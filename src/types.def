@@ -1,0 +1,109 @@
+(type class
+  (uintptr_t id)
+  (object name)
+  (object super)
+  (object objectMask)
+  (object fieldTable)
+  (object methodTable)
+  (object staticTable))
+
+(type objectMask
+  (uint32_t maskLength)
+  (uint32_t arrayMaskLength)
+  (array uint32_t body))
+
+(pod field
+  (uint16_t flags)
+  (object name)
+  (object class))
+
+(type fieldTable
+  (object index)
+  (array field body))
+
+(pod method
+  (uint16_t flags)
+  (object name)
+  (object spec)
+  (object code))
+
+(type methodTable
+  (object index)
+  (array method body))
+
+(pod exceptionHandler
+  (uint16_t start)
+  (uint16_t end)
+  (uint16_t handler)
+  (uint16_t catchType))
+
+(type exceptionHandlerTable
+  (array exceptionHandler body))
+
+(type code
+  (object pool)
+  (object exceptionHandlerTable)
+  (uint16_t maxStack)
+  (uint16_t maxLocals)
+  (array uint8_t body))
+
+(type frame
+  (object code)
+  (uint32_t ip)
+  (array object locals))
+
+(type reference
+  (object class)
+  (object name)
+  (object spec))
+
+(type string
+  (uint32_t hash)
+  (uint32_t id)
+  (array char value))
+
+(type byte
+  (uint8_t value))
+
+(type short
+  (uint16_t value))
+
+(type int
+  (uint32_t value))
+
+(type long
+  (uint64_t value))
+
+(type float
+  (uint32_t value))
+
+(type double
+  (uint64_t value))
+
+(type rawArray
+  (array object body))
+
+(type objectArray
+  (object elementClass)
+  (array object body))
+
+(type byteArray
+  (array uint8_t body))
+
+(type shortArray
+  (array uint16_t body))
+
+(type charArray
+  (array uint16_t body))
+
+(type intArray
+  (array uint32_t body))
+
+(type longArray
+  (array uint64_t body))
+
+(type floatArray
+  (array uint32_t body))
+
+(type doubleArray
+  (array uint64_t body))
