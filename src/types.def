@@ -34,7 +34,7 @@
 (pod exceptionHandler
   (uint16_t start)
   (uint16_t end)
-  (uint16_t handler)
+  (uint16_t ip)
   (uint16_t catchType))
 
 (type exceptionHandlerTable
@@ -50,6 +50,7 @@
 (type frame
   (object code)
   (uint32_t ip)
+  (uint32_t stackBase)
   (array object locals))
 
 (type reference
@@ -64,6 +65,9 @@
 
 (type byte
   (uint8_t value))
+
+(type boolean
+  (extends byte))
 
 (type short
   (uint16_t value))
@@ -89,6 +93,9 @@
 
 (type byteArray
   (array uint8_t body))
+
+(type booleanArray
+  (extends byteArray))
 
 (type shortArray
   (array uint16_t body))
