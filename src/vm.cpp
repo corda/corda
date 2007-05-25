@@ -22,11 +22,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     objectArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -43,11 +43,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     objectArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -94,7 +94,7 @@ run(Thread* t)
       PUSH(array);
     } else {
       object message = makeString(t, "%d", c);
-      t->exception = makeNASException(t, message);
+      t->exception = makeNegativeArrayStoreException(t, message);
       goto throw_;
     }
   } goto loop;
@@ -117,7 +117,7 @@ run(Thread* t)
     if (array) {
       PUSH(makeInt(t, arrayLength(array)));
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } UNREACHABLE;
@@ -150,7 +150,7 @@ run(Thread* t)
   case athrow: {
     POP(t->exception);
     if (t->exception == 0) {
-      t->exception = makeNPException(t, 0);      
+      t->exception = makeNullPointerException(t, 0);      
     }
     goto throw_;
   } UNREACHABLE;
@@ -166,11 +166,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     byteArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -187,11 +187,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     byteArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -211,11 +211,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     charArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -232,11 +232,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     charArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -252,7 +252,7 @@ run(Thread* t)
       if (t->exception) goto throw_;
 
       if (not instanceOf(t, class_, t->stack[t->sp - 1])) {
-        t->exception = makeCCException(t, 0);
+        t->exception = makeClassCastException(t, 0);
         goto throw_;
       }
     }
@@ -360,7 +360,7 @@ run(Thread* t)
       
       PUSH(getField(instance, field));
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -370,13 +370,22 @@ run(Thread* t)
       uint8_t index1 = codeBody(t->code)[ip++];
       uint8_t index2 = codeBody(t->code)[ip++];
       uint16_t index = (index1 << 8) | index2;
-    
+
       object field = resolveField(t, codePool(t->code), index);
       if (t->exception) goto throw_;
+
+      if (not classInitialized(fieldClass(field))) {
+        frameIp(t->frame) = ip - 3;
+        PUSH(t->frame);
+
+        t->code = classInitializer(fieldClass(field));
+        t->frame = makeFrame(t, t->code);
+        ip = 0;
+      }
       
       PUSH(getStatic(field));
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -440,11 +449,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     intArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -468,11 +477,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     intArrayLength(array));
-        t->exception = makeAIOOBException(t, message);
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNPException(t, 0);
+      t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
   } goto loop;
@@ -753,36 +762,37 @@ run(Thread* t)
     }
   } goto loop;
 
+  case invokeinterface: {
+    // todo
+  } goto loop;
+
   default: UNREACHABLE;
   }
 
  throw_:
-  PUSH(t->frame);
-  for (; t->sp >= 0; --(t->sp)) {
-    if (typeOf(t->stack[t->sp]) == FrameType) {
-      t->frame = t->stack[t->sp];
-      t->code = frameCode(t->frame);
-      object eht = codeExceptionHandlerTable(t->code);
-      if (eht) {
-        for (unsigned i = 0; i < exceptionHandleTableLength(eht); ++i) {
-          ExceptionHandler* eh = exceptionHandlerTableBody(eht)[i];
-          uint16_t catchType = exceptionHandlerCatchType(eh);
-          if (catchType == 0 or
-              instanceOf(rawArrayBody(codePool(t->code))[catchType],
-                         t->exception))
-          {
-            t->sp = frameStackBase(t->frame);
-            ip = exceptionHandlerIp(eh);
-            PUSH(t->exception);
-            t->exception = 0;
-            goto loop;
-          }
+  for (; t->frame; t->frame = frameNext(t->frame)) {
+    t->code = frameCode(t->frame);
+    object eht = codeExceptionHandlerTable(t->code);
+    if (eht) {
+      for (unsigned i = 0; i < exceptionHandleTableLength(eht); ++i) {
+        ExceptionHandler* eh = exceptionHandlerTableBody(eht)[i];
+        uint16_t catchType = exceptionHandlerCatchType(eh);
+        if (catchType == 0 or
+            instanceOf(rawArrayBody(codePool(t->code))[catchType],
+                       t->exception))
+        {
+          t->sp = frameStackBase(t->frame);
+          ip = exceptionHandlerIp(eh);
+          PUSH(t->exception);
+          t->exception = 0;
+          goto loop;
         }
       }
     }
   }
 
   t->code = defaultExceptionHandler(t);
+  t->frame = makeFrame(t, t->code);
   t->sp = 0;
   ip = 0;
   PUSH(t->exception);
