@@ -49,6 +49,7 @@
 
 (type frame
   (object code)
+  (object next)
   (uint32_t ip)
   (uint32_t stackBase)
   (array object locals))

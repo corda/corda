@@ -1,10 +1,10 @@
-
 namespace {
 
 object
 run(Thread* t)
 {
   unsigned ip = 0;
+  unsigned parameterCount = 0;
 
 #define PUSH(x) t->stack[(t->sp)++] = x
 #define POP(x) x = t->stack[--(t->sp)]
@@ -99,15 +99,17 @@ run(Thread* t)
     }
   } goto loop;
 
-  case areturn: {
-    object value; POP(value);
-    if (t->sp) {
-      POP(t->frame);
+  case areturn:
+  case ireturn:
+  case lreturn: {
+    t->frame = frameNext(t->frame);
+    if (t->frame) {
       t->code = frameCode(t->frame);
       ip = frameIp(t->frame);
-      PUSH(value);
       goto loop;
     } else {
+      object value; POP(value);
+      t->code = 0;
       return value;
     }
   } goto loop;
@@ -122,27 +124,37 @@ run(Thread* t)
     }
   } UNREACHABLE;
 
-  case astore: {
+  case astore:
+  case istore:
+  case lstore: {
     object value; POP(value);
     set(t, frameBody(t->frame)[codeBody(t->code)[ip++]], value);
   } goto loop;
 
-  case astore_0: {
+  case astore_0:
+  case istore_0:
+  case lstore_0: {
     object value; POP(value);
     set(t, frameBody(t->frame)[0], value);
   } goto loop;
 
-  case astore_1: {
+  case astore_1:
+  case istore_1:
+  case lstore_1: {
     object value; POP(value);
     set(t, frameBody(t->frame)[1], value);
   } goto loop;
 
-  case astore_2: {
+  case astore_2:
+  case istore_2:
+  case lstore_2: {
     object value; POP(value);
     set(t, frameBody(t->frame)[2], value);
   } goto loop;
 
-  case astore_3: {
+  case astore_3:
+  case istore_3:
+  case lstore_3: {
     object value; POP(value);
     set(t, frameBody(t->frame)[3], value);
   } goto loop;
@@ -375,12 +387,10 @@ run(Thread* t)
       if (t->exception) goto throw_;
 
       if (not classInitialized(fieldClass(field))) {
-        frameIp(t->frame) = ip - 3;
-        PUSH(t->frame);
-
         t->code = classInitializer(fieldClass(field));
-        t->frame = makeFrame(t, t->code);
-        ip = 0;
+        ip -= 3;
+        parameterCount = 0;
+        goto invoke;
       }
       
       PUSH(getStatic(field));
@@ -709,24 +719,29 @@ run(Thread* t)
     frameBody(t->frame)[index] = makeInt(t, v + c);
   } goto loop;
 
-  case iload: {
-    PUSH(makeInt(t, intValue(frameBody(t->frame)[codeBody(t->code)[ip++]])));
+  case iload:
+  case lload: {
+    PUSH(frameBody(t->frame)[codeBody(t->code)[ip++]]);
   } goto loop;
 
-  case iload_0: {
-    PUSH(makeInt(t, intValue(frameBody(t->frame)[0])));
+  case iload_0:
+  case lload_0: {
+    PUSH(frameBody(t->frame)[0]);
   } goto loop;
 
-  case iload_1: {
-    PUSH(makeInt(t, intValue(frameBody(t->frame)[1])));
+  case iload_1:
+  case lload_1: {
+    PUSH(frameBody(t->frame)[1]);
   } goto loop;
 
-  case iload_2: {
-    PUSH(makeInt(t, intValue(frameBody(t->frame)[2])));
+  case iload_2:
+  case lload_2: {
+    PUSH(frameBody(t->frame)[2]);
   } goto loop;
 
-  case iload_3: {
-    PUSH(makeInt(t, intValue(frameBody(t->frame)[3])));
+  case iload_3:
+  case lload_3: {
+    PUSH(frameBody(t->frame)[3]);
   } goto loop;
 
   case imul: {
@@ -763,11 +778,341 @@ run(Thread* t)
   } goto loop;
 
   case invokeinterface: {
-    // todo
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
+      
+    ip += 2;
+
+    object method = resolveMethod(t, codePool(t->code), index);
+    if (t->exception) goto throw_;
+    
+    parameterCount = methodParameterCount(method);
+    if (t->stack[t->sp - parameterCount]) {    
+      t->code = methodCode
+        (findInterfaceMethod(t, method, t->stack[t->sp - parameterCount]));
+      if (t->exception) goto throw_;
+
+      goto invoke;
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
   } goto loop;
 
-  default: UNREACHABLE;
+  case invokespecial: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
+
+    object method = resolveMethod(t, codePool(t->code), index);
+    if (t->exception) goto throw_;
+    
+    parameterCount = methodParameterCount(method);
+    if (t->stack[t->sp - parameterCount]) {
+      if (isSpecialMethod(method, t->stack[t->sp - parameterCount])) {
+        t->code = methodCode
+          (findSpecialMethod(t, method, t->stack[t->sp - parameterCount]));
+        if (t->exception) goto throw_;
+      } else {
+        t->code = methodCode(method);
+      }
+      
+      goto invoke;
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
+  } goto loop;
+
+  case invokestatic: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
+
+    object method = resolveMethod(t, codePool(t->code), index);
+    if (t->exception) goto throw_;
+    
+    if (not classInitialized(methodClass(method))) {
+      t->code = classInitializer(methodClass(method));
+      ip -= 2;
+      parameterCount = 0;
+      goto invoke;
+    }
+
+    parameterCount = methodParameterCount(method);
+    t->code = methodCode(method);
+  } goto invoke;
+
+  case invokevirtual: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
+
+    object method = resolveMethod(t, codePool(t->code), index);
+    if (t->exception) goto throw_;
+    
+    parameterCount = methodParameterCount(method);
+    if (t->stack[t->sp - parameterCount]) {
+      t->code = methodCode
+        (findVirtualMethod(t, method, t->stack[t->sp - parameterCount]));
+      if (t->exception) goto throw_;
+      
+      goto invoke;
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
+  } goto loop;
+
+  case ior: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, intValue(a) | intValue(b)));
+  } goto loop;
+
+  case irem: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, intValue(a) % intValue(b)));
+  } goto loop;
+
+  case ishl: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, intValue(a) << intValue(b)));
+  } goto loop;
+
+  case ishr: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, intValue(a) >> intValue(b)));
+  } goto loop;
+
+  case isub: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, intValue(a) - intValue(b)));
+  } goto loop;
+
+  case iushr: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, static_cast<uint32_t>(intValue(a)) >> intValue(b)));
+  } goto loop;
+
+  case ixor: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, intValue(a) ^ intValue(b)));
+  } goto loop;
+
+  case jsr: {
+    uint8_t offset1 = codeBody(t->code)[ip++];
+    uint8_t offset2 = codeBody(t->code)[ip++];
+
+    PUSH(makeInt(ip));
+    ip = (ip - 1) + ((offset1 << 8) | offset2);
+  } goto loop;
+
+  case jsr_w: {
+    uint8_t offset1 = codeBody(t->code)[ip++];
+    uint8_t offset2 = codeBody(t->code)[ip++];
+    uint8_t offset3 = codeBody(t->code)[ip++];
+    uint8_t offset4 = codeBody(t->code)[ip++];
+
+    PUSH(makeInt(ip));
+    ip = (ip - 1)
+      + ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
+  } goto loop;
+
+  case l2i: {
+    object v; POP(v);
+    
+    PUSH(makeInt(t, static_cast<int32_t>(longValue(v))));
+  } goto loop;
+
+  case ladd: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) + longValue(b)));
+  } goto loop;
+
+  case laload: {
+    object index; POP(index);
+    object array; POP(array);
+
+    if (array) {
+      int32_t i = intValue(index);
+      if (i >= 0 and i < longArrayLength(array)) {
+        PUSH(makeLong(t, longArrayBody(array)[i]));
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", i,
+                                    longArrayLength(array));
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
+  } goto loop;
+
+  case land: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) & longValue(b)));
+  } goto loop;
+
+  case lastore: {
+    object value; POP(value);
+    object index; POP(index);
+    object array; POP(array);
+    int32_t i = intValue(index);
+
+    if (array) {
+      if (i >= 0 and i < longArrayLength(array)) {
+        longArrayBody(array)[i] = longValue(value);
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", i,
+                                    longArrayLength(array));
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
+  } goto loop;
+
+  case lcmp: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeInt(t, longValue(a) > longValue(b) ? 1
+                 : longValue(a) == longValue(b) ? 0 : -1));
+  } goto loop;
+
+  case lconst_0: {
+    PUSH(makeLong(0));
+  } goto loop;
+
+  case lconst_1: {
+    PUSH(makeLong(1));
+  } goto loop;
+
+  case ldc: {
+    PUSH(codePool(t->code)[codeBody(t->code)[ip++]]);
+  } goto loop;
+
+  case ldc_w:
+  case ldc2_w: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+
+    PUSH(codePool(t->code)[codeBody(t->code)[(offset1 << 8) | offset2]]);
+  } goto loop;
+
+  case ldiv: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) / longValue(b)));
+  } goto loop;
+
+  case lmul: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) * longValue(b)));
+  } goto loop;
+
+  case lneg: {
+    object v; POP(v);
+    
+    PUSH(makeLong(t, - longValue(v)));
+  } goto loop;
+
+  case lor: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) | longValue(b)));
+  } goto loop;
+
+  case lrem: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) % longValue(b)));
+  } goto loop;
+
+  case lshl: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) << longValue(b)));
+  } goto loop;
+
+  case lshr: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) >> longValue(b)));
+  } goto loop;
+
+  case lsub: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) - longValue(b)));
+  } goto loop;
+
+  case lushr: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, static_cast<uint64_t>(longValue(a)) << longValue(b)));
+  } goto loop;
+
+  case lxor: {
+    object b; POP(b);
+    object a; POP(a);
+    
+    PUSH(makeLong(t, longValue(a) ^ longValue(b)));
+  } goto loop;
+
+  case multianewarray: {
+    // tbc
+  } goto loop;
+
+    default: UNREACHABLE;
   }
+
+ invoke:
+  if (codeMaxStack(t->code) + t->sp - parameterCount > Thread::StackSize) {
+    t->exception = makeStackOverflowException(t, 0);
+    goto throw_;      
+  }
+  
+  frameIp(t->frame) = ip;
+  
+  t->frame = makeFrame(t, t->code, t->frame);
+  memcpy(frameLocals(t->frame),
+         t->stack + t->sp - parameterCount,
+         parameterCount);
+  t->sp -= parameterCount;
+  ip = 0;
+  goto loop;
 
  throw_:
   for (; t->frame; t->frame = frameNext(t->frame)) {
