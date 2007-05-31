@@ -56,23 +56,33 @@ run(Thread* t)
     PUSH(0);
   } goto loop;
 
-  case aload: {
+  case aload:
+  case iload:
+  case lload: {
     PUSH(frameBody(t->frame)[codeBody(t->code)[ip++]]);
   } goto loop;
 
-  case aload_0: {
+  case aload_0:
+  case iload_0:
+  case lload_0: {
     PUSH(frameBody(t->frame)[0]);
   } goto loop;
 
-  case aload_1: {
+  case aload_1:
+  case iload_1:
+  case lload_1: {
     PUSH(frameBody(t->frame)[1]);
   } goto loop;
 
-  case aload_2: {
+  case aload_2:
+  case iload_2:
+  case lload_2: {
     PUSH(frameBody(t->frame)[2]);
   } goto loop;
 
-  case aload_3: {
+  case aload_3:
+  case iload_3:
+  case lload_3: {
     PUSH(frameBody(t->frame)[3]);
   } goto loop;
 
@@ -378,26 +388,21 @@ run(Thread* t)
   } goto loop;
 
   case getstatic: {
-    if (instance) {
-      uint8_t index1 = codeBody(t->code)[ip++];
-      uint8_t index2 = codeBody(t->code)[ip++];
-      uint16_t index = (index1 << 8) | index2;
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
 
-      object field = resolveField(t, codePool(t->code), index);
-      if (t->exception) goto throw_;
+    object field = resolveField(t, codePool(t->code), index);
+    if (t->exception) goto throw_;
 
-      if (not classInitialized(fieldClass(field))) {
-        t->code = classInitializer(fieldClass(field));
-        ip -= 3;
-        parameterCount = 0;
-        goto invoke;
-      }
-      
-      PUSH(getStatic(field));
-    } else {
-      t->exception = makeNullPointerException(t, 0);
-      goto throw_;
+    if (not classInitialized(fieldClass(field))) {
+      t->code = classInitializer(fieldClass(field));
+      ip -= 3;
+      parameterCount = 0;
+      goto invoke;
     }
+      
+    PUSH(getStatic(field));
   } goto loop;
 
   case goto_: {
@@ -717,31 +722,6 @@ run(Thread* t)
     
     int32_t v = intValue(frameBody(t->frame)[index]);
     frameBody(t->frame)[index] = makeInt(t, v + c);
-  } goto loop;
-
-  case iload:
-  case lload: {
-    PUSH(frameBody(t->frame)[codeBody(t->code)[ip++]]);
-  } goto loop;
-
-  case iload_0:
-  case lload_0: {
-    PUSH(frameBody(t->frame)[0]);
-  } goto loop;
-
-  case iload_1:
-  case lload_1: {
-    PUSH(frameBody(t->frame)[1]);
-  } goto loop;
-
-  case iload_2:
-  case lload_2: {
-    PUSH(frameBody(t->frame)[2]);
-  } goto loop;
-
-  case iload_3:
-  case lload_3: {
-    PUSH(frameBody(t->frame)[3]);
   } goto loop;
 
   case imul: {
@@ -1091,8 +1071,263 @@ run(Thread* t)
     PUSH(makeLong(t, longValue(a) ^ longValue(b)));
   } goto loop;
 
-  case multianewarray: {
-    // tbc
+  case new_: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
+    
+    object class_ = resolveClass(t, codePool(t->code), index);
+    if (t->exception) goto throw_;
+      
+    if (not classInitialized(class_)) {
+      t->code = classInitializer(class_);
+      ip -= 3;
+      parameterCount = 0;
+      goto invoke;
+    }
+
+    unsigned size = instanceSize(class_);
+    object instance = allocate(t, size);
+    *static_cast<object*>(instance) = class_;
+    memset(static_cast<object*>(instance) + sizeof(object),
+           0,
+           size - sizeof(object));
+    
+    PUSH(instance);
+  } goto loop;
+
+  case newarray: {
+    object count; POP(count);
+    int32_t c = intValue(count);
+
+    if (c >= 0) {
+      uint8_t type = codeBody(t->code)[ip++];
+
+      object array;
+      unsigned factor;
+
+      switch (type) {
+      case T_BOOLEAN:
+        array = makeBooleanArray(t, c);
+        factor = 1;
+        break;
+
+      case T_CHAR:
+        array = makeCharArray(t, c);
+        factor = 2;
+        break;
+
+      case T_FLOAT:
+        array = makeFloatArray(t, c);
+        factor = 4;
+        break;
+
+      case T_DOUBLE:
+        array = makeDoubleArray(t, c);
+        factor = 8;
+        break;
+
+      case T_BYTE:
+        array = makeByteArray(t, c);
+        factor = 1;
+        break;
+
+      case T_SHORT:
+        array = makeShortArray(t, c);
+        factor = 2;
+        break;
+
+      case T_INT:
+        array = makeIntArray(t, c);
+        factor = 4;
+        break;
+
+      case T_LONG:
+        array = makeLongArray(t, c);
+        factor = 8;
+        break;
+
+      default: UNREACHABLE;
+      }
+      
+      memset(static_cast<object*>(instance) + (sizeof(object) * 2),
+             0,
+             c * factor);
+      
+      PUSH(array);
+    } else {
+      object message = makeString(t, "%d", c);
+      t->exception = makeNegativeArrayStoreException(t, message);
+      goto throw_;
+    }
+  } goto loop;
+
+  case nop: goto loop;
+
+  case pop: {
+    -- (t->sp);
+  } goto loop;
+
+  case pop2: {
+    object top = t->stack[t->sp - 1];
+    if (isLongOrDouble(top)) {
+      -- (t->sp);
+    } else {
+      t->sp -= 2;
+    }
+  } goto loop;
+
+  case putfield: {
+    object instance; POP(instance);
+    if (instance) {
+      uint8_t index1 = codeBody(t->code)[ip++];
+      uint8_t index2 = codeBody(t->code)[ip++];
+      uint16_t index = (index1 << 8) | index2;
+    
+      object field = resolveField(t, codePool(t->code), index);
+      if (t->exception) goto throw_;
+      
+      object value; POP(value);
+      setField(t, instance, field, value);
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
+  } goto loop;
+
+  case putstatic: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
+
+    object field = resolveField(t, codePool(t->code), index);
+    if (t->exception) goto throw_;
+
+    if (not classInitialized(fieldClass(field))) {
+      t->code = classInitializer(fieldClass(field));
+      ip -= 3;
+      parameterCount = 0;
+      goto invoke;
+    }
+      
+    object value; POP(value);
+    setStatic(t, field, value);
+  } goto loop;
+
+  case ret: {
+    ip = intValue(frameBody(t->frame)[codeBody(t->code)[ip++]]);
+  } goto loop;
+
+  case return_: {
+    t->frame = frameNext(t->frame);
+    if (t->frame) {
+      t->code = frameCode(t->frame);
+      ip = frameIp(t->frame);
+      goto loop;
+    } else {
+      t->code = 0;
+      return 0;
+    }
+  } goto loop;
+
+  case saload: {
+    object index; POP(index);
+    object array; POP(array);
+
+    if (array) {
+      int32_t i = intValue(index);
+      if (i >= 0 and i < shortArrayLength(array)) {
+        PUSH(makeShort(t, shortArrayBody(array)[i]));
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", i,
+                                    shortArrayLength(array));
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
+  } goto loop;
+
+  case sastore: {
+    object value; POP(value);
+    object index; POP(index);
+    object array; POP(array);
+    int32_t i = intValue(index);
+
+    if (array) {
+      if (i >= 0 and i < shortArrayLength(array)) {
+        shortArrayBody(array)[i] = intValue(value);
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", i,
+                                    shortArrayLength(array));
+        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      t->exception = makeNullPointerException(t, 0);
+      goto throw_;
+    }
+  } goto loop;
+
+  case sipush: {
+    uint8_t byte1 = codeBody(t->code)[ip++];
+    uint8_t byte2 = codeBody(t->code)[ip++];
+
+    PUSH(makeInt(t, (byte1 << 8) | byte2));
+  } goto loop;
+
+  case swap: {
+    object tmp = t->stack[t->sp - 1];
+    t->stack[t->sp - 1] = t->stack[t->sp - 2];
+    t->stack[t->sp - 2] = tmp;
+  } goto loop;
+
+  case wide: goto wide;
+
+    default: UNREACHABLE;
+  }
+
+ wide:
+  switch (codeBody(t->code)[ip++]) {
+  case aload:
+  case iload:
+  case lload: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+
+    PUSH(frameBody(t->frame)[(index1 << 8) | index2]);
+  } goto loop;
+
+  case astore:
+  case istore:
+  case lstore: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+
+    object value; POP(value);
+    set(t, frameBody(t->frame)[(index1 << 8) | index2], value);
+  } goto loop;
+
+  case iinc: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+    uint16_t index = (index1 << 8) | index2;
+
+    uint8_t count1 = codeBody(t->code)[ip++];
+    uint8_t count2 = codeBody(t->code)[ip++];
+    uint16_t count = (count1 << 8) | count2;
+    
+    int32_t v = intValue(frameBody(t->frame)[index]);
+    frameBody(t->frame)[index] = makeInt(t, v + count);
+  } goto loop;
+
+  case ret: {
+    uint8_t index1 = codeBody(t->code)[ip++];
+    uint8_t index2 = codeBody(t->code)[ip++];
+
+    ip = intValue(frameBody(t->frame)[(index1 << 8) | index2]);
   } goto loop;
 
     default: UNREACHABLE;
