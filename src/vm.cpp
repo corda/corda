@@ -1,5 +1,98 @@
 namespace {
 
+void
+iterate(Thread* t, Heap::Visitor* v)
+{
+  v->visit(&(t->frame));
+  v->visit(&(t->code));
+  v->visit(&(t->exception));
+
+  for (unsigned i = 0; i < t->sp; ++i) {
+    v->visit(t->stack + t->sp);
+  }
+
+  for (Thread* t = t->child; t; t = t->next) {
+    iterate(t, v);
+  }
+}
+
+void
+collect(Machine* m, Heap::CollectionType type)
+{
+  class Iterator: Heap::Iterator {
+   public:
+    Iterator(Machine* m): machine(m) { }
+
+    void iterate(Heap::Visitor* v) {
+      for (Thread* t = m->rootThread; t; t = t->next) {
+        ::iterate(t, v);
+      }
+    }
+    
+   private:
+    Machine* machine;
+  } it(m);
+
+  m->heap.collect(type, &it);
+}
+
+object
+collectAndAllocate(Thread* t, unsigned size)
+{
+  if (size > Thread::HeapSize) {
+    abort(); // not yet implemented
+  }
+
+  LOCK(t->vm->stateLock);
+
+  if (t->vm->exclusive) {
+    // enter idle state and wait for collection to finish.
+    t->state = Thread::IdleState;
+    -- t->vm->activeCount;
+    
+    t->vm->stateLock->notifyAll();
+
+    while (t->vm->exclusive) {
+      t->vm->stateLock->wait();
+    }
+
+    // wake up.
+    state = Thread::ActiveState;
+    ++ t->vm->activeCount;
+  } else {
+    // enter exclusive state and wait for other threads to go idle.
+    t->vm->exclusive = t;
+    
+    while (t->vm->activeCount > 1) {
+      t->vm->stateLock->wait();
+    }
+
+    // collect.
+    collect(t->vm, Heap::MinorCollection);
+
+    // signal collection finish.
+    t->vm->exclusive = 0;
+    t->vm->stateLock->notifyAll();
+  }
+
+  t->heapIndex += size;
+  return t->heap;
+}
+
+inline object
+allocate(Thread* t, unsigned size)
+{
+  if (UNLIKELY(size > Thread::HeapSize - t->heapIndex
+               or t->vm->exclusive))
+  {
+    return collectAndAllocate(t, size);
+  } else {
+    object o = t->heap + t->heapIndex;
+    t->heapIndex += size;
+    return o;
+  }
+}
+
 object
 run(Thread* t)
 {
