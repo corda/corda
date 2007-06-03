@@ -373,7 +373,7 @@ run(Thread* t)
   case lreturn: {
     t->frame = frameNext(t->frame);
     if (t->frame) {
-      t->code = frameCode(t->frame);
+      t->code = methodCode(frameMethod(t->frame));
       ip = frameIp(t->frame);
       goto loop;
     } else {
@@ -1478,7 +1478,7 @@ run(Thread* t)
   case return_: {
     t->frame = frameNext(t->frame);
     if (t->frame) {
-      t->code = frameCode(t->frame);
+      t->code = methodCode(frameMethod(t->frame));
       ip = frameIp(t->frame);
       goto loop;
     } else {
@@ -1608,7 +1608,7 @@ run(Thread* t)
 
  throw_:
   for (; t->frame; t->frame = frameNext(t->frame)) {
-    t->code = frameCode(t->frame);
+    t->code = methodCode(frameMethod(t->frame));
     object eht = codeExceptionHandlerTable(t->code);
     if (eht) {
       for (unsigned i = 0; i < exceptionHandleTableLength(eht); ++i) {

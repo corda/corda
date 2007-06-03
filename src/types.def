@@ -48,7 +48,7 @@
   (array uint8_t body))
 
 (type frame
-  (object code)
+  (object method)
   (object next)
   (uint32_t ip)
   (uint32_t stackBase)
