@@ -9,11 +9,13 @@ class Heap {
   };
 
   class Visitor {
+   public:
     virtual ~Visitor() { }
     virtual void visit(void**) = 0;
   };
 
   class Iterator {
+   public:
     virtual ~Iterator() { }
     virtual void iterate(Visitor*) = 0;
   };
