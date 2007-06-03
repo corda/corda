@@ -1,8 +1,94 @@
+#include "common.h"
+#include "system.h"
+#include "heap.h"
+
 namespace {
+
+typedef void* object;
+
+class Thread;
+
+class Machine {
+ public:
+  System* sys;
+  Heap* heap;
+  Thread* rootThread;
+  Thread* exclusive;
+  unsigned activeCount;
+  unsigned liveCount;
+  System::Monitor* stateLock;
+};
+
+class Thread {
+ public:
+  enum State {
+    NoState,
+    ActiveState,
+    IdleState,
+    ZombieState,
+    ExclusiveState,
+    ExitState
+  };
+
+  static const unsigned HeapSize = 64 * 1024;
+  static const unsigned StackSize = 64 * 1024;
+
+  Machine* vm;
+  Thread* next;
+  Thread* child;
+  State state;
+  object frame;
+  object code;
+  object exception;
+  unsigned sp;
+  unsigned heapIndex;
+  object stack[StackSize];
+  object heap[HeapSize];
+};
+
+inline void NO_RETURN
+abort(Thread* t)
+{
+  t->vm->sys->abort();
+}
+
+inline void
+assert(Thread* t, bool v)
+{
+  if (UNLIKELY(not v)) abort(t);
+}
+
+void
+init(Machine* m, System* sys, Heap* heap)
+{
+  sys->zero(m, sizeof(Machine));
+  m->sys = sys;
+  m->heap = heap;
+  if (not sys->success(sys->make(&(m->stateLock)))) {
+    sys->abort();
+  }
+}
+
+void
+dispose(Machine* m)
+{
+  m->stateLock->dispose();
+}
+
+void
+init(Thread* t, Machine* m)
+{
+  m->sys->zero(m, sizeof(Thread));
+  t->vm = m;
+  m->rootThread = t;
+  t->state = Thread::NoState;
+}
 
 void
 iterate(Thread* t, Heap::Visitor* v)
 {
+  t->heapIndex = 0;
+
   v->visit(&(t->frame));
   v->visit(&(t->code));
   v->visit(&(t->exception));
@@ -33,64 +119,144 @@ collect(Machine* m, Heap::CollectionType type)
     Machine* machine;
   } it(m);
 
-  m->heap.collect(type, &it);
+  m->heap->collect(type, &it);
 }
 
-object
-collectAndAllocate(Thread* t, unsigned size)
+void
+enter(Thread* t, Thread::State s)
 {
-  if (size > Thread::HeapSize) {
-    abort(); // not yet implemented
-  }
+  if (s == state) return;
 
-  LOCK(t->vm->stateLock);
+  ACQUIRE(t->vm->stateLock);
 
-  if (t->vm->exclusive) {
-    // enter idle state and wait for collection to finish.
-    t->state = Thread::IdleState;
-    -- t->vm->activeCount;
-    
-    t->vm->stateLock->notifyAll();
+  switch (s) {
+  case ExclusiveState: {
+    assert(t, state == ActiveState);
 
     while (t->vm->exclusive) {
-      t->vm->stateLock->wait();
+      // another thread got here first.
+      enter(t, Thread::IdleState);
+      enter(t, Thread::ActiveState);
     }
 
-    // wake up.
-    state = Thread::ActiveState;
-    ++ t->vm->activeCount;
-  } else {
-    // enter exclusive state and wait for other threads to go idle.
+    t->state = ExclusiveState;
     t->vm->exclusive = t;
-    
+      
     while (t->vm->activeCount > 1) {
       t->vm->stateLock->wait();
     }
+  } break;
 
-    // collect.
-    collect(t->vm, Heap::MinorCollection);
+  case IdleState:
+  case ZombieState: {
+    switch (state) {
+    case ExclusiveState: {
+      assert(t, t->vm->exclusive == t);
+      t->vm->exclusive = 0;
+    } break;
 
-    // signal collection finish.
-    t->vm->exclusive = 0;
+    case ActiveState: break;
+
+    default: abort(t);
+    }
+
+    -- t->vm->activeCount;
+    if (s == ZombieState) {
+      -- t->vm->liveCount;
+    }
+    t->state = s;
+
     t->vm->stateLock->notifyAll();
+  } break;
+
+  case ActiveState: {
+    switch (state) {
+    case ExclusiveState: {
+      assert(t, t->vm->exclusive == t);
+
+      t->state = s;
+      t->vm->exclusive = 0;
+
+      t->vm->stateLock->notifyAll();
+    } break;
+
+    case NoState:
+    case IdleState: {
+      while (t->vm->exclusive) {
+        t->vm->stateLock->wait();
+      }
+
+      ++ t->vm->activeCount;
+      if (state == NoState) {
+        ++ t->vm->liveCount;
+      }
+      t->state = s;
+    } break;
+
+    default: abort(t);
+    }
+  } break;
+
+  case ExitState: {
+    switch (state) {
+    case ExclusiveState: {
+      assert(t, t->vm->exclusive == t);
+      t->vm->exclusive = 0;
+    } break;
+
+    case ActiveState: break;
+
+    default: abort(t);
+    }
+      
+    -- t->vm->activeCount;
+    t->state = s;
+
+    while (t->vm->liveCount > 1) {
+      t->vm->stateLock->wait();
+    }
+  } break;
+
+  default: abort(t);
+  }
+}
+
+void
+maybeYieldAndMaybeCollect(Thread* t, unsigned size)
+{
+  if (size > Thread::HeapSize) {
+    // large object support not yet implemented.
+    abort(t);
   }
 
-  t->heapIndex += size;
-  return t->heap;
+  ACQUIRE(t->vm->stateLock);
+
+  while (t->vm->exclusive) {
+    // another thread wants to enter the exclusive state, either for a
+    // collection or some other reason.  We give it a chance here.
+    enter(t, Thread::IdleState);
+    enter(t, Thread::ActiveState);
+  }
+
+  if (t->heapIndex + size >= Thread::HeapSize) {
+    enter(t, Thread::ExclusiveState);
+    collect(t->vm, Heap::MinorCollection);
+    enter(t, Thread::ActiveState);
+  }
 }
 
 inline object
 allocate(Thread* t, unsigned size)
 {
-  if (UNLIKELY(size > Thread::HeapSize - t->heapIndex
+  if (UNLIKELY(t->heapIndex + size >= Thread::HeapSize
                or t->vm->exclusive))
   {
-    return collectAndAllocate(t, size);
-  } else {
-    object o = t->heap + t->heapIndex;
-    t->heapIndex += size;
-    return o;
+    maybeYieldAndMaybeCollect(t, size);
   }
+
+  object o = t->heap + t->heapIndex;
+  t->heapIndex += size;
+  return o;
 }
 
 object
@@ -192,7 +358,7 @@ run(Thread* t)
       if (t->exception) goto throw_;
       
       object array = makeObjectArray(t, class_, c);
-      memset(objectArrayBody(array), 0, c * 4);
+      t->vm->sys->zero(objectArrayBody(array), c * 4);
       
       PUSH(array);
     } else {
@@ -225,7 +391,7 @@ run(Thread* t)
       t->exception = makeNullPointerException(t, 0);
       goto throw_;
     }
-  } UNREACHABLE;
+  } abort(t);
 
   case astore:
   case istore:
@@ -268,7 +434,7 @@ run(Thread* t)
       t->exception = makeNullPointerException(t, 0);      
     }
     goto throw_;
-  } UNREACHABLE;
+  } abort(t);
 
   case baload: {
     object index; POP(index);
@@ -1182,9 +1348,8 @@ run(Thread* t)
     unsigned size = instanceSize(class_);
     object instance = allocate(t, size);
     *static_cast<object*>(instance) = class_;
-    memset(static_cast<object*>(instance) + sizeof(object),
-           0,
-           size - sizeof(object));
+    t->vm->sys->zero(static_cast<object*>(instance) + sizeof(object),
+                     size - sizeof(object));
     
     PUSH(instance);
   } goto loop;
@@ -1240,12 +1405,11 @@ run(Thread* t)
         factor = 8;
         break;
 
-      default: UNREACHABLE;
+      default: abort(t);
       }
       
-      memset(static_cast<object*>(instance) + (sizeof(object) * 2),
-             0,
-             c * factor);
+      t->vm->sys->zero(static_cast<object*>(instance) + (sizeof(object) * 2),
+                       c * factor);
       
       PUSH(array);
     } else {
@@ -1379,7 +1543,7 @@ run(Thread* t)
 
   case wide: goto wide;
 
-    default: UNREACHABLE;
+  default: abort(t);
   }
 
  wide:
@@ -1423,7 +1587,7 @@ run(Thread* t)
     ip = intValue(frameBody(t->frame)[(index1 << 8) | index2]);
   } goto loop;
 
-    default: UNREACHABLE;
+  default: abort(t);
   }
 
  invoke:
