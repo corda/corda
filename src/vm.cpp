@@ -259,25 +259,34 @@ allocate(Thread* t, unsigned size)
   return o;
 }
 
+inline void
+push(Thread* t, object o)
+{
+  t->stack[(t->sp)++] = o;
+}
+
+inline object
+pop(Thread* t)
+{
+  return t->stack[--(t->sp)];
+}
+
 object
 run(Thread* t)
 {
   unsigned ip = 0;
   unsigned parameterCount = 0;
 
-#define PUSH(x) t->stack[(t->sp)++] = x
-#define POP(x) x = t->stack[--(t->sp)]
-
  loop:
   switch (codeBody(t->code)[ip++]) {
   case aaload: {
-    object index; POP(index);
-    object array; POP(array);
+    object index = pop(t);
+    object array = pop(t);
 
     if (array) {
       int32_t i = intValue(index);
       if (i >= 0 and i < objectArrayLength(array)) {
-        PUSH(objectArrayBody(array)[i]);
+        push(t, objectArrayBody(array)[i]);
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     objectArrayLength(array));
@@ -291,9 +300,9 @@ run(Thread* t)
   } goto loop;
 
   case aastore: {
-    object value; POP(value);
-    object index; POP(index);
-    object array; POP(array);
+    object value = pop(t);
+    object index = pop(t);
+    object array = pop(t);
     int32_t i = intValue(index);
 
     if (array) {
@@ -312,41 +321,41 @@ run(Thread* t)
   } goto loop;
 
   case aconst_null: {
-    PUSH(0);
+    push(t, 0);
   } goto loop;
 
   case aload:
   case iload:
   case lload: {
-    PUSH(frameBody(t->frame)[codeBody(t->code)[ip++]]);
+    push(t, frameBody(t->frame)[codeBody(t->code)[ip++]]);
   } goto loop;
 
   case aload_0:
   case iload_0:
   case lload_0: {
-    PUSH(frameBody(t->frame)[0]);
+    push(t, frameBody(t->frame)[0]);
   } goto loop;
 
   case aload_1:
   case iload_1:
   case lload_1: {
-    PUSH(frameBody(t->frame)[1]);
+    push(t, frameBody(t->frame)[1]);
   } goto loop;
 
   case aload_2:
   case iload_2:
   case lload_2: {
-    PUSH(frameBody(t->frame)[2]);
+    push(t, frameBody(t->frame)[2]);
   } goto loop;
 
   case aload_3:
   case iload_3:
   case lload_3: {
-    PUSH(frameBody(t->frame)[3]);
+    push(t, frameBody(t->frame)[3]);
   } goto loop;
 
   case anewarray: {
-    object count; POP(count);
+    object count = pop(t);
     int32_t c = intValue(count);
 
     if (c >= 0) {
@@ -360,7 +369,7 @@ run(Thread* t)
       object array = makeObjectArray(t, class_, c);
       t->vm->sys->zero(objectArrayBody(array), c * 4);
       
-      PUSH(array);
+      push(t, array);
     } else {
       object message = makeString(t, "%d", c);
       t->exception = makeNegativeArrayStoreException(t, message);
@@ -377,16 +386,16 @@ run(Thread* t)
       ip = frameIp(t->frame);
       goto loop;
     } else {
-      object value; POP(value);
+      object value = pop(t);
       t->code = 0;
       return value;
     }
   } goto loop;
 
   case arraylength: {
-    object array; POP(array);
+    object array = pop(t);
     if (array) {
-      PUSH(makeInt(t, arrayLength(array)));
+      push(t, makeInt(t, arrayLength(array)));
     } else {
       t->exception = makeNullPointerException(t, 0);
       goto throw_;
@@ -396,40 +405,40 @@ run(Thread* t)
   case astore:
   case istore:
   case lstore: {
-    object value; POP(value);
+    object value = pop(t);
     set(t, frameBody(t->frame)[codeBody(t->code)[ip++]], value);
   } goto loop;
 
   case astore_0:
   case istore_0:
   case lstore_0: {
-    object value; POP(value);
+    object value = pop(t);
     set(t, frameBody(t->frame)[0], value);
   } goto loop;
 
   case astore_1:
   case istore_1:
   case lstore_1: {
-    object value; POP(value);
+    object value = pop(t);
     set(t, frameBody(t->frame)[1], value);
   } goto loop;
 
   case astore_2:
   case istore_2:
   case lstore_2: {
-    object value; POP(value);
+    object value = pop(t);
     set(t, frameBody(t->frame)[2], value);
   } goto loop;
 
   case astore_3:
   case istore_3:
   case lstore_3: {
-    object value; POP(value);
+    object value = pop(t);
     set(t, frameBody(t->frame)[3], value);
   } goto loop;
 
   case athrow: {
-    POP(t->exception);
+    t->exception = pop(t);
     if (t->exception == 0) {
       t->exception = makeNullPointerException(t, 0);      
     }
@@ -437,13 +446,13 @@ run(Thread* t)
   } abort(t);
 
   case baload: {
-    object index; POP(index);
-    object array; POP(array);
+    object index = pop(t);
+    object array = pop(t);
 
     if (array) {
       int32_t i = intValue(index);
       if (i >= 0 and i < byteArrayLength(array)) {
-        PUSH(makeByte(t, byteArrayBody(array)[i]));
+        push(t, makeByte(t, byteArrayBody(array)[i]));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     byteArrayLength(array));
@@ -457,9 +466,9 @@ run(Thread* t)
   } goto loop;
 
   case bastore: {
-    object value; POP(value);
-    object index; POP(index);
-    object array; POP(array);
+    object value = pop(t);
+    object index = pop(t);
+    object array = pop(t);
     int32_t i = intValue(index);
 
     if (array) {
@@ -478,17 +487,17 @@ run(Thread* t)
   } goto loop;
 
   case bipush: {
-    PUSH(makeInt(t, codeBody(t->code)[ip++]));
+    push(t, makeInt(t, codeBody(t->code)[ip++]));
   } goto loop;
 
   case caload: {
-    object index; POP(index);
-    object array; POP(array);
+    object index = pop(t);
+    object array = pop(t);
 
     if (array) {
       int32_t i = intValue(index);
       if (i >= 0 and i < charArrayLength(array)) {
-        PUSH(makeInt(t, charArrayBody(array)[i]));
+        push(t, makeInt(t, charArrayBody(array)[i]));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     charArrayLength(array));
@@ -502,9 +511,9 @@ run(Thread* t)
   } goto loop;
 
   case castore: {
-    object value; POP(value);
-    object index; POP(index);
-    object array; POP(array);
+    object value = pop(t);
+    object index = pop(t);
+    object array = pop(t);
     int32_t i = intValue(index);
 
     if (array) {
@@ -541,96 +550,96 @@ run(Thread* t)
 
   case dup: {
     object value = t->stack[t->sp - 1];
-    PUSH(value);
+    push(t, value);
   } goto loop;
 
   case dup_x1: {
-    object first; POP(first);
-    object second; POP(second);
+    object first = pop(t);
+    object second = pop(t);
     
-    PUSH(first);
-    PUSH(second);
-    PUSH(first);
+    push(t, first);
+    push(t, second);
+    push(t, first);
   } goto loop;
 
   case dup_x2: {
-    object first; POP(first);
-    object second; POP(second);
-    object third; POP(third);
+    object first = pop(t);
+    object second = pop(t);
+    object third = pop(t);
     
-    PUSH(first);
-    PUSH(third);
-    PUSH(second);
-    PUSH(first);
+    push(t, first);
+    push(t, third);
+    push(t, second);
+    push(t, first);
   } goto loop;
 
   case dup2: {
     object first = t->stack[t->sp - 1];
     if (isLongOrDouble(first)) {
-      PUSH(first);
+      push(t, first);
     } else {
       object second = t->stack[t->sp - 2];
-      PUSH(second);
-      PUSH(first);
+      push(t, second);
+      push(t, first);
     }
   } goto loop;
 
   case dup2_x1: {
-    object first; POP(first);
-    object second; POP(second);
+    object first = pop(t);
+    object second = pop(t);
     
     if (isLongOrDouble(first)) {
-      PUSH(first);
-      PUSH(second);
-      PUSH(first);
+      push(t, first);
+      push(t, second);
+      push(t, first);
     } else {
-      object third; POP(third);
-      PUSH(second);
-      PUSH(first);
-      PUSH(third);
-      PUSH(second);
-      PUSH(first);
+      object third = pop(t);
+      push(t, second);
+      push(t, first);
+      push(t, third);
+      push(t, second);
+      push(t, first);
     }
   } goto loop;
 
   case dup2_x2: {
-    object first; POP(first);
-    object second; POP(second);
+    object first = pop(t);
+    object second = pop(t);
     
     if (isLongOrDouble(first)) {
       if (isLongOrDouble(second)) {
-        PUSH(first);
-        PUSH(second);
-        PUSH(first);
+        push(t, first);
+        push(t, second);
+        push(t, first);
       } else {
-        object third; POP(third);
-        PUSH(first);
-        PUSH(third);
-        PUSH(second);
-        PUSH(first);
+        object third = pop(t);
+        push(t, first);
+        push(t, third);
+        push(t, second);
+        push(t, first);
       }
     } else {
-      object third; POP(third);
+      object third = pop(t);
       if (isLongOrDouble(third)) {
-        PUSH(second);
-        PUSH(first);
-        PUSH(third);
-        PUSH(second);
-        PUSH(first);
+        push(t, second);
+        push(t, first);
+        push(t, third);
+        push(t, second);
+        push(t, first);
       } else {
-        object fourth; POP(fourth);
-        PUSH(second);
-        PUSH(first);
-        PUSH(fourth);
-        PUSH(third);
-        PUSH(second);
-        PUSH(first);
+        object fourth = pop(t);
+        push(t, second);
+        push(t, first);
+        push(t, fourth);
+        push(t, third);
+        push(t, second);
+        push(t, first);
       }
     }
   } goto loop;
 
   case getfield: {
-    object instance; POP(instance);
+    object instance = pop(t);
     if (instance) {
       uint8_t index1 = codeBody(t->code)[ip++];
       uint8_t index2 = codeBody(t->code)[ip++];
@@ -639,7 +648,7 @@ run(Thread* t)
       object field = resolveField(t, codePool(t->code), index);
       if (t->exception) goto throw_;
       
-      PUSH(getField(instance, field));
+      push(t, getField(instance, field));
     } else {
       t->exception = makeNullPointerException(t, 0);
       goto throw_;
@@ -661,7 +670,7 @@ run(Thread* t)
       goto invoke;
     }
       
-    PUSH(getStatic(field));
+    push(t, getStatic(field));
   } goto loop;
 
   case goto_: {
@@ -682,44 +691,44 @@ run(Thread* t)
   } goto loop;
 
   case i2b: {
-    object v; POP(v);
+    object v = pop(t);
     
-    PUSH(makeInt(t, static_cast<int8_t>(intValue(v))));
+    push(t, makeInt(t, static_cast<int8_t>(intValue(v))));
   } goto loop;
 
   case i2c: {
-    object v; POP(v);
+    object v = pop(t);
     
-    PUSH(makeInt(t, static_cast<uint16_t>(intValue(v))));
+    push(t, makeInt(t, static_cast<uint16_t>(intValue(v))));
   } goto loop;
 
   case i2l: {
-    object v; POP(v);
+    object v = pop(t);
     
-    PUSH(makeLong(t, intValue(v)));
+    push(t, makeLong(t, intValue(v)));
   } goto loop;
 
   case i2s: {
-    object v; POP(v);
+    object v = pop(t);
 
-    PUSH(makeInt(t, static_cast<int16_t>(intValue(v))));
+    push(t, makeInt(t, static_cast<int16_t>(intValue(v))));
   } goto loop;
 
   case iadd: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) + intValue(b)));
+    push(t, makeInt(t, intValue(a) + intValue(b)));
   } goto loop;
 
   case iaload: {
-    object index; POP(index);
-    object array; POP(array);
+    object index = pop(t);
+    object array = pop(t);
 
     if (array) {
       int32_t i = intValue(index);
       if (i >= 0 and i < intArrayLength(array)) {
-        PUSH(makeInt(t, intArrayBody(array)[i]));
+        push(t, makeInt(t, intArrayBody(array)[i]));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     intArrayLength(array));
@@ -733,16 +742,16 @@ run(Thread* t)
   } goto loop;
 
   case iand: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) & intValue(b)));
+    push(t, makeInt(t, intValue(a) & intValue(b)));
   } goto loop;
 
   case iastore: {
-    object value; POP(value);
-    object index; POP(index);
-    object array; POP(array);
+    object value = pop(t);
+    object index = pop(t);
+    object array = pop(t);
     int32_t i = intValue(index);
 
     if (array) {
@@ -761,42 +770,42 @@ run(Thread* t)
   } goto loop;
 
   case iconst_0: {
-    PUSH(makeInt(0));
+    push(t, makeInt(0));
   } goto loop;
 
   case iconst_1: {
-    PUSH(makeInt(1));
+    push(t, makeInt(1));
   } goto loop;
 
   case iconst_2: {
-    PUSH(makeInt(2));
+    push(t, makeInt(2));
   } goto loop;
 
   case iconst_3: {
-    PUSH(makeInt(3));
+    push(t, makeInt(3));
   } goto loop;
 
   case iconst_4: {
-    PUSH(makeInt(4));
+    push(t, makeInt(4));
   } goto loop;
 
   case iconst_5: {
-    PUSH(makeInt(5));
+    push(t, makeInt(5));
   } goto loop;
 
   case idiv: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) / intValue(b)));
+    push(t, makeInt(t, intValue(a) / intValue(b)));
   } goto loop;
 
   case if_acmpeq: {
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (a == b) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -807,8 +816,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (a != b) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -819,8 +828,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (intValue(a) == intValue(b)) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -831,8 +840,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (intValue(a) != intValue(b)) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -843,8 +852,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (intValue(a) > intValue(b)) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -855,8 +864,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (intValue(a) >= intValue(b)) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -867,8 +876,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (intValue(a) < intValue(b)) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -879,8 +888,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
     if (intValue(a) < intValue(b)) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -891,7 +900,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (intValue(v) == 0) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -902,7 +911,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (intValue(v)) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -913,7 +922,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (intValue(v) > 0) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -924,7 +933,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (intValue(v) >= 0) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -935,7 +944,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (intValue(v) < 0) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -946,7 +955,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (intValue(v) <= 0) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -957,7 +966,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (v) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -968,7 +977,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    object v; POP(v);
+    object v = pop(t);
     
     if (v == 0) {
       ip = (ip - 1) + ((offset1 << 8) | offset2);
@@ -984,16 +993,16 @@ run(Thread* t)
   } goto loop;
 
   case imul: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) * intValue(b)));
+    push(t, makeInt(t, intValue(a) * intValue(b)));
   } goto loop;
 
   case ineg: {
-    object v; POP(v);
+    object v = pop(t);
     
-    PUSH(makeInt(t, - intValue(v)));
+    push(t, makeInt(t, - intValue(v)));
   } goto loop;
 
   case instanceof: {
@@ -1007,12 +1016,12 @@ run(Thread* t)
       if (t->exception) goto throw_;
 
       if (instanceOf(t, class_, t->stack[t->sp - 1])) {
-        PUSH(makeInt(t, 1));
+        push(t, makeInt(t, 1));
       } else {
-        PUSH(makeInt(t, 0));
+        push(t, makeInt(t, 0));
       }
     } else {
-      PUSH(makeInt(t, 0));
+      push(t, makeInt(t, 0));
     }
   } goto loop;
 
@@ -1105,59 +1114,59 @@ run(Thread* t)
   } goto loop;
 
   case ior: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) | intValue(b)));
+    push(t, makeInt(t, intValue(a) | intValue(b)));
   } goto loop;
 
   case irem: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) % intValue(b)));
+    push(t, makeInt(t, intValue(a) % intValue(b)));
   } goto loop;
 
   case ishl: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) << intValue(b)));
+    push(t, makeInt(t, intValue(a) << intValue(b)));
   } goto loop;
 
   case ishr: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) >> intValue(b)));
+    push(t, makeInt(t, intValue(a) >> intValue(b)));
   } goto loop;
 
   case isub: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) - intValue(b)));
+    push(t, makeInt(t, intValue(a) - intValue(b)));
   } goto loop;
 
   case iushr: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, static_cast<uint32_t>(intValue(a)) >> intValue(b)));
+    push(t, makeInt(t, static_cast<uint32_t>(intValue(a)) >> intValue(b)));
   } goto loop;
 
   case ixor: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, intValue(a) ^ intValue(b)));
+    push(t, makeInt(t, intValue(a) ^ intValue(b)));
   } goto loop;
 
   case jsr: {
     uint8_t offset1 = codeBody(t->code)[ip++];
     uint8_t offset2 = codeBody(t->code)[ip++];
 
-    PUSH(makeInt(ip));
+    push(t, makeInt(ip));
     ip = (ip - 1) + ((offset1 << 8) | offset2);
   } goto loop;
 
@@ -1167,32 +1176,32 @@ run(Thread* t)
     uint8_t offset3 = codeBody(t->code)[ip++];
     uint8_t offset4 = codeBody(t->code)[ip++];
 
-    PUSH(makeInt(ip));
+    push(t, makeInt(ip));
     ip = (ip - 1)
       + ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
   } goto loop;
 
   case l2i: {
-    object v; POP(v);
+    object v = pop(t);
     
-    PUSH(makeInt(t, static_cast<int32_t>(longValue(v))));
+    push(t, makeInt(t, static_cast<int32_t>(longValue(v))));
   } goto loop;
 
   case ladd: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) + longValue(b)));
+    push(t, makeLong(t, longValue(a) + longValue(b)));
   } goto loop;
 
   case laload: {
-    object index; POP(index);
-    object array; POP(array);
+    object index = pop(t);
+    object array = pop(t);
 
     if (array) {
       int32_t i = intValue(index);
       if (i >= 0 and i < longArrayLength(array)) {
-        PUSH(makeLong(t, longArrayBody(array)[i]));
+        push(t, makeLong(t, longArrayBody(array)[i]));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     longArrayLength(array));
@@ -1206,16 +1215,16 @@ run(Thread* t)
   } goto loop;
 
   case land: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) & longValue(b)));
+    push(t, makeLong(t, longValue(a) & longValue(b)));
   } goto loop;
 
   case lastore: {
-    object value; POP(value);
-    object index; POP(index);
-    object array; POP(array);
+    object value = pop(t);
+    object index = pop(t);
+    object array = pop(t);
     int32_t i = intValue(index);
 
     if (array) {
@@ -1234,23 +1243,23 @@ run(Thread* t)
   } goto loop;
 
   case lcmp: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeInt(t, longValue(a) > longValue(b) ? 1
+    push(t, makeInt(t, longValue(a) > longValue(b) ? 1
                  : longValue(a) == longValue(b) ? 0 : -1));
   } goto loop;
 
   case lconst_0: {
-    PUSH(makeLong(0));
+    push(t, makeLong(0));
   } goto loop;
 
   case lconst_1: {
-    PUSH(makeLong(1));
+    push(t, makeLong(1));
   } goto loop;
 
   case ldc: {
-    PUSH(codePool(t->code)[codeBody(t->code)[ip++]]);
+    push(t, codePool(t->code)[codeBody(t->code)[ip++]]);
   } goto loop;
 
   case ldc_w:
@@ -1258,76 +1267,76 @@ run(Thread* t)
     uint8_t index1 = codeBody(t->code)[ip++];
     uint8_t index2 = codeBody(t->code)[ip++];
 
-    PUSH(codePool(t->code)[codeBody(t->code)[(offset1 << 8) | offset2]]);
+    push(t, codePool(t->code)[codeBody(t->code)[(offset1 << 8) | offset2]]);
   } goto loop;
 
   case ldiv: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) / longValue(b)));
+    push(t, makeLong(t, longValue(a) / longValue(b)));
   } goto loop;
 
   case lmul: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) * longValue(b)));
+    push(t, makeLong(t, longValue(a) * longValue(b)));
   } goto loop;
 
   case lneg: {
-    object v; POP(v);
+    object v = pop(t);
     
-    PUSH(makeLong(t, - longValue(v)));
+    push(t, makeLong(t, - longValue(v)));
   } goto loop;
 
   case lor: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) | longValue(b)));
+    push(t, makeLong(t, longValue(a) | longValue(b)));
   } goto loop;
 
   case lrem: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) % longValue(b)));
+    push(t, makeLong(t, longValue(a) % longValue(b)));
   } goto loop;
 
   case lshl: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) << longValue(b)));
+    push(t, makeLong(t, longValue(a) << longValue(b)));
   } goto loop;
 
   case lshr: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) >> longValue(b)));
+    push(t, makeLong(t, longValue(a) >> longValue(b)));
   } goto loop;
 
   case lsub: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) - longValue(b)));
+    push(t, makeLong(t, longValue(a) - longValue(b)));
   } goto loop;
 
   case lushr: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, static_cast<uint64_t>(longValue(a)) << longValue(b)));
+    push(t, makeLong(t, static_cast<uint64_t>(longValue(a)) << longValue(b)));
   } goto loop;
 
   case lxor: {
-    object b; POP(b);
-    object a; POP(a);
+    object b = pop(t);
+    object a = pop(t);
     
-    PUSH(makeLong(t, longValue(a) ^ longValue(b)));
+    push(t, makeLong(t, longValue(a) ^ longValue(b)));
   } goto loop;
 
   case new_: {
@@ -1351,11 +1360,11 @@ run(Thread* t)
     t->vm->sys->zero(static_cast<object*>(instance) + sizeof(object),
                      size - sizeof(object));
     
-    PUSH(instance);
+    push(t, instance);
   } goto loop;
 
   case newarray: {
-    object count; POP(count);
+    object count = pop(t);
     int32_t c = intValue(count);
 
     if (c >= 0) {
@@ -1411,7 +1420,7 @@ run(Thread* t)
       t->vm->sys->zero(static_cast<object*>(instance) + (sizeof(object) * 2),
                        c * factor);
       
-      PUSH(array);
+      push(t, array);
     } else {
       object message = makeString(t, "%d", c);
       t->exception = makeNegativeArrayStoreException(t, message);
@@ -1435,7 +1444,7 @@ run(Thread* t)
   } goto loop;
 
   case putfield: {
-    object instance; POP(instance);
+    object instance = pop(t);
     if (instance) {
       uint8_t index1 = codeBody(t->code)[ip++];
       uint8_t index2 = codeBody(t->code)[ip++];
@@ -1444,7 +1453,7 @@ run(Thread* t)
       object field = resolveField(t, codePool(t->code), index);
       if (t->exception) goto throw_;
       
-      object value; POP(value);
+      object value = pop(t);
       setField(t, instance, field, value);
     } else {
       t->exception = makeNullPointerException(t, 0);
@@ -1467,7 +1476,7 @@ run(Thread* t)
       goto invoke;
     }
       
-    object value; POP(value);
+    object value = pop(t);
     setStatic(t, field, value);
   } goto loop;
 
@@ -1488,13 +1497,13 @@ run(Thread* t)
   } goto loop;
 
   case saload: {
-    object index; POP(index);
-    object array; POP(array);
+    object index = pop(t);
+    object array = pop(t);
 
     if (array) {
       int32_t i = intValue(index);
       if (i >= 0 and i < shortArrayLength(array)) {
-        PUSH(makeShort(t, shortArrayBody(array)[i]));
+        push(t, makeShort(t, shortArrayBody(array)[i]));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     shortArrayLength(array));
@@ -1508,9 +1517,9 @@ run(Thread* t)
   } goto loop;
 
   case sastore: {
-    object value; POP(value);
-    object index; POP(index);
-    object array; POP(array);
+    object value = pop(t);
+    object index = pop(t);
+    object array = pop(t);
     int32_t i = intValue(index);
 
     if (array) {
@@ -1532,7 +1541,7 @@ run(Thread* t)
     uint8_t byte1 = codeBody(t->code)[ip++];
     uint8_t byte2 = codeBody(t->code)[ip++];
 
-    PUSH(makeInt(t, (byte1 << 8) | byte2));
+    push(t, makeInt(t, (byte1 << 8) | byte2));
   } goto loop;
 
   case swap: {
@@ -1554,7 +1563,7 @@ run(Thread* t)
     uint8_t index1 = codeBody(t->code)[ip++];
     uint8_t index2 = codeBody(t->code)[ip++];
 
-    PUSH(frameBody(t->frame)[(index1 << 8) | index2]);
+    push(t, frameBody(t->frame)[(index1 << 8) | index2]);
   } goto loop;
 
   case astore:
@@ -1563,7 +1572,7 @@ run(Thread* t)
     uint8_t index1 = codeBody(t->code)[ip++];
     uint8_t index2 = codeBody(t->code)[ip++];
 
-    object value; POP(value);
+    object value = pop(t);
     set(t, frameBody(t->frame)[(index1 << 8) | index2], value);
   } goto loop;
 
@@ -1620,7 +1629,7 @@ run(Thread* t)
         {
           t->sp = frameStackBase(t->frame);
           ip = exceptionHandlerIp(eh);
-          PUSH(t->exception);
+          push(t, t->exception);
           t->exception = 0;
           goto loop;
         }
@@ -1632,7 +1641,7 @@ run(Thread* t)
   t->frame = makeFrame(t, t->code);
   t->sp = 0;
   ip = 0;
-  PUSH(t->exception);
+  push(t, t->exception);
   t->exception = 0;
   goto loop;
 }
