@@ -146,12 +146,8 @@ class Scalar : public Object {
 
 class Array : public Scalar {
  public:
-  const char* lengthString;
-  const char* positionString;
-
   static Array* make(Object* owner, Object* typeObject, const char* typeName,
-                     const char* name, const char* lengthString,
-                     const char* positionString, unsigned elementSize)
+                     const char* name, unsigned elementSize)
   {
     Array* o = allocate<Array>();
     o->type = Object::Array;
@@ -159,8 +155,6 @@ class Array : public Scalar {
     o->typeObject = typeObject;
     o->typeName = typeName;
     o->name = name;
-    o->lengthString = lengthString;
-    o->positionString = positionString;
     o->elementSize = elementSize;
     return o;
   }
@@ -172,30 +166,6 @@ arrayElementSize(Object* o)
   switch (o->type) {
   case Object::Array:
     return static_cast<Array*>(o)->elementSize;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-const char*
-arrayLengthString(Object* o)
-{
-  switch (o->type) {
-  case Object::Array:
-    return static_cast<Array*>(o)->lengthString;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-const char*
-arrayPositionString(Object* o)
-{
-  switch (o->type) {
-  case Object::Array:
-    return static_cast<Array*>(o)->positionString;
 
   default:
     UNREACHABLE;
@@ -766,6 +736,10 @@ sizeOf(const char* type, Object* declarations)
     return sizeof(uint8_t);
   } else if (equal(type, "int16_t") or equal(type, "uint16_t")) {
     return sizeof(uint16_t);
+  } else if (equal(type, "int32_t") or equal(type, "uint32_t")) {
+    return sizeof(uint32_t);
+  } else if (equal(type, "int64_t") or equal(type, "uint64_t")) {
+    return sizeof(uint64_t);
   } else if (equal(type, "char")) {
     return sizeof(char);
   } else if (namesPointer(type)) {
@@ -780,7 +754,7 @@ sizeOf(const char* type, Object* declarations)
 }
 
 Object*
-parseArray(Object::ObjectType type, Object* t, Object* p, Object* declarations)
+parseArray(Object* t, Object* p, Object* declarations)
 {
   const char* typeName = string(car(p));
 
@@ -788,8 +762,7 @@ parseArray(Object::ObjectType type, Object* t, Object* p, Object* declarations)
   const char* name = string(car(p));
 
   return Array::make(t, declaration(typeName, declarations),
-                     typeName, name, length, position,
-                     sizeOf(typeName, declarations));
+                     typeName, name, sizeOf(typeName, declarations));
 }
 
 Object*
@@ -797,7 +770,7 @@ parseMember(Object* t, Object* p, Object* declarations)
 {
   const char* spec = string(car(p));
   if (equal(spec, "array")) {
-    return parseArray(Object::Array, t, cdr(p), declarations);
+    return parseArray(t, cdr(p), declarations);
   } else if (equal(spec, "noassert")) {
     Object* member = parseMember(t, cdr(p), declarations);
     memberNoAssert(member) = true;
@@ -928,10 +901,6 @@ parseDeclaration(Object* p, Object* declarations)
   const char* spec = string(car(p));
   if (equal(spec, "type")) {
     return parseType(Object::Type, cdr(p), declarations);
-  } else if (equal(spec, "op")) {
-    Object* t = parseType(Object::Type, cdr(p), declarations);
-    typeOp(t) = true;
-    return t;
   } else if (equal(spec, "pod")) {
     return parseType(Object::Pod, cdr(p), declarations);
   } else {
@@ -989,14 +958,12 @@ writeOffset(Output* out, Object* offset, bool allocationStyle = false)
       } break;
 
       case Object::Array: {
-        const char* lengthString = arrayLengthString(o);
-
         out->write("pad((");
         if (allocationStyle) {
-          out->write(lengthString);
+          out->write("length");
         } else {
           out->write(typeShortName(memberOwner(o)));
-          out->write(capitalize(lengthString));
+          out->write(capitalize("length"));
           out->write("(o)");
         }
         out->write(" * ");
@@ -1373,24 +1340,6 @@ writeEnums(Output* out, Object* declarations)
   }  
 }
 
-void
-writeOpEnums(Output* out, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      if (typeOp(o)) {
-        out->write(capitalize(typeName(o)));
-        out->write(",\n");
-      }
-    } break;
-
-    default: break;
-    }
-  }  
-}
-
 const char*
 lispStyle(const char* s)
 {
@@ -1435,37 +1384,6 @@ writeEnumCases(Output* out, Object* declarations)
 }
 
 void
-writeOpEnumCases(Output* out, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      if (typeOp(o)) {
-        out->write("case ");
-        out->write(capitalize(typeName(o)));
-        out->write(": return \"");
-        out->write(lispStyle(typeName(o)));
-        out->write("\";\n");
-      }
-    } break;
-
-    default: break;
-    }
-  }  
-}
-
-const char*
-opName(const char* s)
-{
-  unsigned length = strlen(s);
-  assert(length > 2);
-  const char* r = strndup(s, length - 2);
-  assert(r);
-  return r;
-}
-
-void
 writeDeclarations(Output* out, Object* declarations)
 {
   for (Object* p = declarations; p; p = cdr(p)) {
@@ -1499,7 +1417,7 @@ void
 set(uint32_t* mask, unsigned index)
 {
   if (index < 32) {
-    mask |= 1 << index;
+    *mask |= 1 << index;
   } else {
     UNREACHABLE;
   }
@@ -1509,7 +1427,7 @@ unsigned
 typeFixedSize(Object* type)
 {
   unsigned length = 0;
-  for (MemberIterator it(o); it.hasMore();) {
+  for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
     switch (m->type) {
     case Object::Scalar: {
@@ -1521,19 +1439,19 @@ typeFixedSize(Object* type)
     default: UNREACHABLE;
     }
   }
-  return length;
+  return length / 4;
 }
 
 unsigned
 typeArrayElementSize(Object* type)
 {
-  for (MemberIterator it(o); it.hasMore();) {
+  for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
     switch (m->type) {
     case Object::Scalar: break;
 
     case Object::Array: {
-      return memberElementSize(m);
+      return memberElementSize(m) / 4;
     } break;
 
     default: UNREACHABLE;
@@ -1545,11 +1463,11 @@ typeArrayElementSize(Object* type)
 uint32_t
 typeObjectMask(Object* type)
 {
-  assert(typeFixedMaskLength(type) + typeArrayElementMaskLength(type) < 32);
+  assert(typeFixedSize(type) + typeArrayElementSize(type) < 32);
 
   uint32_t mask = 0;
 
-  for (MemberIterator it(o); it.hasMore();) {
+  for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
     unsigned offset = it.offset() / sizeof(void*);
 
@@ -1566,7 +1484,7 @@ typeObjectMask(Object* type)
       } else if (memberTypeObject(m)
                  and memberTypeObject(m)->type == Object::Pod)
       {
-        for (MemberIterator it(m); it.hasMore();) {
+        for (MemberIterator it(memberTypeObject(m)); it.hasMore();) {
           Object* m = it.next();
           if (equal(memberTypeName(m), "object")) {
             set(&mask, offset + (it.offset() / sizeof(void*)));
@@ -1578,6 +1496,8 @@ typeObjectMask(Object* type)
     default: UNREACHABLE;
     }
   }
+
+  return mask;
 }
 
 void
@@ -1642,9 +1562,7 @@ main(int ac, char** av)
       or (ac == 2
           and not equal(av[1], "header")
           and not equal(av[1], "enums")
-          and not equal(av[1], "op-enums")
           and not equal(av[1], "enum-cases")
-          and not equal(av[1], "op-enum-cases")
           and not equal(av[1], "declarations")
           and not equal(av[1], "constructors")
           and not equal(av[1], "primary-inits")))
@@ -1668,16 +1586,8 @@ main(int ac, char** av)
     writeEnums(&out, declarations);
   }
 
-  if (ac == 1 or equal(av[1], "op-enums")) {
-    writeOpEnums(&out, declarations);
-  }
-
   if (ac == 1 or equal(av[1], "enum-cases")) {
     writeEnumCases(&out, declarations);
-  }
-
-  if (ac == 1 or equal(av[1], "op-enum-cases")) {
-    writeOpEnumCases(&out, declarations);
   }
 
   if (ac == 1 or equal(av[1], "declarations")) {

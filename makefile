@@ -34,18 +34,22 @@ stdcpp-cflags = $(fast) $(cflags)
 type-headers = \
 	$(bld)/type-header.h \
 	$(bld)/type-enums.h \
-	$(bld)/type-op-enums.h \
 	$(bld)/type-enum-cases.h \
-	$(bld)/type-op-enum-cases.h \
 	$(bld)/type-declarations.h \
 	$(bld)/type-constructors.h \
 	$(bld)/type-primary-inits.h
-interpreter-headers = $(type-headers)
+interpreter-headers = \
+	$(type-headers) \
+	$(src)/heap.h \
+	$(src)/system.h
 interpreter-sources = \
-	$(src)/compile.cpp
+	$(src)/vm.cpp
 interpreter-objects = $(call cpp-objects,$(interpreter-sources),$(src))
 interpreter-cflags = $(slow) $(cflags)
 
+generator-headers = \
+	$(src)/input.h \
+	$(src)/output.h
 generator-sources = \
 	$(src)/type-generator.cpp
 generator-objects = $(call cpp-objects,$(generator-sources),$(src))
@@ -117,11 +121,14 @@ $(type-headers): %.h: $(src)/types.def $(generator-executable)
 	@echo "generating $(@)"
 	$(generator-executable) $(call gen-arg,$(@)) < $(<) > $(@)
 
-$(bld)/compile.o \
-$(bld)/test-compile.o \
-$(bld)/stress-compile.o \
-$(bld)/fast-compile.o: \
-		$(interpreter-headers)
+$(bld)/vm.o \
+$(bld)/test-vm.o \
+$(bld)/stress-vm.o \
+$(bld)/fast-vm.o: \
+	$(interpreter-headers)
+
+$(bld)/type-generator.o: \
+	$(generator-headers)
 
 $(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
