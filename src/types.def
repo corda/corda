@@ -1,16 +1,13 @@
 (type class
-  (uintptr_t id)
+  (uint32_t id)
+  (uint16_t fixedSize)
+  (uint16_t arrayElementSize)
+  (object objectMask)
   (object name)
   (object super)
-  (object objectMask)
   (object fieldTable)
   (object methodTable)
   (object staticTable))
-
-(type objectMask
-  (uint32_t maskLength)
-  (uint32_t arrayMaskLength)
-  (array uint32_t body))
 
 (pod field
   (uint16_t flags)

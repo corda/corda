@@ -39,8 +39,6 @@ class Object {
   typedef enum {
     Scalar,
     Array,
-    ConstantArray,
-    Constant,
     Pod,
     Type,
     Pair,
@@ -127,7 +125,6 @@ class Scalar : public Object {
   const char* typeName;
   const char* name;
   unsigned elementSize;
-  bool nogc;
   bool noassert;
   bool hide;
 
@@ -141,7 +138,6 @@ class Scalar : public Object {
     o->typeName = typeName;
     o->name = name;
     o->elementSize = size;
-    o->nogc = false;
     o->noassert = false;
     o->hide = false;
     return o;
@@ -175,7 +171,6 @@ arrayElementSize(Object* o)
 {
   switch (o->type) {
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Array*>(o)->elementSize;
 
   default:
@@ -207,37 +202,12 @@ arrayPositionString(Object* o)
   }
 }
 
-class ConstantArray : public Array {
- public:
-  unsigned length;
-
-  static ConstantArray* make(Object* owner, Object* typeObject,
-                             const char* typeName, const char* name,
-                             const char* lengthString,
-                             const char* positionString, unsigned elementSize,
-                             unsigned length)
-  {
-    ConstantArray* o = allocate<ConstantArray>();
-    o->type = Object::ConstantArray;
-    o->owner = owner;
-    o->typeObject = typeObject;
-    o->typeName = typeName;
-    o->name = name;
-    o->lengthString = lengthString;
-    o->elementSize = elementSize;
-    o->positionString = positionString;
-    o->length = length;
-    return o;
-  }  
-};
-
 Object*
 memberOwner(Object* o)
 {
   switch (o->type) {
   case Object::Scalar:
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Scalar*>(o)->owner;
 
   default:
@@ -251,7 +221,6 @@ memberTypeObject(Object* o)
   switch (o->type) {
   case Object::Scalar:
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Scalar*>(o)->typeObject;
 
   default:
@@ -265,7 +234,6 @@ memberTypeName(Object* o)
   switch (o->type) {
   case Object::Scalar:
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Scalar*>(o)->typeName;
 
   default:
@@ -279,7 +247,6 @@ memberName(Object* o)
   switch (o->type) {
   case Object::Scalar:
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Scalar*>(o)->name;
 
   default:
@@ -288,22 +255,11 @@ memberName(Object* o)
 }
 
 unsigned
-constantLength(Object* o)
-{
-  assert(o->type == Object::ConstantArray);
-  return static_cast<ConstantArray*>(o)->length;
-}
-
-unsigned
 memberSize(Object* o)
 {
   switch (o->type) {
   case Object::Scalar:
     return static_cast<Scalar*>(o)->elementSize;
-
-  case Object::ConstantArray:
-    return static_cast<ConstantArray*>(o)->length *
-      static_cast<ConstantArray*>(o)->elementSize;
 
   default:
     UNREACHABLE;
@@ -316,22 +272,7 @@ memberElementSize(Object* o)
   switch (o->type) {
   case Object::Scalar:
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Scalar*>(o)->elementSize;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-bool&
-memberNoGc(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-  case Object::ConstantArray:
-    return static_cast<Scalar*>(o)->nogc;
 
   default:
     UNREACHABLE;
@@ -344,7 +285,6 @@ memberNoAssert(Object* o)
   switch (o->type) {
   case Object::Scalar:
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Scalar*>(o)->noassert;
 
   default:
@@ -358,7 +298,6 @@ memberHide(Object* o)
   switch (o->type) {
   case Object::Scalar:
   case Object::Array:
-  case Object::ConstantArray:
     return static_cast<Scalar*>(o)->hide;
 
   default:
@@ -374,8 +313,6 @@ class Type : public Object {
   List members;
   List subtypes;
   bool hideConstructor;
-  bool op;
-  bool code;
 
   static Type* make(Object::ObjectType type, const char* name,
                     const char* shortName)
@@ -388,8 +325,6 @@ class Type : public Object {
     o->members.first = o->members.last = 0;
     o->subtypes.first = o->subtypes.last = 0;
     o->hideConstructor = false;
-    o->op = false;
-    o->code = false;
     return o;
   }  
 };
@@ -490,58 +425,6 @@ typeHideConstructor(Object* o)
   default:
     UNREACHABLE;
   }
-}
-
-bool&
-typeOp(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->op;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-bool&
-typeCode(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->code;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-class Constant : public Object {
- public:
-  const char* name;
-  const char* value;
-
-  static Constant* make(const char* name, const char* value) {
-    Constant* o = allocate<Constant>();
-    o->type = Object::Constant;
-    o->name = name;
-    o->value = value;
-    return o;
-  }
-};
-
-const char*
-constantName(Object* o)
-{
-  assert(o->type == Object::Constant);
-  return static_cast<Constant*>(o)->name;
-}
-
-const char*
-constant(Object* o)
-{
-  assert(o->type == Object::Constant);
-  return static_cast<Constant*>(o)->value;
 }
 
 class Number : public Object {
@@ -724,10 +607,6 @@ declaration(const char* name, Object* declarations)
       if (equal(name, typeName(o))) return o;
       break;
 
-    case Object::Constant:
-      if (equal(name, constantName(o))) return o;
-      break;
-
     default: UNREACHABLE;
     }
   }
@@ -759,9 +638,6 @@ class MemberIterator {
   unsigned size_;
   unsigned padding_;
   unsigned alignment_;
-  unsigned arrayLengthMember_;
-  unsigned arrayPositionMember_;
-  int dependency_;
 
   MemberIterator(Object* type, bool skipSupers = false):
     types(derivationChain(type)),
@@ -772,10 +648,7 @@ class MemberIterator {
     offset_(type->type == Object::Pod ? 0 : sizeof(void*)),
     size_(0),
     padding_(0),
-    alignment_(0),
-    arrayLengthMember_(0),
-    arrayPositionMember_(0),
-    dependency_(-1)
+    alignment_(0)
   { 
     while (skipSupers and hasMore() and this->type != type) next();
     padding_ = 0;
@@ -800,12 +673,8 @@ class MemberIterator {
     assert(hasMore());
 
     if (member) {
-      if (member->type == Object::Array) {
-        dependency_ = index_;
-        offset_ = 0;
-      } else {
-        offset_ += size_;
-      }
+      assert(member->type == Object::Scalar);
+      offset_ += size_;
     }
 
     member = car(members);
@@ -814,18 +683,13 @@ class MemberIterator {
     ++ index_;
 
     switch (member->type) {
-    case Object::Scalar: case Object::ConstantArray: {
-      arrayLengthMember_ = 0;
-      arrayPositionMember_ = 0;
+    case Object::Scalar: {
       size_ = memberSize(member);
       padding_ = pad(size_, alignment_);  
       alignment_ = (alignment_ + size_ + padding_) % sizeof(void*); 
     } break;
 
     case Object::Array: {
-      arrayLengthMember_ = findMember(type, arrayLengthString(member));
-      arrayPositionMember_ = arrayPositionString(member) ?
-        findMember(type, arrayPositionString(member)) : 0;
       size_ = 0x7FFFFFFF;
       padding_ = pad(memberElementSize(member), alignment_);
       alignment_ = 0;
@@ -837,13 +701,6 @@ class MemberIterator {
     offset_ += padding_;
 
     return member;
-  }
-
-  static unsigned findMember(Object* type, const char* name) {
-    for (MemberIterator it(type); it.hasMore();) {
-      if (equal(memberName(it.next()), name)) return it.index();
-    }
-    UNREACHABLE;
   }
 
   unsigned offset() {
@@ -864,18 +721,6 @@ class MemberIterator {
 
   unsigned index() {
     return index_;
-  }
-
-  unsigned arrayLengthMember() {
-    return arrayLengthMember_;
-  }
-
-  unsigned arrayPositionMember() {
-    return arrayPositionMember_;
-  }
-
-  int dependency() {
-    return dependency_;
   }
 
   unsigned alignment() {
@@ -934,19 +779,6 @@ sizeOf(const char* type, Object* declarations)
   }
 }
 
-int
-constant(const char* name, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    if (o->type == Type::Constant and equal(name, constantName(o)))
-      return atoi(constant(o));
-  }
-
-  fprintf(stderr, "unknown constant: %s\n", name);
-  abort();
-}
-
 Object*
 parseArray(Object::ObjectType type, Object* t, Object* p, Object* declarations)
 {
@@ -955,22 +787,9 @@ parseArray(Object::ObjectType type, Object* t, Object* p, Object* declarations)
   p = cdr(p);
   const char* name = string(car(p));
 
-  p = cdr(p);
-  const char* length = string(car(p));
-
-  p = cdr(p);
-  const char* position = p ? string(car(p)) : length;
-  
-  unsigned elementSize = sizeOf(typeName, declarations);
-  if (type == Object::ConstantArray) {
-    unsigned size = constant(length, declarations) * elementSize;
-    return ConstantArray::make(t, declaration(typeName, declarations),
-                               typeName, name, length, position, elementSize,
-                               size);
-  } else {
-    return Array::make(t, declaration(typeName, declarations),
-                       typeName, name, length, position, elementSize);
-  }
+  return Array::make(t, declaration(typeName, declarations),
+                     typeName, name, length, position,
+                     sizeOf(typeName, declarations));
 }
 
 Object*
@@ -979,12 +798,6 @@ parseMember(Object* t, Object* p, Object* declarations)
   const char* spec = string(car(p));
   if (equal(spec, "array")) {
     return parseArray(Object::Array, t, cdr(p), declarations);
-  } else if (equal(spec, "constant-array")) {
-    return parseArray(Object::ConstantArray, t, cdr(p), declarations);
-  } else if (equal(spec, "nogc")) {
-    Object* member = parseMember(t, cdr(p), declarations);
-    memberNoGc(member) = true;
-    return member;
   } else if (equal(spec, "noassert")) {
     Object* member = parseMember(t, cdr(p), declarations);
     memberNoAssert(member) = true;
@@ -1028,7 +841,6 @@ memberEqual(Object* a, Object* b)
     switch (a->type) {
     case Object::Scalar:
       return equal(memberTypeName(a), memberTypeName(b))
-        and memberNoGc(a) == memberNoGc(b)
         and memberNoAssert(a) == memberNoAssert(b)
         and memberHide(a) == memberHide(b);
 
@@ -1120,26 +932,8 @@ parseDeclaration(Object* p, Object* declarations)
     Object* t = parseType(Object::Type, cdr(p), declarations);
     typeOp(t) = true;
     return t;
-  } else if (equal(spec, "code")) {
-    const char* name = string(car(cdr(p)));
-    Type* t = Type::make(Object::Type, name, name);
-    typeSuper(t) = declaration("annotatedOp", declarations);
-    assert(typeSuper(t));
-    assert(typeSuper(t)->type == Object::Type);
-    addSubtype(typeSuper(t), t);
-    typeOp(t) = true;
-    typeCode(t) = true;
-    return t;
   } else if (equal(spec, "pod")) {
     return parseType(Object::Pod, cdr(p), declarations);
-  } else if (equal(spec, "constant")) {
-    p = cdr(p);
-    const char* name = string(car(p));
-
-    p = cdr(p);
-    const char* value = string(car(p));
-
-    return Constant::make(name, value);
   } else {
     fprintf(stderr, "unexpected declaration spec: %s\n", spec);
     abort();
@@ -1304,7 +1098,7 @@ typeBodyOffset(Object* type, Object* offset)
   while (it.hasMore()) {
     Object* m = it.next();
     switch (m->type) {
-    case Object::Scalar: case Object::ConstantArray: {
+    case Object::Scalar: {
       offset = cons(Number::make(it.space()), offset);
     } break;
 
@@ -1364,25 +1158,6 @@ writePods(Output* out, Object* declarations)
 }
 
 void
-writeConstants(Output* out, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Constant: {
-      out->write("const unsigned ");
-      out->write(capitalize(constantName(o)));
-      out->write(" = ");
-      out->write(constant(o));
-      out->write(";\n\n");
-    } break;
-
-    default: break;
-    }
-  }
-}
-
-void
 writeAccessors(Output* out, Object* declarations)
 {
   for (Object* p = declarations; p; p = cdr(p)) {
@@ -1395,7 +1170,7 @@ writeAccessors(Output* out, Object* declarations)
       for (MemberIterator it(o, true); it.hasMore();) {
         Object* m = it.next();
         switch (m->type) {
-        case Object::Scalar: case Object::ConstantArray: {
+        case Object::Scalar: {
           if (it.padding()) offset = cons(Number::make(it.padding()), offset);
           writeAccessor(out, m, offset);
           if (memberNoAssert(m)) writeAccessor(out, m, offset, true);
@@ -1511,8 +1286,7 @@ typeProtectedMemberCount(Object* o)
   for (MemberIterator it(o); it.hasMore();) {
     Object* m = it.next();
     if (m->type == Object::Scalar
-        and equal(memberTypeName(m), "object")
-        and not memberNoGc(m))
+        and equal(memberTypeName(m), "object"))
     {
       ++ count;
     }
@@ -1527,8 +1301,7 @@ writeProtected(Output* out, Object* o)
   for (MemberIterator it(o); it.hasMore();) {
     Object* m = it.next();
     if (m->type == Object::Scalar
-        and equal(memberTypeName(m), "object")
-        and not memberNoGc(m))
+        and equal(memberTypeName(m), "object"))
     {
       if (wrote) {
         out->write(", ");
@@ -1709,94 +1482,6 @@ writeDeclarations(Output* out, Object* declarations)
     default: break;
     }
   }  
-
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      if (typeCode(o)) {
-        out->write("object ");
-        out->write(opName(typeName(o)));
-        out->write("Code;\n");        
-      }
-    } break;
-
-    default: break;
-    }
-  }  
-}
-
-unsigned
-podObjectFieldMask(Object* o)
-{
-  unsigned mask = 0;
-  if (o->type == Object::Pod) {
-    for (MemberIterator it(o); it.hasMore();) {
-      Object* m = it.next();
-      assert(m->type == Object::Scalar);
-      if (equal(memberTypeName(m), "object") and not memberNoGc(m)) {
-        assert(it.offset() % sizeof(void*) == 0);
-        unsigned i = it.offset() / sizeof(void*);
-        assert(i < (sizeof(unsigned) * 8));
-        mask |= static_cast<unsigned>(1) << i;
-      }
-    }
-  }
-  return mask;
-}
-
-bool
-podHasObjectFields(Object* o)
-{
-  if (o->type == Object::Pod) {
-    for (MemberIterator it(o); it.hasMore();) {
-      Object* m = it.next();
-      assert(m->type == Object::Scalar);
-      if (equal(memberTypeName(m), "object") and not memberNoGc(m)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-const char*
-memberEnum(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar: {
-    if (equal(memberTypeName(o), "object")) {
-      if (memberNoGc(o)) {
-        return "OtherMember";
-      } else {
-        return "ObjectMember";
-      }
-    } else if (namesPointer(memberTypeName(o))) {
-      return "PointerMember";
-    } else {
-      return "OtherMember";
-    }
-  } break;
-
-  case Object::ConstantArray: {
-    return "OtherMember";
-  } break;
-
-  case Object::Array: {
-    if (equal(memberTypeName(o), "object")) {
-      return "ObjectArrayMember";
-    } else if (memberTypeObject(o)
-               and memberTypeObject(o)->type == Object::Pod
-               and podHasObjectFields(memberTypeObject(o)))
-    {
-      return "ObjectPodArrayMember";
-    } else {
-      return "ArrayMember";
-    }
-  } break;
-
-  default: UNREACHABLE;
-  }
 }
 
 unsigned
@@ -1811,6 +1496,91 @@ memberCount(Object* o)
 }
 
 void
+set(uint32_t* mask, unsigned index)
+{
+  if (index < 32) {
+    mask |= 1 << index;
+  } else {
+    UNREACHABLE;
+  }
+}
+
+unsigned
+typeFixedSize(Object* type)
+{
+  unsigned length = 0;
+  for (MemberIterator it(o); it.hasMore();) {
+    Object* m = it.next();
+    switch (m->type) {
+    case Object::Scalar: {
+      length = pad(it.offset() + it.space());
+    } break;
+
+    case Object::Array: break;
+
+    default: UNREACHABLE;
+    }
+  }
+  return length;
+}
+
+unsigned
+typeArrayElementSize(Object* type)
+{
+  for (MemberIterator it(o); it.hasMore();) {
+    Object* m = it.next();
+    switch (m->type) {
+    case Object::Scalar: break;
+
+    case Object::Array: {
+      return memberElementSize(m);
+    } break;
+
+    default: UNREACHABLE;
+    }
+  }
+  return 0;
+}
+
+uint32_t
+typeObjectMask(Object* type)
+{
+  assert(typeFixedMaskLength(type) + typeArrayElementMaskLength(type) < 32);
+
+  uint32_t mask = 0;
+
+  for (MemberIterator it(o); it.hasMore();) {
+    Object* m = it.next();
+    unsigned offset = it.offset() / sizeof(void*);
+
+    switch (m->type) {
+    case Object::Scalar: {
+      if (equal(memberTypeName(m), "object")) {
+        set(&mask, offset);
+      }
+    } break;
+
+    case Object::Array: {
+      if (equal(memberTypeName(m), "object")) {
+        set(&mask, offset);
+      } else if (memberTypeObject(m)
+                 and memberTypeObject(m)->type == Object::Pod)
+      {
+        for (MemberIterator it(m); it.hasMore();) {
+          Object* m = it.next();
+          if (equal(memberTypeName(m), "object")) {
+            set(&mask, offset + (it.offset() / sizeof(void*)));
+          }
+        }  
+      }
+    } break;
+
+    default: UNREACHABLE;
+    }
+  }
+}
+
+void
 writePrimaryInitialization(Output* out, Object* type)
 {
   unsigned memberCount = ::memberCount(type);
@@ -1819,13 +1589,7 @@ writePrimaryInitialization(Output* out, Object* type)
   out->write("{\n");
 
   if (typeObjectMask(type)) {
-    out->write("  object mask = makeObjectMask(");
-    out->write(typeMaskLength(type));
-    out->write(", ");
-    out->write(typeArrayMaskLength(type));
-    out->write(", ");
-    out->write(typeObjectMaskLengthIn32BitWords(type));
-    out->write(");\n");
+    out->write("  object mask = makeIntArray(t, 1);\n");
 
     out->write("  objectMaskBody(mask)[0] = ");
     out->write(typeObjectMask(type));
@@ -1839,7 +1603,11 @@ writePrimaryInitialization(Output* out, Object* type)
   out->write("Class = makeClass");
   out->write("(t, ");
   out->write(capitalize(typeName(type)));
-  out->write("Type, 0, 0, mask, 0, 0, 0);\n");
+  out->write("Type, ");
+  out->write(typeFixedSize(type));
+  out->write(", ");
+  out->write(typeArrayElementSize(type));
+  out->write(", mask, 0, 0, 0, 0, 0);\n");
 
   out->write("}\n\n");
 }
@@ -1892,7 +1660,6 @@ main(int ac, char** av)
 
   if (ac == 1 or equal(av[1], "header")) {
     writePods(&out, declarations);
-    writeConstants(&out, declarations);
     writeAccessors(&out, declarations);
     writeConstructorDeclarations(&out, declarations);
   }
