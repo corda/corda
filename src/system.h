@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#define ACQUIRE(x) System::MonitorResource MAKE_NAME(monitorResource_) (x)
+
 class System {
  public:
   typedef int Status;
@@ -22,6 +24,15 @@ class System {
     virtual void notify() = 0;
     virtual void notifyAll() = 0;
     virtual void dispose() = 0;
+  };
+
+  class MonitorResource {
+   public:
+    MonitorResource(Monitor* m): m(m) { m->acquire(); }
+    ~MonitorResource() { m->release(); }
+
+   private:
+    Monitor* m;
   };
 
   class File {

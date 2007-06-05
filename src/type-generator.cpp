@@ -1006,12 +1006,12 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   out->write(member->type == Object::Scalar ? "&" : "*");
   out->write("\n");
   writeAccessorName(out, member, true, unsafe);
-  out->write("(Thread* t, ");
   if (memberOwner(member)->type == Object::Pod) {
+    out->write("(");
     out->write(capitalize(::typeName(memberOwner(member))));
     out->write("*");
   } else {
-    out->write("object");
+    out->write("(Thread* t, object");
   }
   out->write(" o");
   if (member->type != Object::Scalar) {
