@@ -1062,8 +1062,8 @@ run(Thread* t)
     
     parameterCount = methodParameterCount(method);
     if (t->stack[t->sp - parameterCount]) {    
-      t->code = methodCode
-        (findInterfaceMethod(t, method, t->stack[t->sp - parameterCount]));
+      t->code = findInterfaceMethod
+        (t, method, t->stack[t->sp - parameterCount]);
       if (t->exception) goto throw_;
 
       goto invoke;
@@ -1084,11 +1084,11 @@ run(Thread* t)
     parameterCount = methodParameterCount(method);
     if (t->stack[t->sp - parameterCount]) {
       if (isSpecialMethod(method, t->stack[t->sp - parameterCount])) {
-        t->code = methodCode
-          (findSpecialMethod(t, method, t->stack[t->sp - parameterCount]));
+        t->code = findSpecialMethod
+          (t, method, t->stack[t->sp - parameterCount]);
         if (t->exception) goto throw_;
       } else {
-        t->code = methodCode(t, method);
+        t->code = method;
       }
       
       goto invoke;
@@ -1114,7 +1114,7 @@ run(Thread* t)
     }
 
     parameterCount = methodParameterCount(method);
-    t->code = methodCode(t, method);
+    t->code = method;
   } goto invoke;
 
   case invokevirtual: {
@@ -1127,8 +1127,7 @@ run(Thread* t)
     
     parameterCount = methodParameterCount(method);
     if (t->stack[t->sp - parameterCount]) {
-      t->code = methodCode
-        (t, findVirtualMethod(t, method, t->stack[t->sp - parameterCount]));
+      t->code = findVirtualMethod(t, method, t->stack[t->sp - parameterCount]);
       if (t->exception) goto throw_;
       
       goto invoke;
@@ -1626,18 +1625,19 @@ run(Thread* t)
   }
 
  invoke:
-  if (codeMaxStack(t, t->code) + t->sp - parameterCount > Thread::StackSize) {
+  if (codeMaxStack(t, methodCode(t, t->code)) + t->sp - parameterCount
+      > Thread::StackSize)
+  {
     t->exception = makeStackOverflowException(t, 0);
     goto throw_;      
   }
   
   frameIp(t, t->frame) = ip;
   
-  t->frame = makeFrame(t, t->code, t->frame);
-  memcpy(frameLocals(t, t->frame),
-         t->stack + t->sp - parameterCount,
-         parameterCount);
   t->sp -= parameterCount;
+  t->frame = makeFrame(t, t->code, t->frame, 0, t->sp,
+                       codeMaxLocals(t, methodCode(t, t->code)));
+  t->vm->sys->copy(t->stack + t->sp, frameLocals(t, t->frame), parameterCount);
   ip = 0;
   goto loop;
 
@@ -1646,8 +1646,8 @@ run(Thread* t)
     t->code = methodCode(t, frameMethod(t, t->frame));
     object eht = codeExceptionHandlerTable(t, t->code);
     if (eht) {
-      for (unsigned i = 0; i < exceptionHandleTableLength(t, eht); ++i) {
-        ExceptionHandler* eh = exceptionHandlerTableBody(t, eht)[i];
+      for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
+        ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
         uint16_t catchType = exceptionHandlerCatchType(eh);
         if (catchType == 0 or
             instanceOf(rawArrayBody(t, codePool(t, t->code))[catchType],
@@ -1663,8 +1663,9 @@ run(Thread* t)
     }
   }
 
-  t->code = defaultExceptionHandler(t);
-  t->frame = makeFrame(t, t->code);
+  object method = defaultExceptionHandler(t);
+  t->code = methodCode(t, method);
+  t->frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, t->code));
   t->sp = 0;
   ip = 0;
   push(t, t->exception);
