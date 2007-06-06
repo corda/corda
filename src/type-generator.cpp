@@ -340,6 +340,10 @@ addMember(Object* o, Object* member)
 {
   switch (o->type) {
   case Object::Type: case Object::Pod:
+    if (member->type == Object::Array) {
+      static_cast<Type*>(o)->members.append
+        (Scalar::make(o, 0, "uint32_t", "length", sizeof(uint32_t)));
+    }
     static_cast<Type*>(o)->members.append(member);
     break;
 

@@ -9,24 +9,16 @@
   (object methodTable)
   (object staticTable))
 
-(pod field
+(type field
   (uint16_t flags)
   (object name)
   (object class))
 
-(type fieldTable
-  (object index)
-  (array field body))
-
-(pod method
+(type method
   (uint16_t flags)
   (object name)
   (object spec)
   (object code))
-
-(type methodTable
-  (object index)
-  (array method body))
 
 (pod exceptionHandler
   (uint16_t start)
@@ -62,19 +54,22 @@
   (array char value))
 
 (type byte
-  (uint8_t value))
+  (int8_t value))
 
 (type boolean
   (extends byte))
 
 (type short
+  (int16_t value))
+
+(type char
   (uint16_t value))
 
 (type int
-  (uint32_t value))
+  (int32_t value))
 
 (type long
-  (uint64_t value))
+  (int64_t value))
 
 (type float
   (uint32_t value))
@@ -90,22 +85,22 @@
   (array object body))
 
 (type byteArray
-  (array uint8_t body))
+  (array int8_t body))
 
 (type booleanArray
   (extends byteArray))
 
 (type shortArray
-  (array uint16_t body))
+  (array int16_t body))
 
 (type charArray
   (array uint16_t body))
 
 (type intArray
-  (array uint32_t body))
+  (array int32_t body))
 
 (type longArray
-  (array uint64_t body))
+  (array int64_t body))
 
 (type floatArray
   (array uint32_t body))
