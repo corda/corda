@@ -2,6 +2,9 @@
 #define COMMON_H
 
 #include "stdint.h"
+#include "stdarg.h"
+#include "string.h"
+#include "stdio.h"
 
 #define NO_RETURN __attribute__((noreturn))
 #define UNLIKELY(v) __builtin_expect(v, 0)

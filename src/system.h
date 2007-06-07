@@ -63,9 +63,7 @@ class System {
 
   virtual bool success(Status) = 0;
   virtual void* allocate(unsigned size) = 0;
-  virtual void zero(void*, unsigned size) = 0;
   virtual void free(void*) = 0;
-  virtual void copy(void* src, void* dst, unsigned size);
   virtual Status start(Thread*) = 0;
   virtual Status make(Monitor**) = 0;
   virtual Status open(File**, const char* path, int flags, int mode) = 0;

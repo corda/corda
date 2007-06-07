@@ -49,8 +49,6 @@
   (object spec))
 
 (type string
-  (uint32_t hash)
-  (uint32_t id)
   (array char value))
 
 (type byte

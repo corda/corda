@@ -2,6 +2,10 @@
 #include "system.h"
 #include "heap.h"
 
+#define PROTECTED(thread, name, value)                          \
+  Protector MAKE_NAME(protector_) (thread, value);              \
+  object& name(thread->stack[thread->sp - 1]);
+
 namespace {
 
 typedef void* object;
@@ -36,6 +40,7 @@ class Machine {
   unsigned activeCount;
   unsigned liveCount;
   System::Monitor* stateLock;
+  object jstringClass;
 };
 
 class Thread {
@@ -80,7 +85,7 @@ assert(Thread* t, bool v)
 void
 init(Machine* m, System* sys, Heap* heap)
 {
-  sys->zero(m, sizeof(Machine));
+  memset(m, 0, sizeof(Machine));
   m->sys = sys;
   m->heap = heap;
   if (not sys->success(sys->make(&(m->stateLock)))) {
@@ -97,7 +102,7 @@ dispose(Machine* m)
 void
 init(Thread* t, Machine* m)
 {
-  m->sys->zero(m, sizeof(Thread));
+  memset(m, 0, sizeof(Thread));
   t->vm = m;
   m->rootThread = t;
   t->state = Thread::NoState;
@@ -290,6 +295,60 @@ pop(Thread* t)
   return t->stack[--(t->sp)];
 }
 
+class Protector {
+ public:
+  Protector(Thread* t, object value): t(t) {
+    if (t->sp >= Thread::StackSize) abort(t);
+    push(t, value);
+  }
+
+  ~Protector() {
+    pop(t);
+  }
+
+ private:
+  Thread* t;
+};
+
+inline object
+make(Thread* t, object class_)
+{
+  unsigned size = classFixedSize(t, class_);
+  object instance = allocate(t, size);
+  *static_cast<object*>(instance) = class_;
+  memset(static_cast<object*>(instance) + sizeof(object), 0,
+         size - sizeof(object));
+  return instance;
+}
+
+template <class T>
+inline T&
+cast(object p, unsigned offset)
+{
+  return *reinterpret_cast<T*>(static_cast<uint8_t*>(p) + offset);
+}
+
+object
+makeJString(Thread* t, const char* format, ...)
+{
+  static const unsigned Size = 256;
+  char buffer[Size];
+  
+  va_list a;
+  va_start(a, format);
+  vsnprintf(buffer, Size - 1, format, a);
+  va_end(a);
+
+  PROTECTED(t, s, makeString(t, strlen(buffer) + 1));
+  memcpy(stringValue(t, s), buffer, stringLength(t, s));
+
+  object r = make(t, t->vm->jstringClass);
+  cast<object>(r, sizeof(void*)) = s;
+  cast<int32_t>(r, sizeof(void*) * 2) = 0;
+  cast<int32_t>(r, (sizeof(void*) * 2) + sizeof(int32_t)) = stringLength(t, s);
+  return r;
+}
+
 object
 run(Thread* t)
 {
@@ -386,7 +445,7 @@ run(Thread* t)
       if (t->exception) goto throw_;
       
       object array = makeObjectArray(t, class_, c);
-      t->vm->sys->zero(objectArrayBody(t, array), c * 4);
+      memset(objectArrayBody(t, array), 0, c * 4);
       
       push(t, array);
     } else {
@@ -418,8 +477,7 @@ run(Thread* t)
         push(t, makeInt(t, objectArrayLength(t, array)));
       } else {
         // for all other array types, the length follow the class pointer.
-        push(t, makeInt(t, reinterpret_cast<uint32_t&>
-                        (static_cast<uintptr_t*>(array)[1])));
+        push(t, makeInt(t, cast<uint32_t>(array, sizeof(void*))));
       }
     } else {
       t->exception = makeNullPointerException(t, 0);
@@ -1379,13 +1437,7 @@ run(Thread* t)
       goto invoke;
     }
 
-    unsigned size = instanceSize(class_);
-    object instance = allocate(t, size);
-    *static_cast<object*>(instance) = class_;
-    t->vm->sys->zero(static_cast<object*>(instance) + sizeof(object),
-                     size - sizeof(object));
-    
-    push(t, instance);
+    push(t, make(t, class_));
   } goto loop;
 
   case newarray: {
@@ -1442,8 +1494,8 @@ run(Thread* t)
       default: abort(t);
       }
       
-      t->vm->sys->zero(static_cast<object*>(instance) + (sizeof(object) * 2),
-                       c * factor);
+      memset(static_cast<object*>(instance) + (sizeof(object) * 2), 0
+             c * factor);
       
       push(t, array);
     } else {
@@ -1637,7 +1689,7 @@ run(Thread* t)
   t->sp -= parameterCount;
   t->frame = makeFrame(t, t->code, t->frame, 0, t->sp,
                        codeMaxLocals(t, methodCode(t, t->code)));
-  t->vm->sys->copy(t->stack + t->sp, frameLocals(t, t->frame), parameterCount);
+  memcpy(frameLocals(t, t->frame), t->stack + t->sp, parameterCount);
   ip = 0;
   goto loop;
 
