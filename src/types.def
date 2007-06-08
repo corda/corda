@@ -48,14 +48,50 @@
   (object name)
   (object spec))
 
+(type trace
+  (object method)
+  (uint32_t ip)
+  (object next))
+
 (type string
-  (array char value))
+  (object bytes)
+  (int32_t offset)
+  (int32_t length)
+  (int32_t hash))
+
+(type throwable
+  (object message)
+  (object trace))
+
+(type exception
+  (extends throwable))
+
+(type runtimeException
+  (extends exception))
+
+(type nullPointerException
+  (extends runtimeException))
+
+(type arrayIndexOutOfBoundsException
+  (extends runtimeException))
+
+(type negativeArrayStoreException
+  (extends runtimeException))
+
+(type classCastException
+  (extends runtimeException))
+
+(type error
+  (extends throwable))
+
+(type StackOverflowError
+  (extends error))
 
 (type byte
   (int8_t value))
 
 (type boolean
-  (extends byte))
+  (int8_t byte))
 
 (type short
   (int16_t value))
@@ -86,7 +122,7 @@
   (array int8_t body))
 
 (type booleanArray
-  (extends byteArray))
+  (array int8_t body))
 
 (type shortArray
   (array int16_t body))
