@@ -39,6 +39,7 @@ class Machine {
   unsigned activeCount;
   unsigned liveCount;
   System::Monitor* stateLock;
+  System::Monitor* heapLock;
   object jstringClass;
 };
 
@@ -78,6 +79,7 @@ class Thread {
   object frame;
   object code;
   object exception;
+  unsigned ip;
   unsigned sp;
   unsigned heapIndex;
   object stack[StackSize];
@@ -103,7 +105,10 @@ init(Machine* m, System* sys, Heap* heap)
   memset(m, 0, sizeof(Machine));
   m->sys = sys;
   m->heap = heap;
-  if (not sys->success(sys->make(&(m->stateLock)))) {
+
+  if (not sys->success(sys->make(&(m->stateLock))) or
+      not sys->success(sys->make(&(m->heapLock))))
+  {
     sys->abort();
   }
 }
@@ -112,6 +117,7 @@ void
 dispose(Machine* m)
 {
   m->stateLock->dispose();
+  m->heapLock->dispose();
 }
 
 void
@@ -303,6 +309,13 @@ allocate(Thread* t, unsigned size)
 }
 
 inline void
+set(Thread* t, object& target, object value)
+{
+  target = value;
+  t->vm->heap->check(&target, t->vm->heapLock);
+}
+
+inline void
 push(Thread* t, object o)
 {
   t->stack[(t->sp)++] = o;
@@ -323,6 +336,7 @@ top(Thread* t)
 inline object
 make(Thread* t, object class_)
 {
+  PROTECT(t, class_);
   unsigned size = classFixedSize(t, class_);
   object instance = allocate(t, size);
   *static_cast<object*>(instance) = class_;
@@ -338,12 +352,6 @@ cast(object p, unsigned offset)
   return *reinterpret_cast<T*>(static_cast<uint8_t*>(p) + offset);
 }
 
-void
-my_vsnprintf(char* buffer, unsigned size, const char* format, va_list a)
-{
-  // todo
-}
-
 object
 makeString(Thread* t, const char* format, ...)
 {
@@ -352,7 +360,7 @@ makeString(Thread* t, const char* format, ...)
   
   va_list a;
   va_start(a, format);
-  my_vsnprintf(buffer, Size - 1, format, a);
+  vsnprintf(buffer, Size - 1, format, a);
   va_end(a);
 
   object s = makeByteArray(t, strlen(buffer) + 1);
@@ -366,6 +374,7 @@ makeTrace(Thread* t)
 {
   object trace = 0;
   PROTECT(t, trace);
+  frameIp(t, t->frame) = t->ip;
   for (; t->frame; t->frame = frameNext(t, t->frame)) {
     trace = makeTrace
       (t, frameMethod(t, t->frame), frameIp(t, t->frame), trace);
@@ -412,11 +421,16 @@ makeStackOverflowError(Thread* t)
 object
 run(Thread* t)
 {
-  unsigned ip = 0;
+  unsigned& ip = t->ip;
+  unsigned& sp = t->sp;
+  object& code = t->code;
+  object& frame = t->frame;
+  object& exception = t->exception;
+  object* stack = t->stack;
   unsigned parameterCount = 0;
 
  loop:
-  switch (codeBody(t, t->code)[ip++]) {
+  switch (codeBody(t, code)[ip++]) {
   case aaload: {
     object index = pop(t);
     object array = pop(t);
@@ -430,11 +444,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     objectArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -453,11 +467,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     objectArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -469,31 +483,31 @@ run(Thread* t)
   case aload:
   case iload:
   case lload: {
-    push(t, frameLocals(t, t->frame)[codeBody(t, t->code)[ip++]]);
+    push(t, frameLocals(t, frame)[codeBody(t, code)[ip++]]);
   } goto loop;
 
   case aload_0:
   case iload_0:
   case lload_0: {
-    push(t, frameLocals(t, t->frame)[0]);
+    push(t, frameLocals(t, frame)[0]);
   } goto loop;
 
   case aload_1:
   case iload_1:
   case lload_1: {
-    push(t, frameLocals(t, t->frame)[1]);
+    push(t, frameLocals(t, frame)[1]);
   } goto loop;
 
   case aload_2:
   case iload_2:
   case lload_2: {
-    push(t, frameLocals(t, t->frame)[2]);
+    push(t, frameLocals(t, frame)[2]);
   } goto loop;
 
   case aload_3:
   case iload_3:
   case lload_3: {
-    push(t, frameLocals(t, t->frame)[3]);
+    push(t, frameLocals(t, frame)[3]);
   } goto loop;
 
   case anewarray: {
@@ -501,12 +515,12 @@ run(Thread* t)
     int32_t c = intValue(t, count);
 
     if (LIKELY(c >= 0)) {
-      uint8_t index1 = codeBody(t, t->code)[ip++];
-      uint8_t index2 = codeBody(t, t->code)[ip++];
+      uint8_t index1 = codeBody(t, code)[ip++];
+      uint8_t index2 = codeBody(t, code)[ip++];
       uint16_t index = (index1 << 8) | index2;
       
-      object class_ = resolveClass(t, codePool(t, t->code), index);
-      if (UNLIKELY(t->exception)) goto throw_;
+      object class_ = resolveClass(t, codePool(t, code), index);
+      if (UNLIKELY(exception)) goto throw_;
       
       object array = makeObjectArray(t, class_, c);
       memset(objectArrayBody(t, array), 0, c * 4);
@@ -514,7 +528,7 @@ run(Thread* t)
       push(t, array);
     } else {
       object message = makeString(t, "%d", c);
-      t->exception = makeNegativeArrayStoreException(t, message);
+      exception = makeNegativeArrayStoreException(t, message);
       goto throw_;
     }
   } goto loop;
@@ -522,14 +536,14 @@ run(Thread* t)
   case areturn:
   case ireturn:
   case lreturn: {
-    t->frame = frameNext(t, t->frame);
-    if (t->frame) {
-      t->code = methodCode(t, frameMethod(t, t->frame));
-      ip = frameIp(t, t->frame);
+    frame = frameNext(t, frame);
+    if (frame) {
+      code = methodCode(t, frameMethod(t, frame));
+      ip = frameIp(t, frame);
       goto loop;
     } else {
       object value = pop(t);
-      t->code = 0;
+      code = 0;
       return value;
     }
   } goto loop;
@@ -544,7 +558,7 @@ run(Thread* t)
         push(t, makeInt(t, cast<uint32_t>(array, sizeof(void*))));
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } abort(t);
@@ -553,41 +567,41 @@ run(Thread* t)
   case istore:
   case lstore: {
     object value = pop(t);
-    set(t, frameLocals(t, t->frame)[codeBody(t, t->code)[ip++]], value);
+    set(t, frameLocals(t, frame)[codeBody(t, code)[ip++]], value);
   } goto loop;
 
   case astore_0:
   case istore_0:
   case lstore_0: {
     object value = pop(t);
-    set(t, frameLocals(t, t->frame)[0], value);
+    set(t, frameLocals(t, frame)[0], value);
   } goto loop;
 
   case astore_1:
   case istore_1:
   case lstore_1: {
     object value = pop(t);
-    set(t, frameLocals(t, t->frame)[1], value);
+    set(t, frameLocals(t, frame)[1], value);
   } goto loop;
 
   case astore_2:
   case istore_2:
   case lstore_2: {
     object value = pop(t);
-    set(t, frameLocals(t, t->frame)[2], value);
+    set(t, frameLocals(t, frame)[2], value);
   } goto loop;
 
   case astore_3:
   case istore_3:
   case lstore_3: {
     object value = pop(t);
-    set(t, frameLocals(t, t->frame)[3], value);
+    set(t, frameLocals(t, frame)[3], value);
   } goto loop;
 
   case athrow: {
-    t->exception = pop(t);
-    if (UNLIKELY(t->exception == 0)) {
-      t->exception = makeNullPointerException(t);      
+    exception = pop(t);
+    if (UNLIKELY(exception == 0)) {
+      exception = makeNullPointerException(t);      
     }
     goto throw_;
   } abort(t);
@@ -605,11 +619,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     byteArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -628,17 +642,17 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     byteArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
 
   case bipush: {
-    push(t, makeInt(t, codeBody(t, t->code)[ip++]));
+    push(t, makeInt(t, codeBody(t, code)[ip++]));
   } goto loop;
 
   case caload: {
@@ -654,11 +668,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     charArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -677,38 +691,38 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     charArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
 
   case checkcast: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
 
-    if (t->stack[t->sp - 1]) {
+    if (stack[sp - 1]) {
       uint16_t index = (index1 << 8) | index2;
       
-      object class_ = resolveClass(t, codePool(t, t->code), index);
-      if (UNLIKELY(t->exception)) goto throw_;
+      object class_ = resolveClass(t, codePool(t, code), index);
+      if (UNLIKELY(exception)) goto throw_;
 
-      if (not instanceOf(t, class_, t->stack[t->sp - 1])) {
+      if (not instanceOf(t, class_, stack[sp - 1])) {
         object message = makeString
-          (t, "%S as %S",
-           className(t, objectClass(t->stack[t->sp - 1])),
-           className(t, class_));
-        t->exception = makeClassCastException(t, message);
+          (t, "%s as %s",
+           byteArrayBody(t, className(t, objectClass(stack[sp - 1]))),
+           byteArrayBody(t, className(t, class_)));
+        exception = makeClassCastException(t, message);
         goto throw_;
       }
     }
   } goto loop;
 
   case dup: {
-    object value = t->stack[t->sp - 1];
+    object value = stack[sp - 1];
     push(t, value);
   } goto loop;
 
@@ -733,11 +747,11 @@ run(Thread* t)
   } goto loop;
 
   case dup2: {
-    object first = t->stack[t->sp - 1];
+    object first = stack[sp - 1];
     if (isLongOrDouble(first)) {
       push(t, first);
     } else {
-      object second = t->stack[t->sp - 2];
+      object second = stack[sp - 2];
       push(t, second);
       push(t, first);
     }
@@ -800,30 +814,30 @@ run(Thread* t)
   case getfield: {
     object instance = pop(t);
     if (LIKELY(instance)) {
-      uint8_t index1 = codeBody(t, t->code)[ip++];
-      uint8_t index2 = codeBody(t, t->code)[ip++];
+      uint8_t index1 = codeBody(t, code)[ip++];
+      uint8_t index2 = codeBody(t, code)[ip++];
       uint16_t index = (index1 << 8) | index2;
     
-      object field = resolveField(t, codePool(t, t->code), index);
-      if (UNLIKELY(t->exception)) goto throw_;
+      object field = resolveField(t, codePool(t, code), index);
+      if (UNLIKELY(exception)) goto throw_;
       
       push(t, getField(instance, field));
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
 
   case getstatic: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
 
-    object field = resolveField(t, codePool(t, t->code), index);
-    if (UNLIKELY(t->exception)) goto throw_;
+    object field = resolveField(t, codePool(t, code), index);
+    if (UNLIKELY(exception)) goto throw_;
 
     if (not classInitialized(fieldClass(t, field))) {
-      t->code = classInitializer(fieldClass(t, field));
+      code = classInitializer(fieldClass(t, field));
       ip -= 3;
       parameterCount = 0;
       goto invoke;
@@ -833,17 +847,17 @@ run(Thread* t)
   } goto loop;
 
   case goto_: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     ip = (ip - 1) + ((offset1 << 8) | offset2);
   } goto loop;
     
   case goto_w: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
-    uint8_t offset3 = codeBody(t, t->code)[ip++];
-    uint8_t offset4 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset3 = codeBody(t, code)[ip++];
+    uint8_t offset4 = codeBody(t, code)[ip++];
 
     ip = (ip - 1)
       + ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
@@ -893,11 +907,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     intArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -923,11 +937,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     intArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -964,8 +978,8 @@ run(Thread* t)
   } goto loop;
 
   case if_acmpeq: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -976,8 +990,8 @@ run(Thread* t)
   } goto loop;
 
   case if_acmpne: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -988,8 +1002,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpeq: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -1000,8 +1014,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpne: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -1012,8 +1026,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpgt: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -1024,8 +1038,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpge: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -1036,8 +1050,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmplt: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -1048,8 +1062,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmple: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object b = pop(t);
     object a = pop(t);
@@ -1060,8 +1074,8 @@ run(Thread* t)
   } goto loop;
 
   case ifeq: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1071,8 +1085,8 @@ run(Thread* t)
   } goto loop;
 
   case ifne: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1082,8 +1096,8 @@ run(Thread* t)
   } goto loop;
 
   case ifgt: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1093,8 +1107,8 @@ run(Thread* t)
   } goto loop;
 
   case ifge: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1104,8 +1118,8 @@ run(Thread* t)
   } goto loop;
 
   case iflt: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1115,8 +1129,8 @@ run(Thread* t)
   } goto loop;
 
   case ifle: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1126,8 +1140,8 @@ run(Thread* t)
   } goto loop;
 
   case ifnonnull: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1137,8 +1151,8 @@ run(Thread* t)
   } goto loop;
 
   case ifnull: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     object v = pop(t);
     
@@ -1148,11 +1162,11 @@ run(Thread* t)
   } goto loop;
 
   case iinc: {
-    uint8_t index = codeBody(t, t->code)[ip++];
-    int8_t c = codeBody(t, t->code)[ip++];
+    uint8_t index = codeBody(t, code)[ip++];
+    int8_t c = codeBody(t, code)[ip++];
     
-    int32_t v = intValue(t, frameLocals(t, t->frame)[index]);
-    frameLocals(t, t->frame)[index] = makeInt(t, v + c);
+    int32_t v = intValue(t, frameLocals(t, frame)[index]);
+    frameLocals(t, frame)[index] = makeInt(t, v + c);
   } goto loop;
 
   case imul: {
@@ -1169,16 +1183,16 @@ run(Thread* t)
   } goto loop;
 
   case instanceof: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
 
-    if (t->stack[t->sp - 1]) {
+    if (stack[sp - 1]) {
       uint16_t index = (index1 << 8) | index2;
       
-      object class_ = resolveClass(t, codePool(t, t->code), index);
-      if (UNLIKELY(t->exception)) goto throw_;
+      object class_ = resolveClass(t, codePool(t, code), index);
+      if (UNLIKELY(exception)) goto throw_;
 
-      if (instanceOf(t, class_, t->stack[t->sp - 1])) {
+      if (instanceOf(t, class_, stack[sp - 1])) {
         push(t, makeInt(t, 1));
       } else {
         push(t, makeInt(t, 0));
@@ -1189,88 +1203,86 @@ run(Thread* t)
   } goto loop;
 
   case invokeinterface: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
       
     ip += 2;
 
-    object method = resolveMethod(t, codePool(t, t->code), index);
-    if (UNLIKELY(t->exception)) goto throw_;
+    object method = resolveMethod(t, codePool(t, code), index);
+    if (UNLIKELY(exception)) goto throw_;
     
     parameterCount = methodParameterCount(method);
-    if (LIKELY(t->stack[t->sp - parameterCount])) {
-      t->code = findInterfaceMethod
-        (t, method, t->stack[t->sp - parameterCount]);
-      if (UNLIKELY(t->exception)) goto throw_;
+    if (LIKELY(stack[sp - parameterCount])) {
+      code = findInterfaceMethod(t, method, stack[sp - parameterCount]);
+      if (UNLIKELY(exception)) goto throw_;
 
       goto invoke;
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
 
   case invokespecial: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
 
-    object method = resolveMethod(t, codePool(t, t->code), index);
-    if (UNLIKELY(t->exception)) goto throw_;
+    object method = resolveMethod(t, codePool(t, code), index);
+    if (UNLIKELY(exception)) goto throw_;
     
     parameterCount = methodParameterCount(method);
-    if (LIKELY(t->stack[t->sp - parameterCount])) {
-      if (isSpecialMethod(method, t->stack[t->sp - parameterCount])) {
-        t->code = findSpecialMethod
-          (t, method, t->stack[t->sp - parameterCount]);
-        if (UNLIKELY(t->exception)) goto throw_;
+    if (LIKELY(stack[sp - parameterCount])) {
+      if (isSpecialMethod(method, stack[sp - parameterCount])) {
+        code = findSpecialMethod(t, method, stack[sp - parameterCount]);
+        if (UNLIKELY(exception)) goto throw_;
       } else {
-        t->code = method;
+        code = method;
       }
       
       goto invoke;
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
 
   case invokestatic: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
 
-    object method = resolveMethod(t, codePool(t, t->code), index);
-    if (UNLIKELY(t->exception)) goto throw_;
+    object method = resolveMethod(t, codePool(t, code), index);
+    if (UNLIKELY(exception)) goto throw_;
     
     if (not classInitialized(methodClass(t, method))) {
-      t->code = classInitializer(methodClass(t, method));
+      code = classInitializer(methodClass(t, method));
       ip -= 2;
       parameterCount = 0;
       goto invoke;
     }
 
     parameterCount = methodParameterCount(method);
-    t->code = method;
+    code = method;
   } goto invoke;
 
   case invokevirtual: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
 
-    object method = resolveMethod(t, codePool(t, t->code), index);
-    if (UNLIKELY(t->exception)) goto throw_;
+    object method = resolveMethod(t, codePool(t, code), index);
+    if (UNLIKELY(exception)) goto throw_;
     
     parameterCount = methodParameterCount(method);
-    if (LIKELY(t->stack[t->sp - parameterCount])) {
-      t->code = findVirtualMethod(t, method, t->stack[t->sp - parameterCount]);
-      if (UNLIKELY(t->exception)) goto throw_;
+    if (LIKELY(stack[sp - parameterCount])) {
+      code = findVirtualMethod(t, method, stack[sp - parameterCount]);
+      if (UNLIKELY(exception)) goto throw_;
       
       goto invoke;
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -1325,18 +1337,18 @@ run(Thread* t)
   } goto loop;
 
   case jsr: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
 
     push(t, makeInt(t, ip));
     ip = (ip - 1) + ((offset1 << 8) | offset2);
   } goto loop;
 
   case jsr_w: {
-    uint8_t offset1 = codeBody(t, t->code)[ip++];
-    uint8_t offset2 = codeBody(t, t->code)[ip++];
-    uint8_t offset3 = codeBody(t, t->code)[ip++];
-    uint8_t offset4 = codeBody(t, t->code)[ip++];
+    uint8_t offset1 = codeBody(t, code)[ip++];
+    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset3 = codeBody(t, code)[ip++];
+    uint8_t offset4 = codeBody(t, code)[ip++];
 
     push(t, makeInt(t, ip));
     ip = (ip - 1)
@@ -1369,11 +1381,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     longArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -1399,11 +1411,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     longArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -1425,15 +1437,15 @@ run(Thread* t)
   } goto loop;
 
   case ldc: {
-    push(t, rawArrayBody(t, codePool(t, t->code))[codeBody(t, t->code)[ip++]]);
+    push(t, rawArrayBody(t, codePool(t, code))[codeBody(t, code)[ip++]]);
   } goto loop;
 
   case ldc_w:
   case ldc2_w: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
 
-    push(t, rawArrayBody(t, codePool(t, t->code))[(index1 << 8) | index2]);
+    push(t, rawArrayBody(t, codePool(t, code))[(index1 << 8) | index2]);
   } goto loop;
 
   case ldiv: {
@@ -1507,15 +1519,15 @@ run(Thread* t)
   } goto loop;
 
   case new_: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
     
-    object class_ = resolveClass(t, codePool(t, t->code), index);
-    if (UNLIKELY(t->exception)) goto throw_;
+    object class_ = resolveClass(t, codePool(t, code), index);
+    if (UNLIKELY(exception)) goto throw_;
       
     if (not classInitialized(class_)) {
-      t->code = classInitializer(class_);
+      code = classInitializer(class_);
       ip -= 3;
       parameterCount = 0;
       goto invoke;
@@ -1529,7 +1541,7 @@ run(Thread* t)
     int32_t c = intValue(t, count);
 
     if (LIKELY(c >= 0)) {
-      uint8_t type = codeBody(t, t->code)[ip++];
+      uint8_t type = codeBody(t, code)[ip++];
 
       object array;
       unsigned factor;
@@ -1584,7 +1596,7 @@ run(Thread* t)
       push(t, array);
     } else {
       object message = makeString(t, "%d", c);
-      t->exception = makeNegativeArrayStoreException(t, message);
+      exception = makeNegativeArrayStoreException(t, message);
       goto throw_;
     }
   } goto loop;
@@ -1592,46 +1604,46 @@ run(Thread* t)
   case nop: goto loop;
 
   case pop_: {
-    -- (t->sp);
+    -- sp;
   } goto loop;
 
   case pop2: {
-    object top = t->stack[t->sp - 1];
+    object top = stack[sp - 1];
     if (isLongOrDouble(top)) {
-      -- (t->sp);
+      -- sp;
     } else {
-      t->sp -= 2;
+      sp -= 2;
     }
   } goto loop;
 
   case putfield: {
     object instance = pop(t);
     if (LIKELY(instance)) {
-      uint8_t index1 = codeBody(t, t->code)[ip++];
-      uint8_t index2 = codeBody(t, t->code)[ip++];
+      uint8_t index1 = codeBody(t, code)[ip++];
+      uint8_t index2 = codeBody(t, code)[ip++];
       uint16_t index = (index1 << 8) | index2;
     
-      object field = resolveField(t, codePool(t, t->code), index);
-      if (UNLIKELY(t->exception)) goto throw_;
+      object field = resolveField(t, codePool(t, code), index);
+      if (UNLIKELY(exception)) goto throw_;
       
       object value = pop(t);
       setField(t, instance, field, value);
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
 
   case putstatic: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
 
-    object field = resolveField(t, codePool(t, t->code), index);
-    if (UNLIKELY(t->exception)) goto throw_;
+    object field = resolveField(t, codePool(t, code), index);
+    if (UNLIKELY(exception)) goto throw_;
 
     if (not classInitialized(fieldClass(t, field))) {
-      t->code = classInitializer(fieldClass(t, field));
+      code = classInitializer(fieldClass(t, field));
       ip -= 3;
       parameterCount = 0;
       goto invoke;
@@ -1642,17 +1654,17 @@ run(Thread* t)
   } goto loop;
 
   case ret: {
-    ip = intValue(t, frameLocals(t, t->frame)[codeBody(t, t->code)[ip]]);
+    ip = intValue(t, frameLocals(t, frame)[codeBody(t, code)[ip]]);
   } goto loop;
 
   case return_: {
-    t->frame = frameNext(t, t->frame);
-    if (t->frame) {
-      t->code = methodCode(t, frameMethod(t, t->frame));
-      ip = frameIp(t, t->frame);
+    frame = frameNext(t, frame);
+    if (frame) {
+      code = methodCode(t, frameMethod(t, frame));
+      ip = frameIp(t, frame);
       goto loop;
     } else {
-      t->code = 0;
+      code = 0;
       return 0;
     }
   } goto loop;
@@ -1670,11 +1682,11 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     shortArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
@@ -1693,26 +1705,26 @@ run(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     shortArrayLength(t, array));
-        t->exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
       }
     } else {
-      t->exception = makeNullPointerException(t);
+      exception = makeNullPointerException(t);
       goto throw_;
     }
   } goto loop;
 
   case sipush: {
-    uint8_t byte1 = codeBody(t, t->code)[ip++];
-    uint8_t byte2 = codeBody(t, t->code)[ip++];
+    uint8_t byte1 = codeBody(t, code)[ip++];
+    uint8_t byte2 = codeBody(t, code)[ip++];
 
     push(t, makeInt(t, (byte1 << 8) | byte2));
   } goto loop;
 
   case swap: {
-    object tmp = t->stack[t->sp - 1];
-    t->stack[t->sp - 1] = t->stack[t->sp - 2];
-    t->stack[t->sp - 2] = tmp;
+    object tmp = stack[sp - 1];
+    stack[sp - 1] = stack[sp - 2];
+    stack[sp - 2] = tmp;
   } goto loop;
 
   case wide: goto wide;
@@ -1721,82 +1733,82 @@ run(Thread* t)
   }
 
  wide:
-  switch (codeBody(t, t->code)[ip++]) {
+  switch (codeBody(t, code)[ip++]) {
   case aload:
   case iload:
   case lload: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
 
-    push(t, frameLocals(t, t->frame)[(index1 << 8) | index2]);
+    push(t, frameLocals(t, frame)[(index1 << 8) | index2]);
   } goto loop;
 
   case astore:
   case istore:
   case lstore: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
 
     object value = pop(t);
-    set(t, frameLocals(t, t->frame)[(index1 << 8) | index2], value);
+    set(t, frameLocals(t, frame)[(index1 << 8) | index2], value);
   } goto loop;
 
   case iinc: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
     uint16_t index = (index1 << 8) | index2;
 
-    uint8_t count1 = codeBody(t, t->code)[ip++];
-    uint8_t count2 = codeBody(t, t->code)[ip++];
+    uint8_t count1 = codeBody(t, code)[ip++];
+    uint8_t count2 = codeBody(t, code)[ip++];
     uint16_t count = (count1 << 8) | count2;
     
-    int32_t v = intValue(t, frameLocals(t, t->frame)[index]);
-    frameLocals(t, t->frame)[index] = makeInt(t, v + count);
+    int32_t v = intValue(t, frameLocals(t, frame)[index]);
+    frameLocals(t, frame)[index] = makeInt(t, v + count);
   } goto loop;
 
   case ret: {
-    uint8_t index1 = codeBody(t, t->code)[ip++];
-    uint8_t index2 = codeBody(t, t->code)[ip++];
+    uint8_t index1 = codeBody(t, code)[ip++];
+    uint8_t index2 = codeBody(t, code)[ip++];
 
-    ip = intValue(t, frameLocals(t, t->frame)[(index1 << 8) | index2]);
+    ip = intValue(t, frameLocals(t, frame)[(index1 << 8) | index2]);
   } goto loop;
 
   default: abort(t);
   }
 
  invoke:
-  if (UNLIKELY(codeMaxStack(t, methodCode(t, t->code)) + t->sp - parameterCount
+  if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + sp - parameterCount
                > Thread::StackSize))
   {
-    t->exception = makeStackOverflowError(t);
+    exception = makeStackOverflowError(t);
     goto throw_;      
   }
   
-  frameIp(t, t->frame) = ip;
+  frameIp(t, frame) = ip;
   
-  t->sp -= parameterCount;
-  t->frame = makeFrame(t, t->code, t->frame, 0, t->sp,
-                       codeMaxLocals(t, methodCode(t, t->code)));
-  memcpy(frameLocals(t, t->frame), t->stack + t->sp, parameterCount);
+  sp -= parameterCount;
+  frame = makeFrame(t, code, frame, 0, sp,
+                    codeMaxLocals(t, methodCode(t, code)));
+  memcpy(frameLocals(t, frame), stack + sp, parameterCount);
   ip = 0;
   goto loop;
 
  throw_:
-  for (; t->frame; t->frame = frameNext(t, t->frame)) {
-    t->code = methodCode(t, frameMethod(t, t->frame));
-    object eht = codeExceptionHandlerTable(t, t->code);
+  for (; frame; frame = frameNext(t, frame)) {
+    code = methodCode(t, frameMethod(t, frame));
+    object eht = codeExceptionHandlerTable(t, code);
     if (eht) {
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
         uint16_t catchType = exceptionHandlerCatchType(eh);
         if (catchType == 0 or
-            instanceOf(rawArrayBody(t, codePool(t, t->code))[catchType],
-                       t->exception))
+            instanceOf(rawArrayBody(t, codePool(t, code))[catchType],
+                       exception))
         {
-          t->sp = frameStackBase(t, t->frame);
+          sp = frameStackBase(t, frame);
           ip = exceptionHandlerIp(eh);
-          push(t, t->exception);
-          t->exception = 0;
+          push(t, exception);
+          exception = 0;
           goto loop;
         }
       }
@@ -1804,12 +1816,12 @@ run(Thread* t)
   }
 
   object method = defaultExceptionHandler(t);
-  t->code = methodCode(t, method);
-  t->frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, t->code));
-  t->sp = 0;
+  code = methodCode(t, method);
+  frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, code));
+  sp = 0;
   ip = 0;
-  push(t, t->exception);
-  t->exception = 0;
+  push(t, exception);
+  exception = 0;
   goto loop;
 }
 
