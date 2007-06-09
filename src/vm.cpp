@@ -1624,7 +1624,7 @@ run(Thread* t)
       default: abort(t);
       }
       
-      memset(static_cast<object*>(instance) + (sizeof(object) * 2), 0,
+      memset(static_cast<uint8_t*>(array) + sizeof(object) + 4, 0,
              c * factor);
       
       push(t, array);
