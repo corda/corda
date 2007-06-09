@@ -5,6 +5,7 @@
   (object objectMask)
   (object name)
   (object super)
+  (object interfaceTable)
   (object fieldTable)
   (object methodTable)
   (object staticTable))
@@ -47,6 +48,22 @@
   (object class)
   (object name)
   (object spec))
+
+(type interface
+  (uint32_t id)
+  (object name)
+  (object supers)
+  (object methodTable)
+  (object staticTable))
+
+(type pair
+  (object first)
+  (object second))
+
+(type triple
+  (object first)
+  (object second)
+  (object third))
 
 (type trace
   (object method)

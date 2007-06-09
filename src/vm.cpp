@@ -24,7 +24,6 @@ enum ObjectType {
 class Thread;
 
 Type typeOf(object);
-
 object& objectClass(object);
 void assert(Thread* t, bool v);
 
@@ -416,6 +415,41 @@ object
 makeStackOverflowError(Thread* t)
 {
   return makeStackOverflowError(t, 0, makeTrace(t));
+}
+
+inline bool
+isLongOrDouble(object o)
+{
+  return typeOf(o) == LongType or typeOf(o) == DoubleType;
+}
+
+bool
+instanceOf(Thread* t, object class_, object o)
+{
+  if (o == 0) {
+    return false;
+  }
+
+  if (typeOf(class_) == InterfaceType) {
+    Type id = interfaceId(t, class_);
+    for (object oc = objectClass(o); oc; oc = classSuper(t, oc)) {
+      object itable = classInterfaceTable(t, oc);
+      for (unsigned i = 0; i < rawArrayLength(t, itable); i += 2) {
+        if (interfaceId(t, rawArrayBody(t, itable)[i]) == id) {
+          return true;
+        }
+      }
+    }
+  } else {
+    Type id = classId(t, class_);
+    for (object oc = objectClass(o); oc; oc = classSuper(t, oc)) {
+      if (classId(t, oc) == id) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 object
@@ -1802,7 +1836,8 @@ run(Thread* t)
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
         uint16_t catchType = exceptionHandlerCatchType(eh);
         if (catchType == 0 or
-            instanceOf(rawArrayBody(t, codePool(t, code))[catchType],
+            instanceOf(t,
+                       rawArrayBody(t, codePool(t, code))[catchType],
                        exception))
         {
           sp = frameStackBase(t, frame);
