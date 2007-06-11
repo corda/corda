@@ -423,6 +423,32 @@ isLongOrDouble(object o)
   return typeOf(o) == LongType or typeOf(o) == DoubleType;
 }
 
+inline object
+getField(Thread* t, object instance, object field)
+{
+  return cast<object>(instance, fieldOffset(t, field) * sizeof(object));
+}
+
+inline void
+setField(Thread* t, object o, object field, object value)
+{
+  set(t, cast<object>(o, fieldOffset(t, field) * sizeof(object)), value);
+}
+
+inline object
+getStatic(Thread* t, object field)
+{
+  return rawArrayBody(t, classStaticTable(t, fieldClass(t, field)))
+    [fieldOffset(t, field)];
+}
+
+inline void
+setStatic(Thread* t, object field, object value)
+{
+  set(t, rawArrayBody(t, classStaticTable(t, fieldClass(t, field)))
+      [fieldOffset(t, field)], value);
+}
+
 bool
 instanceOf(Thread* t, object class_, object o)
 {
@@ -450,6 +476,27 @@ instanceOf(Thread* t, object class_, object o)
   }
 
   return false;
+}
+
+object
+findInterfaceMethod(Thread* t, object method, object o)
+{
+  Type id = interfaceId(t, methodClass(t, method));
+  object itable = classInterfaceTable(t, objectClass(o));
+  for (unsigned i = 0; i < rawArrayLength(t, itable); i += 2) {
+    if (interfaceId(t, rawArrayBody(t, itable)[i]) == id) {
+      return rawArrayBody(t, rawArrayBody(t, itable)[i + 1])
+        [methodOffset(t, method)];
+    }
+  }
+  abort(t);
+}
+
+inline object
+findVirtualMethod(Thread* t, object method, object o)
+{
+  return rawArrayBody(t, classMethodTable(t, objectClass(o)))
+    [methodOffset(t, method)];
 }
 
 object
@@ -855,7 +902,7 @@ run(Thread* t)
       object field = resolveField(t, codePool(t, code), index);
       if (UNLIKELY(exception)) goto throw_;
       
-      push(t, getField(instance, field));
+      push(t, getField(t, instance, field));
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
@@ -870,14 +917,16 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
 
-    if (not classInitialized(fieldClass(t, field))) {
-      code = classInitializer(fieldClass(t, field));
+    object p = classInitializers(t, fieldClass(t, field));
+    if (p) {
+      set(t, classInitializers(t, fieldClass(t, field)), pairSecond(t, p));
+      code = pairFirst(t, p);
       ip -= 3;
       parameterCount = 0;
       goto invoke;
     }
       
-    push(t, getStatic(field));
+    push(t, getStatic(t, field));
   } goto loop;
 
   case goto_: {
@@ -1246,7 +1295,7 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
     
-    parameterCount = methodParameterCount(method);
+    parameterCount = methodParameterCount(t, method);
     if (LIKELY(stack[sp - parameterCount])) {
       code = findInterfaceMethod(t, method, stack[sp - parameterCount]);
       if (UNLIKELY(exception)) goto throw_;
@@ -1266,7 +1315,7 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
     
-    parameterCount = methodParameterCount(method);
+    parameterCount = methodParameterCount(t, method);
     if (LIKELY(stack[sp - parameterCount])) {
       if (isSpecialMethod(method, stack[sp - parameterCount])) {
         code = findSpecialMethod(t, method, stack[sp - parameterCount]);
@@ -1290,14 +1339,16 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
     
-    if (not classInitialized(methodClass(t, method))) {
-      code = classInitializer(methodClass(t, method));
-      ip -= 2;
+    object p = classInitializers(t, methodClass(t, method));
+    if (p) {
+      set(t, classInitializers(t, methodClass(t, method)), pairSecond(t, p));
+      code = pairFirst(t, p);
+      ip -= 3;
       parameterCount = 0;
       goto invoke;
     }
 
-    parameterCount = methodParameterCount(method);
+    parameterCount = methodParameterCount(t, method);
     code = method;
   } goto invoke;
 
@@ -1309,7 +1360,7 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
     
-    parameterCount = methodParameterCount(method);
+    parameterCount = methodParameterCount(t, method);
     if (LIKELY(stack[sp - parameterCount])) {
       code = findVirtualMethod(t, method, stack[sp - parameterCount]);
       if (UNLIKELY(exception)) goto throw_;
@@ -1559,9 +1610,11 @@ run(Thread* t)
     
     object class_ = resolveClass(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
-      
-    if (not classInitialized(class_)) {
-      code = classInitializer(class_);
+
+    object p = classInitializers(t, class_);
+    if (p) {
+      set(t, classInitializers(t, class_), pairSecond(t, p));
+      code = pairFirst(t, p);
       ip -= 3;
       parameterCount = 0;
       goto invoke;
@@ -1676,8 +1729,10 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
 
-    if (not classInitialized(fieldClass(t, field))) {
-      code = classInitializer(fieldClass(t, field));
+    object p = classInitializers(t, fieldClass(t, field));
+    if (p) {
+      set(t, classInitializers(t, fieldClass(t, field)), pairSecond(t, p));
+      code = pairFirst(t, p);
       ip -= 3;
       parameterCount = 0;
       goto invoke;

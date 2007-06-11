@@ -8,17 +8,22 @@
   (object interfaceTable)
   (object fieldTable)
   (object methodTable)
-  (object staticTable))
+  (object staticTable)
+  (object initializers))
 
 (type field
   (uint16_t flags)
+  (uint16_t offset)
   (object name)
   (object class))
 
 (type method
   (uint16_t flags)
+  (uint16_t offset)
+  (uint16_t parameterCount)
   (object name)
   (object spec)
+  (object class)
   (object code))
 
 (pod exceptionHandler
