@@ -39,7 +39,6 @@ class Machine {
   unsigned liveCount;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
-  object jstringClass;
 };
 
 class Thread {
@@ -75,6 +74,7 @@ class Thread {
   Thread* next;
   Thread* child;
   State state;
+  object thread;
   object frame;
   object code;
   object exception;
@@ -133,6 +133,7 @@ iterate(Thread* t, Heap::Visitor* v)
 {
   t->heapIndex = 0;
 
+  v->visit(&(t->thread));
   v->visit(&(t->frame));
   v->visit(&(t->code));
   v->visit(&(t->exception));
@@ -493,10 +494,37 @@ findInterfaceMethod(Thread* t, object method, object o)
 }
 
 inline object
+findMethod(Thread* t, object method, object class_)
+{
+  return rawArrayBody(t, classMethodTable(t, class_))
+    [methodOffset(t, method)];
+}
+
+inline object
 findVirtualMethod(Thread* t, object method, object o)
 {
-  return rawArrayBody(t, classMethodTable(t, objectClass(o)))
-    [methodOffset(t, method)];
+  return findMethod(t, method, objectClass(o));
+}
+
+bool
+isSuperclass(Thread* t, object class_, object base)
+{
+  Type id = classId(t, class_);
+  for (object oc = classSuper(t, base); oc; oc = classSuper(t, oc)) {
+    if (classId(t, oc) == id) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool
+isSpecialMethod(Thread* t, object method, object class_)
+{
+  return (classFlags(t, class_) & ACC_SUPER)
+    and strcmp("<init>", reinterpret_cast<char*>
+               (byteArrayBody(t, methodName(t, method)))) != 0
+    and isSuperclass(t, methodClass(t, method), class_);
 }
 
 object
@@ -1317,8 +1345,9 @@ run(Thread* t)
     
     parameterCount = methodParameterCount(t, method);
     if (LIKELY(stack[sp - parameterCount])) {
-      if (isSpecialMethod(method, stack[sp - parameterCount])) {
-        code = findSpecialMethod(t, method, stack[sp - parameterCount]);
+      object class_ = methodClass(t, frameMethod(t, t->frame));
+      if (isSpecialMethod(t, method, class_)) {
+        code = findMethod(t, method, classSuper(t, class_));
         if (UNLIKELY(exception)) goto throw_;
       } else {
         code = method;
@@ -1905,7 +1934,7 @@ run(Thread* t)
     }
   }
 
-  object method = defaultExceptionHandler(t);
+  object method = threadExceptionHandler(t, t->thread);
   code = methodCode(t, method);
   frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, code));
   sp = 0;

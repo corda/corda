@@ -3,6 +3,7 @@
   (uint16_t fixedSize)
   (uint16_t arrayElementSize)
   (object objectMask)
+  (uint16_t flags)
   (object name)
   (object super)
   (object interfaceTable)
@@ -74,6 +75,10 @@
   (object method)
   (uint32_t ip)
   (object next))
+
+(type thread
+  (object localMap)
+  (object exceptionHandler))
 
 (type string
   (object bytes)

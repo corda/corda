@@ -200,4 +200,10 @@ enum TypeCode {
   T_LONG = 11
 };
 
+const unsigned ACC_PUBLIC    = 1 <<  0;
+const unsigned ACC_FINAL     = 1 <<  4;
+const unsigned ACC_SUPER     = 1 <<  5;
+const unsigned ACC_INTERFACE = 1 <<  9;
+const unsigned ACC_ABSTRACT  = 1 << 10;
+
 #endif//CONSTANTS_H
