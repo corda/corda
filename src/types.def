@@ -109,6 +109,9 @@
 (type classCastException
   (extends runtimeException))
 
+(type classNotFoundException
+  (extends runtimeException))
+
 (type error
   (extends throwable))
 

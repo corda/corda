@@ -1,9 +1,12 @@
 #include "common.h"
 #include "system.h"
 #include "heap.h"
+#include "class_finder.h"
 
 #define PROTECT(thread, name)                                   \
   Thread::Protector MAKE_NAME(protector_) (thread, &name);
+
+#define ACQUIRE_MONITOR(x) MonitorResource MAKE_NAME(monitorResource_) (x)
 
 namespace {
 
@@ -33,12 +36,15 @@ class Machine {
  public:
   System* sys;
   Heap* heap;
+  ClassFinder* classFinder;
   Thread* rootThread;
   Thread* exclusive;
   unsigned activeCount;
   unsigned liveCount;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
+  System::Monitor* classLock;
+  object classMap;
 };
 
 class Thread {
@@ -86,6 +92,15 @@ class Thread {
   Protector* protector;
 };
 
+class MonitorResource {
+ public:
+  MonitorResource(System::Monitor* m): m(m) { m->acquire(); }
+  ~MonitorResource() { m->release(); }
+
+ private:
+  System::Monitor* m;
+};
+
 inline void NO_RETURN
 abort(Thread* t)
 {
@@ -99,14 +114,16 @@ assert(Thread* t, bool v)
 }
 
 void
-init(Machine* m, System* sys, Heap* heap)
+init(Machine* m, System* sys, Heap* heap, ClassFinder* classFinder)
 {
   memset(m, 0, sizeof(Machine));
   m->sys = sys;
   m->heap = heap;
+  m->classFinder = classFinder;
 
   if (not sys->success(sys->make(&(m->stateLock))) or
-      not sys->success(sys->make(&(m->heapLock))))
+      not sys->success(sys->make(&(m->heapLock))) or
+      not sys->success(sys->make(&(m->classLock))))
   {
     sys->abort();
   }
@@ -156,16 +173,18 @@ collect(Machine* m, Heap::CollectionType type)
 {
   class Iterator: public Heap::Iterator {
    public:
-    Iterator(Machine* m): machine(m) { }
+    Iterator(Machine* m): m(m) { }
 
     void iterate(Heap::Visitor* v) {
-      for (Thread* t = machine->rootThread; t; t = t->next) {
+      v->visit(&(m->classMap));
+
+      for (Thread* t = m->rootThread; t; t = t->next) {
         ::iterate(t, v);
       }
     }
     
    private:
-    Machine* machine;
+    Machine* m;
   } it(m);
 
   m->heap->collect(type, &it);
@@ -176,7 +195,7 @@ enter(Thread* t, Thread::State s)
 {
   if (s == t->state) return;
 
-  ACQUIRE(t->vm->stateLock);
+  ACQUIRE_MONITOR(t->vm->stateLock);
 
   switch (s) {
   case Thread::ExclusiveState: {
@@ -278,7 +297,7 @@ maybeYieldAndMaybeCollect(Thread* t, unsigned size)
     abort(t);
   }
 
-  ACQUIRE(t->vm->stateLock);
+  ACQUIRE_MONITOR(t->vm->stateLock);
 
   while (t->vm->exclusive) {
     // another thread wants to enter the exclusive state, either for a
@@ -403,7 +422,15 @@ makeClassCastException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeArrayIndexOutOfBoundsException(t, message, trace);
+  return makeClassCastException(t, message, trace);
+}
+
+object
+makeClassNotFoundException(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeClassNotFoundException(t, message, trace);
 }
 
 object
@@ -551,17 +578,15 @@ isSpecialMethod(Thread* t, object method, object class_)
 }
 
 object
-find(Thread* t, object class_, object reference,
-     object& (*table)(Thread*, object),
+find(Thread* t, object class_, object table, object reference,
      object& (*name)(Thread*, object),
      object& (*spec)(Thread*, object),
      object (*makeError)(Thread*, object))
 {
-  object a = table(t, class_);
   object n = referenceName(t, reference);
   object s = referenceSpec(t, reference);
-  for (unsigned i = 0; i < rawArrayLength(t, a); ++i) {
-    object field = rawArrayBody(t, a)[i];
+  for (unsigned i = 0; i < rawArrayLength(t, table); ++i) {
+    object field = rawArrayBody(t, table)[i];
     if (strcmp(byteArrayBody(t, name(t, field)),
                byteArrayBody(t, n)) == 0 and
         strcmp(byteArrayBody(t, spec(t, field)),
@@ -583,15 +608,120 @@ find(Thread* t, object class_, object reference,
 inline object
 findFieldInClass(Thread* t, object class_, object reference)
 {
-  return find(t, class_, reference, classFieldTable, fieldName, fieldSpec,
-              makeNoSuchFieldError);
+  return find(t, class_, classFieldTable(t, class_), reference, fieldName,
+              fieldSpec, makeNoSuchFieldError);
 }
 
 inline object
 findMethodInClass(Thread* t, object class_, object reference)
 {
-  return find(t, class_, reference, classMethodTable, methodName, methodSpec,
-              makeNoSuchMethodError);
+  return find(t, class_, classMethodTable(t, class_), reference, methodName,
+              methodSpec, makeNoSuchMethodError);
+}
+
+uint32_t
+hash(const int8_t* s, unsigned length)
+{
+  uint32_t h = 0;
+  for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
+  return h;  
+}
+
+bool
+byteArrayEqual(Thread* t, object a, object b)
+{
+  if (a == b) return true;
+
+  if (byteArrayLength(t, a) == byteArrayLength(t, b)) {
+    return strcmp(byteArrayBody(t, a), byteArrayBody(t, b)) == 0;
+  } else {
+    return false;
+  }
+}
+
+object
+hashMapFind(Thread* t, object map, uint32_t hash, object key,
+            bool (*equal)(Thread*, object, object))
+{
+  unsigned index = hash & (rawArrayLength(t, map) - 1);
+  object n = rawArrayBody(t, map)[index];
+  while (n) {
+    if (equal(t, tripleFirst(t, n), key)) {
+      return tripleSecond(t, n);
+    }
+    
+    n = tripleThird(t, n);
+  }
+  return 0;
+}
+
+object
+hashMapInsert(Thread* t, object map, uint32_t hash, object key, object value)
+{
+  unsigned index = hash & (rawArrayLength(t, map) - 1);
+  object n = rawArrayBody(t, map)[index];
+
+  PROTECT(t, map);
+
+  n = makeTriple(t, key, value, n);
+
+  set(t, rawArrayBody(t, map)[index], n);
+}
+
+object
+resolveClass(Thread* t, object spec)
+{
+  PROTECT(t, spec);
+  ACQUIRE(t, t->vm->classLock);
+
+  uint32_t h = hash(byteArrayBody(t, spec), byteArrayLength(t, spec) - 1);
+  object class_ = hashMapFind(t, t->vm->classMap, h, spec, byteArrayEqual);
+  if (class_ == 0) {
+    unsigned size;
+    const uint8_t* data = t->vm->classFinder->find
+      (reinterpret_cast<const char*>(byteArrayBody(t, spec)), &size);
+
+    if (data) {
+      class_ = parseClass(t, data, size);
+
+      PROTECT(t, class_);
+      hashMapInsert(t, t->vm->classMap, h, spec, class_);
+    } else {
+      object message = makeString(t, "%s", byteArrayBody(t, spec));
+      t->exception = makeClassNotFoundException(t, message);
+    }
+  }
+  return class_;
+}
+
+inline object
+resolveClass(Thread* t, object pool, unsigned index)
+{
+  object o = rawArrayBody(t, pool)[index];
+  if (typeOf(o) == ByteArrayType) {
+    PROTECT(t, pool);
+
+    o = resolveClass(t, o);
+    if (UNLIKELY(t->exception)) return 0;
+    
+    set(t, rawArrayBody(t, pool)[index], o);
+  }
+  return o; 
+}
+
+inline object
+resolveClass(Thread* t, object container, object& (*class_)(Thread*, object))
+{
+  object o = class_(t, container);
+  if (typeOf(o) == ByteArrayType) {
+    PROTECT(t, container);
+
+    o = resolveClass(t, o);
+    if (UNLIKELY(t->exception)) return 0;
+    
+    set(t, class_(t, container), o);
+  }
+  return o; 
 }
 
 inline object
@@ -602,7 +732,7 @@ resolve(Thread* t, object pool, unsigned index,
   if (typeOf(o) == ReferenceType) {
     PROTECT(t, pool);
 
-    object class_ = resolveClass(t, referenceClass(t, o));
+    object class_ = resolveClass(t, o, referenceClass);
     if (UNLIKELY(t->exception)) return 0;
 
     o = find(t, class_, rawArrayBody(t, pool)[index]);

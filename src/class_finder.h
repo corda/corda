@@ -6,7 +6,7 @@
 class ClassFinder {
  public:
   virtual ~ClassFinder() { }
-  virtual const uint8_t* find(const char* className) = 0;
+  virtual const uint8_t* find(const char* className, unsigned* size) = 0;
   virtual void free(const uint8_t* class_) = 0;
 };
 
