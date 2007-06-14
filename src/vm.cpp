@@ -630,13 +630,9 @@ hash(const int8_t* s, unsigned length)
 bool
 byteArrayEqual(Thread* t, object a, object b)
 {
-  if (a == b) return true;
-
-  if (byteArrayLength(t, a) == byteArrayLength(t, b)) {
-    return strcmp(byteArrayBody(t, a), byteArrayBody(t, b)) == 0;
-  } else {
-    return false;
-  }
+  return a == b or
+    ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
+     strcmp(byteArrayBody(t, a), byteArrayBody(t, b)) == 0);
 }
 
 object
