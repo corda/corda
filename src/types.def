@@ -16,6 +16,7 @@
   (uint16_t flags)
   (uint16_t offset)
   (object name)
+  (object spec)
   (object class))
 
 (type method
@@ -111,7 +112,13 @@
 (type error
   (extends throwable))
 
-(type StackOverflowError
+(type stackOverflowError
+  (extends error))
+
+(type noSuchFieldError
+  (extends error))
+
+(type noSuchMethodError
   (extends error))
 
 (type byte

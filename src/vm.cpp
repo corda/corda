@@ -418,6 +418,22 @@ makeStackOverflowError(Thread* t)
   return makeStackOverflowError(t, 0, makeTrace(t));
 }
 
+object
+makeNoSuchFieldError(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeNoSuchFieldError(t, message, trace);
+}
+
+object
+makeNoSuchMethodError(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeNoSuchMethodError(t, message, trace);
+}
+
 inline bool
 isLongOrDouble(object o)
 {
@@ -518,60 +534,73 @@ isSuperclass(Thread* t, object class_, object base)
   return false;
 }
 
+inline int
+strcmp(const int8_t* a, const int8_t* b)
+{
+  return ::strcmp(reinterpret_cast<const char*>(a),
+                  reinterpret_cast<const char*>(b));
+}
+
 inline bool
 isSpecialMethod(Thread* t, object method, object class_)
 {
   return (classFlags(t, class_) & ACC_SUPER)
-    and strcmp("<init>", reinterpret_cast<char*>
-               (byteArrayBody(t, methodName(t, method)))) != 0
+    and strcmp(reinterpret_cast<const int8_t*>("<init>"), 
+               byteArrayBody(t, methodName(t, method))) != 0
     and isSuperclass(t, methodClass(t, method), class_);
 }
 
 object
-findField(Thread* t, object class_, object reference)
+find(Thread* t, object class_, object reference,
+     object& (*table)(Thread*, object),
+     object& (*name)(Thread*, object),
+     object& (*spec)(Thread*, object),
+     object (*makeError)(Thread*, object))
 {
-  object table = classFieldTable(t, class_);
-  object name = referenceName(t, reference);
-  for (unsigned i = 0; i < rawArrayLength(t, table); ++i) {
-    object fieldName = fieldName(t, rawArrayBody(t, table)[i]);
-    if (strcmp(reinterpret_cast<char*>(byteArrayBody(t, fieldName)),
-               reinterpret_cast<char*>(byteArrayBody(t, name))) == 0)
+  object a = table(t, class_);
+  object n = referenceName(t, reference);
+  object s = referenceSpec(t, reference);
+  for (unsigned i = 0; i < rawArrayLength(t, a); ++i) {
+    object field = rawArrayBody(t, a)[i];
+    if (strcmp(byteArrayBody(t, name(t, field)),
+               byteArrayBody(t, n)) == 0 and
+        strcmp(byteArrayBody(t, spec(t, field)),
+               byteArrayBody(t, s)) == 0)
     {
-#error compare specs
-      return rawArrayBody(t, table)[i];
+      return field;
     }               
   }
-#error make message
-  t->exception = makeNoSuchFieldError(t, message);
-  return 0;
-}
 
-object
-findMethod(Thread* t, object class_, object reference)
-{
-  object table = classMethodTable(t, class_);
-  object name = referenceName(t, reference);
-  for (unsigned i = 0; i < rawArrayLength(t, table); ++i) {
-    object methodName = methodName(t, rawArrayBody(t, table)[i]);
-    if (strcmp(reinterpret_cast<char*>(byteArrayBody(t, methodName)),
-               reinterpret_cast<char*>(byteArrayBody(t, name))) == 0)
-    {
-#error compare specs
-      return rawArrayBody(t, table)[i];
-    }               
-  }
-#error make message
-  t->exception = makeNoSuchMethodError(t, message);
+  object message = makeString
+    (t, "%s (%s) not found in %s",
+     byteArrayBody(t, n),
+     byteArrayBody(t, s),
+     byteArrayBody(t, className(t, class_)));
+  t->exception = makeError(t, message);
   return 0;
 }
 
 inline object
+findFieldInClass(Thread* t, object class_, object reference)
+{
+  return find(t, class_, reference, classFieldTable, fieldName, fieldSpec,
+              makeNoSuchFieldError);
+}
+
+inline object
+findMethodInClass(Thread* t, object class_, object reference)
+{
+  return find(t, class_, reference, classMethodTable, methodName, methodSpec,
+              makeNoSuchMethodError);
+}
+
+inline object
 resolve(Thread* t, object pool, unsigned index,
-        object (find*)(Thread*, object, object))
+        object (*find)(Thread*, object, object))
 {
   object o = rawArrayBody(t, pool)[index];
   if (typeOf(o) == ReferenceType) {
-    PROTECT(pool);
+    PROTECT(t, pool);
 
     object class_ = resolveClass(t, referenceClass(t, o));
     if (UNLIKELY(t->exception)) return 0;
@@ -579,22 +608,21 @@ resolve(Thread* t, object pool, unsigned index,
     o = find(t, class_, rawArrayBody(t, pool)[index]);
     if (UNLIKELY(t->exception)) return 0;
     
-    return set(t, rawArrayBody(t, pool)[index], o);
-  } else {
-    return o;
+    set(t, rawArrayBody(t, pool)[index], o);
   }
+  return o;
 }
 
 inline object
 resolveField(Thread* t, object pool, unsigned index)
 {
-  return resolve(t, pool, index, findField);
+  return resolve(t, pool, index, findFieldInClass);
 }
 
 inline object
 resolveMethod(Thread* t, object pool, unsigned index)
 {
-  return resolve(t, pool, index, findMethod);
+  return resolve(t, pool, index, findMethodInClass);
 }
 
 object
