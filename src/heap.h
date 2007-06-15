@@ -22,8 +22,8 @@ class Heap {
 
   virtual ~Heap() { }
   virtual void collect(CollectionType type, Iterator* it) = 0;
-  virtual bool isTenured(void** p) = 0;
-  virtual void markTenured(void** p);
+  virtual bool needsMark(void** p) = 0;
+  virtual void mark(void** p);
 };
 
 #endif//HEAP_H

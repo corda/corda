@@ -356,9 +356,9 @@ inline void
 set(Thread* t, object& target, object value)
 {
   target = value;
-  if (t->vm->heap->isTenured(&target)) {
-    ACQUIRE(t, t->vm->heapLock);
-    t->vm->heap->markTenured(&target);
+  if (t->vm->heap->needsMark(&target)) {
+    ACQUIRE_RAW(t, t->vm->heapLock);
+    t->vm->heap->mark(&target);
   }
 }
 
