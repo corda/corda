@@ -708,6 +708,8 @@ resolveClass(Thread* t, object spec)
     if (data) {
       class_ = parseClass(t, data, size);
 
+      t->vm->classFinder->free(data);
+
       PROTECT(t, class_);
       hashMapInsert(t, t->vm->classMap, h, spec, class_);
     } else {
