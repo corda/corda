@@ -1,8 +1,6 @@
 #ifndef HEAP_H
 #define HEAP_H
 
-#include "system.h"
-
 class Heap {
  public:
   enum CollectionType {
@@ -24,7 +22,8 @@ class Heap {
 
   virtual ~Heap() { }
   virtual void collect(CollectionType type, Iterator* it) = 0;
-  virtual void check(void** p, System::Monitor* lock) = 0;
+  virtual bool isTenured(void** p) = 0;
+  virtual bool markTenured(void** p);
 };
 
 #endif//HEAP_H

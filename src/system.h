@@ -16,11 +16,12 @@ class System {
   class Monitor {
    public:
     virtual ~Monitor() { }
-    virtual void acquire() = 0;
-    virtual void release() = 0;
-    virtual void wait() = 0;
-    virtual void notify() = 0;
-    virtual void notifyAll() = 0;
+    virtual bool tryAcquire(void* id) = 0;
+    virtual void acquire(void* id) = 0;
+    virtual void release(void* id) = 0;
+    virtual void wait(void* id) = 0;
+    virtual void notify(void* id) = 0;
+    virtual void notifyAll(void* id) = 0;
     virtual void dispose() = 0;
   };
 

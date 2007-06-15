@@ -6,7 +6,8 @@
 #define PROTECT(thread, name)                                   \
   Thread::Protector MAKE_NAME(protector_) (thread, &name);
 
-#define ACQUIRE_MONITOR(x) MonitorResource MAKE_NAME(monitorResource_) (x)
+#define ACQUIRE(t, x) MonitorResource MAKE_NAME(monitorResource_) (t, x)
+#define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
 namespace {
 
@@ -92,12 +93,35 @@ class Thread {
   Protector* protector;
 };
 
+void enter(Thread* t, Thread::State state);
+
 class MonitorResource {
  public:
-  MonitorResource(System::Monitor* m): m(m) { m->acquire(); }
-  ~MonitorResource() { m->release(); }
+  MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
+    if (not m->tryAcquire(t)) {
+      enter(t, Thread::IdleState);
+      m->acquire(t);
+      enter(t, Thread::ActiveState);
+    }
+  }
+
+  ~MonitorResource() { m->release(t); }
 
  private:
+  Thread* t;
+  System::Monitor* m;
+};
+
+class RawMonitorResource {
+ public:
+  RawMonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
+    m->acquire(t);
+  }
+
+  ~RawMonitorResource() { m->release(t); }
+
+ private:
+  Thread* t;
   System::Monitor* m;
 };
 
@@ -134,6 +158,7 @@ dispose(Machine* m)
 {
   m->stateLock->dispose();
   m->heapLock->dispose();
+  m->classLock->dispose();
 }
 
 void
@@ -195,7 +220,7 @@ enter(Thread* t, Thread::State s)
 {
   if (s == t->state) return;
 
-  ACQUIRE_MONITOR(t->vm->stateLock);
+  ACQUIRE_RAW(t, t->vm->stateLock);
 
   switch (s) {
   case Thread::ExclusiveState: {
@@ -211,7 +236,7 @@ enter(Thread* t, Thread::State s)
     t->vm->exclusive = t;
       
     while (t->vm->activeCount > 1) {
-      t->vm->stateLock->wait();
+      t->vm->stateLock->wait(t);
     }
   } break;
 
@@ -234,7 +259,7 @@ enter(Thread* t, Thread::State s)
     }
     t->state = s;
 
-    t->vm->stateLock->notifyAll();
+    t->vm->stateLock->notifyAll(t);
   } break;
 
   case Thread::ActiveState: {
@@ -245,13 +270,13 @@ enter(Thread* t, Thread::State s)
       t->state = s;
       t->vm->exclusive = 0;
 
-      t->vm->stateLock->notifyAll();
+      t->vm->stateLock->notifyAll(t);
     } break;
 
     case Thread::NoState:
     case Thread::IdleState: {
       while (t->vm->exclusive) {
-        t->vm->stateLock->wait();
+        t->vm->stateLock->wait(t);
       }
 
       ++ t->vm->activeCount;
@@ -281,7 +306,7 @@ enter(Thread* t, Thread::State s)
     t->state = s;
 
     while (t->vm->liveCount > 1) {
-      t->vm->stateLock->wait();
+      t->vm->stateLock->wait(t);
     }
   } break;
 
@@ -297,7 +322,7 @@ maybeYieldAndMaybeCollect(Thread* t, unsigned size)
     abort(t);
   }
 
-  ACQUIRE_MONITOR(t->vm->stateLock);
+  ACQUIRE_RAW(t, t->vm->stateLock);
 
   while (t->vm->exclusive) {
     // another thread wants to enter the exclusive state, either for a
@@ -331,7 +356,10 @@ inline void
 set(Thread* t, object& target, object value)
 {
   target = value;
-  t->vm->heap->check(&target, t->vm->heapLock);
+  if (t->vm->heap->isTenured(&target)) {
+    ACQUIRE(t, t->vm->heapLock);
+    t->vm->heap->markTenured(&target);
+  }
 }
 
 inline void
