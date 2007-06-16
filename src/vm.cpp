@@ -501,13 +501,65 @@ isLongOrDouble(object o)
 inline object
 getField(Thread* t, object instance, object field)
 {
-  return cast<object>(instance, fieldOffset(t, field) * sizeof(object));
+  switch (rawArrayBody(t, fieldSpec(t, field))[0]) {
+  case 'B':
+    return makeByte(t, cast<int8_t>(instance, fieldOffset(t, field)));
+  case 'C':
+    return makeChar(t, cast<int16_t>(instance, fieldOffset(t, field)));
+  case 'D':
+    return makeDouble(t, cast<int64_t>(instance, fieldOffset(t, field)));
+  case 'F':
+    return makeFloat(t, cast<int32_t>(instance, fieldOffset(t, field)));
+  case 'I':
+    return makeInt(t, cast<int32_t>(instance, fieldOffset(t, field)));
+  case 'J':
+    return makeLong(t, cast<int64_t>(instance, fieldOffset(t, field)));
+  case 'S':
+    return makeShort(t, cast<int16_t>(instance, fieldOffset(t, field)));
+  case 'Z':
+    return makeBoolean(t, cast<int8_t>(instance, fieldOffset(t, field)));
+  case 'L':
+  case '[':
+    return cast<object>(instance, fieldOffset(t, field));
+
+  default: abort(t);
+  }
 }
 
 inline void
 setField(Thread* t, object o, object field, object value)
 {
-  set(t, cast<object>(o, fieldOffset(t, field) * sizeof(object)), value);
+  switch (rawArrayBody(t, fieldSpec(t, field))[0]) {
+  case 'B':
+    cast<int8_t>(o, fieldOffset(t, field)) = byteValue(t, value);
+    break;
+  case 'C':
+    cast<int16_t>(o, fieldOffset(t, field)) = charValue(t, value);
+    break;
+  case 'D':
+    cast<int64_t>(o, fieldOffset(t, field)) = doubleValue(t, value);
+    break;
+  case 'F':
+    cast<int32_t>(o, fieldOffset(t, field)) = floatValue(t, value);
+    break;
+  case 'I':
+    cast<int32_t>(o, fieldOffset(t, field)) = intValue(t, value);
+    break;
+  case 'J':
+    cast<int64_t>(o, fieldOffset(t, field)) = longValue(t, value);
+    break;
+  case 'S':
+    cast<int16_t>(o, fieldOffset(t, field)) = shortValue(t, value);
+    break;
+  case 'Z':
+    cast<int8_t>(o, fieldOffset(t, field)) = booleanValue(t, value);
+    break;
+  case 'L':
+  case '[':
+    set(t, cast<object>(o, fieldOffset(t, field)), value);
+
+  default: abort(t);
+  }
 }
 
 inline object
@@ -658,6 +710,12 @@ hash(const int8_t* s, unsigned length)
   return h;  
 }
 
+inline uint32_t
+hashByteArray(Thread* t, object array)
+{
+  return hash(byteArrayBody(t, array), byteArrayLength(t, array) - 1);
+}
+
 bool
 byteArrayEqual(Thread* t, object a, object b)
 {
@@ -693,6 +751,207 @@ hashMapInsert(Thread* t, object map, uint32_t hash, object key, object value)
   n = makeTriple(t, key, value, n);
 
   set(t, rawArrayBody(t, map)[index], n);
+}
+
+void
+parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
+{
+  PROTECT(t, class_);
+  PROTECT(t, pool);
+  
+  object map = makeHashMap(t, 0, 0);
+  PROTECT(t, map);
+
+  object superInterfaces = classInterfaceTable(t, classSuper(t, class_));
+  PROTECT(t, superInterfaces);
+
+  for (unsigned i = 0; i < rawArrayLength(t, superInterfaces); i += 2) {
+    object name = interfaceName(t, rawArrayBody(t, superInterfaces)[i]);
+    hashMapInsert(t, map, hashByteArray(t, name), name, name);
+  }
+  
+  unsigned count = s.read2();
+  for (unsigned i = 0; i < count; ++i) {
+    object name = rawArrayBody(t, pool)[s.read2()];
+    hashMapInsert(t, map, hashByteArray(t, name), name, name);
+  }
+
+  object interfaceTable = 0;
+  if (hashMapSize(t, map)) {
+    interfaceTable = makeRawArray(t, hashMapSize(t, map));
+    unsigned i = 0;
+    for (object it = hmIterator(t, map); it; it = hmIteratorNext(t, it)) {
+      set(t, rawArrayBody(t, interfaceTable)[i], hmIteratorKey(t, it));
+      i += 2;
+    }
+  }
+
+  set(t, classInterfaceTable(t, class_), interfaceTable);
+}
+
+void
+parseFieldTable(Thread* t, Stream& s, object class_, object pool)
+{
+  PROTECT(t, class_);
+  PROTECT(t, pool);
+
+  unsigned count = s.read2();
+  if (count) {
+    unsigned memberOffset
+      = classFixedSize(t, classSuper(t, class_)) * sizeof(void*);
+    unsigned staticOffset = 0;
+  
+    object fieldTable = makeRawArray(t, count);
+    PROTECT(t, fieldTable);
+
+    for (unsigned i = 0; i < count; ++i) {
+      unsigned flags = s.read2();
+      unsigned name = s.read2();
+      unsigned spec = s.read2();
+
+      unsigned attributeCount = s.read2();
+      for (unsigned j = 0; j < attributeCount; ++j) {
+        s.read2();
+        s.skip(s.read4());
+      }
+
+      object value = makeField(t,
+                               flags,
+                               0, // offset
+                               rawArrayBody(t, pool)[name],
+                               rawArrayBody(t, pool)[spec],
+                               class_);
+
+      if (flags & ACC_STATIC) {
+        fieldOffset(t, value) = staticOffset++;
+      } else {
+        if (memberOffset % sizeof(void*) and isReferenceField(t, value)) {
+          while (memberOffset % sizeof(void*)) ++ memberOffset;
+        }
+
+        fieldOffset(t, value) = memberOffset;
+        memberOffset += fieldSize(t, value);
+      }
+
+      set(t, rawArrayBody(t, fieldTable)[i], value);
+    }
+
+    set(t, classFieldTable(t, class_), fieldTable);
+
+    if (staticOffset) {
+      object staticTable = makeRawArray(t, staticOffset);
+      memset(rawArrayBody(t, staticTable), 0, staticOffset * sizeof(void*));
+
+      set(t, classStaticTable(t, class_), staticTable);
+    }
+  }
+}
+
+object
+parseCode(Thread* t, Stream& s)
+{
+  
+}
+
+void
+parseMemberTable(Thread* t, Stream& s, object class_, object pool)
+{
+  PROTECT(t, class_);
+  PROTECT(t, pool);
+
+  object map = makeHashMap(t, 0, 0);
+  PROTECT(t, map);
+
+  unsigned virtualCount = 0;
+
+  object superVTable = classVTable(t, super);
+  PROTECT(t, superVTable);
+
+  if (superVTable) {
+    virtualCount = rawArrayLength(t, superVTable);
+    for (unsigned i = 0; i < virtualCount; ++i) {
+      object method = rawArrayBody(t, superVTable)[i];
+      hashMapInsert(t, map, hashMethod(t, method), method, method);
+    }
+  }
+
+  object newVirtuals = makeList(t, 0, 0, 0);
+  PROTECT(t, newVirtuals);
+  
+  unsigned count = s.read2();
+  if (count) {
+    object methodTable = makeRawArray(t, count);
+    PROTECT(t, methodTable);
+
+    for (unsigned i = 0; i < count; ++i) {
+      unsigned flags = s.read2();
+      unsigned name = s.read2();
+      unsigned spec = s.read2();
+
+      object code = 0;
+      unsigned attributeCount = s.read2();
+      for (unsigned j = 0; j < attributeCount; ++j) {
+        object name = rawArrayBody(t, pool)[s.read2()];
+        if (strcmp(reinterpret_cast<const int8_t*>("Code"),
+                   byteArrayBody(t, name)) == 0)
+        {
+          code = parseCode(t, s);
+        } else {
+          s.skip(s.read4());
+        }
+      }
+
+      object value = makeMethod(t,
+                                flags,
+                                0, // offset
+                                parameterCount(rawArrayBody(t, pool)[spec]),
+                                rawArrayBody(t, pool)[name],
+                                rawArrayBody(t, pool)[spec],
+                                class_,
+                                code);
+
+      if ((flags & ACC_STATIC) == 0) {
+        object p = hashMapFindNode
+          (t, map, hashMethod(t, method), method, methodEqual);
+
+        if (p) {
+          methodOffset(t, value) = methodOffset(t, tripleFirst(t, p));
+
+          set(t, tripleSecond(t, p), value);
+        } else {
+          methodOffset(t, value) = offset++;
+
+          listAppend(t, newVirtuals, value);
+          ++ virtualCount;
+        }
+      }
+
+      set(t, rawArrayBody(t, methodTable)[i], value);
+    }
+
+    set(t, classMethodTable(t, class_), methodTable);
+  }
+
+  if (virtualCount) {
+    object vtable = makeRawArray(t, virtualCount);
+    unsigned i = 0;
+
+    if (superVTable) {
+      for (; i < rawArrayLength(t, superVTable); ++i) {
+        object method = rawArrayBody(t, superVTable)[i];
+        method = hashMapFind
+          (t, map, hashMethod(t, method), method, methodEqual);
+
+        set(t, rawArrayBody(t, vtable)[i], method);
+      }
+
+      for (object p = listFront(t, newVirtuals); p; p = pairSecond(t, p)) {
+        set(t, rawArrayBody(t, vtable)[i++], pairFirst(t, p));        
+      }
+    }
+
+    set(t, classVTable(t, class_), vtable);
+  }
 }
 
 object
@@ -783,16 +1042,6 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
 
   unsigned flags = s.read2();
   unsigned name = s.read2();
-  unsigned super = s.read2();
-  
-  unsigned interfaceCount = s.read2();
-  object interfaces = makeRawArray(t, interfaceCount * 2);
-  PROTECT(t, interfaces);
-
-  for (unsigned i = 0; i < interfaceCount * 2; i += 2) {
-    set(t, rawArrayBody(t, interfaces)[i], rawArrayBody(t, pool)[s.read2()]);
-    rawArrayBody(t, interfaces)[i + 1] = 0;
-  }
 
   object class_ = makeClass(t,
                             t->vm->nextClassId++,
@@ -801,76 +1050,24 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
                             0, // object mask
                             flags,
                             rawArrayBody(t, pool)[name],
-                            rawArrayBody(t, pool)[super],
-                            interfaces,
+                            0, // super
+                            0, // interfaces
                             0, // fields
                             0, // methods
                             0, // static table
                             0); // initializers
   PROTECT(t, class_);
+  
+  object super = resolveClass(t, rawArrayBody(t, pool)[s.read2()]);
+  if (UNLIKELY(t->exception)) return 0;
 
-  unsigned fieldCount = s.read2();
-  object fields = makeRawArray(t, fieldCount * 2);
-  set(t, classFieldTable(t, class_), fields);
-  PROTECT(t, fields);
+  set(t, classSuper(t, class_), super);
+  
+  parseInterfaceTable(t, s, class_, pool);
 
-  for (unsigned i = 0; i < fieldCount; ++i) {
-    unsigned flags = s.read2();
-    unsigned name = s.read2();
-    unsigned spec = s.read2();
+  parseFieldTable(t, s, class_, pool);
 
-    unsigned attributeCount = s.read2();
-    for (unsigned j = 0; j < attributeCount; ++j) {
-      s.read2();
-      s.skip(s.read4());
-    }
-
-    object value = makeField(t,
-                             flags,
-                             0, // offset
-                             rawArrayBody(t, pool)[name],
-                             rawArrayBody(t, pool)[spec],
-                             class_);
-
-    set(t, rawArrayBody(t, fields)[i], value);
-  }
-
-  unsigned methodCount = s.read2();
-  object methods = makeRawArray(t, methodCount * 2);
-  set(t, classMethodTable(t, class_), methods);
-  PROTECT(t, methods);
-
-  for (unsigned i = 0; i < methodCount; ++i) {
-    unsigned flags = s.read2();
-    unsigned name = s.read2();
-    unsigned spec = s.read2();
-    
-    object code = 0;
-    unsigned attributeCount = s.read2();
-    for (unsigned j = 0; j < attributeCount; ++j) {
-      object name = rawArrayBody(t, pool)[s.read2()];
-      if (strcmp(reinterpret_cast<const int8_t*>("Code"),
-                 byteArrayBody(t, name)) == 0)
-      {
-        unsigned length = s.read2();
-        code = makeByteArray(t, length);
-        s.read(reinterpret_cast<uint8_t*>(byteArrayBody(t, code)), length);
-      } else {
-        s.skip(s.read4());
-      }
-    }
-
-    object value = makeMethod(t,
-                              flags,
-                              0, // offset
-                              parameterCount(rawArrayBody(t, pool)[spec]),
-                              rawArrayBody(t, pool)[name],
-                              rawArrayBody(t, pool)[spec],
-                              class_,
-                              code);
-
-    set(t, rawArrayBody(t, methods)[i], value);
-  }
+  parseMethodTable(t, s, class_, pool);
 
   return class_;
 }
@@ -881,7 +1078,7 @@ resolveClass(Thread* t, object spec)
   PROTECT(t, spec);
   ACQUIRE(t, t->vm->classLock);
 
-  uint32_t h = hash(byteArrayBody(t, spec), byteArrayLength(t, spec) - 1);
+  uint32_t h = hashByteArray(t, spec);
   object class_ = hashMapFind(t, t->vm->classMap, h, spec, byteArrayEqual);
   if (class_ == 0) {
     unsigned size;
@@ -895,22 +1092,6 @@ resolveClass(Thread* t, object spec)
       t->vm->classFinder->free(data);
 
       PROTECT(t, class_);
-
-      // resolve superclass
-      object super = resolveClass(t, classSuper(t, class_));
-      if (UNLIKELY(t->exception)) return 0;
-        
-      set(t, classSuper(t, class_), super);
-
-#error todo
-      // merge interface table with that of superclass and generate
-      // vtables
-
-      // concatenate field table with those of superclass and populate
-      // offsets
-
-      // merge method table with that of superclass and populate
-      // offsets
 
       // cache class
       hashMapInsert(t, t->vm->classMap, h, spec, class_);
