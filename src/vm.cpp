@@ -2,6 +2,7 @@
 #include "system.h"
 #include "heap.h"
 #include "class_finder.h"
+#include "stream.h"
 
 #define PROTECT(thread, name)                                   \
   Thread::Protector MAKE_NAME(protector_) (thread, &name);
@@ -42,6 +43,7 @@ class Machine {
   Thread* exclusive;
   unsigned activeCount;
   unsigned liveCount;
+  unsigned nextClassId;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
@@ -144,6 +146,7 @@ init(Machine* m, System* sys, Heap* heap, ClassFinder* classFinder)
   m->sys = sys;
   m->heap = heap;
   m->classFinder = classFinder;
+  m->nextClassId = OtherType + 1;
 
   if (not sys->success(sys->make(&(m->stateLock))) or
       not sys->success(sys->make(&(m->heapLock))) or
@@ -693,6 +696,186 @@ hashMapInsert(Thread* t, object map, uint32_t hash, object key, object value)
 }
 
 object
+parseClass(Thread* t, const uint8_t* data, unsigned size)
+{
+  class Client : public Stream::Client {
+   public:
+    Client(Thread* t): t(t) { }
+
+    virtual void NO_RETURN handleEOS() {
+      abort(t);
+    }
+
+   private:
+    Thread* t;
+  } client(t);
+
+  Stream s(&client, data, size);
+
+  uint32_t magic = s.read4();
+  assert(t, magic == 0xCAFEBABE);
+  s.read2(); // minor version
+  s.read2(); // major version
+
+  unsigned poolCount = s.read2();
+  object pool = makeRawArray(t, poolCount);
+  PROTECT(t, pool);
+
+  for (unsigned i = 0; i < poolCount; ++i) {
+    switch (s.read1()) {
+    case CONSTANT_Class: {
+      set(t, rawArrayBody(t, pool)[i], rawArrayBody(t, pool)[s.read2()]);
+    } break;
+
+    case CONSTANT_Fieldref:
+    case CONSTANT_Methodref:
+    case CONSTANT_InterfaceMethodref: {
+      object c = rawArrayBody(t, pool)[s.read2()];
+      object nameAndType = rawArrayBody(t, pool)[s.read2()];
+      object value = makeReference
+        (t, c, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    case CONSTANT_String: {
+      object bytes = rawArrayBody(t, pool)[s.read2()];
+      object value = makeString(t, bytes, 0, byteArrayLength(t, bytes), 0);
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    case CONSTANT_Integer: {
+      object value = makeInt(t, s.read4());
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    case CONSTANT_Float: {
+      object value = makeFloat(t, s.readFloat());
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    case CONSTANT_Long: {
+      object value = makeLong(t, s.read8());
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    case CONSTANT_Double: {
+      object value = makeLong(t, s.readDouble());
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    case CONSTANT_NameAndType: {
+      object name = rawArrayBody(t, pool)[s.read2()];
+      object type = rawArrayBody(t, pool)[s.read2()];
+      object value = makePair(t, name, type);
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    case CONSTANT_Utf8: {
+      unsigned length = s.read2();
+      object value = makeByteArray(t, length);
+      s.read(reinterpret_cast<uint8_t*>(byteArrayBody(t, value)), length);
+      set(t, rawArrayBody(t, pool)[i], value);
+    } break;
+
+    default: abort(t);
+    }
+  }
+
+  unsigned flags = s.read2();
+  unsigned name = s.read2();
+  unsigned super = s.read2();
+  
+  unsigned interfaceCount = s.read2();
+  object interfaces = makeRawArray(t, interfaceCount * 2);
+  PROTECT(t, interfaces);
+
+  for (unsigned i = 0; i < interfaceCount * 2; i += 2) {
+    set(t, rawArrayBody(t, interfaces)[i], rawArrayBody(t, pool)[s.read2()]);
+    rawArrayBody(t, interfaces)[i + 1] = 0;
+  }
+
+  object class_ = makeClass(t,
+                            t->vm->nextClassId++,
+                            0, // fixed size
+                            0, // array size
+                            0, // object mask
+                            flags,
+                            rawArrayBody(t, pool)[name],
+                            rawArrayBody(t, pool)[super],
+                            interfaces,
+                            0, // fields
+                            0, // methods
+                            0, // static table
+                            0); // initializers
+  PROTECT(t, class_);
+
+  unsigned fieldCount = s.read2();
+  object fields = makeRawArray(t, fieldCount * 2);
+  set(t, classFieldTable(t, class_), fields);
+  PROTECT(t, fields);
+
+  for (unsigned i = 0; i < fieldCount; ++i) {
+    unsigned flags = s.read2();
+    unsigned name = s.read2();
+    unsigned spec = s.read2();
+
+    unsigned attributeCount = s.read2();
+    for (unsigned j = 0; j < attributeCount; ++j) {
+      s.read2();
+      s.skip(s.read4());
+    }
+
+    object value = makeField(t,
+                             flags,
+                             0, // offset
+                             rawArrayBody(t, pool)[name],
+                             rawArrayBody(t, pool)[spec],
+                             class_);
+
+    set(t, rawArrayBody(t, fields)[i], value);
+  }
+
+  unsigned methodCount = s.read2();
+  object methods = makeRawArray(t, methodCount * 2);
+  set(t, classMethodTable(t, class_), methods);
+  PROTECT(t, methods);
+
+  for (unsigned i = 0; i < methodCount; ++i) {
+    unsigned flags = s.read2();
+    unsigned name = s.read2();
+    unsigned spec = s.read2();
+    
+    object code = 0;
+    unsigned attributeCount = s.read2();
+    for (unsigned j = 0; j < attributeCount; ++j) {
+      object name = rawArrayBody(t, pool)[s.read2()];
+      if (strcmp(reinterpret_cast<const int8_t*>("Code"),
+                 byteArrayBody(t, name)) == 0)
+      {
+        unsigned length = s.read2();
+        code = makeByteArray(t, length);
+        s.read(reinterpret_cast<uint8_t*>(byteArrayBody(t, code)), length);
+      } else {
+        s.skip(s.read4());
+      }
+    }
+
+    object value = makeMethod(t,
+                              flags,
+                              0, // offset
+                              parameterCount(rawArrayBody(t, pool)[spec]),
+                              rawArrayBody(t, pool)[name],
+                              rawArrayBody(t, pool)[spec],
+                              class_,
+                              code);
+
+    set(t, rawArrayBody(t, methods)[i], value);
+  }
+
+  return class_;
+}
+
+object
 resolveClass(Thread* t, object spec)
 {
   PROTECT(t, spec);
@@ -706,11 +889,30 @@ resolveClass(Thread* t, object spec)
       (reinterpret_cast<const char*>(byteArrayBody(t, spec)), &size);
 
     if (data) {
+      // parse class file
       class_ = parseClass(t, data, size);
 
       t->vm->classFinder->free(data);
 
       PROTECT(t, class_);
+
+      // resolve superclass
+      object super = resolveClass(t, classSuper(t, class_));
+      if (UNLIKELY(t->exception)) return 0;
+        
+      set(t, classSuper(t, class_), super);
+
+#error todo
+      // merge interface table with that of superclass and generate
+      // vtables
+
+      // concatenate field table with those of superclass and populate
+      // offsets
+
+      // merge method table with that of superclass and populate
+      // offsets
+
+      // cache class
       hashMapInsert(t, t->vm->classMap, h, spec, class_);
     } else {
       object message = makeString(t, "%s", byteArrayBody(t, spec));
