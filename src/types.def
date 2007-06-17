@@ -10,7 +10,7 @@
   (object fieldTable)
   (object methodTable)
   (object staticTable)
-  (object initializers))
+  (object initializer))
 
 (type field
   (uint16_t flags)

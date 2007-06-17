@@ -851,10 +851,22 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   object interfaceTable = 0;
   if (hashMapSize(t, map)) {
     interfaceTable = makeArray(t, hashMapSize(t, map));
+    PROTECT(t, interfaceTable);
+
     unsigned i = 0;
-    for (object it = hmIterator(t, map); it; it = hmIteratorNext(t, it)) {
-      set(t, arrayBody(t, interfaceTable)[i], hmIteratorKey(t, it));
-      i += 2;
+    object it = hmIterator(t, map);
+    PROTECT(t, it);
+
+    for (; it; it = hmIteratorNext(t, it)) {
+      object interface = resolveClass(t, hmIteratorKey(t, it));
+      if (UNLIKELY(t->exception)) return;
+
+      set(t, arrayBody(t, interfaceTable)[i++], interface);
+
+      // we'll fill in this table in parseMethodTable():
+      object vtable = makeArray
+        (t, arraySize(t, interfaceMethodTable(t, interface)));
+      set(t, arrayBody(t, interfaceTable)[i++], vtable);      
     }
   }
 
@@ -920,9 +932,36 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 }
 
 object
-parseCode(Thread* t, Stream& s)
+parseCode(Thread* t, Stream& s, object pool)
 {
-  
+  unsigned maxStack = s.read2();
+  unsigned maxLocals = s.read2();
+  unsigned length = s.read4();
+
+  object code = makeCode(t, pool, 0, maxStack, maxLocals, length);
+  s.read(codeBody(t, code), length);
+
+  unsigned ehtLength = s.read2();
+  if (ehtLength) {
+    PROTECT(t, code);
+
+    object eht = makeExceptionHandlerTable(t, ehtLength);
+    for (unsigned i = 0; i < ehtLength; ++i) {
+      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht) + i;
+      eh->start = s.read2();
+      eh->end = s.read2();
+      eh->ip = s.read2();
+      eh->catchType = s.read2();
+    }
+
+    set(t, codeExceptionHandlerTable(t, code), eht);
+  }
+
+  unsigned attributeCount = s.read2();
+  for (unsigned j = 0; j < attributeCount; ++j) {
+    s.read2();
+    s.skip(s.read4());
+  }
 }
 
 void
@@ -964,12 +1003,14 @@ parseMemberTable(Thread* t, Stream& s, object class_, object pool)
       unsigned attributeCount = s.read2();
       for (unsigned j = 0; j < attributeCount; ++j) {
         object name = arrayBody(t, pool)[s.read2()];
+        unsigned length = s.read4();
+
         if (strcmp(reinterpret_cast<const int8_t*>("Code"),
                    byteArrayBody(t, name)) == 0)
         {
-          code = parseCode(t, s);
+          code = parseCode(t, s, pool);
         } else {
-          s.skip(s.read4());
+          s.skip(length);
         }
       }
 
@@ -981,8 +1022,15 @@ parseMemberTable(Thread* t, Stream& s, object class_, object pool)
                                 arrayBody(t, pool)[spec],
                                 class_,
                                 code);
+      PROTECT(t, value);
 
-      if ((flags & ACC_STATIC) == 0) {
+      if (flags & ACC_STATIC) {
+        if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
+                   byteArrayBody(t, methodName(t, value))) == 0)
+        {
+          set(t, classInitializer(t, class_), value);
+        }
+      } else {
         object p = hashMapFindNode(t, map, method, methodHash, methodEqual);
 
         if (p) {
@@ -1004,10 +1052,12 @@ parseMemberTable(Thread* t, Stream& s, object class_, object pool)
   }
 
   if (virtualCount) {
+    // generate class vtable
+
     object vtable = makeArray(t, virtualCount);
-    unsigned i = 0;
 
     if (superVirtualTable) {
+      unsigned i = 0;
       for (; i < arrayLength(t, superVirtualTable); ++i) {
         object method = arrayBody(t, superVirtualTable)[i];
         method = hashMapFind(t, map, method, methodHash, methodEqual);
@@ -1021,6 +1071,23 @@ parseMemberTable(Thread* t, Stream& s, object class_, object pool)
     }
 
     set(t, classVirtualTable(t, class_), vtable);
+
+    // generate interface vtables
+    
+    object itable = classInterfaceTable(t, class_);
+    PROTECT(t, itable);
+
+    for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+      object methodTable = interfaceMethodTable(t, arrayBody(t, itable)[i]);
+      object vtable = arrayBody(t, itable)[i + 1];
+
+      for (unsigned j = 0; j < arrayLength(t, methodTable); ++j) {
+        object method = arrayBody(t, methodTable)[j];
+        method = hashMapFind(t, map, method, methodHash, methodEqual);
+
+        set(t, arrayBody(t, vtable)[j], method);        
+      }
+    }
   }
 }
 
@@ -1134,10 +1201,13 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
   set(t, classSuper(t, class_), super);
   
   parseInterfaceTable(t, s, class_, pool);
+  if (UNLIKELY(t->exception)) return 0;
 
   parseFieldTable(t, s, class_, pool);
+  if (UNLIKELY(t->exception)) return 0;
 
   parseMethodTable(t, s, class_, pool);
+  if (UNLIKELY(t->exception)) return 0;
 
   return class_;
 }
@@ -1651,10 +1721,10 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
 
-    object p = classInitializers(t, fieldClass(t, field));
-    if (p) {
-      set(t, classInitializers(t, fieldClass(t, field)), pairSecond(t, p));
-      code = pairFirst(t, p);
+    object clinit = classInitializer(t, fieldClass(t, field));
+    if (clinit) {
+      set(t, classInitializer(t, fieldClass(t, field)), 0);
+      code = clinit;
       ip -= 3;
       parameterCount = 0;
       goto invoke;
@@ -2074,10 +2144,10 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
     
-    object p = classInitializers(t, methodClass(t, method));
-    if (p) {
-      set(t, classInitializers(t, methodClass(t, method)), pairSecond(t, p));
-      code = pairFirst(t, p);
+    object clinit = classInitializer(t, fieldClass(t, field));
+    if (clinit) {
+      set(t, classInitializer(t, fieldClass(t, field)), 0);
+      code = clinit;
       ip -= 3;
       parameterCount = 0;
       goto invoke;
@@ -2346,10 +2416,10 @@ run(Thread* t)
     object class_ = resolveClass(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
 
-    object p = classInitializers(t, class_);
-    if (p) {
-      set(t, classInitializers(t, class_), pairSecond(t, p));
-      code = pairFirst(t, p);
+    object clinit = classInitializer(t, fieldClass(t, field));
+    if (clinit) {
+      set(t, classInitializer(t, fieldClass(t, field)), 0);
+      code = clinit;
       ip -= 3;
       parameterCount = 0;
       goto invoke;
@@ -2464,10 +2534,10 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
 
-    object p = classInitializers(t, fieldClass(t, field));
-    if (p) {
-      set(t, classInitializers(t, fieldClass(t, field)), pairSecond(t, p));
-      code = pairFirst(t, p);
+    object clinit = classInitializer(t, fieldClass(t, field));
+    if (clinit) {
+      set(t, classInitializer(t, fieldClass(t, field)), 0);
+      code = clinit;
       ip -= 3;
       parameterCount = 0;
       goto invoke;
