@@ -1,12 +1,12 @@
 (type class
-  (uint32_t id)
+  (uint16_t flags)
   (uint16_t fixedSize)
   (uint16_t arrayElementSize)
   (object objectMask)
-  (uint16_t flags)
   (object name)
   (object super)
   (object interfaceTable)
+  (object virtualTable)
   (object fieldTable)
   (object methodTable)
   (object staticTable)
@@ -71,6 +71,15 @@
   (object first)
   (object second)
   (object third))
+
+(type hashMap
+  (object size)
+  (object array))
+
+(type list
+  (object size)
+  (object front)
+  (object rear))
 
 (type trace
   (object method)
@@ -148,7 +157,7 @@
 (type double
   (uint64_t value))
 
-(type rawArray
+(type array
   (array object body))
 
 (type objectArray
