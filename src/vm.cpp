@@ -3,6 +3,7 @@
 #include "heap.h"
 #include "class_finder.h"
 #include "stream.h"
+#include "constants.h"
 
 #define PROTECT(thread, name)                                   \
   Thread::Protector MAKE_NAME(protector_) (thread, &name);
@@ -10,17 +11,25 @@
 #define ACQUIRE(t, x) MonitorResource MAKE_NAME(monitorResource_) (t, x)
 #define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
+using namespace vm;
+
 namespace {
 
 typedef void* object;
 typedef unsigned Type;
 
-#include "constants.h"
-
 class Thread;
 
 void assert(Thread*, bool);
 object resolveClass(Thread*, object);
+object allocate(Thread* t, unsigned size);
+
+inline unsigned
+pad(unsigned n)
+{
+  unsigned extra = n % sizeof(void*);
+  return (extra ? n + sizeof(void*) - extra : n);
+}
 
 template <class T>
 inline T&
@@ -49,7 +58,7 @@ class Machine {
   System::Monitor* classLock;
   object classMap;
 
-#include "type-declarations.h"
+#include "type-members.cpp"
 };
 
 class Thread {
@@ -97,7 +106,8 @@ class Thread {
   Protector* protector;
 };
 
-#include "type-header.h"
+#include "type-declarations.cpp"
+#include "type-constructors.cpp"
 
 void enter(Thread* t, Thread::State state);
 
@@ -171,10 +181,12 @@ dispose(Machine* m)
 void
 init(Thread* t, Machine* m)
 {
-  memset(m, 0, sizeof(Thread));
+  memset(t, 0, sizeof(Thread));
   t->vm = m;
   m->rootThread = t;
   t->state = Thread::NoState;
+
+#include "type-initializations.cpp"
 }
 
 void
@@ -993,8 +1005,9 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       if (flags & ACC_STATIC) {
         fieldOffset(t, value) = staticOffset++;
       } else {
-        if (memberOffset % sizeof(void*) and isReferenceField(t, value)) {
-          while (memberOffset % sizeof(void*)) ++ memberOffset;
+        unsigned excess = memberOffset % sizeof(void*);
+        if (excess and isReferenceField(t, value)) {
+          memberOffset += sizeof(void*) - excess;
         }
 
         fieldOffset(t, value) = memberOffset;
@@ -2452,7 +2465,7 @@ run(Thread* t)
     push(t, arrayBody(t, codePool(t, code))[(index1 << 8) | index2]);
   } goto loop;
 
-  case ldiv: {
+  case vm::ldiv: {
     object b = pop(t);
     object a = pop(t);
     
@@ -2609,7 +2622,7 @@ run(Thread* t)
 
   case nop: goto loop;
 
-  case pop_: {
+  case vm::pop: {
     -- sp;
   } goto loop;
 

@@ -1,6 +1,8 @@
 #ifndef HEAP_H
 #define HEAP_H
 
+namespace vm {
+
 class Heap {
  public:
   enum CollectionType {
@@ -25,5 +27,7 @@ class Heap {
   virtual bool needsMark(void** p) = 0;
   virtual void mark(void** p);
 };
+
+} // namespace vm
 
 #endif//HEAP_H

@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+namespace vm {
+
 class System {
  public:
   typedef int Status;
@@ -59,5 +61,7 @@ class System {
   virtual Status open(File**, const char* path, int flags, int mode) = 0;
   virtual void abort() = 0;
 };
+
+} // namespace vm
 
 #endif//SYSTEM_H

@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+namespace vm {
+
 enum OpCode {
   aaload,
   aastore,
@@ -175,7 +177,7 @@ enum OpCode {
   new_,
   newarray,
   nop,
-  pop_,
+  pop,
   pop2,
   putfield,
   putstatic,
@@ -224,5 +226,7 @@ const unsigned ACC_VOLATILE  = 1 <<  6;
 const unsigned ACC_TRANSIENT = 1 <<  7;
 const unsigned ACC_INTERFACE = 1 <<  9;
 const unsigned ACC_ABSTRACT  = 1 << 10;
+
+} // namespace vm
 
 #endif//CONSTANTS_H

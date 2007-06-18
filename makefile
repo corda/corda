@@ -31,13 +31,13 @@ stdcpp-sources = $(src)/stdc++.cpp
 stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
 stdcpp-cflags = $(fast) $(cflags)
 
-type-headers = \
-	$(bld)/type-header.h \
-	$(bld)/type-declarations.h \
-	$(bld)/type-constructors.h \
-	$(bld)/type-primary-inits.h
-interpreter-headers = \
-	$(type-headers) \
+generated-code = \
+	$(bld)/type-declarations.cpp \
+	$(bld)/type-members.cpp \
+	$(bld)/type-constructors.cpp \
+	$(bld)/type-initializations.cpp
+interpreter-depends = \
+	$(generated-code) \
 	$(src)/heap.h \
 	$(src)/system.h
 interpreter-sources = \
@@ -114,8 +114,8 @@ clean:
 	@echo "removing $(bld)"
 	rm -r $(bld)
 
-gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.h:\1:')
-$(type-headers): %.h: $(src)/types.def $(generator-executable)
+gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
+$(generated-code): %.cpp: $(src)/types.def $(generator-executable)
 	@echo "generating $(@)"
 	$(generator-executable) $(call gen-arg,$(@)) < $(<) > $(@)
 
@@ -123,7 +123,7 @@ $(bld)/vm.o \
 $(bld)/test-vm.o \
 $(bld)/stress-vm.o \
 $(bld)/fast-vm.o: \
-	$(interpreter-headers)
+	$(interpreter-depends)
 
 $(bld)/type-generator.o: \
 	$(generator-headers)

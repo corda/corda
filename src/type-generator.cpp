@@ -1209,7 +1209,7 @@ writeConstructorInitializations(Output* out, Object* t)
     case Object::Scalar: {
       out->write("  ");
       writeAccessorName(out, m, true);
-      out->write("(o) = ");
+      out->write("(t, o) = ");
       out->write(obfuscate(memberName(m)));
       out->write(";\n");
     } break;
@@ -1250,39 +1250,6 @@ writeConstructorDeclarations(Output* out, Object* declarations)
   }
 }
 
-unsigned
-typeProtectedMemberCount(Object* o)
-{
-  unsigned count = 0;
-  for (MemberIterator it(o); it.hasMore();) {
-    Object* m = it.next();
-    if (m->type == Object::Scalar
-        and equal(memberTypeName(m), "object"))
-    {
-      ++ count;
-    }
-  }
-  return count;
-}
-
-void
-writeProtected(Output* out, Object* o)
-{
-  bool wrote = false;
-  for (MemberIterator it(o); it.hasMore();) {
-    Object* m = it.next();
-    if (m->type == Object::Scalar
-        and equal(memberTypeName(m), "object"))
-    {
-      if (wrote) {
-        out->write(", ");
-      }
-      out->write(obfuscate(memberName(m)));
-      wrote = true;
-    }
-  }
-}
-
 void
 writeConstructors(Output* out, Object* declarations)
 {
@@ -1301,20 +1268,22 @@ writeConstructors(Output* out, Object* declarations)
 
       out->write(")\n{\n");
 
-      unsigned protectedCount = typeProtectedMemberCount(o);
-      if (protectedCount) {
-        out->write("  PROTECT");
-        out->write(protectedCount);
-        out->write("(");
-        writeProtected(out, o);
-        out->write(");\n");
+      for (MemberIterator it(o); it.hasMore();) {
+        Object* m = it.next();
+        if (m->type == Object::Scalar
+            and equal(memberTypeName(m), "object"))
+        {
+          out->write("  PROTECT(t, ");
+          out->write(obfuscate(memberName(m)));
+          out->write(");\n");
+        }
       }
 
       out->write("  object o = allocate(t, ");
       writeOffset(out, typeOffset(o), true);
       out->write(");\n");
 
-      out->write("  objectClass(o) = system->");
+      out->write("  objectClass(o) = t->vm->");
       out->write(typeName(o));
       out->write("Class;\n");
 
@@ -1329,7 +1298,7 @@ writeConstructors(Output* out, Object* declarations)
 }
 
 void
-writeDeclarations(Output* out, Object* declarations)
+writeMembers(Output* out, Object* declarations)
 {
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
@@ -1446,7 +1415,7 @@ typeObjectMask(Object* type)
 }
 
 void
-writePrimaryInitialization(Output* out, Object* type)
+writeInitialization(Output* out, Object* type)
 {
   unsigned memberCount = ::memberCount(type);
   if (memberCount == 0) return;
@@ -1456,34 +1425,32 @@ writePrimaryInitialization(Output* out, Object* type)
   if (typeObjectMask(type)) {
     out->write("  object mask = makeIntArray(t, 1);\n");
 
-    out->write("  objectMaskBody(mask)[0] = ");
+    out->write("  intArrayBody(t, mask)[0] = ");
     out->write(typeObjectMask(type));
     out->write(";\n");
   } else {
     out->write("  object mask = 0;\n");    
   }
 
-  out->write("  object ");
+  out->write("  t->vm->");
   out->write(typeName(type));
   out->write("Class = makeClass");
-  out->write("(t, ");
-  out->write(capitalize(typeName(type)));
-  out->write("Type, ");
+  out->write("(t, 0, ");
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));
-  out->write(", mask, 0, 0, 0, 0, 0);\n");
+  out->write(", mask, 0, 0, 0, 0, 0, 0, 0, 0);\n");
 
   out->write("}\n\n");
 }
 
 void
-writePrimaryInitializations(Output* out, Object* declarations)
+writeInitializations(Output* out, Object* declarations)
 {
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
     if (o->type == Object::Type) {
-      writePrimaryInitialization(out, o);
+      writeInitialization(out, o);
     }
   }
 }
@@ -1492,7 +1459,7 @@ void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
-          "usage: %s {header,declarations,constructors,primary-inits}\n",
+          "usage: %s {declarations,members,constructors,initializations}\n",
           command);
   exit(-1);
 }
@@ -1504,10 +1471,10 @@ main(int ac, char** av)
 {
   if ((ac != 1 and ac != 2)
       or (ac == 2
-          and not equal(av[1], "header")
           and not equal(av[1], "declarations")
+          and not equal(av[1], "members")
           and not equal(av[1], "constructors")
-          and not equal(av[1], "primary-inits")))
+          and not equal(av[1], "initializations")))
   {
     usageAndExit(av[0]);
   }
@@ -1518,22 +1485,22 @@ main(int ac, char** av)
 
   FileOutput out(0, stdout, false);
 
-  if (ac == 1 or equal(av[1], "header")) {
+  if (ac == 1 or equal(av[1], "declarations")) {
     writePods(&out, declarations);
     writeAccessors(&out, declarations);
     writeConstructorDeclarations(&out, declarations);
   }
 
-  if (ac == 1 or equal(av[1], "declarations")) {
-    writeDeclarations(&out, declarations);
+  if (ac == 1 or equal(av[1], "members")) {
+    writeMembers(&out, declarations);
   }
 
   if (ac == 1 or equal(av[1], "constructors")) {
     writeConstructors(&out, declarations);
   }
   
-  if (ac == 1 or equal(av[1], "primary-inits")) {
-    writePrimaryInitializations(&out, declarations);
+  if (ac == 1 or equal(av[1], "initializations")) {
+    writeInitializations(&out, declarations);
   }
 
   return 0;

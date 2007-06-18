@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+namespace vm {
+
 class Stream {
  public:
   class Client {
@@ -74,5 +76,7 @@ class Stream {
   unsigned size;
   unsigned position;
 };
+
+} // namespace vm
 
 #endif//STREAM_H
