@@ -33,8 +33,6 @@ stdcpp-cflags = $(fast) $(cflags)
 
 type-headers = \
 	$(bld)/type-header.h \
-	$(bld)/type-enums.h \
-	$(bld)/type-enum-cases.h \
 	$(bld)/type-declarations.h \
 	$(bld)/type-constructors.h \
 	$(bld)/type-primary-inits.h

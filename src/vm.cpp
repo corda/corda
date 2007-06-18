@@ -19,7 +19,8 @@ typedef unsigned Type;
 
 class Thread;
 
-void assert(Thread* t, bool v);
+void assert(Thread*, bool);
+object resolveClass(Thread*, object);
 
 template <class T>
 inline T&
@@ -34,8 +35,6 @@ objectClass(object o)
   return cast<object>(o, 0);
 }
 
-#include "type-header.h"
-
 class Machine {
  public:
   System* sys;
@@ -45,11 +44,12 @@ class Machine {
   Thread* exclusive;
   unsigned activeCount;
   unsigned liveCount;
-  unsigned nextClassId;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
   object classMap;
+
+#include "type-declarations.h"
 };
 
 class Thread {
@@ -96,6 +96,8 @@ class Thread {
   object heap[HeapSize];
   Protector* protector;
 };
+
+#include "type-header.h"
 
 void enter(Thread* t, Thread::State state);
 
@@ -148,7 +150,6 @@ init(Machine* m, System* sys, Heap* heap, ClassFinder* classFinder)
   m->sys = sys;
   m->heap = heap;
   m->classFinder = classFinder;
-  m->nextClassId = OtherType + 1;
 
   if (not sys->success(sys->make(&(m->stateLock))) or
       not sys->success(sys->make(&(m->heapLock))) or
@@ -497,7 +498,7 @@ isLongOrDouble(Thread* t, object o)
 inline object
 getField(Thread* t, object instance, object field)
 {
-  switch (arrayBody(t, fieldSpec(t, field))[0]) {
+  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
   case 'B':
     return makeByte(t, cast<int8_t>(instance, fieldOffset(t, field)));
   case 'C':
@@ -525,7 +526,7 @@ getField(Thread* t, object instance, object field)
 inline void
 setField(Thread* t, object o, object field, object value)
 {
-  switch (arrayBody(t, fieldSpec(t, field))[0]) {
+  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
   case 'B':
     cast<int8_t>(o, fieldOffset(t, field)) = byteValue(t, value);
     break;
@@ -709,6 +710,14 @@ byteArrayHash(Thread* t, object array)
   return hash(byteArrayBody(t, array), byteArrayLength(t, array) - 1);
 }
 
+bool
+byteArrayEqual(Thread* t, object a, object b)
+{
+  return a == b or
+    ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
+     strcmp(byteArrayBody(t, a), byteArrayBody(t, b)) == 0);
+}
+
 inline uint32_t
 methodHash(Thread* t, object method)
 {
@@ -717,11 +726,11 @@ methodHash(Thread* t, object method)
 }
 
 bool
-byteArrayEqual(Thread* t, object a, object b)
+methodEqual(Thread* t, object a, object b)
 {
   return a == b or
-    ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
-     strcmp(byteArrayBody(t, a), byteArrayBody(t, b)) == 0);
+    (byteArrayEqual(t, methodName(t, a), methodName(t, b)) and
+     byteArrayEqual(t, methodSpec(t, a), methodSpec(t, b)));
 }
 
 object
@@ -764,10 +773,10 @@ hashMapGrow(Thread* t, object map, uint32_t (*hash)(Thread*, object))
 
   unsigned newLength = (oldLength ? oldLength * 2 : 32);
   object newArray = makeArray(t, newLength);
-  memset(arrayBody(t, newArray), o, newLength * sizeof(object));
+  memset(arrayBody(t, newArray), 0, newLength * sizeof(object));
 
   if (oldArray) {
-    for (unsigned i = 0; i < length; ++i) {
+    for (unsigned i = 0; i < oldLength; ++i) {
       object next;
       for (object p = arrayBody(t, oldArray)[i]; p; p = next) {
         next = tripleThird(t, p);
@@ -789,24 +798,60 @@ void
 hashMapInsert(Thread* t, object map, object key, object value,
               uint32_t (*hash)(Thread*, object))
 {
-  PROTECT(t, map);
-
   object array = hashMapArray(t, map);
   PROTECT(t, array);
 
   ++ hashMapSize(t, map);
 
-  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) {
+  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
+    PROTECT(t, map);
+    PROTECT(t, key);
+    PROTECT(t, value);
+
     hashMapGrow(t, map, hash);
     array = hashMapArray(t, map);
   }
 
-  unsigned index = hash & (arrayLength(t, array) - 1);
+  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
   object n = arrayBody(t, array)[index];
 
   n = makeTriple(t, key, value, n);
 
   set(t, arrayBody(t, array)[index], n);
+}
+
+object
+hashMapIterator(Thread* t, object map)
+{
+  object array = hashMapArray(t, map);
+  if (array) {
+    for (unsigned i = 0; i < arrayLength(t, array); ++i) {
+      if (arrayBody(t, array)[i]) {
+        return makeHashMapIterator(t, map, arrayBody(t, array)[i], i + 1);
+      }
+    }
+  }
+  return 0;
+}
+
+object
+hashMapIteratorNext(Thread* t, object it)
+{
+  object map = hashMapIteratorMap(t, it);
+  object node = hashMapIteratorNode(t, it);
+  unsigned index = hashMapIteratorIndex(t, it);
+
+  if (tripleThird(t, node)) {
+    return makeHashMapIterator(t, map, tripleThird(t, node), index + 1);
+  } else {
+    object array = hashMapArray(t, map);
+    for (unsigned i = index; i < arrayLength(t, array); ++i) {
+      if (arrayBody(t, array)[i]) {
+        return makeHashMapIterator(t, map, arrayBody(t, array)[i], i + 1);
+      }
+    }
+    return 0;
+  }  
 }
 
 void
@@ -854,23 +899,61 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     PROTECT(t, interfaceTable);
 
     unsigned i = 0;
-    object it = hmIterator(t, map);
+    object it = hashMapIterator(t, map);
     PROTECT(t, it);
 
-    for (; it; it = hmIteratorNext(t, it)) {
-      object interface = resolveClass(t, hmIteratorKey(t, it));
+    for (; it; it = hashMapIteratorNext(t, it)) {
+      object interface = resolveClass
+        (t, tripleFirst(t, hashMapIteratorNode(t, it)));
       if (UNLIKELY(t->exception)) return;
 
       set(t, arrayBody(t, interfaceTable)[i++], interface);
 
       // we'll fill in this table in parseMethodTable():
       object vtable = makeArray
-        (t, arraySize(t, interfaceMethodTable(t, interface)));
+        (t, arrayLength(t, interfaceMethodTable(t, interface)));
       set(t, arrayBody(t, interfaceTable)[i++], vtable);      
     }
   }
 
   set(t, classInterfaceTable(t, class_), interfaceTable);
+}
+
+bool
+isReferenceField(Thread* t, object field)
+{
+  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
+  case 'L':
+  case '[':
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+unsigned
+fieldSize(Thread* t, object field)
+{
+  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
+  case 'B':
+    return 1;
+  case 'C':
+  case 'S':
+  case 'Z':
+    return 2;
+  case 'D':
+  case 'J':
+    return 8;
+  case 'F':
+  case 'I':
+    return 4;
+  case 'L':
+  case '[':
+    return sizeof(void*);
+
+  default: abort(t);
+  }
 }
 
 void
@@ -947,11 +1030,11 @@ parseCode(Thread* t, Stream& s, object pool)
 
     object eht = makeExceptionHandlerTable(t, ehtLength);
     for (unsigned i = 0; i < ehtLength; ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht) + i;
-      eh->start = s.read2();
-      eh->end = s.read2();
-      eh->ip = s.read2();
-      eh->catchType = s.read2();
+      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+      exceptionHandlerStart(eh) = s.read2();
+      exceptionHandlerEnd(eh) = s.read2();
+      exceptionHandlerIp(eh) = s.read2();
+      exceptionHandlerCatchType(eh) = s.read2();
     }
 
     set(t, codeExceptionHandlerTable(t, code), eht);
@@ -964,8 +1047,36 @@ parseCode(Thread* t, Stream& s, object pool)
   }
 }
 
+unsigned
+parameterCount(Thread* t, object spec)
+{
+  unsigned count = 0;
+  const char* s = reinterpret_cast<const char*>(byteArrayBody(t, spec));
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      break;
+      
+    default:
+      ++ s;
+      break;
+    }
+
+    ++ count;
+  }
+
+  return count;
+}
+
 void
-parseMemberTable(Thread* t, Stream& s, object class_, object pool)
+parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 {
   PROTECT(t, class_);
   PROTECT(t, pool);
@@ -975,7 +1086,7 @@ parseMemberTable(Thread* t, Stream& s, object class_, object pool)
 
   unsigned virtualCount = 0;
 
-  object superVirtualTable = classVirtualTable(t, super);
+  object superVirtualTable = classVirtualTable(t, classSuper(t, class_));
   PROTECT(t, superVirtualTable);
 
   if (superVirtualTable) {
@@ -1017,7 +1128,7 @@ parseMemberTable(Thread* t, Stream& s, object class_, object pool)
       object value = makeMethod(t,
                                 flags,
                                 0, // offset
-                                parameterCount(arrayBody(t, pool)[spec]),
+                                parameterCount(t, arrayBody(t, pool)[spec]),
                                 arrayBody(t, pool)[name],
                                 arrayBody(t, pool)[spec],
                                 class_,
@@ -1031,17 +1142,16 @@ parseMemberTable(Thread* t, Stream& s, object class_, object pool)
           set(t, classInitializer(t, class_), value);
         }
       } else {
-        object p = hashMapFindNode(t, map, method, methodHash, methodEqual);
+        object p = hashMapFindNode(t, map, value, methodHash, methodEqual);
 
         if (p) {
           methodOffset(t, value) = methodOffset(t, tripleFirst(t, p));
 
           set(t, tripleSecond(t, p), value);
         } else {
-          methodOffset(t, value) = offset++;
+          methodOffset(t, value) = virtualCount++;
 
           listAppend(t, newVirtuals, value);
-          ++ virtualCount;
         }
       }
 
@@ -1168,8 +1278,9 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
 
     case CONSTANT_Utf8: {
       unsigned length = s.read2();
-      object value = makeByteArray(t, length);
+      object value = makeByteArray(t, length + 1);
       s.read(reinterpret_cast<uint8_t*>(byteArrayBody(t, value)), length);
+      byteArrayBody(t, value)[length] = 0;
       set(t, arrayBody(t, pool)[i], value);
     } break;
 
@@ -1181,18 +1292,18 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
   unsigned name = s.read2();
 
   object class_ = makeClass(t,
-                            t->vm->nextClassId++,
+                            flags,
                             0, // fixed size
                             0, // array size
                             0, // object mask
-                            flags,
                             arrayBody(t, pool)[name],
                             0, // super
                             0, // interfaces
+                            0, // vtable
                             0, // fields
                             0, // methods
                             0, // static table
-                            0); // initializers
+                            0); // initializer
   PROTECT(t, class_);
   
   object super = resolveClass(t, arrayBody(t, pool)[s.read2()]);
@@ -2144,9 +2255,9 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
     
-    object clinit = classInitializer(t, fieldClass(t, field));
+    object clinit = classInitializer(t, methodClass(t, method));
     if (clinit) {
-      set(t, classInitializer(t, fieldClass(t, field)), 0);
+      set(t, classInitializer(t, methodClass(t, method)), 0);
       code = clinit;
       ip -= 3;
       parameterCount = 0;
@@ -2416,9 +2527,9 @@ run(Thread* t)
     object class_ = resolveClass(t, codePool(t, code), index);
     if (UNLIKELY(exception)) goto throw_;
 
-    object clinit = classInitializer(t, fieldClass(t, field));
+    object clinit = classInitializer(t, class_);
     if (clinit) {
-      set(t, classInitializer(t, fieldClass(t, field)), 0);
+      set(t, classInitializer(t, class_), 0);
       code = clinit;
       ip -= 3;
       parameterCount = 0;

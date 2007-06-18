@@ -992,9 +992,9 @@ writeSubtypeAssertions(Output* out, Object* o)
 {
   for (Object* p = typeSubtypes(o); p; p = cdr(p)) {
     Object* st = car(p);
-    out->write(" or typeOf(o) == ");
-    out->write(capitalize(typeName(st)));
-    out->write("Type");
+    out->write(" or objectClass(o) == t->vm->");
+    out->write(typeName(st));
+    out->write("Class");
     writeSubtypeAssertions(out, st);
   }
 }
@@ -1027,9 +1027,9 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   out->write(") {\n");
 
   if (not unsafe and memberOwner(member)->type == Object::Type) {
-    out->write("  assert(t, objectClass(o) == 0 or typeOf(o) == ");
-    out->write(capitalize(::typeName(memberOwner(member))));
-    out->write("Type");
+    out->write("  assert(t, objectClass(o) == 0 or objectClass(o) == t->vm->");
+    out->write(::typeName(memberOwner(member)));
+    out->write("Class");
     writeSubtypeAssertions(out, memberOwner(member));
     out->write(");\n");
   }
@@ -1329,65 +1329,6 @@ writeConstructors(Output* out, Object* declarations)
 }
 
 void
-writeEnums(Output* out, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write(capitalize(typeName(o)));
-      out->write("Type,\n");
-    } break;
-
-    default: break;
-    }
-  }  
-}
-
-const char*
-lispStyle(const char* s)
-{
-  unsigned length = 0;
-  for (const char* p = s; *p; ++p) {
-    if (*p >= 'A' and *p <= 'Z') ++ length;
-    ++ length;
-  }
-  
-  char* n = static_cast<char*>(malloc(length + 1));
-  assert(n);
-  char* np = n;
-  for (const char* p = s; *p; ++p) {
-    if (*p >= 'A' and *p <= 'Z') {
-      *(np++) = '-';
-      *(np++) = 'a' + (*p - 'A');
-    } else {
-      *(np++) = *p;
-    }
-  }
-  *np = 0;
-  return n;
-}
-
-void
-writeEnumCases(Output* out, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write("case ");
-      out->write(capitalize(typeName(o)));
-      out->write("Type: return \"");
-      out->write(lispStyle(typeName(o)));
-      out->write("\";\n");
-    } break;
-
-    default: break;
-    }
-  }  
-}
-
-void
 writeDeclarations(Output* out, Object* declarations)
 {
   for (Object* p = declarations; p; p = cdr(p)) {
@@ -1551,8 +1492,7 @@ void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
-          "usage: %s {header,enums,enum-cases,declarations,constructors,"
-          "primary-inits}\n",
+          "usage: %s {header,declarations,constructors,primary-inits}\n",
           command);
   exit(-1);
 }
@@ -1565,8 +1505,6 @@ main(int ac, char** av)
   if ((ac != 1 and ac != 2)
       or (ac == 2
           and not equal(av[1], "header")
-          and not equal(av[1], "enums")
-          and not equal(av[1], "enum-cases")
           and not equal(av[1], "declarations")
           and not equal(av[1], "constructors")
           and not equal(av[1], "primary-inits")))
@@ -1584,14 +1522,6 @@ main(int ac, char** av)
     writePods(&out, declarations);
     writeAccessors(&out, declarations);
     writeConstructorDeclarations(&out, declarations);
-  }
-
-  if (ac == 1 or equal(av[1], "enums")) {
-    writeEnums(&out, declarations);
-  }
-
-  if (ac == 1 or equal(av[1], "enum-cases")) {
-    writeEnumCases(&out, declarations);
   }
 
   if (ac == 1 or equal(av[1], "declarations")) {

@@ -73,11 +73,16 @@
   (object third))
 
 (type hashMap
-  (object size)
+  (uint32_t size)
   (object array))
 
+(type hashMapIterator
+  (object map)
+  (object node)
+  (unsigned index))
+
 (type list
-  (object size)
+  (uint32_t size)
   (object front)
   (object rear))
 
@@ -137,7 +142,7 @@
   (int8_t value))
 
 (type boolean
-  (int8_t byte))
+  (int8_t value))
 
 (type short
   (int16_t value))
