@@ -134,7 +134,8 @@ class RawMonitorResource {
 inline void NO_RETURN
 abort(Thread* t)
 {
-  t->vm->sys->abort();
+  t->vm->sys->abort(); // this should not return
+  ::abort();
 }
 
 inline void
@@ -1045,6 +1046,8 @@ parseCode(Thread* t, Stream& s, object pool)
     s.read2();
     s.skip(s.read4());
   }
+
+  return code;
 }
 
 unsigned

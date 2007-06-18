@@ -57,7 +57,7 @@ class System {
   virtual Status start(Thread*) = 0;
   virtual Status make(Monitor**) = 0;
   virtual Status open(File**, const char* path, int flags, int mode) = 0;
-  virtual void NO_RETURN abort() = 0;
+  virtual void abort() = 0;
 };
 
 #endif//SYSTEM_H

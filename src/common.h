@@ -2,6 +2,7 @@
 #define COMMON_H
 
 #include "stdint.h"
+#include "stdlib.h"
 #include "stdarg.h"
 #include "string.h"
 #include "stdio.h"
