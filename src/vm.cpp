@@ -4,6 +4,7 @@
 #include "class_finder.h"
 #include "stream.h"
 #include "constants.h"
+#include "vm.h"
 
 #define PROTECT(thread, name)                                   \
   Thread::Protector MAKE_NAME(protector_) (thread, &name);
@@ -22,7 +23,9 @@ class Thread;
 
 void assert(Thread*, bool);
 object resolveClass(Thread*, object);
-object allocate(Thread* t, unsigned size);
+object allocate(Thread*, unsigned);
+object& arrayBody(Thread*, object, unsigned);
+void set(Thread*, object&, object);
 
 inline unsigned
 pad(unsigned n)
@@ -46,6 +49,10 @@ objectClass(object o)
 
 class Machine {
  public:
+  enum {
+#include "type-enums.cpp"
+  } Type;
+
   System* sys;
   Heap* heap;
   ClassFinder* classFinder;
@@ -57,8 +64,7 @@ class Machine {
   System::Monitor* heapLock;
   System::Monitor* classLock;
   object classMap;
-
-#include "type-members.cpp"
+  object types;
 };
 
 class Thread {
@@ -183,10 +189,15 @@ init(Thread* t, Machine* m)
 {
   memset(t, 0, sizeof(Thread));
   t->vm = m;
-  m->rootThread = t;
   t->state = Thread::NoState;
 
+  if (m->rootThread == 0) {
+    m->rootThread = t;
+
 #include "type-initializations.cpp"
+
+    m->classMap = makeHashMap(t, 0, 0);
+  }
 }
 
 void
@@ -221,6 +232,7 @@ collect(Machine* m, Heap::CollectionType type)
 
     void iterate(Heap::Visitor* v) {
       v->visit(&(m->classMap));
+      v->visit(&(m->types));
 
       for (Thread* t = m->rootThread; t; t = t->next) {
         ::iterate(t, v);
@@ -412,18 +424,37 @@ make(Thread* t, object class_)
 }
 
 object
-makeString(Thread* t, const char* format, ...)
+makeByteArray(Thread* t, const char* format, va_list a)
 {
   static const unsigned Size = 256;
   char buffer[Size];
   
-  va_list a;
-  va_start(a, format);
   vsnprintf(buffer, Size - 1, format, a);
-  va_end(a);
 
   object s = makeByteArray(t, strlen(buffer) + 1);
-  memcpy(byteArrayBody(t, s), buffer, byteArrayLength(t, s));
+  memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
+
+  return s;
+}
+
+object
+makeByteArray(Thread* t, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object s = makeByteArray(t, format, a);
+  va_end(a);
+
+  return s;
+}
+
+object
+makeString(Thread* t, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object s = makeByteArray(t, format, a);
+  va_end(a);
 
   return makeString(t, s, 0, byteArrayLength(t, s), 0);
 }
@@ -504,14 +535,14 @@ makeNoSuchMethodError(Thread* t, object message)
 inline bool
 isLongOrDouble(Thread* t, object o)
 {
-  return objectClass(o) == t->vm->longClass
-    or objectClass(o) == t->vm->doubleClass;
+  return objectClass(o) == arrayBody(t, t->vm->types, Machine::LongType)
+    or objectClass(o) == arrayBody(t, t->vm->types, Machine::DoubleType);
 }
 
 inline object
 getField(Thread* t, object instance, object field)
 {
-  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
+  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
   case 'B':
     return makeByte(t, cast<int8_t>(instance, fieldOffset(t, field)));
   case 'C':
@@ -539,7 +570,7 @@ getField(Thread* t, object instance, object field)
 inline void
 setField(Thread* t, object o, object field, object value)
 {
-  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
+  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
   case 'B':
     cast<int8_t>(o, fieldOffset(t, field)) = byteValue(t, value);
     break;
@@ -575,15 +606,15 @@ setField(Thread* t, object o, object field, object value)
 inline object
 getStatic(Thread* t, object field)
 {
-  return arrayBody(t, classStaticTable(t, fieldClass(t, field)))
-    [fieldOffset(t, field)];
+  return arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                   fieldOffset(t, field));
 }
 
 inline void
 setStatic(Thread* t, object field, object value)
 {
-  set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)))
-      [fieldOffset(t, field)], value);
+  set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                   fieldOffset(t, field)), value);
 }
 
 bool
@@ -593,11 +624,13 @@ instanceOf(Thread* t, object class_, object o)
     return false;
   }
 
-  if (objectClass(class_) == t->vm->interfaceClass) {
+  if (objectClass(class_)
+      == arrayBody(t, t->vm->types, Machine::InterfaceType))
+  {
     for (object oc = objectClass(o); oc; oc = classSuper(t, oc)) {
       object itable = classInterfaceTable(t, oc);
       for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-        if (arrayBody(t, itable)[i] == class_) {
+        if (arrayBody(t, itable, i) == class_) {
           return true;
         }
       }
@@ -619,9 +652,9 @@ findInterfaceMethod(Thread* t, object method, object o)
   object interface = methodClass(t, method);
   object itable = classInterfaceTable(t, objectClass(o));
   for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-    if (arrayBody(t, itable)[i] == interface) {
-      return arrayBody(t, arrayBody(t, itable)[i + 1])
-        [methodOffset(t, method)];
+    if (arrayBody(t, itable, i) == interface) {
+      return arrayBody(t, arrayBody(t, itable, i + 1),
+                       methodOffset(t, method));
     }
   }
   abort(t);
@@ -630,8 +663,8 @@ findInterfaceMethod(Thread* t, object method, object o)
 inline object
 findMethod(Thread* t, object method, object class_)
 {
-  return arrayBody(t, classVirtualTable(t, class_))
-    [methodOffset(t, method)];
+  return arrayBody(t, classVirtualTable(t, class_), 
+                   methodOffset(t, method));
 }
 
 inline object
@@ -663,7 +696,7 @@ isSpecialMethod(Thread* t, object method, object class_)
 {
   return (classFlags(t, class_) & ACC_SUPER)
     and strcmp(reinterpret_cast<const int8_t*>("<init>"), 
-               byteArrayBody(t, methodName(t, method))) != 0
+               &byteArrayBody(t, methodName(t, method), 0)) != 0
     and isSuperclass(t, methodClass(t, method), class_);
 }
 
@@ -676,11 +709,11 @@ find(Thread* t, object class_, object table, object reference,
   object n = referenceName(t, reference);
   object s = referenceSpec(t, reference);
   for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-    object field = arrayBody(t, table)[i];
-    if (strcmp(byteArrayBody(t, name(t, field)),
-               byteArrayBody(t, n)) == 0 and
-        strcmp(byteArrayBody(t, spec(t, field)),
-               byteArrayBody(t, s)) == 0)
+    object field = arrayBody(t, table, i);
+    if (strcmp(&byteArrayBody(t, name(t, field), 0),
+               &byteArrayBody(t, n, 0)) == 0 and
+        strcmp(&byteArrayBody(t, spec(t, field), 0),
+               &byteArrayBody(t, s, 0)) == 0)
     {
       return field;
     }               
@@ -688,9 +721,9 @@ find(Thread* t, object class_, object table, object reference,
 
   object message = makeString
     (t, "%s (%s) not found in %s",
-     byteArrayBody(t, n),
-     byteArrayBody(t, s),
-     byteArrayBody(t, className(t, class_)));
+     &byteArrayBody(t, n, 0),
+     &byteArrayBody(t, s, 0),
+     &byteArrayBody(t, className(t, class_), 0));
   t->exception = makeError(t, message);
   return 0;
 }
@@ -720,7 +753,7 @@ hash(const int8_t* s, unsigned length)
 inline uint32_t
 byteArrayHash(Thread* t, object array)
 {
-  return hash(byteArrayBody(t, array), byteArrayLength(t, array) - 1);
+  return hash(&byteArrayBody(t, array, 0), byteArrayLength(t, array) - 1);
 }
 
 bool
@@ -728,7 +761,7 @@ byteArrayEqual(Thread* t, object a, object b)
 {
   return a == b or
     ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
-     strcmp(byteArrayBody(t, a), byteArrayBody(t, b)) == 0);
+     strcmp(&byteArrayBody(t, a, 0), &byteArrayBody(t, b, 0)) == 0);
 }
 
 inline uint32_t
@@ -754,7 +787,7 @@ hashMapFindNode(Thread* t, object map, object key,
   object array = hashMapArray(t, map);
   if (array) {
     unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    object n = arrayBody(t, array)[index];
+    object n = arrayBody(t, array, index);
     while (n) {
       if (equal(t, tripleFirst(t, n), key)) {
         return n;
@@ -786,20 +819,20 @@ hashMapGrow(Thread* t, object map, uint32_t (*hash)(Thread*, object))
 
   unsigned newLength = (oldLength ? oldLength * 2 : 32);
   object newArray = makeArray(t, newLength);
-  memset(arrayBody(t, newArray), 0, newLength * sizeof(object));
+  memset(&arrayBody(t, newArray, 0), 0, newLength * sizeof(object));
 
   if (oldArray) {
     for (unsigned i = 0; i < oldLength; ++i) {
       object next;
-      for (object p = arrayBody(t, oldArray)[i]; p; p = next) {
+      for (object p = arrayBody(t, oldArray, i); p; p = next) {
         next = tripleThird(t, p);
 
         object key = tripleFirst(t, p);
         unsigned index = hash(t, key) & (newLength - 1);
-        object n = arrayBody(t, newArray)[index];
+        object n = arrayBody(t, newArray, index);
 
         set(t, tripleThird(t, p), n);
-        set(t, arrayBody(t, newArray)[index], p);
+        set(t, arrayBody(t, newArray, index), p);
       }
     }
   }
@@ -826,11 +859,11 @@ hashMapInsert(Thread* t, object map, object key, object value,
   }
 
   unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-  object n = arrayBody(t, array)[index];
+  object n = arrayBody(t, array, index);
 
   n = makeTriple(t, key, value, n);
 
-  set(t, arrayBody(t, array)[index], n);
+  set(t, arrayBody(t, array, index), n);
 }
 
 object
@@ -839,8 +872,8 @@ hashMapIterator(Thread* t, object map)
   object array = hashMapArray(t, map);
   if (array) {
     for (unsigned i = 0; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array)[i]) {
-        return makeHashMapIterator(t, map, arrayBody(t, array)[i], i + 1);
+      if (arrayBody(t, array, i)) {
+        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
       }
     }
   }
@@ -859,8 +892,8 @@ hashMapIteratorNext(Thread* t, object it)
   } else {
     object array = hashMapArray(t, map);
     for (unsigned i = index; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array)[i]) {
-        return makeHashMapIterator(t, map, arrayBody(t, array)[i], i + 1);
+      if (arrayBody(t, array, i)) {
+        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
       }
     }
     return 0;
@@ -896,13 +929,13 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, superInterfaces);
 
   for (unsigned i = 0; i < arrayLength(t, superInterfaces); i += 2) {
-    object name = interfaceName(t, arrayBody(t, superInterfaces)[i]);
+    object name = interfaceName(t, arrayBody(t, superInterfaces, i));
     hashMapInsert(t, map, name, name, byteArrayHash);
   }
   
   unsigned count = s.read2();
   for (unsigned i = 0; i < count; ++i) {
-    object name = arrayBody(t, pool)[s.read2()];
+    object name = arrayBody(t, pool, s.read2());
     hashMapInsert(t, map, name, name, byteArrayHash);
   }
 
@@ -920,12 +953,12 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
         (t, tripleFirst(t, hashMapIteratorNode(t, it)));
       if (UNLIKELY(t->exception)) return;
 
-      set(t, arrayBody(t, interfaceTable)[i++], interface);
+      set(t, arrayBody(t, interfaceTable, i++), interface);
 
       // we'll fill in this table in parseMethodTable():
       object vtable = makeArray
         (t, arrayLength(t, interfaceMethodTable(t, interface)));
-      set(t, arrayBody(t, interfaceTable)[i++], vtable);      
+      set(t, arrayBody(t, interfaceTable, i++), vtable);      
     }
   }
 
@@ -935,7 +968,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 bool
 isReferenceField(Thread* t, object field)
 {
-  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
+  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
   case 'L':
   case '[':
     return true;
@@ -948,7 +981,7 @@ isReferenceField(Thread* t, object field)
 unsigned
 fieldSize(Thread* t, object field)
 {
-  switch (byteArrayBody(t, fieldSpec(t, field))[0]) {
+  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
   case 'B':
     return 1;
   case 'C':
@@ -998,8 +1031,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       object value = makeField(t,
                                flags,
                                0, // offset
-                               arrayBody(t, pool)[name],
-                               arrayBody(t, pool)[spec],
+                               arrayBody(t, pool, name),
+                               arrayBody(t, pool, spec),
                                class_);
 
       if (flags & ACC_STATIC) {
@@ -1014,14 +1047,14 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         memberOffset += fieldSize(t, value);
       }
 
-      set(t, arrayBody(t, fieldTable)[i], value);
+      set(t, arrayBody(t, fieldTable, i), value);
     }
 
     set(t, classFieldTable(t, class_), fieldTable);
 
     if (staticOffset) {
       object staticTable = makeArray(t, staticOffset);
-      memset(arrayBody(t, staticTable), 0, staticOffset * sizeof(void*));
+      memset(&arrayBody(t, staticTable, 0), 0, staticOffset * sizeof(void*));
 
       set(t, classStaticTable(t, class_), staticTable);
     }
@@ -1036,7 +1069,7 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned length = s.read4();
 
   object code = makeCode(t, pool, 0, maxStack, maxLocals, length);
-  s.read(codeBody(t, code), length);
+  s.read(&codeBody(t, code, 0), length);
 
   unsigned ehtLength = s.read2();
   if (ehtLength) {
@@ -1067,7 +1100,7 @@ unsigned
 parameterCount(Thread* t, object spec)
 {
   unsigned count = 0;
-  const char* s = reinterpret_cast<const char*>(byteArrayBody(t, spec));
+  const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
   ++ s; // skip '('
   while (*s and *s != ')') {
     switch (*s) {
@@ -1108,7 +1141,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   if (superVirtualTable) {
     virtualCount = arrayLength(t, superVirtualTable);
     for (unsigned i = 0; i < virtualCount; ++i) {
-      object method = arrayBody(t, superVirtualTable)[i];
+      object method = arrayBody(t, superVirtualTable, i);
       hashMapInsert(t, map, method, method, byteArrayHash);
     }
   }
@@ -1129,11 +1162,11 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       object code = 0;
       unsigned attributeCount = s.read2();
       for (unsigned j = 0; j < attributeCount; ++j) {
-        object name = arrayBody(t, pool)[s.read2()];
+        object name = arrayBody(t, pool, s.read2());
         unsigned length = s.read4();
 
         if (strcmp(reinterpret_cast<const int8_t*>("Code"),
-                   byteArrayBody(t, name)) == 0)
+                   &byteArrayBody(t, name, 0)) == 0)
         {
           code = parseCode(t, s, pool);
         } else {
@@ -1144,16 +1177,16 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       object value = makeMethod(t,
                                 flags,
                                 0, // offset
-                                parameterCount(t, arrayBody(t, pool)[spec]),
-                                arrayBody(t, pool)[name],
-                                arrayBody(t, pool)[spec],
+                                parameterCount(t, arrayBody(t, pool, spec)),
+                                arrayBody(t, pool, name),
+                                arrayBody(t, pool, spec),
                                 class_,
                                 code);
       PROTECT(t, value);
 
       if (flags & ACC_STATIC) {
         if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
-                   byteArrayBody(t, methodName(t, value))) == 0)
+                   &byteArrayBody(t, methodName(t, value), 0)) == 0)
         {
           set(t, classInitializer(t, class_), value);
         }
@@ -1171,7 +1204,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         }
       }
 
-      set(t, arrayBody(t, methodTable)[i], value);
+      set(t, arrayBody(t, methodTable, i), value);
     }
 
     set(t, classMethodTable(t, class_), methodTable);
@@ -1185,14 +1218,14 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     if (superVirtualTable) {
       unsigned i = 0;
       for (; i < arrayLength(t, superVirtualTable); ++i) {
-        object method = arrayBody(t, superVirtualTable)[i];
+        object method = arrayBody(t, superVirtualTable, i);
         method = hashMapFind(t, map, method, methodHash, methodEqual);
 
-        set(t, arrayBody(t, vtable)[i], method);
+        set(t, arrayBody(t, vtable, i), method);
       }
 
       for (object p = listFront(t, newVirtuals); p; p = pairSecond(t, p)) {
-        set(t, arrayBody(t, vtable)[i++], pairFirst(t, p));        
+        set(t, arrayBody(t, vtable, i++), pairFirst(t, p));        
       }
     }
 
@@ -1204,14 +1237,14 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     PROTECT(t, itable);
 
     for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-      object methodTable = interfaceMethodTable(t, arrayBody(t, itable)[i]);
-      object vtable = arrayBody(t, itable)[i + 1];
+      object methodTable = interfaceMethodTable(t, arrayBody(t, itable, i));
+      object vtable = arrayBody(t, itable, i + 1);
 
       for (unsigned j = 0; j < arrayLength(t, methodTable); ++j) {
-        object method = arrayBody(t, methodTable)[j];
+        object method = arrayBody(t, methodTable, j);
         method = hashMapFind(t, map, method, methodHash, methodEqual);
 
-        set(t, arrayBody(t, vtable)[j], method);        
+        set(t, arrayBody(t, vtable, j), method);        
       }
     }
   }
@@ -1246,58 +1279,58 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
   for (unsigned i = 0; i < poolCount; ++i) {
     switch (s.read1()) {
     case CONSTANT_Class: {
-      set(t, arrayBody(t, pool)[i], arrayBody(t, pool)[s.read2()]);
+      set(t, arrayBody(t, pool, i), arrayBody(t, pool, s.read2()));
     } break;
 
     case CONSTANT_Fieldref:
     case CONSTANT_Methodref:
     case CONSTANT_InterfaceMethodref: {
-      object c = arrayBody(t, pool)[s.read2()];
-      object nameAndType = arrayBody(t, pool)[s.read2()];
+      object c = arrayBody(t, pool, s.read2());
+      object nameAndType = arrayBody(t, pool, s.read2());
       object value = makeReference
         (t, c, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
-      set(t, arrayBody(t, pool)[i], value);
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_String: {
-      object bytes = arrayBody(t, pool)[s.read2()];
+      object bytes = arrayBody(t, pool, s.read2());
       object value = makeString(t, bytes, 0, byteArrayLength(t, bytes), 0);
-      set(t, arrayBody(t, pool)[i], value);
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_Integer: {
       object value = makeInt(t, s.read4());
-      set(t, arrayBody(t, pool)[i], value);
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_Float: {
       object value = makeFloat(t, s.readFloat());
-      set(t, arrayBody(t, pool)[i], value);
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_Long: {
       object value = makeLong(t, s.read8());
-      set(t, arrayBody(t, pool)[i], value);
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_Double: {
       object value = makeLong(t, s.readDouble());
-      set(t, arrayBody(t, pool)[i], value);
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_NameAndType: {
-      object name = arrayBody(t, pool)[s.read2()];
-      object type = arrayBody(t, pool)[s.read2()];
+      object name = arrayBody(t, pool, s.read2());
+      object type = arrayBody(t, pool, s.read2());
       object value = makePair(t, name, type);
-      set(t, arrayBody(t, pool)[i], value);
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_Utf8: {
       unsigned length = s.read2();
       object value = makeByteArray(t, length + 1);
-      s.read(reinterpret_cast<uint8_t*>(byteArrayBody(t, value)), length);
-      byteArrayBody(t, value)[length] = 0;
-      set(t, arrayBody(t, pool)[i], value);
+      s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, value, 0)), length);
+      byteArrayBody(t, value, length) = 0;
+      set(t, arrayBody(t, pool, i), value);
     } break;
 
     default: abort(t);
@@ -1312,7 +1345,7 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
                             0, // fixed size
                             0, // array size
                             0, // object mask
-                            arrayBody(t, pool)[name],
+                            arrayBody(t, pool, name),
                             0, // super
                             0, // interfaces
                             0, // vtable
@@ -1322,7 +1355,7 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
                             0); // initializer
   PROTECT(t, class_);
   
-  object super = resolveClass(t, arrayBody(t, pool)[s.read2()]);
+  object super = resolveClass(t, arrayBody(t, pool, s.read2()));
   if (UNLIKELY(t->exception)) return 0;
 
   set(t, classSuper(t, class_), super);
@@ -1350,7 +1383,7 @@ resolveClass(Thread* t, object spec)
   if (class_ == 0) {
     unsigned size;
     const uint8_t* data = t->vm->classFinder->find
-      (reinterpret_cast<const char*>(byteArrayBody(t, spec)), &size);
+      (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)), &size);
 
     if (data) {
       // parse class file
@@ -1362,7 +1395,7 @@ resolveClass(Thread* t, object spec)
 
       hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
     } else {
-      object message = makeString(t, "%s", byteArrayBody(t, spec));
+      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
       t->exception = makeClassNotFoundException(t, message);
     }
   }
@@ -1372,14 +1405,14 @@ resolveClass(Thread* t, object spec)
 inline object
 resolveClass(Thread* t, object pool, unsigned index)
 {
-  object o = arrayBody(t, pool)[index];
-  if (objectClass(o) == t->vm->byteArrayClass) {
+  object o = arrayBody(t, pool, index);
+  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ByteArrayType)) {
     PROTECT(t, pool);
 
     o = resolveClass(t, o);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, arrayBody(t, pool)[index], o);
+    set(t, arrayBody(t, pool, index), o);
   }
   return o; 
 }
@@ -1388,7 +1421,7 @@ inline object
 resolveClass(Thread* t, object container, object& (*class_)(Thread*, object))
 {
   object o = class_(t, container);
-  if (objectClass(o) == t->vm->byteArrayClass) {
+  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ByteArrayType)) {
     PROTECT(t, container);
 
     o = resolveClass(t, o);
@@ -1403,17 +1436,17 @@ inline object
 resolve(Thread* t, object pool, unsigned index,
         object (*find)(Thread*, object, object))
 {
-  object o = arrayBody(t, pool)[index];
-  if (objectClass(o) == t->vm->byteArrayClass) {
+  object o = arrayBody(t, pool, index);
+  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ByteArrayType)) {
     PROTECT(t, pool);
 
     object class_ = resolveClass(t, o, referenceClass);
     if (UNLIKELY(t->exception)) return 0;
 
-    o = find(t, class_, arrayBody(t, pool)[index]);
+    o = find(t, class_, arrayBody(t, pool, index));
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, arrayBody(t, pool)[index], o);
+    set(t, arrayBody(t, pool, index), o);
   }
   return o;
 }
@@ -1441,8 +1474,10 @@ run(Thread* t)
   object* stack = t->stack;
   unsigned parameterCount = 0;
 
+  if (UNLIKELY(exception)) goto throw_;
+
  loop:
-  switch (codeBody(t, code)[ip++]) {
+  switch (codeBody(t, code, ip++)) {
   case aaload: {
     object index = pop(t);
     object array = pop(t);
@@ -1452,7 +1487,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < objectArrayLength(t, array)))
       {
-        push(t, objectArrayBody(t, array)[i]);
+        push(t, objectArrayBody(t, array, i));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     objectArrayLength(t, array));
@@ -1475,7 +1510,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < objectArrayLength(t, array)))
       {
-        set(t, objectArrayBody(t, array)[i], value);
+        set(t, objectArrayBody(t, array, i), value);
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     objectArrayLength(t, array));
@@ -1495,31 +1530,31 @@ run(Thread* t)
   case aload:
   case iload:
   case lload: {
-    push(t, frameLocals(t, frame)[codeBody(t, code)[ip++]]);
+    push(t, frameLocals(t, frame, codeBody(t, code, ip++)));
   } goto loop;
 
   case aload_0:
   case iload_0:
   case lload_0: {
-    push(t, frameLocals(t, frame)[0]);
+    push(t, frameLocals(t, frame, 0));
   } goto loop;
 
   case aload_1:
   case iload_1:
   case lload_1: {
-    push(t, frameLocals(t, frame)[1]);
+    push(t, frameLocals(t, frame, 1));
   } goto loop;
 
   case aload_2:
   case iload_2:
   case lload_2: {
-    push(t, frameLocals(t, frame)[2]);
+    push(t, frameLocals(t, frame, 2));
   } goto loop;
 
   case aload_3:
   case iload_3:
   case lload_3: {
-    push(t, frameLocals(t, frame)[3]);
+    push(t, frameLocals(t, frame, 3));
   } goto loop;
 
   case anewarray: {
@@ -1527,15 +1562,15 @@ run(Thread* t)
     int32_t c = intValue(t, count);
 
     if (LIKELY(c >= 0)) {
-      uint8_t index1 = codeBody(t, code)[ip++];
-      uint8_t index2 = codeBody(t, code)[ip++];
+      uint8_t index1 = codeBody(t, code, ip++);
+      uint8_t index2 = codeBody(t, code, ip++);
       uint16_t index = (index1 << 8) | index2;
       
       object class_ = resolveClass(t, codePool(t, code), index);
       if (UNLIKELY(exception)) goto throw_;
       
       object array = makeObjectArray(t, class_, c);
-      memset(objectArrayBody(t, array), 0, c * 4);
+      memset(&objectArrayBody(t, array, 0), 0, c * 4);
       
       push(t, array);
     } else {
@@ -1563,7 +1598,9 @@ run(Thread* t)
   case arraylength: {
     object array = pop(t);
     if (LIKELY(array)) {
-      if (objectClass(array) == t->vm->objectArrayClass) {
+      if (objectClass(array)
+          == arrayBody(t, t->vm->types, Machine::ObjectArrayType))
+      {
         push(t, makeInt(t, objectArrayLength(t, array)));
       } else {
         // for all other array types, the length follow the class pointer.
@@ -1579,35 +1616,35 @@ run(Thread* t)
   case istore:
   case lstore: {
     object value = pop(t);
-    set(t, frameLocals(t, frame)[codeBody(t, code)[ip++]], value);
+    set(t, frameLocals(t, frame, codeBody(t, code, ip++)), value);
   } goto loop;
 
   case astore_0:
   case istore_0:
   case lstore_0: {
     object value = pop(t);
-    set(t, frameLocals(t, frame)[0], value);
+    set(t, frameLocals(t, frame, 0), value);
   } goto loop;
 
   case astore_1:
   case istore_1:
   case lstore_1: {
     object value = pop(t);
-    set(t, frameLocals(t, frame)[1], value);
+    set(t, frameLocals(t, frame, 1), value);
   } goto loop;
 
   case astore_2:
   case istore_2:
   case lstore_2: {
     object value = pop(t);
-    set(t, frameLocals(t, frame)[2], value);
+    set(t, frameLocals(t, frame, 2), value);
   } goto loop;
 
   case astore_3:
   case istore_3:
   case lstore_3: {
     object value = pop(t);
-    set(t, frameLocals(t, frame)[3], value);
+    set(t, frameLocals(t, frame, 3), value);
   } goto loop;
 
   case athrow: {
@@ -1627,7 +1664,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < byteArrayLength(t, array)))
       {
-        push(t, makeByte(t, byteArrayBody(t, array)[i]));
+        push(t, makeByte(t, byteArrayBody(t, array, i)));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     byteArrayLength(t, array));
@@ -1650,7 +1687,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < byteArrayLength(t, array)))
       {
-        byteArrayBody(t, array)[i] = intValue(t, value);
+        byteArrayBody(t, array, i) = intValue(t, value);
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     byteArrayLength(t, array));
@@ -1664,7 +1701,7 @@ run(Thread* t)
   } goto loop;
 
   case bipush: {
-    push(t, makeInt(t, codeBody(t, code)[ip++]));
+    push(t, makeInt(t, codeBody(t, code, ip++)));
   } goto loop;
 
   case caload: {
@@ -1676,7 +1713,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < charArrayLength(t, array)))
       {
-        push(t, makeInt(t, charArrayBody(t, array)[i]));
+        push(t, makeInt(t, charArrayBody(t, array, i)));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     charArrayLength(t, array));
@@ -1699,7 +1736,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < charArrayLength(t, array)))
       {
-        charArrayBody(t, array)[i] = intValue(t, value);
+        charArrayBody(t, array, i) = intValue(t, value);
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     charArrayLength(t, array));
@@ -1713,8 +1750,8 @@ run(Thread* t)
   } goto loop;
 
   case checkcast: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
 
     if (stack[sp - 1]) {
       uint16_t index = (index1 << 8) | index2;
@@ -1725,8 +1762,8 @@ run(Thread* t)
       if (not instanceOf(t, class_, stack[sp - 1])) {
         object message = makeString
           (t, "%s as %s",
-           byteArrayBody(t, className(t, objectClass(stack[sp - 1]))),
-           byteArrayBody(t, className(t, class_)));
+           &byteArrayBody(t, className(t, objectClass(stack[sp - 1])), 0),
+           &byteArrayBody(t, className(t, class_), 0));
         exception = makeClassCastException(t, message);
         goto throw_;
       }
@@ -1826,8 +1863,8 @@ run(Thread* t)
   case getfield: {
     object instance = pop(t);
     if (LIKELY(instance)) {
-      uint8_t index1 = codeBody(t, code)[ip++];
-      uint8_t index2 = codeBody(t, code)[ip++];
+      uint8_t index1 = codeBody(t, code, ip++);
+      uint8_t index2 = codeBody(t, code, ip++);
       uint16_t index = (index1 << 8) | index2;
     
       object field = resolveField(t, codePool(t, code), index);
@@ -1841,8 +1878,8 @@ run(Thread* t)
   } goto loop;
 
   case getstatic: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
 
     object field = resolveField(t, codePool(t, code), index);
@@ -1861,17 +1898,17 @@ run(Thread* t)
   } goto loop;
 
   case goto_: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     ip = (ip - 1) + ((offset1 << 8) | offset2);
   } goto loop;
     
   case goto_w: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
-    uint8_t offset3 = codeBody(t, code)[ip++];
-    uint8_t offset4 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
+    uint8_t offset3 = codeBody(t, code, ip++);
+    uint8_t offset4 = codeBody(t, code, ip++);
 
     ip = (ip - 1)
       + ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
@@ -1917,7 +1954,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < intArrayLength(t, array)))
       {
-        push(t, makeInt(t, intArrayBody(t, array)[i]));
+        push(t, makeInt(t, intArrayBody(t, array, i)));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     intArrayLength(t, array));
@@ -1947,7 +1984,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < intArrayLength(t, array)))
       {
-        intArrayBody(t, array)[i] = intValue(t, value);
+        intArrayBody(t, array, i) = intValue(t, value);
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     intArrayLength(t, array));
@@ -1992,8 +2029,8 @@ run(Thread* t)
   } goto loop;
 
   case if_acmpeq: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2004,8 +2041,8 @@ run(Thread* t)
   } goto loop;
 
   case if_acmpne: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2016,8 +2053,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpeq: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2028,8 +2065,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpne: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2040,8 +2077,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpgt: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2052,8 +2089,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmpge: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2064,8 +2101,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmplt: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2076,8 +2113,8 @@ run(Thread* t)
   } goto loop;
 
   case if_icmple: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object b = pop(t);
     object a = pop(t);
@@ -2088,8 +2125,8 @@ run(Thread* t)
   } goto loop;
 
   case ifeq: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2099,8 +2136,8 @@ run(Thread* t)
   } goto loop;
 
   case ifne: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2110,8 +2147,8 @@ run(Thread* t)
   } goto loop;
 
   case ifgt: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2121,8 +2158,8 @@ run(Thread* t)
   } goto loop;
 
   case ifge: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2132,8 +2169,8 @@ run(Thread* t)
   } goto loop;
 
   case iflt: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2143,8 +2180,8 @@ run(Thread* t)
   } goto loop;
 
   case ifle: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2154,8 +2191,8 @@ run(Thread* t)
   } goto loop;
 
   case ifnonnull: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2165,8 +2202,8 @@ run(Thread* t)
   } goto loop;
 
   case ifnull: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     object v = pop(t);
     
@@ -2176,11 +2213,11 @@ run(Thread* t)
   } goto loop;
 
   case iinc: {
-    uint8_t index = codeBody(t, code)[ip++];
-    int8_t c = codeBody(t, code)[ip++];
+    uint8_t index = codeBody(t, code, ip++);
+    int8_t c = codeBody(t, code, ip++);
     
-    int32_t v = intValue(t, frameLocals(t, frame)[index]);
-    frameLocals(t, frame)[index] = makeInt(t, v + c);
+    int32_t v = intValue(t, frameLocals(t, frame, index));
+    frameLocals(t, frame, index) = makeInt(t, v + c);
   } goto loop;
 
   case imul: {
@@ -2197,8 +2234,8 @@ run(Thread* t)
   } goto loop;
 
   case instanceof: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
 
     if (stack[sp - 1]) {
       uint16_t index = (index1 << 8) | index2;
@@ -2217,8 +2254,8 @@ run(Thread* t)
   } goto loop;
 
   case invokeinterface: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
       
     ip += 2;
@@ -2239,8 +2276,8 @@ run(Thread* t)
   } goto loop;
 
   case invokespecial: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
 
     object method = resolveMethod(t, codePool(t, code), index);
@@ -2264,8 +2301,8 @@ run(Thread* t)
   } goto loop;
 
   case invokestatic: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
 
     object method = resolveMethod(t, codePool(t, code), index);
@@ -2285,8 +2322,8 @@ run(Thread* t)
   } goto invoke;
 
   case invokevirtual: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
 
     object method = resolveMethod(t, codePool(t, code), index);
@@ -2354,18 +2391,18 @@ run(Thread* t)
   } goto loop;
 
   case jsr: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
 
     push(t, makeInt(t, ip));
     ip = (ip - 1) + ((offset1 << 8) | offset2);
   } goto loop;
 
   case jsr_w: {
-    uint8_t offset1 = codeBody(t, code)[ip++];
-    uint8_t offset2 = codeBody(t, code)[ip++];
-    uint8_t offset3 = codeBody(t, code)[ip++];
-    uint8_t offset4 = codeBody(t, code)[ip++];
+    uint8_t offset1 = codeBody(t, code, ip++);
+    uint8_t offset2 = codeBody(t, code, ip++);
+    uint8_t offset3 = codeBody(t, code, ip++);
+    uint8_t offset4 = codeBody(t, code, ip++);
 
     push(t, makeInt(t, ip));
     ip = (ip - 1)
@@ -2394,7 +2431,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < longArrayLength(t, array)))
       {
-        push(t, makeLong(t, longArrayBody(t, array)[i]));
+        push(t, makeLong(t, longArrayBody(t, array, i)));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     longArrayLength(t, array));
@@ -2424,7 +2461,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < longArrayLength(t, array)))
       {
-        longArrayBody(t, array)[i] = longValue(t, value);
+        longArrayBody(t, array, i) = longValue(t, value);
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     longArrayLength(t, array));
@@ -2454,15 +2491,15 @@ run(Thread* t)
   } goto loop;
 
   case ldc: {
-    push(t, arrayBody(t, codePool(t, code))[codeBody(t, code)[ip++]]);
+    push(t, arrayBody(t, codePool(t, code), codeBody(t, code, ip++)));
   } goto loop;
 
   case ldc_w:
   case ldc2_w: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
 
-    push(t, arrayBody(t, codePool(t, code))[(index1 << 8) | index2]);
+    push(t, arrayBody(t, codePool(t, code), (index1 << 8) | index2));
   } goto loop;
 
   case vm::ldiv: {
@@ -2536,8 +2573,8 @@ run(Thread* t)
   } goto loop;
 
   case new_: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
     
     object class_ = resolveClass(t, codePool(t, code), index);
@@ -2560,7 +2597,7 @@ run(Thread* t)
     int32_t c = intValue(t, count);
 
     if (LIKELY(c >= 0)) {
-      uint8_t type = codeBody(t, code)[ip++];
+      uint8_t type = codeBody(t, code, ip++);
 
       object array;
       unsigned factor;
@@ -2638,8 +2675,8 @@ run(Thread* t)
   case putfield: {
     object instance = pop(t);
     if (LIKELY(instance)) {
-      uint8_t index1 = codeBody(t, code)[ip++];
-      uint8_t index2 = codeBody(t, code)[ip++];
+      uint8_t index1 = codeBody(t, code, ip++);
+      uint8_t index2 = codeBody(t, code, ip++);
       uint16_t index = (index1 << 8) | index2;
     
       object field = resolveField(t, codePool(t, code), index);
@@ -2654,8 +2691,8 @@ run(Thread* t)
   } goto loop;
 
   case putstatic: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
 
     object field = resolveField(t, codePool(t, code), index);
@@ -2675,7 +2712,7 @@ run(Thread* t)
   } goto loop;
 
   case ret: {
-    ip = intValue(t, frameLocals(t, frame)[codeBody(t, code)[ip]]);
+    ip = intValue(t, frameLocals(t, frame, codeBody(t, code, ip)));
   } goto loop;
 
   case return_: {
@@ -2699,7 +2736,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < shortArrayLength(t, array)))
       {
-        push(t, makeShort(t, shortArrayBody(t, array)[i]));
+        push(t, makeShort(t, shortArrayBody(t, array, i)));
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     shortArrayLength(t, array));
@@ -2722,7 +2759,7 @@ run(Thread* t)
       if (LIKELY(i >= 0 and
                  static_cast<uint32_t>(i) < shortArrayLength(t, array)))
       {
-        shortArrayBody(t, array)[i] = intValue(t, value);
+        shortArrayBody(t, array, i) = intValue(t, value);
       } else {
         object message = makeString(t, "%d not in [0,%d]", i,
                                     shortArrayLength(t, array));
@@ -2736,8 +2773,8 @@ run(Thread* t)
   } goto loop;
 
   case sipush: {
-    uint8_t byte1 = codeBody(t, code)[ip++];
-    uint8_t byte2 = codeBody(t, code)[ip++];
+    uint8_t byte1 = codeBody(t, code, ip++);
+    uint8_t byte2 = codeBody(t, code, ip++);
 
     push(t, makeInt(t, (byte1 << 8) | byte2));
   } goto loop;
@@ -2754,44 +2791,44 @@ run(Thread* t)
   }
 
  wide:
-  switch (codeBody(t, code)[ip++]) {
+  switch (codeBody(t, code, ip++)) {
   case aload:
   case iload:
   case lload: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
 
-    push(t, frameLocals(t, frame)[(index1 << 8) | index2]);
+    push(t, frameLocals(t, frame, (index1 << 8) | index2));
   } goto loop;
 
   case astore:
   case istore:
   case lstore: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
 
     object value = pop(t);
-    set(t, frameLocals(t, frame)[(index1 << 8) | index2], value);
+    set(t, frameLocals(t, frame, (index1 << 8) | index2), value);
   } goto loop;
 
   case iinc: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
 
-    uint8_t count1 = codeBody(t, code)[ip++];
-    uint8_t count2 = codeBody(t, code)[ip++];
+    uint8_t count1 = codeBody(t, code, ip++);
+    uint8_t count2 = codeBody(t, code, ip++);
     uint16_t count = (count1 << 8) | count2;
     
-    int32_t v = intValue(t, frameLocals(t, frame)[index]);
-    frameLocals(t, frame)[index] = makeInt(t, v + count);
+    int32_t v = intValue(t, frameLocals(t, frame, index));
+    frameLocals(t, frame, index) = makeInt(t, v + count);
   } goto loop;
 
   case ret: {
-    uint8_t index1 = codeBody(t, code)[ip++];
-    uint8_t index2 = codeBody(t, code)[ip++];
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
 
-    ip = intValue(t, frameLocals(t, frame)[(index1 << 8) | index2]);
+    ip = intValue(t, frameLocals(t, frame, (index1 << 8) | index2));
   } goto loop;
 
   default: abort(t);
@@ -2810,7 +2847,7 @@ run(Thread* t)
   sp -= parameterCount;
   frame = makeFrame(t, code, frame, 0, sp,
                     codeMaxLocals(t, methodCode(t, code)));
-  memcpy(frameLocals(t, frame), stack + sp, parameterCount);
+  memcpy(&frameLocals(t, frame, 0), stack + sp, parameterCount);
   ip = 0;
   goto loop;
 
@@ -2824,7 +2861,7 @@ run(Thread* t)
         uint16_t catchType = exceptionHandlerCatchType(eh);
         if (catchType == 0 or
             instanceOf(t,
-                       arrayBody(t, codePool(t, code))[catchType],
+                       arrayBody(t, codePool(t, code), catchType),
                        exception))
         {
           sp = frameStackBase(t, frame);
@@ -2847,4 +2884,52 @@ run(Thread* t)
   goto loop;
 }
 
+void
+run(Thread* t, const char* className, int argc, const char** argv)
+{
+  object class_ = resolveClass(t, makeByteArray(t, "%s", className));
+  if (LIKELY(t->exception == 0)) {
+    PROTECT(t, class_);
+
+    object name = makeByteArray(t, "main");
+    PROTECT(t, name);
+
+    object spec = makeByteArray(t, "([Ljava/lang/String;)V");
+    object reference = makeReference(t, class_, name, spec);
+    
+    object method = findMethodInClass(t, class_, reference);
+    if (LIKELY(t->exception == 0)) {
+      t->code = methodCode(t, method);
+      t->frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, t->code));
+
+      object args = makeObjectArray
+        (t, arrayBody(t, t->vm->types, Machine::StringType), argc);
+      PROTECT(t, args);
+
+      for (int i = 0; i < argc; ++i) {
+        object arg = makeString(t, "%s", argv);
+        set(t, objectArrayBody(t, args, i), arg);
+      }
+
+      push(t, args);
+    }    
+  }
+
+  run(t);
+}
+
 } // namespace
+
+namespace vm {
+
+void
+run(System* sys, Heap* heap, ClassFinder* classFinder,
+    const char* className, int argc, const char** argv)
+{
+  Machine m; init(&m, sys, heap, classFinder);
+  Thread t; init(&t, &m);
+
+  run(&t, className, argc, argv);
+}
+
+}

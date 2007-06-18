@@ -32,14 +32,19 @@ stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
 stdcpp-cflags = $(fast) $(cflags)
 
 generated-code = \
+	$(bld)/type-enums.cpp \
 	$(bld)/type-declarations.cpp \
-	$(bld)/type-members.cpp \
 	$(bld)/type-constructors.cpp \
 	$(bld)/type-initializations.cpp
 interpreter-depends = \
 	$(generated-code) \
+	$(src)/common.h \
+	$(src)/system.h \
 	$(src)/heap.h \
-	$(src)/system.h
+	$(src)/class_finder.h \
+	$(src)/stream.h \
+	$(src)/constants.h \
+	$(src)/vm.h
 interpreter-sources = \
 	$(src)/vm.cpp
 interpreter-objects = $(call cpp-objects,$(interpreter-sources),$(src))

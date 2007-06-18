@@ -992,9 +992,9 @@ writeSubtypeAssertions(Output* out, Object* o)
 {
   for (Object* p = typeSubtypes(o); p; p = cdr(p)) {
     Object* st = car(p);
-    out->write(" or objectClass(o) == t->vm->");
-    out->write(typeName(st));
-    out->write("Class");
+    out->write(" or objectClass(o) == arrayBody(t, t->vm->types, Machine::");
+    out->write(capitalize(typeName(st)));
+    out->write("Type)");
     writeSubtypeAssertions(out, st);
   }
 }
@@ -1007,7 +1007,11 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
 
   out->write("inline ");
   out->write(typeName);
-  out->write(member->type == Object::Scalar ? "&" : "*");
+  if (member->type != Object::Scalar and memberTypeObject(member)) {
+    out->write("*");
+  } else {
+    out->write("&");
+  }
   out->write("\n");
   writeAccessorName(out, member, true, unsafe);
   if (memberOwner(member)->type == Object::Pod) {
@@ -1020,32 +1024,40 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   out->write(" o");
   if (member->type != Object::Scalar) {
     out->write(", unsigned i");
-    if (memberTypeObject(member) == 0) {
-      out->write(" = 0");
-    }
   }
   out->write(") {\n");
 
   if (not unsafe and memberOwner(member)->type == Object::Type) {
-    out->write("  assert(t, objectClass(o) == 0 or objectClass(o) == t->vm->");
-    out->write(::typeName(memberOwner(member)));
-    out->write("Class");
+    out->write("  assert(t, objectClass(o) == 0 or ");
+    out->write("objectClass(o) == arrayBody(t, t->vm->types, Machine::");
+    out->write(capitalize(::typeName(memberOwner(member))));
+    out->write("Type)");
     writeSubtypeAssertions(out, memberOwner(member));
     out->write(");\n");
+
+    if (member->type != Object::Scalar) {
+      out->write("  assert(t, i < ");
+      out->write(::typeName(memberOwner(member)));
+      out->write("Length(t, o));\n");
+    }
   }
 
   out->write("  return reinterpret_cast<");
   out->write(typeName);
-  out->write(member->type == Object::Scalar ? "&" : "*");
+  if (member->type != Object::Scalar and memberTypeObject(member)) {
+    out->write("*");
+  } else {
+    out->write("&");
+  }
   if (memberOwner(member)->type == Object::Pod) {
     out->write(">(o->body");
   } else {
     out->write(">(static_cast<uint8_t*>(o)");
   }
-  if (member->type == Object::Scalar) {
-    out->write("[");
-  } else {
+  if (member->type != Object::Scalar and memberTypeObject(member)) {
     out->write(" + ");
+  } else {
+    out->write("[");
   }
   writeOffset(out, offset);
   if (member->type != Object::Scalar) {
@@ -1056,7 +1068,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     out->write(elementSize);
     out->write(")");
   }
-  if (member->type == Object::Scalar) {
+  if (member->type == Object::Scalar or memberTypeObject(member) == 0) {
     out->write("]");
   }
   out->write(");\n}\n\n");
@@ -1283,9 +1295,9 @@ writeConstructors(Output* out, Object* declarations)
       writeOffset(out, typeOffset(o), true);
       out->write(");\n");
 
-      out->write("  objectClass(o) = t->vm->");
-      out->write(typeName(o));
-      out->write("Class;\n");
+      out->write("  objectClass(o) = arrayBody(t, t->vm->types, Machine::");
+      out->write(capitalize(typeName(o)));
+      out->write("Type);\n");
 
       writeConstructorInitializations(out, o);
 
@@ -1298,22 +1310,31 @@ writeConstructors(Output* out, Object* declarations)
 }
 
 void
-writeMembers(Output* out, Object* declarations)
+writeEnums(Output* out, Object* declarations)
 {
+  bool wrote = false;
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
       if (typeMemberCount(o)) {
-        out->write("object ");
-        out->write(typeName(o));
-        out->write("Class;\n");
+        if (wrote) {
+          out->write(",\n");
+        } else {
+          wrote = true;
+        }
+        out->write(capitalize(typeName(o)));
+        out->write("Type");
       }
     } break;
 
     default: break;
     }
-  }  
+  }
+
+  if (wrote) {
+    out->write("\n");
+  } 
 }
 
 unsigned
@@ -1425,41 +1446,69 @@ writeInitialization(Output* out, Object* type)
   if (typeObjectMask(type)) {
     out->write("  object mask = makeIntArray(t, 1);\n");
 
-    out->write("  intArrayBody(t, mask)[0] = ");
+    out->write("  intArrayBody(t, mask, 0) = ");
     out->write(typeObjectMask(type));
     out->write(";\n");
   } else {
     out->write("  object mask = 0;\n");    
   }
 
-  out->write("  t->vm->");
-  out->write(typeName(type));
-  out->write("Class = makeClass");
+  out->write("  object class_ = makeClass");
   out->write("(t, 0, ");
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));
   out->write(", mask, 0, 0, 0, 0, 0, 0, 0, 0);\n");
 
+  out->write("  set(t, arrayBody(t, t->vm->types, Machine::");
+  out->write(capitalize(typeName(type)));
+  out->write("Type), class_);\n");
+
   out->write("}\n\n");
+}
+
+unsigned
+typeCount(Object* declarations)
+{
+  unsigned count = 0;
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    switch (o->type) {
+    case Object::Type: {
+      if (typeMemberCount(o)) {
+        ++ count;
+      }
+    } break;
+
+    default: break;
+    }
+  }
+  return count;
 }
 
 void
 writeInitializations(Output* out, Object* declarations)
 {
+  out->write("  t->vm->types = makeArray(t, ");
+  out->write(typeCount(declarations));
+  out->write(");\n\n");
+
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
     if (o->type == Object::Type) {
       writeInitialization(out, o);
     }
   }
+
+  out->write("  set(t, objectClass(t->vm->types), ");
+  out->write("arrayBody(t, t->vm->types, Machine::ArrayType));\n");
 }
 
 void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
-          "usage: %s {declarations,members,constructors,initializations}\n",
+          "usage: %s {enums,declarations,constructors,initializations}\n",
           command);
   exit(-1);
 }
@@ -1471,8 +1520,8 @@ main(int ac, char** av)
 {
   if ((ac != 1 and ac != 2)
       or (ac == 2
+          and not equal(av[1], "enums")
           and not equal(av[1], "declarations")
-          and not equal(av[1], "members")
           and not equal(av[1], "constructors")
           and not equal(av[1], "initializations")))
   {
@@ -1485,14 +1534,14 @@ main(int ac, char** av)
 
   FileOutput out(0, stdout, false);
 
+  if (ac == 1 or equal(av[1], "enums")) {
+    writeEnums(&out, declarations);
+  }
+
   if (ac == 1 or equal(av[1], "declarations")) {
     writePods(&out, declarations);
     writeAccessors(&out, declarations);
     writeConstructorDeclarations(&out, declarations);
-  }
-
-  if (ac == 1 or equal(av[1], "members")) {
-    writeMembers(&out, declarations);
   }
 
   if (ac == 1 or equal(av[1], "constructors")) {
