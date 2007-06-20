@@ -36,8 +36,8 @@ class Segment {
 
 //         printf("iterating from %p (index %d) to %p (index %d) "
 //                "(%d of %d bytes) (scale: %d)\n",
-//                start, index, end, limit, (end - start) * sizeof(void*),
-//                map->segment->position * sizeof(void*), map->scale);
+//                start, index, end, limit, (end - start) * BytesPerWord,
+//                map->segment->position * BytesPerWord, map->scale);
       }
 
       bool hasMore() {
@@ -51,12 +51,12 @@ class Segment {
         for (; word <= wordLimit and (word < wordLimit or bit < bitLimit);
              ++word)
         {
-          uintptr_t* p = map->data + word;
+          uintptr_t* p = map->data() + word;
           if (*p) {
             for (; bit < BitsPerWord and (word < wordLimit or bit < bitLimit);
                  ++bit)
             {
-              if (map->data[word] & (static_cast<uintptr_t>(1) << bit)) {
+              if (map->data()[word] & (static_cast<uintptr_t>(1) << bit)) {
                 index = ::indexOf(word, bit);
 //                 printf("hit at index %d\n", index);
                 return true;
@@ -74,8 +74,8 @@ class Segment {
       }
       
       void** next() {
-        assert(hasMore());
-        assert(map->segment);
+        assert(map->segment->context, hasMore());
+        assert(map->segment->context, map->segment);
 
         return reinterpret_cast<void**>(map->segment->data) +
           ((index++) * map->scale);
@@ -83,83 +83,66 @@ class Segment {
     };
 
     Segment* segment;
+    unsigned offset;
     unsigned bitsPerRecord;
     unsigned scale;
-    uintptr_t* data;
     Map* next;
     Map* child;
     
     void init() {
       init(0);
-      data = 0;
     }
 
-    void init(Segment* segment, unsigned bitsPerRecord = 1, unsigned scale = 1,
-              Map* next = 0, Map* child = 0)
+    void init(Segment* segment, unsigned offset, unsigned bitsPerRecord = 1,
+              unsigned scale = 1, Map* next = 0, Map* child = 0)
     {
       assert(bitsPerRecord);
       assert(scale);
       assert(powerOfTwo(scale));
 
       this->segment = segment;
+      this->offset = offset;
       this->bitsPerRecord = bitsPerRecord;
       this->scale = scale;
       this->next = next;
       this->child = child;
     }
 
-    void replaceWith(Map* m) {
-      assert(m);
-      assert(bitsPerRecord == m->bitsPerRecord);
-      assert(scale == m->scale);
-
-      free(data);
-
-      data = m->data;
-      m->data = 0;
-      
-      if (next) next->replaceWith(m->next);
-      if (child) child->replaceWith(m->child);
+    uintptr_t* data() {
+      return segment->data + offset;
     }
 
     unsigned size(unsigned capacity) {
       unsigned result = pad
         (divide(divide(capacity, scale) * bitsPerRecord, 8));
-      assert(result);
+      assert(segment->context, result);
       return result;
     }
 
     unsigned size() {
-      assert(segment);
+      assert(segment->context, segment);
       return size(max(segment->capacity, 1));
     }
 
     unsigned indexOf(void* p) {
-      assert(segment);
-      assert(segment->position
+      assert(segment->context, segment);
+      assert(segment->context,
+             segment->position
              and p >= segment->data
              and p <= segment->data + segment->position);
-      assert(segment->data);
-      return ((static_cast<void**>(p) - reinterpret_cast<void**>(segment->data))
+      assert(segment->context, segment->data);
+
+      return ((static_cast<void**>(p)
+               - reinterpret_cast<void**>(segment->data))
               / scale) * bitsPerRecord;
     }
 
-    void update() {
-      data = static_cast<uintptr_t*>(realloc(data, size()));
-      assert(data);
+    void update(uintptr_t* segmentData) {
+      uintptr_t* p = segmentData + offset;
+      memcpy(p, data(), size(segment->position));
 
-      if (next) next->update();
-      if (child) child->update();
-    }
-
-    void reset(bool clear = true) {
-      free(data);
-      data = static_cast<uintptr_t*>(malloc(size()));
-      assert(data);
-      if (clear) memset(data, 0, size());
-
-      if (next) next->reset();
-      if (child) child->reset();
+      if (next) next->update(segmentData);
+      if (child) child->update(segmentData);
     }
 
     void clear() {
@@ -219,8 +202,7 @@ class Segment {
     }
 
     void dispose() {
-      free(data);
-      data = 0;
+      offset = 0;
       segment = 0;
       next = 0;
 
@@ -237,7 +219,7 @@ class Segment {
       return n;
     }
 
-    void setSegment(Segment* s) {
+    void setSegment(Segment* s, bool clear = true) {
       segment = s;
       if (next) next->setSegment(s);
       if (child) child->setSegment(s);
@@ -259,27 +241,46 @@ class Segment {
     return footprint(capacity);
   }
 
-  void init(unsigned capacityInBytes, Map* map = 0, bool clearMap = true) {
-    this->capacity = divide(capacityInBytes, BytesPerWord);
+  void init(Context* context, unsigned capacity, Map* map = 0,
+            bool clearMap = true)
+  {
+    this->context = context;
+    this->capacity = capacity;
     this->data = 0;
     this->position = 0;
     this->map = map;
 
     if (capacity) {
-      if (map) map->reset(clearMap);
-      this->data = static_cast<uintptr_t*>(malloc(capacity * BytesPerWord));
-      assert(this->data);
+      unsigned count = footprint(capacity);
+      this->data = static_cast<uintptr_t*>(system(context)->allocate(&count));
+
+      if (count != footprint(capacity)) {
+        abort(context);
+      }
+
+      if (map) {
+        map->setSegment(this, clearMap);
+      }
     }
   }
 
-  void* add(System* sys, void* p, unsigned size) {
+  void* allocate(unsigned size) {
+    assert(c, size);
+    assert(c, position + size <= capacity);
+    void* p = reinterpret_cast<void**>(data) + position;
+    position += size;
+
+    return p;
+  }
+
+  void* add(void* p, unsigned size) {
     void* target = allocate(size);
-    memcpy(target, p, size);
+    memcpy(target, p, size * BytesPerWord);
     return target;
   }
 
   unsigned remaining() {
-    return (capacity - position) * BytesPerWord;
+    return capacity - position;
   }
 
   void replaceWith(Segment* s) {
@@ -307,28 +308,30 @@ class Segment {
     }    
   }
 
-  void grow(System* sys, unsigned extra) {
-    if (remainingBytes() < extra) {
-      unsigned minimumNeeded = s->usedBytes() + (extra * bytesPerWord);
+  void grow(unsigned extra) {
+    if (remaining() < extra) {
+      unsigned minimumNeeded = position + extra;
       unsigned count = minimumNeeded * 2;
+      
+      minimumNeeded = footprint(minimumNeeded);
+      count = footprint(count);
 
-      void* p = sys->allocate(&count);
+      uintptr_t* p = static_cast<uintptr_t*>
+        (system(context)->allocate(&count));
 
       if (count >= minimumNeeded) {
-        memcpy(p, s->data, s->usedBytes());
-        s->data = p;
-        sys->free(s->data);
+        memcpy(p, data, position * BytesPerWord);
+
+        if (map) {
+          map->update(p);
+        }
+
+        data = p;
+        system(context)->free(data);
       } else {
-        abort(sys);
+        abort(context);
       }
     }
-
-    unsigned newCapacity = divide(newCapacityInBytes, BytesPerWord);
-    assert(newCapacity > capacity);
-    capacity = newCapacity;
-    data = static_cast<uintptr_t*>(realloc(data, capacity * BytesPerWord));
-    assert(data);
-    if (map) map->update();
   }
 
   bool contains(void* p) {
@@ -354,7 +357,7 @@ void
 initGen1(Context* c)
 {
   c->ageMap.init(&(c->gen1), log(Arena::TenureThreshold));
-  c->gen1.init(c->minimumGen1Size, &(c->ageMap), false);
+  c->gen1.init(c->minimumGen1Size / BytesPerWord, &(c->ageMap), false);
 }
 
 void
@@ -364,14 +367,14 @@ initGen2(Context* c)
   c->pageMap.init(&(c->gen2), 1, LikelyPageSize / BytesPerWord, 0,
                   &(c->pointerMap));
   c->heapMap.init(&(c->gen2), 1, c->pageMap.scale * 1024, 0, &(c->pageMap));
-  c->gen2.init(c->minimumGen2Size, &(c->heapMap));
+  c->gen2.init(c->minimumGen2Size / BytesPerWord, &(c->heapMap));
 }
 
 void
 initNextGen1(Context* c)
 {
-  unsigned size = max(c->minimumGen1Size,
-                      nextPowerOfTwo(c->gen1.position() * BytesPerWord));
+  unsigned size = max(c->minimumGen1Size / BytesPerWord,
+                      nextPowerOfTwo(c->gen1.position()));
   c->nextAgeMap.init(&(c->nextGen1), log(Arena::TenureThreshold));
   c->nextGen1.init(size, &(c->nextAgeMap), false);
 }
@@ -379,8 +382,8 @@ initNextGen1(Context* c)
 void
 initNextGen2(Context* c)
 {
-  unsigned size = max(c->minimumGen2Size,
-                      nextPowerOfTwo(c->gen2.position() * BytesPerWord));
+  unsigned size = max(c->minimumGen2Size / BytesPerWord,
+                      nextPowerOfTwo(c->gen2.position()));
   c->pointerMap.init(&(c->nextGen2));
   c->pageMap.init(&(c->nextGen2), 1, LikelyPageSize / BytesPerWord, 0,
                   &(c->pointerMap));
@@ -411,11 +414,8 @@ bitset(object o)
 object
 copyTo(Context* c, Segment* s, object o, unsigned size)
 {
-  assert(c, size >= BytesPerWord);
-  assert(c, size % BytesPerWord == 0);
-
-  if (s->remainingBytes() < size) {
-    s->grow(c->sys, size * bytesPerWord);
+  if (s->remaining() < size) {
+    s->grow(c->sys, size);
   }
 
   return static_cast<object>(s->add(o, size));
@@ -424,7 +424,7 @@ copyTo(Context* c, Segment* s, object o, unsigned size)
 object
 copy2(Context* c, object o)
 {
-  unsigned size = c->client->sizeOf(o);
+  unsigned size = c->client->sizeInWords(o);
 
   if (c->gen2.contains(o)) {
     assert(c, c->mode == MajorCollection
@@ -437,7 +437,7 @@ copy2(Context* c, object o)
       if (c->mode == MinorCollection) {
         if (c->gen2.front == 0) initGen2(a);
 
-        if (c->gen2.remainingBytes() >= size) {
+        if (c->gen2.remaining() >= size) {
           return copyTo(c, &(c->gen2), o, size);
         } else {
           c->mode = OverflowCollection;
@@ -676,7 +676,7 @@ collect(Context* c, void** p)
       virtual bool visit(unsigned offset) {
         bool needsVisit;
         object childCopy = update
-          (c, &cast<object>(copy, offset * sizeof(void*)), &needsVisit);
+          (c, &cast<object>(copy, offset * BytesPerWord), &needsVisit);
         
         ++ total;
 
@@ -698,7 +698,7 @@ collect(Context* c, void** p)
             bitsetSet(bitset, offset, true);
           }          
         } else {
-          cast<object>(copy, offset * sizeof(void*)) = childCopy;
+          cast<object>(copy, offset * BytesPerWord) = childCopy;
         }
 
         return true;
@@ -722,8 +722,8 @@ collect(Context* c, void** p)
         parent = original;
       }
 
-      original = cast<object>(copy, walker.first * sizeof(void*));
-      cast<object>(copy, walker.first * sizeof(void*)) = follow(original);
+      original = cast<object>(copy, walker.first * BytesPerWord);
+      cast<object>(copy, walker.first * BytesPerWord) = follow(original);
       goto visit;
     } else {
       // ascend
@@ -775,8 +775,8 @@ collect(Context* c, void** p)
       parent = ::parent(original);
     }
 
-    original = cast<object>(copy, walker.next * sizeof(void*));
-    cast<object>(copy, walker.next * sizeof(void*)) = follow(original);
+    original = cast<object>(copy, walker.next * BytesPerWord);
+    cast<object>(copy, walker.next * BytesPerWord) = follow(original);
     goto visit;
   } else {
     return;
@@ -843,7 +843,7 @@ class ObjectSegmentIterator {
   object next() {
     assert(c, hasNext());
     object p = s->data + (index * BytesPerWord);
-    index += c->client->sizeOf(p) / BytesPerWord;
+    index += c->client->sizeInWords(p);
     return p;
   }
 
