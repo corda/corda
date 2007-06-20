@@ -26,7 +26,7 @@ class Heap {
    public:
     virtual ~Client() { }
     virtual void visitRoots(Visitor*) = 0;
-    virtual void sizeInWords(void*) = 0;
+    virtual unsigned sizeInWords(void*) = 0;
     virtual void walk(void*, Walker*) = 0;
   };
 
@@ -34,6 +34,7 @@ class Heap {
   virtual void collect(CollectionType type, Client* client) = 0;
   virtual bool needsMark(void** p) = 0;
   virtual void mark(void** p) = 0;
+  virtual void* follow(void* p) = 0;
   virtual void dispose() = 0;
 };
 

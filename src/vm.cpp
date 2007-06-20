@@ -24,20 +24,6 @@ object allocate(Thread*, unsigned);
 object& arrayBody(Thread*, object, unsigned);
 void set(Thread*, object&, object);
 
-inline unsigned
-pad(unsigned n)
-{
-  unsigned extra = n % BytesPerWord;
-  return (extra ? n + BytesPerWord - extra : n);
-}
-
-template <class T>
-inline T&
-cast(object p, unsigned offset)
-{
-  return *reinterpret_cast<T*>(static_cast<uint8_t*>(p) + offset);
-}
-
 object&
 objectClass(object o)
 {
@@ -52,7 +38,17 @@ class Machine {
 
   Machine(System* system, Heap* heap, ClassFinder* classFinder);
 
-  System* sys;
+  ~Machine() { 
+    dispose();
+  }
+
+  void dispose() {
+    stateLock->dispose();
+    heapLock->dispose();
+    classLock->dispose();
+  }
+
+  System* system;
   Heap* heap;
   ClassFinder* classFinder;
   Thread* rootThread;
@@ -94,6 +90,8 @@ class Thread {
 
   static const unsigned HeapSize = 64 * 1024;
   static const unsigned StackSize = 64 * 1024;
+
+  Thread(Machine* m);
 
   Machine* vm;
   Thread* next;
@@ -149,7 +147,7 @@ class RawMonitorResource {
 inline void NO_RETURN
 abort(Thread* t)
 {
-  t->vm->sys->abort(); // this should not return
+  t->vm->system->abort(); // this should not return
   ::abort();
 }
 
@@ -173,23 +171,14 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   classMap(0),
   types(0)
 {
-  if (not system->success(system->make(&(m->stateLock))) or
-      not system->success(system->make(&(m->heapLock))) or
-      not system->success(system->make(&(m->classLock))))
+  if (not system->success(system->make(&stateLock)) or
+      not system->success(system->make(&heapLock)) or
+      not system->success(system->make(&classLock)))
   {
     system->abort();
   }
 }
 
-void
-dispose(Machine* m)
-{
-  m->stateLock->dispose();
-  m->heapLock->dispose();
-  m->classLock->dispose();
-}
-
-void
 Thread::Thread(Machine* m):
   vm(m),
   next(0),
@@ -205,11 +194,13 @@ Thread::Thread(Machine* m):
   protector(0)
 {
   if (m->rootThread == 0) {
-    m->rootThread = t;
+    m->rootThread = this;
+
+    Thread* t = this;
 
 #include "type-initializations.cpp"
 
-    m->classMap = makeHashMap(t, 0, 0);
+    m->classMap = makeHashMap(this, 0, 0);
   }
 }
 
@@ -253,6 +244,8 @@ collect(Machine* m, Heap::CollectionType type)
     }
 
     virtual unsigned sizeInWords(void* p) {
+      Thread* t = m->rootThread;
+
       p = m->heap->follow(p);
       object class_ = m->heap->follow(objectClass(p));
 
@@ -265,6 +258,8 @@ collect(Machine* m, Heap::CollectionType type)
     }
 
     virtual void walk(void* p, Heap::Walker* w) {
+      Thread* t = m->rootThread;
+
       p = m->heap->follow(p);
       object class_ = m->heap->follow(objectClass(p));
       unsigned fixedSize = classFixedSize(t, class_);
@@ -273,7 +268,7 @@ collect(Machine* m, Heap::CollectionType type)
 
       object objectMask = m->heap->follow(classObjectMask(t, class_));
       int mask[intArrayLength(t, objectMask)];
-      memcpy(mask, &intArrayBody(t, objectMask),
+      memcpy(mask, &intArrayBody(t, objectMask, 0),
              intArrayLength(t, objectMask) * 4);
 
       for (unsigned i = 0; i < fixedSize; ++i) {
