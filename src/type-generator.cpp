@@ -1489,7 +1489,7 @@ typeCount(Object* declarations)
 void
 writeInitializations(Output* out, Object* declarations)
 {
-  out->write("  t->vm->types = makeArray(t, ");
+  out->write("t->vm->types = makeArray(t, ");
   out->write(typeCount(declarations));
   out->write(");\n\n");
 
@@ -1500,7 +1500,7 @@ writeInitializations(Output* out, Object* declarations)
     }
   }
 
-  out->write("  set(t, objectClass(t->vm->types), ");
+  out->write("set(t, objectClass(t->vm->types), ");
   out->write("arrayBody(t, t->vm->types, Machine::ArrayType));\n");
 }
 

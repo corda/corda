@@ -25,7 +25,8 @@ class Heap {
   virtual ~Heap() { }
   virtual void collect(CollectionType type, Iterator* it) = 0;
   virtual bool needsMark(void** p) = 0;
-  virtual void mark(void** p);
+  virtual void mark(void** p) = 0;
+  virtual void dispose() = 0;
 };
 
 } // namespace vm
