@@ -7,7 +7,7 @@ namespace vm {
 
 class System {
  public:
-  typedef int Status;
+  typedef intptr_t Status;
 
   class Thread {
    public:

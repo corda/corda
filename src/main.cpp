@@ -12,6 +12,21 @@ namespace {
 
 class System: public vm::System {
  public:
+  class Monitor: public vm::System::Monitor {
+   public:
+    Monitor(vm::System* s): s(s) { }
+
+    virtual bool tryAcquire(void*) { return true; }
+    virtual void acquire(void*) { }
+    virtual void release(void*) { }
+    virtual void wait(void*) { }
+    virtual void notify(void*) { }
+    virtual void notifyAll(void*) { }
+    virtual void dispose() { s->free(this);  }
+
+    vm::System* s;
+  };
+
   System(unsigned limit): limit(limit), count(0) { }
 
   virtual bool success(Status s) {
@@ -42,8 +57,9 @@ class System: public vm::System {
     return 1;
   }
 
-  virtual Status make(Monitor**) {
-    return 1;
+  virtual Status make(vm::System::Monitor** m) {
+    *m = new (vm::System::allocate(sizeof(Monitor))) Monitor(this);
+    return 0;
   }
 
   virtual void abort() {
@@ -159,7 +175,7 @@ parsePath(vm::System* s, const char* path)
   };
 
   unsigned count = 0;
-  for (Tokenizer t(path, ':'); t.hasMore();) ++ count;
+  for (Tokenizer t(path, ':'); t.hasMore(); t.next()) ++ count;
 
   const char** v = static_cast<const char**>
     (s->allocate((count + 1) * sizeof(const char*)));
@@ -204,7 +220,7 @@ void
 usageAndExit(const char* name)
 {
   fprintf(stderr, "usage: %s [-cp <classpath>] [-hs <maximum heap size>] "
-          "<class name> [<argument> ...]", name);
+          "<class name> [<argument> ...]\n", name);
   exit(-1);
 }
 

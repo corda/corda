@@ -928,15 +928,11 @@ parse(Input* in)
 }
 
 void
-writeAccessorName(Output* out, Object* member, bool respectHide = false,
-                  bool unsafe = false)
+writeAccessorName(Output* out, Object* member, bool respectHide = false)
 {
   const char* owner = typeShortName(memberOwner(member));
   out->write(owner);
   out->write(capitalize(memberName(member)));
-  if (unsafe) {
-    out->write("Unsafe");
-  }
   if (respectHide and memberHide(member)) {
     out->write("0");
   }
@@ -1013,7 +1009,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     out->write("&");
   }
   out->write("\n");
-  writeAccessorName(out, member, true, unsafe);
+  writeAccessorName(out, member, true);
   if (memberOwner(member)->type == Object::Pod) {
     out->write("(");
     out->write(capitalize(::typeName(memberOwner(member))));
@@ -1027,18 +1023,22 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   }
   out->write(") {\n");
 
-  if (not unsafe and memberOwner(member)->type == Object::Type) {
-    out->write("  assert(t, objectClass(o) == 0 or ");
-    out->write("objectClass(o) == arrayBody(t, t->vm->types, Machine::");
-    out->write(capitalize(::typeName(memberOwner(member))));
-    out->write("Type)");
-    writeSubtypeAssertions(out, memberOwner(member));
-    out->write(");\n");
+  if (memberOwner(member)->type == Object::Type) {
+    if (unsafe) {
+      out->write("  assert(t, true);");
+    } else {
+      out->write("  assert(t, objectClass(o) == 0 or ");
+      out->write("objectClass(o) == arrayBody(t, t->vm->types, Machine::");
+      out->write(capitalize(::typeName(memberOwner(member))));
+      out->write("Type)");
+      writeSubtypeAssertions(out, memberOwner(member));
+      out->write(");\n");
 
-    if (member->type != Object::Scalar) {
-      out->write("  assert(t, i < ");
-      out->write(::typeName(memberOwner(member)));
-      out->write("Length(t, o));\n");
+      if (member->type != Object::Scalar) {
+        out->write("  assert(t, i < ");
+        out->write(::typeName(memberOwner(member)));
+        out->write("Length(t, o));\n");
+      }
     }
   }
 
@@ -1155,14 +1155,13 @@ writeAccessors(Output* out, Object* declarations)
         switch (m->type) {
         case Object::Scalar: {
           if (it.padding()) offset = cons(Number::make(it.padding()), offset);
-          writeAccessor(out, m, offset);
-          if (memberNoAssert(m)) writeAccessor(out, m, offset, true);
+          writeAccessor(out, m, offset, memberNoAssert(m));
           offset = cons(Number::make(it.size()), offset);
         } break;
 
         case Object::Array: {
           if (it.padding()) offset = cons(Number::make(it.padding()), offset);
-          writeAccessor(out, m, offset);
+          writeAccessor(out, m, offset, memberNoAssert(m));
           offset = cons(m, offset);
         } break;
 
@@ -1489,6 +1488,20 @@ typeCount(Object* declarations)
 void
 writeInitializations(Output* out, Object* declarations)
 {
+  unsigned count = typeCount(declarations);
+
+  out->write("t->vm->types = allocate(t, pad((");
+  out->write(count);
+  out->write(" * ");
+  out->write(sizeof(void*));
+  out->write(") + 4 + ");
+  out->write(sizeof(void*));
+  out->write("));\n");
+  out->write("objectClass(t->vm->types) = 0;\n");
+  out->write("arrayLength(t, t->vm->types) = ");
+  out->write(count);
+  out->write(";\n");
+
   out->write("t->vm->types = makeArray(t, ");
   out->write(typeCount(declarations));
   out->write(");\n\n");

@@ -163,7 +163,7 @@
   (uint64_t value))
 
 (type array
-  (array object body))
+  (noassert array object body))
 
 (type objectArray
   (object elementClass)

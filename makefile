@@ -51,6 +51,7 @@ interpreter-sources = \
 	$(src)/main.cpp
 interpreter-objects = $(call cpp-objects,$(interpreter-sources),$(src))
 interpreter-cflags = $(slow) $(cflags)
+input = Test
 
 generator-headers = \
 	$(src)/input.h \

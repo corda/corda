@@ -103,9 +103,11 @@ class Segment {
       scale(scale),
       child(child)
     {
-      assert(segment->context, bitsPerRecord);
-      assert(segment->context, scale);
-      assert(segment->context, powerOfTwo(scale));
+      if (segment) {
+        assert(segment->context, bitsPerRecord);
+        assert(segment->context, scale);
+        assert(segment->context, powerOfTwo(scale));
+      }
     }
 
     unsigned offset() {

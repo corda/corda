@@ -511,11 +511,13 @@ object
 makeTrace(Thread* t)
 {
   object trace = 0;
-  PROTECT(t, trace);
-  frameIp(t, t->frame) = t->ip;
-  for (; t->frame; t->frame = frameNext(t, t->frame)) {
-    trace = makeTrace
-      (t, frameMethod(t, t->frame), frameIp(t, t->frame), trace);
+  if (t->frame) {
+    PROTECT(t, trace);
+    frameIp(t, t->frame) = t->ip;
+    for (; t->frame; t->frame = frameNext(t, t->frame)) {
+      trace = makeTrace
+        (t, frameMethod(t, t->frame), frameIp(t, t->frame), trace);
+    }
   }
   return trace;
 }
