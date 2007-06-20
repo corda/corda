@@ -1,6 +1,8 @@
 #ifndef HEAP_H
 #define HEAP_H
 
+#include "system.h"
+
 namespace vm {
 
 class Heap {
@@ -37,6 +39,8 @@ class Heap {
   virtual void* follow(void* p) = 0;
   virtual void dispose() = 0;
 };
+
+Heap* makeHeap(System* system);
 
 } // namespace vm
 

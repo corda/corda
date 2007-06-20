@@ -47,7 +47,8 @@ interpreter-depends = \
 	$(src)/vm.h
 interpreter-sources = \
 	$(src)/vm.cpp \
-	$(src)/heap.cpp
+	$(src)/heap.cpp \
+	$(src)/main.cpp
 interpreter-objects = $(call cpp-objects,$(interpreter-sources),$(src))
 interpreter-cflags = $(slow) $(cflags)
 

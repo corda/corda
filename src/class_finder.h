@@ -7,9 +7,16 @@ namespace vm {
 
 class ClassFinder {
  public:
+  class Data {
+   public:
+    virtual ~Data() { }
+    virtual const uint8_t* start() = 0;
+    virtual size_t length() = 0;
+    virtual void dispose() = 0;
+  };
+
   virtual ~ClassFinder() { }
-  virtual const uint8_t* find(const char* className, unsigned* size) = 0;
-  virtual void free(const uint8_t* class_) = 0;
+  virtual Data* find(const char* className) = 0;
 };
 
 } // namespace vm

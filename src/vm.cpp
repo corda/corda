@@ -1429,15 +1429,13 @@ resolveClass(Thread* t, object spec)
   object class_ = hashMapFind
     (t, t->vm->classMap, spec, byteArrayHash, byteArrayEqual);
   if (class_ == 0) {
-    unsigned size;
-    const uint8_t* data = t->vm->classFinder->find
-      (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)), &size);
+    ClassFinder::Data* data = t->vm->classFinder->find
+      (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
 
     if (data) {
       // parse class file
-      class_ = parseClass(t, data, size);
-
-      t->vm->classFinder->free(data);
+      class_ = parseClass(t, data->start(), data->length());
+      data->dispose();
 
       PROTECT(t, class_);
 

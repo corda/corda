@@ -238,12 +238,8 @@ class Segment {
     map(map)
   {
     if (capacity) {
-      unsigned count = footprint(capacity) * BytesPerWord;
-      data = static_cast<uintptr_t*>(system(context)->allocate(&count));
-
-      if (count != footprint(capacity) * BytesPerWord) {
-        abort(context);
-      }
+      data = static_cast<uintptr_t*>
+        (system(context)->allocate(footprint(capacity) * BytesPerWord));
 
       if (map) {
         map->setSegment(this);
@@ -998,6 +994,8 @@ collect(Context* c)
 
 } // namespace
 
+namespace vm {
+
 Heap*
 makeHeap(System* system)
 {
@@ -1047,11 +1045,7 @@ makeHeap(System* system)
     Context c;
   };
   
-  unsigned count = sizeof(Heap);
-  void* p = system->allocate(&count);
-  if (count != sizeof(Heap)) {
-    system->abort();
-  }
-
-  return new (p) Heap(system);
+  return new (system->allocate(sizeof(Heap))) Heap(system);
 }
+
+} // namespace vm
