@@ -54,7 +54,7 @@ class System {
   virtual ~System() { }
 
   virtual bool success(Status) = 0;
-  virtual void* allocate(unsigned size) = 0;
+  virtual void* allocate(unsigned* size) = 0;
   virtual void free(void*) = 0;
   virtual Status start(Thread*) = 0;
   virtual Status make(Monitor**) = 0;

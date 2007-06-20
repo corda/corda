@@ -16,9 +16,6 @@ using namespace vm;
 
 namespace {
 
-typedef void* object;
-typedef unsigned Type;
-
 class Thread;
 
 void assert(Thread*, bool);
@@ -30,8 +27,8 @@ void set(Thread*, object&, object);
 inline unsigned
 pad(unsigned n)
 {
-  unsigned extra = n % sizeof(void*);
-  return (extra ? n + sizeof(void*) - extra : n);
+  unsigned extra = n % BytesPerWord;
+  return (extra ? n + BytesPerWord - extra : n);
 }
 
 template <class T>
@@ -996,7 +993,7 @@ fieldSize(Thread* t, object field)
     return 4;
   case 'L':
   case '[':
-    return sizeof(void*);
+    return BytesPerWord;
 
   default: abort(t);
   }
@@ -1011,7 +1008,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
   unsigned count = s.read2();
   if (count) {
     unsigned memberOffset
-      = classFixedSize(t, classSuper(t, class_)) * sizeof(void*);
+      = classFixedSize(t, classSuper(t, class_)) * BytesPerWord;
     unsigned staticOffset = 0;
   
     object fieldTable = makeArray(t, count);
@@ -1038,9 +1035,9 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       if (flags & ACC_STATIC) {
         fieldOffset(t, value) = staticOffset++;
       } else {
-        unsigned excess = memberOffset % sizeof(void*);
+        unsigned excess = memberOffset % BytesPerWord;
         if (excess and isReferenceField(t, value)) {
-          memberOffset += sizeof(void*) - excess;
+          memberOffset += BytesPerWord - excess;
         }
 
         fieldOffset(t, value) = memberOffset;
@@ -1054,7 +1051,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
     if (staticOffset) {
       object staticTable = makeArray(t, staticOffset);
-      memset(&arrayBody(t, staticTable, 0), 0, staticOffset * sizeof(void*));
+      memset(&arrayBody(t, staticTable, 0), 0, staticOffset * BytesPerWord);
 
       set(t, classStaticTable(t, class_), staticTable);
     }
@@ -1604,7 +1601,7 @@ run(Thread* t)
         push(t, makeInt(t, objectArrayLength(t, array)));
       } else {
         // for all other array types, the length follow the class pointer.
-        push(t, makeInt(t, cast<uint32_t>(array, sizeof(void*))));
+        push(t, makeInt(t, cast<uint32_t>(array, BytesPerWord)));
       }
     } else {
       exception = makeNullPointerException(t);
