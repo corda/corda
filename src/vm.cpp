@@ -50,6 +50,8 @@ class Machine {
 #include "type-enums.cpp"
   } Type;
 
+  Machine(System* system, Heap* heap, ClassFinder* classFinder);
+
   System* sys;
   Heap* heap;
   ClassFinder* classFinder;
@@ -157,19 +159,25 @@ assert(Thread* t, bool v)
   if (UNLIKELY(not v)) abort(t);
 }
 
-void
-init(Machine* m, System* sys, Heap* heap, ClassFinder* classFinder)
+Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
+  system(system),
+  heap(heap),
+  classFinder(classFinder),
+  rootThread(0),
+  exclusive(0),
+  activeCount(0),
+  liveCount(0),
+  stateLock(0),
+  heapLock(0),
+  classLock(0),
+  classMap(0),
+  types(0)
 {
-  memset(m, 0, sizeof(Machine));
-  m->sys = sys;
-  m->heap = heap;
-  m->classFinder = classFinder;
-
-  if (not sys->success(sys->make(&(m->stateLock))) or
-      not sys->success(sys->make(&(m->heapLock))) or
-      not sys->success(sys->make(&(m->classLock))))
+  if (not system->success(system->make(&(m->stateLock))) or
+      not system->success(system->make(&(m->heapLock))) or
+      not system->success(system->make(&(m->classLock))))
   {
-    sys->abort();
+    system->abort();
   }
 }
 
@@ -182,12 +190,20 @@ dispose(Machine* m)
 }
 
 void
-init(Thread* t, Machine* m)
+Thread::Thread(Machine* m):
+  vm(m),
+  next(0),
+  child(0),
+  state(NoState),
+  thread(0),
+  frame(0),
+  code(0),
+  exception(0),
+  ip(0),
+  sp(0),
+  heapIndex(0),
+  protector(0)
 {
-  memset(t, 0, sizeof(Thread));
-  t->vm = m;
-  t->state = Thread::NoState;
-
   if (m->rootThread == 0) {
     m->rootThread = t;
 
@@ -198,7 +214,7 @@ init(Thread* t, Machine* m)
 }
 
 void
-iterate(Thread* t, Heap::Visitor* v)
+visitRoots(Thread* t, Heap::Visitor* v)
 {
   t->heapIndex = 0;
 
@@ -216,23 +232,63 @@ iterate(Thread* t, Heap::Visitor* v)
   }
 
   for (Thread* t = t->child; t; t = t->next) {
-    iterate(t, v);
+    visitRoots(t, v);
   }
 }
 
 void
 collect(Machine* m, Heap::CollectionType type)
 {
-  class Iterator: public Heap::Iterator {
+  class Client: public Heap::Client {
    public:
-    Iterator(Machine* m): m(m) { }
+    Client(Machine* m): m(m) { }
 
-    void iterate(Heap::Visitor* v) {
+    virtual void visitRoots(Heap::Visitor* v) {
       v->visit(&(m->classMap));
       v->visit(&(m->types));
 
       for (Thread* t = m->rootThread; t; t = t->next) {
-        ::iterate(t, v);
+        ::visitRoots(t, v);
+      }
+    }
+
+    virtual unsigned sizeInWords(void* p) {
+      p = m->heap->follow(p);
+      object class_ = m->heap->follow(objectClass(p));
+
+      unsigned n = classFixedSize(t, class_);
+      if (classArrayElementSize(t, class_)) {
+        n += classArrayElementSize(t, class_)
+          * cast<uint32_t>(p, (classFixedSize(t, class_) - 1) * BytesPerWord);
+      }
+      return n;
+    }
+
+    virtual void walk(void* p, Heap::Walker* w) {
+      p = m->heap->follow(p);
+      object class_ = m->heap->follow(objectClass(p));
+      unsigned fixedSize = classFixedSize(t, class_);
+      unsigned arrayLength = cast<uint32_t>(p, (fixedSize - 1) * BytesPerWord);
+      unsigned arrayElementSize = classArrayElementSize(t, class_);
+
+      object objectMask = m->heap->follow(classObjectMask(t, class_));
+      int mask[intArrayLength(t, objectMask)];
+      memcpy(mask, &intArrayBody(t, objectMask),
+             intArrayLength(t, objectMask) * 4);
+
+      for (unsigned i = 0; i < fixedSize; ++i) {
+        if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
+          if (not w->visit(i)) return;
+        }
+      }
+
+      for (unsigned i = 0; i < arrayLength; ++i) {
+        for (unsigned j = 0; j < arrayElementSize; ++j) {
+          unsigned k = fixedSize + j;
+          if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
+            if (not w->visit(fixedSize + (i * arrayElementSize) + j)) return;
+          }
+        }
       }
     }
     
@@ -2920,11 +2976,11 @@ run(Thread* t, const char* className, int argc, const char** argv)
 namespace vm {
 
 void
-run(System* sys, Heap* heap, ClassFinder* classFinder,
+run(System* system, Heap* heap, ClassFinder* classFinder,
     const char* className, int argc, const char** argv)
 {
-  Machine m; init(&m, sys, heap, classFinder);
-  Thread t; init(&t, &m);
+  Machine m(system, heap, classFinder);
+  Thread t(&m);
 
   run(&t, className, argc, argv);
 }

@@ -16,14 +16,22 @@ class Heap {
     virtual void visit(void**) = 0;
   };
 
-  class Iterator {
+  class Walker {
    public:
-    virtual ~Iterator() { }
-    virtual void iterate(Visitor*) = 0;
+    virtual ~Walker() { }
+    virtual bool visit(unsigned) = 0;
+  };
+
+  class Client {
+   public:
+    virtual ~Client() { }
+    virtual void visitRoots(Visitor*) = 0;
+    virtual void sizeInWords(void*) = 0;
+    virtual void walk(void*, Walker*) = 0;
   };
 
   virtual ~Heap() { }
-  virtual void collect(CollectionType type, Iterator* it) = 0;
+  virtual void collect(CollectionType type, Client* client) = 0;
   virtual bool needsMark(void** p) = 0;
   virtual void mark(void** p) = 0;
   virtual void dispose() = 0;
