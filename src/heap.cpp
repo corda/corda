@@ -15,6 +15,9 @@ const unsigned MinimumGen2Size = 128 * 1024;
 
 void* const Top = reinterpret_cast<void*>(~static_cast<uintptr_t>(0));
 
+const bool Verbose = true;
+const bool Debug = false;
+
 class Context;
 
 System* system(Context*);
@@ -572,7 +575,9 @@ copy(Context* c, object o)
 {
   object r = copy2(c, o);
 
-  fprintf(stderr, "copy %p to %p\n", o, r);
+  if (Debug) {
+    fprintf(stderr, "copy %p to %p\n", o, r);
+  }
 
   // leave a pointer to the copy in the original
   cast<object>(o, 0) = r;
@@ -750,13 +755,17 @@ collect(Context* c, void** p)
 {
   object original = *p;
   object parent = 0;
-
-  fprintf(stderr, "update %p at %p\n", *p, p);
+  
+  if (Debug) {
+    fprintf(stderr, "update %p at %p\n", *p, p);
+  }
 
   bool needsVisit;
   *p = update(c, p, &needsVisit);
 
-  fprintf(stderr, "  result: %p (visit? %d)\n", *p, needsVisit);
+  if (Debug) {
+    fprintf(stderr, "  result: %p (visit? %d)\n", *p, needsVisit);
+  }
 
   if (not needsVisit) return;
 
@@ -777,17 +786,22 @@ collect(Context* c, void** p)
       { }
 
       virtual bool visit(unsigned offset) {
-        fprintf(stderr, "  update %p at %p - offset %d from %p\n",
-                cast<object>(copy, offset * BytesPerWord),
-                &cast<object>(copy, offset * BytesPerWord),
-                offset,
-                copy);
+        if (Debug) {
+          fprintf(stderr, "  update %p at %p - offset %d from %p\n",
+                  cast<object>(copy, offset * BytesPerWord),
+                  &cast<object>(copy, offset * BytesPerWord),
+                  offset,
+                  copy);
+        }
 
         bool needsVisit;
         object childCopy = update
           (c, &cast<object>(copy, offset * BytesPerWord), &needsVisit);
         
-        fprintf(stderr, "    result: %p (visit? %d)\n", childCopy, needsVisit);
+        if (Debug) {
+          fprintf(stderr, "    result: %p (visit? %d)\n",
+                  childCopy, needsVisit);
+        }
 
         ++ total;
 
@@ -834,7 +848,9 @@ collect(Context* c, void** p)
       unsigned total;
     } walker(c, copy, bitset(c, original));
 
-    fprintf(stderr, "walk %p\n", copy);
+    if (Debug) {
+      fprintf(stderr, "walk %p\n", copy);
+    }
 
     c->client->walk(copy, &walker);
 
@@ -890,7 +906,9 @@ collect(Context* c, void** p)
       unsigned total;
     } walker(c, bitset(c, original));
 
-    fprintf(stderr, "scan %p\n", copy);
+    if (Debug) {
+      fprintf(stderr, "scan %p\n", copy);
+    }
 
     c->client->walk(copy, &walker);
 
@@ -902,11 +920,13 @@ collect(Context* c, void** p)
       parent = ::parent(c, original);
     }
 
-    fprintf(stderr, "  next is %p at %p - offset %d from %p\n",
-            cast<object>(copy, walker.next * BytesPerWord),
-            &cast<object>(copy, walker.next * BytesPerWord),
-            walker.next,
-            copy);
+    if (Debug) {
+      fprintf(stderr, "  next is %p at %p - offset %d from %p\n",
+              cast<object>(copy, walker.next * BytesPerWord),
+              &cast<object>(copy, walker.next * BytesPerWord),
+              walker.next,
+              copy);
+    }
 
     original = cast<object>(copy, walker.next * BytesPerWord);
     cast<object>(copy, walker.next * BytesPerWord) = follow(c, original);
@@ -1048,10 +1068,18 @@ collect(Context* c)
   case MinorCollection: {
     initNextGen1(c);
 
+    if (Verbose) {
+      fprintf(stderr, "minor collection\n");
+    }
+
     collect2(c);
 
     if (c->mode == OverflowCollection) {
       c->mode = Gen2Collection;
+
+      if (Verbose) {
+        fprintf(stderr, "gen2 collection\n");
+      }
 
       c->gen2Base = Top;
 
@@ -1068,6 +1096,10 @@ collect(Context* c)
     initNextGen2(c);
     
     c->heapMap.clear();
+
+    if (Verbose) {
+      fprintf(stderr, "major collection\n");
+    }
 
     collect2(c);
 
@@ -1123,12 +1155,12 @@ makeHeap(System* system)
 
     virtual void* follow(void* p) {
       if (wasCollected(&c, p)) {
-        fprintf(stderr, "follow: %p: %p\n", p, ::follow(&c, p));
+        if (Debug) {
+          fprintf(stderr, "follow: %p: %p\n", p, ::follow(&c, p));
+        }
 
         return ::follow(&c, p);
       } else {
-        //fprintf(stderr, "follow: %p: %p\n", p, p);
-
         return p;
       }
     }
