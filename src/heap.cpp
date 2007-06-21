@@ -116,6 +116,16 @@ class Segment {
       }
     }
 
+    void replaceWith(Map* m) {
+      assert(segment->context, m);
+      assert(segment->context, bitsPerRecord == m->bitsPerRecord);
+      assert(segment->context, scale == m->scale);
+
+      m->segment = 0;
+      
+      if (child) child->replaceWith(m->child);
+    }
+
     unsigned offset() {
       unsigned n = segment->capacity;
       if (child) n += child->footprint(segment->capacity);
@@ -134,12 +144,10 @@ class Segment {
     }
 
     unsigned size() {
-      assert(segment->context, segment);
       return size(max(segment->capacity, 1));
     }
 
     unsigned indexOf(void* p) {
-      assert(segment->context, segment);
       assert(segment->context,
              segment->position
              and p >= segment->data
@@ -258,7 +266,7 @@ class Segment {
 
   unsigned footprint(unsigned capacity) {
     unsigned n = capacity;
-    if (map) n += map->size(capacity);
+    if (map) n += map->footprint(capacity);
     return n;
   }
 
@@ -291,7 +299,7 @@ class Segment {
   }
 
   void replaceWith(Segment* s) {
-    system(context)->free(data);
+    if (data) system(context)->free(data);
 
     data = s->data;
     s->data = 0;
@@ -303,8 +311,12 @@ class Segment {
     s->capacity = 0;
 
     if (s->map) {
-      map = s->map;
-      map->setSegment(this);
+      if (map) {
+        map->replaceWith(s->map);
+      } else {
+        map = s->map;
+        map->setSegment(this);
+      }
       s->map = 0;
     } else {
       map = 0;
@@ -1023,6 +1035,8 @@ collect2(Context* c)
 void
 collect(Context* c)
 {
+  if (c->gen1.data == 0) initGen1(c);
+
   switch (c->mode) {
   case MinorCollection: {
     initNextGen1(c);
