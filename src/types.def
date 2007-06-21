@@ -1,3 +1,6 @@
+(type intArray
+  (array int32_t body))
+
 (type class
   (uint16_t flags)
   (uint16_t fixedSize)
@@ -180,9 +183,6 @@
 
 (type charArray
   (array uint16_t body))
-
-(type intArray
-  (array int32_t body))
 
 (type longArray
   (array int64_t body))

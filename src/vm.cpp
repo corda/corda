@@ -23,7 +23,7 @@ class Thread;
 void assert(Thread*, bool);
 object resolveClass(Thread*, object);
 object allocate(Thread*, unsigned);
-object& arrayBody(Thread*, object, unsigned);
+object& arrayBodyUnsafe(Thread*, object, unsigned);
 void set(Thread*, object&, object);
 
 object&
@@ -62,6 +62,7 @@ class Machine {
   System::Monitor* classLock;
   object classMap;
   object types;
+  bool unsafe;
 };
 
 class Thread {
@@ -171,7 +172,8 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   heapLock(0),
   classLock(0),
   classMap(0),
-  types(0)
+  types(0),
+  unsafe(false)
 {
   if (not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
@@ -197,12 +199,24 @@ Thread::Thread(Machine* m):
 {
   if (m->rootThread == 0) {
     m->rootThread = this;
+    m->unsafe = true;
 
     Thread* t = this;
 
 #include "type-initializations.cpp"
 
+    object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
+    set(t, objectClass(t->vm->types), arrayClass);
+
+    object classClass = arrayBody(t, m->types, Machine::ClassType);
+    set(t, objectClass(classClass), classClass);
+
+    object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
+    set(t, objectClass(intArrayClass), classClass);
+
     m->classMap = makeHashMap(this, 0, 0);
+
+    m->unsafe = false;
   }
 }
 
@@ -251,10 +265,12 @@ collect(Machine* m, Heap::CollectionType type)
       p = m->heap->follow(p);
       object class_ = m->heap->follow(objectClass(p));
 
-      unsigned n = classFixedSize(t, class_);
+      unsigned n = divide(classFixedSize(t, class_), BytesPerWord);
+
       if (classArrayElementSize(t, class_)) {
-        n += classArrayElementSize(t, class_)
-          * cast<uint32_t>(p, (classFixedSize(t, class_) - 1) * BytesPerWord);
+        n += divide(classArrayElementSize(t, class_)
+                    * cast<uint32_t>(p, classFixedSize(t, class_) - 4),
+                    BytesPerWord);
       }
       return n;
     }
@@ -264,28 +280,63 @@ collect(Machine* m, Heap::CollectionType type)
 
       p = m->heap->follow(p);
       object class_ = m->heap->follow(objectClass(p));
-      unsigned fixedSize = classFixedSize(t, class_);
-      unsigned arrayLength = cast<uint32_t>(p, (fixedSize - 1) * BytesPerWord);
-      unsigned arrayElementSize = classArrayElementSize(t, class_);
-
       object objectMask = m->heap->follow(classObjectMask(t, class_));
-      int mask[intArrayLength(t, objectMask)];
-      memcpy(mask, &intArrayBody(t, objectMask, 0),
-             intArrayLength(t, objectMask) * 4);
 
-      for (unsigned i = 0; i < fixedSize; ++i) {
-        if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
-          if (not w->visit(i)) return;
-        }
-      }
+      if (objectMask) {
+        fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
+                p, class_, objectMask, intArrayLength(t, objectMask));
 
-      for (unsigned i = 0; i < arrayLength; ++i) {
-        for (unsigned j = 0; j < arrayElementSize; ++j) {
-          unsigned k = fixedSize + j;
-          if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
-            if (not w->visit(fixedSize + (i * arrayElementSize) + j)) return;
+        unsigned fixedSize = classFixedSize(t, class_);
+        unsigned arrayElementSize = classArrayElementSize(t, class_);
+        unsigned arrayLength
+          = (arrayElementSize ? cast<uint32_t>(p, fixedSize - 4) : 0);
+
+        int mask[intArrayLength(t, objectMask)];
+        memcpy(mask, &intArrayBody(t, objectMask, 0),
+               intArrayLength(t, objectMask) * 4);
+
+//         fprintf
+//           (stderr,
+//            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
+//            fixedSize, arrayLength, arrayElementSize, mask[0]);
+
+        unsigned fixedSizeInWords = divide(fixedSize, BytesPerWord);
+        unsigned arrayElementSizeInWords
+          = divide(arrayElementSize, BytesPerWord);
+
+        for (unsigned i = 0; i < fixedSizeInWords; ++i) {
+          if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
+            if (not w->visit(i)) {
+              return;
+            }
           }
         }
+
+        bool arrayObjectElements = false;
+        for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+          unsigned k = fixedSizeInWords + j;
+          if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
+            arrayObjectElements = true;
+            break;
+          }
+        }
+
+        if (arrayObjectElements) {
+          for (unsigned i = 0; i < arrayLength; ++i) {
+            for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+              unsigned k = fixedSizeInWords + j;
+              if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
+                if (not w->visit
+                    (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
+                {
+                  return;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        w->visit(0);
       }
     }
     
@@ -295,7 +346,9 @@ collect(Machine* m, Heap::CollectionType type)
 
   fprintf(stderr, "collection time!\n");
 
+  m->unsafe = true;
   m->heap->collect(type, &it);
+  m->unsafe = false;
 }
 
 void
@@ -1187,15 +1240,13 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, class_);
   PROTECT(t, pool);
 
+  unsigned memberOffset = BytesPerWord;
+  if (classSuper(t, class_)) {
+    memberOffset = classFixedSize(t, classSuper(t, class_)) * BytesPerWord;
+  }
+
   unsigned count = s.read2();
   if (count) {
-    fprintf(stderr, "%d fields\n", count);
-
-    unsigned memberOffset = BytesPerWord;
-    if (classSuper(t, class_)) {
-      memberOffset= classFixedSize(t, classSuper(t, class_)) * BytesPerWord;
-    }
-
     unsigned staticOffset = 0;
   
     object fieldTable = makeArray(t, count);
@@ -1242,6 +1293,32 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       set(t, classStaticTable(t, class_), staticTable);
     }
+  }
+
+  classFixedSize(t, class_) = divide(memberOffset, BytesPerWord);
+  
+  object mask = makeIntArray
+    (t, divide(classFixedSize(t, class_), BitsPerWord));
+
+  memset(&intArrayBody(t, mask, 0), 0, intArrayLength(t, mask) * 4);
+
+  bool sawReferenceField = false;
+  for (object c = class_; c; c = classSuper(t, c)) {
+    object fieldTable = classFieldTable(t, c);
+    if (fieldTable) {
+      for (int i = arrayLength(t, fieldTable) - 1; i >= 0; --i) {
+        object field = arrayBody(t, fieldTable, i);
+        if (isReferenceField(t, field)) {
+          unsigned index = fieldOffset(t, field) / BytesPerWord;
+          intArrayBody(t, mask, (index / 32)) |= 1 << (index % 32);
+          sawReferenceField = true;
+        }
+      }
+    }
+  }
+
+  if (sawReferenceField) {
+    set(t, classObjectMask(t, class_), mask);
   }
 }
 
@@ -1612,6 +1689,8 @@ run(Thread* t)
   if (UNLIKELY(exception)) goto throw_;
 
  loop:
+  //fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
+
   switch (codeBody(t, code, ip++)) {
   case aaload: {
     object index = pop(t);
@@ -2036,7 +2115,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    ip = (ip - 1) + ((offset1 << 8) | offset2);
+    ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
   } goto loop;
     
   case goto_w: {
@@ -2045,8 +2124,8 @@ run(Thread* t)
     uint8_t offset3 = codeBody(t, code, ip++);
     uint8_t offset4 = codeBody(t, code, ip++);
 
-    ip = (ip - 1)
-      + ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
+    ip = (ip - 5) + static_cast<int16_t>
+      (((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4));
   } goto loop;
 
   case i2b: {
@@ -3044,6 +3123,8 @@ run(Thread* t)
 void
 run(Thread* t, const char* className, int argc, const char** argv)
 {
+  enter(t, Thread::ActiveState);
+
   object class_ = resolveClass(t, makeByteArray(t, "%s", className));
   if (LIKELY(t->exception == 0)) {
     PROTECT(t, class_);

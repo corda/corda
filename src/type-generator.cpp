@@ -928,11 +928,15 @@ parse(Input* in)
 }
 
 void
-writeAccessorName(Output* out, Object* member, bool respectHide = false)
+writeAccessorName(Output* out, Object* member, bool respectHide = false,
+                  bool unsafe = false)
 {
   const char* owner = typeShortName(memberOwner(member));
   out->write(owner);
   out->write(capitalize(memberName(member)));
+  if (unsafe) {
+    out->write("Unsafe");
+  }
   if (respectHide and memberHide(member)) {
     out->write("0");
   }
@@ -988,7 +992,8 @@ writeSubtypeAssertions(Output* out, Object* o)
 {
   for (Object* p = typeSubtypes(o); p; p = cdr(p)) {
     Object* st = car(p);
-    out->write(" or objectClass(o) == arrayBody(t, t->vm->types, Machine::");
+    out->write(" or objectClass(o) == arrayBodyUnsafe");
+    out->write("(t, t->vm->types, Machine::");
     out->write(capitalize(typeName(st)));
     out->write("Type)");
     writeSubtypeAssertions(out, st);
@@ -1009,7 +1014,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     out->write("&");
   }
   out->write("\n");
-  writeAccessorName(out, member, true);
+  writeAccessorName(out, member, true, unsafe);
   if (memberOwner(member)->type == Object::Pod) {
     out->write("(");
     out->write(capitalize(::typeName(memberOwner(member))));
@@ -1027,8 +1032,9 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     if (unsafe) {
       out->write("  assert(t, true);");
     } else {
-      out->write("  assert(t, objectClass(o) == 0 or ");
-      out->write("objectClass(o) == arrayBody(t, t->vm->types, Machine::");
+      out->write("  assert(t, t->vm->unsafe or objectClass(o) == 0 or ");
+      out->write("objectClass(o) == arrayBodyUnsafe");
+      out->write("(t, t->vm->types, Machine::");
       out->write(capitalize(::typeName(memberOwner(member))));
       out->write("Type)");
       writeSubtypeAssertions(out, memberOwner(member));
@@ -1155,13 +1161,19 @@ writeAccessors(Output* out, Object* declarations)
         switch (m->type) {
         case Object::Scalar: {
           if (it.padding()) offset = cons(Number::make(it.padding()), offset);
-          writeAccessor(out, m, offset, memberNoAssert(m));
+          writeAccessor(out, m, offset);
+          if (memberNoAssert(m)) {
+            writeAccessor(out, m, offset, true);
+          }
           offset = cons(Number::make(it.size()), offset);
         } break;
 
         case Object::Array: {
           if (it.padding()) offset = cons(Number::make(it.padding()), offset);
-          writeAccessor(out, m, offset, memberNoAssert(m));
+          writeAccessor(out, m, offset);
+          if (memberNoAssert(m)) {
+            writeAccessor(out, m, offset, true);
+          }
           offset = cons(m, offset);
         } break;
 
@@ -1373,7 +1385,7 @@ typeFixedSize(Object* type)
     default: UNREACHABLE;
     }
   }
-  return length / 4;
+  return length;
 }
 
 unsigned
@@ -1385,7 +1397,7 @@ typeArrayElementSize(Object* type)
     case Object::Scalar: break;
 
     case Object::Array: {
-      return memberElementSize(m) / 4;
+      return memberElementSize(m);
     } break;
 
     default: UNREACHABLE;
@@ -1397,9 +1409,10 @@ typeArrayElementSize(Object* type)
 uint32_t
 typeObjectMask(Object* type)
 {
-  assert(typeFixedSize(type) + typeArrayElementSize(type) < 32);
+  assert(typeFixedSize(type) + typeArrayElementSize(type)
+         < 32 * sizeof(void*));
 
-  uint32_t mask = 0;
+  uint32_t mask = 1;
 
   for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
@@ -1442,7 +1455,7 @@ writeInitialization(Output* out, Object* type)
 
   out->write("{\n");
 
-  if (typeObjectMask(type)) {
+  if (typeObjectMask(type) != 1) {
     out->write("  object mask = makeIntArray(t, 1);\n");
 
     out->write("  intArrayBody(t, mask, 0) = ");
@@ -1507,9 +1520,6 @@ writeInitializations(Output* out, Object* declarations)
       writeInitialization(out, o);
     }
   }
-
-  out->write("set(t, objectClass(t->vm->types), ");
-  out->write("arrayBody(t, t->vm->types, Machine::ArrayType));\n");
 }
 
 void

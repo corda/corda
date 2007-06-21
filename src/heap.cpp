@@ -19,6 +19,12 @@ System* system(Context*);
 void NO_RETURN abort(Context*);
 void assert(Context*, bool);
 
+void
+indent(unsigned i)
+{
+  for (; i > 0; --i) fprintf(stderr, "  ");
+}
+
 class Segment {
  public:
   class Map {
@@ -385,6 +391,8 @@ class Context {
   Segment::Map heapMap;
 
   CollectionMode mode;
+
+  unsigned depth;
 };
 
 inline System*
@@ -448,21 +456,34 @@ initNextGen2(Context* c)
   c->gen2.map = 0;
 }
 
-inline object&
-follow(object o)
+inline bool
+wasCollected(Context* c, object o)
 {
+  return o and
+    (not c->nextGen1.contains(o)) and
+    (not c->nextGen2.contains(o)) and
+    (c->nextGen1.contains(cast<object>(o, 0)) or
+     c->nextGen2.contains(cast<object>(o, 0)));
+}
+
+inline object
+follow(Context* c, object o)
+{
+  assert(c, wasCollected(c, o));
   return cast<object>(o, 0);
 }
 
 inline object&
-parent(object o)
+parent(Context* c, object o)
 {
+  assert(c, wasCollected(c, o));
   return cast<object>(o, BytesPerWord);
 }
 
 inline uintptr_t*
-bitset(object o)
+bitset(Context* c, object o)
 {
+  assert(c, wasCollected(c, o));
   return &cast<uintptr_t>(o, BytesPerWord * 2);
 }
 
@@ -524,17 +545,13 @@ copy(Context* c, object o)
 {
   object r = copy2(c, o);
 
+  indent(c->depth);
+  fprintf(stderr, "copy %p to %p\n", o, r);
+
   // leave a pointer to the copy in the original
-  follow(o) = r;
+  cast<object>(o, 0) = r;
 
   return r;
-}
-
-inline bool
-wasCollected(Context* c, object o)
-{
-  return o and (c->nextGen1.contains(follow(o)) or
-                c->nextGen2.contains(follow(o)));
 }
 
 object
@@ -542,7 +559,7 @@ update3(Context* c, object *p, bool* needsVisit)
 {
   if (wasCollected(c, *p)) {
     *needsVisit = false;
-    return follow(*p);
+    return follow(c, *p);
   } else {
     *needsVisit = true;
     return copy(c, *p);
@@ -708,13 +725,19 @@ collect(Context* c, void** p)
   object original = *p;
   object parent = 0;
 
+  indent(c->depth);
+  fprintf(stderr, "update %p at %p\n", *p, p);
+
   bool needsVisit;
   *p = update(c, p, &needsVisit);
+
+  indent(c->depth);
+  fprintf(stderr, "  result: %p (visit? %d)\n", *p, needsVisit);
 
   if (not needsVisit) return;
 
  visit: {
-    object copy = follow(original);
+    object copy = follow(c, original);
 
     class Walker : public Heap::Walker {
      public:
@@ -723,16 +746,27 @@ collect(Context* c, void** p)
         copy(copy),
         bitset(bitset),
         first(0),
+        second(0),
         last(0),
         visits(0),
         total(0)
       { }
 
       virtual bool visit(unsigned offset) {
+        indent(c->depth);
+        fprintf(stderr, "  update %p at %p - offset %d from %p\n",
+                cast<object>(copy, offset * BytesPerWord),
+                &cast<object>(copy, offset * BytesPerWord),
+                offset,
+                copy);
+
         bool needsVisit;
         object childCopy = update
           (c, &cast<object>(copy, offset * BytesPerWord), &needsVisit);
         
+        indent(c->depth);
+        fprintf(stderr, "    result: %p (visit? %d)\n", childCopy, needsVisit);
+
         ++ total;
 
         if (total == 3) {
@@ -744,16 +778,25 @@ collect(Context* c, void** p)
 
           if (visits == 1) {
             first = offset;
+          } else if (visits == 2) {
+            second = offset;
           }
-
-          if (total >= 3) {
-            bitsetClear(bitset, last, offset);
-            last = offset;
-
-            bitsetSet(bitset, offset, true);
-          }          
         } else {
           cast<object>(copy, offset * BytesPerWord) = childCopy;
+        }
+
+        if (total >= 3 and (second or needsVisit)) {
+          bitsetClear(bitset, last, offset);
+          last = offset;
+
+          if (second) {
+            bitsetSet(bitset, second, true);
+            second = 0;
+          }
+          
+          if (needsVisit) {
+            bitsetSet(bitset, offset, true);
+          }
         }
 
         return true;
@@ -763,31 +806,37 @@ collect(Context* c, void** p)
       object copy;
       uintptr_t* bitset;
       unsigned first;
+      unsigned second;
       unsigned last;
       unsigned visits;
       unsigned total;
-    } walker(c, copy, bitset(original));
+    } walker(c, copy, bitset(c, original));
+
+    indent(c->depth);
+    fprintf(stderr, "walk %p\n", copy);
 
     c->client->walk(copy, &walker);
 
     if (walker.visits) {
       // descend
+      ++ c->depth;
       if (walker.visits > 1) {
-        ::parent(original) = parent;
+        ::parent(c, original) = parent;
         parent = original;
       }
 
       original = cast<object>(copy, walker.first * BytesPerWord);
-      cast<object>(copy, walker.first * BytesPerWord) = follow(original);
+      cast<object>(copy, walker.first * BytesPerWord) = follow(c, original);
       goto visit;
     } else {
       // ascend
+      -- c->depth;
       original = parent;
     }
   }
 
   if (original) {
-    object copy = follow(original);
+    object copy = follow(c, original);
 
     class Walker : public Heap::Walker {
      public:
@@ -820,18 +869,30 @@ collect(Context* c, void** p)
       uintptr_t* bitset;
       unsigned next;
       unsigned total;
-    } walker(c, bitset(original));
+    } walker(c, bitset(c, original));
+
+    indent(c->depth);
+    fprintf(stderr, "scan %p\n", copy);
+
+    c->client->walk(copy, &walker);
 
     assert(c, walker.total > 1);
 
-    if (walker.total == 3 and bitsetHasMore(bitset(original))) {
+    if (walker.total == 3 and bitsetHasMore(bitset(c, original))) {
       parent = original;
     } else {
-      parent = ::parent(original);
+      parent = ::parent(c, original);
     }
 
+    indent(c->depth);
+    fprintf(stderr, "  next is %p at %p - offset %d from %p\n",
+            cast<object>(copy, walker.next * BytesPerWord),
+            &cast<object>(copy, walker.next * BytesPerWord),
+            walker.next,
+            copy);
+
     original = cast<object>(copy, walker.next * BytesPerWord);
-    cast<object>(copy, walker.next * BytesPerWord) = follow(original);
+    cast<object>(copy, walker.next * BytesPerWord) = follow(c, original);
     goto visit;
   } else {
     return;
@@ -1019,6 +1080,7 @@ makeHeap(System* system)
       }
 
       c.client = client;
+      c.depth = 0;
 
       ::collect(&c);
     }
@@ -1038,8 +1100,14 @@ makeHeap(System* system)
 
     virtual void* follow(void* p) {
       if (wasCollected(&c, p)) {
-        return ::follow(p);
+        indent(c.depth);
+        fprintf(stderr, "follow: %p: %p\n", p, ::follow(&c, p));
+
+        return ::follow(&c, p);
       } else {
+        //indent(c.depth);
+        //fprintf(stderr, "follow: %p: %p\n", p, p);
+
         return p;
       }
     }
