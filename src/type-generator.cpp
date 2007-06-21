@@ -1492,19 +1492,14 @@ writeInitializations(Output* out, Object* declarations)
 
   out->write("t->vm->types = allocate(t, pad((");
   out->write(count);
-  out->write(" * ");
-  out->write(sizeof(void*));
-  out->write(") + 4 + ");
-  out->write(sizeof(void*));
-  out->write("));\n");
+  out->write(" * sizeof(void*)) + 4 + sizeof(void*)));\n");
   out->write("objectClass(t->vm->types) = 0;\n");
   out->write("arrayLength(t, t->vm->types) = ");
   out->write(count);
   out->write(";\n");
-
-  out->write("t->vm->types = makeArray(t, ");
-  out->write(typeCount(declarations));
-  out->write(");\n\n");
+  out->write("memset(&arrayBody(t, t->vm->types, 0), 0, ");
+  out->write(count);
+  out->write(" * sizeof(void*));\n\n");
 
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);

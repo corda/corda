@@ -42,13 +42,19 @@ class System: public vm::System {
     if (up == 0) abort();
 
     *up = *size;
+    count += *up;
+
     return up + 1;
   }
 
   virtual void free(const void* p) {
     if (p) {
       const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
+      if (count < *up) {
+        abort();
+      }
       count -= *up;
+
       ::free(const_cast<uintptr_t*>(up));
     }
   }
@@ -71,15 +77,18 @@ class System: public vm::System {
 };
 
 const char*
-append(vm::System* s, const char* a, const char* b, const char* c)
+append(vm::System* s, const char* a, const char* b, const char* c,
+       const char* d)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
   unsigned cl = strlen(c);
-  char* p = static_cast<char*>(s->allocate(al + bl + cl + 1));
+  unsigned dl = strlen(d);
+  char* p = static_cast<char*>(s->allocate(al + bl + cl + dl + 1));
   memcpy(p, a, al);
   memcpy(p + al, b, bl);
-  memcpy(p + al + bl, c, cl + 1);
+  memcpy(p + al + bl, c, cl);
+  memcpy(p + al + bl + cl, d, dl + 1);
   return p;
 }
 
@@ -92,7 +101,8 @@ class ClassFinder: public vm::ClassFinder {
 
   class Data: public vm::ClassFinder::Data {
    public:
-    Data(uint8_t* start, size_t length):
+    Data(vm::System* system, uint8_t* start, size_t length):
+      system(system),
       start_(start),
       length_(length)
     { }
@@ -109,18 +119,22 @@ class ClassFinder: public vm::ClassFinder {
       if (start_) {
         munmap(start_, length_);
       }
+      system->free(this);
     }
 
+    vm::System* system;
     uint8_t* start_;
     size_t length_;
   };
 
   virtual Data* find(const char* className) {
-    Data* d = new (system->allocate(sizeof(Data))) Data(0, 0);
+    Data* d = new (system->allocate(sizeof(Data))) Data(system, 0, 0);
 
     for (const char** p = path; *p; ++p) {
-      const char* file = append(system, *p, "/", className);
+      const char* file = append(system, *p, "/", className, ".class");
       int fd = open(file, O_RDONLY);
+      system->free(file);
+
       if (fd != -1) {
         struct stat s;
         int r = fstat(fd, &s);
@@ -133,7 +147,6 @@ class ClassFinder: public vm::ClassFinder {
           }
         }
       }
-      system->free(file);
     }
     
     system->free(d);
@@ -183,7 +196,7 @@ parsePath(vm::System* s, const char* path)
   unsigned i = 0;
   for (Tokenizer t(path, ':'); t.hasMore(); ++i) {
     Tokenizer::Token token(t.next());
-    char* p = static_cast<char*>(s->allocate(token.length));
+    char* p = static_cast<char*>(s->allocate(token.length + 1));
     memcpy(p, token.s, token.length);
     p[token.length] = 0;
     v[i] = p;

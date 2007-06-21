@@ -8,6 +8,7 @@ cxx = g++
 cc = gcc
 vg = nice valgrind --leak-check=full --num-callers=32 --db-attach=yes \
 	--freelist-vol=100000000
+javac = javac
 
 warnings = -Wall -Wextra -Werror -Wold-style-cast -Wunused-parameter \
 	-Winit-self -Wconversion
@@ -51,7 +52,6 @@ interpreter-sources = \
 	$(src)/main.cpp
 interpreter-objects = $(call cpp-objects,$(interpreter-sources),$(src))
 interpreter-cflags = $(slow) $(cflags)
-input = Test
 
 generator-headers = \
 	$(src)/input.h \
@@ -74,32 +74,42 @@ fast-objects = $(patsubst $(bld)/%,$(bld)/fast-%,$(interpreter-objects))
 fast-executable = $(bld)/fast-vm
 fast-cflags = $(fast) $(cflags)
 
+input = $(bld)/classes/Test.class
+input-depends = \
+	$(bld)/classes/java/lang/Object.class \
+	$(bld)/classes/java/lang/Class.class \
+	$(bld)/classes/vm/VM.class
+
+gen-run-arg = $(shell echo $(1) | sed -e 's:$(bld)/classes/\(.*\)\.class:\1:')
+
 .PHONY: build
 build: $(executable)
 
+$(input): $(input-depends)
+
 .PHONY: run
-run: $(executable)
-	$(<) $(input)
+run: $(executable) $(input)
+	$(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
 
 .PHONY: debug
-debug: $(executable)
-	gdb --args $(<) $(input)
+debug: $(executable) $(input)
+	gdb --args $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
 
 .PHONY: fast
 fast: $(fast-executable)
 	ls -lh $(<)
 
 .PHONY: vg
-vg: $(executable)
-	$(vg) $(<) $(input)
+vg: $(executable) $(input)
+	$(vg) $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
 
 .PHONY: test
-test: $(test-executable)
-	$(vg) $(<) $(input)
+test: $(test-executable) $(input)
+	$(vg) $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
 
 .PHONY: stress
-stress: $(stress-executable)
-	$(vg) $(<) $(input)
+stress: $(stress-executable) $(input)
+	$(vg) $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
 
 .PHONY: run-all
 run-all: $(executable)
@@ -135,6 +145,11 @@ $(bld)/fast-vm.o: \
 
 $(bld)/type-generator.o: \
 	$(generator-headers)
+
+$(bld)/classes/%.class: $(inp)/%.java
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(javac) -bootclasspath $(inp) -classpath $(inp) -d $(bld)/classes $(<)
 
 $(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
