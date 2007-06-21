@@ -231,7 +231,7 @@ visitRoots(Thread* t, Heap::Visitor* v)
   v->visit(&(t->exception));
 
   for (unsigned i = 0; i < t->sp; ++i) {
-    v->visit(t->stack + t->sp);
+    v->visit(t->stack + i);
   }
 
   for (Thread::Protector* p = t->protector; p; p = p->next) {
