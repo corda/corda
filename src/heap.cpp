@@ -20,9 +20,9 @@ void NO_RETURN abort(Context*);
 void assert(Context*, bool);
 
 void
-indent(unsigned i)
+indent(unsigned /*i*/)
 {
-  for (; i > 0; --i) fprintf(stderr, "  ");
+  //for (; i > 0; --i) fprintf(stderr, "  ");
 }
 
 class Segment {
@@ -785,7 +785,7 @@ collect(Context* c, void** p)
           cast<object>(copy, offset * BytesPerWord) = childCopy;
         }
 
-        if (total >= 3 and (second or needsVisit)) {
+        if (visits > 1 and total > 2 and (second or needsVisit)) {
           bitsetClear(bitset, last, offset);
           last = offset;
 

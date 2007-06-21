@@ -238,8 +238,8 @@ visitRoots(Thread* t, Heap::Visitor* v)
     v->visit(p->p);
   }
 
-  for (Thread* t = t->child; t; t = t->next) {
-    visitRoots(t, v);
+  for (Thread* c = t->child; c; c = c->next) {
+    visitRoots(c, v);
   }
 }
 
@@ -536,7 +536,7 @@ makeByteArray(Thread* t, const char* format, va_list a)
   
   vsnprintf(buffer, Size - 1, format, a);
 
-  object s = makeByteArray(t, strlen(buffer) + 1);
+  object s = makeByteArray(t, strlen(buffer) + 1, false);
   memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
 
   return s;
@@ -926,8 +926,7 @@ hashMapGrow(Thread* t, object map, uint32_t (*hash)(Thread*, object))
   PROTECT(t, oldArray);
 
   unsigned newLength = (oldLength ? oldLength * 2 : 32);
-  object newArray = makeArray(t, newLength);
-  memset(&arrayBody(t, newArray, 0), 0, newLength * sizeof(object));
+  object newArray = makeArray(t, newLength, true);
 
   if (oldArray) {
     for (unsigned i = 0; i < oldLength; ++i) {
@@ -1028,7 +1027,8 @@ object
 parsePool(Thread* t, Stream& s)
 {
   unsigned poolCount = s.read2() - 1;
-  object pool = makeArray(t, poolCount);
+  object pool = makeArray(t, poolCount, true);
+
   PROTECT(t, pool);
 
   for (unsigned i = 0; i < poolCount; ++i) {
@@ -1057,28 +1057,28 @@ parsePool(Thread* t, Stream& s)
 
     case CONSTANT_Utf8: {
       unsigned length = s.read2();
-      object value = makeByteArray(t, length + 1);
+      object value = makeByteArray(t, length + 1, false);
       s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, value, 0)), length);
       byteArrayBody(t, value, length) = 0;
       set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_Class: {
-      object value = makeIntArray(t, 2);
+      object value = makeIntArray(t, 2, false);
       intArrayBody(t, value, 0) = c;
       intArrayBody(t, value, 1) = s.read2();
       set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_String: {
-      object value = makeIntArray(t, 2);
+      object value = makeIntArray(t, 2, false);
       intArrayBody(t, value, 0) = c;
       intArrayBody(t, value, 1) = s.read2();
       set(t, arrayBody(t, pool, i), value);
     } break;
 
     case CONSTANT_NameAndType: {
-      object value = makeIntArray(t, 3);
+      object value = makeIntArray(t, 3, false);
       intArrayBody(t, value, 0) = c;
       intArrayBody(t, value, 1) = s.read2();
       intArrayBody(t, value, 2) = s.read2();
@@ -1088,7 +1088,7 @@ parsePool(Thread* t, Stream& s)
     case CONSTANT_Fieldref:
     case CONSTANT_Methodref:
     case CONSTANT_InterfaceMethodref: {
-      object value = makeIntArray(t, 3);
+      object value = makeIntArray(t, 3, false);
       intArrayBody(t, value, 0) = c;
       intArrayBody(t, value, 1) = s.read2();
       intArrayBody(t, value, 2) = s.read2();
@@ -1173,7 +1173,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 
   object interfaceTable = 0;
   if (hashMapSize(t, map)) {
-    interfaceTable = makeArray(t, hashMapSize(t, map));
+    interfaceTable = makeArray(t, hashMapSize(t, map), true);
     PROTECT(t, interfaceTable);
 
     unsigned i = 0;
@@ -1189,7 +1189,8 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 
       // we'll fill in this table in parseMethodTable():
       object vtable = makeArray
-        (t, arrayLength(t, interfaceMethodTable(t, interface)));
+        (t, arrayLength(t, interfaceMethodTable(t, interface)), true);
+
       set(t, arrayBody(t, interfaceTable, i++), vtable);      
     }
   }
@@ -1249,7 +1250,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
   if (count) {
     unsigned staticOffset = 0;
   
-    object fieldTable = makeArray(t, count);
+    object fieldTable = makeArray(t, count, true);
     PROTECT(t, fieldTable);
 
     for (unsigned i = 0; i < count; ++i) {
@@ -1288,8 +1289,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     set(t, classFieldTable(t, class_), fieldTable);
 
     if (staticOffset) {
-      object staticTable = makeArray(t, staticOffset);
-      memset(&arrayBody(t, staticTable, 0), 0, staticOffset * BytesPerWord);
+      object staticTable = makeArray(t, staticOffset, true);
 
       set(t, classStaticTable(t, class_), staticTable);
     }
@@ -1298,9 +1298,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
   classFixedSize(t, class_) = divide(memberOffset, BytesPerWord);
   
   object mask = makeIntArray
-    (t, divide(classFixedSize(t, class_), BitsPerWord));
-
-  memset(&intArrayBody(t, mask, 0), 0, intArrayLength(t, mask) * 4);
+    (t, divide(classFixedSize(t, class_), BitsPerWord), true);
 
   bool sawReferenceField = false;
   for (object c = class_; c; c = classSuper(t, c)) {
@@ -1329,14 +1327,14 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  object code = makeCode(t, pool, 0, maxStack, maxLocals, length);
+  object code = makeCode(t, pool, 0, maxStack, maxLocals, length, false);
   s.read(&codeBody(t, code, 0), length);
 
   unsigned ehtLength = s.read2();
   if (ehtLength) {
     PROTECT(t, code);
 
-    object eht = makeExceptionHandlerTable(t, ehtLength);
+    object eht = makeExceptionHandlerTable(t, ehtLength, false);
     for (unsigned i = 0; i < ehtLength; ++i) {
       ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
       exceptionHandlerStart(eh) = s.read2();
@@ -1416,7 +1414,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   
   unsigned count = s.read2();
   if (count) {
-    object methodTable = makeArray(t, count);
+    object methodTable = makeArray(t, count, true);
     PROTECT(t, methodTable);
 
     for (unsigned i = 0; i < count; ++i) {
@@ -1479,7 +1477,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   if (virtualCount) {
     // generate class vtable
 
-    object vtable = makeArray(t, virtualCount);
+    object vtable = makeArray(t, virtualCount, false);
 
     unsigned i = 0;
     if (superVirtualTable) {
@@ -1783,8 +1781,7 @@ run(Thread* t)
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
       
-      object array = makeObjectArray(t, class_, c);
-      memset(&objectArrayBody(t, array, 0), 0, c * 4);
+      object array = makeObjectArray(t, class_, c, true);
       
       push(t, array);
     } else {
@@ -2814,55 +2811,43 @@ run(Thread* t)
       uint8_t type = codeBody(t, code, ip++);
 
       object array;
-      unsigned factor;
 
       switch (type) {
       case T_BOOLEAN:
-        array = makeBooleanArray(t, c);
-        factor = 1;
+        array = makeBooleanArray(t, c, true);
         break;
 
       case T_CHAR:
-        array = makeCharArray(t, c);
-        factor = 2;
+        array = makeCharArray(t, c, true);
         break;
 
       case T_FLOAT:
-        array = makeFloatArray(t, c);
-        factor = 4;
+        array = makeFloatArray(t, c, true);
         break;
 
       case T_DOUBLE:
-        array = makeDoubleArray(t, c);
-        factor = 8;
+        array = makeDoubleArray(t, c, true);
         break;
 
       case T_BYTE:
-        array = makeByteArray(t, c);
-        factor = 1;
+        array = makeByteArray(t, c, true);
         break;
 
       case T_SHORT:
-        array = makeShortArray(t, c);
-        factor = 2;
+        array = makeShortArray(t, c, true);
         break;
 
       case T_INT:
-        array = makeIntArray(t, c);
-        factor = 4;
+        array = makeIntArray(t, c, true);
         break;
 
       case T_LONG:
-        array = makeLongArray(t, c);
-        factor = 8;
+        array = makeLongArray(t, c, true);
         break;
 
       default: abort(t);
       }
-      
-      memset(static_cast<uint8_t*>(array) + sizeof(object) + 4, 0,
-             c * factor);
-      
+            
       push(t, array);
     } else {
       object message = makeString(t, "%d", c);
@@ -3060,8 +3045,13 @@ run(Thread* t)
   
   sp -= parameterCount;
   frame = makeFrame(t, code, frame, 0, sp,
-                    codeMaxLocals(t, methodCode(t, code)));
-  memcpy(&frameLocals(t, frame, 0), stack + sp, parameterCount);
+                    codeMaxLocals(t, methodCode(t, code)), false);
+
+  memcpy(&frameLocals(t, frame, 0), stack + sp, parameterCount * BytesPerWord);
+
+  memset(&frameLocals(t, frame, 0) + parameterCount, 0,
+         (frameLength(t, frame) - parameterCount) * BytesPerWord);
+
   ip = 0;
   goto loop;
 
@@ -3093,7 +3083,7 @@ run(Thread* t)
   if (t->thread) {
     object method = threadExceptionHandler(t, t->thread);
     code = methodCode(t, method);
-    frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, code));
+    frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, code), true);
     sp = 0;
     ip = 0;
     push(t, exception);
@@ -3138,10 +3128,12 @@ run(Thread* t, const char* className, int argc, const char** argv)
     object method = findMethodInClass(t, class_, reference);
     if (LIKELY(t->exception == 0)) {
       t->code = methodCode(t, method);
-      t->frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, t->code));
+      t->frame = makeFrame
+        (t, method, 0, 0, 0, codeMaxLocals(t, t->code), true);
 
       object args = makeObjectArray
-        (t, arrayBody(t, t->vm->types, Machine::StringType), argc);
+        (t, arrayBody(t, t->vm->types, Machine::StringType), argc, true);
+
       PROTECT(t, args);
 
       for (int i = 0; i < argc; ++i) {

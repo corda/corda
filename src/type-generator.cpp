@@ -1217,6 +1217,10 @@ writeConstructorParameters(Output* out, Object* t)
       out->write(" ");
       out->write(obfuscate(memberName(m)));
     } break;
+
+    case Object::Array: {
+      out->write(", bool clear");
+    } break;
             
     default: break;
     }    
@@ -1237,6 +1241,17 @@ writeConstructorInitializations(Output* out, Object* t)
       out->write(";\n");
     } break;
             
+    case Object::Array: {
+      out->write("  if (clear and length) memset(");
+      if (memberTypeObject(m) == 0) {
+        out->write("&");
+      }
+      writeAccessorName(out, m, true);
+      out->write("(t, o, 0), 0, length * ");
+      out->write(arrayElementSize(m));
+      out->write(");\n");
+    } break;
+
     default: break;
     }    
   }
@@ -1456,7 +1471,7 @@ writeInitialization(Output* out, Object* type)
   out->write("{\n");
 
   if (typeObjectMask(type) != 1) {
-    out->write("  object mask = makeIntArray(t, 1);\n");
+    out->write("  object mask = makeIntArray(t, 1, false);\n");
 
     out->write("  intArrayBody(t, mask, 0) = ");
     out->write(typeObjectMask(type));
