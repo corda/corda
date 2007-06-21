@@ -283,8 +283,8 @@ collect(Machine* m, Heap::CollectionType type)
       object objectMask = m->heap->follow(classObjectMask(t, class_));
 
       if (objectMask) {
-        fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
-                p, class_, objectMask, intArrayLength(t, objectMask));
+//         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
+//                 p, class_, objectMask, intArrayLength(t, objectMask));
 
         unsigned fixedSize = classFixedSize(t, class_);
         unsigned arrayElementSize = classArrayElementSize(t, class_);
@@ -343,8 +343,6 @@ collect(Machine* m, Heap::CollectionType type)
    private:
     Machine* m;
   } it(m);
-
-  fprintf(stderr, "collection time!\n");
 
   m->unsafe = true;
   m->heap->collect(type, &it);
@@ -1687,7 +1685,7 @@ run(Thread* t)
   if (UNLIKELY(exception)) goto throw_;
 
  loop:
-  //fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
+  fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
 
   switch (codeBody(t, code, ip++)) {
   case aaload: {
@@ -2121,7 +2119,7 @@ run(Thread* t)
     uint8_t offset3 = codeBody(t, code, ip++);
     uint8_t offset4 = codeBody(t, code, ip++);
 
-    ip = (ip - 5) + static_cast<int16_t>
+    ip = (ip - 5) + static_cast<int32_t>
       (((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4));
   } goto loop;
 
@@ -2247,7 +2245,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (a == b) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2259,7 +2257,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (a != b) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2271,7 +2269,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (intValue(t, a) == intValue(t, b)) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2283,7 +2281,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (intValue(t, a) != intValue(t, b)) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2295,7 +2293,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (intValue(t, a) > intValue(t, b)) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2307,7 +2305,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (intValue(t, a) >= intValue(t, b)) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2319,7 +2317,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (intValue(t, a) < intValue(t, b)) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2331,7 +2329,7 @@ run(Thread* t)
     object a = pop(t);
     
     if (intValue(t, a) < intValue(t, b)) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2342,7 +2340,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (intValue(t, v) == 0) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2353,7 +2351,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (intValue(t, v)) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2364,7 +2362,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (intValue(t, v) > 0) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2375,7 +2373,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (intValue(t, v) >= 0) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2386,7 +2384,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (intValue(t, v) < 0) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2397,7 +2395,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (intValue(t, v) <= 0) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2408,7 +2406,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (v) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2419,7 +2417,7 @@ run(Thread* t)
     object v = pop(t);
     
     if (v == 0) {
-      ip = (ip - 1) + ((offset1 << 8) | offset2);
+      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
 
@@ -2606,7 +2604,7 @@ run(Thread* t)
     uint8_t offset2 = codeBody(t, code, ip++);
 
     push(t, makeInt(t, ip));
-    ip = (ip - 1) + ((offset1 << 8) | offset2);
+    ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
   } goto loop;
 
   case jsr_w: {
@@ -2616,8 +2614,8 @@ run(Thread* t)
     uint8_t offset4 = codeBody(t, code, ip++);
 
     push(t, makeInt(t, ip));
-    ip = (ip - 1)
-      + ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
+    ip = (ip - 3) + static_cast<int32_t>
+      ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
   } goto loop;
 
   case l2i: {
