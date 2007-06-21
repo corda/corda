@@ -8,22 +8,18 @@ namespace {
 
 // an object must survive TenureThreshold + 2 garbage collections
 // before being copied to gen2:
-static const unsigned TenureThreshold = 3;
+const unsigned TenureThreshold = 3;
 
-static const unsigned MinimumGen1Size = 64 * 1024;
-static const unsigned MinimumGen2Size = 128 * 1024;
+const unsigned MinimumGen1Size = 64 * 1024;
+const unsigned MinimumGen2Size = 128 * 1024;
+
+void* const Top = reinterpret_cast<void*>(~static_cast<uintptr_t>(0));
 
 class Context;
 
 System* system(Context*);
 void NO_RETURN abort(Context*);
 void assert(Context*, bool);
-
-void
-indent(unsigned /*i*/)
-{
-  //for (; i > 0; --i) fprintf(stderr, "  ");
-}
 
 class Segment {
  public:
@@ -42,12 +38,12 @@ class Segment {
         assert(map->segment->context, map->bitsPerRecord == 1);
         assert(map->segment->context, map->segment);
 
-        index = map->indexOf(map->segment->data + start);
+        index = map->indexOf(start);
         assert(map->segment->context, index == 0 or start != 0);
 
         if (end > map->segment->position) end = map->segment->position;
 
-        limit = map->indexOf(map->segment->data + end);
+        limit = map->indexOf(end);
         if (end - start % map->scale) ++ limit;
 
 //         printf("iterating from %p (index %d) to %p (index %d) "
@@ -147,6 +143,10 @@ class Segment {
       return size(max(segment->capacity, 1));
     }
 
+    unsigned indexOf(unsigned segmentIndex) {
+      return (segmentIndex / scale) * bitsPerRecord;
+    }
+
     unsigned indexOf(void* p) {
       assert(segment->context,
              segment->position
@@ -154,9 +154,8 @@ class Segment {
              and p <= segment->data + segment->position);
       assert(segment->context, segment->data);
 
-      return ((static_cast<void**>(p)
-               - reinterpret_cast<void**>(segment->data))
-              / scale) * bitsPerRecord;
+      return indexOf(static_cast<void**>(p)
+                     - reinterpret_cast<void**>(segment->data));
     }
 
     void update(uintptr_t* segmentData) {
@@ -180,14 +179,18 @@ class Segment {
       data()[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
     }
 
-    void clearOnly(unsigned index) {
+    void clearOnlyIndex(unsigned index) {
       for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
         clear(i);
       }
     }
 
+    void clearOnly(unsigned segmentIndex) {
+      clearOnlyIndex(indexOf(segmentIndex));
+    }
+
     void clearOnly(void* p) {
-      clearOnly(indexOf(p));
+      clearOnlyIndex(indexOf(p));
     }
 
     void clear(void* p) {
@@ -195,7 +198,7 @@ class Segment {
       if (child) child->clear(p);
     }
 
-    void setOnly(unsigned index, unsigned v = 1) {
+    void setOnlyIndex(unsigned index, unsigned v = 1) {
       unsigned i = index + bitsPerRecord - 1;
       while (true) {
         if (v & 1) set(i); else clear(i);
@@ -205,8 +208,12 @@ class Segment {
       }
     }
 
+    void setOnly(unsigned segmentIndex, unsigned v = 1) {
+      setOnlyIndex(indexOf(segmentIndex), v);
+    }
+
     void setOnly(void* p, unsigned v = 1) {
-      setOnly(indexOf(p), v);
+      setOnlyIndex(indexOf(p), v);
     }
 
     void set(void* p, unsigned v = 1) {
@@ -396,6 +403,8 @@ class Context {
   Segment gen2;
   Segment nextGen2;
 
+  void* gen2Base;
+
   Segment::Map ageMap;
   Segment::Map nextAgeMap;
   Segment::Map pointerMap;
@@ -403,8 +412,6 @@ class Context {
   Segment::Map heapMap;
 
   CollectionMode mode;
-
-  unsigned depth;
 };
 
 inline System*
@@ -469,13 +476,17 @@ initNextGen2(Context* c)
 }
 
 inline bool
+fresh(Context* c, object o)
+{
+  return c->nextGen1.contains(o)
+    or c->nextGen2.contains(o)
+    or (o >= c->gen2Base and c->gen2.contains(o));
+}
+
+inline bool
 wasCollected(Context* c, object o)
 {
-  return o and
-    (not c->nextGen1.contains(o)) and
-    (not c->nextGen2.contains(o)) and
-    (c->nextGen1.contains(cast<object>(o, 0)) or
-     c->nextGen2.contains(cast<object>(o, 0)));
+  return o and (not fresh(c, o)) and fresh(c, cast<object>(o, 0));
 }
 
 inline object
@@ -526,6 +537,10 @@ copy2(Context* c, object o)
         if (c->gen2.data == 0) initGen2(c);
 
         if (c->gen2.remaining() >= size) {
+          if (c->gen2Base == Top) {
+            c->gen2Base = c->gen2.data + c->gen2.position;
+          }
+
           return copyTo(c, &(c->gen2), o, size);
         } else {
           c->mode = OverflowCollection;
@@ -557,7 +572,6 @@ copy(Context* c, object o)
 {
   object r = copy2(c, o);
 
-  indent(c->depth);
   fprintf(stderr, "copy %p to %p\n", o, r);
 
   // leave a pointer to the copy in the original
@@ -737,13 +751,11 @@ collect(Context* c, void** p)
   object original = *p;
   object parent = 0;
 
-  indent(c->depth);
   fprintf(stderr, "update %p at %p\n", *p, p);
 
   bool needsVisit;
   *p = update(c, p, &needsVisit);
 
-  indent(c->depth);
   fprintf(stderr, "  result: %p (visit? %d)\n", *p, needsVisit);
 
   if (not needsVisit) return;
@@ -765,7 +777,6 @@ collect(Context* c, void** p)
       { }
 
       virtual bool visit(unsigned offset) {
-        indent(c->depth);
         fprintf(stderr, "  update %p at %p - offset %d from %p\n",
                 cast<object>(copy, offset * BytesPerWord),
                 &cast<object>(copy, offset * BytesPerWord),
@@ -776,7 +787,6 @@ collect(Context* c, void** p)
         object childCopy = update
           (c, &cast<object>(copy, offset * BytesPerWord), &needsVisit);
         
-        indent(c->depth);
         fprintf(stderr, "    result: %p (visit? %d)\n", childCopy, needsVisit);
 
         ++ total;
@@ -824,14 +834,12 @@ collect(Context* c, void** p)
       unsigned total;
     } walker(c, copy, bitset(c, original));
 
-    indent(c->depth);
     fprintf(stderr, "walk %p\n", copy);
 
     c->client->walk(copy, &walker);
 
     if (walker.visits) {
       // descend
-      ++ c->depth;
       if (walker.visits > 1) {
         ::parent(c, original) = parent;
         parent = original;
@@ -842,7 +850,6 @@ collect(Context* c, void** p)
       goto visit;
     } else {
       // ascend
-      -- c->depth;
       original = parent;
     }
   }
@@ -883,7 +890,6 @@ collect(Context* c, void** p)
       unsigned total;
     } walker(c, bitset(c, original));
 
-    indent(c->depth);
     fprintf(stderr, "scan %p\n", copy);
 
     c->client->walk(copy, &walker);
@@ -896,7 +902,6 @@ collect(Context* c, void** p)
       parent = ::parent(c, original);
     }
 
-    indent(c->depth);
     fprintf(stderr, "  next is %p at %p - offset %d from %p\n",
             cast<object>(copy, walker.next * BytesPerWord),
             &cast<object>(copy, walker.next * BytesPerWord),
@@ -1037,6 +1042,8 @@ collect(Context* c)
 {
   if (c->gen1.data == 0) initGen1(c);
 
+  c->gen2Base = Top;
+
   switch (c->mode) {
   case MinorCollection: {
     initNextGen1(c);
@@ -1045,6 +1052,9 @@ collect(Context* c)
 
     if (c->mode == OverflowCollection) {
       c->mode = Gen2Collection;
+
+      c->gen2Base = Top;
+
       collect2(c);
 
       c->gen2.replaceWith(&(c->nextGen2));
@@ -1094,7 +1104,6 @@ makeHeap(System* system)
       }
 
       c.client = client;
-      c.depth = 0;
 
       ::collect(&c);
     }
@@ -1114,12 +1123,10 @@ makeHeap(System* system)
 
     virtual void* follow(void* p) {
       if (wasCollected(&c, p)) {
-        indent(c.depth);
         fprintf(stderr, "follow: %p: %p\n", p, ::follow(&c, p));
 
         return ::follow(&c, p);
       } else {
-        //indent(c.depth);
         //fprintf(stderr, "follow: %p: %p\n", p, p);
 
         return p;
