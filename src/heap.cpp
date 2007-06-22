@@ -12,8 +12,8 @@ namespace {
 // before being copied to gen2:
 const unsigned TenureThreshold = 3;
 
-const unsigned MinimumGen1Size = 64 * 1024;
-const unsigned MinimumGen2Size = 128 * 1024;
+const unsigned MinimumGen1SizeInBytes = 64 * 1024;
+const unsigned MinimumGen2SizeInBytes = 128 * 1024;
 
 const unsigned Top = ~static_cast<unsigned>(0);
 
@@ -260,16 +260,37 @@ class Segment {
     Chain* next;
     Chain* previous;
 
-    Chain(Segment* segment, unsigned offset, unsigned capacity,
-          Chain* previous):
+    Chain(Segment* segment, unsigned capacity, Chain* previous):
       segment(segment),
-      offset(offset),
+      offset(previous ? previous->offset + previous->position : 0),
       position(0),
       capacity(capacity),
       next(0),
       previous(previous)
     {
       assert(segment->context, sizeof(Chain) % BytesPerWord == 0);
+    }
+
+    static Chain* make(Segment* s, unsigned minimum, unsigned desired) {
+      assert(s->context, minimum > 0);
+      assert(s->context, desired >= minimum);
+
+      void* p = 0;
+      unsigned capacity = desired;
+      while (p == 0) {
+        p = system(s->context)->tryAllocate
+          (footprint(capacity, s->rear, s->map) * BytesPerWord);
+
+        if (p == 0) {
+          if (capacity > minimum) {
+            capacity = minimum + ((capacity - minimum) / 2);
+          } else {
+            abort(s->context);
+          }
+        }
+      }
+      
+      return new (p) Chain(s, capacity, s->rear);
     }
 
     static void dispose(Chain* c) {
@@ -308,27 +329,22 @@ class Segment {
   Chain* rear;
   Map* map;
 
-  Segment(Context* context, unsigned capacity, Map* map = 0,
+  Segment(Context* context, unsigned minimum, unsigned desired, Map* map = 0,
           bool clearMap = true):
     context(context),
     front(0),
     rear(0),
     map(map)
   {
-    front = rear = 0;
-    this->map = map;
-
-    if (capacity) {
-      front = rear = new
-        (system(context)->allocate
-         (Chain::footprint(capacity, 0, map) * BytesPerWord))
-        Chain(this, 0, capacity, 0);
+    if (desired) {
+      front = rear = Chain::make(this, minimum, desired);
 
       if (map) {
-        map->setSegment(this);
         if (clearMap) {
-          map->clear();
+          memset(front->data() + front->capacity, 0,
+                 map->footprint(front->capacity) * BytesPerWord);
         }
+        map->setSegment(this);
       }
     }
   }
@@ -354,18 +370,6 @@ class Segment {
       }
     }
     abort(context);
-  }
-
-  void copyTo(void* p) {
-    for (Chain* c = front; c; c = c->next) {
-      if (c->position) {
-        memcpy(static_cast<uintptr_t*>(p) + c->offset,
-               c->data(),
-               c->position * BytesPerWord);
-      } else {
-        return;
-      }
-    }
   }
 
   unsigned footprint() {
@@ -463,31 +467,14 @@ class Segment {
       assert(context, rear->position);
       assert(context, rear->next == 0);
 
-      if (Verbose) {
-        fprintf(stderr, "grow\n");
-      }
-
       unsigned desired = (position() + minimum) * 2;
       
-      void* p = 0;
-      unsigned newCapacity = desired;
-      while (p == 0) {
-        p = system(context)->tryAllocate
-          (Chain::footprint(newCapacity, rear, map) * BytesPerWord);
-
-        if (p == 0) {
-          if (newCapacity > minimum) {
-            newCapacity = minimum + ((newCapacity - minimum) / 2);
-          } else {
-            abort(context);
-          }
-        }
-      }
-
-      Chain* c = new (p) Chain
-        (this, rear->offset + rear->position, newCapacity, rear);
+      Chain* c = Chain::make(this, minimum, desired);
 
       if (map) {
+        memset(c->data() + c->capacity, 0,
+               map->footprint(c->offset + c->capacity) * BytesPerWord);
+
         map->update(c->data() + c->capacity, c->offset + c->capacity);
       }
 
@@ -515,10 +502,10 @@ class Context {
   Context(System* system):
     system(system),
     client(0),
-    gen1(this, 0),
-    nextGen1(this, 0),
-    gen2(this, 0),
-    nextGen2(this, 0)
+    gen1(this, 0, 0),
+    nextGen1(this, 0, 0),
+    gen2(this, 0, 0),
+    nextGen2(this, 0, 0)
   { }
 
   void dispose() {
@@ -540,12 +527,33 @@ class Context {
 
   Segment::Map ageMap;
   Segment::Map nextAgeMap;
+
   Segment::Map pointerMap;
   Segment::Map pageMap;
   Segment::Map heapMap;
 
+  Segment::Map nextPointerMap;
+  Segment::Map nextPageMap;
+  Segment::Map nextHeapMap;
+
   CollectionMode mode;
 };
+
+const char*
+segment(Context* c, void* p)
+{
+  if (c->gen1.contains(p)) {
+    return "gen1";
+  } else if (c->nextGen1.contains(p)) {
+    return "nextGen1";
+  } else if (c->gen2.contains(p)) {
+    return "gen2";
+  } else if (c->nextGen2.contains(p)) {
+    return "nextGen2";
+  } else {
+    return "none";
+  }
+}
 
 inline System*
 system(Context* c)
@@ -569,43 +577,54 @@ assert(Context* c, bool v)
 void
 initGen1(Context* c)
 {
-  new (&(c->ageMap)) Segment::Map(&(c->gen1), log(TenureThreshold));
-  new (&(c->gen1)) Segment
-    (c, MinimumGen1Size / BytesPerWord, &(c->ageMap), false);
-}
+  unsigned minimum = MinimumGen1SizeInBytes / BytesPerWord;
+  unsigned desired = minimum;
 
-void
-initGen2(Context* c)
-{
-  new (&(c->pointerMap)) Segment::Map(&(c->gen2));
-  new (&(c->pageMap)) Segment::Map
-    (&(c->gen2), 1, LikelyPageSize / BytesPerWord, &(c->pointerMap));
-  new (&(c->heapMap)) Segment::Map
-    (&(c->gen2), 1, c->pageMap.scale * 1024, &(c->pageMap));
-  new (&(c->gen2)) Segment(c, MinimumGen2Size / BytesPerWord, &(c->heapMap));
+  new (&(c->ageMap)) Segment::Map(&(c->gen1), log(TenureThreshold));
+
+  new (&(c->gen1)) Segment(c, minimum, desired, &(c->ageMap), false);
 }
 
 void
 initNextGen1(Context* c)
 {
-  unsigned size = max(MinimumGen1Size / BytesPerWord,
-                      nextPowerOfTwo(c->gen1.position()));
+  unsigned minimum = MinimumGen1SizeInBytes / BytesPerWord;
+  unsigned desired = max(minimum, nextPowerOfTwo(c->gen1.position()));
+
   new (&(c->nextAgeMap)) Segment::Map(&(c->nextGen1), log(TenureThreshold));
-  new (&(c->nextGen1)) Segment(c, size, &(c->nextAgeMap), false);
+
+  new (&(c->nextGen1)) Segment(c, minimum, desired, &(c->nextAgeMap), false);
+}
+
+void
+initGen2(Context* c)
+{
+  unsigned minimum = MinimumGen2SizeInBytes / BytesPerWord;
+  unsigned desired = minimum;
+
+  new (&(c->pointerMap)) Segment::Map(&(c->gen2));
+  new (&(c->pageMap)) Segment::Map
+    (&(c->gen2), 1, LikelyPageSizeInBytes / BytesPerWord, &(c->pointerMap));
+  new (&(c->heapMap)) Segment::Map
+    (&(c->gen2), 1, c->pageMap.scale * 1024, &(c->pageMap));
+
+  new (&(c->gen2)) Segment(c, minimum, desired, &(c->heapMap));
 }
 
 void
 initNextGen2(Context* c)
 {
-  unsigned size = max(MinimumGen2Size / BytesPerWord,
-                      nextPowerOfTwo(c->gen2.position()));
-  new (&(c->pointerMap)) Segment::Map(&(c->nextGen2));
-  new (&(c->pageMap)) Segment::Map
-    (&(c->nextGen2), 1, LikelyPageSize / BytesPerWord, &(c->pointerMap));
-  new (&(c->heapMap)) Segment::Map
-    (&(c->nextGen2), 1, c->pageMap.scale * 1024, &(c->pageMap));
-  new (&(c->nextGen2)) Segment(c, size, &(c->heapMap));
-  c->gen2.map = 0;
+  unsigned minimum = MinimumGen2SizeInBytes / BytesPerWord;
+  unsigned desired = max(minimum, nextPowerOfTwo(c->gen2.position()));
+
+  new (&(c->nextPointerMap)) Segment::Map(&(c->nextGen2));
+  new (&(c->nextPageMap)) Segment::Map
+    (&(c->nextGen2), 1, LikelyPageSizeInBytes / BytesPerWord,
+     &(c->nextPointerMap));
+  new (&(c->nextHeapMap)) Segment::Map
+    (&(c->nextGen2), 1, c->pageMap.scale * 1024, &(c->nextPageMap));
+
+  new (&(c->nextGen2)) Segment(c, minimum, desired, &(c->nextHeapMap));
 }
 
 inline bool
@@ -644,9 +663,24 @@ bitset(Context* c, object o)
 }
 
 inline object
-copyTo(Context*, Segment* s, object o, unsigned size)
+copyTo(Context* c, Segment* s, object o, unsigned size)
 {
-  s->ensure(size);
+  if (s->remaining() < size) {
+    if (Verbose) {
+      if (s == &(c->gen2)) {
+        fprintf(stderr, "grow gen2\n");
+      } else if (s == &(c->nextGen1)) {
+        fprintf(stderr, "grow nextGen1\n");
+      } else if (s == &(c->nextGen2)) {
+        fprintf(stderr, "grow nextGen2\n");
+      } else {
+        abort(c);
+      }
+    }
+
+    s->ensure(size);
+  }
+
   return static_cast<object>(s->add(o, size));
 }
 
@@ -707,7 +741,8 @@ copy(Context* c, object o)
   object r = copy2(c, o);
 
   if (Debug) {
-    fprintf(stderr, "copy %p to %p\n", o, r);
+    fprintf(stderr, "copy %p (%s) to %p (%s)\n",
+            o, segment(c, o), r, segment(c, r));
   }
 
   // leave a pointer to the copy in the original
@@ -744,6 +779,8 @@ update2(Context* c, object* p, bool* needsVisit)
     if (c->gen2.contains(*p)) {
       return update3(c, p, needsVisit);
     } else {
+      assert(c, c->nextGen1.contains(*p) or c->nextGen2.contains(*p));
+
       *needsVisit = false;
       return *p;
     }
@@ -769,11 +806,21 @@ update(Context* c, object* p, bool* needsVisit)
   if (r) {
     if (c->mode == MinorCollection) {
       if (c->gen2.contains(p) and not c->gen2.contains(r)) {
+        if (Debug) {        
+          fprintf(stderr, "mark %p (%s) at %p (%s)\n",
+                  r, segment(c, r), p, segment(c, p));
+        }
+
         c->heapMap.set(p);
       }
     } else {
       if (c->nextGen2.contains(p) and not c->nextGen2.contains(r)) {
-        c->heapMap.set(p);
+        if (Debug) {        
+          fprintf(stderr, "mark %p (%s) at %p (%s)\n",
+                  r, segment(c, r), p, segment(c, p));
+        }
+
+        c->nextHeapMap.set(p);
       }      
     }
   }
@@ -888,14 +935,16 @@ collect(Context* c, void** p)
   object parent = 0;
   
   if (Debug) {
-    fprintf(stderr, "update %p at %p\n", *p, p);
+    fprintf(stderr, "update %p (%s) at %p (%s)\n",
+            *p, segment(c, *p), p, segment(c, p));
   }
 
   bool needsVisit;
   *p = update(c, p, &needsVisit);
 
   if (Debug) {
-    fprintf(stderr, "  result: %p (visit? %d)\n", *p, needsVisit);
+    fprintf(stderr, "  result: %p (%s) (visit? %d)\n",
+           *p,  segment(c, *p), needsVisit);
   }
 
   if (not needsVisit) return;
@@ -918,11 +967,13 @@ collect(Context* c, void** p)
 
       virtual bool visit(unsigned offset) {
         if (Debug) {
-          fprintf(stderr, "  update %p at %p - offset %d from %p\n",
+          fprintf(stderr, "  update %p (%s) at %p - offset %d from %p (%s)\n",
                   cast<object>(copy, offset * BytesPerWord),
+                  segment(c, cast<object>(copy, offset * BytesPerWord)),
                   &cast<object>(copy, offset * BytesPerWord),
                   offset,
-                  copy);
+                  copy,
+                  segment(c, copy));
         }
 
         bool needsVisit;
@@ -930,8 +981,8 @@ collect(Context* c, void** p)
           (c, &cast<object>(copy, offset * BytesPerWord), &needsVisit);
         
         if (Debug) {
-          fprintf(stderr, "    result: %p (visit? %d)\n",
-                  childCopy, needsVisit);
+          fprintf(stderr, "    result: %p (%s) (visit? %d)\n",
+                  childCopy, segment(c, childCopy), needsVisit);
         }
 
         ++ total;
@@ -980,7 +1031,7 @@ collect(Context* c, void** p)
     } walker(c, copy, bitset(c, original));
 
     if (Debug) {
-      fprintf(stderr, "walk %p\n", copy);
+      fprintf(stderr, "walk %p (%s)\n", copy, segment(c, copy));
     }
 
     c->client->walk(copy, &walker);
@@ -1052,11 +1103,13 @@ collect(Context* c, void** p)
     }
 
     if (Debug) {
-      fprintf(stderr, "  next is %p at %p - offset %d from %p\n",
+      fprintf(stderr, "  next is %p (%s) at %p - offset %d from %p (%s)\n",
               cast<object>(copy, walker.next * BytesPerWord),
+              segment(c, cast<object>(copy, walker.next * BytesPerWord)),
               &cast<object>(copy, walker.next * BytesPerWord),
               walker.next,
-              copy);
+              copy,
+              segment(c, copy));
     }
 
     original = cast<object>(copy, walker.next * BytesPerWord);
@@ -1082,9 +1135,7 @@ collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
       map->clearOnly(s);
       bool childDirty = false;
       collect(c, map->child, s, e, &childDirty, true);
-      if (c->mode == OverflowCollection) {
-        return;
-      } else if (childDirty) {
+      if (c->mode != OverflowCollection and childDirty) {
         map->setOnly(s);
         *dirty = true;
       }
@@ -1099,11 +1150,7 @@ collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
       } else {
         collect(c, p);
 
-        if (c->mode == OverflowCollection) {
-          return;
-        } else if (c->gen2.contains(*p)) {
-          // done
-        } else {
+        if (c->mode != OverflowCollection and not c->gen2.contains(*p)) {
           map->setOnly(p);
           *dirty = true;
         }
@@ -1290,6 +1337,11 @@ makeHeap(System* system)
     }
 
     virtual void mark(void** p) {
+      if (Debug) {        
+        fprintf(stderr, "mark %p (%s) at %p (%s)\n",
+                *p, segment(&c, *p), p, segment(&c, p));
+      }
+
       c.heapMap.set(p);
     }
 
@@ -1301,7 +1353,9 @@ makeHeap(System* system)
     virtual void* follow(void* p) {
       if (wasCollected(&c, p)) {
         if (Debug) {
-          fprintf(stderr, "follow: %p: %p\n", p, ::follow(&c, p));
+          fprintf(stderr, "follow %p (%s) to %p (%s)\n",
+                  p, segment(&c, p),
+                  ::follow(&c, p), segment(&c, ::follow(&c, p)));
         }
 
         return ::follow(&c, p);

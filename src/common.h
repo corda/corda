@@ -25,7 +25,7 @@ typedef void* object;
 const unsigned BytesPerWord = sizeof(uintptr_t);
 const unsigned BitsPerWord = BytesPerWord * 8;
 
-const unsigned LikelyPageSize = 4 * 1024;
+const unsigned LikelyPageSizeInBytes = 4 * 1024;
 
 inline unsigned
 max(unsigned a, unsigned b)

@@ -91,8 +91,8 @@ class Thread {
     Protector* next;
   };
 
-  static const unsigned HeapSize = 64 * 1024;
-  static const unsigned StackSize = 64 * 1024;
+  static const unsigned HeapSizeInBytes = 64 * 1024;
+  static const unsigned StackSizeInBytes = 64 * 1024;
 
   Thread(Machine* m);
 
@@ -107,8 +107,8 @@ class Thread {
   unsigned ip;
   unsigned sp;
   unsigned heapIndex;
-  object stack[StackSize];
-  object heap[HeapSize];
+  object stack[StackSizeInBytes / BytesPerWord];
+  object heap[HeapSizeInBytes / BytesPerWord];
   Protector* protector;
 };
 
@@ -449,9 +449,9 @@ enter(Thread* t, Thread::State s)
 }
 
 void
-maybeYieldAndMaybeCollect(Thread* t, unsigned size)
+maybeYieldAndMaybeCollect(Thread* t, unsigned sizeInBytes)
 {
-  if (size > Thread::HeapSize) {
+  if (sizeInBytes > Thread::HeapSizeInBytes) {
     // large object support not yet implemented.
     abort(t);
   }
@@ -465,7 +465,9 @@ maybeYieldAndMaybeCollect(Thread* t, unsigned size)
     enter(t, Thread::ActiveState);
   }
 
-  if (t->heapIndex + size >= Thread::HeapSize) {
+  if (t->heapIndex + divide(sizeInBytes, BytesPerWord)
+      >= (Thread::HeapSizeInBytes / BytesPerWord))
+  {
     enter(t, Thread::ExclusiveState);
     collect(t->vm, Heap::MinorCollection);
     enter(t, Thread::ActiveState);
@@ -473,16 +475,17 @@ maybeYieldAndMaybeCollect(Thread* t, unsigned size)
 }
 
 inline object
-allocate(Thread* t, unsigned size)
+allocate(Thread* t, unsigned sizeInBytes)
 {
-  if (UNLIKELY(t->heapIndex + size >= Thread::HeapSize
+  if (UNLIKELY(t->heapIndex + divide(sizeInBytes, BytesPerWord)
+               >= (Thread::HeapSizeInBytes / BytesPerWord)
                or t->vm->exclusive))
   {
-    maybeYieldAndMaybeCollect(t, size);
+    maybeYieldAndMaybeCollect(t, sizeInBytes);
   }
 
   object o = t->heap + t->heapIndex;
-  t->heapIndex += size;
+  t->heapIndex += divide(sizeInBytes, BytesPerWord);
   return o;
 }
 
@@ -518,11 +521,11 @@ inline object
 make(Thread* t, object class_)
 {
   PROTECT(t, class_);
-  unsigned size = classFixedSize(t, class_);
-  object instance = allocate(t, size);
+  unsigned sizeInBytes = classFixedSize(t, class_);
+  object instance = allocate(t, sizeInBytes);
   *static_cast<object*>(instance) = class_;
   memset(static_cast<object*>(instance) + sizeof(object), 0,
-         size - sizeof(object));
+         sizeInBytes - sizeof(object));
   return instance;
 }
 
@@ -1241,7 +1244,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
   unsigned memberOffset = BytesPerWord;
   if (classSuper(t, class_)) {
-    memberOffset = classFixedSize(t, classSuper(t, class_)) * BytesPerWord;
+    memberOffset = classFixedSize(t, classSuper(t, class_));
   }
 
   unsigned count = s.read2();
@@ -3033,7 +3036,7 @@ run(Thread* t)
 
  invoke:
   if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + sp - parameterCount
-               > Thread::StackSize))
+               > (Thread::StackSizeInBytes / BytesPerWord)))
   {
     exception = makeStackOverflowError(t);
     goto throw_;      
