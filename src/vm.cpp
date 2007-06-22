@@ -44,11 +44,7 @@ class Machine {
     dispose();
   }
 
-  void dispose() {
-    stateLock->dispose();
-    heapLock->dispose();
-    classLock->dispose();
-  }
+  void dispose();
 
   System* system;
   Heap* heap;
@@ -63,6 +59,28 @@ class Machine {
   object classMap;
   object types;
   bool unsafe;
+};
+
+class Chain {
+ public:
+  Chain(Chain* next): next(next) { }
+
+  static unsigned footprint(unsigned sizeInBytes) {
+    return sizeof(Chain) + sizeInBytes;
+  }
+
+  uint8_t* data() {
+    return reinterpret_cast<uint8_t*>(this) + sizeof(Chain);
+  }
+
+  static void dispose(System* s, Chain* c) {
+    if (c) {
+      if (c->next) dispose(s, c->next);
+      s->free(c);
+    }
+  }
+
+  Chain* next;
 };
 
 class Thread {
@@ -99,6 +117,8 @@ class Thread {
 
   Thread(Machine* m);
 
+  void dispose();
+
   Machine* vm;
   Thread* next;
   Thread* child;
@@ -113,6 +133,7 @@ class Thread {
   object stack[StackSizeInWords];
   object heap[HeapSizeInWords];
   Protector* protector;
+  Chain* chain;
 };
 
 #include "type-declarations.cpp"
@@ -186,6 +207,18 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   }
 }
 
+void
+Machine::dispose()
+{
+  stateLock->dispose();
+  heapLock->dispose();
+  classLock->dispose();
+  
+  if (rootThread) {
+    rootThread->dispose();
+  }
+}
+
 Thread::Thread(Machine* m):
   vm(m),
   next(0),
@@ -198,7 +231,8 @@ Thread::Thread(Machine* m):
   ip(0),
   sp(0),
   heapIndex(0),
-  protector(0)
+  protector(0),
+  chain(0)
 {
   if (m->rootThread == 0) {
     m->rootThread = this;
@@ -224,6 +258,16 @@ Thread::Thread(Machine* m):
 }
 
 void
+Thread::dispose()
+{
+  Chain::dispose(vm->system, chain);
+  
+  for (Thread* c = child; c; c = c->next) {
+    c->dispose();
+  }
+}
+
+void
 visitRoots(Thread* t, Heap::Visitor* v)
 {
   t->heapIndex = 0;
@@ -243,6 +287,17 @@ visitRoots(Thread* t, Heap::Visitor* v)
 
   for (Thread* c = t->child; c; c = c->next) {
     visitRoots(c, v);
+  }
+}
+
+void
+postCollect(Thread* t)
+{
+  Chain::dispose(t->vm->system, t->chain);
+  t->chain = 0;
+
+  for (Thread* c = t->child; c; c = c->next) {
+    postCollect(c);
   }
 }
 
@@ -350,6 +405,8 @@ collect(Machine* m, Heap::CollectionType type)
   m->unsafe = true;
   m->heap->collect(type, &it);
   m->unsafe = false;
+
+  postCollect(m->rootThread);
 }
 
 void
@@ -451,12 +508,27 @@ enter(Thread* t, Thread::State s)
   }
 }
 
-void
-maybeYieldAndMaybeCollect(Thread* t, unsigned sizeInBytes)
+inline object
+allocateLarge(Thread* t, unsigned sizeInBytes)
 {
-  if (sizeInBytes > Thread::HeapSizeInBytes) {
-    // large object support not yet implemented.
-    abort(t);
+  void* p = t->vm->system->allocate(Chain::footprint(sizeInBytes));
+  t->chain = new (p) Chain(t->chain);
+  return t->chain->data();
+}
+
+inline object
+allocateSmall(Thread* t, unsigned sizeInBytes)
+{
+  object o = t->heap + t->heapIndex;
+  t->heapIndex += divide(sizeInBytes, BytesPerWord);
+  return o;
+}
+
+object
+allocate2(Thread* t, unsigned sizeInBytes)
+{
+  if (sizeInBytes > Thread::HeapSizeInBytes and t->chain == 0) {
+    return allocateLarge(t, sizeInBytes);
   }
 
   ACQUIRE_RAW(t, t->vm->stateLock);
@@ -475,6 +547,12 @@ maybeYieldAndMaybeCollect(Thread* t, unsigned sizeInBytes)
     collect(t->vm, Heap::MinorCollection);
     enter(t, Thread::ActiveState);
   }
+
+  if (sizeInBytes > Thread::HeapSizeInBytes) {
+    return allocateLarge(t, sizeInBytes);
+  } else {
+    return allocateSmall(t, sizeInBytes);
+  }
 }
 
 inline object
@@ -484,12 +562,10 @@ allocate(Thread* t, unsigned sizeInBytes)
                >= Thread::HeapSizeInWords
                or t->vm->exclusive))
   {
-    maybeYieldAndMaybeCollect(t, sizeInBytes);
+    return allocate2(t, sizeInBytes);
+  } else {
+    return allocateSmall(t, sizeInBytes);
   }
-
-  object o = t->heap + t->heapIndex;
-  t->heapIndex += divide(sizeInBytes, BytesPerWord);
-  return o;
 }
 
 inline void

@@ -2,6 +2,7 @@
 #include "sys/types.h"
 #include "sys/stat.h"
 #include "fcntl.h"
+#include "common.h"
 #include "system.h"
 #include "heap.h"
 #include "vm.h"
@@ -9,6 +10,8 @@
 using namespace vm;
 
 namespace {
+
+const bool Verbose = false;
 
 class System: public vm::System {
  public:
@@ -34,6 +37,11 @@ class System: public vm::System {
   }
 
   virtual void* tryAllocate(unsigned size) {
+    if (Verbose) {
+      fprintf(stderr, "try %d; count: %d; limit: %d\n",
+              size, count, limit);
+    }
+
     if (count + size > limit) {
       return 0;
     }
@@ -54,6 +62,11 @@ class System: public vm::System {
         abort();
       }
       count -= *up;
+
+      if (Verbose) {
+        fprintf(stderr, "free %d; count: %d; limit: %d\n",
+                *up, count, limit);
+      }
 
       ::free(const_cast<uintptr_t*>(up));
     }

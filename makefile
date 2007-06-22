@@ -81,6 +81,7 @@ input-depends = \
 	$(bld)/classes/vm/VM.class
 
 gen-run-arg = $(shell echo $(1) | sed -e 's:$(bld)/classes/\(.*\)\.class:\1:')
+args = -cp $(bld)/classes -hs 67108864 $(call gen-run-arg,$(input))
 
 .PHONY: build
 build: $(executable)
@@ -89,11 +90,11 @@ $(input): $(input-depends)
 
 .PHONY: run
 run: $(executable) $(input)
-	$(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
+	$(<) $(args)
 
 .PHONY: debug
 debug: $(executable) $(input)
-	gdb --args $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
+	gdb --args $(<) $(args)
 
 .PHONY: fast
 fast: $(fast-executable)
@@ -101,15 +102,15 @@ fast: $(fast-executable)
 
 .PHONY: vg
 vg: $(executable) $(input)
-	$(vg) $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
+	$(vg) $(<) $(args)
 
 .PHONY: test
 test: $(test-executable) $(input)
-	$(vg) $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
+	$(vg) $(<) $(args)
 
 .PHONY: stress
 stress: $(stress-executable) $(input)
-	$(vg) $(<) -cp $(bld)/classes $(call gen-run-arg,$(input))
+	$(vg) $(<) $(args)
 
 .PHONY: run-all
 run-all: $(executable)

@@ -93,16 +93,18 @@ class Segment {
     };
 
     Segment* segment;
+    Map* child;
     unsigned bitsPerRecord;
     unsigned scale;
-    Map* child;
+    bool clearNewData;
 
     Map(Segment* segment = 0, unsigned bitsPerRecord = 1,
-        unsigned scale = 1, Map* child = 0):
+        unsigned scale = 1, Map* child = 0, bool clearNewData = true):
       segment(segment),
+      child(child),
       bitsPerRecord(bitsPerRecord),
       scale(scale),
-      child(child)
+      clearNewData(clearNewData)
     {
       if (segment) {
         assert(segment->context, bitsPerRecord);
@@ -329,8 +331,7 @@ class Segment {
   Chain* rear;
   Map* map;
 
-  Segment(Context* context, unsigned minimum, unsigned desired, Map* map = 0,
-          bool clearMap = true):
+  Segment(Context* context, unsigned minimum, unsigned desired, Map* map = 0):
     context(context),
     front(0),
     rear(0),
@@ -340,7 +341,7 @@ class Segment {
       front = rear = Chain::make(this, minimum, desired);
 
       if (map) {
-        if (clearMap) {
+        if (map->clearNewData) {
           memset(front->data() + front->capacity, 0,
                  map->footprint(front->capacity) * BytesPerWord);
         }
@@ -467,13 +468,15 @@ class Segment {
       assert(context, rear->position);
       assert(context, rear->next == 0);
 
-      unsigned desired = (position() + minimum) * 2;
+      unsigned desired = capacity() + minimum;
       
       Chain* c = Chain::make(this, minimum, desired);
 
       if (map) {
-        memset(c->data() + c->capacity, 0,
-               map->footprint(c->offset + c->capacity) * BytesPerWord);
+        if (map->clearNewData) {
+          memset(c->data() + c->capacity, 0,
+                 map->footprint(c->offset + c->capacity) * BytesPerWord);
+        }
 
         map->update(c->data() + c->capacity, c->offset + c->capacity);
       }
@@ -580,9 +583,15 @@ initGen1(Context* c)
   unsigned minimum = MinimumGen1SizeInBytes / BytesPerWord;
   unsigned desired = minimum;
 
-  new (&(c->ageMap)) Segment::Map(&(c->gen1), log(TenureThreshold));
+  new (&(c->ageMap)) Segment::Map
+    (&(c->gen1), log(TenureThreshold), 1, 0, false);
 
-  new (&(c->gen1)) Segment(c, minimum, desired, &(c->ageMap), false);
+  new (&(c->gen1)) Segment(c, minimum, desired, &(c->ageMap));
+
+  if (Verbose) {
+    fprintf(stderr, "init gen1 to %d bytes\n",
+            c->gen1.capacity() * BytesPerWord);
+  }
 }
 
 void
@@ -591,9 +600,15 @@ initNextGen1(Context* c)
   unsigned minimum = MinimumGen1SizeInBytes / BytesPerWord;
   unsigned desired = max(minimum, nextPowerOfTwo(c->gen1.position()));
 
-  new (&(c->nextAgeMap)) Segment::Map(&(c->nextGen1), log(TenureThreshold));
+  new (&(c->nextAgeMap)) Segment::Map
+    (&(c->nextGen1), log(TenureThreshold), 1, 0, false);
 
-  new (&(c->nextGen1)) Segment(c, minimum, desired, &(c->nextAgeMap), false);
+  new (&(c->nextGen1)) Segment(c, minimum, desired, &(c->nextAgeMap));
+
+  if (Verbose) {
+    fprintf(stderr, "init nextGen1 to %d bytes\n",
+            c->nextGen1.capacity() * BytesPerWord);
+  }
 }
 
 void
@@ -609,6 +624,11 @@ initGen2(Context* c)
     (&(c->gen2), 1, c->pageMap.scale * 1024, &(c->pageMap));
 
   new (&(c->gen2)) Segment(c, minimum, desired, &(c->heapMap));
+
+  if (Verbose) {
+    fprintf(stderr, "init gen2 to %d bytes\n",
+            c->gen2.capacity() * BytesPerWord);
+  }
 }
 
 void
@@ -625,6 +645,11 @@ initNextGen2(Context* c)
     (&(c->nextGen2), 1, c->pageMap.scale * 1024, &(c->nextPageMap));
 
   new (&(c->nextGen2)) Segment(c, minimum, desired, &(c->nextHeapMap));
+
+  if (Verbose) {
+    fprintf(stderr, "init nextGen2 to %d bytes\n",
+            c->nextGen2.capacity() * BytesPerWord);
+  }
 }
 
 inline bool
@@ -666,19 +691,22 @@ inline object
 copyTo(Context* c, Segment* s, object o, unsigned size)
 {
   if (s->remaining() < size) {
+    s->ensure(size);
+
     if (Verbose) {
       if (s == &(c->gen2)) {
-        fprintf(stderr, "grow gen2\n");
+        fprintf(stderr, "grow gen2 to %d bytes\n",
+                c->gen2.capacity() * BytesPerWord);
       } else if (s == &(c->nextGen1)) {
-        fprintf(stderr, "grow nextGen1\n");
+        fprintf(stderr, "grow nextGen1 to %d bytes\n",
+                c->nextGen1.capacity() * BytesPerWord);
       } else if (s == &(c->nextGen2)) {
-        fprintf(stderr, "grow nextGen2\n");
+        fprintf(stderr, "grow nextGen2 to %d bytes\n",
+                c->nextGen2.capacity() * BytesPerWord);
       } else {
         abort(c);
       }
     }
-
-    s->ensure(size);
   }
 
   return static_cast<object>(s->add(o, size));
