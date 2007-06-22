@@ -45,6 +45,25 @@ class System {
   }
 };
 
+inline void NO_RETURN
+abort(System* s)
+{
+  s->abort(); // this should not return
+  ::abort();
+}
+
+#ifdef NDEBUG
+inline void
+assert(System*, bool)
+{ }
+#else
+inline void
+assert(System* s, bool v)
+{
+  if (UNLIKELY(not v)) abort(s);
+}
+#endif
+
 } // namespace vm
 
 #endif//SYSTEM_H

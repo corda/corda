@@ -171,7 +171,7 @@ $(generator-objects): $(bld)/%.o: $(src)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(generator-cflags) -c $(<) -o $(@)
 
-$(fast-objects): $(bld)/fast-%.o: $(src)/%.cpp
+$(fast-objects): $(bld)/fast-%.o: $(src)/%.cpp $(interpreter-depends)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(fast-cflags) -c $(<) -o $(@)

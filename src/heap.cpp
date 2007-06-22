@@ -567,14 +567,13 @@ system(Context* c)
 inline void NO_RETURN
 abort(Context* c)
 {
-  c->system->abort(); // this should not return
-  ::abort();
+  abort(c->system);
 }
 
 inline void
 assert(Context* c, bool v)
 {
-  if (UNLIKELY(not v)) abort(c);
+  assert(c->system, v);
 }
 
 void

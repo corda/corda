@@ -174,14 +174,13 @@ class RawMonitorResource {
 inline void NO_RETURN
 abort(Thread* t)
 {
-  t->vm->system->abort(); // this should not return
-  ::abort();
+  abort(t->vm->system);
 }
 
 inline void
 assert(Thread* t, bool v)
 {
-  if (UNLIKELY(not v)) abort(t);
+  assert(t->vm->system, v);
 }
 
 Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
@@ -1727,7 +1726,7 @@ resolve(Thread* t, object pool, unsigned index,
         object (*find)(Thread*, object, object))
 {
   object o = arrayBody(t, pool, index);
-  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ByteArrayType)) {
+  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ReferenceType)) {
     PROTECT(t, pool);
 
     object class_ = resolveClass(t, o, referenceClass);
@@ -3126,6 +3125,7 @@ run(Thread* t)
   sp -= parameterCount;
   frame = makeFrame(t, code, frame, 0, sp,
                     codeMaxLocals(t, methodCode(t, code)), false);
+  code = methodCode(t, code);
 
   memcpy(&frameLocals(t, frame, 0), stack + sp, parameterCount * BytesPerWord);
 
