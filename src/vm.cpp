@@ -3120,19 +3120,25 @@ run(Thread* t)
     goto throw_;      
   }
   
-  frameIp(t, frame) = ip;
+  if (methodFlags(t, code) & ACC_NATIVE) {
+    // todo
+    abort(t);
+  } else {
+    frameIp(t, frame) = ip;
+    ip = 0;
+
+    sp -= parameterCount;
   
-  sp -= parameterCount;
-  frame = makeFrame(t, code, frame, 0, sp,
-                    codeMaxLocals(t, methodCode(t, code)), false);
-  code = methodCode(t, code);
+    frame = makeFrame(t, code, frame, 0, sp,
+                      codeMaxLocals(t, methodCode(t, code)), false);
+    code = methodCode(t, code);
 
-  memcpy(&frameLocals(t, frame, 0), stack + sp, parameterCount * BytesPerWord);
+    memcpy(&frameLocals(t, frame, 0), stack + sp,
+           parameterCount * BytesPerWord);
 
-  memset(&frameLocals(t, frame, 0) + parameterCount, 0,
-         (frameLength(t, frame) - parameterCount) * BytesPerWord);
-
-  ip = 0;
+    memset(&frameLocals(t, frame, 0) + parameterCount, 0,
+           (frameLength(t, frame) - parameterCount) * BytesPerWord);
+  }
   goto loop;
 
  throw_:
