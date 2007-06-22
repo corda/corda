@@ -94,6 +94,9 @@ class Thread {
   static const unsigned HeapSizeInBytes = 64 * 1024;
   static const unsigned StackSizeInBytes = 64 * 1024;
 
+  static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
+  static const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
+
   Thread(Machine* m);
 
   Machine* vm;
@@ -107,8 +110,8 @@ class Thread {
   unsigned ip;
   unsigned sp;
   unsigned heapIndex;
-  object stack[StackSizeInBytes / BytesPerWord];
-  object heap[HeapSizeInBytes / BytesPerWord];
+  object stack[StackSizeInWords];
+  object heap[HeapSizeInWords];
   Protector* protector;
 };
 
@@ -466,7 +469,7 @@ maybeYieldAndMaybeCollect(Thread* t, unsigned sizeInBytes)
   }
 
   if (t->heapIndex + divide(sizeInBytes, BytesPerWord)
-      >= (Thread::HeapSizeInBytes / BytesPerWord))
+      >= Thread::HeapSizeInWords)
   {
     enter(t, Thread::ExclusiveState);
     collect(t->vm, Heap::MinorCollection);
@@ -478,7 +481,7 @@ inline object
 allocate(Thread* t, unsigned sizeInBytes)
 {
   if (UNLIKELY(t->heapIndex + divide(sizeInBytes, BytesPerWord)
-               >= (Thread::HeapSizeInBytes / BytesPerWord)
+               >= Thread::HeapSizeInWords
                or t->vm->exclusive))
   {
     maybeYieldAndMaybeCollect(t, sizeInBytes);
@@ -2429,7 +2432,7 @@ run(Thread* t)
     int8_t c = codeBody(t, code, ip++);
     
     int32_t v = intValue(t, frameLocals(t, frame, index));
-    frameLocals(t, frame, index) = makeInt(t, v + c);
+    set(t, frameLocals(t, frame, index), makeInt(t, v + c));
   } goto loop;
 
   case imul: {
@@ -3021,7 +3024,7 @@ run(Thread* t)
     uint16_t count = (count1 << 8) | count2;
     
     int32_t v = intValue(t, frameLocals(t, frame, index));
-    frameLocals(t, frame, index) = makeInt(t, v + count);
+    set(t, frameLocals(t, frame, index), makeInt(t, v + count));
   } goto loop;
 
   case ret: {
@@ -3036,7 +3039,7 @@ run(Thread* t)
 
  invoke:
   if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + sp - parameterCount
-               > (Thread::StackSizeInBytes / BytesPerWord)))
+               > Thread::StackSizeInWords))
   {
     exception = makeStackOverflowError(t);
     goto throw_;      
