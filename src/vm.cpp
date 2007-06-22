@@ -1685,7 +1685,7 @@ run(Thread* t)
   if (UNLIKELY(exception)) goto throw_;
 
  loop:
-  fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
+  //fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
 
   switch (codeBody(t, code, ip++)) {
   case aaload: {

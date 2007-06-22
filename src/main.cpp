@@ -33,15 +33,15 @@ class System: public vm::System {
     return s == 0;
   }
 
-  virtual void* allocate(unsigned* size) {
-    if (count + *size > limit) {
-      *size = limit - count;
+  virtual void* tryAllocate(unsigned size) {
+    if (count + size > limit) {
+      return 0;
     }
 
-    uintptr_t* up = static_cast<uintptr_t*>(malloc(*size + sizeof(uintptr_t)));
+    uintptr_t* up = static_cast<uintptr_t*>(malloc(size + sizeof(uintptr_t)));
     if (up == 0) abort();
 
-    *up = *size;
+    *up = size;
     count += *up;
 
     return up + 1;

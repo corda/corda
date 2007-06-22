@@ -137,12 +137,6 @@ $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
 	@echo "generating $(@)"
 	$(generator-executable) $(call gen-arg,$(@)) < $(<) > $(@)
 
-$(bld)/vm.o \
-$(bld)/test-vm.o \
-$(bld)/stress-vm.o \
-$(bld)/fast-vm.o: \
-	$(interpreter-depends)
-
 $(bld)/type-generator.o: \
 	$(generator-headers)
 
@@ -156,17 +150,17 @@ $(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(stdcpp-cflags) -c $(<) -o $(@)
 
-$(interpreter-objects): $(bld)/%.o: $(src)/%.cpp
+$(interpreter-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) -c $(<) -o $(@)
 
-$(test-objects): $(bld)/test-%.o: $(src)/%.cpp
+$(test-objects): $(bld)/test-%.o: $(src)/%.cpp $(interpreter-depends)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) $(test-cflags) -c $(<) -o $(@)
 
-$(stress-objects): $(bld)/stress-%.o: $(src)/%.cpp
+$(stress-objects): $(bld)/stress-%.o: $(src)/%.cpp $(interpreter-depends)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) $(stress-cflags) -c $(<) -o $(@)

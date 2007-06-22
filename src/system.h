@@ -30,16 +30,15 @@ class System {
   virtual ~System() { }
 
   virtual bool success(Status) = 0;
-  virtual void* allocate(unsigned* size) = 0;
+  virtual void* tryAllocate(unsigned size) = 0;
   virtual void free(const void*) = 0;
   virtual Status start(Thread*) = 0;
   virtual Status make(Monitor**) = 0;
   virtual void abort() = 0;
 
   void* allocate(unsigned size) {
-    unsigned requested = size;
-    void* p = allocate(&size);
-    if (size != requested) {
+    void* p = tryAllocate(size);
+    if (p == 0) {
       abort();
     }
     return p;

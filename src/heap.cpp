@@ -2,6 +2,8 @@
 #include "system.h"
 #include "common.h"
 
+#define CHAIN_HEADER_SIZE divide(sizeof(Segment::Chain), BytesPerWord)
+
 using namespace vm;
 
 namespace {
@@ -13,10 +15,10 @@ const unsigned TenureThreshold = 3;
 const unsigned MinimumGen1Size = 64 * 1024;
 const unsigned MinimumGen2Size = 128 * 1024;
 
-void* const Top = reinterpret_cast<void*>(~static_cast<uintptr_t>(0));
+const unsigned Top = ~static_cast<unsigned>(0);
 
 const bool Verbose = true;
-const bool Debug = false;
+const bool Debug = true;
 
 class Context;
 
@@ -28,6 +30,8 @@ class Segment {
  public:
   class Map {
    public:
+    class Chain;
+
     class Iterator {
      public:
       Map* map;
@@ -40,19 +44,14 @@ class Segment {
         assert(map->segment->context, map);
         assert(map->segment->context, map->bitsPerRecord == 1);
         assert(map->segment->context, map->segment);
+        assert(map->segment->context, start <= map->segment->position());
+
+        if (end > map->segment->position()) end = map->segment->position();
 
         index = map->indexOf(start);
-        assert(map->segment->context, index == 0 or start != 0);
-
-        if (end > map->segment->position) end = map->segment->position;
-
         limit = map->indexOf(end);
-        if (end - start % map->scale) ++ limit;
 
-//         printf("iterating from %p (index %d) to %p (index %d) "
-//                "(%d of %d bytes) (scale: %d)\n",
-//                start, index, end, limit, (end - start) * BytesPerWord,
-//                map->segment->position * BytesPerWord, map->scale);
+        if ((end - start) % map->scale) ++ limit;
       }
 
       bool hasMore() {
@@ -100,7 +99,7 @@ class Segment {
     unsigned bitsPerRecord;
     unsigned scale;
     Map* child;
-    
+
     Map(Segment* segment = 0, unsigned bitsPerRecord = 1,
         unsigned scale = 1, Map* child = 0):
       segment(segment),
@@ -125,14 +124,18 @@ class Segment {
       if (child) child->replaceWith(m->child);
     }
 
-    unsigned offset() {
-      unsigned n = segment->capacity;
-      if (child) n += child->footprint(segment->capacity);
+    unsigned offset(unsigned capacity) {
+      unsigned n = 0;
+      if (child) n += child->footprint(capacity);
       return n;
     }
 
+    unsigned offset() {
+      return offset(segment->capacity());
+    }
+
     uintptr_t* data() {
-      return segment->data + offset();
+      return segment->rear->data() + segment->rear->capacity + offset();
     }
 
     unsigned size(unsigned capacity) {
@@ -143,7 +146,7 @@ class Segment {
     }
 
     unsigned size() {
-      return size(max(segment->capacity, 1));
+      return size(max(segment->capacity(), 1));
     }
 
     unsigned indexOf(unsigned segmentIndex) {
@@ -151,21 +154,21 @@ class Segment {
     }
 
     unsigned indexOf(void* p) {
-      assert(segment->context,
-             segment->position
-             and p >= segment->data
-             and p <= segment->data + segment->position);
-      assert(segment->context, segment->data);
-
-      return indexOf(static_cast<void**>(p)
-                     - reinterpret_cast<void**>(segment->data));
+      assert(segment->context, segment);
+      assert(segment->context, segment->almostContains(p));
+      assert(segment->context, segment->capacity());
+      return indexOf(segment->indexOf(p));
     }
 
-    void update(uintptr_t* segmentData) {
-      uintptr_t* p = segmentData + offset();
-      memcpy(p, data(), size(segment->position) * BytesPerWord);
+    void update(uintptr_t* newData, unsigned capacity) {
+      assert(segment->context, capacity >= segment->capacity());
 
-      if (child) child->update(segmentData);
+      uintptr_t* p = newData + offset(capacity);
+      memcpy(p, data(), size(segment->position()) * BytesPerWord);
+
+      if (child) {
+        child->update(newData, capacity);
+      }
     }
 
     void clear() {
@@ -174,17 +177,21 @@ class Segment {
       if (child) child->clear();
     }
 
-    void clear(unsigned i) {
+    void clearBit(unsigned i) {
+      assert(segment->context, wordOf(i) * BytesPerWord < size());
+
       data()[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
     }
 
-    void set(unsigned i) {
+    void setBit(unsigned i) {
+      assert(segment->context, wordOf(i) * BytesPerWord < size());
+
       data()[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
     }
 
     void clearOnlyIndex(unsigned index) {
       for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
-        clear(i);
+        clearBit(i);
       }
     }
 
@@ -204,7 +211,7 @@ class Segment {
     void setOnlyIndex(unsigned index, unsigned v = 1) {
       unsigned i = index + bitsPerRecord - 1;
       while (true) {
-        if (v & 1) set(i); else clear(i);
+        if (v & 1) setBit(i); else clearBit(i);
         v >>= 1;
         if (i == index) break;
         --i;
@@ -249,76 +256,133 @@ class Segment {
     }
   };
 
+  class Chain {
+   public:
+    Segment* segment;
+    unsigned offset;
+    unsigned position;
+    unsigned capacity;
+    Chain* next;
+    Chain* previous;
+
+    Chain(Segment* segment, unsigned offset, unsigned capacity,
+          Chain* previous):
+      segment(segment),
+      offset(offset),
+      position(0),
+      capacity(capacity),
+      next(0),
+      previous(previous)
+    {
+      assert(segment->context, sizeof(Chain) % BytesPerWord == 0);
+    }
+
+    static void dispose(Chain* c) {
+      if (c) {
+        if (c->next) dispose(c->next);
+        system(c->segment->context)->free(c);
+      }
+    }
+
+    uintptr_t* data() {
+      return reinterpret_cast<uintptr_t*>(this) + CHAIN_HEADER_SIZE;
+    }
+
+    static unsigned footprint(unsigned capacity, Map* map) {
+      unsigned n = CHAIN_HEADER_SIZE + capacity;
+      if (map) {
+        n += map->footprint(capacity);
+      }
+      return n;
+    }
+
+    unsigned footprint() {
+      return footprint(capacity, segment->map);
+    }
+  };
+
   Context* context;
-  uintptr_t* data;
-  unsigned position;
-  unsigned capacity;
+  Chain* front;
+  Chain* rear;
   Map* map;
 
   Segment(Context* context, unsigned capacity, Map* map = 0,
           bool clearMap = true):
     context(context),
-    data(0),
-    position(0),
-    capacity(capacity),
+    front(0),
+    rear(0),
     map(map)
   {
+    front = rear = 0;
+    this->map = map;
+
     if (capacity) {
-      data = static_cast<uintptr_t*>
-        (system(context)->allocate(footprint(capacity) * BytesPerWord));
+      front = rear = new
+        (system(context)->allocate
+         (Chain::footprint(capacity, map) * BytesPerWord))
+        Chain(this, 0, capacity, 0);
 
       if (map) {
         map->setSegment(this);
-        if (clearMap) map->clear();
+        if (clearMap) {
+          map->clear();
+        }
       }
     }
   }
 
-  unsigned footprint(unsigned capacity) {
-    unsigned n = capacity;
-    if (map) n += map->footprint(capacity);
-    return n;
+  unsigned capacity() {
+    return (rear? rear->offset + rear->capacity : 0);
+  }
+
+  unsigned position() {
+    return (rear? rear->offset + rear->position : 0);
+  }
+
+  void truncate(unsigned offset) {
+    assert(context, offset <= position());
+    
+    for (Chain* c = front; c; c = c->next) {
+      if (offset >= c->offset
+          and offset <= c->offset + c->position)
+      {
+        c->position = offset - c->offset;
+        Chain::dispose(c->next);
+        return;
+      }
+    }
+    abort(context);
+  }
+
+  void copyTo(void* p) {
+    for (Chain* c = front; c; c = c->next) {
+      if (c->position) {
+        memcpy(static_cast<uintptr_t*>(p) + c->offset,
+               c->data(),
+               c->position * BytesPerWord);
+      } else {
+        return;
+      }
+    }
   }
 
   unsigned footprint() {
-    return footprint(capacity);
-  }
-
-  void* allocate(unsigned size) {
-    assert(context, size);
-    assert(context, position + size <= capacity);
-    void* p = reinterpret_cast<void**>(data) + position;
-    position += size;
-
-    return p;
-  }
-
-  void* add(void* p, unsigned size) {
-    void* target = allocate(size);
-    memcpy(target, p, size * BytesPerWord);
-    return target;
-  }
-
-  void* get(unsigned offset) {
-    assert(context, offset < position);
-    return data + offset;
+    unsigned n = 0;
+    for (Chain* c = front; c; c = c->next) n += c->footprint();
+    return n;
   }
 
   unsigned remaining() {
-    return capacity - position;
+    return capacity() - position();
   }
 
   void replaceWith(Segment* s) {
-    if (data) system(context)->free(data);
+    Chain::dispose(front);
 
-    data = s->data;
-    s->data = 0;
+    front = s->front;
+    rear = s->rear;
 
-    position = s->position;
-    s->position = 0;
-
-    capacity = s->capacity;
-    s->capacity = 0;
+    s->front = s->rear = 0;
 
     if (s->map) {
       if (map) {
@@ -333,42 +397,104 @@ class Segment {
     }    
   }
 
-  void grow(unsigned extra) {
-    if (remaining() < extra) {
-      unsigned minimumNeeded = position + extra;
-      unsigned count = minimumNeeded * 2;
-      
-      minimumNeeded = footprint(minimumNeeded) * BytesPerWord;
-      count = footprint(count) * BytesPerWord;
-
-      uintptr_t* p = static_cast<uintptr_t*>
-        (system(context)->allocate(&count));
-
-      if (count >= minimumNeeded) {
-        memcpy(p, data, position * BytesPerWord);
-
-        if (map) {
-          map->update(p);
-        }
-
-        data = p;
-        system(context)->free(data);
-      } else {
-        abort(context);
+  bool contains(void* p) {
+    for (Chain* c = front; c; c = c->next) {
+      if (c->position and p >= c->data() and p < c->data() + c->position) {
+        return true;
       }
+    }
+    return false;
+  }
+
+  bool almostContains(void* p) {
+    return contains(p) or p == rear->data() + rear->position;
+  }
+
+  void* get(unsigned offset) {
+    for (Chain* c = front; c; c = c->next) {
+      if (c->position
+          and offset >= c->offset
+          and offset < c->offset + c->position)
+      {
+        return c->data() + (offset - c->offset);
+      }
+    }
+
+    if (offset == rear->offset + rear->position) {
+      return rear->data() + (offset - rear->offset);
+    }
+
+    abort(context);
+  }
+
+  unsigned indexOf(void* p) {
+    for (Chain* c = front; c; c = c->next) {
+      if (c->position and p >= c->data() and p < c->data() + c->position) {
+        return (static_cast<uintptr_t*>(p) - c->data()) + c->offset;
+      }
+    }
+
+    if (p == rear->data() + rear->position) {
+      return (static_cast<uintptr_t*>(p) - rear->data()) + rear->offset;
+    }
+
+    abort(context);
+  }
+
+  void* allocate(unsigned sizeInBytes) {
+    unsigned size = divide(sizeInBytes, BytesPerWord);
+    assert(context, size);
+    assert(context, rear->position + size <= rear->capacity);
+    void* p = reinterpret_cast<void**>(rear->data()) + rear->position;
+    rear->position += size;
+
+    return p;
+  }
+
+  void* add(void* p, unsigned size) {
+    void* target = allocate(size);
+    memcpy(target, p, size * BytesPerWord);
+    return target;
+  }
+
+  void ensure(unsigned minimum) {
+    if (remaining() < minimum) {
+      if (Verbose) {
+        fprintf(stderr, "grow\n");
+      }
+
+      unsigned desired = (position() + minimum) * 2;
+      
+      void* p = 0;
+      unsigned newCapacity = desired;
+      while (p == 0) {
+        p = system(context)->tryAllocate
+          (Chain::footprint(newCapacity, map) * BytesPerWord);
+
+        if (p == 0) {
+          if (newCapacity > minimum) {
+            newCapacity = minimum + ((newCapacity - minimum) / 2);
+          } else {
+            abort(context);
+          }
+        }
+      }
+
+      Chain* c = new (p) Chain
+        (this, rear->offset + rear->position, newCapacity, rear);
+
+      if (map) {
+        map->update(c->data() + c->capacity, newCapacity);
+      }
+
+      rear->previous = c;
+      rear = c;
     }
   }
 
-  bool contains(void* p) {
-    return position and p >= data and p < data + position;
-  }
-
   void dispose() {
-    system(context)->free(data);
-    data = 0;
-    position = 0;
-    capacity = 0;
-
+    Chain::dispose(front);
+    front = rear = 0;
     map = 0;
   }
 };
@@ -406,7 +532,7 @@ class Context {
   Segment gen2;
   Segment nextGen2;
 
-  void* gen2Base;
+  unsigned gen2Base;
 
   Segment::Map ageMap;
   Segment::Map nextAgeMap;
@@ -459,7 +585,7 @@ void
 initNextGen1(Context* c)
 {
   unsigned size = max(MinimumGen1Size / BytesPerWord,
-                      nextPowerOfTwo(c->gen1.position));
+                      nextPowerOfTwo(c->gen1.position()));
   new (&(c->nextAgeMap)) Segment::Map(&(c->nextGen1), log(TenureThreshold));
   new (&(c->nextGen1)) Segment(c, size, &(c->nextAgeMap), false);
 }
@@ -468,7 +594,7 @@ void
 initNextGen2(Context* c)
 {
   unsigned size = max(MinimumGen2Size / BytesPerWord,
-                      nextPowerOfTwo(c->gen2.position));
+                      nextPowerOfTwo(c->gen2.position()));
   new (&(c->pointerMap)) Segment::Map(&(c->nextGen2));
   new (&(c->pageMap)) Segment::Map
     (&(c->nextGen2), 1, LikelyPageSize / BytesPerWord, &(c->pointerMap));
@@ -483,7 +609,7 @@ fresh(Context* c, object o)
 {
   return c->nextGen1.contains(o)
     or c->nextGen2.contains(o)
-    or (o >= c->gen2Base and c->gen2.contains(o));
+    or (c->gen2.contains(o) and c->gen2.indexOf(o) > c->gen2Base);
 }
 
 inline bool
@@ -516,10 +642,7 @@ bitset(Context* c, object o)
 inline object
 copyTo(Context*, Segment* s, object o, unsigned size)
 {
-  if (s->remaining() < size) {
-    s->grow(size);
-  }
-
+  s->ensure(size);
   return static_cast<object>(s->add(o, size));
 }
 
@@ -537,15 +660,19 @@ copy2(Context* c, object o)
     unsigned age = c->ageMap.get(o);
     if (age == TenureThreshold) {
       if (c->mode == MinorCollection) {
-        if (c->gen2.data == 0) initGen2(c);
+        if (c->gen2.front == 0) initGen2(c);
 
         if (c->gen2.remaining() >= size) {
           if (c->gen2Base == Top) {
-            c->gen2Base = c->gen2.data + c->gen2.position;
+            c->gen2Base = c->gen2.position();
           }
 
           return copyTo(c, &(c->gen2), o, size);
         } else {
+          if (Verbose) {
+            fprintf(stderr, "overflow collection\n");
+          }
+
           c->mode = OverflowCollection;
           initNextGen2(c);
           return copyTo(c, &(c->nextGen2), o, size);          
@@ -586,7 +713,7 @@ copy(Context* c, object o)
 }
 
 object
-update3(Context* c, object *p, bool* needsVisit)
+update3(Context* c, object* p, bool* needsVisit)
 {
   if (wasCollected(c, *p)) {
     *needsVisit = false;
@@ -985,31 +1112,45 @@ collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
 
 class ObjectSegmentIterator {
  public:
-  ObjectSegmentIterator(Context* c, Segment* s, unsigned end):
-    c(c), s(s), index(0), end(end)
+  Context* context;
+  Segment::Chain* chain;
+  unsigned index;
+  unsigned end;
+  bool dirty;
+
+  ObjectSegmentIterator(Segment* segment, unsigned end):
+    context(segment->context),
+    chain(segment->front),
+    index(0),
+    end(end),
+    dirty(false)
   { }
 
   bool hasNext() {
-    return index < end;
+    if (dirty) {
+      dirty = false;
+      uintptr_t* p = chain->data() + index;
+      index += context->client->sizeInWords(p);
+    }
+
+    if (chain and index == chain->position) {
+      chain = chain->next;
+      index = 0;
+    }
+
+    return chain and index + chain->offset < end;
   }
 
   object next() {
-    assert(c, hasNext());
-    object p = s->data + (index * BytesPerWord);
-    index += c->client->sizeInWords(p);
-    return p;
+    dirty = true;
+    return chain->data() + index;
   }
-
-  Context* c;
-  Segment* s;
-  unsigned index;
-  unsigned end;
 };
 
 void
 collect(Context* c, Segment* s, unsigned limit)
 {
-  for (ObjectSegmentIterator it(c, s, limit); it.hasNext();) {
+  for (ObjectSegmentIterator it(s, limit); it.hasNext();) {
     object p = it.next();
 
     class Walker : public Heap::Walker {
@@ -1032,14 +1173,14 @@ collect(Context* c, Segment* s, unsigned limit)
 void
 collect2(Context* c)
 {
-  if (c->mode == MinorCollection and c->gen2.position) {
+  if (c->mode == MinorCollection and c->gen2.position()) {
     unsigned start = 0;
-    unsigned end = start + c->gen2.position;
+    unsigned end = start + c->gen2.position();
     bool dirty;
     collect(c, &(c->heapMap), start, end, &dirty, false);
   } else if (c->mode == Gen2Collection) {
-    unsigned ng2Position = c->nextGen2.position;
-    collect(c, &(c->nextGen1), c->nextGen1.position);
+    unsigned ng2Position = c->nextGen2.position();
+    collect(c, &(c->nextGen1), c->nextGen1.position());
     collect(c, &(c->nextGen2), ng2Position);
   }
 
@@ -1060,7 +1201,7 @@ collect2(Context* c)
 void
 collect(Context* c)
 {
-  if (c->gen1.data == 0) initGen1(c);
+  if (c->gen1.front == 0) initGen1(c);
 
   c->gen2Base = Top;
 
