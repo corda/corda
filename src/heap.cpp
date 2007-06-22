@@ -41,7 +41,6 @@ class Segment {
       Iterator(Map* map, unsigned start, unsigned end):
         map(map)
       {
-        assert(map->segment->context, map);
         assert(map->segment->context, map->bitsPerRecord == 1);
         assert(map->segment->context, map->segment);
         assert(map->segment->context, start <= map->segment->position());
@@ -55,8 +54,6 @@ class Segment {
       }
 
       bool hasMore() {
-        assert(map->segment->context, map);
-
         unsigned word = wordOf(index);
         unsigned bit = bitOf(index);
         unsigned wordLimit = wordOf(limit);
@@ -115,7 +112,6 @@ class Segment {
     }
 
     void replaceWith(Map* m) {
-      assert(segment->context, m);
       assert(segment->context, bitsPerRecord == m->bitsPerRecord);
       assert(segment->context, scale == m->scale);
 
@@ -154,7 +150,6 @@ class Segment {
     }
 
     unsigned indexOf(void* p) {
-      assert(segment->context, segment);
       assert(segment->context, segment->almostContains(p));
       assert(segment->context, segment->capacity());
       return indexOf(segment->indexOf(p));
@@ -178,13 +173,13 @@ class Segment {
     }
 
     void clearBit(unsigned i) {
-      assert(segment->context, wordOf(i) * BytesPerWord < size());
+      assert(segment->context, wordOf(i) < size());
 
       data()[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
     }
 
     void setBit(unsigned i) {
-      assert(segment->context, wordOf(i) * BytesPerWord < size());
+      assert(segment->context, wordOf(i) < size());
 
       data()[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
     }
@@ -288,16 +283,23 @@ class Segment {
       return reinterpret_cast<uintptr_t*>(this) + CHAIN_HEADER_SIZE;
     }
 
-    static unsigned footprint(unsigned capacity, Map* map) {
+    static unsigned footprint(unsigned capacity, Chain* previous,
+                              Map* map)
+    {
       unsigned n = CHAIN_HEADER_SIZE + capacity;
       if (map) {
-        n += map->footprint(capacity);
+        unsigned segmentCapacity = capacity;
+        if (previous) {
+          segmentCapacity += previous->offset + previous->position;
+        }
+
+        n += map->footprint(segmentCapacity);
       }
       return n;
     }
 
     unsigned footprint() {
-      return footprint(capacity, segment->map);
+      return footprint(capacity, previous, segment->map);
     }
   };
 
@@ -319,7 +321,7 @@ class Segment {
     if (capacity) {
       front = rear = new
         (system(context)->allocate
-         (Chain::footprint(capacity, map) * BytesPerWord))
+         (Chain::footprint(capacity, 0, map) * BytesPerWord))
         Chain(this, 0, capacity, 0);
 
       if (map) {
@@ -441,8 +443,7 @@ class Segment {
     abort(context);
   }
 
-  void* allocate(unsigned sizeInBytes) {
-    unsigned size = divide(sizeInBytes, BytesPerWord);
+  void* allocate(unsigned size) {
     assert(context, size);
     assert(context, rear->position + size <= rear->capacity);
     void* p = reinterpret_cast<void**>(rear->data()) + rear->position;
@@ -459,6 +460,9 @@ class Segment {
 
   void ensure(unsigned minimum) {
     if (remaining() < minimum) {
+      assert(context, rear->position);
+      assert(context, rear->next == 0);
+
       if (Verbose) {
         fprintf(stderr, "grow\n");
       }
@@ -469,7 +473,7 @@ class Segment {
       unsigned newCapacity = desired;
       while (p == 0) {
         p = system(context)->tryAllocate
-          (Chain::footprint(newCapacity, map) * BytesPerWord);
+          (Chain::footprint(newCapacity, rear, map) * BytesPerWord);
 
         if (p == 0) {
           if (newCapacity > minimum) {
@@ -484,10 +488,10 @@ class Segment {
         (this, rear->offset + rear->position, newCapacity, rear);
 
       if (map) {
-        map->update(c->data() + c->capacity, newCapacity);
+        map->update(c->data() + c->capacity, c->offset + c->capacity);
       }
 
-      rear->previous = c;
+      rear->next = c;
       rear = c;
     }
   }
@@ -609,7 +613,7 @@ fresh(Context* c, object o)
 {
   return c->nextGen1.contains(o)
     or c->nextGen2.contains(o)
-    or (c->gen2.contains(o) and c->gen2.indexOf(o) > c->gen2Base);
+    or (c->gen2.contains(o) and c->gen2.indexOf(o) >= c->gen2Base);
 }
 
 inline bool
