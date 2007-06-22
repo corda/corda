@@ -285,7 +285,7 @@ class Segment {
 
         if (p == 0) {
           if (capacity > minimum) {
-            capacity = minimum + ((capacity - minimum) / 2);
+            capacity = avg(minimum, capacity);
           } else {
             abort(s->context);
           }
@@ -597,7 +597,7 @@ void
 initNextGen1(Context* c)
 {
   unsigned minimum = MinimumGen1SizeInBytes / BytesPerWord;
-  unsigned desired = max(minimum, nextPowerOfTwo(c->gen1.position()));
+  unsigned desired = max(minimum, avg(c->gen1.position(), c->gen1.capacity()));
 
   new (&(c->nextAgeMap)) Segment::Map
     (&(c->nextGen1), log(TenureThreshold), 1, 0, false);
@@ -634,7 +634,7 @@ void
 initNextGen2(Context* c)
 {
   unsigned minimum = MinimumGen2SizeInBytes / BytesPerWord;
-  unsigned desired = max(minimum, nextPowerOfTwo(c->gen2.position()));
+  unsigned desired = max(minimum, avg(c->gen2.position(), c->gen2.capacity()));
 
   new (&(c->nextPointerMap)) Segment::Map(&(c->nextGen2));
   new (&(c->nextPageMap)) Segment::Map

@@ -40,6 +40,12 @@ min(unsigned a, unsigned b)
 }
 
 inline unsigned
+avg(unsigned a, unsigned b)
+{
+  return (a + b) / 2;
+}
+
+inline unsigned
 pad(unsigned n)
 {
   unsigned extra = n % BytesPerWord;
