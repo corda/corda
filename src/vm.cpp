@@ -20,17 +20,32 @@ static const bool Debug = true;
 
 class Thread;
 
+void (*Initializer)(Thread*, object);
+
 void assert(Thread*, bool);
 object resolveClass(Thread*, object);
 object allocate(Thread*, unsigned);
 object& arrayBodyUnsafe(Thread*, object, unsigned);
 void set(Thread*, object&, object);
+object bootstrapInitializers(Thread*);
 
 object&
 objectClass(object o)
 {
   return cast<object>(o, 0);
 }
+
+enum FieldCode {
+  ByteField,
+  CharField,
+  DoubleField,
+  FloatField,
+  IntField,
+  LongField,
+  ShortField,
+  BooleanField,
+  ObjectField
+};
 
 class Machine {
  public:
@@ -250,9 +265,11 @@ Thread::Thread(Machine* m):
     object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
     set(t, objectClass(intArrayClass), classClass);
 
+    m->unsafe = false;
+
     m->classMap = makeHashMap(this, 0, 0);
 
-    m->unsafe = false;
+    m->bootstrapInitializers = bootstrapInitializers(this);
   }
 }
 
@@ -725,64 +742,161 @@ isLongOrDouble(Thread* t, object o)
     or objectClass(o) == arrayBody(t, t->vm->types, Machine::DoubleType);
 }
 
-inline object
-getField(Thread* t, object instance, object field)
+unsigned
+fieldCode(unsigned javaCode)
 {
-  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
+  switch (javaCode) {
   case 'B':
-    return makeByte(t, cast<int8_t>(instance, fieldOffset(t, field)));
+    return ByteField;
   case 'C':
-    return makeChar(t, cast<int16_t>(instance, fieldOffset(t, field)));
+    return CharField;
   case 'D':
-    return makeDouble(t, cast<int64_t>(instance, fieldOffset(t, field)));
+    return DoubleField;
   case 'F':
-    return makeFloat(t, cast<int32_t>(instance, fieldOffset(t, field)));
+    return FloatField;
   case 'I':
-    return makeInt(t, cast<int32_t>(instance, fieldOffset(t, field)));
+    return IntField;
   case 'J':
-    return makeLong(t, cast<int64_t>(instance, fieldOffset(t, field)));
+    return LongField;
   case 'S':
-    return makeShort(t, cast<int16_t>(instance, fieldOffset(t, field)));
+    return ShortField;
   case 'Z':
-    return makeBoolean(t, cast<int8_t>(instance, fieldOffset(t, field)));
+    return BooleanField;
   case 'L':
   case '[':
+    return ObjectField;
+
+  default: abort(t);
+  }
+}
+
+uint64_t
+primitiveValue(Thread* t, unsigned code, object o)
+{
+  switch (code) {
+  case ByteField:
+    return byteValue(t, o);
+  case CharField:
+    return charValue(t, o);
+  case DoubleField:
+    return doubleValue(t, o);
+  case FloatField:
+    return floatValue(t, o);
+  case IntField:
+    return intValue(t, o);
+  case LongField:
+    return longValue(t, o);
+  case ShortField:
+    return shortValue(t, o);
+  case BooleanField:
+    return booleanValue(t, o);
+
+  default: abort(t);
+  }
+}
+
+object
+makePrimitive(Thread* t, unsigned code, uint64_t value)
+{
+  switch (code) {
+  case ByteField:
+    return makeByte(t, value);
+  case CharField:
+    return makeChar(t, value);
+  case DoubleField:
+    return makeDouble(t, value);
+  case FloatField:
+    return makeFloat(t, value);
+  case IntField:
+    return makeInt(t, value);
+  case LongField:
+    return makeLong(t, value);
+  case ShortField:
+    return makeShort(t, value);
+  case BooleanField:
+    return makeBoolean(t, value);
+
+  default: abort(t);
+  }
+}
+
+unsigned
+primitiveSize(unsigned code)
+{
+  switch (code) {
+  case ByteField:
+  case BooleanField:
+    return 1;
+  case CharField:
+  case ShortField:
+    return 2;
+  case DoubleField:
+  case LongField:
+    return 8;
+  case FloatField:
+  case IntField:
+    return 4;
+
+  default: abort(t);
+  }
+}
+
+object
+getField(Thread* t, object instance, object field)
+{
+  switch (fieldCode(t, field)) {
+  case ByteField:
+    return makeByte(t, cast<int8_t>(instance, fieldOffset(t, field)));
+  case CharField:
+    return makeChar(t, cast<int16_t>(instance, fieldOffset(t, field)));
+  case DoubleField:
+    return makeDouble(t, cast<int64_t>(instance, fieldOffset(t, field)));
+  case FloatField:
+    return makeFloat(t, cast<int32_t>(instance, fieldOffset(t, field)));
+  case IntField:
+    return makeInt(t, cast<int32_t>(instance, fieldOffset(t, field)));
+  case LongField:
+    return makeLong(t, cast<int64_t>(instance, fieldOffset(t, field)));
+  case ShortField:
+    return makeShort(t, cast<int16_t>(instance, fieldOffset(t, field)));
+  case BooleanField:
+    return makeBoolean(t, cast<int8_t>(instance, fieldOffset(t, field)));
+  case ObjectField:
     return cast<object>(instance, fieldOffset(t, field));
 
   default: abort(t);
   }
 }
 
-inline void
+void
 setField(Thread* t, object o, object field, object value)
 {
-  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
-  case 'B':
+  switch (fieldCode(t, field)) {
+  case ByteField:
     cast<int8_t>(o, fieldOffset(t, field)) = byteValue(t, value);
     break;
-  case 'C':
+  case CharField:
     cast<int16_t>(o, fieldOffset(t, field)) = charValue(t, value);
     break;
-  case 'D':
+  case DoubleField:
     cast<int64_t>(o, fieldOffset(t, field)) = doubleValue(t, value);
     break;
-  case 'F':
+  case FloatField:
     cast<int32_t>(o, fieldOffset(t, field)) = floatValue(t, value);
     break;
-  case 'I':
+  case IntField:
     cast<int32_t>(o, fieldOffset(t, field)) = intValue(t, value);
     break;
-  case 'J':
+  case LongField:
     cast<int64_t>(o, fieldOffset(t, field)) = longValue(t, value);
     break;
-  case 'S':
+  case ShortField:
     cast<int16_t>(o, fieldOffset(t, field)) = shortValue(t, value);
     break;
-  case 'Z':
+  case BooleanField:
     cast<int8_t>(o, fieldOffset(t, field)) = booleanValue(t, value);
     break;
-  case 'L':
-  case '[':
+  case ObjectField:
     set(t, cast<object>(o, fieldOffset(t, field)), value);
 
   default: abort(t);
@@ -1277,40 +1391,14 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   set(t, classInterfaceTable(t, class_), interfaceTable);
 }
 
-bool
-isReferenceField(Thread* t, object field)
-{
-  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
-  case 'L':
-  case '[':
-    return true;
-
-  default:
-    return false;
-  }
-}
-
-unsigned
+inline unsigned
 fieldSize(Thread* t, object field)
 {
-  switch (byteArrayBody(t, fieldSpec(t, field), 0)) {
-  case 'B':
-    return 1;
-  case 'C':
-  case 'S':
-  case 'Z':
-    return 2;
-  case 'D':
-  case 'J':
-    return 8;
-  case 'F':
-  case 'I':
-    return 4;
-  case 'L':
-  case '[':
+  unsigned code = fieldCode(t, field);
+  if (code == ObjectField) {
     return BytesPerWord;
-
-  default: abort(t);
+  } else {
+    return primitiveSize(code);
   }
 }
 
@@ -1343,18 +1431,20 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         s.skip(s.read4());
       }
 
-      object value = makeField(t,
-                               flags,
-                               0, // offset
-                               arrayBody(t, pool, name - 1),
-                               arrayBody(t, pool, spec - 1),
-                               class_);
+      object value = makeField
+        (t,
+         flags,
+         0, // offset
+         fieldCode(byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
+         arrayBody(t, pool, name - 1),
+         arrayBody(t, pool, spec - 1),
+         class_);
 
       if (flags & ACC_STATIC) {
         fieldOffset(t, value) = staticOffset++;
       } else {
         unsigned excess = memberOffset % BytesPerWord;
-        if (excess and isReferenceField(t, value)) {
+        if (excess and fieldCode(t, value) == ObjectField) {
           memberOffset += BytesPerWord - excess;
         }
 
@@ -1385,7 +1475,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     if (fieldTable) {
       for (int i = arrayLength(t, fieldTable) - 1; i >= 0; --i) {
         object field = arrayBody(t, fieldTable, i);
-        if (isReferenceField(t, field)) {
+        if (fieldCode(t, field) == ObjectField) {
           unsigned index = fieldOffset(t, field) / BytesPerWord;
           intArrayBody(t, mask, (index / 32)) |= 1 << (index % 32);
           sawReferenceField = true;
@@ -1682,6 +1772,12 @@ resolveClass(Thread* t, object spec)
 
       PROTECT(t, class_);
 
+      object initializer = hashMapFind
+        (t, t->vm->bootstrapInitializers, spec, byteArrayHash, byteArrayEqual);
+      if (initializer) {
+        static_cast<Initializer>(pointerValue(t, initializer))(t, class_);
+      }
+
       hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
     } else {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
@@ -1750,6 +1846,89 @@ inline object
 resolveMethod(Thread* t, object pool, unsigned index)
 {
   return resolve(t, pool, index, findMethodInClass);
+}
+
+inline object
+resolveNativeMethodData(Thread* t, object method)
+{
+  if (objectClass(methodCode(t, method))
+      == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+  {
+    for (System::Library lib = t->vm->libraries; lib; lib = lib->next()) {
+      void* p = lib->resolve(reinterpret_cast<const char*>
+                             (&byteArrayBody(t, methodCode(t, method), 0)));
+      if (p) {
+        PROTECT(t, method);
+
+        object data = makeNativeMethodData(t,
+                                           p,
+                                           0, // argument table size
+                                           0, // return code
+                                           parameterCount,
+                                           false);
+        
+        unsigned argumentTableSize = 0;
+        unsigned index = 0;
+        const char* s = reinterpret_cast<const char*>
+          (&byteArrayBody(t, methodSpec(t, method), 0));
+        ++ s; // skip '('
+        while (*s and *s != ')') {
+          unsigned code = fieldCode(*s);
+          nativeMethodDataParameterCodes(t, data, index++) = code;
+
+          switch (*s) {
+          case 'L':
+            argumentTableSize += 1;
+            while (*s and *s != ';') ++ s;
+            ++ s;
+            break;
+
+          case '[':
+            argumentTableSize += 1;
+            while (*s == '[') ++ s;
+            break;
+      
+          default:
+            argumentTableSize += divide(primitiveSize(code), 4);
+            ++ s;
+            break;
+          }
+        }
+
+        nativeMethodDataArgumentTableSize(t, data) = argumentTableSize;
+        nativeMethodReturnCode(t, data) = fieldCode(s[1]);
+
+        set(t, methodCode(t, method), data);
+        return data;
+      }
+    }
+
+    return 0;
+  } else {
+    return methodCode(t, method);
+  }  
+}
+
+void
+bsiVM(Thread* t, object class_)
+{
+  // todo
+}
+
+object
+bootstrapInitializers(Thread* t)
+{
+  object map = makeHashMap(t, 0, 0);
+  PROTECT(t, map);
+  object key = 0;
+  PROTECT(t, key);
+  object value;
+
+  key = makeByteArray(t, "vm/VM");
+  value = makePointer(t, bsiVM);
+  hashMapInsert(t, map, key, value, hashByteArray);
+
+  return map;
 }
 
 object
@@ -3119,25 +3298,74 @@ run(Thread* t)
     exception = makeStackOverflowError(t);
     goto throw_;      
   }
-  
+    
+  unsigned base = sp - parameterCount;
+
   if (methodFlags(t, code) & ACC_NATIVE) {
-    // todo
-    abort(t);
+    object data = resolveNativeMethodData(t, code);
+    if (UNLIKELY(data == 0)) {
+      object message = makeString
+        (t, "%s.%s:%s",
+         &byteArrayBody(t, className(t, methodClass(t, code)), 0),
+         &byteArrayBody(t, methodName(t, code), 0),
+         &byteArrayBody(t, methodSpec(t, code), 0));
+      exception = makeUnsatifiedLinkError(t, message);
+      goto throw_;
+    }
+
+    uint32_t* args[nativeMethodDataArgumentTableSize(t, data)];
+    uint8_t sizes[parameterCount];
+    unsigned offset = 0;
+    for (unsigned i = 0; i < parameterCount; ++i) {
+      unsigned code = nativeMethodDataParameterCodes(t, data);
+
+      if (code == ObjectField) {
+        size[i] = 4;
+        args[offset++] = sp + i + 1;
+      } else {
+        size[i] = primitiveSize(code);
+        uint64_t v = primitiveValue(t, code, stack[sp + i]);
+        if (size[i] == 8) {
+          args[offset++] = v & 0xFFFFFFFF;
+          args[offset++] = v >> 32;
+        } else {
+          args[offset++] = v;
+        }
+      }
+    }
+
+    unsigned returnCode = nativeMethodDataReturnCode(t, data);
+    unsigned returnSize
+      = (code == ObjectField ? 4 : primitiveSize(returnCode));
+
+    uint64_t rv = t->vm->system->call(nativeMethodDataPointer(t, data),
+                                      parameterCount,
+                                      args,
+                                      sizes,
+                                      returnSize);
+
+    sp = base;
+
+    if (returnCode == ObjectField) {
+      push(t, (rv == 0 ? 0 : stack[rv - 1]));
+    } else {
+      push(t, makePrimitive(t, returnCode, rv));
+    }
   } else {
     frameIp(t, frame) = ip;
     ip = 0;
 
-    sp -= parameterCount;
-  
-    frame = makeFrame(t, code, frame, 0, sp,
+    frame = makeFrame(t, code, frame, 0, base,
                       codeMaxLocals(t, methodCode(t, code)), false);
     code = methodCode(t, code);
 
-    memcpy(&frameLocals(t, frame, 0), stack + sp,
+    memcpy(&frameLocals(t, frame, 0), stack + base,
            parameterCount * BytesPerWord);
 
     memset(&frameLocals(t, frame, 0) + parameterCount, 0,
            (frameLength(t, frame) - parameterCount) * BytesPerWord);
+
+    sp = base;
   }
   goto loop;
 

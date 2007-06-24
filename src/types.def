@@ -18,6 +18,7 @@
 (type field
   (uint16_t flags)
   (uint16_t offset)
+  (uint8_t code)
   (object name)
   (object spec)
   (object class))
@@ -30,6 +31,12 @@
   (object spec)
   (object class)
   (object code))
+
+(type nativeMethodData
+  (void* pointer)
+  (uint16_t argumentTableSize)
+  (uint8_t returnCode)
+  (array uint8_t parameterCodes))
 
 (pod exceptionHandler
   (uint16_t start)

@@ -27,6 +27,13 @@ class System {
     virtual void dispose() = 0;
   };
 
+  class Library {
+   public:
+    virtual ~Library() { }
+    virtual void* resolve(const char* function) = 0;
+    virtual Library* next() = 0;
+  };
+
   virtual ~System() { }
 
   virtual bool success(Status) = 0;
@@ -34,6 +41,10 @@ class System {
   virtual void free(const void*) = 0;
   virtual Status start(Thread*) = 0;
   virtual Status make(Monitor**) = 0;
+  virtual uint64_t call(void* function, unsigned argumentCount,
+                        uint32_t* argumentTable, uint8_t* argumentSizeTable,
+                        unsigned returnSize);
+  virtual Status load(Library**, const char* name, Library* next);
   virtual void abort() = 0;
 
   void* allocate(unsigned size) {
