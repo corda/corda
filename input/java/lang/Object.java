@@ -1,11 +1,7 @@
 package java.lang;
 
-import vm.VM;
-
 public class Object {
-  protected Object clone() {
-    return VM.clone(this);
-  }
+  protected native Object clone();
 
   public boolean equals(Object o) {
     return this == o;
@@ -13,35 +9,19 @@ public class Object {
 
   protected void finalize() { }
 
-  public final Class<? extends Object> getClass() {
-    return VM.getClass(this);
-  }
+  public native final Class<? extends Object> getClass();
 
-  public int hashCode() {
-    return VM.hashCode(this);
-  }
+  public native int hashCode();
 
-  public final void notify() {
-    VM.notify(this);
-  }
+  public native final void notify();
 
-  public final void notifyAll() {
-    VM.notifyAll(this);
-  }
+  public native final void notifyAll();
 
-  public String toString() {
-    return VM.toString(this);
-  }
+  public native String toString();
 
-  public final void wait() {
-    VM.wait(this);
-  }
+  public native final void wait();
 
-  public final void wait(long timeout) {
-    VM.wait(this, timeout);
-  }
+  public native final void wait(long timeout);
 
-  public final void wait(long timeout, int nanos) {
-    VM.wait(this, timeout, nanos);
-  }
+  public native final void wait(long timeout, int nanos);
 }

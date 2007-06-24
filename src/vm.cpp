@@ -28,6 +28,7 @@ object resolveClass(Thread*, object);
 object allocate(Thread*, unsigned);
 object& arrayBodyUnsafe(Thread*, object, unsigned);
 void set(Thread*, object&, object);
+object makeString(Thread*, const char*, ...);
 object makeByteArray(Thread*, const char*, ...);
 unsigned objectSize(Thread* t, object o);
 
@@ -38,6 +39,7 @@ objectClass(object o)
 }
 
 enum FieldCode {
+  VoidField,
   ByteField,
   CharField,
   DoubleField,
@@ -76,6 +78,7 @@ class Machine {
   System::Library* libraries;
   object classMap;
   object bootstrapClassMap;
+  object builtinMap;
   object types;
   bool unsafe;
 };
@@ -222,6 +225,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   libraries(0),
   classMap(0),
   bootstrapClassMap(0),
+  builtinMap(0),
   types(0),
   unsafe(false)
 {
@@ -429,6 +433,42 @@ listAppend(Thread* t, object list, object value)
   set(t, listRear(t, list), p);
 }
 
+inline void
+push(Thread* t, object o)
+{
+  t->stack[(t->sp)++] = o;
+}
+
+inline void
+pushSafe(Thread* t, object o)
+{
+  expect(t, t->sp + 1 < Thread::StackSizeInWords);
+  push(t, o);
+}
+
+inline object
+pop(Thread* t)
+{
+  return t->stack[--(t->sp)];
+}
+
+inline object&
+top(Thread* t)
+{
+  return t->stack[t->sp - 1];
+}
+
+int32_t
+builtinToString(Thread* t, int32_t this_)
+{
+  object o = t->stack[this_ - 1];
+  object s = makeString(t, "%s@%p",
+                        &byteArrayBody(t, className(t, objectClass(o)), 0),
+                        o);
+  pushSafe(t, s);
+  return t->sp;
+}
+
 Thread::Thread(Machine* m):
   vm(m),
   next(0),
@@ -463,10 +503,29 @@ Thread::Thread(Machine* m):
 
     m->unsafe = false;
 
-    m->classMap = makeHashMap(this, 0, 0);
     m->bootstrapClassMap = makeHashMap(this, 0, 0);
 
 #include "type-java-initializations.cpp"
+
+    m->classMap = makeHashMap(this, 0, 0);
+    m->builtinMap = makeHashMap(this, 0, 0);
+
+    struct {
+      const char* key;
+      void* value;
+    } builtins[] = {
+      { "Java_java_lang_Object_toString",
+        reinterpret_cast<void*>(builtinToString) },
+      { 0, 0 }
+    };
+
+    for (unsigned i = 0; builtins[i].key; ++i) {
+      object key = makeByteArray(t, builtins[i].key);
+      PROTECT(t, key);
+      object value = makePointer(t, builtins[i].value);
+
+      hashMapInsert(t, m->builtinMap, key, value, byteArrayHash);
+    }
   }
 }
 
@@ -524,6 +583,7 @@ collect(Machine* m, Heap::CollectionType type)
     virtual void visitRoots(Heap::Visitor* v) {
       v->visit(&(m->classMap));
       v->visit(&(m->bootstrapClassMap));
+      v->visit(&(m->builtinMap));
       v->visit(&(m->types));
 
       for (Thread* t = m->rootThread; t; t = t->next) {
@@ -790,24 +850,6 @@ set(Thread* t, object& target, object value)
     ACQUIRE_RAW(t, t->vm->heapLock);
     t->vm->heap->mark(&target);
   }
-}
-
-inline void
-push(Thread* t, object o)
-{
-  t->stack[(t->sp)++] = o;
-}
-
-inline object
-pop(Thread* t)
-{
-  return t->stack[--(t->sp)];
-}
-
-inline object&
-top(Thread* t)
-{
-  return t->stack[t->sp - 1];
 }
 
 inline object
@@ -1586,9 +1628,23 @@ parameterCount(Thread* t, object spec)
 }
 
 object
-makeJNIName(Thread* t, object method, bool decorate)
+makeJNIName(Thread* t, object method, bool /*decorate*/)
 {
-  // todo
+  object name = makeByteArray
+    (t, "Java_%s_%s",
+     &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+     &byteArrayBody(t, methodName(t, method), 0));
+
+  for (unsigned i = 0; i < byteArrayLength(t, name) - 1; ++i) {
+    switch (byteArrayBody(t, name, i)) {
+    case '/':
+      byteArrayBody(t, name, i) = '_';
+      break;
+    }
+  }
+
+  // todo: decorate and translate as needed
+  return name;
 }
 
 void
@@ -1648,15 +1704,21 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         }
       }
 
-      object method = makeMethod
-        (t,
-         flags,
-         0, // offset
-         parameterCount(t, arrayBody(t, pool, spec - 1)),
-         arrayBody(t, pool, name - 1),
-         arrayBody(t, pool, spec - 1),
-         class_,
-         code);
+      unsigned parameterCount = ::parameterCount
+        (t, arrayBody(t, pool, spec - 1));
+
+      if ((flags & ACC_STATIC) == 0) {
+        ++ parameterCount;
+      }
+
+      object method = makeMethod(t,
+                                 flags,
+                                 0, // offset
+                                 parameterCount,
+                                 arrayBody(t, pool, name - 1),
+                                 arrayBody(t, pool, spec - 1),
+                                 class_,
+                                 code);
       PROTECT(t, method);
 
       if (flags & ACC_STATIC) {
@@ -1938,65 +2000,177 @@ resolveMethod(Thread* t, object pool, unsigned index)
   return resolve(t, pool, index, findMethodInClass);
 }
 
+object
+makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
+{
+  PROTECT(t, method);
+
+  object data = makeNativeMethodData(t,
+                                     function,
+                                     0, // argument table size
+                                     0, // return code,
+                                     builtin,
+                                     methodParameterCount(t, method),
+                                     false);
+        
+  unsigned argumentTableSize = sizeof(void*) / 4;
+  unsigned index = 0;
+
+  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+    nativeMethodDataParameterCodes(t, data, index++) = ObjectField;
+    argumentTableSize += 1;    
+  }
+
+  const char* s = reinterpret_cast<const char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    unsigned code = fieldCode(t, *s);
+    nativeMethodDataParameterCodes(t, data, index++) = code;
+
+    switch (*s) {
+    case 'L':
+      argumentTableSize += 1;
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+
+    case '[':
+      argumentTableSize += 1;
+      while (*s == '[') ++ s;
+      break;
+      
+    default:
+      argumentTableSize += divide(primitiveSize(t, code), 4);
+      ++ s;
+      break;
+    }
+  }
+
+  nativeMethodDataArgumentTableSize(t, data) = argumentTableSize;
+  nativeMethodDataReturnCode(t, data) = fieldCode(t, s[1]);
+
+  return data;
+}
+
 inline object
 resolveNativeMethodData(Thread* t, object method)
 {
   if (objectClass(methodCode(t, method))
       == arrayBody(t, t->vm->types, Machine::ByteArrayType))
   {
+    object data = 0;
     for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
       void* p = lib->resolve(reinterpret_cast<const char*>
                              (&byteArrayBody(t, methodCode(t, method), 0)));
       if (p) {
         PROTECT(t, method);
-
-        object data = makeNativeMethodData(t,
-                                           p,
-                                           0, // argument table size
-                                           0, // return code
-                                           methodParameterCount(t, method),
-                                           false);
-        
-        unsigned argumentTableSize = 0;
-        unsigned index = 0;
-        const char* s = reinterpret_cast<const char*>
-          (&byteArrayBody(t, methodSpec(t, method), 0));
-        ++ s; // skip '('
-        while (*s and *s != ')') {
-          unsigned code = fieldCode(t, *s);
-          nativeMethodDataParameterCodes(t, data, index++) = code;
-
-          switch (*s) {
-          case 'L':
-            argumentTableSize += 1;
-            while (*s and *s != ';') ++ s;
-            ++ s;
-            break;
-
-          case '[':
-            argumentTableSize += 1;
-            while (*s == '[') ++ s;
-            break;
-      
-          default:
-            argumentTableSize += divide(primitiveSize(t, code), 4);
-            ++ s;
-            break;
-          }
-        }
-
-        nativeMethodDataArgumentTableSize(t, data) = argumentTableSize;
-        nativeMethodDataReturnCode(t, data) = fieldCode(t, s[1]);
-
-        set(t, methodCode(t, method), data);
-        return data;
+        data = makeNativeMethodData(t, method, p, false);
+        break;
       }
     }
 
-    return 0;
+    if (data == 0) {
+      object p = hashMapFind(t, t->vm->builtinMap, methodCode(t, method),
+                             byteArrayHash, byteArrayEqual);
+      if (p) {
+        PROTECT(t, method);
+        data = makeNativeMethodData(t, method, pointerValue(t, p), true);
+      }
+    }
+
+    if (data) {
+      set(t, methodCode(t, method), data);
+    }
+    return data;
   } else {
     return methodCode(t, method);
   }  
+}
+
+inline object
+invokeNative(Thread* t, object method)
+{
+  object data = resolveNativeMethodData(t, method);
+  if (UNLIKELY(data == 0)) {
+    object message = makeString
+      (t, "%s.%s:%s",
+       &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+       &byteArrayBody(t, methodName(t, method), 0),
+       &byteArrayBody(t, methodSpec(t, method), 0));
+    t->exception = makeUnsatisfiedLinkError(t, message);
+    return 0;
+  }
+
+  unsigned parameterCount = methodParameterCount(t, method);
+
+  uint32_t args[nativeMethodDataArgumentTableSize(t, data)];
+  uint8_t sizes[parameterCount + 1];
+  unsigned offset = 0;
+
+  switch (sizeof(uintptr_t)) {
+  case 4: {
+    sizes[0] = 4;
+    args[offset++] = reinterpret_cast<uintptr_t>(t);
+  } break;
+
+  case 8: {
+    sizes[0] = 8;
+    uint64_t v = reinterpret_cast<uint64_t>(t);
+    args[offset++] = static_cast<uint32_t>(v >> 32);
+    args[offset++] = static_cast<uint32_t>(v & 0xFFFFFFFF);
+  } break;
+    
+  default:
+    abort(t);
+  }
+
+  for (unsigned i = 0; i < parameterCount; ++i) {
+    unsigned code = nativeMethodDataParameterCodes(t, data, i);
+
+    if (code == ObjectField) {
+      sizes[i + 1] = 4;
+      args[offset++] = t->sp + i + 1;
+    } else {
+      sizes[i + 1] = primitiveSize(t, code);
+      uint64_t v = primitiveValue(t, code, t->stack[t->sp + i]);
+      if (sizes[i + 1] == 8) {
+        args[offset++] = static_cast<uint32_t>(v >> 32);
+        args[offset++] = static_cast<uint32_t>(v & 0xFFFFFFFF);
+      } else {
+        args[offset++] = v;
+      }
+    }
+  }
+
+  unsigned returnCode = nativeMethodDataReturnCode(t, data);
+  unsigned returnSize
+    = (returnCode == ObjectField ? 4 : primitiveSize(t, returnCode));
+
+  void* function = nativeMethodDataFunction(t, data);
+
+  bool builtin = nativeMethodDataBuiltin(t, data);
+  if (not builtin) {
+    enter(t, Thread::IdleState);
+  }
+
+  uint64_t rv = t->vm->system->call(function,
+                                    parameterCount,
+                                    args,
+                                    sizes,
+                                    returnSize);
+
+  if (not builtin) {
+    enter(t, Thread::ActiveState);
+  }
+
+  if (UNLIKELY(t->exception) or returnCode == VoidField) {
+    return 0;
+  } else if (returnCode == ObjectField) {
+    return (rv == 0 ? 0 : t->stack[rv - 1]);
+  } else {
+    return makePrimitive(t, returnCode, rv);
+  }
 }
 
 object
@@ -2008,7 +2182,6 @@ run(Thread* t)
   object& frame = t->frame;
   object& exception = t->exception;
   object* stack = t->stack;
-  unsigned parameterCount = 0;
 
   if (UNLIKELY(exception)) goto throw_;
 
@@ -2427,7 +2600,6 @@ run(Thread* t)
       set(t, classInitializer(t, fieldClass(t, field)), 0);
       code = clinit;
       ip -= 3;
-      parameterCount = 0;
       goto invoke;
     }
       
@@ -2800,7 +2972,7 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    parameterCount = methodParameterCount(t, method);
+    unsigned parameterCount = methodParameterCount(t, method);
     if (LIKELY(stack[sp - parameterCount])) {
       code = findInterfaceMethod(t, method, stack[sp - parameterCount]);
       if (UNLIKELY(exception)) goto throw_;
@@ -2820,7 +2992,7 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    parameterCount = methodParameterCount(t, method);
+    unsigned parameterCount = methodParameterCount(t, method);
     if (LIKELY(stack[sp - parameterCount])) {
       object class_ = methodClass(t, frameMethod(t, t->frame));
       if (isSpecialMethod(t, method, class_)) {
@@ -2850,11 +3022,9 @@ run(Thread* t)
       set(t, classInitializer(t, methodClass(t, method)), 0);
       code = clinit;
       ip -= 3;
-      parameterCount = 0;
       goto invoke;
     }
 
-    parameterCount = methodParameterCount(t, method);
     code = method;
   } goto invoke;
 
@@ -2866,7 +3036,7 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    parameterCount = methodParameterCount(t, method);
+    unsigned parameterCount = methodParameterCount(t, method);
     if (LIKELY(stack[sp - parameterCount])) {
       code = findVirtualMethod(t, method, stack[sp - parameterCount]);
       if (UNLIKELY(exception)) goto throw_;
@@ -3122,7 +3292,6 @@ run(Thread* t)
       set(t, classInitializer(t, class_), 0);
       code = clinit;
       ip -= 3;
-      parameterCount = 0;
       goto invoke;
     }
 
@@ -3228,7 +3397,6 @@ run(Thread* t)
       set(t, classInitializer(t, fieldClass(t, field)), 0);
       code = clinit;
       ip -= 3;
-      parameterCount = 0;
       goto invoke;
     }
       
@@ -3359,65 +3527,27 @@ run(Thread* t)
   default: abort(t);
   }
 
- invoke: {
-    if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + sp - parameterCount
+ invoke: {    
+    unsigned parameterCount = methodParameterCount(t, code);
+    unsigned base = sp - parameterCount;
+
+    if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + base
                  > Thread::StackSizeInWords))
     {
       exception = makeStackOverflowError(t);
       goto throw_;      
     }
-    
-    unsigned base = sp - parameterCount;
 
     if (methodFlags(t, code) & ACC_NATIVE) {
-      object data = resolveNativeMethodData(t, code);
-      if (UNLIKELY(data == 0)) {
-        object message = makeString
-          (t, "%s.%s:%s",
-           &byteArrayBody(t, className(t, methodClass(t, code)), 0),
-           &byteArrayBody(t, methodName(t, code), 0),
-           &byteArrayBody(t, methodSpec(t, code), 0));
-        exception = makeUnsatisfiedLinkError(t, message);
+      object r = invokeNative(t, code);
+
+      if (UNLIKELY(exception)) {
         goto throw_;
       }
 
-      uint32_t args[nativeMethodDataArgumentTableSize(t, data)];
-      uint8_t sizes[parameterCount];
-      unsigned offset = 0;
-      for (unsigned i = 0; i < parameterCount; ++i) {
-        unsigned code = nativeMethodDataParameterCodes(t, data, i);
-
-        if (code == ObjectField) {
-          sizes[i] = 4;
-          args[offset++] = sp + i + 1;
-        } else {
-          sizes[i] = primitiveSize(t, code);
-          uint64_t v = primitiveValue(t, code, stack[sp + i]);
-          if (sizes[i] == 8) {
-            args[offset++] = static_cast<uint32_t>(v & 0xFFFFFFFF);
-            args[offset++] = static_cast<uint32_t>(v >> 32);
-          } else {
-            args[offset++] = v;
-          }
-        }
-      }
-
-      unsigned returnCode = nativeMethodDataReturnCode(t, data);
-      unsigned returnSize
-        = (returnCode == ObjectField ? 4 : primitiveSize(t, returnCode));
-
-      uint64_t rv = t->vm->system->call(nativeMethodDataPointer(t, data),
-                                        parameterCount,
-                                        args,
-                                        sizes,
-                                        returnSize);
-
       sp = base;
-
-      if (returnCode == ObjectField) {
-        push(t, (rv == 0 ? 0 : stack[rv - 1]));
-      } else {
-        push(t, makePrimitive(t, returnCode, rv));
+      if (nativeMethodDataReturnCode(t, methodCode(t, code)) != VoidField) {
+        push(t, r);
       }
     } else {
       frameIp(t, frame) = ip;

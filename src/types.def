@@ -33,10 +33,14 @@
   (object code))
 
 (type nativeMethodData
-  (void* pointer)
+  (void* function)
   (uint16_t argumentTableSize)
   (uint8_t returnCode)
+  (uint8_t builtin)
   (array uint8_t parameterCodes))
+
+(type pointer
+  (void* value))
 
 (pod exceptionHandler
   (uint16_t start)

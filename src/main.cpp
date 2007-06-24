@@ -2,6 +2,7 @@
 #include "sys/types.h"
 #include "sys/stat.h"
 #include "fcntl.h"
+#include "dlfcn.h"
 #include "common.h"
 #include "system.h"
 #include "heap.h"
@@ -28,6 +29,34 @@ class System: public vm::System {
     virtual void dispose() { s->free(this);  }
 
     vm::System* s;
+  };
+
+  class Library: public vm::System::Library {
+   public:
+    Library(vm::System* s, void* p, vm::System::Library* next):
+      s(s),
+      p(p),
+      next_(next)
+    { }
+
+    virtual void* resolve(const char* function) {
+      return dlsym(p, function);
+    }
+
+    virtual vm::System::Library* next() {
+      return next_;
+    }
+
+    virtual void dispose() {
+      if (next_) {
+        next_->dispose();
+      }
+      s->free(this);
+    }
+
+    vm::System* s;
+    void* p;
+    vm::System::Library* next_;
   };
 
   System(unsigned limit): limit(limit), count(0) { }
@@ -79,6 +108,24 @@ class System: public vm::System {
   virtual Status make(vm::System::Monitor** m) {
     *m = new (vm::System::allocate(sizeof(Monitor))) Monitor(this);
     return 0;
+  }
+
+  virtual uint64_t call(void* function, unsigned argumentCount,
+                        uint32_t* argumentTable, uint8_t* argumentSizeTable,
+                        unsigned returnSize)
+  {
+    
+  }
+
+  virtual Status load(Library** lib, const char* name, Library* next) {
+    void* p = dlopen(name, RTLD_LAZY);
+    if (p) {
+      *lib = new (vm::System::allocate(sizeof(Library)))
+        Library(this, p, next);
+      return 0;
+    } else {
+      return 1;
+    }
   }
 
   virtual void abort() {
