@@ -32,6 +32,7 @@ class System {
     virtual ~Library() { }
     virtual void* resolve(const char* function) = 0;
     virtual Library* next() = 0;
+    virtual void dispose() = 0;
   };
 
   virtual ~System() { }
@@ -63,6 +64,12 @@ abort(System* s)
   ::abort();
 }
 
+inline void
+expect(System* s, bool v)
+{
+  if (UNLIKELY(not v)) abort(s);
+}
+
 #ifdef NDEBUG
 inline void
 assert(System*, bool)
@@ -71,7 +78,7 @@ assert(System*, bool)
 inline void
 assert(System* s, bool v)
 {
-  if (UNLIKELY(not v)) abort(s);
+  expect(s, v);
 }
 #endif
 

@@ -36,7 +36,8 @@ generated-code = \
 	$(bld)/type-enums.cpp \
 	$(bld)/type-declarations.cpp \
 	$(bld)/type-constructors.cpp \
-	$(bld)/type-initializations.cpp
+	$(bld)/type-initializations.cpp \
+	$(bld)/type-java-initializations.cpp
 interpreter-depends = \
 	$(generated-code) \
 	$(src)/common.h \

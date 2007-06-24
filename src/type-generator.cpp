@@ -278,19 +278,19 @@ memberHide(Object* o)
 class Type : public Object {
  public:
   const char* name;
-  const char* shortName;
+  const char* javaName;
   Object* super;
   List members;
   List subtypes;
   bool hideConstructor;
 
   static Type* make(Object::ObjectType type, const char* name,
-                    const char* shortName)
+                    const char* javaName)
   {
     Type* o = allocate<Type>();
     o->type = type;
     o->name = name;
-    o->shortName = shortName;
+    o->javaName = javaName;
     o->super = 0;
     o->members.first = o->members.last = 0;
     o->subtypes.first = o->subtypes.last = 0;
@@ -312,11 +312,11 @@ typeName(Object* o)
 }
 
 const char*
-typeShortName(Object* o)
+typeJavaName(Object* o)
 {
   switch (o->type) {
   case Object::Type: case Object::Pod:
-    return static_cast<Type*>(o)->shortName;
+    return static_cast<Type*>(o)->javaName;
 
   default:
     UNREACHABLE;
@@ -878,13 +878,13 @@ parseType(Object::ObjectType type, Object* p, Object* declarations)
 {
   const char* name = string(car(p));
 
-  const char* shortName = name;
+  const char* javaName = 0;
   if (cdr(p) and car(cdr(p))->type == Object::String) {
     p = cdr(p);
-    shortName = string(car(p));
+    javaName = string(car(p));
   }
 
-  Type* t = Type::make(type, name, shortName);
+  Type* t = Type::make(type, name, javaName);
 
   for (p = cdr(p); p; p = cdr(p)) {
     if (type == Object::Type) {
@@ -931,7 +931,7 @@ void
 writeAccessorName(Output* out, Object* member, bool respectHide = false,
                   bool unsafe = false)
 {
-  const char* owner = typeShortName(memberOwner(member));
+  const char* owner = typeName(memberOwner(member));
   out->write(owner);
   out->write(capitalize(memberName(member)));
   if (unsafe) {
@@ -966,7 +966,7 @@ writeOffset(Output* out, Object* offset, bool allocationStyle = false)
         if (allocationStyle) {
           out->write("length");
         } else {
-          out->write(typeShortName(memberOwner(o)));
+          out->write(typeName(memberOwner(o)));
           out->write(capitalize("length"));
           out->write("(o)");
         }
@@ -1480,16 +1480,32 @@ writeInitialization(Output* out, Object* type)
     out->write("  object mask = 0;\n");    
   }
 
+  if (typeJavaName(type)) {
+    if (typeObjectMask(type) != 1) {
+      out->write("  PROTECT(t, mask);\n");
+    }
+    out->write("  object name = makeByteArray(t, \"");
+    out->write(typeJavaName(type));
+    out->write("\");\n");
+  } else {
+    out->write("  object name = 0;\n");    
+  }
+
   out->write("  object class_ = makeClass");
   out->write("(t, 0, ");
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));
-  out->write(", mask, 0, 0, 0, 0, 0, 0, 0, 0);\n");
+  out->write(", mask, name, 0, 0, 0, 0, 0, 0, 0);\n");
 
   out->write("  set(t, arrayBody(t, t->vm->types, Machine::");
   out->write(capitalize(typeName(type)));
   out->write("Type), class_);\n");
+
+  if (typeJavaName(type)) {
+    out->write("  hashMapInsert(t, t->vm->bootstrapClassMap, ");
+    out->write("className(t, class_), class_, byteArrayHash);\n");
+  }
 
   out->write("}\n\n");
 }
@@ -1531,7 +1547,18 @@ writeInitializations(Output* out, Object* declarations)
 
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
-    if (o->type == Object::Type) {
+    if (o->type == Object::Type and typeJavaName(o) == 0) {
+      writeInitialization(out, o);
+    }
+  }
+}
+
+void
+writeJavaInitializations(Output* out, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    if (o->type == Object::Type and typeJavaName(o)) {
       writeInitialization(out, o);
     }
   }
@@ -1556,7 +1583,8 @@ main(int ac, char** av)
           and not equal(av[1], "enums")
           and not equal(av[1], "declarations")
           and not equal(av[1], "constructors")
-          and not equal(av[1], "initializations")))
+          and not equal(av[1], "initializations")
+          and not equal(av[1], "java-initializations")))
   {
     usageAndExit(av[0]);
   }
@@ -1583,6 +1611,10 @@ main(int ac, char** av)
   
   if (ac == 1 or equal(av[1], "initializations")) {
     writeInitializations(&out, declarations);
+  }
+
+  if (ac == 1 or equal(av[1], "java-initializations")) {
+    writeJavaInitializations(&out, declarations);
   }
 
   return 0;

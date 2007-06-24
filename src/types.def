@@ -101,77 +101,6 @@
   (uint32_t ip)
   (object next))
 
-(type thread
-  (object localMap)
-  (object exceptionHandler))
-
-(type string
-  (object bytes)
-  (int32_t offset)
-  (int32_t length)
-  (int32_t hash))
-
-(type throwable
-  (object message)
-  (object trace))
-
-(type exception
-  (extends throwable))
-
-(type runtimeException
-  (extends exception))
-
-(type nullPointerException
-  (extends runtimeException))
-
-(type arrayIndexOutOfBoundsException
-  (extends runtimeException))
-
-(type negativeArrayStoreException
-  (extends runtimeException))
-
-(type classCastException
-  (extends runtimeException))
-
-(type classNotFoundException
-  (extends runtimeException))
-
-(type error
-  (extends throwable))
-
-(type stackOverflowError
-  (extends error))
-
-(type noSuchFieldError
-  (extends error))
-
-(type noSuchMethodError
-  (extends error))
-
-(type byte
-  (int8_t value))
-
-(type boolean
-  (int8_t value))
-
-(type short
-  (int16_t value))
-
-(type char
-  (uint16_t value))
-
-(type int
-  (int32_t value))
-
-(type long
-  (int64_t value))
-
-(type float
-  (uint32_t value))
-
-(type double
-  (uint64_t value))
-
 (type array
   (noassert array object body))
 
@@ -199,3 +128,88 @@
 
 (type doubleArray
   (array uint64_t body))
+
+
+(type jobject java/lang/Object)
+
+(type string java/lang/String
+  (extends jobject)
+  (object bytes)
+  (int32_t offset)
+  (int32_t length)
+  (int32_t hash))
+
+(type throwable java/lang/Throwable
+  (extends jobject)
+  (object message)
+  (object trace)
+  (object cause))
+
+(type exception java/lang/Exception
+  (extends throwable))
+
+(type runtimeException java/lang/RuntimeException
+  (extends exception))
+
+(type nullPointerException java/lang/NullPointerException
+  (extends runtimeException))
+
+(type arrayIndexOutOfBoundsException
+  java/lang/ArrayIndexOutOfBoundsException
+  (extends runtimeException))
+
+(type negativeArrayStoreException java/lang/NegativeArrayStoreException
+  (extends runtimeException))
+
+(type classCastException java/lang/ClassCastException
+  (extends runtimeException))
+
+(type classNotFoundException java/lang/ClassNotFoundException
+  (extends runtimeException))
+
+(type error java/lang/Error
+  (extends throwable))
+
+(type stackOverflowError java/lang/StackOverflowError
+  (extends error))
+
+(type noSuchFieldError java/lang/NoSuchFieldError
+  (extends error))
+
+(type noSuchMethodError java/lang/NoSuchMethodError
+  (extends error))
+
+(type unsatisfiedLinkError java/lang/UnsatisifiedLinkError
+  (extends error))
+
+(type byte java/lang/Byte
+  (extends jobject)
+  (int8_t value))
+
+(type boolean java/lang/Boolean
+  (extends jobject)
+  (int8_t value))
+
+(type short java/lang/Short
+  (extends jobject)
+  (int16_t value))
+
+(type char java/lang/Character
+  (extends jobject)
+  (uint16_t value))
+
+(type int java/lang/Integer
+  (extends jobject)
+  (int32_t value))
+
+(type long java/lang/Long
+  (extends jobject)
+  (int64_t value))
+
+(type float java/lang/Float
+  (extends jobject)
+  (uint32_t value))
+
+(type double java/lang/Double
+  (extends jobject)
+  (uint64_t value))

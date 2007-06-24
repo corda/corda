@@ -23,11 +23,13 @@ class Thread;
 void (*Initializer)(Thread*, object);
 
 void assert(Thread*, bool);
+void expect(Thread*, bool);
 object resolveClass(Thread*, object);
 object allocate(Thread*, unsigned);
 object& arrayBodyUnsafe(Thread*, object, unsigned);
 void set(Thread*, object&, object);
-object bootstrapInitializers(Thread*);
+object makeByteArray(Thread*, const char*, ...);
+unsigned objectSize(Thread* t, object o);
 
 object&
 objectClass(object o)
@@ -71,7 +73,9 @@ class Machine {
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
+  System::Library* libraries;
   object classMap;
+  object bootstrapClassMap;
   object types;
   bool unsafe;
 };
@@ -198,6 +202,12 @@ assert(Thread* t, bool v)
   assert(t->vm->system, v);
 }
 
+inline void
+expect(Thread* t, bool v)
+{
+  expect(t->vm->system, v);
+}
+
 Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   system(system),
   heap(heap),
@@ -209,7 +219,9 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   stateLock(0),
   heapLock(0),
   classLock(0),
+  libraries(0),
   classMap(0),
+  bootstrapClassMap(0),
   types(0),
   unsafe(false)
 {
@@ -227,10 +239,194 @@ Machine::dispose()
   stateLock->dispose();
   heapLock->dispose();
   classLock->dispose();
+  libraries->dispose();
   
   if (rootThread) {
     rootThread->dispose();
   }
+}
+
+uint32_t
+hash(const int8_t* s, unsigned length)
+{
+  uint32_t h = 0;
+  for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
+  return h;  
+}
+
+inline uint32_t
+byteArrayHash(Thread* t, object array)
+{
+  return hash(&byteArrayBody(t, array, 0), byteArrayLength(t, array));
+}
+
+bool
+byteArrayEqual(Thread* t, object a, object b)
+{
+  return a == b or
+    ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
+     memcmp(&byteArrayBody(t, a, 0), &byteArrayBody(t, b, 0),
+            byteArrayLength(t, a)) == 0);
+}
+
+bool
+intArrayEqual(Thread* t, object a, object b)
+{
+  return a == b or
+    ((intArrayLength(t, a) == intArrayLength(t, b)) and
+     memcmp(&intArrayBody(t, a, 0), &intArrayBody(t, b, 0),
+            intArrayLength(t, a) * 4) == 0);
+}
+
+inline uint32_t
+methodHash(Thread* t, object method)
+{
+  return byteArrayHash(t, methodName(t, method))
+    ^ byteArrayHash(t, methodSpec(t, method));
+}
+
+bool
+methodEqual(Thread* t, object a, object b)
+{
+  return a == b or
+    (byteArrayEqual(t, methodName(t, a), methodName(t, b)) and
+     byteArrayEqual(t, methodSpec(t, a), methodSpec(t, b)));
+}
+
+object
+hashMapFindNode(Thread* t, object map, object key,
+                uint32_t (*hash)(Thread*, object),
+                bool (*equal)(Thread*, object, object))
+{
+  object array = hashMapArray(t, map);
+  if (array) {
+    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+    object n = arrayBody(t, array, index);
+    while (n) {
+      if (equal(t, tripleFirst(t, n), key)) {
+        return n;
+      }
+      
+      n = tripleThird(t, n);
+    }
+  }
+  return 0;
+}
+
+inline object
+hashMapFind(Thread* t, object map, object key,
+            uint32_t (*hash)(Thread*, object),
+            bool (*equal)(Thread*, object, object))
+{
+  object n = hashMapFindNode(t, map, key, hash, equal);
+  return (n ? tripleSecond(t, n) : 0);
+}
+
+void
+hashMapGrow(Thread* t, object map, uint32_t (*hash)(Thread*, object))
+{
+  PROTECT(t, map);
+
+  object oldArray = hashMapArray(t, map);
+  unsigned oldLength = (oldArray ? arrayLength(t, oldArray) : 0);
+  PROTECT(t, oldArray);
+
+  unsigned newLength = (oldLength ? oldLength * 2 : 32);
+  object newArray = makeArray(t, newLength, true);
+
+  if (oldArray) {
+    for (unsigned i = 0; i < oldLength; ++i) {
+      object next;
+      for (object p = arrayBody(t, oldArray, i); p; p = next) {
+        next = tripleThird(t, p);
+
+        object key = tripleFirst(t, p);
+        unsigned index = hash(t, key) & (newLength - 1);
+        object n = arrayBody(t, newArray, index);
+
+        set(t, tripleThird(t, p), n);
+        set(t, arrayBody(t, newArray, index), p);
+      }
+    }
+  }
+  
+  set(t, hashMapArray(t, map), newArray);
+}
+
+void
+hashMapInsert(Thread* t, object map, object key, object value,
+              uint32_t (*hash)(Thread*, object))
+{
+  object array = hashMapArray(t, map);
+  PROTECT(t, array);
+
+  ++ hashMapSize(t, map);
+
+  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
+    PROTECT(t, map);
+    PROTECT(t, key);
+    PROTECT(t, value);
+
+    hashMapGrow(t, map, hash);
+    array = hashMapArray(t, map);
+  }
+
+  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+  object n = arrayBody(t, array, index);
+
+  n = makeTriple(t, key, value, n);
+
+  set(t, arrayBody(t, array, index), n);
+}
+
+object
+hashMapIterator(Thread* t, object map)
+{
+  object array = hashMapArray(t, map);
+  if (array) {
+    for (unsigned i = 0; i < arrayLength(t, array); ++i) {
+      if (arrayBody(t, array, i)) {
+        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
+      }
+    }
+  }
+  return 0;
+}
+
+object
+hashMapIteratorNext(Thread* t, object it)
+{
+  object map = hashMapIteratorMap(t, it);
+  object node = hashMapIteratorNode(t, it);
+  unsigned index = hashMapIteratorIndex(t, it);
+
+  if (tripleThird(t, node)) {
+    return makeHashMapIterator(t, map, tripleThird(t, node), index + 1);
+  } else {
+    object array = hashMapArray(t, map);
+    for (unsigned i = index; i < arrayLength(t, array); ++i) {
+      if (arrayBody(t, array, i)) {
+        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
+      }
+    }
+    return 0;
+  }  
+}
+
+void
+listAppend(Thread* t, object list, object value)
+{
+  PROTECT(t, list);
+
+  ++ listSize(t, list);
+  
+  object p = makePair(t, value, 0);
+  if (listFront(t, list)) {
+    set(t, pairSecond(t, listRear(t, list)), p);
+  } else {
+    set(t, listFront(t, list), p);
+  }
+  set(t, listRear(t, list), p);
 }
 
 Thread::Thread(Machine* m):
@@ -268,8 +464,9 @@ Thread::Thread(Machine* m):
     m->unsafe = false;
 
     m->classMap = makeHashMap(this, 0, 0);
+    m->bootstrapClassMap = makeHashMap(this, 0, 0);
 
-    m->bootstrapInitializers = bootstrapInitializers(this);
+#include "type-java-initializations.cpp"
   }
 }
 
@@ -326,6 +523,7 @@ collect(Machine* m, Heap::CollectionType type)
 
     virtual void visitRoots(Heap::Visitor* v) {
       v->visit(&(m->classMap));
+      v->visit(&(m->bootstrapClassMap));
       v->visit(&(m->types));
 
       for (Thread* t = m->rootThread; t; t = t->next) {
@@ -680,7 +878,7 @@ makeArrayIndexOutOfBoundsException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeArrayIndexOutOfBoundsException(t, message, trace);
+  return makeArrayIndexOutOfBoundsException(t, message, trace, 0);
 }
 
 object
@@ -688,7 +886,7 @@ makeNegativeArrayStoreException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeNegativeArrayStoreException(t, message, trace);
+  return makeNegativeArrayStoreException(t, message, trace, 0);
 }
 
 object
@@ -696,7 +894,7 @@ makeClassCastException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeClassCastException(t, message, trace);
+  return makeClassCastException(t, message, trace, 0);
 }
 
 object
@@ -704,19 +902,19 @@ makeClassNotFoundException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeClassNotFoundException(t, message, trace);
+  return makeClassNotFoundException(t, message, trace, 0);
 }
 
 object
 makeNullPointerException(Thread* t)
 {
-  return makeNullPointerException(t, 0, makeTrace(t));
+  return makeNullPointerException(t, 0, makeTrace(t), 0);
 }
 
 object
 makeStackOverflowError(Thread* t)
 {
-  return makeStackOverflowError(t, 0, makeTrace(t));
+  return makeStackOverflowError(t, 0, makeTrace(t), 0);
 }
 
 object
@@ -724,7 +922,7 @@ makeNoSuchFieldError(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeNoSuchFieldError(t, message, trace);
+  return makeNoSuchFieldError(t, message, trace, 0);
 }
 
 object
@@ -732,7 +930,15 @@ makeNoSuchMethodError(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeNoSuchMethodError(t, message, trace);
+  return makeNoSuchMethodError(t, message, trace, 0);
+}
+
+object
+makeUnsatisfiedLinkError(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeUnsatisfiedLinkError(t, message, trace, 0);
 }
 
 inline bool
@@ -743,7 +949,7 @@ isLongOrDouble(Thread* t, object o)
 }
 
 unsigned
-fieldCode(unsigned javaCode)
+fieldCode(Thread* t, unsigned javaCode)
 {
   switch (javaCode) {
   case 'B':
@@ -821,7 +1027,7 @@ makePrimitive(Thread* t, unsigned code, uint64_t value)
 }
 
 unsigned
-primitiveSize(unsigned code)
+primitiveSize(Thread* t, unsigned code)
 {
   switch (code) {
   case ByteField:
@@ -1043,179 +1249,6 @@ findMethodInClass(Thread* t, object class_, object reference)
               methodSpec, makeNoSuchMethodError);
 }
 
-uint32_t
-hash(const int8_t* s, unsigned length)
-{
-  uint32_t h = 0;
-  for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
-  return h;  
-}
-
-inline uint32_t
-byteArrayHash(Thread* t, object array)
-{
-  return hash(&byteArrayBody(t, array, 0), byteArrayLength(t, array) - 1);
-}
-
-bool
-byteArrayEqual(Thread* t, object a, object b)
-{
-  return a == b or
-    ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
-     strcmp(&byteArrayBody(t, a, 0), &byteArrayBody(t, b, 0)) == 0);
-}
-
-inline uint32_t
-methodHash(Thread* t, object method)
-{
-  return byteArrayHash(t, methodName(t, method))
-    ^ byteArrayHash(t, methodSpec(t, method));
-}
-
-bool
-methodEqual(Thread* t, object a, object b)
-{
-  return a == b or
-    (byteArrayEqual(t, methodName(t, a), methodName(t, b)) and
-     byteArrayEqual(t, methodSpec(t, a), methodSpec(t, b)));
-}
-
-object
-hashMapFindNode(Thread* t, object map, object key,
-                uint32_t (*hash)(Thread*, object),
-                bool (*equal)(Thread*, object, object))
-{
-  object array = hashMapArray(t, map);
-  if (array) {
-    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    object n = arrayBody(t, array, index);
-    while (n) {
-      if (equal(t, tripleFirst(t, n), key)) {
-        return n;
-      }
-      
-      n = tripleThird(t, n);
-    }
-  }
-  return 0;
-}
-
-inline object
-hashMapFind(Thread* t, object map, object key,
-            uint32_t (*hash)(Thread*, object),
-            bool (*equal)(Thread*, object, object))
-{
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  return (n ? tripleSecond(t, n) : 0);
-}
-
-void
-hashMapGrow(Thread* t, object map, uint32_t (*hash)(Thread*, object))
-{
-  PROTECT(t, map);
-
-  object oldArray = hashMapArray(t, map);
-  unsigned oldLength = (oldArray ? arrayLength(t, oldArray) : 0);
-  PROTECT(t, oldArray);
-
-  unsigned newLength = (oldLength ? oldLength * 2 : 32);
-  object newArray = makeArray(t, newLength, true);
-
-  if (oldArray) {
-    for (unsigned i = 0; i < oldLength; ++i) {
-      object next;
-      for (object p = arrayBody(t, oldArray, i); p; p = next) {
-        next = tripleThird(t, p);
-
-        object key = tripleFirst(t, p);
-        unsigned index = hash(t, key) & (newLength - 1);
-        object n = arrayBody(t, newArray, index);
-
-        set(t, tripleThird(t, p), n);
-        set(t, arrayBody(t, newArray, index), p);
-      }
-    }
-  }
-  
-  set(t, hashMapArray(t, map), newArray);
-}
-
-void
-hashMapInsert(Thread* t, object map, object key, object value,
-              uint32_t (*hash)(Thread*, object))
-{
-  object array = hashMapArray(t, map);
-  PROTECT(t, array);
-
-  ++ hashMapSize(t, map);
-
-  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
-    PROTECT(t, map);
-    PROTECT(t, key);
-    PROTECT(t, value);
-
-    hashMapGrow(t, map, hash);
-    array = hashMapArray(t, map);
-  }
-
-  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-  object n = arrayBody(t, array, index);
-
-  n = makeTriple(t, key, value, n);
-
-  set(t, arrayBody(t, array, index), n);
-}
-
-object
-hashMapIterator(Thread* t, object map)
-{
-  object array = hashMapArray(t, map);
-  if (array) {
-    for (unsigned i = 0; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-  }
-  return 0;
-}
-
-object
-hashMapIteratorNext(Thread* t, object it)
-{
-  object map = hashMapIteratorMap(t, it);
-  object node = hashMapIteratorNode(t, it);
-  unsigned index = hashMapIteratorIndex(t, it);
-
-  if (tripleThird(t, node)) {
-    return makeHashMapIterator(t, map, tripleThird(t, node), index + 1);
-  } else {
-    object array = hashMapArray(t, map);
-    for (unsigned i = index; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-    return 0;
-  }  
-}
-
-void
-listAppend(Thread* t, object list, object value)
-{
-  PROTECT(t, list);
-
-  ++ listSize(t, list);
-  
-  object p = makePair(t, value, 0);
-  if (listFront(t, list)) {
-    set(t, pairSecond(t, listRear(t, list)), p);
-  } else {
-    set(t, listFront(t, list), p);
-  }
-  set(t, listRear(t, list), p);
-}
-
 object
 parsePool(Thread* t, Stream& s)
 {
@@ -1398,7 +1431,7 @@ fieldSize(Thread* t, object field)
   if (code == ObjectField) {
     return BytesPerWord;
   } else {
-    return primitiveSize(code);
+    return primitiveSize(t, code);
   }
 }
 
@@ -1431,28 +1464,28 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         s.skip(s.read4());
       }
 
-      object value = makeField
+      object field = makeField
         (t,
          flags,
          0, // offset
-         fieldCode(byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
+         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
          arrayBody(t, pool, name - 1),
          arrayBody(t, pool, spec - 1),
          class_);
 
       if (flags & ACC_STATIC) {
-        fieldOffset(t, value) = staticOffset++;
+        fieldOffset(t, field) = staticOffset++;
       } else {
         unsigned excess = memberOffset % BytesPerWord;
-        if (excess and fieldCode(t, value) == ObjectField) {
+        if (excess and fieldCode(t, field) == ObjectField) {
           memberOffset += BytesPerWord - excess;
         }
 
-        fieldOffset(t, value) = memberOffset;
-        memberOffset += fieldSize(t, value);
+        fieldOffset(t, field) = memberOffset;
+        memberOffset += fieldSize(t, field);
       }
 
-      set(t, arrayBody(t, fieldTable, i), value);
+      set(t, arrayBody(t, fieldTable, i), field);
     }
 
     set(t, classFieldTable(t, class_), fieldTable);
@@ -1552,14 +1585,23 @@ parameterCount(Thread* t, object spec)
   return count;
 }
 
+object
+makeJNIName(Thread* t, object method, bool decorate)
+{
+  // todo
+}
+
 void
 parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 {
   PROTECT(t, class_);
   PROTECT(t, pool);
 
-  object map = makeHashMap(t, 0, 0);
-  PROTECT(t, map);
+  object virtualMap = makeHashMap(t, 0, 0);
+  PROTECT(t, virtualMap);
+
+  object nativeMap = makeHashMap(t, 0, 0);
+  PROTECT(t, nativeMap);
 
   unsigned virtualCount = 0;
 
@@ -1574,7 +1616,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     virtualCount = arrayLength(t, superVirtualTable);
     for (unsigned i = 0; i < virtualCount; ++i) {
       object method = arrayBody(t, superVirtualTable, i);
-      hashMapInsert(t, map, method, method, methodHash);
+      hashMapInsert(t, virtualMap, method, method, methodHash);
     }
   }
 
@@ -1606,7 +1648,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         }
       }
 
-      object value = makeMethod
+      object method = makeMethod
         (t,
          flags,
          0, // offset
@@ -1615,29 +1657,51 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
          arrayBody(t, pool, spec - 1),
          class_,
          code);
-      PROTECT(t, value);
+      PROTECT(t, method);
 
       if (flags & ACC_STATIC) {
         if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
-                   &byteArrayBody(t, methodName(t, value), 0)) == 0)
+                   &byteArrayBody(t, methodName(t, method), 0)) == 0)
         {
-          set(t, classInitializer(t, class_), value);
+          set(t, classInitializer(t, class_), method);
         }
       } else {
-        object p = hashMapFindNode(t, map, value, methodHash, methodEqual);
+        object p = hashMapFindNode
+          (t, virtualMap, method, methodHash, methodEqual);
 
         if (p) {
-          methodOffset(t, value) = methodOffset(t, tripleFirst(t, p));
+          methodOffset(t, method) = methodOffset(t, tripleFirst(t, p));
 
-          set(t, tripleSecond(t, p), value);
+          set(t, tripleSecond(t, p), method);
         } else {
-          methodOffset(t, value) = virtualCount++;
+          methodOffset(t, method) = virtualCount++;
 
-          listAppend(t, newVirtuals, value);
+          listAppend(t, newVirtuals, method);
         }
       }
 
-      set(t, arrayBody(t, methodTable, i), value);
+      if (flags & ACC_NATIVE) {
+        object p = hashMapFindNode
+          (t, nativeMap, method, methodHash, methodEqual);
+
+        if (p == 0) {
+          hashMapInsert(t, virtualMap, method, method, methodHash);
+        }
+      }
+
+      set(t, arrayBody(t, methodTable, i), method);
+    }
+
+    for (unsigned i = 0; i < count; ++i) {
+      object method = arrayBody(t, methodTable, i);
+
+      if (methodFlags(t, method) & ACC_NATIVE) {
+        object p = hashMapFindNode
+          (t, nativeMap, method, methodHash, methodEqual);
+
+        object jniName = makeJNIName(t, method, p != 0);
+        set(t, methodCode(t, method), jniName);
+      }
     }
 
     set(t, classMethodTable(t, class_), methodTable);
@@ -1652,7 +1716,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     if (superVirtualTable) {
       for (; i < arrayLength(t, superVirtualTable); ++i) {
         object method = arrayBody(t, superVirtualTable, i);
-        method = hashMapFind(t, map, method, methodHash, methodEqual);
+        method = hashMapFind(t, virtualMap, method, methodHash, methodEqual);
 
         set(t, arrayBody(t, vtable, i), method);
       }
@@ -1676,7 +1740,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         
         for (unsigned j = 0; j < arrayLength(t, methodTable); ++j) {
           object method = arrayBody(t, methodTable, j);
-          method = hashMapFind(t, map, method, methodHash, methodEqual);
+          method = hashMapFind(t, virtualMap, method, methodHash, methodEqual);
           
           set(t, arrayBody(t, vtable, j), method);        
         }
@@ -1747,6 +1811,29 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
   return class_;
 }
 
+void
+updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
+{
+  expect(t, bootstrapClass != class_);
+
+  // verify that the classes have the same layout
+  expect(t, classSuper(t, bootstrapClass) == classSuper(t, class_));
+  expect(t, classFixedSize(t, bootstrapClass) == classFixedSize(t, class_));
+  expect(t, (classObjectMask(t, bootstrapClass) == 0
+             and classObjectMask(t, class_) == 0)
+         or intArrayEqual(t, classObjectMask(t, bootstrapClass),
+                          classObjectMask(t, class_)));
+
+  PROTECT(t, bootstrapClass);
+  PROTECT(t, class_);
+
+  enter(t, Thread::ExclusiveState);
+
+  memcpy(bootstrapClass, class_, objectSize(t, class_));
+
+  enter(t, Thread::ActiveState);
+}
+
 object
 resolveClass(Thread* t, object spec)
 {
@@ -1772,10 +1859,13 @@ resolveClass(Thread* t, object spec)
 
       PROTECT(t, class_);
 
-      object initializer = hashMapFind
-        (t, t->vm->bootstrapInitializers, spec, byteArrayHash, byteArrayEqual);
-      if (initializer) {
-        static_cast<Initializer>(pointerValue(t, initializer))(t, class_);
+      object bootstrapClass = hashMapFind
+        (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+      if (bootstrapClass) {
+        PROTECT(t, bootstrapClass);
+
+        updateBootstrapClass(t, bootstrapClass, class_);
+        class_ = bootstrapClass;
       }
 
       hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
@@ -1854,7 +1944,7 @@ resolveNativeMethodData(Thread* t, object method)
   if (objectClass(methodCode(t, method))
       == arrayBody(t, t->vm->types, Machine::ByteArrayType))
   {
-    for (System::Library lib = t->vm->libraries; lib; lib = lib->next()) {
+    for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
       void* p = lib->resolve(reinterpret_cast<const char*>
                              (&byteArrayBody(t, methodCode(t, method), 0)));
       if (p) {
@@ -1864,7 +1954,7 @@ resolveNativeMethodData(Thread* t, object method)
                                            p,
                                            0, // argument table size
                                            0, // return code
-                                           parameterCount,
+                                           methodParameterCount(t, method),
                                            false);
         
         unsigned argumentTableSize = 0;
@@ -1873,7 +1963,7 @@ resolveNativeMethodData(Thread* t, object method)
           (&byteArrayBody(t, methodSpec(t, method), 0));
         ++ s; // skip '('
         while (*s and *s != ')') {
-          unsigned code = fieldCode(*s);
+          unsigned code = fieldCode(t, *s);
           nativeMethodDataParameterCodes(t, data, index++) = code;
 
           switch (*s) {
@@ -1889,14 +1979,14 @@ resolveNativeMethodData(Thread* t, object method)
             break;
       
           default:
-            argumentTableSize += divide(primitiveSize(code), 4);
+            argumentTableSize += divide(primitiveSize(t, code), 4);
             ++ s;
             break;
           }
         }
 
         nativeMethodDataArgumentTableSize(t, data) = argumentTableSize;
-        nativeMethodReturnCode(t, data) = fieldCode(s[1]);
+        nativeMethodDataReturnCode(t, data) = fieldCode(t, s[1]);
 
         set(t, methodCode(t, method), data);
         return data;
@@ -1907,28 +1997,6 @@ resolveNativeMethodData(Thread* t, object method)
   } else {
     return methodCode(t, method);
   }  
-}
-
-void
-bsiVM(Thread* t, object class_)
-{
-  // todo
-}
-
-object
-bootstrapInitializers(Thread* t)
-{
-  object map = makeHashMap(t, 0, 0);
-  PROTECT(t, map);
-  object key = 0;
-  PROTECT(t, key);
-  object value;
-
-  key = makeByteArray(t, "vm/VM");
-  value = makePointer(t, bsiVM);
-  hashMapInsert(t, map, key, value, hashByteArray);
-
-  return map;
 }
 
 object
@@ -3291,83 +3359,83 @@ run(Thread* t)
   default: abort(t);
   }
 
- invoke:
-  if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + sp - parameterCount
-               > Thread::StackSizeInWords))
-  {
-    exception = makeStackOverflowError(t);
-    goto throw_;      
-  }
-    
-  unsigned base = sp - parameterCount;
-
-  if (methodFlags(t, code) & ACC_NATIVE) {
-    object data = resolveNativeMethodData(t, code);
-    if (UNLIKELY(data == 0)) {
-      object message = makeString
-        (t, "%s.%s:%s",
-         &byteArrayBody(t, className(t, methodClass(t, code)), 0),
-         &byteArrayBody(t, methodName(t, code), 0),
-         &byteArrayBody(t, methodSpec(t, code), 0));
-      exception = makeUnsatifiedLinkError(t, message);
-      goto throw_;
+ invoke: {
+    if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + sp - parameterCount
+                 > Thread::StackSizeInWords))
+    {
+      exception = makeStackOverflowError(t);
+      goto throw_;      
     }
+    
+    unsigned base = sp - parameterCount;
 
-    uint32_t* args[nativeMethodDataArgumentTableSize(t, data)];
-    uint8_t sizes[parameterCount];
-    unsigned offset = 0;
-    for (unsigned i = 0; i < parameterCount; ++i) {
-      unsigned code = nativeMethodDataParameterCodes(t, data);
+    if (methodFlags(t, code) & ACC_NATIVE) {
+      object data = resolveNativeMethodData(t, code);
+      if (UNLIKELY(data == 0)) {
+        object message = makeString
+          (t, "%s.%s:%s",
+           &byteArrayBody(t, className(t, methodClass(t, code)), 0),
+           &byteArrayBody(t, methodName(t, code), 0),
+           &byteArrayBody(t, methodSpec(t, code), 0));
+        exception = makeUnsatisfiedLinkError(t, message);
+        goto throw_;
+      }
 
-      if (code == ObjectField) {
-        size[i] = 4;
-        args[offset++] = sp + i + 1;
-      } else {
-        size[i] = primitiveSize(code);
-        uint64_t v = primitiveValue(t, code, stack[sp + i]);
-        if (size[i] == 8) {
-          args[offset++] = v & 0xFFFFFFFF;
-          args[offset++] = v >> 32;
+      uint32_t args[nativeMethodDataArgumentTableSize(t, data)];
+      uint8_t sizes[parameterCount];
+      unsigned offset = 0;
+      for (unsigned i = 0; i < parameterCount; ++i) {
+        unsigned code = nativeMethodDataParameterCodes(t, data, i);
+
+        if (code == ObjectField) {
+          sizes[i] = 4;
+          args[offset++] = sp + i + 1;
         } else {
-          args[offset++] = v;
+          sizes[i] = primitiveSize(t, code);
+          uint64_t v = primitiveValue(t, code, stack[sp + i]);
+          if (sizes[i] == 8) {
+            args[offset++] = static_cast<uint32_t>(v & 0xFFFFFFFF);
+            args[offset++] = static_cast<uint32_t>(v >> 32);
+          } else {
+            args[offset++] = v;
+          }
         }
       }
-    }
 
-    unsigned returnCode = nativeMethodDataReturnCode(t, data);
-    unsigned returnSize
-      = (code == ObjectField ? 4 : primitiveSize(returnCode));
+      unsigned returnCode = nativeMethodDataReturnCode(t, data);
+      unsigned returnSize
+        = (returnCode == ObjectField ? 4 : primitiveSize(t, returnCode));
 
-    uint64_t rv = t->vm->system->call(nativeMethodDataPointer(t, data),
-                                      parameterCount,
-                                      args,
-                                      sizes,
-                                      returnSize);
+      uint64_t rv = t->vm->system->call(nativeMethodDataPointer(t, data),
+                                        parameterCount,
+                                        args,
+                                        sizes,
+                                        returnSize);
 
-    sp = base;
+      sp = base;
 
-    if (returnCode == ObjectField) {
-      push(t, (rv == 0 ? 0 : stack[rv - 1]));
+      if (returnCode == ObjectField) {
+        push(t, (rv == 0 ? 0 : stack[rv - 1]));
+      } else {
+        push(t, makePrimitive(t, returnCode, rv));
+      }
     } else {
-      push(t, makePrimitive(t, returnCode, rv));
+      frameIp(t, frame) = ip;
+      ip = 0;
+
+      frame = makeFrame(t, code, frame, 0, base,
+                        codeMaxLocals(t, methodCode(t, code)), false);
+      code = methodCode(t, code);
+
+      memcpy(&frameLocals(t, frame, 0), stack + base,
+             parameterCount * BytesPerWord);
+
+      memset(&frameLocals(t, frame, 0) + parameterCount, 0,
+             (frameLength(t, frame) - parameterCount) * BytesPerWord);
+
+      sp = base;
     }
-  } else {
-    frameIp(t, frame) = ip;
-    ip = 0;
-
-    frame = makeFrame(t, code, frame, 0, base,
-                      codeMaxLocals(t, methodCode(t, code)), false);
-    code = methodCode(t, code);
-
-    memcpy(&frameLocals(t, frame, 0), stack + base,
-           parameterCount * BytesPerWord);
-
-    memset(&frameLocals(t, frame, 0) + parameterCount, 0,
-           (frameLength(t, frame) - parameterCount) * BytesPerWord);
-
-    sp = base;
-  }
-  goto loop;
+  } goto loop;
 
  throw_:
   for (; frame; frame = frameNext(t, frame)) {
@@ -3394,26 +3462,28 @@ run(Thread* t)
     }
   }
 
-  if (t->thread) {
-    object method = threadExceptionHandler(t, t->thread);
-    code = methodCode(t, method);
-    frame = makeFrame(t, method, 0, 0, 0, codeMaxLocals(t, code), true);
-    sp = 0;
-    ip = 0;
-    push(t, exception);
-    exception = 0;
-    goto loop;
-  } else if (Debug) {
-    object p = 0;
-    object n = 0;
-    for (object trace = throwableTrace(t, exception); trace; trace = n) {
-      n = traceNext(t, trace);
-      set(t, traceNext(t, trace), p);
-      p = trace;
+  object p = 0;
+  object n = 0;
+  for (object trace = throwableTrace(t, exception); trace; trace = n) {
+    n = traceNext(t, trace);
+    set(t, traceNext(t, trace), p);
+    p = trace;
+  }
+
+  for (object e = exception; e; e = throwableCause(t, e)) {
+    if (e == exception) {
+      fprintf(stderr, "uncaught exception: ");
+    } else {
+      fprintf(stderr, "caused by: ");
     }
 
-    fprintf(stderr, "uncaught exception: %s\n", &byteArrayBody
-            (t, stringBytes(t, throwableMessage(t, exception)), 0));
+    fprintf(stderr, "%s", &byteArrayBody
+            (t, className(t, objectClass(exception)), 0));
+  
+    if (throwableMessage(t, exception)) {
+      fprintf(stderr, ": %s\n", &byteArrayBody
+              (t, stringBytes(t, throwableMessage(t, exception)), 0));
+    }
 
     for (; p; p = traceNext(t, p)) {
       fprintf(stderr, "  at %s\n", &byteArrayBody
@@ -3421,7 +3491,7 @@ run(Thread* t)
     }
   }
 
-  abort(t);
+  return 0;
 }
 
 void
