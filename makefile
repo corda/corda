@@ -2,7 +2,7 @@
 
 bld = build
 src = src
-inp = input
+classpath = classpath
 
 cxx = g++
 cc = gcc
@@ -22,7 +22,7 @@ thread-lflags = -lpthread
 
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
 	-I$(src) -I$(bld) $(thread-cflags)
-lflags = $(thread-lflags)
+lflags = $(thread-lflags) -ldl
 test-cflags = -DDEBUG_MEMORY
 stress-cflags = -DDEBUG_MEMORY -DDEBUG_MEMORY_MAJOR
 
@@ -31,6 +31,13 @@ cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
 stdcpp-sources = $(src)/stdc++.cpp
 stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
 stdcpp-cflags = $(fast) $(cflags)
+
+jni-sources = $(classpath)/java/lang/System.cpp
+jni-objects = $(call cpp-objects,$(jni-sources),$(classpath))
+jni-cflags = -I/usr/lib/jvm/java-6-sun-1.6.0.00/include \
+	-I/usr/lib/jvm/java-6-sun-1.6.0.00/include/linux \
+	$(cflags)
+jni-library = $(bld)/libnatives.so
 
 generated-code = \
 	$(bld)/type-enums.cpp \
@@ -75,11 +82,10 @@ fast-objects = $(patsubst $(bld)/%,$(bld)/fast-%,$(interpreter-objects))
 fast-executable = $(bld)/fast-vm
 fast-cflags = $(fast) $(cflags)
 
-input = $(bld)/classes/Test.class
+input = $(bld)/classes/Hello.class
 input-depends = \
-	$(bld)/classes/java/lang/Object.class \
-	$(bld)/classes/java/lang/Class.class \
-	$(bld)/classes/vm/VM.class
+	$(bld)/classes/java/lang/System.class \
+	$(jni-library)
 
 gen-run-arg = $(shell echo $(1) | sed -e 's:$(bld)/classes/\(.*\)\.class:\1:')
 args = -cp $(bld)/classes -hs 67108864 $(call gen-run-arg,$(input))
@@ -142,10 +148,11 @@ $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
 $(bld)/type-generator.o: \
 	$(generator-headers)
 
-$(bld)/classes/%.class: $(inp)/%.java
+$(bld)/classes/%.class: $(classpath)/%.java
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(javac) -bootclasspath $(inp) -classpath $(inp) -d $(bld)/classes $(<)
+	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
+		-d $(bld)/classes $(<)
 
 $(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
@@ -176,6 +183,15 @@ $(fast-objects): $(bld)/fast-%.o: $(src)/%.cpp $(interpreter-depends)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(fast-cflags) -c $(<) -o $(@)
+
+$(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(jni-cflags) -c $(<) -o $(@)	
+
+$(jni-library): $(jni-objects)
+	@echo "linking $(@)"
+	$(cc) $(lflags) -shared $(^) -o $(@)
 
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"

@@ -66,6 +66,8 @@ class System: public vm::System {
   }
 
   virtual void* tryAllocate(unsigned size) {
+    // todo: synchronize access
+
     if (Verbose) {
       fprintf(stderr, "try %d; count: %d; limit: %d\n",
               size, count, limit);
@@ -85,6 +87,8 @@ class System: public vm::System {
   }
 
   virtual void free(const void* p) {
+    // todo: synchronize access
+
     if (p) {
       const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
       if (count < *up) {
@@ -110,14 +114,19 @@ class System: public vm::System {
     return 0;
   }
 
-  virtual uint64_t call(void* function, unsigned argumentCount,
-                        uint32_t* argumentTable, uint8_t* argumentSizeTable,
-                        unsigned returnSize)
+  virtual uint64_t call(void* ,//function,
+                        unsigned ,//argumentCount,
+                        uint32_t* ,//argumentTable,
+                        uint8_t* ,//argumentSizeTable,
+                        unsigned )//returnSize)
   {
-    
+    ::abort();
   }
 
-  virtual Status load(Library** lib, const char* name, Library* next) {
+  virtual Status load(vm::System::Library** lib,
+                      const char* name,
+                      vm::System::Library* next)
+  {
     void* p = dlopen(name, RTLD_LAZY);
     if (p) {
       *lib = new (vm::System::allocate(sizeof(Library)))

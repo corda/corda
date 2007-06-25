@@ -4,6 +4,7 @@
 #include "class_finder.h"
 #include "stream.h"
 #include "constants.h"
+#include "jni.h"
 #include "vm.h"
 
 #define PROTECT(thread, name)                                   \
@@ -30,7 +31,6 @@ object& arrayBodyUnsafe(Thread*, object, unsigned);
 void set(Thread*, object&, object);
 object makeString(Thread*, const char*, ...);
 object makeByteArray(Thread*, const char*, ...);
-unsigned objectSize(Thread* t, object o);
 
 object&
 objectClass(object o)
@@ -152,10 +152,11 @@ class Thread {
   unsigned ip;
   unsigned sp;
   unsigned heapIndex;
-  object stack[StackSizeInWords];
-  object heap[HeapSizeInWords];
   Protector* protector;
   Chain* chain;
+  object stack[StackSizeInWords];
+  object heap[HeapSizeInWords];
+  JNIEnv jniEnv;
 };
 
 #include "type-declarations.cpp"
@@ -456,77 +457,6 @@ inline object&
 top(Thread* t)
 {
   return t->stack[t->sp - 1];
-}
-
-int32_t
-builtinToString(Thread* t, int32_t this_)
-{
-  object o = t->stack[this_ - 1];
-  object s = makeString(t, "%s@%p",
-                        &byteArrayBody(t, className(t, objectClass(o)), 0),
-                        o);
-  pushSafe(t, s);
-  return t->sp;
-}
-
-Thread::Thread(Machine* m):
-  vm(m),
-  next(0),
-  child(0),
-  state(NoState),
-  thread(0),
-  frame(0),
-  code(0),
-  exception(0),
-  ip(0),
-  sp(0),
-  heapIndex(0),
-  protector(0),
-  chain(0)
-{
-  if (m->rootThread == 0) {
-    m->rootThread = this;
-    m->unsafe = true;
-
-    Thread* t = this;
-
-#include "type-initializations.cpp"
-
-    object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
-    set(t, objectClass(t->vm->types), arrayClass);
-
-    object classClass = arrayBody(t, m->types, Machine::ClassType);
-    set(t, objectClass(classClass), classClass);
-
-    object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
-    set(t, objectClass(intArrayClass), classClass);
-
-    m->unsafe = false;
-
-    m->bootstrapClassMap = makeHashMap(this, 0, 0);
-
-#include "type-java-initializations.cpp"
-
-    m->classMap = makeHashMap(this, 0, 0);
-    m->builtinMap = makeHashMap(this, 0, 0);
-
-    struct {
-      const char* key;
-      void* value;
-    } builtins[] = {
-      { "Java_java_lang_Object_toString",
-        reinterpret_cast<void*>(builtinToString) },
-      { 0, 0 }
-    };
-
-    for (unsigned i = 0; builtins[i].key; ++i) {
-      object key = makeByteArray(t, builtins[i].key);
-      PROTECT(t, key);
-      object value = makePointer(t, builtins[i].value);
-
-      hashMapInsert(t, m->builtinMap, key, value, byteArrayHash);
-    }
-  }
 }
 
 void
@@ -864,6 +794,22 @@ make(Thread* t, object class_)
   return instance;
 }
 
+unsigned
+objectSize(Thread* t, object o)
+{
+  object class_ = objectClass(o);
+
+  unsigned n = divide(classFixedSize(t, class_), BytesPerWord);
+
+  if (classArrayElementSize(t, class_)) {
+    n += divide(classArrayElementSize(t, class_)
+                * cast<uint32_t>(o, classFixedSize(t, class_) - 4),
+                BytesPerWord);
+  }
+
+  return n;
+}
+
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
@@ -913,6 +859,14 @@ makeTrace(Thread* t)
     }
   }
   return trace;
+}
+
+object
+makeRuntimeException(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeClassCastException(t, message, trace, 0);
 }
 
 object
@@ -1891,7 +1845,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   enter(t, Thread::ExclusiveState);
 
-  memcpy(bootstrapClass, class_, objectSize(t, class_));
+  memcpy(bootstrapClass, class_, objectSize(t, class_) * BytesPerWord);
 
   enter(t, Thread::ActiveState);
 }
@@ -2013,12 +1967,12 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
                                      methodParameterCount(t, method),
                                      false);
         
-  unsigned argumentTableSize = sizeof(void*) / 4;
+  unsigned argumentTableSize = BytesPerWord / 4;
   unsigned index = 0;
 
   if ((methodFlags(t, method) & ACC_STATIC) == 0) {
     nativeMethodDataParameterCodes(t, data, index++) = ObjectField;
-    argumentTableSize += 1;    
+    argumentTableSize += BytesPerWord / 4;
   }
 
   const char* s = reinterpret_cast<const char*>
@@ -2030,13 +1984,13 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
 
     switch (*s) {
     case 'L':
-      argumentTableSize += 1;
+      argumentTableSize += BytesPerWord / 4;
       while (*s and *s != ';') ++ s;
       ++ s;
       break;
 
     case '[':
-      argumentTableSize += 1;
+      argumentTableSize += BytesPerWord / 4;
       while (*s == '[') ++ s;
       break;
       
@@ -2108,35 +2062,29 @@ invokeNative(Thread* t, object method)
   uint8_t sizes[parameterCount + 1];
   unsigned offset = 0;
 
-  switch (sizeof(uintptr_t)) {
-  case 4: {
-    sizes[0] = 4;
-    args[offset++] = reinterpret_cast<uintptr_t>(t);
-  } break;
-
-  case 8: {
-    sizes[0] = 8;
-    uint64_t v = reinterpret_cast<uint64_t>(t);
-    args[offset++] = static_cast<uint32_t>(v >> 32);
-    args[offset++] = static_cast<uint32_t>(v & 0xFFFFFFFF);
-  } break;
-    
-  default:
-    abort(t);
-  }
+  sizes[0] = BytesPerWord;
+  JNIEnv* e = &(t->jniEnv);
+  memcpy(args + offset, &e, BytesPerWord);
+  offset += BytesPerWord / 4;
 
   for (unsigned i = 0; i < parameterCount; ++i) {
     unsigned code = nativeMethodDataParameterCodes(t, data, i);
 
     if (code == ObjectField) {
-      sizes[i + 1] = 4;
-      args[offset++] = t->sp + i + 1;
+      sizes[i + 1] = BytesPerWord;
+      unsigned position = (t->sp - parameterCount) + i;
+      if (t->stack[position]) {
+        memcpy(args + offset, t->stack + position, BytesPerWord);
+      } else {
+        memset(args + offset, 0, BytesPerWord);
+      }
+      offset += BytesPerWord / 4;
     } else {
       sizes[i + 1] = primitiveSize(t, code);
       uint64_t v = primitiveValue(t, code, t->stack[t->sp + i]);
       if (sizes[i + 1] == 8) {
-        args[offset++] = static_cast<uint32_t>(v >> 32);
-        args[offset++] = static_cast<uint32_t>(v & 0xFFFFFFFF);
+        memcpy(args + offset, &v, 8);
+        offset += 2;
       } else {
         args[offset++] = v;
       }
@@ -2167,9 +2115,169 @@ invokeNative(Thread* t, object method)
   if (UNLIKELY(t->exception) or returnCode == VoidField) {
     return 0;
   } else if (returnCode == ObjectField) {
-    return (rv == 0 ? 0 : t->stack[rv - 1]);
+    return (rv == 0 ? 0 :
+            *reinterpret_cast<object*>(static_cast<uintptr_t>(rv)));
   } else {
     return makePrimitive(t, returnCode, rv);
+  }
+}
+
+void
+builtinLoadLibrary(JNIEnv* e, jstring nameString)
+{
+  Thread* t = static_cast<Thread*>(e->reserved0);
+
+  if (LIKELY(nameString)) {
+    object n = *nameString;
+    char name[stringLength(t, n) + 1];
+    memcpy(name,
+           &byteArrayBody(t, stringBytes(t, n), stringOffset(t, n)),
+           stringLength(t, n));
+    name[stringLength(t, n)] = 0;
+
+    System::Library* lib;
+    if (LIKELY(t->vm->system->success
+               (t->vm->system->load(&lib, name, t->vm->libraries))))
+    {
+      t->vm->libraries = lib;
+    } else {
+      object message = makeString(t, "library not found: %s", name);
+      t->exception = makeRuntimeException(t, message);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+}
+
+jstring
+builtinToString(JNIEnv* e, jobject this_)
+{
+  Thread* t = static_cast<Thread*>(e->reserved0);
+
+  object s = makeString
+    (t, "%s@%p",
+     &byteArrayBody(t, className(t, objectClass(*this_)), 0),
+     *this_);
+
+  pushSafe(t, s);
+  return t->stack + (t->sp - 1);
+}
+
+jsize
+GetStringUTFLength(JNIEnv* e, jstring s)
+{
+  Thread* t = static_cast<Thread*>(e->reserved0);
+  enter(t, Thread::ActiveState);
+
+  jsize length = 0;
+  if (LIKELY(s)) {
+    length = stringLength(t, *s);
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+
+  enter(t, Thread::IdleState);
+
+  return length;
+}
+
+const char*
+GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
+{
+  Thread* t = static_cast<Thread*>(e->reserved0);
+  enter(t, Thread::ActiveState);
+
+  char* chars = 0;
+  if (LIKELY(s)) {
+    chars = static_cast<char*>(t->vm->system->allocate(stringLength(t, *s)));
+
+    memcpy(chars,
+           &byteArrayBody(t, stringBytes(t, *s), stringOffset(t, *s)),
+           stringLength(t, *s));
+
+    chars[stringLength(t, *s)] = 0;
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+
+  enter(t, Thread::IdleState);
+
+  *isCopy = true;
+  return chars;
+}
+
+void
+ReleaseStringUTFChars(JNIEnv* e, jstring, const char* chars)
+{
+  Thread* t = static_cast<Thread*>(e->reserved0);
+  t->vm->system->free(chars);
+}
+
+Thread::Thread(Machine* m):
+  vm(m),
+  next(0),
+  child(0),
+  state(NoState),
+  thread(0),
+  frame(0),
+  code(0),
+  exception(0),
+  ip(0),
+  sp(0),
+  heapIndex(0),
+  protector(0),
+  chain(0)
+{
+  memset(&jniEnv, 0, sizeof(JNIEnv));
+  jniEnv.reserved0 = this;
+  jniEnv.GetStringUTFLength = GetStringUTFLength;
+  jniEnv.GetStringUTFChars = GetStringUTFChars;
+  jniEnv.ReleaseStringUTFChars = ReleaseStringUTFChars;
+
+  if (m->rootThread == 0) {
+    m->rootThread = this;
+    m->unsafe = true;
+
+    Thread* t = this;
+
+#include "type-initializations.cpp"
+
+    object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
+    set(t, objectClass(t->vm->types), arrayClass);
+
+    object classClass = arrayBody(t, m->types, Machine::ClassType);
+    set(t, objectClass(classClass), classClass);
+
+    object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
+    set(t, objectClass(intArrayClass), classClass);
+
+    m->unsafe = false;
+
+    m->bootstrapClassMap = makeHashMap(this, 0, 0);
+
+#include "type-java-initializations.cpp"
+
+    m->classMap = makeHashMap(this, 0, 0);
+    m->builtinMap = makeHashMap(this, 0, 0);
+
+    struct {
+      const char* key;
+      void* value;
+    } builtins[] = {
+      { "Java_java_lang_Object_toString",
+        reinterpret_cast<void*>(builtinToString) },
+      { "Java_java_lang_System_load",
+        reinterpret_cast<void*>(builtinLoadLibrary) },
+      { 0, 0 }
+    };
+
+    for (unsigned i = 0; builtins[i].key; ++i) {
+      object key = makeByteArray(t, builtins[i].key);
+      PROTECT(t, key);
+      object value = makePointer(t, builtins[i].value);
+
+      hashMapInsert(t, m->builtinMap, key, value, byteArrayHash);
+    }
   }
 }
 

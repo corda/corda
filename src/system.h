@@ -44,8 +44,8 @@ class System {
   virtual Status make(Monitor**) = 0;
   virtual uint64_t call(void* function, unsigned argumentCount,
                         uint32_t* argumentTable, uint8_t* argumentSizeTable,
-                        unsigned returnSize);
-  virtual Status load(Library**, const char* name, Library* next);
+                        unsigned returnSize) = 0;
+  virtual Status load(Library**, const char* name, Library* next) = 0;
   virtual void abort() = 0;
 
   void* allocate(unsigned size) {
