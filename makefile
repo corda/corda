@@ -50,7 +50,7 @@ interpreter-depends = \
 	$(src)/common.h \
 	$(src)/system.h \
 	$(src)/heap.h \
-	$(src)/class_finder.h \
+	$(src)/class-finder.h \
 	$(src)/stream.h \
 	$(src)/constants.h \
 	$(src)/vm.h

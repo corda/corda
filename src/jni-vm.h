@@ -1,5 +1,5 @@
-#ifndef JNI_H
-#define JNI_H
+#ifndef JNI_VM_H
+#define JNI_VM_H
 
 #include "stdint.h"
 #include "stdarg.h"
@@ -7,6 +7,8 @@
 #define JNIEXPORT 
 #define JNIIMPORT
 #define JNICALL
+
+namespace vm {
 
 typedef uint8_t jboolean;
 typedef int8_t jbyte;
@@ -58,7 +60,15 @@ struct JNINativeMethod {
   void* function;
 };
 
+struct JavaVMVTable;
+
 struct JavaVM {
+  JavaVM(JavaVMVTable* vtable): vtable(vtable) { }
+
+  JavaVMVTable* vtable;
+};
+
+struct JavaVMVTable {
   void* reserved0;
   void* reserved1;
   void* reserved2;
@@ -84,7 +94,15 @@ struct JavaVM {
   (JavaVM*, void**, void*);
 };
 
+struct JNIEnvVTable;
+
 struct JNIEnv {
+  JNIEnv(JNIEnvVTable* vtable): vtable(vtable) { }
+
+  JNIEnvVTable* vtable;
+};
+
+struct JNIEnvVTable {
   void* reserved0;
   void* reserved1;
   void* reserved2;
@@ -1007,4 +1025,6 @@ struct JNIEnv {
     (JNIEnv*, jobject);
 };
 
-#endif//JNI_H
+} // namespace vm
+
+#endif//JNI_VM_H

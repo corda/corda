@@ -196,7 +196,7 @@ enum OpCode {
   new_ = 0xbb,
   newarray = 0xbc,
   nop = 0x00,
-  pop = 0x57,
+  pop_ = 0x57,
   pop2 = 0x58,
   putfield = 0xb5,
   putstatic = 0xb3,

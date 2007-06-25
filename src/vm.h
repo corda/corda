@@ -3,7 +3,7 @@
 
 #include "system.h"
 #include "heap.h"
-#include "class_finder.h"
+#include "class-finder.h"
 
 namespace vm {
 

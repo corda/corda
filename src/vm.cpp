@@ -1,10 +1,10 @@
 #include "common.h"
 #include "system.h"
 #include "heap.h"
-#include "class_finder.h"
+#include "class-finder.h"
 #include "stream.h"
 #include "constants.h"
-#include "jni.h"
+#include "jni-vm.h"
 #include "vm.h"
 
 #define PROTECT(thread, name)                                   \
@@ -81,6 +81,7 @@ class Machine {
   object builtinMap;
   object types;
   bool unsafe;
+  JNIEnvVTable jniEnvVTable;
 };
 
 class Chain {
@@ -105,7 +106,7 @@ class Chain {
   Chain* next;
 };
 
-class Thread {
+class Thread : public JNIEnv {
  public:
   enum State {
     NoState,
@@ -156,7 +157,6 @@ class Thread {
   Chain* chain;
   object stack[StackSizeInWords];
   object heap[HeapSizeInWords];
-  JNIEnv jniEnv;
 };
 
 #include "type-declarations.cpp"
@@ -210,45 +210,6 @@ inline void
 expect(Thread* t, bool v)
 {
   expect(t->vm->system, v);
-}
-
-Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
-  system(system),
-  heap(heap),
-  classFinder(classFinder),
-  rootThread(0),
-  exclusive(0),
-  activeCount(0),
-  liveCount(0),
-  stateLock(0),
-  heapLock(0),
-  classLock(0),
-  libraries(0),
-  classMap(0),
-  bootstrapClassMap(0),
-  builtinMap(0),
-  types(0),
-  unsafe(false)
-{
-  if (not system->success(system->make(&stateLock)) or
-      not system->success(system->make(&heapLock)) or
-      not system->success(system->make(&classLock)))
-  {
-    system->abort();
-  }
-}
-
-void
-Machine::dispose()
-{
-  stateLock->dispose();
-  heapLock->dispose();
-  classLock->dispose();
-  libraries->dispose();
-  
-  if (rootThread) {
-    rootThread->dispose();
-  }
 }
 
 uint32_t
@@ -2063,8 +2024,7 @@ invokeNative(Thread* t, object method)
   unsigned offset = 0;
 
   sizes[0] = BytesPerWord;
-  JNIEnv* e = &(t->jniEnv);
-  memcpy(args + offset, &e, BytesPerWord);
+  memcpy(args + offset, &t, BytesPerWord);
   offset += BytesPerWord / 4;
 
   for (unsigned i = 0; i < parameterCount; ++i) {
@@ -2125,7 +2085,7 @@ invokeNative(Thread* t, object method)
 void
 builtinLoadLibrary(JNIEnv* e, jstring nameString)
 {
-  Thread* t = static_cast<Thread*>(e->reserved0);
+  Thread* t = static_cast<Thread*>(e);
 
   if (LIKELY(nameString)) {
     object n = *nameString;
@@ -2152,7 +2112,7 @@ builtinLoadLibrary(JNIEnv* e, jstring nameString)
 jstring
 builtinToString(JNIEnv* e, jobject this_)
 {
-  Thread* t = static_cast<Thread*>(e->reserved0);
+  Thread* t = static_cast<Thread*>(e);
 
   object s = makeString
     (t, "%s@%p",
@@ -2166,7 +2126,8 @@ builtinToString(JNIEnv* e, jobject this_)
 jsize
 GetStringUTFLength(JNIEnv* e, jstring s)
 {
-  Thread* t = static_cast<Thread*>(e->reserved0);
+  Thread* t = static_cast<Thread*>(e);
+
   enter(t, Thread::ActiveState);
 
   jsize length = 0;
@@ -2184,7 +2145,8 @@ GetStringUTFLength(JNIEnv* e, jstring s)
 const char*
 GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
 {
-  Thread* t = static_cast<Thread*>(e->reserved0);
+  Thread* t = static_cast<Thread*>(e);
+
   enter(t, Thread::ActiveState);
 
   char* chars = 0;
@@ -2209,11 +2171,56 @@ GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
 void
 ReleaseStringUTFChars(JNIEnv* e, jstring, const char* chars)
 {
-  Thread* t = static_cast<Thread*>(e->reserved0);
-  t->vm->system->free(chars);
+  static_cast<Thread*>(e)->vm->system->free(chars);
+}
+
+Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
+  system(system),
+  heap(heap),
+  classFinder(classFinder),
+  rootThread(0),
+  exclusive(0),
+  activeCount(0),
+  liveCount(0),
+  stateLock(0),
+  heapLock(0),
+  classLock(0),
+  libraries(0),
+  classMap(0),
+  bootstrapClassMap(0),
+  builtinMap(0),
+  types(0),
+  unsafe(false)
+{
+  memset(&jniEnvVTable, 0, sizeof(JNIEnvVTable));
+
+  jniEnvVTable.GetStringUTFLength = GetStringUTFLength;
+  jniEnvVTable.GetStringUTFChars = GetStringUTFChars;
+  jniEnvVTable.ReleaseStringUTFChars = ReleaseStringUTFChars;
+
+  if (not system->success(system->make(&stateLock)) or
+      not system->success(system->make(&heapLock)) or
+      not system->success(system->make(&classLock)))
+  {
+    system->abort();
+  }
+}
+
+void
+Machine::dispose()
+{
+  stateLock->dispose();
+  heapLock->dispose();
+  classLock->dispose();
+  libraries->dispose();
+  
+  if (rootThread) {
+    rootThread->dispose();
+  }
 }
 
 Thread::Thread(Machine* m):
+  JNIEnv(&(m->jniEnvVTable)),
   vm(m),
   next(0),
   child(0),
@@ -2228,12 +2235,6 @@ Thread::Thread(Machine* m):
   protector(0),
   chain(0)
 {
-  memset(&jniEnv, 0, sizeof(JNIEnv));
-  jniEnv.reserved0 = this;
-  jniEnv.GetStringUTFLength = GetStringUTFLength;
-  jniEnv.GetStringUTFChars = GetStringUTFChars;
-  jniEnv.ReleaseStringUTFChars = ReleaseStringUTFChars;
-
   if (m->rootThread == 0) {
     m->rootThread = this;
     m->unsafe = true;
@@ -3461,7 +3462,7 @@ run(Thread* t)
 
   case nop: goto loop;
 
-  case vm::pop: {
+  case pop_: {
     -- sp;
   } goto loop;
 

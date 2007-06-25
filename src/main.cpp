@@ -6,6 +6,7 @@
 #include "common.h"
 #include "system.h"
 #include "heap.h"
+#include "class-finder.h"
 #include "vm.h"
 
 using namespace vm;
