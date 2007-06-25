@@ -747,7 +747,7 @@ inline object
 make(Thread* t, object class_)
 {
   PROTECT(t, class_);
-  unsigned sizeInBytes = classFixedSize(t, class_);
+  unsigned sizeInBytes = pad(classFixedSize(t, class_));
   object instance = allocate(t, sizeInBytes);
   *static_cast<object*>(instance) = class_;
   memset(static_cast<object*>(instance) + sizeof(object), 0,
@@ -923,6 +923,8 @@ fieldCode(Thread* t, unsigned javaCode)
     return LongField;
   case 'S':
     return ShortField;
+  case 'V':
+    return VoidField;
   case 'Z':
     return BooleanField;
   case 'L':
@@ -987,18 +989,20 @@ unsigned
 primitiveSize(Thread* t, unsigned code)
 {
   switch (code) {
+  case VoidField:
+    return 0;
   case ByteField:
   case BooleanField:
     return 1;
   case CharField:
   case ShortField:
     return 2;
-  case DoubleField:
-  case LongField:
-    return 8;
   case FloatField:
   case IntField:
     return 4;
+  case DoubleField:
+  case LongField:
+    return 8;
 
   default: abort(t);
   }
@@ -1994,9 +1998,14 @@ resolveNativeMethodData(Thread* t, object method)
       }
     }
 
-    if (data) {
+    if (LIKELY(data)) {
       set(t, methodCode(t, method), data);
+    } else {
+      object message = makeString
+        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
+      t->exception = makeUnsatisfiedLinkError(t, message);
     }
+
     return data;
   } else {
     return methodCode(t, method);
@@ -2007,13 +2016,7 @@ inline object
 invokeNative(Thread* t, object method)
 {
   object data = resolveNativeMethodData(t, method);
-  if (UNLIKELY(data == 0)) {
-    object message = makeString
-      (t, "%s.%s:%s",
-       &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-       &byteArrayBody(t, methodName(t, method), 0),
-       &byteArrayBody(t, methodSpec(t, method), 0));
-    t->exception = makeUnsatisfiedLinkError(t, message);
+  if (UNLIKELY(t->exception)) {
     return 0;
   }
 
@@ -2212,7 +2215,9 @@ Machine::dispose()
   stateLock->dispose();
   heapLock->dispose();
   classLock->dispose();
-  libraries->dispose();
+  if (libraries) {
+    libraries->dispose();
+  }
   
   if (rootThread) {
     rootThread->dispose();
@@ -2267,7 +2272,7 @@ Thread::Thread(Machine* m):
     } builtins[] = {
       { "Java_java_lang_Object_toString",
         reinterpret_cast<void*>(builtinToString) },
-      { "Java_java_lang_System_load",
+      { "Java_java_lang_System_loadLibrary",
         reinterpret_cast<void*>(builtinLoadLibrary) },
       { 0, 0 }
     };
@@ -3640,13 +3645,6 @@ run(Thread* t)
     unsigned parameterCount = methodParameterCount(t, code);
     unsigned base = sp - parameterCount;
 
-    if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + base
-                 > Thread::StackSizeInWords))
-    {
-      exception = makeStackOverflowError(t);
-      goto throw_;      
-    }
-
     if (methodFlags(t, code) & ACC_NATIVE) {
       object r = invokeNative(t, code);
 
@@ -3659,6 +3657,13 @@ run(Thread* t)
         push(t, r);
       }
     } else {
+      if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + base
+                   > Thread::StackSizeInWords))
+      {
+        exception = makeStackOverflowError(t);
+        goto throw_;      
+      }
+
       frameIp(t, frame) = ip;
       ip = 0;
 
@@ -3666,11 +3671,15 @@ run(Thread* t)
                         codeMaxLocals(t, methodCode(t, code)), false);
       code = methodCode(t, code);
 
-      memcpy(&frameLocals(t, frame, 0), stack + base,
-             parameterCount * BytesPerWord);
+      if (parameterCount) {
+        memcpy(&frameLocals(t, frame, 0), stack + base,
+               parameterCount * BytesPerWord);
+      }
 
-      memset(&frameLocals(t, frame, 0) + parameterCount, 0,
-             (frameLength(t, frame) - parameterCount) * BytesPerWord);
+      if (frameLength(t, frame) - parameterCount) {
+        memset(&frameLocals(t, frame, 0) + parameterCount, 0,
+               (frameLength(t, frame) - parameterCount) * BytesPerWord);
+      }
 
       sp = base;
     }
@@ -3725,7 +3734,10 @@ run(Thread* t)
     }
 
     for (; p; p = traceNext(t, p)) {
-      fprintf(stderr, "  at %s\n", &byteArrayBody
+      fprintf(stderr, "  at %s:%s\n",
+              &byteArrayBody
+              (t, className(t, methodClass(t, traceMethod(t, p))), 0),
+              &byteArrayBody
               (t, methodName(t, traceMethod(t, p)), 0));
     }
   }
