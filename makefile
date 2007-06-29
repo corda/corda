@@ -35,7 +35,7 @@ test-cflags = -DDEBUG_MEMORY
 stress-cflags = -DDEBUG_MEMORY -DDEBUG_MEMORY_MAJOR
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
-assembly-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))
+asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))
 
 stdcpp-sources = $(src)/stdc++.cpp
 stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
@@ -68,19 +68,19 @@ interpreter-sources = \
 	$(src)/main.cpp
 
 ifeq ($(arch),i386)
-	interpreter-assembly-sources = $(src)/cdecl.S
+	interpreter-asm-sources = $(src)/cdecl.S
 endif
 ifeq ($(arch),x86_64)
-	interpreter-assembly-sources = $(src)/amd64.S
+	interpreter-asm-sources = $(src)/amd64.S
 endif
 
 interpreter-cpp-objects = \
 	$(call cpp-objects,$(interpreter-sources),$(src))
-interpreter-assembly-objects = \
-	$(call assembly-objects,$(interpreter-assembly-sources),$(src))
+interpreter-asm-objects = \
+	$(call asm-objects,$(interpreter-asm-sources),$(src))
 interpreter-objects = \
 	$(interpreter-cpp-objects) \
-	$(interpreter-assembly-objects)
+	$(interpreter-asm-objects)
 interpreter-cflags = $(slow) $(cflags)
 
 generator-headers = \
@@ -94,13 +94,31 @@ generator-cflags = $(slow) $(cflags)
 
 executable = $(bld)/vm
 
-test-objects = $(patsubst $(bld)/%,$(bld)/test-%,$(interpreter-objects))
+test-cpp-objects = \
+	$(patsubst $(bld)/%,$(bld)/test-%,$(interpreter-cpp-objects))
+test-asm-objects = \
+	$(patsubst $(bld)/%,$(bld)/test-%,$(interpreter-asm-objects))
+test-objects = \
+	$(test-cpp-objects) \
+	$(test-asm-objects)
 test-executable = $(bld)/test-vm
 
-stress-objects = $(patsubst $(bld)/%,$(bld)/stress-%,$(interpreter-objects))
+stress-cpp-objects = \
+	$(patsubst $(bld)/%,$(bld)/stress-%,$(interpreter-cpp-objects))
+stress-asm-objects = \
+	$(patsubst $(bld)/%,$(bld)/stress-%,$(interpreter-asm-objects))
+stress-objects = \
+	$(stress-cpp-objects) \
+	$(stress-asm-objects)
 stress-executable = $(bld)/stress-vm
 
-fast-objects = $(patsubst $(bld)/%,$(bld)/fast-%,$(interpreter-objects))
+fast-cpp-objects = \
+	$(patsubst $(bld)/%,$(bld)/fast-%,$(interpreter-cpp-objects))
+fast-asm-objects = \
+	$(patsubst $(bld)/%,$(bld)/fast-%,$(interpreter-asm-objects))
+fast-objects = \
+	$(fast-cpp-objects) \
+	$(fast-asm-objects)
 fast-executable = $(bld)/fast-vm
 fast-cflags = $(fast) $(cflags)
 
@@ -186,17 +204,27 @@ $(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) -c $(<) -o $(@)
 
-$(interpreter-assembly-objects): $(bld)/%.o: $(src)/%.S
+$(interpreter-asm-objects): $(bld)/%.o: $(src)/%.S
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) -c $(<) -o $(@)
 
-$(test-objects): $(bld)/test-%.o: $(src)/%.cpp $(interpreter-depends)
+$(test-cpp-objects): $(bld)/test-%.o: $(src)/%.cpp $(interpreter-depends)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) $(test-cflags) -c $(<) -o $(@)
 
-$(stress-objects): $(bld)/stress-%.o: $(src)/%.cpp $(interpreter-depends)
+$(test-asm-objects): $(bld)/test-%.o: $(src)/%.S
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(interpreter-cflags) $(test-cflags) -c $(<) -o $(@)
+
+$(stress-cpp-objects): $(bld)/stress-%.o: $(src)/%.cpp $(interpreter-depends)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(interpreter-cflags) $(stress-cflags) -c $(<) -o $(@)
+
+$(stress-asm-objects): $(bld)/stress-%.o: $(src)/%.S
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) $(stress-cflags) -c $(<) -o $(@)
@@ -206,7 +234,12 @@ $(generator-objects): $(bld)/%.o: $(src)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(generator-cflags) -c $(<) -o $(@)
 
-$(fast-objects): $(bld)/fast-%.o: $(src)/%.cpp $(interpreter-depends)
+$(fast-cpp-objects): $(bld)/fast-%.o: $(src)/%.cpp $(interpreter-depends)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(fast-cflags) -c $(<) -o $(@)
+
+$(fast-asm-objects): $(bld)/fast-%.o: $(src)/%.S
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(fast-cflags) -c $(<) -o $(@)
