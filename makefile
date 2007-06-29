@@ -1,16 +1,17 @@
 #MAKEFLAGS = -s
 
-bld = build
+# arch = $(shell uname -m)
+# ifeq ($(arch),i586)
+# 	arch = i386
+# endif
+# ifeq ($(arch),i686)
+# 	arch = i386
+# endif
+arch = i386
+
+bld = build/$(arch)
 src = src
 classpath = classpath
-
-arch = $(shell uname -m)
-ifeq ($(arch),i586)
-	arch = i386
-endif
-ifeq ($(arch),i686)
-	arch = i386
-endif
 
 cxx = g++
 cc = gcc
@@ -43,9 +44,8 @@ stdcpp-cflags = $(fast) $(cflags)
 
 jni-sources = $(classpath)/java/lang/System.cpp
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath))
-jni-cflags = -I/usr/lib/jvm/java-6-sun-1.6.0.00/include \
-	-I/usr/lib/jvm/java-6-sun-1.6.0.00/include/linux \
-	$(cflags)
+jni-cflags = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux \
+	$(slow) $(cflags)
 jni-library = $(bld)/libnatives.so
 
 generated-code = \
@@ -160,8 +160,8 @@ stress-all: $(stress-executable)
 
 .PHONY: clean
 clean:
-	@echo "removing $(bld)"
-	rm -rf $(bld)
+	@echo "removing build"
+	rm -rf build
 
 gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator-executable)

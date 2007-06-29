@@ -12,6 +12,7 @@
 using namespace vm;
 
 #ifdef __i386__
+#define LD "%d"
 
 extern "C" uint64_t
 cdeclCall(void* function, void* stack, unsigned stackSize,
@@ -29,6 +30,7 @@ dynamicCall(void* function, uint32_t* arguments, uint8_t*,
 } // namespace
 
 #elif defined __x86_64__
+#define LD "%ld"
 
 extern "C" uint64_t
 amd64Call(void* function, void* stack, unsigned stackSize,
@@ -83,6 +85,22 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
 #endif
 
 namespace {
+
+const char*
+append(vm::System* s, const char* a, const char* b, const char* c,
+       const char* d)
+{
+  unsigned al = strlen(a);
+  unsigned bl = strlen(b);
+  unsigned cl = strlen(c);
+  unsigned dl = strlen(d);
+  char* p = static_cast<char*>(s->allocate(al + bl + cl + dl + 1));
+  memcpy(p, a, al);
+  memcpy(p + al, b, bl);
+  memcpy(p + al + bl, c, cl);
+  memcpy(p + al + bl + cl, d, dl + 1);
+  return p;
+}
 
 const bool Verbose = false;
 
@@ -169,7 +187,7 @@ class System: public vm::System {
       count -= *up;
 
       if (Verbose) {
-        fprintf(stderr, "free %d; count: %d; limit: %d\n",
+        fprintf(stderr, "free " LD "; count: %d; limit: %d\n",
                 *up, count, limit);
       }
 
@@ -196,7 +214,11 @@ class System: public vm::System {
                       const char* name,
                       vm::System::Library* next)
   {
-    void* p = dlopen(name, RTLD_LAZY);
+    unsigned size = strlen(name) + 7;
+    char buffer[size];
+    snprintf(buffer, size, "lib%s.so", name);
+ 
+    void* p = dlopen(buffer, RTLD_LAZY);
     if (p) {
       *lib = new (vm::System::allocate(sizeof(Library)))
         Library(this, p, next);
@@ -213,22 +235,6 @@ class System: public vm::System {
   unsigned limit;
   unsigned count;
 };
-
-const char*
-append(vm::System* s, const char* a, const char* b, const char* c,
-       const char* d)
-{
-  unsigned al = strlen(a);
-  unsigned bl = strlen(b);
-  unsigned cl = strlen(c);
-  unsigned dl = strlen(d);
-  char* p = static_cast<char*>(s->allocate(al + bl + cl + dl + 1));
-  memcpy(p, a, al);
-  memcpy(p + al, b, bl);
-  memcpy(p + al + bl, c, cl);
-  memcpy(p + al + bl + cl, d, dl + 1);
-  return p;
-}
 
 class ClassFinder: public vm::ClassFinder {
  public:

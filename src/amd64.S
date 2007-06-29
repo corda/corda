@@ -52,8 +52,8 @@ test:
    movq   24(%rbp),%rax
    movq   0(%rax),%rdi
    movq   8(%rax),%rsi
-   movq   16(%rax),%rcx
-   movq   24(%rax),%rdx
+   movq   16(%rax),%rdx
+   movq   24(%rax),%rcx
    movq   32(%rax),%r8
    movq   40(%rax),%r9
 

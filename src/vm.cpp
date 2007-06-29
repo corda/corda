@@ -1574,23 +1574,118 @@ parameterCount(Thread* t, object spec)
   return count;
 }
 
-object
-makeJNIName(Thread* t, object method, bool /*decorate*/)
+unsigned
+mangledSize(int8_t c)
 {
-  object name = makeByteArray
-    (t, "Java_%s_%s",
-     &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-     &byteArrayBody(t, methodName(t, method), 0));
+  switch (c) {
+  case '_':
+  case ';':
+  case '[':
+    return 2;
 
-  for (unsigned i = 0; i < byteArrayLength(t, name) - 1; ++i) {
-    switch (byteArrayBody(t, name, i)) {
-    case '/':
-      byteArrayBody(t, name, i) = '_';
-      break;
+  case '$':
+    return 6;
+
+  default:
+    return 1;
+  }
+}
+
+unsigned
+mangle(int8_t c, int8_t* dst)
+{
+  switch (c) {
+  case '/':
+    dst[0] = '_';
+    return 1;
+
+  case '_':
+    dst[0] = '_';
+    dst[1] = '1';
+    return 2;
+
+  case ';':
+    dst[0] = '_';
+    dst[1] = '2';
+    return 2;
+
+  case '[':
+    dst[0] = '_';
+    dst[1] = '3';
+    return 2;
+
+  case '$':
+    memcpy(dst, "_00024", 6);
+    return 6;
+
+  default:
+    dst[0] = c;    
+    return 1;
+  }
+}
+
+object
+makeJNIName(Thread* t, object method, bool decorate)
+{
+  unsigned size = 5;
+  object className = ::className(t, methodClass(t, method));
+  PROTECT(t, className);
+  for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
+    size += mangledSize(byteArrayBody(t, className, i));
+  }
+
+  ++ size;
+
+  object methodName = ::methodName(t, method);
+  PROTECT(t, methodName);
+  for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
+    size += mangledSize(byteArrayBody(t, methodName, i));
+  }
+
+  object methodSpec = ::methodSpec(t, method);
+  PROTECT(t, methodSpec);
+  if (decorate) {
+    size += 2;
+    for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
+           and byteArrayBody(t, methodSpec, i) != ')'; ++i)
+    {
+      size += mangledSize(byteArrayBody(t, methodSpec, i));
     }
   }
 
-  // todo: decorate and translate as needed
+  object name = makeByteArray(t, size + 1, false);
+  unsigned index = 0;
+
+  memcpy(&byteArrayBody(t, name, index), "Java_", 5);
+  index += 5;
+
+  for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
+    index += mangle(byteArrayBody(t, className, i),
+                    &byteArrayBody(t, name, index));
+  }
+
+  byteArrayBody(t, name, index++) = '_';
+
+  for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
+    index += mangle(byteArrayBody(t, methodName, i),
+                    &byteArrayBody(t, name, index));
+  }
+  
+  if (decorate) {
+    byteArrayBody(t, name, index++) = '_';
+    byteArrayBody(t, name, index++) = '_';
+    for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
+           and byteArrayBody(t, methodSpec, i) != ')'; ++i)
+    {
+      index += mangle(byteArrayBody(t, className, i),
+                      &byteArrayBody(t, name, index));
+    }
+  }
+
+  byteArrayBody(t, name, index++) = 0;
+
+  assert(t, index == size + 1);
+
   return name;
 }
 
