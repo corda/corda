@@ -120,11 +120,11 @@ $(input): $(input-depends)
 
 .PHONY: run
 run: $(executable) $(input)
-	$(<) $(args)
+	LD_LIBRARY_PATH=$(bld) $(<) $(args)
 
 .PHONY: debug
 debug: $(executable) $(input)
-	gdb --args $(<) $(args)
+	LD_LIBRARY_PATH=$(bld) gdb --args $(<) $(args)
 
 .PHONY: fast
 fast: $(fast-executable)
@@ -132,15 +132,15 @@ fast: $(fast-executable)
 
 .PHONY: vg
 vg: $(executable) $(input)
-	$(vg) $(<) $(args)
+	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
 
 .PHONY: test
 test: $(test-executable) $(input)
-	$(vg) $(<) $(args)
+	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
 
 .PHONY: stress
 stress: $(stress-executable) $(input)
-	$(vg) $(<) $(args)
+	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
 
 .PHONY: run-all
 run-all: $(executable)
