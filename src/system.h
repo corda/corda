@@ -42,9 +42,9 @@ class System {
   virtual void free(const void*) = 0;
   virtual Status start(Thread*) = 0;
   virtual Status make(Monitor**) = 0;
-  virtual uint64_t call(void* function, unsigned argumentCount,
-                        uint32_t* argumentTable, uint8_t* argumentSizeTable,
-                        unsigned returnSize) = 0;
+  virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
+                        unsigned count, unsigned size,
+                        unsigned returnType) = 0;
   virtual Status load(Library**, const char* name, Library* next) = 0;
   virtual void abort() = 0;
 

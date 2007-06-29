@@ -6,6 +6,7 @@
 #include "stdarg.h"
 #include "string.h"
 #include "stdio.h"
+#include "types.h"
 
 #define NO_RETURN __attribute__((noreturn))
 

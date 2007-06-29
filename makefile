@@ -4,6 +4,14 @@ bld = build
 src = src
 classpath = classpath
 
+arch = $(shell uname -m)
+ifeq ($(arch),i586)
+	arch = i386
+endif
+ifeq ($(arch),i686)
+	arch = i386
+endif
+
 cxx = g++
 cc = gcc
 vg = nice valgrind --leak-check=full --num-callers=32 --db-attach=yes \
@@ -27,6 +35,7 @@ test-cflags = -DDEBUG_MEMORY
 stress-cflags = -DDEBUG_MEMORY -DDEBUG_MEMORY_MAJOR
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
+assembly-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))
 
 stdcpp-sources = $(src)/stdc++.cpp
 stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
@@ -58,7 +67,21 @@ interpreter-sources = \
 	$(src)/vm.cpp \
 	$(src)/heap.cpp \
 	$(src)/main.cpp
-interpreter-objects = $(call cpp-objects,$(interpreter-sources),$(src))
+
+ifeq ($(arch),i386)
+	interpreter-assembly-sources = $(src)/cdecl.S
+endif
+ifeq ($(arch),x86_64)
+	interpreter-assembly-sources = $(src)/amd64.S
+endif
+
+interpreter-cpp-objects = \
+	$(call cpp-objects,$(interpreter-sources),$(src))
+interpreter-assembly-objects = \
+	$(call assembly-objects,$(interpreter-assembly-sources),$(src))
+interpreter-objects = \
+	$(interpreter-cpp-objects) \
+	$(interpreter-assembly-objects)
 interpreter-cflags = $(slow) $(cflags)
 
 generator-headers = \
@@ -138,7 +161,7 @@ stress-all: $(stress-executable)
 .PHONY: clean
 clean:
 	@echo "removing $(bld)"
-	rm -r $(bld)
+	rm -rf $(bld)
 
 gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
@@ -159,7 +182,12 @@ $(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(stdcpp-cflags) -c $(<) -o $(@)
 
-$(interpreter-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
+$(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(interpreter-cflags) -c $(<) -o $(@)
+
+$(interpreter-assembly-objects): $(bld)/%.o: $(src)/%.S
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(interpreter-cflags) -c $(<) -o $(@)

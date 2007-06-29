@@ -17,7 +17,8 @@ using namespace vm;
 
 namespace {
 
-static const bool Debug = true;
+static const bool Verbose = false;
+static const bool Debug = false;
 
 class Thread;
 
@@ -827,7 +828,7 @@ makeRuntimeException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeClassCastException(t, message, trace, 0);
+  return makeRuntimeException(t, message, trace, 0);
 }
 
 object
@@ -930,6 +931,33 @@ fieldCode(Thread* t, unsigned javaCode)
   case 'L':
   case '[':
     return ObjectField;
+
+  default: abort(t);
+  }
+}
+
+unsigned
+fieldType(Thread* t, unsigned code)
+{
+  switch (code) {
+  case VoidField:
+    return VOID_TYPE;
+  case ByteField:
+  case BooleanField:
+    return INT8_TYPE;
+  case CharField:
+  case ShortField:
+    return INT16_TYPE;
+  case DoubleField:
+    return DOUBLE_TYPE;
+  case FloatField:
+    return FLOAT_TYPE;
+  case IntField:
+    return INT32_TYPE;
+  case LongField:
+    return INT64_TYPE;
+  case ObjectField:
+    return POINTER_TYPE;
 
   default: abort(t);
   }
@@ -1828,15 +1856,19 @@ resolveClass(Thread* t, object spec)
       (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
 
     if (data) {
-      fprintf(stderr, "parsing %s\n", &byteArrayBody
-              (t, spec, 0));
+      if (Verbose) {
+        fprintf(stderr, "parsing %s\n", &byteArrayBody
+                (t, spec, 0));
+      }
 
       // parse class file
       class_ = parseClass(t, data->start(), data->length());
       data->dispose();
 
-      fprintf(stderr, "done parsing %s\n", &byteArrayBody
-              (t, className(t, class_), 0));
+      if (Verbose) {
+        fprintf(stderr, "done parsing %s\n", &byteArrayBody
+                (t, className(t, class_), 0));
+      }
 
       PROTECT(t, class_);
 
@@ -1929,15 +1961,17 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
                                      0, // argument table size
                                      0, // return code,
                                      builtin,
-                                     methodParameterCount(t, method),
+                                     methodParameterCount(t, method) + 1,
                                      false);
         
-  unsigned argumentTableSize = BytesPerWord / 4;
+  unsigned argumentTableSize = BytesPerWord;
   unsigned index = 0;
 
+  nativeMethodDataParameterTypes(t, data, index++) = POINTER_TYPE;
+
   if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-    nativeMethodDataParameterCodes(t, data, index++) = ObjectField;
-    argumentTableSize += BytesPerWord / 4;
+    nativeMethodDataParameterTypes(t, data, index++) = POINTER_TYPE;
+    argumentTableSize += BytesPerWord;
   }
 
   const char* s = reinterpret_cast<const char*>
@@ -1945,22 +1979,22 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
   ++ s; // skip '('
   while (*s and *s != ')') {
     unsigned code = fieldCode(t, *s);
-    nativeMethodDataParameterCodes(t, data, index++) = code;
+    nativeMethodDataParameterTypes(t, data, index++) = fieldType(t, code);
 
     switch (*s) {
     case 'L':
-      argumentTableSize += BytesPerWord / 4;
+      argumentTableSize += BytesPerWord;
       while (*s and *s != ';') ++ s;
       ++ s;
       break;
 
     case '[':
-      argumentTableSize += BytesPerWord / 4;
+      argumentTableSize += BytesPerWord;
       while (*s == '[') ++ s;
       break;
       
     default:
-      argumentTableSize += divide(primitiveSize(t, code), 4);
+      argumentTableSize += pad(primitiveSize(t, code));
       ++ s;
       break;
     }
@@ -2020,44 +2054,50 @@ invokeNative(Thread* t, object method)
     return 0;
   }
 
-  unsigned parameterCount = methodParameterCount(t, method);
+  unsigned count = methodParameterCount(t, method);
 
-  uint32_t args[nativeMethodDataArgumentTableSize(t, data)];
-  uint8_t sizes[parameterCount + 1];
+  unsigned size = nativeMethodDataArgumentTableSize(t, data);
+  uintptr_t args[size / BytesPerWord];
   unsigned offset = 0;
 
-  sizes[0] = BytesPerWord;
-  memcpy(args + offset, &t, BytesPerWord);
-  offset += BytesPerWord / 4;
+  args[offset++] = reinterpret_cast<uintptr_t>(t);
 
-  for (unsigned i = 0; i < parameterCount; ++i) {
-    unsigned code = nativeMethodDataParameterCodes(t, data, i);
+  for (unsigned i = 0; i < count; ++i) {
+    unsigned type = nativeMethodDataParameterTypes(t, data, i);
+    unsigned position = (t->sp - count) + i;
+    object o = t->stack[position];
 
-    if (code == ObjectField) {
-      sizes[i + 1] = BytesPerWord;
-      unsigned position = (t->sp - parameterCount) + i;
-      if (t->stack[position]) {
-        memcpy(args + offset, t->stack + position, BytesPerWord);
-      } else {
-        memset(args + offset, 0, BytesPerWord);
-      }
-      offset += BytesPerWord / 4;
-    } else {
-      sizes[i + 1] = primitiveSize(t, code);
-      uint64_t v = primitiveValue(t, code, t->stack[t->sp + i]);
-      if (sizes[i + 1] == 8) {
-        memcpy(args + offset, &v, 8);
-        offset += 2;
-      } else {
-        args[offset++] = v;
-      }
+    switch (type) {
+    case INT8_TYPE:
+      args[offset++] = cast<uint8_t>(o, BytesPerWord);
+      break;
+
+    case INT16_TYPE:
+      args[offset++] = cast<uint16_t>(o, BytesPerWord);
+      break;
+
+    case INT32_TYPE:
+    case FLOAT_TYPE:
+      args[offset++] = cast<uint32_t>(o, BytesPerWord);
+      break;
+
+    case INT64_TYPE:
+    case DOUBLE_TYPE: {
+      uint64_t v = cast<uint64_t>(o, BytesPerWord);
+      memcpy(args + offset, &v, 8);
+      offset += (8 / BytesPerWord);
+    } break;
+
+    case POINTER_TYPE:
+      args[offset++] = reinterpret_cast<uintptr_t>(t->stack + position);
+      break;
+
+    default: abort(t);
     }
   }
 
   unsigned returnCode = nativeMethodDataReturnCode(t, data);
-  unsigned returnSize
-    = (returnCode == ObjectField ? 4 : primitiveSize(t, returnCode));
-
+  unsigned returnType = fieldType(t, returnCode);
   void* function = nativeMethodDataFunction(t, data);
 
   bool builtin = nativeMethodDataBuiltin(t, data);
@@ -2065,11 +2105,13 @@ invokeNative(Thread* t, object method)
     enter(t, Thread::IdleState);
   }
 
-  uint64_t rv = t->vm->system->call(function,
-                                    parameterCount,
-                                    args,
-                                    sizes,
-                                    returnSize);
+  uint64_t rv = t->vm->system->call
+    (function,
+     args,
+     &nativeMethodDataParameterTypes(t, data, 0),
+     count + 1,
+     size,
+     returnType);
 
   if (not builtin) {
     enter(t, Thread::ActiveState);
@@ -3656,6 +3698,8 @@ run(Thread* t)
       if (nativeMethodDataReturnCode(t, methodCode(t, code)) != VoidField) {
         push(t, r);
       }
+
+      code = methodCode(t, frameMethod(t, frame));
     } else {
       if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + base
                    > Thread::StackSizeInWords))
@@ -3734,7 +3778,7 @@ run(Thread* t)
     }
 
     for (; p; p = traceNext(t, p)) {
-      fprintf(stderr, "  at %s:%s\n",
+      fprintf(stderr, "  at %s.%s\n",
               &byteArrayBody
               (t, className(t, methodClass(t, traceMethod(t, p))), 0),
               &byteArrayBody

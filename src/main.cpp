@@ -11,6 +11,77 @@
 
 using namespace vm;
 
+#ifdef __i386__
+
+extern "C" uint64_t
+cdeclCall(void* function, void* stack, unsigned stackSize,
+          unsigned returnType);
+
+namespace {
+
+inline uint64_t
+dynamicCall(void* function, uint32_t* arguments, uint8_t*,
+            unsigned, unsigned argumentsSize, unsigned returnType)
+{
+  return cdeclCall(function, arguments, argumentsSize, returnType);
+}
+
+} // namespace
+
+#elif defined __x86_64__
+
+extern "C" uint64_t
+amd64Call(void* function, void* stack, unsigned stackSize,
+          void* gprTable, void* sseTable, unsigned returnType);
+
+namespace {
+
+uint64_t
+dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
+            unsigned argumentCount, unsigned, unsigned returnType)
+{
+  const unsigned GprCount = 6;
+  uint64_t gprTable[GprCount];
+  unsigned gprIndex = 0;
+
+  const unsigned SseCount = 8;
+  uint64_t sseTable[SseCount];
+  unsigned sseIndex = 0;
+
+  uint64_t stack[argumentCount];
+  unsigned stackIndex = 0;
+
+  for (unsigned i = 0; i < argumentCount; ++i) {
+    switch (argumentTypes[i]) {
+    case FLOAT_TYPE:
+    case DOUBLE_TYPE: {
+      if (sseIndex < SseCount) {
+        sseTable[sseIndex++] = arguments[i];
+      } else {
+        stack[stackIndex++] = arguments[i];
+      }
+    } break;
+
+    default: {
+      if (gprIndex < GprCount) {
+        gprTable[gprIndex++] = arguments[i];
+      } else {
+        stack[stackIndex++] = arguments[i];
+      }
+    } break;
+    }
+  }
+
+  return amd64Call(function, stack, stackIndex * 8, (gprIndex ? gprTable : 0),
+                   (sseIndex ? sseTable : 0), returnType);
+}
+
+} // namespace
+
+#else
+#  error unsupported platform
+#endif
+
 namespace {
 
 const bool Verbose = false;
@@ -115,13 +186,10 @@ class System: public vm::System {
     return 0;
   }
 
-  virtual uint64_t call(void* ,//function,
-                        unsigned ,//argumentCount,
-                        uint32_t* ,//argumentTable,
-                        uint8_t* ,//argumentSizeTable,
-                        unsigned )//returnSize)
+  virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
+                        unsigned count, unsigned size, unsigned returnType)
   {
-    ::abort();
+    return dynamicCall(function, arguments, types, count, size, returnType);
   }
 
   virtual Status load(vm::System::Library** lib,

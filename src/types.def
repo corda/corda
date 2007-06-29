@@ -37,7 +37,7 @@
   (uint16_t argumentTableSize)
   (uint8_t returnCode)
   (uint8_t builtin)
-  (array uint8_t parameterCodes))
+  (array uint8_t parameterTypes))
 
 (type pointer
   (void* value))
