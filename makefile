@@ -1,13 +1,12 @@
 #MAKEFLAGS = -s
 
-# arch = $(shell uname -m)
-# ifeq ($(arch),i586)
-# 	arch = i386
-# endif
-# ifeq ($(arch),i686)
-# 	arch = i386
-# endif
-arch = i386
+arch = $(shell uname -m)
+ifeq ($(arch),i586)
+	arch = i386
+endif
+ifeq ($(arch),i686)
+	arch = i386
+endif
 
 bld = build/$(arch)
 src = src
