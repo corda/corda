@@ -3892,7 +3892,11 @@ run(Thread* t)
     unsigned base = sp - parameterCount;
 
     if (methodFlags(t, code) & ACC_NATIVE) {
+      frame = makeFrame(t, code, frame, 0, base, 0, false);
+
       object r = invokeNative(t, code);
+
+      frame = frameNext(t, frame);
 
       if (UNLIKELY(exception)) {
         goto throw_;

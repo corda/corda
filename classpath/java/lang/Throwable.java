@@ -7,7 +7,7 @@ public class Throwable {
 
   public Throwable(String message, Throwable cause) {
     this.message = message;
-    this.trace = trace(0);
+    this.trace = trace(1);
     this.cause = cause;
   }
 
