@@ -36,6 +36,7 @@ stress-cflags = -DDEBUG_MEMORY -DDEBUG_MEMORY_MAJOR
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))
+java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(bld)/%.class,$(x)))
 
 stdcpp-sources = $(src)/stdc++.cpp
 stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
@@ -122,10 +123,14 @@ fast-objects = \
 fast-executable = $(bld)/fast-vm
 fast-cflags = $(fast) $(cflags)
 
+classpath-sources = $(shell find %(classpath)/java -name '*.java')
+classpath-classes = $(call java-classes,$(classpath-sources),$(classpath))
+
 input = $(bld)/classes/TestExceptions.class
-# input-depends = \
-# 	$(bld)/classes/java/lang/System.class \
-# 	$(jni-library)
+input-depends = \
+	$(bld)/classes/java/lang/System.class \
+	$(bld)/classes/java/lang/Throwable.class \
+	$(jni-library)
 
 gen-run-arg = $(shell echo $(1) | sed -e 's:$(bld)/classes/\(.*\)\.class:\1:')
 args = -cp $(bld)/classes -hs 67108864 $(call gen-run-arg,$(input))

@@ -2532,7 +2532,7 @@ run(Thread* t)
   if (UNLIKELY(exception)) goto throw_;
 
  loop:
-  //fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
+//   fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
 
   switch (codeBody(t, code, ip++)) {
   case aaload: {
@@ -3713,8 +3713,7 @@ run(Thread* t)
   } goto loop;
 
   case putfield: {
-    object instance = pop(t);
-    if (LIKELY(instance)) {
+    if (LIKELY(stack[sp - 2])) {
       uint8_t index1 = codeBody(t, code, ip++);
       uint8_t index2 = codeBody(t, code, ip++);
       uint16_t index = (index1 << 8) | index2;
@@ -3723,6 +3722,7 @@ run(Thread* t)
       if (UNLIKELY(exception)) goto throw_;
       
       object value = pop(t);
+      object instance = pop(t);
       setField(t, instance, field, value);
     } else {
       exception = makeNullPointerException(t);
