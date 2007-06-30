@@ -51,9 +51,17 @@
 (type exceptionHandlerTable
   (array exceptionHandler body))
 
+(pod lineNumber
+  (uint16_t ip)
+  (uint16_t line))
+
+(type lineNumberTable
+  (array lineNumber body))
+
 (type code
   (object pool)
   (object exceptionHandlerTable)
+  (object lineNumberTable)
   (uint16_t maxStack)
   (uint16_t maxLocals)
   (array uint8_t body))
@@ -100,11 +108,10 @@
   (object front)
   (object rear))
 
-(type trace
+(type stackTraceElement
   (object method)
-  (uint32_t ip)
-  (object next))
-
+  (int32_t ip))
+ 
 (type array
   (noassert array object body))
 

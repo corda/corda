@@ -52,6 +52,9 @@ enum FieldCode {
   ObjectField
 };
 
+static const int NativeLine = -1;
+static const int UnknownLine = -2;
+
 class Machine {
  public:
   enum {
@@ -809,18 +812,34 @@ makeString(Thread* t, const char* format, ...)
 }
 
 object
+makeTrace(Thread* t, object frame)
+{
+  PROTECT(t, frame);
+
+  unsigned count = 0;
+  for (object f = frame; f; f = frameNext(t, f)) {
+    ++ count;
+  }
+
+  object trace = makeObjectArray
+    (t, arrayBody(t, t->vm->types, Machine::StackTraceElementType),
+     count, true);
+  PROTECT(t, trace);
+
+  unsigned index = 0;
+  for (object f = frame; f; f = frameNext(t, f)) {
+    object e = makeStackTraceElement(t, frameMethod(t, f), frameIp(t, f));
+    set(t, objectArrayBody(t, trace, index++), e);
+  }
+
+  return trace;
+}
+
+object
 makeTrace(Thread* t)
 {
-  object trace = 0;
-  if (t->frame) {
-    PROTECT(t, trace);
-    frameIp(t, t->frame) = t->ip;
-    for (; t->frame; t->frame = frameNext(t, t->frame)) {
-      trace = makeTrace
-        (t, frameMethod(t, t->frame), frameIp(t, t->frame), trace);
-    }
-  }
-  return trace;
+  frameIp(t, t->frame) = t->ip;
+  return makeTrace(t, t->frame);
 }
 
 object
@@ -1093,6 +1112,7 @@ setField(Thread* t, object o, object field, object value)
     break;
   case ObjectField:
     set(t, cast<object>(o, fieldOffset(t, field)), value);
+    break;
 
   default: abort(t);
   }
@@ -1486,10 +1506,11 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     }
   }
 
-  classFixedSize(t, class_) = divide(memberOffset, BytesPerWord);
+  classFixedSize(t, class_) = pad(memberOffset);
   
   object mask = makeIntArray
     (t, divide(classFixedSize(t, class_), BitsPerWord), true);
+  intArrayBody(t, mask, 0) = 1;
 
   bool sawReferenceField = false;
   for (object c = class_; c; c = classSuper(t, c)) {
@@ -1518,7 +1539,7 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  object code = makeCode(t, pool, 0, maxStack, maxLocals, length, false);
+  object code = makeCode(t, pool, 0, 0, maxStack, maxLocals, length, false);
   s.read(&codeBody(t, code, 0), length);
 
   unsigned ehtLength = s.read2();
@@ -1539,8 +1560,24 @@ parseCode(Thread* t, Stream& s, object pool)
 
   unsigned attributeCount = s.read2();
   for (unsigned j = 0; j < attributeCount; ++j) {
-    s.read2();
-    s.skip(s.read4());
+    object name = arrayBody(t, pool, s.read2() - 1);
+    unsigned length = s.read4();
+
+    if (strcmp(reinterpret_cast<const int8_t*>("LineNumberTable"),
+               &byteArrayBody(t, name, 0)) == 0)
+    {
+      unsigned lntLength = s.read2();
+      object lnt = makeLineNumberTable(t, lntLength, false);
+      for (unsigned i = 0; i < lntLength; ++i) {
+        LineNumber* ln = lineNumberTableBody(t, lnt, i);
+        lineNumberIp(ln) = s.read2();
+        lineNumberLine(ln) = s.read2();
+      }
+
+      set(t, codeLineNumberTable(t, code), lnt);
+    } else {
+      s.skip(length);
+    }
   }
 
   return code;
@@ -1572,6 +1609,30 @@ parameterCount(Thread* t, object spec)
   }
 
   return count;
+}
+
+int
+lineNumber(Thread* t, object method, unsigned ip)
+{
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    return NativeLine;
+  }
+
+  object table = codeLineNumberTable(t, methodCode(t, method));
+  if (table) {
+    // todo: do a binary search:
+    int last = UnknownLine;
+    for (unsigned i = 0; i < lineNumberTableLength(t, table); ++i) {
+      if (ip <= lineNumberIp(lineNumberTableBody(t, table, i))) {
+        return last;
+      } else {
+        last = lineNumberLine(lineNumberTableBody(t, table, i));
+      }
+    }
+    return last;
+  } else {
+    return UnknownLine;
+  }
 }
 
 unsigned
@@ -2158,7 +2219,7 @@ invokeNative(Thread* t, object method)
   args[offset++] = reinterpret_cast<uintptr_t>(t);
 
   for (unsigned i = 0; i < count; ++i) {
-    unsigned type = nativeMethodDataParameterTypes(t, data, i);
+    unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
     unsigned position = (t->sp - count) + i;
     object o = t->stack[position];
 
@@ -2222,8 +2283,10 @@ invokeNative(Thread* t, object method)
   }
 }
 
+namespace builtin {
+
 void
-builtinLoadLibrary(JNIEnv* e, jstring nameString)
+loadLibrary(JNIEnv* e, jstring nameString)
 {
   Thread* t = static_cast<Thread*>(e);
 
@@ -2250,7 +2313,7 @@ builtinLoadLibrary(JNIEnv* e, jstring nameString)
 }
 
 jstring
-builtinToString(JNIEnv* e, jobject this_)
+toString(JNIEnv* e, jobject this_)
 {
   Thread* t = static_cast<Thread*>(e);
 
@@ -2262,6 +2325,34 @@ builtinToString(JNIEnv* e, jobject this_)
   pushSafe(t, s);
   return t->stack + (t->sp - 1);
 }
+
+jarray
+trace(JNIEnv* e, jint skipCount)
+{
+  Thread* t = static_cast<Thread*>(e);
+
+  object frame = t->frame;
+  while (skipCount--) frame = frameNext(t, frame);
+  
+  if (methodClass(t, frameMethod(t, frame))
+      == arrayBody(t, t->vm->types, Machine::ThrowableType))
+  {
+    // skip Throwable constructors
+    while (strcmp(reinterpret_cast<const int8_t*>("<init>"),
+                  &byteArrayBody(t, methodName(t, frameMethod(t, frame)), 0))
+           == 0)
+    {
+      frame = frameNext(t, frame);
+    }
+  }
+
+  pushSafe(t, makeTrace(t, frame));
+  return t->stack + (t->sp - 1);
+}
+
+} // namespace builtin
+
+namespace jni {
 
 jsize
 GetStringUTFLength(JNIEnv* e, jstring s)
@@ -2304,7 +2395,7 @@ GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
 
   enter(t, Thread::IdleState);
 
-  *isCopy = true;
+  if (isCopy) *isCopy = true;
   return chars;
 }
 
@@ -2313,6 +2404,8 @@ ReleaseStringUTFChars(JNIEnv* e, jstring, const char* chars)
 {
   static_cast<Thread*>(e)->vm->system->free(chars);
 }
+
+} // namespace jni
 
 Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   system(system),
@@ -2334,9 +2427,9 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
 {
   memset(&jniEnvVTable, 0, sizeof(JNIEnvVTable));
 
-  jniEnvVTable.GetStringUTFLength = GetStringUTFLength;
-  jniEnvVTable.GetStringUTFChars = GetStringUTFChars;
-  jniEnvVTable.ReleaseStringUTFChars = ReleaseStringUTFChars;
+  jniEnvVTable.GetStringUTFLength = jni::GetStringUTFLength;
+  jniEnvVTable.GetStringUTFChars = jni::GetStringUTFChars;
+  jniEnvVTable.ReleaseStringUTFChars = jni::ReleaseStringUTFChars;
 
   if (not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
@@ -2408,9 +2501,11 @@ Thread::Thread(Machine* m):
       void* value;
     } builtins[] = {
       { "Java_java_lang_Object_toString",
-        reinterpret_cast<void*>(builtinToString) },
+        reinterpret_cast<void*>(builtin::toString) },
       { "Java_java_lang_System_loadLibrary",
-        reinterpret_cast<void*>(builtinLoadLibrary) },
+        reinterpret_cast<void*>(builtin::loadLibrary) },
+      { "Java_java_lang_Throwable_trace",
+        reinterpret_cast<void*>(builtin::trace) },
       { 0, 0 }
     };
 
@@ -3849,14 +3944,6 @@ run(Thread* t)
     }
   }
 
-  object p = 0;
-  object n = 0;
-  for (object trace = throwableTrace(t, exception); trace; trace = n) {
-    n = traceNext(t, trace);
-    set(t, traceNext(t, trace), p);
-    p = trace;
-  }
-
   for (object e = exception; e; e = throwableCause(t, e)) {
     if (e == exception) {
       fprintf(stderr, "uncaught exception: ");
@@ -3870,14 +3957,32 @@ run(Thread* t)
     if (throwableMessage(t, exception)) {
       fprintf(stderr, ": %s\n", &byteArrayBody
               (t, stringBytes(t, throwableMessage(t, exception)), 0));
+    } else {
+      fprintf(stderr, "\n");
     }
 
-    for (; p; p = traceNext(t, p)) {
-      fprintf(stderr, "  at %s.%s\n",
-              &byteArrayBody
-              (t, className(t, methodClass(t, traceMethod(t, p))), 0),
-              &byteArrayBody
-              (t, methodName(t, traceMethod(t, p)), 0));
+    object trace = throwableTrace(t, e);
+    for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
+      object e = objectArrayBody(t, trace, i);
+      const int8_t* class_ = &byteArrayBody
+        (t, className(t, methodClass(t, stackTraceElementMethod(t, e))), 0);
+      const int8_t* method = &byteArrayBody
+        (t, methodName(t, stackTraceElementMethod(t, e)), 0);
+      int line = lineNumber
+        (t, stackTraceElementMethod(t, e), stackTraceElementIp(t, e));
+
+      fprintf(stderr, "  at %s.%s", class_, method);
+
+      switch (line) {
+      case NativeLine:
+        fprintf(stderr, "(native)\n");
+        break;
+      case UnknownLine:
+        fprintf(stderr, "(unknown)\n");
+        break;
+      default:
+        fprintf(stderr, "(%d)\n", line);
+      }
     }
   }
 

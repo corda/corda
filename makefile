@@ -122,10 +122,10 @@ fast-objects = \
 fast-executable = $(bld)/fast-vm
 fast-cflags = $(fast) $(cflags)
 
-input = $(bld)/classes/Hello.class
-input-depends = \
-	$(bld)/classes/java/lang/System.class \
-	$(jni-library)
+input = $(bld)/classes/TestExceptions.class
+# input-depends = \
+# 	$(bld)/classes/java/lang/System.class \
+# 	$(jni-library)
 
 gen-run-arg = $(shell echo $(1) | sed -e 's:$(bld)/classes/\(.*\)\.class:\1:')
 args = -cp $(bld)/classes -hs 67108864 $(call gen-run-arg,$(input))

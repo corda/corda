@@ -659,7 +659,7 @@ class MemberIterator {
     switch (member->type) {
     case Object::Scalar: {
       size_ = memberSize(member);
-      padding_ = pad(size_, alignment_);  
+      padding_ = pad(size_, alignment_);
       alignment_ = (alignment_ + size_ + padding_) % sizeof(void*); 
     } break;
 
@@ -673,6 +673,9 @@ class MemberIterator {
     }
 
     offset_ += padding_;
+
+//     printf("size: %d; padding: %d; alignment: %d; offset: %d;\n",
+//            size_, padding_, alignment_, offset_);
 
     return member;
   }
@@ -1271,8 +1274,6 @@ writeConstructorDeclarations(Output* out, Object* declarations)
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
-      if (typeMemberCount(o) == 0) continue;
-      
       out->write("object make");
       out->write(capitalize(typeName(o)));
       if (typeHideConstructor(o)) out->write("0");
@@ -1295,8 +1296,6 @@ writeConstructors(Output* out, Object* declarations)
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
-      if (typeMemberCount(o) == 0) continue;
-      
       out->write("object\nmake");
       out->write(capitalize(typeName(o)));
       if (typeHideConstructor(o)) out->write("0");
@@ -1343,15 +1342,13 @@ writeEnums(Output* out, Object* declarations)
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
-      if (typeMemberCount(o)) {
-        if (wrote) {
-          out->write(",\n");
-        } else {
-          wrote = true;
-        }
-        out->write(capitalize(typeName(o)));
-        out->write("Type");
+      if (wrote) {
+        out->write(",\n");
+      } else {
+        wrote = true;
       }
+      out->write(capitalize(typeName(o)));
+      out->write("Type");
     } break;
 
     default: break;
@@ -1387,7 +1384,7 @@ set(uint32_t* mask, unsigned index)
 unsigned
 typeFixedSize(Object* type)
 {
-  unsigned length = 0;
+  unsigned length = sizeof(void*);
   for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
     switch (m->type) {
@@ -1465,9 +1462,6 @@ typeObjectMask(Object* type)
 void
 writeInitialization(Output* out, Object* type)
 {
-  unsigned memberCount = ::memberCount(type);
-  if (memberCount == 0) return;
-
   out->write("{\n");
 
   if (typeObjectMask(type) != 1) {
@@ -1487,8 +1481,17 @@ writeInitialization(Output* out, Object* type)
     out->write("  object name = makeByteArray(t, \"");
     out->write(typeJavaName(type));
     out->write("\");\n");
+
+    if (typeSuper(type)) {
+      out->write("  object super = arrayBody(t, t->vm->types, Machine::");
+      out->write(capitalize(typeName(typeSuper(type))));
+      out->write("Type);\n");
+    } else {
+      out->write("  object super = 0;\n");
+    }
   } else {
-    out->write("  object name = 0;\n");    
+    out->write("  object name = 0;\n"); 
+    out->write("  object super = 0;\n");   
   }
 
   out->write("  object class_ = makeClass");
@@ -1496,7 +1499,7 @@ writeInitialization(Output* out, Object* type)
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));
-  out->write(", mask, name, 0, 0, 0, 0, 0, 0, 0);\n");
+  out->write(", mask, name, super, 0, 0, 0, 0, 0, 0);\n");
 
   out->write("  set(t, arrayBody(t, t->vm->types, Machine::");
   out->write(capitalize(typeName(type)));
@@ -1518,9 +1521,7 @@ typeCount(Object* declarations)
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
-      if (typeMemberCount(o)) {
-        ++ count;
-      }
+      ++ count;
     } break;
 
     default: break;
