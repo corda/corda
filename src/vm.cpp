@@ -1996,6 +1996,20 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   memcpy(bootstrapClass, class_, objectSize(t, class_) * BytesPerWord);
 
+  object fieldTable = classFieldTable(t, class_);
+  if (fieldTable) {
+    for (unsigned i = 0; i < arrayLength(t, fieldTable); ++i) {
+      set(t, fieldClass(t, arrayBody(t, fieldTable, i)), bootstrapClass);
+    }
+  }
+
+  object methodTable = classMethodTable(t, class_);
+  if (methodTable) {
+    for (unsigned i = 0; i < arrayLength(t, methodTable); ++i) {
+      set(t, methodClass(t, arrayBody(t, methodTable, i)), bootstrapClass);
+    }
+  }
+
   enter(t, Thread::ActiveState);
 }
 
