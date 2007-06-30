@@ -3973,8 +3973,13 @@ run(Thread* t)
             (t, className(t, objectClass(exception)), 0));
   
     if (throwableMessage(t, exception)) {
-      fprintf(stderr, ": %s\n", &byteArrayBody
-              (t, stringBytes(t, throwableMessage(t, exception)), 0));
+      object m = throwableMessage(t, exception);
+      char message[stringLength(t, m) + 1];
+      memcpy(message,
+             &byteArrayBody(t, stringBytes(t, m), stringOffset(t, m)),
+             stringLength(t, m));
+      message[stringLength(t, m)] = 0;
+      fprintf(stderr, ": %s\n", message);
     } else {
       fprintf(stderr, "\n");
     }
