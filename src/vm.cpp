@@ -492,14 +492,10 @@ collect(Machine* m, Heap::CollectionType type)
       p = m->heap->follow(mask(p));
       object class_ = m->heap->follow(objectClass(t, p));
 
-      unsigned n = divide(classFixedSize(t, class_), BytesPerWord);
-
-      if (classArrayElementSize(t, class_)) {
-        n += divide(classArrayElementSize(t, class_)
-                    * cast<uint32_t>(p, classFixedSize(t, class_) - 4),
-                    BytesPerWord);
-      }
-      return n;
+      return divide(classFixedSize(t, class_), BytesPerWord)
+        + divide(classArrayElementSize(t, class_)
+                 * cast<uint32_t>(p, classFixedSize(t, class_) - 4),
+                 BytesPerWord);
     }
 
     virtual void walk(void* p, Heap::Walker* w) {
@@ -764,15 +760,10 @@ objectSize(Thread* t, object o)
 {
   object class_ = objectClass(t, o);
 
-  unsigned n = divide(classFixedSize(t, class_), BytesPerWord);
-
-  if (classArrayElementSize(t, class_)) {
-    n += divide(classArrayElementSize(t, class_)
-                * cast<uint32_t>(o, classFixedSize(t, class_) - 4),
-                BytesPerWord);
-  }
-
-  return n;
+  return divide(classFixedSize(t, class_), BytesPerWord)
+    + divide(classArrayElementSize(t, class_)
+             * cast<uint32_t>(o, classFixedSize(t, class_) - 4),
+             BytesPerWord);
 }
 
 object
