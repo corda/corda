@@ -1,8 +1,12 @@
 #include "sys/mman.h"
 #include "sys/types.h"
 #include "sys/stat.h"
+#include <sys/time.h>
+#include <time.h>
 #include "fcntl.h"
 #include "dlfcn.h"
+#include "errno.h"
+#include "pthread.h"
 #include "common.h"
 #include "system.h"
 #include "heap.h"
@@ -86,6 +90,22 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
 
 namespace {
 
+void*
+run(void* t)
+{
+  static_cast<vm::System::Thread*>(t)->run();
+  return 0;
+}
+
+int64_t
+now()
+{
+  timeval tv = { 0, 0 };
+  gettimeofday(&tv, 0);
+  return (static_cast<int64_t>(tv.tv_sec) * 1000) +
+    (static_cast<int64_t>(tv.tv_usec) / 1000);
+}
+
 const char*
 append(vm::System* s, const char* a, const char* b, const char* c,
        const char* d)
@@ -108,17 +128,95 @@ class System: public vm::System {
  public:
   class Monitor: public vm::System::Monitor {
    public:
-    Monitor(vm::System* s): s(s) { }
+    Monitor(vm::System* s): s(s), context(0), depth(0) {
+      pthread_mutex_init(&mutex, 0);
+      pthread_cond_init(&condition, 0);      
+    }
 
-    virtual bool tryAcquire(void*) { return true; }
-    virtual void acquire(void*) { }
-    virtual void release(void*) { }
-    virtual void wait(void*) { }
-    virtual void notify(void*) { }
-    virtual void notifyAll(void*) { }
-    virtual void dispose() { s->free(this);  }
+    virtual bool tryAcquire(void* context) {
+      if (this->context == context) {
+        ++ depth;
+        return true;
+      } else {
+        switch (pthread_mutex_trylock(&mutex)) {
+        case EBUSY:
+          return false;
+
+        case 0:
+          this->context = context;
+          ++ depth;
+          return true;
+
+        default:
+          vm::abort(s);
+        }
+      }
+    }
+
+    virtual void acquire(void* context) {
+      if (this->context != context) {
+        pthread_mutex_lock(&mutex);
+        this->context = context;
+      }
+      ++ depth;
+    }
+
+    virtual void release(void* context) {
+      if (this->context == context) {
+        if (-- depth == 0) {
+          this->context = 0;
+          pthread_mutex_unlock(&mutex);
+        }
+      } else {
+        vm::abort(s);
+      }
+    }
+
+    virtual void wait(void* context, int64_t time) {
+      if (this->context == context) {
+        if (time) {
+          int64_t then = now() + time;
+          timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
+          int rv = pthread_cond_timedwait(&condition, &mutex, &ts);
+          assert(s, rv == 0);
+        } else {
+          int rv = pthread_cond_wait(&condition, &mutex);
+          assert(s, rv == 0);
+        }
+      } else {
+        vm::abort(s);
+      }
+    }
+
+    virtual void notify(void* context) {
+      if (this->context == context) {
+        int rv = pthread_cond_signal(&condition);
+        assert(s, rv == 0);
+      } else {
+        vm::abort(s);
+      }
+    }
+
+    virtual void notifyAll(void* context) {
+      if (this->context == context) {
+        int rv = pthread_cond_broadcast(&condition);
+        assert(s, rv == 0);
+      } else {
+        vm::abort(s);
+      }
+    }
+
+    virtual void dispose() {
+      pthread_mutex_destroy(&mutex);
+      pthread_cond_destroy(&condition);
+      s->free(this);
+    }
 
     vm::System* s;
+    pthread_mutex_t mutex;
+    pthread_cond_t condition;
+    void* context;
+    unsigned depth;
   };
 
   class Library: public vm::System::Library {
@@ -149,14 +247,20 @@ class System: public vm::System {
     vm::System::Library* next_;
   };
 
-  System(unsigned limit): limit(limit), count(0) { }
+  System(unsigned limit): limit(limit), count(0) {
+    pthread_mutex_init(&mutex, 0);
+  }
+
+  ~System() {
+    pthread_mutex_destroy(&mutex);
+  }
 
   virtual bool success(Status s) {
     return s == 0;
   }
 
   virtual void* tryAllocate(unsigned size) {
-    // todo: synchronize access
+    pthread_mutex_lock(&mutex);
 
     if (Verbose) {
       fprintf(stderr, "try %d; count: %d; limit: %d\n",
@@ -164,20 +268,26 @@ class System: public vm::System {
     }
 
     if (count + size > limit) {
+      pthread_mutex_unlock(&mutex);
       return 0;
+    } else {
+      uintptr_t* up = static_cast<uintptr_t*>
+        (malloc(size + sizeof(uintptr_t)));
+      if (up == 0) {
+        pthread_mutex_unlock(&mutex);
+        vm::abort(this);
+      } else {
+        *up = size;
+        count += *up;
+      
+        pthread_mutex_unlock(&mutex);
+        return up + 1;
+      }
     }
-
-    uintptr_t* up = static_cast<uintptr_t*>(malloc(size + sizeof(uintptr_t)));
-    if (up == 0) abort();
-
-    *up = size;
-    count += *up;
-
-    return up + 1;
   }
 
   virtual void free(const void* p) {
-    // todo: synchronize access
+    pthread_mutex_lock(&mutex);
 
     if (p) {
       const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
@@ -193,10 +303,15 @@ class System: public vm::System {
 
       ::free(const_cast<uintptr_t*>(up));
     }
+
+    pthread_mutex_unlock(&mutex);
   }
 
-  virtual Status start(Thread*) {
-    return 1;
+  virtual Status start(Thread* t) {
+    pthread_t thread;
+    int rv = pthread_create(&thread, 0, run, t);
+    assert(this, rv == 0);
+    return 0;
   }
 
   virtual Status make(vm::System::Monitor** m) {
@@ -232,6 +347,7 @@ class System: public vm::System {
     ::abort();
   }
 
+  pthread_mutex_t mutex;
   unsigned limit;
   unsigned count;
 };

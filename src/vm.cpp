@@ -33,12 +33,6 @@ void set(Thread*, object&, object);
 object makeString(Thread*, const char*, ...);
 object makeByteArray(Thread*, const char*, ...);
 
-object&
-objectClass(object o)
-{
-  return cast<object>(o, 0);
-}
-
 enum FieldCode {
   VoidField,
   ByteField,
@@ -162,6 +156,12 @@ class Thread : public JNIEnv {
   object stack[StackSizeInWords];
   object heap[HeapSizeInWords];
 };
+
+inline object
+objectClass(Thread*, object o)
+{
+  return mask(cast<object>(o, 0));
+}
 
 #include "type-declarations.cpp"
 #include "type-constructors.cpp"
@@ -489,8 +489,8 @@ collect(Machine* m, Heap::CollectionType type)
     virtual unsigned sizeInWords(void* p) {
       Thread* t = m->rootThread;
 
-      p = m->heap->follow(p);
-      object class_ = m->heap->follow(objectClass(p));
+      p = m->heap->follow(mask(p));
+      object class_ = m->heap->follow(objectClass(t, p));
 
       unsigned n = divide(classFixedSize(t, class_), BytesPerWord);
 
@@ -505,8 +505,8 @@ collect(Machine* m, Heap::CollectionType type)
     virtual void walk(void* p, Heap::Walker* w) {
       Thread* t = m->rootThread;
 
-      p = m->heap->follow(p);
-      object class_ = m->heap->follow(objectClass(p));
+      p = m->heap->follow(mask(p));
+      object class_ = m->heap->follow(objectClass(t, p));
       object objectMask = m->heap->follow(classObjectMask(t, class_));
 
       if (objectMask) {
@@ -599,7 +599,7 @@ enter(Thread* t, Thread::State s)
     t->vm->exclusive = t;
       
     while (t->vm->activeCount > 1) {
-      t->vm->stateLock->wait(t);
+      t->vm->stateLock->wait(t, 0);
     }
   } break;
 
@@ -639,7 +639,7 @@ enter(Thread* t, Thread::State s)
     case Thread::NoState:
     case Thread::IdleState: {
       while (t->vm->exclusive) {
-        t->vm->stateLock->wait(t);
+        t->vm->stateLock->wait(t, 0);
       }
 
       ++ t->vm->activeCount;
@@ -669,7 +669,7 @@ enter(Thread* t, Thread::State s)
     t->state = s;
 
     while (t->vm->liveCount > 1) {
-      t->vm->stateLock->wait(t);
+      t->vm->stateLock->wait(t, 0);
     }
   } break;
 
@@ -762,7 +762,7 @@ make(Thread* t, object class_)
 unsigned
 objectSize(Thread* t, object o)
 {
-  object class_ = objectClass(o);
+  object class_ = objectClass(t, o);
 
   unsigned n = divide(classFixedSize(t, class_), BytesPerWord);
 
@@ -921,8 +921,8 @@ makeUnsatisfiedLinkError(Thread* t, object message)
 inline bool
 isLongOrDouble(Thread* t, object o)
 {
-  return objectClass(o) == arrayBody(t, t->vm->types, Machine::LongType)
-    or objectClass(o) == arrayBody(t, t->vm->types, Machine::DoubleType);
+  return objectClass(t, o) == arrayBody(t, t->vm->types, Machine::LongType)
+    or objectClass(t, o) == arrayBody(t, t->vm->types, Machine::DoubleType);
 }
 
 unsigned
@@ -1139,10 +1139,10 @@ instanceOf(Thread* t, object class_, object o)
     return false;
   }
 
-  if (objectClass(class_)
+  if (objectClass(t, class_)
       == arrayBody(t, t->vm->types, Machine::InterfaceType))
   {
-    for (object oc = objectClass(o); oc; oc = classSuper(t, oc)) {
+    for (object oc = objectClass(t, o); oc; oc = classSuper(t, oc)) {
       object itable = classInterfaceTable(t, oc);
       for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
         if (arrayBody(t, itable, i) == class_) {
@@ -1151,7 +1151,7 @@ instanceOf(Thread* t, object class_, object o)
       }
     }
   } else {
-    for (object oc = objectClass(o); oc; oc = classSuper(t, oc)) {
+    for (object oc = objectClass(t, o); oc; oc = classSuper(t, oc)) {
       if (oc == class_) {
         return true;
       }
@@ -1165,7 +1165,7 @@ object
 findInterfaceMethod(Thread* t, object method, object o)
 {
   object interface = methodClass(t, method);
-  object itable = classInterfaceTable(t, objectClass(o));
+  object itable = classInterfaceTable(t, objectClass(t, o));
   for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
     if (arrayBody(t, itable, i) == interface) {
       return arrayBody(t, arrayBody(t, itable, i + 1),
@@ -1185,7 +1185,7 @@ findMethod(Thread* t, object method, object class_)
 inline object
 findVirtualMethod(Thread* t, object method, object o)
 {
-  return findMethod(t, method, objectClass(o));
+  return findMethod(t, method, objectClass(t, o));
 }
 
 bool
@@ -1336,7 +1336,8 @@ parsePool(Thread* t, Stream& s)
 
   for (unsigned i = 0; i < poolCount; ++i) {
     object o = arrayBody(t, pool, i);
-    if (objectClass(o) == arrayBody(t, t->vm->types, Machine::IntArrayType)) {
+    if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::IntArrayType))
+    {
       switch (intArrayBody(t, o, 0)) {
       case CONSTANT_Class: {
         set(t, arrayBody(t, pool, i),
@@ -1361,7 +1362,8 @@ parsePool(Thread* t, Stream& s)
 
   for (unsigned i = 0; i < poolCount; ++i) {
     object o = arrayBody(t, pool, i);
-    if (objectClass(o) == arrayBody(t, t->vm->types, Machine::IntArrayType)) {
+    if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::IntArrayType))
+    {
       switch (intArrayBody(t, o, 0)) {
       case CONSTANT_Fieldref:
       case CONSTANT_Methodref:
@@ -2064,7 +2066,8 @@ inline object
 resolveClass(Thread* t, object pool, unsigned index)
 {
   object o = arrayBody(t, pool, index);
-  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ByteArrayType)) {
+  if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+  {
     PROTECT(t, pool);
 
     o = resolveClass(t, o);
@@ -2079,7 +2082,8 @@ inline object
 resolveClass(Thread* t, object container, object& (*class_)(Thread*, object))
 {
   object o = class_(t, container);
-  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ByteArrayType)) {
+  if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+  {
     PROTECT(t, container);
 
     o = resolveClass(t, o);
@@ -2095,7 +2099,8 @@ resolve(Thread* t, object pool, unsigned index,
         object (*find)(Thread*, object, object))
 {
   object o = arrayBody(t, pool, index);
-  if (objectClass(o) == arrayBody(t, t->vm->types, Machine::ReferenceType)) {
+  if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::ReferenceType))
+  {
     PROTECT(t, pool);
 
     object class_ = resolveClass(t, o, referenceClass);
@@ -2179,7 +2184,7 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
 inline object
 resolveNativeMethodData(Thread* t, object method)
 {
-  if (objectClass(methodCode(t, method))
+  if (objectClass(t, methodCode(t, method))
       == arrayBody(t, t->vm->types, Machine::ByteArrayType))
   {
     object data = 0;
@@ -2333,7 +2338,7 @@ toString(JNIEnv* e, jobject this_)
 
   object s = makeString
     (t, "%s@%p",
-     &byteArrayBody(t, className(t, objectClass(*this_)), 0),
+     &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
      *this_);
 
   pushSafe(t, s);
@@ -2493,13 +2498,13 @@ Thread::Thread(Machine* m):
 #include "type-initializations.cpp"
 
     object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
-    set(t, objectClass(t->vm->types), arrayClass);
+    set(t, cast<object>(t->vm->types, 0), arrayClass);
 
     object classClass = arrayBody(t, m->types, Machine::ClassType);
-    set(t, objectClass(classClass), classClass);
+    set(t, cast<object>(classClass, 0), classClass);
 
     object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
-    set(t, objectClass(intArrayClass), classClass);
+    set(t, cast<object>(intArrayClass, 0), classClass);
 
     m->unsafe = false;
 
@@ -2668,7 +2673,7 @@ run(Thread* t)
   case arraylength: {
     object array = pop(t);
     if (LIKELY(array)) {
-      if (objectClass(array)
+      if (objectClass(t, array)
           == arrayBody(t, t->vm->types, Machine::ObjectArrayType))
       {
         push(t, makeInt(t, objectArrayLength(t, array)));
@@ -2832,7 +2837,7 @@ run(Thread* t)
       if (not instanceOf(t, class_, stack[sp - 1])) {
         object message = makeString
           (t, "%s as %s",
-           &byteArrayBody(t, className(t, objectClass(stack[sp - 1])), 0),
+           &byteArrayBody(t, className(t, objectClass(t, stack[sp - 1])), 0),
            &byteArrayBody(t, className(t, class_), 0));
         exception = makeClassCastException(t, message);
         goto throw_;
@@ -3639,6 +3644,26 @@ run(Thread* t)
     push(t, makeLong(t, longValue(t, a) ^ longValue(t, b)));
   } goto loop;
 
+//   case monitorenter: {
+//     object o = pop(t);
+//     if (LIKELY(o)) {
+//       objectMonitor(t, o)->acquire(t);
+//     } else {
+//       exception = makeNullPointerException(t);
+//       goto throw_;
+//     }
+//   } goto loop;
+
+//   case monitorexit: {
+//     object o = pop(t);
+//     if (LIKELY(o)) {
+//       objectMonitor(t, o)->release(t);
+//     } else {
+//       exception = makeNullPointerException(t);
+//       goto throw_;
+//     }
+//   } goto loop;
+
   case new_: {
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
@@ -3948,7 +3973,7 @@ run(Thread* t)
           arrayBody(t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
 
         if (catchType == 0 or
-            (objectClass(catchType)
+            (objectClass(t, catchType)
              == arrayBody(t, t->vm->types, Machine::ClassType) and
              instanceOf(t, catchType, exception)))
         {
@@ -3970,7 +3995,7 @@ run(Thread* t)
     }
 
     fprintf(stderr, "%s", &byteArrayBody
-            (t, className(t, objectClass(exception)), 0));
+            (t, className(t, objectClass(t, exception)), 0));
   
     if (throwableMessage(t, exception)) {
       object m = throwableMessage(t, exception);
@@ -3994,17 +4019,17 @@ run(Thread* t)
       int line = lineNumber
         (t, stackTraceElementMethod(t, e), stackTraceElementIp(t, e));
 
-      fprintf(stderr, "  at %s.%s", class_, method);
+      fprintf(stderr, "  at %s.%s ", class_, method);
 
       switch (line) {
       case NativeLine:
         fprintf(stderr, "(native)\n");
         break;
       case UnknownLine:
-        fprintf(stderr, "(unknown)\n");
+        fprintf(stderr, "(unknown line)\n");
         break;
       default:
-        fprintf(stderr, "(%d)\n", line);
+        fprintf(stderr, "(line %d)\n", line);
       }
     }
   }

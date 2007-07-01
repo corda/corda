@@ -21,7 +21,7 @@ class System {
     virtual bool tryAcquire(void* id) = 0;
     virtual void acquire(void* id) = 0;
     virtual void release(void* id) = 0;
-    virtual void wait(void* id) = 0;
+    virtual void wait(void* id, int64_t time) = 0;
     virtual void notify(void* id) = 0;
     virtual void notifyAll(void* id) = 0;
     virtual void dispose() = 0;

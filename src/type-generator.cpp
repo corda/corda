@@ -995,7 +995,7 @@ writeSubtypeAssertions(Output* out, Object* o)
 {
   for (Object* p = typeSubtypes(o); p; p = cdr(p)) {
     Object* st = car(p);
-    out->write(" or objectClass(o) == arrayBodyUnsafe");
+    out->write(" or objectClass(t, o) == arrayBodyUnsafe");
     out->write("(t, t->vm->types, Machine::");
     out->write(capitalize(typeName(st)));
     out->write("Type)");
@@ -1035,8 +1035,8 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     if (unsafe) {
       out->write("  assert(t, true);");
     } else {
-      out->write("  assert(t, t->vm->unsafe or objectClass(o) == 0 or ");
-      out->write("objectClass(o) == arrayBodyUnsafe");
+      out->write("  assert(t, t->vm->unsafe or ");
+      out->write("objectClass(t, o) == arrayBodyUnsafe");
       out->write("(t, t->vm->types, Machine::");
       out->write(capitalize(::typeName(memberOwner(member))));
       out->write("Type)");
@@ -1320,7 +1320,8 @@ writeConstructors(Output* out, Object* declarations)
       writeOffset(out, typeOffset(o), true);
       out->write(");\n");
 
-      out->write("  objectClass(o) = arrayBody(t, t->vm->types, Machine::");
+      out->write("  cast<object>(o, 0) ");
+      out->write("= arrayBody(t, t->vm->types, Machine::");
       out->write(capitalize(typeName(o)));
       out->write("Type);\n");
 
@@ -1538,7 +1539,7 @@ writeInitializations(Output* out, Object* declarations)
   out->write("t->vm->types = allocate(t, pad((");
   out->write(count);
   out->write(" * sizeof(void*)) + 4 + sizeof(void*)));\n");
-  out->write("objectClass(t->vm->types) = 0;\n");
+  out->write("cast<object>(t->vm->types, 0) = 0;\n");
   out->write("arrayLength(t, t->vm->types) = ");
   out->write(count);
   out->write(";\n");

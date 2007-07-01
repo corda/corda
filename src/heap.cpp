@@ -26,6 +26,32 @@ System* system(Context*);
 void NO_RETURN abort(Context*);
 void assert(Context*, bool);
 
+inline object
+get(object o, unsigned offsetInWords)
+{
+  return mask(cast<object>(o, offsetInWords * BytesPerWord));
+}
+
+inline object*
+getp(object o, unsigned offsetInWords)
+{
+  return &cast<object>(o, offsetInWords * BytesPerWord);
+}
+
+inline void
+set(object* o, object value)
+{
+  *o = reinterpret_cast<object>
+    (reinterpret_cast<uintptr_t>(value)
+     | reinterpret_cast<uintptr_t>(*o) & (~PointerMask));
+}
+
+inline void
+set(object o, unsigned offsetInWords, object value)
+{
+  set(getp(o, offsetInWords), value);
+}
+
 class Segment {
  public:
   class Map {
@@ -662,7 +688,7 @@ fresh(Context* c, object o)
 inline bool
 wasCollected(Context* c, object o)
 {
-  return o and (not fresh(c, o)) and fresh(c, cast<object>(o, 0));
+  return o and (not fresh(c, o)) and fresh(c, get(o, 0));
 }
 
 inline object
@@ -779,55 +805,55 @@ copy(Context* c, object o)
 }
 
 object
-update3(Context* c, object* p, bool* needsVisit)
+update3(Context* c, object o, bool* needsVisit)
 {
-  if (wasCollected(c, *p)) {
+  if (wasCollected(c, o)) {
     *needsVisit = false;
-    return follow(c, *p);
+    return follow(c, o);
   } else {
     *needsVisit = true;
-    return copy(c, *p);
+    return copy(c, o);
   }
 }
 
 object
-update2(Context* c, object* p, bool* needsVisit)
+update2(Context* c, object o, bool* needsVisit)
 {
   switch (c->mode) {
   case MinorCollection:
   case OverflowCollection:
-    if (c->gen2.contains(*p)) {
+    if (c->gen2.contains(o)) {
       *needsVisit = false;
-      return *p;
+      return o;
     }
     break;
     
   case Gen2Collection:
-    if (c->gen2.contains(*p)) {
-      return update3(c, p, needsVisit);
+    if (c->gen2.contains(o)) {
+      return update3(c, o, needsVisit);
     } else {
-      assert(c, c->nextGen1.contains(*p) or c->nextGen2.contains(*p));
+      assert(c, c->nextGen1.contains(o) or c->nextGen2.contains(o));
 
       *needsVisit = false;
-      return *p;
+      return o;
     }
     break;
 
   default: break;
   }
 
-  return update3(c, p, needsVisit);
+  return update3(c, o, needsVisit);
 }
 
 object
 update(Context* c, object* p, bool* needsVisit)
 {
-  if (*p == 0) {
+  if (mask(*p) == 0) {
     *needsVisit = false;
-    return *p;
+    return 0;
   }
 
-  object r = update2(c, p, needsVisit);
+  object r = update2(c, mask(*p), needsVisit);
 
   // update heap map.
   if (r) {
@@ -956,22 +982,22 @@ bitsetNext(Context* c, uintptr_t* p)
 }
 
 void
-collect(Context* c, void** p)
+collect(Context* c, object* p)
 {
-  object original = *p;
+  object original = mask(*p);
   object parent = 0;
   
   if (Debug) {
     fprintf(stderr, "update %p (%s) at %p (%s)\n",
-            *p, segment(c, *p), p, segment(c, p));
+            mask(*p), segment(c, *p), p, segment(c, p));
   }
 
   bool needsVisit;
-  *p = update(c, p, &needsVisit);
+  set(p, update(c, mask(p), &needsVisit));
 
   if (Debug) {
     fprintf(stderr, "  result: %p (%s) (visit? %d)\n",
-           *p,  segment(c, *p), needsVisit);
+            mask(*p), segment(c, *p), needsVisit);
   }
 
   if (not needsVisit) return;
@@ -995,17 +1021,16 @@ collect(Context* c, void** p)
       virtual bool visit(unsigned offset) {
         if (Debug) {
           fprintf(stderr, "  update %p (%s) at %p - offset %d from %p (%s)\n",
-                  cast<object>(copy, offset * BytesPerWord),
-                  segment(c, cast<object>(copy, offset * BytesPerWord)),
-                  &cast<object>(copy, offset * BytesPerWord),
+                  get(copy, offset),
+                  segment(c, get(copy, offset)),
+                  getp(copy, offset),
                   offset,
                   copy,
                   segment(c, copy));
         }
 
         bool needsVisit;
-        object childCopy = update
-          (c, &cast<object>(copy, offset * BytesPerWord), &needsVisit);
+        object childCopy = update(c, getp(copy, offset), &needsVisit);
         
         if (Debug) {
           fprintf(stderr, "    result: %p (%s) (visit? %d)\n",
@@ -1027,7 +1052,7 @@ collect(Context* c, void** p)
             second = offset;
           }
         } else {
-          cast<object>(copy, offset * BytesPerWord) = childCopy;
+          set(copy, offset, childCopy);
         }
 
         if (visits > 1 and total > 2 and (second or needsVisit)) {
@@ -1070,8 +1095,8 @@ collect(Context* c, void** p)
         parent = original;
       }
 
-      original = cast<object>(copy, walker.first * BytesPerWord);
-      cast<object>(copy, walker.first * BytesPerWord) = follow(c, original);
+      original = get(copy, walker.first);
+      set(copy, walker.first, follow(c, original));
       goto visit;
     } else {
       // ascend
@@ -1131,16 +1156,16 @@ collect(Context* c, void** p)
 
     if (Debug) {
       fprintf(stderr, "  next is %p (%s) at %p - offset %d from %p (%s)\n",
-              cast<object>(copy, walker.next * BytesPerWord),
-              segment(c, cast<object>(copy, walker.next * BytesPerWord)),
-              &cast<object>(copy, walker.next * BytesPerWord),
+              get(copy, walker.next),
+              segment(c, get(copy, walker.next)),
+              getp(copy, walker.next),
               walker.next,
               copy,
               segment(c, copy));
     }
 
-    original = cast<object>(copy, walker.next * BytesPerWord);
-    cast<object>(copy, walker.next * BytesPerWord) = follow(c, original);
+    original = get(copy, walker.next);
+    set(copy, walker.next, follow(c, original));
     goto visit;
   } else {
     return;
@@ -1236,7 +1261,7 @@ collect(Context* c, Segment* s, unsigned limit)
       Walker(Context* c, object p): c(c), p(p) { }
 
       virtual bool visit(unsigned offset) {
-        collect(c, &cast<object>(p, offset * BytesPerWord));
+        collect(c, getp(p, offset));
         return true;
       }
 

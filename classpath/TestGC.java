@@ -1,4 +1,4 @@
-public class Test {
+public class TestGC {
 
   private static void small() {
     for (int i = 0; i < 1024; ++i) {

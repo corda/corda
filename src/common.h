@@ -26,6 +26,9 @@ typedef void* object;
 const unsigned BytesPerWord = sizeof(uintptr_t);
 const unsigned BitsPerWord = BytesPerWord * 8;
 
+const uintptr_t PointerMask
+= ((~static_cast<uintptr_t>(0)) / BytesPerWord) * BytesPerWord;
+
 const unsigned LikelyPageSizeInBytes = 4 * 1024;
 
 inline unsigned
@@ -107,6 +110,13 @@ inline T&
 cast(object p, unsigned offset)
 {
   return *reinterpret_cast<T*>(static_cast<uint8_t*>(p) + offset);
+}
+
+template <class T>
+inline T*
+mask(T* p)
+{
+  return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & PointerMask);
 }
 
 }
