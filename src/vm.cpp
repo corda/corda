@@ -2471,6 +2471,12 @@ invokeNative(Thread* t, object method)
   }
 }
 
+object
+frameLocals(Thread* t, object frame, unsigned index)
+{
+  return t->stack[frameStackBase(t, frame) + index];
+}
+
 namespace builtin {
 
 void
@@ -4086,7 +4092,7 @@ run(Thread* t)
     unsigned base = sp - parameterCount;
 
     if (methodFlags(t, code) & ACC_NATIVE) {
-      frame = makeFrame(t, code, frame, 0, base, 0, false);
+      frame = makeFrame(t, code, frame, 0, base);
 
       object r = invokeNative(t, code);
 
@@ -4103,7 +4109,8 @@ run(Thread* t)
 
       code = methodCode(t, frameMethod(t, frame));
     } else {
-      if (UNLIKELY(codeMaxStack(t, methodCode(t, code)) + base
+      if (UNLIKELY(codeMaxStack(t, methodCode(t, code))
+                   + codeMaxLocals(t, methodCode(t, code)) + base
                    > Thread::StackSizeInWords))
       {
         exception = makeStackOverflowError(t);
@@ -4113,21 +4120,10 @@ run(Thread* t)
       frameIp(t, frame) = ip;
       ip = 0;
 
-      frame = makeFrame(t, code, frame, 0, base,
-                        codeMaxLocals(t, methodCode(t, code)), false);
+      frame = makeFrame(t, code, frame, 0, base);
       code = methodCode(t, code);
 
-      if (parameterCount) {
-        memcpy(&frameLocals(t, frame, 0), stack + base,
-               parameterCount * BytesPerWord);
-      }
-
-      if (frameLength(t, frame) - parameterCount) {
-        memset(&frameLocals(t, frame, 0) + parameterCount, 0,
-               (frameLength(t, frame) - parameterCount) * BytesPerWord);
-      }
-
-      sp = base;
+      sp = base + codeMaxLocals(t, methodCode(t, code));
     }
   } goto loop;
 
@@ -4224,8 +4220,7 @@ run(Thread* t, const char* className, int argc, const char** argv)
     object method = findMethodInClass(t, class_, reference);
     if (LIKELY(t->exception == 0)) {
       t->code = methodCode(t, method);
-      t->frame = makeFrame
-        (t, method, 0, 0, 0, codeMaxLocals(t, t->code), true);
+      t->frame = makeFrame(t, method, 0, 0, 0);
 
       object args = makeObjectArray
         (t, arrayBody(t, t->vm->types, Machine::StringType), argc, true);

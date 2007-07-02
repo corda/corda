@@ -70,8 +70,7 @@
   (object method)
   (object next)
   (uint32_t ip)
-  (uint32_t stackBase)
-  (array object locals))
+  (uint32_t stackBase))
 
 (type reference
   (object class)
