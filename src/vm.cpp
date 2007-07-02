@@ -11,14 +11,26 @@
   Thread::Protector MAKE_NAME(protector_) (thread, &name);
 
 #define ACQUIRE(t, x) MonitorResource MAKE_NAME(monitorResource_) (t, x)
+
 #define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
+
+#define ACQUIRE_READ(t, x) ReadResource MAKE_NAME(readResource_) (t, x)
+
+#define ACQUIRE_WRITE(t, x) WriteResource MAKE_NAME(writeResource_) (t, x)
+
+#define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
 
 using namespace vm;
 
 namespace {
 
-static const bool Verbose = false;
-static const bool Debug = false;
+const bool Verbose = false;
+const bool Debug = false;
+
+const uintptr_t HashTakenMark = 1;
+const uintptr_t ExtendedMark = 2;
+const uintptr_t MonitorFlag
+= static_cast<uintptr_t>(1) << ((BytesPerWord * 8) - 1);
 
 class Thread;
 
@@ -73,10 +85,12 @@ class Machine {
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
+  System::ReadWriteLock monitorMapLock;
   System::Library* libraries;
   object classMap;
   object bootstrapClassMap;
   object builtinMap;
+  object monitorMap;
   object types;
   bool unsafe;
   JNIEnvVTable jniEnvVTable;
@@ -168,13 +182,57 @@ objectClass(Thread*, object o)
 
 void enter(Thread* t, Thread::State state);
 
+class StateResource {
+ public:
+  StateResource(Thread* t, Thread::State state): t(t), oldState(t->state) {
+    enter(t, state);
+  }
+
+  ~StateResource() { enter(t, oldState); }
+
+ private:
+  Thread* t;
+  Thread::State oldState;
+};
+
+class ReadResource {
+ public:
+  ReadResource(Thread* t, System::ReadWriteLock& lock): t(t), lock(lock) {
+    if (not lock.tryAcquireRead(t)) {
+      ENTER(t, Thread::IdleState);
+      lock.acquireRead(t);
+    }
+  }
+
+  ~ReadResource() { lock.releaseRead(t); }
+
+ private:
+  Thread* t;
+  System::ReadWriteLock& lock;
+};
+
+class WriteResource {
+ public:
+  WriteResource(Thread* t, System::ReadWriteLock& lock): t(t), lock(lock) {
+    if (not lock.tryAcquireWrite(t)) {
+      ENTER(t, Thread::IdleState);
+      lock.acquireWrite(t);
+    }
+  }
+
+  ~WriteResource() { lock.releaseWrite(t); }
+
+ private:
+  Thread* t;
+  System::ReadWriteLock& lock;
+};
+
 class MonitorResource {
  public:
   MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
     if (not m->tryAcquire(t)) {
-      enter(t, Thread::IdleState);
+      ENTER(t, Thread::IdleState);
       m->acquire(t);
-      enter(t, Thread::ActiveState);
     }
   }
 
@@ -222,6 +280,105 @@ hash(const int8_t* s, unsigned length)
   uint32_t h = 0;
   for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
   return h;  
+}
+
+inline bool
+objectExtended(Thread*, object o)
+{
+  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == ExtendedMark;
+}
+
+inline uintptr_t&
+extendedWord(Thread* t, object o, unsigned baseSize)
+{
+  assert(t, objectExtended(t, o));
+  return cast<uintptr_t>(o, baseSize * BytesPerWord);
+}
+
+unsigned
+baseSize(Thread* t, object o, object class_)
+{
+  return divide(classFixedSize(t, class_), BytesPerWord)
+    + divide(classArrayElementSize(t, class_)
+             * cast<uint32_t>(o, classFixedSize(t, class_) - 4),
+             BytesPerWord);
+}
+
+inline unsigned
+baseSize(Thread* t, object o)
+{
+  return baseSize(t, o, objectClass(t, o));
+}
+
+unsigned
+extendedSize(Thread* t, object o, unsigned baseSize)
+{
+  unsigned n = baseSize;
+
+  if (objectExtended(t, o)) {
+    if (extendedWord(t, o, n) & MonitorFlag) {
+      n += BytesPerWord;
+    }
+    n += BytesPerWord;
+  }
+
+  return n;
+}
+
+inline unsigned
+extendedSize(Thread* t, object o)
+{
+  return extendedSize(t, o, baseSize(t, o));
+}
+
+inline bool
+monitorAttached(Thread* t, object o, unsigned baseSize)
+{
+  return objectExtended(t, o)
+    and (extendedWord(t, o, baseSize) & MonitorFlag);
+}
+
+inline System::Monitor*&
+attachedMonitor(Thread* t, object o, unsigned baseSize)
+{
+  assert(t, monitorAttached(t, o, baseSize));
+  return cast<System::Monitor*>(o, (baseSize + 1) * BytesPerWord);
+}
+
+inline bool
+hashTaken(Thread*, object o)
+{
+  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == HashTakenMark;
+}
+
+inline void
+markHashTaken(Thread* t, object o)
+{
+  assert(t, not objectExtended(t, o));
+  cast<uintptr_t>(o, 0) |= HashTakenMark;
+}
+
+inline uint32_t
+takeHash(Thread*, object o)
+{
+  return reinterpret_cast<uintptr_t>(o) / BytesPerWord;
+}
+
+inline uint32_t
+objectHash(Thread* t, object o)
+{
+  if (objectExtended(t, o)) {
+    return extendedWord(t, o, baseSize(t, o)) & PointerMask;
+  } else {
+    markHashTaken(t, o);
+    return takeHash(t, o);
+  }
+}
+
+inline bool
+objectEqual(Thread*, object a, object b)
+{
+  return a == b;
 }
 
 inline uint32_t
@@ -479,6 +636,7 @@ collect(Machine* m, Heap::CollectionType type)
       v->visit(&(m->classMap));
       v->visit(&(m->bootstrapClassMap));
       v->visit(&(m->builtinMap));
+      v->visit(&(m->monitorMap));
       v->visit(&(m->types));
 
       for (Thread* t = m->rootThread; t; t = t->next) {
@@ -486,16 +644,64 @@ collect(Machine* m, Heap::CollectionType type)
       }
     }
 
-    virtual unsigned sizeInWords(void* p) {
+    virtual unsigned sizeInWords(object o) {
       Thread* t = m->rootThread;
 
-      p = m->heap->follow(mask(p));
-      object class_ = m->heap->follow(objectClass(t, p));
+      o = m->heap->follow(mask(o));
 
-      return divide(classFixedSize(t, class_), BytesPerWord)
-        + divide(classArrayElementSize(t, class_)
-                 * cast<uint32_t>(p, classFixedSize(t, class_) - 4),
-                 BytesPerWord);
+      return extendedSize
+        (t, o, baseSize(t, o, m->heap->follow(objectClass(t, o))));
+    }
+
+    virtual void copy(object o, Heap::Allocator* allocator) {
+      Thread* t = m->rootThread;
+
+      o = m->heap->follow(mask(o));
+
+      unsigned base = baseSize(t, o, m->heap->follow(objectClass(t, o)));
+      unsigned copyCount = base;
+      unsigned allocateCount = base;
+
+      System::Monitor* monitor = 0;
+
+      if (objectExtended(t, o)) {
+        copyCount += BytesPerWord;
+        allocateCount += BytesPerWord;
+
+        if (extendedWord(t, o, base) & MonitorFlag) {
+          copyCount += BytesPerWord;
+          allocateCount += BytesPerWord;
+        } else {
+          monitor = gcHashMapRemove
+            (t, m->monitorMap, o, gcObjectHash, gcObjectEqual);
+
+          if (monitor) {
+            allocateCount += BytesPerWord;
+          }
+        }
+      } else if (hashTaken(t, o)) {
+        allocateCount += BytesPerWord;
+
+        monitor = gcHashMapRemove
+          (t, m->monitorMap, o, gcObjectHash, gcObjectEqual);
+
+        if (monitor) {
+          allocateCount += BytesPerWord;
+        }
+      }
+
+      object dst = allocator->allocate(allocateCount);
+      memcpy(o, dst, copyCount * BytesPerWord);
+
+      if (hashTaken(t, o)) {
+        extendedWord(t, dst, base) = takeHash(t, o);
+        cast<uintptr_t>(dst, 0) &= PointerMask;
+        cast<uintptr_t>(dst, 0) |= ExtendedMark;
+      }
+
+      if (monitor) {
+        attachedMonitor(t, dst, base) = monitor;
+      }
     }
 
     virtual void walk(void* p, Heap::Walker* w) {
@@ -755,15 +961,41 @@ make(Thread* t, object class_)
   return instance;
 }
 
-unsigned
-objectSize(Thread* t, object o)
+System::Monitor*
+mappedMonitor(Thread* t, object o)
 {
-  object class_ = objectClass(t, o);
+  PROTECT(t, o);
 
-  return divide(classFixedSize(t, class_), BytesPerWord)
-    + divide(classArrayElementSize(t, class_)
-             * cast<uint32_t>(o, classFixedSize(t, class_) - 4),
-             BytesPerWord);
+  System::Monitor* m = 0;
+  { ACQUIRE_READ(t, t->vm->monitorMapLock);
+    object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, objectEqual);
+    if (p) {
+      m = static_cast<System::Monitor*>(pointerValue(t, p));
+    }
+  }
+
+  if (m == 0) {
+    System::Status s = t->vm->system->make(&m);
+    expect(t, t->vm->system->success(s));
+
+    object pointer = makePointer(t, m);
+    PROTECT(t, pointer);
+
+    ACQUIRE_WRITE(t, t->vm->monitorMapLock);
+
+    hashMapInsert(t, t->vm->monitorMap, o, pointer, objectHash);
+  }
+}
+
+inline System::Monitor*
+objectMonitor(Thread* t, object o)
+{
+  unsigned base = baseSize(t, o);
+  if (monitorAttached(t, o, base)) {
+    return attachedMonitor(t, o, base);
+  } else {
+    return mappedMonitor(t, o);
+  }
 }
 
 object
@@ -1985,9 +2217,9 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   PROTECT(t, bootstrapClass);
   PROTECT(t, class_);
 
-  enter(t, Thread::ExclusiveState);
+  ENTER(t, Thread::ExclusiveState);
 
-  memcpy(bootstrapClass, class_, objectSize(t, class_) * BytesPerWord);
+  memcpy(bootstrapClass, class_, extendedSize(t, class_) * BytesPerWord);
 
   object fieldTable = classFieldTable(t, class_);
   if (fieldTable) {
@@ -2002,8 +2234,6 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
       set(t, methodClass(t, arrayBody(t, methodTable, i)), bootstrapClass);
     }
   }
-
-  enter(t, Thread::ActiveState);
 }
 
 object
@@ -2369,7 +2599,7 @@ GetStringUTFLength(JNIEnv* e, jstring s)
 {
   Thread* t = static_cast<Thread*>(e);
 
-  enter(t, Thread::ActiveState);
+  ENTER(t, Thread::ActiveState);
 
   jsize length = 0;
   if (LIKELY(s)) {
@@ -2377,8 +2607,6 @@ GetStringUTFLength(JNIEnv* e, jstring s)
   } else {
     t->exception = makeNullPointerException(t);
   }
-
-  enter(t, Thread::IdleState);
 
   return length;
 }
@@ -2388,7 +2616,7 @@ GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
 {
   Thread* t = static_cast<Thread*>(e);
 
-  enter(t, Thread::ActiveState);
+  ENTER(t, Thread::ActiveState);
 
   char* chars = 0;
   if (LIKELY(s)) {
@@ -2402,8 +2630,6 @@ GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
   } else {
     t->exception = makeNullPointerException(t);
   }
-
-  enter(t, Thread::IdleState);
 
   if (isCopy) *isCopy = true;
   return chars;
@@ -2428,10 +2654,12 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   stateLock(0),
   heapLock(0),
   classLock(0),
+  monitorMapLock(system),
   libraries(0),
   classMap(0),
   bootstrapClassMap(0),
   builtinMap(0),
+  monitorMap(0),
   types(0),
   unsafe(false)
 {
@@ -2505,6 +2733,7 @@ Thread::Thread(Machine* m):
 
     m->classMap = makeHashMap(this, 0, 0);
     m->builtinMap = makeHashMap(this, 0, 0);
+    m->monitorMap = makeHashMap(this, 0, 0);
 
     struct {
       const char* key;
@@ -3635,25 +3864,25 @@ run(Thread* t)
     push(t, makeLong(t, longValue(t, a) ^ longValue(t, b)));
   } goto loop;
 
-//   case monitorenter: {
-//     object o = pop(t);
-//     if (LIKELY(o)) {
-//       objectMonitor(t, o)->acquire(t);
-//     } else {
-//       exception = makeNullPointerException(t);
-//       goto throw_;
-//     }
-//   } goto loop;
+  case monitorenter: {
+    object o = pop(t);
+    if (LIKELY(o)) {
+      objectMonitor(t, o)->acquire(t);
+    } else {
+      exception = makeNullPointerException(t);
+      goto throw_;
+    }
+  } goto loop;
 
-//   case monitorexit: {
-//     object o = pop(t);
-//     if (LIKELY(o)) {
-//       objectMonitor(t, o)->release(t);
-//     } else {
-//       exception = makeNullPointerException(t);
-//       goto throw_;
-//     }
-//   } goto loop;
+  case monitorexit: {
+    object o = pop(t);
+    if (LIKELY(o)) {
+      objectMonitor(t, o)->release(t);
+    } else {
+      exception = makeNullPointerException(t);
+      goto throw_;
+    }
+  } goto loop;
 
   case new_: {
     uint8_t index1 = codeBody(t, code, ip++);

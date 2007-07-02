@@ -5,9 +5,7 @@ public class TestExceptions {
   }
 
   private static void moreDangerous() {
-    //    synchronized (TestExceptions.class) {
-      evenMoreDangerous();
-      //    }
+    evenMoreDangerous();
   }
 
   private static void dangerous() {
