@@ -707,48 +707,42 @@ bitset(Context* c, object o)
 }
 
 inline object
-copyTo(Context* c, Segment* s, object o)
+copyTo(Context* c, Segment* s, object o, unsigned size)
 {
-  class Allocator: public Heap::Allocator {
-   public:
-    Allocator(Segment* s): s(s) { }
+  if (s->remaining() < size) {
+    s->ensure(size);
 
-    virtual void* allocate(unsigned size) {
-      if (s->remaining() < size) {
-        s->ensure(size);
-
-        if (Verbose) {
-          if (s == &(c->gen2)) {
-            fprintf(stderr, "grow gen2 to %d bytes\n",
-                    c->gen2.capacity() * BytesPerWord);
-          } else if (s == &(c->nextGen1)) {
-            fprintf(stderr, "grow nextGen1 to %d bytes\n",
-                    c->nextGen1.capacity() * BytesPerWord);
-          } else if (s == &(c->nextGen2)) {
-            fprintf(stderr, "grow nextGen2 to %d bytes\n",
-                    c->nextGen2.capacity() * BytesPerWord);
-          } else {
-            abort(c);
-          }
-        }
+    if (Verbose) {
+      if (s == &(c->gen2)) {
+        fprintf(stderr, "grow gen2 to %d bytes\n",
+                c->gen2.capacity() * BytesPerWord);
+      } else if (s == &(c->nextGen1)) {
+        fprintf(stderr, "grow nextGen1 to %d bytes\n",
+                c->nextGen1.capacity() * BytesPerWord);
+      } else if (s == &(c->nextGen2)) {
+        fprintf(stderr, "grow nextGen2 to %d bytes\n",
+                c->nextGen2.capacity() * BytesPerWord);
+      } else {
+        abort(c);
       }
-
-      return s->allocate(size);
     }
-  } allocator(s);
-
-  c->client->copy(o, &allocator);
-  return p;
+  }
+  
+  object dst = s->allocate(size);
+  c->client->copy(o, dst);
+  return dst;
 }
 
 object
 copy2(Context* c, object o)
 {
+  unsigned size = c->client->copiedSizeInWords(o);
+
   if (c->gen2.contains(o)) {
     assert(c, c->mode == MajorCollection
            or c->mode == Gen2Collection);
 
-    return copyTo(c, &(c->nextGen2), o);
+    return copyTo(c, &(c->nextGen2), o, size);
   } else if (c->gen1.contains(o)) {
     unsigned age = c->ageMap.get(o);
     if (age == TenureThreshold) {
@@ -760,7 +754,7 @@ copy2(Context* c, object o)
             c->gen2Base = c->gen2.position();
           }
 
-          return copyTo(c, &(c->gen2), o);
+          return copyTo(c, &(c->gen2), o, size);
         } else {
           if (Verbose) {
             fprintf(stderr, "overflow collection\n");
@@ -768,13 +762,13 @@ copy2(Context* c, object o)
 
           c->mode = OverflowCollection;
           initNextGen2(c);
-          return copyTo(c, &(c->nextGen2), o);          
+          return copyTo(c, &(c->nextGen2), o, size);          
         }
       } else {
-        return copyTo(c, &(c->nextGen2), o);
+        return copyTo(c, &(c->nextGen2), o, size);
       }
     } else {
-      o = copyTo(c, &(c->nextGen1), o);
+      o = copyTo(c, &(c->nextGen1), o, size);
       c->nextAgeMap.setOnly(o, age + 1);
       return o;
     }
@@ -782,7 +776,7 @@ copy2(Context* c, object o)
     assert(c, not c->nextGen1.contains(o));
     assert(c, not c->nextGen2.contains(o));
 
-    o = copyTo(c, &(c->nextGen1), o);
+    o = copyTo(c, &(c->nextGen1), o, size);
 
     c->nextAgeMap.clear(o);
 

@@ -25,8 +25,6 @@ const bool Debug = false;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
-const uintptr_t MonitorFlag
-= static_cast<uintptr_t>(1) << ((BytesPerWord * 8) - 1);
 
 class Thread;
 
@@ -81,13 +79,15 @@ class Machine {
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
-  System::Monitor* monitorMapLock;
+  System::Monitor* finalizerLock;
   System::Library* libraries;
   object classMap;
   object bootstrapClassMap;
   object builtinMap;
   object monitorMap;
   object types;
+  object finalizers;
+  object doomed;
   bool unsafe;
   JNIEnvVTable jniEnvVTable;
 };
@@ -271,30 +271,7 @@ baseSize(Thread* t, object o, object class_)
 unsigned
 extendedSize(Thread* t, object o, unsigned baseSize)
 {
-  unsigned n = baseSize;
-
-  if (objectExtended(t, o)) {
-    if (extendedWord(t, o, n) & MonitorFlag) {
-      n += BytesPerWord;
-    }
-    n += BytesPerWord;
-  }
-
-  return n;
-}
-
-inline bool
-monitorAttached(Thread* t, object o, unsigned baseSize)
-{
-  return objectExtended(t, o)
-    and (extendedWord(t, o, baseSize) & MonitorFlag);
-}
-
-inline System::Monitor*&
-attachedMonitor(Thread* t, object o, unsigned baseSize)
-{
-  assert(t, monitorAttached(t, o, baseSize));
-  return cast<System::Monitor*>(o, (baseSize + 1) * BytesPerWord);
+  return baseSize + objectExtended(t, o);
 }
 
 inline bool
@@ -320,7 +297,7 @@ inline uint32_t
 objectHash(Thread* t, object o)
 {
   if (objectExtended(t, o)) {
-    return extendedWord(t, o, baseSize(t, o, objectClass(o))) & PointerMask;
+    return extendedWord(t, o, baseSize(t, o, objectClass(t, o)));
   } else {
     markHashTaken(t, o);
     return takeHash(t, o);
@@ -402,7 +379,8 @@ hashMapFind(Thread* t, object map, object key,
 }
 
 void
-hashMapGrow(Thread* t, object map, uint32_t (*hash)(Thread*, object))
+hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
+              unsigned size)
 {
   PROTECT(t, map);
 
@@ -410,7 +388,7 @@ hashMapGrow(Thread* t, object map, uint32_t (*hash)(Thread*, object))
   unsigned oldLength = (oldArray ? arrayLength(t, oldArray) : 0);
   PROTECT(t, oldArray);
 
-  unsigned newLength = (oldLength ? oldLength * 2 : 32);
+  unsigned newLength = max(nextPowerOfTwo(size), 16);
   object newArray = makeArray(t, newLength, true);
 
   if (oldArray) {
@@ -446,7 +424,7 @@ hashMapInsert(Thread* t, object map, object key, object value,
     PROTECT(t, key);
     PROTECT(t, value);
 
-    hashMapGrow(t, map, hash);
+    hashMapResize(t, map, hash, arrayLength(t, array) * 2);
     array = hashMapArray(t, map);
   }
 
@@ -456,6 +434,39 @@ hashMapInsert(Thread* t, object map, object key, object value,
   n = makeTriple(t, key, value, n);
 
   set(t, arrayBody(t, array, index), n);
+}
+
+object
+hashMapRemove(Thread* t, object map, object key,
+              uint32_t (*hash)(Thread*, object),
+              bool (*equal)(Thread*, object, object))
+{
+  object array = hashMapArray(t, map);
+  object o = 0;
+  if (array) {
+    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+    object n = arrayBody(t, array, index);
+    object p = 0;
+    while (n) {
+      if (equal(t, tripleFirst(t, n), key)) {
+        o = tripleFirst(t, n);
+        if (p) {
+          set(t, tripleThird(t, p), tripleThird(t, n));
+        } else {
+          set(t, arrayBody(t, array, index), tripleThird(t, n));
+        }
+      }
+      
+      p = n;
+      n = tripleThird(t, n);
+    }
+  }
+
+  if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
+    hashMapResize(t, map, hash, arrayLength(t, array) / 2);
+  }
+
+  return o;
 }
 
 object
@@ -594,6 +605,28 @@ collect(Machine* m, Heap::CollectionType type)
       for (Thread* t = m->rootThread; t; t = t->next) {
         ::visitRoots(t, v);
       }
+
+      Thread* t = m->rootThread;
+      for (object* f = &(m->finalizers); *f;) {
+        object o = finalizerTarget(t, *f);
+        if (m->heap->follow(o) == o) {
+          // object has not been collected
+          object x = *f;
+          *f = finalizerNext(t, x);
+          finalizerNext(t, x) = m->doomed;
+          m->doomed = x;
+        } else {
+          f = &finalizerNext(t, *f);
+        }
+      }
+
+      for (object* f = &(m->finalizers); *f; f = &finalizerNext(t, *f)) {
+        v->visit(f);
+      }
+
+      for (object* f = &(m->doomed); *f; f = &finalizerNext(t, *f)) {
+        v->visit(f);
+      }
     }
 
     virtual unsigned sizeInWords(object o) {
@@ -605,54 +638,34 @@ collect(Machine* m, Heap::CollectionType type)
         (t, o, baseSize(t, o, m->heap->follow(objectClass(t, o))));
     }
 
-    virtual void copy(object o, Heap::Allocator* allocator) {
+    virtual unsigned copiedSizeInWords(object o) {
+      Thread* t = m->rootThread;
+
+      o = m->heap->follow(mask(o));
+
+      unsigned n = baseSize(t, o, m->heap->follow(objectClass(t, o)));
+
+      if (objectExtended(t, o) or hashTaken(t, o)) {
+        ++ n;
+      }
+
+      return n;
+    }
+
+    virtual void copy(object o, object dst) {
       Thread* t = m->rootThread;
 
       o = m->heap->follow(mask(o));
 
       unsigned base = baseSize(t, o, m->heap->follow(objectClass(t, o)));
-      unsigned copyCount = base;
-      unsigned allocateCount = base;
+      unsigned n = extendedSize(t, o, base);
 
-      System::Monitor* monitor = 0;
-
-      if (objectExtended(t, o)) {
-        copyCount += BytesPerWord;
-        allocateCount += BytesPerWord;
-
-        if (extendedWord(t, o, base) & MonitorFlag) {
-          copyCount += BytesPerWord;
-          allocateCount += BytesPerWord;
-        } else {
-          monitor = gcHashMapRemove
-            (t, m->monitorMap, o, gcObjectHash, gcObjectEqual);
-
-          if (monitor) {
-            allocateCount += BytesPerWord;
-          }
-        }
-      } else if (hashTaken(t, o)) {
-        allocateCount += BytesPerWord;
-
-        monitor = gcHashMapRemove
-          (t, m->monitorMap, o, gcObjectHash, gcObjectEqual);
-
-        if (monitor) {
-          allocateCount += BytesPerWord;
-        }
-      }
-
-      object dst = allocator->allocate(allocateCount);
-      memcpy(o, dst, copyCount * BytesPerWord);
+      memcpy(o, dst, n * BytesPerWord);
 
       if (hashTaken(t, o)) {
         extendedWord(t, dst, base) = takeHash(t, o);
         cast<uintptr_t>(dst, 0) &= PointerMask;
         cast<uintptr_t>(dst, 0) |= ExtendedMark;
-      }
-
-      if (monitor) {
-        attachedMonitor(t, dst, base) = monitor;
       }
     }
 
@@ -730,6 +743,13 @@ collect(Machine* m, Heap::CollectionType type)
   m->unsafe = false;
 
   postCollect(m->rootThread);
+
+  Thread* t = m->rootThread;
+  for (object f = m->doomed; f; f = tripleThird(t, f)) {
+    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
+      (t, finalizerTarget(t, f));
+  }
+  m->doomed = 0;
 }
 
 void
@@ -913,36 +933,45 @@ make(Thread* t, object class_)
   return instance;
 }
 
-System::Monitor*
-mappedMonitor(Thread* t, object o)
+void
+addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 {
-  PROTECT(t, o);
+  PROTECT(t, target);
 
-  ACQUIRE(t, t->vm->monitorMapLock);
+  ACQUIRE(t, t->vm->finalizerLock);
 
+  object p = makePointer(t, reinterpret_cast<void*>(finalize));
+  t->vm->finalizers = makeTriple(t, target, p, t->vm->finalizers);
+}
+
+void
+removeMonitor(Thread* t, object o)
+{
+  hashMapRemove(t, t->vm->monitorMap, o, objectHash, objectEqual);
+}
+
+System::Monitor*
+objectMonitor(Thread* t, object o)
+{
   object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, objectEqual);
 
   if (p) {
     return static_cast<System::Monitor*>(pointerValue(t, p));
   } else {
+    PROTECT(t, o);
+
+    ENTER(t, Thread::ExclusiveState);
+
+    System::Monitor* m;
     System::Status s = t->vm->system->make(&m);
     expect(t, t->vm->system->success(s));
 
-    object pointer = makePointer(t, m);
-    hashMapInsert(t, t->vm->monitorMap, o, pointer, objectHash);
+    p = makePointer(t, m);
+    hashMapInsert(t, t->vm->monitorMap, o, p, objectHash);
+
+    addFinalizer(t, o, removeMonitor);
 
     return m;
-  }
-}
-
-inline System::Monitor*
-objectMonitor(Thread* t, object o)
-{
-  unsigned base = baseSize(t, o);
-  if (monitorAttached(t, o, base)) {
-    return attachedMonitor(t, o, base);
-  } else {
-    return mappedMonitor(t, o);
   }
 }
 
@@ -2167,7 +2196,10 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   ENTER(t, Thread::ExclusiveState);
 
-  memcpy(bootstrapClass, class_, extendedSize(t, class_) * BytesPerWord);
+  memcpy(bootstrapClass,
+         class_,
+         extendedSize(t, class_, baseSize(t, class_, objectClass(t, class_)))
+         * BytesPerWord);
 
   object fieldTable = classFieldTable(t, class_);
   if (fieldTable) {
@@ -2471,7 +2503,7 @@ invokeNative(Thread* t, object method)
   }
 }
 
-object
+object&
 frameLocals(Thread* t, object frame, unsigned index)
 {
   return t->stack[frameStackBase(t, frame) + index];
@@ -2608,13 +2640,15 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   stateLock(0),
   heapLock(0),
   classLock(0),
-  monitorMapLock(0),
+  finalizerLock(0),
   libraries(0),
   classMap(0),
   bootstrapClassMap(0),
   builtinMap(0),
   monitorMap(0),
   types(0),
+  finalizers(0),
+  doomed(0),
   unsafe(false)
 {
   memset(&jniEnvVTable, 0, sizeof(JNIEnvVTable));
@@ -2626,7 +2660,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   if (not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
-      not system->success(system->make(&monitorMapLock)))
+      not system->success(system->make(&finalizerLock)))
   {
     system->abort();
   }
@@ -2638,6 +2672,8 @@ Machine::dispose()
   stateLock->dispose();
   heapLock->dispose();
   classLock->dispose();
+  finalizerLock->dispose();
+
   if (libraries) {
     libraries->dispose();
   }

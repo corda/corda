@@ -24,18 +24,13 @@ class Heap {
     virtual bool visit(unsigned) = 0;
   };
 
-  class Allocator {
-   public:
-    virtual ~Allocator() { }
-    virtual void* allocate(unsigned sizeInWords) = 0;
-  };
-
   class Client {
    public:
     virtual ~Client() { }
     virtual void visitRoots(Visitor*) = 0;
     virtual unsigned sizeInWords(void*) = 0;
-    virtual void copy(void*, Allocator*) = 0;
+    virtual unsigned copiedSizeInWords(void*) = 0;
+    virtual void copy(void*, void*) = 0;
     virtual void walk(void*, Walker*) = 0;
   };
 
