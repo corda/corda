@@ -14,10 +14,6 @@
 
 #define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
-#define ACQUIRE_READ(t, x) ReadResource MAKE_NAME(readResource_) (t, x)
-
-#define ACQUIRE_WRITE(t, x) WriteResource MAKE_NAME(writeResource_) (t, x)
-
 #define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
 
 using namespace vm;
@@ -85,7 +81,7 @@ class Machine {
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
-  System::ReadWriteLock monitorMapLock;
+  System::Monitor* monitorMapLock;
   System::Library* libraries;
   object classMap;
   object bootstrapClassMap;
@@ -195,38 +191,6 @@ class StateResource {
   Thread::State oldState;
 };
 
-class ReadResource {
- public:
-  ReadResource(Thread* t, System::ReadWriteLock& lock): t(t), lock(lock) {
-    if (not lock.tryAcquireRead(t)) {
-      ENTER(t, Thread::IdleState);
-      lock.acquireRead(t);
-    }
-  }
-
-  ~ReadResource() { lock.releaseRead(t); }
-
- private:
-  Thread* t;
-  System::ReadWriteLock& lock;
-};
-
-class WriteResource {
- public:
-  WriteResource(Thread* t, System::ReadWriteLock& lock): t(t), lock(lock) {
-    if (not lock.tryAcquireWrite(t)) {
-      ENTER(t, Thread::IdleState);
-      lock.acquireWrite(t);
-    }
-  }
-
-  ~WriteResource() { lock.releaseWrite(t); }
-
- private:
-  Thread* t;
-  System::ReadWriteLock& lock;
-};
-
 class MonitorResource {
  public:
   MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
@@ -304,12 +268,6 @@ baseSize(Thread* t, object o, object class_)
              BytesPerWord);
 }
 
-inline unsigned
-baseSize(Thread* t, object o)
-{
-  return baseSize(t, o, objectClass(t, o));
-}
-
 unsigned
 extendedSize(Thread* t, object o, unsigned baseSize)
 {
@@ -323,12 +281,6 @@ extendedSize(Thread* t, object o, unsigned baseSize)
   }
 
   return n;
-}
-
-inline unsigned
-extendedSize(Thread* t, object o)
-{
-  return extendedSize(t, o, baseSize(t, o));
 }
 
 inline bool
@@ -368,7 +320,7 @@ inline uint32_t
 objectHash(Thread* t, object o)
 {
   if (objectExtended(t, o)) {
-    return extendedWord(t, o, baseSize(t, o)) & PointerMask;
+    return extendedWord(t, o, baseSize(t, o, objectClass(o))) & PointerMask;
   } else {
     markHashTaken(t, o);
     return takeHash(t, o);
@@ -966,24 +918,20 @@ mappedMonitor(Thread* t, object o)
 {
   PROTECT(t, o);
 
-  System::Monitor* m = 0;
-  { ACQUIRE_READ(t, t->vm->monitorMapLock);
-    object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, objectEqual);
-    if (p) {
-      m = static_cast<System::Monitor*>(pointerValue(t, p));
-    }
-  }
+  ACQUIRE(t, t->vm->monitorMapLock);
 
-  if (m == 0) {
+  object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, objectEqual);
+
+  if (p) {
+    return static_cast<System::Monitor*>(pointerValue(t, p));
+  } else {
     System::Status s = t->vm->system->make(&m);
     expect(t, t->vm->system->success(s));
 
     object pointer = makePointer(t, m);
-    PROTECT(t, pointer);
-
-    ACQUIRE_WRITE(t, t->vm->monitorMapLock);
-
     hashMapInsert(t, t->vm->monitorMap, o, pointer, objectHash);
+
+    return m;
   }
 }
 
@@ -2654,7 +2602,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   stateLock(0),
   heapLock(0),
   classLock(0),
-  monitorMapLock(system),
+  monitorMapLock(0),
   libraries(0),
   classMap(0),
   bootstrapClassMap(0),
@@ -2671,7 +2619,8 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
 
   if (not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
-      not system->success(system->make(&classLock)))
+      not system->success(system->make(&classLock)) or
+      not system->success(system->make(&monitorMapLock)))
   {
     system->abort();
   }
