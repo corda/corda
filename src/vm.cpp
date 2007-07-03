@@ -4159,6 +4159,11 @@ run(Thread* t)
       frame = makeFrame(t, code, frame, 0, base);
       code = methodCode(t, code);
 
+      memset(stack + base + parameterCount,
+             0,
+             (codeMaxLocals(t, methodCode(t, code)) - parameterCount)
+             * BytesPerWord);
+
       sp = base + codeMaxLocals(t, methodCode(t, code));
     }
   } goto loop;
