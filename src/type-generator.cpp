@@ -1496,7 +1496,7 @@ writeInitialization(Output* out, Object* type)
   }
 
   out->write("  object class_ = makeClass");
-  out->write("(t, 0, ");
+  out->write("(t, 0, 0, ");
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));

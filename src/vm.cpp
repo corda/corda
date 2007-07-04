@@ -57,8 +57,10 @@ enum StackTag {
   ObjectTag
 };
 
-static const int NativeLine = -1;
-static const int UnknownLine = -2;
+const int NativeLine = -1;
+const int UnknownLine = -2;
+
+const unsigned WeakReferenceFlag = 1 << 0;
 
 class Machine {
  public:
@@ -93,6 +95,7 @@ class Machine {
   object types;
   object finalizers;
   object doomed;
+  object weakReferences;
   bool unsafe;
   JNIEnvVTable jniEnvVTable;
 };
@@ -316,6 +319,18 @@ objectEqual(Thread*, object a, object b)
 }
 
 inline uint32_t
+referenceHash(Thread* t, object o)
+{
+  return objectHash(t, jreferenceTarget(t, o));
+}
+
+inline bool
+referenceEqual(Thread* t, object a, object b)
+{
+  return a == jreferenceTarget(t, b);
+}
+
+inline uint32_t
 byteArrayHash(Thread* t, object array)
 {
   return hash(&byteArrayBody(t, array, 0), byteArrayLength(t, array));
@@ -364,7 +379,7 @@ hashMapFindNode(Thread* t, object map, object key,
     unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
     object n = arrayBody(t, array, index);
     while (n) {
-      if (equal(t, tripleFirst(t, n), key)) {
+      if (equal(t, key, tripleFirst(t, n))) {
         return n;
       }
       
@@ -453,7 +468,7 @@ hashMapRemove(Thread* t, object map, object key,
     object n = arrayBody(t, array, index);
     object p = 0;
     while (n) {
-      if (equal(t, tripleFirst(t, n), key)) {
+      if (equal(t, key, tripleFirst(t, n))) {
         o = tripleFirst(t, n);
         if (p) {
           set(t, tripleThird(t, p), tripleThird(t, n));
@@ -690,6 +705,21 @@ collect(Machine* m, Heap::CollectionType type)
       for (object* f = &(m->doomed); *f; f = &finalizerNext(t, *f)) {
         v->visit(f);
       }
+
+      for (object p = m->weakReferences; p;) {
+        object o = jreferenceTarget(t, p);
+        object followed = m->heap->follow(o);
+        if (followed == o) {
+          // object has not been collected
+          jreferenceTarget(t, p) = 0;
+        } else {
+          jreferenceTarget(t, p) = followed;
+        }
+
+        object last = p;
+        p = weakReferenceNext(t, p);
+        weakReferenceNext(t, last) = 0;
+      }
     }
 
     virtual unsigned sizeInWords(object o) {
@@ -719,8 +749,9 @@ collect(Machine* m, Heap::CollectionType type)
       Thread* t = m->rootThread;
 
       o = m->heap->follow(mask(o));
+      object class_ = m->heap->follow(objectClass(t, o));
 
-      unsigned base = baseSize(t, o, m->heap->follow(objectClass(t, o)));
+      unsigned base = baseSize(t, o, class_);
       unsigned n = extendedSize(t, o, base);
 
       memcpy(o, dst, n * BytesPerWord);
@@ -729,6 +760,11 @@ collect(Machine* m, Heap::CollectionType type)
         extendedWord(t, dst, base) = takeHash(t, o);
         cast<uintptr_t>(dst, 0) &= PointerMask;
         cast<uintptr_t>(dst, 0) |= ExtendedMark;
+      }
+
+      if (classVmFlags(t, class_) & WeakReferenceFlag) {
+        weakReferenceNext(t, dst) = m->weakReferences;
+        m->weakReferences = dst;
       }
     }
 
@@ -743,6 +779,7 @@ collect(Machine* m, Heap::CollectionType type)
 //         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
 //                 p, class_, objectMask, intArrayLength(t, objectMask));
 
+        unsigned vmFlags = classVmFlags(t, class_);
         unsigned fixedSize = classFixedSize(t, class_);
         unsigned arrayElementSize = classArrayElementSize(t, class_);
         unsigned arrayLength
@@ -762,7 +799,9 @@ collect(Machine* m, Heap::CollectionType type)
           = divide(arrayElementSize, BytesPerWord);
 
         for (unsigned i = 0; i < fixedSizeInWords; ++i) {
-          if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
+          if ((i != 1 or (vmFlags & WeakReferenceFlag) == 0)
+              and mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i)))
+          {
             if (not w->visit(i)) {
               return;
             }
@@ -813,6 +852,8 @@ collect(Machine* m, Heap::CollectionType type)
       (t, finalizerTarget(t, f));
   }
   m->doomed = 0;
+
+  m->weakReferences = 0;
 }
 
 void
@@ -1010,13 +1051,13 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 void
 removeMonitor(Thread* t, object o)
 {
-  hashMapRemove(t, t->vm->monitorMap, o, objectHash, objectEqual);
+  hashMapRemove(t, t->vm->monitorMap, o, objectHash, referenceEqual);
 }
 
 System::Monitor*
 objectMonitor(Thread* t, object o)
 {
-  object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, objectEqual);
+  object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, referenceEqual);
 
   if (p) {
     return static_cast<System::Monitor*>(pointerValue(t, p));
@@ -1030,7 +1071,11 @@ objectMonitor(Thread* t, object o)
     expect(t, t->vm->system->success(s));
 
     p = makePointer(t, m);
-    hashMapInsert(t, t->vm->monitorMap, o, p, objectHash);
+    PROTECT(t, p);
+
+    object wr = makeWeakReference(t, o, 0);
+
+    hashMapInsert(t, t->vm->monitorMap, wr, p, referenceHash);
 
     addFinalizer(t, o, removeMonitor);
 
@@ -2169,6 +2214,7 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
 
   object class_ = makeClass(t,
                             flags,
+                            0, // VM flags
                             0, // fixed size
                             0, // array size
                             0, // object mask
@@ -2188,6 +2234,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
     if (UNLIKELY(t->exception)) return 0;
 
     set(t, classSuper(t, class_), sc);
+
+    classVmFlags(t, class_) |= classVmFlags(t, sc);
   }
   
   parseInterfaceTable(t, s, class_, pool);
@@ -2219,6 +2267,8 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   PROTECT(t, class_);
 
   ENTER(t, Thread::ExclusiveState);
+
+  classVmFlags(t, class_) |= classVmFlags(t, bootstrapClass);
 
   memcpy(bootstrapClass,
          class_,
@@ -2675,6 +2725,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   types(0),
   finalizers(0),
   doomed(0),
+  weakReferences(0),
   unsafe(false)
 {
   memset(&jniEnvVTable, 0, sizeof(JNIEnvVTable));
@@ -2741,6 +2792,9 @@ Thread::Thread(Machine* m):
 
     object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
     set(t, cast<object>(intArrayClass, 0), classClass);
+
+    classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
+      |= WeakReferenceFlag;
 
     m->unsafe = false;
 

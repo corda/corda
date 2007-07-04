@@ -3,6 +3,7 @@
 
 (type class
   (uint16_t flags)
+  (uint16_t vmFlags)
   (uint16_t fixedSize)
   (uint16_t arrayElementSize)
   (object objectMask)
@@ -229,3 +230,11 @@
 (type double java/lang/Double
   (extends jobject)
   (uint64_t value))
+
+(type jreference java/lang/ref/Reference
+  (extends jobject)
+  (object target))
+
+(type weakReference java/lang/ref/WeakReference
+  (extends jreference)
+  (object next))
