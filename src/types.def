@@ -27,6 +27,7 @@
   (uint16_t flags)
   (uint16_t offset)
   (uint16_t parameterCount)
+  (uint16_t parameterFootprint)
   (object name)
   (object spec)
   (object class)

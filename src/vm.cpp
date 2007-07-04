@@ -52,6 +52,11 @@ enum FieldCode {
   ObjectField
 };
 
+enum StackTag {
+  IntTag, // must be zero
+  ObjectTag
+};
+
 static const int NativeLine = -1;
 static const int UnknownLine = -2;
 
@@ -163,7 +168,7 @@ class Thread : public JNIEnv {
   unsigned heapIndex;
   Protector* protector;
   Chain* chain;
-  object stack[StackSizeInWords];
+  uintptr_t stack[StackSizeInWords];
   object heap[HeapSizeInWords];
 };
 
@@ -520,28 +525,84 @@ listAppend(Thread* t, object list, object value)
 }
 
 inline void
-push(Thread* t, object o)
+pushObject(Thread* t, object o)
 {
-  t->stack[(t->sp)++] = o;
+  t->stack[(t->sp * 2)    ] = ObjectTag;
+  t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
+  ++ t->sp;
 }
 
 inline void
-pushSafe(Thread* t, object o)
+pushInt(Thread* t, uint32_t v)
 {
-  expect(t, t->sp + 1 < Thread::StackSizeInWords);
-  push(t, o);
+  t->stack[(t->sp * 2)    ] = IntTag;
+  t->stack[(t->sp * 2) + 1] = v;
+  ++ t->sp;
+}
+
+inline void
+pushLong(Thread* t, uint64_t v)
+{
+  pushInt(t, v >> 32);
+  pushInt(t, v & 0xFF);
 }
 
 inline object
-pop(Thread* t)
+popObject(Thread* t)
 {
-  return t->stack[--(t->sp)];
+  assert(t, t->stack[(t->sp - 1) * 2] == ObjectTag);
+  return reinterpret_cast<object>(t->stack[((-- t->sp) * 2) + 1]);
+}
+
+inline uint32_t
+popInt(Thread* t)
+{
+  assert(t, t->stack[t->sp - 2] == IntTag);
+  return t->stack[((-- t->sp) * 2) + 1];
+}
+
+inline uint64_t
+popLong(Thread* t)
+{
+  uint64_t a = popInt(t);
+  uint64_t b = popInt(t);
+  return (b << 32) | a;
 }
 
 inline object&
-top(Thread* t)
+peekObject(Thread* t, unsigned index)
 {
-  return t->stack[t->sp - 1];
+  assert(t, t->stack[index * 2] == ObjectTag);
+  return *reinterpret_cast<object*>(t->stack + (index * 2) + 1);
+}
+
+inline uint32_t&
+peekInt(Thread* t, unsigned index)
+{
+  assert(t, t->stack[index * 2] == IntTag);
+  return t->stack[(index * 2) + 1];
+}
+
+inline uint64_t
+peekLong(Thread* t, unsigned index)
+{
+  return (static_cast<uint64_t>(peekInt(t, index)) << 32)
+    | static_cast<uint64_t>(peekInt(t, index + 2));
+}
+
+inline void
+setLong(Thread* t, unsigned index, uint64_t value)
+{
+  peekInt(t, index) = value >> 32;
+  peekInt(t, index + 2) = value & 0xFF;
+}
+
+inline object*
+pushReference(Thread* t, object o)
+{
+  expect(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+  pushObject(t, o);
+  return &peekObject(t, t->sp - 1);
 }
 
 void
@@ -565,7 +626,9 @@ visitRoots(Thread* t, Heap::Visitor* v)
   v->visit(&(t->exception));
 
   for (unsigned i = 0; i < t->sp; ++i) {
-    v->visit(t->stack + i);
+    if (t->stack[i * 2] == ObjectTag) {
+      v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
+    }
   }
 
   for (Thread::Protector* p = t->protector; p; p = p->next) {
@@ -1118,13 +1181,6 @@ makeUnsatisfiedLinkError(Thread* t, object message)
   return makeUnsatisfiedLinkError(t, message, trace, 0);
 }
 
-inline bool
-isLongOrDouble(Thread* t, object o)
-{
-  return objectClass(t, o) == arrayBody(t, t->vm->types, Machine::LongType)
-    or objectClass(t, o) == arrayBody(t, t->vm->types, Machine::DoubleType);
-}
-
 unsigned
 fieldCode(Thread* t, unsigned javaCode)
 {
@@ -1253,76 +1309,6 @@ primitiveSize(Thread* t, unsigned code)
 
   default: abort(t);
   }
-}
-
-object
-getField(Thread* t, object instance, object field)
-{
-  switch (fieldCode(t, field)) {
-  case ByteField:
-    return makeByte(t, cast<int8_t>(instance, fieldOffset(t, field)));
-  case CharField:
-    return makeChar(t, cast<int16_t>(instance, fieldOffset(t, field)));
-  case DoubleField:
-    return makeDouble(t, cast<int64_t>(instance, fieldOffset(t, field)));
-  case FloatField:
-    return makeFloat(t, cast<int32_t>(instance, fieldOffset(t, field)));
-  case IntField:
-    return makeInt(t, cast<int32_t>(instance, fieldOffset(t, field)));
-  case LongField:
-    return makeLong(t, cast<int64_t>(instance, fieldOffset(t, field)));
-  case ShortField:
-    return makeShort(t, cast<int16_t>(instance, fieldOffset(t, field)));
-  case BooleanField:
-    return makeBoolean(t, cast<int8_t>(instance, fieldOffset(t, field)));
-  case ObjectField:
-    return cast<object>(instance, fieldOffset(t, field));
-
-  default: abort(t);
-  }
-}
-
-void
-setField(Thread* t, object o, object field, object value)
-{
-  switch (fieldCode(t, field)) {
-  case ByteField:
-    cast<int8_t>(o, fieldOffset(t, field)) = byteValue(t, value);
-    break;
-  case CharField:
-    cast<int16_t>(o, fieldOffset(t, field)) = charValue(t, value);
-    break;
-  case DoubleField:
-    cast<int64_t>(o, fieldOffset(t, field)) = doubleValue(t, value);
-    break;
-  case FloatField:
-    cast<int32_t>(o, fieldOffset(t, field)) = floatValue(t, value);
-    break;
-  case IntField:
-    cast<int32_t>(o, fieldOffset(t, field)) = intValue(t, value);
-    break;
-  case LongField:
-    cast<int64_t>(o, fieldOffset(t, field)) = longValue(t, value);
-    break;
-  case ShortField:
-    cast<int16_t>(o, fieldOffset(t, field)) = shortValue(t, value);
-    break;
-  case BooleanField:
-    cast<int8_t>(o, fieldOffset(t, field)) = booleanValue(t, value);
-    break;
-  case ObjectField:
-    set(t, cast<object>(o, fieldOffset(t, field)), value);
-    break;
-
-  default: abort(t);
-  }
-}
-
-inline object
-getStatic(Thread* t, object field)
-{
-  return arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                   fieldOffset(t, field));
 }
 
 inline void
@@ -1786,6 +1772,40 @@ parseCode(Thread* t, Stream& s, object pool)
 }
 
 unsigned
+parameterFootprint(Thread* t, object spec)
+{
+  unsigned footprint = 0;
+  const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      break;
+      
+    case 'J':
+    case 'D':
+      ++ s;
+      ++ footprint;
+      break;
+
+    default:
+      ++ s;
+      break;
+    }
+
+    ++ footprint;
+  }
+
+  return footprint;
+}
+
+unsigned
 parameterCount(Thread* t, object spec)
 {
   unsigned count = 0;
@@ -2012,6 +2032,9 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       unsigned parameterCount = ::parameterCount
         (t, arrayBody(t, pool, spec - 1));
 
+      unsigned parameterFootprint = ::parameterFootprint
+        (t, arrayBody(t, pool, spec - 1));
+
       if ((flags & ACC_STATIC) == 0) {
         ++ parameterCount;
       }
@@ -2020,6 +2043,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  flags,
                                  0, // offset
                                  parameterCount,
+                                 parameterFootprint,
                                  arrayBody(t, pool, name - 1),
                                  arrayBody(t, pool, spec - 1),
                                  class_,
@@ -2422,7 +2446,7 @@ resolveNativeMethodData(Thread* t, object method)
   }  
 }
 
-inline object
+inline uint64_t
 invokeNative(Thread* t, object method)
 {
   object data = resolveNativeMethodData(t, method);
@@ -2440,32 +2464,25 @@ invokeNative(Thread* t, object method)
 
   for (unsigned i = 0; i < count; ++i) {
     unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
-    unsigned position = (t->sp - count) + i;
-    object o = t->stack[position];
+    unsigned position = t->sp - ((count - i) * 2);
 
     switch (type) {
     case INT8_TYPE:
-      args[offset++] = cast<uint8_t>(o, BytesPerWord);
-      break;
-
     case INT16_TYPE:
-      args[offset++] = cast<uint16_t>(o, BytesPerWord);
-      break;
-
     case INT32_TYPE:
     case FLOAT_TYPE:
-      args[offset++] = cast<uint32_t>(o, BytesPerWord);
+      args[offset++] = peekInt(t, position);
       break;
 
     case INT64_TYPE:
     case DOUBLE_TYPE: {
-      uint64_t v = cast<uint64_t>(o, BytesPerWord);
+      uint64_t v = peekLong(t, position);
       memcpy(args + offset, &v, 8);
       offset += (8 / BytesPerWord);
     } break;
 
     case POINTER_TYPE:
-      args[offset++] = reinterpret_cast<uintptr_t>(t->stack + position);
+      args[offset++] = reinterpret_cast<uintptr_t>(&peekObject(t, position));
       break;
 
     default: abort(t);
@@ -2493,20 +2510,31 @@ invokeNative(Thread* t, object method)
     enter(t, Thread::ActiveState);
   }
 
-  if (UNLIKELY(t->exception) or returnCode == VoidField) {
-    return 0;
-  } else if (returnCode == ObjectField) {
-    return (rv == 0 ? 0 :
-            *reinterpret_cast<object*>(static_cast<uintptr_t>(rv)));
-  } else {
-    return makePrimitive(t, returnCode, rv);
-  }
+  return rv;
 }
 
-object&
-frameLocals(Thread* t, object frame, unsigned index)
+inline object&
+localObject(Thread* t, object frame, unsigned index)
 {
-  return t->stack[frameStackBase(t, frame) + index];
+  return peekObject(t, frameStackBase(t, frame) + index);
+}
+
+inline uint32_t&
+localInt(Thread* t, object frame, unsigned index)
+{
+  return peekInt(t, frameStackBase(t, frame) + index);
+}
+
+inline uint64_t
+localLong(Thread* t, object frame, unsigned index)
+{
+  return peekLong(t, frameStackBase(t, frame) + index);
+}
+
+inline void
+setLocalLong(Thread* t, object frame, unsigned index, uint32_t value)
+{
+  setLong(t, frameStackBase(t, frame) + index, value);
 }
 
 namespace builtin {
@@ -2548,8 +2576,7 @@ toString(JNIEnv* e, jobject this_)
      &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
      *this_);
 
-  pushSafe(t, s);
-  return t->stack + (t->sp - 1);
+  return pushReference(t, s);
 }
 
 jarray
@@ -2572,8 +2599,7 @@ trace(JNIEnv* e, jint skipCount)
     }
   }
 
-  pushSafe(t, makeTrace(t, frame));
-  return t->stack + (t->sp - 1);
+  return pushReference(t, makeTrace(t, frame));
 }
 
 } // namespace builtin
@@ -2752,31 +2778,32 @@ Thread::Thread(Machine* m):
 object
 run(Thread* t)
 {
+  unsigned instruction = nop;
   unsigned& ip = t->ip;
   unsigned& sp = t->sp;
   object& code = t->code;
   object& frame = t->frame;
   object& exception = t->exception;
-  object* stack = t->stack;
+  uintptr_t* stack = t->stack;
 
   if (UNLIKELY(exception)) goto throw_;
 
  loop:
 //   fprintf(stderr, "ip: %d; instruction: 0x%x\n", ip, codeBody(t, code, ip));
 
-  switch (codeBody(t, code, ip++)) {
+  instruction = codeBody(t, code, ip++);
+  switch (instruction) {
   case aaload: {
-    object index = pop(t);
-    object array = pop(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      int32_t i = intValue(t, index);
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < objectArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < objectArrayLength(t, array)))
       {
-        push(t, objectArrayBody(t, array, i));
+        pushObject(t, objectArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     objectArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -2788,18 +2815,17 @@ run(Thread* t)
   } goto loop;
 
   case aastore: {
-    object value = pop(t);
-    object index = pop(t);
-    object array = pop(t);
-    int32_t i = intValue(t, index);
+    object value = popObject(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < objectArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < objectArrayLength(t, array)))
       {
-        set(t, objectArrayBody(t, array, i), value);
+        set(t, objectArrayBody(t, array, index), value);
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     objectArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -2811,44 +2837,33 @@ run(Thread* t)
   } goto loop;
 
   case aconst_null: {
-    push(t, 0);
+    pushObject(t, 0);
   } goto loop;
 
-  case aload:
-  case iload:
-  case lload: {
-    push(t, frameLocals(t, frame, codeBody(t, code, ip++)));
+  case aload: {
+    pushObject(t, localObject(t, frame, codeBody(t, code, ip++)));
   } goto loop;
 
-  case aload_0:
-  case iload_0:
-  case lload_0: {
-    push(t, frameLocals(t, frame, 0));
+  case aload_0: {
+    pushObject(t, localObject(t, frame, 0));
   } goto loop;
 
-  case aload_1:
-  case iload_1:
-  case lload_1: {
-    push(t, frameLocals(t, frame, 1));
+  case aload_1: {
+    pushObject(t, localObject(t, frame, 1));
   } goto loop;
 
-  case aload_2:
-  case iload_2:
-  case lload_2: {
-    push(t, frameLocals(t, frame, 2));
+  case aload_2: {
+    pushObject(t, localObject(t, frame, 2));
   } goto loop;
 
-  case aload_3:
-  case iload_3:
-  case lload_3: {
-    push(t, frameLocals(t, frame, 3));
+  case aload_3: {
+    pushObject(t, localObject(t, frame, 3));
   } goto loop;
 
   case anewarray: {
-    object count = pop(t);
-    int32_t c = intValue(t, count);
+    int32_t count = popInt(t);
 
-    if (LIKELY(c >= 0)) {
+    if (LIKELY(count >= 0)) {
       uint8_t index1 = codeBody(t, code, ip++);
       uint8_t index2 = codeBody(t, code, ip++);
       uint16_t index = (index1 << 8) | index2;
@@ -2856,11 +2871,11 @@ run(Thread* t)
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
       
-      object array = makeObjectArray(t, class_, c, true);
+      object array = makeObjectArray(t, class_, count, true);
       
-      push(t, array);
+      pushObject(t, array);
     } else {
-      object message = makeString(t, "%d", c);
+      object message = makeString(t, "%d", count);
       exception = makeNegativeArrayStoreException(t, message);
       goto throw_;
     }
@@ -2875,22 +2890,30 @@ run(Thread* t)
       ip = frameIp(t, frame);
       goto loop;
     } else {
-      object value = pop(t);
       code = 0;
-      return value;
+      switch (instruction) {
+      case areturn:
+        return popObject(t);
+
+      case ireturn:
+        return makeInt(t, popInt(t));
+
+      case lreturn:
+        return makeLong(t, popLong(t));
+      }
     }
   } goto loop;
 
   case arraylength: {
-    object array = pop(t);
+    object array = popObject(t);
     if (LIKELY(array)) {
       if (objectClass(t, array)
           == arrayBody(t, t->vm->types, Machine::ObjectArrayType))
       {
-        push(t, makeInt(t, objectArrayLength(t, array)));
+        pushInt(t, objectArrayLength(t, array));
       } else {
         // for all other array types, the length follow the class pointer.
-        push(t, makeInt(t, cast<uint32_t>(array, BytesPerWord)));
+        pushInt(t, cast<uint32_t>(array, BytesPerWord));
       }
     } else {
       exception = makeNullPointerException(t);
@@ -2898,61 +2921,44 @@ run(Thread* t)
     }
   } abort(t);
 
-  case astore:
-  case istore:
-  case lstore: {
-    object value = pop(t);
-    set(t, frameLocals(t, frame, codeBody(t, code, ip++)), value);
+  case astore: {
+    set(t, localObject(t, frame, codeBody(t, code, ip++)), popObject(t));
   } goto loop;
 
-  case astore_0:
-  case istore_0:
-  case lstore_0: {
-    object value = pop(t);
-    set(t, frameLocals(t, frame, 0), value);
+  case astore_0: {
+    set(t, localObject(t, frame, 0), popObject(t));
   } goto loop;
 
-  case astore_1:
-  case istore_1:
-  case lstore_1: {
-    object value = pop(t);
-    set(t, frameLocals(t, frame, 1), value);
+  case astore_1: {
+    set(t, localObject(t, frame, 1), popObject(t));
   } goto loop;
 
-  case astore_2:
-  case istore_2:
-  case lstore_2: {
-    object value = pop(t);
-    set(t, frameLocals(t, frame, 2), value);
+  case astore_2: {
+    set(t, localObject(t, frame, 2), popObject(t));
   } goto loop;
 
-  case astore_3:
-  case istore_3:
-  case lstore_3: {
-    object value = pop(t);
-    set(t, frameLocals(t, frame, 3), value);
+  case astore_3: {
+    set(t, localObject(t, frame, 3), popObject(t));
   } goto loop;
 
   case athrow: {
-    exception = pop(t);
+    exception = popObject(t);
     if (UNLIKELY(exception == 0)) {
       exception = makeNullPointerException(t);      
     }
-    goto throw_;
-  } abort(t);
+  } goto throw_;
 
   case baload: {
-    object index = pop(t);
-    object array = pop(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      int32_t i = intValue(t, index);
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < byteArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < byteArrayLength(t, array)))
       {
-        push(t, makeByte(t, byteArrayBody(t, array, i)));
+        pushInt(t, byteArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     byteArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -2964,18 +2970,17 @@ run(Thread* t)
   } goto loop;
 
   case bastore: {
-    object value = pop(t);
-    object index = pop(t);
-    object array = pop(t);
-    int32_t i = intValue(t, index);
+    int8_t value = popInt(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < byteArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < byteArrayLength(t, array)))
       {
-        byteArrayBody(t, array, i) = intValue(t, value);
+        byteArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     byteArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -2987,21 +2992,20 @@ run(Thread* t)
   } goto loop;
 
   case bipush: {
-    push(t, makeInt(t, codeBody(t, code, ip++)));
+    pushInt(t, codeBody(t, code, ip++));
   } goto loop;
 
   case caload: {
-    object index = pop(t);
-    object array = pop(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      int32_t i = intValue(t, index);
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < charArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < charArrayLength(t, array)))
       {
-        push(t, makeInt(t, charArrayBody(t, array, i)));
+        pushInt(t, charArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     charArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -3013,18 +3017,17 @@ run(Thread* t)
   } goto loop;
 
   case castore: {
-    object value = pop(t);
-    object index = pop(t);
-    object array = pop(t);
-    int32_t i = intValue(t, index);
+    uint16_t value = popInt(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < charArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < charArrayLength(t, array)))
       {
-        charArrayBody(t, array, i) = intValue(t, value);
+        charArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     charArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -3039,16 +3042,17 @@ run(Thread* t)
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
 
-    if (stack[sp - 1]) {
+    if (peekObject(t, sp - 1)) {
       uint16_t index = (index1 << 8) | index2;
       
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
-      if (not instanceOf(t, class_, stack[sp - 1])) {
+      if (not instanceOf(t, class_, peekObject(t, sp - 1))) {
         object message = makeString
           (t, "%s as %s",
-           &byteArrayBody(t, className(t, objectClass(t, stack[sp - 1])), 0),
+           &byteArrayBody
+           (t, className(t, objectClass(t, peekObject(t, sp - 1))), 0),
            &byteArrayBody(t, className(t, class_), 0));
         exception = makeClassCastException(t, message);
         goto throw_;
@@ -3057,97 +3061,50 @@ run(Thread* t)
   } goto loop;
 
   case dup: {
-    object value = stack[sp - 1];
-    push(t, value);
+    memcpy(stack + ((sp    ) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    ++ sp;
   } goto loop;
 
   case dup_x1: {
-    object first = pop(t);
-    object second = pop(t);
-    
-    push(t, first);
-    push(t, second);
-    push(t, first);
+    memcpy(stack + ((sp    ) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 2) * 2), stack + ((sp    ) * 2), BytesPerWord * 2);
+    ++ sp;
   } goto loop;
 
   case dup_x2: {
-    object first = pop(t);
-    object second = pop(t);
-    object third = pop(t);
-    
-    push(t, first);
-    push(t, third);
-    push(t, second);
-    push(t, first);
+    memcpy(stack + ((sp    ) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 2) * 2), stack + ((sp - 3) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 3) * 2), stack + ((sp    ) * 2), BytesPerWord * 2);
+    ++ sp;
   } goto loop;
 
   case dup2: {
-    object first = stack[sp - 1];
-    if (isLongOrDouble(t, first)) {
-      push(t, first);
-    } else {
-      object second = stack[sp - 2];
-      push(t, second);
-      push(t, first);
-    }
+    memcpy(stack + ((sp + 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 4);
+    sp += 2;
   } goto loop;
 
   case dup2_x1: {
-    object first = pop(t);
-    object second = pop(t);
-    
-    if (isLongOrDouble(t, first)) {
-      push(t, first);
-      push(t, second);
-      push(t, first);
-    } else {
-      object third = pop(t);
-      push(t, second);
-      push(t, first);
-      push(t, third);
-      push(t, second);
-      push(t, first);
-    }
+    memcpy(stack + ((sp + 1) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp    ) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 1) * 2), stack + ((sp - 3) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 3) * 2), stack + ((sp    ) * 2), BytesPerWord * 4);
+    sp += 2;
   } goto loop;
 
   case dup2_x2: {
-    object first = pop(t);
-    object second = pop(t);
-    
-    if (isLongOrDouble(t, first)) {
-      if (isLongOrDouble(t, second)) {
-        push(t, first);
-        push(t, second);
-        push(t, first);
-      } else {
-        object third = pop(t);
-        push(t, first);
-        push(t, third);
-        push(t, second);
-        push(t, first);
-      }
-    } else {
-      object third = pop(t);
-      if (isLongOrDouble(t, third)) {
-        push(t, second);
-        push(t, first);
-        push(t, third);
-        push(t, second);
-        push(t, first);
-      } else {
-        object fourth = pop(t);
-        push(t, second);
-        push(t, first);
-        push(t, fourth);
-        push(t, third);
-        push(t, second);
-        push(t, first);
-      }
-    }
+    memcpy(stack + ((sp + 1) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp    ) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 1) * 2), stack + ((sp - 3) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 2) * 2), stack + ((sp - 4) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 4) * 2), stack + ((sp    ) * 2), BytesPerWord * 4);
+    sp += 2;
   } goto loop;
 
   case getfield: {
-    object instance = pop(t);
+    object instance = popObject(t);
+
     if (LIKELY(instance)) {
       uint8_t index1 = codeBody(t, code, ip++);
       uint8_t index2 = codeBody(t, code, ip++);
@@ -3156,7 +3113,28 @@ run(Thread* t)
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
       
-      push(t, getField(t, instance, field));
+      switch (fieldCode(t, field)) {
+      case ByteField:
+      case BooleanField:
+        pushInt(t, cast<int8_t>(instance, fieldOffset(t, field)));
+
+      case CharField:
+      case ShortField:
+        pushInt(t, cast<int16_t>(instance, fieldOffset(t, field)));
+
+      case FloatField:
+      case IntField:
+        pushInt(t, cast<int32_t>(instance, fieldOffset(t, field)));
+
+      case DoubleField:
+      case LongField:
+        pushLong(t, cast<int64_t>(instance, fieldOffset(t, field)));
+
+      case ObjectField:
+        pushObject(t, cast<object>(instance, fieldOffset(t, field)));
+
+      default: abort(t);
+      }
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
@@ -3178,8 +3156,31 @@ run(Thread* t)
       ip -= 3;
       goto invoke;
     }
-      
-    push(t, getStatic(t, field));
+
+    object v = arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                         fieldOffset(t, field));
+
+    switch (fieldCode(t, field)) {
+    case ByteField:
+    case BooleanField:
+    case CharField:
+    case ShortField:
+    case FloatField:
+    case IntField:
+      pushInt(t, intValue(t, v));
+      break;
+
+    case DoubleField:
+    case LongField:
+      pushLong(t, longValue(t, v));
+      break;
+
+    case ObjectField:
+      pushObject(t, v);
+      break;
+
+    default: abort(t);
+    }
   } goto loop;
 
   case goto_: {
@@ -3200,48 +3201,39 @@ run(Thread* t)
   } goto loop;
 
   case i2b: {
-    object v = pop(t);
-    
-    push(t, makeInt(t, static_cast<int8_t>(intValue(t, v))));
+    pushInt(t, static_cast<int8_t>(popInt(t)));
   } goto loop;
 
   case i2c: {
-    object v = pop(t);
-    
-    push(t, makeInt(t, static_cast<uint16_t>(intValue(t, v))));
+    pushInt(t, static_cast<uint16_t>(popInt(t)));
   } goto loop;
 
   case i2l: {
-    object v = pop(t);
-    
-    push(t, makeLong(t, intValue(t, v)));
+    pushLong(t, popInt(t));
   } goto loop;
 
   case i2s: {
-    object v = pop(t);
-
-    push(t, makeInt(t, static_cast<int16_t>(intValue(t, v))));
+    pushInt(t, static_cast<int16_t>(popInt(t)));
   } goto loop;
 
   case iadd: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) + intValue(t, b)));
+    pushInt(t, a + b);
   } goto loop;
 
   case iaload: {
-    object index = pop(t);
-    object array = pop(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      int32_t i = intValue(t, index);
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < intArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < intArrayLength(t, array)))
       {
-        push(t, makeInt(t, intArrayBody(t, array, i)));
+        pushInt(t, intArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     intArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -3253,25 +3245,24 @@ run(Thread* t)
   } goto loop;
 
   case iand: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) & intValue(t, b)));
+    pushInt(t, a & b);
   } goto loop;
 
   case iastore: {
-    object value = pop(t);
-    object index = pop(t);
-    object array = pop(t);
-    int32_t i = intValue(t, index);
+    int32_t value = popInt(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < intArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < intArrayLength(t, array)))
       {
-        intArrayBody(t, array, i) = intValue(t, value);
+        intArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     intArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -3283,42 +3274,42 @@ run(Thread* t)
   } goto loop;
 
   case iconst_0: {
-    push(t, makeInt(t, 0));
+    pushInt(t, 0);
   } goto loop;
 
   case iconst_1: {
-    push(t, makeInt(t, 1));
+    pushInt(t, 1);
   } goto loop;
 
   case iconst_2: {
-    push(t, makeInt(t, 2));
+    pushInt(t, 2);
   } goto loop;
 
   case iconst_3: {
-    push(t, makeInt(t, 3));
+    pushInt(t, 3);
   } goto loop;
 
   case iconst_4: {
-    push(t, makeInt(t, 4));
+    pushInt(t, 4);
   } goto loop;
 
   case iconst_5: {
-    push(t, makeInt(t, 5));
+    pushInt(t, 5);
   } goto loop;
 
   case idiv: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) / intValue(t, b)));
+    pushInt(t, a / b);
   } goto loop;
 
   case if_acmpeq: {
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
     if (a == b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
@@ -3329,8 +3320,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
     if (a != b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
@@ -3341,10 +3332,10 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    if (intValue(t, a) == intValue(t, b)) {
+    if (a == b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3353,10 +3344,10 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    if (intValue(t, a) != intValue(t, b)) {
+    if (a != b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3365,10 +3356,10 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    if (intValue(t, a) > intValue(t, b)) {
+    if (a > b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3377,10 +3368,10 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    if (intValue(t, a) >= intValue(t, b)) {
+    if (a >= b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3389,10 +3380,10 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    if (intValue(t, a) < intValue(t, b)) {
+    if (a < b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3401,10 +3392,10 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    if (intValue(t, a) < intValue(t, b)) {
+    if (a < b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3413,9 +3404,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (intValue(t, v) == 0) {
+    if (popInt(t) == 0) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3424,9 +3413,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (intValue(t, v)) {
+    if (popInt(t)) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3435,9 +3422,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (intValue(t, v) > 0) {
+    if (static_cast<int32_t>(popInt(t)) > 0) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3446,9 +3431,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (intValue(t, v) >= 0) {
+    if (static_cast<int32_t>(popInt(t)) >= 0) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3457,9 +3440,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (intValue(t, v) < 0) {
+    if (static_cast<int32_t>(popInt(t)) < 0) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3468,9 +3449,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (intValue(t, v) <= 0) {
+    if (static_cast<int32_t>(popInt(t)) <= 0) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3479,9 +3458,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (v) {
+    if (popObject(t)) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3490,9 +3467,7 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    object v = pop(t);
-    
-    if (v == 0) {
+    if (popObject(t) == 0) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -3501,40 +3476,37 @@ run(Thread* t)
     uint8_t index = codeBody(t, code, ip++);
     int8_t c = codeBody(t, code, ip++);
     
-    int32_t v = intValue(t, frameLocals(t, frame, index));
-    set(t, frameLocals(t, frame, index), makeInt(t, v + c));
+    localInt(t, frame, index) += c;
   } goto loop;
 
   case imul: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) * intValue(t, b)));
+    pushInt(t, a * b);
   } goto loop;
 
   case ineg: {
-    object v = pop(t);
-    
-    push(t, makeInt(t, - intValue(t, v)));
+    pushInt(t, - popInt(t));
   } goto loop;
 
   case instanceof: {
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
 
-    if (stack[sp - 1]) {
+    if (peekObject(t, sp - 1)) {
       uint16_t index = (index1 << 8) | index2;
       
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
-      if (instanceOf(t, class_, stack[sp - 1])) {
-        push(t, makeInt(t, 1));
+      if (instanceOf(t, class_, peekObject(t, sp - 1))) {
+        pushInt(t, 1);
       } else {
-        push(t, makeInt(t, 0));
+        pushInt(t, 0);
       }
     } else {
-      push(t, makeInt(t, 0));
+      pushInt(t, 0);
     }
   } goto loop;
 
@@ -3542,15 +3514,16 @@ run(Thread* t)
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
     uint16_t index = (index1 << 8) | index2;
-      
+    
     ip += 2;
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    unsigned parameterCount = methodParameterCount(t, method);
-    if (LIKELY(stack[sp - parameterCount])) {
-      code = findInterfaceMethod(t, method, stack[sp - parameterCount]);
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    if (LIKELY(peekObject(t, sp - parameterFootprint))) {
+      code = findInterfaceMethod
+        (t, method, peekObject(t, sp - parameterFootprint));
       if (UNLIKELY(exception)) goto throw_;
 
       goto invoke;
@@ -3568,8 +3541,8 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    unsigned parameterCount = methodParameterCount(t, method);
-    if (LIKELY(stack[sp - parameterCount])) {
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       object class_ = methodClass(t, frameMethod(t, t->frame));
       if (isSpecialMethod(t, method, class_)) {
         code = findMethod(t, method, classSuper(t, class_));
@@ -3612,9 +3585,10 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    unsigned parameterCount = methodParameterCount(t, method);
-    if (LIKELY(stack[sp - parameterCount])) {
-      code = findVirtualMethod(t, method, stack[sp - parameterCount]);
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    if (LIKELY(peekObject(t, sp - parameterFootprint))) {
+      code = findVirtualMethod
+        (t, method, peekObject(t, sp - parameterFootprint));
       if (UNLIKELY(exception)) goto throw_;
       
       goto invoke;
@@ -3625,59 +3599,79 @@ run(Thread* t)
   } goto loop;
 
   case ior: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) | intValue(t, b)));
+    pushInt(t, a | b);
   } goto loop;
 
   case irem: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) % intValue(t, b)));
+    pushInt(t, a % b);
   } goto loop;
 
   case ishl: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) << intValue(t, b)));
+    pushInt(t, a << b);
   } goto loop;
 
   case ishr: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) >> intValue(t, b)));
+    pushInt(t, a >> b);
+  } goto loop;
+
+  case istore: {
+    localInt(t, frame, codeBody(t, code, ip++)) = popInt(t);
+  } goto loop;
+
+  case istore_0: {
+    localInt(t, frame, 0) = popInt(t);
+  } goto loop;
+
+  case istore_1: {
+    localInt(t, frame, 1) = popInt(t);
+  } goto loop;
+
+  case istore_2: {
+    localInt(t, frame, 2) = popInt(t);
+  } goto loop;
+
+  case istore_3: {
+    localInt(t, frame, 3) = popInt(t);
   } goto loop;
 
   case isub: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) - intValue(t, b)));
+    pushInt(t, a - b);
   } goto loop;
 
   case iushr: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, static_cast<uint32_t>(intValue(t, a)) >> intValue(t, b)));
+    pushInt(t, static_cast<uint32_t>(a >> b));
   } goto loop;
 
   case ixor: {
-    object b = pop(t);
-    object a = pop(t);
+    int32_t b = popInt(t);
+    int32_t a = popInt(t);
     
-    push(t, makeInt(t, intValue(t, a) ^ intValue(t, b)));
+    pushInt(t, a ^ b);
   } goto loop;
 
   case jsr: {
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    push(t, makeInt(t, ip));
+    pushInt(t, ip);
     ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
   } goto loop;
 
@@ -3687,36 +3681,33 @@ run(Thread* t)
     uint8_t offset3 = codeBody(t, code, ip++);
     uint8_t offset4 = codeBody(t, code, ip++);
 
-    push(t, makeInt(t, ip));
+    pushInt(t, ip);
     ip = (ip - 3) + static_cast<int32_t>
       ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
   } goto loop;
 
   case l2i: {
-    object v = pop(t);
-    
-    push(t, makeInt(t, static_cast<int32_t>(longValue(t, v))));
+    pushLong(t, static_cast<int32_t>(popLong(t)));
   } goto loop;
 
   case ladd: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) + longValue(t, b)));
+    pushLong(t, a + b);
   } goto loop;
 
   case laload: {
-    object index = pop(t);
-    object array = pop(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      int32_t i = intValue(t, index);
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < longArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < longArrayLength(t, array)))
       {
-        push(t, makeLong(t, longArrayBody(t, array, i)));
+        pushLong(t, longArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     longArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -3728,25 +3719,24 @@ run(Thread* t)
   } goto loop;
 
   case land: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) & longValue(t, b)));
+    pushLong(t, a & b);
   } goto loop;
 
   case lastore: {
-    object value = pop(t);
-    object index = pop(t);
-    object array = pop(t);
-    int32_t i = intValue(t, index);
+    int64_t value = popLong(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < longArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < longArrayLength(t, array)))
       {
-        longArrayBody(t, array, i) = longValue(t, value);
+        longArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     longArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -3758,105 +3748,151 @@ run(Thread* t)
   } goto loop;
 
   case lcmp: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeInt(t, longValue(t, a) > longValue(t, b) ? 1
-                    : longValue(t, a) == longValue(t, b) ? 0 : -1));
+    pushInt(t, a > b ? 1 : a == b ? 0 : -1);
   } goto loop;
 
   case lconst_0: {
-    push(t, makeLong(t, 0));
+    pushLong(t, 0);
   } goto loop;
 
   case lconst_1: {
-    push(t, makeLong(t, 1));
+    pushLong(t, 1);
   } goto loop;
 
-  case ldc: {
-    push(t, arrayBody(t, codePool(t, code), codeBody(t, code, ip++) - 1));
+  case ldc:
+  case ldc_w: {
+    uint16_t index;
+
+    if (instruction == ldc) {
+      index = codeBody(t, code, ip++);
+    } else {
+      uint8_t index1 = codeBody(t, code, ip++);
+      uint8_t index2 = codeBody(t, code, ip++);
+      index = (index1 << 8) | index2;
+    }
+
+    object v = arrayBody(t, codePool(t, code), index - 1);
+
+    if (objectClass(t, v) == arrayBody(t, t->vm->types, Machine::IntType)) {
+      pushInt(t, intValue(t, v));
+    } else if (objectClass(t, v)
+               == arrayBody(t, t->vm->types, Machine::StringType))
+    {
+      pushObject(t, v);
+    } else if (objectClass(t, v)
+               == arrayBody(t, t->vm->types, Machine::FloatType))
+    {
+      pushInt(t, floatValue(t, v));
+    }
   } goto loop;
 
-  case ldc_w:
   case ldc2_w: {
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
 
-    push(t, arrayBody(t, codePool(t, code), ((index1 << 8) | index2) - 1));
+    object v = arrayBody(t, codePool(t, code), ((index1 << 8) | index2) - 1);
+
+    if (objectClass(t, v) == arrayBody(t, t->vm->types, Machine::LongType)) {
+      pushLong(t, longValue(t, v));
+    } else if (objectClass(t, v)
+               == arrayBody(t, t->vm->types, Machine::DoubleType))
+    {
+      pushLong(t, doubleValue(t, v));
+    }
   } goto loop;
 
   case vm::ldiv: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) / longValue(t, b)));
+    pushLong(t, a / b);
   } goto loop;
 
   case lmul: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) * longValue(t, b)));
+    pushLong(t, a * b);
   } goto loop;
 
   case lneg: {
-    object v = pop(t);
-    
-    push(t, makeLong(t, - longValue(t, v)));
+    pushLong(t, - popInt(t));
   } goto loop;
 
   case lor: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) | longValue(t, b)));
+    pushLong(t, a | b);
   } goto loop;
 
   case lrem: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) % longValue(t, b)));
+    pushLong(t, a % b);
   } goto loop;
 
   case lshl: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) << longValue(t, b)));
+    pushLong(t, a << b);
   } goto loop;
 
   case lshr: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) >> longValue(t, b)));
+    pushLong(t, a >> b);
+  } goto loop;
+
+  case lstore: {
+    setLocalLong(t, frame, codeBody(t, code, ip++), popLong(t));
+  } goto loop;
+
+  case lstore_0: {
+    setLocalLong(t, frame, 0, popLong(t));
+  } goto loop;
+
+  case lstore_1: {
+    setLocalLong(t, frame, 1, popLong(t));
+  } goto loop;
+
+  case lstore_2: {
+    setLocalLong(t, frame, 2, popLong(t));
+  } goto loop;
+
+  case lstore_3: {
+    setLocalLong(t, frame, 3, popLong(t));
   } goto loop;
 
   case lsub: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) - longValue(t, b)));
+    pushLong(t, a - b);
   } goto loop;
 
   case lushr: {
-    object b = pop(t);
-    object a = pop(t);
+    uint64_t b = popLong(t);
+    uint64_t a = popLong(t);
     
-    push(t, makeLong(t, static_cast<uint64_t>(longValue(t, a))
-                     << longValue(t, b)));
+    pushLong(t, a >> b);
   } goto loop;
 
   case lxor: {
-    object b = pop(t);
-    object a = pop(t);
+    int64_t b = popLong(t);
+    int64_t a = popLong(t);
     
-    push(t, makeLong(t, longValue(t, a) ^ longValue(t, b)));
+    pushLong(t, a ^ b);
   } goto loop;
 
   case monitorenter: {
-    object o = pop(t);
+    object o = popObject(t);
     if (LIKELY(o)) {
       objectMonitor(t, o)->acquire(t);
     } else {
@@ -3866,7 +3902,7 @@ run(Thread* t)
   } goto loop;
 
   case monitorexit: {
-    object o = pop(t);
+    object o = popObject(t);
     if (LIKELY(o)) {
       objectMonitor(t, o)->release(t);
     } else {
@@ -3891,57 +3927,56 @@ run(Thread* t)
       goto invoke;
     }
 
-    push(t, make(t, class_));
+    pushObject(t, make(t, class_));
   } goto loop;
 
   case newarray: {
-    object count = pop(t);
-    int32_t c = intValue(t, count);
+    int32_t count = popInt(t);
 
-    if (LIKELY(c >= 0)) {
+    if (LIKELY(count >= 0)) {
       uint8_t type = codeBody(t, code, ip++);
 
       object array;
 
       switch (type) {
       case T_BOOLEAN:
-        array = makeBooleanArray(t, c, true);
+        array = makeBooleanArray(t, count, true);
         break;
 
       case T_CHAR:
-        array = makeCharArray(t, c, true);
+        array = makeCharArray(t, count, true);
         break;
 
       case T_FLOAT:
-        array = makeFloatArray(t, c, true);
+        array = makeFloatArray(t, count, true);
         break;
 
       case T_DOUBLE:
-        array = makeDoubleArray(t, c, true);
+        array = makeDoubleArray(t, count, true);
         break;
 
       case T_BYTE:
-        array = makeByteArray(t, c, true);
+        array = makeByteArray(t, count, true);
         break;
 
       case T_SHORT:
-        array = makeShortArray(t, c, true);
+        array = makeShortArray(t, count, true);
         break;
 
       case T_INT:
-        array = makeIntArray(t, c, true);
+        array = makeIntArray(t, count, true);
         break;
 
       case T_LONG:
-        array = makeLongArray(t, c, true);
+        array = makeLongArray(t, count, true);
         break;
 
       default: abort(t);
       }
             
-      push(t, array);
+      pushObject(t, array);
     } else {
-      object message = makeString(t, "%d", c);
+      object message = makeString(t, "%d", count);
       exception = makeNegativeArrayStoreException(t, message);
       goto throw_;
     }
@@ -3954,29 +3989,73 @@ run(Thread* t)
   } goto loop;
 
   case pop2: {
-    object top = stack[sp - 1];
-    if (isLongOrDouble(t, top)) {
-      -- sp;
-    } else {
-      sp -= 2;
-    }
+    sp -= 2;
   } goto loop;
 
   case putfield: {
-    if (LIKELY(stack[sp - 2])) {
-      uint8_t index1 = codeBody(t, code, ip++);
-      uint8_t index2 = codeBody(t, code, ip++);
-      uint16_t index = (index1 << 8) | index2;
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
+    uint16_t index = (index1 << 8) | index2;
     
-      object field = resolveField(t, codePool(t, code), index - 1);
-      if (UNLIKELY(exception)) goto throw_;
+    object field = resolveField(t, codePool(t, code), index - 1);
+    if (UNLIKELY(exception)) goto throw_;
       
-      object value = pop(t);
-      object instance = pop(t);
-      setField(t, instance, field, value);
-    } else {
-      exception = makeNullPointerException(t);
-      goto throw_;
+    switch (fieldCode(t, field)) {
+    case ByteField:
+    case BooleanField:
+    case CharField:
+    case ShortField:
+    case FloatField:
+    case IntField: {
+      int32_t value = popInt(t);
+      object o = popObject(t);
+      if (LIKELY(o)) {
+        switch (fieldCode(t, field)) {
+        case ByteField:
+        case BooleanField:
+          cast<int8_t>(o, fieldOffset(t, field)) = value;
+          break;
+            
+        case CharField:
+        case ShortField:
+          cast<int16_t>(o, fieldOffset(t, field)) = value;
+          break;
+            
+        case FloatField:
+        case IntField:
+          cast<int32_t>(o, fieldOffset(t, field)) = value;
+          break;
+        }
+      } else {
+        exception = makeNullPointerException(t);
+        goto throw_;
+      }
+    } break;
+
+    case DoubleField:
+    case LongField: {
+      int64_t value = popLong(t);
+      object o = popObject(t);
+      if (LIKELY(o)) {
+        cast<int64_t>(o, fieldOffset(t, field)) = value;
+      } else {
+        exception = makeNullPointerException(t);
+        goto throw_;
+      }
+    } break;
+
+    case ObjectField: {
+      object value = popObject(t);
+      object o = popObject(t);
+      if (LIKELY(o)) {
+        set(t, cast<object>(o, fieldOffset(t, field)), value);
+      } else {
+        exception = makeNullPointerException(t);
+        goto throw_;
+      }
+    } break;
+
+    default: abort(t);
     }
   } goto loop;
 
@@ -3995,13 +4074,39 @@ run(Thread* t)
       ip -= 3;
       goto invoke;
     }
+
+    PROTECT(t, field);
       
-    object value = pop(t);
-    setStatic(t, field, value);
+    object v;
+
+    switch (fieldCode(t, field)) {
+    case ByteField:
+    case BooleanField:
+    case CharField:
+    case ShortField:
+    case FloatField:
+    case IntField: {
+      v = makeInt(t, popInt(t));
+    } break;
+
+    case DoubleField:
+    case LongField: {
+      v = makeLong(t, popLong(t));
+    } break;
+
+    case ObjectField:
+      v = popObject(t);
+      break;
+
+    default: abort(t);
+    }
+
+    set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                     fieldOffset(t, field)), v);
   } goto loop;
 
   case ret: {
-    ip = intValue(t, frameLocals(t, frame, codeBody(t, code, ip)));
+    ip = localInt(t, frame, codeBody(t, code, ip));
   } goto loop;
 
   case return_: {
@@ -4017,17 +4122,16 @@ run(Thread* t)
   } goto loop;
 
   case saload: {
-    object index = pop(t);
-    object array = pop(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      int32_t i = intValue(t, index);
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < shortArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < shortArrayLength(t, array)))
       {
-        push(t, makeShort(t, shortArrayBody(t, array, i)));
+        pushInt(t, shortArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     shortArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -4039,18 +4143,17 @@ run(Thread* t)
   } goto loop;
 
   case sastore: {
-    object value = pop(t);
-    object index = pop(t);
-    object array = pop(t);
-    int32_t i = intValue(t, index);
+    int16_t value = popInt(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(i >= 0 and
-                 static_cast<uint32_t>(i) < shortArrayLength(t, array)))
+      if (LIKELY(index >= 0 and
+                 static_cast<uint32_t>(index) < shortArrayLength(t, array)))
       {
-        shortArrayBody(t, array, i) = intValue(t, value);
+        shortArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", i,
+        object message = makeString(t, "%d not in [0,%d]", index,
                                     shortArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -4065,13 +4168,14 @@ run(Thread* t)
     uint8_t byte1 = codeBody(t, code, ip++);
     uint8_t byte2 = codeBody(t, code, ip++);
 
-    push(t, makeInt(t, (byte1 << 8) | byte2));
+    pushInt(t, (byte1 << 8) | byte2);
   } goto loop;
 
   case swap: {
-    object tmp = stack[sp - 1];
-    stack[sp - 1] = stack[sp - 2];
-    stack[sp - 2] = tmp;
+    uintptr_t tmp[2];
+    memcpy(tmp                   , stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp - 2) * 2), tmp                   , BytesPerWord * 2);
   } goto loop;
 
   case wide: goto wide;
@@ -4081,23 +4185,18 @@ run(Thread* t)
 
  wide:
   switch (codeBody(t, code, ip++)) {
-  case aload:
-  case iload:
-  case lload: {
+  case aload: {
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
 
-    push(t, frameLocals(t, frame, (index1 << 8) | index2));
+    pushObject(t, localObject(t, frame, (index1 << 8) | index2));
   } goto loop;
 
-  case astore:
-  case istore:
-  case lstore: {
+  case astore: {
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
 
-    object value = pop(t);
-    set(t, frameLocals(t, frame, (index1 << 8) | index2), value);
+    set(t, localObject(t, frame, (index1 << 8) | index2), popObject(t));
   } goto loop;
 
   case iinc: {
@@ -4109,28 +4208,55 @@ run(Thread* t)
     uint8_t count2 = codeBody(t, code, ip++);
     uint16_t count = (count1 << 8) | count2;
     
-    int32_t v = intValue(t, frameLocals(t, frame, index));
-    set(t, frameLocals(t, frame, index), makeInt(t, v + count));
+    localInt(t, frame, index) += count;
+  } goto loop;
+
+  case iload: {
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
+
+    pushInt(t, localInt(t, frame, (index1 << 8) | index2));
+  } goto loop;
+
+  case istore: {
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
+
+    localInt(t, frame, (index1 << 8) | index2) = popInt(t);
+  } goto loop;
+
+  case lload: {
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
+
+    pushLong(t, localLong(t, frame, (index1 << 8) | index2));
+  } goto loop;
+
+  case lstore: {
+    uint8_t index1 = codeBody(t, code, ip++);
+    uint8_t index2 = codeBody(t, code, ip++);
+
+    setLocalLong(t, frame, (index1 << 8) | index2,  popLong(t));
   } goto loop;
 
   case ret: {
     uint8_t index1 = codeBody(t, code, ip++);
     uint8_t index2 = codeBody(t, code, ip++);
 
-    ip = intValue(t, frameLocals(t, frame, (index1 << 8) | index2));
+    ip = localInt(t, frame, (index1 << 8) | index2);
   } goto loop;
 
   default: abort(t);
   }
 
  invoke: {    
-    unsigned parameterCount = methodParameterCount(t, code);
-    unsigned base = sp - parameterCount;
+    unsigned parameterFootprint = methodParameterFootprint(t, code);
+    unsigned base = sp - parameterFootprint;
 
     if (methodFlags(t, code) & ACC_NATIVE) {
       frame = makeFrame(t, code, frame, 0, base);
 
-      object r = invokeNative(t, code);
+      uint64_t result = invokeNative(t, code);
 
       frame = frameNext(t, frame);
 
@@ -4139,8 +4265,32 @@ run(Thread* t)
       }
 
       sp = base;
-      if (nativeMethodDataReturnCode(t, methodCode(t, code)) != VoidField) {
-        push(t, r);
+
+      switch (result) {
+      case ByteField:
+      case BooleanField:
+      case CharField:
+      case ShortField:
+      case FloatField:
+      case IntField:
+        pushInt(t, result);
+        break;
+
+      case LongField:
+      case DoubleField:
+        pushLong(t, result);
+        break;
+
+      case ObjectField:
+        pushObject(t, result == 0 ? 0 :
+                   *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+        break;
+
+      case VoidField:
+        break;
+
+      default:
+        abort(t);
       }
 
       code = methodCode(t, frameMethod(t, frame));
@@ -4159,10 +4309,10 @@ run(Thread* t)
       frame = makeFrame(t, code, frame, 0, base);
       code = methodCode(t, code);
 
-      memset(stack + base + parameterCount,
+      memset(stack + ((base + parameterFootprint) * 2),
              0,
-             (codeMaxLocals(t, methodCode(t, code)) - parameterCount)
-             * BytesPerWord);
+             (codeMaxLocals(t, methodCode(t, code)) - parameterFootprint)
+             * BytesPerWord * 2);
 
       sp = base + codeMaxLocals(t, methodCode(t, code));
     }
@@ -4185,7 +4335,7 @@ run(Thread* t)
         {
           sp = frameStackBase(t, frame);
           ip = exceptionHandlerIp(eh);
-          push(t, exception);
+          pushObject(t, exception);
           exception = 0;
           goto loop;
         }
@@ -4273,7 +4423,7 @@ run(Thread* t, const char* className, int argc, const char** argv)
         set(t, objectArrayBody(t, args, i), arg);
       }
 
-      push(t, args);
+      pushObject(t, args);
     }    
   }
 
