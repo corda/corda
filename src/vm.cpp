@@ -763,6 +763,26 @@ collect(Machine* m, Heap::CollectionType type)
       }
 
       Thread* t = m->rootThread;
+
+      object p = m->weakReferences;
+      m->weakReferences = 0;
+      while (p) {
+        object o = jreferenceTarget(t, p);
+        object followed = m->heap->follow(o);
+        if (followed == o) {
+          // object has not been collected
+          object x = p;
+          p = weakReferenceNext(t, x);
+          weakReferenceNext(t, x) = m->weakReferences;
+          m->weakReferences = x;
+        } else {
+          jreferenceTarget(t, p) = followed;
+          object x = p;
+          p = weakReferenceNext(t, x);
+          weakReferenceNext(t, x) = 0;
+        }
+      }
+
       for (object* f = &(m->finalizers); *f;) {
         object o = finalizerTarget(t, *f);
         if (m->heap->follow(o) == o) {
@@ -782,21 +802,6 @@ collect(Machine* m, Heap::CollectionType type)
 
       for (object* f = &(m->doomed); *f; f = &finalizerNext(t, *f)) {
         v->visit(f);
-      }
-
-      for (object p = m->weakReferences; p;) {
-        object o = jreferenceTarget(t, p);
-        object followed = m->heap->follow(o);
-        if (followed == o) {
-          // object has not been collected
-          jreferenceTarget(t, p) = 0;
-        } else {
-          jreferenceTarget(t, p) = followed;
-        }
-
-        object last = p;
-        p = weakReferenceNext(t, p);
-        weakReferenceNext(t, last) = 0;
       }
     }
 
@@ -931,6 +936,12 @@ collect(Machine* m, Heap::CollectionType type)
   }
   m->doomed = 0;
 
+  for (object p = m->weakReferences; p;) {
+    jreferenceTarget(t, p) = 0;
+    object x = p;
+    p = weakReferenceNext(t, x);
+    weakReferenceNext(t, x) = 0;
+  }
   m->weakReferences = 0;
 }
 
