@@ -4297,7 +4297,7 @@ run(Thread* t)
     } else {
       if (UNLIKELY(codeMaxStack(t, methodCode(t, code))
                    + codeMaxLocals(t, methodCode(t, code)) + base
-                   > Thread::StackSizeInWords))
+                   > Thread::StackSizeInWords / 2))
       {
         exception = makeStackOverflowError(t);
         goto throw_;      
