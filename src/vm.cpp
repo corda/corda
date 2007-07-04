@@ -20,7 +20,7 @@ using namespace vm;
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool Debug = false;
 const bool DebugRun = false;
 const bool DebugStack = false;
@@ -1542,11 +1542,13 @@ parsePool(Thread* t, Stream& s)
     case CONSTANT_Long: {
       object value = makeLong(t, s.read8());
       set(t, arrayBody(t, pool, i), value);
+      ++i;
     } break;
 
     case CONSTANT_Double: {
       object value = makeLong(t, s.readDouble());
       set(t, arrayBody(t, pool, i), value);
+      ++i;
     } break;
 
     case CONSTANT_Utf8: {
@@ -1595,7 +1597,8 @@ parsePool(Thread* t, Stream& s)
 
   for (unsigned i = 0; i < poolCount; ++i) {
     object o = arrayBody(t, pool, i);
-    if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::IntArrayType))
+    if (o and objectClass(t, o)
+        == arrayBody(t, t->vm->types, Machine::IntArrayType))
     {
       switch (intArrayBody(t, o, 0)) {
       case CONSTANT_Class: {
@@ -1621,7 +1624,8 @@ parsePool(Thread* t, Stream& s)
 
   for (unsigned i = 0; i < poolCount; ++i) {
     object o = arrayBody(t, pool, i);
-    if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::IntArrayType))
+    if (o and objectClass(t, o)
+        == arrayBody(t, t->vm->types, Machine::IntArrayType))
     {
       switch (intArrayBody(t, o, 0)) {
       case CONSTANT_Fieldref:

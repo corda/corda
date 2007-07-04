@@ -1,4 +1,4 @@
-public class TestThreads {
+public class TestThreads implements Runnable {
 
   public static void main(String[] args) {
     TestThreads test = new TestThreads();
