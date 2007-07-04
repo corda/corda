@@ -127,7 +127,7 @@ fast-cflags = $(fast) $(cflags)
 classpath-sources = $(shell find $(classpath)/java -name '*.java')
 classpath-classes = $(call java-classes,$(classpath-sources),$(classpath))
 
-input = $(bld)/classes/TestExceptions.class
+input = $(bld)/classes/Hello.class
 input-depends = \
 	$(classpath-classes) \
 	$(jni-library)

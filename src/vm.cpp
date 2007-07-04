@@ -2757,7 +2757,8 @@ GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
 
   char* chars = 0;
   if (LIKELY(s)) {
-    chars = static_cast<char*>(t->vm->system->allocate(stringLength(t, *s)));
+    chars = static_cast<char*>
+      (t->vm->system->allocate(stringLength(t, *s) + 1));
 
     memcpy(chars,
            &byteArrayBody(t, stringBytes(t, *s), stringOffset(t, *s)),

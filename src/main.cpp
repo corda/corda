@@ -236,6 +236,12 @@ class System: public vm::System {
     }
 
     virtual void dispose() {
+      if (Verbose) {
+        fprintf(stderr, "close %p\n", p);
+      }
+
+      dlclose(p);
+
       if (next_) {
         next_->dispose();
       }
@@ -335,6 +341,10 @@ class System: public vm::System {
  
     void* p = dlopen(buffer, RTLD_LAZY);
     if (p) {
+      if (Verbose) {
+        fprintf(stderr, "open %s as %p\n", buffer, p);
+      }
+
       *lib = new (vm::System::allocate(sizeof(Library)))
         Library(this, p, next);
       return 0;
