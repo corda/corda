@@ -4584,19 +4584,26 @@ run(Thread* t)
     if (eht) {
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-        object catchType =
-          arrayBody(t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
-
-        if (catchType == 0 or
-            (objectClass(t, catchType)
-             == arrayBody(t, t->vm->types, Machine::ClassType) and
-             instanceOf(t, catchType, exception)))
+        if (frameIp(t, frame) >= exceptionHandlerStart(eh)
+            and frameIp(t, frame) >= exceptionHandlerEnd(eh))
         {
-          sp = frameStackBase(t, frame);
-          ip = exceptionHandlerIp(eh);
-          pushObject(t, exception);
-          exception = 0;
-          goto loop;
+          object catchType = 0;
+          if (exceptionHandlerCatchType(eh)) {
+            catchType = arrayBody
+              (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
+          }
+
+          if (catchType == 0 or
+              (objectClass(t, catchType)
+               == arrayBody(t, t->vm->types, Machine::ClassType) and
+               instanceOf(t, catchType, exception)))
+          {
+            sp = frameStackBase(t, frame);
+            ip = exceptionHandlerIp(eh);
+            pushObject(t, exception);
+            exception = 0;
+            goto loop;
+          }
         }
       }
     }
