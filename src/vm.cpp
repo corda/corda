@@ -458,6 +458,21 @@ hashMapInsert(Thread* t, object map, object key, object value,
   set(t, arrayBody(t, array, index), n);
 }
 
+inline bool
+hashMapInsertOrReplace(Thread* t, object map, object key, object value,
+                       uint32_t (*hash)(Thread*, object),
+                       bool (*equal)(Thread*, object, object))
+{
+  object n = hashMapFindNode(t, map, key, hash, equal);
+  if (n == 0) {
+    hashMapInsert(t, map, key, value, hash);
+    return true;
+  } else {
+    set(t, tripleSecond(t, n), value);
+    return false;
+  }
+}
+
 object
 hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
@@ -1398,9 +1413,7 @@ instanceOf(Thread* t, object class_, object o)
     return false;
   }
 
-  if (objectClass(t, class_)
-      == arrayBody(t, t->vm->types, Machine::InterfaceType))
-  {
+  if (classFlags(t, class_) & ACC_INTERFACE) {
     for (object oc = objectClass(t, o); oc; oc = classSuper(t, oc)) {
       object itable = classInterfaceTable(t, oc);
       for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
@@ -1645,6 +1658,28 @@ parsePool(Thread* t, Stream& s)
 }
 
 void
+addInterfaces(Thread* t, object class_, object map)
+{
+  object table = classInterfaceTable(t, class_);
+  if (table) {
+    unsigned increment = 2;
+    if (classFlags(t, class_) & ACC_INTERFACE) {
+      increment = 1;
+    }
+
+    PROTECT(t, map);
+    PROTECT(t, table);
+
+    for (unsigned i = 0; i < arrayLength(t, table); i += increment) {
+      object interface = arrayBody(t, table, i);
+      object name = className(t, interface);
+      hashMapInsertOrReplace(t, map, name, interface, byteArrayHash,
+                             byteArrayEqual);
+    }
+  }
+}
+
+void
 parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 {
   PROTECT(t, class_);
@@ -1654,26 +1689,30 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, map);
 
   if (classSuper(t, class_)) {
-    object superInterfaces = classInterfaceTable(t, classSuper(t, class_));
-    if (superInterfaces) {
-      PROTECT(t, superInterfaces);
-
-      for (unsigned i = 0; i < arrayLength(t, superInterfaces); i += 2) {
-        object name = interfaceName(t, arrayBody(t, superInterfaces, i));
-        hashMapInsert(t, map, name, name, byteArrayHash);
-      }
-    }
+    addInterfaces(t, classSuper(t, class_), map);
   }
   
   unsigned count = s.read2();
   for (unsigned i = 0; i < count; ++i) {
     object name = arrayBody(t, pool, s.read2() - 1);
-    hashMapInsert(t, map, name, name, byteArrayHash);
+    PROTECT(t, name);
+
+    object interface = resolveClass(t, name);
+    PROTECT(t, interface);
+
+    hashMapInsertOrReplace(t, map, name, interface, byteArrayHash,
+                           byteArrayEqual);
+
+    addInterfaces(t, interface, map);
   }
 
   object interfaceTable = 0;
   if (hashMapSize(t, map)) {
-    interfaceTable = makeArray(t, hashMapSize(t, map), true);
+    unsigned length = hashMapSize(t, map) ;
+    if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
+      length *= 2;
+    }
+    interfaceTable = makeArray(t, length, true);
     PROTECT(t, interfaceTable);
 
     unsigned i = 0;
@@ -1687,11 +1726,13 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 
       set(t, arrayBody(t, interfaceTable, i++), interface);
 
-      // we'll fill in this table in parseMethodTable():
-      object vtable = makeArray
-        (t, arrayLength(t, interfaceMethodTable(t, interface)), true);
-
-      set(t, arrayBody(t, interfaceTable, i++), vtable);      
+      if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
+        // we'll fill in this table in parseMethodTable():
+        object vtable = makeArray
+          (t, arrayLength(t, classVirtualTable(t, interface)), true);
+        
+        set(t, arrayBody(t, interfaceTable, i++), vtable);
+      }
     }
   }
 
@@ -2066,15 +2107,32 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   object superVirtualTable = 0;
   PROTECT(t, superVirtualTable);
 
-  if (classSuper(t, class_)) {
-    superVirtualTable = classVirtualTable(t, classSuper(t, class_));
-  }
+  if (classFlags(t, class_) & ACC_INTERFACE) {
+    object itable = classInterfaceTable(t, class_);
+    if (itable) {
+      for (unsigned i = 0; i < arrayLength(t, itable); ++i) {
+        object vtable = classVirtualTable(t, arrayBody(t, itable, i));
+        for (unsigned j = 0; j < virtualCount; ++j) {
+          object method = arrayBody(t, vtable, j);
+          if (hashMapInsertOrReplace(t, virtualMap, method, method, methodHash,
+                                     methodEqual))
+          {
+            ++ virtualCount;
+          }
+        }
+      }
+    }
+  } else {
+    if (classSuper(t, class_)) {
+      superVirtualTable = classVirtualTable(t, classSuper(t, class_));
+    }
 
-  if (superVirtualTable) {
-    virtualCount = arrayLength(t, superVirtualTable);
-    for (unsigned i = 0; i < virtualCount; ++i) {
-      object method = arrayBody(t, superVirtualTable, i);
-      hashMapInsert(t, virtualMap, method, method, methodHash);
+    if (superVirtualTable) {
+      virtualCount = arrayLength(t, superVirtualTable);
+      for (unsigned i = 0; i < virtualCount; ++i) {
+        object method = arrayBody(t, superVirtualTable, i);
+        hashMapInsert(t, virtualMap, method, method, methodHash);
+      }
     }
   }
 
@@ -2179,15 +2237,24 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   if (virtualCount) {
     // generate class vtable
 
+    unsigned i = 0;
     object vtable = makeArray(t, virtualCount, false);
 
-    unsigned i = 0;
-    if (superVirtualTable) {
-      for (; i < arrayLength(t, superVirtualTable); ++i) {
-        object method = arrayBody(t, superVirtualTable, i);
-        method = hashMapFind(t, virtualMap, method, methodHash, methodEqual);
+    if (classFlags(t, class_) & ACC_INTERFACE) {
+      object it = hashMapIterator(t, virtualMap);
 
-        set(t, arrayBody(t, vtable, i), method);
+      for (; it; it = hashMapIteratorNext(t, it)) {
+        object method = tripleFirst(t, hashMapIteratorNode(t, it));
+        set(t, arrayBody(t, vtable, i++), method);
+      }
+    } else {
+      if (superVirtualTable) {
+        for (; i < arrayLength(t, superVirtualTable); ++i) {
+          object method = arrayBody(t, superVirtualTable, i);
+          method = hashMapFind(t, virtualMap, method, methodHash, methodEqual);
+
+          set(t, arrayBody(t, vtable, i), method);
+        }
       }
     }
 
@@ -2197,21 +2264,24 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
     set(t, classVirtualTable(t, class_), vtable);
 
-    // generate interface vtables
+    if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
+      // generate interface vtables
     
-    object itable = classInterfaceTable(t, class_);
-    if (itable) {
-      PROTECT(t, itable);
+      object itable = classInterfaceTable(t, class_);
+      if (itable) {
+        PROTECT(t, itable);
 
-      for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-        object methodTable = interfaceMethodTable(t, arrayBody(t, itable, i));
-        object vtable = arrayBody(t, itable, i + 1);
+        for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+          object ivtable = classVirtualTable(t, arrayBody(t, itable, i));
+          object vtable = arrayBody(t, itable, i + 1);
         
-        for (unsigned j = 0; j < arrayLength(t, methodTable); ++j) {
-          object method = arrayBody(t, methodTable, j);
-          method = hashMapFind(t, virtualMap, method, methodHash, methodEqual);
+          for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
+            object method = arrayBody(t, ivtable, j);
+            method = hashMapFind
+              (t, virtualMap, method, methodHash, methodEqual);
           
-          set(t, arrayBody(t, vtable, j), method);        
+            set(t, arrayBody(t, vtable, j), method);        
+          }
         }
       }
     }
@@ -2354,6 +2424,7 @@ resolveClass(Thread* t, object spec)
 
       object bootstrapClass = hashMapFind
         (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+
       if (bootstrapClass) {
         PROTECT(t, bootstrapClass);
 

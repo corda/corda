@@ -79,13 +79,6 @@
   (object name)
   (object spec))
 
-(type interface
-  (uint32_t id)
-  (object name)
-  (object supers)
-  (object methodTable)
-  (object staticTable))
-
 (type pair
   (object first)
   (object second))
