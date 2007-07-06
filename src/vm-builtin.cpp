@@ -4,10 +4,8 @@ namespace vm {
 namespace builtin {
 
 void
-loadLibrary(JNIEnv* e, jstring nameString)
+loadLibrary(Thread* t, jstring nameString)
 {
-  Thread* t = static_cast<Thread*>(e);
-
   if (LIKELY(nameString)) {
     object n = *nameString;
     char name[stringLength(t, n) + 1];
@@ -31,10 +29,8 @@ loadLibrary(JNIEnv* e, jstring nameString)
 }
 
 jstring
-toString(JNIEnv* e, jobject this_)
+toString(Thread* t, jobject this_)
 {
-  Thread* t = static_cast<Thread*>(e);
-
   object s = makeString
     (t, "%s@%p",
      &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
@@ -44,10 +40,8 @@ toString(JNIEnv* e, jobject this_)
 }
 
 jarray
-trace(JNIEnv* e, jint skipCount)
+trace(Thread* t, jint skipCount)
 {
-  Thread* t = static_cast<Thread*>(e);
-
   int frame = t->frame;
   while (skipCount-- and frame >= 0) {
     frame = frameNext(t, frame);

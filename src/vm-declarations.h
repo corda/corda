@@ -1750,6 +1750,15 @@ hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object));
 
+object
+hashMapIterator(Thread* t, object map);
+
+object
+hashMapIteratorNext(Thread* t, object it);
+
+void
+listAppend(Thread* t, object list, object value);
+
 } // namespace vm
 
 #endif//VM_DECLARATIONS_H

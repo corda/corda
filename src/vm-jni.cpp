@@ -5,51 +5,35 @@ namespace vm {
 namespace jni {
 
 jsize
-GetStringUTFLength(JNIEnv* e, jstring s)
+GetStringUTFLength(Thread* t, jstring s)
 {
-  Thread* t = static_cast<Thread*>(e);
-
   ENTER(t, Thread::ActiveState);
 
-  jsize length = 0;
-  if (LIKELY(s)) {
-    length = stringLength(t, *s);
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
-
-  return length;
+  return stringLength(t, *s);
 }
 
 const char*
-GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
+GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
 {
-  Thread* t = static_cast<Thread*>(e);
-
   ENTER(t, Thread::ActiveState);
 
-  char* chars = 0;
-  if (LIKELY(s)) {
-    chars = static_cast<char*>
-      (t->vm->system->allocate(stringLength(t, *s) + 1));
+  char* chars = static_cast<char*>
+    (t->vm->system->allocate(stringLength(t, *s) + 1));
 
-    memcpy(chars,
-           &byteArrayBody(t, stringBytes(t, *s), stringOffset(t, *s)),
-           stringLength(t, *s));
+  memcpy(chars,
+         &byteArrayBody(t, stringBytes(t, *s), stringOffset(t, *s)),
+         stringLength(t, *s));
 
-    chars[stringLength(t, *s)] = 0;
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
+  chars[stringLength(t, *s)] = 0;
 
   if (isCopy) *isCopy = true;
   return chars;
 }
 
 void
-ReleaseStringUTFChars(JNIEnv* e, jstring, const char* chars)
+ReleaseStringUTFChars(Thread* t, jstring, const char* chars)
 {
-  static_cast<Thread*>(e)->vm->system->free(chars);
+  t->vm->system->free(chars);
 }
 
 void
@@ -57,9 +41,9 @@ populate(JNIEnvVTable* table)
 {
   memset(table, 0, sizeof(JNIEnvVTable));
 
-  table->GetStringUTFLength = jni::GetStringUTFLength;
-  table->GetStringUTFChars = jni::GetStringUTFChars;
-  table->ReleaseStringUTFChars = jni::ReleaseStringUTFChars;
+  table->GetStringUTFLength = GetStringUTFLength;
+  table->GetStringUTFChars = GetStringUTFChars;
+  table->ReleaseStringUTFChars = ReleaseStringUTFChars;
 }
 
 } // namespace jni

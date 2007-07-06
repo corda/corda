@@ -13,59 +13,6 @@ using namespace vm;
 
 namespace {
 
-object
-resolveClass(Thread*, object);
-
-object
-hashMapIterator(Thread* t, object map)
-{
-  object array = hashMapArray(t, map);
-  if (array) {
-    for (unsigned i = 0; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-  }
-  return 0;
-}
-
-object
-hashMapIteratorNext(Thread* t, object it)
-{
-  object map = hashMapIteratorMap(t, it);
-  object node = hashMapIteratorNode(t, it);
-  unsigned index = hashMapIteratorIndex(t, it);
-
-  if (tripleThird(t, node)) {
-    return makeHashMapIterator(t, map, tripleThird(t, node), index + 1);
-  } else {
-    object array = hashMapArray(t, map);
-    for (unsigned i = index; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-    return 0;
-  }  
-}
-
-void
-listAppend(Thread* t, object list, object value)
-{
-  PROTECT(t, list);
-
-  ++ listSize(t, list);
-  
-  object p = makePair(t, value, 0);
-  if (listFront(t, list)) {
-    set(t, pairSecond(t, listRear(t, list)), p);
-  } else {
-    set(t, listFront(t, list), p);
-  }
-  set(t, listRear(t, list), p);
-}
-
 void
 pushFrame(Thread* t, object method)
 {
@@ -760,6 +707,9 @@ addInterfaces(Thread* t, object class_, object map)
     }
   }
 }
+
+object
+resolveClass(Thread*, object);
 
 void
 parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
@@ -3932,6 +3882,56 @@ makeTrace(Thread* t, int frame)
   }
 
   return trace;
+}
+
+object
+hashMapIterator(Thread* t, object map)
+{
+  object array = hashMapArray(t, map);
+  if (array) {
+    for (unsigned i = 0; i < arrayLength(t, array); ++i) {
+      if (arrayBody(t, array, i)) {
+        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
+      }
+    }
+  }
+  return 0;
+}
+
+object
+hashMapIteratorNext(Thread* t, object it)
+{
+  object map = hashMapIteratorMap(t, it);
+  object node = hashMapIteratorNode(t, it);
+  unsigned index = hashMapIteratorIndex(t, it);
+
+  if (tripleThird(t, node)) {
+    return makeHashMapIterator(t, map, tripleThird(t, node), index + 1);
+  } else {
+    object array = hashMapArray(t, map);
+    for (unsigned i = index; i < arrayLength(t, array); ++i) {
+      if (arrayBody(t, array, i)) {
+        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
+      }
+    }
+    return 0;
+  }  
+}
+
+void
+listAppend(Thread* t, object list, object value)
+{
+  PROTECT(t, list);
+
+  ++ listSize(t, list);
+  
+  object p = makePair(t, value, 0);
+  if (listFront(t, list)) {
+    set(t, pairSecond(t, listRear(t, list)), p);
+  } else {
+    set(t, listFront(t, list), p);
+  }
+  set(t, listRear(t, list), p);
 }
 
 #include "type-constructors.cpp"
