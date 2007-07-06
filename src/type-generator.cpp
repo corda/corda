@@ -1479,7 +1479,7 @@ writeInitialization(Output* out, Object* type)
     if (typeObjectMask(type) != 1) {
       out->write("  PROTECT(t, mask);\n");
     }
-    out->write("  object name = makeByteArray(t, \"");
+    out->write("  object name = ::makeByteArray(t, \"");
     out->write(typeJavaName(type));
     out->write("\");\n");
 

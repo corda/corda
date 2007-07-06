@@ -4,513 +4,17 @@
 #include "class-finder.h"
 #include "stream.h"
 #include "constants.h"
-#include "jni-vm.h"
 #include "vm.h"
-
-#define PROTECT(thread, name)                                   \
-  Thread::Protector MAKE_NAME(protector_) (thread, &name);
-
-#define ACQUIRE(t, x) MonitorResource MAKE_NAME(monitorResource_) (t, x)
-
-#define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
-
-#define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
+#include "vm-jni.h"
+#include "vm-builtin.h"
+#include "vm-declarations.h"
 
 using namespace vm;
 
 namespace {
 
-const bool Verbose = false;
-const bool Debug = false;
-const bool DebugRun = false;
-const bool DebugStack = false;
-
-const uintptr_t HashTakenMark = 1;
-const uintptr_t ExtendedMark = 2;
-
-const unsigned FrameBaseOffset = 0;
-const unsigned FrameNextOffset = 1;
-const unsigned FrameMethodOffset = 2;
-const unsigned FrameIpOffset = 3;
-const unsigned FrameFootprint = 4;
-
-class Thread;
-
-void (*Initializer)(Thread*, object);
-
-void assert(Thread*, bool);
-void expect(Thread*, bool);
-object resolveClass(Thread*, object);
-object allocate(Thread*, unsigned);
-object& arrayBodyUnsafe(Thread*, object, unsigned);
-void set(Thread*, object&, object);
-object makeString(Thread*, const char*, ...);
-object makeByteArray(Thread*, const char*, ...);
-
-enum FieldCode {
-  VoidField,
-  ByteField,
-  CharField,
-  DoubleField,
-  FloatField,
-  IntField,
-  LongField,
-  ShortField,
-  BooleanField,
-  ObjectField
-};
-
-enum StackTag {
-  IntTag, // must be zero
-  ObjectTag
-};
-
-const int NativeLine = -1;
-const int UnknownLine = -2;
-
-const unsigned WeakReferenceFlag = 1 << 0;
-
-class Machine {
- public:
-  enum {
-#include "type-enums.cpp"
-  } Type;
-
-  Machine(System* system, Heap* heap, ClassFinder* classFinder);
-
-  ~Machine() { 
-    dispose();
-  }
-
-  void dispose();
-
-  System* system;
-  Heap* heap;
-  ClassFinder* classFinder;
-  Thread* rootThread;
-  Thread* exclusive;
-  unsigned activeCount;
-  unsigned liveCount;
-  System::Monitor* stateLock;
-  System::Monitor* heapLock;
-  System::Monitor* classLock;
-  System::Monitor* finalizerLock;
-  System::Library* libraries;
-  object classMap;
-  object bootstrapClassMap;
-  object builtinMap;
-  object monitorMap;
-  object types;
-  object finalizers;
-  object doomed;
-  object weakReferences;
-  bool unsafe;
-  JNIEnvVTable jniEnvVTable;
-};
-
-class Chain {
- public:
-  Chain(Chain* next): next(next) { }
-
-  static unsigned footprint(unsigned sizeInBytes) {
-    return sizeof(Chain) + sizeInBytes;
-  }
-
-  uint8_t* data() {
-    return reinterpret_cast<uint8_t*>(this) + sizeof(Chain);
-  }
-
-  static void dispose(System* s, Chain* c) {
-    if (c) {
-      if (c->next) dispose(s, c->next);
-      s->free(c);
-    }
-  }
-
-  Chain* next;
-};
-
-class Thread : public JNIEnv {
- public:
-  enum State {
-    NoState,
-    ActiveState,
-    IdleState,
-    ZombieState,
-    ExclusiveState,
-    ExitState
-  };
-
-  class Protector {
-   public:
-    Protector(Thread* t, object* p): t(t), p(p), next(t->protector) {
-      t->protector = this;
-    }
-
-    ~Protector() {
-      t->protector = next;
-    }
-
-    Thread* t;
-    object* p;
-    Protector* next;
-  };
-
-  static const unsigned HeapSizeInBytes = 64 * 1024;
-  static const unsigned StackSizeInBytes = 64 * 1024;
-
-  static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
-  static const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
-
-  Thread(Machine* m);
-
-  void dispose();
-
-  Machine* vm;
-  Thread* next;
-  Thread* child;
-  State state;
-  object thread;
-  object code;
-  object exception;
-  unsigned ip;
-  unsigned sp;
-  int frame;
-  unsigned heapIndex;
-  Protector* protector;
-  Chain* chain;
-  uintptr_t stack[StackSizeInWords];
-  object heap[HeapSizeInWords];
-};
-
-inline object
-objectClass(Thread*, object o)
-{
-  return mask(cast<object>(o, 0));
-}
-
-#include "type-declarations.cpp"
-#include "type-constructors.cpp"
-
-void enter(Thread* t, Thread::State state);
-
-class StateResource {
- public:
-  StateResource(Thread* t, Thread::State state): t(t), oldState(t->state) {
-    enter(t, state);
-  }
-
-  ~StateResource() { enter(t, oldState); }
-
- private:
-  Thread* t;
-  Thread::State oldState;
-};
-
-class MonitorResource {
- public:
-  MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
-    if (not m->tryAcquire(t)) {
-      ENTER(t, Thread::IdleState);
-      m->acquire(t);
-    }
-  }
-
-  ~MonitorResource() { m->release(t); }
-
- private:
-  Thread* t;
-  System::Monitor* m;
-};
-
-class RawMonitorResource {
- public:
-  RawMonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
-    m->acquire(t);
-  }
-
-  ~RawMonitorResource() { m->release(t); }
-
- private:
-  Thread* t;
-  System::Monitor* m;
-};
-
-inline void NO_RETURN
-abort(Thread* t)
-{
-  abort(t->vm->system);
-}
-
-inline void
-assert(Thread* t, bool v)
-{
-  assert(t->vm->system, v);
-}
-
-inline void
-expect(Thread* t, bool v)
-{
-  expect(t->vm->system, v);
-}
-
-uint32_t
-hash(const int8_t* s, unsigned length)
-{
-  uint32_t h = 0;
-  for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
-  return h;  
-}
-
-inline bool
-objectExtended(Thread*, object o)
-{
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == ExtendedMark;
-}
-
-inline uintptr_t&
-extendedWord(Thread* t, object o, unsigned baseSize)
-{
-  assert(t, objectExtended(t, o));
-  return cast<uintptr_t>(o, baseSize * BytesPerWord);
-}
-
-unsigned
-baseSize(Thread* t, object o, object class_)
-{
-  return divide(classFixedSize(t, class_), BytesPerWord)
-    + divide(classArrayElementSize(t, class_)
-             * cast<uint32_t>(o, classFixedSize(t, class_) - 4),
-             BytesPerWord);
-}
-
-unsigned
-extendedSize(Thread* t, object o, unsigned baseSize)
-{
-  return baseSize + objectExtended(t, o);
-}
-
-inline bool
-hashTaken(Thread*, object o)
-{
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == HashTakenMark;
-}
-
-inline void
-markHashTaken(Thread* t, object o)
-{
-  assert(t, not objectExtended(t, o));
-  cast<uintptr_t>(o, 0) |= HashTakenMark;
-}
-
-inline uint32_t
-takeHash(Thread*, object o)
-{
-  return reinterpret_cast<uintptr_t>(o) / BytesPerWord;
-}
-
-inline uint32_t
-objectHash(Thread* t, object o)
-{
-  if (objectExtended(t, o)) {
-    return extendedWord(t, o, baseSize(t, o, objectClass(t, o)));
-  } else {
-    markHashTaken(t, o);
-    return takeHash(t, o);
-  }
-}
-
-inline bool
-objectEqual(Thread*, object a, object b)
-{
-  return a == b;
-}
-
-inline uint32_t
-referenceHash(Thread* t, object o)
-{
-  return objectHash(t, jreferenceTarget(t, o));
-}
-
-inline bool
-referenceEqual(Thread* t, object a, object b)
-{
-  return a == jreferenceTarget(t, b);
-}
-
-inline uint32_t
-byteArrayHash(Thread* t, object array)
-{
-  return hash(&byteArrayBody(t, array, 0), byteArrayLength(t, array));
-}
-
-bool
-byteArrayEqual(Thread* t, object a, object b)
-{
-  return a == b or
-    ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
-     memcmp(&byteArrayBody(t, a, 0), &byteArrayBody(t, b, 0),
-            byteArrayLength(t, a)) == 0);
-}
-
-bool
-intArrayEqual(Thread* t, object a, object b)
-{
-  return a == b or
-    ((intArrayLength(t, a) == intArrayLength(t, b)) and
-     memcmp(&intArrayBody(t, a, 0), &intArrayBody(t, b, 0),
-            intArrayLength(t, a) * 4) == 0);
-}
-
-inline uint32_t
-methodHash(Thread* t, object method)
-{
-  return byteArrayHash(t, methodName(t, method))
-    ^ byteArrayHash(t, methodSpec(t, method));
-}
-
-bool
-methodEqual(Thread* t, object a, object b)
-{
-  return a == b or
-    (byteArrayEqual(t, methodName(t, a), methodName(t, b)) and
-     byteArrayEqual(t, methodSpec(t, a), methodSpec(t, b)));
-}
-
 object
-hashMapFindNode(Thread* t, object map, object key,
-                uint32_t (*hash)(Thread*, object),
-                bool (*equal)(Thread*, object, object))
-{
-  object array = hashMapArray(t, map);
-  if (array) {
-    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    object n = arrayBody(t, array, index);
-    while (n) {
-      if (equal(t, key, tripleFirst(t, n))) {
-        return n;
-      }
-      
-      n = tripleThird(t, n);
-    }
-  }
-  return 0;
-}
-
-inline object
-hashMapFind(Thread* t, object map, object key,
-            uint32_t (*hash)(Thread*, object),
-            bool (*equal)(Thread*, object, object))
-{
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  return (n ? tripleSecond(t, n) : 0);
-}
-
-void
-hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
-              unsigned size)
-{
-  PROTECT(t, map);
-
-  object oldArray = hashMapArray(t, map);
-  unsigned oldLength = (oldArray ? arrayLength(t, oldArray) : 0);
-  PROTECT(t, oldArray);
-
-  unsigned newLength = nextPowerOfTwo(size);
-  object newArray = makeArray(t, newLength, true);
-
-  if (oldArray) {
-    for (unsigned i = 0; i < oldLength; ++i) {
-      object next;
-      for (object p = arrayBody(t, oldArray, i); p; p = next) {
-        next = tripleThird(t, p);
-
-        object key = tripleFirst(t, p);
-        unsigned index = hash(t, key) & (newLength - 1);
-        object n = arrayBody(t, newArray, index);
-
-        set(t, tripleThird(t, p), n);
-        set(t, arrayBody(t, newArray, index), p);
-      }
-    }
-  }
-  
-  set(t, hashMapArray(t, map), newArray);
-}
-
-void
-hashMapInsert(Thread* t, object map, object key, object value,
-              uint32_t (*hash)(Thread*, object))
-{
-  object array = hashMapArray(t, map);
-  PROTECT(t, array);
-
-  ++ hashMapSize(t, map);
-
-  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
-    PROTECT(t, map);
-    PROTECT(t, key);
-    PROTECT(t, value);
-
-    hashMapResize(t, map, hash, array ? arrayLength(t, array) * 2 : 16);
-    array = hashMapArray(t, map);
-  }
-
-  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-  object n = arrayBody(t, array, index);
-
-  n = makeTriple(t, key, value, n);
-
-  set(t, arrayBody(t, array, index), n);
-}
-
-inline bool
-hashMapInsertOrReplace(Thread* t, object map, object key, object value,
-                       uint32_t (*hash)(Thread*, object),
-                       bool (*equal)(Thread*, object, object))
-{
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  if (n == 0) {
-    hashMapInsert(t, map, key, value, hash);
-    return true;
-  } else {
-    set(t, tripleSecond(t, n), value);
-    return false;
-  }
-}
-
-object
-hashMapRemove(Thread* t, object map, object key,
-              uint32_t (*hash)(Thread*, object),
-              bool (*equal)(Thread*, object, object))
-{
-  object array = hashMapArray(t, map);
-  object o = 0;
-  if (array) {
-    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    object n = arrayBody(t, array, index);
-    object p = 0;
-    while (n) {
-      if (equal(t, key, tripleFirst(t, n))) {
-        o = tripleFirst(t, n);
-        if (p) {
-          set(t, tripleThird(t, p), tripleThird(t, n));
-        } else {
-          set(t, arrayBody(t, array, index), tripleThird(t, n));
-        }
-      }
-      
-      p = n;
-      n = tripleThird(t, n);
-    }
-  }
-
-  if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
-    hashMapResize(t, map, hash, arrayLength(t, array) / 2);
-  }
-
-  return o;
-}
+resolveClass(Thread*, object);
 
 object
 hashMapIterator(Thread* t, object map)
@@ -562,191 +66,6 @@ listAppend(Thread* t, object list, object value)
   set(t, listRear(t, list), p);
 }
 
-inline void
-pushObject(Thread* t, object o)
-{
-  if (DebugStack) {
-    fprintf(stderr, "push object %p at %d\n", o, t->sp);
-  }
-
-  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
-  t->stack[(t->sp * 2)    ] = ObjectTag;
-  t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
-  ++ t->sp;
-}
-
-inline void
-pushInt(Thread* t, uint32_t v)
-{
-  if (DebugStack) {
-    fprintf(stderr, "push int %d at %d\n", v, t->sp);
-  }
-
-  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
-  t->stack[(t->sp * 2)    ] = IntTag;
-  t->stack[(t->sp * 2) + 1] = v;
-  ++ t->sp;
-}
-
-inline void
-pushLong(Thread* t, uint64_t v)
-{
-  if (DebugStack) {
-    fprintf(stderr, "push long " LLD " at %d\n", v, t->sp);
-  }
-
-  pushInt(t, v >> 32);
-  pushInt(t, v & 0xFF);
-}
-
-inline object
-popObject(Thread* t)
-{
-  if (DebugStack) {
-    fprintf(stderr, "pop object %p at %d\n",
-            reinterpret_cast<object>(t->stack[((t->sp - 1) * 2) + 1]),
-            t->sp - 1);
-  }
-
-  assert(t, t->stack[(t->sp - 1) * 2] == ObjectTag);
-  return reinterpret_cast<object>(t->stack[((-- t->sp) * 2) + 1]);
-}
-
-inline uint32_t
-popInt(Thread* t)
-{
-  if (DebugStack) {
-    fprintf(stderr, "pop int " LD " at %d\n",
-            t->stack[((t->sp - 1) * 2) + 1],
-            t->sp - 1);
-  }
-
-  assert(t, t->stack[(t->sp - 1) * 2] == IntTag);
-  return t->stack[((-- t->sp) * 2) + 1];
-}
-
-inline uint64_t
-popLong(Thread* t)
-{
-  if (DebugStack) {
-    fprintf(stderr, "pop long " LLD " at %d\n",
-            (static_cast<uint64_t>(t->stack[((t->sp - 2) * 2) + 1]) << 32)
-            | static_cast<uint64_t>(t->stack[((t->sp - 1) * 2) + 1]),
-            t->sp - 2);
-  }
-
-  uint64_t a = popInt(t);
-  uint64_t b = popInt(t);
-  return (b << 32) | a;
-}
-
-inline object
-peekObject(Thread* t, unsigned index)
-{
-  if (DebugStack) {
-    fprintf(stderr, "peek object %p at %d\n",
-            reinterpret_cast<object>(t->stack[(index * 2) + 1]),
-            index);
-  }
-
-  assert(t, index < Thread::StackSizeInWords / 2);
-  assert(t, t->stack[index * 2] == ObjectTag);
-  return *reinterpret_cast<object*>(t->stack + (index * 2) + 1);
-}
-
-inline uint32_t
-peekInt(Thread* t, unsigned index)
-{
-  if (DebugStack) {
-    fprintf(stderr, "peek int " LD " at %d\n",
-            t->stack[(index * 2) + 1],
-            index);
-  }
-
-  assert(t, index < Thread::StackSizeInWords / 2);
-  assert(t, t->stack[index * 2] == IntTag);
-  return t->stack[(index * 2) + 1];
-}
-
-inline uint64_t
-peekLong(Thread* t, unsigned index)
-{
-  if (DebugStack) {
-    fprintf(stderr, "peek long " LLD " at %d\n",
-            (static_cast<uint64_t>(t->stack[(index * 2) + 1]) << 32)
-            | static_cast<uint64_t>(t->stack[((index + 1) * 2) + 1]),
-            index);
-  }
-
-  return (static_cast<uint64_t>(peekInt(t, index)) << 32)
-    | static_cast<uint64_t>(peekInt(t, index + 1));
-}
-
-inline void
-pokeObject(Thread* t, unsigned index, object value)
-{
-  if (DebugStack) {
-    fprintf(stderr, "poke object %p at %d\n", value, index);
-  }
-
-  t->stack[index * 2] = ObjectTag;
-  t->stack[(index * 2) + 1] = reinterpret_cast<uintptr_t>(value);
-}
-
-inline void
-pokeInt(Thread* t, unsigned index, uint32_t value)
-{
-  if (DebugStack) {
-    fprintf(stderr, "poke int %d at %d\n", value, index);
-  }
-
-  t->stack[index * 2] = IntTag;
-  t->stack[(index * 2) + 1] = value;
-}
-
-inline void
-pokeLong(Thread* t, unsigned index, uint64_t value)
-{
-  if (DebugStack) {
-    fprintf(stderr, "poke long " LLD " at %d\n", value, index);
-  }
-
-  pokeInt(t, index, value >> 32);
-  pokeInt(t, index + 2, value & 0xFF);
-}
-
-inline object*
-pushReference(Thread* t, object o)
-{
-  expect(t, t->sp + 1 < Thread::StackSizeInWords / 2);
-  pushObject(t, o);
-  return reinterpret_cast<object*>(t->stack + ((t->sp - 1) * 2) + 1);
-}
-
-inline int
-frameNext(Thread* t, int frame)
-{
-  return peekInt(t, frame + FrameNextOffset);
-}
-
-inline object
-frameMethod(Thread* t, int frame)
-{
-  return peekObject(t, frame + FrameMethodOffset);
-}
-
-inline unsigned
-frameIp(Thread* t, int frame)
-{
-  return peekInt(t, frame + FrameIpOffset);
-}
-
-inline unsigned
-frameBase(Thread* t, int frame)
-{
-  return peekInt(t, frame + FrameBaseOffset);
-}
-
 void
 pushFrame(Thread* t, object method)
 {
@@ -789,16 +108,6 @@ popFrame(Thread* t)
   } else {
     t->code = 0;
     t->ip = 0;
-  }
-}
-
-void
-Thread::dispose()
-{
-  Chain::dispose(vm->system, chain);
-  
-  for (Thread* c = child; c; c = c->next) {
-    c->dispose();
   }
 }
 
@@ -1027,175 +336,6 @@ collect(Machine* m, Heap::CollectionType type)
   m->weakReferences = 0;
 }
 
-void
-enter(Thread* t, Thread::State s)
-{
-  if (s == t->state) return;
-
-  ACQUIRE_RAW(t, t->vm->stateLock);
-
-  switch (s) {
-  case Thread::ExclusiveState: {
-    assert(t, t->state == Thread::ActiveState);
-
-    while (t->vm->exclusive) {
-      // another thread got here first.
-      enter(t, Thread::IdleState);
-      enter(t, Thread::ActiveState);
-    }
-
-    t->state = Thread::ExclusiveState;
-    t->vm->exclusive = t;
-      
-    while (t->vm->activeCount > 1) {
-      t->vm->stateLock->wait(t, 0);
-    }
-  } break;
-
-  case Thread::IdleState:
-  case Thread::ZombieState: {
-    switch (t->state) {
-    case Thread::ExclusiveState: {
-      assert(t, t->vm->exclusive == t);
-      t->vm->exclusive = 0;
-    } break;
-
-    case Thread::ActiveState: break;
-
-    default: abort(t);
-    }
-
-    -- t->vm->activeCount;
-    if (s == Thread::ZombieState) {
-      -- t->vm->liveCount;
-    }
-    t->state = s;
-
-    t->vm->stateLock->notifyAll(t);
-  } break;
-
-  case Thread::ActiveState: {
-    switch (t->state) {
-    case Thread::ExclusiveState: {
-      assert(t, t->vm->exclusive == t);
-
-      t->state = s;
-      t->vm->exclusive = 0;
-
-      t->vm->stateLock->notifyAll(t);
-    } break;
-
-    case Thread::NoState:
-    case Thread::IdleState: {
-      while (t->vm->exclusive) {
-        t->vm->stateLock->wait(t, 0);
-      }
-
-      ++ t->vm->activeCount;
-      if (t->state == Thread::NoState) {
-        ++ t->vm->liveCount;
-      }
-      t->state = s;
-    } break;
-
-    default: abort(t);
-    }
-  } break;
-
-  case Thread::ExitState: {
-    switch (t->state) {
-    case Thread::ExclusiveState: {
-      assert(t, t->vm->exclusive == t);
-      t->vm->exclusive = 0;
-    } break;
-
-    case Thread::ActiveState: break;
-
-    default: abort(t);
-    }
-      
-    -- t->vm->activeCount;
-    t->state = s;
-
-    while (t->vm->liveCount > 1) {
-      t->vm->stateLock->wait(t, 0);
-    }
-  } break;
-
-  default: abort(t);
-  }
-}
-
-inline object
-allocateLarge(Thread* t, unsigned sizeInBytes)
-{
-  void* p = t->vm->system->allocate(Chain::footprint(sizeInBytes));
-  t->chain = new (p) Chain(t->chain);
-  return t->chain->data();
-}
-
-inline object
-allocateSmall(Thread* t, unsigned sizeInBytes)
-{
-  object o = t->heap + t->heapIndex;
-  t->heapIndex += divide(sizeInBytes, BytesPerWord);
-  return o;
-}
-
-object
-allocate2(Thread* t, unsigned sizeInBytes)
-{
-  if (sizeInBytes > Thread::HeapSizeInBytes and t->chain == 0) {
-    return allocateLarge(t, sizeInBytes);
-  }
-
-  ACQUIRE_RAW(t, t->vm->stateLock);
-
-  while (t->vm->exclusive) {
-    // another thread wants to enter the exclusive state, either for a
-    // collection or some other reason.  We give it a chance here.
-    enter(t, Thread::IdleState);
-    enter(t, Thread::ActiveState);
-  }
-
-  if (t->heapIndex + divide(sizeInBytes, BytesPerWord)
-      >= Thread::HeapSizeInWords)
-  {
-    enter(t, Thread::ExclusiveState);
-    collect(t->vm, Heap::MinorCollection);
-    enter(t, Thread::ActiveState);
-  }
-
-  if (sizeInBytes > Thread::HeapSizeInBytes) {
-    return allocateLarge(t, sizeInBytes);
-  } else {
-    return allocateSmall(t, sizeInBytes);
-  }
-}
-
-inline object
-allocate(Thread* t, unsigned sizeInBytes)
-{
-  if (UNLIKELY(t->heapIndex + divide(sizeInBytes, BytesPerWord)
-               >= Thread::HeapSizeInWords
-               or t->vm->exclusive))
-  {
-    return allocate2(t, sizeInBytes);
-  } else {
-    return allocateSmall(t, sizeInBytes);
-  }
-}
-
-inline void
-set(Thread* t, object& target, object value)
-{
-  target = value;
-  if (t->vm->heap->needsMark(&target)) {
-    ACQUIRE_RAW(t, t->vm->heapLock);
-    t->vm->heap->mark(&target);
-  }
-}
-
 inline object
 make(Thread* t, object class_)
 {
@@ -1266,133 +406,6 @@ makeByteArray(Thread* t, const char* format, va_list a)
   memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
 
   return s;
-}
-
-object
-makeByteArray(Thread* t, const char* format, ...)
-{
-  va_list a;
-  va_start(a, format);
-  object s = makeByteArray(t, format, a);
-  va_end(a);
-
-  return s;
-}
-
-object
-makeString(Thread* t, const char* format, ...)
-{
-  va_list a;
-  va_start(a, format);
-  object s = makeByteArray(t, format, a);
-  va_end(a);
-
-  return makeString(t, s, 0, byteArrayLength(t, s), 0);
-}
-
-object
-makeTrace(Thread* t, int frame)
-{
-  unsigned count = 0;
-  for (int f = frame; f >= 0; f = frameNext(t, f)) {
-    ++ count;
-  }
-
-  object trace = makeObjectArray
-    (t, arrayBody(t, t->vm->types, Machine::StackTraceElementType),
-     count, true);
-  PROTECT(t, trace);
-
-  unsigned index = 0;
-  for (int f = frame; f >= 0; f = frameNext(t, f)) {
-    object e = makeStackTraceElement(t, frameMethod(t, f), frameIp(t, f));
-    set(t, objectArrayBody(t, trace, index++), e);
-  }
-
-  return trace;
-}
-
-object
-makeTrace(Thread* t)
-{
-  pokeInt(t, t->frame + FrameIpOffset, t->ip);
-  return makeTrace(t, t->frame);
-}
-
-object
-makeRuntimeException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeRuntimeException(t, message, trace, 0);
-}
-
-object
-makeArrayIndexOutOfBoundsException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeArrayIndexOutOfBoundsException(t, message, trace, 0);
-}
-
-object
-makeNegativeArrayStoreException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNegativeArrayStoreException(t, message, trace, 0);
-}
-
-object
-makeClassCastException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeClassCastException(t, message, trace, 0);
-}
-
-object
-makeClassNotFoundException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeClassNotFoundException(t, message, trace, 0);
-}
-
-object
-makeNullPointerException(Thread* t)
-{
-  return makeNullPointerException(t, 0, makeTrace(t), 0);
-}
-
-object
-makeStackOverflowError(Thread* t)
-{
-  return makeStackOverflowError(t, 0, makeTrace(t), 0);
-}
-
-object
-makeNoSuchFieldError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoSuchFieldError(t, message, trace, 0);
-}
-
-object
-makeNoSuchMethodError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoSuchMethodError(t, message, trace, 0);
-}
-
-object
-makeUnsatisfiedLinkError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeUnsatisfiedLinkError(t, message, trace, 0);
 }
 
 unsigned
@@ -1545,13 +558,6 @@ isSuperclass(Thread* t, object class_, object base)
     }
   }
   return false;
-}
-
-inline int
-strcmp(const int8_t* a, const int8_t* b)
-{
-  return ::strcmp(reinterpret_cast<const char*>(a),
-                  reinterpret_cast<const char*>(b));
 }
 
 inline bool
@@ -2832,251 +1838,6 @@ inline void
 setLocalLong(Thread* t, unsigned index, uint64_t value)
 {
   pokeLong(t, frameBase(t, t->frame) + index, value);
-}
-
-namespace builtin {
-
-void
-loadLibrary(JNIEnv* e, jstring nameString)
-{
-  Thread* t = static_cast<Thread*>(e);
-
-  if (LIKELY(nameString)) {
-    object n = *nameString;
-    char name[stringLength(t, n) + 1];
-    memcpy(name,
-           &byteArrayBody(t, stringBytes(t, n), stringOffset(t, n)),
-           stringLength(t, n));
-    name[stringLength(t, n)] = 0;
-
-    System::Library* lib;
-    if (LIKELY(t->vm->system->success
-               (t->vm->system->load(&lib, name, t->vm->libraries))))
-    {
-      t->vm->libraries = lib;
-    } else {
-      object message = makeString(t, "library not found: %s", name);
-      t->exception = makeRuntimeException(t, message);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
-}
-
-jstring
-toString(JNIEnv* e, jobject this_)
-{
-  Thread* t = static_cast<Thread*>(e);
-
-  object s = makeString
-    (t, "%s@%p",
-     &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
-     *this_);
-
-  return pushReference(t, s);
-}
-
-jarray
-trace(JNIEnv* e, jint skipCount)
-{
-  Thread* t = static_cast<Thread*>(e);
-
-  int frame = t->frame;
-  while (skipCount-- and frame >= 0) {
-    frame = frameNext(t, frame);
-  }
-  
-  if (methodClass(t, frameMethod(t, frame))
-      == arrayBody(t, t->vm->types, Machine::ThrowableType))
-  {
-    // skip Throwable constructors
-    while (strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                  &byteArrayBody(t, methodName(t, frameMethod(t, frame)), 0))
-           == 0)
-    {
-      frame = frameNext(t, frame);
-    }
-  }
-
-  return pushReference(t, makeTrace(t, frame));
-}
-
-} // namespace builtin
-
-namespace jni {
-
-jsize
-GetStringUTFLength(JNIEnv* e, jstring s)
-{
-  Thread* t = static_cast<Thread*>(e);
-
-  ENTER(t, Thread::ActiveState);
-
-  jsize length = 0;
-  if (LIKELY(s)) {
-    length = stringLength(t, *s);
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
-
-  return length;
-}
-
-const char*
-GetStringUTFChars(JNIEnv* e, jstring s, jboolean* isCopy)
-{
-  Thread* t = static_cast<Thread*>(e);
-
-  ENTER(t, Thread::ActiveState);
-
-  char* chars = 0;
-  if (LIKELY(s)) {
-    chars = static_cast<char*>
-      (t->vm->system->allocate(stringLength(t, *s) + 1));
-
-    memcpy(chars,
-           &byteArrayBody(t, stringBytes(t, *s), stringOffset(t, *s)),
-           stringLength(t, *s));
-
-    chars[stringLength(t, *s)] = 0;
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
-
-  if (isCopy) *isCopy = true;
-  return chars;
-}
-
-void
-ReleaseStringUTFChars(JNIEnv* e, jstring, const char* chars)
-{
-  static_cast<Thread*>(e)->vm->system->free(chars);
-}
-
-} // namespace jni
-
-Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
-  system(system),
-  heap(heap),
-  classFinder(classFinder),
-  rootThread(0),
-  exclusive(0),
-  activeCount(0),
-  liveCount(0),
-  stateLock(0),
-  heapLock(0),
-  classLock(0),
-  finalizerLock(0),
-  libraries(0),
-  classMap(0),
-  bootstrapClassMap(0),
-  builtinMap(0),
-  monitorMap(0),
-  types(0),
-  finalizers(0),
-  doomed(0),
-  weakReferences(0),
-  unsafe(false)
-{
-  memset(&jniEnvVTable, 0, sizeof(JNIEnvVTable));
-
-  jniEnvVTable.GetStringUTFLength = jni::GetStringUTFLength;
-  jniEnvVTable.GetStringUTFChars = jni::GetStringUTFChars;
-  jniEnvVTable.ReleaseStringUTFChars = jni::ReleaseStringUTFChars;
-
-  if (not system->success(system->make(&stateLock)) or
-      not system->success(system->make(&heapLock)) or
-      not system->success(system->make(&classLock)) or
-      not system->success(system->make(&finalizerLock)))
-  {
-    system->abort();
-  }
-}
-
-void
-Machine::dispose()
-{
-  stateLock->dispose();
-  heapLock->dispose();
-  classLock->dispose();
-  finalizerLock->dispose();
-
-  if (libraries) {
-    libraries->dispose();
-  }
-  
-  if (rootThread) {
-    rootThread->dispose();
-  }
-}
-
-Thread::Thread(Machine* m):
-  JNIEnv(&(m->jniEnvVTable)),
-  vm(m),
-  next(0),
-  child(0),
-  state(NoState),
-  thread(0),
-  code(0),
-  exception(0),
-  ip(0),
-  sp(0),
-  frame(-1),
-  heapIndex(0),
-  protector(0),
-  chain(0)
-{
-  if (m->rootThread == 0) {
-    m->rootThread = this;
-    m->unsafe = true;
-
-    Thread* t = this;
-
-#include "type-initializations.cpp"
-
-    object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
-    set(t, cast<object>(t->vm->types, 0), arrayClass);
-
-    object classClass = arrayBody(t, m->types, Machine::ClassType);
-    set(t, cast<object>(classClass, 0), classClass);
-
-    object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
-    set(t, cast<object>(intArrayClass, 0), classClass);
-
-    m->unsafe = false;
-
-    m->bootstrapClassMap = makeHashMap(this, 0, 0);
-
-#include "type-java-initializations.cpp"
-
-    classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
-      |= WeakReferenceFlag;
-
-    m->classMap = makeHashMap(this, 0, 0);
-    m->builtinMap = makeHashMap(this, 0, 0);
-    m->monitorMap = makeHashMap(this, 0, 0);
-
-    struct {
-      const char* key;
-      void* value;
-    } builtins[] = {
-      { "Java_java_lang_Object_toString",
-        reinterpret_cast<void*>(builtin::toString) },
-      { "Java_java_lang_System_loadLibrary",
-        reinterpret_cast<void*>(builtin::loadLibrary) },
-      { "Java_java_lang_Throwable_trace",
-        reinterpret_cast<void*>(builtin::trace) },
-      { 0, 0 }
-    };
-
-    for (unsigned i = 0; builtins[i].key; ++i) {
-      object key = makeByteArray(t, builtins[i].key);
-      PROTECT(t, key);
-      object value = makePointer(t, builtins[i].value);
-
-      hashMapInsert(t, m->builtinMap, key, value, byteArrayHash);
-    }
-  }
 }
 
 object
@@ -4777,6 +3538,404 @@ run(Thread* t, const char* className, int argc, const char** argv)
 
 namespace vm {
 
+Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
+  system(system),
+  heap(heap),
+  classFinder(classFinder),
+  rootThread(0),
+  exclusive(0),
+  activeCount(0),
+  liveCount(0),
+  stateLock(0),
+  heapLock(0),
+  classLock(0),
+  finalizerLock(0),
+  libraries(0),
+  classMap(0),
+  bootstrapClassMap(0),
+  builtinMap(0),
+  monitorMap(0),
+  types(0),
+  finalizers(0),
+  doomed(0),
+  weakReferences(0),
+  unsafe(false)
+{
+  jni::populate(&jniEnvVTable);
+
+  if (not system->success(system->make(&stateLock)) or
+      not system->success(system->make(&heapLock)) or
+      not system->success(system->make(&classLock)) or
+      not system->success(system->make(&finalizerLock)))
+  {
+    system->abort();
+  }
+}
+
+void
+Machine::dispose()
+{
+  stateLock->dispose();
+  heapLock->dispose();
+  classLock->dispose();
+  finalizerLock->dispose();
+
+  if (libraries) {
+    libraries->dispose();
+  }
+  
+  if (rootThread) {
+    rootThread->dispose();
+  }
+}
+
+Thread::Thread(Machine* m):
+  vtable(&(m->jniEnvVTable)),
+  vm(m),
+  next(0),
+  child(0),
+  state(NoState),
+  thread(0),
+  code(0),
+  exception(0),
+  ip(0),
+  sp(0),
+  frame(-1),
+  heapIndex(0),
+  protector(0),
+  chain(0)
+{
+  if (m->rootThread == 0) {
+    m->rootThread = this;
+    m->unsafe = true;
+
+    Thread* t = this;
+
+#include "type-initializations.cpp"
+
+    object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
+    set(t, cast<object>(t->vm->types, 0), arrayClass);
+
+    object classClass = arrayBody(t, m->types, Machine::ClassType);
+    set(t, cast<object>(classClass, 0), classClass);
+
+    object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
+    set(t, cast<object>(intArrayClass, 0), classClass);
+
+    m->unsafe = false;
+
+    m->bootstrapClassMap = makeHashMap(this, 0, 0);
+
+#include "type-java-initializations.cpp"
+
+    classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
+      |= WeakReferenceFlag;
+
+    m->classMap = makeHashMap(this, 0, 0);
+    m->builtinMap = makeHashMap(this, 0, 0);
+    m->monitorMap = makeHashMap(this, 0, 0);
+
+    builtin::populate(t, m->builtinMap);
+  }
+}
+
+void
+Thread::dispose()
+{
+  Chain::dispose(vm->system, chain);
+  
+  for (Thread* c = child; c; c = c->next) {
+    c->dispose();
+  }
+}
+
+void
+enter(Thread* t, Thread::State s)
+{
+  if (s == t->state) return;
+
+  ACQUIRE_RAW(t, t->vm->stateLock);
+
+  switch (s) {
+  case Thread::ExclusiveState: {
+    assert(t, t->state == Thread::ActiveState);
+
+    while (t->vm->exclusive) {
+      // another thread got here first.
+      enter(t, Thread::IdleState);
+      enter(t, Thread::ActiveState);
+    }
+
+    t->state = Thread::ExclusiveState;
+    t->vm->exclusive = t;
+      
+    while (t->vm->activeCount > 1) {
+      t->vm->stateLock->wait(t, 0);
+    }
+  } break;
+
+  case Thread::IdleState:
+  case Thread::ZombieState: {
+    switch (t->state) {
+    case Thread::ExclusiveState: {
+      assert(t, t->vm->exclusive == t);
+      t->vm->exclusive = 0;
+    } break;
+
+    case Thread::ActiveState: break;
+
+    default: abort(t);
+    }
+
+    -- t->vm->activeCount;
+    if (s == Thread::ZombieState) {
+      -- t->vm->liveCount;
+    }
+    t->state = s;
+
+    t->vm->stateLock->notifyAll(t);
+  } break;
+
+  case Thread::ActiveState: {
+    switch (t->state) {
+    case Thread::ExclusiveState: {
+      assert(t, t->vm->exclusive == t);
+
+      t->state = s;
+      t->vm->exclusive = 0;
+
+      t->vm->stateLock->notifyAll(t);
+    } break;
+
+    case Thread::NoState:
+    case Thread::IdleState: {
+      while (t->vm->exclusive) {
+        t->vm->stateLock->wait(t, 0);
+      }
+
+      ++ t->vm->activeCount;
+      if (t->state == Thread::NoState) {
+        ++ t->vm->liveCount;
+      }
+      t->state = s;
+    } break;
+
+    default: abort(t);
+    }
+  } break;
+
+  case Thread::ExitState: {
+    switch (t->state) {
+    case Thread::ExclusiveState: {
+      assert(t, t->vm->exclusive == t);
+      t->vm->exclusive = 0;
+    } break;
+
+    case Thread::ActiveState: break;
+
+    default: abort(t);
+    }
+      
+    -- t->vm->activeCount;
+    t->state = s;
+
+    while (t->vm->liveCount > 1) {
+      t->vm->stateLock->wait(t, 0);
+    }
+  } break;
+
+  default: abort(t);
+  }
+}
+
+object
+allocate2(Thread* t, unsigned sizeInBytes)
+{
+  if (sizeInBytes > Thread::HeapSizeInBytes and t->chain == 0) {
+    return allocateLarge(t, sizeInBytes);
+  }
+
+  ACQUIRE_RAW(t, t->vm->stateLock);
+
+  while (t->vm->exclusive) {
+    // another thread wants to enter the exclusive state, either for a
+    // collection or some other reason.  We give it a chance here.
+    enter(t, Thread::IdleState);
+    enter(t, Thread::ActiveState);
+  }
+
+  if (t->heapIndex + divide(sizeInBytes, BytesPerWord)
+      >= Thread::HeapSizeInWords)
+  {
+    enter(t, Thread::ExclusiveState);
+    collect(t->vm, Heap::MinorCollection);
+    enter(t, Thread::ActiveState);
+  }
+
+  if (sizeInBytes > Thread::HeapSizeInBytes) {
+    return allocateLarge(t, sizeInBytes);
+  } else {
+    return allocateSmall(t, sizeInBytes);
+  }
+}
+
+object
+makeByteArray(Thread* t, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object s = ::makeByteArray(t, format, a);
+  va_end(a);
+
+  return s;
+}
+
+object
+makeString(Thread* t, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object s = ::makeByteArray(t, format, a);
+  va_end(a);
+
+  return makeString(t, s, 0, byteArrayLength(t, s), 0);
+}
+
+object
+hashMapFindNode(Thread* t, object map, object key,
+                uint32_t (*hash)(Thread*, object),
+                bool (*equal)(Thread*, object, object))
+{
+  object array = hashMapArray(t, map);
+  if (array) {
+    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+    object n = arrayBody(t, array, index);
+    while (n) {
+      if (equal(t, key, tripleFirst(t, n))) {
+        return n;
+      }
+      
+      n = tripleThird(t, n);
+    }
+  }
+  return 0;
+}
+
+void
+hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
+              unsigned size)
+{
+  PROTECT(t, map);
+
+  object oldArray = hashMapArray(t, map);
+  unsigned oldLength = (oldArray ? arrayLength(t, oldArray) : 0);
+  PROTECT(t, oldArray);
+
+  unsigned newLength = nextPowerOfTwo(size);
+  object newArray = makeArray(t, newLength, true);
+
+  if (oldArray) {
+    for (unsigned i = 0; i < oldLength; ++i) {
+      object next;
+      for (object p = arrayBody(t, oldArray, i); p; p = next) {
+        next = tripleThird(t, p);
+
+        object key = tripleFirst(t, p);
+        unsigned index = hash(t, key) & (newLength - 1);
+        object n = arrayBody(t, newArray, index);
+
+        set(t, tripleThird(t, p), n);
+        set(t, arrayBody(t, newArray, index), p);
+      }
+    }
+  }
+  
+  set(t, hashMapArray(t, map), newArray);
+}
+
+void
+hashMapInsert(Thread* t, object map, object key, object value,
+              uint32_t (*hash)(Thread*, object))
+{
+  object array = hashMapArray(t, map);
+  PROTECT(t, array);
+
+  ++ hashMapSize(t, map);
+
+  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
+    PROTECT(t, map);
+    PROTECT(t, key);
+    PROTECT(t, value);
+
+    hashMapResize(t, map, hash, array ? arrayLength(t, array) * 2 : 16);
+    array = hashMapArray(t, map);
+  }
+
+  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+  object n = arrayBody(t, array, index);
+
+  n = makeTriple(t, key, value, n);
+
+  set(t, arrayBody(t, array, index), n);
+}
+
+object
+hashMapRemove(Thread* t, object map, object key,
+              uint32_t (*hash)(Thread*, object),
+              bool (*equal)(Thread*, object, object))
+{
+  object array = hashMapArray(t, map);
+  object o = 0;
+  if (array) {
+    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+    object n = arrayBody(t, array, index);
+    object p = 0;
+    while (n) {
+      if (equal(t, key, tripleFirst(t, n))) {
+        o = tripleFirst(t, n);
+        if (p) {
+          set(t, tripleThird(t, p), tripleThird(t, n));
+        } else {
+          set(t, arrayBody(t, array, index), tripleThird(t, n));
+        }
+      }
+      
+      p = n;
+      n = tripleThird(t, n);
+    }
+  }
+
+  if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
+    hashMapResize(t, map, hash, arrayLength(t, array) / 2);
+  }
+
+  return o;
+}
+
+object
+makeTrace(Thread* t, int frame)
+{
+  unsigned count = 0;
+  for (int f = frame; f >= 0; f = frameNext(t, f)) {
+    ++ count;
+  }
+
+  object trace = makeObjectArray
+    (t, arrayBody(t, t->vm->types, Machine::StackTraceElementType),
+     count, true);
+  PROTECT(t, trace);
+
+  unsigned index = 0;
+  for (int f = frame; f >= 0; f = frameNext(t, f)) {
+    object e = makeStackTraceElement(t, frameMethod(t, f), frameIp(t, f));
+    set(t, objectArrayBody(t, trace, index++), e);
+  }
+
+  return trace;
+}
+
+#include "type-constructors.cpp"
+
 void
 run(System* system, Heap* heap, ClassFinder* classFinder,
     const char* className, int argc, const char** argv)
@@ -4784,7 +3943,7 @@ run(System* system, Heap* heap, ClassFinder* classFinder,
   Machine m(system, heap, classFinder);
   Thread t(&m);
 
-  run(&t, className, argc, argv);
+  ::run(&t, className, argc, argv);
 }
 
 }

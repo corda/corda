@@ -63,9 +63,14 @@ interpreter-depends = \
 	$(src)/class-finder.h \
 	$(src)/stream.h \
 	$(src)/constants.h \
-	$(src)/vm.h
+	$(src)/vm.h \
+	$(src)/vm-jni.h \
+	$(src)/vm-builtin.h \
+	$(src)/vm-declarations.h
 interpreter-sources = \
 	$(src)/vm.cpp \
+	$(src)/vm-jni.cpp \
+	$(src)/vm-builtin.cpp \
 	$(src)/heap.cpp \
 	$(src)/main.cpp
 
