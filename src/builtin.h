@@ -1,7 +1,7 @@
-#ifndef VM_BUITLIN_H
-#define VM_BUITLIN_H
+#ifndef BUITLIN_H
+#define BUITLIN_H
 
-#include "vm-declarations.h"
+#include "machine.h"
 
 namespace vm {
 namespace builtin {
@@ -12,4 +12,4 @@ populate(Thread* t, object map);
 } // namespace builtin
 } // namespace vm
 
-#endif//VM_BUILTIN_H
+#endif//BUILTIN_H

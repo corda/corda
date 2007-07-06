@@ -1,5 +1,5 @@
-#ifndef VM_DECLARATIONS_H
-#define VM_DECLARATIONS_H
+#ifndef MACHINE_H
+#define MACHINE_H
 
 #include "common.h"
 #include "system.h"
@@ -1579,6 +1579,42 @@ frameBase(Thread* t, int frame)
 }
 
 inline object
+localObject(Thread* t, unsigned index)
+{
+  return peekObject(t, frameBase(t, t->frame) + index);
+}
+
+inline uint32_t
+localInt(Thread* t, unsigned index)
+{
+  return peekInt(t, frameBase(t, t->frame) + index);
+}
+
+inline uint64_t
+localLong(Thread* t, unsigned index)
+{
+  return peekLong(t, frameBase(t, t->frame) + index);
+}
+
+inline void
+setLocalObject(Thread* t, unsigned index, object value)
+{
+  pokeObject(t, frameBase(t, t->frame) + index, value);
+}
+
+inline void
+setLocalInt(Thread* t, unsigned index, uint32_t value)
+{
+  pokeInt(t, frameBase(t, t->frame) + index, value);
+}
+
+inline void
+setLocalLong(Thread* t, unsigned index, uint64_t value)
+{
+  pokeLong(t, frameBase(t, t->frame) + index, value);
+}
+
+inline object
 makeTrace(Thread* t)
 {
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
@@ -1759,6 +1795,12 @@ hashMapIteratorNext(Thread* t, object it);
 void
 listAppend(Thread* t, object list, object value);
 
+void
+addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
+
+System::Monitor*
+objectMonitor(Thread* t, object o);
+
 } // namespace vm
 
-#endif//VM_DECLARATIONS_H
+#endif//MACHINE_H

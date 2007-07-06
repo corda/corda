@@ -1,4 +1,5 @@
-#include "vm-builtin.h"
+#include "builtin.h"
+#include "machine.h"
 
 namespace vm {
 namespace builtin {

@@ -1,5 +1,5 @@
-#ifndef VM_H
-#define VM_H
+#ifndef RUN_H
+#define RUN_H
 
 #include "system.h"
 #include "heap.h"
@@ -13,4 +13,4 @@ run(System* sys, Heap* heap, ClassFinder* classFinder,
 
 }
 
-#endif//VM_H
+#endif//RUN_H

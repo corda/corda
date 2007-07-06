@@ -1,5 +1,5 @@
-#include "vm-jni.h"
-#include "vm-declarations.h"
+#include "jnienv.h"
+#include "machine.h"
 
 namespace vm {
 namespace jni {

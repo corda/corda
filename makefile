@@ -1,4 +1,4 @@
-#MAKEFLAGS = -s
+MAKEFLAGS = -s
 
 arch = $(shell uname -m)
 ifeq ($(arch),i586)
@@ -55,6 +55,7 @@ generated-code = \
 	$(bld)/type-constructors.cpp \
 	$(bld)/type-initializations.cpp \
 	$(bld)/type-java-initializations.cpp
+
 interpreter-depends = \
 	$(generated-code) \
 	$(src)/common.h \
@@ -63,14 +64,16 @@ interpreter-depends = \
 	$(src)/class-finder.h \
 	$(src)/stream.h \
 	$(src)/constants.h \
-	$(src)/vm.h \
-	$(src)/vm-jni.h \
-	$(src)/vm-builtin.h \
-	$(src)/vm-declarations.h
+	$(src)/run.h \
+	$(src)/jnienv.h \
+	$(src)/builtin.h \
+	$(src)/machine.h
+
 interpreter-sources = \
-	$(src)/vm.cpp \
-	$(src)/vm-jni.cpp \
-	$(src)/vm-builtin.cpp \
+	$(src)/run.cpp \
+	$(src)/machine.cpp \
+	$(src)/jnienv.cpp \
+	$(src)/builtin.cpp \
 	$(src)/heap.cpp \
 	$(src)/main.cpp
 

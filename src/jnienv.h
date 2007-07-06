@@ -1,7 +1,7 @@
-#ifndef VM_JNI_H
-#define VM_JNI_H
+#ifndef JNIENV_H
+#define JNIENV_H
 
-#include "vm-declarations.h"
+#include "machine.h"
 
 namespace vm {
 namespace jni {
@@ -12,4 +12,4 @@ populate(JNIEnvVTable* table);
 } // namespace jni
 } // namespace vm
 
-#endif//VM_JNI_H
+#endif//JNIENV_H
