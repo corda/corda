@@ -4642,8 +4642,10 @@ run(Thread* t)
     } else {
       unsigned parameterFootprint = methodParameterFootprint(t, code);
       unsigned base = sp - parameterFootprint;
-      if (UNLIKELY(codeMaxStack(t, methodCode(t, code))
-                   + codeMaxLocals(t, methodCode(t, code)) + base
+      if (UNLIKELY(base
+                   + codeMaxLocals(t, methodCode(t, code))
+                   + FrameFootprint
+                   + codeMaxStack(t, methodCode(t, code))
                    > Thread::StackSizeInWords / 2))
       {
         exception = makeStackOverflowError(t);
