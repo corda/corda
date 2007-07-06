@@ -8,6 +8,14 @@
 #include "stdio.h"
 #include "types.h"
 
+#ifdef __i386__
+#  define LD "%d"
+#  define LLD "%lld"
+#elif defined __x86_64__
+#  define LD "%ld"
+#  define LLD "%ld"
+#endif
+
 #define NO_RETURN __attribute__((noreturn))
 
 #define LIKELY(v) __builtin_expect((v) != 0, true)

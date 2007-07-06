@@ -16,7 +16,6 @@
 using namespace vm;
 
 #ifdef __i386__
-#define LD "%d"
 
 extern "C" uint64_t
 cdeclCall(void* function, void* stack, unsigned stackSize,
@@ -34,7 +33,6 @@ dynamicCall(void* function, uint32_t* arguments, uint8_t*,
 } // namespace
 
 #elif defined __x86_64__
-#define LD "%ld"
 
 extern "C" uint64_t
 amd64Call(void* function, void* stack, unsigned stackSize,

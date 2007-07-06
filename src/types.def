@@ -68,12 +68,6 @@
   (uint16_t maxLocals)
   (array uint8_t body))
 
-(type frame
-  (object method)
-  (object next)
-  (uint32_t ip)
-  (uint32_t stackBase))
-
 (type reference
   (object class)
   (object name)
