@@ -4,8 +4,13 @@
 #include "system.h"
 #include "heap.h"
 #include "class-finder.h"
+#include "machine.h"
 
 namespace vm {
+
+object
+run(Thread* t, const char* className, const char* methodName,
+    const char* methodSpec, ...);
 
 void
 run(System* sys, Heap* heap, ClassFinder* classFinder,

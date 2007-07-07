@@ -125,6 +125,28 @@ const bool Verbose = false;
 
 class System: public vm::System {
  public:
+  class Thread: public vm::System::Thread {
+   public:
+    Thread(vm::System* s, vm::System::Runnable* r): s(s), r(r) { }
+
+    virtual void run() {
+      r->run(this);
+    }
+
+    virtual void join() {
+      int rv = pthread_join(thread, 0);
+      assert(s, rv == 0);
+    }
+
+    virtual void dispose() {
+      s->free(this);
+    }
+
+    vm::System* s;
+    vm::System::Runnable* r;
+    pthread_t thread;
+  };
+
   class Monitor: public vm::System::Monitor {
    public:
     Monitor(vm::System* s): s(s), context(0), depth(0) {
@@ -312,9 +334,16 @@ class System: public vm::System {
     pthread_mutex_unlock(&mutex);
   }
 
-  virtual Status start(Thread* t) {
-    pthread_t thread;
-    int rv = pthread_create(&thread, 0, run, t);
+  virtual Status attach(vm::System::Thread** tp) {
+    Thread* t = new (vm::System::allocate(sizeof(Thread))) Thread(this, 0);
+    t->thread = pthread_self();
+    *tp = t;
+    return 0;
+  }
+
+  virtual Status start(Runnable* r) {
+    Thread* t = new (vm::System::allocate(sizeof(Thread))) Thread(this, r);
+    int rv = pthread_create(&(t->thread), 0, run, t);
     assert(this, rv == 0);
     return 0;
   }

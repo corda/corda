@@ -2,11 +2,11 @@ public class TestThreads implements Runnable {
 
   public static void main(String[] args) {
     TestThreads test = new TestThreads();
-    Thread th = new Thread(test);
+    Thread thread = new Thread(test);
 
     try {
       synchronized (test) {
-        th.start();
+        thread.start();
         test.wait();
       }
     } catch (Throwable e) {

@@ -9,23 +9,25 @@ namespace {
 void
 visitRoots(Thread* t, Heap::Visitor* v)
 {
-  t->heapIndex = 0;
+  if (t->state != Thread::ZombieState) {
+    t->heapIndex = 0;
 
-  v->visit(&(t->thread));
-  v->visit(&(t->code));
-  v->visit(&(t->exception));
+    v->visit(&(t->javaThread));
+    v->visit(&(t->code));
+    v->visit(&(t->exception));
 
-  for (unsigned i = 0; i < t->sp; ++i) {
-    if (t->stack[i * 2] == ObjectTag) {
-      v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
+    for (unsigned i = 0; i < t->sp; ++i) {
+      if (t->stack[i * 2] == ObjectTag) {
+        v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
+      }
+    }
+
+    for (Thread::Protector* p = t->protector; p; p = p->next) {
+      v->visit(p->p);
     }
   }
 
-  for (Thread::Protector* p = t->protector; p; p = p->next) {
-    v->visit(p->p);
-  }
-
-  for (Thread* c = t->child; c; c = c->next) {
+  for (Thread* c = t->child; c; c = c->peer) {
     visitRoots(c, v);
   }
 }
@@ -33,17 +35,116 @@ visitRoots(Thread* t, Heap::Visitor* v)
 void
 postCollect(Thread* t)
 {
-  Chain::dispose(t->vm->system, t->chain);
-  t->chain = 0;
+  if (t->large) {
+    t->vm->system->free(t->large);
+    t->large = 0;
+  }
 
-  for (Thread* c = t->child; c; c = c->next) {
+  for (Thread* c = t->child; c; c = c->peer) {
     postCollect(c);
   }
 }
 
-void
-collect(Machine* m, Heap::CollectionType type)
+bool
+find(Thread* t, Thread* o)
 {
+  if (t == o) return true;
+
+  for (Thread* p = t->peer; p; p = p->peer) {
+    if (p == o) return true;
+  }
+
+  if (t->child) return find(t->child, o);
+
+  return false;
+}
+
+void
+join(Thread* t, Thread* o)
+{
+  if (t != o) {
+    o->systemThread->join();
+  }
+}
+
+void
+dispose(Thread* t, Thread* o, bool remove)
+{
+  if (remove) {
+    if (o->parent) {
+      if (o->child) {
+        o->parent->child = o->child;
+        if (o->peer) {
+          o->peer->peer = o->child->peer;
+          o->child->peer = o->peer;
+        }
+      } else if (o->peer) {
+        o->parent->child = o->peer;
+      } else {
+        o->parent->child = 0;
+      }
+    } else if (o->child) {
+      t->vm->rootThread = o->child;
+      if (o->peer) {
+        o->peer->peer = o->child->peer;
+        o->child->peer = o->peer;
+      }      
+    } else if (o->peer) {
+      t->vm->rootThread = o->peer;
+    } else {
+      abort(t);
+    }
+
+    assert(t, not find(t->vm->rootThread, o));
+  }
+
+  o->dispose();
+}
+
+void
+joinAll(Thread* m, Thread* o)
+{
+  for (Thread* p = o->child; p;) {
+    Thread* child = p;
+    p = p->peer;
+    joinAll(m, child);
+  }
+
+  join(m, o);
+}
+
+void
+disposeAll(Thread* m, Thread* o)
+{
+  for (Thread* p = o->child; p;) {
+    Thread* child = p;
+    p = p->peer;
+    disposeAll(m, child);
+  }
+
+  dispose(m, o, false);
+}
+
+void
+killZombies(Thread* t, Thread* o)
+{
+  for (Thread* p = o->child; p;) {
+    Thread* child = p;
+    p = p->peer;
+    killZombies(t, child);
+  }
+
+  if (o->state == Thread::ZombieState) {
+    join(t, o);
+    dispose(t, o, true);
+  }
+}
+
+void
+collect(Thread* t, Heap::CollectionType type)
+{
+  Machine* m = t->vm;
+
   class Client: public Heap::Client {
    public:
     Client(Machine* m): m(m) { }
@@ -55,7 +156,7 @@ collect(Machine* m, Heap::CollectionType type)
       v->visit(&(m->monitorMap));
       v->visit(&(m->types));
 
-      for (Thread* t = m->rootThread; t; t = t->next) {
+      for (Thread* t = m->rootThread; t; t = t->peer) {
         ::visitRoots(t, v);
       }
 
@@ -221,7 +322,6 @@ collect(Machine* m, Heap::CollectionType type)
 
   postCollect(m->rootThread);
 
-  Thread* t = m->rootThread;
   for (object f = m->doomed; f; f = tripleThird(t, f)) {
     reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
       (t, finalizerTarget(t, f));
@@ -229,6 +329,8 @@ collect(Machine* m, Heap::CollectionType type)
   m->doomed = 0;
 
   m->weakReferences = 0;
+
+  killZombies(t, m->rootThread);
 }
 
 void
@@ -306,25 +408,36 @@ Machine::dispose()
   }
 }
 
-Thread::Thread(Machine* m):
+Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
+               Thread* parent):
   vtable(&(m->jniEnvVTable)),
   vm(m),
-  next(0),
+  allocator(allocator),
+  parent(parent),
+  peer((parent ? parent->child : 0)),
   child(0),
   state(NoState),
-  thread(0),
+  systemThread(0),
+  javaThread(javaThread),
   code(0),
   exception(0),
+  large(0),
   ip(0),
   sp(0),
   frame(-1),
   heapIndex(0),
-  protector(0),
-  chain(0)
+  protector(0)
 {
-  if (m->rootThread == 0) {
+  if (parent == 0) {
+    assert(this, m->rootThread == 0);
+    assert(this, javaThread == 0);
+
     m->rootThread = this;
     m->unsafe = true;
+
+    if (not m->system->success(m->system->attach(&systemThread))) {
+      abort(this);
+    }
 
     Thread* t = this;
 
@@ -353,17 +466,62 @@ Thread::Thread(Machine* m):
     m->monitorMap = makeHashMap(this, 0, 0);
 
     builtin::populate(t, m->builtinMap);
+
+    javaThread = makeThread(t, 0, reinterpret_cast<int64_t>(t));
+  } else {
+    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
+    parent->child = this;
+  }
+}
+
+void
+Thread::exit()
+{
+  if (state != Thread::ExitState and
+      state != Thread::ZombieState)
+  {
+    enter(this, Thread::ExclusiveState);
+
+    if (vm->liveCount == 1) {
+      vm::exit(this);
+    } else {
+      enter(this, Thread::ZombieState);
+    }
   }
 }
 
 void
 Thread::dispose()
 {
-  Chain::dispose(vm->system, chain);
-  
-  for (Thread* c = child; c; c = c->next) {
-    c->dispose();
+  if (large) {
+    vm->system->free(large);
+    large = 0;
   }
+
+  if (systemThread) {
+    systemThread->dispose();
+    systemThread = 0;
+  }
+
+  if (allocator) {
+    allocator->free(this);
+    allocator = 0;
+  }
+}
+
+void
+exit(Thread* t)
+{
+  enter(t, Thread::ExitState);
+
+  joinAll(t, t->vm->rootThread);
+
+  for (object f = t->vm->finalizers; f; f = finalizerNext(t, f)) {
+    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
+      (t, finalizerTarget(t, f));
+  }
+
+  disposeAll(t, t->vm->rootThread);
 }
 
 void
@@ -379,8 +537,7 @@ enter(Thread* t, Thread::State s)
 
     while (t->vm->exclusive) {
       // another thread got here first.
-      enter(t, Thread::IdleState);
-      enter(t, Thread::ActiveState);
+      ENTER(t, Thread::IdleState);
     }
 
     t->state = Thread::ExclusiveState;
@@ -468,25 +625,23 @@ enter(Thread* t, Thread::State s)
 object
 allocate2(Thread* t, unsigned sizeInBytes)
 {
-  if (sizeInBytes > Thread::HeapSizeInBytes and t->chain == 0) {
+  if (sizeInBytes > Thread::HeapSizeInBytes and t->large == 0) {
     return allocateLarge(t, sizeInBytes);
   }
 
   ACQUIRE_RAW(t, t->vm->stateLock);
 
-  while (t->vm->exclusive) {
+  while (t->vm->exclusive and t->vm->exclusive != t) {
     // another thread wants to enter the exclusive state, either for a
     // collection or some other reason.  We give it a chance here.
-    enter(t, Thread::IdleState);
-    enter(t, Thread::ActiveState);
+    ENTER(t, Thread::IdleState);
   }
 
   if (t->heapIndex + divide(sizeInBytes, BytesPerWord)
       >= Thread::HeapSizeInWords)
   {
-    enter(t, Thread::ExclusiveState);
-    collect(t->vm, Heap::MinorCollection);
-    enter(t, Thread::ActiveState);
+    ENTER(t, Thread::ExclusiveState);
+    collect(t, Heap::MinorCollection);
   }
 
   if (sizeInBytes > Thread::HeapSizeInBytes) {
@@ -708,8 +863,8 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 
   ACQUIRE(t, t->vm->finalizerLock);
 
-  object p = makePointer(t, reinterpret_cast<void*>(finalize));
-  t->vm->finalizers = makeTriple(t, target, p, t->vm->finalizers);
+  t->vm->finalizers = makeFinalizer
+    (t, target, reinterpret_cast<void*>(finalize), t->vm->finalizers);
 }
 
 System::Monitor*

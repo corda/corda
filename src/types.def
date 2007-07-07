@@ -143,6 +143,11 @@
   (int32_t length)
   (int32_t hash))
 
+(type thread java/lang/Thread
+  (extends jobject)
+  (object task)
+  (int64_t peer))
+
 (type throwable java/lang/Throwable
   (extends jobject)
   (object message)
@@ -156,6 +161,9 @@
   (extends exception))
 
 (type nullPointerException java/lang/NullPointerException
+  (extends runtimeException))
+
+(type illegalStateException java/lang/IllegalStateException
   (extends runtimeException))
 
 (type arrayIndexOutOfBoundsException

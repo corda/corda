@@ -2,12 +2,13 @@ package java.lang;
 
 public class Thread implements Runnable {
   private final Runnable task;
+  private long peer;
 
   public Thread(Runnable task) {
     this.task = task;
   }
 
-  public native void start();
+  public synchronized native void start();
 
   public void run() {
     if (task != null) {

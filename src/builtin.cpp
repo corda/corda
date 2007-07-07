@@ -1,5 +1,6 @@
 #include "builtin.h"
 #include "machine.h"
+#include "run.h"
 
 namespace vm {
 namespace builtin {
@@ -64,6 +65,43 @@ trace(Thread* t, jint skipCount)
 }
 
 void
+start(Thread* t, jobject this_)
+{
+  Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *this_));
+  if (p) {
+    object message = makeString(t, "thread already started");
+    t->exception = makeIllegalStateException(t, message);
+  } else {
+    p = new (t->vm->system->allocate(sizeof(Thread)))
+      Thread(t->vm, t->vm->system, *this_, t);
+
+    enter(p, Thread::ActiveState);
+
+    class Runnable: public System::Runnable {
+     public:
+      Runnable(Thread* t): t(t) { }
+
+      virtual void run(System::Thread* st) {
+        t->systemThread = st;
+
+        vm::run(t, "java/lang/Thread", "run", "()V", t->javaThread);
+
+        t->exit();
+      }
+
+      Thread* t;
+    } r(p);
+
+    if (not t->vm->system->success(t->vm->system->start(&r))) {
+      p->exit();
+
+      object message = makeString(t, "unable to start native thread");
+      t->exception = makeRuntimeException(t, message);
+    }
+  }
+}
+
+void
 populate(Thread* t, object map)
 {
   struct {
@@ -76,6 +114,8 @@ populate(Thread* t, object map)
       reinterpret_cast<void*>(loadLibrary) },
     { "Java_java_lang_Throwable_trace",
       reinterpret_cast<void*>(trace) },
+    { "Java_java_lang_Thread_start",
+      reinterpret_cast<void*>(start) },
     { 0, 0 }
   };
 

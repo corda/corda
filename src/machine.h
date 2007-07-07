@@ -23,7 +23,7 @@ namespace vm {
 
 const bool Verbose = false;
 const bool Debug = false;
-const bool DebugRun = false;
+const bool DebugRun = true;
 const bool DebugStack = false;
 
 const uintptr_t HashTakenMark = 1;
@@ -1114,28 +1114,6 @@ class Machine {
   JNIEnvVTable jniEnvVTable;
 };
 
-class Chain {
- public:
-  Chain(Chain* next): next(next) { }
-
-  static unsigned footprint(unsigned sizeInBytes) {
-    return sizeof(Chain) + sizeInBytes;
-  }
-
-  uint8_t* data() {
-    return reinterpret_cast<uint8_t*>(this) + sizeof(Chain);
-  }
-
-  static void dispose(System* s, Chain* c) {
-    if (c) {
-      if (c->next) dispose(s, c->next);
-      s->free(c);
-    }
-  }
-
-  Chain* next;
-};
-
 class Thread {
  public:
   enum State {
@@ -1168,24 +1146,32 @@ class Thread {
   static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
   static const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
 
-  Thread(Machine* m);
+  Thread(Machine* m, Allocator* allocator, object javaThread, Thread* parent);
 
+  ~Thread() {
+    exit();
+  }
+
+  void exit();
   void dispose();
 
   JNIEnvVTable* vtable;
   Machine* vm;
-  Thread* next;
+  Allocator* allocator;
+  Thread* parent;
+  Thread* peer;
   Thread* child;
   State state;
-  object thread;
+  System::Thread* systemThread;
+  object javaThread;
   object code;
   object exception;
+  object large;
   unsigned ip;
   unsigned sp;
   int frame;
   unsigned heapIndex;
   Protector* protector;
-  Chain* chain;
   uintptr_t stack[StackSizeInWords];
   object heap[HeapSizeInWords];
 };
@@ -1261,9 +1247,7 @@ expect(Thread* t, bool v)
 inline object
 allocateLarge(Thread* t, unsigned sizeInBytes)
 {
-  void* p = t->vm->system->allocate(Chain::footprint(sizeInBytes));
-  t->chain = new (p) Chain(t->chain);
-  return t->chain->data();
+  return t->large = t->vm->system->allocate(sizeInBytes);
 }
 
 inline object
@@ -1317,6 +1301,14 @@ makeRuntimeException(Thread* t, object message)
   PROTECT(t, message);
   object trace = makeTrace(t);
   return makeRuntimeException(t, message, trace, 0);
+}
+
+inline object
+makeIllegalStateException(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeIllegalStateException(t, message, trace, 0);
 }
 
 inline object
@@ -1781,6 +1773,20 @@ hashMapInsertOrReplace(Thread* t, object map, object key, object value,
   }
 }
 
+inline bool
+hashMapInsertMaybe(Thread* t, object map, object key, object value,
+                   uint32_t (*hash)(Thread*, object),
+                   bool (*equal)(Thread*, object, object))
+{
+  object n = hashMapFindNode(t, map, key, hash, equal);
+  if (n == 0) {
+    hashMapInsert(t, map, key, value, hash);
+    return true;
+  } else {
+    return false;
+  }
+}
+
 object
 hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
@@ -1800,6 +1806,9 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
 System::Monitor*
 objectMonitor(Thread* t, object o);
+
+void
+exit(Thread* t);
 
 } // namespace vm
 

@@ -5,7 +5,15 @@
 
 namespace vm {
 
-class System {
+class Allocator {
+ public:
+  virtual ~Allocator() { }
+  virtual void* tryAllocate(unsigned size) = 0;
+  virtual void* allocate(unsigned size) = 0;
+  virtual void free(const void*) = 0;
+};
+
+class System: public Allocator {
  public:
   typedef intptr_t Status;
 
@@ -13,6 +21,14 @@ class System {
    public:
     virtual ~Thread() { }
     virtual void run() = 0;
+    virtual void join() = 0;
+    virtual void dispose() = 0;
+  };
+
+  class Runnable {
+   public:
+    virtual ~Runnable() { }
+    virtual void run(Thread*) = 0;
   };
 
   class Monitor {
@@ -38,9 +54,8 @@ class System {
   virtual ~System() { }
 
   virtual bool success(Status) = 0;
-  virtual void* tryAllocate(unsigned size) = 0;
-  virtual void free(const void*) = 0;
-  virtual Status start(Thread*) = 0;
+  virtual Status attach(Thread**) = 0;
+  virtual Status start(Runnable*) = 0;
   virtual Status make(Monitor**) = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
@@ -48,7 +63,7 @@ class System {
   virtual Status load(Library**, const char* name, Library* next) = 0;
   virtual void abort() = 0;
 
-  void* allocate(unsigned size) {
+  virtual void* allocate(unsigned size) {
     void* p = tryAllocate(size);
     if (p == 0) {
       abort();

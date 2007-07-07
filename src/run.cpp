@@ -65,8 +65,17 @@ make(Thread* t, object class_)
   unsigned sizeInBytes = pad(classFixedSize(t, class_));
   object instance = allocate(t, sizeInBytes);
   *static_cast<object*>(instance) = class_;
-  memset(static_cast<object*>(instance) + sizeof(object), 0,
+  memset(static_cast<object*>(instance) + 1, 0,
          sizeInBytes - sizeof(object));
+
+  fprintf(stderr, "new instance: %p\n", instance);
+
+  if (class_ == arrayBody(t, t->vm->types, Machine::ThreadType)) {
+    if (threadPeer(t, instance)) {
+      fprintf(stderr, "yo!\n");
+    }
+  }
+
   return instance;
 }
 
@@ -417,8 +426,8 @@ addInterfaces(Thread* t, object class_, object map)
     for (unsigned i = 0; i < arrayLength(t, table); i += increment) {
       object interface = arrayBody(t, table, i);
       object name = className(t, interface);
-      hashMapInsertOrReplace(t, map, name, interface, byteArrayHash,
-                             byteArrayEqual);
+      hashMapInsertMaybe(t, map, name, interface, byteArrayHash,
+                         byteArrayEqual);
     }
   }
 }
@@ -447,8 +456,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     object interface = resolveClass(t, name);
     PROTECT(t, interface);
 
-    hashMapInsertOrReplace(t, map, name, interface, byteArrayHash,
-                           byteArrayEqual);
+    hashMapInsertMaybe(t, map, name, interface, byteArrayHash, byteArrayEqual);
 
     addInterfaces(t, interface, map);
   }
@@ -881,8 +889,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         object vtable = classVirtualTable(t, arrayBody(t, itable, i));
         for (unsigned j = 0; j < virtualCount; ++j) {
           object method = arrayBody(t, vtable, j);
-          if (hashMapInsertOrReplace(t, virtualMap, method, method, methodHash,
-                                     methodEqual))
+          if (hashMapInsertMaybe(t, virtualMap, method, method, methodHash,
+                                 methodEqual))
           {
             ++ virtualCount;
           }
@@ -971,15 +979,19 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
           methodOffset(t, method) = virtualCount++;
 
           listAppend(t, newVirtuals, method);
+
+          hashMapInsert(t, virtualMap, method, method, methodHash);
         }
       }
 
       if (flags & ACC_NATIVE) {
         object p = hashMapFindNode
           (t, nativeMap, method, methodHash, methodEqual);
-
-        if (p == 0) {
-          hashMapInsert(t, virtualMap, method, method, methodHash);
+        
+        if (p) {
+          set(t, tripleSecond(t, p), method);          
+        } else {
+          hashMapInsert(t, virtualMap, method, 0, methodHash);          
         }
       }
 
@@ -990,10 +1002,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       object method = arrayBody(t, methodTable, i);
 
       if (methodFlags(t, method) & ACC_NATIVE) {
-        object p = hashMapFindNode
+        object overloaded = hashMapFind
           (t, nativeMap, method, methodHash, methodEqual);
 
-        object jniName = makeJNIName(t, method, p != 0);
+        object jniName = makeJNIName(t, method, overloaded);
         set(t, methodCode(t, method), jniName);
       }
     }
@@ -1023,10 +1035,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
           set(t, arrayBody(t, vtable, i), method);
         }
       }
-    }
 
-    for (object p = listFront(t, newVirtuals); p; p = pairSecond(t, p)) {
-      set(t, arrayBody(t, vtable, i++), pairFirst(t, p));        
+      for (object p = listFront(t, newVirtuals); p; p = pairSecond(t, p)) {
+        set(t, arrayBody(t, vtable, i++), pairFirst(t, p));        
+      }
     }
 
     set(t, classVirtualTable(t, class_), vtable);
@@ -1046,6 +1058,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
             object method = arrayBody(t, ivtable, j);
             method = hashMapFind
               (t, virtualMap, method, methodHash, methodEqual);
+            assert(t, method);
           
             set(t, arrayBody(t, vtable, j), method);        
           }
@@ -1368,11 +1381,26 @@ resolveNativeMethodData(Thread* t, object method)
 }
 
 inline void
+checkStack(Thread* t, object method)
+{
+  unsigned parameterFootprint = methodParameterFootprint(t, method);
+  unsigned base = t->sp - parameterFootprint;
+  if (UNLIKELY(base
+               + codeMaxLocals(t, methodCode(t, method))
+               + FrameFootprint
+               + codeMaxStack(t, methodCode(t, method))
+               > Thread::StackSizeInWords / 2))
+  {
+    t->exception = makeStackOverflowError(t);
+  }
+}
+
+unsigned
 invokeNative(Thread* t, object method)
 {
   object data = resolveNativeMethodData(t, method);
   if (UNLIKELY(t->exception)) {
-    return;
+    return VoidField;
   }
 
   pushFrame(t, method);
@@ -1419,7 +1447,8 @@ invokeNative(Thread* t, object method)
   void* function = nativeMethodDataFunction(t, data);
 
   bool builtin = nativeMethodDataBuiltin(t, data);
-  if (not builtin) {
+  Thread::State oldState = t->state;
+  if (not builtin) {    
     enter(t, Thread::IdleState);
   }
 
@@ -1432,13 +1461,13 @@ invokeNative(Thread* t, object method)
      returnType);
 
   if (not builtin) {
-    enter(t, Thread::ActiveState);
+    enter(t, oldState);
   }
 
   popFrame(t);
 
   if (UNLIKELY(t->exception)) {
-    return;
+    return VoidField;
   }
 
   switch (returnCode) {
@@ -1467,6 +1496,8 @@ invokeNative(Thread* t, object method)
   default:
     abort(t);
   };
+
+  return returnCode;
 }
 
 object
@@ -1853,23 +1884,29 @@ run(Thread* t)
       case ByteField:
       case BooleanField:
         pushInt(t, cast<int8_t>(instance, fieldOffset(t, field)));
+        break;
 
       case CharField:
       case ShortField:
         pushInt(t, cast<int16_t>(instance, fieldOffset(t, field)));
+        break;
 
       case FloatField:
       case IntField:
         pushInt(t, cast<int32_t>(instance, fieldOffset(t, field)));
+        break;
 
       case DoubleField:
       case LongField:
         pushLong(t, cast<int64_t>(instance, fieldOffset(t, field)));
+        break;
 
       case ObjectField:
         pushObject(t, cast<object>(instance, fieldOffset(t, field)));
+        break;
 
-      default: abort(t);
+      default:
+        abort(t);
       }
     } else {
       exception = makeNullPointerException(t);
@@ -3025,22 +3062,10 @@ run(Thread* t)
  invoke: {
     if (methodFlags(t, code) & ACC_NATIVE) {
       invokeNative(t, code);
-
-      if (UNLIKELY(exception)) {
-        goto throw_;
-      }
+      if (UNLIKELY(exception)) goto throw_;
     } else {
-      unsigned parameterFootprint = methodParameterFootprint(t, code);
-      unsigned base = sp - parameterFootprint;
-      if (UNLIKELY(base
-                   + codeMaxLocals(t, methodCode(t, code))
-                   + FrameFootprint
-                   + codeMaxStack(t, methodCode(t, code))
-                   > Thread::StackSizeInWords / 2))
-      {
-        exception = makeStackOverflowError(t);
-        goto throw_;      
-      }
+      checkStack(t, code);
+      if (UNLIKELY(exception)) goto throw_;
 
       pushFrame(t, code);
     }
@@ -3048,6 +3073,10 @@ run(Thread* t)
 
  throw_:
   for (; frame >= 0; frame = frameNext(t, frame)) {
+    if (methodFlags(t, frameMethod(t, frame)) & ACC_NATIVE) {
+      return 0;
+    }
+
     code = methodCode(t, frameMethod(t, frame));
     object eht = codeExceptionHandlerTable(t, code);
     if (eht) {
@@ -3131,50 +3160,137 @@ run(Thread* t)
 void
 run(Thread* t, const char* className, int argc, const char** argv)
 {
-  enter(t, Thread::ActiveState);
+  object args = makeObjectArray
+    (t, arrayBody(t, t->vm->types, Machine::StringType), argc, true);
 
-  object class_ = resolveClass(t, makeByteArray(t, "%s", className));
-  if (LIKELY(t->exception == 0)) {
-    PROTECT(t, class_);
+  PROTECT(t, args);
 
-    object name = makeByteArray(t, "main");
-    PROTECT(t, name);
-
-    object spec = makeByteArray(t, "([Ljava/lang/String;)V");
-    object reference = makeReference(t, class_, name, spec);
-    
-    object method = findMethodInClass(t, class_, reference);
-    if (LIKELY(t->exception == 0)) {
-      object args = makeObjectArray
-        (t, arrayBody(t, t->vm->types, Machine::StringType), argc, true);
-
-      PROTECT(t, args);
-
-      for (int i = 0; i < argc; ++i) {
-        object arg = makeString(t, "%s", argv);
-        set(t, objectArrayBody(t, args, i), arg);
-      }
-
-      pushObject(t, args);
-      pushFrame(t, method);
-    }    
+  for (int i = 0; i < argc; ++i) {
+    object arg = makeString(t, "%s", argv);
+    set(t, objectArrayBody(t, args, i), arg);
   }
 
-  run(t);
+  run(t, className, "main", "([Ljava/lang/String;)V", args);
 }
 
 } // namespace
 
 namespace vm {
 
+object
+run(Thread* t, const char* className, const char* methodName,
+    const char* methodSpec, ...)
+{
+  enter(t, Thread::ActiveState);
+
+  object class_ = resolveClass(t, makeByteArray(t, "%s", className));
+  if (LIKELY(t->exception == 0)) {
+    PROTECT(t, class_);
+
+    object name = makeByteArray(t, methodName);
+    PROTECT(t, name);
+
+    object spec = makeByteArray(t, methodSpec);
+    object reference = makeReference(t, class_, name, spec);
+    
+    object method = findMethodInClass(t, class_, reference);
+    if (LIKELY(t->exception == 0)) {
+      va_list a;
+      va_start(a, methodSpec);
+
+      if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+        pushObject(t, va_arg(a, object));
+      }
+
+      const char* s = methodSpec;
+      ++ s; // skip '('
+      while (*s and *s != ')') {
+        switch (*s) {
+        case 'L':
+          while (*s and *s != ';') ++ s;
+          ++ s;
+          pushObject(t, va_arg(a, object));
+          break;
+
+        case '[':
+          while (*s == '[') ++ s;
+          switch (*s) {
+          case 'L':
+            while (*s and *s != ';') ++ s;
+            ++ s;
+            break;
+
+          default:
+            ++ s;
+            break;
+          }
+          pushObject(t, va_arg(a, object));
+          break;
+      
+        case 'J':
+        case 'D':
+          ++ s;
+          pushLong(t, va_arg(a, uint64_t));
+          break;
+          
+        default:
+          ++ s;
+          pushInt(t, va_arg(a, uint32_t));
+          break;
+        }
+      }
+
+      va_end(a);
+
+      if (methodFlags(t, method) & ACC_NATIVE) {
+        unsigned returnCode = invokeNative(t, method);
+
+        if (LIKELY(t->exception == 0)) {
+          switch (returnCode) {
+          case ByteField:
+          case BooleanField:
+          case CharField:
+          case ShortField:
+          case FloatField:
+          case IntField:
+            return makeInt(t, popInt(t));
+
+          case LongField:
+          case DoubleField:
+            return makeLong(t, popLong(t));
+        
+          case ObjectField:
+            return popObject(t);
+
+          case VoidField:
+            return 0;
+
+          default:
+            abort(t);
+          };
+        }
+      } else {
+        checkStack(t, method);
+        if (LIKELY(t->exception == 0)) {
+          pushFrame(t, method);
+        }
+      }
+    }    
+  }
+
+  return ::run(t);
+}
+
 void
 run(System* system, Heap* heap, ClassFinder* classFinder,
     const char* className, int argc, const char** argv)
 {
   Machine m(system, heap, classFinder);
-  Thread t(&m);
+  Thread t(&m, 0, 0, 0);
 
   ::run(&t, className, argc, argv);
+
+  exit(&t);
 }
 
 }
