@@ -36,6 +36,14 @@ ReleaseStringUTFChars(Thread* t, jstring, const char* chars)
   t->vm->system->free(chars);
 }
 
+jstring
+NewStringUTF(Thread* t, const char* chars)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeString(t, "%s", chars));
+}
+
 void
 populate(JNIEnvVTable* table)
 {
@@ -44,6 +52,7 @@ populate(JNIEnvVTable* table)
   table->GetStringUTFLength = GetStringUTFLength;
   table->GetStringUTFChars = GetStringUTFChars;
   table->ReleaseStringUTFChars = ReleaseStringUTFChars;
+  table->NewStringUTF = NewStringUTF;
 }
 
 } // namespace jni

@@ -226,6 +226,10 @@ class System: public vm::System {
         vm::abort(s);
       }
     }
+    
+    virtual void* owner() {
+      return context;
+    }
 
     virtual void dispose() {
       pthread_mutex_destroy(&mutex);

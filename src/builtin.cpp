@@ -5,6 +5,35 @@
 namespace vm {
 namespace builtin {
 
+jstring
+toString(Thread* t, jobject this_)
+{
+  object s = makeString
+    (t, "%s@%p",
+     &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
+     *this_);
+
+  return pushReference(t, s);
+}
+
+void
+wait(Thread* t, jobject this_, jlong milliseconds)
+{
+  vm::wait(t, *this_, milliseconds);
+}
+
+void
+notify(Thread* t, jobject this_)
+{
+  vm::notify(t, *this_);
+}
+
+void
+notifyAll(Thread* t, jobject this_)
+{
+  vm::notifyAll(t, *this_);
+}
+
 void
 loadLibrary(Thread* t, jstring nameString)
 {
@@ -30,15 +59,53 @@ loadLibrary(Thread* t, jstring nameString)
   }
 }
 
-jstring
-toString(Thread* t, jobject this_)
+void
+arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
+          jint length)
 {
-  object s = makeString
-    (t, "%s@%p",
-     &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
-     *this_);
+  if (LIKELY(src and dst)) {
+    object s = *src;
+    object d = *dst;
 
-  return pushReference(t, s);
+    if (LIKELY(objectClass(t, s) == objectClass(t, d))) {
+      unsigned elementSize = classArrayElementSize(t, objectClass(t, s));
+
+      if (LIKELY(elementSize)) {
+        unsigned offset = 0;
+
+        if (objectClass(t, s)
+            == arrayBody(t, t->vm->types, Machine::ObjectArrayType))
+        {
+          if (LIKELY(objectArrayElementClass(t, s)
+                     == objectArrayElementClass(t, d)))
+          {
+            offset = 1;
+          } else {
+            t->exception = makeArrayStoreException(t);
+            return;
+          }
+        }
+
+        int32_t sl = cast<uint32_t>(s, offset * BytesPerWord);
+        int32_t dl = cast<uint32_t>(d, offset * BytesPerWord);
+        if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
+                   dstOffset >= 0 and dstOffset + length < dl))
+        {
+          uint8_t* sbody = &cast<uint8_t>(s, (offset * BytesPerWord) + 4);
+          uint8_t* dbody = &cast<uint8_t>(s, (offset * BytesPerWord) + 4);
+          memcpy(sbody + (srcOffset * elementSize),
+                 dbody + (dstOffset * elementSize),
+                 length * elementSize);
+          return;
+        }
+      }
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+    return;
+  }
+
+  t->exception = makeArrayStoreException(t);
 }
 
 jarray
@@ -100,7 +167,6 @@ start(Thread* t, jobject this_)
     }
   }
 }
-
 void
 populate(Thread* t, object map)
 {
@@ -110,8 +176,16 @@ populate(Thread* t, object map)
   } builtins[] = {
     { "Java_java_lang_Object_toString",
       reinterpret_cast<void*>(toString) },
+    { "Java_java_lang_Object_wait",
+      reinterpret_cast<void*>(wait) },
+    { "Java_java_lang_Object_notify",
+      reinterpret_cast<void*>(notify) },
+    { "Java_java_lang_Object_notifyAll",
+      reinterpret_cast<void*>(notifyAll) },
     { "Java_java_lang_System_loadLibrary",
       reinterpret_cast<void*>(loadLibrary) },
+    { "Java_java_lang_System_arraycopy",
+      reinterpret_cast<void*>(arraycopy) },
     { "Java_java_lang_Throwable_trace",
       reinterpret_cast<void*>(trace) },
     { "Java_java_lang_Thread_start",

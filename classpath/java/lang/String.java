@@ -6,6 +6,20 @@ public final class String {
   private int length;
   private int hash;
 
+  public String(char[] data, int offset, int length, boolean copy) {
+    if (copy) {
+      char[] c = new char[length];
+      System.arraycopy(data, offset, c, 0, length);
+      
+      this.data = c;
+      this.length = length;
+    } else {
+      this.data = data;
+      this.offset = offset;
+      this.length = length;
+    }
+  }
+
   public int length() {
     return length;
   }
@@ -14,8 +28,23 @@ public final class String {
     return valueOf((long) v);
   }
 
-  public native void getChars(int offset, int length,
-                              char[] dst, int dstLength);
+  public void getChars(int srcOffset, int srcLength,
+                       char[] dst, int dstOffset)
+  {
+    if (srcOffset + srcLength > length) {
+      throw new ArrayIndexOutOfBoundsException();
+    }
+
+    if (data instanceof char[]) {
+      char[] src = (char[]) data;
+      System.arraycopy(src, offset + srcOffset, dst, dstOffset, srcLength);
+    } else {
+      byte[] src = (byte[]) data;
+      for (int i = 0; i < srcLength; ++i) {
+        dst[i + dstOffset] = (char) src[i + offset + srcOffset];
+      }      
+    }
+  }
 
   public static String valueOf(long v) {
     if (v == 0) {
@@ -35,7 +64,7 @@ public final class String {
         array[--index] = '-';
       }
 
-      return vm.Strings.wrap(array, index, Max - index);
+      return new String(array, index, Max - index, false);
     }
   }
 }

@@ -24,7 +24,7 @@ namespace vm {
 const bool Verbose = false;
 const bool Debug = false;
 const bool DebugRun = true;
-const bool DebugStack = false;
+const bool DebugStack = true;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
@@ -1312,6 +1312,12 @@ makeIllegalStateException(Thread* t, object message)
 }
 
 inline object
+makeIllegalMonitorStateException(Thread* t)
+{
+  return makeIllegalMonitorStateException(t, 0, makeTrace(t), 0);
+}
+
+inline object
 makeArrayIndexOutOfBoundsException(Thread* t, object message)
 {
   PROTECT(t, message);
@@ -1320,11 +1326,17 @@ makeArrayIndexOutOfBoundsException(Thread* t, object message)
 }
 
 inline object
-makeNegativeArrayStoreException(Thread* t, object message)
+makeArrayStoreException(Thread* t)
+{
+  return makeArrayStoreException(t, 0, makeTrace(t), 0);
+}
+
+inline object
+makeNegativeArraySizeException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeNegativeArrayStoreException(t, message, trace, 0);
+  return makeNegativeArraySizeException(t, message, trace, 0);
 }
 
 inline object
@@ -1535,7 +1547,7 @@ pokeLong(Thread* t, unsigned index, uint64_t value)
   }
 
   pokeInt(t, index, value >> 32);
-  pokeInt(t, index + 2, value & 0xFF);
+  pokeInt(t, index + 1, value & 0xFF);
 }
 
 inline object*
@@ -1806,6 +1818,56 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
 System::Monitor*
 objectMonitor(Thread* t, object o);
+
+inline void
+acquire(Thread* t, object o)
+{
+  System::Monitor* m = objectMonitor(t, o);
+  if (not m->tryAcquire(t)) {
+    ENTER(t, Thread::IdleState);
+    m->acquire(t);
+  }
+}
+
+inline void
+release(Thread* t, object o)
+{
+  objectMonitor(t, o)->release(t);
+}
+
+inline void
+wait(Thread* t, object o, int64_t milliseconds)
+{
+  System::Monitor* m = objectMonitor(t, o);
+  if (m->owner() == t) {
+    ENTER(t, Thread::IdleState);
+    m->wait(t, milliseconds);
+  } else {
+    t->exception = makeIllegalMonitorStateException(t);
+  }
+}
+
+inline void
+notify(Thread* t, object o)
+{
+  System::Monitor* m = objectMonitor(t, o);
+  if (m->owner() == t) {
+    m->notify(t);
+  } else {
+    t->exception = makeIllegalMonitorStateException(t);
+  }
+}
+
+inline void
+notifyAll(Thread* t, object o)
+{
+  System::Monitor* m = objectMonitor(t, o);
+  if (m->owner() == t) {
+    m->notifyAll(t);
+  } else {
+    t->exception = makeIllegalMonitorStateException(t);
+  }
+}
 
 void
 exit(Thread* t);

@@ -1,6 +1,3 @@
-(type intArray
-  (array int32_t body))
-
 (type class
   (uint16_t flags)
   (uint16_t vmFlags)
@@ -108,31 +105,6 @@
 (type array
   (noassert array object body))
 
-(type objectArray
-  (object elementClass)
-  (array object body))
-
-(type byteArray
-  (array int8_t body))
-
-(type booleanArray
-  (array int8_t body))
-
-(type shortArray
-  (array int16_t body))
-
-(type charArray
-  (array uint16_t body))
-
-(type longArray
-  (array int64_t body))
-
-(type floatArray
-  (array uint32_t body))
-
-(type doubleArray
-  (array uint64_t body))
-
 
 (type jobject java/lang/Object)
 
@@ -166,11 +138,17 @@
 (type illegalStateException java/lang/IllegalStateException
   (extends runtimeException))
 
+(type illegalMonitorStateException java/lang/IllegalMonitorStateException
+  (extends runtimeException))
+
 (type arrayIndexOutOfBoundsException
   java/lang/ArrayIndexOutOfBoundsException
   (extends runtimeException))
 
-(type negativeArrayStoreException java/lang/NegativeArrayStoreException
+(type arrayStoreException java/lang/arrayStoreException
+  (extends runtimeException))
+
+(type negativeArraySizeException java/lang/NegativeArraySizeException
   (extends runtimeException))
 
 (type classCastException java/lang/ClassCastException
@@ -228,8 +206,45 @@
 
 (type jreference java/lang/ref/Reference
   (extends jobject)
-  (object target))
+  (void* target)
+  (void* next))
 
 (type weakReference java/lang/ref/WeakReference
-  (extends jreference)
-  (object next))
+  (extends jreference))
+
+(type objectArray [
+  (extends jobject)
+  (object elementClass)
+  (array object body))
+
+(type byteArray [B
+  (extends jobject)
+  (array int8_t body))
+
+(type booleanArray [Z
+  (extends jobject)
+  (array int8_t body))
+
+(type shortArray [S
+  (extends jobject)
+  (array int16_t body))
+
+(type charArray [C
+  (extends jobject)
+  (array uint16_t body))
+
+(type intArray [I
+  (extends jobject)
+  (array int32_t body))
+
+(type longArray [J
+  (extends jobject)
+  (array int64_t body))
+
+(type floatArray [F
+  (extends jobject)
+  (array uint32_t body))
+
+(type doubleArray [D
+  (extends jobject)
+  (array uint64_t body))

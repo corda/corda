@@ -40,6 +40,7 @@ class System: public Allocator {
     virtual void wait(void* context, int64_t time) = 0;
     virtual void notify(void* context) = 0;
     virtual void notifyAll(void* context) = 0;
+    virtual void* owner() = 0;
     virtual void dispose() = 0;
   };
 

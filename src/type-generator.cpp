@@ -1475,23 +1475,11 @@ writeInitialization(Output* out, Object* type)
     out->write("  object mask = 0;\n");    
   }
 
-  if (typeJavaName(type)) {
-    if (typeObjectMask(type) != 1) {
-      out->write("  PROTECT(t, mask);\n");
-    }
-    out->write("  object name = ::makeByteArray(t, \"");
-    out->write(typeJavaName(type));
-    out->write("\");\n");
-
-    if (typeSuper(type)) {
-      out->write("  object super = arrayBody(t, t->vm->types, Machine::");
-      out->write(capitalize(typeName(typeSuper(type))));
-      out->write("Type);\n");
-    } else {
-      out->write("  object super = 0;\n");
-    }
+  if (typeJavaName(type) and typeSuper(type)) {
+    out->write("  object super = arrayBody(t, t->vm->types, Machine::");
+    out->write(capitalize(typeName(typeSuper(type))));
+    out->write("Type);\n");
   } else {
-    out->write("  object name = 0;\n"); 
     out->write("  object super = 0;\n");   
   }
 
@@ -1500,16 +1488,11 @@ writeInitialization(Output* out, Object* type)
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));
-  out->write(", mask, name, super, 0, 0, 0, 0, 0, 0);\n");
+  out->write(", mask, 0, super, 0, 0, 0, 0, 0, 0);\n");
 
   out->write("  set(t, arrayBody(t, t->vm->types, Machine::");
   out->write(capitalize(typeName(type)));
   out->write("Type), class_);\n");
-
-  if (typeJavaName(type)) {
-    out->write("  hashMapInsert(t, t->vm->bootstrapClassMap, ");
-    out->write("className(t, class_), class_, byteArrayHash);\n");
-  }
 
   out->write("}\n\n");
 }
@@ -1549,10 +1532,38 @@ writeInitializations(Output* out, Object* declarations)
 
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
-    if (o->type == Object::Type and typeJavaName(o) == 0) {
+    if (o->type == Object::Type and equal(typeName(o), "intArray")) {
       writeInitialization(out, o);
     }
   }
+
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    if (o->type == Object::Type and not equal(typeName(o), "intArray")) {
+      writeInitialization(out, o);
+    }
+  }
+}
+
+void
+writeJavaInitialization(Output* out, Object* type)
+{
+  out->write("{\n");
+
+  out->write("  object name = ::makeByteArray(t, \"");
+  out->write(typeJavaName(type));
+  out->write("\");\n");
+
+  out->write("  object class_ = arrayBody(t, t->vm->types, Machine::");
+  out->write(capitalize(typeName(type)));
+  out->write("Type);\n");
+
+  out->write("  set(t, className(t, class_), name);\n");
+
+  out->write("  hashMapInsert(t, t->vm->bootstrapClassMap, ");
+  out->write("name, class_, byteArrayHash);\n");
+
+  out->write("}\n\n");
 }
 
 void
@@ -1561,7 +1572,7 @@ writeJavaInitializations(Output* out, Object* declarations)
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
     if (o->type == Object::Type and typeJavaName(o)) {
-      writeInitialization(out, o);
+      writeJavaInitialization(out, o);
     }
   }
 }
@@ -1570,7 +1581,8 @@ void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
-          "usage: %s {enums,declarations,constructors,initializations}\n",
+          "usage: %s {enums,declarations,constructors,initializations,"
+          "java-initializations}\n",
           command);
   exit(-1);
 }

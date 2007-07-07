@@ -19,9 +19,9 @@ public class Object {
 
   public native String toString();
 
-  public native final void wait();
+  public final void wait() {
+    wait(0);
+  }
 
   public native final void wait(long timeout);
-
-  public native final void wait(long timeout, int nanos);
 }

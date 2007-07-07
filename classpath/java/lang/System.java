@@ -8,14 +8,17 @@ public abstract class System {
     loadLibrary("natives");
   }
 
+  public static native void arraycopy(Object src, int srcOffset, Object dst,
+                                      int dstOffset, int length);
+
   public static native void loadLibrary(String name);
 
   public static native String getProperty(String name);
 
   public static class Output {
-    public native void print(String s);
+    public synchronized native void print(String s);
 
-    public void println(String s) {
+    public synchronized void println(String s) {
       print(s);
       print(getProperty("line.separator"));
     }

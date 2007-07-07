@@ -42,11 +42,30 @@ pushFrame(Thread* t, object method)
 
   pokeInt(t, frame + FrameBaseOffset, base);
   pokeObject(t, frame + FrameMethodOffset, method);
+  pokeInt(t, t->frame + FrameIpOffset, 0);
+
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    if (methodFlags(t, method) & ACC_STATIC) {
+      acquire(t, methodClass(t, method));
+    } else {
+      acquire(t, peekObject(t, base));
+    }   
+  }
 }
 
 void
 popFrame(Thread* t)
 {
+  object method = frameMethod(t, t->frame);
+
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    if (methodFlags(t, method) & ACC_STATIC) {
+      release(t, methodClass(t, method));
+    } else {
+      release(t, peekObject(t, frameBase(t, t->frame)));
+    }   
+  }
+
   t->sp = frameBase(t, t->frame);
   t->frame = frameNext(t, t->frame);
   if (t->frame >= 0) {
@@ -1214,10 +1233,20 @@ resolveClass(Thread* t, object spec)
 
       hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
     } else {
-      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = makeClassNotFoundException(t, message);
+      class_ = hashMapFind
+        (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+
+      if (class_ == 0) {
+        object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
+        t->exception = makeClassNotFoundException(t, message);
+      }
+    }
+
+    if (class_) {
+      hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
     }
   }
+
   return class_;
 }
 
@@ -1452,6 +1481,12 @@ invokeNative(Thread* t, object method)
     enter(t, Thread::IdleState);
   }
 
+  if (DebugRun) {
+    fprintf(stderr, "invoke native method %s.%s\n",
+            &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+            &byteArrayBody(t, methodName(t, method), 0));
+  }
+
   uint64_t result = t->vm->system->call
     (function,
      args,
@@ -1459,6 +1494,14 @@ invokeNative(Thread* t, object method)
      count + 1,
      size,
      returnType);
+
+  if (DebugRun) {
+    fprintf(stderr, "return from native method %s.%s\n",
+            &byteArrayBody
+            (t, className(t, methodClass(t, frameMethod(t, t->frame))), 0),
+            &byteArrayBody
+            (t, methodName(t, frameMethod(t, t->frame)), 0));
+  }
 
   if (not builtin) {
     enter(t, oldState);
@@ -1477,15 +1520,26 @@ invokeNative(Thread* t, object method)
   case ShortField:
   case FloatField:
   case IntField:
+    if (DebugRun) {
+      fprintf(stderr, "result: " LLD "\n", result);
+    }
     pushInt(t, result);
     break;
 
   case LongField:
   case DoubleField:
+    if (DebugRun) {
+      fprintf(stderr, "result: " LLD "\n", result);
+    }
     pushLong(t, result);
     break;
 
   case ObjectField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %p at %p\n", result == 0 ? 0 :
+              *reinterpret_cast<object*>(static_cast<uintptr_t>(result)),
+              reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+    }
     pushObject(t, result == 0 ? 0 :
                *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
     break;
@@ -1622,28 +1676,19 @@ run(Thread* t)
       pushObject(t, array);
     } else {
       object message = makeString(t, "%d", count);
-      exception = makeNegativeArrayStoreException(t, message);
+      exception = makeNegativeArraySizeException(t, message);
       goto throw_;
     }
   } goto loop;
 
-  case areturn:
-  case ireturn:
-  case lreturn: {
+  case areturn: {
+    object result = popObject(t);
     popFrame(t);
     if (frame >= 0) {
+      pushObject(t, result);
       goto loop;
     } else {
-      switch (instruction) {
-      case areturn:
-        return popObject(t);
-
-      case ireturn:
-        return makeInt(t, popInt(t));
-
-      case lreturn:
-        return makeLong(t, popLong(t));
-      }
+      return result;
     }
   } goto loop;
 
@@ -1655,14 +1700,14 @@ run(Thread* t)
       {
         pushInt(t, objectArrayLength(t, array));
       } else {
-        // for all other array types, the length follow the class pointer.
+        // for all other array types, the length follows the class pointer.
         pushInt(t, cast<uint32_t>(array, BytesPerWord));
       }
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
     }
-  } abort(t);
+  } goto loop;
 
   case astore: {
     setLocalObject(t, codeBody(t, code, ip++), popObject(t));
@@ -2168,7 +2213,7 @@ run(Thread* t)
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
-    if (a < b) {
+    if (a <= b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
     }
   } goto loop;
@@ -2405,6 +2450,17 @@ run(Thread* t)
     pushInt(t, a % b);
   } goto loop;
 
+  case ireturn: {
+    int32_t result = popInt(t);
+    popFrame(t);
+    if (frame >= 0) {
+      pushInt(t, result);
+      goto loop;
+    } else {
+      return makeInt(t, result);
+    }
+  } goto loop;
+
   case ishl: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
@@ -2480,7 +2536,7 @@ run(Thread* t)
   } goto loop;
 
   case l2i: {
-    pushLong(t, static_cast<int32_t>(popLong(t)));
+    pushInt(t, static_cast<int32_t>(popLong(t)));
   } goto loop;
 
   case ladd: {
@@ -2649,6 +2705,17 @@ run(Thread* t)
     pushLong(t, a % b);
   } goto loop;
 
+  case lreturn: {
+    int64_t result = popLong(t);
+    popFrame(t);
+    if (frame >= 0) {
+      pushLong(t, result);
+      goto loop;
+    } else {
+      return makeLong(t, result);
+    }
+  } goto loop;
+
   case lshl: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
@@ -2707,7 +2774,7 @@ run(Thread* t)
   case monitorenter: {
     object o = popObject(t);
     if (LIKELY(o)) {
-      objectMonitor(t, o)->acquire(t);
+      acquire(t, o);
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
@@ -2717,7 +2784,7 @@ run(Thread* t)
   case monitorexit: {
     object o = popObject(t);
     if (LIKELY(o)) {
-      objectMonitor(t, o)->release(t);
+      release(t, o);
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
@@ -2790,7 +2857,7 @@ run(Thread* t)
       pushObject(t, array);
     } else {
       object message = makeString(t, "%d", count);
-      exception = makeNegativeArrayStoreException(t, message);
+      exception = makeNegativeArraySizeException(t, message);
       goto throw_;
     }
   } goto loop;

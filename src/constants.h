@@ -235,18 +235,19 @@ enum Constant {
   CONSTANT_Utf8 = 1
 };
 
-const unsigned ACC_PUBLIC    = 1 <<  0;
-const unsigned ACC_PRIVATE   = 1 <<  1;
-const unsigned ACC_PROTECTED = 1 <<  2;
-const unsigned ACC_STATIC    = 1 <<  3;
-const unsigned ACC_FINAL     = 1 <<  4;
-const unsigned ACC_SUPER     = 1 <<  5;
-const unsigned ACC_VOLATILE  = 1 <<  6;
-const unsigned ACC_TRANSIENT = 1 <<  7;
-const unsigned ACC_NATIVE    = 1 <<  8;
-const unsigned ACC_INTERFACE = 1 <<  9;
-const unsigned ACC_ABSTRACT  = 1 << 10;
-const unsigned ACC_STRICT    = 1 << 11;
+const unsigned ACC_PUBLIC       = 1 <<  0;
+const unsigned ACC_PRIVATE      = 1 <<  1;
+const unsigned ACC_PROTECTED    = 1 <<  2;
+const unsigned ACC_STATIC       = 1 <<  3;
+const unsigned ACC_FINAL        = 1 <<  4;
+const unsigned ACC_SUPER        = 1 <<  5;
+const unsigned ACC_SYNCHRONIZED = ACC_SUPER;
+const unsigned ACC_VOLATILE     = 1 <<  6;
+const unsigned ACC_TRANSIENT    = 1 <<  7;
+const unsigned ACC_NATIVE       = 1 <<  8;
+const unsigned ACC_INTERFACE    = 1 <<  9;
+const unsigned ACC_ABSTRACT     = 1 << 10;
+const unsigned ACC_STRICT       = 1 << 11;
 
 } // namespace vm
 

@@ -22,7 +22,7 @@ public class TestThreads implements Runnable {
       try {
         System.out.println("I'm running in a seperate thread!");
 
-        final int arrayCount = 64;
+        final int arrayCount = 8;
         final int arraySize = 4;
         System.out.println("Allocating and discarding " + arrayCount +
                            " arrays of " + arraySize + "MB each");

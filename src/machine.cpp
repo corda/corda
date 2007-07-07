@@ -6,45 +6,6 @@ using namespace vm;
 
 namespace {
 
-void
-visitRoots(Thread* t, Heap::Visitor* v)
-{
-  if (t->state != Thread::ZombieState) {
-    t->heapIndex = 0;
-
-    v->visit(&(t->javaThread));
-    v->visit(&(t->code));
-    v->visit(&(t->exception));
-
-    for (unsigned i = 0; i < t->sp; ++i) {
-      if (t->stack[i * 2] == ObjectTag) {
-        v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
-      }
-    }
-
-    for (Thread::Protector* p = t->protector; p; p = p->next) {
-      v->visit(p->p);
-    }
-  }
-
-  for (Thread* c = t->child; c; c = c->peer) {
-    visitRoots(c, v);
-  }
-}
-
-void
-postCollect(Thread* t)
-{
-  if (t->large) {
-    t->vm->system->free(t->large);
-    t->large = 0;
-  }
-
-  for (Thread* c = t->child; c; c = c->peer) {
-    postCollect(c);
-  }
-}
-
 bool
 find(Thread* t, Thread* o)
 {
@@ -141,6 +102,45 @@ killZombies(Thread* t, Thread* o)
 }
 
 void
+visitRoots(Thread* t, Heap::Visitor* v)
+{
+  if (t->state != Thread::ZombieState) {
+    t->heapIndex = 0;
+
+    v->visit(&(t->javaThread));
+    v->visit(&(t->code));
+    v->visit(&(t->exception));
+
+    for (unsigned i = 0; i < t->sp; ++i) {
+      if (t->stack[i * 2] == ObjectTag) {
+        v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
+      }
+    }
+
+    for (Thread::Protector* p = t->protector; p; p = p->next) {
+      v->visit(p->p);
+    }
+  }
+
+  for (Thread* c = t->child; c; c = c->peer) {
+    visitRoots(c, v);
+  }
+}
+
+void
+postCollect(Thread* t)
+{
+  if (t->large) {
+    t->vm->system->free(t->large);
+    t->large = 0;
+  }
+
+  for (Thread* c = t->child; c; c = c->peer) {
+    postCollect(c);
+  }
+}
+
+void
 collect(Thread* t, Heap::CollectionType type)
 {
   Machine* m = t->vm;
@@ -174,13 +174,8 @@ collect(Thread* t, Heap::CollectionType type)
         }
       }
 
-      for (object* f = &(m->finalizers); *f; f = &finalizerNext(t, *f)) {
-        v->visit(f);
-      }
-
-      for (object* f = &(m->doomed); *f; f = &finalizerNext(t, *f)) {
-        v->visit(f);
-      }
+      v->visit(&(m->finalizers));
+      v->visit(&(m->doomed));
 
       for (object p = m->weakReferences; p;) {
         object o = jreferenceTarget(t, p);
@@ -193,8 +188,8 @@ collect(Thread* t, Heap::CollectionType type)
         }
 
         object last = p;
-        p = weakReferenceNext(t, p);
-        weakReferenceNext(t, last) = 0;
+        p = jreferenceNext(t, p);
+        jreferenceNext(t, last) = 0;
       }
     }
 
@@ -233,13 +228,16 @@ collect(Thread* t, Heap::CollectionType type)
       memcpy(dst, o, n * BytesPerWord);
 
       if (hashTaken(t, o)) {
-        extendedWord(t, dst, base) = takeHash(t, o);
         cast<uintptr_t>(dst, 0) &= PointerMask;
         cast<uintptr_t>(dst, 0) |= ExtendedMark;
+        extendedWord(t, dst, base) = takeHash(t, o);
       }
 
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
-        weakReferenceNext(t, dst) = m->weakReferences;
+        fprintf(stderr, "weak reference to %p at %p\n",
+                jreferenceTarget(t, dst),
+                &jreferenceTarget(t, dst));
+        jreferenceNext(t, dst) = m->weakReferences;
         m->weakReferences = dst;
       }
     }
@@ -255,7 +253,6 @@ collect(Thread* t, Heap::CollectionType type)
 //         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
 //                 p, class_, objectMask, intArrayLength(t, objectMask));
 
-        unsigned vmFlags = classVmFlags(t, class_);
         unsigned fixedSize = classFixedSize(t, class_);
         unsigned arrayElementSize = classArrayElementSize(t, class_);
         unsigned arrayLength
@@ -275,9 +272,7 @@ collect(Thread* t, Heap::CollectionType type)
           = divide(arrayElementSize, BytesPerWord);
 
         for (unsigned i = 0; i < fixedSizeInWords; ++i) {
-          if ((i != 1 or (vmFlags & WeakReferenceFlag) == 0)
-              and mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i)))
-          {
+          if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
             if (not w->visit(i)) {
               return;
             }
@@ -322,7 +317,7 @@ collect(Thread* t, Heap::CollectionType type)
 
   postCollect(m->rootThread);
 
-  for (object f = m->doomed; f; f = tripleThird(t, f)) {
+  for (object f = m->doomed; f; f = finalizerNext(t, f)) {
     reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
       (t, finalizerTarget(t, f));
   }
@@ -451,6 +446,8 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
 
     object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
     set(t, cast<object>(intArrayClass, 0), classClass);
+    set(t, classSuper(t, intArrayClass),
+        arrayBody(t, m->types, Machine::JobjectType));
 
     m->unsafe = false;
 
