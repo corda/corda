@@ -331,6 +331,7 @@ collect(Thread* t, Heap::CollectionType type)
 void
 removeMonitor(Thread* t, object o)
 {
+  abort(t);
   hashMapRemove(t, t->vm->monitorMap, o, objectHash, referenceEqual);
 }
 
@@ -668,6 +669,24 @@ makeString(Thread* t, const char* format, ...)
   va_end(a);
 
   return makeString(t, s, 0, byteArrayLength(t, s), 0);
+}
+
+void
+stringChars(Thread* t, object string, char* chars)
+{
+  object data = stringData(t, string);
+  if (objectClass(t, data)
+      == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+  {
+    memcpy(chars,
+           &byteArrayBody(t, data, stringOffset(t, string)),
+           stringLength(t, string));
+  } else {
+    for (int i = 0; i < stringLength(t, string); ++i) {
+      chars[i] = charArrayBody(t, data, stringOffset(t, string) + i);
+    }
+  }
+  chars[stringLength(t, string)] = 0;
 }
 
 object

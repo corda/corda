@@ -19,12 +19,7 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
 
   char* chars = static_cast<char*>
     (t->vm->system->allocate(stringLength(t, *s) + 1));
-
-  memcpy(chars,
-         &byteArrayBody(t, stringBytes(t, *s), stringOffset(t, *s)),
-         stringLength(t, *s));
-
-  chars[stringLength(t, *s)] = 0;
+  stringChars(t, *s, chars);
 
   if (isCopy) *isCopy = true;
   return chars;

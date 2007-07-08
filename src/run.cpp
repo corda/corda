@@ -226,17 +226,14 @@ findInterfaceMethod(Thread* t, object method, object o)
   abort(t);
 }
 
+object
+resolveClass(Thread*, object);
+
 inline object
 findMethod(Thread* t, object method, object class_)
 {
   return arrayBody(t, classVirtualTable(t, class_), 
                    methodOffset(t, method));
-}
-
-inline object
-findVirtualMethod(Thread* t, object method, object o)
-{
-  return findMethod(t, method, objectClass(t, o));
 }
 
 bool
@@ -450,9 +447,6 @@ addInterfaces(Thread* t, object class_, object map)
     }
   }
 }
-
-object
-resolveClass(Thread*, object);
 
 void
 parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
@@ -1204,7 +1198,10 @@ resolveClass(Thread* t, object spec)
     ClassFinder::Data* data = t->vm->classFinder->find
       (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
 
-    if (data) {
+    if (byteArrayBody(t, spec, 0) == '[') {
+      class_ = hashMapFind
+        (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+    } else if (data) {
       if (Verbose) {
         fprintf(stderr, "parsing %s\n", &byteArrayBody
                 (t, spec, 0));
@@ -1232,18 +1229,13 @@ resolveClass(Thread* t, object spec)
       }
 
       hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
-    } else {
-      class_ = hashMapFind
-        (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
-
-      if (class_ == 0) {
-        object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-        t->exception = makeClassNotFoundException(t, message);
-      }
     }
 
     if (class_) {
       hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
+    } else {
+      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
+      t->exception = makeClassNotFoundException(t, message);
     }
   }
 
@@ -2383,8 +2375,24 @@ run(Thread* t)
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       object class_ = methodClass(t, frameMethod(t, frame));
       if (isSpecialMethod(t, method, class_)) {
-        code = findMethod(t, method, classSuper(t, class_));
-        if (UNLIKELY(exception)) goto throw_;
+        class_ = classSuper(t, class_);
+
+        if (UNLIKELY(classVirtualTable(t, class_) == 0)) {
+          PROTECT(t, class_);
+
+          resolveClass(t, className(t, class_));
+          if (UNLIKELY(exception)) goto throw_;
+
+          object clinit = classInitializer(t, class_);
+          if (clinit) {
+            set(t, classInitializer(t, methodClass(t, method)), 0);
+            code = clinit;
+            ip -= 3;
+            goto invoke;
+          }          
+        }
+
+        code = findMethod(t, method, class_);
       } else {
         code = method;
       }
@@ -2425,10 +2433,24 @@ run(Thread* t)
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
-      code = findVirtualMethod
-        (t, method, peekObject(t, sp - parameterFootprint));
-      if (UNLIKELY(exception)) goto throw_;
-      
+      object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
+
+      if (UNLIKELY(classVirtualTable(t, class_) == 0)) {
+        PROTECT(t, class_);
+
+        resolveClass(t, className(t, class_));
+        if (UNLIKELY(exception)) goto throw_;
+
+        object clinit = classInitializer(t, class_);
+        if (clinit) {
+          set(t, classInitializer(t, methodClass(t, method)), 0);
+          code = clinit;
+          ip -= 3;
+          goto invoke;
+        }          
+      }
+
+      code = findMethod(t, method, class_);      
       goto invoke;
     } else {
       exception = makeNullPointerException(t);
@@ -2635,6 +2657,8 @@ run(Thread* t)
                == arrayBody(t, t->vm->types, Machine::FloatType))
     {
       pushInt(t, floatValue(t, v));
+    } else {
+      abort(t);
     }
   } goto loop;
 
@@ -2650,6 +2674,8 @@ run(Thread* t)
                == arrayBody(t, t->vm->types, Machine::DoubleType))
     {
       pushLong(t, doubleValue(t, v));
+    } else {
+      abort(t);
     }
   } goto loop;
 
@@ -3139,6 +3165,8 @@ run(Thread* t)
   } goto loop;
 
  throw_:
+  fprintf(stderr, "throw\n");
+  pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= 0; frame = frameNext(t, frame)) {
     if (methodFlags(t, frameMethod(t, frame)) & ACC_NATIVE) {
       return 0;
@@ -3149,8 +3177,8 @@ run(Thread* t)
     if (eht) {
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-        if (frameIp(t, frame) >= exceptionHandlerStart(eh)
-            and frameIp(t, frame) >= exceptionHandlerEnd(eh))
+        if (frameIp(t, frame) - 1 >= exceptionHandlerStart(eh)
+            and frameIp(t, frame) - 1 < exceptionHandlerEnd(eh))
         {
           object catchType = 0;
           if (exceptionHandlerCatchType(eh)) {
@@ -3187,10 +3215,7 @@ run(Thread* t)
     if (throwableMessage(t, exception)) {
       object m = throwableMessage(t, exception);
       char message[stringLength(t, m) + 1];
-      memcpy(message,
-             &byteArrayBody(t, stringBytes(t, m), stringOffset(t, m)),
-             stringLength(t, m));
-      message[stringLength(t, m)] = 0;
+      stringChars(t, m, message);
       fprintf(stderr, ": %s\n", message);
     } else {
       fprintf(stderr, "\n");

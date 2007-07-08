@@ -110,7 +110,7 @@
 
 (type string java/lang/String
   (extends jobject)
-  (object bytes)
+  (object data)
   (int32_t offset)
   (int32_t length)
   (int32_t hash))
@@ -169,8 +169,11 @@
 (type noSuchMethodError java/lang/NoSuchMethodError
   (extends error))
 
-(type unsatisfiedLinkError java/lang/UnsatisifiedLinkError
+(type linkageError java/lang/LinkageError
   (extends error))
+
+(type unsatisfiedLinkError java/lang/UnsatisifiedLinkError
+  (extends linkageError))
 
 (type byte java/lang/Byte
   (extends jobject)

@@ -1397,6 +1397,9 @@ makeByteArray(Thread* t, const char* format, ...);
 object
 makeString(Thread* t, const char* format, ...);
 
+void
+stringChars(Thread* t, object string, char* chars);
+
 inline void
 pushObject(Thread* t, object o)
 {

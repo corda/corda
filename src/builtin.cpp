@@ -40,10 +40,7 @@ loadLibrary(Thread* t, jstring nameString)
   if (LIKELY(nameString)) {
     object n = *nameString;
     char name[stringLength(t, n) + 1];
-    memcpy(name,
-           &byteArrayBody(t, stringBytes(t, n), stringOffset(t, n)),
-           stringLength(t, n));
-    name[stringLength(t, n)] = 0;
+    stringChars(t, n, name);
 
     System::Library* lib;
     if (LIKELY(t->vm->system->success
