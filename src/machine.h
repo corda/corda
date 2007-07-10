@@ -1076,6 +1076,9 @@ strcmp(const int8_t* a, const int8_t* b)
                   reinterpret_cast<const char*>(b));
 }
 
+void
+noop();
+
 class Machine {
  public:
   enum {
@@ -1108,8 +1111,10 @@ class Machine {
   object monitorMap;
   object types;
   object finalizers;
-  object doomed;
+  object tenuredFinalizers;
+  object finalizeQueue;
   object weakReferences;
+  object tenuredWeakReferences;
   bool unsafe;
   JNIEnvVTable jniEnvVTable;
 };
@@ -1639,9 +1644,16 @@ hash(const int8_t* s, unsigned length)
 inline unsigned
 baseSize(Thread* t, object o, object class_)
 {
+  if (classArrayElementSize(t, class_)) {
+    noop();
+    if (cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord)) {
+      noop();
+    }
+  }
+
   return divide(classFixedSize(t, class_), BytesPerWord)
     + divide(classArrayElementSize(t, class_)
-             * cast<uint32_t>(o, classFixedSize(t, class_) - 4),
+             * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
              BytesPerWord);
 }
 

@@ -1412,6 +1412,31 @@ makeHeap(System* system)
       }
     }
 
+    virtual Status status(void* p) {
+      p = mask(p);
+
+      if (c.nextGen1.contains(p)) {
+        return Reachable;
+      } else if (c.nextGen2.contains(p)
+                 or (c.gen2.contains(p)
+                     and c.gen2.indexOf(p) >= c.gen2Base))
+      {
+        return Tenured;
+      } else if (wasCollected(&c, p)) {
+        return Reachable;
+      } else {
+        return Unreachable;
+      }
+    }
+
+    virtual CollectionType collectionType() {
+      if (c.mode == ::MinorCollection) {
+        return MinorCollection;
+      } else {
+        return MajorCollection;
+      }
+    }
+
     Context c;
   };
   

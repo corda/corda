@@ -80,9 +80,9 @@
   (object third))
 
 (type finalizer
-  (object target)
+  (void* target)
   (void* finalize)
-  (object next))
+  (void* next))
 
 (type hashMap
   (uint32_t size)

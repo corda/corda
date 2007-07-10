@@ -342,7 +342,7 @@ addMember(Object* o, Object* member)
   case Object::Type: case Object::Pod:
     if (member->type == Object::Array) {
       static_cast<Type*>(o)->members.append
-        (Scalar::make(o, 0, "uint32_t", "length", sizeof(uint32_t)));
+        (Scalar::make(o, 0, "uintptr_t", "length", sizeof(uintptr_t)));
     }
     static_cast<Type*>(o)->members.append(member);
     break;
@@ -1390,7 +1390,7 @@ typeFixedSize(Object* type)
     Object* m = it.next();
     switch (m->type) {
     case Object::Scalar: {
-      length = pad(it.offset() + it.space());
+      length = pad(it.offset() + it.size());
     } break;
 
     case Object::Array: break;
@@ -1521,7 +1521,7 @@ writeInitializations(Output* out, Object* declarations)
 
   out->write("t->vm->types = allocate(t, pad((");
   out->write(count);
-  out->write(" * sizeof(void*)) + 4 + sizeof(void*)));\n");
+  out->write(" * sizeof(void*)) + sizeof(uintptr_t) + sizeof(void*)));\n");
   out->write("cast<object>(t->vm->types, 0) = 0;\n");
   out->write("arrayLength(t, t->vm->types) = ");
   out->write(count);

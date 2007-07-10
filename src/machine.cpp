@@ -128,6 +128,145 @@ visitRoots(Thread* t, Heap::Visitor* v)
 }
 
 void
+postVisit(Thread* t, Heap::Visitor* v)
+{
+  Machine* m = t->vm;
+
+  object firstNewTenuredFinalizer = 0;
+  object lastNewTenuredFinalizer = 0;
+
+  for (object* p = &(m->finalizers); *p;) {
+    v->visit(p);
+
+    if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
+      // target is unreachable - queue it up for finalization
+
+      v->visit(&finalizerTarget(t, *p));
+
+      object finalizer = *p;
+      *p = finalizerNext(t, finalizer);
+      finalizerNext(t, finalizer) = m->finalizeQueue;
+      m->finalizeQueue = finalizer;
+    } else {
+      // target is reachable
+
+      v->visit(&finalizerTarget(t, *p));
+
+      if (m->heap->status(*p) == Heap::Tenured) {
+        // the finalizer is tenured, so we remove it from
+        // m->finalizers and later add it to m->tenuredFinalizers
+
+        if (lastNewTenuredFinalizer == 0) {
+          lastNewTenuredFinalizer = *p;
+        }
+
+        object finalizer = *p;
+        *p = finalizerNext(t, finalizer);
+        finalizerNext(t, finalizer) = firstNewTenuredFinalizer;
+        firstNewTenuredFinalizer = finalizer;
+      } else {
+        p = &finalizerNext(t, *p);
+      }
+    }
+  }
+
+  object firstNewTenuredWeakReference = 0;
+  object lastNewTenuredWeakReference = 0;
+
+  for (object* p = &(m->weakReferences); *p;) {
+    if (m->heap->status(*p) == Heap::Unreachable) {
+      // reference is unreachable - remove it from the list
+
+      *p = jreferenceNext(t, *p);
+    } else if (m->heap->status(jreferenceTarget(t, *p)) == Heap::Unreachable) {
+      // target is unreachable - clear the reference and remove it
+      // from the list
+
+      jreferenceTarget(t, *p) = 0;
+      *p = jreferenceNext(t, *p);
+    } else {
+      // both reference and target are reachable
+
+      v->visit(&jreferenceTarget(t, *p));
+      v->visit(p);
+
+      if (m->heap->status(*p) == Heap::Tenured) {
+        // the reference is tenured, so we remove it from
+        // m->weakReferences and later add it to
+        // m->tenuredWeakReferences
+
+        if (lastNewTenuredWeakReference == 0) {
+          lastNewTenuredWeakReference = *p;
+        }
+
+        object reference = *p;
+        *p = jreferenceNext(t, reference);
+        jreferenceNext(t, reference) = firstNewTenuredWeakReference;
+        firstNewTenuredWeakReference = reference;
+      } else {
+        p = &jreferenceNext(t, *p);
+      }
+    }
+  }
+
+  if (m->heap->collectionType() == Heap::MajorCollection) {
+    for (object* p = &(m->tenuredFinalizers); *p;) {
+      v->visit(p);
+
+      if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
+        // target is unreachable - queue it up for finalization
+
+        v->visit(&finalizerTarget(t, *p));
+
+        object finalizer = *p;
+        *p = finalizerNext(t, finalizer);
+        finalizerNext(t, finalizer) = m->finalizeQueue;
+        m->finalizeQueue = finalizer;
+      } else {
+        // target is reachable
+
+        v->visit(&finalizerTarget(t, *p));
+
+        p = &finalizerNext(t, *p);
+      }
+    }
+
+    for (object* p = &(m->tenuredWeakReferences); *p;) {
+      if (m->heap->status(*p) == Heap::Unreachable) {
+        // reference is unreachable - remove it from the list
+
+        *p = jreferenceNext(t, *p);
+      } else if (m->heap->status(jreferenceTarget(t, *p))
+                 == Heap::Unreachable)
+      {
+        // target is unreachable - clear the reference and remove it
+        // from the list
+
+        jreferenceTarget(t, *p) = 0;
+        *p = jreferenceNext(t, *p);
+      } else {
+        // target is reachable
+
+        v->visit(&jreferenceTarget(t, *p));
+        v->visit(p);
+
+        p = &jreferenceNext(t, *p);
+      }
+    }
+  }
+
+  if (lastNewTenuredFinalizer) {
+    finalizerNext(t, lastNewTenuredFinalizer) = m->tenuredFinalizers;
+    m->tenuredFinalizers = lastNewTenuredFinalizer;
+  }
+
+  if (lastNewTenuredWeakReference) {
+    jreferenceNext(t, lastNewTenuredWeakReference) = m->tenuredWeakReferences;
+    m->tenuredWeakReferences = lastNewTenuredWeakReference;
+  }
+}
+
+void
 postCollect(Thread* t)
 {
   if (t->large) {
@@ -160,37 +299,7 @@ collect(Thread* t, Heap::CollectionType type)
         ::visitRoots(t, v);
       }
 
-      Thread* t = m->rootThread;
-      for (object* f = &(m->finalizers); *f;) {
-        object o = finalizerTarget(t, *f);
-        if (m->heap->follow(o) == o) {
-          // object has not been collected
-          object x = *f;
-          *f = finalizerNext(t, x);
-          finalizerNext(t, x) = m->doomed;
-          m->doomed = x;
-        } else {
-          f = &finalizerNext(t, *f);
-        }
-      }
-
-      v->visit(&(m->finalizers));
-      v->visit(&(m->doomed));
-
-      for (object p = m->weakReferences; p;) {
-        object o = jreferenceTarget(t, p);
-        object followed = m->heap->follow(o);
-        if (followed == o) {
-          // object has not been collected
-          jreferenceTarget(t, p) = 0;
-        } else {
-          jreferenceTarget(t, p) = followed;
-        }
-
-        object last = p;
-        p = jreferenceNext(t, p);
-        jreferenceNext(t, last) = 0;
-      }
+      postVisit(m->rootThread, v);
     }
 
     virtual unsigned sizeInWords(object o) {
@@ -256,7 +365,8 @@ collect(Thread* t, Heap::CollectionType type)
         unsigned fixedSize = classFixedSize(t, class_);
         unsigned arrayElementSize = classArrayElementSize(t, class_);
         unsigned arrayLength
-          = (arrayElementSize ? cast<uint32_t>(p, fixedSize - 4) : 0);
+          = (arrayElementSize ?
+             cast<uintptr_t>(p, fixedSize - BytesPerWord) : 0);
 
         int mask[intArrayLength(t, objectMask)];
         memcpy(mask, &intArrayBody(t, objectMask, 0),
@@ -317,13 +427,11 @@ collect(Thread* t, Heap::CollectionType type)
 
   postCollect(m->rootThread);
 
-  for (object f = m->doomed; f; f = finalizerNext(t, f)) {
+  for (object f = m->finalizeQueue; f; f = finalizerNext(t, f)) {
     reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
       (t, finalizerTarget(t, f));
   }
-  m->doomed = 0;
-
-  m->weakReferences = 0;
+  m->finalizeQueue = 0;
 
   killZombies(t, m->rootThread);
 }
@@ -372,8 +480,9 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   monitorMap(0),
   types(0),
   finalizers(0),
-  doomed(0),
-  weakReferences(0),
+  tenuredFinalizers(0),
+  finalizeQueue(0),
+  tenuredWeakReferences(0),
   unsafe(false)
 {
   jni::populate(&jniEnvVTable);
@@ -911,6 +1020,10 @@ objectMonitor(Thread* t, object o)
     return m;
   }
 }
+
+void
+noop()
+{ }
 
 #include "type-constructors.cpp"
 

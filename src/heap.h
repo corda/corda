@@ -12,6 +12,12 @@ class Heap {
     MajorCollection
   };
 
+  enum Status {
+    Reachable,
+    Unreachable,
+    Tenured
+  };
+
   class Visitor {
    public:
     virtual ~Visitor() { }
@@ -39,6 +45,8 @@ class Heap {
   virtual bool needsMark(void** p) = 0;
   virtual void mark(void** p) = 0;
   virtual void* follow(void* p) = 0;
+  virtual Status status(void* p) = 0;
+  virtual CollectionType collectionType() = 0;
   virtual void dispose() = 0;
 };
 

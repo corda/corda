@@ -83,8 +83,8 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
           }
         }
 
-        int32_t sl = cast<uint32_t>(s, offset * BytesPerWord);
-        int32_t dl = cast<uint32_t>(d, offset * BytesPerWord);
+        intptr_t sl = cast<uintptr_t>(s, offset * BytesPerWord);
+        intptr_t dl = cast<uintptr_t>(d, offset * BytesPerWord);
         if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
                    dstOffset >= 0 and dstOffset + length < dl))
         {
