@@ -177,24 +177,18 @@ postVisit(Thread* t, Heap::Visitor* v)
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable - remove it from the list
 
-      fprintf(stderr, "unreachable wr: %p\n", *p);
-
       *p = jreferenceNext(t, *p);
     } else if (m->heap->status(jreferenceTarget(t, *p)) == Heap::Unreachable) {
       // target is unreachable - clear the reference and remove it
       // from the list
-
-      fprintf(stderr, "target unreachable for wr: %p\n", *p);
 
       jreferenceTarget(t, *p) = 0;
       *p = jreferenceNext(t, *p);
     } else {
       // both reference and target are reachable
 
-      fprintf(stderr, "viable wr: %p\n", *p);
-
-      v->visit(&jreferenceTarget(t, *p));
       v->visit(p);
+      v->visit(&jreferenceTarget(t, *p));
 
       if (m->heap->status(*p) == Heap::Tenured) {
         // the reference is tenured, so we remove it from
@@ -253,8 +247,8 @@ postVisit(Thread* t, Heap::Visitor* v)
       } else {
         // target is reachable
 
-        v->visit(&jreferenceTarget(t, *p));
         v->visit(p);
+        v->visit(&jreferenceTarget(t, *p));
 
         p = &jreferenceNext(t, *p);
       }
