@@ -177,15 +177,21 @@ postVisit(Thread* t, Heap::Visitor* v)
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable - remove it from the list
 
+      fprintf(stderr, "unreachable wr: %p\n", *p);
+
       *p = jreferenceNext(t, *p);
     } else if (m->heap->status(jreferenceTarget(t, *p)) == Heap::Unreachable) {
       // target is unreachable - clear the reference and remove it
       // from the list
 
+      fprintf(stderr, "target unreachable for wr: %p\n", *p);
+
       jreferenceTarget(t, *p) = 0;
       *p = jreferenceNext(t, *p);
     } else {
       // both reference and target are reachable
+
+      fprintf(stderr, "viable wr: %p\n", *p);
 
       v->visit(&jreferenceTarget(t, *p));
       v->visit(p);
@@ -341,14 +347,6 @@ collect(Thread* t, Heap::CollectionType type)
         cast<uintptr_t>(dst, 0) |= ExtendedMark;
         extendedWord(t, dst, base) = takeHash(t, o);
       }
-
-      if (classVmFlags(t, class_) & WeakReferenceFlag) {
-        fprintf(stderr, "weak reference to %p at %p\n",
-                jreferenceTarget(t, dst),
-                &jreferenceTarget(t, dst));
-        jreferenceNext(t, dst) = m->weakReferences;
-        m->weakReferences = dst;
-      }
     }
 
     virtual void walk(void* p, Heap::Walker* w) {
@@ -482,6 +480,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   finalizers(0),
   tenuredFinalizers(0),
   finalizeQueue(0),
+  weakReferences(0),
   tenuredWeakReferences(0),
   unsafe(false)
 {
@@ -998,6 +997,10 @@ objectMonitor(Thread* t, object o)
   object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, referenceEqual);
 
   if (p) {
+    fprintf(stderr, "found monitor %p for object 0x%x\n",
+            static_cast<System::Monitor*>(pointerValue(t, p)),
+            objectHash(t, o));
+
     return static_cast<System::Monitor*>(pointerValue(t, p));
   } else {
     PROTECT(t, o);
@@ -1011,7 +1014,13 @@ objectMonitor(Thread* t, object o)
     p = makePointer(t, m);
     PROTECT(t, p);
 
-    object wr = makeWeakReference(t, o, 0);
+    object wr = makeWeakReference(t, o, t->vm->weakReferences);
+    t->vm->weakReferences = wr;
+
+    fprintf(stderr, "made monitor %p for object 0x%x\n",
+            m,
+            objectHash(t, o));
+    fprintf(stderr, "new wr: %p\n", wr);
 
     hashMapInsert(t, t->vm->monitorMap, wr, p, referenceHash);
 

@@ -23,8 +23,8 @@ namespace vm {
 
 const bool Verbose = false;
 const bool Debug = false;
-const bool DebugRun = true;
-const bool DebugStack = true;
+const bool DebugRun = false;
+const bool DebugStack = false;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
@@ -1644,13 +1644,6 @@ hash(const int8_t* s, unsigned length)
 inline unsigned
 baseSize(Thread* t, object o, object class_)
 {
-  if (classArrayElementSize(t, class_)) {
-    noop();
-    if (cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord)) {
-      noop();
-    }
-  }
-
   return divide(classFixedSize(t, class_), BytesPerWord)
     + divide(classArrayElementSize(t, class_)
              * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
