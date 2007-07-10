@@ -3191,7 +3191,7 @@ run(Thread* t)
                == arrayBody(t, t->vm->types, Machine::ClassType) and
                instanceOf(t, catchType, exception)))
           {
-            sp = frameBase(t, frame);
+            sp = frame + FrameFootprint;
             ip = exceptionHandlerIp(eh);
             pushObject(t, exception);
             exception = 0;
