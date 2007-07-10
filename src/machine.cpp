@@ -991,9 +991,11 @@ objectMonitor(Thread* t, object o)
   object p = hashMapFind(t, t->vm->monitorMap, o, objectHash, referenceEqual);
 
   if (p) {
-    fprintf(stderr, "found monitor %p for object 0x%x\n",
-            static_cast<System::Monitor*>(pointerValue(t, p)),
-            objectHash(t, o));
+    if (DebugMonitors) {
+      fprintf(stderr, "found monitor %p for object 0x%x\n",
+              static_cast<System::Monitor*>(pointerValue(t, p)),
+              objectHash(t, o));
+    }
 
     return static_cast<System::Monitor*>(pointerValue(t, p));
   } else {
@@ -1011,10 +1013,11 @@ objectMonitor(Thread* t, object o)
     object wr = makeWeakReference(t, o, t->vm->weakReferences);
     t->vm->weakReferences = wr;
 
-    fprintf(stderr, "made monitor %p for object 0x%x\n",
-            m,
-            objectHash(t, o));
-    fprintf(stderr, "new wr: %p\n", wr);
+    if (DebugMonitors) {
+      fprintf(stderr, "made monitor %p for object 0x%x\n",
+              m,
+              objectHash(t, o));
+    }
 
     hashMapInsert(t, t->vm->monitorMap, wr, p, referenceHash);
 
