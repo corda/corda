@@ -172,7 +172,7 @@
 (type linkageError java/lang/LinkageError
   (extends error))
 
-(type unsatisfiedLinkError java/lang/UnsatisifiedLinkError
+(type unsatisfiedLinkError java/lang/UnsatisfiedLinkError
   (extends linkageError))
 
 (type byte java/lang/Byte
