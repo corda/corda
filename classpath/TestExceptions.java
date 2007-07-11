@@ -13,7 +13,11 @@ public class TestExceptions {
   }
 
   public static void main(String[] args) {
-    dangerous();
+    try {
+      dangerous();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
 }

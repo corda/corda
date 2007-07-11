@@ -428,14 +428,6 @@ collect(Thread* t, Heap::CollectionType type)
   killZombies(t, m->rootThread);
 }
 
-void
-removeMonitor(Thread* t, object o)
-{
-  object p = hashMapRemove
-    (t, t->vm->monitorMap, o, objectHash, referenceEqual);
-  static_cast<System::Monitor*>(pointerValue(t, p))->dispose();
-}
-
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
@@ -606,7 +598,6 @@ Thread::dispose()
 
   if (allocator) {
     allocator->free(this);
-    allocator = 0;
   }
 }
 
@@ -618,6 +609,11 @@ exit(Thread* t)
   joinAll(t, t->vm->rootThread);
 
   for (object f = t->vm->finalizers; f; f = finalizerNext(t, f)) {
+    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
+      (t, finalizerTarget(t, f));
+  }
+
+  for (object f = t->vm->tenuredFinalizers; f; f = finalizerNext(t, f)) {
     reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
       (t, finalizerTarget(t, f));
   }
@@ -800,13 +796,10 @@ hashMapFindNode(Thread* t, object map, object key,
   object array = hashMapArray(t, map);
   if (array) {
     unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    object n = arrayBody(t, array, index);
-    while (n) {
+    for (object n = arrayBody(t, array, index); n; n = tripleThird(t, n)) {
       if (equal(t, key, tripleFirst(t, n))) {
         return n;
       }
-      
-      n = tripleThird(t, n);
     }
   }
   return 0;
@@ -818,25 +811,27 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 {
   PROTECT(t, map);
 
-  object oldArray = hashMapArray(t, map);
-  unsigned oldLength = (oldArray ? arrayLength(t, oldArray) : 0);
-  PROTECT(t, oldArray);
+  object newArray = 0;
 
-  unsigned newLength = nextPowerOfTwo(size);
-  object newArray = makeArray(t, newLength, true);
+  if (size) {
+    object oldArray = hashMapArray(t, map);
+    PROTECT(t, oldArray);
 
-  if (oldArray) {
-    for (unsigned i = 0; i < oldLength; ++i) {
-      object next;
-      for (object p = arrayBody(t, oldArray, i); p; p = next) {
-        next = tripleThird(t, p);
+    unsigned newLength = nextPowerOfTwo(size);
+    newArray = makeArray(t, newLength, true);
 
-        object key = tripleFirst(t, p);
-        unsigned index = hash(t, key) & (newLength - 1);
-        object n = arrayBody(t, newArray, index);
+    if (oldArray) {
+      for (unsigned i = 0; i < arrayLength(t, oldArray); ++i) {
+        object next;
+        for (object p = arrayBody(t, oldArray, i); p; p = next) {
+          next = tripleThird(t, p);
 
-        set(t, tripleThird(t, p), n);
-        set(t, arrayBody(t, newArray, index), p);
+          object key = tripleFirst(t, p);
+          unsigned index = hash(t, key) & (newLength - 1);
+
+          set(t, tripleThird(t, p), arrayBody(t, newArray, index));
+          set(t, arrayBody(t, newArray, index), p);
+        }
       }
     }
   }
@@ -845,8 +840,8 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 }
 
 void
-hashMapInsert(Thread* t, object map, object key, object value,
-              uint32_t (*hash)(Thread*, object))
+hashMapInsert2(Thread* t, object map, object key, object value, uint32_t h,
+               uint32_t (*hash)(Thread*, object))
 {
   object array = hashMapArray(t, map);
   PROTECT(t, array);
@@ -862,7 +857,7 @@ hashMapInsert(Thread* t, object map, object key, object value,
     array = hashMapArray(t, map);
   }
 
-  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+  unsigned index = h & (arrayLength(t, array) - 1);
   object n = arrayBody(t, array, index);
 
   n = makeTriple(t, key, value, n);
@@ -870,37 +865,46 @@ hashMapInsert(Thread* t, object map, object key, object value,
   set(t, arrayBody(t, array, index), n);
 }
 
+void
+hashMapInsert(Thread* t, object map, object key, object value,
+              uint32_t (*hash)(Thread*, object))
+{
+  hashMapInsert2(t, map, key, value, hash(t, key), hash);
+}
+
+object
+hashMapRemove2(Thread* t, object map, object key, uint32_t h,
+               uint32_t (*hash)(Thread*, object),
+               bool (*equal)(Thread*, object, object))
+{
+  object array = hashMapArray(t, map);
+  object o = 0;
+  if (array) {
+    unsigned index = h & (arrayLength(t, array) - 1);
+    for (object* n = &arrayBody(t, array, index); *n;) {
+      if (equal(t, key, tripleFirst(t, *n))) {
+        o = tripleSecond(t, *n);
+        set(t, *n, tripleThird(t, *n));
+        -- hashMapSize(t, map);
+      } else {
+        n = &tripleThird(t, *n);
+      }
+    }
+
+    if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
+      hashMapResize(t, map, hash, arrayLength(t, array) / 2);
+    }
+  }
+
+  return o;
+}
+
 object
 hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object))
 {
-  object array = hashMapArray(t, map);
-  object o = 0;
-  if (array) {
-    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    object n = arrayBody(t, array, index);
-    object p = 0;
-    while (n) {
-      if (equal(t, key, tripleFirst(t, n))) {
-        o = tripleSecond(t, n);
-        if (p) {
-          set(t, tripleThird(t, p), tripleThird(t, n));
-        } else {
-          set(t, arrayBody(t, array, index), tripleThird(t, n));
-        }
-      }
-      
-      p = n;
-      n = tripleThird(t, n);
-    }
-  }
-
-  if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
-    hashMapResize(t, map, hash, arrayLength(t, array) / 2);
-  }
-
-  return o;
+  return hashMapRemove2(t, map, key, hash(t, key), hash, equal);
 }
 
 object
@@ -986,6 +990,23 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
     (t, target, reinterpret_cast<void*>(finalize), t->vm->finalizers);
 }
 
+void
+removeMonitor(Thread* t, object o)
+{
+  object p = hashMapRemove2
+    (t, t->vm->monitorMap, o, objectHash(t, o), referenceHash, referenceEqual);
+
+  assert(t, p);
+
+  if (DebugMonitors) {
+    fprintf(stderr, "dispose monitor %p for object %x\n",
+            static_cast<System::Monitor*>(pointerValue(t, p)),
+            objectHash(t, o));
+  }
+
+  static_cast<System::Monitor*>(pointerValue(t, p))->dispose();
+}
+
 System::Monitor*
 objectMonitor(Thread* t, object o)
 {
@@ -993,7 +1014,7 @@ objectMonitor(Thread* t, object o)
 
   if (p) {
     if (DebugMonitors) {
-      fprintf(stderr, "found monitor %p for object 0x%x\n",
+      fprintf(stderr, "found monitor %p for object %x\n",
               static_cast<System::Monitor*>(pointerValue(t, p)),
               objectHash(t, o));
     }
@@ -1015,7 +1036,7 @@ objectMonitor(Thread* t, object o)
     t->vm->weakReferences = wr;
 
     if (DebugMonitors) {
-      fprintf(stderr, "made monitor %p for object 0x%x\n",
+      fprintf(stderr, "made monitor %p for object %x\n",
               m,
               objectHash(t, o));
     }

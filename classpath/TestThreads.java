@@ -22,13 +22,13 @@ public class TestThreads implements Runnable {
       try {
         System.out.println("I'm running in a separate thread!");
 
-//         final int arrayCount = 8;
-//         final int arraySize = 4;
-//         System.out.println("Allocating and discarding " + arrayCount +
-//                            " arrays of " + arraySize + "MB each");
-//         for (; i < arrayCount; ++i) {
-//           byte[] array = new byte[arraySize * 1024 * 1024];
-//         }
+        final int arrayCount = 16;
+        final int arraySize = 4;
+        System.out.println("Allocating and discarding " + arrayCount +
+                           " arrays of " + arraySize + "MB each");
+        for (; i < arrayCount; ++i) {
+          byte[] array = new byte[arraySize * 1024 * 1024];
+        }
 
         long nap = 5;
         System.out.println("sleeping for " + nap + " seconds");

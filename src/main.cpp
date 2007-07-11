@@ -139,7 +139,9 @@ class System: public vm::System {
     }
 
     virtual void dispose() {
-      r->dispose();
+      if (r) {
+        r->dispose();
+      }
       s->free(this);
     }
 
@@ -196,6 +198,9 @@ class System: public vm::System {
 
     virtual void wait(void* context, int64_t time) {
       if (this->context == context) {
+        unsigned depth = this->depth;
+        this->depth = 0;
+        this->context = 0;
         if (time) {
           int64_t then = now() + time;
           timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
@@ -205,6 +210,8 @@ class System: public vm::System {
           int rv = pthread_cond_wait(&condition, &mutex);
           assert(s, rv == 0);
         }
+        this->context = context;
+        this->depth = depth;
       } else {
         vm::abort(s);
       }
@@ -233,6 +240,7 @@ class System: public vm::System {
     }
 
     virtual void dispose() {
+      assert(s, context == 0);
       pthread_mutex_destroy(&mutex);
       pthread_cond_destroy(&condition);
       s->free(this);

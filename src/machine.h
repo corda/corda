@@ -24,7 +24,7 @@ namespace vm {
 const bool Verbose = false;
 const bool DebugRun = false;
 const bool DebugStack = false;
-const bool DebugMonitors = false;
+const bool DebugMonitors = true;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
@@ -1831,6 +1831,12 @@ inline void
 acquire(Thread* t, object o)
 {
   System::Monitor* m = objectMonitor(t, o);
+
+  if (DebugMonitors) {
+    fprintf(stderr, "thread %p acquires %p for %x\n",
+            t, m, objectHash(t, o));
+  }
+
   if (not m->tryAcquire(t)) {
     ENTER(t, Thread::IdleState);
     m->acquire(t);
@@ -1840,18 +1846,36 @@ acquire(Thread* t, object o)
 inline void
 release(Thread* t, object o)
 {
-  objectMonitor(t, o)->release(t);
+  System::Monitor* m = objectMonitor(t, o);
+
+  if (DebugMonitors) {
+    fprintf(stderr, "thread %p releases %p for %x\n",
+            t, m, objectHash(t, o));
+  }
+
+  m->release(t);
 }
 
 inline void
 wait(Thread* t, object o, int64_t milliseconds)
 {
   System::Monitor* m = objectMonitor(t, o);
+
+  if (DebugMonitors) {
+    fprintf(stderr, "thread %p waits " LLD " millis on %p for %x\n",
+            t, milliseconds, m, objectHash(t, o));
+  }
+
   if (m->owner() == t) {
     ENTER(t, Thread::IdleState);
     m->wait(t, milliseconds);
   } else {
     t->exception = makeIllegalMonitorStateException(t);
+  }
+
+  if (DebugMonitors) {
+    fprintf(stderr, "thread %p wakes up on %p for %x\n",
+            t, m, objectHash(t, o));
   }
 }
 
@@ -1859,6 +1883,12 @@ inline void
 notify(Thread* t, object o)
 {
   System::Monitor* m = objectMonitor(t, o);
+
+  if (DebugMonitors) {
+    fprintf(stderr, "thread %p notifies on %p for %x\n",
+            t, m, objectHash(t, o));
+  }
+
   if (m->owner() == t) {
     m->notify(t);
   } else {
@@ -1870,6 +1900,12 @@ inline void
 notifyAll(Thread* t, object o)
 {
   System::Monitor* m = objectMonitor(t, o);
+
+  if (DebugMonitors) {
+    fprintf(stderr, "thread %p notifies all on %p for %x\n",
+            t, m, objectHash(t, o));
+  }
+
   if (m->owner() == t) {
     m->notifyAll(t);
   } else {
