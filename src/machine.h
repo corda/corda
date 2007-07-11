@@ -24,7 +24,7 @@ namespace vm {
 const bool Verbose = false;
 const bool DebugRun = false;
 const bool DebugStack = false;
-const bool DebugMonitors = true;
+const bool DebugMonitors = false;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;

@@ -257,12 +257,12 @@ postVisit(Thread* t, Heap::Visitor* v)
 
   if (lastNewTenuredFinalizer) {
     finalizerNext(t, lastNewTenuredFinalizer) = m->tenuredFinalizers;
-    m->tenuredFinalizers = lastNewTenuredFinalizer;
+    m->tenuredFinalizers = firstNewTenuredFinalizer;
   }
 
   if (lastNewTenuredWeakReference) {
     jreferenceNext(t, lastNewTenuredWeakReference) = m->tenuredWeakReferences;
-    m->tenuredWeakReferences = lastNewTenuredWeakReference;
+    m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
 }
 
