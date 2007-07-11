@@ -29,7 +29,7 @@ thread-cflags = -pthread
 thread-lflags = -lpthread
 
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
-	-I$(src) -I$(bld) $(thread-cflags)
+	-I$(src) -I$(bld) $(thread-cflags) -D__STDC_LIMIT_MACROS
 lflags = $(thread-lflags) -ldl
 test-cflags = -DDEBUG_MEMORY
 stress-cflags = -DDEBUG_MEMORY -DDEBUG_MEMORY_MAJOR

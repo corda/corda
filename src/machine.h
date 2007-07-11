@@ -1439,7 +1439,7 @@ pushLong(Thread* t, uint64_t v)
   }
 
   pushInt(t, v >> 32);
-  pushInt(t, v & 0xFF);
+  pushInt(t, v & 0xFFFFFFFF);
 }
 
 inline object
@@ -1555,7 +1555,7 @@ pokeLong(Thread* t, unsigned index, uint64_t value)
   }
 
   pokeInt(t, index, value >> 32);
-  pokeInt(t, index + 1, value & 0xFF);
+  pokeInt(t, index + 1, value & 0xFFFFFFFF);
 }
 
 inline object*

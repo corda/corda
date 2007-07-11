@@ -27,7 +27,7 @@ public class StringBuilder {
       index -= c.value.length();
       c.value.getChars(0, c.value.length(), array, index);
     }
-    return new String(array, 0, array.length, false);
+    return new String(array, 0, length, false);
   }
 
   private static class Cell {

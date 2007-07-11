@@ -145,7 +145,7 @@
   java/lang/ArrayIndexOutOfBoundsException
   (extends runtimeException))
 
-(type arrayStoreException java/lang/arrayStoreException
+(type arrayStoreException java/lang/ArrayStoreException
   (extends runtimeException))
 
 (type negativeArraySizeException java/lang/NegativeArraySizeException

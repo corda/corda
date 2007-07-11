@@ -431,8 +431,9 @@ collect(Thread* t, Heap::CollectionType type)
 void
 removeMonitor(Thread* t, object o)
 {
-  abort(t);
-  hashMapRemove(t, t->vm->monitorMap, o, objectHash, referenceEqual);
+  object p = hashMapRemove
+    (t, t->vm->monitorMap, o, objectHash, referenceEqual);
+  static_cast<System::Monitor*>(pointerValue(t, p))->dispose();
 }
 
 object
@@ -770,7 +771,7 @@ makeString(Thread* t, const char* format, ...)
   object s = ::makeByteArray(t, format, a);
   va_end(a);
 
-  return makeString(t, s, 0, byteArrayLength(t, s), 0);
+  return makeString(t, s, 0, byteArrayLength(t, s) - 1, 0);
 }
 
 void
@@ -882,7 +883,7 @@ hashMapRemove(Thread* t, object map, object key,
     object p = 0;
     while (n) {
       if (equal(t, key, tripleFirst(t, n))) {
-        o = tripleFirst(t, n);
+        o = tripleSecond(t, n);
         if (p) {
           set(t, tripleThird(t, p), tripleThird(t, n));
         } else {

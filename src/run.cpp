@@ -87,14 +87,6 @@ make(Thread* t, object class_)
   memset(static_cast<object*>(instance) + 1, 0,
          sizeInBytes - sizeof(object));
 
-  fprintf(stderr, "new instance: %p\n", instance);
-
-  if (class_ == arrayBody(t, t->vm->types, Machine::ThreadType)) {
-    if (threadPeer(t, instance)) {
-      fprintf(stderr, "yo!\n");
-    }
-  }
-
   return instance;
 }
 
@@ -390,7 +382,8 @@ parsePool(Thread* t, Stream& s)
 
       case CONSTANT_String: {
         object bytes = arrayBody(t, pool, intArrayBody(t, o, 1) - 1);
-        object value = makeString(t, bytes, 0, byteArrayLength(t, bytes), 0);
+        object value = makeString
+          (t, bytes, 0, byteArrayLength(t, bytes) - 1, 0);
         set(t, arrayBody(t, pool, i), value);
       } break;
 
@@ -2377,7 +2370,7 @@ run(Thread* t)
       if (isSpecialMethod(t, method, class_)) {
         class_ = classSuper(t, class_);
 
-        if (UNLIKELY(classVirtualTable(t, class_) == 0)) {
+        if (classVirtualTable(t, class_) == 0) {
           PROTECT(t, class_);
 
           resolveClass(t, className(t, class_));
@@ -2435,7 +2428,7 @@ run(Thread* t)
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
 
-      if (UNLIKELY(classVirtualTable(t, class_) == 0)) {
+      if (classVirtualTable(t, class_) == 0) {
         PROTECT(t, class_);
 
         resolveClass(t, className(t, class_));

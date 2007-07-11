@@ -29,6 +29,7 @@ class System: public Allocator {
    public:
     virtual ~Runnable() { }
     virtual void run(Thread*) = 0;
+    virtual void dispose() = 0;
   };
 
   class Monitor {
@@ -58,6 +59,7 @@ class System: public Allocator {
   virtual Status attach(Thread**) = 0;
   virtual Status start(Runnable*) = 0;
   virtual Status make(Monitor**) = 0;
+  virtual void sleep(int64_t milliseconds) = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;

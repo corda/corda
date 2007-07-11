@@ -35,6 +35,16 @@ notifyAll(Thread* t, jobject this_)
 }
 
 void
+sleep(Thread* t, jlong milliseconds)
+{
+  if (milliseconds == 0) milliseconds = INT64_MAX;
+
+  ENTER(t, Thread::IdleState);
+
+  t->vm->system->sleep(milliseconds);
+}
+
+void
 loadLibrary(Thread* t, jstring nameString)
 {
   if (LIKELY(nameString)) {
@@ -68,7 +78,7 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
       unsigned elementSize = classArrayElementSize(t, objectClass(t, s));
 
       if (LIKELY(elementSize)) {
-        unsigned offset = 0;
+        unsigned offset = 1;
 
         if (objectClass(t, s)
             == arrayBody(t, t->vm->types, Machine::ObjectArrayType))
@@ -76,7 +86,7 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
           if (LIKELY(objectArrayElementClass(t, s)
                      == objectArrayElementClass(t, d)))
           {
-            offset = 1;
+            offset = 2;
           } else {
             t->exception = makeArrayStoreException(t);
             return;
@@ -86,12 +96,12 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
         intptr_t sl = cast<uintptr_t>(s, offset * BytesPerWord);
         intptr_t dl = cast<uintptr_t>(d, offset * BytesPerWord);
         if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
-                   dstOffset >= 0 and dstOffset + length < dl))
+                   dstOffset >= 0 and dstOffset + length <= dl))
         {
-          uint8_t* sbody = &cast<uint8_t>(s, (offset * BytesPerWord) + 4);
-          uint8_t* dbody = &cast<uint8_t>(s, (offset * BytesPerWord) + 4);
-          memcpy(sbody + (srcOffset * elementSize),
-                 dbody + (dstOffset * elementSize),
+          uint8_t* sbody = &cast<uint8_t>(s, (offset + 1) * BytesPerWord);
+          uint8_t* dbody = &cast<uint8_t>(d, (offset + 1) * BytesPerWord);
+          memcpy(dbody + (dstOffset * elementSize),
+                 sbody + (srcOffset * elementSize),
                  length * elementSize);
           return;
         }
@@ -143,7 +153,7 @@ start(Thread* t, jobject this_)
 
     class Runnable: public System::Runnable {
      public:
-      Runnable(Thread* t): t(t) { }
+      Runnable(System* s, Thread* t): s(s), t(t) { }
 
       virtual void run(System::Thread* st) {
         t->systemThread = st;
@@ -153,10 +163,16 @@ start(Thread* t, jobject this_)
         t->exit();
       }
 
-      Thread* t;
-    } r(p);
+      virtual void dispose() {
+        s->free(this);
+      }
 
-    if (not t->vm->system->success(t->vm->system->start(&r))) {
+      System* s;
+      Thread* t;
+    }* r = new (t->vm->system->allocate(sizeof(Runnable)))
+       Runnable(t->vm->system, p);
+
+    if (not t->vm->system->success(t->vm->system->start(r))) {
       p->exit();
 
       object message = makeString(t, "unable to start native thread");
@@ -179,6 +195,8 @@ populate(Thread* t, object map)
       reinterpret_cast<void*>(notify) },
     { "Java_java_lang_Object_notifyAll",
       reinterpret_cast<void*>(notifyAll) },
+    { "Java_java_lang_Thread_sleep",
+      reinterpret_cast<void*>(sleep) },
     { "Java_java_lang_System_loadLibrary",
       reinterpret_cast<void*>(loadLibrary) },
     { "Java_java_lang_System_arraycopy",

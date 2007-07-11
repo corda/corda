@@ -139,6 +139,7 @@ class System: public vm::System {
     }
 
     virtual void dispose() {
+      r->dispose();
       s->free(this);
     }
 
@@ -355,6 +356,12 @@ class System: public vm::System {
   virtual Status make(vm::System::Monitor** m) {
     *m = new (vm::System::allocate(sizeof(Monitor))) Monitor(this);
     return 0;
+  }
+
+  virtual void sleep(int64_t milliseconds) {
+    timespec ts = { milliseconds / 1000, (milliseconds % 1000) * 1000 * 1000 };
+
+    nanosleep(&ts, 0);
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
