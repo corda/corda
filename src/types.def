@@ -1,4 +1,7 @@
-(type class
+(type jobject java/lang/Object)
+
+(type class java/lang/Class
+  (extends jobject)
   (uint16_t flags)
   (uint16_t vmFlags)
   (uint16_t fixedSize)
@@ -104,9 +107,6 @@
  
 (type array
   (noassert array object body))
-
-
-(type jobject java/lang/Object)
 
 (type string java/lang/String
   (extends jobject)

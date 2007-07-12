@@ -537,13 +537,15 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
     object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
     set(t, cast<object>(t->vm->types, 0), arrayClass);
 
+    object objectClass = arrayBody(t, m->types, Machine::JobjectType);
+
     object classClass = arrayBody(t, m->types, Machine::ClassType);
     set(t, cast<object>(classClass, 0), classClass);
+    set(t, classSuper(t, classClass), objectClass);
 
     object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
     set(t, cast<object>(intArrayClass, 0), classClass);
-    set(t, classSuper(t, intArrayClass),
-        arrayBody(t, m->types, Machine::JobjectType));
+    set(t, classSuper(t, intArrayClass), objectClass);
 
     m->unsafe = false;
 

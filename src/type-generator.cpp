@@ -71,14 +71,14 @@ cons(Object* car, Object* cdr)
   return Pair::make(car, cdr);
 }
 
-Object*
+Object*&
 car(Object* o)
 {
   assert(o->type == Object::Pair);
   return static_cast<Pair*>(o)->car;
 }
 
-Object*
+Object*&
 cdr(Object* o)
 {
   assert(o->type == Object::Pair);
@@ -1514,6 +1514,27 @@ typeCount(Object* declarations)
   return count;
 }
 
+Object*
+reorder(Object* declarations)
+{
+  Object* intArrayType = 0;
+  Object* classType = 0;
+  for (Object** p = &declarations; *p;) {
+    Object* o = car(*p);
+    if (o->type == Object::Type and equal(typeName(o), "intArray")) {
+      intArrayType = o;
+      *p = cdr(*p);
+    } else if (o->type == Object::Type and equal(typeName(o), "class")) {
+      classType = o;
+      *p = cdr(*p);
+    } else {
+      p = &cdr(*p);
+    }
+  }
+
+  return cons(intArrayType, cons(classType, declarations));
+}
+
 void
 writeInitializations(Output* out, Object* declarations)
 {
@@ -1530,16 +1551,11 @@ writeInitializations(Output* out, Object* declarations)
   out->write(count);
   out->write(" * sizeof(void*));\n\n");
 
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    if (o->type == Object::Type and equal(typeName(o), "intArray")) {
-      writeInitialization(out, o);
-    }
-  }
+  declarations = reorder(declarations);
 
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
-    if (o->type == Object::Type and not equal(typeName(o), "intArray")) {
+    if (o->type == Object::Type) {
       writeInitialization(out, o);
     }
   }

@@ -568,7 +568,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
   classFixedSize(t, class_) = pad(memberOffset);
   
   object mask = makeIntArray
-    (t, divide(classFixedSize(t, class_), BitsPerWord), true);
+    (t, divide(classFixedSize(t, class_), BitsPerWord * BytesPerWord), true);
   intArrayBody(t, mask, 0) = 1;
 
   bool sawReferenceField = false;

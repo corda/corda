@@ -16,6 +16,12 @@ toString(Thread* t, jobject this_)
   return pushReference(t, s);
 }
 
+jclass
+getClass(Thread* t, jobject this_)
+{
+  return pushReference(t, objectClass(t, *this_));
+}
+
 void
 wait(Thread* t, jobject this_, jlong milliseconds)
 {
@@ -189,6 +195,8 @@ populate(Thread* t, object map)
   } builtins[] = {
     { "Java_java_lang_Object_toString",
       reinterpret_cast<void*>(toString) },
+    { "Java_java_lang_Object_getClass",
+      reinterpret_cast<void*>(getClass) },
     { "Java_java_lang_Object_wait",
       reinterpret_cast<void*>(wait) },
     { "Java_java_lang_Object_notify",

@@ -20,6 +20,20 @@ public final class String {
     }
   }
 
+  public String(byte[] data, int offset, int length, boolean copy) {
+    if (copy) {
+      byte[] c = new byte[length];
+      System.arraycopy(data, offset, c, 0, length);
+      
+      this.data = c;
+      this.length = length;
+    } else {
+      this.data = data;
+      this.offset = offset;
+      this.length = length;
+    }
+  }
+
   public int length() {
     return length;
   }
