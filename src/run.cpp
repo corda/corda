@@ -249,10 +249,9 @@ isSpecialMethod(Thread* t, object method, object class_)
 }
 
 object
-find(Thread* t, object class_, object table, object reference,
+find(Thread* t, object table, object reference,
      object& (*name)(Thread*, object),
-     object& (*spec)(Thread*, object),
-     object (*makeError)(Thread*, object))
+     object& (*spec)(Thread*, object))
 {
   object n = referenceName(t, reference);
   object s = referenceSpec(t, reference);
@@ -268,27 +267,20 @@ find(Thread* t, object class_, object table, object reference,
     }               
   }
 
-  object message = makeString
-    (t, "%s:%s not found in %s",
-     &byteArrayBody(t, n, 0),
-     &byteArrayBody(t, s, 0),
-     &byteArrayBody(t, className(t, class_), 0));
-  t->exception = makeError(t, message);
   return 0;
 }
 
 inline object
 findFieldInClass(Thread* t, object class_, object reference)
 {
-  return find(t, class_, classFieldTable(t, class_), reference, fieldName,
-              fieldSpec, makeNoSuchFieldError);
+  return find(t, classFieldTable(t, class_), reference, fieldName, fieldSpec);
 }
 
 inline object
 findMethodInClass(Thread* t, object class_, object reference)
 {
-  return find(t, class_, classMethodTable(t, class_), reference, methodName,
-              methodSpec, makeNoSuchMethodError);
+  return find(t, classMethodTable(t, class_), reference, methodName,
+              methodSpec);
 }
 
 object
@@ -1269,34 +1261,49 @@ resolveClass(Thread* t, object container, object& (*class_)(Thread*, object))
 
 inline object
 resolve(Thread* t, object pool, unsigned index,
-        object (*find)(Thread*, object, object))
+        object (*find)(Thread*, object, object),
+        object (*makeError)(Thread*, object))
 {
   object o = arrayBody(t, pool, index);
   if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::ReferenceType))
   {
     PROTECT(t, pool);
 
+    object reference = o;
+    PROTECT(t, reference);
+
     object class_ = resolveClass(t, o, referenceClass);
     if (UNLIKELY(t->exception)) return 0;
+    
+    for (o = 0; o == 0 and class_; class_ = classSuper(t, class_)) {
+      o = find(t, class_, arrayBody(t, pool, index));
+    }
 
-    o = find(t, class_, arrayBody(t, pool, index));
-    if (UNLIKELY(t->exception)) return 0;
+    if (o == 0) {
+      object message = makeString
+        (t, "%s %s not found in %s",
+         &byteArrayBody(t, referenceName(t, reference), 0),
+         &byteArrayBody(t, referenceSpec(t, reference), 0),
+         &byteArrayBody(t, referenceClass(t, reference), 0));
+      t->exception = makeError(t, message);
+    }
     
     set(t, arrayBody(t, pool, index), o);
   }
+
   return o;
 }
 
 inline object
 resolveField(Thread* t, object pool, unsigned index)
 {
-  return resolve(t, pool, index, findFieldInClass);
+  return resolve(t, pool, index, findFieldInClass, makeNoSuchFieldError);
 }
 
 inline object
 resolveMethod(Thread* t, object pool, unsigned index)
 {
-  return resolve(t, pool, index, findMethodInClass);
+  return resolve(t, pool, index, findMethodInClass, makeNoSuchMethodError);
 }
 
 object
@@ -3158,7 +3165,10 @@ run(Thread* t)
   } goto loop;
 
  throw_:
-  fprintf(stderr, "throw\n");
+  if (DebugRun) {
+    fprintf(stderr, "throw\n");
+  }
+
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= 0; frame = frameNext(t, frame)) {
     if (methodFlags(t, frameMethod(t, frame)) & ACC_NATIVE) {
@@ -3170,6 +3180,7 @@ run(Thread* t)
     if (eht) {
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+
         if (frameIp(t, frame) - 1 >= exceptionHandlerStart(eh)
             and frameIp(t, frame) - 1 < exceptionHandlerEnd(eh))
         {
@@ -3179,11 +3190,11 @@ run(Thread* t)
               (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
           }
 
-          if (catchType == 0 or
-              (objectClass(t, catchType)
-               == arrayBody(t, t->vm->types, Machine::ClassType) and
-               instanceOf(t, catchType, exception)))
-          {
+          if (catchType) {
+            catchType = resolveClass(t, catchType);
+          }
+
+          if (catchType == 0 or instanceOf(t, catchType, exception)) {
             sp = frame + FrameFootprint;
             ip = exceptionHandlerIp(eh);
             pushObject(t, exception);
