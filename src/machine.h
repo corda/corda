@@ -53,6 +53,11 @@ enum StackTag {
   ObjectTag
 };
 
+enum MapType {
+  NormalMap,
+  WeakMap
+};
+
 const int NativeLine = -1;
 const int UnknownLine = -2;
 
@@ -1289,6 +1294,15 @@ set(Thread* t, object& target, object value)
   }
 }
 
+inline void
+setObjectClass(Thread* t, object o, object value)
+{
+  set(t, cast<object>(o, 0),
+      reinterpret_cast<object>
+      (reinterpret_cast<uintptr_t>(value)
+       | reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
+}
+
 object&
 arrayBodyUnsafe(Thread*, object, unsigned);
 
@@ -1706,18 +1720,6 @@ objectEqual(Thread*, object a, object b)
 }
 
 inline uint32_t
-referenceHash(Thread* t, object o)
-{
-  return objectHash(t, jreferenceTarget(t, o));
-}
-
-inline bool
-referenceEqual(Thread* t, object a, object b)
-{
-  return a == jreferenceTarget(t, b);
-}
-
-inline uint32_t
 byteArrayHash(Thread* t, object array)
 {
   return hash(&byteArrayBody(t, array, 0), byteArrayLength(t, array));
@@ -1820,6 +1822,54 @@ hashMapIteratorNext(Thread* t, object it);
 
 void
 listAppend(Thread* t, object list, object value);
+
+unsigned
+fieldCode(Thread* t, unsigned javaCode);
+
+unsigned
+fieldType(Thread* t, unsigned code);
+
+unsigned
+primitiveSize(Thread* t, unsigned code);
+
+inline unsigned
+fieldSize(Thread* t, object field)
+{
+  unsigned code = fieldCode(t, field);
+  if (code == ObjectField) {
+    return BytesPerWord;
+  } else {
+    return primitiveSize(t, code);
+  }
+}
+
+object
+resolveClass(Thread* t, object spec);
+
+object
+resolveObjectArrayClass(Thread* t, object elementSpec);
+
+object
+makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear);
+
+inline unsigned
+objectArrayLength(Thread* t, object array)
+{
+  assert(t, classFixedSize(t, objectClass(t, array)) == BytesPerWord * 2);
+  assert(t, classArrayElementSize(t, objectClass(t, array)) == BytesPerWord);
+  return cast<uintptr_t>(array, BytesPerWord);
+}
+
+inline object&
+objectArrayBody(Thread* t, object array, unsigned index)
+{
+  assert(t, classFixedSize(t, objectClass(t, array)) == BytesPerWord * 2);
+  assert(t, classArrayElementSize(t, objectClass(t, array)) == BytesPerWord);
+  assert(t, classObjectMask(t, objectClass(t, array))
+         == classObjectMask(t, arrayBody
+                            (t, t->vm->types, Machine::ArrayType)));
+  return cast<object>(array, (1 + index) * BytesPerWord);
+}
 
 void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));

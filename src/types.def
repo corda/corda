@@ -3,7 +3,8 @@
 (type class java/lang/Class
   (extends jobject)
   (uint16_t flags)
-  (uint16_t vmFlags)
+  (uint8_t vmFlags)
+  (uint8_t arrayDimensions)
   (uint16_t fixedSize)
   (uint16_t arrayElementSize)
   (object objectMask)
@@ -88,6 +89,7 @@
   (void* next))
 
 (type hashMap
+  (uint32_t type)
   (uint32_t size)
   (object array))
 
@@ -214,11 +216,6 @@
 
 (type weakReference java/lang/ref/WeakReference
   (extends jreference))
-
-(type objectArray [
-  (extends jobject)
-  (object elementClass)
-  (array object body))
 
 (type byteArray [B
   (extends jobject)

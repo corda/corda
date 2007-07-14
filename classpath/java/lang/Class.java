@@ -2,7 +2,8 @@ package java.lang;
 
 public final class Class <T> {
   private short flags;
-  private short vmFlags;
+  private byte vmFlags;
+  private byte arrayDimensions;
   private short fixedSize;
   private short arrayElementSize;
   private int[] objectMask;

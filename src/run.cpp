@@ -2,7 +2,6 @@
 #include "system.h"
 #include "heap.h"
 #include "class-finder.h"
-#include "stream.h"
 #include "constants.h"
 #include "run.h"
 #include "jnienv.h"
@@ -90,86 +89,6 @@ make(Thread* t, object class_)
   return instance;
 }
 
-unsigned
-fieldCode(Thread* t, unsigned javaCode)
-{
-  switch (javaCode) {
-  case 'B':
-    return ByteField;
-  case 'C':
-    return CharField;
-  case 'D':
-    return DoubleField;
-  case 'F':
-    return FloatField;
-  case 'I':
-    return IntField;
-  case 'J':
-    return LongField;
-  case 'S':
-    return ShortField;
-  case 'V':
-    return VoidField;
-  case 'Z':
-    return BooleanField;
-  case 'L':
-  case '[':
-    return ObjectField;
-
-  default: abort(t);
-  }
-}
-
-unsigned
-fieldType(Thread* t, unsigned code)
-{
-  switch (code) {
-  case VoidField:
-    return VOID_TYPE;
-  case ByteField:
-  case BooleanField:
-    return INT8_TYPE;
-  case CharField:
-  case ShortField:
-    return INT16_TYPE;
-  case DoubleField:
-    return DOUBLE_TYPE;
-  case FloatField:
-    return FLOAT_TYPE;
-  case IntField:
-    return INT32_TYPE;
-  case LongField:
-    return INT64_TYPE;
-  case ObjectField:
-    return POINTER_TYPE;
-
-  default: abort(t);
-  }
-}
-
-unsigned
-primitiveSize(Thread* t, unsigned code)
-{
-  switch (code) {
-  case VoidField:
-    return 0;
-  case ByteField:
-  case BooleanField:
-    return 1;
-  case CharField:
-  case ShortField:
-    return 2;
-  case FloatField:
-  case IntField:
-    return 4;
-  case DoubleField:
-  case LongField:
-    return 8;
-
-  default: abort(t);
-  }
-}
-
 inline void
 setStatic(Thread* t, object field, object value)
 {
@@ -217,9 +136,6 @@ findInterfaceMethod(Thread* t, object method, object o)
   }
   abort(t);
 }
-
-object
-resolveClass(Thread*, object);
 
 inline object
 findMethod(Thread* t, object method, object class_)
@@ -283,447 +199,6 @@ findMethodInClass(Thread* t, object class_, object reference)
               methodSpec);
 }
 
-object
-parsePool(Thread* t, Stream& s)
-{
-  unsigned poolCount = s.read2() - 1;
-  object pool = makeArray(t, poolCount, true);
-
-  PROTECT(t, pool);
-
-  for (unsigned i = 0; i < poolCount; ++i) {
-    unsigned c = s.read1();
-
-    switch (c) {
-    case CONSTANT_Integer: {
-      object value = makeInt(t, s.read4());
-      set(t, arrayBody(t, pool, i), value);
-    } break;
-
-    case CONSTANT_Float: {
-      object value = makeFloat(t, s.readFloat());
-      set(t, arrayBody(t, pool, i), value);
-    } break;
-
-    case CONSTANT_Long: {
-      object value = makeLong(t, s.read8());
-      set(t, arrayBody(t, pool, i), value);
-      ++i;
-    } break;
-
-    case CONSTANT_Double: {
-      object value = makeLong(t, s.readDouble());
-      set(t, arrayBody(t, pool, i), value);
-      ++i;
-    } break;
-
-    case CONSTANT_Utf8: {
-      unsigned length = s.read2();
-      object value = makeByteArray(t, length + 1, false);
-      s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, value, 0)), length);
-      byteArrayBody(t, value, length) = 0;
-      set(t, arrayBody(t, pool, i), value);
-    } break;
-
-    case CONSTANT_Class: {
-      object value = makeIntArray(t, 2, false);
-      intArrayBody(t, value, 0) = c;
-      intArrayBody(t, value, 1) = s.read2();
-      set(t, arrayBody(t, pool, i), value);
-    } break;
-
-    case CONSTANT_String: {
-      object value = makeIntArray(t, 2, false);
-      intArrayBody(t, value, 0) = c;
-      intArrayBody(t, value, 1) = s.read2();
-      set(t, arrayBody(t, pool, i), value);
-    } break;
-
-    case CONSTANT_NameAndType: {
-      object value = makeIntArray(t, 3, false);
-      intArrayBody(t, value, 0) = c;
-      intArrayBody(t, value, 1) = s.read2();
-      intArrayBody(t, value, 2) = s.read2();
-      set(t, arrayBody(t, pool, i), value);
-    } break;
-
-    case CONSTANT_Fieldref:
-    case CONSTANT_Methodref:
-    case CONSTANT_InterfaceMethodref: {
-      object value = makeIntArray(t, 3, false);
-      intArrayBody(t, value, 0) = c;
-      intArrayBody(t, value, 1) = s.read2();
-      intArrayBody(t, value, 2) = s.read2();
-      set(t, arrayBody(t, pool, i), value);
-    } break;
-
-    default: abort(t);
-    }
-  }
-
-  for (unsigned i = 0; i < poolCount; ++i) {
-    object o = arrayBody(t, pool, i);
-    if (o and objectClass(t, o)
-        == arrayBody(t, t->vm->types, Machine::IntArrayType))
-    {
-      switch (intArrayBody(t, o, 0)) {
-      case CONSTANT_Class: {
-        set(t, arrayBody(t, pool, i),
-            arrayBody(t, pool, intArrayBody(t, o, 1) - 1));
-      } break;
-
-      case CONSTANT_String: {
-        object bytes = arrayBody(t, pool, intArrayBody(t, o, 1) - 1);
-        object value = makeString
-          (t, bytes, 0, byteArrayLength(t, bytes) - 1, 0);
-        set(t, arrayBody(t, pool, i), value);
-      } break;
-
-      case CONSTANT_NameAndType: {
-        object name = arrayBody(t, pool, intArrayBody(t, o, 1) - 1);
-        object type = arrayBody(t, pool, intArrayBody(t, o, 2) - 1);
-        object value = makePair(t, name, type);
-        set(t, arrayBody(t, pool, i), value);
-      } break;
-      }
-    }
-  }
-
-  for (unsigned i = 0; i < poolCount; ++i) {
-    object o = arrayBody(t, pool, i);
-    if (o and objectClass(t, o)
-        == arrayBody(t, t->vm->types, Machine::IntArrayType))
-    {
-      switch (intArrayBody(t, o, 0)) {
-      case CONSTANT_Fieldref:
-      case CONSTANT_Methodref:
-      case CONSTANT_InterfaceMethodref: {
-        object c = arrayBody(t, pool, intArrayBody(t, o, 1) - 1);
-        object nameAndType = arrayBody(t, pool, intArrayBody(t, o, 2) - 1);
-        object value = makeReference
-          (t, c, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
-        set(t, arrayBody(t, pool, i), value);
-      } break;
-      }
-    }
-  }
-
-  return pool;
-}
-
-void
-addInterfaces(Thread* t, object class_, object map)
-{
-  object table = classInterfaceTable(t, class_);
-  if (table) {
-    unsigned increment = 2;
-    if (classFlags(t, class_) & ACC_INTERFACE) {
-      increment = 1;
-    }
-
-    PROTECT(t, map);
-    PROTECT(t, table);
-
-    for (unsigned i = 0; i < arrayLength(t, table); i += increment) {
-      object interface = arrayBody(t, table, i);
-      object name = className(t, interface);
-      hashMapInsertMaybe(t, map, name, interface, byteArrayHash,
-                         byteArrayEqual);
-    }
-  }
-}
-
-void
-parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
-{
-  PROTECT(t, class_);
-  PROTECT(t, pool);
-  
-  object map = makeHashMap(t, 0, 0);
-  PROTECT(t, map);
-
-  if (classSuper(t, class_)) {
-    addInterfaces(t, classSuper(t, class_), map);
-  }
-  
-  unsigned count = s.read2();
-  for (unsigned i = 0; i < count; ++i) {
-    object name = arrayBody(t, pool, s.read2() - 1);
-    PROTECT(t, name);
-
-    object interface = resolveClass(t, name);
-    PROTECT(t, interface);
-
-    hashMapInsertMaybe(t, map, name, interface, byteArrayHash, byteArrayEqual);
-
-    addInterfaces(t, interface, map);
-  }
-
-  object interfaceTable = 0;
-  if (hashMapSize(t, map)) {
-    unsigned length = hashMapSize(t, map) ;
-    if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
-      length *= 2;
-    }
-    interfaceTable = makeArray(t, length, true);
-    PROTECT(t, interfaceTable);
-
-    unsigned i = 0;
-    object it = hashMapIterator(t, map);
-    PROTECT(t, it);
-
-    for (; it; it = hashMapIteratorNext(t, it)) {
-      object interface = resolveClass
-        (t, tripleFirst(t, hashMapIteratorNode(t, it)));
-      if (UNLIKELY(t->exception)) return;
-
-      set(t, arrayBody(t, interfaceTable, i++), interface);
-
-      if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
-        // we'll fill in this table in parseMethodTable():
-        object vtable = makeArray
-          (t, arrayLength(t, classVirtualTable(t, interface)), true);
-        
-        set(t, arrayBody(t, interfaceTable, i++), vtable);
-      }
-    }
-  }
-
-  set(t, classInterfaceTable(t, class_), interfaceTable);
-}
-
-inline unsigned
-fieldSize(Thread* t, object field)
-{
-  unsigned code = fieldCode(t, field);
-  if (code == ObjectField) {
-    return BytesPerWord;
-  } else {
-    return primitiveSize(t, code);
-  }
-}
-
-void
-parseFieldTable(Thread* t, Stream& s, object class_, object pool)
-{
-  PROTECT(t, class_);
-  PROTECT(t, pool);
-
-  unsigned memberOffset = BytesPerWord;
-  if (classSuper(t, class_)) {
-    memberOffset = classFixedSize(t, classSuper(t, class_));
-  }
-
-  unsigned count = s.read2();
-  if (count) {
-    unsigned staticOffset = 0;
-  
-    object fieldTable = makeArray(t, count, true);
-    PROTECT(t, fieldTable);
-
-    for (unsigned i = 0; i < count; ++i) {
-      unsigned flags = s.read2();
-      unsigned name = s.read2();
-      unsigned spec = s.read2();
-
-      unsigned attributeCount = s.read2();
-      for (unsigned j = 0; j < attributeCount; ++j) {
-        s.read2();
-        s.skip(s.read4());
-      }
-
-      object field = makeField
-        (t,
-         flags,
-         0, // offset
-         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
-         arrayBody(t, pool, name - 1),
-         arrayBody(t, pool, spec - 1),
-         class_);
-
-      if (flags & ACC_STATIC) {
-        fieldOffset(t, field) = staticOffset++;
-      } else {
-        unsigned excess = memberOffset % BytesPerWord;
-        if (excess and fieldCode(t, field) == ObjectField) {
-          memberOffset += BytesPerWord - excess;
-        }
-
-        fieldOffset(t, field) = memberOffset;
-        memberOffset += fieldSize(t, field);
-      }
-
-      set(t, arrayBody(t, fieldTable, i), field);
-    }
-
-    set(t, classFieldTable(t, class_), fieldTable);
-
-    if (staticOffset) {
-      object staticTable = makeArray(t, staticOffset, true);
-
-      set(t, classStaticTable(t, class_), staticTable);
-    }
-  }
-
-  classFixedSize(t, class_) = pad(memberOffset);
-  
-  object mask = makeIntArray
-    (t, divide(classFixedSize(t, class_), BitsPerWord * BytesPerWord), true);
-  intArrayBody(t, mask, 0) = 1;
-
-  bool sawReferenceField = false;
-  for (object c = class_; c; c = classSuper(t, c)) {
-    object fieldTable = classFieldTable(t, c);
-    if (fieldTable) {
-      for (int i = arrayLength(t, fieldTable) - 1; i >= 0; --i) {
-        object field = arrayBody(t, fieldTable, i);
-        if (fieldCode(t, field) == ObjectField) {
-          unsigned index = fieldOffset(t, field) / BytesPerWord;
-          intArrayBody(t, mask, (index / 32)) |= 1 << (index % 32);
-          sawReferenceField = true;
-        }
-      }
-    }
-  }
-
-  if (sawReferenceField) {
-    set(t, classObjectMask(t, class_), mask);
-  }
-}
-
-object
-parseCode(Thread* t, Stream& s, object pool)
-{
-  unsigned maxStack = s.read2();
-  unsigned maxLocals = s.read2();
-  unsigned length = s.read4();
-
-  object code = makeCode(t, pool, 0, 0, maxStack, maxLocals, length, false);
-  s.read(&codeBody(t, code, 0), length);
-
-  unsigned ehtLength = s.read2();
-  if (ehtLength) {
-    PROTECT(t, code);
-
-    object eht = makeExceptionHandlerTable(t, ehtLength, false);
-    for (unsigned i = 0; i < ehtLength; ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-      exceptionHandlerStart(eh) = s.read2();
-      exceptionHandlerEnd(eh) = s.read2();
-      exceptionHandlerIp(eh) = s.read2();
-      exceptionHandlerCatchType(eh) = s.read2();
-    }
-
-    set(t, codeExceptionHandlerTable(t, code), eht);
-  }
-
-  unsigned attributeCount = s.read2();
-  for (unsigned j = 0; j < attributeCount; ++j) {
-    object name = arrayBody(t, pool, s.read2() - 1);
-    unsigned length = s.read4();
-
-    if (strcmp(reinterpret_cast<const int8_t*>("LineNumberTable"),
-               &byteArrayBody(t, name, 0)) == 0)
-    {
-      unsigned lntLength = s.read2();
-      object lnt = makeLineNumberTable(t, lntLength, false);
-      for (unsigned i = 0; i < lntLength; ++i) {
-        LineNumber* ln = lineNumberTableBody(t, lnt, i);
-        lineNumberIp(ln) = s.read2();
-        lineNumberLine(ln) = s.read2();
-      }
-
-      set(t, codeLineNumberTable(t, code), lnt);
-    } else {
-      s.skip(length);
-    }
-  }
-
-  return code;
-}
-
-unsigned
-parameterFootprint(Thread* t, object spec)
-{
-  unsigned footprint = 0;
-  const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
-    case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    case 'J':
-    case 'D':
-      ++ s;
-      ++ footprint;
-      break;
-
-    default:
-      ++ s;
-      break;
-    }
-
-    ++ footprint;
-  }
-
-  return footprint;
-}
-
-unsigned
-parameterCount(Thread* t, object spec)
-{
-  unsigned count = 0;
-  const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
-    case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    default:
-      ++ s;
-      break;
-    }
-
-    ++ count;
-  }
-
-  return count;
-}
-
 int
 lineNumber(Thread* t, object method, unsigned ip)
 {
@@ -746,485 +221,6 @@ lineNumber(Thread* t, object method, unsigned ip)
   } else {
     return UnknownLine;
   }
-}
-
-unsigned
-mangledSize(int8_t c)
-{
-  switch (c) {
-  case '_':
-  case ';':
-  case '[':
-    return 2;
-
-  case '$':
-    return 6;
-
-  default:
-    return 1;
-  }
-}
-
-unsigned
-mangle(int8_t c, int8_t* dst)
-{
-  switch (c) {
-  case '/':
-    dst[0] = '_';
-    return 1;
-
-  case '_':
-    dst[0] = '_';
-    dst[1] = '1';
-    return 2;
-
-  case ';':
-    dst[0] = '_';
-    dst[1] = '2';
-    return 2;
-
-  case '[':
-    dst[0] = '_';
-    dst[1] = '3';
-    return 2;
-
-  case '$':
-    memcpy(dst, "_00024", 6);
-    return 6;
-
-  default:
-    dst[0] = c;    
-    return 1;
-  }
-}
-
-object
-makeJNIName(Thread* t, object method, bool decorate)
-{
-  unsigned size = 5;
-  object className = ::className(t, methodClass(t, method));
-  PROTECT(t, className);
-  for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
-    size += mangledSize(byteArrayBody(t, className, i));
-  }
-
-  ++ size;
-
-  object methodName = ::methodName(t, method);
-  PROTECT(t, methodName);
-  for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
-    size += mangledSize(byteArrayBody(t, methodName, i));
-  }
-
-  object methodSpec = ::methodSpec(t, method);
-  PROTECT(t, methodSpec);
-  if (decorate) {
-    size += 2;
-    for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
-           and byteArrayBody(t, methodSpec, i) != ')'; ++i)
-    {
-      size += mangledSize(byteArrayBody(t, methodSpec, i));
-    }
-  }
-
-  object name = makeByteArray(t, size + 1, false);
-  unsigned index = 0;
-
-  memcpy(&byteArrayBody(t, name, index), "Java_", 5);
-  index += 5;
-
-  for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
-    index += mangle(byteArrayBody(t, className, i),
-                    &byteArrayBody(t, name, index));
-  }
-
-  byteArrayBody(t, name, index++) = '_';
-
-  for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
-    index += mangle(byteArrayBody(t, methodName, i),
-                    &byteArrayBody(t, name, index));
-  }
-  
-  if (decorate) {
-    byteArrayBody(t, name, index++) = '_';
-    byteArrayBody(t, name, index++) = '_';
-    for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
-           and byteArrayBody(t, methodSpec, i) != ')'; ++i)
-    {
-      index += mangle(byteArrayBody(t, className, i),
-                      &byteArrayBody(t, name, index));
-    }
-  }
-
-  byteArrayBody(t, name, index++) = 0;
-
-  assert(t, index == size + 1);
-
-  return name;
-}
-
-void
-parseMethodTable(Thread* t, Stream& s, object class_, object pool)
-{
-  PROTECT(t, class_);
-  PROTECT(t, pool);
-
-  object virtualMap = makeHashMap(t, 0, 0);
-  PROTECT(t, virtualMap);
-
-  object nativeMap = makeHashMap(t, 0, 0);
-  PROTECT(t, nativeMap);
-
-  unsigned virtualCount = 0;
-
-  object superVirtualTable = 0;
-  PROTECT(t, superVirtualTable);
-
-  if (classFlags(t, class_) & ACC_INTERFACE) {
-    object itable = classInterfaceTable(t, class_);
-    if (itable) {
-      for (unsigned i = 0; i < arrayLength(t, itable); ++i) {
-        object vtable = classVirtualTable(t, arrayBody(t, itable, i));
-        for (unsigned j = 0; j < virtualCount; ++j) {
-          object method = arrayBody(t, vtable, j);
-          if (hashMapInsertMaybe(t, virtualMap, method, method, methodHash,
-                                 methodEqual))
-          {
-            ++ virtualCount;
-          }
-        }
-      }
-    }
-  } else {
-    if (classSuper(t, class_)) {
-      superVirtualTable = classVirtualTable(t, classSuper(t, class_));
-    }
-
-    if (superVirtualTable) {
-      virtualCount = arrayLength(t, superVirtualTable);
-      for (unsigned i = 0; i < virtualCount; ++i) {
-        object method = arrayBody(t, superVirtualTable, i);
-        hashMapInsert(t, virtualMap, method, method, methodHash);
-      }
-    }
-  }
-
-  object newVirtuals = makeList(t, 0, 0, 0);
-  PROTECT(t, newVirtuals);
-  
-  unsigned count = s.read2();
-  if (count) {
-    object methodTable = makeArray(t, count, true);
-    PROTECT(t, methodTable);
-
-    for (unsigned i = 0; i < count; ++i) {
-      unsigned flags = s.read2();
-      unsigned name = s.read2();
-      unsigned spec = s.read2();
-
-      object code = 0;
-      unsigned attributeCount = s.read2();
-      for (unsigned j = 0; j < attributeCount; ++j) {
-        object name = arrayBody(t, pool, s.read2() - 1);
-        unsigned length = s.read4();
-
-        if (strcmp(reinterpret_cast<const int8_t*>("Code"),
-                   &byteArrayBody(t, name, 0)) == 0)
-        {
-          code = parseCode(t, s, pool);
-        } else {
-          s.skip(length);
-        }
-      }
-
-      unsigned parameterCount = ::parameterCount
-        (t, arrayBody(t, pool, spec - 1));
-
-      unsigned parameterFootprint = ::parameterFootprint
-        (t, arrayBody(t, pool, spec - 1));
-
-      if ((flags & ACC_STATIC) == 0) {
-        ++ parameterCount;
-        ++ parameterFootprint;
-      }
-
-      object method = makeMethod(t,
-                                 flags,
-                                 0, // offset
-                                 parameterCount,
-                                 parameterFootprint,
-                                 arrayBody(t, pool, name - 1),
-                                 arrayBody(t, pool, spec - 1),
-                                 class_,
-                                 code);
-      PROTECT(t, method);
-
-      if (flags & ACC_STATIC) {
-        if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
-                   &byteArrayBody(t, methodName(t, method), 0)) == 0)
-        {
-          set(t, classInitializer(t, class_), method);
-        }
-      } else {
-        object p = hashMapFindNode
-          (t, virtualMap, method, methodHash, methodEqual);
-
-        if (p) {
-          methodOffset(t, method) = methodOffset(t, tripleFirst(t, p));
-
-          set(t, tripleSecond(t, p), method);
-        } else {
-          methodOffset(t, method) = virtualCount++;
-
-          listAppend(t, newVirtuals, method);
-
-          hashMapInsert(t, virtualMap, method, method, methodHash);
-        }
-      }
-
-      if (flags & ACC_NATIVE) {
-        object p = hashMapFindNode
-          (t, nativeMap, method, methodHash, methodEqual);
-        
-        if (p) {
-          set(t, tripleSecond(t, p), method);          
-        } else {
-          hashMapInsert(t, virtualMap, method, 0, methodHash);          
-        }
-      }
-
-      set(t, arrayBody(t, methodTable, i), method);
-    }
-
-    for (unsigned i = 0; i < count; ++i) {
-      object method = arrayBody(t, methodTable, i);
-
-      if (methodFlags(t, method) & ACC_NATIVE) {
-        object overloaded = hashMapFind
-          (t, nativeMap, method, methodHash, methodEqual);
-
-        object jniName = makeJNIName(t, method, overloaded);
-        set(t, methodCode(t, method), jniName);
-      }
-    }
-
-    set(t, classMethodTable(t, class_), methodTable);
-  }
-
-  if (virtualCount) {
-    // generate class vtable
-
-    unsigned i = 0;
-    object vtable = makeArray(t, virtualCount, false);
-
-    if (classFlags(t, class_) & ACC_INTERFACE) {
-      object it = hashMapIterator(t, virtualMap);
-
-      for (; it; it = hashMapIteratorNext(t, it)) {
-        object method = tripleFirst(t, hashMapIteratorNode(t, it));
-        set(t, arrayBody(t, vtable, i++), method);
-      }
-    } else {
-      if (superVirtualTable) {
-        for (; i < arrayLength(t, superVirtualTable); ++i) {
-          object method = arrayBody(t, superVirtualTable, i);
-          method = hashMapFind(t, virtualMap, method, methodHash, methodEqual);
-
-          set(t, arrayBody(t, vtable, i), method);
-        }
-      }
-
-      for (object p = listFront(t, newVirtuals); p; p = pairSecond(t, p)) {
-        set(t, arrayBody(t, vtable, i++), pairFirst(t, p));        
-      }
-    }
-
-    set(t, classVirtualTable(t, class_), vtable);
-
-    if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
-      // generate interface vtables
-    
-      object itable = classInterfaceTable(t, class_);
-      if (itable) {
-        PROTECT(t, itable);
-
-        for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-          object ivtable = classVirtualTable(t, arrayBody(t, itable, i));
-          object vtable = arrayBody(t, itable, i + 1);
-        
-          for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
-            object method = arrayBody(t, ivtable, j);
-            method = hashMapFind
-              (t, virtualMap, method, methodHash, methodEqual);
-            assert(t, method);
-          
-            set(t, arrayBody(t, vtable, j), method);        
-          }
-        }
-      }
-    }
-  }
-}
-
-object
-parseClass(Thread* t, const uint8_t* data, unsigned size)
-{
-  class Client : public Stream::Client {
-   public:
-    Client(Thread* t): t(t) { }
-
-    virtual void NO_RETURN handleEOS() {
-      abort(t);
-    }
-
-   private:
-    Thread* t;
-  } client(t);
-
-  Stream s(&client, data, size);
-
-  uint32_t magic = s.read4();
-  assert(t, magic == 0xCAFEBABE);
-  s.read2(); // minor version
-  s.read2(); // major version
-
-  object pool = parsePool(t, s);
-
-  unsigned flags = s.read2();
-  unsigned name = s.read2();
-
-  object class_ = makeClass(t,
-                            flags,
-                            0, // VM flags
-                            0, // fixed size
-                            0, // array size
-                            0, // object mask
-                            arrayBody(t, pool, name - 1),
-                            0, // super
-                            0, // interfaces
-                            0, // vtable
-                            0, // fields
-                            0, // methods
-                            0, // static table
-                            0); // initializer
-  PROTECT(t, class_);
-  
-  unsigned super = s.read2();
-  if (super) {
-    object sc = resolveClass(t, arrayBody(t, pool, super - 1));
-    if (UNLIKELY(t->exception)) return 0;
-
-    set(t, classSuper(t, class_), sc);
-
-    classVmFlags(t, class_) |= classVmFlags(t, sc);
-  }
-  
-  parseInterfaceTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
-
-  parseFieldTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
-
-  parseMethodTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
-
-  return class_;
-}
-
-void
-updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
-{
-  expect(t, bootstrapClass != class_);
-
-  // verify that the classes have the same layout
-  expect(t, classSuper(t, bootstrapClass) == classSuper(t, class_));
-  expect(t, classFixedSize(t, bootstrapClass) == classFixedSize(t, class_));
-  expect(t, (classObjectMask(t, bootstrapClass) == 0
-             and classObjectMask(t, class_) == 0)
-         or intArrayEqual(t, classObjectMask(t, bootstrapClass),
-                          classObjectMask(t, class_)));
-
-  PROTECT(t, bootstrapClass);
-  PROTECT(t, class_);
-
-  ENTER(t, Thread::ExclusiveState);
-
-  classVmFlags(t, class_) |= classVmFlags(t, bootstrapClass);
-
-  memcpy(bootstrapClass,
-         class_,
-         extendedSize(t, class_, baseSize(t, class_, objectClass(t, class_)))
-         * BytesPerWord);
-
-  object fieldTable = classFieldTable(t, class_);
-  if (fieldTable) {
-    for (unsigned i = 0; i < arrayLength(t, fieldTable); ++i) {
-      set(t, fieldClass(t, arrayBody(t, fieldTable, i)), bootstrapClass);
-    }
-  }
-
-  object methodTable = classMethodTable(t, class_);
-  if (methodTable) {
-    for (unsigned i = 0; i < arrayLength(t, methodTable); ++i) {
-      set(t, methodClass(t, arrayBody(t, methodTable, i)), bootstrapClass);
-    }
-  }
-}
-
-object
-resolveClass(Thread* t, object spec)
-{
-  PROTECT(t, spec);
-  ACQUIRE(t, t->vm->classLock);
-
-  object class_ = hashMapFind
-    (t, t->vm->classMap, spec, byteArrayHash, byteArrayEqual);
-  if (class_ == 0) {
-    ClassFinder::Data* data = t->vm->classFinder->find
-      (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
-
-    if (byteArrayBody(t, spec, 0) == '[') {
-      class_ = hashMapFind
-        (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
-    } else if (data) {
-      if (Verbose) {
-        fprintf(stderr, "parsing %s\n", &byteArrayBody
-                (t, spec, 0));
-      }
-
-      // parse class file
-      class_ = parseClass(t, data->start(), data->length());
-      data->dispose();
-
-      if (Verbose) {
-        fprintf(stderr, "done parsing %s\n", &byteArrayBody
-                (t, className(t, class_), 0));
-      }
-
-      PROTECT(t, class_);
-
-      object bootstrapClass = hashMapFind
-        (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
-
-      if (bootstrapClass) {
-        PROTECT(t, bootstrapClass);
-
-        updateBootstrapClass(t, bootstrapClass, class_);
-        class_ = bootstrapClass;
-      }
-
-      hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
-    }
-
-    if (class_) {
-      hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
-    } else {
-      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = makeClassNotFoundException(t, message);
-    }
-  }
-
-  return class_;
 }
 
 inline object
@@ -1591,7 +587,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < objectArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < objectArrayLength(t, array)))
       {
         pushObject(t, objectArrayBody(t, array, index));
       } else {
@@ -1613,7 +609,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < objectArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < objectArrayLength(t, array)))
       {
         set(t, objectArrayBody(t, array, index), value);
       } else {
@@ -1662,10 +658,8 @@ run(Thread* t)
       
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
-      
-      object array = makeObjectArray(t, class_, count, true);
-      
-      pushObject(t, array);
+            
+      pushObject(t, makeObjectArray(t, class_, count, true));
     } else {
       object message = makeString(t, "%d", count);
       exception = makeNegativeArraySizeException(t, message);
@@ -1687,14 +681,7 @@ run(Thread* t)
   case arraylength: {
     object array = popObject(t);
     if (LIKELY(array)) {
-      if (objectClass(t, array)
-          == arrayBody(t, t->vm->types, Machine::ObjectArrayType))
-      {
-        pushInt(t, objectArrayLength(t, array));
-      } else {
-        // for all other array types, the length follows the class pointer.
-        pushInt(t, cast<uint32_t>(array, BytesPerWord));
-      }
+      pushInt(t, cast<uintptr_t>(array, BytesPerWord));
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
@@ -1734,7 +721,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < byteArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < byteArrayLength(t, array)))
       {
         pushInt(t, byteArrayBody(t, array, index));
       } else {
@@ -1756,7 +743,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < byteArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < byteArrayLength(t, array)))
       {
         byteArrayBody(t, array, index) = value;
       } else {
@@ -1781,7 +768,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < charArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < charArrayLength(t, array)))
       {
         pushInt(t, charArrayBody(t, array, index));
       } else {
@@ -1803,7 +790,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < charArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < charArrayLength(t, array)))
       {
         charArrayBody(t, array, index) = value;
       } else {
@@ -2039,7 +1026,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < intArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < intArrayLength(t, array)))
       {
         pushInt(t, intArrayBody(t, array, index));
       } else {
@@ -2068,7 +1055,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < intArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < intArrayLength(t, array)))
       {
         intArrayBody(t, array, index) = value;
       } else {
@@ -2574,7 +1561,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < longArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < longArrayLength(t, array)))
       {
         pushLong(t, longArrayBody(t, array, index));
       } else {
@@ -2603,7 +1590,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < longArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < longArrayLength(t, array)))
       {
         longArrayBody(t, array, index) = value;
       } else {
@@ -3030,7 +2017,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < shortArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < shortArrayLength(t, array)))
       {
         pushInt(t, shortArrayBody(t, array, index));
       } else {
@@ -3052,7 +2039,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (LIKELY(index >= 0 and
-                 static_cast<uint32_t>(index) < shortArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < shortArrayLength(t, array)))
       {
         shortArrayBody(t, array, index) = value;
       } else {
@@ -3226,8 +2213,8 @@ run(Thread* t)
     }
 
     object trace = throwableTrace(t, e);
-    for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
-      object e = objectArrayBody(t, trace, i);
+    for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
+      object e = arrayBody(t, trace, i);
       const int8_t* class_ = &byteArrayBody
         (t, className(t, methodClass(t, stackTraceElementMethod(t, e))), 0);
       const int8_t* method = &byteArrayBody
@@ -3383,6 +2370,8 @@ run(System* system, Heap* heap, ClassFinder* classFinder,
 {
   Machine m(system, heap, classFinder);
   Thread t(&m, 0, 0, 0);
+
+  enter(&t, Thread::ActiveState);
 
   ::run(&t, className, argc, argv);
 

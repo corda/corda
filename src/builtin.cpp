@@ -84,28 +84,13 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
       unsigned elementSize = classArrayElementSize(t, objectClass(t, s));
 
       if (LIKELY(elementSize)) {
-        unsigned offset = 1;
-
-        if (objectClass(t, s)
-            == arrayBody(t, t->vm->types, Machine::ObjectArrayType))
-        {
-          if (LIKELY(objectArrayElementClass(t, s)
-                     == objectArrayElementClass(t, d)))
-          {
-            offset = 2;
-          } else {
-            t->exception = makeArrayStoreException(t);
-            return;
-          }
-        }
-
-        intptr_t sl = cast<uintptr_t>(s, offset * BytesPerWord);
-        intptr_t dl = cast<uintptr_t>(d, offset * BytesPerWord);
+        intptr_t sl = cast<uintptr_t>(s, BytesPerWord);
+        intptr_t dl = cast<uintptr_t>(d, BytesPerWord);
         if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
                    dstOffset >= 0 and dstOffset + length <= dl))
         {
-          uint8_t* sbody = &cast<uint8_t>(s, (offset + 1) * BytesPerWord);
-          uint8_t* dbody = &cast<uint8_t>(d, (offset + 1) * BytesPerWord);
+          uint8_t* sbody = &cast<uint8_t>(s, 2 * BytesPerWord);
+          uint8_t* dbody = &cast<uint8_t>(d, 2 * BytesPerWord);
           memcpy(dbody + (dstOffset * elementSize),
                  sbody + (srcOffset * elementSize),
                  length * elementSize);
@@ -121,7 +106,7 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
   t->exception = makeArrayStoreException(t);
 }
 
-jarray
+jobject
 trace(Thread* t, jint skipCount)
 {
   int frame = t->frame;
@@ -142,6 +127,12 @@ trace(Thread* t, jint skipCount)
   }
 
   return pushReference(t, makeTrace(t, frame));
+}
+
+jarray
+resolveTrace(Thread* t, object trace)
+{
+  // todo
 }
 
 void
