@@ -130,9 +130,37 @@ trace(Thread* t, jint skipCount)
 }
 
 jarray
-resolveTrace(Thread* t, object trace)
+resolveTrace(Thread* t, jobject trace)
 {
-  // todo
+  unsigned length = arrayLength(t, *trace);
+  object array = makeObjectArray
+    (t, arrayBody(t, t->vm->types, Machine::StackTraceElementType),
+     length, true);
+  PROTECT(t, array);
+
+  object e = 0;
+  PROTECT(t, e);
+
+  object class_ = 0;
+  PROTECT(t, class_);
+
+  for (unsigned i = 0; i < length; ++i) {
+    e = arrayBody(t, *trace, i);
+
+    class_ = className(t, methodClass(t, traceElementMethod(t, e)));
+    class_ = makeString(t, class_, 0, byteArrayLength(t, class_) - 1, 0);
+
+    object method = methodName(t, traceElementMethod(t, e));
+    method = makeString(t, method, 0, byteArrayLength(t, method) - 1, 0);
+
+    unsigned line = lineNumber
+      (t, traceElementMethod(t, e), traceElementIp(t, e));
+
+    object ste = makeStackTraceElement(t, class_, method, 0, line);
+    set(t, objectArrayBody(t, array, i), ste);
+  }
+
+  return pushReference(t, array);
 }
 
 void
@@ -202,6 +230,8 @@ populate(Thread* t, object map)
       reinterpret_cast<void*>(arraycopy) },
     { "Java_java_lang_Throwable_trace",
       reinterpret_cast<void*>(trace) },
+    { "Java_java_lang_Throwable_resolveTrace",
+      reinterpret_cast<void*>(resolveTrace) },
     { "Java_java_lang_Thread_start",
       reinterpret_cast<void*>(start) },
     { 0, 0 }

@@ -51,6 +51,7 @@ public class Throwable {
     for (int i = 0; i < trace.length; ++i) {
       sb.append("  at ")
         .append(trace[i].getClassName())
+        .append(".")
         .append(trace[i].getMethodName());
 
       if (trace[i].isNativeMethod()) {

@@ -1374,8 +1374,13 @@ makeArrayClass(Thread* t, object spec)
     }
   }
 
-  object elementClass = resolveClass(t, elementSpec);
-  if (UNLIKELY(t->exception)) return 0;
+  object elementClass = hashMapFind
+    (t, t->vm->bootstrapClassMap, elementSpec, byteArrayHash, byteArrayEqual);
+
+  if (elementClass == 0) {
+    elementClass = resolveClass(t, elementSpec);
+    if (UNLIKELY(t->exception)) return 0;
+  }
 
   return makeArrayClass(t, dimensions, spec, elementClass);
 }
@@ -1886,7 +1891,7 @@ makeTrace(Thread* t, int frame)
 
   unsigned index = 0;
   for (int f = frame; f >= 0; f = frameNext(t, f)) {
-    object e = makeStackTraceElement(t, frameMethod(t, f), frameIp(t, f));
+    object e = makeTraceElement(t, frameMethod(t, f), frameIp(t, f));
     set(t, arrayBody(t, trace, index++), e);
   }
 
@@ -2119,6 +2124,30 @@ makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear)
   setObjectClass(t, array, arrayClass);
 
   return array;
+}
+
+int
+lineNumber(Thread* t, object method, unsigned ip)
+{
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    return NativeLine;
+  }
+
+  object table = codeLineNumberTable(t, methodCode(t, method));
+  if (table) {
+    // todo: do a binary search:
+    int last = UnknownLine;
+    for (unsigned i = 0; i < lineNumberTableLength(t, table); ++i) {
+      if (ip <= lineNumberIp(lineNumberTableBody(t, table, i))) {
+        return last;
+      } else {
+        last = lineNumberLine(lineNumberTableBody(t, table, i));
+      }
+    }
+    return last;
+  } else {
+    return UnknownLine;
+  }
 }
 
 void

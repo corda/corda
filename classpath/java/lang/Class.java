@@ -19,6 +19,6 @@ public final class Class <T> {
   private Class() { }
 
   public String getName() {
-    return new String(name, 0, name.length, false);
+    return new String(name, 0, name.length - 1, false);
   }
 }

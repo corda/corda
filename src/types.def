@@ -103,7 +103,7 @@
   (object front)
   (object rear))
 
-(type stackTraceElement
+(type traceElement
   (object method)
   (int32_t ip))
  
@@ -121,6 +121,13 @@
   (extends jobject)
   (object task)
   (int64_t peer))
+
+(type stackTraceElement java/lang/StackTraceElement
+  (extends jobject)
+  (object class)
+  (object method)
+  (object file)
+  (int32_t line))
 
 (type throwable java/lang/Throwable
   (extends jobject)

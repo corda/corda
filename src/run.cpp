@@ -199,30 +199,6 @@ findMethodInClass(Thread* t, object class_, object reference)
               methodSpec);
 }
 
-int
-lineNumber(Thread* t, object method, unsigned ip)
-{
-  if (methodFlags(t, method) & ACC_NATIVE) {
-    return NativeLine;
-  }
-
-  object table = codeLineNumberTable(t, methodCode(t, method));
-  if (table) {
-    // todo: do a binary search:
-    int last = UnknownLine;
-    for (unsigned i = 0; i < lineNumberTableLength(t, table); ++i) {
-      if (ip <= lineNumberIp(lineNumberTableBody(t, table, i))) {
-        return last;
-      } else {
-        last = lineNumberLine(lineNumberTableBody(t, table, i));
-      }
-    }
-    return last;
-  } else {
-    return UnknownLine;
-  }
-}
-
 inline object
 resolveClass(Thread* t, object pool, unsigned index)
 {
@@ -2216,11 +2192,10 @@ run(Thread* t)
     for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
       object e = arrayBody(t, trace, i);
       const int8_t* class_ = &byteArrayBody
-        (t, className(t, methodClass(t, stackTraceElementMethod(t, e))), 0);
+        (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
       const int8_t* method = &byteArrayBody
-        (t, methodName(t, stackTraceElementMethod(t, e)), 0);
-      int line = lineNumber
-        (t, stackTraceElementMethod(t, e), stackTraceElementIp(t, e));
+        (t, methodName(t, traceElementMethod(t, e)), 0);
+      int line = lineNumber(t, traceElementMethod(t, e), traceElementIp(t, e));
 
       fprintf(stderr, "  at %s.%s ", class_, method);
 

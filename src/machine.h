@@ -1868,8 +1868,11 @@ objectArrayBody(Thread* t, object array, unsigned index)
   assert(t, classObjectMask(t, objectClass(t, array))
          == classObjectMask(t, arrayBody
                             (t, t->vm->types, Machine::ArrayType)));
-  return cast<object>(array, (1 + index) * BytesPerWord);
+  return cast<object>(array, (2 + index) * BytesPerWord);
 }
+
+int
+lineNumber(Thread* t, object method, unsigned ip);
 
 void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
