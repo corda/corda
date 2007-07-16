@@ -271,6 +271,12 @@ postVisit(Thread* t, Heap::Visitor* v)
 void
 postCollect(Thread* t)
 {
+#ifdef VM_STRESS
+  t->vm->system->free(t->heap);
+  t->heap = static_cast<object*>
+    (t->vm->system->allocate(Thread::HeapSizeInBytes));
+#endif
+
   if (t->large) {
     t->vm->system->free(t->large);
     t->large = 0;
@@ -408,88 +414,6 @@ makeJNIName(Thread* t, object method, bool decorate)
   assert(t, index == size + 1);
 
   return name;
-}
-
-unsigned
-parameterFootprint(Thread* t, object spec)
-{
-  unsigned footprint = 0;
-  const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
-    case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    case 'J':
-    case 'D':
-      ++ s;
-      ++ footprint;
-      break;
-
-    default:
-      ++ s;
-      break;
-    }
-
-    ++ footprint;
-  }
-
-  return footprint;
-}
-
-unsigned
-parameterCount(Thread* t, object spec)
-{
-  unsigned count = 0;
-  const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
-    case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    default:
-      ++ s;
-      break;
-    }
-
-    ++ count;
-  }
-
-  return count;
 }
 
 object
@@ -805,11 +729,10 @@ parseCode(Thread* t, Stream& s, object pool)
 
   object code = makeCode(t, pool, 0, 0, maxStack, maxLocals, length, false);
   s.read(&codeBody(t, code, 0), length);
+  PROTECT(t, code);
 
   unsigned ehtLength = s.read2();
   if (ehtLength) {
-    PROTECT(t, code);
-
     object eht = makeExceptionHandlerTable(t, ehtLength, false);
     for (unsigned i = 0; i < ehtLength; ++i) {
       ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
@@ -1012,6 +935,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     object vtable = makeArray(t, virtualCount, false);
 
     if (classFlags(t, class_) & ACC_INTERFACE) {
+      PROTECT(t, vtable);
+
       object it = hashMapIterator(t, virtualMap);
 
       for (; it; it = hashMapIteratorNext(t, it)) {
@@ -1144,12 +1069,16 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   ENTER(t, Thread::ExclusiveState);
 
-  classVmFlags(t, class_) |= classVmFlags(t, bootstrapClass);
+  classFlags(t, bootstrapClass) = classFlags(t, class_);
 
-  memcpy(bootstrapClass,
-         class_,
-         extendedSize(t, class_, baseSize(t, class_, objectClass(t, class_)))
-         * BytesPerWord);
+  set(t, classSuper(t, bootstrapClass), classSuper(t, class_));
+  set(t, classInterfaceTable(t, bootstrapClass),
+       classInterfaceTable(t, class_));
+  set(t, classVirtualTable(t, bootstrapClass), classVirtualTable(t, class_));
+  set(t, classFieldTable(t, bootstrapClass), classFieldTable(t, class_));
+  set(t, classMethodTable(t, bootstrapClass), classMethodTable(t, class_));
+  set(t, classStaticTable(t, bootstrapClass), classStaticTable(t, class_));
+  set(t, classInitializer(t, bootstrapClass), classInitializer(t, class_));
 
   object fieldTable = classFieldTable(t, class_);
   if (fieldTable) {
@@ -1318,9 +1247,6 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
   peer((parent ? parent->child : 0)),
   child(0),
   state(NoState),
-#ifdef VM_STRESS
-  stress(false),
-#endif // VM_STRESS
   systemThread(0),
   javaThread(javaThread),
   code(0),
@@ -1331,6 +1257,10 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
   frame(-1),
   heapIndex(0),
   protector(0)
+#ifdef VM_STRESS
+  , stress(false),
+  heap(static_cast<object*>(m->system->allocate(HeapSizeInBytes)))
+#endif // VM_STRESS
 {
   if (parent == 0) {
     assert(this, m->rootThread == 0);
@@ -1603,6 +1533,86 @@ stringChars(Thread* t, object string, char* chars)
     }
   }
   chars[stringLength(t, string)] = 0;
+}
+
+unsigned
+parameterFootprint(const char* s)
+{
+  unsigned footprint = 0;
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
+      break;
+      
+    case 'J':
+    case 'D':
+      ++ s;
+      ++ footprint;
+      break;
+
+    default:
+      ++ s;
+      break;
+    }
+
+    ++ footprint;
+  }
+
+  return footprint;
+}
+
+unsigned
+parameterCount(const char* s)
+{
+  unsigned count = 0;
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
+      break;
+      
+    default:
+      ++ s;
+      break;
+    }
+
+    ++ count;
+  }
+
+  return count;
 }
 
 object
@@ -1919,8 +1929,6 @@ resolveClass(Thread* t, object spec)
                   (t, className(t, class_), 0));
         }
 
-        PROTECT(t, class_);
-
         object bootstrapClass = hashMapFind
           (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
 
@@ -1934,6 +1942,8 @@ resolveClass(Thread* t, object spec)
     }
 
     if (class_) {
+      PROTECT(t, class_);
+
       hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));

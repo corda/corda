@@ -22,7 +22,7 @@
 namespace vm {
 
 const bool Verbose = false;
-const bool DebugRun = false;
+const bool DebugRun = true;
 const bool DebugStack = false;
 const bool DebugMonitors = false;
 
@@ -1172,9 +1172,6 @@ class Thread {
   Thread* peer;
   Thread* child;
   State state;
-#ifdef VM_STRESS
-  bool stress;
-#endif // VM_STRESS
   System::Thread* systemThread;
   object javaThread;
   object code;
@@ -1185,8 +1182,13 @@ class Thread {
   int frame;
   unsigned heapIndex;
   Protector* protector;
-  uintptr_t stack[StackSizeInWords];
+#ifdef VM_STRESS
+  bool stress;
+  object* heap;
+#else // not VM_STRESS
   object heap[HeapSizeInWords];
+#endif // not VM_STRESS
+  uintptr_t stack[StackSizeInWords];
 };
 
 inline object
@@ -1324,13 +1326,19 @@ allocate(Thread* t, unsigned sizeInBytes)
 }
 
 inline void
-set(Thread* t, object& target, object value)
+mark(Thread* t, object& target)
 {
-  target = value;
   if (t->vm->heap->needsMark(&target)) {
     ACQUIRE_RAW(t, t->vm->heapLock);
     t->vm->heap->mark(&target);
   }
+}
+
+inline void
+set(Thread* t, object& target, object value)
+{
+  target = value;
+  mark(t, target);
 }
 
 inline void
@@ -1908,6 +1916,26 @@ objectArrayBody(Thread* t, object array, unsigned index)
          == classObjectMask(t, arrayBody
                             (t, t->vm->types, Machine::ArrayType)));
   return cast<object>(array, (2 + index) * BytesPerWord);
+}
+
+unsigned
+parameterFootprint(const char* s);
+
+inline unsigned
+parameterFootprint(Thread* t, object spec)
+{
+  return parameterFootprint
+    (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
+}
+
+unsigned
+parameterCount(const char* s);
+
+inline unsigned
+parameterCount(Thread* t, object spec)
+{
+  return parameterCount
+    (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
 }
 
 int

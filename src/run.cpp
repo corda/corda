@@ -2218,6 +2218,8 @@ run(Thread* t)
 void
 run(Thread* t, const char* className, int argc, const char** argv)
 {
+  enter(t, Thread::ActiveState);
+
   object args = makeObjectArray
     (t, arrayBody(t, t->vm->types, Machine::StringType), argc, true);
 
@@ -2228,7 +2230,7 @@ run(Thread* t, const char* className, int argc, const char** argv)
     set(t, objectArrayBody(t, args, i), arg);
   }
 
-  run(t, className, "main", "([Ljava/lang/String;)V", args);
+  run(t, className, "main", "([Ljava/lang/String;)V", 0, args);
 }
 
 } // namespace
@@ -2237,9 +2239,64 @@ namespace vm {
 
 object
 run(Thread* t, const char* className, const char* methodName,
-    const char* methodSpec, ...)
+    const char* methodSpec, object this_, ...)
 {
-  enter(t, Thread::ActiveState);
+  assert(t, t->state == Thread::ActiveState
+         or t->state == Thread::ExclusiveState);
+
+  if (UNLIKELY(t->sp + parameterFootprint(methodSpec) + 1
+               > Thread::StackSizeInWords / 2))
+  {
+    t->exception = makeStackOverflowError(t);
+    return 0;
+  }
+
+  if (this_) {
+    pushObject(t, this_);
+  }
+
+  va_list a;
+  va_start(a, this_);
+
+  const char* s = methodSpec;
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      pushObject(t, va_arg(a, object));
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
+      pushObject(t, va_arg(a, object));
+      break;
+      
+    case 'J':
+    case 'D':
+      ++ s;
+      pushLong(t, va_arg(a, uint64_t));
+      break;
+          
+    default:
+      ++ s;
+      pushInt(t, va_arg(a, uint32_t));
+      break;
+    }
+  }
+
+  va_end(a);
 
   object class_ = resolveClass(t, makeByteArray(t, "%s", className));
   if (LIKELY(t->exception == 0)) {
@@ -2253,52 +2310,7 @@ run(Thread* t, const char* className, const char* methodName,
     
     object method = findMethodInClass(t, class_, reference);
     if (LIKELY(t->exception == 0)) {
-      va_list a;
-      va_start(a, methodSpec);
-
-      if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-        pushObject(t, va_arg(a, object));
-      }
-
-      const char* s = methodSpec;
-      ++ s; // skip '('
-      while (*s and *s != ')') {
-        switch (*s) {
-        case 'L':
-          while (*s and *s != ';') ++ s;
-          ++ s;
-          pushObject(t, va_arg(a, object));
-          break;
-
-        case '[':
-          while (*s == '[') ++ s;
-          switch (*s) {
-          case 'L':
-            while (*s and *s != ';') ++ s;
-            ++ s;
-            break;
-
-          default:
-            ++ s;
-            break;
-          }
-          pushObject(t, va_arg(a, object));
-          break;
-      
-        case 'J':
-        case 'D':
-          ++ s;
-          pushLong(t, va_arg(a, uint64_t));
-          break;
-          
-        default:
-          ++ s;
-          pushInt(t, va_arg(a, uint32_t));
-          break;
-        }
-      }
-
-      va_end(a);
+      assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
       if (methodFlags(t, method) & ACC_NATIVE) {
         unsigned returnCode = invokeNative(t, method);

@@ -10,7 +10,7 @@ namespace vm {
 
 object
 run(Thread* t, const char* className, const char* methodName,
-    const char* methodSpec, ...);
+    const char* methodSpec, object this_, ...);
 
 int
 run(System* sys, Heap* heap, ClassFinder* classFinder,

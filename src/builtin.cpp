@@ -205,6 +205,7 @@ start(Thread* t, jobject this_)
     }
   }
 }
+
 void
 populate(Thread* t, object map)
 {
@@ -212,28 +213,32 @@ populate(Thread* t, object map)
     const char* key;
     void* value;
   } builtins[] = {
-    { "Java_java_lang_Object_toString",
-      reinterpret_cast<void*>(toString) },
+    { "Java_java_lang_System_arraycopy",
+      reinterpret_cast<void*>(arraycopy) },
+    { "Java_java_lang_System_loadLibrary",
+      reinterpret_cast<void*>(loadLibrary) },
+
+    { "Java_java_lang_Thread_start",
+      reinterpret_cast<void*>(start) },
+    { "Java_java_lang_Thread_sleep",
+      reinterpret_cast<void*>(sleep) },
+
+    { "Java_java_lang_Throwable_resolveTrace",
+      reinterpret_cast<void*>(resolveTrace) },
+    { "Java_java_lang_Throwable_trace",
+      reinterpret_cast<void*>(trace) },
+
     { "Java_java_lang_Object_getClass",
       reinterpret_cast<void*>(getClass) },
-    { "Java_java_lang_Object_wait",
-      reinterpret_cast<void*>(wait) },
     { "Java_java_lang_Object_notify",
       reinterpret_cast<void*>(notify) },
     { "Java_java_lang_Object_notifyAll",
       reinterpret_cast<void*>(notifyAll) },
-    { "Java_java_lang_Thread_sleep",
-      reinterpret_cast<void*>(sleep) },
-    { "Java_java_lang_System_loadLibrary",
-      reinterpret_cast<void*>(loadLibrary) },
-    { "Java_java_lang_System_arraycopy",
-      reinterpret_cast<void*>(arraycopy) },
-    { "Java_java_lang_Throwable_trace",
-      reinterpret_cast<void*>(trace) },
-    { "Java_java_lang_Throwable_resolveTrace",
-      reinterpret_cast<void*>(resolveTrace) },
-    { "Java_java_lang_Thread_start",
-      reinterpret_cast<void*>(start) },
+    { "Java_java_lang_Object_toString",
+      reinterpret_cast<void*>(toString) },
+    { "Java_java_lang_Object_wait",
+      reinterpret_cast<void*>(wait) },
+
     { 0, 0 }
   };
 
