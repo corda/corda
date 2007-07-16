@@ -17,7 +17,7 @@ const unsigned MinimumGen2SizeInBytes = 128 * 1024;
 
 const unsigned Top = ~static_cast<unsigned>(0);
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool Debug = false;
 
 class Context;
