@@ -1,4 +1,4 @@
-public class TestExceptions {
+public class Exceptions {
 
   private static void evenMoreDangerous() {
     throw new RuntimeException("chaos! panic! overwhelming anxiety!");

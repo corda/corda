@@ -12,7 +12,7 @@ object
 run(Thread* t, const char* className, const char* methodName,
     const char* methodSpec, ...);
 
-void
+int
 run(System* sys, Heap* heap, ClassFinder* classFinder,
     const char* className, int argc, const char** argv);
 

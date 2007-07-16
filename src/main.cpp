@@ -524,7 +524,7 @@ parsePath(vm::System* s, const char* path)
   return v;
 }
 
-void
+int
 run(unsigned heapSize, const char* path, const char* class_, int argc,
     const char** argv)
 {
@@ -535,7 +535,7 @@ run(unsigned heapSize, const char* path, const char* class_, int argc,
 
   Heap* heap = makeHeap(&s);
 
-  run(&s, heap, &cf, class_, argc, argv);
+  int exitCode = run(&s, heap, &cf, class_, argc, argv);
 
   heap->dispose();
 
@@ -544,6 +544,8 @@ run(unsigned heapSize, const char* path, const char* class_, int argc,
   }
 
   s.free(pathv);
+
+  return exitCode;
 }
 
 void
@@ -584,7 +586,5 @@ main(int ac, const char** av)
     usageAndExit(av[0]);
   }
 
-  run(heapSize, path, class_, argc, argv);
-
-  return 0;
+  return run(heapSize, path, class_, argc, argv);
 }

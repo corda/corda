@@ -2339,7 +2339,7 @@ run(Thread* t, const char* className, const char* methodName,
   return ::run(t);
 }
 
-void
+int
 run(System* system, Heap* heap, ClassFinder* classFinder,
     const char* className, int argc, const char** argv)
 {
@@ -2350,7 +2350,12 @@ run(System* system, Heap* heap, ClassFinder* classFinder,
 
   ::run(&t, className, argc, argv);
 
+  int exitCode = 0;
+  if (t.exception) exitCode = -1;
+
   exit(&t);
+
+  return exitCode;
 }
 
 }

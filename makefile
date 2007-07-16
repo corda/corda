@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 arch = $(shell uname -m)
 ifeq ($(arch),i586)
@@ -8,9 +8,13 @@ ifeq ($(arch),i686)
 	arch = i386
 endif
 
-bld = build/$(arch)
+mode = debug
+
+bld = build/$(arch)/$(mode)
+cls = build/classes
 src = src
 classpath = classpath
+test = test
 
 cxx = g++
 cc = gcc
@@ -21,32 +25,37 @@ javac = javac
 warnings = -Wall -Wextra -Werror -Wold-style-cast -Wunused-parameter \
 	-Winit-self -Wconversion
 
-slow = -O0 -g3
-fast = -Os -DNDEBUG
-
-#thread-cflags = -DNO_THREADS
 thread-cflags = -pthread
 thread-lflags = -lpthread
 
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
 	-I$(src) -I$(bld) $(thread-cflags) -D__STDC_LIMIT_MACROS
+
+ifeq ($(mode),debug)
+cflags += -O0 -g3
+endif
+ifeq ($(mode),stress)
+cflags += -O0 -g3 -DVM_STRESS
+endif
+ifeq ($(mode),stress-major)
+cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
+endif
+ifeq ($(mode),fast)
+fast = -Os -DNDEBUG
+endif
+
 lflags = $(thread-lflags) -ldl
-test-cflags = -DDEBUG_MEMORY
-stress-cflags = -DDEBUG_MEMORY -DDEBUG_MEMORY_MAJOR
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))
-java-classes = \
-	$(foreach x,$(1),$(patsubst $(2)/%.java,$(bld)/classes/%.class,$(x)))
+java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
 
 stdcpp-sources = $(src)/stdc++.cpp
 stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
-stdcpp-cflags = $(fast) $(cflags)
 
 jni-sources = $(classpath)/java/lang/System.cpp
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath))
-jni-cflags = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux \
-	$(slow) $(cflags)
+jni-cflags = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux $(cflags)
 jni-library = $(bld)/libnatives.so
 
 generated-code = \
@@ -91,7 +100,6 @@ interpreter-asm-objects = \
 interpreter-objects = \
 	$(interpreter-cpp-objects) \
 	$(interpreter-asm-objects)
-interpreter-cflags = $(slow) $(cflags)
 
 generator-headers = \
 	$(src)/input.h \
@@ -100,53 +108,31 @@ generator-sources = \
 	$(src)/type-generator.cpp
 generator-objects = $(call cpp-objects,$(generator-sources),$(src))
 generator-executable = $(bld)/generator
-generator-cflags = $(slow) $(cflags)
 
 executable = $(bld)/vm
 
-test-cpp-objects = \
-	$(patsubst $(bld)/%,$(bld)/test-%,$(interpreter-cpp-objects))
-test-asm-objects = \
-	$(patsubst $(bld)/%,$(bld)/test-%,$(interpreter-asm-objects))
-test-objects = \
-	$(test-cpp-objects) \
-	$(test-asm-objects)
-test-executable = $(bld)/test-vm
-
-stress-cpp-objects = \
-	$(patsubst $(bld)/%,$(bld)/stress-%,$(interpreter-cpp-objects))
-stress-asm-objects = \
-	$(patsubst $(bld)/%,$(bld)/stress-%,$(interpreter-asm-objects))
-stress-objects = \
-	$(stress-cpp-objects) \
-	$(stress-asm-objects)
-stress-executable = $(bld)/stress-vm
-
-fast-cpp-objects = \
-	$(patsubst $(bld)/%,$(bld)/fast-%,$(interpreter-cpp-objects))
-fast-asm-objects = \
-	$(patsubst $(bld)/%,$(bld)/fast-%,$(interpreter-asm-objects))
-fast-objects = \
-	$(fast-cpp-objects) \
-	$(fast-asm-objects)
-fast-executable = $(bld)/fast-vm
-fast-cflags = $(fast) $(cflags)
-
-classpath-sources = $(shell find $(classpath)/java -name '*.java')
+classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = $(call java-classes,$(classpath-sources),$(classpath))
 
-input = $(bld)/classes/TestExceptions.class
-input-depends = \
-	$(classpath-classes) \
-	$(jni-library)
+classpath-objects = $(classpath-classes) $(jni-library)
 
-gen-run-arg = $(shell echo $(1) | sed -e 's:$(bld)/classes/\(.*\)\.class:\1:')
-args = -cp $(bld)/classes -hs 67108864 $(call gen-run-arg,$(input))
+test-sources = $(shell find $(test) -name '*.java')
+test-classes = $(call java-classes,$(test-sources),$(test))
+
+input = $(cls)/Hello.class
+
+classpath-objects = $(classpath-classes) $(jni-library)
+
+class-name = $(patsubst $(cls)/%.class,%,$(1))
+class-names = $(foreach x,$(1),$(call class-name,$(x)))
+
+flags = -cp $(cls) -hs 67108864
+args = $(flags) $(call class-name,$(input))
 
 .PHONY: build
 build: $(executable)
 
-$(input): $(input-depends)
+$(input): $(classpath-objects)
 
 .PHONY: run
 run: $(executable) $(input)
@@ -156,37 +142,14 @@ run: $(executable) $(input)
 debug: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) gdb --args $(<) $(args)
 
-.PHONY: fast
-fast: $(fast-executable)
-	ls -lh $(<)
-
 .PHONY: vg
 vg: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
 
 .PHONY: test
-test: $(test-executable) $(input)
-	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
-
-.PHONY: stress
-stress: $(stress-executable) $(input)
-	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
-
-.PHONY: run-all
-run-all: $(executable)
-	set -e; for x in $(all-input); do echo "$$x:"; $(<) $$x; echo; done
-
-.PHONY: vg-all
-vg-all: $(executable)
-	set -e; for x in $(all-input); do echo "$$x:"; $(vg) -q $(<) $$x; done
-
-.PHONY: test-all
-test-all: $(test-executable)
-	set -e; for x in $(all-input); do echo "$$x:"; $(vg) -q $(<) $$x; done
-
-.PHONY: stress-all
-stress-all: $(stress-executable)
-	set -e; for x in $(all-input); do echo "$$x:"; $(vg) -q $(<) $$x; done
+test: $(executable) $(classpath-objects) $(test-classes)
+	LD_LIBRARY_PATH=$(bld) /bin/bash $(test)/test.sh \
+		$(<) "$(flags)" $(call class-names,$(test-classes))
 
 .PHONY: clean
 clean:
@@ -201,61 +164,35 @@ $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
 $(bld)/type-generator.o: \
 	$(generator-headers)
 
-$(bld)/classes/%.class: $(classpath)/%.java
+define compile-class
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
-		-d $(bld)/classes $(<)
+	$(javac) -bootclasspath $(classpath) -classpath $(classpath) -d $(cls) $(<)
+endef
+
+$(cls)/%.class: $(classpath)/%.java
+	$(compile-class)
+
+$(cls)/%.class: $(test)/%.java
+	$(compile-class)
+
+define compile-object
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(cflags) -c $(<) -o $(@)
+endef
 
 $(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(stdcpp-cflags) -c $(<) -o $(@)
+	$(compile-object)
 
 $(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(interpreter-cflags) -c $(<) -o $(@)
+	$(compile-object)
 
 $(interpreter-asm-objects): $(bld)/%.o: $(src)/%.S
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(interpreter-cflags) -c $(<) -o $(@)
-
-$(test-cpp-objects): $(bld)/test-%.o: $(src)/%.cpp $(interpreter-depends)
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(interpreter-cflags) $(test-cflags) -c $(<) -o $(@)
-
-$(test-asm-objects): $(bld)/test-%.o: $(src)/%.S
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(interpreter-cflags) $(test-cflags) -c $(<) -o $(@)
-
-$(stress-cpp-objects): $(bld)/stress-%.o: $(src)/%.cpp $(interpreter-depends)
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(interpreter-cflags) $(stress-cflags) -c $(<) -o $(@)
-
-$(stress-asm-objects): $(bld)/stress-%.o: $(src)/%.S
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(interpreter-cflags) $(stress-cflags) -c $(<) -o $(@)
+	$(compile-object)
 
 $(generator-objects): $(bld)/%.o: $(src)/%.cpp
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(generator-cflags) -c $(<) -o $(@)
-
-$(fast-cpp-objects): $(bld)/fast-%.o: $(src)/%.cpp $(interpreter-depends)
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(fast-cflags) -c $(<) -o $(@)
-
-$(fast-asm-objects): $(bld)/fast-%.o: $(src)/%.S
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(fast-cflags) -c $(<) -o $(@)
+	$(compile-object)
 
 $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
@@ -269,19 +206,6 @@ $(jni-library): $(jni-objects)
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"
 	$(cc) $(lflags) $(^) -o $(@)
-
-$(test-executable): $(test-objects) $(stdcpp-objects)
-	@echo "linking $(@)"
-	$(cc) $(lflags) $(^) -o $(@)
-
-$(stress-executable): $(stress-objects) $(stdcpp-objects)
-	@echo "linking $(@)"
-	$(cc) $(lflags) $(^) -o $(@)
-
-$(fast-executable): $(fast-objects) $(stdcpp-objects)
-	@echo "linking $(@)"
-	$(cc) $(lflags) $(^) -o $(@)
-	strip --strip-all $(@)
 
 .PHONY: generator
 generator: $(generator-executable)

@@ -1,7 +1,6 @@
-public class TestThreads implements Runnable {
-
+public class Threads implements Runnable {
   public static void main(String[] args) {
-    TestThreads test = new TestThreads();
+    Threads test = new Threads();
     Thread thread = new Thread(test);
 
     try {

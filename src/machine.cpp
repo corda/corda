@@ -281,155 +281,6 @@ postCollect(Thread* t)
   }
 }
 
-void
-collect(Thread* t, Heap::CollectionType type)
-{
-  Machine* m = t->vm;
-
-  class Client: public Heap::Client {
-   public:
-    Client(Machine* m): m(m) { }
-
-    virtual void visitRoots(Heap::Visitor* v) {
-      v->visit(&(m->classMap));
-      v->visit(&(m->bootstrapClassMap));
-      v->visit(&(m->builtinMap));
-      v->visit(&(m->monitorMap));
-      v->visit(&(m->types));
-
-      for (Thread* t = m->rootThread; t; t = t->peer) {
-        ::visitRoots(t, v);
-      }
-
-      postVisit(m->rootThread, v);
-    }
-
-    virtual unsigned sizeInWords(object o) {
-      Thread* t = m->rootThread;
-
-      o = m->heap->follow(mask(o));
-
-      return extendedSize
-        (t, o, baseSize(t, o, m->heap->follow(objectClass(t, o))));
-    }
-
-    virtual unsigned copiedSizeInWords(object o) {
-      Thread* t = m->rootThread;
-
-      o = m->heap->follow(mask(o));
-
-      unsigned n = baseSize(t, o, m->heap->follow(objectClass(t, o)));
-
-      if (objectExtended(t, o) or hashTaken(t, o)) {
-        ++ n;
-      }
-
-      return n;
-    }
-
-    virtual void copy(object o, object dst) {
-      Thread* t = m->rootThread;
-
-      o = m->heap->follow(mask(o));
-      object class_ = m->heap->follow(objectClass(t, o));
-
-      unsigned base = baseSize(t, o, class_);
-      unsigned n = extendedSize(t, o, base);
-
-      memcpy(dst, o, n * BytesPerWord);
-
-      if (hashTaken(t, o)) {
-        cast<uintptr_t>(dst, 0) &= PointerMask;
-        cast<uintptr_t>(dst, 0) |= ExtendedMark;
-        extendedWord(t, dst, base) = takeHash(t, o);
-      }
-    }
-
-    virtual void walk(void* p, Heap::Walker* w) {
-      Thread* t = m->rootThread;
-
-      p = m->heap->follow(mask(p));
-      object class_ = m->heap->follow(objectClass(t, p));
-      object objectMask = m->heap->follow(classObjectMask(t, class_));
-
-      if (objectMask) {
-//         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
-//                 p, class_, objectMask, intArrayLength(t, objectMask));
-
-        unsigned fixedSize = classFixedSize(t, class_);
-        unsigned arrayElementSize = classArrayElementSize(t, class_);
-        unsigned arrayLength
-          = (arrayElementSize ?
-             cast<uintptr_t>(p, fixedSize - BytesPerWord) : 0);
-
-        int mask[intArrayLength(t, objectMask)];
-        memcpy(mask, &intArrayBody(t, objectMask, 0),
-               intArrayLength(t, objectMask) * 4);
-
-//         fprintf
-//           (stderr,
-//            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
-//            fixedSize, arrayLength, arrayElementSize, mask[0]);
-
-        unsigned fixedSizeInWords = divide(fixedSize, BytesPerWord);
-        unsigned arrayElementSizeInWords
-          = divide(arrayElementSize, BytesPerWord);
-
-        for (unsigned i = 0; i < fixedSizeInWords; ++i) {
-          if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
-            if (not w->visit(i)) {
-              return;
-            }
-          }
-        }
-
-        bool arrayObjectElements = false;
-        for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-          unsigned k = fixedSizeInWords + j;
-          if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
-            arrayObjectElements = true;
-            break;
-          }
-        }
-
-        if (arrayObjectElements) {
-          for (unsigned i = 0; i < arrayLength; ++i) {
-            for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-              unsigned k = fixedSizeInWords + j;
-              if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
-                if (not w->visit
-                    (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
-                {
-                  return;
-                }
-              }
-            }
-          }
-        }
-      } else {
-        w->visit(0);
-      }
-    }
-    
-   private:
-    Machine* m;
-  } it(m);
-
-  m->unsafe = true;
-  m->heap->collect(type, &it);
-  m->unsafe = false;
-
-  postCollect(m->rootThread);
-
-  for (object f = m->finalizeQueue; f; f = finalizerNext(t, f)) {
-    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
-      (t, finalizerTarget(t, f));
-  }
-  m->finalizeQueue = 0;
-
-  killZombies(t, m->rootThread);
-}
-
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
@@ -1467,6 +1318,9 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
   peer((parent ? parent->child : 0)),
   child(0),
   state(NoState),
+#ifdef VM_STRESS
+  stress(false),
+#endif // VM_STRESS
   systemThread(0),
   javaThread(javaThread),
   code(0),
@@ -1585,6 +1439,8 @@ exit(Thread* t)
 void
 enter(Thread* t, Thread::State s)
 {
+  stress(t);
+
   if (s == t->state) return;
 
   ACQUIRE_RAW(t, t->vm->stateLock);
@@ -2196,6 +2052,155 @@ objectMonitor(Thread* t, object o)
 
     return m;
   }
+}
+
+void
+collect(Thread* t, Heap::CollectionType type)
+{
+  Machine* m = t->vm;
+
+  class Client: public Heap::Client {
+   public:
+    Client(Machine* m): m(m) { }
+
+    virtual void visitRoots(Heap::Visitor* v) {
+      v->visit(&(m->classMap));
+      v->visit(&(m->bootstrapClassMap));
+      v->visit(&(m->builtinMap));
+      v->visit(&(m->monitorMap));
+      v->visit(&(m->types));
+
+      for (Thread* t = m->rootThread; t; t = t->peer) {
+        ::visitRoots(t, v);
+      }
+
+      postVisit(m->rootThread, v);
+    }
+
+    virtual unsigned sizeInWords(object o) {
+      Thread* t = m->rootThread;
+
+      o = m->heap->follow(mask(o));
+
+      return extendedSize
+        (t, o, baseSize(t, o, m->heap->follow(objectClass(t, o))));
+    }
+
+    virtual unsigned copiedSizeInWords(object o) {
+      Thread* t = m->rootThread;
+
+      o = m->heap->follow(mask(o));
+
+      unsigned n = baseSize(t, o, m->heap->follow(objectClass(t, o)));
+
+      if (objectExtended(t, o) or hashTaken(t, o)) {
+        ++ n;
+      }
+
+      return n;
+    }
+
+    virtual void copy(object o, object dst) {
+      Thread* t = m->rootThread;
+
+      o = m->heap->follow(mask(o));
+      object class_ = m->heap->follow(objectClass(t, o));
+
+      unsigned base = baseSize(t, o, class_);
+      unsigned n = extendedSize(t, o, base);
+
+      memcpy(dst, o, n * BytesPerWord);
+
+      if (hashTaken(t, o)) {
+        cast<uintptr_t>(dst, 0) &= PointerMask;
+        cast<uintptr_t>(dst, 0) |= ExtendedMark;
+        extendedWord(t, dst, base) = takeHash(t, o);
+      }
+    }
+
+    virtual void walk(void* p, Heap::Walker* w) {
+      Thread* t = m->rootThread;
+
+      p = m->heap->follow(mask(p));
+      object class_ = m->heap->follow(objectClass(t, p));
+      object objectMask = m->heap->follow(classObjectMask(t, class_));
+
+      if (objectMask) {
+//         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
+//                 p, class_, objectMask, intArrayLength(t, objectMask));
+
+        unsigned fixedSize = classFixedSize(t, class_);
+        unsigned arrayElementSize = classArrayElementSize(t, class_);
+        unsigned arrayLength
+          = (arrayElementSize ?
+             cast<uintptr_t>(p, fixedSize - BytesPerWord) : 0);
+
+        int mask[intArrayLength(t, objectMask)];
+        memcpy(mask, &intArrayBody(t, objectMask, 0),
+               intArrayLength(t, objectMask) * 4);
+
+//         fprintf
+//           (stderr,
+//            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
+//            fixedSize, arrayLength, arrayElementSize, mask[0]);
+
+        unsigned fixedSizeInWords = divide(fixedSize, BytesPerWord);
+        unsigned arrayElementSizeInWords
+          = divide(arrayElementSize, BytesPerWord);
+
+        for (unsigned i = 0; i < fixedSizeInWords; ++i) {
+          if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
+            if (not w->visit(i)) {
+              return;
+            }
+          }
+        }
+
+        bool arrayObjectElements = false;
+        for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+          unsigned k = fixedSizeInWords + j;
+          if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
+            arrayObjectElements = true;
+            break;
+          }
+        }
+
+        if (arrayObjectElements) {
+          for (unsigned i = 0; i < arrayLength; ++i) {
+            for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+              unsigned k = fixedSizeInWords + j;
+              if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
+                if (not w->visit
+                    (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
+                {
+                  return;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        w->visit(0);
+      }
+    }
+    
+   private:
+    Machine* m;
+  } it(m);
+
+  m->unsafe = true;
+  m->heap->collect(type, &it);
+  m->unsafe = false;
+
+  postCollect(m->rootThread);
+
+  for (object f = m->finalizeQueue; f; f = finalizerNext(t, f)) {
+    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
+      (t, finalizerTarget(t, f));
+  }
+  m->finalizeQueue = 0;
+
+  killZombies(t, m->rootThread);
 }
 
 void

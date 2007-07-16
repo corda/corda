@@ -1172,6 +1172,9 @@ class Thread {
   Thread* peer;
   Thread* child;
   State state;
+#ifdef VM_STRESS
+  bool stress;
+#endif // VM_STRESS
   System::Thread* systemThread;
   object javaThread;
   object code;
@@ -1192,7 +1195,8 @@ objectClass(Thread*, object o)
   return mask(cast<object>(o, 0));
 }
 
-void enter(Thread* t, Thread::State state);
+void
+enter(Thread* t, Thread::State state);
 
 class StateResource {
  public:
@@ -1207,9 +1211,41 @@ class StateResource {
   Thread::State oldState;
 };
 
+void
+collect(Thread* t, Heap::CollectionType type);
+
+#ifdef VM_STRESS
+
+inline void
+stress(Thread* t)
+{
+  if ((not t->stress) and t->state != Thread::NoState) {
+    t->stress = true;
+    ENTER(t, Thread::ExclusiveState);
+
+#  ifdef VM_STRESS_MAJOR
+    collect(t, Heap::MajorCollection);
+#  else // not VM_STRESS_MAJOR
+    collect(t, Heap::MinorCollection);
+#  endif // not VM_STRESS_MAJOR
+
+    t->stress = false;
+  }
+}
+
+#else // not VM_STRESS
+
+inline void
+stress(Thread*)
+{ }
+
+#endif // not VM_STRESS
+
 class MonitorResource {
  public:
   MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
+    stress(t);
+
     if (not m->tryAcquire(t)) {
       ENTER(t, Thread::IdleState);
       m->acquire(t);
@@ -1274,6 +1310,8 @@ allocate2(Thread* t, unsigned sizeInBytes);
 inline object
 allocate(Thread* t, unsigned sizeInBytes)
 {
+  stress(t);
+
   if (UNLIKELY(t->heapIndex + divide(sizeInBytes, BytesPerWord)
                >= Thread::HeapSizeInWords
                or t->vm->exclusive))
@@ -1883,6 +1921,8 @@ objectMonitor(Thread* t, object o);
 inline void
 acquire(Thread* t, object o)
 {
+  stress(t);
+
   System::Monitor* m = objectMonitor(t, o);
 
   if (DebugMonitors) {
@@ -1912,6 +1952,8 @@ release(Thread* t, object o)
 inline void
 wait(Thread* t, object o, int64_t milliseconds)
 {
+  stress(t);
+
   System::Monitor* m = objectMonitor(t, o);
 
   if (DebugMonitors) {
