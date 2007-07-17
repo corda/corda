@@ -16,6 +16,8 @@ src = src
 classpath = classpath
 test = test
 
+input = $(cls)/Exceptions.class
+
 cxx = g++
 cc = gcc
 vg = nice valgrind --leak-check=full --num-callers=32 --db-attach=yes \
@@ -118,8 +120,6 @@ classpath-objects = $(classpath-classes) $(jni-library)
 
 test-sources = $(shell find $(test) -name '*.java')
 test-classes = $(call java-classes,$(test-sources),$(test))
-
-input = $(cls)/Hello.class
 
 classpath-objects = $(classpath-classes) $(jni-library)
 

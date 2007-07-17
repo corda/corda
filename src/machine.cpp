@@ -1358,12 +1358,18 @@ exit(Thread* t)
 
   joinAll(t, t->vm->rootThread);
 
-  for (object f = t->vm->finalizers; f; f = finalizerNext(t, f)) {
+  for (object* p = &(t->vm->finalizers); *p;) {
+    object f = *p;
+    *p = finalizerNext(t, *p);
+
     reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
       (t, finalizerTarget(t, f));
   }
 
-  for (object f = t->vm->tenuredFinalizers; f; f = finalizerNext(t, f)) {
+  for (object* p = &(t->vm->tenuredFinalizers); *p;) {
+    object f = *p;
+    *p = finalizerNext(t, *p);
+
     reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
       (t, finalizerTarget(t, f));
   }

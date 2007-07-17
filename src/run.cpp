@@ -872,9 +872,7 @@ run(Thread* t)
   } goto loop;
 
   case getfield: {
-    object instance = popObject(t);
-
-    if (LIKELY(instance)) {
+    if (LIKELY(peekObject(t, sp - 1))) {
       uint8_t index1 = codeBody(t, code, ip++);
       uint8_t index2 = codeBody(t, code, ip++);
       uint16_t index = (index1 << 8) | index2;
@@ -882,6 +880,8 @@ run(Thread* t)
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
       
+      object instance = popObject(t);
+
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
