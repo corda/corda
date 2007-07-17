@@ -396,6 +396,8 @@ invokeNative(Thread* t, object method)
     return VoidField;
   }
 
+  PROTECT(t, data);
+
   pushFrame(t, method);
 
   unsigned count = methodParameterCount(t, method);

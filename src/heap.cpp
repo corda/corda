@@ -1419,7 +1419,8 @@ makeHeap(System* system)
         return Reachable;
       } else if (c.nextGen2.contains(p)
                  or (c.gen2.contains(p)
-                     and c.gen2.indexOf(p) >= c.gen2Base))
+                     and (c.mode == ::MinorCollection
+                          or c.gen2.indexOf(p) >= c.gen2Base)))
       {
         return Tenured;
       } else if (wasCollected(&c, p)) {

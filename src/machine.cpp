@@ -1341,6 +1341,11 @@ Thread::dispose()
     systemThread = 0;
   }
 
+#ifdef VM_STRESS
+  vm->system->free(heap);
+  heap = 0;
+#endif // VM_STRESS
+
   if (allocator) {
     allocator->free(this);
   }
@@ -1377,7 +1382,8 @@ enter(Thread* t, Thread::State s)
 
   switch (s) {
   case Thread::ExclusiveState: {
-    assert(t, t->state == Thread::ActiveState);
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExitState);
 
     while (t->vm->exclusive) {
       // another thread got here first.

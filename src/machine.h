@@ -22,7 +22,7 @@
 namespace vm {
 
 const bool Verbose = false;
-const bool DebugRun = true;
+const bool DebugRun = false;
 const bool DebugStack = false;
 const bool DebugMonitors = false;
 
@@ -1221,7 +1221,10 @@ collect(Thread* t, Heap::CollectionType type);
 inline void
 stress(Thread* t)
 {
-  if ((not t->stress) and t->state != Thread::NoState) {
+  if ((not t->stress)
+      and t->state != Thread::NoState
+      and t->state != Thread::IdleState)
+  {
     t->stress = true;
     { ENTER(t, Thread::ExclusiveState);
 
