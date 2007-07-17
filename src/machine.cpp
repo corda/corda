@@ -910,6 +910,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       object method = arrayBody(t, methodTable, i);
 
       if (methodFlags(t, method) & ACC_NATIVE) {
+        PROTECT(t, method);
+
         object overloaded = hashMapFind
           (t, nativeMap, method, methodHash, methodEqual);
 
@@ -932,7 +934,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     // generate class vtable
 
     unsigned i = 0;
-    object vtable = makeArray(t, virtualCount, false);
+    object vtable = makeArray(t, virtualCount, true);
 
     if (classFlags(t, class_) & ACC_INTERFACE) {
       PROTECT(t, vtable);
