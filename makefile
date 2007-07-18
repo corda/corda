@@ -149,7 +149,7 @@ vg: $(executable) $(input)
 .PHONY: test
 test: $(executable) $(classpath-objects) $(test-classes)
 	LD_LIBRARY_PATH=$(bld) /bin/bash $(test)/test.sh \
-		$(<) "$(flags)" $(call class-names,$(test-classes))
+		$(<) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
 .PHONY: clean
 clean:
