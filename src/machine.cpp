@@ -27,6 +27,7 @@ join(Thread* t, Thread* o)
 {
   if (t != o) {
     o->systemThread->join();
+    o->state = Thread::JoinedState;
   }
 }
 
@@ -97,9 +98,15 @@ killZombies(Thread* t, Thread* o)
     killZombies(t, child);
   }
 
-  if (o->state == Thread::ZombieState) {
+  switch (o->state) {
+  case Thread::ZombieState:
     join(t, o);
+    // fall through
+
+  case Thread::JoinedState:
     dispose(t, o, true);
+
+  default: break;
   }
 }
 
@@ -1386,12 +1393,16 @@ enter(Thread* t, Thread::State s)
 
   if (s == t->state) return;
 
+  if (t->state == Thread::ExitState) {
+    // once in exit state, we stay that way
+    return;
+  }
+
   ACQUIRE_RAW(t, t->vm->stateLock);
 
   switch (s) {
   case Thread::ExclusiveState: {
-    assert(t, t->state == Thread::ActiveState
-           or t->state == Thread::ExitState);
+    assert(t, t->state == Thread::ActiveState);
 
     while (t->vm->exclusive) {
       // another thread got here first.
@@ -1419,8 +1430,11 @@ enter(Thread* t, Thread::State s)
     default: abort(t);
     }
 
+    assert(t, t->vm->activeCount > 0);
     -- t->vm->activeCount;
+
     if (s == Thread::ZombieState) {
+      assert(t, t->vm->liveCount > 0);
       -- t->vm->liveCount;
     }
     t->state = s;
@@ -1467,8 +1481,10 @@ enter(Thread* t, Thread::State s)
 
     default: abort(t);
     }
-      
+
+    assert(t, t->vm->activeCount > 0);
     -- t->vm->activeCount;
+
     t->state = s;
 
     while (t->vm->liveCount > 1) {

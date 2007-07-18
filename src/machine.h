@@ -1131,6 +1131,7 @@ class Thread {
     ActiveState,
     IdleState,
     ZombieState,
+    JoinedState,
     ExclusiveState,
     ExitState
   };

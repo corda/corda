@@ -187,7 +187,9 @@ class Segment {
       assert(segment->context, capacity >= segment->capacity());
 
       uintptr_t* p = newData + offset(capacity);
-      memcpy(p, data(), size(segment->position()) * BytesPerWord);
+      if (segment->position()) {
+        memcpy(p, data(), size(segment->position()) * BytesPerWord);
+      }
 
       if (child) {
         child->update(newData, capacity);
@@ -485,8 +487,17 @@ class Segment {
 
   void ensure(unsigned minimum) {
     if (remaining() < minimum) {
-      assert(context, rear->position);
       assert(context, rear->next == 0);
+
+      if (rear->position == 0) {
+        Chain* c = rear;
+        if (front == rear) {
+          front = rear = 0;
+        } else {
+          rear = rear->previous;
+        }
+        Chain::dispose(c);
+      }
 
       unsigned desired = capacity() + minimum;
       
@@ -501,8 +512,12 @@ class Segment {
         map->update(c->data() + c->capacity, c->offset + c->capacity);
       }
 
-      rear->next = c;
-      rear = c;
+      if (rear) {
+        rear->next = c;
+        rear = c;
+      } else {
+        front = rear = c;
+      }
     }
   }
 
