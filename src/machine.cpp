@@ -730,6 +730,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 object
 parseCode(Thread* t, Stream& s, object pool)
 {
+  PROTECT(t, pool);
+
   unsigned maxStack = s.read2();
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
@@ -1017,6 +1019,7 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
   s.read2(); // major version
 
   object pool = parsePool(t, s);
+  PROTECT(t, pool);
 
   unsigned flags = s.read2();
   unsigned name = s.read2();
@@ -1728,15 +1731,17 @@ hashMapInsert(Thread* t, object map, object key, object value,
   }
 
   unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-  object n = arrayBody(t, array, index);
 
   if (weak) {
+    PROTECT(t, key);
     PROTECT(t, value);
-    key = makeWeakReference(t, key, t->vm->weakReferences);
-    t->vm->weakReferences = key;
+
+    t->vm->weakReferences = makeWeakReference(t, 0, t->vm->weakReferences);
+    jreferenceTarget(t, t->vm->weakReferences) = key;
+    key = t->vm->weakReferences;
   }
 
-  n = makeTriple(t, key, value, n);
+  object n = makeTriple(t, key, value, arrayBody(t, array, index));
 
   set(t, arrayBody(t, array, index), n);
 }
@@ -1767,6 +1772,7 @@ hashMapRemove(Thread* t, object map, object key,
     }
 
     if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
+      PROTECT(t, o);
       hashMapResize(t, map, hash, arrayLength(t, array) / 2);
     }
   }
@@ -2054,7 +2060,8 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
   ACQUIRE(t, t->vm->finalizerLock);
 
   t->vm->finalizers = makeFinalizer
-    (t, target, reinterpret_cast<void*>(finalize), t->vm->finalizers);
+    (t, 0, reinterpret_cast<void*>(finalize), t->vm->finalizers);
+  finalizerTarget(t, t->vm->finalizers) = target;
 }
 
 System::Monitor*

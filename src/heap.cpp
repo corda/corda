@@ -124,19 +124,19 @@ class Segment {
     unsigned scale;
     bool clearNewData;
 
-    Map(Segment* segment = 0, unsigned bitsPerRecord = 1,
-        unsigned scale = 1, Map* child = 0, bool clearNewData = true):
+    Map(Segment* segment, unsigned bitsPerRecord = 1, unsigned scale = 1,
+        Map* child = 0, bool clearNewData = true):
       segment(segment),
       child(child),
       bitsPerRecord(bitsPerRecord),
       scale(scale),
       clearNewData(clearNewData)
-    {
-      if (segment) {
-        assert(segment->context, bitsPerRecord);
-        assert(segment->context, scale);
-        assert(segment->context, powerOfTwo(scale));
-      }
+    { }
+
+    void check() {
+      assert(segment->context, bitsPerRecord);
+      assert(segment->context, scale);
+      assert(segment->context, powerOfTwo(scale));
     }
 
     void replaceWith(Map* m) {
@@ -273,12 +273,6 @@ class Segment {
       if (child) n += child->footprint(capacity);
       return n;
     }
-
-    void setSegment(Segment* s) {
-      segment = s;
-
-      if (child) child->setSegment(s);
-    }
   };
 
   class Chain {
@@ -369,11 +363,11 @@ class Segment {
       front = rear = Chain::make(this, minimum, desired);
 
       if (map) {
+        map->check();
         if (map->clearNewData) {
           memset(front->data() + front->capacity, 0,
                  map->footprint(front->capacity) * BytesPerWord);
         }
-        map->setSegment(this);
       }
     }
   }
@@ -422,11 +416,10 @@ class Segment {
     if (s->map) {
       if (map) {
         map->replaceWith(s->map);
+        s->map = 0;
       } else {
-        map = s->map;
-        map->setSegment(this);
+        abort(context);
       }
-      s->map = 0;
     } else {
       map = 0;
     }    
@@ -540,10 +533,23 @@ class Context {
   Context(System* system):
     system(system),
     client(0),
-    gen1(this, 0, 0),
-    nextGen1(this, 0, 0),
-    gen2(this, 0, 0),
-    nextGen2(this, 0, 0)
+
+    ageMap(&gen1, log(TenureThreshold), 1, 0, false),
+    gen1(this, 0, 0, &ageMap),
+
+    nextAgeMap(&nextGen1, log(TenureThreshold), 1, 0, false),
+    nextGen1(this, 0, 0, &nextAgeMap),
+
+    pointerMap(&gen2),
+    pageMap(&gen2, 1, LikelyPageSizeInBytes / BytesPerWord, &pointerMap),
+    heapMap(&gen2, 1, pageMap.scale * 1024, &pageMap),
+    gen2(this, 0, 0, &heapMap),
+
+    nextPointerMap(&nextGen2),
+    nextPageMap(&nextGen2, 1, LikelyPageSizeInBytes / BytesPerWord,
+            &nextPointerMap),
+    nextHeapMap(&nextGen2, 1, nextPageMap.scale * 1024, &nextPageMap),
+    nextGen2(this, 0, 0, &nextHeapMap)
   { }
 
   void dispose() {
@@ -556,23 +562,23 @@ class Context {
   System* system;
   Heap::Client* client;
   
-  Segment gen1;
-  Segment nextGen1;
-  Segment gen2;
-  Segment nextGen2;
-
-  unsigned gen2Base;
-
   Segment::Map ageMap;
+  Segment gen1;
+
   Segment::Map nextAgeMap;
+  Segment nextGen1;
 
   Segment::Map pointerMap;
   Segment::Map pageMap;
   Segment::Map heapMap;
+  Segment gen2;
 
   Segment::Map nextPointerMap;
   Segment::Map nextPageMap;
   Segment::Map nextHeapMap;
+  Segment nextGen2;
+
+  unsigned gen2Base;
 
   CollectionMode mode;
 };
@@ -1350,7 +1356,9 @@ collect(Context* c)
     initNextGen1(c);
     initNextGen2(c);
     
-    c->heapMap.clear();
+    if (c->gen2.position()) {
+      c->heapMap.clear();
+    }
 
     if (Verbose) {
       fprintf(stderr, "major collection\n");

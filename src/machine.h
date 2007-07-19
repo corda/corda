@@ -1954,8 +1954,6 @@ objectMonitor(Thread* t, object o);
 inline void
 acquire(Thread* t, object o)
 {
-  stress(t);
-
   System::Monitor* m = objectMonitor(t, o);
 
   if (DebugMonitors) {
@@ -1967,6 +1965,8 @@ acquire(Thread* t, object o)
     ENTER(t, Thread::IdleState);
     m->acquire(t);
   }
+
+  stress(t);
 }
 
 inline void
@@ -1985,8 +1985,6 @@ release(Thread* t, object o)
 inline void
 wait(Thread* t, object o, int64_t milliseconds)
 {
-  stress(t);
-
   System::Monitor* m = objectMonitor(t, o);
 
   if (DebugMonitors) {
@@ -2005,6 +2003,8 @@ wait(Thread* t, object o, int64_t milliseconds)
     fprintf(stderr, "thread %p wakes up on %p for %x\n",
             t, m, objectHash(t, o));
   }
+
+  stress(t);
 }
 
 inline void

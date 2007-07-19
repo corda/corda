@@ -1,8 +1,8 @@
 #!/bin/bash
 
 log=build/log.txt
-vg="valgrind --leak-check=full --num-callers=32 --db-attach=yes \
---freelist-vol=100000000"
+vg="nice valgrind --leak-check=full --num-callers=32 \
+--freelist-vol=100000000 --error-exitcode=1"
 
 vm=${1}; shift
 mode=${1}; shift

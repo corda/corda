@@ -391,6 +391,8 @@ checkStack(Thread* t, object method)
 unsigned
 invokeNative(Thread* t, object method)
 {
+  PROTECT(t, method);
+
   object data = resolveNativeMethodData(t, method);
   if (UNLIKELY(t->exception)) {
     return VoidField;
@@ -2156,7 +2158,9 @@ run(Thread* t)
           }
 
           if (catchType) {
+            PROTECT(t, eht);
             catchType = resolveClass(t, catchType);
+            eh = exceptionHandlerTableBody(t, eht, i);
           }
 
           if (catchType == 0 or instanceOf(t, catchType, exception)) {
