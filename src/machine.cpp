@@ -137,6 +137,44 @@ visitRoots(Thread* t, Heap::Visitor* v)
 }
 
 void
+referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
+{
+  v->visit(p);
+  jreferenceTarget(t, *p) = 0;
+
+  if (t->vm->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable) {
+    // queue is reachable - add the reference
+
+    v->visit(&jreferenceQueue(t, *p));
+
+    object q = jreferenceQueue(t, *p);
+
+    set(t, jreferenceJnext(t, *p), *p);
+    if (referenceQueueFront(t, q)) {
+      set(t, jreferenceJnext(t, referenceQueueRear(t, q)), *p);
+    } else {
+      set(t, referenceQueueFront(t, q), *p);
+    }
+    set(t, referenceQueueRear(t, q), *p);
+
+    jreferenceQueue(t, *p) = 0;
+  }
+}
+
+void
+referenceTargetReachable(Thread* t, object* p, Heap::Visitor* v)
+{
+  v->visit(p);
+  v->visit(&jreferenceTarget(t, *p));
+
+  if (t->vm->heap->status(jreferenceQueue(t, *p)) == Heap::Unreachable) {
+    jreferenceQueue(t, *p) = 0;
+  } else {
+    v->visit(&jreferenceQueue(t, *p));
+  }
+}
+
+void
 postVisit(Thread* t, Heap::Visitor* v)
 {
   Machine* m = t->vm;
@@ -188,16 +226,15 @@ postVisit(Thread* t, Heap::Visitor* v)
 
       *p = jreferenceNext(t, *p);
     } else if (m->heap->status(jreferenceTarget(t, *p)) == Heap::Unreachable) {
-      // target is unreachable - clear the reference and remove it
-      // from the list
+      // target is unreachable - clear the reference, remove it from
+      // the list, and enqueue it if it has a live reference queue
 
-      jreferenceTarget(t, *p) = 0;
+      referenceTargetUnreachable(t, p, v);
       *p = jreferenceNext(t, *p);
     } else {
       // both reference and target are reachable
 
-      v->visit(p);
-      v->visit(&jreferenceTarget(t, *p));
+      referenceTargetReachable(t, p, v);
 
       if (m->heap->status(*p) == Heap::Tenured) {
         // the reference is tenured, so we remove it from
@@ -248,17 +285,15 @@ postVisit(Thread* t, Heap::Visitor* v)
       } else if (m->heap->status(jreferenceTarget(t, *p))
                  == Heap::Unreachable)
       {
-        // target is unreachable - clear the reference and remove it
-        // from the list
+        // target is unreachable - clear the reference, remove it from
+        // the list, and enqueue it if it has a live reference queue
 
-        jreferenceTarget(t, *p) = 0;
+        referenceTargetUnreachable(t, p, v);
         *p = jreferenceNext(t, *p);
       } else {
         // target is reachable
 
-        v->visit(p);
-        v->visit(&jreferenceTarget(t, *p));
-
+        referenceTargetReachable(t, p, v);
         p = &jreferenceNext(t, *p);
       }
     }
@@ -1308,9 +1343,6 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
 
 #include "type-java-initializations.cpp"
 
-    classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
-      |= WeakReferenceFlag;
-
     m->classMap = makeHashMap(this, NormalMap, 0, 0);
     m->builtinMap = makeHashMap(this, NormalMap, 0, 0);
     m->monitorMap = makeHashMap(this, WeakMap, 0, 0);
@@ -1736,7 +1768,8 @@ hashMapInsert(Thread* t, object map, object key, object value,
     PROTECT(t, key);
     PROTECT(t, value);
 
-    t->vm->weakReferences = makeWeakReference(t, 0, t->vm->weakReferences);
+    t->vm->weakReferences = makeWeakReference
+      (t, 0, 0, t->vm->weakReferences, 0);
     jreferenceTarget(t, t->vm->weakReferences) = key;
     key = t->vm->weakReferences;
   }

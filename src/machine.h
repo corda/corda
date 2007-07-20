@@ -61,8 +61,6 @@ enum MapType {
 const int NativeLine = -1;
 const int UnknownLine = -2;
 
-const unsigned WeakReferenceFlag = 1 << 0;
-
 class Thread;
 
 typedef Thread JNIEnv;

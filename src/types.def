@@ -190,7 +190,7 @@
 
 (type boolean java/lang/Boolean
   (extends jobject)
-  (int8_t value))
+  (uint8_t value))
 
 (type short java/lang/Short
   (extends jobject)
@@ -225,7 +225,8 @@
   (extends jobject)
   (void* target)
   (void* queue)
-  (void* next))
+  (void* next)
+  (object jnext))
 
 (type weakReference java/lang/ref/WeakReference
   (extends jreference))
@@ -239,7 +240,7 @@
 
 (type booleanArray [Z
   (extends jobject)
-  (array int8_t body))
+  (array uint8_t body))
 
 (type shortArray [S
   (extends jobject)

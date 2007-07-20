@@ -19,10 +19,10 @@ public abstract class ReferenceQueue<T> {
   void add(Reference<? extends T> r) {
     r.next = r;
     if (front == null) {
-      front = rear = r;
+      front = r;
     } else {
       rear.next = r;
-      rear = r;
     }
+    rear = r;
   }
 }

@@ -8,4 +8,8 @@ public class PhantomReference<T> extends Reference<T> {
   public PhantomReference(T target) {
     this(target, null);
   }
+
+  public T get() {
+    return null;
+  }
 }
