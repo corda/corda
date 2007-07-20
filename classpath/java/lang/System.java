@@ -15,6 +15,8 @@ public abstract class System {
 
   public static native String getProperty(String name);
 
+  public static native void gc();
+
   public static class Output {
     public synchronized native void print(String s);
 

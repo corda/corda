@@ -1,6 +1,6 @@
 package java.lang;
 
-public class Long {
+public final class Long {
   private final long value;
 
   public Long(long value) {

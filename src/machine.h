@@ -61,6 +61,9 @@ enum MapType {
 const int NativeLine = -1;
 const int UnknownLine = -2;
 
+const unsigned ReferenceFlag = 1 << 0;
+const unsigned WeakReferenceFlag = 1 << 1;
+
 class Thread;
 
 typedef Thread JNIEnv;
@@ -1106,7 +1109,7 @@ class Machine {
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
-  System::Monitor* finalizerLock;
+  System::Monitor* referenceLock;
   System::Library* libraries;
   object classMap;
   object bootstrapClassMap;

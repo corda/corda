@@ -10,14 +10,16 @@ public class StringBuilder {
     return this;
   }
 
+  public StringBuilder append(Object o) {
+    return append(o == null ? "null" : o.toString());
+  }
+
   public StringBuilder append(int v) {
-    append(String.valueOf(v));
-    return this;
+    return append(String.valueOf(v));
   }
 
   public StringBuilder append(long v) {
-    append(String.valueOf(v));
-    return this;
+    return append(String.valueOf(v));
   }
 
   public String toString() {

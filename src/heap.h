@@ -13,6 +13,7 @@ class Heap {
   };
 
   enum Status {
+    Null,
     Reachable,
     Unreachable,
     Tenured

@@ -1438,7 +1438,9 @@ makeHeap(System* system)
     virtual Status status(void* p) {
       p = mask(p);
 
-      if (c.nextGen1.contains(p)) {
+      if (p == 0) {
+        return Null;
+      } else if (c.nextGen1.contains(p)) {
         return Reachable;
       } else if (c.nextGen2.contains(p)
                  or (c.gen2.contains(p)

@@ -106,6 +106,14 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
   t->exception = makeArrayStoreException(t);
 }
 
+void
+gc(Thread* t)
+{
+  ENTER(t, Thread::ExclusiveState);
+
+  collect(t, Heap::MajorCollection);
+}
+
 jobject
 trace(Thread* t, jint skipCount)
 {
@@ -217,6 +225,8 @@ populate(Thread* t, object map)
       reinterpret_cast<void*>(arraycopy) },
     { "Java_java_lang_System_loadLibrary",
       reinterpret_cast<void*>(loadLibrary) },
+    { "Java_java_lang_System_gc",
+      reinterpret_cast<void*>(gc) },
 
     { "Java_java_lang_Thread_start",
       reinterpret_cast<void*>(start) },

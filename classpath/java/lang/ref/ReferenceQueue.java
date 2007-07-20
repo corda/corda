@@ -1,6 +1,6 @@
 package java.lang.ref;
 
-public abstract class ReferenceQueue<T> {
+public class ReferenceQueue<T> {
   private Reference<? extends T> front;
   private Reference<? extends T> rear;
 

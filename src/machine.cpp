@@ -142,7 +142,9 @@ referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
   v->visit(p);
   jreferenceTarget(t, *p) = 0;
 
-  if (t->vm->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable) {
+  if (jreferenceQueue(t, *p)
+      and t->vm->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
+  {
     // queue is reachable - add the reference
 
     v->visit(&jreferenceQueue(t, *p));
@@ -158,6 +160,17 @@ referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
     set(t, referenceQueueRear(t, q), *p);
 
     jreferenceQueue(t, *p) = 0;
+  }
+}
+
+void
+referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
+{
+  if (jreferenceQueue(t, *p)
+      and t->vm->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
+  {
+    // queue is reachable - add the reference
+    referenceTargetUnreachable(t, p, v);    
   }
 }
 
@@ -222,12 +235,12 @@ postVisit(Thread* t, Heap::Visitor* v)
 
   for (object* p = &(m->weakReferences); *p;) {
     if (m->heap->status(*p) == Heap::Unreachable) {
-      // reference is unreachable - remove it from the list
+      // reference is unreachable
 
+      referenceUnreachable(t, p, v);
       *p = jreferenceNext(t, *p);
     } else if (m->heap->status(jreferenceTarget(t, *p)) == Heap::Unreachable) {
-      // target is unreachable - clear the reference, remove it from
-      // the list, and enqueue it if it has a live reference queue
+      // target is unreachable
 
       referenceTargetUnreachable(t, p, v);
       *p = jreferenceNext(t, *p);
@@ -279,19 +292,19 @@ postVisit(Thread* t, Heap::Visitor* v)
 
     for (object* p = &(m->tenuredWeakReferences); *p;) {
       if (m->heap->status(*p) == Heap::Unreachable) {
-        // reference is unreachable - remove it from the list
+        // reference is unreachable
 
+        referenceUnreachable(t, p, v);
         *p = jreferenceNext(t, *p);
       } else if (m->heap->status(jreferenceTarget(t, *p))
                  == Heap::Unreachable)
       {
-        // target is unreachable - clear the reference, remove it from
-        // the list, and enqueue it if it has a live reference queue
+        // target is unreachable
 
         referenceTargetUnreachable(t, p, v);
         *p = jreferenceNext(t, *p);
       } else {
-        // target is reachable
+        // both reference and target are reachable
 
         referenceTargetReachable(t, p, v);
         p = &jreferenceNext(t, *p);
@@ -1106,7 +1119,9 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   // verify that the classes have the same layout
   expect(t, classSuper(t, bootstrapClass) == classSuper(t, class_));
   expect(t, classFixedSize(t, bootstrapClass) == classFixedSize(t, class_));
-  expect(t, (classObjectMask(t, bootstrapClass) == 0
+  expect(t,
+         (classVmFlags(t, bootstrapClass) & ReferenceFlag)
+         or (classObjectMask(t, bootstrapClass) == 0
              and classObjectMask(t, class_) == 0)
          or intArrayEqual(t, classObjectMask(t, bootstrapClass),
                           classObjectMask(t, class_)));
@@ -1243,7 +1258,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   stateLock(0),
   heapLock(0),
   classLock(0),
-  finalizerLock(0),
+  referenceLock(0),
   libraries(0),
   classMap(0),
   bootstrapClassMap(0),
@@ -1262,7 +1277,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   if (not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
-      not system->success(system->make(&finalizerLock)))
+      not system->success(system->make(&referenceLock)))
   {
     system->abort();
   }
@@ -1274,7 +1289,7 @@ Machine::dispose()
   stateLock->dispose();
   heapLock->dispose();
   classLock->dispose();
-  finalizerLock->dispose();
+  referenceLock->dispose();
 
   if (libraries) {
     libraries->dispose();
@@ -1338,6 +1353,13 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
     set(t, classSuper(t, intArrayClass), objectClass);
 
     m->unsafe = false;
+
+    classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
+      |= ReferenceFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
+      |= ReferenceFlag | WeakReferenceFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
+      |= ReferenceFlag | WeakReferenceFlag;
 
     m->bootstrapClassMap = makeHashMap(this, NormalMap, 0, 0);
 
@@ -2090,7 +2112,7 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 {
   PROTECT(t, target);
 
-  ACQUIRE(t, t->vm->finalizerLock);
+  ACQUIRE(t, t->vm->referenceLock);
 
   t->vm->finalizers = makeFinalizer
     (t, 0, reinterpret_cast<void*>(finalize), t->vm->finalizers);

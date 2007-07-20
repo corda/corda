@@ -76,6 +76,18 @@ popFrame(Thread* t)
   }
 }
 
+void
+registerWeakReference(Thread* t, object r)
+{
+  PROTECT(t, r);
+
+  ACQUIRE(t, t->vm->referenceLock);
+
+  // jreferenceNext(t, r)
+  cast<object>(r, 3 * BytesPerWord) = t->vm->weakReferences;
+  t->vm->weakReferences = r;
+}
+
 inline object
 make(Thread* t, object class_)
 {
@@ -85,6 +97,10 @@ make(Thread* t, object class_)
   *static_cast<object*>(instance) = class_;
   memset(static_cast<object*>(instance) + 1, 0,
          sizeInBytes - sizeof(object));
+
+  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
+    registerWeakReference(t, instance);
+  }
 
   return instance;
 }
@@ -1085,8 +1101,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    int32_t b = popInt(t);
-    int32_t a = popInt(t);
+    object b = popObject(t);
+    object a = popObject(t);
     
     if (a == b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
@@ -1097,8 +1113,8 @@ run(Thread* t)
     uint8_t offset1 = codeBody(t, code, ip++);
     uint8_t offset2 = codeBody(t, code, ip++);
 
-    int32_t b = popInt(t);
-    int32_t a = popInt(t);
+    object b = popObject(t);
+    object a = popObject(t);
     
     if (a != b) {
       ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
