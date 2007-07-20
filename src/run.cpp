@@ -76,19 +76,7 @@ popFrame(Thread* t)
   }
 }
 
-void
-registerWeakReference(Thread* t, object r)
-{
-  PROTECT(t, r);
-
-  ACQUIRE(t, t->vm->referenceLock);
-
-  // jreferenceNext(t, r)
-  cast<object>(r, 3 * BytesPerWord) = t->vm->weakReferences;
-  t->vm->weakReferences = r;
-}
-
-inline object
+object
 make(Thread* t, object class_)
 {
   PROTECT(t, class_);
@@ -99,7 +87,13 @@ make(Thread* t, object class_)
          sizeInBytes - sizeof(object));
 
   if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
-    registerWeakReference(t, instance);
+    PROTECT(t, instance);
+
+    ACQUIRE(t, t->vm->referenceLock);
+
+    // jreferenceNext(t, r)
+    cast<object>(instance, 3 * BytesPerWord) = t->vm->weakReferences;
+    t->vm->weakReferences = instance;
   }
 
   return instance;

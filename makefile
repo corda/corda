@@ -1,4 +1,4 @@
-#MAKEFLAGS = -s
+MAKEFLAGS = -s
 
 arch = $(shell uname -m)
 ifeq ($(arch),i586)
