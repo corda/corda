@@ -2,6 +2,7 @@
 #include "machine.h"
 
 namespace vm {
+
 namespace jni {
 
 jsize
@@ -51,4 +52,5 @@ populate(JNIEnvVTable* table)
 }
 
 } // namespace jni
+
 } // namespace vm

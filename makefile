@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 arch = $(shell uname -m)
 ifeq ($(arch),i586)
@@ -43,7 +43,7 @@ ifeq ($(mode),stress-major)
 cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
-fast = -Os -DNDEBUG
+cflags += -Os -DNDEBUG -DMONOLITHIC
 endif
 
 lflags = $(thread-lflags) -ldl
@@ -81,11 +81,13 @@ interpreter-depends = \
 	$(src)/machine.h
 
 interpreter-sources = \
-	$(src)/run.cpp \
+	$(src)/system.cpp \
+	$(src)/class-finder.cpp \
 	$(src)/machine.cpp \
-	$(src)/jnienv.cpp \
-	$(src)/builtin.cpp \
 	$(src)/heap.cpp \
+	$(src)/run.cpp \
+	$(src)/builtin.cpp \
+	$(src)/jnienv.cpp \
 	$(src)/main.cpp
 
 ifeq ($(arch),i386)

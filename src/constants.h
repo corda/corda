@@ -168,7 +168,7 @@ enum OpCode {
   ldc = 0x12,
   ldc_w = 0x13,
   ldc2_w = 0x14,
-  ldiv = 0x6d,
+  ldiv_ = 0x6d,
   lload = 0x16,
   lload_0 = 0x1e,
   lload_1 = 0x1f,

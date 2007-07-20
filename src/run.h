@@ -16,6 +16,6 @@ int
 run(System* sys, Heap* heap, ClassFinder* classFinder,
     const char* className, int argc, const char** argv);
 
-}
+} // namespace vm
 
 #endif//RUN_H

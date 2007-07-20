@@ -3,6 +3,7 @@
 #include "run.h"
 
 namespace vm {
+
 namespace builtin {
 
 jstring
@@ -262,4 +263,5 @@ populate(Thread* t, object map)
 }
 
 } // namespace builtin
+
 } // namespace vm

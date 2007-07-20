@@ -2,6 +2,7 @@
 #define CLASS_FINDER_H
 
 #include "common.h"
+#include "system.h"
 
 namespace vm {
 
@@ -17,7 +18,11 @@ class ClassFinder {
 
   virtual ~ClassFinder() { }
   virtual Data* find(const char* className) = 0;
+  virtual void dispose() = 0;
 };
+
+ClassFinder*
+makeClassFinder(System* s, const char* path);
 
 } // namespace vm
 

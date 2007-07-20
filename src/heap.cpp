@@ -1374,99 +1374,99 @@ collect(Context* c)
   }
 }
 
+class MyHeap: public Heap {
+ public:
+  MyHeap(System* system): c(system) { }
+
+  virtual void collect(CollectionType type, Client* client) {
+    switch (type) {
+    case MinorCollection:
+      c.mode = ::MinorCollection;
+      break;
+
+    case MajorCollection:
+      c.mode = ::MajorCollection;
+      break;
+
+    default: abort(&c);
+    }
+
+    c.client = client;
+
+    ::collect(&c);
+  }
+
+  virtual bool needsMark(void** p) {
+    return *p and c.gen2.contains(p) and not c.gen2.contains(*p);
+  }
+
+  virtual void mark(void** p) {
+    if (Debug) {        
+      fprintf(stderr, "mark %p (%s) at %p (%s)\n",
+              *p, segment(&c, *p), p, segment(&c, p));
+    }
+
+    c.heapMap.set(p);
+  }
+
+  virtual void dispose() {
+    c.dispose();
+    c.system->free(this);
+  }
+
+  virtual void* follow(void* p) {
+    if (wasCollected(&c, p)) {
+      if (Debug) {
+        fprintf(stderr, "follow %p (%s) to %p (%s)\n",
+                p, segment(&c, p),
+                ::follow(&c, p), segment(&c, ::follow(&c, p)));
+      }
+
+      return ::follow(&c, p);
+    } else {
+      return p;
+    }
+  }
+
+  virtual Status status(void* p) {
+    p = mask(p);
+
+    if (p == 0) {
+      return Null;
+    } else if (c.nextGen1.contains(p)) {
+      return Reachable;
+    } else if (c.nextGen2.contains(p)
+               or (c.gen2.contains(p)
+                   and (c.mode == ::MinorCollection
+                        or c.gen2.indexOf(p) >= c.gen2Base)))
+    {
+      return Tenured;
+    } else if (wasCollected(&c, p)) {
+      return Reachable;
+    } else {
+      return Unreachable;
+    }
+  }
+
+  virtual CollectionType collectionType() {
+    if (c.mode == ::MinorCollection) {
+      return MinorCollection;
+    } else {
+      return MajorCollection;
+    }
+  }
+
+  Context c;
+};
+
 } // namespace
 
 namespace vm {
 
 Heap*
 makeHeap(System* system)
-{
-  class Heap: public vm::Heap {
-   public:
-    Heap(System* system): c(system) { }
-
-    virtual void collect(CollectionType type, Client* client) {
-      switch (type) {
-      case MinorCollection:
-        c.mode = ::MinorCollection;
-        break;
-
-      case MajorCollection:
-        c.mode = ::MajorCollection;
-        break;
-
-      default: abort(&c);
-      }
-
-      c.client = client;
-
-      ::collect(&c);
-    }
-
-    virtual bool needsMark(void** p) {
-      return *p and c.gen2.contains(p) and not c.gen2.contains(*p);
-    }
-
-    virtual void mark(void** p) {
-      if (Debug) {        
-        fprintf(stderr, "mark %p (%s) at %p (%s)\n",
-                *p, segment(&c, *p), p, segment(&c, p));
-      }
-
-      c.heapMap.set(p);
-    }
-
-    virtual void dispose() {
-      c.dispose();
-      c.system->free(this);
-    }
-
-    virtual void* follow(void* p) {
-      if (wasCollected(&c, p)) {
-        if (Debug) {
-          fprintf(stderr, "follow %p (%s) to %p (%s)\n",
-                  p, segment(&c, p),
-                  ::follow(&c, p), segment(&c, ::follow(&c, p)));
-        }
-
-        return ::follow(&c, p);
-      } else {
-        return p;
-      }
-    }
-
-    virtual Status status(void* p) {
-      p = mask(p);
-
-      if (p == 0) {
-        return Null;
-      } else if (c.nextGen1.contains(p)) {
-        return Reachable;
-      } else if (c.nextGen2.contains(p)
-                 or (c.gen2.contains(p)
-                     and (c.mode == ::MinorCollection
-                          or c.gen2.indexOf(p) >= c.gen2Base)))
-      {
-        return Tenured;
-      } else if (wasCollected(&c, p)) {
-        return Reachable;
-      } else {
-        return Unreachable;
-      }
-    }
-
-    virtual CollectionType collectionType() {
-      if (c.mode == ::MinorCollection) {
-        return MinorCollection;
-      } else {
-        return MajorCollection;
-      }
-    }
-
-    Context c;
-  };
-  
-  return new (system->allocate(sizeof(Heap))) Heap(system);
+{  
+  return new (system->allocate(sizeof(MyHeap))) MyHeap(system);
 }
 
 } // namespace vm

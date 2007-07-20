@@ -65,6 +65,7 @@ class System: public Allocator {
                         unsigned returnType) = 0;
   virtual Status load(Library**, const char* name, Library* next) = 0;
   virtual void abort() = 0;
+  virtual void dispose() = 0;
 
   virtual void* allocate(unsigned size) {
     void* p = tryAllocate(size);
@@ -80,6 +81,12 @@ abort(System* s)
 {
   s->abort(); // this should not return
   ::abort();
+}
+
+inline void NO_RETURN
+sysAbort(System* s)
+{
+  abort(s);
 }
 
 inline void
@@ -99,6 +106,9 @@ assert(System* s, bool v)
   expect(s, v);
 }
 #endif
+
+System*
+makeSystem(unsigned heapSize);
 
 } // namespace vm
 

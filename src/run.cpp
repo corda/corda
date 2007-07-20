@@ -1656,7 +1656,7 @@ run(Thread* t)
     }
   } goto loop;
 
-  case vm::ldiv: {
+  case ldiv_: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
     
@@ -2386,4 +2386,4 @@ run(System* system, Heap* heap, ClassFinder* classFinder,
   return exitCode;
 }
 
-}
+} // namespace vm

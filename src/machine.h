@@ -2009,6 +2009,12 @@ wait(Thread* t, object o, int64_t milliseconds)
 }
 
 inline void
+vmWait(Thread* t, object o, int64_t milliseconds)
+{
+  wait(t, o, milliseconds);
+}
+
+inline void
 notify(Thread* t, object o)
 {
   System::Monitor* m = objectMonitor(t, o);
@@ -2026,6 +2032,12 @@ notify(Thread* t, object o)
 }
 
 inline void
+vmNotify(Thread* t, object o)
+{
+  notify(t, o);
+}
+
+inline void
 notifyAll(Thread* t, object o)
 {
   System::Monitor* m = objectMonitor(t, o);
@@ -2040,6 +2052,12 @@ notifyAll(Thread* t, object o)
   } else {
     t->exception = makeIllegalMonitorStateException(t);
   }
+}
+
+inline void
+vmNotifyAll(Thread* t, object o)
+{
+  notifyAll(t, o);
 }
 
 void
