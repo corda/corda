@@ -216,12 +216,21 @@
   (extends jobject)
   (uint64_t value))
 
+(type referenceQueue java/lang/ref/ReferenceQueue
+  (extends jobject)
+  (object front)
+  (object rear))
+
 (type jreference java/lang/ref/Reference
   (extends jobject)
   (void* target)
+  (void* queue)
   (void* next))
 
 (type weakReference java/lang/ref/WeakReference
+  (extends jreference))
+
+(type phantomReference java/lang/ref/PhantomReference
   (extends jreference))
 
 (type byteArray [B
