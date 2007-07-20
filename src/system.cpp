@@ -9,6 +9,8 @@
 #include "pthread.h"
 #include "stdint.h"
 
+#include "system.h"
+
 #ifdef __i386__
 
 extern "C" uint64_t
@@ -31,8 +33,6 @@ dynamicCall(void* function, uint32_t* arguments, uint8_t*,
 extern "C" uint64_t
 amd64Call(void* function, void* stack, unsigned stackSize,
           void* gprTable, void* sseTable, unsigned returnType);
-
-#include "system.h"
 
 namespace {
 
