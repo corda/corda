@@ -1158,18 +1158,13 @@ class Thread {
   static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
   static const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
 
-  Thread(Machine* m, Allocator* allocator, object javaThread, Thread* parent);
-
-  ~Thread() {
-    exit();
-  }
+  Thread(Machine* m, object javaThread, Thread* parent);
 
   void exit();
   void dispose();
 
   JNIEnvVTable* vtable;
   Machine* vm;
-  Allocator* allocator;
   Thread* parent;
   Thread* peer;
   Thread* child;

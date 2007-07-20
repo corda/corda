@@ -2372,16 +2372,16 @@ run(System* system, Heap* heap, ClassFinder* classFinder,
     const char* className, int argc, const char** argv)
 {
   Machine m(system, heap, classFinder);
-  Thread t(&m, 0, 0, 0);
+  Thread* t = new (system->allocate(sizeof(Thread))) Thread(&m, 0, 0);
 
-  enter(&t, Thread::ActiveState);
+  enter(t, Thread::ActiveState);
 
-  ::run(&t, className, argc, argv);
+  ::run(t, className, argc, argv);
 
   int exitCode = 0;
-  if (t.exception) exitCode = -1;
+  if (t->exception) exitCode = -1;
 
-  exit(&t);
+  exit(t);
 
   return exitCode;
 }

@@ -1,8 +1,6 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-
-
 #include "stdint.h"
 #include "stdlib.h"
 #include "stdarg.h"
@@ -28,8 +26,6 @@
 #define MAKE_NAME(FX) MACRO_MakeNameXY(FX, __LINE__)
 
 inline void* operator new(size_t, void* p) throw() { return p; }
-
-
 
 namespace vm {
 

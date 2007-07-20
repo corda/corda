@@ -1294,17 +1294,11 @@ Machine::dispose()
   if (libraries) {
     libraries->dispose();
   }
-  
-  if (rootThread) {
-    rootThread->dispose();
-  }
 }
 
-Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
-               Thread* parent):
+Thread::Thread(Machine* m, object javaThread, Thread* parent):
   vtable(&(m->jniEnvVTable)),
   vm(m),
-  allocator(allocator),
   parent(parent),
   peer((parent ? parent->child : 0)),
   child(0),
@@ -1412,9 +1406,7 @@ Thread::dispose()
   heap = 0;
 #endif // VM_STRESS
 
-  if (allocator) {
-    allocator->free(this);
-  }
+  vm->system->free(this);
 }
 
 void

@@ -180,8 +180,7 @@ start(Thread* t, jobject this_)
     object message = makeString(t, "thread already started");
     t->exception = makeIllegalStateException(t, message);
   } else {
-    p = new (t->vm->system->allocate(sizeof(Thread)))
-      Thread(t->vm, t->vm->system, *this_, t);
+    p = new (t->vm->system->allocate(sizeof(Thread))) Thread(t->vm, *this_, t);
 
     enter(p, Thread::ActiveState);
 
