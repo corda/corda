@@ -49,6 +49,7 @@ class System: public Allocator {
    public:
     virtual ~Library() { }
     virtual void* resolve(const char* function) = 0;
+    virtual const char* name() = 0;
     virtual Library* next() = 0;
     virtual void dispose() = 0;
   };
@@ -64,6 +65,7 @@ class System: public Allocator {
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;
   virtual Status load(Library**, const char* name, Library* next) = 0;
+  virtual void exit(int code) = 0;
   virtual void abort() = 0;
   virtual void dispose() = 0;
 

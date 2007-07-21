@@ -139,6 +139,9 @@ visitRoots(Thread* t, Heap::Visitor* v)
 void
 referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 {
+//   fprintf(stderr, "target %p unreachable for reference %p\n",
+//           jreferenceTarget(t, *p), *p);
+
   v->visit(p);
   jreferenceTarget(t, *p) = 0;
 
@@ -166,6 +169,9 @@ referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 void
 referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
 {
+//   fprintf(stderr, "reference %p unreachable\n",
+//           *p);
+
   if (jreferenceQueue(t, *p)
       and t->vm->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
   {
@@ -177,6 +183,9 @@ referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
 void
 referenceTargetReachable(Thread* t, object* p, Heap::Visitor* v)
 {
+//   fprintf(stderr, "target %p reachable for reference %p\n",
+//           jreferenceTarget(t, *p), *p);
+
   v->visit(p);
   v->visit(&jreferenceTarget(t, *p));
 
@@ -711,9 +720,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       object field = makeField
         (t,
+         0, // vm flags
+         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
          flags,
          0, // offset
-         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
          arrayBody(t, pool, name - 1),
          arrayBody(t, pool, spec - 1),
          class_);
@@ -914,10 +924,11 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       }
 
       object method = makeMethod(t,
-                                 flags,
-                                 0, // offset
+                                 0, // vm flags
                                  parameterCount,
                                  parameterFootprint,
+                                 flags,
+                                 0, // offset
                                  arrayBody(t, pool, name - 1),
                                  arrayBody(t, pool, spec - 1),
                                  class_,
@@ -1791,7 +1802,7 @@ hashMapInsert(Thread* t, object map, object key, object value,
     PROTECT(t, value);
 
     t->vm->weakReferences = makeWeakReference
-      (t, 0, 0, t->vm->weakReferences, 0);
+      (t, t->vm->weakReferences, 0, 0, 0);
     jreferenceTarget(t, t->vm->weakReferences) = key;
     key = t->vm->weakReferences;
   }

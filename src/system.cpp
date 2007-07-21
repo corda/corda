@@ -236,14 +236,19 @@ class MySystem: public System {
 
   class Library: public System::Library {
    public:
-    Library(System* s, void* p, System::Library* next):
+    Library(System* s, void* p, const char* name, System::Library* next):
       s(s),
       p(p),
+      name_(name),
       next_(next)
     { }
 
     virtual void* resolve(const char* function) {
       return dlsym(p, function);
+    }
+
+    virtual const char* name() {
+      return name_;
     }
 
     virtual System::Library* next() {
@@ -260,11 +265,14 @@ class MySystem: public System {
       if (next_) {
         next_->dispose();
       }
+
+      s->free(name_);
       s->free(this);
     }
 
     System* s;
     void* p;
+    const char* name_;
     System::Library* next_;
   };
 
@@ -359,7 +367,8 @@ class MySystem: public System {
                       const char* name,
                       System::Library* next)
   {
-    unsigned size = strlen(name) + 7;
+    unsigned nameLength = strlen(name);
+    unsigned size = nameLength + 7;
     char buffer[size];
     snprintf(buffer, size, "lib%s.so", name);
  
@@ -369,11 +378,17 @@ class MySystem: public System {
         fprintf(stderr, "open %s as %p\n", buffer, p);
       }
 
-      *lib = new (System::allocate(sizeof(Library))) Library(this, p, next);
+      char* n = static_cast<char*>(System::allocate(nameLength + 1));
+      memcpy(n, name, nameLength + 1);
+      *lib = new (System::allocate(sizeof(Library))) Library(this, p, n, next);
       return 0;
     } else {
       return 1;
     }
+  }
+
+  virtual void exit(int code) {
+    ::exit(code);
   }
 
   virtual void abort() {

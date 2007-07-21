@@ -52,28 +52,6 @@ sleep(Thread* t, jlong milliseconds)
 }
 
 void
-loadLibrary(Thread* t, jstring nameString)
-{
-  if (LIKELY(nameString)) {
-    object n = *nameString;
-    char name[stringLength(t, n) + 1];
-    stringChars(t, n, name);
-
-    System::Library* lib;
-    if (LIKELY(t->vm->system->success
-               (t->vm->system->load(&lib, name, t->vm->libraries))))
-    {
-      t->vm->libraries = lib;
-    } else {
-      object message = makeString(t, "library not found: %s", name);
-      t->exception = makeRuntimeException(t, message);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
-}
-
-void
 arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
           jint length)
 {
@@ -108,11 +86,46 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
 }
 
 void
-gc(Thread* t)
+loadLibrary(Thread* t, jobject, jstring nameString)
+{
+  if (LIKELY(nameString)) {
+    object n = *nameString;
+    char name[stringLength(t, n) + 1];
+    stringChars(t, n, name);
+
+    for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
+      if (::strcmp(lib->name(), name) == 0) {
+        // already loaded
+        return;
+      }
+    }
+
+    System::Library* lib;
+    if (LIKELY(t->vm->system->success
+               (t->vm->system->load(&lib, name, t->vm->libraries))))
+    {
+      t->vm->libraries = lib;
+    } else {
+      object message = makeString(t, "library not found: %s", name);
+      t->exception = makeRuntimeException(t, message);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+}
+
+void
+gc(Thread* t, jobject)
 {
   ENTER(t, Thread::ExclusiveState);
 
   collect(t, Heap::MajorCollection);
+}
+
+void
+exit(Thread* t, jobject, jint code)
+{
+  t->vm->system->exit(code);
 }
 
 jobject
@@ -224,10 +237,13 @@ populate(Thread* t, object map)
   } builtins[] = {
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(arraycopy) },
-    { "Java_java_lang_System_loadLibrary",
+
+    { "Java_java_lang_Runtime_loadLibrary",
       reinterpret_cast<void*>(loadLibrary) },
-    { "Java_java_lang_System_gc",
+    { "Java_java_lang_Runtime_gc",
       reinterpret_cast<void*>(gc) },
+    { "Java_java_lang_Runtiime_exit",
+      reinterpret_cast<void*>(exit) },
 
     { "Java_java_lang_Thread_start",
       reinterpret_cast<void*>(start) },
