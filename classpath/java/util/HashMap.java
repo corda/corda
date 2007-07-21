@@ -118,28 +118,27 @@ public class HashMap<K, V> implements Map<K, V> {
     }
   }
 
+  private Cell<K, V> putCell(K key, V value) {
+    Cell<K, V> c = find(key);
+    if (c == null) {
+      insert(factory.make(key, value, null));
+    } else {
+      V old = c.getValue();
+      c.setValue(value);
+    }
+    return c;
+  }
+
   public V get(K key) {
     Cell<K, V> c = find(key);
     return (c == null ? null : c.getValue());
   }
 
-  public V put(K key, V value) {
-    Cell<K, V> c = find(key);
-    if (c == null) {
-      insert(factory.make(key, value, null));
-      return null;
-    } else {
-      V old = c.getValue();
-      c.setValue(value);
-      return old;
-    }
-  }
-
-  public V remove(K key) {
-    V old = null;
+  public Cell<K, V> removeCell(K key) {
+    Cell<K, V> old = null;
     if (key == null) {
       if (nullCell != null) {
-        old = nullCell.getValue();
+        old = nullCell;
         nullCell = null;
         -- size;
       }
@@ -149,7 +148,7 @@ public class HashMap<K, V> implements Map<K, V> {
         Cell<K, V> p = null;
         for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
           if (key.equals(c.getKey())) {
-            old = c.getValue();
+            old = c;
             if (p == null) {
               array[index] = c.next();
             } else {
@@ -164,6 +163,28 @@ public class HashMap<K, V> implements Map<K, V> {
       }
     }
     return old;
+  }
+
+  public V put(K key, V value) {
+    Cell<K, V> c = putCell(key, value);
+    return (c == null ? null : c.getValue());
+  }
+
+  public V remove(K key) {
+    Cell<K, V> c = removeCell(key);
+    return (c == null ? null : c.getValue());
+  }
+
+  public void clear() {
+    array = null;
+  }
+
+  public Set<Entry<K, V>> entrySet() {
+    return new MySet();
+  }
+
+  Iterator<Entry<K, V>> iterator() {
+    return new MyIterator();
   }
 
   interface Cell<K, V> extends Entry<K, V> {
@@ -215,6 +236,87 @@ public class HashMap<K, V> implements Map<K, V> {
   private static class MyCellFactory<K, V> implements CellFactory<K, V> {
     public Cell<K, V> make(K key, V value, Cell<K, V> next) {
       return new MyCell(key, value, next);
+    }
+  }
+
+  private class MySet implements Set<Entry<K, V>> {
+    public int size() {
+      return HashMap.this.size();
+    }
+
+    public boolean add(Entry<K, V> e) {
+      return putCell(e.getKey(), e.getValue()) != null;
+    }
+
+    public boolean remove(Entry<K, V> e) {
+      return removeCell(e.getKey()) != null;
+    }
+
+    public void clear() {
+      HashMap.this.clear();
+    }
+
+    public Iterator<Entry<K, V>> iterator() {
+      return new MyIterator();
+    }
+  }
+
+  private class MyIterator implements Iterator<Entry<K, V>> {
+    private int currentIndex = -1;
+    private int nextIndex = -1;
+    private Cell<K, V> previousCell;
+    private Cell<K, V> currentCell;
+    private Cell<K, V> nextCell;
+
+    public MyIterator() {
+      hasNext();
+    }
+
+    public Entry<K, V> next() {
+      if (hasNext()) {
+        if (currentCell != null && currentCell.next() != null) {
+          previousCell = currentCell;
+        } else {
+          previousCell = null;
+        }
+
+        currentCell = nextCell;
+        currentIndex = nextIndex;
+
+        nextCell = nextCell.next();
+
+        return currentCell;
+      } else {
+        throw new NoSuchElementException();
+      }
+    }
+
+    public boolean hasNext() {
+      if (array != null) {
+        while (nextCell == null && ++ nextIndex < array.length) {
+          if (array[nextIndex] != null) {
+            nextCell = array[nextIndex];
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    public void remove() {
+      if (currentCell != null) {
+        if (previousCell == null) {
+          array[currentIndex] = currentCell.next();
+        } else {
+          previousCell.setNext(currentCell.next());
+          if (previousCell.next() == null) {
+            previousCell = null;
+          }
+        }
+        currentCell = null;
+      } else {
+        throw new IllegalStateException();
+      }
     }
   }
 }

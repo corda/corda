@@ -9,6 +9,10 @@ public interface Map<K, V> {
 
   public V remove(K key);
 
+  public void clear();
+
+  public Set<Entry<K, V>> entrySet();
+
   public interface Entry<K, V> {
     public K getKey();
 

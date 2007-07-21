@@ -251,7 +251,7 @@ populate(Thread* t, object map)
     { "Java_java_lang_Runtiime_exit",
       reinterpret_cast<void*>(exit) },
 
-    { "Java_java_lang_Thread_start",
+    { "Java_java_lang_Thread_doStart",
       reinterpret_cast<void*>(start) },
     { "Java_java_lang_Thread_currentThread",
       reinterpret_cast<void*>(currentThread) },

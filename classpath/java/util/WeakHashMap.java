@@ -45,6 +45,14 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     return map.remove(key);
   }
 
+  public void clear() {
+    map.clear();
+  }
+
+  public Set<Entry<K, V>> entrySet() {
+    return map.entrySet();
+  }
+
   private static class MyCell<K, V>
     extends WeakReference<K>
     implements HashMap.Cell<K, V>

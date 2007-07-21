@@ -12,7 +12,20 @@ public class Thread implements Runnable {
     this.task = task;
   }
 
-  public synchronized native void start();
+  public synchronized void start() {
+    Map<ThreadLocal, Object> map = currentThread().locals;
+    if (map != null) {
+      for (Map.Entry<ThreadLocal, Object> e: map.entrySet()) {
+        if (e.getKey() instanceof InheritableThreadLocal) {
+          locals().put(e.getKey(), e.getValue());
+        }
+      }
+    }
+
+    doStart();
+  }
+
+  private native void doStart();
 
   public void run() {
     if (task != null) {
