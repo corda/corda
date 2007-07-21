@@ -127,6 +127,7 @@
 (type thread java/lang/Thread
   (extends jobject)
   (object task)
+  (object locals)
   (int64_t peer))
 
 (type stackTraceElement java/lang/StackTraceElement

@@ -1382,7 +1382,7 @@ Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
 
     builtin::populate(t, m->builtinMap);
 
-    javaThread = makeThread(t, 0, reinterpret_cast<int64_t>(t));
+    javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
   } else {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
     parent->child = this;
@@ -1749,6 +1749,10 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
     PROTECT(t, oldArray);
 
     unsigned newLength = nextPowerOfTwo(size);
+    if (oldArray and arrayLength(t, oldArray) == newLength) {
+      return;
+    }
+
     newArray = makeArray(t, newLength, true);
 
     if (oldArray) {
@@ -1832,6 +1836,7 @@ hashMapRemove(Thread* t, object map, object key,
         o = tripleSecond(t, *n);
         set(t, *n, tripleThird(t, *n));
         -- hashMapSize(t, map);
+        break;
       } else {
         n = &tripleThird(t, *n);
       }

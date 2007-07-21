@@ -41,6 +41,12 @@ notifyAll(Thread* t, jobject this_)
   vm::notifyAll(t, *this_);
 }
 
+jobject
+currentThread(Thread* t)
+{
+  return pushReference(t, t->javaThread);
+}
+
 void
 sleep(Thread* t, jlong milliseconds)
 {
@@ -247,6 +253,8 @@ populate(Thread* t, object map)
 
     { "Java_java_lang_Thread_start",
       reinterpret_cast<void*>(start) },
+    { "Java_java_lang_Thread_currentThread",
+      reinterpret_cast<void*>(currentThread) },
     { "Java_java_lang_Thread_sleep",
       reinterpret_cast<void*>(sleep) },
 
