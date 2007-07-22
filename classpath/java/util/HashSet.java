@@ -17,6 +17,10 @@ public class HashSet<T> implements Set<T> {
     return map.size();
   }
 
+  public boolean contains(T element) {
+    return map.containsKey(element);
+  }
+
   public boolean add(T element) {
     return map.put(element, Value) != Value;
   }

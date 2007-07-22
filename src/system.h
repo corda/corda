@@ -61,6 +61,7 @@ class System: public Allocator {
   virtual Status start(Runnable*) = 0;
   virtual Status make(Monitor**) = 0;
   virtual void sleep(int64_t milliseconds) = 0;
+  virtual int64_t now() = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;

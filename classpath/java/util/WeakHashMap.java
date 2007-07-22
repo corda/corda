@@ -30,6 +30,16 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     return map.size();
   }
 
+  public boolean containsKey(K key) {
+    poll();
+    return map.containsKey(key);
+  }
+
+  public boolean containsValue(V value) {
+    poll();
+    return map.containsValue(value);
+  }
+
   public V get(K key) {
     poll();
     return map.get(key);
@@ -53,6 +63,14 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     return map.entrySet();
   }
 
+  public Set<K> keySet() {
+    return map.keySet();
+  }
+
+  public Collection<V> values() {
+    return map.values();
+  }
+
   private static class MyCell<K, V>
     extends WeakReference<K>
     implements HashMap.Cell<K, V>
@@ -65,7 +83,7 @@ public class WeakHashMap<K, V> implements Map<K, V> {
       super(key);
       this.value = value;
       this.next = next;
-      this.hashCode = key.hashCode();
+      this.hashCode = (key == null ? 0 : key.hashCode());
     }
 
     public K getKey() {

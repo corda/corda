@@ -15,6 +15,10 @@ public class Vector<T> implements List<T> {
     return list.size();
   }
 
+  public synchronized boolean contains(T element) {
+    return list.contains(element);
+  }
+
   public synchronized boolean add(T element) {
     return list.add(element);
   }
@@ -41,6 +45,12 @@ public class Vector<T> implements List<T> {
 
   public synchronized void clear() {
     list.clear();
+  }
+
+  public synchronized void copyInto(Object[] array) {
+    for (int i = 0; i < size(); ++i) {
+      array[i] = list.get(i);
+    }
   }
 
   public Iterator<T> iterator() {

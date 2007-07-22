@@ -45,6 +45,15 @@ public class ArrayList<T> implements List<T> {
     return size;
   }
 
+  public boolean contains(T element) {
+    for (int i = 0; i < size; ++i) {
+      if (equal(element, array[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public boolean add(T element) {
     resize();
     array[size++] = element;

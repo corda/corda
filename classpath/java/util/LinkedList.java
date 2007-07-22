@@ -20,7 +20,7 @@ public class LinkedList<T> implements List<T> {
     return (a == null && b == null) || (a != null && a.equals(b));
   }
 
-  private void add(Cell<T> c) {
+  private void addFirst(Cell<T> c) {
     ++ size;
 
     if (front == null) {
@@ -28,6 +28,17 @@ public class LinkedList<T> implements List<T> {
     } else {
       c.prev = rear;
       rear = c;
+    }
+  }
+  
+  private void addLast(Cell<T> c) {
+    ++ size;
+
+    if (front == null) {
+      front = rear = c;
+    } else {
+      c.next = front;
+      front = c;
     }
   }
   
@@ -60,9 +71,21 @@ public class LinkedList<T> implements List<T> {
     return size;
   }
 
+  public boolean contains(T element) {
+    return find(element) != null;
+  }
+
   public boolean add(T element) {
-    add(new Cell(element, null, null));
+    addFirst(element);
     return true;
+  }
+
+  public void addFirst(T element) {
+    addFirst(new Cell(element, null, null));
+  }
+
+  public void addLast(T element) {
+    addLast(new Cell(element, null, null));
   }
 
   public T get(int index) {

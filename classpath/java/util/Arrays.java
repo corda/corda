@@ -3,6 +3,10 @@ package java.util;
 public class Arrays {
   private Arrays() { }
 
+  private static boolean equal(Object a, Object b) {
+    return (a == null && b == null) || (a != null && a.equals(b));
+  }
+
   public static <T> List<T> asList(final T ... array) {
     return new List<T>() {
       public int size() {
@@ -11,6 +15,15 @@ public class Arrays {
 
       public boolean add(T element) {
         throw new UnsupportedOperationException();
+      }
+
+      public boolean contains(T element) {
+        for (int i = 0; i < array.length; ++i) {
+          if (equal(element, array[i])) {
+            return true;
+          }
+        }
+        return false;
       }
 
       public T get(int index) {
