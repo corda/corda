@@ -13,6 +13,10 @@ public interface Map<K, V> {
 
   public Set<Entry<K, V>> entrySet();
 
+  public Set<K> keySet();
+
+  public Collection<V> values();
+
   public interface Entry<K, V> {
     public K getKey();
 

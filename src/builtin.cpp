@@ -76,9 +76,15 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
         {
           uint8_t* sbody = &cast<uint8_t>(s, 2 * BytesPerWord);
           uint8_t* dbody = &cast<uint8_t>(d, 2 * BytesPerWord);
-          memcpy(dbody + (dstOffset * elementSize),
-                 sbody + (srcOffset * elementSize),
-                 length * elementSize);
+          if (src == dst) {
+            memmove(dbody + (dstOffset * elementSize),
+                    sbody + (srcOffset * elementSize),
+                    length * elementSize);
+          } else {
+            memcpy(dbody + (dstOffset * elementSize),
+                   sbody + (srcOffset * elementSize),
+                   length * elementSize);
+          }
           return;
         }
       }

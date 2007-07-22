@@ -177,10 +177,19 @@ public class HashMap<K, V> implements Map<K, V> {
 
   public void clear() {
     array = null;
+    size = 0;
   }
 
   public Set<Entry<K, V>> entrySet() {
-    return new MySet();
+    return new EntrySet();
+  }
+
+  public Set<K> keySet() {
+    return new KeySet();
+  }
+
+  public Collection<V> values() {
+    return new Values();
   }
 
   Iterator<Entry<K, V>> iterator() {
@@ -239,7 +248,7 @@ public class HashMap<K, V> implements Map<K, V> {
     }
   }
 
-  private class MySet implements Set<Entry<K, V>> {
+  private class EntrySet implements Set<Entry<K, V>> {
     public int size() {
       return HashMap.this.size();
     }
@@ -258,6 +267,51 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public Iterator<Entry<K, V>> iterator() {
       return new MyIterator();
+    }
+  }
+
+  private class KeySet implements Set<K> {
+    public int size() {
+      return HashMap.this.size();
+    }
+
+    public boolean add(K key) {
+      return putCell(key, null) != null;
+    }
+
+    public boolean remove(K key) {
+      return removeCell(key) != null;
+    }
+
+    public void clear() {
+      HashMap.this.clear();
+    }
+
+    public Iterator<K> iterator() {
+      return new KeyIterator(new MyIterator());
+    }
+  }
+
+
+  private class Values implements Collection<V> {
+    public int size() {
+      return HashMap.this.size();
+    }
+
+    public boolean add(V value) {
+      throw new UnsupportedOperationException();
+    }
+
+    public boolean remove(V value) {
+      throw new UnsupportedOperationException();
+    }
+
+    public void clear() {
+      HashMap.this.clear();
+    }
+
+    public Iterator<V> iterator() {
+      return new ValueIterator(new MyIterator());
     }
   }
 
@@ -317,6 +371,46 @@ public class HashMap<K, V> implements Map<K, V> {
       } else {
         throw new IllegalStateException();
       }
+    }
+  }
+
+  private static class KeyIterator<K, V> implements Iterator<K> {
+    private final Iterator<Entry<K, V>> it;
+
+    public KeyIterator(Iterator<Entry<K, V>> it) {
+      this.it = it;
+    }
+
+    public K next() {
+      return it.next().getKey();
+    }
+
+    public boolean hasNext() {
+      return it.hasNext();
+    }
+
+    public void remove() {
+      it.remove();
+    }
+  }
+
+  private static class ValueIterator<K, V> implements Iterator<V> {
+    private final Iterator<Entry<K, V>> it;
+
+    public ValueIterator(Iterator<Entry<K, V>> it) {
+      this.it = it;
+    }
+
+    public V next() {
+      return it.next().getValue();
+    }
+
+    public boolean hasNext() {
+      return it.hasNext();
+    }
+
+    public void remove() {
+      it.remove();
     }
   }
 }
