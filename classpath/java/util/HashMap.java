@@ -3,7 +3,6 @@ package java.util;
 public class HashMap<K, V> implements Map<K, V> {
   private int size;
   private Cell[] array;
-  private Cell<K, V> nullCell;
   private final CellFactory factory;
 
   HashMap(int capacity, CellFactory<K, V> factory) {
@@ -29,6 +28,14 @@ public class HashMap<K, V> implements Map<K, V> {
 
   public int size() {
     return size;
+  }
+
+  private static int hash(Object a) {
+    return (a == null ? 0 : a.hashCode());
+  }
+
+  private static boolean equal(Object a, Object b) {
+    return (a == null && b == null) || (a != null && a.equals(b));
   }
 
   private void resize() {
@@ -64,58 +71,45 @@ public class HashMap<K, V> implements Map<K, V> {
   }
 
   private Cell<K, V> find(K key) {
-    if (key == null) {
-      return nullCell;
-    } else {
-      if (array != null) {
-        int index = key.hashCode() & (array.length - 1);
-        for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
-          if (key.equals(c.getKey())) {
-            return c;
-          }
+    if (array != null) {
+      int index = hash(key) & (array.length - 1);
+      for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
+        if (equal(key, c.getKey())) {
+          return c;
         }
       }
-
-      return null;
     }
+
+    return null;
   }
 
   private void insert(Cell<K, V> cell) {
     ++ size;
 
-    if (cell.getKey() == null) {
-      nullCell = cell;
-    } else {
-      resize();
+    resize();
 
-      int index = cell.hashCode() & (array.length - 1);
-      cell.setNext(array[index]);
-      array[index] = cell;
-    }
+    int index = cell.hashCode() & (array.length - 1);
+    cell.setNext(array[index]);
+    array[index] = cell;
   }
 
   // primarily for use by WeakHashMap:
-  void remove(Cell<K, V> cell) { 
-    if (cell == nullCell) {
-      nullCell = null;
-      -- size;
-    } else {
-      int index = cell.hashCode() & (array.length - 1);
-      Cell<K, V> p = null;
-      for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
-        if (c == cell) {
-          if (p == null) {
-            array[index] = c.next();
-          } else {
-            p.setNext(c.next());
-          }
-          -- size;
-          break;
+  void remove(Cell<K, V> cell) {
+    int index = cell.hashCode() & (array.length - 1);
+    Cell<K, V> p = null;
+    for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
+      if (c == cell) {
+        if (p == null) {
+          array[index] = c.next();
+        } else {
+          p.setNext(c.next());
         }
+        -- size;
+        break;
       }
-
-      resize();
     }
+
+    resize();
   }
 
   private Cell<K, V> putCell(K key, V value) {
@@ -129,6 +123,14 @@ public class HashMap<K, V> implements Map<K, V> {
     return c;
   }
 
+  public boolean containsKey(K key) {
+    return find(key) != null;
+  }
+
+  public boolean containsValue(V value) {
+    return values().contains(value);
+  }
+
   public V get(K key) {
     Cell<K, V> c = find(key);
     return (c == null ? null : c.getValue());
@@ -136,31 +138,23 @@ public class HashMap<K, V> implements Map<K, V> {
 
   public Cell<K, V> removeCell(K key) {
     Cell<K, V> old = null;
-    if (key == null) {
-      if (nullCell != null) {
-        old = nullCell;
-        nullCell = null;
-        -- size;
-      }
-    } else {
-      if (array != null) {
-        int index = key.hashCode() & (array.length - 1);
-        Cell<K, V> p = null;
-        for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
-          if (key.equals(c.getKey())) {
-            old = c;
-            if (p == null) {
-              array[index] = c.next();
-            } else {
-              p.setNext(c.next());
-            }
-            -- size;
-            break;
+    if (array != null) {
+      int index = hash(key) & (array.length - 1);
+      Cell<K, V> p = null;
+      for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
+        if (equal(key, c.getKey())) {
+          old = c;
+          if (p == null) {
+            array[index] = c.next();
+          } else {
+            p.setNext(c.next());
           }
+          -- size;
+          break;
         }
-
-        resize();
       }
+
+      resize();
     }
     return old;
   }
@@ -238,7 +232,7 @@ public class HashMap<K, V> implements Map<K, V> {
     }
 
     public int hashCode() {
-      return key.hashCode();
+      return (key == null ? 0 : key.hashCode());
     }
   }
 
@@ -251,6 +245,10 @@ public class HashMap<K, V> implements Map<K, V> {
   private class EntrySet implements Set<Entry<K, V>> {
     public int size() {
       return HashMap.this.size();
+    }
+
+    public boolean contains(Entry<K, V> e) {
+      return containsKey(e.getKey());
     }
 
     public boolean add(Entry<K, V> e) {
@@ -275,6 +273,10 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.size();
     }
 
+    public boolean contains(K key) {
+      return containsKey(key);
+    }
+
     public boolean add(K key) {
       return putCell(key, null) != null;
     }
@@ -296,6 +298,10 @@ public class HashMap<K, V> implements Map<K, V> {
   private class Values implements Collection<V> {
     public int size() {
       return HashMap.this.size();
+    }
+
+    public boolean contains(V value) {
+      return containsValue(value);
     }
 
     public boolean add(V value) {

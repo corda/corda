@@ -15,6 +15,14 @@ public class Hashtable<K, V> implements Map<K, V> {
     return map.size();
   }
 
+  public synchronized boolean containsKey(K key) {
+    return map.containsKey(key);
+  }
+
+  public synchronized boolean containsValue(V value) {
+    return map.containsValue(value);
+  }
+
   public synchronized V get(K key) {
     return map.get(key);
   }

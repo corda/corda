@@ -32,6 +32,10 @@ public class Collections {
       synchronized (lock) { return collection.size(); }
     }
 
+    public synchronized boolean contains(T e) {
+      synchronized (lock) { return collection.contains(e); }
+    }
+
     public synchronized boolean add(T e) {
       synchronized (lock) { return collection.add(e); }
     }

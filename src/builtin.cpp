@@ -97,6 +97,12 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
   t->exception = makeArrayStoreException(t);
 }
 
+jlong
+currentTimeMillis(Thread* t)
+{
+  return t->vm->system->now();
+}
+
 void
 loadLibrary(Thread* t, jobject, jstring nameString)
 {

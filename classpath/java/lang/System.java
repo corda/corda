@@ -13,6 +13,8 @@ public abstract class System {
 
   public static native String getProperty(String name);
 
+  public static native long currentTimeMillis();
+
   public static void loadLibrary(String name) {
     Runtime.getRuntime().loadLibrary(name);
   }
