@@ -11,11 +11,19 @@ public abstract class System {
   public static native void arraycopy(Object src, int srcOffset, Object dst,
                                       int dstOffset, int length);
 
-  public static native void loadLibrary(String name);
-
   public static native String getProperty(String name);
 
-  public static native void gc();
+  public static void loadLibrary(String name) {
+    Runtime.getRuntime().loadLibrary(name);
+  }
+
+  public static void gc() {
+    Runtime.getRuntime().gc();
+  }
+
+  public static void exit(int code) {
+    Runtime.getRuntime().exit(code);
+  }
 
   public static class Output {
     public synchronized native void print(String s);

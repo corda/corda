@@ -91,8 +91,8 @@ make(Thread* t, object class_)
 
     ACQUIRE(t, t->vm->referenceLock);
 
-    // jreferenceNext(t, r)
-    cast<object>(instance, 3 * BytesPerWord) = t->vm->weakReferences;
+    // jreferenceNext(t, instance)
+    cast<object>(instance, BytesPerWord) = t->vm->weakReferences;
     t->vm->weakReferences = instance;
   }
 

@@ -17,19 +17,26 @@
   (object staticTable)
   (object initializer))
 
-(type field
+(type accessibleObject java/lang/reflect/AccessibleObject
+  (extends jobject))
+
+(type field java/lang/reflect/Field
+  (extends accessibleObject)
+  (uint8_t vmFlags)
+  (uint8_t code)
   (uint16_t flags)
   (uint16_t offset)
-  (uint8_t code)
   (object name)
   (object spec)
   (object class))
 
-(type method
+(type method java/lang/reflect/Method
+  (extends accessibleObject)
+  (uint8_t vmFlags)
+  (uint8_t parameterCount)
+  (uint16_t parameterFootprint)
   (uint16_t flags)
   (uint16_t offset)
-  (uint16_t parameterCount)
-  (uint16_t parameterFootprint)
   (object name)
   (object spec)
   (object class)
@@ -120,6 +127,7 @@
 (type thread java/lang/Thread
   (extends jobject)
   (object task)
+  (object locals)
   (int64_t peer))
 
 (type stackTraceElement java/lang/StackTraceElement
@@ -223,9 +231,9 @@
 
 (type jreference java/lang/ref/Reference
   (extends jobject)
+  (void* next)
   (void* target)
   (void* queue)
-  (void* next)
   (object jnext))
 
 (type weakReference java/lang/ref/WeakReference

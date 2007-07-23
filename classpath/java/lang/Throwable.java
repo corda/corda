@@ -23,6 +23,10 @@ public class Throwable {
     this(null, null);
   }
 
+  public Throwable getCause() {
+    return cause;
+  }
+
   private static native Object trace(int skipCount);
 
   private static native StackTraceElement[] resolveTrace(Object trace);

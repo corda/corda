@@ -139,6 +139,9 @@ visitRoots(Thread* t, Heap::Visitor* v)
 void
 referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 {
+//   fprintf(stderr, "target %p unreachable for reference %p\n",
+//           jreferenceTarget(t, *p), *p);
+
   v->visit(p);
   jreferenceTarget(t, *p) = 0;
 
@@ -166,6 +169,9 @@ referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 void
 referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
 {
+//   fprintf(stderr, "reference %p unreachable\n",
+//           *p);
+
   if (jreferenceQueue(t, *p)
       and t->vm->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
   {
@@ -177,6 +183,9 @@ referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
 void
 referenceTargetReachable(Thread* t, object* p, Heap::Visitor* v)
 {
+//   fprintf(stderr, "target %p reachable for reference %p\n",
+//           jreferenceTarget(t, *p), *p);
+
   v->visit(p);
   v->visit(&jreferenceTarget(t, *p));
 
@@ -711,9 +720,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       object field = makeField
         (t,
+         0, // vm flags
+         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
          flags,
          0, // offset
-         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
          arrayBody(t, pool, name - 1),
          arrayBody(t, pool, spec - 1),
          class_);
@@ -914,10 +924,11 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       }
 
       object method = makeMethod(t,
-                                 flags,
-                                 0, // offset
+                                 0, // vm flags
                                  parameterCount,
                                  parameterFootprint,
+                                 flags,
+                                 0, // offset
                                  arrayBody(t, pool, name - 1),
                                  arrayBody(t, pool, spec - 1),
                                  class_,
@@ -1365,7 +1376,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     builtin::populate(t, m->builtinMap);
 
-    javaThread = makeThread(t, 0, reinterpret_cast<int64_t>(t));
+    javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
   } else {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
     parent->child = this;
@@ -1730,6 +1741,10 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
     PROTECT(t, oldArray);
 
     unsigned newLength = nextPowerOfTwo(size);
+    if (oldArray and arrayLength(t, oldArray) == newLength) {
+      return;
+    }
+
     newArray = makeArray(t, newLength, true);
 
     if (oldArray) {
@@ -1783,7 +1798,7 @@ hashMapInsert(Thread* t, object map, object key, object value,
     PROTECT(t, value);
 
     t->vm->weakReferences = makeWeakReference
-      (t, 0, 0, t->vm->weakReferences, 0);
+      (t, t->vm->weakReferences, 0, 0, 0);
     jreferenceTarget(t, t->vm->weakReferences) = key;
     key = t->vm->weakReferences;
   }
@@ -1813,6 +1828,7 @@ hashMapRemove(Thread* t, object map, object key,
         o = tripleSecond(t, *n);
         set(t, *n, tripleThird(t, *n));
         -- hashMapSize(t, map);
+        break;
       } else {
         n = &tripleThird(t, *n);
       }

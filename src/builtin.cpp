@@ -41,6 +41,12 @@ notifyAll(Thread* t, jobject this_)
   vm::notifyAll(t, *this_);
 }
 
+jobject
+currentThread(Thread* t)
+{
+  return pushReference(t, t->javaThread);
+}
+
 void
 sleep(Thread* t, jlong milliseconds)
 {
@@ -49,28 +55,6 @@ sleep(Thread* t, jlong milliseconds)
   ENTER(t, Thread::IdleState);
 
   t->vm->system->sleep(milliseconds);
-}
-
-void
-loadLibrary(Thread* t, jstring nameString)
-{
-  if (LIKELY(nameString)) {
-    object n = *nameString;
-    char name[stringLength(t, n) + 1];
-    stringChars(t, n, name);
-
-    System::Library* lib;
-    if (LIKELY(t->vm->system->success
-               (t->vm->system->load(&lib, name, t->vm->libraries))))
-    {
-      t->vm->libraries = lib;
-    } else {
-      object message = makeString(t, "library not found: %s", name);
-      t->exception = makeRuntimeException(t, message);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
 }
 
 void
@@ -92,9 +76,15 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
         {
           uint8_t* sbody = &cast<uint8_t>(s, 2 * BytesPerWord);
           uint8_t* dbody = &cast<uint8_t>(d, 2 * BytesPerWord);
-          memcpy(dbody + (dstOffset * elementSize),
-                 sbody + (srcOffset * elementSize),
-                 length * elementSize);
+          if (src == dst) {
+            memmove(dbody + (dstOffset * elementSize),
+                    sbody + (srcOffset * elementSize),
+                    length * elementSize);
+          } else {
+            memcpy(dbody + (dstOffset * elementSize),
+                   sbody + (srcOffset * elementSize),
+                   length * elementSize);
+          }
           return;
         }
       }
@@ -108,11 +98,46 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
 }
 
 void
-gc(Thread* t)
+loadLibrary(Thread* t, jobject, jstring nameString)
+{
+  if (LIKELY(nameString)) {
+    object n = *nameString;
+    char name[stringLength(t, n) + 1];
+    stringChars(t, n, name);
+
+    for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
+      if (::strcmp(lib->name(), name) == 0) {
+        // already loaded
+        return;
+      }
+    }
+
+    System::Library* lib;
+    if (LIKELY(t->vm->system->success
+               (t->vm->system->load(&lib, name, t->vm->libraries))))
+    {
+      t->vm->libraries = lib;
+    } else {
+      object message = makeString(t, "library not found: %s", name);
+      t->exception = makeRuntimeException(t, message);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+}
+
+void
+gc(Thread* t, jobject)
 {
   ENTER(t, Thread::ExclusiveState);
 
   collect(t, Heap::MajorCollection);
+}
+
+void
+exit(Thread* t, jobject, jint code)
+{
+  t->vm->system->exit(code);
 }
 
 jobject
@@ -223,13 +248,18 @@ populate(Thread* t, object map)
   } builtins[] = {
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(arraycopy) },
-    { "Java_java_lang_System_loadLibrary",
-      reinterpret_cast<void*>(loadLibrary) },
-    { "Java_java_lang_System_gc",
-      reinterpret_cast<void*>(gc) },
 
-    { "Java_java_lang_Thread_start",
+    { "Java_java_lang_Runtime_loadLibrary",
+      reinterpret_cast<void*>(loadLibrary) },
+    { "Java_java_lang_Runtime_gc",
+      reinterpret_cast<void*>(gc) },
+    { "Java_java_lang_Runtiime_exit",
+      reinterpret_cast<void*>(exit) },
+
+    { "Java_java_lang_Thread_doStart",
       reinterpret_cast<void*>(start) },
+    { "Java_java_lang_Thread_currentThread",
+      reinterpret_cast<void*>(currentThread) },
     { "Java_java_lang_Thread_sleep",
       reinterpret_cast<void*>(sleep) },
 

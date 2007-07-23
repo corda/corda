@@ -1,9 +1,9 @@
 package java.lang.ref;
 
 public abstract class Reference<T> {
+  private Object vmNext;
   private T target;
   private ReferenceQueue<? super T> queue;
-  private Object vmNext;
   Reference next;
 
   protected Reference(T target, ReferenceQueue<? super T> queue) {
