@@ -155,6 +155,9 @@
 (type illegalStateException java/lang/IllegalStateException
   (extends runtimeException))
 
+(type illegalArgumentException java/lang/IllegalArgumentException
+  (extends runtimeException))
+
 (type illegalMonitorStateException java/lang/IllegalMonitorStateException
   (extends runtimeException))
 
@@ -173,6 +176,9 @@
 
 (type classNotFoundException java/lang/ClassNotFoundException
   (extends runtimeException))
+
+(type invocationTargetException java/lang/InvocationTargetException
+  (extends exception))
 
 (type error java/lang/Error
   (extends throwable))
@@ -273,3 +279,30 @@
 (type doubleArray [D
   (extends jobject)
   (array uint64_t body))
+
+(type jbyte B
+  (extends jobject))
+
+(type jboolean Z
+  (extends jobject))
+
+(type jshort S
+  (extends jobject))
+
+(type jchar C
+  (extends jobject))
+
+(type jint I
+  (extends jobject))
+
+(type jlong L
+  (extends jobject))
+
+(type jfloat F
+  (extends jobject))
+
+(type jdouble D
+  (extends jobject))
+
+(type jvoid V
+  (extends jobject))

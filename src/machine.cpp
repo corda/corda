@@ -1305,17 +1305,11 @@ Machine::dispose()
   if (libraries) {
     libraries->dispose();
   }
-  
-  if (rootThread) {
-    rootThread->dispose();
-  }
 }
 
-Thread::Thread(Machine* m, Allocator* allocator, object javaThread,
-               Thread* parent):
+Thread::Thread(Machine* m, object javaThread, Thread* parent):
   vtable(&(m->jniEnvVTable)),
   vm(m),
-  allocator(allocator),
   parent(parent),
   peer((parent ? parent->child : 0)),
   child(0),
@@ -1423,9 +1417,7 @@ Thread::dispose()
   heap = 0;
 #endif // VM_STRESS
 
-  if (allocator) {
-    allocator->free(this);
-  }
+  vm->system->free(this);
 }
 
 void
@@ -1631,6 +1623,39 @@ stringChars(Thread* t, object string, char* chars)
     }
   }
   chars[stringLength(t, string)] = 0;
+}
+
+bool
+isAssignableFrom(Thread* t, object a, object b)
+{
+  if (classFlags(t, a) & ACC_INTERFACE) {
+    for (; b; b = classSuper(t, b)) {
+      object itable = classInterfaceTable(t, b);
+      for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+        if (arrayBody(t, itable, i) == a) {
+          return true;
+        }
+      }
+    }
+  } else {
+    for (; b; b = classSuper(t, b)) {
+      if (b == a) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool
+instanceOf(Thread* t, object class_, object o)
+{
+  if (o == 0) {
+    return false;
+  }
+
+  return isAssignableFrom(t, class_, objectClass(t, o));
 }
 
 unsigned

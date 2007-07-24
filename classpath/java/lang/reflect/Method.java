@@ -32,4 +32,49 @@ public class Method<T> extends AccessibleObject implements Member {
   public String getName() {
     return new String(name, 0, name.length - 1, false);
   }
+
+  private static int next(char c, String s, int start) {
+    for (int i = start; i < s.length(); ++i) {
+      if (s.charAt(i) == c) return i;
+    }
+    throw new RuntimeException();
+  }
+
+  public Class[] getParameterTypes() {
+    int count = parameterCount;
+    if ((flags & Modifier.STATIC) == 0) {
+      -- count;
+    }
+
+    Class[] types = new Class[count];
+    int index = 0;
+
+    String spec = new String(this.spec, 1, this.spec.length - 1, false);
+
+    for (int i = 0; i < spec.length(); ++i) {
+      char c = spec.charAt(i);
+      if (c == 'L') {
+        String name = spec.substring(i + 1, next(';', spec, i + 1));
+        types[index++] = Class.forName(name);
+      } else if (c == '[') {
+        int start = i;
+        while (spec.charAt(i) == '[') ++i;
+
+        if (spec.charAt(i) == 'L') {
+          String name = spec.substring(start, next(';', spec, i + 1));
+          types[index++] = Class.forName(name);
+        } else {
+          String name = spec.substring(start, i + 1);
+          types[index++] = Class.forName(name);
+        }
+      } else {
+        String name = spec.substring(i, i + 1);
+        types[index++] = Class.forName(name);
+      }
+    }
+
+    return types;
+  }
+
+  public native Object invoke(Object instance, Object ... arguments);
 }

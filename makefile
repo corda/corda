@@ -16,7 +16,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/References.class
+input = $(cls)/Reflection.class
 
 cxx = g++
 cc = gcc

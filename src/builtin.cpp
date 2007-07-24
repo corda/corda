@@ -1,6 +1,29 @@
 #include "builtin.h"
 #include "machine.h"
+#include "constants.h"
 #include "run.h"
+
+using namespace vm;
+
+namespace {
+
+object
+doInvoke(Thread* t, object this_, object instance, object arguments)
+{
+  object v = pushReference(t, run2(t, this_, instance, arguments));
+  if (t->exception) {
+    t->exception = makeInvocationTargetException(t, t->exception);
+  }
+  return v;
+}
+
+inline void
+replace(char a, char b, char* c)
+{
+  for (; *c; ++c) if (*c == a) *c = b;
+}
+
+} // namespace
 
 namespace vm {
 
@@ -39,6 +62,142 @@ void
 notifyAll(Thread* t, jobject this_)
 {
   vm::notifyAll(t, *this_);
+}
+
+jclass
+forName(Thread* t, jstring name)
+{
+  if (LIKELY(name)) {
+    object n = makeByteArray(t, stringLength(t, *name) + 1, false);
+    char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
+    stringChars(t, *name, s);
+    
+    replace('.', '/', s);
+
+    object c = resolveClass(t, n);
+    if (t->exception) {
+      return 0;
+    }
+
+    object clinit = classInitializer(t, c);
+    if (clinit) {
+      PROTECT(t, c);
+
+      set(t, classInitializer(t, c), 0);
+      run(t, clinit, 0); 
+    }
+
+    return pushReference(t, c);
+  } else {
+    t->exception = makeNullPointerException(t);
+    return 0;
+  }
+}
+
+jboolean
+isAssignableFrom(Thread* t, jobject this_, jclass that)
+{
+  if (LIKELY(that)) {
+    return vm::isAssignableFrom(t, *this_, *that);
+  } else {
+    t->exception = makeNullPointerException(t);
+    return 0;
+  }
+}
+
+jobject
+get(Thread* t, jobject this_, jobject instancep)
+{
+  object field = *this_;
+
+  if (fieldFlags(t, field) & ACC_STATIC) {
+    return pushReference
+      (t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                    fieldOffset(t, field)));
+  } else if (instancep) {
+    object instance = *instancep;
+
+    if (instanceOf(t, fieldClass(t, this_), instance)) {
+      switch (fieldCode(t, field)) {
+      case ByteField:
+        return pushReference
+          (t, makeByte(t, cast<int8_t>(instance, fieldOffset(t, field))));
+
+      case BooleanField:
+        return pushReference
+          (t, makeBoolean(t, cast<uint8_t>(instance, fieldOffset(t, field))));
+
+      case CharField:
+        return pushReference
+          (t, makeChar(t, cast<uint16_t>(instance, fieldOffset(t, field))));
+
+      case ShortField:
+        return pushReference
+          (t, makeShort(t, cast<int16_t>(instance, fieldOffset(t, field))));
+
+      case FloatField:
+        return pushReference
+          (t, makeFloat(t, cast<uint32_t>(instance, fieldOffset(t, field))));
+
+      case IntField:
+        return pushReference
+          (t, makeInt(t, cast<int32_t>(instance, fieldOffset(t, field))));
+
+      case DoubleField:
+        return pushReference
+          (t, makeDouble(t, cast<uint64_t>(instance, fieldOffset(t, field))));
+
+      case LongField:
+        return pushReference
+          (t, makeLong(t, cast<int64_t>(instance, fieldOffset(t, field))));
+
+      case ObjectField:
+        return pushReference
+          (t, cast<object>(instance, fieldOffset(t, field)));
+
+      default:
+        abort(t);
+      }
+    } else {
+      t->exception = makeIllegalArgumentException(t);
+      return 0;
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+    return 0;
+  }
+}
+
+jobject
+invoke(Thread* t, jobject this_, jobject instance, jobjectArray arguments)
+{
+  object method = *this_;
+
+  if (arguments) {
+    if (methodFlags(t, method) & ACC_STATIC) {
+      if (objectArrayLength(t, arguments) == methodParameterCount(t, method)) {
+        return pushReference(t, doInvoke(t, method, 0, *arguments));
+      } else {
+        t->exception = makeArrayIndexOutOfBoundsException(t, 0);
+      }
+    } else if (instance) {
+      if (instanceOf(t, methodClass(t, method), instance)) {
+        if (objectArrayLength(t, arguments)
+            == static_cast<unsigned>(methodParameterCount(t, method) - 1))
+        {
+          return pushReference(t, doInvoke(t, method, *instance, *arguments));
+        } else {
+          t->exception = makeArrayIndexOutOfBoundsException(t, 0);
+        }
+      }
+    } else {
+      t->exception = makeNullPointerException(t);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+
+  return 0;
 }
 
 jobject
@@ -104,15 +263,14 @@ currentTimeMillis(Thread* t)
 }
 
 void
-loadLibrary(Thread* t, jobject, jstring nameString)
+loadLibrary(Thread* t, jobject, jstring name)
 {
-  if (LIKELY(nameString)) {
-    object n = *nameString;
-    char name[stringLength(t, n) + 1];
-    stringChars(t, n, name);
+  if (LIKELY(name)) {
+    char n[stringLength(t, *name) + 1];
+    stringChars(t, *name, n);
 
     for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
-      if (::strcmp(lib->name(), name) == 0) {
+      if (::strcmp(lib->name(), n) == 0) {
         // already loaded
         return;
       }
@@ -120,11 +278,11 @@ loadLibrary(Thread* t, jobject, jstring nameString)
 
     System::Library* lib;
     if (LIKELY(t->vm->system->success
-               (t->vm->system->load(&lib, name, t->vm->libraries))))
+               (t->vm->system->load(&lib, n, t->vm->libraries))))
     {
       t->vm->libraries = lib;
     } else {
-      object message = makeString(t, "library not found: %s", name);
+      object message = makeString(t, "library not found: %s", n);
       t->exception = makeRuntimeException(t, message);
     }
   } else {
@@ -211,8 +369,7 @@ start(Thread* t, jobject this_)
     object message = makeString(t, "thread already started");
     t->exception = makeIllegalStateException(t, message);
   } else {
-    p = new (t->vm->system->allocate(sizeof(Thread)))
-      Thread(t->vm, t->vm->system, *this_, t);
+    p = new (t->vm->system->allocate(sizeof(Thread))) Thread(t->vm, *this_, t);
 
     enter(p, Thread::ActiveState);
 
@@ -253,6 +410,15 @@ populate(Thread* t, object map)
     const char* key;
     void* value;
   } builtins[] = {
+    { "Java_java_lang_Class_forName",
+      reinterpret_cast<void*>(forName) },
+
+    { "Java_java_lang_Field_get",
+      reinterpret_cast<void*>(get) },
+
+    { "Java_java_lang_Method_invoke",
+      reinterpret_cast<void*>(invoke) },
+
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(arraycopy) },
 
