@@ -212,7 +212,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      assert(s, context == 0);
+      //assert(s, context == 0);
       pthread_mutex_destroy(&mutex);
       pthread_cond_destroy(&condition);
       s->free(this);

@@ -1378,6 +1378,12 @@ makeIllegalStateException(Thread* t, object message)
 }
 
 inline object
+makeIllegalArgumentException(Thread* t)
+{
+  return makeIllegalArgumentException(t, 0, makeTrace(t), 0);
+}
+
+inline object
 makeIllegalMonitorStateException(Thread* t)
 {
   return makeIllegalMonitorStateException(t, 0, makeTrace(t), 0);
@@ -1428,6 +1434,14 @@ makeNullPointerException(Thread* t)
 }
 
 inline object
+makeInvocationTargetException(Thread* t, object targetException)
+{
+  PROTECT(t, targetException);
+  object trace = makeTrace(t);
+  return makeRuntimeException(t, 0, trace, targetException);
+}
+
+inline object
 makeStackOverflowError(Thread* t)
 {
   return makeStackOverflowError(t, 0, makeTrace(t), 0);
@@ -1465,6 +1479,12 @@ makeString(Thread* t, const char* format, ...);
 
 void
 stringChars(Thread* t, object string, char* chars);
+
+bool
+isAssignableFrom(Thread* t, object a, object b);
+
+bool
+instanceOf(Thread* t, object class_, object o);
 
 inline void
 pushObject(Thread* t, object o)
@@ -1622,9 +1642,13 @@ pokeLong(Thread* t, unsigned index, uint64_t value)
 inline object*
 pushReference(Thread* t, object o)
 {
-  expect(t, t->sp + 1 < Thread::StackSizeInWords / 2);
-  pushObject(t, o);
-  return reinterpret_cast<object*>(t->stack + ((t->sp - 1) * 2) + 1);
+  if (o) {
+    expect(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+    pushObject(t, o);
+    return reinterpret_cast<object*>(t->stack + ((t->sp - 1) * 2) + 1);
+  } else {
+    return 0;
+  }
 }
 
 inline int
@@ -2054,6 +2078,9 @@ vmNotifyAll(Thread* t, object o)
 {
   notifyAll(t, o);
 }
+
+void
+printTrace(Thread* t, object exception);
 
 void
 exit(Thread* t);

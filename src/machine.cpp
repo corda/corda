@@ -1376,7 +1376,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     builtin::populate(t, m->builtinMap);
 
-    javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
+    t->javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
   } else {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
     parent->child = this;
@@ -1623,6 +1623,39 @@ stringChars(Thread* t, object string, char* chars)
     }
   }
   chars[stringLength(t, string)] = 0;
+}
+
+bool
+isAssignableFrom(Thread* t, object a, object b)
+{
+  if (classFlags(t, a) & ACC_INTERFACE) {
+    for (; b; b = classSuper(t, b)) {
+      object itable = classInterfaceTable(t, b);
+      for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+        if (arrayBody(t, itable, i) == a) {
+          return true;
+        }
+      }
+    }
+  } else {
+    for (; b; b = classSuper(t, b)) {
+      if (b == a) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool
+instanceOf(Thread* t, object class_, object o)
+{
+  if (o == 0) {
+    return false;
+  } else {
+    return isAssignableFrom(t, class_, objectClass(t, o));
+  }
 }
 
 unsigned
@@ -2015,27 +2048,27 @@ resolveClass(Thread* t, object spec)
 
       if (data) {
         if (Verbose) {
-          fprintf(stderr, "parsing %s\n", &byteArrayBody
-                  (t, spec, 0));
+          fprintf(stderr, "parsing %s\n", &byteArrayBody(t, spec, 0));
         }
 
         // parse class file
         class_ = parseClass(t, data->start(), data->length());
         data->dispose();
 
-        if (Verbose) {
-          fprintf(stderr, "done parsing %s\n", &byteArrayBody
-                  (t, className(t, class_), 0));
-        }
+        if (LIKELY(t->exception == 0)) {
+          if (Verbose) {
+            fprintf(stderr, "done parsing %s\n", &byteArrayBody(t, spec, 0));
+          }
 
-        object bootstrapClass = hashMapFind
-          (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+          object bootstrapClass = hashMapFind
+            (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
 
-        if (bootstrapClass) {
-          PROTECT(t, bootstrapClass);
+          if (bootstrapClass) {
+            PROTECT(t, bootstrapClass);
 
-          updateBootstrapClass(t, bootstrapClass, class_);
-          class_ = bootstrapClass;
+            updateBootstrapClass(t, bootstrapClass, class_);
+            class_ = bootstrapClass;
+          }
         }
       }
     }
@@ -2311,6 +2344,51 @@ collect(Thread* t, Heap::CollectionType type)
   m->finalizeQueue = 0;
 
   killZombies(t, m->rootThread);
+}
+
+void
+printTrace(Thread* t, object exception)
+{
+  for (object e = exception; e; e = throwableCauseUnsafe(t, e)) {
+    if (e != exception) {
+      fprintf(stderr, "caused by: ");
+    }
+
+    fprintf(stderr, "%s", &byteArrayBody
+            (t, className(t, objectClass(t, e)), 0));
+  
+    if (throwableMessageUnsafe(t, e)) {
+      object m = throwableMessageUnsafe(t, e);
+      char message[stringLength(t, m) + 1];
+      stringChars(t, m, message);
+      fprintf(stderr, ": %s\n", message);
+    } else {
+      fprintf(stderr, "\n");
+    }
+
+    object trace = throwableTraceUnsafe(t, e);
+    for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
+      object e = arrayBody(t, trace, i);
+      const int8_t* class_ = &byteArrayBody
+        (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
+      const int8_t* method = &byteArrayBody
+        (t, methodName(t, traceElementMethod(t, e)), 0);
+      int line = lineNumber(t, traceElementMethod(t, e), traceElementIp(t, e));
+
+      fprintf(stderr, "  at %s.%s ", class_, method);
+
+      switch (line) {
+      case NativeLine:
+        fprintf(stderr, "(native)\n");
+        break;
+      case UnknownLine:
+        fprintf(stderr, "(unknown line)\n");
+        break;
+      default:
+        fprintf(stderr, "(line %d)\n", line);
+      }
+    }
+  }
 }
 
 void

@@ -139,9 +139,9 @@
 
 (type throwable java/lang/Throwable
   (extends jobject)
-  (object message)
-  (object trace)
-  (object cause))
+  (noassert object message)
+  (noassert object trace)
+  (noassert object cause))
 
 (type exception java/lang/Exception
   (extends throwable))
@@ -153,6 +153,9 @@
   (extends runtimeException))
 
 (type illegalStateException java/lang/IllegalStateException
+  (extends runtimeException))
+
+(type illegalArgumentException java/lang/IllegalArgumentException
   (extends runtimeException))
 
 (type illegalMonitorStateException java/lang/IllegalMonitorStateException
@@ -173,6 +176,9 @@
 
 (type classNotFoundException java/lang/ClassNotFoundException
   (extends runtimeException))
+
+(type invocationTargetException java/lang/InvocationTargetException
+  (extends exception))
 
 (type error java/lang/Error
   (extends throwable))
@@ -231,7 +237,7 @@
 
 (type jreference java/lang/ref/Reference
   (extends jobject)
-  (void* next)
+  (noassert void* next)
   (void* target)
   (void* queue)
   (object jnext))
@@ -273,3 +279,30 @@
 (type doubleArray [D
   (extends jobject)
   (array uint64_t body))
+
+(type jbyte B
+  (extends jobject))
+
+(type jboolean Z
+  (extends jobject))
+
+(type jshort S
+  (extends jobject))
+
+(type jchar C
+  (extends jobject))
+
+(type jint I
+  (extends jobject))
+
+(type jlong L
+  (extends jobject))
+
+(type jfloat F
+  (extends jobject))
+
+(type jdouble D
+  (extends jobject))
+
+(type jvoid V
+  (extends jobject))

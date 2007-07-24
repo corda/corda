@@ -9,6 +9,12 @@
 namespace vm {
 
 object
+run(Thread* t, object method, object this_, ...);
+
+object
+run2(Thread* t, object method, object this_, object arguments);
+
+object
 run(Thread* t, const char* className, const char* methodName,
     const char* methodSpec, object this_, ...);
 

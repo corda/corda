@@ -91,8 +91,7 @@ make(Thread* t, object class_)
 
     ACQUIRE(t, t->vm->referenceLock);
 
-    // jreferenceNext(t, instance)
-    cast<object>(instance, BytesPerWord) = t->vm->weakReferences;
+    jreferenceNextUnsafe(t, instance) = t->vm->weakReferences;
     t->vm->weakReferences = instance;
   }
 
@@ -104,33 +103,6 @@ setStatic(Thread* t, object field, object value)
 {
   set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
                    fieldOffset(t, field)), value);
-}
-
-bool
-instanceOf(Thread* t, object class_, object o)
-{
-  if (o == 0) {
-    return false;
-  }
-
-  if (classFlags(t, class_) & ACC_INTERFACE) {
-    for (object oc = objectClass(t, o); oc; oc = classSuper(t, oc)) {
-      object itable = classInterfaceTable(t, oc);
-      for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-        if (arrayBody(t, itable, i) == class_) {
-          return true;
-        }
-      }
-    }
-  } else {
-    for (object oc = objectClass(t, o); oc; oc = classSuper(t, oc)) {
-      if (oc == class_) {
-        return true;
-      }
-    }
-  }
-
-  return false;
 }
 
 object
@@ -328,6 +300,16 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
     case '[':
       argumentTableSize += BytesPerWord;
       while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
       break;
       
     default:
@@ -535,6 +517,8 @@ invokeNative(Thread* t, object method)
 object
 run(Thread* t)
 {
+  const int base = t->frame;
+
   unsigned instruction = nop;
   unsigned& ip = t->ip;
   unsigned& sp = t->sp;
@@ -659,8 +643,8 @@ run(Thread* t)
 
   case areturn: {
     object result = popObject(t);
-    popFrame(t);
-    if (frame >= 0) {
+    if (frame > base) {
+      popFrame(t);
       pushObject(t, result);
       goto loop;
     } else {
@@ -1451,8 +1435,8 @@ run(Thread* t)
 
   case ireturn: {
     int32_t result = popInt(t);
-    popFrame(t);
-    if (frame >= 0) {
+    if (frame > base) {
+      popFrame(t);
       pushInt(t, result);
       goto loop;
     } else {
@@ -1627,15 +1611,15 @@ run(Thread* t)
     if (objectClass(t, v) == arrayBody(t, t->vm->types, Machine::IntType)) {
       pushInt(t, intValue(t, v));
     } else if (objectClass(t, v)
-               == arrayBody(t, t->vm->types, Machine::StringType))
-    {
-      pushObject(t, v);
-    } else if (objectClass(t, v)
                == arrayBody(t, t->vm->types, Machine::FloatType))
     {
       pushInt(t, floatValue(t, v));
+    } else if (objectClass(t, v)
+               == arrayBody(t, t->vm->types, Machine::StringType))
+    {
+      pushObject(t, v);
     } else {
-      abort(t);
+      pushObject(t, resolveClass(t, v));
     }
   } goto loop;
 
@@ -1710,8 +1694,8 @@ run(Thread* t)
 
   case lreturn: {
     int64_t result = popLong(t);
-    popFrame(t);
-    if (frame >= 0) {
+    if (frame > base) {
+      popFrame(t);
       pushLong(t, result);
       goto loop;
     } else {
@@ -1993,8 +1977,8 @@ run(Thread* t)
   } goto loop;
 
   case return_: {
-    popFrame(t);
-    if (frame >= 0) {
+    if (frame > base) {
+      popFrame(t);
       goto loop;
     } else {
       return 0;
@@ -2148,7 +2132,7 @@ run(Thread* t)
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= 0; frame = frameNext(t, frame)) {
-    if (methodFlags(t, frameMethod(t, frame)) & ACC_NATIVE) {
+    if (frame < base) {
       return 0;
     }
 
@@ -2185,49 +2169,6 @@ run(Thread* t)
     }
   }
 
-  for (object e = exception; e; e = throwableCause(t, e)) {
-    if (e == exception) {
-      fprintf(stderr, "uncaught exception: ");
-    } else {
-      fprintf(stderr, "caused by: ");
-    }
-
-    fprintf(stderr, "%s", &byteArrayBody
-            (t, className(t, objectClass(t, exception)), 0));
-  
-    if (throwableMessage(t, exception)) {
-      object m = throwableMessage(t, exception);
-      char message[stringLength(t, m) + 1];
-      stringChars(t, m, message);
-      fprintf(stderr, ": %s\n", message);
-    } else {
-      fprintf(stderr, "\n");
-    }
-
-    object trace = throwableTrace(t, e);
-    for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
-      object e = arrayBody(t, trace, i);
-      const int8_t* class_ = &byteArrayBody
-        (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
-      const int8_t* method = &byteArrayBody
-        (t, methodName(t, traceElementMethod(t, e)), 0);
-      int line = lineNumber(t, traceElementMethod(t, e), traceElementIp(t, e));
-
-      fprintf(stderr, "  at %s.%s ", class_, method);
-
-      switch (line) {
-      case NativeLine:
-        fprintf(stderr, "(native)\n");
-        break;
-      case UnknownLine:
-        fprintf(stderr, "(unknown line)\n");
-        break;
-      default:
-        fprintf(stderr, "(line %d)\n", line);
-      }
-    }
-  }
-
   return 0;
 }
 
@@ -2249,32 +2190,14 @@ run(Thread* t, const char* className, int argc, const char** argv)
   run(t, className, "main", "([Ljava/lang/String;)V", 0, args);
 }
 
-} // namespace
-
-namespace vm {
-
-object
-run(Thread* t, const char* className, const char* methodName,
-    const char* methodSpec, object this_, ...)
+void
+pushArguments(Thread* t, object this_, const char* spec, va_list a)
 {
-  assert(t, t->state == Thread::ActiveState
-         or t->state == Thread::ExclusiveState);
-
-  if (UNLIKELY(t->sp + parameterFootprint(methodSpec) + 1
-               > Thread::StackSizeInWords / 2))
-  {
-    t->exception = makeStackOverflowError(t);
-    return 0;
-  }
-
   if (this_) {
     pushObject(t, this_);
   }
 
-  va_list a;
-  va_start(a, this_);
-
-  const char* s = methodSpec;
+  const char* s = spec;
   ++ s; // skip '('
   while (*s and *s != ')') {
     switch (*s) {
@@ -2311,6 +2234,172 @@ run(Thread* t, const char* className, const char* methodName,
       break;
     }
   }
+}
+
+void
+pushArguments(Thread* t, object this_, const char* spec, object a)
+{
+  if (this_) {
+    pushObject(t, this_);
+  }
+
+  unsigned index = 0;
+  const char* s = spec;
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      pushObject(t, objectArrayBody(t, a, index++));
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
+      pushObject(t, objectArrayBody(t, a, index++));
+      break;
+      
+    case 'J':
+    case 'D':
+      ++ s;
+      pushLong(t, cast<int64_t>(objectArrayBody(t, a, index++), BytesPerWord));
+      break;
+
+    default:
+      ++ s;
+      pushInt(t, cast<int32_t>(objectArrayBody(t, a, index++), BytesPerWord));
+      break;
+    }
+  }
+}
+
+object
+invoke(Thread* t, object method)
+{
+  object result = 0;
+
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    unsigned returnCode = invokeNative(t, method);
+
+    if (LIKELY(t->exception == 0)) {
+      switch (returnCode) {
+      case ByteField:
+      case BooleanField:
+      case CharField:
+      case ShortField:
+      case FloatField:
+      case IntField:
+        return makeInt(t, popInt(t));
+
+      case LongField:
+      case DoubleField:
+        return makeLong(t, popLong(t));
+        
+      case ObjectField:
+        return popObject(t);
+
+      case VoidField:
+        return 0;
+
+      default:
+        abort(t);
+      };
+    }
+  } else {
+    checkStack(t, method);
+    if (LIKELY(t->exception == 0)) {
+      pushFrame(t, method);
+      result = ::run(t);
+      if (LIKELY(t->exception == 0)) {
+        popFrame(t);
+      }
+    }
+  }
+
+  return result;
+}
+
+} // namespace
+
+namespace vm {
+
+object
+run(Thread* t, object method, object this_, ...)
+{
+  assert(t, t->state == Thread::ActiveState
+         or t->state == Thread::ExclusiveState);
+
+  assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+  if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
+               > Thread::StackSizeInWords / 2))
+  {
+    t->exception = makeStackOverflowError(t);
+    return 0;
+  }
+
+  va_list a;
+  va_start(a, this_);
+
+  const char* spec = reinterpret_cast<char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+  pushArguments(t, this_, spec, a);
+  
+  va_end(a);
+
+  return invoke(t, method);
+}
+
+object
+run2(Thread* t, object method, object this_, object arguments)
+{
+  assert(t, t->state == Thread::ActiveState
+         or t->state == Thread::ExclusiveState);
+
+  assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+  if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
+               > Thread::StackSizeInWords / 2))
+  {
+    t->exception = makeStackOverflowError(t);
+    return 0;
+  }
+
+  const char* spec = reinterpret_cast<char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+  pushArguments(t, this_, spec, arguments);
+
+  return invoke(t, method);
+}
+
+object
+run(Thread* t, const char* className, const char* methodName,
+    const char* methodSpec, object this_, ...)
+{
+  assert(t, t->state == Thread::ActiveState
+         or t->state == Thread::ExclusiveState);
+
+  if (UNLIKELY(t->sp + parameterFootprint(methodSpec) + 1
+               > Thread::StackSizeInWords / 2))
+  {
+    t->exception = makeStackOverflowError(t);
+    return 0;
+  }
+
+  va_list a;
+  va_start(a, this_);
+
+  pushArguments(t, this_, methodSpec, a);
 
   va_end(a);
 
@@ -2328,43 +2417,11 @@ run(Thread* t, const char* className, const char* methodName,
     if (LIKELY(t->exception == 0)) {
       assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
-      if (methodFlags(t, method) & ACC_NATIVE) {
-        unsigned returnCode = invokeNative(t, method);
-
-        if (LIKELY(t->exception == 0)) {
-          switch (returnCode) {
-          case ByteField:
-          case BooleanField:
-          case CharField:
-          case ShortField:
-          case FloatField:
-          case IntField:
-            return makeInt(t, popInt(t));
-
-          case LongField:
-          case DoubleField:
-            return makeLong(t, popLong(t));
-        
-          case ObjectField:
-            return popObject(t);
-
-          case VoidField:
-            return 0;
-
-          default:
-            abort(t);
-          };
-        }
-      } else {
-        checkStack(t, method);
-        if (LIKELY(t->exception == 0)) {
-          pushFrame(t, method);
-        }
-      }
+      return invoke(t, method);
     }    
   }
 
-  return ::run(t);
+  return 0;
 }
 
 int
@@ -2379,7 +2436,10 @@ run(System* system, Heap* heap, ClassFinder* classFinder,
   ::run(t, className, argc, argv);
 
   int exitCode = 0;
-  if (t->exception) exitCode = -1;
+  if (t->exception) {
+    exitCode = -1;
+    printTrace(t, t->exception);
+  }
 
   exit(t);
 

@@ -30,4 +30,6 @@ public class Field<T> extends AccessibleObject {
   public String getName() {
     return new String(name, 0, name.length - 1, false);
   }
+
+  public native Object get(Object instance);
 }
