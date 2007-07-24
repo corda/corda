@@ -2132,7 +2132,7 @@ run(Thread* t)
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= 0; frame = frameNext(t, frame)) {
-    if (frame <= base) {
+    if (frame < base) {
       return 0;
     }
 

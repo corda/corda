@@ -2048,27 +2048,27 @@ resolveClass(Thread* t, object spec)
 
       if (data) {
         if (Verbose) {
-          fprintf(stderr, "parsing %s\n", &byteArrayBody
-                  (t, spec, 0));
+          fprintf(stderr, "parsing %s\n", &byteArrayBody(t, spec, 0));
         }
 
         // parse class file
         class_ = parseClass(t, data->start(), data->length());
         data->dispose();
 
-        if (Verbose) {
-          fprintf(stderr, "done parsing %s\n", &byteArrayBody
-                  (t, className(t, class_), 0));
-        }
+        if (LIKELY(t->exception == 0)) {
+          if (Verbose) {
+            fprintf(stderr, "done parsing %s\n", &byteArrayBody(t, spec, 0));
+          }
 
-        object bootstrapClass = hashMapFind
-          (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+          object bootstrapClass = hashMapFind
+            (t, t->vm->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
 
-        if (bootstrapClass) {
-          PROTECT(t, bootstrapClass);
+          if (bootstrapClass) {
+            PROTECT(t, bootstrapClass);
 
-          updateBootstrapClass(t, bootstrapClass, class_);
-          class_ = bootstrapClass;
+            updateBootstrapClass(t, bootstrapClass, class_);
+            class_ = bootstrapClass;
+          }
         }
       }
     }
