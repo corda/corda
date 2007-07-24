@@ -1376,7 +1376,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     builtin::populate(t, m->builtinMap);
 
-    javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
+    t->javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
   } else {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
     parent->child = this;
