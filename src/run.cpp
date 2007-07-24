@@ -91,8 +91,7 @@ make(Thread* t, object class_)
 
     ACQUIRE(t, t->vm->referenceLock);
 
-    // jreferenceNext(t, instance)
-    cast<object>(instance, BytesPerWord) = t->vm->weakReferences;
+    jreferenceNextUnsafe(t, instance) = t->vm->weakReferences;
     t->vm->weakReferences = instance;
   }
 
@@ -301,6 +300,16 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
     case '[':
       argumentTableSize += BytesPerWord;
       while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
       break;
       
     default:
@@ -1602,15 +1611,15 @@ run(Thread* t)
     if (objectClass(t, v) == arrayBody(t, t->vm->types, Machine::IntType)) {
       pushInt(t, intValue(t, v));
     } else if (objectClass(t, v)
-               == arrayBody(t, t->vm->types, Machine::StringType))
-    {
-      pushObject(t, v);
-    } else if (objectClass(t, v)
                == arrayBody(t, t->vm->types, Machine::FloatType))
     {
       pushInt(t, floatValue(t, v));
+    } else if (objectClass(t, v)
+               == arrayBody(t, t->vm->types, Machine::StringType))
+    {
+      pushObject(t, v);
     } else {
-      abort(t);
+      pushObject(t, resolveClass(t, v));
     }
   } goto loop;
 
@@ -2123,7 +2132,7 @@ run(Thread* t)
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= 0; frame = frameNext(t, frame)) {
-    if (methodFlags(t, frameMethod(t, frame)) & ACC_NATIVE) {
+    if (frame <= base) {
       return 0;
     }
 
@@ -2156,49 +2165,6 @@ run(Thread* t)
             goto loop;
           }
         }
-      }
-    }
-  }
-
-  for (object e = exception; e; e = throwableCause(t, e)) {
-    if (e == exception) {
-      fprintf(stderr, "uncaught exception: ");
-    } else {
-      fprintf(stderr, "caused by: ");
-    }
-
-    fprintf(stderr, "%s", &byteArrayBody
-            (t, className(t, objectClass(t, exception)), 0));
-  
-    if (throwableMessage(t, exception)) {
-      object m = throwableMessage(t, exception);
-      char message[stringLength(t, m) + 1];
-      stringChars(t, m, message);
-      fprintf(stderr, ": %s\n", message);
-    } else {
-      fprintf(stderr, "\n");
-    }
-
-    object trace = throwableTrace(t, e);
-    for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
-      object e = arrayBody(t, trace, i);
-      const int8_t* class_ = &byteArrayBody
-        (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
-      const int8_t* method = &byteArrayBody
-        (t, methodName(t, traceElementMethod(t, e)), 0);
-      int line = lineNumber(t, traceElementMethod(t, e), traceElementIp(t, e));
-
-      fprintf(stderr, "  at %s.%s ", class_, method);
-
-      switch (line) {
-      case NativeLine:
-        fprintf(stderr, "(native)\n");
-        break;
-      case UnknownLine:
-        fprintf(stderr, "(unknown line)\n");
-        break;
-      default:
-        fprintf(stderr, "(line %d)\n", line);
       }
     }
   }
@@ -2354,8 +2320,9 @@ invoke(Thread* t, object method)
     if (LIKELY(t->exception == 0)) {
       pushFrame(t, method);
       result = ::run(t);
-      popFrame(t);
-      
+      if (LIKELY(t->exception == 0)) {
+        popFrame(t);
+      }
     }
   }
 
@@ -2469,7 +2436,10 @@ run(System* system, Heap* heap, ClassFinder* classFinder,
   ::run(t, className, argc, argv);
 
   int exitCode = 0;
-  if (t->exception) exitCode = -1;
+  if (t->exception) {
+    exitCode = -1;
+    printTrace(t, t->exception);
+  }
 
   exit(t);
 

@@ -169,23 +169,29 @@ get(Thread* t, jobject this_, jobject instancep)
 }
 
 jobject
-invoke(Thread* t, jobject this_, jobject instance, jobjectArray arguments)
+invoke(Thread* t, jobject this_, jobject instancep, jobjectArray argumentsp)
 {
   object method = *this_;
 
-  if (arguments) {
+  if (argumentsp) {
+    object arguments = *argumentsp;
+
     if (methodFlags(t, method) & ACC_STATIC) {
-      if (objectArrayLength(t, arguments) == methodParameterCount(t, method)) {
-        return pushReference(t, doInvoke(t, method, 0, *arguments));
+      if (objectArrayLength(t, arguments)
+          == methodParameterCount(t, method))
+      {
+        return pushReference(t, doInvoke(t, method, 0, arguments));
       } else {
         t->exception = makeArrayIndexOutOfBoundsException(t, 0);
       }
-    } else if (instance) {
+    } else if (instancep) {
+      object instance = *instancep;
+
       if (instanceOf(t, methodClass(t, method), instance)) {
         if (objectArrayLength(t, arguments)
             == static_cast<unsigned>(methodParameterCount(t, method) - 1))
         {
-          return pushReference(t, doInvoke(t, method, *instance, *arguments));
+          return pushReference(t, doInvoke(t, method, instance, arguments));
         } else {
           t->exception = makeArrayIndexOutOfBoundsException(t, 0);
         }
@@ -382,6 +388,10 @@ start(Thread* t, jobject this_)
 
         vm::run(t, "java/lang/Thread", "run", "()V", t->javaThread);
 
+        if (t->exception) {
+          printTrace(t, t->exception);
+        }
+
         t->exit();
       }
 
@@ -412,12 +422,8 @@ populate(Thread* t, object map)
   } builtins[] = {
     { "Java_java_lang_Class_forName",
       reinterpret_cast<void*>(forName) },
-
-    { "Java_java_lang_Field_get",
-      reinterpret_cast<void*>(get) },
-
-    { "Java_java_lang_Method_invoke",
-      reinterpret_cast<void*>(invoke) },
+    { "Java_java_lang_Class_isAssignableFrom",
+      reinterpret_cast<void*>(isAssignableFrom) },
 
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(arraycopy) },
@@ -451,6 +457,12 @@ populate(Thread* t, object map)
       reinterpret_cast<void*>(toString) },
     { "Java_java_lang_Object_wait",
       reinterpret_cast<void*>(wait) },
+
+    { "Java_java_lang_reflect_Field_get",
+      reinterpret_cast<void*>(get) },
+
+    { "Java_java_lang_reflect_Method_invoke",
+      reinterpret_cast<void*>(invoke) },
 
     { 0, 0 }
   };

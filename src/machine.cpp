@@ -1653,9 +1653,9 @@ instanceOf(Thread* t, object class_, object o)
 {
   if (o == 0) {
     return false;
+  } else {
+    return isAssignableFrom(t, class_, objectClass(t, o));
   }
-
-  return isAssignableFrom(t, class_, objectClass(t, o));
 }
 
 unsigned
@@ -2344,6 +2344,51 @@ collect(Thread* t, Heap::CollectionType type)
   m->finalizeQueue = 0;
 
   killZombies(t, m->rootThread);
+}
+
+void
+printTrace(Thread* t, object exception)
+{
+  for (object e = exception; e; e = throwableCauseUnsafe(t, e)) {
+    if (e != exception) {
+      fprintf(stderr, "caused by: ");
+    }
+
+    fprintf(stderr, "%s", &byteArrayBody
+            (t, className(t, objectClass(t, e)), 0));
+  
+    if (throwableMessageUnsafe(t, e)) {
+      object m = throwableMessageUnsafe(t, e);
+      char message[stringLength(t, m) + 1];
+      stringChars(t, m, message);
+      fprintf(stderr, ": %s\n", message);
+    } else {
+      fprintf(stderr, "\n");
+    }
+
+    object trace = throwableTraceUnsafe(t, e);
+    for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
+      object e = arrayBody(t, trace, i);
+      const int8_t* class_ = &byteArrayBody
+        (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
+      const int8_t* method = &byteArrayBody
+        (t, methodName(t, traceElementMethod(t, e)), 0);
+      int line = lineNumber(t, traceElementMethod(t, e), traceElementIp(t, e));
+
+      fprintf(stderr, "  at %s.%s ", class_, method);
+
+      switch (line) {
+      case NativeLine:
+        fprintf(stderr, "(native)\n");
+        break;
+      case UnknownLine:
+        fprintf(stderr, "(unknown line)\n");
+        break;
+      default:
+        fprintf(stderr, "(line %d)\n", line);
+      }
+    }
+  }
 }
 
 void

@@ -101,7 +101,8 @@ public final class String implements Comparable<String> {
         return new String(data, offset + start, end - start, false);
       }
     } else {
-      throw new IndexOutOfBoundsException();
+      throw new IndexOutOfBoundsException
+        (start + " not in (0, " + end + ") or " + end + " > " + length);
     }
   }
 

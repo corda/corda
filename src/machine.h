@@ -22,7 +22,7 @@
 namespace vm {
 
 const bool Verbose = false;
-const bool DebugRun = true;
+const bool DebugRun = false;
 const bool DebugStack = false;
 const bool DebugMonitors = false;
 
@@ -2078,6 +2078,9 @@ vmNotifyAll(Thread* t, object o)
 {
   notifyAll(t, o);
 }
+
+void
+printTrace(Thread* t, object exception);
 
 void
 exit(Thread* t);

@@ -139,9 +139,9 @@
 
 (type throwable java/lang/Throwable
   (extends jobject)
-  (object message)
-  (object trace)
-  (object cause))
+  (noassert object message)
+  (noassert object trace)
+  (noassert object cause))
 
 (type exception java/lang/Exception
   (extends throwable))
@@ -237,7 +237,7 @@
 
 (type jreference java/lang/ref/Reference
   (extends jobject)
-  (void* next)
+  (noassert void* next)
   (void* target)
   (void* queue)
   (object jnext))

@@ -53,15 +53,20 @@ public class Method<T> extends AccessibleObject implements Member {
 
     for (int i = 0; i < spec.length(); ++i) {
       char c = spec.charAt(i);
-      if (c == 'L') {
-        String name = spec.substring(i + 1, next(';', spec, i + 1));
+      if (c == ')') {
+        break;
+      } else if (c == 'L') {
+        int start = i + 1;
+        i = next(';', spec, start);
+        String name = spec.substring(start, i);
         types[index++] = Class.forName(name);
       } else if (c == '[') {
         int start = i;
         while (spec.charAt(i) == '[') ++i;
 
         if (spec.charAt(i) == 'L') {
-          String name = spec.substring(start, next(';', spec, i + 1));
+          i = next(';', spec, i + 1);
+          String name = spec.substring(start, i);
           types[index++] = Class.forName(name);
         } else {
           String name = spec.substring(start, i + 1);
