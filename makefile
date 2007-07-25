@@ -16,7 +16,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Threads.class
+input = $(cls)/Hello.class
 
 cxx = g++
 cc = gcc

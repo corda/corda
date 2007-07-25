@@ -130,6 +130,30 @@ public final class String implements Comparable<String> {
     }
   }
 
+  public byte[] getBytes() {
+    byte[] b = new byte[length];
+    getBytes(0, length, b, 0);
+    return b;
+  }
+
+  public void getBytes(int srcOffset, int srcLength,
+                       byte[] dst, int dstOffset)
+  {
+    if (srcOffset + srcLength > length) {
+      throw new IndexOutOfBoundsException();
+    }
+
+    if (data instanceof char[]) {
+      char[] src = (char[]) data;
+      for (int i = 0; i < srcLength; ++i) {
+        dst[i + dstOffset] = (byte) src[i + offset + srcOffset];
+      }
+    } else {
+      byte[] src = (byte[]) data;
+      System.arraycopy(src, offset + srcOffset, dst, dstOffset, srcLength);
+    }
+  }
+
   public void getChars(int srcOffset, int srcLength,
                        char[] dst, int dstOffset)
   {

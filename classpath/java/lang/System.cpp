@@ -5,17 +5,6 @@
 #undef JNIEXPORT
 #define JNIEXPORT __attribute__ ((visibility("default")))
 
-extern "C" JNIEXPORT void JNICALL
-Java_java_lang_System_00024Output_print(JNIEnv* e, jobject, jstring s)
-{
-  jboolean isCopy;
-  const char* chars = e->GetStringUTFChars(s, &isCopy);
-  if (chars) {
-    printf("%s", chars);
-  }
-  e->ReleaseStringUTFChars(s, chars);
-}
-
 extern "C" JNIEXPORT jstring JNICALL
 Java_java_lang_System_getProperty(JNIEnv* e, jstring key)
 {
