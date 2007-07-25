@@ -2154,9 +2154,14 @@ run(Thread* t)
 
             PROTECT(t, eht);
             catchType = resolveClass(t, catchType);
-            eh = exceptionHandlerTableBody(t, eht, i);
 
-            exception = e;
+            if (catchType) {
+              eh = exceptionHandlerTableBody(t, eht, i);
+              exception = e;
+            } else {
+              // can't find what we're supposed to catch - move on.
+              continue;
+            }
           }
 
           if (catchType == 0 or instanceOf(t, catchType, exception)) {
