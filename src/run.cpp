@@ -2131,11 +2131,7 @@ run(Thread* t)
   }
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
-  for (; frame >= 0; frame = frameNext(t, frame)) {
-    if (frame < base) {
-      return 0;
-    }
-
+  for (; frame >= base; popFrame(t)) {
     code = methodCode(t, frameMethod(t, frame));
     object eht = codeExceptionHandlerTable(t, code);
     if (eht) {
@@ -2152,9 +2148,15 @@ run(Thread* t)
           }
 
           if (catchType) {
+            object e = exception;
+            exception = 0;
+            PROTECT(t, e);
+
             PROTECT(t, eht);
             catchType = resolveClass(t, catchType);
             eh = exceptionHandlerTableBody(t, eht, i);
+
+            exception = e;
           }
 
           if (catchType == 0 or instanceOf(t, catchType, exception)) {

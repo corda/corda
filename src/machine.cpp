@@ -967,7 +967,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         if (p) {
           set(t, tripleSecond(t, p), method);          
         } else {
-          hashMapInsert(t, virtualMap, method, 0, methodHash);          
+          hashMapInsert(t, nativeMap, method, 0, methodHash);          
         }
       }
 
