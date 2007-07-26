@@ -369,9 +369,8 @@ resolveNativeMethodData(Thread* t, object method)
 inline void
 checkStack(Thread* t, object method)
 {
-  unsigned parameterFootprint = methodParameterFootprint(t, method);
-  unsigned base = t->sp - parameterFootprint;
-  if (UNLIKELY(base
+  if (UNLIKELY(t->sp
+               + methodParameterFootprint(t, method)
                + codeMaxLocals(t, methodCode(t, method))
                + FrameFootprint
                + codeMaxStack(t, methodCode(t, method))
@@ -406,15 +405,15 @@ invokeNative(Thread* t, object method)
 
   args[offset++] = reinterpret_cast<uintptr_t>(t);
 
-  unsigned start = 0;
+  unsigned i = 0;
   if (methodFlags(t, method) & ACC_STATIC) {
-    start = 1;
+    ++ i;
     args[offset++] = reinterpret_cast<uintptr_t>
       (pushReference(t, methodClass(t, method)));
   }
 
   unsigned sp = frameBase(t, t->frame);
-  for (unsigned i = start; i < count; ++i) {
+  for (; i < count; ++i) {
     unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
 
     switch (type) {
