@@ -761,7 +761,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         classObjectMask(t, classSuper(t, class_)));
   } else {
     object mask = makeIntArray
-      (t, divide(classFixedSize(t, class_), BitsPerWord * BytesPerWord), true);
+      (t, ceiling(classFixedSize(t, class_), BitsPerWord * BytesPerWord), true);
     intArrayBody(t, mask, 0) = 1;
 
     bool sawReferenceField = false;
@@ -1571,7 +1571,7 @@ allocate2(Thread* t, unsigned sizeInBytes)
     ENTER(t, Thread::IdleState);
   }
 
-  if (t->heapIndex + divide(sizeInBytes, BytesPerWord)
+  if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
       >= Thread::HeapSizeInWords)
   {
     ENTER(t, Thread::ExclusiveState);
@@ -2287,9 +2287,9 @@ collect(Thread* t, Heap::CollectionType type)
 //            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
 //            fixedSize, arrayLength, arrayElementSize, mask[0]);
 
-        unsigned fixedSizeInWords = divide(fixedSize, BytesPerWord);
+        unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
         unsigned arrayElementSizeInWords
-          = divide(arrayElementSize, BytesPerWord);
+          = ceiling(arrayElementSize, BytesPerWord);
 
         for (unsigned i = 0; i < fixedSizeInWords; ++i) {
           if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {

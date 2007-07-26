@@ -16,7 +16,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Threads.class
+input = $(cls)/Hello.class
 
 cxx = g++
 cc = gcc
@@ -55,7 +55,7 @@ java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
 stdcpp-sources = $(src)/stdc++.cpp
 stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
 
-jni-sources = $(classpath)/java/lang/System.cpp
+jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath))
 jni-cflags = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux $(cflags)
 jni-library = $(bld)/libnatives.so

@@ -2,7 +2,7 @@
 #include "system.h"
 #include "common.h"
 
-#define CHAIN_HEADER_SIZE divide(sizeof(Segment::Chain), BytesPerWord)
+#define CHAIN_HEADER_SIZE ceiling(sizeof(Segment::Chain), BytesPerWord)
 
 using namespace vm;
 
@@ -164,7 +164,7 @@ class Segment {
 
     unsigned size(unsigned capacity) {
       unsigned result
-        = divide(divide(capacity, scale) * bitsPerRecord, BitsPerWord);
+        = ceiling(ceiling(capacity, scale) * bitsPerRecord, BitsPerWord);
       assert(segment->context, result);
       return result;
     }

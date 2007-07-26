@@ -1,15 +1,28 @@
 package java.io;
 
 public class FileInputStream extends InputStream {
-  private final FileDescriptor fd;
+  private final int fd;
 
   public FileInputStream(FileDescriptor fd) {
-    this.fd = fd;
+    this.fd = fd.value;
   }
 
-  public native int read() throws IOException;
+  private static native int read(int fd) throws IOException;
 
-  public native int read(byte[] b, int offset, int length) throws IOException;
+  private static native int read(int fd, byte[] b, int offset, int length)
+    throws IOException;
 
-  public native void close() throws IOException;
+  public static native void close(int fd) throws IOException;
+
+  public int read() throws IOException {
+    return read(fd);
+  }
+
+  public int read(byte[] b, int offset, int length) throws IOException {
+    return read(fd, b, offset, length);
+  }
+
+  public void close() throws IOException {
+    close(fd);
+  }
 }

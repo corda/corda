@@ -60,15 +60,14 @@ avg(unsigned a, unsigned b)
 inline unsigned
 pad(unsigned n)
 {
-  unsigned extra = n % BytesPerWord;
-  return (extra ? n + BytesPerWord - extra : n);
+  n += BytesPerWord - 1;
+  return n - (n % BytesPerWord);
 }
 
 inline unsigned
-divide(unsigned n, unsigned d)
+ceiling(unsigned n, unsigned d)
 {
-  if (n and d > n) return 1;
-  return (n / d) + (n % d ? 1 : 0);
+  return (n + d - 1) / d;
 }
 
 inline bool

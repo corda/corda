@@ -265,23 +265,24 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
 {
   PROTECT(t, method);
 
+  unsigned count = methodParameterCount(t, method) + 1;
+  if (methodFlags(t, method) & ACC_STATIC) {
+    ++ count;
+  }
+
   object data = makeNativeMethodData(t,
                                      function,
                                      0, // argument table size
                                      0, // return code,
                                      builtin,
-                                     methodParameterCount(t, method) + 1,
+                                     count,
                                      false);
         
-  unsigned argumentTableSize = BytesPerWord;
+  unsigned argumentTableSize = BytesPerWord * 2;
   unsigned index = 0;
 
   nativeMethodDataParameterTypes(t, data, index++) = POINTER_TYPE;
-
-  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-    nativeMethodDataParameterTypes(t, data, index++) = POINTER_TYPE;
-    argumentTableSize += BytesPerWord;
-  }
+  nativeMethodDataParameterTypes(t, data, index++) = POINTER_TYPE;
 
   const char* s = reinterpret_cast<const char*>
     (&byteArrayBody(t, methodSpec(t, method), 0));
@@ -395,6 +396,9 @@ invokeNative(Thread* t, object method)
   pushFrame(t, method);
 
   unsigned count = methodParameterCount(t, method);
+  if (methodFlags(t, method) & ACC_STATIC) {
+    ++ count;
+  }
 
   unsigned size = nativeMethodDataArgumentTableSize(t, data);
   uintptr_t args[size / BytesPerWord];
@@ -402,8 +406,15 @@ invokeNative(Thread* t, object method)
 
   args[offset++] = reinterpret_cast<uintptr_t>(t);
 
+  unsigned start = 0;
+  if (methodFlags(t, method) & ACC_STATIC) {
+    start = 1;
+    args[offset++] = reinterpret_cast<uintptr_t>
+      (pushReference(t, methodClass(t, method)));
+  }
+
   unsigned sp = frameBase(t, t->frame);
-  for (unsigned i = 0; i < count; ++i) {
+  for (unsigned i = start; i < count; ++i) {
     unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
 
     switch (type) {

@@ -1303,7 +1303,7 @@ inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
 {
   object o = t->heap + t->heapIndex;
-  t->heapIndex += divide(sizeInBytes, BytesPerWord);
+  t->heapIndex += ceiling(sizeInBytes, BytesPerWord);
   return o;
 }
 
@@ -1315,7 +1315,7 @@ allocate(Thread* t, unsigned sizeInBytes)
 {
   stress(t);
 
-  if (UNLIKELY(t->heapIndex + divide(sizeInBytes, BytesPerWord)
+  if (UNLIKELY(t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
                >= Thread::HeapSizeInWords
                or t->vm->exclusive))
   {
@@ -1729,10 +1729,10 @@ hash(const int8_t* s, unsigned length)
 inline unsigned
 baseSize(Thread* t, object o, object class_)
 {
-  return divide(classFixedSize(t, class_), BytesPerWord)
-    + divide(classArrayElementSize(t, class_)
-             * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
-             BytesPerWord);
+  return ceiling(classFixedSize(t, class_), BytesPerWord)
+    + ceiling(classArrayElementSize(t, class_)
+              * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
+              BytesPerWord);
 }
 
 inline bool

@@ -1,4 +1,3 @@
-#include "stdio.h"
 #include "string.h"
 #include "jni.h"
 
@@ -6,7 +5,7 @@
 #define JNIEXPORT __attribute__ ((visibility("default")))
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_java_lang_System_getProperty(JNIEnv* e, jstring key)
+Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring key)
 {
   jstring value = 0;
 

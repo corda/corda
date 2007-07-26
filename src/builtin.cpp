@@ -65,7 +65,7 @@ notifyAll(Thread* t, jobject this_)
 }
 
 jclass
-forName(Thread* t, jstring name)
+forName(Thread* t, jclass, jstring name)
 {
   if (LIKELY(name)) {
     object n = makeByteArray(t, stringLength(t, *name) + 1, false);
@@ -207,13 +207,13 @@ invoke(Thread* t, jobject this_, jobject instancep, jobjectArray argumentsp)
 }
 
 jobject
-currentThread(Thread* t)
+currentThread(Thread* t, jclass)
 {
   return pushReference(t, t->javaThread);
 }
 
 void
-sleep(Thread* t, jlong milliseconds)
+sleep(Thread* t, jclass, jlong milliseconds)
 {
   if (milliseconds == 0) milliseconds = INT64_MAX;
 
@@ -223,8 +223,8 @@ sleep(Thread* t, jlong milliseconds)
 }
 
 void
-arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
-          jint length)
+arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
+          jint dstOffset, jint length)
 {
   if (LIKELY(src and dst)) {
     object s = *src;
@@ -263,7 +263,7 @@ arraycopy(Thread* t, jobject src, jint srcOffset, jobject dst, jint dstOffset,
 }
 
 jlong
-currentTimeMillis(Thread* t)
+currentTimeMillis(Thread* t, jclass)
 {
   return t->vm->system->now();
 }
@@ -311,7 +311,7 @@ exit(Thread* t, jobject, jint code)
 }
 
 jobject
-trace(Thread* t, jint skipCount)
+trace(Thread* t, jclass, jint skipCount)
 {
   int frame = t->frame;
   while (skipCount-- and frame >= 0) {
@@ -334,7 +334,7 @@ trace(Thread* t, jint skipCount)
 }
 
 jarray
-resolveTrace(Thread* t, jobject trace)
+resolveTrace(Thread* t, jclass, jobject trace)
 {
   unsigned length = arrayLength(t, *trace);
   object array = makeObjectArray

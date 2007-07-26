@@ -11,8 +11,10 @@ tests=${@}
 
 echo -n "" >${log}
 
+echo
+
 for test in ${tests}; do
-  printf "${test}: "
+  printf "%16s" "${test}: "
 
   case ${mode} in
     debug )
