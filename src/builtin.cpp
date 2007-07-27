@@ -154,11 +154,51 @@ Field_get(Thread* t, jobject this_, jobject instancep)
       }
     } else {
       t->exception = makeIllegalArgumentException(t);
-      return 0;
     }
   } else {
     t->exception = makeNullPointerException(t);
-    return 0;
+  }
+
+  return 0;
+}
+
+void
+Field_set(Thread* t, jobject this_, jobject instancep, jobject value)
+{
+  object field = *this_;
+  object v = (value ? *value : 0);
+
+  if (fieldFlags(t, field) & ACC_STATIC) {
+    if (fieldCode(t, field) == ObjectField or v) {
+      set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                       fieldOffset(t, field)), v);
+    } else {
+      t->exception = makeNullPointerException(t);
+    }
+  } else if (instancep) {
+    object instance = *instancep;
+
+    if (instanceOf(t, fieldClass(t, this_), instance)) {
+      switch (fieldCode(t, field)) {
+      case ObjectField:
+        set(t, cast<object>(instance, fieldOffset(t, field)), v);
+        break;
+
+      default: {
+          uint8_t* body = &cast<uint8_t>(instance, fieldOffset(t, field));
+          if (v) {
+            memcpy(body, &cast<uint8_t>(v, BytesPerWord),
+                   primitiveSize(t, fieldCode(t, field)));
+          } else {
+            t->exception = makeNullPointerException(t);
+          }
+      } break;
+      }
+    } else {
+      t->exception = makeIllegalArgumentException(t);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
   }
 }
 
@@ -253,6 +293,45 @@ Array_get(Thread* t, jobject array, int index)
   }
 
   return 0;
+}
+
+void
+Array_set(Thread* t, jobject array, int index, jobject value)
+{
+  if (LIKELY(array)) {
+    object a = *array;
+    object v = (value ? *value : 0);
+    unsigned elementSize = classArrayElementSize(t, objectClass(t, a));
+
+    if (LIKELY(elementSize)) {
+      intptr_t length = cast<uintptr_t>(a, BytesPerWord);
+
+      if (LIKELY(index >= 0 and index < length)) {
+        switch (byteArrayBody(t, className(t, objectClass(t, a)), 1)) {
+        case 'L':
+        case '[':
+          set(t, objectArrayBody(t, a, index), v);
+          break;
+
+        default: {
+          uint8_t* p = &cast<uint8_t>
+            (a, (2 * BytesPerWord) + (index * elementSize));
+          if (v) {
+            memcpy(p, &cast<uint8_t>(v, BytesPerWord), elementSize);
+          } else {
+            t->exception = makeNullPointerException(t);
+          }
+        } break;
+        }
+      } else {
+        t->exception = makeArrayIndexOutOfBoundsException(t, 0);
+      }
+    } else {
+      t->exception = makeIllegalArgumentException(t);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
 }
 
 jint
@@ -545,6 +624,8 @@ populateBuiltinMap(Thread* t, object map)
 
     { "Java_java_lang_reflect_Array_get",
       reinterpret_cast<void*>(::Array_get) },
+    { "Java_java_lang_reflect_Array_set",
+      reinterpret_cast<void*>(::Array_set) },
     { "Java_java_lang_reflect_Array_getLength",
       reinterpret_cast<void*>(::Array_getLength) },
     { "Java_java_lang_reflect_Array_makeObjectArray",
@@ -555,6 +636,8 @@ populateBuiltinMap(Thread* t, object map)
 
     { "Java_java_lang_reflect_Field_get",
       reinterpret_cast<void*>(::Field_get) },
+    { "Java_java_lang_reflect_Field_set",
+      reinterpret_cast<void*>(::Field_set) },
 
     { "Java_java_lang_reflect_Method_invoke",
       reinterpret_cast<void*>(::Method_invoke) },

@@ -3,6 +3,7 @@ package java.lang;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 public final class Class <T> {
   private short flags;
@@ -85,21 +86,27 @@ public final class Class <T> {
   public Method getDeclaredMethod(String name, Class ... parameterTypes)
     throws NoSuchMethodException
   {
-    Method f = findMethod(name, parameterTypes);
-    if (f == null) {
+    if (name.startsWith("<")) {
+      throw new NoSuchMethodException(name);
+    }
+    Method m = findMethod(name, parameterTypes);
+    if (m == null) {
       throw new NoSuchMethodException(name);
     } else {
-      return f;
+      return m;
     }
   }
 
   public Method getMethod(String name, Class ... parameterTypes)
     throws NoSuchMethodException
   {
+    if (name.startsWith("<")) {
+      throw new NoSuchMethodException(name);
+    }
     for (Class c = this; c != null; c = c.super_) {
-      Method f = c.findMethod(name, parameterTypes);
-      if (f != null) {
-        return f;
+      Method m = c.findMethod(name, parameterTypes);
+      if (m != null) {
+        return m;
       }
     }
     throw new NoSuchMethodException(name);
@@ -108,18 +115,29 @@ public final class Class <T> {
   public Constructor getConstructor(Class ... parameterTypes)
     throws NoSuchMethodException
   {
-    return new Constructor(getDeclaredMethod("<init>", parameterTypes));
+    Method m = findMethod("<init>", parameterTypes);
+    if (m == null) {
+      throw new NoSuchMethodException();
+    } else {
+      return new Constructor(m);
+    }
   }
 
-  public Constructor[] getConstructors() {
+  private int countConstructors(boolean publicOnly) {
     int count = 0;
     for (int i = 0; i < methodTable.length; ++i) {
-      if (methodTable[i].getName().equals("<init>")) {
+      if (((! publicOnly)
+           || ((methodTable[i].getModifiers() & Modifier.PUBLIC)) != 0)
+          && methodTable[i].getName().equals("<init>"))
+      {
         ++ count;
       }
     }
+    return count;
+  }
 
-    Constructor[] array = new Constructor[count];
+  public Constructor[] getDeclaredConstructors() {
+    Constructor[] array = new Constructor[countConstructors(false)];
     int index = 0;
     for (int i = 0; i < methodTable.length; ++i) {
       if (methodTable[i].getName().equals("<init>")) {
@@ -130,8 +148,18 @@ public final class Class <T> {
     return array;
   }
 
-  public Constructor[] getDeclaredConstructors() {
-    return getConstructors();
+  public Constructor[] getConstructors() {
+    Constructor[] array = new Constructor[countConstructors(true)];
+    int index = 0;
+    for (int i = 0; i < methodTable.length; ++i) {
+      if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
+          && methodTable[i].getName().equals("<init>"))
+      {
+        array[index++] = new Constructor(methodTable[i]);
+      }
+    }
+
+    return array;
   }
 
   public Field[] getDeclaredFields() {
@@ -140,18 +168,58 @@ public final class Class <T> {
     return array;
   }
 
-  public Method[] getDeclaredMethods() {
+  private int countPublicFields() {
     int count = 0;
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (! methodTable[i].getName().equals("<init>")) {
+    for (int i = 0; i < fieldTable.length; ++i) {
+      if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
         ++ count;
       }
     }
+    return count;
+  }
 
-    Method[] array = new Method[count];
+  public Field[] getFields() {
+    Field[] array = new Field[countPublicFields()];
+    for (int i = 0; i < fieldTable.length; ++i) {
+      if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
+        array[i] = fieldTable[i];
+      }
+    }
+    return array;
+  }
+
+  private int countMethods(boolean publicOnly) {
+    int count = 0;
+    for (int i = 0; i < methodTable.length; ++i) {
+      if (((! publicOnly)
+           || ((methodTable[i].getModifiers() & Modifier.PUBLIC)) != 0)
+          && (! methodTable[i].getName().startsWith("<")))
+      {
+        ++ count;
+      }
+    }
+    return count;
+  }
+
+  public Method[] getDeclaredMethods() {
+    Method[] array = new Method[countMethods(false)];
     int index = 0;
     for (int i = 0; i < methodTable.length; ++i) {
-      if (! methodTable[i].getName().equals("<init>")) {
+      if (! methodTable[i].getName().startsWith("<")) {
+        array[index++] = methodTable[i];
+      }
+    }
+
+    return array;
+  }
+
+  public Method[] getMethods() {
+    Method[] array = new Method[countMethods(true)];
+    int index = 0;
+    for (int i = 0; i < methodTable.length; ++i) {
+      if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
+          && (! methodTable[i].getName().startsWith("<")))
+      {
         array[index++] = methodTable[i];
       }
     }

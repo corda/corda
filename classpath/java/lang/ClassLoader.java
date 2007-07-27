@@ -7,5 +7,9 @@ public class ClassLoader {
 
   public static ClassLoader getSystemClassLoader() {
     return instance;
-  }  
+  }
+
+  public Class loadClass(String name) {
+    return Class.forName(name);
+  }
 }

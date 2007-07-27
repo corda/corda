@@ -32,4 +32,28 @@ public final class Long extends Number {
   public double doubleValue() {
     return (double) value;
   }
+
+  private static long pow(long a, long b) {
+    long c = 1;
+    for (int i = 0; i < b; ++i) c *= a;
+    return c;
+  }
+
+  public static long parseLong(String s, int radix) {    
+    long number = 0;
+
+    for (int i = 0; i < s.length(); ++i) {
+      char c = s.charAt(i);
+      if (((c >= '0') && (c <= '9')) ||
+	  ((c >= 'a') && (c <= 'z'))) {
+	long digit = ((c >= '0' && c <= '9') ? (c - '0') : (c - 'a' + 10));
+	number += digit * pow(radix, (s.length() - i - 1));
+      } else {
+	throw new NumberFormatException("Invalid character " + c + " code " +
+					(int) c);
+      }
+    }
+
+    return number;
+  }
 }

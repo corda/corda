@@ -32,4 +32,8 @@ public final class Integer extends Number {
   public double doubleValue() {
     return (double) value;
   }
+
+  public static int parseInt(String s, int radix) {
+    return (int) Long.parseLong(s, radix);
+  }
 }

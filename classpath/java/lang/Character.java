@@ -45,7 +45,7 @@ public final class Character {
     return (c >= 'A' && c <= 'Z');
   }
 
-  public static boolean isWhiteSpace(char c) {
+  public static boolean isWhitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n';
   }
 }

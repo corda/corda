@@ -20,7 +20,7 @@
 namespace vm {
 
 const bool Verbose = false;
-const bool DebugRun = true;
+const bool DebugRun = false;
 const bool DebugStack = false;
 const bool DebugMonitors = false;
 

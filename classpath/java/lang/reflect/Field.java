@@ -32,4 +32,6 @@ public class Field<T> extends AccessibleObject {
   }
 
   public native Object get(Object instance);
+
+  public native void set(Object instance, Object value);
 }

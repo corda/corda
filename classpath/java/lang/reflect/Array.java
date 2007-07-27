@@ -5,6 +5,8 @@ public final class Array {
 
   public static native Object get(Object array, int index);
 
+  public static native void set(Object array, int index, Object value);
+
   public static native int getLength(Object array);
 
   private static native Object makeObjectArray(Class elementType, int length);

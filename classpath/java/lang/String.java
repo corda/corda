@@ -144,7 +144,7 @@ public final class String implements Comparable<String> {
 
   public boolean startsWith(String s) {
     if (length >= s.length) {
-      return substring(0, s.length).compareTo(s) != 0;
+      return substring(0, s.length).compareTo(s) == 0;
     } else {
       return false;
     }
@@ -152,7 +152,7 @@ public final class String implements Comparable<String> {
 
   public boolean endsWith(String s) {
     if (length >= s.length) {
-      return substring(length - s.length).compareTo(s) != 0;
+      return substring(length - s.length).compareTo(s) == 0;
     } else {
       return false;
     }
