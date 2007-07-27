@@ -92,10 +92,48 @@ public class LinkedList<T> implements List<T> {
     return find(index).value;
   }
 
+  public T getFirst() {
+    if (front != null) {
+      return front.value;
+    } else {
+      throw new NoSuchElementException();
+    }
+  }
+
+  public T getLast() {
+    if (rear != null) {
+      return rear.value;
+    } else {
+      throw new NoSuchElementException();
+    }
+  }
+
   public T remove(int index) {
     Cell<T> c = find(index);
     remove(c);
     return c.value;
+  }
+
+  public T removeFirst() {
+    if (front != null) {
+      T v = front.value;
+      front = front.next;
+      if (front != null) front.prev = null;
+      return v;
+    } else {
+      throw new NoSuchElementException();
+    }
+  }
+
+  public T removeLast() {
+    if (rear != null) {
+      T v = rear.value;
+      rear = rear.prev;
+      if (rear != null) rear.next = null;
+      return v;
+    } else {
+      throw new NoSuchElementException();
+    }
   }
 
   public boolean remove(T element) {

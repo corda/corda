@@ -1,6 +1,8 @@
 package java.lang;
 
 public final class Byte extends Number {
+  public static final Class TYPE = Class.forName("B");
+
   private final byte value;
 
   public Byte(byte value) {

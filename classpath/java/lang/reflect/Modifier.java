@@ -16,4 +16,11 @@ public final class Modifier {
   public static final int STRICT       = 1 << 11;
 
   private Modifier() { }
+
+  public static boolean isPublic   (int v) { return (v &    PUBLIC) != 0; }
+  public static boolean isPrivate  (int v) { return (v &   PRIVATE) != 0; }
+  public static boolean isProtected(int v) { return (v & PROTECTED) != 0; }
+  public static boolean isStatic   (int v) { return (v &    STATIC) != 0; }
+  public static boolean isFinal    (int v) { return (v &     FINAL) != 0; }
+  public static boolean isSuper    (int v) { return (v &     SUPER) != 0; }
 }

@@ -1,6 +1,8 @@
 package java.lang;
 
 public final class Integer extends Number {
+  public static final Class TYPE = Class.forName("I");
+
   private final int value;
 
   public Integer(int value) {

@@ -1,5 +1,11 @@
 package java.lang;
 
-public abstract class ClassLoader {
-  
+public class ClassLoader {
+  private static final ClassLoader instance = new ClassLoader();
+
+  private ClassLoader() { }
+
+  public static ClassLoader getSystemClassLoader() {
+    return instance;
+  }  
 }

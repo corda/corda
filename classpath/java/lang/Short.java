@@ -1,6 +1,8 @@
 package java.lang;
 
 public final class Short extends Number {
+  public static final Class TYPE = Class.forName("S");
+
   private final short value;
 
   public Short(short value) {

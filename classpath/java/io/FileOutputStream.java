@@ -1,7 +1,7 @@
 package java.io;
 
 public class FileOutputStream extends OutputStream {
-  private final int fd;
+  private int fd;
 
   public FileOutputStream(FileDescriptor fd) {
     this.fd = fd.value;
@@ -42,5 +42,6 @@ public class FileOutputStream extends OutputStream {
 
   public void close() throws IOException {
     close(fd);
+    fd = -1;
   }
 }

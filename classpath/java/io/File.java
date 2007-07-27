@@ -29,6 +29,16 @@ public class File {
     return path;
   }
 
+  private static native String toCanonicalPath(String path);
+
+  public String getCanonicalPath() {
+    return toCanonicalPath(path);
+  }
+
+  public File getCanonicalFile() {
+    return new File(getCanonicalPath());
+  }
+
   private static native String toAbsolutePath(String path);
 
   public String getAbsolutePath() {

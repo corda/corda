@@ -1,6 +1,8 @@
 package java.lang;
 
 public final class Double {
+  public static final Class TYPE = Class.forName("D");
+
   private final double value;
 
   public Double(double value) {

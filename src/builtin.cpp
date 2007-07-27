@@ -163,6 +163,12 @@ Field_get(Thread* t, jobject this_, jobject instancep)
 }
 
 jobject
+Constructor_make(Thread* t, jclass, jclass c)
+{
+  return pushReference(t, make(t, c));
+}
+
+jobject
 Method_invoke(Thread* t, jobject this_, jobject instancep,
               jobjectArray argumentsp)
 {
@@ -199,6 +205,78 @@ Method_invoke(Thread* t, jobject this_, jobject instancep,
   }
 
   return 0;
+}
+
+jobject
+Array_get(Thread* t, jobject array, int index)
+{
+  if (LIKELY(array)) {
+    object a = *array;
+    unsigned elementSize = classArrayElementSize(t, objectClass(t, a));
+
+    if (LIKELY(elementSize)) {
+      intptr_t length = cast<uintptr_t>(a, BytesPerWord);
+
+      if (LIKELY(index >= 0 and index < length)) {
+        switch (byteArrayBody(t, className(t, objectClass(t, a)), 1)) {
+        case 'B':
+          return pushReference(t, makeByte(t, byteArrayBody(t, a, index)));
+        case 'C':
+          return pushReference(t, makeChar(t, charArrayBody(t, a, index)));
+        case 'D':
+          return pushReference(t, makeDouble(t, doubleArrayBody(t, a, index)));
+        case 'F':
+          return pushReference(t, makeFloat(t, floatArrayBody(t, a, index)));
+        case 'I':
+          return pushReference(t, makeInt(t, intArrayBody(t, a, index)));
+        case 'J':
+          return pushReference(t, makeLong(t, longArrayBody(t, a, index)));
+        case 'S':
+          return pushReference(t, makeShort(t, shortArrayBody(t, a, index)));
+        case 'Z':
+          return pushReference
+            (t, makeBoolean(t, booleanArrayBody(t, a, index)));
+        case 'L':
+        case '[':
+          return pushReference(t, objectArrayBody(t, a, index));
+
+        default: abort(t);
+        }
+      } else {
+        t->exception = makeArrayIndexOutOfBoundsException(t, 0);
+      }
+    } else {
+      t->exception = makeIllegalArgumentException(t);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+
+  return 0;
+}
+
+jint
+Array_getLength(Thread* t, jobject array)
+{
+  if (LIKELY(array)) {
+    object a = *array;
+    unsigned elementSize = classArrayElementSize(t, objectClass(t, a));
+
+    if (LIKELY(elementSize)) {
+      return cast<uintptr_t>(a, BytesPerWord);
+    } else {
+      t->exception = makeIllegalArgumentException(t);
+    }
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+  return 0;
+}
+
+jobject
+Array_makeObjectArray(Thread* t, jclass, jclass elementType, jint length)
+{
+  return pushReference(t, makeObjectArray(t, *elementType, length, true));
 }
 
 void
@@ -287,6 +365,13 @@ void
 Runtime_exit(Thread* t, jobject, jint code)
 {
   t->vm->system->exit(code);
+}
+
+jlong
+Runtime_freeMemory(Thread*, jobject)
+{
+  // todo
+  return 0;
 }
 
 jobject
@@ -457,6 +542,16 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Object_toString) },
     { "Java_java_lang_Object_wait",
       reinterpret_cast<void*>(::Object_wait) },
+
+    { "Java_java_lang_reflect_Array_get",
+      reinterpret_cast<void*>(::Array_get) },
+    { "Java_java_lang_reflect_Array_getLength",
+      reinterpret_cast<void*>(::Array_getLength) },
+    { "Java_java_lang_reflect_Array_makeObjectArray",
+      reinterpret_cast<void*>(::Array_makeObjectArray) },
+
+    { "Java_java_lang_reflect_Constructor_make",
+      reinterpret_cast<void*>(::Constructor_make) },
 
     { "Java_java_lang_reflect_Field_get",
       reinterpret_cast<void*>(::Field_get) },

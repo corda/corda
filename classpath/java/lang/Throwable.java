@@ -27,6 +27,10 @@ public class Throwable {
     return cause;
   }
 
+  public String getMessage() {
+    return message;
+  }
+
   private static native Object trace(int skipCount);
 
   private static native StackTraceElement[] resolveTrace(Object trace);
