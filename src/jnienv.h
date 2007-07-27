@@ -5,12 +5,8 @@
 
 namespace vm {
 
-namespace jni {
-
 void
-populate(JNIEnvVTable* table);
-
-} // namespace jni
+populateJNITable(JNIEnvVTable* table);
 
 } // namespace vm
 

@@ -7,6 +7,16 @@ public class FileOutputStream extends OutputStream {
     this.fd = fd.value;
   }
 
+  public FileOutputStream(String path) throws IOException {
+    fd = open(path);
+  }
+
+  public FileOutputStream(File file) throws IOException {
+    this(file.getPath());
+  }
+
+  private static native int open(String path) throws IOException;
+
   public static native void write(int fd, int c) throws IOException;
 
   public static native void write(int fd, byte[] b, int offset, int length)
@@ -19,6 +29,14 @@ public class FileOutputStream extends OutputStream {
   }
 
   public void write(byte[] b, int offset, int length) throws IOException {
+    if (b == null) {
+      throw new NullPointerException();
+    }
+
+    if (offset < 0 || offset + length > b.length) {
+      throw new ArrayIndexOutOfBoundsException();
+    }
+
     write(fd, b, offset, length);
   }
 

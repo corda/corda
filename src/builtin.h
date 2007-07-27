@@ -5,12 +5,8 @@
 
 namespace vm {
 
-namespace builtin {
-
 void
-populate(Thread* t, object map);
-
-} // namespace builtin
+populateBuiltinMap(Thread* t, object map);
 
 } // namespace vm
 

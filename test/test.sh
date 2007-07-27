@@ -36,6 +36,8 @@ for test in ${tests}; do
   fi
 done
 
+echo
+
 if [ -n "${trouble}" ]; then
-  printf "\nsee ${log} for output\n"
+  printf "see ${log} for output\n"
 fi

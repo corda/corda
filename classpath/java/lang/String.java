@@ -87,6 +87,42 @@ public final class String implements Comparable<String> {
     }
   }
 
+  public int indexOf(String s) {
+    if (s.length == 0) return 0;
+
+    for (int i = 0; i < length - s.length; ++i) {
+      int j = 0;
+      for (; j < s.length; ++j) {
+        if (charAt(i + j) != s.charAt(j)) {
+          break;
+        }
+      }
+      if (j == s.length) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  public int lastIndexOf(String s) {
+    if (s.length == 0) return length;
+
+    for (int i = length - s.length; i >= 0; --i) {
+      int j = 0;
+      for (; j < s.length && i + j < length; ++j) {
+        if (charAt(i + j) != s.charAt(j)) {
+          break;
+        }
+      }
+      if (j == s.length) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
   public String substring(int start) {
     return substring(start, length);
   }

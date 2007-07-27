@@ -23,14 +23,8 @@ replace(char a, char b, char* c)
   for (; *c; ++c) if (*c == a) *c = b;
 }
 
-} // namespace
-
-namespace vm {
-
-namespace builtin {
-
 jstring
-toString(Thread* t, jobject this_)
+Object_toString(Thread* t, jobject this_)
 {
   object s = makeString
     (t, "%s@%p",
@@ -41,31 +35,31 @@ toString(Thread* t, jobject this_)
 }
 
 jclass
-getClass(Thread* t, jobject this_)
+Object_getClass(Thread* t, jobject this_)
 {
   return pushReference(t, objectClass(t, *this_));
 }
 
 void
-wait(Thread* t, jobject this_, jlong milliseconds)
+Object_wait(Thread* t, jobject this_, jlong milliseconds)
 {
   vm::wait(t, *this_, milliseconds);
 }
 
 void
-notify(Thread* t, jobject this_)
+Object_notify(Thread* t, jobject this_)
 {
   vm::notify(t, *this_);
 }
 
 void
-notifyAll(Thread* t, jobject this_)
+Object_notifyAll(Thread* t, jobject this_)
 {
   vm::notifyAll(t, *this_);
 }
 
 jclass
-forName(Thread* t, jclass, jstring name)
+Class_forName(Thread* t, jclass, jstring name)
 {
   if (LIKELY(name)) {
     object n = makeByteArray(t, stringLength(t, *name) + 1, false);
@@ -95,7 +89,7 @@ forName(Thread* t, jclass, jstring name)
 }
 
 jboolean
-isAssignableFrom(Thread* t, jobject this_, jclass that)
+Class_isAssignableFrom(Thread* t, jobject this_, jclass that)
 {
   if (LIKELY(that)) {
     return vm::isAssignableFrom(t, *this_, *that);
@@ -106,7 +100,7 @@ isAssignableFrom(Thread* t, jobject this_, jclass that)
 }
 
 jobject
-get(Thread* t, jobject this_, jobject instancep)
+Field_get(Thread* t, jobject this_, jobject instancep)
 {
   object field = *this_;
 
@@ -169,7 +163,8 @@ get(Thread* t, jobject this_, jobject instancep)
 }
 
 jobject
-invoke(Thread* t, jobject this_, jobject instancep, jobjectArray argumentsp)
+Method_invoke(Thread* t, jobject this_, jobject instancep,
+              jobjectArray argumentsp)
 {
   object method = *this_;
 
@@ -206,25 +201,9 @@ invoke(Thread* t, jobject this_, jobject instancep, jobjectArray argumentsp)
   return 0;
 }
 
-jobject
-currentThread(Thread* t, jclass)
-{
-  return pushReference(t, t->javaThread);
-}
-
 void
-sleep(Thread* t, jclass, jlong milliseconds)
-{
-  if (milliseconds == 0) milliseconds = INT64_MAX;
-
-  ENTER(t, Thread::IdleState);
-
-  t->vm->system->sleep(milliseconds);
-}
-
-void
-arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
-          jint dstOffset, jint length)
+System_arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
+                 jint dstOffset, jint length)
 {
   if (LIKELY(src and dst)) {
     object s = *src;
@@ -263,13 +242,13 @@ arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
 }
 
 jlong
-currentTimeMillis(Thread* t, jclass)
+System_currentTimeMillis(Thread* t, jclass)
 {
   return t->vm->system->now();
 }
 
 void
-loadLibrary(Thread* t, jobject, jstring name)
+Runtime_loadLibrary(Thread* t, jobject, jstring name)
 {
   if (LIKELY(name)) {
     char n[stringLength(t, *name) + 1];
@@ -297,7 +276,7 @@ loadLibrary(Thread* t, jobject, jstring name)
 }
 
 void
-gc(Thread* t, jobject)
+Runtime_gc(Thread* t, jobject)
 {
   ENTER(t, Thread::ExclusiveState);
 
@@ -305,13 +284,13 @@ gc(Thread* t, jobject)
 }
 
 void
-exit(Thread* t, jobject, jint code)
+Runtime_exit(Thread* t, jobject, jint code)
 {
   t->vm->system->exit(code);
 }
 
 jobject
-trace(Thread* t, jclass, jint skipCount)
+Throwable_trace(Thread* t, jclass, jint skipCount)
 {
   int frame = t->frame;
   while (skipCount-- and frame >= 0) {
@@ -334,7 +313,7 @@ trace(Thread* t, jclass, jint skipCount)
 }
 
 jarray
-resolveTrace(Thread* t, jclass, jobject trace)
+Throwable_resolveTrace(Thread* t, jclass, jobject trace)
 {
   unsigned length = arrayLength(t, *trace);
   object array = makeObjectArray
@@ -367,8 +346,23 @@ resolveTrace(Thread* t, jclass, jobject trace)
   return pushReference(t, array);
 }
 
+jobject
+Thread_currentThread(Thread* t, jclass)
+{
+  return pushReference(t, t->javaThread);
+}
+
 void
-start(Thread* t, jobject this_)
+Thread_sleep(Thread* t, jclass, jlong milliseconds)
+{
+  if (milliseconds == 0) milliseconds = INT64_MAX;
+
+  ENTER(t, Thread::IdleState);
+
+  t->vm->system->sleep(milliseconds);
+}
+void
+Thread_start(Thread* t, jobject this_)
 {
   Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *this_));
   if (p) {
@@ -413,56 +407,62 @@ start(Thread* t, jobject this_)
   }
 }
 
+} // namespace
+
+namespace vm {
+
 void
-populate(Thread* t, object map)
+populateBuiltinMap(Thread* t, object map)
 {
   struct {
     const char* key;
     void* value;
   } builtins[] = {
     { "Java_java_lang_Class_forName",
-      reinterpret_cast<void*>(forName) },
+      reinterpret_cast<void*>(::Class_forName) },
     { "Java_java_lang_Class_isAssignableFrom",
-      reinterpret_cast<void*>(isAssignableFrom) },
+      reinterpret_cast<void*>(::Class_isAssignableFrom) },
 
     { "Java_java_lang_System_arraycopy",
-      reinterpret_cast<void*>(arraycopy) },
+      reinterpret_cast<void*>(::System_arraycopy) },
+    { "Java_java_lang_System_currentTimeMillis",
+      reinterpret_cast<void*>(::System_currentTimeMillis) },
 
     { "Java_java_lang_Runtime_loadLibrary",
-      reinterpret_cast<void*>(loadLibrary) },
+      reinterpret_cast<void*>(::Runtime_loadLibrary) },
     { "Java_java_lang_Runtime_gc",
-      reinterpret_cast<void*>(gc) },
+      reinterpret_cast<void*>(::Runtime_gc) },
     { "Java_java_lang_Runtiime_exit",
-      reinterpret_cast<void*>(exit) },
+      reinterpret_cast<void*>(::Runtime_exit) },
 
     { "Java_java_lang_Thread_doStart",
-      reinterpret_cast<void*>(start) },
+      reinterpret_cast<void*>(::Thread_start) },
     { "Java_java_lang_Thread_currentThread",
-      reinterpret_cast<void*>(currentThread) },
+      reinterpret_cast<void*>(::Thread_currentThread) },
     { "Java_java_lang_Thread_sleep",
-      reinterpret_cast<void*>(sleep) },
+      reinterpret_cast<void*>(::Thread_sleep) },
 
     { "Java_java_lang_Throwable_resolveTrace",
-      reinterpret_cast<void*>(resolveTrace) },
+      reinterpret_cast<void*>(::Throwable_resolveTrace) },
     { "Java_java_lang_Throwable_trace",
-      reinterpret_cast<void*>(trace) },
+      reinterpret_cast<void*>(::Throwable_trace) },
 
     { "Java_java_lang_Object_getClass",
-      reinterpret_cast<void*>(getClass) },
+      reinterpret_cast<void*>(::Object_getClass) },
     { "Java_java_lang_Object_notify",
-      reinterpret_cast<void*>(notify) },
+      reinterpret_cast<void*>(::Object_notify) },
     { "Java_java_lang_Object_notifyAll",
-      reinterpret_cast<void*>(notifyAll) },
+      reinterpret_cast<void*>(::Object_notifyAll) },
     { "Java_java_lang_Object_toString",
-      reinterpret_cast<void*>(toString) },
+      reinterpret_cast<void*>(::Object_toString) },
     { "Java_java_lang_Object_wait",
-      reinterpret_cast<void*>(wait) },
+      reinterpret_cast<void*>(::Object_wait) },
 
     { "Java_java_lang_reflect_Field_get",
-      reinterpret_cast<void*>(get) },
+      reinterpret_cast<void*>(::Field_get) },
 
     { "Java_java_lang_reflect_Method_invoke",
-      reinterpret_cast<void*>(invoke) },
+      reinterpret_cast<void*>(::Method_invoke) },
 
     { 0, 0 }
   };
@@ -475,7 +475,5 @@ populate(Thread* t, object map)
     hashMapInsert(t, map, key, value, byteArrayHash);
   }
 }
-
-} // namespace builtin
 
 } // namespace vm

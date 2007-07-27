@@ -9,14 +9,13 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring key)
 {
   jstring value = 0;
 
-  jboolean isCopy;
-  const char* chars = e->GetStringUTFChars(key, &isCopy);
+  const char* chars = e->GetStringUTFChars(key, 0);
   if (chars) {
     if (strcmp(chars, "line.separator") == 0) {
       value = e->NewStringUTF("\n");
     }
+    e->ReleaseStringUTFChars(key, chars);
   }
-  e->ReleaseStringUTFChars(key, chars);
 
   return value;
 }

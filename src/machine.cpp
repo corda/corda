@@ -468,7 +468,7 @@ makeJNIName(Thread* t, object method, bool decorate)
     for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
            and byteArrayBody(t, methodSpec, i) != ')'; ++i)
     {
-      index += mangle(byteArrayBody(t, className, i),
+      index += mangle(byteArrayBody(t, methodSpec, i),
                       &byteArrayBody(t, name, index));
     }
   }
@@ -962,12 +962,12 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
       if (flags & ACC_NATIVE) {
         object p = hashMapFindNode
-          (t, nativeMap, method, methodHash, methodEqual);
+          (t, nativeMap, methodName(t, method), byteArrayHash, byteArrayEqual);
         
         if (p) {
           set(t, tripleSecond(t, p), method);          
         } else {
-          hashMapInsert(t, nativeMap, method, 0, methodHash);          
+          hashMapInsert(t, nativeMap, methodName(t, method), 0, byteArrayHash);
         }
       }
 
@@ -981,7 +981,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         PROTECT(t, method);
 
         object overloaded = hashMapFind
-          (t, nativeMap, method, methodHash, methodEqual);
+          (t, nativeMap, methodName(t, method), byteArrayHash, byteArrayEqual);
 
         object jniName = makeJNIName(t, method, overloaded);
         set(t, methodCode(t, method), jniName);
@@ -1283,7 +1283,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   tenuredWeakReferences(0),
   unsafe(false)
 {
-  jni::populate(&jniEnvVTable);
+  populateJNITable(&jniEnvVTable);
 
   if (not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
@@ -1374,7 +1374,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     m->builtinMap = makeHashMap(this, NormalMap, 0, 0);
     m->monitorMap = makeHashMap(this, WeakMap, 0, 0);
 
-    builtin::populate(t, m->builtinMap);
+    populateBuiltinMap(t, m->builtinMap);
 
     t->javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
   } else {
@@ -1583,6 +1583,28 @@ allocate2(Thread* t, unsigned sizeInBytes)
   } else {
     return allocateSmall(t, sizeInBytes);
   }
+}
+
+object
+make(Thread* t, object class_)
+{
+  PROTECT(t, class_);
+  unsigned sizeInBytes = pad(classFixedSize(t, class_));
+  object instance = allocate(t, sizeInBytes);
+  *static_cast<object*>(instance) = class_;
+  memset(static_cast<object*>(instance) + 1, 0,
+         sizeInBytes - sizeof(object));
+
+  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
+    PROTECT(t, instance);
+
+    ACQUIRE(t, t->vm->referenceLock);
+
+    jreferenceNextUnsafe(t, instance) = t->vm->weakReferences;
+    t->vm->weakReferences = instance;
+  }
+
+  return instance;
 }
 
 object

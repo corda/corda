@@ -6,8 +6,6 @@
 #include "heap.h"
 #include "class-finder.h"
 
-#define JNIEXPORT __attribute__ ((visibility("default")))
-#define JNIIMPORT __attribute__ ((visibility("hidden")))
 #define JNICALL
 
 #define PROTECT(thread, name)                                   \
@@ -22,7 +20,7 @@
 namespace vm {
 
 const bool Verbose = false;
-const bool DebugRun = false;
+const bool DebugRun = true;
 const bool DebugStack = false;
 const bool DebugMonitors = false;
 
@@ -1470,6 +1468,9 @@ makeUnsatisfiedLinkError(Thread* t, object message)
   object trace = makeTrace(t);
   return makeUnsatisfiedLinkError(t, message, trace, 0);
 }
+
+object
+make(Thread* t, object class_);
 
 object
 makeByteArray(Thread* t, const char* format, ...);

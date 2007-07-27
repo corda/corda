@@ -76,28 +76,6 @@ popFrame(Thread* t)
   }
 }
 
-object
-make(Thread* t, object class_)
-{
-  PROTECT(t, class_);
-  unsigned sizeInBytes = pad(classFixedSize(t, class_));
-  object instance = allocate(t, sizeInBytes);
-  *static_cast<object*>(instance) = class_;
-  memset(static_cast<object*>(instance) + 1, 0,
-         sizeInBytes - sizeof(object));
-
-  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
-    PROTECT(t, instance);
-
-    ACQUIRE(t, t->vm->referenceLock);
-
-    jreferenceNextUnsafe(t, instance) = t->vm->weakReferences;
-    t->vm->weakReferences = instance;
-  }
-
-  return instance;
-}
-
 inline void
 setStatic(Thread* t, object field, object value)
 {

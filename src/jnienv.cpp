@@ -1,9 +1,9 @@
 #include "jnienv.h"
 #include "machine.h"
 
-namespace vm {
+using namespace vm;
 
-namespace jni {
+namespace {
 
 jsize
 GetStringUTFLength(Thread* t, jstring s)
@@ -41,16 +41,84 @@ NewStringUTF(Thread* t, const char* chars)
 }
 
 void
-populate(JNIEnvVTable* table)
+GetByteArrayRegion(Thread* t, jbyteArray array, jint offset, jint length,
+                   jbyte* dst)
+{
+  ENTER(t, Thread::ActiveState);
+
+  memcpy(dst, &byteArrayBody(t, *array, offset), length);
+}
+
+void
+SetByteArrayRegion(Thread* t, jbyteArray array, jint offset, jint length,
+                   const jbyte* src)
+{
+  ENTER(t, Thread::ActiveState);
+
+  memcpy(&byteArrayBody(t, *array, offset), src, length);
+}
+
+jclass
+FindClass(Thread* t, const char* name)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object n = makeByteArray(t, strlen(name) + 1, false);
+  memcpy(&byteArrayBody(t, n, 0), name, byteArrayLength(t, n));
+
+  return pushReference(t, resolveClass(t, n));
+}
+
+jint
+ThrowNew(Thread* t, jclass c, const char* message)
+{
+  if (t->exception) {
+    return -1;
+  }
+
+  ENTER(t, Thread::ActiveState);
+  
+  object m = 0;
+  PROTECT(t, m);
+
+  if (message) {
+    m = makeString(t, "%s", message);
+  }
+
+  object trace = makeTrace(t);
+  PROTECT(t, trace);
+
+  t->exception = make(t, *c);
+  set(t, throwableMessageUnsafe(t, t->exception), m);
+  set(t, throwableTraceUnsafe(t, t->exception), trace);
+
+  return 0;
+}
+
+jboolean
+ExceptionCheck(Thread* t)
+{
+  return t->exception != 0;
+}
+
+} // namespace
+
+namespace vm {
+
+void
+populateJNITable(JNIEnvVTable* table)
 {
   memset(table, 0, sizeof(JNIEnvVTable));
 
-  table->GetStringUTFLength = GetStringUTFLength;
-  table->GetStringUTFChars = GetStringUTFChars;
-  table->ReleaseStringUTFChars = ReleaseStringUTFChars;
-  table->NewStringUTF = NewStringUTF;
+  table->GetStringUTFLength = ::GetStringUTFLength;
+  table->GetStringUTFChars = ::GetStringUTFChars;
+  table->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
+  table->NewStringUTF = ::NewStringUTF;
+  table->GetByteArrayRegion = ::GetByteArrayRegion;
+  table->SetByteArrayRegion = ::SetByteArrayRegion;
+  table->FindClass = ::FindClass;
+  table->ThrowNew = ::ThrowNew;
+  table->ExceptionCheck = ::ExceptionCheck;
 }
-
-} // namespace jni
 
 } // namespace vm
