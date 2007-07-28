@@ -1,7 +1,7 @@
 package java.lang;
 
 public final class Character {
-  public static final Class TYPE = Class.forName("C");
+  public static final Class TYPE = Class.forCanonicalName("C");
 
   private final char value;
 

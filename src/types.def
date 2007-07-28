@@ -125,10 +125,11 @@
 
 (type thread java/lang/Thread
   (extends jobject)
+  (int64_t peer)
   (object task)
   (object locals)
   (object sleepLock)
-  (int64_t peer))
+  (uint8_t interrupted))
 
 (type stackTraceElement java/lang/StackTraceElement
   (extends jobject)
@@ -280,29 +281,29 @@
   (extends jobject)
   (array uint64_t body))
 
-(type jbyte B
+(type jbyte
   (extends jobject))
 
-(type jboolean Z
+(type jboolean
   (extends jobject))
 
-(type jshort S
+(type jshort
   (extends jobject))
 
-(type jchar C
+(type jchar
   (extends jobject))
 
-(type jint I
+(type jint
   (extends jobject))
 
-(type jlong L
+(type jlong
   (extends jobject))
 
-(type jfloat F
+(type jfloat
   (extends jobject))
 
-(type jdouble D
+(type jdouble
   (extends jobject))
 
-(type jvoid V
+(type jvoid
   (extends jobject))

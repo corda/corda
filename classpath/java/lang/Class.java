@@ -26,7 +26,28 @@ public final class Class <T> {
     return new String(name, 0, name.length - 1, false);
   }
 
-  public static native Class forName(String name);
+  public static native Class forName(String name)
+    throws ClassNotFoundException;
+
+  private static native Class primitiveClass(char name);
+  
+  static Class forCanonicalName(String name) {
+    try {
+      if (name.startsWith("[")) {
+        return forName(name);
+      } else if (name.startsWith("L")) {
+        return forName(name.substring(1, name.length() - 1));
+      } else {
+        if (name.length() == 0) {
+          return primitiveClass(name.charAt(0));
+        } else {
+          throw new ClassNotFoundException(name);
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   public native boolean isAssignableFrom(Class c);
 

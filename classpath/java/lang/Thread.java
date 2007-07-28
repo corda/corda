@@ -4,10 +4,11 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public class Thread implements Runnable {
+  private long peer;
   private final Runnable task;
   private Map<ThreadLocal, Object> locals;
   private Object sleepLock;
-  private long peer;
+  private boolean interrupted;
 
   public Thread(Runnable task) {
     this.task = task;

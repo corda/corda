@@ -1,7 +1,7 @@
 package java.lang;
 
 public final class Integer extends Number {
-  public static final Class TYPE = Class.forName("I");
+  public static final Class TYPE = Class.forCanonicalName("I");
 
   private final int value;
 

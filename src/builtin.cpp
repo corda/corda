@@ -87,6 +87,32 @@ Class_forName(Thread* t, jclass, jstring name)
   }
 }
 
+jclass
+Class_primitiveClass(Thread* t, jclass, jchar name)
+{
+  switch (name) {
+  case 'B':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JbyteType));
+  case 'C':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JcharType));
+  case 'D':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JdoubleType));
+  case 'F':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JfloatType));
+  case 'I':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JintType));
+  case 'L':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JlongType));
+  case 'S':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JshortType));
+  case 'V':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JvoidType));
+  default:
+    t->exception = makeIllegalArgumentException(t);
+    return 0;
+  }
+}
+
 jboolean
 Class_isAssignableFrom(Thread* t, jobject this_, jclass that)
 {

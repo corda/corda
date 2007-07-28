@@ -1,7 +1,7 @@
 package java.lang;
 
 public final class Long extends Number {
-  public static final Class TYPE = Class.forName("J");
+  public static final Class TYPE = Class.forCanonicalName("J");
 
   private final long value;
 

@@ -1,7 +1,7 @@
 package java.lang;
 
 public final class Float extends Number {
-  public static final Class TYPE = Class.forName("F");
+  public static final Class TYPE = Class.forCanonicalName("F");
 
   private final float value;
 

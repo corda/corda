@@ -1,7 +1,7 @@
 package java.lang;
 
 public final class Double {
-  public static final Class TYPE = Class.forName("D");
+  public static final Class TYPE = Class.forCanonicalName("D");
 
   private final double value;
 

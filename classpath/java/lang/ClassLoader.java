@@ -9,7 +9,7 @@ public class ClassLoader {
     return instance;
   }
 
-  public Class loadClass(String name) {
+  public Class loadClass(String name) throws ClassNotFoundException {
     return Class.forName(name);
   }
 }

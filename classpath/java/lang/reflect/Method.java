@@ -51,31 +51,35 @@ public class Method<T> extends AccessibleObject implements Member {
 
     String spec = new String(this.spec, 1, this.spec.length - 1, false);
 
-    for (int i = 0; i < spec.length(); ++i) {
-      char c = spec.charAt(i);
-      if (c == ')') {
-        break;
-      } else if (c == 'L') {
-        int start = i + 1;
-        i = next(';', spec, start);
-        String name = spec.substring(start, i);
-        types[index++] = Class.forName(name);
-      } else if (c == '[') {
-        int start = i;
-        while (spec.charAt(i) == '[') ++i;
-
-        if (spec.charAt(i) == 'L') {
-          i = next(';', spec, i + 1);
+    try {
+      for (int i = 0; i < spec.length(); ++i) {
+        char c = spec.charAt(i);
+        if (c == ')') {
+          break;
+        } else if (c == 'L') {
+          int start = i + 1;
+          i = next(';', spec, start);
           String name = spec.substring(start, i);
           types[index++] = Class.forName(name);
+        } else if (c == '[') {
+          int start = i;
+          while (spec.charAt(i) == '[') ++i;
+
+          if (spec.charAt(i) == 'L') {
+            i = next(';', spec, i + 1);
+            String name = spec.substring(start, i);
+            types[index++] = Class.forName(name);
+          } else {
+            String name = spec.substring(start, i + 1);
+            types[index++] = Class.forName(name);
+          }
         } else {
-          String name = spec.substring(start, i + 1);
+          String name = spec.substring(i, i + 1);
           types[index++] = Class.forName(name);
         }
-      } else {
-        String name = spec.substring(i, i + 1);
-        types[index++] = Class.forName(name);
       }
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
     }
 
     return types;
