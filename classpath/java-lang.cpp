@@ -1,3 +1,6 @@
+#include "sys/time.h"
+#include "time.h"
+#include "time.h"
 #include "string.h"
 #include "jni.h"
 
@@ -18,4 +21,13 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring key)
   }
 
   return value;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_lang_System_currentTimeMillis(JNIEnv*, jclass)
+{
+  timeval tv = { 0, 0 };
+  gettimeofday(&tv, 0);
+  return (static_cast<jlong>(tv.tv_sec) * 1000) +
+    (static_cast<jlong>(tv.tv_usec) / 1000);
 }

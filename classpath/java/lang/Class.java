@@ -19,7 +19,6 @@ public final class Class <T> {
   private Field[] fieldTable;
   private Method[] methodTable;
   private Object[] staticTable;
-  private Method initializer;
 
   private Class() { }
 
@@ -32,9 +31,11 @@ public final class Class <T> {
   public native boolean isAssignableFrom(Class c);
 
   private Field findField(String name) {
-    for (int i = 0; i < fieldTable.length; ++i) {
-      if (fieldTable[i].getName().equals(name)) {
-        return fieldTable[i];
+    if (fieldTable != null) {
+      for (int i = 0; i < fieldTable.length; ++i) {
+        if (fieldTable[i].getName().equals(name)) {
+          return fieldTable[i];
+        }
       }
     }
     return null;
@@ -73,11 +74,13 @@ public final class Class <T> {
   }
 
   private Method findMethod(String name, Class[] parameterTypes) {
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (methodTable[i].getName().equals(name)
-          && match(parameterTypes, methodTable[i].getParameterTypes()))
-      {
-        return methodTable[i];
+    if (methodTable != null) {
+      for (int i = 0; i < methodTable.length; ++i) {
+        if (methodTable[i].getName().equals(name)
+            && match(parameterTypes, methodTable[i].getParameterTypes()))
+        {
+          return methodTable[i];
+        }
       }
     }
     return null;
@@ -125,12 +128,14 @@ public final class Class <T> {
 
   private int countConstructors(boolean publicOnly) {
     int count = 0;
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (((! publicOnly)
-           || ((methodTable[i].getModifiers() & Modifier.PUBLIC)) != 0)
-          && methodTable[i].getName().equals("<init>"))
-      {
-        ++ count;
+    if (methodTable != null) {
+      for (int i = 0; i < methodTable.length; ++i) {
+        if (((! publicOnly)
+             || ((methodTable[i].getModifiers() & Modifier.PUBLIC)) != 0)
+            && methodTable[i].getName().equals("<init>"))
+        {
+          ++ count;
+        }
       }
     }
     return count;
@@ -138,10 +143,12 @@ public final class Class <T> {
 
   public Constructor[] getDeclaredConstructors() {
     Constructor[] array = new Constructor[countConstructors(false)];
-    int index = 0;
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (methodTable[i].getName().equals("<init>")) {
-        array[index++] = new Constructor(methodTable[i]);
+    if (methodTable != null) {
+      int index = 0;
+      for (int i = 0; i < methodTable.length; ++i) {
+        if (methodTable[i].getName().equals("<init>")) {
+          array[index++] = new Constructor(methodTable[i]);
+        }
       }
     }
 
@@ -150,12 +157,14 @@ public final class Class <T> {
 
   public Constructor[] getConstructors() {
     Constructor[] array = new Constructor[countConstructors(true)];
-    int index = 0;
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
-          && methodTable[i].getName().equals("<init>"))
-      {
-        array[index++] = new Constructor(methodTable[i]);
+    if (methodTable != null) {
+      int index = 0;
+      for (int i = 0; i < methodTable.length; ++i) {
+        if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
+            && methodTable[i].getName().equals("<init>"))
+        {
+          array[index++] = new Constructor(methodTable[i]);
+        }
       }
     }
 
@@ -163,16 +172,22 @@ public final class Class <T> {
   }
 
   public Field[] getDeclaredFields() {
-    Field[] array = new Field[fieldTable.length];
-    System.arraycopy(fieldTable, 0, array, 0, fieldTable.length);
-    return array;
+    if (fieldTable != null) {
+      Field[] array = new Field[fieldTable.length];
+      System.arraycopy(fieldTable, 0, array, 0, fieldTable.length);
+      return array;
+    } else {
+      return new Field[0];
+    }
   }
 
   private int countPublicFields() {
     int count = 0;
-    for (int i = 0; i < fieldTable.length; ++i) {
-      if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
-        ++ count;
+    if (fieldTable != null) {
+      for (int i = 0; i < fieldTable.length; ++i) {
+        if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
+          ++ count;
+        }
       }
     }
     return count;
@@ -180,9 +195,11 @@ public final class Class <T> {
 
   public Field[] getFields() {
     Field[] array = new Field[countPublicFields()];
-    for (int i = 0; i < fieldTable.length; ++i) {
-      if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
-        array[i] = fieldTable[i];
+    if (fieldTable != null) {
+      for (int i = 0; i < fieldTable.length; ++i) {
+        if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
+          array[i] = fieldTable[i];
+        }
       }
     }
     return array;
@@ -203,10 +220,12 @@ public final class Class <T> {
 
   public Method[] getDeclaredMethods() {
     Method[] array = new Method[countMethods(false)];
-    int index = 0;
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (! methodTable[i].getName().startsWith("<")) {
-        array[index++] = methodTable[i];
+    if (methodTable != null) {
+      int index = 0;
+      for (int i = 0; i < methodTable.length; ++i) {
+        if (! methodTable[i].getName().startsWith("<")) {
+          array[index++] = methodTable[i];
+        }
       }
     }
 
@@ -215,12 +234,14 @@ public final class Class <T> {
 
   public Method[] getMethods() {
     Method[] array = new Method[countMethods(true)];
-    int index = 0;
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
-          && (! methodTable[i].getName().startsWith("<")))
-      {
-        array[index++] = methodTable[i];
+    if (methodTable != null) {
+      int index = 0;
+      for (int i = 0; i < methodTable.length; ++i) {
+        if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
+            && (! methodTable[i].getName().startsWith("<")))
+        {
+          array[index++] = methodTable[i];
+        }
       }
     }
 
@@ -228,11 +249,15 @@ public final class Class <T> {
   }
 
   public Class[] getInterfaces() {
-    Class[] array = new Class[interfaceTable.length / 2];
-    for (int i = 0; i < array.length; ++i) {
-      array[i] = (Class) interfaceTable[i * 2];
+    if (interfaceTable != null) {
+      Class[] array = new Class[interfaceTable.length / 2];
+      for (int i = 0; i < array.length; ++i) {
+        array[i] = (Class) interfaceTable[i * 2];
+      }
+      return array;
+    } else {
+      return new Class[0];
     }
-    return array;
   }
 
   public ClassLoader getClassLoader() {

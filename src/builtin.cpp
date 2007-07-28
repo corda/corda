@@ -73,12 +73,11 @@ Class_forName(Thread* t, jclass, jstring name)
       return 0;
     }
 
-    object clinit = classInitializer(t, c);
-    if (clinit) {
+    if (classVmFlags(t, c) & NeedInitFlag) {
       PROTECT(t, c);
 
-      set(t, classInitializer(t, c), 0);
-      run(t, clinit, 0); 
+      classVmFlags(t, c) &= ~NeedInitFlag;
+      run(t, classInitializer(t, c), 0);
     }
 
     return pushReference(t, c);
@@ -105,9 +104,36 @@ Field_get(Thread* t, jobject this_, jobject instancep)
   object field = *this_;
 
   if (fieldFlags(t, field) & ACC_STATIC) {
-    return pushReference
-      (t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                    fieldOffset(t, field)));
+    object v = arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                         fieldOffset(t, field));
+
+    switch (fieldCode(t, field)) {
+    case ByteField:
+      return pushReference(t, makeByte(t, intValue(t, v)));
+
+    case BooleanField:
+      return pushReference(t, makeBoolean(t, intValue(t, v)));
+
+    case CharField:
+      return pushReference(t, makeChar(t, intValue(t, v)));
+
+    case ShortField:
+      return pushReference(t, makeShort(t, intValue(t, v)));
+
+    case FloatField:
+      return pushReference(t, makeFloat(t, intValue(t, v)));
+
+    case DoubleField:
+      return pushReference(t, makeDouble(t, longValue(t, v)));
+
+    case IntField:
+    case LongField:
+    case ObjectField:
+      return pushReference(t, v);
+
+    default:
+      abort(t);
+    }
   } else if (instancep) {
     object instance = *instancep;
 
@@ -169,9 +195,44 @@ Field_set(Thread* t, jobject this_, jobject instancep, jobject value)
   object v = (value ? *value : 0);
 
   if (fieldFlags(t, field) & ACC_STATIC) {
+    object* p = &arrayBody(t, classStaticTable(t, fieldClass(t, field)),
+                           fieldOffset(t, field));
+
     if (fieldCode(t, field) == ObjectField or v) {
-      set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                       fieldOffset(t, field)), v);
+      switch (fieldCode(t, field)) {
+      case ByteField:
+        set(t, *p, makeInt(t, byteValue(t, v)));
+        break;
+
+      case BooleanField:
+        set(t, *p, makeInt(t, booleanValue(t, v)));
+        break;
+
+      case CharField:
+        set(t, *p, makeInt(t, charValue(t, v)));
+        break;
+
+      case ShortField:
+        set(t, *p, makeInt(t, shortValue(t, v)));
+        break;
+
+      case FloatField:
+        set(t, *p, makeInt(t, floatValue(t, v)));
+        break;
+
+      case DoubleField:
+        set(t, *p, makeLong(t, longValue(t, v)));
+        break;
+
+      case IntField:
+      case LongField:
+      case ObjectField:
+        set(t, *p, v);
+        break;
+
+      default:
+        abort(t);
+      }
     } else {
       t->exception = makeNullPointerException(t);
     }
@@ -398,12 +459,6 @@ System_arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
   t->exception = makeArrayStoreException(t);
 }
 
-jlong
-System_currentTimeMillis(Thread* t, jclass)
-{
-  return t->vm->system->now();
-}
-
 void
 Runtime_loadLibrary(Thread* t, jobject, jstring name)
 {
@@ -517,15 +572,6 @@ Thread_currentThread(Thread* t, jclass)
 }
 
 void
-Thread_sleep(Thread* t, jclass, jlong milliseconds)
-{
-  if (milliseconds == 0) milliseconds = INT64_MAX;
-
-  ENTER(t, Thread::IdleState);
-
-  t->vm->system->sleep(milliseconds);
-}
-void
 Thread_start(Thread* t, jobject this_)
 {
   Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *this_));
@@ -589,8 +635,6 @@ populateBuiltinMap(Thread* t, object map)
 
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(::System_arraycopy) },
-    { "Java_java_lang_System_currentTimeMillis",
-      reinterpret_cast<void*>(::System_currentTimeMillis) },
 
     { "Java_java_lang_Runtime_loadLibrary",
       reinterpret_cast<void*>(::Runtime_loadLibrary) },
@@ -603,8 +647,6 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Thread_start) },
     { "Java_java_lang_Thread_currentThread",
       reinterpret_cast<void*>(::Thread_currentThread) },
-    { "Java_java_lang_Thread_sleep",
-      reinterpret_cast<void*>(::Thread_sleep) },
 
     { "Java_java_lang_Throwable_resolveTrace",
       reinterpret_cast<void*>(::Throwable_resolveTrace) },

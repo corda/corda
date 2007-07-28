@@ -76,13 +76,6 @@ popFrame(Thread* t)
   }
 }
 
-inline void
-setStatic(Thread* t, object field, object value)
-{
-  set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                   fieldOffset(t, field)), value);
-}
-
 object
 findInterfaceMethod(Thread* t, object method, object o)
 {
@@ -908,10 +901,9 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    object clinit = classInitializer(t, fieldClass(t, field));
-    if (clinit) {
-      set(t, classInitializer(t, fieldClass(t, field)), 0);
-      code = clinit;
+    if (classVmFlags(t, fieldClass(t, field)) & NeedInitFlag) {
+      classVmFlags(t, fieldClass(t, field)) &= ~NeedInitFlag;
+      code = classInitializer(t, fieldClass(t, field));
       ip -= 3;
       goto invoke;
     }
@@ -1332,13 +1324,12 @@ run(Thread* t)
           resolveClass(t, className(t, class_));
           if (UNLIKELY(exception)) goto throw_;
 
-          object clinit = classInitializer(t, class_);
-          if (clinit) {
-            set(t, classInitializer(t, methodClass(t, method)), 0);
-            code = clinit;
+          if (classVmFlags(t, class_) & NeedInitFlag) {
+            classVmFlags(t, class_) &= ~NeedInitFlag;
+            code = classInitializer(t, class_);
             ip -= 3;
             goto invoke;
-          }          
+          }
         }
 
         code = findMethod(t, method, class_);
@@ -1361,10 +1352,9 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    object clinit = classInitializer(t, methodClass(t, method));
-    if (clinit) {
-      set(t, classInitializer(t, methodClass(t, method)), 0);
-      code = clinit;
+    if (classVmFlags(t, methodClass(t, method)) & NeedInitFlag) {
+      classVmFlags(t, methodClass(t, method)) &= ~NeedInitFlag;
+      code = classInitializer(t, methodClass(t, method));
       ip -= 3;
       goto invoke;
     }
@@ -1390,13 +1380,12 @@ run(Thread* t)
         resolveClass(t, className(t, class_));
         if (UNLIKELY(exception)) goto throw_;
 
-        object clinit = classInitializer(t, class_);
-        if (clinit) {
-          set(t, classInitializer(t, methodClass(t, method)), 0);
-          code = clinit;
+        if (classVmFlags(t, class_) & NeedInitFlag) {
+          classVmFlags(t, class_) &= ~NeedInitFlag;
+          code = classInitializer(t, class_);
           ip -= 3;
           goto invoke;
-        }          
+        }
       }
 
       code = findMethod(t, method, class_);      
@@ -1774,10 +1763,9 @@ run(Thread* t)
     object class_ = resolveClass(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    object clinit = classInitializer(t, class_);
-    if (clinit) {
-      set(t, classInitializer(t, class_), 0);
-      code = clinit;
+    if (classVmFlags(t, class_) & NeedInitFlag) {
+      classVmFlags(t, class_) &= ~NeedInitFlag;
+      code = classInitializer(t, class_);
       ip -= 3;
       goto invoke;
     }
@@ -1922,10 +1910,9 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    object clinit = classInitializer(t, fieldClass(t, field));
-    if (clinit) {
-      set(t, classInitializer(t, fieldClass(t, field)), 0);
-      code = clinit;
+    if (classVmFlags(t, fieldClass(t, field)) & NeedInitFlag) {
+      classVmFlags(t, fieldClass(t, field)) &= ~NeedInitFlag;
+      code = classInitializer(t, fieldClass(t, field));
       ip -= 3;
       goto invoke;
     }

@@ -939,7 +939,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
                    &byteArrayBody(t, methodName(t, method), 0)) == 0)
         {
-          set(t, classInitializer(t, class_), method);
+          classVmFlags(t, class_) |= NeedInitFlag;
         }
       } else {
         ++ declaredVirtualCount;
@@ -1096,8 +1096,7 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
                             0, // vtable
                             0, // fields
                             0, // methods
-                            0, // static table
-                            0); // initializer
+                            0); // static table
   PROTECT(t, class_);
   
   unsigned super = s.read2();
@@ -1107,7 +1106,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
 
     set(t, classSuper(t, class_), sc);
 
-    classVmFlags(t, class_) |= classVmFlags(t, sc);
+    classVmFlags(t, class_)
+      |= (classVmFlags(t, sc) & (ReferenceFlag | WeakReferenceFlag));
   }
   
   parseInterfaceTable(t, s, class_, pool);
@@ -1143,6 +1143,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   ENTER(t, Thread::ExclusiveState);
 
   classFlags(t, bootstrapClass) = classFlags(t, class_);
+  classVmFlags(t, bootstrapClass) |= classVmFlags(t, class_);
 
   set(t, classSuper(t, bootstrapClass), classSuper(t, class_));
   set(t, classInterfaceTable(t, bootstrapClass),
@@ -1151,7 +1152,6 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   set(t, classFieldTable(t, bootstrapClass), classFieldTable(t, class_));
   set(t, classMethodTable(t, bootstrapClass), classMethodTable(t, class_));
   set(t, classStaticTable(t, bootstrapClass), classStaticTable(t, class_));
-  set(t, classInitializer(t, bootstrapClass), classInitializer(t, class_));
 
   object fieldTable = classFieldTable(t, class_);
   if (fieldTable) {
@@ -1184,7 +1184,6 @@ makeArrayClass(Thread* t, unsigned dimensions, object spec,
      arrayBody(t, t->vm->types, Machine::JobjectType),
      elementClass,
      classVirtualTable(t, arrayBody(t, t->vm->types, Machine::JobjectType)),
-     0,
      0,
      0,
      0);
@@ -1376,7 +1375,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     populateBuiltinMap(t, m->builtinMap);
 
-    t->javaThread = makeThread(t, 0, 0, reinterpret_cast<int64_t>(t));
+    t->javaThread = makeThread(t, 0, 0, 0, reinterpret_cast<int64_t>(t));
   } else {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
     parent->child = this;
@@ -1678,6 +1677,21 @@ instanceOf(Thread* t, object class_, object o)
   } else {
     return isAssignableFrom(t, class_, objectClass(t, o));
   }
+}
+
+object
+classInitializer(Thread* t, object class_)
+{
+  for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, class_)); ++i) {
+    object o = arrayBody(t, classMethodTable(t, class_), i);
+
+    if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
+               &byteArrayBody(t, methodName(t, o), 0)) == 0)
+    {
+      return o;
+    }               
+  }
+  abort(t);
 }
 
 unsigned

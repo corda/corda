@@ -6,6 +6,7 @@ import java.util.WeakHashMap;
 public class Thread implements Runnable {
   private final Runnable task;
   private Map<ThreadLocal, Object> locals;
+  private Object sleepLock;
   private long peer;
 
   public Thread(Runnable task) {
@@ -17,7 +18,8 @@ public class Thread implements Runnable {
     if (map != null) {
       for (Map.Entry<ThreadLocal, Object> e: map.entrySet()) {
         if (e.getKey() instanceof InheritableThreadLocal) {
-          locals().put(e.getKey(), e.getValue());
+          InheritableThreadLocal itl = (InheritableThreadLocal) e.getKey();
+          locals().put(itl, itl.childValue(e.getValue()));
         }
       }
     }
@@ -42,6 +44,13 @@ public class Thread implements Runnable {
 
   public static native Thread currentThread();
 
-  public static native void sleep(long milliseconds)
-    throws InterruptedException;
+  public static void sleep(long milliseconds) throws InterruptedException {
+    Thread t = currentThread();
+    if (t.sleepLock == null) {
+      t.sleepLock = new Object();
+    }
+    synchronized (t.sleepLock) {
+      t.sleepLock.wait(milliseconds);
+    }
+  }
 }

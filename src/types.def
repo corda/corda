@@ -14,8 +14,7 @@
   (object virtualTable)
   (object fieldTable)
   (object methodTable)
-  (object staticTable)
-  (object initializer))
+  (object staticTable))
 
 (type accessibleObject java/lang/reflect/AccessibleObject
   (extends jobject))
@@ -128,6 +127,7 @@
   (extends jobject)
   (object task)
   (object locals)
+  (object sleepLock)
   (int64_t peer))
 
 (type stackTraceElement java/lang/StackTraceElement

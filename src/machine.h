@@ -22,7 +22,7 @@ namespace vm {
 const bool Verbose = false;
 const bool DebugRun = false;
 const bool DebugStack = false;
-const bool DebugMonitors = false;
+const bool DebugMonitors = true;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
@@ -61,6 +61,7 @@ const int UnknownLine = -2;
 
 const unsigned ReferenceFlag = 1 << 0;
 const unsigned WeakReferenceFlag = 1 << 1;
+const unsigned NeedInitFlag = 1 << 2;
 
 class Thread;
 
@@ -1486,6 +1487,9 @@ isAssignableFrom(Thread* t, object a, object b);
 
 bool
 instanceOf(Thread* t, object class_, object o);
+
+object
+classInitializer(Thread* t, object class_);
 
 inline void
 pushObject(Thread* t, object o)

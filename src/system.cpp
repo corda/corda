@@ -86,6 +86,15 @@ using namespace vm;
 
 namespace {
 
+int64_t
+now()
+{
+  timeval tv = { 0, 0 };
+  gettimeofday(&tv, 0);
+  return (static_cast<int64_t>(tv.tv_sec) * 1000) +
+    (static_cast<int64_t>(tv.tv_usec) / 1000);
+}
+
 void*
 run(void* t)
 {
@@ -174,10 +183,10 @@ class MySystem: public System {
         this->depth = 0;
         this->context = 0;
         if (time) {
-          int64_t then = s->now() + time;
+          int64_t then = now() + time;
           timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
           int rv = pthread_cond_timedwait(&condition, &mutex, &ts);
-          assert(s, rv == 0);
+          assert(s, rv == 0 or rv == ETIMEDOUT);
         } else {
           int rv = pthread_cond_wait(&condition, &mutex);
           assert(s, rv == 0);
@@ -340,19 +349,6 @@ class MySystem: public System {
   virtual Status make(System::Monitor** m) {
     *m = new (System::allocate(sizeof(Monitor))) Monitor(this);
     return 0;
-  }
-
-  virtual void sleep(int64_t milliseconds) {
-    timespec ts = { milliseconds / 1000, (milliseconds % 1000) * 1000 * 1000 };
-
-    nanosleep(&ts, 0);
-  }
-
-  virtual int64_t now() {
-    timeval tv = { 0, 0 };
-    gettimeofday(&tv, 0);
-    return (static_cast<int64_t>(tv.tv_sec) * 1000) +
-      (static_cast<int64_t>(tv.tv_usec) / 1000);
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
