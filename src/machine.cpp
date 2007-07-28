@@ -1322,7 +1322,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   sp(0),
   frame(-1),
   heapIndex(0),
-  protector(0)
+  protector(0),
+  runnable(this)
 #ifdef VM_STRESS
   , stress(false),
   heap(static_cast<object*>(m->system->allocate(HeapSizeInBytes)))
@@ -1335,7 +1336,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     m->rootThread = this;
     m->unsafe = true;
 
-    if (not m->system->success(m->system->attach(&systemThread))) {
+    if (not m->system->success(m->system->attach(&runnable))) {
       abort(this);
     }
 
@@ -1472,7 +1473,7 @@ enter(Thread* t, Thread::State s)
     t->vm->exclusive = t;
       
     while (t->vm->activeCount > 1) {
-      t->vm->stateLock->wait(t, 0);
+      t->vm->stateLock->wait(t->systemThread, 0);
     }
   } break;
 
@@ -1498,7 +1499,7 @@ enter(Thread* t, Thread::State s)
     }
     t->state = s;
 
-    t->vm->stateLock->notifyAll(t);
+    t->vm->stateLock->notifyAll(t->systemThread);
   } break;
 
   case Thread::ActiveState: {
@@ -1509,13 +1510,13 @@ enter(Thread* t, Thread::State s)
       t->state = s;
       t->vm->exclusive = 0;
 
-      t->vm->stateLock->notifyAll(t);
+      t->vm->stateLock->notifyAll(t->systemThread);
     } break;
 
     case Thread::NoState:
     case Thread::IdleState: {
       while (t->vm->exclusive) {
-        t->vm->stateLock->wait(t, 0);
+        t->vm->stateLock->wait(t->systemThread, 0);
       }
 
       ++ t->vm->activeCount;
@@ -1547,7 +1548,7 @@ enter(Thread* t, Thread::State s)
     t->state = s;
 
     while (t->vm->liveCount > 1) {
-      t->vm->stateLock->wait(t, 0);
+      t->vm->stateLock->wait(t->systemThread, 0);
     }
   } break;
 

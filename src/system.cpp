@@ -7,9 +7,13 @@
 #include "dlfcn.h"
 #include "errno.h"
 #include "pthread.h"
+#include "signal.h"
 #include "stdint.h"
 
 #include "system.h"
+
+#define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_) (x)
+
 
 #ifdef __i386__
 
@@ -86,6 +90,28 @@ using namespace vm;
 
 namespace {
 
+class MutexResource {
+ public:
+  MutexResource(pthread_mutex_t& m): m(&m) {
+    pthread_mutex_lock(&m);
+  }
+
+  ~MutexResource() {
+    pthread_mutex_unlock(m);
+  }
+
+ private:
+  pthread_mutex_t* m;
+};
+
+const int InterruptSignal = SIGUSR2;
+
+void
+handleSignal(int)
+{
+  // ignore
+}
+
 int64_t
 now()
 {
@@ -96,22 +122,39 @@ now()
 }
 
 void*
-run(void* t)
+run(void* r)
 {
-  static_cast<System::Thread*>(t)->run();
+  static_cast<System::Runnable*>(r)->run();
   return 0;
 }
 
 const bool Verbose = false;
 
+const unsigned Waiting = 1 << 0;
+const unsigned Notified = 1 << 1;
+
 class MySystem: public System {
  public:
   class Thread: public System::Thread {
    public:
-    Thread(System* s, System::Runnable* r): s(s), r(r) { }
+    Thread(System* s, System::Runnable* r):
+      s(s),
+      r(r),
+      next(0),
+      flags(0)
+    {
+      pthread_mutex_init(&mutex, 0);
+      pthread_cond_init(&condition, 0);
+    }
 
-    virtual void run() {
-      r->run(this);
+    virtual void interrupt() {
+      ACQUIRE(mutex);
+
+      r->setInterrupted(true);
+
+      if (flags & Waiting) {
+        pthread_kill(thread, InterruptSignal);
+      }
     }
 
     virtual void join() {
@@ -120,26 +163,28 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      if (r) {
-        r->dispose();
-      }
       s->free(this);
     }
 
+    pthread_t thread;
+    pthread_mutex_t mutex;
+    pthread_cond_t condition;
     System* s;
     System::Runnable* r;
-    pthread_t thread;
+    Thread* next;
+    unsigned flags;
   };
 
   class Monitor: public System::Monitor {
    public:
-    Monitor(System* s): s(s), context(0), depth(0) {
-      pthread_mutex_init(&mutex, 0);
-      pthread_cond_init(&condition, 0);      
+    Monitor(System* s): s(s), owner_(0), first(0), last(0), depth(0) {
+      pthread_mutex_init(&mutex, 0);    
     }
 
-    virtual bool tryAcquire(void* context) {
-      if (this->context == context) {
+    virtual bool tryAcquire(System::Thread* context) {
+      Thread* t = static_cast<Thread*>(context);
+
+      if (owner_ == t) {
         ++ depth;
         return true;
       } else {
@@ -148,7 +193,7 @@ class MySystem: public System {
           return false;
 
         case 0:
-          this->context = context;
+          owner_ = t;
           ++ depth;
           return true;
 
@@ -158,18 +203,22 @@ class MySystem: public System {
       }
     }
 
-    virtual void acquire(void* context) {
-      if (this->context != context) {
+    virtual void acquire(System::Thread* context) {
+      Thread* t = static_cast<Thread*>(context);
+
+      if (owner_ != t) {
         pthread_mutex_lock(&mutex);
-        this->context = context;
+        owner_ = t;
       }
       ++ depth;
     }
 
-    virtual void release(void* context) {
-      if (this->context == context) {
+    virtual void release(System::Thread* context) {
+      Thread* t = static_cast<Thread*>(context);
+
+      if (owner_ == t) {
         if (-- depth == 0) {
-          this->context = 0;
+          owner_ = 0;
           pthread_mutex_unlock(&mutex);
         }
       } else {
@@ -177,60 +226,139 @@ class MySystem: public System {
       }
     }
 
-    virtual void wait(void* context, int64_t time) {
-      if (this->context == context) {
+    void append(Thread* t) {
+      if (last) {
+        last->next = t;
+      } else {
+        first = last = t;
+      }
+    }
+
+    void remove(Thread* t) {
+      for (Thread** p = &first; *p;) {
+        if (t == *p) {
+          *p = t->next;
+          if (last == t) {
+            last = 0;
+          }
+          break;
+        } else {
+          p = &((*p)->next);
+        }
+      }
+    }
+
+    virtual bool wait(System::Thread* context, int64_t time) {
+      Thread* t = static_cast<Thread*>(context);
+
+      if (owner_ == t) {
+        ACQUIRE(t->mutex);
+      
+        if (t->r->interrupted()) {
+          t->r->setInterrupted(false);
+          return true;
+        }
+
+        t->flags |= Waiting;
+
+        append(t);
+
         unsigned depth = this->depth;
         this->depth = 0;
-        this->context = 0;
+        owner_ = 0;
+        pthread_mutex_unlock(&mutex);
+
         if (time) {
           int64_t then = now() + time;
           timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
-          int rv = pthread_cond_timedwait(&condition, &mutex, &ts);
-          assert(s, rv == 0 or rv == ETIMEDOUT);
+          int rv = pthread_cond_timedwait
+            (&(t->condition), &(t->mutex), &ts);
+          assert(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
         } else {
-          int rv = pthread_cond_wait(&condition, &mutex);
-          assert(s, rv == 0);
+          int rv = pthread_cond_wait(&(t->condition), &(t->mutex));
+          assert(s, rv == 0 or rv == EINTR);
         }
-        this->context = context;
+
+        pthread_mutex_lock(&mutex);
+        owner_ = t;
         this->depth = depth;
+        
+        if ((t->flags & Notified) == 0) {
+          remove(t);
+        }
+
+        t->flags = 0;
+
+        if (t->r->interrupted()) {
+          t->r->setInterrupted(false);
+          return true;
+        } else {
+          return false;
+        }
       } else {
         sysAbort(s);
       }
     }
 
-    virtual void notify(void* context) {
-      if (this->context == context) {
-        int rv = pthread_cond_signal(&condition);
-        assert(s, rv == 0);
+    void doNotify(Thread* t) {
+      ACQUIRE(t->mutex);
+
+      t->flags |= Notified;
+      int rv = pthread_cond_signal(&(t->condition));
+      assert(s, rv == 0);
+    }
+
+    virtual void notify(System::Thread* context) {
+      Thread* t = static_cast<Thread*>(context);
+
+      if (owner_ == t) {
+        if (first) {
+          Thread* t = first;
+          first = first->next;
+          if (t == last) {
+            last = 0;
+          }
+
+          doNotify(t);
+        }
       } else {
         sysAbort(s);
       }
     }
 
-    virtual void notifyAll(void* context) {
-      if (this->context == context) {
-        int rv = pthread_cond_broadcast(&condition);
-        assert(s, rv == 0);
+    virtual void notifyAll(System::Thread* context) {
+      Thread* t = static_cast<Thread*>(context);
+
+      if (owner_ == t) {
+        for (Thread** p = &first; *p;) {
+          Thread* t = *p;
+          p = &(t->next);
+          if (t == last) {
+            last = 0;
+          }
+
+          doNotify(t);
+        }
       } else {
         sysAbort(s);
       }
     }
     
-    virtual void* owner() {
-      return context;
+    virtual System::Thread* owner() {
+      return owner_;
     }
 
     virtual void dispose() {
-      assert(s, context == 0);
+      assert(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
-      pthread_cond_destroy(&condition);
       s->free(this);
     }
 
     System* s;
     pthread_mutex_t mutex;
-    pthread_cond_t condition;
-    void* context;
+    Thread* owner_;
+    Thread* first;
+    Thread* last;
     unsigned depth;
   };
 
@@ -278,6 +406,14 @@ class MySystem: public System {
 
   MySystem(unsigned limit): limit(limit), count(0) {
     pthread_mutex_init(&mutex, 0);
+
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&(sa.sa_mask));
+    sa.sa_handler = handleSignal;
+    
+    int rv = sigaction(InterruptSignal, &sa, 0);
+    assert(this, rv == 0);
   }
 
   virtual bool success(Status s) {
@@ -332,16 +468,17 @@ class MySystem: public System {
     pthread_mutex_unlock(&mutex);
   }
 
-  virtual Status attach(System::Thread** tp) {
-    Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, 0);
+  virtual Status attach(Runnable* r) {
+    Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
     t->thread = pthread_self();
-    *tp = t;
+    r->attach(t);
     return 0;
   }
 
   virtual Status start(Runnable* r) {
     Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
-    int rv = pthread_create(&(t->thread), 0, run, t);
+    r->attach(t);
+    int rv = pthread_create(&(t->thread), 0, run, r);
     assert(this, rv == 0);
     return 0;
   }

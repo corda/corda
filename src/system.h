@@ -20,7 +20,7 @@ class System: public Allocator {
   class Thread {
    public:
     virtual ~Thread() { }
-    virtual void run() = 0;
+    virtual void interrupt() = 0;
     virtual void join() = 0;
     virtual void dispose() = 0;
   };
@@ -28,20 +28,22 @@ class System: public Allocator {
   class Runnable {
    public:
     virtual ~Runnable() { }
-    virtual void run(Thread*) = 0;
-    virtual void dispose() = 0;
+    virtual void attach(Thread*) = 0;
+    virtual void run() = 0;
+    virtual bool interrupted() = 0;
+    virtual void setInterrupted(bool v) = 0;
   };
 
   class Monitor {
    public:
     virtual ~Monitor() { }
-    virtual bool tryAcquire(void* context) = 0;
-    virtual void acquire(void* context) = 0;
-    virtual void release(void* context) = 0;
-    virtual void wait(void* context, int64_t time) = 0;
-    virtual void notify(void* context) = 0;
-    virtual void notifyAll(void* context) = 0;
-    virtual void* owner() = 0;
+    virtual bool tryAcquire(Thread* context) = 0;
+    virtual void acquire(Thread* context) = 0;
+    virtual void release(Thread* context) = 0;
+    virtual bool wait(Thread* context, int64_t time) = 0;
+    virtual void notify(Thread* context) = 0;
+    virtual void notifyAll(Thread* context) = 0;
+    virtual Thread* owner() = 0;
     virtual void dispose() = 0;
   };
 
@@ -57,7 +59,7 @@ class System: public Allocator {
   virtual ~System() { }
 
   virtual bool success(Status) = 0;
-  virtual Status attach(Thread**) = 0;
+  virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
   virtual Status make(Monitor**) = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
@@ -97,16 +99,20 @@ expect(System* s, bool v)
 }
 
 #ifdef NDEBUG
+
 inline void
 assert(System*, bool)
 { }
-#else
+
+#else // not NDEBUG
+
 inline void
 assert(System* s, bool v)
 {
   expect(s, v);
 }
-#endif
+
+#endif // not NDEBUG
 
 System*
 makeSystem(unsigned heapSize);

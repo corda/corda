@@ -22,7 +22,7 @@ namespace vm {
 const bool Verbose = false;
 const bool DebugRun = false;
 const bool DebugStack = false;
-const bool DebugMonitors = true;
+const bool DebugMonitors = false;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
@@ -1124,6 +1124,16 @@ class Machine {
   JNIEnvVTable jniEnvVTable;
 };
 
+object
+run(Thread* t, const char* className, const char* methodName,
+    const char* methodSpec, object this_, ...);
+
+void
+printTrace(Thread* t, object exception);
+
+uint8_t&
+threadInterrupted(Thread* t, object thread);
+
 class Thread {
  public:
   enum State {
@@ -1149,6 +1159,35 @@ class Thread {
     Thread* t;
     object* p;
     Protector* next;
+  };
+
+  class Runnable: public System::Runnable {
+   public:
+    Runnable(Thread* t): t(t) { }
+
+    virtual void attach(System::Thread* st) {
+      t->systemThread = st;
+    }
+
+    virtual void run() {
+      vm::run(t, "java/lang/Thread", "run", "()V", t->javaThread);
+
+      if (t->exception) {
+        printTrace(t, t->exception);
+      }
+
+      t->exit();
+    }
+
+    virtual bool interrupted() {
+      return threadInterrupted(t, t->javaThread);
+    }
+
+    virtual void setInterrupted(bool v) {
+      threadInterrupted(t, t->javaThread) = v;
+    }
+
+    Thread* t;
   };
 
   static const unsigned HeapSizeInBytes = 64 * 1024;
@@ -1178,6 +1217,7 @@ class Thread {
   int frame;
   unsigned heapIndex;
   Protector* protector;
+  Runnable runnable;
 #ifdef VM_STRESS
   bool stress;
   object* heap;
@@ -1248,13 +1288,13 @@ class MonitorResource {
   MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
     stress(t);
 
-    if (not m->tryAcquire(t)) {
+    if (not m->tryAcquire(t->systemThread)) {
       ENTER(t, Thread::IdleState);
-      m->acquire(t);
+      m->acquire(t->systemThread);
     }
   }
 
-  ~MonitorResource() { m->release(t); }
+  ~MonitorResource() { m->release(t->systemThread); }
 
  private:
   Thread* t;
@@ -1264,10 +1304,10 @@ class MonitorResource {
 class RawMonitorResource {
  public:
   RawMonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
-    m->acquire(t);
+    m->acquire(t->systemThread);
   }
 
-  ~RawMonitorResource() { m->release(t); }
+  ~RawMonitorResource() { m->release(t->systemThread); }
 
  private:
   Thread* t;
@@ -1438,6 +1478,12 @@ makeInvocationTargetException(Thread* t, object targetException)
   PROTECT(t, targetException);
   object trace = makeTrace(t);
   return makeRuntimeException(t, 0, trace, targetException);
+}
+
+inline object
+makeInterruptedException(Thread* t)
+{
+  return makeInterruptedException(t, 0, makeTrace(t), 0);
 }
 
 inline object
@@ -1986,9 +2032,9 @@ acquire(Thread* t, object o)
             t, m, objectHash(t, o));
   }
 
-  if (not m->tryAcquire(t)) {
+  if (not m->tryAcquire(t->systemThread)) {
     ENTER(t, Thread::IdleState);
-    m->acquire(t);
+    m->acquire(t->systemThread);
   }
 
   stress(t);
@@ -2004,7 +2050,7 @@ release(Thread* t, object o)
             t, m, objectHash(t, o));
   }
 
-  m->release(t);
+  m->release(t->systemThread);
 }
 
 inline void
@@ -2017,9 +2063,13 @@ wait(Thread* t, object o, int64_t milliseconds)
             t, milliseconds, m, objectHash(t, o));
   }
 
-  if (m->owner() == t) {
+  if (m->owner() == t->systemThread) {
     ENTER(t, Thread::IdleState);
-    m->wait(t, milliseconds);
+
+    bool interrupted = m->wait(t->systemThread, milliseconds);
+    if (interrupted) {
+      t->exception = makeInterruptedException(t);
+    }
   } else {
     t->exception = makeIllegalMonitorStateException(t);
   }
@@ -2033,12 +2083,6 @@ wait(Thread* t, object o, int64_t milliseconds)
 }
 
 inline void
-vmWait(Thread* t, object o, int64_t milliseconds)
-{
-  wait(t, o, milliseconds);
-}
-
-inline void
 notify(Thread* t, object o)
 {
   System::Monitor* m = objectMonitor(t, o);
@@ -2048,17 +2092,11 @@ notify(Thread* t, object o)
             t, m, objectHash(t, o));
   }
 
-  if (m->owner() == t) {
-    m->notify(t);
+  if (m->owner() == t->systemThread) {
+    m->notify(t->systemThread);
   } else {
     t->exception = makeIllegalMonitorStateException(t);
   }
-}
-
-inline void
-vmNotify(Thread* t, object o)
-{
-  notify(t, o);
 }
 
 inline void
@@ -2071,21 +2109,18 @@ notifyAll(Thread* t, object o)
             t, m, objectHash(t, o));
   }
 
-  if (m->owner() == t) {
-    m->notifyAll(t);
+  if (m->owner() == t->systemThread) {
+    m->notifyAll(t->systemThread);
   } else {
     t->exception = makeIllegalMonitorStateException(t);
   }
 }
 
 inline void
-vmNotifyAll(Thread* t, object o)
+interrupt(Thread*, Thread* target)
 {
-  notifyAll(t, o);
+  target->systemThread->interrupt();
 }
-
-void
-printTrace(Thread* t, object exception);
 
 void
 exit(Thread* t);

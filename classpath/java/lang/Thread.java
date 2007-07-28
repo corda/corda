@@ -7,14 +7,18 @@ public class Thread implements Runnable {
   private long peer;
   private final Runnable task;
   private Map<ThreadLocal, Object> locals;
-  private Object sleepLock;
   private boolean interrupted;
+  private Object sleepLock;
 
   public Thread(Runnable task) {
     this.task = task;
   }
 
   public synchronized void start() {
+    if (peer != 0) {
+      throw new IllegalStateException("thread already started");
+    }
+
     Map<ThreadLocal, Object> map = currentThread().locals;
     if (map != null) {
       for (Map.Entry<ThreadLocal, Object> e: map.entrySet()) {
@@ -44,6 +48,26 @@ public class Thread implements Runnable {
   }
 
   public static native Thread currentThread();
+
+  private static native void interrupt(long peer);
+
+  public synchronized void interrupt() {
+    if (peer != 0) {
+      interrupt(peer);
+    } else {
+      interrupted = true;
+    }
+  }
+
+  public static boolean interrupted() {
+    Thread t = currentThread();
+    
+    synchronized (t) {
+      boolean v = t.interrupted;
+      t.interrupted = false;
+      return v;
+    }
+  }
 
   public static void sleep(long milliseconds) throws InterruptedException {
     Thread t = currentThread();

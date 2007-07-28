@@ -128,8 +128,8 @@
   (int64_t peer)
   (object task)
   (object locals)
-  (object sleepLock)
-  (uint8_t interrupted))
+  (uint8_t interrupted)
+  (object sleepLock))
 
 (type stackTraceElement java/lang/StackTraceElement
   (extends jobject)
@@ -179,6 +179,9 @@
   (extends runtimeException))
 
 (type invocationTargetException java/lang/InvocationTargetException
+  (extends exception))
+
+(type interruptedException java/lang/InterruptedException
   (extends exception))
 
 (type error java/lang/Error

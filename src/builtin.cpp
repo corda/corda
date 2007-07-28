@@ -598,49 +598,29 @@ Thread_currentThread(Thread* t, jclass)
 }
 
 void
-Thread_start(Thread* t, jobject this_)
+Thread_doStart(Thread* t, jobject this_)
 {
-  Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *this_));
-  if (p) {
-    object message = makeString(t, "thread already started");
-    t->exception = makeIllegalStateException(t, message);
-  } else {
-    p = new (t->vm->system->allocate(sizeof(Thread))) Thread(t->vm, *this_, t);
+  Thread* p = new (t->vm->system->allocate(sizeof(Thread)))
+    Thread(t->vm, *this_, t);
 
-    enter(p, Thread::ActiveState);
+  enter(p, Thread::ActiveState);
 
-    class Runnable: public System::Runnable {
-     public:
-      Runnable(System* s, Thread* t): s(s), t(t) { }
+  threadPeer(t, *this_) = reinterpret_cast<jlong>(p);
 
-      virtual void run(System::Thread* st) {
-        t->systemThread = st;
+  if (not t->vm->system->success(t->vm->system->start(&(p->runnable)))) {
+    threadPeer(t, *this_) = -1;
 
-        vm::run(t, "java/lang/Thread", "run", "()V", t->javaThread);
+    p->exit();
 
-        if (t->exception) {
-          printTrace(t, t->exception);
-        }
-
-        t->exit();
-      }
-
-      virtual void dispose() {
-        s->free(this);
-      }
-
-      System* s;
-      Thread* t;
-    }* r = new (t->vm->system->allocate(sizeof(Runnable)))
-       Runnable(t->vm->system, p);
-
-    if (not t->vm->system->success(t->vm->system->start(r))) {
-      p->exit();
-
-      object message = makeString(t, "unable to start native thread");
-      t->exception = makeRuntimeException(t, message);
-    }
+    object message = makeString(t, "unable to start native thread");
+    t->exception = makeRuntimeException(t, message);
   }
+}
+
+void
+Thread_interrupt(Thread* t, jclass, jlong peer)
+{
+  interrupt(t, reinterpret_cast<Thread*>(peer));
 }
 
 } // namespace
@@ -670,7 +650,9 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Runtime_exit) },
 
     { "Java_java_lang_Thread_doStart",
-      reinterpret_cast<void*>(::Thread_start) },
+      reinterpret_cast<void*>(::Thread_doStart) },
+    { "Java_java_lang_Thread_interrupt",
+      reinterpret_cast<void*>(::Thread_interrupt) },
     { "Java_java_lang_Thread_currentThread",
       reinterpret_cast<void*>(::Thread_currentThread) },
 
