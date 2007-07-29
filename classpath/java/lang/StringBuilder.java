@@ -4,6 +4,12 @@ public class StringBuilder {
   private Cell chain;
   private int length;
 
+  public StringBuilder(int capacity) { }
+
+  public StringBuilder() {
+    this(0);
+  }
+
   public StringBuilder append(String s) {
     if (s.length() > 0) {
       chain = new Cell(s, chain);

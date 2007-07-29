@@ -9,6 +9,22 @@ public final class Character {
     this.value = value;
   }
 
+  public boolean equals(Object o) {
+    return o instanceof Character && ((Character) o).value == value;
+  }
+
+  public int hashCode() {
+    return (int) value;
+  }
+
+  public String toString() {
+    return toString(value);
+  }
+
+  public static String toString(char v) {
+    return new String(new char[] { v });
+  }
+
   public char charValue() {
     return value;
   }

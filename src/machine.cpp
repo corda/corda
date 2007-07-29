@@ -137,10 +137,23 @@ visitRoots(Thread* t, Heap::Visitor* v)
 }
 
 void
+finalizerTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
+{
+  v->visit(&finalizerTarget(t, *p));
+
+  object finalizer = *p;
+  *p = finalizerNext(t, finalizer);
+  finalizerNext(t, finalizer) = t->vm->finalizeQueue;
+  t->vm->finalizeQueue = finalizer;
+}
+
+void
 referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 {
-//   fprintf(stderr, "target %p unreachable for reference %p\n",
-//           jreferenceTarget(t, *p), *p);
+  if (DebugReferences) {
+    fprintf(stderr, "target %p unreachable for reference %p\n",
+            jreferenceTarget(t, *p), *p);
+  }
 
   v->visit(p);
   jreferenceTarget(t, *p) = 0;
@@ -164,27 +177,35 @@ referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 
     jreferenceQueue(t, *p) = 0;
   }
+
+  *p = jreferenceNext(t, *p);
 }
 
 void
 referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
 {
-//   fprintf(stderr, "reference %p unreachable\n",
-//           *p);
+  if (DebugReferences) {
+    fprintf(stderr, "reference %p unreachable (target %p)\n",
+            *p, jreferenceTarget(t, *p));
+  }
 
   if (jreferenceQueue(t, *p)
       and t->vm->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
   {
     // queue is reachable - add the reference
     referenceTargetUnreachable(t, p, v);    
+  } else {
+    *p = jreferenceNext(t, *p);
   }
 }
 
 void
 referenceTargetReachable(Thread* t, object* p, Heap::Visitor* v)
 {
-//   fprintf(stderr, "target %p reachable for reference %p\n",
-//           jreferenceTarget(t, *p), *p);
+  if (DebugReferences) {
+    fprintf(stderr, "target %p reachable for reference %p\n",
+            jreferenceTarget(t, *p), *p);
+  }
 
   v->visit(p);
   v->visit(&jreferenceTarget(t, *p));
@@ -201,6 +222,16 @@ postVisit(Thread* t, Heap::Visitor* v)
 {
   Machine* m = t->vm;
 
+  for (object* p = &(m->finalizeQueue); *p; p = &(finalizerNext(t, *p))) {
+    v->visit(p);
+    v->visit(&finalizerTarget(t, *p));
+  }
+
+  for (object* p = &(m->finalizeQueue); *p; p = &(finalizerNext(t, *p))) {
+    v->visit(p);
+    v->visit(&finalizerTarget(t, *p));
+  }
+
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
 
@@ -209,16 +240,9 @@ postVisit(Thread* t, Heap::Visitor* v)
 
     if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
       // target is unreachable - queue it up for finalization
-
-      v->visit(&finalizerTarget(t, *p));
-
-      object finalizer = *p;
-      *p = finalizerNext(t, finalizer);
-      finalizerNext(t, finalizer) = m->finalizeQueue;
-      m->finalizeQueue = finalizer;
+      finalizerTargetUnreachable(t, p, v);
     } else {
       // target is reachable
-
       v->visit(&finalizerTarget(t, *p));
 
       if (m->heap->status(*p) == Heap::Tenured) {
@@ -245,17 +269,12 @@ postVisit(Thread* t, Heap::Visitor* v)
   for (object* p = &(m->weakReferences); *p;) {
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable
-
       referenceUnreachable(t, p, v);
-      *p = jreferenceNext(t, *p);
     } else if (m->heap->status(jreferenceTarget(t, *p)) == Heap::Unreachable) {
       // target is unreachable
-
       referenceTargetUnreachable(t, p, v);
-      *p = jreferenceNext(t, *p);
     } else {
       // both reference and target are reachable
-
       referenceTargetReachable(t, p, v);
 
       if (m->heap->status(*p) == Heap::Tenured) {
@@ -283,18 +302,10 @@ postVisit(Thread* t, Heap::Visitor* v)
 
       if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
         // target is unreachable - queue it up for finalization
-
-        v->visit(&finalizerTarget(t, *p));
-
-        object finalizer = *p;
-        *p = finalizerNext(t, finalizer);
-        finalizerNext(t, finalizer) = m->finalizeQueue;
-        m->finalizeQueue = finalizer;
+        finalizerTargetUnreachable(t, p, v);
       } else {
         // target is reachable
-
         v->visit(&finalizerTarget(t, *p));
-
         p = &finalizerNext(t, *p);
       }
     }
@@ -302,19 +313,14 @@ postVisit(Thread* t, Heap::Visitor* v)
     for (object* p = &(m->tenuredWeakReferences); *p;) {
       if (m->heap->status(*p) == Heap::Unreachable) {
         // reference is unreachable
-
         referenceUnreachable(t, p, v);
-        *p = jreferenceNext(t, *p);
       } else if (m->heap->status(jreferenceTarget(t, *p))
                  == Heap::Unreachable)
       {
         // target is unreachable
-
         referenceTargetUnreachable(t, p, v);
-        *p = jreferenceNext(t, *p);
       } else {
         // both reference and target are reachable
-
         referenceTargetReachable(t, p, v);
         p = &jreferenceNext(t, *p);
       }
@@ -771,7 +777,9 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       if (fieldTable) {
         for (int i = arrayLength(t, fieldTable) - 1; i >= 0; --i) {
           object field = arrayBody(t, fieldTable, i);
-          if (fieldCode(t, field) == ObjectField) {
+          if ((fieldFlags(t, field) & ACC_STATIC) == 0
+              and fieldCode(t, field) == ObjectField)
+          {
             unsigned index = fieldOffset(t, field) / BytesPerWord;
             intArrayBody(t, mask, (index / 32)) |= 1 << (index % 32);
             sawReferenceField = true;

@@ -9,6 +9,26 @@ public final class Short extends Number {
     this.value = value;
   }
 
+  public boolean equals(Object o) {
+    return o instanceof Short && ((Short) o).value == value;
+  }
+
+  public int hashCode() {
+    return value;
+  }
+
+  public String toString() {
+    return toString(value);
+  }
+
+  public static String toString(short v, int radix) {
+    return Long.toString(v, radix);
+  }
+
+  public static String toString(short v) {
+    return toString(v, 10);
+  }
+
   public byte byteValue() {
     return (byte) value;
   }

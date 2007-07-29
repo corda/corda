@@ -23,6 +23,7 @@ const bool Verbose = false;
 const bool DebugRun = false;
 const bool DebugStack = false;
 const bool DebugMonitors = false;
+const bool DebugReferences = false;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;

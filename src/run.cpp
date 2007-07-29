@@ -2118,17 +2118,13 @@ run(Thread* t)
         {
           object catchType = 0;
           if (exceptionHandlerCatchType(eh)) {
-            catchType = arrayBody
-              (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
-          }
-
-          if (catchType) {
             object e = exception;
             exception = 0;
             PROTECT(t, e);
 
             PROTECT(t, eht);
-            catchType = resolveClass(t, catchType);
+            catchType = resolveClass
+              (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
 
             if (catchType) {
               eh = exceptionHandlerTableBody(t, eht, i);

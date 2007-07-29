@@ -101,12 +101,14 @@ Class_primitiveClass(Thread* t, jclass, jchar name)
     return pushReference(t, arrayBody(t, t->vm->types, Machine::JfloatType));
   case 'I':
     return pushReference(t, arrayBody(t, t->vm->types, Machine::JintType));
-  case 'L':
+  case 'J':
     return pushReference(t, arrayBody(t, t->vm->types, Machine::JlongType));
   case 'S':
     return pushReference(t, arrayBody(t, t->vm->types, Machine::JshortType));
   case 'V':
     return pushReference(t, arrayBody(t, t->vm->types, Machine::JvoidType));
+  case 'Z':
+    return pushReference(t, arrayBody(t, t->vm->types, Machine::JbooleanType));
   default:
     t->exception = makeIllegalArgumentException(t);
     return 0;
@@ -644,6 +646,8 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Class_forName) },
     { "Java_java_lang_Class_isAssignableFrom",
       reinterpret_cast<void*>(::Class_isAssignableFrom) },
+    { "Java_java_lang_Class_primitiveClass",
+      reinterpret_cast<void*>(::Class_primitiveClass) },
 
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(::System_arraycopy) },

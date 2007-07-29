@@ -14,12 +14,20 @@ public final class String implements Comparable<String> {
     this(data, offset, length, true);
   }
 
+  public String(char[] data) {
+    this(data, 0, data.length);
+  }
+
   public String(byte[] data, int offset, int length, boolean copy) {
     this((Object) data, offset, length, copy);
   }
 
   public String(byte[] data, int offset, int length) {
     this(data, offset, length, true);
+  }
+
+  public String(byte[] data) {
+    this(data, 0, data.length);
   }
 
   private String(Object data, int offset, int length, boolean copy) {
@@ -39,6 +47,10 @@ public final class String implements Comparable<String> {
       this.offset = offset;
       this.length = length;
     }
+  }
+
+  public String toString() {
+    return this;
   }
 
   public int length() {
@@ -89,6 +101,26 @@ public final class String implements Comparable<String> {
       }
       return 0;
     }
+  }
+
+  public int indexOf(char c) {
+    for (int i = 0; i < length - 1; ++i) {
+      if (charAt(i) == c) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  public int lastIndexOf(char c) {
+    for (int i = length - 1; i >= 0; --i) {
+      if (charAt(i) == c) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 
   public int indexOf(String s) {
@@ -232,29 +264,35 @@ public final class String implements Comparable<String> {
 
   public native String intern();
 
+  public static String valueOf(boolean v) {
+    return Boolean.toString(v);
+  }
+
+  public static String valueOf(byte v) {
+    return Byte.toString(v);
+  }
+
+  public static String valueOf(short v) {
+    return Short.toString(v);
+  }
+
+  public static String valueOf(char v) {
+    return Character.toString(v);
+  }
+
   public static String valueOf(int v) {
-    return valueOf((long) v);
+    return Integer.toString(v);
   }
 
   public static String valueOf(long v) {
-    if (v == 0) {
-      return valueOf('0');
-    } else {
-      final int Max = 21;
-      char[] array = new char[Max];
-      int index = Max;
-      long x = (v >= 0 ? v : -v);
+    return Long.toString(v);
+  }
 
-      while (x != 0) {
-        array[--index] = (char) ('0' + (x % 10));
-        x /= 10;
-      }
+  public static String valueOf(float v) {
+    return Float.toString(v);
+  }
 
-      if (v < 0) {
-        array[--index] = '-';
-      }
-
-      return new String(array, index, Max - index, false);
-    }
+  public static String valueOf(double v) {
+    return Double.toString(v);
   }
 }

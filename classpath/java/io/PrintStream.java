@@ -9,7 +9,7 @@ public class PrintStream extends OutputStream {
 
   public PrintStream(OutputStream out, boolean autoFlush) {
     this.out = out;
-    this.autoFlush = true;
+    this.autoFlush = autoFlush;
   }
 
   public PrintStream(OutputStream out) {
@@ -25,6 +25,13 @@ public class PrintStream extends OutputStream {
   public synchronized void println(String s) {
     try {
       out.write(s.getBytes());    
+      out.write(newline);
+      if (autoFlush) flush();
+    } catch (IOException e) { }
+  }
+
+  public synchronized void println() {
+    try {
       out.write(newline);
       if (autoFlush) flush();
     } catch (IOException e) { }

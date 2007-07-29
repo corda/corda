@@ -178,7 +178,7 @@
   (extends runtimeException))
 
 (type classNotFoundException java/lang/ClassNotFoundException
-  (extends runtimeException))
+  (extends exception))
 
 (type invocationTargetException java/lang/InvocationTargetException
   (extends exception))
@@ -204,8 +204,11 @@
 (type unsatisfiedLinkError java/lang/UnsatisfiedLinkError
   (extends linkageError))
 
+(type number java/lang/Number
+  (extends jobject))
+
 (type byte java/lang/Byte
-  (extends jobject)
+  (extends number)
   (int8_t value))
 
 (type boolean java/lang/Boolean
@@ -213,7 +216,7 @@
   (uint8_t value))
 
 (type short java/lang/Short
-  (extends jobject)
+  (extends number)
   (int16_t value))
 
 (type char java/lang/Character
@@ -221,19 +224,19 @@
   (uint16_t value))
 
 (type int java/lang/Integer
-  (extends jobject)
+  (extends number)
   (int32_t value))
 
 (type long java/lang/Long
-  (extends jobject)
+  (extends number)
   (int64_t value))
 
 (type float java/lang/Float
-  (extends jobject)
+  (extends number)
   (uint32_t value))
 
 (type double java/lang/Double
-  (extends jobject)
+  (extends number)
   (uint64_t value))
 
 (type referenceQueue java/lang/ref/ReferenceQueue

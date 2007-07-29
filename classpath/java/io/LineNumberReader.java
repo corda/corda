@@ -7,7 +7,7 @@ public class LineNumberReader extends BufferedReader {
     super(in, bufferSize);
   }
 
-  protected LineNumberReader(Reader in) {
+  public LineNumberReader(Reader in) {
     super(in);
   }
 

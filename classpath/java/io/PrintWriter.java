@@ -9,10 +9,18 @@ public class PrintWriter extends Writer {
 
   public PrintWriter(Writer out, boolean autoFlush) {
     this.out = out;
-    this.autoFlush = true;
+    this.autoFlush = autoFlush;
   }
 
   public PrintWriter(Writer out) {
+    this(out, false);
+  }
+
+  public PrintWriter(OutputStream out, boolean autoFlush) {
+    this(new OutputStreamWriter(out), autoFlush);
+  }
+
+  public PrintWriter(OutputStream out) {
     this(out, false);
   }
 
@@ -25,6 +33,13 @@ public class PrintWriter extends Writer {
   public synchronized void println(String s) {
     try {
       out.write(s.toCharArray());    
+      out.write(newline);
+      if (autoFlush) flush();
+    } catch (IOException e) { }
+  }
+
+  public synchronized void println() {
+    try {
       out.write(newline);
       if (autoFlush) flush();
     } catch (IOException e) { }

@@ -11,7 +11,7 @@ public class BufferedReader extends Reader {
     this.buffer = new char[bufferSize];
   }
 
-  protected BufferedReader(Reader in) {
+  public BufferedReader(Reader in) {
     this(in, 32);
   }
   

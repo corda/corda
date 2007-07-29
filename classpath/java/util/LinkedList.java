@@ -5,6 +5,12 @@ public class LinkedList<T> implements List<T> {
   private Cell<T> rear;
   private int size;
 
+  public LinkedList(Collection<T> c) {
+    addAll(c);
+  }
+
+  public LinkedList() { }
+
   private Cell<T> find(int index) {
     int i = 0;
     for (Cell<T> c = front; c != null; c = c.next) {
@@ -73,6 +79,10 @@ public class LinkedList<T> implements List<T> {
 
   public boolean contains(T element) {
     return find(element) != null;
+  }
+
+  public void addAll(Collection<T> c) {
+    for (T t: c) add(t);
   }
 
   public boolean add(T element) {

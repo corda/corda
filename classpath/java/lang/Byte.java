@@ -9,6 +9,26 @@ public final class Byte extends Number {
     this.value = value;
   }
 
+  public boolean equals(Object o) {
+    return o instanceof Byte && ((Byte) o).value == value;
+  }
+
+  public int hashCode() {
+    return value;
+  }
+
+  public String toString() {
+    return toString(value);
+  }
+
+  public static String toString(byte v, int radix) {
+    return Long.toString(v, radix);
+  }
+
+  public static String toString(byte v) {
+    return toString(v, 10);
+  }
+
   public byte byteValue() {
     return value;
   }

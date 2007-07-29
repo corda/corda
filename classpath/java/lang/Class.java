@@ -38,7 +38,7 @@ public final class Class <T> {
       } else if (name.startsWith("L")) {
         return forName(name.substring(1, name.length() - 1));
       } else {
-        if (name.length() == 0) {
+        if (name.length() == 1) {
           return primitiveClass(name.charAt(0));
         } else {
           throw new ClassNotFoundException(name);

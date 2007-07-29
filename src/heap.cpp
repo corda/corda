@@ -18,7 +18,7 @@ const unsigned MinimumGen2SizeInBytes = 128 * 1024;
 const unsigned Top = ~static_cast<unsigned>(0);
 
 const bool Verbose = true;
-const bool Debug = true;
+const bool Debug = false;
 
 class Context;
 
@@ -1438,6 +1438,7 @@ class MyHeap: public Heap {
     } else if (c.nextGen2.contains(p)
                or (c.gen2.contains(p)
                    and (c.mode == ::MinorCollection
+                        or c.mode == ::OverflowCollection
                         or c.gen2.indexOf(p) >= c.gen2Base)))
     {
       return Tenured;

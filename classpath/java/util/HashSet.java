@@ -5,6 +5,11 @@ public class HashSet<T> implements Set<T> {
 
   private final HashMap<T, Object> map;
 
+  public HashSet(Collection<T> c) {
+    map = new HashMap(c.size());
+    addAll(c);
+  }
+
   public HashSet(int capacity) {
     map = new HashMap(capacity);
   }
@@ -19,6 +24,10 @@ public class HashSet<T> implements Set<T> {
 
   public boolean contains(T element) {
     return map.containsKey(element);
+  }
+
+  public void addAll(Collection<T> c) {
+    for (T t: c) add(t);
   }
 
   public boolean add(T element) {

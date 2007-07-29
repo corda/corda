@@ -1,7 +1,15 @@
 package java.lang;
 
 public class StringBuffer {
-  private final StringBuilder sb = new StringBuilder();
+  private final StringBuilder sb;
+
+  public StringBuffer(int capacity) {
+    sb = new StringBuilder(capacity);
+  }
+
+  public StringBuffer() {
+    this(0);
+  }
 
   public synchronized StringBuffer append(String s) {
     sb.append(s);
