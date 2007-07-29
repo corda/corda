@@ -1114,6 +1114,7 @@ class Machine {
   object bootstrapClassMap;
   object builtinMap;
   object monitorMap;
+  object stringMap;
   object types;
   object finalizers;
   object tenuredFinalizers;
@@ -1777,6 +1778,14 @@ hash(const int8_t* s, unsigned length)
   return h;  
 }
 
+inline uint32_t
+hash(const uint16_t* s, unsigned length)
+{
+  uint32_t h = 0;
+  for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
+  return h;  
+}
+
 inline unsigned
 baseSize(Thread* t, object o, object class_)
 {
@@ -1847,6 +1856,12 @@ byteArrayHash(Thread* t, object array)
   return hash(&byteArrayBody(t, array, 0), byteArrayLength(t, array));
 }
 
+inline uint32_t
+charArrayHash(Thread* t, object array)
+{
+  return hash(&charArrayBody(t, array, 0), charArrayLength(t, array));
+}
+
 inline bool
 byteArrayEqual(Thread* t, object a, object b)
 {
@@ -1854,6 +1869,52 @@ byteArrayEqual(Thread* t, object a, object b)
     ((byteArrayLength(t, a) == byteArrayLength(t, b)) and
      memcmp(&byteArrayBody(t, a, 0), &byteArrayBody(t, b, 0),
             byteArrayLength(t, a)) == 0);
+}
+
+inline uint32_t
+stringHash(Thread* t, object s)
+{
+  if (stringHashCode(t, s) == 0) {
+    object data = stringData(t, s);
+    if (objectClass(t, data)
+        == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+    {
+      stringHashCode(t, s) = byteArrayHash(t, data);
+    } else {
+      stringHashCode(t, s) = charArrayHash(t, data);
+    }
+  }
+  return stringHashCode(t, s);
+}
+
+inline uint16_t
+stringCharAt(Thread* t, object s, int i)
+{
+  object data = stringData(t, s);
+  if (objectClass(t, data)
+      == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+  {
+    return byteArrayBody(t, data, i);
+  } else {
+    return charArrayBody(t, data, i);
+  }
+}
+
+inline bool
+stringEqual(Thread* t, object a, object b)
+{
+  if (a == b) {
+    return true;
+  } else if (stringLength(t, a) == stringLength(t, b)) {
+    for (int i = 0; i < stringLength(t, a); ++i) {
+      if (stringCharAt(t, a, i) != stringCharAt(t, b, i)) {
+        return false;
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 inline bool
@@ -2121,6 +2182,9 @@ interrupt(Thread*, Thread* target)
 {
   target->systemThread->interrupt();
 }
+
+object
+intern(Thread* t, object s);
 
 void
 exit(Thread* t);

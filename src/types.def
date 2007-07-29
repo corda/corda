@@ -121,7 +121,7 @@
   (object data)
   (int32_t offset)
   (int32_t length)
-  (int32_t hash))
+  (int32_t hashCode))
 
 (type thread java/lang/Thread
   (extends jobject)

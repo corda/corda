@@ -33,10 +33,6 @@ public final class String implements Comparable<String> {
     }
   }
 
-  public static String valueOf(int v) {
-    return valueOf((long) v);
-  }
-
   public int length() {
     return length;
   }
@@ -217,7 +213,13 @@ public final class String implements Comparable<String> {
       return ((char[]) data)[index + offset];
     } else {
       return (char) ((byte[]) data)[index + offset];
-    }    
+    }
+  }
+
+  public native String intern();
+
+  public static String valueOf(int v) {
+    return valueOf((long) v);
   }
 
   public static String valueOf(long v) {

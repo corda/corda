@@ -573,6 +573,7 @@ parsePool(Thread* t, Stream& s)
         object bytes = arrayBody(t, pool, intArrayBody(t, o, 1) - 1);
         object value = makeString
           (t, bytes, 0, byteArrayLength(t, bytes) - 1, 0);
+        value = intern(t, value);
         set(t, arrayBody(t, pool, i), value);
       } break;
 
@@ -1253,6 +1254,12 @@ removeMonitor(Thread* t, object o)
   static_cast<System::Monitor*>(pointerValue(t, p))->dispose();
 }
 
+void
+removeString(Thread* t, object o)
+{
+  hashMapRemove(t, t->vm->stringMap, o, stringHash, objectEqual);
+}
+
 } // namespace
 
 namespace vm {
@@ -1274,6 +1281,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   bootstrapClassMap(0),
   builtinMap(0),
   monitorMap(0),
+  stringMap(0),
   types(0),
   finalizers(0),
   tenuredFinalizers(0),
@@ -1373,6 +1381,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     m->classMap = makeHashMap(this, NormalMap, 0, 0);
     m->builtinMap = makeHashMap(this, NormalMap, 0, 0);
     m->monitorMap = makeHashMap(this, WeakMap, 0, 0);
+    m->stringMap = makeHashMap(this, WeakMap, 0, 0);
 
     populateBuiltinMap(t, m->builtinMap);
 
@@ -2234,6 +2243,23 @@ objectMonitor(Thread* t, object o)
   }
 }
 
+object
+intern(Thread* t, object s)
+{
+  ACQUIRE(t, t->vm->referenceLock);
+
+  object n = hashMapFindNode(t, t->vm->stringMap, s, stringHash, stringEqual);
+  if (n) {
+    return jreferenceTarget(t, tripleFirst(t, n));
+  } else {
+    PROTECT(t, s);
+
+    hashMapInsert(t, t->vm->stringMap, s, 0, stringHash);
+    addFinalizer(t, s, removeString);
+    return s;
+  }
+}
+
 void
 collect(Thread* t, Heap::CollectionType type)
 {
@@ -2248,6 +2274,7 @@ collect(Thread* t, Heap::CollectionType type)
       v->visit(&(m->bootstrapClassMap));
       v->visit(&(m->builtinMap));
       v->visit(&(m->monitorMap));
+      v->visit(&(m->stringMap));
       v->visit(&(m->types));
 
       for (Thread* t = m->rootThread; t; t = t->peer) {

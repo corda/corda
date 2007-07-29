@@ -445,6 +445,12 @@ Array_makeObjectArray(Thread* t, jclass, jclass elementType, jint length)
   return pushReference(t, makeObjectArray(t, *elementType, length, true));
 }
 
+jobject
+String_intern(Thread* t, jobject this_)
+{
+  return pushReference(t, intern(t, *this_));
+}
+
 void
 System_arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
                  jint dstOffset, jint length)
@@ -648,6 +654,9 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Runtime_gc) },
     { "Java_java_lang_Runtiime_exit",
       reinterpret_cast<void*>(::Runtime_exit) },
+
+    { "Java_java_lang_String_intern",
+      reinterpret_cast<void*>(::String_intern) },
 
     { "Java_java_lang_Thread_doStart",
       reinterpret_cast<void*>(::Thread_doStart) },
