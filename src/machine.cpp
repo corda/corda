@@ -637,7 +637,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, class_);
   PROTECT(t, pool);
   
-  object map = makeHashMap(t, NormalMap, 0, 0);
+  object map = makeHashMap(t, 0, 0);
   PROTECT(t, map);
 
   if (classSuper(t, class_)) {
@@ -844,10 +844,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, class_);
   PROTECT(t, pool);
 
-  object virtualMap = makeHashMap(t, NormalMap, 0, 0);
+  object virtualMap = makeHashMap(t, 0, 0);
   PROTECT(t, virtualMap);
 
-  object nativeMap = makeHashMap(t, NormalMap, 0, 0);
+  object nativeMap = makeHashMap(t, 0, 0);
   PROTECT(t, nativeMap);
 
   unsigned virtualCount = 0;
@@ -1374,14 +1374,14 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
       |= ReferenceFlag | WeakReferenceFlag;
 
-    m->bootstrapClassMap = makeHashMap(this, NormalMap, 0, 0);
+    m->bootstrapClassMap = makeHashMap(this, 0, 0);
 
 #include "type-java-initializations.cpp"
 
-    m->classMap = makeHashMap(this, NormalMap, 0, 0);
-    m->builtinMap = makeHashMap(this, NormalMap, 0, 0);
-    m->monitorMap = makeHashMap(this, WeakMap, 0, 0);
-    m->stringMap = makeHashMap(this, WeakMap, 0, 0);
+    m->classMap = makeHashMap(this, 0, 0);
+    m->builtinMap = makeHashMap(this, 0, 0);
+    m->monitorMap = makeWeakHashMap(this, 0, 0);
+    m->stringMap = makeWeakHashMap(this, 0, 0);
 
     populateBuiltinMap(t, m->builtinMap);
 
@@ -1789,7 +1789,9 @@ hashMapFindNode(Thread* t, object map, object key,
                 uint32_t (*hash)(Thread*, object),
                 bool (*equal)(Thread*, object, object))
 {
-  bool weak = hashMapType(t, map) == WeakMap;
+  bool weak = objectClass(t, map)
+    == arrayBody(t, t->vm->types, Machine::WeakHashMapType);
+
   object array = hashMapArray(t, map);
   if (array) {
     unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
@@ -1827,7 +1829,8 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
     newArray = makeArray(t, newLength, true);
 
     if (oldArray) {
-      bool weak = hashMapType(t, map) == WeakMap;
+      bool weak = objectClass(t, map)
+        == arrayBody(t, t->vm->types, Machine::WeakHashMapType);
 
       for (unsigned i = 0; i < arrayLength(t, oldArray); ++i) {
         object next;
@@ -1855,7 +1858,9 @@ void
 hashMapInsert(Thread* t, object map, object key, object value,
                uint32_t (*hash)(Thread*, object))
 {
-  bool weak = hashMapType(t, map) == WeakMap;
+  bool weak = objectClass(t, map)
+    == arrayBody(t, t->vm->types, Machine::WeakHashMapType);
+
   object array = hashMapArray(t, map);
   PROTECT(t, array);
 
@@ -1892,7 +1897,9 @@ hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object))
 {
-  bool weak = hashMapType(t, map) == WeakMap;
+  bool weak = objectClass(t, map)
+    == arrayBody(t, t->vm->types, Machine::WeakHashMapType);
+
   object array = hashMapArray(t, map);
   object o = 0;
   if (array) {
@@ -2246,14 +2253,14 @@ objectMonitor(Thread* t, object o)
 object
 intern(Thread* t, object s)
 {
+  PROTECT(t, s);
+
   ACQUIRE(t, t->vm->referenceLock);
 
   object n = hashMapFindNode(t, t->vm->stringMap, s, stringHash, stringEqual);
   if (n) {
     return jreferenceTarget(t, tripleFirst(t, n));
   } else {
-    PROTECT(t, s);
-
     hashMapInsert(t, t->vm->stringMap, s, 0, stringHash);
     addFinalizer(t, s, removeString);
     return s;

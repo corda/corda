@@ -51,11 +51,6 @@ enum StackTag {
   ObjectTag
 };
 
-enum MapType {
-  NormalMap,
-  WeakMap
-};
-
 const int NativeLine = -1;
 const int UnknownLine = -2;
 

@@ -95,9 +95,11 @@
   (void* next))
 
 (type hashMap
-  (uint32_t type)
   (uint32_t size)
   (object array))
+
+(type weakHashMap
+  (extends hashMap))
 
 (type hashMapIterator
   (object map)
