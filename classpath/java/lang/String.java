@@ -10,8 +10,16 @@ public final class String implements Comparable<String> {
     this((Object) data, offset, length, copy);
   }
 
+  public String(char[] data, int offset, int length) {
+    this(data, offset, length, true);
+  }
+
   public String(byte[] data, int offset, int length, boolean copy) {
     this((Object) data, offset, length, copy);
+  }
+
+  public String(byte[] data, int offset, int length) {
+    this(data, offset, length, true);
   }
 
   private String(Object data, int offset, int length, boolean copy) {
@@ -162,12 +170,6 @@ public final class String implements Comparable<String> {
     }
   }
 
-  public byte[] getBytes() {
-    byte[] b = new byte[length];
-    getBytes(0, length, b, 0);
-    return b;
-  }
-
   public void getBytes(int srcOffset, int srcLength,
                        byte[] dst, int dstOffset)
   {
@@ -186,6 +188,12 @@ public final class String implements Comparable<String> {
     }
   }
 
+  public byte[] getBytes() {
+    byte[] b = new byte[length];
+    getBytes(0, length, b, 0);
+    return b;
+  }
+
   public void getChars(int srcOffset, int srcLength,
                        char[] dst, int dstOffset)
   {
@@ -202,6 +210,12 @@ public final class String implements Comparable<String> {
         dst[i + dstOffset] = (char) src[i + offset + srcOffset];
       }      
     }
+  }
+
+  public char[] toCharArray() {
+    char[] b = new char[length];
+    getChars(0, length, b, 0);
+    return b;
   }
 
   public char charAt(int index) {

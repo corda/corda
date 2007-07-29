@@ -1,5 +1,8 @@
 package java.lang;
 
+import java.io.PrintStream;
+import java.io.PrintWriter;
+
 public class Throwable {
   private String message;
   private Object trace;
@@ -42,10 +45,20 @@ public class Throwable {
     return (StackTraceElement[]) trace;
   }
 
-  public void printStackTrace() {
+  public void printStackTrace(PrintStream out) {
     StringBuilder sb = new StringBuilder();
     printStackTrace(sb, System.getProperty("line.separator"));
-    System.err.print(sb.toString());
+    out.print(sb.toString());
+  }
+
+  public void printStackTrace(PrintWriter out) {
+    StringBuilder sb = new StringBuilder();
+    printStackTrace(sb, System.getProperty("line.separator"));
+    out.print(sb.toString());
+  }
+
+  public void printStackTrace() {
+    printStackTrace(System.err);
   }
 
   private void printStackTrace(StringBuilder sb, String nl) {

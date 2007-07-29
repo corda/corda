@@ -22,13 +22,40 @@ public class StringBuilder {
     return append(String.valueOf(v));
   }
 
-  public String toString() {
-    char[] array = new char[length];
+  public int length() {
+    return length;
+  }
+
+  public void getChars(int srcOffset, int srcLength, char[] dst, int dstOffset)
+  {
+    if (srcOffset + srcLength > length) {
+      throw new IndexOutOfBoundsException();
+    }
+
     int index = length;
     for (Cell c = chain; c != null; c = c.next) {
-      index -= c.value.length();
-      c.value.getChars(0, c.value.length(), array, index);
-    }
+      int start = index - c.value.length();
+      int end = index;
+      index = start;
+
+      if (start < srcOffset) {
+        start = srcOffset;
+      }
+
+      if (end > srcOffset + srcLength) {
+        end = srcOffset + srcLength;
+      }
+
+      if (start < end) {
+        c.value.getChars(start - index, end - start,
+                         dst, dstOffset + (start - srcOffset));
+      }
+    }    
+  }
+
+  public String toString() {
+    char[] array = new char[length];
+    getChars(0, length, array, 0);
     return new String(array, 0, length, false);
   }
 
