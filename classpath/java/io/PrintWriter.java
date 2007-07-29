@@ -30,6 +30,14 @@ public class PrintWriter extends Writer {
     } catch (IOException e) { }
   }
 
+  public void print(Object o) {
+    print(o.toString());
+  }
+
+  public void print(char c) {
+    print(String.valueOf(c));
+  }
+
   public synchronized void println(String s) {
     try {
       out.write(s.toCharArray());    
@@ -43,6 +51,14 @@ public class PrintWriter extends Writer {
       out.write(newline);
       if (autoFlush) flush();
     } catch (IOException e) { }
+  }
+
+  public void println(Object o) {
+    println(o.toString());
+  }
+
+  public void println(char c) {
+    println(String.valueOf(c));
   }
 
   public void write(char[] buffer, int offset, int length) throws IOException {

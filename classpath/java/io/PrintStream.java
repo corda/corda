@@ -22,6 +22,14 @@ public class PrintStream extends OutputStream {
     } catch (IOException e) { }
   }
 
+  public void print(Object o) {
+    print(o.toString());
+  }
+
+  public void print(char c) {
+    print(String.valueOf(c));
+  }
+
   public synchronized void println(String s) {
     try {
       out.write(s.getBytes());    
@@ -35,6 +43,14 @@ public class PrintStream extends OutputStream {
       out.write(newline);
       if (autoFlush) flush();
     } catch (IOException e) { }
+  }
+
+  public void println(Object o) {
+    println(o.toString());
+  }
+
+  public void println(char c) {
+    println(String.valueOf(c));
   }
   
   public void write(int c) throws IOException {

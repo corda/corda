@@ -7,6 +7,18 @@ public final class Math {
     return (v < 0 ? -v : v);
   }
 
+  public static long abs(long v) {
+    return (v < 0 ? -v : v);
+  }
+
+  public static float abs(float v) {
+    return (v < 0 ? -v : v);
+  }
+
+  public static double abs(double v) {
+    return (v < 0 ? -v : v);
+  }
+
   public static long round(double v) {
     return (long) (v + 0.5);
   }
