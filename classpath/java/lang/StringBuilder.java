@@ -5,9 +5,15 @@ public class StringBuilder {
   private int length;
 
   public StringBuilder append(String s) {
-    chain = new Cell(s, chain);
-    length += s.length();
+    if (s.length() > 0) {
+      chain = new Cell(s, chain);
+      length += s.length();
+    }
     return this;
+  }
+
+  public StringBuilder append(char[] b, int offset, int length) {
+    return append(new String(b, offset, length));
   }
 
   public StringBuilder append(Object o) {
@@ -22,13 +28,75 @@ public class StringBuilder {
     return append(String.valueOf(v));
   }
 
+  public StringBuilder deleteCharAt(int i) {
+    if (i < 0 || i >= length) {
+      throw new IndexOutOfBoundsException();
+    }
+
+    int index = length;
+    -- length;
+    Cell p = null;
+    for (Cell c = chain; c != null; c = c.next) {
+      int start = index - c.value.length();
+      index = start;
+      
+      if (i >= start) {
+        if (c.value.length() == 1) {
+          if (p == null) {
+            chain = c.next;
+          } else {
+            p.next = c.next;
+          }
+        } else if (i == start) {
+          c.value = c.value.substring(1);
+        } else if (i == start + c.value.length() - 1) {
+          c.value = c.value.substring(0, c.value.length() - 1);
+        } else {
+          c.value = c.value.substring(i + 1, c.value.length());
+          c.next = new Cell(c.value.substring(0, i), c.next);
+        }
+        break;
+      }
+    }
+
+    return this;
+  }
+
   public int length() {
     return length;
   }
 
+  public void setLength(int v) {
+    if (v < 0) {
+      throw new IndexOutOfBoundsException();
+    }
+
+    if (v == 0) {
+      length = 0;
+      chain = null;
+      return;
+    }
+
+    int index = length;
+    length = v;
+    for (Cell c = chain; c != null; c = c.next) {
+      int start = index - c.value.length();
+
+      if (v > start) {
+        if (v < index) {
+          c.value = c.value.substring(0, v - start);
+        }
+        break;
+      }
+
+      chain = c.next;
+      index = start;
+    }
+  }
+
   public void getChars(int srcOffset, int srcLength, char[] dst, int dstOffset)
   {
-    if (srcOffset + srcLength > length) {
+    if (srcOffset < 0 || srcOffset + srcLength > length) {
       throw new IndexOutOfBoundsException();
     }
 
@@ -60,8 +128,8 @@ public class StringBuilder {
   }
 
   private static class Cell {
-    public final String value;
-    public final Cell next;
+    public String value;
+    public Cell next;
 
     public Cell(String value, Cell next) {
       this.value = value;

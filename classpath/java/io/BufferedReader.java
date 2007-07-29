@@ -20,6 +20,27 @@ public class BufferedReader extends Reader {
     limit = in.read(buffer);
   }
 
+  public String readLine() throws IOException {
+    StringBuilder sb = new StringBuilder();
+    while (true) {
+      if (position >= limit) {
+        fill();
+      }
+
+      if (position >= limit) {
+        return sb.toString();
+      }
+
+      for (int i = position; i < limit; ++i) {
+        if (buffer[i] == '\n') {
+          sb.append(buffer, position, i);
+          position = i + 1;
+          return sb.toString();
+        }
+      }
+    }
+  }
+
   public int read(char[] b, int offset, int length) throws IOException {
     int count = 0;
 

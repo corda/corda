@@ -4,7 +4,7 @@ public class StringWriter extends Writer {
   private final StringBuilder out = new StringBuilder();
   
   public void write(char[] b, int offset, int length) throws IOException {
-    out.append(new String(b, offset, length));
+    out.append(b, offset, length);
   }
 
   public String toString() {

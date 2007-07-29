@@ -19,7 +19,6 @@ public class PrintWriter extends Writer {
   public synchronized void print(String s) {
     try {
       out.write(s.toCharArray());
-      if (autoFlush) flush();
     } catch (IOException e) { }
   }
 
@@ -30,7 +29,7 @@ public class PrintWriter extends Writer {
       if (autoFlush) flush();
     } catch (IOException e) { }
   }
-  
+
   public void write(char[] buffer, int offset, int length) throws IOException {
     out.write(buffer, offset, length);
     if (autoFlush) flush();

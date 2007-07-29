@@ -2,6 +2,7 @@ package java.lang;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.IOException;
 
 public class Throwable {
   private String message;
@@ -49,12 +50,14 @@ public class Throwable {
     StringBuilder sb = new StringBuilder();
     printStackTrace(sb, System.getProperty("line.separator"));
     out.print(sb.toString());
+    try { out.flush(); } catch (IOException e) { }
   }
 
   public void printStackTrace(PrintWriter out) {
     StringBuilder sb = new StringBuilder();
     printStackTrace(sb, System.getProperty("line.separator"));
     out.print(sb.toString());
+    try { out.flush(); } catch (IOException e) { }
   }
 
   public void printStackTrace() {

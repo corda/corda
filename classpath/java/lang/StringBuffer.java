@@ -23,8 +23,17 @@ public class StringBuffer {
     return this;
   }
 
+  public synchronized StringBuffer deleteCharAt(int i) {
+    sb.deleteCharAt(i);
+    return this;
+  }
+
   public synchronized int length() {
     return sb.length();
+  }
+
+  public synchronized void setLength(int v) {
+    sb.setLength(v);
   }
 
   public synchronized void getChars(int srcOffset, int srcLength, char[] dst,

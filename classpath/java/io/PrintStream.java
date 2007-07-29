@@ -19,7 +19,6 @@ public class PrintStream extends OutputStream {
   public synchronized void print(String s) {
     try {
       out.write(s.getBytes());
-      if (autoFlush) flush();
     } catch (IOException e) { }
   }
 

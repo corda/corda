@@ -173,7 +173,7 @@ public final class String implements Comparable<String> {
   public void getBytes(int srcOffset, int srcLength,
                        byte[] dst, int dstOffset)
   {
-    if (srcOffset + srcLength > length) {
+    if (srcOffset < 0 || srcOffset + srcLength > length) {
       throw new IndexOutOfBoundsException();
     }
 
@@ -197,7 +197,7 @@ public final class String implements Comparable<String> {
   public void getChars(int srcOffset, int srcLength,
                        char[] dst, int dstOffset)
   {
-    if (srcOffset + srcLength > length) {
+    if (srcOffset < 0 || srcOffset + srcLength > length) {
       throw new IndexOutOfBoundsException();
     }
 
