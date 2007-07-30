@@ -1064,73 +1064,6 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   }
 }
 
-object
-parseClass(Thread* t, const uint8_t* data, unsigned size)
-{
-  class Client : public Stream::Client {
-   public:
-    Client(Thread* t): t(t) { }
-
-    virtual void NO_RETURN handleEOS() {
-      abort(t);
-    }
-
-   private:
-    Thread* t;
-  } client(t);
-
-  Stream s(&client, data, size);
-
-  uint32_t magic = s.read4();
-  assert(t, magic == 0xCAFEBABE);
-  s.read2(); // minor version
-  s.read2(); // major version
-
-  object pool = parsePool(t, s);
-  PROTECT(t, pool);
-
-  unsigned flags = s.read2();
-  unsigned name = s.read2();
-
-  object class_ = makeClass(t,
-                            flags,
-                            0, // VM flags
-                            0, // array dimensions
-                            0, // fixed size
-                            0, // array size
-                            0, // object mask
-                            arrayBody(t, pool, name - 1),
-                            0, // super
-                            0, // interfaces
-                            0, // vtable
-                            0, // fields
-                            0, // methods
-                            0); // static table
-  PROTECT(t, class_);
-  
-  unsigned super = s.read2();
-  if (super) {
-    object sc = resolveClass(t, arrayBody(t, pool, super - 1));
-    if (UNLIKELY(t->exception)) return 0;
-
-    set(t, classSuper(t, class_), sc);
-
-    classVmFlags(t, class_)
-      |= (classVmFlags(t, sc) & (ReferenceFlag | WeakReferenceFlag));
-  }
-  
-  parseInterfaceTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
-
-  parseFieldTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
-
-  parseMethodTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
-
-  return class_;
-}
-
 void
 updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 {
@@ -1195,7 +1128,8 @@ makeArrayClass(Thread* t, unsigned dimensions, object spec,
      classVirtualTable(t, arrayBody(t, t->vm->types, Machine::JobjectType)),
      0,
      0,
-     0);
+     0,
+     t->vm->loader);
 }
 
 object
@@ -1285,7 +1219,7 @@ Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
   classLock(0),
   referenceLock(0),
   libraries(0),
-  classMap(0),
+  loader(0),
   bootstrapClassMap(0),
   builtinMap(0),
   monitorMap(0),
@@ -1358,10 +1292,17 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     Thread* t = this;
 
+    t->vm->loader = allocate(t, sizeof(void*) * 3);
+    memset(t->vm->loader, 0, sizeof(void*) * 2);
+
 #include "type-initializations.cpp"
 
     object arrayClass = arrayBody(t, t->vm->types, Machine::ArrayType);
     set(t, cast<object>(t->vm->types, 0), arrayClass);
+
+    object loaderClass = arrayBody
+      (t, t->vm->types, Machine::SystemClassLoaderType);
+    set(t, cast<object>(t->vm->loader, 0), loaderClass);
 
     object objectClass = arrayBody(t, m->types, Machine::JobjectType);
 
@@ -1386,7 +1327,9 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
 #include "type-java-initializations.cpp"
 
-    m->classMap = makeHashMap(this, 0, 0);
+    object loaderMap = makeHashMap(this, 0, 0);
+    set(t, systemClassLoaderMap(t, m->loader), loaderMap);
+
     m->builtinMap = makeHashMap(this, 0, 0);
     m->monitorMap = makeWeakHashMap(this, 0, 0);
     m->stringMap = makeWeakHashMap(this, 0, 0);
@@ -2088,13 +2031,91 @@ primitiveSize(Thread* t, unsigned code)
 }
 
 object
+findClass(Thread* t, object spec)
+{
+  PROTECT(t, spec);
+  ACQUIRE(t, t->vm->classLock);
+
+  return hashMapFind(t, systemClassLoaderMap(t, t->vm->loader),
+                     spec, byteArrayHash, byteArrayEqual);
+}
+
+object
+parseClass(Thread* t, const uint8_t* data, unsigned size)
+{
+  class Client : public Stream::Client {
+   public:
+    Client(Thread* t): t(t) { }
+
+    virtual void NO_RETURN handleEOS() {
+      abort(t);
+    }
+
+   private:
+    Thread* t;
+  } client(t);
+
+  Stream s(&client, data, size);
+
+  uint32_t magic = s.read4();
+  assert(t, magic == 0xCAFEBABE);
+  s.read2(); // minor version
+  s.read2(); // major version
+
+  object pool = parsePool(t, s);
+  PROTECT(t, pool);
+
+  unsigned flags = s.read2();
+  unsigned name = s.read2();
+
+  object class_ = makeClass(t,
+                            flags,
+                            0, // VM flags
+                            0, // array dimensions
+                            0, // fixed size
+                            0, // array size
+                            0, // object mask
+                            arrayBody(t, pool, name - 1),
+                            0, // super
+                            0, // interfaces
+                            0, // vtable
+                            0, // fields
+                            0, // methods
+                            0, // static table
+                            t->vm->loader);
+  PROTECT(t, class_);
+  
+  unsigned super = s.read2();
+  if (super) {
+    object sc = resolveClass(t, arrayBody(t, pool, super - 1));
+    if (UNLIKELY(t->exception)) return 0;
+
+    set(t, classSuper(t, class_), sc);
+
+    classVmFlags(t, class_)
+      |= (classVmFlags(t, sc) & (ReferenceFlag | WeakReferenceFlag));
+  }
+  
+  parseInterfaceTable(t, s, class_, pool);
+  if (UNLIKELY(t->exception)) return 0;
+
+  parseFieldTable(t, s, class_, pool);
+  if (UNLIKELY(t->exception)) return 0;
+
+  parseMethodTable(t, s, class_, pool);
+  if (UNLIKELY(t->exception)) return 0;
+
+  return class_;
+}
+
+object
 resolveClass(Thread* t, object spec)
 {
   PROTECT(t, spec);
   ACQUIRE(t, t->vm->classLock);
 
-  object class_ = hashMapFind
-    (t, t->vm->classMap, spec, byteArrayHash, byteArrayEqual);
+  object class_ = hashMapFind(t, systemClassLoaderMap(t, t->vm->loader),
+                              spec, byteArrayHash, byteArrayEqual);
   if (class_ == 0) {
     if (byteArrayBody(t, spec, 0) == '[') {
       class_ = hashMapFind
@@ -2137,7 +2158,8 @@ resolveClass(Thread* t, object spec)
     if (class_) {
       PROTECT(t, class_);
 
-      hashMapInsert(t, t->vm->classMap, spec, class_, byteArrayHash);
+      hashMapInsert(t, systemClassLoaderMap(t, t->vm->loader),
+                    spec, class_, byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
       t->exception = makeClassNotFoundException(t, message);
@@ -2285,7 +2307,7 @@ collect(Thread* t, Heap::CollectionType type)
     Client(Machine* m): m(m) { }
 
     virtual void visitRoots(Heap::Visitor* v) {
-      v->visit(&(m->classMap));
+      v->visit(&(m->loader));
       v->visit(&(m->bootstrapClassMap));
       v->visit(&(m->builtinMap));
       v->visit(&(m->monitorMap));

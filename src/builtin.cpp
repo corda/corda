@@ -59,7 +59,7 @@ Object_notifyAll(Thread* t, jobject this_)
 }
 
 jclass
-Class_forName(Thread* t, jclass, jstring name)
+search(Thread* t, jstring name, object (*op)(Thread*, object))
 {
   if (LIKELY(name)) {
     object n = makeByteArray(t, stringLength(t, *name) + 1, false);
@@ -68,16 +68,9 @@ Class_forName(Thread* t, jclass, jstring name)
     
     replace('.', '/', s);
 
-    object c = resolveClass(t, n);
+    object c = op(t, n);
     if (t->exception) {
       return 0;
-    }
-
-    if (classVmFlags(t, c) & NeedInitFlag) {
-      PROTECT(t, c);
-
-      classVmFlags(t, c) &= ~NeedInitFlag;
-      run(t, classInitializer(t, c), 0);
     }
 
     return pushReference(t, c);
@@ -85,6 +78,29 @@ Class_forName(Thread* t, jclass, jstring name)
     t->exception = makeNullPointerException(t);
     return 0;
   }
+}
+
+jclass
+ClassLoader_defineClass(Thread* t, jclass, jbyteArray b, jint offset,
+                        jint length)
+{
+  uint8_t* buffer = static_cast<uint8_t*>(t->vm->system->allocate(length));
+  memcpy(buffer, &byteArrayBody(t, *b, offset), length);
+  object c = parseClass(t, buffer, length);
+  t->vm->system->free(buffer);
+  return pushReference(t, c);
+}
+
+jclass
+SystemClassLoader_findLoadedClass(Thread* t, jclass, jstring name)
+{
+  return search(t, name, findClass);
+}
+
+jclass
+SystemClassLoader_findClass(Thread* t, jclass, jstring name)
+{
+  return search(t, name, resolveClass);
 }
 
 jclass
@@ -295,6 +311,13 @@ jobject
 Constructor_make(Thread* t, jclass, jclass c)
 {
   return pushReference(t, make(t, c));
+}
+
+jobject
+Method_getCaller(Thread* t, jclass)
+{
+  return pushReference
+    (t, frameMethod(t, frameNext(t, frameNext(t, t->frame))));
 }
 
 jobject
@@ -638,15 +661,21 @@ populateBuiltinMap(Thread* t, object map)
     const char* key;
     void* value;
   } builtins[] = {
-    { "Java_java_lang_Class_forName",
-      reinterpret_cast<void*>(::Class_forName) },
     { "Java_java_lang_Class_isAssignableFrom",
       reinterpret_cast<void*>(::Class_isAssignableFrom) },
     { "Java_java_lang_Class_primitiveClass",
       reinterpret_cast<void*>(::Class_primitiveClass) },
 
+    { "Java_java_lang_ClassLoader_defineClass",
+      reinterpret_cast<void*>(::ClassLoader_defineClass) },
+
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(::System_arraycopy) },
+
+    { "Java_java_lang_SystemClassLoader_findClass",
+      reinterpret_cast<void*>(::SystemClassLoader_findClass) },
+    { "Java_java_lang_SystemClassLoader_findLoadedClass",
+      reinterpret_cast<void*>(::SystemClassLoader_findLoadedClass) },
 
     { "Java_java_lang_Runtime_loadLibrary",
       reinterpret_cast<void*>(::Runtime_loadLibrary) },
@@ -698,6 +727,8 @@ populateBuiltinMap(Thread* t, object map)
     { "Java_java_lang_reflect_Field_set",
       reinterpret_cast<void*>(::Field_set) },
 
+    { "Java_java_lang_reflect_Method_getCaller",
+      reinterpret_cast<void*>(::Method_getCaller) },
     { "Java_java_lang_reflect_Method_invoke",
       reinterpret_cast<void*>(::Method_invoke) },
 

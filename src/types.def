@@ -14,7 +14,16 @@
   (object virtualTable)
   (object fieldTable)
   (object methodTable)
-  (object staticTable))
+  (object staticTable)
+  (object loader))
+
+(type classLoader java/lang/ClassLoader
+  (extends jobject)
+  (object parent))
+
+(type systemClassLoader java/lang/SystemClassLoader
+  (extends classLoader)
+  (object map))
 
 (type accessibleObject java/lang/reflect/AccessibleObject
   (extends jobject))

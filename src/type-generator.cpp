@@ -1488,7 +1488,7 @@ writeInitialization(Output* out, Object* type)
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));
-  out->write(", mask, 0, super, 0, 0, 0, 0, 0);\n");
+  out->write(", mask, 0, super, 0, 0, 0, 0, 0, t->vm->loader);\n");
 
   out->write("  set(t, arrayBody(t, t->vm->types, Machine::");
   out->write(capitalize(typeName(type)));

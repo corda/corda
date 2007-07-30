@@ -27,63 +27,27 @@ public final class Math {
     return (int) (v + 0.5);
   }
 
-  public static double floor(double v) {
-    // todo
-    return 0;
-  }
+  public static native double floor(double v);
 
-  public static double ceil(double v) {
-    // todo
-    return 0;
-  }
+  public static native double ceil(double v);
 
-  public static double exp(double v) {
-    // todo
-    return 0;
-  }
+  public static native double exp(double v);
 
-  public static double log(double v) {
-    // todo
-    return 0;
-  }
+  public static native double log(double v);
 
-  public static double cos(double v) {
-    // todo
-    return 0;
-  }
+  public static native double cos(double v);
 
-  public static double sin(double v) {
-    // todo
-    return 0;
-  }
+  public static native double sin(double v);
 
-  public static double tan(double v) {
-    // todo
-    return 0;
-  }
+  public static native double tan(double v);
 
-  public static double acos(double v) {
-    // todo
-    return 0;
-  }
+  public static native double acos(double v);
 
-  public static double asin(double v) {
-    // todo
-    return 0;
-  }
+  public static native double asin(double v);
 
-  public static double atan(double v) {
-    // todo
-    return 0;
-  }
+  public static native double atan(double v);
 
-  public static double sqrt(double v) {
-    // todo
-    return 0;
-  }
+  public static native double sqrt(double v);
 
-  public static double pow(double v, double e) {
-    // todo
-    return 0;
-  }
+  public static native double pow(double v, double e);
 }

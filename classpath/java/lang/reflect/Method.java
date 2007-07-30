@@ -21,6 +21,8 @@ public class Method<T> extends AccessibleObject implements Member {
     if (v) vmFlags |= Accessible; else vmFlags &= ~Accessible;
   }
 
+  public static native Method getCaller();
+
   public Class<T> getDeclaringClass() {
     return class_;
   }

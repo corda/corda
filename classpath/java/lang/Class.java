@@ -6,6 +6,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 public final class Class <T> {
+  private static final int ReferenceFlag = 1 << 0;
+  private static final int WeakReferenceFlag = 1 << 1;
+  private static final int NeedInitFlag = 1 << 2;
+
   private short flags;
   private byte vmFlags;
   private byte arrayDimensions;
@@ -19,6 +23,7 @@ public final class Class <T> {
   private Field[] fieldTable;
   private Method[] methodTable;
   private Object[] staticTable;
+  private ClassLoader loader;
 
   private Class() { }
 
@@ -26,8 +31,25 @@ public final class Class <T> {
     return new String(name, 0, name.length - 1, false);
   }
 
-  public static native Class forName(String name)
-    throws ClassNotFoundException;
+  public static Class forName(String name) throws ClassNotFoundException {
+    return forName
+      (name, true, Method.getCaller().getDeclaringClass().getClassLoader());
+  }
+
+  public static Class forName(String name, boolean initialize,
+                              ClassLoader loader)
+    throws ClassNotFoundException
+  {
+    Class c = loader.loadClass(name);
+    if (initialize && ((c.flags & NeedInitFlag) != 0)) {
+      c.flags &= ~NeedInitFlag;
+      Method m = c.findMethod("<clinit>", new Class[0]);
+      if (m != null) {
+        m.invoke(null);
+      }
+    }
+    return c;
+  }
 
   private static native Class primitiveClass(char name);
   
@@ -282,7 +304,7 @@ public final class Class <T> {
   }
 
   public ClassLoader getClassLoader() {
-    return ClassLoader.getSystemClassLoader();
+    return loader;
   }
 
   public int getModifiers() {

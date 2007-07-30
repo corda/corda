@@ -1106,7 +1106,7 @@ class Machine {
   System::Monitor* classLock;
   System::Monitor* referenceLock;
   System::Library* libraries;
-  object classMap;
+  object loader;
   object bootstrapClassMap;
   object builtinMap;
   object monitorMap;
@@ -2021,6 +2021,12 @@ fieldSize(Thread* t, object field)
     return primitiveSize(t, code);
   }
 }
+
+object
+findClass(Thread* t, object spec);
+
+object
+parseClass(Thread* t, const uint8_t* data, unsigned length);
 
 object
 resolveClass(Thread* t, object spec);
