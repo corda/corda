@@ -288,6 +288,7 @@ class MySystem: public System {
         }
 
         t->flags = 0;
+        t->next = 0;
 
         if (t->r->interrupted()) {
           t->r->setInterrupted(false);
@@ -330,15 +331,10 @@ class MySystem: public System {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
-        for (Thread** p = &first; *p;) {
-          Thread* t = *p;
-          p = &(t->next);
-          if (t == last) {
-            last = 0;
-          }
-
+        for (Thread* t = first; t; t = t->next) {
           doNotify(t);
         }
+        first = last = 0;
       } else {
         sysAbort(s);
       }
