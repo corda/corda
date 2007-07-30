@@ -605,7 +605,7 @@ Thread_currentThread(Thread* t, jclass)
   return pushReference(t, t->javaThread);
 }
 
-void
+jlong
 Thread_doStart(Thread* t, jobject this_)
 {
   Thread* p = new (t->vm->system->allocate(sizeof(Thread)))
@@ -613,15 +613,11 @@ Thread_doStart(Thread* t, jobject this_)
 
   enter(p, Thread::ActiveState);
 
-  threadPeer(t, *this_) = reinterpret_cast<jlong>(p);
-
-  if (not t->vm->system->success(t->vm->system->start(&(p->runnable)))) {
-    threadPeer(t, *this_) = -1;
-
+  if (t->vm->system->success(t->vm->system->start(&(p->runnable)))) {
+    return reinterpret_cast<jlong>(p);
+  } else {
     p->exit();
-
-    object message = makeString(t, "unable to start native thread");
-    t->exception = makeRuntimeException(t, message);
+    return 0;
   }
 }
 

@@ -12,12 +12,6 @@ public class Thread implements Runnable {
 
   public Thread(Runnable task) {
     this.task = task;
-  }
-
-  public synchronized void start() {
-    if (peer != 0) {
-      throw new IllegalStateException("thread already started");
-    }
 
     Map<ThreadLocal, Object> map = currentThread().locals;
     if (map != null) {
@@ -28,11 +22,20 @@ public class Thread implements Runnable {
         }
       }
     }
-
-    doStart();
   }
 
-  private native void doStart();
+  public synchronized void start() {
+    if (peer != 0) {
+      throw new IllegalStateException("thread already started");
+    }
+
+    peer = doStart();
+    if (peer == 0) {
+      throw new RuntimeException("unable to start native thread");
+    }
+  }
+
+  private native long doStart();
 
   public void run() {
     if (task != null) {
