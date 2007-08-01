@@ -131,6 +131,21 @@ Class_primitiveClass(Thread* t, jclass, jchar name)
   }
 }
 
+void
+Class_initialize(Thread* t, jobject this_)
+{
+  acquire(t, t->vm->classLock);
+  object c = *this_;
+  if (classVmFlags(t, c) & NeedInitFlag
+      and (classVmFlags(t, c) & InitFlag) == 0)
+  {
+    classVmFlags(t, c) |= InitFlag;
+    run(t, classInitializer(t, c), 0);
+  } else {
+    release(t, t->vm->classLock);
+  }
+}
+
 jboolean
 Class_isAssignableFrom(Thread* t, jobject this_, jclass that)
 {
@@ -665,6 +680,8 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Class_isAssignableFrom) },
     { "Java_java_lang_Class_primitiveClass",
       reinterpret_cast<void*>(::Class_primitiveClass) },
+    { "Java_java_lang_Class_initialize",
+      reinterpret_cast<void*>(::Class_initialize) },
 
     { "Java_java_lang_ClassLoader_defineClass",
       reinterpret_cast<void*>(::ClassLoader_defineClass) },

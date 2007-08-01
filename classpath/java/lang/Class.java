@@ -6,10 +6,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 public final class Class <T> {
-  private static final int ReferenceFlag = 1 << 0;
-  private static final int WeakReferenceFlag = 1 << 1;
-  private static final int NeedInitFlag = 1 << 2;
-
   private short flags;
   private byte vmFlags;
   private byte arrayDimensions;
@@ -41,17 +37,15 @@ public final class Class <T> {
     throws ClassNotFoundException
   {
     Class c = loader.loadClass(name);
-    if (initialize && ((c.flags & NeedInitFlag) != 0)) {
-      c.flags &= ~NeedInitFlag;
-      Method m = c.findMethod("<clinit>", new Class[0]);
-      if (m != null) {
-        m.invoke(null);
-      }
+    if (initialize) {
+      c.initialize();
     }
     return c;
   }
 
   private static native Class primitiveClass(char name);
+
+  private native void initialize();
   
   static Class forCanonicalName(String name) {
     try {

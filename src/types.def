@@ -214,6 +214,9 @@
 (type unsatisfiedLinkError java/lang/UnsatisfiedLinkError
   (extends linkageError))
 
+(type exceptionInInitializerError java/lang/ExceptionInInitializerError
+  (extends error))
+
 (type number java/lang/Number
   (extends jobject))
 

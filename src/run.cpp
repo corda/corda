@@ -64,6 +64,14 @@ popFrame(Thread* t)
       release(t, peekObject(t, frameBase(t, t->frame)));
     }   
   }
+  
+  if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)) {
+    if (t->exception) {
+      t->exception = makeExceptionInInitializerError(t, t->exception);
+    }
+    classVmFlags(t, methodClass(t, method)) &= ~(NeedInitFlag | InitFlag);
+    release(t, t->vm->classLock);
+  }
 
   t->sp = frameBase(t, t->frame);
   t->frame = frameNext(t, t->frame);
@@ -495,6 +503,34 @@ invokeNative(Thread* t, object method)
   return returnCode;
 }
 
+bool
+classInit2(Thread* t, object class_, unsigned ipOffset)
+{
+  PROTECT(t, class_);
+  acquire(t, t->vm->classLock);
+  if (classVmFlags(t, class_) & NeedInitFlag
+      and (classVmFlags(t, class_) & InitFlag) == 0)
+  {
+    classVmFlags(t, class_) |= InitFlag;
+    t->code = classInitializer(t, class_);
+    t->ip -= ipOffset;
+    return true;
+  } else {
+    release(t, t->vm->classLock);
+    return false;
+  }
+}
+
+inline bool
+classInit(Thread* t, object class_, unsigned ipOffset)
+{
+  if (UNLIKELY(classVmFlags(t, class_) & NeedInitFlag)) {
+    return classInit2(t, class_, ipOffset);
+  } else {
+    return false;
+  }
+}
+
 object
 run(Thread* t)
 {
@@ -508,7 +544,13 @@ run(Thread* t)
   object& exception = t->exception;
   uintptr_t* stack = t->stack;
 
-  if (UNLIKELY(exception)) goto throw_;
+  if (UNLIKELY(exception)) {
+    goto throw_;
+  }
+
+  if (UNLIKELY(classInit(t, methodClass(t, frameMethod(t, frame)), 0))) {
+    goto invoke;
+  }
 
  loop:
   instruction = codeBody(t, code, ip++);
@@ -901,12 +943,7 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    if (classVmFlags(t, fieldClass(t, field)) & NeedInitFlag) {
-      classVmFlags(t, fieldClass(t, field)) &= ~NeedInitFlag;
-      code = classInitializer(t, fieldClass(t, field));
-      ip -= 3;
-      goto invoke;
-    }
+    if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
 
     object v = arrayBody(t, classStaticTable(t, fieldClass(t, field)),
                          fieldOffset(t, field));
@@ -1324,12 +1361,7 @@ run(Thread* t)
           resolveClass(t, className(t, class_));
           if (UNLIKELY(exception)) goto throw_;
 
-          if (classVmFlags(t, class_) & NeedInitFlag) {
-            classVmFlags(t, class_) &= ~NeedInitFlag;
-            code = classInitializer(t, class_);
-            ip -= 3;
-            goto invoke;
-          }
+          if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
         }
 
         code = findMethod(t, method, class_);
@@ -1352,12 +1384,7 @@ run(Thread* t)
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
-    if (classVmFlags(t, methodClass(t, method)) & NeedInitFlag) {
-      classVmFlags(t, methodClass(t, method)) &= ~NeedInitFlag;
-      code = classInitializer(t, methodClass(t, method));
-      ip -= 3;
-      goto invoke;
-    }
+    if (UNLIKELY(classInit(t, methodClass(t, method), 3))) goto invoke;
 
     code = method;
   } goto invoke;
@@ -1380,12 +1407,7 @@ run(Thread* t)
         resolveClass(t, className(t, class_));
         if (UNLIKELY(exception)) goto throw_;
 
-        if (classVmFlags(t, class_) & NeedInitFlag) {
-          classVmFlags(t, class_) &= ~NeedInitFlag;
-          code = classInitializer(t, class_);
-          ip -= 3;
-          goto invoke;
-        }
+        if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
       }
 
       code = findMethod(t, method, class_);      
@@ -1763,12 +1785,7 @@ run(Thread* t)
     object class_ = resolveClass(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    if (classVmFlags(t, class_) & NeedInitFlag) {
-      classVmFlags(t, class_) &= ~NeedInitFlag;
-      code = classInitializer(t, class_);
-      ip -= 3;
-      goto invoke;
-    }
+    if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
 
     pushObject(t, make(t, class_));
   } goto loop;
@@ -1910,12 +1927,7 @@ run(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    if (classVmFlags(t, fieldClass(t, field)) & NeedInitFlag) {
-      classVmFlags(t, fieldClass(t, field)) &= ~NeedInitFlag;
-      code = classInitializer(t, fieldClass(t, field));
-      ip -= 3;
-      goto invoke;
-    }
+    if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
 
     PROTECT(t, field);
       

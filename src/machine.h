@@ -55,9 +55,14 @@ enum StackTag {
 const int NativeLine = -1;
 const int UnknownLine = -2;
 
+// class flags:
 const unsigned ReferenceFlag = 1 << 0;
 const unsigned WeakReferenceFlag = 1 << 1;
 const unsigned NeedInitFlag = 1 << 2;
+const unsigned InitFlag = 1 << 3;
+
+// method flags:
+const unsigned ClassInitFlag = 1 << 0;
 
 class Thread;
 
@@ -1280,18 +1285,32 @@ stress(Thread*)
 
 #endif // not VM_STRESS
 
+inline void
+acquire(Thread* t, System::Monitor* m)
+{
+  if (not m->tryAcquire(t->systemThread)) {
+    ENTER(t, Thread::IdleState);
+    m->acquire(t->systemThread);
+  }
+
+  stress(t);
+}
+
+inline void
+release(Thread* t, System::Monitor* m)
+{
+  m->release(t->systemThread);
+}
+
 class MonitorResource {
  public:
   MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
-    stress(t);
-
-    if (not m->tryAcquire(t->systemThread)) {
-      ENTER(t, Thread::IdleState);
-      m->acquire(t->systemThread);
-    }
+    acquire(t, m);
   }
 
-  ~MonitorResource() { m->release(t->systemThread); }
+  ~MonitorResource() {
+    release(t, m);
+  }
 
  private:
   Thread* t;
@@ -1301,10 +1320,12 @@ class MonitorResource {
 class RawMonitorResource {
  public:
   RawMonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
-    m->acquire(t->systemThread);
+    acquire(t, m);
   }
 
-  ~RawMonitorResource() { m->release(t->systemThread); }
+  ~RawMonitorResource() {
+    release(t, m);
+  }
 
  private:
   Thread* t;
@@ -1511,6 +1532,14 @@ makeUnsatisfiedLinkError(Thread* t, object message)
   PROTECT(t, message);
   object trace = makeTrace(t);
   return makeUnsatisfiedLinkError(t, message, trace, 0);
+}
+
+inline object
+makeExceptionInInitializerError(Thread* t, object cause)
+{
+  PROTECT(t, cause);
+  object trace = makeTrace(t);
+  return makeExceptionInInitializerError(t, 0, trace, cause);
 }
 
 object
@@ -2095,12 +2124,7 @@ acquire(Thread* t, object o)
             t, m, objectHash(t, o));
   }
 
-  if (not m->tryAcquire(t->systemThread)) {
-    ENTER(t, Thread::IdleState);
-    m->acquire(t->systemThread);
-  }
-
-  stress(t);
+  acquire(t, m);
 }
 
 inline void
@@ -2113,7 +2137,7 @@ release(Thread* t, object o)
             t, m, objectHash(t, o));
   }
 
-  m->release(t->systemThread);
+  release(t, m);
 }
 
 inline void

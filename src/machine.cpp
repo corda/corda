@@ -3,6 +3,7 @@
 #include "machine.h"
 #include "stream.h"
 #include "constants.h"
+#include "run.h"
 
 using namespace vm;
 
@@ -948,6 +949,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
                    &byteArrayBody(t, methodName(t, method), 0)) == 0)
         {
+          methodVmFlags(t, method) |= ClassInitFlag;
           classVmFlags(t, class_) |= NeedInitFlag;
         }
       } else {
