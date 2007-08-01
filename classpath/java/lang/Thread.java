@@ -9,11 +9,14 @@ public class Thread implements Runnable {
   private Map<ThreadLocal, Object> locals;
   private boolean interrupted;
   private Object sleepLock;
+  private ClassLoader classLoader;
 
   public Thread(Runnable task) {
     this.task = task;
 
-    Map<ThreadLocal, Object> map = currentThread().locals;
+    Thread current = currentThread();
+
+    Map<ThreadLocal, Object> map = current.locals;
     if (map != null) {
       for (Map.Entry<ThreadLocal, Object> e: map.entrySet()) {
         if (e.getKey() instanceof InheritableThreadLocal) {
@@ -22,6 +25,8 @@ public class Thread implements Runnable {
         }
       }
     }
+
+    classLoader = current.classLoader;
   }
 
   public synchronized void start() {
@@ -41,6 +46,14 @@ public class Thread implements Runnable {
     if (task != null) {
       task.run();
     }
+  }
+
+  public ClassLoader getContextClassLoader() {
+    return classLoader;
+  }
+
+  public void setContextClassLoader(ClassLoader v) {
+    classLoader = v;
   }
 
   public Map<ThreadLocal, Object> locals() {

@@ -1336,7 +1336,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     populateBuiltinMap(t, m->builtinMap);
 
-    t->javaThread = makeThread(t, reinterpret_cast<int64_t>(t), 0, 0, 0, 0);
+    t->javaThread = makeThread
+      (t, reinterpret_cast<int64_t>(t), 0, 0, 0, 0, t->vm->loader);
   } else {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
     parent->child = this;

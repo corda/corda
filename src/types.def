@@ -140,7 +140,8 @@
   (object task)
   (object locals)
   (uint8_t interrupted)
-  (object sleepLock))
+  (object sleepLock)
+  (object classLoader))
 
 (type stackTraceElement java/lang/StackTraceElement
   (extends jobject)
