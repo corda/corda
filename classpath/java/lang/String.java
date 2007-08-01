@@ -65,14 +65,16 @@ public final class String implements Comparable<String> {
   }
 
   public boolean equals(Object o) {
-    return o instanceof String && compareTo((String) o) == 0;
+    return this == o || (o instanceof String && compareTo((String) o) == 0);
   }
 
   public boolean equalsIgnoreCase(String s) {
-    return compareToIgnoreCase(s) == 0;
+    return this == s || compareToIgnoreCase(s) == 0;
   }
 
   public int compareTo(String s) {
+    if (this == s) return 0;
+
     int d = length - s.length;
     if (d != 0) {
       return d;
@@ -88,6 +90,8 @@ public final class String implements Comparable<String> {
   }
 
   public int compareToIgnoreCase(String s) {
+    if (this == s) return 0;
+
     int d = length - s.length;
     if (d != 0) {
       return d;
