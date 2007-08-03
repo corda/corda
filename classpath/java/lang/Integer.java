@@ -56,6 +56,10 @@ public final class Integer extends Number {
     return (double) value;
   }
 
+  public static int parseInt(String s) {
+    return parseInt(s, 10);
+  }
+
   public static int parseInt(String s, int radix) {
     return (int) Long.parseLong(s, radix);
   }

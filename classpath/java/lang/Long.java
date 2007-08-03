@@ -87,6 +87,10 @@ public final class Long extends Number {
     return c;
   }
 
+  public static long parseLong(String s) {
+    return parseLong(s, 10);
+  } 
+
   public static long parseLong(String s, int radix) {    
     long number = 0;
 
