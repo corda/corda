@@ -72,7 +72,7 @@ interpreter-depends = \
 	$(src)/common.h \
 	$(src)/system.h \
 	$(src)/heap.h \
-	$(src)/class-finder.h \
+	$(src)/finder.h \
 	$(src)/stream.h \
 	$(src)/constants.h \
 	$(src)/run.h \
@@ -82,7 +82,7 @@ interpreter-depends = \
 
 interpreter-sources = \
 	$(src)/system.cpp \
-	$(src)/class-finder.cpp \
+	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/heap.cpp \
 	$(src)/run.cpp \

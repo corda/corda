@@ -1,7 +1,7 @@
 #include "common.h"
 #include "system.h"
 #include "heap.h"
-#include "class-finder.h"
+#include "finder.h"
 #include "constants.h"
 #include "run.h"
 #include "jnienv.h"
@@ -2415,10 +2415,10 @@ run(Thread* t, const char* className, const char* methodName,
 }
 
 int
-run(System* system, Heap* heap, ClassFinder* classFinder,
+run(System* system, Heap* heap, Finder* finder,
     const char* className, int argc, const char** argv)
 {
-  Machine m(system, heap, classFinder);
+  Machine m(system, heap, finder);
   Thread* t = new (system->allocate(sizeof(Thread))) Thread(&m, 0, 0);
 
   enter(t, Thread::ActiveState);

@@ -1,6 +1,7 @@
 package java.net;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 
 public final class URL {
@@ -46,8 +47,12 @@ public final class URL {
     return handler.openConnection(this);
   }
 
+  public InputStream openStream() throws IOException {
+    return openConnection().getInputStream();
+  }
+
   public Object getContent() throws IOException {
-    return openConnection().getContent();
+    return openStream();
   }
 
   private static URLStreamHandler findHandler(String protocol)
@@ -88,39 +93,62 @@ public final class URL {
 
   private static class ResourceInputStream extends InputStream {
     private long peer;
+    private int position;
 
     public ResourceInputStream(String path) throws IOException {
       peer = open(path);
+      if (peer == 0) {
+        throw new FileNotFoundException(path);
+      }
     }
 
     private static native long open(String path) throws IOException;
 
-    private static native int read(long peer) throws IOException;
+    private static native int read(long peer, int position) throws IOException;
 
-    private static native int read(long peer, byte[] b, int offset, int length)
+    private static native int read(long peer, int position,
+                                   byte[] b, int offset, int length)
       throws IOException;
 
     public static native void close(long peer) throws IOException;
 
     public int read() throws IOException {
-      return read(peer);
+      if (peer != 0) {
+        int c = read(peer, position);
+        if (c >= 0) {
+          ++ position;
+        }
+        return c;
+      } else {
+        throw new IOException();
+      }
     }
 
     public int read(byte[] b, int offset, int length) throws IOException {
-      if (b == null) {
-        throw new NullPointerException();
-      }
+      if (peer != 0) {
+        if (b == null) {
+          throw new NullPointerException();
+        }
 
-      if (offset < 0 || offset + length > b.length) {
-        throw new ArrayIndexOutOfBoundsException();
-      }
+        if (offset < 0 || offset + length > b.length) {
+          throw new ArrayIndexOutOfBoundsException();
+        }
 
-      return read(peer, b, offset, length);
+        int c = read(peer, position, b, offset, length);
+        if (c >= 0) {
+          position += c;
+        }
+        return c;
+      } else {
+        throw new IOException();
+      }
     }
 
     public void close() throws IOException {
-      close(peer);
-      peer = 0;
+      if (peer != 0) {
+        close(peer);
+        peer = 0;
+      }
     }
   }
 }

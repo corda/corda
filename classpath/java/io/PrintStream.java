@@ -63,11 +63,15 @@ public class PrintStream extends OutputStream {
     if (autoFlush) flush();
   }
 
-  public void flush() throws IOException {
-    out.flush();
+  public void flush() {
+    try {
+      out.flush();
+    } catch (IOException e) { }
   }
 
-  public void close() throws IOException {
-    out.close();
+  public void close() {
+    try {
+      out.close();
+    } catch (IOException e) { }
   }
 }

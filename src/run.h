@@ -3,7 +3,7 @@
 
 #include "system.h"
 #include "heap.h"
-#include "class-finder.h"
+#include "finder.h"
 #include "machine.h"
 
 namespace vm {
@@ -19,7 +19,7 @@ run(Thread* t, const char* className, const char* methodName,
     const char* methodSpec, object this_, ...);
 
 int
-run(System* sys, Heap* heap, ClassFinder* classFinder,
+run(System* sys, Heap* heap, Finder* finder,
     const char* className, int argc, const char** argv);
 
 } // namespace vm

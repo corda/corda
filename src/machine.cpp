@@ -1208,10 +1208,10 @@ removeString(Thread* t, object o)
 
 namespace vm {
 
-Machine::Machine(System* system, Heap* heap, ClassFinder* classFinder):
+Machine::Machine(System* system, Heap* heap, Finder* finder):
   system(system),
   heap(heap),
-  classFinder(classFinder),
+  finder(finder),
   rootThread(0),
   exclusive(0),
   activeCount(0),
@@ -2034,7 +2034,7 @@ primitiveSize(Thread* t, unsigned code)
 }
 
 object
-findClass(Thread* t, object spec)
+findLoadedClass(Thread* t, object spec)
 {
   PROTECT(t, spec);
   ACQUIRE(t, t->vm->classLock);
@@ -2128,8 +2128,11 @@ resolveClass(Thread* t, object spec)
         class_ = makeArrayClass(t, spec);
       }
     } else {
-      ClassFinder::Data* data = t->vm->classFinder->find
-        (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
+      char file[byteArrayLength(t, spec) + 6];
+      memcpy(file, &byteArrayBody(t, spec, 0), byteArrayLength(t, spec) - 1);
+      memcpy(file + byteArrayLength(t, spec) - 1, ".class", 7);
+
+      Finder::Data* data = t->vm->finder->find(file);
 
       if (data) {
         if (Verbose) {

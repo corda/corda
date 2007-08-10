@@ -1,7 +1,7 @@
 #include "common.h"
 #include "system.h"
 #include "heap.h"
-#include "class-finder.h"
+#include "finder.h"
 #include "run.h"
 
 using namespace vm;
@@ -13,13 +13,13 @@ run(unsigned heapSize, const char* path, const char* class_, int argc,
     const char** argv)
 {
   System* s = makeSystem(heapSize);
-  ClassFinder* cf = makeClassFinder(s, path);
+  Finder* f = makeFinder(s, path);
   Heap* heap = makeHeap(s);
 
-  int exitCode = run(s, heap, cf, class_, argc, argv);
+  int exitCode = run(s, heap, f, class_, argc, argv);
 
   heap->dispose();
-  cf->dispose();
+  f->dispose();
   s->dispose();
 
   return exitCode;

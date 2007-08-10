@@ -4,25 +4,22 @@
 #include "fcntl.h"
 
 #include "system.h"
-#include "class-finder.h"
+#include "finder.h"
 
 using namespace vm;
 
 namespace {
 
 const char*
-append(System* s, const char* a, const char* b, const char* c,
-       const char* d)
+append(System* s, const char* a, const char* b, const char* c)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
   unsigned cl = strlen(c);
-  unsigned dl = strlen(d);
-  char* p = static_cast<char*>(s->allocate(al + bl + cl + dl + 1));
+  char* p = static_cast<char*>(s->allocate(al + bl + cl + 1));
   memcpy(p, a, al);
   memcpy(p + al, b, bl);
-  memcpy(p + al + bl, c, cl);
-  memcpy(p + al + bl + cl, d, dl + 1);
+  memcpy(p + al + bl, c, cl + 1);
   return p;
 }
 
@@ -76,14 +73,14 @@ parsePath(System* s, const char* path)
   return v;
 }
 
-class MyClassFinder: public ClassFinder {
+class MyFinder: public Finder {
  public:
-  MyClassFinder(System* system, const char* path):
+  MyFinder(System* system, const char* path):
     system(system),
     path(parsePath(system, path))
   { }
 
-  class Data: public ClassFinder::Data {
+  class Data: public Finder::Data {
    public:
     Data(System* system, uint8_t* start, size_t length):
       system(system),
@@ -111,11 +108,11 @@ class MyClassFinder: public ClassFinder {
     size_t length_;
   };
 
-  virtual Data* find(const char* className) {
+  virtual Data* find(const char* name) {
     Data* d = new (system->allocate(sizeof(Data))) Data(system, 0, 0);
 
     for (const char** p = path; *p; ++p) {
-      const char* file = append(system, *p, "/", className, ".class");
+      const char* file = append(system, *p, "/", name);
       int fd = open(file, O_RDONLY);
       system->free(file);
 
@@ -137,6 +134,20 @@ class MyClassFinder: public ClassFinder {
     return 0;
   }
 
+  virtual bool exists(const char* name) {
+    for (const char** p = path; *p; ++p) {
+      const char* file = append(system, *p, "/", name);
+      struct stat s;
+      int r = stat(file, &s);
+      system->free(file);
+      if (r == 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
   virtual void dispose() {
     for (const char** p = path; *p; ++p) {
       system->free(*p);
@@ -154,10 +165,10 @@ class MyClassFinder: public ClassFinder {
 
 namespace vm {
 
-ClassFinder*
-makeClassFinder(System* s, const char* path)
+Finder*
+makeFinder(System* s, const char* path)
 {
-  return new (s->allocate(sizeof(MyClassFinder))) MyClassFinder(s, path);
+  return new (s->allocate(sizeof(MyFinder))) MyFinder(s, path);
 }
 
 } // namespace vm

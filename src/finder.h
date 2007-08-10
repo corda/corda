@@ -1,12 +1,12 @@
-#ifndef CLASS_FINDER_H
-#define CLASS_FINDER_H
+#ifndef FINDER_H
+#define FINDER_H
 
 #include "common.h"
 #include "system.h"
 
 namespace vm {
 
-class ClassFinder {
+class Finder {
  public:
   class Data {
    public:
@@ -16,14 +16,15 @@ class ClassFinder {
     virtual void dispose() = 0;
   };
 
-  virtual ~ClassFinder() { }
-  virtual Data* find(const char* className) = 0;
+  virtual ~Finder() { }
+  virtual Data* find(const char* name) = 0;
+  virtual bool exists(const char* name) = 0;
   virtual void dispose() = 0;
 };
 
-ClassFinder*
-makeClassFinder(System* s, const char* path);
+Finder*
+makeFinder(System* s, const char* path);
 
 } // namespace vm
 
-#endif//CLASS_FINDER_H
+#endif//FINDER_H

@@ -59,28 +59,6 @@ Object_notifyAll(Thread* t, jobject this_)
 }
 
 jclass
-search(Thread* t, jstring name, object (*op)(Thread*, object))
-{
-  if (LIKELY(name)) {
-    object n = makeByteArray(t, stringLength(t, *name) + 1, false);
-    char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
-    stringChars(t, *name, s);
-    
-    replace('.', '/', s);
-
-    object c = op(t, n);
-    if (t->exception) {
-      return 0;
-    }
-
-    return pushReference(t, c);
-  } else {
-    t->exception = makeNullPointerException(t);
-    return 0;
-  }
-}
-
-jclass
 ClassLoader_defineClass(Thread* t, jclass, jbyteArray b, jint offset,
                         jint length)
 {
@@ -92,15 +70,53 @@ ClassLoader_defineClass(Thread* t, jclass, jbyteArray b, jint offset,
 }
 
 jclass
+search(Thread* t, jstring name, object (*op)(Thread*, object),
+       bool replaceDots)
+{
+  if (LIKELY(name)) {
+    object n = makeByteArray(t, stringLength(t, *name) + 1, false);
+    char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
+    stringChars(t, *name, s);
+    
+    if (replaceDots) {
+      replace('.', '/', s);
+    }
+
+    object r = op(t, n);
+    if (t->exception) {
+      return 0;
+    }
+
+    return pushReference(t, r);
+  } else {
+    t->exception = makeNullPointerException(t);
+    return 0;
+  }
+}
+
+jclass
 SystemClassLoader_findLoadedClass(Thread* t, jclass, jstring name)
 {
-  return search(t, name, findClass);
+  return search(t, name, findLoadedClass, true);
 }
 
 jclass
 SystemClassLoader_findClass(Thread* t, jclass, jstring name)
 {
-  return search(t, name, resolveClass);
+  return search(t, name, resolveClass, true);
+}
+
+jboolean
+SystemClassLoader_resourceExists(Thread* t, jclass, jstring name)
+{
+  if (LIKELY(name)) {
+    char n[stringLength(t, *name) + 1];
+    stringChars(t, *name, n);
+    return t->vm->finder->exists(n);
+  } else {
+    t->exception = makeNullPointerException(t);
+    return 0;
+  }
 }
 
 jclass
@@ -665,6 +681,53 @@ Thread_interrupt(Thread* t, jclass, jlong peer)
   interrupt(t, reinterpret_cast<Thread*>(peer));
 }
 
+jlong
+ResourceInputStream_open(Thread* t, jclass, jstring path)
+{
+  if (LIKELY(path)) {
+    char p[stringLength(t, *path) + 1];
+    stringChars(t, *path, p);
+
+    return reinterpret_cast<jlong>(t->vm->finder->find(p));
+  } else {
+    t->exception = makeNullPointerException(t);
+    return 0;
+  }
+}
+
+jint
+ResourceInputStream_read(Thread*, jclass, jlong peer, jint position)
+{
+  Finder::Data* d = reinterpret_cast<Finder::Data*>(peer);
+  if (position >= static_cast<jint>(d->length())) {
+    return -1;
+  } else {
+    return d->start()[position];
+  }
+}
+
+jint
+ResourceInputStream_read2(Thread* t, jclass, jlong peer, jint position,
+                          jbyteArray b, jint offset, jint length)
+{
+  Finder::Data* d = reinterpret_cast<Finder::Data*>(peer);
+  if (length > static_cast<jint>(d->length()) - position) {
+    length = static_cast<jint>(d->length()) - position;
+  }
+  if (length < 0) {
+    return -1;
+  } else {
+    memcpy(&byteArrayBody(t, *b, offset), d->start() + position, length);
+    return length;
+  }
+}
+
+void
+ResourceInputStream_close(Thread*, jclass, jlong peer)
+{
+  reinterpret_cast<Finder::Data*>(peer)->dispose();
+}
+
 } // namespace
 
 namespace vm {
@@ -693,6 +756,8 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::SystemClassLoader_findClass) },
     { "Java_java_lang_SystemClassLoader_findLoadedClass",
       reinterpret_cast<void*>(::SystemClassLoader_findLoadedClass) },
+    { "Java_java_lang_SystemClassLoader_resourceExists",
+      reinterpret_cast<void*>(::SystemClassLoader_resourceExists) },
 
     { "Java_java_lang_Runtime_loadLibrary",
       reinterpret_cast<void*>(::Runtime_loadLibrary) },
@@ -748,6 +813,15 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Method_getCaller) },
     { "Java_java_lang_reflect_Method_invoke",
       reinterpret_cast<void*>(::Method_invoke) },
+
+    { "Java_java_net_URL_00024ResourceInputStream_open",
+      reinterpret_cast<void*>(::ResourceInputStream_open) },
+    { "Java_java_net_URL_00024ResourceInputStream_read_JI",
+      reinterpret_cast<void*>(::ResourceInputStream_read) },
+    { "Java_java_net_URL_00024ResourceInputStream_read_JI_3BII",
+      reinterpret_cast<void*>(::ResourceInputStream_read2) },
+    { "Java_java_net_URL_00024ResourceInputStream_close",
+      reinterpret_cast<void*>(::ResourceInputStream_close) },
 
     { 0, 0 }
   };

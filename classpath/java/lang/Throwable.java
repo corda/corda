@@ -50,14 +50,14 @@ public class Throwable {
     StringBuilder sb = new StringBuilder();
     printStackTrace(sb, System.getProperty("line.separator"));
     out.print(sb.toString());
-    try { out.flush(); } catch (IOException e) { }
+    out.flush();
   }
 
   public void printStackTrace(PrintWriter out) {
     StringBuilder sb = new StringBuilder();
     printStackTrace(sb, System.getProperty("line.separator"));
     out.print(sb.toString());
-    try { out.flush(); } catch (IOException e) { }
+    out.flush();
   }
 
   public void printStackTrace() {

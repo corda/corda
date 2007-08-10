@@ -4,7 +4,7 @@
 #include "common.h"
 #include "system.h"
 #include "heap.h"
-#include "class-finder.h"
+#include "finder.h"
 
 #define JNICALL
 
@@ -1091,7 +1091,7 @@ class Machine {
 #include "type-enums.cpp"
   } Type;
 
-  Machine(System* system, Heap* heap, ClassFinder* classFinder);
+  Machine(System* system, Heap* heap, Finder* finder);
 
   ~Machine() { 
     dispose();
@@ -1101,7 +1101,7 @@ class Machine {
 
   System* system;
   Heap* heap;
-  ClassFinder* classFinder;
+  Finder* finder;
   Thread* rootThread;
   Thread* exclusive;
   unsigned activeCount;
@@ -2052,7 +2052,7 @@ fieldSize(Thread* t, object field)
 }
 
 object
-findClass(Thread* t, object spec);
+findLoadedClass(Thread* t, object spec);
 
 object
 parseClass(Thread* t, const uint8_t* data, unsigned length);

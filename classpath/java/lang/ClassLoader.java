@@ -1,5 +1,9 @@
 package java.lang;
 
+import java.io.InputStream;
+import java.io.IOException;
+import java.net.URL;
+
 public abstract class ClassLoader {
   private final ClassLoader parent;
 
@@ -74,5 +78,39 @@ public abstract class ClassLoader {
 
   private ClassLoader getParent() {
     return parent;
+  }
+  
+  protected URL findResource(String path) {
+    return null;
+  }
+
+  public URL getResource(String path) {
+    URL url = null;
+    if (parent != null) {
+      url = parent.getResource(path);
+    }
+
+    if (url == null) {
+      url = findResource(path);
+    }
+
+    return url;
+  }
+
+  public InputStream getResourceAsStream(String path) {
+    URL url = getResource(path);
+    try {
+      return (url == null ? null : url.openStream());
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  public static URL getSystemResource(String path) {
+    return getSystemClassLoader().getResource(path);
+  }
+
+  public static InputStream getSystemResourceAsStream(String path) {
+    return getSystemClassLoader().getResourceAsStream(path);
   }
 }
