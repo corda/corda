@@ -3,17 +3,17 @@ package java.util;
 public class HashMap<K, V> implements Map<K, V> {
   private int size;
   private Cell[] array;
-  private final CellFactory factory;
+  private final Helper helper;
 
-  HashMap(int capacity, CellFactory<K, V> factory) {
+  HashMap(int capacity, Helper<K, V> helper) {
     if (capacity > 0) {
       array = new Cell[nextPowerOfTwo(capacity)];
     }
-    this.factory = factory;
+    this.helper = helper;
   }
 
   public HashMap(int capacity) {
-    this(capacity, new MyCellFactory());
+    this(capacity, new MyHelper());
   }
 
   public HashMap() {
@@ -28,14 +28,6 @@ public class HashMap<K, V> implements Map<K, V> {
 
   public int size() {
     return size;
-  }
-
-  private static int hash(Object a) {
-    return (a == null ? 0 : a.hashCode());
-  }
-
-  private static boolean equal(Object a, Object b) {
-    return (a == null && b == null) || (a != null && a.equals(b));
   }
 
   private void resize() {
@@ -115,7 +107,7 @@ public class HashMap<K, V> implements Map<K, V> {
   private Cell<K, V> putCell(K key, V value) {
     Cell<K, V> c = find(key);
     if (c == null) {
-      insert(factory.make(key, value, null));
+      insert(helper.make(key, value, null));
     } else {
       V old = c.getValue();
       c.setValue(value);
@@ -196,11 +188,15 @@ public class HashMap<K, V> implements Map<K, V> {
     public void setNext(HashMap.Cell<K, V> next);
   }
 
-  interface CellFactory<K, V> {
+  interface Helper<K, V> {
     public Cell<K, V> make(K key, V value, Cell<K, V> next);
+    
+    public int hash(K key);
+
+    public boolean equal(K a, K b);
   }
 
-  private static class MyCell<K, V> implements Cell<K, V> {
+  private class MyCell<K, V> implements Cell<K, V> {
     public final K key;
     public V value;
     public Cell<K, V> next;
@@ -232,13 +228,21 @@ public class HashMap<K, V> implements Map<K, V> {
     }
 
     public int hashCode() {
-      return (key == null ? 0 : key.hashCode());
+      return helper.hash(key);
     }
   }
 
-  private static class MyCellFactory<K, V> implements CellFactory<K, V> {
+  static class MyHelper<K, V> implements Helper<K, V> {
     public Cell<K, V> make(K key, V value, Cell<K, V> next) {
       return new MyCell(key, value, next);
+    }
+
+    public int hash(K a) {
+      return (a == null ? 0 : a.hashCode());
+    }
+
+    public boolean equal(K a, K b) {
+      return (a == null && b == null) || (a != null && a.equals(b));
     }
   }
 

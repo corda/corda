@@ -9,7 +9,7 @@ public class WeakHashMap<K, V> implements Map<K, V> {
   private final ReferenceQueue queue;
 
   public WeakHashMap(int capacity) {
-    map = new HashMap(capacity, new MyCellFactory());
+    map = new HashMap(capacity, new MyHelper());
     queue = new ReferenceQueue();
   }
 
@@ -111,8 +111,8 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     }
   }
 
-  private static class MyCellFactory<K, V>
-    implements HashMap.CellFactory<K, V>
+  private static class MyHelper<K, V>
+    extends HashMap.MyHelper<K, V>
   {
     public HashMap.Cell<K, V> make(K key, V value, HashMap.Cell<K, V> next) {
       return new MyCell(key, value, next);
