@@ -9,6 +9,10 @@ public final class Character {
     this.value = value;
   }
 
+  public static Character valueOf(char value) {
+    return new Character(value);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Character && ((Character) o).value == value;
   }

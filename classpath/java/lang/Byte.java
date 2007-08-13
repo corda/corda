@@ -9,6 +9,10 @@ public final class Byte extends Number {
     this.value = value;
   }
 
+  public static Byte valueOf(byte value) {
+    return new Byte(value);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Byte && ((Byte) o).value == value;
   }

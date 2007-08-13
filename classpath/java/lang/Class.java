@@ -47,7 +47,7 @@ public final class Class <T> {
 
   private native void initialize();
   
-  static Class forCanonicalName(String name) {
+  public static Class forCanonicalName(String name) {
     try {
       if (name.startsWith("[")) {
         return forName(name);
@@ -62,6 +62,14 @@ public final class Class <T> {
       }
     } catch (ClassNotFoundException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  public Class getComponentType() {
+    if (isArray()) {
+      return forCanonicalName(new String(name, 1, name.length - 2, false));
+    } else {
+      return null;
     }
   }
 

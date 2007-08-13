@@ -1,6 +1,9 @@
 package java.io;
 
 import java.util.IdentityHashMap;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 public class ObjectOutputStream extends OutputStream {
   private final PrintStream out;
@@ -76,15 +79,15 @@ public class ObjectOutputStream extends OutputStream {
     if (o == null) {
       out.print("n");
     } else {
-      Integer id = map.get(new Identity(o));
+      Integer id = map.get(o);
       if (id == null) {
-        map.put(new Identity(o), nextId);
+        map.put(o, nextId);
 
         Class c = o.getClass();
         if (c.isArray()) {
           serializeArray(o, map, nextId);
         } else if (Serializable.class.isAssignableFrom(c)) {
-          serialize(o, map, nextId);
+          serializeObject(o, map, nextId);
         } else {
           throw new NotSerializableException(c.getName());
         }
@@ -112,32 +115,33 @@ public class ObjectOutputStream extends OutputStream {
 
     for (int i = 0; i < length; ++i) {
       out.print(" ");
+      Object v = Array.get(o, i);
       if (t.equals(boolean.class)) {
-        writeBoolean(Array.getBoolean(o));
+        writeBoolean((Boolean) v);
       } else if (t.equals(byte.class)) {
-        writeByte(Array.getByte(o));
+        writeByte((Byte) v);
       } else if (t.equals(char.class)) {
-        writeChar(Array.getChar(o));
+        writeChar((Character) v);
       } else if (t.equals(short.class)) {
-        writeShort(Array.getShort(o));
+        writeShort((Short) v);
       } else if (t.equals(int.class)) {
-        writeInt(Array.getInt(o));
+        writeInt((Integer) v);
       } else if (t.equals(long.class)) {
-        writeLong(Array.getLong(o));
+        writeLong((Long) v);
       } else if (t.equals(float.class)) {
-        writeFloat(Array.getFloat(o));
+        writeFloat((Float) v);
       } else if (t.equals(double.class)) {
-        writeDouble(Array.getDouble(o));
+        writeDouble((Double) v);
       } else {
-        writeObject(Array.get(o), map, nextId);
+        writeObject(v, map, nextId);
       }
     }
 
     out.print(")");
   }
   
-  private void serialize(Object o, IdentityHashMap<Object, Integer> map,
-                         int nextId)
+  private void serializeObject(Object o, IdentityHashMap<Object, Integer> map,
+                               int nextId)
     throws IOException
   {
     Class c = o.getClass();
@@ -151,25 +155,26 @@ public class ObjectOutputStream extends OutputStream {
       int modifiers = f.getModifiers();
       if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
         out.print(" ");
+        Object v = f.get(o);
         Class t = f.getType();
         if (t.equals(boolean.class)) {
-          writeBoolean(f.getBoolean(o));
+          writeBoolean((Boolean) v);
         } else if (t.equals(byte.class)) {
-          writeByte(f.getByte(o));
+          writeByte((Byte) v);
         } else if (t.equals(char.class)) {
-          writeChar(f.getChar(o));
+          writeChar((Character) v);
         } else if (t.equals(short.class)) {
-          writeShort(f.getShort(o));
+          writeShort((Short) v);
         } else if (t.equals(int.class)) {
-          writeInt(f.getInt(o));
+          writeInt((Integer) v);
         } else if (t.equals(long.class)) {
-          writeLong(f.getLong(o));
+          writeLong((Long) v);
         } else if (t.equals(float.class)) {
-          writeFloat(f.getFloat(o));
+          writeFloat((Float) v);
         } else if (t.equals(double.class)) {
-          writeDouble(f.getDouble(o));
+          writeDouble((Double) v);
         } else {
-          writeObject(f.get(o), map, nextId);
+          writeObject(v, map, nextId);
         }
       }
     }

@@ -13,6 +13,10 @@ public final class Double extends Number {
     this.value = value;
   }
 
+  public static Double valueOf(double value) {
+    return new Double(value);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Double && ((Double) o).value == value;
   }

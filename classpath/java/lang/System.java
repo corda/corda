@@ -29,6 +29,8 @@ public abstract class System {
 
   public static native long currentTimeMillis();
 
+  public static native int identityHashCode(Object o);
+
   public static void loadLibrary(String name) {
     Runtime.getRuntime().loadLibrary(name);
   }

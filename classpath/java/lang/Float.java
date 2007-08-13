@@ -9,6 +9,10 @@ public final class Float extends Number {
     this.value = value;
   }
 
+  public static Float valueOf(float value) {
+    return new Float(value);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Float && ((Float) o).value == value;
   }

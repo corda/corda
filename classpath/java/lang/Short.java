@@ -9,6 +9,10 @@ public final class Short extends Number {
     this.value = value;
   }
 
+  public static Short valueOf(short value) {
+    return new Short(value);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Short && ((Short) o).value == value;
   }

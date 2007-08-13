@@ -1,8 +1,13 @@
 package java.io;
 
+import java.util.HashMap;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 public class ObjectInputStream extends InputStream {
   private final InputStream in;
-  private final Reader r;
+  private final PushbackReader r;
 
   public ObjectInputStream(InputStream in) {
     this.in = in;
@@ -21,7 +26,7 @@ public class ObjectInputStream extends InputStream {
     in.close();
   }
 
-  public Object readObject() throws IOException {
+  public Object readObject() throws IOException, ClassNotFoundException {
     return readObject(new HashMap());
   }
 
@@ -67,7 +72,7 @@ public class ObjectInputStream extends InputStream {
 
   private void skipSpace() throws IOException {
     int c;
-    while ((c = r.read()) != -1 && Character.isSpace((char) c));
+    while ((c = r.read()) != -1 && Character.isWhitespace((char) c));
     if (c != -1) {
       r.unread(c);
     }
@@ -91,7 +96,7 @@ public class ObjectInputStream extends InputStream {
 
     StringBuilder sb = new StringBuilder();
     int c;
-    while ((c = r.read()) != -1 && ! Character.isSpace((char) c)) {
+    while ((c = r.read()) != -1 && ! Character.isWhitespace((char) c)) {
       sb.append((char) c);
     }
     if (c != -1) {
@@ -108,13 +113,15 @@ public class ObjectInputStream extends InputStream {
     return Double.parseDouble(readStringToken());
   }
 
-  private Object readObject(HashMap<Integer, Object> map) throws IOException {
+  private Object readObject(HashMap<Integer, Object> map)
+    throws IOException, ClassNotFoundException
+  {
     skipSpace();
     switch (r.read()) {
     case 'a':
       return deserializeArray(map);
     case 'l':
-      return deserialize(map);
+      return deserializeObject(map);
     case 'n':
       return null;
     case -1:
@@ -124,153 +131,85 @@ public class ObjectInputStream extends InputStream {
     }
   }
 
+  private Object deserialize(HashMap<Integer, Object> map)
+    throws IOException, ClassNotFoundException
+  {
+    skipSpace(); 
+
+    switch (r.read()) {
+    case 'a':
+      return deserializeArray(map);
+    case 'l':
+      return deserializeObject(map);
+    case 'r':
+      return map.get((int) readLongToken());
+    case 'n':
+      return null;
+    case 'z':
+      return (readLongToken() == 0);
+    case 'b':
+      return (byte) readLongToken();
+    case 'c':
+      return (char) readLongToken();
+    case 's':
+      return (short) readLongToken();
+    case 'i':
+      return (int) readLongToken();
+    case 'j':
+      return readLongToken();
+    case 'f':
+      return (float) readDoubleToken();
+    case 'd':
+      return readDoubleToken();
+    case -1:
+      throw new EOFException();
+    default:
+      throw new StreamCorruptedException();
+    }
+  }
+
   private Object deserializeArray(HashMap<Integer, Object> map)
-    throws IOException
+    throws IOException, ClassNotFoundException
   {
     read('(');
     int id = (int) readLongToken();
     Class c = Class.forName(readStringToken());
     int length = (int) readLongToken();
-    Object o = Array.newInstance(c.getComponentType(), length);
+    Class t = c.getComponentType();
+    Object o = Array.newInstance(t, length);
 
     map.put(id, o);
   
     for (int i = 0; i < length; ++i) {
-      skipSpace();
-    
-      switch (r.read()) {
-      case 'a':
-        Array.set(o, i, deserializeArray(map));
-        break;
-
-      case 'l':
-        Array.set(o, i, deserialize(map));
-        break;
-
-      case 'r':
-        Array.set(o, i, map.get((int) readLongToken()));
-        break;
-
-      case 'n':
-        Array.set(o, i, null);
-        break;
-
-      case 'z':
-        f.setBoolean(o, readLongToken() != 0);
-        break;
-
-      case 'b':
-        f.setByte(o, (byte) readLongToken());
-        break;
-
-      case 'c':
-        f.setChar(o, (char) readLongToken());
-        break;
-
-      case 's':
-        f.setShort(o, (short) readLongToken());
-        break;
-
-      case 'i':
-        f.setInt(o, (int) readLongToken());
-        break;
-
-      case 'j':
-        f.setLong(o, readLongToken());
-        break;
-
-      case 'f':
-        f.setFloat(o, (float) readDoubleToken());
-        break;
-
-      case 'd':
-        f.setDouble(o, readDoubleToken());
-        break;
-
-      case -1:
-        throw new EOFException();
-
-      default:
-        throw new StreamCorruptedException();
-      }
+      Array.set(o, i, deserialize(map));
     }
 
     read(')');
+
+    return o;
   }
 
-  private Object deserialize(HashMap<Integer, Object> map)
-    throws IOException
+  private static native Object makeInstance(Class c);
+
+  private Object deserializeObject(HashMap<Integer, Object> map)
+    throws IOException, ClassNotFoundException
   {
     read('(');
     int id = (int) readLongToken();
     Class c = Class.forName(readStringToken());
-    Object o = c.newInstance();
+    Object o = makeInstance(c);
 
     map.put(id, o);
   
     for (Field f: c.getFields()) {
       int modifiers = f.getModifiers();
       if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
-        skipSpace();
-    
-        switch (r.read()) {
-        case 'a':
-          Array.set(o, i, deserializeArray(map));
-          break;
-
-        case 'l':
-          Array.set(o, i, deserialize(map));
-          break;
-
-        case 'r':
-          Array.set(o, i, map.get((int) readLongToken()));
-          break;
-
-        case 'n':
-          Array.set(o, i, null);
-          break;
-
-        case 'z':
-          Array.setBoolean(o, i, readLongToken() != 0);
-          break;
-
-        case 'b':
-          Array.setByte(o, i, (byte) readLongToken());
-          break;
-
-        case 'c':
-          Array.setChar(o, i, (char) readLongToken());
-          break;
-
-        case 's':
-          Array.setShort(o, i, (short) readLongToken());
-          break;
-
-        case 'i':
-          Array.setInt(o, i, (int) readLongToken());
-          break;
-
-        case 'j':
-          Array.setLong(o, i, readLongToken());
-          break;
-
-        case 'f':
-          Array.setFloat(o, i, (float) readDoubleToken());
-          break;
-
-        case 'd':
-          Array.setDouble(o, i, readDoubleToken());
-          break;
-
-        case -1:
-          throw new EOFException();
-
-        default:
-          throw new StreamCorruptedException();
-        }
+        f.set(o, deserialize(map));
       }
     }
 
     read(')');
+
+    return o;
   }
 }

@@ -79,11 +79,11 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     public HashMap.Cell<K, V> next;
     public int hashCode;
 
-    public MyCell(K key, V value, HashMap.Cell<K, V> next) {
+    public MyCell(K key, V value, HashMap.Cell<K, V> next, int hashCode) {
       super(key);
       this.value = value;
       this.next = next;
-      this.hashCode = (key == null ? 0 : key.hashCode());
+      this.hashCode = hashCode;
     }
 
     public K getKey() {
@@ -115,7 +115,7 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     extends HashMap.MyHelper<K, V>
   {
     public HashMap.Cell<K, V> make(K key, V value, HashMap.Cell<K, V> next) {
-      return new MyCell(key, value, next);
+      return new MyCell(key, value, next, hash(key));
     }
   }
 }

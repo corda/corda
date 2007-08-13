@@ -64,9 +64,9 @@ public class HashMap<K, V> implements Map<K, V> {
 
   private Cell<K, V> find(K key) {
     if (array != null) {
-      int index = hash(key) & (array.length - 1);
+      int index = helper.hash(key) & (array.length - 1);
       for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
-        if (equal(key, c.getKey())) {
+        if (helper.equal(key, c.getKey())) {
           return c;
         }
       }
@@ -131,10 +131,10 @@ public class HashMap<K, V> implements Map<K, V> {
   public Cell<K, V> removeCell(K key) {
     Cell<K, V> old = null;
     if (array != null) {
-      int index = hash(key) & (array.length - 1);
+      int index = helper.hash(key) & (array.length - 1);
       Cell<K, V> p = null;
       for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
-        if (equal(key, c.getKey())) {
+        if (helper.equal(key, c.getKey())) {
           old = c;
           if (p == null) {
             array[index] = c.next();
@@ -196,15 +196,17 @@ public class HashMap<K, V> implements Map<K, V> {
     public boolean equal(K a, K b);
   }
 
-  private class MyCell<K, V> implements Cell<K, V> {
+  private static class MyCell<K, V> implements Cell<K, V> {
     public final K key;
     public V value;
     public Cell<K, V> next;
+    public int hashCode;
 
-    public MyCell(K key, V value, Cell<K, V> next) {
+    public MyCell(K key, V value, Cell<K, V> next, int hashCode) {
       this.key = key;
       this.value = value;
       this.next = next;
+      this.hashCode = hashCode;
     }
 
     public K getKey() {
@@ -228,13 +230,13 @@ public class HashMap<K, V> implements Map<K, V> {
     }
 
     public int hashCode() {
-      return helper.hash(key);
+      return hashCode;
     }
   }
 
   static class MyHelper<K, V> implements Helper<K, V> {
     public Cell<K, V> make(K key, V value, Cell<K, V> next) {
-      return new MyCell(key, value, next);
+      return new MyCell(key, value, next, hash(key));
     }
 
     public int hash(K a) {

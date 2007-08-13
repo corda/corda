@@ -49,13 +49,19 @@ Object_wait(Thread* t, jobject this_, jlong milliseconds)
 void
 Object_notify(Thread* t, jobject this_)
 {
-  vm::notify(t, *this_);
+  notify(t, *this_);
 }
 
 void
 Object_notifyAll(Thread* t, jobject this_)
 {
-  vm::notifyAll(t, *this_);
+  notifyAll(t, *this_);
+}
+
+jint
+Object_hashCode(Thread* t, jobject this_)
+{
+  return objectHash(t, *this_);
 }
 
 jclass
@@ -117,6 +123,12 @@ SystemClassLoader_resourceExists(Thread* t, jclass, jstring name)
     t->exception = makeNullPointerException(t);
     return 0;
   }
+}
+
+jobject
+ObjectInputStream_makeInstance(Thread* t, jclass, jclass c)
+{
+  return pushReference(t, make(t, *c));
 }
 
 jclass
@@ -547,6 +559,17 @@ System_arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
   t->exception = makeArrayStoreException(t);
 }
 
+jint
+System_identityHashCode(Thread* t, jclass, jobject o)
+{
+  if (LIKELY(o)) {
+    return objectHash(t, *o);
+  } else {
+    t->exception = makeNullPointerException(t);
+    return 0;
+  }
+}
+
 void
 Runtime_loadLibrary(Thread* t, jobject, jstring name)
 {
@@ -791,6 +814,8 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Object_toString) },
     { "Java_java_lang_Object_wait",
       reinterpret_cast<void*>(::Object_wait) },
+    { "Java_java_lang_Object_hashCode",
+      reinterpret_cast<void*>(::Object_hashCode) },
 
     { "Java_java_lang_reflect_Array_get",
       reinterpret_cast<void*>(::Array_get) },
@@ -822,6 +847,9 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::ResourceInputStream_read2) },
     { "Java_java_net_URL_00024ResourceInputStream_close",
       reinterpret_cast<void*>(::ResourceInputStream_close) },
+
+    { "Java_java_io_ObjectInputStream_makeInstance",
+      reinterpret_cast<void*>(::ObjectInputStream_makeInstance) },
 
     { 0, 0 }
   };

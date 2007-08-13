@@ -31,6 +31,10 @@ public class Field<T> extends AccessibleObject {
     return new String(name, 0, name.length - 1, false);
   }
 
+  public Class getType() {
+    return Class.forCanonicalName(getName());
+  }
+
   public native Object get(Object instance);
 
   public native void set(Object instance, Object value);

@@ -9,6 +9,10 @@ public final class Long extends Number {
     this.value = value;
   }
 
+  public static Long valueOf(long value) {
+    return new Long(value);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Long && ((Long) o).value == value;
   }

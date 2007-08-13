@@ -12,6 +12,10 @@ public final class Boolean {
     this.value = value;
   }
 
+  public static Boolean valueOf(boolean value) {
+    return (value ? Boolean.TRUE : Boolean.FALSE);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Boolean && ((Boolean) o).value == value;
   }

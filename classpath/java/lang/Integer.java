@@ -12,6 +12,10 @@ public final class Integer extends Number {
     this.value = value;
   }
 
+  public static Integer valueOf(int value) {
+    return new Integer(value);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Integer && ((Integer) o).value == value;
   }
