@@ -7,6 +7,7 @@
 #include "string.h"
 #include "stdio.h"
 #include "types.h"
+#include "math.h"
 
 #ifdef __i386__
 #  define LD "%d"

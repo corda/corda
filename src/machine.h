@@ -1590,6 +1590,13 @@ pushInt(Thread* t, uint32_t v)
 }
 
 inline void
+pushFloat(Thread* t, float v)
+{
+  uint32_t a; memcpy(&a, &v, sizeof(uint32_t));
+  pushInt(t, a);
+}
+
+inline void
 pushLong(Thread* t, uint64_t v)
 {
   if (DebugStack) {
@@ -1598,6 +1605,13 @@ pushLong(Thread* t, uint64_t v)
 
   pushInt(t, v >> 32);
   pushInt(t, v & 0xFFFFFFFF);
+}
+
+inline void
+pushDouble(Thread* t, double v)
+{
+  uint64_t a; memcpy(&a, &v, sizeof(uint64_t));
+  pushLong(t, a);
 }
 
 inline object
@@ -1626,6 +1640,14 @@ popInt(Thread* t)
   return t->stack[((-- t->sp) * 2) + 1];
 }
 
+inline float
+popFloat(Thread* t)
+{
+  uint32_t a = popInt(t);
+  float f; memcpy(&f, &a, sizeof(float));
+  return f;
+}
+
 inline uint64_t
 popLong(Thread* t)
 {
@@ -1639,6 +1661,14 @@ popLong(Thread* t)
   uint64_t a = popInt(t);
   uint64_t b = popInt(t);
   return (b << 32) | a;
+}
+
+inline float
+popDouble(Thread* t)
+{
+  uint64_t a = popLong(t);
+  double d; memcpy(&d, &a, sizeof(double));
+  return d;
 }
 
 inline object

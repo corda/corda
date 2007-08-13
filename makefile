@@ -46,7 +46,7 @@ ifeq ($(mode),fast)
 cflags += -Os -DNDEBUG -DMONOLITHIC
 endif
 
-lflags = $(thread-lflags) -ldl
+lflags = $(thread-lflags) -ldl -lm
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))

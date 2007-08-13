@@ -837,6 +837,126 @@ run(Thread* t)
     }
   } goto loop;
 
+  case d2f: {
+    pushFloat(t, static_cast<float>(popDouble(t)));
+  } goto loop;
+
+  case d2i: {
+    pushInt(t, static_cast<int32_t>(popDouble(t)));
+  } goto loop;
+
+  case d2l: {
+    pushLong(t, static_cast<int64_t>(popDouble(t)));
+  } goto loop;
+
+  case dadd: {
+    double b = popDouble(t);
+    double a = popDouble(t);
+    
+    pushDouble(t, a + b);
+  } goto loop;
+
+  case daload: {
+    int32_t index = popInt(t);
+    object array = popObject(t);
+
+    if (LIKELY(array)) {
+      if (LIKELY(index >= 0 and
+                 static_cast<uintptr_t>(index) < doubleArrayLength(t, array)))
+      {
+        double d;
+        memcpy(&d, &doubleArrayBody(t, array, index), sizeof(double));
+        pushDouble(t, d);
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", index,
+                                    doubleArrayLength(t, array));
+        exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      exception = makeNullPointerException(t);
+      goto throw_;
+    }
+  } goto loop;
+
+  case dastore: {
+    double value = popDouble(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
+
+    if (LIKELY(array)) {
+      if (LIKELY(index >= 0 and
+                 static_cast<uintptr_t>(index) < doubleArrayLength(t, array)))
+      {
+        memcpy(&doubleArrayBody(t, array, index), &value, sizeof(uint64_t));
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", index,
+                                    doubleArrayLength(t, array));
+        exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      exception = makeNullPointerException(t);
+      goto throw_;
+    }
+  } goto loop;
+
+  case dcmpg: {
+    double b = popDouble(t);
+    double a = popDouble(t);
+    
+    pushInt(t, (a > b ? 1 : 0));
+  } goto loop;
+
+  case dcmpl: {
+    double b = popDouble(t);
+    double a = popDouble(t);
+    
+    pushInt(t, (a < b ? 1 : 0));
+  } goto loop;
+
+  case dconst_0: {
+    pushDouble(t, 0);
+  } goto loop;
+
+  case dconst_1: {
+    pushDouble(t, 1);
+  } goto loop;
+
+  case ddiv: {
+    double b = popDouble(t);
+    double a = popDouble(t);
+    
+    pushDouble(t, a / b);
+  } goto loop;
+
+  case dmul: {
+    double b = popDouble(t);
+    double a = popDouble(t);
+    
+    pushDouble(t, a * b);
+  } goto loop;
+
+  case dneg: {
+    double a = popDouble(t);
+    
+    pushDouble(t, - a);
+  } goto loop;
+
+  case vm::drem: {
+    double b = popDouble(t);
+    double a = popDouble(t);
+    
+    pushDouble(t, fmod(a, b));
+  } goto loop;
+
+  case dsub: {
+    double b = popDouble(t);
+    double a = popDouble(t);
+    
+    pushDouble(t, a - b);
+  } goto loop;
+
   case dup: {
     if (DebugStack) {
       fprintf(stderr, "dup\n");
@@ -901,6 +1021,129 @@ run(Thread* t)
     memcpy(stack + ((sp - 2) * 2), stack + ((sp - 4) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 4) * 2), stack + ((sp    ) * 2), BytesPerWord * 4);
     sp += 2;
+  } goto loop;
+
+  case f2d: {
+    pushDouble(t, popFloat(t));
+  } goto loop;
+
+  case f2i: {
+    pushInt(t, static_cast<int32_t>(popFloat(t)));
+  } goto loop;
+
+  case f2l: {
+    pushLong(t, static_cast<int64_t>(popFloat(t)));
+  } goto loop;
+
+  case fadd: {
+    float b = popFloat(t);
+    float a = popFloat(t);
+    
+    pushFloat(t, a + b);
+  } goto loop;
+
+  case faload: {
+    int32_t index = popInt(t);
+    object array = popObject(t);
+
+    if (LIKELY(array)) {
+      if (LIKELY(index >= 0 and
+                 static_cast<uintptr_t>(index) < floatArrayLength(t, array)))
+      {
+        float f; memcpy(&f, &floatArrayBody(t, array, index), sizeof(float));
+        pushFloat(t, f);
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", index,
+                                    floatArrayLength(t, array));
+        exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      exception = makeNullPointerException(t);
+      goto throw_;
+    }
+  } goto loop;
+
+  case fastore: {
+    float value = popFloat(t);
+    int32_t index = popInt(t);
+    object array = popObject(t);
+
+    if (LIKELY(array)) {
+      if (LIKELY(index >= 0 and
+                 static_cast<uintptr_t>(index) < floatArrayLength(t, array)))
+      {
+        memcpy(&floatArrayBody(t, array, index), &value, sizeof(uint32_t));
+      } else {
+        object message = makeString(t, "%d not in [0,%d]", index,
+                                    floatArrayLength(t, array));
+        exception = makeArrayIndexOutOfBoundsException(t, message);
+        goto throw_;
+      }
+    } else {
+      exception = makeNullPointerException(t);
+      goto throw_;
+    }
+  } goto loop;
+
+  case fcmpg: {
+    float b = popFloat(t);
+    float a = popFloat(t);
+    
+    pushInt(t, (a > b ? 1 : 0));
+  } goto loop;
+
+  case fcmpl: {
+    float b = popFloat(t);
+    float a = popFloat(t);
+    
+    pushInt(t, (a < b ? 1 : 0));
+  } goto loop;
+
+  case fconst_0: {
+    pushFloat(t, 0);
+  } goto loop;
+
+  case fconst_1: {
+    pushFloat(t, 1);
+  } goto loop;
+
+  case fconst_2: {
+    pushFloat(t, 2);
+  } goto loop;
+
+  case fdiv: {
+    float b = popFloat(t);
+    float a = popFloat(t);
+    
+    pushFloat(t, a / b);
+  } goto loop;
+
+  case fmul: {
+    float b = popFloat(t);
+    float a = popFloat(t);
+    
+    pushFloat(t, a * b);
+  } goto loop;
+
+  case fneg: {
+    float a = popFloat(t);
+    
+    pushFloat(t, - a);
+  } goto loop;
+
+  case frem: {
+    float b = popFloat(t);
+    float a = popFloat(t);
+    
+    pushFloat(t, fmodf(a, b));
+  } goto loop;
+
+  case fsub: {
+    float b = popFloat(t);
+    float a = popFloat(t);
+    
+    pushFloat(t, a - b);
   } goto loop;
 
   case getfield: {
@@ -1269,23 +1512,28 @@ run(Thread* t)
     setLocalInt(t, index, localInt(t, index) + c);
   } goto loop;
 
-  case iload: {
+  case iload:
+  case fload: {
     pushInt(t, localInt(t, codeBody(t, code, ip++)));
   } goto loop;
 
-  case iload_0: {
+  case iload_0:
+  case fload_0: {
     pushInt(t, localInt(t, 0));
   } goto loop;
 
-  case iload_1: {
+  case iload_1:
+  case fload_1: {
     pushInt(t, localInt(t, 1));
   } goto loop;
 
-  case iload_2: {
+  case iload_2:
+  case fload_2: {
     pushInt(t, localInt(t, 2));
   } goto loop;
 
-  case iload_3: {
+  case iload_3:
+  case fload_3: {
     pushInt(t, localInt(t, 3));
   } goto loop;
 
@@ -1426,7 +1674,8 @@ run(Thread* t)
     pushInt(t, a % b);
   } goto loop;
 
-  case ireturn: {
+  case ireturn:
+  case freturn: {
     int32_t result = popInt(t);
     if (frame > base) {
       popFrame(t);
@@ -1451,23 +1700,28 @@ run(Thread* t)
     pushInt(t, a >> b);
   } goto loop;
 
-  case istore: {
+  case istore:
+  case fstore: {
     setLocalInt(t, codeBody(t, code, ip++), popInt(t));
   } goto loop;
 
-  case istore_0: {
+  case istore_0:
+  case fstore_0: {
     setLocalInt(t, 0, popInt(t));
   } goto loop;
 
-  case istore_1: {
+  case istore_1:
+  case fstore_1: {
     setLocalInt(t, 1, popInt(t));
   } goto loop;
 
-  case istore_2: {
+  case istore_2:
+  case fstore_2: {
     setLocalInt(t, 2, popInt(t));
   } goto loop;
 
-  case istore_3: {
+  case istore_3:
+  case fstore_3: {
     setLocalInt(t, 3, popInt(t));
   } goto loop;
 
@@ -1640,23 +1894,28 @@ run(Thread* t)
     pushLong(t, a / b);
   } goto loop;
 
-  case lload: {
+  case lload:
+  case dload: {
     pushLong(t, localLong(t, codeBody(t, code, ip++)));
   } goto loop;
 
-  case lload_0: {
+  case lload_0:
+  case dload_0: {
     pushLong(t, localLong(t, 0));
   } goto loop;
 
-  case lload_1: {
+  case lload_1:
+  case dload_1: {
     pushLong(t, localLong(t, 1));
   } goto loop;
 
-  case lload_2: {
+  case lload_2:
+  case dload_2: {
     pushLong(t, localLong(t, 2));
   } goto loop;
 
-  case lload_3: {
+  case lload_3:
+  case dload_3: {
     pushLong(t, localLong(t, 3));
   } goto loop;
 
@@ -1717,7 +1976,8 @@ run(Thread* t)
     pushLong(t, a % b);
   } goto loop;
 
-  case lreturn: {
+  case lreturn:
+  case dreturn: {
     int64_t result = popLong(t);
     if (frame > base) {
       popFrame(t);
@@ -1742,23 +2002,28 @@ run(Thread* t)
     pushLong(t, a >> b);
   } goto loop;
 
-  case lstore: {
+  case lstore:
+  case dstore: {
     setLocalLong(t, codeBody(t, code, ip++), popLong(t));
   } goto loop;
 
-  case lstore_0: {
+  case lstore_0: 
+  case dstore_0:{
     setLocalLong(t, 0, popLong(t));
   } goto loop;
 
-  case lstore_1: {
+  case lstore_1: 
+  case dstore_1: {
     setLocalLong(t, 1, popLong(t));
   } goto loop;
 
-  case lstore_2: {
+  case lstore_2: 
+  case dstore_2: {
     setLocalLong(t, 2, popLong(t));
   } goto loop;
 
-  case lstore_3: {
+  case lstore_3: 
+  case dstore_3: {
     setLocalLong(t, 3, popLong(t));
   } goto loop;
 

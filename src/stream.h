@@ -59,15 +59,11 @@ class Stream {
   }
 
   uint32_t readFloat() {
-    // todo
-    read4();
-    return 0;
+    return read4();
   }
 
   uint64_t readDouble() {
-    // todo
-    read8();
-    return 0;
+    return read8();
   }
 
  private:
