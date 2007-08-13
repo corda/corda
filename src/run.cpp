@@ -531,6 +531,24 @@ classInit(Thread* t, object class_, unsigned ipOffset)
   }
 }
 
+inline int16_t
+codeReadInt16(Thread* t, unsigned& i)
+{
+  uint8_t v1 = codeBody(t, t->code, i++);
+  uint8_t v2 = codeBody(t, t->code, i++);
+  return ((v1 << 8) | v2);
+}
+
+inline int32_t
+codeReadInt32(Thread* t, unsigned& i)
+{
+  uint8_t v1 = codeBody(t, t->code, i++);
+  uint8_t v2 = codeBody(t, t->code, i++);
+  uint8_t v3 = codeBody(t, t->code, i++);
+  uint8_t v4 = codeBody(t, t->code, i++);
+  return ((v1 << 24) | (v2 << 16) | (v3 << 8) | v4);
+}
+
 object
 run(Thread* t)
 {
@@ -649,9 +667,7 @@ run(Thread* t)
     int32_t count = popInt(t);
 
     if (LIKELY(count >= 0)) {
-      uint8_t index1 = codeBody(t, code, ip++);
-      uint8_t index2 = codeBody(t, code, ip++);
-      uint16_t index = (index1 << 8) | index2;
+      uint16_t index = codeReadInt16(t, ip);
       
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
@@ -756,7 +772,7 @@ run(Thread* t)
   } goto loop;
 
   case bipush: {
-    pushInt(t, codeBody(t, code, ip++));
+    pushInt(t, static_cast<int8_t>(codeBody(t, code, ip++)));
   } goto loop;
 
   case caload: {
@@ -803,12 +819,9 @@ run(Thread* t)
   } goto loop;
 
   case checkcast: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
+    uint16_t index = codeReadInt16(t, ip);
 
     if (peekObject(t, sp - 1)) {
-      uint16_t index = (index1 << 8) | index2;
-      
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
@@ -892,9 +905,7 @@ run(Thread* t)
 
   case getfield: {
     if (LIKELY(peekObject(t, sp - 1))) {
-      uint8_t index1 = codeBody(t, code, ip++);
-      uint8_t index2 = codeBody(t, code, ip++);
-      uint16_t index = (index1 << 8) | index2;
+      uint16_t index = codeReadInt16(t, ip);
     
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
@@ -936,9 +947,7 @@ run(Thread* t)
   } goto loop;
 
   case getstatic: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -972,20 +981,13 @@ run(Thread* t)
   } goto loop;
 
   case goto_: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
-
-    ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+    int16_t offset = codeReadInt16(t, ip);
+    ip = (ip - 3) + offset;
   } goto loop;
     
   case goto_w: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
-    uint8_t offset3 = codeBody(t, code, ip++);
-    uint8_t offset4 = codeBody(t, code, ip++);
-
-    ip = (ip - 5) + static_cast<int32_t>
-      (((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4));
+    int32_t offset = codeReadInt32(t, ip);
+    ip = (ip - 5) + offset;
   } goto loop;
 
   case i2b: {
@@ -1319,9 +1321,7 @@ run(Thread* t)
   } goto loop;
 
   case invokeinterface: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
     
     ip += 2;
 
@@ -1342,9 +1342,7 @@ run(Thread* t)
   } goto loop;
 
   case invokespecial: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1377,9 +1375,7 @@ run(Thread* t)
   } goto loop;
 
   case invokestatic: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1390,9 +1386,7 @@ run(Thread* t)
   } goto invoke;
 
   case invokevirtual: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1677,6 +1671,38 @@ run(Thread* t)
     pushLong(t, - popInt(t));
   } goto loop;
 
+  case lookupswitch: {
+    int32_t base = ip - 1;
+
+    ip += 3;
+    ip -= (ip % 4);
+    
+    int32_t default_ = codeReadInt32(t, ip);
+    int32_t pairCount = codeReadInt32(t, ip);
+    
+    int32_t key = popInt(t);
+
+    int32_t bottom = 0;
+    int32_t top = pairCount;
+    for (int32_t span = top - bottom; span; span = top - bottom) {
+      int32_t middle = bottom + (span / 2);
+      unsigned index = ip + (middle * 8);
+
+      int32_t k = codeReadInt32(t, index);
+
+      if (key < k) {
+        top = middle;
+      } else if (key > k) {
+        bottom = middle + 1;
+      } else {
+        ip = base + codeReadInt32(t, index);
+        goto loop;
+      }
+    }
+
+    ip = base + default_;
+  } goto loop;
+
   case lor: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
@@ -1778,9 +1804,7 @@ run(Thread* t)
   } goto loop;
 
   case new_: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
     
     object class_ = resolveClass(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1853,9 +1877,7 @@ run(Thread* t)
   } goto loop;
 
   case putfield: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
     
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1920,9 +1942,7 @@ run(Thread* t)
   } goto loop;
 
   case putstatic: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
+    uint16_t index = codeReadInt16(t, ip);
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -2019,7 +2039,7 @@ run(Thread* t)
     uint8_t byte1 = codeBody(t, code, ip++);
     uint8_t byte2 = codeBody(t, code, ip++);
 
-    pushInt(t, (byte1 << 8) | byte2);
+    pushInt(t, static_cast<int16_t>((byte1 << 8) | byte2));
   } goto loop;
 
   case swap: {
@@ -2027,6 +2047,26 @@ run(Thread* t)
     memcpy(tmp                   , stack + ((sp - 1) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 2) * 2), tmp                   , BytesPerWord * 2);
+  } goto loop;
+
+  case tableswitch: {
+    int32_t base = ip - 1;
+
+    ip += 3;
+    ip -= (ip % 4);
+    
+    int32_t default_ = codeReadInt32(t, ip);
+    int32_t bottom = codeReadInt32(t, ip);
+    int32_t top = codeReadInt32(t, ip);
+    
+    int32_t key = popInt(t);
+    
+    if (key >= bottom and key <= top) {
+      unsigned index = ip + ((key - bottom) * 4);
+      ip = base + codeReadInt32(t, index);
+    } else {
+      ip = base + default_;      
+    }
   } goto loop;
 
   case wide: goto wide;
@@ -2037,64 +2077,38 @@ run(Thread* t)
  wide:
   switch (codeBody(t, code, ip++)) {
   case aload: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-
-    pushObject(t, localObject(t, (index1 << 8) | index2));
+    pushObject(t, localObject(t, codeReadInt16(t, ip)));
   } goto loop;
 
   case astore: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-
-    setLocalObject(t, (index1 << 8) | index2, popObject(t));
+    setLocalObject(t, codeReadInt16(t, ip), popObject(t));
   } goto loop;
 
   case iinc: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-    uint16_t index = (index1 << 8) | index2;
-
-    uint8_t count1 = codeBody(t, code, ip++);
-    uint8_t count2 = codeBody(t, code, ip++);
-    uint16_t count = (count1 << 8) | count2;
+    uint16_t index = codeReadInt16(t, ip);
+    uint16_t count = codeReadInt16(t, ip);
     
     setLocalInt(t, index, localInt(t, index) + count);
   } goto loop;
 
   case iload: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-
-    pushInt(t, localInt(t, (index1 << 8) | index2));
+    pushInt(t, localInt(t, codeReadInt16(t, ip)));
   } goto loop;
 
   case istore: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-
-    setLocalInt(t, (index1 << 8) | index2, popInt(t));
+    setLocalInt(t, codeReadInt16(t, ip), popInt(t));
   } goto loop;
 
   case lload: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-
-    pushLong(t, localLong(t, (index1 << 8) | index2));
+    pushLong(t, localLong(t, codeReadInt16(t, ip)));
   } goto loop;
 
   case lstore: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-
-    setLocalLong(t, (index1 << 8) | index2,  popLong(t));
+    setLocalLong(t, codeReadInt16(t, ip),  popLong(t));
   } goto loop;
 
   case ret: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
-
-    ip = localInt(t, (index1 << 8) | index2);
+    ip = localInt(t, codeReadInt16(t, ip));
   } goto loop;
 
   default: abort(t);
