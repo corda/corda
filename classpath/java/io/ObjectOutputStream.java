@@ -155,7 +155,14 @@ public class ObjectOutputStream extends OutputStream {
       int modifiers = f.getModifiers();
       if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
         out.print(" ");
-        Object v = f.get(o);
+        Object v;
+
+        try {
+          v = f.get(o);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+
         Class t = f.getType();
         if (t.equals(boolean.class)) {
           writeBoolean((Boolean) v);

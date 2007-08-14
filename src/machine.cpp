@@ -271,8 +271,7 @@ postVisit(Thread* t, Heap::Visitor* v)
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable
       referenceUnreachable(t, p, v);
-    } else if (jreferenceTarget(t, *p) == 0
-               or m->heap->status(jreferenceTarget(t, *p))
+    } else if (m->heap->status(jreferenceTarget(t, *p))
                == Heap::Unreachable)
     {
       // target is unreachable
@@ -318,8 +317,7 @@ postVisit(Thread* t, Heap::Visitor* v)
       if (m->heap->status(*p) == Heap::Unreachable) {
         // reference is unreachable
         referenceUnreachable(t, p, v);
-      } else if (jreferenceTarget(t, *p) == 0
-                 or m->heap->status(jreferenceTarget(t, *p))
+      } else if (m->heap->status(jreferenceTarget(t, *p))
                  == Heap::Unreachable)
       {
         // target is unreachable

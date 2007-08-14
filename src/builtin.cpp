@@ -627,16 +627,16 @@ Throwable_trace(Thread* t, jclass, jint skipCount)
     frame = frameNext(t, frame);
   }
   
-  if (methodClass(t, frameMethod(t, frame))
-      == arrayBody(t, t->vm->types, Machine::ThrowableType))
+  // skip Throwable constructors
+  while (frame >= 0
+         and isAssignableFrom
+         (t, arrayBody(t, t->vm->types, Machine::ThrowableType),
+          methodClass(t, frameMethod(t, frame)))
+         and strcmp(reinterpret_cast<const int8_t*>("<init>"),
+                    &byteArrayBody(t, methodName(t, frameMethod(t, frame)), 0))
+         == 0)
   {
-    // skip Throwable constructors
-    while (strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                  &byteArrayBody(t, methodName(t, frameMethod(t, frame)), 0))
-           == 0)
-    {
-      frame = frameNext(t, frame);
-    }
+    frame = frameNext(t, frame);
   }
 
   return pushReference(t, makeTrace(t, frame));

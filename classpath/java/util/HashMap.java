@@ -53,8 +53,8 @@ public class HashMap<K, V> implements Map<K, V> {
           for (Cell<K, V> c = array[i]; c != null; c = next) {
             next = c.next();
             int index = c.hashCode() & (capacity - 1);
-            c.setNext(array[index]);
-            array[index] = c;
+            c.setNext(newArray[index]);
+            newArray[index] = c;
           }
         }
       }

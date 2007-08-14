@@ -204,7 +204,11 @@ public class ObjectInputStream extends InputStream {
     for (Field f: c.getFields()) {
       int modifiers = f.getModifiers();
       if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
-        f.set(o, deserialize(map));
+        try {
+          f.set(o, deserialize(map));
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
       }
     }
 

@@ -127,8 +127,7 @@ public class LinkedList<T> implements List<T> {
   public T removeFirst() {
     if (front != null) {
       T v = front.value;
-      front = front.next;
-      if (front != null) front.prev = null;
+      remove(front);
       return v;
     } else {
       throw new NoSuchElementException();
@@ -138,8 +137,7 @@ public class LinkedList<T> implements List<T> {
   public T removeLast() {
     if (rear != null) {
       T v = rear.value;
-      rear = rear.prev;
-      if (rear != null) rear.next = null;
+      remove(rear);
       return v;
     } else {
       throw new NoSuchElementException();
