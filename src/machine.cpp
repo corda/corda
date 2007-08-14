@@ -1872,10 +1872,10 @@ hashMapInsert(Thread* t, object map, object key, object value,
     PROTECT(t, key);
     PROTECT(t, value);
 
-    t->vm->weakReferences = makeWeakReference
-      (t, t->vm->weakReferences, 0, 0, 0);
-    jreferenceTarget(t, t->vm->weakReferences) = key;
-    key = t->vm->weakReferences;
+    object r = makeWeakReference(t, 0, 0, 0, 0);
+    jreferenceTarget(t, r) = key;
+    jreferenceNext(t, r) = t->vm->weakReferences;
+    key = t->vm->weakReferences = r;
   }
 
   object n = makeTriple(t, key, value, arrayBody(t, array, index));

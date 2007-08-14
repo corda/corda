@@ -44,6 +44,10 @@ public class BufferedReader extends Reader {
   public int read(char[] b, int offset, int length) throws IOException {
     int count = 0;
 
+    if (position >= limit && length < buffer.length) {
+      fill();
+    }
+
     if (position < limit) {
       int remaining = limit - position;
       if (remaining > length) {
