@@ -208,11 +208,14 @@ resolve(Thread* t, object pool, unsigned index,
     object class_ = resolveClass(t, o, referenceClass);
     if (UNLIKELY(t->exception)) return 0;
     
+    o = 0;
     if (classFlags(t, class_) & ACC_INTERFACE) {
-      o = ::find(t, classVirtualTable(t, class_), arrayBody(t, pool, index),
-                 methodName, methodSpec);
+      if (classVirtualTable(t, class_)) {
+        o = ::find(t, classVirtualTable(t, class_), arrayBody(t, pool, index),
+                   methodName, methodSpec);
+      }
     } else {
-      for (o = 0; o == 0 and class_; class_ = classSuper(t, class_)) {
+      for (; o == 0 and class_; class_ = classSuper(t, class_)) {
         o = find(t, class_, arrayBody(t, pool, index));
       }
     }

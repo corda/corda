@@ -1033,7 +1033,9 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     set(t, classMethodTable(t, class_), methodTable);
   }
 
-  if (declaredVirtualCount == 0) {
+  if (declaredVirtualCount == 0
+      and (classFlags(t, class_) & ACC_INTERFACE) == 0)
+  {
     // inherit interface table and virtual table from superclass
 
     set(t, classInterfaceTable(t, class_),

@@ -95,6 +95,12 @@ ThrowNew(Thread* t, jclass c, const char* message)
   return 0;
 }
 
+void
+DeleteLocalRef(Thread*, jobject)
+{
+  // do nothing
+}
+
 jboolean
 ExceptionCheck(Thread* t)
 {
@@ -119,6 +125,7 @@ populateJNITable(JNIEnvVTable* table)
   table->FindClass = ::FindClass;
   table->ThrowNew = ::ThrowNew;
   table->ExceptionCheck = ::ExceptionCheck;
+  table->DeleteLocalRef = ::DeleteLocalRef;
 }
 
 } // namespace vm

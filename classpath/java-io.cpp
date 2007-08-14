@@ -58,7 +58,7 @@ doOpen(JNIEnv* e, const char* path, int mask)
 {
   int fd = OPEN(path, mask | OPEN_MASK, S_IRUSR | S_IWUSR);
   if (fd == -1) {
-    throwNew(e, "java/lang/IOException", strerror(errno));
+    throwNew(e, "java/io/IOException", strerror(errno));
   }
   return fd;
 }
@@ -68,7 +68,7 @@ doClose(JNIEnv* e, jint fd)
 {
   int r = CLOSE(fd);
   if (r == -1) {
-    throwNew(e, "java/lang/IOException", strerror(errno));
+    throwNew(e, "java/io/IOException", strerror(errno));
   }
 }
 
@@ -81,7 +81,7 @@ doRead(JNIEnv* e, jint fd, jbyte* data, jint length)
   } else if (r == 0) {
     return -1;
   } else {
-    throwNew(e, "java/lang/IOException", strerror(errno));
+    throwNew(e, "java/io/IOException", strerror(errno));
     return 0;
   }  
 }
@@ -91,7 +91,7 @@ doWrite(JNIEnv* e, jint fd, const jbyte* data, jint length)
 {
   int r = WRITE(fd, data, length);
   if (r != length) {
-    throwNew(e, "java/lang/IOException", strerror(errno));
+    throwNew(e, "java/io/IOException", strerror(errno));
   }  
 }
 
@@ -128,7 +128,7 @@ Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
     if (not exists(chars)) {
       int r = ::MKDIR(chars, 0700);
       if (r != 0) {
-        throwNew(e, "java/lang/IOException", strerror(errno));
+        throwNew(e, "java/io/IOException", strerror(errno));
       }
     }
     e->ReleaseStringUTFChars(path, chars);
@@ -143,7 +143,7 @@ Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
     if (not exists(chars)) {
       int fd = CREAT(chars, 0600);
       if (fd == -1) {
-        throwNew(e, "java/lang/IOException", strerror(errno));
+        throwNew(e, "java/io/IOException", strerror(errno));
       } else {
         doClose(e, fd);
       }

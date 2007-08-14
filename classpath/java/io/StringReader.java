@@ -16,6 +16,7 @@ public class StringReader extends Reader {
       }
     }
     in.getChars(position, length, b, offset);
+    position += length;
     return length;
   }
 

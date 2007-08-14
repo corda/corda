@@ -35,6 +35,10 @@ public class Throwable {
     return message;
   }
 
+  public String toString() {
+    return getClass().getName() + ": " + message;
+  }
+
   private static native Object trace(int skipCount);
 
   private static native StackTraceElement[] resolveTrace(Object trace);
