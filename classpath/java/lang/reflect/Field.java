@@ -35,7 +35,8 @@ public class Field<T> extends AccessibleObject {
     return Class.forCanonicalName(getName());
   }
 
-  public native Object get(Object instance);
+  public native Object get(Object instance) throws IllegalAccessException;
 
-  public native void set(Object instance, Object value);
+  public native void set(Object instance, Object value)
+    throws IllegalAccessException;
 }

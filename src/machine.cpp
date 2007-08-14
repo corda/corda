@@ -271,7 +271,10 @@ postVisit(Thread* t, Heap::Visitor* v)
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable
       referenceUnreachable(t, p, v);
-    } else if (m->heap->status(jreferenceTarget(t, *p)) == Heap::Unreachable) {
+    } else if (jreferenceTarget(t, *p) == 0
+               or m->heap->status(jreferenceTarget(t, *p))
+               == Heap::Unreachable)
+    {
       // target is unreachable
       referenceTargetUnreachable(t, p, v);
     } else {
@@ -315,7 +318,8 @@ postVisit(Thread* t, Heap::Visitor* v)
       if (m->heap->status(*p) == Heap::Unreachable) {
         // reference is unreachable
         referenceUnreachable(t, p, v);
-      } else if (m->heap->status(jreferenceTarget(t, *p))
+      } else if (jreferenceTarget(t, *p) == 0
+                 or m->heap->status(jreferenceTarget(t, *p))
                  == Heap::Unreachable)
       {
         // target is unreachable
@@ -685,11 +689,15 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
       set(t, arrayBody(t, interfaceTable, i++), interface);
 
       if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
-        // we'll fill in this table in parseMethodTable():
-        object vtable = makeArray
-          (t, arrayLength(t, classVirtualTable(t, interface)), true);
-        
-        set(t, arrayBody(t, interfaceTable, i++), vtable);
+        if (classVirtualTable(t, interface)) {
+          // we'll fill in this table in parseMethodTable():
+          object vtable = makeArray
+            (t, arrayLength(t, classVirtualTable(t, interface)), true);
+          
+          set(t, arrayBody(t, interfaceTable, i), vtable);
+        }
+
+        ++i;
       }
     }
   }
@@ -772,24 +780,34 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       (t, ceiling(classFixedSize(t, class_), BitsPerWord * BytesPerWord), true);
     intArrayBody(t, mask, 0) = 1;
 
+    object superMask = 0;
+    if (classSuper(t, class_)) {
+      superMask = classObjectMask(t, classSuper(t, class_));
+      if (superMask) {
+        memcpy(&intArrayBody(t, mask, 0),
+               &intArrayBody(t, superMask, 0),
+               ceiling(classFixedSize(t, classSuper(t, class_)),
+                       BitsPerWord * BytesPerWord)
+               * 4);
+      }
+    }
+
     bool sawReferenceField = false;
-    for (object c = class_; c; c = classSuper(t, c)) {
-      object fieldTable = classFieldTable(t, c);
-      if (fieldTable) {
-        for (int i = arrayLength(t, fieldTable) - 1; i >= 0; --i) {
-          object field = arrayBody(t, fieldTable, i);
-          if ((fieldFlags(t, field) & ACC_STATIC) == 0
-              and fieldCode(t, field) == ObjectField)
-          {
-            unsigned index = fieldOffset(t, field) / BytesPerWord;
-            intArrayBody(t, mask, (index / 32)) |= 1 << (index % 32);
-            sawReferenceField = true;
-          }
+    object fieldTable = classFieldTable(t, class_);
+    if (fieldTable) {
+      for (int i = arrayLength(t, fieldTable) - 1; i >= 0; --i) {
+        object field = arrayBody(t, fieldTable, i);
+        if ((fieldFlags(t, field) & ACC_STATIC) == 0
+            and fieldCode(t, field) == ObjectField)
+        {
+          unsigned index = fieldOffset(t, field) / BytesPerWord;
+          intArrayBody(t, mask, (index / 32)) |= 1 << (index % 32);
+          sawReferenceField = true;
         }
       }
     }
 
-    if (sawReferenceField) {
+    if (superMask or sawReferenceField) {
       set(t, classObjectMask(t, class_), mask);
     }
   }
@@ -868,14 +886,29 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   if (classFlags(t, class_) & ACC_INTERFACE) {
     object itable = classInterfaceTable(t, class_);
     if (itable) {
+      PROTECT(t, itable);
       for (unsigned i = 0; i < arrayLength(t, itable); ++i) {
         object vtable = classVirtualTable(t, arrayBody(t, itable, i));
-        for (unsigned j = 0; j < virtualCount; ++j) {
-          object method = arrayBody(t, vtable, j);
-          if (hashMapInsertMaybe(t, virtualMap, method, method, methodHash,
-                                 methodEqual))
-          {
-            ++ virtualCount;
+        if (vtable) {
+          PROTECT(t, vtable);
+          for (unsigned j = 0; j < arrayLength(t, vtable); ++j) {
+            object method = arrayBody(t, vtable, j);
+            object n = hashMapFindNode
+              (t, virtualMap, method, methodHash, methodEqual);
+            if (n == 0) {
+              method = makeMethod
+                (t,
+                 methodVmFlags(t, method),
+                 methodParameterCount(t, method),
+                 methodParameterFootprint(t, method),
+                 methodFlags(t, method),
+                 virtualCount++,
+                 methodName(t, method),
+                 methodSpec(t, method),
+                 methodClass(t, method),
+                 0);
+              hashMapInsert(t, virtualMap, method, method, methodHash);
+            }
           }
         }
       }
@@ -1012,17 +1045,19 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   } else if (virtualCount) {
     // generate class vtable
 
-    unsigned i = 0;
     object vtable = makeArray(t, virtualCount, true);
 
+    unsigned i = 0;
     if (classFlags(t, class_) & ACC_INTERFACE) {
       PROTECT(t, vtable);
 
-      object it = hashMapIterator(t, virtualMap);
-
-      for (; it; it = hashMapIteratorNext(t, it)) {
+      for (object it = hashMapIterator(t, virtualMap); it;
+           it = hashMapIteratorNext(t, it))
+      {
         object method = tripleFirst(t, hashMapIteratorNode(t, it));
-        set(t, arrayBody(t, vtable, i++), method);
+        assert(t, arrayBody(t, vtable, methodOffset(t, method)) == 0);
+        set(t, arrayBody(t, vtable, methodOffset(t, method)), method);
+        ++ i;
       }
     } else {
       if (superVirtualTable) {
@@ -1039,6 +1074,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       }
     }
 
+    assert(t, arrayLength(t, vtable) == i);
+
     set(t, classVirtualTable(t, class_), vtable);
 
     if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
@@ -1050,15 +1087,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
         for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
           object ivtable = classVirtualTable(t, arrayBody(t, itable, i));
-          object vtable = arrayBody(t, itable, i + 1);
+          if (ivtable) {
+            object vtable = arrayBody(t, itable, i + 1);
         
-          for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
-            object method = arrayBody(t, ivtable, j);
-            method = hashMapFind
-              (t, virtualMap, method, methodHash, methodEqual);
-            assert(t, method);
-          
-            set(t, arrayBody(t, vtable, j), method);        
+            for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
+              object method = arrayBody(t, ivtable, j);
+              method = hashMapFind
+                (t, virtualMap, method, methodHash, methodEqual);
+              assert(t, method);
+              
+              set(t, arrayBody(t, vtable, j), method);        
+            }
           }
         }
       }
@@ -1925,7 +1964,7 @@ hashMapIteratorNext(Thread* t, object it)
   unsigned index = hashMapIteratorIndex(t, it);
 
   if (tripleThird(t, node)) {
-    return makeHashMapIterator(t, map, tripleThird(t, node), index + 1);
+    return makeHashMapIterator(t, map, tripleThird(t, node), index);
   } else {
     object array = hashMapArray(t, map);
     for (unsigned i = index; i < arrayLength(t, array); ++i) {
@@ -2244,9 +2283,10 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 
   ACQUIRE(t, t->vm->referenceLock);
 
-  t->vm->finalizers = makeFinalizer
-    (t, 0, reinterpret_cast<void*>(finalize), t->vm->finalizers);
-  finalizerTarget(t, t->vm->finalizers) = target;
+  object f = makeFinalizer(t, 0, reinterpret_cast<void*>(finalize), 0);
+  finalizerTarget(t, f) = target;
+  finalizerNext(t, f) = t->vm->finalizers;
+  t->vm->finalizers = f;
 }
 
 System::Monitor*

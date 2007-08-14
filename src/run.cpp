@@ -208,8 +208,13 @@ resolve(Thread* t, object pool, unsigned index,
     object class_ = resolveClass(t, o, referenceClass);
     if (UNLIKELY(t->exception)) return 0;
     
-    for (o = 0; o == 0 and class_; class_ = classSuper(t, class_)) {
-      o = find(t, class_, arrayBody(t, pool, index));
+    if (classFlags(t, class_) & ACC_INTERFACE) {
+      o = ::find(t, classVirtualTable(t, class_), arrayBody(t, pool, index),
+                 methodName, methodSpec);
+    } else {
+      for (o = 0; o == 0 and class_; class_ = classSuper(t, class_)) {
+        o = find(t, class_, arrayBody(t, pool, index));
+      }
     }
 
     if (o == 0) {
@@ -217,7 +222,7 @@ resolve(Thread* t, object pool, unsigned index,
         (t, "%s %s not found in %s",
          &byteArrayBody(t, referenceName(t, reference), 0),
          &byteArrayBody(t, referenceSpec(t, reference), 0),
-         &byteArrayBody(t, referenceClass(t, reference), 0));
+         &byteArrayBody(t, className(t, referenceClass(t, reference)), 0));
       t->exception = makeError(t, message);
     }
     
@@ -1306,6 +1311,10 @@ run(Thread* t)
     }
   } goto loop;
 
+  case iconst_m1: {
+    pushInt(t, static_cast<unsigned>(-1));
+  } goto loop;
+
   case iconst_0: {
     pushInt(t, 0);
   } goto loop;
@@ -1602,6 +1611,7 @@ run(Thread* t)
         class_ = classSuper(t, class_);
 
         if (classVirtualTable(t, class_) == 0) {
+          PROTECT(t, method);
           PROTECT(t, class_);
 
           resolveClass(t, className(t, class_));
@@ -1644,6 +1654,7 @@ run(Thread* t)
       object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
 
       if (classVirtualTable(t, class_) == 0) {
+        PROTECT(t, method);
         PROTECT(t, class_);
 
         resolveClass(t, className(t, class_));

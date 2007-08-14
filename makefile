@@ -15,6 +15,7 @@ cls = build/classes
 src = src
 classpath = classpath
 test = test
+jscheme = /tmp/jscheme
 
 input = $(cls)/Switch.class
 
@@ -144,9 +145,19 @@ run: $(executable) $(input)
 debug: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) gdb --args $(<) $(args)
 
+.PHONY: debug-jscheme
+debug-jscheme: $(executable) $(input)
+	LD_LIBRARY_PATH=$(bld) gdb --args $(<) -cp $(cls):$(jscheme) -hs 67108864 \
+		jscheme/REPL
+
 .PHONY: vg
 vg: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
+
+.PHONY: vg-jscheme
+vg-jscheme: $(executable) $(input)
+	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) -hs 67108864 \
+		jscheme/REPL
 
 .PHONY: test
 test: $(executable) $(classpath-objects) $(test-classes)

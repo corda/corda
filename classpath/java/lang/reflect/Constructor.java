@@ -38,7 +38,10 @@ public class Constructor<T> extends AccessibleObject implements Member {
 
   private static native <T> T make(Class<T> c);
 
-  public T newInstance(Object ... arguments) {
+  public T newInstance(Object ... arguments)
+    throws InvocationTargetException, InstantiationException,
+    IllegalAccessException
+  {
     T v = make(method.getDeclaringClass());
     method.invoke(v, arguments);
     return v;

@@ -1320,7 +1320,7 @@ class MonitorResource {
 class RawMonitorResource {
  public:
   RawMonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
-    acquire(t, m);
+    m->acquire(t->systemThread);
   }
 
   ~RawMonitorResource() {
