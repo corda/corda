@@ -1881,7 +1881,10 @@ run(Thread* t)
     {
       pushObject(t, v);
     } else {
-      pushObject(t, resolveClass(t, v));
+      object class_ = resolveClass(t, codePool(t, code), index - 1);
+      if (UNLIKELY(exception)) goto throw_;
+
+      pushObject(t, class_);
     }
   } goto loop;
 
