@@ -1,6 +1,10 @@
 package java.io;
 
 public class File {
+  static {
+    System.loadLibrary("natives");
+  }
+
   private final String path;
 
   public File(String path) {

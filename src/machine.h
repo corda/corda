@@ -1829,7 +1829,9 @@ inline uint32_t
 hash(const int8_t* s, unsigned length)
 {
   uint32_t h = 0;
-  for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
+  for (unsigned i = 0; i < length; ++i) {
+    h = (h * 31) + static_cast<unsigned>(s[i]);
+  }
   return h;  
 }
 
@@ -1837,7 +1839,9 @@ inline uint32_t
 hash(const uint16_t* s, unsigned length)
 {
   uint32_t h = 0;
-  for (unsigned i = 0; i < length; ++i) h = (h * 31) + s[i];
+  for (unsigned i = 0; i < length; ++i) {
+    h = (h * 31) + s[i];
+  }
   return h;  
 }
 
@@ -1934,9 +1938,11 @@ stringHash(Thread* t, object s)
     if (objectClass(t, data)
         == arrayBody(t, t->vm->types, Machine::ByteArrayType))
     {
-      stringHashCode(t, s) = byteArrayHash(t, data);
+      stringHashCode(t, s) = hash
+        (&byteArrayBody(t, data, stringOffset(t, s)), stringLength(t, s));
     } else {
-      stringHashCode(t, s) = charArrayHash(t, data);
+      stringHashCode(t, s) = hash
+        (&charArrayBody(t, data, stringOffset(t, s)), stringLength(t, s));
     }
   }
   return stringHashCode(t, s);

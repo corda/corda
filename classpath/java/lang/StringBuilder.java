@@ -3,6 +3,8 @@ package java.lang;
 public class StringBuilder {
   private Cell chain;
   private int length;
+  private char[] buffer;
+  private int position;
 
   public StringBuilder(int capacity) { }
 
@@ -10,12 +12,28 @@ public class StringBuilder {
     this(0);
   }
 
-  public StringBuilder append(String s) {
-    if (s.length() > 0) {
-      chain = new Cell(s, chain);
-      length += s.length();
+  private void flush() {
+    if (position > 0) {
+      char[] b = buffer;
+      int p = position;
+      buffer = null;
+      position = 0;
+      append(new String(b, 0, p, false));
+      length -= p;
     }
-    return this;
+  }
+
+  public StringBuilder append(String s) {
+    if (s == null) {
+      return append("null");
+    } else {
+      if (s.length() > 0) {
+        flush();
+        chain = new Cell(s, chain);
+        length += s.length();
+      }
+      return this;
+    }
   }
 
   public StringBuilder append(char[] b, int offset, int length) {
@@ -24,6 +42,20 @@ public class StringBuilder {
 
   public StringBuilder append(Object o) {
     return append(o == null ? "null" : o.toString());
+  }
+
+  public StringBuilder append(char v) {
+    if (buffer == null) {
+      buffer = new char[32];
+    } else if (position >= buffer.length) {
+      flush();
+      buffer = new char[32];
+    }
+
+    buffer[position++] = v;
+    ++ length;
+
+    return this;
   }
 
   public StringBuilder append(int v) {
@@ -38,6 +70,8 @@ public class StringBuilder {
     if (i < 0 || i >= length) {
       throw new IndexOutOfBoundsException();
     }
+
+    flush();
 
     int index = length;
     -- length;
@@ -83,6 +117,8 @@ public class StringBuilder {
       return;
     }
 
+    flush();
+
     int index = length;
     length = v;
     for (Cell c = chain; c != null; c = c.next) {
@@ -106,6 +142,8 @@ public class StringBuilder {
       throw new IndexOutOfBoundsException();
     }
 
+    flush();
+
     int index = length;
     for (Cell c = chain; c != null; c = c.next) {
       int start = index - c.value.length();
@@ -124,7 +162,7 @@ public class StringBuilder {
         c.value.getChars(start - index, end - start,
                          dst, dstOffset + (start - srcOffset));
       }
-    }    
+    }
   }
 
   public String toString() {

@@ -5,7 +5,7 @@ public class HashMap<K, V> implements Map<K, V> {
   private Cell[] array;
   private final Helper helper;
 
-  HashMap(int capacity, Helper<K, V> helper) {
+  public HashMap(int capacity, Helper<K, V> helper) {
     if (capacity > 0) {
       array = new Cell[nextPowerOfTwo(capacity)];
     }
@@ -18,6 +18,22 @@ public class HashMap<K, V> implements Map<K, V> {
 
   public HashMap() {
     this(0);
+  }
+
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (Iterator<Entry<K, V>> it = iterator(); it.hasNext();) {
+      Entry<K, V> e = it.next();
+      sb.append(e.getKey())
+        .append("=")
+        .append(e.getValue());
+      if (it.hasNext()) {
+        sb.append(",");
+      }
+    }
+    sb.append("}");
+    return sb.toString();
   }
 
   private static int nextPowerOfTwo(int n) {
@@ -85,8 +101,7 @@ public class HashMap<K, V> implements Map<K, V> {
     array[index] = cell;
   }
 
-  // primarily for use by WeakHashMap:
-  void remove(Cell<K, V> cell) {
+  public void remove(Cell<K, V> cell) {
     int index = cell.hashCode() & (array.length - 1);
     Cell<K, V> p = null;
     for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
@@ -366,7 +381,7 @@ public class HashMap<K, V> implements Map<K, V> {
           }
         }
       }
-      return false;
+      return nextCell != null;
     }
 
     public void remove() {

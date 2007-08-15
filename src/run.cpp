@@ -1570,12 +1570,13 @@ run(Thread* t)
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
-      if (instanceOf(t, class_, peekObject(t, sp - 1))) {
+      if (instanceOf(t, class_, popObject(t))) {
         pushInt(t, 1);
       } else {
         pushInt(t, 0);
       }
     } else {
+      popObject(t);
       pushInt(t, 0);
     }
   } goto loop;

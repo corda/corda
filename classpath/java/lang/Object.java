@@ -1,7 +1,15 @@
 package java.lang;
 
 public class Object {
-  protected native Object clone() throws CloneNotSupportedException;
+  protected Object clone() throws CloneNotSupportedException {
+    if (this instanceof Cloneable) {
+      return clone(this);
+    } else {
+      throw new CloneNotSupportedException();
+    }
+  }
+
+  private static native Object clone(Object o);
 
   public boolean equals(Object o) {
     return this == o;

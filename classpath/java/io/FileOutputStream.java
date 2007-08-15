@@ -1,6 +1,10 @@
 package java.io;
 
 public class FileOutputStream extends OutputStream {
+  static {
+    System.loadLibrary("natives");
+  }
+
   private int fd;
 
   public FileOutputStream(FileDescriptor fd) {

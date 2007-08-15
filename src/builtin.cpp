@@ -10,7 +10,7 @@ namespace {
 object
 doInvoke(Thread* t, object this_, object instance, object arguments)
 {
-  object v = pushReference(t, run2(t, this_, instance, arguments));
+  object v = run2(t, this_, instance, arguments);
   if (t->exception) {
     t->exception = makeInvocationTargetException(t, t->exception);
   }
@@ -62,6 +62,16 @@ jint
 Object_hashCode(Thread* t, jobject this_)
 {
   return objectHash(t, *this_);
+}
+
+jobject
+Object_clone(Thread* t, jclass, jobject o)
+{
+  object clone = make(t, objectClass(t, *o));
+  memcpy(static_cast<void**>(clone) + 1,
+         static_cast<void**>(*o) + 1,
+         (baseSize(t, *o, objectClass(t, *o)) - 1) * BytesPerWord);
+  return pushReference(t, clone);
 }
 
 jclass
@@ -816,6 +826,8 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Object_wait) },
     { "Java_java_lang_Object_hashCode",
       reinterpret_cast<void*>(::Object_hashCode) },
+    { "Java_java_lang_Object_clone",
+      reinterpret_cast<void*>(::Object_clone) },
 
     { "Java_java_lang_reflect_Array_get",
       reinterpret_cast<void*>(::Array_get) },

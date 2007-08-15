@@ -31,6 +31,18 @@ public final class String implements Comparable<String> {
   }
 
   private String(Object data, int offset, int length, boolean copy) {
+    int l;
+    if (data instanceof char[]) {
+      l = ((char[]) data).length;
+    } else {
+      l = ((byte[]) data).length;
+    }
+
+    if (offset < 0 || offset + length > l) {
+      throw new IndexOutOfBoundsException
+        (offset + " < 0 or " + offset + " + " + length + " > " + l);
+    }
+
     if (copy) {
       Object c;
       if (data instanceof char[]) {
@@ -59,7 +71,9 @@ public final class String implements Comparable<String> {
 
   public int hashCode() {
     if (hash == 0) {
-      for (int i = 0; i < length; ++i) hash = (hash * 31) + charAt(i);
+      int h = 0;
+      for (int i = 0; i < length; ++i) h = (h * 31) + charAt(i);
+      hash = h;
     }
     return hash;
   }
