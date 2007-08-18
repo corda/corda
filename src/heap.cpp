@@ -12,7 +12,10 @@ const unsigned TenureThreshold = 3;
 
 const unsigned Top = ~static_cast<unsigned>(0);
 
+const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
+
 const bool Verbose = true;
+const bool Verbose2 = false;
 const bool Debug = false;
 
 class Context;
@@ -285,7 +288,6 @@ class Segment {
     map(map)
   {
     if (desired) {
-      assert(context, minimum > 0);
       assert(context, desired >= minimum);
 
       capacity_ = desired;
@@ -297,6 +299,9 @@ class Segment {
         if (data == 0) {
           if (capacity_ > minimum) {
             capacity_ = avg(minimum, capacity_);
+            if (capacity_ == 0) {
+              break;
+            }
           } else {
             abort(context);
           }
@@ -489,7 +494,7 @@ initNextGen1(Context* c, unsigned footprint)
 
   new (&(c->nextGen1)) Segment(c, &(c->nextAgeMap), desired, minimum);
 
-  if (Verbose) {
+  if (Verbose2) {
     fprintf(stderr, "init nextGen1 to %d bytes\n",
             c->nextGen1.capacity() * BytesPerWord);
   }
@@ -509,11 +514,12 @@ initNextGen2(Context* c)
     (&(c->nextGen2), 1, c->pageMap.scale * 1024, &(c->nextPageMap), true);
 
   unsigned minimum = c->gen2.position() + c->tenureFootprint + c->gen2padding;
-  unsigned desired = minimum * 2;
+  unsigned desired = max
+    (minimum * 2, InitialGen2CapacityInBytes / BytesPerWord);
 
   new (&(c->nextGen2)) Segment(c, &(c->nextHeapMap), desired, minimum);
 
-  if (Verbose) {
+  if (Verbose2) {
     fprintf(stderr, "init nextGen2 to %d bytes\n",
             c->nextGen2.capacity() * BytesPerWord);
   }
@@ -1051,12 +1057,15 @@ collect(Context* c, unsigned footprint)
     c->mode = Heap::MajorCollection;
   }
 
+  int64_t then;
   if (Verbose) {
     if (c->mode == Heap::MajorCollection) {
-      fprintf(stderr, "major collection\n");
+      fprintf(stderr, "major collection ");
     } else {
-      fprintf(stderr, "minor collection\n");
+      fprintf(stderr, "minor collection ");
     }
+
+    then = c->system->now();
   }
 
   initNextGen1(c, footprint);
@@ -1069,6 +1078,10 @@ collect(Context* c, unsigned footprint)
   c->gen1.replaceWith(&(c->nextGen1));
   if (c->mode == Heap::MajorCollection) {
     c->gen2.replaceWith(&(c->nextGen2));
+  }
+
+  if (Verbose) {
+    fprintf(stderr, "- " LLD "ms\n", (c->system->now() - then));
   }
 }
 

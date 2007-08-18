@@ -17,7 +17,7 @@ classpath = classpath
 test = test
 jscheme = /tmp/jscheme
 
-input = $(cls)/GC.class
+input = $(cls)/References.class
 
 cxx = g++
 cc = gcc
@@ -34,6 +34,8 @@ thread-lflags = -lpthread
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
 	-I$(src) -I$(bld) $(thread-cflags) -D__STDC_LIMIT_MACROS
 
+lflags = $(thread-lflags) -ldl -lm
+
 ifeq ($(mode),debug)
 cflags += -O0 -g3
 endif
@@ -46,8 +48,10 @@ endif
 ifeq ($(mode),fast)
 cflags += -Os -DNDEBUG -DMONOLITHIC
 endif
-
-lflags = $(thread-lflags) -ldl -lm
+ifeq ($(mode),profile)
+cflags += -Os -pg -DNDEBUG -DMONOLITHIC
+lflags += -pg
+endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))
@@ -141,6 +145,10 @@ $(input): $(classpath-objects)
 run: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) $(<) $(args)
 
+.PHONY: run-jscheme
+run-jscheme: $(executable) $(input)
+	LD_LIBRARY_PATH=$(bld) $(<) -cp $(cls):$(jscheme) jscheme/REPL
+
 .PHONY: debug
 debug: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) gdb --args $(<) $(args)
@@ -157,6 +165,11 @@ vg: $(executable) $(input)
 .PHONY: vg-jscheme
 vg-jscheme: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) \
+		jscheme/REPL
+
+.PHONY: profile-jscheme
+profile-jscheme: $(executable) $(input)
+	echo '(+ 5 6)' | LD_LIBRARY_PATH=$(bld) $(<) -cp $(cls):$(jscheme) \
 		jscheme/REPL
 
 .PHONY: test
