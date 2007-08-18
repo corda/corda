@@ -121,7 +121,7 @@ public final class String implements Comparable<String> {
     }
   }
 
-  public int indexOf(char c) {
+  public int indexOf(int c) {
     for (int i = 0; i < length - 1; ++i) {
       if (charAt(i) == c) {
         return i;
@@ -131,7 +131,7 @@ public final class String implements Comparable<String> {
     return -1;
   }
 
-  public int lastIndexOf(char c) {
+  public int lastIndexOf(int c) {
     for (int i = length - 1; i >= 0; --i) {
       if (charAt(i) == c) {
         return i;
