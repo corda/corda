@@ -112,15 +112,6 @@ handleSignal(int)
   // ignore
 }
 
-int64_t
-now()
-{
-  timeval tv = { 0, 0 };
-  gettimeofday(&tv, 0);
-  return (static_cast<int64_t>(tv.tv_sec) * 1000) +
-    (static_cast<int64_t>(tv.tv_usec) / 1000);
-}
-
 void*
 run(void* r)
 {
@@ -269,7 +260,7 @@ class MySystem: public System {
         pthread_mutex_unlock(&mutex);
 
         if (time) {
-          int64_t then = now() + time;
+          int64_t then = s->now() + time;
           timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
           int rv = pthread_cond_timedwait
             (&(t->condition), &(t->mutex), &ts);
@@ -516,6 +507,13 @@ class MySystem: public System {
 
   virtual void exit(int code) {
     ::exit(code);
+  }
+
+  int64_t now() {
+    timeval tv = { 0, 0 };
+    gettimeofday(&tv, 0);
+    return (static_cast<int64_t>(tv.tv_sec) * 1000) +
+      (static_cast<int64_t>(tv.tv_usec) / 1000);
   }
 
   virtual void abort() {
