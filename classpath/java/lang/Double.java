@@ -63,8 +63,7 @@ public final class Double extends Number {
     return 0.0;
   }
 
-  public static long doubleToRawLongBits(double value) {
-    // todo
-    return 0;
-  }
+  public static native long doubleToRawLongBits(double value);
+
+  public static native double longBitsToDouble(long bits);
 }

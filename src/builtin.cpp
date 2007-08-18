@@ -195,169 +195,76 @@ Class_isAssignableFrom(Thread* t, jobject this_, jclass that)
   }
 }
 
-jobject
-Field_get(Thread* t, jobject this_, jobject instancep)
+jlong
+Field_getPrimitive(Thread* t, jclass, jobject instance, jint code, jint offset)
 {
-  object field = *this_;
-
-  if (fieldFlags(t, field) & ACC_STATIC) {
-    object v = arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                         fieldOffset(t, field));
-
-    switch (fieldCode(t, field)) {
-    case ByteField:
-      return pushReference(t, makeByte(t, intValue(t, v)));
-
-    case BooleanField:
-      return pushReference(t, makeBoolean(t, intValue(t, v)));
-
-    case CharField:
-      return pushReference(t, makeChar(t, intValue(t, v)));
-
-    case ShortField:
-      return pushReference(t, makeShort(t, intValue(t, v)));
-
-    case FloatField:
-      return pushReference(t, makeFloat(t, intValue(t, v)));
-
-    case DoubleField:
-      return pushReference(t, makeDouble(t, longValue(t, v)));
-
-    case IntField:
-    case LongField:
-    case ObjectField:
-      return pushReference(t, v);
-
-    default:
-      abort(t);
-    }
-  } else if (instancep) {
-    object instance = *instancep;
-
-    if (instanceOf(t, fieldClass(t, this_), instance)) {
-      switch (fieldCode(t, field)) {
-      case ByteField:
-        return pushReference
-          (t, makeByte(t, cast<int8_t>(instance, fieldOffset(t, field))));
-
-      case BooleanField:
-        return pushReference
-          (t, makeBoolean(t, cast<uint8_t>(instance, fieldOffset(t, field))));
-
-      case CharField:
-        return pushReference
-          (t, makeChar(t, cast<uint16_t>(instance, fieldOffset(t, field))));
-
-      case ShortField:
-        return pushReference
-          (t, makeShort(t, cast<int16_t>(instance, fieldOffset(t, field))));
-
-      case FloatField:
-        return pushReference
-          (t, makeFloat(t, cast<uint32_t>(instance, fieldOffset(t, field))));
-
-      case IntField:
-        return pushReference
-          (t, makeInt(t, cast<int32_t>(instance, fieldOffset(t, field))));
-
-      case DoubleField:
-        return pushReference
-          (t, makeDouble(t, cast<uint64_t>(instance, fieldOffset(t, field))));
-
-      case LongField:
-        return pushReference
-          (t, makeLong(t, cast<int64_t>(instance, fieldOffset(t, field))));
-
-      case ObjectField:
-        return pushReference
-          (t, cast<object>(instance, fieldOffset(t, field)));
-
-      default:
-        abort(t);
-      }
-    } else {
-      t->exception = makeIllegalArgumentException(t);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
+  switch (code) {
+  case ByteField: 
+    return cast<int8_t>(*instance, offset);
+  case BooleanField: 
+    return cast<uint8_t>(*instance, offset);
+  case CharField: 
+    return cast<uint16_t>(*instance, offset);
+  case ShortField: 
+    return cast<int16_t>(*instance, offset);
+  case IntField: 
+    return cast<int32_t>(*instance, offset);
+  case LongField: 
+    return cast<int64_t>(*instance, offset);
+  case FloatField: 
+    return cast<uint32_t>(*instance, offset);
+  case DoubleField: 
+    return cast<uint64_t>(*instance, offset);
+  default:
+    abort(t);
   }
+}
 
-  return 0;
+jobject
+Field_getObject(Thread* t, jclass, jobject instance, jint offset)
+{
+  return pushReference(t, cast<object>(*instance, offset));
 }
 
 void
-Field_set(Thread* t, jobject this_, jobject instancep, jobject value)
+Field_setPrimitive(Thread* t, jclass, jobject instance, jint code, jint offset,
+                   jlong value)
 {
-  object field = *this_;
-  object v = (value ? *value : 0);
-
-  if (fieldFlags(t, field) & ACC_STATIC) {
-    object* p = &arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                           fieldOffset(t, field));
-
-    if (fieldCode(t, field) == ObjectField or v) {
-      switch (fieldCode(t, field)) {
-      case ByteField:
-        set(t, *p, makeInt(t, byteValue(t, v)));
-        break;
-
-      case BooleanField:
-        set(t, *p, makeInt(t, booleanValue(t, v)));
-        break;
-
-      case CharField:
-        set(t, *p, makeInt(t, charValue(t, v)));
-        break;
-
-      case ShortField:
-        set(t, *p, makeInt(t, shortValue(t, v)));
-        break;
-
-      case FloatField:
-        set(t, *p, makeInt(t, floatValue(t, v)));
-        break;
-
-      case DoubleField:
-        set(t, *p, makeLong(t, longValue(t, v)));
-        break;
-
-      case IntField:
-      case LongField:
-      case ObjectField:
-        set(t, *p, v);
-        break;
-
-      default:
-        abort(t);
-      }
-    } else {
-      t->exception = makeNullPointerException(t);
-    }
-  } else if (instancep) {
-    object instance = *instancep;
-
-    if (instanceOf(t, fieldClass(t, this_), instance)) {
-      switch (fieldCode(t, field)) {
-      case ObjectField:
-        set(t, cast<object>(instance, fieldOffset(t, field)), v);
-        break;
-
-      default: {
-          uint8_t* body = &cast<uint8_t>(instance, fieldOffset(t, field));
-          if (v) {
-            memcpy(body, &cast<uint8_t>(v, BytesPerWord),
-                   primitiveSize(t, fieldCode(t, field)));
-          } else {
-            t->exception = makeNullPointerException(t);
-          }
-      } break;
-      }
-    } else {
-      t->exception = makeIllegalArgumentException(t);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
+  switch (code) {
+  case ByteField:
+    cast<int8_t>(*instance, offset) = static_cast<int8_t>(value);
+    break;
+  case BooleanField:
+    cast<uint8_t>(*instance, offset) = static_cast<uint8_t>(value);
+    break;
+  case CharField:
+    cast<uint16_t>(*instance, offset) = static_cast<uint16_t>(value);
+    break;
+  case ShortField:
+    cast<int16_t>(*instance, offset) = static_cast<int16_t>(value);
+    break;
+  case IntField: 
+    cast<int32_t>(*instance, offset) = static_cast<int32_t>(value);
+    break;
+  case LongField: 
+    cast<int64_t>(*instance, offset) = static_cast<int64_t>(value);
+    break;
+  case FloatField: 
+    cast<uint32_t>(*instance, offset) = static_cast<uint32_t>(value);
+    break;
+  case DoubleField: 
+    cast<uint64_t>(*instance, offset) = static_cast<uint64_t>(value);
+    break;
+  default:
+    abort(t);
   }
+}
+
+void
+Field_setObject(Thread*, jclass, jobject instance, jint offset,
+                jobject value)
+{
+  cast<object>(*instance, offset) = (value ? *value : 0);
 }
 
 jobject
@@ -521,6 +428,34 @@ jobject
 Array_makeObjectArray(Thread* t, jclass, jclass elementType, jint length)
 {
   return pushReference(t, makeObjectArray(t, *elementType, length, true));
+}
+
+jint
+Float_floatToRawIntBits(Thread*, jclass, jfloat v)
+{
+  int32_t r; memcpy(&r, &v, 4);
+  return r;
+}
+
+jfloat
+Float_intBitsToFloat(Thread*, jclass, jint v)
+{
+  jfloat r; memcpy(&r, &v, 4);
+  return r;
+}
+
+jlong
+Double_doubleToRawLongBits(Thread*, jclass, jdouble v)
+{
+  int64_t r; memcpy(&r, &v, 8);
+  return r;
+}
+
+jdouble
+Double_longBitsToDouble(Thread*, jclass, jlong v)
+{
+  jdouble r; memcpy(&r, &v, 8);
+  return r;
 }
 
 jobject
@@ -841,10 +776,14 @@ populateBuiltinMap(Thread* t, object map)
     { "Java_java_lang_reflect_Constructor_make",
       reinterpret_cast<void*>(::Constructor_make) },
 
-    { "Java_java_lang_reflect_Field_get",
-      reinterpret_cast<void*>(::Field_get) },
-    { "Java_java_lang_reflect_Field_set",
-      reinterpret_cast<void*>(::Field_set) },
+    { "Java_java_lang_reflect_Field_getPrimitive",
+      reinterpret_cast<void*>(::Field_getPrimitive) },
+    { "Java_java_lang_reflect_Field_getObject",
+      reinterpret_cast<void*>(::Field_getObject) },
+    { "Java_java_lang_reflect_Field_setPrimitive",
+      reinterpret_cast<void*>(::Field_setPrimitive) },
+    { "Java_java_lang_reflect_Field_setObject",
+      reinterpret_cast<void*>(::Field_setObject) },
 
     { "Java_java_lang_reflect_Method_getCaller",
       reinterpret_cast<void*>(::Method_getCaller) },

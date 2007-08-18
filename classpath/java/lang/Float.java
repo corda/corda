@@ -53,8 +53,7 @@ public final class Float extends Number {
     return (double) value;
   }
 
-  public static int floatToRawIntBits(float value) {
-    // todo
-    return 0;
-  }
+  public static native int floatToRawIntBits(float value);
+
+  public static native float intBitsToFloat(int bits);
 }

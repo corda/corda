@@ -27,6 +27,10 @@ public final class Class <T> {
     return new String(name, 0, name.length - 1, false);
   }
 
+  public Object[] staticTable() {
+    return staticTable;
+  }
+
   public static Class forName(String name) throws ClassNotFoundException {
     return forName
       (name, true, Method.getCaller().getDeclaringClass().getClassLoader());
