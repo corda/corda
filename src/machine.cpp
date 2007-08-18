@@ -1364,6 +1364,25 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
       |= ReferenceFlag | WeakReferenceFlag;
 
+    classVmFlags(t, arrayBody(t, m->types, Machine::JbooleanType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JbyteType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JcharType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JshortType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JintType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JlongType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JfloatType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JdoubleType))
+      |= PrimitiveFlag;
+    classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
+      |= PrimitiveFlag;
+
     m->bootstrapClassMap = makeHashMap(this, 0, 0);
 
 #include "type-java-initializations.cpp"

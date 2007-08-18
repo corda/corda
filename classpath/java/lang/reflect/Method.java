@@ -87,6 +87,27 @@ public class Method<T> extends AccessibleObject implements Member {
     return types;
   }
 
-  public native Object invoke(Object instance, Object ... arguments)
+  public Object invoke(Object instance, Object ... arguments)
+    throws InvocationTargetException, IllegalAccessException
+  {
+    if ((flags & Modifier.STATIC) != 0) {
+      if (arguments.length == parameterCount) {
+        return invoke(this, instance, arguments);
+      } else {
+        throw new ArrayIndexOutOfBoundsException();
+      }
+    } else if (class_.isInstance(instance)) {
+      if (arguments.length == parameterCount - 1) {
+        return invoke(this, instance, arguments);        
+      } else {
+        throw new ArrayIndexOutOfBoundsException();
+      }
+    } else {
+      throw new IllegalArgumentException();
+    }
+  }
+
+  public static native Object invoke(Method method, Object instance,
+                                     Object ... arguments)
     throws InvocationTargetException, IllegalAccessException;
 }

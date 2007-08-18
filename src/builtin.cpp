@@ -7,16 +7,6 @@ using namespace vm;
 
 namespace {
 
-object
-doInvoke(Thread* t, object this_, object instance, object arguments)
-{
-  object v = run2(t, this_, instance, arguments);
-  if (t->exception) {
-    t->exception = makeInvocationTargetException(t, t->exception);
-  }
-  return v;
-}
-
 inline void
 replace(char a, char b, char* c)
 {
@@ -261,10 +251,10 @@ Field_setPrimitive(Thread* t, jclass, jobject instance, jint code, jint offset,
 }
 
 void
-Field_setObject(Thread*, jclass, jobject instance, jint offset,
+Field_setObject(Thread* t, jclass, jobject instance, jint offset,
                 jobject value)
 {
-  cast<object>(*instance, offset) = (value ? *value : 0);
+  set(t, cast<object>(*instance, offset), (value ? *value : 0));
 }
 
 jobject
@@ -281,129 +271,26 @@ Method_getCaller(Thread* t, jclass)
 }
 
 jobject
-Method_invoke(Thread* t, jobject this_, jobject instancep,
-              jobjectArray argumentsp)
+Method_invoke(Thread* t, jclass, jobject method, jobject instance,
+              jobjectArray arguments)
 {
-  object method = *this_;
-
-  if (argumentsp) {
-    object arguments = *argumentsp;
-
-    if (methodFlags(t, method) & ACC_STATIC) {
-      if (objectArrayLength(t, arguments)
-          == methodParameterCount(t, method))
-      {
-        return pushReference(t, doInvoke(t, method, 0, arguments));
-      } else {
-        t->exception = makeArrayIndexOutOfBoundsException(t, 0);
-      }
-    } else if (instancep) {
-      object instance = *instancep;
-
-      if (instanceOf(t, methodClass(t, method), instance)) {
-        if (objectArrayLength(t, arguments)
-            == static_cast<unsigned>(methodParameterCount(t, method) - 1))
-        {
-          return pushReference(t, doInvoke(t, method, instance, arguments));
-        } else {
-          t->exception = makeArrayIndexOutOfBoundsException(t, 0);
-        }
-      }
-    } else {
-      t->exception = makeNullPointerException(t);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
+  object v = run2(t, *method, (instance ? *instance : 0), *arguments);
+  if (t->exception) {
+    t->exception = makeInvocationTargetException(t, t->exception);
   }
-
-  return 0;
+  return pushReference(t, v);
 }
 
 jobject
-Array_get(Thread* t, jobject array, int index)
+Array_getObject(Thread* t, jobject array, int index)
 {
-  if (LIKELY(array)) {
-    object a = *array;
-    unsigned elementSize = classArrayElementSize(t, objectClass(t, a));
-
-    if (LIKELY(elementSize)) {
-      intptr_t length = cast<uintptr_t>(a, BytesPerWord);
-
-      if (LIKELY(index >= 0 and index < length)) {
-        switch (byteArrayBody(t, className(t, objectClass(t, a)), 1)) {
-        case 'B':
-          return pushReference(t, makeByte(t, byteArrayBody(t, a, index)));
-        case 'C':
-          return pushReference(t, makeChar(t, charArrayBody(t, a, index)));
-        case 'D':
-          return pushReference(t, makeDouble(t, doubleArrayBody(t, a, index)));
-        case 'F':
-          return pushReference(t, makeFloat(t, floatArrayBody(t, a, index)));
-        case 'I':
-          return pushReference(t, makeInt(t, intArrayBody(t, a, index)));
-        case 'J':
-          return pushReference(t, makeLong(t, longArrayBody(t, a, index)));
-        case 'S':
-          return pushReference(t, makeShort(t, shortArrayBody(t, a, index)));
-        case 'Z':
-          return pushReference
-            (t, makeBoolean(t, booleanArrayBody(t, a, index)));
-        case 'L':
-        case '[':
-          return pushReference(t, objectArrayBody(t, a, index));
-
-        default: abort(t);
-        }
-      } else {
-        t->exception = makeArrayIndexOutOfBoundsException(t, 0);
-      }
-    } else {
-      t->exception = makeIllegalArgumentException(t);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
-
-  return 0;
+  return pushReference(t, objectArrayBody(t, *array, index));
 }
 
 void
-Array_set(Thread* t, jobject array, int index, jobject value)
+Array_setObject(Thread* t, jobject array, int index, jobject value)
 {
-  if (LIKELY(array)) {
-    object a = *array;
-    object v = (value ? *value : 0);
-    unsigned elementSize = classArrayElementSize(t, objectClass(t, a));
-
-    if (LIKELY(elementSize)) {
-      intptr_t length = cast<uintptr_t>(a, BytesPerWord);
-
-      if (LIKELY(index >= 0 and index < length)) {
-        switch (byteArrayBody(t, className(t, objectClass(t, a)), 1)) {
-        case 'L':
-        case '[':
-          set(t, objectArrayBody(t, a, index), v);
-          break;
-
-        default: {
-          uint8_t* p = &cast<uint8_t>
-            (a, (2 * BytesPerWord) + (index * elementSize));
-          if (v) {
-            memcpy(p, &cast<uint8_t>(v, BytesPerWord), elementSize);
-          } else {
-            t->exception = makeNullPointerException(t);
-          }
-        } break;
-        }
-      } else {
-        t->exception = makeArrayIndexOutOfBoundsException(t, 0);
-      }
-    } else {
-      t->exception = makeIllegalArgumentException(t);
-    }
-  } else {
-    t->exception = makeNullPointerException(t);
-  }
+  set(t, objectArrayBody(t, *array, index), (value ? *value : 0));
 }
 
 jint
@@ -749,6 +636,16 @@ populateBuiltinMap(Thread* t, object map)
     { "Java_java_lang_Throwable_trace",
       reinterpret_cast<void*>(::Throwable_trace) },
 
+    { "Java_java_lang_Float_floatToRawIntBits",
+      reinterpret_cast<void*>(::Float_floatToRawIntBits) },
+    { "Java_java_lang_Float_intBitsToFloat",
+      reinterpret_cast<void*>(::Float_intBitsToFloat) },
+
+    { "Java_java_lang_Double_doubleToRawLongBits",
+      reinterpret_cast<void*>(::Double_doubleToRawLongBits) },
+    { "Java_java_lang_Double_longBitsToDouble",
+      reinterpret_cast<void*>(::Double_longBitsToDouble) },
+
     { "Java_java_lang_Object_getClass",
       reinterpret_cast<void*>(::Object_getClass) },
     { "Java_java_lang_Object_notify",
@@ -764,10 +661,10 @@ populateBuiltinMap(Thread* t, object map)
     { "Java_java_lang_Object_clone",
       reinterpret_cast<void*>(::Object_clone) },
 
-    { "Java_java_lang_reflect_Array_get",
-      reinterpret_cast<void*>(::Array_get) },
-    { "Java_java_lang_reflect_Array_set",
-      reinterpret_cast<void*>(::Array_set) },
+    { "Java_java_lang_reflect_Array_getObject",
+      reinterpret_cast<void*>(::Array_getObject) },
+    { "Java_java_lang_reflect_Array_setObject",
+      reinterpret_cast<void*>(::Array_setObject) },
     { "Java_java_lang_reflect_Array_getLength",
       reinterpret_cast<void*>(::Array_getLength) },
     { "Java_java_lang_reflect_Array_makeObjectArray",

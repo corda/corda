@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 public final class Class <T> {
+  private static final int PrimitiveFlag = 1 << 4;
+
   private short flags;
   private byte vmFlags;
   private byte arrayDimensions;
@@ -330,14 +332,6 @@ public final class Class <T> {
   }
 
   public boolean isPrimitive() {
-    return equals(boolean.class)
-      || equals(byte.class)
-      || equals(char.class)
-      || equals(short.class)
-      || equals(int.class)
-      || equals(long.class)
-      || equals(float.class)
-      || equals(double.class)
-      || equals(void.class);
+    return (vmFlags & PrimitiveFlag) != 0;
   }
 }
