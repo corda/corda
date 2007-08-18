@@ -17,7 +17,7 @@ classpath = classpath
 test = test
 jscheme = /tmp/jscheme
 
-input = $(cls)/Switch.class
+input = $(cls)/GC.class
 
 cxx = g++
 cc = gcc
@@ -129,7 +129,7 @@ classpath-objects = $(classpath-classes) $(jni-library)
 class-name = $(patsubst $(cls)/%.class,%,$(1))
 class-names = $(foreach x,$(1),$(call class-name,$(x)))
 
-flags = -cp $(cls) -hs 67108864
+flags = -cp $(cls)
 args = $(flags) $(call class-name,$(input))
 
 .PHONY: build
@@ -147,7 +147,7 @@ debug: $(executable) $(input)
 
 .PHONY: debug-jscheme
 debug-jscheme: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) gdb --args $(<) -cp $(cls):$(jscheme) -hs 67108864 \
+	LD_LIBRARY_PATH=$(bld) gdb --args $(<) -cp $(cls):$(jscheme) \
 		jscheme/REPL
 
 .PHONY: vg
@@ -156,7 +156,7 @@ vg: $(executable) $(input)
 
 .PHONY: vg-jscheme
 vg-jscheme: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) -hs 67108864 \
+	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) \
 		jscheme/REPL
 
 .PHONY: test

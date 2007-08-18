@@ -1885,6 +1885,9 @@ markHashTaken(Thread* t, object o)
 {
   assert(t, not objectExtended(t, o));
   cast<uintptr_t>(o, 0) |= HashTakenMark;
+
+  ACQUIRE_RAW(t, t->vm->heapLock);
+  t->vm->heap->pad(o, 1);
 }
 
 inline uint32_t

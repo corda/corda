@@ -111,6 +111,23 @@ killZombies(Thread* t, Thread* o)
   }
 }
 
+unsigned
+footprint(Thread* t)
+{
+  unsigned n = t->heapIndex;
+
+  if (t->large) {
+    n += extendedSize
+      (t, t->large, baseSize(t, t->large, objectClass(t, t->large)));
+  }
+
+  for (Thread* c = t->child; c; c = c->peer) {
+    n += footprint(c);
+  }
+
+  return n;
+}
+
 void
 visitRoots(Thread* t, Heap::Visitor* v)
 {
@@ -2498,7 +2515,7 @@ collect(Thread* t, Heap::CollectionType type)
   } it(m);
 
   m->unsafe = true;
-  m->heap->collect(type, &it);
+  m->heap->collect(type, &it, footprint(m->rootThread));
   m->unsafe = false;
 
   postCollect(m->rootThread);

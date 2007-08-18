@@ -38,7 +38,7 @@ usageAndExit(const char* name)
 int
 main(int ac, const char** av)
 {
-  unsigned heapSize = 4 * 1024 * 1024;
+  unsigned heapSize = 128 * 1024 * 1024;
   const char* path = ".";
   const char* class_ = 0;
   int argc = 0;

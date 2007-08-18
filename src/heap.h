@@ -42,9 +42,11 @@ class Heap {
   };
 
   virtual ~Heap() { }
-  virtual void collect(CollectionType type, Client* client) = 0;
+  virtual void collect(CollectionType type, Client* client, unsigned footprint)
+  = 0;
   virtual bool needsMark(void** p) = 0;
   virtual void mark(void** p) = 0;
+  virtual void pad(void* p, unsigned extra) = 0;
   virtual void* follow(void* p) = 0;
   virtual Status status(void* p) = 0;
   virtual CollectionType collectionType() = 0;
