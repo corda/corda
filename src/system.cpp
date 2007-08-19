@@ -149,7 +149,7 @@ class MySystem: public System {
     }
 
     virtual void join() {
-      int rv = pthread_join(thread, 0);
+      int rv UNUSED = pthread_join(thread, 0);
       assert(s, rv == 0);
     }
 
@@ -262,11 +262,11 @@ class MySystem: public System {
         if (time) {
           int64_t then = s->now() + time;
           timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
-          int rv = pthread_cond_timedwait
+          int rv UNUSED = pthread_cond_timedwait
             (&(t->condition), &(t->mutex), &ts);
           assert(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
         } else {
-          int rv = pthread_cond_wait(&(t->condition), &(t->mutex));
+          int rv UNUSED = pthread_cond_wait(&(t->condition), &(t->mutex));
           assert(s, rv == 0 or rv == EINTR);
         }
 
@@ -296,7 +296,7 @@ class MySystem: public System {
       ACQUIRE(t->mutex);
 
       t->flags |= Notified;
-      int rv = pthread_cond_signal(&(t->condition));
+      int rv UNUSED = pthread_cond_signal(&(t->condition));
       assert(s, rv == 0);
     }
 
@@ -399,7 +399,7 @@ class MySystem: public System {
     sigemptyset(&(sa.sa_mask));
     sa.sa_handler = handleSignal;
     
-    int rv = sigaction(InterruptSignal, &sa, 0);
+    int rv UNUSED = sigaction(InterruptSignal, &sa, 0);
     assert(this, rv == 0);
   }
 
@@ -445,7 +445,7 @@ class MySystem: public System {
       count -= *up;
 
       if (Verbose) {
-        fprintf(stderr, "free " LD "; count: %d; limit: %d\n",
+        fprintf(stderr, "free %"LD"; count: %d; limit: %d\n",
                 *up, count, limit);
       }
 
@@ -465,7 +465,7 @@ class MySystem: public System {
   virtual Status start(Runnable* r) {
     Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
     r->attach(t);
-    int rv = pthread_create(&(t->thread), 0, run, r);
+    int rv UNUSED = pthread_create(&(t->thread), 0, run, r);
     assert(this, rv == 0);
     return 0;
   }

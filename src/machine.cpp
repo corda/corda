@@ -2136,7 +2136,7 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
   Stream s(&client, data, size);
 
   uint32_t magic = s.read4();
-  assert(t, magic == 0xCAFEBABE);
+  expect(t, magic == 0xCAFEBABE);
   s.read2(); // minor version
   s.read2(); // major version
 

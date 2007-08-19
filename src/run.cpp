@@ -130,18 +130,20 @@ find(Thread* t, object table, object reference,
      object& (*name)(Thread*, object),
      object& (*spec)(Thread*, object))
 {
-  object n = referenceName(t, reference);
-  object s = referenceSpec(t, reference);
-  for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-    object o = arrayBody(t, table, i);
-
-    if (strcmp(&byteArrayBody(t, name(t, o), 0),
-               &byteArrayBody(t, n, 0)) == 0 and
-        strcmp(&byteArrayBody(t, spec(t, o), 0),
-               &byteArrayBody(t, s, 0)) == 0)
-    {
-      return o;
-    }               
+  if (table) {
+    object n = referenceName(t, reference);
+    object s = referenceSpec(t, reference);
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      object o = arrayBody(t, table, i);
+      
+      if (strcmp(&byteArrayBody(t, name(t, o), 0),
+                 &byteArrayBody(t, n, 0)) == 0 and
+          strcmp(&byteArrayBody(t, spec(t, o), 0),
+                 &byteArrayBody(t, s, 0)) == 0)
+      {
+        return o;
+      }
+    }
   }
 
   return 0;
@@ -478,7 +480,7 @@ invokeNative(Thread* t, object method)
   case FloatField:
   case IntField:
     if (DebugRun) {
-      fprintf(stderr, "result: " LLD "\n", result);
+      fprintf(stderr, "result: %"LLD"\n", result);
     }
     pushInt(t, result);
     break;
@@ -486,7 +488,7 @@ invokeNative(Thread* t, object method)
   case LongField:
   case DoubleField:
     if (DebugRun) {
-      fprintf(stderr, "result: " LLD "\n", result);
+      fprintf(stderr, "result: %"LLD"\n", result);
     }
     pushLong(t, result);
     break;
@@ -2470,7 +2472,7 @@ run(Thread* t, const char* className, int argc, const char** argv)
   PROTECT(t, args);
 
   for (int i = 0; i < argc; ++i) {
-    object arg = makeString(t, "%s", argv);
+    object arg = makeString(t, "%s", argv[i]);
     set(t, objectArrayBody(t, args, i), arg);
   }
 

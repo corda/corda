@@ -1193,7 +1193,7 @@ class Thread {
     Thread* t;
   };
 
-  static const unsigned HeapSizeInBytes = 64 * 1024;
+  static const unsigned HeapSizeInBytes = 512 * 1024;
   static const unsigned StackSizeInBytes = 64 * 1024;
 
   static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
@@ -1339,11 +1339,13 @@ abort(Thread* t)
   abort(t->vm->system);
 }
 
+#ifndef NDEBUG
 inline void
 assert(Thread* t, bool v)
 {
   assert(t->vm->system, v);
 }
+#endif // not NDEBUG
 
 inline void
 expect(Thread* t, bool v)
@@ -1601,7 +1603,7 @@ inline void
 pushLong(Thread* t, uint64_t v)
 {
   if (DebugStack) {
-    fprintf(stderr, "push long " LLD " at %d\n", v, t->sp);
+    fprintf(stderr, "push long %"LLD" at %d\n", v, t->sp);
   }
 
   pushInt(t, v >> 32);
@@ -1632,7 +1634,7 @@ inline uint32_t
 popInt(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop int " LD " at %d\n",
+    fprintf(stderr, "pop int %"LD" at %d\n",
             t->stack[((t->sp - 1) * 2) + 1],
             t->sp - 1);
   }
@@ -1653,7 +1655,7 @@ inline uint64_t
 popLong(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop long " LLD " at %d\n",
+    fprintf(stderr, "pop long %"LLD" at %d\n",
             (static_cast<uint64_t>(t->stack[((t->sp - 2) * 2) + 1]) << 32)
             | static_cast<uint64_t>(t->stack[((t->sp - 1) * 2) + 1]),
             t->sp - 2);
@@ -1690,7 +1692,7 @@ inline uint32_t
 peekInt(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek int " LD " at %d\n",
+    fprintf(stderr, "peek int %"LD" at %d\n",
             t->stack[(index * 2) + 1],
             index);
   }
@@ -1704,7 +1706,7 @@ inline uint64_t
 peekLong(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek long " LLD " at %d\n",
+    fprintf(stderr, "peek long %"LLD" at %d\n",
             (static_cast<uint64_t>(t->stack[(index * 2) + 1]) << 32)
             | static_cast<uint64_t>(t->stack[((index + 1) * 2) + 1]),
             index);
@@ -1740,7 +1742,7 @@ inline void
 pokeLong(Thread* t, unsigned index, uint64_t value)
 {
   if (DebugStack) {
-    fprintf(stderr, "poke long " LLD " at %d\n", value, index);
+    fprintf(stderr, "poke long %"LLD" at %d\n", value, index);
   }
 
   pokeInt(t, index, value >> 32);
@@ -1862,7 +1864,7 @@ objectExtended(Thread*, object o)
 }
 
 inline uintptr_t&
-extendedWord(Thread* t, object o, unsigned baseSize)
+extendedWord(Thread* t UNUSED, object o, unsigned baseSize)
 {
   assert(t, objectExtended(t, o));
   return cast<uintptr_t>(o, baseSize * BytesPerWord);
@@ -2107,7 +2109,7 @@ object
 makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear);
 
 inline unsigned
-objectArrayLength(Thread* t, object array)
+objectArrayLength(Thread* t UNUSED, object array)
 {
   assert(t, classFixedSize(t, objectClass(t, array)) == BytesPerWord * 2);
   assert(t, classArrayElementSize(t, objectClass(t, array)) == BytesPerWord);
@@ -2115,7 +2117,7 @@ objectArrayLength(Thread* t, object array)
 }
 
 inline object&
-objectArrayBody(Thread* t, object array, unsigned index)
+objectArrayBody(Thread* t UNUSED, object array, unsigned index)
 {
   assert(t, classFixedSize(t, objectClass(t, array)) == BytesPerWord * 2);
   assert(t, classArrayElementSize(t, objectClass(t, array)) == BytesPerWord);
@@ -2186,7 +2188,7 @@ wait(Thread* t, object o, int64_t milliseconds)
   System::Monitor* m = objectMonitor(t, o);
 
   if (DebugMonitors) {
-    fprintf(stderr, "thread %p waits " LLD " millis on %p for %x\n",
+    fprintf(stderr, "thread %p waits %"LLD" millis on %p for %x\n",
             t, milliseconds, m, objectHash(t, o));
   }
 

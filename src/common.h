@@ -10,11 +10,12 @@
 #include "math.h"
 
 #ifdef __i386__
-#  define LD "%d"
-#  define LLD "%lld"
+#  define LD "d"
+#  define LLD "lld"
 #elif defined __x86_64__
-#  define LD "%ld"
-#  define LLD "%ld"
+#  define LD "ld"
+#  define LLD "ld"
+#  define LLD "ld"
 #endif
 
 #define NO_RETURN __attribute__((noreturn))
@@ -25,6 +26,8 @@
 #define MACRO_XY(X, Y) X##Y
 #define MACRO_MakeNameXY(FX, LINE) MACRO_XY(FX, LINE)
 #define MAKE_NAME(FX) MACRO_MakeNameXY(FX, __LINE__)
+
+#define UNUSED __attribute__((unused))
 
 inline void* operator new(size_t, void* p) throw() { return p; }
 

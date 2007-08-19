@@ -52,9 +52,9 @@ public abstract class URLStreamHandler {
 
   protected String toExternalForm(URL url) {
     StringBuilder sb = new StringBuilder();
-    sb.append(url.getProtocol()).append("://");
+    sb.append(url.getProtocol()).append(":");
     if (url.getHost() != null) {
-      sb.append(url.getHost());
+      sb.append("//").append(url.getHost());
       if (url.getPort() >= 0) {
         sb.append(":").append(url.getPort());
       }

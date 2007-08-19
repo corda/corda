@@ -1023,7 +1023,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     out->write(capitalize(::typeName(memberOwner(member))));
     out->write("*");
   } else {
-    out->write("(Thread* t, object");
+    out->write("(Thread* t UNUSED, object");
   }
   out->write(" o");
   if (member->type != Object::Scalar) {

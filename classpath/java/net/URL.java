@@ -23,6 +23,10 @@ public final class URL {
     }
   }
 
+  public String toString() {
+    return handler.toExternalForm(this);
+  }
+
   public String getProtocol() {
     return protocol;
   }

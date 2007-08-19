@@ -21,7 +21,9 @@ const bool Debug = false;
 class Context;
 
 void NO_RETURN abort(Context*);
+#ifndef NDEBUG
 void assert(Context*, bool);
+#endif
 
 System* system(Context*);
 
@@ -410,7 +412,11 @@ class Context {
     tenureFootprint(0),
     gen1padding(0),
     gen2padding(0),
-    mode(Heap::MinorCollection)
+    mode(Heap::MinorCollection),
+
+    lastCollectionTime(system->now()),
+    totalCollectionTime(0),
+    totalTime(0)
   { }
 
   void dispose() {
@@ -446,6 +452,10 @@ class Context {
   unsigned gen2padding;
 
   Heap::CollectionType mode;
+
+  int64_t lastCollectionTime;
+  int64_t totalCollectionTime;
+  int64_t totalTime;
 };
 
 inline System*
@@ -476,11 +486,13 @@ abort(Context* c)
   abort(c->system);
 }
 
+#ifndef NDEBUG
 inline void
 assert(Context* c, bool v)
 {
   assert(c->system, v);
 }
+#endif
 
 inline void
 initNextGen1(Context* c, unsigned footprint)
@@ -540,21 +552,21 @@ wasCollected(Context* c, object o)
 }
 
 inline object
-follow(Context* c, object o)
+follow(Context* c UNUSED, object o)
 {
   assert(c, wasCollected(c, o));
   return cast<object>(o, 0);
 }
 
 inline object&
-parent(Context* c, object o)
+parent(Context* c UNUSED, object o)
 {
   assert(c, wasCollected(c, o));
   return cast<object>(o, BytesPerWord);
 }
 
 inline uintptr_t*
-bitset(Context* c, object o)
+bitset(Context* c UNUSED, object o)
 {
   assert(c, wasCollected(c, o));
   return &cast<uintptr_t>(o, BytesPerWord * 2);
@@ -982,7 +994,7 @@ collect(Context* c, object* p)
 
 void
 collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
-        bool* dirty, bool expectDirty)
+        bool* dirty, bool expectDirty UNUSED)
 {
   bool wasDirty = false;
   for (Segment::Map::Iterator it(map, start, end); it.hasMore();) {
@@ -1060,9 +1072,9 @@ collect(Context* c, unsigned footprint)
   int64_t then;
   if (Verbose) {
     if (c->mode == Heap::MajorCollection) {
-      fprintf(stderr, "major collection ");
+      fprintf(stderr, "major collection\n");
     } else {
-      fprintf(stderr, "minor collection ");
+      fprintf(stderr, "minor collection\n");
     }
 
     then = c->system->now();
@@ -1081,7 +1093,22 @@ collect(Context* c, unsigned footprint)
   }
 
   if (Verbose) {
-    fprintf(stderr, "- " LLD "ms\n", (c->system->now() - then));
+    int64_t now = c->system->now();
+    int64_t collection = now - then;
+    int64_t run = then - c->lastCollectionTime;
+    c->totalCollectionTime += collection;
+    c->totalTime += collection + run;
+    c->lastCollectionTime = now;
+
+    fprintf(stderr,
+            " - collect: %4"LLD"ms; "
+            "total: %4"LLD"ms; "
+            "run: %4"LLD"ms; "
+            "total: %4"LLD"ms\n",
+            collection,
+            c->totalCollectionTime,
+            run,
+            c->totalTime - c->totalCollectionTime);
   }
 }
 

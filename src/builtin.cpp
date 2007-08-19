@@ -618,8 +618,10 @@ populateBuiltinMap(Thread* t, object map)
       reinterpret_cast<void*>(::Runtime_loadLibrary) },
     { "Java_java_lang_Runtime_gc",
       reinterpret_cast<void*>(::Runtime_gc) },
-    { "Java_java_lang_Runtiime_exit",
+    { "Java_java_lang_Runtime_exit",
       reinterpret_cast<void*>(::Runtime_exit) },
+    { "Java_java_lang_Runtime_freeMemory",
+      reinterpret_cast<void*>(::Runtime_freeMemory) },
 
     { "Java_java_lang_String_intern",
       reinterpret_cast<void*>(::String_intern) },
@@ -689,9 +691,9 @@ populateBuiltinMap(Thread* t, object map)
 
     { "Java_java_net_URL_00024ResourceInputStream_open",
       reinterpret_cast<void*>(::ResourceInputStream_open) },
-    { "Java_java_net_URL_00024ResourceInputStream_read_JI",
+    { "Java_java_net_URL_00024ResourceInputStream_read__JI",
       reinterpret_cast<void*>(::ResourceInputStream_read) },
-    { "Java_java_net_URL_00024ResourceInputStream_read_JI_3BII",
+    { "Java_java_net_URL_00024ResourceInputStream_read__JI_3BII",
       reinterpret_cast<void*>(::ResourceInputStream_read2) },
     { "Java_java_net_URL_00024ResourceInputStream_close",
       reinterpret_cast<void*>(::ResourceInputStream_close) },

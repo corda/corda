@@ -101,9 +101,7 @@ expect(System* s, bool v)
 
 #ifdef NDEBUG
 
-inline void
-assert(System*, bool)
-{ }
+# define assert(a, b)
 
 #else // not NDEBUG
 

@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 arch = $(shell uname -m)
 ifeq ($(arch),i586)
@@ -15,7 +15,7 @@ cls = build/classes
 src = src
 classpath = classpath
 test = test
-jscheme = /tmp/jscheme
+jscheme = $(HOME)/p/jscheme-7.2/src
 
 input = $(cls)/References.class
 
@@ -23,7 +23,10 @@ cxx = g++
 cc = gcc
 vg = nice valgrind --leak-check=full --num-callers=32 --db-attach=yes \
 	--freelist-vol=100000000
+db = gdb --args
 javac = javac
+strip = :
+show-size = :
 
 warnings = -Wall -Wextra -Werror -Wold-style-cast -Wunused-parameter \
 	-Winit-self -Wconversion
@@ -46,11 +49,9 @@ ifeq ($(mode),stress-major)
 cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
-cflags += -Os -DNDEBUG -DMONOLITHIC
-endif
-ifeq ($(mode),profile)
-cflags += -Os -pg -DNDEBUG -DMONOLITHIC
-lflags += -pg
+cflags += -O3 -DNDEBUG
+#strip = strip
+#show-size = ls -l
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
@@ -136,6 +137,8 @@ class-names = $(foreach x,$(1),$(call class-name,$(x)))
 flags = -cp $(cls)
 args = $(flags) $(call class-name,$(input))
 
+jscheme-command = jscheme/REPL build/make.scm -main commandMain ""
+
 .PHONY: build
 build: $(executable)
 
@@ -145,42 +148,40 @@ $(input): $(classpath-objects)
 run: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) $(<) $(args)
 
-.PHONY: run-jscheme
-run-jscheme: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) $(<) -cp $(cls):$(jscheme) jscheme/REPL
-
 .PHONY: debug
 debug: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) gdb --args $(<) $(args)
 
-.PHONY: debug-jscheme
-debug-jscheme: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) gdb --args $(<) -cp $(cls):$(jscheme) \
-		jscheme/REPL
-
 .PHONY: vg
 vg: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
-
-.PHONY: vg-jscheme
-vg-jscheme: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) \
-		jscheme/REPL
-
-.PHONY: profile-jscheme
-profile-jscheme: $(executable) $(input)
-	echo '(+ 5 6)' | LD_LIBRARY_PATH=$(bld) $(<) -cp $(cls):$(jscheme) \
-		jscheme/REPL
 
 .PHONY: test
 test: $(executable) $(classpath-objects) $(test-classes)
 	LD_LIBRARY_PATH=$(bld) /bin/bash $(test)/test.sh \
 		$(<) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
+.PHONY: run-jscheme
+run-jscheme: $(executable) $(input)
+	LD_LIBRARY_PATH=$(bld) $(<) -cp $(cls):$(jscheme) $(jscheme-command)
+
+.PHONY: debug-jscheme
+debug-jscheme: $(executable) $(input)
+	LD_LIBRARY_PATH=$(bld) $(db) $(<) -cp $(cls):$(jscheme) $(jscheme-command)
+
+.PHONY: vg-jscheme
+vg-jscheme: $(executable) $(input)
+	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) $(jscheme-command)
+
 .PHONY: clean
 clean:
 	@echo "removing build"
 	rm -rf build
+
+.PHONY: clean-native
+clean-native:
+	@echo "removing $(bld)"
+	rm -rf $(bld)
 
 gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
@@ -232,6 +233,8 @@ $(jni-library): $(jni-objects)
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"
 	$(cc) $(lflags) $(^) -o $(@)
+	$(strip) --strip-all $(@)
+	$(show-size) $(@)
 
 .PHONY: generator
 generator: $(generator-executable)

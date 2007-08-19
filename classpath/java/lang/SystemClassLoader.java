@@ -15,7 +15,7 @@ public class SystemClassLoader extends ClassLoader {
   protected URL findResource(String name) {
     if (resourceExists(name)) {
       try {
-        return new URL("resource://" + name);
+        return new URL("resource:" + name);
       } catch (MalformedURLException ignored) { }
     }
     return null;
