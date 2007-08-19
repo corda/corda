@@ -60,7 +60,10 @@ public abstract class URLStreamHandler {
       }
     }
     if (url.getFile() != null) {
-      sb.append("/").append(url.getFile());
+      if (url.getHost() != null) {
+        sb.append("/");
+      }
+      sb.append(url.getFile());
     }
     return sb.toString();
   }

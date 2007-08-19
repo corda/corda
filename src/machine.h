@@ -1939,7 +1939,7 @@ byteArrayEqual(Thread* t, object a, object b)
 inline uint32_t
 stringHash(Thread* t, object s)
 {
-  if (stringHashCode(t, s) == 0) {
+  if (stringHashCode(t, s) == 0 and stringLength(t, s)) {
     object data = stringData(t, s);
     if (objectClass(t, data)
         == arrayBody(t, t->vm->types, Machine::ByteArrayType))

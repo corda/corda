@@ -1947,7 +1947,7 @@ run(Thread* t)
   } goto loop;
 
   case lneg: {
-    pushLong(t, - popInt(t));
+    pushLong(t, - popLong(t));
   } goto loop;
 
   case lookupswitch: {

@@ -282,19 +282,19 @@ Method_invoke(Thread* t, jclass, jobject method, jobject instance,
 }
 
 jobject
-Array_getObject(Thread* t, jobject array, int index)
+Array_getObject(Thread* t, jclass, jobject array, int index)
 {
   return pushReference(t, objectArrayBody(t, *array, index));
 }
 
 void
-Array_setObject(Thread* t, jobject array, int index, jobject value)
+Array_setObject(Thread* t, jclass, jobject array, int index, jobject value)
 {
   set(t, objectArrayBody(t, *array, index), (value ? *value : 0));
 }
 
 jint
-Array_getLength(Thread* t, jobject array)
+Array_getLength(Thread* t, jclass, jobject array)
 {
   if (LIKELY(array)) {
     object a = *array;
