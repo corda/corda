@@ -260,7 +260,7 @@ Field_setObject(Thread* t, jclass, jobject instance, jint offset,
 jobject
 Constructor_make(Thread* t, jclass, jclass c)
 {
-  return pushReference(t, make(t, c));
+  return pushReference(t, make(t, *c));
 }
 
 jobject
@@ -279,18 +279,6 @@ Method_invoke(Thread* t, jclass, jobject method, jobject instance,
     t->exception = makeInvocationTargetException(t, t->exception);
   }
   return pushReference(t, v);
-}
-
-jobject
-Array_getObject(Thread* t, jclass, jobject array, int index)
-{
-  return pushReference(t, objectArrayBody(t, *array, index));
-}
-
-void
-Array_setObject(Thread* t, jclass, jobject array, int index, jobject value)
-{
-  set(t, objectArrayBody(t, *array, index), (value ? *value : 0));
 }
 
 jint
@@ -663,10 +651,6 @@ populateBuiltinMap(Thread* t, object map)
     { "Java_java_lang_Object_clone",
       reinterpret_cast<void*>(::Object_clone) },
 
-    { "Java_java_lang_reflect_Array_getObject",
-      reinterpret_cast<void*>(::Array_getObject) },
-    { "Java_java_lang_reflect_Array_setObject",
-      reinterpret_cast<void*>(::Array_setObject) },
     { "Java_java_lang_reflect_Array_getLength",
       reinterpret_cast<void*>(::Array_getLength) },
     { "Java_java_lang_reflect_Array_makeObjectArray",

@@ -28,14 +28,12 @@ public final class Array {
       return Boolean.valueOf(((boolean[]) array)[index]);
     case 'L':
     case '[':
-      return getObject(array, index);
+      return ((Object[]) array)[index];
 
     default:
       throw new Error();
     }
   }
-
-  private static native Object getObject(Object array, int index);
 
   public static void set(Object array, int index, Object value) {
     String className = array.getClass().getName();
@@ -71,7 +69,7 @@ public final class Array {
     case 'L':
     case '[':
       if (array.getClass().getComponentType().isInstance(value)) {
-        setObject(array, index, value);
+        ((Object[]) array)[index] = value;
       } else {
         throw new IllegalArgumentException();
       }
@@ -81,8 +79,6 @@ public final class Array {
       throw new Error();
     }    
   }
-
-  private static native void setObject(Object array, int index, Object value);
 
   public static native int getLength(Object array);
 

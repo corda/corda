@@ -26,7 +26,7 @@ public final class Float extends Number {
   }
 
   public static String toString(float v) {
-    return "todo";
+    return "Float.toString: todo";
   }
 
   public byte byteValue() {

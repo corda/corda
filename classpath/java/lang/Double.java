@@ -31,7 +31,7 @@ public final class Double extends Number {
   }
 
   public static String toString(double v) {
-    return "todo";
+    return "Double.toString: todo";
   }
 
   public byte byteValue() {
@@ -60,7 +60,7 @@ public final class Double extends Number {
 
   public static double parseDouble(String s) {
     // todo
-    return 0.0;
+    throw new NumberFormatException(s);
   }
 
   public static native long doubleToRawLongBits(double value);

@@ -1172,6 +1172,7 @@ object
 makeArrayClass(Thread* t, unsigned dimensions, object spec,
                object elementClass)
 {
+  // todo: arrays should implement Cloneable and Serializable
   return makeClass
     (t,
      0,
@@ -1182,11 +1183,11 @@ makeArrayClass(Thread* t, unsigned dimensions, object spec,
      classObjectMask(t, arrayBody(t, t->vm->types, Machine::ArrayType)),
      spec,
      arrayBody(t, t->vm->types, Machine::JobjectType),
-     elementClass,
+     0,
      classVirtualTable(t, arrayBody(t, t->vm->types, Machine::JobjectType)),
      0,
      0,
-     0,
+     elementClass,
      t->vm->loader);
 }
 
@@ -1688,6 +1689,8 @@ stringChars(Thread* t, object string, char* chars)
 bool
 isAssignableFrom(Thread* t, object a, object b)
 {
+  if (a == b) return true;
+
   if (classFlags(t, a) & ACC_INTERFACE) {
     for (; b; b = classSuper(t, b)) {
       object itable = classInterfaceTable(t, b);
@@ -1696,6 +1699,11 @@ isAssignableFrom(Thread* t, object a, object b)
           return true;
         }
       }
+    }
+  } else if (classArrayDimensions(t, a)) {
+    if (classArrayDimensions(t, b)) {
+      return isAssignableFrom
+        (t, classStaticTable(t, a), classStaticTable(t, b));
     }
   } else {
     for (; b; b = classSuper(t, b)) {

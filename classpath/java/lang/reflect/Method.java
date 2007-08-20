@@ -73,11 +73,11 @@ public class Method<T> extends AccessibleObject implements Member {
             types[index++] = Class.forName(name);
           } else {
             String name = spec.substring(start, i + 1);
-            types[index++] = Class.forName(name);
+            types[index++] = Class.forCanonicalName(name);
           }
         } else {
           String name = spec.substring(i, i + 1);
-          types[index++] = Class.forName(name);
+          types[index++] = Class.forCanonicalName(name);
         }
       }
     } catch (ClassNotFoundException e) {

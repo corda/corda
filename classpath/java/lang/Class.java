@@ -25,6 +25,10 @@ public final class Class <T> {
 
   private Class() { }
 
+  public String toString() {
+    return getName();
+  }
+
   public String getName() {
     return new String(name, 0, name.length - 1, false);
   }
@@ -73,7 +77,7 @@ public final class Class <T> {
 
   public Class getComponentType() {
     if (isArray()) {
-      return forCanonicalName(new String(name, 1, name.length - 2, false));
+      return (Class) (Object) staticTable;
     } else {
       return null;
     }
@@ -258,12 +262,14 @@ public final class Class <T> {
 
   private int countMethods(boolean publicOnly) {
     int count = 0;
-    for (int i = 0; i < methodTable.length; ++i) {
-      if (((! publicOnly)
-           || ((methodTable[i].getModifiers() & Modifier.PUBLIC)) != 0)
-          && (! methodTable[i].getName().startsWith("<")))
-      {
-        ++ count;
+    if (methodTable != null) {
+      for (int i = 0; i < methodTable.length; ++i) {
+        if (((! publicOnly)
+             || ((methodTable[i].getModifiers() & Modifier.PUBLIC)) != 0)
+            && (! methodTable[i].getName().startsWith("<")))
+        {
+          ++ count;
+        }
       }
     }
     return count;

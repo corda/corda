@@ -36,7 +36,12 @@ public class Throwable {
   }
 
   public String toString() {
-    return getClass().getName() + ": " + message;
+    StringBuilder sb = new StringBuilder();
+    sb.append(getClass().getName());
+    if (message != null) {
+      sb.append(": ").append(message);
+    }
+    return sb.toString();
   }
 
   private static native Object trace(int skipCount);
@@ -69,11 +74,7 @@ public class Throwable {
   }
 
   private void printStackTrace(StringBuilder sb, String nl) {
-    sb.append(getClass().getName());
-    if (message != null) {
-      sb.append(": ").append(message);
-    }
-    sb.append(nl);
+    sb.append(toString()).append(nl);
 
     StackTraceElement[] trace = resolveTrace();
     for (int i = 0; i < trace.length; ++i) {

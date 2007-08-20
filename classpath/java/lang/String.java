@@ -122,7 +122,7 @@ public final class String implements Comparable<String> {
   }
 
   public int indexOf(int c) {
-    for (int i = 0; i < length - 1; ++i) {
+    for (int i = 0; i < length; ++i) {
       if (charAt(i) == c) {
         return i;
       }
@@ -144,7 +144,7 @@ public final class String implements Comparable<String> {
   public int indexOf(String s) {
     if (s.length == 0) return 0;
 
-    for (int i = 0; i < length - s.length; ++i) {
+    for (int i = 0; i < length - s.length + 1; ++i) {
       int j = 0;
       for (; j < s.length; ++j) {
         if (charAt(i + j) != s.charAt(j)) {

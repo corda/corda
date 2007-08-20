@@ -34,7 +34,10 @@ public final class Long extends Number {
       return "0";
     }
 
-    int size = (v < 0 ? 1 : 0);
+    boolean negative = v < 0;
+    if (negative) v = -v;
+
+    int size = (negative ? 1 : 0);
     for (long n = v; n > 0; n /= radix) ++size;
 
     char[] array = new char[size];
@@ -50,7 +53,7 @@ public final class Long extends Number {
       --i;
     }
 
-    if (v < 0) {
+    if (negative) {
       array[i] = '-';
     }
 

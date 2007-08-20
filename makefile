@@ -233,8 +233,8 @@ $(jni-library): $(jni-objects)
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"
 	$(cc) $(lflags) $(^) -o $(@)
-	$(strip) --strip-all $(@)
-	$(show-size) $(@)
+	@$(strip) --strip-all $(@)
+	@$(show-size) $(@)
 
 .PHONY: generator
 generator: $(generator-executable)
