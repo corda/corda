@@ -173,6 +173,14 @@ debug-jscheme: $(executable) $(input)
 vg-jscheme: $(executable) $(input)
 	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) $(jscheme-command)
 
+.PHONY: profile-jscheme
+profile-jscheme: $(executable) $(input)
+	opcontrol --start; \
+	echo '(+ 5 6)' | LD_LIBRARY_PATH=$(bld) \
+		$(<) -cp $(cls):$(jscheme) jscheme/REPL; \
+	opcontrol --stop; \
+	opreport -l $(<)
+
 .PHONY: clean
 clean:
 	@echo "removing build"
