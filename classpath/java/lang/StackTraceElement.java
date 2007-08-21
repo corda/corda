@@ -1,7 +1,7 @@
 package java.lang;
 
 public class StackTraceElement {
-  private static int NativeLine = -2;
+  private static int NativeLine = -1;
 
   private String class_;
   private String method;

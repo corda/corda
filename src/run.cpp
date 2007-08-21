@@ -616,7 +616,7 @@ run(Thread* t)
       {
         pushObject(t, objectArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     objectArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -638,7 +638,7 @@ run(Thread* t)
       {
         set(t, objectArrayBody(t, array, index), value);
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     objectArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -748,7 +748,7 @@ run(Thread* t)
       {
         pushInt(t, byteArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     byteArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -770,7 +770,7 @@ run(Thread* t)
       {
         byteArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     byteArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -795,7 +795,7 @@ run(Thread* t)
       {
         pushInt(t, charArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     charArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -817,7 +817,7 @@ run(Thread* t)
       {
         charArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     charArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -878,7 +878,7 @@ run(Thread* t)
         memcpy(&d, &doubleArrayBody(t, array, index), sizeof(double));
         pushDouble(t, d);
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     doubleArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -900,7 +900,7 @@ run(Thread* t)
       {
         memcpy(&doubleArrayBody(t, array, index), &value, sizeof(uint64_t));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     doubleArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -1063,7 +1063,7 @@ run(Thread* t)
         float f; memcpy(&f, &floatArrayBody(t, array, index), sizeof(float));
         pushFloat(t, f);
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     floatArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -1085,7 +1085,7 @@ run(Thread* t)
       {
         memcpy(&floatArrayBody(t, array, index), &value, sizeof(uint32_t));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     floatArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -1276,7 +1276,7 @@ run(Thread* t)
       {
         pushInt(t, intArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     intArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -1305,7 +1305,7 @@ run(Thread* t)
       {
         intArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     intArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -1803,7 +1803,7 @@ run(Thread* t)
       {
         pushLong(t, longArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     longArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -1832,7 +1832,7 @@ run(Thread* t)
       {
         longArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     longArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -2287,7 +2287,7 @@ run(Thread* t)
       {
         pushInt(t, shortArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     shortArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;
@@ -2309,7 +2309,7 @@ run(Thread* t)
       {
         shortArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d]", index,
+        object message = makeString(t, "%d not in [0,%d)", index,
                                     shortArrayLength(t, array));
         exception = makeArrayIndexOutOfBoundsException(t, message);
         goto throw_;

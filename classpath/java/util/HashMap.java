@@ -1,6 +1,8 @@
 package java.util;
 
 public class HashMap<K, V> implements Map<K, V> {
+  private static final int MinimumCapacity = 16;
+
   private int size;
   private Cell[] array;
   private final Helper helper;
@@ -46,11 +48,17 @@ public class HashMap<K, V> implements Map<K, V> {
     return size;
   }
 
-  private void resize() {
+  private void grow() {
     if (array == null || size >= array.length * 2) {
-      resize(array == null ? 16 : array.length * 2);
-    } else if (size <= array.length / 3) {
+      resize(array == null ? MinimumCapacity : array.length * 2);
+    }
+  }
+
+  private void shrink() {
+    if (array.length / 2 >= MinimumCapacity && size <= array.length / 3) {
       resize(array.length / 2);
+    } else if (size == 0) {
+      resize(0);
     }
   }
 
@@ -94,7 +102,7 @@ public class HashMap<K, V> implements Map<K, V> {
   private void insert(Cell<K, V> cell) {
     ++ size;
 
-    resize();
+    grow();
 
     int index = cell.hashCode() & (array.length - 1);
     cell.setNext(array[index]);
@@ -116,7 +124,7 @@ public class HashMap<K, V> implements Map<K, V> {
       }
     }
 
-    resize();
+    shrink();
   }
 
   private Cell<K, V> putCell(K key, V value) {
@@ -161,7 +169,7 @@ public class HashMap<K, V> implements Map<K, V> {
         }
       }
 
-      resize();
+      shrink();
     }
     return old;
   }

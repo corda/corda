@@ -98,6 +98,13 @@ doWrite(JNIEnv* e, jint fd, const jbyte* data, jint length)
 } // namespace
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_java_io_File_toCanonicalPath(JNIEnv* /*e*/, jclass, jstring path)
+{
+  // todo
+  return path;
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_toAbsolutePath(JNIEnv* /*e*/, jclass, jstring path)
 {
   // todo

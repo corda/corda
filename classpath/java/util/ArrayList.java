@@ -1,24 +1,30 @@
 package java.util;
 
 public class ArrayList<T> implements List<T> {
+  private static final int MinimumCapacity = 16;
+
   private Object[] array;
   private int size;
 
   public ArrayList(int capacity) {
-    if (capacity != 0) {
-      array = new Object[capacity];
-    }
+    resize(capacity);
   }
 
   public ArrayList() {
     this(0);
   }
+  
+  private void grow() {
+    if (array == null || size >= array.length) {
+      resize(array == null ? MinimumCapacity : array.length * 2);
+    }
+  }
 
-  private void resize() {
-    if (array == null || size >= array.length - 1) {
-      resize(array == null ? 16 : array.length * 2);
-    } else if (size <= array.length / 3) {
+  private void shrink() {
+    if (array.length / 2 >= MinimumCapacity && size <= array.length / 3) {
       resize(array.length / 2);
+    } else if (size == 0) {
+      resize(0);
     }
   }
 
@@ -55,8 +61,9 @@ public class ArrayList<T> implements List<T> {
   }
 
   public boolean add(T element) {
-    resize();
-    array[size++] = element;
+    ++ size;
+    grow();
+    array[size - 1] = element;
     return true;
   }
 
@@ -78,7 +85,7 @@ public class ArrayList<T> implements List<T> {
     }
 
     -- size;
-    resize();
+    shrink();
 
     return v;
   }
