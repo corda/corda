@@ -16,10 +16,11 @@ replace(char a, char b, char* c)
 jstring
 Object_toString(Thread* t, jobject this_)
 {
+  unsigned hash = objectHash(t, *this_);
   object s = makeString
-    (t, "%s@%p",
+    (t, "%s@0x%x",
      &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
-     *this_);
+     hash);
 
   return pushReference(t, s);
 }
