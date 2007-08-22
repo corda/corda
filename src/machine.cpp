@@ -132,8 +132,6 @@ void
 visitRoots(Thread* t, Heap::Visitor* v)
 {
   if (t->state != Thread::ZombieState) {
-    t->heapIndex = 0;
-
     v->visit(&(t->javaThread));
     v->visit(&(t->code));
     v->visit(&(t->exception));
@@ -362,10 +360,13 @@ void
 postCollect(Thread* t)
 {
 #ifdef VM_STRESS
-  t->vm->system->free(t->heap);
-  t->heap = static_cast<object*>
+  t->vm->system->free(t->defaultHeap);
+  t->defaultHeap = static_cast<object*>
     (t->vm->system->allocate(Thread::HeapSizeInBytes));
 #endif
+
+  t->heap = t->defaultHeap;
+  t->heapIndex = 0;
 
   if (t->large) {
     t->vm->system->free(t->large);
@@ -1289,7 +1290,8 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
   finalizeQueue(0),
   weakReferences(0),
   tenuredWeakReferences(0),
-  unsafe(false)
+  unsafe(false),
+  heapPoolIndex(0)
 {
   populateJNITable(&jniEnvVTable);
 
@@ -1335,8 +1337,9 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   runnable(this)
 #ifdef VM_STRESS
   , stress(false),
-  heap(static_cast<object*>(m->system->allocate(HeapSizeInBytes)))
+  defaultHeap(static_cast<object*>(m->system->allocate(HeapSizeInBytes)))
 #endif // VM_STRESS
+  , heap(defaultHeap)
 {
   if (parent == 0) {
     assert(this, m->rootThread == 0);
@@ -1613,8 +1616,19 @@ allocate2(Thread* t, unsigned sizeInBytes)
   if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
       >= Thread::HeapSizeInWords)
   {
-    ENTER(t, Thread::ExclusiveState);
-    collect(t, Heap::MinorCollection);
+    t->heap = 0;
+    if (t->vm->heapPoolIndex < Machine::HeapPoolSize) {
+      t->heap = static_cast<object*>
+        (t->vm->system->tryAllocate(Thread::HeapSizeInBytes));
+      if (t->heap) {
+        t->vm->heapPool[t->vm->heapPoolIndex++] = t->heap;
+      }
+    }
+
+    if (t->heap == 0) {
+      ENTER(t, Thread::ExclusiveState);
+      collect(t, Heap::MinorCollection);
+    }
   }
 
   if (sizeInBytes > Thread::HeapSizeInBytes) {
@@ -2535,6 +2549,11 @@ collect(Thread* t, Heap::CollectionType type)
   m->finalizeQueue = 0;
 
   killZombies(t, m->rootThread);
+
+  for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
+    m->system->free(m->heapPool[i]);
+  }
+  m->heapPoolIndex = 0;
 }
 
 void

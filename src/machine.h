@@ -1098,6 +1098,8 @@ class Machine {
     dispose();
   }
 
+  static const unsigned HeapPoolSize = 16;
+
   void dispose();
 
   System* system;
@@ -1125,6 +1127,8 @@ class Machine {
   object tenuredWeakReferences;
   bool unsafe;
   JNIEnvVTable jniEnvVTable;
+  object* heapPool[HeapPoolSize];
+  unsigned heapPoolIndex;
 };
 
 object
@@ -1193,7 +1197,7 @@ class Thread {
     Thread* t;
   };
 
-  static const unsigned HeapSizeInBytes = 512 * 1024;
+  static const unsigned HeapSizeInBytes = 64 * 1024;
   static const unsigned StackSizeInBytes = 64 * 1024;
 
   static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
@@ -1221,11 +1225,12 @@ class Thread {
   unsigned heapIndex;
   Protector* protector;
   Runnable runnable;
+  object* heap;
 #ifdef VM_STRESS
   bool stress;
-  object* heap;
+  object* defaultHeap;
 #else // not VM_STRESS
-  object heap[HeapSizeInWords];
+  object defaultHeap[HeapSizeInWords];
 #endif // not VM_STRESS
   uintptr_t stack[StackSizeInWords];
 };
