@@ -11,6 +11,10 @@ public class Hashtable<K, V> implements Map<K, V> {
     this(0);
   }
 
+  public String toString() {
+    return map.toString();
+  }
+
   public synchronized int size() {
     return map.size();
   }
