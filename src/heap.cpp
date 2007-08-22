@@ -744,7 +744,7 @@ bitsetSet(uintptr_t* p, unsigned i, bool v)
   }
 }
 
-unsigned
+bool
 bitsetHasMore(uintptr_t* p)
 {
   switch (*p) {
@@ -770,7 +770,8 @@ bitsetHasMore(uintptr_t* p)
 unsigned
 bitsetNext(Context* c, uintptr_t* p)
 {
-  assert(c, bitsetHasMore(p));
+  bool more UNUSED = bitsetHasMore(p);
+  assert(c, more);
 
   switch (*p) {
   case 0: abort(c);

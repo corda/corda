@@ -1708,9 +1708,11 @@ isAssignableFrom(Thread* t, object a, object b)
   if (classFlags(t, a) & ACC_INTERFACE) {
     for (; b; b = classSuper(t, b)) {
       object itable = classInterfaceTable(t, b);
-      for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-        if (arrayBody(t, itable, i) == a) {
-          return true;
+      if (itable) {
+        for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+          if (arrayBody(t, itable, i) == a) {
+            return true;
+          }
         }
       }
     }

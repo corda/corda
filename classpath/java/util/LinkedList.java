@@ -32,8 +32,8 @@ public class LinkedList<T> implements List<T> {
     if (front == null) {
       front = rear = c;
     } else {
-      c.prev = rear;
-      rear = c;
+      c.next = front;
+      front = c;
     }
   }
   
@@ -43,8 +43,8 @@ public class LinkedList<T> implements List<T> {
     if (front == null) {
       front = rear = c;
     } else {
-      c.next = front;
-      front = c;
+      c.prev = rear;
+      rear = c;
     }
   }
   
