@@ -5,7 +5,7 @@ public class Object {
     if (this instanceof Cloneable) {
       return clone(this);
     } else {
-      throw new CloneNotSupportedException();
+      throw new CloneNotSupportedException(getClass().getName());
     }
   }
 
