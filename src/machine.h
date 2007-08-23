@@ -1132,6 +1132,9 @@ class Machine {
 };
 
 object
+run(Thread* t, object method, object this_, ...);
+
+object
 run(Thread* t, const char* className, const char* methodName,
     const char* methodSpec, object this_, ...);
 
@@ -2110,6 +2113,20 @@ resolveClass(Thread* t, object spec);
 
 object
 resolveObjectArrayClass(Thread* t, object elementSpec);
+
+inline void
+initClass(Thread* t, object c)
+{
+  acquire(t, t->vm->classLock);
+  if (classVmFlags(t, c) & NeedInitFlag
+      and (classVmFlags(t, c) & InitFlag) == 0)
+  {
+    classVmFlags(t, c) |= InitFlag;
+    run(t, classInitializer(t, c), 0);
+  } else {
+    release(t, t->vm->classLock);
+  }
+}
 
 object
 makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear);

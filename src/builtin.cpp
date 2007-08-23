@@ -163,16 +163,7 @@ Class_primitiveClass(Thread* t, jclass, jchar name)
 void
 Class_initialize(Thread* t, jobject this_)
 {
-  acquire(t, t->vm->classLock);
-  object c = *this_;
-  if (classVmFlags(t, c) & NeedInitFlag
-      and (classVmFlags(t, c) & InitFlag) == 0)
-  {
-    classVmFlags(t, c) |= InitFlag;
-    run(t, classInitializer(t, c), 0);
-  } else {
-    release(t, t->vm->classLock);
-  }
+  initClass(t, *this_);
 }
 
 jboolean

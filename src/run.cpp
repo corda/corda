@@ -85,10 +85,10 @@ popFrame(Thread* t)
 }
 
 object
-findInterfaceMethod(Thread* t, object method, object o)
+findInterfaceMethod(Thread* t, object method, object class_)
 {
   object interface = methodClass(t, method);
-  object itable = classInterfaceTable(t, objectClass(t, o));
+  object itable = classInterfaceTable(t, class_);
   for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
     if (arrayBody(t, itable, i) == interface) {
       return arrayBody(t, arrayBody(t, itable, i + 1),
@@ -1594,9 +1594,7 @@ run(Thread* t)
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       code = findInterfaceMethod
-        (t, method, peekObject(t, sp - parameterFootprint));
-      if (UNLIKELY(exception)) goto throw_;
-
+        (t, method, objectClass(t, peekObject(t, sp - parameterFootprint)));
       goto invoke;
     } else {
       exception = makeNullPointerException(t);
@@ -1669,7 +1667,7 @@ run(Thread* t)
         if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
       }
 
-      code = findMethod(t, method, class_);      
+      code = findMethod(t, method, class_);
       goto invoke;
     } else {
       exception = makeNullPointerException(t);
@@ -2575,6 +2573,31 @@ pushArguments(Thread* t, object this_, const char* spec, object a)
 object
 invoke(Thread* t, object method)
 {
+  PROTECT(t, method);
+
+  object class_;
+  PROTECT(t, class_);
+
+  if (methodFlags(t, method) & ACC_STATIC) {
+    class_ = methodClass(t, method);
+  } else {
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
+
+    if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
+      method = findInterfaceMethod(t, method, class_);
+    } else {
+      if (classVirtualTable(t, class_) == 0) {
+        resolveClass(t, className(t, class_));
+        if (UNLIKELY(t->exception)) return 0;
+      }
+
+      method = findMethod(t, method, class_);
+    }
+  }
+
+  initClass(t, class_);
+
   object result = 0;
 
   if (methodFlags(t, method) & ACC_NATIVE) {
