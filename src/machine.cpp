@@ -114,7 +114,7 @@ killZombies(Thread* t, Thread* o)
 unsigned
 footprint(Thread* t)
 {
-  unsigned n = t->heapIndex;
+  unsigned n = t->heapOffset + t->heapIndex;
 
   if (t->large) {
     n += extendedSize
@@ -366,6 +366,7 @@ postCollect(Thread* t)
 #endif
 
   t->heap = t->defaultHeap;
+  t->heapOffset = 0;
   t->heapIndex = 0;
 
   if (t->large) {
@@ -1333,6 +1334,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   sp(0),
   frame(-1),
   heapIndex(0),
+  heapOffset(0),
   protector(0),
   runnable(this)
 #ifdef VM_STRESS
@@ -1622,6 +1624,8 @@ allocate2(Thread* t, unsigned sizeInBytes)
         (t->vm->system->tryAllocate(Thread::HeapSizeInBytes));
       if (t->heap) {
         t->vm->heapPool[t->vm->heapPoolIndex++] = t->heap;
+        t->heapOffset += t->heapIndex;
+        t->heapIndex = 0;
       }
     }
 

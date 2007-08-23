@@ -1098,7 +1098,7 @@ class Machine {
     dispose();
   }
 
-  static const unsigned HeapPoolSize = 16;
+  static const unsigned HeapPoolSize = 8;
 
   void dispose();
 
@@ -1223,6 +1223,7 @@ class Thread {
   unsigned sp;
   int frame;
   unsigned heapIndex;
+  unsigned heapOffset;
   Protector* protector;
   Runnable runnable;
   object* heap;
