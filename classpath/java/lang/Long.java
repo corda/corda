@@ -98,19 +98,30 @@ public final class Long extends Number {
     return parseLong(s, 10);
   } 
 
-  public static long parseLong(String s, int radix) {    
+  public static long parseLong(String s, int radix) {
+    int i = 0;
     long number = 0;
+    boolean negative = s.startsWith("-");
+    if (negative) {
+      i = 1;
+    }
 
-    for (int i = 0; i < s.length(); ++i) {
+    for (; i < s.length(); ++i) {
       char c = s.charAt(i);
       if (((c >= '0') && (c <= '9')) ||
 	  ((c >= 'a') && (c <= 'z'))) {
 	long digit = ((c >= '0' && c <= '9') ? (c - '0') : (c - 'a' + 10));
-	number += digit * pow(radix, (s.length() - i - 1));
-      } else {
-	throw new NumberFormatException("invalid character " + c + " code " +
-					(int) c);
+        if (digit < radix) {
+          number += digit * pow(radix, (s.length() - i - 1));
+          continue;
+        }
       }
+      throw new NumberFormatException("invalid character " + c + " code " +
+                                      (int) c);
+    }
+
+    if (negative) {
+      number = -number;
     }
 
     return number;
