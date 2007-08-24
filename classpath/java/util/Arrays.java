@@ -3,12 +3,20 @@ package java.util;
 public class Arrays {
   private Arrays() { }
 
+  public static String toString(Object[] a) {
+    return asList(a).toString();
+  }
+
   private static boolean equal(Object a, Object b) {
     return (a == null && b == null) || (a != null && a.equals(b));
   }
 
   public static <T> List<T> asList(final T ... array) {
     return new List<T>() {
+      public String toString() {
+        return Collections.toString(this);
+      }
+
       public int size() {
         return array.length;
       }

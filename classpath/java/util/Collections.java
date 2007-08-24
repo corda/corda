@@ -3,6 +3,19 @@ package java.util;
 public class Collections {
   private Collections() { }
 
+  static String toString(List l) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (Iterator it = l.iterator(); it.hasNext();) {
+      sb.append(it.next());
+      if (it.hasNext()) {
+        sb.append(",");
+      }
+    }
+    sb.append("]");
+    return sb.toString();
+  }
+
   static class IteratorEnumeration<T> implements Enumeration<T> {
     private final Iterator<T> it;
 
