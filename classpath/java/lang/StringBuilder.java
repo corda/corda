@@ -58,6 +58,10 @@ public class StringBuilder {
     return this;
   }
 
+  public StringBuilder append(boolean v) {
+    return append(String.valueOf(v));
+  }
+
   public StringBuilder append(int v) {
     return append(String.valueOf(v));
   }
