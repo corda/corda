@@ -31,10 +31,14 @@ public class StringTokenizer implements Enumeration {
     boolean sawNonDelimiter = false;
     for (int i = position; i < in.length(); ++i) {
       if (isDelimiter(in.charAt(i))) {
-        if (includeDelimiters || sawNonDelimiter) {
+        if (sawNonDelimiter) {
+          sawNonDelimiter = false;
           ++ count;
         }
-        sawNonDelimiter = false;
+
+        if (includeDelimiters) {
+          ++ count;
+        }
       } else {
         sawNonDelimiter = true;
       }
@@ -69,7 +73,7 @@ public class StringTokenizer implements Enumeration {
         }
       } else {
         position = i;
-        while (position < in.length() && ! isDelimiter(in.charAt(i))) {
+        while (position < in.length() && ! isDelimiter(in.charAt(position))) {
           ++ position;
         }
         return in.substring(i, position);
