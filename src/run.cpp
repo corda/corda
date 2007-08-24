@@ -2570,6 +2570,15 @@ pushArguments(Thread* t, object this_, const char* spec, object a)
   }
 }
 
+inline unsigned
+returnCode(Thread* t, object method)
+{
+  const char* s = reinterpret_cast<const char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+  while (*s and *s != ')') ++ s;
+  return fieldCode(t, s[1]);
+}
+
 object
 invoke(Thread* t, object method)
 {
@@ -2611,17 +2620,21 @@ invoke(Thread* t, object method)
       case ShortField:
       case FloatField:
       case IntField:
-        return makeInt(t, popInt(t));
+        result = makeInt(t, popInt(t));
+        break;
 
       case LongField:
       case DoubleField:
-        return makeLong(t, popLong(t));
+        result = makeLong(t, popLong(t));
+        break;
         
       case ObjectField:
-        return popObject(t);
+        result = popObject(t);
+        break;
 
       case VoidField:
-        return 0;
+        result = 0;
+        break;
 
       default:
         abort(t);
@@ -2638,7 +2651,34 @@ invoke(Thread* t, object method)
     }
   }
 
-  return result;
+  switch (returnCode(t, method)) {
+  case ByteField:
+    return makeByte(t, static_cast<int8_t>(intValue(t, result)));
+
+  case BooleanField:
+    return makeBoolean(t, static_cast<uint8_t>(intValue(t, result)));
+
+  case CharField:
+    return makeChar(t, static_cast<uint16_t>(intValue(t, result)));
+
+  case ShortField:
+    return makeShort(t, static_cast<int16_t>(intValue(t, result)));
+
+  case FloatField:
+    return makeFloat(t, static_cast<uint32_t>(intValue(t, result)));
+
+  case DoubleField:
+    return makeDouble(t, static_cast<uint64_t>(longValue(t, result)));
+        
+  case ObjectField:
+  case IntField:
+  case LongField:
+  case VoidField:
+    return result;
+
+  default:
+    abort(t);
+  }
 }
 
 } // namespace
