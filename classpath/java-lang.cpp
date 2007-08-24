@@ -16,6 +16,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring key)
   if (chars) {
     if (strcmp(chars, "line.separator") == 0) {
       value = e->NewStringUTF("\n");
+    } else if (strcmp(chars, "os.name") == 0) {
+      value = e->NewStringUTF("posix");
     }
     e->ReleaseStringUTFChars(key, chars);
   }
