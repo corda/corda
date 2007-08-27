@@ -9,6 +9,12 @@ import java.io.FileOutputStream;
 import java.io.FileDescriptor;
 
 public abstract class System {
+  private static final int Unknown = 0;
+  private static final int JavaClassPath = 1;
+  private static final int LineSeparator = 100;
+  private static final int OsName = 101;
+  
+
   static {
     loadLibrary("natives");
   }
@@ -25,7 +31,28 @@ public abstract class System {
   public static native void arraycopy(Object src, int srcOffset, Object dst,
                                       int dstOffset, int length);
 
-  public static native String getProperty(String name);
+  public static String getProperty(String name) {
+    int code = Unknown;
+    if (name.equals("java.class.path")) {
+      code = JavaClassPath;
+    } else if (name.equals("line.separator")) {
+      code = LineSeparator;
+    } else if (name.equals("os.name")) {
+      code = OsName;
+    }
+
+    if (code == Unknown) {
+      return null;
+    } else if (code == JavaClassPath) {
+      return getVMProperty(code);
+    } else {
+      return getProperty(code);
+    }
+  }
+
+  private static native String getProperty(int code);
+
+  private static native String getVMProperty(int code);
 
   public static native long currentTimeMillis();
 

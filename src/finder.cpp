@@ -23,6 +23,15 @@ append(System* s, const char* a, const char* b, const char* c)
   return p;
 }
 
+const char*
+copy(System* s, const char* a)
+{
+  unsigned al = strlen(a);
+  char* p = static_cast<char*>(s->allocate(al + 1));
+  memcpy(p, a, al + 1);
+  return p;
+}
+
 const char**
 parsePath(System* s, const char* path)
 {
@@ -77,7 +86,8 @@ class MyFinder: public Finder {
  public:
   MyFinder(System* system, const char* path):
     system(system),
-    path(parsePath(system, path))
+    path_(parsePath(system, path)),
+    pathString(copy(system, path))
   { }
 
   class Data: public Finder::Data {
@@ -111,7 +121,7 @@ class MyFinder: public Finder {
   virtual Data* find(const char* name) {
     Data* d = new (system->allocate(sizeof(Data))) Data(system, 0, 0);
 
-    for (const char** p = path; *p; ++p) {
+    for (const char** p = path_; *p; ++p) {
       const char* file = append(system, *p, "/", name);
       int fd = open(file, O_RDONLY);
       system->free(file);
@@ -135,7 +145,7 @@ class MyFinder: public Finder {
   }
 
   virtual bool exists(const char* name) {
-    for (const char** p = path; *p; ++p) {
+    for (const char** p = path_; *p; ++p) {
       const char* file = append(system, *p, "/", name);
       struct stat s;
       int r = stat(file, &s);
@@ -148,17 +158,22 @@ class MyFinder: public Finder {
     return false;
   }
 
+  virtual const char* path() {
+    return pathString;
+  }
+
   virtual void dispose() {
-    for (const char** p = path; *p; ++p) {
+    for (const char** p = path_; *p; ++p) {
       system->free(*p);
     }
-    system->free(path);
-
+    system->free(path_);
+    system->free(pathString);
     system->free(this);
   }
 
   System* system;
-  const char** path;
+  const char** path_;
+  const char* pathString;
 };
 
 } // namespace

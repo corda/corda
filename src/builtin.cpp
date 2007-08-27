@@ -331,6 +331,23 @@ String_intern(Thread* t, jobject this_)
   return pushReference(t, intern(t, *this_));
 }
 
+jstring
+System_getVMProperty(Thread* t, jclass, jint code)
+{
+  enum {
+    JavaClassPath = 1
+  };
+
+  switch (code) {
+  case JavaClassPath:
+    return pushReference(t, makeString(t, "%s", t->vm->finder->path()));
+
+  default:
+    t->exception = makeRuntimeException(t, 0);
+    return 0;
+  }
+}
+
 void
 System_arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
                  jint dstOffset, jint length)
@@ -584,6 +601,8 @@ populateBuiltinMap(Thread* t, object map)
     { "Java_java_lang_ClassLoader_defineClass",
       reinterpret_cast<void*>(::ClassLoader_defineClass) },
 
+    { "Java_java_lang_System_getVMProperty",
+      reinterpret_cast<void*>(::System_getVMProperty) },
     { "Java_java_lang_System_arraycopy",
       reinterpret_cast<void*>(::System_arraycopy) },
 

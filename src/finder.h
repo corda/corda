@@ -19,6 +19,7 @@ class Finder {
   virtual ~Finder() { }
   virtual Data* find(const char* name) = 0;
   virtual bool exists(const char* name) = 0;
+  virtual const char* path() = 0;
   virtual void dispose() = 0;
 };
 
