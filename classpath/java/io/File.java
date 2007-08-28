@@ -33,6 +33,20 @@ public class File {
     return path;
   }
 
+  public String getParent() {
+    int index = path.lastIndexOf("/");
+    if (index >= 0) {
+      return path.substring(0, index);
+    } else {
+      return null;
+    }    
+  }
+
+  public File getParentFile() {
+    String s = getParent();
+    return (s == null ? null : new File(s));
+  }
+
   private static native String toCanonicalPath(String path);
 
   public String getCanonicalPath() {
