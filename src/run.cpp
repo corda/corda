@@ -2651,6 +2651,10 @@ invoke(Thread* t, object method)
     }
   }
 
+  if (UNLIKELY(t->exception)) {
+    return 0;
+  }
+
   switch (returnCode(t, method)) {
   case ByteField:
     return makeByte(t, static_cast<int8_t>(intValue(t, result)));
