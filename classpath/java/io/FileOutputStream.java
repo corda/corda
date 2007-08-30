@@ -21,12 +21,12 @@ public class FileOutputStream extends OutputStream {
 
   private static native int open(String path) throws IOException;
 
-  public static native void write(int fd, int c) throws IOException;
+  private static native void write(int fd, int c) throws IOException;
 
-  public static native void write(int fd, byte[] b, int offset, int length)
+  private static native void write(int fd, byte[] b, int offset, int length)
     throws IOException;
 
-  public static native void close(int fd) throws IOException;
+  private static native void close(int fd) throws IOException;
 
   public void write(int c) throws IOException {
     write(fd, c);

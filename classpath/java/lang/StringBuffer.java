@@ -3,6 +3,10 @@ package java.lang;
 public class StringBuffer {
   private final StringBuilder sb;
 
+  public StringBuffer(String s) {
+    sb = new StringBuilder(s);
+  }
+
   public StringBuffer(int capacity) {
     sb = new StringBuilder(capacity);
   }
@@ -36,9 +40,23 @@ public class StringBuffer {
     return this;
   }
 
+  public synchronized StringBuffer append(char[] b, int offset, int length) {
+    sb.append(b, offset, length);
+    return this;
+  }
+
+  public synchronized StringBuffer insert(int i, String s) {
+    sb.insert(i, s);
+    return this;
+  }
+
   public synchronized StringBuffer deleteCharAt(int i) {
     sb.deleteCharAt(i);
     return this;
+  }
+
+  public synchronized char charAt(int i) {
+    return sb.charAt(i);
   }
 
   public synchronized int length() {

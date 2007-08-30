@@ -23,5 +23,24 @@ public abstract class InputStream {
     return length;
   }
 
+  public long skip(long count) throws IOException {
+    final long Max = 8 * 1024;
+    int size = (int) (count < Max ? count : Max);
+    byte[] buffer = new byte[size];
+    long remaining = count;
+    int c;
+    while ((c = read(buffer, 0, (int) (size < remaining ? size : remaining)))
+           >= 0
+           && remaining > 0)
+    {
+      remaining -= c;
+    }
+    return count - remaining;    
+  }
+
+  public int available() throws IOException {
+    return 0;
+  }
+
   public void close() throws IOException { }
 }

@@ -16,6 +16,10 @@ public final class Boolean {
     return (value ? Boolean.TRUE : Boolean.FALSE);
   }
 
+  public static Boolean valueOf(String s) {
+    return ("true".equals(s) ? Boolean.TRUE : Boolean.FALSE);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Boolean && ((Boolean) o).value == value;
   }

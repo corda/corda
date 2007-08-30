@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.InvocationTargetException;
 
 public final class Class <T> {
   private static final int PrimitiveFlag = 1 << 4;
@@ -35,6 +36,18 @@ public final class Class <T> {
 
   public Object[] staticTable() {
     return staticTable;
+  }
+
+  public T newInstance()
+    throws IllegalAccessException, InstantiationException
+  {
+    try {
+      return (T) getConstructor().newInstance();
+    } catch (NoSuchMethodException e) {
+      throw new RuntimeException(e);
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public static Class forName(String name) throws ClassNotFoundException {

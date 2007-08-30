@@ -36,6 +36,10 @@ public final class Integer extends Number {
     return toString(v, 10);
   }
 
+  public static String toHexString(int v) {
+    return toString(v, 16);
+  }
+
   public byte byteValue() {
     return (byte) value;
   }

@@ -3,6 +3,38 @@ package java.lang;
 public final class Math {
   private Math() { }
 
+  public static double max(double a, double b) {
+    return (a < b ? b : a);
+  }
+
+  public static double min(double a, double b) {
+    return (a > b ? b : a);
+  }
+
+  public static float max(float a, float b) {
+    return (a < b ? b : a);
+  }
+
+  public static float min(float a, float b) {
+    return (a > b ? b : a);
+  }
+
+  public static long max(long a, long b) {
+    return (a < b ? b : a);
+  }
+
+  public static long min(long a, long b) {
+    return (a > b ? b : a);
+  }
+
+  public static int max(int a, int b) {
+    return (a < b ? b : a);
+  }
+
+  public static int min(int a, int b) {
+    return (a > b ? b : a);
+  }
+
   public static int abs(int v) {
     return (v < 0 ? -v : v);
   }
@@ -20,11 +52,11 @@ public final class Math {
   }
 
   public static long round(double v) {
-    return (long) (v + 0.5);
+    return (long) Math.floor(v + 0.5);
   }
 
   public static int round(float v) {
-    return (int) (v + 0.5);
+    return (int) Math.floor(v + 0.5);
   }
 
   public static native double floor(double v);

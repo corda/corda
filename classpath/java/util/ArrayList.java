@@ -67,6 +67,24 @@ public class ArrayList<T> implements List<T> {
     return true;
   }
 
+  public int indexOf(T element) {
+    for (int i = 0; i < size; ++i) {
+      if (equal(element, array[i])) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  public int lastIndexOf(T element) {
+    for (int i = size; i >= 0; --i) {
+      if (equal(element, array[i])) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   public T get(int index) {
     if (index >= 0 && index < size) {
       return (T) array[index];

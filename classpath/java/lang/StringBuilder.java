@@ -1,10 +1,16 @@
 package java.lang;
 
 public class StringBuilder {
+  private static final int BufferSize = 32;
+
   private Cell chain;
   private int length;
   private char[] buffer;
   private int position;
+
+  public StringBuilder(String s) {
+    append(s);
+  }
 
   public StringBuilder(int capacity) { }
 
@@ -28,8 +34,13 @@ public class StringBuilder {
       return append("null");
     } else {
       if (s.length() > 0) {
-        flush();
-        chain = new Cell(s, chain);
+        if (buffer != null && s.length() <= buffer.length - position) {
+          s.getChars(0, s.length(), buffer, position);
+          position += s.length();
+        } else {
+          flush();
+          chain = new Cell(s, chain);
+        }
         length += s.length();
       }
       return this;
@@ -46,10 +57,10 @@ public class StringBuilder {
 
   public StringBuilder append(char v) {
     if (buffer == null) {
-      buffer = new char[32];
+      buffer = new char[BufferSize];
     } else if (position >= buffer.length) {
       flush();
-      buffer = new char[32];
+      buffer = new char[BufferSize];
     }
 
     buffer[position++] = v;
@@ -68,6 +79,60 @@ public class StringBuilder {
 
   public StringBuilder append(long v) {
     return append(String.valueOf(v));
+  }
+
+  public char charAt(int i) {
+    if (i < 0 || i >= length) {
+      throw new IndexOutOfBoundsException();
+    }
+
+    flush();
+
+    int index = length;
+    -- length;
+    Cell p = null;
+    for (Cell c = chain; c != null; c = c.next) {
+      int start = index - c.value.length();
+      index = start;
+      
+      if (i >= start) {
+        return c.value.charAt(i - start);
+      }
+    }
+
+    throw new RuntimeException();
+  }
+
+  public StringBuilder insert(int i, String s) {
+    if (i < 0 || i >= length) {
+      throw new IndexOutOfBoundsException();
+    }
+
+    if (i == length) {
+      append(s);
+    } else {
+      flush();
+
+      int index = length;
+      -- length;
+      for (Cell c = chain; c != null; c = c.next) {
+        int start = index - c.value.length();
+        index = start;
+      
+        if (i >= start) {
+          if (i == start) {
+            c.next = new Cell(s, c.next);
+          } else {
+            String v = c.value;
+            c.value = v.substring(i - start, v.length());
+            c.next = new Cell(s, new Cell(v.substring(0, i - start), c.next));
+          }
+          break;
+        }
+      }
+    }
+
+    return this;
   }
 
   public StringBuilder deleteCharAt(int i) {
@@ -96,8 +161,9 @@ public class StringBuilder {
         } else if (i == start + c.value.length() - 1) {
           c.value = c.value.substring(0, c.value.length() - 1);
         } else {
-          c.value = c.value.substring(i + 1, c.value.length());
-          c.next = new Cell(c.value.substring(0, i), c.next);
+          String v = c.value;
+          c.value = v.substring(i - start + 1, v.length());
+          c.next = new Cell(v.substring(0, i - start), c.next);
         }
         break;
       }

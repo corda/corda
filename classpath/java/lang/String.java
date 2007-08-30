@@ -121,8 +121,54 @@ public final class String implements Comparable<String> {
     }
   }
 
-  public int indexOf(int c) {
+  public String trim() {
+    int start = -1;
     for (int i = 0; i < length; ++i) {
+      char c = charAt(i);
+      if (start == -1 && ! Character.isWhitespace(c)) {
+        start = i;
+        break;
+      }
+    }
+
+    int end = -1;
+    for (int i = length - 1; i >= 0; --i) {
+      char c = charAt(i);
+      if (end == -1 && ! Character.isWhitespace(c)) {
+        end = i + 1;
+        break;
+      }
+    }
+
+    if (start >= end) {
+      return "";
+    } else {
+      return substring(start, end);
+    }
+  }
+
+  public String toLowerCase() {
+    char[] b = new char[length];
+    for (int i = 0; i < length; ++i) {
+      b[i] = Character.toLowerCase(charAt(i));
+    }
+    return new String(b, 0, length, false);
+  }
+
+  public String toUpperCase() {
+    char[] b = new char[length];
+    for (int i = 0; i < length; ++i) {
+      b[i] = Character.toUpperCase(charAt(i));
+    }
+    return new String(b, 0, length, false);
+  }
+
+  public int indexOf(int c) {
+    return indexOf(c, 0);
+  }
+
+  public int indexOf(int c, int start) {
+    for (int i = start; i < length; ++i) {
       if (charAt(i) == c) {
         return i;
       }
@@ -142,9 +188,13 @@ public final class String implements Comparable<String> {
   }
 
   public int indexOf(String s) {
-    if (s.length == 0) return 0;
+    return indexOf(s, 0);
+  }
 
-    for (int i = 0; i < length - s.length + 1; ++i) {
+  public int indexOf(String s, int start) {
+    if (s.length == 0) return start;
+
+    for (int i = start; i < length - s.length + 1; ++i) {
       int j = 0;
       for (; j < s.length; ++j) {
         if (charAt(i + j) != s.charAt(j)) {
@@ -281,6 +331,10 @@ public final class String implements Comparable<String> {
   }
 
   public native String intern();
+
+  public static String valueOf(Object s) {
+    return s.toString();
+  }
 
   public static String valueOf(boolean v) {
     return Boolean.toString(v);

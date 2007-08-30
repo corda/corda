@@ -27,9 +27,9 @@ public class Object {
 
   public native String toString();
 
-  public final void wait() {
+  public final void wait() throws InterruptedException {
     wait(0);
   }
 
-  public native final void wait(long timeout);
+  public native final void wait(long timeout) throws InterruptedException;
 }

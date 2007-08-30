@@ -39,12 +39,28 @@ public class Vector<T> implements List<T> {
     return list.remove(index);
   }
 
+  public T removeElementAt(int index) {
+    return remove(index);
+  }
+
   public synchronized boolean remove(T element) {
     return list.remove(element);
   }
 
+  public boolean removeElement(T element) {
+    return remove(element);
+  }
+
   public synchronized void clear() {
     list.clear();
+  }
+
+  public synchronized int indexOf(T element) {
+    return list.indexOf(element);
+  }
+
+  public synchronized int lastIndexOf(T element) {
+    return list.lastIndexOf(element);
   }
 
   public synchronized void copyInto(Object[] array) {
