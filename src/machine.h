@@ -1090,6 +1090,17 @@ strcmp(const int8_t* a, const int8_t* b)
 void
 noop();
 
+class Reference {
+ public:
+  Reference(object target, Reference* next):
+    target(target),
+    next(next)
+  { }
+
+  object target;
+  Reference* next;
+};
+
 class Machine {
  public:
   enum {
@@ -1111,6 +1122,7 @@ class Machine {
   Finder* finder;
   Thread* rootThread;
   Thread* exclusive;
+  Reference* jniReferences;
   unsigned activeCount;
   unsigned liveCount;
   System::Monitor* stateLock;
@@ -1124,6 +1136,7 @@ class Machine {
   object monitorMap;
   object stringMap;
   object types;
+  object jniInterfaceTable;
   object finalizers;
   object tenuredFinalizers;
   object finalizeQueue;
@@ -1221,6 +1234,7 @@ class Thread {
   Thread* peer;
   Thread* child;
   State state;
+  unsigned criticalLevel;
   System::Thread* systemThread;
   object javaThread;
   object code;

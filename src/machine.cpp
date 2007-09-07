@@ -1273,6 +1273,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
   finder(finder),
   rootThread(0),
   exclusive(0),
+  jniReferences(0),
   activeCount(0),
   liveCount(0),
   stateLock(0),
@@ -1286,6 +1287,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
   monitorMap(0),
   stringMap(0),
   types(0),
+  jniInterfaceTable(0),
   finalizers(0),
   tenuredFinalizers(0),
   finalizeQueue(0),
@@ -1316,6 +1318,12 @@ Machine::dispose()
   if (libraries) {
     libraries->dispose();
   }
+
+  for (Reference* r = jniReferences; r;) {
+    Reference* t = r;
+    r = r->next;
+    system->free(t);
+  }
 }
 
 Thread::Thread(Machine* m, object javaThread, Thread* parent):
@@ -1325,6 +1333,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   peer((parent ? parent->child : 0)),
   child(0),
   state(NoState),
+  criticalLevel(0),
   systemThread(0),
   javaThread(javaThread),
   code(0),
@@ -1416,6 +1425,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     m->builtinMap = makeHashMap(this, 0, 0);
     m->monitorMap = makeWeakHashMap(this, 0, 0);
     m->stringMap = makeWeakHashMap(this, 0, 0);
+
+    m->jniInterfaceTable = makeVector(this, 0, 0, false);
 
     populateBuiltinMap(t, m->builtinMap);
 
@@ -2504,6 +2515,11 @@ collect(Thread* t, Heap::CollectionType type)
       v->visit(&(m->monitorMap));
       v->visit(&(m->stringMap));
       v->visit(&(m->types));
+      v->visit(&(m->jniInterfaceTable));
+
+      for (Reference* r = m->jniReferences; r; r = r->next) {
+        v->visit(&(r->target));
+      }
 
       for (Thread* t = m->rootThread; t; t = t->peer) {
         ::visitRoots(t, v);

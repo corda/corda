@@ -2425,7 +2425,8 @@ run(Thread* t, const char* className, int argc, const char** argv)
 }
 
 void
-pushArguments(Thread* t, object this_, const char* spec, va_list a)
+pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
+              va_list a)
 {
   if (this_) {
     pushObject(t, this_);
@@ -2438,7 +2439,8 @@ pushArguments(Thread* t, object this_, const char* spec, va_list a)
     case 'L':
       while (*s and *s != ';') ++ s;
       ++ s;
-      pushObject(t, va_arg(a, object));
+      pushObject
+        (t, (indirectObjects ? va_arg(a, object) : *va_arg(a, object*)));
       break;
 
     case '[':
@@ -2453,7 +2455,8 @@ pushArguments(Thread* t, object this_, const char* spec, va_list a)
         ++ s;
         break;
       }
-      pushObject(t, va_arg(a, object));
+      pushObject
+        (t, (indirectObjects ? va_arg(a, object) : *va_arg(a, object*)));
       break;
       
     case 'J':
@@ -2637,7 +2640,7 @@ invoke(Thread* t, object method)
 namespace vm {
 
 object
-run(Thread* t, object method, object this_, ...)
+run(Thread* t, object method, object this_, bool indirectObjects, va_list a)
 {
   assert(t, t->state == Thread::ActiveState
          or t->state == Thread::ExclusiveState);
@@ -2651,16 +2654,24 @@ run(Thread* t, object method, object this_, ...)
     return 0;
   }
 
+  const char* spec = reinterpret_cast<char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+  pushArguments(t, this_, spec, indirectObjects, a);
+
+  return invoke(t, method);
+}
+
+object
+run(Thread* t, object method, object this_, ...)
+{
   va_list a;
   va_start(a, this_);
 
-  const char* spec = reinterpret_cast<char*>
-    (&byteArrayBody(t, methodSpec(t, method), 0));
-  pushArguments(t, this_, spec, a);
-  
+  object r = run(t, method, this_, false, a);
+
   va_end(a);
 
-  return invoke(t, method);
+  return r;
 }
 
 object
@@ -2702,7 +2713,7 @@ run(Thread* t, const char* className, const char* methodName,
   va_list a;
   va_start(a, this_);
 
-  pushArguments(t, this_, methodSpec, a);
+  pushArguments(t, this_, methodSpec, false, a);
 
   va_end(a);
 
