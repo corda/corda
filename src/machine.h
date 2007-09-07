@@ -67,6 +67,10 @@ const unsigned ClassInitFlag = 1 << 0;
 
 class Thread;
 
+struct Object { };
+
+typedef Object* object;
+
 typedef Thread JNIEnv;
 
 typedef uint8_t jboolean;
@@ -80,7 +84,7 @@ typedef double jdouble;
 
 typedef jint jsize;
 
-typedef void** jobject;
+typedef object* jobject;
 
 typedef jobject jclass;
 typedef jobject jthrowable;
@@ -98,8 +102,8 @@ typedef jarray jfloatArray;
 typedef jarray jdoubleArray;
 typedef jarray jobjectArray;
 
-typedef void** jfieldID;
-typedef void** jmethodID;
+typedef uintptr_t jfieldID;
+typedef uintptr_t jmethodID;
 
 union jvalue {
   jboolean z;
@@ -1127,7 +1131,7 @@ class Machine {
   object tenuredWeakReferences;
   bool unsafe;
   JNIEnvVTable jniEnvVTable;
-  object* heapPool[HeapPoolSize];
+  uintptr_t* heapPool[HeapPoolSize];
   unsigned heapPoolIndex;
 };
 
@@ -1229,12 +1233,12 @@ class Thread {
   unsigned heapOffset;
   Protector* protector;
   Runnable runnable;
-  object* heap;
+  uintptr_t* heap;
 #ifdef VM_STRESS
   bool stress;
-  object* defaultHeap;
+  uintptr_t* defaultHeap;
 #else // not VM_STRESS
-  object defaultHeap[HeapSizeInWords];
+  uintptr_t defaultHeap[HeapSizeInWords];
 #endif // not VM_STRESS
   uintptr_t stack[StackSizeInWords];
 };
@@ -1365,13 +1369,13 @@ expect(Thread* t, bool v)
 inline object
 allocateLarge(Thread* t, unsigned sizeInBytes)
 {
-  return t->large = t->vm->system->allocate(sizeInBytes);
+  return t->large = static_cast<object>(t->vm->system->allocate(sizeInBytes));
 }
 
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
 {
-  object o = t->heap + t->heapIndex;
+  object o = reinterpret_cast<object>(t->heap + t->heapIndex);
   t->heapIndex += ceiling(sizeInBytes, BytesPerWord);
   return o;
 }
@@ -1397,9 +1401,9 @@ allocate(Thread* t, unsigned sizeInBytes)
 inline void
 mark(Thread* t, object& target)
 {
-  if (t->vm->heap->needsMark(&target)) {
+  if (t->vm->heap->needsMark(reinterpret_cast<void**>(&target))) {
     ACQUIRE_RAW(t, t->vm->heapLock);
-    t->vm->heap->mark(&target);
+    t->vm->heap->mark(reinterpret_cast<void**>(&target));
   }
 }
 
@@ -2082,6 +2086,9 @@ hashMapIteratorNext(Thread* t, object it);
 void
 listAppend(Thread* t, object list, object value);
 
+object
+vectorAppend(Thread* t, object vector, object value);
+
 unsigned
 fieldCode(Thread* t, unsigned javaCode);
 
@@ -2130,6 +2137,44 @@ initClass(Thread* t, object c)
 
 object
 makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear);
+
+object
+findInTable(Thread* t, object table, object name, object spec,
+            object& (*getName)(Thread*, object),
+            object& (*getSpec)(Thread*, object));
+
+inline object
+findFieldInClass(Thread* t, object class_, object name, object spec)
+{
+  return findInTable
+    (t, classFieldTable(t, class_), name, spec, fieldName, fieldSpec);
+}
+
+inline object
+findMethodInClass(Thread* t, object class_, object name, object spec)
+{
+  return findInTable
+    (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
+}
+
+object
+findInHierarchy(Thread* t, object class_, object name, object spec,
+                object (*find)(Thread*, object, object, object),
+                object (*makeError)(Thread*, object));
+
+inline object
+findField(Thread* t, object class_, object name, object spec)
+{
+  return findInHierarchy
+    (t, class_, name, spec, findFieldInClass, makeNoSuchFieldError);
+}
+
+inline object
+findMethod(Thread* t, object class_, object name, object spec)
+{
+  return findInHierarchy
+    (t, class_, name, spec, findMethodInClass, makeNoSuchMethodError);
+}
 
 inline unsigned
 objectArrayLength(Thread* t UNUSED, object array)

@@ -138,7 +138,7 @@ visitRoots(Thread* t, Heap::Visitor* v)
 
     for (unsigned i = 0; i < t->sp; ++i) {
       if (t->stack[i * 2] == ObjectTag) {
-        v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
+        v->visit(t->stack + (i * 2) + 1);
       }
     }
 
@@ -1620,7 +1620,7 @@ allocate2(Thread* t, unsigned sizeInBytes)
   {
     t->heap = 0;
     if (t->vm->heapPoolIndex < Machine::HeapPoolSize) {
-      t->heap = static_cast<object*>
+      t->heap = static_cast<uintptr_t*>
         (t->vm->system->tryAllocate(Thread::HeapSizeInBytes));
       if (t->heap) {
         t->vm->heapPool[t->vm->heapPoolIndex++] = t->heap;
@@ -1648,8 +1648,8 @@ make(Thread* t, object class_)
   PROTECT(t, class_);
   unsigned sizeInBytes = pad(classFixedSize(t, class_));
   object instance = allocate(t, sizeInBytes);
-  *static_cast<object*>(instance) = class_;
-  memset(static_cast<object*>(instance) + 1, 0,
+  cast<object>(instance, 0) = class_;
+  memset(&cast<object>(instance, 0) + 1, 0,
          sizeInBytes - sizeof(object));
 
   if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
@@ -2056,6 +2056,34 @@ listAppend(Thread* t, object list, object value)
   set(t, listRear(t, list), p);
 }
 
+object
+vectorAppend(Thread* t, object vector, object value)
+{
+  if (vectorLength(t, vector) == vectorSize(t, vector)) {
+    PROTECT(t, vector);
+    PROTECT(t, value);
+
+    object newVector = makeVector
+      (t, vectorSize(t, vector), max(16, vectorSize(t, vector) * 2), false);
+
+    if (vectorSize(t, vector)) {
+      memcpy(&vectorBody(t, newVector, 0),
+             &vectorBody(t, vector, 0),
+             vectorSize(t, vector) * BytesPerWord);
+    }
+
+    memset(&vectorBody(t, newVector, vectorSize(t, vector) + 1),
+           0,
+           (vectorLength(t, newVector) - vectorSize(t, vector) - 1)
+           * BytesPerWord);
+
+    vector = newVector;
+  }
+
+  set(t, vectorBody(t, vector, vectorSize(t, vector)++), value);
+  return vector;
+}
+
 unsigned
 fieldCode(Thread* t, unsigned javaCode)
 {
@@ -2316,6 +2344,59 @@ makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear)
   return array;
 }
 
+object
+findInTable(Thread* t, object table, object name, object spec,
+            object& (*getName)(Thread*, object),
+            object& (*getSpec)(Thread*, object))
+{
+  if (table) {
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      object o = arrayBody(t, table, i);      
+      if (strcmp(&byteArrayBody(t, getName(t, o), 0),
+                 &byteArrayBody(t, name, 0)) == 0 and
+          strcmp(&byteArrayBody(t, getSpec(t, o), 0),
+                 &byteArrayBody(t, spec, 0)) == 0)
+      {
+        return o;
+      }
+    }
+  }
+
+  return 0;
+}
+
+object
+findInHierarchy(Thread* t, object class_, object name, object spec,
+                object (*find)(Thread*, object, object, object),
+                object (*makeError)(Thread*, object))
+{
+  object originalClass = class_;
+  PROTECT(t, class_);
+
+  object o = 0;
+  if (classFlags(t, class_) & ACC_INTERFACE) {
+    if (classVirtualTable(t, class_)) {
+      o = findInTable
+        (t, classVirtualTable(t, class_), name, spec, methodName, methodSpec);
+    }
+  } else {
+    for (; o == 0 and class_; class_ = classSuper(t, class_)) {
+      o = find(t, class_, name, spec);
+    }
+  }
+
+  if (o == 0) {
+    object message = makeString
+      (t, "%s %s not found in %s",
+       &byteArrayBody(t, name, 0),
+       &byteArrayBody(t, spec, 0),
+       &byteArrayBody(t, className(t, originalClass), 0));
+    t->exception = makeError(t, message);
+  }
+
+  return o;
+}
+
 int
 lineNumber(Thread* t, object method, unsigned ip)
 {
@@ -2431,21 +2512,23 @@ collect(Thread* t, Heap::CollectionType type)
       postVisit(m->rootThread, v);
     }
 
-    virtual unsigned sizeInWords(object o) {
+    virtual unsigned sizeInWords(void* p) {
       Thread* t = m->rootThread;
 
-      o = m->heap->follow(mask(o));
+      object o = static_cast<object>(m->heap->follow(mask(p)));
 
       return extendedSize
-        (t, o, baseSize(t, o, m->heap->follow(objectClass(t, o))));
+        (t, o, baseSize(t, o, static_cast<object>
+                        (m->heap->follow(objectClass(t, o)))));
     }
 
-    virtual unsigned copiedSizeInWords(object o) {
+    virtual unsigned copiedSizeInWords(void* p) {
       Thread* t = m->rootThread;
 
-      o = m->heap->follow(mask(o));
+      object o = static_cast<object>(m->heap->follow(mask(p)));
 
-      unsigned n = baseSize(t, o, m->heap->follow(objectClass(t, o)));
+      unsigned n = baseSize(t, o, static_cast<object>
+                            (m->heap->follow(objectClass(t, o))));
 
       if (objectExtended(t, o) or hashTaken(t, o)) {
         ++ n;
@@ -2454,30 +2537,34 @@ collect(Thread* t, Heap::CollectionType type)
       return n;
     }
 
-    virtual void copy(object o, object dst) {
+    virtual void copy(void* srcp, void* dstp) {
       Thread* t = m->rootThread;
 
-      o = m->heap->follow(mask(o));
-      object class_ = m->heap->follow(objectClass(t, o));
+      object src = static_cast<object>(m->heap->follow(mask(srcp)));
+      object class_ = static_cast<object>
+        (m->heap->follow(objectClass(t, src)));
 
-      unsigned base = baseSize(t, o, class_);
-      unsigned n = extendedSize(t, o, base);
+      unsigned base = baseSize(t, src, class_);
+      unsigned n = extendedSize(t, src, base);
 
-      memcpy(dst, o, n * BytesPerWord);
+      object dst = static_cast<object>(dstp);
 
-      if (hashTaken(t, o)) {
+      memcpy(dst, src, n * BytesPerWord);
+
+      if (hashTaken(t, src)) {
         cast<uintptr_t>(dst, 0) &= PointerMask;
         cast<uintptr_t>(dst, 0) |= ExtendedMark;
-        extendedWord(t, dst, base) = takeHash(t, o);
+        extendedWord(t, dst, base) = takeHash(t, src);
       }
     }
 
     virtual void walk(void* p, Heap::Walker* w) {
       Thread* t = m->rootThread;
 
-      p = m->heap->follow(mask(p));
-      object class_ = m->heap->follow(objectClass(t, p));
-      object objectMask = m->heap->follow(classObjectMask(t, class_));
+      object o = static_cast<object>(m->heap->follow(mask(p)));
+      object class_ = static_cast<object>(m->heap->follow(objectClass(t, o)));
+      object objectMask = static_cast<object>
+        (m->heap->follow(classObjectMask(t, class_)));
 
       if (objectMask) {
 //         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",

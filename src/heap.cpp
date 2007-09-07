@@ -27,28 +27,28 @@ void assert(Context*, bool);
 
 System* system(Context*);
 
-inline object
-get(object o, unsigned offsetInWords)
+inline void*
+get(void* o, unsigned offsetInWords)
 {
-  return mask(cast<object>(o, offsetInWords * BytesPerWord));
+  return mask(cast<void*>(o, offsetInWords * BytesPerWord));
 }
 
-inline object*
-getp(object o, unsigned offsetInWords)
+inline void**
+getp(void* o, unsigned offsetInWords)
 {
-  return &cast<object>(o, offsetInWords * BytesPerWord);
+  return &cast<void*>(o, offsetInWords * BytesPerWord);
 }
 
 inline void
-set(object* o, object value)
+set(void** o, void* value)
 {
-  *o = reinterpret_cast<object>
+  *o = reinterpret_cast<void*>
     (reinterpret_cast<uintptr_t>(value)
      | reinterpret_cast<uintptr_t>(*o) & (~PointerMask));
 }
 
 inline void
-set(object o, unsigned offsetInWords, object value)
+set(void* o, unsigned offsetInWords, void* value)
 {
   set(getp(o, offsetInWords), value);
 }
@@ -538,7 +538,7 @@ initNextGen2(Context* c)
 }
 
 inline bool
-fresh(Context* c, object o)
+fresh(Context* c, void* o)
 {
   return c->nextGen1.contains(o)
     or c->nextGen2.contains(o)
@@ -546,43 +546,43 @@ fresh(Context* c, object o)
 }
 
 inline bool
-wasCollected(Context* c, object o)
+wasCollected(Context* c, void* o)
 {
   return o and (not fresh(c, o)) and fresh(c, get(o, 0));
 }
 
-inline object
-follow(Context* c UNUSED, object o)
+inline void*
+follow(Context* c UNUSED, void* o)
 {
   assert(c, wasCollected(c, o));
-  return cast<object>(o, 0);
+  return cast<void*>(o, 0);
 }
 
-inline object&
-parent(Context* c UNUSED, object o)
+inline void*&
+parent(Context* c UNUSED, void* o)
 {
   assert(c, wasCollected(c, o));
-  return cast<object>(o, BytesPerWord);
+  return cast<void*>(o, BytesPerWord);
 }
 
 inline uintptr_t*
-bitset(Context* c UNUSED, object o)
+bitset(Context* c UNUSED, void* o)
 {
   assert(c, wasCollected(c, o));
   return &cast<uintptr_t>(o, BytesPerWord * 2);
 }
 
-inline object
-copyTo(Context* c, Segment* s, object o, unsigned size)
+inline void*
+copyTo(Context* c, Segment* s, void* o, unsigned size)
 {
   assert(c, s->remaining() >= size);
-  object dst = s->allocate(size);
+  void* dst = s->allocate(size);
   c->client->copy(o, dst);
   return dst;
 }
 
-object
-copy2(Context* c, object o)
+void*
+copy2(Context* c, void* o)
 {
   unsigned size = c->client->copiedSizeInWords(o);
 
@@ -626,10 +626,10 @@ copy2(Context* c, object o)
   }
 }
 
-object
-copy(Context* c, object o)
+void*
+copy(Context* c, void* o)
 {
-  object r = copy2(c, o);
+  void* r = copy2(c, o);
 
   if (Debug) {
     fprintf(stderr, "copy %p (%s) to %p (%s)\n",
@@ -637,13 +637,13 @@ copy(Context* c, object o)
   }
 
   // leave a pointer to the copy in the original
-  cast<object>(o, 0) = r;
+  cast<void*>(o, 0) = r;
 
   return r;
 }
 
-object
-update3(Context* c, object o, bool* needsVisit)
+void*
+update3(Context* c, void* o, bool* needsVisit)
 {
   if (wasCollected(c, o)) {
     *needsVisit = false;
@@ -654,8 +654,8 @@ update3(Context* c, object o, bool* needsVisit)
   }
 }
 
-object
-update2(Context* c, object o, bool* needsVisit)
+void*
+update2(Context* c, void* o, bool* needsVisit)
 {
   if (c->mode == Heap::MinorCollection and c->gen2.contains(o)) {
     *needsVisit = false;
@@ -665,15 +665,15 @@ update2(Context* c, object o, bool* needsVisit)
   return update3(c, o, needsVisit);
 }
 
-object
-update(Context* c, object* p, bool* needsVisit)
+void*
+update(Context* c, void** p, bool* needsVisit)
 {
   if (mask(*p) == 0) {
     *needsVisit = false;
     return 0;
   }
 
-  object r = update2(c, mask(*p), needsVisit);
+  void* r = update2(c, mask(*p), needsVisit);
 
   // update heap map.
   if (r) {
@@ -803,10 +803,10 @@ bitsetNext(Context* c, uintptr_t* p)
 }
 
 void
-collect(Context* c, object* p)
+collect(Context* c, void** p)
 {
-  object original = mask(*p);
-  object parent = 0;
+  void* original = mask(*p);
+  void* parent = 0;
   
   if (Debug) {
     fprintf(stderr, "update %p (%s) at %p (%s)\n",
@@ -824,11 +824,11 @@ collect(Context* c, object* p)
   if (not needsVisit) return;
 
  visit: {
-    object copy = follow(c, original);
+    void* copy = follow(c, original);
 
     class Walker : public Heap::Walker {
      public:
-      Walker(Context* c, object copy, uintptr_t* bitset):
+      Walker(Context* c, void* copy, uintptr_t* bitset):
         c(c),
         copy(copy),
         bitset(bitset),
@@ -851,7 +851,7 @@ collect(Context* c, object* p)
         }
 
         bool needsVisit;
-        object childCopy = update(c, getp(copy, offset), &needsVisit);
+        void* childCopy = update(c, getp(copy, offset), &needsVisit);
         
         if (Debug) {
           fprintf(stderr, "    result: %p (%s) (visit? %d)\n",
@@ -894,7 +894,7 @@ collect(Context* c, object* p)
       }
 
       Context* c;
-      object copy;
+      void* copy;
       uintptr_t* bitset;
       unsigned first;
       unsigned second;
@@ -926,7 +926,7 @@ collect(Context* c, object* p)
   }
 
   if (original) {
-    object copy = follow(c, original);
+    void* copy = follow(c, original);
 
     class Walker : public Heap::Walker {
      public:
@@ -1014,7 +1014,7 @@ collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
       }
     } else {
       assert(c, map->scale == 1);
-      object* p = reinterpret_cast<object*>(map->segment->get(it.next()));
+      void** p = reinterpret_cast<void**>(map->segment->get(it.next()));
 
       map->clearOnly(p);
       if (c->nextGen1.contains(*p)) {
@@ -1053,8 +1053,8 @@ collect2(Context* c)
    public:
     Visitor(Context* c): c(c) { }
 
-    virtual void visit(void** p) {
-      collect(c, p);
+    virtual void visit(void* p) {
+      collect(c, static_cast<void**>(p));
     }
 
     Context* c;
@@ -1125,14 +1125,19 @@ class MyHeap: public Heap {
     ::collect(&c, footprint);
   }
 
-  virtual bool needsMark(void** p) {
-    return *p and c.gen2.contains(p) and not c.gen2.contains(*p);
+  virtual bool needsMark(void* p) {
+    return *static_cast<void**>(p)
+      and c.gen2.contains(p)
+      and not c.gen2.contains(*static_cast<void**>(p));
   }
 
-  virtual void mark(void** p) {
+  virtual void mark(void* p) {
     if (Debug) {        
       fprintf(stderr, "mark %p (%s) at %p (%s)\n",
-              *p, segment(&c, *p), p, segment(&c, p));
+              *static_cast<void**>(p),
+              segment(&c, *static_cast<void**>(p)),
+              p,
+              segment(&c, p));
     }
 
     c.heapMap.set(p);

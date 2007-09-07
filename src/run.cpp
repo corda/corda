@@ -125,43 +125,6 @@ isSpecialMethod(Thread* t, object method, object class_)
     and isSuperclass(t, methodClass(t, method), class_);
 }
 
-object
-find(Thread* t, object table, object reference,
-     object& (*name)(Thread*, object),
-     object& (*spec)(Thread*, object))
-{
-  if (table) {
-    object n = referenceName(t, reference);
-    object s = referenceSpec(t, reference);
-    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      object o = arrayBody(t, table, i);
-      
-      if (strcmp(&byteArrayBody(t, name(t, o), 0),
-                 &byteArrayBody(t, n, 0)) == 0 and
-          strcmp(&byteArrayBody(t, spec(t, o), 0),
-                 &byteArrayBody(t, s, 0)) == 0)
-      {
-        return o;
-      }
-    }
-  }
-
-  return 0;
-}
-
-inline object
-findFieldInClass(Thread* t, object class_, object reference)
-{
-  return find(t, classFieldTable(t, class_), reference, fieldName, fieldSpec);
-}
-
-inline object
-findMethodInClass(Thread* t, object class_, object reference)
-{
-  return find(t, classMethodTable(t, class_), reference, methodName,
-              methodSpec);
-}
-
 inline object
 resolveClass(Thread* t, object pool, unsigned index)
 {
@@ -196,7 +159,7 @@ resolveClass(Thread* t, object container, object& (*class_)(Thread*, object))
 
 inline object
 resolve(Thread* t, object pool, unsigned index,
-        object (*find)(Thread*, object, object),
+        object (*find)(Thread*, object, object, object),
         object (*makeError)(Thread*, object))
 {
   object o = arrayBody(t, pool, index);
@@ -210,26 +173,10 @@ resolve(Thread* t, object pool, unsigned index,
     object class_ = resolveClass(t, o, referenceClass);
     if (UNLIKELY(t->exception)) return 0;
     
-    o = 0;
-    if (classFlags(t, class_) & ACC_INTERFACE) {
-      if (classVirtualTable(t, class_)) {
-        o = ::find(t, classVirtualTable(t, class_), arrayBody(t, pool, index),
-                   methodName, methodSpec);
-      }
-    } else {
-      for (; o == 0 and class_; class_ = classSuper(t, class_)) {
-        o = find(t, class_, arrayBody(t, pool, index));
-      }
-    }
-
-    if (o == 0) {
-      object message = makeString
-        (t, "%s %s not found in %s",
-         &byteArrayBody(t, referenceName(t, reference), 0),
-         &byteArrayBody(t, referenceSpec(t, reference), 0),
-         &byteArrayBody(t, className(t, referenceClass(t, reference)), 0));
-      t->exception = makeError(t, message);
-    }
+    o = findInHierarchy
+      (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+       find, makeError);
+    if (UNLIKELY(t->exception)) return 0;
     
     set(t, arrayBody(t, pool, index), o);
   }
@@ -2769,7 +2716,8 @@ run(Thread* t, const char* className, const char* methodName,
     object spec = makeByteArray(t, methodSpec);
     object reference = makeReference(t, class_, name, spec);
     
-    object method = findMethodInClass(t, class_, reference);
+    object method = findMethodInClass(t, class_, referenceName(t, reference),
+                                      referenceSpec(t, reference));
     if (LIKELY(t->exception == 0)) {
       assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 

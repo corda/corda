@@ -99,9 +99,9 @@
   (object third))
 
 (type finalizer
-  (void* target)
+  (nogc object target)
   (void* finalize)
-  (void* next))
+  (nogc object next))
 
 (type hashMap
   (uint32_t size)
@@ -119,6 +119,10 @@
   (uint32_t size)
   (object front)
   (object rear))
+
+(type vector
+  (uint32_t size)
+  (array object body))
 
 (type traceElement
   (object method)
@@ -259,9 +263,9 @@
 
 (type jreference java/lang/ref/Reference
   (extends jobject)
-  (noassert void* next)
-  (void* target)
-  (void* queue)
+  (noassert nogc object next)
+  (nogc object target)
+  (nogc object queue)
   (object jnext))
 
 (type weakReference java/lang/ref/WeakReference

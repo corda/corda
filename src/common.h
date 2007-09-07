@@ -33,8 +33,6 @@ inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace vm {
 
-typedef void* object;
-
 const unsigned BytesPerWord = sizeof(uintptr_t);
 const unsigned BitsPerWord = BytesPerWord * 8;
 
@@ -118,7 +116,7 @@ indexOf(unsigned word, unsigned bit)
 
 template <class T>
 inline T&
-cast(object p, unsigned offset)
+cast(void* p, unsigned offset)
 {
   return *reinterpret_cast<T*>(static_cast<uint8_t*>(p) + offset);
 }

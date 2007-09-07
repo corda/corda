@@ -17,7 +17,7 @@ classpath = classpath
 test = test
 jscheme = $(HOME)/p/jscheme-7.2/src
 
-input = $(cls)/References.class
+input = $(cls)/GC.class
 
 cxx = g++
 cc = gcc

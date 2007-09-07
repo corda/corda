@@ -34,6 +34,12 @@ allocate()
   return t;
 }
 
+inline bool
+equal(const char* a, const char* b)
+{
+  return strcmp(a, b) == 0;
+}
+
 class Object {
  public:
   typedef enum {
@@ -126,6 +132,7 @@ class Scalar : public Object {
   const char* name;
   unsigned elementSize;
   bool noassert;
+  bool nogc;
   bool hide;
 
   static Scalar* make(Object* owner, Object* typeObject, const char* typeName,
@@ -139,6 +146,7 @@ class Scalar : public Object {
     o->name = name;
     o->elementSize = size;
     o->noassert = false;
+    o->nogc = false;
     o->hide = false;
     return o;
   }
@@ -260,6 +268,25 @@ memberNoAssert(Object* o)
   default:
     UNREACHABLE;
   }
+}
+
+bool&
+memberNoGC(Object* o)
+{
+  switch (o->type) {
+  case Object::Scalar:
+  case Object::Array:
+    return static_cast<Scalar*>(o)->nogc;
+
+  default:
+    UNREACHABLE;
+  }
+}
+
+bool
+memberGC(Object* o)
+{
+  return not memberNoGC(o) and equal(memberTypeName(o), "object");
 }
 
 bool&
@@ -478,12 +505,6 @@ class Singleton : public Object {
     return o;
   }
 };
-
-bool
-equal(const char* a, const char* b)
-{
-  return strcmp(a, b) == 0;
-}
 
 bool
 endsWith(char c, const char* s)
@@ -782,6 +803,10 @@ parseMember(Object* t, Object* p, Object* declarations)
     Object* member = parseMember(t, cdr(p), declarations);
     memberNoAssert(member) = true;
     return member;
+  } else if (equal(spec, "nogc")) {
+    Object* member = parseMember(t, cdr(p), declarations);
+    memberNoGC(member) = true;
+    return member;
   } else {
     return Scalar::make(t, declaration(spec, declarations), spec,
                         string(car(cdr(p))),
@@ -822,6 +847,7 @@ memberEqual(Object* a, Object* b)
     case Object::Scalar:
       return equal(memberTypeName(a), memberTypeName(b))
         and memberNoAssert(a) == memberNoAssert(b)
+        and memberNoGC(a) == memberNoGC(b)
         and memberHide(a) == memberHide(b);
 
       // todo: compare array fields
@@ -1061,7 +1087,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   if (memberOwner(member)->type == Object::Pod) {
     out->write(">(o->body");
   } else {
-    out->write(">(static_cast<uint8_t*>(o)");
+    out->write(">(reinterpret_cast<uint8_t*>(o)");
   }
   if (member->type != Object::Scalar and memberTypeObject(member)) {
     out->write(" + ");
@@ -1433,20 +1459,20 @@ typeObjectMask(Object* type)
 
     switch (m->type) {
     case Object::Scalar: {
-      if (equal(memberTypeName(m), "object")) {
+      if (memberGC(m)) {
         set(&mask, offset);
       }
     } break;
 
     case Object::Array: {
-      if (equal(memberTypeName(m), "object")) {
+      if (memberGC(m)) {
         set(&mask, offset);
       } else if (memberTypeObject(m)
                  and memberTypeObject(m)->type == Object::Pod)
       {
         for (MemberIterator it(memberTypeObject(m)); it.hasMore();) {
           Object* m = it.next();
-          if (equal(memberTypeName(m), "object")) {
+          if (memberGC(m)) {
             set(&mask, offset + (it.offset() / sizeof(void*)));
           }
         }  
