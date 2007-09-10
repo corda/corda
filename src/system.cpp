@@ -349,6 +349,33 @@ class MySystem: public System {
     unsigned depth;
   };
 
+  class Local: public System::Local {
+   public:
+    Local(System* s): s(s) {
+      int r = pthread_key_create(&key, 0);
+      assert(s, r);
+    }
+
+    virtual void* get() {
+      return pthread_getspecific(key);
+    }
+
+    virtual void set(void* p) {
+      int r = pthread_setspecific(key, p);
+      assert(s, r);
+    }
+
+    virtual void dispose() {
+      int r = pthread_key_delete(key);
+      assert(s, r);
+
+      s->free(this);
+    }
+
+    System* s;
+    pthread_key_t key;
+  };
+
   class Library: public System::Library {
    public:
     Library(System* s, void* p, const char* name, System::Library* next):
@@ -472,6 +499,11 @@ class MySystem: public System {
 
   virtual Status make(System::Monitor** m) {
     *m = new (System::allocate(sizeof(Monitor))) Monitor(this);
+    return 0;
+  }
+
+  virtual Status make(System::Local** l) {
+    *l = new (System::allocate(sizeof(Local))) Local(this);
     return 0;
   }
 

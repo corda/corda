@@ -9,6 +9,45 @@ namespace {
 const uintptr_t InterfaceMethodID
 = (static_cast<uintptr_t>(1) << (BitsPerWord - 1));
 
+jint JNICALL
+AttachCurrentThread(Machine* m, Thread** t, void*)
+{
+  *t = static_cast<Thread*>(m->localThread->get());
+  if (*t == 0) {
+    *t = new (m->system->allocate(sizeof(Thread))) Thread(m, 0, m->rootThread);
+
+    m->localThread->set(*t);
+  }
+  return 0;
+}
+
+jint JNICALL
+DetachCurrentThread(Machine* m)
+{
+  Thread* t = static_cast<Thread*>(m->localThread->get());
+  if (t) {
+    t->exit();
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+jint JNICALL
+GetEnv(Machine* m, Thread** t, jint version)
+{
+  *t = static_cast<Thread*>(m->localThread->get());
+  if (*t) {
+    if (version <= JNI_VERSION_1_4) {
+      return JNI_OK;
+    } else {
+      return JNI_EVERSION;
+    }
+  } else {
+    return JNI_EDETACHED;
+  }
+}
+
 jsize JNICALL
 GetStringUTFLength(Thread* t, jstring s)
 {
@@ -981,6 +1020,70 @@ ExceptionClear(Thread* t)
   t->exception = 0;
 }
 
+jbooleanArray JNICALL
+NewBooleanArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeBooleanArray(t, length, true));
+}
+
+jbyteArray JNICALL
+NewByteArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeByteArray(t, length, true));
+}
+
+jcharArray JNICALL
+NewCharArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeCharArray(t, length, true));
+}
+
+jshortArray JNICALL
+NewShortArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeShortArray(t, length, true));
+}
+
+jintArray JNICALL
+NewIntArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeIntArray(t, length, true));
+}
+
+jlongArray JNICALL
+NewLongArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeLongArray(t, length, true));
+}
+
+jfloatArray JNICALL
+NewFloatArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeFloatArray(t, length, true));
+}
+
+jdoubleArray JNICALL
+NewDoubleArray(Thread* t, jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, makeDoubleArray(t, length, true));
+}
+
 jboolean* JNICALL
 GetBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* isCopy)
 {
@@ -1367,9 +1470,10 @@ ReleasePrimitiveArrayCritical(Thread* t, jarray, void*, jint)
 }
 
 jint JNICALL
-GetJavaVM(Thread* t, JavaVM** vm)
+GetJavaVM(Thread* t, Machine** m)
 {
-#warning todo
+  *m = t->vm;
+  return 0;
 }
 
 jboolean JNICALL
@@ -1377,7 +1481,7 @@ IsSameObject(Thread* t, jobject a, jobject b)
 {
   ENTER(t, Thread::ActiveState);
 
-  return a == b;
+  return *a == *b;
 }
 
 } // namespace
@@ -1385,60 +1489,149 @@ IsSameObject(Thread* t, jobject a, jobject b)
 namespace vm {
 
 void
-populateJNITable(JNIEnvVTable* table)
+populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 {
-  memset(table, 0, sizeof(JNIEnvVTable));
+  memset(vmTable, 0, sizeof(JavaVMVTable));
 
-  table->GetStringUTFLength = ::GetStringUTFLength;
-  table->GetStringUTFChars = ::GetStringUTFChars;
-  table->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
-  table->NewStringUTF = ::NewStringUTF;
-  table->GetByteArrayRegion = ::GetByteArrayRegion;
-  table->SetByteArrayRegion = ::SetByteArrayRegion;
-  table->FindClass = ::FindClass;
-  table->ThrowNew = ::ThrowNew;
-  table->ExceptionCheck = ::ExceptionCheck;
-  table->DeleteLocalRef = ::DeleteLocalRef;
-  table->GetObjectClass = ::GetObjectClass;
-  table->IsInstanceOf = ::IsInstanceOf;
-  table->GetFieldID = ::GetFieldID;
-  table->GetStaticFieldID = ::GetStaticFieldID;
-  table->GetObjectField = ::GetObjectField;
-  table->GetBooleanField = ::GetBooleanField;
-  table->GetByteField = ::GetByteField;
-  table->GetCharField = ::GetCharField;
-  table->GetShortField = ::GetShortField;
-  table->GetIntField = ::GetIntField;
-  table->GetLongField = ::GetLongField;
-  table->GetFloatField = ::GetFloatField;
-  table->GetDoubleField = ::GetDoubleField;
-  table->SetObjectField = ::SetObjectField;
-  table->SetBooleanField = ::SetBooleanField;
-  table->SetByteField = ::SetByteField;
-  table->SetCharField = ::SetCharField;
-  table->SetShortField = ::SetShortField;
-  table->SetIntField = ::SetIntField;
-  table->SetLongField = ::SetLongField;
-  table->SetFloatField = ::SetFloatField;
-  table->SetDoubleField = ::SetDoubleField;
-  table->GetStaticObjectField = ::GetStaticObjectField;
-  table->GetStaticBooleanField = ::GetStaticBooleanField;
-  table->GetStaticByteField = ::GetStaticByteField;
-  table->GetStaticCharField = ::GetStaticCharField;
-  table->GetStaticShortField = ::GetStaticShortField;
-  table->GetStaticIntField = ::GetStaticIntField;
-  table->GetStaticLongField = ::GetStaticLongField;
-  table->GetStaticFloatField = ::GetStaticFloatField;
-  table->GetStaticDoubleField = ::GetStaticDoubleField;
-  table->SetStaticObjectField = ::SetStaticObjectField;
-  table->SetStaticBooleanField = ::SetStaticBooleanField;
-  table->SetStaticByteField = ::SetStaticByteField;
-  table->SetStaticCharField = ::SetStaticCharField;
-  table->SetStaticShortField = ::SetStaticShortField;
-  table->SetStaticIntField = ::SetStaticIntField;
-  table->SetStaticLongField = ::SetStaticLongField;
-  table->SetStaticFloatField = ::SetStaticFloatField;
-  table->SetStaticDoubleField = ::SetStaticDoubleField;
+  vmTable->AttachCurrentThread = AttachCurrentThread;
+  vmTable->DetachCurrentThread = DetachCurrentThread;
+  vmTable->GetEnv = GetEnv;
+
+  memset(envTable, 0, sizeof(JNIEnvVTable));
+
+  envTable->GetStringUTFLength = ::GetStringUTFLength;
+  envTable->GetStringUTFChars = ::GetStringUTFChars;
+  envTable->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
+  envTable->NewStringUTF = ::NewStringUTF;
+  envTable->GetByteArrayRegion = ::GetByteArrayRegion;
+  envTable->SetByteArrayRegion = ::SetByteArrayRegion;
+  envTable->FindClass = ::FindClass;
+  envTable->ThrowNew = ::ThrowNew;
+  envTable->ExceptionCheck = ::ExceptionCheck;
+  envTable->DeleteLocalRef = ::DeleteLocalRef;
+  envTable->GetObjectClass = ::GetObjectClass;
+  envTable->IsInstanceOf = ::IsInstanceOf;
+  envTable->GetFieldID = ::GetFieldID;
+  envTable->GetMethodID = ::GetMethodID;
+  envTable->GetStaticMethodID = ::GetStaticMethodID;
+  envTable->CallObjectMethodV = ::CallObjectMethodV;
+  envTable->CallObjectMethod = ::CallObjectMethod;
+  envTable->CallBooleanMethodV = ::CallBooleanMethodV;
+  envTable->CallBooleanMethod = ::CallBooleanMethod;
+  envTable->CallByteMethodV = ::CallByteMethodV;
+  envTable->CallByteMethod = ::CallByteMethod;
+  envTable->CallCharMethodV = ::CallCharMethodV;
+  envTable->CallCharMethod = ::CallCharMethod;
+  envTable->CallShortMethodV = ::CallShortMethodV;
+  envTable->CallShortMethod = ::CallShortMethod;
+  envTable->CallIntMethodV = ::CallIntMethodV;
+  envTable->CallIntMethod = ::CallIntMethod;
+  envTable->CallLongMethodV = ::CallLongMethodV;
+  envTable->CallLongMethod = ::CallLongMethod;
+  envTable->CallFloatMethodV = ::CallFloatMethodV;
+  envTable->CallFloatMethod = ::CallFloatMethod;
+  envTable->CallDoubleMethodV = ::CallDoubleMethodV;
+  envTable->CallDoubleMethod = ::CallDoubleMethod;
+  envTable->CallVoidMethodV = ::CallVoidMethodV;
+  envTable->CallVoidMethod = ::CallVoidMethod;
+  envTable->CallStaticObjectMethodV = ::CallStaticObjectMethodV;
+  envTable->CallStaticObjectMethod = ::CallStaticObjectMethod;
+  envTable->CallStaticBooleanMethodV = ::CallStaticBooleanMethodV;
+  envTable->CallStaticBooleanMethod = ::CallStaticBooleanMethod;
+  envTable->CallStaticByteMethodV = ::CallStaticByteMethodV;
+  envTable->CallStaticByteMethod = ::CallStaticByteMethod;
+  envTable->CallStaticCharMethodV = ::CallStaticCharMethodV;
+  envTable->CallStaticCharMethod = ::CallStaticCharMethod;
+  envTable->CallStaticShortMethodV = ::CallStaticShortMethodV;
+  envTable->CallStaticShortMethod = ::CallStaticShortMethod;
+  envTable->CallStaticIntMethodV = ::CallStaticIntMethodV;
+  envTable->CallStaticIntMethod = ::CallStaticIntMethod;
+  envTable->CallStaticLongMethodV = ::CallStaticLongMethodV;
+  envTable->CallStaticLongMethod = ::CallStaticLongMethod;
+  envTable->CallStaticFloatMethodV = ::CallStaticFloatMethodV;
+  envTable->CallStaticFloatMethod = ::CallStaticFloatMethod;
+  envTable->CallStaticDoubleMethodV = ::CallStaticDoubleMethodV;
+  envTable->CallStaticDoubleMethod = ::CallStaticDoubleMethod;
+  envTable->CallStaticVoidMethodV = ::CallStaticVoidMethodV;
+  envTable->CallStaticVoidMethod = ::CallStaticVoidMethod;
+  envTable->GetStaticFieldID = ::GetStaticFieldID;
+  envTable->GetObjectField = ::GetObjectField;
+  envTable->GetBooleanField = ::GetBooleanField;
+  envTable->GetByteField = ::GetByteField;
+  envTable->GetCharField = ::GetCharField;
+  envTable->GetShortField = ::GetShortField;
+  envTable->GetIntField = ::GetIntField;
+  envTable->GetLongField = ::GetLongField;
+  envTable->GetFloatField = ::GetFloatField;
+  envTable->GetDoubleField = ::GetDoubleField;
+  envTable->SetObjectField = ::SetObjectField;
+  envTable->SetBooleanField = ::SetBooleanField;
+  envTable->SetByteField = ::SetByteField;
+  envTable->SetCharField = ::SetCharField;
+  envTable->SetShortField = ::SetShortField;
+  envTable->SetIntField = ::SetIntField;
+  envTable->SetLongField = ::SetLongField;
+  envTable->SetFloatField = ::SetFloatField;
+  envTable->SetDoubleField = ::SetDoubleField;
+  envTable->GetStaticObjectField = ::GetStaticObjectField;
+  envTable->GetStaticBooleanField = ::GetStaticBooleanField;
+  envTable->GetStaticByteField = ::GetStaticByteField;
+  envTable->GetStaticCharField = ::GetStaticCharField;
+  envTable->GetStaticShortField = ::GetStaticShortField;
+  envTable->GetStaticIntField = ::GetStaticIntField;
+  envTable->GetStaticLongField = ::GetStaticLongField;
+  envTable->GetStaticFloatField = ::GetStaticFloatField;
+  envTable->GetStaticDoubleField = ::GetStaticDoubleField;
+  envTable->SetStaticObjectField = ::SetStaticObjectField;
+  envTable->SetStaticBooleanField = ::SetStaticBooleanField;
+  envTable->SetStaticByteField = ::SetStaticByteField;
+  envTable->SetStaticCharField = ::SetStaticCharField;
+  envTable->SetStaticShortField = ::SetStaticShortField;
+  envTable->SetStaticIntField = ::SetStaticIntField;
+  envTable->SetStaticLongField = ::SetStaticLongField;
+  envTable->SetStaticFloatField = ::SetStaticFloatField;
+  envTable->SetStaticDoubleField = ::SetStaticDoubleField;
+  envTable->NewGlobalRef = ::NewGlobalRef;
+  envTable->DeleteGlobalRef = ::DeleteGlobalRef;
+  envTable->ExceptionOccurred = ::ExceptionOccurred;
+  envTable->ExceptionDescribe = ::ExceptionDescribe;
+  envTable->ExceptionClear = ::ExceptionClear;
+  envTable->NewBooleanArray = ::NewBooleanArray;
+  envTable->NewByteArray = ::NewByteArray;
+  envTable->NewCharArray = ::NewCharArray;
+  envTable->NewShortArray = ::NewShortArray;
+  envTable->NewIntArray = ::NewIntArray;
+  envTable->NewLongArray = ::NewLongArray;
+  envTable->NewFloatArray = ::NewFloatArray;
+  envTable->NewDoubleArray = ::NewDoubleArray;
+  envTable->GetBooleanArrayElements = ::GetBooleanArrayElements;
+  envTable->GetByteArrayElements = ::GetByteArrayElements;
+  envTable->GetCharArrayElements = ::GetCharArrayElements;
+  envTable->GetShortArrayElements = ::GetShortArrayElements;
+  envTable->GetIntArrayElements = ::GetIntArrayElements;
+  envTable->GetLongArrayElements = ::GetLongArrayElements;
+  envTable->GetFloatArrayElements = ::GetFloatArrayElements;
+  envTable->GetDoubleArrayElements = ::GetDoubleArrayElements;
+  envTable->ReleaseBooleanArrayElements = ::ReleaseBooleanArrayElements;
+  envTable->ReleaseByteArrayElements = ::ReleaseByteArrayElements;
+  envTable->ReleaseCharArrayElements = ::ReleaseCharArrayElements;
+  envTable->ReleaseShortArrayElements = ::ReleaseShortArrayElements;
+  envTable->ReleaseIntArrayElements = ::ReleaseIntArrayElements;
+  envTable->ReleaseLongArrayElements = ::ReleaseLongArrayElements;
+  envTable->ReleaseFloatArrayElements = ::ReleaseFloatArrayElements;
+  envTable->ReleaseDoubleArrayElements = ::ReleaseDoubleArrayElements;
+  envTable->GetBooleanArrayRegion = ::GetBooleanArrayRegion;
+  envTable->GetByteArrayRegion = ::GetByteArrayRegion;
+  envTable->GetCharArrayRegion = ::GetCharArrayRegion;
+  envTable->GetShortArrayRegion = ::GetShortArrayRegion;
+  envTable->GetIntArrayRegion = ::GetIntArrayRegion;
+  envTable->GetLongArrayRegion = ::GetLongArrayRegion;
+  envTable->GetFloatArrayRegion = ::GetFloatArrayRegion;
+  envTable->GetDoubleArrayRegion = ::GetDoubleArrayRegion;
+  envTable->GetPrimitiveArrayCritical = ::GetPrimitiveArrayCritical;
+  envTable->ReleasePrimitiveArrayCritical = ::ReleasePrimitiveArrayCritical;
+  envTable->GetJavaVM = ::GetJavaVM;
+  envTable->IsSameObject = ::IsSameObject;
 }
 
 } // namespace vm

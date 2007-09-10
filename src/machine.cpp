@@ -1268,6 +1268,7 @@ removeString(Thread* t, object o)
 namespace vm {
 
 Machine::Machine(System* system, Heap* heap, Finder* finder):
+  vtable(&javaVMVTable),
   system(system),
   heap(heap),
   finder(finder),
@@ -1276,6 +1277,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
   jniReferences(0),
   activeCount(0),
   liveCount(0),
+  localThread(0),
   stateLock(0),
   heapLock(0),
   classLock(0),
@@ -1296,9 +1298,10 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
   unsafe(false),
   heapPoolIndex(0)
 {
-  populateJNITable(&jniEnvVTable);
+  populateJNITables(&javaVMVTable, &jniEnvVTable);
 
-  if (not system->success(system->make(&stateLock)) or
+  if (not system->success(system->make(&localThread)) or
+      not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
       not system->success(system->make(&referenceLock)))
@@ -1310,6 +1313,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
 void
 Machine::dispose()
 {
+  localThread->dispose();
   stateLock->dispose();
   heapLock->dispose();
   classLock->dispose();
@@ -1430,11 +1434,16 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     populateBuiltinMap(t, m->builtinMap);
 
-    t->javaThread = makeThread
-      (t, reinterpret_cast<int64_t>(t), 0, 0, 0, 0, t->vm->loader);
+    m->localThread->set(this);
   } else {
-    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
     parent->child = this;
+  }
+
+  if (javaThread) {
+    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
+  } else {
+    this->javaThread = makeThread
+      (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader);
   }
 }
 

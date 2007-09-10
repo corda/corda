@@ -65,12 +65,14 @@ const unsigned PrimitiveFlag = 1 << 4;
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;
 
+class Machine;
 class Thread;
 
 struct Object { };
 
 typedef Object* object;
 
+typedef Machine JavaVM;
 typedef Thread JNIEnv;
 
 typedef uint8_t jboolean;
@@ -123,14 +125,6 @@ struct JNINativeMethod {
   void* function;
 };
 
-struct JavaVMVTable;
-
-struct JavaVM {
-  JavaVM(JavaVMVTable* vtable): vtable(vtable) { }
-
-  JavaVMVTable* vtable;
-};
-
 struct JavaVMVTable {
   void* reserved0;
   void* reserved1;
@@ -142,7 +136,7 @@ struct JavaVMVTable {
 
   jint
   (JNICALL *AttachCurrentThread)
-  (JavaVM*, void**, void*);
+  (JavaVM*, JNIEnv**, void*);
 
   jint
   (JNICALL *DetachCurrentThread)
@@ -150,11 +144,11 @@ struct JavaVMVTable {
 
   jint
   (JNICALL *GetEnv)
-  (JavaVM*, void**, jint);
+  (JavaVM*, JNIEnv**, jint);
 
   jint
   (JNICALL *AttachCurrentThreadAsDaemon)
-  (JavaVM*, void**, void*);
+  (JavaVM*, JNIEnv**, void*);
 };
 
 struct JNIEnvVTable {
@@ -1117,6 +1111,7 @@ class Machine {
 
   void dispose();
 
+  JavaVMVTable* vtable;
   System* system;
   Heap* heap;
   Finder* finder;
@@ -1125,6 +1120,7 @@ class Machine {
   Reference* jniReferences;
   unsigned activeCount;
   unsigned liveCount;
+  System::Local* localThread;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
@@ -1143,6 +1139,7 @@ class Machine {
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;
+  JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[HeapPoolSize];
   unsigned heapPoolIndex;
@@ -1197,6 +1194,8 @@ class Thread {
     }
 
     virtual void run() {
+      t->vm->localThread->set(t);
+
       vm::run(t, "java/lang/Thread", "run", "()V", t->javaThread);
 
       if (t->exception) {

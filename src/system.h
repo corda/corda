@@ -47,6 +47,14 @@ class System: public Allocator {
     virtual void dispose() = 0;
   };
 
+  class Local {
+   public:
+    virtual ~Local() { }
+    virtual void* get() = 0;
+    virtual void set(void* p) = 0;
+    virtual void dispose() = 0;
+  };
+
   class Library {
    public:
     virtual ~Library() { }
@@ -62,6 +70,7 @@ class System: public Allocator {
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
   virtual Status make(Monitor**) = 0;
+  virtual Status make(Local**) = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;

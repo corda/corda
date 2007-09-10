@@ -6,7 +6,7 @@
 namespace vm {
 
 void
-populateJNITable(JNIEnvVTable* table);
+populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable);
 
 } // namespace vm
 

@@ -252,6 +252,18 @@ const unsigned ACC_STRICT       = 1 << 11;
 const int JNI_COMMIT = 1;
 const int JNI_ABORT  = 2;
 
+const int JNI_OK        =  0;
+const int JNI_ERR       = -1;
+const int JNI_EDETACHED = -2;
+const int JNI_EVERSION  = -3;
+const int JNI_ENOMEM    = -4;
+const int JNI_EEXIST    = -5;
+const int JNI_EINVAL    = -6;
+
+const int JNI_VERSION_1_1 = 0x00010001;
+const int JNI_VERSION_1_2 = 0x00010002;
+const int JNI_VERSION_1_4 = 0x00010004;
+
 } // namespace vm
 
 #endif//CONSTANTS_H
