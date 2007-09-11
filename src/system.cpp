@@ -352,8 +352,8 @@ class MySystem: public System {
   class Local: public System::Local {
    public:
     Local(System* s): s(s) {
-      int r = pthread_key_create(&key, 0);
-      assert(s, r);
+      int r UNUSED = pthread_key_create(&key, 0);
+      assert(s, r == 0);
     }
 
     virtual void* get() {
@@ -361,13 +361,13 @@ class MySystem: public System {
     }
 
     virtual void set(void* p) {
-      int r = pthread_setspecific(key, p);
-      assert(s, r);
+      int r UNUSED = pthread_setspecific(key, p);
+      assert(s, r == 0);
     }
 
     virtual void dispose() {
-      int r = pthread_key_delete(key);
-      assert(s, r);
+      int r UNUSED = pthread_key_delete(key);
+      assert(s, r == 0);
 
       s->free(this);
     }
