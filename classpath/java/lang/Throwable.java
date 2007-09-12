@@ -31,6 +31,14 @@ public class Throwable {
     return cause;
   }
 
+  public void initCause(Throwable e) {
+    if (cause == null) {
+      cause = e;
+    } else {
+      throw new IllegalStateException();
+    }
+  }
+
   public String getMessage() {
     return message;
   }
