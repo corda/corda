@@ -294,6 +294,10 @@ public final class String implements Comparable<String> {
     return b;
   }
 
+  public byte[] getBytes(String format) {
+    return getBytes();
+  }
+
   public void getChars(int srcOffset, int srcLength,
                        char[] dst, int dstOffset)
   {

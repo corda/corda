@@ -53,6 +53,11 @@ public final class Float extends Number {
     return (double) value;
   }
 
+  public static float parseFloat(String s) {
+    // todo
+    throw new NumberFormatException(s);
+  }
+
   public static native int floatToRawIntBits(float value);
 
   public static native float intBitsToFloat(int bits);

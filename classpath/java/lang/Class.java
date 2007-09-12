@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.InvocationTargetException;
+import java.io.InputStream;
 
 public final class Class <T> {
   private static final int PrimitiveFlag = 1 << 4;
@@ -352,5 +353,12 @@ public final class Class <T> {
 
   public boolean isPrimitive() {
     return (vmFlags & PrimitiveFlag) != 0;
+  }
+
+  public InputStream getResourceAsStream(String path) {
+    if (! path.startsWith("/")) {
+      path = new String(name, 0, name.length - 1, false) + "/" + path;
+    }
+    return getClassLoader().getResourceAsStream(path);
   }
 }

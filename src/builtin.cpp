@@ -400,30 +400,26 @@ System_identityHashCode(Thread* t, jclass, jobject o)
 }
 
 void JNICALL
-Runtime_loadLibrary(Thread* t, jobject, jstring name)
+Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
 {
-  if (LIKELY(name)) {
-    char n[stringLength(t, *name) + 1];
-    stringChars(t, *name, n);
+  char n[stringLength(t, *name) + 1];
+  stringChars(t, *name, n);
 
-    for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
-      if (::strcmp(lib->name(), n) == 0) {
-        // already loaded
-        return;
-      }
+  for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
+    if (lib->matches(n, mapName)) {
+      // already loaded
+      return;
     }
+  }
 
-    System::Library* lib;
-    if (LIKELY(t->vm->system->success
-               (t->vm->system->load(&lib, n, t->vm->libraries))))
-    {
-      t->vm->libraries = lib;
-    } else {
-      object message = makeString(t, "library not found: %s", n);
-      t->exception = makeRuntimeException(t, message);
-    }
+  System::Library* lib;
+  if (LIKELY(t->vm->system->success
+             (t->vm->system->load(&lib, n, mapName, t->vm->libraries))))
+  {
+    t->vm->libraries = lib;
   } else {
-    t->exception = makeNullPointerException(t);
+    object message = makeString(t, "library not found: %s", n);
+    t->exception = makeRuntimeException(t, message);
   }
 }
 
@@ -613,8 +609,8 @@ populateBuiltinMap(Thread* t, object map)
     { "Java_java_lang_SystemClassLoader_resourceExists",
       reinterpret_cast<void*>(::SystemClassLoader_resourceExists) },
 
-    { "Java_java_lang_Runtime_loadLibrary",
-      reinterpret_cast<void*>(::Runtime_loadLibrary) },
+    { "Java_java_lang_Runtime_load",
+      reinterpret_cast<void*>(::Runtime_load) },
     { "Java_java_lang_Runtime_gc",
       reinterpret_cast<void*>(::Runtime_gc) },
     { "Java_java_lang_Runtime_exit",

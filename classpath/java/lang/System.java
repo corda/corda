@@ -13,8 +13,9 @@ public abstract class System {
   private static final int JavaClassPath = 1;
   private static final int LineSeparator = 100;
   private static final int OsName = 101;
-  
 
+  private static Property properties;
+  
   static {
     loadLibrary("natives");
   }
@@ -32,6 +33,12 @@ public abstract class System {
                                       int dstOffset, int length);
 
   public static String getProperty(String name) {
+    for (Property p = properties; p != null; p = p.next) {
+      if (p.name.equals(name)) {
+        return p.value;
+      }
+    }
+
     int code = Unknown;
     if (name.equals("java.class.path")) {
       code = JavaClassPath;
@@ -50,6 +57,17 @@ public abstract class System {
     }
   }
 
+  public static void setProperty(String name, String value) {
+    for (Property p = properties; p != null; p = p.next) {
+      if (p.name.equals(name)) {
+        p.value = value;
+        return;
+      }
+    }
+
+    properties = new Property(name, value, properties);
+  }
+
   private static native String getProperty(int code);
 
   private static native String getVMProperty(int code);
@@ -57,6 +75,20 @@ public abstract class System {
   public static native long currentTimeMillis();
 
   public static native int identityHashCode(Object o);
+
+  public static String mapLibraryName(String name) {
+    if (name != null) {
+      return doMapLibraryName(name);
+    } else {
+      throw new NullPointerException();
+    }
+  }
+
+  private static native String doMapLibraryName(String name);
+
+  public static void load(String path) {
+    Runtime.getRuntime().load(path);
+  }
 
   public static void loadLibrary(String name) {
     Runtime.getRuntime().loadLibrary(name);
@@ -68,5 +100,17 @@ public abstract class System {
 
   public static void exit(int code) {
     Runtime.getRuntime().exit(code);
+  }
+
+  private static class Property {
+    public final String name;
+    public String value;
+    public final Property next;
+
+    public Property(String name, String value, Property next) {
+      this.name = name;
+      this.value = value;
+      this.next = next;
+    }
   }
 }

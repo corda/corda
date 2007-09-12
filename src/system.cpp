@@ -378,10 +378,12 @@ class MySystem: public System {
 
   class Library: public System::Library {
    public:
-    Library(System* s, void* p, const char* name, System::Library* next):
+    Library(System* s, void* p, const char* name, bool mapName,
+            System::Library* next):
       s(s),
       p(p),
-      name_(name),
+      name(name),
+      mapName(mapName),
       next_(next)
     { }
 
@@ -389,8 +391,9 @@ class MySystem: public System {
       return dlsym(p, function);
     }
 
-    virtual const char* name() {
-      return name_;
+    virtual bool matches(const char* name, bool mapName) {
+      return strcmp(this->name, name) == 0
+        and this->mapName == mapName;
     }
 
     virtual System::Library* next() {
@@ -408,13 +411,14 @@ class MySystem: public System {
         next_->dispose();
       }
 
-      s->free(name_);
+      s->free(name);
       s->free(this);
     }
 
     System* s;
     void* p;
-    const char* name_;
+    const char* name;
+    bool mapName;
     System::Library* next_;
   };
 
@@ -515,22 +519,29 @@ class MySystem: public System {
 
   virtual Status load(System::Library** lib,
                       const char* name,
+                      bool mapName,
                       System::Library* next)
   {
+    void* p;
     unsigned nameLength = strlen(name);
-    unsigned size = nameLength + 7;
-    char buffer[size];
-    snprintf(buffer, size, "lib%s.so", name);
+    if (mapName) {
+      unsigned size = nameLength + 7;
+      char buffer[size];
+      snprintf(buffer, size, "lib%s.so", name);
+      p = dlopen(buffer, RTLD_LAZY);
+    } else {
+      p = dlopen(name, RTLD_LAZY);
+    }
  
-    void* p = dlopen(buffer, RTLD_LAZY);
     if (p) {
       if (Verbose) {
-        fprintf(stderr, "open %s as %p\n", buffer, p);
+        fprintf(stderr, "open %s as %p\n", name, p);
       }
 
       char* n = static_cast<char*>(System::allocate(nameLength + 1));
       memcpy(n, name, nameLength + 1);
-      *lib = new (System::allocate(sizeof(Library))) Library(this, p, n, next);
+      *lib = new (System::allocate(sizeof(Library)))
+        Library(this, p, n, mapName, next);
       return 0;
     } else {
       return 1;

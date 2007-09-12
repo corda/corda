@@ -86,4 +86,10 @@ public class File {
   public void createNewFile() {
     createNewFile(path);
   }
+
+  public static native boolean delete(String path);
+
+  public boolean delete() {
+    return delete(path);
+  }
 }

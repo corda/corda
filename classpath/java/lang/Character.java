@@ -57,6 +57,10 @@ public final class Character {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
   }
 
+  public static boolean isLetterOrDigit(char c) {
+    return isDigit(c) || isLetter(c);
+  }
+
   public static boolean isLowerCase(char c) {
     return (c >= 'a' && c <= 'z');
   }
@@ -67,5 +71,9 @@ public final class Character {
 
   public static boolean isWhitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n';
+  }
+
+  public static boolean isSpaceChar(char c) {
+    return isWhitespace(c);
   }
 }

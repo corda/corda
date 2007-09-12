@@ -21,6 +21,7 @@
 #  define STRUCT_STAT struct _stat
 #  define MKDIR(path, mode) _mkdir(path)
 #  define CREAT _creat
+#  define UNLINK _unlink
 #  define OPEN_MASK O_BINARY
 #else
 #  include <unistd.h>
@@ -32,6 +33,7 @@
 #  define STRUCT_STAT struct stat
 #  define MKDIR mkdir
 #  define CREAT creat
+#  define UNLINK unlink
 #  define OPEN_MASK 0
 #endif
 
@@ -148,6 +150,18 @@ Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
     }
     e->ReleaseStringUTFChars(path, chars);
   }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
+{
+  const char* chars = e->GetStringUTFChars(path, 0);
+  int r = -1;
+  if (chars) {
+    r = UNLINK(chars);
+    e->ReleaseStringUTFChars(path, chars);
+  }
+  return r == 0;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

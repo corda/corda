@@ -9,7 +9,23 @@ public class Runtime {
     return instance;
   }
 
-  public native void loadLibrary(String name);
+  public void load(String path) {
+    if (path != null) {
+      load(path, false);
+    } else {
+      throw new NullPointerException();
+    }
+  }
+
+  public void loadLibrary(String path) {
+    if (path != null) {
+      load(path, true);
+    } else {
+      throw new NullPointerException();
+    }
+  }
+
+  private static native void load(String name, boolean mapName);
 
   public native void gc();
 
