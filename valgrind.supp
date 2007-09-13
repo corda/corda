@@ -36,7 +36,7 @@
 }
 
 {
-   gtk-writev
+   gtk-write2
    Memcheck:Param
    writev(vector[...])
    obj:/lib/ld-2.3.6.so
@@ -47,6 +47,24 @@
    fun:XInitExtension
    fun:XkbUseExtension
    fun:XkbQueryExtension
+   fun:gdk_display_open
+   fun:gdk_display_open_default_libgtk_only
+   fun:gtk_init_check
+   fun:Java_org_eclipse_swt_internal_gtk_OS__1gtk_1init_1check
+}
+
+{
+   gtk-write3
+   Memcheck:Param
+   write(buf)
+   fun:__write_nocancel
+   obj:/usr/lib/libX11.so.6.2.0
+   obj:/usr/lib/libX11.so.6.2.0
+   fun:_XReply
+   fun:XInternAtom
+   fun:XSetWMProperties
+   obj:/usr/lib/libgdk-x11-2.0.so.0.800.20
+   fun:gdk_window_new
    fun:gdk_display_open
    fun:gdk_display_open_default_libgtk_only
    fun:gtk_init_check
