@@ -2617,7 +2617,7 @@ collect(Thread* t, Heap::CollectionType type)
           = ceiling(arrayElementSize, BytesPerWord);
 
         for (unsigned i = 0; i < fixedSizeInWords; ++i) {
-          if (mask[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i))) {
+          if (mask[i / 32] & (static_cast<uintptr_t>(1) << (i % 32))) {
             if (not w->visit(i)) {
               return;
             }
@@ -2627,7 +2627,7 @@ collect(Thread* t, Heap::CollectionType type)
         bool arrayObjectElements = false;
         for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
           unsigned k = fixedSizeInWords + j;
-          if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
+          if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
             arrayObjectElements = true;
             break;
           }
@@ -2637,7 +2637,7 @@ collect(Thread* t, Heap::CollectionType type)
           for (unsigned i = 0; i < arrayLength; ++i) {
             for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
               unsigned k = fixedSizeInWords + j;
-              if (mask[wordOf(k)] & (static_cast<uintptr_t>(1) << bitOf(k))) {
+              if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
                 if (not w->visit
                     (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
                 {
