@@ -2450,8 +2450,13 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
     case 'L':
       while (*s and *s != ';') ++ s;
       ++ s;
-      pushObject
-        (t, (indirectObjects ? va_arg(a, object) : *va_arg(a, object*)));
+
+      if (indirectObjects) {
+        object* v = va_arg(a, object*);
+        pushObject(t, v ? *v : 0);
+      } else {
+        pushObject(t, va_arg(a, object));
+      }
       break;
 
     case '[':
@@ -2466,8 +2471,13 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
         ++ s;
         break;
       }
-      pushObject
-        (t, (indirectObjects ? va_arg(a, object) : *va_arg(a, object*)));
+
+      if (indirectObjects) {
+        object* v = va_arg(a, object*);
+        pushObject(t, v ? *v : 0);
+      } else {
+        pushObject(t, va_arg(a, object));
+      }
       break;
       
     case 'J':

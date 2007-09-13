@@ -361,7 +361,7 @@ postCollect(Thread* t)
 {
 #ifdef VM_STRESS
   t->vm->system->free(t->defaultHeap);
-  t->defaultHeap = static_cast<object*>
+  t->defaultHeap = static_cast<uintptr_t*>
     (t->vm->system->allocate(Thread::HeapSizeInBytes));
 #endif
 
@@ -996,6 +996,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       PROTECT(t, method);
 
       if (flags & ACC_STATIC) {
+        methodOffset(t, method) = i;
+
         if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
                    &byteArrayBody(t, methodName(t, method), 0)) == 0)
         {
@@ -1352,7 +1354,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   runnable(this)
 #ifdef VM_STRESS
   , stress(false),
-  defaultHeap(static_cast<object*>(m->system->allocate(HeapSizeInBytes)))
+  defaultHeap(static_cast<uintptr_t*>(m->system->allocate(HeapSizeInBytes)))
 #endif // VM_STRESS
   , heap(defaultHeap)
 {

@@ -1097,9 +1097,9 @@ class Reference {
 
 class Machine {
  public:
-  enum {
+  enum Type {
 #include "type-enums.cpp"
-  } Type;
+  };
 
   Machine(System* system, Heap* heap, Finder* finder);
 
@@ -1246,11 +1246,12 @@ class Thread {
   unsigned heapOffset;
   Protector* protector;
   Runnable runnable;
-  uintptr_t* heap;
 #ifdef VM_STRESS
   bool stress;
   uintptr_t* defaultHeap;
+  uintptr_t* heap;
 #else // not VM_STRESS
+  uintptr_t* heap;
   uintptr_t defaultHeap[HeapSizeInWords];
 #endif // not VM_STRESS
   uintptr_t stack[StackSizeInWords];
