@@ -1592,6 +1592,9 @@ instanceOf(Thread* t, object class_, object o);
 object
 classInitializer(Thread* t, object class_);
 
+object
+frameMethod(Thread* t, int frame);
+
 inline void
 pushObject(Thread* t, object o)
 {

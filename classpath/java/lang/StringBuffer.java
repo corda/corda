@@ -50,6 +50,11 @@ public class StringBuffer {
     return this;
   }
 
+  public synchronized StringBuffer insert(int i, char c) {
+    sb.insert(i, c);
+    return this;
+  }
+
   public synchronized StringBuffer deleteCharAt(int i) {
     sb.deleteCharAt(i);
     return this;

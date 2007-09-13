@@ -368,10 +368,13 @@ invokeNative(Thread* t, object method)
       sp += 2;
     } break;
 
-    case POINTER_TYPE:
-      args[offset++] = reinterpret_cast<uintptr_t>
-        (t->stack + ((sp++) * 2) + 1);
-      break;
+    case POINTER_TYPE: {
+      object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
+      if (*v == 0) {
+        v = 0;
+      }
+      args[offset++] = reinterpret_cast<uintptr_t>(v);
+    } break;
 
     default: abort(t);
     }
@@ -504,6 +507,14 @@ codeReadInt32(Thread* t, unsigned& i)
   uint8_t v3 = codeBody(t, t->code, i++);
   uint8_t v4 = codeBody(t, t->code, i++);
   return ((v1 << 24) | (v2 << 16) | (v3 << 8) | v4);
+}
+
+inline void
+store(Thread* t, unsigned index)
+{
+  memcpy(t->stack + ((frameBase(t, t->frame) + index) * 2),
+         t->stack + ((-- t->sp) * 2),
+         BytesPerWord * 2);
 }
 
 object
@@ -659,23 +670,23 @@ run(Thread* t)
   } goto loop;
 
   case astore: {
-    setLocalObject(t, codeBody(t, code, ip++), popObject(t));
+    store(t, codeBody(t, code, ip++));
   } goto loop;
 
   case astore_0: {
-    setLocalObject(t, 0, popObject(t));
+    store(t, 0);
   } goto loop;
 
   case astore_1: {
-    setLocalObject(t, 1, popObject(t));
+    store(t, 1);
   } goto loop;
 
   case astore_2: {
-    setLocalObject(t, 2, popObject(t));
+    store(t, 2);
   } goto loop;
 
   case astore_3: {
-    setLocalObject(t, 3, popObject(t));
+    store(t, 3);
   } goto loop;
 
   case athrow: {
@@ -1164,12 +1175,12 @@ run(Thread* t)
     case ShortField:
     case FloatField:
     case IntField:
-      pushInt(t, intValue(t, v));
+      pushInt(t, v ? intValue(t, v) : 0);
       break;
 
     case DoubleField:
     case LongField:
-      pushLong(t, longValue(t, v));
+      pushLong(t, v ? longValue(t, v) : 0);
       break;
 
     case ObjectField:

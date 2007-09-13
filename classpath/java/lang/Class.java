@@ -31,8 +31,20 @@ public final class Class <T> {
     return getName();
   }
 
+  private static byte[] replace(int a, int b, byte[] s, int offset,
+                                int length)
+  {
+    byte[] array = new byte[length];
+    for (int i = 0; i < length; ++i) {
+      byte c = s[i];
+      array[i] = (byte) (c == a ? b : c);
+    }
+    return array;
+  }
+
   public String getName() {
-    return new String(name, 0, name.length - 1, false);
+    return new String
+      (replace('/', '.', name, 0, name.length - 1), 0, name.length - 1, false);
   }
 
   public Object[] staticTable() {

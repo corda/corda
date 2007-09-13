@@ -135,6 +135,10 @@ public class StringBuilder {
     return this;
   }
 
+  public StringBuilder insert(int i, char c) {
+    return insert(i, new String(new char[] { c }, 0, 1, false));
+  }
+
   public StringBuilder deleteCharAt(int i) {
     if (i < 0 || i >= length) {
       throw new IndexOutOfBoundsException();

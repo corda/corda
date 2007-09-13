@@ -794,7 +794,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         classObjectMask(t, classSuper(t, class_)));
   } else {
     object mask = makeIntArray
-      (t, ceiling(classFixedSize(t, class_), BitsPerWord * BytesPerWord), true);
+      (t, ceiling(classFixedSize(t, class_), 32 * BytesPerWord), true);
     intArrayBody(t, mask, 0) = 1;
 
     object superMask = 0;
@@ -2334,7 +2334,7 @@ resolveObjectArrayClass(Thread* t, object elementSpec)
   object spec;
   if (byteArrayBody(t, elementSpec, 0) == '[') {
     spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1, false);
-    byteArrayBody(t, elementSpec, 0) = '[';
+    byteArrayBody(t, spec, 0) = '[';
     memcpy(&byteArrayBody(t, spec, 1),
            &byteArrayBody(t, elementSpec, 0),
            byteArrayLength(t, elementSpec));

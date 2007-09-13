@@ -544,6 +544,7 @@ class MySystem: public System {
         Library(this, p, n, mapName, next);
       return 0;
     } else {
+//       fprintf(stderr, "dlerror: %s\n", dlerror());
       return 1;
     }
   }

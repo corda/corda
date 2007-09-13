@@ -7,7 +7,7 @@ public class FileDescriptor {
 
   final int value;
 
-  private FileDescriptor(int value) {
+  public FileDescriptor(int value) {
     this.value = value;
   }
 

@@ -294,7 +294,9 @@ public final class String implements Comparable<String> {
     return b;
   }
 
-  public byte[] getBytes(String format) {
+  public byte[] getBytes(String format)
+    throws java.io.UnsupportedEncodingException
+  {
     return getBytes();
   }
 

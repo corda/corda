@@ -14,15 +14,23 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
 {
   enum {
     LineSeparator = 100,
-    OsName = 101
+    FileSeparator = 101,
+    OsName = 102,
+    JavaIoTmpdir = 103
   };
 
   switch (code) {
   case LineSeparator:
     return e->NewStringUTF("\n");
     
+  case FileSeparator:
+    return e->NewStringUTF("/");
+    
   case OsName:
     return e->NewStringUTF("posix");
+
+  case JavaIoTmpdir:
+    return e->NewStringUTF("/tmp");
 
   default:
     throwNew(e, "java/lang/RuntimeException", 0);

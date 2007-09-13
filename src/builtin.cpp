@@ -419,7 +419,7 @@ Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
     t->vm->libraries = lib;
   } else {
     object message = makeString(t, "library not found: %s", n);
-    t->exception = makeRuntimeException(t, message);
+    t->exception = makeUnsatisfiedLinkError(t, message);
   }
 }
 
@@ -558,11 +558,13 @@ jint JNICALL
 ResourceInputStream_read2(Thread* t, jclass, jlong peer, jint position,
                           jbyteArray b, jint offset, jint length)
 {
+  if (length == 0) return 0;
+  
   Finder::Data* d = reinterpret_cast<Finder::Data*>(peer);
   if (length > static_cast<jint>(d->length()) - position) {
     length = static_cast<jint>(d->length()) - position;
   }
-  if (length < 0) {
+  if (length <= 0) {
     return -1;
   } else {
     memcpy(&byteArrayBody(t, *b, offset), d->start() + position, length);

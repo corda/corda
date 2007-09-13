@@ -153,10 +153,10 @@ findMethod(Thread* t, object class_, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object n = makeString(t, "%s", name);
+  object n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
-  object s = makeString(t, "%s", spec);
+  object s = makeByteArray(t, "%s", spec);
   return vm::findMethod(t, class_, n, s);
 }
 
@@ -184,7 +184,7 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
 
     return (vectorSize(t, t->vm->jniInterfaceTable) - 1) | InterfaceMethodID;
   } else {
-    return methodOffset(t, method);
+    return methodOffset(t, method) + 1;
   }
 }
 
@@ -196,7 +196,7 @@ GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
   object method = findMethod(t, *c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
-  return methodOffset(t, method);
+  return methodOffset(t, method) + 1;
 }
 
 inline object
@@ -205,7 +205,7 @@ getMethod(Thread* t, object o, jmethodID m)
   if (m & InterfaceMethodID) {
     return vectorBody(t, t->vm->jniInterfaceTable, m & (~InterfaceMethodID));
   } else {
-    return arrayBody(t, classVirtualTable(t, objectClass(t, o)), m);
+    return arrayBody(t, classVirtualTable(t, objectClass(t, o)), m - 1);
   }
 }
 
@@ -634,10 +634,10 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
 object
 findField(Thread* t, object class_, const char* name, const char* spec)
 {
-  object n = makeString(t, "%s", name);
+  object n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
-  object s = makeString(t, "%s", spec);
+  object s = makeByteArray(t, "%s", spec);
   return vm::findField(t, class_, n, s);
 }
 
@@ -820,7 +820,8 @@ GetStaticBooleanField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return intValue(t, arrayBody(t, classStaticTable(t, *c), field)) != 0;
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  return v ? intValue(t, v) != 0 : false;
 }
 
 jbyte JNICALL
@@ -828,8 +829,8 @@ GetStaticByteField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return static_cast<jbyte>
-    (intValue(t, arrayBody(t, classStaticTable(t, *c), field)));
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  return static_cast<jbyte>(v ? intValue(t, v) : 0);
 }
 
 jchar JNICALL
@@ -837,8 +838,8 @@ GetStaticCharField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return static_cast<jchar>
-    (intValue(t, arrayBody(t, classStaticTable(t, *c), field)));
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  return static_cast<jchar>(v ? intValue(t, v) : 0);
 }
 
 jshort JNICALL
@@ -846,8 +847,8 @@ GetStaticShortField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return static_cast<jshort>
-    (intValue(t, arrayBody(t, classStaticTable(t, *c), field)));
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  return static_cast<jshort>(v ? intValue(t, v) : 0);
 }
 
 jint JNICALL
@@ -855,13 +856,17 @@ GetStaticIntField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return intValue(t, arrayBody(t, classStaticTable(t, *c), field));
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  return v ? intValue(t, v) : 0;
 }
 
 jlong JNICALL
 GetStaticLongField(Thread* t, jclass c, jfieldID field)
 {
-  return longValue(t, arrayBody(t, classStaticTable(t, *c), field));
+  ENTER(t, Thread::ActiveState);
+
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  return static_cast<jlong>(v ? longValue(t, v) : 0);
 }
 
 jfloat JNICALL
@@ -869,9 +874,10 @@ GetStaticFloatField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  jint i = intValue(t, arrayBody(t, classStaticTable(t, *c), field));
-  jfloat v; memcpy(&v, &i, 4);
-  return v;
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  jint i = v ? intValue(t, v) : 0;
+  jfloat f; memcpy(&f, &i, 4);
+  return f;
 }
 
 jdouble JNICALL
@@ -879,9 +885,10 @@ GetStaticDoubleField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  jlong i = longValue(t, arrayBody(t, classStaticTable(t, *c), field));
-  jdouble v; memcpy(&v, &i, 8);
-  return v;
+  object v = arrayBody(t, classStaticTable(t, *c), field);
+  jlong i = v ? longValue(t, v) : 0;
+  jdouble f; memcpy(&f, &i, 4);
+  return f;
 }
 
 void JNICALL

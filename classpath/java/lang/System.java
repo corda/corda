@@ -12,7 +12,9 @@ public abstract class System {
   private static final int Unknown = 0;
   private static final int JavaClassPath = 1;
   private static final int LineSeparator = 100;
-  private static final int OsName = 101;
+  private static final int FileSeparator = 101;
+  private static final int OsName = 102;
+  private static final int JavaIoTmpdir = 103;
 
   private static Property properties;
   
@@ -42,8 +44,12 @@ public abstract class System {
     int code = Unknown;
     if (name.equals("java.class.path")) {
       code = JavaClassPath;
+    } else if (name.equals("java.io.tmpdir")) {
+      code = JavaIoTmpdir;
     } else if (name.equals("line.separator")) {
       code = LineSeparator;
+    } else if (name.equals("file.separator")) {
+      code = FileSeparator;
     } else if (name.equals("os.name")) {
       code = OsName;
     }

@@ -16,8 +16,10 @@ src = src
 classpath = classpath
 test = test
 jscheme = $(HOME)/p/jscheme-7.2/src
+swt = $(HOME)/p/swt-3.3/bin
 
 input = $(cls)/GC.class
+swt-input = $(cls)/HelloSWT.class
 
 cxx = g++
 cc = gcc
@@ -139,10 +141,13 @@ args = $(flags) $(call class-name,$(input))
 
 jscheme-command = jscheme/REPL build/make.scm -main commandMain ""
 
+swt-command = $(call class-name,$(swt-input))
+
 .PHONY: build
 build: $(executable)
 
 $(input): $(classpath-objects)
+$(swt-input): $(classpath-objects)
 
 .PHONY: run
 run: $(executable) $(input)
@@ -162,24 +167,36 @@ test: $(executable) $(classpath-objects) $(test-classes)
 		$(<) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
 .PHONY: run-jscheme
-run-jscheme: $(executable) $(input)
+run-jscheme: $(executable)
 	LD_LIBRARY_PATH=$(bld) $(<) -cp $(cls):$(jscheme) $(jscheme-command)
 
 .PHONY: debug-jscheme
-debug-jscheme: $(executable) $(input)
+debug-jscheme: $(executable)
 	LD_LIBRARY_PATH=$(bld) $(db) $(<) -cp $(cls):$(jscheme) $(jscheme-command)
 
 .PHONY: vg-jscheme
-vg-jscheme: $(executable) $(input)
+vg-jscheme: $(executable)
 	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(jscheme) $(jscheme-command)
 
 .PHONY: profile-jscheme
-profile-jscheme: $(executable) $(input)
+profile-jscheme: $(executable)
 	opcontrol --start; \
 	echo '(+ 5 6)' | LD_LIBRARY_PATH=$(bld) \
 		$(<) -cp $(cls):$(jscheme) jscheme/REPL; \
 	opcontrol --stop; \
 	opreport -l $(<)
+
+.PHONY: run-swt
+run-swt: $(executable) $(swt-input)
+	LD_LIBRARY_PATH=$(bld) $(<) -cp $(cls):$(swt) $(swt-command)
+
+.PHONY: debug-swt
+debug-swt: $(executable) $(swt-input)
+	LD_LIBRARY_PATH=$(bld) $(db) $(<) -cp $(cls):$(swt) $(swt-command)
+
+.PHONY: vg-swt
+vg-swt: $(executable) $(swt-input)
+	LD_LIBRARY_PATH=$(bld) $(vg) $(<) -cp $(cls):$(swt) $(swt-command)
 
 .PHONY: clean
 clean:
@@ -202,7 +219,8 @@ $(bld)/type-generator.o: \
 define compile-class
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(javac) -bootclasspath $(classpath) -classpath $(classpath) -d $(cls) $(<)
+	$(javac) -bootclasspath $(classpath) -classpath $(classpath):$(swt) \
+		-d $(cls) $(<)
 endef
 
 $(cls)/%.class: $(classpath)/%.java

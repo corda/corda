@@ -51,22 +51,28 @@ public class Field<T> extends AccessibleObject {
       Object v = class_.staticTable()[offset];
       switch (code) {
       case ByteField:
-        return Byte.valueOf((byte) ((Integer) v).intValue());
+        return Byte.valueOf
+          ((byte) (v == null ? 0 : ((Integer) v).intValue()));
 
       case BooleanField:
-        return Boolean.valueOf(((Integer) v) != 0);
+        return Boolean.valueOf
+          (v == null ? false : ((Integer) v) != 0);
 
       case CharField:
-        return Character.valueOf((char) ((Integer) v).intValue());
+        return Character.valueOf
+          ((char) (v == null ? 0 : ((Integer) v).intValue()));
 
       case ShortField:
-        return Short.valueOf((short) ((Integer) v).intValue());
+        return Short.valueOf
+          ((short) (v == null ? 0 : ((Integer) v).intValue()));
 
       case FloatField:
-        return Float.valueOf(Float.intBitsToFloat((Integer) v));
+        return Float.valueOf
+          (Float.intBitsToFloat(v == null ? 0 : (Integer) v));
 
       case DoubleField:
-        return Double.valueOf(Double.longBitsToDouble((Long) v));
+        return Double.valueOf
+          (Double.longBitsToDouble(v == null ? 0 : (Long) v));
 
       case IntField:
       case LongField:
