@@ -1,5 +1,6 @@
 #include "jnienv.h"
 #include "machine.h"
+#include "run.h"
 #include "constants.h"
 
 using namespace vm;
@@ -214,7 +215,7 @@ CallObjectMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, run(t, getMethod(t, *o, m), *o, true, a));
+  return pushReference(t, runv(t, getMethod(t, *o, m), *o, true, a));
 }
 
 jobject JNICALL
@@ -235,7 +236,7 @@ CallBooleanMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   return (t->exception ? 0 : booleanValue(t, r));
 }
 
@@ -257,7 +258,7 @@ CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   return (t->exception ? 0 : byteValue(t, r));
 }
 
@@ -279,7 +280,7 @@ CallCharMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   return (t->exception ? 0 : charValue(t, r));
 }
 
@@ -301,7 +302,7 @@ CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   return (t->exception ? 0 : shortValue(t, r));
 }
 
@@ -323,7 +324,7 @@ CallIntMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -345,7 +346,7 @@ CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   return (t->exception ? 0 : longValue(t, r));
 }
 
@@ -367,7 +368,7 @@ CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   jint i = (t->exception ? 0 : floatValue(t, r));
   jfloat f; memcpy(&f, &i, 4);
   return f;
@@ -391,7 +392,7 @@ CallDoubleMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getMethod(t, *o, m), *o, true, a);
+  object r = runv(t, getMethod(t, *o, m), *o, true, a);
   jlong i = (t->exception ? 0 : doubleValue(t, r));
   jdouble f; memcpy(&f, &i, 4);
   return f;
@@ -415,7 +416,7 @@ CallVoidMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  run(t, getMethod(t, *o, m), *o, true, a);
+  runv(t, getMethod(t, *o, m), *o, true, a);
 }
 
 void JNICALL
@@ -440,7 +441,7 @@ CallStaticObjectMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, run(t, getStaticMethod(t, *c, m), 0, true, a));
+  return pushReference(t, runv(t, getStaticMethod(t, *c, m), 0, true, a));
 }
 
 jobject JNICALL
@@ -461,7 +462,7 @@ CallStaticBooleanMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   return (t->exception ? 0 : booleanValue(t, r));
 }
 
@@ -483,7 +484,7 @@ CallStaticByteMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   return (t->exception ? 0 : byteValue(t, r));
 }
 
@@ -505,7 +506,7 @@ CallStaticCharMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   return (t->exception ? 0 : charValue(t, r));
 }
 
@@ -527,7 +528,7 @@ CallStaticShortMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   return (t->exception ? 0 : shortValue(t, r));
 }
 
@@ -549,7 +550,7 @@ CallStaticIntMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -571,7 +572,7 @@ CallStaticLongMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   return (t->exception ? 0 : longValue(t, r));
 }
 
@@ -593,7 +594,7 @@ CallStaticFloatMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   jint i = (t->exception ? 0 : floatValue(t, r));
   jfloat f; memcpy(&f, &i, 4);
   return f;
@@ -617,7 +618,7 @@ CallStaticDoubleMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = run(t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = runv(t, getStaticMethod(t, *c, m), 0, true, a);
   jlong i = (t->exception ? 0 : doubleValue(t, r));
   jdouble f; memcpy(&f, &i, 4);
   return f;
@@ -641,7 +642,7 @@ CallStaticVoidMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  run(t, getStaticMethod(t, *c, m), 0, true, a);
+  runv(t, getStaticMethod(t, *c, m), 0, true, a);
 }
 
 void JNICALL

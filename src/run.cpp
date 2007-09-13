@@ -2661,7 +2661,7 @@ invoke(Thread* t, object method)
 namespace vm {
 
 object
-run(Thread* t, object method, object this_, bool indirectObjects, va_list a)
+runv(Thread* t, object method, object this_, bool indirectObjects, va_list a)
 {
   assert(t, t->state == Thread::ActiveState
          or t->state == Thread::ExclusiveState);

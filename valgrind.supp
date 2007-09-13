@@ -1,0 +1,54 @@
+
+{
+   ld-cond
+   Memcheck:Cond
+   obj:/lib/ld-2.3.6.so
+}
+
+{
+   ld-addr4
+   Memcheck:Addr4
+   obj:/lib/ld-2.3.6.so
+}
+
+{
+   ld-addr7
+   Memcheck:Addr8
+   obj:/lib/ld-2.3.6.so
+}
+
+{
+   gtk-write
+   Memcheck:Param
+   write(buf)
+   obj:/lib/ld-2.3.6.so
+   fun:_X11TransWrite
+   obj:/usr/lib/libX11.so.6.2.0
+   fun:_XReply
+   fun:XInternAtom
+   fun:XSetWMProperties
+   fun:setup_toplevel_window
+   fun:gdk_window_new
+   fun:gdk_display_open
+   fun:gdk_display_open_default_libgtk_only
+   fun:gtk_init_check
+   fun:Java_org_eclipse_swt_internal_gtk_OS__1gtk_1init_1check
+}
+
+{
+   gtk-writev
+   Memcheck:Param
+   writev(vector[...])
+   obj:/lib/ld-2.3.6.so
+   obj:/usr/lib/libX11.so.6.2.0
+   fun:_X11TransWritev
+   fun:_XSend
+   fun:XQueryExtension
+   fun:XInitExtension
+   fun:XkbUseExtension
+   fun:XkbQueryExtension
+   fun:gdk_display_open
+   fun:gdk_display_open_default_libgtk_only
+   fun:gtk_init_check
+   fun:Java_org_eclipse_swt_internal_gtk_OS__1gtk_1init_1check
+}

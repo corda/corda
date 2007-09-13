@@ -9,7 +9,7 @@
 namespace vm {
 
 object
-run(Thread* t, object method, object this_, bool indirectObjects, va_list a);
+runv(Thread* t, object method, object this_, bool indirectObjects, va_list a);
 
 object
 run(Thread* t, object method, object this_, ...);
