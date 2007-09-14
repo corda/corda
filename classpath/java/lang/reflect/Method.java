@@ -110,4 +110,14 @@ public class Method<T> extends AccessibleObject implements Member {
   public static native Object invoke(Method method, Object instance,
                                      Object ... arguments)
     throws InvocationTargetException, IllegalAccessException;
+
+  public Class getReturnType() {
+    for (int i = 0; i < spec.length - 1; ++i) {
+      if (spec[i] == ')') {
+        return Class.forCanonicalName
+          (new String(spec, i + 1, spec.length - i - 2, false));
+      }
+    }
+    throw new RuntimeException();
+  }
 }

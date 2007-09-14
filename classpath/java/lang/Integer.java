@@ -12,6 +12,10 @@ public final class Integer extends Number {
     this.value = value;
   }
 
+  public Integer(String s) {
+    this.value = parseInt(s);
+  }
+
   public static Integer valueOf(int value) {
     return new Integer(value);
   }

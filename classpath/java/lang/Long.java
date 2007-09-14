@@ -9,6 +9,10 @@ public final class Long extends Number {
     this.value = value;
   }
 
+  public Long(String s) {
+    this.value = parseLong(s);
+  }
+
   public static Long valueOf(long value) {
     return new Long(value);
   }

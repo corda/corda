@@ -12,6 +12,10 @@ public final class Boolean {
     this.value = value;
   }
 
+  public Boolean(String s) {
+    this.value = "true".equals(s);
+  }
+
   public static Boolean valueOf(boolean value) {
     return (value ? Boolean.TRUE : Boolean.FALSE);
   }
