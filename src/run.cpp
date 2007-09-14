@@ -2126,6 +2126,7 @@ run(Thread* t)
 
     object class_ = resolveClass(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    PROTECT(t, class_);
 
     int32_t counts[dimensions];
     for (int i = dimensions - 1; i >= 0; --i) {
