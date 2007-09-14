@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.IOException;
 
 public abstract class ResourceBundle {
+  protected String name;
   protected ResourceBundle parent;
 
   private static String replace(char a, char b, String s) {
@@ -24,7 +25,7 @@ public abstract class ResourceBundle {
       (replace('.', '/', name) + ".properties");
     if (in != null) {
       try {
-        return new MapResourceBundle(new Parser().parse(in), parent);
+        return new MapResourceBundle(name, parent, new Parser().parse(in));
       } finally {
         in.close();
       }
@@ -96,7 +97,7 @@ public abstract class ResourceBundle {
         return value;
       }
     }
-    return null;
+    throw new MissingResourceException(key, name, key);
   }
 
   public String getString(String key) {
@@ -108,7 +109,10 @@ public abstract class ResourceBundle {
   private static class MapResourceBundle extends ResourceBundle {
     private final Map<String, Object> map;
 
-    public MapResourceBundle(Map<String, Object> map, ResourceBundle parent) {
+    public MapResourceBundle(String name, ResourceBundle parent,
+                             Map<String, Object> map)
+    {
+      this.name = name;
       this.parent = parent;
       this.map = map;
     }
