@@ -16,7 +16,7 @@ src = src
 classpath = classpath
 test = test
 jscheme = $(HOME)/p/jscheme-7.2/src
-swt = $(HOME)/p/swt-3.3/bin
+swt = $(HOME)/p/swt-3.3-$(arch)/bin
 
 input = $(cls)/GC.class
 swt-input = $(cls)/HelloSWT.class
