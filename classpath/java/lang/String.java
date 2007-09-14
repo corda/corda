@@ -336,6 +336,46 @@ public final class String implements Comparable<String> {
     }
   }
 
+  public String[] split(String s) {
+    String[] array = new String[(length / s.length) + 1];
+    int index = 0;
+    int last = 0;
+    int position = 0;
+    for (int i = 0; i < length - s.length + 1;) {
+      int j;
+      for (j = 0; j < s.length; ++j) {
+        if (charAt(i + j) != s.charAt(j)) {
+          break;
+        }
+      }
+
+      if (j == s.length) {
+        if (i > 0) {
+          if (i > position) {
+            last = index;
+          }
+          array[index++] = substring(position, i);
+        }
+        i = position = i + s.length;
+      } else {
+        ++ i;
+      }
+    }
+
+    if (position < length) {
+      last = index;
+      array[index] = substring(position, length);
+    }
+
+    if (last + 1 < array.length) {
+      String[] a = new String[last + 1];
+      System.arraycopy(array, 0, a, 0, last + 1);
+      array = a;
+    }
+
+    return array;
+  }
+
   public native String intern();
 
   public static String valueOf(Object s) {

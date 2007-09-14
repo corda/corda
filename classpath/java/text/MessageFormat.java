@@ -15,9 +15,22 @@ public class MessageFormat extends Format {
     this(pattern, Locale.getDefault());
   }
 
-  public StringBuffer format(Object o, StringBuffer target, FieldPosition p) {
+  public StringBuffer format(Object[] args, StringBuffer target,
+                             FieldPosition p)
+  {
     // todo
     return target.append(pattern);
+  }
+
+  public StringBuffer format(Object args, StringBuffer target, FieldPosition p)
+  {
+    return format((Object[]) args, target, p);
+  }
+
+  public static String format(String pattern, Object ... args) {
+    return new MessageFormat
+      (pattern).format(args, new StringBuffer(), new FieldPosition(0))
+      .toString();
   }
 
   public void applyPattern(String pattern) {
