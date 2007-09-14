@@ -1977,14 +1977,14 @@ run(Thread* t)
   } goto loop;
 
   case lshl: {
-    int64_t b = popLong(t);
+    int32_t b = popInt(t);
     int64_t a = popLong(t);
     
     pushLong(t, a << b);
   } goto loop;
 
   case lshr: {
-    int64_t b = popLong(t);
+    int32_t b = popInt(t);
     int64_t a = popLong(t);
     
     pushLong(t, a >> b);
@@ -2700,7 +2700,7 @@ run(Thread* t, object method, object this_, ...)
   va_list a;
   va_start(a, this_);
 
-  object r = run(t, method, this_, false, a);
+  object r = runv(t, method, this_, false, a);
 
   va_end(a);
 

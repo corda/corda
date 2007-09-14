@@ -144,7 +144,7 @@ jscheme-command = jscheme/REPL build/make.scm -main commandMain ""
 swt-command = $(call class-name,$(swt-input))
 
 .PHONY: build
-build: $(executable)
+build: $(executable) $(classpath-objects)
 
 $(input): $(classpath-objects)
 $(swt-input): $(classpath-objects)
