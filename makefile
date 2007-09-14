@@ -23,7 +23,7 @@ swt-input = $(cls)/HelloSWT.class
 
 cxx = g++
 cc = gcc
-vg = nice valgrind --suppressions=valgrind.supp --leak-check=full \
+vg = nice valgrind --suppressions=valgrind.supp --undef-value-errors=no \
 	--num-callers=32 --db-attach=yes --freelist-vol=100000000
 db = gdb --args
 javac = javac
