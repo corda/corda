@@ -53,15 +53,21 @@ public abstract class ResourceBundle {
   {
     try {
       ResourceBundle b = find(name, loader, null);
+
       if (locale.getLanguage() != null) {
         name = name + "_" + locale.getLanguage();
-        b = find(name, loader, b);
+        ResourceBundle b2 = find(name, loader, b);
+        if (b2 != null) b = b2;
+
         if (locale.getCountry() != null) {
           name = name + "_" + locale.getCountry();
-          b = find(name, loader, b);
+          b2 = find(name, loader, b);
+          if (b2 != null) b = b2;
+
           if (locale.getVariant() != null) {
             name = name + "_" + locale.getVariant();
-            b = find(name, loader, b);
+            b2 = find(name, loader, b);
+            if (b2 != null) b = b2;
           }
         }
       }

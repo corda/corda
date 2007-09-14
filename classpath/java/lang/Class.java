@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.InvocationTargetException;
 import java.io.InputStream;
+import java.io.IOException;
+import java.net.URL;
 
 public final class Class <T> {
   private static final int PrimitiveFlag = 1 << 4;
@@ -367,10 +369,23 @@ public final class Class <T> {
     return (vmFlags & PrimitiveFlag) != 0;
   }
 
-  public InputStream getResourceAsStream(String path) {
+  public URL getResource(String path) {
     if (! path.startsWith("/")) {
-      path = new String(name, 0, name.length - 1, false) + "/" + path;
+      String name = new String(this.name, 0, this.name.length - 1, false);
+      int index = name.lastIndexOf('/');
+      if (index >= 0) {
+        path = name.substring(0, index) + "/" + path;
+      }
     }
-    return getClassLoader().getResourceAsStream(path);
+    return getClassLoader().getResource(path);
+  }
+
+  public InputStream getResourceAsStream(String path) {
+    URL url = getResource(path);
+    try {
+      return (url == null ? null : url.openStream());
+    } catch (IOException e) {
+      return null;
+    }
   }
 }
