@@ -517,6 +517,37 @@ store(Thread* t, unsigned index)
          BytesPerWord * 2);
 }
 
+void
+populateMultiArray(Thread* t, object array, int32_t* counts,
+                   unsigned index, unsigned dimensions)
+{
+  if (index + 1 == dimensions or counts[index] == 0) {
+    return;
+  }
+
+  PROTECT(t, array);
+
+  object spec = className(t, objectClass(t, array));
+  PROTECT(t, spec);
+
+  object elementSpec = makeByteArray
+    (t, byteArrayLength(t, spec) - 1, false);
+  memcpy(&byteArrayBody(t, elementSpec, 0),
+         &byteArrayBody(t, spec, 1),
+         byteArrayLength(t, spec) - 1);
+
+  object class_ = resolveClass(t, elementSpec);
+  PROTECT(t, class_);
+
+  for (int32_t i = 0; i < counts[index]; ++i) {
+    object a = makeArray(t, counts[index + 1], true);
+    setObjectClass(t, a, class_);
+    set(t, objectArrayBody(t, array, i), a);
+    
+    populateMultiArray(t, a, counts, index + 1, dimensions);
+  }
+}
+
 object
 run(Thread* t)
 {
@@ -701,15 +732,32 @@ run(Thread* t)
     object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < byteArrayLength(t, array)))
+      if (objectClass(t, array)
+          == arrayBody(t, t->vm->types, Machine::BooleanArrayType))
       {
-        pushInt(t, byteArrayBody(t, array, index));
+        if (LIKELY(index >= 0 and
+                   static_cast<uintptr_t>(index)
+                   < booleanArrayLength(t, array)))
+        {
+          pushInt(t, booleanArrayBody(t, array, index));
+        } else {
+          object message = makeString(t, "%d not in [0,%d)", index,
+                                      booleanArrayLength(t, array));
+          exception = makeArrayIndexOutOfBoundsException(t, message);
+          goto throw_;
+        }
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    byteArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
-        goto throw_;
+        if (LIKELY(index >= 0 and
+                   static_cast<uintptr_t>(index)
+                   < byteArrayLength(t, array)))
+        {
+          pushInt(t, byteArrayBody(t, array, index));
+        } else {
+          object message = makeString(t, "%d not in [0,%d)", index,
+                                      byteArrayLength(t, array));
+          exception = makeArrayIndexOutOfBoundsException(t, message);
+          goto throw_;
+        }
       }
     } else {
       exception = makeNullPointerException(t);
@@ -723,15 +771,31 @@ run(Thread* t)
     object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < byteArrayLength(t, array)))
+      if (objectClass(t, array)
+          == arrayBody(t, t->vm->types, Machine::BooleanArrayType))
       {
-        byteArrayBody(t, array, index) = value;
+        if (LIKELY(index >= 0 and
+                   static_cast<uintptr_t>(index)
+                   < booleanArrayLength(t, array)))
+        {
+          booleanArrayBody(t, array, index) = value;
+        } else {
+          object message = makeString(t, "%d not in [0,%d)", index,
+                                      booleanArrayLength(t, array));
+          exception = makeArrayIndexOutOfBoundsException(t, message);
+          goto throw_;
+        }
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    byteArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
-        goto throw_;
+        if (LIKELY(index >= 0 and
+                   static_cast<uintptr_t>(index) < byteArrayLength(t, array)))
+        {
+          byteArrayBody(t, array, index) = value;
+        } else {
+          object message = makeString(t, "%d not in [0,%d)", index,
+                                      byteArrayLength(t, array));
+          exception = makeArrayIndexOutOfBoundsException(t, message);
+          goto throw_;
+        }
       }
     } else {
       exception = makeNullPointerException(t);
@@ -962,7 +1026,7 @@ run(Thread* t)
       fprintf(stderr, "dup2\n");
     }
 
-    memcpy(stack + ((sp + 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 4);
+    memcpy(stack + ((sp    ) * 2), stack + ((sp - 2) * 2), BytesPerWord * 4);
     sp += 2;
   } goto loop;
 
@@ -1719,9 +1783,9 @@ run(Thread* t)
 
   case iushr: {
     int32_t b = popInt(t);
-    int32_t a = popInt(t);
+    uint32_t a = popInt(t);
     
-    pushInt(t, static_cast<uint32_t>(a >> b));
+    pushInt(t, a >> b);
   } goto loop;
 
   case ixor: {
@@ -2023,7 +2087,7 @@ run(Thread* t)
   } goto loop;
 
   case lushr: {
-    uint64_t b = popLong(t);
+    int64_t b = popLong(t);
     uint64_t a = popLong(t);
     
     pushLong(t, a >> b);
@@ -2054,6 +2118,32 @@ run(Thread* t)
       exception = makeNullPointerException(t);
       goto throw_;
     }
+  } goto loop;
+
+  case multianewarray: {
+    uint16_t index = codeReadInt16(t, ip);
+    uint8_t dimensions = codeBody(t, code, ip++);
+
+    object class_ = resolveClass(t, codePool(t, code), index - 1);
+    if (UNLIKELY(exception)) goto throw_;
+
+    int32_t counts[dimensions];
+    for (int i = dimensions - 1; i >= 0; --i) {
+      counts[i] = popInt(t);
+      if (UNLIKELY(counts[i] < 0)) {
+        object message = makeString(t, "%d", counts[i]);
+        exception = makeNegativeArraySizeException(t, message);
+        goto throw_;
+      }
+    }
+
+    object array = makeArray(t, counts[0], true);
+    setObjectClass(t, array, class_);
+    PROTECT(t, array);
+
+    populateMultiArray(t, array, counts, 0, dimensions);
+
+    pushObject(t, array);
   } goto loop;
 
   case new_: {

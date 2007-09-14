@@ -52,8 +52,8 @@ cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
 cflags += -O3 -DNDEBUG
-#strip = strip
-#show-size = ls -l
+strip = strip
+show-size = ls -l
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
