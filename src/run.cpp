@@ -1209,6 +1209,18 @@ run(Thread* t)
     pushInt(t, static_cast<uint16_t>(popInt(t)));
   } goto loop;
 
+  case i2d: {
+    double f = static_cast<double>(popInt(t));
+    int64_t i; memcpy(&i, &f, 8);
+    pushLong(t, i);
+  } goto loop;
+
+  case i2f: {
+    float f = static_cast<float>(popInt(t));
+    int32_t i; memcpy(&i, &f, 4);
+    pushInt(t, i);
+  } goto loop;
+
   case i2l: {
     pushLong(t, popInt(t));
   } goto loop;
