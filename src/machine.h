@@ -2141,6 +2141,8 @@ resolveObjectArrayClass(Thread* t, object elementSpec);
 inline void
 initClass(Thread* t, object c)
 {
+  PROTECT(t, c);
+
   acquire(t, t->vm->classLock);
   if (classVmFlags(t, c) & NeedInitFlag
       and (classVmFlags(t, c) & InitFlag) == 0)
