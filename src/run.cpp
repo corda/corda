@@ -1226,6 +1226,7 @@ run(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    PROTECT(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
 
@@ -1675,6 +1676,7 @@ run(Thread* t)
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    PROTECT(t, method);
     
     if (UNLIKELY(classInit(t, methodClass(t, method), 3))) goto invoke;
 
@@ -2152,6 +2154,7 @@ run(Thread* t)
     
     object class_ = resolveClass(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    PROTECT(t, class_);
 
     if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
 
@@ -2290,10 +2293,9 @@ run(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    PROTECT(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
-
-    PROTECT(t, field);
       
     object v;
 
