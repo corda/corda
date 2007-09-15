@@ -804,7 +804,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         memcpy(&intArrayBody(t, mask, 0),
                &intArrayBody(t, superMask, 0),
                ceiling(classFixedSize(t, classSuper(t, class_)),
-                       BitsPerWord * BytesPerWord)
+                       32 * BytesPerWord)
                * 4);
       }
     }
