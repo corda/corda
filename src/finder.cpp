@@ -157,8 +157,7 @@ class JarIndex {
     s(s),
     capacity(capacity),
     position(0),
-    nodes(static_cast<Node*>(s->allocate(sizeof(Node) * capacity))),
-    zStream(0)
+    nodes(static_cast<Node*>(s->allocate(sizeof(Node) * capacity)))
   {
     memset(table, 0, sizeof(Node*) * capacity);
   }
@@ -181,8 +180,8 @@ class JarIndex {
     return get4(p);
   }
 
-  static uint32_t compressionMethod(const uint8_t* p) {
-    return get4(p + 8);
+  static uint16_t compressionMethod(const uint8_t* p) {
+    return get2(p + 8);
   }
 
   static uint32_t compressedSize(const uint8_t* p) {
@@ -205,6 +204,14 @@ class JarIndex {
     return p + 30;
   }
 
+  static const uint8_t* fileData(const uint8_t* p) {
+    return p + HeaderSize + fileNameLength(p) + extraFieldLength(p);
+  }
+
+  static const uint8_t* endOfEntry(const uint8_t* p) {
+    return fileData(p) + compressedSize(p);
+  }
+
   static JarIndex* make(System* s, unsigned capacity) {
     return new
       (s->allocate(sizeof(JarIndex) + (sizeof(Node*) * capacity)))
@@ -220,10 +227,7 @@ class JarIndex {
       if (signature(p) == 0x04034b50) {
         index = index->add(hash(fileName(p), fileNameLength(p)), p);
 
-        p += HeaderSize
-          + fileNameLength(p)
-          + extraFieldLength(p)
-          + compressedSize(p);
+        p = endOfEntry(p);
       } else {
         break;
       }
@@ -267,8 +271,7 @@ class JarIndex {
       switch (compressionMethod(p)) {
       case Stored: {
         return new (s->allocate(sizeof(PointerRegion)))
-          PointerRegion(s, p + fileNameLength(p) + extraFieldLength(p),
-                        compressedSize(p));
+          PointerRegion(s, fileData(p), compressedSize(p));
       } break;
 
       case Deflated: {
@@ -276,21 +279,23 @@ class JarIndex {
           (s->allocate(sizeof(DataRegion) + uncompressedSize(p)))
           DataRegion(s, uncompressedSize(p));
           
-        if (zStream == 0) {
-          zStream = static_cast<z_stream*>(s->allocate(sizeof(z_stream)));
-          memset(zStream, 0, sizeof(z_stream));
-          int r UNUSED = inflateInit(zStream);
-          assert(s, r == Z_OK);
-        }
+        z_stream zStream; memset(&zStream, 0, sizeof(z_stream));
 
-        zStream->next_in = const_cast<uint8_t*>
-          (p + fileNameLength(p) + extraFieldLength(p));
-        zStream->avail_in = compressedSize(p);
-        zStream->next_out = region->data;
-        zStream->avail_out = region->length();
+        zStream.next_in = const_cast<uint8_t*>(fileData(p));
+        zStream.avail_in = compressedSize(p);
+        zStream.next_out = region->data;
+        zStream.avail_out = region->length();
 
-        int r UNUSED = inflate(zStream, Z_SYNC_FLUSH);
-        assert(s, r == Z_STREAM_END);
+        // -15 means max window size and raw deflate (no zlib wrapper)
+        int r = inflateInit2(&zStream, -15);
+        expect(s, r == Z_OK);
+
+        r = inflate(&zStream, Z_FINISH);
+        expect(s, r == Z_STREAM_END);
+
+        inflateEnd(&zStream);
+
+        return region;
       } break;
 
       default:
@@ -305,10 +310,6 @@ class JarIndex {
   }
 
   void dispose() {
-    if (zStream) {
-      inflateEnd(zStream);
-      s->free(zStream);
-    }
     s->free(nodes);
     s->free(this);
   }
@@ -317,7 +318,6 @@ class JarIndex {
   unsigned capacity;
   unsigned position;
   Node* nodes;
-  z_stream* zStream;
   Node* table[0];
 };
 
