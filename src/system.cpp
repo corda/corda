@@ -570,7 +570,7 @@ class MySystem: public System {
   virtual FileType identify(const char* name) {
     struct stat s;
     int r = stat(name, &s);
-    if (r) {
+    if (r == 0) {
       if (S_ISREG(s.st_mode)) {
         return File;
       } else if (S_ISDIR(s.st_mode)) {
