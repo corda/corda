@@ -63,15 +63,17 @@ public abstract class System {
     }
   }
 
-  public static void setProperty(String name, String value) {
+  public static String setProperty(String name, String value) {
     for (Property p = properties; p != null; p = p.next) {
       if (p.name.equals(name)) {
+        String oldValue = p.value;
         p.value = value;
-        return;
+        return oldValue;
       }
     }
 
     properties = new Property(name, value, properties);
+    return null;
   }
 
   private static native String getProperty(int code);
