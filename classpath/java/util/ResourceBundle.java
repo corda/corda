@@ -25,7 +25,10 @@ public abstract class ResourceBundle {
       (replace('.', '/', name) + ".properties");
     if (in != null) {
       try {
-        return new MapResourceBundle(name, parent, new Parser().parse(in));
+        ResourceBundle r = new PropertyResourceBundle(in);
+        r.name = name;
+        r.parent = parent;
+        return r;
       } finally {
         in.close();
       }
@@ -105,117 +108,4 @@ public abstract class ResourceBundle {
   }
 
   protected abstract Object handleGetObject(String key);
-
-  private static class MapResourceBundle extends ResourceBundle {
-    private final Map<String, Object> map;
-
-    public MapResourceBundle(String name, ResourceBundle parent,
-                             Map<String, Object> map)
-    {
-      this.name = name;
-      this.parent = parent;
-      this.map = map;
-    }
-
-    protected Object handleGetObject(String key) {
-      return map.get(key);
-    }
-  }
-
-  private static class Parser {
-    private StringBuilder key = null;
-    private StringBuilder value = null;
-    private StringBuilder current = null;
-
-    private void append(int c) {
-      if (current == null) {
-        if (key == null) {
-          current = key = new StringBuilder();
-        } else {
-          current = value = new StringBuilder();
-        }
-      }
-
-      current.append((char) c);
-    }
-
-    private void finishLine(Map<String, Object> map) {
-      if (key != null) {
-        map.put(key.toString(),
-                (value == null ? "" : value.toString().trim()));
-      }
-
-      key = value = current = null;
-    }
-
-    private Map<String, Object> parse(InputStream in)
-      throws IOException
-    {
-      Map<String, Object> map = new HashMap();
-      boolean escaped = false;
-
-      int c;
-      while ((c = in.read()) != -1) {
-        if (c == '\\') {
-          if (escaped) {
-            escaped = false;
-            append(c);
-          } else {
-            escaped = true;
-          }
-        } else {
-          switch (c) {
-          case '#':
-          case '!':
-            if (key == null) {
-              while ((c = in.read()) != -1 && c != '\n');
-            } else {
-              append(c);
-            }
-            break;
-
-          case ' ':
-          case '\r':
-          case '\t':
-            if (escaped || key != current) {
-              append(c);
-            } else {
-              current = null;
-            }
-            break;
-
-          case ':':
-          case '=':
-            if (escaped || key != current) {
-              append(c);
-            } else {
-              if (key == null) {
-                key = new StringBuilder();
-              }
-              current = null;
-            }
-            break;
-
-          case '\n':
-            if (escaped) {
-              append(c);
-            } else {
-              finishLine(map);          
-            }
-            break;
-
-          default:
-            append(c);
-            break;
-          }
-        
-          escaped = false;
-        }
-      }
-
-      finishLine(map);
-
-      return map;
-    }
-  }
 }
