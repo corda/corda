@@ -39,7 +39,7 @@ thread-lflags = -lpthread
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
 	-I$(src) -I$(bld) $(thread-cflags) -D__STDC_LIMIT_MACROS
 
-lflags = $(thread-lflags) -ldl -lm
+lflags = $(thread-lflags) -ldl -lm -lz
 
 ifeq ($(mode),debug)
 cflags += -O0 -g3

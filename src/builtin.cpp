@@ -546,11 +546,11 @@ ResourceInputStream_open(Thread* t, jclass, jstring path)
 jint JNICALL
 ResourceInputStream_read(Thread*, jclass, jlong peer, jint position)
 {
-  Finder::Data* d = reinterpret_cast<Finder::Data*>(peer);
-  if (position >= static_cast<jint>(d->length())) {
+  System::Region* region = reinterpret_cast<System::Region*>(peer);
+  if (position >= static_cast<jint>(region->length())) {
     return -1;
   } else {
-    return d->start()[position];
+    return region->start()[position];
   }
 }
 
@@ -560,14 +560,14 @@ ResourceInputStream_read2(Thread* t, jclass, jlong peer, jint position,
 {
   if (length == 0) return 0;
   
-  Finder::Data* d = reinterpret_cast<Finder::Data*>(peer);
-  if (length > static_cast<jint>(d->length()) - position) {
-    length = static_cast<jint>(d->length()) - position;
+  System::Region* region = reinterpret_cast<System::Region*>(peer);
+  if (length > static_cast<jint>(region->length()) - position) {
+    length = static_cast<jint>(region->length()) - position;
   }
   if (length <= 0) {
     return -1;
   } else {
-    memcpy(&byteArrayBody(t, *b, offset), d->start() + position, length);
+    memcpy(&byteArrayBody(t, *b, offset), region->start() + position, length);
     return length;
   }
 }
@@ -575,7 +575,7 @@ ResourceInputStream_read2(Thread* t, jclass, jlong peer, jint position,
 void JNICALL
 ResourceInputStream_close(Thread*, jclass, jlong peer)
 {
-  reinterpret_cast<Finder::Data*>(peer)->dispose();
+  reinterpret_cast<System::Region*>(peer)->dispose();
 }
 
 } // namespace

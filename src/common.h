@@ -128,6 +128,42 @@ mask(T* p)
   return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & PointerMask);
 }
 
+inline uint32_t
+hash(const char* s)
+{
+  uint32_t h = 0;
+  for (unsigned i = 0; s[i]; ++i) {
+    h = (h * 31) + s[i];
+  }
+  return h;  
+}
+
+inline uint32_t
+hash(const uint8_t* s, unsigned length)
+{
+  uint32_t h = 0;
+  for (unsigned i = 0; i < length; ++i) {
+    h = (h * 31) + s[i];
+  }
+  return h;
+}
+
+inline uint32_t
+hash(const int8_t* s, unsigned length)
+{
+  return hash(reinterpret_cast<const uint8_t*>(s), length);
+}
+
+inline uint32_t
+hash(const uint16_t* s, unsigned length)
+{
+  uint32_t h = 0;
+  for (unsigned i = 0; i < length; ++i) {
+    h = (h * 31) + s[i];
+  }
+  return h;
+}
+
 } // namespace vm
 
 #endif//COMMON_H

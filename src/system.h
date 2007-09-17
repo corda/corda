@@ -17,6 +17,13 @@ class System: public Allocator {
  public:
   typedef intptr_t Status;
 
+  enum FileType {
+    Unknown,
+    DoesNotExist,
+    File,
+    Directory
+  };
+
   class Thread {
    public:
     virtual ~Thread() { }
@@ -55,6 +62,14 @@ class System: public Allocator {
     virtual void dispose() = 0;
   };
 
+  class Region {
+   public:
+    virtual ~Region() { }
+    virtual const uint8_t* start() = 0;
+    virtual size_t length() = 0;
+    virtual void dispose() = 0;
+  };
+
   class Library {
    public:
     virtual ~Library() { }
@@ -74,6 +89,8 @@ class System: public Allocator {
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;
+  virtual Status map(Region**, const char* name) = 0;
+  virtual FileType identify(const char* name) = 0;
   virtual Status load(Library**, const char* name, bool mapName, Library* next)
   = 0;
   virtual void exit(int code) = 0;

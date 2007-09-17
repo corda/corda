@@ -1858,26 +1858,6 @@ makeTrace(Thread* t)
   return makeTrace(t, t->frame);
 }
 
-inline uint32_t
-hash(const int8_t* s, unsigned length)
-{
-  uint32_t h = 0;
-  for (unsigned i = 0; i < length; ++i) {
-    h = (h * 31) + static_cast<unsigned>(s[i]);
-  }
-  return h;  
-}
-
-inline uint32_t
-hash(const uint16_t* s, unsigned length)
-{
-  uint32_t h = 0;
-  for (unsigned i = 0; i < length; ++i) {
-    h = (h * 31) + s[i];
-  }
-  return h;  
-}
-
 inline unsigned
 baseSize(Thread* t, object o, object class_)
 {

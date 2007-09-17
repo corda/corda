@@ -2285,16 +2285,16 @@ resolveClass(Thread* t, object spec)
       memcpy(file, &byteArrayBody(t, spec, 0), byteArrayLength(t, spec) - 1);
       memcpy(file + byteArrayLength(t, spec) - 1, ".class", 7);
 
-      Finder::Data* data = t->vm->finder->find(file);
+      System::Region* region = t->vm->finder->find(file);
 
-      if (data) {
+      if (region) {
         if (Verbose) {
           fprintf(stderr, "parsing %s\n", &byteArrayBody(t, spec, 0));
         }
 
         // parse class file
-        class_ = parseClass(t, data->start(), data->length());
-        data->dispose();
+        class_ = parseClass(t, region->start(), region->length());
+        region->dispose();
 
         if (LIKELY(t->exception == 0)) {
           if (Verbose) {

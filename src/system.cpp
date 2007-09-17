@@ -6,6 +6,7 @@
 #include "fcntl.h"
 #include "dlfcn.h"
 #include "errno.h"
+#include "unistd.h"
 #include "pthread.h"
 #include "signal.h"
 #include "stdint.h"
@@ -376,6 +377,34 @@ class MySystem: public System {
     pthread_key_t key;
   };
 
+  class Region: public System::Region {
+   public:
+    Region(System* system, uint8_t* start, size_t length):
+      system(system),
+      start_(start),
+      length_(length)
+    { }
+
+    virtual const uint8_t* start() {
+      return start_;
+    }
+
+    virtual size_t length() {
+      return length_;
+    }
+
+    virtual void dispose() {
+      if (start_) {
+        munmap(start_, length_);
+      }
+      system->free(this);
+    }
+
+    System* system;
+    uint8_t* start_;
+    size_t length_;
+  };
+
   class Library: public System::Library {
    public:
     Library(System* s, void* p, const char* name, bool mapName,
@@ -515,6 +544,43 @@ class MySystem: public System {
                         unsigned count, unsigned size, unsigned returnType)
   {
     return dynamicCall(function, arguments, types, count, size, returnType);
+  }
+
+  virtual Status map(System::Region** region, const char* name) {
+    Status status = 1;
+
+    int fd = open(name, O_RDONLY);
+    if (fd != -1) {
+      struct stat s;
+      int r = fstat(fd, &s);
+      if (r != -1) {
+        void* data = mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (data) {
+          *region = new (allocate(sizeof(Region)))
+            Region(this, static_cast<uint8_t*>(data), s.st_size);
+          status = 0;
+        }
+      }
+      close(fd);
+    }
+    
+    return status;
+  }
+
+  virtual FileType identify(const char* name) {
+    struct stat s;
+    int r = stat(name, &s);
+    if (r) {
+      if (S_ISREG(s.st_mode)) {
+        return File;
+      } else if (S_ISDIR(s.st_mode)) {
+        return Directory;
+      } else {
+        return Unknown;
+      }
+    } else {
+      return DoesNotExist;
+    }
   }
 
   virtual Status load(System::Library** lib,
