@@ -1287,7 +1287,7 @@ run(Thread* t)
   } goto loop;
 
   case i2l: {
-    pushLong(t, popInt(t));
+    pushLong(t, static_cast<int32_t>(popInt(t)));
   } goto loop;
 
   case i2s: {
