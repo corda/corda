@@ -279,7 +279,7 @@ class JarIndex {
         if (zStream == 0) {
           zStream = static_cast<z_stream*>(s->allocate(sizeof(z_stream)));
           memset(zStream, 0, sizeof(z_stream));
-          int r = inflateInit(zStream);
+          int r UNUSED = inflateInit(zStream);
           assert(s, r == Z_OK);
         }
 
@@ -289,7 +289,7 @@ class JarIndex {
         zStream->next_out = region->data;
         zStream->avail_out = region->length();
 
-        int r = inflate(zStream, Z_SYNC_FLUSH);
+        int r UNUSED = inflate(zStream, Z_SYNC_FLUSH);
         assert(s, r == Z_STREAM_END);
       } break;
 
