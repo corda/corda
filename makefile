@@ -18,7 +18,7 @@ test = test
 jscheme = $(HOME)/p/jscheme-7.2/src
 swt = $(HOME)/p/swt-3.3-$(arch)/bin
 
-input = $(cls)/GC.class
+input = $(cls)/Hello.class
 swt-input = $(cls)/HelloSWT.class
 
 cxx = g++
@@ -258,7 +258,7 @@ $(jni-library): $(jni-objects)
 
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"
-	$(cc) $(lflags) $(^) -o $(@)
+	$(cc) $(lflags) -rdynamic $(^) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
 

@@ -5,7 +5,6 @@
 #include "constants.h"
 #include "run.h"
 #include "jnienv.h"
-#include "builtin.h"
 #include "machine.h"
 
 using namespace vm;
@@ -197,7 +196,7 @@ resolveMethod(Thread* t, object pool, unsigned index)
 }
 
 object
-makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
+makeNativeMethodData(Thread* t, object method, void* function)
 {
   PROTECT(t, method);
 
@@ -210,7 +209,6 @@ makeNativeMethodData(Thread* t, object method, void* function, bool builtin)
                                      function,
                                      0, // argument table size
                                      0, // return code,
-                                     builtin,
                                      count,
                                      false);
         
@@ -274,17 +272,8 @@ resolveNativeMethodData(Thread* t, object method)
                              (&byteArrayBody(t, methodCode(t, method), 0)));
       if (p) {
         PROTECT(t, method);
-        data = makeNativeMethodData(t, method, p, false);
+        data = makeNativeMethodData(t, method, p);
         break;
-      }
-    }
-
-    if (data == 0) {
-      object p = hashMapFind(t, t->vm->builtinMap, methodCode(t, method),
-                             byteArrayHash, byteArrayEqual);
-      if (p) {
-        PROTECT(t, method);
-        data = makeNativeMethodData(t, method, pointerValue(t, p), true);
       }
     }
 
@@ -384,25 +373,24 @@ invokeNative(Thread* t, object method)
   unsigned returnType = fieldType(t, returnCode);
   void* function = nativeMethodDataFunction(t, data);
 
-  bool builtin = nativeMethodDataBuiltin(t, data);
-  Thread::State oldState = t->state;
-  if (not builtin) {    
-    enter(t, Thread::IdleState);
-  }
-
   if (DebugRun) {
     fprintf(stderr, "invoke native method %s.%s\n",
             &byteArrayBody(t, className(t, methodClass(t, method)), 0),
             &byteArrayBody(t, methodName(t, method), 0));
   }
 
-  uint64_t result = t->vm->system->call
-    (function,
-     args,
-     &nativeMethodDataParameterTypes(t, data, 0),
-     count + 1,
-     size,
-     returnType);
+  uint64_t result;
+  
+  { ENTER(t, Thread::IdleState);
+
+    result = t->vm->system->call
+      (function,
+       args,
+       &nativeMethodDataParameterTypes(t, data, 0),
+       count + 1,
+       size,
+       returnType);
+  }
 
   if (DebugRun) {
     fprintf(stderr, "return from native method %s.%s\n",
@@ -410,10 +398,6 @@ invokeNative(Thread* t, object method)
             (t, className(t, methodClass(t, frameMethod(t, t->frame))), 0),
             &byteArrayBody
             (t, methodName(t, frameMethod(t, t->frame)), 0));
-  }
-
-  if (not builtin) {
-    enter(t, oldState);
   }
 
   popFrame(t);

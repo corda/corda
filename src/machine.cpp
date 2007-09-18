@@ -1,5 +1,4 @@
 #include "jnienv.h"
-#include "builtin.h"
 #include "machine.h"
 #include "stream.h"
 #include "constants.h"
@@ -1287,7 +1286,6 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
   libraries(0),
   loader(0),
   bootstrapClassMap(0),
-  builtinMap(0),
   monitorMap(0),
   stringMap(0),
   types(0),
@@ -1306,7 +1304,8 @@ Machine::Machine(System* system, Heap* heap, Finder* finder):
       not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
-      not system->success(system->make(&referenceLock)))
+      not system->success(system->make(&referenceLock)) or
+      not system->success(system->load(&libraries, 0, false, 0)))
   {
     system->abort();
   }
@@ -1428,13 +1427,10 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     object loaderMap = makeHashMap(this, 0, 0);
     set(t, systemClassLoaderMap(t, m->loader), loaderMap);
 
-    m->builtinMap = makeHashMap(this, 0, 0);
     m->monitorMap = makeWeakHashMap(this, 0, 0);
     m->stringMap = makeWeakHashMap(this, 0, 0);
 
     m->jniInterfaceTable = makeVector(this, 0, 0, false);
-
-    populateBuiltinMap(t, m->builtinMap);
 
     m->localThread->set(this);
   } else {
@@ -2522,7 +2518,6 @@ collect(Thread* t, Heap::CollectionType type)
     virtual void visitRoots(Heap::Visitor* v) {
       v->visit(&(m->loader));
       v->visit(&(m->bootstrapClassMap));
-      v->visit(&(m->builtinMap));
       v->visit(&(m->monitorMap));
       v->visit(&(m->stringMap));
       v->visit(&(m->types));

@@ -411,8 +411,8 @@ class MySystem: public System {
             System::Library* next):
       s(s),
       p(p),
-      name(name),
-      mapName(mapName),
+      name_(name),
+      mapName_(mapName),
       next_(next)
     { }
 
@@ -420,9 +420,12 @@ class MySystem: public System {
       return dlsym(p, function);
     }
 
-    virtual bool matches(const char* name, bool mapName) {
-      return strcmp(this->name, name) == 0
-        and this->mapName == mapName;
+    virtual const char* name() {
+      return name_;
+    }
+
+    virtual bool mapName() {
+      return mapName_;
     }
 
     virtual System::Library* next() {
@@ -440,14 +443,17 @@ class MySystem: public System {
         next_->dispose();
       }
 
-      s->free(name);
+      if (name_) {
+        s->free(name_);
+      }
+
       s->free(this);
     }
 
     System* s;
     void* p;
-    const char* name;
-    bool mapName;
+    const char* name_;
+    bool mapName_;
     System::Library* next_;
   };
 
@@ -589,7 +595,7 @@ class MySystem: public System {
                       System::Library* next)
   {
     void* p;
-    unsigned nameLength = strlen(name);
+    unsigned nameLength = (name ? strlen(name) : 0);
     if (mapName) {
       unsigned size = nameLength + 7;
       char buffer[size];
@@ -604,8 +610,14 @@ class MySystem: public System {
         fprintf(stderr, "open %s as %p\n", name, p);
       }
 
-      char* n = static_cast<char*>(System::allocate(nameLength + 1));
-      memcpy(n, name, nameLength + 1);
+      char* n;
+      if (name) {
+        n = static_cast<char*>(System::allocate(nameLength + 1));
+        memcpy(n, name, nameLength + 1);
+      } else {
+        n = 0;
+      }
+
       *lib = new (System::allocate(sizeof(Library)))
         Library(this, p, n, mapName, next);
       return 0;

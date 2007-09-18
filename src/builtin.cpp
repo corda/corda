@@ -3,6 +3,9 @@
 #include "constants.h"
 #include "run.h"
 
+#undef JNIEXPORT
+#define JNIEXPORT __attribute__ ((visibility("default")))
+
 using namespace vm;
 
 namespace {
@@ -11,69 +14,6 @@ inline void
 replace(char a, char b, char* c)
 {
   for (; *c; ++c) if (*c == a) *c = b;
-}
-
-jstring JNICALL
-Object_toString(Thread* t, jobject this_)
-{
-  unsigned hash = objectHash(t, *this_);
-  object s = makeString
-    (t, "%s@0x%x",
-     &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
-     hash);
-
-  return pushReference(t, s);
-}
-
-jclass JNICALL
-Object_getClass(Thread* t, jobject this_)
-{
-  return pushReference(t, objectClass(t, *this_));
-}
-
-void JNICALL
-Object_wait(Thread* t, jobject this_, jlong milliseconds)
-{
-  vm::wait(t, *this_, milliseconds);
-}
-
-void JNICALL
-Object_notify(Thread* t, jobject this_)
-{
-  notify(t, *this_);
-}
-
-void JNICALL
-Object_notifyAll(Thread* t, jobject this_)
-{
-  notifyAll(t, *this_);
-}
-
-jint JNICALL
-Object_hashCode(Thread* t, jobject this_)
-{
-  return objectHash(t, *this_);
-}
-
-jobject JNICALL
-Object_clone(Thread* t, jclass, jobject o)
-{
-  object clone = make(t, objectClass(t, *o));
-  memcpy(reinterpret_cast<void**>(clone) + 1,
-         reinterpret_cast<void**>(*o) + 1,
-         (baseSize(t, *o, objectClass(t, *o)) - 1) * BytesPerWord);
-  return pushReference(t, clone);
-}
-
-jclass JNICALL
-ClassLoader_defineClass(Thread* t, jclass, jbyteArray b, jint offset,
-                        jint length)
-{
-  uint8_t* buffer = static_cast<uint8_t*>(t->vm->system->allocate(length));
-  memcpy(buffer, &byteArrayBody(t, *b, offset), length);
-  object c = parseClass(t, buffer, length);
-  t->vm->system->free(buffer);
-  return pushReference(t, c);
 }
 
 jclass
@@ -101,21 +41,110 @@ search(Thread* t, jstring name, object (*op)(Thread*, object),
   }
 }
 
-jclass JNICALL
-SystemClassLoader_findLoadedClass(Thread* t, jclass, jstring name)
+} // namespace
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_java_lang_Object_toString(Thread* t, jobject this_)
 {
+  ENTER(t, Thread::ActiveState);
+
+  unsigned hash = objectHash(t, *this_);
+  object s = makeString
+    (t, "%s@0x%x",
+     &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
+     hash);
+
+  return pushReference(t, s);
+}
+
+extern "C" JNIEXPORT jclass JNICALL
+Java_java_lang_Object_getClass(Thread* t, jobject this_)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return pushReference(t, objectClass(t, *this_));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Object_wait(Thread* t, jobject this_, jlong milliseconds)
+{
+  ENTER(t, Thread::ActiveState);
+
+  vm::wait(t, *this_, milliseconds);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Object_notify(Thread* t, jobject this_)
+{
+  ENTER(t, Thread::ActiveState);
+
+  notify(t, *this_);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Object_notifyAll(Thread* t, jobject this_)
+{
+  ENTER(t, Thread::ActiveState);
+
+  notifyAll(t, *this_);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_Object_hashCode(Thread* t, jobject this_)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return objectHash(t, *this_);
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_Object_clone(Thread* t, jclass, jobject o)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object clone = make(t, objectClass(t, *o));
+  memcpy(reinterpret_cast<void**>(clone) + 1,
+         reinterpret_cast<void**>(*o) + 1,
+         (baseSize(t, *o, objectClass(t, *o)) - 1) * BytesPerWord);
+  return pushReference(t, clone);
+}
+
+extern "C" JNIEXPORT jclass JNICALL
+Java_java_lang_ClassLoader_defineClass
+(Thread* t, jclass, jbyteArray b, jint offset, jint length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  uint8_t* buffer = static_cast<uint8_t*>(t->vm->system->allocate(length));
+  memcpy(buffer, &byteArrayBody(t, *b, offset), length);
+  object c = parseClass(t, buffer, length);
+  t->vm->system->free(buffer);
+  return pushReference(t, c);
+}
+
+extern "C" JNIEXPORT jclass JNICALL
+Java_java_lang_SystemClassLoader_findLoadedClass
+(Thread* t, jclass, jstring name)
+{
+  ENTER(t, Thread::ActiveState);
+
   return search(t, name, findLoadedClass, true);
 }
 
-jclass JNICALL
-SystemClassLoader_findClass(Thread* t, jclass, jstring name)
+extern "C" JNIEXPORT jclass JNICALL
+Java_java_lang_SystemClassLoader_findClass(Thread* t, jclass, jstring name)
 {
+  ENTER(t, Thread::ActiveState);
+
   return search(t, name, resolveClass, true);
 }
 
-jboolean JNICALL
-SystemClassLoader_resourceExists(Thread* t, jclass, jstring name)
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_lang_SystemClassLoader_resourceExists
+(Thread* t, jclass, jstring name)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (LIKELY(name)) {
     char n[stringLength(t, *name) + 1];
     stringChars(t, *name, n);
@@ -126,15 +155,19 @@ SystemClassLoader_resourceExists(Thread* t, jclass, jstring name)
   }
 }
 
-jobject JNICALL
-ObjectInputStream_makeInstance(Thread* t, jclass, jclass c)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_io_ObjectInputStream_makeInstance(Thread* t, jclass, jclass c)
 {
+  ENTER(t, Thread::ActiveState);
+
   return pushReference(t, make(t, *c));
 }
 
-jclass JNICALL
-Class_primitiveClass(Thread* t, jclass, jchar name)
+extern "C" JNIEXPORT jclass JNICALL
+Java_java_lang_Class_primitiveClass(Thread* t, jclass, jchar name)
 {
+  ENTER(t, Thread::ActiveState);
+
   switch (name) {
   case 'B':
     return pushReference(t, arrayBody(t, t->vm->types, Machine::JbyteType));
@@ -160,15 +193,19 @@ Class_primitiveClass(Thread* t, jclass, jchar name)
   }
 }
 
-void JNICALL
-Class_initialize(Thread* t, jobject this_)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Class_initialize(Thread* t, jobject this_)
 {
+  ENTER(t, Thread::ActiveState);
+
   initClass(t, *this_);
 }
 
-jboolean JNICALL
-Class_isAssignableFrom(Thread* t, jobject this_, jclass that)
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_lang_Class_isAssignableFrom(Thread* t, jobject this_, jclass that)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (LIKELY(that)) {
     return vm::isAssignableFrom(t, *this_, *that);
   } else {
@@ -177,9 +214,12 @@ Class_isAssignableFrom(Thread* t, jobject this_, jclass that)
   }
 }
 
-jlong JNICALL
-Field_getPrimitive(Thread* t, jclass, jobject instance, jint code, jint offset)
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_lang_reflect_Field_getPrimitive
+(Thread* t, jclass, jobject instance, jint code, jint offset)
 {
+  ENTER(t, Thread::ActiveState);
+
   switch (code) {
   case ByteField: 
     return cast<int8_t>(*instance, offset);
@@ -202,16 +242,21 @@ Field_getPrimitive(Thread* t, jclass, jobject instance, jint code, jint offset)
   }
 }
 
-jobject JNICALL
-Field_getObject(Thread* t, jclass, jobject instance, jint offset)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_reflect_Field_getObject
+(Thread* t, jclass, jobject instance, jint offset)
 {
+  ENTER(t, Thread::ActiveState);
+
   return pushReference(t, cast<object>(*instance, offset));
 }
 
-void JNICALL
-Field_setPrimitive(Thread* t, jclass, jobject instance, jint code, jint offset,
-                   jlong value)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_reflect_Field_setPrimitive
+(Thread* t, jclass, jobject instance, jint code, jint offset, jlong value)
 {
+  ENTER(t, Thread::ActiveState);
+
   switch (code) {
   case ByteField:
     cast<int8_t>(*instance, offset) = static_cast<int8_t>(value);
@@ -242,30 +287,38 @@ Field_setPrimitive(Thread* t, jclass, jobject instance, jint code, jint offset,
   }
 }
 
-void JNICALL
-Field_setObject(Thread* t, jclass, jobject instance, jint offset,
-                jobject value)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_reflect_Field_setObject
+(Thread* t, jclass, jobject instance, jint offset, jobject value)
 {
+  ENTER(t, Thread::ActiveState);
+
   set(t, cast<object>(*instance, offset), (value ? *value : 0));
 }
 
-jobject JNICALL
-Constructor_make(Thread* t, jclass, jclass c)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_reflect_Constructor_make(Thread* t, jclass, jclass c)
 {
+  ENTER(t, Thread::ActiveState);
+
   return pushReference(t, make(t, *c));
 }
 
-jobject JNICALL
-Method_getCaller(Thread* t, jclass)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_reflect_Method_getCaller(Thread* t, jclass)
 {
+  ENTER(t, Thread::ActiveState);
+
   return pushReference
     (t, frameMethod(t, frameNext(t, frameNext(t, t->frame))));
 }
 
-jobject JNICALL
-Method_invoke(Thread* t, jclass, jobject method, jobject instance,
-              jobjectArray arguments)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_reflect_Method_invoke
+(Thread* t, jclass, jobject method, jobject instance, jobjectArray arguments)
 {
+  ENTER(t, Thread::ActiveState);
+
   object v = run2(t, *method, (instance ? *instance : 0), *arguments);
   if (t->exception) {
     t->exception = makeInvocationTargetException(t, t->exception);
@@ -273,9 +326,11 @@ Method_invoke(Thread* t, jclass, jobject method, jobject instance,
   return pushReference(t, v);
 }
 
-jint JNICALL
-Array_getLength(Thread* t, jclass, jobject array)
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_reflect_Array_getLength(Thread* t, jclass, jobject array)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (LIKELY(array)) {
     object a = *array;
     unsigned elementSize = classArrayElementSize(t, objectClass(t, a));
@@ -291,49 +346,56 @@ Array_getLength(Thread* t, jclass, jobject array)
   return 0;
 }
 
-jobject JNICALL
-Array_makeObjectArray(Thread* t, jclass, jclass elementType, jint length)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_reflect_Array_makeObjectArray
+(Thread* t, jclass, jclass elementType, jint length)
 {
+  ENTER(t, Thread::ActiveState);
+
   return pushReference(t, makeObjectArray(t, *elementType, length, true));
 }
 
-jint JNICALL
-Float_floatToRawIntBits(Thread*, jclass, jfloat v)
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_Float_floatToRawIntBits(Thread*, jclass, jfloat v)
 {
   int32_t r; memcpy(&r, &v, 4);
   return r;
 }
 
-jfloat JNICALL
-Float_intBitsToFloat(Thread*, jclass, jint v)
+extern "C" JNIEXPORT jfloat JNICALL
+Java_java_lang_Float_intBitsToFloat(Thread*, jclass, jint v)
 {
   jfloat r; memcpy(&r, &v, 4);
   return r;
 }
 
-jlong JNICALL
-Double_doubleToRawLongBits(Thread*, jclass, jdouble v)
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_lang_Double_doubleToRawLongBits(Thread*, jclass, jdouble v)
 {
   int64_t r; memcpy(&r, &v, 8);
   return r;
 }
 
-jdouble JNICALL
-Double_longBitsToDouble(Thread*, jclass, jlong v)
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Double_longBitsToDouble(Thread*, jclass, jlong v)
 {
   jdouble r; memcpy(&r, &v, 8);
   return r;
 }
 
-jobject JNICALL
-String_intern(Thread* t, jobject this_)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_String_intern(Thread* t, jobject this_)
 {
+  ENTER(t, Thread::ActiveState);
+
   return pushReference(t, intern(t, *this_));
 }
 
-jstring JNICALL
-System_getVMProperty(Thread* t, jclass, jint code)
+extern "C" JNIEXPORT jstring JNICALL
+Java_java_lang_System_getVMProperty(Thread* t, jclass, jint code)
 {
+  ENTER(t, Thread::ActiveState);
+
   enum {
     JavaClassPath = 1
   };
@@ -348,10 +410,13 @@ System_getVMProperty(Thread* t, jclass, jint code)
   }
 }
 
-void JNICALL
-System_arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
-                 jint dstOffset, jint length)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_System_arraycopy
+(Thread* t, jclass, jobject src, jint srcOffset,
+ jobject dst, jint dstOffset, jint length)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (LIKELY(src and dst)) {
     object s = *src;
     object d = *dst;
@@ -388,9 +453,11 @@ System_arraycopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
   t->exception = makeArrayStoreException(t);
 }
 
-jint JNICALL
-System_identityHashCode(Thread* t, jclass, jobject o)
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_System_identityHashCode(Thread* t, jclass, jobject o)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (LIKELY(o)) {
     return objectHash(t, *o);
   } else {
@@ -399,14 +466,21 @@ System_identityHashCode(Thread* t, jclass, jobject o)
   }
 }
 
-void JNICALL
-Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
 {
+  ENTER(t, Thread::ActiveState);
+  ACQUIRE(t, t->vm->classLock);
+
   char n[stringLength(t, *name) + 1];
   stringChars(t, *name, n);
 
-  for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
-    if (lib->matches(n, mapName)) {
+  for (System::Library* lib = t->vm->libraries; lib; lib = lib->next())
+  {
+    if (lib->name()
+        and strcmp(lib->name(), n) == 0
+        and lib->mapName() == mapName)
+    {
       // already loaded
       return;
     }
@@ -423,30 +497,35 @@ Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
   }
 }
 
-void JNICALL
-Runtime_gc(Thread* t, jobject)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_gc(Thread* t, jobject)
 {
+  ENTER(t, Thread::ActiveState);
   ENTER(t, Thread::ExclusiveState);
 
   collect(t, Heap::MajorCollection);
 }
 
-void JNICALL
-Runtime_exit(Thread* t, jobject, jint code)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_exit(Thread* t, jobject, jint code)
 {
+  ENTER(t, Thread::ActiveState);
+
   t->vm->system->exit(code);
 }
 
-jlong JNICALL
-Runtime_freeMemory(Thread*, jobject)
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_lang_Runtime_freeMemory(Thread*, jobject)
 {
   // todo
   return 0;
 }
 
-jobject JNICALL
-Throwable_trace(Thread* t, jclass, jint skipCount)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_Throwable_trace(Thread* t, jclass, jint skipCount)
 {
+  ENTER(t, Thread::ActiveState);
+
   int frame = t->frame;
   while (skipCount-- and frame >= 0) {
     frame = frameNext(t, frame);
@@ -467,9 +546,11 @@ Throwable_trace(Thread* t, jclass, jint skipCount)
   return pushReference(t, makeTrace(t, frame));
 }
 
-jarray JNICALL
-Throwable_resolveTrace(Thread* t, jclass, jobject trace)
+extern "C" JNIEXPORT jarray JNICALL
+Java_java_lang_Throwable_resolveTrace(Thread* t, jclass, jobject trace)
 {
+  ENTER(t, Thread::ActiveState);
+
   unsigned length = arrayLength(t, *trace);
   object array = makeObjectArray
     (t, arrayBody(t, t->vm->types, Machine::StackTraceElementType),
@@ -501,15 +582,19 @@ Throwable_resolveTrace(Thread* t, jclass, jobject trace)
   return pushReference(t, array);
 }
 
-jobject JNICALL
-Thread_currentThread(Thread* t, jclass)
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_Thread_currentThread(Thread* t, jclass)
 {
+  ENTER(t, Thread::ActiveState);
+
   return pushReference(t, t->javaThread);
 }
 
-jlong JNICALL
-Thread_doStart(Thread* t, jobject this_)
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_lang_Thread_doStart(Thread* t, jobject this_)
 {
+  ENTER(t, Thread::ActiveState);
+
   Thread* p = new (t->vm->system->allocate(sizeof(Thread)))
     Thread(t->vm, *this_, t);
 
@@ -523,15 +608,18 @@ Thread_doStart(Thread* t, jobject this_)
   }
 }
 
-void JNICALL
-Thread_interrupt(Thread* t, jclass, jlong peer)
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Thread_interrupt(Thread* t, jclass, jlong peer)
 {
   interrupt(t, reinterpret_cast<Thread*>(peer));
 }
 
-jlong JNICALL
-ResourceInputStream_open(Thread* t, jclass, jstring path)
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_net_URL_00024ResourceInputStream_open
+(Thread* t, jclass, jstring path)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (LIKELY(path)) {
     char p[stringLength(t, *path) + 1];
     stringChars(t, *path, p);
@@ -543,8 +631,9 @@ ResourceInputStream_open(Thread* t, jclass, jstring path)
   }
 }
 
-jint JNICALL
-ResourceInputStream_read(Thread*, jclass, jlong peer, jint position)
+extern "C" JNIEXPORT jint JNICALL
+Java_java_net_URL_00024ResourceInputStream_read__JI
+(Thread*, jclass, jlong peer, jint position)
 {
   System::Region* region = reinterpret_cast<System::Region*>(peer);
   if (position >= static_cast<jint>(region->length())) {
@@ -554,10 +643,13 @@ ResourceInputStream_read(Thread*, jclass, jlong peer, jint position)
   }
 }
 
-jint JNICALL
-ResourceInputStream_read2(Thread* t, jclass, jlong peer, jint position,
-                          jbyteArray b, jint offset, jint length)
+extern "C" JNIEXPORT jint JNICALL
+Java_java_net_URL_00024ResourceInputStream_read__JI_3BII
+(Thread* t, jclass, jlong peer, jint position,
+ jbyteArray b, jint offset, jint length)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (length == 0) return 0;
   
   System::Region* region = reinterpret_cast<System::Region*>(peer);
@@ -572,138 +664,8 @@ ResourceInputStream_read2(Thread* t, jclass, jlong peer, jint position,
   }
 }
 
-void JNICALL
-ResourceInputStream_close(Thread*, jclass, jlong peer)
+extern "C" JNIEXPORT void JNICALL
+Java_java_net_URL_00024ResourceInputStream_close(Thread*, jclass, jlong peer)
 {
   reinterpret_cast<System::Region*>(peer)->dispose();
 }
-
-} // namespace
-
-namespace vm {
-
-void
-populateBuiltinMap(Thread* t, object map)
-{
-  struct {
-    const char* key;
-    void* value;
-  } builtins[] = {
-    { "Java_java_lang_Class_isAssignableFrom",
-      reinterpret_cast<void*>(::Class_isAssignableFrom) },
-    { "Java_java_lang_Class_primitiveClass",
-      reinterpret_cast<void*>(::Class_primitiveClass) },
-    { "Java_java_lang_Class_initialize",
-      reinterpret_cast<void*>(::Class_initialize) },
-
-    { "Java_java_lang_ClassLoader_defineClass",
-      reinterpret_cast<void*>(::ClassLoader_defineClass) },
-
-    { "Java_java_lang_System_getVMProperty",
-      reinterpret_cast<void*>(::System_getVMProperty) },
-    { "Java_java_lang_System_arraycopy",
-      reinterpret_cast<void*>(::System_arraycopy) },
-
-    { "Java_java_lang_SystemClassLoader_findClass",
-      reinterpret_cast<void*>(::SystemClassLoader_findClass) },
-    { "Java_java_lang_SystemClassLoader_findLoadedClass",
-      reinterpret_cast<void*>(::SystemClassLoader_findLoadedClass) },
-    { "Java_java_lang_SystemClassLoader_resourceExists",
-      reinterpret_cast<void*>(::SystemClassLoader_resourceExists) },
-
-    { "Java_java_lang_Runtime_load",
-      reinterpret_cast<void*>(::Runtime_load) },
-    { "Java_java_lang_Runtime_gc",
-      reinterpret_cast<void*>(::Runtime_gc) },
-    { "Java_java_lang_Runtime_exit",
-      reinterpret_cast<void*>(::Runtime_exit) },
-    { "Java_java_lang_Runtime_freeMemory",
-      reinterpret_cast<void*>(::Runtime_freeMemory) },
-
-    { "Java_java_lang_String_intern",
-      reinterpret_cast<void*>(::String_intern) },
-
-    { "Java_java_lang_Thread_doStart",
-      reinterpret_cast<void*>(::Thread_doStart) },
-    { "Java_java_lang_Thread_interrupt",
-      reinterpret_cast<void*>(::Thread_interrupt) },
-    { "Java_java_lang_Thread_currentThread",
-      reinterpret_cast<void*>(::Thread_currentThread) },
-
-    { "Java_java_lang_Throwable_resolveTrace",
-      reinterpret_cast<void*>(::Throwable_resolveTrace) },
-    { "Java_java_lang_Throwable_trace",
-      reinterpret_cast<void*>(::Throwable_trace) },
-
-    { "Java_java_lang_Float_floatToRawIntBits",
-      reinterpret_cast<void*>(::Float_floatToRawIntBits) },
-    { "Java_java_lang_Float_intBitsToFloat",
-      reinterpret_cast<void*>(::Float_intBitsToFloat) },
-
-    { "Java_java_lang_Double_doubleToRawLongBits",
-      reinterpret_cast<void*>(::Double_doubleToRawLongBits) },
-    { "Java_java_lang_Double_longBitsToDouble",
-      reinterpret_cast<void*>(::Double_longBitsToDouble) },
-
-    { "Java_java_lang_Object_getClass",
-      reinterpret_cast<void*>(::Object_getClass) },
-    { "Java_java_lang_Object_notify",
-      reinterpret_cast<void*>(::Object_notify) },
-    { "Java_java_lang_Object_notifyAll",
-      reinterpret_cast<void*>(::Object_notifyAll) },
-    { "Java_java_lang_Object_toString",
-      reinterpret_cast<void*>(::Object_toString) },
-    { "Java_java_lang_Object_wait",
-      reinterpret_cast<void*>(::Object_wait) },
-    { "Java_java_lang_Object_hashCode",
-      reinterpret_cast<void*>(::Object_hashCode) },
-    { "Java_java_lang_Object_clone",
-      reinterpret_cast<void*>(::Object_clone) },
-
-    { "Java_java_lang_reflect_Array_getLength",
-      reinterpret_cast<void*>(::Array_getLength) },
-    { "Java_java_lang_reflect_Array_makeObjectArray",
-      reinterpret_cast<void*>(::Array_makeObjectArray) },
-
-    { "Java_java_lang_reflect_Constructor_make",
-      reinterpret_cast<void*>(::Constructor_make) },
-
-    { "Java_java_lang_reflect_Field_getPrimitive",
-      reinterpret_cast<void*>(::Field_getPrimitive) },
-    { "Java_java_lang_reflect_Field_getObject",
-      reinterpret_cast<void*>(::Field_getObject) },
-    { "Java_java_lang_reflect_Field_setPrimitive",
-      reinterpret_cast<void*>(::Field_setPrimitive) },
-    { "Java_java_lang_reflect_Field_setObject",
-      reinterpret_cast<void*>(::Field_setObject) },
-
-    { "Java_java_lang_reflect_Method_getCaller",
-      reinterpret_cast<void*>(::Method_getCaller) },
-    { "Java_java_lang_reflect_Method_invoke",
-      reinterpret_cast<void*>(::Method_invoke) },
-
-    { "Java_java_net_URL_00024ResourceInputStream_open",
-      reinterpret_cast<void*>(::ResourceInputStream_open) },
-    { "Java_java_net_URL_00024ResourceInputStream_read__JI",
-      reinterpret_cast<void*>(::ResourceInputStream_read) },
-    { "Java_java_net_URL_00024ResourceInputStream_read__JI_3BII",
-      reinterpret_cast<void*>(::ResourceInputStream_read2) },
-    { "Java_java_net_URL_00024ResourceInputStream_close",
-      reinterpret_cast<void*>(::ResourceInputStream_close) },
-
-    { "Java_java_io_ObjectInputStream_makeInstance",
-      reinterpret_cast<void*>(::ObjectInputStream_makeInstance) },
-
-    { 0, 0 }
-  };
-
-  for (unsigned i = 0; builtins[i].key; ++i) {
-    object key = makeByteArray(t, builtins[i].key);
-    PROTECT(t, key);
-    object value = makePointer(t, builtins[i].value);
-
-    hashMapInsert(t, map, key, value, byteArrayHash);
-  }
-}
-
-} // namespace vm

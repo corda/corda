@@ -1128,7 +1128,6 @@ class Machine {
   System::Library* libraries;
   object loader;
   object bootstrapClassMap;
-  object builtinMap;
   object monitorMap;
   object stringMap;
   object types;
