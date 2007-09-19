@@ -8,6 +8,19 @@ ifeq ($(arch),i686)
 	arch = i386
 endif
 
+platform = $(shell uname -s)
+ifeq ($(platform),Darwin)
+	rdynamic =
+	thread-cflags =
+	shared = -dynamiclib
+	so-extension = dylib
+else
+	rdynamic = -rdynamic
+	thread-cflags = -pthread
+	shared = -shared
+	so-extension = so
+endif
+
 mode = debug
 
 bld = build/$(arch)/$(mode)
@@ -16,7 +29,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/GC.class
+input = $(cls)/Hello.class
 
 cxx = g++
 cc = gcc
@@ -30,7 +43,6 @@ show-size = :
 warnings = -Wall -Wextra -Werror -Wold-style-cast -Wunused-parameter \
 	-Winit-self -Wconversion
 
-thread-cflags = -pthread
 thread-lflags = -lpthread
 
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
@@ -63,7 +75,7 @@ stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
 jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath))
 jni-cflags = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux $(cflags)
-jni-library = $(bld)/libnatives.so
+jni-library = $(bld)/libnatives.$(so-extension)
 
 generated-code = \
 	$(bld)/type-enums.cpp \
@@ -213,11 +225,11 @@ $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 
 $(jni-library): $(jni-objects)
 	@echo "linking $(@)"
-	$(cc) $(lflags) -shared $(^) -o $(@)
+	$(cc) $(lflags) $(shared) $(^) -o $(@)
 
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"
-	$(cc) $(lflags) -rdynamic $(^) -o $(@)
+	$(cc) $(lflags) $(rdynamic) $(^) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
 

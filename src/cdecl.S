@@ -2,7 +2,6 @@
 
 .text
 .globl cdeclCall
-.type cdeclCall, @function
    
 cdeclCall:
    pushl  %ebp

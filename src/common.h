@@ -11,11 +11,18 @@
 
 #ifdef __i386__
 #  define LD "d"
+#ifdef __APPLE__
+#  define ULD "lu"
+#else
+#  define ULD "u"
+#endif
 #  define LLD "lld"
 #elif defined __x86_64__
 #  define LD "ld"
+#  define ULD "lu"
 #  define LLD "ld"
-#  define LLD "ld"
+#else
+#error "Unsupported architecture"
 #endif
 
 #define NO_RETURN __attribute__((noreturn))
