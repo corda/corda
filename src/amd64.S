@@ -76,10 +76,6 @@ sse:
 call:
    call   *0(%rbp)
    
-   // clear space reserved for memory arguments
-   movq   16(%rbp),%rcx
-   addq   %rcx,%rsp
-
    // handle return value based on expected type
    movq   40(%rbp),%rcx
 

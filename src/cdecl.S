@@ -37,10 +37,6 @@ test:
    // call function
    call   *8(%ebp)
 
-   // clear space reserved for arguments
-   movl   16(%ebp),%ecx
-   addl   %ecx,%esp
-
    // handle return value based on expected type
    movl   20(%ebp),%ecx
    
