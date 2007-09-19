@@ -14,8 +14,8 @@ const unsigned Top = ~static_cast<unsigned>(0);
 
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 
-const bool Verbose = false;
-const bool Verbose2 = false;
+const bool Verbose = true;
+const bool Verbose2 = true;
 const bool Debug = false;
 
 class Context;

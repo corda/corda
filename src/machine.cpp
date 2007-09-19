@@ -1637,7 +1637,7 @@ allocate2(Thread* t, unsigned sizeInBytes)
       >= Thread::HeapSizeInWords)
   {
     t->heap = 0;
-    if (t->vm->heapPoolIndex < Machine::HeapPoolSize) {
+    if (t->large == 0 and t->vm->heapPoolIndex < Machine::HeapPoolSize) {
       t->heap = static_cast<uintptr_t*>
         (t->vm->system->tryAllocate(Thread::HeapSizeInBytes));
       if (t->heap) {
