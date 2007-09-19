@@ -1,10 +1,10 @@
 #include "types.h"
 
 .text
-.globl cdeclCall
-.type cdeclCall, @function
+.globl _cdeclCall
+//.type cdeclCall, @function
    
-cdeclCall:
+_cdeclCall:
    pushl  %ebp
    movl   %esp,%ebp
 

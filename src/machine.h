@@ -1663,7 +1663,7 @@ inline uint32_t
 popInt(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop int %"LD" at %d\n",
+    fprintf(stderr, "pop int %"ULD" at %d\n",
             t->stack[((t->sp - 1) * 2) + 1],
             t->sp - 1);
   }
@@ -1721,7 +1721,7 @@ inline uint32_t
 peekInt(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek int %"LD" at %d\n",
+    fprintf(stderr, "peek int %"ULD" at %d\n",
             t->stack[(index * 2) + 1],
             index);
   }

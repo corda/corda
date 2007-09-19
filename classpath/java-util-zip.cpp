@@ -1,6 +1,6 @@
 #include "stdlib.h"
 #include "string.h"
-#include "zlib.h"
+#include "zlib-custom.h"
 
 #include "jni.h"
 #include "jni-util.h"

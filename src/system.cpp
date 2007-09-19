@@ -25,7 +25,7 @@ cdeclCall(void* function, void* stack, unsigned stackSize,
 namespace {
 
 inline uint64_t
-dynamicCall(void* function, uint32_t* arguments, uint8_t*,
+dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
             unsigned, unsigned argumentsSize, unsigned returnType)
 {
   return cdeclCall(function, arguments, argumentsSize, returnType);
@@ -511,7 +511,7 @@ class MySystem: public System {
       count -= *up;
 
       if (Verbose) {
-        fprintf(stderr, "free %"LD"; count: %d; limit: %d\n",
+        fprintf(stderr, "free %"ULD"; count: %d; limit: %d\n",
                 *up, count, limit);
       }
 

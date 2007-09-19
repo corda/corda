@@ -1,4 +1,4 @@
-#include "zlib.h"
+#include "zlib-custom.h"
 #include "system.h"
 #include "finder.h"
 
