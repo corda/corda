@@ -18,7 +18,7 @@ test = test
 jscheme = $(HOME)/p/jscheme-7.2/src
 swt = $(HOME)/p/swt-3.3-$(arch)/bin
 
-input = $(cls)/Hello.class
+input = $(cls)/GC.class
 swt-input = $(cls)/HelloSWT.class
 
 cxx = g++
@@ -85,7 +85,6 @@ interpreter-depends = \
 	$(src)/constants.h \
 	$(src)/run.h \
 	$(src)/jnienv.h \
-	$(src)/builtin.h \
 	$(src)/machine.h
 
 interpreter-sources = \
