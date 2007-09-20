@@ -13,12 +13,14 @@ ifeq ($(platform),Darwin)
 	rdynamic =
 	thread-cflags =
 	shared = -dynamiclib
-	so-extension = dylib
+	so-extension = jnilib
+	ld-library-path = DYLD_LIBRARY_PATH
 else
 	rdynamic = -rdynamic
 	thread-cflags = -pthread
 	shared = -shared
 	so-extension = so
+	ld-library-path = LD_LIBRARY_PATH
 endif
 
 mode = debug
@@ -154,7 +156,7 @@ $(input): $(classpath-objects)
 
 .PHONY: run
 run: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) $(<) $(args)
+	$(ld-library-path)=$(bld) $(<) $(args)
 
 .PHONY: debug
 debug: $(executable) $(input)

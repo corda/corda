@@ -6,6 +6,12 @@
 #include "jni.h"
 #include "jni-util.h"
 
+#ifdef __APPLE__
+#define SO_SUFFIX ".jnilib"
+#else
+#define SO_SUFFIX ".so"
+#endif
+
 #undef JNIEXPORT
 #define JNIEXPORT __attribute__ ((visibility("default")))
 
@@ -54,9 +60,9 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   const char* chars = e->GetStringUTFChars(name, 0);
   if (chars) {
     unsigned nameLength = strlen(chars);
-    unsigned size = nameLength + 7;
+    unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
     char buffer[size];
-    snprintf(buffer, size, "lib%s.so", chars);
+    snprintf(buffer, size, "lib%s" SO_SUFFIX, chars);
     r = e->NewStringUTF(buffer);
 
     e->ReleaseStringUTFChars(name, chars);

@@ -25,6 +25,12 @@
 #error "Unsupported architecture"
 #endif
 
+#ifdef __APPLE__
+#define SO_SUFFIX ".jnilib"
+#else
+#define SO_SUFFIX ".so"
+#endif
+
 #define NO_RETURN __attribute__((noreturn))
 
 #define LIKELY(v) __builtin_expect((v) != 0, true)

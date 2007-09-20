@@ -597,15 +597,9 @@ class MySystem: public System {
     void* p;
     unsigned nameLength = (name ? strlen(name) : 0);
     if (mapName) {
-#ifdef __APPLE__
-      unsigned size = nameLength + 10;
+      unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
       char buffer[size];
-      snprintf(buffer, size, "lib%s.dylib", name);
-#else
-      unsigned size = nameLength + 7;
-      char buffer[size];
-      snprintf(buffer, size, "lib%s.so", name);
-#endif
+      snprintf(buffer, size, "lib%s" SO_SUFFIX, name);
       p = dlopen(buffer, RTLD_LAZY);
     } else {
       p = dlopen(name, RTLD_LAZY);
