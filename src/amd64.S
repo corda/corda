@@ -2,7 +2,6 @@
 
 .text
 .globl amd64Call
-.type amd64Call, @function
 
 amd64Call:
    pushq  %rbp
