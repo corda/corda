@@ -1,9 +1,14 @@
 #include "types.h"
 
 .text
-.globl cdeclCall
    
+#ifdef __APPLE__
+.globl _cdeclCall
+_cdeclCall: 
+#else
+.globl cdeclCall
 cdeclCall:
+#endif
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -14,6 +19,14 @@ cdeclCall:
    
    // reserve space for arguments
    movl   16(%ebp),%ecx
+
+#ifdef __APPLE__
+   // align to a 16 byte boundary on Darwin
+   addl   $15,%ecx
+   andl   $0xFFFFFFF0,%ecx
+   addl   $8,%ecx
+#endif
+   
    subl   %ecx,%esp
 
    // copy arguments into place
