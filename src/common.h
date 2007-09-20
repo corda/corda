@@ -69,8 +69,7 @@ avg(unsigned a, unsigned b)
 inline unsigned
 pad(unsigned n)
 {
-  n += BytesPerWord - 1;
-  return n - (n % BytesPerWord);
+  return (n + (BytesPerWord - 1)) & ~(BytesPerWord - 1);
 }
 
 inline unsigned
