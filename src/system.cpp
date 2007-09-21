@@ -15,7 +15,6 @@
 
 #define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_) (x)
 
-
 #ifdef __i386__
 
 extern "C" uint64_t

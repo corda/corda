@@ -22,13 +22,13 @@
 #  define ULD "lu"
 #  define LLD "ld"
 #else
-#error "Unsupported architecture"
+#  error "Unsupported architecture"
 #endif
 
 #ifdef __APPLE__
-#define SO_SUFFIX ".jnilib"
+#  define SO_SUFFIX ".jnilib"
 #else
-#define SO_SUFFIX ".so"
+#  define SO_SUFFIX ".so"
 #endif
 
 #define NO_RETURN __attribute__((noreturn))

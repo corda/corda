@@ -7,9 +7,9 @@
 #include "jni-util.h"
 
 #ifdef __APPLE__
-#define SO_SUFFIX ".jnilib"
+#  define SO_SUFFIX ".jnilib"
 #else
-#define SO_SUFFIX ".so"
+#  define SO_SUFFIX ".so"
 #endif
 
 #undef JNIEXPORT

@@ -8,8 +8,9 @@ ifeq ($(arch),i686)
 	arch = i386
 endif
 
-platform = $(shell uname -s)
-ifeq ($(platform),Darwin)
+platform = $(shell uname -s | tr [:upper:] [:lower:])
+
+ifeq ($(platform),darwin)
 	rdynamic =
 	thread-cflags =
 	shared = -dynamiclib
@@ -25,7 +26,7 @@ endif
 
 mode = debug
 
-bld = build/$(arch)/$(mode)
+bld = build/$(platform)/$(arch)/$(mode)
 cls = build/classes
 src = src
 classpath = classpath
@@ -62,9 +63,9 @@ ifeq ($(mode),stress-major)
 cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
-cflags += -O3 -DNDEBUG
-strip = strip
-show-size = ls -l
+cflags += -g3 -O3 -DNDEBUG
+#strip = strip
+#show-size = ls -l
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
