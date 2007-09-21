@@ -302,6 +302,7 @@ class JarIndex {
         abort(s);
       }
     }
+
     return 0;
   }
 
@@ -339,11 +340,17 @@ class JarElement: public Element {
 
   virtual System::Region* find(const char* name) {
     init();
+
+    while (*name == '/') name++;
+
     return (index ? index->find(name) : 0);
   }
 
   virtual bool exists(const char* name)  {
     init();
+
+    while (*name == '/') name++;
+
     return (index ? index->exists(name) : 0);
   }
 
