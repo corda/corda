@@ -1423,13 +1423,12 @@ arrayBodyUnsafe(Thread*, object, unsigned);
 #include "type-declarations.cpp"
 
 object
-makeTrace(Thread* t, FrameIterator* it);
+makeTrace(Thread* t, uintptr_t start);
 
 inline object
 makeTrace(Thread* t)
 {
-  FrameIterator it; t->m->processor->start(t, &it);
-  return makeTrace(t, &it);
+  return makeTrace(t, t->m->processor->frameStart(t));
 }
 
 inline object
@@ -2054,11 +2053,17 @@ int
 run(System* system, Heap* heap, Finder* finder, Processor* processor,
     const char* className, int argc, const char** argv);
 
-jobject
-makeLocalReference(Thread* t, object o);
+inline jobject
+makeLocalReference(Thread* t, object o)
+{
+  return t->m->processor->makeLocalReference(t, o);
+}
 
-void
-disposeLocalReference(Thread* t, jobject r);
+inline void
+disposeLocalReference(Thread* t, jobject r)
+{
+  t->m->processor->disposeLocalReference(t, r);
+}
 
 } // namespace vm
 

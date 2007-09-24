@@ -32,7 +32,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Hello.class
+input = $(cls)/Threads.class
 
 cxx = g++
 cc = gcc

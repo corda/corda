@@ -2752,21 +2752,28 @@ run(System* system, Heap* heap, Finder* finder, Processor* processor,
 }
 
 object
-makeTrace(Thread* t, FrameIterator* it)
+makeTrace(Thread* t, uintptr_t start)
 {
+  Processor* p = t->m->processor;
+
   unsigned count = 0;
-  FrameIterator copy(it);
-  while (copy.valid()) {
+  for (uintptr_t frame = start;
+       p->frameValid(t, frame);
+       frame = p->frameNext(t, frame))
+  {
     ++ count;
-    t->m->processor->next(t, &copy);    
   }
 
   object trace = makeArray(t, count, true);
   PROTECT(t, trace);
   
   unsigned index = 0;
-  while (it->valid()) {
-    object e = makeTraceElement(t, it->method, it->ip);
+  for (uintptr_t frame = start;
+       p->frameValid(t, frame);
+       frame = p->frameNext(t, frame))
+  {
+    object e = makeTraceElement
+      (t, p->frameMethod(t, frame), p->frameIp(t, frame));
     set(t, arrayBody(t, trace, index++), e);
   }
 

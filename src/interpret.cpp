@@ -28,45 +28,6 @@ class Thread: public vm::Thread {
   uintptr_t stack[StackSizeInWords];
 };
 
-class MyProcessor: public Processor {
- public:
-  MyProcessor(System* s):
-    s(s)
-  { }
-
-  virtual vm::Thread*
-  makeThread(Machine* m, object javaThread, vm::Thread* parent)
-  {
-    return new (s->allocate(sizeof(Thread))) Thread(m, javaThread, parent);
-  }
-
-  virtual void
-  visitObjects(vm::Thread* t, Heap::Visitor* v);
-
-  virtual void 
-  start(vm::Thread* t, FrameIterator* it);
-
-  virtual void 
-  next(vm::Thread* t, FrameIterator* it);
-
-  virtual object
-  invokeArray(vm::Thread* t, object method, object this_, object arguments);
-
-  virtual object
-  invokeList(vm::Thread* t, object method, object this_, bool indirectObjects,
-             va_list arguments);
-
-  virtual object
-  invokeList(vm::Thread* t, const char* className, const char* methodName,
-             const char* methodSpec, object this_, va_list arguments);
-
-  virtual void dispose() {
-    s->free(this);
-  }
-  
-  System* s;
-};
-
 inline void
 pushObject(Thread* t, object o)
 {
@@ -3039,127 +3000,176 @@ invoke(Thread* t, object method)
   }
 }
 
-void
-MyProcessor::visitObjects(vm::Thread* vmt, Heap::Visitor* v)
-{
-  Thread* t = static_cast<Thread*>(vmt);
+class MyProcessor: public Processor {
+ public:
+  MyProcessor(System* s):
+    s(s)
+  { }
 
-  v->visit(&(t->code));
+  virtual vm::Thread*
+  makeThread(Machine* m, object javaThread, vm::Thread* parent)
+  {
+    return new (s->allocate(sizeof(Thread))) Thread(m, javaThread, parent);
+  }
 
-  for (unsigned i = 0; i < t->sp; ++i) {
-    if (t->stack[i * 2] == ObjectTag) {
-      v->visit(t->stack + (i * 2) + 1);
+  virtual void
+  visitObjects(vm::Thread* vmt, Heap::Visitor* v)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    v->visit(&(t->code));
+
+    for (unsigned i = 0; i < t->sp; ++i) {
+      if (t->stack[i * 2] == ObjectTag) {
+        v->visit(t->stack + (i * 2) + 1);
+      }
     }
   }
-}
 
-void 
-MyProcessor::start(vm::Thread* vmt, FrameIterator* it)
-{
-  Thread* t = static_cast<Thread*>(vmt);
+  virtual uintptr_t
+  frameStart(vm::Thread* vmt)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
 
-  int f = t->frame;
-  it->base = f + 1;
-  if (it->valid()) {
-    pokeInt(t, t->frame + FrameIpOffset, t->ip);
-    it->method = frameMethod(t, f);
-    it->ip = frameIp(t, f);
+    if (t->frame >= 0) {
+      pokeInt(t, t->frame + FrameIpOffset, t->ip);
+    }
+    return t->frame;
   }
-}
 
-void 
-MyProcessor::next(vm::Thread* vmt, FrameIterator* it)
-{
-  Thread* t = static_cast<Thread*>(vmt);
+  virtual uintptr_t
+  frameNext(vm::Thread* vmt, uintptr_t frame)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
 
-  if (it->valid()) {
-    int f = frameNext(t, it->base - 1);
-    it->base = f + 1;
-    if (it->valid()) {
-      it->method = frameMethod(t, f);
-      it->ip = frameIp(t, f);
+    assert(t, static_cast<intptr_t>(frame) >= 0);
+    return ::frameNext(t, frame);
+  }
+
+  virtual bool
+  frameValid(vm::Thread*, uintptr_t frame)
+  {
+    return static_cast<intptr_t>(frame) >= 0;
+  }
+
+  virtual object
+  frameMethod(vm::Thread* vmt, uintptr_t frame)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    assert(t, static_cast<intptr_t>(frame) >= 0);
+    return ::frameMethod(t, frame);
+  }
+
+  virtual unsigned
+  frameIp(vm::Thread* vmt, uintptr_t frame)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    assert(t, static_cast<intptr_t>(frame) >= 0);
+    return ::frameIp(t, frame);
+  }
+
+  virtual object*
+  makeLocalReference(vm::Thread* vmt, object o)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    return pushReference(t, o);
+  }
+
+  virtual void
+  disposeLocalReference(vm::Thread*, object* r)
+  {
+    if (r) {
+      *r = 0;
     }
   }
-}
 
-object
-MyProcessor::invokeArray(vm::Thread* vmt, object method, object this_,
-                         object arguments)
-{
-  Thread* t = static_cast<Thread*>(vmt);
-
-  assert(t, t->state == Thread::ActiveState
-         or t->state == Thread::ExclusiveState);
-
-  assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
-
-  if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
-               > Thread::StackSizeInWords / 2))
+  virtual object
+  invokeArray(vm::Thread* vmt, object method, object this_, object arguments)
   {
-    t->exception = makeStackOverflowError(t);
-    return 0;
-  }
+    Thread* t = static_cast<Thread*>(vmt);
 
-  const char* spec = reinterpret_cast<char*>
-    (&byteArrayBody(t, methodSpec(t, method), 0));
-  pushArguments(t, this_, spec, arguments);
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
 
-  return ::invoke(t, method);
-}
-
-object
-MyProcessor::invokeList(vm::Thread* vmt, object method, object this_,
-                        bool indirectObjects, va_list arguments)
-{
-  Thread* t = static_cast<Thread*>(vmt);
-
-  assert(t, t->state == Thread::ActiveState
-         or t->state == Thread::ExclusiveState);
-
-  assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
-
-  if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
-               > Thread::StackSizeInWords / 2))
-  {
-    t->exception = makeStackOverflowError(t);
-    return 0;
-  }
-
-  const char* spec = reinterpret_cast<char*>
-    (&byteArrayBody(t, methodSpec(t, method), 0));
-  pushArguments(t, this_, spec, indirectObjects, arguments);
-
-  return ::invoke(t, method);
-}
-
-object
-MyProcessor::invokeList(vm::Thread* vmt, const char* className,
-                        const char* methodName, const char* methodSpec,
-                        object this_, va_list arguments)
-{
-  Thread* t = static_cast<Thread*>(vmt);
-
-  assert(t, t->state == Thread::ActiveState
-         or t->state == Thread::ExclusiveState);
-
-  if (UNLIKELY(t->sp + parameterFootprint(methodSpec) + 1
-               > Thread::StackSizeInWords / 2))
-  {
-    t->exception = makeStackOverflowError(t);
-    return 0;
-  }
-
-  pushArguments(t, this_, methodSpec, false, arguments);
-
-  object method = resolveMethod(t, className, methodName, methodSpec);
-  if (LIKELY(t->exception == 0)) {
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
+    if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
+                 > Thread::StackSizeInWords / 2))
+    {
+      t->exception = makeStackOverflowError(t);
+      return 0;
+    }
+
+    const char* spec = reinterpret_cast<char*>
+      (&byteArrayBody(t, methodSpec(t, method), 0));
+    pushArguments(t, this_, spec, arguments);
+
     return ::invoke(t, method);
-  } else {
-    return 0;
   }
-}
+
+  virtual object
+  invokeList(vm::Thread* vmt, object method, object this_,
+             bool indirectObjects,
+             va_list arguments)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
+
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+    if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
+                 > Thread::StackSizeInWords / 2))
+    {
+      t->exception = makeStackOverflowError(t);
+      return 0;
+    }
+
+    const char* spec = reinterpret_cast<char*>
+      (&byteArrayBody(t, methodSpec(t, method), 0));
+    pushArguments(t, this_, spec, indirectObjects, arguments);
+
+    return ::invoke(t, method);
+  }
+
+  virtual object
+  invokeList(vm::Thread* vmt, const char* className, const char* methodName,
+             const char* methodSpec, object this_, va_list arguments)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
+
+    if (UNLIKELY(t->sp + parameterFootprint(methodSpec) + 1
+                 > Thread::StackSizeInWords / 2))
+    {
+      t->exception = makeStackOverflowError(t);
+      return 0;
+    }
+
+    pushArguments(t, this_, methodSpec, false, arguments);
+
+    object method = resolveMethod(t, className, methodName, methodSpec);
+    if (LIKELY(t->exception == 0)) {
+      assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+      return ::invoke(t, method);
+    } else {
+      return 0;
+    }
+  }
+
+  virtual void dispose() {
+    s->free(this);
+  }
+  
+  System* s;
+};
 
 } // namespace
 

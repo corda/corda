@@ -7,29 +7,6 @@
 
 namespace vm {
 
-class FrameIterator {
- public:
-  FrameIterator():
-    base(0),
-    method(0),
-    ip(0)
-  { }
-
-  FrameIterator(FrameIterator* it):
-    base(it->base),
-    method(it->method),
-    ip(it->ip)
-  { }
-
-  bool valid() {
-    return base != 0;
-  }
-
-  uintptr_t base;
-  object method;
-  unsigned ip;
-};
-
 class Processor {
  public:
   virtual ~Processor() { }
@@ -40,11 +17,26 @@ class Processor {
   virtual void
   visitObjects(Thread* t, Heap::Visitor* v) = 0;
 
-  virtual void 
-  start(Thread* t, FrameIterator* it) = 0;
+  virtual uintptr_t
+  frameStart(Thread* t) = 0;
 
-  virtual void 
-  next(Thread* t, FrameIterator* it) = 0;
+  virtual uintptr_t
+  frameNext(Thread* t, uintptr_t frame) = 0;
+
+  virtual bool
+  frameValid(Thread* t, uintptr_t frame) = 0;
+
+  virtual object
+  frameMethod(Thread* t, uintptr_t frame) = 0;
+
+  virtual unsigned
+  frameIp(Thread* t, uintptr_t frame) = 0;
+
+  virtual object*
+  makeLocalReference(Thread* t, object o) = 0;
+
+  virtual void
+  disposeLocalReference(Thread* t, object* r) = 0;
 
   virtual object
   invokeArray(Thread* t, object method, object this_, object arguments) = 0;

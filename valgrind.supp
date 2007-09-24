@@ -17,28 +17,28 @@
    obj:/lib/ld-2.3.6.so
 }
 
-{
-   <insert a suppression name here>
-   Memcheck:Param
-   write(buf)
-   obj:*
-}
+# {
+#    <insert a suppression name here>
+#    Memcheck:Param
+#    write(buf)
+#    obj:*
+# }
 
-{
-   <insert a suppression name here>
-   Memcheck:Param
-   writev(vector[...])
-   obj:*
-}
+# {
+#    <insert a suppression name here>
+#    Memcheck:Param
+#    writev(vector[...])
+#    obj:*
+# }
 
-{
-   <insert a suppression name here>
-   Memcheck:Cond
-   obj:*
-}
+# {
+#    <insert a suppression name here>
+#    Memcheck:Cond
+#    obj:*
+# }
 
-{
-   <insert a suppression name here>
-   Memcheck:Value8
-   obj:*
-}
+# {
+#    <insert a suppression name here>
+#    Memcheck:Value8
+#    obj:*
+# }

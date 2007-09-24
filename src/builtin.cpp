@@ -308,11 +308,12 @@ Java_java_lang_reflect_Method_getCaller(Thread* t, jclass)
 {
   ENTER(t, Thread::ActiveState);
 
-  FrameIterator it; t->m->processor->start(t, &it);
-  t->m->processor->next(t, &it);
-  t->m->processor->next(t, &it);
+  Processor* p = t->m->processor;
+  uintptr_t frame = p->frameStart(t);
+  frame = p->frameNext(t, frame);
+  frame = p->frameNext(t, frame);
 
-  return makeLocalReference(t, it.method);
+  return makeLocalReference(t, p->frameMethod(t, frame));
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -321,7 +322,7 @@ Java_java_lang_reflect_Method_invoke
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = t->m->processor->invoke
+  object v = t->m->processor->invokeArray
     (t, *method, (instance ? *instance : 0), *arguments);
   if (t->exception) {
     t->exception = makeInvocationTargetException(t, t->exception);
@@ -529,25 +530,27 @@ Java_java_lang_Throwable_trace(Thread* t, jclass, jint skipCount)
 {
   ENTER(t, Thread::ActiveState);
 
-  FrameIterator it; t->m->processor->start(t, &it);
+  Processor* p = t->m->processor;
+  uintptr_t frame = p->frameStart(t);
 
-  while (skipCount-- and it.valid()) {
-    t->m->processor->next(t, &it);
+  while (skipCount-- and p->frameValid(t, frame)) {
+    frame = p->frameNext(t, frame);
   }
   
   // skip Throwable constructors
-  while (it.valid()
+  while (p->frameValid(t, frame)
          and isAssignableFrom
          (t, arrayBody(t, t->m->types, Machine::ThrowableType),
-          methodClass(t, it.method))
+          methodClass(t, p->frameMethod(t, frame)))
          and strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                    &byteArrayBody(t, methodName(t, it.method), 0))
+                    &byteArrayBody
+                    (t, methodName(t, p->frameMethod(t, frame)), 0))
          == 0)
   {
-    t->m->processor->next(t, &it);
+    frame = p->frameNext(t, frame);
   }
 
-  return makeLocalReference(t, makeTrace(t, &it));
+  return makeLocalReference(t, makeTrace(t, frame));
 }
 
 extern "C" JNIEXPORT jarray JNICALL
@@ -599,8 +602,7 @@ Java_java_lang_Thread_doStart(Thread* t, jobject this_)
 {
   ENTER(t, Thread::ActiveState);
 
-  Thread* p = new (t->m->system->allocate(sizeof(Thread)))
-    Thread(t->m, *this_, t);
+  Thread* p = t->m->processor->makeThread(t->m, *this_, t);
 
   enter(p, Thread::ActiveState);
 
