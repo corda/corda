@@ -2,7 +2,8 @@
 #include "system.h"
 #include "heap.h"
 #include "finder.h"
-#include "run.h"
+#include "processor.h"
+#include "machine.h"
 
 using namespace vm;
 
@@ -15,9 +16,11 @@ run(unsigned heapSize, const char* path, const char* class_, int argc,
   System* s = makeSystem(heapSize);
   Finder* f = makeFinder(s, path);
   Heap* heap = makeHeap(s);
+  Processor* p = makeProcessor(s);
 
-  int exitCode = run(s, heap, f, class_, argc, argv);
+  int exitCode = run(s, heap, f, p, class_, argc, argv);
 
+  p->dispose();
   heap->dispose();
   f->dispose();
   s->dispose();

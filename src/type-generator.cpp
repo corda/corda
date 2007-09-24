@@ -1022,7 +1022,7 @@ writeSubtypeAssertions(Output* out, Object* o)
   for (Object* p = typeSubtypes(o); p; p = cdr(p)) {
     Object* st = car(p);
     out->write(" or objectClass(t, o) == arrayBodyUnsafe");
-    out->write("(t, t->vm->types, Machine::");
+    out->write("(t, t->m->types, Machine::");
     out->write(capitalize(typeName(st)));
     out->write("Type)");
     writeSubtypeAssertions(out, st);
@@ -1061,9 +1061,9 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     if (unsafe) {
       out->write("  assert(t, true);");
     } else {
-      out->write("  assert(t, t->vm->unsafe or ");
+      out->write("  assert(t, t->m->unsafe or ");
       out->write("objectClass(t, o) == arrayBodyUnsafe");
-      out->write("(t, t->vm->types, Machine::");
+      out->write("(t, t->m->types, Machine::");
       out->write(capitalize(::typeName(memberOwner(member))));
       out->write("Type)");
       writeSubtypeAssertions(out, memberOwner(member));
@@ -1347,7 +1347,7 @@ writeConstructors(Output* out, Object* declarations)
       out->write(");\n");
 
       out->write("  cast<object>(o, 0) ");
-      out->write("= arrayBody(t, t->vm->types, Machine::");
+      out->write("= arrayBody(t, t->m->types, Machine::");
       out->write(capitalize(typeName(o)));
       out->write("Type);\n");
 
@@ -1502,7 +1502,7 @@ writeInitialization(Output* out, Object* type)
   }
 
   if (typeJavaName(type) and typeSuper(type)) {
-    out->write("  object super = arrayBody(t, t->vm->types, Machine::");
+    out->write("  object super = arrayBody(t, t->m->types, Machine::");
     out->write(capitalize(typeName(typeSuper(type))));
     out->write("Type);\n");
   } else {
@@ -1514,9 +1514,9 @@ writeInitialization(Output* out, Object* type)
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));
-  out->write(", mask, 0, super, 0, 0, 0, 0, 0, t->vm->loader);\n");
+  out->write(", mask, 0, super, 0, 0, 0, 0, 0, t->m->loader);\n");
 
-  out->write("  set(t, arrayBody(t, t->vm->types, Machine::");
+  out->write("  set(t, arrayBody(t, t->m->types, Machine::");
   out->write(capitalize(typeName(type)));
   out->write("Type), class_);\n");
 
@@ -1566,14 +1566,14 @@ writeInitializations(Output* out, Object* declarations)
 {
   unsigned count = typeCount(declarations);
 
-  out->write("t->vm->types = allocate(t, pad((");
+  out->write("t->m->types = allocate(t, pad((");
   out->write(count);
   out->write(" * sizeof(void*)) + sizeof(uintptr_t) + sizeof(void*)));\n");
-  out->write("cast<object>(t->vm->types, 0) = 0;\n");
-  out->write("arrayLength(t, t->vm->types) = ");
+  out->write("cast<object>(t->m->types, 0) = 0;\n");
+  out->write("arrayLength(t, t->m->types) = ");
   out->write(count);
   out->write(";\n");
-  out->write("memset(&arrayBody(t, t->vm->types, 0), 0, ");
+  out->write("memset(&arrayBody(t, t->m->types, 0), 0, ");
   out->write(count);
   out->write(" * sizeof(void*));\n\n");
 
@@ -1596,13 +1596,13 @@ writeJavaInitialization(Output* out, Object* type)
   out->write(typeJavaName(type));
   out->write("\");\n");
 
-  out->write("  object class_ = arrayBody(t, t->vm->types, Machine::");
+  out->write("  object class_ = arrayBody(t, t->m->types, Machine::");
   out->write(capitalize(typeName(type)));
   out->write("Type);\n");
 
   out->write("  set(t, className(t, class_), name);\n");
 
-  out->write("  hashMapInsert(t, t->vm->bootstrapClassMap, ");
+  out->write("  hashMapInsert(t, t->m->bootstrapClassMap, ");
   out->write("name, class_, byteArrayHash);\n");
 
   out->write("}\n\n");

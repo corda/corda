@@ -1,15 +1,326 @@
 #include "common.h"
 #include "system.h"
-#include "heap.h"
-#include "finder.h"
 #include "constants.h"
-#include "run.h"
-#include "jnienv.h"
 #include "machine.h"
+#include "processor.h"
 
 using namespace vm;
 
 namespace {
+
+class Thread: public vm::Thread {
+ public:
+  static const unsigned StackSizeInBytes = 64 * 1024;
+  static const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
+
+  Thread(Machine* m, object javaThread, vm::Thread* parent):
+    vm::Thread(m, javaThread, parent),
+    ip(0),
+    sp(0),
+    frame(-1),
+    code(0)
+  { }
+
+  unsigned ip;
+  unsigned sp;
+  int frame;
+  object code;
+  uintptr_t stack[StackSizeInWords];
+};
+
+class MyProcessor: public Processor {
+ public:
+  MyProcessor(System* s):
+    s(s)
+  { }
+
+  virtual vm::Thread*
+  makeThread(Machine* m, object javaThread, vm::Thread* parent)
+  {
+    return new (s->allocate(sizeof(Thread))) Thread(m, javaThread, parent);
+  }
+
+  virtual void
+  visitObjects(vm::Thread* t, Heap::Visitor* v);
+
+  virtual void 
+  start(vm::Thread* t, FrameIterator* it);
+
+  virtual void 
+  next(vm::Thread* t, FrameIterator* it);
+
+  virtual object
+  invokeArray(vm::Thread* t, object method, object this_, object arguments);
+
+  virtual object
+  invokeList(vm::Thread* t, object method, object this_, bool indirectObjects,
+             va_list arguments);
+
+  virtual object
+  invokeList(vm::Thread* t, const char* className, const char* methodName,
+             const char* methodSpec, object this_, va_list arguments);
+
+  virtual void dispose() {
+    s->free(this);
+  }
+  
+  System* s;
+};
+
+inline void
+pushObject(Thread* t, object o)
+{
+  if (DebugStack) {
+    fprintf(stderr, "push object %p at %d\n", o, t->sp);
+  }
+
+  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+  t->stack[(t->sp * 2)    ] = ObjectTag;
+  t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
+  ++ t->sp;
+}
+
+inline void
+pushInt(Thread* t, uint32_t v)
+{
+  if (DebugStack) {
+    fprintf(stderr, "push int %d at %d\n", v, t->sp);
+  }
+
+  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+  t->stack[(t->sp * 2)    ] = IntTag;
+  t->stack[(t->sp * 2) + 1] = v;
+  ++ t->sp;
+}
+
+inline void
+pushFloat(Thread* t, float v)
+{
+  uint32_t a; memcpy(&a, &v, sizeof(uint32_t));
+  pushInt(t, a);
+}
+
+inline void
+pushLong(Thread* t, uint64_t v)
+{
+  if (DebugStack) {
+    fprintf(stderr, "push long %"LLD" at %d\n", v, t->sp);
+  }
+
+  pushInt(t, v >> 32);
+  pushInt(t, v & 0xFFFFFFFF);
+}
+
+inline void
+pushDouble(Thread* t, double v)
+{
+  uint64_t a; memcpy(&a, &v, sizeof(uint64_t));
+  pushLong(t, a);
+}
+
+inline object
+popObject(Thread* t)
+{
+  if (DebugStack) {
+    fprintf(stderr, "pop object %p at %d\n",
+            reinterpret_cast<object>(t->stack[((t->sp - 1) * 2) + 1]),
+            t->sp - 1);
+  }
+
+  assert(t, t->stack[(t->sp - 1) * 2] == ObjectTag);
+  return reinterpret_cast<object>(t->stack[((-- t->sp) * 2) + 1]);
+}
+
+inline uint32_t
+popInt(Thread* t)
+{
+  if (DebugStack) {
+    fprintf(stderr, "pop int %"ULD" at %d\n",
+            t->stack[((t->sp - 1) * 2) + 1],
+            t->sp - 1);
+  }
+
+  assert(t, t->stack[(t->sp - 1) * 2] == IntTag);
+  return t->stack[((-- t->sp) * 2) + 1];
+}
+
+inline float
+popFloat(Thread* t)
+{
+  uint32_t a = popInt(t);
+  float f; memcpy(&f, &a, sizeof(float));
+  return f;
+}
+
+inline uint64_t
+popLong(Thread* t)
+{
+  if (DebugStack) {
+    fprintf(stderr, "pop long %"LLD" at %d\n",
+            (static_cast<uint64_t>(t->stack[((t->sp - 2) * 2) + 1]) << 32)
+            | static_cast<uint64_t>(t->stack[((t->sp - 1) * 2) + 1]),
+            t->sp - 2);
+  }
+
+  uint64_t a = popInt(t);
+  uint64_t b = popInt(t);
+  return (b << 32) | a;
+}
+
+inline float
+popDouble(Thread* t)
+{
+  uint64_t a = popLong(t);
+  double d; memcpy(&d, &a, sizeof(double));
+  return d;
+}
+
+inline object
+peekObject(Thread* t, unsigned index)
+{
+  if (DebugStack) {
+    fprintf(stderr, "peek object %p at %d\n",
+            reinterpret_cast<object>(t->stack[(index * 2) + 1]),
+            index);
+  }
+
+  assert(t, index < Thread::StackSizeInWords / 2);
+  assert(t, t->stack[index * 2] == ObjectTag);
+  return *reinterpret_cast<object*>(t->stack + (index * 2) + 1);
+}
+
+inline uint32_t
+peekInt(Thread* t, unsigned index)
+{
+  if (DebugStack) {
+    fprintf(stderr, "peek int %"ULD" at %d\n",
+            t->stack[(index * 2) + 1],
+            index);
+  }
+
+  assert(t, index < Thread::StackSizeInWords / 2);
+  assert(t, t->stack[index * 2] == IntTag);
+  return t->stack[(index * 2) + 1];
+}
+
+inline uint64_t
+peekLong(Thread* t, unsigned index)
+{
+  if (DebugStack) {
+    fprintf(stderr, "peek long %"LLD" at %d\n",
+            (static_cast<uint64_t>(t->stack[(index * 2) + 1]) << 32)
+            | static_cast<uint64_t>(t->stack[((index + 1) * 2) + 1]),
+            index);
+  }
+
+  return (static_cast<uint64_t>(peekInt(t, index)) << 32)
+    | static_cast<uint64_t>(peekInt(t, index + 1));
+}
+
+inline void
+pokeObject(Thread* t, unsigned index, object value)
+{
+  if (DebugStack) {
+    fprintf(stderr, "poke object %p at %d\n", value, index);
+  }
+
+  t->stack[index * 2] = ObjectTag;
+  t->stack[(index * 2) + 1] = reinterpret_cast<uintptr_t>(value);
+}
+
+inline void
+pokeInt(Thread* t, unsigned index, uint32_t value)
+{
+  if (DebugStack) {
+    fprintf(stderr, "poke int %d at %d\n", value, index);
+  }
+
+  t->stack[index * 2] = IntTag;
+  t->stack[(index * 2) + 1] = value;
+}
+
+inline void
+pokeLong(Thread* t, unsigned index, uint64_t value)
+{
+  if (DebugStack) {
+    fprintf(stderr, "poke long %"LLD" at %d\n", value, index);
+  }
+
+  pokeInt(t, index, value >> 32);
+  pokeInt(t, index + 1, value & 0xFFFFFFFF);
+}
+
+inline object*
+pushReference(Thread* t, object o)
+{
+  if (o) {
+    expect(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+    pushObject(t, o);
+    return reinterpret_cast<object*>(t->stack + ((t->sp - 1) * 2) + 1);
+  } else {
+    return 0;
+  }
+}
+
+inline int
+frameNext(Thread* t, int frame)
+{
+  return peekInt(t, frame + FrameNextOffset);
+}
+
+inline object
+frameMethod(Thread* t, int frame)
+{
+  return peekObject(t, frame + FrameMethodOffset);
+}
+
+inline unsigned
+frameIp(Thread* t, int frame)
+{
+  return peekInt(t, frame + FrameIpOffset);
+}
+
+inline unsigned
+frameBase(Thread* t, int frame)
+{
+  return peekInt(t, frame + FrameBaseOffset);
+}
+
+inline object
+localObject(Thread* t, unsigned index)
+{
+  return peekObject(t, frameBase(t, t->frame) + index);
+}
+
+inline uint32_t
+localInt(Thread* t, unsigned index)
+{
+  return peekInt(t, frameBase(t, t->frame) + index);
+}
+
+inline uint64_t
+localLong(Thread* t, unsigned index)
+{
+  return peekLong(t, frameBase(t, t->frame) + index);
+}
+
+inline void
+setLocalObject(Thread* t, unsigned index, object value)
+{
+  pokeObject(t, frameBase(t, t->frame) + index, value);
+}
+
+inline void
+setLocalInt(Thread* t, unsigned index, uint32_t value)
+{
+  pokeInt(t, frameBase(t, t->frame) + index, value);
+}
+
+inline void
+setLocalLong(Thread* t, unsigned index, uint64_t value)
+{
+  pokeLong(t, frameBase(t, t->frame) + index, value);
+}
 
 void
 pushFrame(Thread* t, object method)
@@ -69,7 +380,7 @@ popFrame(Thread* t)
       t->exception = makeExceptionInInitializerError(t, t->exception);
     }
     classVmFlags(t, methodClass(t, method)) &= ~(NeedInitFlag | InitFlag);
-    release(t, t->vm->classLock);
+    release(t, t->m->classLock);
   }
 
   t->sp = frameBase(t, t->frame);
@@ -128,7 +439,7 @@ inline object
 resolveClass(Thread* t, object pool, unsigned index)
 {
   object o = arrayBody(t, pool, index);
-  if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
     PROTECT(t, pool);
 
@@ -141,10 +452,11 @@ resolveClass(Thread* t, object pool, unsigned index)
 }
 
 inline object
-resolveClass(Thread* t, object container, object& (*class_)(Thread*, object))
+resolveClass(Thread* t, object container,
+             object& (*class_)(vm::Thread*, object))
 {
   object o = class_(t, container);
-  if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
     PROTECT(t, container);
 
@@ -158,11 +470,11 @@ resolveClass(Thread* t, object container, object& (*class_)(Thread*, object))
 
 inline object
 resolve(Thread* t, object pool, unsigned index,
-        object (*find)(Thread*, object, object, object),
-        object (*makeError)(Thread*, object))
+        object (*find)(vm::Thread*, object, object, object),
+        object (*makeError)(vm::Thread*, object))
 {
   object o = arrayBody(t, pool, index);
-  if (objectClass(t, o) == arrayBody(t, t->vm->types, Machine::ReferenceType))
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
   {
     PROTECT(t, pool);
 
@@ -264,10 +576,10 @@ inline object
 resolveNativeMethodData(Thread* t, object method)
 {
   if (objectClass(t, methodCode(t, method))
-      == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+      == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
     object data = 0;
-    for (System::Library* lib = t->vm->libraries; lib; lib = lib->next()) {
+    for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
       void* p = lib->resolve(reinterpret_cast<const char*>
                              (&byteArrayBody(t, methodCode(t, method), 0)));
       if (p) {
@@ -383,7 +695,7 @@ invokeNative(Thread* t, object method)
   
   { ENTER(t, Thread::IdleState);
 
-    result = t->vm->system->call
+    result = t->m->system->call
       (function,
        args,
        &nativeMethodDataParameterTypes(t, data, 0),
@@ -451,7 +763,7 @@ bool
 classInit2(Thread* t, object class_, unsigned ipOffset)
 {
   PROTECT(t, class_);
-  acquire(t, t->vm->classLock);
+  acquire(t, t->m->classLock);
   if (classVmFlags(t, class_) & NeedInitFlag
       and (classVmFlags(t, class_) & InitFlag) == 0)
   {
@@ -460,7 +772,7 @@ classInit2(Thread* t, object class_, unsigned ipOffset)
     t->ip -= ipOffset;
     return true;
   } else {
-    release(t, t->vm->classLock);
+    release(t, t->m->classLock);
     return false;
   }
 }
@@ -533,7 +845,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
 }
 
 object
-run(Thread* t)
+interpret(Thread* t)
 {
   const int base = t->frame;
 
@@ -717,7 +1029,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (objectClass(t, array)
-          == arrayBody(t, t->vm->types, Machine::BooleanArrayType))
+          == arrayBody(t, t->m->types, Machine::BooleanArrayType))
       {
         if (LIKELY(index >= 0 and
                    static_cast<uintptr_t>(index)
@@ -756,7 +1068,7 @@ run(Thread* t)
 
     if (LIKELY(array)) {
       if (objectClass(t, array)
-          == arrayBody(t, t->vm->types, Machine::BooleanArrayType))
+          == arrayBody(t, t->m->types, Machine::BooleanArrayType))
       {
         if (LIKELY(index >= 0 and
                    static_cast<uintptr_t>(index)
@@ -1890,14 +2202,14 @@ run(Thread* t)
 
     object v = arrayBody(t, codePool(t, code), index - 1);
 
-    if (objectClass(t, v) == arrayBody(t, t->vm->types, Machine::IntType)) {
+    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::IntType)) {
       pushInt(t, intValue(t, v));
     } else if (objectClass(t, v)
-               == arrayBody(t, t->vm->types, Machine::FloatType))
+               == arrayBody(t, t->m->types, Machine::FloatType))
     {
       pushInt(t, floatValue(t, v));
     } else if (objectClass(t, v)
-               == arrayBody(t, t->vm->types, Machine::StringType))
+               == arrayBody(t, t->m->types, Machine::StringType))
     {
       pushObject(t, v);
     } else {
@@ -1914,10 +2226,10 @@ run(Thread* t)
 
     object v = arrayBody(t, codePool(t, code), ((index1 << 8) | index2) - 1);
 
-    if (objectClass(t, v) == arrayBody(t, t->vm->types, Machine::LongType)) {
+    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::LongType)) {
       pushLong(t, longValue(t, v));
     } else if (objectClass(t, v)
-               == arrayBody(t, t->vm->types, Machine::DoubleType))
+               == arrayBody(t, t->m->types, Machine::DoubleType))
     {
       pushLong(t, doubleValue(t, v));
     } else {
@@ -2507,24 +2819,6 @@ run(Thread* t)
 }
 
 void
-run(Thread* t, const char* className, int argc, const char** argv)
-{
-  enter(t, Thread::ActiveState);
-
-  object args = makeObjectArray
-    (t, arrayBody(t, t->vm->types, Machine::StringType), argc, true);
-
-  PROTECT(t, args);
-
-  for (int i = 0; i < argc; ++i) {
-    object arg = makeString(t, "%s", argv[i]);
-    set(t, objectArrayBody(t, args, i), arg);
-  }
-
-  run(t, className, "main", "([Ljava/lang/String;)V", 0, args);
-}
-
-void
 pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
               va_list a)
 {
@@ -2704,7 +2998,7 @@ invoke(Thread* t, object method)
     checkStack(t, method);
     if (LIKELY(t->exception == 0)) {
       pushFrame(t, method);
-      result = ::run(t);
+      result = interpret(t);
       if (LIKELY(t->exception == 0)) {
         popFrame(t);
       }
@@ -2745,48 +3039,55 @@ invoke(Thread* t, object method)
   }
 }
 
-} // namespace
-
-namespace vm {
-
-object
-runv(Thread* t, object method, object this_, bool indirectObjects, va_list a)
+void
+MyProcessor::visitObjects(vm::Thread* vmt, Heap::Visitor* v)
 {
-  assert(t, t->state == Thread::ActiveState
-         or t->state == Thread::ExclusiveState);
+  Thread* t = static_cast<Thread*>(vmt);
 
-  assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+  v->visit(&(t->code));
 
-  if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
-               > Thread::StackSizeInWords / 2))
-  {
-    t->exception = makeStackOverflowError(t);
-    return 0;
+  for (unsigned i = 0; i < t->sp; ++i) {
+    if (t->stack[i * 2] == ObjectTag) {
+      v->visit(t->stack + (i * 2) + 1);
+    }
   }
+}
 
-  const char* spec = reinterpret_cast<char*>
-    (&byteArrayBody(t, methodSpec(t, method), 0));
-  pushArguments(t, this_, spec, indirectObjects, a);
+void 
+MyProcessor::start(vm::Thread* vmt, FrameIterator* it)
+{
+  Thread* t = static_cast<Thread*>(vmt);
 
-  return invoke(t, method);
+  int f = t->frame;
+  it->base = f + 1;
+  if (it->valid()) {
+    pokeInt(t, t->frame + FrameIpOffset, t->ip);
+    it->method = frameMethod(t, f);
+    it->ip = frameIp(t, f);
+  }
+}
+
+void 
+MyProcessor::next(vm::Thread* vmt, FrameIterator* it)
+{
+  Thread* t = static_cast<Thread*>(vmt);
+
+  if (it->valid()) {
+    int f = frameNext(t, it->base - 1);
+    it->base = f + 1;
+    if (it->valid()) {
+      it->method = frameMethod(t, f);
+      it->ip = frameIp(t, f);
+    }
+  }
 }
 
 object
-run(Thread* t, object method, object this_, ...)
+MyProcessor::invokeArray(vm::Thread* vmt, object method, object this_,
+                         object arguments)
 {
-  va_list a;
-  va_start(a, this_);
+  Thread* t = static_cast<Thread*>(vmt);
 
-  object r = runv(t, method, this_, false, a);
-
-  va_end(a);
-
-  return r;
-}
-
-object
-run2(Thread* t, object method, object this_, object arguments)
-{
   assert(t, t->state == Thread::ActiveState
          or t->state == Thread::ExclusiveState);
 
@@ -2803,13 +3104,41 @@ run2(Thread* t, object method, object this_, object arguments)
     (&byteArrayBody(t, methodSpec(t, method), 0));
   pushArguments(t, this_, spec, arguments);
 
-  return invoke(t, method);
+  return ::invoke(t, method);
 }
 
 object
-run(Thread* t, const char* className, const char* methodName,
-    const char* methodSpec, object this_, ...)
+MyProcessor::invokeList(vm::Thread* vmt, object method, object this_,
+                        bool indirectObjects, va_list arguments)
 {
+  Thread* t = static_cast<Thread*>(vmt);
+
+  assert(t, t->state == Thread::ActiveState
+         or t->state == Thread::ExclusiveState);
+
+  assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+  if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
+               > Thread::StackSizeInWords / 2))
+  {
+    t->exception = makeStackOverflowError(t);
+    return 0;
+  }
+
+  const char* spec = reinterpret_cast<char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+  pushArguments(t, this_, spec, indirectObjects, arguments);
+
+  return ::invoke(t, method);
+}
+
+object
+MyProcessor::invokeList(vm::Thread* vmt, const char* className,
+                        const char* methodName, const char* methodSpec,
+                        object this_, va_list arguments)
+{
+  Thread* t = static_cast<Thread*>(vmt);
+
   assert(t, t->state == Thread::ActiveState
          or t->state == Thread::ExclusiveState);
 
@@ -2820,55 +3149,26 @@ run(Thread* t, const char* className, const char* methodName,
     return 0;
   }
 
-  va_list a;
-  va_start(a, this_);
+  pushArguments(t, this_, methodSpec, false, arguments);
 
-  pushArguments(t, this_, methodSpec, false, a);
-
-  va_end(a);
-
-  object class_ = resolveClass(t, makeByteArray(t, "%s", className));
+  object method = resolveMethod(t, className, methodName, methodSpec);
   if (LIKELY(t->exception == 0)) {
-    PROTECT(t, class_);
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
-    object name = makeByteArray(t, methodName);
-    PROTECT(t, name);
-
-    object spec = makeByteArray(t, methodSpec);
-    object reference = makeReference(t, class_, name, spec);
-    
-    object method = findMethodInClass(t, class_, referenceName(t, reference),
-                                      referenceSpec(t, reference));
-    if (LIKELY(t->exception == 0)) {
-      assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
-
-      return invoke(t, method);
-    }    
+    return ::invoke(t, method);
+  } else {
+    return 0;
   }
-
-  return 0;
 }
 
-int
-run(System* system, Heap* heap, Finder* finder,
-    const char* className, int argc, const char** argv)
+} // namespace
+
+namespace vm {
+
+Processor*
+makeProcessor(System* system)
 {
-  Machine m(system, heap, finder);
-  Thread* t = new (system->allocate(sizeof(Thread))) Thread(&m, 0, 0);
-
-  enter(t, Thread::ActiveState);
-
-  ::run(t, className, argc, argv);
-
-  int exitCode = 0;
-  if (t->exception) {
-    exitCode = -1;
-    printTrace(t, t->exception);
-  }
-
-  exit(t);
-
-  return exitCode;
+  return new (system->allocate(sizeof(MyProcessor))) MyProcessor(system);
 }
 
 } // namespace vm

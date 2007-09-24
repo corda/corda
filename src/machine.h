@@ -5,6 +5,7 @@
 #include "system.h"
 #include "heap.h"
 #include "finder.h"
+#include "processor.h"
 
 #define JNICALL
 
@@ -64,13 +65,6 @@ const unsigned PrimitiveFlag = 1 << 4;
 
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;
-
-class Machine;
-class Thread;
-
-struct Object { };
-
-typedef Object* object;
 
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
@@ -1101,7 +1095,7 @@ class Machine {
 #include "type-enums.cpp"
   };
 
-  Machine(System* system, Heap* heap, Finder* finder);
+  Machine(System* system, Heap* heap, Finder* finder, Processor* processor);
 
   ~Machine() { 
     dispose();
@@ -1115,6 +1109,7 @@ class Machine {
   System* system;
   Heap* heap;
   Finder* finder;
+  Processor* processor;
   Thread* rootThread;
   Thread* exclusive;
   Reference* jniReferences;
@@ -1143,13 +1138,6 @@ class Machine {
   uintptr_t* heapPool[HeapPoolSize];
   unsigned heapPoolIndex;
 };
-
-object
-run(Thread* t, object method, object this_, ...);
-
-object
-run(Thread* t, const char* className, const char* methodName,
-    const char* methodSpec, object this_, ...);
 
 void
 printTrace(Thread* t, object exception);
@@ -1193,9 +1181,10 @@ class Thread {
     }
 
     virtual void run() {
-      t->vm->localThread->set(t);
+      t->m->localThread->set(t);
 
-      vm::run(t, "java/lang/Thread", "run", "()V", t->javaThread);
+      t->m->processor->invoke
+        (t, "java/lang/Thread", "run", "()V", t->javaThread);
 
       if (t->exception) {
         printTrace(t, t->exception);
@@ -1216,10 +1205,7 @@ class Thread {
   };
 
   static const unsigned HeapSizeInBytes = 64 * 1024;
-  static const unsigned StackSizeInBytes = 64 * 1024;
-
   static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
-  static const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
 
   Thread(Machine* m, object javaThread, Thread* parent);
 
@@ -1227,7 +1213,7 @@ class Thread {
   void dispose();
 
   JNIEnvVTable* vtable;
-  Machine* vm;
+  Machine* m;
   Thread* parent;
   Thread* peer;
   Thread* child;
@@ -1235,12 +1221,8 @@ class Thread {
   unsigned criticalLevel;
   System::Thread* systemThread;
   object javaThread;
-  object code;
   object exception;
   object large;
-  unsigned ip;
-  unsigned sp;
-  int frame;
   unsigned heapIndex;
   unsigned heapOffset;
   Protector* protector;
@@ -1253,7 +1235,6 @@ class Thread {
   uintptr_t* heap;
   uintptr_t defaultHeap[HeapSizeInWords];
 #endif // not VM_STRESS
-  uintptr_t stack[StackSizeInWords];
 };
 
 inline object
@@ -1362,27 +1343,27 @@ class RawMonitorResource {
 inline void NO_RETURN
 abort(Thread* t)
 {
-  abort(t->vm->system);
+  abort(t->m->system);
 }
 
 #ifndef NDEBUG
 inline void
 assert(Thread* t, bool v)
 {
-  assert(t->vm->system, v);
+  assert(t->m->system, v);
 }
 #endif // not NDEBUG
 
 inline void
 expect(Thread* t, bool v)
 {
-  expect(t->vm->system, v);
+  expect(t->m->system, v);
 }
 
 inline object
 allocateLarge(Thread* t, unsigned sizeInBytes)
 {
-  return t->large = static_cast<object>(t->vm->system->allocate(sizeInBytes));
+  return t->large = static_cast<object>(t->m->system->allocate(sizeInBytes));
 }
 
 inline object
@@ -1403,7 +1384,7 @@ allocate(Thread* t, unsigned sizeInBytes)
 
   if (UNLIKELY(t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
                >= Thread::HeapSizeInWords
-               or t->vm->exclusive))
+               or t->m->exclusive))
   {
     return allocate2(t, sizeInBytes);
   } else {
@@ -1414,9 +1395,9 @@ allocate(Thread* t, unsigned sizeInBytes)
 inline void
 mark(Thread* t, object& target)
 {
-  if (t->vm->heap->needsMark(reinterpret_cast<void**>(&target))) {
-    ACQUIRE_RAW(t, t->vm->heapLock);
-    t->vm->heap->mark(reinterpret_cast<void**>(&target));
+  if (t->m->heap->needsMark(reinterpret_cast<void**>(&target))) {
+    ACQUIRE_RAW(t, t->m->heapLock);
+    t->m->heap->mark(reinterpret_cast<void**>(&target));
   }
 }
 
@@ -1442,10 +1423,14 @@ arrayBodyUnsafe(Thread*, object, unsigned);
 #include "type-declarations.cpp"
 
 object
-makeTrace(Thread* t, int frame);
+makeTrace(Thread* t, FrameIterator* it);
 
-object
-makeTrace(Thread* t);
+inline object
+makeTrace(Thread* t)
+{
+  FrameIterator it; t->m->processor->start(t, &it);
+  return makeTrace(t, &it);
+}
 
 inline object
 makeRuntimeException(Thread* t, object message)
@@ -1595,268 +1580,6 @@ classInitializer(Thread* t, object class_);
 object
 frameMethod(Thread* t, int frame);
 
-inline void
-pushObject(Thread* t, object o)
-{
-  if (DebugStack) {
-    fprintf(stderr, "push object %p at %d\n", o, t->sp);
-  }
-
-  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
-  t->stack[(t->sp * 2)    ] = ObjectTag;
-  t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
-  ++ t->sp;
-}
-
-inline void
-pushInt(Thread* t, uint32_t v)
-{
-  if (DebugStack) {
-    fprintf(stderr, "push int %d at %d\n", v, t->sp);
-  }
-
-  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
-  t->stack[(t->sp * 2)    ] = IntTag;
-  t->stack[(t->sp * 2) + 1] = v;
-  ++ t->sp;
-}
-
-inline void
-pushFloat(Thread* t, float v)
-{
-  uint32_t a; memcpy(&a, &v, sizeof(uint32_t));
-  pushInt(t, a);
-}
-
-inline void
-pushLong(Thread* t, uint64_t v)
-{
-  if (DebugStack) {
-    fprintf(stderr, "push long %"LLD" at %d\n", v, t->sp);
-  }
-
-  pushInt(t, v >> 32);
-  pushInt(t, v & 0xFFFFFFFF);
-}
-
-inline void
-pushDouble(Thread* t, double v)
-{
-  uint64_t a; memcpy(&a, &v, sizeof(uint64_t));
-  pushLong(t, a);
-}
-
-inline object
-popObject(Thread* t)
-{
-  if (DebugStack) {
-    fprintf(stderr, "pop object %p at %d\n",
-            reinterpret_cast<object>(t->stack[((t->sp - 1) * 2) + 1]),
-            t->sp - 1);
-  }
-
-  assert(t, t->stack[(t->sp - 1) * 2] == ObjectTag);
-  return reinterpret_cast<object>(t->stack[((-- t->sp) * 2) + 1]);
-}
-
-inline uint32_t
-popInt(Thread* t)
-{
-  if (DebugStack) {
-    fprintf(stderr, "pop int %"ULD" at %d\n",
-            t->stack[((t->sp - 1) * 2) + 1],
-            t->sp - 1);
-  }
-
-  assert(t, t->stack[(t->sp - 1) * 2] == IntTag);
-  return t->stack[((-- t->sp) * 2) + 1];
-}
-
-inline float
-popFloat(Thread* t)
-{
-  uint32_t a = popInt(t);
-  float f; memcpy(&f, &a, sizeof(float));
-  return f;
-}
-
-inline uint64_t
-popLong(Thread* t)
-{
-  if (DebugStack) {
-    fprintf(stderr, "pop long %"LLD" at %d\n",
-            (static_cast<uint64_t>(t->stack[((t->sp - 2) * 2) + 1]) << 32)
-            | static_cast<uint64_t>(t->stack[((t->sp - 1) * 2) + 1]),
-            t->sp - 2);
-  }
-
-  uint64_t a = popInt(t);
-  uint64_t b = popInt(t);
-  return (b << 32) | a;
-}
-
-inline float
-popDouble(Thread* t)
-{
-  uint64_t a = popLong(t);
-  double d; memcpy(&d, &a, sizeof(double));
-  return d;
-}
-
-inline object
-peekObject(Thread* t, unsigned index)
-{
-  if (DebugStack) {
-    fprintf(stderr, "peek object %p at %d\n",
-            reinterpret_cast<object>(t->stack[(index * 2) + 1]),
-            index);
-  }
-
-  assert(t, index < Thread::StackSizeInWords / 2);
-  assert(t, t->stack[index * 2] == ObjectTag);
-  return *reinterpret_cast<object*>(t->stack + (index * 2) + 1);
-}
-
-inline uint32_t
-peekInt(Thread* t, unsigned index)
-{
-  if (DebugStack) {
-    fprintf(stderr, "peek int %"ULD" at %d\n",
-            t->stack[(index * 2) + 1],
-            index);
-  }
-
-  assert(t, index < Thread::StackSizeInWords / 2);
-  assert(t, t->stack[index * 2] == IntTag);
-  return t->stack[(index * 2) + 1];
-}
-
-inline uint64_t
-peekLong(Thread* t, unsigned index)
-{
-  if (DebugStack) {
-    fprintf(stderr, "peek long %"LLD" at %d\n",
-            (static_cast<uint64_t>(t->stack[(index * 2) + 1]) << 32)
-            | static_cast<uint64_t>(t->stack[((index + 1) * 2) + 1]),
-            index);
-  }
-
-  return (static_cast<uint64_t>(peekInt(t, index)) << 32)
-    | static_cast<uint64_t>(peekInt(t, index + 1));
-}
-
-inline void
-pokeObject(Thread* t, unsigned index, object value)
-{
-  if (DebugStack) {
-    fprintf(stderr, "poke object %p at %d\n", value, index);
-  }
-
-  t->stack[index * 2] = ObjectTag;
-  t->stack[(index * 2) + 1] = reinterpret_cast<uintptr_t>(value);
-}
-
-inline void
-pokeInt(Thread* t, unsigned index, uint32_t value)
-{
-  if (DebugStack) {
-    fprintf(stderr, "poke int %d at %d\n", value, index);
-  }
-
-  t->stack[index * 2] = IntTag;
-  t->stack[(index * 2) + 1] = value;
-}
-
-inline void
-pokeLong(Thread* t, unsigned index, uint64_t value)
-{
-  if (DebugStack) {
-    fprintf(stderr, "poke long %"LLD" at %d\n", value, index);
-  }
-
-  pokeInt(t, index, value >> 32);
-  pokeInt(t, index + 1, value & 0xFFFFFFFF);
-}
-
-inline object*
-pushReference(Thread* t, object o)
-{
-  if (o) {
-    expect(t, t->sp + 1 < Thread::StackSizeInWords / 2);
-    pushObject(t, o);
-    return reinterpret_cast<object*>(t->stack + ((t->sp - 1) * 2) + 1);
-  } else {
-    return 0;
-  }
-}
-
-inline int
-frameNext(Thread* t, int frame)
-{
-  return peekInt(t, frame + FrameNextOffset);
-}
-
-inline object
-frameMethod(Thread* t, int frame)
-{
-  return peekObject(t, frame + FrameMethodOffset);
-}
-
-inline unsigned
-frameIp(Thread* t, int frame)
-{
-  return peekInt(t, frame + FrameIpOffset);
-}
-
-inline unsigned
-frameBase(Thread* t, int frame)
-{
-  return peekInt(t, frame + FrameBaseOffset);
-}
-
-inline object
-localObject(Thread* t, unsigned index)
-{
-  return peekObject(t, frameBase(t, t->frame) + index);
-}
-
-inline uint32_t
-localInt(Thread* t, unsigned index)
-{
-  return peekInt(t, frameBase(t, t->frame) + index);
-}
-
-inline uint64_t
-localLong(Thread* t, unsigned index)
-{
-  return peekLong(t, frameBase(t, t->frame) + index);
-}
-
-inline void
-setLocalObject(Thread* t, unsigned index, object value)
-{
-  pokeObject(t, frameBase(t, t->frame) + index, value);
-}
-
-inline void
-setLocalInt(Thread* t, unsigned index, uint32_t value)
-{
-  pokeInt(t, frameBase(t, t->frame) + index, value);
-}
-
-inline void
-setLocalLong(Thread* t, unsigned index, uint64_t value)
-{
-  pokeLong(t, frameBase(t, t->frame) + index, value);
-}
-
-inline object
-makeTrace(Thread* t)
-{
-  pokeInt(t, t->frame + FrameIpOffset, t->ip);
-  return makeTrace(t, t->frame);
-}
-
 inline unsigned
 baseSize(Thread* t, object o, object class_)
 {
@@ -1897,8 +1620,8 @@ markHashTaken(Thread* t, object o)
   assert(t, not objectExtended(t, o));
   cast<uintptr_t>(o, 0) |= HashTakenMark;
 
-  ACQUIRE_RAW(t, t->vm->heapLock);
-  t->vm->heap->pad(o, 1);
+  ACQUIRE_RAW(t, t->m->heapLock);
+  t->m->heap->pad(o, 1);
 }
 
 inline uint32_t
@@ -1951,7 +1674,7 @@ stringHash(Thread* t, object s)
   if (stringHashCode(t, s) == 0 and stringLength(t, s)) {
     object data = stringData(t, s);
     if (objectClass(t, data)
-        == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+        == arrayBody(t, t->m->types, Machine::ByteArrayType))
     {
       stringHashCode(t, s) = hash
         (&byteArrayBody(t, data, stringOffset(t, s)), stringLength(t, s));
@@ -1968,7 +1691,7 @@ stringCharAt(Thread* t, object s, int i)
 {
   object data = stringData(t, s);
   if (objectClass(t, data)
-      == arrayBody(t, t->vm->types, Machine::ByteArrayType))
+      == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
     return byteArrayBody(t, data, i);
   } else {
@@ -2115,6 +1838,10 @@ object
 resolveClass(Thread* t, object spec);
 
 object
+resolveMethod(Thread* t, const char* className, const char* methodName,
+              const char* methodSpec);
+
+object
 resolveObjectArrayClass(Thread* t, object elementSpec);
 
 inline void
@@ -2122,14 +1849,14 @@ initClass(Thread* t, object c)
 {
   PROTECT(t, c);
 
-  acquire(t, t->vm->classLock);
+  acquire(t, t->m->classLock);
   if (classVmFlags(t, c) & NeedInitFlag
       and (classVmFlags(t, c) & InitFlag) == 0)
   {
     classVmFlags(t, c) |= InitFlag;
-    run(t, classInitializer(t, c), 0);
+    t->m->processor->invoke(t, classInitializer(t, c), 0);
   } else {
-    release(t, t->vm->classLock);
+    release(t, t->m->classLock);
   }
 }
 
@@ -2189,7 +1916,7 @@ objectArrayBody(Thread* t UNUSED, object array, unsigned index)
   assert(t, classArrayElementSize(t, objectClass(t, array)) == BytesPerWord);
   assert(t, classObjectMask(t, objectClass(t, array))
          == classObjectMask(t, arrayBody
-                            (t, t->vm->types, Machine::ArrayType)));
+                            (t, t->m->types, Machine::ArrayType)));
   return cast<object>(array, (2 + index) * BytesPerWord);
 }
 
@@ -2322,6 +2049,16 @@ intern(Thread* t, object s);
 
 void
 exit(Thread* t);
+
+int
+run(System* system, Heap* heap, Finder* finder, Processor* processor,
+    const char* className, int argc, const char** argv);
+
+jobject
+makeLocalReference(Thread* t, object o);
+
+void
+disposeLocalReference(Thread* t, jobject r);
 
 } // namespace vm
 

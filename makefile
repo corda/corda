@@ -93,9 +93,9 @@ interpreter-depends = \
 	$(src)/system.h \
 	$(src)/heap.h \
 	$(src)/finder.h \
+	$(src)/processor.h \
 	$(src)/stream.h \
 	$(src)/constants.h \
-	$(src)/run.h \
 	$(src)/jnienv.h \
 	$(src)/machine.h
 
@@ -104,7 +104,7 @@ interpreter-sources = \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/heap.cpp \
-	$(src)/run.cpp \
+	$(src)/interpret.cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
 	$(src)/main.cpp
@@ -151,7 +151,7 @@ flags = -cp $(cls)
 args = $(flags) $(call class-name,$(input))
 
 .PHONY: build
-build: $(executable) $(classpath-objects)
+build: $(executable) $(classpath-objects) $(test-classes)
 
 $(input): $(classpath-objects)
 

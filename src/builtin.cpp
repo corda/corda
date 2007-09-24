@@ -1,6 +1,6 @@
 #include "machine.h"
 #include "constants.h"
-#include "run.h"
+#include "processor.h"
 
 #undef JNIEXPORT
 #define JNIEXPORT __attribute__ ((visibility("default")))
@@ -33,7 +33,7 @@ search(Thread* t, jstring name, object (*op)(Thread*, object),
       return 0;
     }
 
-    return pushReference(t, r);
+    return makeLocalReference(t, r);
   } else {
     t->exception = makeNullPointerException(t);
     return 0;
@@ -53,7 +53,7 @@ Java_java_lang_Object_toString(Thread* t, jobject this_)
      &byteArrayBody(t, className(t, objectClass(t, *this_)), 0),
      hash);
 
-  return pushReference(t, s);
+  return makeLocalReference(t, s);
 }
 
 extern "C" JNIEXPORT jclass JNICALL
@@ -61,7 +61,7 @@ Java_java_lang_Object_getClass(Thread* t, jobject this_)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, objectClass(t, *this_));
+  return makeLocalReference(t, objectClass(t, *this_));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -105,7 +105,7 @@ Java_java_lang_Object_clone(Thread* t, jclass, jobject o)
   memcpy(reinterpret_cast<void**>(clone) + 1,
          reinterpret_cast<void**>(*o) + 1,
          (baseSize(t, *o, objectClass(t, *o)) - 1) * BytesPerWord);
-  return pushReference(t, clone);
+  return makeLocalReference(t, clone);
 }
 
 extern "C" JNIEXPORT jclass JNICALL
@@ -114,11 +114,11 @@ Java_java_lang_ClassLoader_defineClass
 {
   ENTER(t, Thread::ActiveState);
 
-  uint8_t* buffer = static_cast<uint8_t*>(t->vm->system->allocate(length));
+  uint8_t* buffer = static_cast<uint8_t*>(t->m->system->allocate(length));
   memcpy(buffer, &byteArrayBody(t, *b, offset), length);
   object c = parseClass(t, buffer, length);
-  t->vm->system->free(buffer);
-  return pushReference(t, c);
+  t->m->system->free(buffer);
+  return makeLocalReference(t, c);
 }
 
 extern "C" JNIEXPORT jclass JNICALL
@@ -147,7 +147,7 @@ Java_java_lang_SystemClassLoader_resourceExists
   if (LIKELY(name)) {
     char n[stringLength(t, *name) + 1];
     stringChars(t, *name, n);
-    return t->vm->finder->exists(n);
+    return t->m->finder->exists(n);
   } else {
     t->exception = makeNullPointerException(t);
     return 0;
@@ -159,7 +159,7 @@ Java_java_io_ObjectInputStream_makeInstance(Thread* t, jclass, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, make(t, *c));
+  return makeLocalReference(t, make(t, *c));
 }
 
 extern "C" JNIEXPORT jclass JNICALL
@@ -169,23 +169,23 @@ Java_java_lang_Class_primitiveClass(Thread* t, jclass, jchar name)
 
   switch (name) {
   case 'B':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JbyteType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JbyteType));
   case 'C':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JcharType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JcharType));
   case 'D':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JdoubleType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JdoubleType));
   case 'F':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JfloatType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JfloatType));
   case 'I':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JintType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JintType));
   case 'J':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JlongType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JlongType));
   case 'S':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JshortType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JshortType));
   case 'V':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JvoidType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JvoidType));
   case 'Z':
-    return pushReference(t, arrayBody(t, t->vm->types, Machine::JbooleanType));
+    return makeLocalReference(t, arrayBody(t, t->m->types, Machine::JbooleanType));
   default:
     t->exception = makeIllegalArgumentException(t);
     return 0;
@@ -247,7 +247,7 @@ Java_java_lang_reflect_Field_getObject
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, cast<object>(*instance, offset));
+  return makeLocalReference(t, cast<object>(*instance, offset));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -300,7 +300,7 @@ Java_java_lang_reflect_Constructor_make(Thread* t, jclass, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, make(t, *c));
+  return makeLocalReference(t, make(t, *c));
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -308,8 +308,11 @@ Java_java_lang_reflect_Method_getCaller(Thread* t, jclass)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference
-    (t, frameMethod(t, frameNext(t, frameNext(t, t->frame))));
+  FrameIterator it; t->m->processor->start(t, &it);
+  t->m->processor->next(t, &it);
+  t->m->processor->next(t, &it);
+
+  return makeLocalReference(t, it.method);
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -318,11 +321,12 @@ Java_java_lang_reflect_Method_invoke
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = run2(t, *method, (instance ? *instance : 0), *arguments);
+  object v = t->m->processor->invoke
+    (t, *method, (instance ? *instance : 0), *arguments);
   if (t->exception) {
     t->exception = makeInvocationTargetException(t, t->exception);
   }
-  return pushReference(t, v);
+  return makeLocalReference(t, v);
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -351,7 +355,7 @@ Java_java_lang_reflect_Array_makeObjectArray
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, makeObjectArray(t, *elementType, length, true));
+  return makeLocalReference(t, makeObjectArray(t, *elementType, length, true));
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -387,7 +391,7 @@ Java_java_lang_String_intern(Thread* t, jobject this_)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, intern(t, *this_));
+  return makeLocalReference(t, intern(t, *this_));
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -401,7 +405,7 @@ Java_java_lang_System_getVMProperty(Thread* t, jclass, jint code)
 
   switch (code) {
   case JavaClassPath:
-    return pushReference(t, makeString(t, "%s", t->vm->finder->path()));
+    return makeLocalReference(t, makeString(t, "%s", t->m->finder->path()));
 
   default:
     t->exception = makeRuntimeException(t, 0);
@@ -469,12 +473,12 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
 {
   ENTER(t, Thread::ActiveState);
-  ACQUIRE(t, t->vm->classLock);
+  ACQUIRE(t, t->m->classLock);
 
   char n[stringLength(t, *name) + 1];
   stringChars(t, *name, n);
 
-  for (System::Library* lib = t->vm->libraries; lib; lib = lib->next())
+  for (System::Library* lib = t->m->libraries; lib; lib = lib->next())
   {
     if (lib->name()
         and strcmp(lib->name(), n) == 0
@@ -486,10 +490,10 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
   }
 
   System::Library* lib;
-  if (LIKELY(t->vm->system->success
-             (t->vm->system->load(&lib, n, mapName, t->vm->libraries))))
+  if (LIKELY(t->m->system->success
+             (t->m->system->load(&lib, n, mapName, t->m->libraries))))
   {
-    t->vm->libraries = lib;
+    t->m->libraries = lib;
   } else {
     object message = makeString(t, "library not found: %s", n);
     t->exception = makeUnsatisfiedLinkError(t, message);
@@ -510,7 +514,7 @@ Java_java_lang_Runtime_exit(Thread* t, jobject, jint code)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->vm->system->exit(code);
+  t->m->system->exit(code);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -525,24 +529,25 @@ Java_java_lang_Throwable_trace(Thread* t, jclass, jint skipCount)
 {
   ENTER(t, Thread::ActiveState);
 
-  int frame = t->frame;
-  while (skipCount-- and frame >= 0) {
-    frame = frameNext(t, frame);
+  FrameIterator it; t->m->processor->start(t, &it);
+
+  while (skipCount-- and it.valid()) {
+    t->m->processor->next(t, &it);
   }
   
   // skip Throwable constructors
-  while (frame >= 0
+  while (it.valid()
          and isAssignableFrom
-         (t, arrayBody(t, t->vm->types, Machine::ThrowableType),
-          methodClass(t, frameMethod(t, frame)))
+         (t, arrayBody(t, t->m->types, Machine::ThrowableType),
+          methodClass(t, it.method))
          and strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                    &byteArrayBody(t, methodName(t, frameMethod(t, frame)), 0))
+                    &byteArrayBody(t, methodName(t, it.method), 0))
          == 0)
   {
-    frame = frameNext(t, frame);
+    t->m->processor->next(t, &it);
   }
 
-  return pushReference(t, makeTrace(t, frame));
+  return makeLocalReference(t, makeTrace(t, &it));
 }
 
 extern "C" JNIEXPORT jarray JNICALL
@@ -552,7 +557,7 @@ Java_java_lang_Throwable_resolveTrace(Thread* t, jclass, jobject trace)
 
   unsigned length = arrayLength(t, *trace);
   object array = makeObjectArray
-    (t, arrayBody(t, t->vm->types, Machine::StackTraceElementType),
+    (t, arrayBody(t, t->m->types, Machine::StackTraceElementType),
      length, true);
   PROTECT(t, array);
 
@@ -578,7 +583,7 @@ Java_java_lang_Throwable_resolveTrace(Thread* t, jclass, jobject trace)
     set(t, objectArrayBody(t, array, i), ste);
   }
 
-  return pushReference(t, array);
+  return makeLocalReference(t, array);
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -586,7 +591,7 @@ Java_java_lang_Thread_currentThread(Thread* t, jclass)
 {
   ENTER(t, Thread::ActiveState);
 
-  return pushReference(t, t->javaThread);
+  return makeLocalReference(t, t->javaThread);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -594,12 +599,12 @@ Java_java_lang_Thread_doStart(Thread* t, jobject this_)
 {
   ENTER(t, Thread::ActiveState);
 
-  Thread* p = new (t->vm->system->allocate(sizeof(Thread)))
-    Thread(t->vm, *this_, t);
+  Thread* p = new (t->m->system->allocate(sizeof(Thread)))
+    Thread(t->m, *this_, t);
 
   enter(p, Thread::ActiveState);
 
-  if (t->vm->system->success(t->vm->system->start(&(p->runnable)))) {
+  if (t->m->system->success(t->m->system->start(&(p->runnable)))) {
     return reinterpret_cast<jlong>(p);
   } else {
     p->exit();
@@ -623,7 +628,7 @@ Java_java_net_URL_00024ResourceInputStream_open
     char p[stringLength(t, *path) + 1];
     stringChars(t, *path, p);
 
-    return reinterpret_cast<jlong>(t->vm->finder->find(p));
+    return reinterpret_cast<jlong>(t->m->finder->find(p));
   } else {
     t->exception = makeNullPointerException(t);
     return 0;

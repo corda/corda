@@ -176,6 +176,13 @@ hash(const uint16_t* s, unsigned length)
   return h;
 }
 
+class Machine;
+class Thread;
+
+struct Object { };
+
+typedef Object* object;
+
 } // namespace vm
 
 #endif//COMMON_H
