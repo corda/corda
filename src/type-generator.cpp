@@ -1035,6 +1035,15 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   const char* typeName = memberTypeName(member);
   if (memberTypeObject(member)) typeName = capitalize(typeName);
 
+  if (not unsafe) {
+    out->write("const unsigned ");
+    out->write(capitalize(::typeName(memberOwner(member))));
+    out->write(capitalize(memberName(member)));
+    out->write(" = ");
+    writeOffset(out, offset);
+    out->write(";\n\n");
+  }
+
   out->write("inline ");
   out->write(typeName);
   if (member->type != Object::Scalar and memberTypeObject(member)) {
@@ -1094,7 +1103,10 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   } else {
     out->write("[");
   }
-  writeOffset(out, offset);
+
+  out->write(capitalize(::typeName(memberOwner(member))));
+  out->write(capitalize(memberName(member)));
+
   if (member->type != Object::Scalar) {
     out->write(" + (i * ");
     unsigned elementSize = (memberTypeObject(member) ?

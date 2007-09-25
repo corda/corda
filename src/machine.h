@@ -29,12 +29,6 @@ const bool DebugReferences = false;
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
 
-const unsigned FrameBaseOffset = 0;
-const unsigned FrameNextOffset = 1;
-const unsigned FrameMethodOffset = 2;
-const unsigned FrameIpOffset = 3;
-const unsigned FrameFootprint = 4;
-
 enum FieldCode {
   VoidField,
   ByteField,
@@ -65,6 +59,7 @@ const unsigned PrimitiveFlag = 1 << 4;
 
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;
+const unsigned CompiledFlag = 1 << 1;
 
 typedef Machine JavaVM;
 typedef Thread JNIEnv;

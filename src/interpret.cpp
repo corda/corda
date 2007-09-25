@@ -8,6 +8,12 @@ using namespace vm;
 
 namespace {
 
+const unsigned FrameBaseOffset = 0;
+const unsigned FrameNextOffset = 1;
+const unsigned FrameMethodOffset = 2;
+const unsigned FrameIpOffset = 3;
+const unsigned FrameFootprint = 4;
+
 class Thread: public vm::Thread {
  public:
   static const unsigned StackSizeInBytes = 64 * 1024;
@@ -3112,8 +3118,7 @@ class MyProcessor: public Processor {
 
   virtual object
   invokeList(vm::Thread* vmt, object method, object this_,
-             bool indirectObjects,
-             va_list arguments)
+             bool indirectObjects, va_list arguments)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
