@@ -25,6 +25,10 @@ public class Arrays {
         throw new UnsupportedOperationException();
       }
 
+      public void add(int index, T element) {
+        throw new UnsupportedOperationException();
+      }
+
       public boolean contains(T element) {
         for (int i = 0; i < array.length; ++i) {
           if (equal(element, array[i])) {

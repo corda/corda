@@ -107,6 +107,16 @@ public class LinkedList<T> implements List<T> {
     return true;
   }
 
+  public void add(int index, T element) {
+    if (index == 0) {
+      addFirst(element);
+    } else {
+      Cell<T> cell = find(index);
+      Cell<T> newCell = new Cell<T>(element, cell.prev, cell);
+      cell.prev.next = newCell;
+    }
+  }
+
   public void addFirst(T element) {
     addFirst(new Cell(element, null, null));
   }

@@ -26,6 +26,10 @@ public class Vector<T> implements List<T> {
     return list.contains(element);
   }
 
+  public synchronized void add(int index, T element) {
+    list.add(index, element);
+  }
+
   public synchronized boolean add(T element) {
     return list.add(element);
   }
