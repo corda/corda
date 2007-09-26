@@ -100,6 +100,15 @@ public class ArrayList<T> implements List<T> {
     }    
   }
 
+  public T set(int index, T element) {
+    if (index >= size) {
+      resize(index+1);
+    }
+    Object oldValue = array[index];
+    array[index] = element;
+    return (T) oldValue;
+  }
+
   public T remove(int index) {
     T v = get(index);
 
