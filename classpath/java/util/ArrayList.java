@@ -154,4 +154,8 @@ public class ArrayList<T> implements List<T> {
   public Iterator<T> iterator() {
     return new Collections.ArrayListIterator(this);
   }
+
+  public ListIterator<T> listIterator(int index) {
+    return new Collections.ArrayListIterator(this, index);
+  }
 }

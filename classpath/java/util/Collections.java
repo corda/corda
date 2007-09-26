@@ -102,13 +102,31 @@ public class Collections {
     }
   }
 
-  static class ArrayListIterator<T> implements Iterator<T> {
+  static class ArrayListIterator<T> implements ListIterator<T> {
     private final List<T> list;
     private boolean canRemove = false;
-    private int index = -1;
+    private int index;
 
     public ArrayListIterator(List<T> list) {
+      this(list, 0);
+    }
+
+    public ArrayListIterator(List<T> list, int index) {
       this.list = list;
+      this.index = index - 1;
+    }
+
+    public boolean hasPrevious() {
+      return index >= 0;
+    }
+
+    public T previous() {
+      if (hasPrevious()) {
+        canRemove = true;
+        return list.get(index--);
+      } else {
+        throw new NoSuchElementException();
+      }
     }
 
     public T next() {
