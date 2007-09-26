@@ -2,6 +2,7 @@ package java.lang;
 
 public final class Long extends Number {
   public static final Class TYPE = Class.forCanonicalName("J");
+  public static final Long MAX_VALUE = 9223372036854775807l;
 
   private final long value;
 
