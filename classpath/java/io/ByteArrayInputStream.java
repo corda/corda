@@ -20,6 +20,6 @@ public class ByteArrayInputStream extends InputStream {
   }
 
   public int available() {
-    returns length - position;
+    return length - position;
   }
 }
