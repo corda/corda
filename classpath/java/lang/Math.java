@@ -62,6 +62,11 @@ public final class Math {
     return (int) Math.floor(v + 0.5);
   }
 
+  public static double random() {
+    // TODO
+    throw new UnsupportedOperationException();
+  }
+
   public static native double floor(double v);
 
   public static native double ceil(double v);

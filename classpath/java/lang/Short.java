@@ -2,6 +2,7 @@ package java.lang;
 
 public final class Short extends Number {
   public static final Class TYPE = Class.forCanonicalName("S");
+  public static final short MAX_VALUE = 32767;
 
   private final short value;
 

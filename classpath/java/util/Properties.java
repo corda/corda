@@ -1,11 +1,24 @@
 package java.util;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.IOException;
 
 public class Properties extends Hashtable {
   public void load(InputStream in) throws IOException {
     new Parser().parse(in, this);
+  }
+
+  public void store(OutputStream out, String comment) throws IOException {
+    // TODO
+  }
+
+  public String getProperty(String key) {
+    return (String)get(key);
+  }
+
+  public void setProperty(String key, String value) {
+    put(key, value);
   }
 
   private static class Parser {

@@ -2,7 +2,7 @@ package java.lang;
 
 public class Object {
   protected Object clone() throws CloneNotSupportedException {
-    if (this instanceof Cloneable) {
+    if ((this instanceof Cloneable) || getClass().isArray()) {
       return clone(this);
     } else {
       throw new CloneNotSupportedException(getClass().getName());

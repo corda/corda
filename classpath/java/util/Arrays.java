@@ -25,6 +25,10 @@ public class Arrays {
         throw new UnsupportedOperationException();
       }
 
+      public void add(int index, T element) {
+        throw new UnsupportedOperationException();
+      }
+
       public boolean contains(T element) {
         for (int i = 0; i < array.length; ++i) {
           if (equal(element, array[i])) {
@@ -36,6 +40,14 @@ public class Arrays {
 
       public T get(int index) {
         return array[index];
+      }
+
+      public <S> S[] toArray(S[] a) {
+        return (S[])array;
+      }
+
+      public boolean isEmpty() {
+        return size() == 0;
       }
 
       public T remove(int index) {

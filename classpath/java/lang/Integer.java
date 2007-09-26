@@ -1,6 +1,6 @@
 package java.lang;
 
-public final class Integer extends Number {
+public final class Integer extends Number implements Comparable<Integer> {
   public static final Class TYPE = Class.forCanonicalName("I");
 
   public static final int MIN_VALUE = 0x80000000;
@@ -26,6 +26,10 @@ public final class Integer extends Number {
 
   public int hashCode() {
     return value;
+  }
+
+  public int compareTo(Integer other) {
+    return value - other.value;
   }
 
   public String toString() {

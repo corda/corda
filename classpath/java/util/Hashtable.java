@@ -15,6 +15,10 @@ public class Hashtable<K, V> implements Map<K, V> {
     return map.toString();
   }
 
+  public synchronized boolean isEmpty() {
+    return map.isEmpty();
+  }
+
   public synchronized int size() {
     return map.size();
   }
@@ -33,6 +37,10 @@ public class Hashtable<K, V> implements Map<K, V> {
 
   public synchronized V put(K key, V value) {
     return map.put(key, value);
+  }
+
+  public synchronized void putAll(Map<? extends K,? extends V> elts) {
+    map.putAll(elts);
   }
 
   public synchronized V remove(K key) {

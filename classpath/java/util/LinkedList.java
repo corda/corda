@@ -73,6 +73,23 @@ public class LinkedList<T> implements List<T> {
     }
   }
 
+  public <S> S[] toArray(S[] a) {
+    Object[] retVal = null;
+    if (a.length >= size) {
+      retVal = a;
+    } else {
+      retVal = new Object[size];
+    }
+    int i=0;
+    for (Object o : this) {
+      retVal[i++] = o;
+    }
+    if (a.length > size) {
+      a[size] = null;
+    }
+    return (S[])retVal;
+  }
+
   public int size() {
     return size;
   }
@@ -88,6 +105,16 @@ public class LinkedList<T> implements List<T> {
   public boolean add(T element) {
     addFirst(element);
     return true;
+  }
+
+  public void add(int index, T element) {
+    if (index == 0) {
+      addFirst(element);
+    } else {
+      Cell<T> cell = find(index);
+      Cell<T> newCell = new Cell<T>(element, cell.prev, cell);
+      cell.prev.next = newCell;
+    }
   }
 
   public void addFirst(T element) {
@@ -122,6 +149,10 @@ public class LinkedList<T> implements List<T> {
     Cell<T> c = find(index);
     remove(c);
     return c.value;
+  }
+
+  public boolean isEmpty() {
+    return size() == 0;
   }
 
   public T removeFirst() {

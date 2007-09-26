@@ -11,12 +11,23 @@ public class Vector<T> implements List<T> {
     this(0);
   }
 
+  public Vector(List<T> list) {
+    this(list.size());
+    for (T o : list) {
+      add(o);
+    }
+  }
+
   public synchronized int size() {
     return list.size();
   }
 
   public synchronized boolean contains(T element) {
     return list.contains(element);
+  }
+
+  public synchronized void add(int index, T element) {
+    list.add(index, element);
   }
 
   public synchronized boolean add(T element) {
@@ -37,6 +48,14 @@ public class Vector<T> implements List<T> {
 
   public synchronized T remove(int index) {
     return list.remove(index);
+  }
+
+  public synchronized boolean isEmpty() {
+    return list.isEmpty();
+  }
+
+  public synchronized <S> S[] toArray(S[] a) {
+    return list.toArray(a);
   }
 
   public T removeElementAt(int index) {

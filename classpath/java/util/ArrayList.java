@@ -13,7 +13,14 @@ public class ArrayList<T> implements List<T> {
   public ArrayList() {
     this(0);
   }
-  
+
+  public ArrayList(Collection<T> source) {
+    this(source.size());
+    for (T o : source) {
+      add(o);
+    }
+  }
+
   private void grow() {
     if (array == null || size >= array.length) {
       resize(array == null ? MinimumCapacity : array.length * 2);
@@ -60,6 +67,13 @@ public class ArrayList<T> implements List<T> {
     return false;
   }
 
+  public void add(int index, T element) {
+    size = Math.max(size+1, index+1);
+    grow();
+    System.arraycopy(array, index, array, index+1, size-index);
+    array[index] = element;
+  }
+
   public boolean add(T element) {
     ++ size;
     grow();
@@ -93,6 +107,15 @@ public class ArrayList<T> implements List<T> {
     }    
   }
 
+  public T set(int index, T element) {
+    if (index >= size) {
+      resize(index+1);
+    }
+    Object oldValue = array[index];
+    array[index] = element;
+    return (T) oldValue;
+  }
+
   public T remove(int index) {
     T v = get(index);
 
@@ -118,6 +141,27 @@ public class ArrayList<T> implements List<T> {
     return false;
   }
 
+  public boolean isEmpty() {
+    return size() == 0;
+  }
+
+  public <S> S[] toArray(S[] a) {
+    Object[] retVal = null;
+
+    if (a.length >= size) {
+      retVal = a;
+    } else {
+      retVal = new Object[size];
+    }
+    for (int i = 0; i < size; ++i) {
+      retVal[i] = array[i];
+    }
+    if (a.length > size) {
+      a[size] = null;
+    }
+    return (S[])retVal;
+  }
+
   public void clear() {
     array = null;
     size = 0;
@@ -125,5 +169,9 @@ public class ArrayList<T> implements List<T> {
 
   public Iterator<T> iterator() {
     return new Collections.ArrayListIterator(this);
+  }
+
+  public ListIterator<T> listIterator(int index) {
+    return new Collections.ArrayListIterator(this, index);
   }
 }

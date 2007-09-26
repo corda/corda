@@ -11,6 +11,10 @@ public class IdentityHashMap<K, V> implements Map<K, V> {
     this(0);
   }
 
+  public boolean isEmpty() {
+    return map.isEmpty();
+  }
+
   public int size() {
     return map.size();
   }
@@ -29,6 +33,10 @@ public class IdentityHashMap<K, V> implements Map<K, V> {
 
   public V put(K key, V value) {
     return map.put(key, value);
+  }
+
+  public void putAll(Map<? extends K,? extends V> elts) {
+    map.putAll(elts);
   }
 
   public V remove(K key) {

@@ -44,6 +44,10 @@ public class HashMap<K, V> implements Map<K, V> {
     return r;
   }
 
+  public boolean isEmpty() {
+    return size() == 0;
+  }
+
   public int size() {
     return size;
   }
@@ -179,6 +183,12 @@ public class HashMap<K, V> implements Map<K, V> {
     return (c == null ? null : c.getValue());
   }
 
+  public void putAll(Map<? extends K,? extends V> elts) {
+    for (Map.Entry<? extends K, ? extends V> entry : elts.entrySet()) {
+      put(entry.getKey(), entry.getValue());
+    }
+  }
+
   public V remove(K key) {
     Cell<K, V> c = removeCell(key);
     return (c == null ? null : c.getValue());
@@ -276,6 +286,10 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.size();
     }
 
+    public void addAll(Collection<Entry<K, V>> c) {
+      throw new UnsupportedOperationException();
+    }
+
     public boolean contains(Entry<K, V> e) {
       return containsKey(e.getKey());
     }
@@ -304,6 +318,10 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public boolean contains(K key) {
       return containsKey(key);
+    }
+
+    public void addAll(Collection<K> c) {
+      throw new UnsupportedOperationException();
     }
 
     public boolean add(K key) {

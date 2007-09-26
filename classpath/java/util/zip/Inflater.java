@@ -54,6 +54,15 @@ public class Inflater {
     this.length = length;
   }
 
+  public void reset() {
+    // TODO
+    throw new UnsupportedOperationException();
+  }
+
+  public int inflate(byte[] output) throws DataFormatException {
+    return inflate(output, 0, output.length);
+  }
+
   public int inflate(byte[] output, int offset, int length)
     throws DataFormatException
   {

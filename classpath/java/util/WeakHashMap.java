@@ -26,6 +26,10 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     }
   }
 
+  public boolean isEmpty() {
+    return map.isEmpty();
+  }
+
   public int size() {
     return map.size();
   }
@@ -48,6 +52,10 @@ public class WeakHashMap<K, V> implements Map<K, V> {
   public V put(K key, V value) {
     poll();
     return map.put(key, value);
+  }
+
+  public void putAll(Map<? extends K,? extends V> elts) {
+    map.putAll(elts);
   }
 
   public V remove(K key) {
