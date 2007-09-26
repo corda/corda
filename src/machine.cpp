@@ -877,6 +877,45 @@ parseCode(Thread* t, Stream& s, object pool)
 }
 
 void
+scanMethodSpec(Thread* t, const char* s, unsigned* parameterCount,
+               unsigned* returnCode)
+{
+  unsigned count = 0;
+  ++ s; // skip '('
+  while (*s and *s != ')') {
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
+      break;
+      
+    default:
+      ++ s;
+      break;
+    }
+
+    ++ count;
+  }
+
+  *parameterCount = count;
+  *returnCode = fieldCode(t, s[1]);
+}
+
+void
 parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 {
   PROTECT(t, class_);
@@ -910,6 +949,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
               method = makeMethod
                 (t,
                  methodVmFlags(t, method),
+                 methodReturnCode(t, method),
                  methodParameterCount(t, method),
                  methodParameterFootprint(t, method),
                  methodFlags(t, method),
@@ -967,19 +1007,19 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         }
       }
 
-      unsigned parameterCount = ::parameterCount
-        (t, arrayBody(t, pool, spec - 1));
+      const char* specString = reinterpret_cast<const char*>
+        (&byteArrayBody(t, arrayBody(t, pool, spec - 1), 0));
 
-      unsigned parameterFootprint = ::parameterFootprint
-        (t, arrayBody(t, pool, spec - 1));
+      unsigned parameterCount;
+      unsigned returnCode;
+      scanMethodSpec(t, specString, &parameterCount, &returnCode);
 
-      if ((flags & ACC_STATIC) == 0) {
-        ++ parameterCount;
-        ++ parameterFootprint;
-      }
+      unsigned parameterFootprint = t->m->processor->parameterFootprint
+        (t, specString, flags & ACC_STATIC);
 
       object method = makeMethod(t,
                                  0, // vm flags
+                                 returnCode,
                                  parameterCount,
                                  parameterFootprint,
                                  flags,
@@ -1791,86 +1831,6 @@ classInitializer(Thread* t, object class_)
     }               
   }
   abort(t);
-}
-
-unsigned
-parameterFootprint(const char* s)
-{
-  unsigned footprint = 0;
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
-    case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    case 'J':
-    case 'D':
-      ++ s;
-      ++ footprint;
-      break;
-
-    default:
-      ++ s;
-      break;
-    }
-
-    ++ footprint;
-  }
-
-  return footprint;
-}
-
-unsigned
-parameterCount(const char* s)
-{
-  unsigned count = 0;
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
-    case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    default:
-      ++ s;
-      break;
-    }
-
-    ++ count;
-  }
-
-  return count;
 }
 
 object

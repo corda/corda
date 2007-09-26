@@ -2,8 +2,9 @@ package java.lang.reflect;
 
 public class Method<T> extends AccessibleObject implements Member {
   private byte vmFlags;
+  private byte returnCode;
   private byte parameterCount;
-  private short parameterFootprint;
+  private byte parameterFootprint;
   private short flags;
   private short offset;
   private byte[] name;
@@ -45,9 +46,6 @@ public class Method<T> extends AccessibleObject implements Member {
 
   public Class[] getParameterTypes() {
     int count = parameterCount;
-    if ((flags & Modifier.STATIC) == 0) {
-      -- count;
-    }
 
     Class[] types = new Class[count];
     int index = 0;
@@ -91,14 +89,8 @@ public class Method<T> extends AccessibleObject implements Member {
   public Object invoke(Object instance, Object ... arguments)
     throws InvocationTargetException, IllegalAccessException
   {
-    if ((flags & Modifier.STATIC) != 0) {
+    if ((flags & Modifier.STATIC) != 0 || class_.isInstance(instance)) {
       if (arguments.length == parameterCount) {
-        return invoke(this, instance, arguments);
-      } else {
-        throw new ArrayIndexOutOfBoundsException();
-      }
-    } else if (class_.isInstance(instance)) {
-      if (arguments.length == parameterCount - 1) {
         return invoke(this, instance, arguments);        
       } else {
         throw new ArrayIndexOutOfBoundsException();

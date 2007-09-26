@@ -1841,17 +1841,7 @@ resolveObjectArrayClass(Thread* t, object elementSpec);
 inline void
 initClass(Thread* t, object c)
 {
-  PROTECT(t, c);
-
-  acquire(t, t->m->classLock);
-  if (classVmFlags(t, c) & NeedInitFlag
-      and (classVmFlags(t, c) & InitFlag) == 0)
-  {
-    classVmFlags(t, c) |= InitFlag;
-    t->m->processor->invoke(t, classInitializer(t, c), 0);
-  } else {
-    release(t, t->m->classLock);
-  }
+  t->m->processor->initClass(t, c);
 }
 
 object
@@ -1912,26 +1902,6 @@ objectArrayBody(Thread* t UNUSED, object array, unsigned index)
          == classObjectMask(t, arrayBody
                             (t, t->m->types, Machine::ArrayType)));
   return cast<object>(array, (2 + index) * BytesPerWord);
-}
-
-unsigned
-parameterFootprint(const char* s);
-
-inline unsigned
-parameterFootprint(Thread* t, object spec)
-{
-  return parameterFootprint
-    (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
-}
-
-unsigned
-parameterCount(const char* s);
-
-inline unsigned
-parameterCount(Thread* t, object spec)
-{
-  return parameterCount
-    (reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0)));
 }
 
 int

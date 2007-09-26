@@ -41,8 +41,9 @@
 (type method java/lang/reflect/Method
   (extends accessibleObject)
   (uint8_t vmFlags)
+  (uint8_t returnCode)
   (uint8_t parameterCount)
-  (uint16_t parameterFootprint)
+  (uint8_t parameterFootprint)
   (uint16_t flags)
   (uint16_t offset)
   (object name)
@@ -58,7 +59,6 @@
 (type nativeMethodData
   (void* function)
   (uint16_t argumentTableSize)
-  (uint8_t returnCode)
   (array uint8_t parameterTypes))
 
 (type pointer

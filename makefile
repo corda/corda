@@ -111,11 +111,13 @@ interpreter-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/main.cpp
 
+interpreter-asm-sources = $(src)/vmInvoke.S
+
 ifeq ($(arch),i386)
-	interpreter-asm-sources = $(src)/cdecl.S
+	interpreter-asm-sources += $(src)/cdecl.S
 endif
 ifeq ($(arch),x86_64)
-	interpreter-asm-sources = $(src)/amd64.S
+	interpreter-asm-sources += $(src)/amd64.S
 endif
 
 interpreter-cpp-objects = \

@@ -15,9 +15,13 @@
 
 #define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_) (x)
 
-namespace {
-
 #ifdef __i386__
+
+extern "C" uint64_t
+cdeclCall(void* function, void* stack, unsigned stackSize,
+          unsigned returnType);
+
+namespace {
 
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
@@ -26,7 +30,15 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
   return cdeclCall(function, arguments, argumentsSize, returnType);
 }
 
+} // namespace
+
 #elif defined __x86_64__
+
+extern "C" uint64_t
+amd64Call(void* function, void* stack, unsigned stackSize,
+          void* gprTable, void* sseTable, unsigned returnType);
+
+namespace {
 
 uint64_t
 dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
@@ -68,11 +80,11 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
                    (sseIndex ? sseTable : 0), returnType);
 }
 
+} // namespace
+
 #else
 #  error unsupported platform
 #endif
-
-}
 
 using namespace vm;
 

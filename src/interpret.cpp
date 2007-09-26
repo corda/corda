@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "machine.h"
 #include "processor.h"
+#include "process.h"
 
 using namespace vm;
 
@@ -375,119 +376,16 @@ findInterfaceMethod(Thread* t, object method, object class_)
   abort(t);
 }
 
-inline object
-findMethod(Thread* t, object method, object class_)
-{
-  return arrayBody(t, classVirtualTable(t, class_), 
-                   methodOffset(t, method));
-}
-
-bool
-isSuperclass(Thread* t, object class_, object base)
-{
-  for (object oc = classSuper(t, base); oc; oc = classSuper(t, oc)) {
-    if (oc == class_) {
-      return true;
-    }
-  }
-  return false;
-}
-
-inline bool
-isSpecialMethod(Thread* t, object method, object class_)
-{
-  return (classFlags(t, class_) & ACC_SUPER)
-    and strcmp(reinterpret_cast<const int8_t*>("<init>"), 
-               &byteArrayBody(t, methodName(t, method), 0)) != 0
-    and isSuperclass(t, methodClass(t, method), class_);
-}
-
-inline object
-resolveClass(Thread* t, object pool, unsigned index)
-{
-  object o = arrayBody(t, pool, index);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
-    PROTECT(t, pool);
-
-    o = resolveClass(t, o);
-    if (UNLIKELY(t->exception)) return 0;
-    
-    set(t, arrayBody(t, pool, index), o);
-  }
-  return o; 
-}
-
-inline object
-resolveClass(Thread* t, object container,
-             object& (*class_)(vm::Thread*, object))
-{
-  object o = class_(t, container);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
-    PROTECT(t, container);
-
-    o = resolveClass(t, o);
-    if (UNLIKELY(t->exception)) return 0;
-    
-    set(t, class_(t, container), o);
-  }
-  return o; 
-}
-
-inline object
-resolve(Thread* t, object pool, unsigned index,
-        object (*find)(vm::Thread*, object, object, object),
-        object (*makeError)(vm::Thread*, object))
-{
-  object o = arrayBody(t, pool, index);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
-  {
-    PROTECT(t, pool);
-
-    object reference = o;
-    PROTECT(t, reference);
-
-    object class_ = resolveClass(t, o, referenceClass);
-    if (UNLIKELY(t->exception)) return 0;
-    
-    o = findInHierarchy
-      (t, class_, referenceName(t, reference), referenceSpec(t, reference),
-       find, makeError);
-    if (UNLIKELY(t->exception)) return 0;
-    
-    set(t, arrayBody(t, pool, index), o);
-  }
-
-  return o;
-}
-
-inline object
-resolveField(Thread* t, object pool, unsigned index)
-{
-  return resolve(t, pool, index, findFieldInClass, makeNoSuchFieldError);
-}
-
-inline object
-resolveMethod(Thread* t, object pool, unsigned index)
-{
-  return resolve(t, pool, index, findMethodInClass, makeNoSuchMethodError);
-}
-
 object
 makeNativeMethodData(Thread* t, object method, void* function)
 {
   PROTECT(t, method);
 
-  unsigned count = methodParameterCount(t, method) + 1;
-  if (methodFlags(t, method) & ACC_STATIC) {
-    ++ count;
-  }
+  unsigned count = methodParameterCount(t, method) + 2;
 
   object data = makeNativeMethodData(t,
                                      function,
                                      0, // argument table size
-                                     0, // return code,
                                      count,
                                      false);
         
@@ -534,7 +432,6 @@ makeNativeMethodData(Thread* t, object method, void* function)
   }
 
   nativeMethodDataArgumentTableSize(t, data) = argumentTableSize;
-  nativeMethodDataReturnCode(t, data) = fieldCode(t, s[1]);
 
   return data;
 }
@@ -598,10 +495,7 @@ invokeNative(Thread* t, object method)
 
   pushFrame(t, method);
 
-  unsigned count = methodParameterCount(t, method);
-  if (methodFlags(t, method) & ACC_STATIC) {
-    ++ count;
-  }
+  unsigned count = nativeMethodDataLength(t, data) - 1;
 
   unsigned size = nativeMethodDataArgumentTableSize(t, data);
   uintptr_t args[size / BytesPerWord];
@@ -648,7 +542,7 @@ invokeNative(Thread* t, object method)
     }
   }
 
-  unsigned returnCode = nativeMethodDataReturnCode(t, data);
+  unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
   void* function = nativeMethodDataFunction(t, data);
 
@@ -721,7 +615,7 @@ invokeNative(Thread* t, object method)
 
   default:
     abort(t);
-  };
+  }
 
   return returnCode;
 }
@@ -752,24 +646,6 @@ classInit(Thread* t, object class_, unsigned ipOffset)
   } else {
     return false;
   }
-}
-
-inline int16_t
-codeReadInt16(Thread* t, unsigned& i)
-{
-  uint8_t v1 = codeBody(t, t->code, i++);
-  uint8_t v2 = codeBody(t, t->code, i++);
-  return ((v1 << 8) | v2);
-}
-
-inline int32_t
-codeReadInt32(Thread* t, unsigned& i)
-{
-  uint8_t v1 = codeBody(t, t->code, i++);
-  uint8_t v2 = codeBody(t, t->code, i++);
-  uint8_t v3 = codeBody(t, t->code, i++);
-  uint8_t v4 = codeBody(t, t->code, i++);
-  return ((v1 << 24) | (v2 << 16) | (v3 << 8) | v4);
 }
 
 inline void
@@ -929,7 +805,7 @@ interpret(Thread* t)
     int32_t count = popInt(t);
 
     if (LIKELY(count >= 0)) {
-      uint16_t index = codeReadInt16(t, ip);
+      uint16_t index = codeReadInt16(t, code, ip);
       
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
@@ -1114,7 +990,7 @@ interpret(Thread* t)
   } goto loop;
 
   case checkcast: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
 
     if (peekObject(t, sp - 1)) {
       object class_ = resolveClass(t, codePool(t, code), index - 1);
@@ -1443,7 +1319,7 @@ interpret(Thread* t)
 
   case getfield: {
     if (LIKELY(peekObject(t, sp - 1))) {
-      uint16_t index = codeReadInt16(t, ip);
+      uint16_t index = codeReadInt16(t, code, ip);
     
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
@@ -1485,7 +1361,7 @@ interpret(Thread* t)
   } goto loop;
 
   case getstatic: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1520,12 +1396,12 @@ interpret(Thread* t)
   } goto loop;
 
   case goto_: {
-    int16_t offset = codeReadInt16(t, ip);
+    int16_t offset = codeReadInt16(t, code, ip);
     ip = (ip - 3) + offset;
   } goto loop;
     
   case goto_w: {
-    int32_t offset = codeReadInt32(t, ip);
+    int32_t offset = codeReadInt32(t, code, ip);
     ip = (ip - 5) + offset;
   } goto loop;
 
@@ -1882,7 +1758,7 @@ interpret(Thread* t)
   } goto loop;
 
   case invokeinterface: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
     
     ip += 2;
 
@@ -1901,7 +1777,7 @@ interpret(Thread* t)
   } goto loop;
 
   case invokespecial: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1935,7 +1811,7 @@ interpret(Thread* t)
   } goto loop;
 
   case invokestatic: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -1947,7 +1823,7 @@ interpret(Thread* t)
   } goto invoke;
 
   case invokevirtual: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -2253,8 +2129,8 @@ interpret(Thread* t)
     ip += 3;
     ip -= (ip % 4);
     
-    int32_t default_ = codeReadInt32(t, ip);
-    int32_t pairCount = codeReadInt32(t, ip);
+    int32_t default_ = codeReadInt32(t, code, ip);
+    int32_t pairCount = codeReadInt32(t, code, ip);
     
     int32_t key = popInt(t);
 
@@ -2264,14 +2140,14 @@ interpret(Thread* t)
       int32_t middle = bottom + (span / 2);
       unsigned index = ip + (middle * 8);
 
-      int32_t k = codeReadInt32(t, index);
+      int32_t k = codeReadInt32(t, code, index);
 
       if (key < k) {
         top = middle;
       } else if (key > k) {
         bottom = middle + 1;
       } else {
-        ip = base + codeReadInt32(t, index);
+        ip = base + codeReadInt32(t, code, index);
         goto loop;
       }
     }
@@ -2386,7 +2262,7 @@ interpret(Thread* t)
   } goto loop;
 
   case multianewarray: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
     uint8_t dimensions = codeBody(t, code, ip++);
 
     object class_ = resolveClass(t, codePool(t, code), index - 1);
@@ -2413,7 +2289,7 @@ interpret(Thread* t)
   } goto loop;
 
   case new_: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
     
     object class_ = resolveClass(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -2487,7 +2363,7 @@ interpret(Thread* t)
   } goto loop;
 
   case putfield: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
     
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -2552,7 +2428,7 @@ interpret(Thread* t)
   } goto loop;
 
   case putstatic: {
-    uint16_t index = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
@@ -2664,15 +2540,15 @@ interpret(Thread* t)
     ip += 3;
     ip -= (ip % 4);
     
-    int32_t default_ = codeReadInt32(t, ip);
-    int32_t bottom = codeReadInt32(t, ip);
-    int32_t top = codeReadInt32(t, ip);
+    int32_t default_ = codeReadInt32(t, code, ip);
+    int32_t bottom = codeReadInt32(t, code, ip);
+    int32_t top = codeReadInt32(t, code, ip);
     
     int32_t key = popInt(t);
     
     if (key >= bottom and key <= top) {
       unsigned index = ip + ((key - bottom) * 4);
-      ip = base + codeReadInt32(t, index);
+      ip = base + codeReadInt32(t, code, index);
     } else {
       ip = base + default_;      
     }
@@ -2686,38 +2562,38 @@ interpret(Thread* t)
  wide:
   switch (codeBody(t, code, ip++)) {
   case aload: {
-    pushObject(t, localObject(t, codeReadInt16(t, ip)));
+    pushObject(t, localObject(t, codeReadInt16(t, code, ip)));
   } goto loop;
 
   case astore: {
-    setLocalObject(t, codeReadInt16(t, ip), popObject(t));
+    setLocalObject(t, codeReadInt16(t, code, ip), popObject(t));
   } goto loop;
 
   case iinc: {
-    uint16_t index = codeReadInt16(t, ip);
-    uint16_t count = codeReadInt16(t, ip);
+    uint16_t index = codeReadInt16(t, code, ip);
+    uint16_t count = codeReadInt16(t, code, ip);
     
     setLocalInt(t, index, localInt(t, index) + count);
   } goto loop;
 
   case iload: {
-    pushInt(t, localInt(t, codeReadInt16(t, ip)));
+    pushInt(t, localInt(t, codeReadInt16(t, code, ip)));
   } goto loop;
 
   case istore: {
-    setLocalInt(t, codeReadInt16(t, ip), popInt(t));
+    setLocalInt(t, codeReadInt16(t, code, ip), popInt(t));
   } goto loop;
 
   case lload: {
-    pushLong(t, localLong(t, codeReadInt16(t, ip)));
+    pushLong(t, localLong(t, codeReadInt16(t, code, ip)));
   } goto loop;
 
   case lstore: {
-    setLocalLong(t, codeReadInt16(t, ip),  popLong(t));
+    setLocalLong(t, codeReadInt16(t, code, ip),  popLong(t));
   } goto loop;
 
   case ret: {
-    ip = localInt(t, codeReadInt16(t, ip));
+    ip = localInt(t, codeReadInt16(t, code, ip));
   } goto loop;
 
   default: abort(t);
@@ -3024,6 +2900,68 @@ class MyProcessor: public Processor {
     return 0;
   }
 
+  virtual unsigned
+  parameterFootprint(vm::Thread*, const char* s, bool static_)
+  {
+    unsigned footprint = 0;
+    ++ s; // skip '('
+    while (*s and *s != ')') {
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      case '[':
+        while (*s == '[') ++ s;
+        switch (*s) {
+        case 'L':
+          while (*s and *s != ';') ++ s;
+          ++ s;
+          break;
+
+        default:
+          ++ s;
+          break;
+        }
+        break;
+      
+      case 'J':
+      case 'D':
+        ++ s;
+        ++ footprint;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
+
+      ++ footprint;
+    }
+
+    if (not static_) {
+      ++ footprint;
+    }
+    return footprint;
+  }
+
+  virtual void
+  initClass(vm::Thread* t, object c)
+  {
+    PROTECT(t, c);
+    
+    acquire(t, t->m->classLock);
+    if (classVmFlags(t, c) & NeedInitFlag
+        and (classVmFlags(t, c) & InitFlag) == 0)
+    {
+      classVmFlags(t, c) |= InitFlag;
+      t->m->processor->invoke(t, classInitializer(t, c), 0);
+    } else {
+      release(t, t->m->classLock);
+    }
+  }
+
   virtual void
   visitObjects(vm::Thread* vmt, Heap::Visitor* v)
   {
@@ -3156,7 +3094,7 @@ class MyProcessor: public Processor {
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    if (UNLIKELY(t->sp + parameterFootprint(methodSpec) + 1
+    if (UNLIKELY(t->sp + parameterFootprint(vmt, methodSpec, false)
                  > Thread::StackSizeInWords / 2))
     {
       t->exception = makeStackOverflowError(t);
