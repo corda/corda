@@ -33,8 +33,8 @@ public class Collections {
   }
 
   static class SynchronizedCollection<T> implements Collection<T> {
-    private final Object lock;
-    private final Collection<T> collection;
+    protected final Object lock;
+    protected final Collection<T> collection;
 
     public SynchronizedCollection(Object lock, Collection<T> collection) {
       this.lock = lock;
@@ -73,6 +73,11 @@ public class Collections {
     public SynchronizedSet(Object lock, Set<T> set) {
       super(lock, set);
     }
+
+    public void addAll(Collection<T> c) {
+      synchronized (lock) { ((Set<T>)collection).addAll(c); }
+    }
+
   }
 
   static class SynchronizedIterator<T> implements Iterator<T> {

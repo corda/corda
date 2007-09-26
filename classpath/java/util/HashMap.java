@@ -286,6 +286,10 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.size();
     }
 
+    public void addAll(Collection<Entry<K, V>> c) {
+      throw new UnsupportedOperationException();
+    }
+
     public boolean contains(Entry<K, V> e) {
       return containsKey(e.getKey());
     }
@@ -314,6 +318,10 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public boolean contains(K key) {
       return containsKey(key);
+    }
+
+    public void addAll(Collection<K> c) {
+      throw new UnsupportedOperationException();
     }
 
     public boolean add(K key) {
