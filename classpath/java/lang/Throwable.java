@@ -63,6 +63,10 @@ public class Throwable {
     return (StackTraceElement[]) trace;
   }
 
+  public StackTraceElement[] getStackTrace() {
+    return resolveTrace();
+  }
+
   public void printStackTrace(PrintStream out) {
     StringBuilder sb = new StringBuilder();
     printStackTrace(sb, System.getProperty("line.separator"));
