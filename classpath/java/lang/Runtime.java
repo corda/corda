@@ -1,5 +1,6 @@
 package java.lang;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.OutputStream;
@@ -31,7 +32,7 @@ public class Runtime {
     }
   }
 
-  public Process exec(String command) {
+  public Process exec(String command) throws IOException {
     int[] process = new int[4];
     exec(command, process);
     return new MyProcess(process[0], process[1], process[2], process[3]);
