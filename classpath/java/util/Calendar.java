@@ -34,6 +34,10 @@ public abstract class Calendar {
     fields[field] = value;
   }
 
+  public void setTime(Date date) {
+    // TODO
+  }
+
   public abstract void roll(int field, boolean up);
 
   public void roll(int field, int amount) {
