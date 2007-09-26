@@ -35,4 +35,8 @@ public abstract class Enum<E extends Enum<E>> {
   public int ordinal() {
     return ordinal;
   }
+
+  public String toString() {
+    return name;
+  }
 }
