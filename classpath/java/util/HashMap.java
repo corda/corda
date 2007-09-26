@@ -44,6 +44,10 @@ public class HashMap<K, V> implements Map<K, V> {
     return r;
   }
 
+  public boolean isEmpty() {
+    return size() == 0;
+  }
+
   public int size() {
     return size;
   }
@@ -177,6 +181,12 @@ public class HashMap<K, V> implements Map<K, V> {
   public V put(K key, V value) {
     Cell<K, V> c = putCell(key, value);
     return (c == null ? null : c.getValue());
+  }
+
+  public void putAll(Map<? extends K,? extends V> elts) {
+    for (Map.Entry<? extends K, ? extends V> entry : elts.entrySet()) {
+      put(entry.getKey(), entry.getValue());
+    }
   }
 
   public V remove(K key) {

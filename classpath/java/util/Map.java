@@ -1,6 +1,8 @@
 package java.util;
 
 public interface Map<K, V> {
+  public boolean isEmpty();
+
   public int size();
 
   public boolean containsKey(K key);
@@ -10,6 +12,8 @@ public interface Map<K, V> {
   public V get(K key);
 
   public V put(K key, V value);
+
+  public void putAll(Map<? extends K,? extends V> elts);
 
   public V remove(K key);
 

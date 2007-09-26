@@ -38,6 +38,14 @@ public class Arrays {
         return array[index];
       }
 
+      public <S> S[] toArray(S[] a) {
+        return (S[])array;
+      }
+
+      public boolean isEmpty() {
+        return size() == 0;
+      }
+
       public T remove(int index) {
         throw new UnsupportedOperationException();        
       }

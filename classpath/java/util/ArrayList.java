@@ -13,7 +13,14 @@ public class ArrayList<T> implements List<T> {
   public ArrayList() {
     this(0);
   }
-  
+
+  public ArrayList(Collection<T> source) {
+    this(source.size());
+    for (T o : source) {
+      add(o);
+    }
+  }
+
   private void grow() {
     if (array == null || size >= array.length) {
       resize(array == null ? MinimumCapacity : array.length * 2);
@@ -116,6 +123,27 @@ public class ArrayList<T> implements List<T> {
       }
     }
     return false;
+  }
+
+  public boolean isEmpty() {
+    return size() == 0;
+  }
+
+  public <S> S[] toArray(S[] a) {
+    Object[] retVal = null;
+
+    if (a.length >= size) {
+      retVal = a;
+    } else {
+      retVal = new Object[size];
+    }
+    for (int i = 0; i < size; ++i) {
+      retVal[i] = array[i];
+    }
+    if (a.length > size) {
+      a[size] = null;
+    }
+    return (S[])retVal;
   }
 
   public void clear() {

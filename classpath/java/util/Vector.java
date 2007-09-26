@@ -11,6 +11,13 @@ public class Vector<T> implements List<T> {
     this(0);
   }
 
+  public Vector(List<T> list) {
+    this(list.size());
+    for (T o : list) {
+      add(o);
+    }
+  }
+
   public synchronized int size() {
     return list.size();
   }
@@ -37,6 +44,14 @@ public class Vector<T> implements List<T> {
 
   public synchronized T remove(int index) {
     return list.remove(index);
+  }
+
+  public synchronized boolean isEmpty() {
+    return list.isEmpty();
+  }
+
+  public synchronized <S> S[] toArray(S[] a) {
+    return list.toArray(a);
   }
 
   public T removeElementAt(int index) {
