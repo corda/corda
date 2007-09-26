@@ -3018,6 +3018,12 @@ class MyProcessor: public Processor {
     return new (s->allocate(sizeof(Thread))) Thread(m, javaThread, parent);
   }
 
+  virtual object
+  methodStub(vm::Thread*)
+  {
+    return 0;
+  }
+
   virtual void
   visitObjects(vm::Thread* vmt, Heap::Visitor* v)
   {

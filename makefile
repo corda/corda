@@ -24,7 +24,7 @@ else
 	ld-library-path = LD_LIBRARY_PATH
 endif
 
-process=interpret
+process = interpret
 
 mode = debug
 
