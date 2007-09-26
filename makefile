@@ -24,6 +24,8 @@ else
 	ld-library-path = LD_LIBRARY_PATH
 endif
 
+process = interpret
+
 mode = debug
 
 bld = build/$(platform)/$(arch)/$(mode)
@@ -32,7 +34,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Threads.class
+input = $(cls)/Instructions.class
 
 cxx = g++
 cc = gcc
@@ -104,7 +106,7 @@ interpreter-sources = \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/heap.cpp \
-	$(src)/interpret.cpp \
+	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
 	$(src)/main.cpp

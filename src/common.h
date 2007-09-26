@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "stdlib.h"
 #include "stdarg.h"
+#include "stddef.h"
 #include "string.h"
 #include "stdio.h"
 #include "types.h"
@@ -43,6 +44,22 @@
 #define UNUSED __attribute__((unused))
 
 inline void* operator new(size_t, void* p) throw() { return p; }
+
+#ifdef __i386__
+
+extern "C" uint64_t
+cdeclCall(void* function, void* stack, unsigned stackSize,
+          unsigned returnType);
+
+#elif defined __x86_64__
+
+extern "C" uint64_t
+amd64Call(void* function, void* stack, unsigned stackSize,
+          void* gprTable, void* sseTable, unsigned returnType);
+
+#else
+#  error unsupported platform
+#endif
 
 namespace vm {
 

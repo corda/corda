@@ -14,6 +14,9 @@ class Processor {
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent) = 0;
 
+  virtual object
+  methodStub(Thread* t) = 0;
+
   virtual void
   visitObjects(Thread* t, Heap::Visitor* v) = 0;
 

@@ -917,6 +917,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                  methodName(t, method),
                  methodSpec(t, method),
                  methodClass(t, method),
+                 0,
                  0);
               hashMapInsert(t, virtualMap, method, method, methodHash);
             }
@@ -986,7 +987,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  arrayBody(t, pool, name - 1),
                                  arrayBody(t, pool, spec - 1),
                                  class_,
-                                 code);
+                                 code,
+                                 (code ? t->m->processor->methodStub(t) : 0));
       PROTECT(t, method);
 
       if (flags & ACC_STATIC) {
