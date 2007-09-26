@@ -101,10 +101,20 @@ Java_java_lang_Object_clone(Thread* t, jclass, jobject o)
 {
   ENTER(t, Thread::ActiveState);
 
-  object clone = make(t, objectClass(t, *o));
-  memcpy(reinterpret_cast<void**>(clone) + 1,
-         reinterpret_cast<void**>(*o) + 1,
-         (baseSize(t, *o, objectClass(t, *o)) - 1) * BytesPerWord);
+  object class_ = objectClass(t, *o);
+  unsigned size = baseSize(t, *o, class_) * BytesPerWord;
+  object clone;
+
+  if (classArrayElementSize(t, class_)) {
+    clone = static_cast<object>(allocate(t, size));
+    memcpy(clone, *o, size);
+  } else {
+    clone = make(t, objectClass(t, *o));
+    memcpy(reinterpret_cast<void**>(clone) + 1,
+           reinterpret_cast<void**>(*o) + 1,
+           size - BytesPerWord);
+  }
+
   return makeLocalReference(t, clone);
 }
 
