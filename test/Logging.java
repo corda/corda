@@ -92,11 +92,15 @@ public class Logging {
     throw new Exception("Started here");
   }
 
+  private static final boolean useCustomHandler = true;
   public static void main(String args[]) {
-    Logger root = Logger.getLogger("");
-    root.addHandler(new MyHandler());
-    for (Handler h : root.getHandlers()) root.removeHandler(h);
-    root.addHandler(new MyHandler());
+    if (useCustomHandler) {
+      Logger root = Logger.getLogger("");
+      root.addHandler(new MyHandler());
+      for (Handler h : root.getHandlers()) root.removeHandler(h);
+      root.addHandler(new MyHandler());
+    }
+
     Logging me = new Logging();
     me.run();
   }
