@@ -129,7 +129,7 @@ inline bool
 methodVirtual(Thread* t, object method)
 {
   return (methodFlags(t, method) & (ACC_STATIC | ACC_FINAL | ACC_PRIVATE))
-    != 0;
+    == 0;
 }
 
 } // namespace vm

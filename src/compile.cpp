@@ -62,11 +62,18 @@ class Rope {
     rear->data[position++] = v;
   }
 
-  void appendAddress(uintptr_t v) {
+  void append4(uint32_t v) {
     append((v >>  0) & 0xFF);
     append((v >>  8) & 0xFF);
     append((v >> 16) & 0xFF);
     append((v >> 24) & 0xFF);
+  }
+
+  void appendAddress(uintptr_t v) {
+    append4(v);
+    if (BytesPerWord == 8) {
+      append4(v >> 32);
+    }
   }
 
   unsigned length() {
@@ -109,6 +116,12 @@ class MyThread: public Thread {
   ArgumentList* argumentList;
   void* frame;
 };
+
+inline bool
+isByte(int32_t v)
+{
+  return v == static_cast<int8_t>(v);
+}
 
 class Assembler {
  public:
@@ -181,27 +194,33 @@ class Assembler {
     code.append(0xc0 | (src << 3) | dst);
   }
 
-  void mov(Register src, int srcOffset, Register dst) {
+  void mov(Register src, int32_t srcOffset, Register dst) {
     rex();
     code.append(0x8b);
     if (srcOffset) {
-      assert(code.s, (srcOffset & 0xFFFFFF00) == 0); // todo
-
-      code.append(0x40 | (dst << 3) | src);
-      code.append(srcOffset);
+      if (isByte(srcOffset)) {
+        code.append(0x40 | (dst << 3) | src);
+        code.append(srcOffset);
+      } else {
+        code.append(0x80 | (dst << 3) | src);
+        code.append4(srcOffset);
+      }
     } else {
       code.append((dst << 3) | src);
     }
   }
 
-  void mov(Register src, Register dst, int dstOffset) {
+  void mov(Register src, Register dst, int32_t dstOffset) {
     rex();
     code.append(0x89);
     if (dstOffset) {
-      assert(code.s, (dstOffset & 0xFFFFFF00) == 0); // todo
-
-      code.append(0x40 | (src << 3) | dst);
-      code.append(dstOffset);
+      if (isByte(dstOffset)) {
+        code.append(0x40 | (src << 3) | dst);
+        code.append(dstOffset);
+      } else {
+        code.append(0x80 | (src << 3) | dst);
+        code.append4(dstOffset);
+      }
     } else {
       code.append((src << 3) | dst);
     }
@@ -230,16 +249,16 @@ class Assembler {
     code.append(0x50 | reg);
   }
 
-  void push(Register reg, int offset) {
-    assert(code.s, (offset & 0xFFFFFF00) == 0); // todo
+  void push(Register reg, int32_t offset) {
+    assert(code.s, isByte(offset)); // todo
 
     code.append(0xff);
     code.append(0x70 | reg);
     code.append(offset);
   }
 
-  void push(int v) {
-    assert(code.s, (v & 0xFFFFFF00) == 0); // todo
+  void push(int32_t v) {
+    assert(code.s, isByte(v)); // todo
 
     code.append(0x6a);
     code.append(v);
@@ -249,8 +268,8 @@ class Assembler {
     code.append(0x58 | dst);
   }
 
-  void pop(Register dst, int offset) {
-    assert(code.s, (offset & 0xFFFFFF00) == 0); // todo
+  void pop(Register dst, int32_t offset) {
+    assert(code.s, isByte(offset)); // todo
 
     code.append(0x8f);
     code.append(0x40 | dst);
@@ -263,8 +282,8 @@ class Assembler {
     code.append(0xc0 | (src << 3) | dst);
   }
 
-  void add(int v, Register dst) {
-    assert(code.s, (v & 0xFFFFFF00) == 0); // todo
+  void add(int32_t v, Register dst) {
+    assert(code.s, isByte(v)); // todo
 
     rex();
     code.append(0x83);
@@ -278,8 +297,8 @@ class Assembler {
     code.append(0xc0 | (src << 3) | dst);
   }
 
-  void sub(int v, Register dst) {
-    assert(code.s, (v & 0xFFFFFF00) == 0); // todo
+  void sub(int32_t v, Register dst) {
+    assert(code.s, isByte(v)); // todo
 
     rex();
     code.append(0x83);
@@ -293,8 +312,8 @@ class Assembler {
     code.append(0xc0 | (src << 3) | dst);
   }
 
-  void or_(int v, Register dst) {
-    assert(code.s, (v & 0xFFFFFF00) == 0); // todo
+  void or_(int32_t v, Register dst) {
+    assert(code.s, isByte(v)); // todo
 
     rex();
     code.append(0x83);
@@ -308,8 +327,8 @@ class Assembler {
     code.append(0xc0 | (src << 3) | dst);
   }
 
-  void and_(int v, Register dst) {
-    assert(code.s, (v & 0xFFFFFF00) == 0); // todo
+  void and_(int32_t v, Register dst) {
+    assert(code.s, isByte(v)); // todo
 
     rex();
     code.append(0x83);

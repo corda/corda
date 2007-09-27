@@ -96,6 +96,7 @@ interpreter-depends = \
 	$(src)/heap.h \
 	$(src)/finder.h \
 	$(src)/processor.h \
+	$(src)/process.h \
 	$(src)/stream.h \
 	$(src)/constants.h \
 	$(src)/jnienv.h \
