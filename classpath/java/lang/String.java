@@ -379,7 +379,7 @@ public final class String implements Comparable<String> {
   public native String intern();
 
   public static String valueOf(Object s) {
-    return s.toString();
+    return s == null ? "null" : s.toString();
   }
 
   public static String valueOf(boolean v) {

@@ -23,7 +23,7 @@ public class PrintStream extends OutputStream {
   }
 
   public void print(Object o) {
-    print(o.toString());
+    print(String.valueOf(o));
   }
 
   public void print(char c) {
