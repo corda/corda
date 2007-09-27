@@ -70,7 +70,7 @@ public class ArrayList<T> implements List<T> {
   public void add(int index, T element) {
     size = Math.max(size+1, index+1);
     grow();
-    System.arraycopy(array, index, array, index+1, size-index);
+    System.arraycopy(array, index, array, index+1, size-index-1);
     array[index] = element;
   }
 
