@@ -46,7 +46,7 @@ public class PrintStream extends OutputStream {
   }
 
   public void println(Object o) {
-    println(o.toString());
+    println(String.valueOf(o));
   }
 
   public void println(char c) {
