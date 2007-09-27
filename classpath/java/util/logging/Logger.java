@@ -70,8 +70,8 @@ public class Logger {
   }
 
   private static class DefaultHandler extends Handler {
-    private static final int NAME_WIDTH = 18;
-    private static final int METHOD_WIDTH = 20;
+    private static final int NAME_WIDTH = 14;
+    private static final int METHOD_WIDTH = 15;
     private static final int LEVEL_WIDTH = 8;
 
     public Object clone() { return this; }
