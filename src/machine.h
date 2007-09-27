@@ -1550,6 +1550,43 @@ makeExceptionInInitializerError(Thread* t, object cause)
   return makeExceptionInInitializerError(t, 0, trace, cause);
 }
 
+inline object
+makeNew(Thread* t, object class_)
+{
+  PROTECT(t, class_);
+  unsigned sizeInBytes = pad(classFixedSize(t, class_));
+  object instance = allocate(t, sizeInBytes);
+  cast<object>(instance, 0) = class_;
+  memset(&cast<object>(instance, 0) + 1, 0,
+         sizeInBytes - sizeof(object));
+
+  return instance;
+}
+
+inline object
+makeNewWeakReference(Thread* t, object class_)
+{
+  object instance = makeNew(t, class_);
+  PROTECT(t, instance);
+
+  ACQUIRE(t, t->m->referenceLock);
+
+  jreferenceNextUnsafe(t, instance) = t->m->weakReferences;
+  t->m->weakReferences = instance;
+
+  return instance;
+}
+
+inline object
+make(Thread* t, object class_)
+{
+  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
+    return makeNewWeakReference(t, class_);
+  } else {
+    return makeNew(t, class_);
+  }
+}
+
 object
 make(Thread* t, object class_);
 

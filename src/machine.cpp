@@ -1715,28 +1715,6 @@ allocate2(Thread* t, unsigned sizeInBytes)
 }
 
 object
-make(Thread* t, object class_)
-{
-  PROTECT(t, class_);
-  unsigned sizeInBytes = pad(classFixedSize(t, class_));
-  object instance = allocate(t, sizeInBytes);
-  cast<object>(instance, 0) = class_;
-  memset(&cast<object>(instance, 0) + 1, 0,
-         sizeInBytes - sizeof(object));
-
-  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
-    PROTECT(t, instance);
-
-    ACQUIRE(t, t->m->referenceLock);
-
-    jreferenceNextUnsafe(t, instance) = t->m->weakReferences;
-    t->m->weakReferences = instance;
-  }
-
-  return instance;
-}
-
-object
 makeByteArray(Thread* t, const char* format, ...)
 {
   va_list a;

@@ -12,8 +12,8 @@ public class Instructions {
     int b = 2;
     int c = a + b;
 
-//     Instructions i = new Instructions();
-//     i.foo("hello");
-//     i.bar("hello");
+    Instructions i = new Instructions();
+    i.foo("hello");
+    i.bar("hello");
   }
 }
