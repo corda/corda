@@ -446,7 +446,7 @@ Java_java_lang_System_arraycopy
         {
           uint8_t* sbody = &cast<uint8_t>(s, 2 * BytesPerWord);
           uint8_t* dbody = &cast<uint8_t>(d, 2 * BytesPerWord);
-          if (src == dst) {
+          if (s == d) {
             memmove(dbody + (dstOffset * elementSize),
                     sbody + (srcOffset * elementSize),
                     length * elementSize);
