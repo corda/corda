@@ -200,9 +200,15 @@ class Assembler {
     if (srcOffset) {
       if (isByte(srcOffset)) {
         code.append(0x40 | (dst << 3) | src);
+        if (src == rsp) {
+          code.append(0x24);
+        }
         code.append(srcOffset);
       } else {
         code.append(0x80 | (dst << 3) | src);
+        if (src == rsp) {
+          code.append(0x24);
+        }
         code.append4(srcOffset);
       }
     } else {
@@ -216,9 +222,15 @@ class Assembler {
     if (dstOffset) {
       if (isByte(dstOffset)) {
         code.append(0x40 | (src << 3) | dst);
+        if (dst == rsp) {
+          code.append(0x24);
+        }
         code.append(dstOffset);
       } else {
         code.append(0x80 | (src << 3) | dst);
+        if (dst == rsp) {
+          code.append(0x24);
+        }
         code.append4(dstOffset);
       }
     } else {
@@ -254,6 +266,9 @@ class Assembler {
 
     code.append(0xff);
     code.append(0x70 | reg);
+    if (reg == rsp) {
+      code.append(0x24);
+    }
     code.append(offset);
   }
 
@@ -262,6 +277,15 @@ class Assembler {
 
     code.append(0x6a);
     code.append(v);
+  }
+
+  void pushAddress(uintptr_t v) {
+    if (BytesPerWord == 8) {
+      mov(v, rsi);
+      push(rsi);
+    } else {
+      push(v);
+    }
   }
 
   void pop(Register dst) {
@@ -349,12 +373,6 @@ class Assembler {
     code.append(0xff);
     code.append(0xe0 | reg);
   }
-
-//   void jmp(Register reg, int offset) {
-//     code.append(0xff);
-//     code.append(0x60 | reg);
-//     code.append(offset);
-//   }
 
   void jz(Label& label) {
     code.append(0x0F);
@@ -450,8 +468,10 @@ class Compiler: public Assembler {
 
     unsigned localFootprint = codeMaxLocals(t, code) * BytesPerWord;
 
-    // reserve space for local variables
-    sub(localFootprint - parameterFootprint, rsp);
+    if (localFootprint > parameterFootprint) {
+      // reserve space for local variables
+      sub(localFootprint - parameterFootprint, rsp);
+    }
     
     for (unsigned ip = 0; ip < codeLength(t, code);) {
       unsigned instruction = codeBody(t, code, ip++);
@@ -465,7 +485,7 @@ class Compiler: public Assembler {
         break;
 
       case dup:
-        push(rsp, 4);
+        push(rsp, BytesPerWord);
         break;
 
       case getstatic: {
@@ -534,9 +554,9 @@ class Compiler: public Assembler {
 
       case iadd:
         pop(rax);
-        pop(rdx);
-        add(rax, rdx);
-        push(rdx);
+        pop(rcx);
+        add(rax, rcx);
+        push(rcx);
         break;
 
       case iconst_m1:
@@ -567,21 +587,31 @@ class Compiler: public Assembler {
         push(5);
         break;
 
+      case aload:
+      case iload:
+      case fload:
+        push(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
+        break;
+
+      case aload_0:
       case iload_0:
       case fload_0:
         push(rbp, localOffset(0, parameterFootprint));
         break;
 
+      case aload_1:
       case iload_1:
       case fload_1:
         push(rbp, localOffset(1, parameterFootprint));
         break;
 
+      case aload_2:
       case iload_2:
       case fload_2:
         push(rbp, localOffset(2, parameterFootprint));
         break;
 
+      case aload_3:
       case iload_3:
       case fload_3:
         push(rbp, localOffset(3, parameterFootprint));
@@ -600,12 +630,12 @@ class Compiler: public Assembler {
         }
 
         unsigned footprint = FrameFootprint
-          + methodParameterFootprint(t, target) * BytesPerWord;
+          + (methodParameterFootprint(t, target) * BytesPerWord);
 
         uint8_t* code = &compiledBody(t, methodCompiled(t, target), 0);
         
-        push(rbp, 0);
-        push(reinterpret_cast<uintptr_t>(target));
+        push(rbp);
+        pushAddress(reinterpret_cast<uintptr_t>(target));
         push(rbp, FrameThread);
 
         alignedMov(reinterpret_cast<uintptr_t>(code), rax);
@@ -622,19 +652,24 @@ class Compiler: public Assembler {
         object target = resolveMethod(t, codePool(t, code), index - 1);
         if (UNLIKELY(t->exception)) return;
 
-        unsigned footprint = FrameFootprint
-          + methodParameterFootprint(t, target) * BytesPerWord;
+        unsigned parameterFootprint
+          = methodParameterFootprint(t, target) * BytesPerWord;
+
+        unsigned instance = parameterFootprint - BytesPerWord;
+
+        unsigned footprint = FrameFootprint + parameterFootprint;
 
         unsigned offset = ArrayBody + (methodOffset(t, target) * BytesPerWord);
-        
-        push(rbp, 0);
-        push(reinterpret_cast<uintptr_t>(target));
-        push(rbp, FrameThread);
-        
-        mov(rsp, BytesPerWord * 3, rax);  // load target object
-        mov(rax, 0, rax);                 // load target class
+                
+        mov(rsp, instance, rax);          // load instance
+        mov(rax, 0, rax);                 // load class
         mov(rax, ClassVirtualTable, rax); // load vtable
         mov(rax, offset, rax);            // load method
+
+        push(rbp, 0);
+        push(rax);
+        push(rbp, FrameThread);
+
         mov(rax, MethodCompiled, rax);    // load compiled code
         add(CompiledBody, rax);
         call(rax);                        // call compiled code
@@ -644,21 +679,31 @@ class Compiler: public Assembler {
         pushReturnValue(t, methodReturnCode(t, method));
       } break;
 
+      case astore:
+      case istore:
+      case fstore:
+        pop(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
+        break;
+
+      case astore_0:
       case istore_0:
       case fstore_0:
         pop(rbp, localOffset(0, parameterFootprint));
         break;
 
+      case astore_1:
       case istore_1:
       case fstore_1:
         pop(rbp, localOffset(1, parameterFootprint));
         break;
 
+      case astore_2:
       case istore_2:
       case fstore_2:
         pop(rbp, localOffset(2, parameterFootprint));
         break;
 
+      case astore_3:
       case istore_3:
       case fstore_3:
         pop(rbp, localOffset(3, parameterFootprint));
@@ -687,12 +732,45 @@ class Compiler: public Assembler {
         } else if (objectClass(t, v)
                    == arrayBody(t, t->m->types, Machine::StringType))
         {
-          push(reinterpret_cast<uintptr_t>(v));
+          pushAddress(reinterpret_cast<uintptr_t>(v));
         } else {
           object class_ = resolveClass(t, codePool(t, code), index - 1);
 
-          push(reinterpret_cast<uintptr_t>(class_));
+          pushAddress(reinterpret_cast<uintptr_t>(class_));
         }
+      } break;
+
+      case new_: {
+        uint16_t index = codeReadInt16(t, code, ip);
+        
+        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        if (UNLIKELY(t->exception)) return;
+        PROTECT(t, class_);
+        
+        initClass(t, class_);
+        if (UNLIKELY(t->exception)) return;
+        
+        if (BytesPerWord == 4) {
+          pushAddress(reinterpret_cast<uintptr_t>(class_));
+          push(rbp, FrameThread);
+        } else {
+          mov(reinterpret_cast<uintptr_t>(class_), rsi);
+          mov(rbp, FrameThread, rdi);
+        }
+        
+        if (classVmFlags(t, class_) & WeakReferenceFlag) {
+          mov(reinterpret_cast<uintptr_t>(makeNewWeakReference), rax);
+        } else {
+          mov(reinterpret_cast<uintptr_t>(makeNew), rax);
+        }
+
+        call(rax);
+
+        if (BytesPerWord == 4) {
+          add(BytesPerWord * 2, rsp);
+        }
+
+        push(rax);
       } break;
 
       case pop_: {
@@ -805,16 +883,11 @@ unwind(Thread* t)
 void
 compileMethod(MyThread* t, object method)
 {
-  if (methodVirtual(t, method)) {
-    object this_ = static_cast<object*>
-      (t->frame)[2 + (FrameFootprint / BytesPerWord)];
-    method = findMethod(t, method, objectClass(t, this_));
-  }
-
   compileMethod2(t, method);
+
   if (UNLIKELY(t->exception)) {
     unwind(t);
-  } else {
+  } else if (not methodVirtual(t, method)) {
     updateCaller(t, method);
   }
 }

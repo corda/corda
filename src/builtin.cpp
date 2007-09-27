@@ -108,6 +108,8 @@ Java_java_lang_Object_clone(Thread* t, jclass, jobject o)
   if (classArrayElementSize(t, class_)) {
     clone = static_cast<object>(allocate(t, size));
     memcpy(clone, *o, size);
+    // clear any object header flags:
+    cast<object>(*o, 0) = objectClass(t, *o);
   } else {
     clone = make(t, objectClass(t, *o));
     memcpy(reinterpret_cast<void**>(clone) + 1,
