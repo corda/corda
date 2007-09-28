@@ -89,36 +89,37 @@ public final class String implements Comparable<String> {
   public int compareTo(String s) {
     if (this == s) return 0;
 
-    int d = length - s.length;
-    if (d != 0) {
-      return d;
-    } else {
-      for (int i = 0; i < length; ++i) {
-        d = charAt(i) - s.charAt(i);
-        if (d != 0) {
-          return d;
-        }
+    int idx = 0;
+    int result;
+
+    int end = (length < s.length ? length : s.length);
+
+    while (idx < end) {
+      if ((result = charAt(idx) - s.charAt(idx)) != 0) {
+        return result;
       }
-      return 0;
+      idx++;
     }
+    return length - s.length;
   }
 
   public int compareToIgnoreCase(String s) {
     if (this == s) return 0;
 
-    int d = length - s.length;
-    if (d != 0) {
-      return d;
-    } else {
-      for (int i = 0; i < length; ++i) {
-        d = Character.toLowerCase(charAt(i))
-          - Character.toLowerCase(s.charAt(i));
-        if (d != 0) {
-          return d;
-        }
+    int idx = 0;
+    int result;
+
+    int end = (length < s.length ? length : s.length);
+
+    while (idx < end) {
+      if ((result =
+           Character.toLowerCase(charAt(idx)) -
+           Character.toLowerCase(s.charAt(idx))) != 0) {
+        return result;
       }
-      return 0;
+      idx++;
     }
+    return length - s.length;
   }
 
   public String trim() {
