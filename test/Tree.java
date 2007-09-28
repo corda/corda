@@ -6,11 +6,11 @@ public class Tree {
     if (! v) throw new RuntimeException();
   }
 
-  private static String printList(TreeSet<Integer> list) {
+  private static String printList(TreeSet<?> list) {
     StringBuilder sb = new StringBuilder();
 
-    for (Integer i : list) {
-      sb.append(i);
+    for (Object o : list) {
+      sb.append(o);
       sb.append(", ");
     }
     sb.setLength(sb.length()-2);
@@ -29,12 +29,29 @@ public class Tree {
   }
 
   public static void main(String args[]) {
-    TreeSet<Integer> l = new TreeSet<Integer>(new MyCompare());
-    l.add(5); l.add(2); l.add(1); l.add(8); l.add(3);
-    isEqual(printList(l), "1, 2, 3, 5, 8");
-    l.add(4);
-    isEqual(printList(l), "1, 2, 3, 4, 5, 8");
-    l.remove(3);
-    isEqual(printList(l), "1, 2, 4, 5, 8");
+    TreeSet<Integer> t1 = new TreeSet<Integer>(new MyCompare());
+    t1.add(5); t1.add(2); t1.add(1); t1.add(8); t1.add(3);
+    isEqual(printList(t1), "1, 2, 3, 5, 8");
+    t1.add(4);
+    isEqual(printList(t1), "1, 2, 3, 4, 5, 8");
+    t1.remove(3);
+    isEqual(printList(t1), "1, 2, 4, 5, 8");
+    TreeSet<String> t2 = new TreeSet<String>(new Comparator<String>() {
+      public int compare(String s1, String s2) {
+        return s1.compareTo(s2);
+      }
+    });
+    t2.add("one"); t2.add("two"); t2.add("three"); t2.add("four"); t2.add("five");
+    isEqual(printList(t2), "five, four, one, three, two");
+    for (int i=0; i < 1000; i++) {
+      t2.add(Integer.toString(i));
+    }
+    expect(t2.size() == 1005);
+    for (int i=0; i < 999; i++) {
+      t2.remove(Integer.toString(i));
+    }
+    expect(t2.size() == 6);
+    t2.add("kappa");
+    isEqual(printList(t2), "999, five, four, kappa, one, three, two");
   }
 }
