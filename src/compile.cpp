@@ -18,55 +18,80 @@ const unsigned FrameMethod = FrameThread + BytesPerWord;
 const unsigned FrameNext = FrameNext + BytesPerWord;
 const unsigned FrameFootprint = BytesPerWord * 3;
 
-class Rope {
+class Buffer {
  public:
-  class Node {
-   public:
-    static const unsigned Size = 32;
-
-    Node():
-      next(0)
-    { }
-
-    Node* next;
-    uint8_t data[Size];
-  };
-
-  Rope() { }
-
-  Rope(System* s):
+  Buffer(System* s, unsigned minimumCapacity):
     s(s),
-    front(0),
-    rear(0),
-    count(0),
-    position(Node::Size)
+    data(0),
+    position(0),
+    capacity(0),
+    minimumCapacity(minimumCapacity)
   { }
 
-  void append(uint8_t v) {
-    if (position == Node::Size) {
-      if (front == 0 or rear->next == 0) {
-        Node* n = new (s->allocate(sizeof(Node))) Node;
-        if (front == 0) {
-          front = rear = n;
-        } else {
-          rear->next = n;
-          rear = n;
-        }
-      } else {
-        rear = rear->next;
-      }
-      position = 0;
-      ++ count;
+  ~Buffer() {
+    if (data) {
+      s->free(data);
     }
+  }
 
-    rear->data[position++] = v;
+  void ensure(unsigned space) {
+    if (position + space > capacity) {
+      unsigned newCapacity = max
+        (position + space, max(minimumCapacity, capacity * 2));
+      uint8_t* newData = static_cast<uint8_t*>(s->allocate(newCapacity));
+      if (data) {
+        memcpy(newData, data, position);
+        s->free(data);
+      }
+      data = newData;
+    }
+  }
+
+  void append(uint8_t v) {
+    ensure(1);
+    data[position++] = v;
+  }
+
+  void append2(uint32_t v) {
+    ensure(2);
+    data[position++] = (v >> 0) & 0xFF;
+    data[position++] = (v >> 8) & 0xFF;
   }
 
   void append4(uint32_t v) {
-    append((v >>  0) & 0xFF);
-    append((v >>  8) & 0xFF);
-    append((v >> 16) & 0xFF);
-    append((v >> 24) & 0xFF);
+    ensure(4);
+    data[position++] = (v >>  0) & 0xFF;
+    data[position++] = (v >>  8) & 0xFF;
+    data[position++] = (v >> 16) & 0xFF;
+    data[position++] = (v >> 24) & 0xFF;
+  }
+
+  void set2(unsigned offset, uint32_t v) {
+    assert(s, offset + 2 < position);
+    data[offset++] = (v >> 0) & 0xFF;
+    data[offset++] = (v >> 8) & 0xFF;  
+  }
+
+  void set4(unsigned offset, uint32_t v) {
+    assert(s, offset + 4 < position);
+    data[offset++] = (v >>  0) & 0xFF;
+    data[offset++] = (v >>  8) & 0xFF;
+    data[offset++] = (v >> 16) & 0xFF;
+    data[offset++] = (v >> 24) & 0xFF;    
+  }
+
+  uint16_t get2(unsigned offset) {
+    assert(s, offset + 2 < position);
+    return ((data[offset++] << 0) |
+            (data[offset++] << 8));
+  }
+
+  uint32_t get4(unsigned offset) {
+    assert(s, offset + 4 < position);
+    return ((data[offset++] <<  0) |
+            (data[offset++] <<  8) |
+            (data[offset++] << 16) |
+            (data[offset++] << 24));
   }
 
   void appendAddress(uintptr_t v) {
@@ -77,30 +102,20 @@ class Rope {
   }
 
   unsigned length() {
-    return (count * Node::Size) + position;
+    return position;
   }
 
   void copyTo(uint8_t* b) {
-    if (front) {
-      Node* n = front;
-      while (true) {
-        if (n == rear) {
-          memcpy(b, n->data, position);
-          break;
-        } else {
-          memcpy(b, n->data, Node::Size);
-          b += Node::Size;
-          n = n->next;
-        }
-      }
+    if (data) {
+      memcpy(b, data, position);
     }
   }
 
   System* s;
-  Node* front;
-  Node* rear;
-  unsigned count;
+  uint8_t* data;
   unsigned position;
+  unsigned capacity;
+  unsigned minimumCapacity;
 };
 
 class ArgumentList;
@@ -123,16 +138,40 @@ isByte(int32_t v)
   return v == static_cast<int8_t>(v);
 }
 
+enum Register {
+  rax = 0,
+  rcx = 1,
+  rdx = 2,
+  rbx = 3,
+  rsp = 4,
+  rbp = 5,
+  rsi = 6,
+  rdi = 7,
+  r8 = 8,
+  r9 = 9,
+  r10 = 10,
+  r11 = 11,
+  r12 = 12,
+  r13 = 13,
+  r14 = 14,
+  r15 = 15,
+};
+
+enum SSERegister {
+  xmm0 = 0,
+  xmm1 = 1,
+  xmm2 = 2,
+  xmm3 = 3,
+  xmm4 = 4,
+  xmm5 = 5,
+  xmm6 = 6,
+  xmm7 = 7
+};
+
 class Assembler {
  public:
   class Label {
    public:
-    class Snapshot {
-     public:
-      Rope code;
-      unsigned ip;
-    };
-
     static const unsigned Capacity = 8;
 
     Label(Assembler* a):
@@ -141,45 +180,34 @@ class Assembler {
       mark_(-1)
     { }
 
-    void reference(unsigned ip) {
+    void reference() {
       if (mark_ == -1) {
         expect(code->s, unresolvedCount < Capacity);
-        unresolved[unresolvedCount].code = *code;
-        unresolved[unresolvedCount].ip = ip;
+        unresolved[unresolvedCount] = code->length();
         ++ unresolvedCount;
 
-        code->appendAddress(0);
+        code->append4(0);
       } else {
-        code->appendAddress(mark_ - ip);
+        code->append4(mark_ - (code->length() + 4));
       }
     }
 
     void mark() {
       mark_ = code->length();
       for (unsigned i = 0; i < unresolvedCount; ++i) {
-        unresolved[i].code.appendAddress(mark_ - unresolved[i].ip);
+        code->set4(unresolved[i], mark_ - (unresolved[i] + 4));
       }
     }
 
-    Rope* code;
-    Snapshot unresolved[Capacity];
+    Buffer* code;
+    unsigned unresolved[Capacity];
     unsigned unresolvedCount;
     int mark_;
   };
 
-  enum Register {
-    rax = 0,
-    rcx = 1,
-    rdx = 2,
-    rbx = 3,
-    rsp = 4,
-    rbp = 5,
-    rsi = 6,
-    rdi = 7
-  };
-
   Assembler(System* s):
-    code(s)
+    code(s, 1024),
+    jumps(s, 32)
   { }
 
   void rex() {
@@ -196,7 +224,7 @@ class Assembler {
 
   void offsetInstruction(uint8_t instruction, uint8_t zeroPrefix,
                          uint8_t bytePrefix, uint8_t wordPrefix,
-                         Register a, Register b, int32_t offset)
+                         unsigned a, unsigned b, int32_t offset)
   {
     code.append(instruction);
 
@@ -230,6 +258,12 @@ class Assembler {
 
   void mov4(Register src, Register dst, int32_t dstOffset) {
     offsetInstruction(0x89, 0, 0x40, 0x80, src, dst, dstOffset);
+  }
+
+  void mov(Register src, int32_t srcOffset, SSERegister dst) {
+    code.append(0xf3);
+    code.append(0x0f);
+    offsetInstruction(0x7e, 0, 0x40, 0x80, dst, src, srcOffset);
   }
 
   void mov(Register src, int32_t srcOffset, Register dst) {
@@ -377,7 +411,16 @@ class Assembler {
 
   void jmp(Label& label) {
     code.append(0xE9);
-    label.reference(code.length() + BytesPerWord);
+    label.reference();
+  }
+
+  void jmp(unsigned javaIP) {
+    code.append(0xE9);
+
+    jumps.append4(javaIP);
+    jumps.append4(code.length());
+
+    code.append4(0);
   }
 
   void jmp(Register reg) {
@@ -388,21 +431,33 @@ class Assembler {
   void jz(Label& label) {
     code.append(0x0F);
     code.append(0x84);
-    label.reference(code.length() + BytesPerWord);
+    label.reference();
   }
 
-  void je(Label& label) {
-    jz(label);
+  void jz(unsigned javaIP) {
+    code.append(0x0F);
+    code.append(0x84);
+
+    jumps.append4(javaIP);
+    jumps.append4(code.length());
+
+    code.append4(0);
   }
 
   void jnz(Label& label) {
     code.append(0x0F);
     code.append(0x85);
-    label.reference(code.length() + BytesPerWord);
+    label.reference();
   }
 
-  void jne(Label& label) {
-    jnz(label);
+  void jnz(unsigned javaIP) {
+    code.append(0x0F);
+    code.append(0x85);
+
+    jumps.append4(javaIP);
+    jumps.append4(code.length());
+
+    code.append4(0);
   }
 
   void cmp(int v, Register reg) {
@@ -416,7 +471,8 @@ class Assembler {
     code.append(0xd0 | reg);
   }
 
-  Rope code;
+  Buffer code;
+  Buffer jumps;
 };
 
 void
@@ -433,10 +489,48 @@ localOffset(int v, int parameterFootprint)
   }
 }
 
+Register
+gpRegister(Thread* t, unsigned index)
+{
+  switch (index) {
+  case 0:
+    return rdi;
+  case 1:
+    return rsi;
+  case 2:
+    return rdx;
+  case 3:
+    return rcx;
+  case 4:
+    return r8;
+  case 5:
+    return r9;
+  default:
+    abort(t);
+  }
+}
+
+SSERegister
+sseRegister(Thread* t, unsigned index)
+{
+  assert(t, index < 8);
+         return static_cast<SSERegister>(index);
+}
+
+unsigned
+parameterOffset(Thread* t, object method, unsigned index)
+{
+  return FrameFootprint
+    + (((methodParameterFootprint(t, method) - index - 1) + 2)
+       * BytesPerWord);
+}
+
 class Compiler: public Assembler {
  public:
   Compiler(System* s):
-    Assembler(s)
+    Assembler(s),
+    javaIPs(s, 1024),
+    machineIPs(s, 1024)
   { }
 
   void pushReturnValue(Thread* t, unsigned code) {
@@ -493,7 +587,6 @@ class Compiler: public Assembler {
     }
 
     mov(function, rax);
-
     call(rax);
 
     if (BytesPerWord == 4) {
@@ -501,11 +594,176 @@ class Compiler: public Assembler {
     }
   }
 
-  void compile(Thread* t, object method) {
-    PROTECT(t, method);
+  void compile(MyThread* t, object method) {
+    if (methodFlags(t, method) & ACC_NATIVE) {
+      compileNative(t, method);
+    } else {
+      compileJava(t, method);
+    }
+  }
+
+  void compileNative(MyThread* t, object method) {
+    unsigned frameOffset = reinterpret_cast<uintptr_t>(&(t->frame))
+      - reinterpret_cast<uintptr_t>(t);
+
+    void* function = resolveNativeMethod(t, method);
 
     push(rbp);
     mov(rsp, rbp);
+    
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, frameOffset);              // set thread frame to current
+
+    unsigned index;
+    if (methodFlags(t, method) & ACC_STATIC) {
+      pushAddress(reinterpret_cast<uintptr_t>(methodClass(t, method)));
+      index = 0;
+    } else {
+      index = 1;      
+    }
+
+    MethodSpecIterator it(t, reinterpret_cast<const char*>
+                          (&byteArrayBody(t, methodSpec(t, method), 0)));
+
+    unsigned stackFootprint;
+
+    if (BytesPerWord == 4) {
+      while (it.hasNext()) {
+        unsigned offset = parameterOffset(t, method, index);
+
+        switch (fieldCode(t, *it.next())) {
+        case BooleanField:
+        case ByteField:
+        case ShortField:
+        case CharField:
+        case IntField:
+        case FloatField: {
+          push(rbp, offset);
+          ++ index;
+        } break;
+
+        case LongField:
+        case DoubleField: {
+          push(rbp, offset);
+          push(rbp, offset - BytesPerWord);
+          index += 2;
+        } break;
+
+        case ObjectField: {
+          mov(rbp, rax);
+          add(offset, rax);
+          push(rax);
+          ++ index;
+        } break;
+          
+        default:
+          abort(t);
+        }
+      }
+
+      if (methodFlags(t, method) & ACC_STATIC) {
+        mov(rbp, rax);
+        sub(BytesPerWord, rax);
+        push(rax);                           // push pointer to class pointer
+      } else {
+        unsigned offset = parameterOffset(t, method, 0);
+        mov(rbp, rax);
+        add(offset, rax);
+        push(rax);                           // push pointer to this pointer
+      }
+
+      push(rbp, FrameThread);                // push thread pointer
+
+      stackFootprint = FrameFootprint
+        + (methodParameterFootprint(t, method) * BytesPerWord);
+    } else {
+      const unsigned GprCount = 6;
+      unsigned gprIndex = 0;
+
+      const unsigned SseCount = 8;
+      unsigned sseIndex = 0;
+
+      stackFootprint = 0;
+
+      while (it.hasNext()) {
+        unsigned offset = parameterOffset(t, method, index);
+
+        switch (fieldCode(t, *it.next())) {
+        case BooleanField:
+        case ByteField:
+        case ShortField:
+        case CharField:
+        case IntField: 
+        case LongField: {
+          if (gprIndex < GprCount - 2) {
+            Register reg = gpRegister(t, gprIndex + 2);
+            mov(rbp, offset, reg);
+            ++ gprIndex;
+          } else {
+            push(rbp, offset);
+            stackFootprint += BytesPerWord;
+          }
+        } break;
+
+        case ObjectField: {
+          if (gprIndex < GprCount - 2) {
+            Register reg = gpRegister(t, gprIndex + 2);
+            mov(rbp, reg);
+            add(offset, reg);
+            ++ gprIndex;
+          } else {
+            mov(rbp, rax);
+            add(offset, rax);
+            push(rax); 
+            stackFootprint += BytesPerWord;           
+          }
+        } break;
+
+        case FloatField:
+        case DoubleField: {
+          if (sseIndex < SseCount) {
+            SSERegister reg = sseRegister(t, sseIndex);
+            mov(rbp, offset, reg);
+            ++ sseIndex;
+          } else {
+            push(rbp, offset);
+            stackFootprint += BytesPerWord;
+          }          
+        } break;
+          
+        default:
+          abort(t);
+        }
+
+        ++ index;
+      }
+
+      if (methodFlags(t, method) & ACC_STATIC) {
+        mov(rbp, rsi);
+        sub(BytesPerWord, rsi);              // push pointer to class pointer
+      } else {
+        unsigned offset = parameterOffset(t, method, 0);
+        mov(rbp, rsi);
+        add(offset, rsi);                    // push pointer to this pointer
+      }
+
+      mov(rbp, FrameThread, rdi);            // push thread pointer
+    }
+
+    mov(reinterpret_cast<uintptr_t>(function), rax);
+    call(rax);
+
+    if (stackFootprint) {
+      add(stackFootprint, rsp);
+    }
+
+    mov(rbp, rsp);
+    pop(rbp);
+    ret();
+  }
+
+  void compileJava(MyThread* t, object method) {
+    PROTECT(t, method);
 
     object code = methodCode(t, method);
     PROTECT(t, code);
@@ -515,20 +773,86 @@ class Compiler: public Assembler {
 
     unsigned localFootprint = codeMaxLocals(t, code) * BytesPerWord;
 
+    push(rbp);
+    mov(rsp, rbp);
+
     if (localFootprint > parameterFootprint) {
       // reserve space for local variables
       sub(localFootprint - parameterFootprint, rsp);
     }
     
     for (unsigned ip = 0; ip < codeLength(t, code);) {
+      javaIPs.append2(ip);
+      machineIPs.append4(this->code.length());
+
       unsigned instruction = codeBody(t, code, ip++);
 
       switch (instruction) {
+      case aload:
+      case iload:
+      case fload:
+        push(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
+        break;
+
+      case aload_0:
+      case iload_0:
+      case fload_0:
+        push(rbp, localOffset(0, parameterFootprint));
+        break;
+
+      case aload_1:
+      case iload_1:
+      case fload_1:
+        push(rbp, localOffset(1, parameterFootprint));
+        break;
+
+      case aload_2:
+      case iload_2:
+      case fload_2:
+        push(rbp, localOffset(2, parameterFootprint));
+        break;
+
+      case aload_3:
+      case iload_3:
+      case fload_3:
+        push(rbp, localOffset(3, parameterFootprint));
+        break;
+
       case areturn:
         pop(rax);
         mov(rbp, rsp);
         pop(rbp);
         ret();
+        break;
+
+      case astore:
+      case istore:
+      case fstore:
+        pop(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
+        break;
+
+      case astore_0:
+      case istore_0:
+      case fstore_0:
+        pop(rbp, localOffset(0, parameterFootprint));
+        break;
+
+      case astore_1:
+      case istore_1:
+      case fstore_1:
+        pop(rbp, localOffset(1, parameterFootprint));
+        break;
+
+      case astore_2:
+      case istore_2:
+      case fstore_2:
+        pop(rbp, localOffset(2, parameterFootprint));
+        break;
+
+      case astore_3:
+      case istore_3:
+      case fstore_3:
+        pop(rbp, localOffset(3, parameterFootprint));
         break;
 
       case bipush: {
@@ -565,7 +889,7 @@ class Compiler: public Assembler {
           Label next(this);
 
           cmp(0, rax);
-          je(zero);
+          jz(zero);
 
           push4(rax, IntValue);
           jmp(next);
@@ -582,7 +906,7 @@ class Compiler: public Assembler {
           Label next(this);
 
           cmp(0, rax);
-          je(zero);
+          jz(zero);
 
           push4(rax, LongValue);
           push4(rax, LongValue + 4);
@@ -638,35 +962,13 @@ class Compiler: public Assembler {
         push(5);
         break;
 
-      case aload:
-      case iload:
-      case fload:
-        push(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
-        break;
-
-      case aload_0:
-      case iload_0:
-      case fload_0:
-        push(rbp, localOffset(0, parameterFootprint));
-        break;
-
-      case aload_1:
-      case iload_1:
-      case fload_1:
-        push(rbp, localOffset(1, parameterFootprint));
-        break;
-
-      case aload_2:
-      case iload_2:
-      case fload_2:
-        push(rbp, localOffset(2, parameterFootprint));
-        break;
-
-      case aload_3:
-      case iload_3:
-      case fload_3:
-        push(rbp, localOffset(3, parameterFootprint));
-        break;
+      case ifnull: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        cmp(0, rax);
+        jz((ip - 3) + offset);
+      } break;
 
       case invokespecial: {
         uint16_t index = codeReadInt16(t, code, ip);
@@ -727,36 +1029,6 @@ class Compiler: public Assembler {
 
         pushReturnValue(t, methodReturnCode(t, method));
       } break;
-
-      case astore:
-      case istore:
-      case fstore:
-        pop(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
-        break;
-
-      case astore_0:
-      case istore_0:
-      case fstore_0:
-        pop(rbp, localOffset(0, parameterFootprint));
-        break;
-
-      case astore_1:
-      case istore_1:
-      case fstore_1:
-        pop(rbp, localOffset(1, parameterFootprint));
-        break;
-
-      case astore_2:
-      case istore_2:
-      case fstore_2:
-        pop(rbp, localOffset(2, parameterFootprint));
-        break;
-
-      case astore_3:
-      case istore_3:
-      case fstore_3:
-        pop(rbp, localOffset(3, parameterFootprint));
-        break;
 
       case ldc:
       case ldc_w: {
@@ -870,6 +1142,31 @@ class Compiler: public Assembler {
         abort(t);
       }
     }
+
+    resolveJumps();
+  }
+
+  void resolveJumps() {
+    for (unsigned i = 0; i < jumps.length(); i += 8) {
+      uint32_t ip = jumps.get4(i);
+      uint32_t offset = jumps.get4(i + 4);
+
+      unsigned bottom = 0;
+      unsigned top = javaIPs.length() / 2;
+      for (unsigned span = top - bottom; span; span = top - bottom) {
+        unsigned middle = bottom + (span / 2);
+        uint32_t k = javaIPs.get2(middle * 2);
+
+        if (ip < k) {
+          top = middle;
+        } else if (ip > k) {
+          bottom = middle + 1;
+        } else {
+          code.set4(offset, machineIPs.get4(middle * 4) - (offset + 4));
+          break;
+        }
+      }
+    }
   }
 
   void compileStub(MyThread* t) {
@@ -906,6 +1203,9 @@ class Compiler: public Assembler {
     add(CompiledBody, rax);
     jmp(rax);                                // call compiled code
   }
+
+  Buffer javaIPs;
+  Buffer machineIPs;
 };
 
 void
@@ -937,13 +1237,13 @@ updateCaller(MyThread* t, object method)
     (&compiledBody(t, t->m->processor->methodStub(t), 0));
 
   Assembler a(t->m->system);
-  a.mov(stub, Assembler::rax);
+  a.mov(stub, rax);
   unsigned offset = a.code.length() - BytesPerWord;
 
-  a.call(Assembler::rax);
+  a.call(rax);
 
   uint8_t* caller = static_cast<uint8_t**>(t->frame)[1] - a.code.length();
-  if (memcmp(a.code.front->data, caller, a.code.length()) == 0) {
+  if (memcmp(a.code.data, caller, a.code.length()) == 0) {
     // it's a direct call - update caller to point to new code
 
     // address must be aligned on a word boundary for this write to
@@ -1272,6 +1572,7 @@ class MyProcessor: public Processor {
     if (classVmFlags(t, c) & NeedInitFlag
         and (classVmFlags(t, c) & InitFlag) == 0)
     {
+      classVmFlags(t, c) |= InitFlag;
       invoke(t, classInitializer(t, c), 0);
       if (t->exception) {
         t->exception = makeExceptionInInitializerError(t, t->exception);

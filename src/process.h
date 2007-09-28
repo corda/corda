@@ -132,6 +132,19 @@ methodVirtual(Thread* t, object method)
     == 0;
 }
 
+inline void*
+resolveNativeMethod(Thread* t, object method)
+{
+  for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
+    void* p = lib->resolve(reinterpret_cast<const char*>
+                           (&byteArrayBody(t, methodCode(t, method), 0)));
+    if (p) {
+      return p;
+    }
+  }
+  return 0;
+}
+
 } // namespace vm
 
 #endif//PROCESS_H

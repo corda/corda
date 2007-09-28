@@ -491,8 +491,7 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
   char n[stringLength(t, *name) + 1];
   stringChars(t, *name, n);
 
-  for (System::Library* lib = t->m->libraries; lib; lib = lib->next())
-  {
+  for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     if (lib->name()
         and strcmp(lib->name(), n) == 0
         and lib->mapName() == mapName)

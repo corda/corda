@@ -881,38 +881,13 @@ scanMethodSpec(Thread* t, const char* s, unsigned* parameterCount,
                unsigned* returnCode)
 {
   unsigned count = 0;
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
-    case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    default:
-      ++ s;
-      break;
-    }
-
+  MethodSpecIterator it(t, s);
+  for (; it.hasNext(); it.next()) {
     ++ count;
   }
 
   *parameterCount = count;
-  *returnCode = fieldCode(t, s[1]);
+  *returnCode = fieldCode(t, *it.returnSpec());
 }
 
 void

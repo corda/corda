@@ -1839,6 +1839,58 @@ listAppend(Thread* t, object list, object value);
 object
 vectorAppend(Thread* t, object vector, object value);
 
+class MethodSpecIterator {
+ public:
+  MethodSpecIterator(Thread* t, const char* s):
+    t(t), s(s + 1)
+  { }
+
+  const char* next() {
+    assert(t, *s != ')');
+
+    const char* p = s;
+
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+
+    case '[':
+      while (*s == '[') ++ s;
+      switch (*s) {
+      case 'L':
+        while (*s and *s != ';') ++ s;
+        ++ s;
+        break;
+
+      default:
+        ++ s;
+        break;
+      }
+      break;
+      
+    default:
+      ++ s;
+      break;
+    }
+    
+    return p;
+  }
+
+  bool hasNext() {
+    return *s != ')';
+  }
+
+  const char* returnSpec() {
+    assert(t, *s == ')');
+    return s + 1;
+  }
+
+  Thread* t;
+  const char* s;
+};
+
 unsigned
 fieldCode(Thread* t, unsigned javaCode);
 

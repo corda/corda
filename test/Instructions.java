@@ -20,9 +20,10 @@ public class Instructions {
     int c = a + b;
 
     Instructions i = new Instructions();
-    i.foo("hello");
-    i.bar("hello");
-    baz("hello");
+    String s = "hello";
+    i.foo(s);
+    i.bar(s);
+    baz(s);
 
     int d = alpha;
     beta = 42;

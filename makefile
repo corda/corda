@@ -147,8 +147,6 @@ classpath-objects = $(classpath-classes) $(jni-library)
 test-sources = $(shell find $(test) -name '*.java')
 test-classes = $(call java-classes,$(test-sources),$(test))
 
-classpath-objects = $(classpath-classes) $(jni-library)
-
 class-name = $(patsubst $(cls)/%.class,%,$(1))
 class-names = $(foreach x,$(1),$(call class-name,$(x)))
 

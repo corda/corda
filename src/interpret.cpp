@@ -442,26 +442,18 @@ resolveNativeMethodData(Thread* t, object method)
   if (objectClass(t, methodCode(t, method))
       == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
-    object data = 0;
-    for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
-      void* p = lib->resolve(reinterpret_cast<const char*>
-                             (&byteArrayBody(t, methodCode(t, method), 0)));
-      if (p) {
-        PROTECT(t, method);
-        data = makeNativeMethodData(t, method, p);
-        break;
-      }
-    }
-
-    if (LIKELY(data)) {
+    void* p = resolveNativeMethod(t, method);
+    if (LIKELY(p)) {
+      PROTECT(t, method);
+      object data = makeNativeMethodData(t, method, p);
       set(t, methodCode(t, method), data);
+      return data;
     } else {
       object message = makeString
         (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
       t->exception = makeUnsatisfiedLinkError(t, message);
+      return 0;
     }
-
-    return data;
   } else {
     return methodCode(t, method);
   }  
@@ -1526,170 +1518,154 @@ interpret(Thread* t)
   } goto loop;
 
   case if_acmpeq: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     object b = popObject(t);
     object a = popObject(t);
     
     if (a == b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset);
     }
   } goto loop;
 
   case if_acmpne: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     object b = popObject(t);
     object a = popObject(t);
     
     if (a != b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case if_icmpeq: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
     if (a == b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case if_icmpne: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
     if (a != b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case if_icmpgt: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
     if (a > b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case if_icmpge: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
     if (a >= b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case if_icmplt: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
     if (a < b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case if_icmple: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
     if (a <= b) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case ifeq: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (popInt(t) == 0) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case ifne: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (popInt(t)) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case ifgt: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (static_cast<int32_t>(popInt(t)) > 0) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case ifge: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (static_cast<int32_t>(popInt(t)) >= 0) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case iflt: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (static_cast<int32_t>(popInt(t)) < 0) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case ifle: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (static_cast<int32_t>(popInt(t)) <= 0) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case ifnonnull: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (popObject(t)) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
   case ifnull: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    int16_t offset = codeReadInt16(t, code, ip);
 
     if (popObject(t) == 0) {
-      ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
@@ -2956,7 +2932,7 @@ class MyProcessor: public Processor {
         and (classVmFlags(t, c) & InitFlag) == 0)
     {
       classVmFlags(t, c) |= InitFlag;
-      t->m->processor->invoke(t, classInitializer(t, c), 0);
+      invoke(t, classInitializer(t, c), 0);
     } else {
       release(t, t->m->classLock);
     }
