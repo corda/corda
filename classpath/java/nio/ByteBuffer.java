@@ -60,6 +60,7 @@ public class ByteBuffer {
     if (position != 0) {
       System.arraycopy(array, arrayOffset+position, array, arrayOffset, remaining());
     }
+    position=0;
     return this;
   }
 
@@ -74,7 +75,7 @@ public class ByteBuffer {
   }
 
   public ByteBuffer put(byte val) {
-    array[position++] = val;
+    array[arrayOffset+(position++)] = val;
     return this;
   }
 
