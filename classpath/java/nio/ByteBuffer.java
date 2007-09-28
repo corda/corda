@@ -134,6 +134,8 @@ public class ByteBuffer {
   }
 
   public ByteBuffer flip() {
+    limit = position;
+    position = 0;
     return this;
   }
 
