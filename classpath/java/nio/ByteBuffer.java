@@ -89,7 +89,7 @@ public class ByteBuffer {
   }
 
   public ByteBuffer put(byte[] arr, int offset, int len) {
-    System.arraycopy(arr, offset, array, arrayOffset, len);
+    System.arraycopy(arr, offset, array, arrayOffset+position, len);
     position += len;
     return this;
   }
