@@ -35,7 +35,7 @@ public abstract class Calendar {
   }
 
   public void setTime(Date date) {
-    // TODO
+    time = date.getTime();
   }
 
   public abstract void roll(int field, boolean up);

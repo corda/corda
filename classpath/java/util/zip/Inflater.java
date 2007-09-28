@@ -15,8 +15,10 @@ public class Inflater {
   private int length;
   private boolean needDictionary;
   private boolean finished;
+  private final boolean nowrap;
 
   public Inflater(boolean nowrap) {
+    this.nowrap = nowrap;
     peer = make(nowrap);
   }
 
@@ -55,8 +57,11 @@ public class Inflater {
   }
 
   public void reset() {
-    // TODO
-    throw new UnsupportedOperationException();
+    dispose();
+    peer = make(nowrap);
+    input = null;
+    offset = length = 0;
+    needDictionary = finished = false;
   }
 
   public int inflate(byte[] output) throws DataFormatException {

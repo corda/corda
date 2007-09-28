@@ -1,81 +1,131 @@
 package java.util;
 
 public class TreeSet<T> implements Iterable<T> {
-  private final Comparator<T> comparator;
+  private PersistentSet<Cell<T>> set;
   private int size;
-  private Cell<T> root;
 
-  public TreeSet(Comparator<T> comparator) {
-    this.comparator = comparator;
-    size=0;
-    root=null;
+  public TreeSet(final Comparator<T> comparator) {
+    set = new PersistentSet(new Comparator<Cell<T>>() {
+      public int compare(Cell<T> a, Cell<T> b) {
+        return comparator.compare(a.value, b.value);
+      }
+    });
+    size = 0;
   }
 
   public Iterator<T> iterator() {
-    return walk().iterator();
+    return new MyIterator<T>(set.first());
   }
 
-  private ArrayList<T> walk() {
-    return walk(root, new ArrayList<T>(size));
-  }
-
-  private ArrayList<T> walk(Cell<T> cell, ArrayList<T> list) {
-    if (cell != null) {
-      walk(cell.left, list);
-      list.add(cell.value);
-      walk(cell.right, list);
-    }
-    return list;
-  }
-
-  public boolean add(T o) {
-    ++size;
-    if (root == null) {
-      root = new Cell<T>(o);
+  public boolean add(T value) {
+    PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
+    if (p.fresh()) {
+      set = p.add();
+      ++size;
       return true;
-    } else {
-      Cell<T> newElt = new Cell<T>(o);
-      Cell<T> cur = root;
-      do {
-        int result = comparator.compare(o, cur.value);
-        if (result == 0) return false;
-        if (result < 0) {
-          if (cur.left == null) {
-            newElt.parent = cur;
-            cur.left = newElt;
-            return false;
-          } else {
-            cur = cur.left;
-          }
-        } else {
-          if (cur.right == null) {
-            newElt.parent = cur;
-            cur.right = newElt;
-            return false;
-          } else {
-            cur = cur.right;
-          }
-        }
-      } while (cur != null);
-      throw new RuntimeException("Fell off end of TreeSet");
     }
+    return false;
   }
 
-  public boolean remove(T o) {
-    throw new UnsupportedOperationException();
+  // Used by hashMaps for replacement
+  public void addAndReplace(T value) {
+    PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
+    if (p.fresh()) {
+      set = p.add();
+      ++size;
+    } else {
+      set = p.replaceWith(new Cell(value, null));
+    }
+  }
+    
+  public boolean remove(T value) {
+    PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
+    if (p.fresh()) {
+      return false;
+    } else {
+      --size;
+
+      if (p.value().next != null) {
+        set = p.replaceWith(p.value().next);
+      } else {
+        set = p.remove();
+      }
+
+      return true;
+    }
   }
 
   public int size() {
     return size;
   }
 
-  private static class Cell<T> {
-    public final T value;
-    public Cell<T> parent;
-    public Cell<T> left;
-    public Cell<T> right;
-    public Cell(T val) {
-      value = val;
+  private class MyIterator<T> implements java.util.Iterator<T> {
+    private PersistentSet.Path<Cell<T>> path;
+    private PersistentSet.Path<Cell<T>> nextPath;
+    private Cell<T> cell;
+    private Cell<T> prevCell;
+    private Cell<T> prevPrevCell;
+    private boolean canRemove = false;
+
+    private MyIterator(PersistentSet.Path<Cell<T>> path) {
+      this.path = path;
+      if (path != null) {
+        cell = path.value();
+        nextPath = path.successor();
+      }
     }
-  }
+
+    private MyIterator(MyIterator<T> start) {
+      path = start.path;
+      nextPath = start.nextPath;
+      cell = start.cell;
+      prevCell = start.prevCell;
+      prevPrevCell = start.prevPrevCell;
+      canRemove = start.canRemove;
+    }
+
+    public boolean hasNext() {
+      return cell != null || nextPath != null;
+    }
+
+    public T next() {
+      if (cell == null) {
+        path = nextPath;
+        nextPath = path.successor();
+        cell = path.value();
+      }
+      prevPrevCell = prevCell;
+      prevCell = cell;
+      cell = cell.next;
+      canRemove = true;
+      return prevCell.value;
+    }
+
+    public void remove() {
+      if (! canRemove) throw new IllegalStateException();
+
+      --size;
+
+      if (prevPrevCell != null && prevPrevCell.next == prevCell) {
+        // cell to remove is not the first in the list.
+        prevPrevCell.next = prevCell.next;
+        prevCell = prevPrevCell;
+      } else if (prevCell.next == cell && cell != null) {
+        // cell to remove is the first in the list, but not the last.
+        set = (PersistentSet) path.replaceWith(cell);
+        prevCell = null;
+      } else {
+        // cell is alone in the list.
+        set = (PersistentSet) path.remove();
+        path = path.successor();
+        if (path != null) {
+          prevCell = null;
+          cell = path.value();
+          path = (PersistentSet.Path) set.find((Cell) cell);
+        }
+      }
+
+      canRemove = false;
+    }
+  }    
 }
