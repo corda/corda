@@ -2,6 +2,7 @@ package java.util;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.IOException;
 
 public class Properties extends Hashtable {
@@ -10,7 +11,16 @@ public class Properties extends Hashtable {
   }
 
   public void store(OutputStream out, String comment) throws IOException {
-    // TODO
+    PrintStream os = new PrintStream(out);
+    os.println("# " + comment);
+    for (Iterator it = entrySet().iterator();
+         it.hasNext();) {
+      Map.Entry entry = (Map.Entry)it.next();
+      os.print(entry.getKey());
+      os.print('=');
+      os.println(entry.getValue());
+    }
+    os.flush();
   }
 
   public String getProperty(String key) {
