@@ -97,7 +97,11 @@ class Buffer {
   void appendAddress(uintptr_t v) {
     append4(v);
     if (BytesPerWord == 8) {
+      // we have to use the preprocessor here to avoid a warning on
+      // 32-bit systems
+#ifdef __x86_64__
       append4(v >> 32);
+#endif
     }
   }
 
@@ -304,10 +308,13 @@ class Assembler {
   }
 
   void push(int32_t v) {
-    assert(code.s, isByte(v)); // todo
-
-    code.append(0x6a);
-    code.append(v);
+    if (isByte(v)) {
+      code.append(0x6a);
+      code.append(v);
+    } else {
+      code.append(0x68);
+      code.append4(v);
+    }
   }
 
   void pushAddress(uintptr_t v) {
