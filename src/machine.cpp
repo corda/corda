@@ -1003,7 +1003,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  arrayBody(t, pool, spec - 1),
                                  class_,
                                  code,
-                                 (code ? t->m->processor->methodStub(t) : 0));
+                                 t->m->processor->methodStub(t));
       PROTECT(t, method);
 
       if (flags & ACC_STATIC) {

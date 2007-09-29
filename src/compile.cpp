@@ -52,46 +52,38 @@ class Buffer {
     data[position++] = v;
   }
 
-  void append2(uint32_t v) {
+  void append2(uint16_t v) {
     ensure(2);
-    data[position++] = (v >> 0) & 0xFF;
-    data[position++] = (v >> 8) & 0xFF;
+    memcpy(data + position, &v, 2);
+    position += 2;
   }
 
   void append4(uint32_t v) {
     ensure(4);
-    data[position++] = (v >>  0) & 0xFF;
-    data[position++] = (v >>  8) & 0xFF;
-    data[position++] = (v >> 16) & 0xFF;
-    data[position++] = (v >> 24) & 0xFF;
+    memcpy(data + position, &v, 4);
+    position += 4;
   }
 
   void set2(unsigned offset, uint32_t v) {
-    assert(s, offset + 2 < position);
-    data[offset++] = (v >> 0) & 0xFF;
-    data[offset++] = (v >> 8) & 0xFF;  
+    assert(s, offset + 2 <= position);
+    memcpy(data + offset, &v, 2);
   }
 
   void set4(unsigned offset, uint32_t v) {
-    assert(s, offset + 4 < position);
-    data[offset++] = (v >>  0) & 0xFF;
-    data[offset++] = (v >>  8) & 0xFF;
-    data[offset++] = (v >> 16) & 0xFF;
-    data[offset++] = (v >> 24) & 0xFF;    
+    assert(s, offset + 4 <= position);
+    memcpy(data + offset, &v, 4); 
   }
 
   uint16_t get2(unsigned offset) {
-    assert(s, offset + 2 < position);
-    return ((data[offset++] << 0) |
-            (data[offset++] << 8));
+    assert(s, offset + 2 <= position);
+    uint16_t v; memcpy(&v, data + offset, 2);
+    return v;
   }
 
   uint32_t get4(unsigned offset) {
-    assert(s, offset + 4 < position);
-    return ((data[offset++] <<  0) |
-            (data[offset++] <<  8) |
-            (data[offset++] << 16) |
-            (data[offset++] << 24));
+    assert(s, offset + 4 <= position);
+    uint32_t v; memcpy(&v, data + offset, 4);
+    return v;
   }
 
   void appendAddress(uintptr_t v) {
@@ -256,8 +248,37 @@ class Assembler {
     }    
   }
 
+  void movz1(Register src, int32_t srcOffset, Register dst) {
+    code.append(0x0f);
+    offsetInstruction(0x86, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void movs1(Register src, int32_t srcOffset, Register dst) {
+    code.append(0x0f);
+    offsetInstruction(0x8e, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void movz2(Register src, int32_t srcOffset, Register dst) {
+    code.append(0x0f);
+    offsetInstruction(0x87, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void movs2(Register src, int32_t srcOffset, Register dst) {
+    code.append(0x0f);
+    offsetInstruction(0x8f, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
   void mov4(Register src, int32_t srcOffset, Register dst) {
     offsetInstruction(0x8b, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void mov1(Register src, Register dst, int32_t dstOffset) {
+    offsetInstruction(0x88, 0, 0x40, 0x80, src, dst, dstOffset);
+  }
+
+  void mov2(Register src, Register dst, int32_t dstOffset) {
+    code.append(0x66);
+    offsetInstruction(0x89, 0, 0x40, 0x80, src, dst, dstOffset);
   }
 
   void mov4(Register src, Register dst, int32_t dstOffset) {
@@ -436,14 +457,14 @@ class Assembler {
   }
 
   void jz(Label& label) {
-    code.append(0x0F);
+    code.append(0x0f);
     code.append(0x84);
     label.reference();
   }
 
-  void jz(unsigned javaIP) {
-    code.append(0x0F);
-    code.append(0x84);
+  void conditional(unsigned javaIP, unsigned condition) {
+    code.append(0x0f);
+    code.append(condition);
 
     jumps.append4(javaIP);
     jumps.append4(code.length());
@@ -451,20 +472,34 @@ class Assembler {
     code.append4(0);
   }
 
+  void jz(unsigned javaIP) {
+    conditional(javaIP, 0x84);
+  }
+
   void jnz(Label& label) {
-    code.append(0x0F);
+    code.append(0x0f);
     code.append(0x85);
     label.reference();
   }
 
   void jnz(unsigned javaIP) {
-    code.append(0x0F);
-    code.append(0x85);
+    conditional(javaIP, 0x85);
+  }
 
-    jumps.append4(javaIP);
-    jumps.append4(code.length());
+  void jg(unsigned javaIP) {
+    conditional(javaIP, 0x8f);
+  }
 
-    code.append4(0);
+  void jge(unsigned javaIP) {
+    conditional(javaIP, 0x8d);
+  }
+
+  void jl(unsigned javaIP) {
+    conditional(javaIP, 0x8c);
+  }
+
+  void jle(unsigned javaIP) {
+    conditional(javaIP, 0x8e);
   }
 
   void cmp(int v, Register reg) {
@@ -795,6 +830,10 @@ class Compiler: public Assembler {
       unsigned instruction = codeBody(t, code, ip++);
 
       switch (instruction) {
+      case aconst_null:
+        push(0);
+        break;
+
       case aload:
       case iload:
       case fload:
@@ -869,6 +908,51 @@ class Compiler: public Assembler {
       case dup:
         push(rsp, BytesPerWord);
         break;
+
+      case getfield: {
+        uint16_t index = codeReadInt16(t, code, ip);
+        
+        object field = resolveField(t, codePool(t, code), index - 1);
+        if (UNLIKELY(t->exception)) return;
+      
+        pop(rax);
+
+        switch (fieldCode(t, field)) {
+        case ByteField:
+        case BooleanField:
+          movs1(rax, fieldOffset(t, field), rax);
+          push(rax);
+          break;
+
+        case CharField:
+          movz2(rax, fieldOffset(t, field), rax);
+          push(rax);
+          break;
+
+        case ShortField:
+          movs2(rax, fieldOffset(t, field), rax);
+          push(rax);
+          break;
+
+        case FloatField:
+        case IntField:
+          push4(rax, fieldOffset(t, field));
+          break;
+
+        case DoubleField:
+        case LongField:
+          push4(rax, fieldOffset(t, field));
+          push4(rax, fieldOffset(t, field) + 4);
+          break;
+
+        case ObjectField:
+          push(rax, fieldOffset(t, field));
+          break;
+
+        default:
+          abort(t);
+        }
+      } break;
 
       case getstatic: {
         uint16_t index = codeReadInt16(t, code, ip);
@@ -969,6 +1053,63 @@ class Compiler: public Assembler {
         push(5);
         break;
 
+      case if_acmpeq:
+      case if_icmpeq: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        pop(rcx);
+        cmp(rax, rcx);
+        jz((ip - 3) + offset);
+      } break;
+
+      case if_acmpne:
+      case if_icmpne: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        pop(rcx);
+        cmp(rax, rcx);
+        jnz((ip - 3) + offset);
+      } break;
+
+      case if_icmpgt: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        pop(rcx);
+        cmp(rax, rcx);
+        jg((ip - 3) + offset);
+      } break;
+
+      case if_icmpge: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        pop(rcx);
+        cmp(rax, rcx);
+        jge((ip - 3) + offset);
+      } break;
+
+      case if_icmplt: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        pop(rcx);
+        cmp(rax, rcx);
+        jl((ip - 3) + offset);
+      } break;
+
+      case if_icmple: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        pop(rcx);
+        cmp(rax, rcx);
+        jle((ip - 3) + offset);
+      } break;
+
+      case ifeq:
       case ifnull: {
         int16_t offset = codeReadInt16(t, code, ip);
         
@@ -977,13 +1118,64 @@ class Compiler: public Assembler {
         jz((ip - 3) + offset);
       } break;
 
+      case ifne:
+      case ifnonnull: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        cmp(0, rax);
+        jnz((ip - 3) + offset);
+      } break;
+
+      case ifgt: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        cmp(0, rax);
+        jg((ip - 3) + offset);
+      } break;
+
+      case ifge: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        cmp(0, rax);
+        jge((ip - 3) + offset);
+      } break;
+
+      case iflt: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        cmp(0, rax);
+        jl((ip - 3) + offset);
+      } break;
+
+      case ifle: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        pop(rax);
+        cmp(0, rax);
+        jle((ip - 3) + offset);
+      } break;
+
+      case goto_: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        jmp((ip - 3) + offset);
+      } break;
+
+      case goto_w: {
+        int32_t offset = codeReadInt32(t, code, ip);
+        jmp((ip - 5) + offset);
+      } break;
+
       case invokespecial: {
         uint16_t index = codeReadInt16(t, code, ip);
 
         object target = resolveMethod(t, codePool(t, code), index - 1);
         if (UNLIKELY(t->exception)) return;
 
-        object class_ = methodClass(t, method);
+        object class_ = methodClass(t, target);
         if (isSpecialMethod(t, target, class_)) {
           target = findMethod(t, target, classSuper(t, class_));
         }
@@ -998,7 +1190,7 @@ class Compiler: public Assembler {
         if (UNLIKELY(t->exception)) return;
         PROTECT(t, target);
 
-        initClass(t, methodClass(t, method));
+        initClass(t, methodClass(t, target));
         if (UNLIKELY(t->exception)) return;
 
         compileDirectInvoke(t, target);
@@ -1034,7 +1226,7 @@ class Compiler: public Assembler {
 
         add(footprint, rsp);              // pop arguments
 
-        pushReturnValue(t, methodReturnCode(t, method));
+        pushReturnValue(t, methodReturnCode(t, target));
       } break;
 
       case ldc:
@@ -1091,6 +1283,58 @@ class Compiler: public Assembler {
 
       case pop_: {
         add(BytesPerWord, rsp);
+      } break;
+
+      case putfield: {
+        uint16_t index = codeReadInt16(t, code, ip);
+    
+        object field = resolveField(t, codePool(t, code), index - 1);
+        if (UNLIKELY(t->exception)) return;
+      
+        switch (fieldCode(t, field)) {
+        case ByteField:
+        case BooleanField:
+        case CharField:
+        case ShortField:
+        case FloatField:
+        case IntField: {
+          pop(rcx);
+          pop(rax);
+          switch (fieldCode(t, field)) {
+          case ByteField:
+          case BooleanField:
+            mov1(rcx, rax, fieldOffset(t, field));
+            break;
+            
+          case CharField:
+          case ShortField:
+            mov2(rcx, rax, fieldOffset(t, field));
+            break;
+            
+          case FloatField:
+          case IntField:
+            mov4(rcx, rax, fieldOffset(t, field));
+            break;
+          }
+        } break;
+
+        case DoubleField:
+        case LongField: {
+          pop(rcx);
+          pop(rdx);
+          pop(rax);
+          mov4(rcx, rax, fieldOffset(t, field));
+          mov4(rdx, rax, fieldOffset(t, field) + 4);
+        } break;
+
+        case ObjectField: {
+          pop(rcx);
+          pop(rax);
+          mov(rcx, rax, fieldOffset(t, field));
+        } break;
+
+        default: abort(t);
+        }
       } break;
 
       case putstatic: {
@@ -1160,6 +1404,7 @@ class Compiler: public Assembler {
 
       unsigned bottom = 0;
       unsigned top = javaIPs.length() / 2;
+      bool success = false;
       for (unsigned span = top - bottom; span; span = top - bottom) {
         unsigned middle = bottom + (span / 2);
         uint32_t k = javaIPs.get2(middle * 2);
@@ -1170,9 +1415,11 @@ class Compiler: public Assembler {
           bottom = middle + 1;
         } else {
           code.set4(offset, machineIPs.get4(middle * 4) - (offset + 4));
+          success = true;
           break;
         }
       }
+      assert(code.s, success);
     }
   }
 
@@ -1224,6 +1471,10 @@ compileMethod2(MyThread* t, object method)
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == t->m->processor->methodStub(t)) {
+      fprintf(stderr, "compiling %s.%s\n",
+              &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+              &byteArrayBody(t, methodName(t, method), 0));
+
       Compiler c(t->m->system);
       c.compile(t, method);
     
@@ -1232,6 +1483,12 @@ compileMethod2(MyThread* t, object method)
 
       c.code.copyTo(&compiledBody(t, compiled, 0));
     
+      fprintf(stderr, "compiled %s.%s from %p to %p\n",
+              &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+              &byteArrayBody(t, methodName(t, method), 0),
+              &compiledBody(t, compiled, 0),
+              &compiledBody(t, compiled, 0) + compiledLength(t, compiled));
+
       set(t, methodCompiled(t, method), compiled);
     }
   }

@@ -34,7 +34,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Instructions.class
+input = $(cls)/Hello.class
 
 cxx = g++
 cc = gcc
