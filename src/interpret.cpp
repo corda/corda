@@ -1713,12 +1713,9 @@ interpret(Thread* t)
   } goto loop;
 
   case instanceof: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
+    uint16_t index = codeReadInt16(t, code, ip);
 
     if (peekObject(t, sp - 1)) {
-      uint16_t index = (index1 << 8) | index2;
-      
       object class_ = resolveClass(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 

@@ -18,6 +18,20 @@ const unsigned FrameMethod = FrameThread + BytesPerWord;
 const unsigned FrameNext = FrameNext + BytesPerWord;
 const unsigned FrameFootprint = BytesPerWord * 3;
 
+void
+unwind(Thread* t)
+{
+  // todo
+  abort(t);
+}
+
+void
+throwNew(Thread* t, object class_)
+{
+  t->exception = makeNew(t, class_);
+  unwind(t);
+}
+
 class Buffer {
  public:
   Buffer(System* s, unsigned minimumCapacity):
@@ -456,7 +470,7 @@ class Assembler {
     code.append(0xe0 | reg);
   }
 
-  void jz(Label& label) {
+  void je(Label& label) {
     code.append(0x0f);
     code.append(0x84);
     label.reference();
@@ -472,17 +486,17 @@ class Assembler {
     code.append4(0);
   }
 
-  void jz(unsigned javaIP) {
+  void je(unsigned javaIP) {
     conditional(javaIP, 0x84);
   }
 
-  void jnz(Label& label) {
+  void jne(Label& label) {
     code.append(0x0f);
     code.append(0x85);
     label.reference();
   }
 
-  void jnz(unsigned javaIP) {
+  void jne(unsigned javaIP) {
     conditional(javaIP, 0x85);
   }
 
@@ -619,7 +633,7 @@ class Compiler: public Assembler {
     pushReturnValue(t, methodReturnCode(t, target));
   }
 
-  void compileCall1(uintptr_t function, uintptr_t arg1) {
+  void compileCall(uintptr_t function, uintptr_t arg1) {
     if (BytesPerWord == 4) {
       pushAddress(arg1);
       push(rbp, FrameThread);
@@ -633,6 +647,25 @@ class Compiler: public Assembler {
 
     if (BytesPerWord == 4) {
       add(BytesPerWord * 2, rsp);
+    }
+  }
+
+  void compileCall(uintptr_t function, Register arg1, Register arg2) {
+    if (BytesPerWord == 4) {
+      push(arg2);
+      push(arg1);
+      push(rbp, FrameThread);
+    } else {
+      mov(arg2, rdx);
+      mov(arg1, rsi);
+      mov(rbp, FrameThread, rdi);
+    }
+
+    mov(function, rax);
+    call(rax);
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 3, rsp);
     }
   }
 
@@ -865,6 +898,8 @@ class Compiler: public Assembler {
         break;
 
       case areturn:
+      case ireturn:
+      case freturn:
         pop(rax);
         mov(rbp, rsp);
         pop(rbp);
@@ -903,6 +938,35 @@ class Compiler: public Assembler {
 
       case bipush: {
         push(static_cast<int8_t>(codeBody(t, code, ip++)));
+      } break;
+
+      case checkcast: {
+        uint16_t index = codeReadInt16(t, code, ip);
+
+        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        if (UNLIKELY(t->exception)) return;
+
+        Label next(this);
+        
+        pop(rax);
+        cmp(0, rax);
+        je(next);
+
+        mov(reinterpret_cast<uintptr_t>(class_), rcx);
+        mov(rax, 0, rax);
+        cmp(rcx, rax);
+        je(next);
+
+        compileCall(reinterpret_cast<uintptr_t>(isAssignableFrom), rcx, rax);
+        cmp(0, rax);
+        jne(next);
+        
+        compileCall
+          (reinterpret_cast<uintptr_t>(throwNew),
+           reinterpret_cast<uintptr_t>
+           (arrayBody(t, t->m->types, Machine::ClassCastExceptionType)));
+
+        next.mark();        
       } break;
 
       case dup:
@@ -980,7 +1044,7 @@ class Compiler: public Assembler {
           Label next(this);
 
           cmp(0, rax);
-          jz(zero);
+          je(zero);
 
           push4(rax, IntValue);
           jmp(next);
@@ -997,7 +1061,7 @@ class Compiler: public Assembler {
           Label next(this);
 
           cmp(0, rax);
-          jz(zero);
+          je(zero);
 
           push4(rax, LongValue);
           push4(rax, LongValue + 4);
@@ -1060,7 +1124,7 @@ class Compiler: public Assembler {
         pop(rax);
         pop(rcx);
         cmp(rax, rcx);
-        jz((ip - 3) + offset);
+        je((ip - 3) + offset);
       } break;
 
       case if_acmpne:
@@ -1070,7 +1134,7 @@ class Compiler: public Assembler {
         pop(rax);
         pop(rcx);
         cmp(rax, rcx);
-        jnz((ip - 3) + offset);
+        jne((ip - 3) + offset);
       } break;
 
       case if_icmpgt: {
@@ -1115,7 +1179,7 @@ class Compiler: public Assembler {
         
         pop(rax);
         cmp(0, rax);
-        jz((ip - 3) + offset);
+        je((ip - 3) + offset);
       } break;
 
       case ifne:
@@ -1124,7 +1188,7 @@ class Compiler: public Assembler {
         
         pop(rax);
         cmp(0, rax);
-        jnz((ip - 3) + offset);
+        jne((ip - 3) + offset);
       } break;
 
       case ifgt: {
@@ -1167,6 +1231,39 @@ class Compiler: public Assembler {
       case goto_w: {
         int32_t offset = codeReadInt32(t, code, ip);
         jmp((ip - 5) + offset);
+      } break;
+
+      case instanceof: {
+        uint16_t index = codeReadInt16(t, code, ip);
+
+        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        if (UNLIKELY(t->exception)) return;
+
+        Label call(this);
+        Label zero(this);
+        Label next(this);
+        
+        pop(rax);
+        cmp(0, rax);
+        je(zero);
+
+        mov(reinterpret_cast<uintptr_t>(class_), rcx);
+        mov(rax, 0, rax);
+        cmp(rcx, rax);
+        jne(call);
+        
+        push(1);
+        jmp(next);
+
+        call.mark();
+        compileCall(reinterpret_cast<uintptr_t>(isAssignableFrom), rcx, rax);
+        push(rax);
+        jmp(next);
+
+        zero.mark();
+        push(0);
+
+        next.mark();
       } break;
 
       case invokespecial: {
@@ -1271,11 +1368,11 @@ class Compiler: public Assembler {
         if (UNLIKELY(t->exception)) return;
 
         if (classVmFlags(t, class_) & WeakReferenceFlag) {
-          compileCall1(reinterpret_cast<uintptr_t>(makeNewWeakReference),
-                       reinterpret_cast<uintptr_t>(class_));
+          compileCall(reinterpret_cast<uintptr_t>(makeNewWeakReference),
+                      reinterpret_cast<uintptr_t>(class_));
         } else {
-          compileCall1(reinterpret_cast<uintptr_t>(makeNew),
-                       reinterpret_cast<uintptr_t>(class_));
+          compileCall(reinterpret_cast<uintptr_t>(makeNew),
+                      reinterpret_cast<uintptr_t>(class_));
         }
 
         push(rax);
@@ -1358,18 +1455,18 @@ class Compiler: public Assembler {
         case ShortField:
         case FloatField:
         case IntField: {
-          compileCall1(reinterpret_cast<uintptr_t>(makeNew),
-                       reinterpret_cast<uintptr_t>
-                       (arrayBody(t, t->m->types, Machine::IntType)));
+          compileCall(reinterpret_cast<uintptr_t>(makeNew),
+                      reinterpret_cast<uintptr_t>
+                      (arrayBody(t, t->m->types, Machine::IntType)));
 
           pop4(rax, IntValue);
         } break;
 
         case DoubleField:
         case LongField: {
-          compileCall1(reinterpret_cast<uintptr_t>(makeNew),
-                       reinterpret_cast<uintptr_t>
-                       (arrayBody(t, t->m->types, Machine::LongType)));
+          compileCall(reinterpret_cast<uintptr_t>(makeNew),
+                      reinterpret_cast<uintptr_t>
+                      (arrayBody(t, t->m->types, Machine::LongType)));
 
           pop4(rax, LongValue);
           pop4(rax, LongValue + 4);
@@ -1518,13 +1615,6 @@ updateCaller(MyThread* t, object method)
     *reinterpret_cast<void**>(caller + offset)
       = &compiledBody(t, methodCompiled(t, method), 0);
   }
-}
-
-void
-unwind(Thread* t)
-{
-  // todo
-  abort(t);
 }
 
 void
