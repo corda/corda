@@ -1,11 +1,13 @@
 package java.io;
 
 public class PrintStream extends OutputStream {
-  private static final byte[] newline
-    = System.getProperty("line.separator").getBytes();
-
   private final OutputStream out;
   private final boolean autoFlush;
+
+  private static class Static {
+    private static final byte[] newline
+      = System.getProperty("line.separator").getBytes();
+  }
 
   public PrintStream(OutputStream out, boolean autoFlush) {
     this.out = out;
@@ -33,14 +35,14 @@ public class PrintStream extends OutputStream {
   public synchronized void println(String s) {
     try {
       out.write(s.getBytes());    
-      out.write(newline);
+      out.write(Static.newline);
       if (autoFlush) flush();
     } catch (IOException e) { }
   }
 
   public synchronized void println() {
     try {
-      out.write(newline);
+      out.write(Static.newline);
       if (autoFlush) flush();
     } catch (IOException e) { }
   }

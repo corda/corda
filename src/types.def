@@ -53,7 +53,6 @@
   (object compiled))
 
 (type compiled
-  (nogc object method)
   (array uint8_t body))
 
 (type nativeMethodData

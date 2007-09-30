@@ -56,6 +56,7 @@ const unsigned WeakReferenceFlag = 1 << 1;
 const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
 const unsigned PrimitiveFlag = 1 << 4;
+const unsigned BootstrapFlag = 1 << 5;
 
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;

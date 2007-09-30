@@ -1760,16 +1760,7 @@ interpret(Thread* t)
       object class_ = methodClass(t, frameMethod(t, frame));
       if (isSpecialMethod(t, method, class_)) {
         class_ = classSuper(t, class_);
-
-        if (classVirtualTable(t, class_) == 0) {
-          PROTECT(t, method);
-          PROTECT(t, class_);
-
-          resolveClass(t, className(t, class_));
-          if (UNLIKELY(exception)) goto throw_;
-
-          if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
-        }
+        if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
 
         code = findMethod(t, method, class_);
       } else {
@@ -1804,16 +1795,7 @@ interpret(Thread* t)
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
-
-      if (classVirtualTable(t, class_) == 0) {
-        PROTECT(t, method);
-        PROTECT(t, class_);
-
-        resolveClass(t, className(t, class_));
-        if (UNLIKELY(exception)) goto throw_;
-
-        if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
-      }
+      if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
 
       code = findMethod(t, method, class_);
       goto invoke;
@@ -2494,10 +2476,7 @@ interpret(Thread* t)
   } goto loop;
 
   case sipush: {
-    uint8_t byte1 = codeBody(t, code, ip++);
-    uint8_t byte2 = codeBody(t, code, ip++);
-
-    pushInt(t, static_cast<int16_t>((byte1 << 8) | byte2));
+    pushInt(t, static_cast<int16_t>(codeReadInt16(t, code, ip)));
   } goto loop;
 
   case swap: {
@@ -2766,11 +2745,6 @@ invoke(Thread* t, object method)
     if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
       method = findInterfaceMethod(t, method, class_);
     } else {
-      if (classVirtualTable(t, class_) == 0) {
-        resolveClass(t, className(t, class_));
-        if (UNLIKELY(t->exception)) return 0;
-      }
-
       method = findMethod(t, method, class_);
     }
   }

@@ -1451,8 +1451,6 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     m->bootstrapClassMap = makeHashMap(this, 0, 0);
 
-#include "type-java-initializations.cpp"
-
     object loaderMap = makeHashMap(this, 0, 0);
     set(t, systemClassLoaderMap(t, m->loader), loaderMap);
 
@@ -1462,6 +1460,17 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     m->jniInterfaceTable = makeVector(this, 0, 0, false);
 
     m->localThread->set(this);
+
+#include "type-java-initializations.cpp"
+
+    enter(t, Thread::ActiveState);
+
+    resolveClass
+      (t, className(t, arrayBody(t, m->types, Machine::ClassType)));
+    resolveClass
+      (t, className(t, arrayBody(t, m->types, Machine::IntArrayType)));
+    resolveClass
+      (t, className(t, arrayBody(t, m->types, Machine::ByteArrayType)));
   } else {
     parent->child = this;
   }
@@ -1472,6 +1481,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     this->javaThread = makeThread
       (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader);
   }
+
+  enter(this, Thread::IdleState);
 }
 
 void

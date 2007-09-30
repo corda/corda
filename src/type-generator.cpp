@@ -40,6 +40,12 @@ equal(const char* a, const char* b)
   return strcmp(a, b) == 0;
 }
 
+inline bool
+startsWith(const char* a, const char* b)
+{
+  return strncmp(a, b, strlen(a)) == 0;
+}
+
 class Object {
  public:
   typedef enum {
@@ -1354,6 +1360,22 @@ writeConstructors(Output* out, Object* declarations)
         }
       }
 
+      if (typeJavaName(o)
+          and not equal("class", typeName(o))
+          and startsWith("java/", typeJavaName(o)))
+      {
+        out->write("  object class__ ");
+        out->write("= arrayBody(t, t->m->types, Machine::");
+        out->write(capitalize(typeName(o)));
+        out->write("Type);\n");
+
+        out->write("  if (classVmFlags(t, class__) & BootstrapFlag) {\n");
+        out->write("    classVmFlags(t, class__) &= ~BootstrapFlag;\n");
+        out->write("    resolveClass(t, className(t, class__));\n");
+        out->write("    assert(t, t->exception == 0);\n");
+        out->write("  }\n");
+      }
+
       out->write("  object o = allocate(t, ");
       writeOffset(out, typeOffset(o), true);
       out->write(");\n");
@@ -1522,7 +1544,18 @@ writeInitialization(Output* out, Object* type)
   }
 
   out->write("  object class_ = makeClass");
-  out->write("(t, 0, 0, 0, ");
+  out->write("(t, 0, ");
+
+  if (typeJavaName(type)
+      and not equal("class", typeName(type))
+      and startsWith("java/", typeJavaName(type)))
+  {
+    out->write("BootstrapFlag");
+  } else {
+    out->write("0");
+  }
+
+  out->write(", 0, ");
   out->write(typeFixedSize(type));
   out->write(", ");
   out->write(typeArrayElementSize(type));

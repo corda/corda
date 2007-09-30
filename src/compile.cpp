@@ -32,6 +32,30 @@ throwNew(Thread* t, object class_)
   unwind(t);
 }
 
+void
+throw_(Thread* t, object o)
+{
+  if (o) {
+    t->exception = makeNullPointerException(t);
+  } else {
+    t->exception = o;
+  }
+  unwind(t);
+}
+
+object
+makeBlankObjectArray(Thread* t, object class_, int32_t length)
+{
+  return makeObjectArray(t, class_, length, true);
+}
+
+object
+makeBlankArray(Thread* t, object (*constructor)(Thread*, uintptr_t, bool),
+               int32_t length)
+{
+  return constructor(t, length, true);
+}
+
 class Buffer {
  public:
   Buffer(System* s, unsigned minimumCapacity):
@@ -402,6 +426,17 @@ class Assembler {
     code.append(v);
   }
 
+  void add(int32_t v, Register dst, unsigned offset) {
+    rex();
+    unsigned i = (isByte(v) ? 0x83 : 0x81);
+    offsetInstruction(i, 0, 0x40, 0x80, rax, dst, offset);
+    if (isByte(v)) {
+      code.append(v);
+    } else {
+      code.append4(v);
+    }
+  }
+
   void sub(Register src, Register dst) {
     rex();
     code.append(0x29);
@@ -470,9 +505,9 @@ class Assembler {
     code.append(0xe0 | reg);
   }
 
-  void je(Label& label) {
+  void conditional(Label& label, unsigned condition) {
     code.append(0x0f);
-    code.append(0x84);
+    code.append(condition);
     label.reference();
   }
 
@@ -486,30 +521,48 @@ class Assembler {
     code.append4(0);
   }
 
+  void je(Label& label) {
+    conditional(label, 0x84);
+  }
+
   void je(unsigned javaIP) {
     conditional(javaIP, 0x84);
   }
 
   void jne(Label& label) {
-    code.append(0x0f);
-    code.append(0x85);
-    label.reference();
+    conditional(label, 0x85);
   }
 
   void jne(unsigned javaIP) {
     conditional(javaIP, 0x85);
   }
 
+  void jg(Label& label) {
+    conditional(label, 0x8f);
+  }
+
   void jg(unsigned javaIP) {
     conditional(javaIP, 0x8f);
+  }
+
+  void jge(Label& label) {
+    conditional(label, 0x8d);
   }
 
   void jge(unsigned javaIP) {
     conditional(javaIP, 0x8d);
   }
 
+  void jl(Label& label) {
+    conditional(label, 0x8c);
+  }
+
   void jl(unsigned javaIP) {
     conditional(javaIP, 0x8c);
+  }
+
+  void jle(Label& label) {
+    conditional(label, 0x8e);
   }
 
   void jle(unsigned javaIP) {
@@ -539,7 +592,8 @@ localOffset(int v, int parameterFootprint)
 {
   v *= BytesPerWord;
   if (v < parameterFootprint) {
-    return v + (BytesPerWord * 2) + FrameFootprint;
+    return (parameterFootprint - v - BytesPerWord) + (BytesPerWord * 2)
+      + FrameFootprint;
   } else {
     return -(v + BytesPerWord - parameterFootprint);
   }
@@ -574,11 +628,9 @@ sseRegister(Thread* t, unsigned index)
 }
 
 unsigned
-parameterOffset(Thread* t, object method, unsigned index)
+parameterOffset(unsigned index)
 {
-  return FrameFootprint
-    + (((methodParameterFootprint(t, method) - index - 1) + 2)
-       * BytesPerWord);
+  return FrameFootprint + ((index + 2) * BytesPerWord);
 }
 
 class Compiler: public Assembler {
@@ -635,7 +687,7 @@ class Compiler: public Assembler {
 
   void compileCall(uintptr_t function, uintptr_t arg1) {
     if (BytesPerWord == 4) {
-      pushAddress(arg1);
+      push(arg1);
       push(rbp, FrameThread);
     } else {
       mov(arg1, rsi);
@@ -647,6 +699,42 @@ class Compiler: public Assembler {
 
     if (BytesPerWord == 4) {
       add(BytesPerWord * 2, rsp);
+    }
+  }
+
+  void compileCall(uintptr_t function, Register arg1) {
+    if (BytesPerWord == 4) {
+      push(arg1);
+      push(rbp, FrameThread);
+    } else {
+      mov(arg1, rsi);
+      mov(rbp, FrameThread, rdi);
+    }
+
+    mov(function, rax);
+    call(rax);
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 2, rsp);
+    }
+  }
+
+  void compileCall(uintptr_t function, uintptr_t arg1, Register arg2) {
+    if (BytesPerWord == 4) {
+      push(arg2);
+      push(arg1);
+      push(rbp, FrameThread);
+    } else {
+      mov(arg2, rdx);
+      mov(arg1, rsi);
+      mov(rbp, FrameThread, rdi);
+    }
+
+    mov(function, rax);
+    call(rax);
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 3, rsp);
     }
   }
 
@@ -682,6 +770,12 @@ class Compiler: public Assembler {
       - reinterpret_cast<uintptr_t>(t);
 
     void* function = resolveNativeMethod(t, method);
+    if (UNLIKELY(function == 0)) {
+      object message = makeString
+        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
+      t->exception = makeUnsatisfiedLinkError(t, message);
+      return;
+    }
 
     push(rbp);
     mov(rsp, rbp);
@@ -696,17 +790,24 @@ class Compiler: public Assembler {
     } else {
       index = 1;      
     }
+ 
+    unsigned parameterCodes[methodParameterCount(t, method)];
+    MethodSpecIterator it
+      (t, reinterpret_cast<const char*>
+       (&byteArrayBody(t, methodSpec(t, method), 0)));
 
-    MethodSpecIterator it(t, reinterpret_cast<const char*>
-                          (&byteArrayBody(t, methodSpec(t, method), 0)));
+    for (unsigned i = 0; it.hasNext(); ++i) {
+      parameterCodes[i] = fieldCode(t, *it.next());
+    }
 
     unsigned stackFootprint;
+    unsigned parameterCodeIndex = methodParameterCount(t, method);
 
     if (BytesPerWord == 4) {
-      while (it.hasNext()) {
-        unsigned offset = parameterOffset(t, method, index);
+      while (parameterCodeIndex) {
+        unsigned offset = parameterOffset(index);
 
-        switch (fieldCode(t, *it.next())) {
+        switch (parameterCodes[--parameterCodeIndex]) {
         case BooleanField:
         case ByteField:
         case ShortField:
@@ -741,7 +842,8 @@ class Compiler: public Assembler {
         sub(BytesPerWord, rax);
         push(rax);                           // push pointer to class pointer
       } else {
-        unsigned offset = parameterOffset(t, method, 0);
+        unsigned offset = parameterOffset
+          (methodParameterFootprint(t, method) - 1);
         mov(rbp, rax);
         add(offset, rax);
         push(rax);                           // push pointer to this pointer
@@ -760,10 +862,10 @@ class Compiler: public Assembler {
 
       stackFootprint = 0;
 
-      while (it.hasNext()) {
-        unsigned offset = parameterOffset(t, method, index);
+      while (parameterCodeIndex) {
+        unsigned offset = parameterOffset(index);
 
-        switch (fieldCode(t, *it.next())) {
+        switch (parameterCodes[--parameterCodeIndex]) {
         case BooleanField:
         case ByteField:
         case ShortField:
@@ -817,7 +919,8 @@ class Compiler: public Assembler {
         mov(rbp, rsi);
         sub(BytesPerWord, rsi);              // push pointer to class pointer
       } else {
-        unsigned offset = parameterOffset(t, method, 0);
+        unsigned offset = parameterOffset
+          (methodParameterFootprint(t, method) - 1);
         mov(rbp, rsi);
         add(offset, rsi);                    // push pointer to this pointer
       }
@@ -897,6 +1000,31 @@ class Compiler: public Assembler {
         push(rbp, localOffset(3, parameterFootprint));
         break;
 
+      case anewarray: {
+        uint16_t index = codeReadInt16(t, code, ip);
+      
+        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        if (UNLIKELY(t->exception)) return;
+
+        Label nonnegative(this);
+
+        pop(rax);
+        cmp(0, rax);
+        jle(nonnegative);
+
+        compileCall
+          (reinterpret_cast<uintptr_t>(throwNew),
+           reinterpret_cast<uintptr_t>
+           (arrayBody(t, t->m->types,
+                      Machine::NegativeArraySizeExceptionType)));
+
+        nonnegative.mark();
+        compileCall(reinterpret_cast<uintptr_t>(makeBlankObjectArray),
+                    reinterpret_cast<uintptr_t>(class_),
+                    rax);
+        push(rax);
+      } break;
+
       case areturn:
       case ireturn:
       case freturn:
@@ -936,6 +1064,11 @@ class Compiler: public Assembler {
         pop(rbp, localOffset(3, parameterFootprint));
         break;
 
+      case athrow:
+        pop(rax);
+        compileCall(reinterpret_cast<uintptr_t>(throw_), rax);      
+        break;
+
       case bipush: {
         push(static_cast<int8_t>(codeBody(t, code, ip++)));
       } break;
@@ -948,7 +1081,7 @@ class Compiler: public Assembler {
 
         Label next(this);
         
-        pop(rax);
+        mov(rsp, 0, rax);
         cmp(0, rax);
         je(next);
 
@@ -970,7 +1103,7 @@ class Compiler: public Assembler {
       } break;
 
       case dup:
-        push(rsp, BytesPerWord);
+        push(rsp, 0);
         break;
 
       case getfield: {
@@ -1031,7 +1164,7 @@ class Compiler: public Assembler {
         object table = classStaticTable(t, fieldClass(t, field));
 
         mov(reinterpret_cast<uintptr_t>(table), rax);
-        add(fieldOffset(t, field), rax);
+        add((fieldOffset(t, field) * BytesPerWord) + ArrayBody, rax);
         
         switch (fieldCode(t, field)) {
         case ByteField:
@@ -1080,6 +1213,16 @@ class Compiler: public Assembler {
 
         default: abort(t);
         }
+      } break;
+
+      case goto_: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        jmp((ip - 3) + offset);
+      } break;
+
+      case goto_w: {
+        int32_t offset = codeReadInt32(t, code, ip);
+        jmp((ip - 5) + offset);
       } break;
 
       case iadd:
@@ -1223,14 +1366,11 @@ class Compiler: public Assembler {
         jle((ip - 3) + offset);
       } break;
 
-      case goto_: {
-        int16_t offset = codeReadInt16(t, code, ip);
-        jmp((ip - 3) + offset);
-      } break;
-
-      case goto_w: {
-        int32_t offset = codeReadInt32(t, code, ip);
-        jmp((ip - 5) + offset);
+      case iinc: {
+        uint8_t index = codeBody(t, code, ip++);
+        int8_t c = codeBody(t, code, ip++);
+    
+        add(c, rbp, localOffset(index, parameterFootprint));
       } break;
 
       case instanceof: {
@@ -1326,6 +1466,13 @@ class Compiler: public Assembler {
         pushReturnValue(t, methodReturnCode(t, target));
       } break;
 
+      case isub:
+        pop(rax);
+        pop(rcx);
+        sub(rax, rcx);
+        push(rcx);
+        break;
+
       case ldc:
       case ldc_w: {
         uint16_t index;
@@ -1375,6 +1522,66 @@ class Compiler: public Assembler {
                       reinterpret_cast<uintptr_t>(class_));
         }
 
+        push(rax);
+      } break;
+
+      case newarray: {
+        uint8_t type = codeBody(t, code, ip++);
+
+        Label nonnegative(this);
+
+        pop(rax);
+        cmp(0, rax);
+        jge(nonnegative);
+
+        compileCall
+          (reinterpret_cast<uintptr_t>(throwNew),
+           reinterpret_cast<uintptr_t>
+           (arrayBody(t, t->m->types,
+                      Machine::NegativeArraySizeExceptionType)));
+
+        nonnegative.mark();
+
+        object (*constructor)(Thread*, uintptr_t, bool);
+        switch (type) {
+        case T_BOOLEAN:
+          constructor = makeBooleanArray;
+          break;
+
+        case T_CHAR:
+          constructor = makeCharArray;
+          break;
+
+        case T_FLOAT:
+          constructor = makeFloatArray;
+          break;
+
+        case T_DOUBLE:
+          constructor = makeDoubleArray;
+          break;
+
+        case T_BYTE:
+          constructor = makeByteArray;
+          break;
+
+        case T_SHORT:
+          constructor = makeShortArray;
+          break;
+
+        case T_INT:
+          constructor = makeIntArray;
+          break;
+
+        case T_LONG:
+          constructor = makeLongArray;
+          break;
+
+        default: abort(t);
+        }
+
+        compileCall(reinterpret_cast<uintptr_t>(makeBlankArray),
+                    reinterpret_cast<uintptr_t>(constructor),
+                    rax);
         push(rax);
       } break;
 
@@ -1446,7 +1653,7 @@ class Compiler: public Assembler {
         object table = classStaticTable(t, fieldClass(t, field));
 
         mov(reinterpret_cast<uintptr_t>(table), rax);
-        add(fieldOffset(t, field), rax);
+        add((fieldOffset(t, field) * BytesPerWord) + ArrayBody, rax);
         
         switch (fieldCode(t, field)) {
         case ByteField:
@@ -1485,6 +1692,10 @@ class Compiler: public Assembler {
         pop(rbp);
         ret();
         break;
+
+      case sipush: {
+        push(static_cast<int16_t>(codeReadInt16(t, code, ip)));
+      } break;
 
       default:
         abort(t);
@@ -1575,7 +1786,7 @@ compileMethod2(MyThread* t, object method)
       Compiler c(t->m->system);
       c.compile(t, method);
     
-      object compiled = makeCompiled(t, 0, c.code.length(), false);
+      object compiled = makeCompiled(t, c.code.length(), false);
       if (UNLIKELY(t->exception)) return;
 
       c.code.copyTo(&compiledBody(t, compiled, 0));
@@ -1635,7 +1846,7 @@ compileStub(Thread* t)
   Compiler c(t->m->system);
   c.compileStub(static_cast<MyThread*>(t));
   
-  object stub = makeCompiled(t, 0, c.code.length(), false);
+  object stub = makeCompiled(t, c.code.length(), false);
   c.code.copyTo(&compiledBody(t, stub, 0));
 
   return stub;
@@ -1811,9 +2022,13 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
 
+  void* frame = t->frame;
+
   uint64_t result = vmInvoke
     (&compiledBody(t, methodCompiled(t, method), 0), arguments->array,
      arguments->position * BytesPerWord, returnType);
+
+  t->frame = frame;
 
   object r;
   switch (returnCode) {
