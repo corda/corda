@@ -13,6 +13,8 @@ vmInvoke(void* function, void* stack, unsigned stackSize,
 
 namespace {
 
+const bool Verbose = false;
+
 const unsigned FrameThread = BytesPerWord * 2;
 const unsigned FrameMethod = FrameThread + BytesPerWord;
 const unsigned FrameNext = FrameNext + BytesPerWord;
@@ -288,24 +290,48 @@ class Assembler {
     }    
   }
 
+  void movz1(Register src, Register dst) {
+    code.append(0x0f);
+    code.append(0xb6);
+    code.append(0xc0 | (dst << 3) | src);
+  }
+
   void movz1(Register src, int32_t srcOffset, Register dst) {
     code.append(0x0f);
-    offsetInstruction(0x86, 0, 0x40, 0x80, dst, src, srcOffset);
+    offsetInstruction(0xb6, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void movs1(Register src, Register dst) {
+    code.append(0x0f);
+    code.append(0xbe);
+    code.append(0xc0 | (dst << 3) | src);
   }
 
   void movs1(Register src, int32_t srcOffset, Register dst) {
     code.append(0x0f);
-    offsetInstruction(0x8e, 0, 0x40, 0x80, dst, src, srcOffset);
+    offsetInstruction(0xbe, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void movz2(Register src, Register dst) {
+    code.append(0x0f);
+    code.append(0xb7);
+    code.append(0xc0 | (dst << 3) | src);
   }
 
   void movz2(Register src, int32_t srcOffset, Register dst) {
     code.append(0x0f);
-    offsetInstruction(0x87, 0, 0x40, 0x80, dst, src, srcOffset);
+    offsetInstruction(0xb7, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void movs2(Register src, Register dst) {
+    code.append(0x0f);
+    code.append(0xbf);
+    code.append(0xc0 | (dst << 3) | src);
   }
 
   void movs2(Register src, int32_t srcOffset, Register dst) {
     code.append(0x0f);
-    offsetInstruction(0x8f, 0, 0x40, 0x80, dst, src, srcOffset);
+    offsetInstruction(0xbf, 0, 0x40, 0x80, dst, src, srcOffset);
   }
 
   void mov4(Register src, int32_t srcOffset, Register dst) {
@@ -584,9 +610,16 @@ class Assembler {
   }
 
   void cmp(int v, Register reg) {
+    assert(code.s, isByte(v)); // todo
+
     code.append(0x83);
     code.append(0xf8 | reg);
     code.append(v);
+  }
+
+  void cmp(Register a, Register b) {
+    code.append(0x39);
+    code.append(0xc0 | (a << 3) | b);
   }
 
   void call(Register reg) {
@@ -1005,26 +1038,26 @@ class Compiler: public Assembler {
         cmp(rdx, rcx);
         jge(outOfBounds);
 
-        mov(rax, BytesPerWord * 2, rax);
+        add(BytesPerWord * 2, rax);
 
         switch (instruction) {
         case aaload:
         case faload:
         case iaload:
           shl(log(BytesPerWord), rcx);
-          sub(rcx, rax);
+          add(rcx, rax);
           push(rax, 0);
           break;
 
         case baload:
-          sub(rcx, rax);
+          add(rcx, rax);
           movs1(rax, 0, rax);
           push(rax);
           break;
 
         case caload:
           shl(1, rcx);
-          sub(rcx, rax);
+          add(rcx, rax);
           movz2(rax, 0, rax);
           push(rax);
           break;
@@ -1032,16 +1065,85 @@ class Compiler: public Assembler {
         case daload:
         case laload:
           shl(3, rcx);
-          sub(rcx, rax);
+          add(rcx, rax);
           push4(rax, 0);
           push4(rax, 4);
           break;
 
         case saload:
           shl(1, rcx);
-          sub(rcx, rax);
+          add(rcx, rax);
           movs2(rax, 0, rax);
           push(rax);
+          break;
+        }
+
+        jmp(next);
+
+        outOfBounds.mark();
+        compileCall
+          (reinterpret_cast<uintptr_t>(throwNew),
+           reinterpret_cast<uintptr_t>
+           (arrayBody(t, t->m->types,
+                      Machine::ArrayIndexOutOfBoundsExceptionType)));
+
+        next.mark();
+      } break;
+
+      case aastore:
+      case bastore:
+      case castore:
+      case dastore:
+      case fastore:
+      case iastore:
+      case lastore:
+      case sastore: {
+        Label next(this);
+        Label outOfBounds(this);
+
+        if (instruction == dastore or instruction == lastore) {
+          pop(rdx);
+        }
+        pop(rbx);
+        pop(rcx);
+        pop(rax);
+
+        cmp(0, rcx);
+        jl(outOfBounds);
+
+        mov(rax, BytesPerWord, rdi);
+        cmp(rdi, rcx);
+        jge(outOfBounds);
+
+        add(BytesPerWord * 2, rax);
+
+        switch (instruction) {
+        case aastore:
+        case fastore:
+        case iastore:
+          shl(log(BytesPerWord), rcx);
+          add(rcx, rax);
+          mov(rbx, rax, 0);
+          break;
+
+        case bastore:
+          add(rcx, rax);
+          mov1(rbx, rax, 0);
+          break;
+
+        case castore:
+        case sastore:
+          shl(1, rcx);
+          add(rcx, rax);
+          mov2(rbx, rax, 0);
+          break;
+
+        case dastore:
+        case lastore:
+          shl(3, rcx);
+          add(rcx, rax);
+          mov4(rbx, rax, 0);
+          mov4(rdx, rax, 4);
           break;
         }
 
@@ -1123,6 +1225,11 @@ class Compiler: public Assembler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
+        break;
+
+      case arraylength:
+        pop(rax);
+        push(rax, BytesPerWord);
         break;
 
       case astore:
@@ -1315,6 +1422,24 @@ class Compiler: public Assembler {
         int32_t offset = codeReadInt32(t, code, ip);
         jmp((ip - 5) + offset);
       } break;
+
+      case i2b:
+        mov(rsp, 0, rax);
+        movs1(rax, rax);
+        mov(rax, rsp, 0);
+        break;
+
+      case i2c:
+        mov(rsp, 0, rax);
+        movz2(rax, rax);
+        mov(rax, rsp, 0);
+        break;
+
+      case i2s:
+        mov(rsp, 0, rax);
+        movs2(rax, rax);
+        mov(rax, rsp, 0);
+        break;
 
       case iadd:
         pop(rax);
@@ -1870,9 +1995,11 @@ compileMethod2(MyThread* t, object method)
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == t->m->processor->methodStub(t)) {
-      fprintf(stderr, "compiling %s.%s\n",
-              &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-              &byteArrayBody(t, methodName(t, method), 0));
+      if (Verbose) {
+        fprintf(stderr, "compiling %s.%s\n",
+                &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+                &byteArrayBody(t, methodName(t, method), 0));
+      }
 
       Compiler c(t->m->system);
       c.compile(t, method);
@@ -1882,11 +2009,13 @@ compileMethod2(MyThread* t, object method)
 
       c.code.copyTo(&compiledBody(t, compiled, 0));
     
-      fprintf(stderr, "compiled %s.%s from %p to %p\n",
-              &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-              &byteArrayBody(t, methodName(t, method), 0),
-              &compiledBody(t, compiled, 0),
-              &compiledBody(t, compiled, 0) + compiledLength(t, compiled));
+      if (Verbose) {
+        fprintf(stderr, "compiled %s.%s from %p to %p\n",
+                &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+                &byteArrayBody(t, methodName(t, method), 0),
+                &compiledBody(t, compiled, 0),
+                &compiledBody(t, compiled, 0) + compiledLength(t, compiled));
+      }
 
       set(t, methodCompiled(t, method), compiled);
     }
