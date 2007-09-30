@@ -156,24 +156,24 @@ args = $(flags) $(call class-name,$(input))
 .PHONY: build
 build: $(executable) $(classpath-objects) $(test-classes)
 
-$(input): $(classpath-objects)
+$(input): $(classpath-classes)
 
 .PHONY: run
-run: $(executable) $(input)
-	$(ld-library-path)=$(bld) $(<) $(args)
+run: build
+	$(ld-library-path)=$(bld) $(executable) $(args)
 
 .PHONY: debug
-debug: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) gdb --args $(<) $(args)
+debug: build
+	LD_LIBRARY_PATH=$(bld) gdb --args $(executable) $(args)
 
 .PHONY: vg
-vg: $(executable) $(input)
-	LD_LIBRARY_PATH=$(bld) $(vg) $(<) $(args)
+vg: build
+	LD_LIBRARY_PATH=$(bld) $(vg) $(executable) $(args)
 
 .PHONY: test
-test: $(executable) $(classpath-objects) $(test-classes)
+test: build
 	LD_LIBRARY_PATH=$(bld) /bin/bash $(test)/test.sh 2>/dev/null \
-		$(<) $(mode) "$(flags)" $(call class-names,$(test-classes))
+		$(executable) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
 .PHONY: clean
 clean:
@@ -198,6 +198,7 @@ define compile-class
 	@mkdir -p $(dir $(@))
 	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
 		-d $(cls) $(<)
+	@touch $(@)
 endef
 
 $(cls)/%.class: $(classpath)/%.java

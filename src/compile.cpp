@@ -668,10 +668,10 @@ gpRegister(Thread* t, unsigned index)
 }
 
 SSERegister
-sseRegister(Thread* t, unsigned index)
+sseRegister(Thread* t UNUSED, unsigned index)
 {
   assert(t, index < 8);
-         return static_cast<SSERegister>(index);
+  return static_cast<SSERegister>(index);
 }
 
 unsigned

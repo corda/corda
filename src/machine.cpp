@@ -1466,6 +1466,9 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
     enter(t, Thread::ActiveState);
 
     resolveClass
+      (t, className(t, arrayBody(t, m->types,
+                                 Machine::SystemClassLoaderType)));
+    resolveClass
       (t, className(t, arrayBody(t, m->types, Machine::ClassType)));
     resolveClass
       (t, className(t, arrayBody(t, m->types, Machine::IntArrayType)));
@@ -1482,7 +1485,9 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
       (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader);
   }
 
-  enter(this, Thread::IdleState);
+  if (parent == 0) {
+    enter(this, Thread::IdleState);
+  }
 }
 
 void

@@ -1524,7 +1524,7 @@ interpret(Thread* t)
     object a = popObject(t);
     
     if (a == b) {
-      ip = (ip - 3) + offset);
+      ip = (ip - 3) + offset;
     }
   } goto loop;
 
