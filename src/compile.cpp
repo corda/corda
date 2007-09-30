@@ -159,11 +159,13 @@ class MyThread: public Thread {
   MyThread(Machine* m, object javaThread, vm::Thread* parent):
     vm::Thread(m, javaThread, parent),
     argumentList(0),
-    frame(0)
+    frame(0),
+    reference(0)
   { }
 
   ArgumentList* argumentList;
   void* frame;
+  Reference* reference;
 };
 
 inline bool
@@ -2023,11 +2025,15 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   unsigned returnType = fieldType(t, returnCode);
 
   void* frame = t->frame;
+  Reference* reference = t->reference;
 
   uint64_t result = vmInvoke
     (&compiledBody(t, methodCompiled(t, method), 0), arguments->array,
      arguments->position * BytesPerWord, returnType);
 
+  while (t->reference != reference) {
+    dispose(t, t->reference);
+  }
   t->frame = frame;
 
   object r;
@@ -2187,15 +2193,26 @@ class MyProcessor: public Processor {
   }
 
   virtual object*
-  makeLocalReference(Thread* t, object)
+  makeLocalReference(Thread* vmt, object o)
   {
-    abort(t);
+    if (o) {
+      MyThread* t = static_cast<MyThread*>(vmt);
+
+      Reference* r = new (t->m->system->allocate(sizeof(Reference)))
+        Reference(o, &(t->reference));
+
+      return &(r->target);
+    } else {
+      return 0;
+    }
   }
 
   virtual void
-  disposeLocalReference(Thread* t, object*)
+  disposeLocalReference(Thread* t, object* r)
   {
-    abort(t);
+    if (r) {
+      vm::dispose(t, reinterpret_cast<Reference*>(r));
+    }
   }
 
   virtual object

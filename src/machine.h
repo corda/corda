@@ -1076,13 +1076,20 @@ noop();
 
 class Reference {
  public:
-  Reference(object target, Reference* next):
+  Reference(object target, Reference** handle):
     target(target),
-    next(next)
-  { }
+    next(*handle),
+    handle(handle)
+  {
+    if (next) {
+      next->handle = &next;
+    }
+    *handle = this;
+  }
 
   object target;
   Reference* next;
+  Reference** handle;
 };
 
 class Machine {
@@ -1254,6 +1261,13 @@ class StateResource {
   Thread* t;
   Thread::State oldState;
 };
+
+inline void
+dispose(Thread* t, Reference* r)
+{
+  *(r->handle) = r->next;
+  t->m->system->free(r);
+}
 
 void
 collect(Thread* t, Heap::CollectionType type);

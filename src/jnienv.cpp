@@ -1015,26 +1015,25 @@ NewGlobalRef(Thread* t, jobject o)
 
   ACQUIRE(t, t->m->referenceLock);
   
-  t->m->jniReferences = new (t->m->system->allocate(sizeof(Reference)))
-    Reference(*o, t->m->jniReferences);
+  if (o) {
+    Reference* r = new (t->m->system->allocate(sizeof(Reference)))
+      Reference(*o, &(t->m->jniReferences));
 
-  return &(t->m->jniReferences->target);
+    return &(r->target);
+  } else {
+    return 0;
+  }
 }
 
 void JNICALL
-DeleteGlobalRef(Thread* t, jobject o)
+DeleteGlobalRef(Thread* t, jobject r)
 {
   ENTER(t, Thread::ActiveState);
 
   ACQUIRE(t, t->m->referenceLock);
   
-  for (Reference** r = &(t->m->jniReferences); *r;) {
-    if (&((*r)->target) == o) {
-      *r = (*r)->next;
-      break;
-    } else {
-      r = &((*r)->next);
-    }
+  if (r) {
+    dispose(t, reinterpret_cast<Reference*>(r));
   }
 }
 
