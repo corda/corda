@@ -484,6 +484,18 @@ class Assembler {
     code.append(v);
   }
 
+  void shl(int8_t v, Register dst) {
+    rex();
+    if (v == 1) {
+      code.append(0xd1);
+      code.append(0xe0 | dst);
+    } else {
+      code.append(0xc1);
+      code.append(0xe0 | dst);
+      code.append(v);
+    }
+  }
+
   void ret() {
     code.append(0xc3);
   }
@@ -937,6 +949,10 @@ class Compiler: public Assembler {
       add(stackFootprint, rsp);
     }
 
+    if (methodReturnCode(t, method) == ObjectField) {
+      mov(rax, 0, rax);
+    }
+
     mov(rbp, rsp);
     pop(rbp);
     ret();
@@ -968,6 +984,79 @@ class Compiler: public Assembler {
       unsigned instruction = codeBody(t, code, ip++);
 
       switch (instruction) {
+      case aaload:
+      case baload:
+      case caload:
+      case daload:
+      case faload:
+      case iaload:
+      case laload:
+      case saload: {
+        Label next(this);
+        Label outOfBounds(this);
+
+        pop(rcx);
+        pop(rax);
+
+        cmp(0, rcx);
+        jl(outOfBounds);
+
+        mov(rax, BytesPerWord, rdx);
+        cmp(rdx, rcx);
+        jge(outOfBounds);
+
+        mov(rax, BytesPerWord * 2, rax);
+
+        switch (instruction) {
+        case aaload:
+        case faload:
+        case iaload:
+          shl(log(BytesPerWord), rcx);
+          sub(rcx, rax);
+          push(rax, 0);
+          break;
+
+        case baload:
+          sub(rcx, rax);
+          movs1(rax, 0, rax);
+          push(rax);
+          break;
+
+        case caload:
+          shl(1, rcx);
+          sub(rcx, rax);
+          movz2(rax, 0, rax);
+          push(rax);
+          break;
+
+        case daload:
+        case laload:
+          shl(3, rcx);
+          sub(rcx, rax);
+          push4(rax, 0);
+          push4(rax, 4);
+          break;
+
+        case saload:
+          shl(1, rcx);
+          sub(rcx, rax);
+          movs2(rax, 0, rax);
+          push(rax);
+          break;
+        }
+
+        jmp(next);
+
+        outOfBounds.mark();
+        compileCall
+          (reinterpret_cast<uintptr_t>(throwNew),
+           reinterpret_cast<uintptr_t>
+           (arrayBody(t, t->m->types,
+                      Machine::ArrayIndexOutOfBoundsExceptionType)));
+
+        next.mark();
+      } break;
+
       case aconst_null:
         push(0);
         break;
