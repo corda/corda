@@ -2847,6 +2847,12 @@ class MyProcessor: public Processor {
     return 0;
   }
 
+  virtual object
+  nativeInvoker(vm::Thread*)
+  {
+    return 0;
+  }
+
   virtual unsigned
   parameterFootprint(vm::Thread*, const char* s, bool static_)
   {

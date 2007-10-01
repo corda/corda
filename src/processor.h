@@ -17,6 +17,9 @@ class Processor {
   virtual object
   methodStub(Thread* t) = 0;
 
+  virtual object
+  nativeInvoker(Thread* t) = 0;
+
   virtual unsigned
   parameterFootprint(Thread* t, const char* spec, bool static_) = 0;
 

@@ -20,21 +20,37 @@ const unsigned FrameMethod = FrameThread + BytesPerWord;
 const unsigned FrameNext = FrameNext + BytesPerWord;
 const unsigned FrameFootprint = BytesPerWord * 3;
 
-void
+class ArgumentList;
+
+class MyThread: public Thread {
+ public:
+  MyThread(Machine* m, object javaThread, vm::Thread* parent):
+    vm::Thread(m, javaThread, parent),
+    argumentList(0),
+    frame(0),
+    reference(0)
+  { }
+
+  ArgumentList* argumentList;
+  void* frame;
+  Reference* reference;
+};
+
+void NO_RETURN
 unwind(Thread* t)
 {
   // todo
   abort(t);
 }
 
-void
+void NO_RETURN
 throwNew(Thread* t, object class_)
 {
   t->exception = makeNew(t, class_);
   unwind(t);
 }
 
-void
+void NO_RETURN
 throw_(Thread* t, object o)
 {
   if (o) {
@@ -57,6 +73,140 @@ makeBlankArray(Thread* t, object (*constructor)(Thread*, uintptr_t, bool),
 {
   return constructor(t, length, true);
 }
+
+uint64_t
+invokeNative2(MyThread* t, object method)
+{
+  PROTECT(t, method);
+
+  if (objectClass(t, methodCode(t, method))
+      == arrayBody(t, t->m->types, Machine::ByteArrayType))
+  {
+    void* function = resolveNativeMethod(t, method);
+    if (UNLIKELY(function == 0)) {
+      object message = makeString
+        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
+      t->exception = makeUnsatisfiedLinkError(t, message);
+      return 0;
+    }
+
+    object p = makePointer(t, function);
+    set(t, methodCode(t, method), p);
+  }
+
+  object class_ = methodClass(t, method);
+  PROTECT(t, class_);
+
+  unsigned footprint = methodParameterFootprint(t, method) + 1;
+  unsigned count = methodParameterCount(t, method) + 1;
+  if (methodFlags(t, method) & ACC_STATIC) {
+    ++ footprint;
+    ++ count;
+  }
+
+  uintptr_t args[footprint];
+  unsigned argOffset = 0;
+  uint8_t types[count];
+  unsigned typeOffset = 0;
+
+  args[argOffset++] = reinterpret_cast<uintptr_t>(t);
+  types[typeOffset++] = POINTER_TYPE;
+
+  uintptr_t* sp = static_cast<uintptr_t*>(t->frame)
+    + (methodParameterFootprint(t, method) + 1)
+    + (FrameFootprint / BytesPerWord);
+
+  if (methodFlags(t, method) & ACC_STATIC) {
+    args[argOffset++] = reinterpret_cast<uintptr_t>(&class_);
+  } else {
+    args[argOffset++] = reinterpret_cast<uintptr_t>(sp--);
+  }
+  types[typeOffset++] = POINTER_TYPE;
+
+  MethodSpecIterator it
+    (t, reinterpret_cast<const char*>
+     (&byteArrayBody(t, methodSpec(t, method), 0)));
+  
+  while (it.hasNext()) {
+    unsigned type = types[typeOffset++]
+      = fieldType(t, fieldCode(t, *it.next()));
+
+    switch (type) {
+    case INT8_TYPE:
+    case INT16_TYPE:
+    case INT32_TYPE:
+    case FLOAT_TYPE:
+      args[argOffset++] = *(sp--);
+      break;
+
+    case INT64_TYPE:
+    case DOUBLE_TYPE: {
+      if (BytesPerWord == 8) {
+        uint64_t a = *(sp--);
+        uint64_t b = *(sp--);
+        args[argOffset++] = (a << 32) | b;
+      } else {
+        memcpy(args + argOffset, sp, 8);
+        argOffset += 2;
+        sp -= 2;
+      }
+    } break;
+
+    case POINTER_TYPE: {
+      args[argOffset++] = reinterpret_cast<uintptr_t>(sp--);
+    } break;
+
+    default: abort(t);
+    }
+  }
+
+  void* function = pointerValue(t, methodCode(t, method));
+  unsigned returnType = fieldType(t, methodReturnCode(t, method));
+  uint64_t result;
+  
+  if (Verbose) {
+    fprintf(stderr, "invoke native method %s.%s\n",
+            &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+            &byteArrayBody(t, methodName(t, method), 0));
+  }
+
+  { ENTER(t, Thread::IdleState);
+
+    result = t->m->system->call
+      (function,
+       args,
+       types,
+       count + 1,
+       footprint,
+       returnType);
+  }
+
+  if (Verbose) {
+    fprintf(stderr, "return from native method %s.%s\n",
+            &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+            &byteArrayBody(t, methodName(t, method), 0));
+  }
+
+  if (LIKELY(t->exception == 0) and returnType == POINTER_TYPE) {
+    return *reinterpret_cast<uintptr_t*>(result);
+  } else {
+    return result;
+  }
+}
+
+uint64_t
+invokeNative(MyThread* t, object method)
+{
+  uint64_t result = invokeNative2(t, method);
+  if (UNLIKELY(t->exception)) {
+    unwind(t);
+  } else {
+    return result;
+  }
+}
+
+void
+compileMethod(MyThread* t, object method);
 
 class Buffer {
  public:
@@ -152,22 +302,6 @@ class Buffer {
   unsigned position;
   unsigned capacity;
   unsigned minimumCapacity;
-};
-
-class ArgumentList;
-
-class MyThread: public Thread {
- public:
-  MyThread(Machine* m, object javaThread, vm::Thread* parent):
-    vm::Thread(m, javaThread, parent),
-    argumentList(0),
-    frame(0),
-    reference(0)
-  { }
-
-  ArgumentList* argumentList;
-  void* frame;
-  Reference* reference;
 };
 
 inline bool
@@ -631,9 +765,6 @@ class Assembler {
   Buffer jumps;
 };
 
-void
-compileMethod(MyThread* t, object method);
-
 int
 localOffset(int v, int parameterFootprint)
 {
@@ -805,193 +936,6 @@ class Compiler: public Assembler {
   }
 
   void compile(MyThread* t, object method) {
-    if (methodFlags(t, method) & ACC_NATIVE) {
-      compileNative(t, method);
-    } else {
-      compileJava(t, method);
-    }
-  }
-
-  void compileNative(MyThread* t, object method) {
-    unsigned frameOffset = reinterpret_cast<uintptr_t>(&(t->frame))
-      - reinterpret_cast<uintptr_t>(t);
-
-    void* function = resolveNativeMethod(t, method);
-    if (UNLIKELY(function == 0)) {
-      object message = makeString
-        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
-      t->exception = makeUnsatisfiedLinkError(t, message);
-      return;
-    }
-
-    push(rbp);
-    mov(rsp, rbp);
-    
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
-
-    unsigned index;
-    if (methodFlags(t, method) & ACC_STATIC) {
-      pushAddress(reinterpret_cast<uintptr_t>(methodClass(t, method)));
-      index = 0;
-    } else {
-      index = 1;      
-    }
- 
-    unsigned parameterCodes[methodParameterCount(t, method)];
-    MethodSpecIterator it
-      (t, reinterpret_cast<const char*>
-       (&byteArrayBody(t, methodSpec(t, method), 0)));
-
-    for (unsigned i = 0; it.hasNext(); ++i) {
-      parameterCodes[i] = fieldCode(t, *it.next());
-    }
-
-    unsigned stackFootprint;
-    unsigned parameterCodeIndex = methodParameterCount(t, method);
-
-    if (BytesPerWord == 4) {
-      while (parameterCodeIndex) {
-        unsigned offset = parameterOffset(index);
-
-        switch (parameterCodes[--parameterCodeIndex]) {
-        case BooleanField:
-        case ByteField:
-        case ShortField:
-        case CharField:
-        case IntField:
-        case FloatField: {
-          push(rbp, offset);
-          ++ index;
-        } break;
-
-        case LongField:
-        case DoubleField: {
-          push(rbp, offset);
-          push(rbp, offset - BytesPerWord);
-          index += 2;
-        } break;
-
-        case ObjectField: {
-          mov(rbp, rax);
-          add(offset, rax);
-          push(rax);
-          ++ index;
-        } break;
-          
-        default:
-          abort(t);
-        }
-      }
-
-      if (methodFlags(t, method) & ACC_STATIC) {
-        mov(rbp, rax);
-        sub(BytesPerWord, rax);
-        push(rax);                           // push pointer to class pointer
-      } else {
-        unsigned offset = parameterOffset
-          (methodParameterFootprint(t, method) - 1);
-        mov(rbp, rax);
-        add(offset, rax);
-        push(rax);                           // push pointer to this pointer
-      }
-
-      push(rbp, FrameThread);                // push thread pointer
-
-      stackFootprint = FrameFootprint
-        + (methodParameterFootprint(t, method) * BytesPerWord);
-    } else {
-      const unsigned GprCount = 6;
-      unsigned gprIndex = 0;
-
-      const unsigned SseCount = 8;
-      unsigned sseIndex = 0;
-
-      stackFootprint = 0;
-
-      while (parameterCodeIndex) {
-        unsigned offset = parameterOffset(index);
-
-        switch (parameterCodes[--parameterCodeIndex]) {
-        case BooleanField:
-        case ByteField:
-        case ShortField:
-        case CharField:
-        case IntField: 
-        case LongField: {
-          if (gprIndex < GprCount - 2) {
-            Register reg = gpRegister(t, gprIndex + 2);
-            mov(rbp, offset, reg);
-            ++ gprIndex;
-          } else {
-            push(rbp, offset);
-            stackFootprint += BytesPerWord;
-          }
-        } break;
-
-        case ObjectField: {
-          if (gprIndex < GprCount - 2) {
-            Register reg = gpRegister(t, gprIndex + 2);
-            mov(rbp, reg);
-            add(offset, reg);
-            ++ gprIndex;
-          } else {
-            mov(rbp, rax);
-            add(offset, rax);
-            push(rax); 
-            stackFootprint += BytesPerWord;           
-          }
-        } break;
-
-        case FloatField:
-        case DoubleField: {
-          if (sseIndex < SseCount) {
-            SSERegister reg = sseRegister(t, sseIndex);
-            mov(rbp, offset, reg);
-            ++ sseIndex;
-          } else {
-            push(rbp, offset);
-            stackFootprint += BytesPerWord;
-          }          
-        } break;
-          
-        default:
-          abort(t);
-        }
-
-        ++ index;
-      }
-
-      if (methodFlags(t, method) & ACC_STATIC) {
-        mov(rbp, rsi);
-        sub(BytesPerWord, rsi);              // push pointer to class pointer
-      } else {
-        unsigned offset = parameterOffset
-          (methodParameterFootprint(t, method) - 1);
-        mov(rbp, rsi);
-        add(offset, rsi);                    // push pointer to this pointer
-      }
-
-      mov(rbp, FrameThread, rdi);            // push thread pointer
-    }
-
-    mov(reinterpret_cast<uintptr_t>(function), rax);
-    call(rax);
-
-    if (stackFootprint) {
-      add(stackFootprint, rsp);
-    }
-
-    if (methodReturnCode(t, method) == ObjectField) {
-      mov(rax, 0, rax);
-    }
-
-    mov(rbp, rsp);
-    pop(rbp);
-    ret();
-  }
-
-  void compileJava(MyThread* t, object method) {
     PROTECT(t, method);
 
     object code = methodCode(t, method);
@@ -1947,6 +1891,36 @@ class Compiler: public Assembler {
     }
   }
 
+  void compileNativeInvoker(MyThread* t) {
+    unsigned frameOffset = reinterpret_cast<uintptr_t>(&(t->frame))
+      - reinterpret_cast<uintptr_t>(t);
+
+    push(rbp);
+    mov(rsp, rbp);
+
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, frameOffset);              // set thread frame to current
+
+    if (BytesPerWord == 4) {
+      push(rbp, FrameMethod);
+      push(rbp, FrameThread);
+    } else {
+      mov(rbp, FrameMethod, rsi);
+      mov(rbp, FrameThread, rdi);
+    }
+
+    mov(reinterpret_cast<uintptr_t>(invokeNative), rax);
+    call(rax);
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 2, rsp);
+    }
+
+    mov(rbp, rsp);
+    pop(rbp);
+    ret();
+  }
+
   void compileStub(MyThread* t) {
     unsigned frameOffset = reinterpret_cast<uintptr_t>(&(t->frame))
       - reinterpret_cast<uintptr_t>(t);
@@ -2065,6 +2039,18 @@ compileStub(Thread* t)
 {
   Compiler c(t->m->system);
   c.compileStub(static_cast<MyThread*>(t));
+  
+  object stub = makeCompiled(t, c.code.length(), false);
+  c.code.copyTo(&compiledBody(t, stub, 0));
+
+  return stub;
+}
+
+object
+compileNativeInvoker(Thread* t)
+{
+  Compiler c(t->m->system);
+  c.compileNativeInvoker(static_cast<MyThread*>(t));
   
   object stub = makeCompiled(t, c.code.length(), false);
   c.code.copyTo(&compiledBody(t, stub, 0));
@@ -2290,7 +2276,8 @@ class MyProcessor: public Processor {
  public:
   MyProcessor(System* s):
     s(s),
-    stub(0)
+    methodStub_(0),
+    nativeInvoker_(0)
   { }
 
   virtual Thread*
@@ -2302,10 +2289,19 @@ class MyProcessor: public Processor {
   virtual object
   methodStub(Thread* t)
   {
-    if (stub == 0) {
-      stub = compileStub(t);
+    if (methodStub_ == 0) {
+      methodStub_ = compileStub(t);
     }
-    return stub;
+    return methodStub_;
+  }
+
+  virtual object
+  nativeInvoker(Thread* t)
+  {
+    if (nativeInvoker_ == 0) {
+      nativeInvoker_ = compileNativeInvoker(t);
+    }
+    return nativeInvoker_;
   }
 
   virtual unsigned
@@ -2501,7 +2497,8 @@ class MyProcessor: public Processor {
   }
   
   System* s;
-  object stub;
+  object methodStub_;
+  object nativeInvoker_;
 };
 
 } // namespace
