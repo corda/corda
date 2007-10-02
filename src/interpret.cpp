@@ -2663,6 +2663,14 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
       ++ s;
       pushLong(t, va_arg(a, uint64_t));
       break;
+
+    case 'F': {
+      ++ s;
+      float f = va_arg(a, double);
+      uint32_t i;
+      memcpy(&i, &f, 4);
+      pushInt(t, i);
+    } break;
           
     default:
       ++ s;
