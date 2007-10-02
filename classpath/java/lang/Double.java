@@ -35,7 +35,9 @@ public final class Double extends Number {
   }
 
   public static String toString(double v) {
-    return "Double.toString: todo";
+    byte[] buffer = new byte[20];
+    int numChars = fillBufferWithDouble(v, buffer, 20);
+    return new String(buffer, 0, numChars, false);
   }
 
   public byte byteValue() {
@@ -66,6 +68,9 @@ public final class Double extends Number {
     // todo
     throw new NumberFormatException(s);
   }
+
+  public static native int fillBufferWithDouble(double value, byte[] buffer,
+                                                int charCount);
 
   public static native long doubleToRawLongBits(double value);
 

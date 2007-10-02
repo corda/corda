@@ -69,3 +69,10 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   }
   return r;
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_Double_fillBufferWithDouble(JNIEnv *e, jclass me, jdouble val,
+					   jbyteArray buffer, jint bufferSize) {
+  if (e or me or val or buffer or bufferSize) return 0;
+  return 0;
+}
