@@ -34,7 +34,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Hello.class
+input = $(cls)/Exceptions.class
 
 cxx = g++
 cc = gcc

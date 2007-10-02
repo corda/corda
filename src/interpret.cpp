@@ -537,21 +537,24 @@ invokeNative(Thread* t, object method)
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
   void* function = nativeMethodDataFunction(t, data);
+  uint8_t types[nativeMethodDataLength(t, data)];
+  memcpy(&types,
+         &nativeMethodDataParameterTypes(t, data, 0),
+         nativeMethodDataLength(t, data));
+  uint64_t result;
 
   if (DebugRun) {
     fprintf(stderr, "invoke native method %s.%s\n",
             &byteArrayBody(t, className(t, methodClass(t, method)), 0),
             &byteArrayBody(t, methodName(t, method), 0));
   }
-
-  uint64_t result;
   
   { ENTER(t, Thread::IdleState);
 
     result = t->m->system->call
       (function,
        args,
-       &nativeMethodDataParameterTypes(t, data, 0),
+       types,
        count + 1,
        size,
        returnType);
@@ -2570,43 +2573,13 @@ interpret(Thread* t)
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= base; popFrame(t)) {
-    code = methodCode(t, frameMethod(t, frame));
-    object eht = codeExceptionHandlerTable(t, code);
-    if (eht) {
-      for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-        ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-
-        if (frameIp(t, frame) - 1 >= exceptionHandlerStart(eh)
-            and frameIp(t, frame) - 1 < exceptionHandlerEnd(eh))
-        {
-          object catchType = 0;
-          if (exceptionHandlerCatchType(eh)) {
-            object e = exception;
-            exception = 0;
-            PROTECT(t, e);
-
-            PROTECT(t, eht);
-            catchType = resolveClass
-              (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
-
-            if (catchType) {
-              eh = exceptionHandlerTableBody(t, eht, i);
-              exception = e;
-            } else {
-              // can't find what we're supposed to catch - move on.
-              continue;
-            }
-          }
-
-          if (catchType == 0 or instanceOf(t, catchType, exception)) {
-            sp = frame + FrameFootprint;
-            ip = exceptionHandlerIp(eh);
-            pushObject(t, exception);
-            exception = 0;
-            goto loop;
-          }
-        }
-      }
+    ExceptionHandler* eh = findExceptionHandler(t, frameMethod(t, frame));
+    if (eh) {
+      sp = frame + FrameFootprint;
+      ip = exceptionHandlerIp(eh);
+      pushObject(t, exception);
+      exception = 0;
+      goto loop;
     }
   }
 

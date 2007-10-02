@@ -11,6 +11,9 @@ extern "C" uint64_t
 vmInvoke(void* function, void* stack, unsigned stackSize,
          unsigned returnType);
 
+extern "C" void NO_RETURN
+vmJump(void* address);
+
 namespace {
 
 const bool Verbose = false;
@@ -36,10 +39,108 @@ class MyThread: public Thread {
   Reference* reference;
 };
 
+inline bool
+frameValid(void* frame)
+{
+  return frame != 0;
+}
+
+inline void*
+frameBase(void* frame)
+{
+  return static_cast<void**>(frame)[- (FrameFootprint / BytesPerWord) - 1];
+}
+
+inline void*
+frameNext(void* frame)
+{
+  return static_cast<void**>(frameBase(frame))[FrameNext / BytesPerWord];
+}
+
+inline object
+frameMethod(void* frame)
+{
+  return static_cast<object*>(frameBase(frame))[FrameMethod / BytesPerWord];
+}
+
+inline object
+frameAddress(void* frame)
+{
+  return static_cast<void**>(frame)[- (FrameFootprint / BytesPerWord)];
+}
+
+inline void*
+frameReturnAddress(void* frame)
+{
+  return static_cast<void**>(frameBase(frame))[1];
+}
+
+uint32_t
+ipToOffset(Thread* t, object method, uint16_t ip)
+{
+  object compiled = methodCompiled(t, method);
+ 
+  unsigned bottom = 0;
+  unsigned top = compiledIpTableLength(t, compiled);
+  for (unsigned span = top - bottom; span; span = top - bottom) {
+    unsigned middle = bottom + (span / 2);
+    uint16_t k = compiledIpTable(t, compiled, middle);
+
+    if (ip < k) {
+      top = middle;
+    } else if (ip > k) {
+      bottom = middle + 1;
+    } else {
+      return compiledOffsetTable(t, compiled, middle);
+    }
+  }
+
+  abort(t);
+}
+
+uint16_t
+offsetToIp(Thread* t, object method, uint32_t offset)
+{
+  object compiled = methodCompiled(t, method);
+ 
+  unsigned bottom = 0;
+  unsigned top = compiledOffsetTableLength(t, compiled);
+  for (unsigned span = top - bottom; span; span = top - bottom) {
+    unsigned middle = bottom + (span / 2);
+    uint32_t k = compiledOffsetTable(t, compiled, middle);
+
+    if (ip < k) {
+      top = middle;
+    } else if (ip > k) {
+      bottom = middle + 1;
+    } else {
+      return compiledIpTable(t, compiled, middle);
+    }
+  }
+
+  abort(t);
+}
+
 void NO_RETURN
 unwind(Thread* t)
 {
-  // todo
+  for (void* frame = t->frame; frameValid(frame); frame = frameNext(frame)) {
+    void* next = frameNext(frame);
+    if (not frameValid(next)
+        or methodFlags(t, frameMethod(next)) & ACC_NATIVE)
+    {
+      t->frame = next;
+      vmJump(frameReturnAddress(frame));
+    } else if ((methodFlags(t, frameMethod(frame)) & ACC_NATIVE) == 0) {
+      ExceptionHandler* eh = findExceptionHandler(t, frameMethod(t, frame));
+      if (eh) {
+        t->frame = frame;
+        uint32_t offset = ipToAddress
+          (t, frameMethod(frame), exceptionHandlerIp(eh));
+        vmJump(&compiledBody(t, methodCompiled(t, method), offset));
+      }
+    }
+  }
   abort(t);
 }
 
@@ -851,7 +952,7 @@ class Compiler: public Assembler {
 
     uint8_t* code = &compiledBody(t, methodCompiled(t, target), 0);
         
-    push(rbp);
+    push(rsp);
     pushAddress(reinterpret_cast<uintptr_t>(target));
     push(rbp, FrameThread);
 
@@ -864,6 +965,9 @@ class Compiler: public Assembler {
   }
 
   void compileCall(uintptr_t function, uintptr_t arg1) {
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, frameOffset);              // set thread frame to current
+
     if (BytesPerWord == 4) {
       push(arg1);
       push(rbp, FrameThread);
@@ -881,6 +985,9 @@ class Compiler: public Assembler {
   }
 
   void compileCall(uintptr_t function, Register arg1) {
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, frameOffset);              // set thread frame to current
+
     if (BytesPerWord == 4) {
       push(arg1);
       push(rbp, FrameThread);
@@ -898,6 +1005,9 @@ class Compiler: public Assembler {
   }
 
   void compileCall(uintptr_t function, uintptr_t arg1, Register arg2) {
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, frameOffset);              // set thread frame to current
+
     if (BytesPerWord == 4) {
       push(arg2);
       push(arg1);
@@ -917,6 +1027,9 @@ class Compiler: public Assembler {
   }
 
   void compileCall(uintptr_t function, Register arg1, Register arg2) {
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, frameOffset);              // set thread frame to current
+
     if (BytesPerWord == 4) {
       push(arg2);
       push(arg1);
@@ -1613,7 +1726,7 @@ class Compiler: public Assembler {
         mov(rax, ClassVirtualTable, rax); // load vtable
         mov(rax, offset, rax);            // load method
 
-        push(rbp);
+        push(rsp);
         push(rax);
         push(rbp, FrameThread);
 
@@ -2377,33 +2490,33 @@ class MyProcessor: public Processor {
   }
 
   virtual uintptr_t
-  frameStart(Thread* t)
+  frameStart(Thread* vmt)
   {
-    abort(t);
+    return static_cast<MyThread*>(vmt)->frame;
   }
 
   virtual uintptr_t
-  frameNext(Thread* t, uintptr_t)
+  frameNext(Thread*, uintptr_t frame)
   {
-    abort(t);
+    ::frameNext(reinterpret_cast<void*>(frame));
   }
 
   virtual bool
-  frameValid(Thread* t, uintptr_t)
+  frameValid(Thread*, uintptr_t frame)
   {
-    abort(t);
+    return ::frameValid(frame);
   }
 
   virtual object
-  frameMethod(Thread* t, uintptr_t)
+  frameMethod(Thread*, uintptr_t frame)
   {
-    abort(t);
+    return ::frameMethod(frame);
   }
 
   virtual unsigned
-  frameIp(Thread* t, uintptr_t)
+  frameIp(Thread*, uintptr_t frame)
   {
-    abort(t);
+    return addressToIp(t, frameMethod(frame), frameAddress(frame));
   }
 
   virtual object*
