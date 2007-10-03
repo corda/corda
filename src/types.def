@@ -90,6 +90,16 @@
   (uint16_t maxLocals)
   (array uint8_t body))
 
+(pod nativeExceptionHandler
+  (uint32_t start)
+  (uint32_t end)
+  (uint32_t ip)
+  (uint32_t catchType))
+
+(pod nativeLineNumber
+  (uint32_t ip)
+  (uint32_t line))
+
 (type reference
   (object class)
   (object name)

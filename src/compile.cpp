@@ -124,27 +124,44 @@ class Buffer {
 class Code {
  public:
   Code(Buffer* code, Buffer* lineNumbers, Buffer* exceptionHandlers):
-    codeLength(code->length()),
-    lineNumberTableLength(lineNumbers->length()),
-    exceptionHandlerTableLength(exceptionHandlers->length())
+    codeLength_(code->length()),
+    lineNumberTableLength_(lineNumbers->length()),
+    exceptionHandlerTableLength_(exceptionHandlers->length())
   {
     code->copyTo(body);
-    lineNumbers->copyTo(lineNumberTable());
-    exceptionHandlers->copyTo(exceptionHandlerTable());
+    lineNumbers->copyTo(lineNumber(0));
+    exceptionHandlers->copyTo(exceptionHandler(0));
+  }
+
+  uint8_t* code() {
+    return body;
+  }
+
+  unsigned codeLength() {
+    return codeLength_;
   }
   
-  uint32_t* lineNumberTable() {
-    return reinterpret_cast<uint32_t*>(body + pad(codeLength));
+  NativeLineNumber* lineNumber(unsigned index) {
+    return reinterpret_cast<NativeLineNumber*>
+      (body + pad(codeLength_)) + index;
   }
 
-  uint32_t* exceptionHandlerTable() {
-    return reinterpret_cast<uint32_t*>
-      (body + pad(codeLength) + pad(lineNumberTableLength));
+  unsigned lineNumberTableLength() {
+    return lineNumberTableLength_ / sizeof(NativeLineNumber);
   }
 
-  uint32_t codeLength;
-  uint32_t lineNumberTableLength;
-  uint32_t exceptionHandlerTableLength;
+  NativeExceptionHandler* exceptionHandler(unsigned index) {
+    return reinterpret_cast<NativeExceptionHandler*>
+      (body + pad(codeLength_) + pad(lineNumberTableLength_)) + index;
+  }
+
+  unsigned exceptionHandlerTableLength() {
+    return exceptionHandlerTableLength_ / sizeof(NativeExceptionHandler);
+  }
+
+  uint32_t codeLength_;
+  uint32_t lineNumberTableLength_;
+  uint32_t exceptionHandlerTableLength_;
   uint8_t body[0];
 };
 
@@ -202,33 +219,27 @@ inline unsigned
 addressOffset(Thread* t, object method, void* address)
 {
   Code* code = static_cast<Code*>(methodCompiled(t, method));
-  return static_cast<uint8_t*>(address) - code->body;
+  return static_cast<uint8_t*>(address) - code->code();
 }
 
-const unsigned EHStart = 0;
-const unsigned EHEnd = 1;
-const unsigned EHIp = 2;
-const unsigned EHCatchType = 3;
-const unsigned EHFootprint = 4;
-
-uint32_t*
+NativeExceptionHandler*
 findExceptionHandler(Thread* t, void* frame)
 {
   object method = frameMethod(frame);
   Code* code = static_cast<Code*>(methodCompiled(t, method));
-  uint32_t* table = code->exceptionHandlerTable();
       
-  for (unsigned i = 0; i < code->exceptionHandlerTableLength / 4; ++i) {
-    uint32_t* handler = table + (i * EHFootprint);
+  for (unsigned i = 0; i < code->exceptionHandlerTableLength(); ++i) {
+    NativeExceptionHandler* handler = code->exceptionHandler(i);
     unsigned offset = addressOffset(t, method, frameAddress(frame));
 
-    if (offset - 1 >= handler[EHStart]
-        and offset - 1 < handler[EHEnd])
+    if (offset - 1 >= nativeExceptionHandlerStart(handler)
+        and offset - 1 < nativeExceptionHandlerEnd(handler))
     {
       object catchType;
-      if (handler[EHCatchType]) {
+      if (nativeExceptionHandlerCatchType(handler)) {
         catchType = arrayBody
-          (t, methodCode(t, method), handler[EHCatchType] - 1);
+          (t, methodCode(t, method),
+           nativeExceptionHandlerCatchType(handler) - 1);
       } else {
         catchType = 0;
       }
@@ -253,11 +264,11 @@ unwind(MyThread* t)
       t->frame = next;
       vmJump(frameReturnAddress(frame));
     } else if ((methodFlags(t, frameMethod(frame)) & ACC_NATIVE) == 0) {
-      uint32_t* eh = findExceptionHandler(t, frame);
+      NativeExceptionHandler* eh = findExceptionHandler(t, frame);
       if (eh) {
         Code* code = static_cast<Code*>(methodCompiled(t, frameMethod(frame)));
         t->frame = frame;
-        vmJump(code->body + eh[EHIp]);
+        vmJump(code->code() + nativeExceptionHandlerIp(eh));
       }
     }
   }
@@ -938,8 +949,12 @@ parameterOffset(unsigned index)
 
 class Compiler: public Assembler {
  public:
-  Compiler(System* s):
+  Compiler(Thread* t):
     Assembler(s),
+    t(t),
+    threadFrameOffset(reinterpret_cast<uintptr_t>(&(t->frame))
+                      - reinterpret_cast<uintptr_t>(t))
+    poolRegisterClobbered(true),
     javaIPs(s, 1024),
     machineIPs(s, 1024),
     lineNumbers(s, 256),
@@ -983,7 +998,7 @@ class Compiler: public Assembler {
     push(poolRegister(), poolReference(target));
     push(rbp, FrameThread);
 
-    callAlignedAddress(code->body);
+    callAlignedAddress(code->code());
 
     add(footprint, rsp);                     // pop arguments
 
@@ -991,9 +1006,6 @@ class Compiler: public Assembler {
   }
 
   void compileCall(void* function, object arg1) {
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
-
     if (BytesPerWord == 4) {
       push(poolRegister(), poolReference(arg1));
       push(rbp, FrameThread);
@@ -1001,6 +1013,9 @@ class Compiler: public Assembler {
       mov(poolRegister(), poolReference(arg1), rsi);
       mov(rbp, FrameThread, rdi);
     }
+
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
 
     callAddress(function);
 
@@ -1010,9 +1025,6 @@ class Compiler: public Assembler {
   }
 
   void compileCall(void* function, Register arg1) {
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
-
     if (BytesPerWord == 4) {
       push(arg1);
       push(rbp, FrameThread);
@@ -1020,6 +1032,9 @@ class Compiler: public Assembler {
       mov(arg1, rsi);
       mov(rbp, FrameThread, rdi);
     }
+
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
 
     callAddress(function);
 
@@ -1029,9 +1044,6 @@ class Compiler: public Assembler {
   }
 
   void compileCall(void* function, object arg1, Register arg2) {
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
-
     if (BytesPerWord == 4) {
       push(arg2);
       push(poolRegister(), poolReference(arg1));
@@ -1041,6 +1053,9 @@ class Compiler: public Assembler {
       mov(poolRegister(), poolReference(arg1), rsi);
       mov(rbp, FrameThread, rdi);
     }
+
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
 
     callAddress(function);
 
@@ -1063,6 +1078,9 @@ class Compiler: public Assembler {
       mov(rbp, FrameThread, rdi);
     }
 
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
+
     callAddress(function);
 
     if (BytesPerWord == 4) {
@@ -1071,9 +1089,6 @@ class Compiler: public Assembler {
   }
 
   void compileCall(void* function, Register arg1, Register arg2) {
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
-
     if (BytesPerWord == 4) {
       push(arg2);
       push(arg1);
@@ -1083,6 +1098,9 @@ class Compiler: public Assembler {
       mov(arg1, rsi);
       mov(rbp, FrameThread, rdi);
     }
+
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
 
     callAddress(function);
 
@@ -2086,14 +2104,11 @@ class Compiler: public Assembler {
   }
 
   Code* compileNativeInvoker() {
-    unsigned frameOffset = reinterpret_cast<uintptr_t>(&(t->frame))
-      - reinterpret_cast<uintptr_t>(t);
-
     push(rbp);
     mov(rsp, rbp);
 
     mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
+    mov(rbp, rax, threadFrameOffset);      // set thread frame to current
 
     if (BytesPerWord == 4) {
       push(rbp, FrameMethod);
@@ -2118,14 +2133,11 @@ class Compiler: public Assembler {
   }
 
   Code* compileStub() {
-    unsigned frameOffset = reinterpret_cast<uintptr_t>(&(t->frame))
-      - reinterpret_cast<uintptr_t>(t);
-
     push(rbp);
     mov(rsp, rbp);
 
     mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
+    mov(rbp, rax, threadFrameOffset);      // set thread frame to current
 
     if (BytesPerWord == 4) {
       push(rbp, FrameMethod);
@@ -2181,6 +2193,7 @@ class Compiler: public Assembler {
     if (poolRegisterClobbered) {
       mov(rbp, FrameMethod, rdi);
       mov(rdi, MethodCode, rdi);
+      poolRegisterClobbered = false;
     }
     pool.appendAddress(o);
     return pool.length() + BytesPerWord;
@@ -2199,6 +2212,7 @@ class Compiler: public Assembler {
   }
 
   MyThread* t;
+  unsigned threadFrameOffset;
   bool poolRegisterClobbered;
   Buffer javaIPs;
   Buffer machineIPs;
@@ -2229,8 +2243,8 @@ compileMethod2(MyThread* t, object method)
         fprintf(stderr, "compiled %s.%s from %p to %p\n",
                 &byteArrayBody(t, className(t, methodClass(t, method)), 0),
                 &byteArrayBody(t, methodName(t, method), 0),
-                code->body,
-                code->body + code->codeLength);
+                code->code(),
+                code->code() + code->codeLength());
       }
 
       set(t, methodCompiled(t, method), compiled);
