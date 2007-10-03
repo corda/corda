@@ -50,9 +50,12 @@
   (object spec)
   (object class)
   (object code)
-  (object compiled))
+  (void* compiled))
 
 (type compiled
+  (nogc object pool)
+  (uint32_t lineNumbers)
+  (uint32_t exceptionHandlers)
   (array uint8_t body))
 
 (type nativeMethodData
