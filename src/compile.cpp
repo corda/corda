@@ -15,7 +15,7 @@ extern "C" void
 vmCall();
 
 extern "C" void NO_RETURN
-vmJump(void* address, void* base);
+vmJump(void* address, void* base, void* stack);
 
 namespace {
 
@@ -141,7 +141,8 @@ class MyThread: public Thread {
 inline void*
 frameBase(void* frame)
 {
-  return static_cast<void**>(frame)[(-FrameFootprint / BytesPerWord) - 2];
+  return static_cast<void**>(frame)
+    [static_cast<int>(- (FrameFootprint / BytesPerWord) - 2)];
 }
 
 inline bool
@@ -165,7 +166,8 @@ frameMethod(void* frame)
 inline void*
 frameAddress(void* frame)
 {
-  return static_cast<void**>(frame)[(-FrameFootprint / BytesPerWord) - 1];
+  return static_cast<void**>(frame)
+    [static_cast<int>(- (FrameFootprint / BytesPerWord) - 1)];
 }
 
 inline void*
@@ -180,25 +182,38 @@ compiledCode(Compiled* code)
   return compiledBody(code);
 }
 
+inline unsigned
+compiledLineNumberCount(Thread*, Compiled* code)
+{
+  return compiledLineNumberTableLength(code) / sizeof(NativeLineNumber);
+}
+
 inline NativeLineNumber*
 compiledLineNumber(Thread* t, Compiled* code, unsigned index)
 {
-  assert(t, index <  compiledLineNumberTableLength(code));
+  assert(t, index < compiledLineNumberCount(t, code));
   return reinterpret_cast<NativeLineNumber*>
-    (compiledBody(code) + pad(compiledCodeLength(code)));
+    (compiledBody(code) + pad(compiledCodeLength(code))) + index;
+}
+
+inline unsigned
+compiledExceptionHandlerCount(Thread*, Compiled* code)
+{
+  return compiledExceptionHandlerTableLength(code)
+    / sizeof(NativeExceptionHandler);
 }
 
 inline NativeExceptionHandler*
 compiledExceptionHandler(Thread* t, Compiled* code, unsigned index)
 {
-  assert(t, index <  compiledExceptionHandlerTableLength(code));
+  assert(t, index < compiledExceptionHandlerCount(t, code));
   return reinterpret_cast<NativeExceptionHandler*>
     (compiledBody(code) + pad(compiledCodeLength(code))
-     + pad(compiledLineNumberTableLength(code)));
+     + pad(compiledLineNumberTableLength(code))) + index;
 }
 
 inline Compiled*
-makeCompiled(Thread* t, Buffer* code, Buffer* lineNumbers,
+makeCompiled(Thread* t, object method, Buffer* code, Buffer* lineNumbers,
              Buffer* exceptionHandlers)
 {
   Compiled* c = static_cast<Compiled*>
@@ -207,6 +222,13 @@ makeCompiled(Thread* t, Buffer* code, Buffer* lineNumbers,
                             + pad(lineNumbers->length())
                             + pad(exceptionHandlers->length())));
 
+  if (method) {
+    compiledMaxLocals(c) = codeMaxLocals(t, methodCode(t, method));
+    compiledMaxStack(c) = codeMaxStack(t, methodCode(t, method));
+  } else {
+    compiledMaxLocals(c) = 0;
+    compiledMaxStack(c) = 0;
+  }
   compiledCodeLength(c) = code->length();
   compiledLineNumberTableLength(c) = lineNumbers->length();
   compiledExceptionHandlerTableLength(c) = exceptionHandlers->length();
@@ -237,7 +259,7 @@ findExceptionHandler(Thread* t, void* frame)
   object method = frameMethod(frame);
   Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
       
-  for (unsigned i = 0; i < compiledExceptionHandlerTableLength(code); ++i) {
+  for (unsigned i = 0; i < compiledExceptionHandlerCount(t, code); ++i) {
     NativeExceptionHandler* handler = compiledExceptionHandler(t, code, i);
     unsigned offset = addressOffset(t, method, frameAddress(frame));
 
@@ -254,6 +276,14 @@ findExceptionHandler(Thread* t, void* frame)
       }
 
       if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+        fprintf(stderr, "exception handler match for %d in %s: "
+                "start: %d; end: %d; ip: %d\n",
+                offset,
+                &byteArrayBody(t, methodName(t, frameMethod(frame)), 0),
+                nativeExceptionHandlerStart(handler),
+                nativeExceptionHandlerEnd(handler),
+                nativeExceptionHandlerIp(handler));
+
         return handler;
       }
     }
@@ -266,21 +296,40 @@ void NO_RETURN
 unwind(MyThread* t)
 {
   for (void* frame = t->frame; frameValid(frame); frame = frameNext(frame)) {
+    if ((methodFlags(t, frameMethod(frame)) & ACC_NATIVE) == 0) {
+      NativeExceptionHandler* eh = findExceptionHandler(t, frame);
+      if (eh) {
+        object method = frameMethod(frame);
+        Compiled* code = reinterpret_cast<Compiled*>
+          (methodCompiled(t, method));
+        t->frame = frame;
+
+        void** stack = static_cast<void**>(frameBase(frame));
+
+        unsigned parameterFootprint = methodParameterFootprint(t, method);
+        unsigned localFootprint = compiledMaxLocals(code);
+
+        if (localFootprint > parameterFootprint) {
+          stack -= (localFootprint - parameterFootprint);
+        }
+
+        *(--stack) = t->exception;
+        t->exception = 0;
+
+        vmJump(compiledCode(code) + nativeExceptionHandlerIp(eh),
+               frameBase(frame),
+               stack);
+      }
+    }
+
     void* next = frameNext(frame);
     if (not frameValid(next)
         or methodFlags(t, frameMethod(next)) & ACC_NATIVE)
     {
       t->frame = next;
-      vmJump(frameReturnAddress(frame), frameBase(frame));
-    } else if ((methodFlags(t, frameMethod(frame)) & ACC_NATIVE) == 0) {
-      NativeExceptionHandler* eh = findExceptionHandler(t, frame);
-      if (eh) {
-        Compiled* code = reinterpret_cast<Compiled*>
-          (methodCompiled(t, frameMethod(frame)));
-        t->frame = frame;
-        vmJump(compiledCode(code) + nativeExceptionHandlerIp(eh),
-               frameBase(frame));
-      }
+      vmJump(frameReturnAddress(frame),
+             *static_cast<void**>(frameBase(frame)),
+             static_cast<void**>(frameBase(frame)) + 2);
     }
   }
   abort(t);
@@ -1563,6 +1612,10 @@ class Compiler: public Assembler {
         mov(rax, rsp, 0);
         break;
 
+      case i2l:
+        push(0);
+        break;
+
       case iadd:
         pop(rax);
         pop(rcx);
@@ -1819,9 +1872,7 @@ class Compiler: public Assembler {
         if (instruction == ldc) {
           index = codeBody(t, code, ip++);
         } else {
-          uint8_t index1 = codeBody(t, code, ip++);
-          uint8_t index2 = codeBody(t, code, ip++);
-          index = (index1 << 8) | index2;
+          index = codeReadInt16(t, code, ip);
         }
 
         object v = arrayBody(t, codePool(t, code), index - 1);
@@ -1841,6 +1892,99 @@ class Compiler: public Assembler {
 
           push(poolRegister(), poolReference(class_));
         }
+      } break;
+
+      case ldc2_w: {
+        uint16_t index = codeReadInt16(t, code, ip);
+
+        object v = arrayBody(t, codePool(t, code), index - 1);
+
+        if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::LongType))
+        {
+          push((longValue(t, v)      ) & 0xFFFFFFFF);
+          push((longValue(t, v) >> 32) & 0xFFFFFFFF);
+        } else if (objectClass(t, v)
+                   == arrayBody(t, t->m->types, Machine::DoubleType))
+        {
+          push((doubleValue(t, v)      ) & 0xFFFFFFFF);
+          push((doubleValue(t, v) >> 32) & 0xFFFFFFFF);
+        } else {
+          abort(t);
+        }
+      } break;
+
+      case lconst_0:
+        push(0);
+        push(0);
+        break;
+
+      case lconst_1:
+        push(0);
+        push(1);
+        break;
+
+        // todo:
+//       case lcmp: {
+//         pop(rax);
+//         pop(rdx);
+
+//         if (BytesPerWord == 8) {
+//           shl(32, rax);
+//         }
+    
+//         pushInt(t, a > b ? 1 : a == b ? 0 : -1);
+//       } goto loop;
+
+      case lload: {
+        unsigned index = codeBody(t, code, ip++);
+        push(rbp, localOffset(index, parameterFootprint));
+        push(rbp, localOffset(index + 1, parameterFootprint));
+      } break;
+
+      case lload_0: {
+        push(rbp, localOffset(0, parameterFootprint));
+        push(rbp, localOffset(1, parameterFootprint));
+      } break;
+
+      case lload_1: {
+        push(rbp, localOffset(1, parameterFootprint));
+        push(rbp, localOffset(2, parameterFootprint));
+      } break;
+
+      case lload_2: {
+        push(rbp, localOffset(2, parameterFootprint));
+        push(rbp, localOffset(3, parameterFootprint));
+      } break;
+
+      case lload_3: {
+        push(rbp, localOffset(3, parameterFootprint));
+        push(rbp, localOffset(4, parameterFootprint));
+      } break;
+
+      case lstore: {
+        unsigned index = codeBody(t, code, ip++);
+        pop(rbp, localOffset(index + 1, parameterFootprint));
+        pop(rbp, localOffset(index, parameterFootprint));
+      } break;
+
+      case lstore_0: {
+        pop(rbp, localOffset(1, parameterFootprint));
+        pop(rbp, localOffset(0, parameterFootprint));
+      } break;
+
+      case lstore_1: {
+        pop(rbp, localOffset(2, parameterFootprint));
+        pop(rbp, localOffset(1, parameterFootprint));
+      } break;
+
+      case lstore_2: {
+        pop(rbp, localOffset(3, parameterFootprint));
+        pop(rbp, localOffset(2, parameterFootprint));
+      } break;
+
+      case lstore_3: {
+        pop(rbp, localOffset(4, parameterFootprint));
+        pop(rbp, localOffset(3, parameterFootprint));
       } break;
 
       case new_: {
@@ -2038,7 +2182,7 @@ class Compiler: public Assembler {
     resolveJumps();
     buildExceptionHandlerTable(code);
 
-    return finish();
+    return finish(method);
   }
 
   uint32_t machineIpForJavaIp(uint16_t javaIP) {
@@ -2135,7 +2279,7 @@ class Compiler: public Assembler {
     add(CompiledBody, rax);
     jmp(rax);                                // call compiled code
 
-    return finish();
+    return finish(0);
   }
 
   Compiled* compileNativeInvoker() {
@@ -2161,7 +2305,7 @@ class Compiler: public Assembler {
     pop(rbp);
     ret();
 
-    return finish();
+    return finish(0);
   }
 
   Compiled* compileCaller() {
@@ -2171,11 +2315,11 @@ class Compiler: public Assembler {
 
     jmp(rbx);
 
-    return finish();
+    return finish(0);
   }
 
-  Compiled* finish() {
-    return makeCompiled(t, &code, &lineNumbers, &exceptionHandlers);
+  Compiled* finish(object method) {
+    return makeCompiled(t, method, &code, &lineNumbers, &exceptionHandlers);
   }
 
   object makePool() {
@@ -2273,7 +2417,8 @@ updateCaller(MyThread* t, object method)
 
   a.call(rax);
 
-  uint8_t* caller = static_cast<uint8_t**>(t->frame)[1] - a.code.length();
+  uint8_t* caller = static_cast<uint8_t*>(frameAddress(t->frame))
+    - a.code.length();
   if (memcmp(a.code.data, caller, a.code.length()) == 0) {
     // it's a direct call - update caller to point to new code
 
@@ -2587,9 +2732,7 @@ class MyProcessor: public Processor {
       case 'J':
       case 'D':
         ++ s;
-        if (BytesPerWord == 4) {
-          ++ footprint;
-        }
+        ++ footprint;
         break;
 
       default:
@@ -2660,6 +2803,40 @@ class MyProcessor: public Processor {
   {
     void* f = reinterpret_cast<void*>(frame);
     return addressOffset(t, ::frameMethod(f), ::frameAddress(f));
+  }
+
+  virtual int
+  lineNumber(Thread* t, object method, unsigned ip)
+  {
+    if (methodFlags(t, method) & ACC_NATIVE) {
+      return NativeLine;
+    }
+
+    Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
+    if (compiledLineNumberCount(t, code)) {
+      unsigned bottom = 0;
+      unsigned top = compiledLineNumberCount(t, code);
+      for (unsigned span = top - bottom; span; span = top - bottom) {
+        unsigned middle = bottom + (span / 2);
+        NativeLineNumber* ln = compiledLineNumber(t, code, middle);
+
+        if (ip >= nativeLineNumberIp(ln)
+            and (middle + 1 == compiledLineNumberCount(t, code)
+                 or ip < nativeLineNumberIp
+                 (compiledLineNumber(t, code, middle + 1))))
+        {
+          return nativeLineNumberLine(ln);
+        } else if (ip < nativeLineNumberIp(ln)) {
+          top = middle;
+        } else if (ip > nativeLineNumberIp(ln)) {
+          bottom = middle + 1;
+        }
+      }
+
+      abort(t);
+    } else {
+      return UnknownLine;
+    }
   }
 
   virtual object*

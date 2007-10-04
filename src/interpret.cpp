@@ -1936,22 +1936,17 @@ interpret(Thread* t)
   } goto loop;
 
   case jsr: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
+    uint16_t offset = codeReadInt16(t, code, ip);
 
     pushInt(t, ip);
-    ip = (ip - 3) + static_cast<int16_t>(((offset1 << 8) | offset2));
+    ip = (ip - 3) + static_cast<int16_t>(offset);
   } goto loop;
 
   case jsr_w: {
-    uint8_t offset1 = codeBody(t, code, ip++);
-    uint8_t offset2 = codeBody(t, code, ip++);
-    uint8_t offset3 = codeBody(t, code, ip++);
-    uint8_t offset4 = codeBody(t, code, ip++);
+    uint32_t offset = codeReadInt32(t, code, ip);
 
     pushInt(t, ip);
-    ip = (ip - 3) + static_cast<int32_t>
-      ((offset1 << 24) | (offset2 << 16) | (offset3 << 8) | offset4);
+    ip = (ip - 3) + static_cast<int32_t>(offset);
   } goto loop;
 
   case l2i: {
@@ -2037,9 +2032,7 @@ interpret(Thread* t)
     if (instruction == ldc) {
       index = codeBody(t, code, ip++);
     } else {
-      uint8_t index1 = codeBody(t, code, ip++);
-      uint8_t index2 = codeBody(t, code, ip++);
-      index = (index1 << 8) | index2;
+      index = codeReadInt16(t, code, ip);
     }
 
     object v = arrayBody(t, codePool(t, code), index - 1);
@@ -2063,10 +2056,9 @@ interpret(Thread* t)
   } goto loop;
 
   case ldc2_w: {
-    uint8_t index1 = codeBody(t, code, ip++);
-    uint8_t index2 = codeBody(t, code, ip++);
+    uint16_t index = codeReadInt16(t, code, ip);
 
-    object v = arrayBody(t, codePool(t, code), ((index1 << 8) | index2) - 1);
+    object v = arrayBody(t, codePool(t, code), index - 1);
 
     if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::LongType)) {
       pushLong(t, longValue(t, v));
@@ -2985,6 +2977,30 @@ class MyProcessor: public Processor {
 
     assert(t, static_cast<intptr_t>(frame) >= 0);
     return ::frameIp(t, frame);
+  }
+
+  virtual int
+  lineNumber(Thread* t, object method, unsigned ip)
+  {
+    if (methodFlags(t, method) & ACC_NATIVE) {
+      return NativeLine;
+    }
+
+    object table = codeLineNumberTable(t, methodCode(t, method));
+    if (table) {
+      // todo: do a binary search:
+      int last = UnknownLine;
+      for (unsigned i = 0; i < lineNumberTableLength(t, table); ++i) {
+        if (ip <= lineNumberIp(lineNumberTableBody(t, table, i))) {
+          return last;
+        } else {
+          last = lineNumberLine(lineNumberTableBody(t, table, i));
+        }
+      }
+      return last;
+    } else {
+      return UnknownLine;
+    }
   }
 
   virtual object*

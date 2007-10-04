@@ -590,7 +590,7 @@ Java_java_lang_Throwable_resolveTrace(Thread* t, jclass, jobject trace)
     object method = methodName(t, traceElementMethod(t, e));
     method = makeString(t, method, 0, byteArrayLength(t, method) - 1, 0);
 
-    unsigned line = lineNumber
+    unsigned line = t->m->processor->lineNumber
       (t, traceElementMethod(t, e), traceElementIp(t, e));
 
     object ste = makeStackTraceElement(t, class_, method, 0, line);

@@ -2366,30 +2366,6 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   return o;
 }
 
-int
-lineNumber(Thread* t, object method, unsigned ip)
-{
-  if (methodFlags(t, method) & ACC_NATIVE) {
-    return NativeLine;
-  }
-
-  object table = codeLineNumberTable(t, methodCode(t, method));
-  if (table) {
-    // todo: do a binary search:
-    int last = UnknownLine;
-    for (unsigned i = 0; i < lineNumberTableLength(t, table); ++i) {
-      if (ip <= lineNumberIp(lineNumberTableBody(t, table, i))) {
-        return last;
-      } else {
-        last = lineNumberLine(lineNumberTableBody(t, table, i));
-      }
-    }
-    return last;
-  } else {
-    return UnknownLine;
-  }
-}
-
 void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 {
@@ -2649,7 +2625,8 @@ printTrace(Thread* t, object exception)
         (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
       const int8_t* method = &byteArrayBody
         (t, methodName(t, traceElementMethod(t, e)), 0);
-      int line = lineNumber(t, traceElementMethod(t, e), traceElementIp(t, e));
+      int line = t->m->processor->lineNumber
+        (t, traceElementMethod(t, e), traceElementIp(t, e));
 
       fprintf(stderr, "  at %s.%s ", class_, method);
 

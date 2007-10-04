@@ -43,12 +43,10 @@ test:
 
 .globl vmJump
 vmJump:
-   // %rdi: address
-   // %rsi: base
-   movq   %rsi,%rsp
-   popq   %rbp
-   jmp    *(%rdi)
-   
+   movq   %rsi,%rbp
+   movq   %rdx,%rsp
+   jmp    *%rdi
+
 #elif defined __i386__
    
 .globl vmInvoke
@@ -109,11 +107,9 @@ exit:
      
 .globl vmJump
 vmJump:
-   // 4(%esp): address
-   // 8(%esp): base
    movl   4(%esp),%eax
-   movl   8(%esp),%esp
-   popl   %ebp
+   movl   8(%esp),%ebp
+   movl   12(%esp),%esp
    jmp    *%eax
    
 #else

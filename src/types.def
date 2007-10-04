@@ -39,9 +39,11 @@
   (object class))
 
 (pod compiled
+  (uint16_t maxLocals)
+  (uint16_t maxStack)
   (uint32_t codeLength)
-  (uint16_t lineNumberTableLength)
-  (uint16_t exceptionHandlerTableLength)
+  (uint32_t lineNumberTableLength)
+  (uint32_t exceptionHandlerTableLength)
   (uint8_t[0] body))
 
 (type method java/lang/reflect/Method

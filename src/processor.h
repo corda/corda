@@ -44,6 +44,9 @@ class Processor {
   virtual unsigned
   frameIp(Thread* t, uintptr_t frame) = 0;
 
+  virtual int
+  lineNumber(Thread* t, object method, unsigned ip) = 0;
+
   virtual object*
   makeLocalReference(Thread* t, object o) = 0;
 

@@ -2008,9 +2008,6 @@ objectArrayBody(Thread* t UNUSED, object array, unsigned index)
   return cast<object>(array, (2 + index) * BytesPerWord);
 }
 
-int
-lineNumber(Thread* t, object method, unsigned ip);
-
 void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
