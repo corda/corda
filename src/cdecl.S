@@ -20,14 +20,13 @@ cdeclCall:
    // reserve space for arguments
    movl   16(%ebp),%ecx
 
+   subl   %ecx,%esp
+
 #ifdef __APPLE__
    // align to a 16 byte boundary on Darwin
-   addl   $15,%ecx
-   andl   $0xFFFFFFF0,%ecx
-   addl   $8,%ecx
+   andl   $0xFFFFFFF0,%esp
 #endif
    
-   subl   %ecx,%esp
 
    // copy arguments into place
    movl   $0,%ecx
