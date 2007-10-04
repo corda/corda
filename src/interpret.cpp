@@ -1253,14 +1253,30 @@ interpret(Thread* t)
     float b = popFloat(t);
     float a = popFloat(t);
     
-    pushInt(t, (a > b ? 1 : 0));
+    if (a < b) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } else if (a > b) {
+      pushInt(t, 1);
+    } else if (a == b) {
+      pushInt(t, 0);
+    } else {
+      pushInt(t, 1);
+    }
   } goto loop;
 
   case fcmpl: {
     float b = popFloat(t);
     float a = popFloat(t);
     
-    pushInt(t, (a < b ? 1 : 0));
+    if (a < b) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } else if (a > b) {
+      pushInt(t, 1);
+    } else if (a == b) {
+      pushInt(t, 0);
+    } else {
+      pushInt(t, static_cast<unsigned>(-1));
+    }
   } goto loop;
 
   case fconst_0: {
