@@ -81,6 +81,15 @@ public class StringBuilder {
     return append(String.valueOf(v));
   }
 
+  public StringBuilder append(float v) {
+    return append(String.valueOf(v));
+  }
+
+  public StringBuilder append(double v) {
+    return append(String.valueOf(v));
+  }
+
+
   public char charAt(int i) {
     if (i < 0 || i >= length) {
       throw new IndexOutOfBoundsException();

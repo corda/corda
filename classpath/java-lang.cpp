@@ -69,3 +69,13 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   }
   return r;
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_Double_fillBufferWithDouble(JNIEnv *e, jclass, jdouble val,
+					   jbyteArray buffer, jint bufferSize) {
+  jboolean isCopy;
+  jbyte* buf = e->GetByteArrayElements(buffer, &isCopy);
+  jint count = snprintf(reinterpret_cast<char*>(buf), bufferSize, "%g", val);
+  e->ReleaseByteArrayElements(buffer, buf, 0);
+  return count;
+}

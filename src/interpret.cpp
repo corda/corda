@@ -683,8 +683,9 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
 }
 
 ExceptionHandler*
-findExceptionHandler(Thread* t, object method)
+findExceptionHandler(Thread* t, int frame)
 {
+  object method = frameMethod(t, frame);
   object eht = codeExceptionHandlerTable(t, methodCode(t, method));
       
   if (eht) {
@@ -697,16 +698,16 @@ findExceptionHandler(Thread* t, object method)
         object catchType = 0;
         if (exceptionHandlerCatchType(eh)) {
           object e = t->exception;
-          exception = 0;
+          t->exception = 0;
           PROTECT(t, e);
 
           PROTECT(t, eht);
           catchType = resolveClass
-            (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
+            (t, codePool(t, t->code), exceptionHandlerCatchType(eh) - 1);
 
           if (catchType) {
             eh = exceptionHandlerTableBody(t, eht, i);
-            exception = e;
+            t->exception = e;
           } else {
             // can't find what we're supposed to catch - move on.
             continue;
@@ -756,7 +757,7 @@ interpret(Thread* t)
             &byteArrayBody
             (t, methodName(t, frameMethod(t, frame)), 0));
 
-    int line = lineNumber(t, frameMethod(t, frame), ip);
+    int line = t->m->processor->lineNumber(t, frameMethod(t, frame), ip);
     switch (line) {
     case NativeLine:
       fprintf(stderr, "(native)\n");
@@ -1297,14 +1298,30 @@ interpret(Thread* t)
     float b = popFloat(t);
     float a = popFloat(t);
     
-    pushInt(t, (a > b ? 1 : 0));
+    if (a < b) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } else if (a > b) {
+      pushInt(t, 1);
+    } else if (a == b) {
+      pushInt(t, 0);
+    } else {
+      pushInt(t, 1);
+    }
   } goto loop;
 
   case fcmpl: {
     float b = popFloat(t);
     float a = popFloat(t);
     
-    pushInt(t, (a < b ? 1 : 0));
+    if (a < b) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } else if (a > b) {
+      pushInt(t, 1);
+    } else if (a == b) {
+      pushInt(t, 0);
+    } else {
+      pushInt(t, static_cast<unsigned>(-1));
+    }
   } goto loop;
 
   case fconst_0: {
@@ -2606,7 +2623,7 @@ interpret(Thread* t)
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= base; popFrame(t)) {
-    ExceptionHandler* eh = findExceptionHandler(t, frameMethod(t, frame));
+    ExceptionHandler* eh = findExceptionHandler(t, frame);
     if (eh) {
       sp = frame + FrameFootprint;
       ip = exceptionHandlerIp(eh);
@@ -2669,6 +2686,14 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
       ++ s;
       pushLong(t, va_arg(a, uint64_t));
       break;
+
+    case 'F': {
+      ++ s;
+      float f = va_arg(a, double);
+      uint32_t i;
+      memcpy(&i, &f, 4);
+      pushInt(t, i);
+    } break;
           
     default:
       ++ s;
@@ -2847,13 +2872,13 @@ class MyProcessor: public Processor {
     return new (s->allocate(sizeof(Thread))) Thread(m, javaThread, parent);
   }
 
-  virtual Compiled*
+  virtual void*
   methodStub(vm::Thread*)
   {
     return 0;
   }
 
-  virtual Compiled*
+  virtual void*
   nativeInvoker(vm::Thread*)
   {
     return 0;
@@ -2980,8 +3005,10 @@ class MyProcessor: public Processor {
   }
 
   virtual int
-  lineNumber(Thread* t, object method, unsigned ip)
+  lineNumber(vm::Thread* vmt, object method, unsigned ip)
   {
+    Thread* t = static_cast<Thread*>(vmt);
+
     if (methodFlags(t, method) & ACC_NATIVE) {
       return NativeLine;
     }

@@ -198,7 +198,7 @@ Java_java_io_FileInputStream_read__I(JNIEnv* e, jclass, jint fd)
   if (r <= 0) {
     return -1;
   } else {
-    return data;
+    return data & 0xff;
   }
 }
 
