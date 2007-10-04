@@ -2,10 +2,10 @@
 
 .text
 
-.globl vmInvoke
-vmInvoke:
 #ifdef __x86_64__
 
+.globl vmInvoke
+vmInvoke:
    pushq  %rbp
    movq   %rsp,%rbp
    
@@ -40,9 +40,19 @@ test:
    movq   %rbp,%rsp   
    popq   %rbp
    ret
+
+.globl vmJump
+vmJump:
+   // %rdi: address
+   // %rsi: base
+   movq   %rsi,%rsp
+   popq   %rbp
+   jmp    *(%rdi)
    
 #elif defined __i386__
    
+.globl vmInvoke
+vmInvoke:
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -96,7 +106,16 @@ exit:
    movl   %ebp,%esp
    popl   %ebp
    ret
-      
+     
+.globl vmJump
+vmJump:
+   //  8(%ebp): address
+   // 12(%ebp): base
+   movq   8(%ebp),%eax
+   movq   12(%ebp),%rsp
+   popq   %rbp
+   jmp    *(%eax)
+   
 #else
 #  error unsupported platform
 #endif

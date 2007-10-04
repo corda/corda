@@ -12,15 +12,15 @@ vmInvoke(void* function, void* stack, unsigned stackSize,
          unsigned returnType);
 
 extern "C" void NO_RETURN
-vmJump(void* address);
+vmJump(void* address, void* base);
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 
 const unsigned FrameThread = BytesPerWord * 2;
 const unsigned FrameMethod = FrameThread + BytesPerWord;
-const unsigned FrameNext = FrameNext + BytesPerWord;
+const unsigned FrameNext = FrameMethod + BytesPerWord;
 const unsigned FrameFootprint = BytesPerWord * 3;
 
 class ArgumentList;
@@ -121,50 +121,6 @@ class Buffer {
   unsigned minimumCapacity;
 };
 
-class Code {
- public:
-  Code(Buffer* code, Buffer* lineNumbers, Buffer* exceptionHandlers):
-    codeLength_(code->length()),
-    lineNumberTableLength_(lineNumbers->length()),
-    exceptionHandlerTableLength_(exceptionHandlers->length())
-  {
-    code->copyTo(body);
-    lineNumbers->copyTo(lineNumber(0));
-    exceptionHandlers->copyTo(exceptionHandler(0));
-  }
-
-  uint8_t* code() {
-    return body;
-  }
-
-  unsigned codeLength() {
-    return codeLength_;
-  }
-  
-  NativeLineNumber* lineNumber(unsigned index) {
-    return reinterpret_cast<NativeLineNumber*>
-      (body + pad(codeLength_)) + index;
-  }
-
-  unsigned lineNumberTableLength() {
-    return lineNumberTableLength_ / sizeof(NativeLineNumber);
-  }
-
-  NativeExceptionHandler* exceptionHandler(unsigned index) {
-    return reinterpret_cast<NativeExceptionHandler*>
-      (body + pad(codeLength_) + pad(lineNumberTableLength_)) + index;
-  }
-
-  unsigned exceptionHandlerTableLength() {
-    return exceptionHandlerTableLength_ / sizeof(NativeExceptionHandler);
-  }
-
-  uint32_t codeLength_;
-  uint32_t lineNumberTableLength_;
-  uint32_t exceptionHandlerTableLength_;
-  uint8_t body[0];
-};
-
 class MyThread: public Thread {
  public:
   MyThread(Machine* m, object javaThread, vm::Thread* parent):
@@ -179,22 +135,22 @@ class MyThread: public Thread {
   Reference* reference;
 };
 
-inline bool
-frameValid(void* frame)
-{
-  return frame != 0;
-}
-
 inline void*
 frameBase(void* frame)
 {
-  return static_cast<void**>(frame)[- (FrameFootprint / BytesPerWord) - 1];
+  return *static_cast<void**>(frame);
+}
+
+inline bool
+frameValid(void* frame)
+{
+  return frameBase(frame) != 0;
 }
 
 inline void*
 frameNext(void* frame)
 {
-  return static_cast<void**>(frameBase(frame))[FrameNext / BytesPerWord];
+  return static_cast<void**>(frameBase(frame))[FrameNext / BytesPerWord] ;
 }
 
 inline object
@@ -206,7 +162,7 @@ frameMethod(void* frame)
 inline void*
 frameAddress(void* frame)
 {
-  return static_cast<void**>(frame)[- (FrameFootprint / BytesPerWord)];
+  return static_cast<void**>(frame)[1];
 }
 
 inline void*
@@ -215,21 +171,71 @@ frameReturnAddress(void* frame)
   return static_cast<void**>(frameBase(frame))[1];
 }
 
+inline uint8_t*
+compiledCode(Compiled* code)
+{
+  return compiledBody(code);
+}
+
+inline NativeLineNumber*
+compiledLineNumber(Thread* t, Compiled* code, unsigned index)
+{
+  assert(t, index <  compiledLineNumberTableLength(code));
+  return reinterpret_cast<NativeLineNumber*>
+    (compiledBody(code) + pad(compiledCodeLength(code)));
+}
+
+inline NativeExceptionHandler*
+compiledExceptionHandler(Thread* t, Compiled* code, unsigned index)
+{
+  assert(t, index <  compiledExceptionHandlerTableLength(code));
+  return reinterpret_cast<NativeExceptionHandler*>
+    (compiledBody(code) + pad(compiledCodeLength(code))
+     + pad(compiledLineNumberTableLength(code)));
+}
+
+inline Compiled*
+makeCompiled(Thread* t, Buffer* code, Buffer* lineNumbers,
+             Buffer* exceptionHandlers)
+{
+  Compiled* c = static_cast<Compiled*>
+    (t->m->system->allocate(sizeof(Compiled)
+                            + pad(code->length())
+                            + pad(lineNumbers->length())
+                            + pad(exceptionHandlers->length())));
+
+  compiledCodeLength(c) = code->length();
+  compiledLineNumberTableLength(c) = lineNumbers->length();
+  compiledExceptionHandlerTableLength(c) = exceptionHandlers->length();
+
+  if (code->length()) {
+    code->copyTo(compiledCode(c));
+  }
+  if (lineNumbers->length()) {
+    lineNumbers->copyTo(compiledLineNumber(t, c, 0));
+  }
+  if (exceptionHandlers->length()) {
+    exceptionHandlers->copyTo(compiledExceptionHandler(t, c, 0));
+  }
+
+  return c;
+}
+
 inline unsigned
 addressOffset(Thread* t, object method, void* address)
 {
-  Code* code = static_cast<Code*>(methodCompiled(t, method));
-  return static_cast<uint8_t*>(address) - code->code();
+  Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
+  return static_cast<uint8_t*>(address) - compiledCode(code);
 }
 
 NativeExceptionHandler*
 findExceptionHandler(Thread* t, void* frame)
 {
   object method = frameMethod(frame);
-  Code* code = static_cast<Code*>(methodCompiled(t, method));
+  Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
       
-  for (unsigned i = 0; i < code->exceptionHandlerTableLength(); ++i) {
-    NativeExceptionHandler* handler = code->exceptionHandler(i);
+  for (unsigned i = 0; i < compiledExceptionHandlerTableLength(code); ++i) {
+    NativeExceptionHandler* handler = compiledExceptionHandler(t, code, i);
     unsigned offset = addressOffset(t, method, frameAddress(frame));
 
     if (offset - 1 >= nativeExceptionHandlerStart(handler)
@@ -262,13 +268,15 @@ unwind(MyThread* t)
         or methodFlags(t, frameMethod(next)) & ACC_NATIVE)
     {
       t->frame = next;
-      vmJump(frameReturnAddress(frame));
+      vmJump(frameReturnAddress(frame), frameBase(frame));
     } else if ((methodFlags(t, frameMethod(frame)) & ACC_NATIVE) == 0) {
       NativeExceptionHandler* eh = findExceptionHandler(t, frame);
       if (eh) {
-        Code* code = static_cast<Code*>(methodCompiled(t, frameMethod(frame)));
+        Compiled* code = reinterpret_cast<Compiled*>
+          (methodCompiled(t, frameMethod(frame)));
         t->frame = frame;
-        vmJump(code->code() + nativeExceptionHandlerIp(eh));
+        vmJump(compiledCode(code) + nativeExceptionHandlerIp(eh),
+               frameBase(frame));
       }
     }
   }
@@ -286,9 +294,9 @@ void NO_RETURN
 throw_(MyThread* t, object o)
 {
   if (o) {
-    t->exception = makeNullPointerException(t);
-  } else {
     t->exception = o;
+  } else {
+    t->exception = makeNullPointerException(t);
   }
   unwind(t);
 }
@@ -652,6 +660,11 @@ class Assembler {
     code.appendAddress(v);
   }
 
+  void lea(Register src, int32_t srcOffset, Register dst) {
+    rex();
+    offsetInstruction(0x8d, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
   void nop() {
     code.append(0x90);
   }
@@ -949,17 +962,15 @@ parameterOffset(unsigned index)
 
 class Compiler: public Assembler {
  public:
-  Compiler(Thread* t):
-    Assembler(s),
+  Compiler(MyThread* t):
+    Assembler(t->m->system),
     t(t),
-    threadFrameOffset(reinterpret_cast<uintptr_t>(&(t->frame))
-                      - reinterpret_cast<uintptr_t>(t))
     poolRegisterClobbered(true),
-    javaIPs(s, 1024),
-    machineIPs(s, 1024),
-    lineNumbers(s, 256),
-    exceptionHandlers(s, 256),
-    pool(s, 256)
+    javaIPs(t->m->system, 1024),
+    machineIPs(t->m->system, 1024),
+    lineNumbers(t->m->system, 256),
+    exceptionHandlers(t->m->system, 256),
+    pool(t->m->system, 256)
   { }
 
   void pushReturnValue(unsigned code) {
@@ -992,17 +1003,29 @@ class Compiler: public Assembler {
     unsigned footprint = FrameFootprint
       + (methodParameterFootprint(t, target) * BytesPerWord);
 
-    Code* code = static_cast<Code*>(methodCompiled(t, target));
+    Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, target));
         
-    push(rsp);
+    push(rbp);
     push(poolRegister(), poolReference(target));
     push(rbp, FrameThread);
 
-    callAlignedAddress(code->code());
+    callAlignedAddress(compiledCode(code));
 
     add(footprint, rsp);                     // pop arguments
 
     pushReturnValue(methodReturnCode(t, target));
+  }
+
+  void compileCall2(void* function, unsigned argCount) {
+    mov(rbp, FrameThread, rax);
+    lea(rsp, -(BytesPerWord * 2), rcx);
+    mov(rcx, rax, threadFrameOffset());      // set thread frame to current
+
+    callAddress(function);
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * argCount, rsp);
+    }
   }
 
   void compileCall(void* function, object arg1) {
@@ -1014,14 +1037,7 @@ class Compiler: public Assembler {
       mov(rbp, FrameThread, rdi);
     }
 
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
-
-    callAddress(function);
-
-    if (BytesPerWord == 4) {
-      add(BytesPerWord * 2, rsp);
-    }
+    compileCall2(function, 2);
   }
 
   void compileCall(void* function, Register arg1) {
@@ -1033,14 +1049,7 @@ class Compiler: public Assembler {
       mov(rbp, FrameThread, rdi);
     }
 
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
-
-    callAddress(function);
-
-    if (BytesPerWord == 4) {
-      add(BytesPerWord * 2, rsp);
-    }
+    compileCall2(function, 2);
   }
 
   void compileCall(void* function, object arg1, Register arg2) {
@@ -1054,38 +1063,21 @@ class Compiler: public Assembler {
       mov(rbp, FrameThread, rdi);
     }
 
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
-
-    callAddress(function);
-
-    if (BytesPerWord == 4) {
-      add(BytesPerWord * 3, rsp);
-    }
+    compileCall2(function, 3);
   }
 
   void compileCall(void* function, void* arg1, Register arg2) {
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, frameOffset);              // set thread frame to current
-
     if (BytesPerWord == 4) {
       push(arg2);
-      pushAddress(arg1);
+      pushAddress(reinterpret_cast<uintptr_t>(arg1));
       push(rbp, FrameThread);
     } else {
       mov(arg2, rdx);
-      mov(arg1, rsi);
+      mov(reinterpret_cast<uintptr_t>(arg1), rsi);
       mov(rbp, FrameThread, rdi);
     }
 
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
-
-    callAddress(function);
-
-    if (BytesPerWord == 4) {
-      add(BytesPerWord * 3, rsp);
-    }
+    compileCall2(function, 3);
   }
 
   void compileCall(void* function, Register arg1, Register arg2) {
@@ -1099,17 +1091,10 @@ class Compiler: public Assembler {
       mov(rbp, FrameThread, rdi);
     }
 
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset);        // set thread frame to current
-
-    callAddress(function);
-
-    if (BytesPerWord == 4) {
-      add(BytesPerWord * 3, rsp);
-    }
+    compileCall2(function, 3);
   }
 
-  void compile(MyThread* t, object method) {
+  Compiled* compile(object method) {
     PROTECT(t, method);
 
     object code = methodCode(t, method);
@@ -1133,7 +1118,7 @@ class Compiler: public Assembler {
     if (lnt and lineNumberTableLength(t, lnt)) {
       lineNumberIndex = 0;
     } else {
-      lineNumberIndex = 0;
+      lineNumberIndex = -1;
     }
     
     for (unsigned ip = 0; ip < codeLength(t, code);) {
@@ -1144,11 +1129,15 @@ class Compiler: public Assembler {
         object lnt = codeLineNumberTable(t, code);
         LineNumber* ln = lineNumberTableBody(t, lnt, lineNumberIndex);
 
-        if (lineNumberIp(t, ln) == ip) {
+        if (lineNumberIp(ln) == ip) {
           lineNumbers.append4(this->code.length());
-          lineNumbers.append4(lineNumberLine(t, ln));
-          if (lineNumberIndex < lineNumberTableLength(t, lnt)) {
+          lineNumbers.append4(lineNumberLine(ln));
+          if (static_cast<unsigned>(lineNumberIndex) + 1
+              < lineNumberTableLength(t, lnt))
+          {
             ++ lineNumberIndex;
+          } else {
+            lineNumberIndex = -1;
           }
         }
       }
@@ -1221,7 +1210,7 @@ class Compiler: public Assembler {
 
         outOfBounds.mark();
         compileCall
-          (throwNew,
+          (reinterpret_cast<void*>(throwNew),
            arrayBody
            (t, t->m->types, Machine::ArrayIndexOutOfBoundsExceptionType));
 
@@ -1289,7 +1278,7 @@ class Compiler: public Assembler {
 
         outOfBounds.mark();
         compileCall
-          (throwNew,
+          (reinterpret_cast<void*>(throwNew),
            arrayBody
            (t, t->m->types, Machine::ArrayIndexOutOfBoundsExceptionType));
 
@@ -1334,7 +1323,7 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
       
         object class_ = resolveClass(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
         Label nonnegative(this);
 
@@ -1343,11 +1332,12 @@ class Compiler: public Assembler {
         jle(nonnegative);
 
         compileCall
-          (throwNew,
+          (reinterpret_cast<void*>(throwNew),
            arrayBody(t, t->m->types, Machine::NegativeArraySizeExceptionType));
 
         nonnegative.mark();
-        compileCall(makeBlankObjectArray, class_, rax);
+        compileCall(reinterpret_cast<void*>(makeBlankObjectArray),
+                    class_, rax);
         push(rax);
       } break;
 
@@ -1397,7 +1387,7 @@ class Compiler: public Assembler {
 
       case athrow:
         pop(rax);
-        compileCall(throw_, rax);      
+        compileCall(reinterpret_cast<void*>(throw_), rax);      
         break;
 
       case bipush: {
@@ -1408,7 +1398,7 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
 
         object class_ = resolveClass(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
         Label next(this);
         
@@ -1421,12 +1411,12 @@ class Compiler: public Assembler {
         cmp(rcx, rax);
         je(next);
 
-        compileCall(isAssignableFrom, rcx, rax);
+        compileCall(reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
         cmp(0, rax);
         jne(next);
         
         compileCall
-          (throwNew,
+          (reinterpret_cast<void*>(throwNew),
            arrayBody(t, t->m->types, Machine::ClassCastExceptionType));
 
         next.mark();        
@@ -1440,7 +1430,7 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
         
         object field = resolveField(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
       
         pop(rax);
 
@@ -1485,11 +1475,11 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
         
         object field = resolveField(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
         PROTECT(t, field);
         
         initClass(t, fieldClass(t, field));
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
         
         object table = classStaticTable(t, fieldClass(t, field));
 
@@ -1725,7 +1715,7 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
 
         object class_ = resolveClass(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
         Label call(this);
         Label zero(this);
@@ -1744,7 +1734,7 @@ class Compiler: public Assembler {
         jmp(next);
 
         call.mark();
-        compileCall(isAssignableFrom, rcx, rax);
+        compileCall(reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
         push(rax);
         jmp(next);
 
@@ -1758,34 +1748,34 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
 
         object target = resolveMethod(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
         object class_ = methodClass(t, target);
         if (isSpecialMethod(t, target, class_)) {
           target = findMethod(t, target, classSuper(t, class_));
         }
 
-        compileDirectInvoke(t, target);
+        compileDirectInvoke(target);
       } break;
 
       case invokestatic: {
         uint16_t index = codeReadInt16(t, code, ip);
 
         object target = resolveMethod(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
         PROTECT(t, target);
 
         initClass(t, methodClass(t, target));
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
-        compileDirectInvoke(t, target);
+        compileDirectInvoke(target);
       } break;
 
       case invokevirtual: {
         uint16_t index = codeReadInt16(t, code, ip);
         
         object target = resolveMethod(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
         unsigned parameterFootprint
           = methodParameterFootprint(t, target) * BytesPerWord;
@@ -1812,7 +1802,7 @@ class Compiler: public Assembler {
 
         add(footprint, rsp);              // pop arguments
 
-        pushReturnValue(t, methodReturnCode(t, target));
+        pushReturnValue(methodReturnCode(t, target));
       } break;
 
       case isub:
@@ -1857,16 +1847,16 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
         
         object class_ = resolveClass(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
         PROTECT(t, class_);
         
         initClass(t, class_);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
         if (classVmFlags(t, class_) & WeakReferenceFlag) {
-          compileCall(makeNewWeakReference, class_);
+          compileCall(reinterpret_cast<void*>(makeNewWeakReference), class_);
         } else {
-          compileCall(makeNew, class_);
+          compileCall(reinterpret_cast<void*>(makeNew), class_);
         }
 
         push(rax);
@@ -1882,7 +1872,7 @@ class Compiler: public Assembler {
         jge(nonnegative);
 
         compileCall
-          (throwNew,
+          (reinterpret_cast<void*>(throwNew),
            arrayBody
            (t, t->m->types, Machine::NegativeArraySizeExceptionType));
 
@@ -1925,7 +1915,8 @@ class Compiler: public Assembler {
         default: abort(t);
         }
 
-        compileCall(makeBlankArray, constructor, rax);
+        compileCall(reinterpret_cast<void*>(makeBlankArray),
+                    reinterpret_cast<void*>(constructor), rax);
         push(rax);
       } break;
 
@@ -1937,7 +1928,7 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
     
         object field = resolveField(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
       
         switch (fieldCode(t, field)) {
         case ByteField:
@@ -1989,10 +1980,10 @@ class Compiler: public Assembler {
         uint16_t index = codeReadInt16(t, code, ip);
         
         object field = resolveField(t, codePool(t, code), index - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
 
         initClass(t, fieldClass(t, field));
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
         
         object table = classStaticTable(t, fieldClass(t, field));
 
@@ -2006,14 +1997,16 @@ class Compiler: public Assembler {
         case ShortField:
         case FloatField:
         case IntField: {
-          compileCall(makeNew, arrayBody(t, t->m->types, Machine::IntType));
+          compileCall(reinterpret_cast<void*>(makeNew), 
+                      arrayBody(t, t->m->types, Machine::IntType));
 
           pop4(rax, IntValue);
         } break;
 
         case DoubleField:
         case LongField: {
-          compileCall(makeNew, arrayBody(t, t->m->types, Machine::LongType));
+          compileCall(reinterpret_cast<void*>(makeNew),
+                      arrayBody(t, t->m->types, Machine::LongType));
 
           pop4(rax, LongValue);
           pop4(rax, LongValue + 4);
@@ -2051,7 +2044,6 @@ class Compiler: public Assembler {
   uint32_t machineIpForJavaIp(uint16_t javaIP) {
     unsigned bottom = 0;
     unsigned top = javaIPs.length() / 2;
-    bool success = false;
     for (unsigned span = top - bottom; span; span = top - bottom) {
       unsigned middle = bottom + (span / 2);
       uint32_t k = javaIPs.get2(middle * 2);
@@ -2080,35 +2072,44 @@ class Compiler: public Assembler {
     PROTECT(t, code);
 
     object eht = codeExceptionHandlerTable(t, code);
-    PROTECT(t, eht);
+    if (eht) {
+      PROTECT(t, eht);
 
-    for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+      for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
+        ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
       
-      exceptionHandlers.append4(machineIpForJavaIp(exceptionHandlerStart(eh)));
-      exceptionHandlers.append4(machineIpForJavaIp(exceptionHandlerEnd(eh)));
-      exceptionHandlers.append4(machineIpForJavaIp(exceptionHandlerIp(eh)));
+        exceptionHandlers.append4
+          (machineIpForJavaIp(exceptionHandlerStart(eh)));
 
-      unsigned ct = exceptionHandlerCatchType(eh);
-      object catchType;
-      if (ct) {
-        catchType = resolveClass
-          (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
-      } else {
-        catchType = 0;
+        exceptionHandlers.append4
+          (machineIpForJavaIp(exceptionHandlerEnd(eh)));
+
+        exceptionHandlers.append4
+          (machineIpForJavaIp(exceptionHandlerIp(eh)));
+
+        unsigned ct = exceptionHandlerCatchType(eh);
+        object catchType;
+        if (ct) {
+          catchType = resolveClass
+            (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
+        } else {
+          catchType = 0;
+        }
+
+        exceptionHandlers.append4
+          (catchType ? (poolReference(catchType) / BytesPerWord) - 1 : 0);
       }
-
-      exceptionHandlers.append4
-        (catchType ? (poolReference(catchType) / BytesPerWord) - 1 : 0);
     }
   }
 
-  Code* compileNativeInvoker() {
+  unsigned threadFrameOffset() {
+    return reinterpret_cast<uintptr_t>(&(t->frame))
+      - reinterpret_cast<uintptr_t>(t);
+  }
+
+  Compiled* compileNativeInvoker() {
     push(rbp);
     mov(rsp, rbp);
-
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset);      // set thread frame to current
 
     if (BytesPerWord == 4) {
       push(rbp, FrameMethod);
@@ -2117,6 +2118,9 @@ class Compiler: public Assembler {
       mov(rbp, FrameMethod, rsi);
       mov(rbp, FrameThread, rdi);
     }
+
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, threadFrameOffset());      // set thread frame to current
 
     mov(reinterpret_cast<uintptr_t>(invokeNative), rax);
     call(rax);
@@ -2132,12 +2136,9 @@ class Compiler: public Assembler {
     return finish();
   }
 
-  Code* compileStub() {
+  Compiled* compileStub() {
     push(rbp);
     mov(rsp, rbp);
-
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset);      // set thread frame to current
 
     if (BytesPerWord == 4) {
       push(rbp, FrameMethod);
@@ -2146,6 +2147,9 @@ class Compiler: public Assembler {
       mov(rbp, FrameMethod, rsi);
       mov(rbp, FrameThread, rdi);
     }
+
+    mov(rbp, FrameThread, rax);
+    mov(rbp, rax, threadFrameOffset());      // set thread frame to current
 
     mov(reinterpret_cast<uintptr_t>(compileMethod), rax);
     call(rax);
@@ -2166,19 +2170,14 @@ class Compiler: public Assembler {
     return finish();
   }
 
-  Code* finish() {
-    unsigned footprint = pad(code.length())
-      + pad(lineNumbers.length())
-      + pad(exceptionHandlers.length());
-
-    return new (t->m->system->allocate(sizeof(Code) + footprint))
-      Code(&code, &lineNumbers, &exceptionHandlers);
+  Compiled* finish() {
+    return makeCompiled(t, &code, &lineNumbers, &exceptionHandlers);
   }
 
   object makePool() {
     if (pool.length()) {
       object array = makeArray(t, pool.length() / BytesPerWord, false);
-      pool.copyTo(&arrayBody(t, array));
+      pool.copyTo(&arrayBody(t, array, 0));
       return array;
     } else {
       return 0;
@@ -2195,7 +2194,7 @@ class Compiler: public Assembler {
       mov(rdi, MethodCode, rdi);
       poolRegisterClobbered = false;
     }
-    pool.appendAddress(o);
+    pool.appendAddress(reinterpret_cast<uintptr_t>(o));
     return pool.length() + BytesPerWord;
   }
 
@@ -2212,7 +2211,6 @@ class Compiler: public Assembler {
   }
 
   MyThread* t;
-  unsigned threadFrameOffset;
   bool poolRegisterClobbered;
   Buffer javaIPs;
   Buffer machineIPs;
@@ -2224,12 +2222,16 @@ class Compiler: public Assembler {
 void
 compileMethod2(MyThread* t, object method)
 {
-  if (methodCompiled(t, method) == t->m->processor->methodStub(t)) {
+  if (reinterpret_cast<Compiled*>(methodCompiled(t, method))
+      == t->m->processor->methodStub(t))
+  {
     PROTECT(t, method);
 
     ACQUIRE(t, t->m->classLock);
     
-    if (methodCompiled(t, method) == t->m->processor->methodStub(t)) {
+    if (reinterpret_cast<Compiled*>(methodCompiled(t, method))
+        == t->m->processor->methodStub(t))
+    {
       if (Verbose) {
         fprintf(stderr, "compiling %s.%s\n",
                 &byteArrayBody(t, className(t, methodClass(t, method)), 0),
@@ -2237,17 +2239,17 @@ compileMethod2(MyThread* t, object method)
       }
 
       Compiler c(t);
-      Code* code = c.compile(method);
+      Compiled* code = c.compile(method);
     
       if (Verbose) {
         fprintf(stderr, "compiled %s.%s from %p to %p\n",
                 &byteArrayBody(t, className(t, methodClass(t, method)), 0),
                 &byteArrayBody(t, methodName(t, method), 0),
-                code->code(),
-                code->code() + code->codeLength());
+                compiledCode(code),
+                compiledCode(code) + compiledCodeLength(code));
       }
 
-      set(t, methodCompiled(t, method), compiled);
+      methodCompiled(t, method) = reinterpret_cast<uint64_t>(code);
 
       object pool = c.makePool();
       set(t, methodCode(t, method), pool);
@@ -2259,7 +2261,7 @@ void
 updateCaller(MyThread* t, object method)
 {
   uintptr_t stub = reinterpret_cast<uintptr_t>
-    (&compiledBody(t, t->m->processor->methodStub(t), 0));
+    (compiledCode(static_cast<Compiled*>(t->m->processor->methodStub(t))));
 
   Assembler a(t->m->system);
   a.mov(stub, rax);
@@ -2277,7 +2279,7 @@ updateCaller(MyThread* t, object method)
            % BytesPerWord == 0);
 
     *reinterpret_cast<void**>(caller + offset)
-      = &compiledBody(t, methodCompiled(t, method), 0);
+      = compiledCode(reinterpret_cast<Compiled*>(methodCompiled(t, method)));
   }
 }
 
@@ -2466,9 +2468,10 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   void* frame = t->frame;
   Reference* reference = t->reference;
 
+  Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
   uint64_t result = vmInvoke
-    (&compiledBody(t, methodCompiled(t, method), 0), arguments->array,
-     arguments->position * BytesPerWord, returnType);
+    (compiledCode(code), arguments->array, arguments->position * BytesPerWord,
+     returnType);
 
   while (t->reference != reference) {
     dispose(t, t->reference);
@@ -2616,31 +2619,33 @@ class MyProcessor: public Processor {
   virtual uintptr_t
   frameStart(Thread* vmt)
   {
-    return static_cast<MyThread*>(vmt)->frame;
+    return reinterpret_cast<uintptr_t>(static_cast<MyThread*>(vmt)->frame);
   }
 
   virtual uintptr_t
   frameNext(Thread*, uintptr_t frame)
   {
-    ::frameNext(reinterpret_cast<void*>(frame));
+    return reinterpret_cast<uintptr_t>
+      (::frameNext(reinterpret_cast<void*>(frame)));
   }
 
   virtual bool
   frameValid(Thread*, uintptr_t frame)
   {
-    return ::frameValid(frame);
+    return ::frameValid(reinterpret_cast<void*>(frame));
   }
 
   virtual object
   frameMethod(Thread*, uintptr_t frame)
   {
-    return ::frameMethod(frame);
+    return ::frameMethod(reinterpret_cast<void*>(frame));
   }
 
   virtual unsigned
   frameIp(Thread* t, uintptr_t frame)
   {
-    return addressOffset(t, frameMethod(frame), frameAddress(frame));
+    void* f = reinterpret_cast<void*>(frame);
+    return addressOffset(t, ::frameMethod(f), ::frameAddress(f));
   }
 
   virtual object*
@@ -2742,8 +2747,8 @@ class MyProcessor: public Processor {
   }
   
   System* s;
-  void* methodStub_;
-  void* nativeInvoker_;
+  Compiled* methodStub_;
+  Compiled* nativeInvoker_;
 };
 
 } // namespace

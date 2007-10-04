@@ -14,10 +14,10 @@ class Processor {
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent) = 0;
 
-  virtual object
+  virtual void*
   methodStub(Thread* t) = 0;
 
-  virtual object
+  virtual void*
   nativeInvoker(Thread* t) = 0;
 
   virtual unsigned

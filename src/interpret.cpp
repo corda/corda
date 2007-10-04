@@ -2855,13 +2855,13 @@ class MyProcessor: public Processor {
     return new (s->allocate(sizeof(Thread))) Thread(m, javaThread, parent);
   }
 
-  virtual object
+  virtual Compiled*
   methodStub(vm::Thread*)
   {
     return 0;
   }
 
-  virtual object
+  virtual Compiled*
   nativeInvoker(vm::Thread*)
   {
     return 0;

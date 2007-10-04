@@ -14,7 +14,7 @@ inline unsigned
 pad(unsigned size, unsigned alignment)
 {
   unsigned n = alignment;
-  while (n % size and n % sizeof(void*)) ++ n;
+  while (size and n % size and n % sizeof(void*)) ++ n;
   return n - alignment;
 }
 
@@ -44,6 +44,24 @@ inline bool
 startsWith(const char* a, const char* b)
 {
   return strncmp(a, b, strlen(a)) == 0;
+}
+
+inline bool
+endsWith(const char* a, const char* b)
+{
+  unsigned al = strlen(a);
+  unsigned bl = strlen(b);
+  return (bl >= al) and strncmp(a, b + (bl - al), al) == 0;
+}
+
+inline const char*
+take(unsigned n, const char* c)
+{
+  char* r = static_cast<char*>(malloc(n + 1));
+  assert(r);
+  memcpy(r, c, n);
+  r[n] = 0;
+  return r;
 }
 
 class Object {
@@ -776,6 +794,8 @@ sizeOf(const char* type, Object* declarations)
     return sizeof(uint64_t);
   } else if (equal(type, "char")) {
     return sizeof(char);
+  } else if (endsWith("[0]", type)) {
+    return 0;
   } else if (namesPointer(type)) {
     return sizeof(void*);
   } else {
@@ -1051,12 +1071,19 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   }
 
   out->write("inline ");
-  out->write(typeName);
-  if (member->type != Object::Scalar and memberTypeObject(member)) {
+
+  if (endsWith("[0]", typeName)) {
+    out->write(take(strlen(typeName) - 3, typeName));
     out->write("*");
   } else {
-    out->write("&");
+    out->write(typeName);
+    if (member->type != Object::Scalar and memberTypeObject(member)) {
+      out->write("*");
+    } else {
+      out->write("&");
+    }
   }
+
   out->write("\n");
   writeAccessorName(out, member, true, unsafe);
   if (memberOwner(member)->type == Object::Pod) {
@@ -1093,18 +1120,28 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   }
 
   out->write("  return reinterpret_cast<");
-  out->write(typeName);
-  if (member->type != Object::Scalar and memberTypeObject(member)) {
+
+  if (endsWith("[0]", typeName)) {
+    out->write(take(strlen(typeName) - 3, typeName));
     out->write("*");
   } else {
-    out->write("&");
+    out->write(typeName);
+    if (member->type != Object::Scalar and memberTypeObject(member)) {
+      out->write("*");
+    } else {
+      out->write("&");
+    }
   }
+
   if (memberOwner(member)->type == Object::Pod) {
     out->write(">(o->body");
   } else {
     out->write(">(reinterpret_cast<uint8_t*>(o)");
   }
-  if (member->type != Object::Scalar and memberTypeObject(member)) {
+  if (endsWith("[0]", typeName)
+      or (member->type != Object::Scalar
+          and memberTypeObject(member)))
+  {
     out->write(" + ");
   } else {
     out->write("[");
@@ -1121,7 +1158,10 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     out->write(elementSize);
     out->write(")");
   }
-  if (member->type == Object::Scalar or memberTypeObject(member) == 0) {
+  if (not endsWith("[0]", typeName)
+      and (member->type == Object::Scalar
+          or memberTypeObject(member) == 0))
+  {
     out->write("]");
   }
   out->write(");\n}\n\n");

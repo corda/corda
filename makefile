@@ -71,7 +71,7 @@ cflags += -g3 -O3 -DNDEBUG
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
-asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%.o,$(x)))
+asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
 
 stdcpp-sources = $(src)/stdc++.cpp
@@ -112,14 +112,7 @@ interpreter-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/main.cpp
 
-interpreter-asm-sources = $(src)/vmInvoke.S
-
-ifeq ($(arch),i386)
-	interpreter-asm-sources += $(src)/cdecl.S
-endif
-ifeq ($(arch),x86_64)
-	interpreter-asm-sources += $(src)/amd64.S
-endif
+interpreter-asm-sources = $(src)/compile.S $(src)/system.S
 
 interpreter-cpp-objects = \
 	$(call cpp-objects,$(interpreter-sources),$(src))
@@ -219,7 +212,7 @@ $(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
 $(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
 	$(compile-object)
 
-$(interpreter-asm-objects): $(bld)/%.o: $(src)/%.S
+$(interpreter-asm-objects): $(bld)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
 $(generator-objects): $(bld)/%.o: $(src)/%.cpp

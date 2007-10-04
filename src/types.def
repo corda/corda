@@ -38,6 +38,12 @@
   (object spec)
   (object class))
 
+(pod compiled
+  (uint32_t codeLength)
+  (uint16_t lineNumberTableLength)
+  (uint16_t exceptionHandlerTableLength)
+  (uint8_t[0] body))
+
 (type method java/lang/reflect/Method
   (extends accessibleObject)
   (uint8_t vmFlags)
@@ -50,13 +56,7 @@
   (object spec)
   (object class)
   (object code)
-  (void* compiled))
-
-(type compiled
-  (nogc object pool)
-  (uint32_t lineNumbers)
-  (uint32_t exceptionHandlers)
-  (array uint8_t body))
+  (uint64_t compiled))
 
 (type nativeMethodData
   (void* function)

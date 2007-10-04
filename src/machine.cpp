@@ -992,11 +992,11 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       unsigned parameterFootprint = t->m->processor->parameterFootprint
         (t, specString, flags & ACC_STATIC);
 
-      object compiled;
+      Compiled* compiled;
       if (flags & ACC_NATIVE) {
-        compiled = t->m->processor->nativeInvoker(t);
+        compiled = static_cast<Compiled*>(t->m->processor->nativeInvoker(t));
       } else {
-        compiled = t->m->processor->methodStub(t);
+        compiled = static_cast<Compiled*>(t->m->processor->methodStub(t));
       }
 
       object method = makeMethod(t,
@@ -1010,7 +1010,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  arrayBody(t, pool, spec - 1),
                                  class_,
                                  code,
-                                 compiled);
+                                 reinterpret_cast<uint64_t>(compiled));
       PROTECT(t, method);
 
       if (flags & ACC_STATIC) {
