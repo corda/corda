@@ -109,12 +109,12 @@ exit:
      
 .globl vmJump
 vmJump:
-   //  8(%ebp): address
-   // 12(%ebp): base
-   movq   8(%ebp),%eax
-   movq   12(%ebp),%rsp
-   popq   %rbp
-   jmp    *(%eax)
+   // 4(%esp): address
+   // 8(%esp): base
+   movl   4(%esp),%eax
+   movl   8(%esp),%esp
+   popl   %ebp
+   jmp    *%eax
    
 #else
 #  error unsupported platform

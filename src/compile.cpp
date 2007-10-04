@@ -11,6 +11,9 @@ extern "C" uint64_t
 vmInvoke(void* function, void* stack, unsigned stackSize,
          unsigned returnType);
 
+extern "C" void
+vmCall();
+
 extern "C" void NO_RETURN
 vmJump(void* address, void* base);
 
@@ -138,19 +141,19 @@ class MyThread: public Thread {
 inline void*
 frameBase(void* frame)
 {
-  return *static_cast<void**>(frame);
+  return static_cast<void**>(frame)[(-FrameFootprint / BytesPerWord) - 2];
 }
 
 inline bool
 frameValid(void* frame)
 {
-  return frameBase(frame) != 0;
+  return frame != 0;
 }
 
 inline void*
 frameNext(void* frame)
 {
-  return static_cast<void**>(frameBase(frame))[FrameNext / BytesPerWord] ;
+  return static_cast<void**>(frameBase(frame))[FrameNext / BytesPerWord];
 }
 
 inline object
@@ -162,7 +165,7 @@ frameMethod(void* frame)
 inline void*
 frameAddress(void* frame)
 {
-  return static_cast<void**>(frame)[1];
+  return static_cast<void**>(frame)[(-FrameFootprint / BytesPerWord) - 1];
 }
 
 inline void*
@@ -352,7 +355,7 @@ invokeNative2(MyThread* t, object method)
   args[argOffset++] = reinterpret_cast<uintptr_t>(t);
   types[typeOffset++] = POINTER_TYPE;
 
-  uintptr_t* sp = static_cast<uintptr_t*>(t->frame)
+  uintptr_t* sp = static_cast<uintptr_t*>(frameBase(t->frame))
     + (methodParameterFootprint(t, method) + 1)
     + (FrameFootprint / BytesPerWord);
 
@@ -417,7 +420,7 @@ invokeNative2(MyThread* t, object method)
        args,
        types,
        count + 1,
-       footprint,
+       footprint * BytesPerWord,
        returnType);
   }
 
@@ -960,6 +963,9 @@ parameterOffset(unsigned index)
   return FrameFootprint + ((index + 2) * BytesPerWord);
 }
 
+Compiled*
+caller(MyThread* t);
+
 class Compiler: public Assembler {
  public:
   Compiler(MyThread* t):
@@ -1005,23 +1011,27 @@ class Compiler: public Assembler {
 
     Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, target));
         
-    push(rbp);
+    push(rsp);
     push(poolRegister(), poolReference(target));
     push(rbp, FrameThread);
 
     callAlignedAddress(compiledCode(code));
 
-    add(footprint, rsp);                     // pop arguments
+    add(footprint, rsp); // pop arguments
 
     pushReturnValue(methodReturnCode(t, target));
   }
 
   void compileCall2(void* function, unsigned argCount) {
-    mov(rbp, FrameThread, rax);
-    lea(rsp, -(BytesPerWord * 2), rcx);
-    mov(rcx, rax, threadFrameOffset());      // set thread frame to current
+    if (BytesPerWord == 4) {
+      push(rbp, FrameThread);
+    } else {
+      mov(rbp, FrameThread, rdi);
+    }
 
-    callAddress(function);
+    mov(reinterpret_cast<uintptr_t>(function), rbx);
+
+    callAddress(compiledCode(caller(t)));
 
     if (BytesPerWord == 4) {
       add(BytesPerWord * argCount, rsp);
@@ -1031,10 +1041,8 @@ class Compiler: public Assembler {
   void compileCall(void* function, object arg1) {
     if (BytesPerWord == 4) {
       push(poolRegister(), poolReference(arg1));
-      push(rbp, FrameThread);
     } else {
       mov(poolRegister(), poolReference(arg1), rsi);
-      mov(rbp, FrameThread, rdi);
     }
 
     compileCall2(function, 2);
@@ -1043,10 +1051,8 @@ class Compiler: public Assembler {
   void compileCall(void* function, Register arg1) {
     if (BytesPerWord == 4) {
       push(arg1);
-      push(rbp, FrameThread);
     } else {
       mov(arg1, rsi);
-      mov(rbp, FrameThread, rdi);
     }
 
     compileCall2(function, 2);
@@ -1056,11 +1062,9 @@ class Compiler: public Assembler {
     if (BytesPerWord == 4) {
       push(arg2);
       push(poolRegister(), poolReference(arg1));
-      push(rbp, FrameThread);
     } else {
       mov(arg2, rdx);
       mov(poolRegister(), poolReference(arg1), rsi);
-      mov(rbp, FrameThread, rdi);
     }
 
     compileCall2(function, 3);
@@ -1070,11 +1074,9 @@ class Compiler: public Assembler {
     if (BytesPerWord == 4) {
       push(arg2);
       pushAddress(reinterpret_cast<uintptr_t>(arg1));
-      push(rbp, FrameThread);
     } else {
       mov(arg2, rdx);
       mov(reinterpret_cast<uintptr_t>(arg1), rsi);
-      mov(rbp, FrameThread, rdi);
     }
 
     compileCall2(function, 3);
@@ -1084,11 +1086,9 @@ class Compiler: public Assembler {
     if (BytesPerWord == 4) {
       push(arg2);
       push(arg1);
-      push(rbp, FrameThread);
     } else {
       mov(arg2, rdx);
       mov(arg1, rsi);
-      mov(rbp, FrameThread, rdi);
     }
 
     compileCall2(function, 3);
@@ -2107,35 +2107,6 @@ class Compiler: public Assembler {
       - reinterpret_cast<uintptr_t>(t);
   }
 
-  Compiled* compileNativeInvoker() {
-    push(rbp);
-    mov(rsp, rbp);
-
-    if (BytesPerWord == 4) {
-      push(rbp, FrameMethod);
-      push(rbp, FrameThread);
-    } else {
-      mov(rbp, FrameMethod, rsi);
-      mov(rbp, FrameThread, rdi);
-    }
-
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset());      // set thread frame to current
-
-    mov(reinterpret_cast<uintptr_t>(invokeNative), rax);
-    call(rax);
-
-    if (BytesPerWord == 4) {
-      add(BytesPerWord * 2, rsp);
-    }
-
-    mov(rbp, rsp);
-    pop(rbp);
-    ret();
-
-    return finish();
-  }
-
   Compiled* compileStub() {
     push(rbp);
     mov(rsp, rbp);
@@ -2148,11 +2119,8 @@ class Compiler: public Assembler {
       mov(rbp, FrameThread, rdi);
     }
 
-    mov(rbp, FrameThread, rax);
-    mov(rbp, rax, threadFrameOffset());      // set thread frame to current
-
-    mov(reinterpret_cast<uintptr_t>(compileMethod), rax);
-    call(rax);
+    mov(reinterpret_cast<uintptr_t>(compileMethod), rbx);
+    callAddress(compiledCode(caller(t)));
 
     if (BytesPerWord == 4) {
       add(BytesPerWord * 2, rsp);
@@ -2166,6 +2134,42 @@ class Compiler: public Assembler {
     
     add(CompiledBody, rax);
     jmp(rax);                                // call compiled code
+
+    return finish();
+  }
+
+  Compiled* compileNativeInvoker() {
+    push(rbp);
+    mov(rsp, rbp);
+
+    if (BytesPerWord == 4) {
+      push(rbp, FrameMethod);
+      push(rbp, FrameThread);
+    } else {
+      mov(rbp, FrameMethod, rsi);
+      mov(rbp, FrameThread, rdi);
+    }
+
+    mov(reinterpret_cast<uintptr_t>(invokeNative), rbx);
+    callAddress(compiledCode(caller(t)));
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 2, rsp);
+    }
+
+    mov(rbp, rsp);
+    pop(rbp);
+    ret();
+
+    return finish();
+  }
+
+  Compiled* compileCaller() {
+    mov(rbp, FrameThread, rdi);
+    lea(rsp, FrameFootprint + BytesPerWord, rcx);
+    mov(rcx, rdi, threadFrameOffset()); // set thread frame to current
+
+    jmp(rbx);
 
     return finish();
   }
@@ -2544,6 +2548,16 @@ class MyProcessor: public Processor {
     return nativeInvoker_;
   }
 
+  Compiled*
+  caller(Thread* t)
+  {
+    if (caller_ == 0) {
+      Compiler c(static_cast<MyThread*>(t));
+      caller_ = c.compileCaller();
+    }
+    return caller_;
+  }
+
   virtual unsigned
   parameterFootprint(vm::Thread*, const char* s, bool static_)
   {
@@ -2743,13 +2757,24 @@ class MyProcessor: public Processor {
       s->free(nativeInvoker_);
     }
 
+    if (caller_) {
+      s->free(caller_);
+    }
+
     s->free(this);
   }
   
   System* s;
   Compiled* methodStub_;
   Compiled* nativeInvoker_;
+  Compiled* caller_;
 };
+
+Compiled*
+caller(MyThread* t)
+{
+  return static_cast<MyProcessor*>(t->m->processor)->caller(t);
+}
 
 } // namespace
 
