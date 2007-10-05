@@ -44,6 +44,7 @@ public class SocketChannel extends SelectableChannel
   }
 
   public int read(ByteBuffer b) throws IOException {
+    if (! open) return -1;
     if (b.remaining() == 0) return 0;
     int r = natRead(socket, b.array(), b.arrayOffset() + b.position(), b.remaining());
     b.position(b.position() + r);

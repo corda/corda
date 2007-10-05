@@ -271,6 +271,8 @@ Java_java_nio_channels_SocketChannel_natRead(JNIEnv *e,
     } else {
       throwIOException(e);
     }
+  } else if (r == 0) {
+    return -1;
   }
   return r;
 }
