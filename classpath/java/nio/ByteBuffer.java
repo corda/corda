@@ -60,7 +60,9 @@ public class ByteBuffer {
     if (position != 0) {
       System.arraycopy(array, arrayOffset+position, array, arrayOffset, remaining());
     }
-    position=0;
+    position=remaining();
+    limit(capacity());
+    
     return this;
   }
 
