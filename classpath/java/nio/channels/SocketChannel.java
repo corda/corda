@@ -58,7 +58,9 @@ public class SocketChannel extends SelectableChannel
       natThrowWriteError(socket);
     }
     int w = natWrite(socket, b.array(), b.arrayOffset() + b.position(), b.remaining());
-    b.position(b.position() + w);
+    if (w > 0) {
+      b.position(b.position() + w);
+    }
     return w;
   }
 
