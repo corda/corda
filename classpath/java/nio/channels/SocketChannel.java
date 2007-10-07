@@ -47,7 +47,9 @@ public class SocketChannel extends SelectableChannel
     if (! open) return -1;
     if (b.remaining() == 0) return 0;
     int r = natRead(socket, b.array(), b.arrayOffset() + b.position(), b.remaining());
-    b.position(b.position() + r);
+    if (r > 0) {
+      b.position(b.position() + r);
+    }
     return r;
   }
 
