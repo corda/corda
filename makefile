@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 arch = $(shell uname -m)
 ifeq ($(arch),i586)
@@ -45,7 +45,7 @@ javac = javac
 strip = :
 show-size = :
 
-warnings = -Wall -Wextra -Werror -Wold-style-cast -Wunused-parameter \
+warnings = -Wall -Wextra -Werror -Wunused-parameter \
 	-Winit-self -Wconversion
 
 thread-lflags = -lpthread
