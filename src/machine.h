@@ -1266,6 +1266,9 @@ inline void
 dispose(Thread* t, Reference* r)
 {
   *(r->handle) = r->next;
+  if (r->next) {
+    r->next->handle = r->handle;
+  }
   t->m->system->free(r);
 }
 

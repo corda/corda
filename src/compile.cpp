@@ -353,6 +353,18 @@ throw_(MyThread* t, object o)
   unwind(t);
 }
 
+int64_t
+divideLong(MyThread*, int64_t a, int64_t b)
+{
+  return a / b;
+}
+
+int64_t
+moduloLong(MyThread*, int64_t a, int64_t b)
+{
+  return a % b;
+}
+
 object
 makeBlankObjectArray(Thread* t, object class_, int32_t length)
 {
@@ -800,6 +812,25 @@ class Assembler {
     }
   }
 
+  void adc(int32_t v, Register dst) {
+    assert(code.s, isByte(v)); // todo
+
+    rex();
+    code.append(0x83);
+    code.append(0xd0 | dst);
+    code.append(v);
+  }
+
+  void adc(Register src, Register dst, unsigned dstOffset) {
+    rex();
+    offsetInstruction(0x11, 0, 0x40, 0x80, src, dst, dstOffset);
+  }
+
+  void sub(Register src, Register dst, unsigned dstOffset) {
+    rex();
+    offsetInstruction(0x29, 0, 0x40, 0x80, src, dst, dstOffset);
+  }
+
   void sub(Register src, Register dst) {
     rex();
     code.append(0x29);
@@ -813,6 +844,11 @@ class Assembler {
     code.append(0x83);
     code.append(0xe8 | dst);
     code.append(v);
+  }
+
+  void sbb(Register src, Register dst, unsigned dstOffset) {
+    rex();
+    offsetInstruction(0x19, 0, 0x40, 0x80, src, dst, dstOffset);
   }
 
   void or_(Register src, Register dst) {
@@ -944,6 +980,14 @@ class Assembler {
     conditional(javaIP, 0x8e);
   }
 
+  void jb(Label& label) {
+    conditional(label, 0x82);
+  }
+
+  void ja(Label& label) {
+    conditional(label, 0x87);
+  }
+
   void cmp(int v, Register reg) {
     assert(code.s, isByte(v)); // todo
 
@@ -960,6 +1004,48 @@ class Assembler {
   void call(Register reg) {
     code.append(0xff);
     code.append(0xd0 | reg);
+  }
+
+  void cdq() {
+    code.append(0x99);
+  }
+
+  void imul4(Register src, unsigned srcOffset, Register dst) {
+    code.append(0x0f);
+    offsetInstruction(0xaf, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
+  void imul(Register src, unsigned srcOffset, Register dst) {
+    rex();
+    imul4(src, srcOffset, dst);
+  }
+
+  void imul(Register src) {
+    rex();
+    code.append(0xf7);
+    code.append(0xe8 | src);
+  }
+
+  void idiv(Register src) {
+    rex();
+    code.append(0xf7);
+    code.append(0xf8 | src);
+  }
+
+  void mul(Register src, unsigned offset) {
+    rex();
+    offsetInstruction(0xf7, 0x20, 0x60, 0xa0, rax, src, offset);
+  }
+
+  void neg(Register reg, unsigned offset) {
+    rex();
+    offsetInstruction(0xf7, 0x10, 0x50, 0x90, rax, reg, offset);
+  }
+
+  void neg(Register reg) {
+    rex();
+    code.append(0xf7);
+    code.append(0xd8 | reg);
   }
 
   Buffer code;
@@ -1028,6 +1114,54 @@ class Compiler: public Assembler {
     pool(t->m->system, 256)
   { }
 
+  void pushLong(uint64_t v) {
+    if (BytesPerWord == 8) {
+      pushAddress(v);
+      sub(8, rsp);
+    } else {
+      push((v >> 32) & 0xFFFFFFFF);
+      push((v      ) & 0xFFFFFFFF);
+    }
+  }
+
+  void pushLong(Register low, Register high) {
+    assert(t, BytesPerWord == 4);
+    push(high);
+    push(low);
+  }
+
+  void popLong(Register r) {
+    assert(t, BytesPerWord == 8);
+    add(8, rsp);
+    pop(r);
+  }
+
+  void popLong(Register low, Register high) {
+    assert(t, BytesPerWord == 4);
+    pop(low);
+    pop(high);
+  }
+
+  void loadLong(uint64_t index, unsigned parameterFootprint) {
+    if (BytesPerWord == 8) {
+      push(rbp, localOffset(index, parameterFootprint));
+      sub(8, rsp);
+    } else {
+      push(rbp, localOffset(index + 1, parameterFootprint));
+      push(rbp, localOffset(index, parameterFootprint));
+    }
+  }
+
+  void storeLong(uint64_t index, unsigned parameterFootprint) {
+    if (BytesPerWord == 8) {
+      add(8, rsp);
+      pop(rbp, localOffset(index, parameterFootprint));
+    } else {
+      pop(rbp, localOffset(index, parameterFootprint));
+      pop(rbp, localOffset(index + 1, parameterFootprint));
+    }
+  }
+
   void pushReturnValue(unsigned code) {
     switch (code) {
     case ByteField:
@@ -1085,6 +1219,10 @@ class Compiler: public Assembler {
     if (BytesPerWord == 4) {
       add(BytesPerWord * argCount, rsp);
     }
+  }
+
+  void compileCall(void* function) {
+    compileCall2(function, 1);
   }
 
   void compileCall(void* function, object arg1) {
@@ -1613,7 +1751,13 @@ class Compiler: public Assembler {
         break;
 
       case i2l:
-        push(0);
+        if (BytesPerWord == 8) {
+          sub(8, rsp);
+        } else {
+          pop(rax);
+          cdq();
+          pushLong(rax, rdx);
+        }
         break;
 
       case iadd:
@@ -1764,6 +1908,17 @@ class Compiler: public Assembler {
         add(c, rbp, localOffset(index, parameterFootprint));
       } break;
 
+      case vm::imul:
+        pop(rax);
+        pop(rcx);
+        Assembler::imul(rcx);
+        push(rax);
+        break;
+
+      case ineg:
+        neg(rsp, 0);
+        break;
+
       case instanceof: {
         uint16_t index = codeReadInt16(t, code, ip);
 
@@ -1860,9 +2015,28 @@ class Compiler: public Assembler {
 
       case isub:
         pop(rax);
-        pop(rcx);
-        sub(rax, rcx);
-        push(rcx);
+        sub(rax, rsp, 0);
+        break;
+
+      case l2i:
+        if (BytesPerWord == 8) {
+          add(BytesPerWord, rsp);
+        } else {
+          pop(rax);
+          mov(rax, rsp, 0);
+        }
+        break;
+
+      case ladd:
+        if (BytesPerWord == 8) {
+          add(8, rsp);
+          pop(rax);
+          add(rax, rsp, BytesPerWord);
+        } else {
+          popLong(rax, rdx);
+          add(rax, rsp, 0);
+          adc(rdx, rsp, BytesPerWord);
+        }
         break;
 
       case ldc:
@@ -1901,91 +2075,190 @@ class Compiler: public Assembler {
 
         if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::LongType))
         {
-          push((longValue(t, v)      ) & 0xFFFFFFFF);
-          push((longValue(t, v) >> 32) & 0xFFFFFFFF);
+          pushLong(longValue(t, v));
         } else if (objectClass(t, v)
                    == arrayBody(t, t->m->types, Machine::DoubleType))
         {
-          push((doubleValue(t, v)      ) & 0xFFFFFFFF);
-          push((doubleValue(t, v) >> 32) & 0xFFFFFFFF);
+          pushLong(doubleValue(t, v));
         } else {
           abort(t);
         }
       } break;
 
       case lconst_0:
-        push(0);
-        push(0);
+        pushLong(0);
         break;
 
       case lconst_1:
-        push(0);
-        push(1);
+        pushLong(1);
         break;
 
-        // todo:
-//       case lcmp: {
-//         pop(rax);
-//         pop(rdx);
+      case lcmp: {
+        Label next(this);
+        Label less(this);
+        Label greater(this);
 
-//         if (BytesPerWord == 8) {
-//           shl(32, rax);
-//         }
-    
-//         pushInt(t, a > b ? 1 : a == b ? 0 : -1);
-//       } goto loop;
+        if (BytesPerWord == 8) {
+          popLong(rdx);
+          popLong(rax);
+          
+          cmp(rax, rdx);
+          jl(less);
+          jg(greater);
 
-      case lload: {
-        unsigned index = codeBody(t, code, ip++);
-        push(rbp, localOffset(index, parameterFootprint));
-        push(rbp, localOffset(index + 1, parameterFootprint));
+          push(0);
+          jmp(next);
+          
+          less.mark();
+          push(-1);
+          jmp(next);
+
+          greater.mark();
+          push(1);
+
+          next.mark();
+        } else {
+          popLong(rcx, rbx);
+          popLong(rax, rdx);
+
+          cmp(rdx, rbx);
+          jl(less);
+          jg(greater);
+          
+          cmp(rax, rcx);
+          jb(less);
+          ja(greater);
+
+          push(0);
+          jmp(next);
+
+          less.mark();
+          push(-1);
+          jmp(next);
+
+          greater.mark();
+          push(1);
+
+          next.mark();
+        }
       } break;
 
-      case lload_0: {
-        push(rbp, localOffset(0, parameterFootprint));
-        push(rbp, localOffset(1, parameterFootprint));
-      } break;
+      case ldiv_:
+        if (BytesPerWord == 8) {
+          popLong(rax);
+          popLong(rcx);
+          Assembler::idiv(rcx);
+          pushLong(rax);
+        } else {
+          compileCall(reinterpret_cast<void*>(divideLong));
+          add(4, rsp);
+          mov(rax, rsp, 0);
+          mov(rdx, rsp, 4);
+        }
+        break;
 
-      case lload_1: {
-        push(rbp, localOffset(1, parameterFootprint));
-        push(rbp, localOffset(2, parameterFootprint));
-      } break;
+      case lload:
+        loadLong(codeBody(t, code, ip++), parameterFootprint);
+        break;
 
-      case lload_2: {
-        push(rbp, localOffset(2, parameterFootprint));
-        push(rbp, localOffset(3, parameterFootprint));
-      } break;
+      case lload_0:
+        loadLong(0, parameterFootprint);
+        break;
 
-      case lload_3: {
-        push(rbp, localOffset(3, parameterFootprint));
-        push(rbp, localOffset(4, parameterFootprint));
-      } break;
+      case lload_1:
+        loadLong(1, parameterFootprint);
+        break;
 
-      case lstore: {
-        unsigned index = codeBody(t, code, ip++);
-        pop(rbp, localOffset(index + 1, parameterFootprint));
-        pop(rbp, localOffset(index, parameterFootprint));
-      } break;
+      case lload_2:
+        loadLong(2, parameterFootprint);
+        break;
 
-      case lstore_0: {
-        pop(rbp, localOffset(1, parameterFootprint));
-        pop(rbp, localOffset(0, parameterFootprint));
-      } break;
+      case lload_3:
+        loadLong(3, parameterFootprint);
+        break;
 
-      case lstore_1: {
-        pop(rbp, localOffset(2, parameterFootprint));
-        pop(rbp, localOffset(1, parameterFootprint));
-      } break;
+      case lmul:
+        if (BytesPerWord == 8) {
+          popLong(rax);
+          popLong(rcx);
+          Assembler::imul(rcx);
+          pushLong(rax);
+        } else {
+          mov(rsp, 4, rcx);
+          Assembler::imul(rsp, 8, rcx);
+          mov(rsp, 12, rax);
+          Assembler::imul(rsp, 0, rax);
+          add(rax, rcx);
+          mov(rsp, 8, rax);
+          mul(rsp, 0);
+          add(rcx, rdx);
 
-      case lstore_2: {
-        pop(rbp, localOffset(3, parameterFootprint));
-        pop(rbp, localOffset(2, parameterFootprint));
-      } break;
+          add(4, rsp);
+          mov(rax, rsp, 0);
+          mov(rdx, rsp, 4);
+        }
+        break;
 
-      case lstore_3: {
-        pop(rbp, localOffset(4, parameterFootprint));
-        pop(rbp, localOffset(3, parameterFootprint));
-      } break;
+      case lneg:
+        if (BytesPerWord == 8) {
+          neg(rsp, 8);
+        } else {
+          mov(rsp, 0, rax);
+          mov(rsp, 4, rdx);
+          neg(rax);
+          adc(0, rdx);
+          neg(rdx);
+          
+          mov(rax, rsp, 0);
+          mov(rdx, rsp, 4);
+        }
+        break;
+
+      case lrem:
+        if (BytesPerWord == 8) {
+          popLong(rax);
+          popLong(rcx);
+          Assembler::idiv(rcx);
+          pushLong(rdx);
+        } else {
+          compileCall(reinterpret_cast<void*>(moduloLong));
+          add(4, rsp);
+          mov(rax, rsp, 0);
+          mov(rdx, rsp, 4);
+        }
+        break;
+
+      case lstore:
+        storeLong(codeBody(t, code, ip++), parameterFootprint);
+        break;
+
+      case lstore_0:
+        storeLong(0, parameterFootprint);
+        break;
+
+      case lstore_1:
+        storeLong(1, parameterFootprint);
+        break;
+
+      case lstore_2:
+        storeLong(2, parameterFootprint);
+        break;
+
+      case lstore_3:
+        storeLong(3, parameterFootprint);
+        break;
+
+      case lsub:
+        if (BytesPerWord == 8) {
+          add(8, rsp);
+          pop(rax);
+          sub(rax, rsp, BytesPerWord);
+        } else {
+          popLong(rax, rdx);
+          sub(rax, rsp, 0);
+          sbb(rdx, rsp, BytesPerWord);
+        }
+        break;
 
       case new_: {
         uint16_t index = codeReadInt16(t, code, ip);
