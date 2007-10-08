@@ -402,7 +402,7 @@ class Pipe {
     }
   }
 
-  ~Pipe() {
+  void dispose() {
     ::close(pipe[0]);
     ::close(pipe[1]);
   }
@@ -434,16 +434,24 @@ struct SelectorState {
 
 } // namespace
 
+inline void* operator new(size_t, void* p) throw() { return p; }
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_nio_channels_SocketSelector_natInit(JNIEnv* e, jclass)
 {
-  SelectorState* s = new SelectorState(e);
-  if (s) {
-    FD_ZERO(&(s->read));
-    FD_ZERO(&(s->write));
-    FD_ZERO(&(s->except));
+  void *mem = malloc(sizeof(SelectorState));
+  if (mem) {
+    SelectorState *s = new (mem) SelectorState(e);
+
+    if (s) {
+      FD_ZERO(&(s->read));
+      FD_ZERO(&(s->write));
+      FD_ZERO(&(s->except));
+      return reinterpret_cast<jlong>(s);
+    }
   }
-  return reinterpret_cast<jlong>(s);
+  throwNew(e, "java/lang/OutOfMemoryError", 0);
+  return 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -476,7 +484,8 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_nio_channels_SocketSelector_natClose(JNIEnv *, jclass, jlong state)
 {
   SelectorState* s = reinterpret_cast<SelectorState*>(state);
-  delete s;
+  s->control.dispose();
+  free(s);
 }
 
 extern "C" JNIEXPORT void JNICALL
