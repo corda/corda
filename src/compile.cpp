@@ -1010,6 +1010,11 @@ class Assembler {
     code.append(0x99);
   }
 
+  void cqo() {
+    rex();
+    cdq();
+  }
+
   void imul4(Register src, unsigned srcOffset, Register dst) {
     code.append(0x0f);
     offsetInstruction(0xaf, 0, 0x40, 0x80, dst, src, srcOffset);
@@ -1046,6 +1051,10 @@ class Assembler {
     rex();
     code.append(0xf7);
     code.append(0xd8 | reg);
+  }
+
+  void int3() {
+    code.append(0xcc);
   }
 
   Buffer code;
@@ -2099,10 +2108,10 @@ class Compiler: public Assembler {
         Label greater(this);
 
         if (BytesPerWord == 8) {
-          popLong(rdx);
           popLong(rax);
+          popLong(rcx);
           
-          cmp(rax, rdx);
+          cmp(rax, rcx);
           jl(less);
           jg(greater);
 
@@ -2118,8 +2127,8 @@ class Compiler: public Assembler {
 
           next.mark();
         } else {
-          popLong(rcx, rbx);
           popLong(rax, rdx);
+          popLong(rcx, rbx);
 
           cmp(rdx, rbx);
           jl(less);
@@ -2145,8 +2154,9 @@ class Compiler: public Assembler {
 
       case ldiv_:
         if (BytesPerWord == 8) {
-          popLong(rax);
           popLong(rcx);
+          popLong(rax);
+          cqo();
           Assembler::idiv(rcx);
           pushLong(rax);
         } else {
@@ -2218,6 +2228,7 @@ class Compiler: public Assembler {
         if (BytesPerWord == 8) {
           popLong(rax);
           popLong(rcx);
+          cqo();
           Assembler::idiv(rcx);
           pushLong(rdx);
         } else {
