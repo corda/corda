@@ -518,6 +518,12 @@ isByte(int32_t v)
   return v == static_cast<int8_t>(v);
 }
 
+inline bool
+isInt32(uintptr_t v)
+{
+  return v == static_cast<uintptr_t>(static_cast<int32_t>(v));
+}
+
 enum Register {
   rax = 0,
   rcx = 1,
@@ -761,7 +767,7 @@ class Assembler {
   }
 
   void pushAddress(uintptr_t v) {
-    if (BytesPerWord == 8) {
+    if (BytesPerWord == 8 and not isInt32(v)) {
       mov(v, rsi);
       push(rsi);
     } else {
@@ -810,6 +816,11 @@ class Assembler {
     } else {
       code.append4(v);
     }
+  }
+
+  void add(Register src, Register dst, unsigned dstOffset) {
+    rex();
+    offsetInstruction(0x01, 0, 0x40, 0x80, src, dst, dstOffset);
   }
 
   void adc(int32_t v, Register dst) {
@@ -997,6 +1008,7 @@ class Assembler {
   }
 
   void cmp(Register a, Register b) {
+    rex();
     code.append(0x39);
     code.append(0xc0 | (a << 3) | b);
   }
@@ -1131,6 +1143,12 @@ class Compiler: public Assembler {
       push((v >> 32) & 0xFFFFFFFF);
       push((v      ) & 0xFFFFFFFF);
     }
+  }
+
+  void pushLong(Register r) {
+    assert(t, BytesPerWord == 8);
+    push(r);
+    sub(8, rsp);
   }
 
   void pushLong(Register low, Register high) {
@@ -2226,8 +2244,8 @@ class Compiler: public Assembler {
 
       case lrem:
         if (BytesPerWord == 8) {
-          popLong(rax);
           popLong(rcx);
+          popLong(rax);
           cqo();
           Assembler::idiv(rcx);
           pushLong(rdx);
