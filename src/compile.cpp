@@ -339,6 +339,8 @@ void NO_RETURN
 throwNew(MyThread* t, object class_)
 {
   t->exception = makeNew(t, class_);
+  object trace = makeTrace(t);
+  set(t, cast<object>(t->exception, ThrowableTrace), trace);
   unwind(t);
 }
 
@@ -492,7 +494,7 @@ invokeNative2(MyThread* t, object method)
   }
 
   if (LIKELY(t->exception == 0) and returnType == POINTER_TYPE) {
-    return *reinterpret_cast<uintptr_t*>(result);
+    return result ? *reinterpret_cast<uintptr_t*>(result) : 0;
   } else {
     return result;
   }
@@ -1002,6 +1004,7 @@ class Assembler {
   void cmp(int v, Register reg) {
     assert(code.s, isByte(v)); // todo
 
+    rex();
     code.append(0x83);
     code.append(0xf8 | reg);
     code.append(v);
@@ -1543,7 +1546,7 @@ class Compiler: public Assembler {
 
         pop(rax);
         cmp(0, rax);
-        jle(nonnegative);
+        jge(nonnegative);
 
         compileCall
           (reinterpret_cast<void*>(throwNew),
@@ -2642,7 +2645,7 @@ class Compiler: public Assembler {
     if (poolRegisterClobbered) {
       mov(rbp, FrameMethod, rdi);
       mov(rdi, MethodCode, rdi);
-      poolRegisterClobbered = false;
+      //poolRegisterClobbered = false;
     }
     pool.appendAddress(reinterpret_cast<uintptr_t>(o));
     return pool.length() + BytesPerWord;
