@@ -612,7 +612,7 @@ class Assembler {
 
   Assembler(System* s):
     code(s, 1024),
-    jumps(s, 32)
+    jumps(s, 256)
   { }
 
   void rex() {
@@ -1145,47 +1145,111 @@ parameterOffset(unsigned index)
 Compiled*
 caller(MyThread* t);
 
-class StackMap {
+class StackMapper {
  public:
-  void mark(unsigned /*index*/) {
-    // todo
+  static const uint32_t Infinity = ~static_cast<uint32_t>(0);
+
+  enum {
+    PushLong,
+    PushInt,
+    PushObject,
+    Duplicate,
+    PopLong,
+    PopInt,
+    PopObject,
+    PopIntOrObject,
+    StoreObject,
+    Jump,
+    Branch
+  };
+
+  StackMapper(Thread* t, object method):
+    t(t),
+    method(method),
+    index(codeSize() ? static_cast<uint32_t*>
+          (t->m->system->allocate(codeSize() * 4)) : 0),
+    log(t->m->system, 1024),
+    calls(t->m->system, 256)
+  { }
+
+  ~StackMapper() {
+    if (index) {
+      t->m->system->free(index);
+    }
+  }
+
+  unsigned codeSize() {
+    return method ? codeLength(t, methodCode(t, method)) : 0;
+  }
+
+  void newIp(unsigned javaIp) {
+    assert(t, javaIp < codeSize());
+    index[javaIp] = log.length();
+  }
+
+  void called(unsigned javaIp, unsigned machineIp) {
+    calls.append4(javaIp);
+    calls.append4(machineIp);
   }
 
   void pushedLong() {
-    // todo
+    log.append(PushLong);
   }
 
   void pushedInt() {
-    // todo
+    log.append(PushInt);
   }
 
   void pushedObject() {
-    // todo
+    log.append(PushObject);
   }
 
-  void dup() {
-    // todo
+  void dupped() {
+    log.append(Duplicate);
   }
 
   void poppedLong() {
-    // todo
+    log.append(PopLong);
   }
 
   void poppedInt() {
-    // todo
+    log.append(PopInt);
   }
 
   void poppedObject() {
-    // todo
+    log.append(PopObject);
   }
 
   void poppedIntOrObject() {
-    // todo
+    log.append(PopIntOrObject);
   }
 
-  void unknownTerritory(unsigned) {
-    // todo
+  void storedObject(unsigned index) {
+    log.append(StoreObject);
+    log.append2(index);
   }
+
+  void jumped(unsigned nextJavaIp) {
+    jumped(nextJavaIp, Infinity);
+  }
+
+  void jumped(unsigned nextJavaIp, unsigned targetJavaIp) {
+    log.append(Jump);
+    log.append4(nextJavaIp);
+    log.append4(targetJavaIp);
+  }
+
+  void branched(unsigned nextJavaIp, unsigned targetJavaIp) {
+    log.append(Branch);
+    log.append4(nextJavaIp);
+    log.append4(targetJavaIp);
+  }
+
+  Thread* t;
+  object method;
+  uint32_t* index;
+  Buffer log;
+  Buffer calls;
 };
 
 class Compiler: public Assembler {
@@ -1194,6 +1258,8 @@ class Compiler: public Assembler {
     Assembler(t->m->system),
     t(t),
     method(method),
+    ip(0),
+    stackMapper(t, method),
     poolRegisterClobbered(true),
     machineIPs(method ? static_cast<uint32_t*>
                (t->m->system->allocate
@@ -1215,39 +1281,53 @@ class Compiler: public Assembler {
     pool(t->m->system, 256)
   { }
 
+  ~Compiler() {
+    if (machineIPs) {
+      t->m->system->free(machineIPs);
+    }
+
+    if (lineNumbers) {
+      t->m->system->free(lineNumbers);
+    }
+
+    if (exceptionHandlers) {
+      t->m->system->free(exceptionHandlers);
+    }
+  }
+
   void pushInt() {
     sub(BytesPerWord, rsp);
-    stackMap.pushedInt();
+    stackMapper.pushedInt();
   }
 
   void pushInt(int32_t v) {
     push(v);
-    stackMap.pushedInt();
+    stackMapper.pushedInt();
   }
 
   void pushInt(Register r) {
     push(r);
-    stackMap.pushedInt();
+    stackMapper.pushedInt();
   }
 
   void pushInt(Register r, int32_t offset) {
     push4(r, offset);
-    stackMap.pushedInt();
+    stackMapper.pushedInt();
   }
 
   void pushObject(int32_t v) {
     push(v);
-    stackMap.pushedObject();
+    stackMapper.pushedObject();
   }
 
   void pushObject(Register r) {
     push(r);
-    stackMap.pushedObject();
+    stackMapper.pushedObject();
   }
 
   void pushObject(Register r, int32_t offset) {
     push(r, offset);
-    stackMap.pushedObject();
+    stackMapper.pushedObject();
   }
 
   void pushLong(uint64_t v) {
@@ -1258,28 +1338,28 @@ class Compiler: public Assembler {
       push((v >> 32) & 0xFFFFFFFF);
       push((v      ) & 0xFFFFFFFF);
     }
-    stackMap.pushedLong();
+    stackMapper.pushedLong();
   }
 
   void pushLong(Register r) {
     assert(t, BytesPerWord == 8);
     push(r);
     sub(8, rsp);
-    stackMap.pushedLong();
+    stackMapper.pushedLong();
   }
 
   void pushLong(Register r, int32_t offset) {
     assert(t, BytesPerWord == 8);
     push(r, offset);
     sub(8, rsp);
-    stackMap.pushedLong();
+    stackMapper.pushedLong();
   }
 
   void pushLong(Register low, Register high) {
     assert(t, BytesPerWord == 4);
     push(high);
     push(low);
-    stackMap.pushedLong();
+    stackMapper.pushedLong();
   }
 
   void pushLong(Register low, int32_t lowOffset,
@@ -1288,58 +1368,58 @@ class Compiler: public Assembler {
     assert(t, BytesPerWord == 4);
     push(high, highOffset);
     push(low, lowOffset);
-    stackMap.pushedLong();
+    stackMapper.pushedLong();
   }
 
   void popInt() {
     add(BytesPerWord, rsp);
-    stackMap.poppedInt();
+    stackMapper.poppedInt();
   }
 
   void popInt(Register r) {
     pop(r);
-    stackMap.poppedInt();
+    stackMapper.poppedInt();
   }
 
   void popInt(Register r, int32_t offset) {
     pop4(r, offset);
-    stackMap.poppedInt();
+    stackMapper.poppedInt();
   }
 
   void popObject(Register r) {
     pop(r);
-    stackMap.poppedObject();
+    stackMapper.poppedObject();
   }
 
   void popObject(Register r, int32_t offset) {
     pop(r, offset);
-    stackMap.poppedObject();
+    stackMapper.poppedObject();
   }
 
   void popLong() {
     add(BytesPerWord * 2, rsp);
-    stackMap.poppedLong();
+    stackMapper.poppedLong();
   }
 
   void popLong(Register r) {
     assert(t, BytesPerWord == 8);
     add(BytesPerWord, rsp);
     pop(r);
-    stackMap.poppedLong();
+    stackMapper.poppedLong();
   }
 
   void popLong(Register r, int32_t offset) {
     assert(t, BytesPerWord == 8);
     add(BytesPerWord, rsp);
     pop(r, offset);
-    stackMap.poppedLong();
+    stackMapper.poppedLong();
   }
 
   void popLong(Register low, Register high) {
     assert(t, BytesPerWord == 4);
     pop(low);
     pop(high);
-    stackMap.poppedLong();
+    stackMapper.poppedLong();
   }
 
   void popLong(Register low, int32_t lowOffset,
@@ -1348,18 +1428,18 @@ class Compiler: public Assembler {
     assert(t, BytesPerWord == 4);
     pop(low, lowOffset);
     pop(high, highOffset);
-    stackMap.poppedLong();
+    stackMapper.poppedLong();
   }
 
-  void loadInt(uint64_t index) {
+  void loadInt(unsigned index) {
     pushInt(rbp, localOffset(t, index, method));
   }
 
-  void loadObject(uint64_t index) {
+  void loadObject(unsigned index) {
     pushObject(rbp, localOffset(t, index, method));
   }
 
-  void loadLong(uint64_t index) {
+  void loadLong(unsigned index) {
     if (BytesPerWord == 8) {
       pushLong(rbp, localOffset(t, index, method));
     } else {
@@ -1368,15 +1448,16 @@ class Compiler: public Assembler {
     }
   }
 
-  void storeInt(uint64_t index) {
+  void storeInt(unsigned index) {
     popInt(rbp, localOffset(t, index, method));
   }
 
-  void storeObject(uint64_t index) {
+  void storeObject(unsigned index) {
     popObject(rbp, localOffset(t, index, method));
+    stackMapper.storedObject(index);
   }
 
-  void storeLong(uint64_t index) {
+  void storeLong(unsigned index) {
     if (BytesPerWord == 8) {
       popLong(rbp, localOffset(t, index, method));
     } else {
@@ -1394,19 +1475,19 @@ class Compiler: public Assembler {
     case FloatField:
     case IntField:
       push(rax);
-      stackMap.pushedInt();
+      stackMapper.pushedInt();
       break;
 
     case ObjectField:
       push(rax);
-      stackMap.pushedObject();
+      stackMapper.pushedObject();
       break;
 
     case LongField:
     case DoubleField:
       push(rax);
       push(rdx);
-      stackMap.pushedLong();
+      stackMapper.pushedLong();
       break;
 
     case VoidField:
@@ -1511,8 +1592,6 @@ class Compiler: public Assembler {
   }
 
   Compiled* compile() {
-    PROTECT(t, method);
-
     object code = methodCode(t, method);
     PROTECT(t, code);
 
@@ -1537,7 +1616,8 @@ class Compiler: public Assembler {
       lineNumberIndex = -1;
     }
     
-    for (unsigned ip = 0; ip < codeLength(t, code);) {
+    for (ip = 0; ip < codeLength(t, code);) {
+      stackMapper.newIp(ip);
       machineIPs[ip] = this->code.length();
 
       if (lineNumberIndex >= 0) {
@@ -1762,7 +1842,7 @@ class Compiler: public Assembler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMap.unknownTerritory(this->code.length());
+        stackMapper.jumped(ip);
         break;
 
       case arraylength:
@@ -1829,7 +1909,7 @@ class Compiler: public Assembler {
 
       case dup:
         push(rsp, 0);
-        stackMap.dup();
+        stackMapper.dupped();
         break;
 
       case getfield: {
@@ -1941,13 +2021,13 @@ class Compiler: public Assembler {
       case goto_: {
         int16_t offset = codeReadInt16(t, code, ip);
         jmp((ip - 3) + offset);
-        stackMap.unknownTerritory(this->code.length());
+        stackMapper.jumped(ip, (ip - 3) + offset);
       } break;
 
       case goto_w: {
         int32_t offset = codeReadInt32(t, code, ip);
         jmp((ip - 5) + offset);
-        stackMap.unknownTerritory(this->code.length());
+        stackMapper.jumped(ip, (ip - 5) + offset);
       } break;
 
       case i2b:
@@ -2020,6 +2100,7 @@ class Compiler: public Assembler {
         popObject(rcx);
         cmp(rax, rcx);
         je((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case if_acmpne: {
@@ -2029,6 +2110,7 @@ class Compiler: public Assembler {
         popObject(rcx);
         cmp(rax, rcx);
         jne((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case if_icmpeq: {
@@ -2038,6 +2120,7 @@ class Compiler: public Assembler {
         popInt(rcx);
         cmp(rax, rcx);
         je((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case if_icmpne: {
@@ -2047,6 +2130,7 @@ class Compiler: public Assembler {
         popInt(rcx);
         cmp(rax, rcx);
         jne((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case if_icmpgt: {
@@ -2056,6 +2140,7 @@ class Compiler: public Assembler {
         popInt(rcx);
         cmp(rax, rcx);
         jg((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case if_icmpge: {
@@ -2065,6 +2150,7 @@ class Compiler: public Assembler {
         popInt(rcx);
         cmp(rax, rcx);
         jge((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case if_icmplt: {
@@ -2074,6 +2160,7 @@ class Compiler: public Assembler {
         popInt(rcx);
         cmp(rax, rcx);
         jl((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case if_icmple: {
@@ -2083,6 +2170,7 @@ class Compiler: public Assembler {
         popInt(rcx);
         cmp(rax, rcx);
         jle((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case ifeq: {
@@ -2099,6 +2187,7 @@ class Compiler: public Assembler {
         popObject(rax);
         cmp(0, rax);
         je((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case ifne: {
@@ -2107,6 +2196,7 @@ class Compiler: public Assembler {
         popInt(rax);
         cmp(0, rax);
         jne((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case ifnonnull: {
@@ -2115,6 +2205,7 @@ class Compiler: public Assembler {
         popObject(rax);
         cmp(0, rax);
         jne((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case ifgt: {
@@ -2123,6 +2214,7 @@ class Compiler: public Assembler {
         popInt(rax);
         cmp(0, rax);
         jg((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case ifge: {
@@ -2131,6 +2223,7 @@ class Compiler: public Assembler {
         popInt(rax);
         cmp(0, rax);
         jge((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case iflt: {
@@ -2139,6 +2232,7 @@ class Compiler: public Assembler {
         popInt(rax);
         cmp(0, rax);
         jl((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case ifle: {
@@ -2147,6 +2241,7 @@ class Compiler: public Assembler {
         popInt(rax);
         cmp(0, rax);
         jle((ip - 3) + offset);
+        stackMapper.branched(ip, (ip - 3) + offset);
       } break;
 
       case iinc: {
@@ -2292,7 +2387,7 @@ class Compiler: public Assembler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMap.unknownTerritory(this->code.length());
+        stackMapper.jumped(ip);
         break;
 
       case istore:
@@ -2328,7 +2423,7 @@ class Compiler: public Assembler {
       case l2i:
         if (BytesPerWord == 8) {
           popInt();
-          stackMap.poppedInt();
+          stackMapper.poppedInt();
         } else {
           popInt(rax);
           mov(rax, rsp, 0);
@@ -2647,7 +2742,7 @@ class Compiler: public Assembler {
 
       case pop_: {
         add(BytesPerWord, rsp);
-        stackMap.poppedIntOrObject();
+        stackMapper.poppedIntOrObject();
       } break;
 
       case putfield: {
@@ -2765,7 +2860,7 @@ class Compiler: public Assembler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMap.unknownTerritory(this->code.length());
+        stackMapper.jumped(ip);
         break;
 
       case sipush: {
@@ -2930,7 +3025,7 @@ class Compiler: public Assembler {
     mov(reinterpret_cast<uintptr_t>(function), rax);
     call(rax);
 
-    stackMap.mark(code.length());
+    stackMapper.called(ip, code.length());
     poolRegisterClobbered = true;
   }
 
@@ -2938,13 +3033,14 @@ class Compiler: public Assembler {
     alignedMov(reinterpret_cast<uintptr_t>(function), rax);
     call(rax);
 
-    stackMap.mark(code.length());
+    stackMapper.called(ip, code.length());
     poolRegisterClobbered = true;
   }
 
   MyThread* t;
   object method;
-  StackMap stackMap;
+  unsigned ip;
+  StackMapper stackMapper;
   bool poolRegisterClobbered;
   uint32_t* machineIPs;
   NativeLineNumber* lineNumbers;
