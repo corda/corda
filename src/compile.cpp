@@ -213,14 +213,25 @@ compiledExceptionHandler(Thread* t, Compiled* code, unsigned index)
 }
 
 inline Compiled*
-makeCompiled(Thread* t, object method, Buffer* code, Buffer* lineNumbers,
-             Buffer* exceptionHandlers)
+makeCompiled(Thread* t, object method, Buffer* code,
+             NativeLineNumber* lineNumbers,
+             NativeExceptionHandler* exceptionHandlers)
 {
+  unsigned lineNumberCount
+    = method and codeLineNumberTable(t, methodCode(t, method)) ?
+    lineNumberTableLength
+    (t, codeLineNumberTable(t, methodCode(t, method))) : 0;
+  unsigned exceptionHandlerCount
+    = method and codeExceptionHandlerTable(t, methodCode(t, method)) ?
+    exceptionHandlerTableLength
+    (t, codeExceptionHandlerTable(t, methodCode(t, method))) : 0;
+
   Compiled* c = static_cast<Compiled*>
     (t->m->system->allocate(sizeof(Compiled)
                             + pad(code->length())
-                            + pad(lineNumbers->length())
-                            + pad(exceptionHandlers->length())));
+                            + pad(lineNumberCount * sizeof(NativeLineNumber))
+                            + pad(exceptionHandlerCount
+                                  * sizeof(NativeExceptionHandler))));
 
   if (method) {
     compiledMaxLocals(c) = codeMaxLocals(t, methodCode(t, method));
@@ -230,17 +241,23 @@ makeCompiled(Thread* t, object method, Buffer* code, Buffer* lineNumbers,
     compiledMaxStack(c) = 0;
   }
   compiledCodeLength(c) = code->length();
-  compiledLineNumberTableLength(c) = lineNumbers->length();
-  compiledExceptionHandlerTableLength(c) = exceptionHandlers->length();
+  compiledLineNumberTableLength(c)
+    = lineNumberCount * sizeof(NativeLineNumber);
+  compiledExceptionHandlerTableLength(c)
+    = exceptionHandlerCount * sizeof(NativeExceptionHandler);
 
   if (code->length()) {
     code->copyTo(compiledCode(c));
   }
-  if (lineNumbers->length()) {
-    lineNumbers->copyTo(compiledLineNumber(t, c, 0));
+  if (lineNumberCount) {
+    memcpy(compiledLineNumber(t, c, 0),
+           lineNumbers,
+           lineNumberCount * sizeof(NativeLineNumber));
   }
-  if (exceptionHandlers->length()) {
-    exceptionHandlers->copyTo(compiledExceptionHandler(t, c, 0));
+  if (exceptionHandlerCount) {
+    memcpy(compiledExceptionHandler(t, c, 0),
+           exceptionHandlers,
+           exceptionHandlerCount * sizeof(NativeExceptionHandler));
   }
 
   return c;
@@ -1077,8 +1094,11 @@ class Assembler {
 };
 
 int
-localOffset(int v, int parameterFootprint)
+localOffset(MyThread* t, int v, object method)
 {
+  int parameterFootprint
+    = methodParameterFootprint(t, method) * BytesPerWord;
+
   v *= BytesPerWord;
   if (v < parameterFootprint) {
     return (parameterFootprint - v - BytesPerWord) + (BytesPerWord * 2)
@@ -1125,18 +1145,110 @@ parameterOffset(unsigned index)
 Compiled*
 caller(MyThread* t);
 
+class StackMap {
+ public:
+  void mark(unsigned /*index*/) {
+    // todo
+  }
+
+  void pushedLong() {
+    // todo
+  }
+
+  void pushedInt() {
+    // todo
+  }
+
+  void pushedObject() {
+    // todo
+  }
+
+  void dup() {
+    // todo
+  }
+
+  void poppedLong() {
+    // todo
+  }
+
+  void poppedInt() {
+    // todo
+  }
+
+  void poppedObject() {
+    // todo
+  }
+
+  void poppedIntOrObject() {
+    // todo
+  }
+
+  void unknownTerritory(unsigned) {
+    // todo
+  }
+};
+
 class Compiler: public Assembler {
  public:
-  Compiler(MyThread* t):
+  Compiler(MyThread* t, object method):
     Assembler(t->m->system),
     t(t),
+    method(method),
     poolRegisterClobbered(true),
-    javaIPs(t->m->system, 1024),
-    machineIPs(t->m->system, 1024),
-    lineNumbers(t->m->system, 256),
-    exceptionHandlers(t->m->system, 256),
+    machineIPs(method ? static_cast<uint32_t*>
+               (t->m->system->allocate
+                (codeLength(t, methodCode(t, method)) * 4)) : 0),
+    lineNumbers(method and codeLineNumberTable(t, methodCode(t, method)) ?
+                static_cast<NativeLineNumber*>
+                (t->m->system->allocate
+                 (lineNumberTableLength
+                  (t, codeLineNumberTable(t, methodCode(t, method)))
+                  * sizeof(NativeLineNumber))) : 0),
+    exceptionHandlers(method and codeExceptionHandlerTable
+                      (t, methodCode(t, method)) ?
+                      static_cast<NativeExceptionHandler*>
+                      (t->m->system->allocate
+                       (exceptionHandlerTableLength
+                        (t, codeExceptionHandlerTable
+                         (t, methodCode(t, method)))
+                        * sizeof(NativeExceptionHandler))) : 0),
     pool(t->m->system, 256)
   { }
+
+  void pushInt() {
+    sub(BytesPerWord, rsp);
+    stackMap.pushedInt();
+  }
+
+  void pushInt(int32_t v) {
+    push(v);
+    stackMap.pushedInt();
+  }
+
+  void pushInt(Register r) {
+    push(r);
+    stackMap.pushedInt();
+  }
+
+  void pushInt(Register r, int32_t offset) {
+    push4(r, offset);
+    stackMap.pushedInt();
+  }
+
+  void pushObject(int32_t v) {
+    push(v);
+    stackMap.pushedObject();
+  }
+
+  void pushObject(Register r) {
+    push(r);
+    stackMap.pushedObject();
+  }
+
+  void pushObject(Register r, int32_t offset) {
+    push(r, offset);
+    stackMap.pushedObject();
+  }
 
   void pushLong(uint64_t v) {
     if (BytesPerWord == 8) {
@@ -1146,49 +1258,130 @@ class Compiler: public Assembler {
       push((v >> 32) & 0xFFFFFFFF);
       push((v      ) & 0xFFFFFFFF);
     }
+    stackMap.pushedLong();
   }
 
   void pushLong(Register r) {
     assert(t, BytesPerWord == 8);
     push(r);
     sub(8, rsp);
+    stackMap.pushedLong();
+  }
+
+  void pushLong(Register r, int32_t offset) {
+    assert(t, BytesPerWord == 8);
+    push(r, offset);
+    sub(8, rsp);
+    stackMap.pushedLong();
   }
 
   void pushLong(Register low, Register high) {
     assert(t, BytesPerWord == 4);
     push(high);
     push(low);
+    stackMap.pushedLong();
+  }
+
+  void pushLong(Register low, int32_t lowOffset,
+                Register high, int32_t highOffset)
+  {
+    assert(t, BytesPerWord == 4);
+    push(high, highOffset);
+    push(low, lowOffset);
+    stackMap.pushedLong();
+  }
+
+  void popInt() {
+    add(BytesPerWord, rsp);
+    stackMap.poppedInt();
+  }
+
+  void popInt(Register r) {
+    pop(r);
+    stackMap.poppedInt();
+  }
+
+  void popInt(Register r, int32_t offset) {
+    pop4(r, offset);
+    stackMap.poppedInt();
+  }
+
+  void popObject(Register r) {
+    pop(r);
+    stackMap.poppedObject();
+  }
+
+  void popObject(Register r, int32_t offset) {
+    pop(r, offset);
+    stackMap.poppedObject();
+  }
+
+  void popLong() {
+    add(BytesPerWord * 2, rsp);
+    stackMap.poppedLong();
   }
 
   void popLong(Register r) {
     assert(t, BytesPerWord == 8);
-    add(8, rsp);
+    add(BytesPerWord, rsp);
     pop(r);
+    stackMap.poppedLong();
+  }
+
+  void popLong(Register r, int32_t offset) {
+    assert(t, BytesPerWord == 8);
+    add(BytesPerWord, rsp);
+    pop(r, offset);
+    stackMap.poppedLong();
   }
 
   void popLong(Register low, Register high) {
     assert(t, BytesPerWord == 4);
     pop(low);
     pop(high);
+    stackMap.poppedLong();
   }
 
-  void loadLong(uint64_t index, unsigned parameterFootprint) {
+  void popLong(Register low, int32_t lowOffset,
+               Register high, int32_t highOffset)
+  {
+    assert(t, BytesPerWord == 4);
+    pop(low, lowOffset);
+    pop(high, highOffset);
+    stackMap.poppedLong();
+  }
+
+  void loadInt(uint64_t index) {
+    pushInt(rbp, localOffset(t, index, method));
+  }
+
+  void loadObject(uint64_t index) {
+    pushObject(rbp, localOffset(t, index, method));
+  }
+
+  void loadLong(uint64_t index) {
     if (BytesPerWord == 8) {
-      push(rbp, localOffset(index, parameterFootprint));
-      sub(8, rsp);
+      pushLong(rbp, localOffset(t, index, method));
     } else {
-      push(rbp, localOffset(index + 1, parameterFootprint));
-      push(rbp, localOffset(index, parameterFootprint));
+      pushLong(rbp, localOffset(t, index + 1, method),
+               rbp, localOffset(t, index, method));
     }
   }
 
-  void storeLong(uint64_t index, unsigned parameterFootprint) {
+  void storeInt(uint64_t index) {
+    popInt(rbp, localOffset(t, index, method));
+  }
+
+  void storeObject(uint64_t index) {
+    popObject(rbp, localOffset(t, index, method));
+  }
+
+  void storeLong(uint64_t index) {
     if (BytesPerWord == 8) {
-      add(8, rsp);
-      pop(rbp, localOffset(index, parameterFootprint));
+      popLong(rbp, localOffset(t, index, method));
     } else {
-      pop(rbp, localOffset(index, parameterFootprint));
-      pop(rbp, localOffset(index + 1, parameterFootprint));
+      popLong(rbp, localOffset(t, index, method),
+              rbp, localOffset(t, index + 1, method));
     }
   }
 
@@ -1200,14 +1393,20 @@ class Compiler: public Assembler {
     case ShortField:
     case FloatField:
     case IntField:
+      push(rax);
+      stackMap.pushedInt();
+      break;
+
     case ObjectField:
       push(rax);
+      stackMap.pushedObject();
       break;
 
     case LongField:
     case DoubleField:
       push(rax);
       push(rdx);
+      stackMap.pushedLong();
       break;
 
     case VoidField:
@@ -1311,7 +1510,7 @@ class Compiler: public Assembler {
     compileCall2(function, 3);
   }
 
-  Compiled* compile(object method) {
+  Compiled* compile() {
     PROTECT(t, method);
 
     object code = methodCode(t, method);
@@ -1339,16 +1538,17 @@ class Compiler: public Assembler {
     }
     
     for (unsigned ip = 0; ip < codeLength(t, code);) {
-      javaIPs.append2(ip);
-      machineIPs.append4(this->code.length());
+      machineIPs[ip] = this->code.length();
 
       if (lineNumberIndex >= 0) {
         object lnt = codeLineNumberTable(t, code);
         LineNumber* ln = lineNumberTableBody(t, lnt, lineNumberIndex);
 
         if (lineNumberIp(ln) == ip) {
-          lineNumbers.append4(this->code.length());
-          lineNumbers.append4(lineNumberLine(ln));
+          nativeLineNumberIp(lineNumbers + lineNumberIndex)
+            = this->code.length();
+          nativeLineNumberLine(lineNumbers + lineNumberIndex)
+            = lineNumberLine(ln);
           if (static_cast<unsigned>(lineNumberIndex) + 1
               < lineNumberTableLength(t, lnt))
           {
@@ -1373,8 +1573,8 @@ class Compiler: public Assembler {
         Label next(this);
         Label outOfBounds(this);
 
-        pop(rcx);
-        pop(rax);
+        popInt(rcx);
+        popObject(rax);
 
         cmp(0, rcx);
         jl(outOfBounds);
@@ -1391,41 +1591,46 @@ class Compiler: public Assembler {
         case iaload:
           shl(log(BytesPerWord), rcx);
           add(rcx, rax);
-          push(rax, 0);
+
+          if (instruction == aaload) {
+            pushObject(rax, 0);
+          } else {
+            pushInt(rax, 0);
+          }
           break;
 
         case baload:
           add(rcx, rax);
           movs1(rax, 0, rax);
-          push(rax);
+          pushInt(rax);
           break;
 
         case caload:
           shl(1, rcx);
           add(rcx, rax);
           movz2(rax, 0, rax);
-          push(rax);
+          pushInt(rax);
           break;
 
         case daload:
         case laload:
           shl(3, rcx);
           add(rcx, rax);
-          push4(rax, 0);
-          push4(rax, 4);
+          pushLong(rax, 0);
           break;
 
         case saload:
           shl(1, rcx);
           add(rcx, rax);
           movs2(rax, 0, rax);
-          push(rax);
+          pushInt(rax);
           break;
         }
 
         jmp(next);
 
         outOfBounds.mark();
+        int3();
         compileCall
           (reinterpret_cast<void*>(throwNew),
            arrayBody
@@ -1446,11 +1651,15 @@ class Compiler: public Assembler {
         Label outOfBounds(this);
 
         if (instruction == dastore or instruction == lastore) {
-          pop(rdx);
+          popLong(rdx, rbx);
+        } else if (instruction == aastore) {
+          popObject(rbx);
+        } else {
+          popInt(rbx);
         }
-        pop(rbx);
-        pop(rcx);
-        pop(rax);
+
+        popInt(rcx);
+        popObject(rax);
 
         cmp(0, rcx);
         jl(outOfBounds);
@@ -1503,37 +1712,27 @@ class Compiler: public Assembler {
       } break;
 
       case aconst_null:
-        push(0);
+        pushObject(0);
         break;
 
       case aload:
-      case iload:
-      case fload:
-        push(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
+        loadObject(codeBody(t, code, ip++));
         break;
 
       case aload_0:
-      case iload_0:
-      case fload_0:
-        push(rbp, localOffset(0, parameterFootprint));
+        loadObject(0);
         break;
 
       case aload_1:
-      case iload_1:
-      case fload_1:
-        push(rbp, localOffset(1, parameterFootprint));
+        loadObject(1);
         break;
 
       case aload_2:
-      case iload_2:
-      case fload_2:
-        push(rbp, localOffset(2, parameterFootprint));
+        loadObject(2);
         break;
 
       case aload_3:
-      case iload_3:
-      case fload_3:
-        push(rbp, localOffset(3, parameterFootprint));
+        loadObject(3);
         break;
 
       case anewarray: {
@@ -1544,7 +1743,7 @@ class Compiler: public Assembler {
 
         Label nonnegative(this);
 
-        pop(rax);
+        popInt(rax);
         cmp(0, rax);
         jge(nonnegative);
 
@@ -1555,60 +1754,49 @@ class Compiler: public Assembler {
         nonnegative.mark();
         compileCall(reinterpret_cast<void*>(makeBlankObjectArray),
                     class_, rax);
-        push(rax);
+        pushObject(rax);
       } break;
 
       case areturn:
-      case ireturn:
-      case freturn:
-        pop(rax);
+        popObject(rax);
         mov(rbp, rsp);
         pop(rbp);
         ret();
+        stackMap.unknownTerritory(this->code.length());
         break;
 
       case arraylength:
-        pop(rax);
+        popObject(rax);
         push(rax, BytesPerWord);
         break;
 
       case astore:
-      case istore:
-      case fstore:
-        pop(rbp, localOffset(codeBody(t, code, ip++), parameterFootprint));
+        storeObject(codeBody(t, code, ip++));
         break;
 
       case astore_0:
-      case istore_0:
-      case fstore_0:
-        pop(rbp, localOffset(0, parameterFootprint));
+        storeObject(0);
         break;
 
       case astore_1:
-      case istore_1:
-      case fstore_1:
-        pop(rbp, localOffset(1, parameterFootprint));
+        storeObject(1);
         break;
 
       case astore_2:
-      case istore_2:
-      case fstore_2:
-        pop(rbp, localOffset(2, parameterFootprint));
+        storeObject(2);
         break;
 
       case astore_3:
-      case istore_3:
-      case fstore_3:
-        pop(rbp, localOffset(3, parameterFootprint));
+        storeObject(3);
         break;
 
       case athrow:
-        pop(rax);
+        popObject(rax);
         compileCall(reinterpret_cast<void*>(throw_), rax);      
         break;
 
       case bipush: {
-        push(static_cast<int8_t>(codeBody(t, code, ip++)));
+        pushInt(static_cast<int8_t>(codeBody(t, code, ip++)));
       } break;
 
       case checkcast: {
@@ -1641,6 +1829,7 @@ class Compiler: public Assembler {
 
       case dup:
         push(rsp, 0);
+        stackMap.dup();
         break;
 
       case getfield: {
@@ -1649,38 +1838,37 @@ class Compiler: public Assembler {
         object field = resolveField(t, codePool(t, code), index - 1);
         if (UNLIKELY(t->exception)) return 0;
       
-        pop(rax);
+        popObject(rax);
 
         switch (fieldCode(t, field)) {
         case ByteField:
         case BooleanField:
           movs1(rax, fieldOffset(t, field), rax);
-          push(rax);
+          pushInt(rax);
           break;
 
         case CharField:
           movz2(rax, fieldOffset(t, field), rax);
-          push(rax);
+          pushInt(rax);
           break;
 
         case ShortField:
           movs2(rax, fieldOffset(t, field), rax);
-          push(rax);
+          pushInt(rax);
           break;
 
         case FloatField:
         case IntField:
-          push4(rax, fieldOffset(t, field));
+          pushInt(rax, fieldOffset(t, field));
           break;
 
         case DoubleField:
         case LongField:
-          push4(rax, fieldOffset(t, field));
-          push4(rax, fieldOffset(t, field) + 4);
+          pushLong(rax, fieldOffset(t, field));
           break;
 
         case ObjectField:
-          push(rax, fieldOffset(t, field));
+          pushObject(rax, fieldOffset(t, field));
           break;
 
         default:
@@ -1716,11 +1904,11 @@ class Compiler: public Assembler {
           cmp(0, rax);
           je(zero);
 
-          push4(rax, IntValue);
+          pushInt(rax, IntValue);
           jmp(next);
 
           zero.mark();
-          push(0);
+          pushInt(0);
 
           next.mark();
         } break;
@@ -1733,19 +1921,17 @@ class Compiler: public Assembler {
           cmp(0, rax);
           je(zero);
 
-          push4(rax, LongValue);
-          push4(rax, LongValue + 4);
+          pushLong(rax, LongValue);
           jmp(next);
 
           zero.mark();
-          push(0);
-          push(0);
+          pushLong(0);
 
           next.mark();
         } break;
 
         case ObjectField: {
-          push(rax, 0);
+          pushObject(rax, 0);
         } break;
 
         default: abort(t);
@@ -1755,11 +1941,13 @@ class Compiler: public Assembler {
       case goto_: {
         int16_t offset = codeReadInt16(t, code, ip);
         jmp((ip - 3) + offset);
+        stackMap.unknownTerritory(this->code.length());
       } break;
 
       case goto_w: {
         int32_t offset = codeReadInt32(t, code, ip);
         jmp((ip - 5) + offset);
+        stackMap.unknownTerritory(this->code.length());
       } break;
 
       case i2b:
@@ -1782,65 +1970,81 @@ class Compiler: public Assembler {
 
       case i2l:
         if (BytesPerWord == 8) {
-          sub(8, rsp);
+          pushInt();
         } else {
-          pop(rax);
+          popInt(rax);
           cdq();
           pushLong(rax, rdx);
         }
         break;
 
       case iadd:
-        pop(rax);
-        pop(rcx);
-        add(rax, rcx);
-        push(rcx);
+        popInt(rax);
+        popInt(rcx);
+        add(rcx, rax);
+        pushInt(rax);
         break;
 
       case iconst_m1:
-        push(-1);
+        pushInt(-1);
         break;
 
       case iconst_0:
-        push(0);
+        pushInt(0);
         break;
 
       case iconst_1:
-        push(1);
+        pushInt(1);
         break;
 
       case iconst_2:
-        push(2);
+        pushInt(2);
         break;
 
       case iconst_3:
-        push(3);
+        pushInt(3);
         break;
 
       case iconst_4:
-        push(4);
+        pushInt(4);
         break;
 
       case iconst_5:
-        push(5);
+        pushInt(5);
         break;
 
-      case if_acmpeq:
-      case if_icmpeq: {
+      case if_acmpeq: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
-        pop(rcx);
+        popObject(rax);
+        popObject(rcx);
         cmp(rax, rcx);
         je((ip - 3) + offset);
       } break;
 
-      case if_acmpne:
+      case if_acmpne: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        popObject(rax);
+        popObject(rcx);
+        cmp(rax, rcx);
+        jne((ip - 3) + offset);
+      } break;
+
+      case if_icmpeq: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        popInt(rax);
+        popInt(rcx);
+        cmp(rax, rcx);
+        je((ip - 3) + offset);
+      } break;
+
       case if_icmpne: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
-        pop(rcx);
+        popInt(rax);
+        popInt(rcx);
         cmp(rax, rcx);
         jne((ip - 3) + offset);
       } break;
@@ -1848,8 +2052,8 @@ class Compiler: public Assembler {
       case if_icmpgt: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
-        pop(rcx);
+        popInt(rax);
+        popInt(rcx);
         cmp(rax, rcx);
         jg((ip - 3) + offset);
       } break;
@@ -1857,8 +2061,8 @@ class Compiler: public Assembler {
       case if_icmpge: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
-        pop(rcx);
+        popInt(rax);
+        popInt(rcx);
         cmp(rax, rcx);
         jge((ip - 3) + offset);
       } break;
@@ -1866,8 +2070,8 @@ class Compiler: public Assembler {
       case if_icmplt: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
-        pop(rcx);
+        popInt(rax);
+        popInt(rcx);
         cmp(rax, rcx);
         jl((ip - 3) + offset);
       } break;
@@ -1875,26 +2079,40 @@ class Compiler: public Assembler {
       case if_icmple: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
-        pop(rcx);
+        popInt(rax);
+        popInt(rcx);
         cmp(rax, rcx);
         jle((ip - 3) + offset);
       } break;
 
-      case ifeq:
-      case ifnull: {
+      case ifeq: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
+        popInt(rax);
         cmp(0, rax);
         je((ip - 3) + offset);
       } break;
 
-      case ifne:
+      case ifnull: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        popObject(rax);
+        cmp(0, rax);
+        je((ip - 3) + offset);
+      } break;
+
+      case ifne: {
+        int16_t offset = codeReadInt16(t, code, ip);
+        
+        popInt(rax);
+        cmp(0, rax);
+        jne((ip - 3) + offset);
+      } break;
+
       case ifnonnull: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
+        popObject(rax);
         cmp(0, rax);
         jne((ip - 3) + offset);
       } break;
@@ -1902,7 +2120,7 @@ class Compiler: public Assembler {
       case ifgt: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
+        popInt(rax);
         cmp(0, rax);
         jg((ip - 3) + offset);
       } break;
@@ -1910,7 +2128,7 @@ class Compiler: public Assembler {
       case ifge: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
+        popInt(rax);
         cmp(0, rax);
         jge((ip - 3) + offset);
       } break;
@@ -1918,7 +2136,7 @@ class Compiler: public Assembler {
       case iflt: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
+        popInt(rax);
         cmp(0, rax);
         jl((ip - 3) + offset);
       } break;
@@ -1926,7 +2144,7 @@ class Compiler: public Assembler {
       case ifle: {
         int16_t offset = codeReadInt16(t, code, ip);
         
-        pop(rax);
+        popInt(rax);
         cmp(0, rax);
         jle((ip - 3) + offset);
       } break;
@@ -1935,14 +2153,39 @@ class Compiler: public Assembler {
         uint8_t index = codeBody(t, code, ip++);
         int8_t c = codeBody(t, code, ip++);
     
-        add(c, rbp, localOffset(index, parameterFootprint));
+        add(c, rbp, localOffset(t, index, method));
       } break;
 
+      case iload:
+      case fload:
+        loadInt(codeBody(t, code, ip++));
+        break;
+
+      case iload_0:
+      case fload_0:
+        loadInt(0);
+        break;
+
+      case iload_1:
+      case fload_1:
+        loadInt(1);
+        break;
+
+      case iload_2:
+      case fload_2:
+        loadInt(2);
+        break;
+
+      case iload_3:
+      case fload_3:
+        loadInt(3);
+        break;
+
       case vm::imul:
-        pop(rax);
-        pop(rcx);
+        popInt(rax);
+        popInt(rcx);
         Assembler::imul(rcx);
-        push(rax);
+        pushInt(rax);
         break;
 
       case ineg:
@@ -1959,7 +2202,7 @@ class Compiler: public Assembler {
         Label zero(this);
         Label next(this);
         
-        pop(rax);
+        popObject(rax);
         cmp(0, rax);
         je(zero);
 
@@ -1968,16 +2211,16 @@ class Compiler: public Assembler {
         cmp(rcx, rax);
         jne(call);
         
-        push(1);
+        pushInt(1);
         jmp(next);
 
         call.mark();
         compileCall(reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
-        push(rax);
+        pushInt(rax);
         jmp(next);
 
         zero.mark();
-        push(0);
+        pushInt(0);
 
         next.mark();
       } break;
@@ -2043,24 +2286,58 @@ class Compiler: public Assembler {
         pushReturnValue(methodReturnCode(t, target));
       } break;
 
+      case ireturn:
+      case freturn:
+        popInt(rax);
+        mov(rbp, rsp);
+        pop(rbp);
+        ret();
+        stackMap.unknownTerritory(this->code.length());
+        break;
+
+      case istore:
+      case fstore:
+        storeInt(codeBody(t, code, ip++));
+        break;
+
+      case istore_0:
+      case fstore_0:
+        storeInt(0);
+        break;
+
+      case istore_1:
+      case fstore_1:
+        storeInt(1);
+        break;
+
+      case istore_2:
+      case fstore_2:
+        storeInt(2);
+        break;
+
+      case istore_3:
+      case fstore_3:
+        storeInt(3);
+        break;
+
       case isub:
-        pop(rax);
+        popInt(rax);
         sub(rax, rsp, 0);
         break;
 
       case l2i:
         if (BytesPerWord == 8) {
-          add(BytesPerWord, rsp);
+          popInt();
+          stackMap.poppedInt();
         } else {
-          pop(rax);
+          popInt(rax);
           mov(rax, rsp, 0);
         }
         break;
 
       case ladd:
         if (BytesPerWord == 8) {
-          add(8, rsp);
-          pop(rax);
+          popLong(rax);
           add(rax, rsp, BytesPerWord);
         } else {
           popLong(rax, rdx);
@@ -2082,19 +2359,19 @@ class Compiler: public Assembler {
         object v = arrayBody(t, codePool(t, code), index - 1);
 
         if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::IntType)) {
-          push(intValue(t, v));
+          pushInt(intValue(t, v));
         } else if (objectClass(t, v)
                    == arrayBody(t, t->m->types, Machine::FloatType))
         {
-          push(floatValue(t, v));
+          pushInt(floatValue(t, v));
         } else if (objectClass(t, v)
                    == arrayBody(t, t->m->types, Machine::StringType))
         {
-          push(poolRegister(), poolReference(v));
+          pushObject(poolRegister(), poolReference(v));
         } else {
           object class_ = resolveClass(t, codePool(t, code), index - 1);
 
-          push(poolRegister(), poolReference(class_));
+          pushObject(poolRegister(), poolReference(class_));
         }
       } break;
 
@@ -2136,15 +2413,15 @@ class Compiler: public Assembler {
           jl(less);
           jg(greater);
 
-          push(0);
+          pushInt(0);
           jmp(next);
           
           less.mark();
-          push(-1);
+          pushInt(-1);
           jmp(next);
 
           greater.mark();
-          push(1);
+          pushInt(1);
 
           next.mark();
         } else {
@@ -2159,15 +2436,15 @@ class Compiler: public Assembler {
           jb(less);
           ja(greater);
 
-          push(0);
+          pushInt(0);
           jmp(next);
 
           less.mark();
-          push(-1);
+          pushInt(-1);
           jmp(next);
 
           greater.mark();
-          push(1);
+          pushInt(1);
 
           next.mark();
         }
@@ -2182,30 +2459,30 @@ class Compiler: public Assembler {
           pushLong(rax);
         } else {
           compileCall(reinterpret_cast<void*>(divideLong));
-          add(4, rsp);
+          popLong();
           mov(rax, rsp, 0);
           mov(rdx, rsp, 4);
         }
         break;
 
       case lload:
-        loadLong(codeBody(t, code, ip++), parameterFootprint);
+        loadLong(codeBody(t, code, ip++));
         break;
 
       case lload_0:
-        loadLong(0, parameterFootprint);
+        loadLong(0);
         break;
 
       case lload_1:
-        loadLong(1, parameterFootprint);
+        loadLong(1);
         break;
 
       case lload_2:
-        loadLong(2, parameterFootprint);
+        loadLong(2);
         break;
 
       case lload_3:
-        loadLong(3, parameterFootprint);
+        loadLong(3);
         break;
 
       case lmul:
@@ -2224,7 +2501,7 @@ class Compiler: public Assembler {
           mul(rsp, 0);
           add(rcx, rdx);
 
-          add(4, rsp);
+          popLong();
           mov(rax, rsp, 0);
           mov(rdx, rsp, 4);
         }
@@ -2254,36 +2531,35 @@ class Compiler: public Assembler {
           pushLong(rdx);
         } else {
           compileCall(reinterpret_cast<void*>(moduloLong));
-          add(4, rsp);
+          popLong();
           mov(rax, rsp, 0);
           mov(rdx, rsp, 4);
         }
         break;
 
       case lstore:
-        storeLong(codeBody(t, code, ip++), parameterFootprint);
+        storeLong(codeBody(t, code, ip++));
         break;
 
       case lstore_0:
-        storeLong(0, parameterFootprint);
+        storeLong(0);
         break;
 
       case lstore_1:
-        storeLong(1, parameterFootprint);
+        storeLong(1);
         break;
 
       case lstore_2:
-        storeLong(2, parameterFootprint);
+        storeLong(2);
         break;
 
       case lstore_3:
-        storeLong(3, parameterFootprint);
+        storeLong(3);
         break;
 
       case lsub:
         if (BytesPerWord == 8) {
-          add(8, rsp);
-          pop(rax);
+          popLong(rax);
           sub(rax, rsp, BytesPerWord);
         } else {
           popLong(rax, rdx);
@@ -2308,7 +2584,7 @@ class Compiler: public Assembler {
           compileCall(reinterpret_cast<void*>(makeNew), class_);
         }
 
-        push(rax);
+        pushObject(rax);
       } break;
 
       case newarray: {
@@ -2316,7 +2592,7 @@ class Compiler: public Assembler {
 
         Label nonnegative(this);
 
-        pop(rax);
+        popInt(rax);
         cmp(0, rax);
         jge(nonnegative);
 
@@ -2366,11 +2642,12 @@ class Compiler: public Assembler {
 
         compileCall(reinterpret_cast<void*>(makeBlankArray),
                     reinterpret_cast<void*>(constructor), rax);
-        push(rax);
+        pushObject(rax);
       } break;
 
       case pop_: {
         add(BytesPerWord, rsp);
+        stackMap.poppedIntOrObject();
       } break;
 
       case putfield: {
@@ -2386,8 +2663,9 @@ class Compiler: public Assembler {
         case ShortField:
         case FloatField:
         case IntField: {
-          pop(rcx);
-          pop(rax);
+          popInt(rcx);
+          popObject(rax);
+
           switch (fieldCode(t, field)) {
           case ByteField:
           case BooleanField:
@@ -2408,16 +2686,21 @@ class Compiler: public Assembler {
 
         case DoubleField:
         case LongField: {
-          pop(rcx);
-          pop(rdx);
-          pop(rax);
-          mov4(rcx, rax, fieldOffset(t, field));
-          mov4(rdx, rax, fieldOffset(t, field) + 4);
+          if (BytesPerWord == 8) {
+            popLong(rcx);
+            popObject(rax);
+            mov(rcx, rax, fieldOffset(t, field));
+          } else {
+            popLong(rcx, rbx);
+            popObject(rax);
+            mov(rcx, rax, fieldOffset(t, field));
+            mov(rbx, rax, fieldOffset(t, field) + 4);
+          }
         } break;
 
         case ObjectField: {
-          pop(rcx);
-          pop(rax);
+          popObject(rcx);
+          popObject(rax);
           mov(rcx, rax, fieldOffset(t, field));
         } break;
 
@@ -2435,9 +2718,7 @@ class Compiler: public Assembler {
         if (UNLIKELY(t->exception)) return 0;
         
         object table = classStaticTable(t, fieldClass(t, field));
-
-        mov(poolRegister(), poolReference(table), rax);
-        add((fieldOffset(t, field) * BytesPerWord) + ArrayBody, rax);
+        unsigned offset = (fieldOffset(t, field) * BytesPerWord) + ArrayBody;
         
         switch (fieldCode(t, field)) {
         case ByteField:
@@ -2449,7 +2730,10 @@ class Compiler: public Assembler {
           compileCall(reinterpret_cast<void*>(makeNew), 
                       arrayBody(t, t->m->types, Machine::IntType));
 
-          pop4(rax, IntValue);
+          popInt(rax, IntValue);
+
+          mov(poolRegister(), poolReference(table), rcx);
+          mov(rax, rcx, offset);
         } break;
 
         case DoubleField:
@@ -2457,12 +2741,20 @@ class Compiler: public Assembler {
           compileCall(reinterpret_cast<void*>(makeNew),
                       arrayBody(t, t->m->types, Machine::LongType));
 
-          pop4(rax, LongValue);
-          pop4(rax, LongValue + 4);
+          if (BytesPerWord == 8) {
+            popLong(rax, LongValue);
+          } else {
+            popLong(rax, LongValue,
+                    rax, LongValue + 4);
+          }
+
+          mov(poolRegister(), poolReference(table), rcx);
+          mov(rax, rcx, offset);
         } break;
 
         case ObjectField:
-          pop(rax, 0);
+          mov(poolRegister(), poolReference(table), rax);
+          popObject(rax, offset);
           break;
 
         default: abort(t);
@@ -2473,10 +2765,11 @@ class Compiler: public Assembler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
+        stackMap.unknownTerritory(this->code.length());
         break;
 
       case sipush: {
-        push(static_cast<int16_t>(codeReadInt16(t, code, ip)));
+        pushInt(static_cast<int16_t>(codeReadInt16(t, code, ip)));
       } break;
 
       default:
@@ -2487,25 +2780,7 @@ class Compiler: public Assembler {
     resolveJumps();
     buildExceptionHandlerTable(code);
 
-    return finish(method);
-  }
-
-  uint32_t machineIpForJavaIp(uint16_t javaIP) {
-    unsigned bottom = 0;
-    unsigned top = javaIPs.length() / 2;
-    for (unsigned span = top - bottom; span; span = top - bottom) {
-      unsigned middle = bottom + (span / 2);
-      uint32_t k = javaIPs.get2(middle * 2);
-
-      if (javaIP < k) {
-        top = middle;
-      } else if (javaIP > k) {
-        bottom = middle + 1;
-      } else {
-        return machineIPs.get4(middle * 4);
-      }
-    }
-    abort(code.s);
+    return finish();
   }
 
   void resolveJumps() {
@@ -2513,7 +2788,7 @@ class Compiler: public Assembler {
       uint32_t ip = jumps.get4(i);
       uint32_t offset = jumps.get4(i + 4);
 
-      code.set4(offset, machineIpForJavaIp(ip) - (offset + 4));
+      code.set4(offset, machineIPs[ip] - (offset + 4));
     }
   }
 
@@ -2527,14 +2802,14 @@ class Compiler: public Assembler {
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
       
-        exceptionHandlers.append4
-          (machineIpForJavaIp(exceptionHandlerStart(eh)));
+        nativeExceptionHandlerStart(exceptionHandlers + i)
+          = machineIPs[exceptionHandlerStart(eh)];
 
-        exceptionHandlers.append4
-          (machineIpForJavaIp(exceptionHandlerEnd(eh)));
+        nativeExceptionHandlerEnd(exceptionHandlers + i)
+          = machineIPs[exceptionHandlerEnd(eh)];
 
-        exceptionHandlers.append4
-          (machineIpForJavaIp(exceptionHandlerIp(eh)));
+        nativeExceptionHandlerIp(exceptionHandlers + i)
+          = machineIPs[exceptionHandlerIp(eh)];
 
         unsigned ct = exceptionHandlerCatchType(eh);
         object catchType;
@@ -2545,8 +2820,8 @@ class Compiler: public Assembler {
           catchType = 0;
         }
 
-        exceptionHandlers.append4
-          (catchType ? (poolReference(catchType) / BytesPerWord) - 1 : 0);
+        nativeExceptionHandlerCatchType(exceptionHandlers + i)
+          = (catchType ? (poolReference(catchType) / BytesPerWord) - 1 : 0);
       }
     }
   }
@@ -2584,7 +2859,7 @@ class Compiler: public Assembler {
     add(CompiledBody, rax);
     jmp(rax);                                // call compiled code
 
-    return finish(0);
+    return finish();
   }
 
   Compiled* compileNativeInvoker() {
@@ -2610,7 +2885,7 @@ class Compiler: public Assembler {
     pop(rbp);
     ret();
 
-    return finish(0);
+    return finish();
   }
 
   Compiled* compileCaller() {
@@ -2620,11 +2895,11 @@ class Compiler: public Assembler {
 
     jmp(rbx);
 
-    return finish(0);
+    return finish();
   }
 
-  Compiled* finish(object method) {
-    return makeCompiled(t, method, &code, &lineNumbers, &exceptionHandlers);
+  Compiled* finish() {
+    return makeCompiled(t, method, &code, lineNumbers, exceptionHandlers);
   }
 
   object makePool() {
@@ -2654,21 +2929,26 @@ class Compiler: public Assembler {
   void callAddress(void* function) {
     mov(reinterpret_cast<uintptr_t>(function), rax);
     call(rax);
+
+    stackMap.mark(code.length());
     poolRegisterClobbered = true;
   }
 
   void callAlignedAddress(void* function) {
     alignedMov(reinterpret_cast<uintptr_t>(function), rax);
     call(rax);
+
+    stackMap.mark(code.length());
     poolRegisterClobbered = true;
   }
 
   MyThread* t;
+  object method;
+  StackMap stackMap;
   bool poolRegisterClobbered;
-  Buffer javaIPs;
-  Buffer machineIPs;
-  Buffer lineNumbers;
-  Buffer exceptionHandlers;
+  uint32_t* machineIPs;
+  NativeLineNumber* lineNumbers;
+  NativeExceptionHandler* exceptionHandlers;
   Buffer pool;
 };
 
@@ -2691,8 +2971,8 @@ compileMethod2(MyThread* t, object method)
                 &byteArrayBody(t, methodName(t, method), 0));
       }
 
-      Compiler c(t);
-      Compiled* code = c.compile(method);
+      Compiler c(t, method);
+      Compiled* code = c.compile();
     
       if (Verbose) {
         fprintf(stderr, "compiled %s.%s from %p to %p\n",
@@ -2982,7 +3262,7 @@ class MyProcessor: public Processor {
   methodStub(Thread* t)
   {
     if (methodStub_ == 0) {
-      Compiler c(static_cast<MyThread*>(t));
+      Compiler c(static_cast<MyThread*>(t), 0);
       methodStub_ = c.compileStub();
     }
     return methodStub_;
@@ -2992,7 +3272,7 @@ class MyProcessor: public Processor {
   nativeInvoker(Thread* t)
   {
     if (nativeInvoker_ == 0) {
-      Compiler c(static_cast<MyThread*>(t));
+      Compiler c(static_cast<MyThread*>(t), 0);
       nativeInvoker_ = c.compileNativeInvoker();
     }
     return nativeInvoker_;
@@ -3002,7 +3282,7 @@ class MyProcessor: public Processor {
   caller(Thread* t)
   {
     if (caller_ == 0) {
-      Compiler c(static_cast<MyThread*>(t));
+      Compiler c(static_cast<MyThread*>(t), 0);
       caller_ = c.compileCaller();
     }
     return caller_;
