@@ -28,6 +28,24 @@ const unsigned FrameFootprint = BytesPerWord * 3;
 
 class ArgumentList;
 
+inline void
+markBit(uintptr_t* map, unsigned i)
+{
+  map[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
+}
+
+inline void
+clearBit(uintptr_t* map, unsigned i)
+{
+  map[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
+}
+
+inline unsigned
+getBit(uintptr_t* map, unsigned i)
+{
+  return map[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i));
+}
+
 class Buffer {
  public:
   Buffer(System* s, unsigned minimumCapacity):
@@ -84,6 +102,11 @@ class Buffer {
     memcpy(data + offset, &v, 4); 
   }
 
+  uint16_t get(unsigned offset) {
+    assert(s, offset + 1 <= position);
+    return data[offset];
+  }
+
   uint16_t get2(unsigned offset) {
     assert(s, offset + 2 <= position);
     uint16_t v; memcpy(&v, data + offset, 2);
@@ -129,6 +152,7 @@ class StackMapper {
   static const uint32_t Infinity = ~static_cast<uint32_t>(0);
 
   enum {
+    Call,
     PushLong,
     PushInt,
     PushObject,
@@ -138,17 +162,20 @@ class StackMapper {
     PopObject,
     PopIntOrObject,
     StoreObject,
+    Return,
     Jump,
-    Branch
+    Branch,
+    End
   };
 
   StackMapper(Thread* t, object method):
     t(t),
     method(method),
+    ip(-1),
     index(codeSize() ? static_cast<uint32_t*>
           (t->m->system->allocate(codeSize() * 4)) : 0),
     log(t->m->system, 1024),
-    calls(t->m->system, 256)
+    callCount(0)
   { }
 
   ~StackMapper() {
@@ -161,14 +188,29 @@ class StackMapper {
     return codeLength(t, methodCode(t, method));
   }
 
+  void end(unsigned nextIp) {
+    if (ip >= 0) {
+      log.append(End);
+      log.append2(nextIp);
+    }
+    ip = nextIp;
+  }
+
   void newIp(unsigned javaIp) {
     assert(t, javaIp < codeSize());
+
+    end(javaIp);
     index[javaIp] = log.length();
   }
 
-  void called(unsigned nextJavaIp, unsigned nextMachineIp) {
-    calls.append4(nextJavaIp);
-    calls.append4(nextMachineIp);
+  void finish() {
+    end(codeSize());
+  }
+
+  void called(unsigned nextMachineIp) {
+    log.append(Call);
+    log.append4(nextMachineIp);
+    ++ callCount;
   }
 
   void pushedLong() {
@@ -205,34 +247,222 @@ class StackMapper {
 
   void storedObject(unsigned index) {
     log.append(StoreObject);
-    log.append2(index);
+    log.append2(index - parameterFootprint());
   }
 
-  void jumped(unsigned nextJavaIp) {
-    jumped(nextJavaIp, Infinity);
+  void returned() {
+    log.append(Return);
   }
 
-  void jumped(unsigned nextJavaIp, unsigned targetJavaIp) {
+  void jumped(unsigned targetJavaIp) {
     log.append(Jump);
-    log.append4(nextJavaIp);
-    log.append4(targetJavaIp);
+    log.append2(targetJavaIp);
   }
 
-  void branched(unsigned nextJavaIp, unsigned targetJavaIp) {
+  void branched(unsigned targetJavaIp) {
     log.append(Branch);
-    log.append4(nextJavaIp);
-    log.append4(targetJavaIp);
+    log.append2(targetJavaIp);
   }
 
-  void writeTo(uintptr_t*) {
-    // todo
+  unsigned parameterFootprint() {
+    return methodParameterFootprint(t, method);
+  }
+
+  unsigned localSize() {
+    return codeMaxLocals(t, methodCode(t, method))
+      - parameterFootprint();
+  }
+
+  unsigned stackSize() {
+    return codeMaxStack(t, methodCode(t, method));
+  }
+
+  unsigned mapSize() {
+    return stackSize() + localSize();
+  }
+
+  unsigned mapSizeInWords() {
+    return ceiling(mapSize(), BytesPerWord);
+  }
+
+  unsigned mapSizeInBytes() {
+    return mapSizeInWords() * BytesPerWord;
+  }
+
+  unsigned callTableSize() {
+    return callCount * (mapSizeInBytes() + BytesPerWord);
+  }
+
+  void populateCalls(uintptr_t* calls, unsigned& callIndex, uintptr_t* table,
+                     uintptr_t* mask, uintptr_t* initialMap,
+                     unsigned initialSp, unsigned ip)
+  {
+    uintptr_t map[mapSizeInWords()];
+    memcpy(map, initialMap, mapSizeInBytes());
+
+    unsigned sp = initialSp;
+
+    while (ip < codeSize()) {
+      if (getBit(mask, ip)) {
+        return;
+      }
+
+      markBit(mask, ip);
+      memcpy(table + (ip * mapSizeInWords()), map, mapSizeInBytes());
+
+      unsigned i = index[ip];
+      while (true) {
+        switch (log.get(i++)) {
+        case Call: {
+          assert(t, callIndex < callCount);
+          unsigned machineIp = log.get4(i); i += 4;
+          calls[callIndex * (mapSizeInWords() + 1)] = machineIp;
+          memcpy(calls + (callIndex * (mapSizeInWords() + 1)) + 1,
+                 map, mapSizeInBytes());
+          ++ callIndex;
+        } break;
+
+        case PushLong:
+          assert(t, sp + 2 <= mapSize());
+          sp += 2;
+          break;
+
+        case PushInt:
+          assert(t, sp + 1 <= mapSize());
+          ++ sp;
+          break;
+
+        case PushObject:
+          assert(t, sp + 1 <= mapSize());
+          markBit(map, sp++);
+          break;
+          
+        case Duplicate:
+          assert(t, sp + 1 <= mapSize());
+          assert(t, sp - 1 >= localSize());
+          if (getBit(map, sp - 1)) {
+            markBit(map, sp);
+          }
+          ++ sp;
+          break;
+
+        case PopLong:
+          assert(t, sp - 2 >= localSize());
+          assert(t, getBit(map, sp - 1) == 0);
+          assert(t, getBit(map, sp - 2) == 0);
+          sp -= 2;
+          break;
+
+        case PopInt:
+          assert(t, sp - 1 >= localSize());
+          assert(t, getBit(map, sp - 1) == 0);
+          -- sp;
+          break;
+
+        case PopObject:
+          assert(t, sp - 1 >= localSize());
+          assert(t, getBit(map, sp - 1) != 0);
+          clearBit(map, -- sp);
+          break;
+
+        case PopIntOrObject:
+          assert(t, sp - 1 >= localSize());
+          clearBit(map, -- sp);
+          break;
+
+        case StoreObject: {
+          unsigned index = log.get2(i); i += 2;
+          assert(t, index < localSize());
+          markBit(map, index);
+        } break;
+
+        case Return:
+          ip = codeSize();
+          goto loop;
+
+        case Jump:
+          ip = log.get2(i); i += 2;
+          assert(t, ip < codeSize());
+          goto loop;
+
+        case Branch: {
+          unsigned target = log.get2(i); i += 2;
+          assert(t, target < codeSize());
+          populateCalls(calls, callIndex, table, mask, map, sp, target);
+        } break;
+
+        case End:
+          goto next;
+
+        default:
+          abort(t);
+        }
+      }
+
+    next:
+      ip = log.get2(i);
+
+    loop:;
+    }
+  }
+
+  static int compareCalls(const void* a, const void* b) {
+    return (*static_cast<const uintptr_t*>(a) >
+            *static_cast<const uintptr_t*>(b) ? 1 : -1);
+  }
+
+  void writeCallTableTo(uintptr_t* calls) {
+    uintptr_t* table = static_cast<uintptr_t*>
+      (t->m->system->allocate(codeSize() * mapSizeInBytes()));
+
+    uintptr_t* mask = static_cast<uintptr_t*>
+      (t->m->system->allocate
+       (ceiling(codeSize(), BytesPerWord) * BytesPerWord));
+    memset(mask, 0, ceiling(codeSize(), BytesPerWord) * BytesPerWord);
+
+    uintptr_t map[mapSizeInWords()];
+    memset(map, 0, mapSizeInWords());
+
+    unsigned callIndex = 0;
+
+    populateCalls(calls, callIndex, table, mask, map, localSize(), 0);
+
+    object eht = codeExceptionHandlerTable(t, methodCode(t, method));
+    if (eht) {
+      PROTECT(t, eht);
+
+      for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
+        ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+
+        assert(t, getBit(mask, exceptionHandlerStart(eh)));
+        
+        memcpy(map,
+               table + (exceptionHandlerStart(eh) * mapSizeInBytes()),
+               mapSizeInBytes());
+
+        for (unsigned j = localSize() + 1; j < mapSize(); ++j) {
+          clearBit(map, j);
+        }
+
+        markBit(map, localSize());
+
+        populateCalls(calls, callIndex, table, mask, map, localSize() + 1,
+                      exceptionHandlerIp(eh));
+      }
+    }
+
+    t->m->system->free(mask);
+
+    assert(t, callIndex == callCount);
+    qsort(calls, callCount, mapSizeInBytes() + BytesPerWord, compareCalls);
   }
 
   Thread* t;
   object method;
+  int ip;
   uint32_t* index;
   Buffer log;
-  Buffer calls;
+  unsigned callCount;
 };
 
 class MyThread: public Thread {
@@ -330,7 +560,7 @@ compiledStackMapSize(Thread*, Compiled* code)
   return ceiling(compiledMaxStack(code)
                  + compiledMaxLocals(code)
                  - compiledParameterFootprint(code),
-                 BytesPerWord);
+                 BytesPerWord) + 1;
 }
 
 inline unsigned
@@ -389,7 +619,6 @@ makeCompiled(Thread* t, object method, Buffer* code,
     exceptionHandlerTableLength
     (t, codeExceptionHandlerTable(t, methodCode(t, method))) : 0;
 
-  unsigned javaCodeSize = codeLength(t, methodCode(t, method));
   unsigned maxStack = codeMaxStack(t, methodCode(t, method));
   unsigned maxLocals = codeMaxLocals(t, methodCode(t, method));
   unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -404,9 +633,7 @@ makeCompiled(Thread* t, object method, Buffer* code,
                                   * sizeof(NativeLineNumber))
                             + pad(exceptionHandlerCount
                                   * sizeof(NativeExceptionHandler))
-                            + pad(javaCodeSize
-                                  * stackMapSize
-                                  * BytesPerWord)));
+                            + pad(stackMapper->callTableSize())));
 
   compiledMaxLocals(c) = maxStack;
   compiledMaxStack(c) = maxLocals;
@@ -419,7 +646,7 @@ makeCompiled(Thread* t, object method, Buffer* code,
   compiledExceptionHandlerTableLength(c)
     = exceptionHandlerCount * sizeof(NativeExceptionHandler);
 
-  compiledStackMapTableLength(c) = javaCodeSize * stackMapSize * BytesPerWord;
+  compiledStackMapTableLength(c) = stackMapper->callTableSize();
 
   if (code->length()) {
     code->copyTo(compiledCode(c));
@@ -438,7 +665,7 @@ makeCompiled(Thread* t, object method, Buffer* code,
   }
 
   if (stackMapSize) {
-    stackMapper->writeTo(compiledStackMap(t, c, 0));
+    stackMapper->writeCallTableTo(compiledStackMap(t, c, 0));
   }
 
   return c;
@@ -1427,7 +1654,6 @@ class JavaCompiler: public Compiler {
   JavaCompiler(MyThread* t, object method):
     Compiler(t),
     method(method),
-    ip(0),
     stackMapper(t, method),
     poolRegisterClobbered(true),
     machineIPs(static_cast<uint32_t*>
@@ -1784,7 +2010,7 @@ class JavaCompiler: public Compiler {
       lineNumberIndex = -1;
     }
     
-    for (ip = 0; ip < codeLength(t, code);) {
+    for (unsigned ip = 0; ip < codeLength(t, code);) {
       stackMapper.newIp(ip);
       machineIPs[ip] = this->code.length();
 
@@ -2010,7 +2236,7 @@ class JavaCompiler: public Compiler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMapper.jumped(ip);
+        stackMapper.returned();
         break;
 
       case arraylength:
@@ -2189,13 +2415,13 @@ class JavaCompiler: public Compiler {
       case goto_: {
         int16_t offset = codeReadInt16(t, code, ip);
         jmp((ip - 3) + offset);
-        stackMapper.jumped(ip, (ip - 3) + offset);
+        stackMapper.jumped((ip - 3) + offset);
       } break;
 
       case goto_w: {
         int32_t offset = codeReadInt32(t, code, ip);
         jmp((ip - 5) + offset);
-        stackMapper.jumped(ip, (ip - 5) + offset);
+        stackMapper.jumped((ip - 5) + offset);
       } break;
 
       case i2b:
@@ -2268,7 +2494,7 @@ class JavaCompiler: public Compiler {
         popObject(rcx);
         cmp(rax, rcx);
         je((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case if_acmpne: {
@@ -2278,7 +2504,7 @@ class JavaCompiler: public Compiler {
         popObject(rcx);
         cmp(rax, rcx);
         jne((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case if_icmpeq: {
@@ -2288,7 +2514,7 @@ class JavaCompiler: public Compiler {
         popInt(rcx);
         cmp(rax, rcx);
         je((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case if_icmpne: {
@@ -2298,7 +2524,7 @@ class JavaCompiler: public Compiler {
         popInt(rcx);
         cmp(rax, rcx);
         jne((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case if_icmpgt: {
@@ -2308,7 +2534,7 @@ class JavaCompiler: public Compiler {
         popInt(rcx);
         cmp(rax, rcx);
         jg((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case if_icmpge: {
@@ -2318,7 +2544,7 @@ class JavaCompiler: public Compiler {
         popInt(rcx);
         cmp(rax, rcx);
         jge((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case if_icmplt: {
@@ -2328,7 +2554,7 @@ class JavaCompiler: public Compiler {
         popInt(rcx);
         cmp(rax, rcx);
         jl((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case if_icmple: {
@@ -2338,7 +2564,7 @@ class JavaCompiler: public Compiler {
         popInt(rcx);
         cmp(rax, rcx);
         jle((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case ifeq: {
@@ -2355,7 +2581,7 @@ class JavaCompiler: public Compiler {
         popObject(rax);
         cmp(0, rax);
         je((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case ifne: {
@@ -2364,7 +2590,7 @@ class JavaCompiler: public Compiler {
         popInt(rax);
         cmp(0, rax);
         jne((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case ifnonnull: {
@@ -2373,7 +2599,7 @@ class JavaCompiler: public Compiler {
         popObject(rax);
         cmp(0, rax);
         jne((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case ifgt: {
@@ -2382,7 +2608,7 @@ class JavaCompiler: public Compiler {
         popInt(rax);
         cmp(0, rax);
         jg((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case ifge: {
@@ -2391,7 +2617,7 @@ class JavaCompiler: public Compiler {
         popInt(rax);
         cmp(0, rax);
         jge((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case iflt: {
@@ -2400,7 +2626,7 @@ class JavaCompiler: public Compiler {
         popInt(rax);
         cmp(0, rax);
         jl((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case ifle: {
@@ -2409,7 +2635,7 @@ class JavaCompiler: public Compiler {
         popInt(rax);
         cmp(0, rax);
         jle((ip - 3) + offset);
-        stackMapper.branched(ip, (ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case iinc: {
@@ -2555,7 +2781,7 @@ class JavaCompiler: public Compiler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMapper.jumped(ip);
+        stackMapper.returned();
         break;
 
       case istore:
@@ -3028,7 +3254,7 @@ class JavaCompiler: public Compiler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMapper.jumped(ip);
+        stackMapper.returned();
         break;
 
       case sipush: {
@@ -3090,6 +3316,7 @@ class JavaCompiler: public Compiler {
   }
 
   Compiled* finish() {
+    stackMapper.finish();
     return makeCompiled(t, method, &code, lineNumbers, exceptionHandlers,
                         &stackMapper);
   }
@@ -3121,19 +3348,18 @@ class JavaCompiler: public Compiler {
   void callAddress(void* function) {
     Compiler::callAddress(function);
 
-    stackMapper.called(ip, code.length());
+    stackMapper.called(code.length());
     poolRegisterClobbered = true;
   }
 
   void callAlignedAddress(void* function) {
     Compiler::callAlignedAddress(function);
 
-    stackMapper.called(ip, code.length());
+    stackMapper.called(code.length());
     poolRegisterClobbered = true;
   }
 
   object method;
-  unsigned ip;
   StackMapper stackMapper;
   bool poolRegisterClobbered;
   uint32_t* machineIPs;
