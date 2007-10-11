@@ -196,6 +196,10 @@ public class LinkedList<T> implements List<T> {
     return new MyIterator(front);
   }
 
+  public String toString() {
+    return Collections.toString(this);
+  }
+
   private static class Cell<T> {
     public T value;
     public Cell<T> prev;

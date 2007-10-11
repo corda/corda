@@ -174,4 +174,8 @@ public class ArrayList<T> implements List<T> {
   public ListIterator<T> listIterator(int index) {
     return new Collections.ArrayListIterator(this, index);
   }
+
+  public String toString() {
+    return Collections.toString(this);
+  }
 }
