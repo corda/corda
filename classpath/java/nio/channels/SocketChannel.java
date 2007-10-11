@@ -57,6 +57,7 @@ public class SocketChannel extends SelectableChannel
     if (! connected) {
       natThrowWriteError(socket);
     }
+    if (b.remaining() == 0) return 0;
     int w = natWrite(socket, b.array(), b.arrayOffset() + b.position(), b.remaining());
     if (w > 0) {
       b.position(b.position() + w);

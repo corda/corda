@@ -301,13 +301,13 @@ public final class String implements Comparable<String> {
     return getBytes();
   }
 
-  public void getChars(int srcOffset, int srcLength,
+  public void getChars(int srcOffset, int srcEnd,
                        char[] dst, int dstOffset)
   {
-    if (srcOffset < 0 || srcOffset + srcLength > length) {
+    if (srcOffset < 0 || srcEnd > length) {
       throw new IndexOutOfBoundsException();
     }
-
+    int srcLength = srcEnd-srcOffset;
     if (data instanceof char[]) {
       char[] src = (char[]) data;
       System.arraycopy(src, offset + srcOffset, dst, dstOffset, srcLength);

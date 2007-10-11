@@ -15,6 +15,7 @@ public abstract class System {
   private static final int FileSeparator = 101;
   private static final int OsName = 102;
   private static final int JavaIoTmpdir = 103;
+  private static final int UserHome = 104;
 
   private static Property properties;
   
@@ -50,6 +51,8 @@ public abstract class System {
       code = LineSeparator;
     } else if (name.equals("file.separator")) {
       code = FileSeparator;
+    } else if (name.equals("user.home")) {
+      code = UserHome;
     } else if (name.equals("os.name")) {
       code = OsName;
     }

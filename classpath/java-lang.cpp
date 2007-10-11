@@ -1,3 +1,5 @@
+#include "math.h"
+#include "stdlib.h"
 #include "sys/time.h"
 #include "time.h"
 #include "time.h"
@@ -22,7 +24,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
     LineSeparator = 100,
     FileSeparator = 101,
     OsName = 102,
-    JavaIoTmpdir = 103
+    JavaIoTmpdir = 103,
+    UserHome = 104
   };
 
   switch (code) {
@@ -38,6 +41,14 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
   case JavaIoTmpdir:
     return e->NewStringUTF("/tmp");
 
+  case UserHome:
+    return e->NewStringUTF("/home/scharff");
+#ifdef WIN32
+    LPWSTR home = _wgetenv(L"USERPROFILE");
+    return JvNewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
+#else
+    return e->NewStringUTF(getenv("HOME"));
+#endif
   default:
     throwNew(e, "java/lang/RuntimeException", 0);
     return 0;
@@ -70,8 +81,14 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   return r;
 }
 
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_floor(JNIEnv*, jclass, jdouble val)
+{
+  return floor(val);
+}
+
 extern "C" JNIEXPORT jint JNICALL
-Java_java_lang_Double_fillBufferWithDouble(JNIEnv *e, jclass, jdouble val,
+Java_java_lang_Double_fillBufferWithDouble(JNIEnv* e, jclass, jdouble val,
 					   jbyteArray buffer, jint bufferSize) {
   jboolean isCopy;
   jbyte* buf = e->GetByteArrayElements(buffer, &isCopy);
