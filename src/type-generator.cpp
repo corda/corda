@@ -1411,8 +1411,12 @@ writeConstructors(Output* out, Object* declarations)
 
         out->write("  if (classVmFlags(t, class__) & BootstrapFlag) {\n");
         out->write("    classVmFlags(t, class__) &= ~BootstrapFlag;\n");
+        out->write("#ifndef NDEBUG\n");
+        out->write("    object e = t->exception;\n");
+        out->write("    PROTECT(t, e);\n");
+        out->write("#endif\n");
         out->write("    resolveClass(t, className(t, class__));\n");
-        out->write("    assert(t, t->exception == 0);\n");
+        out->write("    assert(t, t->exception == e);\n");
         out->write("  }\n");
       }
 

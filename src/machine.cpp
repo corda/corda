@@ -2203,7 +2203,11 @@ resolveClass(Thread* t, object spec)
       class_ = hashMapFind
         (t, t->m->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
 
-      if (class_ == 0) {
+      if (class_) {
+        set(t, classVirtualTable(t, class_),
+            classVirtualTable
+            (t, arrayBody(t, t->m->types, Machine::JobjectType)));
+      } else {
         class_ = makeArrayClass(t, spec);
       }
     } else {
