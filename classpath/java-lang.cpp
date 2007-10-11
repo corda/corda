@@ -70,8 +70,15 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   return r;
 }
 
+#include <math.h>
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_floor(JNIEnv*, jclass, jdouble val)
+{
+  return floor(val);
+}
+
 extern "C" JNIEXPORT jint JNICALL
-Java_java_lang_Double_fillBufferWithDouble(JNIEnv *e, jclass, jdouble val,
+Java_java_lang_Double_fillBufferWithDouble(JNIEnv* e, jclass, jdouble val,
 					   jbyteArray buffer, jint bufferSize) {
   jboolean isCopy;
   jbyte* buf = e->GetByteArrayElements(buffer, &isCopy);
