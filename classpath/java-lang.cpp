@@ -82,6 +82,18 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_sqrt(JNIEnv*, jclass, jdouble val)
+{
+  return sqrt(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_pow(JNIEnv*, jclass, jdouble val, jdouble exp)
+{
+  return pow(val, exp);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_floor(JNIEnv*, jclass, jdouble val)
 {
   return floor(val);
