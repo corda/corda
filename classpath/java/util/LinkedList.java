@@ -33,6 +33,7 @@ public class LinkedList<T> implements List<T> {
       front = rear = c;
     } else {
       c.next = front;
+      front.prev = c;
       front = c;
     }
   }
@@ -44,6 +45,7 @@ public class LinkedList<T> implements List<T> {
       front = rear = c;
     } else {
       c.prev = rear;
+      rear.next = c;
       rear = c;
     }
   }
@@ -103,7 +105,7 @@ public class LinkedList<T> implements List<T> {
   }
 
   public boolean add(T element) {
-    addFirst(element);
+    addLast(element);
     return true;
   }
 
