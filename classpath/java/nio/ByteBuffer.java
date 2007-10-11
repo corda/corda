@@ -27,6 +27,12 @@ public class ByteBuffer {
     return array;
   }
 
+  public ByteBuffer clear() {
+    position = 0;
+    limit = capacity;
+    return this;
+  }
+
   public ByteBuffer slice() {
     ByteBuffer buf = new ByteBuffer(array);
     buf.arrayOffset = arrayOffset + position;
