@@ -225,7 +225,7 @@ $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 
 $(jni-library): $(jni-objects)
 	@echo "linking $(@)"
-	$(cc) $(lflags) $(shared) $(^) -o $(@) -lssl -lcrypto
+	$(cc) $(lflags) $(shared) $(^) -o $(@)
 
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"
