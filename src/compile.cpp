@@ -900,14 +900,14 @@ visitStack(MyThread* t, Heap::Visitor* v)
     // we only need to visit the parameters of this method if the
     // caller is native.  Otherwise, the caller owns them.
     void* next = frameNext(f);
-    if (not frameValid(next)) {
-      visitParameters(t, v, f);
-    } else {
+    if (frameValid(next)) {
       v->visit(&frameMethod(next));
       
       if (methodFlags(t, frameMethod(next)) & ACC_NATIVE) {
         visitParameters(t, v, f);
       }
+    } else {
+      visitParameters(t, v, f);
     }
 
     v->visit(&frameMethod(f));
@@ -2902,7 +2902,9 @@ class JavaCompiler: public Compiler {
         mov(rax, MethodCompiled, rax);    // load compiled code
         add(CompiledBody, rax);
         call(rax);                        // call compiled code
+
         poolRegisterClobbered = true;
+        stackMapper.called(this->code.length());
 
         add(footprint, rsp);              // pop arguments
         stackMapper.popped(methodParameterFootprint(t, target));
@@ -3558,10 +3560,10 @@ compileMethod2(MyThread* t, object method)
                 compiledCode(code) + compiledCodeLength(code));
       }
 
-      methodCompiled(t, method) = reinterpret_cast<uint64_t>(code);
-
       object pool = c.makePool();
       set(t, methodCode(t, method), pool);
+
+      methodCompiled(t, method) = reinterpret_cast<uint64_t>(code);
     }
   }
 }
@@ -3700,7 +3702,7 @@ class ArgumentList {
     ++ position;
   }
 
-  void addInt(uint32_t v) {
+  void addInt(uintptr_t v) {
     array[position] = v;
     objectMask[position] = false;
     ++ position;
@@ -3810,6 +3812,9 @@ class MyProcessor: public Processor {
     if (methodStub_ == 0) {
       Compiler c(static_cast<MyThread*>(t));
       methodStub_ = c.compileStub();
+      fprintf(stderr, "compiled method stub from %p to %p\n",
+              compiledCode(methodStub_),
+              compiledCode(methodStub_) + compiledCodeLength(methodStub_));
     }
     return methodStub_;
   }
@@ -3820,6 +3825,10 @@ class MyProcessor: public Processor {
     if (nativeInvoker_ == 0) {
       Compiler c(static_cast<MyThread*>(t));
       nativeInvoker_ = c.compileNativeInvoker();
+      fprintf(stderr, "compiled native invoker from %p to %p\n",
+              compiledCode(nativeInvoker_),
+              compiledCode(nativeInvoker_)
+              + compiledCodeLength(nativeInvoker_));
     }
     return nativeInvoker_;
   }
@@ -3830,6 +3839,9 @@ class MyProcessor: public Processor {
     if (caller_ == 0) {
       Compiler c(static_cast<MyThread*>(t));
       caller_ = c.compileCaller();
+      fprintf(stderr, "compiled caller from %p to %p\n",
+              compiledCode(caller_),
+              compiledCode(caller_) + compiledCodeLength(caller_));
     }
     return caller_;
   }
