@@ -142,7 +142,8 @@ clearBit(uintptr_t* map, unsigned i)
 inline unsigned
 getBit(uintptr_t* map, unsigned i)
 {
-  return map[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i));
+  return (map[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i)))
+    >> bitOf(i);
 }
 
 template <class T>

@@ -300,9 +300,6 @@ class StackMapper {
 
       unsigned i = index[ip];
       while (true) {
-//         fprintf(stderr, "event %d; ip %d; sp %d; local size %d; map size %d\n",
-//                 log.get(i), ip, sp, localSize(), mapSize());
-
         switch (log.get(i++)) {
         case Call: {
           assert(t, callIndex < callCount);
@@ -445,7 +442,7 @@ class StackMapper {
         assert(t, getBit(mask, exceptionHandlerStart(eh)));
         
         memcpy(map,
-               table + (exceptionHandlerStart(eh) * mapSizeInBytes()),
+               table + (exceptionHandlerStart(eh) * mapSizeInWords()),
                mapSizeInBytes());
 
         for (unsigned j = localSize() + 1; j < mapSize(); ++j) {
@@ -460,6 +457,7 @@ class StackMapper {
     }
 
     t->m->system->free(mask);
+    t->m->system->free(table);
 
     assert(t, callIndex == callCount);
     qsort(calls, callCount, mapSizeInBytes() + BytesPerWord, compareCalls);
@@ -2828,7 +2826,6 @@ class JavaCompiler: public Compiler {
       case l2i:
         if (BytesPerWord == 8) {
           popInt();
-          stackMapper.poppedInt();
         } else {
           popInt(rax);
           mov(rax, rsp, 0);
@@ -2913,17 +2910,19 @@ class JavaCompiler: public Compiler {
           jl(less);
           jg(greater);
 
-          pushInt(0);
+          push(0);
           jmp(next);
           
           less.mark();
-          pushInt(-1);
+          push(-1);
           jmp(next);
 
           greater.mark();
-          pushInt(1);
+          push(1);
 
           next.mark();
+
+          stackMapper.pushedInt();
         } else {
           popLong(rax, rdx);
           popLong(rcx, rbx);
@@ -2936,17 +2935,19 @@ class JavaCompiler: public Compiler {
           jb(less);
           ja(greater);
 
-          pushInt(0);
+          push(0);
           jmp(next);
 
           less.mark();
-          pushInt(-1);
+          push(-1);
           jmp(next);
 
           greater.mark();
-          pushInt(1);
+          push(1);
 
           next.mark();
+
+          stackMapper.pushedInt();
         }
       } break;
 
