@@ -10,7 +10,7 @@
 #define JNICALL
 
 #define PROTECT(thread, name)                                   \
-  Thread::Protector MAKE_NAME(protector_) (thread, &name);
+  Thread::SingleProtector MAKE_NAME(protector_) (thread, &name);
 
 #define ACQUIRE(t, x) MonitorResource MAKE_NAME(monitorResource_) (t, x)
 
@@ -1162,17 +1162,29 @@ class Thread {
 
   class Protector {
    public:
-    Protector(Thread* t, object* p): t(t), p(p), next(t->protector) {
+    Protector(Thread* t): t(t), next(t->protector) {
       t->protector = this;
     }
 
-    ~Protector() {
+    virtual ~Protector() {
       t->protector = next;
     }
 
+    virtual void visit(Heap::Visitor* v) = 0;
+
     Thread* t;
-    object* p;
     Protector* next;
+  };
+
+  class SingleProtector: public Protector {
+   public:
+    SingleProtector(Thread* t, object* p): Protector(t), p(p) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(p);
+    }
+
+    object* p;
   };
 
   class Runnable: public System::Runnable {

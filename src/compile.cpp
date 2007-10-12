@@ -84,21 +84,24 @@ class Buffer {
     memcpy(data + offset, &v, 4); 
   }
 
-  uint16_t get(unsigned offset) {
+  uint8_t& get(unsigned offset) {
     assert(s, offset + 1 <= position);
     return data[offset];
   }
 
-  uint16_t get2(unsigned offset) {
+  uint16_t& get2(unsigned offset) {
     assert(s, offset + 2 <= position);
-    uint16_t v; memcpy(&v, data + offset, 2);
-    return v;
+    return *reinterpret_cast<uint16_t*>(data + offset);
   }
 
-  uint32_t get4(unsigned offset) {
+  uint32_t& get4(unsigned offset) {
     assert(s, offset + 4 <= position);
-    uint32_t v; memcpy(&v, data + offset, 4);
-    return v;
+    return *reinterpret_cast<uint32_t*>(data + offset);
+  }
+
+  uintptr_t& getAddress(unsigned offset) {
+    assert(s, offset + 4 <= position);
+    return *reinterpret_cast<uintptr_t*>(data + offset);
   }
 
   void appendAddress(uintptr_t v) {
@@ -504,7 +507,7 @@ frameNext(void* frame)
   return static_cast<void**>(frameBase(frame))[FrameNext / BytesPerWord];
 }
 
-inline object
+inline object&
 frameMethod(void* frame)
 {
   return static_cast<object*>(frameBase(frame))[FrameMethod / BytesPerWord];
@@ -781,6 +784,143 @@ throw_(MyThread* t, object o)
     t->exception = makeNullPointerException(t);
   }
   unwind(t);
+}
+
+uintptr_t*
+frameStackMap(MyThread* t, void* frame)
+{
+  Compiled* code = reinterpret_cast<Compiled*>
+    (methodCompiled(t, frameMethod(frame)));
+  unsigned ip = static_cast<uint8_t*>(frameAddress(frame))
+    - compiledCode(code);
+
+  unsigned bottom = 0;
+  unsigned top = compiledStackMapCount(t, code);
+  for (unsigned span = top - bottom; span; span = top - bottom) {
+    unsigned middle = bottom + (span / 2);
+    uintptr_t* map = compiledStackMap(t, code, middle);
+
+    if (ip < *map) {
+      top = middle;
+    } else if (ip > *map) {
+      bottom = middle + 1;
+    } else {
+      return map + 1;
+    }
+  }
+
+  fprintf(stderr, "%d not found in ", ip);
+  for (unsigned i = 0; i < compiledStackMapCount(t, code); ++i) {
+    fprintf(stderr, "%"LD" ", *compiledStackMap(t, code, i));
+  }
+  fprintf(stderr, "\n");
+
+  abort(t);
+}
+
+int
+localOffset(MyThread* t, int v, object method)
+{
+  int parameterFootprint
+    = methodParameterFootprint(t, method) * BytesPerWord;
+
+  v *= BytesPerWord;
+  if (v < parameterFootprint) {
+    return (parameterFootprint - v - BytesPerWord) + (BytesPerWord * 2)
+      + FrameFootprint;
+  } else {
+    return -(v + BytesPerWord - parameterFootprint);
+  }
+}
+
+inline object*
+frameLocalObject(MyThread* t, void* frame, unsigned index)
+{
+  return reinterpret_cast<object*>
+    (static_cast<uint8_t*>(frameBase(frame))
+     + localOffset(t, index, frameMethod(frame)));
+}
+
+void
+visitParameters(MyThread* t, Heap::Visitor* v, void* frame)
+{
+  object method = frameMethod(frame);
+
+  const char* spec = reinterpret_cast<const char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+
+  unsigned index = 0;
+  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+    v->visit(frameLocalObject(t, frame, index++));        
+  }
+
+  for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    switch (*it.next()) {
+    case 'L':
+    case '[':
+      v->visit(frameLocalObject(t, frame, index++));
+      break;
+      
+    case 'J':
+    case 'D':
+      index += 2;
+      break;
+
+    default:
+      ++ index;
+      break;
+    }
+  }
+
+  assert(t, index == methodParameterFootprint(t, method));
+}
+
+void
+visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame)
+{
+  Compiled* code = reinterpret_cast<Compiled*>
+    (methodCompiled(t, frameMethod(frame)));
+
+  unsigned stack = compiledMaxStack(code);
+  unsigned parameters = compiledParameterFootprint(code);
+  unsigned locals = compiledMaxLocals(code);
+      
+  uintptr_t* stackMap = frameStackMap(t, frame);
+  for (unsigned i = parameters; i < stack + locals; ++i) {
+    if (getBit(stackMap, i)) {
+      v->visit(frameLocalObject(t, frame, i));
+    }
+  }
+}
+
+void
+visitStack(MyThread* t, Heap::Visitor* v)
+{
+  for (void* f = t->frame; frameValid(f); f = frameNext(f)) {
+    // we only need to visit the parameters of this method if the
+    // caller is native.  Otherwise, the caller owns them.
+    void* next = frameNext(f);
+    if (not frameValid(next)) {
+      visitParameters(t, v, f);
+    } else {
+      v->visit(&frameMethod(next));
+      
+      if (methodFlags(t, frameMethod(next)) & ACC_NATIVE) {
+        visitParameters(t, v, f);
+      }
+    }
+
+    v->visit(&frameMethod(f));
+
+    object method = frameMethod(f);
+    Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
+
+    if ((methodFlags(t, method) & ACC_NATIVE) == 0
+        and code != t->m->processor->methodStub(t))
+    {
+      visitStackAndLocals(t, v, f);
+    }
+  }
 }
 
 int64_t
@@ -1504,21 +1644,6 @@ class Assembler {
   Buffer jumps;
 };
 
-int
-localOffset(MyThread* t, int v, object method)
-{
-  int parameterFootprint
-    = methodParameterFootprint(t, method) * BytesPerWord;
-
-  v *= BytesPerWord;
-  if (v < parameterFootprint) {
-    return (parameterFootprint - v - BytesPerWord) + (BytesPerWord * 2)
-      + FrameFootprint;
-  } else {
-    return -(v + BytesPerWord - parameterFootprint);
-  }
-}
-
 Register
 gpRegister(Thread* t, unsigned index)
 {
@@ -1675,7 +1800,8 @@ class JavaCompiler: public Compiler {
                         (t, codeExceptionHandlerTable
                          (t, methodCode(t, method)))
                         * sizeof(NativeExceptionHandler))) : 0),
-    pool(t->m->system, 256)
+    pool(t->m->system, 256),
+    protector(this)
   { }
 
   ~JavaCompiler() {
@@ -3378,6 +3504,21 @@ class JavaCompiler: public Compiler {
   NativeLineNumber* lineNumbers;
   NativeExceptionHandler* exceptionHandlers;
   Buffer pool;
+
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(JavaCompiler* c): Protector(c->t), c(c) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(&(c->method));
+
+      for (unsigned i = 0; i < c->pool.length(); i += BytesPerWord) {
+        v->visit(reinterpret_cast<object*>(&(c->pool.getAddress(i))));
+      }
+    }
+
+    JavaCompiler* c;
+  } protector;
 };
 
 void
@@ -3472,7 +3613,8 @@ class ArgumentList {
     next(this->t->argumentList),
     array(array),
     objectMask(objectMask),
-    position(0)
+    position(0),
+    protector(this)
   {
     this->t->argumentList = this;
 
@@ -3484,35 +3626,10 @@ class ArgumentList {
       addObject(this_);
     }
 
-    const char* s = spec;
-    ++ s; // skip '('
-    while (*s and *s != ')') {
-      switch (*s) {
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      switch (*it.next()) {
       case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-
-        if (indirectObjects) {
-          object* v = va_arg(arguments, object*);
-          addObject(v ? *v : 0);
-        } else {
-          addObject(va_arg(arguments, object));
-        }
-        break;
-
       case '[':
-        while (*s == '[') ++ s;
-        switch (*s) {
-        case 'L':
-          while (*s and *s != ';') ++ s;
-          ++ s;
-          break;
-
-        default:
-          ++ s;
-          break;
-        }
-
         if (indirectObjects) {
           object* v = va_arg(arguments, object*);
           addObject(v ? *v : 0);
@@ -3523,16 +3640,14 @@ class ArgumentList {
       
       case 'J':
       case 'D':
-        ++ s;
         addLong(va_arg(arguments, uint64_t));
         break;
-          
+
       default:
-        ++ s;
         addInt(va_arg(arguments, uint32_t));
-        break;
+        break;        
       }
-    }    
+    }
   }
 
   ArgumentList(Thread* t, uintptr_t* array, bool* objectMask, object this_,
@@ -3541,7 +3656,8 @@ class ArgumentList {
     next(this->t->argumentList),
     array(array),
     objectMask(objectMask),
-    position(0)
+    position(0),
+    protector(this)
   {
     this->t->argumentList = this;
 
@@ -3553,43 +3669,23 @@ class ArgumentList {
     }
 
     unsigned index = 0;
-    const char* s = spec;
-    ++ s; // skip '('
-    while (*s and *s != ')') {
-      switch (*s) {
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      switch (*it.next()) {
       case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        addObject(objectArrayBody(t, arguments, index++));
-        break;
-
       case '[':
-        while (*s == '[') ++ s;
-        switch (*s) {
-        case 'L':
-          while (*s and *s != ';') ++ s;
-          ++ s;
-          break;
-
-        default:
-          ++ s;
-          break;
-        }
         addObject(objectArrayBody(t, arguments, index++));
         break;
       
       case 'J':
       case 'D':
-        ++ s;
         addLong(cast<int64_t>(objectArrayBody(t, arguments, index++),
                               BytesPerWord));
         break;
 
       default:
-        ++ s;
         addInt(cast<int32_t>(objectArrayBody(t, arguments, index++),
                              BytesPerWord));
-        break;
+        break;        
       }
     }
   }
@@ -3622,6 +3718,21 @@ class ArgumentList {
   uintptr_t* array;
   bool* objectMask;
   unsigned position;
+
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(ArgumentList* list): Protector(list->t), list(list) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      for (unsigned i = 0; i < list->position; ++i) {
+        if (list->objectMask[i]) {
+          v->visit(reinterpret_cast<object*>(list->array + i));
+        }
+      }
+    }
+
+    ArgumentList* list;
+  } protector;
 };
 
 object
@@ -3724,43 +3835,20 @@ class MyProcessor: public Processor {
   }
 
   virtual unsigned
-  parameterFootprint(vm::Thread*, const char* s, bool static_)
+  parameterFootprint(vm::Thread* t, const char* s, bool static_)
   {
     unsigned footprint = 0;
-    ++ s; // skip '('
-    while (*s and *s != ')') {
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      case '[':
-        while (*s == '[') ++ s;
-        switch (*s) {
-        case 'L':
-          while (*s and *s != ';') ++ s;
-          ++ s;
-          break;
-
-        default:
-          ++ s;
-          break;
-        }
-        break;
-      
+    for (MethodSpecIterator it(t, s); it.hasNext();) {
+      switch (*it.next()) {
       case 'J':
       case 'D':
-        ++ s;
-        ++ footprint;
+        footprint += 2;
         break;
 
       default:
-        ++ s;
-        break;
+        ++ footprint;
+        break;        
       }
-
-      ++ footprint;
     }
 
     if (not static_) {
@@ -3788,9 +3876,15 @@ class MyProcessor: public Processor {
   }
 
   virtual void
-  visitObjects(Thread* t, Heap::Visitor*)
+  visitObjects(Thread* vmt, Heap::Visitor* v)
   {
-    abort(t);
+    MyThread* t = static_cast<MyThread*>(vmt);
+
+    for (Reference* r = t->reference; r; r = r->next) {
+      v->visit(&(r->target));
+    }
+
+    visitStack(t, v);
   }
 
   virtual uintptr_t

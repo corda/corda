@@ -137,7 +137,7 @@ visitRoots(Thread* t, Heap::Visitor* v)
     t->m->processor->visitObjects(t, v);
 
     for (Thread::Protector* p = t->protector; p; p = p->next) {
-      v->visit(p->p);
+      p->visit(v);
     }
   }
 
@@ -931,7 +931,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                  virtualCount++,
                  methodName(t, method),
                  methodSpec(t, method),
-                 methodClass(t, method),
+                 class_,
                  0,
                  0);
               hashMapInsert(t, virtualMap, method, method, methodHash);
