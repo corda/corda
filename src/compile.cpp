@@ -157,6 +157,7 @@ class StackMapper {
     PushInt,
     PushObject,
     Duplicate,
+    Pop,
     PopLong,
     PopInt,
     PopObject,
@@ -229,6 +230,11 @@ class StackMapper {
     log.append(Duplicate);
   }
 
+  void popped(unsigned count) {
+    log.append(Pop);
+    log.append(count);
+  }
+
   void poppedLong() {
     log.append(PopLong);
   }
@@ -250,7 +256,7 @@ class StackMapper {
     log.append2(index - parameterFootprint());
   }
 
-  void returned() {
+  void exited() {
     log.append(Return);
   }
 
@@ -312,6 +318,9 @@ class StackMapper {
 
       unsigned i = index[ip];
       while (true) {
+        fprintf(stderr, "event %d; ip %d; sp %d; local size %d; map size %d\n",
+                log.get(i), ip, sp, localSize(), mapSize());
+
         switch (log.get(i++)) {
         case Call: {
           assert(t, callIndex < callCount);
@@ -324,11 +333,14 @@ class StackMapper {
 
         case PushLong:
           assert(t, sp + 2 <= mapSize());
+          assert(t, getBit(map, sp) == 0);
+          assert(t, getBit(map, sp + 1) == 0);
           sp += 2;
           break;
 
         case PushInt:
           assert(t, sp + 1 <= mapSize());
+          assert(t, getBit(map, sp) == 0);
           ++ sp;
           break;
 
@@ -346,7 +358,18 @@ class StackMapper {
           ++ sp;
           break;
 
+        case Pop: {
+          unsigned count = log.get(i++);
+          assert(t, sp >= count);
+          assert(t, sp - count >= localSize());
+          while (count) {
+            clearBit(map, -- sp);
+            -- count;
+          }
+        } break;
+
         case PopLong:
+          assert(t, sp >= 2);
           assert(t, sp - 2 >= localSize());
           assert(t, getBit(map, sp - 1) == 0);
           assert(t, getBit(map, sp - 2) == 0);
@@ -354,18 +377,21 @@ class StackMapper {
           break;
 
         case PopInt:
+          assert(t, sp >= 1);
           assert(t, sp - 1 >= localSize());
           assert(t, getBit(map, sp - 1) == 0);
           -- sp;
           break;
 
         case PopObject:
+          assert(t, sp >= 1);
           assert(t, sp - 1 >= localSize());
           assert(t, getBit(map, sp - 1) != 0);
           clearBit(map, -- sp);
           break;
 
         case PopIntOrObject:
+          assert(t, sp >= 1);
           assert(t, sp - 1 >= localSize());
           clearBit(map, -- sp);
           break;
@@ -623,9 +649,6 @@ makeCompiled(Thread* t, object method, Buffer* code,
   unsigned maxLocals = codeMaxLocals(t, methodCode(t, method));
   unsigned parameterFootprint = methodParameterFootprint(t, method);
 
-  unsigned stackMapSize
-  = ceiling(maxStack + maxLocals - parameterFootprint, BytesPerWord);
-
   Compiled* c = static_cast<Compiled*>
     (t->m->system->allocate(sizeof(Compiled)
                             + pad(code->length())
@@ -664,7 +687,7 @@ makeCompiled(Thread* t, object method, Buffer* code,
            exceptionHandlerCount * sizeof(NativeExceptionHandler));
   }
 
-  if (stackMapSize) {
+  if (stackMapper->callTableSize()) {
     stackMapper->writeCallTableTo(compiledStackMap(t, c, 0));
   }
 
@@ -1905,6 +1928,7 @@ class JavaCompiler: public Compiler {
     callAlignedAddress(compiledCode(code));
 
     add(footprint, rsp); // pop arguments
+    stackMapper.popped(methodParameterFootprint(t, target));
 
     pushReturnValue(methodReturnCode(t, target));
   }
@@ -2236,12 +2260,12 @@ class JavaCompiler: public Compiler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMapper.returned();
+        stackMapper.exited();
         break;
 
       case arraylength:
         popObject(rax);
-        push(rax, BytesPerWord);
+        pushInt(rax, BytesPerWord);
         break;
 
       case astore:
@@ -2266,7 +2290,8 @@ class JavaCompiler: public Compiler {
 
       case athrow:
         popObject(rax);
-        compileCall(reinterpret_cast<void*>(throw_), rax);      
+        compileCall(reinterpret_cast<void*>(throw_), rax);
+        stackMapper.exited();
         break;
 
       case bipush: {
@@ -2573,6 +2598,7 @@ class JavaCompiler: public Compiler {
         popInt(rax);
         cmp(0, rax);
         je((ip - 3) + offset);
+        stackMapper.branched((ip - 3) + offset);
       } break;
 
       case ifnull: {
@@ -2700,18 +2726,20 @@ class JavaCompiler: public Compiler {
         cmp(rcx, rax);
         jne(call);
         
-        pushInt(1);
+        push(1);
         jmp(next);
 
         call.mark();
         compileCall(reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
-        pushInt(rax);
+        push(rax);
         jmp(next);
 
         zero.mark();
-        pushInt(0);
+        push(0);
 
         next.mark();
+
+        stackMapper.pushedInt();
       } break;
 
       case invokespecial: {
@@ -2771,6 +2799,7 @@ class JavaCompiler: public Compiler {
         poolRegisterClobbered = true;
 
         add(footprint, rsp);              // pop arguments
+        stackMapper.popped(methodParameterFootprint(t, target));
 
         pushReturnValue(methodReturnCode(t, target));
       } break;
@@ -2781,7 +2810,7 @@ class JavaCompiler: public Compiler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMapper.returned();
+        stackMapper.exited();
         break;
 
       case istore:
@@ -3254,7 +3283,7 @@ class JavaCompiler: public Compiler {
         mov(rbp, rsp);
         pop(rbp);
         ret();
-        stackMapper.returned();
+        stackMapper.exited();
         break;
 
       case sipush: {
@@ -3386,6 +3415,13 @@ compileMethod2(MyThread* t, object method)
                 &byteArrayBody(t, className(t, methodClass(t, method)), 0),
                 &byteArrayBody(t, methodName(t, method), 0));
       }
+
+      if (strcmp(reinterpret_cast<const char*>
+                 (&byteArrayBody(t, methodName(t, method), 0)),
+                 "charAt") == 0)
+      {
+        noop();
+      }                 
 
       JavaCompiler c(t, method);
       Compiled* code = c.compile();
