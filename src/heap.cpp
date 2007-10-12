@@ -206,13 +206,13 @@ class Segment {
     void clearBit(unsigned i) {
       assert(segment->context, wordOf(i) < size());
 
-      data()[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
+      vm::clearBit(data(), i);
     }
 
     void setBit(unsigned i) {
       assert(segment->context, wordOf(i) < size());
 
-      data()[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
+      vm::markBit(data(), i);
     }
 
     void clearOnlyIndex(unsigned index) {
@@ -738,9 +738,9 @@ bitsetSet(uintptr_t* p, unsigned i, bool v)
   }
 
   if (v) {
-    p[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
+    markBit(p, i);
   } else {
-    p[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
+    clearBit(p, i);
   }
 }
 

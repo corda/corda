@@ -127,6 +127,24 @@ indexOf(unsigned word, unsigned bit)
   return (word * BitsPerWord) + bit;
 }
 
+inline void
+markBit(uintptr_t* map, unsigned i)
+{
+  map[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
+}
+
+inline void
+clearBit(uintptr_t* map, unsigned i)
+{
+  map[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
+}
+
+inline unsigned
+getBit(uintptr_t* map, unsigned i)
+{
+  return map[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i));
+}
+
 template <class T>
 inline T&
 cast(void* p, unsigned offset)

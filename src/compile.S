@@ -9,12 +9,16 @@ vmInvoke:
    pushq  %rbp
    movq   %rsp,%rbp
    
+   // rbx is a callee-saved register (so are r12-r15, but we don't use those)
+   pushq  %rbx
+   
    // %rdi: function
    // %rsi: stack
    // %rdx: stackSize
    // %rcx: returnType
 
    // reserve space for arguments
+   pushq  %rdx
    subq   %rdx,%rsp
 
    // copy memory arguments into place
@@ -36,7 +40,12 @@ test:
    
    // call function
    call   *%rdi
+
+   // pop arguments
+   addq   -16(%rbp),%rsp
+   addq   $8,%rsp
    
+   popq   %rbx
    movq   %rbp,%rsp   
    popq   %rbp
    ret
@@ -54,15 +63,18 @@ vmInvoke:
    pushl  %ebp
    movl   %esp,%ebp
 
+   // ebx, esi and edi are callee-saved registers
+   pushl  %ebx
+   pushl  %esi
+   pushl  %edi
+
    //  8(%ebp): function
    // 12(%ebp): stack
    // 16(%ebp): stackSize
    // 20(%ebp): returnType
    
    // reserve space for arguments
-   movl   16(%ebp),%ecx
-   
-   subl   %ecx,%esp
+   subl   16(%ebp),%esp
 
    // copy arguments into place
    movl   $0,%ecx
@@ -84,6 +96,9 @@ test:
    // call function
    call   *8(%ebp)
 
+   // pop arguments
+   addl   16(%ebp),%esp
+
    // handle return value based on expected type
    movl   20(%ebp),%ecx
    
@@ -101,6 +116,9 @@ int32:
    movl   $0,%edx
 
 exit:
+   popl   %edi
+   popl   %esi
+   popl   %ebx
    movl   %ebp,%esp
    popl   %ebp
    ret

@@ -28,24 +28,6 @@ const unsigned FrameFootprint = BytesPerWord * 3;
 
 class ArgumentList;
 
-inline void
-markBit(uintptr_t* map, unsigned i)
-{
-  map[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
-}
-
-inline void
-clearBit(uintptr_t* map, unsigned i)
-{
-  map[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
-}
-
-inline unsigned
-getBit(uintptr_t* map, unsigned i)
-{
-  return map[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i));
-}
-
 class Buffer {
  public:
   Buffer(System* s, unsigned minimumCapacity):
@@ -318,8 +300,8 @@ class StackMapper {
 
       unsigned i = index[ip];
       while (true) {
-        fprintf(stderr, "event %d; ip %d; sp %d; local size %d; map size %d\n",
-                log.get(i), ip, sp, localSize(), mapSize());
+//         fprintf(stderr, "event %d; ip %d; sp %d; local size %d; map size %d\n",
+//                 log.get(i), ip, sp, localSize(), mapSize());
 
         switch (log.get(i++)) {
         case Call: {
