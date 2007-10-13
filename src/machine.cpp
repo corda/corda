@@ -2606,10 +2606,9 @@ void
 printTrace(Thread* t, object exception)
 {
   if (exception == 0) {
-    exception = makeNullPointerException(t, 0,
-					 makeTrace(t, t->m->processor->frameStart(t)),
-					 0);
+    exception = makeNullPointerException(t, 0, makeTrace(t), 0);
   }
+
   for (object e = exception; e; e = throwableCauseUnsafe(t, e)) {
     if (e != exception) {
       fprintf(stderr, "caused by: ");
