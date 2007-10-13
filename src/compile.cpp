@@ -146,7 +146,8 @@ class StackMapper {
     PopLong,
     PopInt,
     PopObject,
-    PopIntOrObject,
+    StoreLong,
+    StoreInt,
     StoreObject,
     Return,
     Jump,
@@ -161,7 +162,8 @@ class StackMapper {
     index(codeSize() ? static_cast<uint32_t*>
           (t->m->system->allocate(codeSize() * 4)) : 0),
     log(t->m->system, 1024),
-    callCount(0)
+    callCount(0),
+    protector(this)
   { }
 
   ~StackMapper() {
@@ -232,13 +234,25 @@ class StackMapper {
     log.append(PopObject);
   }
 
-  void poppedIntOrObject() {
-    log.append(PopIntOrObject);
+  void storedLong(unsigned index) {
+    if (index >= parameterFootprint()) {
+      log.append(StoreLong);
+      log.append2(index - parameterFootprint());
+    }
+  }
+
+  void storedInt(unsigned index) {
+    if (index >= parameterFootprint()) {
+      log.append(StoreInt);
+      log.append2(index - parameterFootprint());
+    }
   }
 
   void storedObject(unsigned index) {
-    log.append(StoreObject);
-    log.append2(index - parameterFootprint());
+    if (index >= parameterFootprint()) {
+      log.append(StoreObject);
+      log.append2(index - parameterFootprint());
+    }
   }
 
   void exited() {
@@ -311,6 +325,16 @@ class StackMapper {
           memcpy(calls + (callIndex * (mapSizeInWords() + 1)) + 1,
                  map, mapSizeInBytes());
           ++ callIndex;
+
+//           fprintf(stderr,
+//                   "call stack and locals 0x%x of size %d at %d of %s.%s\n",
+//                   *map,
+//                   mapSize(),
+//                   machineIp,
+//                   &byteArrayBody
+//                   (t, className(t, methodClass(t, method)), 0),
+//                   &byteArrayBody(t, methodName(t, method), 0));
+
         } break;
 
         case PushLong:
@@ -372,11 +396,18 @@ class StackMapper {
           clearBit(map, -- sp);
           break;
 
-        case PopIntOrObject:
-          assert(t, sp >= 1);
-          assert(t, sp - 1 >= localSize());
-          clearBit(map, -- sp);
-          break;
+        case StoreLong: {
+          unsigned index = log.get2(i); i += 2;
+          assert(t, index + 1 < localSize());
+          clearBit(map, index);
+          clearBit(map, index + 1);
+        } break;
+
+        case StoreInt: {
+          unsigned index = log.get2(i); i += 2;
+          assert(t, index < localSize());
+          clearBit(map, index);
+        } break;
 
         case StoreObject: {
           unsigned index = log.get2(i); i += 2;
@@ -429,7 +460,7 @@ class StackMapper {
     memset(mask, 0, ceiling(codeSize(), BytesPerWord) * BytesPerWord);
 
     uintptr_t map[mapSizeInWords()];
-    memset(map, 0, mapSizeInWords());
+    memset(map, 0, mapSizeInBytes());
 
     unsigned callIndex = 0;
 
@@ -472,6 +503,17 @@ class StackMapper {
   uint32_t* index;
   Buffer log;
   unsigned callCount;
+
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(StackMapper* mapper): Protector(mapper->t), mapper(mapper) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(&(mapper->method));
+    }
+
+    StackMapper* mapper;
+  } protector;
 };
 
 class MyThread: public Thread {
@@ -641,8 +683,8 @@ makeCompiled(Thread* t, object method, Buffer* code,
                                   * sizeof(NativeExceptionHandler))
                             + pad(stackMapper->callTableSize())));
 
-  compiledMaxLocals(c) = maxStack;
-  compiledMaxStack(c) = maxLocals;
+  compiledMaxLocals(c) = maxLocals;
+  compiledMaxStack(c) = maxStack;
   compiledParameterFootprint(c) = parameterFootprint;
   compiledCodeLength(c) = code->length();
 
@@ -881,14 +923,27 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame)
   Compiled* code = reinterpret_cast<Compiled*>
     (methodCompiled(t, frameMethod(frame)));
 
-  unsigned stack = compiledMaxStack(code);
-  unsigned parameters = compiledParameterFootprint(code);
-  unsigned locals = compiledMaxLocals(code);
+  unsigned parameterFootprint = compiledParameterFootprint(code);
+  unsigned count = compiledMaxStack(code)
+    + compiledMaxLocals(code)
+    - parameterFootprint;
       
-  uintptr_t* stackMap = frameStackMap(t, frame);
-  for (unsigned i = parameters; i < stack + locals; ++i) {
-    if (getBit(stackMap, i)) {
-      v->visit(frameLocalObject(t, frame, i));
+  if (count) {
+    uintptr_t* stackMap = frameStackMap(t, frame);
+
+//     fprintf(stderr, "visit stack and locals 0x%x of size %d, at %d of %s.%s\n",
+//             *stackMap,
+//             count,
+//             static_cast<uint8_t*>(frameAddress(frame))
+//             - compiledCode(code),
+//             &byteArrayBody
+//             (t, className(t, methodClass(t, frameMethod(frame))), 0),
+//             &byteArrayBody(t, methodName(t, frameMethod(frame)), 0));
+
+    for (unsigned i = 0; i < count; ++i) {
+      if (getBit(stackMap, i)) {
+        v->visit(frameLocalObject(t, frame, i + parameterFootprint));
+      }
     }
   }
 }
@@ -896,6 +951,10 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame)
 void
 visitStack(MyThread* t, Heap::Visitor* v)
 {
+  if (frameValid(t->frame)) {
+    v->visit(&frameMethod(t->frame));
+  }
+
   for (void* f = t->frame; frameValid(f); f = frameNext(f)) {
     // we only need to visit the parameters of this method if the
     // caller is native.  Otherwise, the caller owns them.
@@ -909,8 +968,6 @@ visitStack(MyThread* t, Heap::Visitor* v)
     } else {
       visitParameters(t, v, f);
     }
-
-    v->visit(&frameMethod(f));
 
     object method = frameMethod(f);
     Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
@@ -1853,7 +1910,7 @@ class JavaCompiler: public Compiler {
     stackMapper.pushedObject();
   }
 
-  void pushLong(uint64_t v) {
+  void pushLongQuiet(uint64_t v) {
     if (BytesPerWord == 8) {
       pushAddress(v);
       sub(8, rsp);
@@ -1861,6 +1918,10 @@ class JavaCompiler: public Compiler {
       push((v >> 32) & 0xFFFFFFFF);
       push((v      ) & 0xFFFFFFFF);
     }
+  }
+
+  void pushLong(uint64_t v) {
+    pushLongQuiet(v);
     stackMapper.pushedLong();
   }
 
@@ -1871,10 +1932,14 @@ class JavaCompiler: public Compiler {
     stackMapper.pushedLong();
   }
 
-  void pushLong(Register r, int32_t offset) {
+  void pushLongQuiet(Register r, int32_t offset) {
     assert(t, BytesPerWord == 8);
     push(r, offset);
     sub(8, rsp);
+  }
+
+  void pushLong(Register r, int32_t offset) {
+    pushLongQuiet(r, offset);
     stackMapper.pushedLong();
   }
 
@@ -1885,12 +1950,18 @@ class JavaCompiler: public Compiler {
     stackMapper.pushedLong();
   }
 
-  void pushLong(Register low, int32_t lowOffset,
-                Register high, int32_t highOffset)
+  void pushLongQuiet(Register low, int32_t lowOffset,
+                     Register high, int32_t highOffset)
   {
     assert(t, BytesPerWord == 4);
     push(high, highOffset);
     push(low, lowOffset);
+  }
+
+  void pushLong(Register low, int32_t lowOffset,
+                Register high, int32_t highOffset)
+  {
+    pushLongQuiet(low, lowOffset, high, highOffset);
     stackMapper.pushedLong();
   }
 
@@ -1973,6 +2044,7 @@ class JavaCompiler: public Compiler {
 
   void storeInt(unsigned index) {
     popInt(rbp, localOffset(t, index, method));
+    stackMapper.storedInt(index);
   }
 
   void storeObject(unsigned index) {
@@ -1987,6 +2059,7 @@ class JavaCompiler: public Compiler {
       popLong(rbp, localOffset(t, index, method),
               rbp, localOffset(t, index + 1, method));
     }
+    stackMapper.storedLong(index);
   }
 
   void pushReturnValue(unsigned code) {
@@ -2033,86 +2106,128 @@ class JavaCompiler: public Compiler {
 
     callAlignedAddress(compiledCode(code));
 
+    stackMapper.called(this->code.length());
+    poolRegisterClobbered = true;
+
     add(footprint, rsp); // pop arguments
     stackMapper.popped(methodParameterFootprint(t, target));
 
     pushReturnValue(methodReturnCode(t, target));
   }
 
-  void compileCall2(void* function, unsigned argCount) {
-    if (BytesPerWord == 4) {
-      push(rbp, FrameThread);
-    } else {
+  void compileThrowNew(Machine::Type type) {
+    object class_ = arrayBody(t, t->m->types, type);
+          
+    if (BytesPerWord == 8) {
+      mov(poolRegister(), poolReference(class_), rsi);
       mov(rbp, FrameThread, rdi);
+    } else {
+      push(poolRegister(), poolReference(class_));
+      push(rbp, FrameThread);
     }
 
-    mov(reinterpret_cast<uintptr_t>(function), rbx);
+    indirectCall(reinterpret_cast<void*>(throwNew));    
+  }
 
+  void directCall(void* function) {
+    callAddress(function);
+
+    poolRegisterClobbered = true;    
+  }
+
+  void indirectCall(void* function) {
+    mov(reinterpret_cast<uintptr_t>(function), rbx);
     callAddress(compiledCode(caller(t)));
 
-    if (BytesPerWord == 4) {
-      add(BytesPerWord * argCount, rsp);
-    }
+    stackMapper.called(code.length());
+    poolRegisterClobbered = true;    
   }
 
-  void compileCall(void* function) {
-    compileCall2(function, 1);
-  }
-
-  void compileCall(void* function, object arg1) {
-    if (BytesPerWord == 4) {
-      push(poolRegister(), poolReference(arg1));
-    } else {
-      mov(poolRegister(), poolReference(arg1), rsi);
-    }
-
-    compileCall2(function, 2);
-  }
-
-  void compileCall(void* function, Register arg1) {
-    if (BytesPerWord == 4) {
-      push(arg1);
-    } else {
-      mov(arg1, rsi);
-    }
-
-    compileCall2(function, 2);
-  }
-
-  void compileCall(void* function, object arg1, Register arg2) {
-    if (BytesPerWord == 4) {
-      push(arg2);
-      push(poolRegister(), poolReference(arg1));
-    } else {
-      mov(arg2, rdx);
-      mov(poolRegister(), poolReference(arg1), rsi);
-    }
-
-    compileCall2(function, 3);
-  }
-
-  void compileCall(void* function, void* arg1, Register arg2) {
-    if (BytesPerWord == 4) {
-      push(arg2);
-      pushAddress(reinterpret_cast<uintptr_t>(arg1));
-    } else {
-      mov(arg2, rdx);
-      mov(reinterpret_cast<uintptr_t>(arg1), rsi);
-    }
-
-    compileCall2(function, 3);
-  }
-
-  void compileCall(void* function, Register arg1, Register arg2) {
-    if (BytesPerWord == 4) {
-      push(arg2);
-      push(arg1);
-    } else {
+  void compileCall(bool direct, void* function, Register arg1, Register arg2) {
+    if (BytesPerWord == 8) {
       mov(arg2, rdx);
       mov(arg1, rsi);
+      mov(rbp, FrameThread, rdi);
+    } else {
+      push(arg2);
+      push(arg1);
+      push(rbp, FrameThread);
     }
 
-    compileCall2(function, 3);
+    if (direct) {
+      directCall(function);
+    } else {
+      indirectCall(function);
+    }
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 3, rsp);
+    }
+  }
+
+  void compileCall(bool direct, void* function, uintptr_t arg1, Register arg2)
+  {
+    if (BytesPerWord == 8) {
+      mov(arg2, rdx);
+      mov(arg1, rsi);
+      mov(rbp, FrameThread, rdi);
+    } else {
+      push(arg2);
+      push(arg1);
+      push(rbp, FrameThread);
+    }
+
+    if (direct) {
+      directCall(function);
+    } else {
+      indirectCall(function);
+    }
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 3, rsp);
+    }
+  }
+
+  void compileCall(bool direct, void* function, object arg1, Register arg2) {
+    if (BytesPerWord == 8) {
+      mov(arg2, rdx);
+      mov(poolRegister(), poolReference(arg1), rsi);
+      mov(rbp, FrameThread, rdi);
+    } else {
+      push(arg2);
+      push(poolRegister(), poolReference(arg1));
+      push(rbp, FrameThread);
+    }
+
+    if (direct) {
+      directCall(function);
+    } else {
+      indirectCall(function);
+    }
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 3, rsp);
+    }
+  }
+
+  void compileCall(bool direct, void* function, object arg1) {
+    if (BytesPerWord == 8) {
+      mov(poolRegister(), poolReference(arg1), rsi);
+      mov(rbp, FrameThread, rdi);
+    } else {
+      push(poolRegister(), poolReference(arg1));
+      push(rbp, FrameThread);
+    }
+
+    if (direct) {
+      directCall(function);
+    } else {
+      indirectCall(function);
+    }
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 2, rsp);
+    }
   }
 
   Compiled* compile() {
@@ -2234,11 +2349,7 @@ class JavaCompiler: public Compiler {
         jmp(next);
 
         outOfBounds.mark();
-        int3();
-        compileCall
-          (reinterpret_cast<void*>(throwNew),
-           arrayBody
-           (t, t->m->types, Machine::ArrayIndexOutOfBoundsExceptionType));
+        compileThrowNew(Machine::ArrayIndexOutOfBoundsExceptionType);
 
         next.mark();
       } break;
@@ -2276,6 +2387,11 @@ class JavaCompiler: public Compiler {
 
         switch (instruction) {
         case aastore:
+          shl(log(BytesPerWord), rcx);
+          add(rcx, rax);
+          compileCall(true, reinterpret_cast<void*>(set), rax, rbx);
+          break;
+
         case fastore:
         case iastore:
           shl(log(BytesPerWord), rcx);
@@ -2307,10 +2423,7 @@ class JavaCompiler: public Compiler {
         jmp(next);
 
         outOfBounds.mark();
-        compileCall
-          (reinterpret_cast<void*>(throwNew),
-           arrayBody
-           (t, t->m->types, Machine::ArrayIndexOutOfBoundsExceptionType));
+        compileThrowNew(Machine::ArrayIndexOutOfBoundsExceptionType);
 
         next.mark();
       } break;
@@ -2351,13 +2464,13 @@ class JavaCompiler: public Compiler {
         cmp(0, rax);
         jge(nonnegative);
 
-        compileCall
-          (reinterpret_cast<void*>(throwNew),
-           arrayBody(t, t->m->types, Machine::NegativeArraySizeExceptionType));
+        compileThrowNew(Machine::NegativeArraySizeExceptionType);
 
         nonnegative.mark();
-        compileCall(reinterpret_cast<void*>(makeBlankObjectArray),
+
+        compileCall(false, reinterpret_cast<void*>(makeBlankObjectArray),
                     class_, rax);
+
         pushObject(rax);
       } break;
 
@@ -2395,8 +2508,14 @@ class JavaCompiler: public Compiler {
         break;
 
       case athrow:
-        popObject(rax);
-        compileCall(reinterpret_cast<void*>(throw_), rax);
+        if (BytesPerWord == 8) {
+          popObject(rsi);
+          mov(rbp, FrameThread, rdi);
+        } else {
+          push(rbp, FrameThread);
+        }
+
+        indirectCall(reinterpret_cast<void*>(throw_));
         stackMapper.exited();
         break;
 
@@ -2421,13 +2540,12 @@ class JavaCompiler: public Compiler {
         cmp(rcx, rax);
         je(next);
 
-        compileCall(reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
+        compileCall(true, reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
+
         cmp(0, rax);
         jne(next);
         
-        compileCall
-          (reinterpret_cast<void*>(throwNew),
-           arrayBody(t, t->m->types, Machine::ClassCastExceptionType));
+        compileThrowNew(Machine::ClassCastExceptionType);
 
         next.mark();        
       } break;
@@ -2509,13 +2627,14 @@ class JavaCompiler: public Compiler {
           cmp(0, rax);
           je(zero);
 
-          pushInt(rax, IntValue);
+          push(rax, IntValue);
           jmp(next);
 
           zero.mark();
-          pushInt(0);
+          push(0);
 
           next.mark();
+          stackMapper.pushedInt();
         } break;
 
         case DoubleField:
@@ -2526,13 +2645,19 @@ class JavaCompiler: public Compiler {
           cmp(0, rax);
           je(zero);
 
-          pushLong(rax, LongValue);
+          if (BytesPerWord == 8) {
+            pushLongQuiet(rax, LongValue);
+          } else {
+            pushLongQuiet(rax, LongValue);
+            pushLongQuiet(rax, LongValue + 4);
+          }
           jmp(next);
 
           zero.mark();
-          pushLong(0);
+          pushLongQuiet(0);
 
           next.mark();
+          stackMapper.pushedLong();
         } break;
 
         case ObjectField: {
@@ -2836,7 +2961,9 @@ class JavaCompiler: public Compiler {
         jmp(next);
 
         call.mark();
-        compileCall(reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
+
+        compileCall(true, reinterpret_cast<void*>(isAssignableFrom), rcx, rax);
+
         push(rax);
         jmp(next);
 
@@ -2903,8 +3030,8 @@ class JavaCompiler: public Compiler {
         add(CompiledBody, rax);
         call(rax);                        // call compiled code
 
-        poolRegisterClobbered = true;
         stackMapper.called(this->code.length());
+        poolRegisterClobbered = true;
 
         add(footprint, rsp);              // pop arguments
         stackMapper.popped(methodParameterFootprint(t, target));
@@ -3087,7 +3214,7 @@ class JavaCompiler: public Compiler {
           Assembler::idiv(rcx);
           pushLong(rax);
         } else {
-          compileCall(reinterpret_cast<void*>(divideLong));
+          directCall(reinterpret_cast<void*>(divideLong));
           popLong();
           mov(rax, rsp, 0);
           mov(rdx, rsp, 4);
@@ -3159,7 +3286,7 @@ class JavaCompiler: public Compiler {
           Assembler::idiv(rcx);
           pushLong(rdx);
         } else {
-          compileCall(reinterpret_cast<void*>(moduloLong));
+          directCall(reinterpret_cast<void*>(moduloLong));
           popLong();
           mov(rax, rsp, 0);
           mov(rdx, rsp, 4);
@@ -3208,9 +3335,10 @@ class JavaCompiler: public Compiler {
         if (UNLIKELY(t->exception)) return 0;
 
         if (classVmFlags(t, class_) & WeakReferenceFlag) {
-          compileCall(reinterpret_cast<void*>(makeNewWeakReference), class_);
+          compileCall(false, reinterpret_cast<void*>(makeNewWeakReference),
+                      class_);
         } else {
-          compileCall(reinterpret_cast<void*>(makeNew), class_);
+          compileCall(false, reinterpret_cast<void*>(makeNew), class_);
         }
 
         pushObject(rax);
@@ -3225,10 +3353,7 @@ class JavaCompiler: public Compiler {
         cmp(0, rax);
         jge(nonnegative);
 
-        compileCall
-          (reinterpret_cast<void*>(throwNew),
-           arrayBody
-           (t, t->m->types, Machine::NegativeArraySizeExceptionType));
+        compileThrowNew(Machine::NegativeArraySizeExceptionType);
 
         nonnegative.mark();
 
@@ -3269,14 +3394,15 @@ class JavaCompiler: public Compiler {
         default: abort(t);
         }
 
-        compileCall(reinterpret_cast<void*>(makeBlankArray),
-                    reinterpret_cast<void*>(constructor), rax);
+        compileCall(false, reinterpret_cast<void*>(makeBlankArray),
+                    reinterpret_cast<uintptr_t>(constructor), rax);
+
         pushObject(rax);
       } break;
 
       case pop_: {
         add(BytesPerWord, rsp);
-        stackMapper.poppedIntOrObject();
+        stackMapper.popped(1);
       } break;
 
       case putfield: {
@@ -3328,9 +3454,25 @@ class JavaCompiler: public Compiler {
         } break;
 
         case ObjectField: {
-          popObject(rcx);
-          popObject(rax);
-          mov(rcx, rax, fieldOffset(t, field));
+          if (BytesPerWord == 8) {
+            popObject(rdx);
+            popObject(rsi);
+            add(fieldOffset(t, field), rsi);
+            mov(rbp, FrameThread, rdi);
+          } else {
+            popObject(rdx);
+            popObject(rsi);
+            add(fieldOffset(t, field), rsi);
+            push(rdx);
+            push(rsi);
+            push(rbp, FrameThread);
+          }
+
+          directCall(reinterpret_cast<void*>(set));
+
+          if (BytesPerWord == 4) {
+            add(BytesPerWord * 3, rsp);
+          }
         } break;
 
         default: abort(t);
@@ -3356,34 +3498,105 @@ class JavaCompiler: public Compiler {
         case ShortField:
         case FloatField:
         case IntField: {
-          compileCall(reinterpret_cast<void*>(makeNew), 
-                      arrayBody(t, t->m->types, Machine::IntType));
+          object intType = arrayBody(t, t->m->types, Machine::IntType);
+          
+          if (BytesPerWord == 8) {
+            mov(poolRegister(), poolReference(intType), rsi);
+            mov(rbp, FrameThread, rdi);
+          } else {
+            push(poolRegister(), poolReference(intType));
+            push(rbp, FrameThread);
+          }
+
+          indirectCall(reinterpret_cast<void*>(makeNew));
+
+          if (BytesPerWord == 4) {
+            add(BytesPerWord * 2, rsp);
+          }
 
           popInt(rax, IntValue);
 
-          mov(poolRegister(), poolReference(table), rcx);
-          mov(rax, rcx, offset);
+          if (BytesPerWord == 8) {
+            mov(rax, rdx);
+            mov(poolRegister(), poolReference(table), rsi);
+            add(offset, rsi);
+            mov(rbp, FrameThread, rdi);
+          } else {
+            push(rax);
+            mov(poolRegister(), poolReference(table), rsi);
+            add(offset, rsi);
+            push(rsi);
+            push(rbp, FrameThread);
+          }
+
+          directCall(reinterpret_cast<void*>(set));
+
+          if (BytesPerWord == 4) {
+            add(BytesPerWord * 3, rsp);
+          }
         } break;
 
         case DoubleField:
         case LongField: {
-          compileCall(reinterpret_cast<void*>(makeNew),
-                      arrayBody(t, t->m->types, Machine::LongType));
+          object longType = arrayBody(t, t->m->types, Machine::LongType);
+          
+          if (BytesPerWord == 8) {
+            mov(poolRegister(), poolReference(longType), rsi);
+            mov(rbp, FrameThread, rdi);
+          } else {
+            push(poolRegister(), poolReference(longType));
+            push(rbp, FrameThread);
+          }
+
+          indirectCall(reinterpret_cast<void*>(makeNew));
 
           if (BytesPerWord == 8) {
             popLong(rax, LongValue);
           } else {
+            add(BytesPerWord * 2, rsp);
             popLong(rax, LongValue,
                     rax, LongValue + 4);
           }
 
-          mov(poolRegister(), poolReference(table), rcx);
-          mov(rax, rcx, offset);
+          if (BytesPerWord == 8) {
+            mov(rax, rdx);
+            mov(poolRegister(), poolReference(table), rsi);
+            add(offset, rsi);
+            mov(rbp, FrameThread, rdi);
+          } else {
+            push(rax);
+            mov(poolRegister(), poolReference(table), rsi);
+            add(offset, rsi);
+            push(rsi);
+            push(rbp, FrameThread);
+          }
+
+          directCall(reinterpret_cast<void*>(set));
+
+          if (BytesPerWord == 4) {
+            add(BytesPerWord * 3, rsp);
+          }
         } break;
 
         case ObjectField:
-          mov(poolRegister(), poolReference(table), rax);
-          popObject(rax, offset);
+          if (BytesPerWord == 8) {
+            popObject(rdx);
+            mov(poolRegister(), poolReference(table), rsi);
+            add(offset, rsi);
+            mov(rbp, FrameThread, rdi);
+          } else {
+            mov(poolRegister(), poolReference(table), rsi);
+            add(offset, rsi);
+            push(rsi);
+            push(rbp, FrameThread);
+          }
+
+          directCall(reinterpret_cast<void*>(set));
+
+          if (BytesPerWord == 4) {
+            add(BytesPerWord * 3, rsp);
+            stackMapper.poppedObject();
+          }
           break;
 
         default: abort(t);
@@ -3485,20 +3698,6 @@ class JavaCompiler: public Compiler {
     return pool.length() + BytesPerWord;
   }
 
-  void callAddress(void* function) {
-    Compiler::callAddress(function);
-
-    stackMapper.called(code.length());
-    poolRegisterClobbered = true;
-  }
-
-  void callAlignedAddress(void* function) {
-    Compiler::callAlignedAddress(function);
-
-    stackMapper.called(code.length());
-    poolRegisterClobbered = true;
-  }
-
   object method;
   StackMapper stackMapper;
   bool poolRegisterClobbered;
@@ -3598,13 +3797,18 @@ updateCaller(MyThread* t, object method)
 void
 compileMethod(MyThread* t, object method)
 {
-  compileMethod2(t, method);
-
-  if (UNLIKELY(t->exception)) {
-    unwind(t);
-  } else if (not methodVirtual(t, method)) {
-    updateCaller(t, method);
+  { PROTECT(t, method);
+    compileMethod2(t, method);
+    
+    if (LIKELY(t->exception == 0)) {
+      if (not methodVirtual(t, method)) {
+        updateCaller(t, method);
+      }
+      return;
+    }
   }
+
+  unwind(t);
 }
 
 class ArgumentList {
