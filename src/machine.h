@@ -1418,6 +1418,17 @@ allocate(Thread* t, unsigned sizeInBytes)
 }
 
 inline void
+mark(Thread* t, object* targets, unsigned count)
+{
+  if (t->m->heap->needsMark(reinterpret_cast<void**>(targets))) {
+    ACQUIRE_RAW(t, t->m->heapLock);
+    for (unsigned i = 0; i < count; ++i) {
+      t->m->heap->mark(reinterpret_cast<void**>(targets + i));
+    }
+  }
+}
+
+inline void
 mark(Thread* t, object& target)
 {
   if (t->m->heap->needsMark(reinterpret_cast<void**>(&target))) {

@@ -457,6 +457,11 @@ Java_java_lang_System_arraycopy
                    sbody + (srcOffset * elementSize),
                    length * elementSize);
           }
+
+          if (classObjectMask(t, objectClass(t, d))) {
+            mark(t, reinterpret_cast<object*>(dbody) + dstOffset, length);
+          }
+
           return;
         }
       }
