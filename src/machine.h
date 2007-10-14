@@ -1098,6 +1098,12 @@ class Machine {
 #include "type-enums.cpp"
   };
 
+  enum State {
+    UnsafeState,
+    BootState,
+    ActiveState
+  };
+
   Machine(System* system, Heap* heap, Finder* finder, Processor* processor);
 
   ~Machine() { 
@@ -1136,6 +1142,7 @@ class Machine {
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;
+  bool active;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[HeapPoolSize];
@@ -1242,14 +1249,11 @@ class Thread {
   unsigned heapOffset;
   Protector* protector;
   Runnable runnable;
-#ifdef VM_STRESS
-  bool stress;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
-#else // not VM_STRESS
-  uintptr_t* heap;
-  uintptr_t defaultHeap[HeapSizeInWords];
-#endif // not VM_STRESS
+#ifdef VM_STRESS
+  bool stress;
+#endif // VM_STRESS
 };
 
 inline object

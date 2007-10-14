@@ -4096,11 +4096,13 @@ class MyProcessor: public Processor {
   {
     MyThread* t = static_cast<MyThread*>(vmt);
 
-    for (Reference* r = t->reference; r; r = r->next) {
-      v->visit(&(r->target));
-    }
+    if (t->m->active) {
+      for (Reference* r = t->reference; r; r = r->next) {
+        v->visit(&(r->target));
+      }
 
-    visitStack(t, v);
+      visitStack(t, v);
+    }
   }
 
   virtual uintptr_t

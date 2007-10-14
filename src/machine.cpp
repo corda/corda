@@ -1336,6 +1336,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   weakReferences(0),
   tenuredWeakReferences(0),
   unsafe(false),
+  active(false),
   heapPoolIndex(0)
 {
   populateJNITables(&javaVMVTable, &jniEnvVTable);
@@ -1386,12 +1387,12 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   heapIndex(0),
   heapOffset(0),
   protector(0),
-  runnable(this)
+  runnable(this),
+  defaultHeap(static_cast<uintptr_t*>(m->system->allocate(HeapSizeInBytes))),
+  heap(defaultHeap)
 #ifdef VM_STRESS
-  , stress(false),
-  defaultHeap(static_cast<uintptr_t*>(m->system->allocate(HeapSizeInBytes)))
+  , stress(false)
 #endif // VM_STRESS
-  , heap(defaultHeap)
 {
   if (parent == 0) {
     assert(this, m->rootThread == 0);
@@ -1399,6 +1400,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
     m->rootThread = this;
     m->unsafe = true;
+    m->active = false;
 
     if (not m->system->success(m->system->attach(&runnable))) {
       abort(this);
@@ -1494,6 +1496,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 
   if (parent == 0) {
     enter(this, Thread::IdleState);
+    m->active = true;
   }
 }
 
