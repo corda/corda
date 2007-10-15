@@ -58,8 +58,8 @@ public class Vector<T> implements List<T> {
     return list.toArray(a);
   }
 
-  public T removeElementAt(int index) {
-    return remove(index);
+  public void removeElementAt(int index) {
+    remove(index);
   }
 
   public synchronized boolean remove(T element) {
