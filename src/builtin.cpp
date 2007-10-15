@@ -374,29 +374,25 @@ Java_java_lang_reflect_Array_makeObjectArray
 extern "C" JNIEXPORT jint JNICALL
 Java_java_lang_Float_floatToRawIntBits(Thread*, jclass, jfloat v)
 {
-  int32_t r; memcpy(&r, &v, 4);
-  return r;
+  return floatToBits(v);
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
 Java_java_lang_Float_intBitsToFloat(Thread*, jclass, jint v)
 {
-  jfloat r; memcpy(&r, &v, 4);
-  return r;
+  return bitsToFloat(v);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_lang_Double_doubleToRawLongBits(Thread*, jclass, jdouble v)
 {
-  int64_t r; memcpy(&r, &v, 8);
-  return r;
+  return doubleToBits(v);
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Double_longBitsToDouble(Thread*, jclass, jlong v)
 {
-  jdouble r; memcpy(&r, &v, 8);
-  return r;
+  return bitsToDouble(v);
 }
 
 extern "C" JNIEXPORT jobject JNICALL

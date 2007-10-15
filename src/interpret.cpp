@@ -64,8 +64,7 @@ pushInt(Thread* t, uint32_t v)
 inline void
 pushFloat(Thread* t, float v)
 {
-  uint32_t a; memcpy(&a, &v, sizeof(uint32_t));
-  pushInt(t, a);
+  pushInt(t, floatToBits(v));
 }
 
 inline void
@@ -82,8 +81,7 @@ pushLong(Thread* t, uint64_t v)
 inline void
 pushDouble(Thread* t, double v)
 {
-  uint64_t a; memcpy(&a, &v, sizeof(uint64_t));
-  pushLong(t, a);
+  pushLong(t, doubleToBits(v));
 }
 
 inline object
@@ -115,9 +113,7 @@ popInt(Thread* t)
 inline float
 popFloat(Thread* t)
 {
-  uint32_t a = popInt(t);
-  float f; memcpy(&f, &a, sizeof(float));
-  return f;
+  return bitsToFloat(popInt(t));
 }
 
 inline uint64_t
@@ -138,9 +134,7 @@ popLong(Thread* t)
 inline float
 popDouble(Thread* t)
 {
-  uint64_t a = popLong(t);
-  double d; memcpy(&d, &a, sizeof(double));
-  return d;
+  return bitsToDouble(popLong(t));
 }
 
 inline object
@@ -1072,9 +1066,7 @@ interpret(Thread* t)
       if (LIKELY(index >= 0 and
                  static_cast<uintptr_t>(index) < doubleArrayLength(t, array)))
       {
-        double d;
-        memcpy(&d, &doubleArrayBody(t, array, index), sizeof(double));
-        pushDouble(t, d);
+        pushLong(t, doubleArrayBody(t, array, index));
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     doubleArrayLength(t, array));
@@ -1113,14 +1105,30 @@ interpret(Thread* t)
     double b = popDouble(t);
     double a = popDouble(t);
     
-    pushInt(t, (a > b ? 1 : 0));
+    if (a < b) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } else if (a > b) {
+      pushInt(t, 1);
+    } else if (a == b) {
+      pushInt(t, 0);
+    } else {
+      pushInt(t, 1);
+    }
   } goto loop;
 
   case dcmpl: {
     double b = popDouble(t);
     double a = popDouble(t);
     
-    pushInt(t, (a < b ? 1 : 0));
+    if (a < b) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } else if (a > b) {
+      pushInt(t, 1);
+    } else if (a == b) {
+      pushInt(t, 0);
+    } else {
+      pushInt(t, static_cast<unsigned>(-1));
+    }
   } goto loop;
 
   case dconst_0: {
@@ -1258,8 +1266,7 @@ interpret(Thread* t)
       if (LIKELY(index >= 0 and
                  static_cast<uintptr_t>(index) < floatArrayLength(t, array)))
       {
-        float f; memcpy(&f, &floatArrayBody(t, array, index), sizeof(float));
-        pushFloat(t, f);
+        pushInt(t, floatArrayBody(t, array, index));
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     floatArrayLength(t, array));
@@ -1467,15 +1474,11 @@ interpret(Thread* t)
   } goto loop;
 
   case i2d: {
-    double f = static_cast<double>(popInt(t));
-    int64_t i; memcpy(&i, &f, 8);
-    pushLong(t, i);
+    pushDouble(t, static_cast<double>(popInt(t)));
   } goto loop;
 
   case i2f: {
-    float f = static_cast<float>(popInt(t));
-    int32_t i; memcpy(&i, &f, 4);
-    pushInt(t, i);
+    pushFloat(t, static_cast<float>(popInt(t)));
   } goto loop;
 
   case i2l: {
@@ -2689,10 +2692,7 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
 
     case 'F': {
       ++ s;
-      float f = va_arg(a, double);
-      uint32_t i;
-      memcpy(&i, &f, 4);
-      pushInt(t, i);
+      pushFloat(t, va_arg(a, double));
     } break;
           
     default:

@@ -980,14 +980,142 @@ visitStack(MyThread* t, Heap::Visitor* v)
   }
 }
 
+intptr_t
+compareDoublesG(uint64_t bi, uint64_t ai)
+{
+  double a = bitsToDouble(ai);
+  double b = bitsToDouble(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+intptr_t
+compareDoublesL(uint64_t bi, uint64_t ai)
+{
+  double a = bitsToDouble(ai);
+  double b = bitsToDouble(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+intptr_t
+compareFloatsG(uint32_t bi, uint32_t ai)
+{
+  float a = bitsToFloat(ai);
+  float b = bitsToFloat(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+intptr_t
+compareFloatsL(uint32_t bi, uint32_t ai)
+{
+  float a = bitsToFloat(ai);
+  float b = bitsToFloat(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+uint64_t
+addDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) + bitsToDouble(b));
+}
+
+uint64_t
+subtractDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) - bitsToDouble(b));
+}
+
+uint64_t
+multiplyDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) * bitsToDouble(b));
+}
+
+uint64_t
+divideDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) / bitsToDouble(b));
+}
+
+uint64_t
+moduloDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(fmod(bitsToDouble(a), bitsToDouble(b)));
+}
+
+uint32_t
+addFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) + bitsToFloat(b));
+}
+
+uint32_t
+subtractFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) - bitsToFloat(b));
+}
+
+uint32_t
+multiplyFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) * bitsToFloat(b));
+}
+
+uint32_t
+divideFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) / bitsToFloat(b));
+}
+
+uint32_t
+moduloFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(fmod(bitsToFloat(a), bitsToFloat(b)));
+}
+
 int64_t
-divideLong(MyThread*, int64_t a, int64_t b)
+divideLong(int64_t b, int64_t a)
 {
   return a / b;
 }
 
 int64_t
-moduloLong(MyThread*, int64_t a, int64_t b)
+moduloLong(int64_t b, int64_t a)
 {
   return a % b;
 }
@@ -2550,10 +2678,240 @@ class JavaCompiler: public Compiler {
         next.mark();        
       } break;
 
+      case dadd: {
+        if (BytesPerWord == 8) {
+          popLong(rdi);
+          popLong(rsi);
+          directCall(reinterpret_cast<void*>(addDouble));
+          pushLong(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(addDouble));
+          add(BytesPerWord * 4, rsp);
+          stackMapper.poppedLong();
+          stackMapper.poppedLong();
+          pushLong(rax, rdx);
+        }
+      } break;
+
+      case dcmpg: {
+        if (BytesPerWord == 8) {
+          popLong(rdi);
+          popLong(rsi);
+          directCall(reinterpret_cast<void*>(compareDoublesG));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(compareDoublesG));
+          add(BytesPerWord * 4, rsp);
+          stackMapper.poppedLong();
+          stackMapper.poppedLong();
+          pushInt(rax);
+        }
+      } break;
+
+      case dcmpl: {
+        if (BytesPerWord == 8) {
+          popLong(rdi);
+          popLong(rsi);
+          directCall(reinterpret_cast<void*>(compareDoublesL));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(compareDoublesL));
+          add(BytesPerWord * 4, rsp);
+          stackMapper.poppedLong();
+          stackMapper.poppedLong();
+          pushInt(rax);
+        }
+      } break;
+
+      case dconst_0: {
+        pushLong(doubleToBits(0.0));
+      } break;
+
+      case dconst_1: {
+        pushLong(doubleToBits(1.0));
+      } break;
+
+      case ddiv: {
+        if (BytesPerWord == 8) {
+          popLong(rdi);
+          popLong(rsi);
+          directCall(reinterpret_cast<void*>(divideDouble));
+          pushLong(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(divideDouble));
+          add(BytesPerWord * 4, rsp);
+          stackMapper.poppedLong();
+          stackMapper.poppedLong();
+          pushLong(rax, rdx);
+        }
+      } break;
+
+      case dmul: {
+        if (BytesPerWord == 8) {
+          popLong(rdi);
+          popLong(rsi);
+          directCall(reinterpret_cast<void*>(multiplyDouble));
+          pushLong(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(multiplyDouble));
+          add(BytesPerWord * 4, rsp);
+          stackMapper.poppedLong();
+          stackMapper.poppedLong();
+          pushLong(rax, rdx);
+        }
+      } break;
+
+      case vm::drem: {
+        if (BytesPerWord == 8) {
+          popLong(rdi);
+          popLong(rsi);
+          directCall(reinterpret_cast<void*>(moduloDouble));
+          pushLong(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(moduloDouble));
+          add(BytesPerWord * 4, rsp);
+          stackMapper.poppedLong();
+          stackMapper.poppedLong();
+          pushLong(rax, rdx);
+        }
+      } break;
+
+      case dsub: {
+        if (BytesPerWord == 8) {
+          popLong(rdi);
+          popLong(rsi);
+          directCall(reinterpret_cast<void*>(subtractDouble));
+          pushLong(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(subtractDouble));
+          add(BytesPerWord * 4, rsp);
+          stackMapper.poppedLong();
+          stackMapper.poppedLong();
+          pushLong(rax, rdx);
+        }
+      } break;
+
       case dup:
         push(rsp, 0);
         stackMapper.dupped();
         break;
+
+      case fadd: {
+        if (BytesPerWord == 8) {
+          popInt(rdi);
+          popInt(rsi);
+          directCall(reinterpret_cast<void*>(addFloat));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(addFloat));
+          add(BytesPerWord * 2, rsp);
+          stackMapper.poppedInt();
+          stackMapper.poppedInt();
+          pushInt(rax);
+        }
+      } break;
+
+      case fcmpg: {
+        if (BytesPerWord == 8) {
+          popInt(rdi);
+          popInt(rsi);
+          directCall(reinterpret_cast<void*>(compareFloatsG));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(compareFloatsG));
+          add(BytesPerWord * 2, rsp);
+          stackMapper.poppedInt();
+          stackMapper.poppedInt();
+          pushInt(rax);
+        }
+      } break;
+
+      case fcmpl: {
+        if (BytesPerWord == 8) {
+          popInt(rdi);
+          popInt(rsi);
+          directCall(reinterpret_cast<void*>(compareFloatsL));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(compareFloatsL));
+          add(BytesPerWord * 2, rsp);
+          stackMapper.poppedInt();
+          stackMapper.poppedInt();
+          pushInt(rax);
+        }
+      } break;
+
+      case fconst_0: {
+        pushInt(floatToBits(0.0));
+      } break;
+
+      case fconst_1: {
+        pushInt(floatToBits(1.0));
+      } break;
+
+      case fconst_2: {
+        pushInt(floatToBits(2.0));
+      } break;
+
+      case fdiv: {
+        if (BytesPerWord == 8) {
+          popInt(rdi);
+          popInt(rsi);
+          directCall(reinterpret_cast<void*>(divideFloat));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(divideFloat));
+          add(BytesPerWord * 2, rsp);
+          stackMapper.poppedInt();
+          stackMapper.poppedInt();
+          pushInt(rax);
+        }
+      } break;
+
+      case fmul: {
+        if (BytesPerWord == 8) {
+          popInt(rdi);
+          popInt(rsi);
+          directCall(reinterpret_cast<void*>(multiplyFloat));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(multiplyFloat));
+          add(BytesPerWord * 2, rsp);
+          stackMapper.poppedInt();
+          stackMapper.poppedInt();
+          pushInt(rax);
+        }
+      } break;
+
+      case frem: {
+        if (BytesPerWord == 8) {
+          popInt(rdi);
+          popInt(rsi);
+          directCall(reinterpret_cast<void*>(moduloFloat));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(moduloFloat));
+          add(BytesPerWord * 2, rsp);
+          stackMapper.poppedInt();
+          stackMapper.poppedInt();
+          pushInt(rax);
+        }
+      } break;
+
+      case fsub: {
+        if (BytesPerWord == 8) {
+          popInt(rdi);
+          popInt(rsi);
+          directCall(reinterpret_cast<void*>(subtractFloat));
+          pushInt(rax);
+        } else {
+          directCall(reinterpret_cast<void*>(subtractFloat));
+          add(BytesPerWord * 2, rsp);
+          stackMapper.poppedInt();
+          stackMapper.poppedInt();
+          pushInt(rax);
+        }
+      } break;
 
       case getfield: {
         uint16_t index = codeReadInt16(t, code, ip);
@@ -3222,22 +3580,27 @@ class JavaCompiler: public Compiler {
         break;
 
       case lload:
+      case dload:
         loadLong(codeBody(t, code, ip++));
         break;
 
       case lload_0:
+      case dload_0:
         loadLong(0);
         break;
 
       case lload_1:
+      case dload_1:
         loadLong(1);
         break;
 
       case lload_2:
+      case dload_2:
         loadLong(2);
         break;
 
       case lload_3:
+      case dload_3:
         loadLong(3);
         break;
 
@@ -3293,23 +3656,41 @@ class JavaCompiler: public Compiler {
         }
         break;
 
+      case lreturn:
+      case dreturn:
+        if (BytesPerWord == 8) {
+          popLong(rax);
+        } else {
+          popLong(rax, rdx);
+        }
+        mov(rbp, rsp);
+        pop(rbp);
+        ret();
+        stackMapper.exited();
+        break;
+
       case lstore:
+      case dstore:
         storeLong(codeBody(t, code, ip++));
         break;
 
       case lstore_0:
+      case dstore_0:
         storeLong(0);
         break;
 
       case lstore_1:
+      case dstore_1:
         storeLong(1);
         break;
 
       case lstore_2:
+      case dstore_2:
         storeLong(2);
         break;
 
       case lstore_3:
+      case dstore_3:
         storeLong(3);
         break;
 

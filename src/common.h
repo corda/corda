@@ -196,6 +196,34 @@ hash(const uint16_t* s, unsigned length)
   return h;
 }
 
+inline uint32_t
+floatToBits(float f)
+{
+  int32_t bits; memcpy(&bits, &f, 4);
+  return bits;
+}
+
+inline uint64_t
+doubleToBits(double d)
+{
+  int64_t bits; memcpy(&bits, &d, 8);
+  return bits;
+}
+
+inline double
+bitsToDouble(uint64_t bits)
+{
+  double d; memcpy(&d, &bits, 8);
+  return d;
+}
+
+inline float
+bitsToFloat(uint32_t bits)
+{
+  float f; memcpy(&f, &bits, 4);
+  return f;
+}
+
 class Machine;
 class Thread;
 

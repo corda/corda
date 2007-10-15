@@ -531,7 +531,7 @@ parsePool(Thread* t, Stream& s)
     } break;
 
     case CONSTANT_Double: {
-      object value = makeLong(t, s.readDouble());
+      object value = makeDouble(t, s.readDouble());
       set(t, arrayBody(t, pool, i), value);
       ++i;
     } break;

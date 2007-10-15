@@ -3,18 +3,34 @@ public class Floats {
     if (! v) throw new RuntimeException();
   }
 
+  private static double multiply(double a, double b) {
+    return a * b;
+  }
+
+  private static float multiply(float a, float b) {
+    return a * b;
+  }
+
+  private static double divide(double a, double b) {
+    return a / b;
+  }
+
+  private static double subtract(double a, double b) {
+    return a - b;
+  }
+
   public static void main(String[] args) {
-    expect(0.5d * 0.5d == 0.25d);
-    expect(0.5f * 0.5f == 0.25f);
+    expect(multiply(0.5d, 0.5d) == 0.25d);
+    expect(multiply(0.5f, 0.5f) == 0.25f);
 
-    expect(0.5d * 0.5d < 0.5d);
-    expect(0.5f * 0.5f < 0.5f);
+    expect(multiply(0.5d, 0.5d) < 0.5d);
+    expect(multiply(0.5f, 0.5f) < 0.5f);
 
-    expect(0.5d * 0.5d > 0.1d);
-    expect(0.5f * 0.5f > 0.1f);
+    expect(multiply(0.5d, 0.5d) > 0.1d);
+    expect(multiply(0.5f, 0.5f) > 0.1f);
 
-    expect(0.5d / 0.5d == 1.0d);
+    expect(divide(0.5d, 0.5d) == 1.0d);
 
-    expect(0.5d - 0.5d == 0.0d);
+    expect(subtract(0.5d, 0.5d) == 0.0d);
   }
 }
