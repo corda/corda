@@ -1,6 +1,6 @@
 package java.util;
 
-public class TreeSet<T> implements Iterable<T> {
+public class TreeSet<T> implements Collection<T> {
   private PersistentSet<Cell<T>> set;
   private int size;
 
@@ -57,6 +57,15 @@ public class TreeSet<T> implements Iterable<T> {
 
   public int size() {
     return size;
+  }
+
+  public boolean contains(T value) {
+    return !set.find(new Cell(value, null)).fresh();
+  }
+
+  public void clear() {
+    set = new PersistentSet(set.comparator());
+    size = 0;
   }
 
   private class MyIterator<T> implements java.util.Iterator<T> {
