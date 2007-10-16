@@ -894,17 +894,16 @@ findExceptionHandler(Thread* t, void* frame)
         catchType = 0;
       }
 
-      if (Verbose and
-          (catchType == 0 or 
-           instanceOf(t, catchType, t->exception)))
-      {
-        fprintf(stderr, "exception handler match for %d in %s: "
-                "start: %d; end: %d; ip: %d\n",
-                offset,
-                &byteArrayBody(t, methodName(t, frameMethod(frame)), 0),
-                nativeExceptionHandlerStart(handler),
-                nativeExceptionHandlerEnd(handler),
-                nativeExceptionHandlerIp(handler));
+      if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+        if (Verbose) {
+          fprintf(stderr, "exception handler match for %d in %s: "
+                  "start: %d; end: %d; ip: %d\n",
+                  offset,
+                  &byteArrayBody(t, methodName(t, frameMethod(frame)), 0),
+                  nativeExceptionHandlerStart(handler),
+                  nativeExceptionHandlerEnd(handler),
+                  nativeExceptionHandlerIp(handler));
+        }
 
         return handler;
       }
