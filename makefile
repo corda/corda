@@ -34,7 +34,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Floats.class
+input = $(cls)/Tree.class
 
 cxx = g++
 cc = gcc

@@ -357,20 +357,6 @@ popFrame(Thread* t)
 }
 
 object
-findInterfaceMethod(Thread* t, object method, object class_)
-{
-  object interface = methodClass(t, method);
-  object itable = classInterfaceTable(t, class_);
-  for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-    if (arrayBody(t, itable, i) == interface) {
-      return arrayBody(t, arrayBody(t, itable, i + 1),
-                       methodOffset(t, method));
-    }
-  }
-  abort(t);
-}
-
-object
 makeNativeMethodData(Thread* t, object method, void* function)
 {
   PROTECT(t, method);

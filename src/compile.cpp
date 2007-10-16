@@ -19,7 +19,7 @@ vmJump(void* address, void* base, void* stack);
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 
 const unsigned FrameThread = BytesPerWord * 2;
 const unsigned FrameMethod = FrameThread + BytesPerWord;
@@ -142,6 +142,11 @@ class StackMapper {
     PushInt,
     PushObject,
     Duplicate,
+    DuplicateX1,
+    DuplicateX2,
+    Duplicate2,
+    Duplicate2X1,
+    Duplicate2X2,
     Pop,
     PopLong,
     PopInt,
@@ -215,6 +220,26 @@ class StackMapper {
 
   void dupped() {
     log.append(Duplicate);
+  }
+
+  void duppedX1() {
+    log.append(DuplicateX1);
+  }
+
+  void duppedX2() {
+    log.append(DuplicateX2);
+  }
+
+  void dupped2() {
+    log.append(Duplicate2);
+  }
+
+  void dupped2X1() {
+    log.append(Duplicate2X1);
+  }
+
+  void dupped2X2() {
+    log.append(Duplicate2X2);
   }
 
   void popped(unsigned count) {
@@ -362,6 +387,127 @@ class StackMapper {
             markBit(map, sp);
           }
           ++ sp;
+          break;
+          
+        case DuplicateX1:
+          assert(t, sp + 1 <= mapSize());
+          assert(t, sp - 2 >= localSize());
+
+          if (getBit(map, sp - 2)) {
+            markBit(map, sp - 1);
+          } else {
+            clearBit(map, sp - 1);
+          }
+
+          if (getBit(map, sp - 1)) {
+            markBit(map, sp - 2);
+            markBit(map, sp);
+          } else {
+            clearBit(map, sp - 2);
+          }
+
+          ++ sp;
+          break;
+          
+        case DuplicateX2:
+          assert(t, sp + 1 <= mapSize());
+          assert(t, sp - 3 >= localSize());
+
+          if (getBit(map, sp - 3)) {
+            markBit(map, sp - 2);
+          } else {
+            clearBit(map, sp - 2);
+          }
+
+          if (getBit(map, sp - 2)) {
+            markBit(map, sp - 1);
+          } else {
+            clearBit(map, sp - 1);
+          }
+
+          if (getBit(map, sp - 1)) {
+            markBit(map, sp - 3);
+            markBit(map, sp);
+          } else {
+            clearBit(map, sp - 3);
+          }
+
+          ++ sp;
+          break;
+          
+        case Duplicate2:
+          assert(t, sp + 2 <= mapSize());
+          assert(t, sp - 2 >= localSize());
+
+          if (getBit(map, sp - 2)) {
+            markBit(map, sp);
+          }
+
+          if (getBit(map, sp - 1)) {
+            markBit(map, sp + 1);
+          }
+
+          sp += 2;
+          break;
+
+        case Duplicate2X1:
+          assert(t, sp + 2 <= mapSize());
+          assert(t, sp - 3 >= localSize());
+
+          if (getBit(map, sp - 3)) {
+            markBit(map, sp - 1);
+          } else {
+            clearBit(map, sp - 1);
+          }
+
+          if (getBit(map, sp - 2)) {
+            markBit(map, sp - 3);
+            markBit(map, sp);
+          } else {
+            clearBit(map, sp - 3);
+          }
+
+          if (getBit(map, sp - 1)) {
+            markBit(map, sp - 2);
+            markBit(map, sp + 1);
+          } else {
+            clearBit(map, sp - 2);
+          }
+
+          sp += 2;
+          break;
+          
+        case Duplicate2X2:
+          assert(t, sp + 2 <= mapSize());
+          assert(t, sp - 4 >= localSize());
+
+          if (getBit(map, sp - 4)) {
+            markBit(map, sp - 2);
+          } else {
+            clearBit(map, sp - 2);
+          }
+
+          if (getBit(map, sp - 3)) {
+            markBit(map, sp - 1);
+          } else {
+            clearBit(map, sp - 1);
+          }
+
+          if (getBit(map, sp - 2)) {
+            markBit(map, sp - 4);
+            markBit(map, sp);
+          } else {
+            clearBit(map, sp - 4);
+          }
+
+          if (getBit(map, sp - 1)) {
+            markBit(map, sp - 3);
+            markBit(map, sp + 1);
+          } else {
+            clearBit(map, sp - 3);
+          }
+
+          sp += 2;
           break;
 
         case Pop: {
@@ -581,7 +727,7 @@ compiledLineNumberCount(Thread*, Compiled* code)
 }
 
 inline NativeLineNumber*
-compiledLineNumber(Thread* t, Compiled* code, unsigned index)
+compiledLineNumber(Thread* t UNUSED, Compiled* code, unsigned index)
 {
   assert(t, index < compiledLineNumberCount(t, code));
   return reinterpret_cast<NativeLineNumber*>
@@ -596,7 +742,7 @@ compiledExceptionHandlerCount(Thread*, Compiled* code)
 }
 
 inline NativeExceptionHandler*
-compiledExceptionHandler(Thread* t, Compiled* code, unsigned index)
+compiledExceptionHandler(Thread* t UNUSED, Compiled* code, unsigned index)
 {
   assert(t, index < compiledExceptionHandlerCount(t, code));
   return reinterpret_cast<NativeExceptionHandler*>
@@ -748,7 +894,10 @@ findExceptionHandler(Thread* t, void* frame)
         catchType = 0;
       }
 
-      if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+      if (Verbose and
+          (catchType == 0 or 
+           instanceOf(t, catchType, t->exception)))
+      {
         fprintf(stderr, "exception handler match for %d in %s: "
                 "start: %d; end: %d; ip: %d\n",
                 offset,
@@ -850,12 +999,6 @@ frameStackMap(MyThread* t, void* frame)
       return map + 1;
     }
   }
-
-  fprintf(stderr, "%d not found in ", ip);
-  for (unsigned i = 0; i < compiledStackMapCount(t, code); ++i) {
-    fprintf(stderr, "%"LD" ", *compiledStackMap(t, code, i));
-  }
-  fprintf(stderr, "\n");
 
   abort(t);
 }
@@ -978,6 +1121,12 @@ visitStack(MyThread* t, Heap::Visitor* v)
       visitStackAndLocals(t, v, f);
     }
   }
+}
+
+object
+findInterfaceMethodFromInstance(Thread* t, object method, object instance)
+{
+  return findInterfaceMethod(t, method, objectClass(t, instance));
 }
 
 intptr_t
@@ -2019,6 +2168,11 @@ class JavaCompiler: public Compiler {
   }
 
   void pushInt(Register r, int32_t offset) {
+    push(r, offset);
+    stackMapper.pushedInt();
+  }
+
+  void pushInt4(Register r, int32_t offset) {
     push4(r, offset);
     stackMapper.pushedInt();
   }
@@ -2104,6 +2258,11 @@ class JavaCompiler: public Compiler {
   }
 
   void popInt(Register r, int32_t offset) {
+    pop(r, offset);
+    stackMapper.poppedInt();
+  }
+
+  void popInt4(Register r, int32_t offset) {
     pop4(r, offset);
     stackMapper.poppedInt();
   }
@@ -2338,6 +2497,30 @@ class JavaCompiler: public Compiler {
     }
   }
 
+  void compileCall(bool direct, void* function, object arg1, Register arg2,
+                   int32_t arg2offset)
+  {
+    if (BytesPerWord == 8) {
+      mov(arg2, arg2offset, rdx);
+      mov(poolRegister(), poolReference(arg1), rsi);
+      mov(rbp, FrameThread, rdi);
+    } else {
+      push(arg2, arg2offset);
+      push(poolRegister(), poolReference(arg1));
+      push(rbp, FrameThread);
+    }
+
+    if (direct) {
+      directCall(function);
+    } else {
+      indirectCall(function);
+    }
+
+    if (BytesPerWord == 4) {
+      add(BytesPerWord * 3, rsp);
+    }
+  }
+
   void compileCall(bool direct, void* function, object arg1) {
     if (BytesPerWord == 8) {
       mov(poolRegister(), poolReference(arg1), rsi);
@@ -2442,7 +2625,7 @@ class JavaCompiler: public Compiler {
           if (instruction == aaload) {
             pushObject(rax, 0);
           } else {
-            pushInt(rax, 0);
+            pushInt4(rax, 0);
           }
           break;
 
@@ -2796,6 +2979,58 @@ class JavaCompiler: public Compiler {
         stackMapper.dupped();
         break;
 
+      case dup_x1:
+        mov(rsp, BytesPerWord, rcx);
+        mov(rsp, 0, rax);
+        mov(rax, rsp, BytesPerWord);
+        mov(rcx, rsp, 0);
+        push(rax);
+        stackMapper.duppedX1();
+        break;
+
+      case dup_x2:
+        mov(rsp, BytesPerWord * 2, rdx);
+        mov(rsp, BytesPerWord, rcx);
+        mov(rsp, 0, rax);
+        mov(rax, rsp, BytesPerWord * 2);
+        mov(rdx, rsp, BytesPerWord);
+        mov(rcx, rsp, 0);
+        push(rax);
+        stackMapper.duppedX2();
+        break;
+
+      case dup2:
+        push(rsp, BytesPerWord);
+        push(rsp, BytesPerWord);
+        stackMapper.dupped2();
+        break;
+
+      case dup2_x1:
+        mov(rsp, BytesPerWord * 2, rdx);
+        mov(rsp, BytesPerWord, rcx);
+        mov(rsp, 0, rax);
+        mov(rcx, rsp, BytesPerWord * 2);
+        mov(rax, rsp, BytesPerWord);
+        mov(rdx, rsp, 0);
+        push(rcx);
+        push(rax);
+        stackMapper.dupped2X1();
+        break;
+
+      case dup2_x2:
+        mov(rsp, BytesPerWord * 3, rbx);
+        mov(rsp, BytesPerWord * 2, rdx);
+        mov(rsp, BytesPerWord, rcx);
+        mov(rsp, 0, rax);
+        mov(rcx, rsp, BytesPerWord * 3);
+        mov(rax, rsp, BytesPerWord * 2);
+        mov(rbx, rsp, BytesPerWord);
+        mov(rdx, rsp, 0);
+        push(rcx);
+        push(rax);
+        stackMapper.dupped2X2();
+        break;
+
       case fadd: {
         if (BytesPerWord == 8) {
           popInt(rdi);
@@ -2940,7 +3175,7 @@ class JavaCompiler: public Compiler {
 
         case FloatField:
         case IntField:
-          pushInt(rax, fieldOffset(t, field));
+          pushInt4(rax, fieldOffset(t, field));
           break;
 
         case DoubleField:
@@ -2985,7 +3220,7 @@ class JavaCompiler: public Compiler {
           cmp(0, rax);
           je(zero);
 
-          push(rax, IntValue);
+          push4(rax, IntValue);
           jmp(next);
 
           zero.mark();
@@ -3331,6 +3566,41 @@ class JavaCompiler: public Compiler {
         next.mark();
 
         stackMapper.pushedInt();
+      } break;
+
+      case invokeinterface: {
+        uint16_t index = codeReadInt16(t, code, ip);
+        ip += 2;
+
+        object target = resolveMethod(t, codePool(t, code), index - 1);
+        if (UNLIKELY(t->exception)) return 0;
+
+        unsigned parameterFootprint
+          = methodParameterFootprint(t, target) * BytesPerWord;
+
+        unsigned instance = parameterFootprint - BytesPerWord;
+
+        unsigned footprint = FrameFootprint + parameterFootprint;
+
+        compileCall(false,
+                    reinterpret_cast<void*>(findInterfaceMethodFromInstance),
+                    target, rsp, instance);
+
+        push(rsp);
+        push(rax);
+        push(rbp, FrameThread);
+
+        mov(rax, MethodCompiled, rax);    // load compiled code
+        add(CompiledBody, rax);
+        call(rax);                        // call compiled code
+
+        stackMapper.called(this->code.length());
+        poolRegisterClobbered = true;
+
+        add(footprint, rsp);              // pop arguments
+        stackMapper.popped(methodParameterFootprint(t, target));
+
+        pushReturnValue(methodReturnCode(t, target));
       } break;
 
       case invokespecial: {
@@ -3895,7 +4165,7 @@ class JavaCompiler: public Compiler {
             add(BytesPerWord * 2, rsp);
           }
 
-          popInt(rax, IntValue);
+          popInt4(rax, IntValue);
 
           if (BytesPerWord == 8) {
             mov(rax, rdx);
@@ -4120,14 +4390,7 @@ compileMethod2(MyThread* t, object method)
         fprintf(stderr, "compiling %s.%s\n",
                 &byteArrayBody(t, className(t, methodClass(t, method)), 0),
                 &byteArrayBody(t, methodName(t, method), 0));
-      }
-
-      if (strcmp(reinterpret_cast<const char*>
-                 (&byteArrayBody(t, methodName(t, method), 0)),
-                 "charAt") == 0)
-      {
-        noop();
-      }                 
+      }            
 
       JavaCompiler c(t, method);
       Compiled* code = c.compile();
@@ -4139,6 +4402,13 @@ compileMethod2(MyThread* t, object method)
                 compiledCode(code),
                 compiledCode(code) + compiledCodeLength(code));
       }
+
+//       if (strcmp(reinterpret_cast<const char*>
+//                  (&byteArrayBody(t, methodName(t, method), 0)),
+//                  "find") == 0)
+//       {
+//         noop();
+//       }
 
       object pool = c.makePool();
       set(t, methodCode(t, method), pool);
@@ -4397,9 +4667,12 @@ class MyProcessor: public Processor {
     if (methodStub_ == 0) {
       Compiler c(static_cast<MyThread*>(t));
       methodStub_ = c.compileStub();
-      fprintf(stderr, "compiled method stub from %p to %p\n",
-              compiledCode(methodStub_),
-              compiledCode(methodStub_) + compiledCodeLength(methodStub_));
+
+      if (Verbose) {
+        fprintf(stderr, "compiled method stub from %p to %p\n",
+                compiledCode(methodStub_),
+                compiledCode(methodStub_) + compiledCodeLength(methodStub_));
+      }
     }
     return methodStub_;
   }
@@ -4410,10 +4683,13 @@ class MyProcessor: public Processor {
     if (nativeInvoker_ == 0) {
       Compiler c(static_cast<MyThread*>(t));
       nativeInvoker_ = c.compileNativeInvoker();
-      fprintf(stderr, "compiled native invoker from %p to %p\n",
-              compiledCode(nativeInvoker_),
-              compiledCode(nativeInvoker_)
-              + compiledCodeLength(nativeInvoker_));
+
+      if (Verbose) {
+        fprintf(stderr, "compiled native invoker from %p to %p\n",
+                compiledCode(nativeInvoker_),
+                compiledCode(nativeInvoker_)
+                + compiledCodeLength(nativeInvoker_));
+      }
     }
     return nativeInvoker_;
   }
@@ -4424,9 +4700,12 @@ class MyProcessor: public Processor {
     if (caller_ == 0) {
       Compiler c(static_cast<MyThread*>(t));
       caller_ = c.compileCaller();
-      fprintf(stderr, "compiled caller from %p to %p\n",
-              compiledCode(caller_),
-              compiledCode(caller_) + compiledCodeLength(caller_));
+
+      if (Verbose) {
+        fprintf(stderr, "compiled caller from %p to %p\n",
+                compiledCode(caller_),
+                compiledCode(caller_) + compiledCodeLength(caller_));
+      }
     }
     return caller_;
   }
@@ -4669,6 +4948,18 @@ caller(MyThread* t)
 } // namespace
 
 namespace vm {
+
+void
+printJavaTrace(Thread* t, void* base, void* ip)
+{
+  void* top[] = { base, ip };
+
+  printTrace
+    (t, makeRuntimeException
+     (t, 0, makeTrace
+      (t, reinterpret_cast<uintptr_t>
+       (top + (FrameFootprint / BytesPerWord) + 2)), 0));
+}
 
 Processor*
 makeProcessor(System* system)

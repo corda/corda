@@ -145,6 +145,20 @@ resolveNativeMethod(Thread* t, object method)
   return 0;
 }
 
+inline object
+findInterfaceMethod(Thread* t, object method, object class_)
+{
+  object interface = methodClass(t, method);
+  object itable = classInterfaceTable(t, class_);
+  for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+    if (arrayBody(t, itable, i) == interface) {
+      return arrayBody(t, arrayBody(t, itable, i + 1),
+                       methodOffset(t, method));
+    }
+  }
+  abort(t);
+}
+
 } // namespace vm
 
 #endif//PROCESS_H
