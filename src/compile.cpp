@@ -2089,7 +2089,13 @@ class Compiler: public Assembler {
     lea(rsp, FrameFootprint + BytesPerWord, rcx);
     mov(rcx, rdi, threadFrameOffset()); // set thread frame to current
 
-    jmp(rbx);
+    push(rbp);
+
+    call(rbx);
+
+    add(BytesPerWord, rsp);
+
+    ret();
 
     return finish();
   }
