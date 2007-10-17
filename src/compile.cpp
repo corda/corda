@@ -389,17 +389,20 @@ class StackMapper {
           ++ sp;
           break;
           
-        case DuplicateX1:
+        case DuplicateX1: {
           assert(t, sp + 1 <= mapSize());
           assert(t, sp - 2 >= localSize());
 
-          if (getBit(map, sp - 2)) {
+          unsigned b2 = getBit(map, sp - 2);
+          unsigned b1 = getBit(map, sp - 1);
+
+          if (b2) {
             markBit(map, sp - 1);
           } else {
             clearBit(map, sp - 1);
           }
 
-          if (getBit(map, sp - 1)) {
+          if (b1) {
             markBit(map, sp - 2);
             markBit(map, sp);
           } else {
@@ -407,25 +410,29 @@ class StackMapper {
           }
 
           ++ sp;
-          break;
+        } break;
           
-        case DuplicateX2:
+        case DuplicateX2: {
           assert(t, sp + 1 <= mapSize());
           assert(t, sp - 3 >= localSize());
 
-          if (getBit(map, sp - 3)) {
+          unsigned b3 = getBit(map, sp - 3);
+          unsigned b2 = getBit(map, sp - 2);
+          unsigned b1 = getBit(map, sp - 1);
+
+          if (b3) {
             markBit(map, sp - 2);
           } else {
             clearBit(map, sp - 2);
           }
 
-          if (getBit(map, sp - 2)) {
+          if (b2) {
             markBit(map, sp - 1);
           } else {
             clearBit(map, sp - 1);
           }
 
-          if (getBit(map, sp - 1)) {
+          if (b1) {
             markBit(map, sp - 3);
             markBit(map, sp);
           } else {
@@ -433,41 +440,48 @@ class StackMapper {
           }
 
           ++ sp;
-          break;
+        } break;
           
-        case Duplicate2:
+        case Duplicate2: {
           assert(t, sp + 2 <= mapSize());
           assert(t, sp - 2 >= localSize());
 
-          if (getBit(map, sp - 2)) {
+          unsigned b2 = getBit(map, sp - 2);
+          unsigned b1 = getBit(map, sp - 1);
+
+          if (b2) {
             markBit(map, sp);
           }
 
-          if (getBit(map, sp - 1)) {
+          if (b1) {
             markBit(map, sp + 1);
           }
 
           sp += 2;
-          break;
+        } break;
 
-        case Duplicate2X1:
+        case Duplicate2X1: {
           assert(t, sp + 2 <= mapSize());
           assert(t, sp - 3 >= localSize());
 
-          if (getBit(map, sp - 3)) {
+          unsigned b3 = getBit(map, sp - 3);
+          unsigned b2 = getBit(map, sp - 2);
+          unsigned b1 = getBit(map, sp - 1);
+
+          if (b3) {
             markBit(map, sp - 1);
           } else {
             clearBit(map, sp - 1);
           }
 
-          if (getBit(map, sp - 2)) {
+          if (b2) {
             markBit(map, sp - 3);
             markBit(map, sp);
           } else {
             clearBit(map, sp - 3);
           }
 
-          if (getBit(map, sp - 1)) {
+          if (b1) {
             markBit(map, sp - 2);
             markBit(map, sp + 1);
           } else {
@@ -475,32 +489,37 @@ class StackMapper {
           }
 
           sp += 2;
-          break;
+        } break;
           
-        case Duplicate2X2:
+        case Duplicate2X2: {
           assert(t, sp + 2 <= mapSize());
           assert(t, sp - 4 >= localSize());
 
-          if (getBit(map, sp - 4)) {
+          unsigned b4 = getBit(map, sp - 4);
+          unsigned b3 = getBit(map, sp - 3);
+          unsigned b2 = getBit(map, sp - 2);
+          unsigned b1 = getBit(map, sp - 1);
+
+          if (b4) {
             markBit(map, sp - 2);
           } else {
             clearBit(map, sp - 2);
           }
 
-          if (getBit(map, sp - 3)) {
+          if (b3) {
             markBit(map, sp - 1);
           } else {
             clearBit(map, sp - 1);
           }
 
-          if (getBit(map, sp - 2)) {
+          if (b2) {
             markBit(map, sp - 4);
             markBit(map, sp);
           } else {
             clearBit(map, sp - 4);
           }
 
-          if (getBit(map, sp - 1)) {
+          if (b1) {
             markBit(map, sp - 3);
             markBit(map, sp + 1);
           } else {
@@ -508,7 +527,7 @@ class StackMapper {
           }
 
           sp += 2;
-          break;
+        } break;
 
         case Pop: {
           unsigned count = log.get(i++);
@@ -998,6 +1017,12 @@ frameStackMap(MyThread* t, void* frame)
       return map + 1;
     }
   }
+
+  fprintf(stderr, "%d not found in ", ip);
+  for (unsigned i = 0; i < compiledStackMapCount(t, code); ++i) {
+    fprintf(stderr, "%"LD" ", *compiledStackMap(t, code, i));
+  }
+  fprintf(stderr, "\n");
 
   abort(t);
 }
@@ -1585,6 +1610,11 @@ class Assembler {
     offsetInstruction(0xbf, 0, 0x40, 0x80, dst, src, srcOffset);
   }
 
+  void movs4(Register src, int32_t srcOffset, Register dst) {
+    rex();
+    offsetInstruction(0x63, 0, 0x40, 0x80, dst, src, srcOffset);
+  }
+
   void mov4(Register src, int32_t srcOffset, Register dst) {
     offsetInstruction(0x8b, 0, 0x40, 0x80, dst, src, srcOffset);
   }
@@ -1662,7 +1692,7 @@ class Assembler {
 
   void push4(Register reg, int32_t offset) {
     if (BytesPerWord == 8) {
-      mov4(reg, offset, rsi);
+      movs4(reg, offset, rsi);
       push(rsi);
     } else {
       push(reg, offset);
@@ -1771,6 +1801,11 @@ class Assembler {
     code.append(0xc0 | (src << 3) | dst);
   }
 
+  void or_(Register src, Register dst, unsigned dstOffset) {
+    rex();
+    offsetInstruction(0x09, 0, 0x40, 0x80, src, dst, dstOffset);
+  }
+
   void or_(int32_t v, Register dst) {
     assert(code.s, isByte(v)); // todo
 
@@ -1784,6 +1819,11 @@ class Assembler {
     rex();
     code.append(0x21);
     code.append(0xc0 | (src << 3) | dst);
+  }
+
+  void and_(Register src, Register dst, unsigned dstOffset) {
+    rex();
+    offsetInstruction(0x21, 0, 0x40, 0x80, src, dst, dstOffset);
   }
 
   void and_(int32_t v, Register dst) {
@@ -1805,6 +1845,18 @@ class Assembler {
       code.append(0xe0 | dst);
       code.append(v);
     }
+  }
+
+  void shl4_cl(Register dst, unsigned dstOffset) {
+    offsetInstruction(0xd3, 0x20, 0x60, 0xa0, rax, dst, dstOffset);
+  }
+
+  void sar4_cl(Register dst, unsigned dstOffset) {
+    offsetInstruction(0xd3, 0x38, 0x7d, 0xb8, rax, dst, dstOffset);
+  }
+
+  void shr4_cl(Register dst, unsigned dstOffset) {
+    offsetInstruction(0xd3, 0x28, 0x6d, 0xa8, rax, dst, dstOffset);
   }
 
   void ret() {
@@ -3313,6 +3365,11 @@ class JavaCompiler: public Compiler {
         pushInt(rax);
         break;
 
+      case iand:
+        popInt(rax);
+        and_(rax, rsp, 0);
+        break;
+
       case iconst_m1:
         pushInt(-1);
         break;
@@ -3339,6 +3396,14 @@ class JavaCompiler: public Compiler {
 
       case iconst_5:
         pushInt(5);
+        break;
+
+      case vm::idiv:
+        popInt(rcx);
+        popInt(rax);
+        cqo();
+        Assembler::idiv(rcx);
+        pushInt(rax);
         break;
 
       case if_acmpeq: {
@@ -3672,6 +3737,19 @@ class JavaCompiler: public Compiler {
         pushReturnValue(methodReturnCode(t, target));
       } break;
 
+      case ior:
+        popInt(rax);
+        or_(rax, rsp, 0);
+        break;
+
+      case irem:
+        popInt(rcx);
+        popInt(rax);
+        cqo();
+        Assembler::idiv(rcx);
+        pushInt(rdx);
+        break;
+
       case ireturn:
       case freturn:
         popInt(rax);
@@ -3679,6 +3757,16 @@ class JavaCompiler: public Compiler {
         pop(rbp);
         ret();
         stackMapper.exited();
+        break;
+
+      case ishl:
+        popInt(rcx);
+        shl4_cl(rsp, 0);
+        break;
+
+      case ishr:
+        popInt(rcx);
+        sar4_cl(rsp, 0);
         break;
 
       case istore:
@@ -3709,6 +3797,11 @@ class JavaCompiler: public Compiler {
       case isub:
         popInt(rax);
         sub(rax, rsp, 0);
+        break;
+
+      case iushr:
+        popInt(rcx);
+        shr4_cl(rsp, 0);
         break;
 
       case l2i:
@@ -4408,12 +4501,16 @@ compileMethod2(MyThread* t, object method)
                 compiledCode(code) + compiledCodeLength(code));
       }
 
-//       if (strcmp(reinterpret_cast<const char*>
-//                  (&byteArrayBody(t, methodName(t, method), 0)),
-//                  "find") == 0)
-//       {
-//         noop();
-//       }
+      if (false and
+          strcmp(reinterpret_cast<const char*>
+                 (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
+                 "java/util/HashMap") == 0 and
+          strcmp(reinterpret_cast<const char*>
+                 (&byteArrayBody(t, methodName(t, method), 0)),
+                 "nextPowerOfTwo") == 0)
+      {
+        noop();
+      }
 
       object pool = c.makePool();
       set(t, methodCode(t, method), pool);

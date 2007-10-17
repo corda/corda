@@ -17,6 +17,10 @@ public class TreeSet<T> implements Collection<T> {
     return new MyIterator<T>(set.first());
   }
 
+  public String toString() {
+    return Collections.toString(this);
+  }
+
   public boolean add(T value) {
     PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
     if (p.fresh()) {

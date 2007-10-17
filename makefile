@@ -34,7 +34,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Tree.class
+input = $(cls)/Memory.class
 
 cxx = g++
 cc = gcc
@@ -65,9 +65,9 @@ ifeq ($(mode),stress-major)
 cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
-cflags += -g3 -O3 -DNDEBUG
-#strip = strip
-#show-size = ls -l
+cflags += -O3 -DNDEBUG
+strip = strip
+show-size = ls -l
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
