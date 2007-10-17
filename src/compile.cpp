@@ -692,6 +692,7 @@ class MyThread: public Thread {
 
   ArgumentList* argumentList;
   void* frame;
+  void* frameData[2];
   Reference* reference;
 };
 
@@ -705,7 +706,7 @@ frameBase(void* frame)
 inline bool
 frameValid(void* frame)
 {
-  return frame != 0;
+  return frame and frameBase(frame);
 }
 
 inline void*
@@ -1648,6 +1649,12 @@ class Assembler {
     mov4(src, dst, dstOffset);
   }
 
+  void mov(int32_t v, Register dst, int32_t dstOffset) {
+    rex();
+    offsetInstruction(0xc7, 0, 0x40, 0x80, rax, dst, dstOffset);
+    code.append4(v);
+  }
+
   void mov(uintptr_t v, Register dst) {
     rex();
     code.append(0xb8 | dst);
@@ -2078,6 +2085,11 @@ class Compiler: public Assembler {
       - reinterpret_cast<uintptr_t>(t);
   }
 
+  unsigned threadFrameDataOffset() {
+    return reinterpret_cast<uintptr_t>(&(t->frameData))
+      - reinterpret_cast<uintptr_t>(t);
+  }
+
   Compiled* compileStub() {
     push(rbp);
     mov(rsp, rbp);
@@ -2137,16 +2149,13 @@ class Compiler: public Assembler {
 
   Compiled* compileCaller() {
     mov(rbp, FrameThread, rdi);
-    lea(rsp, FrameFootprint + BytesPerWord, rcx);
-    mov(rcx, rdi, threadFrameOffset()); // set thread frame to current
+    mov(rsp, 0, rcx);
+    mov(threadFrameDataOffset() + FrameFootprint + (BytesPerWord * 2),
+        rdi, threadFrameOffset());
+    mov(rcx, rdi, threadFrameDataOffset());
+    mov(rbp, rdi, threadFrameDataOffset() + BytesPerWord);
 
-    push(rbp);
-
-    call(rbx);
-
-    add(BytesPerWord, rsp);
-
-    ret();
+    jmp(rbx);
 
     return finish();
   }
