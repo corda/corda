@@ -19,7 +19,7 @@ vmJump(void* address, void* base, void* stack);
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 
 const unsigned FrameThread = BytesPerWord * 2;
 const unsigned FrameMethod = FrameThread + BytesPerWord;
@@ -3281,9 +3281,9 @@ class JavaCompiler: public Compiler {
         if (UNLIKELY(t->exception)) return 0;
         
         object table = classStaticTable(t, fieldClass(t, field));
+        unsigned offset = (fieldOffset(t, field) * BytesPerWord) + ArrayBody;
 
         mov(poolRegister(), poolReference(table), rax);
-        add((fieldOffset(t, field) * BytesPerWord) + ArrayBody, rax);
         
         switch (fieldCode(t, field)) {
         case ByteField:
@@ -3295,6 +3295,7 @@ class JavaCompiler: public Compiler {
           Label zero(this);
           Label next(this);
 
+          mov(rax, offset, rax);
           cmp(0, rax);
           je(zero);
 
@@ -3313,6 +3314,7 @@ class JavaCompiler: public Compiler {
           Label zero(this);
           Label next(this);
 
+          mov(rax, offset, rax);
           cmp(0, rax);
           je(zero);
 
@@ -3332,7 +3334,7 @@ class JavaCompiler: public Compiler {
         } break;
 
         case ObjectField: {
-          pushObject(rax, 0);
+          pushObject(rax, offset);
         } break;
 
         default: abort(t);
