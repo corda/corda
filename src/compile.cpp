@@ -2925,7 +2925,7 @@ class JavaCompiler: public Compiler {
 
         mov(poolRegister(), poolReference(class_), rcx);
         mov(rax, 0, rax);
-        and_(PointerMask, rax);
+        and_(static_cast<int32_t>(PointerMask), rax);
         cmp(rcx, rax);
         je(next);
 
@@ -3638,7 +3638,7 @@ class JavaCompiler: public Compiler {
 
         mov(poolRegister(), poolReference(class_), rcx);
         mov(rax, 0, rax);
-        and_(PointerMask, rax);
+        and_(static_cast<int32_t>(PointerMask), rax);
         cmp(rcx, rax);
         jne(call);
         
@@ -3739,7 +3739,7 @@ class JavaCompiler: public Compiler {
                 
         mov(rsp, instance, rax);          // load instance
         mov(rax, 0, rax);                 // load class
-        and_(PointerMask, rax);           // clean pointer
+        and_(static_cast<int32_t>(PointerMask), rax); // clean pointer
         mov(rax, ClassVirtualTable, rax); // load vtable
         mov(rax, offset, rax);            // load method
 
