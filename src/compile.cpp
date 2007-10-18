@@ -19,7 +19,7 @@ vmJump(void* address, void* base, void* stack);
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 
 const unsigned FrameThread = BytesPerWord * 2;
 const unsigned FrameMethod = FrameThread + BytesPerWord;
@@ -686,12 +686,12 @@ class MyThread: public Thread {
   MyThread(Machine* m, object javaThread, vm::Thread* parent):
     vm::Thread(m, javaThread, parent),
     argumentList(0),
-    frame(0),
     reference(0)
-  { }
+  {
+    memset(frameData, 0, BytesPerWord * 2);
+  }
 
   ArgumentList* argumentList;
-  void* frame;
   void* frameData[2];
   Reference* reference;
 };
@@ -706,7 +706,7 @@ frameBase(void* frame)
 inline bool
 frameValid(void* frame)
 {
-  return frame and frameBase(frame);
+  return frame != 0;
 }
 
 inline void*
@@ -933,17 +933,30 @@ findExceptionHandler(Thread* t, void* frame)
   return 0;
 }
 
+void*
+framePointer(void** data)
+{
+  return data + (FrameFootprint / BytesPerWord) + 2;
+}
+
+void*
+frameStart(MyThread* t)
+{
+  return t->frameData[0] ? framePointer(t->frameData) : 0;
+}
+
 void NO_RETURN
 unwind(MyThread* t)
 {
-  for (void* frame = t->frame; frameValid(frame); frame = frameNext(frame)) {
+  for (void* frame = frameStart(t); frameValid(frame);
+       frame = frameNext(frame))
+  {
     if ((methodFlags(t, frameMethod(frame)) & ACC_NATIVE) == 0) {
       NativeExceptionHandler* eh = findExceptionHandler(t, frame);
       if (eh) {
         object method = frameMethod(frame);
         Compiled* code = reinterpret_cast<Compiled*>
           (methodCompiled(t, method));
-        t->frame = frame;
 
         void** stack = static_cast<void**>(frameBase(frame));
 
@@ -967,7 +980,6 @@ unwind(MyThread* t)
     if (not frameValid(next)
         or methodFlags(t, frameMethod(next)) & ACC_NATIVE)
     {
-      t->frame = next;
       vmJump(frameReturnAddress(frame),
              *static_cast<void**>(frameBase(frame)),
              static_cast<void**>(frameBase(frame)) + 2);
@@ -1119,31 +1131,33 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame)
 void
 visitStack(MyThread* t, Heap::Visitor* v)
 {
-  if (frameValid(t->frame)) {
-    v->visit(&frameMethod(t->frame));
+  void* frame = frameStart(t);
+
+  if (frameValid(frame)) {
+    v->visit(&frameMethod(frame));
   }
 
-  for (void* f = t->frame; frameValid(f); f = frameNext(f)) {
+  for (; frameValid(frame); frame = frameNext(frame)) {
     // we only need to visit the parameters of this method if the
     // caller is native.  Otherwise, the caller owns them.
-    void* next = frameNext(f);
+    void* next = frameNext(frame);
     if (frameValid(next)) {
       v->visit(&frameMethod(next));
       
       if (methodFlags(t, frameMethod(next)) & ACC_NATIVE) {
-        visitParameters(t, v, f);
+        visitParameters(t, v, frame);
       }
     } else {
-      visitParameters(t, v, f);
+      visitParameters(t, v, frame);
     }
 
-    object method = frameMethod(f);
+    object method = frameMethod(frame);
     Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
 
     if ((methodFlags(t, method) & ACC_NATIVE) == 0
         and code != t->m->processor->methodStub(t))
     {
-      visitStackAndLocals(t, v, f);
+      visitStackAndLocals(t, v, frame);
     }
   }
 }
@@ -1345,7 +1359,7 @@ invokeNative2(MyThread* t, object method)
   args[argOffset++] = reinterpret_cast<uintptr_t>(t);
   types[typeOffset++] = POINTER_TYPE;
 
-  uintptr_t* sp = static_cast<uintptr_t*>(frameBase(t->frame))
+  uintptr_t* sp = static_cast<uintptr_t*>(frameBase(frameStart(t)))
     + (methodParameterFootprint(t, method) + 1)
     + (FrameFootprint / BytesPerWord);
 
@@ -2080,11 +2094,6 @@ class Compiler: public Assembler {
     t(t)
   { }
 
-  unsigned threadFrameOffset() {
-    return reinterpret_cast<uintptr_t>(&(t->frame))
-      - reinterpret_cast<uintptr_t>(t);
-  }
-
   unsigned threadFrameDataOffset() {
     return reinterpret_cast<uintptr_t>(&(t->frameData))
       - reinterpret_cast<uintptr_t>(t);
@@ -2149,11 +2158,9 @@ class Compiler: public Assembler {
 
   Compiled* compileCaller() {
     mov(rbp, FrameThread, rdi);
+    mov(rbp, rdi, threadFrameDataOffset());
     mov(rsp, 0, rcx);
-    mov(threadFrameDataOffset() + FrameFootprint + (BytesPerWord * 2),
-        rdi, threadFrameOffset());
-    mov(rcx, rdi, threadFrameDataOffset());
-    mov(rbp, rdi, threadFrameDataOffset() + BytesPerWord);
+    mov(rcx, rdi, threadFrameDataOffset() + BytesPerWord);
 
     jmp(rbx);
 
@@ -4513,10 +4520,10 @@ compileMethod2(MyThread* t, object method)
       if (false and
           strcmp(reinterpret_cast<const char*>
                  (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-                 "java/util/HashMap") == 0 and
+                 "Memory") == 0 and
           strcmp(reinterpret_cast<const char*>
                  (&byteArrayBody(t, methodName(t, method), 0)),
-                 "nextPowerOfTwo") == 0)
+                 "runningSum") == 0)
       {
         noop();
       }
@@ -4541,7 +4548,7 @@ updateCaller(MyThread* t, object method)
 
   a.call(rax);
 
-  uint8_t* caller = static_cast<uint8_t*>(frameAddress(t->frame))
+  uint8_t* caller = static_cast<uint8_t*>(frameAddress(frameStart(t)))
     - a.code.length();
   if (memcmp(a.code.data, caller, a.code.length()) == 0) {
     // it's a direct call - update caller to point to new code
@@ -4588,7 +4595,7 @@ class ArgumentList {
 
     addInt(reinterpret_cast<uintptr_t>(t));
     addObject(0); // reserve space for method
-    addInt(reinterpret_cast<uintptr_t>(this->t->frame));
+    addInt(0); // reserve space for frame
 
     if (this_) {
       addObject(this_);
@@ -4713,8 +4720,14 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
 
-  void* frame = t->frame;
   Reference* reference = t->reference;
+
+  void* frameData[2];
+  memcpy(frameData, t->frameData, BytesPerWord * 2);
+
+  if (frameData[0]) {
+    arguments->array[2] = reinterpret_cast<uintptr_t>(framePointer(frameData));
+  }
 
   Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
   uint64_t result = vmInvoke
@@ -4724,7 +4737,8 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   while (t->reference != reference) {
     dispose(t, t->reference);
   }
-  t->frame = frame;
+
+  memcpy(t->frameData, frameData, BytesPerWord * 2);
 
   object r;
   switch (returnCode) {
@@ -4879,7 +4893,8 @@ class MyProcessor: public Processor {
   virtual uintptr_t
   frameStart(Thread* vmt)
   {
-    return reinterpret_cast<uintptr_t>(static_cast<MyThread*>(vmt)->frame);
+    return reinterpret_cast<uintptr_t>
+      (::frameStart(static_cast<MyThread*>(vmt)));
   }
 
   virtual uintptr_t
