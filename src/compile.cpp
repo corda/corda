@@ -1848,12 +1848,16 @@ class Assembler {
   }
 
   void and_(int32_t v, Register dst) {
-    assert(code.s, isByte(v)); // todo
-
     rex();
-    code.append(0x83);
-    code.append(0xe0 | dst);
-    code.append(v);
+    if (isByte(v)) {
+      code.append(0x83);
+      code.append(0xe0 | dst);
+      code.append(v);
+    } else {
+      code.append(0x81);
+      code.append(0xe0 | dst);
+      code.append(v);
+    }
   }
 
   void shl(int8_t v, Register dst) {
@@ -2921,6 +2925,7 @@ class JavaCompiler: public Compiler {
 
         mov(poolRegister(), poolReference(class_), rcx);
         mov(rax, 0, rax);
+        and_(PointerMask, rax);
         cmp(rcx, rax);
         je(next);
 
@@ -3633,6 +3638,7 @@ class JavaCompiler: public Compiler {
 
         mov(poolRegister(), poolReference(class_), rcx);
         mov(rax, 0, rax);
+        and_(PointerMask, rax);
         cmp(rcx, rax);
         jne(call);
         
@@ -3733,6 +3739,7 @@ class JavaCompiler: public Compiler {
                 
         mov(rsp, instance, rax);          // load instance
         mov(rax, 0, rax);                 // load class
+        and_(PointerMask, rax);           // clean pointer
         mov(rax, ClassVirtualTable, rax); // load vtable
         mov(rax, offset, rax);            // load method
 
