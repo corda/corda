@@ -1605,9 +1605,9 @@ writeInitialization(Output* out, Object* type)
   out->write(typeArrayElementSize(type));
   out->write(", mask, 0, super, 0, 0, 0, 0, 0, t->m->loader);\n");
 
-  out->write("  set(t, arrayBody(t, t->m->types, Machine::");
+  out->write("  set(t, t->m->types, ArrayBody + (Machine::");
   out->write(capitalize(typeName(type)));
-  out->write("Type), class_);\n");
+  out->write("Type * BytesPerWord), class_);\n");
 
   out->write("}\n\n");
 }
@@ -1689,7 +1689,7 @@ writeJavaInitialization(Output* out, Object* type)
   out->write(capitalize(typeName(type)));
   out->write("Type);\n");
 
-  out->write("  set(t, className(t, class_), name);\n");
+  out->write("  set(t, class_, ClassName, name);\n");
 
   out->write("  hashMapInsert(t, t->m->bootstrapClassMap, ");
   out->write("name, class_, byteArrayHash);\n");

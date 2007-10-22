@@ -27,10 +27,9 @@ codeReadInt32(Thread* t, object code, unsigned& ip)
 }
 
 inline object
-resolveClass(Thread* t, object container,
-             object& (*class_)(vm::Thread*, object))
+resolveClassInObject(Thread* t, object container, unsigned classOffset)
 {
-  object o = class_(t, container);
+  object o = cast<object>(container, classOffset);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
     PROTECT(t, container);
@@ -38,13 +37,13 @@ resolveClass(Thread* t, object container,
     o = resolveClass(t, o);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, class_(t, container), o);
+    set(t, container, classOffset, o);
   }
   return o; 
 }
 
 inline object
-resolveClass(Thread* t, object pool, unsigned index)
+resolveClassInPool(Thread* t, object pool, unsigned index)
 {
   object o = arrayBody(t, pool, index);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
@@ -54,7 +53,7 @@ resolveClass(Thread* t, object pool, unsigned index)
     o = resolveClass(t, o);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, arrayBody(t, pool, index), o);
+    set(t, pool, ArrayBody + (index * BytesPerWord), o);
   }
   return o; 
 }
@@ -72,7 +71,7 @@ resolve(Thread* t, object pool, unsigned index,
     object reference = o;
     PROTECT(t, reference);
 
-    object class_ = resolveClass(t, o, referenceClass);
+    object class_ = resolveClassInObject(t, o, ReferenceClass);
     if (UNLIKELY(t->exception)) return 0;
     
     o = findInHierarchy
@@ -80,7 +79,7 @@ resolve(Thread* t, object pool, unsigned index,
        find, makeError);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, arrayBody(t, pool, index), o);
+    set(t, pool, ArrayBody + (index * BytesPerWord), o);
   }
 
   return o;

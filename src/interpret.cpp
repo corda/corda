@@ -426,7 +426,7 @@ resolveNativeMethodData(Thread* t, object method)
     if (LIKELY(p)) {
       PROTECT(t, method);
       object data = makeNativeMethodData(t, method, p);
-      set(t, methodCode(t, method), data);
+      set(t, method, MethodCode, data);
       return data;
     } else {
       object message = makeString
@@ -656,7 +656,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   for (int32_t i = 0; i < counts[index]; ++i) {
     object a = makeArray(t, counts[index + 1], true);
     setObjectClass(t, a, class_);
-    set(t, objectArrayBody(t, array, i), a);
+    set(t, array, ArrayBody + (i * BytesPerWord), a);
     
     populateMultiArray(t, a, counts, index + 1, dimensions);
   }
@@ -682,7 +682,7 @@ findExceptionHandler(Thread* t, int frame)
           PROTECT(t, e);
 
           PROTECT(t, eht);
-          catchType = resolveClass
+          catchType = resolveClassInPool
             (t, codePool(t, t->code), exceptionHandlerCatchType(eh) - 1);
 
           if (catchType) {
@@ -781,7 +781,7 @@ interpret(Thread* t)
       if (LIKELY(index >= 0 and
                  static_cast<uintptr_t>(index) < objectArrayLength(t, array)))
       {
-        set(t, objectArrayBody(t, array, index), value);
+        set(t, array, ArrayBody + (index * BytesPerWord), value);
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     objectArrayLength(t, array));
@@ -824,7 +824,7 @@ interpret(Thread* t)
     if (LIKELY(count >= 0)) {
       uint16_t index = codeReadInt16(t, code, ip);
       
-      object class_ = resolveClass(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
             
       pushObject(t, makeObjectArray(t, class_, count, true));
@@ -1010,7 +1010,7 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     if (peekObject(t, sp - 1)) {
-      object class_ = resolveClass(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
       if (not instanceOf(t, class_, peekObject(t, sp - 1))) {
@@ -1766,7 +1766,7 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     if (peekObject(t, sp - 1)) {
-      object class_ = resolveClass(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
       if (instanceOf(t, class_, popObject(t))) {
@@ -2054,7 +2054,7 @@ interpret(Thread* t)
     {
       pushObject(t, v);
     } else {
-      object class_ = resolveClass(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
       pushObject(t, class_);
@@ -2262,7 +2262,7 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
     uint8_t dimensions = codeBody(t, code, ip++);
 
-    object class_ = resolveClass(t, codePool(t, code), index - 1);
+    object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, class_);
 
@@ -2288,7 +2288,7 @@ interpret(Thread* t)
   case new_: {
     uint16_t index = codeReadInt16(t, code, ip);
     
-    object class_ = resolveClass(t, codePool(t, code), index - 1);
+    object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, class_);
 
@@ -2413,7 +2413,7 @@ interpret(Thread* t)
       object value = popObject(t);
       object o = popObject(t);
       if (LIKELY(o)) {
-        set(t, cast<object>(o, fieldOffset(t, field)), value);
+        set(t, o, fieldOffset(t, field), value);
       } else {
         exception = makeNullPointerException(t);
         goto throw_;
@@ -2457,8 +2457,8 @@ interpret(Thread* t)
     default: abort(t);
     }
 
-    set(t, arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                     fieldOffset(t, field)), v);
+    set(t, classStaticTable(t, fieldClass(t, field)),
+        ArrayBody + (fieldOffset(t, field) * BytesPerWord), v);
   } goto loop;
 
   case ret: {

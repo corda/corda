@@ -993,7 +993,7 @@ throwNew(MyThread* t, object class_)
 {
   t->exception = makeNew(t, class_);
   object trace = makeTrace(t);
-  set(t, cast<object>(t->exception, ThrowableTrace), trace);
+  set(t, t->exception, ThrowableTrace, trace);
   unwind(t);
 }
 
@@ -1338,7 +1338,7 @@ invokeNative2(MyThread* t, object method)
     }
 
     object p = makePointer(t, function);
-    set(t, methodCode(t, method), p);
+    set(t, method, MethodCode, p);
   }
 
   object class_ = methodClass(t, method);
@@ -2771,23 +2771,40 @@ class JavaCompiler: public Compiler {
         cmp(rsi, rcx);
         jge(outOfBounds);
 
-        add(BytesPerWord * 2, rax);
-
         switch (instruction) {
         case aastore:
           shl(log(BytesPerWord), rcx);
-          add(rcx, rax);
-          compileCall(true, reinterpret_cast<void*>(set), rax, rbx);
+          add(ArrayBody, rcx);
+
+          if (BytesPerWord == 8) {
+            mov(rcx, rdx);
+            mov(rbx, rcx);
+            mov(rax, rsi);
+            mov(rbp, FrameThread, rdi);
+          } else {
+            push(rbx);
+            push(rcx);
+            push(rax);
+            push(rbp, FrameThread);
+          }
+
+          directCall(reinterpret_cast<void*>(set));
+
+          if (BytesPerWord == 4) {
+            add(BytesPerWord * 4, rsp);
+          }
           break;
 
         case fastore:
         case iastore:
           shl(log(BytesPerWord), rcx);
+          add(ArrayBody, rcx);
           add(rcx, rax);
           mov(rbx, rax, 0);
           break;
 
         case bastore:
+          add(ArrayBody, rcx);
           add(rcx, rax);
           mov1(rbx, rax, 0);
           break;
@@ -2795,6 +2812,7 @@ class JavaCompiler: public Compiler {
         case castore:
         case sastore:
           shl(1, rcx);
+          add(ArrayBody, rcx);
           add(rcx, rax);
           mov2(rbx, rax, 0);
           break;
@@ -2802,6 +2820,7 @@ class JavaCompiler: public Compiler {
         case dastore:
         case lastore:
           shl(3, rcx);
+          add(ArrayBody, rcx);
           add(rcx, rax);
           mov4(rbx, rax, 0);
           mov4(rdx, rax, 4);
@@ -2843,7 +2862,7 @@ class JavaCompiler: public Compiler {
       case anewarray: {
         uint16_t index = codeReadInt16(t, code, ip);
       
-        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
         if (UNLIKELY(t->exception)) return 0;
 
         Label nonnegative(this);
@@ -2914,7 +2933,7 @@ class JavaCompiler: public Compiler {
       case checkcast: {
         uint16_t index = codeReadInt16(t, code, ip);
 
-        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
         if (UNLIKELY(t->exception)) return 0;
 
         Label next(this);
@@ -3627,7 +3646,7 @@ class JavaCompiler: public Compiler {
       case instanceof: {
         uint16_t index = codeReadInt16(t, code, ip);
 
-        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
         if (UNLIKELY(t->exception)) return 0;
 
         Label call(this);
@@ -3872,7 +3891,7 @@ class JavaCompiler: public Compiler {
         {
           pushObject(poolRegister(), poolReference(v));
         } else {
-          object class_ = resolveClass(t, codePool(t, code), index - 1);
+          object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
 
           pushObject(poolRegister(), poolReference(class_));
         }
@@ -4145,7 +4164,7 @@ class JavaCompiler: public Compiler {
       case new_: {
         uint16_t index = codeReadInt16(t, code, ip);
         
-        object class_ = resolveClass(t, codePool(t, code), index - 1);
+        object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
         if (UNLIKELY(t->exception)) return 0;
         PROTECT(t, class_);
         
@@ -4273,15 +4292,15 @@ class JavaCompiler: public Compiler {
 
         case ObjectField: {
           if (BytesPerWord == 8) {
-            popObject(rdx);
+            popObject(rcx);
+            mov(fieldOffset(t, field), rdx);
             popObject(rsi);
-            add(fieldOffset(t, field), rsi);
             mov(rbp, FrameThread, rdi);
           } else {
-            popObject(rdx);
+            popObject(rcx);
             popObject(rsi);
-            add(fieldOffset(t, field), rsi);
-            push(rdx);
+            push(rcx);
+            push(fieldOffset(t, field));
             push(rsi);
             push(rbp, FrameThread);
           }
@@ -4335,15 +4354,14 @@ class JavaCompiler: public Compiler {
           popInt4(rax, IntValue);
 
           if (BytesPerWord == 8) {
-            mov(rax, rdx);
+            mov(rax, rcx);
+            mov(offset, rdx);
             mov(poolRegister(), poolReference(table), rsi);
-            add(offset, rsi);
             mov(rbp, FrameThread, rdi);
           } else {
             push(rax);
-            mov(poolRegister(), poolReference(table), rsi);
-            add(offset, rsi);
-            push(rsi);
+            push(offset);
+            push(poolRegister(), poolReference(table));
             push(rbp, FrameThread);
           }
 
@@ -4377,15 +4395,14 @@ class JavaCompiler: public Compiler {
           }
 
           if (BytesPerWord == 8) {
-            mov(rax, rdx);
+            mov(rax, rcx);
+            mov(offset, rdx);
             mov(poolRegister(), poolReference(table), rsi);
-            add(offset, rsi);
             mov(rbp, FrameThread, rdi);
           } else {
             push(rax);
-            mov(poolRegister(), poolReference(table), rsi);
-            add(offset, rsi);
-            push(rsi);
+            push(offset);
+            push(poolRegister(), poolReference(table));
             push(rbp, FrameThread);
           }
 
@@ -4398,14 +4415,13 @@ class JavaCompiler: public Compiler {
 
         case ObjectField:
           if (BytesPerWord == 8) {
-            popObject(rdx);
+            popObject(rcx);
+            mov(offset, rdx);
             mov(poolRegister(), poolReference(table), rsi);
-            add(offset, rsi);
             mov(rbp, FrameThread, rdi);
           } else {
-            mov(poolRegister(), poolReference(table), rsi);
-            add(offset, rsi);
-            push(rsi);
+            push(offset);
+            push(poolRegister(), poolReference(table));
             push(rbp, FrameThread);
           }
 
@@ -4502,7 +4518,7 @@ class JavaCompiler: public Compiler {
         unsigned ct = exceptionHandlerCatchType(eh);
         object catchType;
         if (ct) {
-          catchType = resolveClass
+          catchType = resolveClassInPool
             (t, codePool(t, code), exceptionHandlerCatchType(eh) - 1);
         } else {
           catchType = 0;
@@ -4611,7 +4627,7 @@ compileMethod2(MyThread* t, object method)
       }
 
       object pool = c.makePool();
-      set(t, methodCode(t, method), pool);
+      set(t, method, MethodCode, pool);
 
       methodCompiled(t, method) = reinterpret_cast<uint64_t>(code);
     }

@@ -28,6 +28,7 @@ const bool DebugReferences = false;
 
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
+const uintptr_t FixedMark = 3;
 
 enum FieldCode {
   VoidField,
@@ -1421,37 +1422,20 @@ allocate(Thread* t, unsigned sizeInBytes)
   }
 }
 
-inline void
-mark(Thread* t, object* targets, unsigned count)
-{
-  ACQUIRE_RAW(t, t->m->heapLock);
-  for (unsigned i = 0; i < count; ++i) {
-    if (t->m->heap->needsMark(reinterpret_cast<void**>(targets + i))) {
-      t->m->heap->mark(reinterpret_cast<void**>(targets + i));
-    }
-  }
-}
+void
+mark(Thread* t, object target, unsigned offset);
 
 inline void
-mark(Thread* t, object& target)
+set(Thread* t, object target, unsigned offset, object value)
 {
-  if (t->m->heap->needsMark(reinterpret_cast<void**>(&target))) {
-    ACQUIRE_RAW(t, t->m->heapLock);
-    t->m->heap->mark(reinterpret_cast<void**>(&target));
-  }
-}
-
-inline void
-set(Thread* t, object& target, object value)
-{
-  target = value;
-  mark(t, target);
+  cast<object>(target, offset) = value;
+  mark(t, target, offset);
 }
 
 inline void
 setObjectClass(Thread* t, object o, object value)
 {
-  set(t, cast<object>(o, 0),
+  set(t, o, 0,
       reinterpret_cast<object>
       (reinterpret_cast<uintptr_t>(value)
        | reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
@@ -1461,6 +1445,70 @@ object&
 arrayBodyUnsafe(Thread*, object, unsigned);
 
 #include "type-declarations.cpp"
+
+inline bool
+objectFixed(Thread*, object o)
+{
+  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == FixedMark;
+}
+
+inline bool
+objectExtended(Thread*, object o)
+{
+  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == ExtendedMark;
+}
+
+inline bool
+hashTaken(Thread*, object o)
+{
+  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == HashTakenMark;
+}
+
+inline unsigned
+baseSize(Thread* t, object o, object class_)
+{
+  return ceiling(classFixedSize(t, class_), BytesPerWord)
+    + ceiling(classArrayElementSize(t, class_)
+              * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
+              BytesPerWord);
+}
+
+inline void
+mark(Thread* t, object target, unsigned offset, unsigned count)
+{
+  ACQUIRE_RAW(t, t->m->heapLock);
+  if (objectFixed(t, target)) {    
+    unsigned size = baseSize(t, target, objectClass(t, target))
+      * BytesPerWord;
+
+    for (unsigned i = 0; i < count; ++i) {
+      markBit(&cast<uintptr_t>(target, size), offset + (i * BytesPerWord));
+    }
+  } else {
+    for (unsigned i = 0; i < count; ++i) {
+      unsigned j = offset + (i * BytesPerWord);
+      if (t->m->heap->needsMark(&cast<void*>(target, j))) {
+        t->m->heap->mark(&cast<void*>(target, j));
+      }
+    }
+  }
+}
+
+inline void
+mark(Thread* t, object target, unsigned offset)
+{
+  if (objectFixed(t, target)) {
+    unsigned size = baseSize(t, target, objectClass(t, target)) * BytesPerWord;
+
+    ACQUIRE_RAW(t, t->m->heapLock);
+
+    markBit(&cast<uintptr_t>(target, size), offset);
+  } else if (t->m->heap->needsMark(&cast<void*>(target, offset))) {
+    ACQUIRE_RAW(t, t->m->heapLock);
+
+    t->m->heap->mark(&cast<void*>(target, offset));
+  }
+}
 
 object
 makeTrace(Thread* t, uintptr_t start);
@@ -1656,21 +1704,6 @@ classInitializer(Thread* t, object class_);
 object
 frameMethod(Thread* t, int frame);
 
-inline unsigned
-baseSize(Thread* t, object o, object class_)
-{
-  return ceiling(classFixedSize(t, class_), BytesPerWord)
-    + ceiling(classArrayElementSize(t, class_)
-              * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
-              BytesPerWord);
-}
-
-inline bool
-objectExtended(Thread*, object o)
-{
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == ExtendedMark;
-}
-
 inline uintptr_t&
 extendedWord(Thread* t UNUSED, object o, unsigned baseSize)
 {
@@ -1684,16 +1717,11 @@ extendedSize(Thread* t, object o, unsigned baseSize)
   return baseSize + objectExtended(t, o);
 }
 
-inline bool
-hashTaken(Thread*, object o)
-{
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == HashTakenMark;
-}
-
 inline void
 markHashTaken(Thread* t, object o)
 {
   assert(t, not objectExtended(t, o));
+  assert(t, not objectFixed(t, o));
   cast<uintptr_t>(o, 0) |= HashTakenMark;
 
   ACQUIRE_RAW(t, t->m->heapLock);
@@ -1712,7 +1740,9 @@ objectHash(Thread* t, object o)
   if (objectExtended(t, o)) {
     return extendedWord(t, o, baseSize(t, o, objectClass(t, o)));
   } else {
-    markHashTaken(t, o);
+    if (not objectFixed(t, o)) {
+      markHashTaken(t, o);
+    }
     return takeHash(t, o);
   }
 }
@@ -1848,7 +1878,7 @@ hashMapInsertOrReplace(Thread* t, object map, object key, object value,
     hashMapInsert(t, map, key, value, hash);
     return true;
   } else {
-    set(t, tripleSecond(t, n), value);
+    set(t, n, TripleSecond, value);
     return false;
   }
 }

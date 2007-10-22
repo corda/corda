@@ -304,7 +304,7 @@ Java_java_lang_reflect_Field_setObject
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, cast<object>(*instance, offset), (value ? *value : 0));
+  set(t, *instance, offset, (value ? *value : 0));
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -442,8 +442,8 @@ Java_java_lang_System_arraycopy
         if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
                    dstOffset >= 0 and dstOffset + length <= dl))
         {
-          uint8_t* sbody = &cast<uint8_t>(s, 2 * BytesPerWord);
-          uint8_t* dbody = &cast<uint8_t>(d, 2 * BytesPerWord);
+          uint8_t* sbody = &cast<uint8_t>(s, ArrayBody);
+          uint8_t* dbody = &cast<uint8_t>(d, ArrayBody);
           if (s == d) {
             memmove(dbody + (dstOffset * elementSize),
                     sbody + (srcOffset * elementSize),
@@ -455,7 +455,7 @@ Java_java_lang_System_arraycopy
           }
 
           if (classObjectMask(t, objectClass(t, d))) {
-            mark(t, reinterpret_cast<object*>(dbody) + dstOffset, length);
+            mark(t, d, ArrayBody + (dstOffset * BytesPerWord), length);
           }
 
           return;
@@ -595,7 +595,7 @@ Java_java_lang_Throwable_resolveTrace(Thread* t, jclass, jobject trace)
       (t, traceElementMethod(t, e), traceElementIp(t, e));
 
     object ste = makeStackTraceElement(t, class_, method, 0, line);
-    set(t, objectArrayBody(t, array, i), ste);
+    set(t, array, ArrayBody + (i * BytesPerWord), ste);
   }
 
   return makeLocalReference(t, array);

@@ -115,8 +115,8 @@ ThrowNew(Thread* t, jclass c, const char* message)
   PROTECT(t, trace);
 
   t->exception = make(t, *c);
-  set(t, throwableMessageUnsafe(t, t->exception), m);
-  set(t, throwableTraceUnsafe(t, t->exception), trace);
+  set(t, t->exception, ThrowableMessage, m);
+  set(t, t->exception, ThrowableTrace, trace);
 
   return 0;
 }
@@ -775,7 +775,7 @@ SetObjectField(Thread* t, jobject o, jfieldID field, jobject v)
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, cast<object>(*o, field), (v ? *v : 0));
+  set(t, *o, field, (v ? *v : 0));
 }
 
 void JNICALL
@@ -931,7 +931,8 @@ SetStaticObjectField(Thread* t, jclass c, jfieldID field, jobject v)
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, arrayBody(t, classStaticTable(t, *c), field), (v ? *v : 0));
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord),
+      (v ? *v : 0));
 }
 
 void JNICALL
@@ -940,7 +941,7 @@ SetStaticBooleanField(Thread* t, jclass c, jfieldID field, jboolean v)
   ENTER(t, Thread::ActiveState);
 
   object o = makeInt(t, v ? 1 : 0);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 void JNICALL
@@ -949,7 +950,7 @@ SetStaticByteField(Thread* t, jclass c, jfieldID field, jbyte v)
   ENTER(t, Thread::ActiveState);
 
   object o = makeInt(t, v);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 void JNICALL
@@ -958,7 +959,7 @@ SetStaticCharField(Thread* t, jclass c, jfieldID field, jchar v)
   ENTER(t, Thread::ActiveState);
 
   object o = makeInt(t, v);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 void JNICALL
@@ -967,7 +968,7 @@ SetStaticShortField(Thread* t, jclass c, jfieldID field, jshort v)
   ENTER(t, Thread::ActiveState);
 
   object o = makeInt(t, v);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 void JNICALL
@@ -976,7 +977,7 @@ SetStaticIntField(Thread* t, jclass c, jfieldID field, jint v)
   ENTER(t, Thread::ActiveState);
 
   object o = makeInt(t, v);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 void JNICALL
@@ -985,7 +986,7 @@ SetStaticLongField(Thread* t, jclass c, jfieldID field, jlong v)
   ENTER(t, Thread::ActiveState);
 
   object o = makeLong(t, v);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 void JNICALL
@@ -995,7 +996,7 @@ SetStaticFloatField(Thread* t, jclass c, jfieldID field, jfloat v)
 
   jint i; memcpy(&i, &v, 4);
   object o = makeInt(t, i);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 void JNICALL
@@ -1005,7 +1006,7 @@ SetStaticDoubleField(Thread* t, jclass c, jfieldID field, jdouble v)
 
   jlong i; memcpy(&i, &v, 8);
   object o = makeLong(t, i);
-  set(t, arrayBody(t, classStaticTable(t, *c), field), o);
+  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
 }
 
 jobject JNICALL
