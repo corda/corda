@@ -4034,6 +4034,50 @@ class JavaCompiler: public Compiler {
         }
         break;
 
+        // todo:
+//       case lookupswitch: {
+//         int32_t base = ip - 1;
+//         ip += 3;
+//         ip -= (ip % 4);
+    
+//         int32_t default_ = codeReadInt32(t, code, ip);
+//         int32_t pairCount = codeReadInt32(t, code, ip);
+
+//         popInt(rax);
+//         mov(LookupTable(this, base, pairCount, code, ip), rbx);
+//         mov(pairCount, rcx);
+//         jmp(test);
+
+//         loop.mark();
+//         // tbc
+
+//         test.mark();
+//         cmp(0, rcx);
+//         jne(loop);
+
+//         int32_t key = popInt(t);
+
+//         int32_t bottom = 0;
+//         int32_t top = pairCount;
+//         for (int32_t span = top - bottom; span; span = top - bottom) {
+//           int32_t middle = bottom + (span / 2);
+//           unsigned index = ip + (middle * 8);
+
+//           int32_t k = codeReadInt32(t, code, index);
+
+//           if (key < k) {
+//             top = middle;
+//           } else if (key > k) {
+//             bottom = middle + 1;
+//           } else {
+//             ip = base + codeReadInt32(t, code, index);
+//             break;
+//           }
+//         }
+
+//         ip = base + default_;
+//       } break;
+
       case lrem:
         if (BytesPerWord == 8) {
           popLong(rcx);
@@ -4388,6 +4432,34 @@ class JavaCompiler: public Compiler {
         pushInt(static_cast<int16_t>(codeReadInt16(t, code, ip)));
       } break;
 
+        // todo:
+//       case tableswitch: {
+//         int32_t base = ip - 1;
+//         ip += 3;
+//         ip -= (ip % 4);
+
+//         int32_t default_ = codeReadInt32(t, code, ip);
+//         int32_t bottom = codeReadInt32(t, code, ip);
+//         int32_t top = codeReadInt32(t, code, ip);
+
+//         popInt(rax);
+//         cmp(bottom, rax);
+//         jl(defaultLabel);
+        
+//         cmp(top, rax);
+//         jg(defaultLabel);
+
+//         sub(bottom, rax);
+//         mov(Address(NoRegister, rax, 4,
+//                     IndexTable(this, base, top - bottom, code, ip)),
+//             rax);
+//         jmp(rax);
+
+//         defaultLabel.mark();
+//         jmp(base + default_);
+//         stackMapper.jumped(base + default_);
+//       } break;
+
       default:
         abort(t);
       }
@@ -4526,6 +4598,7 @@ compileMethod2(MyThread* t, object method)
                 compiledCode(code) + compiledCodeLength(code));
       }
 
+      // for debugging:
       if (false and
           strcmp(reinterpret_cast<const char*>
                  (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
