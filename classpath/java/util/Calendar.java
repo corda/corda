@@ -76,6 +76,11 @@ public abstract class Calendar {
       parseIntoFields(time);
     }
 
+    public void setTime(Date date) {
+      super.setTime(date);
+      parseIntoFields(this.time);
+    }
+
     private static boolean isLeapYear(int year) {
       return (year%4 == 0) && (year%100 != 0) || (year%400 == 0);
     }
