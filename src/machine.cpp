@@ -1550,16 +1550,18 @@ exit(Thread* t)
     object f = *p;
     *p = finalizerNext(t, *p);
 
-    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
-      (t, finalizerTarget(t, f));
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
   }
 
   for (object* p = &(t->m->tenuredFinalizers); *p;) {
     object f = *p;
     *p = finalizerNext(t, *p);
 
-    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
-      (t, finalizerTarget(t, f));
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
   }
 
   disposeAll(t, t->m->rootThread);
@@ -2390,7 +2392,10 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 
   ACQUIRE(t, t->m->referenceLock);
 
-  object f = makeFinalizer(t, 0, reinterpret_cast<void*>(finalize), 0);
+  void* function;
+  memcpy(&function, &finalize, BytesPerWord);
+
+  object f = makeFinalizer(t, 0, function, 0);
   finalizerTarget(t, f) = target;
   finalizerNext(t, f) = t->m->finalizers;
   t->m->finalizers = f;
@@ -2602,8 +2607,9 @@ collect(Thread* t, Heap::CollectionType type)
   postCollect(m->rootThread);
 
   for (object f = m->finalizeQueue; f; f = finalizerNext(t, f)) {
-    reinterpret_cast<void (*)(Thread*, object)>(finalizerFinalize(t, f))
-      (t, finalizerTarget(t, f));
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
   }
   m->finalizeQueue = 0;
 

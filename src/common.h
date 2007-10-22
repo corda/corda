@@ -45,6 +45,8 @@
 
 inline void* operator new(size_t, void* p) throw() { return p; }
 
+inline void operator delete(void*) { abort(); }
+
 namespace vm {
 
 const unsigned BytesPerWord = sizeof(uintptr_t);

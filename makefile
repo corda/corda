@@ -1,43 +1,37 @@
 MAKEFLAGS = -s
 
-arch = $(shell uname -m)
-ifeq ($(arch),i586)
-	arch = i386
+input = $(cls)/Memory.class
+
+build-arch = $(shell uname -m)
+ifeq ($(build-arch),i586)
+	build-arch = i386
 endif
-ifeq ($(arch),i686)
-	arch = i386
+ifeq ($(build-arch),i686)
+	build-arch = i386
 endif
 
-platform = $(shell uname -s | tr [:upper:] [:lower:])
+build-platform = $(shell uname -s | tr [:upper:] [:lower:])
 
-ifeq ($(platform),darwin)
-	rdynamic =
-	thread-cflags =
-	shared = -dynamiclib
-	so-extension = jnilib
-	ld-library-path = DYLD_LIBRARY_PATH
-else
-	rdynamic = -rdynamic
-	thread-cflags = -pthread
-	shared = -shared
-	so-extension = so
-	ld-library-path = LD_LIBRARY_PATH
-endif
+arch = $(build-arch)
+
+platform = $(build-platform)
 
 process = interpret
 
 mode = debug
 
+build-dir = build/$(build-platform)/$(build-arch)
 bld = build/$(platform)/$(arch)/$(mode)
 cls = build/classes
 src = src
 classpath = classpath
 test = test
 
-input = $(cls)/Memory.class
+build-cxx = g++
+build-cc = gcc
 
-cxx = g++
-cc = gcc
+cxx = $(build-cxx)
+cc = $(build-cc)
 vg = nice valgrind --suppressions=valgrind.supp --undef-value-errors=no \
 	--num-callers=32 --db-attach=yes --freelist-vol=100000000
 db = gdb --args
@@ -45,49 +39,80 @@ javac = javac
 strip = :
 show-size = :
 
+rdynamic = -rdynamic
+thread-cflags = -pthread
+shared = -shared
+so-extension = so
+ld-library-path = LD_LIBRARY_PATH
+
 warnings = -Wall -Wextra -Werror -Wunused-parameter \
 	-Winit-self -Wconversion
 
-thread-lflags = -lpthread
-
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
-	-I$(src) -I$(bld) $(thread-cflags) -D__STDC_LIMIT_MACROS
+	-I$(src) -I$(build-dir) $(thread-cflags) -D__STDC_LIMIT_MACROS
 
-lflags = $(thread-lflags) -ldl -lm -lz
+lflags = -lpthread -ldl -lm -lz
+
+system = posix
+
+ifeq ($(platform),darwin)
+	rdynamic =
+	thread-cflags =
+	shared = -dynamiclib
+	so-extension = jnilib
+	ld-library-path = DYLD_LIBRARY_PATH
+endif
+ifeq ($(platform),windows)
+	inc = ../6.0/shared/include/msw
+	lib = ../6.0/shared/lib/native/msw
+
+	system = windows
+  cxx = i586-mingw32msvc-g++
+  cc = i586-mingw32msvc-gcc
+	rdynamic =
+  so-extension = dll
+	thread-cflags =
+  lflags = -L$(lib) -lm -lz -Wl,--kill-at
+  cflags = $(warnings) -fno-rtti -fno-exceptions -I$(src) -I$(build-dir) \
+		$(thread-cflags) -D__STDC_LIMIT_MACROS -I$(inc)
+endif
 
 ifeq ($(mode),debug)
-cflags += -O0 -g3
+	cflags += -O0 -g3
 endif
 ifeq ($(mode),stress)
-cflags += -O0 -g3 -DVM_STRESS
+	cflags += -O0 -g3 -DVM_STRESS
 endif
 ifeq ($(mode),stress-major)
-cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
+	cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
-cflags += -O3 -DNDEBUG
-strip = strip
-show-size = ls -l
+	cflags += -O3 -DNDEBUG
+	strip = strip
+	show-size = ls -l
 endif
 
-cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(bld)/%.o,$(x)))
-asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(bld)/%-asm.o,$(x)))
+ifeq ($(arch),i386)
+  pointer-size = 4
+else
+  pointer-size = 8
+endif
+
+cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
+asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
 
-stdcpp-sources = $(src)/stdc++.cpp
-stdcpp-objects = $(call cpp-objects,$(stdcpp-sources),$(src))
-
 jni-sources = $(shell find $(classpath) -name '*.cpp')
-jni-objects = $(call cpp-objects,$(jni-sources),$(classpath))
+jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(bld))
 jni-cflags = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux $(cflags)
 jni-library = $(bld)/libnatives.$(so-extension)
 
 generated-code = \
-	$(bld)/type-enums.cpp \
-	$(bld)/type-declarations.cpp \
-	$(bld)/type-constructors.cpp \
-	$(bld)/type-initializations.cpp \
-	$(bld)/type-java-initializations.cpp
+	$(build-dir)/type-enums.cpp \
+	$(build-dir)/type-declarations.cpp \
+	$(build-dir)/type-constructors.cpp \
+	$(build-dir)/type-initializations.cpp \
+	$(build-dir)/type-java-initializations.cpp
 
 interpreter-depends = \
 	$(generated-code) \
@@ -103,7 +128,7 @@ interpreter-depends = \
 	$(src)/machine.h
 
 interpreter-sources = \
-	$(src)/system.cpp \
+	$(src)/$(system).cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/heap.cpp \
@@ -112,12 +137,16 @@ interpreter-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/main.cpp
 
-interpreter-asm-sources = $(src)/compile.S $(src)/system.S
+interpreter-asm-sources = $(src)/$(system).S
+
+ifeq ($(process),compile)
+	interpreter-asm-sources += $(src)/compile.S
+endif
 
 interpreter-cpp-objects = \
-	$(call cpp-objects,$(interpreter-sources),$(src))
+	$(call cpp-objects,$(interpreter-sources),$(src),$(bld))
 interpreter-asm-objects = \
-	$(call asm-objects,$(interpreter-asm-sources),$(src))
+	$(call asm-objects,$(interpreter-asm-sources),$(src),$(bld))
 interpreter-objects = \
 	$(interpreter-cpp-objects) \
 	$(interpreter-asm-objects)
@@ -127,8 +156,9 @@ generator-headers = \
 	$(src)/output.h
 generator-sources = \
 	$(src)/type-generator.cpp
-generator-objects = $(call cpp-objects,$(generator-sources),$(src))
-generator-executable = $(bld)/generator
+generator-objects = $(call \
+	cpp-objects,$(generator-sources),$(src),$(build-dir))
+generator-executable = $(build-dir)/generator
 
 executable = $(bld)/vm
 
@@ -157,15 +187,15 @@ run: build
 
 .PHONY: debug
 debug: build
-	LD_LIBRARY_PATH=$(bld) gdb --args $(executable) $(args)
+	$(ld-library-path)=$(bld) gdb --args $(executable) $(args)
 
 .PHONY: vg
 vg: build
-	LD_LIBRARY_PATH=$(bld) $(vg) $(executable) $(args)
+	$(ld-library-path)=$(bld) $(vg) $(executable) $(args)
 
 .PHONY: test
 test: build
-	LD_LIBRARY_PATH=$(bld) /bin/bash $(test)/test.sh 2>/dev/null \
+	$(ld-library-path)=$(bld) /bin/bash $(test)/test.sh 2>/dev/null \
 		$(executable) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
 .PHONY: clean
@@ -175,15 +205,15 @@ clean:
 
 .PHONY: clean-native
 clean-native:
-	@echo "removing $(bld)"
-	rm -rf $(bld)
+	@echo "removing $(bld) and $(build-dir)"
+	rm -rf $(bld) $(build-dir)
 
-gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
+gen-arg = $(shell echo $(1) | sed -e 's:$(build-dir)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
 	@echo "generating $(@)"
 	$(generator-executable) $(call gen-arg,$(@)) < $(<) > $(@)
 
-$(bld)/type-generator.o: \
+$(build-dir)/type-generator.o: \
 	$(generator-headers)
 
 define compile-class
@@ -206,17 +236,16 @@ define compile-object
 	$(cxx) $(cflags) -c $(<) -o $(@)
 endef
 
-$(stdcpp-objects): $(bld)/%.o: $(src)/%.cpp
-	$(compile-object)
-
 $(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
 	$(compile-object)
 
 $(interpreter-asm-objects): $(bld)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
-$(generator-objects): $(bld)/%.o: $(src)/%.cpp
-	$(compile-object)
+$(generator-objects): $(build-dir)/%.o: $(src)/%.cpp
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(build-cxx) $(cflags) -c $(<) -o $(@)
 
 $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
@@ -225,25 +254,14 @@ $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 
 $(jni-library): $(jni-objects)
 	@echo "linking $(@)"
-	$(cc) $(lflags) $(shared) $(^) -o $(@)
+	$(cc) $(^) $(lflags) $(shared) -o $(@)
 
 $(executable): $(interpreter-objects) $(stdcpp-objects)
 	@echo "linking $(@)"
-	$(cc) $(lflags) $(rdynamic) $(^) -o $(@)
+	$(cc) $(^) $(lflags) $(rdynamic) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
 
-.PHONY: generator
-generator: $(generator-executable)
-
-.PHONY: run-generator
-run-generator: $(generator-executable)
-	$(<) < $(src)/types.def
-
-.PHONY: vg-generator
-vg-generator: $(generator-executable)
-	$(vg) $(<) < $(src)/types.def
-
-$(generator-executable): $(generator-objects) $(stdcpp-objects)
+$(generator-executable): $(generator-objects)
 	@echo "linking $(@)"
-	$(cc) $(lflags) $(^) -o $(@)
+	$(build-cc) -DPOINTER_SIZE=$(pointer-size) $(^) -o $(@)

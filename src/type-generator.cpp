@@ -8,21 +8,31 @@
 
 #define UNREACHABLE abort()
 
+inline void operator delete(void*) { abort(); }
+
+extern "C" void __cxa_pure_virtual(void) { abort(); }
+
 namespace {
+
+#ifndef POINTER_SIZE
+#  define POINTER_SIZE sizeof(void*)
+#endif
+
+const unsigned BytesPerWord = POINTER_SIZE;
 
 inline unsigned
 pad(unsigned size, unsigned alignment)
 {
   unsigned n = alignment;
-  while (size and n % size and n % sizeof(void*)) ++ n;
+  while (size and n % size and n % BytesPerWord) ++ n;
   return n - alignment;
 }
 
 inline unsigned
 pad(unsigned n)
 {
-  unsigned extra = n % sizeof(void*);
-  return (extra ? n + sizeof(void*) - extra : n);
+  unsigned extra = n % BytesPerWord;
+  return (extra ? n + BytesPerWord - extra : n);
 }
 
 template <class T>
@@ -393,7 +403,7 @@ addMember(Object* o, Object* member)
   case Object::Type: case Object::Pod:
     if (member->type == Object::Array) {
       static_cast<Type*>(o)->members.append
-        (Scalar::make(o, 0, "uintptr_t", "length", sizeof(uintptr_t)));
+        (Scalar::make(o, 0, "uintptr_t", "length", BytesPerWord));
     }
     static_cast<Type*>(o)->members.append(member);
     break;
@@ -664,7 +674,7 @@ class MemberIterator {
     members(0),
     member(0),
     index_(-1),
-    offset_(type->type == Object::Pod ? 0 : sizeof(void*)),
+    offset_(type->type == Object::Pod ? 0 : BytesPerWord),
     size_(0),
     padding_(0),
     alignment_(0)
@@ -705,7 +715,7 @@ class MemberIterator {
     case Object::Scalar: {
       size_ = memberSize(member);
       padding_ = pad(size_, alignment_);
-      alignment_ = (alignment_ + size_ + padding_) % sizeof(void*); 
+      alignment_ = (alignment_ + size_ + padding_) % BytesPerWord; 
     } break;
 
     case Object::Array: {
@@ -777,9 +787,9 @@ unsigned
 sizeOf(const char* type, Object* declarations)
 {
   if (equal(type, "object")) {
-    return sizeof(void*);
+    return BytesPerWord;
   } else if (equal(type, "intptr_t")) {
-    return sizeof(intptr_t);
+    return BytesPerWord;
   } else if (equal(type, "unsigned") or equal(type, "int")) {
     return sizeof(int);
   } else if (equal(type, "bool")) {
@@ -797,7 +807,7 @@ sizeOf(const char* type, Object* declarations)
   } else if (endsWith("[0]", type)) {
     return 0;
   } else if (namesPointer(type)) {
-    return sizeof(void*);
+    return BytesPerWord;
   } else {
     Object* dec = declaration(type, declarations);
     if (dec) return typeSize(dec);
@@ -1186,7 +1196,7 @@ typeBodyOffset(Object* type, Object* offset)
     default: UNREACHABLE;
     }
   }
-  unsigned padding = pad(sizeof(void*), it.alignment());
+  unsigned padding = pad(BytesPerWord, it.alignment());
   if (padding) offset = cons(Number::make(padding), offset);
   return offset;
 }
@@ -1198,7 +1208,7 @@ typeOffset(Object* type, Object* super)
     return typeBodyOffset(super, typeOffset(super, typeSuper(super)));
   } else {
     return (type->type == Object::Type ?
-            cons(Number::make(sizeof(void*)), 0) : 0);
+            cons(Number::make(BytesPerWord), 0) : 0);
   }
 }
 
@@ -1489,7 +1499,7 @@ set(uint32_t* mask, unsigned index)
 unsigned
 typeFixedSize(Object* type)
 {
-  unsigned length = sizeof(void*);
+  unsigned length = BytesPerWord;
   for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
     switch (m->type) {
@@ -1527,13 +1537,13 @@ uint32_t
 typeObjectMask(Object* type)
 {
   assert(typeFixedSize(type) + typeArrayElementSize(type)
-         < 32 * sizeof(void*));
+         < 32 * BytesPerWord);
 
   uint32_t mask = 1;
 
   for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
-    unsigned offset = it.offset() / sizeof(void*);
+    unsigned offset = it.offset() / BytesPerWord;
 
     switch (m->type) {
     case Object::Scalar: {
@@ -1551,7 +1561,7 @@ typeObjectMask(Object* type)
         for (MemberIterator it(memberTypeObject(m)); it.hasMore();) {
           Object* m = it.next();
           if (memberGC(m)) {
-            set(&mask, offset + (it.offset() / sizeof(void*)));
+            set(&mask, offset + (it.offset() / BytesPerWord));
           }
         }  
       }
@@ -1657,14 +1667,14 @@ writeInitializations(Output* out, Object* declarations)
 
   out->write("t->m->types = allocate(t, pad((");
   out->write(count);
-  out->write(" * sizeof(void*)) + sizeof(uintptr_t) + sizeof(void*)));\n");
+  out->write(" * BytesPerWord) + (BytesPerWord * 2)));\n");
   out->write("cast<object>(t->m->types, 0) = 0;\n");
   out->write("arrayLength(t, t->m->types) = ");
   out->write(count);
   out->write(";\n");
   out->write("memset(&arrayBody(t, t->m->types, 0), 0, ");
   out->write(count);
-  out->write(" * sizeof(void*));\n\n");
+  out->write(" * BytesPerWord);\n\n");
 
   declarations = reorder(declarations);
 

@@ -7,6 +7,8 @@
 
 using namespace vm;
 
+extern "C" void __cxa_pure_virtual(void) { abort(); }
+
 namespace {
 
 int
