@@ -11,80 +11,10 @@
 #include "signal.h"
 #include "stdint.h"
 
+#include "x86.h"
 #include "system.h"
 
 #define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_) (x)
-
-#ifdef __i386__
-
-extern "C" uint64_t
-cdeclCall(void* function, void* stack, unsigned stackSize,
-          unsigned returnType);
-
-namespace {
-
-inline uint64_t
-dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
-            unsigned, unsigned argumentsSize, unsigned returnType)
-{
-  return cdeclCall(function, arguments, argumentsSize, returnType);
-}
-
-} // namespace
-
-#elif defined __x86_64__
-
-extern "C" uint64_t
-amd64Call(void* function, void* stack, unsigned stackSize,
-          void* gprTable, void* sseTable, unsigned returnType);
-
-namespace {
-
-uint64_t
-dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
-            unsigned argumentCount, unsigned, unsigned returnType)
-{
-  const unsigned GprCount = 6;
-  uint64_t gprTable[GprCount];
-  unsigned gprIndex = 0;
-
-  const unsigned SseCount = 8;
-  uint64_t sseTable[SseCount];
-  unsigned sseIndex = 0;
-
-  uint64_t stack[argumentCount];
-  unsigned stackIndex = 0;
-
-  for (unsigned i = 0; i < argumentCount; ++i) {
-    switch (argumentTypes[i]) {
-    case FLOAT_TYPE:
-    case DOUBLE_TYPE: {
-      if (sseIndex < SseCount) {
-        sseTable[sseIndex++] = arguments[i];
-      } else {
-        stack[stackIndex++] = arguments[i];
-      }
-    } break;
-
-    default: {
-      if (gprIndex < GprCount) {
-        gprTable[gprIndex++] = arguments[i];
-      } else {
-        stack[stackIndex++] = arguments[i];
-      }
-    } break;
-    }
-  }
-
-  return amd64Call(function, stack, stackIndex * 8, (gprIndex ? gprTable : 0),
-                   (sseIndex ? sseTable : 0), returnType);
-}
-
-} // namespace
-
-#else
-#  error unsupported platform
-#endif
 
 using namespace vm;
 
@@ -473,7 +403,7 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocate(unsigned size) {
-    pthread_mutex_lock(&mutex);
+    ACQUIRE(&mutex);
 
     if (Verbose) {
       fprintf(stderr, "try %d; count: %d; limit: %d\n",
@@ -481,26 +411,22 @@ class MySystem: public System {
     }
 
     if (count + size > limit) {
-      pthread_mutex_unlock(&mutex);
       return 0;
     } else {
       uintptr_t* up = static_cast<uintptr_t*>
         (malloc(size + sizeof(uintptr_t)));
       if (up == 0) {
-        pthread_mutex_unlock(&mutex);
         sysAbort(this);
       } else {
         *up = size;
         count += *up;
-      
-        pthread_mutex_unlock(&mutex);
         return up + 1;
       }
     }
   }
 
   virtual void free(const void* p) {
-    pthread_mutex_lock(&mutex);
+    ACQUIRE(&mutex);
 
     if (p) {
       const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
@@ -516,8 +442,6 @@ class MySystem: public System {
 
       ::free(const_cast<uintptr_t*>(up));
     }
-
-    pthread_mutex_unlock(&mutex);
   }
 
   virtual Status attach(Runnable* r) {
@@ -626,15 +550,15 @@ class MySystem: public System {
     }
   }
 
-  virtual void exit(int code) {
-    ::exit(code);
-  }
-
-  int64_t now() {
+  virtual int64_t now() {
     timeval tv = { 0, 0 };
     gettimeofday(&tv, 0);
     return (static_cast<int64_t>(tv.tv_sec) * 1000) +
       (static_cast<int64_t>(tv.tv_usec) / 1000);
+  }
+
+  virtual void exit(int code) {
+    ::exit(code);
   }
 
   virtual void abort() {

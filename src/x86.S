@@ -105,7 +105,7 @@ exit:
 
 #elif defined __i386__
    
-#ifdef __APPLE__
+#if defined __APPLE__ || defined __MINGW32__
 .globl _cdeclCall
 _cdeclCall: 
 #else

@@ -54,6 +54,7 @@ cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
 lflags = -lpthread -ldl -lm -lz
 
 system = posix
+asm = x86
 
 ifeq ($(platform),darwin)
 	rdynamic =
@@ -137,7 +138,7 @@ interpreter-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/main.cpp
 
-interpreter-asm-sources = $(src)/$(system).S
+interpreter-asm-sources = $(src)/$(asm).S
 
 ifeq ($(process),compile)
 	interpreter-asm-sources += $(src)/compile.S
