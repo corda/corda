@@ -46,7 +46,7 @@ public class Memory {
     traceFunc("testArray()");
     Item[] items = new Item[1750];
 
-    for (int iter=1; iter < ITERATION_COUNT; iter++) {
+    for (int iter=0; iter < ITERATION_COUNT; iter++) {
       for (int i=0; i < 1000; i++) {
         items[i] = new Item(1);
       }
@@ -84,7 +84,7 @@ public class Memory {
   private static final void testHashMap() {
     traceFunc("testHashMap()");
     HashMap<Integer, Item> items = new HashMap<Integer, Item>();
-    for (int iter=1; iter < ITERATION_COUNT; iter++) {
+    for (int iter=0; iter < ITERATION_COUNT; iter++) {
       for (int i=0; i < 1000; i++) {
         items.put(i, new Item(1));
       }
@@ -110,7 +110,7 @@ public class Memory {
   private static final void testLinkedList() {
     traceFunc("testLinkedList()");
     LinkedList<Item> items = new LinkedList<Item>();
-    for (int iter=1; iter < ITERATION_COUNT; iter++) {
+    for (int iter=0; iter < ITERATION_COUNT; iter++) {
       for (int i=0; i < 1000; i++) {
         items.add(new Item(1));
       }
@@ -144,7 +144,7 @@ public class Memory {
         return r;
       }
     });
-    for (int iter=1; iter < ITERATION_COUNT; iter++) {
+    for (int iter=0; iter < ITERATION_COUNT; iter++) {
       for (int i=0; i < 1000; i++) {
         items.add(new Item(1));
       }
