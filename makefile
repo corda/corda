@@ -206,7 +206,7 @@ vg: build
 	$(ld-library-path)=$(bld) $(vg) $(executable) $(args)
 
 .PHONY: test
-test: build
+test:
 	$(ld-library-path)=$(bld) /bin/bash $(test)/test.sh 2>/dev/null \
 		$(executable) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
@@ -273,7 +273,7 @@ ifeq ($(platform),windows)
 $(executable): $(interpreter-objects) $(jni-objects)
 	@echo "linking $(@)"
 	$(dlltool) --export-all-symbols -z $(@).def $(^)
-	$(dlltool) -d $(@).def -e $(@).exp
+	$(dlltool) -k -d $(@).def -e $(@).exp
 	$(cc) $(^) $(lflags) $(@).exp -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
