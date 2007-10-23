@@ -1,6 +1,6 @@
 #MAKEFLAGS = -s
 
-input = $(cls)/Memory.class
+input = $(cls)/Hello.class
 
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
@@ -24,7 +24,6 @@ process = interpret
 
 mode = debug
 
-build-dir = build/$(build-platform)/$(build-arch)
 bld = build/$(platform)/$(arch)/$(mode)
 cls = build/classes
 src = src
@@ -36,6 +35,8 @@ build-cc = gcc
 
 cxx = $(build-cxx)
 cc = $(build-cc)
+ar = ar
+ranlib = ranlib
 vg = nice valgrind --suppressions=valgrind.supp --undef-value-errors=no \
 	--num-callers=32 --db-attach=yes --freelist-vol=100000000
 db = gdb --args
@@ -44,18 +45,17 @@ strip = :
 show-size = :
 
 rdynamic = -rdynamic
-thread-cflags = -pthread
 shared = -shared
-so-prefix = lib
-so-extension = so
-ld-library-path = LD_LIBRARY_PATH
 
 warnings = -Wall -Wextra -Werror -Wunused-parameter \
 	-Winit-self -Wconversion
 
-cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
-	-I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -I$(src) -I$(bld) \
-	$(thread-cflags) -D__STDC_LIMIT_MACROS
+common-cflags = $(warnings) -fno-rtti -fno-exceptions \
+	-I$(JAVA_HOME)/include -idirafter $(src) -I$(bld) -D__STDC_LIMIT_MACROS \
+	-DBUILTIN_LIBRARIES=\"natives,tlscontext,scaler\"
+
+cflags = $(common-cflags) -fPIC -fvisibility=hidden \
+	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
 
 lflags = -lpthread -ldl -lm -lz
 
@@ -66,8 +66,6 @@ ifeq ($(platform),darwin)
 	rdynamic =
 	thread-cflags =
 	shared = -dynamiclib
-	so-extension = jnilib
-	ld-library-path = DYLD_LIBRARY_PATH
 endif
 ifeq ($(platform),windows)
 	inc = ../6.0/shared/include/msw
@@ -75,18 +73,15 @@ ifeq ($(platform),windows)
 
 	system = windows
 
-  cxx = i586-mingw32msvc-g++
-  cc = i586-mingw32msvc-gcc
-  dlltool = i586-mingw32msvc-dlltool
+	cxx = i586-mingw32msvc-g++
+	cc = i586-mingw32msvc-gcc
+	dlltool = i586-mingw32msvc-dlltool
+	ar = i586-mingw32msvc-ar
+	ranlib = i586-mingw32msvc-ranlib
 
 	rdynamic = -Wl,--export-dynamic
-  so-prefix =
-  so-extension = dll
-	thread-cflags =
-  lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at
-  cflags = $(warnings) -fno-rtti -fno-exceptions $(thread-cflags) \
-		-D__STDC_LIMIT_MACROS -DBUILTIN_LIBRARIES=\"natives\" \
-		-I$(bld) -I$(JAVA_HOME)/include -I$(inc) -idirafter $(src)
+	lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at
+	cflags = $(common-cflags) -I$(inc)
 endif
 
 ifeq ($(mode),debug)
@@ -105,9 +100,9 @@ ifeq ($(mode),fast)
 endif
 
 ifeq ($(arch),i386)
-  pointer-size = 4
+	pointer-size = 4
 else
-  pointer-size = 8
+	pointer-size = 8
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
@@ -116,8 +111,7 @@ java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
 
 jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(bld))
-jni-cflags = $(cflags) 
-jni-library = $(bld)/$(so-prefix)natives.$(so-extension)
+jni-cflags = $(cflags)
 
 generated-code = \
 	$(bld)/type-enums.cpp \
@@ -168,16 +162,16 @@ generator-headers = \
 	$(src)/output.h
 generator-sources = \
 	$(src)/type-generator.cpp
-generator-objects = $(call \
-	cpp-objects,$(generator-sources),$(src),$(build-dir))
-generator-executable = $(build-dir)/generator
+generator-objects = $(call cpp-objects,$(generator-sources),$(src),$(bld))
+generator-executable = $(bld)/generator
 
+archive = $(bld)/libvm.a
 executable = $(bld)/vm
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = $(call java-classes,$(classpath-sources),$(classpath))
 
-classpath-objects = $(classpath-classes) $(jni-library)
+classpath-objects = $(classpath-classes)
 
 test-sources = $(shell find $(test) -name '*.java')
 test-classes = $(call java-classes,$(test-sources),$(test))
@@ -195,19 +189,19 @@ $(input): $(classpath-classes)
 
 .PHONY: run
 run: build
-	$(ld-library-path)=$(bld) $(executable) $(args)
+	$(executable) $(args)
 
 .PHONY: debug
 debug: build
-	$(ld-library-path)=$(bld) gdb --args $(executable) $(args)
+	gdb --args $(executable) $(args)
 
 .PHONY: vg
 vg: build
-	$(ld-library-path)=$(bld) $(vg) $(executable) $(args)
+	$(vg) $(executable) $(args)
 
 .PHONY: test
-test:
-	$(ld-library-path)=$(bld) /bin/bash $(test)/test.sh 2>/dev/null \
+test: build
+	/bin/bash $(test)/test.sh 2>/dev/null \
 		$(executable) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
 .PHONY: clean
@@ -217,8 +211,8 @@ clean:
 
 .PHONY: clean-native
 clean-native:
-	@echo "removing $(bld) and $(build-dir)"
-	rm -rf $(bld) $(build-dir)
+	@echo "removing $(bld)"
+	rm -rf $(bld)
 
 gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
@@ -226,7 +220,7 @@ $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
 	@mkdir -p -m 1777 $(dir $(@))
 	$(generator-executable) $(call gen-arg,$(@)) < $(<) > $(@)
 
-$(build-dir)/type-generator.o: \
+$(bld)/type-generator.o: \
 	$(generator-headers)
 
 define compile-class
@@ -255,7 +249,7 @@ $(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
 $(interpreter-asm-objects): $(bld)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
-$(generator-objects): $(build-dir)/%.o: $(src)/%.cpp
+$(generator-objects): $(bld)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) $(cflags) -c $(<) -o $(@)
@@ -263,27 +257,28 @@ $(generator-objects): $(build-dir)/%.o: $(src)/%.cpp
 $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
-	$(cxx) $(jni-cflags) -c $(<) -o $(@)	
-
-$(jni-library): $(jni-objects)
-	@echo "linking $(@)"
-	$(cc) $(^) $(lflags) $(shared) -o $(@)
+	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
 ifeq ($(platform),windows)
-$(executable): $(interpreter-objects) $(jni-objects)
-	@echo "linking $(@)"
+$(archive): $(interpreter-objects) $(jni-objects)
+	@echo "creating $(@)"
 	$(dlltool) --export-all-symbols -z $(@).def $(^)
 	$(dlltool) -k -d $(@).def -e $(@).exp
-	$(cc) $(^) $(lflags) $(@).exp -o $(@)
-	@$(strip) --strip-all $(@)
-	@$(show-size) $(@)
+	$(ar) cru $(@) $(@).exp $(^)
+	$(ranlib) $(@)
 else
-$(executable): $(interpreter-objects)
+$(archive): $(interpreter-objects) $(jni-objects)
+	@echo "creating $(@)"
+	$(ar) cru $(@) $(^)
+	$(ranlib) $(@)
+endif
+
+$(executable): $(archive)
 	@echo "linking $(@)"
-	$(cc) $(^) $(lflags) $(rdynamic) -o $(@)
+	$(cc) -Wl,--whole-archive $(^) -Wl,--no-whole-archive \
+		$(lflags) $(rdynamic) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
-endif
 
 $(generator-executable): $(generator-objects)
 	@echo "linking $(@)"
