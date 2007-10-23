@@ -56,7 +56,7 @@ errorString(JNIEnv* e)
   snprintf(buffer, size, "wsa code: %d", WSAGetLastError());
   return charsToArray(e, buffer);
 #else
-  return errorString(errno);
+  return errorString(e, errno);
 #endif
 }
 
