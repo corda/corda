@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.TreeSet;
 
 public class Memory {
-  private static final int ITERATION_COUNT=3;
+  private static final int ITERATION_COUNT=1;
 
   private static class Item {
     private static int instanceCount=0;
