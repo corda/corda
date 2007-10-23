@@ -634,8 +634,6 @@ Java_java_lang_Thread_doStart(Thread* t, jobject this_)
 
   Thread* p = t->m->processor->makeThread(t->m, *this_, t);
 
-  enter(p, Thread::ActiveState);
-
   if (t->m->system->success(t->m->system->start(&(p->runnable)))) {
     return reinterpret_cast<jlong>(p);
   } else {

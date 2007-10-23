@@ -1156,6 +1156,9 @@ printTrace(Thread* t, object exception);
 uint8_t&
 threadInterrupted(Thread* t, object thread);
 
+void
+enterActiveState(Thread* t);
+
 class Thread {
  public:
   enum State {
@@ -1204,6 +1207,8 @@ class Thread {
     }
 
     virtual void run() {
+      enterActiveState(t);
+
       t->m->localThread->set(t);
 
       t->m->processor->invoke
@@ -1265,6 +1270,12 @@ objectClass(Thread*, object o)
 
 void
 enter(Thread* t, Thread::State state);
+
+inline void
+enterActiveState(Thread* t)
+{
+  enter(t, Thread::ActiveState);
+}
 
 class StateResource {
  public:

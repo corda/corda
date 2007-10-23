@@ -100,6 +100,7 @@ class MySystem: public System {
 
     virtual bool tryAcquire(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
+      assert(s, t);
 
       if (owner_ == t) {
         ++ depth;
@@ -122,6 +123,7 @@ class MySystem: public System {
 
     virtual void acquire(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
+      assert(s, t);
 
       if (owner_ != t) {
         int r UNUSED = WaitForSingleObject(mutex, INFINITE);
@@ -133,6 +135,7 @@ class MySystem: public System {
 
     virtual void release(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
+      assert(s, t);
 
       if (owner_ == t) {
         if (-- depth == 0) {
@@ -169,6 +172,7 @@ class MySystem: public System {
 
     virtual bool wait(System::Thread* context, int64_t time) {
       Thread* t = static_cast<Thread*>(context);
+      assert(s, t);
 
       if (owner_ == t) {
         ACQUIRE(s, t->mutex);
@@ -196,7 +200,7 @@ class MySystem: public System {
         assert(s, success);
 
         int r UNUSED = WaitForSingleObject(t->event, (time ? time : INFINITE));
-        assert(s, r == WAIT_OBJECT_0);
+        assert(s, r == WAIT_OBJECT_0 or r == WAIT_TIMEOUT);
 
         r = WaitForSingleObject(t->mutex, INFINITE);
         assert(s, r == WAIT_OBJECT_0);
@@ -230,12 +234,13 @@ class MySystem: public System {
 
       t->flags |= Notified;
 
-      int r UNUSED = SetEvent(t->event);
-      assert(s, r == 0);
+      bool success UNUSED = SetEvent(t->event);
+      assert(s, success);
     }
 
     virtual void notify(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
+      assert(s, t);
 
       if (owner_ == t) {
         if (first) {
@@ -254,6 +259,7 @@ class MySystem: public System {
 
     virtual void notifyAll(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
+      assert(s, t);
 
       if (owner_ == t) {
         for (Thread* t = first; t; t = t->next) {
