@@ -46,6 +46,7 @@ show-size = :
 rdynamic = -rdynamic
 thread-cflags = -pthread
 shared = -shared
+so-prefix = lib
 so-extension = so
 ld-library-path = LD_LIBRARY_PATH
 
@@ -53,7 +54,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter \
 	-Winit-self -Wconversion
 
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
-	-I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -I$(src) -I$(build-dir) \
+	-I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -I$(src) -I$(bld) \
 	$(thread-cflags) -D__STDC_LIMIT_MACROS
 
 lflags = -lpthread -ldl -lm -lz
@@ -73,15 +74,19 @@ ifeq ($(platform),windows)
 	lib = ../6.0/shared/lib/native/msw
 
 	system = windows
+
   cxx = i586-mingw32msvc-g++
   cc = i586-mingw32msvc-gcc
-	rdynamic =
+  dlltool = i586-mingw32msvc-dlltool
+
+	rdynamic = -Wl,--export-dynamic
+  so-prefix =
   so-extension = dll
 	thread-cflags =
   lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at
-  cflags = $(warnings) -fno-rtti -fno-exceptions -I$(build-dir) \
-		$(thread-cflags) -D__STDC_LIMIT_MACROS -I$(JAVA_HOME)/include -I$(inc) \
-		-idirafter $(src)
+  cflags = $(warnings) -fno-rtti -fno-exceptions $(thread-cflags) \
+		-D__STDC_LIMIT_MACROS -DBUILTIN_LIBRARIES=\"natives\" \
+		-I$(bld) -I$(JAVA_HOME)/include -I$(inc) -idirafter $(src)
 endif
 
 ifeq ($(mode),debug)
@@ -112,14 +117,14 @@ java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
 jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(bld))
 jni-cflags = $(cflags) 
-jni-library = $(bld)/libnatives.$(so-extension)
+jni-library = $(bld)/$(so-prefix)natives.$(so-extension)
 
 generated-code = \
-	$(build-dir)/type-enums.cpp \
-	$(build-dir)/type-declarations.cpp \
-	$(build-dir)/type-constructors.cpp \
-	$(build-dir)/type-initializations.cpp \
-	$(build-dir)/type-java-initializations.cpp
+	$(bld)/type-enums.cpp \
+	$(bld)/type-declarations.cpp \
+	$(bld)/type-constructors.cpp \
+	$(bld)/type-initializations.cpp \
+	$(bld)/type-java-initializations.cpp
 
 interpreter-depends = \
 	$(generated-code) \
@@ -215,9 +220,10 @@ clean-native:
 	@echo "removing $(bld) and $(build-dir)"
 	rm -rf $(bld) $(build-dir)
 
-gen-arg = $(shell echo $(1) | sed -e 's:$(build-dir)/type-\(.*\)\.cpp:\1:')
+gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator-executable)
 	@echo "generating $(@)"
+	@mkdir -p -m 1777 $(dir $(@))
 	$(generator-executable) $(call gen-arg,$(@)) < $(<) > $(@)
 
 $(build-dir)/type-generator.o: \
@@ -252,7 +258,7 @@ $(interpreter-asm-objects): $(bld)/%-asm.o: $(src)/%.S
 $(generator-objects): $(build-dir)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
-	$(build-cxx) $(cflags) -c $(<) -o $(@)
+	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) $(cflags) -c $(<) -o $(@)
 
 $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
@@ -263,12 +269,22 @@ $(jni-library): $(jni-objects)
 	@echo "linking $(@)"
 	$(cc) $(^) $(lflags) $(shared) -o $(@)
 
-$(executable): $(interpreter-objects) $(stdcpp-objects)
+ifeq ($(platform),windows)
+$(executable): $(interpreter-objects) $(jni-objects)
+	@echo "linking $(@)"
+	$(dlltool) --export-all-symbols -z $(@).def $(^)
+	$(dlltool) -d $(@).def -e $(@).exp
+	$(cc) $(^) $(lflags) $(@).exp -o $(@)
+	@$(strip) --strip-all $(@)
+	@$(show-size) $(@)
+else
+$(executable): $(interpreter-objects)
 	@echo "linking $(@)"
 	$(cc) $(^) $(lflags) $(rdynamic) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
+endif
 
 $(generator-executable): $(generator-objects)
 	@echo "linking $(@)"
-	$(build-cc) -DPOINTER_SIZE=$(pointer-size) $(^) -o $(@)
+	$(build-cc) $(^) -o $(@)

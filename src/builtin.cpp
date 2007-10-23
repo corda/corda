@@ -489,8 +489,26 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
   ENTER(t, Thread::ActiveState);
   ACQUIRE(t, t->m->classLock);
 
-  char n[stringLength(t, *name) + 1];
+  unsigned length = stringLength(t, *name);
+  char n[length + 1];
   stringChars(t, *name, n);
+
+#ifdef BUILTIN_LIBRARIES
+  if (mapName) {
+    const char* s = BUILTIN_LIBRARIES;
+    while (*s) {
+      if (strncmp(s, n, length) == 0
+          and (s[length] == ',' or s[length] == 0))
+      {
+        // library is built in to this executable
+        return;
+      } else {
+        while (*s and *s != ',') ++ s;
+        if (*s) ++ s;
+      }
+    }
+  }
+#endif // BUILTIN_LIBRARIES
 
   for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     if (lib->name()
