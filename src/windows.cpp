@@ -21,8 +21,8 @@ class MutexResource {
   }
 
   ~MutexResource() {
-    int r UNUSED = ReleaseMutex(m);
-    assert(s, r == 0);
+    bool success UNUSED = ReleaseMutex(m);
+    assert(s, success);
   }
 
  private:
@@ -137,8 +137,8 @@ class MySystem: public System {
       if (owner_ == t) {
         if (-- depth == 0) {
           owner_ = 0;
-          int r UNUSED = ReleaseMutex(mutex);
-          assert(s, r == 0);
+          bool success UNUSED = ReleaseMutex(mutex);
+          assert(s, success);
         }
       } else {
         sysAbort(s);
@@ -186,16 +186,16 @@ class MySystem: public System {
         this->depth = 0;
         owner_ = 0;
 
-        int r UNUSED = ReleaseMutex(mutex);
-        assert(s, r == 0);
+        bool success UNUSED = ReleaseMutex(mutex);
+        assert(s, success);
 
-        r = ResetEvent(t->event);
-        assert(s, r);
+        success = ResetEvent(t->event);
+        assert(s, success);
 
-        r = ReleaseMutex(t->mutex);
-        assert(s, r == 0);
+        success = ReleaseMutex(t->mutex);
+        assert(s, success);
 
-        r = WaitForSingleObject(t->event, (time ? time : INFINITE));
+        int r UNUSED = WaitForSingleObject(t->event, (time ? time : INFINITE));
         assert(s, r == WAIT_OBJECT_0);
 
         r = WaitForSingleObject(t->mutex, INFINITE);
@@ -287,7 +287,7 @@ class MySystem: public System {
    public:
     Local(System* s): s(s) {
       key = TlsAlloc();
-      assert(s, key == TLS_OUT_OF_INDEXES);
+      assert(s, key != TLS_OUT_OF_INDEXES);
     }
 
     virtual void* get() {
@@ -380,7 +380,9 @@ class MySystem: public System {
         fprintf(stderr, "close %p\n", handle);
       }
 
-      FreeLibrary(handle);
+      if (name_) {
+        FreeLibrary(handle);
+      }
 
       if (next_) {
         next_->dispose();
@@ -545,8 +547,10 @@ class MySystem: public System {
       char buffer[size];
       snprintf(buffer, size, "%s" SO_SUFFIX, name);
       handle = LoadLibrary(buffer);
-    } else {
+    } else if (name) {
       handle = LoadLibrary(name);
+    } else {
+      handle = GetModuleHandle(0);
     }
  
     if (handle) {
@@ -566,7 +570,6 @@ class MySystem: public System {
         Library(this, handle, n, mapName, next);
       return 0;
     } else {
-//       fprintf(stderr, "dlerror: %s\n", dlerror());
       return 1;
     }
   }
@@ -598,6 +601,7 @@ class MySystem: public System {
   }
 
   virtual void abort() {
+    asm("int3");
     ::abort();
   }
 

@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 input = $(cls)/Memory.class
 
@@ -11,6 +11,10 @@ ifeq ($(build-arch),i686)
 endif
 
 build-platform = $(shell uname -s | tr [:upper:] [:lower:])
+
+ifeq ($(build-platform),cygwin_nt-5.1)
+	build-platform = windows
+endif
 
 arch = $(build-arch)
 
@@ -49,7 +53,8 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter \
 	-Winit-self -Wconversion
 
 cflags = $(warnings) -fPIC -fno-rtti -fno-exceptions -fvisibility=hidden \
-	-I$(src) -I$(build-dir) $(thread-cflags) -D__STDC_LIMIT_MACROS
+	-I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux -I$(src) -I$(build-dir) \
+	$(thread-cflags) -D__STDC_LIMIT_MACROS
 
 lflags = -lpthread -ldl -lm -lz
 
@@ -73,9 +78,10 @@ ifeq ($(platform),windows)
 	rdynamic =
   so-extension = dll
 	thread-cflags =
-  lflags = -L$(lib) -lm -lz -Wl,--kill-at
-  cflags = $(warnings) -fno-rtti -fno-exceptions -I$(src) -I$(build-dir) \
-		$(thread-cflags) -D__STDC_LIMIT_MACROS -I$(inc)
+  lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at
+  cflags = $(warnings) -fno-rtti -fno-exceptions -I$(build-dir) \
+		$(thread-cflags) -D__STDC_LIMIT_MACROS -I$(JAVA_HOME)/include -I$(inc) \
+		-idirafter $(src)
 endif
 
 ifeq ($(mode),debug)
@@ -105,7 +111,7 @@ java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
 
 jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(bld))
-jni-cflags = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux $(cflags)
+jni-cflags = $(cflags) 
 jni-library = $(bld)/libnatives.$(so-extension)
 
 generated-code = \
@@ -219,7 +225,7 @@ $(build-dir)/type-generator.o: \
 
 define compile-class
 	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
+	@mkdir -p -m 1777 $(dir $(@))
 	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
 		-d $(cls) $(<)
 	@touch $(@)
@@ -233,7 +239,7 @@ $(cls)/%.class: $(test)/%.java
 
 define compile-object
 	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
+	@mkdir -p -m 1777 $(dir $(@))
 	$(cxx) $(cflags) -c $(<) -o $(@)
 endef
 
@@ -245,12 +251,12 @@ $(interpreter-asm-objects): $(bld)/%-asm.o: $(src)/%.S
 
 $(generator-objects): $(build-dir)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
+	@mkdir -p -m 1777 $(dir $(@))
 	$(build-cxx) $(cflags) -c $(<) -o $(@)
 
 $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
+	@mkdir -p -m 1777 $(dir $(@))
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)	
 
 $(jni-library): $(jni-objects)

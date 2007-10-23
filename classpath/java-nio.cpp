@@ -6,6 +6,7 @@
 
 #ifdef WIN32
 #  include <winsock2.h>
+#  include <errno.h>
 #else
 #  include <fcntl.h>
 #  include <errno.h>
@@ -23,31 +24,60 @@
 #define java_nio_channels_SelectionKey_OP_WRITE 4L
 #define java_nio_channels_SelectionKey_OP_ACCEPT 16L
 
+#ifdef WIN32
+typedef int socklen_t;
+#endif
+
+inline void* operator new(size_t, void* p) throw() { return p; }
+
 namespace {
 
-inline const char*
-errorString(int e)
+inline jbyteArray
+charsToArray(JNIEnv* e, const char* s)
 {
-  return strerror(e);
+  unsigned length = strlen(s);
+  jbyteArray a = e->NewByteArray(length + 1);
+  e->SetByteArrayRegion(a, 0, length + 1, reinterpret_cast<const jbyte*>(s));
+  return a;
 }
 
-inline const char*
-errorString()
+inline jbyteArray
+errorString(JNIEnv* e, int n)
+{
+  return charsToArray(e, strerror(n));
+}
+
+inline jbyteArray
+errorString(JNIEnv* e)
 {
 #ifdef WIN32
   const unsigned size = 64;
   char buffer[size];
   snprintf(buffer, size, "wsa code: %d", WSAGetLastError());
-  return JvNewStringLatin1(buffer);
+  return charsToArray(e, buffer);
 #else
   return errorString(errno);
 #endif
 }
 
 void
+throwIOException(JNIEnv* e, const char* s)
+{
+  throwNew(e, "java/io/IOException", s);
+}
+
+void
+throwIOException(JNIEnv* e, jbyteArray a)
+{
+  jbyte* s = static_cast<jbyte*>(e->GetPrimitiveArrayCritical(a, 0));
+  throwIOException(e, reinterpret_cast<const char*>(s));
+  e->ReleasePrimitiveArrayCritical(a, s, 0);
+}
+
+void
 throwIOException(JNIEnv* e)
 {
-  throwNew(e, "java/io/IOException", errorString());
+  throwIOException(e, errorString(e));
 }
 
 void
@@ -97,15 +127,18 @@ makeNonblocking(JNIEnv* e, int d)
 #ifdef WIN32
   u_long a = 1;
   int r = ioctlsocket(d, FIONBIO, &a);
-  if (r != 0) throw new IOException(errorString());
+  if (r != 0) {
+    throwIOException(e);
+    return false;
+  }
 #else
   int r = fcntl(d, F_SETFL, fcntl(d, F_GETFL) | O_NONBLOCK);
   if (r < 0) {
     throwIOException(e);
     return false;
   }
-  return true;
 #endif
+  return true;
 }
 
 void
@@ -153,9 +186,6 @@ doAccept(JNIEnv* e, int s)
   socklen_t length = sizeof(address);
   int r = ::accept(s, &address, &length);
   if (r >= 0) {
-//     System::out->print(JvNewStringLatin1("doAccept: socket: "));
-//     System::out->println(String::valueOf((jint) r));
-
     makeNonblocking(e, r);
     return r;
   } else {
@@ -193,16 +223,13 @@ makeSocket(JNIEnv* e, bool blocking = false)
     WSADATA data;
     int r = WSAStartup(MAKEWORD(2, 2), &data);
     if (r or LOBYTE(data.wVersion) != 2 or HIBYTE(data.wVersion) != 2) {
-      throw new IOException(JvNewStringLatin1("WSAStartup failed"));
+      throwIOException(e, "WSAStartup failed");
     }
   }
 #endif
 
   int s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (s < 0) { throwIOException(e); return s; }
-
-//   System::out->print(JvNewStringLatin1("makeSocket: socket: "));
-//   System::out->println(String::valueOf((jint) s));
 
   if (not blocking) makeNonblocking(e, s);
 
@@ -261,8 +288,8 @@ Java_java_nio_channels_SocketChannel_natRead(JNIEnv *e,
 					     jint length)
 {
   jboolean isCopy;
-  uint8_t *buf =
-    reinterpret_cast<uint8_t*>(e->GetPrimitiveArrayCritical(buffer, &isCopy));
+  uint8_t *buf = static_cast<uint8_t*>
+    (e->GetPrimitiveArrayCritical(buffer, &isCopy));
   int r = ::doRead(socket, buf + offset, length);
   e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
   if (r < 0) {
@@ -286,8 +313,8 @@ Java_java_nio_channels_SocketChannel_natWrite(JNIEnv *e,
 					      jint length)
 {
   jboolean isCopy;
-  uint8_t *buf =
-    reinterpret_cast<uint8_t*>(e->GetPrimitiveArrayCritical(buffer, &isCopy));
+  uint8_t *buf = static_cast<uint8_t*>
+    (e->GetPrimitiveArrayCritical(buffer, &isCopy));
   int r = ::doWrite(socket, buf + offset, length);
   e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
   if (r < 0) {
@@ -311,7 +338,7 @@ Java_java_nio_channels_SocketChannel_natThrowWriteError(JNIEnv *e,
   int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
 		     reinterpret_cast<char*>(&error), &size);
   if (r != 0 or size != sizeof(int) or error != 0) {
-    throwNew(e, "java/io/IOException", errorString(error));
+    throwIOException(e, errorString(e, error));
   }
 }
 
@@ -332,26 +359,26 @@ class Pipe {
   // pipe descriptors or others.  Thus, to implement
   // Selector.wakeup(), we make a socket connection via the loopback
   // interface and use it as a pipe.
-  Pipe(): connected_(false), listener_(-1), reader_(-1), writer_(-1) {
+  Pipe(JNIEnv* e): connected_(false), listener_(-1), reader_(-1), writer_(-1) {
     sockaddr_in address;
     address.sin_family = AF_INET;
     address.sin_port = 0;
     address.sin_addr.s_addr = inet_addr("127.0.0.1"); //INADDR_LOOPBACK;
-    listener_ = makeSocket();
-    ::doListen(listener_, &address);
+    listener_ = makeSocket(e, false);
+    ::doListen(e, listener_, &address);
 
     socklen_t length = sizeof(sockaddr_in);
     int r = getsockname(listener_, reinterpret_cast<sockaddr*>(&address),
                         &length);
     if (r) {
-      throw new IOException(errorString());
+      throwIOException(e);
     }
 
-    writer_ = makeSocket(true);
-    connected_ = ::doConnect(writer_, &address);
+    writer_ = makeSocket(e, true);
+    connected_ = ::doConnect(e, writer_, &address);
   }
 
-  ~Pipe() {
+  void dispose() {
     if (listener_ >= 0) ::close(listener_);
     if (reader_ >= 0) ::close(reader_);
     if (writer_ >= 0) ::close(writer_);
@@ -434,8 +461,6 @@ struct SelectorState {
 
 } // namespace
 
-inline void* operator new(size_t, void* p) throw() { return p; }
-
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_nio_channels_SocketSelector_natInit(JNIEnv* e, jclass)
 {
@@ -494,9 +519,9 @@ Java_java_nio_channels_SocketSelector_natSelectClearAll(JNIEnv *, jclass,
 							jlong state)
 {
   SelectorState* s = reinterpret_cast<SelectorState*>(state);
-  FD_CLR(socket, &(s->read));
-  FD_CLR(socket, &(s->write));
-  FD_CLR(socket, &(s->except));
+  FD_CLR(static_cast<unsigned>(socket), &(s->read));
+  FD_CLR(static_cast<unsigned>(socket), &(s->write));
+  FD_CLR(static_cast<unsigned>(socket), &(s->except));
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -510,17 +535,17 @@ Java_java_nio_channels_SocketSelector_natSelectUpdateInterestSet(JNIEnv *,
   SelectorState* s = reinterpret_cast<SelectorState*>(state);
   if (interest & (java_nio_channels_SelectionKey_OP_READ |
 		  java_nio_channels_SelectionKey_OP_ACCEPT)) {
-    FD_SET(socket, &(s->read));
+    FD_SET(static_cast<unsigned>(socket), &(s->read));
     if (max < socket) max = socket;
   } else {
-    FD_CLR(socket, &(s->read));
+    FD_CLR(static_cast<unsigned>(socket), &(s->read));
   }
   
   if (interest & java_nio_channels_SelectionKey_OP_WRITE) {
-    FD_SET(socket, &(s->write));
+    FD_SET(static_cast<unsigned>(socket), &(s->write));
     if (max < socket) max = socket;
   } else {
-    FD_CLR(socket, &(s->write));
+    FD_CLR(static_cast<unsigned>(socket), &(s->write));
   }
   return max;
 }
@@ -534,7 +559,7 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
   SelectorState* s = reinterpret_cast<SelectorState*>(state);
   if (s->control.reader() >= 0) {
     int socket = s->control.reader();
-    FD_SET(socket, &(s->read));
+    FD_SET(static_cast<unsigned>(socket), &(s->read));
     if (max < socket) max = socket;
   }
   timeval time = { interval / 1000, (interval % 1000) * 1000 };
