@@ -403,7 +403,7 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocate(unsigned size) {
-    ACQUIRE(&mutex);
+    ACQUIRE(mutex);
 
     if (Verbose) {
       fprintf(stderr, "try %d; count: %d; limit: %d\n",
@@ -426,7 +426,7 @@ class MySystem: public System {
   }
 
   virtual void free(const void* p) {
-    ACQUIRE(&mutex);
+    ACQUIRE(mutex);
 
     if (p) {
       const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
