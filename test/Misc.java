@@ -1,4 +1,4 @@
-public class Instructions {
+public class Misc {
   private static int alpha;
   private static int beta;
 
@@ -19,10 +19,10 @@ public class Instructions {
     int b = 2;
     int c = a + b;
 
-    Instructions i = new Instructions();
+    Misc m = new Misc();
     String s = "hello";
-    i.foo(s);
-    i.bar(s);
+    m.foo(s);
+    m.bar(s);
     baz(s);
 
     int d = alpha;
