@@ -550,9 +550,9 @@ class MySystem: public System {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
     if (mapName) {
-      unsigned size = nameLength + sizeof(SO_SUFFIX);
+      unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
       char buffer[size];
-      snprintf(buffer, size, "%s" SO_SUFFIX, name);
+      snprintf(buffer, size, SO_PREFIX "%s" SO_SUFFIX, name);
       handle = LoadLibrary(buffer);
     } else if (name) {
       handle = LoadLibrary(name);
