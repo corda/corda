@@ -168,18 +168,14 @@ float:
    jne    double
    fstps  8(%ebp)
    movl   8(%ebp),%eax
-   jmp    int32
+   jmp    exit
 
 double:
    cmpl   $DOUBLE_TYPE,%ecx
-   jne    int32
+   jne    exit
    fstpl  8(%ebp)
    movl   8(%ebp),%eax
    movl   12(%ebp),%edx
-   jmp    exit
-   
-int32:
-   movl   $0,%edx
 
 exit:
    movl   %ebp,%esp
