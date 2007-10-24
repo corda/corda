@@ -140,6 +140,28 @@ resolveNativeMethod(Thread* t, object method)
     if (p) {
       return p;
     }
+#ifdef __MINGW32__
+    else {
+      // on windows, we also try the _%s@%d variant, since the SWT
+      // libraries use it.
+
+      unsigned footprint = methodParameterFootprint(t, method) + 1;
+      if (methodFlags(t, method) & ACC_STATIC) {
+        ++ footprint;
+      }
+
+      unsigned size = byteArrayLength(t, methodCode(t, method)) + 5;
+      char buffer[size];
+      snprintf(buffer, size, "_%s@%d",
+               &byteArrayBody(t, methodCode(t, method), 0),
+               footprint * BytesPerWord);
+
+      p = lib->resolve(buffer);
+      if (p) {
+        return p;
+      }
+    }
+#endif
   }
   return 0;
 }

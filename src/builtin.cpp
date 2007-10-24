@@ -2,8 +2,11 @@
 #include "constants.h"
 #include "processor.h"
 
-#undef JNIEXPORT
-#define JNIEXPORT __attribute__ ((visibility("default")))
+#ifdef __MINGW32__
+#  define JNIEXPORT __declspec(dllexport)
+#else
+#  define JNIEXPORT __attribute__ ((visibility("default")))
+#endif
 
 using namespace vm;
 
@@ -519,8 +522,6 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
       return;
     }
   }
-
-  fprintf(stderr, "load %s; map name: %d\n", n, mapName);
 
   System::Library* lib;
   if (LIKELY(t->m->system->success

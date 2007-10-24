@@ -4,8 +4,8 @@
    
 #ifdef __x86_64__
    
-.globl amd64Call
-amd64Call:
+.globl vmNativeCall
+vmNativeCall:
    pushq  %rbp
 
    // %rdi aka  0(%rbp): function
@@ -104,14 +104,14 @@ exit:
    ret
 
 #elif defined __i386__
-   
-#if defined __APPLE__ || defined __MINGW32__
-.globl _cdeclCall
-_cdeclCall: 
-#else
-.globl cdeclCall
-cdeclCall:
-#endif
+
+#  if defined __APPLE__ || defined __MINGW32__
+.globl _vmNativeCall
+_vmNativeCall: 
+#  else
+.globl vmNativeCall
+vmNativeCall:
+#  endif
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -125,10 +125,10 @@ cdeclCall:
    
    subl   %ecx,%esp
 
-#ifdef __APPLE__
+#  ifdef __APPLE__
    // align to a 16 byte boundary on Darwin
    andl   $0xFFFFFFF0,%esp
-#endif
+#  endif
    
    // copy arguments into place
    movl   $0,%ecx

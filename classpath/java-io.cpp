@@ -8,11 +8,9 @@
 #include "jni.h"
 #include "jni-util.h"
 
-#undef JNIEXPORT
-#define JNIEXPORT __attribute__ ((visibility("default")))
-
 #ifdef WIN32
 #  include <io.h>
+
 #  define OPEN _open
 #  define CLOSE _close
 #  define READ _read
@@ -25,6 +23,7 @@
 #  define OPEN_MASK O_BINARY
 #else
 #  include <unistd.h>
+
 #  define OPEN open
 #  define CLOSE close
 #  define READ read
@@ -35,6 +34,9 @@
 #  define CREAT creat
 #  define UNLINK unlink
 #  define OPEN_MASK 0
+
+#  undef JNIEXPORT
+#  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif
 
 namespace {

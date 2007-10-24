@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "jni.h"
+#include "jni-util.h"
+
 #ifdef WIN32
 #  include <winsock2.h>
 #  include <errno.h>
@@ -12,13 +15,10 @@
 #  include <errno.h>
 #  include <netdb.h>
 #  include <sys/select.h>
+
+#  undef JNIEXPORT
+#  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif
-
-#include "jni.h"
-#include "jni-util.h"
-
-#undef JNIEXPORT
-#define JNIEXPORT __attribute__ ((visibility("default")))
 
 #define java_nio_channels_SelectionKey_OP_READ 1L
 #define java_nio_channels_SelectionKey_OP_WRITE 4L

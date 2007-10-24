@@ -7,8 +7,8 @@
 #ifdef __i386__
 
 extern "C" uint64_t
-cdeclCall(void* function, void* stack, unsigned stackSize,
-          unsigned returnType);
+vmNativeCall(void* function, void* stack, unsigned stackSize,
+             unsigned returnType);
 
 namespace vm {
 
@@ -16,7 +16,7 @@ inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
             unsigned, unsigned argumentsSize, unsigned returnType)
 {
-  return cdeclCall(function, arguments, argumentsSize, returnType);
+  return vmNativeCall(function, arguments, argumentsSize, returnType);
 }
 
 } // namespace vm
@@ -24,8 +24,8 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #elif defined __x86_64__
 
 extern "C" uint64_t
-amd64Call(void* function, void* stack, unsigned stackSize,
-          void* gprTable, void* sseTable, unsigned returnType);
+vmNativeCall(void* function, void* stack, unsigned stackSize,
+             void* gprTable, void* sseTable, unsigned returnType);
 
 namespace vm {
 
@@ -65,8 +65,9 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
     }
   }
 
-  return amd64Call(function, stack, stackIndex * 8, (gprIndex ? gprTable : 0),
-                   (sseIndex ? sseTable : 0), returnType);
+  return vmNativeCall(function, stack, stackIndex * 8,
+                      (gprIndex ? gprTable : 0),
+                      (sseIndex ? sseTable : 0), returnType);
 }
 
 } // namespace vm

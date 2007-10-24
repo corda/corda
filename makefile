@@ -80,7 +80,7 @@ ifeq ($(platform),windows)
 	ranlib = i586-mingw32msvc-ranlib
 
 	rdynamic = -Wl,--export-dynamic
-	lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at
+	lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
 endif
 
@@ -262,7 +262,7 @@ $(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
 ifeq ($(platform),windows)
 $(archive): $(interpreter-objects) $(jni-objects)
 	@echo "creating $(@)"
-	$(dlltool) --export-all-symbols -z $(@).def $(^)
+	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -k -d $(@).def -e $(@).exp
 	$(ar) cru $(@) $(@).exp $(^)
 	$(ranlib) $(@)

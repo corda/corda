@@ -11,9 +11,12 @@
 
 #ifdef WIN32
 #  include "windows.h"
+#else
+#  undef JNIEXPORT
+#  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif
 
-#ifdef __MINGW32__
+#ifdef WIN32
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
@@ -26,9 +29,6 @@
 #else
 #  define SO_SUFFIX ".so"
 #endif
-
-#undef JNIEXPORT
-#define JNIEXPORT __attribute__ ((visibility("default")))
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
@@ -55,7 +55,6 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
   case JavaIoTmpdir: {
     TCHAR buffer[MAX_PATH];
     GetTempPath(MAX_PATH, buffer);
-    fprintf(stderr, "tmpdir: %s\n", buffer);
     return e->NewStringUTF(buffer);
   }
 

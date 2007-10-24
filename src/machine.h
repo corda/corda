@@ -7,7 +7,11 @@
 #include "finder.h"
 #include "processor.h"
 
-#define JNICALL
+#ifdef __MINGW32__
+#  define JNICALL __stdcall
+#else
+#  define JNICALL
+#endif
 
 #define PROTECT(thread, name)                                   \
   Thread::SingleProtector MAKE_NAME(protector_) (thread, &name);
