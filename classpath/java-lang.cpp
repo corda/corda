@@ -40,20 +40,31 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
   case FileSeparator:
     return e->NewStringUTF("/");
     
+#ifdef WIN32    
+  case OsName:
+    return e->NewStringUTF("Windows");
+
+  case JavaIoTmpdir: {
+    TCHAR buffer[MAX_PATH];
+    GetTempPath(MAX_PATH, buffer);
+    return e->NewStringUTF(buffer);
+  }
+
+  case UserHome: {
+    LPWSTR home = _wgetenv(L"USERPROFILE");
+    return e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
+  }
+#else
   case OsName:
     return e->NewStringUTF("posix");
 
   case JavaIoTmpdir:
     return e->NewStringUTF("/tmp");
 
-  case UserHome: {
-#ifdef WIN32
-    LPWSTR home = _wgetenv(L"USERPROFILE");
-    return e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
-#else
+  case UserHome:
     return e->NewStringUTF(getenv("HOME"));
-#endif
   }
+#endif
 
   default:
     throwNew(e, "java/lang/RuntimeException", 0);
