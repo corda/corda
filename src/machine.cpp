@@ -507,7 +507,7 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
 {
   object value = makeByteArray(t, length + 1, false);
   unsigned vi = 0;
-  for (unsigned si = 0; si < length; ++ si, ++ vi) {
+  for (unsigned si = 0; si < length; ++si) {
     unsigned a = s.read1();
     if (a & 0x80) {
       ++ si;
@@ -516,12 +516,12 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
       unsigned b = s.read1();
 
       if (a == 0xC0 and b == 0x80) {
-        byteArrayBody(t, value, vi) = 0;
+        byteArrayBody(t, value, vi++) = 0;
       } else {
         abort(t); // todo
       }
     } else {
-      byteArrayBody(t, value, vi) = a;
+      byteArrayBody(t, value, vi++) = a;
     }
   }
 
