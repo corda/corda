@@ -77,7 +77,6 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
 
   case UserHome:
     return e->NewStringUTF(getenv("HOME"));
-  }
 #endif
 
   default:
