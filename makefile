@@ -68,8 +68,8 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 endif
 ifeq ($(platform),windows)
-	inc = ../6.0/shared/include/msw
-	lib = ../6.0/shared/lib/native/msw
+	inc = /usr/local/win32/include
+	lib = /usr/local/win32/lib
 
 	system = windows
 
