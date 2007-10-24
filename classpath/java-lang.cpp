@@ -13,8 +13,16 @@
 #  include "windows.h"
 #endif
 
+#ifdef __MINGW32__
+#  define SO_PREFIX ""
+#else
+#  define SO_PREFIX "lib"
+#endif
+
 #ifdef __APPLE__
 #  define SO_SUFFIX ".jnilib"
+#elif defined WIN32
+#  define SO_SUFFIX ".dll"
 #else
 #  define SO_SUFFIX ".so"
 #endif
@@ -34,19 +42,20 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
   };
 
   switch (code) {
+#ifdef WIN32 
   case LineSeparator:
-    return e->NewStringUTF("\n");
-    
+    return e->NewStringUTF("\r\n");
+        
   case FileSeparator:
-    return e->NewStringUTF("/");
-    
-#ifdef WIN32    
+    return e->NewStringUTF("\\");
+   
   case OsName:
     return e->NewStringUTF("Windows");
 
   case JavaIoTmpdir: {
     TCHAR buffer[MAX_PATH];
     GetTempPath(MAX_PATH, buffer);
+    fprintf(stderr, "tmpdir: %s\n", buffer);
     return e->NewStringUTF(buffer);
   }
 
@@ -55,6 +64,12 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
     return e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
   }
 #else
+  case LineSeparator:
+    return e->NewStringUTF("\n");
+
+  case FileSeparator:
+    return e->NewStringUTF("/");
+
   case OsName:
     return e->NewStringUTF("posix");
 
@@ -109,9 +124,9 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   const char* chars = e->GetStringUTFChars(name, 0);
   if (chars) {
     unsigned nameLength = strlen(chars);
-    unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
+    unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
     char buffer[size];
-    snprintf(buffer, size, "lib%s" SO_SUFFIX, chars);
+    snprintf(buffer, size, SO_PREFIX "%s" SO_SUFFIX, chars);
     r = e->NewStringUTF(buffer);
 
     e->ReleaseStringUTFChars(name, chars);

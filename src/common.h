@@ -26,9 +26,15 @@
 #  error "Unsupported architecture"
 #endif
 
+#ifdef __MINGW32__
+#  define SO_PREFIX ""
+#else
+#  define SO_PREFIX "lib"
+#endif
+
 #ifdef __APPLE__
 #  define SO_SUFFIX ".jnilib"
-#elseif defined __MINGW32__
+#elif defined __MINGW32__
 #  define SO_SUFFIX ".dll"
 #else
 #  define SO_SUFFIX ".so"

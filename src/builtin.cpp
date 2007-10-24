@@ -520,6 +520,8 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
     }
   }
 
+  fprintf(stderr, "load %s; map name: %d\n", n, mapName);
+
   System::Library* lib;
   if (LIKELY(t->m->system->success
              (t->m->system->load(&lib, n, mapName, t->m->libraries))))

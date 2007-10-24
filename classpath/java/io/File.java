@@ -1,6 +1,9 @@
 package java.io;
 
 public class File {
+  private static final String FileSeparator
+    = System.getProperty("file.separator");
+
   static {
     System.loadLibrary("natives");
   }
@@ -13,15 +16,15 @@ public class File {
   }
 
   public File(String parent, String child) {
-    this(parent + "/" + child);
+    this(parent + FileSeparator + child);
   }
 
   public File(File parent, String child) {
-    this(parent.getPath() + "/" + child);
+    this(parent.getPath() + FileSeparator + child);
   }
 
   public String getName() {
-    int index = path.lastIndexOf("/");
+    int index = path.lastIndexOf(FileSeparator);
     if (index >= 0) {
       return path.substring(index + 1);
     } else {
@@ -34,7 +37,7 @@ public class File {
   }
 
   public String getParent() {
-    int index = path.lastIndexOf("/");
+    int index = path.lastIndexOf(FileSeparator);
     if (index >= 0) {
       return path.substring(0, index);
     } else {
