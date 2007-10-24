@@ -94,8 +94,9 @@ class System: public Allocator {
   virtual FileType identify(const char* name) = 0;
   virtual Status load(Library**, const char* name, bool mapName, Library* next)
   = 0;
-  virtual void exit(int code) = 0;
+  virtual char pathSeparator() = 0;
   virtual int64_t now() = 0;
+  virtual void exit(int code) = 0;
   virtual void abort() = 0;
   virtual void dispose() = 0;
 

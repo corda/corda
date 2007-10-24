@@ -550,6 +550,10 @@ class MySystem: public System {
     }
   }
 
+  virtual char pathSeparator() {
+    return ':';
+  }
+
   virtual int64_t now() {
     timeval tv = { 0, 0 };
     gettimeofday(&tv, 0);

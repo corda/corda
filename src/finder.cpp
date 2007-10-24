@@ -59,6 +59,11 @@ class DirectoryElement: public Element {
     const char* file = append(s, this->name, "/", name);
     System::Region* region;
     System::Status status = s->map(&region, file);
+
+    if (status) {
+      fprintf(stderr, "%s not found\n", file);
+    }
+
     s->free(file);
 
     if (s->success(status)) {
@@ -325,7 +330,7 @@ class JarIndex {
 class JarElement: public Element {
  public:
   JarElement(System* s, const char* name):
-    s(s), name(name) 
+    s(s), name(name), region(0), index(0)
   { }
 
   void init() {
@@ -401,11 +406,13 @@ parsePath(System* s, const char* path)
 
   Element* first = 0;
   Element* prev = 0;
-  for (Tokenizer t(path, ':'); t.hasMore();) {
+  for (Tokenizer t(path, s->pathSeparator()); t.hasMore();) {
     Tokenizer::Token token(t.next());
     char* name = static_cast<char*>(s->allocate(token.length + 1));
     memcpy(name, token.s, token.length);
     name[token.length] = 0;
+
+    fprintf(stderr, "path element: %s\n", name);
 
     Element* e;
     switch (s->identify(name)) {

@@ -462,7 +462,7 @@ class MySystem: public System {
 
   virtual Status attach(Runnable* r) {
     Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
-    bool success = DuplicateHandle
+    bool success UNUSED = DuplicateHandle
       (GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(),
        &(t->thread), 0, false, DUPLICATE_SAME_ACCESS);
     assert(this, success);
@@ -581,6 +581,9 @@ class MySystem: public System {
     }
   }
 
+  virtual char pathSeparator() {
+    return ';';
+  }
 
   virtual int64_t now() {
     static LARGE_INTEGER frequency;
