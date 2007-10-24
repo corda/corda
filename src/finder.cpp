@@ -59,11 +59,6 @@ class DirectoryElement: public Element {
     const char* file = append(s, this->name, "/", name);
     System::Region* region;
     System::Status status = s->map(&region, file);
-
-    if (status) {
-      fprintf(stderr, "%s not found\n", file);
-    }
-
     s->free(file);
 
     if (s->success(status)) {
@@ -411,8 +406,6 @@ parsePath(System* s, const char* path)
     char* name = static_cast<char*>(s->allocate(token.length + 1));
     memcpy(name, token.s, token.length);
     name[token.length] = 0;
-
-    fprintf(stderr, "path element: %s\n", name);
 
     Element* e;
     switch (s->identify(name)) {
