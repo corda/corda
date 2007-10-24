@@ -503,6 +503,41 @@ makeJNIName(Thread* t, object method, bool decorate)
 }
 
 object
+parseUtf8(Thread* t, Stream& s, unsigned length)
+{
+  object value = makeByteArray(t, length + 1, false);
+  unsigned vi = 0;
+  for (unsigned si = 0; si < length; ++ si, ++ vi) {
+    unsigned a = s.read1();
+    if (a & 0x80) {
+      ++ si;
+      assert(t, si < length);
+
+      unsigned b = s.read1();
+
+      if (a == 0xC0 and b == 0x80) {
+        byteArrayBody(t, value, vi) = 0;
+      } else {
+        abort(t); // todo
+      }
+    } else {
+      byteArrayBody(t, value, vi) = a;
+    }
+  }
+
+  if (vi < length) {
+    PROTECT(t, value);
+    
+    object v = makeByteArray(t, vi + 1, false);
+    memcpy(&byteArrayBody(t, v, 0), &byteArrayBody(t, value, 0), vi);
+    value = v;
+  }
+  
+  byteArrayBody(t, value, vi) = 0;
+  return value;
+}
+
+object
 parsePool(Thread* t, Stream& s)
 {
   unsigned poolCount = s.read2() - 1;
@@ -537,10 +572,7 @@ parsePool(Thread* t, Stream& s)
     } break;
 
     case CONSTANT_Utf8: {
-      unsigned length = s.read2();
-      object value = makeByteArray(t, length + 1, false);
-      s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, value, 0)), length);
-      byteArrayBody(t, value, length) = 0;
+      object value = parseUtf8(t, s, s.read2());
       set(t, pool, ArrayBody + (i * BytesPerWord), value);
     } break;
 
