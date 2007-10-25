@@ -33,6 +33,9 @@ test = test
 build-cxx = g++
 build-cc = gcc
 
+pthread = -pthread
+lpthread = -lpthread
+
 cxx = $(build-cxx)
 cc = $(build-cc)
 ar = ar
@@ -54,18 +57,19 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(bld) -D__STDC_LIMIT_MACROS \
 	-DBUILTIN_LIBRARIES=\"natives,tlscontext,scaler\" -D_JNI_IMPLEMENTATION_
 
-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
-
-lflags = -lpthread -ldl -lm -lz
-
 system = posix
 asm = x86
+begin-merge-archive = -Wl,--whole-archive
+end-merge-archive = -Wl,--no-whole-archive
 
 ifeq ($(platform),darwin)
 	rdynamic =
 	thread-cflags =
 	shared = -dynamiclib
+	pthread =
+	lpthread =
+	begin-merge-archive = -Wl,-all_load
+	end-merge-archive =
 endif
 ifeq ($(platform),windows)
 	inc = /usr/local/win32/include
@@ -83,6 +87,11 @@ ifeq ($(platform),windows)
 	lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
 endif
+
+cflags = $(common-cflags) -fPIC -fvisibility=hidden \
+	-I$(JAVA_HOME)/include/linux -I$(src) $(pthread)
+
+lflags = $(lpthread) -ldl -lm -lz
 
 ifeq ($(mode),debug)
 	cflags += -O0 -g3
@@ -281,7 +290,7 @@ endif
 
 $(executable): $(archive) $(driver-objects)
 	@echo "linking $(@)"
-	$(cc) -Wl,--whole-archive $(^) -Wl,--no-whole-archive \
+	$(cc) $(begin-merge-archive) $(^) $(end-merge-archive) \
 		$(lflags) $(rdynamic) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
