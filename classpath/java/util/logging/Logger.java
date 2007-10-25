@@ -93,7 +93,14 @@ public class Logger {
           sb.append(elt.getMethodName());
           sb.append("(line");
           sb.append(':');
-          sb.append(elt.getLineNumber());
+	  int lineNumber = elt.getLineNumber();
+	  if (lineNumber == -2) {
+	    sb.append("unknown");
+	  } else if (lineNumber == -1) {
+	    sb.append("native");
+	  } else {
+	    sb.append(lineNumber);
+	  }
           sb.append(')');
           sb.append('\n');
         }
