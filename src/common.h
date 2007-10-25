@@ -207,14 +207,14 @@ hash(const uint16_t* s, unsigned length)
 inline uint32_t
 floatToBits(float f)
 {
-  int32_t bits; memcpy(&bits, &f, 4);
+  uint32_t bits; memcpy(&bits, &f, 4);
   return bits;
 }
 
 inline uint64_t
 doubleToBits(double d)
 {
-  int64_t bits; memcpy(&bits, &d, 8);
+  uint64_t bits; memcpy(&bits, &d, 8);
   return bits;
 }
 

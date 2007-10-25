@@ -40,6 +40,11 @@ public class StringBuffer {
     return this;
   }
 
+  public synchronized StringBuffer append(float v) {
+    sb.append(v);
+    return this;
+  }
+
   public synchronized StringBuffer append(char[] b, int offset, int length) {
     sb.append(b, offset, length);
     return this;
