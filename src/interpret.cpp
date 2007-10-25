@@ -1479,11 +1479,11 @@ interpret(Thread* t)
   } goto loop;
 
   case i2d: {
-    pushDouble(t, static_cast<double>(popInt(t)));
+    pushDouble(t, static_cast<double>(static_cast<int32_t>(popInt(t))));
   } goto loop;
 
   case i2f: {
-    pushFloat(t, static_cast<float>(popInt(t)));
+    pushFloat(t, static_cast<float>(static_cast<int32_t>(popInt(t))));
   } goto loop;
 
   case i2l: {
