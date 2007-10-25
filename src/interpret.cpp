@@ -2062,12 +2062,10 @@ interpret(Thread* t)
 
     object v = arrayBody(t, codePool(t, code), index - 1);
 
-    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::IntType)) {
-      pushInt(t, intValue(t, v));
-    } else if (objectClass(t, v)
-               == arrayBody(t, t->m->types, Machine::FloatType))
+    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::IntType)
+        or objectClass(t, v) == arrayBody(t, t->m->types, Machine::FloatType))
     {
-      pushInt(t, floatValue(t, v));
+      pushInt(t, intValue(t, v));
     } else if (objectClass(t, v)
                == arrayBody(t, t->m->types, Machine::StringType))
     {
@@ -2085,12 +2083,10 @@ interpret(Thread* t)
 
     object v = arrayBody(t, codePool(t, code), index - 1);
 
-    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::LongType)) {
-      pushLong(t, longValue(t, v));
-    } else if (objectClass(t, v)
-               == arrayBody(t, t->m->types, Machine::DoubleType))
+    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::LongType)
+        or objectClass(t, v) == arrayBody(t, t->m->types, Machine::DoubleType))
     {
-      pushLong(t, doubleValue(t, v));
+      pushLong(t, longValue(t, v));
     } else {
       abort(t);
     }

@@ -518,7 +518,7 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
       if (a == 0xC0 and b == 0x80) {
         byteArrayBody(t, value, vi++) = 0;
       } else {
-        abort(t); // todo
+        abort(t); // todo: handle non-ASCII characters
       }
     } else {
       byteArrayBody(t, value, vi++) = a;
@@ -555,7 +555,7 @@ parsePool(Thread* t, Stream& s)
     } break;
 
     case CONSTANT_Float: {
-      object value = makeFloat(t, s.readFloat());
+      object value = makeInt(t, s.readFloat());
       set(t, pool, ArrayBody + (i * BytesPerWord), value);
     } break;
 
@@ -566,7 +566,7 @@ parsePool(Thread* t, Stream& s)
     } break;
 
     case CONSTANT_Double: {
-      object value = makeDouble(t, s.readDouble());
+      object value = makeLong(t, s.readDouble());
       set(t, pool, ArrayBody + (i * BytesPerWord), value);
       ++i;
     } break;
@@ -767,15 +767,29 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     object fieldTable = makeArray(t, count, true);
     PROTECT(t, fieldTable);
 
+    object staticValueTable = makeArray(t, count, true);
+    PROTECT(t, staticValueTable);
+
     for (unsigned i = 0; i < count; ++i) {
       unsigned flags = s.read2();
       unsigned name = s.read2();
       unsigned spec = s.read2();
 
+      object value = 0;
+      PROTECT(t, value);
+
       unsigned attributeCount = s.read2();
       for (unsigned j = 0; j < attributeCount; ++j) {
-        s.read2();
-        s.skip(s.read4());
+        object name = arrayBody(t, pool, s.read2() - 1);
+        unsigned length = s.read4();
+
+        if (strcmp(reinterpret_cast<const int8_t*>("ConstantValue"),
+                   &byteArrayBody(t, name, 0)) == 0)
+        {
+          value = arrayBody(t, pool, s.read2() - 1);
+        } else {
+          s.skip(length);
+        }
       }
 
       object field = makeField
@@ -789,8 +803,14 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
          class_);
 
       if (flags & ACC_STATIC) {
+        set(t, staticValueTable, ArrayBody + (staticOffset * BytesPerWord),
+            value);
         fieldOffset(t, field) = staticOffset++;
       } else {
+        if (value) {
+          abort(t); // todo: handle non-static field initializers
+        }
+
         unsigned excess = memberOffset % fieldSize(t, field);
         if (excess) {
           memberOffset += BytesPerWord - excess;
@@ -806,7 +826,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     set(t, class_, ClassFieldTable, fieldTable);
 
     if (staticOffset) {
-      object staticTable = makeArray(t, staticOffset, true);
+      object staticTable = makeArray(t, staticOffset, false);
+      memcpy(&arrayBody(t, staticTable, 0),
+             &arrayBody(t, staticValueTable, 0),
+             staticOffset * BytesPerWord);
 
       set(t, class_, ClassStaticTable, staticTable);
     }
