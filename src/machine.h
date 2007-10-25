@@ -1127,6 +1127,7 @@ class Machine {
   Thread* rootThread;
   Thread* exclusive;
   Reference* jniReferences;
+  const char* builtins;
   unsigned activeCount;
   unsigned liveCount;
   System::Local* localThread;

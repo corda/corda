@@ -496,9 +496,8 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
   char n[length + 1];
   stringChars(t, *name, n);
 
-#ifdef BUILTIN_LIBRARIES
-  if (mapName) {
-    const char* s = BUILTIN_LIBRARIES;
+  if (mapName and t->m->builtins) {
+    const char* s = t->m->builtins;
     while (*s) {
       if (strncmp(s, n, length) == 0
           and (s[length] == ',' or s[length] == 0))
@@ -511,7 +510,6 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
       }
     }
   }
-#endif // BUILTIN_LIBRARIES
 
   for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     if (lib->name()

@@ -1837,8 +1837,11 @@ JNI_GetDefaultJavaVMInitArgs(void* args)
   JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
   a->maxHeapSize = 128 * 1024 * 1024;
   a->classpath = ".";
+  a->properties = 0;
   return 0;
 }
+
+#define BUILTINS_PROPERTY "vm.builtins"
 
 extern "C" JNIEXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
@@ -1851,6 +1854,15 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   Processor* p = makeProcessor(s);
 
   *m = new (s->allocate(sizeof(Machine))) Machine(s, h, f, p);
+
+  if (a->properties) {
+    for (const char** p = a->properties; *p; ++p) {
+      if (strncmp(*p, BUILTINS_PROPERTY, sizeof(BUILTINS_PROPERTY)) == 0) {
+        (*m)->builtins = (*p) + sizeof(BUILTINS_PROPERTY);
+      }
+    }
+  }
+
   *t = p->makeThread(*m, 0, 0);
 
   return 0;

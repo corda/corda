@@ -5,9 +5,9 @@ public class Inflater {
   private static final int Z_STREAM_END = 1;
   private static final int Z_NEED_DICT = 2;
 
-  static {
-    System.loadLibrary("natives");
-  }
+//   static {
+//     System.loadLibrary("natives");
+//   }
 
   private long peer;
   private byte[] input;

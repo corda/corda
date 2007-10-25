@@ -55,7 +55,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter \
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(bld) -D__STDC_LIMIT_MACROS \
-	-DBUILTIN_LIBRARIES=\"natives,tlscontext,scaler\" -D_JNI_IMPLEMENTATION_
+	-D_JNI_IMPLEMENTATION_
 
 system = posix
 asm = x86

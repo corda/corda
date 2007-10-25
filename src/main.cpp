@@ -28,12 +28,15 @@ main(int ac, const char** av)
   const char* class_ = 0;
   int argc = 0;
   const char** argv = 0;
+  int propertyCount = 0;
 
   for (int i = 1; i < ac; ++i) {
     if (strcmp(av[i], "-cp") == 0) {
       vmArgs.classpath = const_cast<char*>(av[++i]);
     } else if (strncmp(av[i], "-Xmx", 4) == 0) {
       vmArgs.maxHeapSize = atoi(av[i] + 4);
+    } else if (strncmp(av[i], "-D", 2) == 0) {
+      ++ propertyCount;
     } else {
       class_ = av[i++];
       if (i < ac) {
@@ -43,6 +46,16 @@ main(int ac, const char** av)
       }
     }
   }
+
+  const char* properties[propertyCount + 1];
+  properties[propertyCount] = 0;
+  for (int i = 1; i < ac; ++i) {
+    if (strncmp(av[i], "-D", 2) == 0) {
+      properties[--propertyCount] = av[i] + 2;
+    }
+  }
+
+  vmArgs.properties = const_cast<char**>(properties);
 
   if (class_ == 0) {
     usageAndExit(av[0]);

@@ -4,9 +4,9 @@ public class File {
   private static final String FileSeparator
     = System.getProperty("file.separator");
 
-  static {
-    System.loadLibrary("natives");
-  }
+//   static {
+//     System.loadLibrary("natives");
+//   }
 
   private final String path;
 

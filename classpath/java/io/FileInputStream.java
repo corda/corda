@@ -1,9 +1,9 @@
 package java.io;
 
 public class FileInputStream extends InputStream {
-  static {
-    System.loadLibrary("natives");
-  }
+//   static {
+//     System.loadLibrary("natives");
+//   }
 
   private int fd;
 
