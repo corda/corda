@@ -1864,7 +1864,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 
   if (a->properties) {
     for (const char** p = a->properties; *p; ++p) {
-      if (strncmp(*p, BUILTINS_PROPERTY, sizeof(BUILTINS_PROPERTY)) == 0) {
+      if (strncmp(*p, BUILTINS_PROPERTY "=", sizeof(BUILTINS_PROPERTY)) == 0) {
         (*m)->builtins = (*p) + sizeof(BUILTINS_PROPERTY);
       }
     }
