@@ -52,7 +52,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter \
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(bld) -D__STDC_LIMIT_MACROS \
-	-DBUILTIN_LIBRARIES=\"natives,tlscontext,scaler\"
+	-DBUILTIN_LIBRARIES=\"natives,tlscontext,scaler\" -D_JNI_IMPLEMENTATION_
 
 cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
@@ -140,8 +140,7 @@ interpreter-sources = \
 	$(src)/heap.cpp \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
-	$(src)/jnienv.cpp \
-	$(src)/main.cpp
+	$(src)/jnienv.cpp
 
 interpreter-asm-sources = $(src)/$(asm).S
 
@@ -156,6 +155,10 @@ interpreter-asm-objects = \
 interpreter-objects = \
 	$(interpreter-cpp-objects) \
 	$(interpreter-asm-objects)
+
+driver-sources = $(src)/main.cpp
+
+driver-objects = $(call cpp-objects,$(driver-sources),$(src),$(bld))
 
 generator-headers = \
 	$(src)/input.h \
@@ -249,6 +252,9 @@ $(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
 $(interpreter-asm-objects): $(bld)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
+$(driver-objects): $(bld)/%.o: $(src)/%.cpp
+	$(compile-object)
+
 $(generator-objects): $(bld)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
@@ -273,7 +279,7 @@ $(archive): $(interpreter-objects) $(jni-objects)
 	$(ranlib) $(@)
 endif
 
-$(executable): $(archive)
+$(executable): $(archive) $(driver-objects)
 	@echo "linking $(@)"
 	$(cc) -Wl,--whole-archive $(^) -Wl,--no-whole-archive \
 		$(lflags) $(rdynamic) -o $(@)

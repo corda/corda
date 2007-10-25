@@ -558,21 +558,21 @@ invokeNative(Thread* t, object method)
   case ByteField:
   case BooleanField:
     if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", static_cast<int8_t>(result));
+      fprintf(stderr, "result: %d\n", static_cast<int8_t>(result));
     }
     pushInt(t, static_cast<int8_t>(result));
     break;
 
   case CharField:
     if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", static_cast<uint16_t>(result));
+      fprintf(stderr, "result: %d\n", static_cast<uint16_t>(result));
     }
     pushInt(t, static_cast<uint16_t>(result));
     break;
 
   case ShortField:
     if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", static_cast<int16_t>(result));
+      fprintf(stderr, "result: %d\n", static_cast<int16_t>(result));
     }
     pushInt(t, static_cast<int16_t>(result));
     break;
@@ -580,7 +580,7 @@ invokeNative(Thread* t, object method)
   case FloatField:
   case IntField:
     if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", result);
+      fprintf(stderr, "result: %d\n", static_cast<int32_t>(result));
     }
     pushInt(t, result);
     break;

@@ -2,6 +2,13 @@
 #include "machine.h"
 #include "processor.h"
 #include "constants.h"
+#include "processor.h"
+
+#ifdef __MINGW32__
+#  define JNIEXPORT __declspec(dllexport)
+#else
+#  define JNIEXPORT __attribute__ ((visibility("default")))
+#endif
 
 using namespace vm;
 
@@ -9,6 +16,25 @@ namespace {
 
 const uintptr_t InterfaceMethodID
 = (static_cast<uintptr_t>(1) << (BitsPerWord - 1));
+
+jint JNICALL
+DestroyJavaVM(Machine* m)
+{
+  System* s = m->system;
+  Processor* p = m->processor;
+  Heap* h = m->heap;
+  Finder* f = m->finder;
+
+  int exitCode = (m->rootThread->exception ? -1 : 0);
+
+  m->dispose();
+  p->dispose();
+  h->dispose();
+  f->dispose();
+  s->dispose();
+
+  return exitCode;
+}
 
 jint JNICALL
 AttachCurrentThread(Machine* m, Thread** t, void*)
@@ -1062,6 +1088,36 @@ ExceptionClear(Thread* t)
   t->exception = 0;
 }
 
+jobjectArray JNICALL
+NewObjectArray(Thread* t, jsize length, jclass class_, jobject init)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object a = makeObjectArray(t, *class_, length, false);
+  object value = (init ? *init : 0);
+  for (jsize i = 0; i < length; ++i) {
+    set(t, a, ArrayBody + (i * BytesPerWord), value);
+  }
+  return makeLocalReference(t, a);
+}
+
+jobject JNICALL
+GetObjectArrayElement(Thread* t, jobjectArray array, jsize index)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return makeLocalReference(t, objectArrayBody(t, *array, index));
+}
+
+void JNICALL
+SetObjectArrayElement(Thread* t, jobjectArray array, jsize index,
+                      jobject value)
+{
+  ENTER(t, Thread::ActiveState);
+
+  set(t, *array, ArrayBody + (index * BytesPerWord), *value);
+}
+
 jbooleanArray JNICALL
 NewBooleanArray(Thread* t, jsize length)
 {
@@ -1589,6 +1645,30 @@ IsSameObject(Thread* t, jobject a, jobject b)
   return *a == *b;
 }
 
+struct JDK1_1InitArgs {
+  jint version;
+
+  const char** properties;
+  jint checkSource;
+  jint nativeStackSize;
+  jint javaStackSize;
+  jint minHeapSize;
+  jint maxHeapSize;
+  jint verifyMode;
+  const char* classpath;
+
+  jint (JNICALL *vfprintf)(FILE* fp, const char* format, va_list args);
+  void (JNICALL *exit)(jint code);
+  void (JNICALL *abort)(void);
+
+  jint enableClassGC;
+  jint enableVerboseGC;
+  jint disableAsyncGC;
+  jint verbose;
+  jboolean debugging;
+  jint debugPort;
+};
+
 } // namespace
 
 namespace vm {
@@ -1598,6 +1678,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 {
   memset(vmTable, 0, sizeof(JavaVMVTable));
 
+  vmTable->DestroyJavaVM = DestroyJavaVM;
   vmTable->AttachCurrentThread = AttachCurrentThread;
   vmTable->DetachCurrentThread = DetachCurrentThread;
   vmTable->GetEnv = GetEnv;
@@ -1699,6 +1780,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->ExceptionOccurred = ::ExceptionOccurred;
   envTable->ExceptionDescribe = ::ExceptionDescribe;
   envTable->ExceptionClear = ::ExceptionClear;
+  envTable->NewObjectArray = ::NewObjectArray;
+  envTable->GetObjectArrayElement = ::GetObjectArrayElement;
+  envTable->SetObjectArrayElement = ::SetObjectArrayElement;
   envTable->NewBooleanArray = ::NewBooleanArray;
   envTable->NewByteArray = ::NewByteArray;
   envTable->NewCharArray = ::NewCharArray;
@@ -1746,3 +1830,28 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 }
 
 } // namespace vm
+
+extern "C" JNIEXPORT jint JNICALL
+JNI_GetDefaultJavaVMInitArgs(void* args)
+{
+  JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
+  a->maxHeapSize = 128 * 1024 * 1024;
+  a->classpath = ".";
+  return 0;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
+{
+  JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
+
+  System* s = makeSystem(a->maxHeapSize);
+  Finder* f = makeFinder(s, a->classpath);
+  Heap* h = makeHeap(s);
+  Processor* p = makeProcessor(s);
+
+  *m = new (s->allocate(sizeof(Machine))) Machine(s, h, f, p);
+  *t = p->makeThread(*m, 0, 0);
+
+  return 0;
+}

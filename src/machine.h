@@ -2190,10 +2190,6 @@ intern(Thread* t, object s);
 void
 exit(Thread* t);
 
-int
-run(System* system, Heap* heap, Finder* finder, Processor* processor,
-    const char* className, int argc, const char** argv);
-
 inline jobject
 makeLocalReference(Thread* t, object o)
 {

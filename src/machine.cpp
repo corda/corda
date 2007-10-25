@@ -2703,28 +2703,6 @@ printTrace(Thread* t, object exception)
   }
 }
 
-int
-run(System* system, Heap* heap, Finder* finder, Processor* processor,
-    const char* className, int argc, const char** argv)
-{
-  Machine m(system, heap, finder, processor);
-  Thread* t = processor->makeThread(&m, 0, 0);
-
-  enter(t, Thread::ActiveState);
-
-  ::invoke(t, className, argc, argv);
-
-  int exitCode = 0;
-  if (t->exception) {
-    exitCode = -1;
-    printTrace(t, t->exception);
-  }
-
-  exit(t);
-
-  return exitCode;
-}
-
 object
 makeTrace(Thread* t, uintptr_t start)
 {

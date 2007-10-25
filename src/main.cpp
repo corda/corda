@@ -1,39 +1,17 @@
-#include "common.h"
-#include "system.h"
-#include "heap.h"
-#include "finder.h"
-#include "processor.h"
-#include "machine.h"
-
-using namespace vm;
+#include "stdlib.h"
+#include "string.h"
+#include "jni.h"
 
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 
+void operator delete(void*) { abort(); }
+
 namespace {
-
-int
-run(unsigned heapSize, const char* path, const char* class_, int argc,
-    const char** argv)
-{
-  System* s = makeSystem(heapSize);
-  Finder* f = makeFinder(s, path);
-  Heap* heap = makeHeap(s);
-  Processor* p = makeProcessor(s);
-
-  int exitCode = run(s, heap, f, p, class_, argc, argv);
-
-  p->dispose();
-  heap->dispose();
-  f->dispose();
-  s->dispose();
-
-  return exitCode;
-}
 
 void
 usageAndExit(const char* name)
 {
-  fprintf(stderr, "usage: %s [-cp <classpath>] [-hs <maximum heap size>] "
+  fprintf(stderr, "usage: %s [-cp <classpath>] [-Xmx<maximum heap size>] "
           "<class name> [<argument> ...]\n", name);
   exit(-1);
 }
@@ -43,17 +21,19 @@ usageAndExit(const char* name)
 int
 main(int ac, const char** av)
 {
-  unsigned heapSize = 128 * 1024 * 1024;
-  const char* path = ".";
+  JDK1_1InitArgs vmArgs;
+  vmArgs.version = 0x00010001;
+  JNI_GetDefaultJavaVMInitArgs(&vmArgs);
+
   const char* class_ = 0;
   int argc = 0;
   const char** argv = 0;
 
   for (int i = 1; i < ac; ++i) {
     if (strcmp(av[i], "-cp") == 0) {
-      path = av[++i];
-    } else if (strcmp(av[i], "-hs") == 0) {
-      heapSize = atoi(av[++i]);
+      vmArgs.classpath = const_cast<char*>(av[++i]);
+    } else if (strncmp(av[i], "-Xmx", 4) == 0) {
+      vmArgs.maxHeapSize = atoi(av[i] + 4);
     } else {
       class_ = av[i++];
       if (i < ac) {
@@ -68,5 +48,35 @@ main(int ac, const char** av)
     usageAndExit(av[0]);
   }
 
-  return run(heapSize, path, class_, argc, argv);
+  JavaVM* vm;
+  JNIEnv* e;
+  JNI_CreateJavaVM(&vm, reinterpret_cast<void**>(&e), &vmArgs);
+
+  jclass c = e->FindClass(class_);
+  if (not e->ExceptionOccurred()) {
+    jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
+    if (not e->ExceptionOccurred()) {
+      jclass stringClass = e->FindClass("java/lang/String");
+      if (not e->ExceptionOccurred()) {
+        jobjectArray a = e->NewObjectArray(argc, stringClass, 0);
+        if (not e->ExceptionOccurred()) {
+          for (int i = 0; i < argc; ++i) {
+            e->SetObjectArrayElement(a, i, e->NewStringUTF(argv[i]));
+          }
+          
+          e->CallStaticVoidMethod(c, m, a);
+        }
+      }
+    }
+  }
+
+  int exitCode = 0;
+  if (e->ExceptionOccurred()) {
+    exitCode = -1;
+    e->ExceptionDescribe();
+  }
+
+  vm->DestroyJavaVM();
+
+  return exitCode;
 }
