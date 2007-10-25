@@ -284,7 +284,7 @@ endif
 
 $(executable): $(archive)
 	@echo "linking $(@)"
-	$(cc) $(begin-merge-archive) -Wl,-all_load $(^) $(end-merge-archive) \
+	$(cc) $(begin-merge-archive) $(^) $(end-merge-archive) \
 		$(lflags) $(rdynamic) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
