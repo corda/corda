@@ -59,6 +59,8 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 
 system = posix
 asm = x86
+begin-merge-archive = -Wl,--whole-archive
+end-merge-archive = -Wl,--no-whole-archive
 
 ifeq ($(platform),darwin)
 	rdynamic =
@@ -66,6 +68,8 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 	pthread =
 	lpthread =
+	begin-merge-archive = -Wl,-all_load
+	end-merge-archive =
 endif
 ifeq ($(platform),windows)
 	inc = /usr/local/win32/include
@@ -280,7 +284,7 @@ endif
 
 $(executable): $(archive)
 	@echo "linking $(@)"
-	$(cc) -Wl,-all_load $(^) \
+	$(cc) $(begin-merge-archive) -Wl,-all_load $(^) $(end-merge-archive) \
 		$(lflags) $(rdynamic) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
