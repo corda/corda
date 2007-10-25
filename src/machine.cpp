@@ -510,15 +510,25 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
   for (unsigned si = 0; si < length; ++si) {
     unsigned a = s.read1();
     if (a & 0x80) {
-      ++ si;
-      assert(t, si < length);
-
-      unsigned b = s.read1();
-
-      if (a == 0xC0 and b == 0x80) {
-        byteArrayBody(t, value, vi++) = 0;
+      // todo: handle non-ASCII characters properly
+      if (a & 0x20) {
+	// 3 bytes
+	si += 2;
+	assert(t, si < length);
+	/*unsigned b = */s.read1();
+	/*unsigned c = */s.read1();
+	byteArrayBody(t, value, vi++) = '_';
       } else {
-        abort(t); // todo: handle non-ASCII characters
+	// 2 bytes
+	++ si;
+	assert(t, si < length);
+	unsigned b = s.read1();
+
+	if (a == 0xC0 and b == 0x80) {
+	  byteArrayBody(t, value, vi++) = 0;
+	} else {
+	  byteArrayBody(t, value, vi++) = '_';
+	}
       }
     } else {
       byteArrayBody(t, value, vi++) = a;
