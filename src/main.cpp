@@ -63,8 +63,9 @@ main(int ac, const char** av)
   }
 
   JavaVM* vm;
-  JNIEnv* e;
-  JNI_CreateJavaVM(&vm, reinterpret_cast<void**>(&e), &vmArgs);
+  void* env;
+  JNI_CreateJavaVM(&vm, &env, &vmArgs);
+  JNIEnv* e = static_cast<JNIEnv*>(env);
 
   jclass c = e->FindClass(class_);
   if (not e->ExceptionOccurred()) {
