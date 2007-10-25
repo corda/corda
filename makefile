@@ -1,7 +1,5 @@
 #MAKEFLAGS = -s
 
-input = $(cls)/Hello.class
-
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
 	build-arch = i386
@@ -24,11 +22,15 @@ process = interpret
 
 mode = debug
 
-bld = build/$(platform)/$(arch)/$(mode)
-cls = build/classes
+build = build
+native-build = $(build)/$(platform)/$(arch)/$(mode)
+classpath-build = $(build)/classpath
+test-build = $(build)/test
 src = src
 classpath = classpath
 test = test
+
+input = $(test-build)/Hello.class
 
 build-cxx = g++
 build-cc = gcc
@@ -44,6 +46,7 @@ vg = nice valgrind --suppressions=valgrind.supp --undef-value-errors=no \
 	--num-callers=32 --db-attach=yes --freelist-vol=100000000
 db = gdb --args
 javac = javac
+zip = zip
 strip = :
 show-size = :
 
@@ -54,8 +57,8 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter \
 	-Winit-self -Wconversion
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
-	-I$(JAVA_HOME)/include -idirafter $(src) -I$(bld) -D__STDC_LIMIT_MACROS \
-	-D_JNI_IMPLEMENTATION_
+	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \
+	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_
 
 system = posix
 asm = x86
@@ -116,18 +119,18 @@ endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
-java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(cls)/%.class,$(x)))
+java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
 
 jni-sources = $(shell find $(classpath) -name '*.cpp')
-jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(bld))
+jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(native-build))
 jni-cflags = $(cflags)
 
 generated-code = \
-	$(bld)/type-enums.cpp \
-	$(bld)/type-declarations.cpp \
-	$(bld)/type-constructors.cpp \
-	$(bld)/type-initializations.cpp \
-	$(bld)/type-java-initializations.cpp
+	$(native-build)/type-enums.cpp \
+	$(native-build)/type-declarations.cpp \
+	$(native-build)/type-constructors.cpp \
+	$(native-build)/type-initializations.cpp \
+	$(native-build)/type-java-initializations.cpp
 
 interpreter-depends = \
 	$(generated-code) \
@@ -158,63 +161,67 @@ ifeq ($(process),compile)
 endif
 
 interpreter-cpp-objects = \
-	$(call cpp-objects,$(interpreter-sources),$(src),$(bld))
+	$(call cpp-objects,$(interpreter-sources),$(src),$(native-build))
 interpreter-asm-objects = \
-	$(call asm-objects,$(interpreter-asm-sources),$(src),$(bld))
+	$(call asm-objects,$(interpreter-asm-sources),$(src),$(native-build))
 interpreter-objects = \
 	$(interpreter-cpp-objects) \
 	$(interpreter-asm-objects)
 
 driver-sources = $(src)/main.cpp
 
-driver-objects = $(call cpp-objects,$(driver-sources),$(src),$(bld))
+driver-objects = $(call cpp-objects,$(driver-sources),$(src),$(native-build))
 
 generator-headers = \
 	$(src)/input.h \
 	$(src)/output.h
-generator-sources = \
-	$(src)/type-generator.cpp
-generator-objects = $(call cpp-objects,$(generator-sources),$(src),$(bld))
-generator-executable = $(bld)/generator
+generator-sources = $(src)/type-generator.cpp
+generator-objects = \
+	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
+generator = $(native-build)/generator
 
-archive = $(bld)/libvm.a
-executable = $(bld)/vm
+bin2c-sources = $(src)/bin2c.cpp
+bin2c-objects = $(call cpp-objects,$(bin2c-sources),$(src),$(native-build))
+bin2c = $(native-build)/bin2c
+
+archive = $(native-build)/libvm.a
+interpreter = $(native-build)/vm
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
-classpath-classes = $(call java-classes,$(classpath-sources),$(classpath))
-
-classpath-objects = $(classpath-classes)
+classpath-classes = \
+	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
+classpath-object = $(native-build)/classpath.o
 
 test-sources = $(shell find $(test) -name '*.java')
-test-classes = $(call java-classes,$(test-sources),$(test))
+test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 
-class-name = $(patsubst $(cls)/%.class,%,$(1))
+class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(1),$(call class-name,$(x)))
 
-flags = -cp $(cls)
-args = $(flags) $(call class-name,$(input))
+flags = -cp $(test-build)
+args = $(flags) $(call class-name,$(test-build),$(input))
 
 .PHONY: build
-build: $(executable) $(classpath-objects) $(test-classes)
+build: $(interpreter) $(classpath-classes) $(test-classes)
 
 $(input): $(classpath-classes)
 
 .PHONY: run
 run: build
-	$(executable) $(args)
+	$(interpreter) $(args)
 
 .PHONY: debug
 debug: build
-	gdb --args $(executable) $(args)
+	gdb --args $(interpreter) $(args)
 
 .PHONY: vg
 vg: build
-	$(vg) $(executable) $(args)
+	$(vg) $(interpreter) $(args)
 
 .PHONY: test
 test: build
 	/bin/bash $(test)/test.sh 2>/dev/null \
-		$(executable) $(mode) "$(flags)" $(call class-names,$(test-classes))
+		$(interpreter) $(mode) "$(flags)" $(call class-names,$(test-classes))
 
 .PHONY: clean
 clean:
@@ -223,31 +230,39 @@ clean:
 
 .PHONY: clean-native
 clean-native:
-	@echo "removing $(bld)"
-	rm -rf $(bld)
+	@echo "removing $(native-build)"
+	rm -rf $(native-build)
 
-gen-arg = $(shell echo $(1) | sed -e 's:$(bld)/type-\(.*\)\.cpp:\1:')
-$(generated-code): %.cpp: $(src)/types.def $(generator-executable)
+gen-arg = $(shell echo $(1) | sed -e 's:$(native-build)/type-\(.*\)\.cpp:\1:')
+$(generated-code): %.cpp: $(src)/types.def $(generator)
 	@echo "generating $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
-	$(generator-executable) $(call gen-arg,$(@)) < $(<) > $(@)
+	$(generator) $(call gen-arg,$(@)) < $(<) > $(@)
 
-$(bld)/type-generator.o: \
+$(native-build)/type-generator.o: \
 	$(generator-headers)
 
 define compile-class
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
 	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
-		-d $(cls) $(<)
+		-d $(1) $(<)
 	@touch $(@)
 endef
 
-$(cls)/%.class: $(classpath)/%.java
-	$(compile-class)
+$(classpath-build)/%.class: $(classpath)/%.java
+	@echo "compiling $(@)"
+	@mkdir -p -m 1777 $(dir $(@))
+	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
+		-d $(classpath-build) $(<)
+	@touch $(@)
 
-$(cls)/%.class: $(test)/%.java
-	$(compile-class)
+$(test-build)/%.class: $(test)/%.java
+	@echo "compiling $(@)"
+	@mkdir -p -m 1777 $(dir $(@))
+	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
+		-d $(test-build) $(<)
+	@touch $(@)
 
 define compile-object
 	@echo "compiling $(@)"
@@ -255,46 +270,66 @@ define compile-object
 	$(cxx) $(cflags) -c $(<) -o $(@)
 endef
 
-$(interpreter-cpp-objects): $(bld)/%.o: $(src)/%.cpp $(interpreter-depends)
+$(interpreter-cpp-objects): \
+		$(native-build)/%.o: $(src)/%.cpp $(interpreter-depends)
 	$(compile-object)
 
-$(interpreter-asm-objects): $(bld)/%-asm.o: $(src)/%.S
+$(interpreter-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
-$(driver-objects): $(bld)/%.o: $(src)/%.cpp
+$(driver-objects): $(native-build)/%.o: $(src)/%.cpp
 	$(compile-object)
 
-$(generator-objects): $(bld)/%.o: $(src)/%.cpp
+$(bin2c-objects): $(native-build)/%.o: $(src)/%.cpp
+	$(compile-object)
+
+$(build)/classpath.zip: $(classpath-classes)
+	echo $(classpath-classes)
+	wd=$$(pwd); \
+	cd $(classpath-build); \
+	$(zip) -q -0 $${wd}/$(@) $$(find -name '*.class'); \
+	cd -
+
+$(build)/classpath.c: $(build)/classpath.zip $(bin2c)
+	$(bin2c) $(<) vmClasspath >$(@)
+
+$(classpath-object): $(build)/classpath.c
+	$(cxx) $(cflags) -c $(<) -o $(@)
+
+$(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) $(cflags) -c $(<) -o $(@)
 
-$(jni-objects): $(bld)/%.o: $(classpath)/%.cpp
+$(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
+$(archive): $(interpreter-objects) $(jni-objects) $(classpath-object)
 ifeq ($(platform),windows)
-$(archive): $(interpreter-objects) $(jni-objects)
 	@echo "creating $(@)"
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -k -d $(@).def -e $(@).exp
 	$(ar) cru $(@) $(@).exp $(^)
 	$(ranlib) $(@)
 else
-$(archive): $(interpreter-objects) $(jni-objects)
 	@echo "creating $(@)"
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 endif
 
-$(executable): $(archive) $(driver-objects)
+$(interpreter): $(archive) $(driver-objects)
 	@echo "linking $(@)"
 	$(cc) $(begin-merge-archive) $(^) $(end-merge-archive) \
 		$(lflags) $(rdynamic) -o $(@)
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
 
-$(generator-executable): $(generator-objects)
+$(generator): $(generator-objects)
+	@echo "linking $(@)"
+	$(build-cc) $(^) -o $(@)
+
+$(bin2c): $(bin2c-objects)
 	@echo "linking $(@)"
 	$(build-cc) $(^) -o $(@)

@@ -2870,7 +2870,10 @@ class MyProcessor: public Processor {
   virtual vm::Thread*
   makeThread(Machine* m, object javaThread, vm::Thread* parent)
   {
-    return new (s->allocate(sizeof(Thread))) Thread(m, javaThread, parent);
+    Thread* t = new (s->allocate(sizeof(Thread)))
+      Thread(m, javaThread, parent);
+    t->init();
+    return t;
   }
 
   virtual void*

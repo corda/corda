@@ -325,13 +325,13 @@ class JarIndex {
 class JarElement: public Element {
  public:
   JarElement(System* s, const char* name):
-    s(s), name(name), region(0), index(0)
+    s(s), name(name), index(0)
   { }
 
-  void init() {
+  virtual void init() {
     if (index == 0) {
       System::Region* r;
-      if (s->success(s->map(&r, this->name))) {
+      if (s->success(s->map(&r, name))) {
         region = r;
         index = JarIndex::open(s, r);
       }
@@ -358,6 +358,8 @@ class JarElement: public Element {
     s->free(name);
     if (index) {
       index->dispose();
+    }
+    if (region) {
       region->dispose();
     }
     s->free(this);
@@ -367,6 +369,35 @@ class JarElement: public Element {
   const char* name;
   System::Region* region;
   JarIndex* index;
+};
+
+class BuiltinElement: public JarElement {
+ public:
+  BuiltinElement(System* s, const char* name):
+    JarElement(s, name)
+  { }
+
+  virtual void init() {
+    if (index == 0) {
+      System::Library* library;
+      if (s->success(s->load(&library, 0, false, 0))) {
+        void* p = library->resolve(name);
+        if (p) {
+          uint8_t* (*function)(unsigned*);
+          memcpy(&function, &p, BytesPerWord);
+
+          unsigned size;
+          uint8_t* data = function(&size);
+          if (data) {
+            region = new (s->allocate(sizeof(PointerRegion)))
+              PointerRegion(s, data, size);
+            index = JarIndex::open(s, region);
+          }
+        }
+        library->dispose();
+      }
+    }
+  }
 };
 
 Element*
@@ -403,26 +434,34 @@ parsePath(System* s, const char* path)
   Element* prev = 0;
   for (Tokenizer t(path, s->pathSeparator()); t.hasMore();) {
     Tokenizer::Token token(t.next());
-    char* name = static_cast<char*>(s->allocate(token.length + 1));
-    memcpy(name, token.s, token.length);
-    name[token.length] = 0;
 
     Element* e;
-    switch (s->identify(name)) {
-    case System::File: {
-      e = new (s->allocate(sizeof(JarElement)))
-        JarElement(s, name);
-    } break;
+    if (*token.s == '[' and token.s[token.length - 1] == ']') {
+      char* name = static_cast<char*>(s->allocate(token.length - 1));
+      memcpy(name, token.s + 1, token.length - 1);
+      name[token.length - 2] = 0; 
+  
+      e = new (s->allocate(sizeof(BuiltinElement))) BuiltinElement(s, name);
+    } else {
+      char* name = static_cast<char*>(s->allocate(token.length + 1));
+      memcpy(name, token.s, token.length);
+      name[token.length] = 0;
 
-    case System::Directory: {
-      e = new (s->allocate(sizeof(DirectoryElement)))
-        DirectoryElement(s, name);
-    } break;
+      switch (s->identify(name)) {
+      case System::File: {
+        e = new (s->allocate(sizeof(JarElement))) JarElement(s, name);
+      } break;
 
-    default: {
-      s->free(name);
-      e = 0;
-    } break;
+      case System::Directory: {
+        e = new (s->allocate(sizeof(DirectoryElement)))
+          DirectoryElement(s, name);
+      } break;
+
+      default: {
+        s->free(name);
+        e = 0;
+      } break;
+      }
     }
 
     if (e) {

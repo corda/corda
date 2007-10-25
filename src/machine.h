@@ -1148,7 +1148,6 @@ class Machine {
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;
-  bool active;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[HeapPoolSize];
@@ -1242,6 +1241,7 @@ class Thread {
 
   Thread(Machine* m, object javaThread, Thread* parent);
 
+  void init();
   void exit();
   void dispose();
 

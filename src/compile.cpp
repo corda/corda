@@ -4881,7 +4881,10 @@ class MyProcessor: public Processor {
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
-    return new (s->allocate(sizeof(MyThread))) MyThread(m, javaThread, parent);
+    MyThread* t = new (s->allocate(sizeof(Thread)))
+      MyThread(m, javaThread, parent);
+    t->init();
+    return t;
   }
 
   virtual void*

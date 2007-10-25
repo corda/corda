@@ -1426,7 +1426,13 @@ writeConstructors(Output* out, Object* declarations)
         out->write("    PROTECT(t, e);\n");
         out->write("#endif\n");
         out->write("    resolveClass(t, className(t, class__));\n");
-        out->write("    assert(t, t->exception == e);\n");
+
+        if (equal("classNotFoundException", typeName(o))) {
+          out->write("    t->exception = 0;\n");
+        } else {
+          out->write("    assert(t, t->exception == e);\n");
+        }
+
         out->write("  }\n");
       }
 
