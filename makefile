@@ -33,14 +33,6 @@ input = $(test-build)/Hello.class
 build-cxx = g++
 build-cc = gcc
 
-pthread = -pthread
-lpthread = -lpthread
-
-ifeq ($(platform),darwin)
-	pthread =
-	lpthread =
-endif
-
 cxx = $(build-cxx)
 cc = $(build-cc)
 ar = ar
@@ -64,13 +56,13 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-	-I$(JAVA_HOME)/include/linux -I$(src) $(pthread)
+	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
 
 cflags = $(build-cflags)
 
 common-lflags = -lm -lz
 
-lflags = $(common-lflags) $(lpthread) -ldl -rdynamic
+lflags = $(common-lflags) -lpthread -ldl -rdynamic
 
 system = posix
 asm = x86
@@ -86,8 +78,9 @@ ifeq ($(arch),i386)
 endif
 
 ifeq ($(platform),darwin)
+	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
+		-I$(JAVA_HOME)/include/linux -I$(src)
 	lflags = $(common-lflags) -ldl
-	objcopy = gobjcopy
 endif
 
 ifeq ($(platform),windows)
