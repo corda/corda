@@ -36,6 +36,11 @@ build-cc = gcc
 pthread = -pthread
 lpthread = -lpthread
 
+ifeq ($(platform),darwin)
+	pthread =
+	lpthread =
+endif
+
 cxx = $(build-cxx)
 cc = $(build-cc)
 ar = ar
@@ -189,6 +194,10 @@ classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
 	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
 classpath-object = $(native-build)/classpath-jar.o
+
+ifeq ($(platform),darwin)
+	classpath-object =
+endif
 
 test-sources = $(shell find $(test) -name '*.java')
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))

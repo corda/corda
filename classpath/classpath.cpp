@@ -10,6 +10,7 @@
 
 extern "C" {
 
+#ifndef __APPLE__
   extern const uint8_t SYMBOL(start)[];
   extern const uint8_t SYMBOL(size)[];
 
@@ -19,5 +20,6 @@ extern "C" {
     *size = reinterpret_cast<uintptr_t>(SYMBOL(size));
     return SYMBOL(start);
   }
+#endif
 
 } // extern "C"
