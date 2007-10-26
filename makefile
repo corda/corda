@@ -60,6 +60,13 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_
 
+build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
+	-I$(JAVA_HOME)/include/linux -I$(src) $(pthread)
+
+cflags = $(build-cflags)
+
+lflags = $(lpthread) -ldl -lm -lz
+
 system = posix
 asm = x86
 begin-merge-archive = -Wl,--whole-archive
@@ -90,11 +97,6 @@ ifeq ($(platform),windows)
 	lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
 endif
-
-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-	-I$(JAVA_HOME)/include/linux -I$(src) $(pthread)
-
-lflags = $(lpthread) -ldl -lm -lz
 
 ifeq ($(mode),debug)
 	cflags += -O0 -g3
@@ -170,7 +172,7 @@ interpreter-objects = \
 
 driver-sources = $(src)/main.cpp
 
-driver-objects = $(call cpp-objects,$(driver-sources),$(src),$(native-build))
+driver-object = $(call cpp-objects,$(driver-sources),$(src),$(native-build))
 
 generator-headers = \
 	$(src)/input.h \
@@ -277,11 +279,13 @@ $(interpreter-cpp-objects): \
 $(interpreter-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
-$(driver-objects): $(native-build)/%.o: $(src)/%.cpp
+$(driver-object): $(native-build)/%.o: $(src)/%.cpp
 	$(compile-object)
 
 $(bin2c-objects): $(native-build)/%.o: $(src)/%.cpp
-	$(compile-object)
+	@echo "compiling $(@)"
+	@mkdir -p -m 1777 $(dir $(@))
+	$(build-cxx) $(build-cflags) -c $(<) -o $(@)
 
 $(build)/classpath.zip: $(classpath-classes)
 	echo $(classpath-classes)
@@ -298,7 +302,7 @@ $(classpath-object): $(build)/classpath.c
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p -m 1777 $(dir $(@))
-	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) $(cflags) -c $(<) -o $(@)
+	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) $(build-cflags) -c $(<) -o $(@)
 
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
@@ -318,7 +322,7 @@ else
 	$(ranlib) $(@)
 endif
 
-$(interpreter): $(archive) $(driver-objects)
+$(interpreter): $(archive) $(driver-object)
 	@echo "linking $(@)"
 	$(cc) $(begin-merge-archive) $(^) $(end-merge-archive) \
 		$(lflags) $(rdynamic) -o $(@)
