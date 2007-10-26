@@ -103,6 +103,21 @@ ReleaseStringUTFChars(Thread* t, jstring, const char* chars)
 }
 
 jstring JNICALL
+NewString(Thread* t, const jchar* chars, jsize size)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object a = 0;
+  if (size) {
+    object a = makeCharArray(t, size, false);
+    memcpy(&charArrayBody(t, a, 0), chars, size);
+  }
+  object s = makeString(t, a, 0, size, 0);
+
+  return makeLocalReference(t, s);
+}
+
+jstring JNICALL
 NewStringUTF(Thread* t, const char* chars)
 {
   ENTER(t, Thread::ActiveState);
@@ -1688,6 +1703,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetStringUTFLength = ::GetStringUTFLength;
   envTable->GetStringUTFChars = ::GetStringUTFChars;
   envTable->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
+  envTable->NewString = ::NewString;
   envTable->NewStringUTF = ::NewStringUTF;
   envTable->FindClass = ::FindClass;
   envTable->ThrowNew = ::ThrowNew;
