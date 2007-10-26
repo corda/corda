@@ -42,11 +42,12 @@ cxx = $(build-cxx)
 cc = $(build-cc)
 ar = ar
 ranlib = ranlib
+objcopy = objcopy
 vg = nice valgrind --suppressions=valgrind.supp --undef-value-errors=no \
 	--num-callers=32 --db-attach=yes --freelist-vol=100000000
 db = gdb --args
 javac = javac
-zip = zip
+jar = jar
 strip = :
 show-size = :
 
@@ -92,6 +93,7 @@ ifeq ($(platform),windows)
 	dlltool = i586-mingw32msvc-dlltool
 	ar = i586-mingw32msvc-ar
 	ranlib = i586-mingw32msvc-ranlib
+	objcopy = i586-mingw32msvc-objcopy
 
 	rdynamic = -Wl,--export-dynamic
 	lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at -mwindows -mconsole
@@ -114,9 +116,17 @@ ifeq ($(mode),fast)
 endif
 
 ifeq ($(arch),i386)
+  object-arch = i386
+	object-format = elf32-i386
 	pointer-size = 4
 else
+  object-arch = i386:x86-64
+	object-format = elf64-x86-64
 	pointer-size = 8
+endif
+
+ifeq ($(platform),windows)
+	object-format = pe-i386
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
@@ -182,17 +192,13 @@ generator-objects = \
 	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
 generator = $(native-build)/generator
 
-bin2c-sources = $(src)/bin2c.cpp
-bin2c-objects = $(call cpp-objects,$(bin2c-sources),$(src),$(native-build))
-bin2c = $(native-build)/bin2c
-
 archive = $(native-build)/libvm.a
 interpreter = $(native-build)/vm
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
 	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
-classpath-object = $(native-build)/classpath.o
+classpath-object = $(native-build)/classpath-jar.o
 
 test-sources = $(shell find $(test) -name '*.java')
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
@@ -282,22 +288,16 @@ $(interpreter-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 $(driver-object): $(native-build)/%.o: $(src)/%.cpp
 	$(compile-object)
 
-$(bin2c-objects): $(native-build)/%.o: $(src)/%.cpp
-	@echo "compiling $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
-	$(build-cxx) $(build-cflags) -c $(<) -o $(@)
-
-$(build)/classpath.zip: $(classpath-classes)
-	echo $(classpath-classes)
+$(build)/classpath.jar: $(classpath-classes)
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
-	 $(zip) -q -0 $${wd}/$(@) $$(find -name '*.class'))
+	 $(jar) c0f $${wd}/$(@) $$(find -name '*.class'))
 
-$(build)/classpath.c: $(build)/classpath.zip $(bin2c)
-	$(bin2c) $(<) vmClasspath >$(@)
-
-$(classpath-object): $(build)/classpath.c
-	$(cxx) $(cflags) -c $(<) -o $(@)
+$(classpath-object): $(build)/classpath.jar
+	(wd=$$(pwd); \
+	 cd $(build); \
+	 $(objcopy) -I binary classpath.jar \
+		 -O $(object-format) -B $(object-arch) $${wd}/$(@))
 
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
@@ -333,6 +333,3 @@ $(generator): $(generator-objects)
 	@echo "linking $(@)"
 	$(build-cc) $(^) -o $(@)
 
-$(bin2c): $(bin2c-objects)
-	@echo "linking $(@)"
-	$(build-cc) $(^) -o $(@)
