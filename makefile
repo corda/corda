@@ -82,6 +82,7 @@ endif
 
 ifeq ($(platform),darwin)
 	lflags = $(common-lflags) -ldl
+	objcopy = gobjcopy
 endif
 
 ifeq ($(platform),windows)
@@ -280,7 +281,7 @@ $(driver-object): $(native-build)/%.o: $(src)/%.cpp
 $(build)/classpath.jar: $(classpath-classes)
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
-	 $(jar) c0f $${wd}/$(@) $$(find -name '*.class'))
+	 $(jar) c0f $${wd}/$(@) $$(find . -name '*.class'))
 
 $(classpath-object): $(build)/classpath.jar
 	(wd=$$(pwd); \
