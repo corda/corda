@@ -76,6 +76,7 @@ end-merge-archive = -Wl,--no-whole-archive
 ifeq ($(platform),darwin)
 	rdynamic =
 	thread-cflags =
+	objcopy = gobjcopy
 	shared = -dynamiclib
 	pthread =
 	lpthread =
