@@ -285,10 +285,9 @@ $(bin2c-objects): $(native-build)/%.o: $(src)/%.cpp
 
 $(build)/classpath.zip: $(classpath-classes)
 	echo $(classpath-classes)
-	wd=$$(pwd); \
-	cd $(classpath-build); \
-	$(zip) -q -0 $${wd}/$(@) $$(find -name '*.class'); \
-	cd -
+	(wd=$$(pwd); \
+	 cd $(classpath-build); \
+	 $(zip) -q -0 $${wd}/$(@) $$(find -name '*.class'))
 
 $(build)/classpath.c: $(build)/classpath.zip $(bin2c)
 	$(bin2c) $(<) vmClasspath >$(@)
