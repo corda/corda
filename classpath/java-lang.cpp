@@ -31,58 +31,50 @@
 #endif
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_java_lang_System_getProperty(JNIEnv* e, jclass, jint code)
+Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
+                                  jbooleanArray found)
 {
-  enum {
-    LineSeparator = 100,
-    FileSeparator = 101,
-    OsName = 102,
-    JavaIoTmpdir = 103,
-    UserHome = 104
-  };
-
-  switch (code) {
+  jstring r = 0;
+  const char* chars = e->GetStringUTFChars(name, 0);
+  if (chars) {
 #ifdef WIN32 
-  case LineSeparator:
-    return e->NewStringUTF("\r\n");
-        
-  case FileSeparator:
-    return e->NewStringUTF("\\");
-   
-  case OsName:
-    return e->NewStringUTF("Windows");
-
-  case JavaIoTmpdir: {
-    TCHAR buffer[MAX_PATH];
-    GetTempPath(MAX_PATH, buffer);
-    return e->NewStringUTF(buffer);
-  }
-
-  case UserHome: {
-    LPWSTR home = _wgetenv(L"USERPROFILE");
-    return e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
-  }
+    if (strcmp(chars, "line.separator") == 0) {
+      r = e->NewStringUTF("\r\n");
+    } else if (strcmp(chars, "file.separator") == 0) {
+      r = e->NewStringUTF("\\");
+    } else if (strcmp(chars, "os.name") == 0) {
+      r = e->NewStringUTF("windows");
+    } else if (strcmp(chars, "java.io.tmpdir") == 0) {
+      TCHAR buffer[MAX_PATH];
+      GetTempPath(MAX_PATH, buffer);
+      r = e->NewStringUTF(buffer);
+    } else if (strcmp(chars, "user.home") == 0) {
+      LPWSTR home = _wgetenv(L"USERPROFILE");
+      r = e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
+    }
 #else
-  case LineSeparator:
-    return e->NewStringUTF("\n");
-
-  case FileSeparator:
-    return e->NewStringUTF("/");
-
-  case OsName:
-    return e->NewStringUTF("posix");
-
-  case JavaIoTmpdir:
-    return e->NewStringUTF("/tmp");
-
-  case UserHome:
-    return e->NewStringUTF(getenv("HOME"));
+    if (strcmp(chars, "line.separator") == 0) {
+      r = e->NewStringUTF("\n");
+    } else if (strcmp(chars, "file.separator") == 0) {
+      r = e->NewStringUTF("/");
+    } else if (strcmp(chars, "os.name") == 0) {
+      r = e->NewStringUTF("posix");
+    } else if (strcmp(chars, "java.io.tmpdir") == 0) {
+      r = e->NewStringUTF("/tmp");
+    } else if (strcmp(chars, "user.home") == 0) {
+      r = e->NewStringUTF(getenv("HOME"));      
+    }
 #endif
 
-  default:
-    throwNew(e, "java/lang/RuntimeException", 0);
-    return 0;
+    e->ReleaseStringUTFChars(name, chars);
   }
+
+  if (r) {
+    jboolean v = true;
+    e->SetBooleanArrayRegion(found, 0, 1, &v);
+  }
+
+  return r;
 }
 
 extern "C" JNIEXPORT jlong JNICALL

@@ -407,22 +407,27 @@ Java_java_lang_String_intern(Thread* t, jobject this_)
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_java_lang_System_getVMProperty(Thread* t, jclass, jint code)
+Java_java_lang_System_getVMProperty(Thread* t, jclass, jstring name,
+                                    jbooleanArray found)
 {
   ENTER(t, Thread::ActiveState);
 
-  enum {
-    JavaClassPath = 1
-  };
+  unsigned length = stringLength(t, *name);
+  char n[length + 1];
+  stringChars(t, *name, n);
 
-  switch (code) {
-  case JavaClassPath:
-    return makeLocalReference(t, makeString(t, "%s", t->m->finder->path()));
-
-  default:
-    t->exception = makeRuntimeException(t, 0);
-    return 0;
+  jstring r = 0;
+  if (strcmp(n, "java.lang.classpath") == 0) {
+    r = makeLocalReference(t, makeString(t, "%s", t->m->finder->path()));
+  } else if (strcmp(n, "avium.version") == 0) {
+    r = makeLocalReference(t, makeString(t, "0.0"));
   }
+  
+  if (r) {
+    booleanArrayBody(t, *found, 0) = true;
+  }
+
+  return r;
 }
 
 extern "C" JNIEXPORT void JNICALL

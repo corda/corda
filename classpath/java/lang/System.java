@@ -9,14 +9,6 @@ import java.io.FileOutputStream;
 import java.io.FileDescriptor;
 
 public abstract class System {
-  private static final int Unknown = 0;
-  private static final int JavaClassPath = 1;
-  private static final int LineSeparator = 100;
-  private static final int FileSeparator = 101;
-  private static final int OsName = 102;
-  private static final int JavaIoTmpdir = 103;
-  private static final int UserHome = 104;
-
   private static Property properties;
   
 //   static {
@@ -42,28 +34,14 @@ public abstract class System {
       }
     }
 
-    int code = Unknown;
-    if (name.equals("java.class.path")) {
-      code = JavaClassPath;
-    } else if (name.equals("java.io.tmpdir")) {
-      code = JavaIoTmpdir;
-    } else if (name.equals("line.separator")) {
-      code = LineSeparator;
-    } else if (name.equals("file.separator")) {
-      code = FileSeparator;
-    } else if (name.equals("user.home")) {
-      code = UserHome;
-    } else if (name.equals("os.name")) {
-      code = OsName;
-    }
+    boolean[] found = new boolean[1];
+    String value = getProperty(name, found);
+    if (found[0]) return value;
 
-    if (code == Unknown) {
-      return null;
-    } else if (code == JavaClassPath) {
-      return getVMProperty(code);
-    } else {
-      return getProperty(code);
-    }
+    value = getVMProperty(name, found);
+    if (found[0]) return value;
+
+    return null;
   }
 
   public static String setProperty(String name, String value) {
@@ -79,9 +57,9 @@ public abstract class System {
     return null;
   }
 
-  private static native String getProperty(int code);
+  private static native String getProperty(String name, boolean[] found);
 
-  private static native String getVMProperty(int code);
+  private static native String getVMProperty(String name, boolean[] found);
 
   public static native long currentTimeMillis();
 
