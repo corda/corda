@@ -10,17 +10,15 @@ endif
 
 build-platform = $(shell uname -s | tr [:upper:] [:lower:])
 
-ifeq ($(build-platform),cygwin_nt-5.1)
-	build-platform = windows
-endif
-
 arch = $(build-arch)
-
 platform = $(build-platform)
 
-process = interpret
+ifeq ($(platform),windows)
+	arch = i386
+endif
 
 mode = debug
+process = interpret
 
 build = build
 native-build = $(build)/$(platform)/$(arch)/$(mode)
@@ -52,7 +50,6 @@ strip = :
 show-size = :
 
 rdynamic = -rdynamic
-shared = -shared
 
 warnings = -Wall -Wextra -Werror -Wunused-parameter \
 	-Winit-self -Wconversion
@@ -66,27 +63,33 @@ build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 
 cflags = $(build-cflags)
 
-lflags = $(lpthread) -ldl -lm -lz
+common-lflags = -lm -lz
+
+lflags = $(common-lflags) $(lpthread) -ldl -rdynamic
 
 system = posix
 asm = x86
-begin-merge-archive = -Wl,--whole-archive
-end-merge-archive = -Wl,--no-whole-archive
+
+object-arch = i386:x86-64
+object-format = elf64-x86-64
+pointer-size = 8
+
+ifeq ($(arch),i386)
+	object-arch = i386
+	object-format = elf32-i386
+	pointer-size = 4
+endif
 
 ifeq ($(platform),darwin)
-	rdynamic =
-	thread-cflags =
-	shared = -dynamiclib
-	pthread =
-	lpthread =
-	begin-merge-archive = -Wl,-all_load
-	end-merge-archive =
+	lflags = $(common-lflags) -ldl
 endif
+
 ifeq ($(platform),windows)
 	inc = /usr/local/win32/include
 	lib = /usr/local/win32/lib
 
 	system = windows
+	object-format = pe-i386
 
 	cxx = i586-mingw32msvc-g++
 	cc = i586-mingw32msvc-gcc
@@ -96,7 +99,7 @@ ifeq ($(platform),windows)
 	objcopy = i586-mingw32msvc-objcopy
 
 	rdynamic = -Wl,--export-dynamic
-	lflags = -L$(lib) -lm -lz -lws2_32 -Wl,--kill-at -mwindows -mconsole
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -Wl,--kill-at -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
 endif
 
@@ -113,20 +116,6 @@ ifeq ($(mode),fast)
 	cflags += -O3 -DNDEBUG
 	strip = strip
 	show-size = ls -l
-endif
-
-ifeq ($(arch),i386)
-  object-arch = i386
-	object-format = elf32-i386
-	pointer-size = 4
-else
-  object-arch = i386:x86-64
-	object-format = elf64-x86-64
-	pointer-size = 8
-endif
-
-ifeq ($(platform),windows)
-	object-format = pe-i386
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
@@ -210,7 +199,7 @@ flags = -cp $(test-build)
 args = $(flags) $(call class-name,$(test-build),$(input))
 
 .PHONY: build
-build: $(interpreter) $(classpath-classes) $(test-classes)
+build: $(interpreter) $(archive) $(classpath-classes) $(test-classes)
 
 $(input): $(classpath-classes)
 
@@ -310,22 +299,21 @@ $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
 $(archive): $(interpreter-objects) $(jni-objects) $(classpath-object)
-ifeq ($(platform),windows)
 	@echo "creating $(@)"
-	$(dlltool) -z $(@).def $(^)
-	$(dlltool) -k -d $(@).def -e $(@).exp
-	$(ar) cru $(@) $(@).exp $(^)
-	$(ranlib) $(@)
-else
-	@echo "creating $(@)"
+	rm -rf $(@)
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
-endif
 
-$(interpreter): $(archive) $(driver-object)
+$(interpreter): \
+		$(interpreter-objects) $(jni-objects) $(classpath-object) $(driver-object)
 	@echo "linking $(@)"
-	$(cc) $(begin-merge-archive) $(^) $(end-merge-archive) \
-		$(lflags) $(rdynamic) -o $(@)
+ifeq ($(platform),windows)
+	$(dlltool) -z $(@).def $(^)
+	$(dlltool) -k -d $(@).def -e $(@).exp
+	$(cc) $(@).exp $(^) $(lflags) -o $(@)
+else
+	$(cc) $(^) $(lflags) -o $(@)
+endif
 	@$(strip) --strip-all $(@)
 	@$(show-size) $(@)
 
