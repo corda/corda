@@ -15,9 +15,6 @@
 #  include <errno.h>
 #  include <netdb.h>
 #  include <sys/select.h>
-
-#  undef JNIEXPORT
-#  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif
 
 #define java_nio_channels_SelectionKey_OP_READ 1L
@@ -493,19 +490,6 @@ Java_java_nio_channels_SocketSelector_natWakeup(JNIEnv *e, jclass, jlong state)
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_java_nio_channels_SocketSelector_natClearWoken(JNIEnv *e, jclass, jlong state)
-{
-  SelectorState* s = reinterpret_cast<SelectorState*>(state);
-  if (s->control.connected() and s->control.reader() >= 0) {
-    char c;
-    int r = ::doRead(s->control.reader(), &c, 1);
-    if (r != 1) {
-      throwIOException(e);
-    }
-  }
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_java_nio_channels_SocketSelector_natClose(JNIEnv *, jclass, jlong state)
 {
   SelectorState* s = reinterpret_cast<SelectorState*>(state);
@@ -562,8 +546,68 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
     FD_SET(static_cast<unsigned>(socket), &(s->read));
     if (max < socket) max = socket;
   }
+
+#ifdef WIN32
+  if (s->control.listener() >= 0) {
+    int socket = s->control.listener();
+    FD_SET(static_cast<unsigned>(socket), &(s->read));
+    if (max < socket) max = socket;
+  }
+
+  if (not s->control.connected()) {
+    int socket = s->control.writer();
+    FD_SET(static_cast<unsigned>(socket), &(s->write));
+    FD_SET(static_cast<unsigned>(socket), &(s->except));
+    if (max < socket) max = socket;
+  }
+#endif
+
   timeval time = { interval / 1000, (interval % 1000) * 1000 };
   int r = ::select(max + 1, &(s->read), &(s->write), &(s->except), &time);
+
+#ifdef WIN32
+  if (FD_ISSET(s->control.writer(), &(s->write)) or
+      FD_ISSET(s->control.writer(), &(s->except)))
+  {
+    unsigned socket = s->control.writer();
+    FD_CLR(socket, &(s->write));
+    FD_CLR(socket, &(s->except));
+
+    int error;
+    socklen_t size = sizeof(int);
+    int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
+                       reinterpret_cast<char*>(&error), &size);
+    if (r != 0 or size != sizeof(int) or error != 0) {
+      throwIOException(e);
+    }
+    s->control.setConnected(true);
+  }
+
+  if (s->control.listener() >= 0 and
+      FD_ISSET(s->control.listener(), &(s->read)))
+  {
+    FD_CLR(static_cast<unsigned>(s->control.listener()), &(s->read));
+
+    s->control.setReader(::doAccept(e, s->control.listener()));
+    s->control.setListener(-1);
+  }
+#endif
+
+  if (s->control.reader() >= 0 and
+      FD_ISSET(s->control.reader(), &(s->read)))
+  {
+    FD_CLR(static_cast<unsigned>(s->control.reader()), &(s->read));
+
+    char c;
+    int r = 1;
+    while (r == 1) {
+      r = ::doRead(s->control.reader(), &c, 1);
+    }
+    if (r < 0 and not eagain()) {
+      throwIOException(e);
+    }
+  }
+
   if (r < 0) {
     if (errno != EINTR) {
       throwIOException(e);
