@@ -109,8 +109,8 @@ NewString(Thread* t, const jchar* chars, jsize size)
 
   object a = 0;
   if (size) {
-    object a = makeCharArray(t, size, false);
-    memcpy(&charArrayBody(t, a, 0), chars, size);
+    a = makeCharArray(t, size, false);
+    memcpy(&charArrayBody(t, a, 0), chars, size * sizeof(jchar));
   }
   object s = makeString(t, a, 0, size, 0);
 
@@ -122,7 +122,15 @@ NewStringUTF(Thread* t, const char* chars)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeString(t, "%s", chars));
+  object a = 0;
+  unsigned size = strlen(chars);
+  if (size) {
+    a = makeByteArray(t, size, false);
+    memcpy(&byteArrayBody(t, a, 0), chars, size);
+  }
+  object s = makeString(t, a, 0, size, 0);
+
+  return makeLocalReference(t, s);
 }
 
 jclass JNICALL
