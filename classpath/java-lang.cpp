@@ -11,12 +11,6 @@
 
 #ifdef WIN32
 #  include "windows.h"
-#else
-#  undef JNIEXPORT
-#  define JNIEXPORT __attribute__ ((visibility("default")))
-#endif
-
-#ifdef WIN32
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"

@@ -1,6 +1,13 @@
 #ifndef JNI_UTIL
 #define JNI_UTIL
 
+#undef JNIEXPORT
+#ifdef __MINGW32__
+#  define JNIEXPORT __declspec(dllexport)
+#else
+#  define JNIEXPORT __attribute__ ((visibility("default")))
+#endif
+
 namespace {
 
 inline void

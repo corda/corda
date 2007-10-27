@@ -5,11 +5,6 @@
 #include "jni.h"
 #include "jni-util.h"
 
-#ifndef WIN32
-#  undef JNIEXPORT
-#  define JNIEXPORT __attribute__ ((visibility("default")))
-#endif
-
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_util_zip_Inflater_make
 (JNIEnv* e, jclass, jboolean nowrap)

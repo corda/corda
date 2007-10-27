@@ -34,9 +34,6 @@
 #  define CREAT creat
 #  define UNLINK unlink
 #  define OPEN_MASK 0
-
-#  undef JNIEXPORT
-#  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif
 
 namespace {
