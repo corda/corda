@@ -376,10 +376,11 @@ postCollect(Thread* t)
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
-  static const unsigned Size = 256;
+  const int Size = 256;
   char buffer[Size];
   
-  vsnprintf(buffer, Size - 1, format, a);
+  int r = vsnprintf(buffer, Size - 1, format, a);
+  expect(t, r >= 0 and r < Size - 1);
 
   object s = makeByteArray(t, strlen(buffer) + 1, false);
   memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
