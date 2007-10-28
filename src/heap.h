@@ -35,17 +35,20 @@ class Heap {
    public:
     virtual ~Client() { }
     virtual void visitRoots(Visitor*) = 0;
-    virtual bool checkFixed(void*) = 0;
+    virtual bool isFixed(void*) = 0;
+    virtual unsigned sizeInWords(void*) = 0;
     virtual unsigned copiedSizeInWords(void*) = 0;
     virtual void copy(void*, void*) = 0;
     virtual void walk(void*, Walker*) = 0;
+    virtual void dispose() = 0;
   };
 
   virtual ~Heap() { }
-  virtual void collect(CollectionType type, Client* client, unsigned footprint)
-  = 0;
+  virtual void collect(CollectionType type, unsigned footprint) = 0;
+  virtual void* allocateFixed(unsigned sizeInWords, bool objectMask,
+                              unsigned* totalInBytes) = 0;
   virtual bool needsMark(void* p) = 0;
-  virtual void mark(void* p) = 0;
+  virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p, unsigned extra) = 0;
   virtual void* follow(void* p) = 0;
   virtual Status status(void* p) = 0;
@@ -53,7 +56,7 @@ class Heap {
   virtual void dispose() = 0;
 };
 
-Heap* makeHeap(System* system);
+Heap* makeHeap(System* system, Heap::Client* client);
 
 } // namespace vm
 

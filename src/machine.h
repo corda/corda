@@ -34,13 +34,6 @@ const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
 const uintptr_t FixedMark = 3;
 
-const unsigned FixedAge = 0;
-const unsigned FixedMarked = 1;
-const unsigned FixedDirty = 2;
-const unsigned FixedHandle = BytesPerWord;
-const unsigned FixedNext = BytesPerWord * 2;
-const unsigned FixedFootprint = BytesPerWord * 3;
-
 enum FieldCode {
   VoidField,
   ByteField,
@@ -1116,13 +1109,15 @@ class Machine {
     ActiveState
   };
 
-  Machine(System* system, Heap* heap, Finder* finder, Processor* processor);
+  Machine(System* system, Finder* finder, Processor* processor);
 
   ~Machine() { 
     dispose();
   }
 
   static const unsigned HeapPoolSize = 8;
+
+  static const unsigned FixedFootprintThresholdInBytes = 256 * 1024;
 
   void dispose();
 
@@ -1137,6 +1132,7 @@ class Machine {
   const char* builtins;
   unsigned activeCount;
   unsigned liveCount;
+  unsigned fixedFootprint;
   System::Local* localThread;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
@@ -1154,11 +1150,6 @@ class Machine {
   object finalizeQueue;
   object weakReferences;
   object tenuredWeakReferences;
-  object fixies;
-  object tenuredFixies;
-  object dirtyFixies;
-  object markedFixies;
-  object visitedFixies;
   bool unsafe;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
@@ -1174,9 +1165,6 @@ threadInterrupted(Thread* t, object thread);
 
 void
 enterActiveState(Thread* t);
-
-void
-visit(Thread* t, Heap::Visitor* v, object* p);
 
 class Thread {
  public:
@@ -1211,7 +1199,7 @@ class Thread {
     SingleProtector(Thread* t, object* p): Protector(t), p(p) { }
 
     virtual void visit(Heap::Visitor* v) {
-      vm::visit(t, v, p);
+      v->visit(p);
     }
 
     object* p;
@@ -1266,7 +1254,6 @@ class Thread {
   Thread* peer;
   Thread* child;
   State state;
-  bool allocatedLarge;
   unsigned criticalLevel;
   System::Thread* systemThread;
   object javaThread;
@@ -1422,10 +1409,7 @@ expect(Thread* t, bool v)
 }
 
 object
-allocateFixed(Thread* t, unsigned sizeInBytes, bool objectMask);
-
-object
-allocate2(Thread* t, unsigned sizeInBytes, bool objectMask);
+allocate2(Thread* t, unsigned sizeInBytes, bool objectMask, bool fixed);
 
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
@@ -1445,17 +1429,27 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
                >= Thread::HeapSizeInWords
                or t->m->exclusive))
   {
-    return allocate2(t, sizeInBytes, objectMask);
+    return allocate2(t, sizeInBytes, objectMask,
+                     sizeInBytes > Thread::HeapSizeInBytes);
   } else {
     return allocateSmall(t, sizeInBytes);
   }
 }
 
-void
-mark(Thread* t, object target, unsigned offset);
+inline void
+mark(Thread* t, object o, unsigned offset, unsigned count)
+{
+  if (t->m->heap->needsMark(o)) {
+    ACQUIRE_RAW(t, t->m->heapLock);
+    t->m->heap->mark(o, offset / BytesPerWord, count);
+  }
+}
 
-void
-mark(Thread* t, object target, unsigned offset, unsigned count);
+inline void
+mark(Thread* t, object o, unsigned offset)
+{
+  mark(t, o, offset, 1);
+}
 
 inline void
 set(Thread* t, object target, unsigned offset, object value)
@@ -1503,95 +1497,6 @@ baseSize(Thread* t, object o, object class_)
     + ceiling(classArrayElementSize(t, class_)
               * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
               BytesPerWord);
-}
-
-inline void*
-fixedStart(Thread* t UNUSED, object o)
-{
-  assert(t, objectFixed(t, o));
-  return &cast<object>(o, - FixedFootprint);
-}
-
-inline uint8_t&
-fixedAge(Thread* t UNUSED, object o)
-{
-  assert(t, objectFixed(t, o));
-  return cast<uint8_t>(o, - (FixedFootprint - FixedAge));
-}
-
-inline uint8_t&
-fixedMarked(Thread* t UNUSED, object o)
-{
-  assert(t, objectFixed(t, o));
-  return cast<uint8_t>(o, - (FixedFootprint - FixedMarked));
-}
-
-inline uint8_t&
-fixedDirty(Thread* t UNUSED, object o)
-{
-  assert(t, objectFixed(t, o));
-  return cast<uint8_t>(o, - (FixedFootprint - FixedDirty));
-}
-
-inline object*&
-fixedHandle(Thread* t UNUSED, object o)
-{
-  assert(t, objectFixed(t, o));
-  return cast<object*>(o, - (FixedFootprint - FixedHandle));
-}
-
-inline object&
-fixedNext(Thread* t UNUSED, object o)
-{
-  assert(t, objectFixed(t, o));
-  return cast<object>(o, - (FixedFootprint - FixedNext));
-}
-
-inline void
-fixedAdd(Thread* t, object o, object* handle)
-{
-//   fprintf(stderr, "add %p to %s\n", o,
-//           handle == &(t->m->fixies) ? "fixies" :
-//           handle == &(t->m->tenuredFixies) ? "tenured" :
-//           handle == &(t->m->dirtyFixies) ? "dirty" :
-//           handle == &(t->m->markedFixies) ? "marked" :
-//           handle == &(t->m->visitedFixies) ? "visited" : "unknown");
-
-  fixedHandle(t, o) = handle;
-  fixedNext(t, o) = *handle;
-  if (*handle) {
-    fixedHandle(t, *handle) = &fixedNext(t, o);
-  }
-  *handle = o;
-}
-
-inline void
-fixedRemove(Thread* t, object o)
-{
-  *fixedHandle(t, o) = fixedNext(t, o);
-  if (fixedNext(t, o)) {
-    fixedHandle(t, fixedNext(t, o)) = fixedHandle(t, o);
-  }
-}
-
-inline void
-fixedMove(Thread* t, object o, object* handle)
-{
-  fixedRemove(t, o);
-  fixedAdd(t, o, handle);
-}
-
-inline uintptr_t*
-fixedMask(Thread* t UNUSED, object o, unsigned size)
-{
-  assert(t, objectFixed(t, o));
-  return &cast<uintptr_t>(o, size * BytesPerWord);
-}
-
-inline uintptr_t*
-fixedMask(Thread* t, object o)
-{
-  return fixedMask(t, o, baseSize(t, o, objectClass(t, o)));
 }
 
 object

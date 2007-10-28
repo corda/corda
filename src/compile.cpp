@@ -674,7 +674,7 @@ class StackMapper {
     MyProtector(StackMapper* mapper): Protector(mapper->t), mapper(mapper) { }
 
     virtual void visit(Heap::Visitor* v) {
-      vm::visit(t, v, &(mapper->method));
+      v->visit(&(mapper->method));
     }
 
     StackMapper* mapper;
@@ -1073,14 +1073,14 @@ visitParameters(MyThread* t, Heap::Visitor* v, void* frame)
 
   unsigned index = 0;
   if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-    visit(t, v, frameLocalObject(t, frame, index++));        
+    v->visit(frameLocalObject(t, frame, index++));        
   }
 
   for (MethodSpecIterator it(t, spec); it.hasNext();) {
     switch (*it.next()) {
     case 'L':
     case '[':
-      visit(t, v, frameLocalObject(t, frame, index++));
+      v->visit(frameLocalObject(t, frame, index++));
       break;
       
     case 'J':
@@ -1122,7 +1122,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame)
 
     for (unsigned i = 0; i < count; ++i) {
       if (getBit(stackMap, i)) {
-        visit(t, v, frameLocalObject(t, frame, i + parameterFootprint));
+        v->visit(frameLocalObject(t, frame, i + parameterFootprint));
       }
     }
   }
@@ -1134,7 +1134,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
   void* frame = frameStart(t);
 
   if (frameValid(frame)) {
-    visit(t, v, &frameMethod(frame));
+    v->visit(&frameMethod(frame));
   }
 
   for (; frameValid(frame); frame = frameNext(frame)) {
@@ -1142,7 +1142,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
     // caller is native.  Otherwise, the caller owns them.
     void* next = frameNext(frame);
     if (frameValid(next)) {
-      visit(t, v, &frameMethod(next));
+      v->visit(&frameMethod(next));
       
       if (methodFlags(t, frameMethod(next)) & ACC_NATIVE) {
         visitParameters(t, v, frame);
@@ -4573,10 +4573,10 @@ class JavaCompiler: public Compiler {
     MyProtector(JavaCompiler* c): Protector(c->t), c(c) { }
 
     virtual void visit(Heap::Visitor* v) {
-      vm::visit(t, v, &(c->method));
+      v->visit(&(c->method));
 
       for (unsigned i = 0; i < c->pool.length(); i += BytesPerWord) {
-        vm::visit(t, v, reinterpret_cast<object*>(&(c->pool.getAddress(i))));
+        v->visit(reinterpret_cast<object*>(&(c->pool.getAddress(i))));
       }
     }
 
@@ -4799,7 +4799,7 @@ class ArgumentList {
     virtual void visit(Heap::Visitor* v) {
       for (unsigned i = 0; i < list->position; ++i) {
         if (list->objectMask[i]) {
-          vm::visit(t, v, reinterpret_cast<object*>(list->array + i));
+          v->visit(reinterpret_cast<object*>(list->array + i));
         }
       }
     }
@@ -4984,7 +4984,7 @@ class MyProcessor: public Processor {
 
     if (t->m->active) {
       for (Reference* r = t->reference; r; r = r->next) {
-        visit(t, v, &(r->target));
+        v->visit(&(r->target));
       }
 
       visitStack(t, v);

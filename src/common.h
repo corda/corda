@@ -232,10 +232,6 @@ bitsToFloat(uint32_t bits)
   return f;
 }
 
-// an object must survive TenureThreshold + 2 garbage collections
-// before being copied to gen2 (muat be at least 1):
-const unsigned TenureThreshold = 3;
-
 class Machine;
 class Thread;
 

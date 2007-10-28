@@ -6,6 +6,12 @@ using namespace vm;
 
 namespace {
 
+// an object must survive TenureThreshold + 2 garbage collections
+// before being copied to gen2 (muat be at least 1):
+const unsigned TenureThreshold = 3;
+
+const unsigned FixieTenureThreshold = TenureThreshold + 2;
+
 const unsigned Top = ~static_cast<unsigned>(0);
 
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
@@ -381,11 +387,77 @@ class Segment {
   }
 };
 
+class Fixie {
+ public:
+  Fixie(unsigned size, bool hasMask, Fixie** handle):
+    age(0),
+    hasMask(hasMask),
+    marked(false),
+    dirty(false)
+  {
+    memset(mask(size), 0, maskSize(size, hasMask));
+    add(handle);
+    if (Debug) {
+      fprintf(stderr, "make %p\n", this);
+    }
+  }
+
+  void add(Fixie** handle) {
+    this->handle = handle;
+    next = *handle;
+    if (next) next->handle = &next;
+    *handle = this;
+  }
+
+  void remove() {
+    *handle = next;
+    if (next) next->handle = handle;
+  }
+
+  void move(Fixie** handle) {
+    remove();
+    add(handle);
+  }
+
+  uintptr_t* mask(unsigned size) {
+    return body + size;
+  }
+
+  static unsigned maskSize(unsigned size, bool hasMask) {
+    return hasMask * ceiling(size, BytesPerWord) * BytesPerWord;
+  }
+
+  static unsigned totalSize(unsigned size, bool hasMask) {
+    return sizeof(Fixie) + (size * BytesPerWord) + maskSize(size, hasMask);
+  }
+
+  unsigned totalSize(unsigned size) {
+    return totalSize(size, hasMask);
+  }
+
+  uint8_t age;
+  bool hasMask;
+  bool marked;
+  bool dirty;
+  Fixie* next;
+  Fixie** handle;
+  uintptr_t body[0];
+};
+
+Fixie*
+fixie(void* body)
+{
+  return static_cast<Fixie*>(body) - 1;
+}
+
+void
+free(Context* c, Fixie** fixies);
+
 class Context {
  public:
-  Context(System* system):
+  Context(System* system, Heap::Client* client):
     system(system),
-    client(0),
+    client(client),
 
     ageMap(&gen1, log(TenureThreshold), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
@@ -406,9 +478,16 @@ class Context {
 
     gen2Base(0),
     tenureFootprint(0),
+    fixieTenureFootprint(0),
     gen1padding(0),
     gen2padding(0),
     mode(Heap::MinorCollection),
+
+    fixies(0),
+    tenuredFixies(0),
+    dirtyFixies(0),
+    markedFixies(0),
+    visitedFixies(0),
 
     lastCollectionTime(system->now()),
     totalCollectionTime(0),
@@ -420,6 +499,10 @@ class Context {
     nextGen1.dispose();
     gen2.dispose();
     nextGen2.dispose();
+    free(this, &tenuredFixies);
+    free(this, &dirtyFixies);
+    free(this, &fixies);
+    client->dispose();
   }
 
   System* system;
@@ -444,10 +527,17 @@ class Context {
   unsigned gen2Base;
   
   unsigned tenureFootprint;
+  unsigned fixieTenureFootprint;
   unsigned gen1padding;
   unsigned gen2padding;
 
   Heap::CollectionType mode;
+
+  Fixie* fixies;
+  Fixie* tenuredFixies;
+  Fixie* dirtyFixies;
+  Fixie* markedFixies;
+  Fixie* visitedFixies;
 
   int64_t lastCollectionTime;
   int64_t totalCollectionTime;
@@ -568,6 +658,62 @@ bitset(Context* c UNUSED, void* o)
   return &cast<uintptr_t>(o, BytesPerWord * 2);
 }
 
+void
+free(Context* c, Fixie** fixies)
+{
+  for (Fixie** p = fixies; *p;) {
+    Fixie* f = *p;
+    *p = f->next;
+    if (Debug) {
+      fprintf(stderr, "free %p\n", f);
+    }
+    c->system->free(f);
+  }
+}
+
+void
+sweepFixies(Context* c)
+{
+  assert(c, c->markedFixies == 0);
+
+  if (c->mode == Heap::MajorCollection) {
+    free(c, &(c->tenuredFixies));
+    free(c, &(c->dirtyFixies));    
+  }
+  free(c, &(c->fixies));
+
+  for (Fixie** p = &(c->visitedFixies); *p;) {
+    Fixie* f = *p;
+    *p = f->next;
+
+    unsigned size = c->client->sizeInWords(f->body);
+
+    ++ f->age;
+    if (f->age > FixieTenureThreshold) {
+      f->age = FixieTenureThreshold;
+    } else if (static_cast<unsigned>(f->age + 1) == FixieTenureThreshold) {
+      c->fixieTenureFootprint += f->totalSize(size);
+    }
+
+    if (f->age == FixieTenureThreshold) {
+      if (Debug) {
+        fprintf(stderr, "tenure %p\n", f);
+      }
+      f->move(&(c->tenuredFixies));
+
+      if (f->dirty) {
+        uintptr_t* mask = f->mask(size);
+        memset(mask, 0, ceiling(size, BytesPerWord) * BytesPerWord); 
+        f->dirty = false; 
+      }
+    } else {
+      f->move(&(c->fixies));
+    }
+
+    f->marked = false;
+  }
+}
+
 inline void*
 copyTo(Context* c, Segment* s, void* o, unsigned size)
 {
@@ -644,7 +790,18 @@ update3(Context* c, void* o, bool* needsVisit)
   if (wasCollected(c, o)) {
     *needsVisit = false;
     return follow(c, o);
-  } else if (c->client->checkFixed(o)) {
+  } else if (c->client->isFixed(o)) {
+    Fixie* f = fixie(o);
+    if ((not f->marked)
+        and (c->mode == Heap::MajorCollection
+             or f->age < FixieTenureThreshold))
+    {
+      if (Debug) {
+        fprintf(stderr, "mark %p\n", f);
+      }
+      f->marked = true;
+      f->move(&(c->markedFixies));
+    }
     *needsVisit = false;
     return o;
   } else {
@@ -993,6 +1150,64 @@ collect(Context* c, void** p)
 }
 
 void
+visitDirtyFixies(Context* c)
+{
+  for (Fixie** p = &(c->dirtyFixies); *p;) {
+    Fixie* f = *p;
+    *p = f->next;
+
+    unsigned size = c->client->sizeInWords(f->body);
+    uintptr_t* mask = f->mask(size);
+    for (unsigned word = 0; word < wordOf(size); ++ word) {
+      if (mask[word]) {
+        for (unsigned bit = 0; bit < bitOf(size); ++ bit) {
+          unsigned index = indexOf(word, bit);
+          if (getBit(mask, index)) {
+            collect(c, reinterpret_cast<void**>(f->body) + index);
+          }
+        }
+      }
+    }
+    
+    memset(mask, 0, ceiling(size, BytesPerWord) * BytesPerWord);
+    f->dirty = false;
+    f->move(&(c->tenuredFixies));
+  }
+}
+
+void
+visitMarkedFixies(Context* c)
+{
+  for (Fixie** p = &(c->markedFixies); *p;) {
+    Fixie* f = *p;
+    *p = f->next;
+
+    if (Debug) {
+      fprintf(stderr, "visit %p\n", f);
+    }
+
+    class Walker: public Heap::Walker {
+     public:
+      Walker(Context* c, void** p):
+        c(c), p(p)
+      { }
+
+      virtual bool visit(unsigned offset) {
+        collect(c, p + offset);
+        return true;
+      }
+
+      Context* c;
+      void** p;
+    } w(c, reinterpret_cast<void**>(f->body));
+
+    c->client->walk(reinterpret_cast<void**>(f->body), &w);
+
+    f->move(&(c->visitedFixies));
+  }  
+}
+
+void
 collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
         bool* dirty, bool expectDirty UNUSED)
 {
@@ -1038,6 +1253,7 @@ collect2(Context* c)
 {
   c->gen2Base = Top;
   c->tenureFootprint = 0;
+  c->fixieTenureFootprint = 0;
   c->gen1padding = 0;
   c->gen2padding = 0;
 
@@ -1048,12 +1264,17 @@ collect2(Context* c)
     collect(c, &(c->heapMap), start, end, &dirty, false);
   }
 
+  if (c->mode == Heap::MinorCollection) {
+    visitDirtyFixies(c);
+  }
+
   class Visitor : public Heap::Visitor {
    public:
     Visitor(Context* c): c(c) { }
 
     virtual void visit(void* p) {
       collect(c, static_cast<void**>(p));
+      visitMarkedFixies(c);
     }
 
     Context* c;
@@ -1065,7 +1286,9 @@ collect2(Context* c)
 void
 collect(Context* c, unsigned footprint)
 {
-  if (c->tenureFootprint > c->gen2.remaining()) {
+  if (c->tenureFootprint > c->gen2.remaining()
+      or c->fixieTenureFootprint)
+  {
     c->mode = Heap::MajorCollection;
   }
 
@@ -1092,6 +1315,8 @@ collect(Context* c, unsigned footprint)
     c->gen2.replaceWith(&(c->nextGen2));
   }
 
+  sweepFixies(c);
+
   if (Verbose) {
     int64_t now = c->system->now();
     int64_t collection = now - then;
@@ -1114,32 +1339,61 @@ collect(Context* c, unsigned footprint)
 
 class MyHeap: public Heap {
  public:
-  MyHeap(System* system): c(system) { }
+  MyHeap(System* system, Heap::Client* client): c(system, client) { }
 
-  virtual void collect(CollectionType type, Client* client, unsigned footprint)
-  {
+  virtual void collect(CollectionType type, unsigned footprint) {
     c.mode = type;
-    c.client = client;
 
     ::collect(&c, footprint);
   }
 
-  virtual bool needsMark(void* p) {
-    return *static_cast<void**>(p)
-      and c.gen2.contains(p)
-      and not c.gen2.contains(*static_cast<void**>(p));
+  virtual void* allocateFixed(unsigned sizeInWords, bool objectMask,
+                              unsigned* totalInBytes)
+  {
+    *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
+    return (new (c.system->allocate(*totalInBytes))
+            Fixie(sizeInWords, objectMask, &(c.fixies)))->body;
   }
 
-  virtual void mark(void* p) {
-    if (Debug) {        
-      fprintf(stderr, "mark %p (%s) at %p (%s)\n",
-              *static_cast<void**>(p),
-              segment(&c, *static_cast<void**>(p)),
-              p,
-              segment(&c, p));
+  virtual bool needsMark(void* p) {
+    if (c.client->isFixed(p)) {
+      return fixie(p)->age == FixieTenureThreshold;
+    } else {
+      return c.gen2.contains(p);
     }
+  }
 
-    c.heapMap.set(p);
+  bool targetNeedsMark(void* target) {
+    return target
+      and not c.gen2.contains(target)
+      and not (c.client->isFixed(target)
+               and fixie(target)->age == FixieTenureThreshold);
+  }
+
+  virtual void mark(void* p, unsigned offset, unsigned count) {
+    if (c.client->isFixed(p)) {
+      Fixie* f = fixie(p);
+      unsigned size = c.client->sizeInWords(p);
+
+      for (unsigned i = 0; i < count; ++i) {
+        void** target = static_cast<void**>(p) + offset + i;
+        if (targetNeedsMark(*target)) {
+          f->dirty = true;
+          markBit(f->mask(size), offset + i);
+        }
+      }
+
+      if (f->dirty) {
+        f->move(&(c.dirtyFixies));
+      }
+    } else {
+      for (unsigned i = 0; i < count; ++i) {
+        void** target = static_cast<void**>(p) + offset + i;
+        if (targetNeedsMark(*target)) {
+          c.heapMap.set(target);
+        }
+      }
+    }
   }
 
   virtual void pad(void* p, unsigned extra) {
@@ -1207,9 +1461,9 @@ class MyHeap: public Heap {
 namespace vm {
 
 Heap*
-makeHeap(System* system)
+makeHeap(System* system, Heap::Client* client)
 {  
-  return new (system->allocate(sizeof(MyHeap))) MyHeap(system);
+  return new (system->allocate(sizeof(MyHeap))) MyHeap(system, client);
 }
 
 } // namespace vm

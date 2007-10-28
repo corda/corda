@@ -22,7 +22,6 @@ DestroyJavaVM(Machine* m)
 {
   System* s = m->system;
   Processor* p = m->processor;
-  Heap* h = m->heap;
   Finder* f = m->finder;
   Thread* t = m->rootThread;
 
@@ -32,7 +31,6 @@ DestroyJavaVM(Machine* m)
 
   m->dispose();
   p->dispose();
-  h->dispose();
   f->dispose();
   s->dispose();
 
@@ -1884,10 +1882,9 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
            BUILTIN_CLASSPATH, s->pathSeparator(), a->classpath);
 
   Finder* f = makeFinder(s, classpath);
-  Heap* h = makeHeap(s);
   Processor* p = makeProcessor(s);
 
-  *m = new (s->allocate(sizeof(Machine))) Machine(s, h, f, p);
+  *m = new (s->allocate(sizeof(Machine))) Machine(s, f, p);
 
   if (a->properties) {
     for (const char** p = a->properties; *p; ++p) {
