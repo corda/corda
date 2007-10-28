@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Hello.class
+input = $(test-build)/Enums.class
 
 build-cxx = g++
 build-cc = gcc
@@ -192,11 +192,11 @@ ifeq ($(platform),darwin)
 	classpath-object =
 endif
 
-test-sources = $(shell find $(test) -name '*.java')
+test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
-class-names = $(foreach x,$(1),$(call class-name,$(x)))
+class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
 flags = -cp $(test-build)
 args = $(flags) $(call class-name,$(test-build),$(input))
@@ -204,7 +204,15 @@ args = $(flags) $(call class-name,$(test-build),$(input))
 .PHONY: build
 build: $(interpreter) $(archive) $(classpath-classes) $(test-classes)
 
-$(input): $(classpath-classes)
+.PHONY: classes
+classes:
+	@mkdir -p $(classpath-build)
+	$(javac) -d $(classpath-build) -bootclasspath $(classpath) \
+		$(classpath-sources)
+	@mkdir -p $(test-build)
+	$(javac) -d $(test-build) -bootclasspath $(classpath-build) $(test-sources)
+
+$(test-classes): $(classpath-classes)
 
 .PHONY: run
 run: build
@@ -221,7 +229,8 @@ vg: build
 .PHONY: test
 test: build
 	/bin/bash $(test)/test.sh 2>/dev/null \
-		$(interpreter) $(mode) "$(flags)" $(call class-names,$(test-classes))
+		$(interpreter) $(mode) "$(flags)" \
+		$(call class-names,$(test-build),$(test-classes))
 
 .PHONY: clean
 clean:
@@ -236,7 +245,7 @@ clean-native:
 gen-arg = $(shell echo $(1) | sed -e 's:$(native-build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator)
 	@echo "generating $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
+	@mkdir -p $(dir $(@))
 	$(generator) $(call gen-arg,$(@)) < $(<) > $(@)
 
 $(native-build)/type-generator.o: \
@@ -244,7 +253,7 @@ $(native-build)/type-generator.o: \
 
 define compile-class
 	@echo "compiling $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
+	@mkdir -p $(dir $(@))
 	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
 		-d $(1) $(<)
 	@touch $(@)
@@ -252,21 +261,21 @@ endef
 
 $(classpath-build)/%.class: $(classpath)/%.java
 	@echo "compiling $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
+	@mkdir -p $(dir $(@))
 	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
 		-d $(classpath-build) $(<)
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
 	@echo "compiling $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
+	@mkdir -p $(dir $(@))
 	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
 		-d $(test-build) $(<)
 	@touch $(@)
 
 define compile-object
 	@echo "compiling $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
+	@mkdir -p $(dir $(@))
 	$(cxx) $(cflags) -c $(<) -o $(@)
 endef
 
@@ -293,12 +302,12 @@ $(classpath-object): $(build)/classpath.jar
 
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
+	@mkdir -p $(dir $(@))
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) $(build-cflags) -c $(<) -o $(@)
 
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"
-	@mkdir -p -m 1777 $(dir $(@))
+	@mkdir -p $(dir $(@))
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
 $(archive): $(interpreter-objects) $(jni-objects) $(classpath-object)

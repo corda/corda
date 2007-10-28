@@ -35,7 +35,7 @@ class Heap {
    public:
     virtual ~Client() { }
     virtual void visitRoots(Visitor*) = 0;
-    virtual unsigned sizeInWords(void*) = 0;
+    virtual bool checkFixed(void*) = 0;
     virtual unsigned copiedSizeInWords(void*) = 0;
     virtual void copy(void*, void*) = 0;
     virtual void walk(void*, Walker*) = 0;

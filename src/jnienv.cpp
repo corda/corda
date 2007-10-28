@@ -24,8 +24,11 @@ DestroyJavaVM(Machine* m)
   Processor* p = m->processor;
   Heap* h = m->heap;
   Finder* f = m->finder;
+  Thread* t = m->rootThread;
 
-  int exitCode = (m->rootThread->exception ? -1 : 0);
+  int exitCode = (t->exception ? -1 : 0);
+  enter(t, Thread::ActiveState);
+  t->exit();
 
   m->dispose();
   p->dispose();
@@ -1859,7 +1862,7 @@ extern "C" JNIEXPORT jint JNICALL
 JNI_GetDefaultJavaVMInitArgs(void* args)
 {
   JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
-  a->maxHeapSize = 128 * 1024 * 1024;
+  a->maxHeapSize = 64 * 1024 * 1024;
   a->classpath = ".";
   a->properties = 0;
   return 0;

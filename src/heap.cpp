@@ -6,10 +6,6 @@ using namespace vm;
 
 namespace {
 
-// an object must survive TenureThreshold + 2 garbage collections
-// before being copied to gen2 (muat be at least 1):
-const unsigned TenureThreshold = 3;
-
 const unsigned Top = ~static_cast<unsigned>(0);
 
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
@@ -648,6 +644,9 @@ update3(Context* c, void* o, bool* needsVisit)
   if (wasCollected(c, o)) {
     *needsVisit = false;
     return follow(c, o);
+  } else if (c->client->checkFixed(o)) {
+    *needsVisit = false;
+    return o;
   } else {
     *needsVisit = true;
     return copy(c, o);

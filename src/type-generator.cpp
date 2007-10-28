@@ -1284,6 +1284,25 @@ writeAccessors(Output* out, Object* declarations)
   }
 }
 
+unsigned
+typeFixedSize(Object* type)
+{
+  unsigned length = BytesPerWord;
+  for (MemberIterator it(type); it.hasMore();) {
+    Object* m = it.next();
+    switch (m->type) {
+    case Object::Scalar: {
+      length = pad(it.offset() + it.size());
+    } break;
+
+    case Object::Array: break;
+
+    default: UNREACHABLE;
+    }
+  }
+  return length;
+}
+
 const char*
 obfuscate(const char* s)
 {
@@ -1317,6 +1336,26 @@ writeConstructorParameters(Output* out, Object* t)
 
     case Object::Array: {
       out->write(", bool clear");
+    } break;
+            
+    default: break;
+    }    
+  }
+}
+
+void
+writeConstructorArguments(Output* out, Object* t)
+{
+  for (MemberIterator it(t); it.hasMore();) {
+    Object* m = it.next();
+    switch (m->type) {
+    case Object::Scalar: {
+      out->write(", ");
+      out->write(obfuscate(memberName(m)));
+    } break;
+
+    case Object::Array: {
+      out->write(", clear");
     } break;
             
     default: break;
@@ -1362,6 +1401,28 @@ typeMemberCount(Object* o)
 }
 
 void
+writeInitializerDeclarations(Output* out, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    switch (o->type) {
+    case Object::Type: {
+      out->write("void init");
+      out->write(capitalize(typeName(o)));
+      if (typeHideConstructor(o)) out->write("0");
+      out->write("(Thread* t, object o");
+      
+      writeConstructorParameters(out, o);
+
+      out->write(");\n\n");
+    } break;
+
+    default: break;
+    }
+  }
+}
+
+void
 writeConstructorDeclarations(Output* out, Object* declarations)
 {
   for (Object* p = declarations; p; p = cdr(p)) {
@@ -1384,13 +1445,44 @@ writeConstructorDeclarations(Output* out, Object* declarations)
 }
 
 void
+writeInitializers(Output* out, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    switch (o->type) {
+    case Object::Type: {
+      out->write("void\ninit");
+      out->write(capitalize(typeName(o)));
+      if (typeHideConstructor(o)) out->write("0");
+      out->write("(Thread* t, object o");
+      
+      writeConstructorParameters(out, o);
+
+      out->write(")\n{\n");
+
+      out->write("  setObjectClass(t, o, ");
+      out->write("arrayBody(t, t->m->types, Machine::");
+      out->write(capitalize(typeName(o)));
+      out->write("Type));\n");
+
+      writeConstructorInitializations(out, o);
+
+      out->write("}\n\n");
+    } break;
+
+    default: break;
+    }
+  }
+}
+
+void
 writeConstructors(Output* out, Object* declarations)
 {
   for (Object* p = declarations; p; p = cdr(p)) {
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
-      out->write("object\nmake");
+      out->write("object make");
       out->write(capitalize(typeName(o)));
       if (typeHideConstructor(o)) out->write("0");
       out->write("(Thread* t");
@@ -1399,14 +1491,18 @@ writeConstructors(Output* out, Object* declarations)
 
       out->write(")\n{\n");
 
+      bool hasObjectMask = false;
       for (MemberIterator it(o); it.hasMore();) {
         Object* m = it.next();
         if (m->type == Object::Scalar
-            and equal(memberTypeName(m), "object"))
+            and equal(memberTypeName(m), "object")
+            and not memberNoGC(m))
         {
           out->write("  PROTECT(t, ");
           out->write(obfuscate(memberName(m)));
           out->write(");\n");
+
+          hasObjectMask = true;
         }
       }
 
@@ -1438,14 +1534,19 @@ writeConstructors(Output* out, Object* declarations)
 
       out->write("  object o = allocate(t, ");
       writeOffset(out, typeOffset(o), true);
+      if (hasObjectMask) {
+        out->write(", true");
+      } else {
+        out->write(", false");
+      }
       out->write(");\n");
 
-      out->write("  cast<object>(o, 0) ");
-      out->write("= arrayBody(t, t->m->types, Machine::");
+      out->write("  init");
       out->write(capitalize(typeName(o)));
-      out->write("Type);\n");
-
-      writeConstructorInitializations(out, o);
+      if (typeHideConstructor(o)) out->write("0");
+      out->write("(t, o");
+      writeConstructorArguments(out, o);
+      out->write(");\n");
 
       out->write("  return o;\n}\n\n");
     } break;
@@ -1500,25 +1601,6 @@ set(uint32_t* mask, unsigned index)
   } else {
     UNREACHABLE;
   }
-}
-
-unsigned
-typeFixedSize(Object* type)
-{
-  unsigned length = BytesPerWord;
-  for (MemberIterator it(type); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: {
-      length = pad(it.offset() + it.size());
-    } break;
-
-    case Object::Array: break;
-
-    default: UNREACHABLE;
-    }
-  }
-  return length;
 }
 
 unsigned
@@ -1673,8 +1755,7 @@ writeInitializations(Output* out, Object* declarations)
 
   out->write("t->m->types = allocate(t, pad((");
   out->write(count);
-  out->write(" * BytesPerWord) + (BytesPerWord * 2)));\n");
-  out->write("cast<object>(t->m->types, 0) = 0;\n");
+  out->write(" * BytesPerWord) + (BytesPerWord * 2)), true);\n");
   out->write("arrayLength(t, t->m->types) = ");
   out->write(count);
   out->write(";\n");
@@ -1763,10 +1844,12 @@ main(int ac, char** av)
   if (ac == 1 or equal(av[1], "declarations")) {
     writePods(&out, declarations);
     writeAccessors(&out, declarations);
+    writeInitializerDeclarations(&out, declarations);
     writeConstructorDeclarations(&out, declarations);
   }
 
   if (ac == 1 or equal(av[1], "constructors")) {
+    writeInitializers(&out, declarations);
     writeConstructors(&out, declarations);
   }
   

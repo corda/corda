@@ -2955,11 +2955,11 @@ class MyProcessor: public Processor {
   {
     Thread* t = static_cast<Thread*>(vmt);
 
-    v->visit(&(t->code));
+    visit(t, v, &(t->code));
 
     for (unsigned i = 0; i < t->sp; ++i) {
       if (t->stack[i * 2] == ObjectTag) {
-        v->visit(t->stack + (i * 2) + 1);
+        visit(t, v, reinterpret_cast<object*>(t->stack + (i * 2) + 1));
       }
     }
   }

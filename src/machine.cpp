@@ -115,11 +115,6 @@ footprint(Thread* t)
 {
   unsigned n = t->heapOffset + t->heapIndex;
 
-  if (t->large) {
-    n += extendedSize
-      (t, t->large, baseSize(t, t->large, objectClass(t, t->large)));
-  }
-
   for (Thread* c = t->child; c; c = c->peer) {
     n += footprint(c);
   }
@@ -131,8 +126,8 @@ void
 visitRoots(Thread* t, Heap::Visitor* v)
 {
   if (t->state != Thread::ZombieState) {
-    v->visit(&(t->javaThread));
-    v->visit(&(t->exception));
+    visit(t, v, &(t->javaThread));
+    visit(t, v, &(t->exception));
 
     t->m->processor->visitObjects(t, v);
 
@@ -147,9 +142,75 @@ visitRoots(Thread* t, Heap::Visitor* v)
 }
 
 void
-finalizerTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
+walk(Thread* t, object o, Heap::Walker* w)
 {
-  v->visit(&finalizerTarget(t, *p));
+  object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
+  object objectMask = static_cast<object>
+    (t->m->heap->follow(classObjectMask(t, class_)));
+
+  if (objectMask) {
+    //         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
+    //                 p, class_, objectMask, intArrayLength(t, objectMask));
+
+    unsigned fixedSize = classFixedSize(t, class_);
+    unsigned arrayElementSize = classArrayElementSize(t, class_);
+    unsigned arrayLength
+      = (arrayElementSize ?
+         cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
+
+    int mask[intArrayLength(t, objectMask)];
+    memcpy(mask, &intArrayBody(t, objectMask, 0),
+           intArrayLength(t, objectMask) * 4);
+
+    //         fprintf
+    //           (stderr,
+    //            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
+    //            fixedSize, arrayLength, arrayElementSize, mask[0]);
+
+    unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
+    unsigned arrayElementSizeInWords
+      = ceiling(arrayElementSize, BytesPerWord);
+
+    for (unsigned i = 0; i < fixedSizeInWords; ++i) {
+      if (mask[i / 32] & (static_cast<uintptr_t>(1) << (i % 32))) {
+        if (not w->visit(i)) {
+          return;
+        }
+      }
+    }
+
+    bool arrayObjectElements = false;
+    for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+      unsigned k = fixedSizeInWords + j;
+      if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
+        arrayObjectElements = true;
+        break;
+      }
+    }
+
+    if (arrayObjectElements) {
+      for (unsigned i = 0; i < arrayLength; ++i) {
+        for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+          unsigned k = fixedSizeInWords + j;
+          if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
+            if (not w->visit
+                (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
+            {
+              return;
+            }
+          }
+        }
+      }
+    }
+  } else {
+    w->visit(0);
+  }
+}
+
+void
+finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
+{
+  visit(t, v, &finalizerTarget(t, *p));
 
   object finalizer = *p;
   *p = finalizerNext(t, finalizer);
@@ -158,14 +219,14 @@ finalizerTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 }
 
 void
-referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
+referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 {
   if (DebugReferences) {
     fprintf(stderr, "target %p unreachable for reference %p\n",
             jreferenceTarget(t, *p), *p);
   }
 
-  v->visit(p);
+  visit(t, v, p);
   jreferenceTarget(t, *p) = 0;
 
   if (jreferenceQueue(t, *p)
@@ -173,7 +234,7 @@ referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
   {
     // queue is reachable - add the reference
 
-    v->visit(&jreferenceQueue(t, *p));
+    visit(t, v, &jreferenceQueue(t, *p));
 
     object q = jreferenceQueue(t, *p);
 
@@ -192,7 +253,7 @@ referenceTargetUnreachable(Thread* t, object* p, Heap::Visitor* v)
 }
 
 void
-referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
+referenceUnreachable(Thread* t, Heap::Visitor* v, object* p)
 {
   if (DebugReferences) {
     fprintf(stderr, "reference %p unreachable (target %p)\n",
@@ -203,27 +264,103 @@ referenceUnreachable(Thread* t, object* p, Heap::Visitor* v)
       and t->m->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
   {
     // queue is reachable - add the reference
-    referenceTargetUnreachable(t, p, v);    
+    referenceTargetUnreachable(t, v, p);    
   } else {
     *p = jreferenceNext(t, *p);
   }
 }
 
 void
-referenceTargetReachable(Thread* t, object* p, Heap::Visitor* v)
+referenceTargetReachable(Thread* t, Heap::Visitor* v, object* p)
 {
   if (DebugReferences) {
     fprintf(stderr, "target %p reachable for reference %p\n",
             jreferenceTarget(t, *p), *p);
   }
 
-  v->visit(p);
-  v->visit(&jreferenceTarget(t, *p));
+  visit(t, v, p);
+  visit(t, v, &jreferenceTarget(t, *p));
 
   if (t->m->heap->status(jreferenceQueue(t, *p)) == Heap::Unreachable) {
     jreferenceQueue(t, *p) = 0;
   } else {
-    v->visit(&jreferenceQueue(t, *p));
+    visit(t, v, &jreferenceQueue(t, *p));
+  }
+}
+
+void
+freeFixies(Thread* t, object* fixies)
+{
+  for (object* p = fixies; *p;) {
+    object o = *p;
+    *p = fixedNext(t, o);
+
+    t->m->system->free(fixedStart(t, o));
+  }
+}
+
+void
+sweepFixies(Thread* t)
+{
+  Machine* m = t->m;
+
+  assert(t, m->markedFixies == 0);
+
+  if (m->heap->collectionType() == Heap::MajorCollection) {
+    freeFixies(t, &(m->tenuredFixies));
+    freeFixies(t, &(m->dirtyFixies));    
+  }
+  freeFixies(t, &(m->fixies));
+
+  for (object* p = &(m->visitedFixies); *p;) {
+    object o = *p;
+    *p = fixedNext(t, o);
+
+    fixedAge(t, o) = (fixedAge(t, o) + 1);
+    if (fixedAge(t, o) > TenureThreshold) {
+      fixedAge(t, o) = TenureThreshold;
+    }
+
+    if (fixedAge(t, o) == TenureThreshold) {
+      fixedMove(t, o, &(m->tenuredFixies));
+
+      if (fixedDirty(t, o)) {
+        unsigned size = baseSize(t, o, objectClass(t, o));
+        uintptr_t* mask = fixedMask(t, o, size);
+        memset(mask, 0, ceiling(size, BytesPerWord) * BytesPerWord); 
+        fixedDirty(t, o) = 0; 
+      }
+    } else {
+      fixedMove(t, o, &(m->fixies));
+    }
+
+    fixedMarked(t, o) = 0;
+  }
+}
+
+void
+visitDirtyFixies(Thread* t, Heap::Visitor* v)
+{
+  for (object* p = &(t->m->dirtyFixies); *p;) {
+    object o = *p;
+    *p = fixedNext(t, o);
+
+    unsigned size = baseSize(t, o, objectClass(t, o));
+    uintptr_t* mask = fixedMask(t, o, size);
+    for (unsigned word = 0; word < wordOf(size); ++ word) {
+      if (mask[word]) {
+        for (unsigned bit = 0; bit < bitOf(size); ++ bit) {
+          unsigned index = indexOf(word, bit);
+          if (getBit(mask, index)) {
+            visit(t, v, &cast<object>(o, index));
+          }
+        }
+      }
+    }
+    
+    memset(mask, 0, ceiling(size, BytesPerWord) * BytesPerWord);
+    fixedDirty(t, o) = 0;
+    fixedMove(t, o, &(t->m->tenuredFixies));
   }
 }
 
@@ -231,29 +368,30 @@ void
 postVisit(Thread* t, Heap::Visitor* v)
 {
   Machine* m = t->m;
+  bool major = m->heap->collectionType() == Heap::MajorCollection;
 
   for (object* p = &(m->finalizeQueue); *p; p = &(finalizerNext(t, *p))) {
-    v->visit(p);
-    v->visit(&finalizerTarget(t, *p));
+    visit(t, v, p);
+    visit(t, v, &finalizerTarget(t, *p));
   }
 
   for (object* p = &(m->finalizeQueue); *p; p = &(finalizerNext(t, *p))) {
-    v->visit(p);
-    v->visit(&finalizerTarget(t, *p));
+    visit(t, v, p);
+    visit(t, v, &finalizerTarget(t, *p));
   }
 
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
 
   for (object* p = &(m->finalizers); *p;) {
-    v->visit(p);
+    visit(t, v, p);
 
     if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
       // target is unreachable - queue it up for finalization
-      finalizerTargetUnreachable(t, p, v);
+      finalizerTargetUnreachable(t, v, p);
     } else {
       // target is reachable
-      v->visit(&finalizerTarget(t, *p));
+      visit(t, v, &finalizerTarget(t, *p));
 
       if (m->heap->status(*p) == Heap::Tenured) {
         // the finalizer is tenured, so we remove it from
@@ -279,15 +417,15 @@ postVisit(Thread* t, Heap::Visitor* v)
   for (object* p = &(m->weakReferences); *p;) {
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable
-      referenceUnreachable(t, p, v);
+      referenceUnreachable(t, v, p);
     } else if (m->heap->status(jreferenceTarget(t, *p))
                == Heap::Unreachable)
     {
       // target is unreachable
-      referenceTargetUnreachable(t, p, v);
+      referenceTargetUnreachable(t, v, p);
     } else {
       // both reference and target are reachable
-      referenceTargetReachable(t, p, v);
+      referenceTargetReachable(t, v, p);
 
       if (m->heap->status(*p) == Heap::Tenured) {
         // the reference is tenured, so we remove it from
@@ -308,16 +446,16 @@ postVisit(Thread* t, Heap::Visitor* v)
     }
   }
 
-  if (m->heap->collectionType() == Heap::MajorCollection) {
+  if (major) {
     for (object* p = &(m->tenuredFinalizers); *p;) {
-      v->visit(p);
+      visit(t, v, p);
 
       if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
         // target is unreachable - queue it up for finalization
-        finalizerTargetUnreachable(t, p, v);
+        finalizerTargetUnreachable(t, v, p);
       } else {
         // target is reachable
-        v->visit(&finalizerTarget(t, *p));
+        visit(t, v, &finalizerTarget(t, *p));
         p = &finalizerNext(t, *p);
       }
     }
@@ -325,15 +463,15 @@ postVisit(Thread* t, Heap::Visitor* v)
     for (object* p = &(m->tenuredWeakReferences); *p;) {
       if (m->heap->status(*p) == Heap::Unreachable) {
         // reference is unreachable
-        referenceUnreachable(t, p, v);
+        referenceUnreachable(t, v, p);
       } else if (m->heap->status(jreferenceTarget(t, *p))
                  == Heap::Unreachable)
       {
         // target is unreachable
-        referenceTargetUnreachable(t, p, v);
+        referenceTargetUnreachable(t, v, p);
       } else {
         // both reference and target are reachable
-        referenceTargetReachable(t, p, v);
+        referenceTargetReachable(t, v, p);
         p = &jreferenceNext(t, *p);
       }
     }
@@ -362,11 +500,7 @@ postCollect(Thread* t)
   t->heap = t->defaultHeap;
   t->heapOffset = 0;
   t->heapIndex = 0;
-
-  if (t->large) {
-    t->m->system->free(t->large);
-    t->large = 0;
-  }
+  t->allocatedLarge = false;
 
   for (Thread* c = t->child; c; c = c->peer) {
     postCollect(c);
@@ -1234,7 +1368,8 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   ENTER(t, Thread::ExclusiveState);
 
   classFlags(t, bootstrapClass) = classFlags(t, class_);
-  classVmFlags(t, bootstrapClass) |= classVmFlags(t, class_);
+  classVmFlags(t, bootstrapClass)
+    |= (classVmFlags(t, class_) & ~BootstrapFlag);
 
   set(t, bootstrapClass, ClassSuper, classSuper(t, class_));
   set(t, bootstrapClass, ClassInterfaceTable, classInterfaceTable(t, class_));
@@ -1404,6 +1539,11 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   finalizeQueue(0),
   weakReferences(0),
   tenuredWeakReferences(0),
+  fixies(0),
+  tenuredFixies(0),
+  dirtyFixies(0),
+  markedFixies(0),
+  visitedFixies(0),
   unsafe(false),
   heapPoolIndex(0)
 {
@@ -1438,6 +1578,12 @@ Machine::dispose()
     r = r->next;
     system->free(t);
   }
+
+  for (unsigned i = 0; i < heapPoolIndex; ++i) {
+    system->free(heapPool[i]);
+  }
+
+  system->free(this);
 }
 
 Thread::Thread(Machine* m, object javaThread, Thread* parent):
@@ -1447,11 +1593,11 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   peer((parent ? parent->child : 0)),
   child(0),
   state(NoState),
+  allocatedLarge(false),
   criticalLevel(0),
   systemThread(0),
   javaThread(javaThread),
   exception(0),
-  large(0),
   heapIndex(0),
   heapOffset(0),
   protector(0),
@@ -1479,7 +1625,7 @@ Thread::init()
 
     Thread* t = this;
 
-    t->m->loader = allocate(t, sizeof(void*) * 3);
+    t->m->loader = allocate(t, sizeof(void*) * 3, true);
     memset(t->m->loader, 0, sizeof(void*) * 2);
 
 #include "type-initializations.cpp"
@@ -1589,20 +1735,11 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  if (large) {
-    m->system->free(large);
-    large = 0;
-  }
-
   if (systemThread) {
     systemThread->dispose();
-    systemThread = 0;
   }
 
-#ifdef VM_STRESS
-  m->system->free(heap);
-  heap = 0;
-#endif // VM_STRESS
+  m->system->free(defaultHeap);
 
   m->system->free(this);
 }
@@ -1631,6 +1768,10 @@ exit(Thread* t)
     memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
     function(t, finalizerTarget(t, f));
   }
+
+  freeFixies(t, &(t->m->tenuredFixies));
+  freeFixies(t, &(t->m->dirtyFixies));
+  freeFixies(t, &(t->m->fixies));
 
   disposeAll(t, t->m->rootThread);
 }
@@ -1746,12 +1887,45 @@ enter(Thread* t, Thread::State s)
 }
 
 object
-allocate2(Thread* t, unsigned sizeInBytes)
+allocateFixed(Thread* t, unsigned sizeInBytes, bool objectMask)
 {
-  if (sizeInBytes > Thread::HeapSizeInBytes and t->large == 0) {
-    return allocateLarge(t, sizeInBytes);
+  ENTER(t, Thread::ExclusiveState);
+
+  unsigned mask = objectMask
+    * ceiling(sizeInBytes / BytesPerWord, BytesPerWord)
+    * BytesPerWord;
+  unsigned total = sizeInBytes + FixedFootprint + mask;
+
+  uint8_t* p = static_cast<uint8_t*>(t->m->system->tryAllocate(total));
+  if (p == 0) {
+    collect(t, Heap::MajorCollection);
+
+    p = static_cast<uint8_t*>(t->m->system->allocate(total));
   }
 
+  memset(p + FixedFootprint + sizeInBytes, 0, mask);
+
+  object o = reinterpret_cast<object>(p + FixedFootprint);
+
+  cast<uintptr_t>(o, 0) = FixedMark;
+  fixedAge(t, o) = 0;
+  fixedMarked(t, o) = 0;
+  fixedDirty(t, o) = 0;
+  fixedAdd(t, o, &(t->m->fixies));
+
+  return o;
+}
+
+object
+allocateLarge(Thread* t, unsigned sizeInBytes, bool objectMask)
+{
+  t->allocatedLarge = true;
+  return allocateFixed(t, sizeInBytes, objectMask);
+}
+
+object
+allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
+{
   ACQUIRE_RAW(t, t->m->stateLock);
 
   while (t->m->exclusive and t->m->exclusive != t) {
@@ -1760,11 +1934,14 @@ allocate2(Thread* t, unsigned sizeInBytes)
     ENTER(t, Thread::IdleState);
   }
 
-  if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+  if (sizeInBytes <= Thread::HeapSizeInBytes
+      and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
       >= Thread::HeapSizeInWords)
   {
     t->heap = 0;
-    if (t->large == 0 and t->m->heapPoolIndex < Machine::HeapPoolSize) {
+    if ((not t->allocatedLarge)
+        and t->m->heapPoolIndex < Machine::HeapPoolSize)
+    {
       t->heap = static_cast<uintptr_t*>
         (t->m->system->tryAllocate(Thread::HeapSizeInBytes));
       if (t->heap) {
@@ -1781,7 +1958,7 @@ allocate2(Thread* t, unsigned sizeInBytes)
   }
 
   if (sizeInBytes > Thread::HeapSizeInBytes) {
-    return allocateLarge(t, sizeInBytes);
+    return allocateLarge(t, sizeInBytes, objectMask);
   } else {
     return allocateSmall(t, sizeInBytes);
   }
@@ -2533,38 +2710,53 @@ collect(Thread* t, Heap::CollectionType type)
     Client(Machine* m): m(m) { }
 
     virtual void visitRoots(Heap::Visitor* v) {
-      v->visit(&(m->loader));
-      v->visit(&(m->bootstrapClassMap));
-      v->visit(&(m->monitorMap));
-      v->visit(&(m->stringMap));
-      v->visit(&(m->types));
-      v->visit(&(m->jniInterfaceTable));
+      Thread* t = m->rootThread;
+
+      visit(t, v, &(m->loader));
+      visit(t, v, &(m->bootstrapClassMap));
+      visit(t, v, &(m->monitorMap));
+      visit(t, v, &(m->stringMap));
+      visit(t, v, &(m->types));
+      visit(t, v, &(m->jniInterfaceTable));
 
       for (Reference* r = m->jniReferences; r; r = r->next) {
-        v->visit(&(r->target));
+        visit(t, v, &(r->target));
       }
 
       for (Thread* t = m->rootThread; t; t = t->peer) {
         ::visitRoots(t, v);
       }
 
+      if (m->heap->collectionType() == Heap::MinorCollection) {
+        visitDirtyFixies(t, v);
+      }
+
       postVisit(m->rootThread, v);
     }
 
-    virtual unsigned sizeInWords(void* p) {
+    virtual bool checkFixed(void* p) {
       Thread* t = m->rootThread;
+      object o = static_cast<object>(p);
 
-      object o = static_cast<object>(m->heap->follow(mask(p)));
-
-      return extendedSize
-        (t, o, baseSize(t, o, static_cast<object>
-                        (m->heap->follow(objectClass(t, o)))));
+      if (objectFixed(t, o)) {
+        if ((not fixedMarked(t, o))
+            and m->heap->collectionType() == Heap::MajorCollection
+            or fixedAge(t, o) < TenureThreshold)
+        {
+          fixedMarked(t, o) = 1;
+          fixedMove(t, o, &(m->markedFixies));
+        }
+        return true;
+      } else {
+        return false;
+      }
     }
 
     virtual unsigned copiedSizeInWords(void* p) {
       Thread* t = m->rootThread;
 
       object o = static_cast<object>(m->heap->follow(mask(p)));
+      assert(t, not objectFixed(t, o));
 
       unsigned n = baseSize(t, o, static_cast<object>
                             (m->heap->follow(objectClass(t, o))));
@@ -2580,6 +2772,8 @@ collect(Thread* t, Heap::CollectionType type)
       Thread* t = m->rootThread;
 
       object src = static_cast<object>(m->heap->follow(mask(srcp)));
+      assert(t, not objectFixed(t, src));
+
       object class_ = static_cast<object>
         (m->heap->follow(objectClass(t, src)));
 
@@ -2601,67 +2795,9 @@ collect(Thread* t, Heap::CollectionType type)
       Thread* t = m->rootThread;
 
       object o = static_cast<object>(m->heap->follow(mask(p)));
-      object class_ = static_cast<object>(m->heap->follow(objectClass(t, o)));
-      object objectMask = static_cast<object>
-        (m->heap->follow(classObjectMask(t, class_)));
+      assert(t, not objectFixed(t, o));
 
-      if (objectMask) {
-//         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
-//                 p, class_, objectMask, intArrayLength(t, objectMask));
-
-        unsigned fixedSize = classFixedSize(t, class_);
-        unsigned arrayElementSize = classArrayElementSize(t, class_);
-        unsigned arrayLength
-          = (arrayElementSize ?
-             cast<uintptr_t>(p, fixedSize - BytesPerWord) : 0);
-
-        int mask[intArrayLength(t, objectMask)];
-        memcpy(mask, &intArrayBody(t, objectMask, 0),
-               intArrayLength(t, objectMask) * 4);
-
-//         fprintf
-//           (stderr,
-//            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
-//            fixedSize, arrayLength, arrayElementSize, mask[0]);
-
-        unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
-        unsigned arrayElementSizeInWords
-          = ceiling(arrayElementSize, BytesPerWord);
-
-        for (unsigned i = 0; i < fixedSizeInWords; ++i) {
-          if (mask[i / 32] & (static_cast<uintptr_t>(1) << (i % 32))) {
-            if (not w->visit(i)) {
-              return;
-            }
-          }
-        }
-
-        bool arrayObjectElements = false;
-        for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-          unsigned k = fixedSizeInWords + j;
-          if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
-            arrayObjectElements = true;
-            break;
-          }
-        }
-
-        if (arrayObjectElements) {
-          for (unsigned i = 0; i < arrayLength; ++i) {
-            for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-              unsigned k = fixedSizeInWords + j;
-              if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
-                if (not w->visit
-                    (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
-                {
-                  return;
-                }
-              }
-            }
-          }
-        }
-      } else {
-        w->visit(0);
-      }
+      ::walk(m->rootThread, o, w);
     }
     
    private:
@@ -2687,6 +2823,8 @@ collect(Thread* t, Heap::CollectionType type)
     m->system->free(m->heapPool[i]);
   }
   m->heapPoolIndex = 0;
+
+  sweepFixies(t);
 }
 
 void
@@ -2767,6 +2905,84 @@ makeTrace(Thread* t, uintptr_t start)
   }
 
   return trace;
+}
+
+void
+mark(Thread* t, object o, unsigned offset)
+{
+  if (objectFixed(t, o)) {
+    if (fixedAge(t, o) == TenureThreshold) {
+      ACQUIRE_RAW(t, t->m->heapLock);
+
+      markBit(fixedMask(t, o), offset / BytesPerWord);
+
+      fixedDirty(t, o) = 1;
+      fixedMove(t, o, &(t->m->dirtyFixies));
+    }
+  } else if (t->m->heap->needsMark(&cast<void*>(o, offset))) {
+    ACQUIRE_RAW(t, t->m->heapLock);
+
+    t->m->heap->mark(&cast<void*>(o, offset));
+  }
+}
+
+void
+mark(Thread* t, object o, unsigned offset, unsigned count)
+{
+  if (objectFixed(t, o)) {
+    if (fixedAge(t, o) == TenureThreshold) {
+      ACQUIRE_RAW(t, t->m->heapLock);
+
+      uintptr_t* mask = fixedMask(t, o);
+
+      for (unsigned i = 0; i < count; ++i) {
+        markBit(mask, (offset / BytesPerWord) + i);
+      }
+
+      fixedDirty(t, o) = 1;
+      fixedMove(t, o, &(t->m->dirtyFixies));
+    }
+  } else {
+    ACQUIRE_RAW(t, t->m->heapLock);
+
+    for (unsigned i = 0; i < count; ++i) {
+      unsigned j = offset + (i * BytesPerWord);
+      if (t->m->heap->needsMark(&cast<void*>(o, j))) {
+        t->m->heap->mark(&cast<void*>(o, j));
+      }
+    }
+  }
+}
+
+void
+visit(Thread* t, Heap::Visitor* v, object* p)
+{
+  v->visit(p);
+
+  for (object* p = &(t->m->markedFixies); *p;) {
+    object o = *p;
+    *p = fixedNext(t, o);
+
+    class Walker: public Heap::Walker {
+     public:
+      Walker(Thread* t, Heap::Visitor* v, object o):
+        t(t), v(v), o(o)
+      { }
+
+      virtual bool visit(unsigned offset) {
+        ::visit(t, v, &cast<object>(o, offset * BytesPerWord));
+        return true;
+      }
+
+      Thread* t;
+      Heap::Visitor* v;
+      object o;
+    } w(t, v, o);
+
+    walk(t, o, &w);
+
+    fixedMove(t, o, &(t->m->visitedFixies));
+  }
 }
 
 void

@@ -7,6 +7,33 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 void operator delete(void*) { abort(); }
 
+#ifdef JNI_VERSION_1_6
+// todo: use JavaVMInitArgs instead
+typedef struct JDK1_1InitArgs {
+    jint version;
+
+    char **properties;
+    jint checkSource;
+    jint nativeStackSize;
+    jint javaStackSize;
+    jint minHeapSize;
+    jint maxHeapSize;
+    jint verifyMode;
+    char *classpath;
+
+    jint (JNICALL *vfprintf)(FILE *fp, const char *format, va_list args);
+    void (JNICALL *exit)(jint code);
+    void (JNICALL *abort)(void);
+
+    jint enableClassGC;
+    jint enableVerboseGC;
+    jint disableAsyncGC;
+    jint verbose;
+    jboolean debugging;
+    jint debugPort;
+} JDK1_1InitArgs;
+#endif
+
 namespace {
 
 void
