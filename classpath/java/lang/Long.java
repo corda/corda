@@ -1,6 +1,6 @@
 package java.lang;
 
-public final class Long extends Number {
+public final class Long extends Number implements Comparable<Long> {
   public static final Class TYPE = Class.forCanonicalName("J");
   public static final Long MAX_VALUE = 9223372036854775807l;
 
@@ -20,6 +20,10 @@ public final class Long extends Number {
 
   public static Long valueOf(long value) {
     return new Long(value);
+  }
+
+  public int compareTo(Long o) {
+    return value > o.value ? 1 : (value < o.value ? -1 : 0);
   }
 
   public boolean equals(Object o) {

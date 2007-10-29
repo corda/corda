@@ -1,6 +1,6 @@
 package java.lang;
 
-public final class Byte extends Number {
+public final class Byte extends Number implements Comparable<Byte> {
   public static final Class TYPE = Class.forCanonicalName("B");
 
   private final byte value;
@@ -23,6 +23,10 @@ public final class Byte extends Number {
 
   public String toString() {
     return toString(value);
+  }
+
+  public int compareTo(Byte o) {
+    return value - o.value;
   }
 
   public static String toString(byte v, int radix) {

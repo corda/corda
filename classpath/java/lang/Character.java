@@ -1,6 +1,6 @@
 package java.lang;
 
-public final class Character {
+public final class Character implements Comparable<Character> {
   public static final Class TYPE = Class.forCanonicalName("C");
 
   private final char value;
@@ -11,6 +11,10 @@ public final class Character {
 
   public static Character valueOf(char value) {
     return new Character(value);
+  }
+
+  public int compareTo(Character o) {
+    return value - o.value;
   }
 
   public boolean equals(Object o) {

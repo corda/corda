@@ -1,6 +1,6 @@
 package java.lang;
 
-public final class Boolean {
+public final class Boolean implements Comparable<Boolean> {
   public static final Class TYPE = Class.forCanonicalName("Z");
 
   public static final Boolean FALSE = new Boolean(false);
@@ -22,6 +22,10 @@ public final class Boolean {
 
   public static Boolean valueOf(String s) {
     return ("true".equals(s) ? Boolean.TRUE : Boolean.FALSE);
+  }
+
+  public int compareTo(Boolean o) {
+    return (value ? (o.value ? 0 : 1) : (o.value ? -1 : 0));
   }
 
   public boolean equals(Object o) {
