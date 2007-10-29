@@ -148,6 +148,15 @@ public class StringBuilder {
     return insert(i, new String(new char[] { c }, 0, 1, false));
   }
 
+  public StringBuilder delete(int start, int end) {
+    int numChars = end - start; // Do not delete end itself
+    while (numChars > 0) {
+      deleteCharAt(start);
+      numChars--;
+    }
+    return this;
+  }
+
   public StringBuilder deleteCharAt(int i) {
     if (i < 0 || i >= length) {
       throw new IndexOutOfBoundsException();
@@ -182,6 +191,12 @@ public class StringBuilder {
       }
     }
 
+    return this;
+  }
+
+  public StringBuilder replace(int start, int end, String str) {
+    delete(start, end);
+    insert(start, str);
     return this;
   }
 

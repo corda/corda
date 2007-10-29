@@ -228,6 +228,33 @@ public final class String implements Comparable<String> {
     return -1;
   }
 
+  public String replace(char oldChar, char newChar) {
+    if (data instanceof char[]) {
+      char[] buf = new char[length];
+      for (int i=0; i < length; i++) {
+	if (charAt(i) == oldChar) {
+	  buf[i] = newChar;
+	} else {
+	  buf[i] = charAt(i);
+	}
+      }
+      return new String(buf, 0, length, false);
+    } else {
+      byte[] buf = new byte[length];
+      byte[] orig = (byte[])data;
+      byte oldByte = (byte)oldChar;
+      byte newByte = (byte)newChar;
+      for (int i=0; i < length; i++) {
+	if (orig[i+offset] == oldByte) {
+	  buf[i] = newByte;
+	} else {
+	  buf[i] = orig[i+offset];
+	}
+      }
+      return new String(buf, 0, length, false);
+    }
+  }
+
   public String substring(int start) {
     return substring(start, length);
   }

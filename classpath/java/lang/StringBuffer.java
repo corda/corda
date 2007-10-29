@@ -60,6 +60,11 @@ public class StringBuffer {
     return this;
   }
 
+  public synchronized StringBuffer delete(int start, int end) {
+    sb.delete(start, end);
+    return this;
+  }
+
   public synchronized StringBuffer deleteCharAt(int i) {
     sb.deleteCharAt(i);
     return this;
@@ -71,6 +76,11 @@ public class StringBuffer {
 
   public synchronized int length() {
     return sb.length();
+  }
+
+  public synchronized StringBuffer replace(int start, int end, String str) {
+    sb.replace(start, end, str);
+    return this;
   }
 
   public synchronized void setLength(int v) {
