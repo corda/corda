@@ -419,8 +419,12 @@ class Fixie {
     add(handle);
   }
 
+  void** body() {
+    return static_cast<void**>(static_cast<void*>(body_));
+  }
+
   uintptr_t* mask(unsigned size) {
-    return body + size;
+    return body_ + size;
   }
 
   static unsigned maskSize(unsigned size, bool hasMask) {
@@ -441,7 +445,7 @@ class Fixie {
   bool dirty;
   Fixie* next;
   Fixie** handle;
-  uintptr_t body[0];
+  uintptr_t body_[0];
 };
 
 Fixie*
@@ -686,7 +690,7 @@ sweepFixies(Context* c)
     Fixie* f = *p;
     *p = f->next;
 
-    unsigned size = c->client->sizeInWords(f->body);
+    unsigned size = c->client->sizeInWords(f->body());
 
     ++ f->age;
     if (f->age > FixieTenureThreshold) {
@@ -1156,14 +1160,14 @@ visitDirtyFixies(Context* c)
     Fixie* f = *p;
     *p = f->next;
 
-    unsigned size = c->client->sizeInWords(f->body);
+    unsigned size = c->client->sizeInWords(f->body());
     uintptr_t* mask = f->mask(size);
     for (unsigned word = 0; word < wordOf(size); ++ word) {
       if (mask[word]) {
         for (unsigned bit = 0; bit < bitOf(size); ++ bit) {
           unsigned index = indexOf(word, bit);
           if (getBit(mask, index)) {
-            collect(c, reinterpret_cast<void**>(f->body) + index);
+            collect(c, f->body() + index);
           }
         }
       }
@@ -1199,9 +1203,9 @@ visitMarkedFixies(Context* c)
 
       Context* c;
       void** p;
-    } w(c, reinterpret_cast<void**>(f->body));
+    } w(c, f->body());
 
-    c->client->walk(reinterpret_cast<void**>(f->body), &w);
+    c->client->walk(f->body(), &w);
 
     f->move(&(c->visitedFixies));
   }  
@@ -1352,7 +1356,7 @@ class MyHeap: public Heap {
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
     return (new (c.system->allocate(*totalInBytes))
-            Fixie(sizeInWords, objectMask, &(c.fixies)))->body;
+            Fixie(sizeInWords, objectMask, &(c.fixies)))->body();
   }
 
   virtual bool needsMark(void* p) {
