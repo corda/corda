@@ -19,6 +19,7 @@ const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 const bool Verbose = false;
 const bool Verbose2 = false;
 const bool Debug = false;
+const bool DebugFixies = false;
 
 class Context;
 
@@ -397,8 +398,8 @@ class Fixie {
   {
     memset(mask(size), 0, maskSize(size, hasMask));
     add(handle);
-    if (Debug) {
-      fprintf(stderr, "make %p\n", this);
+    if (DebugFixies) {
+      fprintf(stderr, "make fixie %p\n", this);
     }
   }
 
@@ -668,8 +669,8 @@ free(Context* c, Fixie** fixies)
   for (Fixie** p = fixies; *p;) {
     Fixie* f = *p;
     *p = f->next;
-    if (Debug) {
-      fprintf(stderr, "free %p\n", f);
+    if (DebugFixies) {
+      fprintf(stderr, "free fixie %p\n", f);
     }
     c->system->free(f);
   }
@@ -700,8 +701,8 @@ sweepFixies(Context* c)
     }
 
     if (f->age == FixieTenureThreshold) {
-      if (Debug) {
-        fprintf(stderr, "tenure %p\n", f);
+      if (DebugFixies) {
+        fprintf(stderr, "tenure fixie %p\n", f);
       }
       f->move(&(c->tenuredFixies));
 
@@ -791,23 +792,23 @@ copy(Context* c, void* o)
 void*
 update3(Context* c, void* o, bool* needsVisit)
 {
-  if (wasCollected(c, o)) {
-    *needsVisit = false;
-    return follow(c, o);
-  } else if (c->client->isFixed(o)) {
+  if (c->client->isFixed(o)) {
     Fixie* f = fixie(o);
     if ((not f->marked)
         and (c->mode == Heap::MajorCollection
              or f->age < FixieTenureThreshold))
     {
-      if (Debug) {
-        fprintf(stderr, "mark %p\n", f);
+      if (DebugFixies) {
+        fprintf(stderr, "mark fixie %p\n", f);
       }
       f->marked = true;
       f->move(&(c->markedFixies));
     }
     *needsVisit = false;
     return o;
+  } else if (wasCollected(c, o)) {
+    *needsVisit = false;
+    return follow(c, o);
   } else {
     *needsVisit = true;
     return copy(c, o);
@@ -1186,8 +1187,8 @@ visitMarkedFixies(Context* c)
     Fixie* f = *p;
     *p = f->next;
 
-    if (Debug) {
-      fprintf(stderr, "visit %p\n", f);
+    if (DebugFixies) {
+      fprintf(stderr, "visit fixie %p\n", f);
     }
 
     class Walker: public Heap::Walker {
@@ -1415,7 +1416,9 @@ class MyHeap: public Heap {
   }
 
   virtual void* follow(void* p) {
-    if (wasCollected(&c, p)) {
+    if (p == 0 or c.client->isFixed(p)) {
+      return p;
+    } else if (wasCollected(&c, p)) {
       if (Debug) {
         fprintf(stderr, "follow %p (%s) to %p (%s)\n",
                 p, segment(&c, p),
