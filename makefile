@@ -112,7 +112,7 @@ ifeq ($(mode),stress-major)
 	cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
-	cflags += -O3 -DNDEBUG
+	cflags += -O3 -g3 -DNDEBUG
 	strip = strip
 	show-size = ls -l
 endif

@@ -149,16 +149,11 @@ public class StringBuilder {
   }
 
   public StringBuilder delete(int start, int end) {
-    int numChars = end - start; // Do not delete end itself
-    while (numChars > 0) {
-      deleteCharAt(start);
-      numChars--;
+    if (start >= end) {
+      return this;
     }
-    return this;
-  }
 
-  public StringBuilder deleteCharAt(int i) {
-    if (i < 0 || i >= length) {
+    if (start < 0 || end > length) {
       throw new IndexOutOfBoundsException();
     }
 
@@ -168,30 +163,38 @@ public class StringBuilder {
     -- length;
     Cell p = null;
     for (Cell c = chain; c != null; c = c.next) {
-      int start = index - c.value.length();
-      index = start;
+      int e = index;
+      int s = index - c.value.length();
+      index = s;
       
-      if (i >= start) {
-        if (c.value.length() == 1) {
+      if (end >= e) {
+        if (start <= s) {
           if (p == null) {
             chain = c.next;
           } else {
             p.next = c.next;
-          }
-        } else if (i == start) {
-          c.value = c.value.substring(1);
-        } else if (i == start + c.value.length() - 1) {
-          c.value = c.value.substring(0, c.value.length() - 1);
+          }          
+        } else {
+          c.value = c.value.substring(0, start - s);
+          break;
+        }
+      } else {
+        if (start <= s) {
+          c.value = c.value.substring(end - s, e - s);
         } else {
           String v = c.value;
-          c.value = v.substring(i - start + 1, v.length());
-          c.next = new Cell(v.substring(0, i - start), c.next);
-        }
-        break;
+          c.value = v.substring(end - s, e - s);
+          c.next = new Cell(v.substring(0, start - s), c.next);
+          break;
+        }        
       }
     }
 
     return this;
+  }
+
+  public StringBuilder deleteCharAt(int i) {
+    return delete(i, i + 1);
   }
 
   public StringBuilder replace(int start, int end, String str) {

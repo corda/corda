@@ -529,6 +529,16 @@ invokeNative(Thread* t, object method)
             &byteArrayBody(t, methodName(t, method), 0));
   }
   
+//   if (strcmp(reinterpret_cast<const char*>
+//              (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
+//              "org/eclipse/swt/internal/C") == 0
+//       and strcmp(reinterpret_cast<const char*>
+//                  (&byteArrayBody(t, methodName(t, method), 0)),
+//                  "memmove") == 0)
+//   {
+//     asm("int3");    
+//   }
+  
   { ENTER(t, Thread::IdleState);
 
     result = t->m->system->call
