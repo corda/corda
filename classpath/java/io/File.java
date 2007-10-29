@@ -23,6 +23,12 @@ public class File {
     this(parent.getPath() + FileSeparator + child);
   }
 
+  private static native boolean isDirectory(String path);
+
+  public boolean isDirectory() {
+    return isDirectory(path);
+  }
+
   public String getName() {
     int index = path.lastIndexOf(FileSeparator);
     if (index >= 0) {

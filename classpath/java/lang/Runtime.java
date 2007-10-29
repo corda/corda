@@ -60,6 +60,8 @@ public class Runtime {
 
   public native long freeMemory();
 
+  public native long totalMemory();
+
   private static class MyProcess extends Process {
     private int pid;
     private final int in;

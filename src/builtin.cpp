@@ -561,6 +561,13 @@ Java_java_lang_Runtime_freeMemory(Thread*, jobject)
   return 0;
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_lang_Runtime_totalMemory(Thread*, jobject)
+{
+  // todo
+  return 0;
+}
+
 extern "C" JNIEXPORT jobject JNICALL
 Java_java_lang_Throwable_trace(Thread* t, jclass, jint skipCount)
 {

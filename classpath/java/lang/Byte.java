@@ -37,6 +37,10 @@ public final class Byte extends Number implements Comparable<Byte> {
     return toString(v, 10);
   }
 
+  public static byte parseByte(String s) {
+    return (byte) Integer.parseInt(s);
+  }
+
   public byte byteValue() {
     return value;
   }
