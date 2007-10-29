@@ -73,6 +73,7 @@ public class Logger {
     private static final int NAME_WIDTH = 14;
     private static final int METHOD_WIDTH = 15;
     private static final int LEVEL_WIDTH = 8;
+    private static java.io.PrintStream outFile;
 
     public Object clone() { return this; }
     public void close() { }
@@ -125,6 +126,22 @@ public class Logger {
       sb.append(r.getMessage());
       maybeLogThrown(sb, r.getThrown());
       System.out.println(sb.toString());
+      if (outFile != null) {
+	outFile.println(sb.toString());
+	outFile.flush();
+      } else {
+	if (System.getProperty("rt.log.dir") != null) {
+	  try {
+	    outFile =
+	      new java.io.PrintStream
+	      (new java.io.FileOutputStream
+	       (new java.io.File(System.getProperty("rt.log.dir"), "log.txt")));
+	  } catch (Exception ex) {
+	    ex.printStackTrace();
+	    outFile = null;
+	  }
+	}
+      }
     }
   }
 
