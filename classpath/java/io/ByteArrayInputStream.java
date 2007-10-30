@@ -20,7 +20,7 @@ public class ByteArrayInputStream extends InputStream {
   }
 
   public int read(byte[] buffer, int offset, int bufferLength) {
-    if (position < length) {
+    if (position >= length) {
       return -1;
     }
     int remaining = length-position;
