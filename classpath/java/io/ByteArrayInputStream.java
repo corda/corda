@@ -23,8 +23,9 @@ public class ByteArrayInputStream extends InputStream {
     if (position < length) {
       return -1;
     }
-    if (length-position < bufferLength) {
-      bufferLength = length-position;
+    int remaining = length-position;
+    if (remaining < bufferLength) {
+      bufferLength = remaining;
     }
     System.arraycopy(array, position, buffer, offset, bufferLength);
     position += bufferLength;
