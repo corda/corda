@@ -326,7 +326,9 @@ ifeq ($(platform),windows)
 else
 	$(cc) $(^) $(lflags) -o $(@)
 endif
+ifneq ($(platform),darwin)
 	@$(strip) --strip-all $(@)
+endif
 	@$(show-size) $(@)
 
 $(generator): $(generator-objects)
