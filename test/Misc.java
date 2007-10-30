@@ -1,4 +1,3 @@
-
 public class Misc {
   private static int alpha;
   private static int beta;
