@@ -3,16 +3,16 @@ package java.io;
 public class ByteArrayInputStream extends InputStream {
   private final byte[] array;
   private int position;
-  private final int length;
+  private final int limit;
 
   public ByteArrayInputStream(byte[] array, int offset, int length) {
     this.array = array;
     position = offset;
-    this.length = length;
+    this.limit = offset + length;
   }
 
   public int read() {
-    if (position < length) {
+    if (position < limit) {
       return array[position++] & 0xff;
     } else {
       return -1;
@@ -20,10 +20,13 @@ public class ByteArrayInputStream extends InputStream {
   }
 
   public int read(byte[] buffer, int offset, int bufferLength) {
-    if (position >= length) {
+    if (bufferLength == 0) {
+      return 0;
+    }
+    if (position >= limit) {
       return -1;
     }
-    int remaining = length-position;
+    int remaining = limit-position;
     if (remaining < bufferLength) {
       bufferLength = remaining;
     }
@@ -33,6 +36,6 @@ public class ByteArrayInputStream extends InputStream {
   }
 
   public int available() {
-    return length - position;
+    return limit - position;
   }
 }
