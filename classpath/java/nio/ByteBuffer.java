@@ -178,7 +178,7 @@ public class ByteBuffer {
   public long getLong() {
     checkGet(8);
     long l = (long)getInt() << 32;
-    l |= (long)getInt() & 0xffffffff;
+    l |= (long)getInt() & 0xffffffffL;
     return l;
   }
 
