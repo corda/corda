@@ -201,4 +201,8 @@ public class ByteBuffer {
     if (position < 0 || position+amount > limit)
       throw new IndexOutOfBoundsException();
   }
+
+  public String toString() {
+    return "(ByteBuffer with array: " + array + " arrayOffset: " + arrayOffset + " position: " + position + " remaining; " + remaining() + ")";
+  }
 }

@@ -19,6 +19,19 @@ public class ByteArrayInputStream extends InputStream {
     }
   }
 
+  public int read(byte[] buffer, int offset, int bufferLength) {
+    if (position >= length) {
+      return -1;
+    }
+    int remaining = length-position;
+    if (remaining < bufferLength) {
+      bufferLength = remaining;
+    }
+    System.arraycopy(array, position, buffer, offset, bufferLength);
+    position += bufferLength;
+    return bufferLength;
+  }
+
   public int available() {
     return length - position;
   }
