@@ -82,7 +82,7 @@ ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 		-I$(JAVA_HOME)/include/linux -I$(src)
 	lflags = $(common-lflags) -ldl
-	strip-all =
+	strip-all = -S -x
 endif
 
 ifeq ($(platform),windows)
@@ -328,7 +328,7 @@ ifeq ($(platform),windows)
 else
 	$(cc) $(^) $(lflags) -o $(@)
 endif
-	@$(strip) $(strip-all) $(@)
+	$(strip) $(strip-all) $(@)
 	@$(show-size) $(@)
 
 $(generator): $(generator-objects)
