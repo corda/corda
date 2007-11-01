@@ -15,7 +15,7 @@
 #  define JNIEXPORT __declspec(dllexport)
 #else
 #ifdef __APPLE__
-#  define JNIEXPORT __attribute__ ((visibility("used")))
+#  define JNIEXPORT __attribute__ ((used))
 #else
 #  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif

@@ -5,7 +5,11 @@
 #ifdef __MINGW32__
 #  define JNIEXPORT __declspec(dllexport)
 #else
+#ifdef __APPLE__
+#  define JNIEXPORT __attribute__ ((used))
+#else
 #  define JNIEXPORT __attribute__ ((visibility("default")))
+#endif
 #endif
 
 namespace {
