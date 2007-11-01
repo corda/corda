@@ -10,6 +10,17 @@
 #include "types.h"
 #include "math.h"
 
+#undef JNIEXPORT
+#ifdef __MINGW32__
+#  define JNIEXPORT __declspec(dllexport)
+#else
+#ifdef __APPLE__
+#  define JNIEXPORT __attribute__ ((visibility("used")))
+#else
+#  define JNIEXPORT __attribute__ ((visibility("default")))
+#endif
+#endif
+
 #ifdef __i386__
 #  define LD "d"
 #ifdef __APPLE__

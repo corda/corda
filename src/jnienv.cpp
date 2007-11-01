@@ -4,12 +4,6 @@
 #include "constants.h"
 #include "processor.h"
 
-#ifdef __MINGW32__
-#  define JNIEXPORT __declspec(dllexport)
-#else
-#  define JNIEXPORT __attribute__ ((visibility("default")))
-#endif
-
 using namespace vm;
 
 namespace {
