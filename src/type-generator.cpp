@@ -786,9 +786,9 @@ namesPointer(const char* s)
 unsigned
 sizeOf(const char* type, Object* declarations)
 {
-  if (equal(type, "object")) {
-    return BytesPerWord;
-  } else if (equal(type, "intptr_t")) {
+  if (equal(type, "object")
+      or equal(type, "intptr_t") or equal(type, "uintptr_t"))
+  {
     return BytesPerWord;
   } else if (equal(type, "unsigned") or equal(type, "int")) {
     return sizeof(int);

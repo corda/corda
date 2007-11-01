@@ -17,6 +17,9 @@
   (object staticTable)
   (object loader))
 
+(type singleton
+  (array uintptr_t body))
+
 (type classLoader java/lang/ClassLoader
   (extends jobject)
   (object parent))
@@ -60,7 +63,7 @@
   (object spec)
   (object class)
   (object code)
-  (uint64_t compiled))
+  (object compiled))
 
 (type nativeMethodData
   (void* function)
