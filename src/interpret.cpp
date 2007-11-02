@@ -2886,13 +2886,13 @@ class MyProcessor: public Processor {
     return t;
   }
 
-  virtual void*
+  virtual object
   methodStub(vm::Thread*)
   {
     return 0;
   }
 
-  virtual void*
+  virtual object
   nativeInvoker(vm::Thread*)
   {
     return 0;

@@ -142,66 +142,68 @@ visitRoots(Thread* t, Heap::Visitor* v)
 }
 
 void
-walk(Thread* t, object o, Heap::Walker* w)
+walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
+     unsigned arrayElementSize, unsigned arrayLength)
+{
+  unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
+  unsigned arrayElementSizeInWords
+    = ceiling(arrayElementSize, BytesPerWord);
+
+  for (unsigned i = 0; i < fixedSizeInWords; ++i) {
+    if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
+      if (not w->visit(i)) {
+        return;
+      }
+    }
+  }
+
+  bool arrayObjectElements = false;
+  for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+    unsigned k = fixedSizeInWords + j;
+    if (mask[k / 32] & (static_cast<uint32_t>(1) << (k % 32))) {
+      arrayObjectElements = true;
+      break;
+    }
+  }
+
+  if (arrayObjectElements) {
+    for (unsigned i = 0; i < arrayLength; ++i) {
+      for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+        unsigned k = fixedSizeInWords + j;
+        if (mask[k / 32] & (static_cast<uint32_t>(1) << (k % 32))) {
+          if (not w->visit
+              (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
+          {
+            return;
+          }
+        }
+      }
+    }
+  }
+}
+
+void
+walk(Thread* t, Heap::Walker* w, object o)
 {
   object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
   object objectMask = static_cast<object>
     (t->m->heap->follow(classObjectMask(t, class_)));
 
   if (objectMask) {
-    //         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
-    //                 p, class_, objectMask, intArrayLength(t, objectMask));
-
     unsigned fixedSize = classFixedSize(t, class_);
     unsigned arrayElementSize = classArrayElementSize(t, class_);
     unsigned arrayLength
       = (arrayElementSize ?
          cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
 
-    int mask[intArrayLength(t, objectMask)];
+    uint32_t mask[intArrayLength(t, objectMask)];
     memcpy(mask, &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
-    //         fprintf
-    //           (stderr,
-    //            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
-    //            fixedSize, arrayLength, arrayElementSize, mask[0]);
-
-    unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
-    unsigned arrayElementSizeInWords
-      = ceiling(arrayElementSize, BytesPerWord);
-
-    for (unsigned i = 0; i < fixedSizeInWords; ++i) {
-      if (mask[i / 32] & (static_cast<uintptr_t>(1) << (i % 32))) {
-        if (not w->visit(i)) {
-          return;
-        }
-      }
-    }
-
-    bool arrayObjectElements = false;
-    for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-      unsigned k = fixedSizeInWords + j;
-      if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
-        arrayObjectElements = true;
-        break;
-      }
-    }
-
-    if (arrayObjectElements) {
-      for (unsigned i = 0; i < arrayLength; ++i) {
-        for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-          unsigned k = fixedSizeInWords + j;
-          if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
-            if (not w->visit
-                (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
-            {
-              return;
-            }
-          }
-        }
-      }
-    }
+    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength);
+//   } else if (classVmFlags(t, class_) & SingletonFlag) {
+//     unsigned length = singletonLength(t, o);
+//     walk(t, w, mask, fixedSize, 0, 0);    
   } else {
     w->visit(0);
   }
@@ -1116,11 +1118,11 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       unsigned parameterFootprint = t->m->processor->parameterFootprint
         (t, specString, flags & ACC_STATIC);
 
-      Compiled* compiled;
+      object compiled;
       if (flags & ACC_NATIVE) {
-        compiled = static_cast<Compiled*>(t->m->processor->nativeInvoker(t));
+        compiled = t->m->processor->nativeInvoker(t);
       } else {
-        compiled = static_cast<Compiled*>(t->m->processor->methodStub(t));
+        compiled = t->m->processor->methodStub(t);
       }
 
       object method = makeMethod(t,
@@ -1134,7 +1136,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  arrayBody(t, pool, spec - 1),
                                  class_,
                                  code,
-                                 reinterpret_cast<uint64_t>(compiled));
+                                 compiled);
       PROTECT(t, method);
 
       if (flags & ACC_STATIC) {
@@ -1511,7 +1513,7 @@ class HeapClient: public Heap::Client {
 
   virtual void walk(void* p, Heap::Walker* w) {
     object o = static_cast<object>(m->heap->follow(mask(p)));
-    ::walk(m->rootThread, o, w);
+    ::walk(m->rootThread, w, o);
   }
 
   virtual void dispose() {
