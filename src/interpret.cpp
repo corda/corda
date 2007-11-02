@@ -733,6 +733,39 @@ findExceptionHandler(Thread* t, int frame)
   return 0;
 }
 
+void
+pushField(Thread* t, object target, object field)
+{
+  switch (fieldCode(t, field)) {
+  case ByteField:
+  case BooleanField:
+    pushInt(t, cast<int8_t>(target, fieldOffset(t, field)));
+    break;
+
+  case CharField:
+  case ShortField:
+    pushInt(t, cast<int16_t>(target, fieldOffset(t, field)));
+    break;
+
+  case FloatField:
+  case IntField:
+    pushInt(t, cast<int32_t>(target, fieldOffset(t, field)));
+    break;
+
+  case DoubleField:
+  case LongField:
+    pushLong(t, cast<int64_t>(target, fieldOffset(t, field)));
+    break;
+
+  case ObjectField:
+    pushObject(t, cast<object>(target, fieldOffset(t, field)));
+    break;
+
+  default:
+    abort(t);
+  }
+}
+
 object
 interpret(Thread* t)
 {
@@ -1399,36 +1432,7 @@ interpret(Thread* t)
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
       
-      object instance = popObject(t);
-
-      switch (fieldCode(t, field)) {
-      case ByteField:
-      case BooleanField:
-        pushInt(t, cast<int8_t>(instance, fieldOffset(t, field)));
-        break;
-
-      case CharField:
-      case ShortField:
-        pushInt(t, cast<int16_t>(instance, fieldOffset(t, field)));
-        break;
-
-      case FloatField:
-      case IntField:
-        pushInt(t, cast<int32_t>(instance, fieldOffset(t, field)));
-        break;
-
-      case DoubleField:
-      case LongField:
-        pushLong(t, cast<int64_t>(instance, fieldOffset(t, field)));
-        break;
-
-      case ObjectField:
-        pushObject(t, cast<object>(instance, fieldOffset(t, field)));
-        break;
-
-      default:
-        abort(t);
-      }
+      pushField(t, popObject(t), field);
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
@@ -1444,30 +1448,7 @@ interpret(Thread* t)
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
 
-    object v = arrayBody(t, classStaticTable(t, fieldClass(t, field)),
-                         fieldOffset(t, field));
-
-    switch (fieldCode(t, field)) {
-    case ByteField:
-    case BooleanField:
-    case CharField:
-    case ShortField:
-    case FloatField:
-    case IntField:
-      pushInt(t, v ? intValue(t, v) : 0);
-      break;
-
-    case DoubleField:
-    case LongField:
-      pushLong(t, v ? longValue(t, v) : 0);
-      break;
-
-    case ObjectField:
-      pushObject(t, v);
-      break;
-
-    default: abort(t);
-    }
+    pushField(t, classStaticTable(t, fieldClass(t, field)), field);
   } goto loop;
 
   case goto_: {
@@ -2389,7 +2370,7 @@ interpret(Thread* t)
     
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
-      
+
     switch (fieldCode(t, field)) {
     case ByteField:
     case BooleanField:
@@ -2458,7 +2439,7 @@ interpret(Thread* t)
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
       
-    object v;
+    object table = classStaticTable(t, fieldClass(t, field));
 
     switch (fieldCode(t, field)) {
     case ByteField:
@@ -2467,23 +2448,36 @@ interpret(Thread* t)
     case ShortField:
     case FloatField:
     case IntField: {
-      v = makeInt(t, popInt(t));
+      int32_t value = popInt(t);
+      switch (fieldCode(t, field)) {
+      case ByteField:
+      case BooleanField:
+        cast<int8_t>(table, fieldOffset(t, field)) = value;
+        break;
+            
+      case CharField:
+      case ShortField:
+        cast<int16_t>(table, fieldOffset(t, field)) = value;
+        break;
+            
+      case FloatField:
+      case IntField:
+        cast<int32_t>(table, fieldOffset(t, field)) = value;
+        break;
+      }
     } break;
 
     case DoubleField:
     case LongField: {
-      v = makeLong(t, popLong(t));
+      cast<int64_t>(table, fieldOffset(t, field)) = popLong(t);
     } break;
 
-    case ObjectField:
-      v = popObject(t);
-      break;
+    case ObjectField: {
+      set(t, table, fieldOffset(t, field), popObject(t));
+    } break;
 
     default: abort(t);
     }
-
-    set(t, classStaticTable(t, fieldClass(t, field)),
-        ArrayBody + (fieldOffset(t, field) * BytesPerWord), v);
   } goto loop;
 
   case ret: {
@@ -2658,35 +2652,10 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
     pushObject(t, this_);
   }
 
-  const char* s = spec;
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
+  for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    switch (*it.next()) {
     case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-
-      if (indirectObjects) {
-        object* v = va_arg(a, object*);
-        pushObject(t, v ? *v : 0);
-      } else {
-        pushObject(t, va_arg(a, object));
-      }
-      break;
-
     case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-
       if (indirectObjects) {
         object* v = va_arg(a, object*);
         pushObject(t, v ? *v : 0);
@@ -2697,19 +2666,16 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
       
     case 'J':
     case 'D':
-      ++ s;
       pushLong(t, va_arg(a, uint64_t));
       break;
 
     case 'F': {
-      ++ s;
       pushFloat(t, va_arg(a, double));
     } break;
-          
+
     default:
-      ++ s;
       pushInt(t, va_arg(a, uint32_t));
-      break;
+      break;        
     }
   }
 }
@@ -2722,41 +2688,23 @@ pushArguments(Thread* t, object this_, const char* spec, object a)
   }
 
   unsigned index = 0;
-  const char* s = spec;
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    switch (*s) {
+  for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    switch (*it.next()) {
     case 'L':
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      pushObject(t, objectArrayBody(t, a, index++));
-      break;
-
     case '[':
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
       pushObject(t, objectArrayBody(t, a, index++));
       break;
       
     case 'J':
     case 'D':
-      ++ s;
-      pushLong(t, cast<int64_t>(objectArrayBody(t, a, index++), BytesPerWord));
+      pushLong(t, cast<int64_t>(objectArrayBody(t, a, index++),
+                                BytesPerWord));
       break;
 
     default:
-      ++ s;
-      pushInt(t, cast<int32_t>(objectArrayBody(t, a, index++), BytesPerWord));
-      break;
+      pushInt(t, cast<int32_t>(objectArrayBody(t, a, index++),
+                               BytesPerWord));
+      break;        
     }
   }
 }
@@ -2899,43 +2847,20 @@ class MyProcessor: public Processor {
   }
 
   virtual unsigned
-  parameterFootprint(vm::Thread*, const char* s, bool static_)
+  parameterFootprint(vm::Thread* t, const char* s, bool static_)
   {
     unsigned footprint = 0;
-    ++ s; // skip '('
-    while (*s and *s != ')') {
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      case '[':
-        while (*s == '[') ++ s;
-        switch (*s) {
-        case 'L':
-          while (*s and *s != ';') ++ s;
-          ++ s;
-          break;
-
-        default:
-          ++ s;
-          break;
-        }
-        break;
-      
+    for (MethodSpecIterator it(t, s); it.hasNext();) {
+      switch (*it.next()) {
       case 'J':
       case 'D':
-        ++ s;
-        ++ footprint;
+        footprint += 2;
         break;
 
       default:
-        ++ s;
-        break;
+        ++ footprint;
+        break;        
       }
-
-      ++ footprint;
     }
 
     if (not static_) {

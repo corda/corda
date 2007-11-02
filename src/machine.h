@@ -27,7 +27,7 @@ namespace vm {
 const bool Verbose = false;
 const bool DebugRun = false;
 const bool DebugStack = false;
-const bool DebugMonitors = false;
+const bool DebugMonitors = true;
 const bool DebugReferences = false;
 
 const uintptr_t HashTakenMark = 1;
@@ -62,6 +62,7 @@ const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
 const unsigned PrimitiveFlag = 1 << 4;
 const unsigned BootstrapFlag = 1 << 5;
+const unsigned SingletonFlag = 1 << 6;
 
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;
@@ -1963,14 +1964,19 @@ unsigned
 primitiveSize(Thread* t, unsigned code);
 
 inline unsigned
-fieldSize(Thread* t, object field)
+fieldSize(Thread* t, unsigned code)
 {
-  unsigned code = fieldCode(t, field);
   if (code == ObjectField) {
     return BytesPerWord;
   } else {
     return primitiveSize(t, code);
   }
+}
+
+inline unsigned
+fieldSize(Thread* t, object field)
+{
+  return fieldSize(t, fieldCode(t, field));
 }
 
 object

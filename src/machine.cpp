@@ -201,9 +201,19 @@ walk(Thread* t, Heap::Walker* w, object o)
            intArrayLength(t, objectMask) * 4);
 
     walk(t, w, mask, fixedSize, arrayElementSize, arrayLength);
-//   } else if (classVmFlags(t, class_) & SingletonFlag) {
-//     unsigned length = singletonLength(t, o);
-//     walk(t, w, mask, fixedSize, 0, 0);    
+  } else if (classVmFlags(t, class_) & SingletonFlag) {
+    unsigned length = singletonLength(t, o);
+    if (length) {
+      unsigned maskSize = ceiling(length + 2, BitsPerWord + 1);
+
+      uint32_t mask[maskSize * (BytesPerWord / 4)];
+      memcpy(mask, &singletonBody(t, o, length - maskSize),
+             maskSize * BytesPerWord);
+
+      walk(t, w, mask, length - maskSize, 0, 0);
+    } else {
+      w->visit(0);
+    }
   } else {
     w->visit(0);
   }
@@ -832,13 +842,16 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
   unsigned count = s.read2();
   if (count) {
-    unsigned staticOffset = 0;
+    unsigned staticOffset = BytesPerWord * 2;
+    unsigned staticCount = 0;
   
     object fieldTable = makeArray(t, count, true);
     PROTECT(t, fieldTable);
 
     object staticValueTable = makeArray(t, count, true);
     PROTECT(t, staticValueTable);
+
+    uint8_t staticTypes[count];
 
     for (unsigned i = 0; i < count; ++i) {
       unsigned flags = s.read2();
@@ -862,10 +875,13 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         }
       }
 
+      unsigned code = fieldCode
+        (t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0));
+
       object field = makeField
         (t,
          0, // vm flags
-         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
+         code,
          flags,
          0, // offset
          arrayBody(t, pool, name - 1),
@@ -873,21 +889,32 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
          class_);
 
       if (flags & ACC_STATIC) {
-        set(t, staticValueTable, ArrayBody + (staticOffset * BytesPerWord),
+        unsigned size = fieldSize(t, code);
+        unsigned excess = staticOffset % size;
+        if (excess) {
+          staticOffset += BytesPerWord - excess;
+        }
+
+        fieldOffset(t, field) = staticOffset;
+
+        staticOffset += size;
+
+        set(t, staticValueTable, ArrayBody + (staticCount * BytesPerWord),
             value);
-        fieldOffset(t, field) = staticOffset++;
+
+        staticTypes[staticCount++] = code;
       } else {
         if (value) {
           abort(t); // todo: handle non-static field initializers
         }
 
-        unsigned excess = memberOffset % fieldSize(t, field);
+        unsigned excess = memberOffset % fieldSize(t, code);
         if (excess) {
           memberOffset += BytesPerWord - excess;
         }
 
         fieldOffset(t, field) = memberOffset;
-        memberOffset += fieldSize(t, field);
+        memberOffset += fieldSize(t, code);
       }
 
       set(t, fieldTable, ArrayBody + (i * BytesPerWord), field);
@@ -895,11 +922,69 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
     set(t, class_, ClassFieldTable, fieldTable);
 
-    if (staticOffset) {
-      object staticTable = makeArray(t, staticOffset, false);
-      memcpy(&arrayBody(t, staticTable, 0),
-             &arrayBody(t, staticValueTable, 0),
-             staticOffset * BytesPerWord);
+    if (staticCount) {
+      unsigned footprint = ceiling(staticOffset - (BytesPerWord * 2),
+                                   BytesPerWord);
+      unsigned maskSize = ceiling(footprint + 2, BitsPerWord);
+      object staticTable = makeSingleton(t, footprint + maskSize, false);
+
+      uint8_t* body = reinterpret_cast<uint8_t*>
+        (&singletonBody(t, staticTable, 0));
+
+      uint32_t* mask = reinterpret_cast<uint32_t*>
+        (&singletonBody(t, staticTable, footprint));
+
+      memset(mask, 0, maskSize * BytesPerWord);
+
+      mask[0] |= 1;
+
+      for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
+        unsigned size = fieldSize(t, staticTypes[i]);
+        unsigned excess = offset % size;
+        if (excess) {
+          offset += BytesPerWord - excess;
+        }
+
+        object value = arrayBody(t, staticValueTable, i);
+        if (value) {
+          switch (staticTypes[i]) {
+          case ByteField:
+          case BooleanField:
+            body[offset] = intValue(t, value);
+            break;
+
+          case CharField:
+          case ShortField:
+            *reinterpret_cast<uint16_t*>(body + offset) = intValue(t, value);
+            break;
+
+          case IntField:
+          case FloatField:
+            *reinterpret_cast<uint32_t*>(body + offset) = intValue(t, value);
+            break;
+
+          case LongField:
+          case DoubleField:
+            memcpy(body + offset, &longValue(t, value), 8);
+            break;
+
+          case ObjectField:
+            memcpy(body + offset, &value, BytesPerWord);
+            break;
+
+          default: abort(t);
+          }
+        } else {
+          memset(body + offset, 0, size);
+        }
+
+        if (staticTypes[i] == ObjectField) {
+          unsigned index = (offset / BytesPerWord) + 2;
+          mask[index / 32] |= 1 << (index % 32);
+        }
+
+        offset += size;
+      }
 
       set(t, class_, ClassStaticTable, staticTable);
     }
@@ -1664,6 +1749,9 @@ Thread::init()
     set(t, intArrayClass, ClassSuper, objectClass);
 
     m->unsafe = false;
+
+    classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+      |= SingletonFlag;
 
     classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
       |= ReferenceFlag;

@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/GC.class
+input = $(test-build)/References.class
 
 build-cxx = g++
 build-cc = gcc
@@ -248,15 +248,15 @@ $(native-build)/type-generator.o: \
 $(classpath-build)/%.class: $(classpath)/%.java
 	@echo $(<)
 
-$(test-build)/%.class: $(test)/%.java
-	@echo $(<)
-
 $(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
 		$(shell make -s $(classpath-classes))
 	@touch $(@)
+
+$(test-build)/%.class: $(test)/%.java
+	@echo $(<)
 
 $(test-dep): $(test-sources)
 	@echo "compiling test classes"
