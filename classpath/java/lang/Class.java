@@ -24,7 +24,7 @@ public final class Class <T> {
   private Method[] virtualTable;
   private Field[] fieldTable;
   private Method[] methodTable;
-  private Object[] staticTable;
+  private Object staticTable;
   private ClassLoader loader;
 
   private Class() { }
@@ -49,7 +49,7 @@ public final class Class <T> {
       (replace('/', '.', name, 0, name.length - 1), 0, name.length - 1, false);
   }
 
-  public Object[] staticTable() {
+  public Object staticTable() {
     return staticTable;
   }
 

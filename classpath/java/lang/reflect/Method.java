@@ -11,7 +11,7 @@ public class Method<T> extends AccessibleObject implements Member {
   private byte[] spec;
   private Class<T> class_;
   private Object code;
-  private long compiled;
+  private Object compiled;
 
   private Method() { }
 

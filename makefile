@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/GC.class
+input = $(test-build)/Hello.class
 
 build-cxx = g++
 build-cc = gcc
@@ -189,6 +189,7 @@ classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
 	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
 classpath-object = $(native-build)/classpath-jar.o
+classpath-dep = $(classpath-build)/dep
 
 ifeq ($(platform),darwin)
 	classpath-object =
@@ -196,6 +197,7 @@ endif
 
 test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
+test-dep = $(test-build)/dep
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
@@ -204,17 +206,9 @@ flags = -cp $(test-build)
 args = $(flags) $(call class-name,$(test-build),$(input))
 
 .PHONY: build
-build: $(interpreter) $(archive) $(classpath-classes) $(test-classes)
+build: $(interpreter) $(archive) $(classpath-dep) $(test-dep)
 
-.PHONY: classes
-classes:
-	@mkdir -p $(classpath-build)
-	$(javac) -d $(classpath-build) -bootclasspath $(classpath) \
-		$(classpath-sources)
-	@mkdir -p $(test-build)
-	$(javac) -d $(test-build) -bootclasspath $(classpath-build) $(test-sources)
-
-$(test-classes): $(classpath-classes)
+$(test-classes): $(classpath-dep)
 
 .PHONY: run
 run: build
@@ -253,26 +247,24 @@ $(generated-code): %.cpp: $(src)/types.def $(generator)
 $(native-build)/type-generator.o: \
 	$(generator-headers)
 
-define compile-class
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
-		-d $(1) $(<)
-	@touch $(@)
-endef
-
 $(classpath-build)/%.class: $(classpath)/%.java
-	@echo "compiling $(@)"
+	@echo $(<)
+
+$(classpath-dep): $(classpath-sources)
+	@echo "compiling classpath classes"
 	@mkdir -p $(dir $(@))
-	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
-		-d $(classpath-build) $(<)
+	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
+		$(shell make -s $(classpath-classes))
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
-	@echo "compiling $(@)"
+	@echo $(<)
+
+$(test-dep): $(test-sources)
+	@echo "compiling test classes"
 	@mkdir -p $(dir $(@))
-	$(javac) -bootclasspath $(classpath) -classpath $(classpath) \
-		-d $(test-build) $(<)
+	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
+		$(shell make -s $(test-classes))
 	@touch $(@)
 
 define compile-object
@@ -291,7 +283,7 @@ $(interpreter-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 $(driver-object): $(native-build)/%.o: $(src)/%.cpp
 	$(compile-object)
 
-$(build)/classpath.jar: $(classpath-classes)
+$(build)/classpath.jar: $(classpath-dep)
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
 	 $(jar) c0f $${wd}/$(@) $$(find . -name '*.class'))

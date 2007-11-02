@@ -142,65 +142,77 @@ visitRoots(Thread* t, Heap::Visitor* v)
 }
 
 void
-walk(Thread* t, object o, Heap::Walker* w)
+walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
+     unsigned arrayElementSize, unsigned arrayLength)
+{
+  unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
+  unsigned arrayElementSizeInWords
+    = ceiling(arrayElementSize, BytesPerWord);
+
+  for (unsigned i = 0; i < fixedSizeInWords; ++i) {
+    if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
+      if (not w->visit(i)) {
+        return;
+      }
+    }
+  }
+
+  bool arrayObjectElements = false;
+  for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+    unsigned k = fixedSizeInWords + j;
+    if (mask[k / 32] & (static_cast<uint32_t>(1) << (k % 32))) {
+      arrayObjectElements = true;
+      break;
+    }
+  }
+
+  if (arrayObjectElements) {
+    for (unsigned i = 0; i < arrayLength; ++i) {
+      for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+        unsigned k = fixedSizeInWords + j;
+        if (mask[k / 32] & (static_cast<uint32_t>(1) << (k % 32))) {
+          if (not w->visit
+              (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
+          {
+            return;
+          }
+        }
+      }
+    }
+  }
+}
+
+void
+walk(Thread* t, Heap::Walker* w, object o)
 {
   object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
   object objectMask = static_cast<object>
     (t->m->heap->follow(classObjectMask(t, class_)));
 
   if (objectMask) {
-    //         fprintf(stderr, "p: %p; class: %p; mask: %p; mask length: %d\n",
-    //                 p, class_, objectMask, intArrayLength(t, objectMask));
-
     unsigned fixedSize = classFixedSize(t, class_);
     unsigned arrayElementSize = classArrayElementSize(t, class_);
     unsigned arrayLength
       = (arrayElementSize ?
          cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
 
-    int mask[intArrayLength(t, objectMask)];
+    uint32_t mask[intArrayLength(t, objectMask)];
     memcpy(mask, &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
-    //         fprintf
-    //           (stderr,
-    //            "fixed size: %d; array length: %d; element size: %d; mask: %x\n",
-    //            fixedSize, arrayLength, arrayElementSize, mask[0]);
+    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength);
+  } else if (classVmFlags(t, class_) & SingletonFlag) {
+    unsigned length = singletonLength(t, o);
+    if (length) {
+      unsigned maskSize = ceiling(length + 2, BitsPerWord + 1);
 
-    unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
-    unsigned arrayElementSizeInWords
-      = ceiling(arrayElementSize, BytesPerWord);
+      uint32_t mask[maskSize * (BytesPerWord / 4)];
+      memcpy(mask, &singletonBody(t, o, length - maskSize),
+             maskSize * BytesPerWord);
 
-    for (unsigned i = 0; i < fixedSizeInWords; ++i) {
-      if (mask[i / 32] & (static_cast<uintptr_t>(1) << (i % 32))) {
-        if (not w->visit(i)) {
-          return;
-        }
-      }
-    }
-
-    bool arrayObjectElements = false;
-    for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-      unsigned k = fixedSizeInWords + j;
-      if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
-        arrayObjectElements = true;
-        break;
-      }
-    }
-
-    if (arrayObjectElements) {
-      for (unsigned i = 0; i < arrayLength; ++i) {
-        for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
-          unsigned k = fixedSizeInWords + j;
-          if (mask[k / 32] & (static_cast<uintptr_t>(1) << (k % 32))) {
-            if (not w->visit
-                (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
-            {
-              return;
-            }
-          }
-        }
-      }
+      walk(t, w, mask, (length + 2) * BytesPerWord, 0, 0);
+    } else {
+      w->visit(0);
     }
   } else {
     w->visit(0);
@@ -830,13 +842,16 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
   unsigned count = s.read2();
   if (count) {
-    unsigned staticOffset = 0;
+    unsigned staticOffset = BytesPerWord * 2;
+    unsigned staticCount = 0;
   
     object fieldTable = makeArray(t, count, true);
     PROTECT(t, fieldTable);
 
     object staticValueTable = makeArray(t, count, true);
     PROTECT(t, staticValueTable);
+
+    uint8_t staticTypes[count];
 
     for (unsigned i = 0; i < count; ++i) {
       unsigned flags = s.read2();
@@ -860,10 +875,13 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         }
       }
 
+      unsigned code = fieldCode
+        (t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0));
+
       object field = makeField
         (t,
          0, // vm flags
-         fieldCode(t, byteArrayBody(t, arrayBody(t, pool, spec - 1), 0)),
+         code,
          flags,
          0, // offset
          arrayBody(t, pool, name - 1),
@@ -871,21 +889,32 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
          class_);
 
       if (flags & ACC_STATIC) {
-        set(t, staticValueTable, ArrayBody + (staticOffset * BytesPerWord),
+        unsigned size = fieldSize(t, code);
+        unsigned excess = staticOffset % size;
+        if (excess) {
+          staticOffset += BytesPerWord - excess;
+        }
+
+        fieldOffset(t, field) = staticOffset;
+
+        staticOffset += size;
+
+        set(t, staticValueTable, ArrayBody + (staticCount * BytesPerWord),
             value);
-        fieldOffset(t, field) = staticOffset++;
+
+        staticTypes[staticCount++] = code;
       } else {
         if (value) {
           abort(t); // todo: handle non-static field initializers
         }
 
-        unsigned excess = memberOffset % fieldSize(t, field);
+        unsigned excess = memberOffset % fieldSize(t, code);
         if (excess) {
           memberOffset += BytesPerWord - excess;
         }
 
         fieldOffset(t, field) = memberOffset;
-        memberOffset += fieldSize(t, field);
+        memberOffset += fieldSize(t, code);
       }
 
       set(t, fieldTable, ArrayBody + (i * BytesPerWord), field);
@@ -893,11 +922,69 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
     set(t, class_, ClassFieldTable, fieldTable);
 
-    if (staticOffset) {
-      object staticTable = makeArray(t, staticOffset, false);
-      memcpy(&arrayBody(t, staticTable, 0),
-             &arrayBody(t, staticValueTable, 0),
-             staticOffset * BytesPerWord);
+    if (staticCount) {
+      unsigned footprint = ceiling(staticOffset - (BytesPerWord * 2),
+                                   BytesPerWord);
+      unsigned maskSize = ceiling(footprint + 2, BitsPerWord);
+      object staticTable = makeSingleton(t, footprint + maskSize, false);
+
+      uint8_t* body = reinterpret_cast<uint8_t*>
+        (&singletonBody(t, staticTable, 0));
+
+      uint32_t* mask = reinterpret_cast<uint32_t*>
+        (&singletonBody(t, staticTable, footprint));
+
+      memset(mask, 0, maskSize * BytesPerWord);
+
+      mask[0] |= 1;
+
+      for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
+        unsigned size = fieldSize(t, staticTypes[i]);
+        unsigned excess = offset % size;
+        if (excess) {
+          offset += BytesPerWord - excess;
+        }
+
+        object value = arrayBody(t, staticValueTable, i);
+        if (value) {
+          switch (staticTypes[i]) {
+          case ByteField:
+          case BooleanField:
+            body[offset] = intValue(t, value);
+            break;
+
+          case CharField:
+          case ShortField:
+            *reinterpret_cast<uint16_t*>(body + offset) = intValue(t, value);
+            break;
+
+          case IntField:
+          case FloatField:
+            *reinterpret_cast<uint32_t*>(body + offset) = intValue(t, value);
+            break;
+
+          case LongField:
+          case DoubleField:
+            memcpy(body + offset, &longValue(t, value), 8);
+            break;
+
+          case ObjectField:
+            memcpy(body + offset, &value, BytesPerWord);
+            break;
+
+          default: abort(t);
+          }
+        } else {
+          memset(body + offset, 0, size);
+        }
+
+        if (staticTypes[i] == ObjectField) {
+          unsigned index = (offset / BytesPerWord) + 2;
+          mask[index / 32] |= static_cast<uint32_t>(1) << (index % 32);
+        }
+
+        offset += size;
+      }
 
       set(t, class_, ClassStaticTable, staticTable);
     }
@@ -1116,11 +1203,11 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       unsigned parameterFootprint = t->m->processor->parameterFootprint
         (t, specString, flags & ACC_STATIC);
 
-      Compiled* compiled;
+      object compiled;
       if (flags & ACC_NATIVE) {
-        compiled = static_cast<Compiled*>(t->m->processor->nativeInvoker(t));
+        compiled = t->m->processor->nativeInvoker(t);
       } else {
-        compiled = static_cast<Compiled*>(t->m->processor->methodStub(t));
+        compiled = t->m->processor->methodStub(t);
       }
 
       object method = makeMethod(t,
@@ -1134,7 +1221,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  arrayBody(t, pool, spec - 1),
                                  class_,
                                  code,
-                                 reinterpret_cast<uint64_t>(compiled));
+                                 compiled);
       PROTECT(t, method);
 
       if (flags & ACC_STATIC) {
@@ -1511,7 +1598,7 @@ class HeapClient: public Heap::Client {
 
   virtual void walk(void* p, Heap::Walker* w) {
     object o = static_cast<object>(m->heap->follow(mask(p)));
-    ::walk(m->rootThread, o, w);
+    ::walk(m->rootThread, w, o);
   }
 
   virtual void dispose() {
@@ -1662,6 +1749,9 @@ Thread::init()
     set(t, intArrayClass, ClassSuper, objectClass);
 
     m->unsafe = false;
+
+    classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+      |= SingletonFlag;
 
     classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
       |= ReferenceFlag;
