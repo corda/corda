@@ -84,7 +84,7 @@ public class Field<T> extends AccessibleObject {
         (Double.longBitsToDouble(getPrimitive(target, code, offset)));
 
     case ObjectField:
-      return getObject(instance, offset);
+      return getObject(target, offset);
 
     default:
       throw new Error();

@@ -210,7 +210,7 @@ walk(Thread* t, Heap::Walker* w, object o)
       memcpy(mask, &singletonBody(t, o, length - maskSize),
              maskSize * BytesPerWord);
 
-      walk(t, w, mask, length - maskSize, 0, 0);
+      walk(t, w, mask, (length + 2) * BytesPerWord, 0, 0);
     } else {
       w->visit(0);
     }
@@ -980,7 +980,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
         if (staticTypes[i] == ObjectField) {
           unsigned index = (offset / BytesPerWord) + 2;
-          mask[index / 32] |= 1 << (index % 32);
+          mask[index / 32] |= static_cast<uint32_t>(1) << (index % 32);
         }
 
         offset += size;
