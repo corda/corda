@@ -62,6 +62,7 @@ const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
 const unsigned PrimitiveFlag = 1 << 4;
 const unsigned SingletonFlag = 1 << 5;
+const unsigned BootstrapFlag = 1 << 6;
 
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;

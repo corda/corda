@@ -1295,6 +1295,12 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
 
   unsigned interfaceCount = s->read2();
   s->skip(interfaceCount * 2);
+//   for (unsigned i = 0; i < interfaceCount; ++i) {
+//     const char* name = reinterpret_cast<const char*>
+//       (pool[pool[s->read2() - 1] - 1]);
+
+//     fprintf(stderr, "%s implements %s\n", typeJavaName(type), name);
+//   }
 
   unsigned fieldCount = s->read2();
   for (unsigned i = 0; i < fieldCount; ++i) {

@@ -1371,6 +1371,8 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
              and classObjectMask(t, class_) == 0)
          or intArrayEqual(t, classObjectMask(t, bootstrapClass),
                           classObjectMask(t, class_)));
+  expect(t, arrayLength(t, classVirtualTable(t, bootstrapClass))
+         == arrayLength(t, classVirtualTable(t, class_)));
 
   PROTECT(t, bootstrapClass);
   PROTECT(t, class_);
@@ -1528,8 +1530,9 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
 
   object super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
 
-  object class_ = makeClass(t, 0, 0, 0, fixedSize, arrayElementSize, mask, 0,
-                            super, 0, 0, 0, 0, 0, t->m->loader);
+  object class_ = makeClass
+    (t, 0, BootstrapFlag, 0, fixedSize, arrayElementSize, mask, 0, super, 0, 0
+     , 0, 0, 0, t->m->loader);
 
   set(t, t->m->types, ArrayBody + (type * BytesPerWord), class_);
 }
@@ -2119,9 +2122,13 @@ stringChars(Thread* t, object string, char* chars)
 bool
 isAssignableFrom(Thread* t, object a, object b)
 {
-  if (a == b) return true;
+  if (a == b) {
+    return true;
+  } else if (classFlags(t, a) & ACC_INTERFACE) {
+    if (classVmFlags(t, b) & BootstrapFlag) {
+      resolveClass(t, className(t, b));
+    }
 
-  if (classFlags(t, a) & ACC_INTERFACE) {
     for (; b; b = classSuper(t, b)) {
       object itable = classInterfaceTable(t, b);
       if (itable) {
