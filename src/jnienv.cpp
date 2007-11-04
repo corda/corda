@@ -11,6 +11,9 @@ namespace {
 const uintptr_t InterfaceMethodID
 = (static_cast<uintptr_t>(1) << (BitsPerWord - 1));
 
+const uintptr_t NonVirtualMethodID
+= (static_cast<uintptr_t>(1) << (BitsPerWord - 2));
+
 jint JNICALL
 DestroyJavaVM(Machine* m)
 {
@@ -228,6 +231,8 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
       = vectorAppend(t, t->m->jniInterfaceTable, method);
 
     return (vectorSize(t, t->m->jniInterfaceTable) - 1) | InterfaceMethodID;
+  } else if (methodFlags(t, method) & ACC_PRIVATE) {
+    return methodOffset(t, method) | NonVirtualMethodID;
   } else {
     return methodOffset(t, method) + 1;
   }
@@ -249,6 +254,9 @@ getMethod(Thread* t, object o, jmethodID m)
 {
   if (m & InterfaceMethodID) {
     return vectorBody(t, t->m->jniInterfaceTable, m & (~InterfaceMethodID));
+  } else if (m & NonVirtualMethodID) {
+    return arrayBody(t, classMethodTable(t, objectClass(t, o)),
+                     m & (~NonVirtualMethodID));
   } else {
     return arrayBody(t, classVirtualTable(t, objectClass(t, o)), m - 1);
   }
@@ -1889,6 +1897,9 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   }
 
   *t = p->makeThread(*m, 0, 0);
+
+  enter(*t, Thread::ActiveState);
+  enter(*t, Thread::IdleState);
 
   return 0;
 }

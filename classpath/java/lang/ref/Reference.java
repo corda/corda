@@ -4,7 +4,8 @@ public abstract class Reference<T> {
   private Object vmNext;
   private T target;
   private ReferenceQueue<? super T> queue;
-  Reference next;
+
+  Reference jNext;
 
   protected Reference(T target, ReferenceQueue<? super T> queue) {
     this.target = target;
@@ -20,7 +21,7 @@ public abstract class Reference<T> {
   }
 
   public boolean isEnqueued() {
-    return next != null;
+    return jNext != null;
   }
 
   public boolean enqueue() {

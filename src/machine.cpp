@@ -250,9 +250,9 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 
     object q = jreferenceQueue(t, *p);
 
-    set(t, *p, JreferenceJnext, *p);
+    set(t, *p, JreferenceJNext, *p);
     if (referenceQueueFront(t, q)) {
-      set(t, referenceQueueRear(t, q), JreferenceJnext, *p);
+      set(t, referenceQueueRear(t, q), JreferenceJNext, *p);
     } else {
       set(t, q, ReferenceQueueFront, *p);
     }
@@ -261,7 +261,7 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
     jreferenceQueue(t, *p) = 0;
   }
 
-  *p = jreferenceNext(t, *p);
+  *p = jreferenceVmNext(t, *p);
 }
 
 void
@@ -278,7 +278,7 @@ referenceUnreachable(Thread* t, Heap::Visitor* v, object* p)
     // queue is reachable - add the reference
     referenceTargetUnreachable(t, v, p);    
   } else {
-    *p = jreferenceNext(t, *p);
+    *p = jreferenceVmNext(t, *p);
   }
 }
 
@@ -373,11 +373,11 @@ postVisit(Thread* t, Heap::Visitor* v)
         }
 
         object reference = *p;
-        *p = jreferenceNext(t, reference);
-        jreferenceNext(t, reference) = firstNewTenuredWeakReference;
+        *p = jreferenceVmNext(t, reference);
+        jreferenceVmNext(t, reference) = firstNewTenuredWeakReference;
         firstNewTenuredWeakReference = reference;
       } else {
-        p = &jreferenceNext(t, *p);
+        p = &jreferenceVmNext(t, *p);
       }
     }
   }
@@ -408,7 +408,7 @@ postVisit(Thread* t, Heap::Visitor* v)
       } else {
         // both reference and target are reachable
         referenceTargetReachable(t, v, p);
-        p = &jreferenceNext(t, *p);
+        p = &jreferenceVmNext(t, *p);
       }
     }
   }
@@ -419,7 +419,7 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 
   if (lastNewTenuredWeakReference) {
-    jreferenceNext(t, lastNewTenuredWeakReference) = m->tenuredWeakReferences;
+    jreferenceVmNext(t, lastNewTenuredWeakReference) = m->tenuredWeakReferences;
     m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
 }
@@ -1224,7 +1224,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  compiled);
       PROTECT(t, method);
 
-      if (flags & ACC_STATIC) {
+      if (flags & (ACC_STATIC | ACC_PRIVATE)) {
         methodOffset(t, method) = i;
 
         if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
@@ -1377,9 +1377,8 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   ENTER(t, Thread::ExclusiveState);
 
+  classVmFlags(t, bootstrapClass) = classVmFlags(t, class_);
   classFlags(t, bootstrapClass) = classFlags(t, class_);
-  classVmFlags(t, bootstrapClass)
-    |= (classVmFlags(t, class_) & ~BootstrapFlag);
 
   set(t, bootstrapClass, ClassSuper, classSuper(t, class_));
   set(t, bootstrapClass, ClassInterfaceTable, classInterfaceTable(t, class_));
@@ -1513,6 +1512,48 @@ invoke(Thread* t, const char* className, int argc, const char** argv)
 
   t->m->processor->invoke
     (t, className, "main", "([Ljava/lang/String;)V", 0, args);
+}
+
+void
+bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
+          unsigned fixedSize, unsigned arrayElementSize)
+{
+  object mask;
+  if (objectMask) {
+    mask = makeIntArray(t, 1, false);
+    intArrayBody(t, mask, 0) = objectMask;
+  } else {
+    mask = 0;
+  }
+
+  object super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
+
+  object class_ = makeClass(t, 0, 0, 0, fixedSize, arrayElementSize, mask, 0,
+                            super, 0, 0, 0, 0, 0, t->m->loader);
+
+  set(t, t->m->types, ArrayBody + (type * BytesPerWord), class_);
+}
+
+void
+bootJavaClass(Thread* t, Machine::Type type, const char* name,
+              unsigned vtableLength, object bootMethod)
+{
+  PROTECT(t, bootMethod);
+
+  object n = makeByteArray(t, name);
+  object class_ = arrayBody(t, t->m->types, type);
+  PROTECT(t, class_);
+
+  set(t, class_, ClassName, n);
+
+  object vtable = makeArray(t, vtableLength, false);
+  for (unsigned i = 0; i < vtableLength; ++ i) {
+    arrayBody(t, vtable, i) = bootMethod;
+  }
+
+  set(t, class_, ClassVirtualTable, vtable);
+
+  hashMapInsert(t, t->m->bootstrapClassMap, n, class_, byteArrayHash);
 }
 
 class HeapClient: public Heap::Client {
@@ -1729,6 +1770,10 @@ Thread::init()
     t->m->loader = allocate(t, sizeof(void*) * 3, true);
     memset(t->m->loader, 0, sizeof(void*) * 2);
 
+    t->m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
+    arrayLength(t, t->m->types) = TypeCount;
+    memset(&arrayBody(t, t->m->types, 0), 0, TypeCount * BytesPerWord);
+
 #include "type-initializations.cpp"
 
     object arrayClass = arrayBody(t, t->m->types, Machine::ArrayType);
@@ -1781,8 +1826,9 @@ Thread::init()
 
     m->bootstrapClassMap = makeHashMap(this, 0, 0);
 
-    object loaderMap = makeHashMap(this, 0, 0);
-    set(t, m->loader, SystemClassLoaderMap, loaderMap);
+    { object loaderMap = makeHashMap(this, 0, 0);
+      set(t, m->loader, SystemClassLoaderMap, loaderMap);
+    }
 
     m->monitorMap = makeWeakHashMap(this, 0, 0);
     m->stringMap = makeWeakHashMap(this, 0, 0);
@@ -1791,19 +1837,14 @@ Thread::init()
 
     m->localThread->set(this);
 
+    { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
+      codeBody(t, bootCode, 0) = impdep1;
+      object bootMethod = makeMethod
+        (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
+      PROTECT(t, bootMethod);
+
 #include "type-java-initializations.cpp"
-
-    enter(t, Thread::ActiveState);
-
-    resolveClass
-      (t, className(t, arrayBody(t, m->types,
-                                 Machine::SystemClassLoaderType)));
-    resolveClass
-      (t, className(t, arrayBody(t, m->types, Machine::ClassType)));
-    resolveClass
-      (t, className(t, arrayBody(t, m->types, Machine::IntArrayType)));
-    resolveClass
-      (t, className(t, arrayBody(t, m->types, Machine::ByteArrayType)));
+    }
   } else {
     parent->child = this;
   }
@@ -1813,10 +1854,6 @@ Thread::init()
   } else {
     this->javaThread = makeThread
       (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader);
-  }
-
-  if (parent == 0) {
-    enter(this, Thread::IdleState);
   }
 }
 
@@ -2072,7 +2109,7 @@ stringChars(Thread* t, object string, char* chars)
            &byteArrayBody(t, data, stringOffset(t, string)),
            stringLength(t, string));
   } else {
-    for (int i = 0; i < stringLength(t, string); ++i) {
+    for (unsigned i = 0; i < stringLength(t, string); ++i) {
       chars[i] = charArrayBody(t, data, stringOffset(t, string) + i);
     }
   }
@@ -2235,7 +2272,7 @@ hashMapInsert(Thread* t, object map, object key, object value,
 
     object r = makeWeakReference(t, 0, 0, 0, 0);
     jreferenceTarget(t, r) = key;
-    jreferenceNext(t, r) = t->m->weakReferences;
+    jreferenceVmNext(t, r) = t->m->weakReferences;
     key = t->m->weakReferences = r;
   }
 
@@ -2810,7 +2847,7 @@ printTrace(Thread* t, object exception)
     exception = makeNullPointerException(t, 0, makeTrace(t), 0);
   }
 
-  for (object e = exception; e; e = throwableCauseUnsafe(t, e)) {
+  for (object e = exception; e; e = throwableCause(t, e)) {
     if (e != exception) {
       fprintf(stderr, "caused by: ");
     }
@@ -2818,8 +2855,8 @@ printTrace(Thread* t, object exception)
     fprintf(stderr, "%s", &byteArrayBody
             (t, className(t, objectClass(t, e)), 0));
   
-    if (throwableMessageUnsafe(t, e)) {
-      object m = throwableMessageUnsafe(t, e);
+    if (throwableMessage(t, e)) {
+      object m = throwableMessage(t, e);
       char message[stringLength(t, m) + 1];
       stringChars(t, m, message);
       fprintf(stderr, ": %s\n", message);
@@ -2827,7 +2864,7 @@ printTrace(Thread* t, object exception)
       fprintf(stderr, "\n");
     }
 
-    object trace = throwableTraceUnsafe(t, e);
+    object trace = throwableTrace(t, e);
     for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
       object e = arrayBody(t, trace, i);
       const int8_t* class_ = &byteArrayBody

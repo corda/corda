@@ -1,16 +1,20 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
+#include "stdlib.h"
+#include "stdio.h"
+#include "stdint.h"
+#include "string.h"
+#include "assert.h"
 
-#include "input.h"
-#include "output.h"
+#include "constants.h"
 
 #define UNREACHABLE abort()
+
+#define UNUSED __attribute__((unused))
 
 inline void operator delete(void*) { abort(); }
 
 extern "C" void __cxa_pure_virtual(void) { abort(); }
+
+using namespace vm;
 
 namespace {
 
@@ -74,11 +78,194 @@ take(unsigned n, const char* c)
   return r;
 }
 
+class Input {
+ public:
+  virtual ~Input() { }
+  
+  virtual void dispose() = 0;
+
+  virtual int peek() = 0;
+
+  virtual int read() = 0;
+
+  virtual unsigned line() = 0;
+
+  virtual unsigned column() = 0;
+
+  void skipSpace() {
+    bool quit = false;
+    while (not quit) {
+      int c = peek();
+      switch (c) {
+      case ' ': case '\t': case '\n':
+        read();
+        break;
+
+      default: quit = true;
+      }
+    }
+  }
+};
+
+class FileInput : public Input {
+ public:
+  const char* file;
+  FILE* stream;
+  unsigned line_;
+  unsigned column_;
+  bool close;
+
+  FileInput(const char* file, FILE* stream = 0, bool close = true):
+    file(file), stream(stream), line_(1), column_(1), close(close)
+  { }
+
+  virtual ~FileInput() {
+    dispose();
+  }
+
+  virtual void dispose() {
+    if (stream and close) {
+      fclose(stream);
+      stream = 0;
+    }
+  }
+
+  virtual int peek() {
+    int c = getc(stream);
+    ungetc(c, stream);
+    return c;
+  }
+
+  virtual int read() {
+    int c = getc(stream);
+    if (c == '\n') {
+      ++ line_;
+      column_ = 1;
+    } else {
+      ++ column_;
+    }
+    return c;
+  }
+
+  virtual unsigned line() {
+    return line_;
+  }
+
+  virtual unsigned column() {
+    return column_;
+  }
+};
+
+class Output {
+ public:
+  virtual ~Output() { }
+  
+  virtual void dispose() = 0;
+
+  virtual void write(const char* s) = 0;
+
+  void write(int i) {
+    static const int Size = 32;
+    char s[Size];
+    int c UNUSED = snprintf(s, Size, "%d", i);
+    assert(c > 0 and c < Size);
+    write(s);
+  }
+};
+
+class FileOutput : public Output {
+ public:
+  const char* file;
+  FILE* stream;
+  bool close;
+
+  FileOutput(const char* file, FILE* stream = 0, bool close = true):
+    file(file), stream(stream), close(close)
+  { }
+
+  virtual ~FileOutput() {
+    dispose();
+  }
+
+  virtual void dispose() {
+    if (stream and close) {
+      fclose(stream);
+      stream = 0;
+    }
+  }
+
+  virtual void write(const char* s) {
+    fputs(s, stream);
+  }
+
+  const char* filename() {
+    return file;
+  }
+};
+
+class Stream {
+ public:
+  Stream(FILE* stream, bool close):
+    stream(stream), close(close)
+  {
+    assert(stream);
+  }
+
+  ~Stream() {
+    if (close) fclose(stream);
+  }
+
+  void skip(unsigned size) {
+    fseek(stream, size, SEEK_CUR);
+  }
+
+  void read(uint8_t* data, unsigned size) {
+    fread(data, 1, size, stream);
+  }
+
+  uint8_t read1() {
+    uint8_t v;
+    read(&v, 1);
+    return v;
+  }
+
+  uint16_t read2() {
+    uint16_t a = read1();
+    uint16_t b = read1();
+    return (a << 8) | b;
+  }
+
+  uint32_t read4() {
+    uint32_t a = read2();
+    uint32_t b = read2();
+    return (a << 16) | b;
+  }
+
+  uint64_t read8() {
+    uint64_t a = read4();
+    uint64_t b = read4();
+    return (a << 32) | b;
+  }
+
+  uint32_t readFloat() {
+    return read4();
+  }
+
+  uint64_t readDouble() {
+    return read8();
+  }
+
+ private:
+  FILE* stream;
+  bool close;
+};
+
 class Object {
  public:
   typedef enum {
     Scalar,
     Array,
+    Method,
     Pod,
     Type,
     Pair,
@@ -116,6 +303,13 @@ car(Object* o)
 {
   assert(o->type == Object::Pair);
   return static_cast<Pair*>(o)->car;
+}
+
+void
+setCar(Object* o, Object* v)
+{
+  assert(o->type == Object::Pair);
+  static_cast<Pair*>(o)->car = v;
 }
 
 Object*&
@@ -336,13 +530,54 @@ memberHide(Object* o)
   }
 }
 
+class Method : public Object {
+ public:
+  Object* owner;
+  const char* name;
+  const char* spec;
+
+  static Method* make(Object* owner, const char* name, const char* spec)
+  {
+    Method* o = allocate<Method>();
+    o->type = Object::Method;
+    o->owner = owner;
+    o->name = name;
+    o->spec = spec;
+    return o;
+  }
+};
+
+const char*
+methodName(Object* o)
+{
+  switch (o->type) {
+  case Object::Method:
+    return static_cast<Method*>(o)->name;
+
+  default:
+    UNREACHABLE;
+  }
+}
+
+const char*
+methodSpec(Object* o)
+{
+  switch (o->type) {
+  case Object::Method:
+    return static_cast<Method*>(o)->spec;
+
+  default:
+    UNREACHABLE;
+  }
+}
+
 class Type : public Object {
  public:
   const char* name;
   const char* javaName;
   Object* super;
   List members;
-  List subtypes;
+  List methods;
   bool hideConstructor;
 
   static Type* make(Object::ObjectType type, const char* name,
@@ -354,7 +589,7 @@ class Type : public Object {
     o->javaName = javaName;
     o->super = 0;
     o->members.first = o->members.last = 0;
-    o->subtypes.first = o->subtypes.last = 0;
+    o->methods.first = o->methods.last = 0;
     o->hideConstructor = false;
     return o;
   }  
@@ -396,6 +631,18 @@ typeMembers(Object* o)
   }
 }
 
+Object*
+typeMethods(Object* o)
+{
+  switch (o->type) {
+  case Object::Type:
+    return static_cast<Type*>(o)->methods.first;
+
+  default:
+    UNREACHABLE;
+  }
+}
+
 void
 addMember(Object* o, Object* member)
 {
@@ -414,24 +661,21 @@ addMember(Object* o, Object* member)
 }
 
 void
-addSubtype(Object* o, Object* subtype)
+addMethod(Object* o, Object* method)
 {
   switch (o->type) {
   case Object::Type:
-    static_cast<Type*>(o)->subtypes.append(subtype);
+    for (Object* p = typeMethods(o); p; p = cdr(p)) {
+      Object* m = car(p);
+      if (equal(methodName(m), methodName(method))
+          and equal(methodSpec(m), methodSpec(method)))
+      {
+        setCar(p, method);
+        return;
+      }
+    }
+    static_cast<Type*>(o)->methods.append(method);
     break;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-Object*
-typeSubtypes(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->subtypes.first;
 
   default:
     UNREACHABLE;
@@ -634,6 +878,25 @@ declaration(const char* name, Object* declarations)
     switch (o->type) {
     case Object::Type: case Object::Pod:
       if (equal(name, typeName(o))) return o;
+      break;
+
+    default: UNREACHABLE;
+    }
+  }
+  return 0;
+}
+
+Object*
+javaDeclaration(const char* name, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    switch (o->type) {
+    case Object::Type:
+      if (typeJavaName(o) and equal(name, typeJavaName(o))) return o;
+      break;
+
+    case Object::Pod:
       break;
 
     default: UNREACHABLE;
@@ -868,7 +1131,6 @@ parseSubdeclaration(Object* t, Object* p, Object* declarations)
     typeSuper(t) = declaration(string(car(cdr(p))), declarations);
     assert(typeSuper(t));
     assert(typeSuper(t)->type == Object::Type);
-    addSubtype(typeSuper(t), t);
   } else {
     Object* member = parseMember(t, p, declarations);
     addMember(t, member);
@@ -924,22 +1186,184 @@ specEqual(Object* a, Object* b)
 }
 
 const char*
+append(const char* a, const char* b, const char* c, const char* d)
+{
+  unsigned al = strlen(a);
+  unsigned bl = strlen(b);
+  unsigned cl = strlen(c);
+  unsigned dl = strlen(d);
+  char* p = static_cast<char*>(malloc(al + bl + cl + dl + 1));
+  memcpy(p, a, al);
+  memcpy(p + al, b, bl);
+  memcpy(p + al + bl, c, cl);
+  memcpy(p + al + bl + cl, d, dl + 1);
+  return p;
+}
+
+const char*
 append(const char* a, const char* b)
 {
-  assert(a and b);
-  unsigned aLength = strlen(a);
-  unsigned bLength = strlen(b);
-  assert(aLength + bLength);
-  char* r = static_cast<char*>(malloc(aLength + bLength + 1));
-  assert(r);
-  
-  memcpy(r, a, aLength);
-  memcpy(r + aLength, b, bLength + 1);
-  return r;
+  return append(a, b, "", "");
+}
+
+const char*
+fieldType(const char* spec)
+{
+  switch (*spec) {
+  case 'B':
+  case 'Z':
+    return "uint8_t";
+  case 'C':
+  case 'S':
+    return "uint16_t";
+  case 'D':
+  case 'J':
+    return "uint64_t";
+  case 'F':
+  case 'I':
+    return "uint32_t";
+  case 'L':
+  case '[':
+    return "object";
+
+  default: abort();
+  }
+}
+
+void
+parseJavaClass(Object* type, Stream* s, Object* declarations)
+{
+  uint32_t magic = s->read4();
+  assert(magic == 0xCAFEBABE);
+  s->read2(); // minor version
+  s->read2(); // major version
+
+  unsigned poolCount = s->read2() - 1;
+  uintptr_t pool[poolCount];
+  for (unsigned i = 0; i < poolCount; ++i) {
+    unsigned c = s->read1();
+
+    switch (c) {
+    case CONSTANT_Integer:
+    case CONSTANT_Float:
+      pool[i] = s->read4();
+      break;
+
+    case CONSTANT_Long:
+    case CONSTANT_Double:
+      pool[i++] = s->read4();
+      pool[i] = s->read4();
+      break;
+
+    case CONSTANT_Utf8: {
+      unsigned length = s->read2();
+      uint8_t* p = static_cast<uint8_t*>(malloc(length + 1));
+      s->read(p, length);
+      p[length] = 0;
+      pool[i] = reinterpret_cast<uintptr_t>(p);
+    } break;
+
+    case CONSTANT_Class:
+    case CONSTANT_String:
+      pool[i] = s->read2();
+      break;
+
+    case CONSTANT_NameAndType:
+      pool[i] = s->read4();
+      break;
+
+    case CONSTANT_Fieldref:
+    case CONSTANT_Methodref:
+    case CONSTANT_InterfaceMethodref:
+      pool[i] = s->read4();
+      break;
+
+    default: abort();
+    }
+  }
+
+  s->read2(); // flags
+  s->read2(); // name
+
+  unsigned superIndex = s->read2();
+  if (superIndex) {
+    const char* name = reinterpret_cast<const char*>
+      (pool[pool[superIndex - 1] - 1]);
+    typeSuper(type) = javaDeclaration(name, declarations);
+    assert(typeSuper(type));
+  }
+
+  unsigned interfaceCount = s->read2();
+  s->skip(interfaceCount * 2);
+
+  unsigned fieldCount = s->read2();
+  for (unsigned i = 0; i < fieldCount; ++i) {
+    unsigned flags = s->read2();
+    unsigned nameIndex = s->read2();
+    unsigned specIndex = s->read2();
+
+    unsigned attributeCount = s->read2();
+    for (unsigned j = 0; j < attributeCount; ++j) {
+      s->read2();
+      s->skip(s->read4());
+    }
+
+    if ((flags & ACC_STATIC) == 0) {
+      char* name = reinterpret_cast<char*>(pool[nameIndex - 1]);
+      unsigned nameLength = strlen(name);
+      if (nameLength > 0 and name[nameLength - 1] == '_') {
+        name[nameLength - 1] = 0;
+      }
+
+      const char* spec = reinterpret_cast<const char*>(pool[specIndex - 1]);
+      const char* memberType = fieldType(spec);
+
+      Object* member = Scalar::make
+        (type, 0, memberType, name, sizeOf(memberType, declarations));
+
+      if (equal(typeJavaName(type), "java/lang/ref/Reference")
+          and (equal(name, "vmNext")
+               or equal(name, "target")
+               or equal(name, "queue")))
+      {
+        memberNoGC(member) = true;
+      }
+
+      addMember(type, member);
+    }
+  }
+
+  if (typeSuper(type)) {
+    for (Object* p = typeMethods(typeSuper(type)); p; p = cdr(p)) {
+      addMethod(type, car(p));
+    }
+  }
+
+  unsigned methodCount = s->read2();
+  for (unsigned i = 0; i < methodCount; ++i) {
+    unsigned flags = s->read2();
+    unsigned nameIndex = s->read2();
+    unsigned specIndex = s->read2();
+
+    unsigned attributeCount = s->read2();
+    for (unsigned j = 0; j < attributeCount; ++j) {
+      s->read2();
+      s->skip(s->read4());
+    }
+
+    if ((flags & (ACC_STATIC | ACC_PRIVATE)) == 0) {
+      const char* name = reinterpret_cast<const char*>(pool[nameIndex - 1]);
+      const char* spec = reinterpret_cast<const char*>(pool[specIndex - 1]);
+
+      Object* method = Method::make(type, name, spec);
+      addMethod(type, method);
+    }    
+  }
 }
 
 Object*
-parseType(Object::ObjectType type, Object* p, Object* declarations)
+parseType(Object::ObjectType type, Object* p, Object* declarations,
+          const char* javaClassDirectory)
 {
   const char* name = string(car(p));
 
@@ -951,13 +1375,27 @@ parseType(Object::ObjectType type, Object* p, Object* declarations)
 
   Type* t = Type::make(type, name, javaName);
 
-  for (p = cdr(p); p; p = cdr(p)) {
-    if (type == Object::Type) {
-      parseSubdeclaration(t, car(p), declarations);
-    } else {
-      Object* member = parseMember(t, car(p), declarations);
-      assert(member->type == Object::Scalar);
-      addMember(t, member);
+  if (javaName and *javaName != '[') {
+    assert(cdr(p) == 0);
+
+    const char* file = append(javaClassDirectory, "/", javaName, ".class");
+    Stream s(fopen(file, "rb"), true);
+    parseJavaClass(t, &s, declarations);
+  } else {
+    for (p = cdr(p); p; p = cdr(p)) {
+      if (type == Object::Type) {
+        parseSubdeclaration(t, car(p), declarations);
+      } else {
+        Object* member = parseMember(t, car(p), declarations);
+        assert(member->type == Object::Scalar);
+        addMember(t, member);
+      }
+    }
+
+    if (type == Object::Type and typeSuper(t)) {
+      for (Object* p = typeMethods(typeSuper(t)); p; p = cdr(p)) {
+        addMethod(t, car(p));
+      }
     }
   }
 
@@ -965,13 +1403,14 @@ parseType(Object::ObjectType type, Object* p, Object* declarations)
 }
 
 Object*
-parseDeclaration(Object* p, Object* declarations)
+parseDeclaration(Object* p, Object* declarations,
+                 const char* javaClassDirectory)
 {
   const char* spec = string(car(p));
   if (equal(spec, "type")) {
-    return parseType(Object::Type, cdr(p), declarations);
+    return parseType(Object::Type, cdr(p), declarations, javaClassDirectory);
   } else if (equal(spec, "pod")) {
-    return parseType(Object::Pod, cdr(p), declarations);
+    return parseType(Object::Pod, cdr(p), declarations, javaClassDirectory);
   } else {
     fprintf(stderr, "unexpected declaration spec: %s\n", spec);
     abort();
@@ -979,14 +1418,15 @@ parseDeclaration(Object* p, Object* declarations)
 }
 
 Object*
-parse(Input* in)
+parse(Input* in, const char* javaClassDirectory)
 {
   Object* eos = Singleton::make(Object::Eos);
   List declarations;
 
   Object* o;
   while ((o = read(in, eos, 0)) != eos) {
-    declarations.append(parseDeclaration(o, declarations.first));
+    declarations.append
+      (parseDeclaration(o, declarations.first, javaClassDirectory));
   }
 
   return declarations.first;
@@ -1053,19 +1493,6 @@ writeOffset(Output* out, Object* offset, bool allocationStyle = false)
 }
 
 void
-writeSubtypeAssertions(Output* out, Object* o)
-{
-  for (Object* p = typeSubtypes(o); p; p = cdr(p)) {
-    Object* st = car(p);
-    out->write(" or objectClass(t, o) == arrayBodyUnsafe");
-    out->write("(t, t->m->types, Machine::");
-    out->write(capitalize(typeName(st)));
-    out->write("Type)");
-    writeSubtypeAssertions(out, st);
-  }
-}
-
-void
 writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
 {
   const char* typeName = memberTypeName(member);
@@ -1110,16 +1537,13 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   out->write(") {\n");
 
   if (memberOwner(member)->type == Object::Type) {
-    if (unsafe) {
-      out->write("  assert(t, true);");
-    } else {
+    if (not unsafe) {
       out->write("  assert(t, t->m->unsafe or ");
-      out->write("objectClass(t, o) == arrayBodyUnsafe");
+      out->write("instanceOf(t, arrayBodyUnsafe");
       out->write("(t, t->m->types, Machine::");
       out->write(capitalize(::typeName(memberOwner(member))));
       out->write("Type)");
-      writeSubtypeAssertions(out, memberOwner(member));
-      out->write(");\n");
+      out->write(", o));\n");
 
       if (member->type != Object::Scalar) {
         out->write("  assert(t, i < ");
@@ -1506,32 +1930,6 @@ writeConstructors(Output* out, Object* declarations)
         }
       }
 
-      if (typeJavaName(o)
-          and not equal("class", typeName(o))
-          and startsWith("java/", typeJavaName(o)))
-      {
-        out->write("  object class__ ");
-        out->write("= arrayBody(t, t->m->types, Machine::");
-        out->write(capitalize(typeName(o)));
-        out->write("Type);\n");
-
-        out->write("  if (classVmFlags(t, class__) & BootstrapFlag) {\n");
-        out->write("    classVmFlags(t, class__) &= ~BootstrapFlag;\n");
-        out->write("#ifndef NDEBUG\n");
-        out->write("    object e = t->exception;\n");
-        out->write("    PROTECT(t, e);\n");
-        out->write("#endif\n");
-        out->write("    resolveClass(t, className(t, class__));\n");
-
-        if (equal("classNotFoundException", typeName(o))) {
-          out->write("    t->exception = 0;\n");
-        } else {
-          out->write("    assert(t, t->exception == e);\n");
-        }
-
-        out->write("  }\n");
-      }
-
       out->write("  object o = allocate(t, ");
       writeOffset(out, typeOffset(o), true);
       if (hasObjectMask) {
@@ -1590,6 +1988,14 @@ memberCount(Object* o)
     it.next();
     ++c;
   }
+  return c;
+}
+
+unsigned
+methodCount(Object* o)
+{
+  unsigned c = 0;
+  for (Object* p = typeMethods(o); p; p = cdr(p)) ++c;
   return c;
 }
 
@@ -1665,49 +2071,31 @@ typeObjectMask(Object* type)
 void
 writeInitialization(Output* out, Object* type)
 {
-  out->write("{\n");
+  out->write("bootClass(t, Machine::");
+  out->write(capitalize(typeName(type)));
+  out->write("Type, ");
+
+  if (typeSuper(type)) {
+    out->write("Machine::");
+    out->write(capitalize(typeName(typeSuper(type))));
+    out->write("Type");
+  } else {
+    out->write("-1");   
+  }
+  out->write(", ");
 
   if (typeObjectMask(type) != 1) {
-    out->write("  object mask = makeIntArray(t, 1, false);\n");
-
-    out->write("  intArrayBody(t, mask, 0) = ");
     out->write(typeObjectMask(type));
-    out->write(";\n");
   } else {
-    out->write("  object mask = 0;\n");    
+    out->write("0");    
   }
+  out->write(", ");
 
-  if (typeJavaName(type) and typeSuper(type)) {
-    out->write("  object super = arrayBody(t, t->m->types, Machine::");
-    out->write(capitalize(typeName(typeSuper(type))));
-    out->write("Type);\n");
-  } else {
-    out->write("  object super = 0;\n");   
-  }
-
-  out->write("  object class_ = makeClass");
-  out->write("(t, 0, ");
-
-  if (typeJavaName(type)
-      and not equal("class", typeName(type))
-      and startsWith("java/", typeJavaName(type)))
-  {
-    out->write("BootstrapFlag");
-  } else {
-    out->write("0");
-  }
-
-  out->write(", 0, ");
   out->write(typeFixedSize(type));
   out->write(", ");
+
   out->write(typeArrayElementSize(type));
-  out->write(", mask, 0, super, 0, 0, 0, 0, 0, t->m->loader);\n");
-
-  out->write("  set(t, t->m->types, ArrayBody + (Machine::");
-  out->write(capitalize(typeName(type)));
-  out->write("Type * BytesPerWord), class_);\n");
-
-  out->write("}\n\n");
+  out->write(");\n");
 }
 
 unsigned
@@ -1751,18 +2139,6 @@ reorder(Object* declarations)
 void
 writeInitializations(Output* out, Object* declarations)
 {
-  unsigned count = typeCount(declarations);
-
-  out->write("t->m->types = allocate(t, pad((");
-  out->write(count);
-  out->write(" * BytesPerWord) + (BytesPerWord * 2)), true);\n");
-  out->write("arrayLength(t, t->m->types) = ");
-  out->write(count);
-  out->write(";\n");
-  out->write("memset(&arrayBody(t, t->m->types, 0), 0, ");
-  out->write(count);
-  out->write(" * BytesPerWord);\n\n");
-
   declarations = reorder(declarations);
 
   for (Object* p = declarations; p; p = cdr(p)) {
@@ -1776,22 +2152,15 @@ writeInitializations(Output* out, Object* declarations)
 void
 writeJavaInitialization(Output* out, Object* type)
 {
-  out->write("{\n");
-
-  out->write("  object name = ::makeByteArray(t, \"");
-  out->write(typeJavaName(type));
-  out->write("\");\n");
-
-  out->write("  object class_ = arrayBody(t, t->m->types, Machine::");
+  out->write("bootJavaClass(t, Machine::");
   out->write(capitalize(typeName(type)));
-  out->write("Type);\n");
+  out->write("Type, \"");
 
-  out->write("  set(t, class_, ClassName, name);\n");
+  out->write(typeJavaName(type));
+  out->write("\", ");
 
-  out->write("  hashMapInsert(t, t->m->bootstrapClassMap, ");
-  out->write("name, class_, byteArrayHash);\n");
-
-  out->write("}\n\n");
+  out->write(methodCount(type));
+  out->write(", bootMethod);\n");
 }
 
 void
@@ -1809,7 +2178,8 @@ void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
-          "usage: %s {enums,declarations,constructors,initializations,"
+          "usage: %s <java class directory> "
+          "{enums,declarations,constructors,initializations,"
           "java-initializations}\n",
           command);
   exit(-1);
@@ -1820,44 +2190,48 @@ usageAndExit(const char* command)
 int
 main(int ac, char** av)
 {
-  if ((ac != 1 and ac != 2)
-      or (ac == 2
-          and not equal(av[1], "enums")
-          and not equal(av[1], "declarations")
-          and not equal(av[1], "constructors")
-          and not equal(av[1], "initializations")
-          and not equal(av[1], "java-initializations")))
+  if ((ac != 2 and ac != 3)
+      or (ac == 3
+          and not equal(av[2], "enums")
+          and not equal(av[2], "declarations")
+          and not equal(av[2], "constructors")
+          and not equal(av[2], "initializations")
+          and not equal(av[2], "java-initializations")))
   {
     usageAndExit(av[0]);
   }
 
   FileInput in(0, stdin, false);
 
-  Object* declarations = parse(&in);
+  Object* declarations = parse(&in, av[1]);
 
   FileOutput out(0, stdout, false);
 
-  if (ac == 1 or equal(av[1], "enums")) {
+  if (ac == 2 or equal(av[2], "enums")) {
     writeEnums(&out, declarations);
   }
 
-  if (ac == 1 or equal(av[1], "declarations")) {
+  if (ac == 2 or equal(av[2], "declarations")) {
+    out.write("const unsigned TypeCount = ");
+    out.Output::write(typeCount(declarations));
+    out.write(";\n\n");
+
     writePods(&out, declarations);
     writeAccessors(&out, declarations);
     writeInitializerDeclarations(&out, declarations);
     writeConstructorDeclarations(&out, declarations);
   }
 
-  if (ac == 1 or equal(av[1], "constructors")) {
+  if (ac == 2 or equal(av[2], "constructors")) {
     writeInitializers(&out, declarations);
     writeConstructors(&out, declarations);
   }
   
-  if (ac == 1 or equal(av[1], "initializations")) {
+  if (ac == 2 or equal(av[2], "initializations")) {
     writeInitializations(&out, declarations);
   }
 
-  if (ac == 1 or equal(av[1], "java-initializations")) {
+  if (ac == 2 or equal(av[2], "java-initializations")) {
     writeJavaInitializations(&out, declarations);
   }
 

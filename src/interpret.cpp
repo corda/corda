@@ -2569,6 +2569,12 @@ interpret(Thread* t)
 
   case wide: goto wide;
 
+  case impdep1: {
+    // this means we're invoking a virtual method on an instance of a
+    // bootstrap class, so we need to load the real class.
+    abort(t);
+  } break;
+
   default: abort(t);
   }
 

@@ -7,21 +7,21 @@ public class ReferenceQueue<T> {
   public Reference<? extends T> poll() {
     Reference<? extends T> r = front;
     if (front != null) {
-      if (front == front.next) {
+      if (front == front.jNext) {
         front = rear = null;
       } else {
-        front = front.next;
+        front = front.jNext;
       }
     }
     return r;
   }
 
   void add(Reference<? extends T> r) {
-    r.next = r;
+    r.jNext = r;
     if (front == null) {
       front = r;
     } else {
-      rear.next = r;
+      rear.jNext = r;
     }
     rear = r;
   }

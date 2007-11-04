@@ -127,8 +127,7 @@ findMethod(Thread* t, object method, object class_)
 inline bool
 methodVirtual(Thread* t, object method)
 {
-  return (methodFlags(t, method) & (ACC_STATIC | ACC_FINAL | ACC_PRIVATE))
-    == 0;
+  return (methodFlags(t, method) & (ACC_STATIC | ACC_PRIVATE)) == 0;
 }
 
 inline void*

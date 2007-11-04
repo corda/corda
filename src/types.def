@@ -1,45 +1,17 @@
 (type jobject java/lang/Object)
 
-(type class java/lang/Class
-  (extends jobject)
-  (uint16_t flags)
-  (uint8_t vmFlags)
-  (uint8_t arrayDimensions)
-  (uint16_t fixedSize)
-  (uint16_t arrayElementSize)
-  (object objectMask)
-  (object name)
-  (object super)
-  (object interfaceTable)
-  (object virtualTable)
-  (object fieldTable)
-  (object methodTable)
-  (object staticTable)
-  (object loader))
+(type class java/lang/Class)
 
 (type singleton
   (array uintptr_t body))
 
-(type classLoader java/lang/ClassLoader
-  (extends jobject)
-  (object parent))
+(type classLoader java/lang/ClassLoader)
 
-(type systemClassLoader java/lang/SystemClassLoader
-  (extends classLoader)
-  (object map))
+(type systemClassLoader java/lang/SystemClassLoader)
 
-(type accessibleObject java/lang/reflect/AccessibleObject
-  (extends jobject))
+(type accessibleObject java/lang/reflect/AccessibleObject)
 
-(type field java/lang/reflect/Field
-  (extends accessibleObject)
-  (uint8_t vmFlags)
-  (uint8_t code)
-  (uint16_t flags)
-  (uint16_t offset)
-  (object name)
-  (object spec)
-  (object class))
+(type field java/lang/reflect/Field)
 
 (pod compiled
   (uint16_t maxLocals)
@@ -51,19 +23,7 @@
   (uint32_t stackMapTableLength)
   (uint8_t[0] body))
 
-(type method java/lang/reflect/Method
-  (extends accessibleObject)
-  (uint8_t vmFlags)
-  (uint8_t returnCode)
-  (uint8_t parameterCount)
-  (uint8_t parameterFootprint)
-  (uint16_t flags)
-  (uint16_t offset)
-  (object name)
-  (object spec)
-  (object class)
-  (object code)
-  (object compiled))
+(type method java/lang/reflect/Method)
 
 (type nativeMethodData
   (void* function)
@@ -154,148 +114,82 @@
 (type array
   (noassert array object body))
 
-(type string java/lang/String
-  (extends jobject)
-  (object data)
-  (int32_t offset)
-  (int32_t length)
-  (int32_t hashCode))
+(type string java/lang/String)
 
-(type thread java/lang/Thread
-  (extends jobject)
-  (int64_t peer)
-  (object task)
-  (object locals)
-  (uint8_t interrupted)
-  (object sleepLock)
-  (object classLoader))
+(type thread java/lang/Thread)
 
-(type stackTraceElement java/lang/StackTraceElement
-  (extends jobject)
-  (object class)
-  (object method)
-  (object file)
-  (int32_t line))
+(type stackTraceElement java/lang/StackTraceElement)
 
-(type throwable java/lang/Throwable
-  (extends jobject)
-  (noassert object message)
-  (noassert object trace)
-  (noassert object cause))
+(type throwable java/lang/Throwable)
 
-(type exception java/lang/Exception
-  (extends throwable))
+(type exception java/lang/Exception)
 
-(type runtimeException java/lang/RuntimeException
-  (extends exception))
+(type runtimeException java/lang/RuntimeException)
 
-(type nullPointerException java/lang/NullPointerException
-  (extends runtimeException))
+(type nullPointerException java/lang/NullPointerException)
 
-(type illegalStateException java/lang/IllegalStateException
-  (extends runtimeException))
+(type illegalStateException java/lang/IllegalStateException)
 
-(type illegalArgumentException java/lang/IllegalArgumentException
-  (extends runtimeException))
+(type illegalArgumentException java/lang/IllegalArgumentException)
 
-(type illegalMonitorStateException java/lang/IllegalMonitorStateException
-  (extends runtimeException))
+(type illegalMonitorStateException java/lang/IllegalMonitorStateException)
 
 (type arrayIndexOutOfBoundsException
-  java/lang/ArrayIndexOutOfBoundsException
-  (extends runtimeException))
+  java/lang/ArrayIndexOutOfBoundsException)
 
-(type arrayStoreException java/lang/ArrayStoreException
-  (extends runtimeException))
+(type arrayStoreException java/lang/ArrayStoreException)
 
-(type negativeArraySizeException java/lang/NegativeArraySizeException
-  (extends runtimeException))
+(type negativeArraySizeException java/lang/NegativeArraySizeException)
 
-(type classCastException java/lang/ClassCastException
-  (extends runtimeException))
+(type classCastException java/lang/ClassCastException)
 
-(type classNotFoundException java/lang/ClassNotFoundException
-  (extends exception))
+(type classNotFoundException java/lang/ClassNotFoundException)
 
-(type invocationTargetException java/lang/InvocationTargetException
-  (extends exception))
+(type invocationTargetException java/lang/reflect/InvocationTargetException)
 
-(type interruptedException java/lang/InterruptedException
-  (extends exception))
+(type interruptedException java/lang/InterruptedException)
 
-(type error java/lang/Error
-  (extends throwable))
+(type error java/lang/Error)
 
-(type stackOverflowError java/lang/StackOverflowError
-  (extends error))
+(type stackOverflowError java/lang/StackOverflowError)
 
-(type noSuchFieldError java/lang/NoSuchFieldError
-  (extends error))
+(type linkageError java/lang/LinkageError)
 
-(type noSuchMethodError java/lang/NoSuchMethodError
-  (extends error))
+(type incompatibleClassChangeError java/lang/IncompatibleClassChangeError)
 
-(type linkageError java/lang/LinkageError
-  (extends error))
+(type noSuchFieldError java/lang/NoSuchFieldError)
 
-(type unsatisfiedLinkError java/lang/UnsatisfiedLinkError
-  (extends linkageError))
+(type noSuchMethodError java/lang/NoSuchMethodError)
 
-(type exceptionInInitializerError java/lang/ExceptionInInitializerError
-  (extends error))
+(type unsatisfiedLinkError java/lang/UnsatisfiedLinkError)
 
-(type number java/lang/Number
-  (extends jobject))
+(type exceptionInInitializerError java/lang/ExceptionInInitializerError)
 
-(type byte java/lang/Byte
-  (extends number)
-  (int8_t value))
+(type number java/lang/Number)
 
-(type boolean java/lang/Boolean
-  (extends jobject)
-  (uint8_t value))
+(type byte java/lang/Byte)
 
-(type short java/lang/Short
-  (extends number)
-  (int16_t value))
+(type boolean java/lang/Boolean)
 
-(type char java/lang/Character
-  (extends jobject)
-  (uint16_t value))
+(type short java/lang/Short)
 
-(type int java/lang/Integer
-  (extends number)
-  (int32_t value))
+(type char java/lang/Character)
 
-(type long java/lang/Long
-  (extends number)
-  (int64_t value))
+(type int java/lang/Integer)
 
-(type float java/lang/Float
-  (extends number)
-  (uint32_t value))
+(type long java/lang/Long)
 
-(type double java/lang/Double
-  (extends number)
-  (uint64_t value))
+(type float java/lang/Float)
 
-(type referenceQueue java/lang/ref/ReferenceQueue
-  (extends jobject)
-  (object front)
-  (object rear))
+(type double java/lang/Double)
 
-(type jreference java/lang/ref/Reference
-  (extends jobject)
-  (noassert nogc object next)
-  (nogc object target)
-  (nogc object queue)
-  (object jnext))
+(type referenceQueue java/lang/ref/ReferenceQueue)
 
-(type weakReference java/lang/ref/WeakReference
-  (extends jreference))
+(type jreference java/lang/ref/Reference)
 
-(type phantomReference java/lang/ref/PhantomReference
-  (extends jreference))
+(type weakReference java/lang/ref/WeakReference)
+
+(type phantomReference java/lang/ref/PhantomReference)
 
 (type byteArray [B
   (extends jobject)

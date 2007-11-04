@@ -21,6 +21,7 @@ public final class Boolean implements Comparable<Boolean> {
   }
 
   public static Boolean valueOf(String s) {
+    Boolean.TRUE.booleanValue();
     return ("true".equals(s) ? Boolean.TRUE : Boolean.FALSE);
   }
 

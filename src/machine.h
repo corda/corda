@@ -61,8 +61,7 @@ const unsigned WeakReferenceFlag = 1 << 1;
 const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
 const unsigned PrimitiveFlag = 1 << 4;
-const unsigned BootstrapFlag = 1 << 5;
-const unsigned SingletonFlag = 1 << 6;
+const unsigned SingletonFlag = 1 << 5;
 
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;
@@ -1471,6 +1470,9 @@ setObjectClass(Thread* t, object o, object value)
 object&
 arrayBodyUnsafe(Thread*, object, unsigned);
 
+bool
+instanceOf(Thread* t, object class_, object o);
+
 #include "type-declarations.cpp"
 
 inline bool
@@ -1654,7 +1656,7 @@ makeNewWeakReference(Thread* t, object class_)
 
   ACQUIRE(t, t->m->referenceLock);
 
-  jreferenceNextUnsafe(t, instance) = t->m->weakReferences;
+  jreferenceVmNext(t, instance) = t->m->weakReferences;
   t->m->weakReferences = instance;
 
   return instance;
@@ -1681,9 +1683,6 @@ stringChars(Thread* t, object string, char* chars);
 
 bool
 isAssignableFrom(Thread* t, object a, object b);
-
-bool
-instanceOf(Thread* t, object class_, object o);
 
 object
 classInitializer(Thread* t, object class_);
@@ -1799,7 +1798,7 @@ stringEqual(Thread* t, object a, object b)
   if (a == b) {
     return true;
   } else if (stringLength(t, a) == stringLength(t, b)) {
-    for (int i = 0; i < stringLength(t, a); ++i) {
+    for (unsigned i = 0; i < stringLength(t, a); ++i) {
       if (stringCharAt(t, a, i) != stringCharAt(t, b, i)) {
         return false;
       }

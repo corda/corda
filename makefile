@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Hello.class
+input = $(test-build)/Reflection.class
 
 build-cxx = g++
 build-cc = gcc
@@ -174,9 +174,7 @@ driver-sources = $(src)/main.cpp
 
 driver-object = $(call cpp-objects,$(driver-sources),$(src),$(native-build))
 
-generator-headers = \
-	$(src)/input.h \
-	$(src)/output.h
+generator-headers =	$(src)/constants.h
 generator-sources = $(src)/type-generator.cpp
 generator-objects = \
 	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
@@ -239,10 +237,10 @@ clean-native:
 	rm -rf $(native-build)
 
 gen-arg = $(shell echo $(1) | sed -e 's:$(native-build)/type-\(.*\)\.cpp:\1:')
-$(generated-code): %.cpp: $(src)/types.def $(generator)
+$(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@echo "generating $(@)"
 	@mkdir -p $(dir $(@))
-	$(generator) $(call gen-arg,$(@)) < $(<) > $(@)
+	$(generator) $(classpath-build) $(call gen-arg,$(@)) < $(<) > $(@)
 
 $(native-build)/type-generator.o: \
 	$(generator-headers)
@@ -297,7 +295,8 @@ $(classpath-object): $(build)/classpath.jar
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) $(build-cflags) -c $(<) -o $(@)
+	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
+		-c $(<) -o $(@)
 
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@echo "compiling $(@)"

@@ -4,7 +4,7 @@ public final class String implements Comparable<String> {
   private Object data;
   private int offset;
   private int length;
-  private int hash;
+  private int hashCode;
 
   public String(char[] data, int offset, int length, boolean copy) {
     this((Object) data, offset, length, copy);
@@ -70,12 +70,12 @@ public final class String implements Comparable<String> {
   }
 
   public int hashCode() {
-    if (hash == 0) {
+    if (hashCode == 0) {
       int h = 0;
       for (int i = 0; i < length; ++i) h = (h * 31) + charAt(i);
-      hash = h;
+      hashCode = h;
     }
-    return hash;
+    return hashCode;
   }
 
   public boolean equals(Object o) {
