@@ -1082,9 +1082,8 @@ interpret(Thread* t)
            (t, className(t, objectClass(t, peekObject(t, sp - 1))), 0),
            &byteArrayBody(t, className(t, class_), 0));
         exception = makeClassCastException(t, message);
+        goto throw_;
       }
-
-      if (UNLIKELY(exception)) goto throw_;
     }
   } goto loop;
 
@@ -1785,8 +1784,6 @@ interpret(Thread* t)
       } else {
         pushInt(t, 0);
       }
-
-      if (UNLIKELY(exception)) goto throw_;
     } else {
       popObject(t);
       pushInt(t, 0);
