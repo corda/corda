@@ -1082,8 +1082,9 @@ interpret(Thread* t)
            (t, className(t, objectClass(t, peekObject(t, sp - 1))), 0),
            &byteArrayBody(t, className(t, class_), 0));
         exception = makeClassCastException(t, message);
-        goto throw_;
       }
+
+      if (UNLIKELY(exception)) goto throw_;
     }
   } goto loop;
 
@@ -1784,6 +1785,8 @@ interpret(Thread* t)
       } else {
         pushInt(t, 0);
       }
+
+      if (UNLIKELY(exception)) goto throw_;
     } else {
       popObject(t);
       pushInt(t, 0);
@@ -1851,6 +1854,10 @@ interpret(Thread* t)
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+
+    fprintf(stderr, "invokevirtual %s.%s\n",
+            &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+            &byteArrayBody(t, methodName(t, method), 0));
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
@@ -2571,9 +2578,27 @@ interpret(Thread* t)
 
   case impdep1: {
     // this means we're invoking a virtual method on an instance of a
-    // bootstrap class, so we need to load the real class.
-    abort(t);
-  } break;
+    // bootstrap class, so we need to load the real class to get the
+    // real method and call it.
+
+    assert(t, frameNext(t, frame) >= base);
+    popFrame(t);
+
+    assert(t, codeBody(t, code, ip - 3) == invokevirtual);
+    ip -= 2;
+
+    uint16_t index = codeReadInt16(t, code, ip);
+    object method = resolveMethod(t, codePool(t, code), index - 1);
+
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
+    assert(t, classVmFlags(t, class_) & BootstrapFlag);
+    
+    resolveClass(t, className(t, class_));
+    if (UNLIKELY(exception)) goto throw_;
+
+    ip -= 3;
+  } goto loop;
 
   default: abort(t);
   }
@@ -2737,6 +2762,10 @@ invoke(Thread* t, object method)
   } else {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
+
+    if (classVmFlags(t, class_) & BootstrapFlag) {
+      resolveClass(t, className(t, class_));
+    }
 
     if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
       method = findInterfaceMethod(t, method, class_);

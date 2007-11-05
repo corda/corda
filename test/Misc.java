@@ -17,6 +17,8 @@ public class Misc {
   public static void main(String[] args) {
     boolean v = Boolean.valueOf("true");
 
+    ClassLoader.getSystemClassLoader().toString();
+
     int a = 2;
     int b = 2;
     int c = a + b;

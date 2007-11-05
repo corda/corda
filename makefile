@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Reflection.class
+input = $(test-build)/References.class
 
 build-cxx = g++
 build-cc = gcc

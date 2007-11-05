@@ -2131,6 +2131,7 @@ isAssignableFrom(Thread* t, object a, object b)
   if (classFlags(t, a) & ACC_INTERFACE) {
     if (classVmFlags(t, b) & BootstrapFlag) {
       resolveClass(t, className(t, b));
+      if (UNLIKELY(t->exception)) return false;
     }
 
     for (; b; b = classSuper(t, b)) {
