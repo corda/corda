@@ -2753,9 +2753,7 @@ invoke(Thread* t, object method)
   object class_;
   PROTECT(t, class_);
 
-  if (methodFlags(t, method) & ACC_STATIC) {
-    class_ = methodClass(t, method);
-  } else {
+  if (methodVirtual(t, method)) {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
 
@@ -2768,6 +2766,8 @@ invoke(Thread* t, object method)
     } else {
       method = findMethod(t, method, class_);
     }
+  } else {
+    class_ = methodClass(t, method);
   }
 
   initClass(t, class_);
