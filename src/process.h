@@ -124,12 +124,6 @@ findMethod(Thread* t, object method, object class_)
                    methodOffset(t, method));
 }
 
-inline bool
-methodVirtual(Thread* t, object method)
-{
-  return (methodFlags(t, method) & (ACC_STATIC | ACC_PRIVATE)) == 0;
-}
-
 inline void*
 resolveNativeMethod(Thread* t, object method)
 {
@@ -168,6 +162,8 @@ resolveNativeMethod(Thread* t, object method)
 inline object
 findInterfaceMethod(Thread* t, object method, object class_)
 {
+  assert(t, (classVmFlags(t, class_) & BootstrapFlag) == 0);
+
   object interface = methodClass(t, method);
   object itable = classInterfaceTable(t, class_);
   for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {

@@ -579,6 +579,7 @@ class Type : public Object {
   List members;
   List methods;
   bool hideConstructor;
+  bool overridesMethods;
 
   static Type* make(Object::ObjectType type, const char* name,
                     const char* javaName)
@@ -591,6 +592,7 @@ class Type : public Object {
     o->members.first = o->members.last = 0;
     o->methods.first = o->methods.last = 0;
     o->hideConstructor = false;
+    o->overridesMethods = false;
     return o;
   }  
 };
@@ -637,6 +639,18 @@ typeMethods(Object* o)
   switch (o->type) {
   case Object::Type:
     return static_cast<Type*>(o)->methods.first;
+
+  default:
+    UNREACHABLE;
+  }
+}
+
+bool&
+typeOverridesMethods(Object* o)
+{
+  switch (o->type) {
+  case Object::Type:
+    return static_cast<Type*>(o)->overridesMethods;
 
   default:
     UNREACHABLE;
@@ -1295,12 +1309,6 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
 
   unsigned interfaceCount = s->read2();
   s->skip(interfaceCount * 2);
-//   for (unsigned i = 0; i < interfaceCount; ++i) {
-//     const char* name = reinterpret_cast<const char*>
-//       (pool[pool[s->read2() - 1] - 1]);
-
-//     fprintf(stderr, "%s implements %s\n", typeJavaName(type), name);
-//   }
 
   unsigned fieldCount = s->read2();
   for (unsigned i = 0; i < fieldCount; ++i) {
@@ -1357,12 +1365,13 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
       s->skip(s->read4());
     }
 
-    if ((flags & (ACC_STATIC | ACC_PRIVATE)) == 0) {
-      const char* name = reinterpret_cast<const char*>(pool[nameIndex - 1]);
-      const char* spec = reinterpret_cast<const char*>(pool[specIndex - 1]);
+    const char* name = reinterpret_cast<const char*>(pool[nameIndex - 1]);
+    const char* spec = reinterpret_cast<const char*>(pool[specIndex - 1]);
 
+    if ((flags & (ACC_STATIC | ACC_PRIVATE)) == 0 and *name != '<') {
       Object* method = Method::make(type, name, spec);
       addMethod(type, method);
+      typeOverridesMethods(type) = true;
     }    
   }
 }
@@ -2160,12 +2169,25 @@ writeJavaInitialization(Output* out, Object* type)
 {
   out->write("bootJavaClass(t, Machine::");
   out->write(capitalize(typeName(type)));
-  out->write("Type, \"");
+  out->write("Type, ");
+
+  if (typeSuper(type)) {
+    out->write("Machine::");
+    out->write(capitalize(typeName(typeSuper(type))));
+    out->write("Type");
+  } else {
+    out->write("-1");   
+  }
+  out->write(", \"");
 
   out->write(typeJavaName(type));
   out->write("\", ");
 
-  out->write(methodCount(type));
+  if (typeOverridesMethods(type)) {
+    out->write(methodCount(type));
+  } else {
+    out->write("-1");
+  }
   out->write(", bootMethod);\n");
 }
 

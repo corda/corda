@@ -6,6 +6,7 @@
 #include "heap.h"
 #include "finder.h"
 #include "processor.h"
+#include "constants.h"
 
 #ifdef __MINGW32__
 #  define JNICALL __stdcall
@@ -2178,6 +2179,13 @@ inline void
 disposeLocalReference(Thread* t, jobject r)
 {
   t->m->processor->disposeLocalReference(t, r);
+}
+
+inline bool
+methodVirtual(Thread* t, object method)
+{
+  return (methodFlags(t, method) & (ACC_STATIC | ACC_PRIVATE)) == 0
+    and byteArrayBody(t, methodName(t, method), 0) != '<';
 }
 
 } // namespace vm

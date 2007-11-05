@@ -14,10 +14,8 @@ public class Misc {
     return s;
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     boolean v = Boolean.valueOf("true");
-
-    ClassLoader.getSystemClassLoader().toString();
 
     int a = 2;
     int b = 2;

@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Misc.class
+input = $(test-build)/Reflection.class
 
 build-cxx = g++
 build-cc = gcc

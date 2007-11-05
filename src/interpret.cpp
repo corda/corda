@@ -2563,7 +2563,7 @@ interpret(Thread* t)
       unsigned index = ip + ((key - bottom) * 4);
       ip = base + codeReadInt32(t, code, index);
     } else {
-      ip = base + default_;      
+      ip = base + default_;
     }
   } goto loop;
 

@@ -1224,16 +1224,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                                  compiled);
       PROTECT(t, method);
 
-      if (flags & (ACC_STATIC | ACC_PRIVATE)) {
-        methodOffset(t, method) = i;
-
-        if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
-                   &byteArrayBody(t, methodName(t, method), 0)) == 0)
-        {
-          methodVmFlags(t, method) |= ClassInitFlag;
-          classVmFlags(t, class_) |= NeedInitFlag;
-        }
-      } else {
+      if (methodVirtual(t, method)) {
         ++ declaredVirtualCount;
 
         object p = hashMapFindNode
@@ -1249,6 +1240,15 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
           listAppend(t, newVirtuals, method);
 
           hashMapInsert(t, virtualMap, method, method, methodHash);
+        }
+      } else {
+        methodOffset(t, method) = i;
+
+        if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
+                   &byteArrayBody(t, methodName(t, method), 0)) == 0)
+        {
+          methodVmFlags(t, method) |= ClassInitFlag;
+          classVmFlags(t, class_) |= NeedInitFlag;
         }
       }
 
@@ -1371,8 +1371,6 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
              and classObjectMask(t, class_) == 0)
          or intArrayEqual(t, classObjectMask(t, bootstrapClass),
                           classObjectMask(t, class_)));
-  expect(t, arrayLength(t, classVirtualTable(t, bootstrapClass))
-         == arrayLength(t, classVirtualTable(t, class_)));
 
   PROTECT(t, bootstrapClass);
   PROTECT(t, class_);
@@ -1531,27 +1529,33 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
   object super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
 
   object class_ = makeClass
-    (t, 0, BootstrapFlag, 0, fixedSize, arrayElementSize, mask, 0, super, 0, 0
-     , 0, 0, 0, t->m->loader);
+    (t, 0, BootstrapFlag, 0, fixedSize, arrayElementSize, mask, 0, super, 0, 0,
+     0, 0, 0, t->m->loader);
 
   set(t, t->m->types, ArrayBody + (type * BytesPerWord), class_);
 }
 
 void
-bootJavaClass(Thread* t, Machine::Type type, const char* name,
-              unsigned vtableLength, object bootMethod)
+bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
+              int vtableLength, object bootMethod)
 {
   PROTECT(t, bootMethod);
 
   object n = makeByteArray(t, name);
   object class_ = arrayBody(t, t->m->types, type);
-  PROTECT(t, class_);
 
   set(t, class_, ClassName, n);
 
-  object vtable = makeArray(t, vtableLength, false);
-  for (unsigned i = 0; i < vtableLength; ++ i) {
-    arrayBody(t, vtable, i) = bootMethod;
+  object vtable;
+  if (vtableLength >= 0) {
+    PROTECT(t, class_);
+
+    vtable = makeArray(t, vtableLength, false);
+    for (int i = 0; i < vtableLength; ++ i) {
+      arrayBody(t, vtable, i) = bootMethod;
+    }
+  } else {
+    vtable = classVirtualTable(t, arrayBody(t, t->m->types, superType));
   }
 
   set(t, class_, ClassVirtualTable, vtable);
@@ -2122,9 +2126,9 @@ stringChars(Thread* t, object string, char* chars)
 bool
 isAssignableFrom(Thread* t, object a, object b)
 {
-  if (a == b) {
-    return true;
-  } else if (classFlags(t, a) & ACC_INTERFACE) {
+  if (a == b) return true;
+
+  if (classFlags(t, a) & ACC_INTERFACE) {
     if (classVmFlags(t, b) & BootstrapFlag) {
       resolveClass(t, className(t, b));
     }

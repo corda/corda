@@ -231,10 +231,10 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
       = vectorAppend(t, t->m->jniInterfaceTable, method);
 
     return (vectorSize(t, t->m->jniInterfaceTable) - 1) | InterfaceMethodID;
-  } else if (methodFlags(t, method) & ACC_PRIVATE) {
-    return methodOffset(t, method) | NonVirtualMethodID;
-  } else {
+  } else if (methodVirtual(t, method)) {
     return methodOffset(t, method) + 1;
+  } else {
+    return methodOffset(t, method) | NonVirtualMethodID;
   }
 }
 
