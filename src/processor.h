@@ -15,10 +15,35 @@ class Processor {
   makeThread(Machine* m, object javaThread, Thread* parent) = 0;
 
   virtual object
-  methodStub(Thread* t) = 0;
+  makeMethod(Thread* t,
+             uint8_t vmFlags,
+             uint8_t returnCode,
+             uint8_t parameterCount,
+             uint8_t parameterFootprint,
+             uint16_t flags,
+             uint16_t offset,
+             object name,
+             object spec,
+             object class_,
+             object code) = 0;
 
   virtual object
-  nativeInvoker(Thread* t) = 0;
+  makeClass(Thread* t,
+            uint16_t flags,
+            uint8_t vmFlags,
+            uint8_t arrayDimensions,
+            uint16_t fixedSize,
+            uint16_t arrayElementSize,
+            object objectMask,
+            object name,
+            object super,
+            object interfaceTable,
+            object virtualTable,
+            object fieldTable,
+            object methodTable,
+            object staticTable,
+            object loader,
+            unsigned vtableLength) = 0;
 
   virtual unsigned
   parameterFootprint(Thread* t, const char* spec, bool static_) = 0;

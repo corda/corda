@@ -197,15 +197,15 @@ IsInstanceOf(Thread* t, jobject o, jclass c)
 }
 
 object
-findMethod(Thread* t, object class_, const char* name, const char* spec)
+findMethod(Thread* t, object c, const char* name, const char* spec)
 {
-  ENTER(t, Thread::ActiveState);
+  PROTECT(t, c);
 
   object n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
   object s = makeByteArray(t, "%s", spec);
-  return vm::findMethod(t, class_, n, s);
+  return vm::findMethod(t, c, n, s);
 }
 
 jmethodID JNICALL

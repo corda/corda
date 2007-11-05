@@ -1351,6 +1351,12 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
     }
   }
 
+  if (equal(typeJavaName(type), "java/lang/Class")) {
+    // add inline vtable
+    addMember(type, Array::make
+              (type, 0, "void*", "vtable", sizeOf("void*", 0)));
+  }
+
   if (typeSuper(type)) {
     for (Object* p = typeMethods(typeSuper(type)); p; p = cdr(p)) {
       addMethod(type, car(p));
@@ -2114,6 +2120,9 @@ writeInitialization(Output* out, Object* type)
   out->write(", ");
 
   out->write(typeArrayElementSize(type));
+  out->write(", ");
+
+  out->write(methodCount(type));
   out->write(");\n");
 }
 

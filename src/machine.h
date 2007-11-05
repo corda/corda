@@ -2188,6 +2188,79 @@ methodVirtual(Thread* t, object method)
     and byteArrayBody(t, methodName(t, method), 0) != '<';
 }
 
+inline unsigned
+singletonMaskSize(unsigned count)
+{
+  if (count) {
+    return ceiling(count + 2, BitsPerWord);
+  }
+  return 0;
+}
+
+inline unsigned
+singletonMaskSize(Thread* t, object singleton)
+{
+  unsigned length = singletonLength(t, singleton);
+  if (length) {
+    return ceiling(length + 2, BitsPerWord + 1);
+  }
+  return 0;
+}
+
+inline unsigned
+singletonCount(Thread* t, object singleton)
+{
+  return singletonLength(t, singleton) - singletonMaskSize(t, singleton);
+}
+
+inline uint32_t*
+singletonMask(Thread* t, object singleton)
+{
+  assert(t, singletonLength(t, singleton));
+  return reinterpret_cast<uint32_t*>
+    (&singletonBody(t, singleton, singletonCount(t, singleton)));
+}
+
+inline void
+singletonMarkObject(Thread* t, object singleton, unsigned index)
+{
+  singletonMask(t, singleton)[(index + 2) / 32]
+    |= (static_cast<uint32_t>(1) << ((index + 2) % 32));
+}
+
+inline bool
+singletonIsObject(Thread* t, object singleton, unsigned index)
+{
+  assert(t, index < singletonCount(t, singleton));
+
+  return (singletonMask(t, singleton)[(index + 2) / 32]
+          & (static_cast<uint32_t>(1) << ((index + 2) % 32))) != 0;
+}
+
+inline object
+singletonObject(Thread* t, object singleton, unsigned index)
+{
+  assert(t, singletonIsObject(t, singleton, index));
+  return reinterpret_cast<object>(singletonBody(t, singleton, index));
+}
+
+inline uintptr_t&
+singletonValue(Thread* t, object singleton, unsigned index)
+{
+  assert(t, not singletonIsObject(t, singleton, index));
+  return singletonBody(t, singleton, index);
+}
+
+inline object
+makeSingleton(Thread* t, unsigned count)
+{
+  object o = makeSingleton(t, count + singletonMaskSize(count), true);
+  if (count) {
+    singletonMask(t, o)[0] = 1;
+  }
+  return o;
+}
+
 } // namespace vm
 
 #endif//MACHINE_H

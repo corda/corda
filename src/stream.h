@@ -10,27 +10,35 @@ class Stream {
   class Client {
    public:
     virtual ~Client() { }
-    virtual void NO_RETURN handleEOS() = 0;
+    virtual void NO_RETURN handleError() = 0;
   };
 
   Stream(Client* client, const uint8_t* data, unsigned size):
-    client(client), data(data), size(size), position(0)
+    client(client), data(data), size(size), position_(0)
   { }
 
+  unsigned position() {
+    return position_;
+  }
+
+  void setPosition(unsigned p) {
+    position_ = p;
+  }
+
   void skip(unsigned size) {
-    if (size > this->size - position) {
-      client->handleEOS();
+    if (size > this->size - position_) {
+      client->handleError();
     } else {
-      position += size;
+      position_ += size;
     }
   }
 
   void read(uint8_t* data, unsigned size) {
-    if (size > this->size - position) {
-      client->handleEOS();
+    if (size > this->size - position_) {
+      client->handleError();
     } else {
-      memcpy(data, this->data + position, size);
-      position += size;
+      memcpy(data, this->data + position_, size);
+      position_ += size;
     }
   }
 
@@ -70,7 +78,7 @@ class Stream {
   Client* client;
   const uint8_t* data;
   unsigned size;
-  unsigned position;
+  unsigned position_;
 };
 
 } // namespace vm

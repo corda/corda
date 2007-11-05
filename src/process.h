@@ -45,7 +45,7 @@ resolveClassInObject(Thread* t, object container, unsigned classOffset)
 inline object
 resolveClassInPool(Thread* t, object pool, unsigned index)
 {
-  object o = arrayBody(t, pool, index);
+  object o = singletonObject(t, pool, index);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
     PROTECT(t, pool);
@@ -53,7 +53,7 @@ resolveClassInPool(Thread* t, object pool, unsigned index)
     o = resolveClass(t, o);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, pool, ArrayBody + (index * BytesPerWord), o);
+    set(t, pool, SingletonBody + (index * BytesPerWord), o);
   }
   return o; 
 }
@@ -63,7 +63,7 @@ resolve(Thread* t, object pool, unsigned index,
         object (*find)(vm::Thread*, object, object, object),
         object (*makeError)(vm::Thread*, object))
 {
-  object o = arrayBody(t, pool, index);
+  object o = singletonObject(t, pool, index);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
   {
     PROTECT(t, pool);
@@ -79,7 +79,7 @@ resolve(Thread* t, object pool, unsigned index,
        find, makeError);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, pool, ArrayBody + (index * BytesPerWord), o);
+    set(t, pool, SingletonBody + (index * BytesPerWord), o);
   }
 
   return o;

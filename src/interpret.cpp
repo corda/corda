@@ -2051,36 +2051,33 @@ interpret(Thread* t)
       index = codeReadInt16(t, code, ip);
     }
 
-    object v = arrayBody(t, codePool(t, code), index - 1);
+    object pool = codePool(t, code);
 
-    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::IntType)
-        or objectClass(t, v) == arrayBody(t, t->m->types, Machine::FloatType))
-    {
-      pushInt(t, intValue(t, v));
-    } else if (objectClass(t, v)
-               == arrayBody(t, t->m->types, Machine::StringType))
-    {
-      pushObject(t, v);
+    if (singletonIsObject(t, pool, index - 1)) {
+      object v = singletonObject(t, pool, index - 1);
+      if (objectClass(t, v)
+          == arrayBody(t, t->m->types, Machine::ByteArrayType))
+      {
+        object class_ = resolveClassInPool(t, pool, index - 1); 
+        if (UNLIKELY(exception)) goto throw_;
+
+        pushObject(t, class_);
+      } else {     
+        pushObject(t, v);
+      }
     } else {
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
-      if (UNLIKELY(exception)) goto throw_;
-
-      pushObject(t, class_);
+      pushInt(t, singletonValue(t, pool, index - 1));
     }
   } goto loop;
 
   case ldc2_w: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object v = arrayBody(t, codePool(t, code), index - 1);
+    object pool = codePool(t, code);
 
-    if (objectClass(t, v) == arrayBody(t, t->m->types, Machine::LongType)
-        or objectClass(t, v) == arrayBody(t, t->m->types, Machine::DoubleType))
-    {
-      pushLong(t, longValue(t, v));
-    } else {
-      abort(t);
-    }
+    uint64_t v;
+    memcpy(&v, &singletonValue(t, pool, index - 1), 8);
+    pushLong(t, v);
   } goto loop;
 
   case ldiv_: {
@@ -2863,15 +2860,45 @@ class MyProcessor: public Processor {
   }
 
   virtual object
-  methodStub(vm::Thread*)
+  makeMethod(vm::Thread* t,
+             uint8_t vmFlags,
+             uint8_t returnCode,
+             uint8_t parameterCount,
+             uint8_t parameterFootprint,
+             uint16_t flags,
+             uint16_t offset,
+             object name,
+             object spec,
+             object class_,
+             object code)
   {
-    return 0;
+    return vm::makeMethod
+      (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
+       offset, name, spec, class_, code, 0);
   }
 
   virtual object
-  nativeInvoker(vm::Thread*)
+  makeClass(vm::Thread* t,
+            uint16_t flags,
+            uint8_t vmFlags,
+            uint8_t arrayDimensions,
+            uint16_t fixedSize,
+            uint16_t arrayElementSize,
+            object objectMask,
+            object name,
+            object super,
+            object interfaceTable,
+            object virtualTable,
+            object fieldTable,
+            object methodTable,
+            object staticTable,
+            object loader,
+            unsigned vtableLength UNUSED)
   {
-    return 0;
+    return vm::makeClass
+      (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
+       objectMask, name, super, interfaceTable, virtualTable, fieldTable,
+       methodTable, staticTable, loader, 0, false);
   }
 
   virtual unsigned
