@@ -1377,7 +1377,8 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   ENTER(t, Thread::ExclusiveState);
 
-  classVmFlags(t, bootstrapClass) = classVmFlags(t, class_);
+  classVmFlags(t, bootstrapClass) &= ~BootstrapFlag;
+  classVmFlags(t, bootstrapClass) |= classVmFlags(t, class_);
   classFlags(t, bootstrapClass) = classFlags(t, class_);
 
   set(t, bootstrapClass, ClassSuper, classSuper(t, class_));

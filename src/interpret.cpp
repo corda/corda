@@ -1854,10 +1854,6 @@ interpret(Thread* t)
 
     object method = resolveMethod(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
-
-    fprintf(stderr, "invokevirtual %s.%s\n",
-            &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-            &byteArrayBody(t, methodName(t, method), 0));
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
