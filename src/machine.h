@@ -2237,11 +2237,11 @@ singletonIsObject(Thread* t, object singleton, unsigned index)
           & (static_cast<uint32_t>(1) << ((index + 2) % 32))) != 0;
 }
 
-inline object
+inline object&
 singletonObject(Thread* t, object singleton, unsigned index)
 {
   assert(t, singletonIsObject(t, singleton, index));
-  return reinterpret_cast<object>(singletonBody(t, singleton, index));
+  return reinterpret_cast<object&>(singletonBody(t, singleton, index));
 }
 
 inline uintptr_t&

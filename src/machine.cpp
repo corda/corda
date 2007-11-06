@@ -867,7 +867,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     object fieldTable = makeArray(t, count, true);
     PROTECT(t, fieldTable);
 
-    object staticValueTable = makeArray(t, count, true);
+    object staticValueTable = makeIntArray(t, count, false);
     PROTECT(t, staticValueTable);
 
     uint8_t staticTypes[count];
@@ -877,8 +877,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       unsigned name = s.read2();
       unsigned spec = s.read2();
 
-      object value = 0;
-      PROTECT(t, value);
+      unsigned value = 0;
 
       unsigned code = fieldCode
         (t, byteArrayBody(t, singletonObject(t, pool, spec - 1), 0));
@@ -891,29 +890,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         if (strcmp(reinterpret_cast<const int8_t*>("ConstantValue"),
                    &byteArrayBody(t, name, 0)) == 0)
         {
-          switch (code) {
-          case ByteField:
-          case BooleanField:
-          case CharField:
-          case ShortField:
-          case IntField:
-          case FloatField:
-            value = makeInt(t, singletonValue(t, pool, s.read2() - 1));
-            break;
-
-          case LongField:
-          case DoubleField: {
-            uint64_t v;
-            memcpy(&v, &singletonValue(t, pool, s.read2() - 1), 8);
-            value = makeLong(t, v);
-          } break;
-
-          case ObjectField:
-            value = singletonObject(t, pool, s.read2() - 1);
-            break;
-
-          default: abort(t);
-          }
+          value = s.read2();
         } else {
           s.skip(length);
         }
@@ -940,8 +917,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
         staticOffset += size;
 
-        set(t, staticValueTable, ArrayBody + (staticCount * BytesPerWord),
-            value);
+        intArrayBody(t, staticValueTable, staticCount) = value;
 
         staticTypes[staticCount++] = code;
       } else {
@@ -978,31 +954,35 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           offset += BytesPerWord - excess;
         }
 
-        object value = arrayBody(t, staticValueTable, i);
+        unsigned value = intArrayBody(t, staticValueTable, i);
         if (value) {
           switch (staticTypes[i]) {
           case ByteField:
           case BooleanField:
-            body[offset] = intValue(t, value);
+            body[offset] = singletonValue(t, pool, value - 1);
             break;
 
           case CharField:
           case ShortField:
-            *reinterpret_cast<uint16_t*>(body + offset) = intValue(t, value);
+            *reinterpret_cast<uint16_t*>(body + offset)
+              = singletonValue(t, pool, value - 1);
             break;
 
           case IntField:
           case FloatField:
-            *reinterpret_cast<uint32_t*>(body + offset) = intValue(t, value);
+            *reinterpret_cast<uint32_t*>(body + offset)
+              = singletonValue(t, pool, value - 1);
             break;
 
           case LongField:
           case DoubleField:
-            memcpy(body + offset, &longValue(t, value), 8);
+            memcpy(body + offset, &singletonValue(t, pool, value - 1), 8);
             break;
 
           case ObjectField:
-            memcpy(body + offset, &value, BytesPerWord);
+            memcpy(body + offset,
+                   &singletonObject(t, pool, value - 1),
+                   BytesPerWord);
             break;
 
           default: abort(t);
@@ -1569,15 +1549,25 @@ void
 bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
           unsigned fixedSize, unsigned arrayElementSize, unsigned vtableLength)
 {
+  object super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
+
   object mask;
   if (objectMask) {
-    mask = makeIntArray(t, 1, false);
-    intArrayBody(t, mask, 0) = objectMask;
+    if (super
+        and classObjectMask(t, super)
+        and intArrayBody(t, classObjectMask(t, super), 0)
+        == static_cast<int32_t>(objectMask))
+    {
+      mask = classObjectMask(t, arrayBody(t, t->m->types, superType));
+    } else {
+      mask = makeIntArray(t, 1, false);
+      intArrayBody(t, mask, 0) = objectMask;
+    }
   } else {
     mask = 0;
   }
 
-  object super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
+  super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
 
   object class_ = t->m->processor->makeClass
     (t, 0, BootstrapFlag, 0, fixedSize, arrayElementSize, mask, 0, super, 0, 0,
