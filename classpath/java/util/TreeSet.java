@@ -63,6 +63,10 @@ public class TreeSet<T> implements Collection<T> {
     return size;
   }
 
+  public boolean isEmpty() {
+    return size == 0;
+  }
+
   public boolean contains(T value) {
     return !set.find(new Cell(value, null)).fresh();
   }

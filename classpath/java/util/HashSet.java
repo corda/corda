@@ -22,6 +22,10 @@ public class HashSet<T> implements Set<T> {
     return map.size();
   }
 
+  public boolean isEmpty() {
+    return map.isEmpty();
+  }
+
   public boolean contains(T element) {
     return map.containsKey(element);
   }

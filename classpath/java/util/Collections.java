@@ -45,6 +45,10 @@ public class Collections {
       synchronized (lock) { return collection.size(); }
     }
 
+    public boolean isEmpty() {
+      return size() == 0;
+    }
+
     public synchronized boolean contains(T e) {
       synchronized (lock) { return collection.contains(e); }
     }
@@ -77,7 +81,6 @@ public class Collections {
     public void addAll(Collection<T> c) {
       synchronized (lock) { ((Set<T>)collection).addAll(c); }
     }
-
   }
 
   static class SynchronizedIterator<T> implements Iterator<T> {

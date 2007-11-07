@@ -293,6 +293,10 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.size();
     }
 
+    public boolean isEmpty() {
+      return HashMap.this.isEmpty();
+    }
+
     public void addAll(Collection<Entry<K, V>> c) {
       throw new UnsupportedOperationException();
     }
@@ -321,6 +325,10 @@ public class HashMap<K, V> implements Map<K, V> {
   private class KeySet implements Set<K> {
     public int size() {
       return HashMap.this.size();
+    }
+
+    public boolean isEmpty() {
+      return HashMap.this.isEmpty();
     }
 
     public boolean contains(K key) {
@@ -352,6 +360,10 @@ public class HashMap<K, V> implements Map<K, V> {
   private class Values implements Collection<V> {
     public int size() {
       return HashMap.this.size();
+    }
+
+    public boolean isEmpty() {
+      return HashMap.this.isEmpty();
     }
 
     public boolean contains(V value) {
