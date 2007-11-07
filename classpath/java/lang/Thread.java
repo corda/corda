@@ -29,6 +29,10 @@ public class Thread implements Runnable {
     classLoader = current.classLoader;
   }
 
+  public Thread(Runnable task, String name) {
+    this(task);
+  }
+
   public synchronized void start() {
     if (peer != 0) {
       throw new IllegalStateException("thread already started");

@@ -1,5 +1,7 @@
 package java.lang;
 
+import java.io.UnsupportedEncodingException;
+
 public final class String implements Comparable<String> {
   private Object data;
   private int offset;
@@ -28,6 +30,15 @@ public final class String implements Comparable<String> {
 
   public String(byte[] data) {
     this(data, 0, data.length);
+  }
+
+  public String(byte[] data, String charset)
+    throws UnsupportedEncodingException
+  {
+    this(data);
+    if (! charset.equals("US-ASCII")) {
+      throw new UnsupportedEncodingException(charset);
+    }
   }
 
   private String(Object data, int offset, int length, boolean copy) {
