@@ -1,8 +1,5 @@
 package java.util;
 
-import java.util.Comparator;
-import java.lang.Iterable;
-
 public class PersistentSet <T> implements Iterable <T> {
   private static final Node NullNode = new Node(null);
 
@@ -31,6 +28,19 @@ public class PersistentSet <T> implements Iterable <T> {
     this.root = root;
     this.comparator = comparator;
     this.size = size;
+  }
+
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (java.util.Iterator it = iterator(); it.hasNext();) {
+      sb.append(it.next());
+      if (it.hasNext()) {
+        sb.append(",");
+      }
+    }
+    sb.append("}");
+    return sb.toString();
   }
 
   public Comparator<T> comparator() {
@@ -168,6 +178,13 @@ public class PersistentSet <T> implements Iterable <T> {
   }
 
   private PersistentSet<T> remove(Path<T> p) {
+    if (size == 1) {
+      if (p.node != root) {
+        throw new IllegalArgumentException();
+      }
+      return new PersistentSet(NullNode, comparator, 0);
+    }
+
     Node<T> new_ = p.node;
     Node<T> newRoot = p.root.root;
     Cell<Node<T>> ancestors = p.ancestors;
@@ -424,77 +441,6 @@ public class PersistentSet <T> implements Iterable <T> {
       return new Path(false, s.value, p.root, s.next);
     }
   }
-
-//   public void dump(java.io.PrintStream out) {
-//     dump(root, out, 0);
-//   }
-
-//   private static void indent(java.io.PrintStream out, int level) {
-//     for (int i = 0; i < level; ++i) out.print("  ");
-//   }
-
-//   private static <T> void dump(Node<T> n, java.io.PrintStream out, int level) {
-//     indent(out, level);
-//     out.print(n == NullNode ? null : n.value);
-//     out.println(n == NullNode ? "" : n.red ? " (red)" : " (black)");
-//     if (n.left != NullNode || n.right != NullNode) {
-//       dump(n.left, out, level + 1);
-//       dump(n.right, out, level + 1);
-//     }
-//   }
-
-//   private static int[] randomSet(java.util.Random r, int size) {
-//     int[] data = new int[size];
-//     for (int i = size - 1; i >= 0; --i) {
-//       data[i] = i + 1;
-//     }
-
-//     for (int i = size - 1; i >= 0; --i) {
-//       int n = r.nextInt(size);
-//       int tmp = data[i];
-//       data[i] = data[n];
-//       data[n] = tmp;
-//     }
-
-//     return data;
-//   }
-
-//   public static void main(String[] args) {
-//     java.util.Random r = new java.util.Random(Integer.parseInt(args[0]));
-//     int size = 18;
-//     PersistentSet<Integer>[] sets = new PersistentSet[size];
-//     PersistentSet<Integer> s = new PersistentSet();
-
-//     int[] data = randomSet(r, size);
-
-//     for (int i = 0; i < size; ++i) {
-//       System.out.println("-- add " + data[i] + " -- ");
-//       sets[i] = s = s.add(data[i]);
-//       dump(s.root, System.out, 0);
-//     }
-
-//     System.out.println("\npersistence:\n");
-//     for (int i = 0; i < size; ++i) {
-//       dump(sets[i].root, System.out, 0);
-//       System.out.println("--");
-//     }
-
-//     data = randomSet(r, size);
-
-//     System.out.println("\nremoval:\n");
-//     for (int i = 0; i < size; ++i) {
-//       System.out.println("-- remove " + data[i] + " -- ");
-//       sets[i] = s = s.remove(data[i]);
-//       dump(s.root, System.out, 0);
-//     }
-
-//     System.out.println("\npersistence:\n");
-//     for (int i = 0; i < size; ++i) {
-//       dump(sets[i].root, System.out, 0);
-//       System.out.println("--");
-//     }
-//   }
-
   private static class Node <T> {
     public T value;
     public Node left;
@@ -543,6 +489,8 @@ public class PersistentSet <T> implements Iterable <T> {
     }
 
     public PersistentSet<T> remove() {
+      if (fresh) throw new IllegalStateException();
+
       return root.remove(this);
     }
 
