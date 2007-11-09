@@ -138,7 +138,6 @@ public class ByteBuffer {
     return this;
   }
 
-
   public boolean hasRemaining() {
     return remaining() > 0;
   }
@@ -146,6 +145,17 @@ public class ByteBuffer {
   public byte get() {
     checkGet(1);
     return array[arrayOffset+(position++)];
+  }
+
+  public ByteBuffer get(byte[] dst) {
+    return get(dst, 0, dst.length);
+  }
+
+  public ByteBuffer get(byte[] dst, int offset, int length) {
+    checkGet(length);
+    System.arraycopy(array, arrayOffset + position, dst, offset, length);
+    position += length;
+    return this;
   }
 
   public byte get(int position) {
