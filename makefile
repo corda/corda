@@ -105,7 +105,7 @@ ifeq ($(platform),windows)
 endif
 
 ifeq ($(mode),debug)
-	cflags += -O0 -g3
+	cflags += -O0 -g3 -DNDEBUG
 endif
 ifeq ($(mode),stress)
 	cflags += -O0 -g3 -DVM_STRESS
