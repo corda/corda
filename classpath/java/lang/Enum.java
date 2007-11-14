@@ -2,7 +2,7 @@ package java.lang;
 
 import java.lang.reflect.Method;
 
-public abstract class Enum<E extends Enum<E>> {
+public abstract class Enum<E extends Enum<E>> implements Comparable<E> {
   private final String name;
   private final int ordinal;
 

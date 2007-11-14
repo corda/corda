@@ -42,6 +42,10 @@ public class Vector<T> implements List<T> {
     return list.get(index);
   }
 
+  public synchronized T set(int index, T value) {
+      return list.set(index, value);
+  }
+
   public T elementAt(int index) {
     return get(index);
   }

@@ -114,7 +114,7 @@ public class LinkedList<T> implements List<T> {
       addFirst(element);
     } else {
       Cell<T> cell = find(index);
-      Cell<T> newCell = new Cell<T>(element, cell.prev, cell);
+      Cell<T> newCell = new Cell(element, cell.prev, cell);
       cell.prev.next = newCell;
     }
   }
@@ -129,6 +129,13 @@ public class LinkedList<T> implements List<T> {
 
   public T get(int index) {
     return find(index).value;
+  }
+
+  public T set(int index, T value) {
+    Cell<T> c = find(index);
+    T old = c.value;
+    c.value = value;
+    return old;
   }
 
   public T getFirst() {

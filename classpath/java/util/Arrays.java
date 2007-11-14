@@ -42,6 +42,10 @@ public class Arrays {
         return array[index];
       }
 
+      public T set(int index, T value) {
+        throw new UnsupportedOperationException();
+      }
+
       public <S> S[] toArray(S[] a) {
         return (S[])array;
       }

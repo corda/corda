@@ -3,6 +3,8 @@ package java.util;
 public interface List<T> extends Collection<T> {
   public T get(int index);
 
+  public T set(int index, T value);
+
   public T remove(int index);
 
   public boolean add(T element);
