@@ -100,6 +100,14 @@ ReleaseStringUTFChars(Thread* t, jstring, const char* chars)
   t->m->system->free(chars);
 }
 
+jsize JNICALL
+GetArrayLength(Thread* t, jarray array)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return cast<uintptr_t>(*array, BytesPerWord);
+}
+
 jstring JNICALL
 NewString(Thread* t, const jchar* chars, jsize size)
 {
@@ -260,6 +268,32 @@ getMethod(Thread* t, object o, jmethodID m)
   } else {
     return arrayBody(t, classVirtualTable(t, objectClass(t, o)), m - 1);
   }
+}
+
+jobject JNICALL
+NewObjectV(Thread* t, jclass c, jmethodID m, va_list a)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object o = make(t, *c);
+  PROTECT(t, o);
+
+  t->m->processor->invokeList(t, getMethod(t, o, m), o, true, a);
+
+  return makeLocalReference(t, o);
+}
+
+jobject JNICALL
+NewObject(Thread* t, jclass c, jmethodID m, ...)
+{
+  va_list a;
+  va_start(a, m);
+
+  jobject r = NewObject(t, c, m, a);
+
+  va_end(a);
+
+  return r;
 }
 
 jobject JNICALL
@@ -1496,7 +1530,10 @@ GetBooleanArrayRegion(Thread* t, jbooleanArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &booleanArrayBody(t, *array, offset), length * sizeof(jboolean));
+  if (length) {
+    memcpy(dst, &booleanArrayBody(t, *array, offset),
+           length * sizeof(jboolean));
+  }
 }
 
 void JNICALL
@@ -1505,7 +1542,9 @@ GetByteArrayRegion(Thread* t, jbyteArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &byteArrayBody(t, *array, offset), length * sizeof(jbyte));
+  if (length) {
+    memcpy(dst, &byteArrayBody(t, *array, offset), length * sizeof(jbyte));
+  }
 }
 
 void JNICALL
@@ -1514,16 +1553,20 @@ GetCharArrayRegion(Thread* t, jcharArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &charArrayBody(t, *array, offset), length * sizeof(jchar));
+  if (length) {
+    memcpy(dst, &charArrayBody(t, *array, offset), length * sizeof(jchar));
+  }
 }
 
 void JNICALL
 GetShortArrayRegion(Thread* t, jshortArray array, jint offset, jint length,
-                   jshort* dst)
+                    jshort* dst)
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &shortArrayBody(t, *array, offset), length * sizeof(jshort));
+  if (length) {
+    memcpy(dst, &shortArrayBody(t, *array, offset), length * sizeof(jshort));
+  }
 }
 
 void JNICALL
@@ -1532,7 +1575,9 @@ GetIntArrayRegion(Thread* t, jintArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &intArrayBody(t, *array, offset), length * sizeof(jint));
+  if (length) {
+    memcpy(dst, &intArrayBody(t, *array, offset), length * sizeof(jint));
+  }
 }
 
 void JNICALL
@@ -1541,7 +1586,9 @@ GetLongArrayRegion(Thread* t, jlongArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &longArrayBody(t, *array, offset), length * sizeof(jlong));
+  if (length) {
+    memcpy(dst, &longArrayBody(t, *array, offset), length * sizeof(jlong));
+  }
 }
 
 void JNICALL
@@ -1550,7 +1597,9 @@ GetFloatArrayRegion(Thread* t, jfloatArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &floatArrayBody(t, *array, offset), length * sizeof(jfloat));
+  if (length) {
+    memcpy(dst, &floatArrayBody(t, *array, offset), length * sizeof(jfloat));
+  }
 }
 
 void JNICALL
@@ -1559,7 +1608,9 @@ GetDoubleArrayRegion(Thread* t, jdoubleArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(dst, &doubleArrayBody(t, *array, offset), length * sizeof(jdouble));
+  if (length) {
+    memcpy(dst, &doubleArrayBody(t, *array, offset), length * sizeof(jdouble));
+  }
 }
 
 void JNICALL
@@ -1568,7 +1619,10 @@ SetBooleanArrayRegion(Thread* t, jbooleanArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&booleanArrayBody(t, *array, offset), src, length * sizeof(jboolean));
+  if (length) {
+    memcpy(&booleanArrayBody(t, *array, offset), src,
+           length * sizeof(jboolean));
+  }
 }
 
 void JNICALL
@@ -1577,7 +1631,9 @@ SetByteArrayRegion(Thread* t, jbyteArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&byteArrayBody(t, *array, offset), src, length * sizeof(jbyte));
+  if (length) {
+    memcpy(&byteArrayBody(t, *array, offset), src, length * sizeof(jbyte));
+  }
 }
 
 void JNICALL
@@ -1586,7 +1642,9 @@ SetCharArrayRegion(Thread* t, jcharArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&charArrayBody(t, *array, offset), src, length * sizeof(jchar));
+  if (length) {
+    memcpy(&charArrayBody(t, *array, offset), src, length * sizeof(jchar));
+  }
 }
 
 void JNICALL
@@ -1595,7 +1653,9 @@ SetShortArrayRegion(Thread* t, jshortArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&shortArrayBody(t, *array, offset), src, length * sizeof(jshort));
+  if (length) {
+    memcpy(&shortArrayBody(t, *array, offset), src, length * sizeof(jshort));
+  }
 }
 
 void JNICALL
@@ -1604,7 +1664,9 @@ SetIntArrayRegion(Thread* t, jintArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&intArrayBody(t, *array, offset), src, length * sizeof(jint));
+  if (length) {
+    memcpy(&intArrayBody(t, *array, offset), src, length * sizeof(jint));
+  }
 }
 
 void JNICALL
@@ -1613,7 +1675,9 @@ SetLongArrayRegion(Thread* t, jlongArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&longArrayBody(t, *array, offset), src, length * sizeof(jlong));
+  if (length) {
+    memcpy(&longArrayBody(t, *array, offset), src, length * sizeof(jlong));
+  }
 }
 
 void JNICALL
@@ -1622,7 +1686,9 @@ SetFloatArrayRegion(Thread* t, jfloatArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&floatArrayBody(t, *array, offset), src, length * sizeof(jfloat));
+  if (length) {
+    memcpy(&floatArrayBody(t, *array, offset), src, length * sizeof(jfloat));
+  }
 }
 
 void JNICALL
@@ -1631,7 +1697,9 @@ SetDoubleArrayRegion(Thread* t, jdoubleArray array, jint offset, jint length,
 {
   ENTER(t, Thread::ActiveState);
 
-  memcpy(&doubleArrayBody(t, *array, offset), src, length * sizeof(jdouble));
+  if (length) {
+    memcpy(&doubleArrayBody(t, *array, offset), src, length * sizeof(jdouble));
+  }
 }
 
 void* JNICALL
@@ -1654,6 +1722,26 @@ ReleasePrimitiveArrayCritical(Thread* t, jarray, void*, jint)
   if ((-- t->criticalLevel) == 0) {
     enter(t, Thread::IdleState);
   }
+}
+
+jint JNICALL
+MonitorEnter(Thread* t, jobject o)
+{
+  ENTER(t, Thread::ActiveState);
+
+  acquire(t, *o);
+
+  return 0;
+}
+
+jint JNICALL
+MonitorExit(Thread* t, jobject o)
+{
+  ENTER(t, Thread::ActiveState);
+
+  release(t, *o);
+
+  return 0;
 }
 
 jint JNICALL
@@ -1714,6 +1802,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetStringUTFLength = ::GetStringUTFLength;
   envTable->GetStringUTFChars = ::GetStringUTFChars;
   envTable->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
+  envTable->GetArrayLength = ::GetArrayLength;
   envTable->NewString = ::NewString;
   envTable->NewStringUTF = ::NewStringUTF;
   envTable->FindClass = ::FindClass;
@@ -1725,6 +1814,8 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetFieldID = ::GetFieldID;
   envTable->GetMethodID = ::GetMethodID;
   envTable->GetStaticMethodID = ::GetStaticMethodID;
+  envTable->NewObject = ::NewObject;
+  envTable->NewObjectV = ::NewObjectV;
   envTable->CallObjectMethodV = ::CallObjectMethodV;
   envTable->CallObjectMethod = ::CallObjectMethod;
   envTable->CallBooleanMethodV = ::CallBooleanMethodV;
@@ -1852,6 +1943,8 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->SetDoubleArrayRegion = ::SetDoubleArrayRegion;
   envTable->GetPrimitiveArrayCritical = ::GetPrimitiveArrayCritical;
   envTable->ReleasePrimitiveArrayCritical = ::ReleasePrimitiveArrayCritical;
+  envTable->MonitorEnter = MonitorEnter;
+  envTable->MonitorExit = MonitorExit;
   envTable->GetJavaVM = ::GetJavaVM;
   envTable->IsSameObject = ::IsSameObject;
 }
