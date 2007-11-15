@@ -1,6 +1,6 @@
 package java.nio;
 
-public class ByteBuffer {
+public class ByteBuffer implements Comparable<ByteBuffer> {
   private final byte[] array;
   private int arrayOffset;
   private int capacity;
@@ -23,6 +23,22 @@ public class ByteBuffer {
     capacity = array.length;
     limit = capacity;
     position = 0;
+  }
+
+  public int compareTo(ByteBuffer o) {
+    int end = (remaining() < o.remaining() ? remaining() : o.remaining());
+
+    for (int i = 0; i < end; ++i) {
+      int d = get(position + i) - o.get(o.position + i);
+      if (d != 0) {
+        return d;
+      }
+    }
+    return remaining() - o.remaining();
+  }
+
+  public boolean equals(Object o) {
+    return o instanceof ByteBuffer && compareTo((ByteBuffer) o) == 0;
   }
 
   public byte[] array() {
