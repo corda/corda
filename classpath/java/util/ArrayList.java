@@ -108,12 +108,13 @@ public class ArrayList<T> implements List<T> {
   }
 
   public T set(int index, T element) {
-    if (index >= size) {
-      resize(index+1);
+    if (index >= 0 && index < size) {
+      Object oldValue = array[index];
+      array[index] = element;
+      return (T) oldValue;
+    } else {
+      throw new IndexOutOfBoundsException(index + " not in [0, " + size + ")");
     }
-    Object oldValue = array[index];
-    array[index] = element;
-    return (T) oldValue;
   }
 
   public T remove(int index) {
