@@ -345,6 +345,18 @@ public final class Class <T> {
     }
   }
 
+  public T[] getEnumConstants() {
+    if (isAssignableFrom(Enum.class)) {
+      try {
+        return (T[]) getMethod("values").invoke(null);
+      } catch (Exception e) {
+        throw new Error();
+      }
+    } else {
+      return null;
+    }
+  }
+
   public ClassLoader getClassLoader() {
     return loader;
   }
