@@ -683,8 +683,8 @@ class StackMapper {
 
 class MyThread: public Thread {
  public:
-  MyThread(Machine* m, object javaThread, vm::Thread* parent):
-    vm::Thread(m, javaThread, parent),
+  MyThread(Machine* m, object javaThread, Thread* parent):
+    Thread(m, javaThread, parent),
     argumentList(0),
     reference(0)
   {
