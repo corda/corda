@@ -13,16 +13,6 @@
 
 (type field java/lang/reflect/Field)
 
-(pod compiled
-  (uint16_t maxLocals)
-  (uint16_t maxStack)
-  (uint32_t parameterFootprint)
-  (uint32_t codeLength)
-  (uint32_t lineNumberTableLength)
-  (uint32_t exceptionHandlerTableLength)
-  (uint32_t stackMapTableLength)
-  (uint8_t[0] body))
-
 (type method java/lang/reflect/Method)
 
 (type nativeMethodData
@@ -56,16 +46,6 @@
   (uint16_t maxStack)
   (uint16_t maxLocals)
   (array uint8_t body))
-
-(pod nativeExceptionHandler
-  (uint32_t start)
-  (uint32_t end)
-  (uint32_t ip)
-  (uint32_t catchType))
-
-(pod nativeLineNumber
-  (uint32_t ip)
-  (uint32_t line))
 
 (type reference
   (object class)
