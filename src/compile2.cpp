@@ -1,22 +1,506 @@
-Operand*
-add(Compiler* c, Buffer* objectPool, object o)
+uintptr_t*
+makeCodeMask(MyThread* t, unsigned length)
 {
-  Operand* result = c->append(c->constant(0));
-  objectPool->appendAddress(c->poolOffset(result));
-  objectPool->appendAddress(o);
-  return result;
+  unsigned size = ceiling(codeLength(t, code), BytesPerWord)
+    * BytesPerWord;
+  uintptr_t* mask = static_cast<uintptr_t*>(t->m->system->allocate(size));
+  memset(mask, 0, size);
+  return mask;
+}
+
+class Frame {
+ public:
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(MyThread* t, Frame* frame): Protector(t), frame(frame) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(&(frame->method));
+
+      if (next == 0) {
+        Buffer* pool = frame->objectPool;
+        for (unsigned i = 1; i < pool->length(); i += BytesPerWord * 2) {
+          v->visit(reinterpret_cast<object*>(&(pool->getAddress(i))));
+        }
+      }
+    }
+
+    Frame* frame;
+  };
+
+  Frame(MyThread* t, Compiler* c, object method, uintptr_t* map,
+        Buffer* objectPool):
+    next(0),
+    t(t),
+    c(c),
+    method(method),
+    map(map),
+    objectPool(objectPool),
+    codeMask(makeCodeMask(t, codeLength(t, methodCode(t, method)))),
+    sp(localSize(t, method)),
+    protector(t, this)
+  {
+    memset(map, 0, mapSizeInBytes(t, method));
+  }
+
+  Frame(Frame* f, uintptr_t* map):
+    next(f),
+    t(f->t),
+    c(f->c),
+    method(f->method),
+    map(map),
+    objectPool(f->objectPool),
+    codeMask(f->codeMask),
+    sp(f->sp),
+    protector(t, this)
+  {
+    memcpy(map, f->map, mapSizeInBytes(t, method));
+  }
+
+  ~Frame() {
+    t->m->system->free(codeMask);
+  }
+
+  Operand* append(object o) {
+    Operand* result = c->append(c->constant(0));
+    objectPool->appendAddress(c->poolOffset(result));
+    objectPool->appendAddress(o);
+    return result;
+  }
+
+  static unsigned parameterFootprint(Thread* t, object method) {
+    return methodParameterFootprint(t, method);
+  }
+
+  static unsigned localSize(Thread* t, object method) {
+    return codeMaxLocals(t, methodCode(t, method))
+      - parameterFootprint(t, method);
+  }
+
+  static unsigned stackSize(Thread* t, object method) {
+    return codeMaxStack(t, methodCode(t, method));
+  }
+
+  static unsigned mapSize(Thread* t, object method) {
+    return stackSize(t, method) + localSize(t, method);
+  }
+
+  static unsigned mapSizeInWords(Thread* t, object method) {
+    return ceiling(mapSize(t, method), BytesPerWord);
+  }
+
+  static unsigned mapSizeInBytes(Thread* t, object method) {
+    return mapSizeInWords(t, method) * BytesPerWord;
+  }
+
+  void pushedInt() {
+    assert(t, sp + 1 <= mapSize(t, method));
+    assert(t, getBit(map, sp) == 0);
+    ++ sp;
+  }
+
+  void pushedObject() {
+    assert(t, sp + 1 <= mapSize(t, method));
+    markBit(map, sp++);
+  }
+  
+  void poppedInt() {
+    assert(t, sp >= 1);
+    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, getBit(map, sp - 1) == 0);
+    -- sp;
+  }
+  
+  void poppedObject() {
+    assert(t, sp >= 1);
+    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, getBit(map, sp - 1) != 0);
+    clearBit(map, -- sp);
+  }
+
+  void storedInt(unsigned index) {
+    assert(t, index < localSize());
+    clearBit(map, index);
+  }
+
+  void storedObject(unsigned index) {
+    assert(t, index < localSize());
+    markBit(map, index);
+  }
+
+  void dupped() {
+    assert(t, sp + 1 <= mapSize(t, method));
+    assert(t, sp - 1 >= localSize(t, method));
+    if (getBit(map, sp - 1)) {
+      markBit(map, sp);
+    }
+    ++ sp;
+  }
+
+  void duppedX1() {
+    assert(t, sp + 1 <= mapSize(t, method));
+    assert(t, sp - 2 >= localSize(t, method));
+
+    unsigned b2 = getBit(map, sp - 2);
+    unsigned b1 = getBit(map, sp - 1);
+
+    if (b2) {
+      markBit(map, sp - 1);
+    } else {
+      clearBit(map, sp - 1);
+    }
+
+    if (b1) {
+      markBit(map, sp - 2);
+      markBit(map, sp);
+    } else {
+      clearBit(map, sp - 2);
+    }
+
+    ++ sp;
+  }
+
+  void duppedX2() {
+    assert(t, sp + 1 <= mapSize(t, method));
+    assert(t, sp - 3 >= localSize(t, method));
+
+    unsigned b3 = getBit(map, sp - 3);
+    unsigned b2 = getBit(map, sp - 2);
+    unsigned b1 = getBit(map, sp - 1);
+
+    if (b3) {
+      markBit(map, sp - 2);
+    } else {
+      clearBit(map, sp - 2);
+    }
+
+    if (b2) {
+      markBit(map, sp - 1);
+    } else {
+      clearBit(map, sp - 1);
+    }
+
+    if (b1) {
+      markBit(map, sp - 3);
+      markBit(map, sp);
+    } else {
+      clearBit(map, sp - 3);
+    }
+
+    ++ sp;
+  }
+
+  void dupped2() {
+    assert(t, sp + 2 <= mapSize(t, method));
+    assert(t, sp - 2 >= localSize());
+
+    unsigned b2 = getBit(map, sp - 2);
+    unsigned b1 = getBit(map, sp - 1);
+
+    if (b2) {
+      markBit(map, sp);
+    }
+
+    if (b1) {
+      markBit(map, sp + 1);
+    }
+
+    sp += 2;
+  }
+
+  void dupped2X1() {
+    assert(t, sp + 2 <= mapSize(t, method));
+    assert(t, sp - 3 >= localSize(t, method));
+
+    unsigned b3 = getBit(map, sp - 3);
+    unsigned b2 = getBit(map, sp - 2);
+    unsigned b1 = getBit(map, sp - 1);
+
+    if (b3) {
+      markBit(map, sp - 1);
+    } else {
+      clearBit(map, sp - 1);
+    }
+
+    if (b2) {
+      markBit(map, sp - 3);
+      markBit(map, sp);
+    } else {
+      clearBit(map, sp - 3);
+    }
+
+    if (b1) {
+      markBit(map, sp - 2);
+      markBit(map, sp + 1);
+    } else {
+      clearBit(map, sp - 2);
+    }
+
+    sp += 2;
+  }
+
+  void dupped2X2() {
+    assert(t, sp + 2 <= mapSize(t, method));
+    assert(t, sp - 4 >= localSize(t, method));
+
+    unsigned b4 = getBit(map, sp - 4);
+    unsigned b3 = getBit(map, sp - 3);
+    unsigned b2 = getBit(map, sp - 2);
+    unsigned b1 = getBit(map, sp - 1);
+
+    if (b4) {
+      markBit(map, sp - 2);
+    } else {
+      clearBit(map, sp - 2);
+    }
+
+    if (b3) {
+      markBit(map, sp - 1);
+    } else {
+      clearBit(map, sp - 1);
+    }
+
+    if (b2) {
+      markBit(map, sp - 4);
+      markBit(map, sp);
+    } else {
+      clearBit(map, sp - 4);
+    }
+
+    if (b1) {
+      markBit(map, sp - 3);
+      markBit(map, sp + 1);
+    } else {
+      clearBit(map, sp - 3);
+    }
+
+    sp += 2;
+  }
+
+  void swapped() {
+    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, sp - 2 >= localSize(t, method));
+
+    bool savedBit = getBit(map, sp - 1);
+    if (getBit(map, sp - 2)) {
+      markBit(map, sp - 1);
+    } else {
+      clearBit(map, sp - 1);
+    }
+
+    if (savedBit) {
+      markBit(map, sp - 2);
+    } else {
+      clearBit(map, sp - 2);
+    }
+  }
+
+  void pushInt(Operand* o) {
+    c->push(o);
+    pushedInt();
+  }
+
+  void pushObject(Operand* o) {
+    c->push(o);
+    pushedObject();
+  }
+
+  void pushLong(Operand* o) {
+    c->push2(o);
+    pushedInt();
+    pushedInt();
+  }
+
+  void pop(unsigned count) {
+    assert(t, sp >= count);
+    assert(t, sp - count >= localSize());
+    while (count) {
+      clearBit(map, -- sp);
+      -- count;
+    }
+  }
+
+  Operand* topInt() {
+    assert(t, sp >= 1);
+    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, getBit(map, sp - 1) == 0);
+    return c->stack(0);
+  }
+
+  Operand* topLong() {
+    assert(t, sp >= 2);
+    assert(t, sp - 2 >= localSize(t, method));
+    assert(t, getBit(map, sp - 1) == 0);
+    assert(t, getBit(map, sp - 2) == 0);
+    return c->stack2(1);
+  }
+
+  Operand* topObject() {
+    assert(t, sp >= 1);
+    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, getBit(map, sp - 1) != 0);
+    return c->stack(0);
+  }
+
+  Operand* popInt() {
+    poppedInt();
+    return c->pop();
+  }
+
+  Operand* popLong() {
+    poppedInt();
+    poppedInt();
+    return c->pop2();
+  }
+
+  Operand* popObject() {
+    poppedObject();
+    return c->pop();
+  }
+
+  void popInt(Operand* o) {
+    c->pop(o);
+    poppedInt();
+  }
+
+  void popLong(Operand* o) {
+    c->pop2(o);
+    poppedInt();
+    poppedInt();
+  }
+
+  void popObject(Operand* o) {
+    c->pop(o);
+    poppedObject();
+  }
+
+  void loadInt(unsigned index) {
+    pushInt(c->offset(c->base(), localOffset(t, index, method)));
+  }
+
+  void loadLong(unsigned index) {
+    pushLong(c->offset(c->base(), localOffset(t, index, method)));
+  }
+
+  void loadObject(unsigned index) {
+    pushObject(c->offset(c->base(), localOffset(t, index, method)));
+  }
+
+  void storeInt(unsigned index) {
+    popInt(c->offset(c->base(), localOffset(t, index, method)));
+    storedInt(index);
+  }
+
+  void storeLong(unsigned index) {
+    popLong(c->offset(c->base(), localOffset(t, index, method)));
+    storedInt(index);
+    storedInt(index + 1);
+  }
+
+  void storeObject(unsigned index) {
+    popObject(c->offset(c->base(), localOffset(t, index, method)));
+    storedObject(index);
+  }
+
+  void dup() {
+    c->push(c->stack(0));
+    dupped();
+  }
+
+  void dupX1() {
+    Operand* a = c->stack(0);
+    Operand* b = c->stack(1);
+
+    c->mov(a, b);
+    c->mov(b, a);
+    c->push(a);
+
+    duppedX1();
+  }
+
+  void dupX2() {
+    Operand* a = c->stack(0);
+    Operand* b = c->stack(1);
+    Operand* c = c->stack(2);
+
+    c->mov(a, c);
+    c->mov(c, b);
+    c->mov(b, a);
+    c->push(a);
+
+    duppedX2();
+  }
+
+  void dup2() {
+    Operand* a = c->stack(0);
+
+    c->push(a);
+    c->push(a);
+
+    dupped2();
+  }
+
+  void dup2X1() {
+    Operand* a = c->stack(0);
+    Operand* b = c->stack(1);
+    Operand* c = c->stack(2);
+
+    c->mov(b, c);
+    c->mov(a, b);
+    c->mov(c, a);
+    c->push(b);
+    c->push(a);
+
+    dupped2X1();
+  }
+
+  void dup2X2() {
+    Operand* a = c->stack(0);
+    Operand* b = c->stack(1);
+    Operand* c = c->stack(2);
+    Operand* d = c->stack(3);
+
+    c->mov(b, d);
+    c->mov(a, c);
+    c->mov(d, b);
+    c->mov(c, a);
+    c->push(b);
+    c->push(a);
+
+    dupped2X2();
+  }
+
+  void swap() {
+    Operand* a = c->stack(0);
+    Operand* b = c->stack(1);
+    Operand* tmp = c->temporary();
+
+    c->mov(a, tmp);
+    c->mov(b, a);
+    c->mov(tmp, b);
+
+    swapped();
+  }
+  
+  Frame* next;
+  MyThread* t;
+  Compiler* c;
+  object method;
+  Buffer* objectPool;
+  uintptr_t codeMask;
+  unsigned sp;
+  MyProtector protector;
+};
+
+void
+compileThrowNew(MyThread* t, Frame* frame, Machine::Type type)
+{
+  Operand* class_ = frame->append(arrayBody(t, t->m->types, type));
+  c->indirectCallNoReturn(throwNew, 2, frame->c->thread(), class_);
 }
 
 void
-compileThrowNew(MyThread* t, Compiler* c, Buffer* objectPool,
-                Machine::Type type)
-{
-  Operand* class_ = add(c, objectPool, arrayBody(t, t->m->types, type));
-  c->indirectCallNoReturn(throwNew, 2, c->thread(), class_);
-}
-
-void
-pushReturnValue(MyThread* t, Frame* f, unsigned code, Operand* result)
+pushReturnValue(MyThread* t, Frame* frame, unsigned code, Operand* result)
 {
   switch (code) {
   case ByteField:
@@ -48,9 +532,10 @@ pushReturnValue(MyThread* t, Frame* f, unsigned code, Operand* result)
 }
 
 void
-compileDirectInvoke(MyThread* t, Compiler* c, Frame* frame, object target)
+compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
-  Operand* result = c->alignedCall(compiledCode(methodCompiled(t, target)));
+  Operand* result = frame->c->alignedCall
+    (compiledCode(methodCompiled(t, target)));
 
   frame->pop(methodParameterFootprint(t, target));
 
@@ -58,13 +543,14 @@ compileDirectInvoke(MyThread* t, Compiler* c, Frame* frame, object target)
 }
 
 void
-compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
-        uintptr_t* codeMask, Buffer* objectPool, unsigned ip)
+compile(MyThread* t, Frame* initialFrame, unsigned ip)
 {
-  Frame myFrame(initialFrame);
+  uintptr_t map[Frame::mapSizeInWords(t, initialFrame->method)];
+  Frame myFrame(initialFrame, map);
   Frame* frame = &myFrame;
+  Compiler* c = frame->c;
 
-  object code = methodCode(t, method);
+  object code = methodCode(t, frame->method);
   PROTECT(t, code);
     
   while (ip < codeLength(t, code)) {
@@ -142,8 +628,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       c->jmp(next);
 
       c->mark(outOfBounds);
-      compileThrowNew(t, c, objectPool,
-                      Machine::ArrayIndexOutOfBoundsExceptionType);
+      compileThrowNew(t, frame, Machine::ArrayIndexOutOfBoundsExceptionType);
 
       c->mark(next);
     } break;
@@ -219,8 +704,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       jmp(next);
 
       c->mark(outOfBounds);
-      compileThrowNew(t, c, objectPool,
-                      Machine::ArrayIndexOutOfBoundsExceptionType);
+      compileThrowNew(t, frame, Machine::ArrayIndexOutOfBoundsExceptionType);
 
       c->mark(next);
     } break;
@@ -261,13 +745,12 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       c->cmp(c->constant(0), length);
       jge(nonnegative);
 
-      compileThrowNew(t, c, objectPool,
-                      Machine::NegativeArraySizeExceptionType);
+      compileThrowNew(t, frame, Machine::NegativeArraySizeExceptionType);
 
       c->mark(nonnegative);
 
       c->indirectCall(makeBlankObjectArray, 3,
-                      c->thread(), add(c, objectPool, class_), length);
+                      c->thread(), frame->append(class_), length);
 
       frame->pushObject(array);
     } break;
@@ -325,7 +808,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       c->cmp(c->constant(0), tmp);
       je(next);
 
-      Operand* class_ = add(c, objectPool, class_);
+      Operand* class_ = frame->append(class_);
 
       c->mov(c->dereference(tmp), tmp);
       c->and_(c->constant(PointerMask), tmp);
@@ -338,7 +821,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       cmp(0, result);
       jne(next);
         
-      compileThrowNew(t, c, objectPool, Machine::ClassCastExceptionType);
+      compileThrowNew(t, frame, Machine::ClassCastExceptionType);
 
       c->mark(next);
     } break;
@@ -524,7 +1007,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         initClass(t, fieldClass(t, field));
         if (UNLIKELY(t->exception)) return;
 
-        table = add(c, objectPool, classStaticTable(t, fieldClass(t, field)));
+        table = frame->append(classStaticTable(t, fieldClass(t, field)));
       } else {
         table = frame->popObject();
       }
@@ -666,7 +1149,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         c->jne(target);
       }
       
-      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
     } break;
 
@@ -705,7 +1188,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         break;
       }
       
-      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
     } break;
 
@@ -742,7 +1225,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         break;
       }
       
-      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
     } break;
 
@@ -760,7 +1243,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         c->jne(target);
       }
       
-      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
     } break;
 
@@ -820,7 +1303,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       c->cmp(c->constant(0), tmp);
       je(zero);
 
-      Operand* class_ = add(c, objectPool, class_);
+      Operand* class_ = frame->append(class_);
 
       c->mov(c->dereference(tmp), tmp);
       c->and_(c->constant(PointerMask), tmp);
@@ -849,21 +1332,20 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       object target = resolveMethod(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      unsigned parameterFootprint
-        = methodParameterFootprint(t, target) * BytesPerWord;
+      unsigned parameterFootprint = methodParameterFootprint(t, target);
 
-      unsigned instance = parameterFootprint - BytesPerWord;
+      unsigned instance = parameterFootprint - 1;
 
       Operand* found = c->directCall(findInterfaceMethodFromInstance, 3,
                                      t->thread(),
-                                     add(c, objectPool, target),
-                                     c->offset(t->stack(), instance));
+                                     frame->append(target),
+                                     c->stack(instance));
 
       c->mov(c->offset(found, MethodCompiled), found);
 
       Operand* result = c->call(c->offset(found, CompiledBody));
 
-      frame->pop(methodParameterFootprint(t, target));
+      frame->pop(parameterFootprint);
 
       pushReturnValue(t, frame, methodReturnCode(t, target), result);
     } break;
@@ -879,7 +1361,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         target = findMethod(t, target, classSuper(t, class_));
       }
 
-      compileDirectInvoke(t, c, frame, target);
+      compileDirectInvoke(t, frame, target);
     } break;
 
     case invokestatic: {
@@ -892,7 +1374,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       initClass(t, methodClass(t, target));
       if (UNLIKELY(t->exception)) return;
 
-      compileDirectInvoke(t, c, frame, target);
+      compileDirectInvoke(t, frame, target);
     } break;
 
     case invokevirtual: {
@@ -901,14 +1383,13 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       object target = resolveMethod(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      unsigned parameterFootprint
-        = methodParameterFootprint(t, target) * BytesPerWord;
+      unsigned parameterFootprint = methodParameterFootprint(t, target);
 
-      unsigned instance = parameterFootprint - BytesPerWord;
+      unsigned instance = parameterFootprint - 1;
 
       unsigned offset = ClassVtable + (methodOffset(t, target) * BytesPerWord);
 
-      Operand* instance = c->offset(c->stack(), instance);
+      Operand* instance = c->stack(instance);
       Operand* class_ = c->temporary();
       
       c->mov(c->dereference(instance), class_);
@@ -916,7 +1397,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
 
       Operand* result = c->call(c->offset(class_, offset));
 
-      frame->pop(methodParameterFootprint(t, target));
+      frame->pop(parameterFootprint);
 
       pushReturnValue(t, frame, methodReturnCode(t, target), result);
     } break;
@@ -1056,9 +1537,9 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
           object class_ = resolveClassInPool(t, pool, index - 1); 
           if (UNLIKELY(exception)) return;
 
-          frame->pushObject(add(c, objectPool, class_));
+          frame->pushObject(frame->append(class_));
         } else {
-          frame->pushObject(add(c, objectPool, v));
+          frame->pushObject(frame->append(v));
         }
       } else {
         frame->pushInt(c->constant(singletonValue(t, pool, index - 1)));
@@ -1124,7 +1605,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       int32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
-      compile(t, c, frame, method, codeMask, objectPool, defaultIp);
+      compile(t, frame, defaultIp);
       if (UNLIKELY(t->exception)) return;
 
       Operand* default_ = c->append(c->logicalIp(defaultIp));
@@ -1138,7 +1619,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         int32_t newIp = base + codeReadInt32(t, code, index);
         assert(t, newIp < codeLength(t, code));
 
-        compile(t, c, frame, method, codeMask, objectPool, newIp);
+        compile(t, frame, newIp);
         if (UNLIKELY(t->exception)) return;
 
         Operand* result = c->append(c->constant(key));
@@ -1240,7 +1721,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       Operand* result = c->indirectCall
         (makeMultidimensionalArray, 3,
          c->thread(),
-         c->offset(c->stack(), dimensions - 1),
+         c->stack(dimensions - 1),
          c->constant(dimensions));
 
       frame->pop(dimensions);
@@ -1261,11 +1742,11 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
         result = c->indirectCall(makeNewWeakReference, 2,
                                  c->thread(),
-                                 add(c, objectPool, class_));
+                                 frame->append(class_));
       } else {
         result = c->indirectCall(makeNew, 2,
                                  c->thread(),
-                                 add(c, objectPool, class_));
+                                 frame->append(class_));
       }
 
       frame->pushObject(result);
@@ -1280,8 +1761,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       c->cmp(0, size);
       c->jge(nonnegative);
 
-      compileThrowNew(t, c, objectPool,
-                      Machine::NegativeArraySizeExceptionType);
+      compileThrowNew(t, frame, Machine::NegativeArraySizeExceptionType);
 
       c->mark(nonnegative);
 
@@ -1379,7 +1859,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       Operand* table;
 
       if (instruction == putstatic) {
-        table = add(c, objectPool, staticTable);
+        table = frame->append(staticTable);
       } else {
         table = frame->popObject();
       }
@@ -1437,7 +1917,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       int32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
-      compile(t, c, frame, method, codeMask, objectPool, defaultIp);
+      compile(t, frame, defaultIp);
       if (UNLIKELY(t->exception)) return;
       
       Operand* default_ = c->append(c->logicalIp(defaultIp));
@@ -1451,7 +1931,7 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         int32_t newIp = base + codeReadInt32(t, code, index);
         assert(t, newIp < codeLength(t, code));
         
-        compile(t, c, frame, method, codeMask, objectPool, newIp);
+        compile(t, frame, newIp);
         if (UNLIKELY(t->exception)) return;
 
         Operand* result = c->append(c->logicalIp(newIp));
@@ -1534,35 +2014,11 @@ compile(MyThread* t, Compiler* compiler, object method)
 
   compiler->prologue(parameterFootptrint, localFootprint);
 
-  unsigned codeMaskSize
-    = ceiling(codeLength(t, code), BytesPerWord)
-    * BytesPerWord;
-
-  uintptr_t* codeMask = static_cast<uintptr_t*>
-    (t->m->system->allocate(codeMaskSize));
-
-  RESOURCE(t, codeMask);
-
-  memset(codeMask, 0, codeMaskSize);
-
   Buffer objectPool;
+  uintptr_t map[Frame::mapSizeInWords(t, method)];
+  Frame frame(t, compiler, method, map, objectPool);
 
-  class MyProtector: public Thread::Protector {
-   public:
-    MyProtector(MyThread* t, Buffer* pool): Protector(t), pool(pool) { }
-
-    virtual void visit(Heap::Visitor* v) {
-      for (unsigned i = 1; i < pool->length(); i += BytesPerWord * 2) {
-        v->visit(reinterpret_cast<object*>(&(pool->getAddress(i))));
-      }
-    }
-
-    Buffer* pool;
-  } protector(t, objectPool);
-
-  Frame frame(compiler);
-
-  compile(t, c, &stack, method, codeMask, &objectPool, 0);
+  compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
 
   object eht = codeExceptionHandlerTable(t, methodCode(t, method));
@@ -1575,10 +2031,10 @@ compile(MyThread* t, Compiler* compiler, object method)
       assert(t, getBit(codeMask, exceptionHandlerStart(eh)));
         
       Frame frame2(&frame);
-      stack2.pushObject();
+      frame2.pushObject();
 
-      compile(t, c, &stack, method, codeMask, &objectPool,
-              exceptionHandlerIp(eh));
+      compile(t, &frame2, exceptionHandlerIp(eh));
+      if (UNLIKELY(t->exception)) return 0;
     }
   }
 
