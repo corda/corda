@@ -1,9 +1,8 @@
 Operand*
 add(Compiler* c, Buffer* objectPool, object o)
 {
-  unsigned offset;
-  Operand* result = c->poolAddress(0, &offset);
-  objectPool->appendAddress(offset);
+  Operand* result = c->append(c->constant(0));
+  objectPool->appendAddress(c->poolOffset(result));
   objectPool->appendAddress(o);
   return result;
 }
@@ -667,9 +666,8 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         c->jne(target);
       }
       
-      Frame frame(frame);
-      compile(t, c, &stack, method, codeMask, objectPool, newIp);
-      if (UNLIKELY(t->exception)) return 0;      
+      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      if (UNLIKELY(t->exception)) return;
     } break;
 
     case if_icmpeq:
@@ -707,9 +705,8 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         break;
       }
       
-      Frame frame(frame);
-      compile(t, c, &stack, method, codeMask, objectPool, newIp);
-      if (UNLIKELY(t->exception)) return 0;      
+      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      if (UNLIKELY(t->exception)) return;
     } break;
 
     case ifeq:
@@ -745,9 +742,8 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         break;
       }
       
-      Frame frame(frame);
-      compile(t, c, &stack, method, codeMask, objectPool, newIp);
-      if (UNLIKELY(t->exception)) return 0;      
+      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      if (UNLIKELY(t->exception)) return;
     } break;
 
     case ifnull:
@@ -764,9 +760,8 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
         c->jne(target);
       }
       
-      Frame frame(frame);
-      compile(t, c, &stack, method, codeMask, objectPool, newIp);
-      if (UNLIKELY(t->exception)) return 0;      
+      compile(t, c, frame, method, codeMask, objectPool, newIp);
+      if (UNLIKELY(t->exception)) return;
     } break;
 
     case iinc: {
@@ -800,13 +795,6 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
     case fload_3:
       frame->loadInt(3);
       break;
-
-    case impdep1: {
-      // this means we're invoking a virtual method on an instance of a
-      // bootstrap class, so we need to load the real class to get the
-      // real method and call it.
-#warning todo
-    } goto loop;
 
     case imul: {
       Operand* a = frame->popInt();
@@ -1014,9 +1002,9 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
     } break;
 
     case lcmp: {
-      Operand* next = c->label();;
-      Operand* less = c->label();;
-      Operand* greater = c->label();;
+      Operand* next = c->label();
+      Operand* less = c->label();
+      Operand* greater = c->label();
 
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
@@ -1127,8 +1115,44 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       break;
 
     case lookupswitch: {
-#warning todo
-    } break;
+      int32_t base = ip - 1;
+
+      ip = (ip + 3) & ~3; // pad to four byte boundary
+
+      Operand* key = frame->popInt();
+    
+      int32_t defaultIp = base + codeReadInt32(t, code, ip);
+      assert(t, defaultIp < codeLength(t, code));
+
+      compile(t, c, frame, method, codeMask, objectPool, defaultIp);
+      if (UNLIKELY(t->exception)) return;
+
+      Operand* default_ = c->append(c->logicalIp(defaultIp));
+
+      int32_t pairCount = codeReadInt32(t, code, ip);
+
+      Operand* start;
+      for (int32_t i = 0; i < pairCount; ++i) {
+        unsigned index = ip + (i * 8);
+        int32_t key = codeReadInt32(t, code, index);
+        int32_t newIp = base + codeReadInt32(t, code, index);
+        assert(t, newIp < codeLength(t, code));
+
+        compile(t, c, frame, method, codeMask, objectPool, newIp);
+        if (UNLIKELY(t->exception)) return;
+
+        Operand* result = c->append(c->constant(key));
+        c->append(c->logicalIp(newIp));
+
+        if (i == 0) {
+          start = result;
+        }
+      }
+
+      c->jmp(c->directCall
+             (lookUpAddress, 4,
+              key, start, c->constant(pairCount), default_));
+    } return;
 
     case lor: {
       Operand* a = frame->popLong();
@@ -1404,8 +1428,52 @@ compile(MyThread* t, Compiler* c, Frame* initialFrame, object method,
       break;
 
     case tableswitch: {
-#warning todo
-    } break;
+      int32_t base = ip - 1;
+
+      ip = (ip + 3) & ~3; // pad to four byte boundary
+
+      Operand* key = frame->popInt();
+
+      int32_t defaultIp = base + codeReadInt32(t, code, ip);
+      assert(t, defaultIp < codeLength(t, code));
+
+      compile(t, c, frame, method, codeMask, objectPool, defaultIp);
+      if (UNLIKELY(t->exception)) return;
+      
+      Operand* default_ = c->append(c->logicalIp(defaultIp));
+
+      int32_t bottom = codeReadInt32(t, code, ip);
+      int32_t top = codeReadInt32(t, code, ip);
+        
+      Operand* start;
+      for (int32_t i = 0; i < bottom - top + 1; ++i) {
+        unsigned index = ip + (i * 4);
+        int32_t newIp = base + codeReadInt32(t, code, index);
+        assert(t, newIp < codeLength(t, code));
+        
+        compile(t, c, frame, method, codeMask, objectPool, newIp);
+        if (UNLIKELY(t->exception)) return;
+
+        Operand* result = c->append(c->logicalIp(newIp));
+        if (i == 0) {
+          start = result;
+        }
+      }
+
+      Operand* defaultCase = c->label();
+      
+      c->cmp(c->constant(bottom), key);
+      c->jl(defaultCase);
+
+      c->cmp(c->constant(top), key);
+      c->jg(defaultCase);
+
+      c->shl(c->constant(2), key);
+      c->jmp(c->offset(start, key));
+
+      c->mark(defaultCase);
+      c->jmp(default_);
+    } return;
 
     case wide: {
       switch (codeBody(t, code, ip++)) {
