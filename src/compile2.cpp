@@ -1,11 +1,42 @@
+#include "machine.h"
+#include "buffer.h"
+#include "process.h"
+#include "compiler.h"
+
+using namespace vm;
+
+namespace {
+
+class MyThread: public Thread {
+ public:
+  MyThread(Machine* m, object javaThread, Thread* parent):
+    Thread(m, javaThread, parent),
+    base(0)
+  { }
+
+  void* base;
+};
+
 uintptr_t*
 makeCodeMask(MyThread* t, unsigned length)
 {
-  unsigned size = ceiling(codeLength(t, code), BytesPerWord)
-    * BytesPerWord;
+  unsigned size = ceiling(length, BytesPerWord) * BytesPerWord;
   uintptr_t* mask = static_cast<uintptr_t*>(t->m->system->allocate(size));
   memset(mask, 0, size);
   return mask;
+}
+
+int
+localOffset(MyThread* t, int v, object method)
+{
+  int parameterFootprint = methodParameterFootprint(t, method) * BytesPerWord;
+
+  v *= BytesPerWord;
+  if (v < parameterFootprint) {
+    return (parameterFootprint - v - BytesPerWord) + (BytesPerWord * 2);
+  } else {
+    return -(v + BytesPerWord - parameterFootprint);
+  }
 }
 
 class Frame {
@@ -64,7 +95,7 @@ class Frame {
   Operand* append(object o) {
     Operand* result = c->append(c->constant(0));
     objectPool->appendAddress(c->poolOffset(result));
-    objectPool->appendAddress(o);
+    objectPool->appendAddress(reinterpret_cast<uintptr_t>(o));
     return result;
   }
 
@@ -375,14 +406,21 @@ class Frame {
   }
 
   void loadInt(unsigned index) {
+    assert(t, index < localSize());
+    assert(t, getBit(map, index) == 0);
     pushInt(c->offset(c->base(), localOffset(t, index, method)));
   }
 
   void loadLong(unsigned index) {
+    assert(t, index < localSize() - 1);
+    assert(t, getBit(map, index) == 0);
+    assert(t, getBit(map, index + 1) == 0);
     pushLong(c->offset(c->base(), localOffset(t, index, method)));
   }
 
   void loadObject(unsigned index) {
+    assert(t, index < localSize());
+    assert(t, getBit(map, index) != 0);
     pushObject(c->offset(c->base(), localOffset(t, index, method)));
   }
 
@@ -402,82 +440,89 @@ class Frame {
     storedObject(index);
   }
 
+  void increment(unsigned index, unsigned count) {
+    assert(t, index < localSize());
+    assert(t, getBit(map, index) == 0);
+    c->add(c->constant(count),
+           c->offset(c->base(), localOffset(t, index, method)));
+  }
+
   void dup() {
     c->push(c->stack(0));
     dupped();
   }
 
   void dupX1() {
-    Operand* a = c->stack(0);
-    Operand* b = c->stack(1);
+    Operand* s0 = c->stack(0);
+    Operand* s1 = c->stack(1);
 
-    c->mov(a, b);
-    c->mov(b, a);
-    c->push(a);
+    c->mov(s0, s1);
+    c->mov(s1, s0);
+    c->push(s0);
 
     duppedX1();
   }
 
   void dupX2() {
-    Operand* a = c->stack(0);
-    Operand* b = c->stack(1);
-    Operand* c = c->stack(2);
+    Operand* s0 = c->stack(0);
+    Operand* s1 = c->stack(1);
+    Operand* s2 = c->stack(2);
 
-    c->mov(a, c);
-    c->mov(c, b);
-    c->mov(b, a);
-    c->push(a);
+    c->mov(s0, s2);
+    c->mov(s2, s1);
+    c->mov(s1, s0);
+    c->push(s0);
 
     duppedX2();
   }
 
   void dup2() {
-    Operand* a = c->stack(0);
+    Operand* s0 = c->stack(0);
 
-    c->push(a);
-    c->push(a);
+    c->push(s0);
+    c->push(s0);
 
     dupped2();
   }
 
   void dup2X1() {
-    Operand* a = c->stack(0);
-    Operand* b = c->stack(1);
-    Operand* c = c->stack(2);
+    Operand* s0 = c->stack(0);
+    Operand* s1 = c->stack(1);
+    Operand* s2 = c->stack(2);
 
-    c->mov(b, c);
-    c->mov(a, b);
-    c->mov(c, a);
-    c->push(b);
-    c->push(a);
+    c->mov(s1, s2);
+    c->mov(s0, s1);
+    c->mov(s2, s0);
+    c->push(s1);
+    c->push(s0);
 
     dupped2X1();
   }
 
   void dup2X2() {
-    Operand* a = c->stack(0);
-    Operand* b = c->stack(1);
-    Operand* c = c->stack(2);
-    Operand* d = c->stack(3);
+    Operand* s0 = c->stack(0);
+    Operand* s1 = c->stack(1);
+    Operand* s2 = c->stack(2);
+    Operand* s3 = c->stack(3);
 
-    c->mov(b, d);
-    c->mov(a, c);
-    c->mov(d, b);
-    c->mov(c, a);
-    c->push(b);
-    c->push(a);
+    c->mov(s1, s3);
+    c->mov(s0, s2);
+    c->mov(s3, s1);
+    c->mov(s2, s0);
+    c->push(s1);
+    c->push(s0);
 
     dupped2X2();
   }
 
   void swap() {
-    Operand* a = c->stack(0);
-    Operand* b = c->stack(1);
+    Operand* s0 = c->stack(0);
+    Operand* s1 = c->stack(1);
     Operand* tmp = c->temporary();
 
-    c->mov(a, tmp);
-    c->mov(b, a);
-    c->mov(tmp, b);
+    c->mov(s0, tmp);
+    c->mov(s1, s0);
+    c->mov(tmp, s1);
 
     swapped();
   }
@@ -486,17 +531,334 @@ class Frame {
   MyThread* t;
   Compiler* c;
   object method;
+  uintptr_t* map;
   Buffer* objectPool;
-  uintptr_t codeMask;
+  uintptr_t* codeMask;
   unsigned sp;
   MyProtector protector;
 };
+
+void NO_RETURN
+unwind(MyThread* t);
+
+object
+findInterfaceMethodFromInstance(Thread* t, object method, object instance)
+{
+  return findInterfaceMethod(t, method, objectClass(t, instance));
+}
+
+intptr_t
+compareDoublesG(uint64_t bi, uint64_t ai)
+{
+  double a = bitsToDouble(ai);
+  double b = bitsToDouble(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+intptr_t
+compareDoublesL(uint64_t bi, uint64_t ai)
+{
+  double a = bitsToDouble(ai);
+  double b = bitsToDouble(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+intptr_t
+compareFloatsG(uint32_t bi, uint32_t ai)
+{
+  float a = bitsToFloat(ai);
+  float b = bitsToFloat(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+intptr_t
+compareFloatsL(uint32_t bi, uint32_t ai)
+{
+  float a = bitsToFloat(ai);
+  float b = bitsToFloat(bi);
+  
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else if (a == b) {
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+uint64_t
+addDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) + bitsToDouble(b));
+}
+
+uint64_t
+subtractDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) - bitsToDouble(b));
+}
+
+uint64_t
+multiplyDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) * bitsToDouble(b));
+}
+
+uint64_t
+divideDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(bitsToDouble(a) / bitsToDouble(b));
+}
+
+uint64_t
+moduloDouble(uint64_t b, uint64_t a)
+{
+  return doubleToBits(fmod(bitsToDouble(a), bitsToDouble(b)));
+}
+
+uint64_t
+negateDouble(uint64_t a)
+{
+  return doubleToBits(- bitsToDouble(a));
+}
+
+uint32_t
+doubleToFloat(int64_t a)
+{
+  return floatToBits(static_cast<float>(bitsToDouble(a)));
+}
+
+int32_t
+doubleToInt(int64_t a)
+{
+  return static_cast<int32_t>(bitsToDouble(a));
+}
+
+int64_t
+doubleToLong(int64_t a)
+{
+  return static_cast<int64_t>(bitsToDouble(a));
+}
+
+uint32_t
+addFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) + bitsToFloat(b));
+}
+
+uint32_t
+subtractFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) - bitsToFloat(b));
+}
+
+uint32_t
+multiplyFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) * bitsToFloat(b));
+}
+
+uint32_t
+divideFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(bitsToFloat(a) / bitsToFloat(b));
+}
+
+uint32_t
+moduloFloat(uint32_t b, uint32_t a)
+{
+  return floatToBits(fmod(bitsToFloat(a), bitsToFloat(b)));
+}
+
+uint32_t
+negateFloat(uint32_t a)
+{
+  return floatToBits(- bitsToFloat(a));
+}
+
+int64_t
+divideLong(int64_t b, int64_t a)
+{
+  return a / b;
+}
+
+int64_t
+moduloLong(int64_t b, int64_t a)
+{
+  return a % b;
+}
+
+uint64_t
+floatToDouble(int32_t a)
+{
+  return doubleToBits(static_cast<double>(bitsToFloat(a)));
+}
+
+int32_t
+floatToInt(int32_t a)
+{
+  return static_cast<int32_t>(bitsToFloat(a));
+}
+
+int64_t
+floatToLong(int32_t a)
+{
+  return static_cast<int64_t>(bitsToFloat(a));
+}
+
+uint64_t
+intToDouble(int32_t a)
+{
+  return doubleToBits(static_cast<double>(a));
+}
+
+uint32_t
+intToFloat(int32_t a)
+{
+  return floatToBits(static_cast<float>(a));
+}
+
+object
+makeBlankObjectArray(Thread* t, object class_, int32_t length)
+{
+  return makeObjectArray(t, class_, length, true);
+}
+
+object
+makeBlankArray(Thread* t, object (*constructor)(Thread*, uintptr_t, bool),
+               int32_t length)
+{
+  return constructor(t, length, true);
+}
+
+uintptr_t
+lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
+              uintptr_t* default_)
+{
+  int32_t bottom = 0;
+  int32_t top = count;
+  for (int32_t span = top - bottom; span; span = top - bottom) {
+    int32_t middle = bottom + (span / 2);
+    uintptr_t* p = start + (middle * 2);
+    int32_t k = *p;
+
+    if (key < k) {
+      top = middle;
+    } else if (key > k) {
+      bottom = middle + 1;
+    } else {
+      return p[1];
+    }
+  }
+
+  return *default_;
+}
+
+void
+acquireMonitorForObject(Thread* t, object o)
+{
+  acquire(t, o);
+}
+
+void
+releaseMonitorForObject(Thread* t, object o)
+{
+  release(t, o);
+}
+
+object
+makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* stack,
+                           int32_t dimensions)
+{
+  PROTECT(t, class_);
+
+  int32_t counts[dimensions];
+  for (int i = dimensions - 1; i >= 0; --i) {
+    counts[i] = stack[dimensions - i - 1];
+    if (UNLIKELY(counts[i] < 0)) {
+      object message = makeString(t, "%d", counts[i]);
+      t->exception = makeNegativeArraySizeException(t, message);
+      return 0;
+    }
+  }
+
+  object array = makeArray(t, counts[0], true);
+  setObjectClass(t, array, class_);
+  PROTECT(t, array);
+
+  populateMultiArray(t, array, counts, 0, dimensions);
+
+  return array;
+}
+
+object
+makeMultidimensionalArray(MyThread* t, object class_, uintptr_t* stack,
+                          int32_t dimensions)
+{
+  object r = makeMultidimensionalArray2(t, class_, stack, dimensions);
+  if (UNLIKELY(t->exception)) {
+    unwind(t);
+  } else {
+    return r;
+  }
+}
+
+void NO_RETURN
+throwNew(MyThread* t, object class_)
+{
+  t->exception = makeNew(t, class_);
+  object trace = makeTrace(t);
+  set(t, t->exception, ThrowableTrace, trace);
+  unwind(t);
+}
+
+void NO_RETURN
+throw_(MyThread* t, object o)
+{
+  if (o) {
+    t->exception = o;
+  } else {
+    t->exception = makeNullPointerException(t);
+  }
+  unwind(t);
+}
 
 void
 compileThrowNew(MyThread* t, Frame* frame, Machine::Type type)
 {
   Operand* class_ = frame->append(arrayBody(t, t->m->types, type));
-  c->indirectCallNoReturn(throwNew, 2, frame->c->thread(), class_);
+  Compiler* c = frame->c;
+  c->indirectCallNoReturn(c->constant(reinterpret_cast<intptr_t>(throwNew)),
+                          2, c->thread(), class_);
 }
 
 void
@@ -514,8 +876,6 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code, Operand* result)
 
   case ObjectField:
     frame->pushObject(result);
-    push(rax);
-    stackMapper.pushedObject();
     break;
 
   case LongField:
@@ -535,7 +895,9 @@ void
 compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
   Operand* result = frame->c->alignedCall
-    (compiledCode(methodCompiled(t, target)));
+    (frame->c->constant
+     (reinterpret_cast<intptr_t>
+      (&singletonBody(t, methodCompiled(t, target), 0))));
 
   frame->pop(methodParameterFootprint(t, target));
 
@@ -554,12 +916,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
   PROTECT(t, code);
     
   while (ip < codeLength(t, code)) {
-    if (getBit(codeMask, ip)) {
+    if (getBit(frame->codeMask, ip)) {
       // we've already visited this part of the code
       return;
     }
 
-    markBit(mask, ip);
+    markBit(frame->codeMask, ip);
+
+    c->startLogicalIp(ip);
 
     unsigned instruction = codeBody(t, code, ip++);
 
@@ -667,7 +1031,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         c->shl(c->constant(log(BytesPerWord)), index);
         c->add(c->constant(ArrayBody), index);
           
-        c->directCall(set, 4, c->thread(), array, index, value);
+        c->directCall(c->constant(reinterpret_cast<intptr_t>(set)),
+                      4, c->thread(), array, index, value);
         break;
 
       case fastore:
@@ -701,7 +1066,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         break;
       }
 
-      jmp(next);
+      c->jmp(next);
 
       c->mark(outOfBounds);
       compileThrowNew(t, frame, Machine::ArrayIndexOutOfBoundsExceptionType);
@@ -743,16 +1108,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* length = frame->popInt();
       c->cmp(c->constant(0), length);
-      jge(nonnegative);
+      c->jge(nonnegative);
 
       compileThrowNew(t, frame, Machine::NegativeArraySizeExceptionType);
 
       c->mark(nonnegative);
 
-      c->indirectCall(makeBlankObjectArray, 3,
-                      c->thread(), frame->append(class_), length);
-
-      frame->pushObject(array);
+      frame->pushObject
+        (c->indirectCall
+         (c->constant(reinterpret_cast<intptr_t>(makeBlankObjectArray)),
+          3, c->thread(), frame->append(class_), length));
     } break;
 
     case areturn:
@@ -784,7 +1149,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       break;
 
     case athrow:
-      c->indirectCallNoReturn(throw_, 2, c->thread(), frame->popObject());
+      c->indirectCallNoReturn(c->constant(reinterpret_cast<intptr_t>(throw_)),
+                              2, c->thread(), frame->popObject());
       break;
 
     case bipush:
@@ -806,20 +1172,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->mov(instance, tmp);
 
       c->cmp(c->constant(0), tmp);
-      je(next);
+      c->je(next);
 
-      Operand* class_ = frame->append(class_);
+      Operand* classOperand = frame->append(class_);
 
       c->mov(c->dereference(tmp), tmp);
       c->and_(c->constant(PointerMask), tmp);
 
-      cmp(class_, tmp);
-      je(next);
+      c->cmp(classOperand, tmp);
+      c->je(next);
 
-      Operand* result = c->directCall(isAssignableFrom, 2, class_, tmp);
+      Operand* result = c->directCall
+        (c->constant(reinterpret_cast<intptr_t>(isAssignableFrom)),
+         2, classOperand, tmp);
 
-      cmp(0, result);
-      jne(next);
+      c->cmp(0, result);
+      c->jne(next);
         
       compileThrowNew(t, frame, Machine::ClassCastExceptionType);
 
@@ -828,35 +1196,47 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case d2f: {
       Operand* a = frame->popLong();
-      frame->pushInt(c->directCall(doubleToFloat, 1, a));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(doubleToFloat)), 1, a));
     } break;
 
     case d2i: {
       Operand* a = frame->popLong();
-      frame->pushInt(c->directCall(doubleToInt, 1, a));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(doubleToInt)), 1, a));
     } break;
 
-    case d2i: {
+    case d2l: {
       Operand* a = frame->popLong();
-      frame->pushLong(c->directCall(doubleToLong, 1, a));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(doubleToLong)), 1, a));
     } break;
 
     case dadd: {
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
-      frame->pushLong(c->directCall(addDouble, 2, a, b));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(addDouble)), 2, a, b));
     } break;
 
     case dcmpg: {
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
-      frame->pushInt(c->directCall(compareDoublesG, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(compareDoublesG)), 2, a, b));
     } break;
 
     case dcmpl: {
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
-      frame->pushInt(c->directCall(compareDoublesL, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(compareDoublesL)), 2, a, b));
     } break;
 
     case dconst_0:
@@ -870,30 +1250,40 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case ddiv: {
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
-      frame->pushLong(c->directCall(divideDouble, 2, a, b));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(divideDouble)), 2, a, b));
     } break;
 
     case dmul: {
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
-      frame->pushLong(c->directCall(multiplyDouble, 2, a, b));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(multiplyDouble)), 2, a, b));
     } break;
 
     case dneg: {
       Operand* a = frame->popLong();
-      frame->pushLong(c->directCall(negateDouble, 1, a));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(negateDouble)), 1, a));
     } break;
 
     case vm::drem: {
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
-      frame->pushLong(c->directCall(moduloDouble, 2, a, b));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(moduloDouble)), 2, a, b));
     } break;
 
     case dsub: {
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
-      frame->pushLong(c->directCall(subtractDouble, 2, a, b));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(subtractDouble)), 2, a, b));
     } break;
 
     case dup:
@@ -922,35 +1312,47 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case f2d: {
       Operand* a = frame->popInt();
-      frame->pushLong(c->directCall(floatToDouble, 1, a));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(floatToDouble)), 1, a));
     } break;
 
     case f2i: {
       Operand* a = frame->popInt();
-      frame->pushInt(c->directCall(floatToInt, 1, a));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(floatToInt)), 1, a));
     } break;
 
     case f2l: {
       Operand* a = frame->popInt();
-      frame->pushLong(c->directCall(floatToLong, 1, a));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(floatToLong)), 1, a));
     } break;
 
     case fadd: {
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
-      frame->pushInt(c->directCall(addFloat, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(addFloat)), 2, a, b));
     } break;
 
     case fcmpg: {
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
-      frame->pushInt(c->directCall(compareFloatsG, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(compareFloatsG)), 2, a, b));
     } break;
 
     case fcmpl: {
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
-      frame->pushInt(c->directCall(compareFloatsL, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(compareFloatsL)), 2, a, b));
     } break;
 
     case fconst_0:
@@ -968,30 +1370,40 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case fdiv: {
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
-      frame->pushInt(c->directCall(divideFloat, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(divideFloat)), 2, a, b));
     } break;
 
     case fmul: {
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
-      frame->pushInt(c->directCall(multiplyFloat, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(multiplyFloat)), 2, a, b));
     } break;
 
     case fneg: {
       Operand* a = frame->popLong();
-      frame->pushLong(c->directCall(negateFloat, 1, a));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(negateFloat)), 1, a));
     } break;
 
     case vm::frem: {
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
-      frame->pushInt(c->directCall(moduloFloat, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(moduloFloat)), 2, a, b));
     } break;
 
     case fsub: {
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
-      frame->pushInt(c->directCall(subtractFloat, 2, a, b));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(subtractFloat)), 2, a, b));
     } break;
 
     case getfield:
@@ -1073,12 +1485,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case i2d: {
       Operand* a = frame->popInt();
-      frame->pushLong(c->directCall(intToDouble, 1, a));
+      frame->pushLong
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(intToDouble)), 1, a));
     } break;
 
     case i2f: {
       Operand* a = frame->popInt();
-      frame->pushInt(c->directCall(intToFloat, 1, a));
+      frame->pushInt
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(intToFloat)), 1, a));
     } break;
 
     case i2l:
@@ -1249,9 +1665,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case iinc: {
       uint8_t index = codeBody(t, code, ip++);
-      int8_t c = codeBody(t, code, ip++);
+      int8_t count = codeBody(t, code, ip++);
 
-      c->add(c->constant(c), frame->topInt());
+      frame->increment(index, count);
     } break;
 
     case iload:
@@ -1301,25 +1717,28 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->mov(instance, tmp);
 
       c->cmp(c->constant(0), tmp);
-      je(zero);
+      c->je(zero);
 
-      Operand* class_ = frame->append(class_);
+      Operand* classOperand = frame->append(class_);
 
       c->mov(c->dereference(tmp), tmp);
       c->and_(c->constant(PointerMask), tmp);
 
-      cmp(class_, tmp);
-      jne(call);
+      c->cmp(classOperand, tmp);
+      c->jne(call);
 
       c->mov(c->constant(1), result);
-      jmp(next);
+      c->jmp(next);
 
-      c->mov(c->directCall(isAssignableFrom, 2, class_, tmp), result);
+      c->mov
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(isAssignableFrom)),
+          2, classOperand, tmp), result);
       c->jmp(next);
         
       c->mark(zero);
 
-      frame->mov(c->constant(0), result);
+      c->mov(c->constant(0), result);
 
       c->mark(next);
       frame->pushInt(result);
@@ -1336,14 +1755,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       unsigned instance = parameterFootprint - 1;
 
-      Operand* found = c->directCall(findInterfaceMethodFromInstance, 3,
-                                     t->thread(),
-                                     frame->append(target),
-                                     c->stack(instance));
+      Operand* found = c->directCall
+        (c->constant
+         (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
+         3, c->thread(), frame->append(target), c->stack(instance));
 
       c->mov(c->offset(found, MethodCompiled), found);
 
-      Operand* result = c->call(c->offset(found, CompiledBody));
+      Operand* result = c->call(c->offset(found, SingletonBody));
 
       frame->pop(parameterFootprint);
 
@@ -1385,15 +1804,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       unsigned parameterFootprint = methodParameterFootprint(t, target);
 
-      unsigned instance = parameterFootprint - 1;
-
       unsigned offset = ClassVtable + (methodOffset(t, target) * BytesPerWord);
 
-      Operand* instance = c->stack(instance);
+      Operand* instance = c->stack(parameterFootprint - 1);
       Operand* class_ = c->temporary();
       
       c->mov(c->dereference(instance), class_);
-      c->and_(static_cast<int32_t>(PointerMask), class_);
+      c->and_(c->constant(PointerMask), class_);
 
       Operand* result = c->call(c->offset(class_, offset));
 
@@ -1492,15 +1909,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* result = c->temporary();
           
       c->cmp(a, b);
-      jl(less);
-      jg(greater);
+      c->jl(less);
+      c->jg(greater);
 
       c->mov(c->constant(0), result);
-      jmp(next);
+      c->jmp(next);
           
       c->mark(less);
       c->mov(c->constant(-1), result);
-      jmp(next);
+      c->jmp(next);
 
       c->mark(greater);
       c->mov(c->constant(1), result);
@@ -1535,7 +1952,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
             == arrayBody(t, t->m->types, Machine::ByteArrayType))
         {
           object class_ = resolveClassInPool(t, pool, index - 1); 
-          if (UNLIKELY(exception)) return;
+          if (UNLIKELY(t->exception)) return;
 
           frame->pushObject(frame->append(class_));
         } else {
@@ -1554,9 +1971,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint64_t v;
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
       frame->pushLong(c->constant(v));
-    } goto loop;
+    } break;
 
-    case ldiv: {
+    case ldiv_: {
       Operand* a = frame->popLong();
       c->div(a, frame->topLong());
     } break;
@@ -1630,9 +2047,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         }
       }
 
-      c->jmp(c->directCall
-             (lookUpAddress, 4,
-              key, start, c->constant(pairCount), default_));
+      c->jmp
+        (c->directCall
+         (c->constant(reinterpret_cast<intptr_t>(lookUpAddress)),
+          4, key, start, c->constant(pairCount), default_));
     } return;
 
     case lor: {
@@ -1701,13 +2119,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case monitorenter: {
-      c->indirectCall(acquireMonitorForObject, 2,
-                      c->thread(), frame->popObject());
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(acquireMonitorForObject)),
+         2, c->thread(), frame->popObject());
     } break;
 
     case monitorexit: {
-      c->indirectCall(releaseMonitorForObject, 2,
-                      c->thread(), frame->popObject());
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(releaseMonitorForObject)),
+         2, c->thread(), frame->popObject());
     } break;
 
     case multianewarray: {
@@ -1715,18 +2135,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint8_t dimensions = codeBody(t, code, ip++);
 
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
-      if (UNLIKELY(exception)) return;
+      if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
       Operand* result = c->indirectCall
-        (makeMultidimensionalArray, 3,
-         c->thread(),
-         c->stack(dimensions - 1),
+        (c->constant(reinterpret_cast<intptr_t>(makeMultidimensionalArray)),
+         4, c->thread(), frame->append(class_), c->stack(),
          c->constant(dimensions));
 
       frame->pop(dimensions);
       frame->pushObject(result);
-    } goto loop;
+    } break;
 
     case new_: {
       uint16_t index = codeReadInt16(t, code, ip);
@@ -1740,13 +2159,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* result;
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
-        result = c->indirectCall(makeNewWeakReference, 2,
-                                 c->thread(),
-                                 frame->append(class_));
+        result = c->indirectCall
+          (c->constant(reinterpret_cast<intptr_t>(makeNewWeakReference)),
+           2, c->thread(), frame->append(class_));
       } else {
-        result = c->indirectCall(makeNew, 2,
-                                 c->thread(),
-                                 frame->append(class_));
+        result = c->indirectCall
+          (c->constant(reinterpret_cast<intptr_t>(makeNew)),
+           2, c->thread(), frame->append(class_));
       }
 
       frame->pushObject(result);
@@ -1803,7 +2222,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       }
 
       frame->pushObject
-        (c->indirectCall(makeBlankArray, 2, c->constant(constructor), size));
+        (c->indirectCall
+         (c->constant(reinterpret_cast<intptr_t>(makeBlankArray)),
+          2, c->constant(reinterpret_cast<intptr_t>(constructor)), size));
     } break;
 
     case nop: break;
@@ -1821,7 +2242,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint16_t index = codeReadInt16(t, code, ip);
     
       object field = resolveField(t, codePool(t, code), index - 1);
-      if (UNLIKELY(exception)) return;
+      if (UNLIKELY(t->exception)) return;
 
       object staticTable;
 
@@ -1841,16 +2262,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       case ShortField:
       case FloatField:
       case IntField: {
-        Operand* value = frame->popInt();
+        value = frame->popInt();
       } break;
 
       case DoubleField:
       case LongField: {
-        Operand* value = frame->popLong();
+        value = frame->popLong();
       } break;
 
       case ObjectField: {
-        Operand* value = frame->popLong();
+        value = frame->popLong();
       } break;
 
       default: abort(t);
@@ -1887,7 +2308,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       case ObjectField:
         c->directCall
-          (set, 4, c->thread(), table, fieldOffset(t, field), value);
+          (c->constant(reinterpret_cast<intptr_t>(set)),
+           4, c->thread(), table, fieldOffset(t, field), value);
         break;
 
       default: abort(t);
@@ -1959,34 +2381,34 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       switch (codeBody(t, code, ip++)) {
       case aload: {
         frame->loadObject(codeReadInt16(t, code, ip));
-      } goto loop;
+      } break;
 
       case astore: {
         frame->storeObject(codeReadInt16(t, code, ip));
-      } goto loop;
+      } break;
 
       case iinc: {
         uint16_t index = codeReadInt16(t, code, ip);
-        uint16_t c = codeReadInt16(t, code, ip);
+        uint16_t count = codeReadInt16(t, code, ip);
 
-        c->add(c->constant(c), frame->topInt());
-      } goto loop;
+        frame->increment(index, count);
+      } break;
 
       case iload: {
         frame->loadInt(codeReadInt16(t, code, ip));
-      } goto loop;
+      } break;
 
       case istore: {
         frame->storeInt(codeReadInt16(t, code, ip));
-      } goto loop;
+      } break;
 
       case lload: {
         frame->loadLong(codeReadInt16(t, code, ip));
-      } goto loop;
+      } break;
 
       case lstore: {
-        frame->storeLoad(codeReadInt16(t, code, ip));
-      } goto loop;
+        frame->storeLong(codeReadInt16(t, code, ip));
+      } break;
 
       case ret:
         // see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4381996
@@ -2007,16 +2429,12 @@ compile(MyThread* t, Compiler* compiler, object method)
   object code = methodCode(t, method);
   PROTECT(t, code);
   
-  unsigned parameterFootprint
-    = methodParameterFootprint(t, method) * BytesPerWord;
-  
-  unsigned localFootprint = codeMaxLocals(t, code) * BytesPerWord;
+  compiler->prologue(methodParameterFootprint(t, method),
+                     codeMaxLocals(t, code));
 
-  compiler->prologue(parameterFootptrint, localFootprint);
-
-  Buffer objectPool;
+  Buffer objectPool(t->m->system, 256);
   uintptr_t map[Frame::mapSizeInWords(t, method)];
-  Frame frame(t, compiler, method, map, objectPool);
+  Frame frame(t, compiler, method, map, &objectPool);
 
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
@@ -2030,8 +2448,9 @@ compile(MyThread* t, Compiler* compiler, object method)
 
       assert(t, getBit(codeMask, exceptionHandlerStart(eh)));
         
-      Frame frame2(&frame);
-      frame2.pushObject();
+      uintptr_t map[Frame::mapSizeInWords(t, method)];
+      Frame frame2(&frame, map);
+      frame2.pushedObject();
 
       compile(t, &frame2, exceptionHandlerIp(eh));
       if (UNLIKELY(t->exception)) return 0;
@@ -2040,19 +2459,21 @@ compile(MyThread* t, Compiler* compiler, object method)
 
   unsigned count = ceiling(compiler->size(), BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
-  object result = allocate(t, size * BytesPerWord, true, true);
+  object result = allocate2(t, size * BytesPerWord, true, true);
   initSingleton(t, result, size, true); 
-  singletonMask(t, o)[0] = 1;
+  singletonMask(t, result)[0] = 1;
 
-  compiler->writeTo(&singletonValue(t, singleton, 0));
+  compiler->writeTo(&singletonValue(t, result, 0));
 
   for (unsigned i = 0; i < objectPool.length(); i += BytesPerWord * 2) {
     uintptr_t index = compiler->poolOffset() + objectPool.getAddress(i);
-    object value = reinterpret_cast<object>(objectPool->getAddress(i));
+    object value = reinterpret_cast<object>(objectPool.getAddress(i));
 
     singletonMarkObject(t, result, index);
-    set(t, singletonObject(t, result, index), value);
+    set(t, result, SingletonBody + (index * BytesPerWord), value);
   }
 
   return result;
 }
+
+} // namespace
