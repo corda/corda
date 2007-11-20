@@ -68,10 +68,14 @@ public final class Array {
       break;
     case 'L':
     case '[':
-      if (array.getClass().getComponentType().isInstance(value)) {
+      if (value == null
+          || array.getClass().getComponentType().isInstance(value))
+      {
         ((Object[]) array)[index] = value;
       } else {
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException
+          ("need " + array.getClass().getComponentType() +
+           ", got " + value.getClass().getName());
       }
       break;
 

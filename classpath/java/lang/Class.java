@@ -105,7 +105,7 @@ public final class Class <T> {
 
   public Class getComponentType() {
     if (isArray()) {
-      return (Class) (Object) staticTable;
+      return (Class) staticTable;
     } else {
       return null;
     }
@@ -279,9 +279,10 @@ public final class Class <T> {
   public Field[] getFields() {
     Field[] array = new Field[countPublicFields()];
     if (fieldTable != null) {
+      int ai = 0;
       for (int i = 0; i < fieldTable.length; ++i) {
         if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
-          array[i] = fieldTable[i];
+          array[ai++] = fieldTable[i];
         }
       }
     }
@@ -306,10 +307,10 @@ public final class Class <T> {
   public Method[] getDeclaredMethods() {
     Method[] array = new Method[countMethods(false)];
     if (methodTable != null) {
-      int index = 0;
+      int ai = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (! methodTable[i].getName().startsWith("<")) {
-          array[index++] = methodTable[i];
+          array[ai++] = methodTable[i];
         }
       }
     }
@@ -346,7 +347,7 @@ public final class Class <T> {
   }
 
   public T[] getEnumConstants() {
-    if (isAssignableFrom(Enum.class)) {
+    if (Enum.class.isAssignableFrom(this)) {
       try {
         return (T[]) getMethod("values").invoke(null);
       } catch (Exception e) {
@@ -374,7 +375,7 @@ public final class Class <T> {
   }
 
   public boolean isInstance(Object o) {
-    return isAssignableFrom(o.getClass());
+    return o != null && isAssignableFrom(o.getClass());
   }
 
   public boolean isPrimitive() {

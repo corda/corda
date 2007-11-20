@@ -43,7 +43,7 @@ public class Field<T> extends AccessibleObject {
   }
 
   public Class getType() {
-    return Class.forCanonicalName(getName());
+    return Class.forCanonicalName(new String(spec, 0, spec.length - 1, false));
   }
 
   public Object get(Object instance) throws IllegalAccessException {
@@ -139,10 +139,11 @@ public class Field<T> extends AccessibleObject {
       break;
 
     case ObjectField:
-      if (getType().isInstance(value)) {
+      if (value == null || getType().isInstance(value)) {
         setObject(target, offset, value);
       } else {
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException
+          ("need " + getType() + ", got " + value.getClass().getName());
       }
       break;
 
