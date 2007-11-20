@@ -2062,6 +2062,9 @@ objectArrayBody(Thread* t UNUSED, object array, unsigned index)
   return cast<object>(array, (2 + index) * BytesPerWord);
 }
 
+unsigned
+parameterFootprint(Thread* t, const char* s, bool static_);
+
 void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 

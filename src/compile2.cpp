@@ -2476,4 +2476,293 @@ compile(MyThread* t, Compiler* compiler, object method)
   return result;
 }
 
+class MyProcessor: public Processor {
+ public:
+  MyProcessor(System* s):
+    s(s)
+  { }
+
+  virtual Thread*
+  makeThread(Machine* m, object javaThread, Thread* parent)
+  {
+    MyThread* t = new (s->allocate(sizeof(Thread)))
+      MyThread(m, javaThread, parent);
+    t->init();
+    return t;
+  }
+
+  virtual object
+  makeMethod(vm::Thread* t,
+             uint8_t vmFlags,
+             uint8_t returnCode,
+             uint8_t parameterCount,
+             uint8_t parameterFootprint,
+             uint16_t flags,
+             uint16_t offset,
+             object name,
+             object spec,
+             object class_,
+             object code)
+  {
+    object compiled
+      = ((flags & ACC_NATIVE) ? nativeCompiled : defaultCompiled);
+
+    return vm::makeMethod
+      (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
+       offset, name, spec, class_, code, compiled);
+  }
+
+  virtual object
+  makeClass(vm::Thread* t,
+            uint16_t flags,
+            uint8_t vmFlags,
+            uint8_t arrayDimensions,
+            uint16_t fixedSize,
+            uint16_t arrayElementSize,
+            object objectMask,
+            object name,
+            object super,
+            object interfaceTable,
+            object virtualTable,
+            object fieldTable,
+            object methodTable,
+            object staticTable,
+            object loader,
+            unsigned vtableLength)
+  {
+    object c = vm::makeClass
+      (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
+       objectMask, name, super, interfaceTable, virtualTable, fieldTable,
+       methodTable, staticTable, loader, vtableLength, false);
+
+    for (unsigned i = 0; i < vtableLength; ++i) {
+      object compiled
+        = ((flags & ACC_NATIVE) ? nativeCompiled : defaultCompiled);
+      classVtable(t, c, i) = &singletonBody(t, compiled, 0);
+    }
+
+    return c;
+  }
+
+  virtual void
+  initClass(Thread* t, object c)
+  {
+    PROTECT(t, c);
+    
+    ACQUIRE(t, t->m->classLock);
+    if (classVmFlags(t, c) & NeedInitFlag
+        and (classVmFlags(t, c) & InitFlag) == 0)
+    {
+      classVmFlags(t, c) |= InitFlag;
+      invoke(t, classInitializer(t, c), 0);
+      if (t->exception) {
+        t->exception = makeExceptionInInitializerError(t, t->exception);
+      }
+      classVmFlags(t, c) &= ~(NeedInitFlag | InitFlag);
+    }
+  }
+
+  virtual void
+  visitObjects(Thread* vmt, Heap::Visitor* v)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+
+    if (t == t->m->rootThread) {
+      visit(&defaultCompiled);
+      visit(&nativeCompiled);
+      visit(&addressTree);
+    }
+
+    for (Reference* r = t->reference; r; r = r->next) {
+      v->visit(&(r->target));
+    }
+
+    visitStack(t, v);
+  }
+
+  virtual uintptr_t
+  frameStart(Thread* vmt)
+  {
+    return reinterpret_cast<uintptr_t>
+      (::frameStart(static_cast<MyThread*>(vmt)));
+  }
+
+  virtual uintptr_t
+  frameNext(Thread*, uintptr_t frame)
+  {
+    return reinterpret_cast<uintptr_t>
+      (::frameNext(reinterpret_cast<void*>(frame)));
+  }
+
+  virtual bool
+  frameValid(Thread*, uintptr_t frame)
+  {
+    return ::frameValid(reinterpret_cast<void*>(frame));
+  }
+
+  virtual object
+  frameMethod(Thread*, uintptr_t frame)
+  {
+    return ::frameMethod(reinterpret_cast<void*>(frame));
+  }
+
+  virtual unsigned
+  frameIp(Thread* t, uintptr_t frame)
+  {
+    void* f = reinterpret_cast<void*>(frame);
+    return addressOffset(t, ::frameMethod(f), ::frameAddress(f));
+  }
+
+  virtual int
+  lineNumber(Thread* t, object method, unsigned ip)
+  {
+    if (methodFlags(t, method) & ACC_NATIVE) {
+      return NativeLine;
+    }
+
+    Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
+    if (compiledLineNumberCount(t, code)) {
+      unsigned bottom = 0;
+      unsigned top = compiledLineNumberCount(t, code);
+      for (unsigned span = top - bottom; span; span = top - bottom) {
+        unsigned middle = bottom + (span / 2);
+        NativeLineNumber* ln = compiledLineNumber(t, code, middle);
+
+        if (ip >= nativeLineNumberIp(ln)
+            and (middle + 1 == compiledLineNumberCount(t, code)
+                 or ip < nativeLineNumberIp
+                 (compiledLineNumber(t, code, middle + 1))))
+        {
+          return nativeLineNumberLine(ln);
+        } else if (ip < nativeLineNumberIp(ln)) {
+          top = middle;
+        } else if (ip > nativeLineNumberIp(ln)) {
+          bottom = middle + 1;
+        }
+      }
+
+      abort(t);
+    } else {
+      return UnknownLine;
+    }
+  }
+
+  virtual object*
+  makeLocalReference(Thread* vmt, object o)
+  {
+    if (o) {
+      MyThread* t = static_cast<MyThread*>(vmt);
+
+      Reference* r = new (t->m->system->allocate(sizeof(Reference)))
+        Reference(o, &(t->reference));
+
+      return &(r->target);
+    } else {
+      return 0;
+    }
+  }
+
+  virtual void
+  disposeLocalReference(Thread* t, object* r)
+  {
+    if (r) {
+      vm::dispose(t, reinterpret_cast<Reference*>(r));
+    }
+  }
+
+  virtual object
+  invokeArray(Thread* t, object method, object this_, object arguments)
+  {
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
+
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+    const char* spec = reinterpret_cast<char*>
+      (&byteArrayBody(t, methodSpec(t, method), 0));
+
+    unsigned size = methodParameterFootprint(t, method) + FrameFootprint;
+    uintptr_t array[size];
+    bool objectMask[size];
+    ArgumentList list(t, array, objectMask, this_, spec, arguments);
+    
+    return ::invoke(t, method, &list);
+  }
+
+  virtual object
+  invokeList(Thread* t, object method, object this_, bool indirectObjects,
+             va_list arguments)
+  {
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
+
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+    
+    const char* spec = reinterpret_cast<char*>
+      (&byteArrayBody(t, methodSpec(t, method), 0));
+
+    unsigned size = methodParameterFootprint(t, method) + FrameFootprint;
+    uintptr_t array[size];
+    bool objectMask[size];
+    ArgumentList list
+      (t, array, objectMask, this_, spec, indirectObjects, arguments);
+
+    return ::invoke(t, method, &list);
+  }
+
+  virtual object
+  invokeList(Thread* t, const char* className, const char* methodName,
+             const char* methodSpec, object this_, va_list arguments)
+  {
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
+
+    unsigned size = parameterFootprint(t, methodSpec, false) + FrameFootprint;
+    uintptr_t array[size];
+    bool objectMask[size];
+    ArgumentList list
+      (t, array, objectMask, this_, methodSpec, false, arguments);
+
+    object method = resolveMethod(t, className, methodName, methodSpec);
+    if (LIKELY(t->exception == 0)) {
+      assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+      return ::invoke(t, method, &list);
+    } else {
+      return 0;
+    }
+  }
+
+  virtual void dispose() {
+    if (methodStub_) {
+      s->free(methodStub_);
+    }
+
+    if (nativeInvoker_) {
+      s->free(nativeInvoker_);
+    }
+
+    if (caller_) {
+      s->free(caller_);
+    }
+
+    s->free(this);
+  }
+  
+  System* s;
+  Compiled* methodStub_;
+  Compiled* nativeInvoker_;
+  Compiled* caller_;
+};
+
 } // namespace
+
+namespace vm {
+
+Processor*
+makeProcessor(System* system)
+{
+  return new (system->allocate(sizeof(MyProcessor))) MyProcessor(system);
+}
+
+} // namespace vm

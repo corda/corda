@@ -1212,15 +1212,12 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       unsigned returnCode;
       scanMethodSpec(t, specString, &parameterCount, &returnCode);
 
-      unsigned parameterFootprint = t->m->processor->parameterFootprint
-        (t, specString, flags & ACC_STATIC);
-
       object method =  t->m->processor->makeMethod
         (t,
          0, // vm flags
          returnCode,
          parameterCount,
-         parameterFootprint,
+         parameterFootprint(t, specString, flags & ACC_STATIC),
          flags,
          0, // offset
          singletonObject(t, pool, name - 1),
@@ -2244,6 +2241,9 @@ hashMapFindNode(Thread* t, object map, object key,
       object k = tripleFirst(t, n);
       if (weak) {
         k = jreferenceTarget(t, k);
+        if (k == 0) {
+          continue;
+        }
       }
 
       if (equal(t, key, k)) {
@@ -2285,6 +2285,9 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
           object k = tripleFirst(t, p);
           if (weak) {
             k = jreferenceTarget(t, k);
+            if (k == 0) {
+              continue;
+            }
           }
 
           unsigned index = hash(t, k) & (newLength - 1);
@@ -2338,6 +2341,19 @@ hashMapInsert(Thread* t, object map, object key, object value,
 }
 
 object
+hashMapRemoveNode(Thread* t, object map, unsigned index, object p, object n)
+{
+  if (p) {
+    set(t, p, TripleThird, tripleThird(t, n));
+  } else {
+    set(t, hashMapArray(t, map), ArrayBody + (index * BytesPerWord),
+        tripleThird(t, n));
+  }
+  -- hashMapSize(t, map);
+  return n;
+}
+
+object
 hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object))
@@ -2354,17 +2370,14 @@ hashMapRemove(Thread* t, object map, object key,
       object k = tripleFirst(t, n);
       if (weak) {
         k = jreferenceTarget(t, k);
+        if (k == 0) {
+          n = tripleThird(t, hashMapRemoveNode(t, map, index, p, n));
+          continue;
+        }
       }
 
       if (equal(t, key, k)) {
-        o = tripleSecond(t, n);
-        if (p) {
-          set(t, p, TripleThird, tripleThird(t, n));
-        } else {
-          set(t, array, ArrayBody + (index * BytesPerWord),
-              tripleThird(t, n));
-        }
-        -- hashMapSize(t, map);
+        o = tripleSecond(t, hashMapRemoveNode(t, map, index, p, n));
         break;
       } else {
         p = n;
@@ -2823,6 +2836,29 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   }
 
   return o;
+}
+
+unsigned
+parameterFootprint(Thread* t, const char* s, bool static_)
+{
+  unsigned footprint = 0;
+  for (MethodSpecIterator it(t, s); it.hasNext();) {
+    switch (*it.next()) {
+    case 'J':
+    case 'D':
+      footprint += 2;
+      break;
+
+    default:
+      ++ footprint;
+      break;        
+    }
+  }
+
+  if (not static_) {
+    ++ footprint;
+  }
+  return footprint;
 }
 
 void

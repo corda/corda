@@ -2870,29 +2870,6 @@ class MyProcessor: public Processor {
        methodTable, staticTable, loader, 0, false);
   }
 
-  virtual unsigned
-  parameterFootprint(vm::Thread* t, const char* s, bool static_)
-  {
-    unsigned footprint = 0;
-    for (MethodSpecIterator it(t, s); it.hasNext();) {
-      switch (*it.next()) {
-      case 'J':
-      case 'D':
-        footprint += 2;
-        break;
-
-      default:
-        ++ footprint;
-        break;        
-      }
-    }
-
-    if (not static_) {
-      ++ footprint;
-    }
-    return footprint;
-  }
-
   virtual void
   initClass(vm::Thread* t, object c)
   {
