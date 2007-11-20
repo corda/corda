@@ -660,37 +660,6 @@ store(Thread* t, unsigned index)
          BytesPerWord * 2);
 }
 
-void
-populateMultiArray(Thread* t, object array, int32_t* counts,
-                   unsigned index, unsigned dimensions)
-{
-  if (index + 1 == dimensions or counts[index] == 0) {
-    return;
-  }
-
-  PROTECT(t, array);
-
-  object spec = className(t, objectClass(t, array));
-  PROTECT(t, spec);
-
-  object elementSpec = makeByteArray
-    (t, byteArrayLength(t, spec) - 1, false);
-  memcpy(&byteArrayBody(t, elementSpec, 0),
-         &byteArrayBody(t, spec, 1),
-         byteArrayLength(t, spec) - 1);
-
-  object class_ = resolveClass(t, elementSpec);
-  PROTECT(t, class_);
-
-  for (int32_t i = 0; i < counts[index]; ++i) {
-    object a = makeArray(t, counts[index + 1], true);
-    setObjectClass(t, a, class_);
-    set(t, array, ArrayBody + (i * BytesPerWord), a);
-    
-    populateMultiArray(t, a, counts, index + 1, dimensions);
-  }
-}
-
 ExceptionHandler*
 findExceptionHandler(Thread* t, int frame)
 {
