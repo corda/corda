@@ -5,16 +5,28 @@
 
 using namespace vm;
 
+extern "C" uint64_t
+vmInvoke(void* thread, void* function, void* stack, unsigned stackSize,
+         unsigned returnType);
+
+extern "C" void
+vmCall();
+
+extern "C" void NO_RETURN
+vmJump(void* address, void* base, void* stack);
+
 namespace {
 
 class MyThread: public Thread {
  public:
   MyThread(Machine* m, object javaThread, Thread* parent):
     Thread(m, javaThread, parent),
-    base(0)
+    caller(0),
+    reference(0)
   { }
 
-  void* base;
+  void* caller;
+  Reference* reference;
 };
 
 uintptr_t*
@@ -93,7 +105,7 @@ class Frame {
   }
 
   Operand* append(object o) {
-    Operand* result = c->append(c->constant(0));
+    Operand* result = c->poolAppend(c->constant(0));
     objectPool->appendAddress(c->poolOffset(result));
     objectPool->appendAddress(reinterpret_cast<uintptr_t>(o));
     return result;
@@ -408,35 +420,35 @@ class Frame {
   void loadInt(unsigned index) {
     assert(t, index < localSize());
     assert(t, getBit(map, index) == 0);
-    pushInt(c->offset(c->base(), localOffset(t, index, method)));
+    pushInt(c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < localSize() - 1);
     assert(t, getBit(map, index) == 0);
     assert(t, getBit(map, index + 1) == 0);
-    pushLong(c->offset(c->base(), localOffset(t, index, method)));
+    pushLong(c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void loadObject(unsigned index) {
     assert(t, index < localSize());
     assert(t, getBit(map, index) != 0);
-    pushObject(c->offset(c->base(), localOffset(t, index, method)));
+    pushObject(c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void storeInt(unsigned index) {
-    popInt(c->offset(c->base(), localOffset(t, index, method)));
+    popInt(c->memory(c->base(), localOffset(t, index, method)));
     storedInt(index);
   }
 
   void storeLong(unsigned index) {
-    popLong(c->offset(c->base(), localOffset(t, index, method)));
+    popLong(c->memory(c->base(), localOffset(t, index, method)));
     storedInt(index);
     storedInt(index + 1);
   }
 
   void storeObject(unsigned index) {
-    popObject(c->offset(c->base(), localOffset(t, index, method)));
+    popObject(c->memory(c->base(), localOffset(t, index, method)));
     storedObject(index);
   }
 
@@ -444,7 +456,7 @@ class Frame {
     assert(t, index < localSize());
     assert(t, getBit(map, index) == 0);
     c->add(c->constant(count),
-           c->offset(c->base(), localOffset(t, index, method)));
+           c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void dup() {
@@ -523,6 +535,8 @@ class Frame {
     c->mov(s0, tmp);
     c->mov(s1, s0);
     c->mov(tmp, s1);
+
+    c->release(tmp);
 
     swapped();
   }
@@ -945,47 +959,34 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->cmp(c->constant(0), index);
       c->jl(outOfBounds);
 
-      c->cmp(c->offset(index, ArrayLength), index);
+      c->cmp(c->memory(array, ArrayLength), index);
       c->jge(outOfBounds);
-
-      c->add(c->constant(ArrayBody), array);
 
       switch (instruction) {
       case aaload:
+        frame->pushObject(c->memory(array, ArrayBody, index, BytesPerWord));
+        break;
+
       case faload:
       case iaload:
-        c->shl(c->constant(log(BytesPerWord)), index);
-        c->add(index, array);
-
-        if (instruction == aaload) {
-          frame->pushObject(c->dereference(array));
-        } else {
-          frame->pushInt(c->dereference4(array));
-        }
+        frame->pushInt(c->select4(c->memory(array, ArrayBody, index, 4)));
         break;
 
       case baload:
-        c->add(index, array);
-        frame->pushInt(c->dereference1(array));
+        frame->pushInt(c->select1(c->memory(array, ArrayBody, index, 1)));
         break;
 
       case caload:
-        c->shl(c->constant(1), index);
-        c->add(index, array);
-        frame->pushInt(c->dereference2z(array));
+        frame->pushInt(c->select2z(c->memory(array, ArrayBody, index, 2)));
         break;
 
       case daload:
       case laload:
-        c->shl(c->constant(3), index);
-        c->add(index, array);
-        frame->pushLong(c->dereference8(array));
+        frame->pushInt(c->select8(c->memory(array, ArrayBody, index, 8)));
         break;
 
       case saload:
-        c->shl(c->constant(1), index);
-        c->add(index, array);
-        frame->pushInt(c->dereference2(array));
+        frame->pushInt(c->select2(c->memory(array, ArrayBody, index, 2)));
         break;
       }
 
@@ -1023,7 +1024,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->cmp(c->constant(0), index);
       c->jl(outOfBounds);
 
-      c->cmp(c->offset(index, BytesPerWord), index);
+      c->cmp(c->memory(array, BytesPerWord), index);
       c->jge(outOfBounds);
 
       switch (instruction) {
@@ -1037,32 +1038,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       case fastore:
       case iastore:
-        c->shl(c->constant(log(BytesPerWord)), index);
-        c->add(c->constant(ArrayBody), index);
-        c->add(index, array);
-        c->mov(value, c->dereference4(array));
+        c->mov(value, c->select4(c->memory(array, ArrayBody, index, 4)));
         break;
 
       case bastore:
-        c->add(c->constant(ArrayBody), index);
-        c->add(index, array);
-        c->mov(value, c->dereference1(array));
+        c->mov(value, c->select1(c->memory(array, ArrayBody, index, 1)));
         break;
 
       case castore:
       case sastore:
-        c->shl(c->constant(1), index);
-        c->add(c->constant(ArrayBody), index);
-        c->add(index, array);
-        c->mov(value, c->dereference2(array));
+        c->mov(value, c->select2(c->memory(array, ArrayBody, index, 2)));
         break;
 
       case dastore:
       case lastore:
-        c->shl(c->constant(3), index);
-        c->add(c->constant(ArrayBody), index);
-        c->add(index, array);
-        c->mov(value, c->dereference8(array));
+        c->mov(value, c->select8(c->memory(array, ArrayBody, index, 8)));
         break;
       }
 
@@ -1121,11 +1111,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case areturn:
-      c->epilogue(frame->popObject());
+      c->epilogue();
+      c->return_(frame->popObject());
       return;
 
     case arraylength:
-      frame->pushInt(c->offset(frame->popObject(), ArrayLength));
+      frame->pushInt(c->memory(frame->popObject(), ArrayLength));
       break;
 
     case astore:
@@ -1176,7 +1167,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* classOperand = frame->append(class_);
 
-      c->mov(c->dereference(tmp), tmp);
+      c->mov(c->memory(tmp), tmp);
       c->and_(c->constant(PointerMask), tmp);
 
       c->cmp(classOperand, tmp);
@@ -1185,6 +1176,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* result = c->directCall
         (c->constant(reinterpret_cast<intptr_t>(isAssignableFrom)),
          2, classOperand, tmp);
+
+      c->release(tmp);
 
       c->cmp(0, result);
       c->jne(next);
@@ -1427,29 +1420,29 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        frame->pushInt(c->offset1(table, fieldOffset(t, field)));
+        frame->pushInt(c->select1(c->memory(table, fieldOffset(t, field))));
         break;
 
       case CharField:
-        frame->pushInt(c->offset2z(table, fieldOffset(t, field)));
+        frame->pushInt(c->select2z(c->memory(table, fieldOffset(t, field))));
         break;
 
       case ShortField:
-        frame->pushInt(c->offset2(table, fieldOffset(t, field)));
+        frame->pushInt(c->select2(c->memory(table, fieldOffset(t, field))));
         break;
 
       case FloatField:
       case IntField:
-        frame->pushInt(c->offset4(table, fieldOffset(t, field)));
+        frame->pushInt(c->select4(c->memory(table, fieldOffset(t, field))));
         break;
 
       case DoubleField:
       case LongField:
-        frame->pushLong(c->offset8(table, fieldOffset(t, field)));
+        frame->pushLong(c->select8(c->memory(table, fieldOffset(t, field))));
         break;
 
       case ObjectField:
-        frame->pushObject(c->offset(table, fieldOffset(t, field)));
+        frame->pushObject(c->memory(c->memory(table, fieldOffset(t, field))));
         break;
 
       default:
@@ -1721,7 +1714,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* classOperand = frame->append(class_);
 
-      c->mov(c->dereference(tmp), tmp);
+      c->mov(c->memory(tmp), tmp);
       c->and_(c->constant(PointerMask), tmp);
 
       c->cmp(classOperand, tmp);
@@ -1734,6 +1727,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         (c->directCall
          (c->constant(reinterpret_cast<intptr_t>(isAssignableFrom)),
           2, classOperand, tmp), result);
+
+      c->release(tmp);
+
       c->jmp(next);
         
       c->mark(zero);
@@ -1742,6 +1738,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->mark(next);
       frame->pushInt(result);
+
+      c->release(result);
     } break;
 
     case invokeinterface: {
@@ -1760,9 +1758,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
          (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
          3, c->thread(), frame->append(target), c->stack(instance));
 
-      c->mov(c->offset(found, MethodCompiled), found);
+      c->mov(c->memory(found, MethodCompiled), found);
 
-      Operand* result = c->call(c->offset(found, SingletonBody));
+      Operand* result = c->call(c->memory(found, SingletonBody));
 
       frame->pop(parameterFootprint);
 
@@ -1809,10 +1807,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* instance = c->stack(parameterFootprint - 1);
       Operand* class_ = c->temporary();
       
-      c->mov(c->dereference(instance), class_);
+      c->mov(c->memory(instance), class_);
       c->and_(c->constant(PointerMask), class_);
 
-      Operand* result = c->call(c->offset(class_, offset));
+      Operand* result = c->call(c->memory(class_, offset));
+
+      c->release(class_);
 
       frame->pop(parameterFootprint);
 
@@ -1831,7 +1831,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case ireturn:
     case freturn:
-      c->epilogue(frame->popInt());
+      c->epilogue();
+      c->return_(frame->popInt());
       return;
 
     case ishl: {
@@ -1924,6 +1925,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->mark(next);
       frame->pushInt(result);
+
+      c->release(result);
     } break;
 
     case lconst_0:
@@ -2025,7 +2028,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       compile(t, frame, defaultIp);
       if (UNLIKELY(t->exception)) return;
 
-      Operand* default_ = c->append(c->logicalIp(defaultIp));
+      Operand* default_ = c->poolAppend(c->logicalIp(defaultIp));
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
@@ -2039,8 +2042,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         compile(t, frame, newIp);
         if (UNLIKELY(t->exception)) return;
 
-        Operand* result = c->append(c->constant(key));
-        c->append(c->logicalIp(newIp));
+        Operand* result = c->poolAppend(c->constant(key));
+        c->poolAppend(c->logicalIp(newIp));
 
         if (i == 0) {
           start = result;
@@ -2065,7 +2068,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case lreturn:
     case dreturn:
-      c->epilogue(frame->popLong());
+      c->epilogue();
+      c->return_(frame->popLong());
       return;
 
     case lshl: {
@@ -2288,22 +2292,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        c->mov(value, c->offset1(table, fieldOffset(t, field)));
+        c->mov(value, c->select1(c->memory(table, fieldOffset(t, field))));
         break;
 
       case CharField:
       case ShortField:
-        c->mov(value, c->offset2(table, fieldOffset(t, field)));
+        c->mov(value, c->select2(c->memory(table, fieldOffset(t, field))));
         break;
             
       case FloatField:
       case IntField:
-        c->mov(value, c->offset4(table, fieldOffset(t, field)));
+        c->mov(value, c->select4(c->memory(table, fieldOffset(t, field))));
         break;
 
       case DoubleField:
       case LongField:
-        c->mov(value, c->offset8(table, fieldOffset(t, field)));
+        c->mov(value, c->select8(c->memory(table, fieldOffset(t, field))));
         break;
 
       case ObjectField:
@@ -2318,6 +2322,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case return_:
       c->epilogue();
+      c->ret();
       return;
 
     case sipush:
@@ -2342,7 +2347,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       compile(t, frame, defaultIp);
       if (UNLIKELY(t->exception)) return;
       
-      Operand* default_ = c->append(c->logicalIp(defaultIp));
+      Operand* default_ = c->poolAppend(c->logicalIp(defaultIp));
 
       int32_t bottom = codeReadInt32(t, code, ip);
       int32_t top = codeReadInt32(t, code, ip);
@@ -2356,7 +2361,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         compile(t, frame, newIp);
         if (UNLIKELY(t->exception)) return;
 
-        Operand* result = c->append(c->logicalIp(newIp));
+        Operand* result = c->poolAppend(c->logicalIp(newIp));
         if (i == 0) {
           start = result;
         }
@@ -2370,8 +2375,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->cmp(c->constant(top), key);
       c->jg(defaultCase);
 
-      c->shl(c->constant(2), key);
-      c->jmp(c->offset(start, key));
+      c->shl(c->constant(1), key);
+      c->jmp(c->memory(start, 0, key, BytesPerWord));
 
       c->mark(defaultCase);
       c->jmp(default_);
@@ -2422,19 +2427,46 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 }
 
 object
-compile(MyThread* t, Compiler* compiler, object method)
+finish(MyThread* t, Compiler* c, Buffer* objectPool)
+{
+  unsigned count = ceiling(c->size(), BytesPerWord);
+  unsigned size = count + singletonMaskSize(count);
+  object result = allocate2(t, size * BytesPerWord, true, true);
+  initSingleton(t, result, size, true); 
+  singletonMask(t, result)[0] = 1;
+
+  c->writeTo(&singletonValue(t, result, 0));
+
+  if (objectPool) {
+    for (unsigned i = 0; i < objectPool->length(); i += BytesPerWord * 2) {
+      uintptr_t index = c->poolOffset() + objectPool->getAddress(i);
+      object value = reinterpret_cast<object>(objectPool->getAddress(i));
+      
+      singletonMarkObject(t, result, index);
+      set(t, result, SingletonBody + (index * BytesPerWord), value);
+    }
+  }
+
+  return result;
+}
+
+object
+compile(MyThread* t, Compiler* c, object method)
 {
   PROTECT(t, method);
+  
+  c->prologue();
 
   object code = methodCode(t, method);
   PROTECT(t, code);
-  
-  compiler->prologue(methodParameterFootprint(t, method),
-                     codeMaxLocals(t, code));
+
+  unsigned footprint = methodParameterFootprint(t, method);
+  unsigned locals = codeMaxLocals(t, code);
+  c->reserve(locals > footprint ? locals - footprint : 0);
 
   Buffer objectPool(t->m->system, 256);
   uintptr_t map[Frame::mapSizeInWords(t, method)];
-  Frame frame(t, compiler, method, map, &objectPool);
+  Frame frame(t, c, method, map, &objectPool);
 
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
@@ -2457,29 +2489,237 @@ compile(MyThread* t, Compiler* compiler, object method)
     }
   }
 
-  unsigned count = ceiling(compiler->size(), BytesPerWord);
-  unsigned size = count + singletonMaskSize(count);
-  object result = allocate2(t, size * BytesPerWord, true, true);
-  initSingleton(t, result, size, true); 
-  singletonMask(t, result)[0] = 1;
+  return finish(t, c, &objectPool);
+}
 
-  compiler->writeTo(&singletonValue(t, result, 0));
+void
+compile(MyThread* t, object method);
 
-  for (unsigned i = 0; i < objectPool.length(); i += BytesPerWord * 2) {
-    uintptr_t index = compiler->poolOffset() + objectPool.getAddress(i);
-    object value = reinterpret_cast<object>(objectPool.getAddress(i));
+void*
+compileMethod(MyThread* t);
 
-    singletonMarkObject(t, result, index);
-    set(t, result, SingletonBody + (index * BytesPerWord), value);
+void*
+invokeNative(MyThread* t);
+
+void
+visitStack(MyThread* t, Heap::Visitor* v);
+
+object
+compileDefault(MyThread* t, Compiler* c)
+{
+  c->prologue();
+
+  unsigned caller
+    = reinterpret_cast<uintptr_t>(&(t->caller))
+    - reinterpret_cast<uintptr_t>(t);
+
+  c->mov(c->base(), c->memory(c->thread(), caller));
+
+  c->epilogue();
+
+  c->jmp
+    (c->directCall
+     (c->constant(reinterpret_cast<intptr_t>(compileMethod)),
+      1, c->thread()));
+
+  return finish(t, c, 0);
+}
+
+object
+compileNative(MyThread* t, Compiler* c)
+{
+  c->prologue();
+
+  unsigned caller
+    = reinterpret_cast<uintptr_t>(&(t->caller))
+    - reinterpret_cast<uintptr_t>(t);
+
+  c->mov(c->base(), c->memory(c->thread(), caller));
+
+  c->call
+    (c->directCall
+     (c->constant(reinterpret_cast<intptr_t>(invokeNative)),
+      1, c->thread()));
+  
+  c->epilogue();
+  c->ret();
+
+  return finish(t, c, 0);
+}
+
+class ArgumentList {
+ public:
+  ArgumentList(Thread* t, uintptr_t* array, bool* objectMask, object this_,
+               const char* spec, bool indirectObjects, va_list arguments):
+    t(static_cast<MyThread*>(t)),
+    array(array),
+    objectMask(objectMask),
+    position(0),
+    protector(this)
+  {
+    if (this_) {
+      addObject(this_);
+    }
+
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      switch (*it.next()) {
+      case 'L':
+      case '[':
+        if (indirectObjects) {
+          object* v = va_arg(arguments, object*);
+          addObject(v ? *v : 0);
+        } else {
+          addObject(va_arg(arguments, object));
+        }
+        break;
+      
+      case 'J':
+      case 'D':
+        addLong(va_arg(arguments, uint64_t));
+        break;
+
+      default:
+        addInt(va_arg(arguments, uint32_t));
+        break;        
+      }
+    }
   }
 
-  return result;
+  ArgumentList(Thread* t, uintptr_t* array, bool* objectMask, object this_,
+               const char* spec, object arguments):
+    t(static_cast<MyThread*>(t)),
+    array(array),
+    objectMask(objectMask),
+    position(0),
+    protector(this)
+  {
+    if (this_) {
+      addObject(this_);
+    }
+
+    unsigned index = 0;
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      switch (*it.next()) {
+      case 'L':
+      case '[':
+        addObject(objectArrayBody(t, arguments, index++));
+        break;
+      
+      case 'J':
+      case 'D':
+        addLong(cast<int64_t>(objectArrayBody(t, arguments, index++),
+                              BytesPerWord));
+        break;
+
+      default:
+        addInt(cast<int32_t>(objectArrayBody(t, arguments, index++),
+                             BytesPerWord));
+        break;        
+      }
+    }
+  }
+
+  void addObject(object v) {
+    array[position] = reinterpret_cast<uintptr_t>(v);
+    objectMask[position] = true;
+    ++ position;
+  }
+
+  void addInt(uintptr_t v) {
+    array[position] = v;
+    objectMask[position] = false;
+    ++ position;
+  }
+
+  void addLong(uint64_t v) {
+    memcpy(array + position, &v, 8);
+    objectMask[position] = false;
+    objectMask[position] = false;
+    position += 2;
+  }
+
+  MyThread* t;
+  uintptr_t* array;
+  bool* objectMask;
+  unsigned position;
+
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(ArgumentList* list): Protector(list->t), list(list) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      for (unsigned i = 0; i < list->position; ++i) {
+        if (list->objectMask[i]) {
+          v->visit(reinterpret_cast<object*>(list->array + i));
+        }
+      }
+    }
+
+    ArgumentList* list;
+  } protector;
+};
+
+object
+invoke(Thread* thread, object method, ArgumentList* arguments)
+{
+  MyThread* t = static_cast<MyThread*>(thread);
+  
+  unsigned returnCode = methodReturnCode(t, method);
+  unsigned returnType = fieldType(t, returnCode);
+
+  Reference* reference = t->reference;
+  void* caller = t->caller;
+
+  uint64_t result = vmInvoke
+    (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
+     arguments->position * BytesPerWord, returnType);
+
+  t->caller = caller;
+
+  while (t->reference != reference) {
+    dispose(t, t->reference);
+  }
+
+  object r;
+  switch (returnCode) {
+  case ByteField:
+  case BooleanField:
+  case CharField:
+  case ShortField:
+  case FloatField:
+  case IntField:
+    r = makeInt(t, result);
+    break;
+
+  case LongField:
+  case DoubleField:
+    r = makeLong(t, result);
+    break;
+
+  case ObjectField:
+    r = (result == 0 ? 0 :
+         *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+    break;
+
+  case VoidField:
+    r = 0;
+    break;
+
+  default:
+    abort(t);
+  };
+
+  return r;
 }
 
 class MyProcessor: public Processor {
  public:
   MyProcessor(System* s):
-    s(s)
+    s(s),
+    defaultCompiled(0),
+    nativeCompiled(0),
+    addressTree(0),
+    indirectCaller(0)
   { }
 
   virtual Thread*
@@ -2489,6 +2729,24 @@ class MyProcessor: public Processor {
       MyThread(m, javaThread, parent);
     t->init();
     return t;
+  }
+
+  object getDefaultCompiled(MyThread* t) {
+    if (defaultCompiled == 0) {
+      Compiler* c = makeCompiler(t->m->system, 0);
+      defaultCompiled = compileDefault(t, c);
+      c->dispose();
+    }
+    return defaultCompiled;
+  }
+
+  object getNativeCompiled(MyThread* t) {
+    if (nativeCompiled == 0) {
+      Compiler* c = makeCompiler(t->m->system, 0);
+      nativeCompiled = compileNative(t, c);
+      c->dispose();
+    }
+    return nativeCompiled;
   }
 
   virtual object
@@ -2505,7 +2763,9 @@ class MyProcessor: public Processor {
              object code)
   {
     object compiled
-      = ((flags & ACC_NATIVE) ? nativeCompiled : defaultCompiled);
+      = ((flags & ACC_NATIVE)
+         ? getNativeCompiled(static_cast<MyThread*>(t))
+         : getDefaultCompiled(static_cast<MyThread*>(t)));
 
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
@@ -2537,7 +2797,10 @@ class MyProcessor: public Processor {
 
     for (unsigned i = 0; i < vtableLength; ++i) {
       object compiled
-        = ((flags & ACC_NATIVE) ? nativeCompiled : defaultCompiled);
+        = ((flags & ACC_NATIVE)
+           ? getNativeCompiled(static_cast<MyThread*>(t))
+           : getDefaultCompiled(static_cast<MyThread*>(t)));
+
       classVtable(t, c, i) = &singletonBody(t, compiled, 0);
     }
 
@@ -2568,9 +2831,9 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
 
     if (t == t->m->rootThread) {
-      visit(&defaultCompiled);
-      visit(&nativeCompiled);
-      visit(&addressTree);
+      v->visit(&defaultCompiled);
+      v->visit(&nativeCompiled);
+      v->visit(&addressTree);
     }
 
     for (Reference* r = t->reference; r; r = r->next) {
@@ -2581,70 +2844,39 @@ class MyProcessor: public Processor {
   }
 
   virtual uintptr_t
-  frameStart(Thread* vmt)
+  frameStart(Thread* t)
   {
-    return reinterpret_cast<uintptr_t>
-      (::frameStart(static_cast<MyThread*>(vmt)));
+    abort(t);
   }
 
   virtual uintptr_t
-  frameNext(Thread*, uintptr_t frame)
+  frameNext(Thread* t, uintptr_t)
   {
-    return reinterpret_cast<uintptr_t>
-      (::frameNext(reinterpret_cast<void*>(frame)));
+    abort(t);    
   }
 
   virtual bool
-  frameValid(Thread*, uintptr_t frame)
+  frameValid(Thread* t, uintptr_t)
   {
-    return ::frameValid(reinterpret_cast<void*>(frame));
+    abort(t);
   }
 
   virtual object
-  frameMethod(Thread*, uintptr_t frame)
+  frameMethod(Thread* t, uintptr_t)
   {
-    return ::frameMethod(reinterpret_cast<void*>(frame));
+    abort(t);
   }
 
   virtual unsigned
-  frameIp(Thread* t, uintptr_t frame)
+  frameIp(Thread* t, uintptr_t)
   {
-    void* f = reinterpret_cast<void*>(frame);
-    return addressOffset(t, ::frameMethod(f), ::frameAddress(f));
+    abort(t);
   }
 
   virtual int
-  lineNumber(Thread* t, object method, unsigned ip)
+  lineNumber(Thread* t, object, unsigned)
   {
-    if (methodFlags(t, method) & ACC_NATIVE) {
-      return NativeLine;
-    }
-
-    Compiled* code = reinterpret_cast<Compiled*>(methodCompiled(t, method));
-    if (compiledLineNumberCount(t, code)) {
-      unsigned bottom = 0;
-      unsigned top = compiledLineNumberCount(t, code);
-      for (unsigned span = top - bottom; span; span = top - bottom) {
-        unsigned middle = bottom + (span / 2);
-        NativeLineNumber* ln = compiledLineNumber(t, code, middle);
-
-        if (ip >= nativeLineNumberIp(ln)
-            and (middle + 1 == compiledLineNumberCount(t, code)
-                 or ip < nativeLineNumberIp
-                 (compiledLineNumber(t, code, middle + 1))))
-        {
-          return nativeLineNumberLine(ln);
-        } else if (ip < nativeLineNumberIp(ln)) {
-          top = middle;
-        } else if (ip > nativeLineNumberIp(ln)) {
-          bottom = middle + 1;
-        }
-      }
-
-      abort(t);
-    } else {
-      return UnknownLine;
-    }
+    abort(t);
   }
 
   virtual object*
@@ -2681,12 +2913,20 @@ class MyProcessor: public Processor {
     const char* spec = reinterpret_cast<char*>
       (&byteArrayBody(t, methodSpec(t, method), 0));
 
-    unsigned size = methodParameterFootprint(t, method) + FrameFootprint;
+    unsigned size = methodParameterFootprint(t, method);
     uintptr_t array[size];
     bool objectMask[size];
     ArgumentList list(t, array, objectMask, this_, spec, arguments);
     
-    return ::invoke(t, method, &list);
+    PROTECT(t, method);
+
+    compile(static_cast<MyThread*>(t), method);
+
+    if (LIKELY(t->exception == 0)) {
+      return ::invoke(t, method, &list);
+    }
+
+    return 0;
   }
 
   virtual object
@@ -2701,13 +2941,21 @@ class MyProcessor: public Processor {
     const char* spec = reinterpret_cast<char*>
       (&byteArrayBody(t, methodSpec(t, method), 0));
 
-    unsigned size = methodParameterFootprint(t, method) + FrameFootprint;
+    unsigned size = methodParameterFootprint(t, method);
     uintptr_t array[size];
     bool objectMask[size];
     ArgumentList list
       (t, array, objectMask, this_, spec, indirectObjects, arguments);
 
-    return ::invoke(t, method, &list);
+    PROTECT(t, method);
+
+    compile(static_cast<MyThread*>(t), method);
+
+    if (LIKELY(t->exception == 0)) {
+      return ::invoke(t, method, &list);
+    }
+
+    return 0;
   }
 
   virtual object
@@ -2717,7 +2965,7 @@ class MyProcessor: public Processor {
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    unsigned size = parameterFootprint(t, methodSpec, false) + FrameFootprint;
+    unsigned size = parameterFootprint(t, methodSpec, false);
     uintptr_t array[size];
     bool objectMask[size];
     ArgumentList list
@@ -2727,33 +2975,71 @@ class MyProcessor: public Processor {
     if (LIKELY(t->exception == 0)) {
       assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
-      return ::invoke(t, method, &list);
-    } else {
-      return 0;
+      PROTECT(t, method);
+      
+      compile(static_cast<MyThread*>(t), method);
+
+      if (LIKELY(t->exception == 0)) {
+        return ::invoke(t, method, &list);
+      }
     }
+
+    return 0;
   }
 
   virtual void dispose() {
-    if (methodStub_) {
-      s->free(methodStub_);
-    }
-
-    if (nativeInvoker_) {
-      s->free(nativeInvoker_);
-    }
-
-    if (caller_) {
-      s->free(caller_);
+    if (indirectCaller) {
+      s->free(indirectCaller);
     }
 
     s->free(this);
   }
   
   System* s;
-  Compiled* methodStub_;
-  Compiled* nativeInvoker_;
-  Compiled* caller_;
+  object defaultCompiled;
+  object nativeCompiled;
+  object addressTree;
+  void* indirectCaller;
 };
+
+void
+compile(MyThread* t, object method)
+{
+  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+
+  object stub = p->getDefaultCompiled(t);
+
+  if (methodCompiled(t, method) == stub) {
+    PROTECT(t, method);
+
+    ACQUIRE(t, t->m->classLock);
+    
+    if (methodCompiled(t, method) == stub) {
+      if (p->indirectCaller == 0) {
+        Compiler* c = makeCompiler(t->m->system, 0);
+    
+        unsigned caller
+          = reinterpret_cast<uintptr_t>(&(t->caller))
+          - reinterpret_cast<uintptr_t>(t);
+
+        c->mov(c->base(), c->memory(c->thread(), caller));
+        c->jmp(c->indirectTarget());
+
+        p->indirectCaller = t->m->system->allocate(c->size());
+        c->writeTo(p->indirectCaller);
+      }
+
+      PROTECT(t, method);
+
+      Compiler* c = makeCompiler(t->m->system, p->indirectCaller);
+    
+      object compiled = compile(t, c, method);
+      set(t, method, MethodCompiled, compiled);
+
+      c->dispose();
+    }
+  }
+}
 
 } // namespace
 
