@@ -317,12 +317,28 @@ Java_java_lang_reflect_Method_getCaller(Thread* t, jclass)
 {
   ENTER(t, Thread::ActiveState);
 
-  Processor* p = t->m->processor;
-  uintptr_t frame = p->frameStart(t);
-  frame = p->frameNext(t, frame);
-  frame = p->frameNext(t, frame);
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t): t(t), method(0), count(0) { }
 
-  return makeLocalReference(t, p->frameMethod(t, frame));
+    virtual bool visit(Processor::StackWalker* walker) {
+      if (count == 2) {
+        method = walker->method();
+        return false;
+      } else {
+        ++ count;
+        return true;
+      }
+    }
+
+    Thread* t;
+    object method;
+    unsigned count;
+  } v(t);
+
+  t->m->processor->walkStack(t, &v);
+
+  return makeLocalReference(t, v.method);
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -567,27 +583,41 @@ Java_java_lang_Throwable_trace(Thread* t, jclass, jint skipCount)
 {
   ENTER(t, Thread::ActiveState);
 
-  Processor* p = t->m->processor;
-  uintptr_t frame = p->frameStart(t);
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t, int skipCount):
+      t(t), trace(0), skipCount(skipCount)
+    { }
 
-  while (skipCount-- and p->frameValid(t, frame)) {
-    frame = p->frameNext(t, frame);
-  }
-  
-  // skip Throwable constructors
-  while (p->frameValid(t, frame)
-         and isAssignableFrom
-         (t, arrayBody(t, t->m->types, Machine::ThrowableType),
-          methodClass(t, p->frameMethod(t, frame)))
-         and strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                    &byteArrayBody
-                    (t, methodName(t, p->frameMethod(t, frame)), 0))
-         == 0)
-  {
-    frame = p->frameNext(t, frame);
-  }
+    virtual bool visit(Processor::StackWalker* walker) {
+      if (skipCount == 0) {
+        object method = walker->method();
+        if (isAssignableFrom
+            (t, arrayBody(t, t->m->types, Machine::ThrowableType),
+             methodClass(t, method))
+            and strcmp(reinterpret_cast<const int8_t*>("<init>"),
+                       &byteArrayBody(t, methodName(t, method), 0))
+            == 0)
+        {
+          return true;
+        } else {
+          trace = makeTrace(t, walker);
+          return false;
+        }
+      } else {
+        -- skipCount;
+        return true;
+      }
+    }
 
-  return makeLocalReference(t, makeTrace(t, frame));
+    Thread* t;
+    object trace;
+    unsigned skipCount;
+  } v(t, skipCount);
+
+  t->m->processor->walkStack(t, &v);
+
+  return makeLocalReference(t, v.trace);
 }
 
 extern "C" JNIEXPORT jarray JNICALL

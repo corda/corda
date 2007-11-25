@@ -9,6 +9,28 @@ namespace vm {
 
 class Processor {
  public:
+  class StackWalker;
+
+  class StackVisitor {
+   public:
+    virtual ~StackVisitor() { }
+
+    virtual bool visit(StackWalker* walker) = 0;
+  };
+
+  class StackWalker {
+   public:
+    virtual ~StackWalker() { }
+
+    virtual void walk(StackVisitor* v) = 0;
+
+    virtual object method() = 0;
+
+    virtual int ip() = 0;
+
+    virtual unsigned count() = 0;
+  };
+
   virtual ~Processor() { }
 
   virtual Thread*
@@ -51,23 +73,11 @@ class Processor {
   virtual void
   visitObjects(Thread* t, Heap::Visitor* v) = 0;
 
-  virtual uintptr_t
-  frameStart(Thread* t) = 0;
-
-  virtual uintptr_t
-  frameNext(Thread* t, uintptr_t frame) = 0;
-
-  virtual bool
-  frameValid(Thread* t, uintptr_t frame) = 0;
-
-  virtual object
-  frameMethod(Thread* t, uintptr_t frame) = 0;
-
-  virtual unsigned
-  frameIp(Thread* t, uintptr_t frame) = 0;
+  virtual void
+  walkStack(Thread* t, StackVisitor* v) = 0;
 
   virtual int
-  lineNumber(Thread* t, object method, unsigned ip) = 0;
+  lineNumber(Thread* t, object method, int ip) = 0;
 
   virtual object*
   makeLocalReference(Thread* t, object o) = 0;

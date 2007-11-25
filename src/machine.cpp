@@ -3010,33 +3010,53 @@ printTrace(Thread* t, object exception)
 }
 
 object
-makeTrace(Thread* t, uintptr_t start)
+makeTrace(Thread* t, Processor::StackWalker* walker)
 {
-  Processor* p = t->m->processor;
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t): t(t), trace(0), index(0), protector(t, &trace) { }
 
-  unsigned count = 0;
-  for (uintptr_t frame = start;
-       p->frameValid(t, frame);
-       frame = p->frameNext(t, frame))
-  {
-    ++ count;
-  }
+    virtual bool visit(Processor::StackWalker* walker) {
+      if (trace == 0) {
+        trace = makeArray(t, walker->count(), true);
+      }
 
-  object trace = makeArray(t, count, true);
-  PROTECT(t, trace);
-  
-  unsigned index = 0;
-  for (uintptr_t frame = start;
-       p->frameValid(t, frame);
-       frame = p->frameNext(t, frame))
-  {
-    object e = makeTraceElement
-      (t, p->frameMethod(t, frame), p->frameIp(t, frame));
-    set(t, trace, ArrayBody + (index * BytesPerWord), e);
-    ++ index;
-  }
+      object e = makeTraceElement(t, walker->method(), walker->ip());
+      set(t, trace, ArrayBody + (index * BytesPerWord), e);
+      ++ index;
+      return true;
+    }
 
-  return trace;
+    Thread* t;
+    object trace;
+    unsigned index;
+    Thread::SingleProtector protector;
+  } v(t);
+
+  walker->walk(&v);
+
+  return v.trace;
+}
+
+object
+makeTrace(Thread* t)
+{
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t): t(t), trace(0) { }
+
+    virtual bool visit(Processor::StackWalker* walker) {
+      trace = makeTrace(t, walker);
+      return false;
+    }
+
+    Thread* t;
+    object trace;
+  } v(t);
+
+  t->m->processor->walkStack(t, &v);
+
+  return v.trace;
 }
 
 void

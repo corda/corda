@@ -89,8 +89,20 @@
 
 (type traceElement
   (object method)
-  (int32_t ip))
+  (int ip))
+
+(type treeNode
+  (intptr_t key))
  
+(type traceNode
+  (extends treeNode)
+  (object method)
+  (void* handler)
+  (uint16_t line)
+  (uint8_t virtualCall)
+  (object target)
+  (array uintptr_t map))
+
 (type array
   (noassert array object body))
 

@@ -1505,13 +1505,10 @@ baseSize(Thread* t, object o, object class_)
 }
 
 object
-makeTrace(Thread* t, uintptr_t start);
+makeTrace(Thread* t, Processor::StackWalker* walker);
 
-inline object
-makeTrace(Thread* t)
-{
-  return makeTrace(t, t->m->processor->frameStart(t));
-}
+object
+makeTrace(Thread* t);
 
 inline object
 makeRuntimeException(Thread* t, object message)

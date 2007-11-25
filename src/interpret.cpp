@@ -35,6 +35,44 @@ class Thread: public vm::Thread {
   uintptr_t stack[StackSizeInWords];
 };
 
+int
+lineNumber(Thread* t, object method, unsigned ip)
+{
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    return NativeLine;
+  }
+
+  // our parameter indicates the instruction following the one we care
+  // about, so we back up first:
+  -- ip;
+
+  object code = methodCode(t, method);
+  object lnt = codeLineNumberTable(t, code);
+  if (lnt) {
+    unsigned bottom = 0;
+    unsigned top = lineNumberTableLength(t, lnt);
+    for (unsigned span = top - bottom; span; span = top - bottom) {
+      unsigned middle = bottom + (span / 2);
+      LineNumber* ln = lineNumberTableBody(t, lnt, middle);
+
+      if (ip >= lineNumberIp(ln)
+          and (middle + 1 == lineNumberTableLength(t, lnt)
+               or ip < lineNumberIp(lineNumberTableBody(t, lnt, middle + 1))))
+      {
+        return lineNumberLine(ln);
+      } else if (ip < lineNumberIp(ln)) {
+        top = middle;
+      } else if (ip > lineNumberIp(ln)) {
+        bottom = middle + 1;
+      }
+    }
+
+    abort(t);
+  } else {
+    return UnknownLine;
+  }
+}
+
 inline void
 pushObject(Thread* t, object o)
 {
@@ -355,6 +393,39 @@ popFrame(Thread* t)
     t->ip = 0;
   }
 }
+
+class MyStackWalker: public Processor::StackWalker {
+ public:
+  MyStackWalker(Thread* t, int frame): t(t), frame(frame) { }
+
+  virtual void walk(Processor::StackVisitor* v) {
+    for (int frame = this->frame; frame >= 0; frame = frameNext(t, frame)) {
+      MyStackWalker walker(t, frame);
+      if (not v->visit(&walker)) {
+        break;
+      }
+    }
+  }
+
+  virtual object method() {
+    return frameMethod(t, frame);
+  }
+
+  virtual int ip() {
+    return frameIp(t, frame);
+  }
+
+  virtual unsigned count() {
+    unsigned count = 0;
+    for (int frame = this->frame; frame >= 0; frame = frameNext(t, frame)) {
+      ++ count;
+    }
+    return count;
+  }
+
+  Thread* t;
+  int frame;
+};
 
 object
 makeNativeMethodData(Thread* t, object method, void* function)
@@ -768,7 +839,7 @@ interpret(Thread* t)
             &byteArrayBody
             (t, methodName(t, frameMethod(t, frame)), 0));
 
-    int line = t->m->processor->lineNumber(t, frameMethod(t, frame), ip);
+    int line = lineNumber(t, frameMethod(t, frame), ip);
     switch (line) {
     case NativeLine:
       fprintf(stderr, "(native)\n");
@@ -2900,74 +2971,23 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual uintptr_t
-  frameStart(vm::Thread* vmt)
+  virtual void
+  walkStack(vm::Thread* vmt, StackVisitor* v)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
     if (t->frame >= 0) {
       pokeInt(t, t->frame + FrameIpOffset, t->ip);
     }
-    return t->frame;
-  }
 
-  virtual uintptr_t
-  frameNext(vm::Thread* vmt, uintptr_t frame)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    assert(t, static_cast<intptr_t>(frame) >= 0);
-    return ::frameNext(t, frame);
-  }
-
-  virtual bool
-  frameValid(vm::Thread*, uintptr_t frame)
-  {
-    return static_cast<intptr_t>(frame) >= 0;
-  }
-
-  virtual object
-  frameMethod(vm::Thread* vmt, uintptr_t frame)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    assert(t, static_cast<intptr_t>(frame) >= 0);
-    return ::frameMethod(t, frame);
-  }
-
-  virtual unsigned
-  frameIp(vm::Thread* vmt, uintptr_t frame)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    assert(t, static_cast<intptr_t>(frame) >= 0);
-    return ::frameIp(t, frame);
+    MyStackWalker walker(t, t->frame);
+    walker.walk(v);
   }
 
   virtual int
-  lineNumber(vm::Thread* vmt, object method, unsigned ip)
+  lineNumber(vm::Thread* t, object method, int ip)
   {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    if (methodFlags(t, method) & ACC_NATIVE) {
-      return NativeLine;
-    }
-
-    object table = codeLineNumberTable(t, methodCode(t, method));
-    if (table) {
-      // todo: do a binary search:
-      int last = UnknownLine;
-      for (unsigned i = 0; i < lineNumberTableLength(t, table); ++i) {
-        if (ip <= lineNumberIp(lineNumberTableBody(t, table, i))) {
-          return last;
-        } else {
-          last = lineNumberLine(lineNumberTableBody(t, table, i));
-        }
-      }
-      return last;
-    } else {
-      return UnknownLine;
-    }
+    return ::lineNumber(static_cast<Thread*>(t), method, ip);
   }
 
   virtual object*

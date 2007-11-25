@@ -19,7 +19,6 @@ class Compiler {
 
   virtual void push(Operand*) = 0;
   virtual void push2(Operand*) = 0;
-  virtual Operand* stack() = 0;
   virtual Operand* stack(unsigned) = 0;
   virtual Operand* stack2(unsigned) = 0;
   virtual Operand* pop() = 0;
@@ -27,10 +26,10 @@ class Compiler {
   virtual void pop(Operand*) = 0;
   virtual void pop2(Operand*) = 0;
 
+  virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
   virtual Operand* indirectTarget() = 0;
-
   virtual Operand* temporary() = 0;
   virtual void release(Operand*) = 0;
 

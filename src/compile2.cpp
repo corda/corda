@@ -19,14 +19,194 @@ namespace {
 
 class MyThread: public Thread {
  public:
+  class CallTrace {
+   public:
+    CallTrace(MyThread* t):
+      t(t),
+      base(t->base),
+      stack(t->stack),
+      next(t->trace)
+    {
+      t->trace = this;
+      t->base = 0;
+      t->stack = 0;
+    }
+
+    ~CallTrace() {
+      t->stack = stack;
+      t->base = base;
+      t->trace = next;
+    }
+
+    MyThread* t;
+    void* base;
+    void* stack;
+    CallTrace* next;
+  };
+
   MyThread(Machine* m, object javaThread, Thread* parent):
     Thread(m, javaThread, parent),
-    caller(0),
+    base(0),
+    stack(0),
+    trace(0),
     reference(0)
   { }
 
-  void* caller;
+  void* base;
+  void* stack;
+  CallTrace* trace;
   Reference* reference;
+};
+
+object
+resolveTarget(MyThread* t, void* stack, object method)
+{
+  if (methodVirtual(t, method)) {
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    object class_ = objectClass
+      (t, reinterpret_cast<object*>(stack)[parameterFootprint + 1]);
+
+    if (classVmFlags(t, class_) & BootstrapFlag) {
+      resolveClass(t, className(t, class_));
+      if (UNLIKELY(t->exception)) return 0;
+    }
+
+    if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
+      return findInterfaceMethod(t, method, class_);
+    } else {
+      return findMethod(t, method, class_);
+    }
+  }
+
+  return method;
+}
+
+object
+findTraceNode(MyThread* t, void* address);
+
+class MyStackWalker: public Processor::StackWalker {
+ public:
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(MyStackWalker* walker):
+      Protector(walker->t), walker(walker)
+    { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(&(walker->node));
+      v->visit(&(walker->nativeMethod));
+    }
+
+    MyStackWalker* walker;
+  };
+
+  MyStackWalker(MyThread* t):
+    t(t),
+    base(t->base),
+    stack(t->stack),
+    trace(t->trace),
+    node(findTraceNode(t, *static_cast<void**>(stack))),
+    nativeMethod(resolveNativeMethod(t, stack, node)),
+    protector(this)
+  { }
+
+  MyStackWalker(MyStackWalker* w):
+    t(w->t),
+    base(w->base),
+    stack(w->stack),
+    trace(w->trace),
+    node(w->node),
+    nativeMethod(w->nativeMethod),
+    protector(this)
+  { }
+
+  static object resolveNativeMethod(MyThread* t, void* stack, object node) {
+    if (node) {
+      object target = resolveTarget(t, stack, traceNodeTarget(t, node));
+      if (target and methodFlags(t, target) & ACC_NATIVE) {
+        return target;
+      }
+    }
+    return 0;
+  }
+
+  virtual void walk(Processor::StackVisitor* v) {
+    if (not v->visit(this)) {
+      return;
+    }
+
+    for (MyStackWalker it(this); it.next();) {
+      MyStackWalker walker(it);
+      if (not v->visit(&walker)) {
+        break;
+      }
+    }
+  }
+    
+  bool next() {
+    if (nativeMethod) {
+      nativeMethod = 0;
+    } else {
+      stack = static_cast<void**>(base) + 1;
+      base = *static_cast<void**>(base);
+      node = findTraceNode(t, *static_cast<void**>(stack));
+      if (node == 0) {
+        if (trace) {
+          base = trace->base;
+          stack = static_cast<void**>(trace->stack);
+          trace = trace->next;
+          node = findTraceNode(t, *static_cast<void**>(stack));
+          nativeMethod = resolveNativeMethod(t, stack, node);
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  virtual object method() {
+    if (nativeMethod) {
+      return nativeMethod;
+    } else {
+      return traceNodeMethod(t, node);
+    }
+  }
+
+  virtual int ip() {
+    if (nativeMethod) {
+      return NativeLine;
+    } else {
+      return traceNodeLine(t, node);
+    }
+  }
+
+  virtual unsigned count() {
+    class Visitor: public Processor::StackVisitor {
+     public:
+      Visitor(): count(0) { }
+
+      virtual bool visit(Processor::StackWalker*) {
+        ++ count;
+        return true;
+      }
+
+      unsigned count;
+    } v;
+
+    MyStackWalker walker(this);
+    walker.walk(&v);
+    
+    return v.count;
+  }
+
+  MyThread* t;
+  void* base;
+  void* stack;
+  MyThread::CallTrace* trace;
+  object node;
+  object nativeMethod;
+  MyProtector protector;
 };
 
 uintptr_t*
@@ -162,12 +342,12 @@ class Frame {
   }
 
   void storedInt(unsigned index) {
-    assert(t, index < localSize());
+    assert(t, index < localSize(t, method));
     clearBit(map, index);
   }
 
   void storedObject(unsigned index) {
-    assert(t, index < localSize());
+    assert(t, index < localSize(t, method));
     markBit(map, index);
   }
 
@@ -235,7 +415,7 @@ class Frame {
 
   void dupped2() {
     assert(t, sp + 2 <= mapSize(t, method));
-    assert(t, sp - 2 >= localSize());
+    assert(t, sp - 2 >= localSize(t, method));
 
     unsigned b2 = getBit(map, sp - 2);
     unsigned b1 = getBit(map, sp - 1);
@@ -356,7 +536,7 @@ class Frame {
 
   void pop(unsigned count) {
     assert(t, sp >= count);
-    assert(t, sp - count >= localSize());
+    assert(t, sp - count >= localSize(t, method));
     while (count) {
       clearBit(map, -- sp);
       -- count;
@@ -418,20 +598,20 @@ class Frame {
   }
 
   void loadInt(unsigned index) {
-    assert(t, index < localSize());
+    assert(t, index < localSize(t, method));
     assert(t, getBit(map, index) == 0);
     pushInt(c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void loadLong(unsigned index) {
-    assert(t, index < localSize() - 1);
+    assert(t, index < localSize(t, method) - 1);
     assert(t, getBit(map, index) == 0);
     assert(t, getBit(map, index + 1) == 0);
     pushLong(c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void loadObject(unsigned index) {
-    assert(t, index < localSize());
+    assert(t, index < localSize(t, method));
     assert(t, getBit(map, index) != 0);
     pushObject(c->memory(c->base(), localOffset(t, index, method)));
   }
@@ -453,7 +633,7 @@ class Frame {
   }
 
   void increment(unsigned index, unsigned count) {
-    assert(t, index < localSize());
+    assert(t, index < localSize(t, method));
     assert(t, getBit(map, index) == 0);
     c->add(c->constant(count),
            c->memory(c->base(), localOffset(t, index, method)));
@@ -553,7 +733,38 @@ class Frame {
 };
 
 void NO_RETURN
-unwind(MyThread* t);
+unwind(MyThread* t)
+{
+  void* base = t->base;
+  void** stack = static_cast<void**>(t->stack);
+  while (true) {
+    void* returnAddress = *stack;
+    object node = findTraceNode(t, returnAddress);
+    if (node) {
+      void* handler = traceNodeHandler(t, node);
+      if (handler) {
+        object method = traceNodeMethod(t, node);
+
+        unsigned parameterFootprint = methodParameterFootprint(t, method);
+        unsigned localFootprint = codeMaxLocals(t, methodCode(t, method));
+
+        if (localFootprint > parameterFootprint) {
+          stack -= (localFootprint - parameterFootprint);
+        }
+
+        *(--stack) = t->exception;
+        t->exception = 0;
+
+        vmJump(handler, base, stack);
+      } else {
+        stack = static_cast<void**>(base) + 1;
+        base = *static_cast<void**>(base);
+      }
+    } else {
+      vmJump(returnAddress, base, stack + 1);
+    }
+  }
+}
 
 object
 findInterfaceMethodFromInstance(Thread* t, object method, object instance)
@@ -1140,8 +1351,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       break;
 
     case athrow:
-      c->indirectCallNoReturn(c->constant(reinterpret_cast<intptr_t>(throw_)),
-                              2, c->thread(), frame->popObject());
+      c->indirectCallNoReturn
+        (c->constant(reinterpret_cast<intptr_t>(throw_)),
+         2, c->thread(), frame->popObject());
       break;
 
     case bipush:
@@ -1451,7 +1663,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case goto_: {
-      int32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
       assert(t, newIp < codeLength(t, code));
 
       c->jmp(c->logicalIp(newIp));
@@ -1459,7 +1671,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case goto_w: {
-      int32_t newIp = (ip - 5) + codeReadInt32(t, code, ip);
+      uint32_t newIp = (ip - 5) + codeReadInt32(t, code, ip);
       assert(t, newIp < codeLength(t, code));
 
       c->jmp(c->logicalIp(newIp));
@@ -1544,7 +1756,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case if_acmpeq:
     case if_acmpne: {
-      int32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
       assert(t, newIp < codeLength(t, code));
         
       Operand* a = frame->popObject();
@@ -1568,7 +1780,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case if_icmpge:
     case if_icmplt:
     case if_icmple: {
-      int32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
       assert(t, newIp < codeLength(t, code));
         
       Operand* a = frame->popInt();
@@ -1607,7 +1819,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case ifge:
     case iflt:
     case ifle: {
-      int32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
       assert(t, newIp < codeLength(t, code));
 
       c->cmp(0, frame->popInt());
@@ -1640,7 +1852,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case ifnull:
     case ifnonnull: {
-      int32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
       assert(t, newIp < codeLength(t, code));
 
       c->cmp(0, frame->popObject());
@@ -2022,7 +2234,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* key = frame->popInt();
     
-      int32_t defaultIp = base + codeReadInt32(t, code, ip);
+      uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
       compile(t, frame, defaultIp);
@@ -2036,7 +2248,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       for (int32_t i = 0; i < pairCount; ++i) {
         unsigned index = ip + (i * 8);
         int32_t key = codeReadInt32(t, code, index);
-        int32_t newIp = base + codeReadInt32(t, code, index);
+        uint32_t newIp = base + codeReadInt32(t, code, index);
         assert(t, newIp < codeLength(t, code));
 
         compile(t, frame, newIp);
@@ -2341,7 +2553,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* key = frame->popInt();
 
-      int32_t defaultIp = base + codeReadInt32(t, code, ip);
+      uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
       compile(t, frame, defaultIp);
@@ -2355,7 +2567,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* start;
       for (int32_t i = 0; i < bottom - top + 1; ++i) {
         unsigned index = ip + (i * 4);
-        int32_t newIp = base + codeReadInt32(t, code, index);
+        uint32_t newIp = base + codeReadInt32(t, code, index);
         assert(t, newIp < codeLength(t, code));
         
         compile(t, frame, newIp);
@@ -2478,7 +2690,7 @@ compile(MyThread* t, Compiler* c, object method)
     for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
       ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
 
-      assert(t, getBit(codeMask, exceptionHandlerStart(eh)));
+      assert(t, getBit(frame.codeMask, exceptionHandlerStart(eh)));
         
       uintptr_t map[Frame::mapSizeInWords(t, method)];
       Frame frame2(&frame, map);
@@ -2496,24 +2708,258 @@ void
 compile(MyThread* t, object method);
 
 void*
-compileMethod(MyThread* t);
+compileMethod(MyThread* t)
+{
+  object node = findTraceNode(t, *static_cast<void**>(t->stack));
+  object target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
 
-void*
-invokeNative(MyThread* t);
+  if (LIKELY(t->exception == 0)) {
+    compile(t, target);
+  }
+
+  if (UNLIKELY(t->exception)) {
+    unwind(t);
+  } else {
+    return &singletonValue(t, methodCompiled(t, target), 0);
+  }
+}
+
+uint64_t
+invokeNative2(MyThread* t, object method)
+{
+  PROTECT(t, method);
+
+  if (objectClass(t, methodCode(t, method))
+      == arrayBody(t, t->m->types, Machine::ByteArrayType))
+  {
+    void* function = resolveNativeMethod(t, method);
+    if (UNLIKELY(function == 0)) {
+      object message = makeString
+        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
+      t->exception = makeUnsatisfiedLinkError(t, message);
+      return 0;
+    }
+
+    object p = makePointer(t, function);
+    set(t, method, MethodCode, p);
+  }
+
+  object class_ = methodClass(t, method);
+  PROTECT(t, class_);
+
+  unsigned footprint = methodParameterFootprint(t, method) + 1;
+  unsigned count = methodParameterCount(t, method) + 1;
+  if (methodFlags(t, method) & ACC_STATIC) {
+    ++ footprint;
+    ++ count;
+  }
+
+  uintptr_t args[footprint];
+  unsigned argOffset = 0;
+  uint8_t types[count];
+  unsigned typeOffset = 0;
+
+  args[argOffset++] = reinterpret_cast<uintptr_t>(t);
+  types[typeOffset++] = POINTER_TYPE;
+
+  uintptr_t* sp = static_cast<uintptr_t*>(t->stack)
+    + (methodParameterFootprint(t, method) + 1);
+
+  if (methodFlags(t, method) & ACC_STATIC) {
+    args[argOffset++] = reinterpret_cast<uintptr_t>(&class_);
+  } else {
+    args[argOffset++] = reinterpret_cast<uintptr_t>(sp--);
+  }
+  types[typeOffset++] = POINTER_TYPE;
+
+  MethodSpecIterator it
+    (t, reinterpret_cast<const char*>
+     (&byteArrayBody(t, methodSpec(t, method), 0)));
+  
+  while (it.hasNext()) {
+    unsigned type = types[typeOffset++]
+      = fieldType(t, fieldCode(t, *it.next()));
+
+    switch (type) {
+    case INT8_TYPE:
+    case INT16_TYPE:
+    case INT32_TYPE:
+    case FLOAT_TYPE:
+      args[argOffset++] = *(sp--);
+      break;
+
+    case INT64_TYPE:
+    case DOUBLE_TYPE: {
+      if (BytesPerWord == 8) {
+        uint64_t a = *(sp--);
+        uint64_t b = *(sp--);
+        args[argOffset++] = (a << 32) | b;
+      } else {
+        memcpy(args + argOffset, sp, 8);
+        argOffset += 2;
+        sp -= 2;
+      }
+    } break;
+
+    case POINTER_TYPE: {
+      args[argOffset++] = reinterpret_cast<uintptr_t>(sp--);
+    } break;
+
+    default: abort(t);
+    }
+  }
+
+  void* function = pointerValue(t, methodCode(t, method));
+  unsigned returnType = fieldType(t, methodReturnCode(t, method));
+  uint64_t result;
+  
+  if (Verbose) {
+    fprintf(stderr, "invoke native method %s.%s\n",
+            &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+            &byteArrayBody(t, methodName(t, method), 0));
+  }
+
+  { ENTER(t, Thread::IdleState);
+
+    result = t->m->system->call
+      (function,
+       args,
+       types,
+       count + 1,
+       footprint * BytesPerWord,
+       returnType);
+  }
+
+  if (Verbose) {
+    fprintf(stderr, "return from native method %s.%s\n",
+            &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+            &byteArrayBody(t, methodName(t, method), 0));
+  }
+
+  if (LIKELY(t->exception == 0) and returnType == POINTER_TYPE) {
+    return result ? *reinterpret_cast<uintptr_t*>(result) : 0;
+  } else {
+    return result;
+  }
+}
+
+uint64_t
+invokeNative(MyThread* t)
+{
+  object node = findTraceNode(t, *static_cast<void**>(t->stack));
+  object target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
+  uint64_t result;
+
+  if (LIKELY(t->exception == 0)) {
+    result = invokeNative2(t, target);
+  }
+
+  if (UNLIKELY(t->exception)) {
+    unwind(t);
+  } else {
+    return result;
+  }
+}
+
+inline object*
+localObject(MyThread* t, void* base, object method, unsigned index)
+{
+  return reinterpret_cast<object*>
+    (static_cast<uint8_t*>(base) + localOffset(t, index, method));
+}
 
 void
-visitStack(MyThread* t, Heap::Visitor* v);
+visitParameters(MyThread* t, Heap::Visitor* v, void* base, object method)
+{
+  const char* spec = reinterpret_cast<const char*>
+    (&byteArrayBody(t, methodSpec(t, method), 0));
+
+  unsigned index = 0;
+  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+    v->visit(localObject(t, base, method, index++));        
+  }
+
+  for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    switch (*it.next()) {
+    case 'L':
+    case '[':
+      v->visit(localObject(t, base, method, index++));
+      break;
+      
+    case 'J':
+    case 'D':
+      index += 2;
+      break;
+
+    default:
+      ++ index;
+      break;
+    }
+  }
+
+  assert(t, index == methodParameterFootprint(t, method));
+}
+
+void
+visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node)
+{
+  object method = traceNodeMethod(t, node);
+
+  unsigned parameterFootprint = methodParameterFootprint(t, method);
+  unsigned count = codeMaxStack(t, methodCode(t, method))
+    + codeMaxLocals(t, methodCode(t, method))
+    - parameterFootprint;
+      
+  if (count) {
+    uintptr_t* map = &traceNodeMap(t, node, 0);
+
+    for (unsigned i = 0; i < count; ++i) {
+      if (getBit(map, i)) {
+        v->visit(localObject(t, base, method, i + parameterFootprint));
+      }
+    }
+  }
+}
+
+void
+visitStack(MyThread* t, Heap::Visitor* v)
+{
+  void* base = t->base;
+  void** stack = static_cast<void**>(t->stack);
+  MyThread::CallTrace* trace = t->trace;
+  while (true) {
+    object node = findTraceNode(t, *stack);
+    if (node) {
+      object method = traceNodeMethod(t, node);
+      
+      // we only need to visit the parameters of this method if the
+      // caller is native.  Otherwise, the caller owns them.
+      object next = findTraceNode(t, static_cast<void**>(base)[1]);
+      if (next == 0) {
+        visitParameters(t, v, base, method);
+      }
+      
+      visitStackAndLocals(t, v, base, method);
+
+      stack = static_cast<void**>(base) + 1;
+      base = *static_cast<void**>(base);
+    } else if (trace) {
+      base = trace->base;
+      stack = static_cast<void**>(trace->stack);
+      trace = trace->next;
+    } else {
+      break;
+    }
+  }  
+}
 
 object
 compileDefault(MyThread* t, Compiler* c)
 {
   c->prologue();
 
-  unsigned caller
-    = reinterpret_cast<uintptr_t>(&(t->caller))
-    - reinterpret_cast<uintptr_t>(t);
-
-  c->mov(c->base(), c->memory(c->thread(), caller));
+  c->mov(c->base(), c->memory(c->thread(), difference(&(t->base), t)));
+  c->mov(c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
 
   c->epilogue();
 
@@ -2530,11 +2976,8 @@ compileNative(MyThread* t, Compiler* c)
 {
   c->prologue();
 
-  unsigned caller
-    = reinterpret_cast<uintptr_t>(&(t->caller))
-    - reinterpret_cast<uintptr_t>(t);
-
-  c->mov(c->base(), c->memory(c->thread(), caller));
+  c->mov(c->base(), c->memory(c->thread(), difference(&(t->base), t)));
+  c->mov(c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
 
   c->call
     (c->directCall
@@ -2668,13 +3111,11 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   unsigned returnType = fieldType(t, returnCode);
 
   Reference* reference = t->reference;
-  void* caller = t->caller;
+  MyThread::CallTrace trace(t);
 
   uint64_t result = vmInvoke
     (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
      arguments->position * BytesPerWord, returnType);
-
-  t->caller = caller;
 
   while (t->reference != reference) {
     dispose(t, t->reference);
@@ -2843,40 +3284,19 @@ class MyProcessor: public Processor {
     visitStack(t, v);
   }
 
-  virtual uintptr_t
-  frameStart(Thread* t)
+  virtual void
+  walkStack(Thread* vmt, StackVisitor* v)
   {
-    abort(t);
-  }
+    MyThread* t = static_cast<MyThread*>(vmt);
 
-  virtual uintptr_t
-  frameNext(Thread* t, uintptr_t)
-  {
-    abort(t);    
-  }
-
-  virtual bool
-  frameValid(Thread* t, uintptr_t)
-  {
-    abort(t);
-  }
-
-  virtual object
-  frameMethod(Thread* t, uintptr_t)
-  {
-    abort(t);
-  }
-
-  virtual unsigned
-  frameIp(Thread* t, uintptr_t)
-  {
-    abort(t);
+    MyStackWalker walker(t);
+    walker.walk(v);
   }
 
   virtual int
-  lineNumber(Thread* t, object, unsigned)
+  lineNumber(Thread*, object, int ip)
   {
-    abort(t);
+    return ip;
   }
 
   virtual object*
@@ -3017,12 +3437,10 @@ compile(MyThread* t, object method)
     if (methodCompiled(t, method) == stub) {
       if (p->indirectCaller == 0) {
         Compiler* c = makeCompiler(t->m->system, 0);
-    
-        unsigned caller
-          = reinterpret_cast<uintptr_t>(&(t->caller))
-          - reinterpret_cast<uintptr_t>(t);
 
-        c->mov(c->base(), c->memory(c->thread(), caller));
+        c->mov(c->base(), c->memory(c->thread(), difference(&(t->base), t)));
+        c->mov(c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
+
         c->jmp(c->indirectTarget());
 
         p->indirectCaller = t->m->system->allocate(c->size());

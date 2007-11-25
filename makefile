@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/List.class
+input = $(test-build)/Exceptions.class
 
 build-cxx = g++
 build-cc = gcc
@@ -105,7 +105,7 @@ ifeq ($(platform),windows)
 endif
 
 ifeq ($(mode),debug)
-	cflags += -O0 -g3 -DNDEBUG
+	cflags += -O0 -g3
 endif
 ifeq ($(mode),stress)
 	cflags += -O0 -g3 -DVM_STRESS

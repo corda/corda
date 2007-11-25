@@ -239,6 +239,12 @@ bitsToFloat(uint32_t bits)
   return f;
 }
 
+inline intptr_t
+difference(void* a, void* b)
+{
+  return reinterpret_cast<intptr_t>(a) - reinterpret_cast<intptr_t>(b);
+}
+
 class Machine;
 class Thread;
 
