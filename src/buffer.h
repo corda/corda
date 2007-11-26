@@ -51,6 +51,23 @@ class Buffer {
     position += 4;
   }
 
+  void appendAddress(uintptr_t v) {
+    append4(v);
+    if (BytesPerWord == 8) {
+      // we have to use the preprocessor here to avoid a warning on
+      // 32-bit systems
+#ifdef __x86_64__
+      append4(v >> 32);
+#endif
+    }
+  }
+
+  void append(void* p, unsigned size) {
+    ensure(size);
+    memcpy(data + position, p, size);
+    position += size;
+  }
+
   void set2(unsigned offset, uint32_t v) {
     assert(s, offset + 2 <= position);
     memcpy(data + offset, &v, 2);
@@ -81,15 +98,9 @@ class Buffer {
     return *reinterpret_cast<uintptr_t*>(data + offset);
   }
 
-  void appendAddress(uintptr_t v) {
-    append4(v);
-    if (BytesPerWord == 8) {
-      // we have to use the preprocessor here to avoid a warning on
-      // 32-bit systems
-#ifdef __x86_64__
-      append4(v >> 32);
-#endif
-    }
+  void get(unsigned offset, void* p, unsigned size) {
+    assert(s, offset + size <= position);
+    memcpy(p, data + offset, size);
   }
 
   unsigned length() {

@@ -35,44 +35,6 @@ class Thread: public vm::Thread {
   uintptr_t stack[StackSizeInWords];
 };
 
-int
-lineNumber(Thread* t, object method, unsigned ip)
-{
-  if (methodFlags(t, method) & ACC_NATIVE) {
-    return NativeLine;
-  }
-
-  // our parameter indicates the instruction following the one we care
-  // about, so we back up first:
-  -- ip;
-
-  object code = methodCode(t, method);
-  object lnt = codeLineNumberTable(t, code);
-  if (lnt) {
-    unsigned bottom = 0;
-    unsigned top = lineNumberTableLength(t, lnt);
-    for (unsigned span = top - bottom; span; span = top - bottom) {
-      unsigned middle = bottom + (span / 2);
-      LineNumber* ln = lineNumberTableBody(t, lnt, middle);
-
-      if (ip >= lineNumberIp(ln)
-          and (middle + 1 == lineNumberTableLength(t, lnt)
-               or ip < lineNumberIp(lineNumberTableBody(t, lnt, middle + 1))))
-      {
-        return lineNumberLine(ln);
-      } else if (ip < lineNumberIp(ln)) {
-        top = middle;
-      } else if (ip > lineNumberIp(ln)) {
-        bottom = middle + 1;
-      }
-    }
-
-    abort(t);
-  } else {
-    return UnknownLine;
-  }
-}
-
 inline void
 pushObject(Thread* t, object o)
 {
@@ -734,43 +696,7 @@ store(Thread* t, unsigned index)
 ExceptionHandler*
 findExceptionHandler(Thread* t, int frame)
 {
-  object method = frameMethod(t, frame);
-  object eht = codeExceptionHandlerTable(t, methodCode(t, method));
-      
-  if (eht) {
-    for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-
-      if (frameIp(t, frame) - 1 >= exceptionHandlerStart(eh)
-          and frameIp(t, frame) - 1 < exceptionHandlerEnd(eh))
-      {
-        object catchType = 0;
-        if (exceptionHandlerCatchType(eh)) {
-          object e = t->exception;
-          t->exception = 0;
-          PROTECT(t, e);
-
-          PROTECT(t, eht);
-          catchType = resolveClassInPool
-            (t, codePool(t, t->code), exceptionHandlerCatchType(eh) - 1);
-
-          if (catchType) {
-            eh = exceptionHandlerTableBody(t, eht, i);
-            t->exception = e;
-          } else {
-            // can't find what we're supposed to catch - move on.
-            continue;
-          }
-        }
-
-        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
-          return eh;
-        }
-      }
-    }
-  }
-
-  return 0;
+  return findExceptionHandler(t, frameMethod(t, frame), frameIp(t, frame));
 }
 
 void
@@ -839,7 +765,7 @@ interpret(Thread* t)
             &byteArrayBody
             (t, methodName(t, frameMethod(t, frame)), 0));
 
-    int line = lineNumber(t, frameMethod(t, frame), ip);
+    int line = findLineNumber(t, frameMethod(t, frame), ip);
     switch (line) {
     case NativeLine:
       fprintf(stderr, "(native)\n");
@@ -2987,7 +2913,7 @@ class MyProcessor: public Processor {
   virtual int
   lineNumber(vm::Thread* t, object method, int ip)
   {
-    return ::lineNumber(static_cast<Thread*>(t), method, ip);
+    return findLineNumber(static_cast<Thread*>(t), method, ip);
   }
 
   virtual object*

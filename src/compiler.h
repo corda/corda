@@ -7,13 +7,21 @@ namespace vm {
 
 class Operand { };
 
+class Promise {
+ public:
+  virtual ~Promise() { }
+
+  virtual unsigned value() = 0;
+};
+
 class Compiler {
  public:
   virtual ~Compiler() { }
 
+  virtual Promise* poolOffset() = 0;
+  virtual Promise* codeOffset() = 0;
+
   virtual Operand* poolAppend(Operand*) = 0;
-  virtual unsigned poolOffset() = 0;
-  virtual unsigned poolOffset(Operand*) = 0;
 
   virtual Operand* constant(intptr_t) = 0;
 
@@ -44,6 +52,7 @@ class Compiler {
   (Operand* address, unsigned argumentCount, ...) = 0;
   virtual Operand* directCall
   (Operand* address, unsigned argumentCount, ...) = 0;
+
   virtual void return_(Operand*) = 0;
   virtual void ret() = 0;
 
@@ -87,9 +96,12 @@ class Compiler {
 
   virtual void startLogicalIp(unsigned) = 0;
   virtual Operand* logicalIp(unsigned) = 0;
+  virtual unsigned logicalIpToOffset(unsigned) = 0;
 
   virtual unsigned size() = 0;
   virtual void writeTo(void*) = 0;
+
+  virtual void updateCall(void* returnAddress, void* newTarget);
 
   virtual void dispose() = 0;
 };

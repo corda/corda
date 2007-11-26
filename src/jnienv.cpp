@@ -1,5 +1,6 @@
 #include "jnienv.h"
 #include "machine.h"
+#include "util.h"
 #include "processor.h"
 #include "constants.h"
 #include "processor.h"

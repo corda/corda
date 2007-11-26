@@ -145,12 +145,14 @@ interpreter-depends = \
 	$(src)/stream.h \
 	$(src)/constants.h \
 	$(src)/jnienv.h \
-	$(src)/machine.h
+	$(src)/machine.h \
+	$(src)/util.h
 
 interpreter-sources = \
 	$(src)/$(system).cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
+	$(src)/util.cpp \
 	$(src)/heap.cpp \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
