@@ -1,5 +1,208 @@
 #include "util.h"
 
+using namespace vm;
+
+namespace {
+
+object
+clone(Thread* t, object o)
+{
+  object class_ = objectClass(t, o);
+  unsigned size = baseSize(t, o, class_) * BytesPerWord;
+
+  object clone = make(t, class_);
+  memcpy(reinterpret_cast<void**>(clone) + 1,
+         reinterpret_cast<void**>(o) + 1,
+         size - BytesPerWord);
+
+  return clone;
+}
+
+object
+treeFind(Thread* t, object oldRoot, object node, object sentinal)
+{
+  object newRoot = clone(t, oldRoot);
+  object ancestors = 0;
+
+  object old = oldRoot;
+  object new_ = newRoot;
+  while (old != sentinal) {
+    ancestors = makePair(t, new_, ancestors);
+
+    intptr_t difference = treeNodeKey(t, node) - treeNodeKey(t, old);
+    if (difference < 0) {
+      old = treeNodeLeft(t, old);
+      object n = clone(t, old);
+      set(t, new_, TreeNodeLeft, n);
+      new_ = n;
+    } else if (difference > 0) {
+      old = treeNodeRight(t, old);
+      object n = clone(t, old);
+      set(t, new_, TreeNodeRight, n);
+      new_ = n;
+    } else {
+      return makeTreePath(t, false, new_, newRoot, pairSecond(t, ancestors));
+    }
+  }
+
+  object class_ = objectClass(t, node);
+  unsigned size = baseSize(t, node, class_) * BytesPerWord;
+  unsigned treeNodeSize = classFixedSize
+    (t, arrayBody(t, t->m->types, Machine::TreeNodeType)) * BytesPerWord;
+  unsigned diff = treeNodeSize - size;
+  
+  if (diff) {
+    memcpy(reinterpret_cast<uint8_t*>(new_) + treeNodeSize,
+           reinterpret_cast<uint8_t*>(node) + treeNodeSize,
+           diff);
+  }
+
+  return makeTreePath(t, true, new_, newRoot, ancestors);
+}
+
+object
+leftRotate(Thread* t, object n)
+{
+  object child = clone(t, treeNodeRight(t, n));
+  set(t, n, TreeNodeRight, treeNodeLeft(t, child));
+  set(t, child, TreeNodeLeft, n);
+  return child;
+}
+
+object
+rightRotate(Thread* t, object n)
+{
+  object child = clone(t, treeNodeLeft(t, n));
+  set(t, n, TreeNodeLeft, treeNodeRight(t, child));
+  set(t, child, TreeNodeRight, n);
+  return child;
+}
+
+object
+treeAdd(Thread* t, object path)
+{
+  object new_ = treePathNode(t, path);
+  object newRoot = treePathRoot(t, path);
+  object ancestors = treePathAncestors(t, path);
+
+  // rebalance
+  treeNodeRed(t, new_) = true;
+  while (ancestors != 0 and treeNodeRed(t, pairFirst(t, ancestors))) {
+    if (pairFirst(t, ancestors)
+        == treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors))))
+    {
+      if (treeNodeRed
+          (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors)))))
+      {
+        treeNodeRed(t, pairFirst(t, ancestors)) = true;
+
+        object n = clone
+          (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors))));
+
+        set(t, pairFirst(t, pairSecond(t, ancestors)), TreeNodeRight, n);
+
+        treeNodeRed
+          (t, treeNodeRight
+           (t, pairFirst(t, pairSecond(t, ancestors)))) = false;
+
+        treeNodeRed(t, pairFirst(t, pairSecond(t, ancestors))) = false;
+
+        new_ = pairFirst(t, pairSecond(t, ancestors));
+        ancestors = pairSecond(t, pairSecond(t, ancestors));
+      } else {
+        if (new_ == treeNodeRight(t, pairFirst(t, ancestors))) {
+          new_ = pairFirst(t, ancestors);
+          ancestors = pairSecond(t, ancestors);
+
+          object n = leftRotate(t, new_);
+
+          if (new_ == treeNodeRight(t, pairFirst(t, ancestors))) {
+            set(t, pairFirst(t, ancestors), TreeNodeRight, n);
+          } else {
+            set(t, pairFirst(t, ancestors), TreeNodeLeft, n);
+          }
+          ancestors = makePair(t, n, ancestors);
+        }
+        treeNodeRed(t, pairFirst(t, ancestors)) = false;
+        treeNodeRed(t, pairFirst(t, pairSecond(t, ancestors))) = true;
+
+        object n = rightRotate(t, pairFirst(t, pairSecond(t, ancestors)));
+        if (pairSecond(t, pairSecond(t, ancestors)) == 0) {
+          newRoot = n;
+        } else if (treeNodeRight
+                   (t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))))
+                   == pairFirst(t, pairSecond(t, ancestors)))
+        {
+          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
+              TreeNodeRight, n);
+        } else {
+          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
+              TreeNodeLeft, n);
+        }
+        // done
+      }
+    } else { // this is just the reverse of the code above (right and
+             // left swapped):
+      if (treeNodeRed
+          (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors)))))
+      {
+        treeNodeRed(t, pairFirst(t, ancestors)) = true;
+
+        object n = clone
+          (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors))));
+
+        set(t, pairFirst(t, pairSecond(t, ancestors)), TreeNodeLeft, n);
+
+        treeNodeRed
+          (t, treeNodeLeft
+           (t, pairFirst(t, pairSecond(t, ancestors)))) = false;
+
+        treeNodeRed(t, pairFirst(t, pairSecond(t, ancestors))) = false;
+
+        new_ = pairFirst(t, pairSecond(t, ancestors));
+        ancestors = pairSecond(t, pairSecond(t, ancestors));
+      } else {
+        if (new_ == treeNodeLeft(t, pairFirst(t, ancestors))) {
+          new_ = pairFirst(t, ancestors);
+          ancestors = pairSecond(t, ancestors);
+
+          object n = rightRotate(t, new_);
+
+          if (new_ == treeNodeLeft(t, pairFirst(t, ancestors))) {
+            set(t, pairFirst(t, ancestors), TreeNodeLeft, n);
+          } else {
+            set(t, pairFirst(t, ancestors), TreeNodeRight, n);
+          }
+          ancestors = makePair(t, n, ancestors);
+        }
+        treeNodeRed(t, pairFirst(t, ancestors)) = false;
+        treeNodeRed(t, pairFirst(t, pairSecond(t, ancestors))) = true;
+
+        object n = leftRotate(t, pairFirst(t, pairSecond(t, ancestors)));
+        if (pairSecond(t, pairSecond(t, ancestors)) == 0) {
+          newRoot = n;
+        } else if (treeNodeLeft
+                   (t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))))
+                   == pairFirst(t, pairSecond(t, ancestors)))
+        {
+          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
+              TreeNodeLeft, n);
+        } else {
+          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
+              TreeNodeRight, n);
+        }
+        // done
+      }
+    }
+  }
+
+  treeNodeRed(t, newRoot) = false;
+
+  return newRoot;
+}
+
+} // namespace
+
 namespace vm {
 
 object
@@ -247,6 +450,35 @@ vectorAppend(Thread* t, object vector, object value)
   set(t, vector, VectorBody + (vectorSize(t, vector) * BytesPerWord), value);
   ++ vectorSize(t, vector);
   return vector;
+}
+
+object
+treeQuery(Thread* t, object tree, intptr_t key, object sentinal)
+{
+  object node = tree;
+  while (node != sentinal) {
+    intptr_t difference = key - treeNodeKey(t, node);
+    if (difference < 0) {
+      node = treeNodeLeft(t, node);
+    } else if (difference > 0) {
+      node = treeNodeRight(t, node);
+    } else {
+      return node;
+    }
+  }
+
+  return 0;
+}
+
+object
+treeInsert(Thread* t, object tree, object node, object sentinal)
+{
+  object path = treeFind(t, tree, node, sentinal);
+  if (treePathFresh(t, path)) {
+    return treeAdd(t, path);
+  } else {
+    return tree;
+  }  
 }
 
 } // namespace vm

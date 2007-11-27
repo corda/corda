@@ -2749,8 +2749,8 @@ finish(MyThread* t, Compiler* c, object method, Buffer* objectPool,
       traceLog->get(i + BytesPerWord + 2 + 1 + 4, map, mapSize);
 
       object node = makeTraceNode
-        (t, reinterpret_cast<intptr_t>(start + offset->value()), 0, 0, method,
-         target, virtualCall, mapSize / BytesPerWord, false);
+        (t, reinterpret_cast<intptr_t>(start + offset->value()), 0, 0, 0,
+         method, target, virtualCall, mapSize / BytesPerWord, false);
 
       if (mapSize) {
         memcpy(&traceNodeMap(t, node, 0), map, mapSize);
@@ -3328,6 +3328,7 @@ class MyProcessor: public Processor {
     defaultCompiled(0),
     nativeCompiled(0),
     addressTree(0),
+    addressTreeSentinal(0),
     indirectCaller(0)
   { }
 
@@ -3587,13 +3588,41 @@ class MyProcessor: public Processor {
   object defaultCompiled;
   object nativeCompiled;
   object addressTree;
+  object addressTreeSentinal;
   void* indirectCaller;
 };
+
+MyProcessor*
+processor(MyThread* t)
+{
+  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+  if (p->addressTree == 0) {
+    ACQUIRE(t, t->m->classLock);
+
+    if (p->addressTree == 0) {
+      p->addressTreeSentinal = makeTraceNode(t, 0, 0, 0, 0, 0, 0, 0, 0, false);
+      set(t, p->addressTreeSentinal, TreeNodeLeft, p->addressTreeSentinal);
+      set(t, p->addressTreeSentinal, TreeNodeRight, p->addressTreeSentinal);
+      p->addressTree = p->addressTreeSentinal;
+
+      Compiler* c = makeCompiler(t->m->system, 0);
+
+      c->mov(c->base(), c->memory(c->thread(), difference(&(t->base), t)));
+      c->mov(c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
+
+      c->jmp(c->indirectTarget());
+
+      p->indirectCaller = t->m->system->allocate(c->size());
+      c->writeTo(p->indirectCaller);
+    }
+  }
+  return p;
+}
 
 void
 compile(MyThread* t, object method)
 {
-  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+  MyProcessor* p = processor(t);
 
   object stub = p->getDefaultCompiled(t);
 
@@ -3603,18 +3632,6 @@ compile(MyThread* t, object method)
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == stub) {
-      if (p->indirectCaller == 0) {
-        Compiler* c = makeCompiler(t->m->system, 0);
-
-        c->mov(c->base(), c->memory(c->thread(), difference(&(t->base), t)));
-        c->mov(c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
-
-        c->jmp(c->indirectTarget());
-
-        p->indirectCaller = t->m->system->allocate(c->size());
-        c->writeTo(p->indirectCaller);
-      }
-
       PROTECT(t, method);
 
       Compiler* c = makeCompiler(t->m->system, p->indirectCaller);
@@ -3630,15 +3647,17 @@ compile(MyThread* t, object method)
 object
 findTraceNode(MyThread* t, void* address)
 {
-  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
-  return treeQuery(t, p->addressTree, reinterpret_cast<intptr_t>(address));
+  MyProcessor* p = processor(t);
+  return treeQuery(t, p->addressTree, reinterpret_cast<intptr_t>(address),
+                   p->addressTreeSentinal);
 }
 
 void
 insertTraceNode(MyThread* t, object node)
 {
-  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
-  p->addressTree = treeInsert(t, p->addressTree, node);
+  MyProcessor* p = processor(t);
+  p->addressTree = treeInsert
+    (t, p->addressTree, node, p->addressTreeSentinal);
 }
 
 } // namespace

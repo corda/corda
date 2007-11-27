@@ -105,13 +105,13 @@ ifeq ($(platform),windows)
 endif
 
 ifeq ($(mode),debug)
-	cflags += -O0 -g3
+	cflags += -O0 -g3 -DNDEBUG
 endif
 ifeq ($(mode),stress)
-	cflags += -O0 -g3 -DVM_STRESS
+	cflags += -O0 -g3 -DNDEBUG -DVM_STRESS
 endif
 ifeq ($(mode),stress-major)
-	cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
+	cflags += -O0 -g3 -DNDEBUG -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG

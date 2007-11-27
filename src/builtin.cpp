@@ -108,7 +108,7 @@ Java_java_lang_Object_clone(Thread* t, jclass, jobject o)
     // clear any object header flags:
     setObjectClass(t, *o, objectClass(t, *o));
   } else {
-    clone = make(t, objectClass(t, *o));
+    clone = make(t, class_);
     memcpy(reinterpret_cast<void**>(clone) + 1,
            reinterpret_cast<void**>(*o) + 1,
            size - BytesPerWord);

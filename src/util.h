@@ -74,10 +74,10 @@ object
 vectorAppend(Thread* t, object vector, object value);
 
 object
-treeQuery(Thread* t, object tree, intptr_t key);
+treeQuery(Thread* t, object tree, intptr_t key, object sentinal);
 
 object
-treeInsert(Thread* t, object tree, object node);
+treeInsert(Thread* t, object tree, object node, object sentinal);
 
 } // vm
 
