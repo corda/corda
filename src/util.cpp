@@ -19,13 +19,21 @@ clone(Thread* t, object o)
 }
 
 object
-treeFind(Thread* t, object oldRoot, object node, object sentinal)
+treeFind(Thread* t, object old, object node, object sentinal)
 {
-  object newRoot = clone(t, oldRoot);
-  object ancestors = 0;
+  PROTECT(t, old);
+  PROTECT(t, node);
+  PROTECT(t, sentinal);
 
-  object old = oldRoot;
+  object newRoot = clone(t, old);
+  PROTECT(t, newRoot);
+
   object new_ = newRoot;
+  PROTECT(t, new_);
+
+  object ancestors = 0;
+  PROTECT(t, ancestors);
+
   while (old != sentinal) {
     ancestors = makePair(t, new_, ancestors);
 
@@ -82,8 +90,13 @@ object
 treeAdd(Thread* t, object path)
 {
   object new_ = treePathNode(t, path);
+  PROTECT(t, new_);
+
   object newRoot = treePathRoot(t, path);
+  PROTECT(t, newRoot);
+
   object ancestors = treePathAncestors(t, path);
+  PROTECT(t, ancestors);
 
   // rebalance
   treeNodeRed(t, new_) = true;
