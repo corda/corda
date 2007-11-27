@@ -14,6 +14,10 @@ public class ByteArrayOutputStream extends OutputStream {
     this(0);
   }
 
+  public int size() {
+    return position;
+  }
+
   public void write(int c) {
     if (buffer == null) {
       buffer = new byte[BufferSize];
