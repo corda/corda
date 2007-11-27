@@ -32,35 +32,93 @@ join(Thread* t, Thread* o)
   }
 }
 
+unsigned
+count(Thread* t, Thread* o)
+{
+  unsigned c = 0;
+
+  if (t != o) ++ c;
+
+  for (Thread* p = t->peer; p; p = p->peer) {
+    c += count(p, o);
+  }
+  
+  if (t->child) c += count(t->child, o);
+
+  return c;
+}
+
+Thread**
+fill(Thread* t, Thread* o, Thread** array)
+{
+  if (t != o) *(array++) = t;
+
+  for (Thread* p = t->peer; p; p = p->peer) {
+    array = fill(p, o, array);
+  }
+  
+  if (t->child) array = fill(t->child, o, array);
+
+  return array;
+}
+
 void
 dispose(Thread* t, Thread* o, bool remove)
 {
   if (remove) {
+    // debug
+    expect(t, find(t->m->rootThread, o));
+
+    unsigned c = count(t->m->rootThread, o);
+    Thread* threads[c];
+    fill(t->m->rootThread, o, threads);
+    // end debug
+
     if (o->parent) {
-      if (o->child) {
-        o->parent->child = o->child;
-        if (o->peer) {
-          o->peer->peer = o->child->peer;
-          o->child->peer = o->peer;
+      Thread* previous;
+      for (Thread* p = o->parent->child; p;) {
+        if (p == o) {
+          if (p == o->parent->child) {
+            o->parent->child = p->peer;
+          } else {
+            previous->peer = p->peer;
+          }
+          break;
+        } else {
+          previous = p;
+          p = p->peer;
         }
-      } else if (o->peer) {
-        o->parent->child = o->peer;
-      } else {
-        o->parent->child = 0;
+      }      
+
+      for (Thread* p = o->child; p;) {
+        Thread* next = p->peer;
+        p->peer = o->parent->child;
+        o->parent->child = p;
+        p->parent = o->parent;
+        p = next;
       }
     } else if (o->child) {
       t->m->rootThread = o->child;
-      if (o->peer) {
-        o->peer->peer = o->child->peer;
-        o->child->peer = o->peer;
-      }      
+
+      for (Thread* p = o->peer; p;) {
+        Thread* next = p->peer;
+        p->peer = t->m->rootThread;
+        t->m->rootThread = p;
+        p = next;
+      }
     } else if (o->peer) {
       t->m->rootThread = o->peer;
     } else {
       abort(t);
     }
 
-    assert(t, not find(t->m->rootThread, o));
+    // debug
+    expect(t, not find(t->m->rootThread, o));
+
+    for (unsigned i = 0; i < c; ++i) {
+      expect(t, find(t->m->rootThread, threads[i]));
+    }
+    // end debug
   }
 
   o->dispose();
@@ -797,7 +855,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   if (classSuper(t, class_)) {
     addInterfaces(t, classSuper(t, class_), map);
   }
-  
+
   unsigned count = s.read2();
   for (unsigned i = 0; i < count; ++i) {
     object name = singletonObject(t, pool, s.read2() - 1);
@@ -1290,12 +1348,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   if (declaredVirtualCount == 0
       and (classFlags(t, class_) & ACC_INTERFACE) == 0)
   {
-    // inherit interface table and virtual table from superclass
+    // inherit virtual table from superclass
+    set(t, class_, ClassVirtualTable, superVirtualTable);
 
-    set(t, class_, ClassInterfaceTable,
-        classInterfaceTable(t, classSuper(t, class_)));
-
-    set(t, class_, ClassVirtualTable, superVirtualTable);    
+    if (classInterfaceTable(t, classSuper(t, class_))
+        and arrayLength(t, classInterfaceTable(t, class_))
+        == arrayLength(t, classInterfaceTable(t, classSuper(t, class_))))
+    {
+      // inherit interface table from superclass
+      set(t, class_, ClassInterfaceTable,
+          classInterfaceTable(t, classSuper(t, class_)));
+    }
   } else if (virtualCount) {
     // generate class vtable
 
@@ -1892,6 +1955,7 @@ Thread::init()
 #include "type-java-initializations.cpp"
     }
   } else {
+    peer = parent->child;
     parent->child = this;
   }
 
@@ -2048,6 +2112,8 @@ enter(Thread* t, Thread::State s)
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
       t->m->exclusive = 0;
+
+      t->m->stateLock->notifyAll(t->systemThread);
     } break;
 
     case Thread::ActiveState: break;
@@ -2632,7 +2698,7 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 }
 
 System::Monitor*
-objectMonitor(Thread* t, object o)
+objectMonitor(Thread* t, object o, bool createNew)
 {
   object p = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
 
@@ -2644,7 +2710,7 @@ objectMonitor(Thread* t, object o)
     }
 
     return static_cast<System::Monitor*>(pointerValue(t, p));
-  } else {
+  } else if (createNew) {
     PROTECT(t, o);
 
     ENTER(t, Thread::ExclusiveState);
@@ -2665,6 +2731,8 @@ objectMonitor(Thread* t, object o)
     addFinalizer(t, o, removeMonitor);
 
     return m;
+  } else {
+    return 0;
   }
 }
 

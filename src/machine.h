@@ -1998,12 +1998,12 @@ void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
 System::Monitor*
-objectMonitor(Thread* t, object o);
+objectMonitor(Thread* t, object o, bool createNew);
 
 inline void
 acquire(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, true);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p acquires %p for %x\n",
@@ -2016,7 +2016,7 @@ acquire(Thread* t, object o)
 inline void
 release(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p releases %p for %x\n",
@@ -2029,14 +2029,14 @@ release(Thread* t, object o)
 inline void
 wait(Thread* t, object o, int64_t milliseconds)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p waits %"LLD" millis on %p for %x\n",
             t, milliseconds, m, objectHash(t, o));
   }
 
-  if (m->owner() == t->systemThread) {
+  if (m and m->owner() == t->systemThread) {
     ENTER(t, Thread::IdleState);
 
     bool interrupted = m->wait(t->systemThread, milliseconds);
@@ -2058,14 +2058,14 @@ wait(Thread* t, object o, int64_t milliseconds)
 inline void
 notify(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p notifies on %p for %x\n",
             t, m, objectHash(t, o));
   }
 
-  if (m->owner() == t->systemThread) {
+  if (m and m->owner() == t->systemThread) {
     m->notify(t->systemThread);
   } else {
     t->exception = makeIllegalMonitorStateException(t);
@@ -2075,14 +2075,14 @@ notify(Thread* t, object o)
 inline void
 notifyAll(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p notifies all on %p for %x\n",
             t, m, objectHash(t, o));
   }
 
-  if (m->owner() == t->systemThread) {
+  if (m and m->owner() == t->systemThread) {
     m->notifyAll(t->systemThread);
   } else {
     t->exception = makeIllegalMonitorStateException(t);

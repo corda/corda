@@ -80,7 +80,7 @@ class MySystem: public System {
 
     virtual void join() {
       int rv UNUSED = pthread_join(thread, 0);
-      assert(s, rv == 0);
+      expect(s, rv == 0);
     }
 
     virtual void dispose() {
@@ -150,21 +150,32 @@ class MySystem: public System {
     void append(Thread* t) {
       if (last) {
         last->next = t;
+        last = t;
       } else {
         first = last = t;
       }
     }
 
     void remove(Thread* t) {
-      for (Thread** p = &first; *p;) {
-        if (t == *p) {
-          *p = t->next;
-          if (last == t) {
-            last = 0;
+      Thread* previous;
+      for (Thread* current = first; current;) {
+        if (t == current) {
+          if (current == first) {
+            first = t->next;
+          } else {
+            previous->next = t->next;
           }
+
+          if (current == last) {
+            last = previous;
+          }
+
+          t->next = 0;
+
           break;
         } else {
-          p = &((*p)->next);
+          previous = current;
+          current = current->next;
         }
       }
     }
@@ -194,10 +205,10 @@ class MySystem: public System {
           timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
           int rv UNUSED = pthread_cond_timedwait
             (&(t->condition), &(t->mutex), &ts);
-          assert(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
+          expect(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
         } else {
           int rv UNUSED = pthread_cond_wait(&(t->condition), &(t->mutex));
-          assert(s, rv == 0 or rv == EINTR);
+          expect(s, rv == 0 or rv == EINTR);
         }
 
         pthread_mutex_lock(&mutex);
@@ -227,7 +238,7 @@ class MySystem: public System {
 
       t->flags |= Notified;
       int rv UNUSED = pthread_cond_signal(&(t->condition));
-      assert(s, rv == 0);
+      expect(s, rv == 0);
     }
 
     virtual void notify(System::Thread* context) {
@@ -266,7 +277,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      assert(s, owner_ == 0);
+      expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
       s->free(this);
     }
@@ -283,7 +294,7 @@ class MySystem: public System {
    public:
     Local(System* s): s(s) {
       int r UNUSED = pthread_key_create(&key, 0);
-      assert(s, r == 0);
+      expect(s, r == 0);
     }
 
     virtual void* get() {
@@ -292,12 +303,12 @@ class MySystem: public System {
 
     virtual void set(void* p) {
       int r UNUSED = pthread_setspecific(key, p);
-      assert(s, r == 0);
+      expect(s, r == 0);
     }
 
     virtual void dispose() {
       int r UNUSED = pthread_key_delete(key);
-      assert(s, r == 0);
+      expect(s, r == 0);
 
       s->free(this);
     }
@@ -395,7 +406,7 @@ class MySystem: public System {
     sa.sa_handler = handleSignal;
     
     int rv UNUSED = sigaction(InterruptSignal, &sa, 0);
-    assert(this, rv == 0);
+    expect(this, rv == 0);
   }
 
   virtual bool success(Status s) {
@@ -455,7 +466,7 @@ class MySystem: public System {
     Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
     r->attach(t);
     int rv UNUSED = pthread_create(&(t->thread), 0, run, r);
-    assert(this, rv == 0);
+    expect(this, rv == 0);
     return 0;
   }
 
