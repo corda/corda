@@ -1928,7 +1928,7 @@ interpret(Thread* t)
     uint32_t offset = codeReadInt32(t, code, ip);
 
     pushInt(t, ip);
-    ip = (ip - 3) + static_cast<int32_t>(offset);
+    ip = (ip - 5) + static_cast<int32_t>(offset);
   } goto loop;
 
   case l2i: {
