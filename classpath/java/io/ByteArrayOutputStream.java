@@ -15,7 +15,7 @@ public class ByteArrayOutputStream extends OutputStream {
   }
 
   public int size() {
-    return position;
+    return length;
   }
 
   public void write(int c) {
@@ -65,7 +65,6 @@ public class ByteArrayOutputStream extends OutputStream {
       buffer = null;
       position = 0;
       chain = new Cell(b, 0, p, chain);
-      length -= p;
     }    
   }
 
