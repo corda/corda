@@ -157,7 +157,7 @@ class MySystem: public System {
     }
 
     void remove(Thread* t) {
-      Thread* previous;
+      Thread* previous = 0;
       for (Thread* current = first; current;) {
         if (t == current) {
           if (current == first) {

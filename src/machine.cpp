@@ -75,7 +75,7 @@ dispose(Thread* t, Thread* o, bool remove)
     // end debug
 
     if (o->parent) {
-      Thread* previous;
+      Thread* previous = 0;
       for (Thread* p = o->parent->child; p;) {
         if (p == o) {
           if (p == o->parent->child) {
