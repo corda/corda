@@ -151,21 +151,32 @@ class MySystem: public System {
     void append(Thread* t) {
       if (last) {
         last->next = t;
+        last = t;
       } else {
         first = last = t;
       }
     }
 
     void remove(Thread* t) {
-      for (Thread** p = &first; *p;) {
-        if (t == *p) {
-          *p = t->next;
-          if (last == t) {
-            last = 0;
+      Thread* previous = 0;
+      for (Thread* current = first; current;) {
+        if (t == current) {
+          if (current == first) {
+            first = t->next;
+          } else {
+            previous->next = t->next;
           }
+
+          if (current == last) {
+            last = previous;
+          }
+
+          t->next = 0;
+
           break;
         } else {
-          p = &((*p)->next);
+          previous = current;
+          current = current->next;
         }
       }
     }

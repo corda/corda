@@ -3,6 +3,7 @@ package java.lang;
 public final class Math {
   public static final double E = 2.718281828459045;
   public static final double PI = 3.141592653589793;
+  private static boolean randomInitialized = false;
 
   private Math() { }
 
@@ -62,7 +63,17 @@ public final class Math {
     return (int) Math.floor(v + 0.5);
   }
 
-  public static native double random();
+  public static double random() {
+    if (randomInitialized) {
+      natRandomInitialize(System.currentTimeMillis());
+      randomInitialized = true;
+    }
+    return natRandom();
+  }
+
+  public static native void natRandomInitialize(long val);
+
+  public static native double natRandom();
 
   public static native double floor(double v);
 

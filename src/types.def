@@ -24,17 +24,17 @@
   (void* value))
 
 (pod exceptionHandler
-  (uint16_t start)
-  (uint16_t end)
-  (uint16_t ip)
-  (uint16_t catchType))
+  (uint32_t start)
+  (uint32_t end)
+  (uint32_t ip)
+  (uint32_t catchType))
 
 (type exceptionHandlerTable
   (array exceptionHandler body))
 
 (pod lineNumber
-  (uint16_t ip)
-  (uint16_t line))
+  (uint32_t ip)
+  (uint32_t line))
 
 (type lineNumberTable
   (array lineNumber body))
@@ -89,8 +89,27 @@
 
 (type traceElement
   (object method)
-  (int32_t ip))
+  (int ip))
+
+(type treeNode
+  (intptr_t key)
+  (uintptr_t red)
+  (object left)
+  (object right))
  
+(type treePath
+  (uintptr_t fresh)
+  (object node)
+  (object root)
+  (object ancestors))
+
+(type traceNode
+  (extends treeNode)
+  (object method)
+  (object target)
+  (uintptr_t virtualCall)
+  (array uintptr_t map))
+
 (type array
   (noassert array object body))
 

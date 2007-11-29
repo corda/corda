@@ -1505,13 +1505,10 @@ baseSize(Thread* t, object o, object class_)
 }
 
 object
-makeTrace(Thread* t, uintptr_t start);
+makeTrace(Thread* t, Processor::StackWalker* walker);
 
-inline object
-makeTrace(Thread* t)
-{
-  return makeTrace(t, t->m->processor->frameStart(t));
-}
+object
+makeTrace(Thread* t);
 
 inline object
 makeRuntimeException(Thread* t, object message)
@@ -1835,74 +1832,6 @@ methodEqual(Thread* t, object a, object b)
      byteArrayEqual(t, methodSpec(t, a), methodSpec(t, b)));
 }
 
-object
-hashMapFindNode(Thread* t, object map, object key,
-                uint32_t (*hash)(Thread*, object),
-                bool (*equal)(Thread*, object, object));
-
-inline object
-hashMapFind(Thread* t, object map, object key,
-            uint32_t (*hash)(Thread*, object),
-            bool (*equal)(Thread*, object, object))
-{
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  return (n ? tripleSecond(t, n) : 0);
-}
-
-void
-hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
-              unsigned size);
-
-void
-hashMapInsert(Thread* t, object map, object key, object value,
-              uint32_t (*hash)(Thread*, object));
-
-inline bool
-hashMapInsertOrReplace(Thread* t, object map, object key, object value,
-                       uint32_t (*hash)(Thread*, object),
-                       bool (*equal)(Thread*, object, object))
-{
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  if (n == 0) {
-    hashMapInsert(t, map, key, value, hash);
-    return true;
-  } else {
-    set(t, n, TripleSecond, value);
-    return false;
-  }
-}
-
-inline bool
-hashMapInsertMaybe(Thread* t, object map, object key, object value,
-                   uint32_t (*hash)(Thread*, object),
-                   bool (*equal)(Thread*, object, object))
-{
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  if (n == 0) {
-    hashMapInsert(t, map, key, value, hash);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-object
-hashMapRemove(Thread* t, object map, object key,
-              uint32_t (*hash)(Thread*, object),
-              bool (*equal)(Thread*, object, object));
-
-object
-hashMapIterator(Thread* t, object map);
-
-object
-hashMapIteratorNext(Thread* t, object it);
-
-void
-listAppend(Thread* t, object list, object value);
-
-object
-vectorAppend(Thread* t, object vector, object value);
-
 class MethodSpecIterator {
  public:
   MethodSpecIterator(Thread* t, const char* s):
@@ -2069,12 +1998,12 @@ void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
 System::Monitor*
-objectMonitor(Thread* t, object o);
+objectMonitor(Thread* t, object o, bool createNew);
 
 inline void
 acquire(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, true);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p acquires %p for %x\n",
@@ -2087,7 +2016,7 @@ acquire(Thread* t, object o)
 inline void
 release(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p releases %p for %x\n",
@@ -2100,14 +2029,14 @@ release(Thread* t, object o)
 inline void
 wait(Thread* t, object o, int64_t milliseconds)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p waits %"LLD" millis on %p for %x\n",
             t, milliseconds, m, objectHash(t, o));
   }
 
-  if (m->owner() == t->systemThread) {
+  if (m and m->owner() == t->systemThread) {
     ENTER(t, Thread::IdleState);
 
     bool interrupted = m->wait(t->systemThread, milliseconds);
@@ -2129,14 +2058,14 @@ wait(Thread* t, object o, int64_t milliseconds)
 inline void
 notify(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p notifies on %p for %x\n",
             t, m, objectHash(t, o));
   }
 
-  if (m->owner() == t->systemThread) {
+  if (m and m->owner() == t->systemThread) {
     m->notify(t->systemThread);
   } else {
     t->exception = makeIllegalMonitorStateException(t);
@@ -2146,14 +2075,14 @@ notify(Thread* t, object o)
 inline void
 notifyAll(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o);
+  System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p notifies all on %p for %x\n",
             t, m, objectHash(t, o));
   }
 
-  if (m->owner() == t->systemThread) {
+  if (m and m->owner() == t->systemThread) {
     m->notifyAll(t->systemThread);
   } else {
     t->exception = makeIllegalMonitorStateException(t);

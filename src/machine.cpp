@@ -1,5 +1,6 @@
 #include "jnienv.h"
 #include "machine.h"
+#include "util.h"
 #include "stream.h"
 #include "constants.h"
 #include "processor.h"
@@ -31,35 +32,93 @@ join(Thread* t, Thread* o)
   }
 }
 
+unsigned
+count(Thread* t, Thread* o)
+{
+  unsigned c = 0;
+
+  if (t != o) ++ c;
+
+  for (Thread* p = t->peer; p; p = p->peer) {
+    c += count(p, o);
+  }
+  
+  if (t->child) c += count(t->child, o);
+
+  return c;
+}
+
+Thread**
+fill(Thread* t, Thread* o, Thread** array)
+{
+  if (t != o) *(array++) = t;
+
+  for (Thread* p = t->peer; p; p = p->peer) {
+    array = fill(p, o, array);
+  }
+  
+  if (t->child) array = fill(t->child, o, array);
+
+  return array;
+}
+
 void
 dispose(Thread* t, Thread* o, bool remove)
 {
   if (remove) {
+    // debug
+    expect(t, find(t->m->rootThread, o));
+
+    unsigned c = count(t->m->rootThread, o);
+    Thread* threads[c];
+    fill(t->m->rootThread, o, threads);
+    // end debug
+
     if (o->parent) {
-      if (o->child) {
-        o->parent->child = o->child;
-        if (o->peer) {
-          o->peer->peer = o->child->peer;
-          o->child->peer = o->peer;
+      Thread* previous = 0;
+      for (Thread* p = o->parent->child; p;) {
+        if (p == o) {
+          if (p == o->parent->child) {
+            o->parent->child = p->peer;
+          } else {
+            previous->peer = p->peer;
+          }
+          break;
+        } else {
+          previous = p;
+          p = p->peer;
         }
-      } else if (o->peer) {
-        o->parent->child = o->peer;
-      } else {
-        o->parent->child = 0;
+      }      
+
+      for (Thread* p = o->child; p;) {
+        Thread* next = p->peer;
+        p->peer = o->parent->child;
+        o->parent->child = p;
+        p->parent = o->parent;
+        p = next;
       }
     } else if (o->child) {
       t->m->rootThread = o->child;
-      if (o->peer) {
-        o->peer->peer = o->child->peer;
-        o->child->peer = o->peer;
-      }      
+
+      for (Thread* p = o->peer; p;) {
+        Thread* next = p->peer;
+        p->peer = t->m->rootThread;
+        t->m->rootThread = p;
+        p = next;
+      }
     } else if (o->peer) {
       t->m->rootThread = o->peer;
     } else {
       abort(t);
     }
 
-    assert(t, not find(t->m->rootThread, o));
+    // debug
+    expect(t, not find(t->m->rootThread, o));
+
+    for (unsigned i = 0; i < c; ++i) {
+      expect(t, find(t->m->rootThread, threads[i]));
+    }
+    // end debug
   }
 
   o->dispose();
@@ -796,7 +855,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   if (classSuper(t, class_)) {
     addInterfaces(t, classSuper(t, class_), map);
   }
-  
+
   unsigned count = s.read2();
   for (unsigned i = 0; i < count; ++i) {
     object name = singletonObject(t, pool, s.read2() - 1);
@@ -1289,12 +1348,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   if (declaredVirtualCount == 0
       and (classFlags(t, class_) & ACC_INTERFACE) == 0)
   {
-    // inherit interface table and virtual table from superclass
+    // inherit virtual table from superclass
+    set(t, class_, ClassVirtualTable, superVirtualTable);
 
-    set(t, class_, ClassInterfaceTable,
-        classInterfaceTable(t, classSuper(t, class_)));
-
-    set(t, class_, ClassVirtualTable, superVirtualTable);    
+    if (classInterfaceTable(t, classSuper(t, class_))
+        and arrayLength(t, classInterfaceTable(t, class_))
+        == arrayLength(t, classInterfaceTable(t, classSuper(t, class_))))
+    {
+      // inherit interface table from superclass
+      set(t, class_, ClassInterfaceTable,
+          classInterfaceTable(t, classSuper(t, class_)));
+    }
   } else if (virtualCount) {
     // generate class vtable
 
@@ -1891,6 +1955,7 @@ Thread::init()
 #include "type-java-initializations.cpp"
     }
   } else {
+    peer = parent->child;
     parent->child = this;
   }
 
@@ -2047,6 +2112,8 @@ enter(Thread* t, Thread::State s)
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
       t->m->exclusive = 0;
+
+      t->m->stateLock->notifyAll(t->systemThread);
     } break;
 
     case Thread::ActiveState: break;
@@ -2224,253 +2291,6 @@ classInitializer(Thread* t, object class_)
     }               
   }
   abort(t);
-}
-
-object
-hashMapFindNode(Thread* t, object map, object key,
-                uint32_t (*hash)(Thread*, object),
-                bool (*equal)(Thread*, object, object))
-{
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
-
-  object array = hashMapArray(t, map);
-  if (array) {
-    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    for (object n = arrayBody(t, array, index); n; n = tripleThird(t, n)) {
-      object k = tripleFirst(t, n);
-      if (weak) {
-        k = jreferenceTarget(t, k);
-        if (k == 0) {
-          continue;
-        }
-      }
-
-      if (equal(t, key, k)) {
-        return n;
-      }
-    }
-  }
-  return 0;
-}
-
-void
-hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
-              unsigned size)
-{
-  PROTECT(t, map);
-
-  object newArray = 0;
-
-  if (size) {
-    object oldArray = hashMapArray(t, map);
-    PROTECT(t, oldArray);
-
-    unsigned newLength = nextPowerOfTwo(size);
-    if (oldArray and arrayLength(t, oldArray) == newLength) {
-      return;
-    }
-
-    newArray = makeArray(t, newLength, true);
-
-    if (oldArray) {
-      bool weak = objectClass(t, map)
-        == arrayBody(t, t->m->types, Machine::WeakHashMapType);
-
-      for (unsigned i = 0; i < arrayLength(t, oldArray); ++i) {
-        object next;
-        for (object p = arrayBody(t, oldArray, i); p; p = next) {
-          next = tripleThird(t, p);
-
-          object k = tripleFirst(t, p);
-          if (weak) {
-            k = jreferenceTarget(t, k);
-            if (k == 0) {
-              continue;
-            }
-          }
-
-          unsigned index = hash(t, k) & (newLength - 1);
-
-          set(t, p, TripleThird, arrayBody(t, newArray, index));
-          set(t, newArray, ArrayBody + (index * BytesPerWord), p);
-        }
-      }
-    }
-  }
-  
-  set(t, map, HashMapArray, newArray);
-}
-
-void
-hashMapInsert(Thread* t, object map, object key, object value,
-               uint32_t (*hash)(Thread*, object))
-{
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
-
-  object array = hashMapArray(t, map);
-  PROTECT(t, array);
-
-  ++ hashMapSize(t, map);
-
-  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
-    PROTECT(t, map);
-    PROTECT(t, key);
-    PROTECT(t, value);
-
-    hashMapResize(t, map, hash, array ? arrayLength(t, array) * 2 : 16);
-    array = hashMapArray(t, map);
-  }
-
-  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-
-  if (weak) {
-    PROTECT(t, key);
-    PROTECT(t, value);
-
-    object r = makeWeakReference(t, 0, 0, 0, 0);
-    jreferenceTarget(t, r) = key;
-    jreferenceVmNext(t, r) = t->m->weakReferences;
-    key = t->m->weakReferences = r;
-  }
-
-  object n = makeTriple(t, key, value, arrayBody(t, array, index));
-
-  set(t, array, ArrayBody + (index * BytesPerWord), n);
-}
-
-object
-hashMapRemoveNode(Thread* t, object map, unsigned index, object p, object n)
-{
-  if (p) {
-    set(t, p, TripleThird, tripleThird(t, n));
-  } else {
-    set(t, hashMapArray(t, map), ArrayBody + (index * BytesPerWord),
-        tripleThird(t, n));
-  }
-  -- hashMapSize(t, map);
-  return n;
-}
-
-object
-hashMapRemove(Thread* t, object map, object key,
-              uint32_t (*hash)(Thread*, object),
-              bool (*equal)(Thread*, object, object))
-{
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
-
-  object array = hashMapArray(t, map);
-  object o = 0;
-  if (array) {
-    unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
-    object p = 0;
-    for (object n = arrayBody(t, array, index); n;) {
-      object k = tripleFirst(t, n);
-      if (weak) {
-        k = jreferenceTarget(t, k);
-        if (k == 0) {
-          n = tripleThird(t, hashMapRemoveNode(t, map, index, p, n));
-          continue;
-        }
-      }
-
-      if (equal(t, key, k)) {
-        o = tripleSecond(t, hashMapRemoveNode(t, map, index, p, n));
-        break;
-      } else {
-        p = n;
-        n = tripleThird(t, n);
-      }
-    }
-
-    if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
-      PROTECT(t, o);
-      hashMapResize(t, map, hash, arrayLength(t, array) / 2);
-    }
-  }
-
-  return o;
-}
-
-object
-hashMapIterator(Thread* t, object map)
-{
-  object array = hashMapArray(t, map);
-  if (array) {
-    for (unsigned i = 0; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-  }
-  return 0;
-}
-
-object
-hashMapIteratorNext(Thread* t, object it)
-{
-  object map = hashMapIteratorMap(t, it);
-  object node = hashMapIteratorNode(t, it);
-  unsigned index = hashMapIteratorIndex(t, it);
-
-  if (tripleThird(t, node)) {
-    return makeHashMapIterator(t, map, tripleThird(t, node), index);
-  } else {
-    object array = hashMapArray(t, map);
-    for (unsigned i = index; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-    return 0;
-  }  
-}
-
-void
-listAppend(Thread* t, object list, object value)
-{
-  PROTECT(t, list);
-
-  ++ listSize(t, list);
-  
-  object p = makePair(t, value, 0);
-  if (listFront(t, list)) {
-    set(t, listRear(t, list), PairSecond, p);
-  } else {
-    set(t, list, ListFront, p);
-  }
-  set(t, list, ListRear, p);
-}
-
-object
-vectorAppend(Thread* t, object vector, object value)
-{
-  if (vectorLength(t, vector) == vectorSize(t, vector)) {
-    PROTECT(t, vector);
-    PROTECT(t, value);
-
-    object newVector = makeVector
-      (t, vectorSize(t, vector), max(16, vectorSize(t, vector) * 2), false);
-
-    if (vectorSize(t, vector)) {
-      memcpy(&vectorBody(t, newVector, 0),
-             &vectorBody(t, vector, 0),
-             vectorSize(t, vector) * BytesPerWord);
-    }
-
-    memset(&vectorBody(t, newVector, vectorSize(t, vector) + 1),
-           0,
-           (vectorLength(t, newVector) - vectorSize(t, vector) - 1)
-           * BytesPerWord);
-
-    vector = newVector;
-  }
-
-  set(t, vector, VectorBody + (vectorSize(t, vector) * BytesPerWord), value);
-  ++ vectorSize(t, vector);
-  return vector;
 }
 
 unsigned
@@ -2878,7 +2698,7 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 }
 
 System::Monitor*
-objectMonitor(Thread* t, object o)
+objectMonitor(Thread* t, object o, bool createNew)
 {
   object p = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
 
@@ -2890,7 +2710,7 @@ objectMonitor(Thread* t, object o)
     }
 
     return static_cast<System::Monitor*>(pointerValue(t, p));
-  } else {
+  } else if (createNew) {
     PROTECT(t, o);
 
     ENTER(t, Thread::ExclusiveState);
@@ -2911,6 +2731,8 @@ objectMonitor(Thread* t, object o)
     addFinalizer(t, o, removeMonitor);
 
     return m;
+  } else {
+    return 0;
   }
 }
 
@@ -3010,33 +2832,53 @@ printTrace(Thread* t, object exception)
 }
 
 object
-makeTrace(Thread* t, uintptr_t start)
+makeTrace(Thread* t, Processor::StackWalker* walker)
 {
-  Processor* p = t->m->processor;
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t): t(t), trace(0), index(0), protector(t, &trace) { }
 
-  unsigned count = 0;
-  for (uintptr_t frame = start;
-       p->frameValid(t, frame);
-       frame = p->frameNext(t, frame))
-  {
-    ++ count;
-  }
+    virtual bool visit(Processor::StackWalker* walker) {
+      if (trace == 0) {
+        trace = makeArray(t, walker->count(), true);
+      }
 
-  object trace = makeArray(t, count, true);
-  PROTECT(t, trace);
-  
-  unsigned index = 0;
-  for (uintptr_t frame = start;
-       p->frameValid(t, frame);
-       frame = p->frameNext(t, frame))
-  {
-    object e = makeTraceElement
-      (t, p->frameMethod(t, frame), p->frameIp(t, frame));
-    set(t, trace, ArrayBody + (index * BytesPerWord), e);
-    ++ index;
-  }
+      object e = makeTraceElement(t, walker->method(), walker->ip());
+      set(t, trace, ArrayBody + (index * BytesPerWord), e);
+      ++ index;
+      return true;
+    }
 
-  return trace;
+    Thread* t;
+    object trace;
+    unsigned index;
+    Thread::SingleProtector protector;
+  } v(t);
+
+  walker->walk(&v);
+
+  return v.trace;
+}
+
+object
+makeTrace(Thread* t)
+{
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t): t(t), trace(0) { }
+
+    virtual bool visit(Processor::StackWalker* walker) {
+      trace = makeTrace(t, walker);
+      return false;
+    }
+
+    Thread* t;
+    object trace;
+  } v(t);
+
+  t->m->processor->walkStack(t, &v);
+
+  return v.trace;
 }
 
 void

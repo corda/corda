@@ -356,6 +356,39 @@ popFrame(Thread* t)
   }
 }
 
+class MyStackWalker: public Processor::StackWalker {
+ public:
+  MyStackWalker(Thread* t, int frame): t(t), frame(frame) { }
+
+  virtual void walk(Processor::StackVisitor* v) {
+    for (int frame = this->frame; frame >= 0; frame = frameNext(t, frame)) {
+      MyStackWalker walker(t, frame);
+      if (not v->visit(&walker)) {
+        break;
+      }
+    }
+  }
+
+  virtual object method() {
+    return frameMethod(t, frame);
+  }
+
+  virtual int ip() {
+    return frameIp(t, frame);
+  }
+
+  virtual unsigned count() {
+    unsigned count = 0;
+    for (int frame = this->frame; frame >= 0; frame = frameNext(t, frame)) {
+      ++ count;
+    }
+    return count;
+  }
+
+  Thread* t;
+  int frame;
+};
+
 object
 makeNativeMethodData(Thread* t, object method, void* function)
 {
@@ -663,43 +696,7 @@ store(Thread* t, unsigned index)
 ExceptionHandler*
 findExceptionHandler(Thread* t, int frame)
 {
-  object method = frameMethod(t, frame);
-  object eht = codeExceptionHandlerTable(t, methodCode(t, method));
-      
-  if (eht) {
-    for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-
-      if (frameIp(t, frame) - 1 >= exceptionHandlerStart(eh)
-          and frameIp(t, frame) - 1 < exceptionHandlerEnd(eh))
-      {
-        object catchType = 0;
-        if (exceptionHandlerCatchType(eh)) {
-          object e = t->exception;
-          t->exception = 0;
-          PROTECT(t, e);
-
-          PROTECT(t, eht);
-          catchType = resolveClassInPool
-            (t, codePool(t, t->code), exceptionHandlerCatchType(eh) - 1);
-
-          if (catchType) {
-            eh = exceptionHandlerTableBody(t, eht, i);
-            t->exception = e;
-          } else {
-            // can't find what we're supposed to catch - move on.
-            continue;
-          }
-        }
-
-        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
-          return eh;
-        }
-      }
-    }
-  }
-
-  return 0;
+  return findExceptionHandler(t, frameMethod(t, frame), frameIp(t, frame));
 }
 
 void
@@ -768,7 +765,7 @@ interpret(Thread* t)
             &byteArrayBody
             (t, methodName(t, frameMethod(t, frame)), 0));
 
-    int line = t->m->processor->lineNumber(t, frameMethod(t, frame), ip);
+    int line = findLineNumber(t, frameMethod(t, frame), ip);
     switch (line) {
     case NativeLine:
       fprintf(stderr, "(native)\n");
@@ -1931,7 +1928,7 @@ interpret(Thread* t)
     uint32_t offset = codeReadInt32(t, code, ip);
 
     pushInt(t, ip);
-    ip = (ip - 3) + static_cast<int32_t>(offset);
+    ip = (ip - 5) + static_cast<int32_t>(offset);
   } goto loop;
 
   case l2i: {
@@ -2900,74 +2897,23 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual uintptr_t
-  frameStart(vm::Thread* vmt)
+  virtual void
+  walkStack(vm::Thread* vmt, StackVisitor* v)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
     if (t->frame >= 0) {
       pokeInt(t, t->frame + FrameIpOffset, t->ip);
     }
-    return t->frame;
-  }
 
-  virtual uintptr_t
-  frameNext(vm::Thread* vmt, uintptr_t frame)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    assert(t, static_cast<intptr_t>(frame) >= 0);
-    return ::frameNext(t, frame);
-  }
-
-  virtual bool
-  frameValid(vm::Thread*, uintptr_t frame)
-  {
-    return static_cast<intptr_t>(frame) >= 0;
-  }
-
-  virtual object
-  frameMethod(vm::Thread* vmt, uintptr_t frame)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    assert(t, static_cast<intptr_t>(frame) >= 0);
-    return ::frameMethod(t, frame);
-  }
-
-  virtual unsigned
-  frameIp(vm::Thread* vmt, uintptr_t frame)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    assert(t, static_cast<intptr_t>(frame) >= 0);
-    return ::frameIp(t, frame);
+    MyStackWalker walker(t, t->frame);
+    walker.walk(v);
   }
 
   virtual int
-  lineNumber(vm::Thread* vmt, object method, unsigned ip)
+  lineNumber(vm::Thread* t, object method, int ip)
   {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    if (methodFlags(t, method) & ACC_NATIVE) {
-      return NativeLine;
-    }
-
-    object table = codeLineNumberTable(t, methodCode(t, method));
-    if (table) {
-      // todo: do a binary search:
-      int last = UnknownLine;
-      for (unsigned i = 0; i < lineNumberTableLength(t, table); ++i) {
-        if (ip <= lineNumberIp(lineNumberTableBody(t, table, i))) {
-          return last;
-        } else {
-          last = lineNumberLine(lineNumberTableBody(t, table, i));
-        }
-      }
-      return last;
-    } else {
-      return UnknownLine;
-    }
+    return findLineNumber(static_cast<Thread*>(t), method, ip);
   }
 
   virtual object*

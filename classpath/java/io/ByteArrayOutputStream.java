@@ -14,6 +14,10 @@ public class ByteArrayOutputStream extends OutputStream {
     this(0);
   }
 
+  public int size() {
+    return length;
+  }
+
   public void write(int c) {
     if (buffer == null) {
       buffer = new byte[BufferSize];
@@ -61,7 +65,6 @@ public class ByteArrayOutputStream extends OutputStream {
       buffer = null;
       position = 0;
       chain = new Cell(b, 0, p, chain);
-      length -= p;
     }    
   }
 

@@ -241,6 +241,26 @@ Java_java_lang_Math_pow(JNIEnv*, jclass, jdouble val, jdouble exp)
   return pow(val, exp);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Math_natRandomInitialize(JNIEnv*, jclass, jlong val)
+{
+#ifdef WIN32
+  srand(val);
+#else
+  srand48(val);
+#endif
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_natRandom(JNIEnv*, jclass)
+{
+#ifdef WIN32
+  return rand();
+#else
+  return drand48();
+#endif
+}
+
 extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_floor(JNIEnv*, jclass, jdouble val)
 {

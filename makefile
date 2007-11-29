@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/List.class
+input = $(test-build)/Exceptions.class
 
 build-cxx = g++
 build-cc = gcc
@@ -108,10 +108,10 @@ ifeq ($(mode),debug)
 	cflags += -O0 -g3 -DNDEBUG
 endif
 ifeq ($(mode),stress)
-	cflags += -O0 -g3 -DVM_STRESS
+	cflags += -O0 -g3 -DNDEBUG -DVM_STRESS
 endif
 ifeq ($(mode),stress-major)
-	cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
+	cflags += -O0 -g3 -DNDEBUG -DVM_STRESS -DVM_STRESS_MAJOR
 endif
 ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG
@@ -145,12 +145,14 @@ interpreter-depends = \
 	$(src)/stream.h \
 	$(src)/constants.h \
 	$(src)/jnienv.h \
-	$(src)/machine.h
+	$(src)/machine.h \
+	$(src)/util.h
 
 interpreter-sources = \
 	$(src)/$(system).cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
+	$(src)/util.cpp \
 	$(src)/heap.cpp \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
