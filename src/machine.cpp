@@ -2715,6 +2715,17 @@ objectMonitor(Thread* t, object o, bool createNew)
 
     ENTER(t, Thread::ExclusiveState);
 
+    p = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
+    if (p) {
+      if (DebugMonitors) {
+        fprintf(stderr, "found monitor %p for object %x\n",
+                static_cast<System::Monitor*>(pointerValue(t, p)),
+                objectHash(t, o));
+      }
+
+      return static_cast<System::Monitor*>(pointerValue(t, p));
+    }
+
     System::Monitor* m;
     System::Status s = t->m->system->make(&m);
     expect(t, t->m->system->success(s));
