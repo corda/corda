@@ -11,6 +11,8 @@
 
 #ifdef WIN32
 #  include "windows.h"
+#  include "io.h"
+#  include "tchar.h"
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
@@ -22,6 +24,109 @@
 #  define SO_SUFFIX ".dll"
 #else
 #  define SO_SUFFIX ".so"
+#endif
+
+namespace {
+#ifdef WIN32
+  void makePipe(JNIEnv* e, HANDLE p[2])
+  {
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = 1;
+    sa.lpSecurityDescriptor = 0;
+  
+    BOOL success = CreatePipe(p, p + 1, &sa, 0);
+    if (not success) {
+      char* errStr = (char*) malloc(9 * sizeof(char));
+      snprintf(errStr, 9, "%d", (int) GetLastError());
+      throwNew(e, "java/io/IOException", errStr);
+    }
+  }
+  
+  int descriptor(JNIEnv* e, HANDLE h)
+  {
+    int fd = _open_osfhandle(reinterpret_cast<long>(h), 0);
+    if (fd == -1) {
+      throwNew(e, "java/io/IOException", strerror(errno));
+    }
+    return fd;
+  }
+#endif  
+}
+
+#ifdef WIN32
+extern "C" JNIEXPORT void JNICALL Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
+                                              jobjectArray command, jintArray process)
+{
+  //const char* line = e->GetStringUTFChars(command, 0);
+  
+  int size = 0;
+  for (int i = 0; i < e->GetArrayLength(command); ++i){
+    jstring element = (jstring) e->GetObjectArrayElement(command, i);
+    size += e->GetStringUTFLength(element) + 1;
+  } 
+   
+  char line[size];
+  char* linep = line;
+  for (int i = 0; i < e->GetArrayLength(command); ++i) {
+    if (i) *(linep++) = _T(' ');
+    jstring element = (jstring) e->GetObjectArrayElement(command, i);
+    const char* s =  e->GetStringUTFChars(element, 0);
+    _tcscpy(linep, s);
+    linep += e->GetStringUTFLength(element);
+  }
+  *(linep++) = _T('\0');
+ 
+  printf("command: %s\n", _T(line));
+ 
+  HANDLE in[] = { 0, 0 };
+  HANDLE out[] = { 0, 0 };
+  HANDLE err[] = { 0, 0 };
+  
+  makePipe(e, in);
+  SetHandleInformation(in[0], HANDLE_FLAG_INHERIT, 0);
+  jint inDescriptor = descriptor(e, in[0]);
+  if(e->ExceptionOccurred()) return;
+  e->SetIntArrayRegion(process, 1, 1, &inDescriptor);
+  makePipe(e, out);
+  SetHandleInformation(out[1], HANDLE_FLAG_INHERIT, 0);
+  jint outDescriptor = descriptor(e, out[1]);
+  if(e->ExceptionOccurred()) return;
+  e->SetIntArrayRegion(process, 2, 1, &outDescriptor);
+  makePipe(e, err);
+  SetHandleInformation(err[0], HANDLE_FLAG_INHERIT, 0);
+  jint errDescriptor = descriptor(e, err[0]);
+  if(e->ExceptionOccurred()) return;
+  e->SetIntArrayRegion(process, 3, 1, &errDescriptor);
+  
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&pi, sizeof(pi));
+ 
+  STARTUPINFO si;
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  si.dwFlags = STARTF_USESTDHANDLES;
+  si.hStdOutput = in[1];
+  si.hStdInput = out[0];
+  si.hStdError = err[1];
+ 
+  BOOL success = CreateProcess(0, (LPSTR) line, 0, 0, 1,
+                               CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
+                               0, 0, &si, &pi);
+
+  //e->ReleaseStringUTFChars(command, line);
+  
+  if (not success) {
+    char* errStr = (char*) malloc(9 * sizeof(char));
+    snprintf(errStr, 9, "%d", (int) GetLastError());
+    throwNew(e, "java/io/IOException", errStr);
+    return;
+  }
+  
+  jint pid = reinterpret_cast<jlong>(pi.hProcess);
+  e->SetIntArrayRegion(process, 0, 1, &pid);
+  
+}
 #endif
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -134,6 +239,26 @@ extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_pow(JNIEnv*, jclass, jdouble val, jdouble exp)
 {
   return pow(val, exp);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Math_natRandomInitialize(JNIEnv*, jclass, jlong val)
+{
+#ifdef WIN32
+  srand(val);
+#else
+  srand48(val);
+#endif
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_natRandom(JNIEnv*, jclass)
+{
+#ifdef WIN32
+  return rand();
+#else
+  return drand48();
+#endif
 }
 
 extern "C" JNIEXPORT jdouble JNICALL

@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.io.FileDescriptor;
+import java.util.StringTokenizer;
 
 public class Runtime {
   private static final Runtime instance = new Runtime();
@@ -34,7 +35,11 @@ public class Runtime {
 
   public Process exec(String command) throws IOException {
     int[] process = new int[4];
-    exec(command, process);
+    StringTokenizer t = new StringTokenizer(command);
+    String[] cmd = new String[t.countTokens()];
+    for (int i = 0; i < cmd.length; i++)
+      cmd[i] = t.nextToken();
+    exec(cmd, process);
     return new MyProcess(process[0], process[1], process[2], process[3]);
   }
 
@@ -44,7 +49,7 @@ public class Runtime {
     return new MyProcess(process[0], process[1], process[2], process[3]);
   }
 
-  private static native void exec(String command, int[] process);
+  //private static native void exec(String command, int[] process);
 
   private static native void exec(String[] command, int[] process);
 
