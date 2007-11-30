@@ -180,6 +180,8 @@ ThrowNew(Thread* t, jclass c, const char* message)
 void JNICALL
 DeleteLocalRef(Thread* t, jobject r)
 {
+  ENTER(t, Thread::ActiveState);
+
   disposeLocalReference(t, r);
 }
 
@@ -290,7 +292,7 @@ NewObject(Thread* t, jclass c, jmethodID m, ...)
   va_list a;
   va_start(a, m);
 
-  jobject r = NewObject(t, c, m, a);
+  jobject r = NewObjectV(t, c, m, a);
 
   va_end(a);
 
