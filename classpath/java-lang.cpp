@@ -11,6 +11,7 @@
 
 #ifdef WIN32
 #  include "windows.h"
+#  include "winbase.h"
 #  include "io.h"
 #  include "tchar.h"
 #  define SO_PREFIX ""
@@ -28,6 +29,25 @@
 
 namespace {
 #ifdef WIN32
+  char* getErrorStr(DWORD err){
+    // The poor man's error string, just print the error code 
+    char * errStr = (char*) malloc(9 * sizeof(char));
+    snprintf(errStr, 9, "%d", (int) err);
+    return errStr;
+    
+    // The better way to do this, if I could figure out how to convert LPTSTR to char*
+    //char* errStr;
+    //LPTSTR s;
+    //if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+    //                 FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, 0, &s, 0, NULL) == 0)
+    //{
+    //  errStr.Format("Unknown error occurred (%08x)", err);
+    //} else {
+    //  errStr = s;
+    //}
+    //return errStr;
+  }
+
   void makePipe(JNIEnv* e, HANDLE p[2])
   {
     SECURITY_ATTRIBUTES sa;
@@ -37,9 +57,7 @@ namespace {
   
     BOOL success = CreatePipe(p, p + 1, &sa, 0);
     if (not success) {
-      char* errStr = (char*) malloc(9 * sizeof(char));
-      snprintf(errStr, 9, "%d", (int) GetLastError());
-      throwNew(e, "java/io/IOException", errStr);
+      throwNew(e, "java/io/IOException", getErrorStr(GetLastError()));
     }
   }
   
@@ -55,10 +73,10 @@ namespace {
 }
 
 #ifdef WIN32
-extern "C" JNIEXPORT void JNICALL Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
-                                              jobjectArray command, jintArray process)
+extern "C" JNIEXPORT void JNICALL 
+Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
+                            jobjectArray command, jlongArray process)
 {
-  //const char* line = e->GetStringUTFChars(command, 0);
   
   int size = 0;
   for (int i = 0; i < e->GetArrayLength(command); ++i){
@@ -73,11 +91,10 @@ extern "C" JNIEXPORT void JNICALL Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
     const char* s =  e->GetStringUTFChars(element, 0);
     _tcscpy(linep, s);
+    e->ReleaseStringUTFChars(element, s);
     linep += e->GetStringUTFLength(element);
   }
   *(linep++) = _T('\0');
- 
-  printf("command: %s\n", _T(line));
  
   HANDLE in[] = { 0, 0 };
   HANDLE out[] = { 0, 0 };
@@ -85,19 +102,19 @@ extern "C" JNIEXPORT void JNICALL Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   
   makePipe(e, in);
   SetHandleInformation(in[0], HANDLE_FLAG_INHERIT, 0);
-  jint inDescriptor = descriptor(e, in[0]);
+  jlong inDescriptor = static_cast<jlong>(descriptor(e, in[0]));
   if(e->ExceptionOccurred()) return;
-  e->SetIntArrayRegion(process, 1, 1, &inDescriptor);
+  e->SetLongArrayRegion(process, 1, 1, &inDescriptor);
   makePipe(e, out);
   SetHandleInformation(out[1], HANDLE_FLAG_INHERIT, 0);
-  jint outDescriptor = descriptor(e, out[1]);
+  jlong outDescriptor = static_cast<jlong>(descriptor(e, out[1]));
   if(e->ExceptionOccurred()) return;
-  e->SetIntArrayRegion(process, 2, 1, &outDescriptor);
+  e->SetLongArrayRegion(process, 2, 1, &outDescriptor);
   makePipe(e, err);
   SetHandleInformation(err[0], HANDLE_FLAG_INHERIT, 0);
-  jint errDescriptor = descriptor(e, err[0]);
+  jlong errDescriptor = static_cast<jlong>(descriptor(e, err[0]));
   if(e->ExceptionOccurred()) return;
-  e->SetIntArrayRegion(process, 3, 1, &errDescriptor);
+  e->SetLongArrayRegion(process, 3, 1, &errDescriptor);
   
   PROCESS_INFORMATION pi;
   ZeroMemory(&pi, sizeof(pi));
@@ -113,19 +130,40 @@ extern "C" JNIEXPORT void JNICALL Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   BOOL success = CreateProcess(0, (LPSTR) line, 0, 0, 1,
                                CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
                                0, 0, &si, &pi);
-
-  //e->ReleaseStringUTFChars(command, line);
   
   if (not success) {
-    char* errStr = (char*) malloc(9 * sizeof(char));
-    snprintf(errStr, 9, "%d", (int) GetLastError());
-    throwNew(e, "java/io/IOException", errStr);
+    throwNew(e, "java/io/IOException", getErrorStr(GetLastError()));
     return;
   }
   
-  jint pid = reinterpret_cast<jlong>(pi.hProcess);
-  e->SetIntArrayRegion(process, 0, 1, &pid);
+  jlong pid = reinterpret_cast<jlong>(pi.hProcess);
+  e->SetLongArrayRegion(process, 0, 1, &pid);
   
+}
+
+extern "C" JNIEXPORT jint JNICALL 
+Java_java_lang_Runtime_exitValue(JNIEnv* e, jclass, jlong pid)
+{
+  DWORD exitCode;
+  BOOL success = GetExitCodeProcess(reinterpret_cast<HANDLE>(pid), &exitCode);
+  if(not success){
+    throwNew(e, "java/lang/Exception", getErrorStr(GetLastError()));
+  } else if(exitCode == STILL_ACTIVE){
+    throwNew(e, "java/lang/IllegalThreadStateException", "Process is still active");
+  }
+  return exitCode;
+}
+
+extern "C" JNIEXPORT jint JNICALL 
+Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid)
+{
+  DWORD exitCode;
+  WaitForSingleObject(reinterpret_cast<HANDLE>(pid), INFINITE);
+  BOOL success = GetExitCodeProcess(reinterpret_cast<HANDLE>(pid), &exitCode);
+  if(not success){
+    throwNew(e, "java/lang/Exception", getErrorStr(GetLastError()));
+  }
+  return exitCode;
 }
 #endif
 

@@ -34,28 +34,28 @@ public class Runtime {
   }
 
   public Process exec(String command) throws IOException {
-    int[] process = new int[4];
+    long[] process = new long[4];
     StringTokenizer t = new StringTokenizer(command);
     String[] cmd = new String[t.countTokens()];
     for (int i = 0; i < cmd.length; i++)
       cmd[i] = t.nextToken();
     exec(cmd, process);
-    return new MyProcess(process[0], process[1], process[2], process[3]);
+    return new MyProcess(process[0], (int) process[1], (int) process[2], (int) process[3]);
   }
 
   public Process exec(String[] command) {
-    int[] process = new int[4];
+    long[] process = new long[4];
     exec(command, process);
-    return new MyProcess(process[0], process[1], process[2], process[3]);
+    return new MyProcess(process[0], (int) process[1], (int) process[2], (int) process[3]);
   }
 
   //private static native void exec(String command, int[] process);
 
-  private static native void exec(String[] command, int[] process);
+  private static native void exec(String[] command, long[] process);
 
-  private static native int exitValue(int pid);
+  private static native int exitValue(long pid);
 
-  private static native int waitFor(int pid);
+  private static native int waitFor(long pid);
 
   private static native void load(String name, boolean mapName);
 
@@ -68,13 +68,13 @@ public class Runtime {
   public native long totalMemory();
 
   private static class MyProcess extends Process {
-    private int pid;
+    private long pid;
     private final int in;
     private final int out;
     private final int err;
     private int exitCode;
 
-    public MyProcess(int pid, int in, int out, int err) {
+    public MyProcess(long pid, int in, int out, int err) {
       this.pid = pid;
       this.in = in;
       this.out = out;
