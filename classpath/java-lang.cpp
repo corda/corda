@@ -8,6 +8,9 @@
 #include "stdint.h"
 #include "jni.h"
 #include "jni-util.h"
+#include "errno.h"
+#include "fcntl.h"
+#include "unistd.h"
 
 #ifdef WIN32
 #  include "windows.h"
@@ -17,6 +20,7 @@
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
+#include "sys/wait.h"
 #endif
 
 #ifdef __APPLE__
@@ -68,6 +72,35 @@ namespace {
       throwNew(e, "java/io/IOException", strerror(errno));
     }
     return fd;
+  }
+#else
+  void makePipe(JNIEnv* e, int p[2])
+  {
+    if(pipe(p) != 0) {
+      throwNew(e, "java/io/IOException", strerror(errno));
+    }
+  }
+  
+  void safeClose(int &fd)
+  {
+    if(fd != -1) close(fd);
+    fd = -1;
+  }
+  
+  void close(int p[2])
+  {
+    ::close(p[0]);
+    ::close(p[1]);
+  }
+  
+  void clean(JNIEnv* e, jobjectArray command, char** p)
+  {
+    int i = 0;
+    for(char** x = p; *x; ++x, ++i){
+      jstring element = (jstring) e->GetObjectArrayElement(command, i);
+      e->ReleaseStringUTFChars(element, *x);
+    }
+    free(p);
   }
 #endif  
 }
@@ -163,6 +196,129 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid)
   if(not success){
     throwNew(e, "java/lang/Exception", getErrorStr(GetLastError()));
   }
+  return exitCode;
+}
+#else
+extern "C" JNIEXPORT void JNICALL 
+Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
+                            jobjectArray command, jlongArray process)
+{
+  char** argv = static_cast<char**>(malloc((e->GetArrayLength(command) + 1) * sizeof(char*)));
+  int i;
+  for(i = 0; i < e->GetArrayLength(command); i++){
+    jstring element = (jstring) e->GetObjectArrayElement(command, i);
+    char* s = const_cast<char*>(e->GetStringUTFChars(element, 0));
+    argv[i] = s;
+  }
+  argv[i] = 0;
+  
+  int in[] = { -1, -1 };
+  int out[] = { -1, -1 };
+  int err[] = { -1, -1 };
+  int msg[] = { -1, -1 };
+  
+  makePipe(e, in);
+  if(e->ExceptionOccurred()) return;
+  jlong inDescriptor = static_cast<jlong>(in[0]);
+  e->SetLongArrayRegion(process, 1, 1, &inDescriptor);
+  makePipe(e, out);
+  if(e->ExceptionOccurred()) return;
+  jlong outDescriptor = static_cast<jlong>(out[1]);
+  e->SetLongArrayRegion(process, 1, 1, &outDescriptor);
+  makePipe(e, err);
+  if(e->ExceptionOccurred()) return;
+  jlong errDescriptor = static_cast<jlong>(err[0]);
+  e->SetLongArrayRegion(process, 1, 1, &errDescriptor);
+  makePipe(e, msg);
+  if(e->ExceptionOccurred()) return;
+  if(fcntl(msg[1], F_SETFD, FD_CLOEXEC) != 0) {
+    throwNew(e, "java/io/IOException", strerror(errno));
+    return;
+  }
+  
+  pid_t pid = fork();
+  switch(pid){
+  case -1: // error
+    throwNew(e, "java/io/IOException", strerror(errno));
+    return;
+  case 0: { // child
+    // Setup stdin, stdout and stderr
+    dup2(in[1], 1);
+    close(in);
+    dup2(out[0], 0);
+    close(out);
+    dup2(err[1], 2);
+    close(err);
+    close(msg[0]);
+    
+    execvp(argv[0], argv);
+    
+    // Error if here
+    char c = errno;
+    write(msg[1], &c, 1);
+    exit(127);
+  } break;
+    
+  default: { //parent
+    jlong JNIPid = static_cast<jlong>(pid);
+    e->SetLongArrayRegion(process, 0, 1, &JNIPid);
+    
+    safeClose(in[1]);
+    safeClose(out[0]);
+    safeClose(err[1]);
+    safeClose(msg[1]);
+      
+    char c;
+    int r = read(msg[0], &c, 1);
+    if(r == -1) {
+      throwNew(e, "java/io/IOException", strerror(errno));
+      return;
+    } else if(r) {
+      throwNew(e, "java/io/IOException", strerror(c));
+      return;
+    }
+  } break;
+  }
+  
+  safeClose(msg[0]);
+  clean(e, command, argv);
+  
+  fcntl(in[0], F_SETFD, FD_CLOEXEC);
+  fcntl(out[1], F_SETFD, FD_CLOEXEC);
+  fcntl(err[0], F_SETFD, FD_CLOEXEC);
+}
+
+extern "C" JNIEXPORT jint JNICALL 
+Java_java_lang_Runtime_exitValue(JNIEnv* e, jclass, jlong pid)
+{
+  int status;
+  pid_t returned = waitpid(pid, &status, WNOHANG);
+  if(returned == 0){
+    throwNew(e, "java/lang/IllegalThreadStateException", strerror(errno));
+  } else if(returned == -1){
+    throwNew(e, "java/lang/Exception", strerror(errno));
+  } 
+  
+  return WEXITSTATUS(status);
+}
+
+extern "C" JNIEXPORT jint JNICALL 
+Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid)
+{
+  bool finished = false;
+  int status;
+  int exitCode;
+  while(!finished){
+    waitpid(pid, &status, 0);
+    if(WIFEXITED(status)){
+      finished = true;
+      exitCode = WEXITSTATUS(status);
+    } else if(WIFSIGNALED(status)){
+      finished = true;
+      exitCode = -1;
+    }
+  }
+  
   return exitCode;
 }
 #endif
