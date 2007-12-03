@@ -11,6 +11,19 @@ public class Arrays {
     return (a == null && b == null) || (a != null && a.equals(b));
   }
 
+  public static <T> void sort(T[] array, Comparator<? super T> comparator) {
+    // insertion sort
+    for (int j = 1; j < array.length; ++j) {
+      T t = array[j];
+      int i = j - 1;
+      while (i >= 0 && comparator.compare(array[i], t) > 0) {
+        array[i + 1] = array[i];
+        i = i - 1;
+      }
+      array[i + 1] = t;
+    }
+  }
+
   public static <T> List<T> asList(final T ... array) {
     return new List<T>() {
       public String toString() {
