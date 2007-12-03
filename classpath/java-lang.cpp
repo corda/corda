@@ -1,7 +1,6 @@
 #include "math.h"
 #include "stdlib.h"
 #include "sys/time.h"
-#include "sys/wait.h"
 #include "time.h"
 #include "time.h"
 #include "string.h"
@@ -21,6 +20,7 @@
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
+#include "sys/wait.h"
 #endif
 
 #ifdef __APPLE__
