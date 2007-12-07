@@ -16,7 +16,7 @@ const unsigned Top = ~static_cast<unsigned>(0);
 
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool Verbose2 = false;
 const bool Debug = false;
 const bool DebugFixies = false;
@@ -606,7 +606,8 @@ initNextGen1(Context* c, unsigned footprint)
 inline bool
 oversizedGen2(Context* c)
 {
-  return c->gen2.position() < (c->gen2.capacity() / 4);
+  return c->gen2.capacity() > (InitialGen2CapacityInBytes / BytesPerWord)
+    and c->gen2.position() < (c->gen2.capacity() / 4);
 }
 
 inline void
