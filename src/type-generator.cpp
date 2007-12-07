@@ -1952,6 +1952,11 @@ writeConstructors(Output* out, Object* declarations)
           out->write(");\n");
 
           hasObjectMask = true;
+        } else if (m->type == Object::Array
+                   and equal(memberTypeName(m), "object")
+                   and not memberNoGC(m))
+        {
+          hasObjectMask = true;
         }
       }
 
