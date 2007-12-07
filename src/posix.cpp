@@ -581,6 +581,7 @@ class MySystem: public System {
   }
 
   virtual void dispose() {
+    assert(this, count == 0);
     pthread_mutex_destroy(&mutex);
     ::free(this);
   }
