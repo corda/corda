@@ -1401,6 +1401,8 @@ class MyHeap: public Heap {
   virtual void mark(void* p, unsigned offset, unsigned count) {
     if (c.client->isFixed(p)) {
       Fixie* f = fixie(p);
+      assert(&c, f->hasMask);
+
       unsigned size = c.client->sizeInWords(p);
 
       for (unsigned i = 0; i < count; ++i) {
