@@ -7,7 +7,7 @@ using namespace vm;
 namespace {
 
 // an object must survive TenureThreshold + 2 garbage collections
-// before being copied to gen2 (muat be at least 1):
+// before being copied to gen2 (must be at least 1):
 const unsigned TenureThreshold = 3;
 
 const unsigned FixieTenureThreshold = TenureThreshold + 2;
@@ -603,6 +603,12 @@ initNextGen1(Context* c, unsigned footprint)
   }
 }
 
+inline bool
+oversizedGen2(Context* c)
+{
+  return c->gen2.position() < (c->gen2.capacity() / 4);
+}
+
 inline void
 initNextGen2(Context* c)
 {
@@ -617,8 +623,15 @@ initNextGen2(Context* c)
     (&(c->nextGen2), 1, c->pageMap.scale * 1024, &(c->nextPageMap), true);
 
   unsigned minimum = c->gen2.position() + c->tenureFootprint + c->gen2padding;
-  unsigned desired = max
-    (minimum * 2, InitialGen2CapacityInBytes / BytesPerWord);
+  unsigned desired = minimum;
+
+  if (not oversizedGen2(c)) {
+    desired *= 2;
+  }
+
+  if (desired < InitialGen2CapacityInBytes / BytesPerWord) {
+    desired = InitialGen2CapacityInBytes / BytesPerWord;
+  }
 
   new (&(c->nextGen2)) Segment(c, &(c->nextHeapMap), desired, minimum);
 
@@ -1291,7 +1304,8 @@ collect2(Context* c)
 void
 collect(Context* c, unsigned footprint)
 {
-  if (c->tenureFootprint > c->gen2.remaining()
+  if (oversizedGen2(c)
+      or c->tenureFootprint + c->gen2padding > c->gen2.remaining()
       or c->fixieTenureFootprint)
   {
     c->mode = Heap::MajorCollection;
@@ -1339,6 +1353,14 @@ collect(Context* c, unsigned footprint)
             c->totalCollectionTime,
             run,
             c->totalTime - c->totalCollectionTime);
+
+    fprintf(stderr,
+            " - gen1: %8d/%8d bytes; "
+            "gen2: %8d/%8d bytes\n",
+            c->gen1.position() * BytesPerWord,
+            c->gen1.capacity() * BytesPerWord,
+            c->gen2.position() * BytesPerWord,
+            c->gen2.capacity() * BytesPerWord);
   }
 }
 
