@@ -2834,7 +2834,7 @@ compile(MyThread* t, Compiler* c, object method)
 
   unsigned footprint = methodParameterFootprint(t, method);
   unsigned locals = codeMaxLocals(t, code);
-  c->reserve(locals > footprint ? locals - footprint : 0);
+  c->sub(c->constant((locals - footprint) * BytesPerWord), c->stack());
 
   Buffer objectPool(t->m->system, 256);
   Buffer traceLog(t->m->system, 1024);

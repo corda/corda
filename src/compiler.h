@@ -89,8 +89,6 @@ class Compiler {
   virtual Operand* select4(Operand*) = 0;
   virtual Operand* select8(Operand*) = 0;
 
-  virtual void reserve(unsigned) = 0;
-
   virtual void prologue() = 0;
   virtual void epilogue() = 0;
 
