@@ -102,15 +102,6 @@ class Vector {
     T r; pop(&r, sizeof(T));
     return r;
   }
-
-  void update(Vector* v) {
-    dispose();
-
-    data = v->data;
-    position = v->position;
-    capacity = v->capacity;
-    minimumCapacity = v->minimumCapacity;
-  }
   
   System* s;
   uint8_t* data;

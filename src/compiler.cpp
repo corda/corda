@@ -37,7 +37,7 @@ class Context {
   Context(System* s, void* indirectCaller):
     s(s),
     code(s, 1024),
-    virtualStack(s, BytesPerWord * 32),
+    logicalStack(s, BytesPerWord * 32),
     operands(s, 8 * 1024),
     ipTable(s, sizeof(IpMapping) * 512),
     constantPool(s, BytesPerWord * 32),
@@ -53,13 +53,13 @@ class Context {
     registerPool.dispose();
     ipTable.dispose();
     operands.dispose();
-    virtualStack.dispose();
+    logicalStack.dispose();
     code.dispose();
   }
 
   System* s;
   Vector code;
-  Vector virtualStack;
+  Vector logicalStack;
   Vector operands;
   Vector ipTable;
   Vector constantPool;
@@ -156,6 +156,10 @@ class MyOperand: public Operand {
   }
 
   virtual unsigned size() = 0;
+
+  virtual void logicalPush(Context* c) { abort(c); }
+
+  virtual void logicalFlush(Context* c) { abort(c); }
 
   virtual void push(Context* c) { abort(c); }
 
@@ -446,10 +450,6 @@ class MemoryOperand: public MyOperand {
     return sizeof(MemoryOperand);
   }
 
-  virtual bool isStackReference() {
-    return false;
-  }
-
   virtual void push(Context* c) {
     assert(c, index == 0);
     assert(c, scale == 0);
@@ -480,21 +480,6 @@ class MemoryOperand: public MyOperand {
   int displacement;
   MyOperand* index;
   unsigned scale;
-};
-
-class StackOperand: public MemoryOperand {
- public:
-  StackOperand(MyOperand* base, int displacement):
-    MemoryOperand(base, displacement, 0, 1)
-  { }
-
-  virtual unsigned size() {
-    return sizeof(StackOperand);
-  }
-
-  virtual bool isStackReference() {
-    return true;
-  }
 };
 
 class SelectionOperand: public MyOperand {
@@ -556,10 +541,11 @@ memory(Context* c, MyOperand* base, int displacement,
   return c->operands.push(MemoryOperand(base, displacement, index, scale));
 }
 
-StackOperand*
+MemoryOperand*
 stack(Context* c, int displacement)
 {
-  return c->operands.push(StackOperand(register_(c, rbp), displacement));
+  return c->operands.push
+    (MemoryOperand(register_(c, rbp), displacement, 0, 1));
 }
 
 MyOperand*
@@ -574,41 +560,40 @@ selection(Context* c, SelectionOperand::SelectionType type, MyOperand* base)
   }
 }
 
-bool
-isStackReference(Context*, MyOperand* v)
-{
-  return v->type() == MyOperand::MemoryOperandType
-    and static_cast<MemoryOperand*>(v)->isStackReference();
-}
-
 void
 flushStack(Context* c)
 {
-  Vector newVirtualStack(c->s, c->virtualStack.length() * 2);
-  for (unsigned i = 0; i < c->virtualStack.length();) {
-    MyOperand* v = c->virtualStack.peek<MyOperand>(i);
-
-    if (not isStackReference(c, v)) {
-      v->push(c);
-
-      if (v->footprint() / BytesPerWord == 2) {
-        newVirtualStack.push(stack(c, c->stackIndex + 4));
-      } else {
-        newVirtualStack.push(stack(c, c->stackIndex));
-      }
-    } else {
-      newVirtualStack.append(v, v->size());
-    }
-
-    i += v->size();
+  for (unsigned i = 0; i < c->logicalStack.length(); i += BytesPerWord) {
+    (*c->logicalStack.peek<MyOperand*>(i))->logicalFlush(c);
   }
+}
 
-  c->virtualStack.update(&newVirtualStack);
+Register
+gpRegister(Context* c, unsigned index)
+{
+  switch (index) {
+  case 0:
+    return rdi;
+  case 1:
+    return rsi;
+  case 2:
+    return rdx;
+  case 3:
+    return rcx;
+  case 4:
+    return r8;
+  case 5:
+    return r9;
+  default:
+    abort(c);
+  }
 }
 
 unsigned
 pushArguments(Context* c, unsigned count, va_list list)
 {
+  flushStack(c);
+  
   MyOperand* arguments[count];
   unsigned footprint = 0;
   for (unsigned i = 0; i < count; ++i) {
@@ -616,11 +601,24 @@ pushArguments(Context* c, unsigned count, va_list list)
     footprint += pad(arguments[i]->footprint());
   }
 
+  const int GprCount = 6;
   for (int i = count - 1; i >= 0; --i) {
-    arguments[i]->push(c);
+    if (BytesPerWord == 8 and i < GprCount) {
+      arguments[i]->mov(c, register_(c, gpRegister(c, i)));
+    } else {
+      arguments[i]->push(c);
+    }
   }
 
-  return footprint;
+  if (BytesPerWord == 8) {
+    if (footprint > GprCount * BytesPerWord) {
+      return footprint - GprCount * BytesPerWord;
+    } else {
+      return 0;
+    }
+  } else {
+    return footprint;
+  }
 }
 
 class MyCompiler: public Compiler {
@@ -649,17 +647,17 @@ class MyCompiler: public Compiler {
   }
 
   virtual void push(Operand* v) {
-    c.virtualStack.push(static_cast<MyOperand*>(v));
+    static_cast<MyOperand*>(v)->logicalPush(&c);
   }
 
   virtual void push2(Operand* v) {
     push(v);
-    if (BytesPerWord == 8) push(0);
+    if (BytesPerWord == 8) push(immediate(&c, 0));
   }
 
   virtual Operand* stack(unsigned index) {
-    return c.virtualStack.peek<MyOperand>
-      (c.virtualStack.length() - ((index + 1) * BytesPerWord));
+    return c.logicalStack.peek<MyOperand>
+      (c.logicalStack.length() - ((index + 1) * BytesPerWord));
   }
 
   virtual Operand* stack2(unsigned index) {
@@ -667,7 +665,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* pop() {
-    return c.virtualStack.pop<MyOperand*>();
+    return c.logicalStack.pop<MyOperand*>();
   }
 
   virtual Operand* pop2() {
@@ -676,7 +674,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void pop(Operand* dst) {
-    c.virtualStack.pop<MyOperand*>()->mov(&c, static_cast<MyOperand*>(dst));
+    c.logicalStack.pop<MyOperand*>()->mov(&c, static_cast<MyOperand*>(dst));
   }
 
   virtual void pop2(Operand* dst) {
