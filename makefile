@@ -161,6 +161,12 @@ interpreter-sources = \
 interpreter-asm-sources = $(src)/$(asm).S
 
 ifeq ($(process),compile)
+	interpreter-depends += \
+		$(src)/compiler.h \
+		$(src)/vector.h
+
+	interpreter-sources += $(src)/compiler.cpp
+
 	interpreter-asm-sources += $(src)/compile.S
 endif
 

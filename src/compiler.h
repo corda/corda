@@ -16,14 +16,6 @@ class Promise {
 
 class Compiler {
  public:
-  enum SelectionType {
-    S1Selection,
-    S2Selection,
-    Z2Selection,
-    S4Selection,
-    S8Selection
-  };
-
   virtual ~Compiler() { }
 
   virtual Promise* poolOffset() = 0;
@@ -56,7 +48,7 @@ class Compiler {
   virtual Operand* alignedCall(Operand*) = 0;
   virtual Operand* indirectCall
   (Operand* address, unsigned argumentCount, ...) = 0;
-  virtual Operand* indirectCallNoReturn
+  virtual void indirectCallNoReturn
   (Operand* address, unsigned argumentCount, ...) = 0;
   virtual Operand* directCall
   (Operand* address, unsigned argumentCount, ...) = 0;
@@ -89,7 +81,11 @@ class Compiler {
   virtual Operand* memory(Operand* base, int displacement = 0,
                           Operand* index = 0, unsigned scale = 1) = 0;
 
-  virtual Operand* select(SelectionType, Operand*) = 0;
+  virtual Operand* select1(Operand*) = 0;
+  virtual Operand* select2(Operand*) = 0;
+  virtual Operand* select2z(Operand*) = 0;
+  virtual Operand* select4(Operand*) = 0;
+  virtual Operand* select8(Operand*) = 0;
 
   virtual void prologue() = 0;
   virtual void epilogue() = 0;

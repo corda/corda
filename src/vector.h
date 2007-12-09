@@ -5,7 +5,6 @@
 
 namespace vm {
 
-template <class T = uint8_t>
 class Vector {
  public:
   Vector(System* s, unsigned minimumCapacity):
@@ -40,15 +39,13 @@ class Vector {
   }
 
   void get(unsigned offset, void* dst, unsigned size) {
-    assert(s, offset >= 0);
     assert(s, offset + size <= position);
-    mempcy(dst, data + offset, size);
+    memcpy(dst, data + offset, size);
   }
 
   void set(unsigned offset, const void* src, unsigned size) {
-    assert(s, offset >= 0);
     assert(s, offset + size <= position);
-    mempcy(data + offset, src, size);
+    memcpy(data + offset, src, size);
   }
 
   void pop(void* dst, unsigned size) {
@@ -56,11 +53,16 @@ class Vector {
     position -= size;
   }
 
-  void* append(const void* p, unsigned size) {
+  void* allocate(unsigned size) {
     ensure(size);
     void* r = data + position;
-    memcpy(r, p, size);
     position += size;
+    return r;
+  }
+
+  void* append(const void* p, unsigned size) {
+    void* r = allocate(size);
+    memcpy(r, p, size);
     return r;
   }
 
@@ -80,15 +82,34 @@ class Vector {
     append(&v, BytesPerWord);
   }
 
-  template <class C = T>
-  C* push(const C& v) {
-    return static_cast<C*>(append(&v, sizeof(C)));
+  unsigned length() {
+    return position;
   }
 
-  template <class C = T>
-  C pop() {
-    C r; pop(&r, sizeof(C));
+  template <class T>
+  T* peek(unsigned offset) {
+    assert(s, offset + sizeof(T) <= position);
+    return reinterpret_cast<T*>(data + offset);
+  }
+
+  template <class T>
+  T* push(const T& v) {
+    return static_cast<T*>(append(&v, sizeof(T)));
+  }
+
+  template <class T>
+  T pop() {
+    T r; pop(&r, sizeof(T));
     return r;
+  }
+
+  void update(Vector* v) {
+    dispose();
+
+    data = v->data;
+    position = v->position;
+    capacity = v->capacity;
+    minimumCapacity = v->minimumCapacity;
   }
   
   System* s;

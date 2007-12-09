@@ -5,6 +5,25 @@ using namespace vm;
 
 namespace {
 
+enum Register {
+  rax = 0,
+  rcx = 1,
+  rdx = 2,
+  rbx = 3,
+  rsp = 4,
+  rbp = 5,
+  rsi = 6,
+  rdi = 7,
+  r8 = 8,
+  r9 = 9,
+  r10 = 10,
+  r11 = 11,
+  r12 = 12,
+  r13 = 13,
+  r14 = 14,
+  r15 = 15,
+};
+
 class IpMapping {
  public:
   IpMapping(unsigned ip, unsigned offset): ip(ip), offset(offset) { }
@@ -24,7 +43,8 @@ class Context {
     constantPool(s, BytesPerWord * 32),
     registerPool(s, BytesPerWord * 8),
     promises(s, 1024),
-    indirectCaller(reinterpret_cast<intptr_t>(indirectCaller))
+    indirectCaller(reinterpret_cast<intptr_t>(indirectCaller)),
+    stackIndex(- BytesPerWord)
   { }
 
   void dispose() {
@@ -39,13 +59,14 @@ class Context {
 
   System* s;
   Vector code;
-  Vector<MyOperand*> virtualStack;
+  Vector virtualStack;
   Vector operands;
-  Vector<IpMapping> ipTable;
-  Vector<MyOperand*> constantPool;
-  Vector<MyOperand*> registerPool;
+  Vector ipTable;
+  Vector constantPool;
+  Vector registerPool;
   Vector promises;
-  intptr_t indirectCaller;  
+  intptr_t indirectCaller;
+  int stackIndex;
 };
 
 inline void NO_RETURN
@@ -65,7 +86,7 @@ assert(Context* c, bool v)
 inline void
 expect(Context* c, bool v)
 {
-  expect(c->system, v);
+  expect(c->s, v);
 }
 
 class MyPromise: public Promise {
@@ -78,7 +99,7 @@ class MyPromise: public Promise {
 
   MyPromise(intptr_t value): resolved(false), value_(value) { }
 
-  virtual unsigned value(System* s) {
+  virtual unsigned value(System* s UNUSED) {
     assert(s, resolved);
     return value_;
   }
@@ -100,7 +121,7 @@ class PoolPromise: public MyPromise {
 
 class CodePromise: public MyPromise {
  public:
-  PoolPromise(intptr_t value): MyPromise(value) { }
+  CodePromise(intptr_t value): MyPromise(value) { }
 
   virtual PromiseType type() {
     return CodePromiseType;
@@ -109,7 +130,7 @@ class CodePromise: public MyPromise {
 
 class IpPromise: public MyPromise {
  public:
-  PoolPromise(intptr_t value): MyPromise(value) { }
+  IpPromise(intptr_t value): MyPromise(value) { }
 
   virtual PromiseType type() {
     return IpPromiseType;
@@ -120,8 +141,10 @@ class MyOperand: public Operand {
  public:
   enum OperandType {
     ImmediateOperandType,
+    AbsoluteOperandType,
     RegisterOperandType,
-    MemoryOperandType
+    MemoryOperandType,
+    SelectionOperandType
   };
 
   virtual ~MyOperand() { }
@@ -136,9 +159,15 @@ class MyOperand: public Operand {
 
   virtual void push(Context* c) { abort(c); }
 
+  virtual void pop(Context* c) { abort(c); }
+
   virtual void mov(Context* c, MyOperand*) { abort(c); }
 
   virtual void cmp(Context* c, MyOperand*) { abort(c); }
+
+  virtual void call(Context* c) { abort(c); }
+
+  virtual void alignedCall(Context* c) { abort(c); }
 
   virtual void jl(Context* c) { abort(c); }
 
@@ -178,6 +207,141 @@ class MyOperand: public Operand {
 
   virtual void neg(Context* c) { abort(c); }
 };
+
+inline bool
+isInt8(intptr_t v)
+{
+  return v == static_cast<int8_t>(v);
+}
+
+inline bool
+isInt32(intptr_t v)
+{
+  return v == static_cast<int32_t>(v);
+}
+
+Register
+registerValue(Context* c, MyOperand* v);
+
+Promise*
+absoluteValue(Context* c, MyOperand* v);
+
+void
+setAbsoluteValue(Context* c, MyOperand* v, Promise* value);
+
+MyOperand*
+memoryBase(Context* c, MyOperand* v);
+
+int
+memoryDisplacement(Context* c, MyOperand* v);
+
+MyOperand*
+memoryIndex(Context* c, MyOperand* v);
+
+unsigned
+memoryScale(Context* c, MyOperand* v);
+
+Register
+asRegister(Context* c, MyOperand* v);
+
+void
+rex(Context* c)
+{
+  if (BytesPerWord == 8) {
+    c->code.append(0x48);
+  }
+}
+
+void
+ret(Context* c)
+{
+  c->code.append(0xc3);
+}
+
+void
+encode(Context* c, uint8_t instruction, uint8_t zeroPrefix,
+       uint8_t bytePrefix, uint8_t wordPrefix,
+       Register a, Register b, int32_t offset)
+{
+  c->code.append(instruction);
+
+  uint8_t prefix;
+  if (offset == 0 and b != rbp) {
+    prefix = zeroPrefix;
+  } else if (isInt8(offset)) {
+    prefix = bytePrefix;
+  } else {
+    prefix = wordPrefix;
+  }
+
+  c->code.append(prefix | (a << 3) | b);
+
+  if (b == rsp) {
+    c->code.append(0x24);
+  }
+
+  if (offset == 0 and b != rbp) {
+    // do nothing
+  } else if (isInt8(offset)) {
+    c->code.append(offset);
+  } else {
+    c->code.append4(offset);
+  }
+}
+
+class RegisterOperand: public MyOperand {
+ public:
+  RegisterOperand(Register value):
+    value(value)
+  { }
+
+  virtual OperandType type() {
+    return RegisterOperandType;
+  }
+
+  virtual unsigned size() {
+    return sizeof(RegisterOperand);
+  }
+
+  virtual void push(Context* c) {
+    c->code.append(0x50 | value);
+  }
+
+  virtual void mov(Context* c, MyOperand* dst) {
+    switch (dst->type()) {
+    case RegisterOperandType:
+      if (value != registerValue(c, dst)) {
+        rex(c);
+        c->code.append(0x89);
+        c->code.append(0xc0 | (value << 3) | registerValue(c, dst));
+      }
+      break;
+
+    case MemoryOperandType:
+      rex(c);
+      encode(c, 0x89, 0, 0x40, 0x80, value,
+             asRegister(c, memoryBase(c, dst)),
+             memoryDisplacement(c, dst));
+      break;
+
+    default: abort(c);
+    }
+  }
+
+  Register value;
+};
+
+RegisterOperand*
+temporary(Context* c)
+{
+  return c->registerPool.pop<RegisterOperand*>();
+}
+
+void
+release(Context* c, RegisterOperand* v)
+{
+  c->registerPool.push(v);
+}
 
 class ImmediateOperand: public MyOperand {
  public:
@@ -219,9 +383,9 @@ class ImmediateOperand: public MyOperand {
     case MemoryOperandType:
       rex(c);
       encode(c, 0xc7, 0, 0x40, 0x80, rax,
-             asRegister(memoryBase(c, dst)),
+             asRegister(c, memoryBase(c, dst)),
              memoryDisplacement(c, dst));
-      c->code.append4(v);
+      c->code.append4(value);
       break;
 
     default: abort(c);
@@ -248,98 +412,13 @@ class AbsoluteOperand: public MyOperand {
   Promise* value;
 };
 
-class RegisterOperand: public MyOperand {
- public:
-  RegisterOperand(Register value):
-    value(value)
-  { }
-
-  virtual OperandType type() {
-    return RegisterOperandType;
-  }
-
-  virtual unsigned size() {
-    return sizeof(RegisterOperand);
-  }
-
-  virtual void push(Context* c) {
-    c->code.append(0x50 | value);
-  }
-
-  virtual void mov(Context* c, MyOperand* dst) {
-    switch (dst->type()) {
-    case RegisterOperandType:
-      if (value != registerValue(c, dst)) {
-        rex(c);
-        c->code.append(0x89);
-        c->code.append(0xc0 | (value << 3) | registerValue(c, dst));
-      }
-      break;
-
-    case MemoryOperandType:
-      rex(c);
-      encode(c, 0x89, 0, 0x40, 0x80, src,
-             asRegister(memoryBase(c, dst)),
-             memoryDisplacement(c, dst));
-      break;
-
-    default: abort(c);
-    }
-  }
-
-  Register value;
-};
-
-RegisterOperand*
-temporary(Context* c)
-{
-  return c->registerPool.pop<RegisterOperand*>();
-}
-
-void
-release(Context* c, RegisterOperand* v)
-{
-  return c->registerPool.push(v);
-}
-
-void
-encode(Context* c, uint8_t instruction, uint8_t zeroPrefix,
-       uint8_t bytePrefix, uint8_t wordPrefix,
-       Register a, Register b, int32_t offset)
-{
-  c->code.append(instruction);
-
-  uint8_t prefix;
-  if (offset == 0 and b != rbp) {
-    prefix = zeroPrefix;
-  } else if (isByte(offset)) {
-    prefix = bytePrefix;
-  } else {
-    prefix = wordPrefix;
-  }
-
-  c->code.append(prefix | (a << 3) | b);
-
-  if (b == rsp) {
-    c->code.append(0x24);
-  }
-
-  if (offset == 0 and b != rbp) {
-    // do nothing
-  } else if (isInt8(offset)) {
-    c->code.append(offset);
-  } else {
-    c->code.append4(offset);
-  }
-}
-
 Register
 asRegister(Context* c, MyOperand* v)
 {
-  if (v->type() == RegisterOperandType) {
-    return registerValue(v);
+  if (v->type() == MyOperand::RegisterOperandType) {
+    return registerValue(c, v);
   } else {
-    assert(c, v->type() == MemoryOperandType);
+    assert(c, v->type() == MyOperand::MemoryOperandType);
  
     RegisterOperand* tmp = temporary(c);
     v->mov(c, tmp);
@@ -383,7 +462,7 @@ class MemoryOperand: public MyOperand {
     case RegisterOperandType:
       rex(c);
       encode(c, 0x8b, 0, 0x40, 0x80, registerValue(c, dst),
-             base, displacement);
+             asRegister(c, base), displacement);
       break;
 
     case MemoryOperandType: {
@@ -393,7 +472,7 @@ class MemoryOperand: public MyOperand {
       release(c, tmp);
     } break;
 
-    default: abort(t);
+    default: abort(c);
     }
   }
 
@@ -420,8 +499,16 @@ class StackOperand: public MemoryOperand {
 
 class SelectionOperand: public MyOperand {
  public:
-  SelectionOperand(Compiler::SelectionType type, MyOperand* base):
-    type(type), base(base)
+  enum SelectionType {
+    S1Selection,
+    S2Selection,
+    Z2Selection,
+    S4Selection,
+    S8Selection
+  };
+
+  SelectionOperand(SelectionType type, MyOperand* base):
+    selectionType(type), base(base)
   { }
 
   virtual OperandType type() {
@@ -429,7 +516,7 @@ class SelectionOperand: public MyOperand {
   }
 
   virtual unsigned footprint() {
-    if (type == Compiler::S8Selection) {
+    if (selectionType == S8Selection) {
       return 8;
     } else {
       return 4;
@@ -440,7 +527,7 @@ class SelectionOperand: public MyOperand {
     return sizeof(SelectionOperand);
   }
 
-  Compiler::SelectionType type;
+  SelectionType selectionType;
   MyOperand* base;
 };
 
@@ -451,7 +538,7 @@ immediate(Context* c, intptr_t v)
 }
 
 AbsoluteOperand*
-absolute(Context* c, intptr_t v)
+absolute(Context* c, Promise* v)
 {
   return c->operands.push(AbsoluteOperand(v));
 }
@@ -476,10 +563,10 @@ stack(Context* c, int displacement)
 }
 
 MyOperand*
-selection(Context* c, Compiler::SelectionType type, MyOperand* base)
+selection(Context* c, SelectionOperand::SelectionType type, MyOperand* base)
 {
-  if ((type == S4Selection and BytesPerWord == 4)
-      or (type == S8Selection and BytesPerWord == 8))
+  if ((type == SelectionOperand::S4Selection and BytesPerWord == 4)
+      or (type == SelectionOperand::S8Selection and BytesPerWord == 8))
   {
     return base;
   } else {
@@ -488,18 +575,18 @@ selection(Context* c, Compiler::SelectionType type, MyOperand* base)
 }
 
 bool
-isStackReference(Context* c, MyOperand* v)
+isStackReference(Context*, MyOperand* v)
 {
-  return v->type() == MemoryOperandType
+  return v->type() == MyOperand::MemoryOperandType
     and static_cast<MemoryOperand*>(v)->isStackReference();
 }
 
 void
 flushStack(Context* c)
 {
-  Stack newVirtualStack;
+  Vector newVirtualStack(c->s, c->virtualStack.length() * 2);
   for (unsigned i = 0; i < c->virtualStack.length();) {
-    MyOperand* v = c->virtualStack.peek<MyOperand*>(i);
+    MyOperand* v = c->virtualStack.peek<MyOperand>(i);
 
     if (not isStackReference(c, v)) {
       v->push(c);
@@ -510,13 +597,30 @@ flushStack(Context* c)
         newVirtualStack.push(stack(c, c->stackIndex));
       }
     } else {
-      newVirtualStack.push(v, v->size());
+      newVirtualStack.append(v, v->size());
     }
 
     i += v->size();
   }
 
-  c->virtualStack.swap(&newVirtualStack);
+  c->virtualStack.update(&newVirtualStack);
+}
+
+unsigned
+pushArguments(Context* c, unsigned count, va_list list)
+{
+  MyOperand* arguments[count];
+  unsigned footprint = 0;
+  for (unsigned i = 0; i < count; ++i) {
+    arguments[i] = va_arg(list, MyOperand*);
+    footprint += pad(arguments[i]->footprint());
+  }
+
+  for (int i = count - 1; i >= 0; --i) {
+    arguments[i]->push(c);
+  }
+
+  return footprint;
 }
 
 class MyCompiler: public Compiler {
@@ -526,16 +630,17 @@ class MyCompiler: public Compiler {
   { }
 
   virtual Promise* poolOffset() {
-    return c.promises.push(PoolPromise(constantPool.length() / BytesPerWord));
+    return c.promises.push
+      (PoolPromise(c.constantPool.length() / BytesPerWord));
   }
 
   virtual Promise* codeOffset() {
-    return c.promises.push(CodePromise(code.length()));
+    return c.promises.push(CodePromise(c.code.length()));
   }
 
   virtual Operand* poolAppend(Operand* v) {
     Operand* r = absolute(&c, poolOffset());
-    constantPool.push(static_cast<MyOperand*>(v));
+    c.constantPool.push(static_cast<MyOperand*>(v));
     return r;
   }
 
@@ -553,15 +658,16 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* stack(unsigned index) {
-    return c.virtualStack.peek(stack.size() - index - 1);
+    return c.virtualStack.peek<MyOperand>
+      (c.virtualStack.length() - ((index + 1) * BytesPerWord));
   }
 
   virtual Operand* stack2(unsigned index) {
-    return c.virtualStack.peek(stack.size() - index - 1);
+    return stack(index);
   }
 
   virtual Operand* pop() {
-    return pop(c);
+    return c.virtualStack.pop<MyOperand*>();
   }
 
   virtual Operand* pop2() {
@@ -570,7 +676,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void pop(Operand* dst) {
-    pop(c)->mov(&c, static_cast<MyOperand*>(dst));
+    c.virtualStack.pop<MyOperand*>()->mov(&c, static_cast<MyOperand*>(dst));
   }
 
   virtual void pop2(Operand* dst) {
@@ -628,45 +734,49 @@ class MyCompiler: public Compiler {
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
-    pushArguments(&c, argumentCount, a);
+    unsigned footprint = pushArguments(&c, argumentCount, a);
     va_end(a);
 
-    static_cast<MyOperand*>(address)->mov(&c, register_(rax));
-    immediate(&c, indirectCaller)->call(&c);
+    static_cast<MyOperand*>(address)->mov(&c, register_(&c, rax));
+    immediate(&c, c.indirectCaller)->call(&c);
 
-    popArguments(&c, argumentCount);
+    immediate(&c, footprint)->sub(&c, register_(&c, rsp));
+
+    return register_(&c, rax);
   }
 
-  virtual Operand* indirectCallNoReturn
+  virtual void indirectCallNoReturn
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
     pushArguments(&c, argumentCount, a);    
     va_end(a);
 
-    static_cast<MyOperand*>(address)->mov(&c, register_(rax));
-    immediate(&c, indirectCaller)->call(&c);
+    static_cast<MyOperand*>(address)->mov(&c, register_(&c, rax));
+    immediate(&c, c.indirectCaller)->call(&c);
   }
 
   virtual Operand* directCall
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
-    pushArguments(&c, argumentCount, a);
+    unsigned footprint = pushArguments(&c, argumentCount, a);
     va_end(a);
 
     static_cast<MyOperand*>(address)->call(&c);
 
-    popArguments(&c, argumentCount);
+    immediate(&c, footprint)->sub(&c, register_(&c, rsp));
+
+    return register_(&c, rax);
   }
 
   virtual void return_(Operand* v) {
-    static_cast<MyOperand*>(v)->mov(&c, register_(rax));
-    ret(c);
+    static_cast<MyOperand*>(v)->mov(&c, register_(&c, rax));
+    ret();
   }
 
   virtual void ret() {
-    ret(c);
+    ::ret(&c);
   }
 
   virtual void mov(Operand* src, Operand* dst) {
@@ -757,11 +867,33 @@ class MyCompiler: public Compiler {
   virtual Operand* memory(Operand* base, int displacement,
                           Operand* index, unsigned scale)
   {
-    return memory(&c, base, displacement, index, scale);
+    return ::memory(&c, static_cast<MyOperand*>(base), displacement,
+                    static_cast<MyOperand*>(index), scale);
   }
 
-  virtual Operand* select(SelectionType type, Operand* v) {
-    return selection(&c, type, v);
+  virtual Operand* select1(Operand* v) {
+    return selection(&c, SelectionOperand::S1Selection,
+                     static_cast<MyOperand*>(v));
+  }
+
+  virtual Operand* select2(Operand* v) {
+    return selection(&c, SelectionOperand::S2Selection, 
+                     static_cast<MyOperand*>(v));
+  }
+
+  virtual Operand* select2z(Operand* v) {
+    return selection(&c, SelectionOperand::Z2Selection, 
+                     static_cast<MyOperand*>(v));
+  }
+
+  virtual Operand* select4(Operand* v) {
+    return selection(&c, SelectionOperand::S4Selection, 
+                     static_cast<MyOperand*>(v));
+  }
+
+  virtual Operand* select8(Operand* v) {
+    return selection(&c, SelectionOperand::S8Selection, 
+                     static_cast<MyOperand*>(v));
   }
 
   virtual void prologue() {
@@ -775,19 +907,20 @@ class MyCompiler: public Compiler {
   }
 
   virtual void startLogicalIp(unsigned ip) {
-    c.ipTable.push(IpMapping(ip, code.length()));
+    c.ipTable.push(IpMapping(ip, c.code.length()));
   }
 
   virtual Operand* logicalIp(unsigned ip) {
-    return absolute(&c, promises.push(IpPromise(ip)));
+    return absolute(&c, c.promises.push(IpPromise(ip)));
   }
 
   virtual unsigned logicalIpToOffset(unsigned ip) {
     unsigned bottom = 0;
-    unsigned top = c.ipTable.size();
+    unsigned top = c.ipTable.length() / sizeof(IpMapping);
     for (unsigned span = top - bottom; span; span = top - bottom) {
       unsigned middle = bottom + (span / 2);
-      IpMapping* mapping = c.ipTable.get(middle);
+      IpMapping* mapping = c.ipTable.peek<IpMapping>
+        (middle * sizeof(IpMapping));
 
       if (ip == mapping->ip) {
         return mapping->offset;
@@ -798,25 +931,25 @@ class MyCompiler: public Compiler {
       }
     }
 
-    abort(s);
+    abort(&c);
   }
 
   virtual unsigned size() {
     return c.code.length();
   }
 
-  virtual void writeTo(void* out) {
+  virtual void writeTo(void*) {
     // todo
   }
 
-  virtual void updateCall(void* returnAddress, void* newTarget) {
+  virtual void updateCall(void*, void*) {
     // todo
   }
 
   virtual void dispose() {
     c.dispose();
 
-    s->free(this);
+    c.s->free(this);
   }
 
   Context c;
