@@ -11,11 +11,19 @@ class Promise {
  public:
   virtual ~Promise() { }
 
-  virtual unsigned value() = 0;
+  virtual unsigned value(System* s) = 0;
 };
 
 class Compiler {
  public:
+  enum SelectionType {
+    S1Selection,
+    S2Selection,
+    Z2Selection,
+    S4Selection,
+    S8Selection
+  };
+
   virtual ~Compiler() { }
 
   virtual Promise* poolOffset() = 0;
@@ -78,16 +86,10 @@ class Compiler {
   virtual void xor_(Operand* v, Operand* dst) = 0;
   virtual void neg(Operand*) = 0;
 
-  virtual Operand* memory(Operand* base) = 0;
-  virtual Operand* memory(Operand* base, unsigned displacement) = 0;
-  virtual Operand* memory(Operand* base, unsigned displacement,
-                          Operand* index, unsigned scale) = 0;
+  virtual Operand* memory(Operand* base, int displacement = 0,
+                          Operand* index = 0, unsigned scale = 1) = 0;
 
-  virtual Operand* select1(Operand*) = 0;
-  virtual Operand* select2(Operand*) = 0;
-  virtual Operand* select2z(Operand*) = 0;
-  virtual Operand* select4(Operand*) = 0;
-  virtual Operand* select8(Operand*) = 0;
+  virtual Operand* select(SelectionType, Operand*) = 0;
 
   virtual void prologue() = 0;
   virtual void epilogue() = 0;
