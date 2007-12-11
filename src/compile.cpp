@@ -18,6 +18,8 @@ vmJump(void* address, void* base, void* stack);
 
 namespace {
 
+const bool Verbose = true;
+
 class MyThread: public Thread {
  public:
   class CallTrace {
@@ -351,7 +353,7 @@ class Frame {
   }
 
   static unsigned traceSizeInBytes(Thread* t, object method) {
-    return BytesPerWord + BytesPerWord + 1 + mapSizeInWords(t, method);
+    return sizeof(TraceElement) + mapSizeInWords(t, method);
   }
 
   void pushedInt() {
@@ -655,21 +657,26 @@ class Frame {
   }
 
   void loadInt(unsigned index) {
-    assert(t, index < localSize(t, method));
-    assert(t, getBit(map, index) == 0);
+    assert(t, index < codeMaxLocals(t, methodCode(t, method)));
+    assert(t, index < parameterFootprint(t, method)
+           or getBit(map, index - parameterFootprint(t, method)) == 0);
     pushInt(c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void loadLong(unsigned index) {
-    assert(t, index < localSize(t, method) - 1);
-    assert(t, getBit(map, index) == 0);
-    assert(t, getBit(map, index + 1) == 0);
+    assert(t, index < static_cast<unsigned>
+           (codeMaxLocals(t, methodCode(t, method)) - 1));
+    assert(t, index < parameterFootprint(t, method)
+           or getBit(map, index - parameterFootprint(t, method)) == 0);
+    assert(t, index < parameterFootprint(t, method)
+           or getBit(map, index + 1 - parameterFootprint(t, method)) == 0);
     pushLong(c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void loadObject(unsigned index) {
-    assert(t, index < localSize(t, method));
-    assert(t, getBit(map, index) != 0);
+    assert(t, index < codeMaxLocals(t, methodCode(t, method)));
+    assert(t, index < parameterFootprint(t, method)
+           or getBit(map, index - parameterFootprint(t, method)) != 0);
     pushObject(c->memory(c->base(), localOffset(t, index, method)));
   }
 
@@ -2733,7 +2740,7 @@ object
 finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
        Vector* traceLog)
 {
-  unsigned count = ceiling(c->size(), BytesPerWord);
+  unsigned count = ceiling(c->codeSize() + c->poolSize(), BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
   object result = allocate2
     (t, SingletonBody + size * BytesPerWord, true, true);
@@ -2827,6 +2834,14 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
 
         set(t, code, CodeLineNumberTable, newTable);
       }
+    }
+
+    if (Verbose) {
+      fprintf(stderr, "%s.%s from %p to %p\n",
+              &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+              &byteArrayBody(t, methodName(t, method), 0),
+              start,
+              start + c->codeSize());
     }
   }
 
@@ -3638,7 +3653,7 @@ processor(MyThread* t)
       c->jmp(c->indirectTarget());
 
       p->indirectCaller = static_cast<uint8_t*>
-        (t->m->system->allocate(c->size()));
+        (t->m->system->allocate(c->codeSize()));
       c->writeTo(p->indirectCaller);
 
       c->dispose();
@@ -3664,6 +3679,11 @@ compile(MyThread* t, object method)
     
       object compiled = compile(t, c, method);
       set(t, method, MethodCompiled, compiled);
+
+      if (methodVirtual(t, method)) {
+        classVtable(t, methodClass(t, method), methodOffset(t, method))
+          = &singletonValue(t, compiled, 0);
+      }
 
       c->dispose();
     }

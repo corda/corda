@@ -23,7 +23,7 @@ public class Misc {
     int b = 2;
     int c = a + b;
 
-//     Misc m = new Misc();
+    Misc m = new Misc();
 //     String s = "hello";
 //     m.foo(s);
 //     m.bar(s);

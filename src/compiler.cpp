@@ -29,6 +29,7 @@ const unsigned RegisterCount = BytesPerWord * 2;
 
 class Context;
 class ImmediateOperand;
+class AbsoluteOperand;
 class RegisterOperand;
 class MemoryOperand;
 class StackOperand;
@@ -53,12 +54,21 @@ isInt32(intptr_t v)
 
 class IpTask {
  public:
+  enum Priority {
+    LowPriority,
+    HighPriority
+  };
+
   IpTask(IpTask* next): next(next) { }
 
   virtual ~IpTask() { }
 
   virtual void run(Context* c, unsigned ip, unsigned start, unsigned end,
                    uint8_t* code, unsigned offset) = 0;
+
+  virtual Priority priority() {
+    return LowPriority;
+  }
   
   IpTask* next;
 };
@@ -86,6 +96,10 @@ class MyPromise: public Promise {
  public:
   MyPromise(intptr_t key): key(key) { }
 
+  virtual unsigned value(Compiler*);
+
+  virtual unsigned value(Context*) = 0;
+
   intptr_t key;
 };
 
@@ -93,14 +107,14 @@ class PoolPromise: public MyPromise {
  public:
   PoolPromise(intptr_t key): MyPromise(key) { }
 
-  virtual unsigned value(Compiler*);
+  virtual unsigned value(Context*);
 };
 
 class CodePromise: public MyPromise {
  public:
   CodePromise(intptr_t key): MyPromise(key) { }
 
-  virtual unsigned value(Compiler*);
+  virtual unsigned value(Context*);
 };
 
 class CodePromiseTask: public IpTask {
@@ -113,6 +127,10 @@ class CodePromiseTask: public IpTask {
     p->key = offset + (p->key - start);
   }
 
+  virtual Priority priority() {
+    return HighPriority;
+  }
+
   CodePromise* p;
 };
 
@@ -120,7 +138,7 @@ class IpPromise: public MyPromise {
  public:
   IpPromise(intptr_t key): MyPromise(key) { }
 
-  virtual unsigned value(Compiler*);
+  virtual unsigned value(Context*);
 };
 
 class MyOperand: public Operand {
@@ -178,6 +196,8 @@ class MyOperand: public Operand {
 
   virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
 
+  virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
+
   virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
 };
 
@@ -186,6 +206,8 @@ class RegisterOperand: public MyOperand {
   RegisterOperand(Register value):
     value(value), reserved(false), stack(0)
   { }
+
+  virtual StackOperand* logicalPush(Context* c);
 
   virtual void logicalFlush(Context* c UNUSED, StackOperand* s UNUSED) {
     assert(c, stack == s);
@@ -209,6 +231,7 @@ class RegisterOperand: public MyOperand {
 
   virtual void accept(Context*, Operation, RegisterOperand*);
   virtual void accept(Context*, Operation, ImmediateOperand*);
+  virtual void accept(Context*, Operation, AbsoluteOperand*);
   virtual void accept(Context*, Operation, MemoryOperand*);
 
   Register value;
@@ -240,6 +263,10 @@ class AbsoluteOperand: public MyOperand {
   { }
 
   virtual void apply(Context* c, Operation operation);
+
+  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
+    operand->accept(c, operation, this);
+  }
 
   virtual void setAbsolute(Context*, intptr_t v) {
     value->key = v;
@@ -311,6 +338,10 @@ class StackOperand: public MyOperand {
     } else {
       index = 0;
     }
+  }
+
+  virtual StackOperand* logicalPush(Context* c) {
+    return base->logicalPush(c);
   }
 
   virtual void accept(Context* c, Operation operation,
@@ -626,6 +657,24 @@ encode(Context* c, uint8_t instruction, uint8_t zeroPrefix,
   }
 }
 
+StackOperand*
+RegisterOperand::logicalPush(Context* c)
+{
+  if (reserved or stack) {
+    RegisterOperand* tmp = temporary(c, false);
+    tmp->accept(c, mov, this);
+    c->stack = new (c->zone.allocate(sizeof(StackOperand)))
+      StackOperand(tmp, c->stack);
+    tmp->stack = c->stack;
+  } else {
+    c->stack = new (c->zone.allocate(sizeof(StackOperand)))
+      StackOperand(this, c->stack);
+    stack = c->stack;
+  }
+
+  return c->stack;
+}
+
 void
 RegisterOperand::apply(Context* c, Operation operation)
 {
@@ -680,13 +729,21 @@ RegisterOperand::accept(Context* c, Operation operation,
                         ImmediateOperand* operand)
 {
   switch (operation) {
-  case sub:
-    assert(c, isInt8(operand->value)); // todo
-
+  case mov:
     rex(c);
-    c->code.append(0x83);
-    c->code.append(0xe8 | value);
-    c->code.append(operand->value);    
+    c->code.append(0xb8 | value);
+    c->code.appendAddress(operand->value);
+    break;
+
+  case sub:
+    if (operand->value) {
+      assert(c, isInt8(operand->value)); // todo
+
+      rex(c);
+      c->code.append(0x83);
+      c->code.append(0xe8 | value);
+      c->code.append(operand->value);
+    }
     break;
 
   default: abort(c);
@@ -708,6 +765,42 @@ RegisterOperand::accept(Context* c, Operation operation,
   }
 }
 
+class AbsoluteMovTask: public IpTask {
+ public:
+  AbsoluteMovTask(unsigned start, MyPromise* promise, IpTask* next):
+    IpTask(next), start(start), promise(promise)
+  { }
+
+  virtual void run(Context* c UNUSED, unsigned, unsigned start, unsigned,
+                   uint8_t* code, unsigned offset)
+  {
+    uint8_t* instruction = code + offset + (this->start - start);
+    intptr_t v = reinterpret_cast<intptr_t>(code + promise->value(c));
+    memcpy(instruction + (BytesPerWord / 8) + 1, &v, BytesPerWord);
+  }
+
+  unsigned start;
+  MyPromise* promise;
+};
+
+void
+RegisterOperand::accept(Context* c, Operation operation,
+                        AbsoluteOperand* operand)
+{
+  switch (operation) {
+  case mov: {
+    IpMapping* mapping = currentMapping(c);
+    mapping->task = new (c->zone.allocate(sizeof(AbsoluteMovTask)))
+      AbsoluteMovTask(c->code.length(), operand->value, mapping->task);
+    
+    accept(c, mov, immediate(c, 0));
+    accept(c, mov, memory(c, this, 0, 0, 1));
+  } break;
+
+  default: abort(c);
+  }
+}
+
 class DirectCallTask: public IpTask {
  public:
   DirectCallTask(unsigned start, uint8_t* address, IpTask* next):
@@ -718,8 +811,11 @@ class DirectCallTask: public IpTask {
                    uint8_t* code, unsigned offset)
   {
     uint8_t* instruction = code + offset + (this->start - start);
+    assert(c, *instruction == 0xe8);
+
     intptr_t v = address - instruction;
     assert(c, isInt32(v));
+
     int32_t v32 = v;
     memcpy(instruction + 1, &v32, 4);
   }
@@ -747,6 +843,13 @@ ImmediateOperand::apply(Context* c, Operation operation)
     
     c->code.append(0xE8);
     c->code.append4(0);
+  } break;
+
+  case alignedCall: {
+    while ((c->code.length() + 1) % 4) {
+      c->code.append(0x90);
+    }
+    apply(c, call);
   } break;
     
   default: abort(c);
@@ -776,6 +879,10 @@ void
 MemoryOperand::apply(Context* c, Operation operation)
 {
   switch (operation) {
+  case pop:
+    encode(c, 0x8f, 0, 0x40, 0x80, rax, base->asRegister(c), displacement);
+    break;
+
   default: abort(c);
   }
 }
@@ -809,6 +916,67 @@ MemoryOperand::accept(Context* c, Operation operation,
     break;
 
   default: abort(c);
+  }
+}
+
+unsigned
+PoolPromise::value(Context* c)
+{
+  if (c->ipTable) {
+    return c->code.length() + key;
+  }
+
+  abort(c);
+}
+
+unsigned
+CodePromise::value(Context* c)
+{
+  if (c->ipTable) {
+    return key;
+  }
+
+  abort(c);
+}
+
+unsigned
+IpPromise::value(Context* c)
+{
+  if (c->ipTable) {
+    unsigned bottom = 0;
+    unsigned top = c->ipMappings.length() / BytesPerWord;
+    for (unsigned span = top - bottom; span; span = top - bottom) {
+      unsigned middle = bottom + (span / 2);
+      IpMapping* mapping = c->ipTable[middle];
+
+      if (key == mapping->ip) {
+        return mapping->start;
+      } else if (key < mapping->ip) {
+        top = middle;
+      } else if (key > mapping->ip) {
+        bottom = middle + 1;
+      }
+    }
+  }
+
+  abort(c);
+}
+
+void
+runTasks(Context* c, uint8_t* out, IpTask::Priority priority)
+{
+  uint8_t* p = out;
+  for (unsigned i = 0; i < c->ipMappings.length() / BytesPerWord; ++i) {
+    IpMapping* mapping = c->ipTable[i];
+    int length = mapping->end - mapping->start;
+
+    for (IpTask* t = mapping->task; t; t = t->next) {
+      if (t->priority() == priority) {
+        t->run(c, mapping->ip, mapping->start, mapping->end, out, p - out);
+      }
+    }
+
+    p += length;
   }
 }
 
@@ -1140,8 +1308,12 @@ class MyCompiler: public Compiler {
     return new (c.zone.allocate(sizeof(IpPromise))) IpPromise(ip);
   }
 
-  virtual unsigned size() {
-    return c.code.length() + c.constantPool.length();
+  virtual unsigned codeSize() {
+    return c.code.length();
+  }
+
+  virtual unsigned poolSize() {
+    return c.constantPool.length();
   }
 
   virtual void writeTo(uint8_t* out) {
@@ -1172,21 +1344,22 @@ class MyCompiler: public Compiler {
     for (unsigned i = 0; i < tableSize; ++i) {
       IpMapping* mapping = c.ipTable[i];
       int length = mapping->end - mapping->start;
-      memcpy(p, c.code.data + mapping->start, length);
 
-      for (IpTask* t = mapping->task; t; t = t->next) {
-        t->run(&c, mapping->ip, mapping->start, mapping->end, out, p - out);
-      }
+      memcpy(p, c.code.data + mapping->start, length);
 
       p += length;
     }
 
     memcpy(p, c.constantPool.data, c.constantPool.length());
+
+    runTasks(&c, out, IpTask::HighPriority);
+    runTasks(&c, out, IpTask::LowPriority);
   }
 
   virtual void updateCall(void* returnAddress, void* newTarget) {
     uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
     assert(&c, *instruction == 0xE8);
+    assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
 
     int32_t v = static_cast<uint8_t*>(newTarget)
       - static_cast<uint8_t*>(returnAddress);
@@ -1203,52 +1376,9 @@ class MyCompiler: public Compiler {
 };
 
 unsigned
-PoolPromise::value(Compiler* compiler)
+MyPromise::value(Compiler* compiler)
 {
-  Context* c = &(static_cast<MyCompiler*>(compiler)->c);
-
-  if (c->ipTable) {
-    return c->code.length() + key;
-  }
-
-  abort(c);
-}
-
-unsigned
-CodePromise::value(Compiler* compiler)
-{
-  Context* c = &(static_cast<MyCompiler*>(compiler)->c);
-
-  if (c->ipTable) {
-    return key;
-  }
-
-  abort(c);
-}
-
-unsigned
-IpPromise::value(Compiler* compiler)
-{
-  Context* c = &(static_cast<MyCompiler*>(compiler)->c);
-
-  if (c->ipTable) {
-    unsigned bottom = 0;
-    unsigned top = c->ipMappings.length() / BytesPerWord;
-    for (unsigned span = top - bottom; span; span = top - bottom) {
-      unsigned middle = bottom + (span / 2);
-      IpMapping* mapping = c->ipTable[middle];
-
-      if (key == mapping->ip) {
-        return mapping->start;
-      } else if (key < mapping->ip) {
-        top = middle;
-      } else if (key > mapping->ip) {
-        bottom = middle + 1;
-      }
-    }
-  }
-
-  abort(c);
+  return value(&(static_cast<MyCompiler*>(compiler)->c));
 }
 
 } // namespace
