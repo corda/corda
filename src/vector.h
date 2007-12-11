@@ -35,6 +35,7 @@ class Vector {
         s->free(data);
       }
       data = newData;
+      capacity = newCapacity;
     }
   }
 
@@ -82,6 +83,10 @@ class Vector {
     append(&v, BytesPerWord);
   }
 
+  void appendAddress(void* v) {
+    append(&v, BytesPerWord);
+  }
+
   unsigned length() {
     return position;
   }
@@ -90,17 +95,6 @@ class Vector {
   T* peek(unsigned offset) {
     assert(s, offset + sizeof(T) <= position);
     return reinterpret_cast<T*>(data + offset);
-  }
-
-  template <class T>
-  T* push(const T& v) {
-    return static_cast<T*>(append(&v, sizeof(T)));
-  }
-
-  template <class T>
-  T pop() {
-    T r; pop(&r, sizeof(T));
-    return r;
   }
   
   System* s;

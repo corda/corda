@@ -73,12 +73,6 @@ listAppend(Thread* t, object list, object value);
 object
 vectorAppend(Thread* t, object vector, object value);
 
-object
-treeQuery(Thread* t, object tree, intptr_t key, object sentinal);
-
-object
-treeInsert(Thread* t, object tree, object node, object sentinal);
-
 } // vm
 
 #endif//UTIL_H

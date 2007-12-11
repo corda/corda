@@ -181,7 +181,7 @@ class MyStackWalker: public Processor::StackWalker {
     if (nativeMethod) {
       return 0;
     } else {
-      return treeNodeKey(t, node);
+      return traceNodeAddress(t, node);
     }
   }
 
@@ -606,7 +606,7 @@ class Frame {
     assert(t, sp - 2 >= localSize(t, method));
     assert(t, getBit(map, sp - 1) == 0);
     assert(t, getBit(map, sp - 2) == 0);
-    return c->stack2(1);
+    return c->stack(1);
   }
 
   Operand* topObject() {
@@ -2743,11 +2743,9 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     for (unsigned i = 0; i < objectPool->length(); i += sizeof(PoolElement)) {
       PoolElement* e = objectPool->peek<PoolElement>(i);
 
-      singletonMarkObject
-        (t, result, e->offset->value(t->m->system) / BytesPerWord);
+      singletonMarkObject(t, result, e->offset->value(c) / BytesPerWord);
 
-      set(t, result, SingletonBody + e->offset->value(t->m->system),
-          e->value);
+      set(t, result, SingletonBody + e->offset->value(c), e->value);
     }
 
     unsigned traceSize = Frame::traceSizeInBytes(t, method);
@@ -2756,8 +2754,8 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
       TraceElement* e = traceLog->peek<TraceElement>(i);
 
       object node = makeTraceNode
-        (t, reinterpret_cast<intptr_t>(start + e->offset->value(t->m->system)),
-         0, 0, 0, method, e->target, e->virtualCall, mapSize / BytesPerWord,
+        (t, reinterpret_cast<intptr_t>(start + e->offset->value(c)),
+         0, method, e->target, e->virtualCall, mapSize / BytesPerWord,
          false);
 
       if (mapSize) {
@@ -2784,13 +2782,16 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
             (t, newTable, i);
 
           exceptionHandlerStart(newHandler)
-            = c->logicalIpToOffset(exceptionHandlerStart(oldHandler));
+            = c->logicalIpToOffset(exceptionHandlerStart(oldHandler))
+            ->value(c);
 
           exceptionHandlerEnd(newHandler)
-            = c->logicalIpToOffset(exceptionHandlerEnd(oldHandler));
+            = c->logicalIpToOffset(exceptionHandlerEnd(oldHandler))
+            ->value(c);
 
           exceptionHandlerIp(newHandler)
-            = c->logicalIpToOffset(exceptionHandlerIp(oldHandler));
+            = c->logicalIpToOffset(exceptionHandlerIp(oldHandler))
+            ->value(c);
 
           exceptionHandlerCatchType(newHandler)
             = exceptionHandlerCatchType(oldHandler);
@@ -2811,7 +2812,8 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
           LineNumber* oldLine = lineNumberTableBody(t, oldTable, i);
           LineNumber* newLine = lineNumberTableBody(t, newTable, i);
 
-          lineNumberIp(newLine) = c->logicalIpToOffset(lineNumberIp(oldLine));
+          lineNumberIp(newLine) = c->logicalIpToOffset(lineNumberIp(oldLine))
+            ->value(c);
 
           lineNumberLine(newLine) = lineNumberLine(oldLine);
         }
@@ -2891,7 +2893,7 @@ compileMethod(MyThread* t)
   } else {
     if (not traceNodeVirtualCall(t, node)) {
       Compiler* c = makeCompiler(t->m->system, 0);
-      c->updateCall(reinterpret_cast<void*>(treeNodeKey(t, node)),
+      c->updateCall(reinterpret_cast<void*>(traceNodeAddress(t, node)),
                     &singletonValue(t, methodCompiled(t, target), 0));
       c->dispose();
     }
@@ -3335,8 +3337,8 @@ class MyProcessor: public Processor {
     s(s),
     defaultCompiled(0),
     nativeCompiled(0),
-    addressTree(0),
-    addressTreeSentinal(0),
+    addressTable(0),
+    addressCount(0),
     indirectCaller(0)
   { }
 
@@ -3451,7 +3453,7 @@ class MyProcessor: public Processor {
     if (t == t->m->rootThread) {
       v->visit(&defaultCompiled);
       v->visit(&nativeCompiled);
-      v->visit(&addressTree);
+      v->visit(&addressTable);
     }
 
     for (Reference* r = t->reference; r; r = r->next) {
@@ -3595,8 +3597,8 @@ class MyProcessor: public Processor {
   System* s;
   object defaultCompiled;
   object nativeCompiled;
-  object addressTree;
-  object addressTreeSentinal;
+  object addressTable;
+  unsigned addressCount;
   void* indirectCaller;
 };
 
@@ -3604,14 +3606,11 @@ MyProcessor*
 processor(MyThread* t)
 {
   MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
-  if (p->addressTree == 0) {
+  if (p->addressTable == 0) {
     ACQUIRE(t, t->m->classLock);
 
-    if (p->addressTree == 0) {
-      p->addressTreeSentinal = makeTraceNode(t, 0, 0, 0, 0, 0, 0, 0, 0, false);
-      set(t, p->addressTreeSentinal, TreeNodeLeft, p->addressTreeSentinal);
-      set(t, p->addressTreeSentinal, TreeNodeRight, p->addressTreeSentinal);
-      p->addressTree = p->addressTreeSentinal;
+    if (p->addressTable == 0) {
+      p->addressTable = makeArray(t, 128, true);
 
       Compiler* c = makeCompiler(t->m->system, 0);
 
@@ -3656,16 +3655,68 @@ object
 findTraceNode(MyThread* t, void* address)
 {
   MyProcessor* p = processor(t);
-  return treeQuery(t, p->addressTree, reinterpret_cast<intptr_t>(address),
-                   p->addressTreeSentinal);
+
+  intptr_t key = reinterpret_cast<intptr_t>(address);
+  unsigned index = static_cast<uintptr_t>(key) 
+    & (arrayLength(t, p->addressTable) - 1);
+
+  for (object n = arrayBody(t, p->addressTable, index);
+       n; n = tripleThird(t, n))
+  {
+    intptr_t k = traceNodeAddress(t, n);
+
+    if (k == key) {
+      return n;
+    }
+  }
+  abort(t);
+}
+
+object
+resizeTable(MyThread* t, object oldTable, unsigned newLength)
+{
+  PROTECT(t, oldTable);
+
+  object newTable = makeArray(t, newLength, true);
+
+  for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
+    object next;
+    for (object p = arrayBody(t, oldTable, i); p; p = next) {
+      next = traceNodeNext(t, p);
+
+      intptr_t k = traceNodeAddress(t, p);
+
+      unsigned index = k & (newLength - 1);
+
+      set(t, p, TraceNodeNext, arrayBody(t, newTable, index));
+      set(t, newTable, ArrayBody + (index * BytesPerWord), p);
+    }
+  }
+
+  return newTable;
 }
 
 void
 insertTraceNode(MyThread* t, object node)
 {
   MyProcessor* p = processor(t);
-  p->addressTree = treeInsert
-    (t, p->addressTree, node, p->addressTreeSentinal);
+  ENTER(t, Thread::ExclusiveState);
+
+  ++ p->addressCount;
+
+  if (p->addressCount >= arrayLength(t, p->addressTable) * 2) { 
+    PROTECT(t, node);
+
+    p->addressTable = resizeTable
+      (t, p->addressTable, arrayLength(t, p->addressTable) * 2);
+  }
+
+  intptr_t key = traceNodeAddress(t, node);
+  unsigned index = static_cast<uintptr_t>(key)
+    & (arrayLength(t, p->addressTable) - 1);
+
+  set(t, node, TraceNodeNext, arrayBody(t, p->addressTable, index));
+  set(t, p->addressTable, ArrayBody + (index * BytesPerWord), node);
 }
 
 } // namespace

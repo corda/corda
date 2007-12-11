@@ -7,11 +7,13 @@ namespace vm {
 
 class Operand { };
 
+class Compiler;
+
 class Promise {
  public:
   virtual ~Promise() { }
 
-  virtual unsigned value(System* s) = 0;
+  virtual unsigned value(Compiler*) = 0;
 };
 
 class Compiler {
@@ -20,32 +22,23 @@ class Compiler {
 
   virtual Promise* poolOffset() = 0;
   virtual Promise* codeOffset() = 0;
+  virtual Promise* logicalIpToOffset(unsigned) = 0;
 
   virtual Operand* poolAppend(Operand*) = 0;
 
   virtual Operand* constant(intptr_t) = 0;
-
-  virtual void push(Operand*) = 0;
-  virtual void push2(Operand*) = 0;
-  virtual Operand* stack(unsigned) = 0;
-  virtual Operand* stack2(unsigned) = 0;
-  virtual Operand* pop() = 0;
-  virtual Operand* pop2() = 0;
-  virtual void pop(Operand*) = 0;
-  virtual void pop2(Operand*) = 0;
 
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
   virtual Operand* indirectTarget() = 0;
   virtual Operand* temporary() = 0;
+  virtual Operand* stack(unsigned) = 0;
   virtual void release(Operand*) = 0;
 
   virtual Operand* label() = 0;
   virtual void mark(Operand*) = 0;
 
-  virtual Operand* call(Operand*) = 0;
-  virtual Operand* alignedCall(Operand*) = 0;
   virtual Operand* indirectCall
   (Operand* address, unsigned argumentCount, ...) = 0;
   virtual void indirectCallNoReturn
@@ -56,6 +49,14 @@ class Compiler {
   virtual void return_(Operand*) = 0;
   virtual void ret() = 0;
 
+  virtual void push(Operand*) = 0;
+  virtual void push2(Operand*) = 0;
+  virtual Operand* pop() = 0;
+  virtual Operand* pop2() = 0;
+  virtual void pop(Operand*) = 0;
+  virtual void pop2(Operand*) = 0;
+  virtual Operand* call(Operand*) = 0;
+  virtual Operand* alignedCall(Operand*) = 0;
   virtual void mov(Operand* src, Operand* dst) = 0;
   virtual void cmp(Operand* subtrahend, Operand* minuend) = 0;
   virtual void jl(Operand*) = 0;
@@ -92,12 +93,11 @@ class Compiler {
 
   virtual void startLogicalIp(unsigned) = 0;
   virtual Operand* logicalIp(unsigned) = 0;
-  virtual unsigned logicalIpToOffset(unsigned) = 0;
 
   virtual unsigned size() = 0;
   virtual void writeTo(void*) = 0;
 
-  virtual void updateCall(void* returnAddress, void* newTarget);
+  virtual void updateCall(void* returnAddress, void* newTarget) = 0;
 
   virtual void dispose() = 0;
 };
