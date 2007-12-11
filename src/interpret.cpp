@@ -2868,7 +2868,7 @@ class MyProcessor: public Processor {
   }
 
   virtual void
-  initVtable(Thread*, object)
+  initVtable(vm::Thread*, object)
   {
     // ignore
   }
