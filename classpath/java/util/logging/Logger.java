@@ -73,6 +73,11 @@ public class Logger {
     private static final int NAME_WIDTH = 14;
     private static final int METHOD_WIDTH = 15;
     private static final int LEVEL_WIDTH = 8;
+    private final String newline;
+
+    public DefaultHandler() {
+      newline = System.getProperty("line.separator");
+    }
 
     public Object clone() { return this; }
     public void close() { }
@@ -84,7 +89,7 @@ public class Logger {
         sb.append(t.getClass().getName());
         sb.append(": ");
         sb.append(t.getMessage());
-        sb.append('\n');
+        sb.append(newline);
 
         for (StackTraceElement elt : t.getStackTrace()) {
           sb.append('\t');
@@ -102,7 +107,7 @@ public class Logger {
 	    sb.append(lineNumber);
 	  }
           sb.append(')');
-          sb.append('\n');
+          sb.append(newline);
         }
         maybeLogThrown(sb, t.getCause());
       }
