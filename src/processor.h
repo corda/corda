@@ -68,6 +68,9 @@ class Processor {
             unsigned vtableLength) = 0;
 
   virtual void
+  initVtable(Thread* t, object c) = 0;
+
+  virtual void
   initClass(Thread* t, object c) = 0;
 
   virtual void
@@ -95,6 +98,9 @@ class Processor {
   virtual object
   invokeList(Thread* t, const char* className, const char* methodName,
              const char* methodSpec, object this_, va_list arguments) = 0;
+
+  virtual void
+  dispose(Thread* t) = 0;
 
   virtual void
   dispose() = 0;

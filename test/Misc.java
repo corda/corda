@@ -15,24 +15,24 @@ public class Misc {
   }
 
   public static void main(String[] args) {
-    boolean v = Boolean.valueOf("true");
+//     boolean v = Boolean.valueOf("true");
 
-    ClassLoader.getSystemClassLoader().toString();
+//     ClassLoader.getSystemClassLoader().toString();
 
     int a = 2;
     int b = 2;
     int c = a + b;
 
-    Misc m = new Misc();
-    String s = "hello";
-    m.foo(s);
-    m.bar(s);
-    baz(s);
+//     Misc m = new Misc();
+//     String s = "hello";
+//     m.foo(s);
+//     m.bar(s);
+//     baz(s);
 
-    int d = alpha;
-    beta = 42;
-    alpha = 43;
-    int e = beta;
-    int f = alpha;
+//     int d = alpha;
+//     beta = 42;
+//     alpha = 43;
+//     int e = beta;
+//     int f = alpha;
   }
 }

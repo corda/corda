@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Exceptions.class
+input = $(test-build)/Misc.class
 
 build-cxx = g++
 build-cc = gcc
@@ -40,6 +40,7 @@ ranlib = ranlib
 objcopy = objcopy
 vg = nice valgrind --suppressions=valgrind.supp --undef-value-errors=no \
 	--num-callers=32 --db-attach=yes --freelist-vol=100000000
+vg += --leak-check=full
 db = gdb --args
 javac = javac
 jar = jar
@@ -105,7 +106,7 @@ ifeq ($(platform),windows)
 endif
 
 ifeq ($(mode),debug)
-	cflags += -O0 -g3 -DNDEBUG
+	cflags += -O0 -g3
 endif
 ifeq ($(mode),stress)
 	cflags += -O0 -g3 -DNDEBUG -DVM_STRESS

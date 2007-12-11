@@ -95,7 +95,7 @@ class Compiler {
   virtual Operand* logicalIp(unsigned) = 0;
 
   virtual unsigned size() = 0;
-  virtual void writeTo(void*) = 0;
+  virtual void writeTo(uint8_t*) = 0;
 
   virtual void updateCall(void* returnAddress, void* newTarget) = 0;
 

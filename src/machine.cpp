@@ -1498,7 +1498,7 @@ makeArrayClass(Thread* t, unsigned dimensions, object spec,
   object vtable = classVirtualTable
     (t, arrayBody(t, t->m->types, Machine::JobjectType));
 
-  return t->m->processor->makeClass
+  object c = t->m->processor->makeClass
     (t,
      0,
      0,
@@ -1515,6 +1515,10 @@ makeArrayClass(Thread* t, unsigned dimensions, object spec,
      elementClass,
      t->m->loader,
      arrayLength(t, vtable));
+
+  t->m->processor->initVtable(t, c);
+
+  return c;
 }
 
 object
@@ -1661,6 +1665,8 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
   }
 
   set(t, class_, ClassVirtualTable, vtable);
+
+  t->m->processor->initVtable(t, class_);
 
   hashMapInsert(t, t->m->bootstrapClassMap, n, class_, byteArrayHash);
 }
@@ -1986,6 +1992,8 @@ Thread::exit()
 void
 Thread::dispose()
 {
+  m->processor->dispose(this);
+
   if (systemThread) {
     systemThread->dispose();
   }
@@ -2470,6 +2478,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
      classStaticTable(t, class_),
      classLoader(t, class_),
      vtableLength);
+
+  t->m->processor->initVtable(t, real);
 
   updateClassTables(t, real, class_);
 

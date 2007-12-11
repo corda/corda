@@ -314,7 +314,9 @@ class Frame {
   }
 
   ~Frame() {
-    t->m->system->free(codeMask);
+    if (next == 0) {
+      t->m->system->free(codeMask);
+    }
   }
 
   Operand* append(object o) {
@@ -378,13 +380,17 @@ class Frame {
   }
 
   void storedInt(unsigned index) {
-    assert(t, index < localSize(t, method));
-    clearBit(map, index);
+    if (index >= parameterFootprint(t, method)) {
+      assert(t, index - parameterFootprint(t, method) < localSize(t, method));
+      clearBit(map, index - parameterFootprint(t, method));
+    }
   }
 
   void storedObject(unsigned index) {
-    assert(t, index < localSize(t, method));
-    markBit(map, index);
+    if (index >= parameterFootprint(t, method)) {
+      assert(t, index - parameterFootprint(t, method) < localSize(t, method));
+      markBit(map, index - parameterFootprint(t, method));
+    }
   }
 
   void dupped() {
@@ -2729,7 +2735,8 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
 {
   unsigned count = ceiling(c->size(), BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
-  object result = allocate2(t, size * BytesPerWord, true, true);
+  object result = allocate2
+    (t, SingletonBody + size * BytesPerWord, true, true);
   initSingleton(t, result, size, true); 
   singletonMask(t, result)[0] = 1;
 
@@ -3108,11 +3115,13 @@ visitStack(MyThread* t, Heap::Visitor* v)
   while (true) {
     object node = findTraceNode(t, *stack);
     if (node) {
-      object method = traceNodeMethod(t, node);
-      
+      PROTECT(t, node);
+
       // we only need to visit the parameters of this method if the
       // caller is native.  Otherwise, the caller owns them.
       object next = findTraceNode(t, static_cast<void**>(base)[1]);
+      object method = traceNodeMethod(t, node);
+      
       if (next == 0) {
         visitParameters(t, v, base, method);
       }
@@ -3345,7 +3354,7 @@ class MyProcessor: public Processor {
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
-    MyThread* t = new (s->allocate(sizeof(Thread)))
+    MyThread* t = new (s->allocate(sizeof(MyThread)))
       MyThread(m, javaThread, parent);
     t->init();
     return t;
@@ -3410,21 +3419,23 @@ class MyProcessor: public Processor {
             object loader,
             unsigned vtableLength)
   {
-    object c = vm::makeClass
+    return vm::makeClass
       (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
        objectMask, name, super, interfaceTable, virtualTable, fieldTable,
        methodTable, staticTable, loader, vtableLength, false);
+  }
 
-    for (unsigned i = 0; i < vtableLength; ++i) {
+  virtual void
+  initVtable(Thread* t, object c)
+  {
+    for (unsigned i = 0; i < classLength(t, c); ++i) {
       object compiled
-        = ((flags & ACC_NATIVE)
+        = ((classFlags(t, c) & ACC_NATIVE)
            ? getNativeCompiled(static_cast<MyThread*>(t))
            : getDefaultCompiled(static_cast<MyThread*>(t)));
 
       classVtable(t, c, i) = &singletonBody(t, compiled, 0);
     }
-
-    return c;
   }
 
   virtual void
@@ -3586,6 +3597,13 @@ class MyProcessor: public Processor {
     return 0;
   }
 
+  virtual void dispose(Thread* thread) {
+    MyThread* t = static_cast<MyThread*>(thread);
+    while (t->reference) {
+      vm::dispose(t, t->reference);
+    }
+  }
+
   virtual void dispose() {
     if (indirectCaller) {
       s->free(indirectCaller);
@@ -3599,7 +3617,7 @@ class MyProcessor: public Processor {
   object nativeCompiled;
   object addressTable;
   unsigned addressCount;
-  void* indirectCaller;
+  uint8_t* indirectCaller;
 };
 
 MyProcessor*
@@ -3619,8 +3637,11 @@ processor(MyThread* t)
 
       c->jmp(c->indirectTarget());
 
-      p->indirectCaller = t->m->system->allocate(c->size());
+      p->indirectCaller = static_cast<uint8_t*>
+        (t->m->system->allocate(c->size()));
       c->writeTo(p->indirectCaller);
+
+      c->dispose();
     }
   }
   return p;
@@ -3631,14 +3652,12 @@ compile(MyThread* t, object method)
 {
   MyProcessor* p = processor(t);
 
-  object stub = p->getDefaultCompiled(t);
-
-  if (methodCompiled(t, method) == stub) {
+  if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
     PROTECT(t, method);
 
     ACQUIRE(t, t->m->classLock);
     
-    if (methodCompiled(t, method) == stub) {
+    if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
       PROTECT(t, method);
 
       Compiler* c = makeCompiler(t->m->system, p->indirectCaller);
@@ -3655,6 +3674,7 @@ object
 findTraceNode(MyThread* t, void* address)
 {
   MyProcessor* p = processor(t);
+  ACQUIRE(t, t->m->classLock);
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
   unsigned index = static_cast<uintptr_t>(key) 
@@ -3700,13 +3720,12 @@ void
 insertTraceNode(MyThread* t, object node)
 {
   MyProcessor* p = processor(t);
-  ENTER(t, Thread::ExclusiveState);
+  PROTECT(t, node);
+  ACQUIRE(t, t->m->classLock);
 
   ++ p->addressCount;
 
   if (p->addressCount >= arrayLength(t, p->addressTable) * 2) { 
-    PROTECT(t, node);
-
     p->addressTable = resizeTable
       (t, p->addressTable, arrayLength(t, p->addressTable) * 2);
   }

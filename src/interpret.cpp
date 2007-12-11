@@ -2868,6 +2868,12 @@ class MyProcessor: public Processor {
   }
 
   virtual void
+  initVtable(Thread*, object)
+  {
+    // ignore
+  }
+
+  virtual void
   initClass(vm::Thread* t, object c)
   {
     PROTECT(t, c);
@@ -3007,6 +3013,10 @@ class MyProcessor: public Processor {
     } else {
       return 0;
     }
+  }
+
+  virtual void dispose(vm::Thread*) {
+    // ignore
   }
 
   virtual void dispose() {

@@ -11,35 +11,38 @@ vmInvoke:
    
    // rbx is a callee-saved register (so are r12-r15, but we don't use those)
    pushq  %rbx
-   
-   // %rdi: function
-   // %rsi: stack
-   // %rdx: stackSize
-   // %rcx: returnType
+      
+   // %rdi: thread
+   // %rsi: function
+   // %rdx: stack
+   // %rcx: stackSize
+   // %r8 : returnType
 
+   mov    %rdi,%rbx
+   
    // reserve space for arguments
-   pushq  %rdx
-   subq   %rdx,%rsp
+   pushq  %rcx
+   subq   %rcx,%rsp
 
    // copy memory arguments into place
-   movq   $0,%r8
+   movq   $0,%r9
    jmp    test
 
 loop:
-   movq   %r8,%rax
-   movq   %r8,%r9
-   addq   %rsp,%r9
-   addq   %rsi,%rax
+   movq   %r9,%rax
+   movq   %r9,%r10
+   addq   %rsp,%r10
+   addq   %rdx,%rax
 	 movq	  (%rax),%rax
-   movq   %rax,(%r9)
-   addq   $8,%r8
+   movq   %rax,(%r10)
+   addq   $8,%r9
 
 test:
-   cmpq   %rdx,%r8
+   cmpq   %rcx,%r9
    jb     loop
    
    // call function
-   call   *%rdi
+   call   *%rsi
 
    // pop arguments
    addq   -16(%rbp),%rsp
@@ -68,13 +71,16 @@ vmInvoke:
    pushl  %esi
    pushl  %edi
 
-   //  8(%ebp): function
-   // 12(%ebp): stack
-   // 16(%ebp): stackSize
-   // 20(%ebp): returnType
+   //  8(%ebp): thread
+   // 12(%ebp): function
+   // 16(%ebp): stack
+   // 20(%ebp): stackSize
+   // 24(%ebp): returnType
+   
+   mov    8(%ebp),%rbx
    
    // reserve space for arguments
-   subl   16(%ebp),%esp
+   subl   20(%ebp),%esp
 
    // copy arguments into place
    movl   $0,%ecx
@@ -84,23 +90,23 @@ loop:
    movl   %ecx,%eax
    movl   %ecx,%edx
    addl   %esp,%edx
-   addl   12(%ebp),%eax
+   addl   16(%ebp),%eax
 	 movl	  (%eax),%eax
    movl   %eax,(%edx)
    addl   $4,%ecx
 
 test:
-   cmpl   16(%ebp),%ecx
+   cmpl   20(%ebp),%ecx
    jb     loop
 
    // call function
-   call   *8(%ebp)
+   call   *12(%ebp)
 
    // pop arguments
-   addl   16(%ebp),%esp
+   addl   20(%ebp),%esp
 
    // handle return value based on expected type
-   movl   20(%ebp),%ecx
+   movl   24(%ebp),%ecx
    
 void:   
    cmpl   $VOID_TYPE,%ecx
