@@ -1403,7 +1403,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case areturn:
-      c->epilogue();
       c->return_(frame->popObject());
       return;
 
@@ -2130,7 +2129,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case ireturn:
     case freturn:
-      c->epilogue();
       c->return_(frame->popInt());
       return;
 
@@ -2367,7 +2365,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case lreturn:
     case dreturn:
-      c->epilogue();
       c->return_(frame->popLong());
       return;
 
@@ -2866,7 +2863,7 @@ compile(MyThread* t, Compiler* c, object method)
 
   unsigned footprint = methodParameterFootprint(t, method);
   unsigned locals = codeMaxLocals(t, code);
-  c->sub(c->constant((locals - footprint) * BytesPerWord), c->stack());
+  c->reserve(locals - footprint);
 
   Vector objectPool(t->m->system, 256);
   Vector traceLog(t->m->system, 1024);

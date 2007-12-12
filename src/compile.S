@@ -77,7 +77,7 @@ vmInvoke:
    // 20(%ebp): stackSize
    // 24(%ebp): returnType
    
-   mov    8(%ebp),%rbx
+   mov    8(%ebp),%ebx
    
    // reserve space for arguments
    subl   20(%ebp),%esp

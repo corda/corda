@@ -89,6 +89,7 @@ class Compiler {
   virtual Operand* select8(Operand*) = 0;
 
   virtual void prologue() = 0;
+  virtual void reserve(unsigned size) = 0;
   virtual void epilogue() = 0;
 
   virtual void startLogicalIp(unsigned) = 0;

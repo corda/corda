@@ -178,10 +178,6 @@ class MyOperand: public Operand {
     return BytesPerWord;
   }
 
-  virtual StackOperand* logicalPush(Context* c) { abort(c); }
-
-  virtual void logicalFlush(Context*, StackOperand*) { /* ignore */ }
-
   virtual Register asRegister(Context* c) { abort(c); }
 
   virtual void release(Context*) { /* ignore */ }
@@ -204,15 +200,8 @@ class MyOperand: public Operand {
 class RegisterOperand: public MyOperand {
  public:
   RegisterOperand(Register value):
-    value(value), reserved(false), stack(0)
+    value(value), reserved(false)
   { }
-
-  virtual StackOperand* logicalPush(Context* c);
-
-  virtual void logicalFlush(Context* c UNUSED, StackOperand* s UNUSED) {
-    assert(c, stack == s);
-    stack = 0;
-  }
 
   virtual Register asRegister(Context*) {
     return value;
@@ -236,7 +225,6 @@ class RegisterOperand: public MyOperand {
 
   Register value;
   bool reserved;
-  StackOperand* stack;
 };
 
 class ImmediateOperand: public MyOperand {
@@ -244,8 +232,6 @@ class ImmediateOperand: public MyOperand {
   ImmediateOperand(intptr_t value):
     value(value)
   { }
-
-  virtual StackOperand* logicalPush(Context* c);
 
   virtual void apply(Context* c, Operation operation);
 
@@ -261,8 +247,6 @@ class AbsoluteOperand: public MyOperand {
   AbsoluteOperand(MyPromise* value):
     value(value)
   { }
-
-  virtual StackOperand* logicalPush(Context* c);
 
   virtual void apply(Context* c, Operation operation);
 
@@ -290,7 +274,7 @@ class MemoryOperand: public MyOperand {
     assert(static_cast<System*>(0), scale == 1); // todo
   }
 
-  virtual StackOperand* logicalPush(Context* c);
+  virtual Register asRegister(Context*);
 
   virtual void apply(Context* c, Operation operation);
 
@@ -336,22 +320,20 @@ class SelectionOperand: public MyOperand {
 
 class StackOperand: public MyOperand {
  public:
-  StackOperand(MyOperand* base, StackOperand* next):
-    base(base), next(next), flushed(false)
-  {
-    if (next) {
-      index = next->index + (next->footprint() / BytesPerWord);
-    } else {
-      index = 0;
-    }
-  }
+  StackOperand(MyOperand* base, int index, StackOperand* next):
+    base(base), index(index), next(next)
+  { }
 
-  virtual StackOperand* logicalPush(Context* c) {
-    return base->logicalPush(c);
+  virtual unsigned footprint() {
+    return base->footprint();
   }
 
   virtual Register asRegister(Context* c) {
     return base->asRegister(c);
+  }
+
+  virtual void apply(Context* c, Operation operation) {
+    base->apply(c, operation);
   }
 
   virtual void accept(Context* c, Operation operation,
@@ -361,9 +343,8 @@ class StackOperand: public MyOperand {
   }
 
   MyOperand* base;
-  StackOperand* next;
   int index;
-  bool flushed;
+  StackOperand* next;
 };
 
 class Context {
@@ -376,7 +357,8 @@ class Context {
     zone(s, 8 * 1024),
     indirectCaller(reinterpret_cast<intptr_t>(indirectCaller)),
     stack(0),
-    ipTable(0)
+    ipTable(0),
+    reserved(0)
   {
     ipMappings.appendAddress
       (new (zone.allocate(sizeof(IpMapping))) IpMapping(-1, 0));
@@ -407,6 +389,7 @@ class Context {
   intptr_t indirectCaller;
   StackOperand* stack;
   IpMapping** ipTable;
+  unsigned reserved;
   RegisterOperand* registers[RegisterCount];
 };
 
@@ -465,72 +448,49 @@ currentMapping(Context* c)
   return mapping;
 }
 
-void
-flush(Context* c, StackOperand* s)
-{
-  s->base->apply(c, MyOperand::push);
-
-  s->base->logicalFlush(c, s);
-
-  s->base = memory
-    (c, register_(c, rbp), - (s->index + 1) * BytesPerWord, 0, 1);
-  s->flushed = true;
-}
-
 RegisterOperand*
-temporary(Context* c, bool reserve)
+temporary(Context* c)
 {
-  RegisterOperand* r = 0;
   // we don't yet support using r9-r15
   for (unsigned i = 0; i < 8/*RegisterCount*/; ++i) {
     if (not c->registers[i]->reserved) {
-      if (c->registers[i]->stack == 0) {
-        if (reserve) c->registers[i]->reserved = true;
-        return c->registers[i];
-      } else if (r == 0 or r->stack->index > c->registers[i]->stack->index) {
-        r = c->registers[i];
-      }
+      c->registers[i]->reserved = true;
+      return c->registers[i];
     }
   }
 
-  if (r) {
-    flush(c, r->stack);
-    return r;
-  } else {
-    abort(c);
-  }
+  abort(c);
 }
 
 StackOperand*
-push(Context* c, MyOperand* base)
+push(Context* c, MyOperand* v)
 {
-  return base->logicalPush(c);
+  v->apply(c, MyOperand::push);
+
+  int index = (c->stack ?
+               c->stack->index + (c->stack->footprint() / BytesPerWord) :
+               0);
+
+  MyOperand* base = memory
+    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1);
+
+  return c->stack = new (c->zone.allocate(sizeof(StackOperand)))
+    StackOperand(base, index, c->stack);
 }
 
 void
 pop(Context* c, MyOperand* dst)
 {
-  if (c->stack->flushed) {
-    dst->apply(c, MyOperand::pop);
-  } else {
-    c->stack->base->apply(c, MyOperand::mov, dst);
-    c->stack->base->logicalFlush(c, c->stack);
-  }
+  dst->apply(c, MyOperand::pop);
   c->stack = c->stack->next;
 }
 
 MyOperand*
 pop(Context* c)
 {
-  MyOperand* r;
-  if (c->stack->flushed) {
-    RegisterOperand* tmp = temporary(c, true);
-    tmp->apply(c, MyOperand::pop);
-    r = tmp;
-  } else {
-    r = c->stack->base;
-    c->stack->base->logicalFlush(c, c->stack);
-  }
+  RegisterOperand* tmp = temporary(c);
+  tmp->apply(c, MyOperand::pop);
+  MyOperand* r = tmp;
   c->stack = c->stack->next;
   return r;
 }
@@ -545,22 +505,6 @@ selection(Context* c, SelectionOperand::SelectionType type, MyOperand* base)
   } else {
     return new (c->zone.allocate(sizeof(SelectionOperand)))
       SelectionOperand(type, base);
-  }
-}
-
-void
-flushStack(Context* c)
-{
-  if (c->stack) {
-    StackOperand* stack[c->stack->index + 1];
-    int index = c->stack->index + 1;
-    for (StackOperand* s = c->stack; s and not s->flushed; s = s->next) {
-      stack[-- index] = s;
-    }
-
-    for (; index < c->stack->index + 1; ++ index) {
-      flush(c, stack[index]);
-    }
   }
 }
 
@@ -588,8 +532,6 @@ gpRegister(Context* c, unsigned index)
 unsigned
 pushArguments(Context* c, unsigned count, va_list list)
 {
-  flushStack(c);
-  
   MyOperand* arguments[count];
   unsigned footprint = 0;
   for (unsigned i = 0; i < count; ++i) {
@@ -662,24 +604,6 @@ encode(Context* c, uint8_t instruction, uint8_t zeroPrefix,
   }
 }
 
-StackOperand*
-RegisterOperand::logicalPush(Context* c)
-{
-  if (reserved or stack) {
-    RegisterOperand* tmp = temporary(c, false);
-    tmp->accept(c, mov, this);
-    c->stack = new (c->zone.allocate(sizeof(StackOperand)))
-      StackOperand(tmp, c->stack);
-    tmp->stack = c->stack;
-  } else {
-    c->stack = new (c->zone.allocate(sizeof(StackOperand)))
-      StackOperand(this, c->stack);
-    stack = c->stack;
-  }
-
-  return c->stack;
-}
-
 void
 RegisterOperand::apply(Context* c, Operation operation)
 {
@@ -734,6 +658,17 @@ RegisterOperand::accept(Context* c, Operation operation,
                         ImmediateOperand* operand)
 {
   switch (operation) {
+  case add:
+    if (operand->value) {
+      assert(c, isInt8(operand->value)); // todo
+
+      rex(c);
+      c->code.append(0x83);
+      c->code.append(0xc0 | value);
+      c->code.append(operand->value);
+    }
+    break;
+
   case and_:
     if (operand->value) {
       rex(c);
@@ -806,14 +741,20 @@ class AbsoluteMovTask: public IpTask {
 };
 
 void
+addAbsoluteMovTask(Context* c, MyPromise* p)
+{
+  IpMapping* mapping = currentMapping(c);
+  mapping->task = new (c->zone.allocate(sizeof(AbsoluteMovTask)))
+    AbsoluteMovTask(c->code.length(), p, mapping->task);
+}
+
+void
 RegisterOperand::accept(Context* c, Operation operation,
                         AbsoluteOperand* operand)
 {
   switch (operation) {
   case mov: {
-    IpMapping* mapping = currentMapping(c);
-    mapping->task = new (c->zone.allocate(sizeof(AbsoluteMovTask)))
-      AbsoluteMovTask(c->code.length(), operand->value, mapping->task);
+    addAbsoluteMovTask(c, operand->value);
     
     accept(c, mov, immediate(c, 0));
     accept(c, mov, memory(c, this, 0, 0, 1));
@@ -846,11 +787,13 @@ class DirectCallTask: public IpTask {
   uint8_t* address;
 };
 
-StackOperand*
-ImmediateOperand::logicalPush(Context* c)
+void
+addDirectCallTask(Context* c, intptr_t v)
 {
-  return c->stack = new (c->zone.allocate(sizeof(StackOperand)))
-    StackOperand(this, c->stack);  
+  IpMapping* mapping = currentMapping(c);
+  mapping->task = new (c->zone.allocate(sizeof(DirectCallTask)))
+    DirectCallTask
+    (c->code.length(), reinterpret_cast<uint8_t*>(v), mapping->task);
 }
 
 void
@@ -865,43 +808,55 @@ ImmediateOperand::apply(Context* c, Operation operation)
   } break;
 
   case call: {
-    IpMapping* mapping = currentMapping(c);
-    mapping->task = new (c->zone.allocate(sizeof(DirectCallTask)))
-      DirectCallTask
-      (c->code.length(), reinterpret_cast<uint8_t*>(value), mapping->task);
+    addDirectCallTask(c, value);
     
     c->code.append(0xE8);
     c->code.append4(0);
   } break;
+
+  case push:
+    if (isInt8(value)) {
+      c->code.append(0x6a);
+      c->code.append(value);
+    } else if (isInt32(value)) {
+      c->code.append(0x68);
+      c->code.append4(value);
+    } else {
+      RegisterOperand* tmp = temporary(c);
+      tmp->accept(c, mov, this);
+      tmp->apply(c, push);
+      tmp->release(c);
+    }
+    break;
     
   default: abort(c);
   }
-}
-
-StackOperand*
-AbsoluteOperand::logicalPush(Context* c)
-{
-  return c->stack = new (c->zone.allocate(sizeof(StackOperand)))
-    StackOperand(this, c->stack);  
 }
 
 void
 AbsoluteOperand::apply(Context* c, Operation operation)
 {
   switch (operation) {
+  case push: {
+    addAbsoluteMovTask(c, value);
+    
+    RegisterOperand* tmp = temporary(c);
+    tmp->accept(c, mov, immediate(c, 0));
+    memory(c, tmp, 0, 0, 1)->apply(c, push);
+    tmp->release(c);
+  } break;
+
   default: abort(c);
   }
 }
 
-StackOperand*
-MemoryOperand::logicalPush(Context* c)
+Register
+MemoryOperand::asRegister(Context* c)
 {
-  RegisterOperand* tmp = temporary(c, false);
+  RegisterOperand* tmp = temporary(c);
   tmp->accept(c, mov, this);
-  c->stack = new (c->zone.allocate(sizeof(StackOperand)))
-    StackOperand(tmp, c->stack);
-  tmp->stack = c->stack;
-  return c->stack;
+  tmp->release(c);
+  return tmp->value;
 }
 
 void
@@ -916,6 +871,10 @@ MemoryOperand::apply(Context* c, Operation operation)
     encode(c, 0x8f, 0, 0x40, 0x80, rax, base->asRegister(c), displacement);
     break;
 
+  case push:
+    encode(c, 0xff, 0x30, 0x70, 0xb0, rax, base->asRegister(c), displacement);
+    break;
+
   default: abort(c);
   }
 }
@@ -928,6 +887,12 @@ MemoryOperand::accept(Context* c, Operation operation,
   case mov:
     rex(c);
     encode(c, 0x89, 0, 0x40, 0x80, operand->value, base->asRegister(c),
+           displacement);
+    break;
+
+  case add:
+    rex(c);
+    encode(c, 0x01, 0, 0x40, 0x80, operand->value, base->asRegister(c),
            displacement);
     break;
 
@@ -958,7 +923,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 {
   switch (operation) {
   case mov: {
-    RegisterOperand* tmp = temporary(c, true);
+    RegisterOperand* tmp = temporary(c);
     
     tmp->accept(c, mov, operand);
     accept(c, mov, tmp);
@@ -1108,7 +1073,6 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* stack() {
-    flushStack(&c);
     return register_(&c, rsp);
   }
 
@@ -1125,7 +1089,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* temporary() {
-    return ::temporary(&c, true);
+    return ::temporary(&c);
   }
 
   virtual void release(Operand* v) {
@@ -1153,7 +1117,7 @@ class MyCompiler: public Compiler {
 
     immediate(&c, c.indirectCaller)->apply(&c, MyOperand::call);
 
-    immediate(&c, footprint)->apply(&c, MyOperand::sub, register_(&c, rsp));
+    immediate(&c, footprint)->apply(&c, MyOperand::add, register_(&c, rsp));
 
     return register_(&c, rax);
   }
@@ -1180,24 +1144,23 @@ class MyCompiler: public Compiler {
 
     static_cast<MyOperand*>(address)->apply(&c, MyOperand::call);
 
-    immediate(&c, footprint)->apply(&c, MyOperand::sub, register_(&c, rsp));
+    immediate(&c, footprint)->apply(&c, MyOperand::add, register_(&c, rsp));
 
     return register_(&c, rax);
   }
 
   virtual void return_(Operand* v) {
     static_cast<MyOperand*>(v)->apply(&c, MyOperand::mov, register_(&c, rax));
+    epilogue();
     ret();
   }
 
   virtual Operand* call(Operand* v) {
-    flushStack(&c);
     static_cast<MyOperand*>(v)->apply(&c, MyOperand::call);
     return register_(&c, rax);
   }
 
   virtual Operand* alignedCall(Operand* v) {
-    flushStack(&c);
     static_cast<MyOperand*>(v)->apply(&c, MyOperand::alignedCall);
     return register_(&c, rax);
   }
@@ -1338,6 +1301,11 @@ class MyCompiler: public Compiler {
   virtual void prologue() {
     register_(&c, rbp)->apply(&c, MyOperand::push);
     register_(&c, rsp)->apply(&c, MyOperand::mov, register_(&c, rbp));
+  }
+
+  virtual void reserve(unsigned size) {
+    sub(constant(size * BytesPerWord), stack());
+    c.reserved = size;
   }
 
   virtual void epilogue() {
