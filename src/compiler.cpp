@@ -285,7 +285,10 @@ class MemoryOperand: public MyOperand {
     displacement(displacement),
     index(index),
     scale(scale)
-  { }
+  {
+    assert(static_cast<System*>(0), index == 0); // todo
+    assert(static_cast<System*>(0), scale == 1); // todo
+  }
 
   virtual StackOperand* logicalPush(Context* c);
 
@@ -345,6 +348,10 @@ class StackOperand: public MyOperand {
 
   virtual StackOperand* logicalPush(Context* c) {
     return base->logicalPush(c);
+  }
+
+  virtual Register asRegister(Context* c) {
+    return base->asRegister(c);
   }
 
   virtual void accept(Context* c, Operation operation,
@@ -677,12 +684,9 @@ void
 RegisterOperand::apply(Context* c, Operation operation)
 {
   switch (operation) {
-  case push:
-    c->code.append(0x50 | value);
-    break;
-
-  case pop:
-    c->code.append(0x58 | value);
+  case call:
+    c->code.append(0xff);
+    c->code.append(0xd0 | value);
     break;
 
   case jmp:
@@ -690,9 +694,12 @@ RegisterOperand::apply(Context* c, Operation operation)
     c->code.append(0xe0 | value);
     break;
 
-  case call:
-    c->code.append(0xff);
-    c->code.append(0xd0 | value);
+  case pop:
+    c->code.append(0x58 | value);
+    break;
+
+  case push:
+    c->code.append(0x50 | value);
     break;
 
   default: abort(c);
@@ -704,18 +711,18 @@ RegisterOperand::accept(Context* c, Operation operation,
                         RegisterOperand* operand)
 {
   switch (operation) {
+  case add:
+    rex(c);
+    c->code.append(0x01);
+    c->code.append(0xc0 | (operand->value << 3) | value);
+    break;
+
   case mov:
     if (value != operand->value) {
       rex(c);
       c->code.append(0x89);
       c->code.append(0xc0 | (operand->value << 3) | value);
     }
-    break;
-
-  case add:
-    rex(c);
-    c->code.append(0x01);
-    c->code.append(0xc0 | (operand->value << 3) | value);
     break;
 
   default: abort(c);
@@ -727,6 +734,23 @@ RegisterOperand::accept(Context* c, Operation operation,
                         ImmediateOperand* operand)
 {
   switch (operation) {
+  case and_:
+    if (operand->value) {
+      rex(c);
+      if (isInt8(operand->value)) {
+        c->code.append(0x83);
+        c->code.append(0xe0 | value);
+        c->code.append(operand->value);
+      } else {
+        assert(c, isInt32(operand->value));
+
+        c->code.append(0x81);
+        c->code.append(0xe0 | value);
+        c->code.append(operand->value);
+      }
+    }
+    break;
+
   case mov:
     rex(c);
     c->code.append(0xb8 | value);
@@ -811,7 +835,7 @@ class DirectCallTask: public IpTask {
     uint8_t* instruction = code + offset + (this->start - start);
     assert(c, *instruction == 0xe8);
 
-    intptr_t v = address - instruction;
+    intptr_t v = address - instruction - 5;
     assert(c, isInt32(v));
 
     int32_t v32 = v;
@@ -833,6 +857,13 @@ void
 ImmediateOperand::apply(Context* c, Operation operation)
 {
   switch (operation) {
+  case alignedCall: {
+    while ((c->code.length() + 1) % 4) {
+      c->code.append(0x90);
+    }
+    apply(c, call);
+  } break;
+
   case call: {
     IpMapping* mapping = currentMapping(c);
     mapping->task = new (c->zone.allocate(sizeof(DirectCallTask)))
@@ -841,13 +872,6 @@ ImmediateOperand::apply(Context* c, Operation operation)
     
     c->code.append(0xE8);
     c->code.append4(0);
-  } break;
-
-  case alignedCall: {
-    while ((c->code.length() + 1) % 4) {
-      c->code.append(0x90);
-    }
-    apply(c, call);
   } break;
     
   default: abort(c);
@@ -884,6 +908,10 @@ void
 MemoryOperand::apply(Context* c, Operation operation)
 {
   switch (operation) {
+  case call:
+    encode(c, 0xff, 0x10, 0x50, 0x90, rax, base->asRegister(c), displacement);
+    break;
+
   case pop:
     encode(c, 0x8f, 0, 0x40, 0x80, rax, base->asRegister(c), displacement);
     break;

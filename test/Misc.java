@@ -25,9 +25,9 @@ public class Misc {
 
     Misc m = new Misc();
     String s = "hello";
-//     m.foo(s);
-//     m.bar(s);
-//     baz(s);
+    m.foo(s);
+    m.bar(s);
+    baz(s);
 
 //     int d = alpha;
 //     beta = 42;

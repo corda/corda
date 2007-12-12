@@ -3158,12 +3158,8 @@ visitStack(MyThread* t, Heap::Visitor* v)
 object
 compileDefault(MyThread* t, Compiler* c)
 {
-  c->prologue();
-
   c->mov(c->base(), c->memory(c->thread(), difference(&(t->base), t)));
   c->mov(c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
-
-  c->epilogue();
 
   c->jmp
     (c->directCall
@@ -3693,6 +3689,10 @@ compile(MyThread* t, object method)
 object
 findTraceNode(MyThread* t, void* address)
 {
+  if (Verbose) {
+    fprintf(stderr, "find trace node %p\n", address);
+  }
+
   MyProcessor* p = processor(t);
   ACQUIRE(t, t->m->classLock);
 
@@ -3739,6 +3739,11 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
 void
 insertTraceNode(MyThread* t, object node)
 {
+  if (Verbose) {
+    fprintf(stderr, "insert trace node %p\n",
+            reinterpret_cast<void*>(traceNodeAddress(t, node)));
+  }
+
   MyProcessor* p = processor(t);
   PROTECT(t, node);
   ACQUIRE(t, t->m->classLock);
