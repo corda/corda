@@ -15,7 +15,7 @@ public class Misc {
   }
 
   public static void main(String[] args) {
-//     boolean v = Boolean.valueOf("true");
+    boolean v = Boolean.valueOf("true");
 
 //     ClassLoader.getSystemClassLoader().toString();
 
