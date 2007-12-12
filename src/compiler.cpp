@@ -491,13 +491,6 @@ temporary(Context* c, bool reserve)
   }
 }
 
-void
-release(Context* c UNUSED, RegisterOperand* v)
-{
-  assert(c, v->reserved);
-  v->reserved = false;
-}
-
 StackOperand*
 push(Context* c, MyOperand* base)
 {
@@ -511,6 +504,7 @@ pop(Context* c, MyOperand* dst)
     dst->apply(c, MyOperand::pop);
   } else {
     c->stack->base->apply(c, MyOperand::mov, dst);
+    c->stack->base->logicalFlush(c, c->stack);
   }
   c->stack = c->stack->next;
 }
@@ -525,6 +519,7 @@ pop(Context* c)
     r = tmp;
   } else {
     r = c->stack->base;
+    c->stack->base->logicalFlush(c, c->stack);
   }
   c->stack = c->stack->next;
   return r;
@@ -1392,4 +1387,4 @@ makeCompiler(System* system, void* indirectCaller)
     MyCompiler(system, indirectCaller);
 }
 
-} // namespace vm
+} // namespace v
