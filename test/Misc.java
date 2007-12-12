@@ -24,7 +24,7 @@ public class Misc {
     int c = a + b;
 
     Misc m = new Misc();
-//     String s = "hello";
+    String s = "hello";
 //     m.foo(s);
 //     m.bar(s);
 //     baz(s);

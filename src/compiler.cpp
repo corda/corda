@@ -262,6 +262,8 @@ class AbsoluteOperand: public MyOperand {
     value(value)
   { }
 
+  virtual StackOperand* logicalPush(Context* c);
+
   virtual void apply(Context* c, Operation operation);
 
   virtual void apply(Context* c, Operation operation, MyOperand* operand) {
@@ -295,6 +297,7 @@ class MemoryOperand: public MyOperand {
 
   virtual void accept(Context*, Operation, RegisterOperand*);
   virtual void accept(Context*, Operation, ImmediateOperand*);
+  virtual void accept(Context*, Operation, AbsoluteOperand*);
 
   MyOperand* base;
   int displacement;
@@ -851,6 +854,13 @@ ImmediateOperand::apply(Context* c, Operation operation)
   }
 }
 
+StackOperand*
+AbsoluteOperand::logicalPush(Context* c)
+{
+  return c->stack = new (c->zone.allocate(sizeof(StackOperand)))
+    StackOperand(this, c->stack);  
+}
+
 void
 AbsoluteOperand::apply(Context* c, Operation operation)
 {
@@ -909,6 +919,24 @@ MemoryOperand::accept(Context* c, Operation operation,
     encode(c, 0xc7, 0, 0x40, 0x80, rax, base->asRegister(c), displacement);
     c->code.append4(operand->value);
     break;
+
+  default: abort(c);
+  }
+}
+
+void
+MemoryOperand::accept(Context* c, Operation operation,
+                      AbsoluteOperand* operand)
+{
+  switch (operation) {
+  case mov: {
+    RegisterOperand* tmp = temporary(c, true);
+    
+    tmp->accept(c, mov, operand);
+    accept(c, mov, tmp);
+
+    tmp->release(c);
+  } break;
 
   default: abort(c);
   }
