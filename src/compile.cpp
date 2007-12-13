@@ -1498,7 +1498,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->release(tmp);
 
-      c->cmp(0, result);
+      c->cmp(c->constant(0), result);
       c->jne(next);
         
       compileThrowNew(t, frame, Machine::ClassCastExceptionType);
@@ -2594,7 +2594,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* nonnegative = c->label();
 
       Operand* size = frame->popInt();
-      c->cmp(0, size);
+      c->cmp(c->constant(0), size);
       c->release(size);
 
       c->jge(nonnegative);
@@ -2957,6 +2957,18 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
               &byteArrayBody(t, methodName(t, method), 0),
               start,
               start + c->codeSize());
+    }
+
+    // for debugging:
+    if (false and
+        strcmp(reinterpret_cast<const char*>
+               (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
+               "java/lang/String") == 0 and
+        strcmp(reinterpret_cast<const char*>
+               (&byteArrayBody(t, methodName(t, method), 0)),
+               "getBytes") == 0)
+    {
+      asm("int3");
     }
   }
 

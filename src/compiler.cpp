@@ -362,6 +362,10 @@ class StackOperand: public MyOperand {
     base->apply(c, operation);
   }
 
+  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
+    base->apply(c, operation, operand);
+  }
+
   virtual void accept(Context* c, Operation operation,
                       RegisterOperand* operand)
   {
@@ -514,12 +518,13 @@ pushed(Context* c)
 void
 push(Context* c, int count)
 {
+  immediate(c, count * BytesPerWord)->apply
+    (c, MyOperand::sub, register_(c, rsp));
+
   while (count) {
     -- count;
     pushed(c);
   }
-  immediate(c, count * BytesPerWord)->apply
-    (c, MyOperand::sub, register_(c, rsp));
 }
 
 StackOperand*
@@ -532,13 +537,14 @@ push(Context* c, MyOperand* v)
 void
 pop(Context* c, int count)
 {
+  immediate(c, count * BytesPerWord)->apply
+    (c, MyOperand::add, register_(c, rsp));
+
   while (count) {
     count -= (c->stack->footprint() / BytesPerWord);
     assert(c, count >= 0);
     c->stack = c->stack->next;
   }
-  immediate(c, count * BytesPerWord)->apply
-    (c, MyOperand::add, register_(c, rsp));
 }
 
 void
@@ -759,14 +765,12 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case cmp: {
     intptr_t v = operand->value->value(c);
-    if (v) {
-      assert(c, isInt8(v)); // todo
+    assert(c, isInt8(v)); // todo
 
-      rex(c);
-      c->code.append(0x83);
-      c->code.append(0xf8 | value);
-      c->code.append(v);
-    }
+    rex(c);
+    c->code.append(0x83);
+    c->code.append(0xf8 | value);
+    c->code.append(v);
   } break;
 
   case mov: {
@@ -797,6 +801,12 @@ RegisterOperand::accept(Context* c, Operation operation,
                         MemoryOperand* operand)
 {
   switch (operation) {
+  case cmp:
+    rex(c);
+    encode(c, 0x3b, 0, 0x40, 0x80, value, operand->base->asRegister(c),
+           operand->displacement);
+    break;
+
   case mov:
     rex(c);
     encode(c, 0x8b, 0, 0x40, 0x80, value, operand->base->asRegister(c),
@@ -838,6 +848,14 @@ RegisterOperand::accept(Context* c, Operation operation,
                         AbsoluteOperand* operand)
 {
   switch (operation) {
+  case cmp: {
+    RegisterOperand* tmp = temporary(c);
+    addAbsoluteMovTask(c, operand->value);
+    tmp->accept(c, mov, immediate(c, 0));
+    accept(c, cmp, memory(c, tmp, 0, 0, 1));
+    tmp->release(c);
+  } break;
+
   case mov: {
     addAbsoluteMovTask(c, operand->value);
     
