@@ -20,12 +20,9 @@ public class StringBuilder {
 
   private void flush() {
     if (position > 0) {
-      char[] b = buffer;
-      int p = position;
+      chain = new Cell(new String(buffer, 0, position, false), chain);
       buffer = null;
       position = 0;
-      append(new String(b, 0, p, false));
-      length -= p;
     }
   }
 
@@ -98,7 +95,6 @@ public class StringBuilder {
     flush();
 
     int index = length;
-    -- length;
     Cell p = null;
     for (Cell c = chain; c != null; c = c.next) {
       int start = index - c.value.length();
@@ -123,7 +119,6 @@ public class StringBuilder {
       flush();
 
       int index = length;
-      -- length;
       for (Cell c = chain; c != null; c = c.next) {
         int start = index - c.value.length();
         index = start;
@@ -139,6 +134,8 @@ public class StringBuilder {
           break;
         }
       }
+
+      length += s.length();
     }
 
     return this;
@@ -160,7 +157,6 @@ public class StringBuilder {
     flush();
 
     int index = length;
-    -- length;
     Cell p = null;
     for (Cell c = chain; c != null; c = c.next) {
       int e = index;
@@ -189,6 +185,8 @@ public class StringBuilder {
         }        
       }
     }
+
+    length -= (end - start);
 
     return this;
   }
