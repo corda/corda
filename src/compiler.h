@@ -13,7 +13,7 @@ class Promise {
  public:
   virtual ~Promise() { }
 
-  virtual unsigned value(Compiler*) = 0;
+  virtual intptr_t value(Compiler*) = 0;
 };
 
 class Compiler {
@@ -49,8 +49,10 @@ class Compiler {
   virtual void return_(Operand*) = 0;
   virtual void ret() = 0;
 
+  virtual void push(unsigned count) = 0;
   virtual void push(Operand*) = 0;
   virtual void push2(Operand*) = 0;
+  virtual void pop(unsigned count) = 0;
   virtual Operand* pop() = 0;
   virtual Operand* pop2() = 0;
   virtual void pop(Operand*) = 0;
