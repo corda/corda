@@ -2878,7 +2878,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
 
   walker->walk(&v);
 
-  return v.trace;
+  return v.trace ? v.trace : makeArray(t, 0, true);
 }
 
 object
@@ -2899,7 +2899,7 @@ makeTrace(Thread* t)
 
   t->m->processor->walkStack(t, &v);
 
-  return v.trace;
+  return v.trace ? v.trace : makeArray(t, 0, true);
 }
 
 void

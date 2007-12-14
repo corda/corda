@@ -33,6 +33,8 @@ enum SelectionType {
   S8Selection
 };
 
+const bool Verbose = true;
+
 const unsigned RegisterCount = BytesPerWord * 2;
 
 class Context;
@@ -146,22 +148,24 @@ class MyOperand: public Operand {
 
   virtual void setLabelValue(Context* c, CodePromise*) { abort(c); }
 
-  virtual void apply(Context* c, Operation) { abort(c); }
+  virtual void apply(Context*, Operation) = 0;
 
-  virtual void apply(Context* c, Operation, SelectionType) { abort(c); }
+  virtual void apply(Context*, Operation, MyOperand*) = 0;
 
-  virtual void apply(Context* c, Operation, MyOperand*) { abort(c); }
+  virtual void apply(Context*, Operation, SelectionType) = 0;
 
-  virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
+  virtual void apply(Context*, Operation, MyOperand*, SelectionType) = 0;
 
-  virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+  virtual void accept(Context* c, Operation, RegisterOperand*) = 0;
 
-  virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
+  virtual void accept(Context* c, Operation, ImmediateOperand*) = 0;
 
-  virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
+  virtual void accept(Context* c, Operation, AbsoluteOperand*) = 0;
+
+  virtual void accept(Context* c, Operation, MemoryOperand*) = 0;
 
   virtual void accept(Context* c, Operation, MemoryOperand*, SelectionType)
-  { abort(c); }
+  = 0;
 };
 
 class RegisterOperand: public MyOperand {
@@ -188,11 +192,14 @@ class RegisterOperand: public MyOperand {
 
   virtual void apply(Context*, Operation);
 
-  virtual void apply(Context* c, Operation, SelectionType) { abort(c); }
-
   virtual void apply(Context* c, Operation operation, MyOperand* operand) {
     operand->accept(c, operation, this);
   }
+
+  virtual void apply(Context* c, Operation, SelectionType) { abort(c); }
+
+  virtual void apply(Context* c, Operation, MyOperand*, SelectionType)
+  { abort(c); }
 
   virtual void accept(Context*, Operation, RegisterOperand*);
   virtual void accept(Context*, Operation, ImmediateOperand*);
@@ -212,9 +219,25 @@ class ImmediateOperand: public MyOperand {
 
   virtual void apply(Context* c, Operation operation);
 
+  virtual void apply(Context* c, Operation, SelectionType) { abort(c); }
+
   virtual void apply(Context* c, Operation operation, MyOperand* operand) {
     operand->accept(c, operation, this);
   }
+
+  virtual void apply(Context* c, Operation, MyOperand*, SelectionType)
+  { abort(c); }
+
+  virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*, SelectionType)
+  { abort(c); }
 
   intptr_t value;
 };
@@ -228,6 +251,24 @@ class AddressOperand: public MyOperand {
   virtual void setLabelValue(Context*, CodePromise*);
 
   virtual void apply(Context*, Operation);
+
+  virtual void apply(Context* c, Operation, MyOperand*) { abort(c); }
+
+  virtual void apply(Context* c, Operation, SelectionType) { abort(c); }
+
+  virtual void apply(Context* c, Operation, MyOperand*, SelectionType)
+  { abort(c); }
+
+  virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*, SelectionType)
+  { abort(c); }
 
   MyPromise* promise;
 };
@@ -243,6 +284,22 @@ class AbsoluteOperand: public MyOperand {
   virtual void apply(Context* c, Operation operation, MyOperand* operand) {
     operand->accept(c, operation, this);
   }
+
+  virtual void apply(Context* c, Operation, SelectionType) { abort(c); }
+
+  virtual void apply(Context* c, Operation, MyOperand*, SelectionType)
+  { abort(c); }
+
+  virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*, SelectionType)
+  { abort(c); }
 
   MyPromise* promise;
 };
@@ -261,15 +318,25 @@ class MemoryOperand: public MyOperand {
 
   virtual void apply(Context*, Operation);
 
-  virtual void apply(Context* c, Operation, SelectionType);
-
   virtual void apply(Context* c, Operation operation, MyOperand* operand) {
     operand->accept(c, operation, this);
+  }
+
+  virtual void apply(Context* c, Operation, SelectionType);
+
+  virtual void apply(Context* c, Operation operation, MyOperand* operand,
+                     SelectionType selection)
+  {
+    operand->accept(c, operation, this, selection);
   }
 
   virtual void accept(Context*, Operation, RegisterOperand*);
   virtual void accept(Context*, Operation, ImmediateOperand*);
   virtual void accept(Context*, Operation, AbsoluteOperand*);
+
+  virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*, SelectionType);
 
   MyOperand* base;
   int displacement;
@@ -294,6 +361,26 @@ class SelectionOperand: public MyOperand {
   virtual void apply(Context* c, Operation operation) {
     base->apply(c, operation, selectionType);
   }
+
+  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
+    base->apply(c, operation, operand, selectionType);
+  }
+
+  virtual void apply(Context* c, Operation, SelectionType) { abort(c); }
+
+  virtual void apply(Context* c, Operation, MyOperand*, SelectionType)
+  { abort(c); }
+
+  virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
+
+  virtual void accept(Context* c, Operation, MemoryOperand*, SelectionType)
+  { abort(c); }
 
   SelectionType selectionType;
   MyOperand* base;
@@ -321,6 +408,17 @@ class WrapperOperand: public MyOperand {
     base->apply(c, operation, operand);
   }
 
+  virtual void apply(Context* c, Operation operation, SelectionType selection)
+  {
+    base->apply(c, operation, selection);
+  }
+
+  virtual void apply(Context* c, Operation operation, MyOperand* operand,
+                     SelectionType selection)
+  {
+    base->apply(c, operation, operand, selection);
+  }
+
   virtual void accept(Context* c, Operation operation,
                       RegisterOperand* operand)
   {
@@ -342,6 +440,12 @@ class WrapperOperand: public MyOperand {
   virtual void accept(Context* c, Operation operation, MemoryOperand* operand)
   {
     base->accept(c, operation, operand);
+  }
+
+  virtual void accept(Context* c, Operation operation, MemoryOperand* operand,
+                      SelectionType selection)
+  {
+    base->accept(c, operation, operand, selection);
   }
 
   MyOperand* base;
@@ -606,7 +710,7 @@ RegisterOperand*
 temporary(Context* c)
 {
   // we don't yet support using r9-r15
-  for (unsigned i = 0; i < 8/*RegisterCount*/; ++i) {
+  for (int i = 8/*RegisterCount*/ - 1; i >= 0; --i) {
     if (not c->registers[i]->reserved) {
       c->registers[i]->acquire(c);
       return c->registers[i];
@@ -614,6 +718,14 @@ temporary(Context* c)
   }
 
   abort(c);
+}
+
+RegisterOperand*
+acquire(Context* c, Register v)
+{
+  RegisterOperand* r = register_(c, v);
+  r->acquire(c);
+  return r;
 }
 
 void
@@ -650,6 +762,9 @@ class UnaryOpEvent: public Event {
   { }
 
   virtual void run(Context* c) {
+    if (Verbose and c->codeLength >= 0) {
+      fprintf(stderr, "unary %d\n", operation);
+    }
     operand->apply(c, operation);
   }
 
@@ -668,6 +783,9 @@ class BinaryOpEvent: public Event {
   { }
 
   virtual void run(Context* c) {
+    if (Verbose and c->codeLength >= 0) {
+      fprintf(stderr, "binary %d\n", operation);
+    }
     a->apply(c, operation, b);
   }
 
@@ -684,6 +802,9 @@ class AcquireEvent: public Event {
   { }
 
   virtual void run(Context* c) {
+    if (Verbose and c->codeLength >= 0) {
+      fprintf(stderr, "acquire\n");
+    }
     operand->base = temporary(c);
   }
 
@@ -698,6 +819,9 @@ class ReleaseEvent: public Event {
   { }
 
   virtual void run(Context* c) {
+    if (Verbose and c->codeLength >= 0) {
+      fprintf(stderr, "release\n");
+    }
     operand->release(c);
   }
 
@@ -1302,9 +1426,19 @@ MemoryOperand::accept(Context* c, Operation operation,
     encode(c, 0x01, operand->value, this, true);
   } break;
 
-//   case div: {
-//     // todo
-//   } break;
+  case div: {
+    RegisterOperand* tmp = acquire(c, rax);
+    tmp->accept(c, mov, this);
+    
+    rex(c);
+    c->code.append(0x99);
+    rex(c);
+    c->code.append(0xf7);
+    c->code.append(0xf8 | operand->value);
+
+    accept(c, mov, tmp);
+    tmp->release(c);
+  } break;
 
   case mov: {
     encode(c, 0x89, operand->value, this, true);
@@ -1365,6 +1499,24 @@ MemoryOperand::accept(Context* c, Operation operation,
   }
 }
 
+void
+MemoryOperand::accept(Context* c, Operation operation,
+                      MemoryOperand* operand, SelectionType selection)
+{
+  switch (operation) {
+  case mov: {
+    RegisterOperand* tmp = temporary(c);
+    
+    tmp->accept(c, mov, operand, selection);
+    accept(c, mov, tmp);
+
+    tmp->release(c);
+  } break;    
+
+  default: abort(c);
+  }
+}
+
 int
 compareSegmentPointers(const void* a, const void* b)
 {
@@ -1389,6 +1541,10 @@ writeCode(Context* c)
 
   for (unsigned i = 0; i < tableSize; ++i) {
     Segment* s = c->segmentTable[i];
+    if (Verbose and c->codeLength >= 0) {
+      fprintf(stderr, "\nip %d\n", s->logicalIp);
+    }
+      
     Event* events[s->event->count];
     unsigned ei = s->event->count;
     for (Event* e = s->event; e; e = e->next) {
@@ -1396,6 +1552,10 @@ writeCode(Context* c)
     }
 
     for (unsigned ei = 0; ei < s->event->count; ++ei) {
+      if (Verbose and c->codeLength >= 0) {
+        fprintf(stderr, "address %p\n", c->code.data + c->code.length());
+      }
+
       events[ei]->offset = c->code.length();
 
       events[ei]->run(c);
@@ -1538,8 +1698,14 @@ class MyCompiler: public Compiler {
   }
 
   virtual void mark(Operand* label) {
-    static_cast<MyOperand*>(label)->setLabelValue
-      (&c, static_cast<CodePromise*>(codeOffset()));
+    CodePromise* p = new (c.zone.allocate(sizeof(CodePromise)))
+      CodePromise(true);
+
+    Segment* s = currentSegment(&c);
+    s->event->task = new (c.zone.allocate(sizeof(CodePromiseTask)))
+      CodePromiseTask(p, s->event->task);
+
+    static_cast<MyOperand*>(label)->setLabelValue(&c, p);
   }
 
   virtual Operand* indirectCall
@@ -1608,7 +1774,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void cmp(Operand* subtrahend, Operand* minuend) {
-    appendOperation(&c, MyOperand::mov, subtrahend, minuend);
+    appendOperation(&c, MyOperand::cmp, subtrahend, minuend);
   }
 
   virtual void jl(Operand* v) {

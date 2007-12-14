@@ -64,7 +64,7 @@ class MyThread: public Thread {
 object
 resolveTarget(MyThread* t, void* stack, object method)
 {
-  if (methodVirtual(t, method)) {
+  if (method and methodVirtual(t, method)) {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     object class_ = objectClass
       (t, reinterpret_cast<object*>(stack)[parameterFootprint]);
@@ -111,7 +111,7 @@ class MyStackWalker: public Processor::StackWalker {
     base(t->base),
     stack(t->stack),
     trace(t->trace),
-    node(findTraceNode(t, *static_cast<void**>(stack))),
+    node(stack ? findTraceNode(t, *static_cast<void**>(stack)) : 0),
     nativeMethod(resolveNativeMethod(t, stack, node)),
     protector(this)
   { }
@@ -137,6 +137,10 @@ class MyStackWalker: public Processor::StackWalker {
   }
 
   virtual void walk(Processor::StackVisitor* v) {
+    if (stack == 0) {
+      return;
+    }
+
     if (not v->visit(this)) {
       return;
     }
@@ -157,7 +161,7 @@ class MyStackWalker: public Processor::StackWalker {
       base = *static_cast<void**>(base);
       node = findTraceNode(t, *static_cast<void**>(stack));
       if (node == 0) {
-        if (trace) {
+        if (trace and trace->stack) {
           base = trace->base;
           stack = static_cast<void**>(trace->stack);
           trace = trace->next;
@@ -1494,7 +1498,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* result = c->directCall
         (c->constant(reinterpret_cast<intptr_t>(isAssignableFrom)),
-         2, classOperand, tmp);
+         3, c->thread(), classOperand, tmp);
 
       c->release(tmp);
 
@@ -2078,7 +2082,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* next = c->label();
       Operand* zero = c->label();
 
-      Operand* instance = frame->topObject();
+      Operand* instance = frame->popObject();
       Operand* tmp = c->temporary();
       Operand* result = c->temporary();
 
@@ -2098,12 +2102,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->mov(c->constant(1), result);
       c->jmp(next);
 
+      c->mark(call);
+
       c->mov
         (c->directCall
          (c->constant(reinterpret_cast<intptr_t>(isAssignableFrom)),
-          2, classOperand, tmp), result);
+          3, c->thread(), classOperand, tmp), result);
 
       c->release(tmp);
+      c->release(instance);
 
       c->jmp(next);
         
@@ -2211,9 +2218,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case ireturn:
-    case freturn:
-      c->return_(frame->popInt());
-      return;
+    case freturn: {
+      Operand* a = frame->popInt();
+      c->return_(a);
+      c->release(a);
+    } return;
 
     case ishl: {
       Operand* a = frame->popInt();
@@ -2966,7 +2975,7 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
                "java/lang/String") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "getBytes") == 0)
+               "charAt") == 0)
     {
       asm("int3");
     }
@@ -3831,7 +3840,8 @@ findTraceNode(MyThread* t, void* address)
       return n;
     }
   }
-  abort(t);
+
+  return 0;
 }
 
 object
