@@ -464,10 +464,10 @@ class Context {
     system(system),
     client(client),
 
-    ageMap(&gen1, log(TenureThreshold), 1, 0, false),
+    ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
 
-    nextAgeMap(&nextGen1, log(TenureThreshold), 1, 0, false),
+    nextAgeMap(&nextGen1,  max(1, log(TenureThreshold)), 1, 0, false),
     nextGen1(this, &nextAgeMap, 0, 0),
 
     pointerMap(&gen2, 1, 1, 0, true),
@@ -589,7 +589,7 @@ inline void
 initNextGen1(Context* c, unsigned footprint)
 {
   new (&(c->nextAgeMap)) Segment::Map
-    (&(c->nextGen1), log(TenureThreshold), 1, 0, false);
+    (&(c->nextGen1),  max(1, log(TenureThreshold)), 1, 0, false);
 
   unsigned minimum
     = (c->gen1.position() - c->tenureFootprint) + footprint + c->gen1padding;

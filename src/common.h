@@ -118,7 +118,6 @@ nextPowerOfTwo(unsigned n)
 inline unsigned
 log(unsigned n)
 {
-  if (n < 3) return 1;
   unsigned r = 0;
   for (unsigned i = 1; i < n; ++r) i <<= 1;
   return r;

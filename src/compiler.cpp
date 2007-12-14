@@ -255,10 +255,7 @@ class MemoryOperand: public MyOperand {
     displacement(displacement),
     index(index),
     scale(scale)
-  {
-    assert(static_cast<System*>(0), index == 0); // todo
-    assert(static_cast<System*>(0), scale == 1); // todo
-  }
+  { }
 
   virtual Register asRegister(Context*);
 
@@ -863,34 +860,49 @@ rex(Context* c)
 }
 
 void
-encode(Context* c, uint8_t instruction, uint8_t zeroPrefix,
-       uint8_t bytePrefix, uint8_t wordPrefix,
-       Register a, Register b, int32_t offset)
+encode(Context* c, uint8_t instruction, int a, Register b,
+       int32_t displacement, int index, unsigned scale)
 {
   c->code.append(instruction);
 
-  uint8_t prefix;
-  if (offset == 0 and b != rbp) {
-    prefix = zeroPrefix;
-  } else if (isInt8(offset)) {
-    prefix = bytePrefix;
+  uint8_t width;
+  if (displacement == 0 and b != rbp) {
+    width = 0;
+  } else if (isInt8(displacement)) {
+    width = 0x40;
   } else {
-    prefix = wordPrefix;
+    width = 0x80;
   }
 
-  c->code.append(prefix | (a << 3) | b);
-
-  if (b == rsp) {
-    c->code.append(0x24);
+  if (index == -1) {
+    c->code.append(width | (a << 3) | b);
+    if (b == rsp) {
+      c->code.append(0x24);
+    }
+  } else {
+    assert(c, b != rsp);
+    c->code.append(width | (a << 3) | 4);
+    c->code.append((log(scale) << 6) | (index << 3) | b);
   }
 
-  if (offset == 0 and b != rbp) {
+  if (displacement == 0 and b != rbp) {
     // do nothing
-  } else if (isInt8(offset)) {
-    c->code.append(offset);
+  } else if (isInt8(displacement)) {
+    c->code.append(displacement);
   } else {
-    c->code.append4(offset);
+    c->code.append4(displacement);
   }
+}
+
+void
+encode(Context* c, uint8_t instruction, int a, MemoryOperand* b, bool rex)
+{
+  Register r = b->base->asRegister(c);
+  int index = b->index ? b->index->asRegister(c) : -1;
+  if (rex) {
+    ::rex(c);
+  }
+  encode(c, instruction, a, r, b->displacement, index, b->scale);
 }
 
 void
@@ -1017,15 +1029,11 @@ RegisterOperand::accept(Context* c, Operation operation,
 {
   switch (operation) {
   case cmp: {
-    Register r = operand->base->asRegister(c);
-    rex(c);
-    encode(c, 0x3b, 0, 0x40, 0x80, value, r, operand->displacement);
+    encode(c, 0x3b, value, operand, true);
   } break;
 
   case mov: {
-    Register r = operand->base->asRegister(c);
-    rex(c);
-    encode(c, 0x8b, 0, 0x40, 0x80, value, r, operand->displacement);
+    encode(c, 0x8b, value, operand, true);
   } break;
 
   default: abort(c);
@@ -1038,27 +1046,24 @@ RegisterOperand::accept(Context* c, Operation operation,
 {
   switch (operation) {
   case mov: {
-    Register r = operand->base->asRegister(c);
-
     switch (selection) {
     case S1Selection:
       c->code.append(0x0f);
-      encode(c, 0xbe, 0, 0x40, 0x80, value, r, operand->displacement);      
+      encode(c, 0xbe, value, operand, false);      
       break;
 
     case S2Selection:
       c->code.append(0x0f);
-      encode(c, 0xbf, 0, 0x40, 0x80, value, r, operand->displacement);      
+      encode(c, 0xbf, value, operand, false);      
       break;
 
     case Z2Selection:
       c->code.append(0x0f);
-      encode(c, 0xb7, 0, 0x40, 0x80, value, r, operand->displacement);      
+      encode(c, 0xb7, value, operand, false);      
       break;
 
     case S4Selection:
-      rex(c);
-      encode(c, 0x63, 0, 0x40, 0x80, value, r, operand->displacement);      
+      encode(c, 0x63, value, operand, true);      
       break;
 
     default: abort(c);
@@ -1254,15 +1259,19 @@ MemoryOperand::apply(Context* c, Operation operation)
 {
   switch (operation) {
   case call:
-    encode(c, 0xff, 0x10, 0x50, 0x90, rax, base->asRegister(c), displacement);
+    encode(c, 0xff, 2, this, false);
+    break;
+
+  case neg:
+    encode(c, 0xf7, 2, this, true);
     break;
 
   case pop:
-    encode(c, 0x8f, 0, 0x40, 0x80, rax, base->asRegister(c), displacement);
+    encode(c, 0x8f, 0, this, false);
     break;
 
   case push:
-    encode(c, 0xff, 0x30, 0x70, 0xb0, rax, base->asRegister(c), displacement);
+    encode(c, 0xff, 6, this, false);
     break;
 
   default: abort(c);
@@ -1290,21 +1299,19 @@ MemoryOperand::accept(Context* c, Operation operation,
 {
   switch (operation) {
   case add: {
-    Register r = base->asRegister(c);
-    rex(c);
-    encode(c, 0x01, 0, 0x40, 0x80, operand->value, r, displacement);
+    encode(c, 0x01, operand->value, this, true);
   } break;
 
+//   case div: {
+//     // todo
+//   } break;
+
   case mov: {
-    Register r = base->asRegister(c);
-    rex(c);
-    encode(c, 0x89, 0, 0x40, 0x80, operand->value, r, displacement);
+    encode(c, 0x89, operand->value, this, true);
   } break;
 
   case sub: {
-    Register r = base->asRegister(c);
-    rex(c);
-    encode(c, 0x29, 0, 0x40, 0x80, operand->value, r, displacement);
+    encode(c, 0x29, operand->value, this, true);
   } break;
 
   default: abort(c);
@@ -1317,11 +1324,9 @@ MemoryOperand::accept(Context* c, Operation operation,
 {
   switch (operation) {
   case add: {
-    Register r = base->asRegister(c);
     unsigned i = (isInt8(operand->value) ? 0x83 : 0x81);
 
-    rex(c);
-    encode(c, i, 0, 0x40, 0x80, rax, r, displacement);
+    encode(c, i, 0, this, true);
     if (isInt8(operand->value)) {
       c->code.append(operand->value);
     } else if (isInt32(operand->value)) {
@@ -1334,9 +1339,7 @@ MemoryOperand::accept(Context* c, Operation operation,
   case mov: {
     assert(c, isInt32(operand->value)); // todo
 
-    Register r = base->asRegister(c);
-    rex(c);
-    encode(c, 0xc7, 0, 0x40, 0x80, rax, r, displacement);
+    encode(c, 0xc7, 0, this, true);
     c->code.append4(operand->value);
   } break;
 
