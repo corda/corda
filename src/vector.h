@@ -20,13 +20,24 @@ class Vector {
   }
 
   void dispose() {
-    if (data) {
+    if (data and minimumCapacity >= 0) {
       s->free(data);
     }
   }
 
+  void wrap(uint8_t* data, unsigned capacity) {
+    dispose();
+
+    this->data = data;
+    this->position = 0;
+    this->capacity = capacity;
+    this->minimumCapacity = -1;
+  }
+
   void ensure(unsigned space) {
     if (position + space > capacity) {
+      assert(s, minimumCapacity >= 0);
+
       unsigned newCapacity = max
         (position + space, max(minimumCapacity, capacity * 2));
       uint8_t* newData = static_cast<uint8_t*>(s->allocate(newCapacity));
@@ -101,7 +112,7 @@ class Vector {
   uint8_t* data;
   unsigned position;
   unsigned capacity;
-  unsigned minimumCapacity;
+  int minimumCapacity;
 };
 
 } // namespace vm
