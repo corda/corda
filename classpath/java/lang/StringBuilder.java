@@ -95,7 +95,6 @@ public class StringBuilder {
     flush();
 
     int index = length;
-    Cell p = null;
     for (Cell c = chain; c != null; c = c.next) {
       int start = index - c.value.length();
       index = start;
