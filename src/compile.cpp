@@ -19,6 +19,7 @@ vmJump(void* address, void* base, void* stack);
 namespace {
 
 const bool Verbose = true;
+const bool DebugTraces = false;
 
 class MyThread: public Thread {
  public:
@@ -1801,7 +1802,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         break;
 
       case ObjectField:
-        frame->pushObject(c->memory(c->memory(table, fieldOffset(t, field))));
+        frame->pushObject(c->memory(table, fieldOffset(t, field)));
         break;
 
       default:
@@ -1830,13 +1831,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case i2b: {
-      Operand* top = frame->topInt();
-      c->mov(c->select1(top), top);
+      Operand* tmp = c->temporary();
+      c->mov(frame->topInt(), tmp);
+      c->mov(c->select1(tmp), frame->topInt());
+      c->release(tmp);
     } break;
 
     case i2c: {
-      Operand* top = frame->topInt();
-      c->mov(c->select2z(top), top);
+      Operand* tmp = c->temporary();
+      c->mov(frame->topInt(), tmp);
+      c->mov(c->select2z(tmp), frame->topInt());
+      c->release(tmp);
     } break;
 
     case i2d: {
@@ -1862,8 +1867,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case i2s: {
-      Operand* top = frame->topInt();
-      c->mov(c->select2(top), top);
+      Operand* tmp = c->temporary();
+      c->mov(frame->topInt(), tmp);
+      c->mov(c->select2(tmp), frame->topInt());
+      c->release(tmp);
     } break;
       
     case iadd: {
@@ -2473,7 +2480,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case lreturn:
     case dreturn: {
       Operand* a = frame->popLong();
-      c->return_(frame->popLong());
+      c->return_(a);
       c->release(a);
     } return;
 
@@ -2972,10 +2979,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/String") == 0 and
+               "java/lang/Boolean") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "charAt") == 0)
+               "booleanValue") == 0)
     {
       asm("int3");
     }
@@ -3098,7 +3105,7 @@ invokeNative2(MyThread* t, object method)
   types[typeOffset++] = POINTER_TYPE;
 
   uintptr_t* sp = static_cast<uintptr_t*>(t->stack)
-    + (methodParameterFootprint(t, method) + 1);
+    + methodParameterFootprint(t, method);
 
   if (methodFlags(t, method) & ACC_STATIC) {
     args[argOffset++] = reinterpret_cast<uintptr_t>(&class_);
@@ -3820,7 +3827,7 @@ compile(MyThread* t, object method)
 object
 findTraceNode(MyThread* t, void* address)
 {
-  if (Verbose) {
+  if (DebugTraces) {
     fprintf(stderr, "find trace node %p\n", address);
   }
 
@@ -3871,7 +3878,7 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
 void
 insertTraceNode(MyThread* t, object node)
 {
-  if (Verbose) {
+  if (DebugTraces) {
     fprintf(stderr, "insert trace node %p\n",
             reinterpret_cast<void*>(traceNodeAddress(t, node)));
   }
