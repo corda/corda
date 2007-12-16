@@ -28,7 +28,7 @@ class Compiler {
   virtual Promise* poolAppend(intptr_t) = 0;
   virtual Promise* poolAppendPromise(Promise*) = 0;
 
-  virtual Operand* constant(intptr_t) = 0;
+  virtual Operand* constant(int64_t) = 0;
   virtual Operand* promiseConstant(Promise*) = 0;
   virtual Operand* absolute(Promise*) = 0;
   virtual Operand* memory(Operand* base, int displacement = 0,
@@ -64,10 +64,8 @@ class Compiler {
 
   virtual Stack* push(Stack*, unsigned count) = 0;
   virtual Stack* push(Stack*, Operand*) = 0;
-  virtual Stack* push2(Stack*, Operand*) = 0;
   virtual Stack* pop(Stack*, unsigned count) = 0;
   virtual Stack* pop(Stack*, Operand*) = 0;
-  virtual Stack* pop2(Stack*, Operand*) = 0;
   virtual Operand* stack(Stack*, unsigned) = 0;
 
   virtual void mov(Operand* src, Operand* dst) = 0;

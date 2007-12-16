@@ -19,7 +19,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 namespace {
 
 const bool Verbose = true;
-const bool DebugTraces = true;
+const bool DebugTraces = false;
 
 class MyThread: public Thread {
  public:
@@ -617,7 +617,11 @@ class Frame {
   }
 
   void pushLong(Operand* o) {
-    stack = c->push2(stack, o);
+    stack = c->push(stack, c->select8(o));
+    if (BytesPerWord == 8) {
+      stack = c->push(stack, 1);
+    }
+
     pushedInt();
     pushedInt();
   }
@@ -673,7 +677,11 @@ class Frame {
   }
 
   void popLong(Operand* o) {
-    stack = c->pop2(stack, o);
+    if (BytesPerWord == 8) {
+      stack = c->pop(stack, 1);
+    }
+    stack = c->pop(stack, o);
+
     poppedInt();
     poppedInt();
   }
@@ -697,7 +705,7 @@ class Frame {
            or getBit(map, index - parameterFootprint(t, method)) == 0);
     assert(t, index < parameterFootprint(t, method)
            or getBit(map, index + 1 - parameterFootprint(t, method)) == 0);
-    pushLong(c->memory(c->base(), localOffset(t, index, method)));
+    pushLong(c->select8(c->memory(c->base(), localOffset(t, index, method))));
   }
 
   void loadObject(unsigned index) {
@@ -713,7 +721,7 @@ class Frame {
   }
 
   void storeLong(unsigned index) {
-    popLong(c->memory(c->base(), localOffset(t, index, method)));
+    popLong(c->select8(c->memory(c->base(), localOffset(t, index, method))));
     storedInt(index);
     storedInt(index + 1);
   }
@@ -723,7 +731,7 @@ class Frame {
     storedObject(index);
   }
 
-  void increment(unsigned index, unsigned count) {
+  void increment(unsigned index, int count) {
     assert(t, index < codeMaxLocals(t, methodCode(t, method)));
     assert(t, index < parameterFootprint(t, method)
            or getBit(map, index - parameterFootprint(t, method)) == 0);
@@ -1296,7 +1304,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       case daload:
       case laload:
-        frame->pushInt(c->select8(c->memory(array, ArrayBody, index, 8)));
+        frame->pushLong(c->select8(c->memory(array, ArrayBody, index, 8)));
         break;
 
       case saload:
@@ -1844,17 +1852,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case i2b: {
-      Operand* tmp = c->temporary();
-      c->mov(frame->topInt(), tmp);
-      c->mov(c->select1(tmp), frame->topInt());
-      c->release(tmp);
+      Operand* top = frame->topInt();
+      c->mov(c->select1(top), top);
     } break;
 
     case i2c: {
-      Operand* tmp = c->temporary();
-      c->mov(frame->topInt(), tmp);
-      c->mov(c->select2z(tmp), frame->topInt());
-      c->release(tmp);
+      Operand* top = frame->topInt();
+      c->mov(c->select2z(top), top);
     } break;
 
     case i2d: {
@@ -1880,10 +1884,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case i2s: {
-      Operand* tmp = c->temporary();
-      c->mov(frame->topInt(), tmp);
-      c->mov(c->select2(tmp), frame->topInt());
-      c->release(tmp);
+      Operand* top = frame->topInt();
+      c->mov(c->select2(top), top);
     } break;
       
     case iadd: {
@@ -2306,13 +2308,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       // see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4381996
       abort(t);
 
-    case l2i:
-      frame->pushInt(frame->popLong());
-      break;
+    case l2i: {
+      Operand* a = frame->popLong();
+      frame->pushInt(a);
+      c->release(a);
+    } break;
 
     case ladd: {
       Operand* a = frame->popLong();
-      c->sub(a, frame->topLong());
+      c->add(a, frame->topLong());
       c->release(a);
     } break;
 
@@ -3007,10 +3011,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "Enums") == 0 and
+               "java/lang/Long") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "checkFaceCard") == 0)
+               "toString") == 0)
     {
       asm("int3");
     }
