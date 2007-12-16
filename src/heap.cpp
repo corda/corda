@@ -332,7 +332,7 @@ class Segment {
   }
 
   void replaceWith(Segment* s) {
-    system(context)->free(data);
+    if (data) system(context)->free(data);
     data = s->data;
     s->data = 0;
 
@@ -350,7 +350,7 @@ class Segment {
         abort(context);
       }
     } else {
-      map = 0;
+      assert(context, map == 0);
     }    
   }
 
@@ -467,7 +467,7 @@ class Context {
     ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
 
-    nextAgeMap(&nextGen1,  max(1, log(TenureThreshold)), 1, 0, false),
+    nextAgeMap(&nextGen1, max(1, log(TenureThreshold)), 1, 0, false),
     nextGen1(this, &nextAgeMap, 0, 0),
 
     pointerMap(&gen2, 1, 1, 0, true),

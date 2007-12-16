@@ -2777,6 +2777,11 @@ intern(Thread* t, object s)
 void
 collect(Thread* t, Heap::CollectionType type)
 {
+#ifdef VM_STRESS
+  bool stress = t->stress;
+  if (not stress) t->stress = true;
+#endif
+
   Machine* m = t->m;
 
   m->unsafe = true;
@@ -2800,6 +2805,10 @@ collect(Thread* t, Heap::CollectionType type)
   m->heapPoolIndex = 0;
 
   m->fixedFootprint = 0;
+
+#ifdef VM_STRESS
+  if (not stress) t->stress = false;
+#endif
 }
 
 void

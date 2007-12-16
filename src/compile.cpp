@@ -2914,6 +2914,7 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
 
   if (method) {
     PROTECT(t, method);
+    PROTECT(t, result);
 
     for (unsigned i = 0; i < objectPool->length(); i += sizeof(PoolElement)) {
       PoolElement* e = objectPool->peek<PoolElement>(i);
@@ -3076,17 +3077,20 @@ void
 compile(MyThread* t, object method);
 
 void*
-compileMethod(MyThread* t)
+compileMethod2(MyThread* t)
 {
   object node = findTraceNode(t, *static_cast<void**>(t->stack));
+  PROTECT(t, node);
+
   object target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
+  PROTECT(t, target);
 
   if (LIKELY(t->exception == 0)) {
     compile(t, target);
   }
 
   if (UNLIKELY(t->exception)) {
-    unwind(t);
+    return 0;
   } else {
     if (not traceNodeVirtualCall(t, node)) {
       Compiler* c = makeCompiler(t->m->system, 0);
@@ -3095,6 +3099,18 @@ compileMethod(MyThread* t)
       c->dispose();
     }
     return &singletonValue(t, methodCompiled(t, target), 0);
+  }
+}
+
+void*
+compileMethod(MyThread* t)
+{
+  void* r = compileMethod2(t);
+
+  if (UNLIKELY(t->exception)) {
+    unwind(t);
+  } else {
+    return r;
   }
 }
 
@@ -3302,7 +3318,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
   void** stack = static_cast<void**>(t->stack);
   MyThread::CallTrace* trace = t->trace;
 
-  while (true) {
+  while (stack) {
     object node = findTraceNode(t, *stack);
     if (node) {
       PROTECT(t, node);
@@ -3316,7 +3332,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
         visitParameters(t, v, base, method);
       }
       
-      visitStackAndLocals(t, v, base, method);
+      visitStackAndLocals(t, v, base, node);
 
       stack = static_cast<void**>(base) + 1;
       base = *static_cast<void**>(base);
@@ -3838,8 +3854,6 @@ compile(MyThread* t, object method)
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
-      PROTECT(t, method);
-
       Compiler* c = makeCompiler(t->m->system, p->indirectCaller);
     
       object compiled = compile(t, c, method);
