@@ -188,7 +188,9 @@ class MyStackWalker: public Processor::StackWalker {
     if (nativeMethod) {
       return 0;
     } else {
-      return traceNodeAddress(t, node);
+      intptr_t start = reinterpret_cast<intptr_t>
+        (&singletonValue(t, methodCompiled(t, traceNodeMethod(t, node)), 0));
+      return traceNodeAddress(t, node) - start;
     }
   }
 
@@ -244,19 +246,21 @@ localOffset(MyThread* t, int v, object method)
 
 class PoolElement {
  public:
-  PoolElement(object value, Promise* offset): value(value), offset(offset) { }
+  PoolElement(object value, Promise* address):
+    value(value), address(address)
+  { }
 
   object value;
-  Promise* offset;
+  Promise* address;
 };
 
 class TraceElement {
  public:
-  TraceElement(object target, Promise* offset, bool virtualCall):
-    target(target), offset(offset), virtualCall(virtualCall) { }
+  TraceElement(object target, Promise* machineIp, bool virtualCall):
+    target(target), machineIp(machineIp), virtualCall(virtualCall) { }
 
   object target;
-  Promise* offset;
+  Promise* machineIp;
   bool virtualCall;
   uint8_t map[0];
 };
@@ -292,6 +296,7 @@ class Frame {
     next(0),
     t(t),
     c(c),
+    stack(0),
     method(method),
     map(map),
     objectPool(objectPool),
@@ -308,6 +313,7 @@ class Frame {
     next(f),
     t(f->t),
     c(f->c),
+    stack(f->stack),
     method(f->method),
     map(map),
     objectPool(f->objectPool),
@@ -327,9 +333,9 @@ class Frame {
   }
 
   Operand* append(object o) {
-    new (objectPool->allocate(sizeof(PoolElement)))
-      PoolElement(o, c->poolOffset());
-    return c->poolAppend(c->constant(0));
+    Promise* p = c->poolAppend(0);
+    new (objectPool->allocate(sizeof(PoolElement))) PoolElement(o, p);
+    return c->absolute(p);
   }
 
   static unsigned parameterFootprint(Thread* t, object method) {
@@ -578,12 +584,16 @@ class Frame {
 
   void trace(object target, bool virtualCall) {
     TraceElement* e = new (traceLog->allocate(traceSizeInBytes(t, method)))
-      TraceElement(target, c->codeOffset(), virtualCall);
+      TraceElement(target, c->machineIp(), virtualCall);
     memcpy(e->map, map, mapSizeInWords(t, method) * BytesPerWord);
   }
 
   void trace() {
     trace(0, false);
+  }
+
+  Operand* machineIp(unsigned logicalIp) {
+    return c->promiseConstant(c->machineIp(logicalIp));
   }
 
   void startLogicalIp(unsigned ip) {
@@ -592,36 +602,36 @@ class Frame {
   }
 
   void pushInt(Operand* o) {
-    c->push(o);
+    stack = c->push(stack, o);
     pushedInt();
   }
 
   void pushObject(Operand* o) {
-    c->push(o);
+    stack = c->push(stack, o);
     pushedObject();
   }
 
   void pushObject() {
-    c->push(1);
+    stack = c->push(stack, 1);
     pushedObject();
   }
 
   void pushLong(Operand* o) {
-    c->push2(o);
+    stack = c->push2(stack, o);
     pushedInt();
     pushedInt();
   }
 
   void pop(unsigned count) {
     popped(count);
-    c->pop(count);
+    stack = c->pop(stack, count);
   }
 
   Operand* topInt() {
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize(t, method));
     assert(t, getBit(map, sp - 1) == 0);
-    return c->stack(0);
+    return c->stack(stack, 0);
   }
 
   Operand* topLong() {
@@ -629,45 +639,47 @@ class Frame {
     assert(t, sp - 2 >= localSize(t, method));
     assert(t, getBit(map, sp - 1) == 0);
     assert(t, getBit(map, sp - 2) == 0);
-    return c->stack(1);
+    return c->stack(stack, 1);
   }
 
   Operand* topObject() {
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize(t, method));
     assert(t, getBit(map, sp - 1) != 0);
-    return c->stack(0);
+    return c->stack(stack, 0);
   }
 
   Operand* popInt() {
-    poppedInt();
-    return c->pop();
+    Operand* tmp = c->temporary();
+    popInt(tmp);
+    return tmp;
   }
 
   Operand* popLong() {
-    poppedInt();
-    poppedInt();
-    return c->pop2();
+    Operand* tmp = c->temporary();
+    popLong(tmp);
+    return tmp;
   }
 
   Operand* popObject() {
-    poppedObject();
-    return c->pop();
+    Operand* tmp = c->temporary();
+    popObject(tmp);
+    return tmp;
   }
 
   void popInt(Operand* o) {
-    c->pop(o);
+    stack = c->pop(stack, o);
     poppedInt();
   }
 
   void popLong(Operand* o) {
-    c->pop2(o);
+    stack = c->pop2(stack, o);
     poppedInt();
     poppedInt();
   }
 
   void popObject(Operand* o) {
-    c->pop(o);
+    stack = c->pop(stack, o);
     poppedObject();
   }
 
@@ -712,83 +724,84 @@ class Frame {
   }
 
   void increment(unsigned index, unsigned count) {
-    assert(t, index < localSize(t, method));
-    assert(t, getBit(map, index) == 0);
+    assert(t, index < codeMaxLocals(t, methodCode(t, method)));
+    assert(t, index < parameterFootprint(t, method)
+           or getBit(map, index - parameterFootprint(t, method)) == 0);
     c->add(c->constant(count),
            c->memory(c->base(), localOffset(t, index, method)));
   }
 
   void dup() {
-    c->push(c->stack(0));
+    stack = c->push(stack, c->stack(stack, 0));
     dupped();
   }
 
   void dupX1() {
-    Operand* s0 = c->stack(0);
-    Operand* s1 = c->stack(1);
+    Operand* s0 = c->stack(stack, 0);
+    Operand* s1 = c->stack(stack, 1);
 
     c->mov(s0, s1);
     c->mov(s1, s0);
-    c->push(s0);
+    stack = c->push(stack, s0);
 
     duppedX1();
   }
 
   void dupX2() {
-    Operand* s0 = c->stack(0);
-    Operand* s1 = c->stack(1);
-    Operand* s2 = c->stack(2);
+    Operand* s0 = c->stack(stack, 0);
+    Operand* s1 = c->stack(stack, 1);
+    Operand* s2 = c->stack(stack, 2);
 
     c->mov(s0, s2);
     c->mov(s2, s1);
     c->mov(s1, s0);
-    c->push(s0);
+    stack = c->push(stack, s0);
 
     duppedX2();
   }
 
   void dup2() {
-    Operand* s0 = c->stack(0);
+    Operand* s0 = c->stack(stack, 0);
 
-    c->push(s0);
-    c->push(s0);
+    stack = c->push(stack, s0);
+    stack = c->push(stack, s0);
 
     dupped2();
   }
 
   void dup2X1() {
-    Operand* s0 = c->stack(0);
-    Operand* s1 = c->stack(1);
-    Operand* s2 = c->stack(2);
+    Operand* s0 = c->stack(stack, 0);
+    Operand* s1 = c->stack(stack, 1);
+    Operand* s2 = c->stack(stack, 2);
 
     c->mov(s1, s2);
     c->mov(s0, s1);
     c->mov(s2, s0);
-    c->push(s1);
-    c->push(s0);
+    stack = c->push(stack, s1);
+    stack = c->push(stack, s0);
 
     dupped2X1();
   }
 
   void dup2X2() {
-    Operand* s0 = c->stack(0);
-    Operand* s1 = c->stack(1);
-    Operand* s2 = c->stack(2);
-    Operand* s3 = c->stack(3);
+    Operand* s0 = c->stack(stack, 0);
+    Operand* s1 = c->stack(stack, 1);
+    Operand* s2 = c->stack(stack, 2);
+    Operand* s3 = c->stack(stack, 3);
 
     c->mov(s1, s3);
     c->mov(s0, s2);
     c->mov(s3, s1);
     c->mov(s2, s0);
-    c->push(s1);
-    c->push(s0);
+    stack = c->push(stack, s1);
+    stack = c->push(stack, s0);
 
     dupped2X2();
   }
 
   void swap() {
-    Operand* s0 = c->stack(0);
-    Operand* s1 = c->stack(1);
+    Operand* s0 = c->stack(stack, 0);
+    Operand* s1 = c->stack(stack, 1);
     Operand* tmp = c->temporary();
 
     c->mov(s0, tmp);
@@ -803,6 +816,7 @@ class Frame {
   Frame* next;
   MyThread* t;
   Compiler* c;
+  Stack* stack;
   object method;
   uintptr_t* map;
   Vector* objectPool;
@@ -1818,7 +1832,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
       assert(t, newIp < codeLength(t, code));
 
-      c->jmp(c->logicalIp(newIp));
+      c->jmp(frame->machineIp(newIp));
       ip = newIp;
     } break;
 
@@ -1826,7 +1840,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint32_t newIp = (ip - 5) + codeReadInt32(t, code, ip);
       assert(t, newIp < codeLength(t, code));
 
-      c->jmp(c->logicalIp(newIp));
+      c->jmp(frame->machineIp(newIp));
       ip = newIp;
     } break;
 
@@ -1930,7 +1944,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->release(a);
       c->release(b);
 
-      Operand* target = c->logicalIp(newIp);
+      Operand* target = frame->machineIp(newIp);
       if (instruction == if_acmpeq) {
         c->je(target);
       } else {
@@ -1956,7 +1970,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->release(a);
       c->release(b);
 
-      Operand* target = c->logicalIp(newIp);
+      Operand* target = frame->machineIp(newIp);
       switch (instruction) {
       case if_icmpeq:
         c->je(target);
@@ -1995,7 +2009,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->cmp(c->constant(0), a);
       c->release(a);
 
-      Operand* target = c->logicalIp(newIp);
+      Operand* target = frame->machineIp(newIp);
       switch (instruction) {
       case ifeq:
         c->je(target);
@@ -2026,11 +2040,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
       assert(t, newIp < codeLength(t, code));
 
-      Operand* a = frame->popInt();
+      Operand* a = frame->popObject();
       c->cmp(c->constant(0), a);
       c->release(a);
 
-      Operand* target = c->logicalIp(newIp);
+      Operand* target = frame->machineIp(newIp);
       if (instruction == ifnull) {
         c->je(target);
       } else {
@@ -2145,7 +2159,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* found = c->directCall
         (c->constant
          (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
-         3, c->thread(), frame->append(target), c->stack(instance));
+         3, c->thread(), frame->append(target),
+         c->stack(frame->stack, instance));
 
       c->mov(c->memory(found, MethodCompiled), found);
 
@@ -2195,7 +2210,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       unsigned offset = ClassVtable + (methodOffset(t, target) * BytesPerWord);
 
-      Operand* instance = c->stack(parameterFootprint - 1);
+      Operand* instance = c->stack(frame->stack, parameterFootprint - 1);
       Operand* class_ = c->temporary();
       
       c->mov(c->memory(instance), class_);
@@ -2432,30 +2447,28 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
-      compile(t, frame, defaultIp);
-      if (UNLIKELY(t->exception)) return;
-
-      Operand* default_ = c->poolAppend(c->logicalIp(defaultIp));
+      Operand* default_ = c->absolute
+        (c->poolAppendPromise(c->machineIp(defaultIp)));
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
-      Operand* start;
+      Operand* start = 0;
+      uint32_t ipTable[pairCount];
       for (int32_t i = 0; i < pairCount; ++i) {
         unsigned index = ip + (i * 8);
         int32_t key = codeReadInt32(t, code, index);
         uint32_t newIp = base + codeReadInt32(t, code, index);
         assert(t, newIp < codeLength(t, code));
 
-        compile(t, frame, newIp);
-        if (UNLIKELY(t->exception)) return;
+        ipTable[i] = newIp;
 
-        Operand* result = c->poolAppend(c->constant(key));
-        c->poolAppend(c->logicalIp(newIp));
-
+        Promise* p = c->poolAppend(key);
         if (i == 0) {
-          start = result;
+          start = c->promiseConstant(p);
         }
+        c->poolAppendPromise(c->machineIp(newIp));
       }
+      assert(t, start);
 
       c->jmp
         (c->directCall
@@ -2463,6 +2476,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
           4, key, start, c->constant(pairCount), default_));
 
       c->release(key);
+
+      for (int32_t i = 0; i < pairCount; ++i) {
+        compile(t, frame, ipTable[i]);
+        if (UNLIKELY(t->exception)) return;
+      }
+
+      compile(t, frame, defaultIp);
+      if (UNLIKELY(t->exception)) return;
     } return;
 
     case lor: {
@@ -2611,7 +2632,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* size = frame->popInt();
       c->cmp(c->constant(0), size);
-      c->release(size);
 
       c->jge(nonnegative);
 
@@ -2658,7 +2678,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* result = c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(makeBlankArray)),
-         2, c->constant(reinterpret_cast<intptr_t>(constructor)), size);
+         3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
+         size);
+
+      c->release(size);
 
       frame->trace();
 
@@ -2782,29 +2805,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
-
-      compile(t, frame, defaultIp);
-      if (UNLIKELY(t->exception)) return;
       
-      Operand* default_ = c->poolAppend(c->logicalIp(defaultIp));
-
       int32_t bottom = codeReadInt32(t, code, ip);
       int32_t top = codeReadInt32(t, code, ip);
         
-      Operand* start;
-      for (int32_t i = 0; i < bottom - top + 1; ++i) {
+      Operand* start = 0;
+      uint32_t ipTable[top - bottom + 1];
+      for (int32_t i = 0; i < top - bottom + 1; ++i) {
         unsigned index = ip + (i * 4);
         uint32_t newIp = base + codeReadInt32(t, code, index);
         assert(t, newIp < codeLength(t, code));
-        
-        compile(t, frame, newIp);
-        if (UNLIKELY(t->exception)) return;
 
-        Operand* result = c->poolAppend(c->logicalIp(newIp));
+        ipTable[i] = newIp;
+
+        Promise* p = c->poolAppendPromise(c->machineIp(newIp));
         if (i == 0) {
-          start = result;
+          start = c->promiseConstant(p);
         }
       }
+      assert(t, start);
 
       Operand* defaultCase = c->label();
       
@@ -2814,13 +2833,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->cmp(c->constant(top), key);
       c->jg(defaultCase);
 
-      c->shl(c->constant(1), key);
+      c->sub(c->constant(bottom), key);
       c->jmp(c->memory(start, 0, key, BytesPerWord));
 
       c->mark(defaultCase);
-      c->jmp(default_);
+      c->jmp(frame->machineIp(defaultIp));
 
       c->release(key);
+
+      for (int32_t i = 0; i < top - bottom + 1; ++i) {
+        compile(t, frame, ipTable[i]);
+        if (UNLIKELY(t->exception)) return;
+      }
+
+      compile(t, frame, defaultIp);
+      if (UNLIKELY(t->exception)) return;
     } return;
 
     case wide: {
@@ -2887,10 +2914,12 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
 
     for (unsigned i = 0; i < objectPool->length(); i += sizeof(PoolElement)) {
       PoolElement* e = objectPool->peek<PoolElement>(i);
+      intptr_t offset = e->address->value(c)
+        - reinterpret_cast<intptr_t>(start);
 
-      singletonMarkObject(t, result, e->offset->value(c) / BytesPerWord);
+      singletonMarkObject(t, result, offset / BytesPerWord);
 
-      set(t, result, SingletonBody + e->offset->value(c), e->value);
+      set(t, result, SingletonBody + offset, e->value);
     }
 
     unsigned traceSize = Frame::traceSizeInBytes(t, method);
@@ -2899,9 +2928,8 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
       TraceElement* e = traceLog->peek<TraceElement>(i);
 
       object node = makeTraceNode
-        (t, reinterpret_cast<intptr_t>(start + e->offset->value(c)),
-         0, method, e->target, e->virtualCall, mapSize / BytesPerWord,
-         false);
+        (t, e->machineIp->value(c), 0, method, e->target, e->virtualCall,
+         mapSize / BytesPerWord, false);
 
       if (mapSize) {
         memcpy(&traceNodeMap(t, node, 0), e->map, mapSize);
@@ -2927,16 +2955,16 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
             (t, newTable, i);
 
           exceptionHandlerStart(newHandler)
-            = c->logicalIpToOffset(exceptionHandlerStart(oldHandler))
-            ->value(c);
+            = c->machineIp(exceptionHandlerStart(oldHandler))->value(c)
+            - reinterpret_cast<intptr_t>(start);
 
           exceptionHandlerEnd(newHandler)
-            = c->logicalIpToOffset(exceptionHandlerEnd(oldHandler))
-            ->value(c);
+            = c->machineIp(exceptionHandlerEnd(oldHandler))->value(c)
+            - reinterpret_cast<intptr_t>(start);
 
           exceptionHandlerIp(newHandler)
-            = c->logicalIpToOffset(exceptionHandlerIp(oldHandler))
-            ->value(c);
+            = c->machineIp(exceptionHandlerIp(oldHandler))->value(c)
+            - reinterpret_cast<intptr_t>(start);
 
           exceptionHandlerCatchType(newHandler)
             = exceptionHandlerCatchType(oldHandler);
@@ -2957,8 +2985,9 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
           LineNumber* oldLine = lineNumberTableBody(t, oldTable, i);
           LineNumber* newLine = lineNumberTableBody(t, newTable, i);
 
-          lineNumberIp(newLine) = c->logicalIpToOffset(lineNumberIp(oldLine))
-            ->value(c);
+          lineNumberIp(newLine)
+            = c->machineIp(lineNumberIp(oldLine))->value(c)
+            - reinterpret_cast<intptr_t>(start);
 
           lineNumberLine(newLine) = lineNumberLine(oldLine);
         }
@@ -2979,10 +3008,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/Boolean") == 0 and
+               "Enums") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "booleanValue") == 0)
+               "checkFaceCard") == 0)
     {
       asm("int3");
     }
@@ -3474,8 +3503,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
     break;
 
   case ObjectField:
-    r = (result == 0 ? 0 :
-         *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+    r = reinterpret_cast<object>(result);
     break;
 
   case VoidField:

@@ -36,13 +36,14 @@ enum SelectionType {
 const bool Verbose = false;
 
 const unsigned RegisterCount = BytesPerWord * 2;
+const unsigned GprParameterCount = 6;
 
 class Context;
+class MyOperand;
 class ImmediateOperand;
 class AbsoluteOperand;
 class RegisterOperand;
 class MemoryOperand;
-class StackOperand;
 class CodePromise;
 class MyPromise;
 
@@ -63,6 +64,16 @@ isInt32(intptr_t v)
 {
   return v == static_cast<int32_t>(v);
 }
+
+class RegisterNode {
+ public:
+  RegisterNode(Register value, RegisterNode* next):
+    value(value), next(next)
+  { }
+
+  Register value;
+  RegisterNode* next;
+};
 
 class Task {
  public:
@@ -105,6 +116,17 @@ class Segment {
   Event* event;
 };
 
+class MyStack: public Stack {
+ public:
+  MyStack(MyOperand* value, int index, MyStack* next):
+    value(value), index(index), next(next)
+  { }
+
+  MyOperand* value;
+  int index;
+  MyStack* next;
+};
+
 class MyOperand: public Operand {
  public:
   enum Operation {
@@ -144,9 +166,12 @@ class MyOperand: public Operand {
 
   virtual Register asRegister(Context* c) { abort(c); }
 
+  virtual RegisterNode* dependencies(Context*, RegisterNode* next)
+  { return next; }
+
   virtual void release(Context*) { /* ignore */ }
 
-  virtual void setLabelValue(Context* c, CodePromise*) { abort(c); }
+  virtual void setLabelValue(Context* c, MyPromise*) { abort(c); }
 
   virtual void apply(Context*, Operation) = 0;
 
@@ -180,6 +205,8 @@ class RegisterOperand: public MyOperand {
   virtual Register asRegister(Context*) {
     return value;
   }
+
+  virtual RegisterNode* dependencies(Context* c, RegisterNode* next);
 
   void acquire(Context* c UNUSED) {
     assert(c, not reserved);
@@ -253,7 +280,9 @@ class AddressOperand: public MyOperand {
     promise(promise)
   { }
 
-  virtual void setLabelValue(Context*, CodePromise*);
+  virtual Register asRegister(Context* c);
+
+  virtual void setLabelValue(Context*, MyPromise*);
 
   virtual void apply(Context*, Operation);
   virtual void apply(Context* c, Operation, MyOperand*) { abort(c); }
@@ -312,6 +341,15 @@ class MemoryOperand: public MyOperand {
   { }
 
   virtual Register asRegister(Context*);
+
+  virtual RegisterNode* dependencies(Context* c, RegisterNode* next) {
+    next = base->dependencies(c, next);
+    if (index) {
+      return index->dependencies(c, next);
+    } else {
+      return next;
+    }
+  }
 
   virtual void apply(Context*, Operation);
 
@@ -404,6 +442,10 @@ class WrapperOperand: public MyOperand {
     return base->asRegister(c);
   }
 
+  virtual RegisterNode* dependencies(Context* c, RegisterNode* next) {
+    return base->dependencies(c, next);
+  }
+
   virtual void apply(Context* c, Operation operation) {
     base->apply(c, operation);
   }
@@ -461,16 +503,6 @@ class WrapperOperand: public MyOperand {
   MyOperand* base;
 };
 
-class StackOperand: public WrapperOperand {
- public:
-  StackOperand(MyOperand* base, int index, StackOperand* next):
-    WrapperOperand(base), index(index), next(next)
-  { }
-
-  int index;
-  StackOperand* next;
-};
-
 class TemporaryOperand: public WrapperOperand {
  public:
   TemporaryOperand(MyOperand* base):
@@ -497,7 +529,6 @@ class Context {
     zone(s, 8 * 1024),
     indirectCaller(reinterpret_cast<intptr_t>(indirectCaller)),
     segmentTable(0),
-    stack(0),
     reserved(0),
     codeLength(-1)
   {
@@ -529,7 +560,6 @@ class Context {
   Zone zone;
   intptr_t indirectCaller;
   Segment** segmentTable;
-  StackOperand* stack;
   unsigned reserved;
   int codeLength;
   RegisterOperand* registers[RegisterCount];
@@ -585,7 +615,7 @@ class PoolPromise: public MyPromise {
 
   virtual intptr_t value(Context* c) {
     if (resolved(c)) {
-      return c->codeLength + key;
+      return reinterpret_cast<intptr_t>(c->code.data + c->codeLength + key);
     }
     
     abort(c);
@@ -600,17 +630,13 @@ class PoolPromise: public MyPromise {
 
 class CodePromise: public MyPromise {
  public:
-  CodePromise(bool absolute):
-    offset(-1), absolute(absolute)
+  CodePromise():
+    offset(-1)
   { }
 
   virtual intptr_t value(Context* c) {
     if (resolved(c)) {
-      if (absolute) {
-        return reinterpret_cast<intptr_t>(c->code.data + offset);
-      } else {
-        return offset;
-      }
+      return reinterpret_cast<intptr_t>(c->code.data + offset);
     }
     
     abort(c);
@@ -621,13 +647,12 @@ class CodePromise: public MyPromise {
   }
 
   intptr_t offset;
-  bool absolute;
 };
 
 class IpPromise: public MyPromise {
  public:
-  IpPromise(intptr_t logicalIp, bool absolute):
-    logicalIp(logicalIp), absolute(absolute)
+  IpPromise(intptr_t logicalIp):
+    logicalIp(logicalIp)
   { }
 
   virtual intptr_t value(Context* c) {
@@ -639,11 +664,7 @@ class IpPromise: public MyPromise {
         Segment* s = c->segmentTable[middle];
 
         if (logicalIp == s->logicalIp) {
-          if (absolute) {
-            return reinterpret_cast<intptr_t>(c->code.data + s->offset);
-          } else {
-            return s->offset;
-          }
+          return reinterpret_cast<intptr_t>(c->code.data + s->offset);
         } else if (logicalIp < s->logicalIp) {
           top = middle;
         } else if (logicalIp > s->logicalIp) {
@@ -660,7 +681,6 @@ class IpPromise: public MyPromise {
   }
 
   intptr_t logicalIp;
-  bool absolute;
 };
 
 AddressOperand*
@@ -837,6 +857,99 @@ class ReleaseEvent: public Event {
   MyOperand* operand; 
 };
 
+
+class Movement {
+ public:
+  MyOperand* source;
+  Register destination;
+  RegisterNode* dependencies;
+};
+
+void
+push(Context* c, Movement* table, unsigned size)
+{
+  int pushed[size];
+  unsigned pushIndex = 0;
+  for (unsigned i = 0; i < size; ++i) {
+    Movement* mi = table + i;
+    for (unsigned j = i + 1; j < size; ++j) {
+      Movement* mj = table + j;
+      for (RegisterNode* d = mj->dependencies; d; d = d->next) {
+        if (mi->destination == d->value) {
+          mi->source->apply(c, MyOperand::push);
+          pushed[pushIndex++] = i;
+          goto loop;
+        }
+      }
+    }
+
+    mi->source->apply(c, MyOperand::mov, register_(c, mi->destination));
+  loop:;    
+  }
+
+  for (int i = pushIndex - 1; i >= 0; --i) {
+    register_(c, table[pushed[i]].destination)->apply
+      (c, MyOperand::pop);
+  }
+}
+
+Register
+gpRegister(Context* c, unsigned index)
+{
+  switch (index) {
+  case 0:
+    return rdi;
+  case 1:
+    return rsi;
+  case 2:
+    return rdx;
+  case 3:
+    return rcx;
+  case 4:
+    return r8;
+  case 5:
+    return r9;
+  default:
+    abort(c);
+  }
+}
+
+class ArgumentEvent: public Event {
+ public:
+  ArgumentEvent(MyOperand** arguments, unsigned count, Event* next):
+    Event(next),
+    arguments(arguments),
+    count(count)
+  { }
+
+  virtual void run(Context* c) {
+    if (BytesPerWord == 8) {
+      const unsigned size = min(count, GprParameterCount);
+      Movement moveTable[size];
+
+      for (int i = count - 1; i >= 0; --i) {
+        if (static_cast<unsigned>(i) < GprParameterCount) {
+          Movement* m = moveTable + (size - i - 1);
+          m->source = arguments[i];
+          m->destination = gpRegister(c, i);
+          m->dependencies = arguments[i]->dependencies(c, 0);
+        } else {
+          arguments[i]->apply(c, MyOperand::push);
+        }
+      }
+
+      push(c, moveTable, size);
+    } else {
+      for (int i = count - 1; i >= 0; --i) {
+        arguments[i]->apply(c, MyOperand::push);
+      }
+    }
+  }
+
+  MyOperand** arguments; 
+  unsigned count;
+};
+
 void
 appendOperation(Context* c, MyOperand::Operation operation)
 {
@@ -877,105 +990,88 @@ appendRelease(Context* c, Operand* operand)
     ReleaseEvent(operand, s->event);
 }
 
-StackOperand*
-pushed(Context* c)
+void
+appendArgumentEvent(Context* c, MyOperand** arguments, unsigned count)
 {
-  int index = (c->stack ?
-               c->stack->index + (c->stack->footprint() / BytesPerWord) :
-               0);
-
-  MyOperand* base = memory
-    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1);
-
-  return c->stack = new (c->zone.allocate(sizeof(StackOperand)))
-    StackOperand(base, index, c->stack);
+  Segment* s = currentSegment(c);
+  s->event = new (c->zone.allocate(sizeof(ArgumentEvent)))
+    ArgumentEvent(arguments, count, s->event);
 }
 
-void
-push(Context* c, int count)
+MyStack*
+pushed(Context* c, MyStack* stack)
+{
+  int index = (stack ?
+               stack->index + (stack->value->footprint() / BytesPerWord) :
+               0);
+
+  MyOperand* value = memory
+    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1);
+
+  return new (c->zone.allocate(sizeof(MyStack))) MyStack(value, index, stack);
+}
+
+MyStack*
+push(Context* c, MyStack* stack, int count)
 {
   appendOperation
     (c, MyOperand::sub, immediate(c, count * BytesPerWord), register_(c, rsp));
 
   while (count) {
     -- count;
-    pushed(c);
+    stack = pushed(c, stack);
   }
+
+  return stack;
 }
 
-StackOperand*
-push(Context* c, MyOperand* v)
+MyStack*
+push(Context* c, MyStack* stack, MyOperand* v)
 {
   appendOperation(c, MyOperand::push, v);
 
-  return pushed(c);
+  return pushed(c, stack);
 }
 
-void
-pop(Context* c, int count)
+MyStack*
+pop(Context* c, MyStack* stack, int count)
 {
   appendOperation
     (c, MyOperand::add, immediate(c, count * BytesPerWord), register_(c, rsp));
 
   while (count) {
-    count -= (c->stack->footprint() / BytesPerWord);
+    count -= (stack->value->footprint() / BytesPerWord);
     assert(c, count >= 0);
-    c->stack = c->stack->next;
+    stack = stack->next;
   }
+
+  return stack;
 }
 
-void
-pop(Context* c, MyOperand* dst)
+MyStack*
+pop(Context* c, MyStack* stack, MyOperand* dst)
 {
   appendOperation(c, MyOperand::pop, dst);
 
-  c->stack = c->stack->next;
-}
-
-Register
-gpRegister(Context* c, unsigned index)
-{
-  switch (index) {
-  case 0:
-    return rdi;
-  case 1:
-    return rsi;
-  case 2:
-    return rdx;
-  case 3:
-    return rcx;
-  case 4:
-    return r8;
-  case 5:
-    return r9;
-  default:
-    abort(c);
-  }
+  return stack->next;
 }
 
 unsigned
 pushArguments(Context* c, unsigned count, va_list list)
 {
-  MyOperand* arguments[count];
+  MyOperand** arguments = static_cast<MyOperand**>
+    (c->zone.allocate(count * BytesPerWord));
   unsigned footprint = 0;
   for (unsigned i = 0; i < count; ++i) {
     arguments[i] = va_arg(list, MyOperand*);
     footprint += pad(arguments[i]->footprint());
   }
 
-  const int GprCount = 6;
-  for (int i = count - 1; i >= 0; --i) {
-    if (BytesPerWord == 8 and i < GprCount) {
-      appendOperation
-        (c, MyOperand::mov, arguments[i], register_(c, gpRegister(c, i)));
-    } else {
-      appendOperation(c, MyOperand::push, arguments[i]);
-    }
-  }
+  appendArgumentEvent(c, arguments, count);
 
   if (BytesPerWord == 8) {
-    if (footprint > GprCount * BytesPerWord) {
-      return footprint - GprCount * BytesPerWord;
+    if (footprint > GprParameterCount * BytesPerWord) {
+      return footprint - GprParameterCount * BytesPerWord;
     } else {
       return 0;
     }
@@ -1036,6 +1132,13 @@ encode(Context* c, uint8_t instruction, int a, MemoryOperand* b, bool rex)
     ::rex(c);
   }
   encode(c, instruction, a, r, b->displacement, index, b->scale);
+}
+
+RegisterNode*
+RegisterOperand::dependencies(Context* c, RegisterNode* next)
+{
+  return new (c->zone.allocate(sizeof(RegisterNode)))
+    RegisterNode(value, next);
 }
 
 void
@@ -1142,19 +1245,17 @@ RegisterOperand::accept(Context* c, Operation operation,
   } break;
 
   case and_: {
-    if (operand->value) {
-      rex(c);
-      if (isInt8(operand->value)) {
-        c->code.append(0x83);
-        c->code.append(0xe0 | value);
-        c->code.append(operand->value);
-      } else {
-        assert(c, isInt32(operand->value));
+    rex(c);
+    if (isInt8(operand->value)) {
+      c->code.append(0x83);
+      c->code.append(0xe0 | value);
+      c->code.append(operand->value);
+    } else {
+      assert(c, isInt32(operand->value));
 
-        c->code.append(0x81);
-        c->code.append(0xe0 | value);
-        c->code.append(operand->value);
-      }
+      c->code.append(0x81);
+      c->code.append(0xe0 | value);
+      c->code.append(operand->value);
     }
   } break;
 
@@ -1171,6 +1272,22 @@ RegisterOperand::accept(Context* c, Operation operation,
     rex(c);
     c->code.append(0xb8 | value);
     c->code.appendAddress(operand->value);
+  } break;
+
+  case shl: {
+    if (operand->value) {
+      rex(c);
+      if (operand->value == 1) {
+        c->code.append(0xd1);
+        c->code.append(0xe0 | value);
+      } else {
+        assert(c, isInt8(operand->value));
+
+        c->code.append(0xc1);
+        c->code.append(0xe0 | value);
+        c->code.append(operand->value);
+      }
+    }
   } break;
 
   case sub: {
@@ -1243,9 +1360,7 @@ ImmediateOperand*
 value(Context* c, AbsoluteOperand* operand)
 {
   if (c->codeLength >= 0) {
-    return immediate
-      (c, reinterpret_cast<intptr_t>
-       (c->code.data + operand->promise->value(c)));
+    return immediate(c, operand->promise->value(c));
   } else {
     return immediate(c, 0);
   }
@@ -1306,7 +1421,7 @@ conditional(Context* c, unsigned condition, AddressOperand* operand)
 }
 
 void
-AddressOperand::setLabelValue(Context*, CodePromise* p)
+AddressOperand::setLabelValue(Context*, MyPromise* p)
 {
   promise = p;
 }
@@ -1356,6 +1471,22 @@ AddressOperand::apply(Context* c, Operation operation)
     
   default: abort(c);
   }
+}
+
+Register
+AddressOperand::asRegister(Context* c)
+{
+  intptr_t v;
+  if (c->codeLength >= 0) {
+    v = promise->value(c);
+  } else {
+    v = 0;
+  }
+  
+  RegisterOperand* tmp = temporary(c);
+  tmp->accept(c, mov, immediate(c, v));
+  tmp->release(c);
+  return tmp->value;  
 }
 
 void
@@ -1436,6 +1567,10 @@ MemoryOperand::apply(Context* c, Operation operation)
     encode(c, 0xff, 2, this, false);
     break;
 
+  case jmp:
+    encode(c, 0xff, 4, this, false);
+    break;
+
   case neg:
     encode(c, 0xf7, 2, this, true);
     break;
@@ -1472,6 +1607,10 @@ MemoryOperand::accept(Context* c, Operation operation,
                       RegisterOperand* operand)
 {
   switch (operation) {
+  case and_: {
+    encode(c, 0x21, operand->value, this, true);
+  } break;
+
   case add: {
     encode(c, 0x01, operand->value, this, true);
   } break;
@@ -1656,14 +1795,8 @@ class MyCompiler: public Compiler {
     c(s, indirectCaller)
   { }
 
-  virtual Promise* poolOffset() {
-    return new (c.zone.allocate(sizeof(PoolPromise)))
-      PoolPromise(c.constantPool.length());
-  }
-
-  virtual Promise* codeOffset() {
-    CodePromise* p = new (c.zone.allocate(sizeof(CodePromise)))
-      CodePromise(false);
+  virtual Promise* machineIp() {
+    CodePromise* p = new (c.zone.allocate(sizeof(CodePromise))) CodePromise();
 
     Segment* s = currentSegment(&c);
     s->event->task = new (c.zone.allocate(sizeof(CodePromiseTask)))
@@ -1672,64 +1805,77 @@ class MyCompiler: public Compiler {
     return p;
   }
 
-  virtual Operand* poolAppend(Operand* v) {
-    Operand* r = absolute(&c, static_cast<MyPromise*>(poolOffset()));
+  virtual Promise* machineIp(unsigned logicalIp) {
+    return new (c.zone.allocate(sizeof(IpPromise))) IpPromise(logicalIp);
+  }
+
+  virtual Promise* poolAppend(intptr_t v) {
+    return poolAppendPromise
+      (new (c.zone.allocate(sizeof(ResolvedPromise))) ResolvedPromise(v));
+  }
+
+  virtual Promise* poolAppendPromise(Promise* v) {
+    Promise* p = new (c.zone.allocate(sizeof(PoolPromise)))
+      PoolPromise(c.constantPool.length());
     c.constantPool.appendAddress(v);
-    return r;
+    return p;
   }
 
   virtual Operand* constant(intptr_t v) {
     return immediate(&c, v);
   }
 
-  virtual void push(unsigned count) {
-    ::push(&c, count);
+  virtual Operand* promiseConstant(Promise* p) {
+    return address(&c, static_cast<MyPromise*>(p));
   }
 
-  virtual void push(Operand* v) {
-    ::push(&c, static_cast<MyOperand*>(v));
+  virtual Operand* absolute(Promise* p) {
+    return ::absolute(&c, static_cast<MyPromise*>(p));
   }
 
-  virtual void push2(Operand* v) {
-    push(v);
-    if (BytesPerWord == 8) push(immediate(&c, 0));
+  virtual Stack* push(Stack* s, unsigned count) {
+    return ::push(&c, static_cast<MyStack*>(s), count);
   }
 
-  virtual Operand* stack(unsigned index) {
-    StackOperand* s = c.stack;
-    unsigned i = 0;
-    if (s->footprint() / BytesPerWord == 2) ++ i;
+  virtual Stack* push(Stack* s, Operand* v) {
+    return ::push(&c, static_cast<MyStack*>(s), static_cast<MyOperand*>(v));
+  }
 
-    for (; i < index; ++i) {
-      s = s->next;
-      if (s->footprint() / BytesPerWord == 2) ++ i;
-    }
-
+  virtual Stack* push2(Stack* s, Operand* v) {
+    s = push(s, v);
+    if (BytesPerWord == 8) s = push(s, immediate(&c, 0));
     return s;
   }
 
-  virtual void pop(unsigned count) {
-    ::pop(&c, count);
+  virtual Operand* stack(Stack* s, unsigned index) {
+    MyStack* stack = static_cast<MyStack*>(s);
+    unsigned i = 0;
+
+    if (stack->value->footprint() / BytesPerWord == 2) {
+      ++ i;
+    }
+
+    for (; i < index; ++i) {
+      stack = stack->next;
+      if (stack->value->footprint() / BytesPerWord == 2) {
+        ++ i;
+      }
+    }
+
+    return stack->value;
   }
 
-  virtual Operand* pop() {
-    Operand* tmp = static_cast<MyOperand*>(temporary());
-    pop(tmp);
-    return tmp;
+  virtual Stack* pop(Stack* s, unsigned count) {
+    return ::pop(&c, static_cast<MyStack*>(s), count);
   }
 
-  virtual Operand* pop2() {
-    if (BytesPerWord == 8) pop(1);
-    return pop();
+  virtual Stack* pop(Stack* s, Operand* dst) {
+    return ::pop(&c, static_cast<MyStack*>(s), static_cast<MyOperand*>(dst));
   }
 
-  virtual void pop(Operand* dst) {
-    ::pop(&c, static_cast<MyOperand*>(dst));
-  }
-
-  virtual void pop2(Operand* dst) {
-    if (BytesPerWord == 8) pop(1);
-    pop(dst);
+  virtual Stack* pop2(Stack* s, Operand* dst) {
+    if (BytesPerWord == 8) s = pop(s, 1);
+    return pop(s, dst);
   }
 
   virtual Operand* stack() {
@@ -1764,14 +1910,8 @@ class MyCompiler: public Compiler {
   }
 
   virtual void mark(Operand* label) {
-    CodePromise* p = new (c.zone.allocate(sizeof(CodePromise)))
-      CodePromise(true);
-
-    Segment* s = currentSegment(&c);
-    s->event->task = new (c.zone.allocate(sizeof(CodePromiseTask)))
-      CodePromiseTask(p, s->event->task);
-
-    static_cast<MyOperand*>(label)->setLabelValue(&c, p);
+    static_cast<MyOperand*>(label)->setLabelValue
+      (&c, static_cast<MyPromise*>(machineIp()));
   }
 
   virtual Operand* indirectCall
@@ -1972,15 +2112,6 @@ class MyCompiler: public Compiler {
        Segment(ip, new (c.zone.allocate(sizeof(Event))) Event(0)));
   }
 
-  virtual Operand* logicalIp(unsigned ip) {
-    return address
-      (&c, new (c.zone.allocate(sizeof(IpPromise))) IpPromise(ip, true));
-  }
-
-  virtual Promise* logicalIpToOffset(unsigned ip) {
-    return new (c.zone.allocate(sizeof(IpPromise))) IpPromise(ip, false);
-  }
-
   virtual unsigned codeSize() {
     if (c.codeLength < 0) {
       assert(&c, c.code.length() == 0);
@@ -1997,9 +2128,10 @@ class MyCompiler: public Compiler {
     c.code.wrap(out, codeSize());
     writeCode(&c);
 
-    memcpy(out + codeSize(),
-           c.constantPool.data,
-           c.constantPool.length());
+    for (unsigned i = 0; i < c.constantPool.length(); i += BytesPerWord) {
+      Promise* p; c.constantPool.get(i, &p, BytesPerWord);
+      *reinterpret_cast<intptr_t*>(out + codeSize() + i) = p->value(this);
+    }
   }
 
   virtual void updateCall(void* returnAddress, void* newTarget) {

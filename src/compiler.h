@@ -7,6 +7,8 @@ namespace vm {
 
 class Operand { };
 
+class Stack { };
+
 class Compiler;
 
 class Promise {
@@ -20,20 +22,29 @@ class Compiler {
  public:
   virtual ~Compiler() { }
 
-  virtual Promise* poolOffset() = 0;
-  virtual Promise* codeOffset() = 0;
-  virtual Promise* logicalIpToOffset(unsigned) = 0;
+  virtual Promise* machineIp() = 0;
+  virtual Promise* machineIp(unsigned logicalIp) = 0;
 
-  virtual Operand* poolAppend(Operand*) = 0;
+  virtual Promise* poolAppend(intptr_t) = 0;
+  virtual Promise* poolAppendPromise(Promise*) = 0;
 
   virtual Operand* constant(intptr_t) = 0;
+  virtual Operand* promiseConstant(Promise*) = 0;
+  virtual Operand* absolute(Promise*) = 0;
+  virtual Operand* memory(Operand* base, int displacement = 0,
+                          Operand* index = 0, unsigned scale = 1) = 0;
+
+  virtual Operand* select1(Operand*) = 0;
+  virtual Operand* select2(Operand*) = 0;
+  virtual Operand* select2z(Operand*) = 0;
+  virtual Operand* select4(Operand*) = 0;
+  virtual Operand* select8(Operand*) = 0;
 
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
   virtual Operand* indirectTarget() = 0;
   virtual Operand* temporary() = 0;
-  virtual Operand* stack(unsigned) = 0;
   virtual void release(Operand*) = 0;
 
   virtual Operand* label() = 0;
@@ -46,19 +57,19 @@ class Compiler {
   virtual Operand* directCall
   (Operand* address, unsigned argumentCount, ...) = 0;
 
+  virtual Operand* call(Operand*) = 0;
+  virtual Operand* alignedCall(Operand*) = 0;
   virtual void return_(Operand*) = 0;
   virtual void ret() = 0;
 
-  virtual void push(unsigned count) = 0;
-  virtual void push(Operand*) = 0;
-  virtual void push2(Operand*) = 0;
-  virtual void pop(unsigned count) = 0;
-  virtual Operand* pop() = 0;
-  virtual Operand* pop2() = 0;
-  virtual void pop(Operand*) = 0;
-  virtual void pop2(Operand*) = 0;
-  virtual Operand* call(Operand*) = 0;
-  virtual Operand* alignedCall(Operand*) = 0;
+  virtual Stack* push(Stack*, unsigned count) = 0;
+  virtual Stack* push(Stack*, Operand*) = 0;
+  virtual Stack* push2(Stack*, Operand*) = 0;
+  virtual Stack* pop(Stack*, unsigned count) = 0;
+  virtual Stack* pop(Stack*, Operand*) = 0;
+  virtual Stack* pop2(Stack*, Operand*) = 0;
+  virtual Operand* stack(Stack*, unsigned) = 0;
+
   virtual void mov(Operand* src, Operand* dst) = 0;
   virtual void cmp(Operand* subtrahend, Operand* minuend) = 0;
   virtual void jl(Operand*) = 0;
@@ -81,21 +92,11 @@ class Compiler {
   virtual void xor_(Operand* v, Operand* dst) = 0;
   virtual void neg(Operand*) = 0;
 
-  virtual Operand* memory(Operand* base, int displacement = 0,
-                          Operand* index = 0, unsigned scale = 1) = 0;
-
-  virtual Operand* select1(Operand*) = 0;
-  virtual Operand* select2(Operand*) = 0;
-  virtual Operand* select2z(Operand*) = 0;
-  virtual Operand* select4(Operand*) = 0;
-  virtual Operand* select8(Operand*) = 0;
-
   virtual void prologue() = 0;
   virtual void reserve(unsigned size) = 0;
   virtual void epilogue() = 0;
 
   virtual void startLogicalIp(unsigned) = 0;
-  virtual Operand* logicalIp(unsigned) = 0;
 
   virtual unsigned codeSize() = 0;
   virtual unsigned poolSize() = 0;

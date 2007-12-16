@@ -617,6 +617,8 @@ Java_java_lang_Throwable_trace(Thread* t, jclass, jint skipCount)
 
   t->m->processor->walkStack(t, &v);
 
+  if (v.trace == 0) v.trace = makeArray(t, 0, true);
+
   return makeLocalReference(t, v.trace);
 }
 
