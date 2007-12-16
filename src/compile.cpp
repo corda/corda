@@ -872,10 +872,12 @@ unwind(MyThread* t)
   }
 }
 
-object
+void*
 findInterfaceMethodFromInstance(Thread* t, object method, object instance)
 {
-  return findInterfaceMethod(t, method, objectClass(t, instance));
+  return &singletonValue
+    (t, methodCompiled
+     (t, findInterfaceMethod(t, method, objectClass(t, instance))), 0);
 }
 
 intptr_t
@@ -2157,16 +2159,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       unsigned instance = parameterFootprint - 1;
 
-      Operand* found = c->directCall
-        (c->constant
-         (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
-         3, c->thread(), frame->append(target),
-         c->stack(frame->stack, instance));
-
-      c->mov(c->memory(found, MethodCompiled), found);
-
-      Operand* result = c->call(c->memory(found, SingletonBody));
-
+      Operand* result = c->call
+        (c->directCall
+         (c->constant
+          (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
+          3, c->thread(), frame->append(target),
+          c->stack(frame->stack, instance)));
+      
       frame->trace(target, true);
 
       frame->pop(parameterFootprint);
@@ -3009,13 +3008,13 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     }
 
     // for debugging:
-    if (false and
+    if (//false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/Long") == 0 and
+               "java/util/Collections$ArrayListIterator") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "toString") == 0)
+               "<init>") == 0)
     {
       asm("int3");
     }

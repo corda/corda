@@ -1165,6 +1165,13 @@ RegisterOperand::accept(Context* c, Operation operation,
     }
     break;
 
+  case mul:
+    rex(c);
+    c->code.append(0x0f);
+    c->code.append(0xaf);
+    c->code.append(0xc0 | (value << 3) | operand->value);
+    break;
+
   default: abort(c);
   }
 }
@@ -1578,7 +1585,10 @@ MemoryOperand::accept(Context* c, Operation operation,
     } else {
       switch (selection) {
       case S1Selection:
-        encode(c, 0x88, operand->value, this, true);
+        if (operand->value > rbx) {
+          c->code.append(0x40);
+        }
+        encode(c, 0x88, operand->value, this, false);
         break;
 
       case S2Selection:
@@ -1594,6 +1604,16 @@ MemoryOperand::accept(Context* c, Operation operation,
       default: abort(c);
       }
     }
+  } break;
+
+  case mul: {
+    RegisterOperand* tmp = temporary(c);
+
+    tmp->accept(c, mov, this);
+    tmp->accept(c, mul, operand);
+    accept(c, mov, tmp);
+    
+    tmp->release(c);
   } break;
 
   case rem: {
