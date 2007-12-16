@@ -57,6 +57,7 @@ test:
 vmJump:
    movq   %rsi,%rbp
    movq   %rdx,%rsp
+   movq   %rcx,%rbx
    jmp    *%rdi
 
 #elif defined __i386__
@@ -134,6 +135,7 @@ vmJump:
    movl   4(%esp),%eax
    movl   8(%esp),%ebp
    movl   12(%esp),%esp
+   movl   16(%esp),%ebx
    jmp    *%eax
    
 #else

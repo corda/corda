@@ -14,12 +14,12 @@ extern "C" void
 vmCall();
 
 extern "C" void NO_RETURN
-vmJump(void* address, void* base, void* stack);
+vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
 const bool Verbose = true;
-const bool DebugTraces = false;
+const bool DebugTraces = true;
 
 class MyThread: public Thread {
  public:
@@ -847,20 +847,19 @@ unwind(MyThread* t)
         unsigned parameterFootprint = methodParameterFootprint(t, method);
         unsigned localFootprint = codeMaxLocals(t, methodCode(t, method));
 
-        if (localFootprint > parameterFootprint) {
-          stack -= (localFootprint - parameterFootprint);
-        }
+        stack = static_cast<void**>(base)
+          - (localFootprint - parameterFootprint);
 
         *(--stack) = t->exception;
         t->exception = 0;
 
-        vmJump(compiled + exceptionHandlerIp(handler), base, stack);
+        vmJump(compiled + exceptionHandlerIp(handler), base, stack, t);
       } else {
         stack = static_cast<void**>(base) + 1;
         base = *static_cast<void**>(base);
       }
     } else {
-      vmJump(returnAddress, base, stack + 1);
+      vmJump(returnAddress, base, stack + 1, 0);
     }
   }
 }
