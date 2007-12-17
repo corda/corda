@@ -274,7 +274,7 @@ class Frame {
     virtual void visit(Heap::Visitor* v) {
       v->visit(&(frame->method));
 
-      if (next == 0) {
+      if (frame->next == 0) {
         Vector* pool = frame->objectPool;
         for (unsigned i = 0; i < pool->length(); i += sizeof(PoolElement)) {
           v->visit(&(pool->peek<PoolElement>(i)->value));
@@ -283,7 +283,7 @@ class Frame {
         Vector* log = frame->traceLog;
         unsigned traceSize = traceSizeInBytes(t, frame->method);
         for (unsigned i = 0; i < log->length(); i += traceSize) {
-          v->visit(&(pool->peek<TraceElement>(i)->target));
+          v->visit(&(log->peek<TraceElement>(i)->target));
         }
       }
     }
@@ -364,7 +364,7 @@ class Frame {
   }
 
   static unsigned traceSizeInBytes(Thread* t, object method) {
-    return sizeof(TraceElement) + mapSizeInWords(t, method);
+    return sizeof(TraceElement) + mapSizeInBytes(t, method);
   }
 
   void pushedInt() {
@@ -1774,6 +1774,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* table;
 
       if (instruction == getstatic) {
+        PROTECT(t, field);
+
         initClass(t, fieldClass(t, field));
         if (UNLIKELY(t->exception)) return;
 
@@ -2689,10 +2691,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      object staticTable;
+      object staticTable = 0;
 
       if (instruction == putstatic) {
         PROTECT(t, field);
+
         initClass(t, fieldClass(t, field));
         if (UNLIKELY(t->exception)) return;  
 
@@ -3218,7 +3221,7 @@ invokeNative(MyThread* t)
 {
   object node = findTraceNode(t, *static_cast<void**>(t->stack));
   object target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
-  uint64_t result;
+  uint64_t result = 0;
 
   if (LIKELY(t->exception == 0)) {
     result = invokeNative2(t, target);

@@ -1599,6 +1599,13 @@ MemoryOperand::accept(Context* c, Operation operation,
     dx->release(c);
   } break;
 
+  case shl: {
+    RegisterOperand* cx = temporary(c, rcx);
+    cx->accept(c, mov, operand);
+    encode(c, 0xd3, 4, this, true);
+    cx->release(c);
+  } break;
+
   case sub: {
     encode(c, 0x29, operand->value, this, true);
   } break;
