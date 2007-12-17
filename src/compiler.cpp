@@ -302,6 +302,10 @@ absolute(Context* c, MyPromise* v);
 RegisterOperand*
 register_(Context* c, Register v, SelectionType = DefaultSelection);
 
+RegisterOperand*
+register_(Context* c, Register v, Register high,
+          SelectionType = DefaultSelection);
+
 MemoryOperand*
 memory(Context* c, MyOperand* base, int displacement,
        MyOperand* index, unsigned scale, SelectionType = DefaultSelection);
@@ -403,8 +407,8 @@ release(Context* c, Register v)
 
 class RegisterOperand: public MyOperand {
  public:
-  RegisterOperand(Register value, SelectionType selection):
-    value(value), selection(selection)
+  RegisterOperand(Register value, Register high, SelectionType selection):
+    value(value), high(high), selection(selection)
   { }
 
   virtual unsigned footprint(Context*) {
@@ -416,7 +420,14 @@ class RegisterOperand: public MyOperand {
   }
 
   virtual MyOperand* select(Context* c, SelectionType selection) {
-    return register_(c, value, selection);
+    if (selection == this->selection) {
+      return this;
+    } else if (selection == S8Selection and BytesPerWord == 4) {
+#warning tbc
+      return register_(c, value, acquire(c), selection);
+    } else {
+      return register_(c, value, selection);
+    }
   }
 
   virtual RegisterNode* dependencies(Context* c, RegisterNode* next) {
@@ -440,6 +451,7 @@ class RegisterOperand: public MyOperand {
   virtual void accept(Context*, Operation, MemoryOperand*);
 
   Register value;
+  Register high;
   SelectionType selection;
 };
 
@@ -617,7 +629,7 @@ address(Context* c, MyPromise* p)
 }
 
 ImmediateOperand*
-immediate(Context* c, intptr_t v, SelectionType selection)
+immediate(Context* c, int64_t v, SelectionType selection)
 {
   return new (c->zone.allocate(sizeof(ImmediateOperand)))
     ImmediateOperand(v, selection);
@@ -632,8 +644,16 @@ absolute(Context* c, MyPromise* v)
 RegisterOperand*
 register_(Context* c, Register v, SelectionType selection)
 {
+  assert(c, BytesPerWord != 4 or selection != S8Selection);
   return new (c->zone.allocate(sizeof(RegisterOperand)))
     RegisterOperand(v, selection);
+}
+
+RegisterOperand*
+register_(Context* c, Register v, Register high, SelectionType selection)
+{
+  return new (c->zone.allocate(sizeof(RegisterOperand)))
+    RegisterOperand(v, high, selection);
 }
 
 MemoryOperand*
@@ -950,14 +970,15 @@ appendArgumentEvent(Context* c, MyOperand** arguments, unsigned count)
 }
 
 MyStack*
-pushed(Context* c, MyStack* stack)
+pushed(Context* c, MyStack* stack, unsigned footprint)
 {
   int index = (stack ?
                stack->index + (stack->value->footprint(c) / BytesPerWord) :
                0);
 
   MyOperand* value = memory
-    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1);
+    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1,
+     footprint == (BytesPerWord * 2) ? S8Selection : DefaultSelection);
 
   return new (c->zone.allocate(sizeof(MyStack))) MyStack(value, index, stack);
 }
@@ -970,7 +991,7 @@ push(Context* c, MyStack* stack, int count)
 
   while (count) {
     -- count;
-    stack = pushed(c, stack);
+    stack = pushed(c, stack, BytesPerWord);
   }
 
   return stack;
@@ -981,7 +1002,7 @@ push(Context* c, MyStack* stack, MyOperand* v)
 {
   appendOperation(c, MyOperand::push, v);
 
-  return pushed(c, stack);
+  return pushed(c, stack, v->footprint(c));
 }
 
 MyStack*
@@ -1295,6 +1316,20 @@ RegisterOperand::accept(Context* c, Operation operation,
         encode(c, 0x63, value, operand, true);
         break;
 
+      case S8Selection:
+        assert(c, selection == S8Selection);
+
+        register_(c, value)->accept
+          (c, mov, memory
+           (c, operand->base, operand->displacement,
+            operand->index, operand->scale));
+
+        register_(c, high)->accept
+          (c, mov, memory
+           (c, operand->base, operand->displacement + BytesPerWord,
+            operand->index, operand->scale));
+        break;
+
       default: abort(c);
       }
     }
@@ -1440,7 +1475,7 @@ AddressOperand::asRegister(Context* c)
 void
 ImmediateOperand::apply(Context* c, Operation operation)
 {
-  assert(c, selection == DefaultSelection);
+  assert(c, operation == push or selection == DefaultSelection);
 
   switch (operation) {
   case alignedCall:
@@ -1451,17 +1486,22 @@ ImmediateOperand::apply(Context* c, Operation operation)
     break;
 
   case push: {
-    if (isInt8(value)) {
-      c->code.append(0x6a);
-      c->code.append(value);
-    } else if (isInt32(value)) {
-      c->code.append(0x68);
-      c->code.append4(value);
+    if (selection == DefaultSelection) {
+      if (isInt8(value)) {
+        c->code.append(0x6a);
+        c->code.append(value);
+      } else if (isInt32(value)) {
+        c->code.append(0x68);
+        c->code.append4(value);
+      } else {
+        RegisterOperand* tmp = temporary(c);
+        tmp->accept(c, mov, this);
+        tmp->apply(c, push);
+        tmp->release(c);
+      }
     } else {
-      RegisterOperand* tmp = temporary(c);
-      tmp->accept(c, mov, this);
-      tmp->apply(c, push);
-      tmp->release(c);
+      immediate(c, (value >> 32) & 0xFFFFFFFF)->apply(c, push);
+      immediate(c, (value      ) & 0xFFFFFFFF)->apply(c, push);
     }
   } break;
     

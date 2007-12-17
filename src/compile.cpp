@@ -745,64 +745,46 @@ class Frame {
   }
 
   void dupX1() {
-    Operand* s0 = c->stack(stack, 0);
-    Operand* s1 = c->stack(stack, 1);
-
-    c->mov(s0, s1);
-    c->mov(s1, s0);
-    stack = c->push(stack, s0);
+    stack = c->push(stack, c->stack(stack, 0));
+    c->mov(c->stack(stack, 2), c->stack(stack, 1));
+    c->mov(c->stack(stack, 0), c->stack(stack, 2));
 
     duppedX1();
   }
 
   void dupX2() {
-    Operand* s0 = c->stack(stack, 0);
-    Operand* s1 = c->stack(stack, 1);
-    Operand* s2 = c->stack(stack, 2);
-
-    c->mov(s0, s2);
-    c->mov(s2, s1);
-    c->mov(s1, s0);
-    stack = c->push(stack, s0);
+    stack = c->push(stack, c->stack(stack, 0));
+    c->mov(c->stack(stack, 2), c->stack(stack, 1));
+    c->mov(c->stack(stack, 3), c->stack(stack, 2));
+    c->mov(c->stack(stack, 0), c->stack(stack, 3));
 
     duppedX2();
   }
 
   void dup2() {
-    Operand* s0 = c->stack(stack, 0);
-
-    stack = c->push(stack, s0);
-    stack = c->push(stack, s0);
+    stack = c->push(stack, c->stack(stack, 0));
+    stack = c->push(stack, c->stack(stack, 1));
 
     dupped2();
   }
 
   void dup2X1() {
-    Operand* s0 = c->stack(stack, 0);
-    Operand* s1 = c->stack(stack, 1);
-    Operand* s2 = c->stack(stack, 2);
-
-    c->mov(s1, s2);
-    c->mov(s0, s1);
-    c->mov(s2, s0);
-    stack = c->push(stack, s1);
-    stack = c->push(stack, s0);
+    stack = c->push(stack, c->stack(stack, 1));
+    stack = c->push(stack, c->stack(stack, 1));
+    c->mov(c->stack(stack, 4), c->stack(stack, 2));
+    c->mov(c->stack(stack, 1), c->stack(stack, 4));
+    c->mov(c->stack(stack, 0), c->stack(stack, 3));
 
     dupped2X1();
   }
 
   void dup2X2() {
-    Operand* s0 = c->stack(stack, 0);
-    Operand* s1 = c->stack(stack, 1);
-    Operand* s2 = c->stack(stack, 2);
-    Operand* s3 = c->stack(stack, 3);
-
-    c->mov(s1, s3);
-    c->mov(s0, s2);
-    c->mov(s3, s1);
-    c->mov(s2, s0);
-    stack = c->push(stack, s1);
-    stack = c->push(stack, s0);
+    stack = c->push(stack, c->stack(stack, 1));
+    stack = c->push(stack, c->stack(stack, 1));
+    c->mov(c->stack(stack, 5), c->stack(stack, 3));
+    c->mov(c->stack(stack, 4), c->stack(stack, 2));
+    c->mov(c->stack(stack, 1), c->stack(stack, 5));
+    c->mov(c->stack(stack, 0), c->stack(stack, 4));
 
     dupped2X2();
   }
@@ -3008,7 +2990,7 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     }
 
     // for debugging:
-    if (//false and
+    if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
                "java/util/Collections$ArrayListIterator") == 0 and
