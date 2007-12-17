@@ -7,6 +7,7 @@ using namespace vm;
 namespace {
 
 enum Register {
+  NoRegister = -1,
   rax = 0,
   rcx = 1,
   rdx = 2,
@@ -126,9 +127,10 @@ class MyStack: public Stack {
 
 class RegisterData {
  public:
-  RegisterData(): reserved(false) { }
+  RegisterData(): reserved(false), high(NoRegister) { }
 
   bool reserved;
+  Register high;
 };
 
 class Context {
@@ -366,6 +368,8 @@ class MyOperand: public Operand {
 
   virtual void accept(Context* c, Operation, ImmediateOperand*) = 0;
 
+  virtual void accept(Context* c, Operation, AddressOperand*) = 0;
+
   virtual void accept(Context* c, Operation, AbsoluteOperand*) = 0;
 
   virtual void accept(Context* c, Operation, MemoryOperand*) = 0;
@@ -403,12 +407,16 @@ release(Context* c, Register v)
     fprintf(stderr, "release %d\n", v);
   }
   c->registers[v].reserved = false;
+
+  if (c->registers[v].high != NoRegister) {
+    release(c, c->registers[v].high);
+  }
 }
 
 class RegisterOperand: public MyOperand {
  public:
-  RegisterOperand(Register value, Register high, SelectionType selection):
-    value(value), high(high), selection(selection)
+  RegisterOperand(Register value, SelectionType selection):
+    value(value), selection(selection)
   { }
 
   virtual unsigned footprint(Context*) {
@@ -422,10 +430,12 @@ class RegisterOperand: public MyOperand {
   virtual MyOperand* select(Context* c, SelectionType selection) {
     if (selection == this->selection) {
       return this;
-    } else if (selection == S8Selection and BytesPerWord == 4) {
-#warning tbc
-      return register_(c, value, acquire(c), selection);
     } else {
+      if (selection == S8Selection and BytesPerWord == 4
+          and c->registers[value].high == NoRegister)
+      {
+        c->registers[value].high = ::acquire(c);
+      }
       return register_(c, value, selection);
     }
   }
@@ -433,6 +443,10 @@ class RegisterOperand: public MyOperand {
   virtual RegisterNode* dependencies(Context* c, RegisterNode* next) {
     return new (c->zone.allocate(sizeof(RegisterNode)))
       RegisterNode(value, next);
+  }
+
+  void acquire(Context* c) {
+    value = ::acquire(c);
   }
 
   virtual void release(Context* c) {
@@ -447,11 +461,11 @@ class RegisterOperand: public MyOperand {
 
   virtual void accept(Context*, Operation, RegisterOperand*);
   virtual void accept(Context*, Operation, ImmediateOperand*);
+  virtual void accept(Context*, Operation, AddressOperand*);
   virtual void accept(Context*, Operation, AbsoluteOperand*);
   virtual void accept(Context*, Operation, MemoryOperand*);
 
   Register value;
-  Register high;
   SelectionType selection;
 };
 
@@ -477,6 +491,7 @@ class ImmediateOperand: public MyOperand {
 
   virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+  virtual void accept(Context* c, Operation, AddressOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
 
@@ -495,9 +510,13 @@ class AddressOperand: public MyOperand {
   virtual void setLabelValue(Context*, MyPromise*);
 
   virtual void apply(Context*, Operation);
-  virtual void apply(Context* c, Operation, MyOperand*) { abort(c); }
+  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
+    operand->accept(c, operation, this);
+  }
+
   virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+  virtual void accept(Context* c, Operation, AddressOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
 
@@ -520,6 +539,7 @@ class AbsoluteOperand: public MyOperand {
 
   virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, ImmediateOperand*) { abort(c); }
+  virtual void accept(Context* c, Operation, AddressOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, AbsoluteOperand*) { abort(c); }
   virtual void accept(Context* c, Operation, MemoryOperand*) { abort(c); }
 
@@ -564,6 +584,7 @@ class MemoryOperand: public MyOperand {
 
   virtual void accept(Context*, Operation, RegisterOperand*);
   virtual void accept(Context*, Operation, ImmediateOperand*);
+  virtual void accept(Context* c, Operation, AddressOperand*) { abort(c); }
   virtual void accept(Context*, Operation, AbsoluteOperand*);
   virtual void accept(Context*, Operation, MemoryOperand*);
 
@@ -572,54 +593,6 @@ class MemoryOperand: public MyOperand {
   MyOperand* index;
   unsigned scale;
   SelectionType selection;
-};
-
-class WrapperOperand: public MyOperand {
- public:
-  virtual MyOperand* base(Context*) = 0;
-
-  virtual unsigned footprint(Context* c) {
-    return base(c)->footprint(c);
-  }
-
-  virtual Register asRegister(Context* c) {
-    return base(c)->asRegister(c);
-  }
-
-  virtual RegisterNode* dependencies(Context* c, RegisterNode* next) {
-    return base(c)->dependencies(c, next);
-  }
-
-  virtual void apply(Context* c, Operation operation) {
-    base(c)->apply(c, operation);
-  }
-
-  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
-    base(c)->apply(c, operation, operand);
-  }
-
-  virtual void accept(Context* c, Operation operation,
-                      RegisterOperand* operand)
-  {
-    base(c)->accept(c, operation, operand);
-  }
-
-  virtual void accept(Context* c, Operation operation,
-                      ImmediateOperand* operand)
-  {
-    base(c)->accept(c, operation, operand);
-  }
-
-  virtual void accept(Context* c, Operation operation,
-                      AbsoluteOperand* operand)
-  {
-    base(c)->accept(c, operation, operand);
-  }
-
-  virtual void accept(Context* c, Operation operation, MemoryOperand* operand)
-  {
-    base(c)->accept(c, operation, operand);
-  }
 };
 
 AddressOperand*
@@ -647,13 +620,6 @@ register_(Context* c, Register v, SelectionType selection)
   assert(c, BytesPerWord != 4 or selection != S8Selection);
   return new (c->zone.allocate(sizeof(RegisterOperand)))
     RegisterOperand(v, selection);
-}
-
-RegisterOperand*
-register_(Context* c, Register v, Register high, SelectionType selection)
-{
-  return new (c->zone.allocate(sizeof(RegisterOperand)))
-    RegisterOperand(v, high, selection);
 }
 
 MemoryOperand*
@@ -695,56 +661,6 @@ apply(Context* c, MyOperand::Operation op)
   default: abort(c);
   }
 }
-
-class RegisterReference {
- public:
-  RegisterReference(): valid(false) { }
-
-  Register value(Context* c) {
-    assert(c, valid);
-    return value_;
-  }
-
-  void acquire(Context* c) {
-    value_ = ::acquire(c);
-    valid = true;
-  }
-
-  void release(Context* c) {
-    ::release(c, value_);
-    valid = false;
-  }
-
-  Register value_;
-  bool valid;
-};
-
-class TemporaryOperand: public WrapperOperand {
- public:
-  TemporaryOperand(RegisterReference* reference, SelectionType selection):
-    reference(reference), selection(selection)
-  { }
-
-  virtual MyOperand* base(Context* c) {
-    return register_(c, reference->value(c), selection);
-  }
-
-  virtual unsigned footprint(Context*) {
-    return (selection == S8Selection ? 8 : BytesPerWord);
-  }
-
-  virtual MyOperand* select(Context* c, SelectionType selection) {
-    return new (c->zone.allocate(sizeof(TemporaryOperand)))
-      TemporaryOperand(reference, selection);
-  }
-
-  virtual void release(Context* c) {
-    reference->release(c);
-  }
-
-  RegisterReference* reference;
-  SelectionType selection;
-};
 
 class OpEvent: public Event {
  public:
@@ -802,16 +718,16 @@ class BinaryOpEvent: public Event {
 
 class AcquireEvent: public Event {
  public:
-  AcquireEvent(TemporaryOperand* operand, Event* next):
+  AcquireEvent(RegisterOperand* operand, Event* next):
     Event(next),
     operand(operand)
   { }
 
   virtual void run(Context* c) {
-    operand->reference->acquire(c);
+    operand->acquire(c);
   }
 
-  TemporaryOperand* operand; 
+  RegisterOperand* operand; 
 };
 
 class ReleaseEvent: public Event {
@@ -946,7 +862,7 @@ appendOperation(Context* c, MyOperand::Operation operation, Operand* a, Operand*
 }
 
 void
-appendAcquire(Context* c, TemporaryOperand* operand)
+appendAcquire(Context* c, RegisterOperand* operand)
 {
   Segment* s = currentSegment(c);
   s->event = new (c->zone.allocate(sizeof(AcquireEvent)))
@@ -981,20 +897,6 @@ pushed(Context* c, MyStack* stack, unsigned footprint)
      footprint == (BytesPerWord * 2) ? S8Selection : DefaultSelection);
 
   return new (c->zone.allocate(sizeof(MyStack))) MyStack(value, index, stack);
-}
-
-MyStack*
-push(Context* c, MyStack* stack, int count)
-{
-  appendOperation
-    (c, MyOperand::sub, immediate(c, count * BytesPerWord), register_(c, rsp));
-
-  while (count) {
-    -- count;
-    stack = pushed(c, stack, BytesPerWord);
-  }
-
-  return stack;
 }
 
 MyStack*
@@ -1110,6 +1012,7 @@ void
 RegisterOperand::apply(Context* c, Operation operation)
 {
   assert(c, selection == DefaultSelection);
+  assert(c, value != NoRegister);
 
   switch (operation) {
   case call:
@@ -1277,6 +1180,29 @@ RegisterOperand::accept(Context* c, Operation operation,
   }
 }
 
+ImmediateOperand*
+value(Context* c, AddressOperand* operand)
+{
+  if (operand->promise->resolved(c)) {
+    return immediate(c, operand->promise->value(c));
+  } else {
+    return immediate(c, 0);
+  }
+}
+
+void
+RegisterOperand::accept(Context* c, Operation operation,
+                        AddressOperand* operand)
+{
+  switch (operation) {
+  case mov: {
+    accept(c, operation, ::value(c, operand));
+  } break;
+
+  default: abort(c);
+  }
+}
+
 void
 RegisterOperand::accept(Context* c, Operation operation,
                         MemoryOperand* operand)
@@ -1324,7 +1250,7 @@ RegisterOperand::accept(Context* c, Operation operation,
            (c, operand->base, operand->displacement,
             operand->index, operand->scale));
 
-        register_(c, high)->accept
+        register_(c, c->registers[value].high)->accept
           (c, mov, memory
            (c, operand->base, operand->displacement + BytesPerWord,
             operand->index, operand->scale));
@@ -1853,7 +1779,18 @@ class MyCompiler: public Compiler {
   }
 
   virtual Stack* push(Stack* s, unsigned count) {
-    return ::push(&c, static_cast<MyStack*>(s), count);
+    sub(immediate(&c, count * BytesPerWord), register_(&c, rsp));
+
+    return pushed(s, count);
+  }
+
+  virtual Stack* pushed(Stack* s, unsigned count) {
+    MyStack* stack = static_cast<MyStack*>(s);
+    while (count) {
+      -- count;
+      stack = ::pushed(&c, stack, BytesPerWord);
+    }
+    return stack;
   }
 
   virtual Stack* push(Stack* s, Operand* v) {
@@ -1903,10 +1840,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* temporary() {
-    RegisterReference* reference = new
-      (c.zone.allocate(sizeof(RegisterReference))) RegisterReference();
-    TemporaryOperand* r = new (c.zone.allocate(sizeof(TemporaryOperand)))
-      TemporaryOperand(reference, DefaultSelection);
+    RegisterOperand* r = register_(&c, NoRegister);
     appendAcquire(&c, r);
     return r;
   }

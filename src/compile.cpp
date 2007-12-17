@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -612,7 +612,7 @@ class Frame {
   }
 
   void pushObject() {
-    stack = c->push(stack, 1);
+    stack = c->pushed(stack, 1);
     pushedObject();
   }
 
@@ -710,8 +710,8 @@ class Frame {
 
   void loadObject(unsigned index) {
     assert(t, index < codeMaxLocals(t, methodCode(t, method)));
-    assert(t, index < parameterFootprint(t, method)
-           or getBit(map, index - parameterFootprint(t, method)) != 0);
+//     assert(t, index < parameterFootprint(t, method)
+//            or getBit(map, index - parameterFootprint(t, method)) != 0);
     pushObject(c->memory(c->base(), localOffset(t, index, method)));
   }
 
@@ -1077,7 +1077,7 @@ makeBlankArray(Thread* t, object (*constructor)(Thread*, uintptr_t, bool),
 
 uintptr_t
 lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
-              uintptr_t* default_)
+              uintptr_t default_)
 {
   int32_t bottom = 0;
   int32_t top = count;
@@ -1095,7 +1095,7 @@ lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
     }
   }
 
-  return *default_;
+  return default_;
 }
 
 void
@@ -2993,10 +2993,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/util/Collections$ArrayListIterator") == 0 and
+               "java/lang/String") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "<init>") == 0)
+               "getChars") == 0)
     {
       asm("int3");
     }
@@ -3161,12 +3161,11 @@ invokeNative2(MyThread* t, object method)
 
     case INT64_TYPE:
     case DOUBLE_TYPE: {
+      memcpy(args + argOffset, sp, 8);
       if (BytesPerWord == 8) {
-        uint64_t a = *(sp--);
-        uint64_t b = *(sp--);
-        args[argOffset++] = (a << 32) | b;
+        ++argOffset;
+        --sp;
       } else {
-        memcpy(args + argOffset, sp, 8);
         argOffset += 2;
         sp -= 2;
       }
@@ -3480,7 +3479,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
 
   uint64_t result = vmInvoke
     (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
-     arguments->position * BytesPerWord, returnType);
+     arguments->position, returnType);
 
   while (t->reference != reference) {
     dispose(t, t->reference);
@@ -3858,7 +3857,6 @@ findTraceNode(MyThread* t, void* address)
   }
 
   MyProcessor* p = processor(t);
-  ACQUIRE(t, t->m->classLock);
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
   unsigned index = static_cast<uintptr_t>(key) 
@@ -3911,7 +3909,7 @@ insertTraceNode(MyThread* t, object node)
 
   MyProcessor* p = processor(t);
   PROTECT(t, node);
-  ACQUIRE(t, t->m->classLock);
+  ENTER(t, Thread::ExclusiveState);
 
   ++ p->addressCount;
 

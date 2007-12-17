@@ -63,6 +63,7 @@ class Compiler {
   virtual void ret() = 0;
 
   virtual Stack* push(Stack*, unsigned count) = 0;
+  virtual Stack* pushed(Stack*, unsigned count) = 0;
   virtual Stack* push(Stack*, Operand*) = 0;
   virtual Stack* pop(Stack*, unsigned count) = 0;
   virtual Stack* pop(Stack*, Operand*) = 0;

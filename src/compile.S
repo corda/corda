@@ -20,22 +20,14 @@ vmInvoke:
 
    mov    %rdi,%rbx
    
-   // reserve space for arguments
-   pushq  %rcx
-   subq   %rcx,%rsp
-
    // copy memory arguments into place
+   pushq  %rcx
    movq   $0,%r9
    jmp    test
 
 loop:
-   movq   %r9,%rax
-   movq   %r9,%r10
-   addq   %rsp,%r10
-   addq   %rdx,%rax
-	 movq	  (%rax),%rax
-   movq   %rax,(%r10)
-   addq   $8,%r9
+   push   (%rdx,%r9,8)
+   inc    %r9
 
 test:
    cmpq   %rcx,%r9
@@ -80,21 +72,13 @@ vmInvoke:
    
    mov    8(%ebp),%ebx
    
-   // reserve space for arguments
-   subl   20(%ebp),%esp
-
    // copy arguments into place
    movl   $0,%ecx
    jmp    test
 
 loop:
-   movl   %ecx,%eax
-   movl   %ecx,%edx
-   addl   %esp,%edx
-   addl   16(%ebp),%eax
-	 movl	  (%eax),%eax
-   movl   %eax,(%edx)
-   addl   $4,%ecx
+   push   (%rdx,%rcx,4)
+   inc    %ecx
 
 test:
    cmpl   20(%ebp),%ecx
