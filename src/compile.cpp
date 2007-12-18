@@ -2888,6 +2888,8 @@ object
 finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
        Vector* traceLog)
 {
+  PROTECT(t, method);
+
   unsigned count = ceiling(c->codeSize() + c->poolSize(), BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
   object result = allocate2
@@ -2900,7 +2902,6 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
   c->writeTo(start);
 
   if (method) {
-    PROTECT(t, method);
     PROTECT(t, result);
 
     for (unsigned i = 0; i < objectPool->length(); i += sizeof(PoolElement)) {
@@ -2999,10 +3000,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "org/eclipse/swt/widgets/Display") == 0 and
+               "java/util/Properties$Parser") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "init") == 0)
+               "parse") == 0)
     {
       asm("int3");
     }
@@ -3172,11 +3173,7 @@ invokeNative2(MyThread* t, object method)
     case INT64_TYPE:
     case DOUBLE_TYPE: {
       memcpy(args + argOffset, sp, 8);
-      if (BytesPerWord == 8) {
-        ++argOffset;
-      } else {
-        argOffset += 2;
-      }
+      argOffset += (8 / BytesPerWord);
       sp -= 2;
     } break;
 
@@ -3217,6 +3214,16 @@ invokeNative2(MyThread* t, object method)
 
   if (LIKELY(t->exception == 0) and returnType == POINTER_TYPE) {
     return result ? *reinterpret_cast<uintptr_t*>(result) : 0;
+  } else if (BytesPerWord == 8) {
+    switch (returnType) {
+    case INT8_TYPE:
+    case INT16_TYPE:
+    case INT32_TYPE:
+      // force sign extension
+      return static_cast<int32_t>(result);
+
+    default: return result;
+    }
   } else {
     return result;
   }
