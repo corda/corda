@@ -27,6 +27,9 @@ vmNativeCall:
 
    // reserve space for arguments passed via memory
    subq   %rdx,%rsp
+   
+   // align to a 16 byte boundary
+   andq   $0xFFFFFFFFFFFFFFF0,%rsp
 
    // copy memory arguments into place
    movq   $0,%rcx
