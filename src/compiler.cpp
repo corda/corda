@@ -963,10 +963,10 @@ rex(Context* c)
 }
 
 void
-encode(Context* c, uint8_t instruction, int a, Register b,
+encode(Context* c, uint8_t* instruction, unsigned length, int a, Register b,
        int32_t displacement, int index, unsigned scale)
 {
-  c->code.append(instruction);
+  c->code.append(instruction, length);
 
   uint8_t width;
   if (displacement == 0 and b != rbp) {
@@ -1005,7 +1005,19 @@ encode(Context* c, uint8_t instruction, int a, MemoryOperand* b, bool rex)
   if (rex) {
     ::rex(c);
   }
-  encode(c, instruction, a, r, b->displacement, index, b->scale);
+  encode(c, &instruction, 1, a, r, b->displacement, index, b->scale);
+}
+
+void
+encode2(Context* c, uint16_t instruction, int a, MemoryOperand* b, bool rex)
+{
+  Register r = b->base->asRegister(c);
+  int index = b->index ? b->index->asRegister(c) : -1;
+  if (rex) {
+    ::rex(c);
+  }
+  uint8_t i[2] = { instruction >> 8, instruction & 0xff };
+  encode(c, i, 2, a, r, b->displacement, index, b->scale);
 }
 
 void
@@ -1221,21 +1233,15 @@ RegisterOperand::accept(Context* c, Operation operation,
     } else {
       switch (operand->selection) {
       case S1Selection:
-        rex(c);
-        c->code.append(0x0f);
-        encode(c, 0xbe, value, operand, false);      
+        encode2(c, 0x0fbe, value, operand, true);      
         break;
 
       case S2Selection:
-        rex(c);
-        c->code.append(0x0f);
-        encode(c, 0xbf, value, operand, false);      
+        encode2(c, 0x0fbf, value, operand, true);      
         break;
 
       case Z2Selection:
-        rex(c);
-        c->code.append(0x0f);
-        encode(c, 0xb7, value, operand, false);      
+        encode2(c, 0x0fb7, value, operand, true);      
         break;
 
       case S4Selection:
@@ -1582,6 +1588,10 @@ MemoryOperand::accept(Context* c, Operation operation,
     tmp->release(c);
   } break;
 
+  case or_: {
+    encode(c, 0x09, operand->value, this, true);
+  } break;
+
   case rem: {
     RegisterOperand* ax = temporary(c, rax);
     RegisterOperand* dx = temporary(c, rdx);
@@ -1608,6 +1618,10 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case sub: {
     encode(c, 0x29, operand->value, this, true);
+  } break;
+
+  case xor_: {
+    encode(c, 0x31, operand->value, this, true);
   } break;
 
   default: abort(c);

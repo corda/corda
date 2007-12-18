@@ -2165,6 +2165,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       object class_ = methodClass(t, target);
       if (isSpecialMethod(t, target, class_)) {
+        initClass(t, classSuper(t, class_));
+        if (UNLIKELY(t->exception)) return;
+
         target = findMethod(t, target, classSuper(t, class_));
       }
 
@@ -2996,10 +2999,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/String") == 0 and
+               "org/eclipse/swt/widgets/Display") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "getChars") == 0)
+               "init") == 0)
     {
       asm("int3");
     }
@@ -3066,8 +3069,12 @@ compileMethod2(MyThread* t)
   object node = findTraceNode(t, *static_cast<void**>(t->stack));
   PROTECT(t, node);
 
-  object target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
+  object target = traceNodeTarget(t, node);
   PROTECT(t, target);
+
+  if (traceNodeVirtualCall(t, node)) {
+    target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
+  }
 
   if (LIKELY(t->exception == 0)) {
     compile(t, target);
@@ -3167,15 +3174,14 @@ invokeNative2(MyThread* t, object method)
       memcpy(args + argOffset, sp, 8);
       if (BytesPerWord == 8) {
         ++argOffset;
-        --sp;
       } else {
         argOffset += 2;
-        sp -= 2;
       }
+      sp -= 2;
     } break;
 
     case POINTER_TYPE: {
-      args[argOffset++] = reinterpret_cast<uintptr_t>(sp--);
+      args[argOffset++] = *sp ? reinterpret_cast<uintptr_t>(sp--) : 0;
     } break;
 
     default: abort(t);
