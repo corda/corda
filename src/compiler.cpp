@@ -1122,12 +1122,19 @@ RegisterOperand::accept(Context* c, Operation operation,
   switch (operation) {
   case add: {
     if (operand->value) {
-      assert(c, isInt8(operand->value)); // todo
-
       rex(c);
-      c->code.append(0x83);
-      c->code.append(0xc0 | value);
-      c->code.append(operand->value);
+      if (isInt8(operand->value)) {
+        c->code.append(0x83);
+        c->code.append(0xc0 | value);
+        c->code.append(operand->value);
+      } else if (isInt32(operand->value)) {
+        c->code.append(0x81);
+        c->code.append(0xc0 | value);
+        c->code.append4(operand->value);        
+      } else {
+        abort(c);
+      }
+
     }
   } break;
 
@@ -1179,12 +1186,18 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case sub: {
     if (operand->value) {
-      assert(c, isInt8(operand->value)); // todo
-
       rex(c);
-      c->code.append(0x83);
-      c->code.append(0xe8 | value);
-      c->code.append(operand->value);
+      if (isInt8(operand->value)) {
+        c->code.append(0x83);
+        c->code.append(0xe8 | value);
+        c->code.append(operand->value);
+      } else if (isInt32(operand->value)) {
+        c->code.append(0x81);
+        c->code.append(0xe8 | value);
+        c->code.append4(operand->value);        
+      } else {
+        abort(c);
+      }
     }
   } break;
 
@@ -1613,6 +1626,20 @@ MemoryOperand::accept(Context* c, Operation operation,
     RegisterOperand* cx = temporary(c, rcx);
     cx->accept(c, mov, operand);
     encode(c, 0xd3, 4, this, true);
+    cx->release(c);
+  } break;
+
+  case shr: {
+    RegisterOperand* cx = temporary(c, rcx);
+    cx->accept(c, mov, operand);
+    encode(c, 0xd3, 5, this, true);
+    cx->release(c);
+  } break;
+
+  case ushr: {
+    RegisterOperand* cx = temporary(c, rcx);
+    cx->accept(c, mov, operand);
+    encode(c, 0xd3, 7, this, true);
     cx->release(c);
   } break;
 
