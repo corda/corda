@@ -302,11 +302,7 @@ AbsoluteOperand*
 absolute(Context* c, MyPromise* v);
 
 RegisterOperand*
-register_(Context* c, Register v, SelectionType = DefaultSelection);
-
-RegisterOperand*
-register_(Context* c, Register v, Register high,
-          SelectionType = DefaultSelection);
+register_(Context* c, RegisterReference*, SelectionType = DefaultSelection);
 
 MemoryOperand*
 memory(Context* c, MyOperand* base, int displacement,
@@ -413,18 +409,43 @@ release(Context* c, Register v)
   }
 }
 
+class RegisterReference {
+ public:
+  RegisterReference(Register v = NoRegister): value_(v) { }
+
+  void acquire(Context* c) {
+    value_ = ::acquire(c);
+  }
+
+  void release(Context* c) {
+    ::release(c, value_);
+    value_ = NoRegister;
+  }
+
+  Register value(Context* c UNUSED) {
+    assert(c, value_ != NoRegister);
+    return value_;
+  }
+
+  Register value_;
+};
+
 class RegisterOperand: public MyOperand {
  public:
-  RegisterOperand(Register value, SelectionType selection):
-    value(value), selection(selection)
+  RegisterOperand(RegisterReference* reference, SelectionType selection):
+    reference(reference), selection(selection)
   { }
+
+  Register value(Context* c) {
+    return reference->value(c);
+  }
 
   virtual unsigned footprint(Context*) {
     return (selection == S8Selection ? 8 : BytesPerWord);
   }
 
-  virtual Register asRegister(Context*) {
-    return value;
+  virtual Register asRegister(Context* c) {
+    return value(c);
   }
 
   virtual MyOperand* select(Context* c, SelectionType selection) {
@@ -432,25 +453,21 @@ class RegisterOperand: public MyOperand {
       return this;
     } else {
       if (selection == S8Selection and BytesPerWord == 4
-          and c->registers[value].high == NoRegister)
+          and c->registers[value(c)].high == NoRegister)
       {
-        c->registers[value].high = ::acquire(c);
+        c->registers[value(c)].high = ::acquire(c);
       }
-      return register_(c, value, selection);
+      return register_(c, value(c), selection);
     }
   }
 
   virtual RegisterNode* dependencies(Context* c, RegisterNode* next) {
     return new (c->zone.allocate(sizeof(RegisterNode)))
-      RegisterNode(value, next);
-  }
-
-  void acquire(Context* c) {
-    value = ::acquire(c);
+      RegisterNode(value(c), next);
   }
 
   virtual void release(Context* c) {
-    ::release(c, value);
+    reference->release(c);
   }
 
   virtual void apply(Context*, Operation);
@@ -465,7 +482,7 @@ class RegisterOperand: public MyOperand {
   virtual void accept(Context*, Operation, AbsoluteOperand*);
   virtual void accept(Context*, Operation, MemoryOperand*);
 
-  Register value;
+  RegisterReference* reference;
   SelectionType selection;
 };
 
@@ -618,8 +635,10 @@ RegisterOperand*
 register_(Context* c, Register v, SelectionType selection)
 {
   assert(c, BytesPerWord != 4 or selection != S8Selection);
+  RegisterReference* r = new (c->zone.allocate(sizeof(RegisterReference)))
+    RegisterReference(v);
   return new (c->zone.allocate(sizeof(RegisterOperand)))
-    RegisterOperand(v, selection);
+    RegisterOperand(r, selection);
 }
 
 MemoryOperand*
@@ -724,7 +743,7 @@ class AcquireEvent: public Event {
   { }
 
   virtual void run(Context* c) {
-    operand->acquire(c);
+    operand->reference->acquire(c);
   }
 
   RegisterOperand* operand; 
