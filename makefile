@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Threads.class
+input = $(test-build)/Enums.class
 
 build-cxx = g++
 build-cc = gcc

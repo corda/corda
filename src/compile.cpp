@@ -3000,10 +3000,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/util/Properties$Parser") == 0 and
+               "java/lang/reflect/Method") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "parse") == 0)
+               "invoke") == 0)
     {
       asm("int3");
     }
@@ -3178,7 +3178,12 @@ invokeNative2(MyThread* t, object method)
     } break;
 
     case POINTER_TYPE: {
-      args[argOffset++] = *sp ? reinterpret_cast<uintptr_t>(sp--) : 0;
+      if (*sp) {
+        args[argOffset++] = reinterpret_cast<uintptr_t>(sp);
+      } else {
+        args[argOffset++] = 0;
+      }
+      -- sp;
     } break;
 
     default: abort(t);
