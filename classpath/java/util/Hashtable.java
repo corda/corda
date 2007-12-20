@@ -11,6 +11,13 @@ public class Hashtable<K, V> implements Map<K, V> {
     this(0);
   }
 
+  public Hashtable(Map<? extends K,? extends V> m) {
+    this(m.size());
+    for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
+      put(entry.getKey(), entry.getValue());
+    }
+  }
+
   public String toString() {
     return map.toString();
   }

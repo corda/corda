@@ -2,13 +2,15 @@ package java.io;
 
 public class PushbackReader extends Reader {
   private final Reader in;
-  private final char[] buffer;
-  private int position;
-  private int limit;
+  private char savedChar;
+  private boolean hasSavedChar;
 
   public PushbackReader(Reader in, int bufferSize) {
+    if (bufferSize > 1) {
+      throw new IllegalArgumentException(bufferSize + " > 1");
+    }
     this.in = in;
-    this.buffer = new char[bufferSize];
+    this.hasSavedChar = false;
   }
 
   public PushbackReader(Reader in) {
@@ -17,29 +19,20 @@ public class PushbackReader extends Reader {
 
   public int read(char[] b, int offset, int length) throws IOException {
     int count = 0;
-
-    if (position < limit) {
-      int remaining = limit - position;
-      if (remaining > length) {
-        remaining = length;
-      }
-
-      System.arraycopy(buffer, position, b, offset, remaining);
-
-      count += remaining;
-      position += remaining;
-      offset += remaining;
-      length -= remaining;
+    if (hasSavedChar && length > 0) {
+      length--;
+      b[offset++] = savedChar;
+      hasSavedChar = false;
+      count = 1;
     }
-
     if (length > 0) {
       int c = in.read(b, offset, length);
       if (c == -1) {
-        if (count == 0) {
-          count = -1;
-        }
+	if (count == 0) {
+	  count = -1;
+	}
       } else {
-        count += c;
+	count += c;
       }
     }
 
@@ -47,11 +40,13 @@ public class PushbackReader extends Reader {
   }
 
   public void unread(char[] b, int offset, int length) throws IOException {
-    if (position < length) {
-      throw new IOException(length + " not in [0," + position + "]");
+    if (length != 1) {
+      throw new IOException("Can only push back 1 char, not " + length);
+    } else if (hasSavedChar) {
+      throw new IOException("Already have a saved char");
     } else {
-      System.arraycopy(buffer, position - length, b, offset, length);
-      position -= length;
+      hasSavedChar = true;
+      savedChar = b[offset];
     }
   }
 
