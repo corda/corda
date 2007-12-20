@@ -1659,7 +1659,7 @@ MemoryOperand::apply(Context* c, Operation operation)
       dx->accept(c, mov, high);
 
       ax->apply(c, neg);
-      dx->accept(c, addc, immediate(c, 0), dx);
+      dx->accept(c, addc, immediate(c, 0));
       dx->apply(c, neg);
 
       low->accept(c, mov, ax);
@@ -1749,7 +1749,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 
       operand->apply(c, push);
       apply(c, push);
-      immediate_(c, reinterpret_cast<intptr_t>(divideLong))->apply(c, call);
+      immediate(c, reinterpret_cast<intptr_t>(divideLong))->apply(c, call);
       accept(c, mov, register_(c, rax, rdx, S8Selection));
     }
   } break;
@@ -1821,8 +1821,8 @@ MemoryOperand::accept(Context* c, Operation operation,
       ax->accept(c, mul, lowSrc);
       dx->accept(c, add, tmp);
 
-      lowDst->accept(c, mov, rax);
-      highDst->accept(c, mov, rdx);
+      lowDst->accept(c, mov, ax);
+      highDst->accept(c, mov, dx);
 
       tmp->release(c);
       ax->release(c);
@@ -1855,7 +1855,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 
       operand->apply(c, push);
       apply(c, push);
-      immediate_(c, reinterpret_cast<intptr_t>(moduloLong))->apply(c, call);
+      immediate(c, reinterpret_cast<intptr_t>(moduloLong))->apply(c, call);
       accept(c, mov, register_(c, rax, rdx, S8Selection));
     }
   } break;

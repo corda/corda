@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -2296,7 +2296,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case l2i: {
       Operand* a = frame->popLong();
-      frame->pushInt(a);
+      frame->pushInt(c->select4(a));
       c->release(a);
     } break;
 
