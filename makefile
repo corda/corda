@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Enums.class
+input = $(test-build)/Exceptions.class
 
 build-cxx = g++
 build-cc = gcc

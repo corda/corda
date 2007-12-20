@@ -19,7 +19,7 @@ vmInvoke:
    // %r8 : returnType
 
    mov    %rdi,%rbx
-   
+
    // copy memory arguments into place
    pushq  %rcx
    movq   $0,%r9
@@ -37,7 +37,11 @@ test:
    call   *%rsi
 
    // pop arguments
-   addq   -16(%rbp),%rsp
+   mov    -16(%rbp),%rcx
+   sal    $3,%rcx
+   addq   %rcx,%rsp
+
+   // pop argument stack size
    addq   $8,%rsp
    
    popq   %rbx
@@ -77,7 +81,7 @@ vmInvoke:
    jmp    test
 
 loop:
-   push   (%rdx,%rcx,4)
+   push   (%edx,%ecx,4)
    inc    %ecx
 
 test:
@@ -88,7 +92,9 @@ test:
    call   *12(%ebp)
 
    // pop arguments
-   addl   20(%ebp),%esp
+   mov    20(%ebp),%ecx
+   sal    $2,%ecx
+   addl   %ecx,%esp
 
    // handle return value based on expected type
    movl   24(%ebp),%ecx
@@ -118,8 +124,8 @@ exit:
 vmJump:
    movl   4(%esp),%eax
    movl   8(%esp),%ebp
-   movl   12(%esp),%esp
    movl   16(%esp),%ebx
+   movl   12(%esp),%esp
    jmp    *%eax
    
 #else

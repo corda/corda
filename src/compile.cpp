@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -660,7 +660,7 @@ class Frame {
   }
 
   Operand* popLong() {
-    Operand* tmp = c->temporary();
+    Operand* tmp = c->select8(c->temporary());
     popLong(tmp);
     return tmp;
   }
@@ -3000,10 +3000,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/reflect/Method") == 0 and
+               "java/lang/Throwable") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "invoke") == 0)
+               "init") == 0)
     {
       asm("int3");
     }
