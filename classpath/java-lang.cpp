@@ -424,6 +424,12 @@ Java_java_lang_Math_sin(JNIEnv*, jclass, jdouble val)
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_cos(JNIEnv*, jclass, jdouble val)
+{
+  return cos(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_sqrt(JNIEnv*, jclass, jdouble val)
 {
   return sqrt(val);
