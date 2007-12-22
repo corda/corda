@@ -27,11 +27,14 @@ enum Register {
 };
 
 enum SelectionType {
-  S1Selection,
-  S2Selection,
-  Z2Selection,
-  S4Selection,
-  S8Selection
+  Select1,
+  Select2,
+  Select4,
+  Select8,
+  SignExtend1,
+  SignExtend2,
+  ZeroExtend2,
+  SignExtend4
 };
 
 const bool Verbose = false;
@@ -1112,8 +1115,8 @@ RegisterOperand::apply(Context* c, Operation operation)
       case S8Selection:
         assert(c, selection == S8Selection);
 
-        register_(c, high(c))->apply(c, pop);
         register_(c, value(c))->apply(c, pop);
+        register_(c, high(c))->apply(c, pop);
         break;
 
       default: abort(c);
@@ -1125,16 +1128,10 @@ RegisterOperand::apply(Context* c, Operation operation)
     if (selection == DefaultSelection) {
       c->code.append(0x50 | value(c));
     } else {
-      switch (selection) {
-      case S8Selection:
-        assert(c, selection == S8Selection);
+      assert(c, selection == S8Selection);
 
-        register_(c, value(c))->apply(c, push);
-        register_(c, high(c))->apply(c, push);
-        break;
-
-      default: abort(c);
-      }
+      register_(c, high(c))->apply(c, push);
+      register_(c, value(c))->apply(c, push);
     }
     break;
 
@@ -1579,6 +1576,8 @@ ImmediateOperand::apply(Context* c, Operation operation)
         tmp->release(c);
       }
     } else {
+      assert(c, selection == S8Selection);
+
       immediate(c, (value >> 32) & 0xFFFFFFFF)->apply(c, push);
       immediate(c, (value      ) & 0xFFFFFFFF)->apply(c, push);
     }
@@ -1678,11 +1677,24 @@ MemoryOperand::apply(Context* c, Operation operation)
     if (selection == DefaultSelection) {
       encode(c, 0xff, 6, this, false);
     } else {
-      RegisterOperand* tmp = temporary
-        (c, selection == S8Selection ? S8Selection : DefaultSelection);
-      tmp->accept(c, mov, this);
-      tmp->apply(c, operation);
-      tmp->release(c);
+      switch (selection) {
+      case S8Selection: {
+        MemoryOperand* low = memory(c, base, displacement, index, scale);
+        MemoryOperand* high = memory
+          (c, base, displacement + BytesPerWord, index, scale);
+        
+        high->apply(c, push);
+        low->apply(c, push);
+      } break;
+        
+      default: {
+        RegisterOperand* tmp = temporary
+          (c, selection == S8Selection ? S8Selection : DefaultSelection);
+        tmp->accept(c, mov, this);
+        tmp->apply(c, operation);
+        tmp->release(c);
+      } break;
+      }
     }
     break;
 
@@ -2169,7 +2181,7 @@ class MyCompiler: public Compiler {
       (&c, static_cast<MyPromise*>(machineIp()));
   }
 
-  virtual Operand* indirectCall
+  virtual void indirectCall
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
@@ -2180,8 +2192,6 @@ class MyCompiler: public Compiler {
     call(immediate(&c, c.indirectCaller));
 
     add(immediate(&c, footprint), register_(&c, rsp));
-
-    return register_(&c, rax);
   }
 
   virtual void indirectCallNoReturn
@@ -2196,7 +2206,7 @@ class MyCompiler: public Compiler {
     call(immediate(&c, c.indirectCaller));
   }
 
-  virtual Operand* directCall
+  virtual void directCall
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
@@ -2206,8 +2216,10 @@ class MyCompiler: public Compiler {
     call(address);
 
     add(immediate(&c, footprint), register_(&c, rsp));
+  }
 
-    return register_(&c, rax);
+  virtual Operand* result() {
+    return ::temporary(&c, rax, rdx);
   }
 
   virtual void return_(Operand* v) {
@@ -2216,14 +2228,12 @@ class MyCompiler: public Compiler {
     ret();
   }
 
-  virtual Operand* call(Operand* v) {
+  virtual void call(Operand* v) {
     appendOperation(&c, MyOperand::call, v);
-    return register_(&c, rax);
   }
 
-  virtual Operand* alignedCall(Operand* v) {
+  virtual void alignedCall(Operand* v) {
     appendOperation(&c, MyOperand::alignedCall, v);
-    return register_(&c, rax);
   }
 
   virtual void ret() {
@@ -2322,23 +2332,35 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* select1(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, S1Selection);
+    return static_cast<MyOperand*>(v)->select(&c, Select1);
   }
 
   virtual Operand* select2(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, S2Selection);
-  }
-
-  virtual Operand* select2z(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, Z2Selection);
+    return static_cast<MyOperand*>(v)->select(&c, Select2);
   }
 
   virtual Operand* select4(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, S4Selection);
+    return static_cast<MyOperand*>(v)->select(&c, Select4);
   }
 
   virtual Operand* select8(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, S8Selection);
+    return static_cast<MyOperand*>(v)->select(&c, Select8);
+  }
+
+  virtual Operand* signExtend1(Operand* v) {
+    return static_cast<MyOperand*>(v)->select(&c, SignExtend1);
+  }
+
+  virtual Operand* signExtend2(Operand* v) {
+    return static_cast<MyOperand*>(v)->select(&c, SignExtend2);
+  }
+
+  virtual Operand* zeroExtend2(Operand* v) {
+    return static_cast<MyOperand*>(v)->select(&c, ZeroExtend2);
+  }
+
+  virtual Operand* signExtend4(Operand* v) {
+    return static_cast<MyOperand*>(v)->select(&c, SignExtend4);
   }
 
   virtual void prologue() {

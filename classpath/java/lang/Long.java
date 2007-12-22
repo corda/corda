@@ -38,10 +38,15 @@ public final class Long extends Number implements Comparable<Long> {
     return String.valueOf(value);
   }
 
+  private static native void printLong(long v);
+  private static native void printInt(long v);
+
   public static String toString(long v, int radix) {
     if (radix < 1 || radix > 36) {
       throw new IllegalArgumentException("radix " + radix + " not in [1,36]");
     }
+
+    printLong(v);
 
     if (v == 0) {
       return "0";
@@ -53,10 +58,13 @@ public final class Long extends Number implements Comparable<Long> {
     int size = (negative ? 1 : 0);
     for (long n = v; n > 0; n /= radix) ++size;
 
+    printInt(size);
+
     char[] array = new char[size];
 
     int i = array.length - 1;
     for (long n = v; n > 0; n /= radix) {
+      printLong(n);
       long digit = n % radix;
       if (digit >= 0 && digit <= 9) {
         array[i] = (char) ('0' + digit);

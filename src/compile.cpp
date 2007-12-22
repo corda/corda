@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -617,7 +617,7 @@ class Frame {
   }
 
   void pushLong(Operand* o) {
-    stack = c->push(stack, c->select8(o));
+    stack = c->push(stack, o);
     if (BytesPerWord == 8) {
       stack = c->push(stack, 1);
     }
@@ -654,7 +654,7 @@ class Frame {
   }
 
   Operand* popInt() {
-    Operand* tmp = c->temporary();
+    Operand* tmp = c->select4(c->temporary());
     popInt(tmp);
     return tmp;
   }
@@ -695,7 +695,8 @@ class Frame {
     assert(t, index < codeMaxLocals(t, methodCode(t, method)));
     assert(t, index < parameterFootprint(t, method)
            or getBit(map, index - parameterFootprint(t, method)) == 0);
-    pushInt(c->memory(c->base(), localOffset(t, index, method)));
+    pushInt
+      (c->signExtend4(c->memory(c->base(), localOffset(t, index, method))));
   }
 
   void loadLong(unsigned index) {
@@ -1180,8 +1181,10 @@ compileThrowNew(MyThread* t, Frame* frame, Machine::Type type)
 }
 
 void
-pushReturnValue(MyThread* t, Frame* frame, unsigned code, Operand* result)
+pushReturnValue(MyThread* t, Frame* frame, unsigned code)
 {
+  Object* result = c->result();
+
   switch (code) {
   case ByteField:
   case BooleanField:
@@ -1189,7 +1192,7 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code, Operand* result)
   case ShortField:
   case FloatField:
   case IntField:
-    frame->pushInt(result);
+    frame->pushInt(c->signExtend4(result));
     break;
 
   case ObjectField:
@@ -1198,7 +1201,7 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code, Operand* result)
 
   case LongField:
   case DoubleField:
-    frame->pushLong(result);
+    frame->pushLong(c->select8(result));
     break;
 
   case VoidField:
@@ -1207,6 +1210,8 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code, Operand* result)
   default:
     abort(t);
   }
+
+  c->release(c);
 }
 
 void
@@ -1275,15 +1280,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       case faload:
       case iaload:
-        frame->pushInt(c->select4(c->memory(array, ArrayBody, index, 4)));
+        frame->pushInt(c->signExtend4(c->memory(array, ArrayBody, index, 4)));
         break;
 
       case baload:
-        frame->pushInt(c->select1(c->memory(array, ArrayBody, index, 1)));
+        frame->pushInt(c->signExtend1(c->memory(array, ArrayBody, index, 1)));
         break;
 
       case caload:
-        frame->pushInt(c->select2z(c->memory(array, ArrayBody, index, 2)));
+        frame->pushInt(c->zeroExtend2(c->memory(array, ArrayBody, index, 2)));
         break;
 
       case daload:
@@ -1292,7 +1297,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         break;
 
       case saload:
-        frame->pushInt(c->select2(c->memory(array, ArrayBody, index, 2)));
+        frame->pushInt(c->signExtend2(c->memory(array, ArrayBody, index, 2)));
         break;
       }
 
@@ -1350,21 +1355,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       case fastore:
       case iastore:
-        c->mov(value, c->select4(c->memory(array, ArrayBody, index, 4)));
+        c->mov(c->select4(value), c->memory(array, ArrayBody, index, 4));
         break;
 
       case bastore:
-        c->mov(value, c->select1(c->memory(array, ArrayBody, index, 1)));
+        c->mov(c->select1(value), c->memory(array, ArrayBody, index, 1));
         break;
 
       case castore:
       case sastore:
-        c->mov(value, c->select2(c->memory(array, ArrayBody, index, 2)));
+        c->mov(c->select2(value), c->memory(array, ArrayBody, index, 2));
         break;
 
       case dastore:
       case lastore:
-        c->mov(value, c->select8(c->memory(array, ArrayBody, index, 8)));
+        c->mov(c->select8(value), c->memory(array, ArrayBody, index, 8));
         break;
       }
 
@@ -1787,25 +1792,30 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        frame->pushInt(c->select1(c->memory(table, fieldOffset(t, field))));
+        frame->pushInt
+          (c->signExtend1(c->memory(table, fieldOffset(t, field))));
         break;
 
       case CharField:
-        frame->pushInt(c->select2z(c->memory(table, fieldOffset(t, field))));
+        frame->pushInt
+          (c->zeroExtend2(c->memory(table, fieldOffset(t, field))));
         break;
 
       case ShortField:
-        frame->pushInt(c->select2(c->memory(table, fieldOffset(t, field))));
+        frame->pushInt
+          (c->signExtend2(c->memory(table, fieldOffset(t, field))));
         break;
 
       case FloatField:
       case IntField:
-        frame->pushInt(c->select4(c->memory(table, fieldOffset(t, field))));
+        frame->pushInt
+          (c->signExtend4(c->memory(table, fieldOffset(t, field))));
         break;
 
       case DoubleField:
       case LongField:
-        frame->pushLong(c->select8(c->memory(table, fieldOffset(t, field))));
+        frame->pushLong
+          (c->select8(c->memory(table, fieldOffset(t, field))));
         break;
 
       case ObjectField:
@@ -1839,12 +1849,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case i2b: {
       Operand* top = frame->topInt();
-      c->mov(c->select1(top), top);
+      c->mov(c->signExtend1(top), top);
     } break;
 
     case i2c: {
       Operand* top = frame->topInt();
-      c->mov(c->select2z(top), top);
+      c->mov(c->zeroExtend2(top), top);
     } break;
 
     case i2d: {
@@ -1865,13 +1875,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case i2l: {
       Operand* a = frame->popInt();
-      frame->pushLong(a);
+      frame->pushLong(c->signExtend4(a));
       c->release(a);
     } break;
 
     case i2s: {
       Operand* top = frame->topInt();
-      c->mov(c->select2(top), top);
+      c->mov(c->signExtend2(top), top);
     } break;
       
     case iadd: {
@@ -2739,22 +2749,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        c->mov(value, c->select1(c->memory(table, fieldOffset(t, field))));
+        c->mov(c->select1(value), c->memory(table, fieldOffset(t, field)));
         break;
 
       case CharField:
       case ShortField:
-        c->mov(value, c->select2(c->memory(table, fieldOffset(t, field))));
+        c->mov(c->select2(value), c->memory(table, fieldOffset(t, field)));
         break;
             
       case FloatField:
       case IntField:
-        c->mov(value, c->select4(c->memory(table, fieldOffset(t, field))));
+        c->mov(c->select4(value), c->memory(table, fieldOffset(t, field)));
         break;
 
       case DoubleField:
       case LongField:
-        c->mov(value, c->select8(c->memory(table, fieldOffset(t, field))));
+        c->mov(c->select8(value), c->memory(table, fieldOffset(t, field)));
         break;
 
       case ObjectField:
@@ -2997,13 +3007,13 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     }
 
     // for debugging:
-    if (false and
+    if (//false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/Throwable") == 0 and
+               "java/lang/Long") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "init") == 0)
+               "toString") == 0)
     {
       asm("int3");
     }

@@ -36,29 +36,34 @@ class Compiler {
 
   virtual Operand* select1(Operand*) = 0;
   virtual Operand* select2(Operand*) = 0;
-  virtual Operand* select2z(Operand*) = 0;
   virtual Operand* select4(Operand*) = 0;
   virtual Operand* select8(Operand*) = 0;
+
+  virtual Operand* signExtend1(Operand*) = 0;
+  virtual Operand* signExtend2(Operand*) = 0;
+  virtual Operand* zeroExtend2(Operand*) = 0;
+  virtual Operand* signExtend4(Operand*) = 0;
 
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
   virtual Operand* indirectTarget() = 0;
   virtual Operand* temporary() = 0;
+  virtual Operand* result() = 0;
   virtual void release(Operand*) = 0;
 
   virtual Operand* label() = 0;
   virtual void mark(Operand*) = 0;
 
-  virtual Operand* indirectCall
+  virtual void indirectCall
   (Operand* address, unsigned argumentCount, ...) = 0;
   virtual void indirectCallNoReturn
   (Operand* address, unsigned argumentCount, ...) = 0;
-  virtual Operand* directCall
+  virtual void directCall
   (Operand* address, unsigned argumentCount, ...) = 0;
 
-  virtual Operand* call(Operand*) = 0;
-  virtual Operand* alignedCall(Operand*) = 0;
+  virtual void call(Operand*) = 0;
+  virtual void alignedCall(Operand*) = 0;
   virtual void return_(Operand*) = 0;
   virtual void ret() = 0;
 
