@@ -1125,7 +1125,7 @@ RegisterOperand::apply(Context* c, Operation operation)
     break;
 
   case push:
-    if (selection == DefaultSelection) {
+    if (selection == DefaultSelection or selection == S4Selection) {
       c->code.append(0x50 | value(c));
     } else {
       assert(c, selection == S8Selection);
