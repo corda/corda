@@ -57,9 +57,14 @@ vmJump:
    jmp    *%rdi
 
 #elif defined __i386__
-   
+
+#  if defined __APPLE__ || defined __MINGW32__
+.globl _vmInvoke
+_vmInvoke: 
+#  else
 .globl vmInvoke
 vmInvoke:
+#  endif
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -120,8 +125,13 @@ exit:
    popl   %ebp
    ret
      
+#  if defined __APPLE__ || defined __MINGW32__
+.globl _vmJump
+_vmJump: 
+#  else
 .globl vmJump
 vmJump:
+#  endif
    movl   4(%esp),%eax
    movl   8(%esp),%ebp
    movl   16(%esp),%ebx
