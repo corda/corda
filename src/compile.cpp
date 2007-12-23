@@ -71,6 +71,9 @@ resolveTarget(MyThread* t, void* stack, object method)
       (t, reinterpret_cast<object*>(stack)[parameterFootprint]);
 
     if (classVmFlags(t, class_) & BootstrapFlag) {
+      PROTECT(t, method);
+      PROTECT(t, class_);
+
       resolveClass(t, className(t, class_));
       if (UNLIKELY(t->exception)) return 0;
     }
