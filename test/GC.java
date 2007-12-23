@@ -29,9 +29,9 @@ public class GC {
   }
 
   public static void main(String[] args) {
-    //small();
+    small();
     medium();
-    //large();
+    large();
   }
 
 }

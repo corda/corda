@@ -1540,6 +1540,16 @@ RegisterOperand::accept(Context* c, Operation operation,
     }
   } break;
 
+  case mul: {
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode2(c, 0x0faf, value(c), operand, operand->selection);
+    } else {
+      abort(c);
+    }
+  } break;
+
   default: abort(c);
   }
 }
@@ -1649,6 +1659,7 @@ AddressOperand::apply(Context* c, Operation operation)
     conditional(c, 0x8d, this);
     break;
 
+
   case jl:
     conditional(c, 0x8c, this);
     break;
@@ -1656,6 +1667,13 @@ AddressOperand::apply(Context* c, Operation operation)
   case jle:
     conditional(c, 0x8e, this);
     break;
+
+  case push: {
+    RegisterOperand* tmp = temporary(c);
+    tmp->accept(c, mov, this);
+    tmp->apply(c, push);
+    tmp->release(c);
+  } break;
     
   default: abort(c);
   }
@@ -1986,7 +2004,7 @@ MemoryOperand::accept(Context* c, Operation operation,
     } else {
       assert(c, operand->selection == Select8);
 
-      RegisterOperand* tmp = temporary(c);
+      RegisterOperand* tmp = temporary(c, rcx);
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
@@ -2003,7 +2021,11 @@ MemoryOperand::accept(Context* c, Operation operation,
       ax->accept(c, mul, lowSrc);
       tmp->accept(c, add, ax);
       ax->accept(c, mov, lowDst);
-      ax->accept(c, mul, lowSrc);
+
+      // mul lowSrc,%eax
+      c->code.append(0xf7);
+      c->code.append(0xe8 | lowSrc->value(c));
+
       dx->accept(c, add, tmp);
 
       lowDst->accept(c, mov, ax);
