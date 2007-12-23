@@ -3279,7 +3279,8 @@ invokeNative2(MyThread* t, object method)
   }
 
   void* function = pointerValue(t, methodCode(t, method));
-  unsigned returnType = fieldType(t, methodReturnCode(t, method));
+  unsigned returnCode = methodReturnCode(t, method);
+  unsigned returnType = fieldType(t, returnCode);
   uint64_t result;
   
   if (Verbose) {
@@ -3305,20 +3306,37 @@ invokeNative2(MyThread* t, object method)
             &byteArrayBody(t, methodName(t, method), 0));
   }
 
-  if (LIKELY(t->exception == 0) and returnType == POINTER_TYPE) {
-    return result ? *reinterpret_cast<uintptr_t*>(result) : 0;
-  } else if (BytesPerWord == 8) {
-    switch (returnType) {
-    case INT8_TYPE:
-    case INT16_TYPE:
-    case INT32_TYPE:
-      // force sign extension
+  if (LIKELY(t->exception == 0)) {
+    switch (returnCode) {
+    case ByteField:
+    case BooleanField:
+      return static_cast<int8_t>(result);
+
+    case CharField:
+      return static_cast<uint16_t>(result);
+
+    case ShortField:
+      return static_cast<int16_t>(result);
+
+    case FloatField:
+    case IntField:
       return static_cast<int32_t>(result);
 
-    default: return result;
+    case LongField:
+    case DoubleField:
+      return result;
+
+    case ObjectField:
+      return static_cast<uintptr_t>(result) ? *reinterpret_cast<uintptr_t*>
+        (static_cast<uintptr_t>(result)) : 0;
+
+    case VoidField:
+      return 0;
+
+    default: abort(t);
     }
   } else {
-    return result;
+    return 0;
   }
 }
 
