@@ -1221,8 +1221,7 @@ RegisterOperand::apply(Context* c, Operation operation)
     break;
 
   case push:
-    if (selection == DefaultSelection or selection == Select4
-        or (BytesPerWord == 8 and selection == Select8From4))
+    if (selection == DefaultSelection or selection == Select4)
     {
       c->code.append(0x50 | value(c));
     } else {
@@ -1233,16 +1232,23 @@ RegisterOperand::apply(Context* c, Operation operation)
         break;
 
       case Select8From4: {
-        RegisterOperand* ax = temporary(c, rax);
-        RegisterOperand* dx = temporary(c, rdx);
-        
-        ax->accept(c, mov, register_(c, value(c)));
-        c->code.append(0x99); // cdq
-        dx->apply(c, push);
-        ax->apply(c, push);
-
-        ax->release(c);
-        dx->release(c);
+        if (BytesPerWord == 8) {
+          RegisterOperand* fullSize = register_
+            (c, reference, DefaultSelection);
+          fullSize->accept(c, mov, this);
+          fullSize->apply(c, operation);
+        } else {
+          RegisterOperand* ax = temporary(c, rax);
+          RegisterOperand* dx = temporary(c, rdx);
+          
+          ax->accept(c, mov, register_(c, value(c)));
+          c->code.append(0x99); // cdq
+          dx->apply(c, push);
+          ax->apply(c, push);
+          
+          ax->release(c);
+          dx->release(c);
+        }
       } break;
 
       default: abort(c);
@@ -1325,7 +1331,9 @@ RegisterOperand::accept(Context* c, Operation operation,
           break;
 
         case Select4:
-          c->code.append(0x89);
+        case Select8From4:
+          rex(c);
+          c->code.append(0x63);
           c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
           break;
 

@@ -3081,10 +3081,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "Floats") == 0 and
+               "java/lang/Math") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "multiply") == 0)
+               "max") == 0)
     {
       asm("int3");
     }
@@ -3562,9 +3562,13 @@ class ArgumentList {
   }
 
   void addLong(uint64_t v) {
-    memcpy(array + position, &v, 8);
+    if (BytesPerWord == 8) {
+      memcpy(array + position + 1, &v, 8);
+    } else {
+      memcpy(array + position, &v, 8);
+    }
     objectMask[position] = false;
-    objectMask[position] = false;
+    objectMask[position + 1] = false;
     position += 2;
   }
 
