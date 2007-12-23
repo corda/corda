@@ -582,14 +582,10 @@ class Frame {
     }
   }
 
-  void trace(object target, bool virtualCall) {
+  void trace(Promise* returnAddress, object target, bool virtualCall) {
     TraceElement* e = new (traceLog->allocate(traceSizeInBytes(t, method)))
-      TraceElement(target, c->machineIp(), virtualCall);
+      TraceElement(target, returnAddress, virtualCall);
     memcpy(e->map, map, mapSizeInWords(t, method) * BytesPerWord);
-  }
-
-  void trace() {
-    trace(0, false);
   }
 
   Operand* machineIp(unsigned logicalIp) {
@@ -1180,11 +1176,12 @@ compileThrowNew(MyThread* t, Frame* frame, Machine::Type type)
 {
   Operand* class_ = frame->append(arrayBody(t, t->m->types, type));
   Compiler* c = frame->c;
+
   c->indirectCallNoReturn
     (c->constant(reinterpret_cast<intptr_t>(throwNew)),
      2, c->thread(), class_);
 
-  frame->trace();
+  frame->trace(c->machineIp(), 0, false);
 }
 
 void
@@ -1232,12 +1229,14 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code)
 void
 compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
-  frame->c->alignedCall
-    (frame->c->constant
+  Compiler* c = frame->c;
+
+  c->alignedCall
+    (c->constant
      (reinterpret_cast<intptr_t>
       (&singletonBody(t, methodCompiled(t, target), 0))));
 
-  frame->trace(target, false);
+  frame->trace(c->machineIp(), target, false);
 
   frame->pop(methodParameterFootprint(t, target));
 
@@ -1357,16 +1356,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->jge(outOfBounds);
 
       switch (instruction) {
-      case aastore:
+      case aastore: {
         c->shl(c->constant(log(BytesPerWord)), index);
         c->add(c->constant(ArrayBody), index);
           
-        c->directCall
+        Promise* returnAddress = c->directCall
           (c->constant(reinterpret_cast<intptr_t>(set)),
            4, c->thread(), array, index, value);
 
-        frame->trace();
-        break;
+        frame->trace(returnAddress, 0, false);
+      } break;
 
       case fastore:
       case iastore:
@@ -1440,7 +1439,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->mark(nonnegative);
 
-      c->indirectCall
+      Promise* returnAddress = c->indirectCall
          (c->constant(reinterpret_cast<intptr_t>(makeBlankObjectArray)),
           3, c->thread(), frame->append(class_), length);
 
@@ -1448,7 +1447,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->release(length);
 
-      frame->trace();
+      frame->trace(returnAddress, 0, false);
 
       frame->pushObject(result);
       c->release(result);
@@ -1493,7 +1492,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
          2, c->thread(), e);
       c->release(e);
 
-      frame->trace();
+      frame->trace(c->machineIp(), 0, false);
     } return;
 
     case bipush:
@@ -1511,11 +1510,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* classOperand = frame->append(class_);
 
-      c->indirectCall
+      Promise* returnAddress = c->indirectCall
          (c->constant(reinterpret_cast<intptr_t>(checkCast)),
           3, c->thread(), classOperand, instance);
 
-      frame->trace();
+      frame->trace(returnAddress, 0, false);
     } break;
 
     case d2f: {
@@ -2224,7 +2223,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->call(result);
       c->release(result);
       
-      frame->trace(target, true);
+      frame->trace(c->machineIp(), target, true);
 
       frame->pop(parameterFootprint);
 
@@ -2279,7 +2278,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->call(c->memory(class_, offset));
 
-      frame->trace(target, true);
+      frame->trace(c->machineIp(), target, true);
 
       c->release(class_);
 
@@ -2628,22 +2627,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case monitorenter: {
       Operand* a = frame->popObject();
-      c->indirectCall
+      Promise* returnAddress = c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(acquireMonitorForObject)),
          2, c->thread(), a);
       c->release(a);
 
-      frame->trace();
+      frame->trace(returnAddress, 0, false);
     } break;
 
     case monitorexit: {
       Operand* a = frame->popObject();
-      c->indirectCall
+      Promise* returnAddress = c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(releaseMonitorForObject)),
          2, c->thread(), a);
       c->release(a);
 
-      frame->trace();
+      frame->trace(returnAddress, 0, false);
     } break;
 
     case multianewarray: {
@@ -2654,14 +2653,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
-      c->indirectCall
+      Promise* returnAddress = c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(makeMultidimensionalArray)),
          4, c->thread(), frame->append(class_), c->stack(),
          c->constant(dimensions));
 
       Operand* result = c->result();
 
-      frame->trace();
+      frame->trace(returnAddress, 0, false);
 
       frame->pop(dimensions);
       frame->pushObject(result);
@@ -2678,20 +2677,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       initClass(t, class_);
       if (UNLIKELY(t->exception)) return;
 
+      Promise* returnAddress;
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
-        c->indirectCall
+        returnAddress = c->indirectCall
           (c->constant(reinterpret_cast<intptr_t>(makeNewWeakReference)),
            2, c->thread(), frame->append(class_));
       } else {
-        c->indirectCall
+        returnAddress = c->indirectCall
           (c->constant(reinterpret_cast<intptr_t>(makeNew)),
            2, c->thread(), frame->append(class_));
       }
 
+      frame->trace(returnAddress, 0, false);
+
       Operand* result = c->result();
-
-      frame->trace();
-
       frame->pushObject(result);
       c->release(result);
     } break;
@@ -2747,7 +2746,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       default: abort(t);
       }
 
-      c->indirectCall
+      Promise* returnAddress = c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(makeBlankArray)),
          3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
          size);
@@ -2756,7 +2755,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->release(size);
 
-      frame->trace();
+      frame->trace(returnAddress, 0, false);
 
       frame->pushObject(result);
       c->release(result);
@@ -3085,10 +3084,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/String") == 0 and
+               "GC") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "getBytes") == 0)
+               "medium") == 0)
     {
       asm("int3");
     }

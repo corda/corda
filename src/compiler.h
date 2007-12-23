@@ -52,11 +52,11 @@ class Compiler {
   virtual Operand* label() = 0;
   virtual void mark(Operand*) = 0;
 
-  virtual void indirectCall
+  virtual Promise* indirectCall
   (Operand* address, unsigned argumentCount, ...) = 0;
   virtual void indirectCallNoReturn
   (Operand* address, unsigned argumentCount, ...) = 0;
-  virtual void directCall
+  virtual Promise* directCall
   (Operand* address, unsigned argumentCount, ...) = 0;
 
   virtual void call(Operand*) = 0;

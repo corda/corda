@@ -83,6 +83,7 @@ vmInvoke:
    
    // copy arguments into place
    movl   $0,%ecx
+   mov    16(%ebp),%edx
    jmp    test
 
 loop:

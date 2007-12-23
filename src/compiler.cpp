@@ -2384,7 +2384,7 @@ class MyCompiler: public Compiler {
       (&c, static_cast<MyPromise*>(machineIp()));
   }
 
-  virtual void indirectCall
+  virtual Promise* indirectCall
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
@@ -2393,8 +2393,10 @@ class MyCompiler: public Compiler {
 
     mov(address, register_(&c, rax));
     call(immediate(&c, c.indirectCaller));
+    Promise* p = machineIp();
 
     add(immediate(&c, footprint), register_(&c, rsp));
+    return p;
   }
 
   virtual void indirectCallNoReturn
@@ -2409,7 +2411,7 @@ class MyCompiler: public Compiler {
     call(immediate(&c, c.indirectCaller));
   }
 
-  virtual void directCall
+  virtual Promise* directCall
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
@@ -2417,8 +2419,10 @@ class MyCompiler: public Compiler {
     va_end(a);
 
     call(address);
+    Promise* p = machineIp();
 
     add(immediate(&c, footprint), register_(&c, rsp));
+    return p;
   }
 
   virtual Operand* result() {
