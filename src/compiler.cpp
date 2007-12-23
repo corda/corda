@@ -2428,7 +2428,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void return_(Operand* v) {
-    mov(v, register_(&c, rax));
+    mov(v, register_(&c, rax, rdx));
     epilogue();
     ret();
   }

@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Exceptions.class
+input = $(test-build)/Floats.class
 
 build-cxx = g++
 build-cc = gcc

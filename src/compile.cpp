@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -1523,11 +1523,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(doubleToFloat)), 1, a);
+      c->release(a);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case d2i: {
@@ -1535,11 +1535,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->directCall
          (c->constant(reinterpret_cast<intptr_t>(doubleToInt)), 1, a);
+      c->release(a);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case d2l: {
@@ -1547,11 +1547,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(doubleToLong)), 1, a);
+      c->release(a);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case dadd: {
@@ -1560,12 +1560,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(addDouble)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case dcmpg: {
@@ -1574,12 +1574,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
          (c->constant(reinterpret_cast<intptr_t>(compareDoublesG)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case dcmpl: {
@@ -1588,20 +1588,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(compareDoublesL)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case dconst_0:
-      frame->pushLong(c->constant(doubleToBits(0.0)));
+      frame->pushLong(c->select8(c->constant(doubleToBits(0.0))));
       break;
       
     case dconst_1:
-      frame->pushLong(c->constant(doubleToBits(1.0)));
+      frame->pushLong(c->select8(c->constant(doubleToBits(1.0))));
       break;
 
     case ddiv: {
@@ -1610,12 +1610,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
          (c->constant(reinterpret_cast<intptr_t>(divideDouble)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case dmul: {
@@ -1624,12 +1624,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(multiplyDouble)), 2, a, b);
+      c->release(a);
+      c->release(b);
       
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case dneg: {
@@ -1637,11 +1637,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(negateDouble)), 1, a);
+      c->release(a);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case vm::drem: {
@@ -1650,12 +1650,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(moduloDouble)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case dsub: {
@@ -1664,12 +1664,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(subtractDouble)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case dup:
@@ -1701,11 +1701,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(floatToDouble)), 1, a);
+      c->release(a);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case f2i: {
@@ -1713,11 +1713,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
          (c->constant(reinterpret_cast<intptr_t>(floatToInt)), 1, a);
+      c->release(a);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case f2l: {
@@ -1725,11 +1725,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(floatToLong)), 1, a);
+      c->release(a);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case fadd: {
@@ -1738,12 +1738,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(addFloat)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case fcmpg: {
@@ -1752,12 +1752,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(compareFloatsG)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case fcmpl: {
@@ -1766,12 +1766,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(compareFloatsL)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case fconst_0:
@@ -1792,12 +1792,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(divideFloat)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case fmul: {
@@ -1806,12 +1806,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(multiplyFloat)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case fneg: {
@@ -1819,11 +1819,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(negateFloat)), 1, a);
+      c->release(a);
 
       Operand* result = c->select8(c->result());
       frame->pushLong(result);
       c->release(result);
-      c->release(a);
     } break;
 
     case vm::frem: {
@@ -1832,12 +1832,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(moduloFloat)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case fsub: {
@@ -1846,12 +1846,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->directCall
         (c->constant(reinterpret_cast<intptr_t>(subtractFloat)), 2, a, b);
+      c->release(a);
+      c->release(b);
 
       Operand* result = c->select4(c->result());
       frame->pushInt(result);
       c->release(result);
-      c->release(a);
-      c->release(b);
     } break;
 
     case getfield:
