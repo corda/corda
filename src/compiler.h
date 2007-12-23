@@ -36,13 +36,10 @@ class Compiler {
 
   virtual Operand* select1(Operand*) = 0;
   virtual Operand* select2(Operand*) = 0;
+  virtual Operand* select2z(Operand*) = 0;
   virtual Operand* select4(Operand*) = 0;
   virtual Operand* select8(Operand*) = 0;
-
-  virtual Operand* signExtend1(Operand*) = 0;
-  virtual Operand* signExtend2(Operand*) = 0;
-  virtual Operand* zeroExtend2(Operand*) = 0;
-  virtual Operand* signExtend4(Operand*) = 0;
+  virtual Operand* select8From4(Operand*) = 0;
 
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;

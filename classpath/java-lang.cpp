@@ -482,16 +482,3 @@ Java_java_lang_Double_fillBufferWithDouble(JNIEnv* e, jclass, jdouble val,
   e->ReleaseByteArrayElements(buffer, buf, 0);
   return count;
 }
-
-extern "C" JNIEXPORT void JNICALL
-Java_java_lang_Long_printLong(JNIEnv*, jclass, jlong v)
-{
-  fprintf(stderr, "DEBUG: %lld\n", v);
-}
-
-
-extern "C" JNIEXPORT void JNICALL
-Java_java_lang_Long_printInt(JNIEnv*, jclass, jint v)
-{
-  fprintf(stderr, "DEBUG: %d\n", v);
-}

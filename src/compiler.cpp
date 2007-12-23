@@ -29,12 +29,10 @@ enum Register {
 enum SelectionType {
   Select1,
   Select2,
+  Select2z,
   Select4,
   Select8,
-  SignExtend1,
-  SignExtend2,
-  ZeroExtend2,
-  SignExtend4
+  Select8From4
 };
 
 const bool Verbose = false;
@@ -42,7 +40,7 @@ const bool Verbose = false;
 const unsigned RegisterCount = BytesPerWord * 2;
 const unsigned GprParameterCount = 6;
 const SelectionType DefaultSelection
-= (BytesPerWord == 8 ? S8Selection : S4Selection);
+= (BytesPerWord == 8 ? Select8 : Select4);
 
 class Context;
 class MyOperand;
@@ -54,6 +52,19 @@ class MemoryOperand;
 class CodePromise;
 class MyPromise;
 class RegisterReference;
+
+inline unsigned
+footprint(SelectionType selection)
+{
+  switch (selection) {
+  case Select8:
+  case Select8From4:
+    return 8;
+
+  default:
+    return BytesPerWord;
+  }
+}
 
 int64_t
 divideLong(int64_t a, int64_t b)
@@ -320,7 +331,7 @@ RegisterOperand*
 register_(Context* c, RegisterReference*, SelectionType = DefaultSelection);
 
 RegisterOperand*
-register_(Context* c, Register, Register = NoRegister,
+register_(Context* c, Register = NoRegister, Register = NoRegister,
           SelectionType = DefaultSelection);
 
 MemoryOperand*
@@ -429,38 +440,63 @@ release(Context* c, Register v)
 class RegisterReference {
  public:
   RegisterReference(Register value = NoRegister, Register high = NoRegister):
-    value_(value), high_(high), acquireHigh(false)
+    value_(value), defaultValue(value), high_(high), defaultHigh(high),
+    acquired(true)
   { }
 
   void acquire(Context* c) {
-    value_ = ::acquire(c);
-    if (acquireHigh) {
-      high_ = ::acquire(c);
+    if (defaultValue != NoRegister) {
+      ::acquire(c, defaultValue);
     }
+
+    if (defaultHigh != NoRegister) {
+      ::acquire(c, defaultHigh);
+    }
+
+    value_ = defaultValue;
+    high_ = defaultHigh;
+
+    acquired = true;
   }
 
   void release(Context* c) {
-    ::release(c, value_);
-    value_ = NoRegister;
+    assert(c, acquired);
+
+    if (value_ != NoRegister) {
+      ::release(c, value_);
+    }
 
     if (high_ != NoRegister) {
       ::release(c, high_);
     }
+
+    value_ = NoRegister;
+    high_ = NoRegister;
+
+    acquired = false;
   }
 
-  Register value(Context* c UNUSED) {
-    assert(c, value_ != NoRegister);
+  Register value(Context* c) {
+    assert(c, acquired);
+    if (value_ == NoRegister) {
+      value_ = ::acquire(c);
+    }
     return value_;
   }
 
-  Register high(Context* c UNUSED) {
-    assert(c, high_ != NoRegister);
+  Register high(Context* c) {
+    assert(c, acquired);
+    if (high_ == NoRegister) {
+      high_ = ::acquire(c);
+    }
     return high_;
   }
 
   Register value_;
+  Register defaultValue;
   Register high_;
-  bool acquireHigh;
+  Register defaultHigh;
+  bool acquired;
 };
 
 class RegisterOperand: public MyOperand {
@@ -478,7 +514,7 @@ class RegisterOperand: public MyOperand {
   }
 
   virtual unsigned footprint(Context*) {
-    return (selection == S8Selection ? 8 : BytesPerWord);
+    return ::footprint(selection);
   }
 
   virtual Register asRegister(Context* c) {
@@ -489,9 +525,6 @@ class RegisterOperand: public MyOperand {
     if (selection == this->selection) {
       return this;
     } else {
-      if (selection == S8Selection and BytesPerWord == 4) {
-        reference->acquireHigh = true;
-      }
       return register_(c, reference, selection);
     }
   }
@@ -528,7 +561,7 @@ class ImmediateOperand: public MyOperand {
   { }
 
   virtual unsigned footprint(Context*) {
-    return (selection == S8Selection ? 8 : BytesPerWord);
+    return ::footprint(selection);
   }
 
   virtual MyOperand* select(Context* c, SelectionType selection) {
@@ -610,7 +643,7 @@ class MemoryOperand: public MyOperand {
   { }
 
   virtual unsigned footprint(Context*) {
-    return (selection == S8Selection ? 8 : BytesPerWord);
+    return ::footprint(selection);
   }
 
   virtual Register asRegister(Context*);
@@ -698,7 +731,7 @@ temporary(Context* c)
 RegisterOperand*
 temporary(Context* c, SelectionType selection)
 {
-  if (BytesPerWord == 4 and selection == S8Selection) {
+  if (BytesPerWord == 4 and selection == Select8) {
     return register_(c, acquire(c), acquire(c), selection);
   } else {
     return register_(c, acquire(c), NoRegister, selection);
@@ -710,6 +743,14 @@ temporary(Context* c, Register v)
 {
   acquire(c, v);
   return register_(c, v);
+}
+
+RegisterOperand*
+temporary(Context* c, Register v, Register h)
+{
+  acquire(c, v);
+  acquire(c, h);
+  return register_(c, v, h);
 }
 
 Segment*
@@ -793,6 +834,9 @@ class AcquireEvent: public Event {
   { }
 
   virtual void run(Context* c) {
+    if (Verbose) {
+      fprintf(stderr, "acquire register\n");
+    }
     operand->reference->acquire(c);
   }
 
@@ -807,6 +851,9 @@ class ReleaseEvent: public Event {
   { }
 
   virtual void run(Context* c) {
+    if (Verbose) {
+      fprintf(stderr, "release register\n");
+    }
     operand->release(c);
   }
 
@@ -954,18 +1001,38 @@ appendArgumentEvent(Context* c, MyOperand** arguments, unsigned count)
     ArgumentEvent(arguments, count, s->event);
 }
 
-MyStack*
-pushed(Context* c, MyStack* stack, unsigned footprint)
+void
+logStack(Context* c, MyStack* stack)
 {
-  int index = (stack ?
-               stack->index + (stack->value->footprint(c) / BytesPerWord) :
-               0);
+  fprintf(stderr, "ip %3d: ", currentSegment(c)->logicalIp);
+
+  if (stack) {
+    fprintf(stderr, " %d",
+            static_cast<MemoryOperand*>(stack->value)->displacement);
+  }
+
+  for (MyStack* s = stack; s; s = s->next) {
+    fprintf(stderr, "*");
+  }
+
+  fprintf(stderr, "\n");
+}
+
+MyStack*
+pushed(Context* c, MyStack* stack)
+{
+  int index = (stack ? stack->index + 1 : 0);
 
   MyOperand* value = memory
-    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1,
-     footprint == (BytesPerWord * 2) ? S8Selection : DefaultSelection);
+    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1);
 
-  return new (c->zone.allocate(sizeof(MyStack))) MyStack(value, index, stack);
+  stack = new (c->zone.allocate(sizeof(MyStack))) MyStack(value, index, stack);
+
+  if (Verbose) {
+    logStack(c, stack);
+  }
+
+  return stack;
 }
 
 MyStack*
@@ -973,7 +1040,10 @@ push(Context* c, MyStack* stack, MyOperand* v)
 {
   appendOperation(c, MyOperand::push, v);
 
-  return pushed(c, stack, v->footprint(c));
+  if ((v->footprint(c) / BytesPerWord) == 2) {
+    stack = pushed(c, stack);
+  }
+  return pushed(c, stack);
 }
 
 MyStack*
@@ -983,9 +1053,13 @@ pop(Context* c, MyStack* stack, int count)
     (c, MyOperand::add, immediate(c, count * BytesPerWord), register_(c, rsp));
 
   while (count) {
-    count -= (stack->value->footprint(c) / BytesPerWord);
+    -- count;
     assert(c, count >= 0);
     stack = stack->next;
+  }
+
+  if (Verbose) {
+    logStack(c, stack);
   }
 
   return stack;
@@ -995,6 +1069,14 @@ MyStack*
 pop(Context* c, MyStack* stack, MyOperand* dst)
 {
   appendOperation(c, MyOperand::pop, dst);
+
+  if (dst->footprint(c) / BytesPerWord == 2) {
+    stack = stack->next;
+  }
+
+  if (Verbose) {
+    logStack(c, stack->next);
+  }
 
   return stack->next;
 }
@@ -1028,6 +1110,17 @@ rex(Context* c)
 {
   if (BytesPerWord == 8) {
     c->code.append(0x48);
+  }
+}
+
+void
+rex(Context* c, SelectionType selection)
+{
+  if (selection == Select8) {
+    assert(c, BytesPerWord == 8);
+    rex(c);
+  } else {
+    assert(c, selection == Select4);
   }
 }
 
@@ -1078,6 +1171,15 @@ encode(Context* c, uint8_t instruction, int a, MemoryOperand* b, bool rex)
 }
 
 void
+encode(Context* c, uint8_t instruction, int a, MemoryOperand* b,
+       SelectionType selection)
+{
+  assert(c, selection == DefaultSelection or selection == Select4);
+
+  encode(c, instruction, a, b, selection == DefaultSelection);
+}
+
+void
 encode2(Context* c, uint16_t instruction, int a, MemoryOperand* b, bool rex)
 {
   Register r = b->base->asRegister(c);
@@ -1092,51 +1194,64 @@ encode2(Context* c, uint16_t instruction, int a, MemoryOperand* b, bool rex)
 void
 RegisterOperand::apply(Context* c, Operation operation)
 {
-  assert(c, operation == push
-         or operation == pop
-         or selection == DefaultSelection);
-
   switch (operation) {
   case call:
+    assert(c, selection == DefaultSelection);
+
     c->code.append(0xff);
     c->code.append(0xd0 | value(c));
     break;
 
   case jmp:
+    assert(c, selection == DefaultSelection);
+
     c->code.append(0xff);
     c->code.append(0xe0 | value(c));
     break;
 
   case pop:
-    if (selection == DefaultSelection) {
+    if (selection == DefaultSelection or selection == Select4) {
       c->code.append(0x58 | value(c));
     } else {
-      switch (selection) {
-      case S8Selection:
-        assert(c, selection == S8Selection);
+      assert(c, selection == Select8);
 
-        register_(c, value(c))->apply(c, pop);
-        register_(c, high(c))->apply(c, pop);
+      register_(c, value(c))->apply(c, pop);
+      register_(c, high(c))->apply(c, pop);
+    }
+    break;
+
+  case push:
+    if (selection == DefaultSelection or selection == Select4
+        or (BytesPerWord == 8 and selection == Select8From4))
+    {
+      c->code.append(0x50 | value(c));
+    } else {
+      switch (selection) {
+      case Select8:
+        register_(c, high(c))->apply(c, push);
+        register_(c, value(c))->apply(c, push);
         break;
+
+      case Select8From4: {
+        RegisterOperand* ax = temporary(c, rax);
+        RegisterOperand* dx = temporary(c, rdx);
+        
+        ax->accept(c, mov, register_(c, value(c)));
+        c->code.append(0x99); // cdq
+        dx->apply(c, push);
+        ax->apply(c, push);
+
+        ax->release(c);
+        dx->release(c);
+      } break;
 
       default: abort(c);
       }
     }
     break;
 
-  case push:
-    if (selection == DefaultSelection or selection == S4Selection) {
-      c->code.append(0x50 | value(c));
-    } else {
-      assert(c, selection == S8Selection);
-
-      register_(c, high(c))->apply(c, push);
-      register_(c, value(c))->apply(c, push);
-    }
-    break;
-
   case neg:
-    rex(c);
+    rex(c, selection);
     c->code.append(0xf7);
     c->code.append(0xd8 | value(c));
     break;
@@ -1151,21 +1266,27 @@ RegisterOperand::accept(Context* c, Operation operation,
 {
   switch (operation) {
   case add:
-    rex(c);
+    assert(c, selection == operand->selection);
+  
+    rex(c, operand->selection);
     c->code.append(0x01);
     c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
     break;
 
   case cmp:
-    if (selection == DefaultSelection) {
-      rex(c);
+    assert(c, selection == operand->selection);
+  
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      rex(c, operand->selection);
       c->code.append(0x39);
       c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
     } else {
-      assert(c, selection == S8Selection);
+      assert(c, operand->selection == Select8);
 
       register_(c, high(c))->accept
-        (c, mov, register_(c, operand->high(c)));
+        (c, cmp, register_(c, operand->high(c)));
 
       // if the high order bits are equal, we compare the low order
       // bits; otherwise, we jump past that comparison
@@ -1174,41 +1295,41 @@ RegisterOperand::accept(Context* c, Operation operation,
       c->code.append4(2);
 
       register_(c, value(c))->accept
-        (c, mov, register_(c, operand->value(c)));
+        (c, cmp, register_(c, operand->value(c)));
     }
     break;
 
   case mov:
     if (value(c) != operand->value(c) or selection != operand->selection) {
-      if (operand->selection == DefaultSelection) {
-        rex(c);
+      if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+      {
+        rex(c, selection);
         c->code.append(0x89);
         c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
       } else {
         switch (operand->selection) {
-        case S1Selection:
+        case Select1:
           c->code.append(0xbe);
           c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
           break;
 
-        case S2Selection:
+        case Select2:
           c->code.append(0xbf);
           c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
           break;
 
-        case Z2Selection:
+        case Select2z:
           c->code.append(0xb7);
           c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
           break;
 
-        case S4Selection:
+        case Select4:
           c->code.append(0x89);
           c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
           break;
 
-        case S8Selection:
-          assert(c, selection == S8Selection);
-          
+        case Select8:
           register_(c, value(c))->accept
             (c, mov, register_(c, operand->value(c)));
 
@@ -1223,7 +1344,9 @@ RegisterOperand::accept(Context* c, Operation operation,
     break;
 
   case mul:
-    rex(c);
+    assert(c, selection == operand->selection);
+  
+    rex(c, selection);
     c->code.append(0x0f);
     c->code.append(0xaf);
     c->code.append(0xc0 | (value(c) << 3) | operand->value(c));
@@ -1349,6 +1472,8 @@ void
 RegisterOperand::accept(Context* c, Operation operation,
                         AddressOperand* operand)
 {
+  assert(c, selection == DefaultSelection);
+
   switch (operation) {
   case mov: {
     accept(c, operation, ::value(c, operand));
@@ -1362,38 +1487,43 @@ void
 RegisterOperand::accept(Context* c, Operation operation,
                         MemoryOperand* operand)
 {
-  assert(c, operation == mov or selection == DefaultSelection);
-  assert(c, operation == mov or operand->selection == DefaultSelection);
+  assert(c, selection == DefaultSelection);
 
   switch (operation) {
   case cmp: {
-    encode(c, 0x3b, value(c), operand, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {    
+      encode(c, 0x3b, value(c), operand, operand->selection);
+    } else {
+      abort(c);
+    }
   } break;
 
   case mov: {
-    if (operand->selection == DefaultSelection) {
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
       encode(c, 0x8b, value(c), operand, true);
     } else {
       switch (operand->selection) {
-      case S1Selection:
+      case Select1:
         encode2(c, 0x0fbe, value(c), operand, true);      
         break;
 
-      case S2Selection:
+      case Select2:
         encode2(c, 0x0fbf, value(c), operand, true);      
         break;
 
-      case Z2Selection:
+      case Select2z:
         encode2(c, 0x0fb7, value(c), operand, true);      
         break;
 
-      case S4Selection:
+      case Select4:
         encode(c, 0x63, value(c), operand, true);
         break;
 
-      case S8Selection:
-        assert(c, selection == S8Selection);
-
+      case Select8:
         register_(c, value(c))->accept
           (c, mov, memory
            (c, operand->base, operand->displacement,
@@ -1551,12 +1681,12 @@ AddressOperand::asRegister(Context* c)
 void
 ImmediateOperand::apply(Context* c, Operation operation)
 {
-  assert(c, operation == push or selection == DefaultSelection);
-
   switch (operation) {
   case alignedCall:
   case call:
   case jmp:
+    assert(c, selection == DefaultSelection);
+
     address(c, new (c->zone.allocate(sizeof(ResolvedPromise)))
             ResolvedPromise(value))->apply(c, operation);
     break;
@@ -1576,7 +1706,7 @@ ImmediateOperand::apply(Context* c, Operation operation)
         tmp->release(c);
       }
     } else {
-      assert(c, selection == S8Selection);
+      assert(c, selection == Select8);
 
       immediate(c, (value >> 32) & 0xFFFFFFFF)->apply(c, push);
       immediate(c, (value      ) & 0xFFFFFFFF)->apply(c, push);
@@ -1634,18 +1764,22 @@ MemoryOperand::apply(Context* c, Operation operation)
 {
   switch (operation) {
   case call:
+    assert(c, selection == DefaultSelection);
+
     encode(c, 0xff, 2, this, false);
     break;
 
   case jmp:
+    assert(c, selection == DefaultSelection);
+
     encode(c, 0xff, 4, this, false);
     break;
 
   case neg:
     if (selection == DefaultSelection) {
-      encode(c, 0xf7, 2, this, true);
+      encode(c, 0xf7, 2, this, selection);
     } else {
-      assert(c, selection == S8Selection);
+      assert(c, selection == Select8);
 
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
@@ -1670,7 +1804,18 @@ MemoryOperand::apply(Context* c, Operation operation)
     break;
 
   case pop:
-    encode(c, 0x8f, 0, this, false);
+    if (selection == DefaultSelection) {
+      encode(c, 0x8f, 0, this, false);
+    } else {
+      assert(c, selection == Select8);
+
+      MemoryOperand* low = memory(c, base, displacement, index, scale);
+      MemoryOperand* high = memory
+        (c, base, displacement + BytesPerWord, index, scale);
+
+      low->apply(c, pop);
+      high->apply(c, pop);
+    }
     break;
 
   case push:
@@ -1678,7 +1823,7 @@ MemoryOperand::apply(Context* c, Operation operation)
       encode(c, 0xff, 6, this, false);
     } else {
       switch (selection) {
-      case S8Selection: {
+      case Select8: {
         MemoryOperand* low = memory(c, base, displacement, index, scale);
         MemoryOperand* high = memory
           (c, base, displacement + BytesPerWord, index, scale);
@@ -1689,7 +1834,7 @@ MemoryOperand::apply(Context* c, Operation operation)
         
       default: {
         RegisterOperand* tmp = temporary
-          (c, selection == S8Selection ? S8Selection : DefaultSelection);
+          (c, selection == Select8 ? Select8 : DefaultSelection);
         tmp->accept(c, mov, this);
         tmp->apply(c, operation);
         tmp->release(c);
@@ -1708,14 +1853,22 @@ MemoryOperand::accept(Context* c, Operation operation,
 {
   switch (operation) {
   case and_: {
-    encode(c, 0x21, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x21, operand->value(c), this, operand->selection);
+    } else {
+      abort(c);
+    }
   } break;
 
   case add: {
-    if (selection == DefaultSelection) {
-      encode(c, 0x01, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x01, operand->value(c), this, operand->selection);
     } else {
-      assert(c, selection == S8Selection);
+      assert(c, operand->selection == Select8);
 
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
@@ -1733,22 +1886,26 @@ MemoryOperand::accept(Context* c, Operation operation,
   } break;
 
   case addc:
-    if (operand->selection == DefaultSelection) {
-      encode(c, 0x11, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x11, operand->value(c), this, operand->selection);
     } else {
       abort(c);
     }
     break;
 
   case div: {
-    if (selection == DefaultSelection) {
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
       ax->accept(c, mov, this);
     
-      rex(c);
+      rex(c, operand->selection);
       c->code.append(0x99);
-      rex(c);
+      rex(c, operand->selection);
       c->code.append(0xf7);
       c->code.append(0xf8 | operand->value(c));
 
@@ -1757,40 +1914,52 @@ MemoryOperand::accept(Context* c, Operation operation,
       ax->release(c);
       dx->release(c);
     } else {
-      assert(c, selection == S8Selection);
+      assert(c, operand->selection == Select8);
 
       operand->apply(c, push);
-      apply(c, push);
+      memory(c, base, displacement, index, scale, Select8)->apply(c, push);
       immediate(c, reinterpret_cast<intptr_t>(divideLong))->apply(c, call);
-      accept(c, mov, register_(c, rax, rdx, S8Selection));
+      register_(c, rsp)->accept(c, add, immediate(c, 16));
+      accept(c, mov, register_(c, rax, rdx, Select8));
     }
   } break;
 
   case mov: {
-    if (selection == DefaultSelection) {
-      encode(c, 0x89, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x89, operand->value(c), this, operand->selection);
     } else {
-      switch (selection) {
-      case S1Selection:
-        if (operand->value(c) > rbx) {
-          c->code.append(0x40);
+      switch (operand->selection) {
+      case Select1:
+        if (BytesPerWord == 8) {
+          if (operand->value(c) > rbx) {
+            c->code.append(0x40);
+          }
+          encode(c, 0x88, operand->value(c), this, false);
+        } else {
+          if (operand->value(c) > rbx) {
+            RegisterOperand* ax = temporary(c, rax);
+            ax->accept(c, mov, register_(c, operand->value(c)));
+            accept(c, mov, register_(c, rax, NoRegister, Select1));
+            ax->release(c);
+          } else {
+            encode(c, 0x88, operand->value(c), this, false);
+          }
         }
-        encode(c, 0x88, operand->value(c), this, false);
         break;
 
-      case S2Selection:
-      case Z2Selection:
+      case Select2:
+      case Select2z:
         c->code.append(0x66);
         encode(c, 0x89, operand->value(c), this, false);
         break;
 
-      case S4Selection:
+      case Select4:
         encode(c, 0x89, operand->value(c), this, false);
         break;
 
-      case S8Selection:
-        assert(c, operand->selection == S8Selection);
-
+      case Select8:
         memory(c, base, displacement, index, scale)->accept
           (c, mov, register_(c, operand->value(c)));
 
@@ -1804,7 +1973,9 @@ MemoryOperand::accept(Context* c, Operation operation,
   } break;
 
   case mul: {
-    if (selection == DefaultSelection) {
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
       RegisterOperand* tmp = temporary(c);
 
       tmp->accept(c, mov, this);
@@ -1813,6 +1984,8 @@ MemoryOperand::accept(Context* c, Operation operation,
     
       tmp->release(c);
     } else {
+      assert(c, operand->selection == Select8);
+
       RegisterOperand* tmp = temporary(c);
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
@@ -1843,11 +2016,19 @@ MemoryOperand::accept(Context* c, Operation operation,
   } break;
 
   case or_: {
-    encode(c, 0x09, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x09, operand->value(c), this, operand->selection);
+    } else {
+      abort(c);
+    }
   } break;
 
   case rem: {
-    if (selection == DefaultSelection) {
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
       ax->accept(c, mov, this);
@@ -1863,41 +2044,62 @@ MemoryOperand::accept(Context* c, Operation operation,
       ax->release(c);
       dx->release(c);
     } else {
-      assert(c, selection == S8Selection);
+      assert(c, operand->selection == Select8);
 
       operand->apply(c, push);
-      apply(c, push);
+      memory(c, base, displacement, index, scale, Select8)->apply(c, push);
       immediate(c, reinterpret_cast<intptr_t>(moduloLong))->apply(c, call);
-      accept(c, mov, register_(c, rax, rdx, S8Selection));
+      register_(c, rsp)->accept(c, add, immediate(c, 16));
+      accept(c, mov, register_(c, rax, rdx, Select8));
     }
   } break;
 
   case shl: {
-    RegisterOperand* cx = temporary(c, rcx);
-    cx->accept(c, mov, operand);
-    encode(c, 0xd3, 4, this, true);
-    cx->release(c);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      RegisterOperand* cx = temporary(c, rcx);
+      cx->accept(c, mov, operand);
+      encode(c, 0xd3, 4, this, operand->selection);
+      cx->release(c);
+    } else {
+      abort(c);
+    }
   } break;
 
   case shr: {
-    RegisterOperand* cx = temporary(c, rcx);
-    cx->accept(c, mov, operand);
-    encode(c, 0xd3, 5, this, true);
-    cx->release(c);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      RegisterOperand* cx = temporary(c, rcx);
+      cx->accept(c, mov, operand);
+      encode(c, 0xd3, 5, this, operand->selection);
+      cx->release(c);
+    } else {
+      abort(c);
+    }
   } break;
 
   case ushr: {
-    RegisterOperand* cx = temporary(c, rcx);
-    cx->accept(c, mov, operand);
-    encode(c, 0xd3, 7, this, true);
-    cx->release(c);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      RegisterOperand* cx = temporary(c, rcx);
+      cx->accept(c, mov, operand);
+      encode(c, 0xd3, 7, this, operand->selection);
+      cx->release(c);
+    } else {
+      abort(c);
+    }
   } break;
 
   case sub: {
-    if (selection == DefaultSelection) {
-      encode(c, 0x29, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x29, operand->value(c), this, operand->selection);
     } else {
-      assert(c, selection == S8Selection);
+      assert(c, operand->selection == Select8);
 
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
@@ -1915,15 +2117,23 @@ MemoryOperand::accept(Context* c, Operation operation,
   } break;
 
   case subb:
-    if (operand->selection == DefaultSelection) {
-      encode(c, 0x19, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x19, operand->value(c), this, operand->selection);
     } else {
       abort(c);
     }
     break;
 
   case xor_: {
-    encode(c, 0x31, operand->value(c), this, true);
+    if (operand->selection == DefaultSelection
+        or operand->selection == Select4)
+    {
+      encode(c, 0x31, operand->value(c), this, operand->selection);
+    } else {
+      abort(c);
+    }
   } break;
 
   default: abort(c);
@@ -2111,7 +2321,7 @@ class MyCompiler: public Compiler {
     MyStack* stack = static_cast<MyStack*>(s);
     while (count) {
       -- count;
-      stack = ::pushed(&c, stack, BytesPerWord);
+      stack = ::pushed(&c, stack);
     }
     return stack;
   }
@@ -2122,17 +2332,10 @@ class MyCompiler: public Compiler {
 
   virtual Operand* stack(Stack* s, unsigned index) {
     MyStack* stack = static_cast<MyStack*>(s);
-    unsigned i = 0;
 
-    if (stack->value->footprint(&c) / BytesPerWord == 2) {
-      ++ i;
-    }
-
-    for (; i < index; ++i) {
+    while (index) {
+      -- index;
       stack = stack->next;
-      if (stack->value->footprint(&c) / BytesPerWord == 2) {
-        ++ i;
-      }
     }
 
     return stack->value;
@@ -2163,7 +2366,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* temporary() {
-    RegisterOperand* r = register_(&c, NoRegister);
+    RegisterOperand* r = register_(&c);
     appendAcquire(&c, r);
     return r;
   }
@@ -2219,7 +2422,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* result() {
-    return ::temporary(&c, rax, rdx);
+    RegisterOperand* r = register_(&c, rax, rdx);
+    appendAcquire(&c, r);
+    return r;
   }
 
   virtual void return_(Operand* v) {
@@ -2339,6 +2544,10 @@ class MyCompiler: public Compiler {
     return static_cast<MyOperand*>(v)->select(&c, Select2);
   }
 
+  virtual Operand* select2z(Operand* v) {
+    return static_cast<MyOperand*>(v)->select(&c, Select2z);
+  }
+
   virtual Operand* select4(Operand* v) {
     return static_cast<MyOperand*>(v)->select(&c, Select4);
   }
@@ -2347,20 +2556,8 @@ class MyCompiler: public Compiler {
     return static_cast<MyOperand*>(v)->select(&c, Select8);
   }
 
-  virtual Operand* signExtend1(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, SignExtend1);
-  }
-
-  virtual Operand* signExtend2(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, SignExtend2);
-  }
-
-  virtual Operand* zeroExtend2(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, ZeroExtend2);
-  }
-
-  virtual Operand* signExtend4(Operand* v) {
-    return static_cast<MyOperand*>(v)->select(&c, SignExtend4);
+  virtual Operand* select8From4(Operand* v) {
+    return static_cast<MyOperand*>(v)->select(&c, Select8From4);
   }
 
   virtual void prologue() {
