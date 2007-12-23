@@ -1344,8 +1344,6 @@ RegisterOperand::accept(Context* c, Operation operation,
     break;
 
   case mul:
-    assert(c, selection == operand->selection);
-  
     rex(c, selection);
     c->code.append(0x0f);
     c->code.append(0xaf);
@@ -1360,13 +1358,12 @@ void
 RegisterOperand::accept(Context* c, Operation operation,
                         ImmediateOperand* operand)
 {
-  assert(c, selection == DefaultSelection);
   assert(c, operand->selection == DefaultSelection);
 
   switch (operation) {
   case add: {
     if (operand->value) {
-      rex(c);
+      rex(c, selection);
       if (isInt8(operand->value)) {
         c->code.append(0x83);
         c->code.append(0xc0 | value(c));
@@ -1392,7 +1389,7 @@ RegisterOperand::accept(Context* c, Operation operation,
     break;
 
   case and_: {
-    rex(c);
+    rex(c, selection);
     if (isInt8(operand->value)) {
       c->code.append(0x83);
       c->code.append(0xe0 | value(c));
@@ -1409,7 +1406,7 @@ RegisterOperand::accept(Context* c, Operation operation,
   case cmp: {
     assert(c, isInt8(operand->value)); // todo
 
-    rex(c);
+    rex(c, selection);
     c->code.append(0x83);
     c->code.append(0xf8 | value(c));
     c->code.append(operand->value);
@@ -1423,7 +1420,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case shl: {
     if (operand->value) {
-      rex(c);
+      rex(c, selection);
       if (operand->value == 1) {
         c->code.append(0xd1);
         c->code.append(0xe0 | value(c));
@@ -1439,7 +1436,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case sub: {
     if (operand->value) {
-      rex(c);
+      rex(c, selection);
       if (isInt8(operand->value)) {
         c->code.append(0x83);
         c->code.append(0xe8 | value(c));
@@ -1487,8 +1484,6 @@ void
 RegisterOperand::accept(Context* c, Operation operation,
                         MemoryOperand* operand)
 {
-  assert(c, selection == DefaultSelection);
-
   switch (operation) {
   case cmp: {
     if (operand->selection == DefaultSelection
@@ -1943,10 +1938,8 @@ MemoryOperand::accept(Context* c, Operation operation,
   } break;
 
   case mov: {
-    if (operand->selection == DefaultSelection
-        or operand->selection == Select4)
-    {
-      encode(c, 0x89, operand->value(c), this, operand->selection);
+    if (operand->selection == DefaultSelection) {
+      encode(c, 0x89, operand->value(c), this, true);
     } else {
       switch (operand->selection) {
       case Select1:

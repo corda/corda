@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -613,10 +613,10 @@ class Frame {
   }
 
   void pushLong(Operand* o) {
-    stack = c->push(stack, o);
     if (BytesPerWord == 8) {
       stack = c->push(stack, 1);
     }
+    stack = c->push(stack, o);
 
     pushedInt();
     pushedInt();
@@ -673,10 +673,10 @@ class Frame {
   }
 
   void popLong(Operand* o) {
+    stack = c->pop(stack, o);
     if (BytesPerWord == 8) {
       stack = c->pop(stack, 1);
     }
-    stack = c->pop(stack, o);
 
     poppedInt();
     poppedInt();
@@ -702,10 +702,7 @@ class Frame {
     assert(t, index < parameterFootprint(t, method)
            or getBit(map, index + 1 - parameterFootprint(t, method)) == 0);
     pushLong
-      (c->select8
-       (c->memory
-        (c->base(),
-         localOffset(t, index + (4 / BytesPerWord), method))));
+      (c->select8 (c->memory (c->base(), localOffset(t, index + 1, method))));
   }
 
   void loadObject(unsigned index) {
@@ -722,10 +719,7 @@ class Frame {
 
   void storeLong(unsigned index) {
     popLong
-      (c->select8
-       (c->memory
-        (c->base(),
-         localOffset(t, index + (4 / BytesPerWord), method))));
+      (c->select8(c->memory(c->base(), localOffset(t, index + 1, method))));
     storedInt(index);
     storedInt(index + 1);
   }
@@ -3084,10 +3078,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "GC") == 0 and
+               "Floats") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "medium") == 0)
+               "multiply") == 0)
     {
       asm("int3");
     }
@@ -3256,11 +3250,7 @@ invokeNative2(MyThread* t, object method)
 
     case INT64_TYPE:
     case DOUBLE_TYPE: {
-      if (BytesPerWord == 8) {
-        memcpy(args + argOffset, sp, 8);
-      } else {
-        memcpy(args + argOffset, sp - 1, 8);
-      }
+      memcpy(args + argOffset, sp - 1, 8);
       argOffset += (8 / BytesPerWord);
       sp -= 2;
     } break;
