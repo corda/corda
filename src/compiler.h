@@ -34,19 +34,13 @@ class Compiler {
   virtual Operand* memory(Operand* base, int displacement = 0,
                           Operand* index = 0, unsigned scale = 1) = 0;
 
-  virtual Operand* select1(Operand*) = 0;
-  virtual Operand* select2(Operand*) = 0;
-  virtual Operand* select2z(Operand*) = 0;
-  virtual Operand* select4(Operand*) = 0;
-  virtual Operand* select8(Operand*) = 0;
-  virtual Operand* select8From4(Operand*) = 0;
-
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
   virtual Operand* indirectTarget() = 0;
   virtual Operand* temporary() = 0;
-  virtual Operand* result() = 0;
+  virtual Operand* result4() = 0;
+  virtual Operand* result8() = 0;
   virtual void release(Operand*) = 0;
 
   virtual Operand* label() = 0;
@@ -61,18 +55,32 @@ class Compiler {
 
   virtual void call(Operand*) = 0;
   virtual void alignedCall(Operand*) = 0;
-  virtual void return_(Operand*) = 0;
+  virtual void return4(Operand*) = 0;
+  virtual void return8(Operand*) = 0;
   virtual void ret() = 0;
 
   virtual Stack* push(Stack*, unsigned count) = 0;
   virtual Stack* pushed(Stack*, unsigned count) = 0;
-  virtual Stack* push(Stack*, Operand*) = 0;
   virtual Stack* pop(Stack*, unsigned count) = 0;
-  virtual Stack* pop(Stack*, Operand*) = 0;
   virtual Operand* stack(Stack*, unsigned) = 0;
 
-  virtual void mov(Operand* src, Operand* dst) = 0;
-  virtual void cmp(Operand* subtrahend, Operand* minuend) = 0;
+  virtual Stack* push1(Stack*, Operand*) = 0;
+  virtual Stack* push2(Stack*, Operand*) = 0;
+  virtual Stack* push2z(Stack*, Operand*) = 0;
+  virtual Stack* push4(Stack*, Operand*) = 0;
+  virtual Stack* push8(Stack*, Operand*) = 0;
+  virtual Stack* pop4(Stack*, Operand*) = 0;
+  virtual Stack* pop8(Stack*, Operand*) = 0;
+  virtual void mov1(Operand* src, Operand* dst) = 0;
+  virtual void mov2(Operand* src, Operand* dst) = 0;
+  virtual void mov4(Operand* src, Operand* dst) = 0;
+  virtual void mov8(Operand* src, Operand* dst) = 0;
+  virtual void mov1ToW(Operand* src, Operand* dst) = 0;
+  virtual void mov2ToW(Operand* src, Operand* dst) = 0;
+  virtual void mov2zToW(Operand* src, Operand* dst) = 0;
+  virtual void mov4To8(Operand* src, Operand* dst) = 0;
+  virtual void cmp4(Operand* subtrahend, Operand* minuend) = 0;
+  virtual void cmp8(Operand* subtrahend, Operand* minuend) = 0;
   virtual void jl(Operand*) = 0;
   virtual void jg(Operand*) = 0;
   virtual void jle(Operand*) = 0;
@@ -80,18 +88,30 @@ class Compiler {
   virtual void je(Operand*) = 0;
   virtual void jne(Operand*) = 0;
   virtual void jmp(Operand*) = 0;
-  virtual void add(Operand* v, Operand* dst) = 0;
-  virtual void sub(Operand* v, Operand* dst) = 0;
-  virtual void mul(Operand* v, Operand* dst) = 0;
-  virtual void div(Operand* v, Operand* dst) = 0;
-  virtual void rem(Operand* v, Operand* dst) = 0;
-  virtual void shl(Operand* v, Operand* dst) = 0;
-  virtual void shr(Operand* v, Operand* dst) = 0;
-  virtual void ushr(Operand* v, Operand* dst) = 0;
-  virtual void and_(Operand* v, Operand* dst) = 0;
-  virtual void or_(Operand* v, Operand* dst) = 0;
-  virtual void xor_(Operand* v, Operand* dst) = 0;
-  virtual void neg(Operand*) = 0;
+  virtual void add4(Operand* v, Operand* dst) = 0;
+  virtual void add8(Operand* v, Operand* dst) = 0;
+  virtual void sub4(Operand* v, Operand* dst) = 0;
+  virtual void sub8(Operand* v, Operand* dst) = 0;
+  virtual void mul4(Operand* v, Operand* dst) = 0;
+  virtual void mul8(Operand* v, Operand* dst) = 0;
+  virtual void div4(Operand* v, Operand* dst) = 0;
+  virtual void div8(Operand* v, Operand* dst) = 0;
+  virtual void rem4(Operand* v, Operand* dst) = 0;
+  virtual void rem8(Operand* v, Operand* dst) = 0;
+  virtual void shl4(Operand* v, Operand* dst) = 0;
+  virtual void shl8(Operand* v, Operand* dst) = 0;
+  virtual void shr4(Operand* v, Operand* dst) = 0;
+  virtual void shr8(Operand* v, Operand* dst) = 0;
+  virtual void ushr4(Operand* v, Operand* dst) = 0;
+  virtual void ushr8(Operand* v, Operand* dst) = 0;
+  virtual void and4(Operand* v, Operand* dst) = 0;
+  virtual void and8(Operand* v, Operand* dst) = 0;
+  virtual void or4(Operand* v, Operand* dst) = 0;
+  virtual void or8(Operand* v, Operand* dst) = 0;
+  virtual void xor4(Operand* v, Operand* dst) = 0;
+  virtual void xor8(Operand* v, Operand* dst) = 0;
+  virtual void neg4(Operand*) = 0;
+  virtual void neg8(Operand*) = 0;
 
   virtual void prologue() = 0;
   virtual void reserve(unsigned size) = 0;
