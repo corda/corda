@@ -907,6 +907,7 @@ class ArgumentEvent: public Event {
       for (int i = count - 1; i >= 0; --i) {
         if (i > 0 and arguments[i - 1] == 0) {
           arguments[i]->apply(c, MyOperand::push8);
+          -- i;
         } else {
           arguments[i]->apply(c, MyOperand::push4);
         }
@@ -1179,6 +1180,15 @@ RegisterOperand::apply(Context* c, Operation operation)
     } else {
       c->code.append(0x50 | value(c));      
     }
+    break;
+
+  case neg4:
+  case neg8:
+    assert(c, BytesPerWord == 8 or operation == neg4); // todo
+
+    rex(c);
+    c->code.append(0xf7);
+    c->code.append(0xd8 | value(c));
     break;
 
   default: abort(c);
@@ -1454,6 +1464,13 @@ RegisterOperand::accept(Context* c, Operation operation,
     assert(c, BytesPerWord == 8); // todo
 
     encode(c, 0x63, value(c), operand, true);
+    break;
+
+  case mul4:
+  case mul8:
+    assert(c, BytesPerWord == 8 or operation == mul4); // todo
+
+    encode2(c, 0x0faf, value(c), operand, true);
     break;
 
   default: abort(c);
@@ -2090,13 +2107,27 @@ MemoryOperand::accept(Context* c, Operation operation,
   switch (operation) {
   case mov1ToW:
   case mov2ToW:
-  case mov2zToW: {
-    RegisterOperand* tmp = temporary(c);
-    tmp->accept(c, operation, operand);
-    accept(c, mov, tmp);
-    tmp->release(c);
+  case mov2zToW:
+  case mov4To8: {
+    if (BytesPerWord == 4 and operation == mov4To8) {
+      RegisterOperand* ax = temporary(c, rax);
+      RegisterOperand* dx = temporary(c, rdx);
+          
+      ax->accept(c, mov4, operand);
+      c->code.append(0x99); // cdq
+      accept(c, mov8, register_(c, rax, rdx));
+          
+      ax->release(c);
+      dx->release(c);
+    } else {
+      RegisterOperand* tmp = temporary(c);
+      tmp->accept(c, operation, operand);
+      accept(c, mov, tmp);
+      tmp->release(c);
+    }
   } break;
 
+  case mov4:
   case mov8:
   case and4: {
     RegisterOperand* tmp = temporary(c);
