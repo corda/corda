@@ -19,6 +19,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 namespace {
 
 const bool Verbose = false;
+const bool DebugNatives = false;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -708,6 +709,11 @@ class Frame {
     pushedInt();
   }
 
+  void pushAddress(Operand* o) {
+    stack = push(c, stack, o);
+    pushedInt();
+  }
+
   void pushObject(Operand* o) {
     stack = push(c, stack, o);
     pushedObject();
@@ -833,6 +839,21 @@ class Frame {
     storedObject(index);
   }
 
+  void storeObjectOrAddress(unsigned index) {
+    stack = ::pop
+      (c, stack, c->memory(c->base(), localOffset(t, index, method)));
+
+    assert(t, sp >= 1);
+    assert(t, sp - 1 >= localSize(t, method));
+    if (getBit(map, sp - 1)) {
+      storedObject(index);
+    } else {
+      storedInt(index);
+    }
+
+    clearBit(map, -- sp);
+  }
+
   void increment(unsigned index, int count) {
     assert(t, index < codeMaxLocals(t, methodCode(t, method)));
     assert(t, index < parameterFootprint(t, method)
@@ -864,7 +885,7 @@ class Frame {
   }
 
   void dup2() {
-    stack = push(c, stack, c->stack(stack, 0));
+    stack = push(c, stack, c->stack(stack, 1));
     stack = push(c, stack, c->stack(stack, 1));
 
     dupped2();
@@ -1568,7 +1589,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case astore:
-      frame->storeObject(codeBody(t, code, ip++));
+      frame->storeObjectOrAddress(codeBody(t, code, ip++));
       break;
 
     case astore_0:
@@ -2067,9 +2088,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->release(a);
     } break;
 
-    case i2l: {
+    case i2l:
       frame->topIntToLong();
-    } break;
+      break;
 
     case i2s: {
       Operand* top = frame->topInt();
@@ -2466,14 +2487,29 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case jsr:
-    case jsr_w:
-    case ret:
-      // see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4381996
-      abort(t);
+    case jsr_w: {
+      uint32_t newIp;
 
-    case l2i: {
-      frame->topLongToInt();
+      if (instruction == jsr) {
+        newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      } else {
+        newIp = (ip - 5) + codeReadInt32(t, code, ip);
+      }
+
+      assert(t, newIp < codeLength(t, code));
+
+      frame->pushAddress(frame->machineIp(ip));
+      c->jmp(frame->machineIp(newIp));
+
+      // NB: we assume that the stack will look the same on return
+      // from the subroutine as at call time.
+      compile(t, frame, newIp);
+      if (UNLIKELY(t->exception)) return;
     } break;
+
+    case l2i:
+      frame->topLongToInt();
+      break;
 
     case ladd: {
       Operand* a = frame->popLong();
@@ -2964,6 +3000,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->release(value);
     } break;
 
+    case ret:
+      c->jmp
+        (c->memory
+         (c->base(), localOffset(t, codeBody(t, code, ip), frame->method)));
+      return;
+
     case return_:
       c->epilogue();
       c->ret();
@@ -3066,8 +3108,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       } break;
 
       case ret:
-        // see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4381996
-        abort(t);
+        c->jmp
+          (c->memory
+           (c->base(), localOffset
+            (t, codeReadInt16(t, code, ip), frame->method)));
+        return;
 
       default: abort(t);
       }
@@ -3204,10 +3249,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "java/lang/Long") == 0 and
+               "org/eclipse/swt/internal/gtk/OS") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "valueOf") == 0)
+               "ascii") == 0)
     {
       asm("int3");
     }
@@ -3403,7 +3448,7 @@ invokeNative2(MyThread* t, object method)
   unsigned returnType = fieldType(t, returnCode);
   uint64_t result;
   
-  if (Verbose) {
+  if (DebugNatives) {
     fprintf(stderr, "invoke native method %s.%s\n",
             &byteArrayBody(t, className(t, methodClass(t, method)), 0),
             &byteArrayBody(t, methodName(t, method), 0));
@@ -3420,7 +3465,7 @@ invokeNative2(MyThread* t, object method)
        returnType);
   }
 
-  if (Verbose) {
+  if (DebugNatives) {
     fprintf(stderr, "return from native method %s.%s\n",
             &byteArrayBody(t, className(t, methodClass(t, method)), 0),
             &byteArrayBody(t, methodName(t, method), 0));

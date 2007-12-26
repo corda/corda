@@ -1333,13 +1333,20 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case cmp4:
   case cmp8: {
-    assert(c, isInt8(operand->value)); // todo
     assert(c, BytesPerWord == 8 or operation == cmp4); // todo
 
     rex(c);
-    c->code.append(0x83);
-    c->code.append(0xf8 | value(c));
-    c->code.append(operand->value);
+    if (isInt8(operand->value)) {
+      c->code.append(0x83);
+      c->code.append(0xf8 | value(c));
+      c->code.append(operand->value);
+    } else {
+      assert(c, isInt32(operand->value));
+
+      c->code.append(0x81);
+      c->code.append(0xf8 | value(c));
+      c->code.append4(operand->value);
+    }
   } break;
 
   case mov4:

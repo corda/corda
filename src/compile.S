@@ -9,8 +9,12 @@ vmInvoke:
    pushq  %rbp
    movq   %rsp,%rbp
    
-   // rbx is a callee-saved register (so are r12-r15, but we don't use those)
+   // push callee-saved registers
    pushq  %rbx
+   pushq  %r12
+   pushq  %r13
+   pushq  %r14
+   pushq  %r15
       
    // %rdi: thread
    // %rsi: function
@@ -20,7 +24,7 @@ vmInvoke:
 
    mov    %rdi,%rbx
 
-   // copy memory arguments into place
+   // copy arguments into place
    pushq  %rcx
    movq   $0,%r9
    jmp    test
@@ -37,14 +41,20 @@ test:
    call   *%rsi
 
    // pop arguments
-   mov    -16(%rbp),%rcx
+   mov    -48(%rbp),%rcx
    sal    $3,%rcx
    addq   %rcx,%rsp
 
    // pop argument stack size
    addq   $8,%rsp
    
+   // pop callee-saved registers
+   popq   %r15
+   popq   %r14
+   popq   %r13
+   popq   %r12
    popq   %rbx
+   
    movq   %rbp,%rsp   
    popq   %rbp
    ret
