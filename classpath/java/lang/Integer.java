@@ -45,7 +45,7 @@ public final class Integer extends Number implements Comparable<Integer> {
   }
 
   public static String toHexString(int v) {
-    return toString(v, 16);
+    return Long.toString(((long) v) & 0xFFFFFFFFL, 16);
   }
 
   public byte byteValue() {
