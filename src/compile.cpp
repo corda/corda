@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool DebugTraces = false;
 
 class MyThread: public Thread {
@@ -2282,6 +2282,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->release(a);
     } break;
 
+    case ineg: {
+      c->neg4(frame->topInt());
+    } break;
+
     case instanceof: {
       uint16_t index = codeReadInt16(t, code, ip);
 
@@ -2477,6 +2481,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->release(a);
     } break;
 
+    case land: {
+      Operand* a = frame->popLong();
+      c->and8(a, frame->topLong());
+      c->release(a);
+    } break;
+
     case lcmp: {
       Operand* next = c->label();
       Operand* less = c->label();
@@ -2669,13 +2679,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } return;
 
     case lshl: {
-      Operand* a = frame->popLong();
+      Operand* a = frame->popInt();
       c->shl8(a, frame->topLong());
       c->release(a);
     } break;
 
     case lshr: {
-      Operand* a = frame->popLong();
+      Operand* a = frame->popInt();
       c->shr8(a, frame->topLong());
       c->release(a);
     } break;
@@ -2712,7 +2722,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case lushr: {
-      Operand* a = frame->popLong();
+      Operand* a = frame->popInt();
       c->ushr8(a, frame->topLong());
       c->release(a);
     } break;
@@ -3062,6 +3072,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       default: abort(t);
       }
     } break;
+
+    default: abort(t);
     }
   }
 }
