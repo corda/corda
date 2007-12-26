@@ -1221,7 +1221,7 @@ RegisterOperand::accept(Context* c, Operation operation,
       register_(c, value(c))->accept
         (c, cmp, register_(c, operand->value(c)));
     } else {
-      rex(c);
+      if (operation == cmp8) rex(c);
       c->code.append(0x39);
       c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
     }
