@@ -1593,19 +1593,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       break;
 
     case astore_0:
-      frame->storeObject(0);
+      frame->storeObjectOrAddress(0);
       break;
 
     case astore_1:
-      frame->storeObject(1);
+      frame->storeObjectOrAddress(1);
       break;
 
     case astore_2:
-      frame->storeObject(2);
+      frame->storeObjectOrAddress(2);
       break;
 
     case astore_3:
-      frame->storeObject(3);
+      frame->storeObjectOrAddress(3);
       break;
 
     case athrow: {
