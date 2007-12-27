@@ -18,7 +18,7 @@ vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugTraces = false;
 
@@ -2505,6 +2505,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       // from the subroutine as at call time.
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
+
+      frame->pop(1);
     } break;
 
     case l2i:
