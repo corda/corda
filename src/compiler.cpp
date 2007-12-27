@@ -1835,7 +1835,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       ax->accept(c, mov, register_(c, operand->value(c)));
       dx->accept(c, mov, register_(c, operand->high(c)));
 
-      memory(c, base, displacement, index, scale)->accept(c, add, ax);
+      accept(c, add, ax);
       memory(c, base, displacement + BytesPerWord, index, scale)->accept
         (c, addc, dx);
 
@@ -1853,11 +1853,15 @@ MemoryOperand::accept(Context* c, Operation operation,
   case div4:
   case div8:
     if (BytesPerWord == 4 and operation == div8) {
+      RegisterOperand* axdx = temporary(c, rax, rdx);
+
       operand->apply(c, push8);
-      memory(c, base, displacement, index, scale)->apply(c, push8);
+      apply(c, push8);
       immediate(c, reinterpret_cast<intptr_t>(divideLong))->apply(c, call);
       register_(c, rsp)->accept(c, add, immediate(c, 16));
-      accept(c, mov8, register_(c, rax, rdx));
+      accept(c, mov8, axdx);
+
+      axdx->release(c);
     } else {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
@@ -1879,8 +1883,7 @@ MemoryOperand::accept(Context* c, Operation operation,
   case mov4:
   case mov8:
     if (BytesPerWord == 4 and operation == mov8) {
-      memory(c, base, displacement, index, scale)->accept
-        (c, mov, register_(c, operand->value(c)));
+      accept(c, mov, register_(c, operand->value(c)));
 
       memory(c, base, displacement + BytesPerWord, index, scale)->accept
         (c, mov, register_(c, operand->high(c)));
@@ -1900,7 +1903,7 @@ MemoryOperand::accept(Context* c, Operation operation,
     } else {
       if (operand->value(c) > rbx) {
         RegisterOperand* ax = temporary(c, rax);
-        ax->accept(c, mov, register_(c, operand->value(c)));
+        ax->accept(c, mov, operand);
         accept(c, mov1, register_(c, rax));
         ax->release(c);
       } else {
@@ -1929,7 +1932,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       RegisterOperand* lowSrc = register_(c, operand->value(c));
       RegisterOperand* highSrc = register_(c, operand->high(c));
 
-      MemoryOperand* lowDst = memory(c, base, displacement, index, scale);
+      MemoryOperand* lowDst = this;
       MemoryOperand* highDst = memory
         (c, base, displacement + BytesPerWord, index, scale);
       
@@ -1973,11 +1976,15 @@ MemoryOperand::accept(Context* c, Operation operation,
   case rem4:
   case rem8:
     if (BytesPerWord == 4 and operation == rem8) {
+      RegisterOperand* axdx = temporary(c, rax, rdx);
+
       operand->apply(c, push8);
-      memory(c, base, displacement, index, scale)->apply(c, push8);
+      apply(c, push8);
       immediate(c, reinterpret_cast<intptr_t>(moduloLong))->apply(c, call);
       register_(c, rsp)->accept(c, add, immediate(c, 16));
-      accept(c, mov8, register_(c, rax, rdx));
+      accept(c, mov8, axdx);
+
+      axdx->release(c);
     } else {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
@@ -1998,32 +2005,74 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case shl4:
   case shl8: {
-    assert(c, BytesPerWord == 8 or operation == shl4); // todo
+    if (BytesPerWord == 4 and operation == shl8) {
+      RegisterOperand* cx = temporary(c, rcx);
+      RegisterOperand* tmp = temporary(c);
 
-    RegisterOperand* cx = temporary(c, rcx);
-    cx->accept(c, mov, operand);
-    encode(c, 0xd3, 4, this, true);
-    cx->release(c);
+      cx->accept(c, mov, operand);
+      tmp->accept(c, mov, this);
+      // shld
+      encode2(c, 0x0fa5, tmp->value(c), memory
+              (c, base, displacement + BytesPerWord, index, scale), false);
+      // shl
+      encode(c, 0xd3, 4, this, false);
+
+      tmp->release(c);
+      cx->release(c);
+    } else {
+      RegisterOperand* cx = temporary(c, rcx);
+      cx->accept(c, mov, operand);
+      encode(c, 0xd3, 4, this, true);
+      cx->release(c);
+    }
   } break;
 
   case shr4:
   case shr8: {
-    assert(c, BytesPerWord == 8 or operation == shr4); // todo
+    if (BytesPerWord == 4 and operation == shr8) {
+      RegisterOperand* cx = temporary(c, rcx);
+      RegisterOperand* tmp = temporary(c);
 
-    RegisterOperand* cx = temporary(c, rcx);
-    cx->accept(c, mov, operand);
-    encode(c, 0xd3, 5, this, true);
-    cx->release(c);
+      cx->accept(c, mov, operand);
+      tmp->accept(c, mov, this);
+      // shrd
+      encode2(c, 0x0fad, tmp->value(c), this, false);
+      // sar
+      encode(c, 0xd3, 5, memory
+             (c, base, displacement + BytesPerWord, index, scale), false);
+
+      tmp->release(c);
+      cx->release(c);
+    } else {
+      RegisterOperand* cx = temporary(c, rcx);
+      cx->accept(c, mov, operand);
+      encode(c, 0xd3, 5, this, true);
+      cx->release(c);
+    }
   } break;
 
   case ushr4:
   case ushr8: {
-    assert(c, BytesPerWord == 8 or operation == ushr4); // todo
+    if (BytesPerWord == 4 and operation == ushr8) {
+      RegisterOperand* cx = temporary(c, rcx);
+      RegisterOperand* tmp = temporary(c);
 
-    RegisterOperand* cx = temporary(c, rcx);
-    cx->accept(c, mov, operand);
-    encode(c, 0xd3, 7, this, true);
-    cx->release(c);
+      cx->accept(c, mov, operand);
+      tmp->accept(c, mov, this);
+      // shrd
+      encode2(c, 0x0fad, tmp->value(c), this, false);
+      // shr
+      encode(c, 0xd3, 7, memory
+             (c, base, displacement + BytesPerWord, index, scale), false);
+
+      tmp->release(c);
+      cx->release(c);
+    } else {
+      RegisterOperand* cx = temporary(c, rcx);
+      cx->accept(c, mov, operand);
+      encode(c, 0xd3, 7, this, true);
+      cx->release(c);
+    }
   } break;
 
   case sub4:
@@ -2035,7 +2084,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       ax->accept(c, mov, register_(c, operand->value(c)));
       dx->accept(c, mov, register_(c, operand->high(c)));
 
-      memory(c, base, displacement, index, scale)->accept(c, sub, ax);
+      accept(c, sub, ax);
       memory(c, base, displacement + BytesPerWord, index, scale)->accept
         (c, subb, dx);
 
