@@ -209,7 +209,12 @@ test-dep = $(test-build)/dep
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
-flags = -cp $(test-build)
+ifeq ($(platform),darwin)
+	flags = -cp $(classpath-build):$(test-build)
+else
+	flags = -cp $(test-build)
+endif
+
 args = $(flags) $(call class-name,$(test-build),$(input))
 
 .PHONY: build
