@@ -42,13 +42,13 @@ class CodePromise;
 class MyPromise;
 class RegisterReference;
 
-int64_t
+int64_t FORCE_ALIGN
 divideLong(int64_t a, int64_t b)
 {
   return a / b;
 }
 
-int64_t
+int64_t FORCE_ALIGN
 moduloLong(int64_t a, int64_t b)
 {
   return a % b;
