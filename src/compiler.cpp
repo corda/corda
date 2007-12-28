@@ -1165,7 +1165,7 @@ RegisterOperand::apply(Context* c, Operation operation)
   case pop4:
   case pop8:
     if (BytesPerWord == 4 and operation == pop8) {
-      register_(c, value(c))->apply(c, pop);
+      apply(c, pop);
       register_(c, high(c))->apply(c, pop);
     } else {
       c->code.append(0x58 | value(c));
@@ -1176,7 +1176,7 @@ RegisterOperand::apply(Context* c, Operation operation)
   case push8:
     if (BytesPerWord == 4 and operation == push8) {
       register_(c, high(c))->apply(c, push);
-      register_(c, value(c))->apply(c, push);
+      apply(c, push);
     } else {
       c->code.append(0x50 | value(c));      
     }
@@ -1218,8 +1218,7 @@ RegisterOperand::accept(Context* c, Operation operation,
       c->code.append(0x85); // jne
       c->code.append4(2);
 
-      register_(c, value(c))->accept
-        (c, cmp, register_(c, operand->value(c)));
+      accept(c, cmp, operand);
     } else {
       if (operation == cmp8) rex(c);
       c->code.append(0x39);
@@ -1230,8 +1229,7 @@ RegisterOperand::accept(Context* c, Operation operation,
   case mov4:
   case mov8:
     if (BytesPerWord == 4 and operation == mov8) {
-      register_(c, value(c))->accept
-        (c, mov, register_(c, operand->value(c)));
+      accept(c, mov, operand);
       
       register_(c, high(c))->accept
         (c, mov, register_(c, operand->high(c)));
@@ -1439,10 +1437,7 @@ RegisterOperand::accept(Context* c, Operation operation,
   case mov4:
   case mov8:
     if (BytesPerWord == 4 and operation == mov8) {
-      register_(c, value(c))->accept
-        (c, mov, memory
-         (c, operand->base, operand->displacement,
-          operand->index, operand->scale));
+      accept(c, mov, operand);
 
       register_(c, high(c))->accept
         (c, mov, memory
@@ -1731,7 +1726,7 @@ MemoryOperand::apply(Context* c, Operation operation)
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
-      MemoryOperand* low = memory(c, base, displacement, index, scale);
+      MemoryOperand* low = this;
       MemoryOperand* high = memory
         (c, base, displacement + BytesPerWord, index, scale);
 
@@ -1755,7 +1750,7 @@ MemoryOperand::apply(Context* c, Operation operation)
   case pop4:
   case pop8:
     if (BytesPerWord == 4 and operation == pop8) {
-      MemoryOperand* low = memory(c, base, displacement, index, scale);
+      MemoryOperand* low = this;
       MemoryOperand* high = memory
         (c, base, displacement + BytesPerWord, index, scale);
 
@@ -1771,7 +1766,7 @@ MemoryOperand::apply(Context* c, Operation operation)
   case push4:
   case push8:
     if (BytesPerWord == 4 and operation == push8) {
-      MemoryOperand* low = memory(c, base, displacement, index, scale);
+      MemoryOperand* low = this;
       MemoryOperand* high = memory
         (c, base, displacement + BytesPerWord, index, scale);
         
@@ -1832,7 +1827,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
-      ax->accept(c, mov, register_(c, operand->value(c)));
+      ax->accept(c, mov, operand);
       dx->accept(c, mov, register_(c, operand->high(c)));
 
       accept(c, add, ax);
@@ -1883,7 +1878,7 @@ MemoryOperand::accept(Context* c, Operation operation,
   case mov4:
   case mov8:
     if (BytesPerWord == 4 and operation == mov8) {
-      accept(c, mov, register_(c, operand->value(c)));
+      accept(c, mov, operand);
 
       memory(c, base, displacement + BytesPerWord, index, scale)->accept
         (c, mov, register_(c, operand->high(c)));
@@ -1929,7 +1924,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
-      RegisterOperand* lowSrc = register_(c, operand->value(c));
+      RegisterOperand* lowSrc = operand;
       RegisterOperand* highSrc = register_(c, operand->high(c));
 
       MemoryOperand* lowDst = this;
@@ -2081,7 +2076,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
-      ax->accept(c, mov, register_(c, operand->value(c)));
+      ax->accept(c, mov, operand);
       dx->accept(c, mov, register_(c, operand->high(c)));
 
       accept(c, sub, ax);
