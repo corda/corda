@@ -19,6 +19,20 @@ public class Misc {
     if (! v) throw new RuntimeException();
   }
 
+  private synchronized byte sync() {
+    byte[] array = new byte[123];
+    return array[42];
+  }
+
+  private static synchronized byte syncStatic(boolean throw_) {
+    byte[] array = new byte[123];
+    if (throw_) {
+      throw new RuntimeException();
+    } else {
+      return array[42];
+    }
+  }
+
   public static void main(String[] args) {
     boolean v = Boolean.valueOf("true");
 
@@ -33,6 +47,14 @@ public class Misc {
     m.foo(s);
     m.bar(s);
     baz(s);
+
+    m.sync();
+    syncStatic(false);
+    try {
+      syncStatic(true);
+    } catch (RuntimeException e) {
+      e.printStackTrace();
+    }
 
     int d = alpha;
     beta = 42;

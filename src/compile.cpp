@@ -248,6 +248,13 @@ localOffset(MyThread* t, int v, object method)
   }
 }
 
+inline object*
+localObject(MyThread* t, void* base, object method, unsigned index)
+{
+  return reinterpret_cast<object*>
+    (static_cast<uint8_t*>(base) + localOffset(t, index, method));
+}
+
 class PoolElement {
  public:
   PoolElement(object value, Promise* address):
@@ -968,6 +975,17 @@ unwind(MyThread* t)
 
         vmJump(compiled + exceptionHandlerIp(handler), base, stack, t);
       } else {
+        if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+          object lock;
+          if (methodFlags(t, method) & ACC_STATIC) {
+            lock = methodClass(t, method);
+          } else {
+            lock = *localObject(t, base, method, 0);
+          }
+    
+          release(t, lock);
+        }
+
         stack = static_cast<void**>(base) + 1;
         base = *static_cast<void**>(base);
       }
@@ -1367,6 +1385,41 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
 }
 
 void
+handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
+{
+  Compiler* c = frame->c;
+  object method = frame->method;
+
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    Operand* lock;
+    if (methodFlags(t, method) & ACC_STATIC) {
+      lock = frame->append(methodClass(t, method));
+    } else {
+      lock = c->memory(c->base(), localOffset(t, 0, method));
+    }
+    
+    Promise* returnAddress = c->indirectCall
+      (c->constant(function), 2, c->thread(), lock);
+
+    frame->trace(returnAddress, 0, false);
+  }  
+}
+
+void
+handleEntrance(MyThread* t, Frame* frame)
+{
+  handleMonitorEvent
+    (t, frame, reinterpret_cast<intptr_t>(acquireMonitorForObject));
+}
+
+void
+handleExit(MyThread* t, Frame* frame)
+{
+  handleMonitorEvent
+    (t, frame, reinterpret_cast<intptr_t>(releaseMonitorForObject));
+}
+
+void
 compile(MyThread* t, Frame* initialFrame, unsigned ip)
 {
   uintptr_t map[Frame::mapSizeInWords(t, initialFrame->method)];
@@ -1577,6 +1630,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case areturn: {
+      handleExit(t, frame);
       Operand* result = frame->popObject();
       returnW(c, result);
       c->release(result);
@@ -2426,6 +2480,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case ireturn:
     case freturn: {
+      handleExit(t, frame);
       Operand* a = frame->popInt();
       c->return4(a);
       c->release(a);
@@ -2711,6 +2766,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case lreturn:
     case dreturn: {
+      handleExit(t, frame);
       Operand* a = frame->popLong();
       c->return8(a);
       c->release(a);
@@ -3009,6 +3065,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       return;
 
     case return_:
+      handleExit(t, frame);
       c->epilogue();
       c->ret();
       return;
@@ -3251,10 +3308,10 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     if (false and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "org/eclipse/swt/internal/gtk/OS") == 0 and
+               "Misc") == 0 and
         strcmp(reinterpret_cast<const char*>
                (&byteArrayBody(t, methodName(t, method), 0)),
-               "ascii") == 0)
+               "syncStatic") == 0)
     {
       asm("int3");
     }
@@ -3291,6 +3348,8 @@ compile(MyThread* t, Compiler* c, object method)
   Vector traceLog(t->m->system, 1024);
   uintptr_t map[Frame::mapSizeInWords(t, method)];
   Frame frame(t, c, method, map, &objectPool, &traceLog);
+
+  handleEntrance(t, &frame);
 
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
@@ -3523,13 +3582,6 @@ invokeNative(MyThread* t)
   } else {
     return result;
   }
-}
-
-inline object*
-localObject(MyThread* t, void* base, object method, unsigned index)
-{
-  return reinterpret_cast<object*>
-    (static_cast<uint8_t*>(base) + localOffset(t, index, method));
 }
 
 void
