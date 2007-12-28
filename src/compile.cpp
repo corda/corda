@@ -4214,12 +4214,13 @@ findTraceNode(MyThread* t, void* address)
   }
 
   MyProcessor* p = processor(t);
+  object table = p->addressTable;
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
   unsigned index = static_cast<uintptr_t>(key) 
-    & (arrayLength(t, p->addressTable) - 1);
+    & (arrayLength(t, table) - 1);
 
-  for (object n = arrayBody(t, p->addressTable, index);
+  for (object n = arrayBody(t, table, index);
        n; n = traceNodeNext(t, n))
   {
     intptr_t k = traceNodeAddress(t, n);
@@ -4237,19 +4238,36 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
 {
   PROTECT(t, oldTable);
 
+  object oldNode = 0;
+  PROTECT(t, oldNode);
+
   object newTable = makeArray(t, newLength, true);
 
   for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
-    object next;
-    for (object p = arrayBody(t, oldTable, i); p; p = next) {
-      next = traceNodeNext(t, p);
-
-      intptr_t k = traceNodeAddress(t, p);
+    for (oldNode = arrayBody(t, oldTable, i);
+         oldNode;
+         oldNode = traceNodeNext(t, oldNode))
+    {
+      intptr_t k = traceNodeAddress(t, oldNode);
 
       unsigned index = k & (newLength - 1);
 
-      set(t, p, TraceNodeNext, arrayBody(t, newTable, index));
-      set(t, newTable, ArrayBody + (index * BytesPerWord), p);
+      object newNode = makeTraceNode
+        (t, traceNodeAddress(t, oldNode),
+         arrayBody(t, newTable, index),
+         traceNodeMethod(t, oldNode),
+         traceNodeTarget(t, oldNode),
+         traceNodeVirtualCall(t, oldNode),
+         traceNodeLength(t, oldNode),
+         false);
+
+      if (traceNodeLength(t, oldNode)) {
+        memcpy(&traceNodeMap(t, newNode, 0),
+               &traceNodeMap(t, oldNode, 0),
+               traceNodeLength(t, oldNode) * BytesPerWord);
+      }
+
+      set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
     }
   }
 
@@ -4266,7 +4284,6 @@ insertTraceNode(MyThread* t, object node)
 
   MyProcessor* p = processor(t);
   PROTECT(t, node);
-  ENTER(t, Thread::ExclusiveState);
 
   ++ p->addressCount;
 
