@@ -80,6 +80,13 @@ class System: public Allocator {
     virtual void dispose() = 0;
   };
 
+  class SignalHandler {
+   public:
+    virtual ~SignalHandler() { }
+
+    virtual bool handleSignal(void* ip, void* base, void* stack) = 0;
+  };
+
   virtual ~System() { }
 
   virtual bool success(Status) = 0;
@@ -87,6 +94,7 @@ class System: public Allocator {
   virtual Status start(Runnable*) = 0;
   virtual Status make(Monitor**) = 0;
   virtual Status make(Local**) = 0;
+  virtual Status handleSegFault(SignalHandler* handler) = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;

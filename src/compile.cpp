@@ -28,11 +28,13 @@ class MyThread: public Thread {
    public:
     CallTrace(MyThread* t):
       t(t),
+      ip(t->ip),
       base(t->base),
       stack(t->stack),
       next(t->trace)
     {
       t->trace = this;
+      t->ip = 0;
       t->base = 0;
       t->stack = 0;
     }
@@ -40,10 +42,12 @@ class MyThread: public Thread {
     ~CallTrace() {
       t->stack = stack;
       t->base = base;
+      t->ip = ip;
       t->trace = next;
     }
 
     MyThread* t;
+    void* ip;
     void* base;
     void* stack;
     CallTrace* next;
@@ -51,12 +55,14 @@ class MyThread: public Thread {
 
   MyThread(Machine* m, object javaThread, Thread* parent):
     Thread(m, javaThread, parent),
+    ip(0),
     base(0),
     stack(0),
     trace(0),
     reference(0)
   { }
 
+  void* ip;
   void* base;
   void* stack;
   CallTrace* trace;
@@ -116,7 +122,9 @@ class MyStackWalker: public Processor::StackWalker {
     base(t->base),
     stack(t->stack),
     trace(t->trace),
-    node(stack ? findTraceNode(t, *static_cast<void**>(stack)) : 0),
+    node(t->ip ? findTraceNode(t, t->ip) :
+         (stack ? findTraceNode(t, *static_cast<void**>(stack)) :
+          0)),
     nativeMethod(resolveNativeMethod(t, stack, node)),
     protector(this)
   { }
@@ -663,9 +671,9 @@ class Frame {
     }
   }
 
-  void trace(Promise* returnAddress, object target, bool virtualCall) {
+  void trace(Promise* address, object target, bool virtualCall) {
     TraceElement* e = new (traceLog->allocate(traceSizeInBytes(t, method)))
-      TraceElement(target, returnAddress, virtualCall);
+      TraceElement(target, address, virtualCall);
     memcpy(e->map, map, mapSizeInWords(t, method) * BytesPerWord);
   }
 
@@ -947,21 +955,38 @@ class Frame {
   MyProtector protector;
 };
 
+class MyNullHandler: public Compiler::NullHandler {
+ public:
+  MyNullHandler(Frame* frame): frame(frame) {
+    frame->c->setNullHandler(this);
+  }
+
+  virtual void handleMaybeNull(Promise* address) {
+    frame->trace(address, 0, false);
+  }
+
+  Frame* frame;
+};
+
 void NO_RETURN
 unwind(MyThread* t)
 {
+  void* ip = t->ip;
   void* base = t->base;
   void** stack = static_cast<void**>(t->stack);
+  if (ip == 0) {
+    ip = *stack;
+  }
+
   while (true) {
-    void* returnAddress = *stack;
-    object node = findTraceNode(t, returnAddress);
+    object node = findTraceNode(t, ip);
     if (node) {
       object method = traceNodeMethod(t, node);
       uint8_t* compiled = reinterpret_cast<uint8_t*>
         (&singletonValue(t, methodCompiled(t, method), 0));
 
       ExceptionHandler* handler = findExceptionHandler
-        (t, method, difference(returnAddress, compiled));
+        (t, method, difference(ip, compiled));
 
       if (handler) {
         unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -987,20 +1012,26 @@ unwind(MyThread* t)
         }
 
         stack = static_cast<void**>(base) + 1;
+        ip = *stack;
         base = *static_cast<void**>(base);
       }
     } else {
-      vmJump(returnAddress, base, stack + 1, 0);
+      vmJump(ip, base, stack + 1, 0);
     }
   }
 }
 
 void*
-findInterfaceMethodFromInstance(Thread* t, object method, object instance)
+findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
-  return &singletonValue
-    (t, methodCompiled
-     (t, findInterfaceMethod(t, method, objectClass(t, instance))), 0);
+  if (instance) {
+    return &singletonValue
+      (t, methodCompiled
+       (t, findInterfaceMethod(t, method, objectClass(t, instance))), 0);
+  } else {
+    t->exception = makeNullPointerException(t);
+    unwind(t);
+  }
 }
 
 intptr_t
@@ -1240,15 +1271,36 @@ lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
 }
 
 void
-acquireMonitorForObject(Thread* t, object o)
+setMaybeNull(MyThread* t, object o, unsigned offset, object value)
 {
-  acquire(t, o);
+  if (o) {
+    set(t, o, offset, value);
+  } else {
+    t->exception = makeNullPointerException(t);
+    unwind(t);
+  }
 }
 
 void
-releaseMonitorForObject(Thread* t, object o)
+acquireMonitorForObject(MyThread* t, object o)
 {
-  release(t, o);
+  if (o) {
+    acquire(t, o);
+  } else {
+    t->exception = makeNullPointerException(t);
+    unwind(t);
+  }
+}
+
+void
+releaseMonitorForObject(MyThread* t, object o)
+{
+  if (o) {
+    release(t, o);
+  } else {
+    t->exception = makeNullPointerException(t);
+    unwind(t);
+  }
 }
 
 object
@@ -1465,29 +1517,30 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       switch (instruction) {
       case aaload:
-        frame->pushObject(c->memory(array, ArrayBody, index, BytesPerWord));
+        frame->pushObject
+          (c->memory(array, ArrayBody, index, BytesPerWord, true));
         break;
 
       case faload:
       case iaload:
-        frame->pushInt4(c->memory(array, ArrayBody, index, 4));
+        frame->pushInt4(c->memory(array, ArrayBody, index, 4, true));
         break;
 
       case baload:
-        frame->pushInt1(c->memory(array, ArrayBody, index, 1));
+        frame->pushInt1(c->memory(array, ArrayBody, index, 1, true));
         break;
 
       case caload:
-        frame->pushInt2z(c->memory(array, ArrayBody, index, 2));
+        frame->pushInt2z(c->memory(array, ArrayBody, index, 2, true));
         break;
 
       case daload:
       case laload:
-        frame->pushLong(c->memory(array, ArrayBody, index, 8));
+        frame->pushLong(c->memory(array, ArrayBody, index, 8, true));
         break;
 
       case saload:
-        frame->pushInt2(c->memory(array, ArrayBody, index, 2));
+        frame->pushInt2(c->memory(array, ArrayBody, index, 2, true));
         break;
       }
 
@@ -1536,8 +1589,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         c->shl4(c->constant(log(BytesPerWord)), index);
         c->add4(c->constant(ArrayBody), index);
           
-        Promise* returnAddress = c->directCall
-          (c->constant(reinterpret_cast<intptr_t>(set)),
+        Promise* returnAddress = c->indirectCall
+          (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
            4, c->thread(), array, index, value);
 
         frame->trace(returnAddress, 0, false);
@@ -1545,21 +1598,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       case fastore:
       case iastore:
-        c->mov4(value, c->memory(array, ArrayBody, index, 4));
+        c->mov4(value, c->memory(array, ArrayBody, index, 4, true));
         break;
 
       case bastore:
-        c->mov1(value, c->memory(array, ArrayBody, index, 1));
+        c->mov1(value, c->memory(array, ArrayBody, index, 1, true));
         break;
 
       case castore:
       case sastore:
-        c->mov2(value, c->memory(array, ArrayBody, index, 2));
+        c->mov2(value, c->memory(array, ArrayBody, index, 2, true));
         break;
 
       case dastore:
       case lastore:
-        c->mov8(value, c->memory(array, ArrayBody, index, 8));
+        c->mov8(value, c->memory(array, ArrayBody, index, 8, true));
         break;
       }
 
@@ -1638,7 +1691,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case arraylength: {
       Operand* array = frame->popObject();
-      frame->pushInt4(c->memory(array, ArrayLength));
+      frame->pushInt4(c->memory(array, ArrayLength, 0, 1, true));
       c->release(array);
     } break;
 
@@ -2055,32 +2108,40 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         table = frame->popObject();
       }
 
+      bool maybeNull = (instruction == getfield);
+
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        frame->pushInt1(c->memory(table, fieldOffset(t, field)));
+        frame->pushInt1
+          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case CharField:
-        frame->pushInt2z(c->memory(table, fieldOffset(t, field)));
+        frame->pushInt2z
+          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case ShortField:
-        frame->pushInt2(c->memory(table, fieldOffset(t, field)));
+        frame->pushInt2
+          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case FloatField:
       case IntField:
-        frame->pushInt4(c->memory(table, fieldOffset(t, field)));
+        frame->pushInt4
+          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case DoubleField:
       case LongField:
-        frame->pushLong(c->memory(table, fieldOffset(t, field)));
+        frame->pushLong
+          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case ObjectField:
-        frame->pushObject(c->memory(table, fieldOffset(t, field)));
+        frame->pushObject
+          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       default:
@@ -2392,7 +2453,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       unsigned instance = parameterFootprint - 1;
 
-      c->directCall
+      c->indirectCall
          (c->constant
           (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
           3, c->thread(), frame->append(target),
@@ -2455,7 +2516,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       mov(c, c->memory(instance), class_);
       and_(c, c->constant(PointerMask), class_);
 
-      c->call(c->memory(class_, offset));
+      c->call(c->memory(class_, offset, 0, 1, true));
 
       frame->trace(c->machineIp(), target, true);
 
@@ -3022,31 +3083,43 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         table = frame->popObject();
       }
 
+      bool maybeNull = (instruction == getstatic);
+
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        c->mov1(value, c->memory(table, fieldOffset(t, field)));
+        c->mov1(value, c->memory
+                (table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case CharField:
       case ShortField:
-        c->mov2(value, c->memory(table, fieldOffset(t, field)));
+        c->mov2(value, c->memory
+                (table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
             
       case FloatField:
       case IntField:
-        c->mov4(value, c->memory(table, fieldOffset(t, field)));
+        c->mov4(value, c->memory
+                (table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case DoubleField:
       case LongField:
-        c->mov8(value, c->memory(table, fieldOffset(t, field)));
+        c->mov8(value, c->memory
+                (table, fieldOffset(t, field), 0, 1, maybeNull));
         break;
 
       case ObjectField:
-        c->directCall
-          (c->constant(reinterpret_cast<intptr_t>(set)),
-           4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
+        if (maybeNull) {
+          c->indirectCall
+            (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
+             4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
+        } else {
+          c->directCall
+            (c->constant(reinterpret_cast<intptr_t>(set)),
+             4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
+        }
         break;
 
       default: abort(t);
@@ -3348,6 +3421,7 @@ compile(MyThread* t, Compiler* c, object method)
   Vector traceLog(t->m->system, 1024);
   uintptr_t map[Frame::mapSizeInWords(t, method)];
   Frame frame(t, c, method, map, &objectPool, &traceLog);
+  MyNullHandler nullHandler(&frame);
 
   handleEntrance(t, &frame);
 
@@ -3640,12 +3714,17 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node)
 void
 visitStack(MyThread* t, Heap::Visitor* v)
 {
+  void* ip = t->ip;
   void* base = t->base;
   void** stack = static_cast<void**>(t->stack);
+  if (ip == 0) {
+    ip = *stack;
+  }
+
   MyThread::CallTrace* trace = t->trace;
 
   while (stack) {
-    object node = findTraceNode(t, *stack);
+    object node = findTraceNode(t, ip);
     if (node) {
       PROTECT(t, node);
 
@@ -3661,6 +3740,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
       visitStackAndLocals(t, v, base, node);
 
       stack = static_cast<void**>(base) + 1;
+      ip = *stack;
       base = *static_cast<void**>(base);
     } else if (trace) {
       base = trace->base;
@@ -3828,11 +3908,14 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   unsigned returnType = fieldType(t, returnCode);
 
   Reference* reference = t->reference;
-  MyThread::CallTrace trace(t);
+  uint64_t result;
 
-  uint64_t result = vmInvoke
-    (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
-     arguments->position, returnType);
+  { MyThread::CallTrace trace(t);
+
+    result = vmInvoke
+      (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
+       arguments->position, returnType);
+  }
 
   while (t->reference != reference) {
     dispose(t, t->reference);
@@ -3868,6 +3951,27 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
 
   return r;
 }
+
+class SegFaultHandler: public System::SignalHandler {
+ public:
+  SegFaultHandler(): m(0) { }
+
+  virtual bool handleSignal(void* ip, void* base, void* stack) {
+    MyThread* t = static_cast<MyThread*>(m->localThread->get());
+    object node = findTraceNode(t, ip);
+    if (node) {
+      t->ip = ip;
+      t->base = base;
+      t->stack = stack;
+      t->exception = makeNullPointerException(t);
+      unwind(t);
+    } else {
+      return false;
+    }
+  }
+
+  Machine* m;
+};
 
 class MyProcessor: public Processor {
  public:
@@ -4126,8 +4230,11 @@ class MyProcessor: public Processor {
     return 0;
   }
 
-  virtual void dispose(Thread* thread) {
-    MyThread* t = static_cast<MyThread*>(thread);
+  virtual void dispose(Thread* vmt) {
+    MyThread* t = static_cast<MyThread*>(vmt);
+
+    t->m->system->handleSegFault(0);
+
     while (t->reference) {
       vm::dispose(t, t->reference);
     }
@@ -4147,6 +4254,7 @@ class MyProcessor: public Processor {
   object addressTable;
   unsigned addressCount;
   uint8_t* indirectCaller;
+  SegFaultHandler segFaultHandler;
 };
 
 MyProcessor*
@@ -4176,6 +4284,10 @@ processor(MyThread* t)
 
       c->dispose();
     }
+
+    p->segFaultHandler.m = t->m;
+    expect(t, t->m->system->success
+           (t->m->system->handleSegFault(&(p->segFaultHandler))));
   }
   return p;
 }

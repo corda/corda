@@ -20,6 +20,9 @@ using namespace vm;
 
 namespace {
 
+System::SignalHandler* segFaultHandler = 0;
+struct sigaction oldSegFaultHandler;
+
 class MutexResource {
  public:
   MutexResource(pthread_mutex_t& m): m(&m) {
@@ -36,10 +39,38 @@ class MutexResource {
 
 const int InterruptSignal = SIGUSR2;
 
+#ifdef __x86_64__
+const int IpRegister = REG_RIP;
+const int BaseRegister = REG_RBP;
+const int StackRegister = REG_RSP;
+#elif defined __i386__
+const int IpRegister = REG_EIP;
+const int BaseRegister = REG_EBP;
+const int StackRegister = REG_ESP;
+#else
+#  error unsupported architecture
+#endif
+
 void
-handleSignal(int)
+handleSignal(int signal, siginfo_t* info, void* context)
 {
-  // ignore
+  if (signal == SIGSEGV) {
+    greg_t* registers
+      = static_cast<ucontext_t*>(context)->uc_mcontext.gregs;
+
+    bool handled = segFaultHandler->handleSignal
+      (reinterpret_cast<void*>(registers[IpRegister]),
+       reinterpret_cast<void*>(registers[BaseRegister]),
+       reinterpret_cast<void*>(registers[StackRegister]));
+
+    if (not handled) {
+      if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
+        oldSegFaultHandler.sa_sigaction(signal, info, context);
+      } else {
+        oldSegFaultHandler.sa_handler(signal);
+      }
+    }
+  }
 }
 
 void*
@@ -403,7 +434,8 @@ class MySystem: public System {
     struct sigaction sa;
     memset(&sa, 0, sizeof(struct sigaction));
     sigemptyset(&(sa.sa_mask));
-    sa.sa_handler = handleSignal;
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = handleSignal;
     
     int rv UNUSED = sigaction(InterruptSignal, &sa, 0);
     expect(this, rv == 0);
@@ -478,6 +510,24 @@ class MySystem: public System {
   virtual Status make(System::Local** l) {
     *l = new (System::allocate(sizeof(Local))) Local(this);
     return 0;
+  }
+
+  virtual Status handleSegFault(SignalHandler* handler) {
+    if (handler) {
+      segFaultHandler = handler;
+
+      struct sigaction sa;
+      memset(&sa, 0, sizeof(struct sigaction));
+      sigemptyset(&(sa.sa_mask));
+      sa.sa_flags = SA_SIGINFO;
+      sa.sa_sigaction = handleSignal;
+    
+      return sigaction(SIGSEGV, &sa, &oldSegFaultHandler);
+    } else if (segFaultHandler) {
+      return sigaction(SIGSEGV, &oldSegFaultHandler, 0);
+    } else {
+      return 1;
+    }
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,

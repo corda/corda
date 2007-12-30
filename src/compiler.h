@@ -20,7 +20,16 @@ class Promise {
 
 class Compiler {
  public:
+  class NullHandler {
+   public:
+    virtual ~NullHandler() { }
+
+    virtual void handleMaybeNull(Promise* address) = 0;
+  };
+
   virtual ~Compiler() { }
+
+  virtual void setNullHandler(NullHandler*) = 0;
 
   virtual Promise* machineIp() = 0;
   virtual Promise* machineIp(unsigned logicalIp) = 0;
@@ -31,8 +40,11 @@ class Compiler {
   virtual Operand* constant(int64_t) = 0;
   virtual Operand* promiseConstant(Promise*) = 0;
   virtual Operand* absolute(Promise*) = 0;
-  virtual Operand* memory(Operand* base, int displacement = 0,
-                          Operand* index = 0, unsigned scale = 1) = 0;
+  virtual Operand* memory(Operand* base,
+                          int displacement = 0,
+                          Operand* index = 0,
+                          unsigned scale = 1,
+                          bool maybeNull = false) = 0;
 
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
