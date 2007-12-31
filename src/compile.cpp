@@ -75,23 +75,21 @@ resolveTarget(MyThread* t, void* stack, object method)
   if (method and methodVirtual(t, method)) {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
 
-    if (reinterpret_cast<object*>(stack)[parameterFootprint]) {
-      object class_ = objectClass
-        (t, reinterpret_cast<object*>(stack)[parameterFootprint]);
+    object class_ = objectClass
+      (t, reinterpret_cast<object*>(stack)[parameterFootprint]);
 
-      if (classVmFlags(t, class_) & BootstrapFlag) {
-        PROTECT(t, method);
-        PROTECT(t, class_);
+    if (classVmFlags(t, class_) & BootstrapFlag) {
+      PROTECT(t, method);
+      PROTECT(t, class_);
 
-        resolveClass(t, className(t, class_));
-        if (UNLIKELY(t->exception)) return 0;
-      }
+      resolveClass(t, className(t, class_));
+      if (UNLIKELY(t->exception)) return 0;
+    }
 
-      if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
-        return findInterfaceMethod(t, method, class_);
-      } else {
-        return findMethod(t, method, class_);
-      }
+    if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
+      return findInterfaceMethod(t, method, class_);
+    } else {
+      return findMethod(t, method, class_);
     }
   }
 
@@ -2512,7 +2510,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->indirectCall
          (c->constant
           (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
-          frame->trace(target, true),
+          frame->trace(0, false),
           3, c->thread(), frame->append(target),
           c->stack(frame->stack, instance));
 
@@ -3999,7 +3997,7 @@ class SegFaultHandler: public System::SignalHandler {
  public:
   SegFaultHandler(): m(0) { }
 
-  virtual bool handleSignal(void* ip, void* base, void* stack) {
+  virtual void handleSignal(void* ip, void* base, void* stack) {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
     object node = findTraceNode(t, ip);
     if (node) {
@@ -4008,8 +4006,6 @@ class SegFaultHandler: public System::SignalHandler {
       t->stack = stack;
       t->exception = makeNullPointerException(t);
       unwind(t);
-    } else {
-      return false;
     }
   }
 

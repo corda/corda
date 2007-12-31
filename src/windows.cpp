@@ -13,6 +13,21 @@ using namespace vm;
 
 namespace {
 
+System::SignalHandler* segFaultHandler = 0;
+LPTOP_LEVEL_EXCEPTION_FILTER oldSegFaultHandler = 0;
+
+LONG CALLBACK
+handleException(LPEXCEPTION_POINTERS e)
+{
+  if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+    segFaultHandler->handleSignal
+      (reinterpret_cast<void*>(e->ContextRecord->Eip),
+       reinterpret_cast<void*>(e->ContextRecord->Ebp),
+       reinterpret_cast<void*>(e->ContextRecord->Esp));
+  }
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+
 class MutexResource {
  public:
   MutexResource(System* s, HANDLE m): s(s), m(m) {
@@ -498,6 +513,21 @@ class MySystem: public System {
   virtual Status make(System::Local** l) {
     *l = new (System::allocate(sizeof(Local))) Local(this);
     return 0;
+  }
+
+  virtual Status handleSegFault(SignalHandler* handler) {
+    if (handler) {
+      segFaultHandler = handler;
+
+      oldSegFaultHandler = SetUnhandledExceptionFilter(handleException);
+      return 0;
+    } else if (segFaultHandler) {
+      segFaultHandler = 0;
+      SetUnhandledExceptionFilter(oldSegFaultHandler);
+      return 0;
+    } else {
+      return 1;
+    }
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,

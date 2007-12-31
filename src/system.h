@@ -84,7 +84,7 @@ class System: public Allocator {
    public:
     virtual ~SignalHandler() { }
 
-    virtual bool handleSignal(void* ip, void* base, void* stack) = 0;
+    virtual void handleSignal(void* ip, void* base, void* stack) = 0;
   };
 
   virtual ~System() { }

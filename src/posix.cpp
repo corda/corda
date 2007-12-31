@@ -64,19 +64,17 @@ handleSignal(int signal, siginfo_t* info, void* context)
     greg_t* registers
       = static_cast<ucontext_t*>(context)->uc_mcontext.gregs;
 
-    bool handled = segFaultHandler->handleSignal
+    segFaultHandler->handleSignal
       (reinterpret_cast<void*>(registers[IpRegister]),
        reinterpret_cast<void*>(registers[BaseRegister]),
        reinterpret_cast<void*>(registers[StackRegister]));
 
-    if (not handled) {
-      if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
-        oldSegFaultHandler.sa_sigaction(signal, info, context);
-      } else if (oldSegFaultHandler.sa_handler) {
-        oldSegFaultHandler.sa_handler(signal);
-      } else {
-        abort();
-      }
+    if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
+      oldSegFaultHandler.sa_sigaction(signal, info, context);
+    } else if (oldSegFaultHandler.sa_handler) {
+      oldSegFaultHandler.sa_handler(signal);
+    } else {
+      abort();
     }
   }
 }
@@ -532,6 +530,7 @@ class MySystem: public System {
     
       return sigaction(SIGSEGV, &sa, &oldSegFaultHandler);
     } else if (segFaultHandler) {
+      segFaultHandler = 0;
       return sigaction(SIGSEGV, &oldSegFaultHandler, 0);
     } else {
       return 1;
