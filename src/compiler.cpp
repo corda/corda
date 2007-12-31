@@ -137,20 +137,19 @@ class RegisterData {
 
 class Context {
  public:
-  Context(System* s, void* indirectCaller):
+  Context(System* s, Zone* zone, void* indirectCaller):
     s(s),
     constantPool(s, BytesPerWord * 32),
     plan(s, 1024),
     code(s, 1024),
-    zone(s, 8 * 1024),
+    zone(zone),
     indirectCaller(reinterpret_cast<intptr_t>(indirectCaller)),
     segmentTable(0),
     reserved(0),
-    codeLength(-1),
-    nullHandler(0)
+    codeLength(-1)
   {
-    plan.appendAddress(new (zone.allocate(sizeof(Segment))) Segment
-                       (-1, new (zone.allocate(sizeof(Event))) Event(0)));
+    plan.appendAddress(new (zone->allocate(sizeof(Segment))) Segment
+                       (-1, new (zone->allocate(sizeof(Event))) Event(0)));
 
     registers[rsp].reserved = true;
     registers[rbp].reserved = true;
@@ -158,7 +157,6 @@ class Context {
   }
 
   void dispose() {
-    zone.dispose();
     plan.dispose();
     code.dispose();
     constantPool.dispose();
@@ -169,12 +167,11 @@ class Context {
   Vector constantPool;
   Vector plan;
   Vector code;
-  Zone zone;
+  Zone* zone;
   intptr_t indirectCaller;
   Segment** segmentTable;
   unsigned reserved;
   int codeLength;
-  Compiler::NullHandler* nullHandler;
   RegisterData registers[RegisterCount];
 };
 
@@ -221,6 +218,13 @@ class ResolvedPromise: public MyPromise {
 
   intptr_t value_;
 };
+
+ResolvedPromise*
+resolved(Context* c, intptr_t value)
+{
+  return new (c->zone->allocate(sizeof(ResolvedPromise)))
+    ResolvedPromise(value);
+}
 
 class PoolPromise: public MyPromise {
  public:
@@ -313,7 +317,7 @@ register_(Context* c, Register = NoRegister, Register = NoRegister);
 
 MemoryOperand*
 memory(Context* c, MyOperand* base, int displacement,
-       MyOperand* index, unsigned scale, bool maybeNull);
+       MyOperand* index, unsigned scale, Compiler::TraceHandler* traceHandler);
 
 class MyOperand: public Operand {
  public:
@@ -523,7 +527,7 @@ class RegisterOperand: public MyOperand {
   }
 
   virtual RegisterNode* dependencies(Context* c, RegisterNode* next) {
-    return new (c->zone.allocate(sizeof(RegisterNode)))
+    return new (c->zone->allocate(sizeof(RegisterNode)))
       RegisterNode(value(c), next);
   }
 
@@ -533,8 +537,8 @@ class RegisterOperand: public MyOperand {
 
   virtual void apply(Context*, Operation);
 
-  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
-    operand->accept(c, operation, this);
+  virtual void apply(Context* c, Operation op, MyOperand* operand) {
+    operand->accept(c, op, this);
   }
 
   virtual void accept(Context*, Operation, RegisterOperand*);
@@ -552,10 +556,10 @@ class ImmediateOperand: public MyOperand {
     value(value)
   { }
 
-  virtual void apply(Context* c, Operation operation);
+  virtual void apply(Context* c, Operation op);
 
-  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
-    operand->accept(c, operation, this);
+  virtual void apply(Context* c, Operation op, MyOperand* operand) {
+    operand->accept(c, op, this);
   }
 
   virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
@@ -578,8 +582,8 @@ class AddressOperand: public MyOperand {
   virtual void setLabelValue(Context*, MyPromise*);
 
   virtual void apply(Context*, Operation);
-  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
-    operand->accept(c, operation, this);
+  virtual void apply(Context* c, Operation op, MyOperand* operand) {
+    operand->accept(c, op, this);
   }
 
   virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
@@ -601,8 +605,8 @@ class AbsoluteOperand: public MyOperand {
 
   virtual void apply(Context*, Operation);
 
-  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
-    operand->accept(c, operation, this);
+  virtual void apply(Context* c, Operation op, MyOperand* operand) {
+    operand->accept(c, op, this);
   }
 
   virtual void accept(Context* c, Operation, RegisterOperand*) { abort(c); }
@@ -617,13 +621,18 @@ class AbsoluteOperand: public MyOperand {
 class MemoryOperand: public MyOperand {
  public:
   MemoryOperand(MyOperand* base, int displacement, MyOperand* index,
-                unsigned scale, bool maybeNull):
+                unsigned scale, Compiler::TraceHandler* traceHandler):
     base(base),
     displacement(displacement),
     index(index),
     scale(scale),
-    maybeNull(maybeNull)
+    traceHandler(traceHandler)
   { }
+
+  MemoryOperand* high(Context* c) {
+    return memory
+      (c, base, displacement + BytesPerWord, index, scale, traceHandler);
+  }
 
   virtual Register asRegister(Context*);
 
@@ -638,8 +647,8 @@ class MemoryOperand: public MyOperand {
 
   virtual void apply(Context*, Operation);
 
-  virtual void apply(Context* c, Operation operation, MyOperand* operand) {
-    operand->accept(c, operation, this);
+  virtual void apply(Context* c, Operation op, MyOperand* operand) {
+    operand->accept(c, op, this);
   }
 
   virtual void accept(Context*, Operation, RegisterOperand*);
@@ -652,7 +661,7 @@ class MemoryOperand: public MyOperand {
   int displacement;
   MyOperand* index;
   unsigned scale;
-  bool maybeNull;
+  Compiler::TraceHandler* traceHandler;
 };
 
 class CodePromiseTask: public Task {
@@ -671,43 +680,43 @@ class CodePromiseTask: public Task {
 AddressOperand*
 address(Context* c, MyPromise* p)
 {
-  return new (c->zone.allocate(sizeof(AddressOperand))) AddressOperand(p);
+  return new (c->zone->allocate(sizeof(AddressOperand))) AddressOperand(p);
 }
 
 ImmediateOperand*
 immediate(Context* c, int64_t v)
 {
-  return new (c->zone.allocate(sizeof(ImmediateOperand)))
+  return new (c->zone->allocate(sizeof(ImmediateOperand)))
     ImmediateOperand(v);
 }
 
 AbsoluteOperand*
 absolute(Context* c, MyPromise* v)
 {
-  return new (c->zone.allocate(sizeof(AbsoluteOperand))) AbsoluteOperand(v);
+  return new (c->zone->allocate(sizeof(AbsoluteOperand))) AbsoluteOperand(v);
 }
 
 RegisterOperand*
 register_(Context* c, RegisterReference* r)
 {
-  return new (c->zone.allocate(sizeof(RegisterOperand)))
+  return new (c->zone->allocate(sizeof(RegisterOperand)))
     RegisterOperand(r);
 }
 
 RegisterOperand*
 register_(Context* c, Register v, Register h)
 {
-  RegisterReference* r = new (c->zone.allocate(sizeof(RegisterReference)))
+  RegisterReference* r = new (c->zone->allocate(sizeof(RegisterReference)))
     RegisterReference(v, h);
   return register_(c, r);
 }
 
 MemoryOperand*
 memory(Context* c, MyOperand* base, int displacement,
-       MyOperand* index, unsigned scale, bool maybeNull)
+       MyOperand* index, unsigned scale, Compiler::TraceHandler* traceHandler)
 {
-  return new (c->zone.allocate(sizeof(MemoryOperand)))
-    MemoryOperand(base, displacement, index, scale, maybeNull);
+  return new (c->zone->allocate(sizeof(MemoryOperand)))
+    MemoryOperand(base, displacement, index, scale, traceHandler);
 }
 
 RegisterOperand*
@@ -741,24 +750,13 @@ currentSegment(Context* c)
 Promise*
 machineIp(Context* c)
 {
-  CodePromise* p = new (c->zone.allocate(sizeof(CodePromise))) CodePromise();
+  CodePromise* p = new (c->zone->allocate(sizeof(CodePromise))) CodePromise();
   
   Segment* s = currentSegment(c);
-  s->event->task = new (c->zone.allocate(sizeof(CodePromiseTask)))
+  s->event->task = new (c->zone->allocate(sizeof(CodePromiseTask)))
     CodePromiseTask(p, s->event->task);
   
   return p;
-}
-
-void
-handleMaybeNull(Context* c)
-{
-  if (c->codeLength >= 0) {
-    c->nullHandler->handleMaybeNull
-      (new (c->zone.allocate(sizeof(ResolvedPromise)))
-       ResolvedPromise
-       (reinterpret_cast<intptr_t>(c->code.data + c->code.length)));
-  }
 }
 
 void
@@ -775,54 +773,54 @@ apply(Context* c, MyOperand::Operation op)
 
 class OpEvent: public Event {
  public:
-  OpEvent(MyOperand::Operation operation, Event* next):
-    Event(next), operation(operation)
+  OpEvent(MyOperand::Operation op, Event* next):
+    Event(next), op(op)
   { }
 
   virtual void run(Context* c) {
-    apply(c, operation);
+    apply(c, op);
   }
 
-  MyOperand::Operation operation;
+  MyOperand::Operation op;
 };
 
 class UnaryOpEvent: public Event {
  public:
-  UnaryOpEvent(MyOperand::Operation operation, Operand* operand, Event* next):
+  UnaryOpEvent(MyOperand::Operation op, Operand* operand, Event* next):
     Event(next),
-    operation(operation),
+    op(op),
     operand(static_cast<MyOperand*>(operand))
   { }
 
   virtual void run(Context* c) {
     if (Verbose) {
-      fprintf(stderr, "unary %d\n", operation);
+      fprintf(stderr, "unary %d\n", op);
     }
-    operand->apply(c, operation);
+    operand->apply(c, op);
   }
 
-  MyOperand::Operation operation;
+  MyOperand::Operation op;
   MyOperand* operand; 
 };
 
 class BinaryOpEvent: public Event {
  public:
-  BinaryOpEvent(MyOperand::Operation operation, Operand* a, Operand* b,
+  BinaryOpEvent(MyOperand::Operation op, Operand* a, Operand* b,
                 Event* next):
     Event(next),
-    operation(operation),
+    op(op),
     a(static_cast<MyOperand*>(a)),
     b(static_cast<MyOperand*>(b))
   { }
 
   virtual void run(Context* c) {
     if (Verbose) {
-      fprintf(stderr, "binary %d\n", operation);
+      fprintf(stderr, "binary %d\n", op);
     }
-    a->apply(c, operation, b);
+    a->apply(c, op, b);
   }
 
-  MyOperand::Operation operation;
+  MyOperand::Operation op;
   MyOperand* a; 
   MyOperand* b;
 };
@@ -887,7 +885,8 @@ push(Context* c, Movement* table, unsigned size)
       }
     }
 
-    mi->source->apply(c, MyOperand::mov, register_(c, mi->destination));
+    mi->source->apply
+      (c, MyOperand::mov, register_(c, mi->destination));
   loop:;    
   }
 
@@ -960,34 +959,34 @@ class ArgumentEvent: public Event {
 };
 
 void
-appendOperation(Context* c, MyOperand::Operation operation)
+appendOperation(Context* c, MyOperand::Operation op)
 {
   Segment* s = currentSegment(c);
-  s->event = new (c->zone.allocate(sizeof(OpEvent)))
-    OpEvent(operation, s->event);
+  s->event = new (c->zone->allocate(sizeof(OpEvent)))
+    OpEvent(op, s->event);
 }
 
 void
-appendOperation(Context* c, MyOperand::Operation operation, Operand* operand)
+appendOperation(Context* c, MyOperand::Operation op, Operand* operand)
 {
   Segment* s = currentSegment(c);
-  s->event = new (c->zone.allocate(sizeof(UnaryOpEvent)))
-    UnaryOpEvent(operation, operand, s->event);
+  s->event = new (c->zone->allocate(sizeof(UnaryOpEvent)))
+    UnaryOpEvent(op, operand, s->event);
 }
 
 void
-appendOperation(Context* c, MyOperand::Operation operation, Operand* a, Operand* b)
+appendOperation(Context* c, MyOperand::Operation op, Operand* a, Operand* b)
 {
   Segment* s = currentSegment(c);
-  s->event = new (c->zone.allocate(sizeof(BinaryOpEvent)))
-    BinaryOpEvent(operation, a, b, s->event);
+  s->event = new (c->zone->allocate(sizeof(BinaryOpEvent)))
+    BinaryOpEvent(op, a, b, s->event);
 }
 
 void
 appendAcquire(Context* c, RegisterOperand* operand)
 {
   Segment* s = currentSegment(c);
-  s->event = new (c->zone.allocate(sizeof(AcquireEvent)))
+  s->event = new (c->zone->allocate(sizeof(AcquireEvent)))
     AcquireEvent(operand, s->event);
 }
 
@@ -995,7 +994,7 @@ void
 appendRelease(Context* c, Operand* operand)
 {
   Segment* s = currentSegment(c);
-  s->event = new (c->zone.allocate(sizeof(ReleaseEvent)))
+  s->event = new (c->zone->allocate(sizeof(ReleaseEvent)))
     ReleaseEvent(operand, s->event);
 }
 
@@ -1003,7 +1002,7 @@ void
 appendArgumentEvent(Context* c, MyOperand** arguments, unsigned count)
 {
   Segment* s = currentSegment(c);
-  s->event = new (c->zone.allocate(sizeof(ArgumentEvent)))
+  s->event = new (c->zone->allocate(sizeof(ArgumentEvent)))
     ArgumentEvent(arguments, count, s->event);
 }
 
@@ -1031,9 +1030,10 @@ pushed(Context* c, MyStack* stack)
 
   MyOperand* value = memory
     (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1,
-     false);
+     0);
 
-  stack = new (c->zone.allocate(sizeof(MyStack))) MyStack(value, index, stack);
+  stack = new (c->zone->allocate(sizeof(MyStack)))
+    MyStack(value, index, stack);
 
   if (Verbose) {
     logStack(c, stack);
@@ -1043,11 +1043,11 @@ pushed(Context* c, MyStack* stack)
 }
 
 MyStack*
-push(Context* c, MyStack* stack, MyOperand::Operation operation, MyOperand* v)
+push(Context* c, MyStack* stack, MyOperand::Operation op, MyOperand* v)
 {
-  appendOperation(c, operation, v);
+  appendOperation(c, op, v);
 
-  if (BytesPerWord == 4 and operation == MyOperand::push8) {
+  if (BytesPerWord == 4 and op == MyOperand::push8) {
     stack = pushed(c, stack);
   }
   return pushed(c, stack);
@@ -1057,7 +1057,9 @@ MyStack*
 pop(Context* c, MyStack* stack, int count)
 {
   appendOperation
-    (c, MyOperand::add, immediate(c, count * BytesPerWord), register_(c, rsp));
+    (c, MyOperand::add,
+     immediate(c, count * BytesPerWord),
+     register_(c, rsp));
 
   while (count) {
     -- count;
@@ -1073,11 +1075,11 @@ pop(Context* c, MyStack* stack, int count)
 }
 
 MyStack*
-pop(Context* c, MyStack* stack, MyOperand::Operation operation, MyOperand* dst)
+pop(Context* c, MyStack* stack, MyOperand::Operation op, MyOperand* dst)
 {
-  appendOperation(c, operation, dst);
+  appendOperation(c, op, dst);
 
-  if (BytesPerWord == 4 and operation == MyOperand::pop8) {
+  if (BytesPerWord == 4 and op == MyOperand::pop8) {
     stack = stack->next;
   }
 
@@ -1092,7 +1094,7 @@ void
 pushArguments(Context* c, unsigned count, va_list list)
 {
   MyOperand** arguments = static_cast<MyOperand**>
-    (c->zone.allocate(count * BytesPerWord));
+    (c->zone->allocate(count * BytesPerWord));
 
   unsigned index = 0;
   for (unsigned i = 0; i < count; ++i) {
@@ -1171,6 +1173,13 @@ encode(Context* c, uint8_t instruction, int a, MemoryOperand* b, bool rex)
 {
   Register r = b->base->asRegister(c);
   int index = b->index ? b->index->asRegister(c) : -1;
+
+  if (b->traceHandler and c->codeLength >= 0) {
+    b->traceHandler->handleTrace
+      (resolved(c, reinterpret_cast<intptr_t>
+                (c->code.data + c->code.length())));
+  }
+
   if (rex) {
     ::rex(c);
   }
@@ -1182,6 +1191,13 @@ encode2(Context* c, uint16_t instruction, int a, MemoryOperand* b, bool rex)
 {
   Register r = b->base->asRegister(c);
   int index = b->index ? b->index->asRegister(c) : -1;
+
+  if (b->traceHandler and c->codeLength >= 0) {
+    b->traceHandler->handleTrace
+      (resolved(c, reinterpret_cast<intptr_t>
+                (c->code.data + c->code.length())));
+  }
+
   if (rex) {
     ::rex(c);
   }
@@ -1190,13 +1206,13 @@ encode2(Context* c, uint16_t instruction, int a, MemoryOperand* b, bool rex)
 }
 
 void
-RegisterOperand::apply(Context* c, Operation operation)
+RegisterOperand::apply(Context* c, Operation op)
 {
-  switch (operation) {
-  case call:
+  switch (op) {
+  case call: {
     c->code.append(0xff);
     c->code.append(0xd0 | value(c));
-    break;
+  } break;
 
   case jmp:
     c->code.append(0xff);
@@ -1205,7 +1221,7 @@ RegisterOperand::apply(Context* c, Operation operation)
 
   case pop4:
   case pop8:
-    if (BytesPerWord == 4 and operation == pop8) {
+    if (BytesPerWord == 4 and op == pop8) {
       apply(c, pop);
       register_(c, high(c))->apply(c, pop);
     } else {
@@ -1215,7 +1231,7 @@ RegisterOperand::apply(Context* c, Operation operation)
 
   case push4:
   case push8:
-    if (BytesPerWord == 4 and operation == push8) {
+    if (BytesPerWord == 4 and op == push8) {
       register_(c, high(c))->apply(c, push);
       apply(c, push);
     } else {
@@ -1225,7 +1241,7 @@ RegisterOperand::apply(Context* c, Operation operation)
 
   case neg4:
   case neg8:
-    assert(c, BytesPerWord == 8 or operation == neg4); // todo
+    assert(c, BytesPerWord == 8 or op == neg4); // todo
 
     rex(c);
     c->code.append(0xf7);
@@ -1237,10 +1253,10 @@ RegisterOperand::apply(Context* c, Operation operation)
 }
 
 void
-RegisterOperand::accept(Context* c, Operation operation,
+RegisterOperand::accept(Context* c, Operation op,
                         RegisterOperand* operand)
 {
-  switch (operation) {
+  switch (op) {
   case add:
     rex(c);
     c->code.append(0x01);
@@ -1249,7 +1265,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case cmp4:
   case cmp8:
-    if (BytesPerWord == 4 and operation == cmp8) {
+    if (BytesPerWord == 4 and op == cmp8) {
       register_(c, high(c))->accept
         (c, cmp, register_(c, operand->high(c)));
 
@@ -1261,7 +1277,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
       accept(c, cmp, operand);
     } else {
-      if (operation == cmp8) rex(c);
+      if (op == cmp8) rex(c);
       c->code.append(0x39);
       c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
     }
@@ -1269,7 +1285,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case mov4:
   case mov8:
-    if (BytesPerWord == 4 and operation == mov8) {
+    if (BytesPerWord == 4 and op == mov8) {
       accept(c, mov, operand);
       
       register_(c, high(c))->accept
@@ -1305,7 +1321,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case mul4:
   case mul8:
-    assert(c, BytesPerWord == 8 or operation == mul4); // todo
+    assert(c, BytesPerWord == 8 or op == mul4); // todo
 
     rex(c);
     c->code.append(0x0f);
@@ -1318,13 +1334,13 @@ RegisterOperand::accept(Context* c, Operation operation,
 }
 
 void
-RegisterOperand::accept(Context* c, Operation operation,
+RegisterOperand::accept(Context* c, Operation op,
                         ImmediateOperand* operand)
 {
-  switch (operation) {
+  switch (op) {
   case add4:
   case add8:
-    assert(c, BytesPerWord == 8 or operation == add4); // todo
+    assert(c, BytesPerWord == 8 or op == add4); // todo
 
     if (operand->value) {
       rex(c);
@@ -1354,7 +1370,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case and4:
   case and8:
-    assert(c, BytesPerWord == 8 or operation == and4); // todo
+    assert(c, BytesPerWord == 8 or op == and4); // todo
 
     rex(c);
     if (isInt8(operand->value)) {
@@ -1372,7 +1388,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case cmp4:
   case cmp8: {
-    assert(c, BytesPerWord == 8 or operation == cmp4); // todo
+    assert(c, BytesPerWord == 8 or op == cmp4); // todo
 
     rex(c);
     if (isInt8(operand->value)) {
@@ -1390,7 +1406,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case mov4:
   case mov8: {
-    assert(c, BytesPerWord == 8 or operation == mov4); // todo
+    assert(c, BytesPerWord == 8 or op == mov4); // todo
 
     rex(c);
     c->code.append(0xb8 | value(c));
@@ -1399,7 +1415,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case shl4:
   case shl8: {
-    assert(c, BytesPerWord == 8 or operation == shl4); // todo
+    assert(c, BytesPerWord == 8 or op == shl4); // todo
 
     if (operand->value) {
       rex(c);
@@ -1418,7 +1434,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case sub4:
   case sub8: {
-    assert(c, BytesPerWord == 8 or operation == sub4); // todo
+    assert(c, BytesPerWord == 8 or op == sub4); // todo
 
     if (operand->value) {
       rex(c);
@@ -1451,12 +1467,12 @@ value(Context* c, AddressOperand* operand)
 }
 
 void
-RegisterOperand::accept(Context* c, Operation operation,
+RegisterOperand::accept(Context* c, Operation op,
                         AddressOperand* operand)
 {
-  switch (operation) {
+  switch (op) {
   case mov: {
-    accept(c, operation, ::value(c, operand));
+    accept(c, op, ::value(c, operand));
   } break;
 
   default: abort(c);
@@ -1464,29 +1480,24 @@ RegisterOperand::accept(Context* c, Operation operation,
 }
 
 void
-RegisterOperand::accept(Context* c, Operation operation,
+RegisterOperand::accept(Context* c, Operation op,
                         MemoryOperand* operand)
 {
-  assert(c, not operand->maybeNull);
-
-  switch (operation) {
+  switch (op) {
   case cmp4:
   case cmp8:
-    assert(c, BytesPerWord == 8 or operation == cmp4); // todo
+    assert(c, BytesPerWord == 8 or op == cmp4); // todo
 
     encode(c, 0x3b, value(c), operand, true);
     break;
 
   case mov4:
   case mov8:
-    if (BytesPerWord == 4 and operation == mov8) {
+    if (BytesPerWord == 4 and op == mov8) {
       accept(c, mov, operand);
 
-      register_(c, high(c))->accept
-        (c, mov, memory
-         (c, operand->base, operand->displacement + BytesPerWord,
-          operand->index, operand->scale, false));
-    } else if (BytesPerWord == 8 and operation == mov4) {
+      register_(c, high(c))->accept(c, mov, operand->high(c));
+    } else if (BytesPerWord == 8 and op == mov4) {
       encode(c, 0x63, value(c), operand, true);
     } else {
       encode(c, 0x8b, value(c), operand, true);
@@ -1494,16 +1505,16 @@ RegisterOperand::accept(Context* c, Operation operation,
     break;
 
   case mov1ToW:
-    encode2(c, 0x0fbe, value(c), operand, true);      
+    encode2(c, 0x0fbe, value(c), operand, true);
     break;
 
   case mov2ToW:
-    encode2(c, 0x0fbf, value(c), operand, true);      
-    break;
+    encode2(c, 0x0fbf, value(c), operand, true);
+  break;
 
   case mov2zToW:
-    encode2(c, 0x0fb7, value(c), operand, true);      
-    break;
+    encode2(c, 0x0fb7, value(c), operand, true);
+  break;
 
   case mov4To8:
     assert(c, BytesPerWord == 8); // todo
@@ -1513,7 +1524,7 @@ RegisterOperand::accept(Context* c, Operation operation,
 
   case mul4:
   case mul8:
-    assert(c, BytesPerWord == 8 or operation == mul4); // todo
+    assert(c, BytesPerWord == 8 or op == mul4); // todo
 
     encode2(c, 0x0faf, value(c), operand, true);
     break;
@@ -1533,26 +1544,26 @@ value(Context* c, AbsoluteOperand* operand)
 }
 
 void
-RegisterOperand::accept(Context* c, Operation operation,
+RegisterOperand::accept(Context* c, Operation op,
                         AbsoluteOperand* operand)
 {
-  switch (operation) {
+  switch (op) {
   case cmp4:
   case cmp8: {
-    assert(c, BytesPerWord == 8 or operation == cmp4); // todo
+    assert(c, BytesPerWord == 8 or op == cmp4); // todo
 
     RegisterOperand* tmp = temporary(c);
     tmp->accept(c, mov, ::value(c, operand));
-    accept(c, cmp, memory(c, tmp, 0, 0, 1, false));
+    accept(c, cmp, memory(c, tmp, 0, 0, 1, 0));
     tmp->release(c);
   } break;
 
   case mov4:
   case mov8: {
-    assert(c, BytesPerWord == 8 or operation == mov4); // todo
+    assert(c, BytesPerWord == 8 or op == mov4); // todo
 
     accept(c, mov, ::value(c, operand));
-    accept(c, mov, memory(c, this, 0, 0, 1, false));
+    accept(c, mov, memory(c, this, 0, 0, 1, 0));
   } break;
 
   default: abort(c);
@@ -1599,9 +1610,9 @@ AddressOperand::setLabelValue(Context*, MyPromise* p)
 }
 
 void
-AddressOperand::apply(Context* c, Operation operation)
+AddressOperand::apply(Context* c, Operation op)
 {
-  switch (operation) {
+  switch (op) {
   case alignedCall: {
     while ((c->code.length() + 1) % 4) {
       c->code.append(0x90);
@@ -1609,9 +1620,9 @@ AddressOperand::apply(Context* c, Operation operation)
     apply(c, call);
   } break;
 
-  case call:
+  case call: {
     unconditional(c, 0xe8, this);
-    break;
+  } break;
 
   case jmp:
     unconditional(c, 0xe9, this);
@@ -1644,7 +1655,7 @@ AddressOperand::apply(Context* c, Operation operation)
 
   case push4:
   case push8: {
-    assert(c, BytesPerWord == 8 or operation == push4); // todo
+    assert(c, BytesPerWord == 8 or op == push4); // todo
 
     RegisterOperand* tmp = temporary(c);
     tmp->accept(c, mov, this);
@@ -1674,21 +1685,22 @@ AddressOperand::asRegister(Context* c)
 }
 
 void
-ImmediateOperand::apply(Context* c, Operation operation)
+ImmediateOperand::apply(Context* c, Operation op)
 {
-  switch (operation) {
+  switch (op) {
   case alignedCall:
   case call:
   case jmp:
-    address(c, new (c->zone.allocate(sizeof(ResolvedPromise)))
-            ResolvedPromise(value))->apply(c, operation);
+    address(c, resolved(c, value))->apply(c, op);
     break;
 
   case push4:
   case push8:
-    if (BytesPerWord == 4 and operation == push8) {
-      immediate(c, (value >> 32) & 0xFFFFFFFF)->apply(c, push);
-      immediate(c, (value      ) & 0xFFFFFFFF)->apply(c, push);
+    if (BytesPerWord == 4 and op == push8) {
+      immediate(c, (value >> 32) & 0xFFFFFFFF)->apply
+        (c, push);
+      immediate(c, (value      ) & 0xFFFFFFFF)->apply
+        (c, push);
     } else {
       if (isInt8(value)) {
         c->code.append(0x6a);
@@ -1713,28 +1725,28 @@ Register
 AbsoluteOperand::asRegister(Context* c)
 {
   RegisterOperand* tmp = temporary(c);
-  tmp->accept(c, mov, this);
+  tmp->accept(c, MyOperand::mov, this);
   Register v = tmp->value(c);
   tmp->release(c);
   return v;
 }
 
 void
-absoluteApply(Context* c, MyOperand::Operation operation,
+absoluteApply(Context* c, MyOperand::Operation op,
               AbsoluteOperand* operand)
 {
   RegisterOperand* tmp = temporary(c);
   tmp->accept(c, MyOperand::mov, value(c, operand));
-  memory(c, tmp, 0, 0, 1, false)->apply(c, operation);
+  memory(c, tmp, 0, 0, 1, 0)->apply(c, op);
   tmp->release(c);
 }
 
 void
-AbsoluteOperand::apply(Context* c, Operation operation)
+AbsoluteOperand::apply(Context* c, Operation op)
 {
-  switch (operation) {
+  switch (op) {
   case push:
-    absoluteApply(c, operation, this);
+    absoluteApply(c, op, this);
     break;
 
   default: abort(c);
@@ -1752,32 +1764,25 @@ MemoryOperand::asRegister(Context* c)
 }
 
 void
-MemoryOperand::apply(Context* c, Operation operation)
+MemoryOperand::apply(Context* c, Operation op)
 {
-  switch (operation) {
+  switch (op) {
   case call:
-    if (maybeNull) handleMaybeNull(c);
-
     encode(c, 0xff, 2, this, false);
     break;
 
   case jmp:
-    if (maybeNull) handleMaybeNull(c);
-
     encode(c, 0xff, 4, this, false);
     break;
 
   case neg4:
   case neg8:
-    assert(c, not maybeNull);
-
-    if (BytesPerWord == 4 and operation == neg8) {
+    if (BytesPerWord == 4 and op == neg8) {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
       MemoryOperand* low = this;
-      MemoryOperand* high = memory
-        (c, base, displacement + BytesPerWord, index, scale, false);
+      MemoryOperand* high = this->high(c);
 
       ax->accept(c, mov, low);
       dx->accept(c, mov, high);
@@ -1798,16 +1803,13 @@ MemoryOperand::apply(Context* c, Operation operation)
 
   case pop4:
   case pop8:
-    assert(c, not maybeNull);
-
-    if (BytesPerWord == 4 and operation == pop8) {
+    if (BytesPerWord == 4 and op == pop8) {
       MemoryOperand* low = this;
-      MemoryOperand* high = memory
-        (c, base, displacement + BytesPerWord, index, scale, false);
+      MemoryOperand* high = this->high(c);
 
       low->apply(c, pop);
       high->apply(c, pop);
-    } else if (BytesPerWord == 8 and operation == pop4) {
+    } else if (BytesPerWord == 8 and op == pop4) {
       abort(c);
     } else {
       encode(c, 0x8f, 0, this, false);
@@ -1816,20 +1818,16 @@ MemoryOperand::apply(Context* c, Operation operation)
 
   case push4:
   case push8:
-    assert(c, not maybeNull);
-
-    if (BytesPerWord == 4 and operation == push8) {
-      MemoryOperand* low = memory
-        (c, base, displacement, index, scale, false);
-      MemoryOperand* high = memory
-        (c, base, displacement + BytesPerWord, index, scale, maybeNull);
+    if (BytesPerWord == 4 and op == push8) {
+      MemoryOperand* low = this;
+      MemoryOperand* high = this->high(c);
         
       high->apply(c, push);
       low->apply(c, push);
-    } else if (BytesPerWord == 8 and operation == push4) {
+    } else if (BytesPerWord == 8 and op == push4) {
       RegisterOperand* tmp = temporary(c);
       tmp->accept(c, mov4, this);
-      tmp->apply(c, operation);
+      tmp->apply(c, op);
       tmp->release(c);
     } else {
       encode(c, 0xff, 6, this, false);
@@ -1839,10 +1837,8 @@ MemoryOperand::apply(Context* c, Operation operation)
   case push1:
   case push2:
   case push2z: {
-    assert(c, not maybeNull);
-
     RegisterOperand* tmp = temporary(c);
-    switch (operation) {
+    switch (op) {
     case push1:
       tmp->accept(c, mov1ToW, this);
       break;
@@ -1866,22 +1862,19 @@ MemoryOperand::apply(Context* c, Operation operation)
 }
 
 void
-MemoryOperand::accept(Context* c, Operation operation,
-                      RegisterOperand* operand)
+MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
 {
-  assert(c, not maybeNull);
-
-  switch (operation) {
+  switch (op) {
   case and4:
   case and8:
-    assert(c, BytesPerWord == 8 or operation == and4); // todo
+    assert(c, BytesPerWord == 8 or op == and4); // todo
 
     encode(c, 0x21, operand->value(c), this, true);
     break;
 
   case add4:
   case add8:
-    if (BytesPerWord == 4 and operation == add8) {
+    if (BytesPerWord == 4 and op == add8) {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
@@ -1889,8 +1882,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       dx->accept(c, mov, register_(c, operand->high(c)));
 
       accept(c, add, ax);
-      memory(c, base, displacement + BytesPerWord, index, scale, false)->accept
-        (c, addc, dx);
+      high(c)->accept(c, addc, dx);
 
       ax->release(c);
       dx->release(c);
@@ -1905,13 +1897,15 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case div4:
   case div8:
-    if (BytesPerWord == 4 and operation == div8) {
+    if (BytesPerWord == 4 and op == div8) {
       RegisterOperand* axdx = temporary(c, rax, rdx);
 
       operand->apply(c, push8);
       apply(c, push8);
-      immediate(c, reinterpret_cast<intptr_t>(divideLong))->apply(c, call);
-      register_(c, rsp)->accept(c, add, immediate(c, 16));
+      immediate(c, reinterpret_cast<intptr_t>(divideLong))->apply
+        (c, call);
+      register_(c, rsp)->accept
+        (c, add, immediate(c, 16));
       accept(c, mov8, axdx);
 
       axdx->release(c);
@@ -1935,12 +1929,12 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case mov4:
   case mov8:
-    if (BytesPerWord == 4 and operation == mov8) {
+    if (BytesPerWord == 4 and op == mov8) {
       accept(c, mov, operand);
 
-      memory(c, base, displacement + BytesPerWord, index, scale, false)->accept
+      high(c)->accept
         (c, mov, register_(c, operand->high(c)));
-    } else if (BytesPerWord == 8 and operation == mov4) {
+    } else if (BytesPerWord == 8 and op == mov4) {
       encode(c, 0x89, operand->value(c), this, false);
     } else {
       encode(c, 0x89, operand->value(c), this, true);
@@ -1977,7 +1971,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case mul4:
   case mul8:
-    if (BytesPerWord == 4 and operation == mul8) {
+    if (BytesPerWord == 4 and op == mul8) {
       RegisterOperand* tmp = temporary(c, rcx);
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
@@ -1986,8 +1980,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       RegisterOperand* highSrc = register_(c, operand->high(c));
 
       MemoryOperand* lowDst = this;
-      MemoryOperand* highDst = memory
-        (c, base, displacement + BytesPerWord, index, scale, false);
+      MemoryOperand* highDst = this->high(c);
       
       tmp->accept(c, mov, highSrc);
       tmp->accept(c, mul, lowDst);
@@ -2021,20 +2014,22 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case or4:
   case or8:
-    assert(c, BytesPerWord == 8 or operation == or4); // todo
+    assert(c, BytesPerWord == 8 or op == or4); // todo
 
     encode(c, 0x09, operand->value(c), this, true);
     break;
 
   case rem4:
   case rem8:
-    if (BytesPerWord == 4 and operation == rem8) {
+    if (BytesPerWord == 4 and op == rem8) {
       RegisterOperand* axdx = temporary(c, rax, rdx);
 
       operand->apply(c, push8);
       apply(c, push8);
-      immediate(c, reinterpret_cast<intptr_t>(moduloLong))->apply(c, call);
-      register_(c, rsp)->accept(c, add, immediate(c, 16));
+      immediate(c, reinterpret_cast<intptr_t>(moduloLong))->apply
+        (c, call);
+      register_(c, rsp)->accept
+        (c, add, immediate(c, 16));
       accept(c, mov8, axdx);
 
       axdx->release(c);
@@ -2058,19 +2053,16 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case shl4:
   case shl8: {
-    if (BytesPerWord == 4 and operation == shl8) {
+    if (BytesPerWord == 4 and op == shl8) {
       RegisterOperand* cx = temporary(c, rcx);
       RegisterOperand* tmp = temporary(c);
 
       cx->accept(c, mov, operand);
       tmp->accept(c, mov, this);
       // shld
-      encode2(c, 0x0fa5, tmp->value(c), memory
-              (c, base, displacement + BytesPerWord, index, scale, maybeNull),
-              false);
+      encode2(c, 0x0fa5, tmp->value(c), high(c), false);
       // shl
-      encode(c, 0xd3, 4, memory(c, base, displacement, index, scale, false),
-             false);
+      encode(c, 0xd3, 4, this, false);
 
       tmp->release(c);
       cx->release(c);
@@ -2084,7 +2076,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case shr4:
   case shr8: {
-    if (BytesPerWord == 4 and operation == shr8) {
+    if (BytesPerWord == 4 and op == shr8) {
       RegisterOperand* cx = temporary(c, rcx);
       RegisterOperand* tmp = temporary(c);
 
@@ -2093,9 +2085,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       // shrd
       encode2(c, 0x0fad, tmp->value(c), this, false);
       // sar
-      encode(c, 0xd3, 5, memory
-             (c, base, displacement + BytesPerWord, index, scale, false),
-             false);
+      encode(c, 0xd3, 5, high(c), false);
 
       tmp->release(c);
       cx->release(c);
@@ -2109,7 +2099,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case ushr4:
   case ushr8: {
-    if (BytesPerWord == 4 and operation == ushr8) {
+    if (BytesPerWord == 4 and op == ushr8) {
       RegisterOperand* cx = temporary(c, rcx);
       RegisterOperand* tmp = temporary(c);
 
@@ -2118,9 +2108,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       // shrd
       encode2(c, 0x0fad, tmp->value(c), this, false);
       // shr
-      encode(c, 0xd3, 7, memory
-             (c, base, displacement + BytesPerWord, index, scale, false),
-             false);
+      encode(c, 0xd3, 7, high(c), false);
 
       tmp->release(c);
       cx->release(c);
@@ -2134,7 +2122,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case sub4:
   case sub8:
-    if (BytesPerWord == 4 and operation == sub8) {
+    if (BytesPerWord == 4 and op == sub8) {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
 
@@ -2142,8 +2130,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       dx->accept(c, mov, register_(c, operand->high(c)));
 
       accept(c, sub, ax);
-      memory(c, base, displacement + BytesPerWord, index, scale, false)->accept
-        (c, subb, dx);
+      high(c)->accept(c, subb, dx);
 
       ax->release(c);
       dx->release(c);
@@ -2158,7 +2145,7 @@ MemoryOperand::accept(Context* c, Operation operation,
 
   case xor4:
   case xor8: {
-    assert(c, BytesPerWord == 8 or operation == xor4); // todo
+    assert(c, BytesPerWord == 8 or op == xor4); // todo
 
     encode(c, 0x31, operand->value(c), this, true);
   } break;
@@ -2168,15 +2155,13 @@ MemoryOperand::accept(Context* c, Operation operation,
 }
 
 void
-MemoryOperand::accept(Context* c, Operation operation,
+MemoryOperand::accept(Context* c, Operation op,
                       ImmediateOperand* operand)
 {
-  assert(c, not maybeNull);
-
-  switch (operation) {
+  switch (op) {
   case add4:
   case add8: {
-    assert(c, BytesPerWord == 8 or operation == add4); // todo
+    assert(c, BytesPerWord == 8 or op == add4); // todo
 
     unsigned i = (isInt8(operand->value) ? 0x83 : 0x81);
 
@@ -2193,7 +2178,7 @@ MemoryOperand::accept(Context* c, Operation operation,
   case mov4:
   case mov8: {
     assert(c, isInt32(operand->value)); // todo
-    assert(c, BytesPerWord == 8 or operation == mov4); // todo
+    assert(c, BytesPerWord == 8 or op == mov4); // todo
 
     encode(c, 0xc7, 0, this, true);
     c->code.append4(operand->value);
@@ -2204,32 +2189,27 @@ MemoryOperand::accept(Context* c, Operation operation,
 }
 
 void
-MemoryOperand::accept(Context* c, Operation operation,
+MemoryOperand::accept(Context* c, Operation op,
                       AbsoluteOperand* operand)
 {
-  assert(c, not maybeNull);
-
   RegisterOperand* tmp = temporary(c);
     
   tmp->accept(c, mov, operand);
-  accept(c, operation, tmp);
+  accept(c, op, tmp);
 
   tmp->release(c);
 }
 
 void
-MemoryOperand::accept(Context* c, Operation operation,
+MemoryOperand::accept(Context* c, Operation op,
                       MemoryOperand* operand)
 {
-  assert(c, not maybeNull);
-  assert(c, not operand->maybeNull);
-
-  switch (operation) {
+  switch (op) {
   case mov1ToW:
   case mov2ToW:
   case mov2zToW:
   case mov4To8: {
-    if (BytesPerWord == 4 and operation == mov4To8) {
+    if (BytesPerWord == 4 and op == mov4To8) {
       RegisterOperand* ax = temporary(c, rax);
       RegisterOperand* dx = temporary(c, rdx);
           
@@ -2241,7 +2221,7 @@ MemoryOperand::accept(Context* c, Operation operation,
       dx->release(c);
     } else {
       RegisterOperand* tmp = temporary(c);
-      tmp->accept(c, operation, operand);
+      tmp->accept(c, op, operand);
       accept(c, mov, tmp);
       tmp->release(c);
     }
@@ -2252,7 +2232,7 @@ MemoryOperand::accept(Context* c, Operation operation,
   case and4: {
     RegisterOperand* tmp = temporary(c);
     tmp->accept(c, mov, operand);
-    accept(c, operation, tmp);
+    accept(c, op, tmp);
     tmp->release(c);
   } break;
 
@@ -2320,30 +2300,20 @@ writeCode(Context* c)
 
 class MyCompiler: public Compiler {
  public:
-  MyCompiler(System* s, void* indirectCaller):
-    c(s, indirectCaller)
+  MyCompiler(System* s, Zone* zone, void* indirectCaller):
+    c(s, zone, indirectCaller)
   { }
 
-  virtual void setNullHandler(NullHandler* nullHandler) {
-    assert(&c, c.nullHandler == 0);
-    c.nullHandler = nullHandler;
-  }
-
-  virtual Promise* machineIp() {
-    return ::machineIp(&c);
-  }
-
   virtual Promise* machineIp(unsigned logicalIp) {
-    return new (c.zone.allocate(sizeof(IpPromise))) IpPromise(logicalIp);
+    return new (c.zone->allocate(sizeof(IpPromise))) IpPromise(logicalIp);
   }
 
   virtual Promise* poolAppend(intptr_t v) {
-    return poolAppendPromise
-      (new (c.zone.allocate(sizeof(ResolvedPromise))) ResolvedPromise(v));
+    return poolAppendPromise(resolved(&c, v));
   }
 
   virtual Promise* poolAppendPromise(Promise* v) {
-    Promise* p = new (c.zone.allocate(sizeof(PoolPromise)))
+    Promise* p = new (c.zone->allocate(sizeof(PoolPromise)))
       PoolPromise(c.constantPool.length());
     c.constantPool.appendAddress(v);
     return p;
@@ -2363,7 +2333,8 @@ class MyCompiler: public Compiler {
 
   virtual Stack* push(Stack* s, unsigned count) {
     appendOperation
-      (&c, MyOperand::sub, immediate(&c, count * BytesPerWord),
+      (&c, MyOperand::sub,
+       immediate(&c, count * BytesPerWord),
        register_(&c, rsp));
 
     return pushed(s, count);
@@ -2458,54 +2429,64 @@ class MyCompiler: public Compiler {
     return address(&c, 0);
   }
 
+  Promise* machineIp() {
+    CodePromise* p = new (c.zone->allocate(sizeof(CodePromise))) CodePromise();
+
+    Segment* s = currentSegment(&c);
+    s->event->task = new (c.zone->allocate(sizeof(CodePromiseTask)))
+      CodePromiseTask(p, s->event->task);
+
+    return p;
+  }
+
   virtual void mark(Operand* label) {
     static_cast<MyOperand*>(label)->setLabelValue
       (&c, static_cast<MyPromise*>(machineIp()));
   }
 
-  virtual Promise* indirectCall
-  (Operand* address, unsigned argumentCount, ...)
+  virtual void indirectCall
+  (Operand* address, TraceHandler* traceHandler, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
     pushArguments(&c, argumentCount, a);
     va_end(a);
 
-    appendOperation(&c, MyOperand::mov, address, register_(&c, rax));
-    call(immediate(&c, c.indirectCaller));
-    Promise* p = machineIp();
+    appendOperation
+      (&c, MyOperand::mov, address, register_(&c, rax));
+    call(immediate(&c, c.indirectCaller), traceHandler);
 
     appendOperation
-      (&c, MyOperand::add, immediate(&c, argumentFootprint(argumentCount)),
+      (&c, MyOperand::add,
+       immediate(&c, argumentFootprint(argumentCount)),
        register_(&c, rsp));
-    return p;
   }
 
   virtual void indirectCallNoReturn
-  (Operand* address, unsigned argumentCount, ...)
+  (Operand* address, TraceHandler* traceHandler, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
     pushArguments(&c, argumentCount, a);    
     va_end(a);
 
-    appendOperation(&c, MyOperand::mov, address, register_(&c, rax));
+    appendOperation
+      (&c, MyOperand::mov, address, register_(&c, rax));
 
-    call(immediate(&c, c.indirectCaller));
+    call(immediate(&c, c.indirectCaller), traceHandler);
   }
 
-  virtual Promise* directCall
+  virtual void directCall
   (Operand* address, unsigned argumentCount, ...)
   {
     va_list a; va_start(a, argumentCount);
     pushArguments(&c, argumentCount, a);
     va_end(a);
 
-    call(address);
-    Promise* p = machineIp();
+    call(address, 0);
 
     appendOperation
-      (&c, MyOperand::add, immediate(&c, argumentFootprint(argumentCount)),
+      (&c, MyOperand::add,
+       immediate(&c, argumentFootprint(argumentCount)),
        register_(&c, rsp));
-    return p;
   }
 
   virtual Operand* result4() {
@@ -2540,12 +2521,18 @@ class MyCompiler: public Compiler {
     }
   }
 
-  virtual void call(Operand* v) {
+  virtual void call(Operand* v, TraceHandler* traceHandler) {
     appendOperation(&c, MyOperand::call, v);
+    if (traceHandler) {
+      traceHandler->handleTrace(machineIp());
+    }
   }
 
-  virtual void alignedCall(Operand* v) {
+  virtual void alignedCall(Operand* v, TraceHandler* traceHandler) {
     appendOperation(&c, MyOperand::alignedCall, v);
+    if (traceHandler) {
+      traceHandler->handleTrace(machineIp());
+    }
   }
 
   virtual void ret() {
@@ -2718,16 +2705,16 @@ class MyCompiler: public Compiler {
 
   virtual Operand* memory(Operand* base, int displacement,
                           Operand* index, unsigned scale,
-                          bool maybeNull)
+                          TraceHandler* trace)
   {
     return ::memory(&c, static_cast<MyOperand*>(base), displacement,
-                    static_cast<MyOperand*>(index), scale, maybeNull);
+                    static_cast<MyOperand*>(index), scale, trace);
   }
 
   virtual void prologue() {
     appendOperation(&c, MyOperand::push, register_(&c, rbp));
     appendOperation
-      (&c, MyOperand::mov, register_(&c, rsp), register_(&c, rbp));
+      (&c, MyOperand::mov,  register_(&c, rsp), register_(&c, rbp));
   }
 
   virtual void reserve(unsigned size) {
@@ -2746,8 +2733,8 @@ class MyCompiler: public Compiler {
 
   virtual void startLogicalIp(unsigned ip) {
     c.plan.appendAddress
-      (new (c.zone.allocate(sizeof(Segment)))
-       Segment(ip, new (c.zone.allocate(sizeof(Event))) Event(0)));
+      (new (c.zone->allocate(sizeof(Segment)))
+       Segment(ip, new (c.zone->allocate(sizeof(Event))) Event(0)));
   }
 
   virtual unsigned codeSize() {
@@ -2784,8 +2771,6 @@ class MyCompiler: public Compiler {
 
   virtual void dispose() {
     c.dispose();
-
-    c.s->free(this);
   }
 
   Context c;
@@ -2802,10 +2787,10 @@ MyPromise::value(Compiler* compiler)
 namespace vm {
 
 Compiler*
-makeCompiler(System* system, void* indirectCaller)
+makeCompiler(System* system, Zone* zone, void* indirectCaller)
 {
-  return new (system->allocate(sizeof(MyCompiler)))
-    MyCompiler(system, indirectCaller);
+  return new (zone->allocate(sizeof(MyCompiler)))
+    MyCompiler(system, zone, indirectCaller);
 }
 
 } // namespace v

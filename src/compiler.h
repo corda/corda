@@ -2,6 +2,7 @@
 #define COMPILER_H
 
 #include "system.h"
+#include "zone.h"
 
 namespace vm {
 
@@ -20,18 +21,15 @@ class Promise {
 
 class Compiler {
  public:
-  class NullHandler {
+  class TraceHandler {
    public:
-    virtual ~NullHandler() { }
+    virtual ~TraceHandler() { }
 
-    virtual void handleMaybeNull(Promise* address) = 0;
+    virtual void handleTrace(Promise* address) = 0;
   };
 
   virtual ~Compiler() { }
 
-  virtual void setNullHandler(NullHandler*) = 0;
-
-  virtual Promise* machineIp() = 0;
   virtual Promise* machineIp(unsigned logicalIp) = 0;
 
   virtual Promise* poolAppend(intptr_t) = 0;
@@ -44,7 +42,7 @@ class Compiler {
                           int displacement = 0,
                           Operand* index = 0,
                           unsigned scale = 1,
-                          bool maybeNull = false) = 0;
+                          TraceHandler* traceHandler = 0) = 0;
 
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
@@ -58,15 +56,17 @@ class Compiler {
   virtual Operand* label() = 0;
   virtual void mark(Operand*) = 0;
 
-  virtual Promise* indirectCall
-  (Operand* address, unsigned argumentCount, ...) = 0;
+  virtual void indirectCall
+  (Operand* address, TraceHandler* traceHandler,
+   unsigned argumentCount, ...) = 0;
   virtual void indirectCallNoReturn
-  (Operand* address, unsigned argumentCount, ...) = 0;
-  virtual Promise* directCall
+  (Operand* address, TraceHandler* traceHandler,
+   unsigned argumentCount, ...) = 0;
+  virtual void directCall
   (Operand* address, unsigned argumentCount, ...) = 0;
 
-  virtual void call(Operand*) = 0;
-  virtual void alignedCall(Operand*) = 0;
+  virtual void call(Operand*, TraceHandler*) = 0;
+  virtual void alignedCall(Operand*, TraceHandler*) = 0;
   virtual void return4(Operand*) = 0;
   virtual void return8(Operand*) = 0;
   virtual void ret() = 0;
@@ -141,7 +141,7 @@ class Compiler {
 };
 
 Compiler*
-makeCompiler(System* system, void* indirectCaller);
+makeCompiler(System* system, Zone* zone, void* indirectCaller);
 
 } // namespace vm
 

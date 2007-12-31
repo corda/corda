@@ -55,6 +55,12 @@ void
 handleSignal(int signal, siginfo_t* info, void* context)
 {
   if (signal == SIGSEGV) {
+    sigset_t set;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGSEGV);
+    sigprocmask(SIG_UNBLOCK, &set, 0);
+
     greg_t* registers
       = static_cast<ucontext_t*>(context)->uc_mcontext.gregs;
 
@@ -66,8 +72,10 @@ handleSignal(int signal, siginfo_t* info, void* context)
     if (not handled) {
       if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
         oldSegFaultHandler.sa_sigaction(signal, info, context);
-      } else {
+      } else if (oldSegFaultHandler.sa_handler) {
         oldSegFaultHandler.sa_handler(signal);
+      } else {
+        abort();
       }
     }
   }

@@ -74,21 +74,24 @@ resolveTarget(MyThread* t, void* stack, object method)
 {
   if (method and methodVirtual(t, method)) {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
-    object class_ = objectClass
-      (t, reinterpret_cast<object*>(stack)[parameterFootprint]);
 
-    if (classVmFlags(t, class_) & BootstrapFlag) {
-      PROTECT(t, method);
-      PROTECT(t, class_);
+    if (reinterpret_cast<object*>(stack)[parameterFootprint]) {
+      object class_ = objectClass
+        (t, reinterpret_cast<object*>(stack)[parameterFootprint]);
 
-      resolveClass(t, className(t, class_));
-      if (UNLIKELY(t->exception)) return 0;
-    }
+      if (classVmFlags(t, class_) & BootstrapFlag) {
+        PROTECT(t, method);
+        PROTECT(t, class_);
 
-    if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
-      return findInterfaceMethod(t, method, class_);
-    } else {
-      return findMethod(t, method, class_);
+        resolveClass(t, className(t, class_));
+        if (UNLIKELY(t->exception)) return 0;
+      }
+
+      if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
+        return findInterfaceMethod(t, method, class_);
+      } else {
+        return findMethod(t, method, class_);
+      }
     }
   }
 
@@ -235,10 +238,10 @@ class MyStackWalker: public Processor::StackWalker {
 };
 
 uintptr_t*
-makeCodeMask(MyThread* t, unsigned length)
+makeCodeMask(Zone* zone, unsigned length)
 {
   unsigned size = ceiling(length, BytesPerWord) * BytesPerWord;
-  uintptr_t* mask = static_cast<uintptr_t*>(t->m->system->allocate(size));
+  uintptr_t* mask = static_cast<uintptr_t*>(zone->allocate(size));
   memset(mask, 0, size);
   return mask;
 }
@@ -265,23 +268,40 @@ localObject(MyThread* t, void* base, object method, unsigned index)
 
 class PoolElement {
  public:
-  PoolElement(object value, Promise* address):
-    value(value), address(address)
+  PoolElement(object value, Promise* address, PoolElement* next):
+    value(value), address(address), next(next)
   { }
 
   object value;
   Promise* address;
+  PoolElement* next;
 };
 
-class TraceElement {
- public:
-  TraceElement(object target, Promise* machineIp, bool virtualCall):
-    target(target), machineIp(machineIp), virtualCall(virtualCall) { }
+class Context;
 
+class TraceElement: public Compiler::TraceHandler {
+ public:
+  TraceElement(Context* context, object target,
+               bool virtualCall, TraceElement* next):
+    context(context),
+    address(0),
+    target(target),
+    virtualCall(virtualCall),
+    next(next)
+  { }
+
+  virtual void handleTrace(Promise* address) {
+    if (this->address == 0) {
+      this->address = address;
+    }
+  }
+
+  Context* context;
+  Promise* address;
   object target;
-  Promise* machineIp;
   bool virtualCall;
-  uint8_t map[0];
+  TraceElement* next;
+  uintptr_t map[0];
 };
 
 inline Stack*
@@ -354,76 +374,94 @@ and_(Compiler* c, Operand* src, Operand* dst)
   }
 }
 
-class Frame {
+class Context {
  public:
   class MyProtector: public Thread::Protector {
    public:
-    MyProtector(Frame* frame): Protector(frame->t), frame(frame) { }
+    MyProtector(Context* c): Protector(c->t), c(c) { }
 
     virtual void visit(Heap::Visitor* v) {
-      v->visit(&(frame->method));
+      v->visit(&(c->method));
 
-      if (frame->next == 0) {
-        Vector* pool = frame->objectPool;
-        for (unsigned i = 0; i < pool->length(); i += sizeof(PoolElement)) {
-          v->visit(&(pool->peek<PoolElement>(i)->value));
-        }
+      for (PoolElement* p = c->objectPool; p; p = p->next) {
+        v->visit(&(p->value));
+      }
 
-        Vector* log = frame->traceLog;
-        unsigned traceSize = traceSizeInBytes(t, frame->method);
-        for (unsigned i = 0; i < log->length(); i += traceSize) {
-          v->visit(&(log->peek<TraceElement>(i)->target));
-        }
+      for (TraceElement* p = c->traceLog; p; p = p->next) {
+        v->visit(&(p->target));
       }
     }
 
-    Frame* frame;
+    Context* c;
   };
 
-  Frame(MyThread* t, Compiler* c, object method, uintptr_t* map,
-        Vector* objectPool, Vector* traceLog):
-    next(0),
+  Context(MyThread* t, object method, uint8_t* indirectCaller):
     t(t),
-    c(c),
-    stack(0),
+    zone(t->m->system, 8 * 1024),
+    c(makeCompiler(t->m->system, &zone, indirectCaller)),
     method(method),
-    map(map),
-    objectPool(objectPool),
-    traceLog(traceLog),
-    codeMask(makeCodeMask(t, codeLength(t, methodCode(t, method)))),
-    ip(0),
-    sp(localSize(t, method)),
+    objectPool(0),
+    traceLog(0),
+    codeMask(makeCodeMask(&zone, codeLength(t, methodCode(t, method)))),
     protector(this)
+  { }
+
+  Context(MyThread* t):
+    t(t),
+    zone(t->m->system, 256),
+    c(makeCompiler(t->m->system, &zone, 0)),
+    method(0),
+    objectPool(0),
+    traceLog(0),
+    codeMask(0),
+    protector(this)
+  { }
+
+  ~Context() {
+    c->dispose();
+  }
+
+  MyThread* t;
+  Zone zone;
+  Compiler* c;
+  object method;
+  PoolElement* objectPool;
+  TraceElement* traceLog;
+  uintptr_t* codeMask;
+  MyProtector protector;
+};
+
+class Frame {
+ public:
+  Frame(Context* context, uintptr_t* map):
+    context(context),
+    t(context->t),
+    c(context->c),
+    stack(0),
+    map(map),
+    ip(0),
+    sp(localSize(t, context->method))
   {
-    memset(map, 0, mapSizeInBytes(t, method));
+    memset(map, 0, mapSizeInBytes(t, context->method));
   }
 
   Frame(Frame* f, uintptr_t* map):
-    next(f),
-    t(f->t),
-    c(f->c),
+    context(f->context),
+    t(context->t),
+    c(context->c),
     stack(f->stack),
-    method(f->method),
     map(map),
-    objectPool(f->objectPool),
-    traceLog(f->traceLog),
-    codeMask(f->codeMask),
     ip(f->ip),
-    sp(f->sp),
-    protector(this)
+    sp(f->sp)
   {
-    memcpy(map, f->map, mapSizeInBytes(t, method));
-  }
-
-  ~Frame() {
-    if (next == 0) {
-      t->m->system->free(codeMask);
-    }
+    memcpy(map, f->map, mapSizeInBytes(context->t, context->method));
   }
 
   Operand* append(object o) {
     Promise* p = c->poolAppend(0);
-    new (objectPool->allocate(sizeof(PoolElement))) PoolElement(o, p);
+    context->objectPool = new
+      (context->zone.allocate(sizeof(PoolElement)))
+      PoolElement(o, p, context->objectPool);
     return c->absolute(p);
   }
 
@@ -457,19 +495,19 @@ class Frame {
   }
 
   void pushedInt() {
-    assert(t, sp + 1 <= mapSize(t, method));
+    assert(t, sp + 1 <= mapSize(t, context->method));
     assert(t, getBit(map, sp) == 0);
     ++ sp;
   }
 
   void pushedObject() {
-    assert(t, sp + 1 <= mapSize(t, method));
+    assert(t, sp + 1 <= mapSize(t, context->method));
     markBit(map, sp++);
   }
 
   void popped(unsigned count) {
     assert(t, sp >= count);
-    assert(t, sp - count >= localSize(t, method));
+    assert(t, sp - count >= localSize(t, context->method));
     while (count) {
       clearBit(map, -- sp);
       -- count;
@@ -478,35 +516,37 @@ class Frame {
   
   void poppedInt() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, sp - 1 >= localSize(t, context->method));
     assert(t, getBit(map, sp - 1) == 0);
     -- sp;
   }
   
   void poppedObject() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, sp - 1 >= localSize(t, context->method));
     assert(t, getBit(map, sp - 1) != 0);
     clearBit(map, -- sp);
   }
 
   void storedInt(unsigned index) {
-    if (index >= parameterFootprint(t, method)) {
-      assert(t, index - parameterFootprint(t, method) < localSize(t, method));
-      clearBit(map, index - parameterFootprint(t, method));
+    if (index >= parameterFootprint(t, context->method)) {
+      assert(t, index - parameterFootprint(t, context->method)
+             < localSize(t, context->method));
+      clearBit(map, index - parameterFootprint(t, context->method));
     }
   }
 
   void storedObject(unsigned index) {
-    if (index >= parameterFootprint(t, method)) {
-      assert(t, index - parameterFootprint(t, method) < localSize(t, method));
-      markBit(map, index - parameterFootprint(t, method));
+    if (index >= parameterFootprint(t, context->method)) {
+      assert(t, index - parameterFootprint(t, context->method)
+             < localSize(t, context->method));
+      markBit(map, index - parameterFootprint(t, context->method));
     }
   }
 
   void dupped() {
-    assert(t, sp + 1 <= mapSize(t, method));
-    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, sp + 1 <= mapSize(t, context->method));
+    assert(t, sp - 1 >= localSize(t, context->method));
     if (getBit(map, sp - 1)) {
       markBit(map, sp);
     }
@@ -514,8 +554,8 @@ class Frame {
   }
 
   void duppedX1() {
-    assert(t, sp + 1 <= mapSize(t, method));
-    assert(t, sp - 2 >= localSize(t, method));
+    assert(t, sp + 1 <= mapSize(t, context->method));
+    assert(t, sp - 2 >= localSize(t, context->method));
 
     unsigned b2 = getBit(map, sp - 2);
     unsigned b1 = getBit(map, sp - 1);
@@ -537,8 +577,8 @@ class Frame {
   }
 
   void duppedX2() {
-    assert(t, sp + 1 <= mapSize(t, method));
-    assert(t, sp - 3 >= localSize(t, method));
+    assert(t, sp + 1 <= mapSize(t, context->method));
+    assert(t, sp - 3 >= localSize(t, context->method));
 
     unsigned b3 = getBit(map, sp - 3);
     unsigned b2 = getBit(map, sp - 2);
@@ -567,8 +607,8 @@ class Frame {
   }
 
   void dupped2() {
-    assert(t, sp + 2 <= mapSize(t, method));
-    assert(t, sp - 2 >= localSize(t, method));
+    assert(t, sp + 2 <= mapSize(t, context->method));
+    assert(t, sp - 2 >= localSize(t, context->method));
 
     unsigned b2 = getBit(map, sp - 2);
     unsigned b1 = getBit(map, sp - 1);
@@ -585,8 +625,8 @@ class Frame {
   }
 
   void dupped2X1() {
-    assert(t, sp + 2 <= mapSize(t, method));
-    assert(t, sp - 3 >= localSize(t, method));
+    assert(t, sp + 2 <= mapSize(t, context->method));
+    assert(t, sp - 3 >= localSize(t, context->method));
 
     unsigned b3 = getBit(map, sp - 3);
     unsigned b2 = getBit(map, sp - 2);
@@ -616,8 +656,8 @@ class Frame {
   }
 
   void dupped2X2() {
-    assert(t, sp + 2 <= mapSize(t, method));
-    assert(t, sp - 4 >= localSize(t, method));
+    assert(t, sp + 2 <= mapSize(t, context->method));
+    assert(t, sp - 4 >= localSize(t, context->method));
 
     unsigned b4 = getBit(map, sp - 4);
     unsigned b3 = getBit(map, sp - 3);
@@ -654,8 +694,8 @@ class Frame {
   }
 
   void swapped() {
-    assert(t, sp - 1 >= localSize(t, method));
-    assert(t, sp - 2 >= localSize(t, method));
+    assert(t, sp - 1 >= localSize(t, context->method));
+    assert(t, sp - 2 >= localSize(t, context->method));
 
     bool savedBit = getBit(map, sp - 1);
     if (getBit(map, sp - 2)) {
@@ -669,12 +709,6 @@ class Frame {
     } else {
       clearBit(map, sp - 2);
     }
-  }
-
-  void trace(Promise* address, object target, bool virtualCall) {
-    TraceElement* e = new (traceLog->allocate(traceSizeInBytes(t, method)))
-      TraceElement(target, address, virtualCall);
-    memcpy(e->map, map, mapSizeInWords(t, method) * BytesPerWord);
   }
 
   Operand* machineIp(unsigned logicalIp) {
@@ -756,14 +790,14 @@ class Frame {
 
   Operand* topInt() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, sp - 1 >= localSize(t, context->method));
     assert(t, getBit(map, sp - 1) == 0);
     return c->stack(stack, 0);
   }
 
   Operand* topLong() {
     assert(t, sp >= 2);
-    assert(t, sp - 2 >= localSize(t, method));
+    assert(t, sp - 2 >= localSize(t, context->method));
     assert(t, getBit(map, sp - 1) == 0);
     assert(t, getBit(map, sp - 2) == 0);
     return c->stack(stack, 0);
@@ -771,7 +805,7 @@ class Frame {
 
   Operand* topObject() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, sp - 1 >= localSize(t, context->method));
     assert(t, getBit(map, sp - 1) != 0);
     return c->stack(stack, 0);
   }
@@ -815,51 +849,52 @@ class Frame {
   }
 
   void loadInt(unsigned index) {
-    assert(t, index < codeMaxLocals(t, methodCode(t, method)));
-    assert(t, index < parameterFootprint(t, method)
-           or getBit(map, index - parameterFootprint(t, method)) == 0);
-    pushInt(c->memory(c->base(), localOffset(t, index, method)));
+    assert(t, index < codeMaxLocals(t, methodCode(t, context->method)));
+    assert(t, index < parameterFootprint(t, context->method)
+           or getBit(map, index - parameterFootprint(t, context->method))
+           == 0);
+    pushInt(c->memory(c->base(), localOffset(t, index, context->method)));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>
-           (codeMaxLocals(t, methodCode(t, method)) - 1));
-    assert(t, index < parameterFootprint(t, method)
-           or getBit(map, index - parameterFootprint(t, method)) == 0);
-    assert(t, index < parameterFootprint(t, method)
-           or getBit(map, index + 1 - parameterFootprint(t, method)) == 0);
-    pushLong(c->memory(c->base(), localOffset(t, index + 1, method)));
+           (codeMaxLocals(t, methodCode(t, context->method)) - 1));
+    assert(t, index < parameterFootprint(t, context->method)
+           or getBit(map, index - parameterFootprint(t, context->method))
+           == 0);
+    assert(t, index < parameterFootprint(t, context->method)
+           or getBit(map, index + 1 - parameterFootprint(t, context->method))
+           == 0);
+    pushLong(c->memory(c->base(), localOffset(t, index + 1, context->method)));
   }
 
   void loadObject(unsigned index) {
-    assert(t, index < codeMaxLocals(t, methodCode(t, method)));
-//     assert(t, index < parameterFootprint(t, method)
-//            or getBit(map, index - parameterFootprint(t, method)) != 0);
-    pushObject(c->memory(c->base(), localOffset(t, index, method)));
+    assert(t, index < codeMaxLocals(t, methodCode(t, context->method)));
+    pushObject(c->memory(c->base(), localOffset(t, index, context->method)));
   }
 
   void storeInt(unsigned index) {
-    popInt(c->memory(c->base(), localOffset(t, index, method)));
+    popInt(c->memory(c->base(), localOffset(t, index, context->method)));
     storedInt(index);
   }
 
   void storeLong(unsigned index) {
-    popLong(c->memory(c->base(), localOffset(t, index + 1, method)));
+    popLong(c->memory(c->base(), localOffset(t, index + 1, context->method)));
     storedInt(index);
     storedInt(index + 1);
   }
 
   void storeObject(unsigned index) {
-    popObject(c->memory(c->base(), localOffset(t, index, method)));
+    popObject(c->memory(c->base(), localOffset(t, index, context->method)));
     storedObject(index);
   }
 
   void storeObjectOrAddress(unsigned index) {
     stack = ::pop
-      (c, stack, c->memory(c->base(), localOffset(t, index, method)));
+      (c, stack, c->memory(c->base(), localOffset(t, index, context->method)));
 
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, method));
+    assert(t, sp - 1 >= localSize(t, context->method));
     if (getBit(map, sp - 1)) {
       storedObject(index);
     } else {
@@ -870,11 +905,12 @@ class Frame {
   }
 
   void increment(unsigned index, int count) {
-    assert(t, index < codeMaxLocals(t, methodCode(t, method)));
-    assert(t, index < parameterFootprint(t, method)
-           or getBit(map, index - parameterFootprint(t, method)) == 0);
+    assert(t, index < codeMaxLocals(t, methodCode(t, context->method)));
+    assert(t, index < parameterFootprint(t, context->method)
+           or getBit(map, index - parameterFootprint(t, context->method))
+           == 0);
     c->add4(c->constant(count),
-            c->memory(c->base(), localOffset(t, index, method)));
+            c->memory(c->base(), localOffset(t, index, context->method)));
   }
 
   void dup() {
@@ -940,32 +976,26 @@ class Frame {
 
     swapped();
   }
+
+  TraceElement* trace(object target, bool virtualCall) {
+    unsigned mapSize = mapSizeInWords(t, context->method);
+
+    TraceElement* e = context->traceLog = new
+      (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
+      TraceElement(context, target, virtualCall, context->traceLog);
+
+    memcpy(e->map, map, mapSizeInWords(t, context->method) * BytesPerWord);
+
+    return e;
+  }
   
-  Frame* next;
+  Context* context;
   MyThread* t;
   Compiler* c;
   Stack* stack;
-  object method;
   uintptr_t* map;
-  Vector* objectPool;
-  Vector* traceLog;
-  uintptr_t* codeMask;
   unsigned ip;
   unsigned sp;
-  MyProtector protector;
-};
-
-class MyNullHandler: public Compiler::NullHandler {
- public:
-  MyNullHandler(Frame* frame): frame(frame) {
-    frame->c->setNullHandler(this);
-  }
-
-  virtual void handleMaybeNull(Promise* address) {
-    frame->trace(address, 0, false);
-  }
-
-  Frame* frame;
 };
 
 void NO_RETURN
@@ -974,7 +1004,9 @@ unwind(MyThread* t)
   void* ip = t->ip;
   void* base = t->base;
   void** stack = static_cast<void**>(t->stack);
-  if (ip == 0) {
+  if (ip) {
+    t->ip = 0;
+  } else {
     ip = *stack;
   }
 
@@ -1019,6 +1051,29 @@ unwind(MyThread* t)
       vmJump(ip, base, stack + 1, 0);
     }
   }
+}
+
+void
+insertTraceNode(MyThread* t, object method, object target, bool virtualCall,
+                uintptr_t* map, void* address)
+{
+  unsigned mapSize = Frame::mapSizeInWords(t, method);
+
+  object node = makeTraceNode
+    (t,
+     reinterpret_cast<intptr_t>(address),
+     0,
+     method,
+     target,
+     virtualCall,
+     mapSize,
+     false);
+
+  if (mapSize) {
+    memcpy(&traceNodeMap(t, node, 0), map, mapSize * BytesPerWord);
+  }
+
+  insertTraceNode(t, node);
 }
 
 void*
@@ -1273,7 +1328,7 @@ lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
 void
 setMaybeNull(MyThread* t, object o, unsigned offset, object value)
 {
-  if (o) {
+  if (LIKELY(o)) {
     set(t, o, offset, value);
   } else {
     t->exception = makeNullPointerException(t);
@@ -1284,7 +1339,7 @@ setMaybeNull(MyThread* t, object o, unsigned offset, object value)
 void
 acquireMonitorForObject(MyThread* t, object o)
 {
-  if (o) {
+  if (LIKELY(o)) {
     acquire(t, o);
   } else {
     t->exception = makeNullPointerException(t);
@@ -1295,7 +1350,7 @@ acquireMonitorForObject(MyThread* t, object o)
 void
 releaseMonitorForObject(MyThread* t, object o)
 {
-  if (o) {
+  if (LIKELY(o)) {
     release(t, o);
   } else {
     t->exception = makeNullPointerException(t);
@@ -1352,7 +1407,7 @@ throwNew(MyThread* t, object class_)
 void NO_RETURN
 throw_(MyThread* t, object o)
 {
-  if (o) {
+  if (LIKELY(o)) {
     t->exception = o;
   } else {
     t->exception = makeNullPointerException(t);
@@ -1368,9 +1423,8 @@ compileThrowNew(MyThread* t, Frame* frame, Machine::Type type)
 
   c->indirectCallNoReturn
     (c->constant(reinterpret_cast<intptr_t>(throwNew)),
+     frame->trace(0, false),
      2, c->thread(), class_);
-
-  frame->trace(c->machineIp(), 0, false);
 }
 
 void
@@ -1427,9 +1481,8 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
   c->alignedCall
     (c->constant
      (reinterpret_cast<intptr_t>
-      (&singletonBody(t, methodCompiled(t, target), 0))));
-
-  frame->trace(c->machineIp(), target, false);
+      (&singletonBody(t, methodCompiled(t, target), 0))),
+     frame->trace(target, false));
 
   frame->pop(methodParameterFootprint(t, target));
 
@@ -1440,7 +1493,7 @@ void
 handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
 {
   Compiler* c = frame->c;
-  object method = frame->method;
+  object method = frame->context->method;
 
   if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
     Operand* lock;
@@ -1450,10 +1503,10 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
       lock = c->memory(c->base(), localOffset(t, 0, method));
     }
     
-    Promise* returnAddress = c->indirectCall
-      (c->constant(function), 2, c->thread(), lock);
-
-    frame->trace(returnAddress, 0, false);
+    c->indirectCall
+      (c->constant(function),
+       frame->trace(0, false),
+       2, c->thread(), lock);
   }  
 }
 
@@ -1474,21 +1527,22 @@ handleExit(MyThread* t, Frame* frame)
 void
 compile(MyThread* t, Frame* initialFrame, unsigned ip)
 {
-  uintptr_t map[Frame::mapSizeInWords(t, initialFrame->method)];
+  uintptr_t map[Frame::mapSizeInWords(t, initialFrame->context->method)];
   Frame myFrame(initialFrame, map);
   Frame* frame = &myFrame;
   Compiler* c = frame->c;
+  Context* context = frame->context;
 
-  object code = methodCode(t, frame->method);
+  object code = methodCode(t, context->method);
   PROTECT(t, code);
     
   while (ip < codeLength(t, code)) {
-    if (getBit(frame->codeMask, ip)) {
+    if (getBit(context->codeMask, ip)) {
       // we've already visited this part of the code
       return;
     }
 
-    markBit(frame->codeMask, ip);
+    markBit(context->codeMask, ip);
 
     frame->startLogicalIp(ip);
 
@@ -1512,35 +1566,36 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->cmp4(c->constant(0), index);
       c->jl(outOfBounds);
 
-      c->cmp4(c->memory(array, ArrayLength), index);
+      c->cmp4(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
+              index);
       c->jge(outOfBounds);
 
       switch (instruction) {
       case aaload:
         frame->pushObject
-          (c->memory(array, ArrayBody, index, BytesPerWord, true));
+          (c->memory(array, ArrayBody, index, BytesPerWord));
         break;
 
       case faload:
       case iaload:
-        frame->pushInt4(c->memory(array, ArrayBody, index, 4, true));
+        frame->pushInt4(c->memory(array, ArrayBody, index, 4));
         break;
 
       case baload:
-        frame->pushInt1(c->memory(array, ArrayBody, index, 1, true));
+        frame->pushInt1(c->memory(array, ArrayBody, index, 1));
         break;
 
       case caload:
-        frame->pushInt2z(c->memory(array, ArrayBody, index, 2, true));
+        frame->pushInt2z(c->memory(array, ArrayBody, index, 2));
         break;
 
       case daload:
       case laload:
-        frame->pushLong(c->memory(array, ArrayBody, index, 8, true));
+        frame->pushLong(c->memory(array, ArrayBody, index, 8));
         break;
 
       case saload:
-        frame->pushInt2(c->memory(array, ArrayBody, index, 2, true));
+        frame->pushInt2(c->memory(array, ArrayBody, index, 2));
         break;
       }
 
@@ -1581,7 +1636,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->cmp4(c->constant(0), index);
       c->jl(outOfBounds);
 
-      c->cmp4(c->memory(array, BytesPerWord), index);
+      c->cmp4(c->memory(array, BytesPerWord, 0, 1, frame->trace(0, false)),
+              index);
       c->jge(outOfBounds);
 
       switch (instruction) {
@@ -1589,30 +1645,29 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         c->shl4(c->constant(log(BytesPerWord)), index);
         c->add4(c->constant(ArrayBody), index);
           
-        Promise* returnAddress = c->indirectCall
+        c->indirectCall
           (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
+           frame->trace(0, false),
            4, c->thread(), array, index, value);
-
-        frame->trace(returnAddress, 0, false);
       } break;
 
       case fastore:
       case iastore:
-        c->mov4(value, c->memory(array, ArrayBody, index, 4, true));
+        c->mov4(value, c->memory(array, ArrayBody, index, 4));
         break;
 
       case bastore:
-        c->mov1(value, c->memory(array, ArrayBody, index, 1, true));
+        c->mov1(value, c->memory(array, ArrayBody, index, 1));
         break;
 
       case castore:
       case sastore:
-        c->mov2(value, c->memory(array, ArrayBody, index, 2, true));
+        c->mov2(value, c->memory(array, ArrayBody, index, 2));
         break;
 
       case dastore:
       case lastore:
-        c->mov8(value, c->memory(array, ArrayBody, index, 8, true));
+        c->mov8(value, c->memory(array, ArrayBody, index, 8));
         break;
       }
 
@@ -1668,15 +1723,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->mark(nonnegative);
 
-      Promise* returnAddress = c->indirectCall
-         (c->constant(reinterpret_cast<intptr_t>(makeBlankObjectArray)),
-          3, c->thread(), frame->append(class_), length);
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(makeBlankObjectArray)),
+         frame->trace(0, false),
+         3, c->thread(), frame->append(class_), length);
 
       Operand* result = ::result(c);
 
       c->release(length);
-
-      frame->trace(returnAddress, 0, false);
 
       frame->pushObject(result);
       c->release(result);
@@ -1691,7 +1745,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case arraylength: {
       Operand* array = frame->popObject();
-      frame->pushInt4(c->memory(array, ArrayLength, 0, 1, true));
+      frame->pushInt4
+        (c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)));
       c->release(array);
     } break;
 
@@ -1719,10 +1774,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* e = frame->popObject();
       c->indirectCallNoReturn
         (c->constant(reinterpret_cast<intptr_t>(throw_)),
+         frame->trace(0, false),
          2, c->thread(), e);
       c->release(e);
-
-      frame->trace(c->machineIp(), 0, false);
     } return;
 
     case bipush:
@@ -1740,11 +1794,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* classOperand = frame->append(class_);
 
-      Promise* returnAddress = c->indirectCall
-         (c->constant(reinterpret_cast<intptr_t>(checkCast)),
-          3, c->thread(), classOperand, instance);
-
-      frame->trace(returnAddress, 0, false);
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(checkCast)),
+         frame->trace(0, false),
+         3, c->thread(), classOperand, instance);
     } break;
 
     case d2f: {
@@ -2108,47 +2161,50 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         table = frame->popObject();
       }
 
-      bool maybeNull = (instruction == getfield);
+      TraceElement* trace = 0;
+      if (instruction == getfield) {
+        trace = frame->trace(0, false);
+      }
 
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
         frame->pushInt1
-          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
+          (c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case CharField:
         frame->pushInt2z
-          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
+          (c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case ShortField:
         frame->pushInt2
-          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
+          (c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case FloatField:
       case IntField:
         frame->pushInt4
-          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
+          (c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case DoubleField:
       case LongField:
         frame->pushLong
-          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
+          (c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case ObjectField:
         frame->pushObject
-          (c->memory(table, fieldOffset(t, field), 0, 1, maybeNull));
+          (c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       default:
         abort(t);
       }
 
-      if (instruction != getstatic) {
+      if (instruction == getfield) {
         c->release(table);
       }
     } break;
@@ -2456,14 +2512,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->indirectCall
          (c->constant
           (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
+          frame->trace(target, true),
           3, c->thread(), frame->append(target),
           c->stack(frame->stack, instance));
 
       Operand* result = ::result(c);
-      c->call(result);
+      c->call(result, frame->trace(target, true));
       c->release(result);
-      
-      frame->trace(c->machineIp(), target, true);
 
       frame->pop(parameterFootprint);
 
@@ -2513,12 +2568,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* instance = c->stack(frame->stack, parameterFootprint - 1);
       Operand* class_ = c->temporary();
       
-      mov(c, c->memory(instance), class_);
+      mov(c, c->memory(instance, 0, 0, 1, frame->trace(0, false)), class_);
       and_(c, c->constant(PointerMask), class_);
 
-      c->call(c->memory(class_, offset, 0, 1, true));
-
-      frame->trace(c->machineIp(), target, true);
+      c->call(c->memory(class_, offset, 0, 1), frame->trace(target, true));
 
       c->release(class_);
 
@@ -2890,22 +2943,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case monitorenter: {
       Operand* a = frame->popObject();
-      Promise* returnAddress = c->indirectCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(acquireMonitorForObject)),
+         frame->trace(0, false),
          2, c->thread(), a);
       c->release(a);
-
-      frame->trace(returnAddress, 0, false);
     } break;
 
     case monitorexit: {
       Operand* a = frame->popObject();
-      Promise* returnAddress = c->indirectCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(releaseMonitorForObject)),
+         frame->trace(0, false),
          2, c->thread(), a);
       c->release(a);
-
-      frame->trace(returnAddress, 0, false);
     } break;
 
     case multianewarray: {
@@ -2916,14 +2967,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
-      Promise* returnAddress = c->indirectCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(makeMultidimensionalArray)),
+         frame->trace(0, false),
          4, c->thread(), frame->append(class_), c->stack(),
          c->constant(dimensions));
 
       Operand* result = ::result(c);
-
-      frame->trace(returnAddress, 0, false);
 
       frame->pop(dimensions);
       frame->pushObject(result);
@@ -2940,18 +2990,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       initClass(t, class_);
       if (UNLIKELY(t->exception)) return;
 
-      Promise* returnAddress;
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
-        returnAddress = c->indirectCall
+        c->indirectCall
           (c->constant(reinterpret_cast<intptr_t>(makeNewWeakReference)),
+           frame->trace(0, false),
            2, c->thread(), frame->append(class_));
       } else {
-        returnAddress = c->indirectCall
+        c->indirectCall
           (c->constant(reinterpret_cast<intptr_t>(makeNew)),
+           frame->trace(0, false),
            2, c->thread(), frame->append(class_));
       }
-
-      frame->trace(returnAddress, 0, false);
 
       Operand* result = ::result(c);
       frame->pushObject(result);
@@ -3009,16 +3058,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       default: abort(t);
       }
 
-      Promise* returnAddress = c->indirectCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(makeBlankArray)),
+         frame->trace(0, false),
          3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
          size);
       
       Operand* result = ::result(c);
 
       c->release(size);
-
-      frame->trace(returnAddress, 0, false);
 
       frame->pushObject(result);
       c->release(result);
@@ -3083,37 +3131,37 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         table = frame->popObject();
       }
 
-      bool maybeNull = (instruction == getstatic);
+      TraceElement* trace = 0;
+      if (instruction == putfield and fieldCode(t, field) != ObjectField) {
+        trace = frame->trace(0, false);
+      }
 
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        c->mov1(value, c->memory
-                (table, fieldOffset(t, field), 0, 1, maybeNull));
+        c->mov1(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case CharField:
       case ShortField:
-        c->mov2(value, c->memory
-                (table, fieldOffset(t, field), 0, 1, maybeNull));
+        c->mov2(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
             
       case FloatField:
       case IntField:
-        c->mov4(value, c->memory
-                (table, fieldOffset(t, field), 0, 1, maybeNull));
+        c->mov4(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case DoubleField:
       case LongField:
-        c->mov8(value, c->memory
-                (table, fieldOffset(t, field), 0, 1, maybeNull));
+        c->mov8(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case ObjectField:
-        if (maybeNull) {
+        if (instruction == putfield) {
           c->indirectCall
             (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
+             frame->trace(0, false),
              4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
         } else {
           c->directCall
@@ -3125,7 +3173,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       default: abort(t);
       }
 
-      if (instruction != putstatic) {
+      if (instruction == putfield) {
         c->release(table);
       }
       c->release(value);
@@ -3134,7 +3182,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case ret:
       c->jmp
         (c->memory
-         (c->base(), localOffset(t, codeBody(t, code, ip), frame->method)));
+         (c->base(), localOffset
+          (t, codeBody(t, code, ip), context->method)));
       return;
 
     case return_:
@@ -3243,7 +3292,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         c->jmp
           (c->memory
            (c->base(), localOffset
-            (t, codeReadInt16(t, code, ip), frame->method)));
+            (t, codeReadInt16(t, code, ip), context->method)));
         return;
 
       default: abort(t);
@@ -3266,10 +3315,9 @@ logCompile(const void* code, unsigned size, const char* class_,
 }
 
 object
-finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
-       Vector* traceLog, const char* name)
+finish(MyThread* t, Context* context, const char* name)
 {
-  PROTECT(t, method);
+  Compiler* c = context->c;
 
   unsigned count = ceiling(c->codeSize() + c->poolSize(), BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
@@ -3282,36 +3330,33 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
 
   c->writeTo(start);
 
-  if (method) {
+  if (context->method) {
     PROTECT(t, result);
 
-    for (unsigned i = 0; i < objectPool->length(); i += sizeof(PoolElement)) {
-      PoolElement* e = objectPool->peek<PoolElement>(i);
-      intptr_t offset = e->address->value(c)
-        - reinterpret_cast<intptr_t>(start);
+    unsigned mapSize = Frame::mapSizeInWords(t, context->method);
 
-      singletonMarkObject(t, result, offset / BytesPerWord);
-
-      set(t, result, SingletonBody + offset, e->value);
-    }
-
-    unsigned traceSize = Frame::traceSizeInBytes(t, method);
-    unsigned mapSize = Frame::mapSizeInBytes(t, method);
-    for (unsigned i = 0; i < traceLog->length(); i += traceSize) {
-      TraceElement* e = traceLog->peek<TraceElement>(i);
-
+    for (TraceElement* p = context->traceLog; p; p = p->next) {
       object node = makeTraceNode
-        (t, e->machineIp->value(c), 0, method, e->target, e->virtualCall,
-         mapSize / BytesPerWord, false);
+        (t, p->address->value(c), 0, context->method, p->target,
+         p->virtualCall, mapSize, false);
 
       if (mapSize) {
-        memcpy(&traceNodeMap(t, node, 0), e->map, mapSize);
+        memcpy(&traceNodeMap(t, node, 0), p->map, mapSize * BytesPerWord);
       }
 
       insertTraceNode(t, node);
     }
 
-    object code = methodCode(t, method);
+    for (PoolElement* p = context->objectPool; p; p = p->next) {
+      intptr_t offset = p->address->value(c)
+        - reinterpret_cast<intptr_t>(start);
+
+      singletonMarkObject(t, result, offset / BytesPerWord);
+
+      set(t, result, SingletonBody + offset, p->value);
+    }
+
+    object code = methodCode(t, context->method);
     PROTECT(t, code);
 
     {
@@ -3370,21 +3415,24 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
     }
 
     if (Verbose) {
-      logCompile(start, c->codeSize(),
-                 reinterpret_cast<const char*>
-                 (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-                 reinterpret_cast<const char*>
-                 (&byteArrayBody(t, methodName(t, method), 0)));
+      logCompile
+        (start, c->codeSize(),
+         reinterpret_cast<const char*>
+         (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
+         reinterpret_cast<const char*>
+         (&byteArrayBody(t, methodName(t, context->method), 0)));
     }
 
     // for debugging:
     if (false and
-        strcmp(reinterpret_cast<const char*>
-               (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-               "Misc") == 0 and
-        strcmp(reinterpret_cast<const char*>
-               (&byteArrayBody(t, methodName(t, method), 0)),
-               "syncStatic") == 0)
+        strcmp
+        (reinterpret_cast<const char*>
+         (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
+         "Misc") == 0 and
+        strcmp
+        (reinterpret_cast<const char*>
+         (&byteArrayBody(t, methodName(t, context->method), 0)),
+         "syncStatic") == 0)
     {
       asm("int3");
     }
@@ -3398,46 +3446,37 @@ finish(MyThread* t, Compiler* c, object method, Vector* objectPool,
 }
 
 object
-finish(MyThread* t, Compiler* c, const char* name)
+compile(MyThread* t, Context* context)
 {
-  return finish(t, c, 0, 0, 0, name);
-}
+  Compiler* c = context->c;
 
-object
-compile(MyThread* t, Compiler* c, object method)
-{
-  PROTECT(t, method);
-  
   c->prologue();
 
-  object code = methodCode(t, method);
+  object code = methodCode(t, context->method);
   PROTECT(t, code);
 
-  unsigned footprint = methodParameterFootprint(t, method);
+  unsigned footprint = methodParameterFootprint(t, context->method);
   unsigned locals = codeMaxLocals(t, code);
   c->reserve(locals - footprint);
 
-  Vector objectPool(t->m->system, 256);
-  Vector traceLog(t->m->system, 1024);
-  uintptr_t map[Frame::mapSizeInWords(t, method)];
-  Frame frame(t, c, method, map, &objectPool, &traceLog);
-  MyNullHandler nullHandler(&frame);
+  uintptr_t map[Frame::mapSizeInWords(t, context->method)];
+  Frame frame(context, map);
 
   handleEntrance(t, &frame);
 
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
 
-  object eht = codeExceptionHandlerTable(t, methodCode(t, method));
+  object eht = codeExceptionHandlerTable(t, methodCode(t, context->method));
   if (eht) {
     PROTECT(t, eht);
 
     for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
       ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
 
-      assert(t, getBit(frame.codeMask, exceptionHandlerStart(eh)));
+      assert(t, getBit(context->codeMask, exceptionHandlerStart(eh)));
         
-      uintptr_t map[Frame::mapSizeInWords(t, method)];
+      uintptr_t map[Frame::mapSizeInWords(t, context->method)];
       Frame frame2(&frame, map);
       frame2.pushObject();
 
@@ -3446,7 +3485,7 @@ compile(MyThread* t, Compiler* c, object method)
     }
   }
 
-  return finish(t, c, method, &objectPool, &traceLog, 0);
+  return finish(t, context, 0);
 }
 
 void
@@ -3473,10 +3512,10 @@ compileMethod2(MyThread* t)
     return 0;
   } else {
     if (not traceNodeVirtualCall(t, node)) {
-      Compiler* c = makeCompiler(t->m->system, 0);
-      c->updateCall(reinterpret_cast<void*>(traceNodeAddress(t, node)),
-                    &singletonValue(t, methodCompiled(t, target), 0));
-      c->dispose();
+      Context context(t);
+      context.c->updateCall
+        (reinterpret_cast<void*>(traceNodeAddress(t, node)),
+         &singletonValue(t, methodCompiled(t, target), 0));
     }
     return &singletonValue(t, methodCompiled(t, target), 0);
   }
@@ -3753,8 +3792,10 @@ visitStack(MyThread* t, Heap::Visitor* v)
 }
 
 object
-compileDefault(MyThread* t, Compiler* c)
+compileDefault(MyThread* t, Context* context)
 {
+  Compiler* c = context->c;
+
   mov(c, c->base(), c->memory(c->thread(), difference(&(t->base), t)));
   mov(c, c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
 
@@ -3766,12 +3807,14 @@ compileDefault(MyThread* t, Compiler* c)
   c->jmp(result);
   c->release(result);
 
-  return finish(t, c, "default");
+  return finish(t, context, "default");
 }
 
 object
-compileNative(MyThread* t, Compiler* c)
+compileNative(MyThread* t, Context* context)
 {
+  Compiler* c = context->c;
+
   mov(c, c->base(), c->memory(c->thread(), difference(&(t->base), t)));
   mov(c, c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
 
@@ -3780,7 +3823,7 @@ compileNative(MyThread* t, Compiler* c)
   
   c->ret();
 
-  return finish(t, c, "native");
+  return finish(t, context, "native");
 }
 
 class ArgumentList {
@@ -3995,18 +4038,16 @@ class MyProcessor: public Processor {
 
   object getDefaultCompiled(MyThread* t) {
     if (defaultCompiled == 0) {
-      Compiler* c = makeCompiler(t->m->system, 0);
-      defaultCompiled = compileDefault(t, c);
-      c->dispose();
+      Context context(t);
+      defaultCompiled = compileDefault(t, &context);
     }
     return defaultCompiled;
   }
 
   object getNativeCompiled(MyThread* t) {
     if (nativeCompiled == 0) {
-      Compiler* c = makeCompiler(t->m->system, 0);
-      nativeCompiled = compileNative(t, c);
-      c->dispose();
+      Context context(t);
+      nativeCompiled = compileNative(t, &context);
     }
     return nativeCompiled;
   }
@@ -4267,7 +4308,8 @@ processor(MyThread* t)
     if (p->addressTable == 0) {
       p->addressTable = makeArray(t, 128, true);
 
-      Compiler* c = makeCompiler(t->m->system, 0);
+      Context context(t);
+      Compiler* c = context.c;
 
       mov(c, c->base(), c->memory(c->thread(), difference(&(t->base), t)));
       mov(c, c->stack(), c->memory(c->thread(), difference(&(t->stack), t)));
@@ -4281,8 +4323,6 @@ processor(MyThread* t)
       if (Verbose) {
         logCompile(p->indirectCaller, c->codeSize(), 0, "indirect caller");
       }
-
-      c->dispose();
     }
 
     p->segFaultHandler.m = t->m;
@@ -4303,17 +4343,15 @@ compile(MyThread* t, object method)
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
-      Compiler* c = makeCompiler(t->m->system, p->indirectCaller);
+      Context context(t, method, p->indirectCaller);
     
-      object compiled = compile(t, c, method);
+      object compiled = compile(t, &context);
       set(t, method, MethodCompiled, compiled);
 
       if (methodVirtual(t, method)) {
         classVtable(t, methodClass(t, method), methodOffset(t, method))
           = &singletonValue(t, compiled, 0);
       }
-
-      c->dispose();
     }
   }
 }

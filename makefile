@@ -28,7 +28,7 @@ src = src
 classpath = classpath
 test = test
 
-input = $(test-build)/Misc.class
+input = List
 
 build-cxx = g++
 build-cc = gcc
@@ -215,7 +215,7 @@ else
 	flags = -cp $(test-build)
 endif
 
-args = $(flags) $(call class-name,$(test-build),$(input))
+args = $(flags) $(input)
 
 .PHONY: build
 build: $(interpreter) $(archive) $(classpath-dep) $(test-dep)
