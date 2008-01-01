@@ -39,17 +39,27 @@ class MutexResource {
 };
 
 const int InterruptSignal = SIGUSR2;
+#ifdef __APPLE__
+const int SegFaultSignal = SIGBUS;
+#else
+const int SegFaultSignal = SIGSEGV;
+#endif
 
 #ifdef __x86_64__
-const int IpRegister = REG_RIP;
-const int BaseRegister = REG_RBP;
-const int StackRegister = REG_RSP;
-const int ThreadRegister = REG_RBX;
+#  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
+#  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
+#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
+#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
+#elif defined __APPLE__
+#  define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
+#  define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
+#  define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
+#  define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
 #elif defined __i386__
-const int IpRegister = REG_EIP;
-const int BaseRegister = REG_EBP;
-const int StackRegister = REG_ESP;
-const int ThreadRegister = REG_EBX;
+#  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
+#  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
+#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
+#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
 #else
 #  error unsupported architecture
 #endif
@@ -57,32 +67,31 @@ const int ThreadRegister = REG_EBX;
 void
 handleSignal(int signal, siginfo_t* info, void* context)
 {
-  if (signal == SIGSEGV) {
-    sigset_t set;
-
-    sigemptyset(&set);
-    sigaddset(&set, SIGSEGV);
-    sigprocmask(SIG_UNBLOCK, &set, 0);
-
+  if (signal == SegFaultSignal) {
     ucontext_t* c = static_cast<ucontext_t*>(context);
 
-    greg_t* registers = c->uc_mcontext.gregs;
     bool jump = segFaultHandler->handleSignal
-      (reinterpret_cast<void**>(registers + IpRegister),
-       reinterpret_cast<void**>(registers + BaseRegister),
-       reinterpret_cast<void**>(registers + StackRegister),
-       reinterpret_cast<void**>(registers + ThreadRegister));
+      (reinterpret_cast<void**>(&IP_REGISTER(c)),
+       reinterpret_cast<void**>(&BASE_REGISTER(c)),
+       reinterpret_cast<void**>(&STACK_REGISTER(c)),
+       reinterpret_cast<void**>(&THREAD_REGISTER(c)));
 
     if (jump) {
       // I'd like to use setcontext here (and get rid of the
-      // sigprocmask call above), but it doesn't work on my system,
-      // and I can't tell from the documentation if it's even supposed
-      // to work.
+      // sigprocmask call), but it doesn't work on my Linux x86_64
+      // system, and I can't tell from the documentation if it's even
+      // supposed to work.
 
-      vmJump(reinterpret_cast<void*>(registers[IpRegister]),
-             reinterpret_cast<void*>(registers[BaseRegister]),
-             reinterpret_cast<void*>(registers[StackRegister]),
-             reinterpret_cast<void*>(registers[ThreadRegister]));
+      sigset_t set;
+
+      sigemptyset(&set);
+      sigaddset(&set, SegFaultSignal);
+      sigprocmask(SIG_UNBLOCK, &set, 0);
+
+      vmJump(reinterpret_cast<void*>(IP_REGISTER(c)),
+             reinterpret_cast<void*>(BASE_REGISTER(c)),
+             reinterpret_cast<void*>(STACK_REGISTER(c)),
+             reinterpret_cast<void*>(THREAD_REGISTER(c)));
     } else if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
       oldSegFaultHandler.sa_sigaction(signal, info, context);
     } else if (oldSegFaultHandler.sa_handler) {
@@ -542,10 +551,10 @@ class MySystem: public System {
       sa.sa_flags = SA_SIGINFO;
       sa.sa_sigaction = handleSignal;
     
-      return sigaction(SIGSEGV, &sa, &oldSegFaultHandler);
+      return sigaction(SegFaultSignal, &sa, &oldSegFaultHandler);
     } else if (segFaultHandler) {
       segFaultHandler = 0;
-      return sigaction(SIGSEGV, &oldSegFaultHandler, 0);
+      return sigaction(SegFaultSignal, &oldSegFaultHandler, 0);
     } else {
       return 1;
     }
