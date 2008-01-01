@@ -70,11 +70,13 @@ handleSignal(int signal, siginfo_t* info, void* context)
   if (signal == SegFaultSignal) {
     ucontext_t* c = static_cast<ucontext_t*>(context);
 
+    void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
+    void* base = reinterpret_cast<void*>(BASE_REGISTER(c));
+    void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
+    void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
+
     bool jump = segFaultHandler->handleSignal
-      (reinterpret_cast<void**>(&IP_REGISTER(c)),
-       reinterpret_cast<void**>(&BASE_REGISTER(c)),
-       reinterpret_cast<void**>(&STACK_REGISTER(c)),
-       reinterpret_cast<void**>(&THREAD_REGISTER(c)));
+      (&ip, &base, &stack, &thread);
 
     if (jump) {
       // I'd like to use setcontext here (and get rid of the
@@ -88,10 +90,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       sigaddset(&set, SegFaultSignal);
       sigprocmask(SIG_UNBLOCK, &set, 0);
 
-      vmJump(reinterpret_cast<void*>(IP_REGISTER(c)),
-             reinterpret_cast<void*>(BASE_REGISTER(c)),
-             reinterpret_cast<void*>(STACK_REGISTER(c)),
-             reinterpret_cast<void*>(THREAD_REGISTER(c)));
+      vmJump(ip, base, stack, thread);
     } else if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
       oldSegFaultHandler.sa_sigaction(signal, info, context);
     } else if (oldSegFaultHandler.sa_handler) {
