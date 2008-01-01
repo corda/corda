@@ -3,6 +3,10 @@
 
 #include "types.h"
 #include "stdint.h"
+#include "common.h"
+
+extern "C" void NO_RETURN
+vmJump(void* address, void* base, void* stack, void* thread);
 
 #ifdef __i386__
 

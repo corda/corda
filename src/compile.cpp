@@ -3,6 +3,7 @@
 #include "vector.h"
 #include "process.h"
 #include "compiler.h"
+#include "x86.h"
 
 using namespace vm;
 
@@ -12,9 +13,6 @@ vmInvoke(void* thread, void* function, void* stack, unsigned stackSize,
 
 extern "C" void
 vmCall();
-
-extern "C" void NO_RETURN
-vmJump(void* address, void* base, void* stack, void* thread);
 
 namespace {
 
@@ -996,8 +994,9 @@ class Frame {
   unsigned sp;
 };
 
-void NO_RETURN
-unwind(MyThread* t)
+void
+findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
+                 void** targetStack)
 {
   void* ip = t->ip;
   void* base = t->base;
@@ -1008,7 +1007,8 @@ unwind(MyThread* t)
     ip = *stack;
   }
 
-  while (true) {
+  *targetIp = 0;
+  while (*targetIp == 0) {
     object node = findTraceNode(t, ip);
     if (node) {
       object method = traceNodeMethod(t, node);
@@ -1028,7 +1028,9 @@ unwind(MyThread* t)
         *(--stack) = t->exception;
         t->exception = 0;
 
-        vmJump(compiled + exceptionHandlerIp(handler), base, stack, t);
+        *targetIp = compiled + exceptionHandlerIp(handler);
+        *targetBase = base;
+        *targetStack = stack;
       } else {
         if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
           object lock;
@@ -1046,9 +1048,21 @@ unwind(MyThread* t)
         base = *static_cast<void**>(base);
       }
     } else {
-      vmJump(ip, base, stack + 1, 0);
+      *targetIp = ip;
+      *targetBase = base;
+      *targetStack = stack + 1;
     }
   }
+}
+
+void NO_RETURN
+unwind(MyThread* t)
+{
+  void* ip;
+  void* base;
+  void* stack;
+  findUnwindTarget(t, &ip, &base, &stack);
+  vmJump(ip, base, stack, t);
 }
 
 void
@@ -3997,15 +4011,22 @@ class SegFaultHandler: public System::SignalHandler {
  public:
   SegFaultHandler(): m(0) { }
 
-  virtual void handleSignal(void* ip, void* base, void* stack) {
+  virtual bool handleSignal(void** ip, void** base, void** stack,
+                            void** thread)
+  {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
-    object node = findTraceNode(t, ip);
+    object node = findTraceNode(t, *ip);
     if (node) {
-      t->ip = ip;
-      t->base = base;
-      t->stack = stack;
+      t->ip = *ip;
+      t->base = *base;
+      t->stack = *stack;
       t->exception = makeNullPointerException(t);
-      unwind(t);
+
+      findUnwindTarget(t, ip, base, stack);
+      *thread = t;
+      return true;
+    } else {
+      return false;
     }
   }
 

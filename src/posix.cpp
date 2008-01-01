@@ -9,6 +9,7 @@
 #include "unistd.h"
 #include "pthread.h"
 #include "signal.h"
+#include "ucontext.h"
 #include "stdint.h"
 
 #include "x86.h"
@@ -43,10 +44,12 @@ const int InterruptSignal = SIGUSR2;
 const int IpRegister = REG_RIP;
 const int BaseRegister = REG_RBP;
 const int StackRegister = REG_RSP;
+const int ThreadRegister = REG_RBX;
 #elif defined __i386__
 const int IpRegister = REG_EIP;
 const int BaseRegister = REG_EBP;
 const int StackRegister = REG_ESP;
+const int ThreadRegister = REG_EBX;
 #else
 #  error unsupported architecture
 #endif
@@ -61,15 +64,26 @@ handleSignal(int signal, siginfo_t* info, void* context)
     sigaddset(&set, SIGSEGV);
     sigprocmask(SIG_UNBLOCK, &set, 0);
 
-    greg_t* registers
-      = static_cast<ucontext_t*>(context)->uc_mcontext.gregs;
+    ucontext_t* c = static_cast<ucontext_t*>(context);
 
-    segFaultHandler->handleSignal
-      (reinterpret_cast<void*>(registers[IpRegister]),
-       reinterpret_cast<void*>(registers[BaseRegister]),
-       reinterpret_cast<void*>(registers[StackRegister]));
+    greg_t* registers = c->uc_mcontext.gregs;
+    bool jump = segFaultHandler->handleSignal
+      (reinterpret_cast<void**>(registers + IpRegister),
+       reinterpret_cast<void**>(registers + BaseRegister),
+       reinterpret_cast<void**>(registers + StackRegister),
+       reinterpret_cast<void**>(registers + ThreadRegister));
 
-    if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
+    if (jump) {
+      // I'd like to use setcontext here (and get rid of the
+      // sigprocmask call above), but it doesn't work on my system,
+      // and I can't tell from the documentation if it's even supposed
+      // to work.
+
+      vmJump(reinterpret_cast<void*>(registers[IpRegister]),
+             reinterpret_cast<void*>(registers[BaseRegister]),
+             reinterpret_cast<void*>(registers[StackRegister]),
+             reinterpret_cast<void*>(registers[ThreadRegister]));
+    } else if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
       oldSegFaultHandler.sa_sigaction(signal, info, context);
     } else if (oldSegFaultHandler.sa_handler) {
       oldSegFaultHandler.sa_handler(signal);

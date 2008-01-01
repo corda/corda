@@ -20,10 +20,15 @@ LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e)
 {
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-    segFaultHandler->handleSignal
-      (reinterpret_cast<void*>(e->ContextRecord->Eip),
-       reinterpret_cast<void*>(e->ContextRecord->Ebp),
-       reinterpret_cast<void*>(e->ContextRecord->Esp));
+    bool jump = segFaultHandler->handleSignal
+      (reinterpret_cast<void**>(&(e->ContextRecord->Eip)),
+       reinterpret_cast<void**>(&(e->ContextRecord->Ebp)),
+       reinterpret_cast<void**>(&(e->ContextRecord->Esp)),
+       reinterpret_cast<void**>(&(e->ContextRecord->Ebx)));
+
+    if (jump) {
+      return EXCEPTION_CONTINUE_EXECUTION;
+    }
   }
   return EXCEPTION_CONTINUE_SEARCH;
 }

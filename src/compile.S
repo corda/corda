@@ -59,13 +59,6 @@ test:
    popq   %rbp
    ret
 
-.globl vmJump
-vmJump:
-   movq   %rsi,%rbp
-   movq   %rdx,%rsp
-   movq   %rcx,%rbx
-   jmp    *%rdi
-
 #elif defined __i386__
 
 #  if defined __APPLE__ || defined __MINGW32__
@@ -135,19 +128,6 @@ exit:
    movl   %ebp,%esp
    popl   %ebp
    ret
-     
-#  if defined __APPLE__ || defined __MINGW32__
-.globl _vmJump
-_vmJump: 
-#  else
-.globl vmJump
-vmJump:
-#  endif
-   movl   4(%esp),%eax
-   movl   8(%esp),%ebp
-   movl   16(%esp),%ebx
-   movl   12(%esp),%esp
-   jmp    *%eax
    
 #else
 #  error unsupported platform
