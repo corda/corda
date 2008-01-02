@@ -416,6 +416,10 @@ class Fixie {
   }
 
   void move(Fixie** handle) {
+    if (DebugFixies) {
+      fprintf(stderr, "move fixie %p\n", this);
+    }
+
     remove();
     add(handle);
   }
@@ -716,14 +720,13 @@ sweepFixies(Context* c)
 
     if (f->age == FixieTenureThreshold) {
       if (DebugFixies) {
-        fprintf(stderr, "tenure fixie %p\n", f);
+        fprintf(stderr, "tenure fixie %p (dirty: %d)\n", f, f->dirty);
       }
-      f->move(&(c->tenuredFixies));
 
       if (f->dirty) {
-        uintptr_t* mask = f->mask(size);
-        memset(mask, 0, ceiling(size, BytesPerWord) * BytesPerWord); 
-        f->dirty = false; 
+        f->move(&(c->dirtyFixies));
+      } else {
+        f->move(&(c->tenuredFixies));
       }
     } else {
       f->move(&(c->fixies));
@@ -848,32 +851,67 @@ update(Context* c, void** p, bool* needsVisit)
     return 0;
   }
 
-  void* r = update2(c, mask(*p), needsVisit);
+  return update2(c, mask(*p), needsVisit);
+}
 
-  // update heap map.
-  if (r) {
-    if (c->mode == Heap::MinorCollection) {
-      if (c->gen2.contains(p) and not c->gen2.contains(r)) {
-        if (Debug) {        
-          fprintf(stderr, "mark %p (%s) at %p (%s)\n",
-                  r, segment(c, r), p, segment(c, p));
-        }
+void
+updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
+{
+  Segment* seg;
+  Segment::Map* map;
 
-        c->heapMap.set(p);
-      }
-    } else {
-      if (c->nextGen2.contains(p) and not c->nextGen2.contains(r)) {
-        if (Debug) {        
-          fprintf(stderr, "mark %p (%s) at %p (%s)\n",
-                  r, segment(c, r), p, segment(c, p));
-        }
-
-        c->nextHeapMap.set(p);
-      }      
-    }
+  if (c->mode == Heap::MinorCollection) {
+    seg = &(c->gen2);
+    map = &(c->heapMap);
+  } else {
+    seg = &(c->nextGen2);
+    map = &(c->nextHeapMap);
   }
 
-  return r;
+  if (not (c->client->isFixed(result)
+           and fixie(result)->age == FixieTenureThreshold)
+      and not seg->contains(result))
+  {
+    if (target and c->client->isFixed(target)) {
+      Fixie* f = fixie(target);
+      assert(c, f->hasMask);
+
+      if (static_cast<unsigned>(f->age + 1) >= FixieTenureThreshold) {
+        unsigned size = c->client->sizeInWords(f->body());
+
+        if (DebugFixies) {
+          fprintf(stderr, "dirty fixie %p at %d\n", f, offset);
+        }
+
+        f->dirty = true;
+        markBit(f->mask(size), offset);
+      }
+    } else if (seg->contains(p)) {
+      if (Debug) {        
+        fprintf(stderr, "mark %p (%s) at %p (%s)\n",
+                result, segment(c, result), p, segment(c, p));
+      }
+
+      map->set(p);
+    }
+  }
+}
+
+void*
+update(Context* c, void** p, void* target, unsigned offset, bool* needsVisit)
+{
+  if (mask(*p) == 0) {
+    *needsVisit = false;
+    return 0;
+  }
+
+  void* result = update2(c, mask(*p), needsVisit);
+
+  if (result) {
+    updateHeapMap(c, p, target, offset, result);
+  }
+
+  return result;
 }
 
 const uintptr_t BitsetExtensionBit
@@ -978,7 +1016,7 @@ bitsetNext(Context* c, uintptr_t* p)
 }
 
 void
-collect(Context* c, void** p)
+collect(Context* c, void** p, void* target, unsigned offset)
 {
   void* original = mask(*p);
   void* parent = 0;
@@ -989,7 +1027,7 @@ collect(Context* c, void** p)
   }
 
   bool needsVisit;
-  set(p, update(c, mask(p), &needsVisit));
+  set(p, update(c, mask(p), target, offset, &needsVisit));
 
   if (Debug) {
     fprintf(stderr, "  result: %p (%s) (visit? %d)\n",
@@ -1026,7 +1064,8 @@ collect(Context* c, void** p)
         }
 
         bool needsVisit;
-        void* childCopy = update(c, getp(copy, offset), &needsVisit);
+        void* childCopy = update
+          (c, getp(copy, offset), copy, offset, &needsVisit);
         
         if (Debug) {
           fprintf(stderr, "    result: %p (%s) (visit? %d)\n",
@@ -1169,28 +1208,69 @@ collect(Context* c, void** p)
 }
 
 void
+collect(Context* c, void** p)
+{
+  collect(c, p, 0, 0);
+}
+
+void
+collect(Context* c, void* target, unsigned offset)
+{
+  collect(c, getp(target, offset), target, offset);
+}
+
+void
 visitDirtyFixies(Context* c)
 {
   for (Fixie** p = &(c->dirtyFixies); *p;) {
     Fixie* f = *p;
-    *p = f->next;
 
+    bool wasDirty = false;
+    bool stillDirty = false;
     unsigned size = c->client->sizeInWords(f->body());
     uintptr_t* mask = f->mask(size);
-    for (unsigned word = 0; word < wordOf(size); ++ word) {
+
+    unsigned word = 0;
+    unsigned bit = 0;
+    unsigned wordLimit = wordOf(size);
+    unsigned bitLimit = bitOf(size);
+
+    for (; word <= wordLimit and (word < wordLimit or bit < bitLimit);
+         ++ word)
+    {
       if (mask[word]) {
-        for (unsigned bit = 0; bit < bitOf(size); ++ bit) {
+        for (; bit < BitsPerWord and (word < wordLimit or bit < bitLimit);
+             ++ bit)
+        {
           unsigned index = indexOf(word, bit);
           if (getBit(mask, index)) {
-            collect(c, f->body() + index);
+            wasDirty = true;
+
+            clearBit(mask, index);
+    
+            if (DebugFixies) {
+              fprintf(stderr, "clean fixie %p at %d\n", f, index);
+            }
+
+            collect(c, f->body(), index);
+
+            if (getBit(mask, index)) {
+              stillDirty = true;
+            }
           }
         }
       }
     }
-    
-    memset(mask, 0, ceiling(size, BytesPerWord) * BytesPerWord);
-    f->dirty = false;
-    f->move(&(c->tenuredFixies));
+
+    assert(c, wasDirty);
+
+    if (stillDirty) {
+      p = &(f->next);
+    } else {
+      f->dirty = false;
+      *p = f->next;
+      f->move(&(c->tenuredFixies));
+    } 
   }
 }
 
@@ -1212,7 +1292,7 @@ visitMarkedFixies(Context* c)
       { }
 
       virtual bool visit(unsigned offset) {
-        collect(c, p + offset);
+        collect(c, p, offset);
         return true;
       }
 
@@ -1403,11 +1483,15 @@ class MyHeap: public Heap {
       Fixie* f = fixie(p);
       assert(&c, f->hasMask);
 
-      unsigned size = c.client->sizeInWords(p);
+      unsigned size = c.client->sizeInWords(f->body());
 
       for (unsigned i = 0; i < count; ++i) {
         void** target = static_cast<void**>(p) + offset + i;
         if (targetNeedsMark(*target)) {
+          if (DebugFixies) {
+            fprintf(stderr, "dirty fixie %p at %d\n", f, offset + i);
+          }
+
           f->dirty = true;
           markBit(f->mask(size), offset + i);
         }
