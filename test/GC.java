@@ -29,9 +29,22 @@ public class GC {
   }
 
   public static void main(String[] args) {
+    Object[] array = new Object[1024 * 1024];
+    array[0] = new Object();
+
     small();
+
+    array[1] = new Object();
+
     medium();
+
+    array[2] = new Object();
+
     large();
+
+    array[0].toString();
+    array[1].toString();
+    array[2].toString();
   }
 
 }
