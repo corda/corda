@@ -3768,7 +3768,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
   void* ip = t->ip;
   void* base = t->base;
   void** stack = static_cast<void**>(t->stack);
-  if (ip == 0) {
+  if (ip == 0 and stack) {
     ip = *stack;
   }
 
@@ -3791,11 +3791,16 @@ visitStack(MyThread* t, Heap::Visitor* v)
       visitStackAndLocals(t, v, base, node);
 
       stack = static_cast<void**>(base) + 1;
-      ip = *stack;
+      if (stack) {
+        ip = *stack;
+      }
       base = *static_cast<void**>(base);
     } else if (trace) {
       base = trace->base;
       stack = static_cast<void**>(trace->stack);
+      if (stack) {
+        ip = *stack;
+      }
       trace = trace->next;
     } else {
       break;
@@ -4015,19 +4020,20 @@ class SegFaultHandler: public System::SignalHandler {
                             void** thread)
   {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
-    object node = findTraceNode(t, *ip);
-    if (node) {
-      t->ip = *ip;
-      t->base = *base;
-      t->stack = *stack;
-      t->exception = makeNullPointerException(t);
+    if (t->state == Thread::ActiveState) {
+      object node = findTraceNode(t, *ip);
+      if (node) {
+        t->ip = *ip;
+        t->base = *base;
+        t->stack = *stack;
+        t->exception = makeNullPointerException(t);
 
-      findUnwindTarget(t, ip, base, stack);
-      *thread = t;
-      return true;
-    } else {
-      return false;
+        findUnwindTarget(t, ip, base, stack);
+        *thread = t;
+        return true;
+      }
     }
+    return false;
   }
 
   Machine* m;
@@ -4409,6 +4415,7 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
   PROTECT(t, oldNode);
 
   object newTable = makeArray(t, newLength, true);
+  PROTECT(t, newTable);
 
   for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
     for (oldNode = arrayBody(t, oldTable, i);
