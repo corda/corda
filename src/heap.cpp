@@ -16,7 +16,7 @@ const unsigned Top = ~static_cast<unsigned>(0);
 
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool Verbose2 = false;
 const bool Debug = false;
 const bool DebugFixies = false;
@@ -1243,6 +1243,7 @@ visitDirtyFixies(Context* c)
              ++ bit)
         {
           unsigned index = indexOf(word, bit);
+
           if (getBit(mask, index)) {
             wasDirty = true;
 
@@ -1259,6 +1260,7 @@ visitDirtyFixies(Context* c)
             }
           }
         }
+        bit = 0;
       }
     }
 
