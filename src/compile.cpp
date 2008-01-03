@@ -3590,11 +3590,10 @@ invokeNative2(MyThread* t, object method)
   PROTECT(t, class_);
 
   unsigned footprint = methodParameterFootprint(t, method) + 1;
-  unsigned count = methodParameterCount(t, method) + 1;
   if (methodFlags(t, method) & ACC_STATIC) {
     ++ footprint;
-    ++ count;
   }
+  unsigned count = methodParameterCount(t, method) + 2;
 
   uintptr_t args[footprint];
   unsigned argOffset = 0;
@@ -3667,7 +3666,7 @@ invokeNative2(MyThread* t, object method)
       (function,
        args,
        types,
-       count + 1,
+       count,
        footprint * BytesPerWord,
        returnType);
   }
