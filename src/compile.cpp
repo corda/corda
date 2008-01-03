@@ -479,7 +479,7 @@ class Frame {
   }
 
   static unsigned mapSizeInWords(Thread* t, object method) {
-    return ceiling(mapSize(t, method), BytesPerWord);
+    return ceiling(mapSize(t, method), BitsPerWord);
   }
 
   static unsigned mapSizeInBytes(Thread* t, object method) {
@@ -991,7 +991,7 @@ class Frame {
       (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
       TraceElement(context, target, virtualCall, context->traceLog);
 
-    memcpy(e->map, map, mapSizeInWords(t, context->method) * BytesPerWord);
+    memcpy(e->map, map, mapSize * BytesPerWord);
 
     return e;
   }
@@ -1074,29 +1074,6 @@ unwind(MyThread* t)
   void* stack;
   findUnwindTarget(t, &ip, &base, &stack);
   vmJump(ip, base, stack, t);
-}
-
-void
-insertTraceNode(MyThread* t, object method, object target, bool virtualCall,
-                uintptr_t* map, void* address)
-{
-  unsigned mapSize = Frame::mapSizeInWords(t, method);
-
-  object node = makeTraceNode
-    (t,
-     reinterpret_cast<intptr_t>(address),
-     0,
-     method,
-     target,
-     virtualCall,
-     mapSize,
-     false);
-
-  if (mapSize) {
-    memcpy(&traceNodeMap(t, node, 0), map, mapSize * BytesPerWord);
-  }
-
-  insertTraceNode(t, node);
 }
 
 void*
@@ -2997,11 +2974,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
+      Operand* stack = c->temporary();
+      mov(c, c->stack(), stack);
+
       c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(makeMultidimensionalArray)),
          frame->trace(0, false),
-         4, c->thread(), frame->append(class_), c->stack(),
+         4, c->thread(), frame->append(class_), stack,
          c->constant(dimensions));
+      
+      c->release(stack);
 
       Operand* result = ::result(c);
 
