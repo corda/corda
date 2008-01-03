@@ -31,9 +31,10 @@ public class Throwable {
     return cause;
   }
 
-  public void initCause(Throwable e) {
+  public Throwable initCause(Throwable e) {
     if (cause == null) {
       cause = e;
+      return this;
     } else {
       throw new IllegalStateException();
     }
