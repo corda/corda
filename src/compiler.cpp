@@ -1226,6 +1226,9 @@ RegisterOperand::apply(Context* c, Operation op)
       register_(c, high(c))->apply(c, pop);
     } else {
       c->code.append(0x58 | value(c));
+      if (BytesPerWord == 8 and op == pop4) {
+        accept(c, mov4To8, this);
+      }
     }
     break;
 
@@ -1390,7 +1393,7 @@ RegisterOperand::accept(Context* c, Operation op,
   case cmp8: {
     assert(c, BytesPerWord == 8 or op == cmp4); // todo
 
-    rex(c);
+    if (op == cmp8) rex(c);
     if (isInt8(operand->value)) {
       c->code.append(0x83);
       c->code.append(0xf8 | value(c));

@@ -812,6 +812,12 @@ class Frame {
     return tmp;
   }
 
+  Operand* popInt4() {
+    Operand* tmp = c->temporary();
+    popInt4(tmp);
+    return tmp;
+  }
+
   Operand* popLong() {
     Operand* tmp = c->temporary();
     popLong(tmp);
@@ -826,6 +832,11 @@ class Frame {
 
   void popInt(Operand* o) {
     stack = ::pop(c, stack, o);
+    poppedInt();
+  }
+
+  void popInt4(Operand* o) {
+    stack = c->pop4(stack, o);
     poppedInt();
   }
 
@@ -1408,11 +1419,19 @@ makeMultidimensionalArray(MyThread* t, object class_, uintptr_t* stack,
 }
 
 void NO_RETURN
-throwNew(MyThread* t, object class_)
+throwArrayIndexOutOfBounds(MyThread* t, object array, int32_t index)
 {
-  t->exception = makeNew(t, class_);
-  object trace = makeTrace(t);
-  set(t, t->exception, ThrowableTrace, trace);
+  object message = makeString
+    (t, "array of length %d indexed at %d", arrayLength(t, array), index);
+  t->exception = makeArrayIndexOutOfBoundsException(t, message);
+  unwind(t);
+}
+
+void NO_RETURN
+throwNegativeArraySize(MyThread* t, int32_t length)
+{
+  object message = makeString(t, "%d", length);
+  t->exception = makeArrayIndexOutOfBoundsException(t, message);
   unwind(t);
 }
 
@@ -1428,22 +1447,14 @@ throw_(MyThread* t, object o)
 }
 
 void
-compileThrowNew(MyThread* t, Frame* frame, Machine::Type type)
-{
-  Operand* class_ = frame->append(arrayBody(t, t->m->types, type));
-  Compiler* c = frame->c;
-
-  c->indirectCallNoReturn
-    (c->constant(reinterpret_cast<intptr_t>(throwNew)),
-     frame->trace(0, false),
-     2, c->thread(), class_);
-}
-
-void
 checkCast(MyThread* t, object class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
-    throwNew(t, arrayBody(t, t->m->types, Machine::ClassCastExceptionType));
+    object message = makeString(t, "%s as %s",
+                                className(t, objectClass(t, o)),
+                                className(t, class_));
+    t->exception = makeClassCastException(t, message);
+    unwind(t);
   }
 }
 
@@ -1569,18 +1580,27 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case iaload:
     case laload:
     case saload: {
-      Operand* next = c->label();
-      Operand* outOfBounds = c->label();
+      Operand* load = c->label();
+      Operand* throw_ = c->label();
 
-      Operand* index = frame->popInt();
+      Operand* index = frame->popInt4();
       Operand* array = frame->popObject();
 
       c->cmp4(c->constant(0), index);
-      c->jl(outOfBounds);
+      c->jl(throw_);
 
       c->cmp4(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
               index);
-      c->jge(outOfBounds);
+      c->jl(load);
+
+      c->mark(throw_);
+
+      c->indirectCallNoReturn
+        (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
+         frame->trace(0, false),
+         3, c->thread(), array, index);
+
+      c->mark(load);
 
       switch (instruction) {
       case aaload:
@@ -1613,13 +1633,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       c->release(index);
       c->release(array);
-
-      c->jmp(next);
-
-      c->mark(outOfBounds);
-      compileThrowNew(t, frame, Machine::ArrayIndexOutOfBoundsExceptionType);
-
-      c->mark(next);
     } break;
 
     case aastore:
@@ -1630,9 +1643,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case iastore:
     case lastore:
     case sastore: {
-      Operand* next = c->label();
-      Operand* outOfBounds = c->label();
-
       Operand* value;
       if (instruction == dastore or instruction == lastore) {
         value = frame->popLong();
@@ -1642,15 +1652,27 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         value = frame->popInt();
       }
 
-      Operand* index = frame->popInt();
+      Operand* store = c->label();
+      Operand* throw_ = c->label();
+
+      Operand* index = frame->popInt4();
       Operand* array = frame->popObject();
 
       c->cmp4(c->constant(0), index);
-      c->jl(outOfBounds);
+      c->jl(throw_);
 
-      c->cmp4(c->memory(array, BytesPerWord, 0, 1, frame->trace(0, false)),
+      c->cmp4(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
               index);
-      c->jge(outOfBounds);
+      c->jl(store);
+
+      c->mark(throw_);
+
+      c->indirectCallNoReturn
+        (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
+         frame->trace(0, false),
+         3, c->thread(), array, index);
+
+      c->mark(store);
 
       switch (instruction) {
       case aastore: {
@@ -1686,13 +1708,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       c->release(value);
       c->release(index);
       c->release(array);
-
-      c->jmp(next);
-
-      c->mark(outOfBounds);
-      compileThrowNew(t, frame, Machine::ArrayIndexOutOfBoundsExceptionType);
-
-      c->mark(next);
     } break;
 
     case aconst_null:
@@ -1727,11 +1742,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* nonnegative = c->label();
 
-      Operand* length = frame->popInt();
+      Operand* length = frame->popInt4();
       c->cmp4(c->constant(0), length);
       c->jge(nonnegative);
 
-      compileThrowNew(t, frame, Machine::NegativeArraySizeExceptionType);
+      c->indirectCallNoReturn
+        (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
+         frame->trace(0, false),
+         2, c->thread(), length);
 
       c->mark(nonnegative);
 
@@ -2831,7 +2849,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       ip = (ip + 3) & ~3; // pad to four byte boundary
 
-      Operand* key = frame->popInt();
+      Operand* key = frame->popInt4();
     
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
@@ -3024,12 +3042,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Operand* nonnegative = c->label();
 
-      Operand* size = frame->popInt();
-      c->cmp4(c->constant(0), size);
+      Operand* length = frame->popInt4();
+      c->cmp4(c->constant(0), length);
 
       c->jge(nonnegative);
 
-      compileThrowNew(t, frame, Machine::NegativeArraySizeExceptionType);
+      c->indirectCallNoReturn
+        (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
+         frame->trace(0, false),
+         2, c->thread(), length);
 
       c->mark(nonnegative);
 
@@ -3074,11 +3095,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         (c->constant(reinterpret_cast<intptr_t>(makeBlankArray)),
          frame->trace(0, false),
          3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
-         size);
+         length);
       
       Operand* result = ::result(c);
 
-      c->release(size);
+      c->release(length);
 
       frame->pushObject(result);
       c->release(result);
@@ -3218,7 +3239,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       ip = (ip + 3) & ~3; // pad to four byte boundary
 
-      Operand* key = frame->popInt();
+      Operand* key = frame->popInt4();
 
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
