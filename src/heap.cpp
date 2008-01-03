@@ -487,7 +487,6 @@ class Context {
 
     gen2Base(0),
     tenureFootprint(0),
-    fixieTenureFootprint(0),
     gen1padding(0),
     gen2padding(0),
     mode(Heap::MinorCollection),
@@ -536,7 +535,6 @@ class Context {
   unsigned gen2Base;
   
   unsigned tenureFootprint;
-  unsigned fixieTenureFootprint;
   unsigned gen1padding;
   unsigned gen2padding;
 
@@ -709,16 +707,11 @@ sweepFixies(Context* c)
     Fixie* f = *p;
     *p = f->next;
 
-    unsigned size = c->client->sizeInWords(f->body());
-
     ++ f->age;
-    if (f->age > FixieTenureThreshold) {
-      f->age = FixieTenureThreshold;
-    } else if (static_cast<unsigned>(f->age + 1) == FixieTenureThreshold) {
-      c->fixieTenureFootprint += f->totalSize(size);
-    }
 
-    if (f->age == FixieTenureThreshold) {
+    if (f->age >= FixieTenureThreshold) {
+      f->age = FixieTenureThreshold;
+
       if (DebugFixies) {
         fprintf(stderr, "tenure fixie %p (dirty: %d)\n", f, f->dirty);
       }
@@ -874,7 +867,7 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
   {
     if (target and c->client->isFixed(target)) {
       Fixie* f = fixie(target);
-      assert(c, f->hasMask);
+      assert(c, offset == 0 or f->hasMask);
 
       if (static_cast<unsigned>(f->age + 1) >= FixieTenureThreshold) {
         unsigned size = c->client->sizeInWords(f->body());
@@ -1354,7 +1347,6 @@ collect2(Context* c)
 {
   c->gen2Base = Top;
   c->tenureFootprint = 0;
-  c->fixieTenureFootprint = 0;
   c->gen1padding = 0;
   c->gen2padding = 0;
 
@@ -1387,9 +1379,10 @@ collect2(Context* c)
 void
 collect(Context* c, unsigned footprint)
 {
+  // todo: tweak the calculation below to take memory footprint of
+  // tenured fixies into account.
   if (oversizedGen2(c)
-      or c->tenureFootprint + c->gen2padding > c->gen2.remaining()
-      or c->fixieTenureFootprint)
+      or c->tenureFootprint + c->gen2padding > c->gen2.remaining())
   {
     c->mode = Heap::MajorCollection;
   }
@@ -1483,7 +1476,7 @@ class MyHeap: public Heap {
   virtual void mark(void* p, unsigned offset, unsigned count) {
     if (c.client->isFixed(p)) {
       Fixie* f = fixie(p);
-      assert(&c, f->hasMask);
+      assert(&c, offset == 0 or f->hasMask);
 
       unsigned size = c.client->sizeInWords(f->body());
 
