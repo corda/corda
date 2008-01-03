@@ -18,10 +18,10 @@ ifeq ($(platform),windows)
 endif
 
 mode = debug
-process = interpret
+process = compile
 
 build = build
-native-build = $(build)/$(platform)/$(arch)/$(mode)
+native-build = $(build)/$(platform)-$(arch)-$(process)-$(mode)
 classpath-build = $(build)/classpath
 test-build = $(build)/test
 src = src
@@ -38,8 +38,7 @@ cc = $(build-cc)
 ar = ar
 ranlib = ranlib
 objcopy = objcopy
-vg = nice valgrind --suppressions=valgrind.supp --undef-value-errors=no \
-	--num-callers=32 --db-attach=yes --freelist-vol=100000000
+vg = nice valgrind --num-callers=32 --db-attach=yes	--freelist-vol=100000000
 vg += --leak-check=full
 db = gdb --args
 javac = javac
