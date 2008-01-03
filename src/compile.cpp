@@ -2997,11 +2997,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
+      Operand* stack = c->temporary();
+      c->mov(c->stack(), stack);
+
       c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(makeMultidimensionalArray)),
          frame->trace(0, false),
-         4, c->thread(), frame->append(class_), c->stack(),
+         4, c->thread(), frame->append(class_), stack,
          c->constant(dimensions));
+
+      c->release(stack);
 
       Operand* result = ::result(c);
 
