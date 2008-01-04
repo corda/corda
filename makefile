@@ -38,7 +38,7 @@ cc = $(build-cc)
 ar = ar
 ranlib = ranlib
 objcopy = objcopy
-vg = nice valgrind --num-callers=32 --db-attach=yes	--freelist-vol=100000000
+vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full
 db = gdb --args
 javac = javac
