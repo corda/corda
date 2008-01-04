@@ -1800,7 +1800,7 @@ MemoryOperand::apply(Context* c, Operation op)
       ax->release(c);
       dx->release(c);
     } else {
-      encode(c, 0xf7, 2, this, true);
+      encode(c, 0xf7, 3, this, true);
     }
     break;
 
