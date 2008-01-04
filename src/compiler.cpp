@@ -2088,14 +2088,14 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       // shrd
       encode2(c, 0x0fad, tmp->value(c), this, false);
       // sar
-      encode(c, 0xd3, 5, high(c), false);
+      encode(c, 0xd3, 7, high(c), false);
 
       tmp->release(c);
       cx->release(c);
     } else {
       RegisterOperand* cx = temporary(c, rcx);
       cx->accept(c, mov, operand);
-      encode(c, 0xd3, 5, this, true);
+      encode(c, 0xd3, 7, this, true);
       cx->release(c);
     }
   } break;
@@ -2111,14 +2111,14 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       // shrd
       encode2(c, 0x0fad, tmp->value(c), this, false);
       // shr
-      encode(c, 0xd3, 7, high(c), false);
+      encode(c, 0xd3, 5, high(c), false);
 
       tmp->release(c);
       cx->release(c);
     } else {
       RegisterOperand* cx = temporary(c, rcx);
       cx->accept(c, mov, operand);
-      encode(c, 0xd3, 7, this, true);
+      encode(c, 0xd3, 5, this, true);
       cx->release(c);
     }
   } break;
