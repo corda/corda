@@ -219,9 +219,7 @@ class Segment {
     }
 
     void clearOnlyIndex(unsigned index) {
-      for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
-        clearBit(i);
-      }
+      clearBits(data(), bitsPerRecord, index);
     }
 
     void clearOnly(unsigned segmentIndex) {
@@ -238,13 +236,7 @@ class Segment {
     }
 
     void setOnlyIndex(unsigned index, unsigned v = 1) {
-      unsigned i = index + bitsPerRecord - 1;
-      while (true) {
-        if (v & 1) setBit(i); else clearBit(i);
-        v >>= 1;
-        if (i == index) break;
-        --i;
-      }
+      setBits(data(), bitsPerRecord, index, v);
     }
 
     void setOnly(unsigned segmentIndex, unsigned v = 1) {
@@ -262,14 +254,7 @@ class Segment {
     }
 
     unsigned get(void* p) {
-      unsigned index = indexOf(p);
-      unsigned v = 0;
-      for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
-        unsigned wi = bitOf(i);
-        v <<= 1;
-        v |= ((data()[wordOf(i)]) & (static_cast<uintptr_t>(1) << wi)) >> wi;
-      }
-      return v;
+      return getBits(data(), bitsPerRecord, indexOf(p));
     }
 
     unsigned footprint(unsigned capacity) {

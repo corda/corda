@@ -166,6 +166,34 @@ getBit(uintptr_t* map, unsigned i)
     >> bitOf(i);
 }
 
+inline void
+clearBits(uintptr_t* map, unsigned bitsPerRecord, unsigned index)
+{
+  for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
+    clearBit(map, i);
+  }
+}
+
+inline void
+setBits(uintptr_t* map, unsigned bitsPerRecord, int index, unsigned v)
+{
+  for (int i = index + bitsPerRecord - 1; i >= index; --i) {
+    if (v & 1) markBit(map, i); else clearBit(map, i);
+    v >>= 1;
+  }
+}
+
+inline unsigned
+getBits(uintptr_t* map, unsigned bitsPerRecord, unsigned index)
+{
+  unsigned v = 0;
+  for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
+    v <<= 1;
+    v |= getBit(map, i);
+  }
+  return v;
+}
+
 template <class T>
 inline T&
 cast(void* p, unsigned offset)
