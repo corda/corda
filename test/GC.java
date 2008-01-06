@@ -28,6 +28,39 @@ public class GC {
     }
   }
 
+  private static void lifetime1(boolean predicate) {
+    if (predicate) {
+      Object a = null;
+    }
+
+    small();
+  }
+
+  private static void lifetime2(boolean predicate) {
+    if (predicate) {
+      int a = 42;
+    } else {
+      Object a = null;
+    }
+
+    small();
+  }
+
+  private static void lifetime3(boolean predicate) {
+    int i = 2;
+    if (predicate) {
+      Object a = null;
+    } else {
+      Object a = null;
+    }
+
+    do {
+      small();
+      int a = 42;
+      -- i;
+    } while (i >= 0);
+  }
+
   public static void main(String[] args) {
     Object[] array = new Object[1024 * 1024];
     array[0] = new Object();
@@ -45,6 +78,15 @@ public class GC {
     array[0].toString();
     array[1].toString();
     array[2].toString();
+
+    lifetime1(true);
+    lifetime1(false);
+
+    lifetime2(true);
+    lifetime2(false);
+
+    lifetime3(true);
+    lifetime3(false);
   }
 
 }
