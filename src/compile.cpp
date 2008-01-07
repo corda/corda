@@ -16,7 +16,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugTraces = false;
 
@@ -233,15 +233,6 @@ class MyStackWalker: public Processor::StackWalker {
   MyProtector protector;
 };
 
-uintptr_t*
-makeCodeMask(Zone* zone, unsigned length)
-{
-  unsigned size = ceiling(length, BytesPerWord) * BytesPerWord;
-  uintptr_t* mask = static_cast<uintptr_t*>(zone->allocate(size));
-  memset(mask, 0, size);
-  return mask;
-}
-
 int
 localOffset(MyThread* t, int v, object method)
 {
@@ -370,6 +361,55 @@ and_(Compiler* c, Operand* src, Operand* dst)
   }
 }
 
+enum Event {
+  PushEvent,
+  PopEvent,
+  IpEvent,
+  MarkEvent,
+  ClearEvent,
+  TraceEvent
+};
+
+unsigned
+frameSize(MyThread* t, object method)
+{
+  return codeMaxLocals(t, methodCode(t, method))
+    + codeMaxStack(t, methodCode(t, method));
+}
+
+unsigned
+stackMapSizeInWords(MyThread* t, object method)
+{
+  return ceiling(codeMaxStack(t, methodCode(t, method)), BitsPerWord)
+    * BytesPerWord;
+}
+
+unsigned
+frameMapSizeInWords(MyThread* t, object method)
+{
+  return ceiling(frameSize(t, method), BitsPerWord) * BytesPerWord;
+}
+
+uint16_t*
+makeVisitTable(MyThread* t, Zone* zone, object method)
+{
+  unsigned size = codeLength(t, methodCode(t, method)) * 2;
+  uint16_t* table = static_cast<uint16_t*>(zone->allocate(size));
+  memset(table, 0, size);
+  return table;
+}
+
+uintptr_t*
+makeFrameMapTable(MyThread* t, Zone* zone, object method)
+{
+  unsigned size = frameMapSizeInWords(t, method)
+    * codeLength(t, methodCode(t, method))
+    * BytesPerWord;
+  uintptr_t* table = static_cast<uintptr_t*>(zone->allocate(size));
+  memset(table, 0, size);
+  return table;
+}
+
 class Context {
  public:
   class MyProtector: public Thread::Protector {
@@ -393,12 +433,15 @@ class Context {
 
   Context(MyThread* t, object method, uint8_t* indirectCaller):
     t(t),
-    zone(t->m->system, 8 * 1024),
+    zone(t->m->system, 16 * 1024),
     c(makeCompiler(t->m->system, &zone, indirectCaller)),
     method(method),
     objectPool(0),
     traceLog(0),
-    codeMask(makeCodeMask(&zone, codeLength(t, methodCode(t, method)))),
+    visitTable(makeVisitTable(t, &zone, method)),
+    rootTable(makeFrameMapTable(t, &zone, method)),
+    knownTable(makeFrameMapTable(t, &zone, method)),
+    eventLog(t->m->system, 1024),
     protector(this)
   { }
 
@@ -409,7 +452,10 @@ class Context {
     method(0),
     objectPool(0),
     traceLog(0),
-    codeMask(0),
+    visitTable(0),
+    rootTable(0),
+    knownTable(0),
+    eventLog(t->m->system, 0),
     protector(this)
   { }
 
@@ -423,22 +469,28 @@ class Context {
   object method;
   PoolElement* objectPool;
   TraceElement* traceLog;
-  uintptr_t* codeMask;
+  uint16_t* visitTable;
+  uintptr_t* rootTable;
+  uintptr_t* knownTable;
+  Vector eventLog;
   MyProtector protector;
 };
 
 class Frame {
  public:
-  Frame(Context* context, uintptr_t* map):
+  Frame(Context* context, uintptr_t* stackMap):
+    next(0),
     context(context),
     t(context->t),
     c(context->c),
     stack(0),
-    map(map),
+    stackMap(stackMap),
     ip(0),
-    sp(localSize(t, context->method))
+    sp(localSize(t, context->method)),
+    level(0)
   {
-    memset(map, 0, mapSizeInBytes(t, context->method));
+    memset(stackMap, 0,
+           stackMapSizeInWords(t, context->method) * BytesPerWord);
   }
 
   Frame(Frame* f, uintptr_t* map):
@@ -446,11 +498,23 @@ class Frame {
     t(context->t),
     c(context->c),
     stack(f->stack),
-    map(map),
+    stackMap(stackMap),
     ip(f->ip),
-    sp(f->sp)
+    sp(f->sp),
+    level(f->level + 1)
   {
-    memcpy(map, f->map, mapSizeInBytes(context->t, context->method));
+    memcpy(stackMap, f->stackMap,
+           stackMapSizeInWords(t, context->method) * BytesPerWord);
+
+    if (level > 1) {
+      context->eventLog.append(PushEvent);
+    }
+  }
+
+  ~Frame() {
+    if (level > 1 and t->exception == 0) {
+      context->eventLog.append(PopEvent);      
+    }
   }
 
   Operand* append(object o) {
@@ -461,254 +525,266 @@ class Frame {
     return c->absolute(p);
   }
 
-  static unsigned parameterFootprint(Thread* t, object method) {
-    return methodParameterFootprint(t, method);
+  unsigned localSize() {
+    return codeMaxLocals(t, methodCode(t, context->method));
   }
 
-  static unsigned localSize(Thread* t, object method) {
-    return codeMaxLocals(t, methodCode(t, method))
-      - parameterFootprint(t, method);
+  unsigned stackSize() {
+    return codeMaxStack(t, methodCode(t, context->method));
   }
 
-  static unsigned stackSize(Thread* t, object method) {
-    return codeMaxStack(t, methodCode(t, method));
+  unsigned frameSize() {
+    return localSize() + stackSize();
   }
 
-  static unsigned mapSize(Thread* t, object method) {
-    return stackSize(t, method) + localSize(t, method);
+  void mark(int index) {
+    assert(t, index < frameSize());
+
+    context->eventLog.append(MarkEvent);
+    context->eventLog.append2(index);
+
+    int si = index - localSize();
+    if (si >= 0) {
+      markBit(stackMap, si);
+    }
   }
 
-  static unsigned mapSizeInWords(Thread* t, object method) {
-    return ceiling(mapSize(t, method), BitsPerWord);
+  void clear(int index) {
+    assert(t, index < frameSize());
+
+    context->eventLog.append(ClearEvent);
+    context->eventLog.append2(index);
+
+    int si = index - localSize();
+    if (si >= 0) {
+      clearBit(stackMap, si);
+    }
   }
 
-  static unsigned mapSizeInBytes(Thread* t, object method) {
-    return mapSizeInWords(t, method) * BytesPerWord;
-  }
-
-  static unsigned traceSizeInBytes(Thread* t, object method) {
-    return sizeof(TraceElement) + mapSizeInBytes(t, method);
+  unsigned get(int index) {
+    assert(t, index < frameSize());
+    int si = index - localSize();
+    assert(t, si >= 0);
+    return getBit(stackMap, si);
   }
 
   void pushedInt() {
-    assert(t, sp + 1 <= mapSize(t, context->method));
-    assert(t, getBit(map, sp) == 0);
+    assert(t, sp + 1 <= frameSize());
+    assert(t, get(sp) == 0);
     ++ sp;
   }
 
   void pushedObject() {
-    assert(t, sp + 1 <= mapSize(t, context->method));
-    markBit(map, sp++);
+    assert(t, sp + 1 <= frameSize());
+    mark(sp++);
   }
 
   void popped(unsigned count) {
     assert(t, sp >= count);
-    assert(t, sp - count >= localSize(t, context->method));
+    assert(t, sp - count >= localSize());
     while (count) {
-      clearBit(map, -- sp);
+      clear(-- sp);
       -- count;
     }
   }
   
   void poppedInt() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, context->method));
-    assert(t, getBit(map, sp - 1) == 0);
+    assert(t, sp - 1 >= localSize());
+    assert(t, get(sp - 1) == 0);
     -- sp;
   }
   
   void poppedObject() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, context->method));
-    assert(t, getBit(map, sp - 1) != 0);
-    clearBit(map, -- sp);
+    assert(t, sp - 1 >= localSize());
+    assert(t, get(sp - 1) != 0);
+    clear(-- sp);
   }
 
   void storedInt(unsigned index) {
-    if (index >= parameterFootprint(t, context->method)) {
-      assert(t, index - parameterFootprint(t, context->method)
-             < localSize(t, context->method));
-      clearBit(map, index - parameterFootprint(t, context->method));
-    }
+    assert(t, index < localSize());
+    clear(index);
   }
 
   void storedObject(unsigned index) {
-    if (index >= parameterFootprint(t, context->method)) {
-      assert(t, index - parameterFootprint(t, context->method)
-             < localSize(t, context->method));
-      markBit(map, index - parameterFootprint(t, context->method));
-    }
+    assert(t, index < localSize());
+    mark(index);
   }
 
   void dupped() {
-    assert(t, sp + 1 <= mapSize(t, context->method));
-    assert(t, sp - 1 >= localSize(t, context->method));
-    if (getBit(map, sp - 1)) {
-      markBit(map, sp);
+    assert(t, sp + 1 <= frameSize());
+    assert(t, sp - 1 >= localSize());
+    if (get(sp - 1)) {
+      mark(sp);
     }
     ++ sp;
   }
 
   void duppedX1() {
-    assert(t, sp + 1 <= mapSize(t, context->method));
-    assert(t, sp - 2 >= localSize(t, context->method));
+    assert(t, sp + 1 <= frameSize());
+    assert(t, sp - 2 >= localSize());
 
-    unsigned b2 = getBit(map, sp - 2);
-    unsigned b1 = getBit(map, sp - 1);
+    unsigned b2 = get(sp - 2);
+    unsigned b1 = get(sp - 1);
 
     if (b2) {
-      markBit(map, sp - 1);
+      mark(sp - 1);
     } else {
-      clearBit(map, sp - 1);
+      clear(sp - 1);
     }
 
     if (b1) {
-      markBit(map, sp - 2);
-      markBit(map, sp);
+      mark(sp - 2);
+      mark(sp);
     } else {
-      clearBit(map, sp - 2);
+      clear(sp - 2);
     }
 
     ++ sp;
   }
 
   void duppedX2() {
-    assert(t, sp + 1 <= mapSize(t, context->method));
-    assert(t, sp - 3 >= localSize(t, context->method));
+    assert(t, sp + 1 <= frameSize());
+    assert(t, sp - 3 >= localSize());
 
-    unsigned b3 = getBit(map, sp - 3);
-    unsigned b2 = getBit(map, sp - 2);
-    unsigned b1 = getBit(map, sp - 1);
+    unsigned b3 = get(sp - 3);
+    unsigned b2 = get(sp - 2);
+    unsigned b1 = get(sp - 1);
 
     if (b3) {
-      markBit(map, sp - 2);
+      mark(sp - 2);
     } else {
-      clearBit(map, sp - 2);
+      clear(sp - 2);
     }
 
     if (b2) {
-      markBit(map, sp - 1);
+      mark(sp - 1);
     } else {
-      clearBit(map, sp - 1);
+      clear(sp - 1);
     }
 
     if (b1) {
-      markBit(map, sp - 3);
-      markBit(map, sp);
+      mark(sp - 3);
+      mark(sp);
     } else {
-      clearBit(map, sp - 3);
+      clear(sp - 3);
     }
 
     ++ sp;
   }
 
   void dupped2() {
-    assert(t, sp + 2 <= mapSize(t, context->method));
-    assert(t, sp - 2 >= localSize(t, context->method));
+    assert(t, sp + 2 <= frameSize());
+    assert(t, sp - 2 >= localSize());
 
-    unsigned b2 = getBit(map, sp - 2);
-    unsigned b1 = getBit(map, sp - 1);
+    unsigned b2 = get(sp - 2);
+    unsigned b1 = get(sp - 1);
 
     if (b2) {
-      markBit(map, sp);
+      mark(sp);
     }
 
     if (b1) {
-      markBit(map, sp + 1);
+      mark(sp + 1);
     }
 
     sp += 2;
   }
 
   void dupped2X1() {
-    assert(t, sp + 2 <= mapSize(t, context->method));
-    assert(t, sp - 3 >= localSize(t, context->method));
+    assert(t, sp + 2 <= frameSize());
+    assert(t, sp - 3 >= localSize());
 
-    unsigned b3 = getBit(map, sp - 3);
-    unsigned b2 = getBit(map, sp - 2);
-    unsigned b1 = getBit(map, sp - 1);
+    unsigned b3 = get(sp - 3);
+    unsigned b2 = get(sp - 2);
+    unsigned b1 = get(sp - 1);
 
     if (b3) {
-      markBit(map, sp - 1);
+      mark(sp - 1);
     } else {
-      clearBit(map, sp - 1);
+      clear(sp - 1);
     }
 
     if (b2) {
-      markBit(map, sp - 3);
-      markBit(map, sp);
+      mark(sp - 3);
+      mark(sp);
     } else {
-      clearBit(map, sp - 3);
+      clear(sp - 3);
     }
 
     if (b1) {
-      markBit(map, sp - 2);
-      markBit(map, sp + 1);
+      mark(sp - 2);
+      mark(sp + 1);
     } else {
-      clearBit(map, sp - 2);
+      clear(sp - 2);
     }
 
     sp += 2;
   }
 
   void dupped2X2() {
-    assert(t, sp + 2 <= mapSize(t, context->method));
-    assert(t, sp - 4 >= localSize(t, context->method));
+    assert(t, sp + 2 <= frameSize());
+    assert(t, sp - 4 >= localSize());
 
-    unsigned b4 = getBit(map, sp - 4);
-    unsigned b3 = getBit(map, sp - 3);
-    unsigned b2 = getBit(map, sp - 2);
-    unsigned b1 = getBit(map, sp - 1);
+    unsigned b4 = get(sp - 4);
+    unsigned b3 = get(sp - 3);
+    unsigned b2 = get(sp - 2);
+    unsigned b1 = get(sp - 1);
 
     if (b4) {
-      markBit(map, sp - 2);
+      mark(sp - 2);
     } else {
-      clearBit(map, sp - 2);
+      clear(sp - 2);
     }
 
     if (b3) {
-      markBit(map, sp - 1);
+      mark(sp - 1);
     } else {
-      clearBit(map, sp - 1);
+      clear(sp - 1);
     }
 
     if (b2) {
-      markBit(map, sp - 4);
-      markBit(map, sp);
+      mark(sp - 4);
+      mark(sp);
     } else {
-      clearBit(map, sp - 4);
+      clear(sp - 4);
     }
 
     if (b1) {
-      markBit(map, sp - 3);
-      markBit(map, sp + 1);
+      mark(sp - 3);
+      mark(sp + 1);
     } else {
-      clearBit(map, sp - 3);
+      clear(sp - 3);
     }
 
     sp += 2;
   }
 
   void swapped() {
-    assert(t, sp - 1 >= localSize(t, context->method));
-    assert(t, sp - 2 >= localSize(t, context->method));
+    assert(t, sp - 2 >= 0);
 
-    bool savedBit = getBit(map, sp - 1);
-    if (getBit(map, sp - 2)) {
-      markBit(map, sp - 1);
+    bool savedBit = get(sp - 1);
+    if (get(sp - 2)) {
+      mark(sp - 1);
     } else {
-      clearBit(map, sp - 1);
+      clear(sp - 1);
     }
 
     if (savedBit) {
-      markBit(map, sp - 2);
+      mark(sp - 2);
     } else {
-      clearBit(map, sp - 2);
+      clear(sp - 2);
     }
   }
 
   Operand* machineIp(unsigned logicalIp) {
     return c->promiseConstant(c->machineIp(logicalIp));
+  }
+
+  void visitLogicalIp(unsigned ip) {
+    context->eventLog.append(IpEvent);
+    context->eventLog.append16(ip);
   }
 
   void startLogicalIp(unsigned ip) {
@@ -786,23 +862,23 @@ class Frame {
 
   Operand* topInt() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, context->method));
-    assert(t, getBit(map, sp - 1) == 0);
+    assert(sp - 1 >= localSize());
+    assert(t, get(sp - 1) == 0);
     return c->stack(stack, 0);
   }
 
   Operand* topLong() {
     assert(t, sp >= 2);
-    assert(t, sp - 2 >= localSize(t, context->method));
-    assert(t, getBit(map, sp - 1) == 0);
-    assert(t, getBit(map, sp - 2) == 0);
+    assert(sp - 2 >= localSize());
+    assert(t, get(sp - 1) == 0);
+    assert(t, get(sp - 2) == 0);
     return c->stack(stack, 0);
   }
 
   Operand* topObject() {
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, context->method));
-    assert(t, getBit(map, sp - 1) != 0);
+    assert(sp - 1 >= localSize());
+    assert(t, get(sp - 1) != 0);
     return c->stack(stack, 0);
   }
 
@@ -856,27 +932,18 @@ class Frame {
   }
 
   void loadInt(unsigned index) {
-    assert(t, index < codeMaxLocals(t, methodCode(t, context->method)));
-    assert(t, index < parameterFootprint(t, context->method)
-           or getBit(map, index - parameterFootprint(t, context->method))
-           == 0);
+    assert(t, index < localSize());
     pushInt(c->memory(c->base(), localOffset(t, index, context->method)));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>
-           (codeMaxLocals(t, methodCode(t, context->method)) - 1));
-    assert(t, index < parameterFootprint(t, context->method)
-           or getBit(map, index - parameterFootprint(t, context->method))
-           == 0);
-    assert(t, index < parameterFootprint(t, context->method)
-           or getBit(map, index + 1 - parameterFootprint(t, context->method))
-           == 0);
+           (localSize() - 1));
     pushLong(c->memory(c->base(), localOffset(t, index + 1, context->method)));
   }
 
   void loadObject(unsigned index) {
-    assert(t, index < codeMaxLocals(t, methodCode(t, context->method)));
+    assert(t, index < localSize());
     pushObject(c->memory(c->base(), localOffset(t, index, context->method)));
   }
 
@@ -901,23 +968,14 @@ class Frame {
       (c, stack, c->memory(c->base(), localOffset(t, index, context->method)));
 
     assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize(t, context->method));
-    if (getBit(map, sp - 1)) {
+    assert(t, sp - 1 >= localSize());
+    if (get(sp - 1)) {
       storedObject(index);
     } else {
       storedInt(index);
     }
 
-    clearBit(map, -- sp);
-  }
-
-  void increment(unsigned index, int count) {
-    assert(t, index < codeMaxLocals(t, methodCode(t, context->method)));
-    assert(t, index < parameterFootprint(t, context->method)
-           or getBit(map, index - parameterFootprint(t, context->method))
-           == 0);
-    c->add4(c->constant(count),
-            c->memory(c->base(), localOffset(t, index, context->method)));
+    popped(1);
   }
 
   void dup() {
@@ -985,13 +1043,14 @@ class Frame {
   }
 
   TraceElement* trace(object target, bool virtualCall) {
-    unsigned mapSize = mapSizeInWords(t, context->method);
+    unsigned mapSize = frameMapSizeInWords(t, context->method);
 
     TraceElement* e = context->traceLog = new
       (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
       TraceElement(context, target, virtualCall, context->traceLog);
 
-    memcpy(e->map, map, mapSize * BytesPerWord);
+    context->eventLog.append(TraceEvent);
+    context->eventLog.appendAddress(e);
 
     return e;
   }
@@ -1000,9 +1059,10 @@ class Frame {
   MyThread* t;
   Compiler* c;
   Stack* stack;
-  uintptr_t* map;
+  uintptr_t* stackMap;
   unsigned ip;
   unsigned sp;
+  unsigned level;
 };
 
 void
@@ -1527,7 +1587,7 @@ handleExit(MyThread* t, Frame* frame)
 void
 compile(MyThread* t, Frame* initialFrame, unsigned ip)
 {
-  uintptr_t map[Frame::mapSizeInWords(t, initialFrame->context->method)];
+  uintptr_t stackMap[stackMapSizeInWords(t, initialFrame->context->method)];
   Frame myFrame(initialFrame, map);
   Frame* frame = &myFrame;
   Compiler* c = frame->c;
@@ -1537,14 +1597,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
   PROTECT(t, code);
     
   while (ip < codeLength(t, code)) {
-    if (getBit(context->codeMask, ip)) {
+    frame->visitLogicalIp(ip);
+
+    if (context->visitTable[ip] ++) {
       // we've already visited this part of the code
       return;
     }
 
-    markBit(context->codeMask, ip);
-
     frame->startLogicalIp(ip);
+
+//     fprintf(stderr, "ip: %d map: %ld\n", ip, *(frame->map));
 
     unsigned instruction = codeBody(t, code, ip++);
 
@@ -2447,7 +2509,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint8_t index = codeBody(t, code, ip++);
       int8_t count = codeBody(t, code, ip++);
 
-      frame->increment(index, count);
+      c->add4(c->constant(count),
+              c->memory(c->base(), localOffset(t, index, context->method)));
     } break;
 
     case iload:
@@ -2869,9 +2932,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         if (UNLIKELY(t->exception)) return;
       }
 
-      compile(t, frame, defaultIp);
-      if (UNLIKELY(t->exception)) return;
-    } return;
+      ip = defaultIp;
+    } break;
 
     case lor: {
       Operand* a = frame->popLong();
@@ -3268,9 +3330,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         if (UNLIKELY(t->exception)) return;
       }
 
-      compile(t, frame, defaultIp);
-      if (UNLIKELY(t->exception)) return;
-    } return;
+      ip = defaultIp;
+    } break;
 
     case wide: {
       switch (codeBody(t, code, ip++)) {
@@ -3286,7 +3347,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         uint16_t index = codeReadInt16(t, code, ip);
         uint16_t count = codeReadInt16(t, code, ip);
 
-        frame->increment(index, count);
+        c->add4(c->constant(count),
+                c->memory(c->base(), localOffset(t, index, context->method)));
       } break;
 
       case iload: {
@@ -3331,6 +3393,223 @@ logCompile(const void* code, unsigned size, const char* class_,
   }
 }
 
+void
+updateExceptionHandlerTable(MyThread* t, Compiler* c, object code)
+{
+  object oldTable = codeExceptionHandlerTable(t, code);
+  if (oldTable) {
+    PROTECT(t, code);
+    PROTECT(t, oldTable);
+
+    unsigned length = exceptionHandlerTableLength(t, oldTable);
+    object newTable = makeExceptionHandlerTable(t, length, false);
+    for (unsigned i = 0; i < length; ++i) {
+      ExceptionHandler* oldHandler = exceptionHandlerTableBody
+        (t, oldTable, i);
+      ExceptionHandler* newHandler = exceptionHandlerTableBody
+        (t, newTable, i);
+
+      exceptionHandlerStart(newHandler)
+        = c->machineIp(exceptionHandlerStart(oldHandler))->value(c)
+        - reinterpret_cast<intptr_t>(start);
+
+      exceptionHandlerEnd(newHandler)
+        = c->machineIp(exceptionHandlerEnd(oldHandler))->value(c)
+        - reinterpret_cast<intptr_t>(start);
+
+      exceptionHandlerIp(newHandler)
+        = c->machineIp(exceptionHandlerIp(oldHandler))->value(c)
+        - reinterpret_cast<intptr_t>(start);
+
+      exceptionHandlerCatchType(newHandler)
+        = exceptionHandlerCatchType(oldHandler);
+    }
+
+    set(t, code, CodeExceptionHandlerTable, newTable);
+  }
+}
+
+void
+updateLineNumberTable(MyThread* t, Compiler* c, object code)
+{
+  object oldTable = codeLineNumberTable(t, code);
+  if (oldTable) {
+    PROTECT(t, code);
+    PROTECT(t, oldTable);
+
+    unsigned length = lineNumberTableLength(t, oldTable);
+    object newTable = makeLineNumberTable(t, length, false);
+    for (unsigned i = 0; i < length; ++i) {
+      LineNumber* oldLine = lineNumberTableBody(t, oldTable, i);
+      LineNumber* newLine = lineNumberTableBody(t, newTable, i);
+
+      lineNumberIp(newLine)
+        = c->machineIp(lineNumberIp(oldLine))->value(c)
+        - reinterpret_cast<intptr_t>(start);
+
+      lineNumberLine(newLine) = lineNumberLine(oldLine);
+    }
+
+    set(t, code, CodeLineNumberTable, newTable);
+  }
+}
+
+void
+calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
+                   uintptr_t* originalKnown)
+{
+  unsigned mapSize = frameMapSizeInWords(t, context->method);
+
+  uintptr_t roots[mapSize];
+  memcpy(roots, originalRoots, mapSize * BytesPerWord);
+
+  uintptr_t known[mapSize];
+  memcpy(known, originalKnown, mapSize * BytesPerWord);
+
+  int32_t ip = -1;
+
+  for (unsigned ei = 0; ei < context->eventLog.length();) {
+    Event e = static_cast<Event>(context->eventLog.get(ei++));
+    switch (e) {
+    case PushEvent: {
+      calculateJunctions(t, context, roots, known);
+    } break;
+
+    case PopEvent:
+      return;
+
+    case IpEvent: {
+      ip = context->eventLog.get2(ei);
+
+      if (context->visitTable[ip] > 1) {
+        uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
+        uintptr_t* tableKnown = context->knownTable + (ip * mapSize);
+        
+        for (unsigned wi = 0; wi < mapSize; ++wi) {
+          tableRoots[wi] &= ~(known[wi] & ~roots[wi]);
+          tableKnown[wi] |= known[wi];
+        }
+
+        memset(roots, 0, mapSize * BytesPerWord);
+        memset(known, 0, mapSize * BytesPerWord);
+      }
+
+      ei += 2;
+    } break;
+
+    case MarkEvent: {
+      assert(t, ip >= 0);
+
+      unsigned i = context->eventLog.get2(ei);
+      markBit(roots, i);
+      markBit(known, i);
+
+      ei += 2;
+    } break;
+
+    case ClearEvent: {
+      assert(t, ip >= 0);
+
+      unsigned i = context->eventLog.get2(ei);
+      clearBit(roots, i);
+      markBit(known, i);
+
+      ei += 2;
+    } break;
+
+    case TraceEvent: {
+      ei += BytesPerWord;
+    } break;
+
+    default: abort(t);
+    }
+  }
+}
+
+void
+updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots)
+{
+  unsigned mapSize = frameMapSizeInWords(t, context->method);
+
+  uintptr_t roots[mapSize];
+  memcpy(roots, originalRoots, mapSize * BytesPerWord);
+
+  int32_t ip = -1;
+
+  for (unsigned ei = 0; ei < context->eventLog.length();) {
+    Event e = static_cast<Event>(context->eventLog.get(ei++));
+    switch (e) {
+    case PushEvent: {
+      updateTraceElements(t, context, roots);
+    } break;
+
+    case PopEvent:
+      return;
+
+    case IpEvent: {
+      ip = context->eventLog.get2(ei);
+
+      if (context->visitTable[ip] > 1) {
+        uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
+        uintptr_t* tableKnown = context->knownTable + (ip * mapSize);
+        
+        for (unsigned wi = 0; wi < mapSize; ++wi) {
+          roots[wi] &= ~(tableKnown[wi] & ~tableRoots[wi]);
+        }
+      }
+
+      ei += 2;
+    } break;
+
+    case MarkEvent: {
+      assert(t, ip >= 0);
+
+      unsigned i = context->eventLog.get2(ei);
+      markBit(roots, i);
+
+      ei += 2;
+    } break;
+
+    case ClearEvent: {
+      assert(t, ip >= 0);
+
+      unsigned i = context->eventLog.get2(ei);
+      clearBit(roots, i);
+
+      ei += 2;
+    } break;
+
+    case TraceEvent: {
+      TraceElement* te; context->eventLog.get(ei, &te, BytesPerWord);
+      memcpy(te->map, roots, singleMapSize * BytesPerWord);
+
+      ei += BytesPerWord;
+    } break;
+
+    default: abort(t);
+    }
+  }
+}
+
+void
+calculateFrameMaps(MyThread* t, Context* context)
+{
+  unsigned mapSize = frameMapSizeInWords(t, context->method);
+
+  uintptr_t roots[mapSize];
+  memse(roots, 0, mapSize * BytesPerWord);
+
+  uintptr_t known[mapSize];
+  memset(known, 0xFF, mapSize * BytesPerWord);
+
+  // first pass: calculate reachable roots at instructions with more
+  // than one predecessor.
+  calculateJunctions(t, context, roots, known);
+
+  // second pass: update trace elements.
+  updateTraceElements(t, context, root);
+}
+
 object
 finish(MyThread* t, Context* context, const char* name)
 {
@@ -3350,7 +3629,7 @@ finish(MyThread* t, Context* context, const char* name)
   if (context->method) {
     PROTECT(t, result);
 
-    unsigned mapSize = Frame::mapSizeInWords(t, context->method);
+    unsigned mapSize = frameMapSizeInWords(t, context->method);
 
     for (TraceElement* p = context->traceLog; p; p = p->next) {
       object node = makeTraceNode
@@ -3373,63 +3652,9 @@ finish(MyThread* t, Context* context, const char* name)
       set(t, result, SingletonBody + offset, p->value);
     }
 
-    object code = methodCode(t, context->method);
-    PROTECT(t, code);
+    updateExceptionHandlerTable(t, c, methodCode(t, context->method));
 
-    {
-      object oldTable = codeExceptionHandlerTable(t, code);
-      if (oldTable) {
-        PROTECT(t, oldTable);
-
-        unsigned length = exceptionHandlerTableLength(t, oldTable);
-        object newTable = makeExceptionHandlerTable(t, length, false);
-        for (unsigned i = 0; i < length; ++i) {
-          ExceptionHandler* oldHandler = exceptionHandlerTableBody
-            (t, oldTable, i);
-          ExceptionHandler* newHandler = exceptionHandlerTableBody
-            (t, newTable, i);
-
-          exceptionHandlerStart(newHandler)
-            = c->machineIp(exceptionHandlerStart(oldHandler))->value(c)
-            - reinterpret_cast<intptr_t>(start);
-
-          exceptionHandlerEnd(newHandler)
-            = c->machineIp(exceptionHandlerEnd(oldHandler))->value(c)
-            - reinterpret_cast<intptr_t>(start);
-
-          exceptionHandlerIp(newHandler)
-            = c->machineIp(exceptionHandlerIp(oldHandler))->value(c)
-            - reinterpret_cast<intptr_t>(start);
-
-          exceptionHandlerCatchType(newHandler)
-            = exceptionHandlerCatchType(oldHandler);
-        }
-
-        set(t, code, CodeExceptionHandlerTable, newTable);
-      }
-    }
-
-    {
-      object oldTable = codeLineNumberTable(t, code);
-      if (oldTable) {
-        PROTECT(t, oldTable);
-
-        unsigned length = lineNumberTableLength(t, oldTable);
-        object newTable = makeLineNumberTable(t, length, false);
-        for (unsigned i = 0; i < length; ++i) {
-          LineNumber* oldLine = lineNumberTableBody(t, oldTable, i);
-          LineNumber* newLine = lineNumberTableBody(t, newTable, i);
-
-          lineNumberIp(newLine)
-            = c->machineIp(lineNumberIp(oldLine))->value(c)
-            - reinterpret_cast<intptr_t>(start);
-
-          lineNumberLine(newLine) = lineNumberLine(oldLine);
-        }
-
-        set(t, code, CodeLineNumberTable, newTable);
-      }
-    }
+    updateLineNumberTable(t, c, methodCode(t, context->method));
 
     if (Verbose) {
       logCompile
@@ -3449,7 +3674,7 @@ finish(MyThread* t, Context* context, const char* name)
         strcmp
         (reinterpret_cast<const char*>
          (&byteArrayBody(t, methodName(t, context->method), 0)),
-         "syncStatic") == 0)
+         "main") == 0)
     {
       asm("int3");
     }
@@ -3476,13 +3701,38 @@ compile(MyThread* t, Context* context)
   unsigned locals = codeMaxLocals(t, code);
   c->reserve(locals - footprint);
 
-  uintptr_t map[Frame::mapSizeInWords(t, context->method)];
-  Frame frame(context, map);
+  uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
+  Frame frame(context, stackMap);
 
   handleEntrance(t, &frame);
 
+  unsigned index = 0;
+  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+    frame.mark(index++);    
+  }
+
+  for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    switch (*it.next()) {
+    case 'L':
+    case '[':
+      frame.mark(index++);
+      break;
+      
+    case 'J':
+    case 'D':
+      index += 2;
+      break;
+
+    default:
+      ++ index;
+      break;
+    }
+  }
+
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
+
+  calculateFrameMaps(t, context);
 
   object eht = codeExceptionHandlerTable(t, methodCode(t, context->method));
   if (eht) {
@@ -3490,15 +3740,29 @@ compile(MyThread* t, Context* context)
 
     for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
       ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+      unsigned start = exceptionHandlerStart(eh);
 
-      assert(t, getBit(context->codeMask, exceptionHandlerStart(eh)));
+      assert(t, context->visitTable[start]);
         
-      uintptr_t map[Frame::mapSizeInWords(t, context->method)];
+      uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
       Frame frame2(&frame, map);
       frame2.pushObject();
 
+      uintptr_t* roots = context->rootTable + (start * mapSize);
+
+      for (unsigned i = 0;
+           i < codeMaxLocals(t, methodCode(t, context->method));
+           ++ i)
+      {
+        if (getBit(roots, i)) {
+          frame2.mark(i);
+        }
+      }
+
       compile(t, &frame2, exceptionHandlerIp(eh));
       if (UNLIKELY(t->exception)) return 0;
+
+      calculateFrameMaps(t, context);
     }
   }
 
@@ -3714,53 +3978,29 @@ invokeNative(MyThread* t)
 }
 
 void
-visitParameters(MyThread* t, Heap::Visitor* v, void* base, object method)
-{
-  const char* spec = reinterpret_cast<const char*>
-    (&byteArrayBody(t, methodSpec(t, method), 0));
-
-  unsigned index = 0;
-  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-    v->visit(localObject(t, base, method, index++));        
-  }
-
-  for (MethodSpecIterator it(t, spec); it.hasNext();) {
-    switch (*it.next()) {
-    case 'L':
-    case '[':
-      v->visit(localObject(t, base, method, index++));
-      break;
-      
-    case 'J':
-    case 'D':
-      index += 2;
-      break;
-
-    default:
-      ++ index;
-      break;
-    }
-  }
-
-  assert(t, index == methodParameterFootprint(t, method));
-}
-
-void
-visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node)
+visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node,
+                    void* calleeBase, unsigned argumentFootprint)
 {
   object method = traceNodeMethod(t, node);
 
-  unsigned parameterFootprint = methodParameterFootprint(t, method);
-  unsigned count = codeMaxStack(t, methodCode(t, method))
-    + codeMaxLocals(t, methodCode(t, method))
-    - parameterFootprint;
+  unsigned count;
+  if (calleeBase) {
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    unsigned height = static_cast<uintptr_t*>(base)
+      - static_cast<uintptr_t*>(calleeBase) - 1;
+
+    count = parameterFootprint + height - argumentFootprint;
+  } else {
+    count = codeMaxStack(t, methodCode(t, method))
+      + codeMaxLocals(t, methodCode(t, method))
+  }
       
   if (count) {
     uintptr_t* map = &traceNodeMap(t, node, 0);
 
     for (unsigned i = 0; i < count; ++i) {
       if (getBit(map, i)) {
-        v->visit(localObject(t, base, method, i + parameterFootprint));
+        v->visit(localObject(t, base, method, i));
       }
     }
   }
@@ -3776,23 +4016,22 @@ visitStack(MyThread* t, Heap::Visitor* v)
     ip = *stack;
   }
 
+#error "todo: don't visit arguments twice"
+
   MyThread::CallTrace* trace = t->trace;
+  void* calleeBase = 0;
+  unsigned argumentFootprint = 0;
 
   while (stack) {
     object node = findTraceNode(t, ip);
     if (node) {
       PROTECT(t, node);
+      
+      visitStackAndLocals(t, v, base, node, calleeBase, argumentFootprint);
 
-      // we only need to visit the parameters of this method if the
-      // caller is native.  Otherwise, the caller owns them.
-      object next = findTraceNode(t, static_cast<void**>(base)[1]);
-      object method = traceNodeMethod(t, node);
-      
-      if (next == 0) {
-        visitParameters(t, v, base, method);
-      }
-      
-      visitStackAndLocals(t, v, base, node);
+      calleeBase = base;
+      argumentFootprint = methodParameterFootprint
+        (t, traceNodeMethod(t, node));
 
       stack = static_cast<void**>(base) + 1;
       if (stack) {
@@ -3800,6 +4039,8 @@ visitStack(MyThread* t, Heap::Visitor* v)
       }
       base = *static_cast<void**>(base);
     } else if (trace) {
+      calleeBase = 0;
+      argumentFootprint = 0;
       base = trace->base;
       stack = static_cast<void**>(trace->stack);
       if (stack) {
