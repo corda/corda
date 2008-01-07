@@ -47,6 +47,16 @@ public class GC {
   }
 
   private static void stackMap3(boolean predicate) {
+    if (predicate) {
+      Object a = null;
+    } else {
+      int a = 42;
+    }
+
+    System.gc();
+  }
+
+  private static void stackMap4(boolean predicate) {
     int i = 2;
     if (predicate) {
       Object a = null;
@@ -59,6 +69,22 @@ public class GC {
       int a = 42;
       -- i;
     } while (i >= 0);
+  }
+
+  private static void noop() { }
+
+  private static void stackMap5(boolean predicate) {
+    if (predicate) {
+      noop();
+    }
+
+    if (predicate) {
+      noop();
+    } else {
+      Object a = null;
+    }
+
+    System.gc();
   }
 
   public static void main(String[] args) {
@@ -87,6 +113,12 @@ public class GC {
 
     stackMap3(true);
     stackMap3(false);
+
+    stackMap4(true);
+    stackMap4(false);
+
+    stackMap5(true);
+    stackMap5(false);
   }
 
 }

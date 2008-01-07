@@ -3491,24 +3491,27 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
     case IpEvent: {
       ip = context->eventLog.get2(ei);
 
+      if (DebugFrameMaps) {
+        fprintf(stderr, "      roots at ip %3d: ", ip);
+        printSet(*roots);
+        fprintf(stderr, "\n");
+
+        fprintf(stderr, "      known at ip %3d: ", ip);
+        printSet(*known);
+        fprintf(stderr, "\n");
+      }
+
       if (context->visitTable[ip] > 1) {
         uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
         uintptr_t* tableKnown = context->knownTable + (ip * mapSize);
         
-        if (DebugFrameMaps) {
-          fprintf(stderr, "      roots at ip %3d: ", ip);
-          printSet(*roots);
-          fprintf(stderr, "\n");
-
-          fprintf(stderr, "      known at ip %3d: ", ip);
-          printSet(*known);
-          fprintf(stderr, "\n");
-        }
-
         for (unsigned wi = 0; wi < mapSize; ++wi) {
           tableRoots[wi] &= ~(known[wi] & ~roots[wi]);
           tableRoots[wi] |= known[wi] & roots[wi] & ~tableKnown[wi];
           tableKnown[wi] |= known[wi];
+
+          roots[wi] = 0;
+          known[wi] = tableKnown[wi] & ~tableRoots[wi];
         }
 
         if (DebugFrameMaps) {
@@ -3520,9 +3523,6 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
           printSet(*tableKnown);
           fprintf(stderr, "\n");
         }
-
-        memset(roots, 0, mapSize * BytesPerWord);
-        memset(known, 0, mapSize * BytesPerWord);
       }
 
       ei += 2;
@@ -3579,6 +3579,12 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots,
     case IpEvent: {
       ip = context->eventLog.get2(ei);
 
+      if (DebugFrameMaps) {
+        fprintf(stderr, "        map at ip %3d: ", ip);
+        printSet(*roots);
+        fprintf(stderr, "\n");
+      }
+
       if (context->visitTable[ip] > 1) {
         uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
         uintptr_t* tableKnown = context->knownTable + (ip * mapSize);
@@ -3608,12 +3614,6 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots,
     case TraceEvent: {
       TraceElement* te; context->eventLog.get(ei, &te, BytesPerWord);
       memcpy(te->map, roots, mapSize * BytesPerWord);
-
-      if (DebugFrameMaps) {
-        fprintf(stderr, "        map at ip %3d: ", ip);
-        printSet(*roots);
-        fprintf(stderr, "\n");
-      }
 
       ei += BytesPerWord;
     } break;
