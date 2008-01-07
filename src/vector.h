@@ -98,6 +98,26 @@ class Vector {
     append(&v, BytesPerWord);
   }
 
+  unsigned get(unsigned offset) {
+    uint8_t v; get(offset, &v, 1);
+    return v;
+  }
+
+  unsigned get2(unsigned offset) {
+    uint16_t v; get(offset, &v, 2);
+    return v;
+  }
+
+  unsigned get4(unsigned offset) {
+    uint32_t v; get(offset, &v, 4);
+    return v;
+  }
+
+  uintptr_t getAddress(unsigned offset) {
+    uintptr_t v; get(offset, &v, BytesPerWord);
+    return v;
+  }
+
   unsigned length() {
     return position;
   }

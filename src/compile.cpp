@@ -19,6 +19,7 @@ namespace {
 const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugTraces = false;
+const bool DebugFrameMaps = false;
 
 class MyThread: public Thread {
  public:
@@ -479,21 +480,20 @@ class Context {
 class Frame {
  public:
   Frame(Context* context, uintptr_t* stackMap):
-    next(0),
     context(context),
     t(context->t),
     c(context->c),
     stack(0),
     stackMap(stackMap),
     ip(0),
-    sp(localSize(t, context->method)),
+    sp(localSize()),
     level(0)
   {
     memset(stackMap, 0,
            stackMapSizeInWords(t, context->method) * BytesPerWord);
   }
 
-  Frame(Frame* f, uintptr_t* map):
+  Frame(Frame* f, uintptr_t* stackMap):
     context(f->context),
     t(context->t),
     c(context->c),
@@ -537,7 +537,7 @@ class Frame {
     return localSize() + stackSize();
   }
 
-  void mark(int index) {
+  void mark(unsigned index) {
     assert(t, index < frameSize());
 
     context->eventLog.append(MarkEvent);
@@ -549,7 +549,7 @@ class Frame {
     }
   }
 
-  void clear(int index) {
+  void clear(unsigned index) {
     assert(t, index < frameSize());
 
     context->eventLog.append(ClearEvent);
@@ -561,7 +561,7 @@ class Frame {
     }
   }
 
-  unsigned get(int index) {
+  unsigned get(unsigned index) {
     assert(t, index < frameSize());
     int si = index - localSize();
     assert(t, si >= 0);
@@ -762,7 +762,7 @@ class Frame {
   }
 
   void swapped() {
-    assert(t, sp - 2 >= 0);
+    assert(t, sp - 2 >= localSize());
 
     bool savedBit = get(sp - 1);
     if (get(sp - 2)) {
@@ -784,7 +784,7 @@ class Frame {
 
   void visitLogicalIp(unsigned ip) {
     context->eventLog.append(IpEvent);
-    context->eventLog.append16(ip);
+    context->eventLog.append2(ip);
   }
 
   void startLogicalIp(unsigned ip) {
@@ -862,14 +862,14 @@ class Frame {
 
   Operand* topInt() {
     assert(t, sp >= 1);
-    assert(sp - 1 >= localSize());
+    assert(t, sp - 1 >= localSize());
     assert(t, get(sp - 1) == 0);
     return c->stack(stack, 0);
   }
 
   Operand* topLong() {
     assert(t, sp >= 2);
-    assert(sp - 2 >= localSize());
+    assert(t, sp - 2 >= localSize());
     assert(t, get(sp - 1) == 0);
     assert(t, get(sp - 2) == 0);
     return c->stack(stack, 0);
@@ -877,7 +877,7 @@ class Frame {
 
   Operand* topObject() {
     assert(t, sp >= 1);
-    assert(sp - 1 >= localSize());
+    assert(t, sp - 1 >= localSize());
     assert(t, get(sp - 1) != 0);
     return c->stack(stack, 0);
   }
@@ -1588,7 +1588,7 @@ void
 compile(MyThread* t, Frame* initialFrame, unsigned ip)
 {
   uintptr_t stackMap[stackMapSizeInWords(t, initialFrame->context->method)];
-  Frame myFrame(initialFrame, map);
+  Frame myFrame(initialFrame, stackMap);
   Frame* frame = &myFrame;
   Compiler* c = frame->c;
   Context* context = frame->context;
@@ -3394,7 +3394,8 @@ logCompile(const void* code, unsigned size, const char* class_,
 }
 
 void
-updateExceptionHandlerTable(MyThread* t, Compiler* c, object code)
+updateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
+                            intptr_t start)
 {
   object oldTable = codeExceptionHandlerTable(t, code);
   if (oldTable) {
@@ -3410,16 +3411,13 @@ updateExceptionHandlerTable(MyThread* t, Compiler* c, object code)
         (t, newTable, i);
 
       exceptionHandlerStart(newHandler)
-        = c->machineIp(exceptionHandlerStart(oldHandler))->value(c)
-        - reinterpret_cast<intptr_t>(start);
+        = c->machineIp(exceptionHandlerStart(oldHandler))->value(c) - start;
 
       exceptionHandlerEnd(newHandler)
-        = c->machineIp(exceptionHandlerEnd(oldHandler))->value(c)
-        - reinterpret_cast<intptr_t>(start);
+        = c->machineIp(exceptionHandlerEnd(oldHandler))->value(c) - start;
 
       exceptionHandlerIp(newHandler)
-        = c->machineIp(exceptionHandlerIp(oldHandler))->value(c)
-        - reinterpret_cast<intptr_t>(start);
+        = c->machineIp(exceptionHandlerIp(oldHandler))->value(c) - start;
 
       exceptionHandlerCatchType(newHandler)
         = exceptionHandlerCatchType(oldHandler);
@@ -3430,7 +3428,8 @@ updateExceptionHandlerTable(MyThread* t, Compiler* c, object code)
 }
 
 void
-updateLineNumberTable(MyThread* t, Compiler* c, object code)
+updateLineNumberTable(MyThread* t, Compiler* c, object code,
+                      intptr_t start)
 {
   object oldTable = codeLineNumberTable(t, code);
   if (oldTable) {
@@ -3444,8 +3443,7 @@ updateLineNumberTable(MyThread* t, Compiler* c, object code)
       LineNumber* newLine = lineNumberTableBody(t, newTable, i);
 
       lineNumberIp(newLine)
-        = c->machineIp(lineNumberIp(oldLine))->value(c)
-        - reinterpret_cast<intptr_t>(start);
+        = c->machineIp(lineNumberIp(oldLine))->value(c) - start;
 
       lineNumberLine(newLine) = lineNumberLine(oldLine);
     }
@@ -3455,8 +3453,20 @@ updateLineNumberTable(MyThread* t, Compiler* c, object code)
 }
 
 void
+printSet(uintptr_t m)
+{
+  for (unsigned i = 0; i < 16; ++i) {
+    if ((m >> i) & 1) {
+      fprintf(stderr, "1");
+    } else {
+      fprintf(stderr, "_");
+    }
+  }
+}
+
+unsigned
 calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
-                   uintptr_t* originalKnown)
+                   uintptr_t* originalKnown, unsigned ei)
 {
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
@@ -3468,15 +3478,15 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
 
   int32_t ip = -1;
 
-  for (unsigned ei = 0; ei < context->eventLog.length();) {
+  while (ei < context->eventLog.length()) {
     Event e = static_cast<Event>(context->eventLog.get(ei++));
     switch (e) {
     case PushEvent: {
-      calculateJunctions(t, context, roots, known);
+      ei = calculateJunctions(t, context, roots, known, ei);
     } break;
 
     case PopEvent:
-      return;
+      return ei;
 
     case IpEvent: {
       ip = context->eventLog.get2(ei);
@@ -3485,9 +3495,30 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
         uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
         uintptr_t* tableKnown = context->knownTable + (ip * mapSize);
         
+        if (DebugFrameMaps) {
+          fprintf(stderr, "      roots at ip %3d: ", ip);
+          printSet(*roots);
+          fprintf(stderr, "\n");
+
+          fprintf(stderr, "      known at ip %3d: ", ip);
+          printSet(*known);
+          fprintf(stderr, "\n");
+        }
+
         for (unsigned wi = 0; wi < mapSize; ++wi) {
           tableRoots[wi] &= ~(known[wi] & ~roots[wi]);
+          tableRoots[wi] |= known[wi] & roots[wi] & ~tableKnown[wi];
           tableKnown[wi] |= known[wi];
+        }
+
+        if (DebugFrameMaps) {
+          fprintf(stderr, "table roots at ip %3d: ", ip);
+          printSet(*tableRoots);
+          fprintf(stderr, "\n");
+
+          fprintf(stderr, "table known at ip %3d: ", ip);
+          printSet(*tableKnown);
+          fprintf(stderr, "\n");
         }
 
         memset(roots, 0, mapSize * BytesPerWord);
@@ -3498,8 +3529,6 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
     } break;
 
     case MarkEvent: {
-      assert(t, ip >= 0);
-
       unsigned i = context->eventLog.get2(ei);
       markBit(roots, i);
       markBit(known, i);
@@ -3508,8 +3537,6 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
     } break;
 
     case ClearEvent: {
-      assert(t, ip >= 0);
-
       unsigned i = context->eventLog.get2(ei);
       clearBit(roots, i);
       markBit(known, i);
@@ -3524,10 +3551,13 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
     default: abort(t);
     }
   }
+
+  return ei;
 }
 
-void
-updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots)
+unsigned
+updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots,
+                    unsigned ei)
 {
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
@@ -3536,15 +3566,15 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots)
 
   int32_t ip = -1;
 
-  for (unsigned ei = 0; ei < context->eventLog.length();) {
+  while (ei < context->eventLog.length()) {
     Event e = static_cast<Event>(context->eventLog.get(ei++));
     switch (e) {
     case PushEvent: {
-      updateTraceElements(t, context, roots);
+      ei = updateTraceElements(t, context, roots, ei);
     } break;
 
     case PopEvent:
-      return;
+      return ei;
 
     case IpEvent: {
       ip = context->eventLog.get2(ei);
@@ -3562,8 +3592,6 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots)
     } break;
 
     case MarkEvent: {
-      assert(t, ip >= 0);
-
       unsigned i = context->eventLog.get2(ei);
       markBit(roots, i);
 
@@ -3571,8 +3599,6 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots)
     } break;
 
     case ClearEvent: {
-      assert(t, ip >= 0);
-
       unsigned i = context->eventLog.get2(ei);
       clearBit(roots, i);
 
@@ -3581,7 +3607,13 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots)
 
     case TraceEvent: {
       TraceElement* te; context->eventLog.get(ei, &te, BytesPerWord);
-      memcpy(te->map, roots, singleMapSize * BytesPerWord);
+      memcpy(te->map, roots, mapSize * BytesPerWord);
+
+      if (DebugFrameMaps) {
+        fprintf(stderr, "        map at ip %3d: ", ip);
+        printSet(*roots);
+        fprintf(stderr, "\n");
+      }
 
       ei += BytesPerWord;
     } break;
@@ -3589,6 +3621,8 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots)
     default: abort(t);
     }
   }
+
+  return ei;
 }
 
 void
@@ -3597,17 +3631,17 @@ calculateFrameMaps(MyThread* t, Context* context)
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   uintptr_t roots[mapSize];
-  memse(roots, 0, mapSize * BytesPerWord);
+  memset(roots, 0, mapSize * BytesPerWord);
 
   uintptr_t known[mapSize];
   memset(known, 0xFF, mapSize * BytesPerWord);
 
   // first pass: calculate reachable roots at instructions with more
   // than one predecessor.
-  calculateJunctions(t, context, roots, known);
+  calculateJunctions(t, context, roots, known, 0);
 
   // second pass: update trace elements.
-  updateTraceElements(t, context, root);
+  updateTraceElements(t, context, roots, 0);
 }
 
 object
@@ -3652,9 +3686,11 @@ finish(MyThread* t, Context* context, const char* name)
       set(t, result, SingletonBody + offset, p->value);
     }
 
-    updateExceptionHandlerTable(t, c, methodCode(t, context->method));
+    updateExceptionHandlerTable(t, c, methodCode(t, context->method),
+                                reinterpret_cast<intptr_t>(start));
 
-    updateLineNumberTable(t, c, methodCode(t, context->method));
+    updateLineNumberTable(t, c, methodCode(t, context->method),
+                          reinterpret_cast<intptr_t>(start));
 
     if (Verbose) {
       logCompile
@@ -3707,11 +3743,15 @@ compile(MyThread* t, Context* context)
   handleEntrance(t, &frame);
 
   unsigned index = 0;
-  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+  if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
     frame.mark(index++);    
   }
 
-  for (MethodSpecIterator it(t, spec); it.hasNext();) {
+  for (MethodSpecIterator it
+         (t, reinterpret_cast<const char*>
+          (&byteArrayBody(t, methodSpec(t, context->method), 0)));
+       it.hasNext();)
+  {
     switch (*it.next()) {
     case 'L':
     case '[':
@@ -3745,10 +3785,11 @@ compile(MyThread* t, Context* context)
       assert(t, context->visitTable[start]);
         
       uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
-      Frame frame2(&frame, map);
+      Frame frame2(&frame, stackMap);
       frame2.pushObject();
 
-      uintptr_t* roots = context->rootTable + (start * mapSize);
+      uintptr_t* roots = context->rootTable
+        + (start * frameMapSizeInWords(t, context->method));
 
       for (unsigned i = 0;
            i < codeMaxLocals(t, methodCode(t, context->method));
@@ -3987,12 +4028,12 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node,
   if (calleeBase) {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     unsigned height = static_cast<uintptr_t*>(base)
-      - static_cast<uintptr_t*>(calleeBase) - 1;
+      - static_cast<uintptr_t*>(calleeBase) - 2;
 
     count = parameterFootprint + height - argumentFootprint;
   } else {
     count = codeMaxStack(t, methodCode(t, method))
-      + codeMaxLocals(t, methodCode(t, method))
+      + codeMaxLocals(t, methodCode(t, method));
   }
       
   if (count) {
@@ -4016,8 +4057,6 @@ visitStack(MyThread* t, Heap::Visitor* v)
     ip = *stack;
   }
 
-#error "todo: don't visit arguments twice"
-
   MyThread::CallTrace* trace = t->trace;
   void* calleeBase = 0;
   unsigned argumentFootprint = 0;
@@ -4026,7 +4065,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
     object node = findTraceNode(t, ip);
     if (node) {
       PROTECT(t, node);
-      
+
       visitStackAndLocals(t, v, base, node, calleeBase, argumentFootprint);
 
       calleeBase = base;

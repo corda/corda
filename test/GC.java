@@ -28,25 +28,25 @@ public class GC {
     }
   }
 
-  private static void lifetime1(boolean predicate) {
+  private static void stackMap1(boolean predicate) {
     if (predicate) {
       Object a = null;
     }
 
-    small();
+    System.gc();
   }
 
-  private static void lifetime2(boolean predicate) {
+  private static void stackMap2(boolean predicate) {
     if (predicate) {
       int a = 42;
     } else {
       Object a = null;
     }
 
-    small();
+    System.gc();
   }
 
-  private static void lifetime3(boolean predicate) {
+  private static void stackMap3(boolean predicate) {
     int i = 2;
     if (predicate) {
       Object a = null;
@@ -55,7 +55,7 @@ public class GC {
     }
 
     do {
-      small();
+      System.gc();
       int a = 42;
       -- i;
     } while (i >= 0);
@@ -79,14 +79,14 @@ public class GC {
     array[1].toString();
     array[2].toString();
 
-    lifetime1(true);
-    lifetime1(false);
+    stackMap1(true);
+    stackMap1(false);
 
-    lifetime2(true);
-    lifetime2(false);
+    stackMap2(true);
+    stackMap2(false);
 
-    lifetime3(true);
-    lifetime3(false);
+    stackMap3(true);
+    stackMap3(false);
   }
 
 }
