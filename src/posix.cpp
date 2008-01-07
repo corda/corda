@@ -51,10 +51,10 @@ const int SegFaultSignal = SIGSEGV;
 #  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
 #  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
 #elif defined __APPLE__
-#  define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
-#  define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
-#  define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
-#  define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
+#  define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
+#  define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
+#  define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
+#  define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
 #elif defined __i386__
 #  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
 #  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
