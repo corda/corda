@@ -3385,11 +3385,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
 void
 logCompile(const void* code, unsigned size, const char* class_,
-           const char* name)
+           const char* name, const char* spec)
 {
   if (Verbose) {
-    fprintf(stderr, "%s.%s from %p to %p\n",
-            class_, name, code, static_cast<const uint8_t*>(code) + size);
+    fprintf(stderr, "%s.%s%s from %p to %p\n",
+            class_, name, spec, code,
+            static_cast<const uint8_t*>(code) + size);
   }
 }
 
@@ -3698,7 +3699,9 @@ finish(MyThread* t, Context* context, const char* name)
          reinterpret_cast<const char*>
          (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
          reinterpret_cast<const char*>
-         (&byteArrayBody(t, methodName(t, context->method), 0)));
+         (&byteArrayBody(t, methodName(t, context->method), 0)),
+         reinterpret_cast<const char*>
+         (&byteArrayBody(t, methodSpec(t, context->method), 0)));
     }
 
     // for debugging:
@@ -3716,7 +3719,7 @@ finish(MyThread* t, Context* context, const char* name)
     }
   } else {
     if (Verbose) {
-      logCompile(start, c->codeSize(), 0, name);
+      logCompile(start, c->codeSize(), 0, name, 0);
     }
   }
 
@@ -3739,8 +3742,6 @@ compile(MyThread* t, Context* context)
 
   uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
   Frame frame(context, stackMap);
-
-  handleEntrance(t, &frame);
 
   unsigned index = 0;
   if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
@@ -3768,6 +3769,8 @@ compile(MyThread* t, Context* context)
       break;
     }
   }
+
+  handleEntrance(t, &frame);
 
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
@@ -4628,7 +4631,7 @@ processor(MyThread* t)
       c->writeTo(p->indirectCaller);
 
       if (Verbose) {
-        logCompile(p->indirectCaller, c->codeSize(), 0, "indirect caller");
+        logCompile(p->indirectCaller, c->codeSize(), 0, "indirect caller", 0);
       }
     }
 
