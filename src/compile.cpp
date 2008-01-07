@@ -3047,8 +3047,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       
       c->release(stack);
 
-      c->release(stack);
-
       Operand* result = ::result(c);
 
       frame->pop(dimensions);
