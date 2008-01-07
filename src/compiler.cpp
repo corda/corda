@@ -1870,9 +1870,12 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
   switch (op) {
   case and4:
   case and8:
-    assert(c, BytesPerWord == 8 or op == and4); // todo
-
-    encode(c, 0x21, operand->value(c), this, true);
+    if (BytesPerWord == 4 and op == and8) {
+      accept(c, and4, operand);
+      high(c)->accept(c, and4, register_(c, operand->high(c)));
+    } else {
+      encode(c, 0x21, operand->value(c), this, true);
+    }
     break;
 
   case add4:
@@ -2017,9 +2020,12 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
 
   case or4:
   case or8:
-    assert(c, BytesPerWord == 8 or op == or4); // todo
-
-    encode(c, 0x09, operand->value(c), this, true);
+    if (BytesPerWord == 4 and op == or8) {
+      accept(c, or4, operand);
+      high(c)->accept(c, or4, register_(c, operand->high(c)));
+    } else {
+      encode(c, 0x09, operand->value(c), this, true);
+    }
     break;
 
   case rem4:
@@ -2148,9 +2154,12 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
 
   case xor4:
   case xor8: {
-    assert(c, BytesPerWord == 8 or op == xor4); // todo
-
-    encode(c, 0x31, operand->value(c), this, true);
+    if (BytesPerWord == 4 and op == xor8) {
+      accept(c, xor4, operand);
+      high(c)->accept(c, xor4, register_(c, operand->high(c)));
+    } else {
+      encode(c, 0x31, operand->value(c), this, true);
+    }
   } break;
 
   default: abort(c);
