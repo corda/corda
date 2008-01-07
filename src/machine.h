@@ -1634,7 +1634,7 @@ makeExceptionInInitializerError(Thread* t, object cause)
   return makeExceptionInInitializerError(t, 0, trace, cause);
 }
 
-inline object
+inline object FORCE_ALIGN
 makeNew(Thread* t, object class_)
 {
   PROTECT(t, class_);
@@ -1647,7 +1647,7 @@ makeNew(Thread* t, object class_)
   return instance;
 }
 
-inline object
+inline object FORCE_ALIGN
 makeNewWeakReference(Thread* t, object class_)
 {
   object instance = makeNew(t, class_);

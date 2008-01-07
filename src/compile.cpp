@@ -1136,7 +1136,7 @@ unwind(MyThread* t)
   vmJump(ip, base, stack, t);
 }
 
-void*
+void* FORCE_ALIGN
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
@@ -1349,13 +1349,13 @@ intToFloat(int32_t a)
   return floatToBits(static_cast<float>(a));
 }
 
-object
+object FORCE_ALIGN
 makeBlankObjectArray(Thread* t, object class_, int32_t length)
 {
   return makeObjectArray(t, class_, length, true);
 }
 
-object
+object FORCE_ALIGN
 makeBlankArray(Thread* t, object (*constructor)(Thread*, uintptr_t, bool),
                int32_t length)
 {
@@ -1385,7 +1385,7 @@ lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
   return default_;
 }
 
-void
+void FORCE_ALIGN
 setMaybeNull(MyThread* t, object o, unsigned offset, object value)
 {
   if (LIKELY(o)) {
@@ -1396,7 +1396,7 @@ setMaybeNull(MyThread* t, object o, unsigned offset, object value)
   }
 }
 
-void
+void FORCE_ALIGN
 acquireMonitorForObject(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -1407,7 +1407,7 @@ acquireMonitorForObject(MyThread* t, object o)
   }
 }
 
-void
+void FORCE_ALIGN
 releaseMonitorForObject(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -1443,7 +1443,7 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* stack,
   return array;
 }
 
-object
+object FORCE_ALIGN
 makeMultidimensionalArray(MyThread* t, object class_, uintptr_t* stack,
                           int32_t dimensions)
 {
@@ -1455,7 +1455,7 @@ makeMultidimensionalArray(MyThread* t, object class_, uintptr_t* stack,
   }
 }
 
-void NO_RETURN
+void NO_RETURN FORCE_ALIGN
 throwArrayIndexOutOfBounds(MyThread* t, object array, int32_t index)
 {
   object message = makeString
@@ -1464,7 +1464,7 @@ throwArrayIndexOutOfBounds(MyThread* t, object array, int32_t index)
   unwind(t);
 }
 
-void NO_RETURN
+void NO_RETURN FORCE_ALIGN
 throwNegativeArraySize(MyThread* t, int32_t length)
 {
   object message = makeString(t, "%d", length);
@@ -1472,7 +1472,7 @@ throwNegativeArraySize(MyThread* t, int32_t length)
   unwind(t);
 }
 
-void NO_RETURN
+void NO_RETURN FORCE_ALIGN
 throw_(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -1483,7 +1483,7 @@ throw_(MyThread* t, object o)
   unwind(t);
 }
 
-void
+void FORCE_ALIGN
 checkCast(MyThread* t, object class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
@@ -3846,7 +3846,7 @@ compileMethod2(MyThread* t)
   }
 }
 
-void*
+void* FORCE_ALIGN
 compileMethod(MyThread* t)
 {
   void* r = compileMethod2(t);
@@ -4003,7 +4003,7 @@ invokeNative2(MyThread* t, object method)
   }
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 invokeNative(MyThread* t)
 {
   object node = findTraceNode(t, *static_cast<void**>(t->stack));
