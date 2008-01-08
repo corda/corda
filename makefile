@@ -1,4 +1,4 @@
-#MAKEFLAGS = -s
+MAKEFLAGS = -s
 
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
@@ -45,7 +45,6 @@ javac = javac
 jar = jar
 strip = :
 strip-all = --strip-all
-show-size = :
 
 rdynamic = -rdynamic
 
@@ -116,7 +115,6 @@ endif
 ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG
 	strip = strip
-	show-size = ls -l
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
@@ -333,7 +331,6 @@ else
 	$(cc) $(^) $(lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
-	@$(show-size) $(@)
 
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
