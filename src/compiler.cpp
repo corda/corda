@@ -1966,8 +1966,7 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
     break;
 
   case mov2:
-    c->code.append(0x66);
-    encode(c, 0x89, operand->value(c), this, false);
+    encode2(c, 0x6689, operand->value(c), this, false);
     break;
 
   case mov4To8:
