@@ -3384,11 +3384,9 @@ void
 logCompile(const void* code, unsigned size, const char* class_,
            const char* name, const char* spec)
 {
-  if (Verbose) {
-    fprintf(stderr, "%s.%s%s from %p to %p\n",
-            class_, name, spec, code,
-            static_cast<const uint8_t*>(code) + size);
-  }
+  fprintf(stderr, "%s.%s%s from %p to %p\n",
+          class_, name, spec, code,
+          static_cast<const uint8_t*>(code) + size);
 }
 
 void
@@ -3716,6 +3714,11 @@ object
 compile(MyThread* t, Context* context)
 {
   Compiler* c = context->c;
+
+//   fprintf(stderr, "compiling %s.%s%s\n",
+//           &byteArrayBody(t, className(t, methodClass(t, context->method)), 0),
+//           &byteArrayBody(t, methodName(t, context->method), 0),
+//           &byteArrayBody(t, methodSpec(t, context->method), 0));
 
   c->prologue();
 
@@ -4645,14 +4648,16 @@ compile(MyThread* t, object method)
       initClass(t, methodClass(t, method));
       if (UNLIKELY(t->exception)) return;
 
-      Context context(t, method, p->indirectCaller);
+      if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
+        Context context(t, method, p->indirectCaller);
     
-      object compiled = compile(t, &context);
-      set(t, method, MethodCompiled, compiled);
+        object compiled = compile(t, &context);
+        set(t, method, MethodCompiled, compiled);
 
-      if (methodVirtual(t, method)) {
-        classVtable(t, methodClass(t, method), methodOffset(t, method))
-          = &singletonValue(t, compiled, 0);
+        if (methodVirtual(t, method)) {
+          classVtable(t, methodClass(t, method), methodOffset(t, method))
+            = &singletonValue(t, compiled, 0);
+        }
       }
     }
   }
