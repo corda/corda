@@ -1135,6 +1135,13 @@ unwind(MyThread* t)
   vmJump(ip, base, stack, t);
 }
 
+void FORCE_ALIGN
+tryInitClass(MyThread* t, object class_)
+{
+  initClass(t, class_);
+  if (UNLIKELY(t->exception)) unwind(t);
+}
+
 void* FORCE_ALIGN
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
@@ -2223,10 +2230,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Operand* table;
 
       if (instruction == getstatic) {
-        PROTECT(t, field);
-
-        initClass(t, fieldClass(t, field));
-        if (UNLIKELY(t->exception)) return;
+        c->indirectCall
+          (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
+           frame->trace(0, false),
+           2, c->thread(), frame->append(fieldClass(t, field)));
 
         table = frame->append(classStaticTable(t, fieldClass(t, field)));
       } else {
@@ -2606,9 +2613,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       object class_ = methodClass(t, target);
       if (isSpecialMethod(t, target, class_)) {
-        initClass(t, classSuper(t, class_));
-        if (UNLIKELY(t->exception)) return;
-
         target = findMethod(t, target, classSuper(t, class_));
       }
 
@@ -2619,10 +2623,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       uint16_t index = codeReadInt16(t, code, ip);
 
       object target = resolveMethod(t, codePool(t, code), index - 1);
-      if (UNLIKELY(t->exception)) return;
-      PROTECT(t, target);
-
-      initClass(t, methodClass(t, target));
       if (UNLIKELY(t->exception)) return;
 
       compileDirectInvoke(t, frame, target);
@@ -3062,10 +3062,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
-      PROTECT(t, class_);
-        
-      initClass(t, class_);
-      if (UNLIKELY(t->exception)) return;
 
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
         c->indirectCall
@@ -3172,10 +3168,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       object staticTable = 0;
 
       if (instruction == putstatic) {
-        PROTECT(t, field);
-
-        initClass(t, fieldClass(t, field));
-        if (UNLIKELY(t->exception)) return;  
+        c->indirectCall
+          (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
+           frame->trace(0, false),
+           2, c->thread(), frame->append(fieldClass(t, field)));
 
         staticTable = classStaticTable(t, fieldClass(t, field));      
       }
@@ -3852,6 +3848,9 @@ uint64_t
 invokeNative2(MyThread* t, object method)
 {
   PROTECT(t, method);
+
+  initClass(t, methodClass(t, method));
+  if (UNLIKELY(t->exception)) return 0;
 
   if (objectClass(t, methodCode(t, method))
       == arrayBody(t, t->m->types, Machine::ByteArrayType))
@@ -4643,6 +4642,9 @@ compile(MyThread* t, object method)
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
+      initClass(t, methodClass(t, method));
+      if (UNLIKELY(t->exception)) return;
+
       Context context(t, method, p->indirectCaller);
     
       object compiled = compile(t, &context);
