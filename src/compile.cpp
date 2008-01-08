@@ -21,6 +21,8 @@ const bool DebugNatives = false;
 const bool DebugTraces = false;
 const bool DebugFrameMaps = false;
 
+const bool CheckArrayBounds = true;
+
 class MyThread: public Thread {
  public:
   class CallTrace {
@@ -1616,27 +1618,29 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case iaload:
     case laload:
     case saload: {
-      Operand* load = c->label();
-      Operand* throw_ = c->label();
-
       Operand* index = frame->popInt4();
       Operand* array = frame->popObject();
 
-      c->cmp4(c->constant(0), index);
-      c->jl(throw_);
+      if (CheckArrayBounds) {
+        Operand* load = c->label();
+        Operand* throw_ = c->label();
 
-      c->cmp4(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
-              index);
-      c->jl(load);
+        c->cmp4(c->constant(0), index);
+        c->jl(throw_);
 
-      c->mark(throw_);
+        c->cmp4(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
+                index);
+        c->jl(load);
 
-      c->indirectCallNoReturn
-        (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
-         frame->trace(0, false),
-         3, c->thread(), array, index);
+        c->mark(throw_);
 
-      c->mark(load);
+        c->indirectCallNoReturn
+          (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
+           frame->trace(0, false),
+           3, c->thread(), array, index);
+
+        c->mark(load);
+      }
 
       switch (instruction) {
       case aaload:
@@ -1688,27 +1692,29 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         value = frame->popInt();
       }
 
-      Operand* store = c->label();
-      Operand* throw_ = c->label();
-
       Operand* index = frame->popInt4();
       Operand* array = frame->popObject();
 
-      c->cmp4(c->constant(0), index);
-      c->jl(throw_);
+      if (CheckArrayBounds) {
+        Operand* store = c->label();
+        Operand* throw_ = c->label();
 
-      c->cmp4(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
-              index);
-      c->jl(store);
+        c->cmp4(c->constant(0), index);
+        c->jl(throw_);
 
-      c->mark(throw_);
+        c->cmp4(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
+                index);
+        c->jl(store);
 
-      c->indirectCallNoReturn
-        (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
-         frame->trace(0, false),
-         3, c->thread(), array, index);
+        c->mark(throw_);
 
-      c->mark(store);
+        c->indirectCallNoReturn
+          (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
+           frame->trace(0, false),
+           3, c->thread(), array, index);
+
+        c->mark(store);
+      }
 
       switch (instruction) {
       case aastore: {
@@ -3471,6 +3477,14 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
 
   int32_t ip = -1;
 
+  // invariant: for each stack position, roots contains a zero at that
+  // position if there exists some path to the current instruction
+  // such that there is definitely not an object pointer at that
+  // position.  Otherwise, roots contains a one at that position,
+  // meaning either all known paths result in an object pointer at
+  // that position, or the contents of that position are as yet
+  // unknown.
+
   while (ei < context->eventLog.length()) {
     Event e = static_cast<Event>(context->eventLog.get(ei++));
     switch (e) {
@@ -3610,8 +3624,11 @@ calculateFrameMaps(MyThread* t, Context* context)
   uintptr_t roots[mapSize];
   memset(roots, 0, mapSize * BytesPerWord);
 
-  // first pass: calculate reachable roots at instructions with more
-  // than one predecessor.
+  // first pass: for each instruction with more than one predecessor,
+  // and for each stack position, determine if there exists a path to
+  // that instruction such that there is not an object pointer left at
+  // that stack position (i.e. it is uninitialized or contains
+  // primitive data).
   calculateJunctions(t, context, roots, 0);
 
   // second pass: update trace elements.
