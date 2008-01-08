@@ -401,13 +401,13 @@ makeVisitTable(MyThread* t, Zone* zone, object method)
 }
 
 uintptr_t*
-makeFrameMapTable(MyThread* t, Zone* zone, object method)
+makeRootTable(MyThread* t, Zone* zone, object method)
 {
   unsigned size = frameMapSizeInWords(t, method)
     * codeLength(t, methodCode(t, method))
     * BytesPerWord;
   uintptr_t* table = static_cast<uintptr_t*>(zone->allocate(size));
-  memset(table, 0, size);
+  memset(table, 0xFF, size);
   return table;
 }
 
@@ -440,8 +440,7 @@ class Context {
     objectPool(0),
     traceLog(0),
     visitTable(makeVisitTable(t, &zone, method)),
-    rootTable(makeFrameMapTable(t, &zone, method)),
-    knownTable(makeFrameMapTable(t, &zone, method)),
+    rootTable(makeRootTable(t, &zone, method)),
     eventLog(t->m->system, 1024),
     protector(this)
   { }
@@ -455,7 +454,6 @@ class Context {
     traceLog(0),
     visitTable(0),
     rootTable(0),
-    knownTable(0),
     eventLog(t->m->system, 0),
     protector(this)
   { }
@@ -472,7 +470,6 @@ class Context {
   TraceElement* traceLog;
   uint16_t* visitTable;
   uintptr_t* rootTable;
-  uintptr_t* knownTable;
   Vector eventLog;
   MyProtector protector;
 };
@@ -3465,15 +3462,12 @@ printSet(uintptr_t m)
 
 unsigned
 calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
-                   uintptr_t* originalKnown, unsigned ei)
+                   unsigned ei)
 {
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   uintptr_t roots[mapSize];
   memcpy(roots, originalRoots, mapSize * BytesPerWord);
-
-  uintptr_t known[mapSize];
-  memcpy(known, originalKnown, mapSize * BytesPerWord);
 
   int32_t ip = -1;
 
@@ -3481,7 +3475,7 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
     Event e = static_cast<Event>(context->eventLog.get(ei++));
     switch (e) {
     case PushEvent: {
-      ei = calculateJunctions(t, context, roots, known, ei);
+      ei = calculateJunctions(t, context, roots, ei);
     } break;
 
     case PopEvent:
@@ -3494,32 +3488,19 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
         fprintf(stderr, "      roots at ip %3d: ", ip);
         printSet(*roots);
         fprintf(stderr, "\n");
-
-        fprintf(stderr, "      known at ip %3d: ", ip);
-        printSet(*known);
-        fprintf(stderr, "\n");
       }
 
       if (context->visitTable[ip] > 1) {
         uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
-        uintptr_t* tableKnown = context->knownTable + (ip * mapSize);
         
         for (unsigned wi = 0; wi < mapSize; ++wi) {
-          tableRoots[wi] &= ~(known[wi] & ~roots[wi]);
-          tableRoots[wi] |= known[wi] & roots[wi] & ~tableKnown[wi];
-          tableKnown[wi] |= known[wi];
-
-          roots[wi] = 0;
-          known[wi] = tableKnown[wi] & ~tableRoots[wi];
+          tableRoots[wi] &= roots[wi];
+          roots[wi] &= tableRoots[wi];
         }
 
         if (DebugFrameMaps) {
           fprintf(stderr, "table roots at ip %3d: ", ip);
           printSet(*tableRoots);
-          fprintf(stderr, "\n");
-
-          fprintf(stderr, "table known at ip %3d: ", ip);
-          printSet(*tableKnown);
           fprintf(stderr, "\n");
         }
       }
@@ -3530,7 +3511,6 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
     case MarkEvent: {
       unsigned i = context->eventLog.get2(ei);
       markBit(roots, i);
-      markBit(known, i);
 
       ei += 2;
     } break;
@@ -3538,7 +3518,6 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
     case ClearEvent: {
       unsigned i = context->eventLog.get2(ei);
       clearBit(roots, i);
-      markBit(known, i);
 
       ei += 2;
     } break;
@@ -3586,10 +3565,9 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots,
 
       if (context->visitTable[ip] > 1) {
         uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
-        uintptr_t* tableKnown = context->knownTable + (ip * mapSize);
         
         for (unsigned wi = 0; wi < mapSize; ++wi) {
-          roots[wi] &= ~(tableKnown[wi] & ~tableRoots[wi]);
+          roots[wi] &= tableRoots[wi];
         }
       }
 
@@ -3632,12 +3610,9 @@ calculateFrameMaps(MyThread* t, Context* context)
   uintptr_t roots[mapSize];
   memset(roots, 0, mapSize * BytesPerWord);
 
-  uintptr_t known[mapSize];
-  memset(known, 0xFF, mapSize * BytesPerWord);
-
   // first pass: calculate reachable roots at instructions with more
   // than one predecessor.
-  calculateJunctions(t, context, roots, known, 0);
+  calculateJunctions(t, context, roots, 0);
 
   // second pass: update trace elements.
   updateTraceElements(t, context, roots, 0);
