@@ -738,11 +738,9 @@ sweepFixies(Context* c)
     f->marked = false;
   }
 
-  if (c->tenuredFixieCeiling > c->tenuredFixieFootprint * 4) {
-    c->tenuredFixieCeiling = max
-      (c->tenuredFixieCeiling / 2,
-       InitialTenuredFixieCeilingInBytes / BytesPerWord);
-  }
+  c->tenuredFixieCeiling = max
+    (c->tenuredFixieFootprint * 2,
+     InitialTenuredFixieCeilingInBytes / BytesPerWord);
 }
 
 inline void*
@@ -1429,10 +1427,6 @@ collect(Context* c, unsigned footprint)
   initNextGen1(c, footprint);
 
   if (c->mode == Heap::MajorCollection) {
-    c->tenuredFixieCeiling = max
-      ((c->fixieTenureFootprint + c->tenuredFixieFootprint) * 2,
-       InitialTenuredFixieCeilingInBytes / BytesPerWord);
-
     initNextGen2(c);
   }
 
