@@ -1584,6 +1584,8 @@ unconditional(Context* c, unsigned jump, AddressOperand* operand)
   } else {
     v = 0;
   }
+
+  assert(c, isInt32(v));
   
   c->code.append(jump);
   c->code.append4(v);
@@ -1600,6 +1602,8 @@ conditional(Context* c, unsigned condition, AddressOperand* operand)
   } else {
     v = 0;
   }
+
+  assert(c, isInt32(v));
   
   c->code.append(0x0f);
   c->code.append(condition);
