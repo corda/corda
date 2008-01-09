@@ -15,6 +15,7 @@ const unsigned FixieTenureThreshold = TenureThreshold + 2;
 const unsigned Top = ~static_cast<unsigned>(0);
 
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
+const unsigned InitialTenuredFixieCeilingInBytes = 4 * 1024 * 1024;
 
 const bool Verbose = false;
 const bool Verbose2 = false;
@@ -474,6 +475,12 @@ class Context {
     tenureFootprint(0),
     gen1padding(0),
     gen2padding(0),
+
+    fixieTenureFootprint(0),
+    untenuredFixieFootprint(0),
+    tenuredFixieFootprint(0),
+    tenuredFixieCeiling(InitialTenuredFixieCeilingInBytes),
+
     mode(Heap::MinorCollection),
 
     fixies(0),
@@ -522,6 +529,11 @@ class Context {
   unsigned tenureFootprint;
   unsigned gen1padding;
   unsigned gen2padding;
+
+  unsigned fixieTenureFootprint;
+  unsigned untenuredFixieFootprint;
+  unsigned tenuredFixieFootprint;
+  unsigned tenuredFixieCeiling;
 
   Heap::CollectionType mode;
 
@@ -684,22 +696,33 @@ sweepFixies(Context* c)
 
   if (c->mode == Heap::MajorCollection) {
     free(c, &(c->tenuredFixies));
-    free(c, &(c->dirtyFixies));    
+    free(c, &(c->dirtyFixies));
+
+    c->tenuredFixieFootprint = 0;
   }
   free(c, &(c->fixies));
+
+  c->untenuredFixieFootprint = 0;
 
   for (Fixie** p = &(c->visitedFixies); *p;) {
     Fixie* f = *p;
     *p = f->next;
 
+    unsigned size = c->client->sizeInWords(f->body());
+
     ++ f->age;
-
-    if (f->age >= FixieTenureThreshold) {
+    if (f->age > FixieTenureThreshold) {
       f->age = FixieTenureThreshold;
+    } else if (static_cast<unsigned>(f->age + 1) == FixieTenureThreshold) {
+      c->fixieTenureFootprint += f->totalSize(size);
+    }
 
+    if (f->age == FixieTenureThreshold) {
       if (DebugFixies) {
         fprintf(stderr, "tenure fixie %p (dirty: %d)\n", f, f->dirty);
       }
+
+      c->tenuredFixieFootprint += size;
 
       if (f->dirty) {
         f->move(&(c->dirtyFixies));
@@ -707,10 +730,18 @@ sweepFixies(Context* c)
         f->move(&(c->tenuredFixies));
       }
     } else {
+      c->untenuredFixieFootprint += size;
+
       f->move(&(c->fixies));
     }
 
     f->marked = false;
+  }
+
+  if (c->tenuredFixieCeiling > c->tenuredFixieFootprint * 4) {
+    c->tenuredFixieCeiling = max
+      (c->tenuredFixieCeiling / 2,
+       InitialTenuredFixieCeilingInBytes / BytesPerWord);
   }
 }
 
@@ -1332,6 +1363,7 @@ collect2(Context* c)
 {
   c->gen2Base = Top;
   c->tenureFootprint = 0;
+  c->fixieTenureFootprint = 0;
   c->gen1padding = 0;
   c->gen2padding = 0;
 
@@ -1364,11 +1396,22 @@ collect2(Context* c)
 void
 collect(Context* c, unsigned footprint)
 {
-  // todo: tweak the calculation below to take memory footprint of
-  // tenured fixies into account.
   if (oversizedGen2(c)
-      or c->tenureFootprint + c->gen2padding > c->gen2.remaining())
+      or c->tenureFootprint + c->gen2padding > c->gen2.remaining()
+      or c->fixieTenureFootprint + c->tenuredFixieFootprint
+      > c->tenuredFixieCeiling)
   {
+    if (Verbose) {
+      if (oversizedGen2(c)) {
+        fprintf(stderr, "oversized gen2 causes ");
+      } else if (c->tenureFootprint + c->gen2padding > c->gen2.remaining())
+      {
+        fprintf(stderr, "undersized gen2 causes ");
+      } else {
+        fprintf(stderr, "fixie ceiling causes ");
+      }
+    }
+
     c->mode = Heap::MajorCollection;
   }
 
@@ -1384,7 +1427,12 @@ collect(Context* c, unsigned footprint)
   }
 
   initNextGen1(c, footprint);
+
   if (c->mode == Heap::MajorCollection) {
+    c->tenuredFixieCeiling = max
+      ((c->fixieTenureFootprint + c->tenuredFixieFootprint) * 2,
+       InitialTenuredFixieCeilingInBytes / BytesPerWord);
+
     initNextGen2(c);
   }
 
@@ -1416,12 +1464,22 @@ collect(Context* c, unsigned footprint)
             c->totalTime - c->totalCollectionTime);
 
     fprintf(stderr,
-            " - gen1: %8d/%8d bytes; "
-            "gen2: %8d/%8d bytes\n",
+            " -             gen1: %8d/%8d bytes\n",
             c->gen1.position() * BytesPerWord,
-            c->gen1.capacity() * BytesPerWord,
+            c->gen1.capacity() * BytesPerWord);
+
+    fprintf(stderr,
+            " -             gen2: %8d/%8d bytes\n",
             c->gen2.position() * BytesPerWord,
             c->gen2.capacity() * BytesPerWord);
+
+    fprintf(stderr,
+            " - untenured fixies:          %8d bytes\n",
+            c->untenuredFixieFootprint * BytesPerWord);
+
+    fprintf(stderr,
+            " -   tenured fixies:          %8d bytes\n",
+            c->tenuredFixieFootprint * BytesPerWord);
   }
 }
 
