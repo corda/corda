@@ -47,6 +47,8 @@ public class Misc {
   }
 
   public static void main(String[] args) {
+    expect(Long.valueOf(231L) == 231L);
+
     long x = 231;
     expect((x >> 32) == 0);
     expect((x >>> 32) == 0);
