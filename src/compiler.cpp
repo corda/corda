@@ -1331,6 +1331,12 @@ RegisterOperand::accept(Context* c, Operation op,
     c->code.append(0xc0 | (value(c) << 3) | operand->value(c));
     break;
 
+  case xor4:
+    rex(c);
+    c->code.append(0x31);
+    c->code.append(0xc0 | (operand->value(c) << 3) | value(c));
+    break;
+
   default: abort(c);
   }
 }
@@ -2065,18 +2071,37 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
   case shl4:
   case shl8: {
     if (BytesPerWord == 4 and op == shl8) {
-      RegisterOperand* cx = temporary(c, rcx);
-      RegisterOperand* tmp = temporary(c);
+      RegisterOperand* count = temporary(c, rcx);
+      RegisterOperand* low = temporary(c);
+      RegisterOperand* high = temporary(c);
 
-      cx->accept(c, mov, operand);
-      tmp->accept(c, mov, this);
+      count->accept(c, mov, operand);
+      low->accept(c, mov, this);
+      high->accept(c, mov, this->high(c));
+
       // shld
-      encode2(c, 0x0fa5, tmp->value(c), high(c), false);
-      // shl
-      encode(c, 0xd3, 4, this, false);
+      c->code.append(0x0f);
+      c->code.append(0xa5);
+      c->code.append(0xc0 | (high->value(c) << 3) | low->value(c));
 
-      tmp->release(c);
-      cx->release(c);
+      // shl
+      c->code.append(0xd3);
+      c->code.append(0xe0 | low->value(c));
+
+      count->accept(c, cmp, immediate(c, 32));
+      c->code.append(0x0f);
+      c->code.append(0x8c); // jl
+      c->code.append4(2 + 2);
+
+      high->accept(c, mov, low); // 2 bytes
+      low->accept(c, xor4, low); // 2 bytes
+
+      this->accept(c, mov, low);
+      this->high(c)->accept(c, mov, high);
+
+      high->release(c);
+      low->release(c);
+      count->release(c);
     } else {
       RegisterOperand* cx = temporary(c, rcx);
       cx->accept(c, mov, operand);
@@ -2088,18 +2113,40 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
   case shr4:
   case shr8: {
     if (BytesPerWord == 4 and op == shr8) {
-      RegisterOperand* cx = temporary(c, rcx);
-      RegisterOperand* tmp = temporary(c);
+      RegisterOperand* count = temporary(c, rcx);
+      RegisterOperand* low = temporary(c);
+      RegisterOperand* high = temporary(c);
 
-      cx->accept(c, mov, operand);
-      tmp->accept(c, mov, high(c));
+      count->accept(c, mov, operand);
+      low->accept(c, mov, this);
+      high->accept(c, mov, this->high(c));
+
       // shrd
-      encode2(c, 0x0fad, tmp->value(c), this, false);
-      // sar
-      encode(c, 0xd3, 7, high(c), false);
+      c->code.append(0x0f);
+      c->code.append(0xad);
+      c->code.append(0xc0 | (low->value(c) << 3) | high->value(c));
 
-      tmp->release(c);
-      cx->release(c);
+      // sar
+      c->code.append(0xd3);
+      c->code.append(0xf8 | high->value(c));
+
+      count->accept(c, cmp, immediate(c, 32));
+      c->code.append(0x0f);
+      c->code.append(0x8c); // jl
+      c->code.append4(2 + 3);
+
+      low->accept(c, mov, high); // 2 bytes
+      // sar 31,high
+      c->code.append(0xc1);
+      c->code.append(0xf8 | high->value(c));
+      c->code.append(31);
+
+      this->accept(c, mov, low);
+      this->high(c)->accept(c, mov, high);
+
+      high->release(c);
+      low->release(c);
+      count->release(c);
     } else {
       RegisterOperand* cx = temporary(c, rcx);
       cx->accept(c, mov, operand);
@@ -2111,18 +2158,37 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
   case ushr4:
   case ushr8: {
     if (BytesPerWord == 4 and op == ushr8) {
-      RegisterOperand* cx = temporary(c, rcx);
-      RegisterOperand* tmp = temporary(c);
+      RegisterOperand* count = temporary(c, rcx);
+      RegisterOperand* low = temporary(c);
+      RegisterOperand* high = temporary(c);
 
-      cx->accept(c, mov, operand);
-      tmp->accept(c, mov, high(c));
-      // shrd
-      encode2(c, 0x0fad, tmp->value(c), this, false);
-      // shr
-      encode(c, 0xd3, 5, high(c), false);
+      count->accept(c, mov, operand);
+      low->accept(c, mov, this);
+      high->accept(c, mov, this->high(c));
 
-      tmp->release(c);
-      cx->release(c);
+      // shld
+      c->code.append(0x0f);
+      c->code.append(0xa5);
+      c->code.append(0xc0 | (low->value(c) << 3) | high->value(c));
+
+      // shl
+      c->code.append(0xd3);
+      c->code.append(0xe8 | high->value(c));
+
+      count->accept(c, cmp, immediate(c, 32));
+      c->code.append(0x0f);
+      c->code.append(0x8c); // jl
+      c->code.append4(2 + 2);
+
+      low->accept(c, mov, high); // 2 bytes
+      high->accept(c, xor4, high); // 2 bytes
+
+      this->accept(c, mov, low);
+      this->high(c)->accept(c, mov, high);
+
+      high->release(c);
+      low->release(c);
+      count->release(c);
     } else {
       RegisterOperand* cx = temporary(c, rcx);
       cx->accept(c, mov, operand);

@@ -33,7 +33,45 @@ public class Misc {
     }
   }
 
+  public static void putInt(int val, byte[] dst, int offset) {
+    System.out.println("put " + val);
+    dst[offset]   = (byte)((val >> 24) & 0xff);
+    dst[offset+1] = (byte)((val >> 16) & 0xff);
+    dst[offset+2] = (byte)((val >>  8) & 0xff);
+    dst[offset+3] = (byte)((val      ) & 0xff);
+  }
+
+  public static void putLong(long val, byte[] dst, int offset) {
+    putInt((int)(val >> 32), dst, offset);
+    putInt((int)val, dst, offset + 4);
+  }
+
   public static void main(String[] args) {
+    long x = 231;
+    expect((x >> 32) == 0);
+    expect((x >>> 32) == 0);
+    expect((x << 32) == 992137445376L);
+
+    long y = -231;
+    expect((y >> 32) == 0xffffffffffffffffL);
+    expect((y >>> 32) == 0xffffffffL);
+
+    byte[] array = new byte[8];
+    putLong(231, array, 0);
+    expect((array[0] & 0xff) == 0);
+    expect((array[1] & 0xff) == 0);
+    expect((array[2] & 0xff) == 0);
+    expect((array[3] & 0xff) == 0);
+    expect((array[4] & 0xff) == 0);
+    expect((array[5] & 0xff) == 0);
+    expect((array[6] & 0xff) == 0);
+    expect((array[7] & 0xff) == 231);
+
+    java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8);
+    buffer.putLong(231);
+    buffer.flip();
+    expect(buffer.getLong() == 231);
+
     boolean v = Boolean.valueOf("true");
 
     ClassLoader.getSystemClassLoader().toString();
