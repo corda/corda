@@ -96,9 +96,9 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
 }
 
 void JNICALL
-ReleaseStringUTFChars(Thread* t, jstring, const char* chars)
+ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
 {
-  t->m->system->free(chars);
+  t->m->system->free(chars, stringLength(t, *s) + 1);
 }
 
 jsize JNICALL
@@ -1393,119 +1393,126 @@ void JNICALL
 ReleaseBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* p,
                             jint mode)
 {
+  unsigned size = booleanArrayLength(t, *array) * sizeof(jboolean);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = booleanArrayLength(t, *array) * sizeof(jboolean);
     if (size) {
       memcpy(&booleanArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 
 void JNICALL
 ReleaseByteArrayElements(Thread* t, jbyteArray array, jbyte* p, jint mode)
 {
+  unsigned size = byteArrayLength(t, *array) * sizeof(jbyte);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = byteArrayLength(t, *array) * sizeof(jbyte);
     if (size) {
       memcpy(&byteArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 
 void JNICALL
 ReleaseCharArrayElements(Thread* t, jcharArray array, jchar* p, jint mode)
 {
+  unsigned size = charArrayLength(t, *array) * sizeof(jchar);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = charArrayLength(t, *array) * sizeof(jchar);
     if (size) {
       memcpy(&charArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 
 void JNICALL
 ReleaseShortArrayElements(Thread* t, jshortArray array, jshort* p, jint mode)
 {
+  unsigned size = shortArrayLength(t, *array) * sizeof(jshort);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = shortArrayLength(t, *array) * sizeof(jshort);
     if (size) {
       memcpy(&shortArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 
 void JNICALL
 ReleaseIntArrayElements(Thread* t, jintArray array, jint* p, jint mode)
 {
+  unsigned size = intArrayLength(t, *array) * sizeof(jint);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = intArrayLength(t, *array) * sizeof(jint);
     if (size) {
       memcpy(&intArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 
 void JNICALL
 ReleaseLongArrayElements(Thread* t, jlongArray array, jlong* p, jint mode)
 {
+  unsigned size = longArrayLength(t, *array) * sizeof(jlong);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = longArrayLength(t, *array) * sizeof(jlong);
     if (size) {
       memcpy(&longArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 
 void JNICALL
 ReleaseFloatArrayElements(Thread* t, jfloatArray array, jfloat* p, jint mode)
 {
+  unsigned size = floatArrayLength(t, *array) * sizeof(jfloat);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = floatArrayLength(t, *array) * sizeof(jfloat);
     if (size) {
       memcpy(&floatArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 
@@ -1513,17 +1520,18 @@ void JNICALL
 ReleaseDoubleArrayElements(Thread* t, jdoubleArray array, jdouble* p,
                            jint mode)
 {
+  unsigned size = doubleArrayLength(t, *array) * sizeof(jdouble);
+
   if (mode == 0 or mode == JNI_COMMIT) {
     ENTER(t, Thread::ActiveState);
     
-    unsigned size = doubleArrayLength(t, *array) * sizeof(jdouble);
     if (size) {
       memcpy(&doubleArrayBody(t, *array, 0), p, size);
     }
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->system->free(p);
+    t->m->system->free(p, size);
   }
 }
 

@@ -444,10 +444,6 @@ class MySystem: public System {
     assert(this, mutex);
   }
 
-  virtual bool success(Status s) {
-    return s == 0;
-  }
-
   virtual void* tryAllocate(unsigned size) {
     ACQUIRE(this, mutex);
 
@@ -459,36 +455,63 @@ class MySystem: public System {
     if (count + size > limit) {
       return 0;
     } else {
+#ifndef NDEBUG
       uintptr_t* up = static_cast<uintptr_t*>
         (malloc(size + sizeof(uintptr_t)));
       if (up == 0) {
-        sysAbort(this);
+        return 0;
       } else {
         *up = size;
         count += *up;
       
         return up + 1;
       }
+#else
+      void* p = malloc(size);
+      if (p == 0) {
+        return 0;
+      } else {
+        count += size;
+        return p;
+      }
+#endif
     }
   }
 
-  virtual void free(const void* p) {
+  virtual void free(const void* p, unsigned size) {
     ACQUIRE(this, mutex);
 
+    if (Verbose) {
+      fprintf(stderr, "free %d; count: %d; limit: %d\n",
+              size, count, limit);
+    }
+
     if (p) {
+#ifndef NDEBUG
       const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
-      if (count < *up) {
-        abort();
-      }
+
+      if (*up != size) abort();
+      if (count < *up) abort();
+
       count -= *up;
 
-      if (Verbose) {
-        fprintf(stderr, "free %"ULD"; count: %d; limit: %d\n",
-                *up, count, limit);
-      }
-
       ::free(const_cast<uintptr_t*>(up));
+#else
+      if (count < size) abort();
+
+      count -= size;
+
+      ::free(const_cast<void*>(p));
+#endif
     }
+  }
+
+  virtual Allocator* codeAllocator() {
+    return this;
+  }
+
+  virtual bool success(Status s) {
+    return s == 0;
   }
 
   virtual Status attach(Runnable* r) {

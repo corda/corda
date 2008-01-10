@@ -115,6 +115,45 @@ const unsigned Notified = 1 << 1;
 
 class MySystem: public System {
  public:
+  class CodeAllocator: public Allocator {
+   public:
+    CodeAllocator(MySystem* s): s(s) { }
+
+    virtual void* tryAllocate(unsigned size) {
+      assert(s, size % LikelyPageSizeInBytes == 0);
+
+#ifdef __x86_64__
+      void* p = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+
+      if (p == MAP_FAILED) {
+        return 0;
+      } else {
+        return p;
+      }
+#else
+      return s->tryAllocate(size);
+#endif
+    }
+
+    virtual void* allocate(unsigned size) {
+      void* p = tryAllocate(size);
+      expect(s, p);
+      return p;
+    }
+
+    virtual void free(const void* p, unsigned size) {
+#ifdef __x86_64__
+      int r UNUSED = munmap(const_cast<void*>(p), size);
+      assert(s, r == 0);
+#else
+      s->free(p, size);
+#endif
+    }
+
+    MySystem* s;
+  };
+
   class Thread: public System::Thread {
    public:
     Thread(System* s, System::Runnable* r):
@@ -143,7 +182,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     pthread_t thread;
@@ -338,7 +377,7 @@ class MySystem: public System {
     virtual void dispose() {
       expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     System* s;
@@ -369,7 +408,7 @@ class MySystem: public System {
       int r UNUSED = pthread_key_delete(key);
       expect(s, r == 0);
 
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     System* s;
@@ -378,8 +417,8 @@ class MySystem: public System {
 
   class Region: public System::Region {
    public:
-    Region(System* system, uint8_t* start, size_t length):
-      system(system),
+    Region(System* s, uint8_t* start, size_t length):
+      s(s),
       start_(start),
       length_(length)
     { }
@@ -396,21 +435,22 @@ class MySystem: public System {
       if (start_) {
         munmap(start_, length_);
       }
-      system->free(this);
+      s->free(this, sizeof(*this));
     }
 
-    System* system;
+    System* s;
     uint8_t* start_;
     size_t length_;
   };
 
   class Library: public System::Library {
    public:
-    Library(System* s, void* p, const char* name, bool mapName,
-            System::Library* next):
+    Library(System* s, void* p, const char* name, unsigned nameLength,
+            bool mapName, System::Library* next):
       s(s),
       p(p),
       name_(name),
+      nameLength(nameLength),
       mapName_(mapName),
       next_(next)
     { }
@@ -443,20 +483,21 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_);
+        s->free(name_, nameLength + 1);
       }
 
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     System* s;
     void* p;
     const char* name_;
+    unsigned nameLength;
     bool mapName_;
     System::Library* next_;
   };
 
-  MySystem(unsigned limit): limit(limit), count(0) {
+  MySystem(unsigned limit): limit(limit), count(0), codeAllocator_(this) {
     pthread_mutex_init(&mutex, 0);
 
     struct sigaction sa;
@@ -467,10 +508,6 @@ class MySystem: public System {
     
     int rv UNUSED = sigaction(InterruptSignal, &sa, 0);
     expect(this, rv == 0);
-  }
-
-  virtual bool success(Status s) {
-    return s == 0;
   }
 
   virtual void* tryAllocate(unsigned size) {
@@ -484,35 +521,63 @@ class MySystem: public System {
     if (count + size > limit) {
       return 0;
     } else {
+#ifndef NDEBUG
       uintptr_t* up = static_cast<uintptr_t*>
         (malloc(size + sizeof(uintptr_t)));
       if (up == 0) {
-        sysAbort(this);
+        return 0;
       } else {
         *up = size;
         count += *up;
+      
         return up + 1;
       }
+#else
+      void* p = malloc(size);
+      if (p == 0) {
+        return 0;
+      } else {
+        count += size;
+        return p;
+      }
+#endif
     }
   }
 
-  virtual void free(const void* p) {
+  virtual void free(const void* p, unsigned size) {
     ACQUIRE(mutex);
 
+    if (Verbose) {
+      fprintf(stderr, "free %d; count: %d; limit: %d\n",
+              size, count, limit);
+    }
+
     if (p) {
+#ifndef NDEBUG
       const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
-      if (count < *up) {
-        abort();
-      }
+
+      if (*up != size) abort();
+      if (count < *up) abort();
+
       count -= *up;
 
-      if (Verbose) {
-        fprintf(stderr, "free %"ULD"; count: %d; limit: %d\n",
-                *up, count, limit);
-      }
-
       ::free(const_cast<uintptr_t*>(up));
+#else
+      if (count < size) abort();
+
+      count -= size;
+
+      ::free(const_cast<void*>(p));
+#endif
     }
+  }
+
+  virtual Allocator* codeAllocator() {
+    return &codeAllocator_;
+  }
+
+  virtual bool success(Status s) {
+    return s == 0;
   }
 
   virtual Status attach(Runnable* r) {
@@ -632,7 +697,7 @@ class MySystem: public System {
       }
 
       *lib = new (System::allocate(sizeof(Library)))
-        Library(this, p, n, mapName, next);
+        Library(this, p, n, nameLength, mapName, next);
       return 0;
     } else {
 //       fprintf(stderr, "dlerror: %s\n", dlerror());
@@ -668,6 +733,7 @@ class MySystem: public System {
   pthread_mutex_t mutex;
   unsigned limit;
   unsigned count;
+  CodeAllocator codeAllocator_;
 };
 
 } // namespace

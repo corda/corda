@@ -482,7 +482,7 @@ void
 postCollect(Thread* t)
 {
 #ifdef VM_STRESS
-  t->m->system->free(t->defaultHeap);
+  t->m->system->free(t->defaultHeap, Thread::HeapSizeInBytes);
   t->defaultHeap = static_cast<uintptr_t*>
     (t->m->system->allocate(Thread::HeapSizeInBytes));
 #endif
@@ -813,7 +813,7 @@ parsePool(Thread* t, Stream& s)
       i += parsePoolEntry(t, s, index, pool, i);
     }
 
-    t->m->system->free(index);
+    t->m->system->free(index, count * 4);
 
     s.setPosition(end);
   }
@@ -1758,7 +1758,7 @@ class HeapClient: public Heap::Client {
   }
 
   virtual void dispose() {
-    m->system->free(this);
+    m->system->free(this, sizeof(*this));
   }
     
  private:
@@ -1832,16 +1832,16 @@ Machine::dispose()
   for (Reference* r = jniReferences; r;) {
     Reference* t = r;
     r = r->next;
-    system->free(t);
+    system->free(t, sizeof(*t));
   }
 
   for (unsigned i = 0; i < heapPoolIndex; ++i) {
-    system->free(heapPool[i]);
+    system->free(heapPool[i], Thread::HeapSizeInBytes);
   }
 
   heap->dispose();
 
-  system->free(this);
+  system->free(this, sizeof(*this));
 }
 
 Thread::Thread(Machine* m, object javaThread, Thread* parent):
@@ -1992,15 +1992,13 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  m->processor->dispose(this);
-
   if (systemThread) {
     systemThread->dispose();
   }
 
-  m->system->free(defaultHeap);
+  m->system->free(defaultHeap, Thread::HeapSizeInBytes);
 
-  m->system->free(this);
+  m->processor->dispose(this);
 }
 
 void
@@ -2144,7 +2142,18 @@ enter(Thread* t, Thread::State s)
 }
 
 object
-allocate2(Thread* t, unsigned sizeInBytes, bool objectMask, bool fixed)
+allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
+{
+  return allocate3
+    (t, t->m->system,
+     ceiling(sizeInBytes, BytesPerWord) > Thread::HeapSizeInWords ?
+     Machine::FixedAllocation : Machine::MovableAllocation,
+     sizeInBytes, objectMask);
+}
+
+object
+allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
+          unsigned sizeInBytes, bool objectMask)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
@@ -2154,7 +2163,7 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask, bool fixed)
     ENTER(t, Thread::IdleState);
   }
 
-  if (fixed) {
+  if (type == Machine::FixedAllocation) {
     if (t->m->fixedFootprint + sizeInBytes
         > Machine::FixedFootprintThresholdInBytes)
     {
@@ -2179,20 +2188,37 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask, bool fixed)
     ENTER(t, Thread::ExclusiveState);
     collect(t, Heap::MinorCollection);
   }
+  
+  switch (type) {
+  case Machine::MovableAllocation: {
+    return allocateSmall(t, sizeInBytes);
+  }
 
-  if (fixed) {
+  case Machine::FixedAllocation: {
     unsigned total;
     object o = static_cast<object>
       (t->m->heap->allocateFixed
-       (ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
     cast<uintptr_t>(o, 0) = FixedMark;
 
     t->m->fixedFootprint += total;
 
     return o;
-  } else {
-    return allocateSmall(t, sizeInBytes);
+  }
+
+  case Machine::ImmortalAllocation: {
+    unsigned total;
+    object o = static_cast<object>
+      (t->m->heap->allocateImmortal
+       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+
+    cast<uintptr_t>(o, 0) = FixedMark;
+
+    return o;
+  }
+
+  default: abort(t);
   }
 }
 
@@ -2800,7 +2826,7 @@ collect(Thread* t, Heap::CollectionType type)
   killZombies(t, m->rootThread);
 
   for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
-    m->system->free(m->heapPool[i]);
+    m->system->free(m->heapPool[i], Thread::HeapSizeInBytes);
   }
   m->heapPoolIndex = 0;
 

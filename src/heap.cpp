@@ -285,7 +285,7 @@ class Segment {
       while (data == 0) {
         data = static_cast<uintptr_t*>
           (system(context)->tryAllocate
-           ((capacity_ + map->footprint(capacity_)) * BytesPerWord));
+           ((capacity_ + mapFootprint(capacity_)) * BytesPerWord));
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -305,6 +305,10 @@ class Segment {
     }
   }
 
+  unsigned mapFootprint(unsigned capacity) {
+    return map and capacity ? map->footprint(capacity) : 0;
+  }
+
   unsigned capacity() {
     return capacity_;
   }
@@ -318,7 +322,10 @@ class Segment {
   }
 
   void replaceWith(Segment* s) {
-    if (data) system(context)->free(data);
+    if (data) {
+      system(context)->free
+        (data, (capacity() + mapFootprint(capacity())) * BytesPerWord);
+    }
     data = s->data;
     s->data = 0;
 
@@ -368,7 +375,8 @@ class Segment {
   }
 
   void dispose() {
-    system(context)->free(data);
+    system(context)->free
+      (data, (capacity() + mapFootprint(capacity())) * BytesPerWord);
     data = 0;
     map = 0;
   }
@@ -376,28 +384,37 @@ class Segment {
 
 class Fixie {
  public:
-  Fixie(unsigned size, bool hasMask, Fixie** handle):
-    age(0),
+  Fixie(unsigned size, bool hasMask, Fixie** handle, bool immortal):
+    age(immortal ? FixieTenureThreshold + 1 : 0),
     hasMask(hasMask),
     marked(false),
-    dirty(false)
+    dirty(false),
+    size(size)
   {
-    memset(mask(size), 0, maskSize(size, hasMask));
+    memset(mask(), 0, maskSize(size, hasMask));
     add(handle);
     if (DebugFixies) {
-      fprintf(stderr, "make fixie %p\n", this);
+      fprintf(stderr, "make fixie %p of size %d\n", this, totalSize());
     }
+  }
+
+  bool immortal() {
+    return age == FixieTenureThreshold + 1;
   }
 
   void add(Fixie** handle) {
     this->handle = handle;
-    next = *handle;
-    if (next) next->handle = &next;
-    *handle = this;
+    if (handle) {
+      next = *handle;
+      if (next) next->handle = &next;
+      *handle = this;
+    } else {
+      next = 0;
+    }
   }
 
   void remove() {
-    *handle = next;
+    if (handle) *handle = next;
     if (next) next->handle = handle;
   }
 
@@ -414,7 +431,7 @@ class Fixie {
     return static_cast<void**>(static_cast<void*>(body_));
   }
 
-  uintptr_t* mask(unsigned size) {
+  uintptr_t* mask() {
     return body_ + size;
   }
 
@@ -426,7 +443,7 @@ class Fixie {
     return sizeof(Fixie) + (size * BytesPerWord) + maskSize(size, hasMask);
   }
 
-  unsigned totalSize(unsigned size) {
+  unsigned totalSize() {
     return totalSize(size, hasMask);
   }
 
@@ -434,6 +451,7 @@ class Fixie {
   bool hasMask;
   bool marked;
   bool dirty;
+  unsigned size;
   Fixie* next;
   Fixie** handle;
   uintptr_t body_[0];
@@ -485,7 +503,7 @@ class Context {
 
     fixies(0),
     tenuredFixies(0),
-    dirtyFixies(0),
+    dirtyTenuredFixies(0),
     markedFixies(0),
     visitedFixies(0),
 
@@ -500,7 +518,7 @@ class Context {
     gen2.dispose();
     nextGen2.dispose();
     free(this, &tenuredFixies);
-    free(this, &dirtyFixies);
+    free(this, &dirtyTenuredFixies);
     free(this, &fixies);
     client->dispose();
   }
@@ -539,7 +557,7 @@ class Context {
 
   Fixie* fixies;
   Fixie* tenuredFixies;
-  Fixie* dirtyFixies;
+  Fixie* dirtyTenuredFixies;
   Fixie* markedFixies;
   Fixie* visitedFixies;
 
@@ -681,11 +699,15 @@ free(Context* c, Fixie** fixies)
 {
   for (Fixie** p = fixies; *p;) {
     Fixie* f = *p;
-    *p = f->next;
-    if (DebugFixies) {
-      fprintf(stderr, "free fixie %p\n", f);
+    if (f->immortal()) {
+      p = &(f->next);
+    } else {
+      *p = f->next;
+      if (DebugFixies) {
+        fprintf(stderr, "free fixie %p\n", f);
+      }
+      c->system->free(f, f->totalSize());
     }
-    c->system->free(f);
   }
 }
 
@@ -696,7 +718,7 @@ sweepFixies(Context* c)
 
   if (c->mode == Heap::MajorCollection) {
     free(c, &(c->tenuredFixies));
-    free(c, &(c->dirtyFixies));
+    free(c, &(c->dirtyTenuredFixies));
 
     c->tenuredFixieFootprint = 0;
   }
@@ -708,29 +730,31 @@ sweepFixies(Context* c)
     Fixie* f = *p;
     *p = f->next;
 
-    unsigned size = c->client->sizeInWords(f->body());
-
-    ++ f->age;
-    if (f->age > FixieTenureThreshold) {
-      f->age = FixieTenureThreshold;
-    } else if (static_cast<unsigned>(f->age + 1) == FixieTenureThreshold) {
-      c->fixieTenureFootprint += f->totalSize(size);
+    if (not f->immortal()) {
+      ++ f->age;
+      if (f->age > FixieTenureThreshold) {
+        f->age = FixieTenureThreshold;
+      } else if (static_cast<unsigned>(f->age + 1) == FixieTenureThreshold) {
+        c->fixieTenureFootprint += f->totalSize();
+      }
     }
 
-    if (f->age == FixieTenureThreshold) {
+    if (f->age >= FixieTenureThreshold) {
       if (DebugFixies) {
         fprintf(stderr, "tenure fixie %p (dirty: %d)\n", f, f->dirty);
       }
 
-      c->tenuredFixieFootprint += size;
+      if (not f->immortal()) {
+        c->tenuredFixieFootprint += f->totalSize();
+      }
 
       if (f->dirty) {
-        f->move(&(c->dirtyFixies));
+        f->move(&(c->dirtyTenuredFixies));
       } else {
         f->move(&(c->tenuredFixies));
       }
     } else {
-      c->untenuredFixieFootprint += size;
+      c->untenuredFixieFootprint += f->totalSize();
 
       f->move(&(c->fixies));
     }
@@ -740,7 +764,7 @@ sweepFixies(Context* c)
 
   c->tenuredFixieCeiling = max
     (c->tenuredFixieFootprint * 2,
-     InitialTenuredFixieCeilingInBytes / BytesPerWord);
+     InitialTenuredFixieCeilingInBytes);
 }
 
 inline void*
@@ -862,6 +886,24 @@ update(Context* c, void** p, bool* needsVisit)
 }
 
 void
+markDirty(Context* c, Fixie* f)
+{
+  if (not f->dirty) {
+    f->dirty = true;
+    f->move(&(c->dirtyTenuredFixies));
+  }
+}
+
+void
+markClean(Context* c, Fixie* f)
+{
+  if (f->dirty) {
+    f->dirty = false;
+    f->move(&(c->tenuredFixies));
+  }
+}
+
+void
 updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
 {
   Segment* seg;
@@ -876,7 +918,7 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
   }
 
   if (not (c->client->isFixed(result)
-           and fixie(result)->age == FixieTenureThreshold)
+           and fixie(result)->age >= FixieTenureThreshold)
       and not seg->contains(result))
   {
     if (target and c->client->isFixed(target)) {
@@ -884,14 +926,13 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
       assert(c, offset == 0 or f->hasMask);
 
       if (static_cast<unsigned>(f->age + 1) >= FixieTenureThreshold) {
-        unsigned size = c->client->sizeInWords(f->body());
-
         if (DebugFixies) {
-          fprintf(stderr, "dirty fixie %p at %d\n", f, offset);
+          fprintf(stderr, "dirty fixie %p at %d (%p)\n",
+                  f, offset, f->body() + offset);
         }
 
-        f->dirty = true;
-        markBit(f->mask(size), offset);
+        markDirty(c, f);
+        markBit(f->mask(), offset);
       }
     } else if (seg->contains(p)) {
       if (Debug) {        
@@ -1227,20 +1268,23 @@ collect(Context* c, void* target, unsigned offset)
 }
 
 void
-visitDirtyFixies(Context* c)
+visitDirtyFixies(Context* c, Fixie** p)
 {
-  for (Fixie** p = &(c->dirtyFixies); *p;) {
+  while (*p) {
     Fixie* f = *p;
 
     bool wasDirty = false;
-    bool stillDirty = false;
-    unsigned size = c->client->sizeInWords(f->body());
-    uintptr_t* mask = f->mask(size);
+    bool clean = true;
+    uintptr_t* mask = f->mask();
 
     unsigned word = 0;
     unsigned bit = 0;
-    unsigned wordLimit = wordOf(size);
-    unsigned bitLimit = bitOf(size);
+    unsigned wordLimit = wordOf(f->size);
+    unsigned bitLimit = bitOf(f->size);
+
+    if (DebugFixies) {
+      fprintf(stderr, "clean fixie %p\n", f);
+    }
 
     for (; word <= wordLimit and (word < wordLimit or bit < bitLimit);
          ++ word)
@@ -1255,15 +1299,16 @@ visitDirtyFixies(Context* c)
             wasDirty = true;
 
             clearBit(mask, index);
-    
+
             if (DebugFixies) {
-              fprintf(stderr, "clean fixie %p at %d\n", f, index);
+              fprintf(stderr, "clean fixie %p at %d (%p)\n",
+                      f, index, f->body() + index);
             }
 
             collect(c, f->body(), index);
 
             if (getBit(mask, index)) {
-              stillDirty = true;
+              clean = false;
             }
           }
         }
@@ -1271,15 +1316,18 @@ visitDirtyFixies(Context* c)
       }
     }
 
+    if (DebugFixies) {
+      fprintf(stderr, "done cleaning fixie %p\n", f);
+    }
+
     assert(c, wasDirty);
 
-    if (stillDirty) {
-      p = &(f->next);
-    } else {
-      f->dirty = false;
+    if (clean) {
       *p = f->next;
-      f->move(&(c->tenuredFixies));
-    } 
+      markClean(c, f);
+    } else {
+      p = &(f->next);
+    }
   }
 }
 
@@ -1373,7 +1421,7 @@ collect2(Context* c)
   }
 
   if (c->mode == Heap::MinorCollection) {
-    visitDirtyFixies(c);
+    visitDirtyFixies(c, &(c->dirtyTenuredFixies));
   }
 
   class Visitor : public Heap::Visitor {
@@ -1469,11 +1517,11 @@ collect(Context* c, unsigned footprint)
 
     fprintf(stderr,
             " - untenured fixies:          %8d bytes\n",
-            c->untenuredFixieFootprint * BytesPerWord);
+            c->untenuredFixieFootprint);
 
     fprintf(stderr,
             " -   tenured fixies:          %8d bytes\n",
-            c->tenuredFixieFootprint * BytesPerWord);
+            c->tenuredFixieFootprint);
   }
 }
 
@@ -1487,17 +1535,25 @@ class MyHeap: public Heap {
     ::collect(&c, footprint);
   }
 
-  virtual void* allocateFixed(unsigned sizeInWords, bool objectMask,
-                              unsigned* totalInBytes)
+  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
+                              bool objectMask, unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (c.system->allocate(*totalInBytes))
-            Fixie(sizeInWords, objectMask, &(c.fixies)))->body();
+    return (new (allocator->allocate(*totalInBytes))
+            Fixie(sizeInWords, objectMask, &(c.fixies), false))->body();
+  }
+
+  virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
+                                 bool objectMask, unsigned* totalInBytes)
+  {
+    *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
+    return (new (allocator->allocate(*totalInBytes))
+            Fixie(sizeInWords, objectMask, &(c.tenuredFixies), true))->body();
   }
 
   virtual bool needsMark(void* p) {
     if (c.client->isFixed(p)) {
-      return fixie(p)->age == FixieTenureThreshold;
+      return fixie(p)->age >= FixieTenureThreshold;
     } else {
       return c.gen2.contains(p);
     }
@@ -1507,7 +1563,7 @@ class MyHeap: public Heap {
     return target
       and not c.gen2.contains(target)
       and not (c.client->isFixed(target)
-               and fixie(target)->age == FixieTenureThreshold);
+               and fixie(target)->age >= FixieTenureThreshold);
   }
 
   virtual void mark(void* p, unsigned offset, unsigned count) {
@@ -1515,27 +1571,25 @@ class MyHeap: public Heap {
       Fixie* f = fixie(p);
       assert(&c, offset == 0 or f->hasMask);
 
-      unsigned size = c.client->sizeInWords(f->body());
-
+      bool dirty = false;
       for (unsigned i = 0; i < count; ++i) {
         void** target = static_cast<void**>(p) + offset + i;
-        if (targetNeedsMark(*target)) {
+        if (targetNeedsMark(mask(*target))) {
           if (DebugFixies) {
-            fprintf(stderr, "dirty fixie %p at %d\n", f, offset + i);
+            fprintf(stderr, "dirty fixie %p at %d (%p)\n",
+                    f, offset, f->body() + offset);
           }
 
-          f->dirty = true;
-          markBit(f->mask(size), offset + i);
+          dirty = true;
+          markBit(f->mask(), offset + i);
         }
       }
 
-      if (f->dirty) {
-        f->move(&(c.dirtyFixies));
-      }
+      if (dirty) markDirty(&c, f);
     } else {
       for (unsigned i = 0; i < count; ++i) {
         void** target = static_cast<void**>(p) + offset + i;
-        if (targetNeedsMark(*target)) {
+        if (targetNeedsMark(mask(*target))) {
           c.heapMap.set(target);
         }
       }
@@ -1598,7 +1652,7 @@ class MyHeap: public Heap {
 
   virtual void dispose() {
     c.dispose();
-    c.system->free(this);
+    c.system->free(this, sizeof(*this));
   }
 
   Context c;

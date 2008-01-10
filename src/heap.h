@@ -2,6 +2,7 @@
 #define HEAP_H
 
 #include "system.h"
+#include "zone.h"
 
 namespace vm {
 
@@ -45,8 +46,10 @@ class Heap {
 
   virtual ~Heap() { }
   virtual void collect(CollectionType type, unsigned footprint) = 0;
-  virtual void* allocateFixed(unsigned sizeInWords, bool objectMask,
-                              unsigned* totalInBytes) = 0;
+  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
+                              bool objectMask, unsigned* totalInBytes) = 0;
+  virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
+                                 bool objectMask, unsigned* totalInBytes) = 0;
   virtual bool needsMark(void* p) = 0;
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p, unsigned extra) = 0;

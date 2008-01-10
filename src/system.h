@@ -2,16 +2,9 @@
 #define SYSTEM_H
 
 #include "common.h"
+#include "allocator.h"
 
 namespace vm {
-
-class Allocator {
- public:
-  virtual ~Allocator() { }
-  virtual void* tryAllocate(unsigned size) = 0;
-  virtual void* allocate(unsigned size) = 0;
-  virtual void free(const void*) = 0;
-};
 
 class System: public Allocator {
  public:
@@ -90,6 +83,7 @@ class System: public Allocator {
 
   virtual ~System() { }
 
+  virtual Allocator* codeAllocator() = 0;
   virtual bool success(Status) = 0;
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;

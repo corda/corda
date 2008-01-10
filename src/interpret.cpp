@@ -3015,8 +3015,8 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual void dispose(vm::Thread*) {
-    // ignore
+  virtual void dispose(vm::Thread* t) {
+    s->free(t, sizeof(Thread));
   }
 
   virtual void dispose() {

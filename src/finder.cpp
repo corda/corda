@@ -7,12 +7,14 @@ using namespace vm;
 namespace {
 
 const char*
-append(System* s, const char* a, const char* b, const char* c)
+append(System* s, unsigned* length, const char* a, const char* b,
+       const char* c)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
   unsigned cl = strlen(c);
-  char* p = static_cast<char*>(s->allocate(al + bl + cl + 1));
+  *length = al + bl + cl;
+  char* p = static_cast<char*>(s->allocate(*length + 1));
   memcpy(p, a, al);
   memcpy(p + al, b, bl);
   memcpy(p + al + bl, c, cl + 1);
@@ -20,10 +22,11 @@ append(System* s, const char* a, const char* b, const char* c)
 }
 
 const char*
-copy(System* s, const char* a)
+copy(System* s, unsigned* length, const char* a)
 {
   unsigned al = strlen(a);
-  char* p = static_cast<char*>(s->allocate(al + 1));
+  *length = al;
+  char* p = static_cast<char*>(s->allocate(*length + 1));
   memcpy(p, a, al + 1);
   return p;
 }
@@ -51,15 +54,16 @@ class Element {
 
 class DirectoryElement: public Element {
  public:
-  DirectoryElement(System* s, const char* name):
-    s(s), name(name)
+  DirectoryElement(System* s, const char* name, unsigned nameLength):
+    s(s), name(name), nameLength(nameLength)
   { }
 
   virtual System::Region* find(const char* name) {
-    const char* file = append(s, this->name, "/", name);
+    unsigned length;
+    const char* file = append(s, &length, this->name, "/", name);
     System::Region* region;
     System::Status status = s->map(&region, file);
-    s->free(file);
+    s->free(file, length + 1);
 
     if (s->success(status)) {
       return region;
@@ -69,19 +73,21 @@ class DirectoryElement: public Element {
   }
 
   virtual bool exists(const char* name)  {
-    const char* file = append(s, this->name, "/", name);
+    unsigned length;
+    const char* file = append(s, &length, this->name, "/", name);
     System::FileType type = s->identify(file);
-    s->free(file);
+    s->free(file, length + 1);
     return type != System::DoesNotExist;
   }
 
   virtual void dispose() {
-    s->free(name);
-    s->free(this);
+    s->free(name, nameLength + 1);
+    s->free(this, sizeof(*this));
   }
 
   System* s;
   const char* name;
+  unsigned nameLength;
 };
 
 class PointerRegion: public System::Region {
@@ -101,7 +107,7 @@ class PointerRegion: public System::Region {
   }
 
   virtual void dispose() {
-    s->free(this);
+    s->free(this, sizeof(*this));
   }
 
   System* s;
@@ -125,7 +131,7 @@ class DataRegion: public System::Region {
   }
 
   virtual void dispose() {
-    s->free(this);
+    s->free(this, sizeof(*this) + length_);
   }
 
   System* s;
@@ -311,8 +317,8 @@ class JarIndex {
   }
 
   void dispose() {
-    s->free(nodes);
-    s->free(this);
+    s->free(nodes, sizeof(Node) * capacity);
+    s->free(this, sizeof(*this) + (sizeof(Node*) * capacity));
   }
 
   System* s;
@@ -324,8 +330,8 @@ class JarIndex {
 
 class JarElement: public Element {
  public:
-  JarElement(System* s, const char* name):
-    s(s), name(name), index(0)
+  JarElement(System* s, const char* name, unsigned nameLength):
+    s(s), name(name), nameLength(nameLength), index(0)
   { }
 
   virtual void init() {
@@ -355,26 +361,27 @@ class JarElement: public Element {
   }
 
   virtual void dispose() {
-    s->free(name);
+    s->free(name, nameLength + 1);
     if (index) {
       index->dispose();
     }
     if (region) {
       region->dispose();
     }
-    s->free(this);
+    s->free(this, sizeof(*this));
   }
 
   System* s;
   const char* name;
+  unsigned nameLength;
   System::Region* region;
   JarIndex* index;
 };
 
 class BuiltinElement: public JarElement {
  public:
-  BuiltinElement(System* s, const char* name):
-    JarElement(s, name)
+  BuiltinElement(System* s, const char* name, unsigned nameLength):
+    JarElement(s, name, nameLength)
   { }
 
   virtual void init() {
@@ -441,7 +448,8 @@ parsePath(System* s, const char* path)
       memcpy(name, token.s + 1, token.length - 1);
       name[token.length - 2] = 0; 
   
-      e = new (s->allocate(sizeof(BuiltinElement))) BuiltinElement(s, name);
+      e = new (s->allocate(sizeof(BuiltinElement)))
+        BuiltinElement(s, name, token.length - 2);
     } else {
       char* name = static_cast<char*>(s->allocate(token.length + 1));
       memcpy(name, token.s, token.length);
@@ -449,16 +457,17 @@ parsePath(System* s, const char* path)
 
       switch (s->identify(name)) {
       case System::File: {
-        e = new (s->allocate(sizeof(JarElement))) JarElement(s, name);
+        e = new (s->allocate(sizeof(JarElement)))
+          JarElement(s, name, token.length);
       } break;
 
       case System::Directory: {
         e = new (s->allocate(sizeof(DirectoryElement)))
-          DirectoryElement(s, name);
+          DirectoryElement(s, name, token.length);
       } break;
 
       default: {
-        s->free(name);
+        s->free(name, token.length + 1);
         e = 0;
       } break;
       }
@@ -482,7 +491,7 @@ class MyFinder: public Finder {
   MyFinder(System* system, const char* path):
     system(system),
     path_(parsePath(system, path)),
-    pathString(copy(system, path))
+    pathString(copy(system, &pathStringLength, path))
   { }
 
   virtual System::Region* find(const char* name) {
@@ -516,13 +525,14 @@ class MyFinder: public Finder {
       e = e->next;
       t->dispose();
     }
-    system->free(pathString);
-    system->free(this);
+    system->free(pathString, pathStringLength + 1);
+    system->free(this, sizeof(*this));
   }
 
   System* system;
   Element* path_;
   const char* pathString;
+  unsigned pathStringLength;
 };
 
 } // namespace

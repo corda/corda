@@ -126,7 +126,7 @@ Java_java_lang_ClassLoader_defineClass
   uint8_t* buffer = static_cast<uint8_t*>(t->m->system->allocate(length));
   memcpy(buffer, &byteArrayBody(t, *b, offset), length);
   object c = parseClass(t, buffer, length);
-  t->m->system->free(buffer);
+  t->m->system->free(buffer, length);
   return makeLocalReference(t, c);
 }
 

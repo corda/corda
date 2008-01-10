@@ -21,7 +21,7 @@ class Vector {
 
   void dispose() {
     if (data and minimumCapacity >= 0) {
-      s->free(data);
+      s->free(data, capacity);
     }
   }
 
@@ -43,7 +43,7 @@ class Vector {
       uint8_t* newData = static_cast<uint8_t*>(s->allocate(newCapacity));
       if (data) {
         memcpy(newData, data, position);
-        s->free(data);
+        s->free(data, capacity);
       }
       data = newData;
       capacity = newCapacity;

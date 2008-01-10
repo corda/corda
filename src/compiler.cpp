@@ -160,7 +160,6 @@ class Context {
     plan.dispose();
     code.dispose();
     constantPool.dispose();
-    if (segmentTable) s->free(segmentTable);
   }
 
   System* s;
@@ -2268,7 +2267,8 @@ writeCode(Context* c)
   unsigned tableSize = (c->plan.length() / BytesPerWord);
 
   if (c->codeLength < 0) {
-    c->segmentTable = static_cast<Segment**>(c->s->allocate(c->plan.length()));
+    c->segmentTable = static_cast<Segment**>
+      (c->zone->allocate(c->plan.length()));
     
     for (unsigned i = 0; i < tableSize; ++i) {
       c->plan.get(i * BytesPerWord, c->segmentTable + i, BytesPerWord);

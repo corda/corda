@@ -436,7 +436,7 @@ class Context {
 
   Context(MyThread* t, object method, uint8_t* indirectCaller):
     t(t),
-    zone(t->m->system, 16 * 1024),
+    zone(t->m->system, t->m->system, 16 * 1024),
     c(makeCompiler(t->m->system, &zone, indirectCaller)),
     method(method),
     objectPool(0),
@@ -449,7 +449,7 @@ class Context {
 
   Context(MyThread* t):
     t(t),
-    zone(t->m->system, 256),
+    zone(t->m->system, t->m->system, LikelyPageSizeInBytes),
     c(makeCompiler(t->m->system, &zone, 0)),
     method(0),
     objectPool(0),
@@ -3629,6 +3629,9 @@ calculateFrameMaps(MyThread* t, Context* context)
   updateTraceElements(t, context, roots, 0);
 }
 
+Allocator*
+codeAllocator(MyThread* t);
+
 object
 finish(MyThread* t, Context* context, const char* name)
 {
@@ -3636,9 +3639,11 @@ finish(MyThread* t, Context* context, const char* name)
 
   unsigned count = ceiling(c->codeSize() + c->poolSize(), BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
-  object result = allocate2
-    (t, SingletonBody + size * BytesPerWord, true, true);
-  initSingleton(t, result, size, true); 
+  object result = allocate3
+    (t, codeAllocator(t), Machine::ImmortalAllocation,
+     SingletonBody + (size * BytesPerWord), true);
+  initSingleton(t, result, size, true);
+  mark(t, result, 0);
   singletonMask(t, result)[0] = 1;
 
   uint8_t* start = reinterpret_cast<uint8_t*>(&singletonValue(t, result, 0));
@@ -4326,7 +4331,9 @@ class MyProcessor: public Processor {
     nativeCompiled(0),
     addressTable(0),
     addressCount(0),
-    indirectCaller(0)
+    indirectCaller(0),
+    indirectCallerSize(0),
+    codeAllocator(s, s->codeAllocator(), 64 * 1024)
   { }
 
   virtual Thread*
@@ -4576,19 +4583,23 @@ class MyProcessor: public Processor {
   virtual void dispose(Thread* vmt) {
     MyThread* t = static_cast<MyThread*>(vmt);
 
-    t->m->system->handleSegFault(0);
-
     while (t->reference) {
       vm::dispose(t, t->reference);
     }
+
+    s->free(t, sizeof(*t));
   }
 
   virtual void dispose() {
+    codeAllocator.dispose();
+    
+    s->handleSegFault(0);
+
     if (indirectCaller) {
-      s->free(indirectCaller);
+      s->free(indirectCaller, indirectCallerSize);
     }
 
-    s->free(this);
+    s->free(this, sizeof(*this));
   }
   
   System* s;
@@ -4597,7 +4608,9 @@ class MyProcessor: public Processor {
   object addressTable;
   unsigned addressCount;
   uint8_t* indirectCaller;
+  unsigned indirectCallerSize;
   SegFaultHandler segFaultHandler;
+  Zone codeAllocator;
 };
 
 MyProcessor*
@@ -4618,8 +4631,9 @@ processor(MyThread* t)
 
       c->jmp(c->indirectTarget());
 
+      p->indirectCallerSize = c->codeSize();
       p->indirectCaller = static_cast<uint8_t*>
-        (t->m->system->allocate(c->codeSize()));
+        (t->m->system->allocate(p->indirectCallerSize));
       c->writeTo(p->indirectCaller);
 
       if (Verbose) {
@@ -4756,6 +4770,11 @@ insertTraceNode(MyThread* t, object node)
 
   set(t, node, TraceNodeNext, arrayBody(t, p->addressTable, index));
   set(t, p->addressTable, ArrayBody + (index * BytesPerWord), node);
+}
+
+Allocator*
+codeAllocator(MyThread* t) {
+  return &(processor(t)->codeAllocator);
 }
 
 } // namespace

@@ -134,6 +134,7 @@ generated-code = \
 
 interpreter-depends = \
 	$(generated-code) \
+	$(src)/allocator.h \
 	$(src)/common.h \
 	$(src)/system.h \
 	$(src)/heap.h \
@@ -144,7 +145,8 @@ interpreter-depends = \
 	$(src)/constants.h \
 	$(src)/jnienv.h \
 	$(src)/machine.h \
-	$(src)/util.h
+	$(src)/util.h \
+	$(src)/zone.h
 
 interpreter-sources = \
 	$(src)/$(system).cpp \

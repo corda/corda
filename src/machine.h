@@ -1105,10 +1105,10 @@ class Machine {
 #include "type-enums.cpp"
   };
 
-  enum State {
-    UnsafeState,
-    BootState,
-    ActiveState
+  enum AllocationType {
+    MovableAllocation,
+    FixedAllocation,
+    ImmortalAllocation
   };
 
   Machine(System* system, Finder* finder, Processor* processor);
@@ -1306,7 +1306,7 @@ dispose(Thread* t, Reference* r)
   if (r->next) {
     r->next->handle = r->handle;
   }
-  t->m->system->free(r);
+  t->m->system->free(r, sizeof(*r));
 }
 
 void
@@ -1411,7 +1411,11 @@ expect(Thread* t, bool v)
 }
 
 object
-allocate2(Thread* t, unsigned sizeInBytes, bool objectMask, bool fixed);
+allocate2(Thread* t, unsigned sizeInBytes, bool objectMask);
+
+object
+allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
+          unsigned sizeInBytes, bool objectMask);
 
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
@@ -1431,8 +1435,7 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
                >= Thread::HeapSizeInWords
                or t->m->exclusive))
   {
-    return allocate2(t, sizeInBytes, objectMask,
-                     sizeInBytes > Thread::HeapSizeInBytes);
+    return allocate2(t, sizeInBytes, objectMask);
   } else {
     return allocateSmall(t, sizeInBytes);
   }
@@ -1461,12 +1464,12 @@ set(Thread* t, object target, unsigned offset, object value)
 }
 
 inline void
-setObjectClass(Thread* t, object o, object value)
+setObjectClass(Thread*, object o, object value)
 {
-  set(t, o, 0,
-      reinterpret_cast<object>
-      (reinterpret_cast<uintptr_t>(value)
-       | reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
+  cast<object>(o, 0)
+    = reinterpret_cast<object>
+    (reinterpret_cast<uintptr_t>(value)
+     | reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask));
 }
 
 object&

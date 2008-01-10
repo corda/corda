@@ -2,25 +2,28 @@
 #define ZONE_H
 
 #include "system.h"
+#include "allocator.h"
 
 namespace vm {
 
-class Zone {
+class Zone: public Allocator {
  public:
   class Segment {
    public:
-    Segment(Segment* next): next(next) { }
+    Segment(Segment* next, unsigned size): next(next), size(size) { }
 
     Segment* next;
+    uintptr_t size;
     uint8_t data[0];
   };
 
-  Zone(System* s, unsigned minimumCapacity):
+  Zone(System* s, Allocator* a, unsigned minimumFootprint):
     s(s),
+    a(a),
     segment(0),
     position(0),
-    capacity(0),
-    minimumCapacity(minimumCapacity)
+    minimumFootprint(minimumFootprint < sizeof(Segment) ? 0 :
+                     minimumFootprint - sizeof(Segment))
   { }
 
   ~Zone() {
@@ -30,31 +33,63 @@ class Zone {
   void dispose() {
     for (Segment* seg = segment, *next; seg; seg = next) {
       next = seg->next;
-      s->free(seg);
+      a->free(seg, sizeof(Segment) + seg->size);
     }
   }
 
-  void ensure(unsigned space) {
-    if (position + space > capacity) {
-      capacity = max(space, max(minimumCapacity, capacity * 2));
-      segment = new (s->allocate(sizeof(Segment) + capacity)) Segment(segment);
+  bool ensure(unsigned space) {
+    if (segment == 0 or position + space > segment->size) {
+      unsigned size = max
+        (space, max
+         (minimumFootprint, segment == 0 ? 0 : segment->size * 2))
+        + sizeof(Segment);
+
+      // pad to page size
+      size = (size + (LikelyPageSizeInBytes - 1))
+        & ~(LikelyPageSizeInBytes - 1);
+
+      void* p = a->tryAllocate(size);
+      if (p == 0) {
+        size = space + sizeof(Segment);
+        void* p = a->tryAllocate(size);
+        if (p == 0) {
+          return false;
+        }
+      }
+
+      segment = new (p) Segment(segment, size - sizeof(Segment));
       position = 0;
     }
+    return true;
   }
 
-  void* allocate(unsigned size) {
+  virtual void* tryAllocate(unsigned size) {
     size = pad(size);
-    ensure(size);
-    void* r = segment->data + position;
-    position += size;
-    return r;
+    if (ensure(size)) {
+      void* r = segment->data + position;
+      position += size;
+      return r;
+    } else {
+      return 0;
+    }
+  }
+
+  virtual void* allocate(unsigned size) {
+    void* p = tryAllocate(size);
+    expect(s, p);
+    return p;
+  }
+
+  virtual void free(const void*, unsigned) {
+    // not supported
+    abort(s);
   }
   
   System* s;
+  Allocator* a;
   Segment* segment;
   unsigned position;
-  unsigned capacity;
-  unsigned minimumCapacity;
+  unsigned minimumFootprint;
 };
 
 } // namespace vm
