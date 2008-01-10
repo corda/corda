@@ -3020,7 +3020,7 @@ class MyProcessor: public Processor {
   }
 
   virtual void dispose() {
-    s->free(this);
+    s->free(this, sizeof(*this));
   }
   
   System* s;
