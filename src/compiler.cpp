@@ -2596,7 +2596,7 @@ class MyCompiler: public Compiler {
     if (BytesPerWord == 8) {
       return4(v);
     } else {
-      appendOperation(&c, MyOperand::mov, v, register_(&c, rax, rdx));
+      appendOperation(&c, MyOperand::mov8, v, register_(&c, rax, rdx));
       epilogue();
       ret();
     }
