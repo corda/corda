@@ -2082,7 +2082,7 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       // shld
       c->code.append(0x0f);
       c->code.append(0xa5);
-      c->code.append(0xc0 | (high->value(c) << 3) | low->value(c));
+      c->code.append(0xc0 | (low->value(c) << 3) | high->value(c));
 
       // shl
       c->code.append(0xd3);
@@ -2124,7 +2124,7 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       // shrd
       c->code.append(0x0f);
       c->code.append(0xad);
-      c->code.append(0xc0 | (low->value(c) << 3) | high->value(c));
+      c->code.append(0xc0 | (high->value(c) << 3) | low->value(c));
 
       // sar
       c->code.append(0xd3);
@@ -2169,7 +2169,7 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       // shld
       c->code.append(0x0f);
       c->code.append(0xa5);
-      c->code.append(0xc0 | (low->value(c) << 3) | high->value(c));
+      c->code.append(0xc0 | (high->value(c) << 3) | low->value(c));
 
       // shl
       c->code.append(0xd3);
