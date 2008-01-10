@@ -2092,7 +2092,7 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       RegisterOperand* tmp = temporary(c);
 
       cx->accept(c, mov, operand);
-      tmp->accept(c, mov, this);
+      tmp->accept(c, mov, high(c));
       // shrd
       encode2(c, 0x0fad, tmp->value(c), this, false);
       // sar
@@ -2115,7 +2115,7 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       RegisterOperand* tmp = temporary(c);
 
       cx->accept(c, mov, operand);
-      tmp->accept(c, mov, this);
+      tmp->accept(c, mov, high(c));
       // shrd
       encode2(c, 0x0fad, tmp->value(c), this, false);
       // shr
