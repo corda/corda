@@ -4595,10 +4595,6 @@ class MyProcessor: public Processor {
     
     s->handleSegFault(0);
 
-    if (indirectCaller) {
-      s->free(indirectCaller, indirectCallerSize);
-    }
-
     s->free(this, sizeof(*this));
   }
   
@@ -4633,7 +4629,7 @@ processor(MyThread* t)
 
       p->indirectCallerSize = c->codeSize();
       p->indirectCaller = static_cast<uint8_t*>
-        (t->m->system->allocate(p->indirectCallerSize));
+        (p->codeAllocator.allocate(p->indirectCallerSize));
       c->writeTo(p->indirectCaller);
 
       if (Verbose) {
