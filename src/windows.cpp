@@ -99,7 +99,7 @@ class MySystem: public System {
       CloseHandle(event);
       CloseHandle(mutex);
       CloseHandle(thread);
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     HANDLE thread;
@@ -309,7 +309,7 @@ class MySystem: public System {
     virtual void dispose() {
       assert(s, owner_ == 0);
       CloseHandle(mutex);
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     System* s;
@@ -340,7 +340,7 @@ class MySystem: public System {
       bool r UNUSED = TlsFree(key);
       assert(s, r);
 
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     System* s;
@@ -372,7 +372,7 @@ class MySystem: public System {
         if (mapping) CloseHandle(mapping);
         if (file) CloseHandle(file);
       }
-      system->free(this);
+      system->free(this, sizeof(*this));
     }
 
     System* system;
@@ -384,11 +384,13 @@ class MySystem: public System {
 
   class Library: public System::Library {
    public:
-    Library(System* s, HMODULE handle, const char* name, bool mapName,
+    Library(System* s, HMODULE handle, const char* name, size_t nameLength,
+	    bool mapName,
             System::Library* next):
       s(s),
       handle(handle),
       name_(name),
+      nameLength(nameLength),
       mapName_(mapName),
       next_(next)
     { }
@@ -426,15 +428,16 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_);
+        s->free(name_, nameLength+1);
       }
 
-      s->free(this);
+      s->free(this, sizeof(*this));
     }
 
     System* s;
     HMODULE handle;
     const char* name_;
+    size_t nameLength;
     bool mapName_;
     System::Library* next_;
   };
@@ -643,7 +646,7 @@ class MySystem: public System {
       }
 
       *lib = new (System::allocate(sizeof(Library)))
-        Library(this, handle, n, mapName, next);
+        Library(this, handle, n, mapName, nameLength, next);
       return 0;
     } else {
       return 1;
