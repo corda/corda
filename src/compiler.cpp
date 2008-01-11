@@ -1467,7 +1467,7 @@ RegisterOperand::accept(Context* c, Operation op,
 ImmediateOperand*
 value(Context* c, AddressOperand* operand)
 {
-  if (c->codeLength and operand->promise->resolved(c)) {
+  if (c->codeLength >= 0 and operand->promise->resolved(c)) {
     return immediate(c, operand->promise->value(c));
   } else {
     return immediate(c, 0);
@@ -1544,7 +1544,7 @@ RegisterOperand::accept(Context* c, Operation op,
 ImmediateOperand*
 value(Context* c, AbsoluteOperand* operand)
 {
-  if (c->codeLength and operand->promise->resolved(c)) {
+  if (c->codeLength >= 0 and operand->promise->resolved(c)) {
     return immediate(c, operand->promise->value(c));
   } else {
     return immediate(c, 0);
@@ -1582,7 +1582,7 @@ void
 unconditional(Context* c, unsigned jump, AddressOperand* operand)
 {
   intptr_t v;
-  if (c->codeLength and operand->promise->resolved(c)) {
+  if (c->codeLength >= 0 and operand->promise->resolved(c)) {
     uint8_t* instruction = c->code.data + c->code.length();
     v = reinterpret_cast<uint8_t*>(operand->promise->value(c))
       - instruction - 5;
@@ -1600,7 +1600,7 @@ void
 conditional(Context* c, unsigned condition, AddressOperand* operand)
 {
   intptr_t v;
-  if (c->codeLength and operand->promise->resolved(c)) {
+  if (c->codeLength >= 0 and operand->promise->resolved(c)) {
     uint8_t* instruction = c->code.data + c->code.length();
     v = reinterpret_cast<uint8_t*>(operand->promise->value(c))
       - instruction - 6;
