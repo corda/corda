@@ -2614,21 +2614,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       object target = resolveMethod(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      fprintf
-        (stderr, "invokespecial (1) %s.%s%s\n",
-         &byteArrayBody(t, className(t, methodClass(t, target)), 0),
-         &byteArrayBody(t, methodName(t, target), 0),
-         &byteArrayBody(t, methodSpec(t, target), 0));
-
       object class_ = methodClass(t, context->method);
       if (isSpecialMethod(t, target, class_)) {
         target = findMethod(t, target, classSuper(t, class_));
-
-        fprintf
-          (stderr, "invokespecial (2) %s.%s%s\n",
-           &byteArrayBody(t, className(t, methodClass(t, target)), 0),
-           &byteArrayBody(t, methodName(t, target), 0),
-           &byteArrayBody(t, methodSpec(t, target), 0));
       }
 
       compileDirectInvoke(t, frame, target);
