@@ -46,7 +46,14 @@ public class Misc {
     putInt((int)val, dst, offset + 4);
   }
 
+  public String toString() {
+    return super.toString();
+  }
+
   public static void main(String[] args) {
+    Misc m = new Misc();
+    m.toString();
+
     expect(Long.valueOf(231L) == 231L);
 
     long x = 231;
@@ -82,7 +89,6 @@ public class Misc {
     int b = 2;
     int c = a + b;
 
-    Misc m = new Misc();
     String s = "hello";
     m.foo(s);
     m.bar(s);

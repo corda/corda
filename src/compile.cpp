@@ -73,7 +73,7 @@ class MyThread: public Thread {
 object
 resolveTarget(MyThread* t, void* stack, object method)
 {
-  if (method and methodVirtual(t, method)) {
+  if (method) {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
 
     object class_ = objectClass
@@ -143,7 +143,10 @@ class MyStackWalker: public Processor::StackWalker {
 
   static object resolveNativeMethod(MyThread* t, void* stack, object node) {
     if (node) {
-      object target = resolveTarget(t, stack, traceNodeTarget(t, node));
+      object target = traceNodeTarget(t, node);
+      if (traceNodeVirtualCall(t, node)) {
+        target = resolveTarget(t, stack, target);
+      }
       if (target and methodFlags(t, target) & ACC_NATIVE) {
         return target;
       }
@@ -1573,7 +1576,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
       (c->constant(function),
        frame->trace(0, false),
        2, c->thread(), lock);
-  }  
+  }
 }
 
 void
@@ -2611,9 +2614,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       object target = resolveMethod(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      object class_ = methodClass(t, target);
+      fprintf
+        (stderr, "invokespecial (1) %s.%s%s\n",
+         &byteArrayBody(t, className(t, methodClass(t, target)), 0),
+         &byteArrayBody(t, methodName(t, target), 0),
+         &byteArrayBody(t, methodSpec(t, target), 0));
+
+      object class_ = methodClass(t, context->method);
       if (isSpecialMethod(t, target, class_)) {
         target = findMethod(t, target, classSuper(t, class_));
+
+        fprintf
+          (stderr, "invokespecial (2) %s.%s%s\n",
+           &byteArrayBody(t, className(t, methodClass(t, target)), 0),
+           &byteArrayBody(t, methodName(t, target), 0),
+           &byteArrayBody(t, methodSpec(t, target), 0));
       }
 
       compileDirectInvoke(t, frame, target);
@@ -3820,7 +3835,7 @@ compileMethod2(MyThread* t)
   PROTECT(t, target);
 
   if (traceNodeVirtualCall(t, node)) {
-    target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
+    target = resolveTarget(t, t->stack, target);
   }
 
   if (LIKELY(t->exception == 0)) {
@@ -3856,6 +3871,8 @@ uint64_t
 invokeNative2(MyThread* t, object method)
 {
   PROTECT(t, method);
+
+  assert(t, methodFlags(t, method) & ACC_NATIVE);
 
   initClass(t, methodClass(t, method));
   if (UNLIKELY(t->exception)) return 0;
@@ -4020,7 +4037,10 @@ uint64_t FORCE_ALIGN
 invokeNative(MyThread* t)
 {
   object node = findTraceNode(t, *static_cast<void**>(t->stack));
-  object target = resolveTarget(t, t->stack, traceNodeTarget(t, node));
+  object target = traceNodeTarget(t, node);
+  if (traceNodeVirtualCall(t, node)) {
+    target = resolveTarget(t, t->stack, target);
+  }
   uint64_t result = 0;
 
   if (LIKELY(t->exception == 0)) {
