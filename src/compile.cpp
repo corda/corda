@@ -3949,6 +3949,14 @@ invokeNative2(MyThread* t, object method)
             &byteArrayBody(t, methodName(t, method), 0));
   }
 
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    if (methodFlags(t, method) & ACC_STATIC) {
+      acquire(t, methodClass(t, method));
+    } else {
+      acquire(t, *reinterpret_cast<object*>(args[0]));
+    }
+  }
+
   { ENTER(t, Thread::IdleState);
 
     result = t->m->system->call
@@ -3958,6 +3966,14 @@ invokeNative2(MyThread* t, object method)
        count,
        footprint * BytesPerWord,
        returnType);
+  }
+
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    if (methodFlags(t, method) & ACC_STATIC) {
+      release(t, methodClass(t, method));
+    } else {
+      release(t, *reinterpret_cast<object*>(args[0]));
+    }
   }
 
   if (DebugNatives) {
