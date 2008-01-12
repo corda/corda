@@ -17,7 +17,7 @@ ifeq ($(platform),windows)
 	arch = i386
 endif
 
-mode = debug
+mode = fast
 process = compile
 
 build = build
