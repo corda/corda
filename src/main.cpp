@@ -3,8 +3,9 @@
 #include "string.h"
 #include "jni.h"
 
+// since we don't link against libstdc++, we must implement some dummy
+// functions:
 extern "C" void __cxa_pure_virtual(void) { abort(); }
-
 void operator delete(void*) { abort(); }
 
 #ifdef JNI_VERSION_1_6
