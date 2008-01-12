@@ -106,6 +106,9 @@ endif
 ifeq ($(mode),debug)
 	cflags += -O0 -g3
 endif
+ifeq ($(mode),debug-fast)
+	cflags += -O0 -g3 -DNDEBUG
+endif
 ifeq ($(mode),stress)
 	cflags += -O0 -g3 -DVM_STRESS
 endif
