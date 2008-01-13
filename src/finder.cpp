@@ -6,6 +6,20 @@ using namespace vm;
 
 namespace {
 
+void*
+allocate(System* s, unsigned size)
+{
+  void* p = s->tryAllocate(size, false);
+  if (p == 0) abort();
+  return p;
+}
+
+void
+free(System* s, const void* p, unsigned size)
+{
+  s->free(p, size, false);
+}
+
 const char*
 append(System* s, unsigned* length, const char* a, const char* b,
        const char* c)
@@ -14,7 +28,7 @@ append(System* s, unsigned* length, const char* a, const char* b,
   unsigned bl = strlen(b);
   unsigned cl = strlen(c);
   *length = al + bl + cl;
-  char* p = static_cast<char*>(s->allocate(*length + 1));
+  char* p = static_cast<char*>(allocate(s, *length + 1));
   memcpy(p, a, al);
   memcpy(p + al, b, bl);
   memcpy(p + al + bl, c, cl + 1);
@@ -26,7 +40,7 @@ copy(System* s, unsigned* length, const char* a)
 {
   unsigned al = strlen(a);
   *length = al;
-  char* p = static_cast<char*>(s->allocate(*length + 1));
+  char* p = static_cast<char*>(allocate(s, *length + 1));
   memcpy(p, a, al + 1);
   return p;
 }
@@ -63,7 +77,7 @@ class DirectoryElement: public Element {
     const char* file = append(s, &length, this->name, "/", name);
     System::Region* region;
     System::Status status = s->map(&region, file);
-    s->free(file, length + 1);
+    free(s, file, length + 1);
 
     if (s->success(status)) {
       return region;
@@ -76,13 +90,13 @@ class DirectoryElement: public Element {
     unsigned length;
     const char* file = append(s, &length, this->name, "/", name);
     System::FileType type = s->identify(file);
-    s->free(file, length + 1);
+    free(s, file, length + 1);
     return type != System::DoesNotExist;
   }
 
   virtual void dispose() {
-    s->free(name, nameLength + 1);
-    s->free(this, sizeof(*this));
+    free(s, name, nameLength + 1);
+    free(s, this, sizeof(*this));
   }
 
   System* s;
@@ -107,7 +121,7 @@ class PointerRegion: public System::Region {
   }
 
   virtual void dispose() {
-    s->free(this, sizeof(*this));
+    free(s, this, sizeof(*this));
   }
 
   System* s;
@@ -131,7 +145,7 @@ class DataRegion: public System::Region {
   }
 
   virtual void dispose() {
-    s->free(this, sizeof(*this) + length_);
+    free(s, this, sizeof(*this) + length_);
   }
 
   System* s;
@@ -163,7 +177,7 @@ class JarIndex {
     s(s),
     capacity(capacity),
     position(0),
-    nodes(static_cast<Node*>(s->allocate(sizeof(Node) * capacity)))
+    nodes(static_cast<Node*>(allocate(s, sizeof(Node) * capacity)))
   {
     memset(table, 0, sizeof(Node*) * capacity);
   }
@@ -220,7 +234,7 @@ class JarIndex {
 
   static JarIndex* make(System* s, unsigned capacity) {
     return new
-      (s->allocate(sizeof(JarIndex) + (sizeof(Node*) * capacity)))
+      (allocate(s, sizeof(JarIndex) + (sizeof(Node*) * capacity)))
       JarIndex(s, capacity);
   }
   
@@ -276,13 +290,13 @@ class JarIndex {
       const uint8_t* p = n->entry;
       switch (compressionMethod(p)) {
       case Stored: {
-        return new (s->allocate(sizeof(PointerRegion)))
+        return new (allocate(s, sizeof(PointerRegion)))
           PointerRegion(s, fileData(p), compressedSize(p));
       } break;
 
       case Deflated: {
         DataRegion* region = new
-          (s->allocate(sizeof(DataRegion) + uncompressedSize(p)))
+          (allocate(s, sizeof(DataRegion) + uncompressedSize(p)))
           DataRegion(s, uncompressedSize(p));
           
         z_stream zStream; memset(&zStream, 0, sizeof(z_stream));
@@ -317,8 +331,8 @@ class JarIndex {
   }
 
   void dispose() {
-    s->free(nodes, sizeof(Node) * capacity);
-    s->free(this, sizeof(*this) + (sizeof(Node*) * capacity));
+    free(s, nodes, sizeof(Node) * capacity);
+    free(s, this, sizeof(*this) + (sizeof(Node*) * capacity));
   }
 
   System* s;
@@ -361,14 +375,14 @@ class JarElement: public Element {
   }
 
   virtual void dispose() {
-    s->free(name, nameLength + 1);
+    free(s, name, nameLength + 1);
     if (index) {
       index->dispose();
     }
     if (region) {
       region->dispose();
     }
-    s->free(this, sizeof(*this));
+    free(s, this, sizeof(*this));
   }
 
   System* s;
@@ -396,7 +410,7 @@ class BuiltinElement: public JarElement {
           unsigned size;
           uint8_t* data = function(&size);
           if (data) {
-            region = new (s->allocate(sizeof(PointerRegion)))
+            region = new (allocate(s, sizeof(PointerRegion)))
               PointerRegion(s, data, size);
             index = JarIndex::open(s, region);
           }
@@ -444,30 +458,30 @@ parsePath(System* s, const char* path)
 
     Element* e;
     if (*token.s == '[' and token.s[token.length - 1] == ']') {
-      char* name = static_cast<char*>(s->allocate(token.length - 1));
+      char* name = static_cast<char*>(allocate(s, token.length - 1));
       memcpy(name, token.s + 1, token.length - 1);
       name[token.length - 2] = 0; 
   
-      e = new (s->allocate(sizeof(BuiltinElement)))
+      e = new (allocate(s, sizeof(BuiltinElement)))
         BuiltinElement(s, name, token.length - 2);
     } else {
-      char* name = static_cast<char*>(s->allocate(token.length + 1));
+      char* name = static_cast<char*>(allocate(s, token.length + 1));
       memcpy(name, token.s, token.length);
       name[token.length] = 0;
 
       switch (s->identify(name)) {
       case System::File: {
-        e = new (s->allocate(sizeof(JarElement)))
+        e = new (allocate(s, sizeof(JarElement)))
           JarElement(s, name, token.length);
       } break;
 
       case System::Directory: {
-        e = new (s->allocate(sizeof(DirectoryElement)))
+        e = new (allocate(s, sizeof(DirectoryElement)))
           DirectoryElement(s, name, token.length);
       } break;
 
       default: {
-        s->free(name, token.length + 1);
+        free(s, name, token.length + 1);
         e = 0;
       } break;
       }
@@ -525,8 +539,8 @@ class MyFinder: public Finder {
       e = e->next;
       t->dispose();
     }
-    system->free(pathString, pathStringLength + 1);
-    system->free(this, sizeof(*this));
+    free(system, pathString, pathStringLength + 1);
+    free(system, this, sizeof(*this));
   }
 
   System* system;
@@ -542,7 +556,7 @@ namespace vm {
 Finder*
 makeFinder(System* s, const char* path)
 {
-  return new (s->allocate(sizeof(MyFinder))) MyFinder(s, path);
+  return new (allocate(s, sizeof(MyFinder))) MyFinder(s, path);
 }
 
 } // namespace vm

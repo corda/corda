@@ -141,7 +141,8 @@ class Compiler {
 };
 
 Compiler*
-makeCompiler(System* system, Zone* zone, void* indirectCaller);
+makeCompiler(System* system, Allocator* allocator, void* allocatorContext,
+             Zone* zone, void* indirectCaller);
 
 } // namespace vm
 

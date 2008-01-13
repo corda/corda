@@ -1111,7 +1111,7 @@ class Machine {
     ImmortalAllocation
   };
 
-  Machine(System* system, Finder* finder, Processor* processor);
+  Machine(System* system, Heap* heap, Finder* finder, Processor* processor);
 
   ~Machine() { 
     dispose();
@@ -1125,6 +1125,7 @@ class Machine {
 
   JavaVMVTable* vtable;
   System* system;
+  Heap::Client* heapClient;
   Heap* heap;
   Finder* finder;
   Processor* processor;
@@ -1167,6 +1168,16 @@ threadInterrupted(Thread* t, object thread);
 
 void
 enterActiveState(Thread* t);
+
+#ifdef VM_STRESS
+
+inline void stress(Thread* t);
+
+#else // not VM_STRESS
+
+#define stress(t)
+
+#endif // not VM_STRESS
 
 class Thread {
  public:
@@ -1306,7 +1317,7 @@ dispose(Thread* t, Reference* r)
   if (r->next) {
     r->next->handle = r->handle;
   }
-  t->m->system->free(r, sizeof(*r));
+  t->m->heap->free(r, sizeof(*r), false);
 }
 
 void
@@ -1334,12 +1345,6 @@ stress(Thread* t)
     t->stress = false;
   }
 }
-
-#else // not VM_STRESS
-
-inline void
-stress(Thread*)
-{ }
 
 #endif // not VM_STRESS
 
@@ -1415,7 +1420,7 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask);
 
 object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
-          unsigned sizeInBytes, bool objectMask);
+          unsigned sizeInBytes, bool executable, bool objectMask);
 
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)

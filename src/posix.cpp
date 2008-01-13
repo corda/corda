@@ -108,6 +108,14 @@ run(void* r)
   return 0;
 }
 
+void*
+allocate(System* s, unsigned size)
+{
+  void* p = s->tryAllocate(size, false);
+  if (p == 0) abort();
+  return p;
+}
+
 const bool Verbose = false;
 
 const unsigned Waiting = 1 << 0;
@@ -115,45 +123,6 @@ const unsigned Notified = 1 << 1;
 
 class MySystem: public System {
  public:
-  class CodeAllocator: public Allocator {
-   public:
-    CodeAllocator(MySystem* s): s(s) { }
-
-    virtual void* tryAllocate(unsigned size) {
-      assert(s, size % LikelyPageSizeInBytes == 0);
-
-#ifdef __x86_64__
-      void* p = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
-
-      if (p == MAP_FAILED) {
-        return 0;
-      } else {
-        return p;
-      }
-#else
-      return s->tryAllocate(size);
-#endif
-    }
-
-    virtual void* allocate(unsigned size) {
-      void* p = tryAllocate(size);
-      expect(s, p);
-      return p;
-    }
-
-    virtual void free(const void* p, unsigned size) {
-#ifdef __x86_64__
-      int r UNUSED = munmap(const_cast<void*>(p), size);
-      assert(s, r == 0);
-#else
-      s->free(p, size);
-#endif
-    }
-
-    MySystem* s;
-  };
-
   class Thread: public System::Thread {
    public:
     Thread(System* s, System::Runnable* r):
@@ -182,7 +151,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     pthread_t thread;
@@ -192,6 +161,29 @@ class MySystem: public System {
     System::Runnable* r;
     Thread* next;
     unsigned flags;
+  };
+
+  class Mutex: public System::Mutex {
+   public:
+    Mutex(System* s): s(s) {
+      pthread_mutex_init(&mutex, 0);    
+    }
+
+    virtual void acquire() {
+      pthread_mutex_lock(&mutex);
+    }
+
+    virtual void release() {
+      pthread_mutex_unlock(&mutex);
+    }
+
+    virtual void dispose() {
+      pthread_mutex_destroy(&mutex);
+      s->free(this, sizeof(*this), false);
+    }
+
+    System* s;
+    pthread_mutex_t mutex;
   };
 
   class Monitor: public System::Monitor {
@@ -377,7 +369,7 @@ class MySystem: public System {
     virtual void dispose() {
       expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     System* s;
@@ -408,7 +400,7 @@ class MySystem: public System {
       int r UNUSED = pthread_key_delete(key);
       expect(s, r == 0);
 
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     System* s;
@@ -435,7 +427,7 @@ class MySystem: public System {
       if (start_) {
         munmap(start_, length_);
       }
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     System* s;
@@ -483,10 +475,10 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_, nameLength + 1);
+        s->free(name_, nameLength + 1, false);
       }
 
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     System* s;
@@ -497,9 +489,7 @@ class MySystem: public System {
     System::Library* next_;
   };
 
-  MySystem(unsigned limit): limit(limit), count(0), codeAllocator_(this) {
-    pthread_mutex_init(&mutex, 0);
-
+  MySystem() {
     struct sigaction sa;
     memset(&sa, 0, sizeof(struct sigaction));
     sigemptyset(&(sa.sa_mask));
@@ -510,70 +500,32 @@ class MySystem: public System {
     expect(this, rv == 0);
   }
 
-  virtual void* tryAllocate(unsigned size) {
-    ACQUIRE(mutex);
+  virtual void* tryAllocate(unsigned size, bool executable) {
+    assert(this, (not executable) or (size % LikelyPageSizeInBytes == 0));
 
-    if (Verbose) {
-      fprintf(stderr, "try %d; count: %d; limit: %d\n",
-              size, count, limit);
-    }
+    if (executable) {
+      void* p = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
 
-    if (count + size > limit) {
-      return 0;
-    } else {
-#ifndef NDEBUG
-      uintptr_t* up = static_cast<uintptr_t*>
-        (malloc(size + sizeof(uintptr_t)));
-      if (up == 0) {
+      if (p == MAP_FAILED) {
         return 0;
       } else {
-        *up = size;
-        count += *up;
-      
-        return up + 1;
-      }
-#else
-      void* p = malloc(size);
-      if (p == 0) {
-        return 0;
-      } else {
-        count += size;
         return p;
       }
-#endif
+    } else {
+      return malloc(size);
     }
   }
 
-  virtual void free(const void* p, unsigned size) {
-    ACQUIRE(mutex);
-
-    if (Verbose) {
-      fprintf(stderr, "free %d; count: %d; limit: %d\n",
-              size, count, limit);
-    }
-
+  virtual void free(const void* p, unsigned size, bool executable) {
     if (p) {
-#ifndef NDEBUG
-      const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
-
-      if (*up != size) abort();
-      if (count < *up) abort();
-
-      count -= *up;
-
-      ::free(const_cast<uintptr_t*>(up));
-#else
-      if (count < size) abort();
-
-      count -= size;
-
-      ::free(const_cast<void*>(p));
-#endif
+      if (executable) {
+        int r UNUSED = munmap(const_cast<void*>(p), size);
+        assert(this, r == 0);
+      } else {
+        ::free(const_cast<void*>(p));
+      }
     }
-  }
-
-  virtual Allocator* codeAllocator() {
-    return &codeAllocator_;
   }
 
   virtual bool success(Status s) {
@@ -581,27 +533,32 @@ class MySystem: public System {
   }
 
   virtual Status attach(Runnable* r) {
-    Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
+    Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
     t->thread = pthread_self();
     r->attach(t);
     return 0;
   }
 
   virtual Status start(Runnable* r) {
-    Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
+    Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
     r->attach(t);
     int rv UNUSED = pthread_create(&(t->thread), 0, run, r);
     expect(this, rv == 0);
     return 0;
   }
 
+  virtual Status make(System::Mutex** m) {
+    *m = new (allocate(this, sizeof(Mutex))) Mutex(this);
+    return 0;
+  }
+
   virtual Status make(System::Monitor** m) {
-    *m = new (System::allocate(sizeof(Monitor))) Monitor(this);
+    *m = new (allocate(this, sizeof(Monitor))) Monitor(this);
     return 0;
   }
 
   virtual Status make(System::Local** l) {
-    *l = new (System::allocate(sizeof(Local))) Local(this);
+    *l = new (allocate(this, sizeof(Local))) Local(this);
     return 0;
   }
 
@@ -640,7 +597,7 @@ class MySystem: public System {
       if (r != -1) {
         void* data = mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
         if (data) {
-          *region = new (allocate(sizeof(Region)))
+          *region = new (allocate(this, sizeof(Region)))
             Region(this, static_cast<uint8_t*>(data), s.st_size);
           status = 0;
         }
@@ -690,13 +647,13 @@ class MySystem: public System {
 
       char* n;
       if (name) {
-        n = static_cast<char*>(System::allocate(nameLength + 1));
+        n = static_cast<char*>(allocate(this, nameLength + 1));
         memcpy(n, name, nameLength + 1);
       } else {
         n = 0;
       }
 
-      *lib = new (System::allocate(sizeof(Library)))
+      *lib = new (allocate(this, sizeof(Library)))
         Library(this, p, n, nameLength, mapName, next);
       return 0;
     } else {
@@ -725,15 +682,8 @@ class MySystem: public System {
   }
 
   virtual void dispose() {
-    assert(this, count == 0);
-    pthread_mutex_destroy(&mutex);
     ::free(this);
   }
-
-  pthread_mutex_t mutex;
-  unsigned limit;
-  unsigned count;
-  CodeAllocator codeAllocator_;
 };
 
 } // namespace
@@ -741,9 +691,9 @@ class MySystem: public System {
 namespace vm {
 
 System*
-makeSystem(unsigned heapSize)
+makeSystem()
 {
-  return new (malloc(sizeof(MySystem))) MySystem(heapSize);
+  return new (malloc(sizeof(MySystem))) MySystem();
 }
 
 } // namespace vm

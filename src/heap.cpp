@@ -17,10 +17,28 @@ const unsigned Top = ~static_cast<unsigned>(0);
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 const unsigned InitialTenuredFixieCeilingInBytes = 4 * 1024 * 1024;
 
+const unsigned MajorCollectionInterval = 16;
+
 const bool Verbose = false;
 const bool Verbose2 = false;
 const bool Debug = false;
 const bool DebugFixies = false;
+
+#define ACQUIRE(x) MutexLock MAKE_NAME(monitorLock_) (x)
+
+class MutexLock {
+ public:
+  MutexLock(System::Mutex* m): m(m) {
+    m->acquire();
+  }
+
+  ~MutexLock() {
+    m->release();
+  }
+
+ private:
+  System::Mutex* m;
+};
 
 class Context;
 
@@ -30,6 +48,9 @@ void assert(Context*, bool);
 #endif
 
 System* system(Context*);
+void* tryAllocate(Context* c, void* clientContext, unsigned size,
+                  bool executable);
+void free(Context* c, const void* p, unsigned size, bool executable);
 
 inline void*
 get(void* o, unsigned offsetInWords)
@@ -284,8 +305,9 @@ class Segment {
       capacity_ = desired;
       while (data == 0) {
         data = static_cast<uintptr_t*>
-          (system(context)->tryAllocate
-           ((capacity_ + mapFootprint(capacity_)) * BytesPerWord));
+          (tryAllocate
+           (context, 0, (capacity_ + mapFootprint(capacity_)) * BytesPerWord,
+            false));
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -323,8 +345,8 @@ class Segment {
 
   void replaceWith(Segment* s) {
     if (data) {
-      system(context)->free
-        (data, (capacity() + mapFootprint(capacity())) * BytesPerWord);
+      free(context, data,
+           (capacity() + mapFootprint(capacity())) * BytesPerWord, false);
     }
     data = s->data;
     s->data = 0;
@@ -375,8 +397,8 @@ class Segment {
   }
 
   void dispose() {
-    system(context)->free
-      (data, (capacity() + mapFootprint(capacity())) * BytesPerWord);
+    free(context, data,
+         (capacity() + mapFootprint(capacity())) * BytesPerWord, false);
     data = 0;
     map = 0;
   }
@@ -468,9 +490,12 @@ free(Context* c, Fixie** fixies);
 
 class Context {
  public:
-  Context(System* system, Heap::Client* client):
+  Context(System* system, unsigned limit):
     system(system),
-    client(client),
+    client(0),
+    count(0),
+    limit(limit),
+    lock(0),
 
     ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
@@ -507,24 +532,38 @@ class Context {
     markedFixies(0),
     visitedFixies(0),
 
+    majorCollectionCountdown(0),
+
     lastCollectionTime(system->now()),
     totalCollectionTime(0),
     totalTime(0)
-  { }
+  {
+    if (not system->success(system->make(&lock))) {
+      system->abort();
+    }
+  }
 
   void dispose() {
     gen1.dispose();
     nextGen1.dispose();
     gen2.dispose();
     nextGen2.dispose();
+    lock->dispose();
+  }
+
+  void disposeFixies() {
     free(this, &tenuredFixies);
     free(this, &dirtyTenuredFixies);
     free(this, &fixies);
-    client->dispose();
   }
 
   System* system;
   Heap::Client* client;
+
+  unsigned count;
+  unsigned limit;
+
+  System::Mutex* lock;
   
   Segment::Map ageMap;
   Segment gen1;
@@ -560,6 +599,8 @@ class Context {
   Fixie* dirtyTenuredFixies;
   Fixie* markedFixies;
   Fixie* visitedFixies;
+
+  unsigned majorCollectionCountdown;
 
   int64_t lastCollectionTime;
   int64_t totalCollectionTime;
@@ -706,7 +747,7 @@ free(Context* c, Fixie** fixies)
       if (DebugFixies) {
         fprintf(stderr, "free fixie %p\n", f);
       }
-      c->system->free(f, f->totalSize());
+      free(c, f, f->totalSize(), false);
     }
   }
 }
@@ -1459,6 +1500,17 @@ collect(Context* c, unsigned footprint)
     }
 
     c->mode = Heap::MajorCollection;
+  } else if (c->mode == Heap::MinorCollection
+             and c->majorCollectionCountdown)
+  {
+    -- c->majorCollectionCountdown;
+    if (c->majorCollectionCountdown == 0) {
+      if (Verbose) {
+        fprintf(stderr, "countdown causes ");
+      }  
+
+      c->mode = Heap::MajorCollection;    
+    }
   }
 
   int64_t then;
@@ -1475,6 +1527,7 @@ collect(Context* c, unsigned footprint)
   initNextGen1(c, footprint);
 
   if (c->mode == Heap::MajorCollection) {
+    c->majorCollectionCountdown = MajorCollectionInterval;
     initNextGen2(c);
   }
 
@@ -1525,9 +1578,63 @@ collect(Context* c, unsigned footprint)
   }
 }
 
+void* tryAllocate(Context* c, void* clientContext, unsigned size,
+                  bool executable)
+{
+  ACQUIRE(c->lock);
+
+  if (clientContext and size + c->count >= c->limit) {
+    c->client->collect(clientContext, Heap::MajorCollection);
+  }
+
+  if (size + c->count < c->limit) {
+    void* p = c->system->tryAllocate(size, executable);
+    if (p) {
+      c->count += size;
+      return p;
+    }
+  }
+  return 0;
+}
+
+void free(Context* c, const void* p, unsigned size, bool executable) {
+  ACQUIRE(c->lock);
+
+  expect(c->system, c->count >= size);
+  c->system->free(p, size, executable);
+  c->count -= size;
+}
+
+void free_(Context* c, const void* p, unsigned size, bool executable) {
+  free(c, p, size, executable);
+}
+
 class MyHeap: public Heap {
  public:
-  MyHeap(System* system, Heap::Client* client): c(system, client) { }
+  MyHeap(System* system, unsigned limit):
+    c(system, limit)
+  { }
+
+  virtual void setClient(Heap::Client* client) {
+    assert(&c, c.client == 0);
+    c.client = client;
+  }
+
+  virtual void* tryAllocate(void* clientContext, unsigned size,
+                            bool executable)
+  {
+    return ::tryAllocate(&c, clientContext, size, executable);
+  }
+
+  virtual void* allocate(void* clientContext, unsigned size, bool executable) {
+    void* p = ::tryAllocate(&c, clientContext, size, executable);
+    expect(c.system, p);
+    return p;
+  }
+
+  virtual void free(const void* p, unsigned size, bool executable) {
+    free_(&c, p, size, executable);
+  }
 
   virtual void collect(CollectionType type, unsigned footprint) {
     c.mode = type;
@@ -1535,19 +1642,21 @@ class MyHeap: public Heap {
     ::collect(&c, footprint);
   }
 
-  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
-                              bool objectMask, unsigned* totalInBytes)
+  virtual void* allocateFixed(Allocator* allocator, void* clientContext,
+                              unsigned sizeInWords, bool objectMask,
+                              unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(*totalInBytes))
+    return (new (allocator->allocate(clientContext, *totalInBytes, false))
             Fixie(sizeInWords, objectMask, &(c.fixies), false))->body();
   }
 
-  virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
+  virtual void* allocateImmortal(Allocator* allocator, void* clientContext,
+                                 unsigned sizeInWords, bool executable,
                                  bool objectMask, unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(*totalInBytes))
+    return (new (allocator->allocate(clientContext, *totalInBytes, executable))
             Fixie(sizeInWords, objectMask, &(c.tenuredFixies), true))->body();
   }
 
@@ -1650,9 +1759,14 @@ class MyHeap: public Heap {
     return c.mode;
   }
 
+  virtual void disposeFixies() {
+    c.disposeFixies();
+  }
+
   virtual void dispose() {
     c.dispose();
-    c.system->free(this, sizeof(*this));
+    assert(&c, c.count == 0);
+    c.system->free(this, sizeof(*this), false);
   }
 
   Context c;
@@ -1663,9 +1777,10 @@ class MyHeap: public Heap {
 namespace vm {
 
 Heap*
-makeHeap(System* system, Heap::Client* client)
+makeHeap(System* system, unsigned limit)
 {  
-  return new (system->allocate(sizeof(MyHeap))) MyHeap(system, client);
+  return new (system->tryAllocate(sizeof(MyHeap), false))
+    MyHeap(system, limit);
 }
 
 } // namespace vm

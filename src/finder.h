@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "system.h"
+#include "allocator.h"
 
 namespace vm {
 

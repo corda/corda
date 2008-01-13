@@ -2194,7 +2194,7 @@ interpret(Thread* t)
   } goto loop;
 
   case lushr: {
-    int64_t b = popLong(t);
+    int64_t b = popInt(t);
     uint64_t a = popLong(t);
     
     pushLong(t, a >> b);
@@ -2812,14 +2812,14 @@ invoke(Thread* t, object method)
 
 class MyProcessor: public Processor {
  public:
-  MyProcessor(System* s):
-    s(s)
+  MyProcessor(System* s, Allocator* allocator):
+    s(s), allocator(allocator)
   { }
 
   virtual vm::Thread*
   makeThread(Machine* m, object javaThread, vm::Thread* parent)
   {
-    Thread* t = new (s->allocate(sizeof(Thread)))
+    Thread* t = new (m->heap->allocate(parent, sizeof(Thread), false))
       Thread(m, javaThread, parent);
     t->init();
     return t;
@@ -3016,14 +3016,15 @@ class MyProcessor: public Processor {
   }
 
   virtual void dispose(vm::Thread* t) {
-    s->free(t, sizeof(Thread));
+    t->m->heap->free(t, sizeof(Thread), false);
   }
 
   virtual void dispose() {
-    s->free(this, sizeof(*this));
+    allocator->free(this, sizeof(*this), false);
   }
   
   System* s;
+  Allocator* allocator;
 };
 
 } // namespace
@@ -3031,9 +3032,10 @@ class MyProcessor: public Processor {
 namespace vm {
 
 Processor*
-makeProcessor(System* system)
+makeProcessor(System* system, Allocator* allocator)
 {
-  return new (system->allocate(sizeof(MyProcessor))) MyProcessor(system);
+  return new (allocator->allocate(0, sizeof(MyProcessor), false))
+    MyProcessor(system, allocator);
 }
 
 } // namespace vm

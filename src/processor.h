@@ -134,7 +134,7 @@ class Processor {
 };
 
 Processor*
-makeProcessor(System* system);
+makeProcessor(System* system, Allocator* allocator);
 
 } // namespace vm
 

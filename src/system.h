@@ -2,11 +2,10 @@
 #define SYSTEM_H
 
 #include "common.h"
-#include "allocator.h"
 
 namespace vm {
 
-class System: public Allocator {
+class System {
  public:
   typedef intptr_t Status;
 
@@ -32,6 +31,14 @@ class System: public Allocator {
     virtual void run() = 0;
     virtual bool interrupted() = 0;
     virtual void setInterrupted(bool v) = 0;
+  };
+
+  class Mutex {
+   public:
+    virtual ~Mutex() { }
+    virtual void acquire() = 0;
+    virtual void release() = 0;
+    virtual void dispose() = 0;
   };
 
   class Monitor {
@@ -83,10 +90,12 @@ class System: public Allocator {
 
   virtual ~System() { }
 
-  virtual Allocator* codeAllocator() = 0;
   virtual bool success(Status) = 0;
+  virtual void* tryAllocate(unsigned size, bool executable) = 0;
+  virtual void free(const void* p, unsigned size, bool executable) = 0;
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
+  virtual Status make(Mutex**) = 0;
   virtual Status make(Monitor**) = 0;
   virtual Status make(Local**) = 0;
   virtual Status handleSegFault(SignalHandler* handler) = 0;
@@ -102,14 +111,6 @@ class System: public Allocator {
   virtual void exit(int code) = 0;
   virtual void abort() = 0;
   virtual void dispose() = 0;
-
-  virtual void* allocate(unsigned size) {
-    void* p = tryAllocate(size);
-    if (p == 0) {
-      abort();
-    }
-    return p;
-  }
 };
 
 inline void NO_RETURN
@@ -146,7 +147,7 @@ assert(System* s, bool v)
 #endif // not NDEBUG
 
 System*
-makeSystem(unsigned heapSize);
+makeSystem();
 
 } // namespace vm
 

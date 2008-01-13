@@ -17,9 +17,12 @@ class Zone: public Allocator {
     uint8_t data[0];
   };
 
-  Zone(System* s, Allocator* a, unsigned minimumFootprint):
+  Zone(System* s, Allocator* allocator, void* context, bool executable,
+       unsigned minimumFootprint):
     s(s),
-    a(a),
+    allocator(allocator),
+    context(context),
+    executable(executable),
     segment(0),
     position(0),
     minimumFootprint(minimumFootprint < sizeof(Segment) ? 0 :
@@ -33,11 +36,11 @@ class Zone: public Allocator {
   void dispose() {
     for (Segment* seg = segment, *next; seg; seg = next) {
       next = seg->next;
-      a->free(seg, sizeof(Segment) + seg->size);
+      allocator->free(seg, sizeof(Segment) + seg->size, executable);
     }
   }
 
-  bool ensure(unsigned space) {
+  bool ensure(void* context, unsigned space, bool executable) {
     if (segment == 0 or position + space > segment->size) {
       unsigned size = max
         (space, max
@@ -48,10 +51,10 @@ class Zone: public Allocator {
       size = (size + (LikelyPageSizeInBytes - 1))
         & ~(LikelyPageSizeInBytes - 1);
 
-      void* p = a->tryAllocate(size);
+      void* p = allocator->tryAllocate(context, size, executable);
       if (p == 0) {
         size = space + sizeof(Segment);
-        void* p = a->tryAllocate(size);
+        void* p = allocator->tryAllocate(context, size, executable);
         if (p == 0) {
           return false;
         }
@@ -63,9 +66,11 @@ class Zone: public Allocator {
     return true;
   }
 
-  virtual void* tryAllocate(unsigned size) {
+  virtual void* tryAllocate(void* context, unsigned size, bool executable) {
+    assert(s, executable == this->executable);
+
     size = pad(size);
-    if (ensure(size)) {
+    if (ensure(context, size, executable)) {
       void* r = segment->data + position;
       position += size;
       return r;
@@ -74,19 +79,27 @@ class Zone: public Allocator {
     }
   }
 
-  virtual void* allocate(unsigned size) {
-    void* p = tryAllocate(size);
+  virtual void* allocate(void* context, unsigned size, bool executable) {
+    assert(s, executable == this->executable);
+
+    void* p = tryAllocate(context, size, executable);
     expect(s, p);
     return p;
   }
 
-  virtual void free(const void*, unsigned) {
+  virtual void free(const void*, unsigned, bool) {
     // not supported
     abort(s);
   }
+
+  void* allocate(unsigned size) {
+    return allocate(context, size, executable);
+  }
   
   System* s;
-  Allocator* a;
+  Allocator* allocator;
+  void* context;
+  bool executable;
   Segment* segment;
   unsigned position;
   unsigned minimumFootprint;

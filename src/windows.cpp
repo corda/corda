@@ -57,6 +57,14 @@ run(void* r)
   return 0;
 }
 
+void*
+allocate(System* s, unsigned size)
+{
+  void* p = s->tryAllocate(size, false);
+  if (p == 0) abort();
+  return p;
+}
+
 const bool Verbose = false;
 
 const unsigned Waiting = 1 << 0;
@@ -99,7 +107,7 @@ class MySystem: public System {
       CloseHandle(event);
       CloseHandle(mutex);
       CloseHandle(thread);
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     HANDLE thread;
@@ -109,6 +117,32 @@ class MySystem: public System {
     System::Runnable* r;
     Thread* next;
     unsigned flags;
+  };
+
+  class Mutex: public System::Mutex {
+   public:
+    Mutex(System* s): s(s) {
+      mutex = CreateMutex(0, false, 0);
+      assert(s, mutex);
+    }
+
+    virtual void acquire() {
+      int r UNUSED = WaitForSingleObject(mutex, INFINITE);
+      assert(s, r == WAIT_OBJECT_0);
+    }
+
+    virtual void release() {
+      bool success UNUSED = ReleaseMutex(mutex);
+      assert(s, success);
+    }
+
+    virtual void dispose() {
+      CloseHandle(mutex);
+      s->free(this, sizeof(*this), false);
+    }
+
+    System* s;
+    HANDLE mutex;
   };
 
   class Monitor: public System::Monitor {
@@ -309,7 +343,7 @@ class MySystem: public System {
     virtual void dispose() {
       assert(s, owner_ == 0);
       CloseHandle(mutex);
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     System* s;
@@ -340,7 +374,7 @@ class MySystem: public System {
       bool r UNUSED = TlsFree(key);
       assert(s, r);
 
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     System* s;
@@ -372,7 +406,7 @@ class MySystem: public System {
         if (mapping) CloseHandle(mapping);
         if (file) CloseHandle(file);
       }
-      system->free(this, sizeof(*this));
+      system->free(this, sizeof(*this), false);
     }
 
     System* system;
@@ -428,10 +462,10 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_, nameLength+1);
+        s->free(name_, nameLength + 1, false);
       }
 
-      s->free(this, sizeof(*this));
+      s->free(this, sizeof(*this), false);
     }
 
     System* s;
@@ -442,75 +476,17 @@ class MySystem: public System {
     System::Library* next_;
   };
 
-  MySystem(unsigned limit): limit(limit), count(0) {
+  MySystem() {
     mutex = CreateMutex(0, false, 0);
     assert(this, mutex);
   }
 
-  virtual void* tryAllocate(unsigned size) {
-    ACQUIRE(this, mutex);
-
-    if (Verbose) {
-      fprintf(stderr, "try %d; count: %d; limit: %d\n",
-              size, count, limit);
-    }
-
-    if (count + size > limit) {
-      return 0;
-    } else {
-#ifndef NDEBUG
-      uintptr_t* up = static_cast<uintptr_t*>
-        (malloc(size + sizeof(uintptr_t)));
-      if (up == 0) {
-        return 0;
-      } else {
-        *up = size;
-        count += *up;
-      
-        return up + 1;
-      }
-#else
-      void* p = malloc(size);
-      if (p == 0) {
-        return 0;
-      } else {
-        count += size;
-        return p;
-      }
-#endif
-    }
+  virtual void* tryAllocate(unsigned size, bool) {
+    return malloc(size);
   }
 
-  virtual void free(const void* p, unsigned size) {
-    ACQUIRE(this, mutex);
-
-    if (Verbose) {
-      fprintf(stderr, "free %d; count: %d; limit: %d\n",
-              size, count, limit);
-    }
-
-    if (p) {
-#ifndef NDEBUG
-      const uintptr_t* up = static_cast<const uintptr_t*>(p) - 1;
-
-      if (*up != size) abort();
-      if (count < *up) abort();
-
-      count -= *up;
-
-      ::free(const_cast<uintptr_t*>(up));
-#else
-      if (count < size) abort();
-
-      count -= size;
-
-      ::free(const_cast<void*>(p));
-#endif
-    }
-  }
-
-  virtual Allocator* codeAllocator() {
-    return this;
+  virtual void free(const void* p, unsigned, bool) {
+    if (p) ::free(const_cast<void*>(p));
   }
 
   virtual bool success(Status s) {
@@ -518,7 +494,7 @@ class MySystem: public System {
   }
 
   virtual Status attach(Runnable* r) {
-    Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
+    Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
     bool success UNUSED = DuplicateHandle
       (GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(),
        &(t->thread), 0, false, DUPLICATE_SAME_ACCESS);
@@ -528,7 +504,7 @@ class MySystem: public System {
   }
 
   virtual Status start(Runnable* r) {
-    Thread* t = new (System::allocate(sizeof(Thread))) Thread(this, r);
+    Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
     r->attach(t);
     DWORD id;
     t->thread = CreateThread(0, 0, run, r, 0, &id);
@@ -536,13 +512,18 @@ class MySystem: public System {
     return 0;
   }
 
+  virtual Status make(System::Mutex** m) {
+    *m = new (allocate(this, sizeof(Mutex))) Mutex(this);
+    return 0;
+  }
+
   virtual Status make(System::Monitor** m) {
-    *m = new (System::allocate(sizeof(Monitor))) Monitor(this);
+    *m = new (allocate(this, sizeof(Monitor))) Monitor(this);
     return 0;
   }
 
   virtual Status make(System::Local** l) {
-    *l = new (System::allocate(sizeof(Local))) Local(this);
+    *l = new (allocate(this, sizeof(Local))) Local(this);
     return 0;
   }
 
@@ -579,7 +560,7 @@ class MySystem: public System {
         if (mapping) {
           void* data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
           if (data) {
-            *region = new (allocate(sizeof(Region)))
+            *region = new (allocate(this, sizeof(Region)))
               Region(this, static_cast<uint8_t*>(data), size, file, mapping);
             status = 0;        
           }
@@ -639,13 +620,13 @@ class MySystem: public System {
 
       char* n;
       if (name) {
-        n = static_cast<char*>(System::allocate(nameLength + 1));
+        n = static_cast<char*>(allocate(this, nameLength + 1));
         memcpy(n, name, nameLength + 1);
       } else {
         n = 0;
       }
 
-      *lib = new (System::allocate(sizeof(Library)))
+      *lib = new (allocate(this, sizeof(Library)))
         Library(this, handle, n, mapName, nameLength, next);
       return 0;
     } else {
@@ -688,14 +669,11 @@ class MySystem: public System {
   }
 
   virtual void dispose() {
-    assert(this, count == 0);
     CloseHandle(mutex);
     ::free(this);
   }
 
   HANDLE mutex;
-  unsigned limit;
-  unsigned count;
 };
 
 } // namespace
@@ -703,9 +681,9 @@ class MySystem: public System {
 namespace vm {
 
 System*
-makeSystem(unsigned heapSize)
+makeSystem()
 {
-  return new (malloc(sizeof(MySystem))) MySystem(heapSize);
+  return new (malloc(sizeof(MySystem))) MySystem();
 }
 
 } // namespace vm

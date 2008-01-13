@@ -439,27 +439,27 @@ class Context {
 
   Context(MyThread* t, object method, uint8_t* indirectCaller):
     t(t),
-    zone(t->m->system, t->m->system, 16 * 1024),
-    c(makeCompiler(t->m->system, &zone, indirectCaller)),
+    zone(t->m->system, t->m->heap, t, false, 16 * 1024),
+    c(makeCompiler(t->m->system, t->m->heap, t, &zone, indirectCaller)),
     method(method),
     objectPool(0),
     traceLog(0),
     visitTable(makeVisitTable(t, &zone, method)),
     rootTable(makeRootTable(t, &zone, method)),
-    eventLog(t->m->system, 1024),
+    eventLog(t->m->system, t->m->heap, t, 1024),
     protector(this)
   { }
 
   Context(MyThread* t):
     t(t),
-    zone(t->m->system, t->m->system, LikelyPageSizeInBytes),
-    c(makeCompiler(t->m->system, &zone, 0)),
+    zone(t->m->system, t->m->heap, t, false, LikelyPageSizeInBytes),
+    c(makeCompiler(t->m->system, t->m->heap, t, &zone, 0)),
     method(0),
     objectPool(0),
     traceLog(0),
     visitTable(0),
     rootTable(0),
-    eventLog(t->m->system, 0),
+    eventLog(t->m->system, t->m->heap, t, 0),
     protector(this)
   { }
 
@@ -3644,7 +3644,7 @@ finish(MyThread* t, Context* context, const char* name)
   unsigned size = count + singletonMaskSize(count);
   object result = allocate3
     (t, codeAllocator(t), Machine::ImmortalAllocation,
-     SingletonBody + (size * BytesPerWord), true);
+     SingletonBody + (size * BytesPerWord), true, true);
   initSingleton(t, result, size, true);
   mark(t, result, 0);
   singletonMask(t, result)[0] = 1;
@@ -4349,21 +4349,22 @@ class SegFaultHandler: public System::SignalHandler {
 
 class MyProcessor: public Processor {
  public:
-  MyProcessor(System* s):
+  MyProcessor(System* s, Allocator* allocator):
     s(s),
+    allocator(allocator),
     defaultCompiled(0),
     nativeCompiled(0),
     addressTable(0),
     addressCount(0),
     indirectCaller(0),
     indirectCallerSize(0),
-    codeAllocator(s, s->codeAllocator(), 64 * 1024)
+    codeAllocator(s, allocator, 0, true, 64 * 1024)
   { }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
-    MyThread* t = new (s->allocate(sizeof(MyThread)))
+    MyThread* t = new (m->heap->allocate(parent, sizeof(MyThread), false))
       MyThread(m, javaThread, parent);
     t->init();
     return t;
@@ -4501,8 +4502,9 @@ class MyProcessor: public Processor {
   {
     if (o) {
       MyThread* t = static_cast<MyThread*>(vmt);
+      PROTECT(t, o);
 
-      Reference* r = new (t->m->system->allocate(sizeof(Reference)))
+      Reference* r = new (t->m->heap->allocate(t, sizeof(Reference), false))
         Reference(o, &(t->reference));
 
       return &(r->target);
@@ -4611,7 +4613,7 @@ class MyProcessor: public Processor {
       vm::dispose(t, t->reference);
     }
 
-    s->free(t, sizeof(*t));
+    t->m->heap->free(t, sizeof(*t), false);
   }
 
   virtual void dispose() {
@@ -4619,10 +4621,11 @@ class MyProcessor: public Processor {
     
     s->handleSegFault(0);
 
-    s->free(this, sizeof(*this));
+    allocator->free(this, sizeof(*this), false);
   }
   
   System* s;
+  Allocator* allocator;
   object defaultCompiled;
   object nativeCompiled;
   object addressTable;
@@ -4659,11 +4662,11 @@ processor(MyThread* t)
       if (Verbose) {
         logCompile(p->indirectCaller, c->codeSize(), 0, "indirect caller", 0);
       }
-    }
 
-    p->segFaultHandler.m = t->m;
-    expect(t, t->m->system->success
-           (t->m->system->handleSegFault(&(p->segFaultHandler))));
+      p->segFaultHandler.m = t->m;
+      expect(t, t->m->system->success
+             (t->m->system->handleSegFault(&(p->segFaultHandler))));
+    }
   }
   return p;
 }
@@ -4802,9 +4805,10 @@ codeAllocator(MyThread* t) {
 namespace vm {
 
 Processor*
-makeProcessor(System* system)
+makeProcessor(System* system, Allocator* allocator)
 {
-  return new (system->allocate(sizeof(MyProcessor))) MyProcessor(system);
+  return new (allocator->allocate(0, sizeof(MyProcessor), false))
+    MyProcessor(system, allocator);
 }
 
 } // namespace vm
