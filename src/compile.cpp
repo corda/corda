@@ -1085,6 +1085,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
     object node = findTraceNode(t, ip);
     if (node) {
       object method = traceNodeMethod(t, node);
+      PROTECT(t, method);
+
       uint8_t* compiled = reinterpret_cast<uint8_t*>
         (&singletonValue(t, methodCompiled(t, method), 0));
 
