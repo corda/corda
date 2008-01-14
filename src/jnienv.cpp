@@ -1969,7 +1969,7 @@ extern "C" JNIEXPORT jint JNICALL
 JNI_GetDefaultJavaVMInitArgs(void* args)
 {
   JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
-  a->maxHeapSize = 64 * 1024 * 1024;
+  a->maxHeapSize = 128 * 1024 * 1024;
   a->classpath = ".";
   a->properties = 0;
   return 0;
