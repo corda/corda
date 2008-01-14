@@ -503,6 +503,10 @@ class MySystem: public System {
   virtual void* tryAllocate(unsigned size, bool executable) {
     assert(this, (not executable) or (size % LikelyPageSizeInBytes == 0));
 
+#ifndef MAP_32BIT
+#define MAP_32BIT 0
+#endif
+
     if (executable) {
       void* p = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE,
                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
