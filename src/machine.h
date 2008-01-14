@@ -1719,7 +1719,7 @@ markHashTaken(Thread* t, object o)
   ACQUIRE_RAW(t, t->m->heapLock);
 
   cast<uintptr_t>(o, 0) |= HashTakenMark;
-  t->m->heap->pad(o, 1);
+  t->m->heap->pad(o);
 }
 
 inline uint32_t

@@ -17,7 +17,11 @@ const unsigned Top = ~static_cast<unsigned>(0);
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 const unsigned InitialTenuredFixieCeilingInBytes = 4 * 1024 * 1024;
 
-const unsigned MajorCollectionInterval = 16;
+// do a major collection at least every N collections (zero means
+// infinity)
+const unsigned MajorCollectionInterval = 0;
+
+const unsigned LowMemoryPaddingInBytes = 1024 * 1024;
 
 const bool Verbose = false;
 const bool Verbose2 = false;
@@ -306,8 +310,7 @@ class Segment {
       while (data == 0) {
         data = static_cast<uintptr_t*>
           (tryAllocate
-           (context, 0, (capacity_ + mapFootprint(capacity_)) * BytesPerWord,
-            false));
+           (context, 0, (footprint(capacity_)) * BytesPerWord, false));
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -327,8 +330,8 @@ class Segment {
     }
   }
 
-  unsigned mapFootprint(unsigned capacity) {
-    return map and capacity ? map->footprint(capacity) : 0;
+  unsigned footprint(unsigned capacity) {
+    return capacity + (map and capacity ? map->footprint(capacity) : 0);
   }
 
   unsigned capacity() {
@@ -345,8 +348,7 @@ class Segment {
 
   void replaceWith(Segment* s) {
     if (data) {
-      free(context, data,
-           (capacity() + mapFootprint(capacity())) * BytesPerWord, false);
+      free(context, data, (footprint(capacity())) * BytesPerWord, false);
     }
     data = s->data;
     s->data = 0;
@@ -397,8 +399,7 @@ class Segment {
   }
 
   void dispose() {
-    free(context, data,
-         (capacity() + mapFootprint(capacity())) * BytesPerWord, false);
+    free(context, data, (footprint(capacity())) * BytesPerWord, false);
     data = 0;
     map = 0;
   }
@@ -515,9 +516,11 @@ class Context {
     nextGen2(this, &nextHeapMap, 0, 0),
 
     gen2Base(0),
+    incomingFootprint(0),
     tenureFootprint(0),
-    gen1padding(0),
-    gen2padding(0),
+    gen1Padding(0),
+    tenurePadding(0),
+    gen2Padding(0),
 
     fixieTenureFootprint(0),
     untenuredFixieFootprint(0),
@@ -583,9 +586,11 @@ class Context {
 
   unsigned gen2Base;
   
+  unsigned incomingFootprint;
   unsigned tenureFootprint;
-  unsigned gen1padding;
-  unsigned gen2padding;
+  unsigned gen1Padding;
+  unsigned tenurePadding;
+  unsigned gen2Padding;
 
   unsigned fixieTenureFootprint;
   unsigned untenuredFixieFootprint;
@@ -643,14 +648,43 @@ assert(Context* c, bool v)
 }
 #endif
 
+inline unsigned
+minimumNextGen1Capacity(Context* c)
+{
+  return c->gen1.position() - c->tenureFootprint + c->incomingFootprint
+    + c->gen1Padding;
+}
+
+inline unsigned
+minimumNextGen2Capacity(Context* c)
+{
+  return c->gen2.position() + c->tenureFootprint + c->tenurePadding
+    + c->gen2Padding;
+}
+
+inline bool
+oversizedGen2(Context* c)
+{
+  return c->gen2.capacity() > (InitialGen2CapacityInBytes / BytesPerWord)
+    and c->gen2.position() < (c->gen2.capacity() / 4);
+}
+
+inline bool
+lowMemory(Context* c)
+{
+  return ((c->gen1.footprint(minimumNextGen1Capacity(c))
+           + c->gen2.footprint(minimumNextGen2Capacity(c))) * BytesPerWord)
+    + LowMemoryPaddingInBytes
+    > c->limit - c->count;
+}
+
 inline void
-initNextGen1(Context* c, unsigned footprint)
+initNextGen1(Context* c)
 {
   new (&(c->nextAgeMap)) Segment::Map
     (&(c->nextGen1),  max(1, log(TenureThreshold)), 1, 0, false);
 
-  unsigned minimum
-    = (c->gen1.position() - c->tenureFootprint) + footprint + c->gen1padding;
+  unsigned minimum = minimumNextGen1Capacity(c);
   unsigned desired = minimum;
 
   new (&(c->nextGen1)) Segment(c, &(c->nextAgeMap), desired, minimum);
@@ -659,13 +693,6 @@ initNextGen1(Context* c, unsigned footprint)
     fprintf(stderr, "init nextGen1 to %d bytes\n",
             c->nextGen1.capacity() * BytesPerWord);
   }
-}
-
-inline bool
-oversizedGen2(Context* c)
-{
-  return c->gen2.capacity() > (InitialGen2CapacityInBytes / BytesPerWord)
-    and c->gen2.position() < (c->gen2.capacity() / 4);
 }
 
 inline void
@@ -681,10 +708,10 @@ initNextGen2(Context* c)
   new (&(c->nextHeapMap)) Segment::Map
     (&(c->nextGen2), 1, c->pageMap.scale * 1024, &(c->nextPageMap), true);
 
-  unsigned minimum = c->gen2.position() + c->tenureFootprint + c->gen2padding;
+  unsigned minimum = minimumNextGen2Capacity(c);
   unsigned desired = minimum;
 
-  if (not oversizedGen2(c)) {
+  if (not (lowMemory(c) or oversizedGen2(c))) {
     desired *= 2;
   }
 
@@ -1451,8 +1478,12 @@ collect2(Context* c)
   c->gen2Base = Top;
   c->tenureFootprint = 0;
   c->fixieTenureFootprint = 0;
-  c->gen1padding = 0;
-  c->gen2padding = 0;
+  c->gen1Padding = 0;
+  c->tenurePadding = 0;
+
+  if (c->mode == Heap::MajorCollection) {
+    c->gen2Padding = 0;
+  }
 
   if (c->mode == Heap::MinorCollection and c->gen2.position()) {
     unsigned start = 0;
@@ -1481,17 +1512,20 @@ collect2(Context* c)
 }
 
 void
-collect(Context* c, unsigned footprint)
+collect(Context* c)
 {
-  if (oversizedGen2(c)
-      or c->tenureFootprint + c->gen2padding > c->gen2.remaining()
+  if (lowMemory(c)
+      or oversizedGen2(c)
+      or c->tenureFootprint + c->tenurePadding > c->gen2.remaining()
       or c->fixieTenureFootprint + c->tenuredFixieFootprint
       > c->tenuredFixieCeiling)
   {
     if (Verbose) {
-      if (oversizedGen2(c)) {
+      if (lowMemory(c)) {
+        fprintf(stderr, "low memory causes ");        
+      } else if (oversizedGen2(c)) {
         fprintf(stderr, "oversized gen2 causes ");
-      } else if (c->tenureFootprint + c->gen2padding > c->gen2.remaining())
+      } else if (c->tenureFootprint + c->tenurePadding > c->gen2.remaining())
       {
         fprintf(stderr, "undersized gen2 causes ");
       } else {
@@ -1524,7 +1558,7 @@ collect(Context* c, unsigned footprint)
     then = c->system->now();
   }
 
-  initNextGen1(c, footprint);
+  initNextGen1(c);
 
   if (c->mode == Heap::MajorCollection) {
     c->majorCollectionCountdown = MajorCollectionInterval;
@@ -1636,10 +1670,11 @@ class MyHeap: public Heap {
     free_(&c, p, size, executable);
   }
 
-  virtual void collect(CollectionType type, unsigned footprint) {
+  virtual void collect(CollectionType type, unsigned incomingFootprint) {
     c.mode = type;
+    c.incomingFootprint = incomingFootprint;
 
-    ::collect(&c, footprint);
+    ::collect(&c);
   }
 
   virtual void* allocateFixed(Allocator* allocator, void* clientContext,
@@ -1705,17 +1740,17 @@ class MyHeap: public Heap {
     }
   }
 
-  virtual void pad(void* p, unsigned extra) {
+  virtual void pad(void* p) {
     if (c.gen1.contains(p)) {
       if (c.ageMap.get(p) == TenureThreshold) {
-        c.gen2padding += extra;
+        ++ c.tenurePadding;
       } else {
-        c.gen1padding += extra;
+        ++ c.gen1Padding;
       }
     } else if (c.gen2.contains(p)) {
-      c.gen2padding += extra;
+      ++ c.gen2Padding;
     } else {
-      c.gen1padding += extra;
+      ++ c.gen1Padding;
     }
   }
 
