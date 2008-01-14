@@ -17,11 +17,10 @@ class Zone: public Allocator {
     uint8_t data[0];
   };
 
-  Zone(System* s, Allocator* allocator, void* context, bool executable,
+  Zone(System* s, Allocator* allocator, bool executable,
        unsigned minimumFootprint):
     s(s),
     allocator(allocator),
-    context(context),
     executable(executable),
     segment(0),
     position(0),
@@ -40,7 +39,7 @@ class Zone: public Allocator {
     }
   }
 
-  bool ensure(void* context, unsigned space, bool executable) {
+  bool ensure(unsigned space, bool executable) {
     if (segment == 0 or position + space > segment->size) {
       unsigned size = max
         (space, max
@@ -51,10 +50,10 @@ class Zone: public Allocator {
       size = (size + (LikelyPageSizeInBytes - 1))
         & ~(LikelyPageSizeInBytes - 1);
 
-      void* p = allocator->tryAllocate(context, size, executable);
+      void* p = allocator->tryAllocate(size, executable);
       if (p == 0) {
         size = space + sizeof(Segment);
-        void* p = allocator->tryAllocate(context, size, executable);
+        void* p = allocator->tryAllocate(size, executable);
         if (p == 0) {
           return false;
         }
@@ -66,11 +65,11 @@ class Zone: public Allocator {
     return true;
   }
 
-  virtual void* tryAllocate(void* context, unsigned size, bool executable) {
+  virtual void* tryAllocate(unsigned size, bool executable) {
     assert(s, executable == this->executable);
 
     size = pad(size);
-    if (ensure(context, size, executable)) {
+    if (ensure(size, executable)) {
       void* r = segment->data + position;
       position += size;
       return r;
@@ -79,10 +78,10 @@ class Zone: public Allocator {
     }
   }
 
-  virtual void* allocate(void* context, unsigned size, bool executable) {
+  virtual void* allocate(unsigned size, bool executable) {
     assert(s, executable == this->executable);
 
-    void* p = tryAllocate(context, size, executable);
+    void* p = tryAllocate(size, executable);
     expect(s, p);
     return p;
   }
@@ -93,7 +92,7 @@ class Zone: public Allocator {
   }
 
   void* allocate(unsigned size) {
-    return allocate(context, size, executable);
+    return allocate(size, executable);
   }
   
   System* s;

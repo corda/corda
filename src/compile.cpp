@@ -439,27 +439,27 @@ class Context {
 
   Context(MyThread* t, object method, uint8_t* indirectCaller):
     t(t),
-    zone(t->m->system, t->m->heap, t, false, 16 * 1024),
-    c(makeCompiler(t->m->system, t->m->heap, t, &zone, indirectCaller)),
+    zone(t->m->system, t->m->heap, false, 16 * 1024),
+    c(makeCompiler(t->m->system, t->m->heap, &zone, indirectCaller)),
     method(method),
     objectPool(0),
     traceLog(0),
     visitTable(makeVisitTable(t, &zone, method)),
     rootTable(makeRootTable(t, &zone, method)),
-    eventLog(t->m->system, t->m->heap, t, 1024),
+    eventLog(t->m->system, t->m->heap, 1024),
     protector(this)
   { }
 
   Context(MyThread* t):
     t(t),
-    zone(t->m->system, t->m->heap, t, false, LikelyPageSizeInBytes),
-    c(makeCompiler(t->m->system, t->m->heap, t, &zone, 0)),
+    zone(t->m->system, t->m->heap, false, LikelyPageSizeInBytes),
+    c(makeCompiler(t->m->system, t->m->heap, &zone, 0)),
     method(0),
     objectPool(0),
     traceLog(0),
     visitTable(0),
     rootTable(0),
-    eventLog(t->m->system, t->m->heap, t, 0),
+    eventLog(t->m->system, t->m->heap, 0),
     protector(this)
   { }
 
@@ -4360,13 +4360,13 @@ class MyProcessor: public Processor {
     addressCount(0),
     indirectCaller(0),
     indirectCallerSize(0),
-    codeAllocator(s, allocator, 0, true, 64 * 1024)
+    codeAllocator(s, allocator, true, 64 * 1024)
   { }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
-    MyThread* t = new (m->heap->allocate(parent, sizeof(MyThread), false))
+    MyThread* t = new (m->heap->allocate(sizeof(MyThread), false))
       MyThread(m, javaThread, parent);
     t->init();
     return t;
@@ -4506,7 +4506,7 @@ class MyProcessor: public Processor {
       MyThread* t = static_cast<MyThread*>(vmt);
       PROTECT(t, o);
 
-      Reference* r = new (t->m->heap->allocate(t, sizeof(Reference), false))
+      Reference* r = new (t->m->heap->allocate(sizeof(Reference), false))
         Reference(o, &(t->reference));
 
       return &(r->target);
@@ -4809,7 +4809,7 @@ namespace vm {
 Processor*
 makeProcessor(System* system, Allocator* allocator)
 {
-  return new (allocator->allocate(0, sizeof(MyProcessor), false))
+  return new (allocator->allocate(sizeof(MyProcessor), false))
     MyProcessor(system, allocator);
 }
 

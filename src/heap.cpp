@@ -52,8 +52,7 @@ void assert(Context*, bool);
 #endif
 
 System* system(Context*);
-void* tryAllocate(Context* c, void* clientContext, unsigned size,
-                  bool executable);
+void* tryAllocate(Context* c, unsigned size, bool executable);
 void free(Context* c, const void* p, unsigned size, bool executable);
 
 inline void*
@@ -310,7 +309,7 @@ class Segment {
       while (data == 0) {
         data = static_cast<uintptr_t*>
           (tryAllocate
-           (context, 0, (footprint(capacity_)) * BytesPerWord, false));
+           (context, (footprint(capacity_)) * BytesPerWord, false));
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -1612,14 +1611,9 @@ collect(Context* c)
   }
 }
 
-void* tryAllocate(Context* c, void* clientContext, unsigned size,
-                  bool executable)
+void* tryAllocate(Context* c, unsigned size, bool executable)
 {
   ACQUIRE(c->lock);
-
-  if (clientContext and size + c->count >= c->limit) {
-    c->client->collect(clientContext, Heap::MajorCollection);
-  }
 
   if (size + c->count < c->limit) {
     void* p = c->system->tryAllocate(size, executable);
@@ -1654,14 +1648,12 @@ class MyHeap: public Heap {
     c.client = client;
   }
 
-  virtual void* tryAllocate(void* clientContext, unsigned size,
-                            bool executable)
-  {
-    return ::tryAllocate(&c, clientContext, size, executable);
+  virtual void* tryAllocate(unsigned size, bool executable) {
+    return ::tryAllocate(&c, size, executable);
   }
 
-  virtual void* allocate(void* clientContext, unsigned size, bool executable) {
-    void* p = ::tryAllocate(&c, clientContext, size, executable);
+  virtual void* allocate(unsigned size, bool executable) {
+    void* p = ::tryAllocate(&c, size, executable);
     expect(c.system, p);
     return p;
   }
@@ -1677,21 +1669,20 @@ class MyHeap: public Heap {
     ::collect(&c);
   }
 
-  virtual void* allocateFixed(Allocator* allocator, void* clientContext,
-                              unsigned sizeInWords, bool objectMask,
-                              unsigned* totalInBytes)
+  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
+                              bool objectMask, unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(clientContext, *totalInBytes, false))
+    return (new (allocator->allocate(*totalInBytes, false))
             Fixie(sizeInWords, objectMask, &(c.fixies), false))->body();
   }
 
-  virtual void* allocateImmortal(Allocator* allocator, void* clientContext,
-                                 unsigned sizeInWords, bool executable,
-                                 bool objectMask, unsigned* totalInBytes)
+  virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
+                                 bool executable, bool objectMask,
+                                 unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(clientContext, *totalInBytes, executable))
+    return (new (allocator->allocate(*totalInBytes, executable))
             Fixie(sizeInWords, objectMask, &(c.tenuredFixies), true))->body();
   }
 

@@ -2819,7 +2819,7 @@ class MyProcessor: public Processor {
   virtual vm::Thread*
   makeThread(Machine* m, object javaThread, vm::Thread* parent)
   {
-    Thread* t = new (m->heap->allocate(parent, sizeof(Thread), false))
+    Thread* t = new (m->heap->allocate(sizeof(Thread), false))
       Thread(m, javaThread, parent);
     t->init();
     return t;
@@ -3034,7 +3034,7 @@ namespace vm {
 Processor*
 makeProcessor(System* system, Allocator* allocator)
 {
-  return new (allocator->allocate(0, sizeof(MyProcessor), false))
+  return new (allocator->allocate(sizeof(MyProcessor), false))
     MyProcessor(system, allocator);
 }
 

@@ -91,7 +91,7 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   char* chars = static_cast<char*>
-    (t->m->heap->allocate(t, stringLength(t, *s) + 1, false));
+    (t->m->heap->allocate(stringLength(t, *s) + 1, false));
   stringChars(t, *s, chars);
 
   if (isCopy) *isCopy = true;
@@ -1109,7 +1109,7 @@ NewGlobalRef(Thread* t, jobject o)
   ACQUIRE(t, t->m->referenceLock);
   
   if (o) {
-    Reference* r = new (t->m->heap->allocate(t, sizeof(Reference), false))
+    Reference* r = new (t->m->heap->allocate(sizeof(Reference), false))
       Reference(*o, &(t->m->jniReferences));
 
     return &(r->target);
@@ -1254,7 +1254,7 @@ GetBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = booleanArrayLength(t, *array) * sizeof(jboolean);
-  jboolean* p = static_cast<jboolean*>(t->m->heap->allocate(t, size, false));
+  jboolean* p = static_cast<jboolean*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &booleanArrayBody(t, *array, 0), size);
   }
@@ -1272,7 +1272,7 @@ GetByteArrayElements(Thread* t, jbyteArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = byteArrayLength(t, *array) * sizeof(jbyte);
-  jbyte* p = static_cast<jbyte*>(t->m->heap->allocate(t, size, false));
+  jbyte* p = static_cast<jbyte*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &byteArrayBody(t, *array, 0), size);
   }
@@ -1290,7 +1290,7 @@ GetCharArrayElements(Thread* t, jcharArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = charArrayLength(t, *array) * sizeof(jchar);
-  jchar* p = static_cast<jchar*>(t->m->heap->allocate(t, size, false));
+  jchar* p = static_cast<jchar*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &charArrayBody(t, *array, 0), size);
   }
@@ -1308,7 +1308,7 @@ GetShortArrayElements(Thread* t, jshortArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = shortArrayLength(t, *array) * sizeof(jshort);
-  jshort* p = static_cast<jshort*>(t->m->heap->allocate(t, size, false));
+  jshort* p = static_cast<jshort*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &shortArrayBody(t, *array, 0), size);
   }
@@ -1326,7 +1326,7 @@ GetIntArrayElements(Thread* t, jintArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = intArrayLength(t, *array) * sizeof(jint);
-  jint* p = static_cast<jint*>(t->m->heap->allocate(t, size, false));
+  jint* p = static_cast<jint*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &intArrayBody(t, *array, 0), size);
   }
@@ -1344,7 +1344,7 @@ GetLongArrayElements(Thread* t, jlongArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = longArrayLength(t, *array) * sizeof(jlong);
-  jlong* p = static_cast<jlong*>(t->m->heap->allocate(t, size, false));
+  jlong* p = static_cast<jlong*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &longArrayBody(t, *array, 0), size);
   }
@@ -1362,7 +1362,7 @@ GetFloatArrayElements(Thread* t, jfloatArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = floatArrayLength(t, *array) * sizeof(jfloat);
-  jfloat* p = static_cast<jfloat*>(t->m->heap->allocate(t, size, false));
+  jfloat* p = static_cast<jfloat*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &floatArrayBody(t, *array, 0), size);
   }
@@ -1380,7 +1380,7 @@ GetDoubleArrayElements(Thread* t, jdoubleArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = doubleArrayLength(t, *array) * sizeof(jdouble);
-  jdouble* p = static_cast<jdouble*>(t->m->heap->allocate(t, size, false));
+  jdouble* p = static_cast<jdouble*>(t->m->heap->allocate(size, false));
   if (size) {
     memcpy(p, &doubleArrayBody(t, *array, 0), size);
   }
@@ -1994,7 +1994,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   Finder* f = makeFinder(s, classpath);
   Processor* p = makeProcessor(s, h);
 
-  *m = new (h->allocate(0, sizeof(Machine), false)) Machine(s, h, f, p);
+  *m = new (h->allocate(sizeof(Machine), false)) Machine(s, h, f, p);
 
   if (a->properties) {
     for (const char** p = a->properties; *p; ++p) {

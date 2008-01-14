@@ -137,12 +137,11 @@ class RegisterData {
 
 class Context {
  public:
-  Context(System* s, Allocator* allocator, void* allocatorContext, Zone* zone,
-          void* indirectCaller):
+  Context(System* s, Allocator* allocator, Zone* zone, void* indirectCaller):
     s(s),
-    constantPool(s, allocator, allocatorContext, BytesPerWord * 32),
-    plan(s, allocator, allocatorContext, 1024),
-    code(s, allocator, allocatorContext, 1024),
+    constantPool(s, allocator, BytesPerWord * 32),
+    plan(s, allocator, 1024),
+    code(s, allocator, 1024),
     zone(zone),
     indirectCaller(reinterpret_cast<intptr_t>(indirectCaller)),
     segmentTable(0),
@@ -2382,9 +2381,9 @@ writeCode(Context* c)
 
 class MyCompiler: public Compiler {
  public:
-  MyCompiler(System* s, Allocator* allocator, void* allocatorContext,
-             Zone* zone, void* indirectCaller):
-    c(s, allocator, allocatorContext, zone, indirectCaller)
+  MyCompiler(System* s, Allocator* allocator, Zone* zone,
+             void* indirectCaller):
+    c(s, allocator, zone, indirectCaller)
   { }
 
   virtual Promise* machineIp(unsigned logicalIp) {
@@ -2870,11 +2869,11 @@ MyPromise::value(Compiler* compiler)
 namespace vm {
 
 Compiler*
-makeCompiler(System* system, Allocator* allocator, void* allocatorContext,
-             Zone* zone, void* indirectCaller)
+makeCompiler(System* system, Allocator* allocator, Zone* zone,
+             void* indirectCaller)
 {
   return new (zone->allocate(sizeof(MyCompiler)))
-    MyCompiler(system, allocator, allocatorContext, zone, indirectCaller);
+    MyCompiler(system, allocator, zone, indirectCaller);
 }
 
 } // namespace v

@@ -766,7 +766,7 @@ parsePool(Thread* t, Stream& s)
 
   if (count) {
     uint32_t* index = static_cast<uint32_t*>
-      (t->m->heap->allocate(t, count * 4, false));
+      (t->m->heap->allocate(count * 4, false));
 
     for (unsigned i = 0; i < count; ++i) {
       index[i] = s.position();
@@ -1778,7 +1778,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
                  Processor* processor):
   vtable(&javaVMVTable),
   system(system),
-  heapClient(new (heap->allocate(0, sizeof(HeapClient), false))
+  heapClient(new (heap->allocate(sizeof(HeapClient), false))
              HeapClient(this)),
   heap(heap),
   finder(finder),
@@ -1869,7 +1869,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   protector(0),
   runnable(this),
   defaultHeap(static_cast<uintptr_t*>
-              (m->heap->allocate(parent, HeapSizeInBytes, false))),
+              (m->heap->allocate(HeapSizeInBytes, false))),
   heap(defaultHeap)
 #ifdef VM_STRESS
   , stress(false)
@@ -2185,7 +2185,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     t->heap = 0;
     if (t->m->heapPoolIndex < Machine::HeapPoolSize) {
       t->heap = static_cast<uintptr_t*>
-        (t->m->heap->tryAllocate(0, Thread::HeapSizeInBytes, false));
+        (t->m->heap->tryAllocate(Thread::HeapSizeInBytes, false));
       if (t->heap) {
         t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
         t->heapOffset += t->heapIndex;
@@ -2208,7 +2208,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     unsigned total;
     object o = static_cast<object>
       (t->m->heap->allocateFixed
-       (allocator, t, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
     cast<uintptr_t>(o, 0) = FixedMark;
 
@@ -2221,7 +2221,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     unsigned total;
     object o = static_cast<object>
       (t->m->heap->allocateImmortal
-       (allocator, t, ceiling(sizeInBytes, BytesPerWord),
+       (allocator, ceiling(sizeInBytes, BytesPerWord),
         executable, objectMask, &total));
 
     cast<uintptr_t>(o, 0) = FixedMark;

@@ -7,11 +7,9 @@ namespace vm {
 
 class Vector {
  public:
-  Vector(System* s, Allocator* allocator, void* context,
-         unsigned minimumCapacity):
+  Vector(System* s, Allocator* allocator, unsigned minimumCapacity):
     s(s),
     allocator(allocator),
-    context(context),
     data(0),
     position(0),
     capacity(0),
@@ -44,7 +42,7 @@ class Vector {
       unsigned newCapacity = max
         (position + space, max(minimumCapacity, capacity * 2));
       uint8_t* newData = static_cast<uint8_t*>
-        (allocator->allocate(context, newCapacity, false));
+        (allocator->allocate(newCapacity, false));
       if (data) {
         memcpy(newData, data, position);
         allocator->free(data, capacity, false);
@@ -134,7 +132,6 @@ class Vector {
   
   System* s;
   Allocator* allocator;
-  void* context;
   uint8_t* data;
   unsigned position;
   unsigned capacity;
