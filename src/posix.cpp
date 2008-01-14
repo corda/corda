@@ -509,7 +509,7 @@ class MySystem: public System {
 
     if (executable) {
       void* p = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
+                     MAP_PRIVATE | MAP_ANON | MAP_32BIT, -1, 0);
 
       if (p == MAP_FAILED) {
         return 0;
