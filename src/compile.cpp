@@ -1498,9 +1498,10 @@ void FORCE_ALIGN
 checkCast(MyThread* t, object class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
-    object message = makeString(t, "%s as %s",
-                                className(t, objectClass(t, o)),
-                                className(t, class_));
+    object message = makeString
+      (t, "%s as %s",
+       &byteArrayBody(t, className(t, objectClass(t, o)), 0),
+       &byteArrayBody(t, className(t, class_), 0));
     t->exception = makeClassCastException(t, message);
     unwind(t);
   }
