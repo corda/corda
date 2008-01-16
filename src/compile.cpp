@@ -4242,7 +4242,10 @@ class ArgumentList {
     if (BytesPerWord == 8) {
       memcpy(array + position + 1, &v, 8);
     } else {
-      memcpy(array + position, &v, 8);
+      // push words in reverse order, since they will be switched back
+      // when pushed on the stack:
+      array[position] = v >> 32;
+      array[position + 1] = v;
     }
     objectMask[position] = false;
     objectMask[position + 1] = false;
