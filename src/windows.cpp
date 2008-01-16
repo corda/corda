@@ -240,55 +240,62 @@ class MySystem: public System {
       assert(s, t);
 
       if (owner_ == t) {
-        ACQUIRE(s, t->mutex);
+        bool interrupted;
+        unsigned depth;
+        int r UNUSED;
+
+        { ACQUIRE(s, t->mutex);
       
-        if (t->r->interrupted()) {
-          t->r->setInterrupted(false);
-          return true;
+          if (t->r->interrupted()) {
+            t->r->setInterrupted(false);
+            return true;
+          }
+
+          t->flags |= Waiting;
+
+          append(t);
+
+          depth = this->depth;
+          this->depth = 0;
+          owner_ = 0;
+
+          bool success UNUSED = ReleaseMutex(mutex);
+          assert(s, success);
+
+          success = ResetEvent(t->event);
+          assert(s, success);
+
+          success = ReleaseMutex(t->mutex);
+          assert(s, success);
+
+          r = WaitForSingleObject(t->event, (time ? time : INFINITE));
+          assert(s, r == WAIT_OBJECT_0 or r == WAIT_TIMEOUT);
+
+          r = WaitForSingleObject(t->mutex, INFINITE);
+          assert(s, r == WAIT_OBJECT_0);
+        
+          if ((t->flags & Notified) == 0) {
+            remove(t);
+          }
+
+          t->flags = 0;
+          t->next = 0;
+
+          if (t->r->interrupted()) {
+            t->r->setInterrupted(false);
+            interrupted = true;
+          } else {
+            interrupted = false;
+          }
         }
-
-        t->flags |= Waiting;
-
-        append(t);
-
-        unsigned depth = this->depth;
-        this->depth = 0;
-        owner_ = 0;
-
-        bool success UNUSED = ReleaseMutex(mutex);
-        assert(s, success);
-
-        success = ResetEvent(t->event);
-        assert(s, success);
-
-        success = ReleaseMutex(t->mutex);
-        assert(s, success);
-
-        int r UNUSED = WaitForSingleObject(t->event, (time ? time : INFINITE));
-        assert(s, r == WAIT_OBJECT_0 or r == WAIT_TIMEOUT);
-
-        r = WaitForSingleObject(t->mutex, INFINITE);
-        assert(s, r == WAIT_OBJECT_0);
 
         r = WaitForSingleObject(mutex, INFINITE);
         assert(s, r == WAIT_OBJECT_0);
 
         owner_ = t;
         this->depth = depth;
-        
-        if ((t->flags & Notified) == 0) {
-          remove(t);
-        }
 
-        t->flags = 0;
-        t->next = 0;
-
-        if (t->r->interrupted()) {
-          t->r->setInterrupted(false);
-          return true;
-        } else {
-          return false;
-        }
+        return interrupted;
       } else {
         sysAbort(s);
       }
