@@ -2957,7 +2957,7 @@ noop()
 } // namespace vm
 
 // for debugging
-extern "C" void
+void
 vmPrintTrace(Thread* t)
 {
   class Visitor: public Processor::StackVisitor {
