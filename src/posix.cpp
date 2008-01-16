@@ -275,6 +275,7 @@ class MySystem: public System {
 
       if (owner_ == t) {
         bool interrupted;
+        bool notified;
         unsigned depth;
 
         { ACQUIRE(t->mutex);
@@ -303,11 +304,9 @@ class MySystem: public System {
             int rv UNUSED = pthread_cond_wait(&(t->condition), &(t->mutex));
             expect(s, rv == 0 or rv == EINTR);
           }
-        
-          if ((t->flags & Notified) == 0) {
-            remove(t);
-          }
 
+          notified = ((t->flags & Notified) == Notified);
+        
           t->flags = 0;
           t->next = 0;
 
@@ -320,6 +319,11 @@ class MySystem: public System {
         }
 
         pthread_mutex_lock(&mutex);
+
+        if (not notified) {
+          remove(t);
+        }
+
         owner_ = t;
         this->depth = depth;
 

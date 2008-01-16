@@ -241,6 +241,7 @@ class MySystem: public System {
 
       if (owner_ == t) {
         bool interrupted;
+        bool notified;
         unsigned depth;
         int r UNUSED;
 
@@ -273,11 +274,9 @@ class MySystem: public System {
 
           r = WaitForSingleObject(t->mutex, INFINITE);
           assert(s, r == WAIT_OBJECT_0);
-        
-          if ((t->flags & Notified) == 0) {
-            remove(t);
-          }
 
+          notified = ((t->flags & Notified) == Notified);
+        
           t->flags = 0;
           t->next = 0;
 
@@ -291,6 +290,10 @@ class MySystem: public System {
 
         r = WaitForSingleObject(mutex, INFINITE);
         assert(s, r == WAIT_OBJECT_0);
+
+        if (not notified) {
+          remove(t);
+        }
 
         owner_ = t;
         this->depth = depth;
