@@ -2955,3 +2955,41 @@ noop()
 #include "type-constructors.cpp"
 
 } // namespace vm
+
+// for debugging
+extern "C" void
+vmPrintTrace(Thread* t)
+{
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t): t(t) { }
+
+    virtual bool visit(Processor::StackWalker* walker) {
+      const int8_t* class_ = &byteArrayBody
+        (t, className(t, methodClass(t, walker->method())), 0);
+      const int8_t* method = &byteArrayBody
+        (t, methodName(t, walker->method()), 0);
+      int line = t->m->processor->lineNumber
+        (t, walker->method(), walker->ip());
+
+      fprintf(stderr, "  at %s.%s ", class_, method);
+
+      switch (line) {
+      case NativeLine:
+        fprintf(stderr, "(native)\n");
+        break;
+      case UnknownLine:
+        fprintf(stderr, "(unknown line)\n");
+        break;
+      default:
+        fprintf(stderr, "(line %d)\n", line);
+      }
+
+      return true;
+    }
+
+    Thread* t;
+  } v(t);
+
+  t->m->processor->walkStack(t, &v);
+}
