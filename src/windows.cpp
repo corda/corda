@@ -275,16 +275,13 @@ class MySystem: public System {
           r = WaitForSingleObject(t->mutex, INFINITE);
           assert(s, r == WAIT_OBJECT_0);
 
-          notified = ((t->flags & Notified) == Notified);
+          notified = ((t->flags & Notified) != 0);
         
           t->flags = 0;
-          t->next = 0;
 
-          if (t->r->interrupted()) {
+          interrupted = t->r->interrupted();
+          if (interrupted) {
             t->r->setInterrupted(false);
-            interrupted = true;
-          } else {
-            interrupted = false;
           }
         }
 
@@ -294,6 +291,8 @@ class MySystem: public System {
         if (not notified) {
           remove(t);
         }
+
+        t->next = 0;
 
         owner_ = t;
         this->depth = depth;
