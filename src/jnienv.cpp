@@ -330,7 +330,7 @@ CallBooleanMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  return (t->exception ? 0 : booleanValue(t, r));
+  return (t->exception ? false : (intValue(t, r) != 0));
 }
 
 jboolean JNICALL
@@ -352,7 +352,7 @@ CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  return (t->exception ? 0 : byteValue(t, r));
+  return (t->exception ? 0 : intValue(t, r));
 }
 
 jbyte JNICALL
@@ -374,7 +374,7 @@ CallCharMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  return (t->exception ? 0 : charValue(t, r));
+  return (t->exception ? 0 : intValue(t, r));
 }
 
 jchar JNICALL
@@ -396,7 +396,7 @@ CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  return (t->exception ? 0 : shortValue(t, r));
+  return (t->exception ? 0 : intValue(t, r));
 }
 
 jshort JNICALL
@@ -440,7 +440,7 @@ CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  return (t->exception ? 0 : longValue(t, r));
+  return (t->exception ? 0 : intValue(t, r));
 }
 
 jlong JNICALL
@@ -462,9 +462,7 @@ CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  jint i = (t->exception ? 0 : floatValue(t, r));
-  jfloat f; memcpy(&f, &i, 4);
-  return f;
+  return (t->exception ? 0 : bitsToFloat(intValue(t, r)));
 }
 
 jfloat JNICALL
@@ -486,9 +484,7 @@ CallDoubleMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  jlong i = (t->exception ? 0 : doubleValue(t, r));
-  jdouble f; memcpy(&f, &i, 4);
-  return f;
+  return (t->exception ? 0 : bitsToDouble(longValue(t, r)));
 }
 
 jdouble JNICALL
@@ -558,7 +554,7 @@ CallStaticBooleanMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 
   object r = t->m->processor->invokeList
     (t, getStaticMethod(t, *c, m), 0, true, a);
-  return (t->exception ? 0 : booleanValue(t, r));
+  return (t->exception ? 0 : (intValue(t, r) != 0));
 }
 
 jboolean JNICALL
@@ -581,7 +577,7 @@ CallStaticByteMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 
   object r = t->m->processor->invokeList
     (t, getStaticMethod(t, *c, m), 0, true, a);
-  return (t->exception ? 0 : byteValue(t, r));
+  return (t->exception ? 0 : intValue(t, r));
 }
 
 jbyte JNICALL
@@ -604,7 +600,7 @@ CallStaticCharMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 
   object r = t->m->processor->invokeList
     (t, getStaticMethod(t, *c, m), 0, true, a);
-  return (t->exception ? 0 : charValue(t, r));
+  return (t->exception ? 0 : intValue(t, r));
 }
 
 jchar JNICALL
@@ -627,7 +623,7 @@ CallStaticShortMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 
   object r = t->m->processor->invokeList
     (t, getStaticMethod(t, *c, m), 0, true, a);
-  return (t->exception ? 0 : shortValue(t, r));
+  return (t->exception ? 0 : intValue(t, r));
 }
 
 jshort JNICALL
@@ -696,9 +692,7 @@ CallStaticFloatMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 
   object r = t->m->processor->invokeList
     (t, getStaticMethod(t, *c, m), 0, true, a);
-  jint i = (t->exception ? 0 : floatValue(t, r));
-  jfloat f; memcpy(&f, &i, 4);
-  return f;
+  return (t->exception ? 0 : bitsToFloat(intValue(t, r)));
 }
 
 jfloat JNICALL
@@ -721,9 +715,7 @@ CallStaticDoubleMethodV(Thread* t, jclass c, jmethodID m, va_list a)
 
   object r = t->m->processor->invokeList
     (t, getStaticMethod(t, *c, m), 0, true, a);
-  jlong i = (t->exception ? 0 : doubleValue(t, r));
-  jdouble f; memcpy(&f, &i, 4);
-  return f;
+  return (t->exception ? 0 : bitsToDouble(longValue(t, r)));
 }
 
 jdouble JNICALL

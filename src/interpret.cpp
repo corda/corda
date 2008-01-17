@@ -2780,34 +2780,7 @@ invoke(Thread* t, object method)
     return 0;
   }
 
-  switch (returnCode(t, method)) {
-  case ByteField:
-    return makeByte(t, static_cast<int8_t>(intValue(t, result)));
-
-  case BooleanField:
-    return makeBoolean(t, static_cast<uint8_t>(intValue(t, result)));
-
-  case CharField:
-    return makeChar(t, static_cast<uint16_t>(intValue(t, result)));
-
-  case ShortField:
-    return makeShort(t, static_cast<int16_t>(intValue(t, result)));
-
-  case FloatField:
-    return makeFloat(t, static_cast<uint32_t>(intValue(t, result)));
-
-  case DoubleField:
-    return makeDouble(t, static_cast<uint64_t>(longValue(t, result)));
-        
-  case ObjectField:
-  case IntField:
-  case LongField:
-  case VoidField:
-    return result;
-
-  default:
-    abort(t);
-  }
+  return result;
 }
 
 class MyProcessor: public Processor {
