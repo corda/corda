@@ -336,7 +336,7 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "file.separator") == 0) {
       r = e->NewStringUTF("\\");
     } else if (strcmp(chars, "os.name") == 0) {
-      r = e->NewStringUTF("windows");
+      r = e->NewStringUTF("Windows");
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
@@ -351,7 +351,11 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "file.separator") == 0) {
       r = e->NewStringUTF("/");
     } else if (strcmp(chars, "os.name") == 0) {
-      r = e->NewStringUTF("posix");
+#ifdef __APPLE__
+      r = e->NewStringUTF("Mac OS X");
+#else
+      r = e->NewStringUTF("Linux");
+#endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
     } else if (strcmp(chars, "user.home") == 0) {
