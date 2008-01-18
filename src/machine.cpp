@@ -2036,11 +2036,19 @@ enter(Thread* t, Thread::State s)
 
   switch (s) {
   case Thread::ExclusiveState: {
-    assert(t, t->state == Thread::ActiveState);
-
     while (t->m->exclusive) {
       // another thread got here first.
       ENTER(t, Thread::IdleState);
+    }
+
+    switch (t->state) {
+    case Thread::ActiveState: break;
+
+    case Thread::IdleState: {
+      ++ t->m->activeCount;
+    } break;
+
+    default: abort(t);
     }
 
     t->state = Thread::ExclusiveState;
