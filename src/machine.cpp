@@ -1591,25 +1591,6 @@ removeString(Thread* t, object o)
 }
 
 void
-invoke(Thread* t, const char* className, int argc, const char** argv)
-{
-  enter(t, Thread::ActiveState);
-
-  object args = makeObjectArray
-    (t, arrayBody(t, t->m->types, Machine::StringType), argc, true);
-
-  PROTECT(t, args);
-
-  for (int i = 0; i < argc; ++i) {
-    object arg = makeString(t, "%s", argv[i]);
-    set(t, args, ArrayBody + (i * BytesPerWord), arg);
-  }
-
-  t->m->processor->invoke
-    (t, className, "main", "([Ljava/lang/String;)V", 0, args);
-}
-
-void
 bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
           unsigned fixedSize, unsigned arrayElementSize, unsigned vtableLength)
 {
@@ -2747,6 +2728,8 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 System::Monitor*
 objectMonitor(Thread* t, object o, bool createNew)
 {
+  assert(t, t->state == Thread::ActiveState);
+
   object p = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
 
   if (p) {

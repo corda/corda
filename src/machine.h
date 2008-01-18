@@ -1645,6 +1645,8 @@ makeExceptionInInitializerError(Thread* t, object cause)
 inline object FORCE_ALIGN
 makeNew(Thread* t, object class_)
 {
+  assert(t, t->state == Thread::ActiveState);
+
   PROTECT(t, class_);
   unsigned sizeInBytes = pad(classFixedSize(t, class_));
   object instance = allocate(t, sizeInBytes, classObjectMask(t, class_));
@@ -1658,6 +1660,8 @@ makeNew(Thread* t, object class_)
 inline object FORCE_ALIGN
 makeNewWeakReference(Thread* t, object class_)
 {
+  assert(t, t->state == Thread::ActiveState);
+
   object instance = makeNew(t, class_);
   PROTECT(t, instance);
 
