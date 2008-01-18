@@ -440,7 +440,7 @@ CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (t->exception ? 0 : longValue(t, r));
 }
 
 jlong JNICALL
