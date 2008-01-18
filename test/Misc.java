@@ -1,6 +1,7 @@
 public class Misc {
   private static int alpha;
   private static int beta;
+  private static byte byte1, byte2, byte3;
   private int gamma;
 
   private String foo(String s) {
@@ -51,6 +52,9 @@ public class Misc {
   }
 
   public static void main(String[] args) {
+    byte2 = 0;
+    expect(byte2 == 0);
+
     Misc m = new Misc();
     m.toString();
 

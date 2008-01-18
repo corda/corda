@@ -1959,9 +1959,10 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
   case mov1:
     if (BytesPerWord == 8) {
       if (operand->value(c) > rbx) {
-        c->code.append(0x40);
+        encode2(c, 0x4088, operand->value(c), this, false);
+      } else {
+        encode(c, 0x88, operand->value(c), this, false);
       }
-      encode(c, 0x88, operand->value(c), this, false);
     } else {
       if (operand->value(c) > rbx) {
         RegisterOperand* ax = temporary(c, rax);
