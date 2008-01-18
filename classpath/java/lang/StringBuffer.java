@@ -30,6 +30,11 @@ public class StringBuffer {
     return this;
   }
 
+  public synchronized StringBuffer append(boolean v) {
+    sb.append(v);
+    return this;
+  }
+
   public synchronized StringBuffer append(int v) {
     sb.append(v);
     return this;
