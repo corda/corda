@@ -1388,11 +1388,11 @@ void JNICALL
 ReleaseBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* p,
                             jint mode)
 {
+  ENTER(t, Thread::ActiveState);
+    
   unsigned size = booleanArrayLength(t, *array) * sizeof(jboolean);
 
   if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
     if (size) {
       memcpy(&booleanArrayBody(t, *array, 0), p, size);
     }
@@ -1406,11 +1406,11 @@ ReleaseBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* p,
 void JNICALL
 ReleaseByteArrayElements(Thread* t, jbyteArray array, jbyte* p, jint mode)
 {
+  ENTER(t, Thread::ActiveState);
+    
   unsigned size = byteArrayLength(t, *array) * sizeof(jbyte);
 
   if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
     if (size) {
       memcpy(&byteArrayBody(t, *array, 0), p, size);
     }
@@ -1424,11 +1424,11 @@ ReleaseByteArrayElements(Thread* t, jbyteArray array, jbyte* p, jint mode)
 void JNICALL
 ReleaseCharArrayElements(Thread* t, jcharArray array, jchar* p, jint mode)
 {
+  ENTER(t, Thread::ActiveState);
+
   unsigned size = charArrayLength(t, *array) * sizeof(jchar);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
+  if (mode == 0 or mode == JNI_COMMIT) {    
     if (size) {
       memcpy(&charArrayBody(t, *array, 0), p, size);
     }
@@ -1442,11 +1442,11 @@ ReleaseCharArrayElements(Thread* t, jcharArray array, jchar* p, jint mode)
 void JNICALL
 ReleaseShortArrayElements(Thread* t, jshortArray array, jshort* p, jint mode)
 {
+  ENTER(t, Thread::ActiveState);  
+
   unsigned size = shortArrayLength(t, *array) * sizeof(jshort);
 
   if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
     if (size) {
       memcpy(&shortArrayBody(t, *array, 0), p, size);
     }
@@ -1460,11 +1460,11 @@ ReleaseShortArrayElements(Thread* t, jshortArray array, jshort* p, jint mode)
 void JNICALL
 ReleaseIntArrayElements(Thread* t, jintArray array, jint* p, jint mode)
 {
+  ENTER(t, Thread::ActiveState);
+    
   unsigned size = intArrayLength(t, *array) * sizeof(jint);
 
   if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
     if (size) {
       memcpy(&intArrayBody(t, *array, 0), p, size);
     }
@@ -1478,11 +1478,11 @@ ReleaseIntArrayElements(Thread* t, jintArray array, jint* p, jint mode)
 void JNICALL
 ReleaseLongArrayElements(Thread* t, jlongArray array, jlong* p, jint mode)
 {
+  ENTER(t, Thread::ActiveState);
+    
   unsigned size = longArrayLength(t, *array) * sizeof(jlong);
 
   if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
     if (size) {
       memcpy(&longArrayBody(t, *array, 0), p, size);
     }
@@ -1496,11 +1496,11 @@ ReleaseLongArrayElements(Thread* t, jlongArray array, jlong* p, jint mode)
 void JNICALL
 ReleaseFloatArrayElements(Thread* t, jfloatArray array, jfloat* p, jint mode)
 {
+  ENTER(t, Thread::ActiveState);
+    
   unsigned size = floatArrayLength(t, *array) * sizeof(jfloat);
 
   if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
     if (size) {
       memcpy(&floatArrayBody(t, *array, 0), p, size);
     }
@@ -1515,11 +1515,11 @@ void JNICALL
 ReleaseDoubleArrayElements(Thread* t, jdoubleArray array, jdouble* p,
                            jint mode)
 {
+  ENTER(t, Thread::ActiveState);
+    
   unsigned size = doubleArrayLength(t, *array) * sizeof(jdouble);
 
   if (mode == 0 or mode == JNI_COMMIT) {
-    ENTER(t, Thread::ActiveState);
-    
     if (size) {
       memcpy(&doubleArrayBody(t, *array, 0), p, size);
     }
