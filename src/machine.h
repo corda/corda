@@ -2049,9 +2049,11 @@ wait(Thread* t, object o, int64_t milliseconds)
   }
 
   if (m and m->owner() == t->systemThread) {
-    ENTER(t, Thread::IdleState);
+    bool interrupted;
+    { ENTER(t, Thread::IdleState);
+      interrupted = m->wait(t->systemThread, milliseconds);
+    }
 
-    bool interrupted = m->wait(t->systemThread, milliseconds);
     if (interrupted) {
       t->exception = makeInterruptedException(t);
     }
