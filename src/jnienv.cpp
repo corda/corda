@@ -143,13 +143,24 @@ NewStringUTF(Thread* t, const char* chars)
   return makeLocalReference(t, s);
 }
 
+void
+replace(int a, int b, const char* in, int8_t* out)
+{
+  while (*in) {
+    *out = (*in == a ? b : *in);
+    ++ in;
+    ++ out;
+  }
+  *out = 0;
+}
+
 jclass JNICALL
 FindClass(Thread* t, const char* name)
 {
   ENTER(t, Thread::ActiveState);
 
   object n = makeByteArray(t, strlen(name) + 1, false);
-  memcpy(&byteArrayBody(t, n, 0), name, byteArrayLength(t, n));
+  replace('.', '/', name, &byteArrayBody(t, n, 0));
 
   return makeLocalReference(t, resolveClass(t, n));
 }
