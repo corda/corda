@@ -6,7 +6,7 @@
    public static *** values();
  }
 
-# the VM depends on a fixed layout for the following classes:
+# the VM depends on the fixed layout of the following classes:
 
 -keepclassmembers class java.lang.Class { <fields>; }
 -keepclassmembers class java.lang.ClassLoader { <fields>; }
@@ -30,7 +30,15 @@
 -keepclassmembers class java.lang.reflect.Field { <fields>; }
 -keepclassmembers class java.lang.reflect.Method { <fields>; }
 
--keepnames public class java.lang.*
+# ClassLoader.getSystemClassloader() depends on the existence of this class:
+
+-keep             class java.lang.SystemClassLoader
+
+# the VM references these classes by name, so protect them from obfuscation:
+
+-keepnames public class java.lang.**
+
+# musn't obfuscate native method names:
 
 -keepclasseswithmembernames class * {
    native <methods>;
