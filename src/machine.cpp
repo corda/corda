@@ -1571,6 +1571,11 @@ makeArrayClass(Thread* t, object spec)
 void
 removeMonitor(Thread* t, object o)
 {
+  unsigned hash;
+  if (DebugMonitors) {
+    hash = objectHash(t, o);
+  }
+
   object p = hashMapRemove(t, t->m->monitorMap, o, objectHash, objectEqual);
 
   assert(t, p);
@@ -1578,7 +1583,7 @@ removeMonitor(Thread* t, object o)
   if (DebugMonitors) {
     fprintf(stderr, "dispose monitor %p for object %x\n",
             static_cast<System::Monitor*>(pointerValue(t, p)),
-            objectHash(t, o));
+            hash);
   }
 
   static_cast<System::Monitor*>(pointerValue(t, p))->dispose();

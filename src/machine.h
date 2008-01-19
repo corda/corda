@@ -2015,11 +2015,16 @@ objectMonitor(Thread* t, object o, bool createNew);
 inline void
 acquire(Thread* t, object o)
 {
+  unsigned hash;
+  if (DebugMonitors) {
+    hash = objectHash(t, o);
+  }
+
   System::Monitor* m = objectMonitor(t, o, true);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p acquires %p for %x\n",
-            t, m, objectHash(t, o));
+            t, m, hash);
   }
 
   acquire(t, m);
@@ -2028,11 +2033,16 @@ acquire(Thread* t, object o)
 inline void
 release(Thread* t, object o)
 {
+  unsigned hash;
+  if (DebugMonitors) {
+    hash = objectHash(t, o);
+  }
+
   System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p releases %p for %x\n",
-            t, m, objectHash(t, o));
+            t, m, hash);
   }
 
   release(t, m);
@@ -2041,11 +2051,16 @@ release(Thread* t, object o)
 inline void
 wait(Thread* t, object o, int64_t milliseconds)
 {
+  unsigned hash;
+  if (DebugMonitors) {
+    hash = objectHash(t, o);
+  }
+
   System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p waits %"LLD" millis on %p for %x\n",
-            t, milliseconds, m, objectHash(t, o));
+            t, milliseconds, m, hash);
   }
 
   if (m and m->owner() == t->systemThread) {
@@ -2063,7 +2078,7 @@ wait(Thread* t, object o, int64_t milliseconds)
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p wakes up on %p for %x\n",
-            t, m, objectHash(t, o));
+            t, m, hash);
   }
 
   stress(t);
@@ -2072,11 +2087,16 @@ wait(Thread* t, object o, int64_t milliseconds)
 inline void
 notify(Thread* t, object o)
 {
+  unsigned hash;
+  if (DebugMonitors) {
+    hash = objectHash(t, o);
+  }
+
   System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p notifies on %p for %x\n",
-            t, m, objectHash(t, o));
+            t, m, hash);
   }
 
   if (m and m->owner() == t->systemThread) {

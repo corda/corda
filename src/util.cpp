@@ -102,24 +102,31 @@ void
 hashMapInsert(Thread* t, object map, object key, object value,
                uint32_t (*hash)(Thread*, object))
 {
+  // note that we reinitialize the array and index variables whenever
+  // an allocation (and thus possibly a collection) occurs, in case
+  // the array changes due to a table resize.
+
+  PROTECT(t, map);
+
+  uint32_t h = hash(t, key);
+
   bool weak = objectClass(t, map)
     == arrayBody(t, t->m->types, Machine::WeakHashMapType);
 
   object array = hashMapArray(t, map);
-  PROTECT(t, array);
 
   ++ hashMapSize(t, map);
 
   if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
-    PROTECT(t, map);
     PROTECT(t, key);
     PROTECT(t, value);
 
     hashMapResize(t, map, hash, array ? arrayLength(t, array) * 2 : 16);
+
     array = hashMapArray(t, map);
   }
 
-  unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
+  object k = key;
 
   if (weak) {
     PROTECT(t, key);
@@ -128,10 +135,17 @@ hashMapInsert(Thread* t, object map, object key, object value,
     object r = makeWeakReference(t, 0, 0, 0, 0);
     jreferenceTarget(t, r) = key;
     jreferenceVmNext(t, r) = t->m->weakReferences;
-    key = t->m->weakReferences = r;
+    k = t->m->weakReferences = r;
+
+    array = hashMapArray(t, map);
   }
 
-  object n = makeTriple(t, key, value, arrayBody(t, array, index));
+  unsigned index = h & (arrayLength(t, array) - 1);
+
+  object n = makeTriple(t, k, value, arrayBody(t, array, index));
+
+  array = hashMapArray(t, map);
+  index = h & (arrayLength(t, array) - 1);
 
   set(t, array, ArrayBody + (index * BytesPerWord), n);
 }
