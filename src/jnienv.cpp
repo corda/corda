@@ -1968,7 +1968,6 @@ JNI_GetDefaultJavaVMInitArgs(void* args)
 }
 
 #define BUILTINS_PROPERTY "vm.builtins"
-#define BUILTIN_CLASSPATH "[vmClasspath]"
 
 extern "C" JNIEXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
@@ -1977,13 +1976,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 
   System* s = makeSystem();
   Heap* h = makeHeap(s, a->maxHeapSize);
-
-  unsigned size = sizeof(BUILTIN_CLASSPATH) + 1 + strlen(a->classpath);
-  char classpath[size];
-  snprintf(classpath, size, "%s%c%s",
-           BUILTIN_CLASSPATH, s->pathSeparator(), a->classpath);
-
-  Finder* f = makeFinder(s, classpath);
+  Finder* f = makeFinder(s, a->classpath);
   Processor* p = makeProcessor(s, h);
 
   *m = new (h->allocate(sizeof(Machine), false)) Machine(s, h, f, p);

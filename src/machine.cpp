@@ -2657,6 +2657,17 @@ findInTable(Thread* t, object table, object name, object spec,
         return o;
       }
     }
+
+    fprintf(stderr, "%s %s not in\n",
+            &byteArrayBody(t, name, 0),
+            &byteArrayBody(t, spec, 0));
+
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      object o = arrayBody(t, table, i); 
+      fprintf(stderr, "\t%s %s\n",
+              &byteArrayBody(t, getName(t, o), 0),
+              &byteArrayBody(t, getSpec(t, o), 0)); 
+    }
   }
 
   return 0;

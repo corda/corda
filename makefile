@@ -1,5 +1,7 @@
 MAKEFLAGS = -s
 
+name = vm
+
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
 	build-arch = i386
@@ -135,7 +137,7 @@ generated-code = \
 	$(native-build)/type-initializations.cpp \
 	$(native-build)/type-java-initializations.cpp
 
-interpreter-depends = \
+vm-depends = \
 	$(generated-code) \
 	$(src)/allocator.h \
 	$(src)/common.h \
@@ -151,7 +153,7 @@ interpreter-depends = \
 	$(src)/util.h \
 	$(src)/zone.h
 
-interpreter-sources = \
+vm-sources = \
 	$(src)/$(system).cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
@@ -161,25 +163,21 @@ interpreter-sources = \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp
 
-interpreter-asm-sources = $(src)/$(asm).S
+vm-asm-sources = $(src)/$(asm).S
 
 ifeq ($(process),compile)
-	interpreter-depends += \
+	vm-depends += \
 		$(src)/compiler.h \
 		$(src)/vector.h
 
-	interpreter-sources += $(src)/compiler.cpp
+	vm-sources += $(src)/compiler.cpp
 
-	interpreter-asm-sources += $(src)/compile.S
+	vm-asm-sources += $(src)/compile.S
 endif
 
-interpreter-cpp-objects = \
-	$(call cpp-objects,$(interpreter-sources),$(src),$(native-build))
-interpreter-asm-objects = \
-	$(call asm-objects,$(interpreter-asm-sources),$(src),$(native-build))
-interpreter-objects = \
-	$(interpreter-cpp-objects) \
-	$(interpreter-asm-objects)
+vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(native-build))
+vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(native-build))
+vm-objects = $(vm-cpp-objects) $(vm-asm-objects)
 
 driver-sources = $(src)/main.cpp
 
@@ -191,8 +189,8 @@ generator-objects = \
 	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
 generator = $(native-build)/generator
 
-archive = $(native-build)/libvm.a
-interpreter = $(native-build)/vm
+archive = $(native-build)/lib$(name).a
+vm = $(native-build)/$(name)
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
@@ -220,26 +218,26 @@ endif
 args = $(flags) $(input)
 
 .PHONY: build
-build: $(interpreter) $(archive) $(classpath-dep) $(test-dep)
+build: $(vm) $(archive) $(classpath-dep) $(test-dep)
 
 $(test-classes): $(classpath-dep)
 
 .PHONY: run
 run: build
-	$(interpreter) $(args)
+	$(vm) $(args)
 
 .PHONY: debug
 debug: build
-	gdb --args $(interpreter) $(args)
+	gdb --args $(vm) $(args)
 
 .PHONY: vg
 vg: build
-	$(vg) $(interpreter) $(args)
+	$(vg) $(vm) $(args)
 
 .PHONY: test
 test: build
 	/bin/bash $(test)/test.sh 2>/dev/null \
-		$(interpreter) $(mode) "$(flags)" \
+		$(vm) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
 .PHONY: clean
@@ -287,11 +285,10 @@ define compile-object
 	$(cxx) $(cflags) -c $(<) -o $(@)
 endef
 
-$(interpreter-cpp-objects): \
-		$(native-build)/%.o: $(src)/%.cpp $(interpreter-depends)
+$(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
-$(interpreter-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
+$(vm-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
 $(driver-object): $(native-build)/%.o: $(src)/%.cpp
@@ -319,14 +316,13 @@ $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
-$(archive): $(interpreter-objects) $(jni-objects) $(classpath-object)
+$(archive): $(vm-objects) $(jni-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
-$(interpreter): \
-		$(interpreter-objects) $(jni-objects) $(classpath-object) $(driver-object)
+$(vm): $(vm-objects) $(jni-objects) $(classpath-object) $(driver-object)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)

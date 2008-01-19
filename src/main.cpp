@@ -1,12 +1,41 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
+#include "stdint.h"
 #include "jni.h"
 
 // since we don't link against libstdc++, we must implement some dummy
 // functions:
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 void operator delete(void*) { abort(); }
+
+#ifdef __MINGW32__
+#  define PATH_SEPARATOR ';'
+#  define EXPORT __declspec(dllexport)
+#  define SYMBOL(x) binary_classpath_jar_##x
+#else
+#  define PATH_SEPARATOR ':'
+#  define EXPORT __attribute__ ((visibility("default")))
+#  define SYMBOL(x) _binary_classpath_jar_##x
+#endif
+
+extern "C" {
+
+#ifndef __APPLE__
+#  define BOOT_CLASSPATH "[classpathJar]"
+
+  extern const uint8_t SYMBOL(start)[];
+  extern const uint8_t SYMBOL(size)[];
+
+  EXPORT const uint8_t*
+  classpathJar(unsigned* size)
+  {
+    *size = reinterpret_cast<uintptr_t>(SYMBOL(size));
+    return SYMBOL(start);
+  }
+#endif
+
+}
 
 #ifdef JNI_VERSION_1_6
 // todo: use JavaVMInitArgs instead
@@ -75,6 +104,14 @@ main(int ac, const char** av)
       }
     }
   }
+
+#ifdef BOOT_CLASSPATH
+  unsigned size = sizeof(BOOT_CLASSPATH) + 1 + strlen(vmArgs.classpath);
+  char classpath[size];
+  snprintf(classpath, size, "%s%c%s",
+           BOOT_CLASSPATH, PATH_SEPARATOR, vmArgs.classpath);
+  vmArgs.classpath = classpath;
+#endif
 
   const char* properties[propertyCount + 1];
   properties[propertyCount] = 0;
