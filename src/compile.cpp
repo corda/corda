@@ -3499,13 +3499,23 @@ printSet(uintptr_t m)
 }
 
 unsigned
-calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
-                   unsigned ei)
+calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
+                   unsigned eventIndex)
 {
+  // for each instruction with more than one predecessor, and for each
+  // stack position, determine if there exists a path to that
+  // instruction such that there is not an object pointer left at that
+  // stack position (i.e. it is uninitialized or contains primitive
+  // data).
+
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   uintptr_t roots[mapSize];
-  memcpy(roots, originalRoots, mapSize * BytesPerWord);
+  if (originalRoots) {
+    memcpy(roots, originalRoots, mapSize * BytesPerWord);
+  } else {
+    memset(roots, 0, mapSize * BytesPerWord);
+  }
 
   int32_t ip = -1;
 
@@ -3517,18 +3527,18 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
   // that position, or the contents of that position are as yet
   // unknown.
 
-  while (ei < context->eventLog.length()) {
-    Event e = static_cast<Event>(context->eventLog.get(ei++));
+  while (eventIndex < context->eventLog.length()) {
+    Event e = static_cast<Event>(context->eventLog.get(eventIndex++));
     switch (e) {
     case PushEvent: {
-      ei = calculateJunctions(t, context, roots, ei);
+      eventIndex = calculateFrameMaps(t, context, roots, eventIndex);
     } break;
 
     case PopEvent:
-      return ei;
+      return eventIndex;
 
     case IpEvent: {
-      ip = context->eventLog.get2(ei);
+      ip = context->eventLog.get2(eventIndex);
 
       if (DebugFrameMaps) {
         fprintf(stderr, "      roots at ip %3d: ", ip);
@@ -3536,9 +3546,9 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
         fprintf(stderr, "\n");
       }
 
+      uintptr_t* tableRoots = context->rootTable + (ip * mapSize);  
+
       if (context->visitTable[ip] > 1) {
-        uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
-        
         for (unsigned wi = 0; wi < mapSize; ++wi) {
           tableRoots[wi] &= roots[wi];
           roots[wi] &= tableRoots[wi];
@@ -3549,59 +3559,65 @@ calculateJunctions(MyThread* t, Context* context, uintptr_t* originalRoots,
           printSet(*tableRoots);
           fprintf(stderr, "\n");
         }
+      } else {
+        memcpy(tableRoots, roots, mapSize * BytesPerWord);
       }
 
-      ei += 2;
+      eventIndex += 2;
     } break;
 
     case MarkEvent: {
-      unsigned i = context->eventLog.get2(ei);
+      unsigned i = context->eventLog.get2(eventIndex);
       markBit(roots, i);
 
-      ei += 2;
+      eventIndex += 2;
     } break;
 
     case ClearEvent: {
-      unsigned i = context->eventLog.get2(ei);
+      unsigned i = context->eventLog.get2(eventIndex);
       clearBit(roots, i);
 
-      ei += 2;
+      eventIndex += 2;
     } break;
 
     case TraceEvent: {
-      ei += BytesPerWord;
+      eventIndex += BytesPerWord;
     } break;
 
     default: abort(t);
     }
   }
 
-  return ei;
+  return eventIndex;
 }
 
 unsigned
 updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots,
-                    unsigned ei)
+                    unsigned eventIndex)
 {
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   uintptr_t roots[mapSize];
-  memcpy(roots, originalRoots, mapSize * BytesPerWord);
+  if (originalRoots) {
+    memcpy(roots, originalRoots, mapSize * BytesPerWord);
+  } else {
+    memset(roots, 0, mapSize * BytesPerWord);
+  }
 
   int32_t ip = -1;
 
-  while (ei < context->eventLog.length()) {
-    Event e = static_cast<Event>(context->eventLog.get(ei++));
+  while (eventIndex < context->eventLog.length()) {
+    Event e = static_cast<Event>(context->eventLog.get(eventIndex++));
     switch (e) {
     case PushEvent: {
-      ei = updateTraceElements(t, context, roots, ei);
+      eventIndex = updateTraceElements(t, context, roots, eventIndex);
     } break;
 
     case PopEvent:
-      return ei;
+      return eventIndex;
 
     case IpEvent: {
-      ip = context->eventLog.get2(ei);
+      ip = context->eventLog.get2(eventIndex);
 
       if (DebugFrameMaps) {
         fprintf(stderr, "        map at ip %3d: ", ip);
@@ -3617,54 +3633,35 @@ updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots,
         }
       }
 
-      ei += 2;
+      eventIndex += 2;
     } break;
 
     case MarkEvent: {
-      unsigned i = context->eventLog.get2(ei);
+      unsigned i = context->eventLog.get2(eventIndex);
       markBit(roots, i);
 
-      ei += 2;
+      eventIndex += 2;
     } break;
 
     case ClearEvent: {
-      unsigned i = context->eventLog.get2(ei);
+      unsigned i = context->eventLog.get2(eventIndex);
       clearBit(roots, i);
 
-      ei += 2;
+      eventIndex += 2;
     } break;
 
     case TraceEvent: {
-      TraceElement* te; context->eventLog.get(ei, &te, BytesPerWord);
+      TraceElement* te; context->eventLog.get(eventIndex, &te, BytesPerWord);
       memcpy(te->map, roots, mapSize * BytesPerWord);
 
-      ei += BytesPerWord;
+      eventIndex += BytesPerWord;
     } break;
 
     default: abort(t);
     }
   }
 
-  return ei;
-}
-
-void
-calculateFrameMaps(MyThread* t, Context* context)
-{
-  unsigned mapSize = frameMapSizeInWords(t, context->method);
-
-  uintptr_t roots[mapSize];
-  memset(roots, 0, mapSize * BytesPerWord);
-
-  // first pass: for each instruction with more than one predecessor,
-  // and for each stack position, determine if there exists a path to
-  // that instruction such that there is not an object pointer left at
-  // that stack position (i.e. it is uninitialized or contains
-  // primitive data).
-  calculateJunctions(t, context, roots, 0);
-
-  // second pass: update trace elements.
-  updateTraceElements(t, context, roots, 0);
+  return eventIndex;
 }
 
 Allocator*
@@ -3804,7 +3801,7 @@ compile(MyThread* t, Context* context)
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
 
-  calculateFrameMaps(t, context);
+  unsigned eventIndex = calculateFrameMaps(t, context, 0, 0);
 
   object eht = codeExceptionHandlerTable(t, methodCode(t, context->method));
   if (eht) {
@@ -3818,7 +3815,6 @@ compile(MyThread* t, Context* context)
         
       uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
       Frame frame2(&frame, stackMap);
-      frame2.pushObject();
 
       uintptr_t* roots = context->rootTable
         + (start * frameMapSizeInWords(t, context->method));
@@ -3826,15 +3822,28 @@ compile(MyThread* t, Context* context)
       for (unsigned i = 0; i < localSize(t, context->method); ++ i) {
         if (getBit(roots, i)) {
           frame2.mark(i);
+        } else {
+          frame2.clear(i);
         }
+      }
+
+      frame2.pushObject();
+
+      for (unsigned i = 1;
+           i < codeMaxStack(t, methodCode(t, context->method));
+           ++i)
+      {
+        frame2.clear(localSize(t, context->method) + i);
       }
 
       compile(t, &frame2, exceptionHandlerIp(eh));
       if (UNLIKELY(t->exception)) return 0;
 
-      calculateFrameMaps(t, context);
+      eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
     }
   }
+
+  updateTraceElements(t, context, 0, 0);
 
   return finish(t, context, 0);
 }
