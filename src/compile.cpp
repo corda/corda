@@ -377,10 +377,19 @@ enum Event {
 };
 
 unsigned
+localSize(MyThread* t, object method)
+{
+  unsigned size = codeMaxLocals(t, methodCode(t, method));
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    ++ size;
+  }
+  return size;
+}
+
+unsigned
 frameSize(MyThread* t, object method)
 {
-  return codeMaxLocals(t, methodCode(t, method))
-    + codeMaxStack(t, methodCode(t, method));
+  return localSize(t, method) + codeMaxStack(t, methodCode(t, method));
 }
 
 unsigned
@@ -528,7 +537,7 @@ class Frame {
   }
 
   unsigned localSize() {
-    return codeMaxLocals(t, methodCode(t, context->method));
+    return ::localSize(t, context->method);
   }
 
   unsigned stackSize() {
@@ -1067,6 +1076,12 @@ class Frame {
   unsigned level;
 };
 
+unsigned
+savedTargetIndex(MyThread* t, object method)
+{
+  return codeMaxLocals(t, methodCode(t, method));
+}
+
 void
 findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
                  void** targetStack)
@@ -1095,7 +1110,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
       if (handler) {
         unsigned parameterFootprint = methodParameterFootprint(t, method);
-        unsigned localFootprint = codeMaxLocals(t, methodCode(t, method));
+        unsigned localFootprint = localSize(t, method);
 
         stack = static_cast<void**>(base)
           - (localFootprint - parameterFootprint);
@@ -1112,7 +1127,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
           if (methodFlags(t, method) & ACC_STATIC) {
             lock = methodClass(t, method);
           } else {
-            lock = *localObject(t, base, method, 0);
+            lock = *localObject(t, base, method, savedTargetIndex(t, method));
           }
     
           release(t, lock);
@@ -1572,7 +1587,8 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     if (methodFlags(t, method) & ACC_STATIC) {
       lock = frame->append(methodClass(t, method));
     } else {
-      lock = c->memory(c->base(), localOffset(t, 0, method));
+      lock = c->memory
+        (c->base(), localOffset(t, savedTargetIndex(t, method), method));
     }
     
     c->indirectCall
@@ -1585,6 +1601,20 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
 void
 handleEntrance(MyThread* t, Frame* frame)
 {
+  object method = frame->context->method;
+
+  if ((methodFlags(t, method) & ACC_SYNCHRONIZED)
+      and ((methodFlags(t, method) & ACC_STATIC) == 0))
+  {
+    Compiler* c = frame->c;
+
+    // save 'this' pointer in case it is overwritten.
+    unsigned index = savedTargetIndex(t, method);
+    mov(c, c->memory(c->base(), localOffset(t, 0, method)),
+        c->memory(c->base(), localOffset(t, index, method)));
+    frame->mark(index);
+  }
+
   handleMonitorEvent
     (t, frame, reinterpret_cast<intptr_t>(acquireMonitorForObject));
 }
@@ -3733,11 +3763,8 @@ compile(MyThread* t, Context* context)
 
   c->prologue();
 
-  object code = methodCode(t, context->method);
-  PROTECT(t, code);
-
   unsigned footprint = methodParameterFootprint(t, context->method);
-  unsigned locals = codeMaxLocals(t, code);
+  unsigned locals = localSize(t, context->method);
   c->reserve(locals - footprint);
 
   uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
@@ -3794,10 +3821,7 @@ compile(MyThread* t, Context* context)
       uintptr_t* roots = context->rootTable
         + (start * frameMapSizeInWords(t, context->method));
 
-      for (unsigned i = 0;
-           i < codeMaxLocals(t, methodCode(t, context->method));
-           ++ i)
-      {
+      for (unsigned i = 0; i < localSize(t, context->method); ++ i) {
         if (getBit(roots, i)) {
           frame2.mark(i);
         }
@@ -4059,8 +4083,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node,
 
     count = parameterFootprint + height - argumentFootprint;
   } else {
-    count = codeMaxStack(t, methodCode(t, method))
-      + codeMaxLocals(t, methodCode(t, method));
+    count = frameSize(t, method);
   }
       
   if (count) {
