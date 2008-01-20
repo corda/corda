@@ -380,7 +380,9 @@ unsigned
 localSize(MyThread* t, object method)
 {
   unsigned size = codeMaxLocals(t, methodCode(t, method));
-  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+  if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
+      == ACC_SYNCHRONIZED)
+  {
     ++ size;
   }
   return size;
@@ -1603,8 +1605,8 @@ handleEntrance(MyThread* t, Frame* frame)
 {
   object method = frame->context->method;
 
-  if ((methodFlags(t, method) & ACC_SYNCHRONIZED)
-      and ((methodFlags(t, method) & ACC_STATIC) == 0))
+  if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
+      == ACC_SYNCHRONIZED)
   {
     Compiler* c = frame->c;
 
@@ -3974,7 +3976,7 @@ invokeNative2(MyThread* t, object method)
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
   uint64_t result;
-  
+
   if (DebugNatives) {
     fprintf(stderr, "invoke native method %s.%s\n",
             &byteArrayBody(t, className(t, methodClass(t, method)), 0),
@@ -4428,14 +4430,10 @@ class MyProcessor: public Processor {
              object class_,
              object code)
   {
-    object compiled
-      = ((flags & ACC_NATIVE)
-         ? getNativeCompiled(static_cast<MyThread*>(t))
-         : getDefaultCompiled(static_cast<MyThread*>(t)));
-
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, name, spec, class_, code, compiled);
+       offset, name, spec, class_, code,
+       getDefaultCompiled(static_cast<MyThread*>(t)));
   }
 
   virtual object
@@ -4465,13 +4463,11 @@ class MyProcessor: public Processor {
   virtual void
   initVtable(Thread* t, object c)
   {
-    for (unsigned i = 0; i < classLength(t, c); ++i) {
-      object compiled
-        = ((classFlags(t, c) & ACC_NATIVE)
-           ? getNativeCompiled(static_cast<MyThread*>(t))
-           : getDefaultCompiled(static_cast<MyThread*>(t)));
+    void* compiled = &singletonBody
+      (t, getDefaultCompiled(static_cast<MyThread*>(t)), 0);
 
-      classVtable(t, c, i) = &singletonBody(t, compiled, 0);
+    for (unsigned i = 0; i < classLength(t, c); ++i) {
+      classVtable(t, c, i) = compiled;
     }
   }
 
@@ -4715,9 +4711,14 @@ compile(MyThread* t, object method)
       if (UNLIKELY(t->exception)) return;
 
       if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
-        Context context(t, method, p->indirectCaller);
-    
-        object compiled = compile(t, &context);
+        object compiled;
+        if (methodFlags(t, method) & ACC_NATIVE) {
+          compiled = p->getNativeCompiled(t);
+        } else {
+          Context context(t, method, p->indirectCaller);
+          compiled = compile(t, &context);
+        }
+
         set(t, method, MethodCompiled, compiled);
 
         if (methodVirtual(t, method)) {
