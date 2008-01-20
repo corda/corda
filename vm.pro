@@ -8,27 +8,27 @@
 
 # the VM depends on the fixed layout of the following classes:
 
--keepclassmembers class java.lang.Class { <fields>; }
--keepclassmembers class java.lang.ClassLoader { <fields>; }
--keepclassmembers class java.lang.SystemClassLoader { <fields>; }
--keepclassmembers class java.lang.String { <fields>; }
--keepclassmembers class java.lang.Thread { <fields>; }
--keepclassmembers class java.lang.StackTraceElement { <fields>; }
--keepclassmembers class java.lang.Throwable { <fields>; }
--keepclassmembers class java.lang.Byte { <fields>; }
--keepclassmembers class java.lang.Boolean { <fields>; }
--keepclassmembers class java.lang.Short { <fields>; }
--keepclassmembers class java.lang.Character { <fields>; }
--keepclassmembers class java.lang.Integer { <fields>; }
--keepclassmembers class java.lang.Long { <fields>; }
--keepclassmembers class java.lang.Float { <fields>; }
--keepclassmembers class java.lang.Double { <fields>; }
--keepclassmembers class java.lang.ref.Reference { <fields>; }
--keepclassmembers class java.lang.ref.ReferenceQueue { <fields>; }
--keepclassmembers class java.lang.ref.WeakReference { <fields>; }
--keepclassmembers class java.lang.ref.PhantomReference { <fields>; }
--keepclassmembers class java.lang.reflect.Field { <fields>; }
--keepclassmembers class java.lang.reflect.Method { <fields>; }
+-keepclassmembers class java.lang.Class { !static <fields>; }
+-keepclassmembers class java.lang.ClassLoader { !static <fields>; }
+-keepclassmembers class java.lang.SystemClassLoader { !static <fields>; }
+-keepclassmembers class java.lang.String { !static <fields>; }
+-keepclassmembers class java.lang.Thread { !static <fields>; }
+-keepclassmembers class java.lang.StackTraceElement { !static <fields>; }
+-keepclassmembers class java.lang.Throwable { !static <fields>; }
+-keepclassmembers class java.lang.Byte { !static <fields>; }
+-keepclassmembers class java.lang.Boolean { !static <fields>; }
+-keepclassmembers class java.lang.Short { !static <fields>; }
+-keepclassmembers class java.lang.Character { !static <fields>; }
+-keepclassmembers class java.lang.Integer { !static <fields>; }
+-keepclassmembers class java.lang.Long { !static <fields>; }
+-keepclassmembers class java.lang.Float { !static <fields>; }
+-keepclassmembers class java.lang.Double { !static <fields>; }
+-keepclassmembers class java.lang.ref.Reference { !static <fields>; }
+-keepclassmembers class java.lang.ref.ReferenceQueue { !static <fields>; }
+-keepclassmembers class java.lang.ref.WeakReference { !static <fields>; }
+-keepclassmembers class java.lang.ref.PhantomReference { !static <fields>; }
+-keepclassmembers class java.lang.reflect.Field { !static <fields>; }
+-keepclassmembers class java.lang.reflect.Method { !static <fields>; }
 
 # ClassLoader.getSystemClassloader() depends on the existence of this class:
 
