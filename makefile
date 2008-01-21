@@ -316,7 +316,7 @@ $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
-$(archive): $(vm-objects) $(jni-objects)
+$(archive): $(vm-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
