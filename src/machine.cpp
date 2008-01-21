@@ -1347,16 +1347,23 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   if (declaredVirtualCount == 0
       and (classFlags(t, class_) & ACC_INTERFACE) == 0)
   {
-    // inherit virtual table from superclass
-    set(t, class_, ClassVirtualTable, superVirtualTable);
-
-    if (classInterfaceTable(t, classSuper(t, class_))
-        and arrayLength(t, classInterfaceTable(t, class_))
-        == arrayLength(t, classInterfaceTable(t, classSuper(t, class_))))
-    {
-      // inherit interface table from superclass
-      set(t, class_, ClassInterfaceTable,
-          classInterfaceTable(t, classSuper(t, class_)));
+    if (classSuper(t, class_)) {
+      // inherit virtual table from superclass
+      set(t, class_, ClassVirtualTable, superVirtualTable);
+      
+      if (classInterfaceTable(t, classSuper(t, class_))
+          and arrayLength(t, classInterfaceTable(t, class_))
+          == arrayLength(t, classInterfaceTable(t, classSuper(t, class_))))
+      {
+        // inherit interface table from superclass
+        set(t, class_, ClassInterfaceTable,
+            classInterfaceTable(t, classSuper(t, class_)));
+      }      
+    } else {
+      // apparently Object does not have any virtual methods.  We give
+      // it a vtable anyway so code doesn't break elsewhere.
+      object vtable = makeArray(t, 0, false);
+      set(t, class_, ClassVirtualTable, vtable);
     }
   } else if (virtualCount) {
     // generate class vtable
