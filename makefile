@@ -130,8 +130,6 @@ jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(native-build))
 jni-cflags = $(cflags)
 
-libclasspath = $(native-build)/libclasspath.a
-
 generated-code = \
 	$(native-build)/type-enums.cpp \
 	$(native-build)/type-declarations.cpp \
@@ -220,7 +218,7 @@ endif
 args = $(flags) $(input)
 
 .PHONY: build
-build: $(vm) $(libvm) $(libclasspath) $(classpath-dep) $(test-dep)
+build: $(vm) $(libvm) $(classpath-dep) $(test-dep)
 
 $(test-classes): $(classpath-dep)
 
@@ -318,13 +316,7 @@ $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
-$(libvm): $(vm-objects)
-	@echo "creating $(@)"
-	rm -rf $(@)
-	$(ar) cru $(@) $(^)
-	$(ranlib) $(@)
-
-$(libclasspath): $(jni-objects)
+$(libvm): $(vm-objects) $(jni-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
