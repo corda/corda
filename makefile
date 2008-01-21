@@ -130,6 +130,8 @@ jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(native-build))
 jni-cflags = $(cflags)
 
+libclasspath = $(native-build)/libclasspath.a
+
 generated-code = \
 	$(native-build)/type-enums.cpp \
 	$(native-build)/type-declarations.cpp \
@@ -189,7 +191,7 @@ generator-objects = \
 	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
 generator = $(native-build)/generator
 
-archive = $(native-build)/lib$(name).a
+libvm = $(native-build)/lib$(name).a
 vm = $(native-build)/$(name)
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
@@ -218,7 +220,7 @@ endif
 args = $(flags) $(input)
 
 .PHONY: build
-build: $(vm) $(archive) $(classpath-dep) $(test-dep)
+build: $(vm) $(libvm) $(libclasspath) $(classpath-dep) $(test-dep)
 
 $(test-classes): $(classpath-dep)
 
@@ -316,13 +318,19 @@ $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) $(jni-cflags) -c $(<) -o $(@)
 
-$(archive): $(vm-objects)
+$(libvm): $(vm-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
-$(vm): $(vm-objects) $(jni-objects) $(classpath-object) $(driver-object)
+$(libclasspath): $(jni-objects)
+	@echo "creating $(@)"
+	rm -rf $(@)
+	$(ar) cru $(@) $(^)
+	$(ranlib) $(@)
+
+$(vm): $(vm-objects) $(classpath-object) $(jni-objects) $(driver-object)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
