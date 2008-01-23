@@ -84,6 +84,7 @@ ifeq ($(platform),darwin)
 		-I$(JAVA_HOME)/include/linux -I$(src)
 	lflags = $(common-lflags) -ldl
 	strip-all = -S -x
+	binaryToMacho = $(native-build)/binaryToMacho
 endif
 
 ifeq ($(platform),windows)
@@ -198,10 +199,6 @@ classpath-classes = \
 classpath-object = $(native-build)/classpath-jar.o
 classpath-dep = $(classpath-build)/dep
 
-ifeq ($(platform),darwin)
-	classpath-object =
-endif
-
 test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 test-dep = $(test-build)/dep
@@ -209,11 +206,7 @@ test-dep = $(test-build)/dep
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
-ifeq ($(platform),darwin)
-	flags = -cp $(classpath-build):$(test-build)
-else
-	flags = -cp $(test-build)
-endif
+flags = -cp $(test-build)
 
 args = $(flags) $(input)
 
@@ -299,11 +292,19 @@ $(build)/classpath.jar: $(classpath-dep)
 	 cd $(classpath-build); \
 	 $(jar) c0f $${wd}/$(@) $$(find . -name '*.class'))
 
-$(classpath-object): $(build)/classpath.jar
+$(binaryToMacho): $(src)/binaryToMacho.cpp
+	$(cxx) $(^) -o $(@)
+
+$(classpath-object): $(build)/classpath.jar $(binaryToMacho)
+ifeq ($(platform),darwin)
+	$(binaryToMacho) $(build)/classpath.jar \
+		__binary_classpath_jar_data __binary_classpath_jar_size > $(@)
+else
 	(wd=$$(pwd); \
 	 cd $(build); \
 	 $(objcopy) -I binary classpath.jar \
 		 -O $(object-format) -B $(object-arch) $${wd}/$(@))
+endif
 
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
