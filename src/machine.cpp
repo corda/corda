@@ -482,9 +482,9 @@ void
 postCollect(Thread* t)
 {
 #ifdef VM_STRESS
-  t->allocator.free(t->defaultHeap, Thread::HeapSizeInBytes);
+  t->m->heap->free(t->defaultHeap, Thread::HeapSizeInBytes, false);
   t->defaultHeap = static_cast<uintptr_t*>
-    (t->allocator.allocate(Thread::HeapSizeInBytes));
+    (t->m->heap->allocate(Thread::HeapSizeInBytes, false));
 #endif
 
   t->heap = t->defaultHeap;
