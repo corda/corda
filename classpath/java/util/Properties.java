@@ -111,6 +111,13 @@ public class Properties extends Hashtable {
               finishLine(map);          
             }
             break;
+          case 'n':
+            if (escaped) {
+              append('\n');
+            } else {
+              append(c);
+            }
+            break;
 
           default:
             append(c);
