@@ -606,8 +606,7 @@ class MySystem: public System {
 
   virtual Status load(System::Library** lib,
                       const char* name,
-                      bool mapName,
-                      System::Library* next)
+                      bool mapName)
   {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
@@ -635,8 +634,14 @@ class MySystem: public System {
         n = 0;
       }
 
-      *lib = new (allocate(this, sizeof(Library)))
-        Library(this, handle, n, mapName, nameLength, next);
+      Library* newLib = new (allocate(this, sizeof(Library)))
+        Library(this, p, n, nameLength, mapName);
+
+      if (*lib) {
+        static_cast<Library*>(*lib)->next = newLib;
+      }
+
+      *lib = newLib;
       return 0;
     } else {
       return 1;

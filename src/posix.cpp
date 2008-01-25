@@ -447,13 +447,13 @@ class MySystem: public System {
   class Library: public System::Library {
    public:
     Library(System* s, void* p, const char* name, unsigned nameLength,
-            bool mapName, System::Library* next):
+            bool mapName):
       s(s),
       p(p),
       name_(name),
       nameLength(nameLength),
       mapName_(mapName),
-      next_(next)
+      next_(0)
     { }
 
     virtual void* resolve(const char* function) {
@@ -639,8 +639,7 @@ class MySystem: public System {
 
   virtual Status load(System::Library** lib,
                       const char* name,
-                      bool mapName,
-                      System::Library* next)
+                      bool mapName)
   {
     void* p;
     unsigned nameLength = (name ? strlen(name) : 0);
@@ -666,8 +665,14 @@ class MySystem: public System {
         n = 0;
       }
 
-      *lib = new (allocate(this, sizeof(Library)))
-        Library(this, p, n, nameLength, mapName, next);
+      Library* newLib = new (allocate(this, sizeof(Library)))
+        Library(this, p, n, nameLength, mapName);
+
+      if (*lib) {
+        static_cast<Library*>(*lib)->next_ = newLib;
+      }
+
+      *lib = newLib;
       return 0;
     } else {
 //       fprintf(stderr, "dlerror: %s\n", dlerror());

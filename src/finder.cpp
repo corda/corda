@@ -400,8 +400,8 @@ class BuiltinElement: public JarElement {
 
   virtual void init() {
     if (index == 0) {
-      System::Library* library;
-      if (s->success(s->load(&library, 0, false, 0))) {
+      System::Library* library = 0;
+      if (s->success(s->load(&library, 0, false))) {
         void* p = library->resolve(name);
         if (p) {
           uint8_t* (*function)(unsigned*);

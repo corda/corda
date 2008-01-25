@@ -1812,7 +1812,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
       not system->success(system->make(&referenceLock)) or
-      not system->success(system->load(&libraries, 0, false, 0)))
+      not system->success(system->load(&libraries, 0, false)))
   {
     system->abort();
   }

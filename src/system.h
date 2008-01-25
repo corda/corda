@@ -104,8 +104,7 @@ class System {
                         unsigned returnType) = 0;
   virtual Status map(Region**, const char* name) = 0;
   virtual FileType identify(const char* name) = 0;
-  virtual Status load(Library**, const char* name, bool mapName, Library* next)
-  = 0;
+  virtual Status load(Library**, const char* name, bool mapName) = 0;
   virtual char pathSeparator() = 0;
   virtual int64_t now() = 0;
   virtual void exit(int code) = 0;
