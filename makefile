@@ -129,7 +129,6 @@ java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
 
 jni-sources = $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(native-build))
-jni-cflags = $(cflags)
 
 generated-code = \
 	$(native-build)/type-enums.cpp \
@@ -313,9 +312,7 @@ $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 		-c $(<) -o $(@)
 
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
-	@echo "compiling $(@)"
-	@mkdir -p $(dir $(@))
-	$(cxx) $(jni-cflags) -c $(<) -o $(@)
+	$(compile-object)
 
 $(libvm): $(vm-objects) $(jni-objects)
 	@echo "creating $(@)"
