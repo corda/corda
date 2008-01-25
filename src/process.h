@@ -127,7 +127,7 @@ findMethod(Thread* t, object method, object class_)
 inline void*
 resolveNativeMethod(Thread* t, object method)
 {
-  for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
+  for (System::Library* lib = t->m->firstLibrary; lib; lib = lib->next()) {
     void* p = lib->resolve(reinterpret_cast<const char*>
                            (&byteArrayBody(t, methodCode(t, method), 0)));
     if (p) {

@@ -77,7 +77,8 @@ class System {
     virtual const char* name() = 0;
     virtual bool mapName() = 0;
     virtual Library* next() = 0;
-    virtual void dispose() = 0;
+    virtual void setNext(Library* lib) = 0;
+    virtual void disposeAll() = 0;
   };
 
   class SignalHandler {

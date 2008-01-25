@@ -457,7 +457,11 @@ class MySystem: public System {
       return next_;
     }
 
-    virtual void dispose() {
+    virtual void setNext(System::Library* lib) {
+      next_ = lib;
+    }
+
+    virtual void disposeAll() {
       if (Verbose) {
         fprintf(stderr, "close %p\n", handle);
       }
@@ -634,14 +638,9 @@ class MySystem: public System {
         n = 0;
       }
 
-      Library* newLib = new (allocate(this, sizeof(Library)))
+      *lib = new (allocate(this, sizeof(Library)))
         Library(this, p, n, nameLength, mapName);
 
-      if (*lib) {
-        static_cast<Library*>(*lib)->next = newLib;
-      }
-
-      *lib = newLib;
       return 0;
     } else {
       return 1;
