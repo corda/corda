@@ -298,7 +298,7 @@ $(binaryToMacho): $(src)/binaryToMacho.cpp
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
 ifeq ($(platform),darwin)
 	$(binaryToMacho) $(build)/classpath.jar \
-		__binary_classpath_jar_data __binary_classpath_jar_size > $(@)
+		__binary_classpath_jar_start __binary_classpath_jar_size > $(@)
 else
 	(wd=$$(pwd); \
 	 cd $(build); \

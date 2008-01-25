@@ -19,10 +19,9 @@ void operator delete(void*) { abort(); }
 #  define SYMBOL(x) _binary_classpath_jar_##x
 #endif
 
-extern "C" {
+#define BOOT_CLASSPATH "[classpathJar]"
 
-#ifndef __APPLE__
-#  define BOOT_CLASSPATH "[classpathJar]"
+extern "C" {
 
   extern const uint8_t SYMBOL(start)[];
   extern const uint8_t SYMBOL(size)[];
@@ -33,7 +32,6 @@ extern "C" {
     *size = reinterpret_cast<uintptr_t>(SYMBOL(size));
     return SYMBOL(start);
   }
-#endif
 
 }
 
