@@ -428,14 +428,13 @@ class MySystem: public System {
   class Library: public System::Library {
    public:
     Library(System* s, HMODULE handle, const char* name, size_t nameLength,
-	    bool mapName,
-            System::Library* next):
+	    bool mapName):
       s(s),
       handle(handle),
       name_(name),
       nameLength(nameLength),
       mapName_(mapName),
-      next_(next)
+      next_(0)
     { }
 
     virtual void* resolve(const char* function) {
@@ -471,7 +470,7 @@ class MySystem: public System {
       }
 
       if (next_) {
-        next_->dispose();
+        next_->disposeAll();
       }
 
       if (name_) {
@@ -639,7 +638,7 @@ class MySystem: public System {
       }
 
       *lib = new (allocate(this, sizeof(Library)))
-        Library(this, p, n, nameLength, mapName);
+        Library(this, handle, n, nameLength, mapName);
 
       return 0;
     } else {
