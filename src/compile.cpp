@@ -3807,39 +3807,53 @@ compile(MyThread* t, Context* context)
   if (eht) {
     PROTECT(t, eht);
 
-    for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-      unsigned start = exceptionHandlerStart(eh);
+    unsigned visitCount = exceptionHandlerTableLength(t, eht);
+    bool visited[visitCount];
+    memset(visited, 0, visitCount);
 
-      assert(t, context->visitTable[start]);
-        
-      uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
-      Frame frame2(&frame, stackMap);
+    while (visitCount) {
+      bool progress = false;
 
-      uintptr_t* roots = context->rootTable
-        + (start * frameMapSizeInWords(t, context->method));
+      for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
+        ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+        unsigned start = exceptionHandlerStart(eh);
 
-      for (unsigned i = 0; i < localSize(t, context->method); ++ i) {
-        if (getBit(roots, i)) {
-          frame2.mark(i);
-        } else {
-          frame2.clear(i);
+        if (not visited[i] and context->visitTable[start]) {
+          -- visitCount;
+          visited[i] = true;
+          progress = true;
+
+          uintptr_t stackMap[stackMapSizeInWords(t, context->method)];
+          Frame frame2(&frame, stackMap);
+
+          uintptr_t* roots = context->rootTable
+            + (start * frameMapSizeInWords(t, context->method));
+
+          for (unsigned i = 0; i < localSize(t, context->method); ++ i) {
+            if (getBit(roots, i)) {
+              frame2.mark(i);
+            } else {
+              frame2.clear(i);
+            }
+          }
+
+          frame2.pushObject();
+
+          for (unsigned i = 1;
+               i < codeMaxStack(t, methodCode(t, context->method));
+               ++i)
+          {
+            frame2.clear(localSize(t, context->method) + i);
+          }
+
+          compile(t, &frame2, exceptionHandlerIp(eh));
+          if (UNLIKELY(t->exception)) return 0;
+
+          eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
         }
       }
 
-      frame2.pushObject();
-
-      for (unsigned i = 1;
-           i < codeMaxStack(t, methodCode(t, context->method));
-           ++i)
-      {
-        frame2.clear(localSize(t, context->method) + i);
-      }
-
-      compile(t, &frame2, exceptionHandlerIp(eh));
-      if (UNLIKELY(t->exception)) return 0;
-
-      eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
+      assert(t, progress);
     }
   }
 
