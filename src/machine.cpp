@@ -1344,6 +1344,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     set(t, class_, ClassMethodTable, methodTable);
   }
 
+  bool populateInterfaceVtables = false;
+
   if (declaredVirtualCount == 0
       and (classFlags(t, class_) & ACC_INTERFACE) == 0)
   {
@@ -1358,10 +1360,12 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         // inherit interface table from superclass
         set(t, class_, ClassInterfaceTable,
             classInterfaceTable(t, classSuper(t, class_)));
-      }      
+      } else {
+        populateInterfaceVtables = true;
+      }
     } else {
-      // apparently Object does not have any virtual methods.  We give
-      // it a vtable anyway so code doesn't break elsewhere.
+      // apparently, Object does not have any virtual methods.  We
+      // give it a vtable anyway so code doesn't break elsewhere.
       object vtable = makeArray(t, 0, false);
       set(t, class_, ClassVirtualTable, vtable);
     }
@@ -1404,25 +1408,28 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     set(t, class_, ClassVirtualTable, vtable);
 
     if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
-      // generate interface vtables
-    
-      object itable = classInterfaceTable(t, class_);
-      if (itable) {
-        PROTECT(t, itable);
+      populateInterfaceVtables = true;
+    }
+  }
 
-        for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-          object ivtable = classVirtualTable(t, arrayBody(t, itable, i));
-          if (ivtable) {
-            object vtable = arrayBody(t, itable, i + 1);
+  if (populateInterfaceVtables) {
+    // generate interface vtables
+    object itable = classInterfaceTable(t, class_);
+    if (itable) {
+      PROTECT(t, itable);
+
+      for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+        object ivtable = classVirtualTable(t, arrayBody(t, itable, i));
+        if (ivtable) {
+          object vtable = arrayBody(t, itable, i + 1);
         
-            for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
-              object method = arrayBody(t, ivtable, j);
-              method = hashMapFind
-                (t, virtualMap, method, methodHash, methodEqual);
-              assert(t, method);
+          for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
+            object method = arrayBody(t, ivtable, j);
+            method = hashMapFind
+              (t, virtualMap, method, methodHash, methodEqual);
+            assert(t, method);
               
-              set(t, vtable, ArrayBody + (j * BytesPerWord), method);        
-            }
+            set(t, vtable, ArrayBody + (j * BytesPerWord), method);        
           }
         }
       }
@@ -2199,6 +2206,8 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 
   if (t->heap == 0) {
     ENTER(t, Thread::ExclusiveState);
+//     fprintf(stderr, "gc");
+//     vmPrintTrace(t);
     collect(t, Heap::MinorCollection);
   }
   

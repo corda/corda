@@ -2230,4 +2230,7 @@ makeSingleton(Thread* t, unsigned count)
 
 } // namespace vm
 
+void
+vmPrintTrace(vm::Thread* t);
+
 #endif//MACHINE_H
