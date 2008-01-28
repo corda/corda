@@ -134,6 +134,7 @@ expect(System* s, bool v)
 
 #ifdef NDEBUG
 
+# undef assert
 # define assert(a, b)
 
 #else // not NDEBUG

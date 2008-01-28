@@ -1,3 +1,6 @@
+#ifdef __APPLE__
+#include "CoreFoundation/CoreFoundation.h"
+#endif
 #include "sys/mman.h"
 #include "sys/types.h"
 #include "sys/stat.h"
@@ -114,6 +117,27 @@ allocate(System* s, unsigned size)
   void* p = s->tryAllocate(size, false);
   if (p == 0) abort();
   return p;
+}
+
+void
+pathOfExecutable(System* s, const char** retBuf, unsigned* size)
+{
+#ifdef __APPLE__
+  CFBundleRef bundle = CFBundleGetMainBundle();
+  CFURLRef url = CFBundleCopyExecutableURL(bundle);
+  CFStringRef path = CFURLCopyPath(url);
+  CFIndex pathSize = CFStringGetMaximumSizeOfFileSystemRepresentation(path);
+  char* buffer = reinterpret_cast<char*>(allocate(s, pathSize));
+  if (CFStringGetFileSystemRepresentation(path, buffer, pathSize)) {
+    *size = pathSize;
+    *retBuf = buffer;
+  } else {
+    abort();
+  }
+#else
+  *size = 0;
+  *retBuf = NULL;
+#endif
 }
 
 const bool Verbose = false;
@@ -646,6 +670,7 @@ class MySystem: public System {
                       bool mapName)
   {
     void* p;
+    bool alreadyAllocated = false;
     unsigned nameLength = (name ? strlen(name) : 0);
     if (mapName) {
       unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
@@ -653,6 +678,10 @@ class MySystem: public System {
       snprintf(buffer, size, "lib%s" SO_SUFFIX, name);
       p = dlopen(buffer, RTLD_LAZY);
     } else {
+      if (!name) {
+        pathOfExecutable(this, &name, &nameLength);
+        alreadyAllocated = true;
+      }
       p = dlopen(name, RTLD_LAZY);
     }
  
@@ -665,6 +694,9 @@ class MySystem: public System {
       if (name) {
         n = static_cast<char*>(allocate(this, nameLength + 1));
         memcpy(n, name, nameLength + 1);
+        if (alreadyAllocated) {
+          free(name, nameLength, false);
+        }
       } else {
         n = 0;
       }
