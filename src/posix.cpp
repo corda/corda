@@ -1,5 +1,6 @@
 #ifdef __APPLE__
 #include "CoreFoundation/CoreFoundation.h"
+#undef assert
 #endif
 #include "sys/mman.h"
 #include "sys/types.h"
