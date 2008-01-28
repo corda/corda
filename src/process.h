@@ -125,7 +125,7 @@ findMethod(Thread* t, object method, object class_)
 }
 
 void*
-resolveNativeMethod(Thread* t, object method, bool decorate);
+resolveNativeMethod2(Thread* t, object method);
 
 inline void*
 resolveNativeMethod(Thread* t, object method)
@@ -133,12 +133,7 @@ resolveNativeMethod(Thread* t, object method)
   if (methodCode(t, method)) {
     return pointerValue(t, methodCode(t, method));
   } else {
-    void* p = resolveNativeMethod(t, method, false);
-    if (p) {
-      return p;
-    } else {
-      return resolveNativeMethod(t, method, true);
-    }
+    return resolveNativeMethod2(t, method);
   }
 }
 

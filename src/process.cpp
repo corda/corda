@@ -119,12 +119,17 @@ makeJNIName(Thread* t, char* name, object method, bool decorate)
 }
 
 void*
-resolveNativeMethod(Thread* t, const char* name)
+resolveNativeMethod(Thread* t, const char* undecorated, const char* decorated)
 {
   for (System::Library* lib = t->m->firstLibrary; lib; lib = lib->next()) {
-    void* p = lib->resolve(name);
+    void* p = lib->resolve(undecorated);
     if (p) {
       return p;
+    } else {
+      p = lib->resolve(decorated);
+      if (p) {
+        return p;
+      }
     }
   }
 
@@ -136,12 +141,17 @@ resolveNativeMethod(Thread* t, const char* name)
 namespace vm {
 
 void*
-resolveNativeMethod(Thread* t, object method, bool decorate)
+resolveNativeMethod2(Thread* t, object method)
 {
-  unsigned size = jniNameLength(t, method, decorate);
-  char name[size + 5]; // extra 5 is for code below
-  makeJNIName(t, name, method, decorate);
-  void* p = ::resolveNativeMethod(t, name);
+  unsigned undecoratedSize = jniNameLength(t, method, false);
+  char undecorated[undecoratedSize + 5]; // extra 5 is for code below
+  makeJNIName(t, undecorated, method, false);
+
+  unsigned decoratedSize = jniNameLength(t, method, true);
+  char decorated[decoratedSize + 5]; // extra 5 is for code below
+  makeJNIName(t, decorated, method, true);
+
+  void* p = ::resolveNativeMethod(t, undecorated, decorated);
   if (p) {
     return p;
   }
@@ -154,9 +164,13 @@ resolveNativeMethod(Thread* t, object method, bool decorate)
     ++ footprint;
   }
 
-  snprintf(name + size - 1, 5, "@%d", footprint * BytesPerWord);
+  snprintf(undecorated + undecoratedSize - 1, 5, "@%d",
+           footprint * BytesPerWord);
 
-  p = resolveNativeMethod(t, reinterpret_cast<const int8_t*>(name));
+  snprintf(decorated + decoratedSize - 1, 5, "@%d",
+           footprint * BytesPerWord);
+
+  p = resolveNativeMethod(t, undecorated, decorated);
   if (p) {
     return p;
   }
