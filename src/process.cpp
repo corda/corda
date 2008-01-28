@@ -170,7 +170,7 @@ resolveNativeMethod2(Thread* t, object method)
   snprintf(decorated + decoratedSize - 1, 5, "@%d",
            footprint * BytesPerWord);
 
-  p = resolveNativeMethod(t, undecorated, decorated);
+  p = ::resolveNativeMethod(t, undecorated, decorated);
   if (p) {
     return p;
   }
