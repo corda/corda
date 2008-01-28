@@ -161,7 +161,8 @@ vm-sources = \
 	$(src)/heap.cpp \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
-	$(src)/jnienv.cpp
+	$(src)/jnienv.cpp \
+	$(src)/process.cpp
 
 vm-asm-sources = $(src)/$(asm).S
 

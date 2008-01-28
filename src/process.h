@@ -124,39 +124,22 @@ findMethod(Thread* t, object method, object class_)
                    methodOffset(t, method));
 }
 
+void*
+resolveNativeMethod(Thread* t, object method, bool decorate);
+
 inline void*
 resolveNativeMethod(Thread* t, object method)
 {
-  for (System::Library* lib = t->m->firstLibrary; lib; lib = lib->next()) {
-    void* p = lib->resolve(reinterpret_cast<const char*>
-                           (&byteArrayBody(t, methodCode(t, method), 0)));
+  if (methodCode(t, method)) {
+    return pointerValue(t, methodCode(t, method));
+  } else {
+    void* p = resolveNativeMethod(t, method, false);
     if (p) {
       return p;
+    } else {
+      return resolveNativeMethod(t, method, true);
     }
-#ifdef __MINGW32__
-    else {
-      // on windows, we also try the _%s@%d variant, since the SWT
-      // libraries use it.
-
-      unsigned footprint = methodParameterFootprint(t, method) + 1;
-      if (methodFlags(t, method) & ACC_STATIC) {
-        ++ footprint;
-      }
-
-      unsigned size = byteArrayLength(t, methodCode(t, method)) + 5;
-      char buffer[size];
-      snprintf(buffer, size, "_%s@%d",
-               &byteArrayBody(t, methodCode(t, method), 0),
-               footprint * BytesPerWord);
-
-      p = lib->resolve(buffer);
-      if (p) {
-        return p;
-      }
-    }
-#endif
   }
-  return 0;
 }
 
 inline object
@@ -206,87 +189,11 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   }
 }
 
-inline ExceptionHandler*
-findExceptionHandler(Thread* t, object method, unsigned ip)
-{
-  PROTECT(t, method);
+ExceptionHandler*
+findExceptionHandler(Thread* t, object method, unsigned ip);
 
-  object eht = codeExceptionHandlerTable(t, methodCode(t, method));
-      
-  if (eht) {
-    for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-
-      if (ip - 1 >= exceptionHandlerStart(eh)
-          and ip - 1 < exceptionHandlerEnd(eh))
-      {
-        object catchType = 0;
-        if (exceptionHandlerCatchType(eh)) {
-          object e = t->exception;
-          t->exception = 0;
-          PROTECT(t, e);
-
-          PROTECT(t, eht);
-          catchType = resolveClassInPool
-            (t, codePool(t, methodCode(t, method)),
-             exceptionHandlerCatchType(eh) - 1);
-
-          if (catchType) {
-            eh = exceptionHandlerTableBody(t, eht, i);
-            t->exception = e;
-          } else {
-            // can't find what we're supposed to catch - move on.
-            continue;
-          }
-        }
-
-        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
-          return eh;
-        }
-      }
-    }
-  }
-
-  return 0;
-}
-
-inline int
-findLineNumber(Thread* t, object method, unsigned ip)
-{
-  if (methodFlags(t, method) & ACC_NATIVE) {
-    return NativeLine;
-  }
-
-  // our parameter indicates the instruction following the one we care
-  // about, so we back up first:
-  -- ip;
-
-  object code = methodCode(t, method);
-  object lnt = codeLineNumberTable(t, code);
-  if (lnt) {
-    unsigned bottom = 0;
-    unsigned top = lineNumberTableLength(t, lnt);
-    for (unsigned span = top - bottom; span; span = top - bottom) {
-      unsigned middle = bottom + (span / 2);
-      LineNumber* ln = lineNumberTableBody(t, lnt, middle);
-
-      if (ip >= lineNumberIp(ln)
-          and (middle + 1 == lineNumberTableLength(t, lnt)
-               or ip < lineNumberIp(lineNumberTableBody(t, lnt, middle + 1))))
-      {
-        return lineNumberLine(ln);
-      } else if (ip < lineNumberIp(ln)) {
-        top = middle;
-      } else if (ip > lineNumberIp(ln)) {
-        bottom = middle + 1;
-      }
-    }
-
-    abort(t);
-  } else {
-    return UnknownLine;
-  }
-}
+int
+findLineNumber(Thread* t, object method, unsigned ip);
 
 } // namespace vm
 

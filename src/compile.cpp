@@ -3917,9 +3917,7 @@ invokeNative2(MyThread* t, object method)
   initClass(t, methodClass(t, method));
   if (UNLIKELY(t->exception)) return 0;
 
-  if (objectClass(t, methodCode(t, method))
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (methodCode(t, method) == 0) {
     void* function = resolveNativeMethod(t, method);
     if (UNLIKELY(function == 0)) {
       object message = makeString
