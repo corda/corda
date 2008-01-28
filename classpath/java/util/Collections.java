@@ -41,7 +41,7 @@ public class Collections {
       this.collection = collection;
     }
 
-    public synchronized int size() {
+    public int size() {
       synchronized (lock) { return collection.size(); }
     }
 
@@ -49,19 +49,19 @@ public class Collections {
       return size() == 0;
     }
 
-    public synchronized boolean contains(T e) {
+    public boolean contains(T e) {
       synchronized (lock) { return collection.contains(e); }
     }
 
-    public synchronized boolean add(T e) {
+    public boolean add(T e) {
       synchronized (lock) { return collection.add(e); }
     }
 
-    public synchronized boolean remove(T e) {
+    public boolean remove(T e) {
       synchronized (lock) { return collection.remove(e); }
     }
 
-    public synchronized void clear() {
+    public void clear() {
       synchronized (lock) { collection.clear(); }
     }
 
