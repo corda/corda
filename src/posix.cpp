@@ -135,7 +135,8 @@ pathOfExecutable(System* s, const char** retBuf, unsigned* size)
     abort();
   }
 #else
-  *size = 0;
+  if (s)
+    *size = 0;
   *retBuf = NULL;
 #endif
 }
