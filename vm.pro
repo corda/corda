@@ -30,6 +30,27 @@
 -keepclassmembers class java.lang.reflect.Field { !static <fields>; }
 -keepclassmembers class java.lang.reflect.Method { !static <fields>; }
 
+# the VM may throw instances of the following:
+
+-keep public class java.lang.RuntimeException
+-keep public class java.lang.IllegalStateException
+-keep public class java.lang.IllegalArgumentException
+-keep public class java.lang.IllegalMonitorStateException
+-keep public class java.lang.ArrayIndexOutOfBoundsException
+-keep public class java.lang.ArrayStoreException
+-keep public class java.lang.NegativeArraySizeException
+-keep public class java.lang.ClassCastException
+-keep public class java.lang.ClassNotFoundException
+-keep public class java.lang.NullPointerException
+-keep public class java.lang.InterruptedException
+-keep public class java.lang.StackOverflowError
+-keep public class java.lang.NoSuchFieldError
+-keep public class java.lang.NoSuchMethodError
+-keep public class java.lang.UnsatisfiedLinkError
+-keep public class java.lang.ExceptionInInitializerError
+-keep public class java.lang.OutOfMemoryError
+-keep public class java.lang.reflect.InvocationTargetException
+
 # ClassLoader.getSystemClassloader() depends on the existence of this class:
 
 -keep             class java.lang.SystemClassLoader
@@ -43,3 +64,7 @@
 -keepclasseswithmembernames class * {
    native <methods>;
  }
+
+# Thread.run is called by name in the VM
+
+-keepclassmembernames class java.lang.Thread { void run(); }
