@@ -82,7 +82,7 @@ endif
 ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 		-I$(JAVA_HOME)/include/linux -I$(src)
-	lflags = $(common-lflags) -ldl
+	lflags = $(common-lflags) -ldl -framework CoreFoundation
 	strip-all = -S -x
 	binaryToMacho = $(native-build)/binaryToMacho
 endif
