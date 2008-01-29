@@ -527,7 +527,8 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
     }
   }
 
-  for (System::Library* lib = t->m->firstLibrary; lib; lib = lib->next()) {
+  System::Library* last;
+  for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     if (lib->name()
         and strcmp(lib->name(), n) == 0
         and lib->mapName() == mapName)
@@ -535,12 +536,12 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
       // already loaded
       return;
     }
+    last = lib;
   }
 
   System::Library* lib;
   if (LIKELY(t->m->system->success(t->m->system->load(&lib, n, mapName)))) {
-    t->m->lastLibrary->setNext(lib);
-    t->m->lastLibrary = lib;
+    last->setNext(lib);
   } else {
     object message = makeString(t, "library not found: %s", n);
     t->exception = makeUnsatisfiedLinkError(t, message);

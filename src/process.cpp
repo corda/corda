@@ -121,7 +121,7 @@ makeJNIName(Thread* t, char* name, object method, bool decorate)
 void*
 resolveNativeMethod(Thread* t, const char* undecorated, const char* decorated)
 {
-  for (System::Library* lib = t->m->firstLibrary; lib; lib = lib->next()) {
+  for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     void* p = lib->resolve(undecorated);
     if (p) {
       return p;

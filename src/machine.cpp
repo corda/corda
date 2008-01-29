@@ -1652,7 +1652,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   heapLock(0),
   classLock(0),
   referenceLock(0),
-  firstLibrary(0),
+  libraries(0),
   loader(0),
   bootstrapClassMap(0),
   monitorMap(0),
@@ -1676,12 +1676,10 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
       not system->success(system->make(&referenceLock)) or
-      not system->success(system->load(&firstLibrary, 0, false)))
+      not system->success(system->load(&libraries, 0, false)))
   {
     system->abort();
   }
-
-  lastLibrary = firstLibrary;
 }
 
 void
@@ -1693,8 +1691,8 @@ Machine::dispose()
   classLock->dispose();
   referenceLock->dispose();
 
-  if (firstLibrary) {
-    firstLibrary->disposeAll();
+  if (libraries) {
+    libraries->disposeAll();
   }
 
   for (Reference* r = jniReferences; r;) {

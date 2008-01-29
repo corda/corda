@@ -1141,8 +1141,7 @@ class Machine {
   System::Monitor* heapLock;
   System::Monitor* classLock;
   System::Monitor* referenceLock;
-  System::Library* firstLibrary;
-  System::Library* lastLibrary;
+  System::Library* libraries;
   object loader;
   object bootstrapClassMap;
   object monitorMap;
