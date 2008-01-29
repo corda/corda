@@ -527,7 +527,7 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
     }
   }
 
-  System::Library* last;
+  System::Library* last = t->m->libraries;
   for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     if (lib->name()
         and strcmp(lib->name(), n) == 0
