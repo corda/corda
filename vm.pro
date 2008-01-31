@@ -2,7 +2,7 @@
 
 # we call the values method reflectively in Enum.valueOf():
 
--keep public class * extends java.lang.Enum {
+-keepclassmembers public class * extends java.lang.Enum {
    public static *** values();
  }
 
