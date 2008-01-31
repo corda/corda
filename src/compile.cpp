@@ -3921,7 +3921,10 @@ invokeNative2(MyThread* t, object method)
     void* function = resolveNativeMethod(t, method);
     if (UNLIKELY(function == 0)) {
       object message = makeString
-        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
+        (t, "%s.%s%s",
+         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+         &byteArrayBody(t, methodName(t, method), 0),
+         &byteArrayBody(t, methodSpec(t, method), 0));
       t->exception = makeUnsatisfiedLinkError(t, message);
       return 0;
     }
