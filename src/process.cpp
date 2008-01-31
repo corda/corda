@@ -144,14 +144,14 @@ void*
 resolveNativeMethod2(Thread* t, object method)
 {
   unsigned undecoratedSize = jniNameLength(t, method, false);
-  char undecorated[undecoratedSize + 5]; // extra 5 is for code below
-  makeJNIName(t, undecorated, method, false);
+  char undecorated[undecoratedSize + 1 + 6]; // extra 6 is for code below
+  makeJNIName(t, undecorated + 1, method, false);
 
   unsigned decoratedSize = jniNameLength(t, method, true);
-  char decorated[decoratedSize + 5]; // extra 5 is for code below
-  makeJNIName(t, decorated, method, true);
+  char decorated[decoratedSize + 1 + 6]; // extra 6 is for code below
+  makeJNIName(t, decorated + 1, method, true);
 
-  void* p = ::resolveNativeMethod(t, undecorated, decorated);
+  void* p = ::resolveNativeMethod(t, undecorated + 1, decorated + 1);
   if (p) {
     return p;
   }
@@ -164,10 +164,12 @@ resolveNativeMethod2(Thread* t, object method)
     ++ footprint;
   }
 
-  snprintf(undecorated + undecoratedSize - 1, 5, "@%d",
+  *undecorated = '_';
+  snprintf(undecorated + undecoratedSize + 1, 5, "@%d",
            footprint * BytesPerWord);
 
-  snprintf(decorated + decoratedSize - 1, 5, "@%d",
+  *decorated = '_';
+  snprintf(decorated + decoratedSize + 1, 5, "@%d",
            footprint * BytesPerWord);
 
   p = ::resolveNativeMethod(t, undecorated, decorated);
