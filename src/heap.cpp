@@ -495,6 +495,7 @@ class Context {
     client(0),
     count(0),
     limit(limit),
+    lowMemoryThreshold(limit / 2),
     lock(0),
 
     ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
@@ -564,6 +565,7 @@ class Context {
 
   unsigned count;
   unsigned limit;
+  unsigned lowMemoryThreshold;
 
   System::Mutex* lock;
   
@@ -668,13 +670,19 @@ oversizedGen2(Context* c)
     and c->gen2.position() < (c->gen2.capacity() / 4);
 }
 
+inline unsigned
+memoryNeeded(Context* c)
+{
+  return c->count
+    + ((c->gen1.footprint(minimumNextGen1Capacity(c))
+        + c->gen2.footprint(minimumNextGen2Capacity(c))) * BytesPerWord)
+    + LowMemoryPaddingInBytes;
+}
+
 inline bool
 lowMemory(Context* c)
 {
-  return ((c->gen1.footprint(minimumNextGen1Capacity(c))
-           + c->gen2.footprint(minimumNextGen2Capacity(c))) * BytesPerWord)
-    + LowMemoryPaddingInBytes
-    > c->limit - c->count;
+  return memoryNeeded(c) > c->lowMemoryThreshold;
 }
 
 inline void
@@ -1555,6 +1563,25 @@ collect(Context* c)
     }
 
     then = c->system->now();
+  }
+
+  unsigned count = memoryNeeded(c);
+  if (count > c->lowMemoryThreshold) {
+    if (Verbose) {
+      fprintf(stderr, "increase low memory threshold from %d to %d\n",
+              c->lowMemoryThreshold,
+              avg(c->limit, c->lowMemoryThreshold));
+    }
+
+    c->lowMemoryThreshold = avg(c->limit, c->lowMemoryThreshold);
+  } else if (count + (count / 16) < c->lowMemoryThreshold) {
+    if (Verbose) {
+      fprintf(stderr, "decrease low memory threshold from %d to %d\n",
+              c->lowMemoryThreshold,
+              avg(count, c->lowMemoryThreshold));
+    }
+
+    c->lowMemoryThreshold = avg(count, c->lowMemoryThreshold);
   }
 
   initNextGen1(c);
