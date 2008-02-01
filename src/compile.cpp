@@ -4015,6 +4015,8 @@ invokeNative2(MyThread* t, object method)
     }
   }
 
+  Reference* reference = t->reference;
+
   { ENTER(t, Thread::IdleState);
 
     result = t->m->system->call
@@ -4044,34 +4046,47 @@ invokeNative2(MyThread* t, object method)
     switch (returnCode) {
     case ByteField:
     case BooleanField:
-      return static_cast<int8_t>(result);
+      result = static_cast<int8_t>(result);
+      break;
 
     case CharField:
-      return static_cast<uint16_t>(result);
+      result = static_cast<uint16_t>(result);
+      break;
 
     case ShortField:
-      return static_cast<int16_t>(result);
+      result = static_cast<int16_t>(result);
+      break;
 
     case FloatField:
     case IntField:
-      return static_cast<int32_t>(result);
+      result = static_cast<int32_t>(result);
+      break;
 
     case LongField:
     case DoubleField:
-      return result;
+      result = result;
+      break;
 
     case ObjectField:
-      return static_cast<uintptr_t>(result) ? *reinterpret_cast<uintptr_t*>
+      result = static_cast<uintptr_t>(result) ? *reinterpret_cast<uintptr_t*>
         (static_cast<uintptr_t>(result)) : 0;
+      break;
 
     case VoidField:
-      return 0;
+      result = 0;
+      break;
 
     default: abort(t);
     }
   } else {
-    return 0;
+    result = 0;
   }
+
+  while (t->reference != reference) {
+    dispose(t, t->reference);
+  }
+
+  return result;
 }
 
 uint64_t FORCE_ALIGN
@@ -4330,7 +4345,6 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
 
-  Reference* reference = t->reference;
   uint64_t result;
 
   { MyThread::CallTrace trace(t);
@@ -4338,10 +4352,6 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
     result = vmInvoke
       (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
        arguments->position, returnType);
-  }
-
-  while (t->reference != reference) {
-    dispose(t, t->reference);
   }
 
   object r;
