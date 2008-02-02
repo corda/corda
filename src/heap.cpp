@@ -17,10 +17,6 @@ const unsigned Top = ~static_cast<unsigned>(0);
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 const unsigned InitialTenuredFixieCeilingInBytes = 4 * 1024 * 1024;
 
-// do a major collection at least every N collections (zero means
-// infinity)
-const unsigned MajorCollectionInterval = 0;
-
 const unsigned LowMemoryPaddingInBytes = 1024 * 1024;
 
 const bool Verbose = false;
@@ -535,8 +531,6 @@ class Context {
     markedFixies(0),
     visitedFixies(0),
 
-    majorCollectionCountdown(0),
-
     lastCollectionTime(system->now()),
     totalCollectionTime(0),
     totalTime(0)
@@ -605,8 +599,6 @@ class Context {
   Fixie* dirtyTenuredFixies;
   Fixie* markedFixies;
   Fixie* visitedFixies;
-
-  unsigned majorCollectionCountdown;
 
   int64_t lastCollectionTime;
   int64_t totalCollectionTime;
@@ -1541,17 +1533,6 @@ collect(Context* c)
     }
 
     c->mode = Heap::MajorCollection;
-  } else if (c->mode == Heap::MinorCollection
-             and c->majorCollectionCountdown)
-  {
-    -- c->majorCollectionCountdown;
-    if (c->majorCollectionCountdown == 0) {
-      if (Verbose) {
-        fprintf(stderr, "countdown causes ");
-      }  
-
-      c->mode = Heap::MajorCollection;    
-    }
   }
 
   int64_t then;
@@ -1587,7 +1568,6 @@ collect(Context* c)
   initNextGen1(c);
 
   if (c->mode == Heap::MajorCollection) {
-    c->majorCollectionCountdown = MajorCollectionInterval;
     initNextGen2(c);
   }
 
