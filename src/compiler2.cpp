@@ -37,17 +37,30 @@ enum OperationType {
   Negate
 };
 
+class Context;
+class MyOperand;
+class ConstantValue;
+class RegisterValue;
+class MemoryValue;
+class Event;
+
 class Value {
  public:
-  virtual void preserve(Context*) = 0;
-  virtual void acquire(Context*, MyOperand*) = 0;
-  virtual void release(Context*, MyOperand*) = 0;
+  virtual bool equals(Value* o);
+  virtual bool equals(ConstantValue* o) { return false; }
+  virtual bool equals(RegisterValue* o) { return false; }
+  virtual bool equals(ConstantValue* o) { return false; }
+
+  virtual void preserve(Context*) { ]
+  virtual void acquire(Context*, MyOperand*) { }
+  virtual void release(Context*, MyOperand*) { }
+
   virtual void apply(Context*, OperationType op) = 0;
   virtual void apply(Context*, OperationType op, unsigned size, Value* b) = 0;
   virtual void accept(Context*, OperationType op, unsigned size,
-                      RegisterValue* a) = 0;
-  virtual void accept(Context*, OperationType op, unsigned size,
                       ConstantValue* a) = 0;
+  virtual void accept(Context*, OperationType op, unsigned size,
+                      RegisterValue* a) = 0;
   virtual void accept(Context*, OperationType op, unsigned size,
                       MemoryValue* a) = 0;
 };
@@ -68,7 +81,7 @@ class MyOperand: public Operand {
 class State {
  public:
   State(State* s):
-    stack(s->stack),
+    stack(s ? s->stack : 0),
     next(s)
   { }
 
@@ -83,14 +96,199 @@ class LogicalInstruction {
   Event* lastEvent;
 };
 
+class Register {
+ public:
+  bool reserved;
+  MyOperand* operand;
+};
+
 class Context {
  public:
-  unsigned logicalIp;
+  Context(NativeMachine* machine, Zone* zone):
+    machine(machine),
+    zone(zone),
+    logicalIp(-1),
+    state(new (c->zone->allocate(sizeof(State))) State(0)),
+    event(0),
+    logicalCode(0),
+    registers(static_cast<Register*>
+              (zone->allocate(sizeof(Register) * machine->registerCount())))
+  {
+    memset(registers, 0, sizeof(Register) * machine->registerCount());
+    
+    registers[machine->base()].reserved = true;
+    registers[machine->stack()].reserved = true;
+    registers[machine->thread()].reserved = true;
+  }
+
+  NativeMachine* machine;
   Zone* zone;
+  unsigned logicalIp;
   State* state;
   Event* event;
   LogicalInstruction* logicalCode;
+  Register* registers;
 };
+
+class ConstantValue: public Value {
+ public:
+  ConstantValue(Promise* value): value(value) { }
+
+  virtual bool equals(Value* o) { return o->equals(this); }
+
+  virtual bool equals(ConstantValue* o) { return o->value == value; }
+
+  virtual void apply(Context* c, OperationType op, unsigned size) {
+    c->machine->appendC(op, size, value);
+  }
+
+  virtual void apply(Context* c, OperationType op, unsigned size, Value* b) {
+    b->accept(c, op, size, this);
+  }
+
+  virtual void accept(Context* c, OperationType, unsigned, ConstantValue*) {
+    abort(c);
+  }
+
+  virtual void accept(Context* c, OperationType, unsigned, RegisterValue*) {
+    abort(c);
+  }
+
+  virtual void accept(Context* c, OperationType, unsigned, MemoryValue*) {
+    abort(c);
+  }
+
+  Promise* value;
+};
+
+ConstantValue*
+constant(Context* c, Promise* value)
+{
+  return new (c->zone->allocate(sizeof(ConstantValue))) ConstantValue(value);
+}
+
+void preserve(Context* c, int reg);
+
+class RegisterValue: public Value {
+ public:
+  RegisterValue(int low, int high): low(low), high(high) { }
+
+  virtual bool equals(Value* o) { return o->equals(this); }
+
+  virtual bool equals(RegisterValue* o) {
+    return o->low == low and o->high == high;
+  }
+
+  virtual void preserve(Context* c) {
+    ::preserve(c, low);
+    if (high >= 0) ::preserve(c, high);
+  }
+
+  virtual void acquire(Context* c, MyOperand* a) {
+    preserve(c);
+    c->registers[low].operand = a;
+    if (high >= 0) c->registers[high].operand = a;
+  }
+
+  virtual void release(Context* c, MyOperand* a) {
+    c->registers[low].operand = 0; 
+    if (high >= 0) c->registers[high].operand = 0;   
+  }
+
+  virtual void apply(Context* c, OperationType op, unsigned size) {
+    c->machine->appendR(op, size, low, high);
+  }
+
+  virtual void apply(Context* c, OperationType op, unsigned size, Value* b) {
+    b->accept(c, op, size, this);
+  }
+
+  virtual void accept(Context* c, OperationType op, unsigned size,
+                      ConstantValue* a)
+  {
+    c->machine->appendCR(op, size, a->value, low, high);
+  }
+
+  virtual void accept(Context* c, OperationType op, unsigned size,
+                      RegisterValue* a)
+  {
+    c->machine->appendRR(op, size, a->low, a->high, low, high);
+  }
+
+  virtual void accept(Context* c, OperationType op, unsigned size,
+                      MemoryValue* a);
+
+  unsigned low;
+};
+
+RegisterValue*
+register_(Context* c, int low, int high)
+{
+  return new (c->zone->allocate(sizeof(RegisterValue)))
+    RegisterValue(low, high);
+}
+
+class MemoryValue: public Value {
+ public:
+  MemoryValue(int base, int offset, int index, unsigned scale,
+              TraceHandler* traceHandler):
+    base(base), offset(offset), index(index), scale(scale),
+    traceHandler(traceHandler)
+  { }
+
+  virtual bool equals(Value* o) { return o->equals(this); }
+
+  virtual bool equals(MemoryValue* o) {
+    return o->base == base
+      and o->offset == offset
+      and o->index == index
+      and o->scale == scale;
+  }
+
+  virtual void apply(Context* c, OperationType op, unsigned size) {
+    c->machine->appendM(op, size, base, offset, index, scale, traceHandler);
+  }
+
+  virtual void apply(Context* c, OperationType op, unsigned size, Value* b) {
+    b->accept(c, op, size, this);
+  }
+
+  virtual void accept(Context* c, OperationType op, unsigned size,
+                      RegisterValue* a)
+  {
+    c->machine->appendRM(op, size, a->low, a->high,
+                         base, offset, index, scale, traceHandler);
+  }
+
+  virtual void accept(Context* c, OperationType op, unsigned size,
+                      ConstantValue* a)
+  {
+    c->machine->appendCM(op, size, a->value,
+                         base, offset, index, scale, traceHandler);
+  }
+
+  virtual void accept(Context* c, OperationType op, unsigned size,
+                      MemoryValue* a)
+  {
+    c->machine->appendMM
+      (op, size, a->base, a->offset, a->index, a->scale, a->traceHandler,
+       base, offset, index, scale, traceHandler);
+  }
+
+  int base;
+  int offset;
+  int index;
+  unsigned scale;
+  TraceHandler* traceHandler;
+};
+
+MemoryValue*
+memory(Context* c, int base, int offset, int index, unsigned scale,
+       TraceHandler* traceHandler)
+{
+  return new (c->zone->allocate(sizeof(MemoryValue)))
+    MemoryValue(base, offset, index, scale, traceHandler);
+}
 
 class Event {
  public:
@@ -105,6 +303,8 @@ class Event {
 
     c->event = this;
   }
+
+  Event(Event* next): next(next) { }
 
   virtual void target(Context* c, MyOperand* value) = 0;
   virtual void replace(Context* c, MyOperand* old, MyOperand* new_) = 0;
@@ -122,11 +322,12 @@ class ArgumentEvent: public Event {
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == a);
 
-    if (index < GprParameterCount) {
-      return register_(c, gpRegister(c, index));
+    if (index < c->machine->argumentRegisterCount()) {
+      return register_(c, c->machine->argumentRegister(index));
     } else {
-      return memory(c, register_(c, BaseRegister),
-                    (v->index + c->stackOffset) * BytesPerWord, 0, 0, 0);
+      return memory(c, c->machine->base(),
+                    (v->index + c->stackOffset) * BytesPerWord,
+                    NoRegister, 0, 0);
     }
   }
 
@@ -140,7 +341,7 @@ class ArgumentEvent: public Event {
     a->value->release(c, a);
     a->target->preserve(c);
 
-    if (not equal(c, a->target, a->value)) {
+    if (not a->target->equals(a->value)) {
       a->value->apply(c, Move, a->size, a->target);
     }
   }
@@ -148,6 +349,13 @@ class ArgumentEvent: public Event {
   MyOperand* a;
   unsigned index;
 };
+
+void
+appendArgument(Context* c, MyOperand* value, unsigned index)
+{
+  new (c->zone->allocate(sizeof(ArgumentEvent)))
+    ArgumentEvent(c, value, index);
+}
 
 class ReturnEvent: public Event {
  public:
@@ -158,11 +366,7 @@ class ReturnEvent: public Event {
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == a);
 
-    if (BytesPerWord == 4 and v->size == 8) {
-      return register_(c, ReturnLowRegister, ReturnHighRegister);
-    } else {
-      return register_(c, ReturnLowRegister);
-    }
+    return register_(c, c->machine->returnLow(), c->machine->returnHigh());
   }
 
   virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
@@ -174,13 +378,19 @@ class ReturnEvent: public Event {
   virtual void compile(Context* c) {
     a->value->release(c, a);
 
-    if (not equal(c, a->target, a->value)) {
+    if (not a->target->equals(a->value)) {
       a->value->apply(c, Move, a->size, a->target);
     }
   }
 
   MyOperand* a;
 };
+
+void
+appendReturn(Context* c, MyOperand* value)
+{
+  new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, value);
+}
 
 class SyncForCallEvent: public Event {
  public:
@@ -204,7 +414,7 @@ class SyncForCallEvent: public Event {
   virtual void compile(Context* c) {
     src->value->release(c, src);
 
-    if (not equal(c, src->target, src->value)) {
+    if (not src->target->equals(src->value)) {
       src->value->apply(c, Move, src->size, src->target);
     }
   }
@@ -213,20 +423,31 @@ class SyncForCallEvent: public Event {
   MyOperand* dst;
 };
 
+void
+appendSyncForCall(Context* c, MyOperand* src, MyOperand* dst)
+{
+  new (c->zone->allocate(sizeof(SyncForCallEvent)))
+    SyncForCallEvent(c, src, dst);
+}
+
 class SyncForJumpEvent: public Event {
  public:
   SyncForJumpEvent(Context* c, MyOperand* src, MyOperand* dst):
     Event(c), src(src), dst(dst)
   { }
 
+  SyncForJumpEvent(Event* next, MyOperand* src, MyOperand* dst):
+    Event(next), src(src), dst(dst)
+  { }
+
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == src);
 
     if (BytesPerWord == 4 and v->size == 8) {
-      return register_(c, stackSyncRegister(c, v->index),
-                       stackSyncRegister(c, v->index + 4));
+      return register_(c, c->machine->stackSyncRegister(c, v->index),
+                       c->machine->stackSyncRegister(c, v->index + 4));
     } else {
-      return register_(c, stackSyncRegister(c, v->index));
+      return register_(c, c->machine->stackSyncRegister(c, v->index));
     }
   }
 
@@ -240,7 +461,7 @@ class SyncForJumpEvent: public Event {
     src->value->release(c, src);
     src->target->acquire(c, dst);
 
-    if (not equal(c, src->target, src->value)) {
+    if (not src->target->equals(src->value)) {
       src->value->apply(c, Move, src->size, src->target);
     }
 
@@ -250,6 +471,13 @@ class SyncForJumpEvent: public Event {
   MyOperand* src;
   MyOperand* dst;
 };
+
+void
+appendSyncForJump(Context* c, MyOperand* src, MyOperand* dst)
+{
+  new (c->zone->allocate(sizeof(SyncForJumpEvent)))
+    SyncForJumpEvent(c, src, dst);
+}
 
 class CallEvent: public Event {
  public:
@@ -279,17 +507,15 @@ class CallEvent: public Event {
     address->value->release(c, address);
 
     if (result->event) {
-      if (BytesPerWord == 4 and result->size == 8) {
-        result->value = register_(c, ReturnLowRegister, ReturnHighRegister);
-      } else {
-        result->value = register_(c, ReturnLowRegister);
-      }
+      result->value = register_
+        (c, c->machine->returnLow(), c->machine->returnHigh());
       result->value->acquire(c, result);
     }
 
     register_(c, StackRegister)->accept
       (c, LoadAddress, BytesPerWord,
-       memory(c, rbp, stackOffset * BytesPerWord, 0, 0, 0));
+       memory(c, c->machine->base(), stackOffset * BytesPerWord,
+              NoRegister, 0, 0));
 
     address->value->apply(c, Call);
   }
@@ -300,6 +526,33 @@ class CallEvent: public Event {
   bool alignCall;
   TraceHandler* traceHandler;
 };
+
+void
+appendCall(Context* c, MyOperand* address, MyOperand* result,
+           unsigned stackOffset, bool alignCall,
+           TraceHandler* traceHandler)
+{
+  new (c->zone->allocate(sizeof(CallEvent)))
+    CallEvent(c, address, result, alignCall, traceHandler);
+}
+
+int
+freeRegister(Context* c)
+{
+  for (unsigned i = 0; i < c->machine->registerCount(); ++i) {
+    if ((not c->registers[i].reserved)
+        and c->registers[i].operand == 0)
+    {
+      return i;
+    }
+  }
+
+  for (unsigned i = 0; i < c->machine->registerCount(); ++i) {
+    if (not c->registers[i].reserved) {
+      return i;
+    }
+  }
+}
 
 class MoveEvent: public Event {
  public:
@@ -321,7 +574,11 @@ class MoveEvent: public Event {
 
   virtual void compile(Context* c) {
     if (src->target == 0) {
-      src->target = freeRegister(c);
+      if (BytesPerWord == 4 and src->size == 8) {
+        src->target = register_(c, freeRegister(c), freeRegister(c));
+      } else {
+        src->target = register_(c, freeRegister(c));
+      }
     }
 
     src->value->release(c, src);
@@ -336,6 +593,12 @@ class MoveEvent: public Event {
   MyOperand* src;
   MyOperand* dst;
 };
+
+void
+appendMove(Context* c, OperationType type, MyOperand* src, MyOperand* dst)
+{
+  new (c->zone->allocate(sizeof(MoveEvent))) MoveEvent(c, type, src, dst);
+}
 
 class BranchEvent: public Event {
  public:
@@ -367,7 +630,7 @@ class BranchEvent: public Event {
     address->value->release(c, address);
 
     a->value->apply(c, Compare, a->size, b->value);
-    address->value->apply(c, type);
+    address->value->apply(c, type, address->size);
   }
 
   OperationType type;
@@ -375,6 +638,14 @@ class BranchEvent: public Event {
   MyOperand* b;
   MyOperand* address;
 };
+
+void
+appendBranch(Context* c, MoveType type, MyOperand* a, MyOperand* b,
+             MyOperand* address)
+{
+  new (c->zone->allocate(sizeof(BranchEvent)))
+    BranchEvent(c, type, a, b, address);
+}
 
 class JumpEvent: public Event {
  public:
@@ -397,7 +668,7 @@ class JumpEvent: public Event {
   virtual void compile(Context* c) {
     address->value->release(c, address);
 
-    address->value->apply(c, Jump);
+    address->value->apply(c, Jump, address->size);
   }
 
   MyOperand* address;
@@ -405,6 +676,12 @@ class JumpEvent: public Event {
   bool alignCall;
   TraceHandler* traceHandler;
 };
+
+void
+appendJump(Context* c, MyOperand* address)
+{
+  new (c->zone->allocate(sizeof(BranchEvent))) JumpEvent(c, address);
+}
 
 class CombineEvent: public Event {
  public:
@@ -414,20 +691,23 @@ class CombineEvent: public Event {
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
-    if (v == a) {
-      switch (type) {
-      case ShiftLeft:
-      case ShiftRight:
-      case UnsignedShiftLeft:
-        return register_(c, rcx);
+    int aLow, aHigh, bLow, bHigh;
+    c->machine->getTargets(c, v->size, &aLow, &aHigh, &bLow, &bHigh);
 
-      default:
+    if (v == a) {
+      if (aLow == NoRegister) {
         return 0;
+      } else {
+        return register_(c, aLow, aHigh);
       }
     } else {
       assert(c, v == b);
 
-      return result->event->target(c, result);
+      if (bLow == NoRegister) {
+        return result->event->target(c, result);
+      } else {
+        return register_(c, aLow, aHigh);
+      }
     }
   }
 
@@ -447,7 +727,7 @@ class CombineEvent: public Event {
     b->value->release(c, b);
     b->value->acquire(c, result);
 
-    if (a->target and a->target != a->value) {
+    if (a->target and not a->target->equals(a->value)) {
       a->value->apply(c, Move, a->size, a->target);
     }
     a->value->apply(c, type, a->size, b->value);
@@ -460,6 +740,14 @@ class CombineEvent: public Event {
   MyOperand* b;
   MyOperand* result;
 };
+
+void
+appendCombine(Context* c, MoveType type, MyOperand* a, MyOperand* b,
+              MyOperand* result)
+{
+  new (c->zone->allocate(sizeof(CombineEvent)))
+    CombineEvent(c, type, a, b, result);
+}
 
 class TranslateEvent: public Event {
  public:
@@ -493,6 +781,13 @@ class TranslateEvent: public Event {
   MyOperand* result;
 };
 
+void
+appendTranslate(Context* c, MoveType type, MyOperand* a, MyOperand* result)
+{
+  new (c->zone->allocate(sizeof(TranslateEvent)))
+    TranslateEvent(c, type, a, result);
+}
+
 class Junction {
  public:
   Junction(unsigned logicalIp, MyOperand* stack, Junction* next):
@@ -505,6 +800,34 @@ class Junction {
   MyOperand* stack;
   Junction* next;
 };
+
+void
+RegisterValue::accept(Context* c, OperationType op, unsigned size,
+                      MemoryValue* a)
+{
+  c->machine->appendMR(op, size, a->base, a->offset, a->index, a->scale,
+                       a->traceHandler, low, high);
+}
+
+void
+preserve(Context* c, int reg)
+{
+  MyOperand* a = c->registers[reg].operand;
+  if (a) {
+    MemoryValue* dst = memory
+      (c, machine->base(), (a->index + c->stackOffset) * BytesPerWord,
+       -1, 0, 0);
+
+    c->machine->appendRM
+      (Move, a->size,
+       static_cast<RegisterValue*>(a->value)->low,
+       static_cast<RegisterValue*>(a->value)->high,
+       dst->base, dst->offset, dst->index, dst->scale, dst->traceHandler);
+
+    a->value = dst;
+    c->registers[reg].operand = 0;
+  }
+}
 
 MyOperand*
 operand(Context* c)
@@ -542,62 +865,6 @@ pop(Context* c)
 }
 
 void
-appendArgument(Context* c, MyOperand* value, unsigned index)
-{
-  new (c->zone->allocate(sizeof(ArgumentEvent)))
-    ArgumentEvent(c, value, index);
-}
-
-void
-appendReturn(Context* c, MyOperand* value)
-{
-  new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, value);
-}
-
-void
-appendMove(Context* c, MoveType type, MyOperand* src, MyOperand* dst)
-{
-  new (c->zone->allocate(sizeof(MoveEvent))) MoveEvent(c, type, src, dst);
-}
-
-void
-appendBranch(Context* c, MoveType type, MyOperand* a, MyOperand* b,
-             MyOperand* address)
-{
-  new (c->zone->allocate(sizeof(BranchEvent)))
-    BranchEvent(c, type, a, b, address);
-}
-
-void
-appendJump(Context* c, MyOperand* address)
-{
-  new (c->zone->allocate(sizeof(BranchEvent))) JumpEvent(c, address);
-}
-
-void
-appendCombine(Context* c, MoveType type, MyOperand* a, MyOperand* b,
-                  MyOperand* result)
-{
-  new (c->zone->allocate(sizeof(CombineEvent)))
-    CombineEvent(c, type, a, b, result);
-}
-
-void
-appendTranslate(Context* c, MoveType type, MyOperand* a, MyOperand* result)
-{
-  new (c->zone->allocate(sizeof(TranslateEvent)))
-    TranslateEvent(c, type, a, result);
-}
-
-void
-appendCall(Context* c, MyOperand* address, MyOperand* result, bool alignCall,
-           TraceHandler* traceHandler)
-{
-  new (c->zone->allocate(sizeof(CallEvent)))
-    CallEvent(c, address, result, alignCall, traceHandler);
-}
-
-void
 syncStack(Context* c, MoveType type)
 {
   MyOperand* top = 0;
@@ -612,7 +879,11 @@ syncStack(Context* c, MoveType type)
     new_ = n;
     new_->index = old->index;
       
-    appendMove(&c, SyncForCall, old, new_);
+    if (type == SyncForCall) {
+      appendSyncForCall(&c, old, new_);
+    } else {
+      appendSyncForJump(&c, old, new_);
+    }
   }
 
   c->state->stack = top;
@@ -639,8 +910,8 @@ updateJunctions(Context* c)
         }
 
         p->lastEvent = p->lastEvent->next = new
-          (c->zone->allocate(sizeof(MoveEvent)))
-          MoveEvent(p->lastEvent->next, SyncForJump, old, new_);
+          (c->zone->allocate(sizeof(SyncForJumpEvent)))
+          SyncForJumpEvent(p->lastEvent->next, old, new_);
       }
     }
   }
