@@ -1,41 +1,9 @@
 #include "compiler.h"
+#include "assembler.h"
 
 using namespace vm;
 
 namespace {
-
-enum OperationType {
-  Call,
-  Return,
-  Store1,
-  Store2,
-  Store4,
-  Store8,
-  Load1,
-  Load2,
-  Load2z,
-  Load4,
-  Load8,
-  JumpIfLess,
-  JumpIfGreater,
-  JumpIfLessOrEqual,
-  JumpIfGreaterOrEqual,
-  JumpIfEqual,
-  JumpIfNotEqual,
-  Jump,
-  Add,
-  Subtract,
-  Multiply,
-  Divide,
-  Remainder,
-  ShiftLeft,
-  ShiftRight,
-  UnsignedShiftRight,
-  And,
-  Or,
-  Xor,
-  Negate
-};
 
 class Context;
 class MyOperand;
@@ -51,7 +19,7 @@ class Value {
   virtual bool equals(RegisterValue* o) { return false; }
   virtual bool equals(ConstantValue* o) { return false; }
 
-  virtual void preserve(Context*) { ]
+  virtual void preserve(Context*) { }
   virtual void acquire(Context*, MyOperand*) { }
   virtual void release(Context*, MyOperand*) { }
 
@@ -104,24 +72,24 @@ class Register {
 
 class Context {
  public:
-  Context(NativeMachine* machine, Zone* zone):
-    machine(machine),
+  Context(Assembler* assembler, Zone* zone):
+    assembler(assembler),
     zone(zone),
     logicalIp(-1),
     state(new (c->zone->allocate(sizeof(State))) State(0)),
     event(0),
     logicalCode(0),
     registers(static_cast<Register*>
-              (zone->allocate(sizeof(Register) * machine->registerCount())))
+              (zone->allocate(sizeof(Register) * assembler->registerCount())))
   {
-    memset(registers, 0, sizeof(Register) * machine->registerCount());
+    memset(registers, 0, sizeof(Register) * assembler->registerCount());
     
-    registers[machine->base()].reserved = true;
-    registers[machine->stack()].reserved = true;
-    registers[machine->thread()].reserved = true;
+    registers[assembler->base()].reserved = true;
+    registers[assembler->stack()].reserved = true;
+    registers[assembler->thread()].reserved = true;
   }
 
-  NativeMachine* machine;
+  Assembler* assembler;
   Zone* zone;
   unsigned logicalIp;
   State* state;
@@ -139,7 +107,7 @@ class ConstantValue: public Value {
   virtual bool equals(ConstantValue* o) { return o->value == value; }
 
   virtual void apply(Context* c, OperationType op, unsigned size) {
-    c->machine->appendC(op, size, value);
+    c->assembler->appendC(op, size, value);
   }
 
   virtual void apply(Context* c, OperationType op, unsigned size, Value* b) {
@@ -196,7 +164,7 @@ class RegisterValue: public Value {
   }
 
   virtual void apply(Context* c, OperationType op, unsigned size) {
-    c->machine->appendR(op, size, low, high);
+    c->assembler->appendR(op, size, low, high);
   }
 
   virtual void apply(Context* c, OperationType op, unsigned size, Value* b) {
@@ -206,13 +174,13 @@ class RegisterValue: public Value {
   virtual void accept(Context* c, OperationType op, unsigned size,
                       ConstantValue* a)
   {
-    c->machine->appendCR(op, size, a->value, low, high);
+    c->assembler->appendCR(op, size, a->value, low, high);
   }
 
   virtual void accept(Context* c, OperationType op, unsigned size,
                       RegisterValue* a)
   {
-    c->machine->appendRR(op, size, a->low, a->high, low, high);
+    c->assembler->appendRR(op, size, a->low, a->high, low, high);
   }
 
   virtual void accept(Context* c, OperationType op, unsigned size,
@@ -246,7 +214,7 @@ class MemoryValue: public Value {
   }
 
   virtual void apply(Context* c, OperationType op, unsigned size) {
-    c->machine->appendM(op, size, base, offset, index, scale, traceHandler);
+    c->assembler->appendM(op, size, base, offset, index, scale, traceHandler);
   }
 
   virtual void apply(Context* c, OperationType op, unsigned size, Value* b) {
@@ -254,23 +222,23 @@ class MemoryValue: public Value {
   }
 
   virtual void accept(Context* c, OperationType op, unsigned size,
-                      RegisterValue* a)
+                      ConstantValue* a)
   {
-    c->machine->appendRM(op, size, a->low, a->high,
-                         base, offset, index, scale, traceHandler);
+    c->assembler->appendCM(op, size, a->value,
+                           base, offset, index, scale, traceHandler);
   }
 
   virtual void accept(Context* c, OperationType op, unsigned size,
-                      ConstantValue* a)
+                      RegisterValue* a)
   {
-    c->machine->appendCM(op, size, a->value,
-                         base, offset, index, scale, traceHandler);
+    c->assembler->appendRM(op, size, a->low, a->high,
+                           base, offset, index, scale, traceHandler);
   }
 
   virtual void accept(Context* c, OperationType op, unsigned size,
                       MemoryValue* a)
   {
-    c->machine->appendMM
+    c->assembler->appendMM
       (op, size, a->base, a->offset, a->index, a->scale, a->traceHandler,
        base, offset, index, scale, traceHandler);
   }
@@ -322,10 +290,10 @@ class ArgumentEvent: public Event {
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == a);
 
-    if (index < c->machine->argumentRegisterCount()) {
-      return register_(c, c->machine->argumentRegister(index));
+    if (index < c->assembler->argumentRegisterCount()) {
+      return register_(c, c->assembler->argumentRegister(index));
     } else {
-      return memory(c, c->machine->base(),
+      return memory(c, c->assembler->base(),
                     (v->index + c->stackOffset) * BytesPerWord,
                     NoRegister, 0, 0);
     }
@@ -366,7 +334,7 @@ class ReturnEvent: public Event {
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == a);
 
-    return register_(c, c->machine->returnLow(), c->machine->returnHigh());
+    return register_(c, c->assembler->returnLow(), c->assembler->returnHigh());
   }
 
   virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
@@ -444,10 +412,10 @@ class SyncForJumpEvent: public Event {
     assert(c, v == src);
 
     if (BytesPerWord == 4 and v->size == 8) {
-      return register_(c, c->machine->stackSyncRegister(c, v->index),
-                       c->machine->stackSyncRegister(c, v->index + 4));
+      return register_(c, c->assembler->stackSyncRegister(c, v->index),
+                       c->assembler->stackSyncRegister(c, v->index + 4));
     } else {
-      return register_(c, c->machine->stackSyncRegister(c, v->index));
+      return register_(c, c->assembler->stackSyncRegister(c, v->index));
     }
   }
 
@@ -508,13 +476,13 @@ class CallEvent: public Event {
 
     if (result->event) {
       result->value = register_
-        (c, c->machine->returnLow(), c->machine->returnHigh());
+        (c, c->assembler->returnLow(), c->assembler->returnHigh());
       result->value->acquire(c, result);
     }
 
     register_(c, StackRegister)->accept
       (c, LoadAddress, BytesPerWord,
-       memory(c, c->machine->base(), stackOffset * BytesPerWord,
+       memory(c, c->assembler->base(), stackOffset * BytesPerWord,
               NoRegister, 0, 0));
 
     address->value->apply(c, Call);
@@ -539,7 +507,7 @@ appendCall(Context* c, MyOperand* address, MyOperand* result,
 int
 freeRegister(Context* c)
 {
-  for (unsigned i = 0; i < c->machine->registerCount(); ++i) {
+  for (unsigned i = 0; i < c->assembler->registerCount(); ++i) {
     if ((not c->registers[i].reserved)
         and c->registers[i].operand == 0)
     {
@@ -547,7 +515,7 @@ freeRegister(Context* c)
     }
   }
 
-  for (unsigned i = 0; i < c->machine->registerCount(); ++i) {
+  for (unsigned i = 0; i < c->assembler->registerCount(); ++i) {
     if (not c->registers[i].reserved) {
       return i;
     }
@@ -692,7 +660,7 @@ class CombineEvent: public Event {
 
   virtual Value* target(Context* c, MyOperand* v) {
     int aLow, aHigh, bLow, bHigh;
-    c->machine->getTargets(c, v->size, &aLow, &aHigh, &bLow, &bHigh);
+    c->assembler->getTargets(op, v->size, &aLow, &aHigh, &bLow, &bHigh);
 
     if (v == a) {
       if (aLow == NoRegister) {
@@ -706,7 +674,7 @@ class CombineEvent: public Event {
       if (bLow == NoRegister) {
         return result->event->target(c, result);
       } else {
-        return register_(c, aLow, aHigh);
+        return register_(c, bLow, bHigh);
       }
     }
   }
@@ -805,8 +773,8 @@ void
 RegisterValue::accept(Context* c, OperationType op, unsigned size,
                       MemoryValue* a)
 {
-  c->machine->appendMR(op, size, a->base, a->offset, a->index, a->scale,
-                       a->traceHandler, low, high);
+  c->assembler->appendMR(op, size, a->base, a->offset, a->index, a->scale,
+                         a->traceHandler, low, high);
 }
 
 void
@@ -815,10 +783,10 @@ preserve(Context* c, int reg)
   MyOperand* a = c->registers[reg].operand;
   if (a) {
     MemoryValue* dst = memory
-      (c, machine->base(), (a->index + c->stackOffset) * BytesPerWord,
+      (c, assembler->base(), (a->index + c->stackOffset) * BytesPerWord,
        -1, 0, 0);
 
-    c->machine->appendRM
+    c->assembler->appendRM
       (Move, a->size,
        static_cast<RegisterValue*>(a->value)->low,
        static_cast<RegisterValue*>(a->value)->high,
@@ -1176,77 +1144,77 @@ class MyCompiler: public Compiler {
   virtual Operand* add(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, Add, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* sub(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, Subtract, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* mul(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, Multiply, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* div(Operand* a, Operand* b)  {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, Divide, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* rem(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, Remainder, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* shl(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, ShiftLeft, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* shr(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, ShiftRight, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* ushr(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, UnsignedShiftRight, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* and_(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, And, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* or_(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, Or, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
   virtual Operand* xor_(Operand* a, Operand* b) {
     MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
     appendCombine(&c, Xor, static_cast<MyOperand*>(a),
-                      static_cast<MyOperand*>(b), result);
+                  static_cast<MyOperand*>(b), result);
     return result;
   }
 
