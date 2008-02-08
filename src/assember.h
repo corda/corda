@@ -3,9 +3,23 @@
 
 namespace vm {
 
-enum OperationType {
+enum Operation {
+  Return
+};
+
+enum UnaryOperation {
   Call,
-  Return,
+  JumpIfLess,
+  JumpIfGreater,
+  JumpIfLessOrEqual,
+  JumpIfGreaterOrEqual,
+  JumpIfEqual,
+  JumpIfNotEqual,
+  Jump,
+  Negate
+};
+
+enum BinaryOperation {
   Move,
   Store1,
   Store2,
@@ -16,13 +30,6 @@ enum OperationType {
   Load2z,
   Load4,
   Load8,
-  JumpIfLess,
-  JumpIfGreater,
-  JumpIfLessOrEqual,
-  JumpIfGreaterOrEqual,
-  JumpIfEqual,
-  JumpIfNotEqual,
-  Jump,
   Add,
   Subtract,
   Multiply,
@@ -33,12 +40,66 @@ enum OperationType {
   UnsignedShiftRight,
   And,
   Or,
-  Xor,
-  Negate
+  Xor
+};
+
+enum OperandType {
+  Constant,
+  Address,
+  Register,
+  Memory
+};
+
+const int NoRegister = -1;
+const int AnyRegister = -2;
+
+class Promise {
+ public:
+  virtual int64_t value() = 0;
+  virtual bool resolved() = 0;
 };
 
 class Assembler {
  public:
+  class Operand { };
+
+  class Constant: public Operand {
+   public:
+    Constant(Promise* value): value(value) { }
+
+    Promise* value;
+  };
+
+  class Address: public Operand {
+   public:
+    Address(Promise* address): address(address) { }
+
+    Promise* address;
+  };
+
+  class Register: public Operand {
+   public:
+    Register(int low, int high): low(low), high(high) { }
+
+    int low;
+    int high;
+  };
+
+  class Memory: public Operand {
+   public:
+    Memory(int base, int offset, int index, unsigned scale,
+           TraceHandler* traceHandler):
+      base(base), offset(offset), index(index), scale(scale),
+      traceHandler(traceHandler)
+    { }
+
+    int base;
+    int offset;
+    int index;
+    unsigned scale;
+    TraceHandler* traceHandler;
+  };
+
   virtual unsigned registerCount() = 0;
 
   virtual int base() = 0;
@@ -52,37 +113,22 @@ class Assembler {
 
   virtual int stackSyncRegister(unsigned index) = 0;
 
-  virtual void getTargets(OperationType op, unsigned size,
-                          int* aLow, int* aHigh,
-                          int* bLow, int* bHigh) = 0;
+  virtual void getTargets(BinaryOperation op, unsigned size,
+                          Register* a, Register* b) = 0;
 
-  virtual void appendC(OperationType op, unsigned size, Promise* value) = 0;
-  virtual void appendR(OperationType op, unsigned size, int low, int high) = 0;
-  virtual void appendM(OperationType op, unsigned size, int base, int offset,
-                       int index, unsigned scale,
-                       TraceHandler* traceHandler) = 0;
+  virtual void apply(Operation op) = 0;
 
-  virtual void appendCR(OperationType op, unsigned size, Promise* aValue,
-                        int bLow, int bHigh) = 0;
-  virtual void appendRR(OperationType op, unsigned size, int aLow, int aHigh,
-                        int bLow, int bHigh) = 0;
-  virtual void appendMR(OperationType op, unsigned size,
-                        int aBase, int aOffset, int aIndex, unsigned aScale,
-                        TraceHandler* aTraceHandler,
-                        int bLow, int bHigh) = 0;
+  virtual void apply(UnaryOperation op, unsigned size, OperandType type,
+                     Operand* operand) = 0;
 
-  virtual void appendCM(OperationType op, unsigned size, Promise* aValue,
-                        int bBase, int bOffset, int bIndex, unsigned bScale,
-                        TraceHandler* bTraceHandler) = 0;
-  virtual void appendRM(OperationType op, unsigned size, int aLow, int aHigh,
-                        int bBase, int bOffset, int bIndex, unsigned bScale,
-                        TraceHandler* bTraceHandler) = 0;
-  virtual void appendMM(OperationType op, unsigned size,
-                        int aBase, int aOffset, int aIndex, unsigned aScale,
-                        TraceHandler* aTraceHandler,
-                        int bBase, int bOffset, int bIndex, unsigned bScale,
-                        TraceHandler* bTraceHandler) = 0;
+  virtual void apply(BinaryOperation op, unsigned size, OperandType aType,
+                     OperandType bType, Operand* a, Operand* b) = 0;
+
+  virtual void writeTo(uint8_t* dst) = 0;
 };
+
+Assembler*
+makeAssembler(System* system, Allocator* allocator, Zone* zone);
 
 } // namespace vm
 
