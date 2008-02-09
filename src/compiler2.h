@@ -3,21 +3,13 @@
 
 #include "system.h"
 #include "zone.h"
+#include "assembler.h"
 
 namespace vm {
 
-class Operand { };
-
-class Promise { };
-
 class Compiler {
  public:
-  class TraceHandler {
-   public:
-    virtual ~TraceHandler() { }
-
-    virtual void handleTrace(Promise* address) = 0;
-  };
+  class Operand { };
 
   virtual ~Compiler() { }
 
@@ -34,11 +26,9 @@ class Compiler {
   virtual Promise* poolAppend(intptr_t value) = 0;
   virtual Promise* poolAppendPromise(Promise* value) = 0;
 
-  virtual intptr_t valueOf(Promise* promise);
-
   virtual Operand* constant(int64_t value) = 0;
   virtual Operand* promiseConstant(Promise* value) = 0;
-  virtual Operand* absolute(Promise* address) = 0;
+  virtual Operand* address(Promise* address) = 0;
   virtual Operand* memory(Operand* base,
                           int displacement = 0,
                           Operand* index = 0,
@@ -56,10 +46,11 @@ class Compiler {
   virtual void push(unsigned count) = 0;
   virtual void pop(unsigned count) = 0;
 
-  virtual void call(Operand* address,
-                    unsigned argumentCount = 0,
-                    bool aligned = false,
-                    TraceHandler* traceHandler = 0) = 0;
+  virtual Operand* call(Operand* address,
+                        unsigned resultSize = 4,
+                        unsigned argumentCount = 0,
+                        bool aligned = false,
+                        TraceHandler* traceHandler = 0) = 0;
   virtual void return_(Operand* value) = 0;
 
   virtual void store1(Operand* src, Operand* dst) = 0;
@@ -71,12 +62,12 @@ class Compiler {
   virtual Operand* load2z(Operand* src) = 0;
   virtual Operand* load4(Operand* src) = 0;
   virtual Operand* load8(Operand* src) = 0;
-  virtual void jl(Operand* predicate, Operand* address) = 0;
-  virtual void jg(Operand* predicate, Operand* address) = 0;
-  virtual void jle(Operand* predicate, Operand* address) = 0;
-  virtual void jge(Operand* predicate, Operand* address) = 0;
-  virtual void je(Operand* predicate, Operand* address) = 0;
-  virtual void jne(Operand* predicate, Operand* address) = 0;
+  virtual void jl(Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jg(Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jle(Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jge(Operand* a, Operand* b, Operand* address) = 0;
+  virtual void je(Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jne(Operand* a, Operand* b, Operand* address) = 0;
   virtual void jmp(Operand* address) = 0;
   virtual Operand* add(Operand* a, Operand* b) = 0;
   virtual Operand* sub(Operand* a, Operand* b) = 0;
@@ -94,8 +85,6 @@ class Compiler {
   virtual unsigned compile() = 0;
   virtual unsigned poolSize() = 0;
   virtual void writeTo(uint8_t* dst) = 0;
-
-  virtual void updateCall(void* returnAddress, void* newTarget) = 0;
 
   virtual void dispose() = 0;
 };

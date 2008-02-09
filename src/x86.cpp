@@ -1,4 +1,5 @@
 #include "assembler.h"
+#include "vector.h"
 
 using namespace vm;
 
@@ -25,12 +26,18 @@ enum Register {
 
 class Task {
  public:
+  Task(Task* next): next(next) { }
+
+  virtual ~Task() { }
+
   virtual void run(uint8_t* code) = 0;
+
+  Task* next;
 };
 
 class MyAssembler: public Assembler {
  public:
-  MyAssembler(System* s): s(s), code(s, s, 1024), tasks(0) { }
+  MyAssembler(System* s, Allocator* a): s(s), code(s, a, 1024), tasks(0) { }
 
   virtual unsigned registerCount() {
     return BytesPerWord == 4 ? 8 : 16;
@@ -77,7 +84,7 @@ class MyAssembler: public Assembler {
     case 5:
       return r9;
     default:
-      abort(c);
+      abort(s);
     }
   }
 
@@ -94,35 +101,43 @@ class MyAssembler: public Assembler {
     case 4:
       return rdi;
     default:
-      abort(c);
+      abort(s);
     }
   }
 
-  virtual void getTargets(OperationType op, unsigned size,
-                          int* aLow, int* aHigh,
-                          int* bLow, int* bHigh)
+  virtual void getTargets(UnaryOperation /*op*/, unsigned /*size*/,
+                          Register* r)
   {
     // todo
-    *aLow = NoRegister;
-    *aHigh = NoRegister;
-    *bLow = NoRegister;
-    *bHigh = NoRegister;
+    r->low = NoRegister;
+    r->high = NoRegister;
   }
 
-  virtual void apply(Operation op) {
+  virtual void getTargets(BinaryOperation /*op*/, unsigned /*size*/,
+                          Register* a, Register* b)
+  {
+    // todo
+    a->low = NoRegister;
+    a->high = NoRegister;
+    b->low = NoRegister;
+    b->high = NoRegister;
+  }
+
+  virtual void apply(Operation /*op*/) {
     // todo
     abort(s);
   }
 
-  virtual void apply(UnaryOperation op, unsigned size, OperandType type,
-                     Operand* operand)
+  virtual void apply(UnaryOperation /*op*/, unsigned /*size*/,
+                     OperandType /*type*/, Operand* /*operand*/)
   {
     // todo
     abort(s);
   }
 
-  virtual void apply(BinaryOperation op, unsigned size, OperandType aType,
-                     OperandType bType, Operand* a, Operand* b)
+  virtual void apply(BinaryOperation /*op*/, unsigned /*size*/,
+                     OperandType /*aType*/, Operand* /*a*/,
+                     OperandType /*bType*/, Operand* /*b*/)
   {
     // todo
     abort(s);
@@ -136,6 +151,20 @@ class MyAssembler: public Assembler {
     }
   }
 
+  virtual unsigned length() {
+    return code.length();
+  }
+
+  virtual void updateCall(void* returnAddress, void* newTarget) {
+    uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
+    assert(s, *instruction == 0xE8);
+    assert(s, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+
+    int32_t v = static_cast<uint8_t*>(newTarget)
+      - static_cast<uint8_t*>(returnAddress);
+    memcpy(instruction + 1, &v, 4);
+  }
+
   System* s;
   Vector code;
   Task* tasks;
@@ -146,10 +175,10 @@ class MyAssembler: public Assembler {
 namespace vm {
 
 Assembler*
-makeAssembler(System* system, Zone* zone)
+makeAssembler(System* system, Allocator* allocator, Zone* zone)
 {
   return new (zone->allocate(sizeof(MyAssembler)))
-    MyAssembler(system);  
+    MyAssembler(system, allocator);  
 }
 
 } // namespace vm

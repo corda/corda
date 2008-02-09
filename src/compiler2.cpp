@@ -1,4 +1,4 @@
-#include "compiler.h"
+#include "compiler2.h"
 #include "assembler.h"
 
 using namespace vm;
@@ -13,10 +13,17 @@ class RegisterValue;
 class MemoryValue;
 class Event;
 
+enum SyncType {
+  SyncForCall,
+  SyncForJump
+};
+
 class Value {
  public:
-  virtual bool equals(Value* o) { return false; }
-  virtual bool equals(RegisterValue* o) { return false; }
+  virtual ~Value() { }
+
+  virtual bool equals(Value*) { return false; }
+  virtual bool equals(RegisterValue*) { return false; }
 
   virtual void preserve(Context*) { }
   virtual void acquire(Context*, MyOperand*) { }
@@ -29,15 +36,16 @@ class Value {
                                   Assembler::Operand** operand) = 0;
 };
 
-class MyOperand: public Operand {
+class MyOperand: public Compiler::Operand {
  public:
   MyOperand(unsigned size, Value* value):
-    size(size), event(0), value(value), index(0), next(0)
+    size(size), event(0), value(value), target(0), index(0), next(0)
   { }
   
   unsigned size;
   Event* event;
   Value* value;
+  Value* target;
   unsigned index;
   MyOperand* next;
 };
@@ -58,31 +66,57 @@ class LogicalInstruction {
   unsigned visits;
   Event* firstEvent;
   Event* lastEvent;
+  unsigned machineOffset;
+  int predecessor;
 };
 
-class Register {
+class RegisterElement {
  public:
   bool reserved;
   MyOperand* operand;
 };
 
+class ConstantPoolNode {
+ public:
+  ConstantPoolNode(Promise* promise): promise(promise), next(0) { }
+
+  Promise* promise;
+  ConstantPoolNode* next;
+};
+
+class Junction {
+ public:
+  Junction(unsigned logicalIp, Junction* next):
+    logicalIp(logicalIp),
+    next(next)
+  { }
+
+  unsigned logicalIp;
+  Junction* next;
+};
+
 class Context {
  public:
-  Context(System* s, Assembler* assembler, Zone* zone):
+  Context(System* system, Assembler* assembler, Zone* zone):
     system(system),
     assembler(assembler),
     zone(zone),
     logicalIp(-1),
-    state(new (c->zone->allocate(sizeof(State))) State(0)),
+    state(new (zone->allocate(sizeof(State))) State(0)),
     event(0),
     logicalCode(0),
-    registers(static_cast<Register*>
-              (zone->allocate(sizeof(Register) * assembler->registerCount()))),
+    logicalCodeLength(0),
+    stackOffset(0),
+    registers(static_cast<RegisterElement*>
+              (zone->allocate
+               (sizeof(RegisterElement) * assembler->registerCount()))),
     firstConstant(0),
     lastConstant(0),
-    constantCount(0)
+    constantCount(0),
+    junctions(0),
+    machineCode(0)
   {
-    memset(registers, 0, sizeof(Register) * assembler->registerCount());
+    memset(registers, 0, sizeof(RegisterElement) * assembler->registerCount());
     
     registers[assembler->base()].reserved = true;
     registers[assembler->stack()].reserved = true;
@@ -92,36 +126,60 @@ class Context {
   System* system;
   Assembler* assembler;
   Zone* zone;
-  unsigned logicalIp;
+  int logicalIp;
   State* state;
   Event* event;
   LogicalInstruction* logicalCode;
-  Register* registers;
-  Constant* firstConstant;
-  Constant* lastConstant;
+  unsigned logicalCodeLength;
+  unsigned stackOffset;
+  RegisterElement* registers;
+  ConstantPoolNode* firstConstant;
+  ConstantPoolNode* lastConstant;
   unsigned constantCount;
+  Junction* junctions;
+  uint8_t* machineCode;
 };
 
+inline void NO_RETURN
+abort(Context* c)
+{
+  abort(c->system);
+}
+
+#ifndef NDEBUG
+inline void
+assert(Context* c, bool v)
+{
+  assert(c->system, v);
+}
+#endif // not NDEBUG
+
+inline void
+expect(Context* c, bool v)
+{
+  expect(c->system, v);
+}
+
 void
-apply(Context* c, UnaryOperand op, unsigned size, Value* a)
+apply(Context* c, UnaryOperation op, unsigned size, Value* a)
 {
   OperandType type;
   Assembler::Operand* operand;
-  a->asAssemblerOperand(&type, &operand);
+  a->asAssemblerOperand(c, &type, &operand);
 
   c->assembler->apply(op, size, type, operand);
 }
 
 void
-apply(Context* c, BinaryOperand op, unsigned size, Value* a, Value* b)
+apply(Context* c, BinaryOperation op, unsigned size, Value* a, Value* b)
 {
   OperandType aType;
   Assembler::Operand* aOperand;
-  a->asAssemblerOperand(&aType, &aOperand);
+  a->asAssemblerOperand(c, &aType, &aOperand);
 
   OperandType bType;
   Assembler::Operand* bOperand;
-  b->asAssemblerOperand(&bType, &bOperand);
+  b->asAssemblerOperand(c, &bType, &bOperand);
 
   c->assembler->apply(op, size, aType, aOperand, bType, bOperand);
 }
@@ -146,15 +204,16 @@ class PoolPromise: public Promise {
   PoolPromise(Context* c, int key): c(c), key(key) { }
 
   virtual int64_t value() {
-    if (resolved(c)) {
-      return reinterpret_cast<intptr_t>(c->code + c->codeLength + key);
+    if (resolved()) {
+      return reinterpret_cast<intptr_t>
+        (c->machineCode + c->assembler->length() + key);
     }
     
     abort(c);
   }
 
   virtual bool resolved() {
-    return c->code != 0;
+    return c->machineCode != 0;
   }
 
   Context* c;
@@ -163,22 +222,23 @@ class PoolPromise: public Promise {
 
 class CodePromise: public Promise {
  public:
-  CodePromise(Context* c): c(c), offset(-1) { }
+  CodePromise(Context* c, CodePromise* next): c(c), offset(-1), next(next) { }
 
   virtual int64_t value() {
-    if (resolved(c)) {
-      return reinterpret_cast<intptr_t>(c->code + offset);
+    if (resolved()) {
+      return reinterpret_cast<intptr_t>(c->machineCode + offset);
     }
     
     abort(c);
   }
 
-  virtual bool resolved(Context* c) {
-    return c->code != 0 and offset >= 0;
+  virtual bool resolved() {
+    return c->machineCode != 0 and offset >= 0;
   }
 
   Context* c;
   int offset;
+  CodePromise* next;
 };
 
 class IpPromise: public Promise {
@@ -189,47 +249,34 @@ class IpPromise: public Promise {
   { }
 
   virtual int64_t value() {
-    if (resolved(c)) {
-      unsigned bottom = 0;
-      unsigned top = c->plan.length() / BytesPerWord;
-      for (unsigned span = top - bottom; span; span = top - bottom) {
-        unsigned middle = bottom + (span / 2);
-        Segment* s = c->segmentTable[middle];
-
-        if (logicalIp == s->logicalIp) {
-          return reinterpret_cast<intptr_t>(c->code + s->offset);
-        } else if (logicalIp < s->logicalIp) {
-          top = middle;
-        } else if (logicalIp > s->logicalIp) {
-          bottom = middle + 1;
-        }
-      }
+    if (resolved()) {
+      return reinterpret_cast<intptr_t>
+        (c->machineCode + c->logicalCode[logicalIp].machineOffset);
     }
 
     abort(c);
   }
 
   virtual bool resolved() {
-    return c->code != 0;
+    return c->machineCode != 0;
   }
 
   Context* c;
   int logicalIp;
 };
 
+RegisterValue*
+freeRegister(Context* c, unsigned size);
+
 class ConstantValue: public Value {
  public:
   ConstantValue(Promise* value): value(value) { }
 
-  virtual RegisterValue* toRegister(Context* c, unsigned size) {
-    RegisterValue* v = freeRegister(c, size);
-    apply(c, Move, size, this, v);
-    return v;
-  }
+  virtual RegisterValue* toRegister(Context* c, unsigned size);
 
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
-                                  void** operand)
+                                  Assembler::Operand** operand)
   {
     *type = Constant;
     *operand = &value;
@@ -248,15 +295,11 @@ class AddressValue: public Value {
  public:
   AddressValue(Promise* address): address(address) { }
 
-  virtual RegisterValue* toRegister(Context* c, unsigned size) {
-    RegisterValue* v = freeRegister(c, size);
-    apply(c, Move, size, this, v);
-    return v;
-  }
+  virtual RegisterValue* toRegister(Context* c, unsigned size);
 
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
-                                  void** operand)
+                                  Assembler::Operand** operand)
   {
     *type = Address;
     *operand = &address;
@@ -286,18 +329,20 @@ class RegisterValue: public Value {
 
   virtual void preserve(Context* c) {
     ::preserve(c, register_.low);
-    if (high >= 0) ::preserve(c, register_.high);
+    if (register_.high >= 0) ::preserve(c, register_.high);
   }
 
   virtual void acquire(Context* c, MyOperand* a) {
     preserve(c);
     c->registers[register_.low].operand = a;
-    if (high >= 0) c->registers[register_.high].operand = a;
+    if (register_.high >= 0) c->registers[register_.high].operand = a;
   }
 
-  virtual void release(Context* c, MyOperand* a) {
+  virtual void release(Context* c, MyOperand* a UNUSED) {
+    assert(c, a == c->registers[register_.low].operand);
+
     c->registers[register_.low].operand = 0; 
-    if (high >= 0) c->registers[register_.high].operand = 0;   
+    if (register_.high >= 0) c->registers[register_.high].operand = 0;   
   }
 
   virtual RegisterValue* toRegister(Context*, unsigned) {
@@ -306,7 +351,7 @@ class RegisterValue: public Value {
 
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
-                                  void** operand)
+                                  Assembler::Operand** operand)
   {
     *type = Register;
     *operand = &register_;
@@ -316,7 +361,7 @@ class RegisterValue: public Value {
 };
 
 RegisterValue*
-register_(Context* c, int low, int high)
+register_(Context* c, int low, int high = NoRegister)
 {
   return new (c->zone->allocate(sizeof(RegisterValue)))
     RegisterValue(low, high);
@@ -326,7 +371,7 @@ class MemoryValue: public Value {
  public:
   MemoryValue(int base, int offset, int index, unsigned scale,
               TraceHandler* traceHandler):
-    value(base, offset, index. scale, traceHandler)
+    value(base, offset, index, scale, traceHandler)
   { }
 
   virtual RegisterValue* toRegister(Context* c, unsigned size) {
@@ -335,17 +380,17 @@ class MemoryValue: public Value {
     return v;
   }
 
-  virtual int base(Context* c) {
+  virtual int base(Context*) {
     return value.base;
   }
 
-  virtual int index(Context* c) {
+  virtual int index(Context*) {
     return value.index;
   }
 
-  virtual void asAssemblerrOperand(Context* c,
-                                   OperandType* type,
-                                   Assembler::Operand** operand)
+  virtual void asAssemblerOperand(Context* c,
+                                  OperandType* type,
+                                  Assembler::Operand** operand)
   {
     value.base = base(c);
     value.index = index(c);
@@ -364,20 +409,28 @@ memory(Context* c, int base, int offset, int index, unsigned scale,
     MemoryValue(base, offset, index, scale, traceHandler);
 }
 
+int
+toRegister(Context* c, MyOperand* a)
+{
+  assert(c, a->size == BytesPerWord);
+
+  return a->value->toRegister(c, a->size)->register_.low;
+}
+
 class AbstractMemoryValue: public MemoryValue {
  public:
   AbstractMemoryValue(MyOperand* base, int offset, MyOperand* index,
                       unsigned scale, TraceHandler* traceHandler):
-    MemoryValue(NoRegister, offset, NoRegister, scale, traceHandler)
+    MemoryValue(NoRegister, offset, NoRegister, scale, traceHandler),
     base_(base), index_(index)
   { }
 
   virtual int base(Context* c) {
-    return base_->toRegister(c);
+    return ::toRegister(c, base_);
   }
 
   virtual int index(Context* c) {
-    return index_ ? index_->toRegister(c) : NoRegister;
+    return index_ ? ::toRegister(c, base_) : NoRegister;
   }
 
   MyOperand* base_;
@@ -394,7 +447,7 @@ memory(Context* c, MyOperand* base, int offset, MyOperand* index,
 
 class Event {
  public:
-  Event(Context* c): next(0) {
+  Event(Context* c): next(0), stack(c->state->stack), promises(0) {
     if (c->event) {
       c->event->next = this;
     }
@@ -408,11 +461,15 @@ class Event {
 
   Event(Event* next): next(next) { }
 
-  virtual void target(Context* c, MyOperand* value) = 0;
+  virtual ~Event() { }
+
+  virtual Value* target(Context* c, MyOperand* value) = 0;
   virtual void replace(Context* c, MyOperand* old, MyOperand* new_) = 0;
   virtual void compile(Context* c) = 0;
 
   Event* next;
+  MyOperand* stack;
+  CodePromise* promises;
 };
 
 class ArgumentEvent: public Event {
@@ -436,7 +493,7 @@ class ArgumentEvent: public Event {
   virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
     assert(c, old == a);
     a = new_;
-    a->target = old->target;
+    new_->target = old->target;
   }
 
   virtual void compile(Context* c) {
@@ -504,8 +561,9 @@ class SyncForCallEvent: public Event {
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == src);
 
-    return memory(c, register_(c, BaseRegister),
-                  (v->index + c->stackOffset) * BytesPerWord, 0, 0, 0);
+    return memory(c, c->assembler->base(),
+                  (v->index + c->stackOffset) * BytesPerWord,
+                  NoRegister, 0, 0);
   }
 
   virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
@@ -547,10 +605,10 @@ class SyncForJumpEvent: public Event {
     assert(c, v == src);
 
     if (BytesPerWord == 4 and v->size == 8) {
-      return register_(c, c->assembler->stackSyncRegister(c, v->index),
-                       c->assembler->stackSyncRegister(c, v->index + 4));
+      return register_(c, c->assembler->stackSyncRegister(v->index),
+                       c->assembler->stackSyncRegister(v->index + 4));
     } else {
-      return register_(c, c->assembler->stackSyncRegister(c, v->index));
+      return register_(c, c->assembler->stackSyncRegister(v->index));
     }
   }
 
@@ -615,7 +673,7 @@ class CallEvent: public Event {
       result->value->acquire(c, result);
     }
 
-    apply(c, LoadAddress, BytesPerWord, register_(c, StackRegister),
+    apply(c, LoadAddress, BytesPerWord, register_(c, c->assembler->stack()),
           memory(c, c->assembler->base(), stackOffset * BytesPerWord,
                  NoRegister, 0, 0));
 
@@ -635,7 +693,7 @@ appendCall(Context* c, MyOperand* address, MyOperand* result,
            TraceHandler* traceHandler)
 {
   new (c->zone->allocate(sizeof(CallEvent)))
-    CallEvent(c, address, result, alignCall, traceHandler);
+    CallEvent(c, address, result, stackOffset, alignCall, traceHandler);
 }
 
 int
@@ -654,6 +712,8 @@ freeRegister(Context* c)
       return i;
     }
   }
+
+  abort(c);
 }
 
 RegisterValue*
@@ -668,7 +728,7 @@ freeRegister(Context* c, unsigned size)
 
 class MoveEvent: public Event {
  public:
-  MoveEvent(Context* c, OperationType type, MyOperand* src, MyOperand* dst):
+  MoveEvent(Context* c, BinaryOperation type, MyOperand* src, MyOperand* dst):
     Event(c), type(type), src(src), dst(dst)
   { }
 
@@ -697,20 +757,20 @@ class MoveEvent: public Event {
     dst->value = src->target;
   }
 
-  OperationType type;
+  BinaryOperation type;
   MyOperand* src;
   MyOperand* dst;
 };
 
 void
-appendMove(Context* c, OperationType type, MyOperand* src, MyOperand* dst)
+appendMove(Context* c, BinaryOperation type, MyOperand* src, MyOperand* dst)
 {
   new (c->zone->allocate(sizeof(MoveEvent))) MoveEvent(c, type, src, dst);
 }
 
 class BranchEvent: public Event {
  public:
-  BranchEvent(Context* c, OperationType type, MyOperand* a, MyOperand* b,
+  BranchEvent(Context* c, UnaryOperation type, MyOperand* a, MyOperand* b,
               MyOperand* address):
     Event(c), type(type), a(a), b(b), address(address)
   { }
@@ -741,14 +801,14 @@ class BranchEvent: public Event {
     apply(c, type, address->size, address->value);
   }
 
-  OperationType type;
+  UnaryOperation type;
   MyOperand* a;
   MyOperand* b;
   MyOperand* address;
 };
 
 void
-appendBranch(Context* c, MoveType type, MyOperand* a, MyOperand* b,
+appendBranch(Context* c, UnaryOperation type, MyOperand* a, MyOperand* b,
              MyOperand* address)
 {
   new (c->zone->allocate(sizeof(BranchEvent)))
@@ -757,7 +817,7 @@ appendBranch(Context* c, MoveType type, MyOperand* a, MyOperand* b,
 
 class JumpEvent: public Event {
  public:
-  Jumpvent(Context* c, MyOperand* address):
+  JumpEvent(Context* c, MyOperand* address):
     Event(c),
     address(address)
   { }
@@ -793,28 +853,29 @@ appendJump(Context* c, MyOperand* address)
 
 class CombineEvent: public Event {
  public:
-  CombineEvent(Context* c, OperationType type, MyOperand* a, MyOperand* b,
+  CombineEvent(Context* c, BinaryOperation type, MyOperand* a, MyOperand* b,
                MyOperand* result):
     Event(c), type(type), a(a), b(b), result(result)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
-    int aLow, aHigh, bLow, bHigh;
-    c->assembler->getTargets(type, v->size, &aLow, &aHigh, &bLow, &bHigh);
+    Assembler::Register ar(NoRegister, NoRegister);
+    Assembler::Register br(NoRegister, NoRegister);
+    c->assembler->getTargets(type, v->size, &ar, &br);
 
     if (v == a) {
-      if (aLow == NoRegister) {
+      if (ar.low == NoRegister) {
         return 0;
       } else {
-        return register_(c, aLow, aHigh);
+        return register_(c, ar.low, ar.high);
       }
     } else {
       assert(c, v == b);
 
-      if (bLow == NoRegister) {
+      if (br.low == NoRegister) {
         return result->event->target(c, result);
       } else {
-        return register_(c, bLow, bHigh);
+        return register_(c, br.low, br.high);
       }
     }
   }
@@ -847,14 +908,14 @@ class CombineEvent: public Event {
     result->value = b->value;
   }
 
-  OperationType type;
+  BinaryOperation type;
   MyOperand* a;
   MyOperand* b;
   MyOperand* result;
 };
 
 void
-appendCombine(Context* c, MoveType type, MyOperand* a, MyOperand* b,
+appendCombine(Context* c, BinaryOperation type, MyOperand* a, MyOperand* b,
               MyOperand* result)
 {
   new (c->zone->allocate(sizeof(CombineEvent)))
@@ -863,7 +924,7 @@ appendCombine(Context* c, MoveType type, MyOperand* a, MyOperand* b,
 
 class TranslateEvent: public Event {
  public:
-  TranslateEvent(Context* c, OperationType type, MyOperand* a,
+  TranslateEvent(Context* c, UnaryOperation type, MyOperand* a,
                  MyOperand* result):
     Event(c), type(type), a(a), result(result)
   { }
@@ -871,13 +932,13 @@ class TranslateEvent: public Event {
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == a);
       
-    int low, high;
-    c->assembler->getTargets(type, v->size, &low, &high);
+    Assembler::Register r(NoRegister, NoRegister);
+    c->assembler->getTargets(type, v->size, &r);
 
-    if (low == NoRegister) {
+    if (r.low == NoRegister) {
       return result->event->target(c, result);
     } else {
-      return register_(c, low, high);
+      return register_(c, r.low, r.high);
     }
   }
 
@@ -892,33 +953,37 @@ class TranslateEvent: public Event {
 
     apply(c, type, a->size, a->value);
 
-    result->value = b->value;
+    result->value = a->value;
   }
 
-  OperationType type;
+  UnaryOperation type;
   MyOperand* a;
   MyOperand* result;
 };
 
 void
-appendTranslate(Context* c, MoveType type, MyOperand* a, MyOperand* result)
+appendTranslate(Context* c, UnaryOperation type, MyOperand* a,
+                MyOperand* result)
 {
   new (c->zone->allocate(sizeof(TranslateEvent)))
     TranslateEvent(c, type, a, result);
 }
 
-class Junction {
- public:
-  Junction(unsigned logicalIp, MyOperand* stack, Junction* next):
-    logicalIp(logicalIp),
-    stack(stack),
-    next(next)
-  { }
+RegisterValue*
+ConstantValue::toRegister(Context* c, unsigned size)
+{
+  RegisterValue* v = freeRegister(c, size);
+  apply(c, Move, size, this, v);
+  return v;
+}
 
-  unsigned logicalIp;
-  MyOperand* stack;
-  Junction* next;
-};
+RegisterValue*
+AddressValue::toRegister(Context* c, unsigned size)
+{
+  RegisterValue* v = freeRegister(c, size);
+  apply(c, Move, size, this, v);
+  return v;
+}
 
 void
 preserve(Context* c, int reg)
@@ -926,15 +991,10 @@ preserve(Context* c, int reg)
   MyOperand* a = c->registers[reg].operand;
   if (a) {
     MemoryValue* dst = memory
-      (c, assembler->base(), (a->index + c->stackOffset) * BytesPerWord,
+      (c, c->assembler->base(), (a->index + c->stackOffset) * BytesPerWord,
        -1, 0, 0);
 
-    c->assembler->appendRM
-      (Move, a->size,
-       static_cast<RegisterValue*>(a->value)->low,
-       static_cast<RegisterValue*>(a->value)->high,
-       dst->base(c), dst->offset, dst->index(c), dst->scale,
-       dst->traceHandler);
+    apply(c, Move, a->size, a->value, dst);
 
     a->value = dst;
     c->registers[reg].operand = 0;
@@ -942,7 +1002,7 @@ preserve(Context* c, int reg)
 }
 
 MyOperand*
-operand(Context* c, unsigned size, Value* value)
+operand(Context* c, unsigned size, Value* value = 0)
 {
   return new (c->zone->allocate(sizeof(MyOperand))) MyOperand(size, value);
 }
@@ -962,22 +1022,22 @@ popState(Context* c)
 }
 
 void
-push(Context* c, Operand* o)
+push(Context* c, MyOperand* o)
 {
-  static_cast<MyOperand*>(o)->next = c->stack;
-  c->stack = static_cast<MyOperand*>(o);
+  static_cast<MyOperand*>(o)->next = c->state->stack;
+  c->state->stack = static_cast<MyOperand*>(o);
 }
 
 MyOperand*
 pop(Context* c)
 {
-  MyOperand* o = c->stack;
-  c->stack = o->next;
+  MyOperand* o = c->state->stack;
+  c->state->stack = o->next;
   return o;
 }
 
 void
-syncStack(Context* c, MoveType type)
+syncStack(Context* c, SyncType type)
 {
   MyOperand* top = 0;
   MyOperand* new_ = 0;
@@ -992,9 +1052,9 @@ syncStack(Context* c, MoveType type)
     new_->index = old->index;
       
     if (type == SyncForCall) {
-      appendSyncForCall(&c, old, new_);
+      appendSyncForCall(c, old, new_);
     } else {
-      appendSyncForJump(&c, old, new_);
+      appendSyncForJump(c, old, new_);
     }
   }
 
@@ -1005,10 +1065,10 @@ void
 updateJunctions(Context* c)
 {
   for (Junction* j = c->junctions; j; j = j->next) {
-    LogicalInstruction* i = c->logicalCode[j->logicalIp];
+    LogicalInstruction* i = c->logicalCode + j->logicalIp;
 
     if (i->predecessor >= 0) {
-      LogicalInstruction* p = c->logicalCode[i->predecessor];
+      LogicalInstruction* p = c->logicalCode + i->predecessor;
 
       MyOperand* new_ = 0;
       for (MyOperand* old = i->firstEvent->stack; old; old = old->next) {
@@ -1018,7 +1078,7 @@ updateJunctions(Context* c)
         new_->index = old->index;
 
         if (old->event) {
-          old->event->replace(o, new_);
+          old->event->replace(c, old, new_);
         }
 
         p->lastEvent = p->lastEvent->next = new
@@ -1039,9 +1099,8 @@ compile(Context* c)
 
 class MyCompiler: public Compiler {
  public:
-  MyCompiler(System* s, Allocator* allocator, Zone* zone,
-             void* indirectCaller):
-    c(s, allocator, zone, indirectCaller)
+  MyCompiler(System* s, Assembler* assembler, Zone* zone):
+    c(s, assembler, zone)
   { }
 
   virtual void pushState() {
@@ -1052,23 +1111,24 @@ class MyCompiler: public Compiler {
     ::pushState(&c);
   }
 
-  virtual void init(unsigned logicalCodeSize, unsigned localFootprint) {
-    c->logicalCodeSize = logicalCodeSize;
-    c->logicalCode = static_cast<LogicalInstruction*>
-      (c->zone->allocate(sizeof(LogicalInstruction) * logicalCodeSize));
-    memset(c->logicalCode, 0, sizeof(LogicalInstruction) * logicalCodeSize);
+  virtual void init(unsigned logicalCodeLength, unsigned stackOffset) {
+    c.logicalCodeLength = logicalCodeLength;
+    c.stackOffset = stackOffset;
+    c.logicalCode = static_cast<LogicalInstruction*>
+      (c.zone->allocate(sizeof(LogicalInstruction) * logicalCodeLength));
+    memset(c.logicalCode, 0, sizeof(LogicalInstruction) * logicalCodeLength);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
     if ((++ c.logicalCode[logicalIp].visits) == 1) {
       c.junctions = new (c.zone->allocate(sizeof(Junction)))
-        Junction(logicalIp, c.logicalCode[logicalIp].stack, c.junctions);
+        Junction(logicalIp, c.junctions);
     }
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
     if (c.logicalIp >= 0) {
-      c->logicalCode[c->logicalIp].lastEvent = c.event;
+      c.logicalCode[c.logicalIp].lastEvent = c.event;
     }
 
     c.logicalIp = logicalIp;
@@ -1079,15 +1139,17 @@ class MyCompiler: public Compiler {
   }
 
   virtual Promise* poolAppend(intptr_t value) {
-    return poolAppendPromise(resolved(&c, v));
+    return poolAppendPromise(new (c.zone->allocate(sizeof(ResolvedPromise)))
+                             ResolvedPromise(value));
   }
 
   virtual Promise* poolAppendPromise(Promise* value) {
     Promise* p = new (c.zone->allocate(sizeof(PoolPromise)))
-      PoolPromise(&c, c.constantPool.length());
+      PoolPromise(&c, c.constantCount);
 
-    Constant* constant = new (c.zone->allocate(sizeof(Constant)))
-      Constant(value);
+    ConstantPoolNode* constant
+      = new (c.zone->allocate(sizeof(ConstantPoolNode)))
+      ConstantPoolNode(value);
 
     if (c.firstConstant) {
       c.lastConstant->next = constant;
@@ -1101,19 +1163,16 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* constant(int64_t value) {
-    return operand
-      (&c, ::constant(&c, new (c.zone->allocate(sizeof(ResolvedPromise)))
-                      ResolvedPromise(&c, value)));
+    return promiseConstant(new (c.zone->allocate(sizeof(ResolvedPromise)))
+                           ResolvedPromise(value));
   }
 
   virtual Operand* promiseConstant(Promise* value) {
-    return operand
-      (&c, ::constant(&c, static_cast<Promise*>(value)));
+    return operand(&c, 0, ::constant(&c, value));
   }
 
-  virtual Operand* absolute(Promise* address) {
-    return operand
-      (&c, ::absolute(&c, static_cast<Promise*>(address)));
+  virtual Operand* address(Promise* address) {
+    return operand(&c, 0, ::address(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -1123,20 +1182,21 @@ class MyCompiler: public Compiler {
                           TraceHandler* traceHandler = 0)
   {
     return operand
-      (&c, memory(&c, static_cast<MyOperand*>(base), displacement,
-                  static_cast<MyOperand*>(index), scale, traceHandler));
+      (&c, 0, ::memory
+       (&c, static_cast<MyOperand*>(base), displacement,
+        static_cast<MyOperand*>(index), scale, traceHandler));
   }
 
   virtual Operand* stack() {
-    return operand(&c, BytesPerWord, register_(&c, c.machine->stack()));
+    return operand(&c, BytesPerWord, register_(&c, c.assembler->stack()));
   }
 
   virtual Operand* base() {
-    return operand(&c, BytesPerWord, register_(&c, c.machine->base()));
+    return operand(&c, BytesPerWord, register_(&c, c.assembler->base()));
   }
 
   virtual Operand* thread() {
-    return operand(&c, BytesPerWord, register_(&c, c.machine->thread()));
+    return operand(&c, BytesPerWord, register_(&c, c.assembler->thread()));
   }
 
   virtual Operand* label() {
@@ -1149,12 +1209,12 @@ class MyCompiler: public Compiler {
   }
 
   virtual void mark(Operand* label) {
-    static_cast<ConstantValue*>(static_cast<MyOperand*>(label))->value
+    static_cast<ConstantValue*>(static_cast<MyOperand*>(label)->value)->value
       = machineIp();
   }
 
   virtual void push(Operand* value) {
-    ::push(&c, value);
+    ::push(&c, static_cast<MyOperand*>(value));
   }
 
   virtual Operand* pop() {
@@ -1185,10 +1245,9 @@ class MyCompiler: public Compiler {
 
     syncStack(&c, SyncForCall);
 
-    unsigned stackOffset = c.stackOffset + c.stack->index
-      + (BytesPerWord == 8 ?
-         (argumentFootprint > GprParameterCount ?
-          argumentFootprint - GprParameterCount : 0) : argumentFootprint);
+    unsigned stackOffset = c.stackOffset + c.state->stack->index
+      + (argumentFootprint > c.assembler->argumentRegisterCount() ?
+         argumentFootprint - c.assembler->argumentRegisterCount() : 0);
 
     MyOperand* result = operand(&c, resultSize, 0);
     appendCall(&c, static_cast<MyOperand*>(address), result, stackOffset,
@@ -1221,25 +1280,25 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* load1(Operand* src) {
-    MyOperand* dst = operand(&c, 4);
+    MyOperand* dst = operand(&c, BytesPerWord);
     appendMove(&c, Load1, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load2(Operand* src) {
-    MyOperand* dst = operand(&c, 4);
+    MyOperand* dst = operand(&c, BytesPerWord);
     appendMove(&c, Load2, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load2z(Operand* src) {
-    MyOperand* dst = operand(&c, 4);
+    MyOperand* dst = operand(&c, BytesPerWord);
     appendMove(&c, Load2z, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load4(Operand* src) {
-    MyOperand* dst = operand(&c, 4);
+    MyOperand* dst = operand(&c, BytesPerWord);
     appendMove(&c, Load4, static_cast<MyOperand*>(src), dst);
     return dst;
   }
@@ -1383,7 +1442,8 @@ class MyCompiler: public Compiler {
 
   virtual unsigned compile() {
     updateJunctions(&c);
-    return ::compile(&c);
+    ::compile(&c);
+    return c.assembler->length();
   }
 
   virtual unsigned poolSize() {
@@ -1391,16 +1451,18 @@ class MyCompiler: public Compiler {
   }
 
   virtual void writeTo(uint8_t* dst) {
+    c.machineCode = dst;
     c.assembler->writeTo(dst);
 
-    for (Constant* n = c.firstConstant; n; n = n->next) {
-      *reinterpret_cast<intptr_t*>(dst + c.code.length() + i)
-        = n->promise->value(this);
+    int i = 0;
+    for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {
+      *reinterpret_cast<intptr_t*>(dst + c.assembler->length() + (i++))
+        = n->promise->value();
     }
   }
 
   virtual void dispose() {
-    c.dispose();
+    // ignore
   }
 
   Context c;
@@ -1411,10 +1473,10 @@ class MyCompiler: public Compiler {
 namespace vm {
 
 Compiler*
-makeCompiler(System* system, Zone* zone)
+makeCompiler(System* system, Assembler* assembler, Zone* zone)
 {
   return new (zone->allocate(sizeof(MyCompiler)))
-    MyCompiler(system, zone);
+    MyCompiler(system, assembler, zone);
 }
 
 } // namespace vm
