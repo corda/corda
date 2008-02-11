@@ -3,146 +3,106 @@
 
 #include "system.h"
 #include "zone.h"
+#include "assembler.h"
 
 namespace vm {
 
-class Operand { };
-
-class Stack { };
-
-class Compiler;
-
-class Promise {
- public:
-  virtual ~Promise() { }
-
-  virtual intptr_t value(Compiler*) = 0;
-};
-
 class Compiler {
  public:
-  class TraceHandler {
-   public:
-    virtual ~TraceHandler() { }
+  static const unsigned Aligned  = 1 << 0;
+  static const unsigned NoReturn = 1 << 1;
 
-    virtual void handleTrace(Promise* address) = 0;
-  };
+  class Operand { };
 
   virtual ~Compiler() { }
 
+  virtual void pushState() = 0;
+  virtual void popState() = 0;
+
+  virtual void init(unsigned logicalCodeSize, unsigned localFootprint) = 0;
+
+  virtual void visitLogicalIp(unsigned logicalIp) = 0;
+  virtual void startLogicalIp(unsigned logicalIp) = 0;
+
   virtual Promise* machineIp(unsigned logicalIp) = 0;
 
-  virtual Promise* poolAppend(intptr_t) = 0;
-  virtual Promise* poolAppendPromise(Promise*) = 0;
+  virtual Promise* poolAppend(intptr_t value) = 0;
+  virtual Promise* poolAppendPromise(Promise* value) = 0;
 
-  virtual Operand* constant(int64_t) = 0;
-  virtual Operand* promiseConstant(Promise*) = 0;
-  virtual Operand* absolute(Promise*) = 0;
+  virtual Operand* constant(intptr_t value) = 0;
+  virtual Operand* constant8(int64_t value) = 0;
+  virtual Operand* promiseConstant(Promise* value) = 0;
+  virtual Operand* promiseConstant8(Promise* value) = 0;
+  virtual Operand* address(Promise* address) = 0;
   virtual Operand* memory(Operand* base,
                           int displacement = 0,
                           Operand* index = 0,
                           unsigned scale = 1,
                           TraceHandler* traceHandler = 0) = 0;
-
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
-  virtual Operand* indirectTarget() = 0;
-  virtual Operand* temporary() = 0;
-  virtual Operand* result4() = 0;
-  virtual Operand* result8() = 0;
-  virtual void release(Operand*) = 0;
 
   virtual Operand* label() = 0;
-  virtual void mark(Operand*) = 0;
+  virtual void mark(Operand* label) = 0;
 
-  virtual void indirectCall
-  (Operand* address, TraceHandler* traceHandler,
-   unsigned argumentCount, ...) = 0;
-  virtual void indirectCallNoReturn
-  (Operand* address, TraceHandler* traceHandler,
-   unsigned argumentCount, ...) = 0;
-  virtual void directCall
-  (Operand* address, unsigned argumentCount, ...) = 0;
+  virtual void push(Operand* value) = 0;
+  virtual Operand* pop() = 0;
+  virtual void push(unsigned count) = 0;
+  virtual void pop(unsigned count) = 0;
+  virtual Operand* peek(unsigned index) = 0;
 
-  virtual void call(Operand*, TraceHandler*) = 0;
-  virtual void alignedCall(Operand*, TraceHandler*) = 0;
-  virtual void return4(Operand*) = 0;
-  virtual void return8(Operand*) = 0;
-  virtual void ret() = 0;
+  virtual Operand* call(Operand* address,
+                        void* indirection,
+                        unsigned flags,
+                        TraceHandler* traceHandler,
+                        unsigned resultSize,
+                        unsigned argumentCount,
+                        ...) = 0;
+  virtual void return_(Operand* value) = 0;
 
-  virtual Stack* push(Stack*, unsigned count) = 0;
-  virtual Stack* pushed(Stack*, unsigned count) = 0;
-  virtual Stack* pop(Stack*, unsigned count) = 0;
-  virtual Operand* stack(Stack*, unsigned) = 0;
+  virtual void store(Operand* src, Operand* dst) = 0;
+  virtual void store1(Operand* src, Operand* dst) = 0;
+  virtual void store2(Operand* src, Operand* dst) = 0;
+  virtual void store4(Operand* src, Operand* dst) = 0;
+  virtual void store8(Operand* src, Operand* dst) = 0;
+  virtual Operand* load(Operand* src) = 0;
+  virtual Operand* load1(Operand* src) = 0;
+  virtual Operand* load2(Operand* src) = 0;
+  virtual Operand* load2z(Operand* src) = 0;
+  virtual Operand* load4(Operand* src) = 0;
+  virtual Operand* load8(Operand* src) = 0;
+  virtual Operand* load4To8(Operand* src) = 0;
+  virtual void cmp(Operand* a, Operand* b) = 0;
+  virtual void jl(Operand* address) = 0;
+  virtual void jg(Operand* address) = 0;
+  virtual void jle(Operand* address) = 0;
+  virtual void jge(Operand* address) = 0;
+  virtual void je(Operand* address) = 0;
+  virtual void jne(Operand* address) = 0;
+  virtual void jmp(Operand* address) = 0;
+  virtual Operand* add(Operand* a, Operand* b) = 0;
+  virtual Operand* sub(Operand* a, Operand* b) = 0;
+  virtual Operand* mul(Operand* a, Operand* b) = 0;
+  virtual Operand* div(Operand* a, Operand* b) = 0;
+  virtual Operand* rem(Operand* a, Operand* b) = 0;
+  virtual Operand* shl(Operand* a, Operand* b) = 0;
+  virtual Operand* shr(Operand* a, Operand* b) = 0;
+  virtual Operand* ushr(Operand* a, Operand* b) = 0;
+  virtual Operand* and_(Operand* a, Operand* b) = 0;
+  virtual Operand* or_(Operand* a, Operand* b) = 0;
+  virtual Operand* xor_(Operand* a, Operand* b) = 0;
+  virtual Operand* neg(Operand* a) = 0;
 
-  virtual Stack* push1(Stack*, Operand*) = 0;
-  virtual Stack* push2(Stack*, Operand*) = 0;
-  virtual Stack* push2z(Stack*, Operand*) = 0;
-  virtual Stack* push4(Stack*, Operand*) = 0;
-  virtual Stack* push8(Stack*, Operand*) = 0;
-  virtual Stack* pop4(Stack*, Operand*) = 0;
-  virtual Stack* pop8(Stack*, Operand*) = 0;
-  virtual void mov1(Operand* src, Operand* dst) = 0;
-  virtual void mov2(Operand* src, Operand* dst) = 0;
-  virtual void mov4(Operand* src, Operand* dst) = 0;
-  virtual void mov8(Operand* src, Operand* dst) = 0;
-  virtual void mov1ToW(Operand* src, Operand* dst) = 0;
-  virtual void mov2ToW(Operand* src, Operand* dst) = 0;
-  virtual void mov2zToW(Operand* src, Operand* dst) = 0;
-  virtual void mov4To8(Operand* src, Operand* dst) = 0;
-  virtual void cmp4(Operand* subtrahend, Operand* minuend) = 0;
-  virtual void cmp8(Operand* subtrahend, Operand* minuend) = 0;
-  virtual void jl(Operand*) = 0;
-  virtual void jg(Operand*) = 0;
-  virtual void jle(Operand*) = 0;
-  virtual void jge(Operand*) = 0;
-  virtual void je(Operand*) = 0;
-  virtual void jne(Operand*) = 0;
-  virtual void jmp(Operand*) = 0;
-  virtual void add4(Operand* v, Operand* dst) = 0;
-  virtual void add8(Operand* v, Operand* dst) = 0;
-  virtual void sub4(Operand* v, Operand* dst) = 0;
-  virtual void sub8(Operand* v, Operand* dst) = 0;
-  virtual void mul4(Operand* v, Operand* dst) = 0;
-  virtual void mul8(Operand* v, Operand* dst) = 0;
-  virtual void div4(Operand* v, Operand* dst) = 0;
-  virtual void div8(Operand* v, Operand* dst) = 0;
-  virtual void rem4(Operand* v, Operand* dst) = 0;
-  virtual void rem8(Operand* v, Operand* dst) = 0;
-  virtual void shl4(Operand* v, Operand* dst) = 0;
-  virtual void shl8(Operand* v, Operand* dst) = 0;
-  virtual void shr4(Operand* v, Operand* dst) = 0;
-  virtual void shr8(Operand* v, Operand* dst) = 0;
-  virtual void ushr4(Operand* v, Operand* dst) = 0;
-  virtual void ushr8(Operand* v, Operand* dst) = 0;
-  virtual void and4(Operand* v, Operand* dst) = 0;
-  virtual void and8(Operand* v, Operand* dst) = 0;
-  virtual void or4(Operand* v, Operand* dst) = 0;
-  virtual void or8(Operand* v, Operand* dst) = 0;
-  virtual void xor4(Operand* v, Operand* dst) = 0;
-  virtual void xor8(Operand* v, Operand* dst) = 0;
-  virtual void neg4(Operand*) = 0;
-  virtual void neg8(Operand*) = 0;
-
-  virtual void prologue() = 0;
-  virtual void reserve(unsigned size) = 0;
-  virtual void epilogue() = 0;
-
-  virtual void startLogicalIp(unsigned) = 0;
-
-  virtual unsigned codeSize() = 0;
+  virtual unsigned compile() = 0;
   virtual unsigned poolSize() = 0;
-  virtual void writeTo(uint8_t*) = 0;
-
-  virtual void updateCall(void* returnAddress, void* newTarget) = 0;
+  virtual void writeTo(uint8_t* dst) = 0;
 
   virtual void dispose() = 0;
 };
 
 Compiler*
-makeCompiler(System* system, Allocator* allocator, Zone* zone,
-             void* indirectCaller);
+makeCompiler(System* system, Assembler* assembler, Zone* zone);
 
 } // namespace vm
 

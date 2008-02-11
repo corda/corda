@@ -165,6 +165,10 @@ class MyAssembler: public Assembler {
     memcpy(instruction + 1, &v, 4);
   }
 
+  virtual void dispose() {
+    code.dispose();
+  }
+
   System* s;
   Vector code;
   Task* tasks;
