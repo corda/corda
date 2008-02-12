@@ -29,7 +29,7 @@ class Value {
   virtual void acquire(Context*, MyOperand*) { }
   virtual void release(Context*, MyOperand*) { }
 
-  virtual RegisterValue* toRegister(Context*, unsigned size) = 0;
+  virtual RegisterValue* toRegister(Context*) = 0;
 
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
@@ -38,14 +38,14 @@ class Value {
 
 class MyOperand: public Compiler::Operand {
  public:
-  MyOperand(unsigned size, Value* value):
-    size(size), event(0), value(value), target(0), index(0), next(0)
+  MyOperand(Value* value):
+    event(0), value(value), target(0), size(0), index(0), next(0)
   { }
   
-  unsigned size;
   Event* event;
   Value* value;
   Value* target;
+  unsigned size;
   unsigned index;
   MyOperand* next;
 };
@@ -257,7 +257,7 @@ class ConstantValue: public Value {
  public:
   ConstantValue(Promise* value): value(value) { }
 
-  virtual RegisterValue* toRegister(Context* c, unsigned size);
+  virtual RegisterValue* toRegister(Context* c);
 
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
@@ -287,7 +287,7 @@ class AddressValue: public Value {
  public:
   AddressValue(Promise* address): address(address) { }
 
-  virtual RegisterValue* toRegister(Context* c, unsigned size);
+  virtual RegisterValue* toRegister(Context* c);
 
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
@@ -337,7 +337,7 @@ class RegisterValue: public Value {
     if (register_.high >= 0) c->registers[register_.high].operand = 0;   
   }
 
-  virtual RegisterValue* toRegister(Context*, unsigned) {
+  virtual RegisterValue* toRegister(Context*) {
     return this;
   }
 
@@ -366,9 +366,9 @@ class MemoryValue: public Value {
     value(base, offset, index, scale, traceHandler)
   { }
 
-  virtual RegisterValue* toRegister(Context* c, unsigned size) {
-    RegisterValue* v = freeRegister(c, size);
-    apply(c, Move, size, this, v);
+  virtual RegisterValue* toRegister(Context* c) {
+    RegisterValue* v = freeRegister(c, BytesPerWord);
+    apply(c, Move, BytesPerWord, this, v);
     return v;
   }
 
@@ -404,9 +404,7 @@ memory(Context* c, int base, int offset, int index, unsigned scale,
 int
 toRegister(Context* c, MyOperand* a)
 {
-  assert(c, a->size == BytesPerWord);
-
-  return a->value->toRegister(c, a->size)->register_.low;
+  return a->value->toRegister(c)->register_.low;
 }
 
 class AbstractMemoryValue: public MemoryValue {
@@ -466,8 +464,8 @@ class Event {
 
 class ArgumentEvent: public Event {
  public:
-  ArgumentEvent(Context* c, MyOperand* a, unsigned index):
-    Event(c), a(a), index(index)
+  ArgumentEvent(Context* c, unsigned size, MyOperand* a, unsigned index):
+    Event(c), size(size), a(a), index(index)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -493,25 +491,26 @@ class ArgumentEvent: public Event {
     a->target->preserve(c);
 
     if (not a->target->equals(a->value)) {
-      apply(c, Move, a->size, a->value, a->target);
+      apply(c, Move, size, a->value, a->target);
     }
   }
 
+  unsigned size;
   MyOperand* a;
   unsigned index;
 };
 
 void
-appendArgument(Context* c, MyOperand* value, unsigned index)
+appendArgument(Context* c, unsigned size, MyOperand* value, unsigned index)
 {
   new (c->zone->allocate(sizeof(ArgumentEvent)))
-    ArgumentEvent(c, value, index);
+    ArgumentEvent(c, size, value, index);
 }
 
 class ReturnEvent: public Event {
  public:
-  ReturnEvent(Context* c, MyOperand* a):
-    Event(c), a(a)
+  ReturnEvent(Context* c, unsigned size, MyOperand* a):
+    Event(c), size(size), a(a)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -531,26 +530,27 @@ class ReturnEvent: public Event {
       a->value->release(c, a);
 
       if (not a->target->equals(a->value)) {
-        apply(c, Move, a->size, a->value, a->target);
+        apply(c, Move, size, a->value, a->target);
       }
     }
 
     c->assembler->apply(Return);
   }
 
+  unsigned size;
   MyOperand* a;
 };
 
 void
-appendReturn(Context* c, MyOperand* value)
+appendReturn(Context* c, unsigned size, MyOperand* value)
 {
-  new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, value);
+  new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, size, value);
 }
 
 class SyncForCallEvent: public Event {
  public:
-  SyncForCallEvent(Context* c, MyOperand* src, MyOperand* dst):
-    Event(c), src(src), dst(dst)
+  SyncForCallEvent(Context* c, unsigned size, MyOperand* src, MyOperand* dst):
+    Event(c), size(size), src(src), dst(dst)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -571,29 +571,30 @@ class SyncForCallEvent: public Event {
     src->value->release(c, src);
 
     if (not src->target->equals(src->value)) {
-      apply(c, Move, src->size, src->value, src->target);
+      apply(c, Move, size, src->value, src->target);
     }
   }
 
+  unsigned size;
   MyOperand* src;
   MyOperand* dst;
 };
 
 void
-appendSyncForCall(Context* c, MyOperand* src, MyOperand* dst)
+appendSyncForCall(Context* c, unsigned size, MyOperand* src, MyOperand* dst)
 {
   new (c->zone->allocate(sizeof(SyncForCallEvent)))
-    SyncForCallEvent(c, src, dst);
+    SyncForCallEvent(c, size, src, dst);
 }
 
 class SyncForJumpEvent: public Event {
  public:
-  SyncForJumpEvent(Context* c, MyOperand* src, MyOperand* dst):
-    Event(c), src(src), dst(dst)
+  SyncForJumpEvent(Context* c, unsigned size, MyOperand* src, MyOperand* dst):
+    Event(c), size(size), src(src), dst(dst)
   { }
 
-  SyncForJumpEvent(Event* next, MyOperand* src, MyOperand* dst):
-    Event(next), src(src), dst(dst)
+  SyncForJumpEvent(Event* next, unsigned size, MyOperand* src, MyOperand* dst):
+    Event(next), size(size), src(src), dst(dst)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -618,21 +619,22 @@ class SyncForJumpEvent: public Event {
     src->target->acquire(c, dst);
 
     if (not src->target->equals(src->value)) {
-      apply(c, Move, src->size, src->value, src->target);
+      apply(c, Move, size, src->value, src->target);
     }
 
     dst->value = src->target;
   }
 
+  unsigned size;
   MyOperand* src;
   MyOperand* dst;
 };
 
 void
-appendSyncForJump(Context* c, MyOperand* src, MyOperand* dst)
+appendSyncForJump(Context* c, unsigned size, MyOperand* src, MyOperand* dst)
 {
   new (c->zone->allocate(sizeof(SyncForJumpEvent)))
-    SyncForJumpEvent(c, src, dst);
+    SyncForJumpEvent(c, size, src, dst);
 }
 
 class CallEvent: public Event {
@@ -680,12 +682,12 @@ class CallEvent: public Event {
 
     if (indirection) {
       if (not address->target->equals(address->value)) {
-        apply(c, Move, address->size, address->value, address->target);
+        apply(c, Move, BytesPerWord, address->value, address->target);
       }
       apply(c, Call, BytesPerWord,
             constant(c, reinterpret_cast<intptr_t>(indirection)));
     } else {
-      apply(c, Call, address->size, address->value);
+      apply(c, Call, BytesPerWord, address->value);
     }
   }
 
@@ -739,8 +741,9 @@ freeRegister(Context* c, unsigned size)
 
 class MoveEvent: public Event {
  public:
-  MoveEvent(Context* c, BinaryOperation type, MyOperand* src, MyOperand* dst):
-    Event(c), type(type), src(src), dst(dst)
+  MoveEvent(Context* c, BinaryOperation type, unsigned size, MyOperand* src,
+            MyOperand* dst):
+    Event(c), type(type), size(size), src(src), dst(dst)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -764,33 +767,36 @@ class MoveEvent: public Event {
       if (dst->value) {
         src->target = dst->value;
       } else {
-        src->target = freeRegister(c, src->size);
+        src->target = freeRegister(c, size);
       }
     }
 
     src->value->release(c, src);
     src->target->acquire(c, dst);
 
-    apply(c, type, src->size, src->value, src->target);
+    apply(c, type, size, src->value, src->target);
 
     dst->value = src->target;
   }
 
   BinaryOperation type;
+  unsigned size;
   MyOperand* src;
   MyOperand* dst;
 };
 
 void
-appendMove(Context* c, BinaryOperation type, MyOperand* src, MyOperand* dst)
+appendMove(Context* c, BinaryOperation type, unsigned size, MyOperand* src,
+           MyOperand* dst)
 {
-  new (c->zone->allocate(sizeof(MoveEvent))) MoveEvent(c, type, src, dst);
+  new (c->zone->allocate(sizeof(MoveEvent)))
+    MoveEvent(c, type, size, src, dst);
 }
 
 class CompareEvent: public Event {
  public:
-  CompareEvent(Context* c,  MyOperand* a, MyOperand* b):
-    Event(c), a(a), b(b)
+  CompareEvent(Context* c, unsigned size, MyOperand* a, MyOperand* b):
+    Event(c), size(size), a(a), b(b)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -814,17 +820,18 @@ class CompareEvent: public Event {
     a->value->release(c, a);
     b->value->release(c, b);
 
-    apply(c, Compare, a->size, a->value, b->value);
+    apply(c, Compare, size, a->value, b->value);
   }
 
+  unsigned size;
   MyOperand* a;
   MyOperand* b;
 };
 
 void
-appendCompare(Context* c, MyOperand* a, MyOperand* b)
+appendCompare(Context* c, unsigned size, MyOperand* a, MyOperand* b)
 {
-  new (c->zone->allocate(sizeof(CompareEvent))) CompareEvent(c, a, b);
+  new (c->zone->allocate(sizeof(CompareEvent))) CompareEvent(c, size, a, b);
 }
 
 class BranchEvent: public Event {
@@ -848,7 +855,7 @@ class BranchEvent: public Event {
   virtual void compile(Context* c) {
     address->value->release(c, address);
 
-    apply(c, type, address->size, address->value);
+    apply(c, type, BytesPerWord, address->value);
   }
 
   UnaryOperation type;
@@ -882,7 +889,7 @@ class JumpEvent: public Event {
   virtual void compile(Context* c) {
     address->value->release(c, address);
 
-    apply(c, Jump, address->size, address->value);
+    apply(c, Jump, BytesPerWord, address->value);
   }
 
   MyOperand* address;
@@ -899,9 +906,9 @@ appendJump(Context* c, MyOperand* address)
 
 class CombineEvent: public Event {
  public:
-  CombineEvent(Context* c, BinaryOperation type, MyOperand* a, MyOperand* b,
-               MyOperand* result):
-    Event(c), type(type), a(a), b(b), result(result)
+  CombineEvent(Context* c, BinaryOperation type, unsigned size, MyOperand* a,
+               MyOperand* b, MyOperand* result):
+    Event(c), type(type), size(size), a(a), b(b), result(result)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -943,36 +950,37 @@ class CombineEvent: public Event {
     b->value->acquire(c, result);
 
     if (a->target and not a->target->equals(a->value)) {
-      apply(c, Move, a->size, a->value, a->target);
+      apply(c, Move, size, a->value, a->target);
     }
     if (b->target and not b->target->equals(b->value)) {
-      apply(c, Move, b->size, b->value, b->target);
+      apply(c, Move, size, b->value, b->target);
     }
 
-    apply(c, type, a->size, a->value, b->value);
+    apply(c, type, size, a->value, b->value);
 
     result->value = b->value;
   }
 
   BinaryOperation type;
+  unsigned size;
   MyOperand* a;
   MyOperand* b;
   MyOperand* result;
 };
 
 void
-appendCombine(Context* c, BinaryOperation type, MyOperand* a, MyOperand* b,
-              MyOperand* result)
+appendCombine(Context* c, BinaryOperation type, unsigned size, MyOperand* a,
+              MyOperand* b, MyOperand* result)
 {
   new (c->zone->allocate(sizeof(CombineEvent)))
-    CombineEvent(c, type, a, b, result);
+    CombineEvent(c, type, size, a, b, result);
 }
 
 class TranslateEvent: public Event {
  public:
-  TranslateEvent(Context* c, UnaryOperation type, MyOperand* a,
+  TranslateEvent(Context* c, UnaryOperation type, unsigned size, MyOperand* a,
                  MyOperand* result):
-    Event(c), type(type), a(a), result(result)
+    Event(c), type(type), size(size), a(a), result(result)
   { }
 
   virtual Value* target(Context* c, MyOperand* v) {
@@ -1003,31 +1011,32 @@ class TranslateEvent: public Event {
   }
 
   UnaryOperation type;
+  unsigned size;
   MyOperand* a;
   MyOperand* result;
 };
 
 void
-appendTranslate(Context* c, UnaryOperation type, MyOperand* a,
+appendTranslate(Context* c, UnaryOperation type, unsigned size, MyOperand* a,
                 MyOperand* result)
 {
   new (c->zone->allocate(sizeof(TranslateEvent)))
-    TranslateEvent(c, type, a, result);
+    TranslateEvent(c, type, size, a, result);
 }
 
 RegisterValue*
-ConstantValue::toRegister(Context* c, unsigned size)
+ConstantValue::toRegister(Context* c)
 {
-  RegisterValue* v = freeRegister(c, size);
-  apply(c, Move, size, this, v);
+  RegisterValue* v = freeRegister(c, BytesPerWord);
+  apply(c, Move, BytesPerWord, this, v);
   return v;
 }
 
 RegisterValue*
-AddressValue::toRegister(Context* c, unsigned size)
+AddressValue::toRegister(Context* c)
 {
-  RegisterValue* v = freeRegister(c, size);
-  apply(c, Move, size, this, v);
+  RegisterValue* v = freeRegister(c, BytesPerWord);
+  apply(c, Move, BytesPerWord, this, v);
   return v;
 }
 
@@ -1048,9 +1057,9 @@ preserve(Context* c, int reg)
 }
 
 MyOperand*
-operand(Context* c, unsigned size, Value* value = 0)
+operand(Context* c, Value* value = 0)
 {
-  return new (c->zone->allocate(sizeof(MyOperand))) MyOperand(size, value);
+  return new (c->zone->allocate(sizeof(MyOperand))) MyOperand(value);
 }
 
 void
@@ -1068,16 +1077,23 @@ popState(Context* c)
 }
 
 void
-push(Context* c, MyOperand* o)
+push(Context* c, unsigned size, MyOperand* o)
 {
-  static_cast<MyOperand*>(o)->next = c->state->stack;
-  c->state->stack = static_cast<MyOperand*>(o);
+  assert(c, o->size == 0 and o->index == 0);
+
+  o->next = c->state->stack;
+  o->size = ceiling(size, BytesPerWord);
+  o->index = ceiling(size, BytesPerWord)
+    + (c->state->stack ? c->state->stack->index : 0);
+  c->state->stack = o;
 }
 
 MyOperand*
-pop(Context* c)
+pop(Context* c, unsigned size UNUSED)
 {
   MyOperand* o = c->state->stack;
+  assert(c, ceiling(size, BytesPerWord) == o->size);
+
   c->state->stack = o->next;
   return o;
 }
@@ -1088,19 +1104,20 @@ syncStack(Context* c, SyncType type)
   MyOperand* top = 0;
   MyOperand* new_ = 0;
   for (MyOperand* old = c->state->stack; old; old = old->next) {
-    MyOperand* n = operand(c, old->size, 0);
+    MyOperand* n = operand(c);
     if (new_) {
       new_->next = n;
     } else {
       top = n;
     }
     new_ = n;
+    new_->size = old->size;
     new_->index = old->index;
       
     if (type == SyncForCall) {
-      appendSyncForCall(c, old, new_);
+      appendSyncForCall(c, old->size * BytesPerWord, old, new_);
     } else {
-      appendSyncForJump(c, old, new_);
+      appendSyncForJump(c, old->size * BytesPerWord, old, new_);
     }
   }
 
@@ -1118,9 +1135,10 @@ updateJunctions(Context* c)
 
       MyOperand* new_ = 0;
       for (MyOperand* old = i->firstEvent->stack; old; old = old->next) {
-        MyOperand* n = operand(c, old->size, 0);
+        MyOperand* n = operand(c);
         if (new_) new_->next = n;
         new_ = n;
+        new_->size = old->size;
         new_->index = old->index;
 
         if (old->event) {
@@ -1129,7 +1147,7 @@ updateJunctions(Context* c)
 
         p->lastEvent = p->lastEvent->next = new
           (c->zone->allocate(sizeof(SyncForJumpEvent)))
-          SyncForJumpEvent(p->lastEvent->next, old, new_);
+          SyncForJumpEvent(p->lastEvent->next, old->size, old, new_);
       }
     }
   }
@@ -1219,21 +1237,12 @@ class MyCompiler: public Compiler {
                            ResolvedPromise(value));
   }
 
-  virtual Operand* constant8(int64_t value) {
-    return promiseConstant8(new (c.zone->allocate(sizeof(ResolvedPromise)))
-                            ResolvedPromise(value));
-  }
-
   virtual Operand* promiseConstant(Promise* value) {
-    return operand(&c, BytesPerWord, ::constant(&c, value));
-  }
-
-  virtual Operand* promiseConstant8(Promise* value) {
-    return operand(&c, 8, ::constant(&c, value));
+    return operand(&c, ::constant(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
-    return operand(&c, BytesPerWord, ::address(&c, address));
+    return operand(&c, ::address(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -1243,25 +1252,25 @@ class MyCompiler: public Compiler {
                           TraceHandler* traceHandler = 0)
   {
     return operand
-      (&c, BytesPerWord, ::memory
+      (&c, ::memory
        (&c, static_cast<MyOperand*>(base), displacement,
         static_cast<MyOperand*>(index), scale, traceHandler));
   }
 
   virtual Operand* stack() {
-    return operand(&c, BytesPerWord, register_(&c, c.assembler->stack()));
+    return operand(&c, register_(&c, c.assembler->stack()));
   }
 
   virtual Operand* base() {
-    return operand(&c, BytesPerWord, register_(&c, c.assembler->base()));
+    return operand(&c, register_(&c, c.assembler->base()));
   }
 
   virtual Operand* thread() {
-    return operand(&c, BytesPerWord, register_(&c, c.assembler->thread()));
+    return operand(&c, register_(&c, c.assembler->thread()));
   }
 
   virtual Operand* label() {
-    return operand(&c, BytesPerWord, ::constant(&c, static_cast<Promise*>(0)));
+    return operand(&c, ::constant(&c, static_cast<Promise*>(0)));
   }
 
   Promise* machineIp() {
@@ -1274,20 +1283,24 @@ class MyCompiler: public Compiler {
       = machineIp();
   }
 
-  virtual void push(Operand* value) {
-    ::push(&c, static_cast<MyOperand*>(value));
+  virtual void push(unsigned size, Operand* value) {
+    ::push(&c, size, static_cast<MyOperand*>(value));
   }
 
-  virtual Operand* pop() {
-    return ::pop(&c);
+  virtual Operand* pop(unsigned size) {
+    return ::pop(&c, size);
   }
 
-  virtual void push(unsigned count) {
-    for (unsigned i = 0; i < count; ++i) ::push(&c, 0);
+  virtual void pushed(unsigned count) {
+    for (unsigned i = 0; i < count; ++i) ::push(&c, BytesPerWord, operand(&c));
   }
 
-  virtual void pop(unsigned count) {
-    for (unsigned i = 0; i < count; ++i) ::pop(&c);
+  virtual void popped(unsigned count) {
+    for (int i = count; i >= 0;) {
+      MyOperand* o = c.state->stack;
+      c.state->stack = o->next;
+      count -= o->size;
+    }
   }
 
   virtual Operand* peek(unsigned index) {
@@ -1300,17 +1313,23 @@ class MyCompiler: public Compiler {
                         void* indirection,
                         unsigned flags,
                         TraceHandler* traceHandler,
-                        unsigned resultSize,
+                        unsigned,
                         unsigned argumentCount,
                         ...)
   {
     va_list a; va_start(a, argumentCount);
 
     unsigned footprint = 0;
+    unsigned size = BytesPerWord;
     for (unsigned i = 0; i < argumentCount; ++i) {
       MyOperand* o = va_arg(a, MyOperand*);
-      footprint += o->size;
-      appendArgument(&c, o, i);
+      if (o) {
+        appendArgument(&c, size, o, footprint);
+        size = BytesPerWord;
+      } else {
+        size = 8;
+      }
+      ++ footprint;
     }
 
     va_end(a);
@@ -1321,87 +1340,42 @@ class MyCompiler: public Compiler {
       + (footprint > c.assembler->argumentRegisterCount() ?
          footprint - c.assembler->argumentRegisterCount() : 0);
 
-    MyOperand* result = operand(&c, resultSize, 0);
+    MyOperand* result = operand(&c);
     appendCall(&c, static_cast<MyOperand*>(address), indirection, flags,
                traceHandler, result, stackOffset);
     return result;
   }
 
-  virtual void return_(Operand* value) {
-    appendReturn(&c, static_cast<MyOperand*>(value));
+  virtual void return_(unsigned size, Operand* value) {
+    appendReturn(&c, size, static_cast<MyOperand*>(value));
   }
 
-  virtual void store(Operand* src, Operand* dst) {
-    appendMove(&c, Move, static_cast<MyOperand*>(src),
+  virtual void store(unsigned size, Operand* src, Operand* dst) {
+    appendMove(&c, Move, size, static_cast<MyOperand*>(src),
                static_cast<MyOperand*>(dst));
   }
 
-  virtual void store1(Operand* src, Operand* dst) {
-    appendMove(&c, Move1, static_cast<MyOperand*>(src),
-               static_cast<MyOperand*>(dst));
-  }
-
-  virtual void store2(Operand* src, Operand* dst) {
-    appendMove(&c, Move2, static_cast<MyOperand*>(src),
-               static_cast<MyOperand*>(dst));
-  }
-
-  virtual void store4(Operand* src, Operand* dst) {
-    appendMove(&c, Move4, static_cast<MyOperand*>(src),
-               static_cast<MyOperand*>(dst));
-  }
-
-  virtual void store8(Operand* src, Operand* dst) {
-    appendMove(&c, Move8, static_cast<MyOperand*>(src),
-               static_cast<MyOperand*>(dst));
-  }
-
-  virtual Operand* load(Operand* src) {
-    MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Move, static_cast<MyOperand*>(src), dst);
+  virtual Operand* load(unsigned size, Operand* src) {
+    MyOperand* dst = operand(&c);
+    appendMove(&c, Move, size, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
-  virtual Operand* load1(Operand* src) {
-    MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Move1ToW, static_cast<MyOperand*>(src), dst);
-    return dst;
-  }
-
-  virtual Operand* load2(Operand* src) {
-    MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Move2ToW, static_cast<MyOperand*>(src), dst);
-    return dst;
-  }
-
-  virtual Operand* load2z(Operand* src) {
-    MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Move2zToW, static_cast<MyOperand*>(src), dst);
-    return dst;
-  }
-
-  virtual Operand* load4(Operand* src) {
-    if (BytesPerWord == 4) {
-      return load(src);
-    } else {
-      return load4To8(src);
-    }
-  }
-
-  virtual Operand* load8(Operand* src) {
-    MyOperand* dst = operand(&c, 8);
-    appendMove(&c, Move8, static_cast<MyOperand*>(src), dst);
+  virtual Operand* loadz(unsigned size, Operand* src) {
+    MyOperand* dst = operand(&c);
+    appendMove(&c, MoveZ, size, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load4To8(Operand* src) {
-    MyOperand* dst = operand(&c, 8);
-    appendMove(&c, Move4To8, static_cast<MyOperand*>(src), dst);
+    MyOperand* dst = operand(&c);
+    appendMove(&c, Move4To8, 0, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
-  virtual void cmp(Operand* a, Operand* b) {
-    appendCompare(&c, static_cast<MyOperand*>(a), static_cast<MyOperand*>(b));
+  virtual void cmp(unsigned size, Operand* a, Operand* b) {
+    appendCompare(&c, size, static_cast<MyOperand*>(a),
+                  static_cast<MyOperand*>(b));
   }
 
   virtual void jl(Operand* address) {
@@ -1446,86 +1420,86 @@ class MyCompiler: public Compiler {
     appendJump(&c, static_cast<MyOperand*>(address));
   }
 
-  virtual Operand* add(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, Add, static_cast<MyOperand*>(a),
+  virtual Operand* add(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, Add, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* sub(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, Subtract, static_cast<MyOperand*>(a),
+  virtual Operand* sub(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, Subtract, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* mul(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, Multiply, static_cast<MyOperand*>(a),
+  virtual Operand* mul(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, Multiply, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* div(Operand* a, Operand* b)  {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, Divide, static_cast<MyOperand*>(a),
+  virtual Operand* div(unsigned size, Operand* a, Operand* b)  {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, Divide, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* rem(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, Remainder, static_cast<MyOperand*>(a),
+  virtual Operand* rem(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, Remainder, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* shl(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, ShiftLeft, static_cast<MyOperand*>(a),
+  virtual Operand* shl(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, ShiftLeft, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* shr(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, ShiftRight, static_cast<MyOperand*>(a),
+  virtual Operand* shr(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, ShiftRight, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* ushr(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, UnsignedShiftRight, static_cast<MyOperand*>(a),
+  virtual Operand* ushr(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, UnsignedShiftRight, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* and_(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, And, static_cast<MyOperand*>(a),
+  virtual Operand* and_(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, And, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* or_(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, Or, static_cast<MyOperand*>(a),
+  virtual Operand* or_(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, Or, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* xor_(Operand* a, Operand* b) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendCombine(&c, Xor, static_cast<MyOperand*>(a),
+  virtual Operand* xor_(unsigned size, Operand* a, Operand* b) {
+    MyOperand* result = operand(&c);
+    appendCombine(&c, Xor, size, static_cast<MyOperand*>(a),
                   static_cast<MyOperand*>(b), result);
     return result;
   }
 
-  virtual Operand* neg(Operand* a) {
-    MyOperand* result = operand(&c, static_cast<MyOperand*>(a)->size);
-    appendTranslate(&c, Negate, static_cast<MyOperand*>(a), result);
+  virtual Operand* neg(unsigned size, Operand* a) {
+    MyOperand* result = operand(&c);
+    appendTranslate(&c, Negate, size, static_cast<MyOperand*>(a), result);
     return result;
   }
 

@@ -29,13 +29,8 @@ const unsigned UnaryOperationCount = Negate + 1;
 
 enum BinaryOperation {
   LoadAddress,
-  Move1,
-  Move2,
-  Move4,
-  Move8,
-  Move1ToW,
-  Move2ToW,
-  Move2zToW,
+  Move,
+  MoveZ,
   Move4To8,
   Compare,
   Add,
@@ -50,8 +45,6 @@ enum BinaryOperation {
   Or,
   Xor
 };
-
-const BinaryOperation Move = (BytesPerWord == 8 ? Move8 : Move4);
 
 const unsigned BinaryOperationCount = Xor + 1;
 

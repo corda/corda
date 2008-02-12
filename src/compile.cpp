@@ -684,97 +684,111 @@ class Frame {
   }
 
   void pushInt(Compiler::Operand* o) {
-    c->push(o);
+    c->push(4, o);
     pushedInt();
   }
 
   void pushAddress(Compiler::Operand* o) {
-    c->push(o);
+    c->push(BytesPerWord, o);
     pushedInt();
   }
 
   void pushObject(Compiler::Operand* o) {
-    c->push(o);
+    c->push(BytesPerWord, o);
     pushedObject();
   }
 
   void pushObject() {
-    c->push(1);
+    c->pushed(1);
     pushedObject();
   }
 
-  void pushLong(Compiler::Operand* o) {
+  void pushLongQuiet(Compiler::Operand* o) {
     if (BytesPerWord == 8) {
-      c->push(1);
+      c->pushed(1);
     }
-    c->push(o);
+    c->push(8, o);
+  }
 
+  void pushLong(Compiler::Operand* o) {
+    pushLongQuiet(o);
     pushedLong();
   }
 
   void pop(unsigned count) {
     popped(count);
-    c->pop(count);
+    c->popped(count);
   }
 
   Compiler::Operand* popInt() {
     poppedInt();
-    return c->pop();
+    return c->pop(4);
+  }
+
+  Compiler::Operand* popLongQuiet() {
+    Compiler::Operand* r = c->pop(8);
+    if (BytesPerWord == 8) {
+      c->popped(1);
+    }
+    return r;
   }
 
   Compiler::Operand* popLong() {
     poppedLong();
-    return c->pop();
+    return popLongQuiet();
   }
 
   Compiler::Operand* popObject() {
     poppedObject();
-    return c->pop();
+    return c->pop(BytesPerWord);
   }
 
   void loadInt(unsigned index) {
     assert(t, index < localSize());
     pushInt
-      (c->load4(c->memory(c->base(), localOffset(t, index, context->method))));
+      (c->load
+       (4, c->memory(c->base(), localOffset(t, index, context->method))));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
     pushLong
-      (c->load8
-       (c->memory(c->base(), localOffset(t, index + 1, context->method))));
+      (c->load
+       (8, c->memory(c->base(), localOffset(t, index + 1, context->method))));
   }
 
   void loadObject(unsigned index) {
     assert(t, index < localSize());
     pushObject
       (c->load
-       (c->memory(c->base(), localOffset(t, index, context->method))));
+       (BytesPerWord,
+        c->memory(c->base(), localOffset(t, index, context->method))));
   }
 
   void storeInt(unsigned index) {
-    c->store4
-      (popInt(), c->memory(c->base(), localOffset(t, index, context->method)));
+    c->store
+      (4, popInt(), c->memory
+       (c->base(), localOffset(t, index, context->method)));
     storedInt(index);
   }
 
   void storeLong(unsigned index) {
-    c->store8
-      (popLong(), c->memory
+    c->store
+      (8, popLong(), c->memory
        (c->base(), localOffset(t, index + 1, context->method)));
     storedLong(index);
   }
 
   void storeObject(unsigned index) {
     c->store
-      (popObject(), c->memory
+      (BytesPerWord, popObject(), c->memory
        (c->base(), localOffset(t, index, context->method)));
     storedObject(index);
   }
 
   void storeObjectOrAddress(unsigned index) {
     c->store
-      (c->pop(), c->memory
+      (BytesPerWord, c->pop(BytesPerWord), c->memory
        (c->base(), localOffset(t, index, context->method)));
 
     assert(t, sp >= 1);
@@ -789,122 +803,131 @@ class Frame {
   }
 
   void dup() {
-    Compiler::Operand* s0 = c->pop();
+    Compiler::Operand* s0 = c->pop(BytesPerWord);
 
-    c->push(s0);
-    c->push(s0);
+    c->push(BytesPerWord, s0);
+    c->push(BytesPerWord, s0);
 
     dupped();
   }
 
   void dupX1() {
-    Compiler::Operand* s0 = c->pop();
-    Compiler::Operand* s1 = c->pop();
+    Compiler::Operand* s0 = c->pop(BytesPerWord);
+    Compiler::Operand* s1 = c->pop(BytesPerWord);
 
-    c->push(s0);
-    c->push(s1);
-    c->push(s0);
+    c->push(BytesPerWord, s0);
+    c->push(BytesPerWord, s1);
+    c->push(BytesPerWord, s0);
 
     duppedX1();
   }
 
   void dupX2() {
-    Compiler::Operand* s0 = c->pop();
-    Compiler::Operand* s1 = c->pop();
+    Compiler::Operand* s0 = c->pop(BytesPerWord);
 
     if (get(sp - 2) == Long) {
-      c->push(s0);
-      c->push(s1);
-      c->push(s0);
-    } else {
-      Compiler::Operand* s2 = c->pop();
+      Compiler::Operand* s1 = popLongQuiet();
 
-      c->push(s0);
-      c->push(s2);
-      c->push(s1);
-      c->push(s0);
+      c->push(BytesPerWord, s0);
+      pushLongQuiet(s1);
+      c->push(BytesPerWord, s0);
+    } else {
+      Compiler::Operand* s1 = c->pop(BytesPerWord);
+      Compiler::Operand* s2 = c->pop(BytesPerWord);
+
+      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, s2);
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
     }
 
     duppedX2();
   }
 
   void dup2() {
-    Compiler::Operand* s0 = c->pop();
-
     if (get(sp - 1) == Long) {
-      c->push(s0);
-      c->push(s0);
-    } else {
-      Compiler::Operand* s1 = c->pop();
+      Compiler::Operand* s0 = popLongQuiet();
 
-      c->push(s1);
-      c->push(s0);
-      c->push(s1);
-      c->push(s0);
+      pushLongQuiet(s0);
+      pushLongQuiet(s0);
+    } else {
+      Compiler::Operand* s0 = c->pop(BytesPerWord);
+      Compiler::Operand* s1 = c->pop(BytesPerWord);
+
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
     }
 
     dupped2();
   }
 
   void dup2X1() {
-    Compiler::Operand* s0 = c->pop();
-    Compiler::Operand* s1 = c->pop();
-
     if (get(sp - 1) == Long) {
-      c->push(s0);
-      c->push(s1);
-      c->push(s0);
-    } else {
-      Compiler::Operand* s2 = c->pop();
+      Compiler::Operand* s0 = popLongQuiet();
+      Compiler::Operand* s1 = c->pop(BytesPerWord);
 
-      c->push(s1);
-      c->push(s0);
-      c->push(s2);
-      c->push(s1);
-      c->push(s0);
+      pushLongQuiet(s0);
+      c->push(BytesPerWord, s1);
+      pushLongQuiet(s0);
+    } else {
+      Compiler::Operand* s0 = c->pop(BytesPerWord);
+      Compiler::Operand* s1 = c->pop(BytesPerWord);
+      Compiler::Operand* s2 = c->pop(BytesPerWord);
+
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, s2);
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
     }
 
     dupped2X1();
   }
 
   void dup2X2() {
-    Compiler::Operand* s0 = c->pop();
-    Compiler::Operand* s1 = c->pop();
-
     if (get(sp - 1) == Long) {
-      if (get(sp - 3) == Long) {
-        c->push(s0);
-        c->push(s1);
-        c->push(s0);
-      } else {
-        Compiler::Operand* s2 = c->pop();
+      Compiler::Operand* s0 = popLongQuiet();
 
-        c->push(s0);
-        c->push(s2);
-        c->push(s1);
-        c->push(s0);
+      if (get(sp - 3) == Long) {
+        Compiler::Operand* s1 = popLongQuiet();
+
+        pushLongQuiet(s0);
+        pushLongQuiet(s1);
+        pushLongQuiet(s0);
+      } else {
+        Compiler::Operand* s1 = c->pop(BytesPerWord);
+        Compiler::Operand* s2 = c->pop(BytesPerWord);
+
+        pushLongQuiet(s0);
+        c->push(BytesPerWord, s2);
+        c->push(BytesPerWord, s1);
+        pushLongQuiet(s0);
       }
     } else {
-      Compiler::Operand* s2 = c->pop();
-      Compiler::Operand* s3 = c->pop();
+      Compiler::Operand* s0 = c->pop(BytesPerWord);
+      Compiler::Operand* s1 = c->pop(BytesPerWord);
+      Compiler::Operand* s2 = c->pop(BytesPerWord);
+      Compiler::Operand* s3 = c->pop(BytesPerWord);
 
-      c->push(s1);
-      c->push(s0);
-      c->push(s3);
-      c->push(s2);
-      c->push(s1);
-      c->push(s0);
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, s3);
+      c->push(BytesPerWord, s2);
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
     }
 
     dupped2X2();
   }
 
   void swap() {
-    Compiler::Operand* s0 = c->pop();
-    Compiler::Operand* s1 = c->pop();
+    Compiler::Operand* s0 = c->pop(BytesPerWord);
+    Compiler::Operand* s1 = c->pop(BytesPerWord);
 
-    c->push(s0);
-    c->push(s1);
+    c->push(BytesPerWord, s0);
+    c->push(BytesPerWord, s1);
 
     swapped();
   }
@@ -1409,6 +1432,8 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
   Compiler* c = frame->c;
 
+  unsigned rSize = resultSize(t, methodReturnCode(t, target));
+
   Compiler::Operand* result = c->call
     (c->constant
      (reinterpret_cast<intptr_t>
@@ -1416,13 +1441,13 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
      0,
      Compiler::Aligned,
      frame->trace(target, false),
-     resultSize(t, methodReturnCode(t, target)),
+     rSize,
      0);
 
-  c->pop(methodParameterFootprint(t, target));
+  c->popped(methodParameterFootprint(t, target));
 
-  if (methodReturnCode(t, target) != VoidField) {
-    c->push(result);
+  if (rSize) {
+    c->push(rSize, result);
   }
 }
 
@@ -1462,7 +1487,8 @@ handleEntrance(MyThread* t, Frame* frame)
 
     // save 'this' pointer in case it is overwritten.
     unsigned index = savedTargetIndex(t, method);
-    c->store(c->memory(c->base(), localOffset(t, 0, method)),
+    c->store(BytesPerWord,
+             c->memory(c->base(), localOffset(t, 0, method)),
              c->memory(c->base(), localOffset(t, index, method)));
     frame->set(index, Frame::Object);
   }
@@ -1521,10 +1547,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         Compiler::Operand* load = c->label();
         Compiler::Operand* throw_ = c->label();
 
-        c->cmp(c->constant(0), index);
+        c->cmp(4, c->constant(0), index);
         c->jl(throw_);
 
-        c->cmp(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
+        c->cmp(BytesPerWord,
+               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
                index);
         c->jl(load);
 
@@ -1544,29 +1571,30 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       switch (instruction) {
       case aaload:
         frame->pushObject
-          (c->load(c->memory(array, ArrayBody, index, BytesPerWord)));
+          (c->load
+           (BytesPerWord, c->memory(array, ArrayBody, index, BytesPerWord)));
         break;
 
       case faload:
       case iaload:
-        frame->pushInt(c->load4(c->memory(array, ArrayBody, index, 4)));
+        frame->pushInt(c->load(4, c->memory(array, ArrayBody, index, 4)));
         break;
 
       case baload:
-        frame->pushInt(c->load1(c->memory(array, ArrayBody, index, 1)));
+        frame->pushInt(c->load(1, c->memory(array, ArrayBody, index, 1)));
         break;
 
       case caload:
-        frame->pushInt(c->load2z(c->memory(array, ArrayBody, index, 2)));
+        frame->pushInt(c->loadz(2, c->memory(array, ArrayBody, index, 2)));
         break;
 
       case daload:
       case laload:
-        frame->pushLong(c->load8(c->memory(array, ArrayBody, index, 8)));
+        frame->pushLong(c->load(8, c->memory(array, ArrayBody, index, 8)));
         break;
 
       case saload:
-        frame->pushInt(c->load2(c->memory(array, ArrayBody, index, 2)));
+        frame->pushInt(c->load(2, c->memory(array, ArrayBody, index, 2)));
         break;
       }
     } break;
@@ -1595,10 +1623,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         Compiler::Operand* store = c->label();
         Compiler::Operand* throw_ = c->label();
 
-        c->cmp(c->constant(0), index);
+        c->cmp(4, c->constant(0), index);
         c->jl(throw_);
 
-        c->cmp(c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
+        c->cmp(BytesPerWord,
+               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
                index);
         c->jl(store);
 
@@ -1624,28 +1653,28 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
            frame->trace(0, false),
            0,
            4, c->thread(), array,
-           c->add(c->constant(ArrayBody),
-                  c->shl(c->constant(log(BytesPerWord)), index)),
+           c->add(4, c->constant(ArrayBody),
+                  c->shl(4, c->constant(log(BytesPerWord)), index)),
            value);
       } break;
 
       case fastore:
       case iastore:
-        c->store4(value, c->memory(array, ArrayBody, index, 4));
+        c->store(4, value, c->memory(array, ArrayBody, index, 4));
         break;
 
       case bastore:
-        c->store1(value, c->memory(array, ArrayBody, index, 1));
+        c->store(1, value, c->memory(array, ArrayBody, index, 1));
         break;
 
       case castore:
       case sastore:
-        c->store2(value, c->memory(array, ArrayBody, index, 2));
+        c->store(2, value, c->memory(array, ArrayBody, index, 2));
         break;
 
       case dastore:
       case lastore:
-        c->store8(value, c->memory(array, ArrayBody, index, 8));
+        c->store(8, value, c->memory(array, ArrayBody, index, 8));
         break;
       }
     } break;
@@ -1683,11 +1712,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* nonnegative = c->label();
 
       Compiler::Operand* length = frame->popInt();
-      c->cmp(c->constant(0), length);
+      c->cmp(4, c->constant(0), length);
       c->jge(nonnegative);
-
-      c->push(length);
-      c->push(c->thread());
 
       c->call
         (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
@@ -1711,13 +1737,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case areturn: {
       handleExit(t, frame);
-      c->return_(frame->popObject());
+      c->return_(BytesPerWord, frame->popObject());
     } return;
 
     case arraylength: {
       frame->pushInt
         (c->load
-         (c->memory
+         (BytesPerWord, c->memory
           (frame->popObject(), ArrayLength, 0, 1, frame->trace(0, false))));
     } break;
 
@@ -1825,11 +1851,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case dconst_0:
-      frame->pushLong(c->constant8(doubleToBits(0.0)));
+      frame->pushLong(c->constant(doubleToBits(0.0)));
       break;
       
     case dconst_1:
-      frame->pushLong(c->constant8(doubleToBits(1.0)));
+      frame->pushLong(c->constant(doubleToBits(1.0)));
       break;
 
     case ddiv: {
@@ -2045,34 +2071,36 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       case ByteField:
       case BooleanField:
         frame->pushInt
-          (c->load1(c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(1, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
         break;
 
       case CharField:
         frame->pushInt
-          (c->load2z(c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->loadz(2, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
         break;
 
       case ShortField:
         frame->pushInt
-          (c->load2(c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(2, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
         break;
 
       case FloatField:
       case IntField:
         frame->pushInt
-          (c->load4(c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(4, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
         break;
 
       case DoubleField:
       case LongField:
         frame->pushLong
-          (c->load8(c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(8, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
         break;
 
       case ObjectField:
         frame->pushObject
-          (c->load(c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load
+           (BytesPerWord, c->memory
+            (table, fieldOffset(t, field), 0, 1, trace)));
         break;
 
       default:
@@ -2097,11 +2125,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case i2b: {
-      frame->pushInt(c->load1(frame->popInt()));
+      frame->pushInt(c->load(1, frame->popInt()));
     } break;
 
     case i2c: {
-      frame->pushInt(c->load2z(frame->popInt()));
+      frame->pushInt(c->loadz(2, frame->popInt()));
     } break;
 
     case i2d: {
@@ -2123,19 +2151,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       break;
 
     case i2s: {
-      frame->pushInt(c->load2(frame->popInt()));
+      frame->pushInt(c->load(2, frame->popInt()));
     } break;
       
     case iadd: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->add(a, b));
+      frame->pushInt(c->add(4, a, b));
     } break;
       
     case iand: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->and_(a, b));
+      frame->pushInt(c->and_(4, a, b));
     } break;
 
     case iconst_m1:
@@ -2169,7 +2197,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case idiv: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->div(a, b));
+      frame->pushInt(c->div(4, a, b));
     } break;
 
     case if_acmpeq:
@@ -2181,7 +2209,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* b = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->cmp(a, b);
+      c->cmp(BytesPerWord, a, b);
       if (instruction == if_acmpeq) {
         c->je(target);
       } else {
@@ -2205,7 +2233,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* b = frame->popInt();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->cmp(a, b);
+      c->cmp(4, a, b);
       switch (instruction) {
       case if_icmpeq:
         c->je(target);
@@ -2243,7 +2271,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->cmp(c->constant(0), a);
+      c->cmp(4, c->constant(0), a);
       switch (instruction) {
       case ifeq:
         c->je(target);
@@ -2277,7 +2305,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* a = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->cmp(c->constant(0), a);
+      c->cmp(BytesPerWord, c->constant(0), a);
       if (instruction == ifnull) {
         c->je(target);
       } else {
@@ -2295,7 +2323,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* a = c->memory
         (c->base(), localOffset(t, index, context->method));
 
-      c->store(c->add(c->constant(count), a), a);
+      c->store(4, c->add(4, c->constant(count), a), a);
     } break;
 
     case iload:
@@ -2326,11 +2354,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case imul: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->mul(a, b));
+      frame->pushInt(c->mul(4, a, b));
     } break;
 
     case ineg: {
-      frame->pushInt(c->neg(frame->popInt()));
+      frame->pushInt(c->neg(4, frame->popInt()));
     } break;
 
     case instanceof: {
@@ -2357,6 +2385,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       unsigned instance = parameterFootprint - 1;
 
+      unsigned rSize = resultSize(t, methodReturnCode(t, target));
+
       Compiler::Operand* result = c->call
         (c->call
          (c->constant
@@ -2370,13 +2400,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
          0,
          0,
          frame->trace(target, true),
-         resultSize(t, methodReturnCode(t, target)),
+         rSize,
          0);
 
       frame->pop(parameterFootprint);
 
-      if (methodReturnCode(t, target) != VoidField) {
-        c->push(result);
+      if (rSize) {
+        c->push(rSize, result);
       }
     } break;
 
@@ -2415,52 +2445,54 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Compiler::Operand* instance = c->peek(parameterFootprint - 1);
 
+      unsigned rSize = resultSize(t, methodReturnCode(t, target));
+
       Compiler::Operand* result = c->call
         (c->memory
          (c->and_
-          (c->constant(PointerMask), c->memory
+          (4, c->constant(PointerMask), c->memory
            (instance, 0, 0, 1, frame->trace(0, false))), offset, 0, 1),
          0,
          0,
          frame->trace(0, true),
-         resultSize(t, methodReturnCode(t, target)),
+         rSize,
          0);
 
       frame->pop(parameterFootprint);
 
-      if (methodReturnCode(t, target) != VoidField) {
-        c->push(result);
+      if (rSize) {
+        c->push(rSize, result);
       }
     } break;
 
     case ior: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->or_(a, b));
+      frame->pushInt(c->or_(4, a, b));
     } break;
 
     case irem: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->rem(a, b));
+      frame->pushInt(c->rem(4, a, b));
     } break;
 
     case ireturn:
     case freturn: {
       handleExit(t, frame);
-      c->return_(frame->popInt());
+      c->return_(4, frame->popInt());
     } return;
 
     case ishl: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->shl(a, b));
+      frame->pushInt(c->shl(4, a, b));
     } break;
 
     case ishr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->shr(a, b));
+      frame->pushInt(c->shr(4, a, b));
     } break;
 
     case istore:
@@ -2491,19 +2523,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case isub: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->sub(a, b));
+      frame->pushInt(c->sub(4, a, b));
     } break;
 
     case iushr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->ushr(a, b));
+      frame->pushInt(c->ushr(4, a, b));
     } break;
 
     case ixor: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->xor_(a, b));
+      frame->pushInt(c->xor_(4, a, b));
     } break;
 
     case jsr:
@@ -2530,19 +2562,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case l2i:
-      frame->pushInt(c->load4(frame->popLong()));
+      frame->pushInt(c->load(4, frame->popLong()));
       break;
 
     case ladd: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->add(a, b));
+      frame->pushLong(c->add(8, a, b));
     } break;
 
     case land: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->and_(a, b));
+      frame->pushLong(c->and_(8, a, b));
     } break;
 
     case lcmp: {
@@ -2553,19 +2585,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      c->cmp(a, b);
+      c->cmp(8, a, b);
       c->jl(less);
       c->jg(greater);
 
-      c->push(c->constant(0));
+      c->push(4, c->constant(0));
       c->jmp(next);
           
       c->mark(less);
-      c->push(c->constant(-1));
+      c->push(4, c->constant(-1));
       c->jmp(next);
 
       c->mark(greater);
-      c->push(c->constant(1));
+      c->push(4, c->constant(1));
 
       c->mark(next);
 
@@ -2573,11 +2605,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     } break;
 
     case lconst_0:
-      frame->pushLong(c->constant8(0));
+      frame->pushLong(c->constant(0));
       break;
 
     case lconst_1:
-      frame->pushLong(c->constant8(1));
+      frame->pushLong(c->constant(1));
       break;
 
     case ldc:
@@ -2616,13 +2648,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       uint64_t v;
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
-      frame->pushLong(c->constant8(v));
+      frame->pushLong(c->constant(v));
     } break;
 
     case ldiv_: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->div(a, b));
+      frame->pushLong(c->div(8, a, b));
     } break;
 
     case lload:
@@ -2653,11 +2685,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case lmul: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->mul(a, b));
+      frame->pushLong(c->mul(8, a, b));
     } break;
 
     case lneg:
-      frame->pushLong(c->neg(frame->popLong()));
+      frame->pushLong(c->neg(8, frame->popLong()));
       break;
 
     case lookupswitch: {
@@ -2710,31 +2742,31 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case lor: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->or_(a, b));
+      frame->pushLong(c->or_(8, a, b));
     } break;
 
     case lrem: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->rem(a, b));
+      frame->pushLong(c->rem(8, a, b));
     } break;
 
     case lreturn:
     case dreturn: {
       handleExit(t, frame);
-      c->return_(frame->popLong());
+      c->return_(8, frame->popLong());
     } return;
 
     case lshl: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->shl(a, b));
+      frame->pushLong(c->shl(8, a, b));
     } break;
 
     case lshr: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->shr(a, b));
+      frame->pushLong(c->shr(8, a, b));
     } break;
 
     case lstore:
@@ -2765,19 +2797,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case lsub: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->sub(a, b));
+      frame->pushLong(c->sub(8, a, b));
     } break;
 
     case lushr: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->ushr(a, b));
+      frame->pushLong(c->ushr(8, a, b));
     } break;
 
     case lxor: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->xor_(a, b));
+      frame->pushLong(c->xor_(8, a, b));
     } break;
 
     case monitorenter: {
@@ -2808,8 +2840,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
          0,
          frame->trace(0, false),
          BytesPerWord,
-         4, c->thread(), frame->append(class_), c->load(c->stack()),
-         c->constant(dimensions));
+         4, c->thread(), frame->append(class_),
+         c->load(BytesPerWord, c->stack()), c->constant(dimensions));
 
       frame->pop(dimensions);
       frame->pushObject(result);
@@ -2849,7 +2881,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Compiler::Operand* length = frame->popInt();
 
-      c->cmp(c->constant(0), length);
+      c->cmp(4, c->constant(0), length);
       c->jge(nonnegative);
 
       c->call
@@ -2980,22 +3012,26 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        c->store1(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store
+          (1, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case CharField:
       case ShortField:
-        c->store2(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store
+          (2, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
             
       case FloatField:
       case IntField:
-        c->store4(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store
+          (4, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case DoubleField:
       case LongField:
-        c->store8(value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store
+          (8, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
         break;
 
       case ObjectField:
@@ -3028,7 +3064,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     case return_:
       handleExit(t, frame);
-      c->return_(0);
+      c->return_(0, 0);
       return;
 
     case sipush:
@@ -3071,13 +3107,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       Compiler::Operand* defaultCase = c->label();
       
-      c->cmp(c->constant(bottom), key);
+      c->cmp(4, c->constant(bottom), key);
       c->jl(defaultCase);
 
-      c->cmp(c->constant(top), key);
+      c->cmp(4, c->constant(top), key);
       c->jg(defaultCase);
 
-      c->sub(c->constant(bottom), key);
+      c->sub(4, c->constant(bottom), key);
       c->jmp(c->memory(start, 0, key, BytesPerWord));
 
       c->mark(defaultCase);
@@ -3108,7 +3144,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         Compiler::Operand* a = c->memory
           (c->base(), localOffset(t, index, context->method));
 
-        c->store(c->add(c->constant(count), a), a);
+        c->store(4, c->add(4, c->constant(count), a), a);
       } break;
 
       case iload: {
@@ -3476,7 +3512,7 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (false and
+  if (//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),

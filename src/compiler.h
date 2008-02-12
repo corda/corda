@@ -29,10 +29,8 @@ class Compiler {
   virtual Promise* poolAppend(intptr_t value) = 0;
   virtual Promise* poolAppendPromise(Promise* value) = 0;
 
-  virtual Operand* constant(intptr_t value) = 0;
-  virtual Operand* constant8(int64_t value) = 0;
+  virtual Operand* constant(int64_t value) = 0;
   virtual Operand* promiseConstant(Promise* value) = 0;
-  virtual Operand* promiseConstant8(Promise* value) = 0;
   virtual Operand* address(Promise* address) = 0;
   virtual Operand* memory(Operand* base,
                           int displacement = 0,
@@ -46,10 +44,10 @@ class Compiler {
   virtual Operand* label() = 0;
   virtual void mark(Operand* label) = 0;
 
-  virtual void push(Operand* value) = 0;
-  virtual Operand* pop() = 0;
-  virtual void push(unsigned count) = 0;
-  virtual void pop(unsigned count) = 0;
+  virtual void push(unsigned size, Operand* value) = 0;
+  virtual Operand* pop(unsigned size) = 0;
+  virtual void pushed(unsigned count) = 0;
+  virtual void popped(unsigned count) = 0;
   virtual Operand* peek(unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
@@ -59,21 +57,14 @@ class Compiler {
                         unsigned resultSize,
                         unsigned argumentCount,
                         ...) = 0;
-  virtual void return_(Operand* value) = 0;
 
-  virtual void store(Operand* src, Operand* dst) = 0;
-  virtual void store1(Operand* src, Operand* dst) = 0;
-  virtual void store2(Operand* src, Operand* dst) = 0;
-  virtual void store4(Operand* src, Operand* dst) = 0;
-  virtual void store8(Operand* src, Operand* dst) = 0;
-  virtual Operand* load(Operand* src) = 0;
-  virtual Operand* load1(Operand* src) = 0;
-  virtual Operand* load2(Operand* src) = 0;
-  virtual Operand* load2z(Operand* src) = 0;
-  virtual Operand* load4(Operand* src) = 0;
-  virtual Operand* load8(Operand* src) = 0;
+  virtual void return_(unsigned size, Operand* value) = 0;
+
+  virtual void store(unsigned size, Operand* src, Operand* dst) = 0;
+  virtual Operand* load(unsigned size, Operand* src) = 0;
+  virtual Operand* loadz(unsigned size, Operand* src) = 0;
   virtual Operand* load4To8(Operand* src) = 0;
-  virtual void cmp(Operand* a, Operand* b) = 0;
+  virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
   virtual void jl(Operand* address) = 0;
   virtual void jg(Operand* address) = 0;
   virtual void jle(Operand* address) = 0;
@@ -81,18 +72,18 @@ class Compiler {
   virtual void je(Operand* address) = 0;
   virtual void jne(Operand* address) = 0;
   virtual void jmp(Operand* address) = 0;
-  virtual Operand* add(Operand* a, Operand* b) = 0;
-  virtual Operand* sub(Operand* a, Operand* b) = 0;
-  virtual Operand* mul(Operand* a, Operand* b) = 0;
-  virtual Operand* div(Operand* a, Operand* b) = 0;
-  virtual Operand* rem(Operand* a, Operand* b) = 0;
-  virtual Operand* shl(Operand* a, Operand* b) = 0;
-  virtual Operand* shr(Operand* a, Operand* b) = 0;
-  virtual Operand* ushr(Operand* a, Operand* b) = 0;
-  virtual Operand* and_(Operand* a, Operand* b) = 0;
-  virtual Operand* or_(Operand* a, Operand* b) = 0;
-  virtual Operand* xor_(Operand* a, Operand* b) = 0;
-  virtual Operand* neg(Operand* a) = 0;
+  virtual Operand* add(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* sub(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* mul(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* div(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* rem(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* shl(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* shr(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* ushr(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* and_(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* or_(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* xor_(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* neg(unsigned size, Operand* a) = 0;
 
   virtual unsigned compile() = 0;
   virtual unsigned poolSize() = 0;

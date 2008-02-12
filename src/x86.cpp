@@ -337,6 +337,37 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+moveMR(Context* c, unsigned size, Assembler::Memory* a, Assembler::Register* b)
+{
+  switch (size) {
+  case 1:
+    encode2(c, 0x0fbe, b->low, a, true);
+    break;
+
+  case 2:
+    encode2(c, 0x0fbf, b->low, a, true);
+    break;
+
+  case 4:
+  case 8:
+    if (BytesPerWord == 4 and size == 8) {
+      moveMR(c, 4, a, b);
+    
+      Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+      Assembler::Register bh(b->high);
+      moveMR(c, 4, &ah, &bh);
+    } else if (BytesPerWord == 8 and size == 4) {
+      encode(c, 0x63, b->low, a, true);
+    } else {
+      encode(c, 0x8b, b->low, a, true);
+    }
+    break;
+
+  default: abort(c);
+  }
+}
+
+void
 move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8); // todo
@@ -363,14 +394,11 @@ populateTables()
   UnaryOperations[INDEX1(Call, Constant)] = CAST1(callC);
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
 
-  BinaryOperations[INDEX2(Move4, Constant, Register)] = CAST2(moveCR);
-  BinaryOperations[INDEX2(Move8, Constant, Register)] = CAST2(moveCR);
-  BinaryOperations[INDEX2(Move4, Constant, Memory)] = CAST2(moveCM);
-  BinaryOperations[INDEX2(Move8, Constant, Memory)] = CAST2(moveCM);
-  BinaryOperations[INDEX2(Move4, Register, Memory)] = CAST2(moveRM);
-  BinaryOperations[INDEX2(Move8, Register, Memory)] = CAST2(moveRM);
-  BinaryOperations[INDEX2(Move4, Register, Register)] = CAST2(moveRR);
-  BinaryOperations[INDEX2(Move8, Register, Register)] = CAST2(moveRR);
+  BinaryOperations[INDEX2(Move, Constant, Register)] = CAST2(moveCR);
+  BinaryOperations[INDEX2(Move, Constant, Memory)] = CAST2(moveCM);
+  BinaryOperations[INDEX2(Move, Register, Memory)] = CAST2(moveRM);
+  BinaryOperations[INDEX2(Move, Register, Register)] = CAST2(moveRR);
+  BinaryOperations[INDEX2(Move, Memory, Register)] = CAST2(moveMR);
   BinaryOperations[INDEX2(Move4To8, Memory, Register)] = CAST2(move4To8MR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
 }
