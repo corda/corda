@@ -1,4 +1,4 @@
-#include "compiler2.h"
+#include "compiler.h"
 #include "assembler.h"
 
 using namespace vm;
@@ -527,11 +527,14 @@ class ReturnEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    a->value->release(c, a);
+    if (a) {
+      a->value->release(c, a);
 
-    if (not a->target->equals(a->value)) {
-      apply(c, Move, a->size, a->value, a->target);
+      if (not a->target->equals(a->value)) {
+        apply(c, Move, a->size, a->value, a->target);
+      }
     }
+
     c->assembler->apply(Return);
   }
 
@@ -743,7 +746,11 @@ class MoveEvent: public Event {
   virtual Value* target(Context* c, MyOperand* v) {
     assert(c, v == src);
 
-    return v->event->target(c, dst);
+    if (dst->value) {
+      return dst->value;
+    } else {
+      return v->event->target(c, dst);
+    }
   }
 
   virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
@@ -754,7 +761,11 @@ class MoveEvent: public Event {
 
   virtual void compile(Context* c) {
     if (src->target == 0) {
-      src->target = freeRegister(c, src->size);
+      if (dst->value) {
+        src->target = dst->value;
+      } else {
+        src->target = freeRegister(c, src->size);
+      }
     }
 
     src->value->release(c, src);
@@ -1127,8 +1138,14 @@ updateJunctions(Context* c)
 void
 compile(Context* c)
 {
-  for (Event* e = c->logicalCode[0].firstEvent; e; e = e->next) {
-    e->compile(c);
+  for (unsigned i = 0; i < c->logicalCodeLength; ++ i) {
+    fprintf(stderr, "compile ip %d\n", i);
+    for (Event* e = c->logicalCode[i].firstEvent; e; e = e->next) {
+      fprintf(stderr, "compile ip %d event\n", i);
+      e->compile(c);
+
+      if (e == c->logicalCode[i].lastEvent) break;
+    }
   }
 }
 
@@ -1320,22 +1337,22 @@ class MyCompiler: public Compiler {
   }
 
   virtual void store1(Operand* src, Operand* dst) {
-    appendMove(&c, Store1, static_cast<MyOperand*>(src),
+    appendMove(&c, Move1, static_cast<MyOperand*>(src),
                static_cast<MyOperand*>(dst));
   }
 
   virtual void store2(Operand* src, Operand* dst) {
-    appendMove(&c, Store2, static_cast<MyOperand*>(src),
+    appendMove(&c, Move2, static_cast<MyOperand*>(src),
                static_cast<MyOperand*>(dst));
   }
 
   virtual void store4(Operand* src, Operand* dst) {
-    appendMove(&c, Store4, static_cast<MyOperand*>(src),
+    appendMove(&c, Move4, static_cast<MyOperand*>(src),
                static_cast<MyOperand*>(dst));
   }
 
   virtual void store8(Operand* src, Operand* dst) {
-    appendMove(&c, Store8, static_cast<MyOperand*>(src),
+    appendMove(&c, Move8, static_cast<MyOperand*>(src),
                static_cast<MyOperand*>(dst));
   }
 
@@ -1347,37 +1364,39 @@ class MyCompiler: public Compiler {
 
   virtual Operand* load1(Operand* src) {
     MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Load1, static_cast<MyOperand*>(src), dst);
+    appendMove(&c, Move1ToW, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load2(Operand* src) {
     MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Load2, static_cast<MyOperand*>(src), dst);
+    appendMove(&c, Move2ToW, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load2z(Operand* src) {
     MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Load2z, static_cast<MyOperand*>(src), dst);
+    appendMove(&c, Move2zToW, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load4(Operand* src) {
-    MyOperand* dst = operand(&c, BytesPerWord);
-    appendMove(&c, Load4, static_cast<MyOperand*>(src), dst);
-    return dst;
+    if (BytesPerWord == 4) {
+      return load(src);
+    } else {
+      return load4To8(src);
+    }
   }
 
   virtual Operand* load8(Operand* src) {
     MyOperand* dst = operand(&c, 8);
-    appendMove(&c, Load8, static_cast<MyOperand*>(src), dst);
+    appendMove(&c, Move8, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 
   virtual Operand* load4To8(Operand* src) {
     MyOperand* dst = operand(&c, 8);
-    appendMove(&c, Load4To8, static_cast<MyOperand*>(src), dst);
+    appendMove(&c, Move4To8, static_cast<MyOperand*>(src), dst);
     return dst;
   }
 

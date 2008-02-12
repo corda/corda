@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 name = vm
 

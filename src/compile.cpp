@@ -3,7 +3,7 @@
 #include "vector.h"
 #include "process.h"
 #include "assembler.h"
-#include "compiler2.h"
+#include "compiler.h"
 #include "x86.h"
 
 using namespace vm;
@@ -17,7 +17,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugTraces = false;
 const bool DebugFrameMaps = false;
@@ -403,7 +403,7 @@ class Context {
   { }
 
   ~Context() {
-    compiler->dispose();
+    if (compiler) compiler->dispose();
     assembler->dispose();
   }
 
@@ -3414,7 +3414,9 @@ finish(MyThread* t, Assembler* a, const char* name)
 
   a->writeTo(start);
 
-  logCompile(start, a->length(), 0, name, 0);
+  if (Verbose) {
+    logCompile(start, a->length(), 0, name, 0);
+  }
 
   return result;
 }

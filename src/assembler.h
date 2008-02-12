@@ -10,6 +10,8 @@ enum Operation {
   Return
 };
 
+const unsigned OperationCount = Return + 1;
+
 enum UnaryOperation {
   Call,
   Push,
@@ -23,19 +25,18 @@ enum UnaryOperation {
   Negate
 };
 
+const unsigned UnaryOperationCount = Negate + 1;
+
 enum BinaryOperation {
   LoadAddress,
-  Move,
-  Store1,
-  Store2,
-  Store4,
-  Store8,
-  Load1,
-  Load2,
-  Load2z,
-  Load4,
-  Load8,
-  Load4To8,
+  Move1,
+  Move2,
+  Move4,
+  Move8,
+  Move1ToW,
+  Move2ToW,
+  Move2zToW,
+  Move4To8,
   Compare,
   Add,
   Subtract,
@@ -50,12 +51,18 @@ enum BinaryOperation {
   Xor
 };
 
+const BinaryOperation Move = (BytesPerWord == 8 ? Move8 : Move4);
+
+const unsigned BinaryOperationCount = Xor + 1;
+
 enum OperandType {
   Constant,
   Address,
   Register,
   Memory
 };
+
+const unsigned OperandTypeCount = Memory + 1;
 
 const int NoRegister = -1;
 const int AnyRegister = -2;
