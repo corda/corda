@@ -534,6 +534,10 @@ class ReturnEvent: public Event {
       }
     }
 
+    Assembler::Register base(c->assembler->base());
+    Assembler::Register stack(c->assembler->stack());
+    c->assembler->apply(Move, BytesPerWord, Register, &base, Register, &stack);
+    c->assembler->apply(Pop, BytesPerWord, Register, &base);
     c->assembler->apply(Return);
   }
 
@@ -1156,6 +1160,13 @@ updateJunctions(Context* c)
 void
 compile(Context* c)
 {
+  Assembler* a = c->assembler;
+
+  Assembler::Register base(a->base());
+  Assembler::Register stack(a->stack());
+  a->apply(Push, BytesPerWord, Register, &base);
+  a->apply(Move, BytesPerWord, Register, &stack, Register, &base);
+
   for (unsigned i = 0; i < c->logicalCodeLength; ++ i) {
     fprintf(stderr, "compile ip %d\n", i);
     for (Event* e = c->logicalCode[i].firstEvent; e; e = e->next) {

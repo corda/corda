@@ -282,6 +282,32 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 }
 
 void
+pushR(Context* c, unsigned size, Assembler::Register* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+
+    pushR(c, 4, &ah);
+    pushR(c, 4, a);
+  } else {
+    c->code.append(0x50 | a->low);      
+  }
+}
+
+void
+popR(Context* c, unsigned size, Assembler::Register* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+
+    popR(c, 4, a);
+    popR(c, 4, &ah);
+  } else {
+    c->code.append(0x50 | a->low);      
+  }
+}
+
+void
 moveCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
        Assembler::Register* b)
 {
@@ -307,10 +333,10 @@ void
 moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
 {
   if (BytesPerWord == 4 and size == 8) {
-    moveRM(c, 4, a, b);
-    
     Assembler::Register ah(a->high);
     Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
+
+    moveRM(c, 4, a, b);    
     moveRM(c, 4, &ah, &bh);
   } else if (BytesPerWord == 8 and size == 4) {
     encode(c, 0x89, a->low, b, false);
@@ -324,10 +350,10 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
        Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
-    moveRR(c, 4, a, b);
-    
     Assembler::Register ah(a->low);
     Assembler::Register bh(b->low);
+
+    moveRR(c, 4, a, b);
     moveRR(c, 4, &ah, &bh);
   } else {
     rex(c);
@@ -351,10 +377,10 @@ moveMR(Context* c, unsigned size, Assembler::Memory* a, Assembler::Register* b)
   case 4:
   case 8:
     if (BytesPerWord == 4 and size == 8) {
-      moveMR(c, 4, a, b);
-    
       Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
       Assembler::Register bh(b->high);
+
+      moveMR(c, 4, a, b);    
       moveMR(c, 4, &ah, &bh);
     } else if (BytesPerWord == 8 and size == 4) {
       encode(c, 0x63, b->low, a, true);
@@ -393,6 +419,8 @@ populateTables()
 
   UnaryOperations[INDEX1(Call, Constant)] = CAST1(callC);
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
+  UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
+  UnaryOperations[INDEX1(Pop, Register)] = CAST1(popR);
 
   BinaryOperations[INDEX2(Move, Constant, Register)] = CAST2(moveCR);
   BinaryOperations[INDEX2(Move, Constant, Memory)] = CAST2(moveCM);

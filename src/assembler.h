@@ -15,6 +15,7 @@ const unsigned OperationCount = Return + 1;
 enum UnaryOperation {
   Call,
   Push,
+  Pop,
   JumpIfLess,
   JumpIfGreater,
   JumpIfLessOrEqual,
