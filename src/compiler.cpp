@@ -513,7 +513,7 @@ class ArgumentEvent: public Event {
       return register_(c, c->assembler->argumentRegister(index));
     } else {
       return memory(c, c->assembler->base(),
-                    index + (c->stackOffset * BytesPerWord),
+                    -(index + ((c->stackOffset + 1) * BytesPerWord)),
                     NoRegister, 0, 0);
     }
   }
@@ -617,7 +617,7 @@ class SyncForCallEvent: public Event {
     assert(c, v == src);
 
     return memory(c, c->assembler->base(),
-                  index + (c->stackOffset * BytesPerWord),
+                  -(index + ((c->stackOffset + 1) * BytesPerWord)),
                   NoRegister, 0, 0);
   }
 
@@ -749,8 +749,7 @@ class CallEvent: public Event {
     assert(c, v == address);
 
     if (indirection) {
-      return register_
-        (c, c->assembler->returnLow(), c->assembler->returnHigh());
+      return register_(c, c->assembler->returnLow(), NoRegister);
     } else {
       return 0;
     }
@@ -777,19 +776,23 @@ class CallEvent: public Event {
     }
 
     if (stackOffset != c->stackOffset) {
-      apply(c, LoadAddress, BytesPerWord, register_(c, c->assembler->stack()),
-            memory(c, c->assembler->base(), stackOffset * BytesPerWord,
-                   NoRegister, 0, 0));
+      apply(c, LoadAddress, BytesPerWord,
+            memory(c, c->assembler->base(),
+                   -((stackOffset + 1) * BytesPerWord),
+                   NoRegister, 0, 0),
+            register_(c, c->assembler->stack()));
     }
 
+    UnaryOperation type = ((flags & Compiler::Aligned) ? AlignedCall : Call);
+
     if (indirection) {
-      if (address->target->equals(address->value)) {
+      if (not address->target->equals(address->value)) {
         apply(c, Move, BytesPerWord, address->value, address->target);
       }
-      apply(c, Call, BytesPerWord,
+      apply(c, type, BytesPerWord,
             constant(c, reinterpret_cast<intptr_t>(indirection)));
     } else {
-      apply(c, Call, BytesPerWord, address->value);
+      apply(c, type, BytesPerWord, address->value);
     }
 
     if (traceHandler) {
@@ -1303,17 +1306,19 @@ stack(Context* c, MyOperand* operand, unsigned size, unsigned index,
     Stack(operand, size, index, next);
 }
 
+Stack*
+stack(Context* c, MyOperand* operand, unsigned size, Stack* next)
+{
+  return stack(c, operand, size, (next ? next->index + size : 0), next);
+}
+
 void
 push(Context* c, unsigned size, MyOperand* o)
 {
   assert(c, ceiling(size, BytesPerWord));
   assert(c, o->event == 0);
 
-  c->state->stack = stack
-    (c, o, ceiling(size, BytesPerWord),
-     ceiling(size, BytesPerWord)
-     + (c->state->stack ? c->state->stack->index : 0),
-     c->state->stack);
+  c->state->stack = stack(c, o, ceiling(size, BytesPerWord), c->state->stack);
 }
 
 MyOperand*
@@ -1571,9 +1576,9 @@ class MyCompiler: public Compiler {
     syncStack(&c, SyncForCall);
 
     unsigned stackOffset = c.stackOffset
-      + (c.state->stack ? c.state->stack->index
-         + (footprint > c.assembler->argumentRegisterCount() ?
-            footprint - c.assembler->argumentRegisterCount() : 0) : 0);
+      + (c.state->stack ? c.state->stack->index + c.state->stack->size : 0)
+      + (footprint > c.assembler->argumentRegisterCount() ?
+         footprint - c.assembler->argumentRegisterCount() : 0);
 
     MyOperand* result = operand(&c);
     appendCall(&c, static_cast<MyOperand*>(address), indirection, flags,

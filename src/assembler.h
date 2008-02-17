@@ -13,16 +13,17 @@ enum Operation {
 const unsigned OperationCount = Return + 1;
 
 enum UnaryOperation {
-  Call,
   Push,
   Pop,
+  Call,
+  AlignedCall,
+  Jump,
   JumpIfLess,
   JumpIfGreater,
   JumpIfLessOrEqual,
   JumpIfGreaterOrEqual,
   JumpIfEqual,
   JumpIfNotEqual,
-  Jump,
   Negate
 };
 

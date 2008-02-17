@@ -3510,7 +3510,7 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (//false and
+  if (true or//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
@@ -3966,7 +3966,7 @@ saveStackAndBase(MyThread* t, Assembler* a)
   a->apply(Move, BytesPerWord, Register, &base, Memory, &baseDst);
 
   Assembler::Register stack(a->stack());
-  Assembler::Memory stackDst(a->thread(), difference(&(t->base), t));
+  Assembler::Memory stackDst(a->thread(), difference(&(t->stack), t));
   a->apply(Move, BytesPerWord, Register, &stack, Memory, &stackDst);
 }
 
@@ -3983,15 +3983,28 @@ pushThread(MyThread*, Assembler* a)
   }
 }
 
+void
+popThread(MyThread*, Assembler* a)
+{
+  if (a->argumentRegisterCount() == 0) {
+    ResolvedPromise bpwPromise(BytesPerWord);
+    Assembler::Constant bpw(&bpwPromise);
+    Assembler::Register stack(a->stack());
+    a->apply(Add, BytesPerWord, Constant, &bpw, Register, &stack);
+  }
+}
+
 object
 compileDefault(MyThread* t, Assembler* a)
 {
   saveStackAndBase(t, a);
   pushThread(t, a);
   
-  ResolvedPromise promise(reinterpret_cast<intptr_t>(compileMethod));
-  Assembler::Constant proc(&promise);
+  ResolvedPromise procPromise(reinterpret_cast<intptr_t>(compileMethod));
+  Assembler::Constant proc(&procPromise);
   a->apply(Call, BytesPerWord, Constant, &proc);
+
+  popThread(t, a);
 
   Assembler::Register result(a->returnLow());
   a->apply(Jump, BytesPerWord, Register, &result);
@@ -4009,6 +4022,8 @@ compileNative(MyThread* t, Assembler* a)
   Assembler::Constant proc(&promise);
   a->apply(Call, BytesPerWord, Constant, &proc);
   
+  popThread(t, a);
+
   a->apply(Return);
 
   return finish(t, a, "native");

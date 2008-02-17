@@ -297,12 +297,30 @@ callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
-jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
+alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  while ((c->code.length() + 1) % 4) {
+    c->code.append(0x90);
+  }
+  callC(c, size, a);
+}
+
+void
+callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, size == BytesPerWord);
 
   c->code.append(0xff);
   c->code.append(0xd0 | a->low);
+}
+
+void
+jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
+{
+  assert(c, size == BytesPerWord);
+
+  c->code.append(0xff);
+  c->code.append(0xe0 | a->low);
 }
 
 void
@@ -319,6 +337,10 @@ pushR(Context* c, unsigned size, Assembler::Register* a)
 }
 
 void
+move4To8RR(Context* c, unsigned size, Assembler::Register* a,
+           Assembler::Register* b);
+
+void
 popR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
@@ -327,12 +349,15 @@ popR(Context* c, unsigned size, Assembler::Register* a)
     popR(c, 4, a);
     popR(c, 4, &ah);
   } else {
-    c->code.append(0x50 | a->low);      
+    c->code.append(0x58 | a->low);
+    if (BytesPerWord == 8 and size == 4) {
+      move4To8RR(c, 0, a, a);
+    }
   }
 }
 
 void
-leaRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
+leaMR(Context* c, unsigned size, Assembler::Memory* b, Assembler::Register* a)
 {
   if (BytesPerWord == 8 and size == 4) {
     encode(c, 0x8d, a->low, b, false);
@@ -404,6 +429,17 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+move4To8RR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+           Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8);
+
+  rex(c);
+  c->code.append(0x63);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
 moveMR(Context* c, unsigned size, Assembler::Memory* a, Assembler::Register* b)
 {
   switch (size) {
@@ -456,6 +492,29 @@ move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
 }
 
 void
+addCR(Context* c, unsigned size, Assembler::Constant* a,
+       Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  int64_t v = a->value->value();
+  if (v) {
+    rex(c);
+    if (isInt8(v)) {
+      c->code.append(0x83);
+      c->code.append(0xc0 | b->low);
+      c->code.append(v);
+    } else if (isInt32(v)) {
+      c->code.append(0x81);
+      c->code.append(0xc0 | b->low);
+      c->code.append4(v);        
+    } else {
+      abort(c);
+    }
+  }
+}
+
+void
 addRR(Context* c, unsigned size, Assembler::Register* a,
        Assembler::Register* b)
 {
@@ -481,18 +540,22 @@ populateTables()
   Operations[Return] = return_;
 
   UnaryOperations[INDEX1(Call, Constant)] = CAST1(callC);
+  UnaryOperations[INDEX1(AlignedCall, Constant)] = CAST1(alignedCallC);
+  UnaryOperations[INDEX1(Call, Register)] = CAST1(callR);
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
   UnaryOperations[INDEX1(Pop, Register)] = CAST1(popR);
 
-  BinaryOperations[INDEX2(LoadAddress, Register, Memory)] = CAST2(leaRM);
+  BinaryOperations[INDEX2(LoadAddress, Memory, Register)] = CAST2(leaMR);
   BinaryOperations[INDEX2(Move, Constant, Register)] = CAST2(moveCR);
   BinaryOperations[INDEX2(Move, Constant, Memory)] = CAST2(moveCM);
   BinaryOperations[INDEX2(Move, Register, Memory)] = CAST2(moveRM);
   BinaryOperations[INDEX2(Move, Register, Register)] = CAST2(moveRR);
+  BinaryOperations[INDEX2(Move4To8, Register, Register)] = CAST2(move4To8RR);
   BinaryOperations[INDEX2(Move, Memory, Register)] = CAST2(moveMR);
   BinaryOperations[INDEX2(Move, Address, Register)] = CAST2(moveAR);
   BinaryOperations[INDEX2(Move4To8, Memory, Register)] = CAST2(move4To8MR);
+  BinaryOperations[INDEX2(Add, Constant, Register)] = CAST2(addCR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
 }
