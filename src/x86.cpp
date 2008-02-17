@@ -121,7 +121,7 @@ class Task {
 
 class OffsetTask: public Task {
  public:
-  OffsetTask(Task* next, Promise* promise, int instructionOffset,
+  OffsetTask(Task* next, Promise* promise, unsigned instructionOffset,
              unsigned instructionSize):
     Task(next),
     promise(promise),
@@ -141,7 +141,7 @@ class OffsetTask: public Task {
   }
 
   Promise* promise;
-  int instructionOffset;
+  unsigned instructionOffset;
   unsigned instructionSize;
 };
 
@@ -151,6 +151,30 @@ appendOffsetTask(Context* c, Promise* promise, int instructionOffset,
 {
   c->tasks = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
     (c->tasks, promise, instructionOffset, instructionSize);
+}
+
+class ImmediateTask: public Task {
+ public:
+  ImmediateTask(Task* next, Promise* promise, unsigned offset):
+    Task(next),
+    promise(promise),
+    offset(offset)
+  { }
+
+  virtual void run(Context* c) {
+    intptr_t v = promise->value();
+    memcpy(c->result + offset, &v, BytesPerWord);
+  }
+
+  Promise* promise;
+  unsigned offset;
+};
+
+void
+appendImmediateTask(Context* c, Promise* promise, unsigned offset)
+{
+  c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
+    (c->tasks, promise, offset);
 }
 
 void
@@ -308,6 +332,18 @@ popR(Context* c, unsigned size, Assembler::Register* a)
 }
 
 void
+leaRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
+{
+  if (BytesPerWord == 8 and size == 4) {
+    encode(c, 0x8d, a->low, b, false);
+  } else {
+    assert(c, BytesPerWord == 8 or size == 4);
+
+    encode(c, 0x8d, a->low, b, true);
+  }
+}
+
+void
 moveCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
        Assembler::Register* b)
 {
@@ -315,7 +351,12 @@ moveCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 
   rex(c);
   c->code.append(0xb8 | b->low);
-  c->code.appendAddress(a->value->value());
+  if (a->value->resolved()) {
+    c->code.appendAddress(a->value->value());
+  } else {
+    appendImmediateTask(c, a->value, c->code.length());
+    c->code.appendAddress(static_cast<uintptr_t>(0));
+  }
 }
 
 void
@@ -394,6 +435,19 @@ moveMR(Context* c, unsigned size, Assembler::Memory* a, Assembler::Register* b)
 }
 
 void
+moveAR(Context* c, unsigned size, Assembler::Address* a,
+       Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  Assembler::Constant constant(a->address);
+  Assembler::Memory memory(b->low, 0, -1, 0);
+
+  moveCR(c, size, &constant, b);
+  moveMR(c, size, &memory, b);
+}
+
+void
 move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8); // todo
@@ -413,6 +467,15 @@ addRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+addRM(Context* c, unsigned size, Assembler::Register* a,
+      Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  encode(c, 0x01, a->low, b, true);
+}
+
+void
 populateTables()
 {
   Operations[Return] = return_;
@@ -422,13 +485,16 @@ populateTables()
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
   UnaryOperations[INDEX1(Pop, Register)] = CAST1(popR);
 
+  BinaryOperations[INDEX2(LoadAddress, Register, Memory)] = CAST2(leaRM);
   BinaryOperations[INDEX2(Move, Constant, Register)] = CAST2(moveCR);
   BinaryOperations[INDEX2(Move, Constant, Memory)] = CAST2(moveCM);
   BinaryOperations[INDEX2(Move, Register, Memory)] = CAST2(moveRM);
   BinaryOperations[INDEX2(Move, Register, Register)] = CAST2(moveRR);
   BinaryOperations[INDEX2(Move, Memory, Register)] = CAST2(moveMR);
+  BinaryOperations[INDEX2(Move, Address, Register)] = CAST2(moveAR);
   BinaryOperations[INDEX2(Move4To8, Memory, Register)] = CAST2(move4To8MR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
+  BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
 }
 
 class MyAssembler: public Assembler {
@@ -442,7 +508,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual unsigned registerCount() {
-    return BytesPerWord == 4 ? 8 : 16;
+    return 8;//BytesPerWord == 4 ? 8 : 16;
   }
 
   virtual int base() {

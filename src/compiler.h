@@ -48,7 +48,7 @@ class Compiler {
   virtual Operand* pop(unsigned size) = 0;
   virtual void pushed(unsigned count) = 0;
   virtual void popped(unsigned count) = 0;
-  virtual Operand* peek(unsigned index) = 0;
+  virtual Operand* peek(unsigned size, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
                         void* indirection,
@@ -64,6 +64,7 @@ class Compiler {
   virtual Operand* load(unsigned size, Operand* src) = 0;
   virtual Operand* loadz(unsigned size, Operand* src) = 0;
   virtual Operand* load4To8(Operand* src) = 0;
+  virtual Operand* dup(unsigned size, Operand* src) = 0;
   virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
   virtual void jl(Operand* address) = 0;
   virtual void jg(Operand* address) = 0;

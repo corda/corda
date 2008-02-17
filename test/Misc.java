@@ -1,66 +1,59 @@
 public class Misc {
-//   private static int alpha;
-//   private static int beta;
-//   private static byte byte1, byte2, byte3;
-//   private int gamma;
+  private static int alpha;
+  private static int beta;
+  private static byte byte1, byte2, byte3;
+  private int gamma;
 
-//   private String foo(String s) {
-//     return s;
-//   }
+  private String foo(String s) {
+    return s;
+  }
 
-//   public String bar(String s) {
-//     return s;
-//   }
+  public String bar(String s) {
+    return s;
+  }
 
-//   private static String baz(String s) {
-//     return s;
-//   }
+  private static String baz(String s) {
+    return s;
+  }
   
-//   private static void expect(boolean v) {
-//     if (! v) throw new RuntimeException();
-//   }
+  private static void expect(boolean v) {
+    if (! v) throw new RuntimeException();
+  }
 
-//   private synchronized byte sync() {
-//     byte[] array = new byte[123];
-//     return array[42];
-//   }
+  private synchronized byte sync() {
+    byte[] array = new byte[123];
+    return array[42];
+  }
 
-//   private static synchronized byte syncStatic(boolean throw_) {
-//     byte[] array = new byte[123];
-//     if (throw_) {
-//       throw new RuntimeException();
-//     } else {
-//       return array[42];
-//     }
-//   }
+  private static synchronized byte syncStatic(boolean throw_) {
+    byte[] array = new byte[123];
+    if (throw_) {
+      throw new RuntimeException();
+    } else {
+      return array[42];
+    }
+  }
 
-//   public static void putInt(int val, byte[] dst, int offset) {
-//     System.out.println("put " + val);
-//     dst[offset]   = (byte)((val >> 24) & 0xff);
-//     dst[offset+1] = (byte)((val >> 16) & 0xff);
-//     dst[offset+2] = (byte)((val >>  8) & 0xff);
-//     dst[offset+3] = (byte)((val      ) & 0xff);
-//   }
+  public static void putInt(int val, byte[] dst, int offset) {
+    System.out.println("put " + val);
+    dst[offset]   = (byte)((val >> 24) & 0xff);
+    dst[offset+1] = (byte)((val >> 16) & 0xff);
+    dst[offset+2] = (byte)((val >>  8) & 0xff);
+    dst[offset+3] = (byte)((val      ) & 0xff);
+  }
 
-//   public static void putLong(long val, byte[] dst, int offset) {
-//     putInt((int)(val >> 32), dst, offset);
-//     putInt((int)val, dst, offset + 4);
-//   }
+  public static void putLong(long val, byte[] dst, int offset) {
+    putInt((int)(val >> 32), dst, offset);
+    putInt((int)val, dst, offset + 4);
+  }
 
-//   public String toString() {
-//     return super.toString();
-//   }
+  public String toString() {
+    return super.toString();
+  }
 
   public static void main(String[] args) {
-    int a = 2;
-    int b = 2;
-    int c = a + b;
-
 //     byte2 = 0;
 //     expect(byte2 == 0);
-
-//     Misc m = new Misc();
-//     m.toString();
 
 //     expect(Long.valueOf(231L) == 231L);
 
@@ -96,6 +89,9 @@ public class Misc {
 //     int a = 2;
 //     int b = 2;
 //     int c = a + b;
+
+    Misc m = new Misc();
+//     m.toString();
 
 //     String s = "hello";
 //     m.foo(s);

@@ -733,6 +733,10 @@ class Frame {
     return r;
   }
 
+  Compiler::Operand* peekLong(unsigned index) {
+    return c->peek(8, index);
+  }
+
   Compiler::Operand* popLong() {
     poppedLong();
     return popLongQuiet();
@@ -803,10 +807,7 @@ class Frame {
   }
 
   void dup() {
-    Compiler::Operand* s0 = c->pop(BytesPerWord);
-
-    c->push(BytesPerWord, s0);
-    c->push(BytesPerWord, s0);
+    c->push(BytesPerWord, c->dup(BytesPerWord, c->peek(BytesPerWord, 0)));
 
     dupped();
   }
@@ -817,7 +818,7 @@ class Frame {
 
     c->push(BytesPerWord, s0);
     c->push(BytesPerWord, s1);
-    c->push(BytesPerWord, s0);
+    c->push(BytesPerWord, c->dup(BytesPerWord, s0));
 
     duppedX1();
   }
@@ -830,7 +831,7 @@ class Frame {
 
       c->push(BytesPerWord, s0);
       pushLongQuiet(s1);
-      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
     } else {
       Compiler::Operand* s1 = c->pop(BytesPerWord);
       Compiler::Operand* s2 = c->pop(BytesPerWord);
@@ -838,7 +839,7 @@ class Frame {
       c->push(BytesPerWord, s0);
       c->push(BytesPerWord, s2);
       c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
     }
 
     duppedX2();
@@ -846,18 +847,15 @@ class Frame {
 
   void dup2() {
     if (get(sp - 1) == Long) {
-      Compiler::Operand* s0 = popLongQuiet();
-
-      pushLongQuiet(s0);
-      pushLongQuiet(s0);
+      pushLongQuiet(c->dup(8, peekLong(0)));
     } else {
       Compiler::Operand* s0 = c->pop(BytesPerWord);
       Compiler::Operand* s1 = c->pop(BytesPerWord);
 
       c->push(BytesPerWord, s1);
       c->push(BytesPerWord, s0);
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, c->dup(BytesPerWord, s1));
+      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
     }
 
     dupped2();
@@ -870,7 +868,7 @@ class Frame {
 
       pushLongQuiet(s0);
       c->push(BytesPerWord, s1);
-      pushLongQuiet(s0);
+      pushLongQuiet(c->dup(8, s0));
     } else {
       Compiler::Operand* s0 = c->pop(BytesPerWord);
       Compiler::Operand* s1 = c->pop(BytesPerWord);
@@ -879,8 +877,8 @@ class Frame {
       c->push(BytesPerWord, s1);
       c->push(BytesPerWord, s0);
       c->push(BytesPerWord, s2);
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, c->dup(BytesPerWord, s1));
+      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
     }
 
     dupped2X1();
@@ -895,7 +893,7 @@ class Frame {
 
         pushLongQuiet(s0);
         pushLongQuiet(s1);
-        pushLongQuiet(s0);
+        pushLongQuiet(c->dup(8, s0));
       } else {
         Compiler::Operand* s1 = c->pop(BytesPerWord);
         Compiler::Operand* s2 = c->pop(BytesPerWord);
@@ -903,7 +901,7 @@ class Frame {
         pushLongQuiet(s0);
         c->push(BytesPerWord, s2);
         c->push(BytesPerWord, s1);
-        pushLongQuiet(s0);
+        pushLongQuiet(c->dup(8, s0));
       }
     } else {
       Compiler::Operand* s0 = c->pop(BytesPerWord);
@@ -915,8 +913,8 @@ class Frame {
       c->push(BytesPerWord, s0);
       c->push(BytesPerWord, s3);
       c->push(BytesPerWord, s2);
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      c->push(BytesPerWord, c->dup(BytesPerWord, s1));
+      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
     }
 
     dupped2X2();
@@ -1788,7 +1786,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      Compiler::Operand* instance = c->peek(0);
+      Compiler::Operand* instance = c->peek(BytesPerWord, 0);
 
       c->call
         (c->constant(reinterpret_cast<intptr_t>(checkCast)),
@@ -2396,7 +2394,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), frame->append(target),
-          c->peek(instance)),
+          c->peek(BytesPerWord, instance)),
          0,
          0,
          frame->trace(target, true),
@@ -2443,7 +2441,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       unsigned offset = ClassVtable + (methodOffset(t, target) * BytesPerWord);
 
-      Compiler::Operand* instance = c->peek(parameterFootprint - 1);
+      Compiler::Operand* instance = c->peek
+        (BytesPerWord, parameterFootprint - 1);
 
       unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
@@ -3463,13 +3462,12 @@ finish(MyThread* t, Context* context)
   Compiler* c = context->compiler;
 
   unsigned codeSize = c->compile();
-  object result = allocateCode(t, codeSize + c->poolSize());
+  object result = allocateCode(t, pad(codeSize) + c->poolSize());
+  PROTECT(t, result);
 
   uint8_t* start = reinterpret_cast<uint8_t*>(&singletonValue(t, result, 0));
 
   c->writeTo(start);
-
-  PROTECT(t, result);
 
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
