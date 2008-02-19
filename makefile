@@ -1,6 +1,6 @@
 MAKEFLAGS = -s
 
-name = vm
+name = avian
 
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
