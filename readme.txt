@@ -47,7 +47,6 @@ Installing
 ----------
 
  $ cp build/${platform}-${arch}-${process}-${mode}/avian ~/bin/
- $ cp build/${platform}-${arch}-${process}-${mode}/libavian.a ~/lib/
 
 
 Embedding
@@ -56,7 +55,16 @@ Embedding
 The following series of commands illustrates how to produce a
 stand-alone executable out of a Java application using Avian.
 
-Step 1: Build the Java code and jar it up.
+Step 1: Build Avian, create a new directory, and populate it with the
+VM object files and bootstrap classpath jar.
+
+ $ make
+ $ mkdir hello
+ $ cd hello
+ $ ar x ../build/${platform}-${arch}-${process}-${mode}/libavian.a
+ $ cp ../build/classpath.jar hello/boot.jar
+
+Step 2: Build the Java code and add it to the jar.
 
  $ cat >Hello.java <<EOF
 public class Hello {
@@ -66,34 +74,34 @@ public class Hello {
 }
 EOF
  $ javac Hello.java
- $ jar c0f hello.jar Hello.class
+ $ jar u0f boot.jar Hello.class
 
 
-Step 2: Make an object file out of the jar.
+Step 3: Make an object file out of the jar.
 
-For linux-i386:
+for linux-i386:
 
- $ objcopy -I binary hello.jar -O elf32-i386 -B i386 hello-jar.o
+ $ objcopy -I binary boot.jar -O elf32-i386 -B i386 boot-jar.o
 
-For linux-x86_64:
+for linux-x86_64:
 
- $ objcopy -I binary hello.jar -O elf64-x86-64 -B i386:x86-64 hello-jar.o
+ $ objcopy -I binary boot.jar -O elf64-x86-64 -B i386:x86-64 boot-jar.o
 
-For windows-i386:
+for windows-i386:
 
- $ objcopy -I binary hello.jar -O pe-i386 -B i386 hello-jar.o
+ $ objcopy -I binary boot.jar -O pe-i386 -B i386 boot-jar.o
 
-For darwin-i386 (objcopy is not currently supported on this platform,
-so we use the binaryToMacho utility instead):
+for darwin-i386: (objcopy is not currently supported on this platform,
+so we use the binaryToMacho utility instead)
 
- $ build/darwin-i386-compile-fast/binaryToMacho hello.jar \
-     __binary_hello_jar_start __hello_classpath_jar_size > hello-jar.o
+ $ build/darwin-i386-compile-fast/binaryToMacho boot.jar \
+     __binary_boot_jar_start __boot_classpath_jar_size > boot-jar.o
 
 
-Step 3: Write a driver which starts the VM and runs the desired main
-method.  Note the helloJar function, which will be called by the VM to
+Step 4: Write a driver which starts the VM and runs the desired main
+method.  Note the bootJar function, which will be called by the VM to
 get a handle to the embedded jar.  We tell the VM about this jar by
-setting the classpath to "[helloJar]".
+setting the classpath to "[bootJar]".
 
  $ cat >main.cpp <<EOF
 #include "stdint.h"
@@ -101,10 +109,10 @@ setting the classpath to "[helloJar]".
 
 #ifdef __MINGW32__
 #  define EXPORT __declspec(dllexport)
-#  define SYMBOL(x) binary_hello_jar_##x
+#  define SYMBOL(x) binary_boot_jar_##x
 #else
 #  define EXPORT __attribute__ ((visibility("default")))
-#  define SYMBOL(x) _binary_hello_jar_##x
+#  define SYMBOL(x) _binary_boot_jar_##x
 #endif
 
 extern "C" {
@@ -113,7 +121,7 @@ extern "C" {
   extern const uint8_t SYMBOL(size)[];
 
   EXPORT const uint8_t*
-  helloJar(unsigned* size)
+  bootJar(unsigned* size)
   {
     *size = reinterpret_cast<uintptr_t>(SYMBOL(size));
     return SYMBOL(start);
@@ -154,14 +162,14 @@ main(int ac, const char** av)
   vmArgs.version = 0x00010001;
   JNI_GetDefaultJavaVMInitArgs(&vmArgs);
 
-  vmArgs.classpath = const_cast<char*>("[helloJar]");
+  vmArgs.classpath = const_cast<char*>("[bootJar]");
 
   JavaVM* vm;
   void* env;
   JNI_CreateJavaVM(&vm, &env, &vmArgs);
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
-  jclass c = e->FindClass(MAIN_CLASS);
+  jclass c = e->FindClass("Hello");
   if (not e->ExceptionOccurred()) {
     jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
     if (not e->ExceptionOccurred()) {
@@ -193,6 +201,8 @@ EOF
  $ g++ -c main.cpp -o main.o
 
 
-Step 4: Link the above with libavian.a to produce the final executable.
+Step 5: Link the objects produced above to produce the final
+executable, and optionally strip its symbols.
 
- $ g++ hello-jar.o main.o -lavian -o hello
+ $ g++ -rdynamic *.o --Wl,-no-whole-archive -ldl -lpthread -lz -o hello
+ $ strip --strip-all hello
