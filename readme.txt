@@ -1,9 +1,15 @@
 Quick Start
 -----------
 
+On Linux:
+ $ export JAVA_HOME=/usr/local/java
  $ make
  $ build/linux-i386-compile-fast/avian -cp build/test Hello
 
+On Mac OS X:
+ $ export JAVA_HOME=/Library/Java/Home
+ $ make
+ $ build/darwin-i386-compile-fast/avian -cp build/test Hello
 
 Supported Platforms
 -------------------
@@ -73,8 +79,8 @@ public class Hello {
   }
 }
 EOF
- $ javac Hello.java
- $ jar u0f boot.jar Hello.class
+ $ javac -bootclasspath boot.jar Hello.java
+ $ jar c0f boot.jar Hello.class
 
 
 Step 3: Make an object file out of the jar.
@@ -95,7 +101,7 @@ for darwin-i386: (objcopy is not currently supported on this platform,
 so we use the binaryToMacho utility instead)
 
  $ ../build/darwin-i386-compile-fast/binaryToMacho boot.jar \
-     __binary_boot_jar_start __boot_classpath_jar_size > boot-jar.o
+     __binary_boot_jar_start __binary_boot_jar_size > boot-jar.o
 
 
 Step 4: Write a driver which starts the VM and runs the desired main
@@ -198,11 +204,16 @@ main(int ac, const char** av)
   return exitCode;
 }
 EOF
- $ g++ -c main.cpp -o main.o
+ $ g++ -I$JAVA_HOME/include -c main.cpp -o main.o
 
 
 Step 5: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
 
+On linux:
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello
  $ strip --strip-all hello
+On Mac OS X:
+ $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello -framework CoreFoundation
+ $ strip -S -x hello
+
