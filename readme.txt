@@ -1,12 +1,12 @@
 Quick Start
 -----------
 
-On Linux:
+on Linux:
  $ export JAVA_HOME=/usr/local/java
  $ make
  $ build/linux-i386-compile-fast/avian -cp build/test Hello
 
-On Mac OS X:
+on Mac OS X:
  $ export JAVA_HOME=/Library/Java/Home
  $ make
  $ build/darwin-i386-compile-fast/avian -cp build/test Hello
@@ -210,10 +210,11 @@ EOF
 Step 5: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
 
-On linux:
+on Linux:
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello
  $ strip --strip-all hello
-On Mac OS X:
+
+on Mac OS X:
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello -framework CoreFoundation
  $ strip -S -x hello
 
