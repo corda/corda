@@ -462,9 +462,7 @@ makeNativeMethodData(Thread* t, object method, void* function)
 inline object
 resolveNativeMethodData(Thread* t, object method)
 {
-  if (objectClass(t, methodCode(t, method))
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (methodCode(t, method) == 0) {
     void* p = resolveNativeMethod(t, method);
     if (LIKELY(p)) {
       PROTECT(t, method);
