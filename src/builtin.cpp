@@ -440,7 +440,7 @@ Java_java_lang_System_getVMProperty(Thread* t, jclass, jstring name,
   jstring r = 0;
   if (strcmp(n, "java.lang.classpath") == 0) {
     r = makeLocalReference(t, makeString(t, "%s", t->m->finder->path()));
-  } else if (strcmp(n, "avium.version") == 0) {
+  } else if (strcmp(n, "avian.version") == 0) {
     r = makeLocalReference(t, makeString(t, "0.0"));
   }
   
