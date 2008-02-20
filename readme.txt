@@ -62,7 +62,7 @@ VM object files and bootstrap classpath jar.
  $ mkdir hello
  $ cd hello
  $ ar x ../build/${platform}-${arch}-${process}-${mode}/libavian.a
- $ cp ../build/classpath.jar hello/boot.jar
+ $ cp ../build/classpath.jar boot.jar
 
 Step 2: Build the Java code and add it to the jar.
 
