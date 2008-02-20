@@ -94,7 +94,7 @@ for windows-i386:
 for darwin-i386: (objcopy is not currently supported on this platform,
 so we use the binaryToMacho utility instead)
 
- $ build/darwin-i386-compile-fast/binaryToMacho boot.jar \
+ $ ../build/darwin-i386-compile-fast/binaryToMacho boot.jar \
      __binary_boot_jar_start __boot_classpath_jar_size > boot-jar.o
 
 
@@ -204,5 +204,5 @@ EOF
 Step 5: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
 
- $ g++ -rdynamic *.o --Wl,-no-whole-archive -ldl -lpthread -lz -o hello
+ $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello
  $ strip --strip-all hello
