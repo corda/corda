@@ -471,7 +471,10 @@ resolveNativeMethodData(Thread* t, object method)
       return data;
     } else {
       object message = makeString
-        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
+        (t, "%s.%s%s",
+         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+         &byteArrayBody(t, methodName(t, method), 0),
+         &byteArrayBody(t, methodSpec(t, method), 0));
       t->exception = makeUnsatisfiedLinkError(t, message);
       return 0;
     }
