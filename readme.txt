@@ -81,7 +81,7 @@ public class Hello {
 }
 EOF
  $ javac -bootclasspath boot.jar Hello.java
- $ jar c0f boot.jar Hello.class
+ $ jar u0f boot.jar Hello.class
 
 
 Step 3: Make an object file out of the jar.
