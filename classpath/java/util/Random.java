@@ -11,6 +11,10 @@
 package java.util;
 
 public class Random {
+  public int nextInt(int n) {
+    return nextInt() % n;
+  }
+
   public int nextInt() {
     return (int)(Math.random()*Integer.MAX_VALUE);
   }
