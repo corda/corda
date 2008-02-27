@@ -233,6 +233,10 @@ test: build
 		$(vm) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
+.PHONY: javadoc
+javadoc:
+	javadoc -sourcepath classpath -d build/javadoc -subpackages java
+
 .PHONY: clean
 clean:
 	@echo "removing build"
