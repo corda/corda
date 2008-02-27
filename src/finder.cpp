@@ -165,7 +165,8 @@ class DataRegion: public System::Region {
 
 class JarIndex {
  public:
-  static const unsigned HeaderSize = 30;
+  static const unsigned LocalHeaderSize = 30;
+  static const unsigned HeaderSize = 46;
 
   enum CompressionMethod {
     Stored = 0,
@@ -210,36 +211,58 @@ class JarIndex {
     return get4(p);
   }
 
-  static uint16_t compressionMethod(const uint8_t* p) {
-    return get2(p + 8);
+  static uint16_t compressionMethod(const uint8_t* centralHeader) {
+    return get2(centralHeader + 10);
   }
 
-  static uint32_t compressedSize(const uint8_t* p) {
-    return get4(p + 18);
+  static uint32_t compressedSize(const uint8_t* centralHeader) {
+    return get4(centralHeader + 20);
   }
 
-  static uint32_t uncompressedSize(const uint8_t* p) {
-    return get4(p + 22);
+  static uint32_t uncompressedSize(const uint8_t* centralHeader) {
+    return get4(centralHeader + 24);
   }
 
-  static uint16_t fileNameLength(const uint8_t* p) {
-    return get2(p + 26);
+  static uint16_t fileNameLength(const uint8_t* centralHeader) {
+    return get2(centralHeader + 28);
   }
 
-  static uint16_t extraFieldLength(const uint8_t* p) {
-    return get2(p + 28);
+  static uint16_t extraFieldLength(const uint8_t* centralHeader) {
+    return get2(centralHeader + 30);
   }
 
-  static const uint8_t* fileName(const uint8_t* p) {
-    return p + 30;
+  static uint16_t commentFieldLength(const uint8_t* centralHeader) {
+    return get2(centralHeader + 32);
   }
 
-  static const uint8_t* fileData(const uint8_t* p) {
-    return p + HeaderSize + fileNameLength(p) + extraFieldLength(p);
+  static uint32_t localHeaderOffset(const uint8_t* centralHeader) {
+    return get4(centralHeader + 42);
+  }
+
+  static uint16_t localFileNameLength(const uint8_t* localHeader) {
+    return get2(localHeader + 26);
+  }
+
+  static uint16_t localExtraFieldLength(const uint8_t* localHeader) {
+    return get2(localHeader + 28);
+  }
+
+  static uint32_t centralDirectoryOffset(const uint8_t* centralHeader) {
+    return get4(centralHeader + 16);
+  }
+
+  static const uint8_t* fileName(const uint8_t* centralHeader) {
+    return centralHeader + 46;
+  }
+
+  static const uint8_t* fileData(const uint8_t* localHeader) {
+    return localHeader + LocalHeaderSize + localFileNameLength(localHeader) +
+      localExtraFieldLength(localHeader);
   }
 
   static const uint8_t* endOfEntry(const uint8_t* p) {
-    return fileData(p) + compressedSize(p);
+    return p + HeaderSize + fileNameLength(p) + extraFieldLength(p) +
+      commentFieldLength(p);
   }
 
   static JarIndex* make(System* s, unsigned capacity) {
@@ -251,15 +274,25 @@ class JarIndex {
   static JarIndex* open(System* s, System::Region* region) {
     JarIndex* index = make(s, 32);
 
-    const uint8_t* p = region->start();
-    const uint8_t* end = p + region->length();
-    while (p < end) {
-      if (signature(p) == 0x04034b50) {
-        index = index->add(hash(fileName(p), fileNameLength(p)), p);
+    const uint8_t* start = region->start();
+    const uint8_t* end = start + region->length();
+    const uint8_t* p = end - 22;
+    // Find end of central directory record
+    while (p > start) {
+      if (signature(p) == 0x06054b50) {
+	p = region->start() + centralDirectoryOffset(p);
+	
+	while (p < end) {
+	  if (signature(p) == 0x02014b50) {
+	    index = index->add(hash(fileName(p), fileNameLength(p)), p);
 
-        p = endOfEntry(p);
+	    p = endOfEntry(p);
+	  } else {
+	    return index;
+	  }
+	}
       } else {
-        break;
+	p--;
       }
     }
 
@@ -294,14 +327,15 @@ class JarIndex {
     return 0;
   }
 
-  System::Region* find(const char* name) {
+  System::Region* find(const char* name, const uint8_t* start) {
     Node* n = findNode(name);
     if (n) {
       const uint8_t* p = n->entry;
       switch (compressionMethod(p)) {
       case Stored: {
         return new (allocate(s, sizeof(PointerRegion)))
-          PointerRegion(s, fileData(p), compressedSize(p));
+          PointerRegion(s, fileData(start + localHeaderOffset(p)),
+			compressedSize(p));
       } break;
 
       case Deflated: {
@@ -311,7 +345,8 @@ class JarIndex {
           
         z_stream zStream; memset(&zStream, 0, sizeof(z_stream));
 
-        zStream.next_in = const_cast<uint8_t*>(fileData(p));
+        zStream.next_in = const_cast<uint8_t*>(fileData(start +
+							localHeaderOffset(p)));
         zStream.avail_in = compressedSize(p);
         zStream.next_out = region->data;
         zStream.avail_out = region->length();
@@ -348,6 +383,7 @@ class JarIndex {
   System* s;
   unsigned capacity;
   unsigned position;
+  
   Node* nodes;
   Node* table[0];
 };
@@ -373,7 +409,7 @@ class JarElement: public Element {
 
     while (*name == '/') name++;
 
-    return (index ? index->find(name) : 0);
+    return (index ? index->find(name, region->start()) : 0);
   }
 
   virtual bool exists(const char* name)  {
