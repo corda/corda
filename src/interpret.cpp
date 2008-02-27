@@ -1,3 +1,13 @@
+/* Copyright (c) 2008, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
 #include "common.h"
 #include "system.h"
 #include "constants.h"
@@ -452,9 +462,7 @@ makeNativeMethodData(Thread* t, object method, void* function)
 inline object
 resolveNativeMethodData(Thread* t, object method)
 {
-  if (objectClass(t, methodCode(t, method))
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (methodCode(t, method) == 0) {
     void* p = resolveNativeMethod(t, method);
     if (LIKELY(p)) {
       PROTECT(t, method);
@@ -463,7 +471,10 @@ resolveNativeMethodData(Thread* t, object method)
       return data;
     } else {
       object message = makeString
-        (t, "%s", &byteArrayBody(t, methodCode(t, method), 0));
+        (t, "%s.%s%s",
+         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+         &byteArrayBody(t, methodName(t, method), 0),
+         &byteArrayBody(t, methodSpec(t, method), 0));
       t->exception = makeUnsatisfiedLinkError(t, message);
       return 0;
     }

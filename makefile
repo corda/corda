@@ -1,6 +1,6 @@
 #MAKEFLAGS = -s
 
-name = vm
+name = avian
 
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
@@ -235,6 +235,10 @@ test: build
 	/bin/bash $(test)/test.sh 2>/dev/null \
 		$(vm) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
+
+.PHONY: javadoc
+javadoc:
+	javadoc -sourcepath classpath -d build/javadoc -subpackages java
 
 .PHONY: clean
 clean:

@@ -1,3 +1,13 @@
+/* Copyright (c) 2008, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
 #include "machine.h"
 #include "constants.h"
 #include "processor.h"
@@ -430,7 +440,7 @@ Java_java_lang_System_getVMProperty(Thread* t, jclass, jstring name,
   jstring r = 0;
   if (strcmp(n, "java.lang.classpath") == 0) {
     r = makeLocalReference(t, makeString(t, "%s", t->m->finder->path()));
-  } else if (strcmp(n, "avium.version") == 0) {
+  } else if (strcmp(n, "avian.version") == 0) {
     r = makeLocalReference(t, makeString(t, "0.0"));
   }
   

@@ -1,3 +1,13 @@
+/* Copyright (c) 2008, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
 #ifdef __APPLE__
 #include "CoreFoundation/CoreFoundation.h"
 #undef assert
@@ -473,9 +483,10 @@ class MySystem: public System {
   class Library: public System::Library {
    public:
     Library(System* s, void* p, const char* name, unsigned nameLength,
-            bool mapName):
+            bool mapName, bool isMain):
       s(s),
       p(p),
+      mainExecutable(isMain),
       name_(name),
       nameLength(nameLength),
       mapName_(mapName),
@@ -507,7 +518,7 @@ class MySystem: public System {
         fprintf(stderr, "close %p\n", p);
       }
 
-      dlclose(p);
+      if (!mainExecutable) dlclose(p);
 
       if (next_) {
         next_->disposeAll();
@@ -522,6 +533,7 @@ class MySystem: public System {
 
     System* s;
     void* p;
+    bool mainExecutable;
     const char* name_;
     unsigned nameLength;
     bool mapName_;
@@ -673,6 +685,7 @@ class MySystem: public System {
   {
     void* p;
     bool alreadyAllocated = false;
+    bool isMain = false;
     unsigned nameLength = (name ? strlen(name) : 0);
     if (mapName) {
       unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
@@ -683,6 +696,7 @@ class MySystem: public System {
       if (!name) {
         pathOfExecutable(this, &name, &nameLength);
         alreadyAllocated = true;
+        isMain = true;
       }
       p = dlopen(name, RTLD_LAZY);
     }
@@ -704,7 +718,7 @@ class MySystem: public System {
       }
 
       *lib = new (allocate(this, sizeof(Library)))
-        Library(this, p, n, nameLength, mapName);
+        Library(this, p, n, nameLength, mapName, isMain);
 
       return 0;
     } else {
