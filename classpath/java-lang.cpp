@@ -449,7 +449,7 @@ Java_java_lang_Double_doubleFromString(JNIEnv*e, jclass, jstring s,
 {
   const char* chars = e->GetStringUTFChars(s, 0);
   double d = 0.0;
-  int numRead = 0;
+  jint numRead = 0;
 
   if (chars) {
     char* lastRead;
@@ -481,7 +481,7 @@ Java_java_lang_Float_floatFromString(JNIEnv*e, jclass, jstring s,
 {
   const char* chars = e->GetStringUTFChars(s, 0);
   float f = 0.0;
-  int numRead = 0;
+  jint numRead = 0;
 
   if (chars) {
     char* lastRead;
