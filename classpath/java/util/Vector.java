@@ -21,11 +21,8 @@ public class Vector<T> implements List<T> {
     this(0);
   }
 
-  public Vector(List<T> list) {
-    this(list.size());
-    for (T o : list) {
-      add(o);
-    }
+  public Vector(Collection<? extends T> source) {
+    list = new ArrayList(source);
   }
 
   public synchronized int size() {

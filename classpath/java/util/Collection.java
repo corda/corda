@@ -23,7 +23,7 @@ public interface Collection<T> extends Iterable<T> {
 
   public boolean remove(T element);
 
-  public <T> T[] toArray(T[] array);
+  public <S> S[] toArray(S[] array);
 
   public void clear();
 }

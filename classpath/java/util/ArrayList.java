@@ -24,11 +24,9 @@ public class ArrayList<T> implements List<T> {
     this(0);
   }
 
-  public ArrayList(Collection<T> source) {
+  public ArrayList(Collection<? extends T> source) {
     this(source.size());
-    for (T o : source) {
-      add(o);
-    }
+    addAll(source);
   }
 
   private void grow() {
@@ -162,20 +160,7 @@ public class ArrayList<T> implements List<T> {
   }
 
   public <S> S[] toArray(S[] a) {
-    Object[] retVal = null;
-
-    if (a.length >= size) {
-      retVal = a;
-    } else {
-      retVal = new Object[size];
-    }
-    for (int i = 0; i < size; ++i) {
-      retVal[i] = array[i];
-    }
-    if (a.length > size) {
-      a[size] = null;
-    }
-    return (S[])retVal;
+    return Collections.toArray(this, a);
   }
 
   public void clear() {

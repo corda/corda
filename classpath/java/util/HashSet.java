@@ -15,7 +15,7 @@ public class HashSet<T> implements Set<T> {
 
   private final HashMap<T, Object> map;
 
-  public HashSet(Collection<T> c) {
+  public HashSet(Collection<? extends T> c) {
     map = new HashMap(c.size());
     addAll(c);
   }

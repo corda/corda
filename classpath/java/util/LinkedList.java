@@ -15,7 +15,7 @@ public class LinkedList<T> implements List<T> {
   private Cell<T> rear;
   private int size;
 
-  public LinkedList(Collection<T> c) {
+  public LinkedList(Collection<? extends T> c) {
     addAll(c);
   }
 
