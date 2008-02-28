@@ -32,6 +32,13 @@ public class HashMap<K, V> implements Map<K, V> {
     this(0);
   }
 
+  public HashMap(Map<K, V> map) {
+    this(map.size());
+    for (Map.Entry<K, V> entry : map.entrySet()) {
+      put(entry.getKey(), entry.getValue());
+    }
+  }
+
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
