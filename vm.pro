@@ -59,6 +59,11 @@
 
 -keepnames public class java.lang.**
 
+# Don't optimize calls to ResourceBundle
+-keep,allowshrinking,allowobfuscation public class java.util.ResourceBundle {
+  public static java.util.ResourceBundle getBundle(...);
+}
+
 # musn't obfuscate native method names:
 
 -keepclasseswithmembernames class * {
