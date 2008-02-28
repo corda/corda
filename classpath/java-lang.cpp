@@ -431,6 +431,70 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   return r;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_lang_Double_isInfinite(JNIEnv*, jclass, jdouble val)
+{
+  return !isfinite(val);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_lang_Double_isNaN(JNIEnv*, jclass, jdouble val)
+{
+  return isnan(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Double_doubleFromString(JNIEnv*e, jclass, jstring s,
+				       jintArray numDoublesRead)
+{
+  const char* chars = e->GetStringUTFChars(s, 0);
+  double d = 0.0;
+  int numRead = 0;
+
+  if (chars) {
+    char* lastRead;
+    d = strtod(chars, &lastRead);
+    if ((lastRead != chars) && ((chars + strlen(chars)) == lastRead)) {
+      numRead = 1;
+    }
+    e->ReleaseStringUTFChars(s, chars);
+  }
+  e->SetIntArrayRegion(numDoublesRead, 0, 1, &numRead);
+  return d;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_lang_Float_isInfinite(JNIEnv*, jclass, jfloat val)
+{
+  return !isfinite(val);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_lang_Float_isNaN(JNIEnv*, jclass, jfloat val)
+{
+  return isnan(val);
+}
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_java_lang_Float_floatFromString(JNIEnv*e, jclass, jstring s,
+				     jintArray numFloatsRead)
+{
+  const char* chars = e->GetStringUTFChars(s, 0);
+  float f = 0.0;
+  int numRead = 0;
+
+  if (chars) {
+    char* lastRead;
+    f = strtof(chars, &lastRead);
+    if ((lastRead != chars) && ((chars + strlen(chars)) == lastRead)) {
+      numRead = 1;
+    }
+    e->ReleaseStringUTFChars(s, chars);
+  }
+  e->SetIntArrayRegion(numFloatsRead, 0, 1, &numRead);
+  return f;
+}
+
 extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_sin(JNIEnv*, jclass, jdouble val)
 {
