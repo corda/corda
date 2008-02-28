@@ -40,16 +40,22 @@ public class HashSet<T> implements Set<T> {
     return map.containsKey(element);
   }
 
-  public void addAll(Collection<T> c) {
-    for (T t: c) add(t);
-  }
-
   public boolean add(T element) {
     return map.put(element, Value) != Value;
   }
 
+  public boolean addAll(Collection<? extends T> collection) {
+    boolean change = false;
+    for (T t: collection) if (add(t)) change = true;
+    return change;
+  }
+
   public boolean remove(T element) {
     return map.remove(element) != Value;
+  }
+
+  public <T> T[] toArray(T[] array) {
+    return Collections.toArray(this, array);
   }
 
   public void clear() {

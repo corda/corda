@@ -13,6 +13,25 @@ package java.util;
 public class Collections {
   private Collections() { }
 
+  static <T> T[] toArray(Collection collection, T[] array) {
+    Class c = array.getClass().getComponentType();
+
+    if (array.length > collection.size()) {
+      array = (T[]) java.lang.reflect.Array.newInstance(c, collection.size());
+    }
+
+    int i = 0;
+    for (Object o: collection) {
+      if (c.isInstance(o)) {
+        array[i++] = (T) o;
+      } else {
+        throw new ArrayStoreException();
+      }
+    }
+
+    return array;
+  }
+
   static String toString(Collection c) {
     StringBuilder sb = new StringBuilder();
     sb.append("[");
@@ -67,8 +86,16 @@ public class Collections {
       synchronized (lock) { return collection.add(e); }
     }
 
+    public boolean addAll(Collection<? extends T> collection) {
+      synchronized (lock) { return this.collection.addAll(collection); }
+    }
+
     public boolean remove(T e) {
       synchronized (lock) { return collection.remove(e); }
+    }
+
+    public <T> T[] toArray(T[] array) {
+      synchronized (lock) { return collection.toArray(array); }
     }
 
     public void clear() {
@@ -86,10 +113,6 @@ public class Collections {
   {
     public SynchronizedSet(Object lock, Set<T> set) {
       super(lock, set);
-    }
-
-    public void addAll(Collection<T> c) {
-      synchronized (lock) { ((Set<T>)collection).addAll(c); }
     }
   }
 

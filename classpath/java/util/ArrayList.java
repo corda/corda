@@ -91,6 +91,11 @@ public class ArrayList<T> implements List<T> {
     return true;
   }
 
+  public boolean addAll(Collection<? extends T> collection) {
+    for (T t: collection) add(t);
+    return true;
+  }
+
   public int indexOf(T element) {
     for (int i = 0; i < size; ++i) {
       if (equal(element, array[i])) {

@@ -263,7 +263,7 @@ $(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s $(classpath-classes))
+		$(shell make -s --no-print-directory $(classpath-classes))
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -273,7 +273,7 @@ $(test-dep): $(test-sources)
 	@echo "compiling test classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s $(test-classes))
+		$(shell make -s --no-print-directory $(test-classes))
 	@touch $(@)
 
 define compile-object

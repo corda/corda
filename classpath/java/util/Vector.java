@@ -44,6 +44,10 @@ public class Vector<T> implements List<T> {
     return list.add(element);
   }
 
+  public synchronized boolean addAll(Collection<? extends T> collection) {
+    return list.addAll(collection);
+  }
+
   public void addElement(T element) {
     add(element);
   }

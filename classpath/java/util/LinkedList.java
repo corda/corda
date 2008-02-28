@@ -86,20 +86,7 @@ public class LinkedList<T> implements List<T> {
   }
 
   public <S> S[] toArray(S[] a) {
-    Object[] retVal = null;
-    if (a.length >= size) {
-      retVal = a;
-    } else {
-      retVal = new Object[size];
-    }
-    int i=0;
-    for (Object o : this) {
-      retVal[i++] = o;
-    }
-    if (a.length > size) {
-      a[size] = null;
-    }
-    return (S[])retVal;
+    return Collections.toArray(this, a);
   }
 
   public int size() {
@@ -116,6 +103,11 @@ public class LinkedList<T> implements List<T> {
 
   public boolean add(T element) {
     addLast(element);
+    return true;
+  }
+
+  public boolean addAll(Collection<? extends T> collection) {
+    for (T t: collection) add(t);
     return true;
   }
 
