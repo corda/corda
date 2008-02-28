@@ -31,6 +31,10 @@ public final class Double extends Number {
     return new Double(value);
   }
 
+  public static Double valueOf(String s) {
+    return new Double(s);
+  }
+
   public boolean equals(Object o) {
     return o instanceof Double && ((Double) o).value == value;
   }
@@ -74,9 +78,22 @@ public final class Double extends Number {
     return value;
   }
 
+  public boolean isInfinite() {
+    return isInfinite(value);
+  }
+
+  public boolean isNaN() {
+    return isNaN(value);
+  }
+
   public static double parseDouble(String s) {
-    // todo
-    throw new NumberFormatException(s);
+    int[] numRead = new int[1];
+    double d = doubleFromString(s, numRead);
+    if (numRead[0] == 1) {
+      return d;
+    } else {
+      throw new NumberFormatException(s);
+    }
   }
 
   public static native int fillBufferWithDouble(double value, byte[] buffer,
@@ -85,4 +102,10 @@ public final class Double extends Number {
   public static native long doubleToRawLongBits(double value);
 
   public static native double longBitsToDouble(long bits);
+
+  public static native boolean isInfinite(double value);
+
+  public static native boolean isNaN(double value);
+
+  public static native double doubleFromString(String s, int[] numRead);
 }

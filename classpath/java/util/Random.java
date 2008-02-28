@@ -18,4 +18,8 @@ public class Random {
   public int nextInt() {
     return (int)(Math.random()*Integer.MAX_VALUE);
   }
+
+  public double nextDouble() {
+    return Math.random();
+  }
 }

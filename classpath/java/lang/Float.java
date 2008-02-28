@@ -15,12 +15,20 @@ public final class Float extends Number {
 
   private final float value;
 
+  public Float(String value) {
+    this.value = parseFloat(value);
+  }
+
   public Float(float value) {
     this.value = value;
   }
 
   public static Float valueOf(float value) {
     return new Float(value);
+  }
+
+  public static Float valueOf(String s) {
+    return new Float(s);
   }
 
   public boolean equals(Object o) {
@@ -63,12 +71,31 @@ public final class Float extends Number {
     return (double) value;
   }
 
+  public boolean isInfinite() {
+    return isInfinite(value);
+  }
+
+  public boolean isNaN() {
+    return isNaN(value);
+  }
+
   public static float parseFloat(String s) {
-    // todo
-    throw new NumberFormatException(s);
+    int[] numRead = new int[1];
+    float f = floatFromString(s, numRead);
+    if (numRead[0] == 1) {
+      return f;
+    } else {
+      throw new NumberFormatException(s);
+    }
   }
 
   public static native int floatToRawIntBits(float value);
 
   public static native float intBitsToFloat(int bits);
+
+  public static native boolean isInfinite(float value);
+
+  public static native boolean isNaN(float value);
+
+  public static native float floatFromString(String s, int[] numRead);
 }
