@@ -533,11 +533,11 @@ extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_natRandom(JNIEnv*, jclass)
 {
 #ifdef WIN32
-  int r = rand();
-  if (r == RAND_MAX) {
+  double r = static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
+  if (r < 0 or r >= 1) {
     return 0;
   } else {
-    return static_cast<double>(r) / static_cast<double>(RAND_MAX);
+    return r;
   }
 #else
   return drand48();
