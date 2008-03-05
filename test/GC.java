@@ -87,6 +87,23 @@ public class GC {
     System.gc();
   }
 
+  private static void stackMap6(boolean predicate) {
+    if (predicate) {
+      int a = 42;
+    } else {
+      Object a = null;
+    }
+
+    if (predicate) {
+      noop();
+    } else {
+      Object a = null;
+    }
+
+    noop();
+    System.gc();
+  }
+
   public static void main(String[] args) {
     Object[] array = new Object[1024 * 1024];
     array[0] = new Object();
@@ -119,6 +136,9 @@ public class GC {
 
     stackMap5(true);
     stackMap5(false);
+
+    stackMap6(true);
+    stackMap6(false);
   }
 
 }
