@@ -16,7 +16,7 @@ public class Collections {
   static <T> T[] toArray(Collection collection, T[] array) {
     Class c = array.getClass().getComponentType();
 
-    if (array.length > collection.size()) {
+    if (array.length < collection.size()) {
       array = (T[]) java.lang.reflect.Array.newInstance(c, collection.size());
     }
 
