@@ -17,7 +17,7 @@ for test in ${tests}; do
   printf "%16s" "${test}: "
 
   case ${mode} in
-    debug )
+    debug|debug-fast|fast )
       ${vm} ${flags} ${test} >>${log} 2>&1;;
 
     stress* )
