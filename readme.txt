@@ -74,7 +74,7 @@ certain flags described below.
 
   * mode - which set of compilation flags to use, which determine
     optimization level, debug symbols, and whether to enable
-    assertions.
+    assertions
       default: fast
 
   * process - choice between pure interpreter or JIT compiler
