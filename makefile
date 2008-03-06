@@ -1,6 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
+version = 0.0.1
 
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
@@ -55,7 +56,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter \
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \
-	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_
+	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
