@@ -23,6 +23,7 @@ endif
 mode = fast
 process = compile
 
+root = $(shell (cd .. && pwd))
 build = build
 native-build = $(build)/$(platform)-$(arch)-$(process)-$(mode)
 classpath-build = $(build)/classpath
@@ -89,8 +90,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	inc = /usr/local/win32/include
-	lib = /usr/local/win32/lib
+	inc = $(root)/win32/include
+	lib = $(root)/win32/lib
 
 	system = windows
 	object-format = pe-i386
