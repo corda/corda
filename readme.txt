@@ -60,6 +60,15 @@ Build requirements include:
 Earlier versions of some of these packages may also work but have not
 been tested.
 
+If you are cross-compiling for Windows, you may find it useful to use
+our win32 repository: (run this from the directory containing the
+avian directory)
+
+  $ git clone git://oss.readytalk.com/win32.git
+
+This gives you the Windows JNI headers, zlib headers and library, and
+a few other useful libraries like OpenSSL and libjpeg.
+
 The build is directed by a single makefile and may be influenced via
 certain flags described below.
 
