@@ -357,6 +357,21 @@ popR(Context* c, unsigned size, Assembler::Register* a)
 }
 
 void
+popM(Context* c, unsigned size, Assembler::Memory* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+
+    popM(c, 4, a);
+    popM(c, 4, &ah);
+  } else {
+    assert(c, BytesPerWord == 4 or size == 8);
+
+    encode(c, 0x8f, 0, a, false);
+  }
+}
+
+void
 leaMR(Context* c, unsigned size, Assembler::Memory* b, Assembler::Register* a)
 {
   if (BytesPerWord == 8 and size == 4) {
@@ -492,8 +507,8 @@ move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
 }
 
 void
-addCR(Context* c, unsigned size, Assembler::Constant* a,
-       Assembler::Register* b)
+addCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+      Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
@@ -515,7 +530,7 @@ addCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-addRR(Context* c, unsigned size, Assembler::Register* a,
+addRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
        Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
@@ -526,7 +541,7 @@ addRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
-addRM(Context* c, unsigned size, Assembler::Register* a,
+addRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
       Assembler::Memory* b)
 {
   assert(c, BytesPerWord == 8 or size == 4);
@@ -545,6 +560,7 @@ populateTables()
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
   UnaryOperations[INDEX1(Pop, Register)] = CAST1(popR);
+  UnaryOperations[INDEX1(Pop, Memory)] = CAST1(popM);
 
   BinaryOperations[INDEX2(LoadAddress, Memory, Register)] = CAST2(leaMR);
   BinaryOperations[INDEX2(Move, Constant, Register)] = CAST2(moveCR);

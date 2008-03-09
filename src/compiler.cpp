@@ -22,23 +22,21 @@ class AddressValue;
 class RegisterValue;
 class MemoryValue;
 class Event;
-
-enum SyncType {
-  SyncForCall,
-  SyncForJump
-};
+class Stack;
 
 class Value {
  public:
   virtual ~Value() { }
 
-  virtual OperandType type() = 0;
+  virtual OperandType type(Context*) = 0;
 
-  virtual bool equals(Value*) { return false; }
+  virtual bool equals(Context*, Value*) { return false; }
 
-  virtual void preserve(Context*, MyOperand*) { }
-  virtual void acquire(Context*, MyOperand*) { }
+  virtual void preserve(Context*, Stack*, MyOperand*) { }
+  virtual void acquire(Context*, Stack*, MyOperand*) { }
   virtual void release(Context*, MyOperand*) { }
+
+  virtual Stack* stackPosition(Context*) { return 0; }
 
   virtual RegisterValue* toRegister(Context*) = 0;
 
@@ -279,7 +277,7 @@ class ConstantValue: public Value {
  public:
   ConstantValue(Promise* value): value(value) { }
 
-  virtual OperandType type() { return Constant; }
+  virtual OperandType type(Context*) { return Constant; }
 
   virtual RegisterValue* toRegister(Context* c);
 
@@ -311,7 +309,7 @@ class AddressValue: public Value {
  public:
   AddressValue(Promise* address): address(address) { }
 
-  virtual OperandType type() { return Address; }
+  virtual OperandType type(Context*) { return Address; }
 
   virtual RegisterValue* toRegister(Context* c);
 
@@ -332,31 +330,31 @@ address(Context* c, Promise* address)
   return new (c->zone->allocate(sizeof(AddressValue))) AddressValue(address);
 }
 
-void preserve(Context* c, int reg, MyOperand* a);
+void preserve(Context*, Stack*, int, MyOperand*);
 
 class RegisterValue: public Value {
  public:
   RegisterValue(int low, int high): register_(low, high) { }
 
-  virtual OperandType type() { return Register; }
+  virtual OperandType type(Context*) { return Register; }
 
-  virtual bool equals(Value* o) {
+  virtual bool equals(Context* c, Value* o) {
     return this == o or
-      (o->type() == Register
+      (o->type(c) == Register
        and static_cast<RegisterValue*>(o)->register_.low == register_.low
        and static_cast<RegisterValue*>(o)->register_.high == register_.high);
   }
 
-  virtual void preserve(Context* c, MyOperand* a) {
-    ::preserve(c, register_.low, a);
-    if (register_.high >= 0) ::preserve(c, register_.high, a);
+  virtual void preserve(Context* c, Stack* s, MyOperand* a) {
+    ::preserve(c, s, register_.low, a);
+    if (register_.high >= 0) ::preserve(c, s, register_.high, a);
   }
 
-  virtual void acquire(Context* c, MyOperand* a) {
+  virtual void acquire(Context* c, Stack* s, MyOperand* a) {
     if (a != c->registers[register_.low].operand) {
       fprintf(stderr, "%p acquire %d\n", a, register_.low);
 
-      preserve(c, a);
+      preserve(c, s, a);
       c->registers[register_.low].operand = a;
       if (register_.high >= 0) c->registers[register_.high].operand = a;
     }
@@ -400,11 +398,11 @@ class MemoryValue: public Value {
     value(base, offset, index, scale, traceHandler)
   { }
 
-  virtual OperandType type() { return Memory; }
+  virtual OperandType type(Context*) { return Memory; }
 
-  virtual bool equals(Value* o) {
+  virtual bool equals(Context* c, Value* o) {
     return this == o or
-      (o->type() == Memory
+      (o->type(c) == Memory
        and static_cast<MemoryValue*>(o)->value.base == value.base
        and static_cast<MemoryValue*>(o)->value.offset == value.offset
        and static_cast<MemoryValue*>(o)->value.index == value.index
@@ -480,6 +478,34 @@ memory(Context* c, MyOperand* base, int offset, MyOperand* index,
     AbstractMemoryValue(base, offset, index, scale, traceHandler);
 }
 
+class StackValue: public Value {
+ public:
+  StackValue(Stack* stack): stack(stack) { }
+
+  virtual OperandType type(Context* c) { abort(c); }
+
+  virtual RegisterValue* toRegister(Context* c) {
+    abort(c);
+  }
+
+  virtual Stack* stackPosition(Context*) { return stack; }
+
+  virtual void asAssemblerOperand(Context* c,
+                                  OperandType*,
+                                  Assembler::Operand**)
+  {
+    abort(c);
+  }
+
+  Stack* stack;
+};
+
+StackValue*
+stackValue(Context* c, Stack* stack)
+{
+  return new (c->zone->allocate(sizeof(StackValue))) StackValue(stack);
+}
+
 class Event {
  public:
   Event(Context* c): next(0), stack(c->state->stack), promises(0) {
@@ -499,7 +525,6 @@ class Event {
   virtual ~Event() { }
 
   virtual Value* target(Context* c, MyOperand* value) = 0;
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) = 0;
   virtual void compile(Context* c) = 0;
 
   Event* next;
@@ -512,11 +537,10 @@ class ArgumentEvent: public Event {
   ArgumentEvent(Context* c, unsigned size, MyOperand* a, unsigned index):
     Event(c), size(size), a(a), index(index)
   {
-    assert(c, a->event == 0);
     a->event = this;
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c, MyOperand* v UNUSED) {
     assert(c, v == a);
 
     if (index < c->assembler->argumentRegisterCount()) {
@@ -528,21 +552,15 @@ class ArgumentEvent: public Event {
     }
   }
 
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == a);
-    a = new_;
-    new_->target = old->target;
-  }
-
   virtual void compile(Context* c) {
     fprintf(stderr, "ArgumentEvent.compile\n");
 
     if (a->target == 0) a->target = target(c, a);
 
     a->value->release(c, a);
-    a->target->preserve(c, a);
+    a->target->preserve(c, stack, a);
 
-    if (not a->target->equals(a->value)) {
+    if (not a->target->equals(c, a->value)) {
       apply(c, Move, size, a->value, a->target);
     }
   }
@@ -565,21 +583,14 @@ class ReturnEvent: public Event {
     Event(c), size(size), a(a)
   {
     if (a) {
-      assert(c, a->event == 0);
       a->event = this;
     }
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c, MyOperand* v UNUSED) {
     assert(c, v == a);
 
     return register_(c, c->assembler->returnLow(), c->assembler->returnHigh());
-  }
-
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == a);
-    a = new_;
-    a->target = old->target;
   }
 
   virtual void compile(Context* c) {
@@ -590,7 +601,7 @@ class ReturnEvent: public Event {
 
       a->value->release(c, a);
 
-      if (not a->target->equals(a->value)) {
+      if (not a->target->equals(c, a->value)) {
         apply(c, Move, size, a->value, a->target);
       }
     }
@@ -613,149 +624,81 @@ appendReturn(Context* c, unsigned size, MyOperand* value)
   new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, size, value);
 }
 
-class SyncForCallEvent: public Event {
- public:
-  SyncForCallEvent(Context* c, unsigned size, unsigned index, MyOperand* src,
-                   MyOperand* dst):
-    Event(c), size(size), index(index), src(src), dst(dst)
-  {
-    assert(c, src->event == 0);
-    src->event = this;
-  }
-
-  virtual Value* target(Context* c, MyOperand* v) {
-    assert(c, v == src);
-
-    return memory(c, c->assembler->base(),
-                  -(index + ((c->stackOffset + 1) * BytesPerWord)),
-                  NoRegister, 0, 0);
-  }
-
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == src);
-    src = new_;
-    src->target = old->target;
-  }
-
-  virtual void compile(Context* c) {
-    fprintf(stderr, "SyncForCallEvent.compile\n");
-
-    if (src->target == 0) src->target = target(c, src);
-
-    src->value->release(c, src);
-
-    if (not src->target->equals(src->value)) {
-      if (src->value->type() == Memory and src->target->type() == Memory) {
-        RegisterValue* tmp = freeRegister(c, size);
-        tmp->preserve(c, 0);
-        apply(c, Move, size, src->value, tmp);
-        src->value = tmp;
-      }
-
-      apply(c, Move, size, src->value, src->target);
-    }
-
-    dst->value = src->target;
-  }
-
-  unsigned size;
-  unsigned index;
-  MyOperand* src;
-  MyOperand* dst;
-};
-
 void
-appendSyncForCall(Context* c, unsigned size, unsigned index, MyOperand* src,
-                  MyOperand* dst)
+syncStack(Context* c, Stack* start, unsigned count)
 {
-  new (c->zone->allocate(sizeof(SyncForCallEvent)))
-    SyncForCallEvent(c, size, index, src, dst);
+  Stack* segment[count];
+  unsigned index = count;
+  for (Stack* s = start; s; s = s->next) {
+    segment[--index] = s;
+  }
+
+  for (unsigned i = 0; i < count; ++i) {
+    Stack* s = segment[i];
+    s->operand->value->release(c, s->operand);
+    apply(c, Push, s->size, s->operand->value);
+    s->operand->value = stackValue(c, s);
+  }
 }
 
-class SyncForJumpEvent: public Event {
+class SyncStackEvent: public Event {
  public:
-  SyncForJumpEvent(Context* c, unsigned size, unsigned index, MyOperand* src,
-                   MyOperand* dst):
-    Event(c), size(size), index(index), src(src), dst(dst)
+  SyncStackEvent(Context* c):
+    Event(c)
   {
-    assert(c, src->event == 0);
-    src->event = this;
-  }
-
-  SyncForJumpEvent(Context* c, Event* next, unsigned size, unsigned index,
-                   MyOperand* src, MyOperand* dst):
-    Event(next), size(size), index(index), src(src), dst(dst)
-  {
-    assert(c, src->event == 0);
-    src->event = this;
-  }
-
-  virtual Value* target(Context* c, MyOperand* v) {
-    assert(c, v == src);
-
-    if (BytesPerWord == 4 and size == 8) {
-      return register_
-        (c, c->assembler->stackSyncRegister(index / BytesPerWord),
-         c->assembler->stackSyncRegister((index / BytesPerWord) + 1));
-    } else {
-      return register_
-        (c, c->assembler->stackSyncRegister(index / BytesPerWord));
+    for (Stack* s = stack; s; s = s->next) {
+      s->operand->event = this;
     }
   }
 
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == src);
-    src = new_;
-    src->target = old->target;
+  SyncStackEvent(Context* c, Event* next):
+    Event(c)
+  {
+    stack = next->stack;
+    for (Stack* s = stack; s; s = s->next) {
+      s->operand->event = this;
+    }
+  }
+
+  virtual Value* target(Context*, MyOperand*) {
+    return 0;
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "SyncForJumpEvent.compile\n");
+    fprintf(stderr, "SyncEvent.compile\n");
 
-    if (src->target == 0) src->target = target(c, src);
-
-    src->value->release(c, src);
-    src->target->acquire(c, dst);
-
-    if (not src->target->equals(src->value)) {
-      apply(c, Move, size, src->value, src->target);
+    unsigned count = 0;
+    for (Stack* s = stack;
+         s and s->operand->value->stackPosition(c) == 0;
+         s = s->next)
+    {
+      ++ count;
     }
 
-    dst->value = src->target;
+    syncStack(c, stack, count);
   }
-
-  unsigned size;
-  unsigned index;
-  MyOperand* src;
-  MyOperand* dst;
 };
 
 void
-appendSyncForJump(Context* c, unsigned size, unsigned index, MyOperand* src,
-                  MyOperand* dst)
-{
-  new (c->zone->allocate(sizeof(SyncForJumpEvent)))
-    SyncForJumpEvent(c, size, index, src, dst);
+appendSyncStack(Context* c) {
+  new (c->zone->allocate(sizeof(SyncStackEvent))) SyncStackEvent(c);
 }
 
 class CallEvent: public Event {
  public:
   CallEvent(Context* c, MyOperand* address, void* indirection, unsigned flags,
-            TraceHandler* traceHandler, MyOperand* result,
-            unsigned stackOffset):
+            TraceHandler* traceHandler, MyOperand* result):
     Event(c),
     address(address),
     indirection(indirection),
     flags(flags),
     traceHandler(traceHandler),
-    result(result),
-    stackOffset(stackOffset)
+    result(result)
   {
-    assert(c, address->event == 0);
     address->event = this;
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c, MyOperand* v UNUSED) {
     assert(c, v == address);
 
     if (indirection) {
@@ -763,11 +706,6 @@ class CallEvent: public Event {
     } else {
       return 0;
     }
-  }
-
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == address);
-    address = new_;
   }
 
   virtual void compile(Context* c) {
@@ -782,21 +720,13 @@ class CallEvent: public Event {
     if (result->event) {
       result->value = register_
         (c, c->assembler->returnLow(), c->assembler->returnHigh());
-      result->value->acquire(c, result);
-    }
-
-    if (stackOffset != c->stackOffset) {
-      apply(c, LoadAddress, BytesPerWord,
-            memory(c, c->assembler->base(),
-                   -((stackOffset + 1) * BytesPerWord),
-                   NoRegister, 0, 0),
-            register_(c, c->assembler->stack()));
+      result->value->acquire(c, stack, result);
     }
 
     UnaryOperation type = ((flags & Compiler::Aligned) ? AlignedCall : Call);
 
     if (indirection) {
-      if (not address->target->equals(address->value)) {
+      if (not address->target->equals(c, address->value)) {
         apply(c, Move, BytesPerWord, address->value, address->target);
       }
       apply(c, type, BytesPerWord,
@@ -817,17 +747,14 @@ class CallEvent: public Event {
   unsigned flags;
   TraceHandler* traceHandler;
   MyOperand* result;
-  unsigned stackOffset;
 };
 
 void
 appendCall(Context* c, MyOperand* address, void* indirection, unsigned flags,
-           TraceHandler* traceHandler, MyOperand* result,
-           unsigned stackOffset)
+           TraceHandler* traceHandler, MyOperand* result)
 {
   new (c->zone->allocate(sizeof(CallEvent)))
-    CallEvent(c, address, indirection, flags, traceHandler, result,
-              stackOffset);
+    CallEvent(c, address, indirection, flags, traceHandler, result);
 }
 
 int
@@ -866,11 +793,10 @@ class MoveEvent: public Event {
             MyOperand* dst):
     Event(c), type(type), size(size), src(src), dst(dst)
   {
-    assert(c, src->event == 0);
     src->event = this;
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c, MyOperand* v UNUSED) {
     assert(c, v == src);
 
     if (dst->value) {
@@ -882,12 +808,6 @@ class MoveEvent: public Event {
     }
   }
 
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == src);
-    src = new_;
-    src->target = old->target;
-  }
-
   virtual void compile(Context* c) {
     fprintf(stderr, "MoveEvent.compile\n");
 
@@ -895,16 +815,22 @@ class MoveEvent: public Event {
 
     if (src->target == 0) {
       src->target = freeRegister(c, size);
-    } else if (src->value->type() == Memory and src->target->type() == Memory)
+    } else if (type == Move
+               and size == BytesPerWord
+               and src->target->equals(c, src->value))
+    {
+      return;
+    } else if (src->value->type(c) == Memory
+               and src->target->type(c) == Memory)
     {
       RegisterValue* tmp = freeRegister(c, size);
-      tmp->preserve(c, 0);
+      tmp->preserve(c, stack, 0);
       apply(c, Move, size, src->value, tmp);
       src->value = tmp;
     }
 
     src->value->release(c, src);
-    src->target->acquire(c, dst);
+    src->target->acquire(c, stack, dst);
 
     apply(c, type, size, src->value, src->target);
 
@@ -935,10 +861,6 @@ class DupEvent: public Event {
     abort(c);
   }
 
-  virtual void replace(Context* c, MyOperand*, MyOperand*) {
-    abort(c);
-  }
-
   virtual void compile(Context* c) {
     fprintf(stderr, "DupEvent.compile\n");
 
@@ -948,17 +870,18 @@ class DupEvent: public Event {
     if (target == 0) {
       if (dst->event) {
         target = dst->event->target(c, dst);
-      } else {
+      }
+      if (target == 0) {
         target = freeRegister(c, size);
       }
-    } else if (value->type() == Memory and target->type() == Memory) {
+    } else if (value->type(c) == Memory and target->type(c) == Memory) {
       RegisterValue* tmp = freeRegister(c, size);
-      tmp->preserve(c, 0);
+      tmp->preserve(c, stack, 0);
       apply(c, Move, size, value, tmp);
       value = tmp;
     }
 
-    target->acquire(c, dst);
+    target->acquire(c, stack, dst);
 
     apply(c, Move, size, value, target);
 
@@ -976,32 +899,60 @@ appendDup(Context* c, unsigned size, MyOperand* src, MyOperand* dst)
   new (c->zone->allocate(sizeof(DupEvent))) DupEvent(c, size, src, dst);
 }
 
+class PopEvent: public Event {
+ public:
+  PopEvent(Context* c):
+    Event(c)
+  { }
+
+  virtual Value* target(Context* c, MyOperand*) {
+    abort(c);
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "PopEvent.compile\n");
+
+    MyOperand* dst = stack->operand;
+    if (dst->value->stackPosition(c)) {
+      Value* target = dst->target;
+
+      if (target == 0) {
+        if (dst->event) {
+          target = dst->event->target(c, dst);
+        }
+        if (target == 0) {
+          target = freeRegister(c, BytesPerWord * stack->size);
+        }
+      }
+
+      target->acquire(c, 0, dst);
+
+      apply(c, Pop, BytesPerWord * stack->size, target);
+
+      dst->value = target;
+    }
+  }
+};
+
+void
+appendPop(Context* c)
+{
+  new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c);
+}
+
 class CompareEvent: public Event {
  public:
   CompareEvent(Context* c, unsigned size, MyOperand* a, MyOperand* b):
     Event(c), size(size), a(a), b(b)
   {
-    assert(c, a->event == 0);
     a->event = this;
-    assert(c, b->event == 0);
     b->event = this;
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c UNUSED, MyOperand* v UNUSED) {
     assert(c, v == a or v == b);
 
     return 0;
-  }
-
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    if (old == a) {
-      a = new_;
-      a->target = old->target;      
-    } else {
-      assert(c, old == b);
-      b = new_;
-      b->target = old->target;
-    }
   }
 
   virtual void compile(Context* c) {
@@ -1029,20 +980,13 @@ class BranchEvent: public Event {
   BranchEvent(Context* c, UnaryOperation type, MyOperand* address):
     Event(c), type(type), address(address)
   {
-    assert(c, address->event == 0);
     address->event = this;
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c UNUSED, MyOperand* v UNUSED) {
     assert(c, v == address);
 
     return 0;
-  }
-
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == address);
-    address = new_;
-    address->target = old->target;
   }
 
   virtual void compile(Context* c) {
@@ -1069,19 +1013,13 @@ class JumpEvent: public Event {
     Event(c),
     address(address)
   {
-    assert(c, address->event == 0);
     address->event = this;
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c UNUSED, MyOperand* v UNUSED) {
     assert(c, v == address);
 
     return 0;
-  }
-
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == address);
-    address = new_;
   }
 
   virtual void compile(Context* c) {
@@ -1093,9 +1031,6 @@ class JumpEvent: public Event {
   }
 
   MyOperand* address;
-  unsigned stackOffset;
-  bool alignCall;
-  TraceHandler* traceHandler;
 };
 
 void
@@ -1110,9 +1045,7 @@ class CombineEvent: public Event {
                MyOperand* b, MyOperand* result):
     Event(c), type(type), size(size), a(a), b(b), result(result)
   {
-    assert(c, a->event == 0);
     a->event = this;
-    assert(c, b->event == 0);
     b->event = this;
   }
 
@@ -1133,7 +1066,7 @@ class CombineEvent: public Event {
       if (br.low == NoRegister) {
         if (result->event) {
           Value* v = result->event->target(c, result);
-          if (v->type() == Register) {
+          if (v->type(c) == Register) {
             return v;
           } else {
             return 0;
@@ -1147,17 +1080,6 @@ class CombineEvent: public Event {
     }
   }
 
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    if (old == a) {
-      a = new_;
-      a->target = old->target;      
-    } else {
-      assert(c, old == b);
-      b = new_;
-      b->target = old->target;
-    }
-  }
-
   virtual void compile(Context* c) {
     fprintf(stderr, "CombineEvent.compile\n");
 
@@ -1166,12 +1088,12 @@ class CombineEvent: public Event {
 
     a->value->release(c, a);
     b->value->release(c, b);
-    b->value->acquire(c, result);
+    b->value->acquire(c, stack, result);
 
-    if (a->target and not a->target->equals(a->value)) {
+    if (a->target and not a->target->equals(c, a->value)) {
       apply(c, Move, size, a->value, a->target);
     }
-    if (b->target and not b->target->equals(b->value)) {
+    if (b->target and not b->target->equals(c, b->value)) {
       apply(c, Move, size, b->value, b->target);
     }
 
@@ -1201,11 +1123,10 @@ class TranslateEvent: public Event {
                  MyOperand* result):
     Event(c), type(type), size(size), a(a), result(result)
   {
-    assert(c, a->event == 0);
     a->event = this;
   }
 
-  virtual Value* target(Context* c, MyOperand* v) {
+  virtual Value* target(Context* c, MyOperand* v UNUSED) {
     assert(c, v == a);
       
     Assembler::Register r(NoRegister);
@@ -1218,20 +1139,14 @@ class TranslateEvent: public Event {
     }
   }
 
-  virtual void replace(Context* c, MyOperand* old, MyOperand* new_) {
-    assert(c, old == a);
-    a = new_;
-    a->target = old->target;
-  }
-
   virtual void compile(Context* c) {
     fprintf(stderr, "TranslateEvent.compile\n");
 
     if (a->target == 0) a->target = target(c, a);
 
-    result->value->acquire(c, result);
+    result->value->acquire(c, stack, result);
 
-    if (a->target and not a->target->equals(a->value)) {
+    if (a->target and not a->target->equals(c, a->value)) {
       apply(c, Move, size, a->value, a->target);
     }
     apply(c, type, size, a->value);
@@ -1270,21 +1185,29 @@ AddressValue::toRegister(Context* c)
 }
 
 void
-preserve(Context* c, int reg, MyOperand* a)
+preserve(Context* c, Stack* stack, int reg, MyOperand* a)
 {
   MyOperand* b = c->registers[reg].operand;
   if (b and a != b) {
     fprintf(stderr, "%p preserve %d for %p\n", a, reg, b);
 
-    abort(c);
-//     MemoryValue* dst = memory
-//       (c, c->assembler->base(), (b->index + c->stackOffset) * BytesPerWord,
-//        -1, 0, 0);
+    unsigned count = 0;
+    Stack* start = 0;
+    for (Stack* s = stack;
+         s and s->operand->value->stackPosition(c) == 0;
+         s = s->next)
+    {
+      if (s->operand == a) {
+        start = s;
+      }
+      if (start) {
+        ++ count;
+      }
+    }
 
-//     apply(c, Move, b->size, b->value, dst);
+    assert(c, start);
 
-//     b->value = dst;
-//     c->registers[reg].operand = 0;
+    syncStack(c, start, count);
   }
 }
 
@@ -1326,7 +1249,6 @@ void
 push(Context* c, unsigned size, MyOperand* o)
 {
   assert(c, ceiling(size, BytesPerWord));
-  assert(c, o->event == 0);
 
   c->state->stack = stack(c, o, ceiling(size, BytesPerWord), c->state->stack);
 }
@@ -1337,32 +1259,10 @@ pop(Context* c, unsigned size UNUSED)
   Stack* s = c->state->stack;
   assert(c, ceiling(size, BytesPerWord) == s->size);
 
+  appendPop(c);
+
   c->state->stack = s->next;
   return s->operand;
-}
-
-void
-syncStack(Context* c, SyncType type)
-{
-  Stack* newStack = 0;
-  for (Stack* s = c->state->stack; s; s = s->next) {
-    MyOperand* old = s->operand;
-    MyOperand* new_ = operand(c);
-    Stack* ns = stack(c, new_, s->size, s->index, 0);
-    if (newStack) {
-      newStack->next = ns;
-    } else {
-      newStack = c->state->stack = ns;
-    }
-      
-    if (type == SyncForCall) {
-      appendSyncForCall
-        (c, s->size * BytesPerWord, s->index * BytesPerWord, old, new_);
-    } else {
-      appendSyncForJump
-        (c, s->size * BytesPerWord, s->index * BytesPerWord, old, new_);
-    }
-  }
 }
 
 void
@@ -1374,20 +1274,10 @@ updateJunctions(Context* c)
     if (i->predecessor >= 0) {
       LogicalInstruction* p = c->logicalCode + i->predecessor;
 
-      for (Stack* s = c->state->stack; s; s = s->next) {
-        MyOperand* old = s->operand;
-        MyOperand* new_ = operand(c);
+      Event* e = new (c->zone->allocate(sizeof(SyncStackEvent)))
+        SyncStackEvent(c, p->lastEvent->next);
 
-        if (old->event) {
-          old->event->replace(c, old, new_);
-        }
-
-        p->lastEvent = p->lastEvent->next = new
-          (c->zone->allocate(sizeof(SyncForJumpEvent)))
-          SyncForJumpEvent
-          (c, p->lastEvent->next, s->size * BytesPerWord,
-           s->index * BytesPerWord, old, new_);
-      }
+      p->lastEvent = p->lastEvent->next = e;
     }
   }
 }
@@ -1548,7 +1438,7 @@ class MyCompiler: public Compiler {
     }
   }
 
-  virtual Operand* peek(unsigned size, unsigned index) {
+  virtual Operand* peek(unsigned size UNUSED, unsigned index) {
     Stack* s = c.state->stack;
     for (unsigned i = index; i > 0;) {
       s = s->next;
@@ -1583,16 +1473,11 @@ class MyCompiler: public Compiler {
 
     va_end(a);
 
-    syncStack(&c, SyncForCall);
-
-    unsigned stackOffset = c.stackOffset
-      + (c.state->stack ? c.state->stack->index + c.state->stack->size : 0)
-      + (footprint > c.assembler->argumentRegisterCount() ?
-         footprint - c.assembler->argumentRegisterCount() : 0);
+    appendSyncStack(&c);
 
     MyOperand* result = operand(&c);
     appendCall(&c, static_cast<MyOperand*>(address), indirection, flags,
-               traceHandler, result, stackOffset);
+               traceHandler, result);
     return result;
   }
 
@@ -1635,43 +1520,43 @@ class MyCompiler: public Compiler {
   }
 
   virtual void jl(Operand* address) {
-    syncStack(&c, SyncForJump);
+    appendSyncStack(&c);
 
     appendBranch(&c, JumpIfLess, static_cast<MyOperand*>(address));
   }
 
   virtual void jg(Operand* address) {
-    syncStack(&c, SyncForJump);
+    appendSyncStack(&c);
 
     appendBranch(&c, JumpIfGreater, static_cast<MyOperand*>(address));
   }
 
   virtual void jle(Operand* address) {
-    syncStack(&c, SyncForJump);
+    appendSyncStack(&c);
 
     appendBranch(&c, JumpIfLessOrEqual, static_cast<MyOperand*>(address));
   }
 
   virtual void jge(Operand* address) {
-    syncStack(&c, SyncForJump);
+    appendSyncStack(&c);
 
     appendBranch(&c, JumpIfGreaterOrEqual, static_cast<MyOperand*>(address));
   }
 
   virtual void je(Operand* address) {
-    syncStack(&c, SyncForJump);
+    appendSyncStack(&c);
 
     appendBranch(&c, JumpIfEqual, static_cast<MyOperand*>(address));
   }
 
   virtual void jne(Operand* address) {
-    syncStack(&c, SyncForJump);
+    appendSyncStack(&c);
 
     appendBranch(&c, JumpIfNotEqual, static_cast<MyOperand*>(address));
   }
 
   virtual void jmp(Operand* address) {
-    syncStack(&c, SyncForJump);
+    appendSyncStack(&c);
 
     appendJump(&c, static_cast<MyOperand*>(address));
   }
