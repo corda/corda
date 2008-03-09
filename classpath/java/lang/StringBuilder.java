@@ -118,7 +118,7 @@ public class StringBuilder {
   }
 
   public StringBuilder insert(int i, String s) {
-    if (i < 0 || i >= length) {
+    if (i < 0 || i > length) {
       throw new IndexOutOfBoundsException();
     }
 

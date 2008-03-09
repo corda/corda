@@ -1,6 +1,7 @@
 #MAKEFLAGS = -s
 
 name = avian
+version = 0.0.1
 
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
@@ -22,6 +23,7 @@ endif
 mode = fast
 process = compile
 
+root = $(shell (cd .. && pwd))
 build = build
 native-build = $(build)/$(platform)-$(arch)-$(process)-$(mode)
 classpath-build = $(build)/classpath
@@ -55,7 +57,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter \
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \
-	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_
+	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
@@ -88,8 +90,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	inc = /usr/local/win32/include
-	lib = /usr/local/win32/lib
+	inc = $(root)/win32/include
+	lib = $(root)/win32/lib
 
 	system = windows
 	object-format = pe-i386
@@ -266,7 +268,7 @@ $(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s $(classpath-classes))
+		$(shell make -s --no-print-directory $(classpath-classes))
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -276,7 +278,7 @@ $(test-dep): $(test-sources)
 	@echo "compiling test classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s $(test-classes))
+		$(shell make -s --no-print-directory $(test-classes))
 	@touch $(@)
 
 define compile-object

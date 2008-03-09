@@ -21,6 +21,14 @@ public class Arrays {
     return (a == null && b == null) || (a != null && a.equals(b));
   }
 
+  public static void sort(Object[] array) {
+    sort(array, new Comparator() {
+        public int compare(Object a, Object b) {
+          return ((Comparable) a).compareTo(b);
+        }
+      });
+  }
+
   public static <T> void sort(T[] array, Comparator<? super T> comparator) {
     // insertion sort
     for (int j = 1; j < array.length; ++j) {
@@ -46,6 +54,10 @@ public class Arrays {
 
       public boolean add(T element) {
         throw new UnsupportedOperationException();
+      }
+
+      public boolean addAll(Collection<? extends T> collection) {
+        throw new UnsupportedOperationException();      
       }
 
       public void add(int index, T element) {

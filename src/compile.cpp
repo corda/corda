@@ -427,6 +427,7 @@ class Context {
   TraceElement* traceLog;
   uint16_t* visitTable;
   uintptr_t* rootTable;
+  bool dirtyRoots;
   Vector eventLog;
   MyProtector protector;
 };
@@ -3297,7 +3298,8 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
   // that position, or the contents of that position are as yet
   // unknown.
 
-  while (eventIndex < context->eventLog.length()) {
+  unsigned length = context->eventLog.length();
+  while (eventIndex < length) {
     Event e = static_cast<Event>(context->eventLog.get(eventIndex++));
     switch (e) {
     case PushEvent: {
@@ -3309,6 +3311,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
     case IpEvent: {
       ip = context->eventLog.get2(eventIndex);
+      eventIndex += 2;
 
       if (DebugFrameMaps) {
         fprintf(stderr, "      roots at ip %3d: ", ip);
@@ -3320,7 +3323,20 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
       if (context->visitTable[ip] > 1) {
         for (unsigned wi = 0; wi < mapSize; ++wi) {
-          tableRoots[wi] &= roots[wi];
+          uintptr_t newRoots = tableRoots[wi] & roots[wi];
+
+          if ((eventIndex == length
+               or context->eventLog.get(eventIndex) == PopEvent)
+              and newRoots != tableRoots[wi])
+          {
+            if (DebugFrameMaps) {
+              fprintf(stderr, "dirty roots!\n");
+            }
+
+            context->dirtyRoots = true;
+          }
+
+          tableRoots[wi] = newRoots;
           roots[wi] &= tableRoots[wi];
         }
 
@@ -3332,92 +3348,20 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       } else {
         memcpy(tableRoots, roots, mapSize * BytesPerWord);
       }
-
-      eventIndex += 2;
     } break;
 
     case MarkEvent: {
       unsigned i = context->eventLog.get2(eventIndex);
-      markBit(roots, i);
-
       eventIndex += 2;
+
+      markBit(roots, i);
     } break;
 
     case ClearEvent: {
       unsigned i = context->eventLog.get2(eventIndex);
+      eventIndex += 2;
+
       clearBit(roots, i);
-
-      eventIndex += 2;
-    } break;
-
-    case TraceEvent: {
-      eventIndex += BytesPerWord;
-    } break;
-
-    default: abort(t);
-    }
-  }
-
-  return eventIndex;
-}
-
-unsigned
-updateTraceElements(MyThread* t, Context* context, uintptr_t* originalRoots,
-                    unsigned eventIndex)
-{
-  unsigned mapSize = frameMapSizeInWords(t, context->method);
-
-  uintptr_t roots[mapSize];
-  if (originalRoots) {
-    memcpy(roots, originalRoots, mapSize * BytesPerWord);
-  } else {
-    memset(roots, 0, mapSize * BytesPerWord);
-  }
-
-  int32_t ip = -1;
-
-  while (eventIndex < context->eventLog.length()) {
-    Event e = static_cast<Event>(context->eventLog.get(eventIndex++));
-    switch (e) {
-    case PushEvent: {
-      eventIndex = updateTraceElements(t, context, roots, eventIndex);
-    } break;
-
-    case PopEvent:
-      return eventIndex;
-
-    case IpEvent: {
-      ip = context->eventLog.get2(eventIndex);
-
-      if (DebugFrameMaps) {
-        fprintf(stderr, "        map at ip %3d: ", ip);
-        printSet(*roots);
-        fprintf(stderr, "\n");
-      }
-
-      if (context->visitTable[ip] > 1) {
-        uintptr_t* tableRoots = context->rootTable + (ip * mapSize);
-        
-        for (unsigned wi = 0; wi < mapSize; ++wi) {
-          roots[wi] &= tableRoots[wi];
-        }
-      }
-
-      eventIndex += 2;
-    } break;
-
-    case MarkEvent: {
-      unsigned i = context->eventLog.get2(eventIndex);
-      markBit(roots, i);
-
-      eventIndex += 2;
-    } break;
-
-    case ClearEvent: {
-      unsigned i = context->eventLog.get2(eventIndex);
-      clearBit(roots, i);
-
-      eventIndex += 2;
     } break;
 
     case TraceEvent: {
@@ -3586,6 +3530,7 @@ compile(MyThread* t, Context* context)
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
 
+  context->dirtyRoots = false;
   unsigned eventIndex = calculateFrameMaps(t, context, 0, 0);
 
   object eht = codeExceptionHandlerTable(t, methodCode(t, context->method));
@@ -3642,7 +3587,10 @@ compile(MyThread* t, Context* context)
     }
   }
 
-  updateTraceElements(t, context, 0, 0);
+  while (context->dirtyRoots) {
+    context->dirtyRoots = false;
+    calculateFrameMaps(t, context, 0, 0);
+  }
 
   return finish(t, context);
 }

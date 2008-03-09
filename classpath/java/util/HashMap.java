@@ -32,6 +32,13 @@ public class HashMap<K, V> implements Map<K, V> {
     this(0);
   }
 
+  public HashMap(Map<K, V> map) {
+    this(map.size());
+    for (Map.Entry<K, V> entry : map.entrySet()) {
+      put(entry.getKey(), entry.getValue());
+    }
+  }
+
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
@@ -307,10 +314,6 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.isEmpty();
     }
 
-    public void addAll(Collection<Entry<K, V>> c) {
-      throw new UnsupportedOperationException();
-    }
-
     public boolean contains(Entry<K, V> e) {
       return containsKey(e.getKey());
     }
@@ -319,8 +322,18 @@ public class HashMap<K, V> implements Map<K, V> {
       return putCell(e.getKey(), e.getValue()) != null;
     }
 
+    public boolean addAll(Collection<? extends Entry<K, V>> collection) {
+      boolean change = false;
+      for (Entry<K, V> e: collection) if (add(e)) change = true;
+      return change;
+    }
+
     public boolean remove(Entry<K, V> e) {
       return removeCell(e.getKey()) != null;
+    }
+
+    public <T> T[] toArray(T[] array) {
+      return Collections.toArray(this, array);      
     }
 
     public void clear() {
@@ -345,16 +358,22 @@ public class HashMap<K, V> implements Map<K, V> {
       return containsKey(key);
     }
 
-    public void addAll(Collection<K> c) {
-      throw new UnsupportedOperationException();
-    }
-
     public boolean add(K key) {
       return putCell(key, null) != null;
     }
 
+    public boolean addAll(Collection<? extends K> collection) {
+      boolean change = false;
+      for (K k: collection) if (add(k)) change = true;
+      return change;
+    }
+
     public boolean remove(K key) {
       return removeCell(key) != null;
+    }
+
+    public <T> T[] toArray(T[] array) {
+      return Collections.toArray(this, array);      
     }
 
     public void clear() {
@@ -384,8 +403,16 @@ public class HashMap<K, V> implements Map<K, V> {
       throw new UnsupportedOperationException();
     }
 
+    public boolean addAll(Collection<? extends V> collection) {
+      throw new UnsupportedOperationException();      
+    }
+
     public boolean remove(V value) {
       throw new UnsupportedOperationException();
+    }
+
+    public <T> T[] toArray(T[] array) {
+      return Collections.toArray(this, array);      
     }
 
     public void clear() {

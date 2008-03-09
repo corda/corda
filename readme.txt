@@ -2,7 +2,7 @@ Quick Start
 -----------
 
 on Linux:
- $ export JAVA_HOME=/usr/local/java
+ $ export JAVA_HOME=/usr/local/java # or wherever you have Java installed
  $ make
  $ build/linux-i386-compile-fast/avian -cp build/test Hello
 
@@ -10,6 +10,25 @@ on Mac OS X:
  $ export JAVA_HOME=/Library/Java/Home
  $ make
  $ build/darwin-i386-compile-fast/avian -cp build/test Hello
+
+
+Introduction
+------------
+
+Avian is a lightweight virtual machine and class library designed to
+provide a useful subset of Java's features, suitable for building
+self-contained applications.  More information is available at the
+project web site:
+
+  http://oss.readytalk.com/avian
+
+If you have any trouble building, running, or embedding Avian, please
+post a message to our discussion group:
+
+  http://groups.google.com/group/avian
+
+That's also the place for any other questions, comments, or
+suggestions you might have.
 
 
 Supported Platforms
@@ -29,6 +48,27 @@ but patches to enable them are welcome.
 Building
 --------
 
+Build requirements include:
+
+  * GNU make 3.80 or later
+  * GCC 3.4 or later
+  * JDK 1.5 or later
+  * GNU binutils 2.17 or later (not needed on OS X)
+  * MinGW 3.4 or later (only if cross-compiling for Windows)
+  * zlib 1.2.3 or later
+
+Earlier versions of some of these packages may also work but have not
+been tested.
+
+If you are cross-compiling for Windows, you may find it useful to use
+our win32 repository: (run this from the directory containing the
+avian directory)
+
+  $ git clone git://oss.readytalk.com/win32.git
+
+This gives you the Windows JNI headers, zlib headers and library, and
+a few other useful libraries like OpenSSL and libjpeg.
+
 The build is directed by a single makefile and may be influenced via
 certain flags described below.
 
@@ -43,7 +83,7 @@ certain flags described below.
 
   * mode - which set of compilation flags to use, which determine
     optimization level, debug symbols, and whether to enable
-    assertions.
+    assertions
       default: fast
 
   * process - choice between pure interpreter or JIT compiler
