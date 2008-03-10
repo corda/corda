@@ -91,7 +91,7 @@ public class Misc {
 //     int c = a + b;
 
     Misc m = new Misc();
-//     m.toString();
+    m.toString();
 
 //     String s = "hello";
 //     m.foo(s);

@@ -1439,8 +1439,9 @@ resultSize(MyThread* t, unsigned code)
 bool
 emptyMethod(MyThread* t, object method)
 {
-  object code = methodCode(t, method);
-  return (codeLength(t, code) == 1 and codeBody(t, code, 0) == return_);
+  return ((methodFlags(t, method) & ACC_NATIVE) == 0)
+    and (codeLength(t, methodCode(t, method)) == 1)
+    and (codeBody(t, methodCode(t, method), 0) == return_);
 }
 
 void
@@ -2475,7 +2476,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
            (instance, 0, 0, 1, frame->trace(0, false))), offset, 0, 1),
          0,
          0,
-         frame->trace(0, true),
+         frame->trace(target, true),
          rSize,
          0);
 

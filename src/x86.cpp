@@ -315,6 +315,14 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 }
 
 void
+callM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
+{
+  assert(c, size == BytesPerWord);
+
+  encode(c, 0xff, 2, a, false);
+}
+
+void
 jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, size == BytesPerWord);
@@ -333,6 +341,21 @@ pushR(Context* c, unsigned size, Assembler::Register* a)
     pushR(c, 4, a);
   } else {
     c->code.append(0x50 | a->low);      
+  }
+}
+
+void
+pushM(Context* c, unsigned size, Assembler::Memory* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+
+    pushM(c, 4, &ah);
+    pushM(c, 4, a);
+  } else {
+    assert(c, BytesPerWord == 4 or size == 8);
+
+    encode(c, 0xff, 6, a, false);    
   }
 }
 
@@ -550,6 +573,42 @@ addRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
+andCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+      Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  rex(c);
+  if (isInt8(a->value->value())) {
+    c->code.append(0x83);
+    c->code.append(0xe0 | b->low);
+    c->code.append(a->value->value());
+  } else {
+    assert(c, isInt32(a->value->value()));
+
+    c->code.append(0x81);
+    c->code.append(0xe0 | b->low);
+    c->code.append(a->value->value());
+  }
+}
+
+void
+andCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+      Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  encode(c, isInt8(a->value->value()) ? 0x83 : 0x81, 4, b, true);
+  if (isInt8(a->value->value())) {
+    c->code.append(a->value->value());
+  } else if (isInt32(a->value->value())) {
+    c->code.append4(a->value->value());
+  } else {
+    abort(c);
+  }
+}
+
+void
 populateTables()
 {
   Operations[Return] = return_;
@@ -557,8 +616,10 @@ populateTables()
   UnaryOperations[INDEX1(Call, Constant)] = CAST1(callC);
   UnaryOperations[INDEX1(AlignedCall, Constant)] = CAST1(alignedCallC);
   UnaryOperations[INDEX1(Call, Register)] = CAST1(callR);
+  UnaryOperations[INDEX1(Call, Memory)] = CAST1(callM);
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
+  UnaryOperations[INDEX1(Push, Memory)] = CAST1(pushM);
   UnaryOperations[INDEX1(Pop, Register)] = CAST1(popR);
   UnaryOperations[INDEX1(Pop, Memory)] = CAST1(popM);
 
@@ -574,6 +635,8 @@ populateTables()
   BinaryOperations[INDEX2(Add, Constant, Register)] = CAST2(addCR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
+  BinaryOperations[INDEX2(And, Constant, Register)] = CAST2(andCR);
+  BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);
 }
 
 class MyAssembler: public Assembler {

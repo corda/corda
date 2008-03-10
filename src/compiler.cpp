@@ -485,7 +485,10 @@ class StackValue: public Value {
   virtual OperandType type(Context* c) { abort(c); }
 
   virtual RegisterValue* toRegister(Context* c) {
-    abort(c);
+    return MemoryValue
+      (c->assembler->base(), (c->stackOffset + stack->index) * BytesPerWord,
+       NoRegister, 0, 0)
+      .toRegister(c);
   }
 
   virtual Stack* stackPosition(Context*) { return stack; }
@@ -636,7 +639,7 @@ syncStack(Context* c, Stack* start, unsigned count)
   for (unsigned i = 0; i < count; ++i) {
     Stack* s = segment[i];
     s->operand->value->release(c, s->operand);
-    apply(c, Push, s->size, s->operand->value);
+    apply(c, Push, s->size * BytesPerWord, s->operand->value);
     s->operand->value = stackValue(c, s);
   }
 }
@@ -1105,16 +1108,23 @@ class CombineEvent: public Event {
     if (a->target == 0) a->target = target(c, a);
     if (b->target == 0) b->target = target(c, b);
 
-    a->value->release(c, a);
-    b->value->release(c, b);
-    b->value->acquire(c, stack, result);
+    if (b->target == 0) {
+      b->target = freeRegister(c, BytesPerWord);
+    }
 
     if (a->target and not a->target->equals(c, a->value)) {
+      a->value->release(c, a);
       apply(c, Move, size, a->value, a->target);
+      a->value = a->target;
     }
+
     if (b->target and not b->target->equals(c, b->value)) {
+      b->value->release(c, b);
       apply(c, Move, size, b->value, b->target);
+      b->value = b->target;
     }
+
+    b->value->acquire(c, stack, result);
 
     apply(c, type, size, a->value, b->value);
 
