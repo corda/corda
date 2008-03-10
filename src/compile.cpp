@@ -1436,6 +1436,13 @@ resultSize(MyThread* t, unsigned code)
   }
 }
 
+bool
+emptyMethod(MyThread* t, object method)
+{
+  object code = methodCode(t, method);
+  return (codeLength(t, code) == 1 and codeBody(t, code, 0) == return_);
+}
+
 void
 compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
@@ -1443,15 +1450,19 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
 
   unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-  Compiler::Operand* result = c->call
-    (c->constant
-     (reinterpret_cast<intptr_t>
-      (&singletonBody(t, methodCompiled(t, target), 0))),
-     0,
-     Compiler::Aligned,
-     frame->trace(target, false),
-     rSize,
-     0);
+  Compiler::Operand* result = 0;
+
+  if (not emptyMethod(t, target)) {
+    result = c->call
+      (c->constant
+       (reinterpret_cast<intptr_t>
+        (&singletonBody(t, methodCompiled(t, target), 0))),
+       0,
+       Compiler::Aligned,
+       frame->trace(target, false),
+       rSize,
+       0);
+  }
 
   c->popped(methodParameterFootprint(t, target));
 
