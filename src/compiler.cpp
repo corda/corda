@@ -641,6 +641,20 @@ syncStack(Context* c, Stack* start, unsigned count)
   }
 }
 
+void
+syncStack(Context* c, Stack* start)
+{
+  unsigned count = 0;
+  for (Stack* s = start;
+       s and s->operand->value->stackPosition(c) == 0;
+       s = s->next)
+  {
+    ++ count;
+  }
+
+  syncStack(c, start, count);
+}
+
 class SyncStackEvent: public Event {
  public:
   SyncStackEvent(Context* c):
@@ -667,15 +681,7 @@ class SyncStackEvent: public Event {
   virtual void compile(Context* c) {
     fprintf(stderr, "SyncEvent.compile\n");
 
-    unsigned count = 0;
-    for (Stack* s = stack;
-         s and s->operand->value->stackPosition(c) == 0;
-         s = s->next)
-    {
-      ++ count;
-    }
-
-    syncStack(c, stack, count);
+    syncStack(c, stack);
   }
 };
 
@@ -814,11 +820,20 @@ class MoveEvent: public Event {
     if (src->target == 0) src->target = target(c, src);
 
     if (src->target == 0) {
-      src->target = freeRegister(c, size);
+      if (type == Move
+          and size == BytesPerWord
+          and dst->event == next)
+      {
+        dst->value = src->value;
+        return;
+      } else {
+        src->target = freeRegister(c, size);
+      }
     } else if (type == Move
                and size == BytesPerWord
                and src->target->equals(c, src->value))
     {
+      dst->value = src->value;
       return;
     } else if (src->value->type(c) == Memory
                and src->target->type(c) == Memory)
@@ -870,6 +885,10 @@ class DupEvent: public Event {
     if (target == 0) {
       if (dst->event) {
         target = dst->event->target(c, dst);
+        if (target == 0 and dst->event == next) {
+          dst->value = src->value;
+          return;
+        }
       }
       if (target == 0) {
         target = freeRegister(c, size);
