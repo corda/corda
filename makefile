@@ -52,8 +52,7 @@ strip-all = --strip-all
 
 rdynamic = -rdynamic
 
-warnings = -Wall -Wextra -Werror -Wunused-parameter \
-	-Winit-self -Wconversion
+warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \

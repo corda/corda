@@ -78,7 +78,7 @@ set(void** o, void* value)
 {
   *o = reinterpret_cast<void*>
     (reinterpret_cast<uintptr_t>(value)
-     | reinterpret_cast<uintptr_t>(*o) & (~PointerMask));
+     | (reinterpret_cast<uintptr_t>(*o) & (~PointerMask)));
 }
 
 inline void

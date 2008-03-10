@@ -1484,7 +1484,7 @@ setObjectClass(Thread*, object o, object value)
   cast<object>(o, 0)
     = reinterpret_cast<object>
     (reinterpret_cast<uintptr_t>(value)
-     | reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask));
+     | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
 }
 
 object&
