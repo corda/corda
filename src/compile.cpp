@@ -1436,6 +1436,31 @@ resultSize(MyThread* t, unsigned code)
   }
 }
 
+void
+pushReturnValue(MyThread* t, Frame* frame, unsigned code,
+                Compiler::Operand* result)
+{
+  switch (code) {
+  case ByteField:
+  case BooleanField:
+  case CharField:
+  case ShortField:
+  case FloatField:
+  case IntField:
+    return frame->pushInt(result);
+
+  case ObjectField:
+    return frame->pushObject(result);
+
+  case LongField:
+  case DoubleField:
+    return frame->pushLong(result);
+
+  default:
+    abort(t);
+  }
+}
+
 bool
 emptyMethod(MyThread* t, object method)
 {
@@ -1465,10 +1490,10 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
        0);
   }
 
-  c->popped(methodParameterFootprint(t, target));
+  frame->pop(methodParameterFootprint(t, target));
 
   if (rSize) {
-    c->push(rSize, result);
+    pushReturnValue(t, frame, methodReturnCode(t, target), result);
   }
 }
 
@@ -2427,7 +2452,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       frame->pop(parameterFootprint);
 
       if (rSize) {
-        c->push(rSize, result);
+        pushReturnValue(t, frame, methodReturnCode(t, target), result);
       }
     } break;
 
@@ -2483,7 +2508,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       frame->pop(parameterFootprint);
 
       if (rSize) {
-        c->push(rSize, result);
+        pushReturnValue(t, frame, methodReturnCode(t, target), result);
       }
     } break;
 
