@@ -236,7 +236,11 @@ test: build
 
 .PHONY: javadoc
 javadoc:
-	javadoc -sourcepath classpath -d build/javadoc -subpackages java
+	javadoc -sourcepath classpath -d build/javadoc -subpackages java \
+		-windowtitle "Avian v$(version) Class Library API" \
+		-doctitle "Avian v$(version) Class Library API" \
+		-header "Avian v$(version)" \
+		-bottom "<a href=\"http://oss.readytalk.com/avian/\">http://oss.readytalk.com/avian</a>"
 
 .PHONY: clean
 clean:
