@@ -133,7 +133,17 @@ class Assembler {
     TraceHandler* traceHandler;
   };
 
+  class Client {
+   public:
+    virtual ~Client() { }
+
+    virtual int acquireTemporary() = 0;
+    virtual void releaseTemporary(int r) = 0;
+  };
+
   virtual ~Assembler() { }
+
+  virtual void setClient(Client* client) = 0;
 
   virtual unsigned registerCount() = 0;
 

@@ -52,11 +52,12 @@ class Task;
 class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
-    s(s), zone(zone), code(s, a, 1024), tasks(0), result(0)
+    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0)
   { }
 
   System* s;
   Zone* zone;
+  Assembler::Client* client;
   Vector code;
   Task* tasks;
   uint8_t* result;
@@ -342,6 +343,50 @@ jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
+jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x84, a);
+}
+
+void
+moveCR(Context*, unsigned, Assembler::Constant*, Assembler::Register*);
+
+void
+pushR(Context*, unsigned, Assembler::Register*);
+
+void
+pushC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  int64_t v = a->value->value();
+
+  if (BytesPerWord == 4 and size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    pushC(c, 4, &ah);
+    pushC(c, 4, &al);
+  } else {
+    if (isInt8(v)) {
+      c->code.append(0x6a);
+      c->code.append(v);
+    } else if (isInt32(v)) {
+      c->code.append(0x68);
+      c->code.append4(v);
+    } else {
+      Assembler::Register tmp(c->client->acquireTemporary());
+      moveCR(c, size, a, &tmp);
+      pushR(c, size, &tmp);
+      c->client->releaseTemporary(tmp.low);
+    }
+  }
+}
+
+void
 pushR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
@@ -532,6 +577,30 @@ moveAR(Context* c, unsigned size, Assembler::Address* a,
 }
 
 void
+moveAM(Context* c, unsigned size, Assembler::Address* a,
+       Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveAR(c, size, a, &tmp);
+  moveRM(c, size, &tmp, b);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
+moveMM(Context* c, unsigned size, Assembler::Memory* a,
+       Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveMR(c, size, a, &tmp);
+  moveRM(c, size, &tmp, b);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
 move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8); // todo
@@ -564,7 +633,7 @@ addCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 
 void
 subtractCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
-      Assembler::Register* b)
+           Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
@@ -587,7 +656,7 @@ subtractCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 
 void
 addRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
-       Assembler::Register* b)
+      Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
@@ -611,17 +680,19 @@ andCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 {
   assert(c, BytesPerWord == 8 or size == 4);
 
+  int64_t v = a->value->value();
+
   rex(c);
-  if (isInt8(a->value->value())) {
+  if (isInt8(v)) {
     c->code.append(0x83);
     c->code.append(0xe0 | b->low);
     c->code.append(a->value->value());
-  } else {
-    assert(c, isInt32(a->value->value()));
-
+  } else if (isInt32(v)) {
     c->code.append(0x81);
     c->code.append(0xe0 | b->low);
-    c->code.append(a->value->value());
+    c->code.append(v);
+  } else {
+    abort(c);
   }
 }
 
@@ -631,11 +702,35 @@ andCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 {
   assert(c, BytesPerWord == 8 or size == 4);
 
+  int64_t v = a->value->value();
+
   encode(c, isInt8(a->value->value()) ? 0x83 : 0x81, 5, b, true);
-  if (isInt8(a->value->value())) {
-    c->code.append(a->value->value());
-  } else if (isInt32(a->value->value())) {
-    c->code.append4(a->value->value());
+  if (isInt8(v)) {
+    c->code.append(v);
+  } else if (isInt32(v)) {
+    c->code.append4(v);
+  } else {
+    abort(c);
+  }
+}
+
+void
+compareCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+          Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  int64_t v = a->value->value();
+
+  if (size == 8) rex(c);
+  if (isInt8(v)) {
+    c->code.append(0x83);
+    c->code.append(0xf8 | b->low);
+    c->code.append(v);
+  } else if (isInt32(v)) {
+    c->code.append(0x81);
+    c->code.append(0xf8 | b->low);
+    c->code.append4(v);
   } else {
     abort(c);
   }
@@ -648,6 +743,7 @@ compareCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
   assert(c, BytesPerWord == 8 or size == 4);
 
   encode(c, isInt8(a->value->value()) ? 0x83 : 0x81, 7, b, true);
+
   if (isInt8(a->value->value())) {
     c->code.append(a->value->value());
   } else if (isInt32(a->value->value())) {
@@ -672,7 +768,9 @@ populateTables()
 
   UnaryOperations[INDEX1(JumpIfGreaterOrEqual, Constant)]
     = CAST1(jumpIfGreaterOrEqualC);
+  UnaryOperations[INDEX1(JumpIfEqual, Constant)] = CAST1(jumpIfEqualC);
 
+  UnaryOperations[INDEX1(Push, Constant)] = CAST1(pushC);
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
   UnaryOperations[INDEX1(Push, Memory)] = CAST1(pushM);
 
@@ -687,6 +785,8 @@ populateTables()
   BinaryOperations[INDEX2(Move, Register, Register)] = CAST2(moveRR);
   BinaryOperations[INDEX2(Move, Memory, Register)] = CAST2(moveMR);
   BinaryOperations[INDEX2(Move, Address, Register)] = CAST2(moveAR);
+  BinaryOperations[INDEX2(Move, Address, Memory)] = CAST2(moveAM);
+  BinaryOperations[INDEX2(Move, Memory, Memory)] = CAST2(moveMM);
 
   BinaryOperations[INDEX2(Move4To8, Register, Register)] = CAST2(move4To8RR);
   BinaryOperations[INDEX2(Move4To8, Memory, Register)] = CAST2(move4To8MR);
@@ -700,6 +800,7 @@ populateTables()
 
   BinaryOperations[INDEX2(Subtract, Constant, Register)] = CAST2(subtractCR);
 
+  BinaryOperations[INDEX2(Compare, Constant, Register)] = CAST2(compareCR);
   BinaryOperations[INDEX2(Compare, Constant, Memory)] = CAST2(compareCM);
 }
 
@@ -711,6 +812,11 @@ class MyAssembler: public Assembler {
       populated = true;
       populateTables();
     }
+  }
+
+  virtual void setClient(Client* client) {
+    assert(&c, c.client == 0);
+    c.client = client;
   }
 
   virtual unsigned registerCount() {

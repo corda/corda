@@ -759,10 +759,11 @@ appendCall(Context* c, MyOperand* address, void* indirection, unsigned flags,
 }
 
 int
-freeRegister(Context* c)
+freeRegisterExcept(Context* c, int except)
 {
   for (int i = c->assembler->registerCount(); i >= 0; --i) {
-    if ((not c->registers[i].reserved)
+    if (i != except
+        and (not c->registers[i].reserved)
         and c->registers[i].operand == 0)
     {
       return i;
@@ -770,7 +771,9 @@ freeRegister(Context* c)
   }
 
   for (int i = c->assembler->registerCount(); i >= 0; --i) {
-    if (not c->registers[i].reserved) {
+    if (i != except
+        and (not c->registers[i].reserved))
+    {
       return i;
     }
   }
@@ -778,11 +781,18 @@ freeRegister(Context* c)
   abort(c);
 }
 
+inline int
+freeRegister(Context* c)
+{
+  return freeRegisterExcept(c, NoRegister);
+}
+
 RegisterValue*
 freeRegister(Context* c, unsigned size)
 {
   if (BytesPerWord == 4 and size == 8) {
-    return register_(c, freeRegister(c), freeRegister(c));
+    int low = freeRegister(c);
+    return register_(c, low, freeRegisterExcept(c, low));
   } else {
     return register_(c, freeRegister(c));
   }
@@ -943,14 +953,6 @@ class MoveEvent: public Event {
     {
       dst->value = src->value;
       return;
-    } else if ((src->value->type(c) == Address
-                or src->value->type(c) == Memory)
-               and src->target->type(c) == Memory)
-    {
-      RegisterValue* tmp = freeRegister(c, size);
-      tmp->preserve(c, stack, 0);
-      apply(c, Move, size, src->value, tmp);
-      src->value = tmp;
     }
 
     src->value->release(c, src);
@@ -1406,11 +1408,14 @@ compile(Context* c)
   }
 
   for (unsigned i = 0; i < c->logicalCodeLength; ++ i) {
+    LogicalInstruction* li = c->logicalCode + i;
+    li->machineOffset = a->length();
+
     fprintf(stderr, "compile ip %d\n", i);
-    for (Event* e = c->logicalCode[i].firstEvent; e; e = e->next) {
+    for (Event* e = li->firstEvent; e; e = e->next) {
       e->compile(c);
 
-      if (e == c->logicalCode[i].lastEvent) break;
+      if (e == li->lastEvent) break;
 
       for (CodePromise* p = e->promises; p; p = p->next) {
         p->offset = a->length();
@@ -1419,11 +1424,30 @@ compile(Context* c)
   }
 }
 
+class Client: public Assembler::Client {
+ public:
+  Client(Context* c): c(c) { }
+
+  virtual int acquireTemporary() {
+    int r = freeRegister(c);
+    c->registers[r].reserved = true;
+    return r;
+  }
+
+  virtual void releaseTemporary(int r) {
+    c->registers[r].reserved = false;
+  }
+
+  Context* c;
+};
+
 class MyCompiler: public Compiler {
  public:
   MyCompiler(System* s, Assembler* assembler, Zone* zone):
-    c(s, assembler, zone)
-  { }
+    c(s, assembler, zone), client(&c)
+  {
+    assembler->setClient(&client);
+  }
 
   virtual void pushState() {
     ::pushState(&c);
@@ -1795,6 +1819,7 @@ class MyCompiler: public Compiler {
   }
 
   Context c;
+  Client client;
 };
 
 } // namespace
