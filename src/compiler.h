@@ -51,6 +51,9 @@ class Compiler {
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
 
+  virtual bool isConstant(Operand* value) = 0;
+  virtual int64_t constantValue(Operand* value) = 0;
+
   virtual Operand* label() = 0;
   virtual void mark(Operand* label) = 0;
 

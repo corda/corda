@@ -948,6 +948,8 @@ class Frame {
       (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
       TraceElement(context, target, virtualCall, context->traceLog);
 
+    fprintf(stderr, "make element %p at ip %d\n", e, ip);
+
     context->eventLog.append(TraceEvent);
     context->eventLog.appendAddress(e);
 
@@ -1573,6 +1575,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     frame->startLogicalIp(ip);
 
+    if (ip == 0) {
+      handleEntrance(t, frame);
+    }
+
 //     fprintf(stderr, "ip: %d map: %ld\n", ip, *(frame->map));
 
     unsigned instruction = codeBody(t, code, ip++);
@@ -1591,17 +1597,24 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       if (CheckArrayBounds) {
         Compiler::Operand* load = c->label();
-        Compiler::Operand* throw_ = c->label();
+        Compiler::Operand* throw_ = 0;
 
-        c->cmp(4, c->constant(0), index);
-        c->jl(throw_);
+        if (c->isConstant(index)) {
+          expect(t, c->constantValue(index) >= 0);
+        } else {
+          throw_ = c->label();
+          c->cmp(4, c->constant(0), index);
+          c->jl(throw_);
+        }
 
         c->cmp(BytesPerWord,
-               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
-               index);
-        c->jl(load);
+               index,
+               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)));
+        c->jge(load);
 
-        c->mark(throw_);
+        if (not c->isConstant(index)) {
+          c->mark(throw_);
+        }
 
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
@@ -1614,34 +1627,67 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         c->mark(load);
       }
 
-      switch (instruction) {
-      case aaload:
-        frame->pushObject
-          (c->load
-           (BytesPerWord, c->memory(array, ArrayBody, index, BytesPerWord)));
-        break;
+      if (c->isConstant(index)) {
+        unsigned i = c->constantValue(index);
+        switch (instruction) {
+        case aaload:
+          frame->pushObject
+            (c->load
+             (BytesPerWord, c->memory(array, ArrayBody + (i * BytesPerWord))));
+          break;
 
-      case faload:
-      case iaload:
-        frame->pushInt(c->load(4, c->memory(array, ArrayBody, index, 4)));
-        break;
+        case faload:
+        case iaload:
+          frame->pushInt(c->load(4, c->memory(array, ArrayBody + (i * 4))));
+          break;
 
-      case baload:
-        frame->pushInt(c->load(1, c->memory(array, ArrayBody, index, 1)));
-        break;
+        case baload:
+          frame->pushInt(c->load(1, c->memory(array, ArrayBody + i)));
+          break;
 
-      case caload:
-        frame->pushInt(c->loadz(2, c->memory(array, ArrayBody, index, 2)));
-        break;
+        case caload:
+          frame->pushInt(c->loadz(2, c->memory(array, ArrayBody + (i * 2))));
+          break;
 
-      case daload:
-      case laload:
-        frame->pushLong(c->load(8, c->memory(array, ArrayBody, index, 8)));
-        break;
+        case daload:
+        case laload:
+          frame->pushInt(c->load(8, c->memory(array, ArrayBody + (i * 8))));
+          break;
 
-      case saload:
-        frame->pushInt(c->load(2, c->memory(array, ArrayBody, index, 2)));
-        break;
+        case saload:
+          frame->pushInt(c->load(2, c->memory(array, ArrayBody + (i * 2))));
+          break;
+        }        
+      } else {
+        switch (instruction) {
+        case aaload:
+          frame->pushObject
+            (c->load
+             (BytesPerWord, c->memory(array, ArrayBody, index, BytesPerWord)));
+          break;
+
+        case faload:
+        case iaload:
+          frame->pushInt(c->load(4, c->memory(array, ArrayBody, index, 4)));
+          break;
+
+        case baload:
+          frame->pushInt(c->load(1, c->memory(array, ArrayBody, index, 1)));
+          break;
+
+        case caload:
+          frame->pushInt(c->loadz(2, c->memory(array, ArrayBody, index, 2)));
+          break;
+
+        case daload:
+        case laload:
+          frame->pushLong(c->load(8, c->memory(array, ArrayBody, index, 8)));
+          break;
+
+        case saload:
+          frame->pushInt(c->load(2, c->memory(array, ArrayBody, index, 2)));
+          break;
+        }
       }
     } break;
 
@@ -1667,17 +1713,24 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
       if (CheckArrayBounds) {
         Compiler::Operand* store = c->label();
-        Compiler::Operand* throw_ = c->label();
+        Compiler::Operand* throw_ = 0;
 
-        c->cmp(4, c->constant(0), index);
-        c->jl(throw_);
+        if (c->isConstant(index)) {
+          expect(t, c->constantValue(index) >= 0);
+        } else {
+          throw_ = c->label();
+          c->cmp(4, c->constant(0), index);
+          c->jl(throw_);
+        }
 
         c->cmp(BytesPerWord,
-               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)),
-               index);
-        c->jl(store);
+               index,
+               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)));
+        c->jge(store);
 
-        c->mark(throw_);
+        if (not c->isConstant(index)) {
+          c->mark(throw_);
+        }
 
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
@@ -1690,38 +1743,74 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         c->mark(store);
       }
 
-      switch (instruction) {
-      case aastore: {
-        c->call
-          (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
-           context->indirection,
-           0,
-           frame->trace(0, false),
-           0,
-           4, c->thread(), array,
-           c->add(4, c->constant(ArrayBody),
-                  c->shl(4, c->constant(log(BytesPerWord)), index)),
-           value);
-      } break;
+      if (c->isConstant(index)) {
+        unsigned i = c->constantValue(index);
+        switch (instruction) {
+        case aastore: {
+          c->call
+            (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
+             context->indirection,
+             0,
+             frame->trace(0, false),
+             0,
+             4, c->thread(), array,
+             c->constant(ArrayBody + (i * BytesPerWord)),
+             value);
+        } break;
 
-      case fastore:
-      case iastore:
-        c->store(4, value, c->memory(array, ArrayBody, index, 4));
-        break;
+        case fastore:
+        case iastore:
+          c->store(4, value, c->memory(array, ArrayBody + (i * 4)));
+          break;
 
-      case bastore:
-        c->store(1, value, c->memory(array, ArrayBody, index, 1));
-        break;
+        case bastore:
+          c->store(1, value, c->memory(array, ArrayBody + i));
+          break;
 
-      case castore:
-      case sastore:
-        c->store(2, value, c->memory(array, ArrayBody, index, 2));
-        break;
+        case castore:
+        case sastore:
+          c->store(2, value, c->memory(array, ArrayBody + (i * 2)));
+          break;
 
-      case dastore:
-      case lastore:
-        c->store(8, value, c->memory(array, ArrayBody, index, 8));
-        break;
+        case dastore:
+        case lastore:
+          c->store(8, value, c->memory(array, ArrayBody + (i * 8)));
+          break;
+        }
+      } else  {
+        switch (instruction) {
+        case aastore: {
+          c->call
+            (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
+             context->indirection,
+             0,
+             frame->trace(0, false),
+             0,
+             4, c->thread(), array,
+             c->add(4, c->constant(ArrayBody),
+                    c->shl(4, c->constant(log(BytesPerWord)), index)),
+             value);
+        } break;
+
+        case fastore:
+        case iastore:
+          c->store(4, value, c->memory(array, ArrayBody, index, 4));
+          break;
+
+        case bastore:
+          c->store(1, value, c->memory(array, ArrayBody, index, 1));
+          break;
+
+        case castore:
+        case sastore:
+          c->store(2, value, c->memory(array, ArrayBody, index, 2));
+          break;
+
+        case dastore:
+        case lastore:
+          c->store(8, value, c->memory(array, ArrayBody, index, 8));
+          break;
+        }
       }
     } break;
 
@@ -1755,21 +1844,26 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      Compiler::Operand* nonnegative = c->label();
-
       Compiler::Operand* length = frame->popInt();
-      c->cmp(4, c->constant(0), length);
-      c->jge(nonnegative);
 
-      c->call
-        (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
-         context->indirection,
-         Compiler::NoReturn,
-         frame->trace(0, false),
-         0,
-         2, c->thread(), length);
+      if (c->isConstant(length)) {
+        expect(t, c->constantValue(length) >= 0);
+      } else{
+        Compiler::Operand* nonnegative = c->label();
 
-      c->mark(nonnegative);
+        c->cmp(4, c->constant(0), length);
+        c->jge(nonnegative);
+
+        c->call
+          (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
+           context->indirection,
+           Compiler::NoReturn,
+           frame->trace(0, false),
+           0,
+           2, c->thread(), length);
+
+        c->mark(nonnegative);
+      }
 
       frame->pushObject
         (c->call
@@ -2924,22 +3018,26 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case newarray: {
       uint8_t type = codeBody(t, code, ip++);
 
-      Compiler::Operand* nonnegative = c->label();
-
       Compiler::Operand* length = frame->popInt();
 
-      c->cmp(4, c->constant(0), length);
-      c->jge(nonnegative);
+      if (c->isConstant(length)) {
+        expect(t, c->constantValue(length) >= 0);
+      } else{
+        Compiler::Operand* nonnegative = c->label();
 
-      c->call
-        (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
-         context->indirection,
-         Compiler::NoReturn,
-         frame->trace(0, false),
-         0,
-         2, c->thread(), length);
+        c->cmp(4, c->constant(0), length);
+        c->jge(nonnegative);
 
-      c->mark(nonnegative);
+        c->call
+          (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
+           context->indirection,
+           Compiler::NoReturn,
+           frame->trace(0, false),
+           0,
+           2, c->thread(), length);
+
+        c->mark(nonnegative);
+      }
 
       object (*constructor)(Thread*, uintptr_t, bool);
       switch (type) {
@@ -2985,7 +3083,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
           0,
           frame->trace(0, false),
           BytesPerWord,
-          2, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
+          3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
           length));
     } break;
 
@@ -3463,6 +3561,7 @@ finish(MyThread* t, Context* context)
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   for (TraceElement* p = context->traceLog; p; p = p->next) {
+    fprintf(stderr, "make node for %p\n", p);
     object node = makeTraceNode
       (t, p->address->value(), 0, context->method, p->target,
        p->virtualCall, mapSize, false);
@@ -3561,8 +3660,6 @@ compile(MyThread* t, Context* context)
       break;
     }
   }
-
-  handleEntrance(t, &frame);
 
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;

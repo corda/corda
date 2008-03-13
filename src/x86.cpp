@@ -224,6 +224,7 @@ void
 encode(Context* c, uint8_t instruction, int a, Assembler::Memory* b, bool rex)
 {
   if (b->traceHandler) {
+    fprintf(stderr, "handle trace %p\n", b->traceHandler);
     b->traceHandler->handleTrace(codePromise(c, c->code.length()));
   }
 
@@ -239,6 +240,7 @@ encode2(Context* c, uint16_t instruction, int a, Assembler::Memory* b,
         bool rex)
 {
   if (b->traceHandler) {
+    fprintf(stderr, "handle trace %p\n", b->traceHandler);
     b->traceHandler->handleTrace(codePromise(c, c->code.length()));
   }
 
@@ -329,6 +331,14 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 
   c->code.append(0xff);
   c->code.append(0xe0 | a->low);
+}
+
+void
+jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x8d, a);
 }
 
 void
@@ -553,6 +563,29 @@ addCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 }
 
 void
+subtractCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+      Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  int64_t v = a->value->value();
+  if (v) {
+    rex(c);
+    if (isInt8(v)) {
+      c->code.append(0x83);
+      c->code.append(0xe8 | b->low);
+      c->code.append(v);
+    } else if (isInt32(v)) {
+      c->code.append(0x81);
+      c->code.append(0xe8 | b->low);
+      c->code.append4(v);        
+    } else {
+      abort(c);
+    }
+  }
+}
+
+void
 addRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
        Assembler::Register* b)
 {
@@ -598,7 +631,23 @@ andCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 {
   assert(c, BytesPerWord == 8 or size == 4);
 
-  encode(c, isInt8(a->value->value()) ? 0x83 : 0x81, 4, b, true);
+  encode(c, isInt8(a->value->value()) ? 0x83 : 0x81, 5, b, true);
+  if (isInt8(a->value->value())) {
+    c->code.append(a->value->value());
+  } else if (isInt32(a->value->value())) {
+    c->code.append4(a->value->value());
+  } else {
+    abort(c);
+  }
+}
+
+void
+compareCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+          Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  encode(c, isInt8(a->value->value()) ? 0x83 : 0x81, 7, b, true);
   if (isInt8(a->value->value())) {
     c->code.append(a->value->value());
   } else if (isInt32(a->value->value())) {
@@ -614,29 +663,44 @@ populateTables()
   Operations[Return] = return_;
 
   UnaryOperations[INDEX1(Call, Constant)] = CAST1(callC);
-  UnaryOperations[INDEX1(AlignedCall, Constant)] = CAST1(alignedCallC);
   UnaryOperations[INDEX1(Call, Register)] = CAST1(callR);
   UnaryOperations[INDEX1(Call, Memory)] = CAST1(callM);
+
+  UnaryOperations[INDEX1(AlignedCall, Constant)] = CAST1(alignedCallC);
+
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
+
+  UnaryOperations[INDEX1(JumpIfGreaterOrEqual, Constant)]
+    = CAST1(jumpIfGreaterOrEqualC);
+
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
   UnaryOperations[INDEX1(Push, Memory)] = CAST1(pushM);
+
   UnaryOperations[INDEX1(Pop, Register)] = CAST1(popR);
   UnaryOperations[INDEX1(Pop, Memory)] = CAST1(popM);
 
   BinaryOperations[INDEX2(LoadAddress, Memory, Register)] = CAST2(leaMR);
+
   BinaryOperations[INDEX2(Move, Constant, Register)] = CAST2(moveCR);
   BinaryOperations[INDEX2(Move, Constant, Memory)] = CAST2(moveCM);
   BinaryOperations[INDEX2(Move, Register, Memory)] = CAST2(moveRM);
   BinaryOperations[INDEX2(Move, Register, Register)] = CAST2(moveRR);
-  BinaryOperations[INDEX2(Move4To8, Register, Register)] = CAST2(move4To8RR);
   BinaryOperations[INDEX2(Move, Memory, Register)] = CAST2(moveMR);
   BinaryOperations[INDEX2(Move, Address, Register)] = CAST2(moveAR);
+
+  BinaryOperations[INDEX2(Move4To8, Register, Register)] = CAST2(move4To8RR);
   BinaryOperations[INDEX2(Move4To8, Memory, Register)] = CAST2(move4To8MR);
+
   BinaryOperations[INDEX2(Add, Constant, Register)] = CAST2(addCR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
+
   BinaryOperations[INDEX2(And, Constant, Register)] = CAST2(andCR);
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);
+
+  BinaryOperations[INDEX2(Subtract, Constant, Register)] = CAST2(subtractCR);
+
+  BinaryOperations[INDEX2(Compare, Constant, Memory)] = CAST2(compareCM);
 }
 
 class MyAssembler: public Assembler {
