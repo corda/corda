@@ -335,11 +335,11 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 }
 
 void
-jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
-  conditional(c, 0x8d, a);
+  unconditional(c, 0xe9, a);
 }
 
 void
@@ -348,6 +348,46 @@ jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
   assert(c, size == BytesPerWord);
 
   conditional(c, 0x84, a);
+}
+
+void
+jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x85, a);
+}
+
+void
+jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x8f, a);
+}
+
+void
+jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x8d, a);
+}
+
+void
+jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x8c, a);
+}
+
+void
+jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x8e, a);
 }
 
 void
@@ -765,10 +805,16 @@ populateTables()
   UnaryOperations[INDEX1(AlignedCall, Constant)] = CAST1(alignedCallC);
 
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
+  UnaryOperations[INDEX1(Jump, Constant)] = CAST1(jumpC);
 
+  UnaryOperations[INDEX1(JumpIfEqual, Constant)] = CAST1(jumpIfEqualC);
+  UnaryOperations[INDEX1(JumpIfNotEqual, Constant)] = CAST1(jumpIfNotEqualC);
+  UnaryOperations[INDEX1(JumpIfGreater, Constant)] = CAST1(jumpIfGreaterC);
   UnaryOperations[INDEX1(JumpIfGreaterOrEqual, Constant)]
     = CAST1(jumpIfGreaterOrEqualC);
-  UnaryOperations[INDEX1(JumpIfEqual, Constant)] = CAST1(jumpIfEqualC);
+  UnaryOperations[INDEX1(JumpIfLess, Constant)] = CAST1(jumpIfLessC);
+  UnaryOperations[INDEX1(JumpIfLessOrEqual, Constant)]
+    = CAST1(jumpIfLessOrEqualC);
 
   UnaryOperations[INDEX1(Push, Constant)] = CAST1(pushC);
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);

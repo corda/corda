@@ -948,8 +948,6 @@ class Frame {
       (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
       TraceElement(context, target, virtualCall, context->traceLog);
 
-    fprintf(stderr, "make element %p at ip %d\n", e, ip);
-
     context->eventLog.append(TraceEvent);
     context->eventLog.appendAddress(e);
 
@@ -3561,7 +3559,6 @@ finish(MyThread* t, Context* context)
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   for (TraceElement* p = context->traceLog; p; p = p->next) {
-    fprintf(stderr, "make node for %p\n", p);
     object node = makeTraceNode
       (t, p->address->value(), 0, context->method, p->target,
        p->virtualCall, mapSize, false);
