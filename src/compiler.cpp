@@ -380,7 +380,7 @@ class RegisterValue: public Value {
     }
   }
 
-  virtual void release(Context* c, MyOperand* a UNUSED) {
+  virtual void release(Context* c, MyOperand* a) {
     if (a == c->registers[register_.low].operand) {
       fprintf(stderr, "%p release %d\n", a, register_.low);
 
@@ -485,6 +485,20 @@ class AbstractMemoryValue: public MemoryValue {
     MemoryValue(NoRegister, offset, NoRegister, scale, traceHandler),
     base_(base), index_(index)
   { }
+
+  virtual void preserve(Context* c, Stack* s, MyOperand*) {
+    base_->value->preserve(c, s, base_);
+    if (index_) {
+      index_->value->preserve(c, s, index_);
+    }
+  }
+
+  virtual void release(Context* c, MyOperand*) {
+    base_->value->release(c, base_);
+    if (index_) {
+      index_->value->release(c, index_);
+    }
+  }
 
   virtual int base(Context* c) {
     return ::toRegister(c, base_);
@@ -628,9 +642,11 @@ class ArgumentEvent: public Event {
     if (a->target == 0) {
       apply(c, Push, size, a->value);
       a->value = 0;
-    } else if (not a->target->equals(c, a->value)) {
-      a->target->preserve(c, stack, a);
-      apply(c, Move, size, a->value, a->target);
+    } else {
+      if (not a->target->equals(c, a->value)) {
+        a->target->preserve(c, stack, a);
+        apply(c, Move, size, a->value, a->target);
+      }
       a->value->release(c, a);
     }
   }
@@ -911,9 +927,9 @@ class PopEvent: public Event {
         target = freeRegister(c, BytesPerWord * stack->size, false);
       }
 
-      target->acquire(c, 0, dst);
-
       apply(c, Pop, BytesPerWord * stack->size, target);
+
+      target->acquire(c, 0, dst);
 
       dst->value = target;
     }
