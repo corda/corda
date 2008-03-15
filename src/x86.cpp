@@ -427,6 +427,20 @@ pushC(Context* c, unsigned size, Assembler::Constant* a)
 }
 
 void
+moveAR(Context*, unsigned, Assembler::Address*, Assembler::Register* b);
+
+void
+pushA(Context* c, unsigned size, Assembler::Address* a)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+  
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveAR(c, size, a, &tmp);
+  pushR(c, size, &tmp);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
 pushR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
@@ -533,8 +547,8 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
        Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
-    Assembler::Register ah(a->low);
-    Assembler::Register bh(b->low);
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
 
     moveRR(c, 4, a, b);
     moveRR(c, 4, &ah, &bh);
@@ -680,6 +694,35 @@ move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
 }
 
 void
+moveZMR(Context* c, unsigned size, Assembler::Memory* a,
+        Assembler::Register* b)
+{
+  switch (size) {
+  case 2:
+    encode2(c, 0x0fb7, b->low, a, true);
+    break;
+
+  default: abort(c); // todo
+  }
+}
+
+void
+moveZRR(Context* c, unsigned size, Assembler::Register* a,
+        Assembler::Register* b)
+{
+  switch (size) {
+  case 2:
+    rex(c);
+    c->code.append(0x0f);
+    c->code.append(0xb7);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+    break;
+
+  default: abort(c); // todo
+  }
+}
+
+void
 addCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
       Assembler::Register* b)
 {
@@ -723,6 +766,17 @@ subtractCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
       abort(c);
     }
   }
+}
+
+void
+subtractRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+           Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  rex(c);
+  c->code.append(0x29);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
 }
 
 void
@@ -808,6 +862,30 @@ compareCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 }
 
 void
+compareRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+          Assembler::Register* b)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    compareRR(c, 4, &ah, &bh);
+
+    // if the high order bits are equal, we compare the low order
+    // bits; otherwise, we jump past that comparison
+    c->code.append(0x0f);
+    c->code.append(0x85); // jne
+    c->code.append4(2);
+
+    compareRR(c, 4, a, b);
+  } else {
+    if (size == 8) rex(c);
+    c->code.append(0x39);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
+}
+
+void
 compareCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
           Assembler::Memory* b)
 {
@@ -822,6 +900,27 @@ compareCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
   } else {
     abort(c);
   }
+}
+
+void
+compareRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
+          Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  encode(c, 0x39, a->low, b, true);
+}
+
+void
+compareMM(Context* c, unsigned size UNUSED, Assembler::Memory* a,
+          Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveMR(c, size, a, &tmp);
+  compareRM(c, size, &tmp, b);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -848,6 +947,7 @@ populateTables()
     = CAST1(jumpIfLessOrEqualC);
 
   UnaryOperations[INDEX1(Push, Constant)] = CAST1(pushC);
+  UnaryOperations[INDEX1(Push, Address)] = CAST1(pushA);
   UnaryOperations[INDEX1(Push, Register)] = CAST1(pushR);
   UnaryOperations[INDEX1(Push, Memory)] = CAST1(pushM);
 
@@ -868,6 +968,9 @@ populateTables()
   BinaryOperations[INDEX2(Move4To8, Register, Register)] = CAST2(move4To8RR);
   BinaryOperations[INDEX2(Move4To8, Memory, Register)] = CAST2(move4To8MR);
 
+  BinaryOperations[INDEX2(MoveZ, Memory, Register)] = CAST2(moveZMR);
+  BinaryOperations[INDEX2(MoveZ, Register, Register)] = CAST2(moveZRR);
+
   BinaryOperations[INDEX2(Add, Constant, Register)] = CAST2(addCR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
@@ -876,9 +979,13 @@ populateTables()
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);
 
   BinaryOperations[INDEX2(Subtract, Constant, Register)] = CAST2(subtractCR);
+  BinaryOperations[INDEX2(Subtract, Register, Register)] = CAST2(subtractRR);
 
   BinaryOperations[INDEX2(Compare, Constant, Register)] = CAST2(compareCR);
+  BinaryOperations[INDEX2(Compare, Register, Register)] = CAST2(compareRR);
+  BinaryOperations[INDEX2(Compare, Register, Memory)] = CAST2(compareRM);
   BinaryOperations[INDEX2(Compare, Constant, Memory)] = CAST2(compareCM);
+  BinaryOperations[INDEX2(Compare, Memory, Memory)] = CAST2(compareMM);
 }
 
 class MyAssembler: public Assembler {

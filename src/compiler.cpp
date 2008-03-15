@@ -26,6 +26,8 @@ class Event;
 class PushEvent;
 class Stack;
 
+void NO_RETURN abort(Context* c);
+
 class Value {
  public:
   virtual ~Value() { }
@@ -38,26 +40,25 @@ class Value {
   virtual void acquire(Context*, Stack*, MyOperand*) { }
   virtual void release(Context*, MyOperand*) { }
 
-  virtual RegisterValue* toRegister(Context*) = 0;
+  virtual int registerValue(Context* c) { abort(c); }
+  virtual int64_t constantValue(Context* c) { abort(c); }
 
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
                                   Assembler::Operand** operand) = 0;
-
-  virtual int64_t constantValue(Context*) = 0;
 };
 
 class MyOperand: public Compiler::Operand {
  public:
   MyOperand(Value* value):
-    event(0), value(value), target(0), push(0), pushedValue(0)
+    event(0), value(value), target(0), push(0), pushed(false)
   { }
   
   Event* event;
   Value* value;
   Value* target;
   PushEvent* push;
-  StackValue* pushedValue;
+  bool pushed;
 };
 
 class Stack {
@@ -283,8 +284,6 @@ class ConstantValue: public Value {
 
   virtual OperandType type(Context*) { return Constant; }
 
-  virtual RegisterValue* toRegister(Context* c);
-
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
                                   Assembler::Operand** operand)
@@ -325,18 +324,12 @@ class AddressValue: public Value {
 
   virtual OperandType type(Context*) { return Address; }
 
-  virtual RegisterValue* toRegister(Context* c);
-
   virtual void asAssemblerOperand(Context*,
                                   OperandType* type,
                                   Assembler::Operand** operand)
   {
     *type = Address;
     *operand = &address;
-  }
-
-  virtual int64_t constantValue(Context* c) {
-    abort(c);
   }
 
   Assembler::Address address;
@@ -389,8 +382,8 @@ class RegisterValue: public Value {
     }
   }
 
-  virtual RegisterValue* toRegister(Context*) {
-    return this;
+  virtual int registerValue(Context*) {
+    return register_.low;
   }
 
   virtual void asAssemblerOperand(Context*,
@@ -399,10 +392,6 @@ class RegisterValue: public Value {
   {
     *type = Register;
     *operand = &register_;
-  }
-
-  virtual int64_t constantValue(Context* c) {
-    abort(c);
   }
 
   Assembler::Register register_;
@@ -433,12 +422,6 @@ class MemoryValue: public Value {
        and static_cast<MemoryValue*>(o)->value.scale == value.scale);
   }
 
-  virtual RegisterValue* toRegister(Context* c) {
-    RegisterValue* v = freeRegister(c, BytesPerWord, false);
-    apply(c, Move, BytesPerWord, this, v);
-    return v;
-  }
-
   virtual int base(Context*) {
     return value.base;
   }
@@ -457,26 +440,8 @@ class MemoryValue: public Value {
     *operand = &value;
   }
 
-  virtual int64_t constantValue(Context* c) {
-    abort(c);
-  }
-
   Assembler::Memory value;
 };
-
-MemoryValue*
-memory(Context* c, int base, int offset, int index, unsigned scale,
-       TraceHandler* traceHandler)
-{
-  return new (c->zone->allocate(sizeof(MemoryValue)))
-    MemoryValue(base, offset, index, scale, traceHandler);
-}
-
-int
-toRegister(Context* c, MyOperand* a)
-{
-  return a->value->toRegister(c)->register_.low;
-}
 
 class AbstractMemoryValue: public MemoryValue {
  public:
@@ -501,11 +466,11 @@ class AbstractMemoryValue: public MemoryValue {
   }
 
   virtual int base(Context* c) {
-    return ::toRegister(c, base_);
+    return base_->value->registerValue(c);
   }
 
   virtual int index(Context* c) {
-    return index_ ? ::toRegister(c, index_) : NoRegister;
+    return index_ ? index_->value->registerValue(c) : NoRegister;
   }
 
   MyOperand* base_;
@@ -522,35 +487,32 @@ memory(Context* c, MyOperand* base, int offset, MyOperand* index,
 
 class StackValue: public Value {
  public:
-  StackValue(Stack* stack): stack(stack) { }
+  StackValue(Context* c, Stack* stack):
+    stack(stack),
+    value
+    (c->assembler->base(),
+     - (c->stackOffset + stack->index + 1) * BytesPerWord,
+     NoRegister, 0, 0)
+  { }
 
-  virtual OperandType type(Context* c) { abort(c); }
+  virtual OperandType type(Context*) { return Memory; }
 
-  virtual RegisterValue* toRegister(Context* c) {
-    return MemoryValue
-      (c->assembler->base(), (c->stackOffset + stack->index) * BytesPerWord,
-       NoRegister, 0, 0)
-      .toRegister(c);
-  }
-
-  virtual void asAssemblerOperand(Context* c,
-                                  OperandType*,
-                                  Assembler::Operand**)
+  virtual void asAssemblerOperand(Context*,
+                                  OperandType* type,
+                                  Assembler::Operand** operand)
   {
-    abort(c);
-  }
-
-  virtual int64_t constantValue(Context* c) {
-    abort(c);
+    *type = Memory;
+    *operand = &value;
   }
 
   Stack* stack;
+  Assembler::Memory value;
 };
 
 StackValue*
 stackValue(Context* c, Stack* stack)
 {
-  return new (c->zone->allocate(sizeof(StackValue))) StackValue(stack);
+  return new (c->zone->allocate(sizeof(StackValue))) StackValue(c, stack);
 }
 
 class Event {
@@ -691,8 +653,8 @@ class ReturnEvent: public Event {
 
       if (not a->target->equals(c, a->value)) {
         apply(c, Move, size, a->value, a->target);
-        a->value->release(c, a);
       }
+      a->value->release(c, a);
     }
 
     Assembler::Register base(c->assembler->base());
@@ -843,9 +805,19 @@ syncStack(Context* c, Stack* start, unsigned count)
 
   for (unsigned i = 0; i < count; ++i) {
     Stack* s = segment[i];
-    apply(c, Push, s->size * BytesPerWord, s->operand->value);
-    s->operand->value->release(c, s->operand);
-    s->operand->pushedValue = stackValue(c, s);
+    if (s->operand->value) {
+      apply(c, Push, s->size * BytesPerWord, s->operand->value);
+      s->operand->value->release(c, s->operand);
+      s->operand->pushed = true;
+      s->operand->value = stackValue(c, s);
+    } else {
+      Assembler::Register stack(c->assembler->stack());
+      Assembler::Constant offset(resolved(c, s->size * BytesPerWord));
+      c->assembler->apply
+        (Subtract, BytesPerWord, Constant, &offset, Register, &stack);
+      s->operand->pushed = true;
+      s->operand->value = stackValue(c, s);
+    }
   }
 }
 
@@ -853,7 +825,7 @@ void
 syncStack(Context* c, Stack* start)
 {
   unsigned count = 0;
-  for (Stack* s = start; s and s->operand->pushedValue == 0; s = s->next) {
+  for (Stack* s = start; s and (not s->operand->pushed); s = s->next) {
     ++ count;
   }
 
@@ -901,8 +873,8 @@ appendPush(Context* c)
 
 class PopEvent: public Event {
  public:
-  PopEvent(Context* c):
-    Event(c)
+  PopEvent(Context* c, unsigned count, bool ignore):
+    Event(c), count(count), ignore(ignore)
   { }
 
   virtual Value* target(Context* c, MyOperand*) {
@@ -916,30 +888,53 @@ class PopEvent: public Event {
   virtual void compile(Context* c) {
     fprintf(stderr, "PopEvent.compile\n");
 
-    MyOperand* dst = stack->operand;
-    if (dst->event and dst->pushedValue) {
-      Value* target = 0;
+    Stack* s = stack;
+    unsigned ignored = 0;
+    for (unsigned i = count; i;) {
+      MyOperand* dst = s->operand;
+      if (dst->pushed) {
+        if (dst->event and (not ignore)) {
+          assert(c, ignored == 0);
 
-      if (dst->event and dst->event->operandSize(c) == BytesPerWord) {
-        target = dst->event->target(c, dst);
+          Value* target = 0;
+
+          if (dst->event->operandSize(c) == BytesPerWord) {
+            target = dst->event->target(c, dst);
+          }
+          if (target == 0) {
+            target = freeRegister(c, BytesPerWord * s->size, false);
+          }
+
+          apply(c, Pop, BytesPerWord * s->size, target);
+
+          target->acquire(c, 0, dst);
+
+          dst->value = target;
+        } else {
+          ignored += s->size;
+        }
       }
-      if (target == 0) {
-        target = freeRegister(c, BytesPerWord * stack->size, false);
-      }
 
-      apply(c, Pop, BytesPerWord * stack->size, target);
+      i -= s->size;
+      s = s->next;
+    }
 
-      target->acquire(c, 0, dst);
-
-      dst->value = target;
+    if (ignored) {
+      Assembler::Register stack(c->assembler->stack());
+      Assembler::Constant offset(resolved(c, ignored * BytesPerWord));
+      c->assembler->apply
+        (Add, BytesPerWord, Constant, &offset, Register, &stack);
     }
   }
+
+  unsigned count;
+  bool ignore;
 };
 
 void
-appendPop(Context* c)
+appendPop(Context* c, unsigned count, bool ignore)
 {
-  new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c);
+  new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c, count, ignore);
 }
 
 bool
@@ -1221,7 +1216,7 @@ class CombineEvent: public Event {
       if (br.low == NoRegister) {
         if (result->event) {
           Value* v = result->event->target(c, result);
-          if (v->type(c) == Register) {
+          if (v and v->type(c) == Register) {
             return v;
           } else {
             return 0;
@@ -1338,20 +1333,52 @@ appendTranslate(Context* c, UnaryOperation type, unsigned size, MyOperand* a,
     TranslateEvent(c, type, size, a, result);
 }
 
-RegisterValue*
-ConstantValue::toRegister(Context* c)
-{
-  RegisterValue* v = freeRegister(c, BytesPerWord, false);
-  apply(c, Move, BytesPerWord, this, v);
-  return v;
-}
+class MemoryEvent: public Event {
+ public:
+  MemoryEvent(Context* c, MyOperand* base, MyOperand* index,
+              MyOperand* result):
+    Event(c), base(base), index(index), result(result)
+  {
+    setEvent(c, base, this);
+    if (index) setEvent(c, index, this);
+  }
 
-RegisterValue*
-AddressValue::toRegister(Context* c)
+  virtual unsigned operandSize(Context*) {
+    return BytesPerWord;
+  }
+
+  virtual Value* target(Context* c, MyOperand* v UNUSED) {
+    assert(c, v == base or v == index);
+    return 0;
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "MemoryEvent.compile\n");
+
+    if (base->value->type(c) != Register) {
+      base->target = freeRegister(c, BytesPerWord, true);
+      apply(c, Move, BytesPerWord, base->value, base->target);  
+      base->value->release(c, base);
+      base->value = base->target;
+    }
+
+    if (index and index->value->type(c) != Register) {
+      index->target = freeRegister(c, BytesPerWord, true);
+      apply(c, Move, BytesPerWord, index->value, index->target);  
+      index->value->release(c, index);
+      index->value = index->target;
+    }
+  }
+
+  MyOperand* base;
+  MyOperand* index;
+  MyOperand* result;
+};
+
+void
+appendMemory(Context* c, MyOperand* a, MyOperand* b, MyOperand* result)
 {
-  RegisterValue* v = freeRegister(c, BytesPerWord, false);
-  apply(c, Move, BytesPerWord, this, v);
-  return v;
+  new (c->zone->allocate(sizeof(MemoryEvent))) MemoryEvent(c, a, b, result);
 }
 
 void
@@ -1363,7 +1390,7 @@ preserve(Context* c, Stack* stack, int reg, MyOperand* a)
 
     unsigned count = 0;
     Stack* start = 0;
-    for (Stack* s = stack; s and s->operand->pushedValue == 0; s = s->next) {
+    for (Stack* s = stack; s and (not s->operand->pushed); s = s->next) {
       if (s->operand == b) {
         start = s;
       }
@@ -1429,7 +1456,7 @@ push(Context* c, unsigned size, MyOperand* o)
   assert(c, ceiling(size, BytesPerWord));
 
   c->state->stack = stack(c, o, ceiling(size, BytesPerWord), c->state->stack);
-
+  
   appendPush(c);
 }
 
@@ -1439,7 +1466,7 @@ pop(Context* c, unsigned size UNUSED)
   Stack* s = c->state->stack;
   assert(c, ceiling(size, BytesPerWord) == s->size);
 
-  appendPop(c);
+  appendPop(c, s->size, false);
 
   c->state->stack = s->next;
   return s->operand;
@@ -1499,11 +1526,11 @@ compile(Context* c)
               i, count(e->stack));
       e->compile(c);
 
-      if (e == li->lastEvent) break;
-
       for (CodePromise* p = e->promises; p; p = p->next) {
         p->offset = a->length();
       }
+
+      if (e == li->lastEvent) break;
     }
   }
 }
@@ -1614,10 +1641,15 @@ class MyCompiler: public Compiler {
                           unsigned scale = 1,
                           TraceHandler* traceHandler = 0)
   {
-    return operand
+    MyOperand* result = operand
       (&c, ::memory
        (&c, static_cast<MyOperand*>(base), displacement,
         static_cast<MyOperand*>(index), scale, traceHandler));
+
+    appendMemory(&c, static_cast<MyOperand*>(base),
+                 static_cast<MyOperand*>(index), result);
+
+    return result;
   }
 
   virtual Operand* stack() {
@@ -1652,6 +1684,8 @@ class MyCompiler: public Compiler {
   }
 
   virtual void mark(Operand* label) {
+    markStack(&c);
+
     static_cast<ConstantValue*>(static_cast<MyOperand*>(label)->value)->value
       = machineIp();
   }
@@ -1665,11 +1699,18 @@ class MyCompiler: public Compiler {
   }
 
   virtual void pushed(unsigned count) {
-    for (unsigned i = 0; i < count; ++i) ::push(&c, BytesPerWord, operand(&c));
+    for (unsigned i = 0; i < count; ++i) {
+      MyOperand* a = operand(&c);
+      ::push(&c, BytesPerWord, a);
+      a->value = stackValue(&c, c.state->stack);
+      a->pushed = true;
+    }
   }
 
   virtual void popped(unsigned count) {
-    for (unsigned i = count; i > 0;) {
+    appendPop(&c, count, true);
+
+    for (unsigned i = count; i;) {
       Stack* s = c.state->stack;
       c.state->stack = s->next;
       i -= s->size;

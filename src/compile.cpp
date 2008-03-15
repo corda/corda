@@ -2589,7 +2589,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* result = c->call
         (c->memory
          (c->and_
-          (4, c->constant(PointerMask), c->memory
+          (BytesPerWord, c->constant(PointerMask), c->memory
            (instance, 0, 0, 1, frame->trace(0, false))), offset, 0, 1),
          0,
          0,
