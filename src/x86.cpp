@@ -529,6 +529,25 @@ moveCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 }
 
 void
+moveRR(Context* c, unsigned size, Assembler::Register* a,
+       Assembler::Register* b)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->low);
+    Assembler::Register bh(b->low);
+
+    moveRR(c, 4, a, b);
+    moveRR(c, 4, &ah, &bh);
+  } else {
+    assert(c, BytesPerWord == 8 or size == 4); // todo
+
+    rex(c);
+    c->code.append(0x89);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
+}
+
+void
 moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
 {
   if (BytesPerWord == 4 and size == 8) {
@@ -540,24 +559,36 @@ moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
   } else if (BytesPerWord == 8 and size == 4) {
     encode(c, 0x89, a->low, b, false);
   } else {
-    encode(c, 0x89, a->low, b, true);
-  }
-}
+    switch (size) {
+    case 1:
+      if (BytesPerWord == 8) {
+        if (a->low > rbx) {
+          encode2(c, 0x4088, a->low, b, false);
+        } else {
+          encode(c, 0x88, a->low, b, false);
+        }
+      } else {
+        if (a->low > rbx) {
+          Assembler::Register ax(c->client->acquireTemporary(rax));
+          moveRR(c, BytesPerWord, a, &ax);
+          moveRM(c, 1, &ax, b);
+          c->client->releaseTemporary(ax.low);
+        } else {
+          encode(c, 0x88, a->low, b, false);
+        }
+      }
+      break;
 
-void
-moveRR(Context* c, unsigned size, Assembler::Register* a,
-       Assembler::Register* b)
-{
-  if (BytesPerWord == 4 and size == 8) {
-    Assembler::Register ah(a->low);
-    Assembler::Register bh(b->low);
+    case 2:
+      encode2(c, 0x6689, a->low, b, false);
+      break;
 
-    moveRR(c, 4, a, b);
-    moveRR(c, 4, &ah, &bh);
-  } else {
-    rex(c);
-    c->code.append(0x89);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    case BytesPerWord:
+      encode(c, 0x89, a->low, b, true);
+      break;
+
+    default: abort(c);
+    }
   }
 }
 

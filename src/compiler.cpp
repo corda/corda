@@ -1512,8 +1512,13 @@ class Client: public Assembler::Client {
  public:
   Client(Context* c): c(c) { }
 
-  virtual int acquireTemporary() {
-    int r = freeRegisterExcept(c, NoRegister, false);
+  virtual int acquireTemporary(int r) {
+    if (r == NoRegister) {
+      r = freeRegisterExcept(c, NoRegister, false);
+    } else {
+      expect(c, not c->registers[r].reserved);
+      expect(c, c->registers[r].operand == 0);
+    }
     c->registers[r].reserved = true;
     return r;
   }

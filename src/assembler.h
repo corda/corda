@@ -137,7 +137,7 @@ class Assembler {
    public:
     virtual ~Client() { }
 
-    virtual int acquireTemporary() = 0;
+    virtual int acquireTemporary(int r = NoRegister) = 0;
     virtual void releaseTemporary(int r) = 0;
   };
 
