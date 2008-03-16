@@ -553,11 +553,24 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
     moveRR(c, 4, a, b);
     moveRR(c, 4, &ah, &bh);
   } else {
-    assert(c, BytesPerWord == 8 or size == 4); // todo
+    switch (size) {
+    case 1:
+      c->code.append(0xbe);
+      c->code.append(0xc0 | (a->low << 3) | b->low);
+      break;
 
-    rex(c);
-    c->code.append(0x89);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    case 2:
+      c->code.append(0xbf);
+      c->code.append(0xc0 | (a->low << 3) | b->low);
+      break;
+
+    case 8:
+      rex(c);
+    case 4:
+      c->code.append(0x89);
+      c->code.append(0xc0 | (a->low << 3) | b->low);
+      break;
+    }
   }
 }
 
