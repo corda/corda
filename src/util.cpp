@@ -12,24 +12,6 @@
 
 using namespace vm;
 
-namespace {
-
-object
-clone(Thread* t, object o)
-{
-  object class_ = objectClass(t, o);
-  unsigned size = baseSize(t, o, class_) * BytesPerWord;
-
-  object clone = make(t, class_);
-  memcpy(reinterpret_cast<void**>(clone) + 1,
-         reinterpret_cast<void**>(o) + 1,
-         size - BytesPerWord);
-
-  return clone;
-}
-
-} // namespace
-
 namespace vm {
 
 object
