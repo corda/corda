@@ -232,15 +232,13 @@ IsInstanceOf(Thread* t, jobject o, jclass c)
 }
 
 object
-findMethod(Thread* t, object c, const char* name, const char* spec)
+findMethod(Thread* t, jclass c, const char* name, const char* spec)
 {
-  PROTECT(t, c);
-
   object n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
   object s = makeByteArray(t, "%s", spec);
-  return vm::findMethod(t, c, n, s);
+  return vm::findMethod(t, *c, n, s);
 }
 
 jmethodID JNICALL
@@ -248,7 +246,7 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = findMethod(t, *c, name, spec);
+  object method = findMethod(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   if (classFlags(t, *c) & ACC_INTERFACE) {
@@ -278,7 +276,7 @@ GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = findMethod(t, *c, name, spec);
+  object method = findMethod(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return methodOffset(t, method) + 1;
@@ -772,13 +770,13 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 object
-findField(Thread* t, object class_, const char* name, const char* spec)
+findField(Thread* t, jclass c, const char* name, const char* spec)
 {
   object n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
   object s = makeByteArray(t, "%s", spec);
-  return vm::findField(t, class_, n, s);
+  return vm::findField(t, *c, n, s);
 }
 
 jfieldID JNICALL
@@ -786,7 +784,7 @@ GetFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, *c, name, spec);
+  object field = findField(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
@@ -797,7 +795,7 @@ GetStaticFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, *c, name, spec);
+  object field = findField(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
