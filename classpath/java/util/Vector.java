@@ -37,6 +37,10 @@ public class Vector<T> implements List<T> {
     list.add(index, element);
   }
 
+  public void insertElementAt(T element, int index) {
+    add(index, element);
+  }
+
   public synchronized boolean add(T element) {
     return list.add(element);
   }
@@ -55,6 +59,10 @@ public class Vector<T> implements List<T> {
 
   public synchronized T set(int index, T value) {
       return list.set(index, value);
+  }
+
+  public T setElementAt(T value, int index) {
+      return set(index, value);
   }
 
   public T elementAt(int index) {
