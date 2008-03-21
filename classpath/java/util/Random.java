@@ -11,15 +11,54 @@
 package java.util;
 
 public class Random {
-  public int nextInt(int n) {
-    return nextInt() % n;
+  private static final long Mask = 0x5DEECE66DL;
+
+  private static long nextSeed = 0;
+
+  private long seed;
+
+  public Random(long seed) {
+    setSeed(seed);
+  }
+
+  public Random() {
+    setSeed((nextSeed++) ^ System.currentTimeMillis());
+  }
+
+  public void setSeed(long seed) {
+    this.seed = (seed ^ Mask) & ((1L << 48) - 1);
+  }
+
+  protected int next(int bits) {
+    seed = ((seed * Mask) + 0xBL) & ((1L << 48) - 1);
+    return (int) (seed >>> (48 - bits));
+  }
+
+  public int nextInt(int limit) {
+    if (limit <= 0) {
+      throw new IllegalArgumentException();
+    }
+    
+    if ((limit & -limit) == limit) {
+      // limit is a power of two
+      return (int) ((limit * (long) next(31)) >> 31);
+    }
+    
+    int bits;
+    int value;
+    do {
+      bits = next(31);
+      value = bits % limit;
+    } while (bits - value + (limit - 1) < 0);
+
+    return value;
   }
 
   public int nextInt() {
-    return (int)(Math.random()*Integer.MAX_VALUE);
+    return next(32);
   }
 
   public double nextDouble() {
-    return Math.random();
+    return (((long) next(26) << 27) + next(27)) / (double) (1L << 53);
   }
 }

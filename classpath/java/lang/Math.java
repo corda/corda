@@ -10,10 +10,12 @@
 
 package java.lang;
 
+import java.util.Random;
+
 public final class Math {
   public static final double E = 2.718281828459045;
   public static final double PI = 3.141592653589793;
-  private static boolean randomInitialized = false;
+  private static final Random random = new Random();
 
   private Math() { }
 
@@ -74,16 +76,8 @@ public final class Math {
   }
 
   public static double random() {
-    if (randomInitialized) {
-      natRandomInitialize(System.currentTimeMillis());
-      randomInitialized = true;
-    }
-    return natRandom();
+    return random.nextDouble();
   }
-
-  public static native void natRandomInitialize(long val);
-
-  public static native double natRandom();
 
   public static native double floor(double v);
 
