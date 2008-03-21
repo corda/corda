@@ -1942,6 +1942,14 @@ interpret(Thread* t)
     ip = (ip - 5) + static_cast<int32_t>(offset);
   } goto loop;
 
+  case l2d: {
+    pushDouble(t, static_cast<double>(static_cast<int64_t>(popLong(t))));
+  } goto loop;
+
+  case l2f: {
+    pushFloat(t, static_cast<float>(static_cast<int64_t>(popLong(t))));
+  } goto loop;
+
   case l2i: {
     pushInt(t, static_cast<int32_t>(popLong(t)));
   } goto loop;
