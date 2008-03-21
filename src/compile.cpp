@@ -1388,6 +1388,18 @@ intToFloat(int32_t a)
   return floatToBits(static_cast<float>(a));
 }
 
+uint64_t
+longToDouble(int64_t a)
+{
+  return doubleToBits(static_cast<double>(a));
+}
+
+uint32_t
+longToFloat(int64_t a)
+{
+  return floatToBits(static_cast<float>(a));
+}
+
 object FORCE_ALIGN
 makeBlankObjectArray(Thread* t, object class_, int32_t length)
 {
@@ -2798,6 +2810,30 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       if (UNLIKELY(t->exception)) return;
 
       frame->pop(1);
+    } break;
+
+    case l2d: {
+      Operand* a = frame->popLong();
+      
+      c->directCall
+        (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
+
+      Operand* result = c->result8();
+      frame->pushLong(result);
+      c->release(result);
+      c->release(a);
+    } break;
+
+    case l2f: {
+      Operand* a = frame->popLong();
+      
+      c->directCall
+        (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
+
+      Operand* result = c->result4();
+      frame->pushInt(result);
+      c->release(result);
+      c->release(a);
     } break;
 
     case l2i:
