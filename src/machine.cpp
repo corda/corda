@@ -1279,7 +1279,9 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     }
   }
 
-  if (populateInterfaceVtables) {
+  if (populateInterfaceVtables
+      and (classFlags(t, class_) & ACC_ABSTRACT) == 0)
+  {
     // generate interface vtables
     object itable = classInterfaceTable(t, class_);
     if (itable) {
