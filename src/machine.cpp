@@ -1279,9 +1279,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     }
   }
 
-  if (populateInterfaceVtables
-      and (classFlags(t, class_) & ACC_ABSTRACT) == 0)
-  {
+  if (populateInterfaceVtables) {
     // generate interface vtables
     object itable = classInterfaceTable(t, class_);
     if (itable) {
@@ -1296,7 +1294,9 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
             object method = arrayBody(t, ivtable, j);
             method = hashMapFind
               (t, virtualMap, method, methodHash, methodEqual);
-            assert(t, method);
+
+            // note that method may be null in the case of an abstract
+            // class
               
             set(t, vtable, ArrayBody + (j * BytesPerWord), method);        
           }
