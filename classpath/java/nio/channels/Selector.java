@@ -40,7 +40,7 @@ public abstract class Selector {
 
   public abstract boolean isOpen();
 
-  public abstract void wakeup();
+  public abstract Selector wakeup();
 
   public abstract int select(long interval) throws IOException;
 

@@ -44,7 +44,7 @@ public class SocketChannel extends SelectableChannel
   }
 
   public void close() throws IOException {
-    if (! isOpen()) {
+    if (isOpen()) {
       super.close();
       closeSocket();
     }

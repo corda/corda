@@ -36,8 +36,9 @@ public class SelectionKey {
     return interestOps;
   }
 
-  public void interestOps(int v) {
+  public SelectionKey interestOps(int v) {
     this.interestOps = v;
+    return this;
   }
 
   public int readyOps() {

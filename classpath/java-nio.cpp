@@ -575,6 +575,13 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
   timeval time = { interval / 1000, (interval % 1000) * 1000 };
   int r = ::select(max + 1, &(s->read), &(s->write), &(s->except), &time);
 
+  if (r < 0) {
+    if (errno != EINTR) {
+      throwIOException(e);
+      return 0;
+    }
+  }
+
 #ifdef WIN32
   if (FD_ISSET(s->control.writer(), &(s->write)) or
       FD_ISSET(s->control.writer(), &(s->except)))
@@ -618,11 +625,6 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
     }
   }
 
-  if (r < 0) {
-    if (errno != EINTR) {
-      throwIOException(e);
-    }
-  }
   return r;
 }
 
