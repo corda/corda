@@ -10,7 +10,11 @@
 
 package java.nio.channels;
 
+import java.io.IOException;
+
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.ServerSocket;
 
 public class ServerSocketChannel extends SocketChannel {
   public static ServerSocketChannel open() {
@@ -24,26 +28,32 @@ public class ServerSocketChannel extends SocketChannel {
     return c;
   }
 
-  public Handle socket() {
+  public ServerSocket socket() {
     return new Handle();
   }
 
-  private int doAccept() throws Exception {
+  private int doAccept() throws IOException {
     return natDoAccept(socket);
   }
 
-  private int doListen(String host, int port) throws Exception {
+  private int doListen(String host, int port) throws IOException {
     return natDoListen(host, port);
   }
 
-  public class Handle {
-    public void bind(InetSocketAddress address)
-      throws Exception
+  public class Handle extends ServerSocket {
+    public void bind(SocketAddress address)
+      throws IOException
     {
-      socket = doListen(address.getHostName(), address.getPort());
+      InetSocketAddress a;
+      try {
+        a = (InetSocketAddress) address;
+      } catch (ClassCastException e) {
+        throw new IllegalArgumentException();
+      }
+      socket = doListen(a.getHostName(), a.getPort());
     }
   }
 
-  private static native int natDoAccept(int socket) throws Exception;
-  private static native int natDoListen(String host, int port) throws Exception;
+  private static native int natDoAccept(int socket) throws IOException;
+  private static native int natDoListen(String host, int port) throws IOException;
 }

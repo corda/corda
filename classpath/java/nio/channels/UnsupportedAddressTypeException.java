@@ -8,22 +8,10 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package java.net;
+package java.nio.channels;
 
-public class InetSocketAddress extends SocketAddress {
-  private final String host;
-  private final int port;
-
-  public InetSocketAddress(String host, int port) {
-    this.host = host;
-    this.port = port;
-  }
-
-  public String getHostName() {
-    return host;
-  }
-
-  public int getPort() {
-    return port;
+public class UnsupportedAddressTypeException extends IllegalArgumentException {
+  public UnsupportedAddressTypeException() {
+    super(null, null);
   }
 }

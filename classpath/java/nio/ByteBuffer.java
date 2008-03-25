@@ -10,12 +10,9 @@
 
 package java.nio;
 
-public class ByteBuffer implements Comparable<ByteBuffer> {
+public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
   private final byte[] array;
   private int arrayOffset;
-  private int capacity;
-  private int position;
-  private int limit;
   private final boolean readOnly;
 
   public static ByteBuffer allocate(int capacity) {
@@ -55,12 +52,6 @@ public class ByteBuffer implements Comparable<ByteBuffer> {
     return array;
   }
 
-  public ByteBuffer clear() {
-    position = 0;
-    limit = capacity;
-    return this;
-  }
-
   public ByteBuffer slice() {
     ByteBuffer buf = new ByteBuffer(array, true);
     buf.arrayOffset = arrayOffset + position;
@@ -68,22 +59,6 @@ public class ByteBuffer implements Comparable<ByteBuffer> {
     buf.capacity = remaining();
     buf.limit = buf.capacity;
     return buf;
-  }
-
-  public int limit() {
-    return limit;
-  }
-
-  public int remaining() {
-    return limit-position;
-  }
-
-  public int position() {
-    return position;
-  }
-
-  public int capacity() {
-    return capacity;
   }
 
   public int arrayOffset() {
@@ -97,16 +72,6 @@ public class ByteBuffer implements Comparable<ByteBuffer> {
     position=remaining();
     limit(capacity());
     
-    return this;
-  }
-
-  public ByteBuffer limit(int newLimit) {
-    limit = newLimit;
-    return this;
-  }
-
-  public ByteBuffer position(int newPosition) {
-    position = newPosition;
     return this;
   }
 
@@ -164,10 +129,6 @@ public class ByteBuffer implements Comparable<ByteBuffer> {
     return this;
   }
 
-  public boolean hasRemaining() {
-    return remaining() > 0;
-  }
-
   public byte get() {
     checkGet(1);
     return array[arrayOffset+(position++)];
@@ -187,12 +148,6 @@ public class ByteBuffer implements Comparable<ByteBuffer> {
   public byte get(int position) {
     checkGet(position, 1);
     return array[arrayOffset+position];
-  }
-
-  public ByteBuffer flip() {
-    limit = position;
-    position = 0;
-    return this;
   }
 
   public int getInt() {

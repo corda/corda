@@ -52,10 +52,11 @@ class SocketSelector extends Selector {
     }
   }
 
-  public synchronized void select(long interval) throws IOException {
+  public synchronized int select(long interval) throws IOException {
     selectedKeys.clear();
 
-    if (clearWoken()) return;
+    if (clearWoken()) return 0;
+
     int max=0;
     for (Iterator<SelectionKey> it = keys.iterator();
          it.hasNext();)
@@ -87,6 +88,8 @@ class SocketSelector extends Selector {
       }
     }
     clearWoken();
+
+    return selectedKeys.size();
   }
 
   public void close() {
