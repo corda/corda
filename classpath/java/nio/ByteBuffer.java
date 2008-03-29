@@ -16,18 +16,22 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
   private final boolean readOnly;
 
   public static ByteBuffer allocate(int capacity) {
-    return new ByteBuffer(new byte[capacity], false);
+    return new ByteBuffer(new byte[capacity], 0, capacity, false);
   }
 
   public static ByteBuffer wrap(byte[] array) {
-    return new ByteBuffer(array, false);
+    return wrap(array, 0, array.length);
   }
 
-  private ByteBuffer(byte[] array, boolean readOnly) {
+  public static ByteBuffer wrap(byte[] array, int offset, int length) {
+    return new ByteBuffer(array, offset, length, false);
+  }
+
+  private ByteBuffer(byte[] array, int offset, int length, boolean readOnly) {
     this.array = array;
     this.readOnly = readOnly;
-    arrayOffset = 0;
-    capacity = array.length;
+    arrayOffset = offset;
+    capacity = length;
     limit = capacity;
     position = 0;
   }
@@ -53,12 +57,7 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
   }
 
   public ByteBuffer slice() {
-    ByteBuffer buf = new ByteBuffer(array, true);
-    buf.arrayOffset = arrayOffset + position;
-    buf.position = 0;
-    buf.capacity = remaining();
-    buf.limit = buf.capacity;
-    return buf;
+    return new ByteBuffer(array, arrayOffset + position, remaining(), true);
   }
 
   public int arrayOffset() {
