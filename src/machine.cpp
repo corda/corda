@@ -1689,7 +1689,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
       not system->success(system->make(&referenceLock)) or
-      not system->success(system->load(&libraries, bootLibrary, true)))
+      not system->success(system->load(&libraries, bootLibrary, false)))
   {
     system->abort();
   }

@@ -317,7 +317,8 @@ $(driver-object): $(driver-source)
 $(driver-dynamic-object): $(driver-source)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(name)\" -c $(<) -o $(@)
+	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(so-prefix)$(name)$(so-suffix)\" \
+		-c $(<) -o $(@)
 
 $(boot-object): $(boot-source)
 	$(compile-object)

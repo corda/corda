@@ -448,7 +448,7 @@ class BuiltinElement: public JarElement {
 
   virtual void init() {
     if (index == 0) {
-      if (s->success(s->load(&library, libraryName, true))) {
+      if (s->success(s->load(&library, libraryName, false))) {
         void* p = library->resolve(name);
         if (p) {
           uint8_t* (*function)(unsigned*);
