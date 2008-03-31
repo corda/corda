@@ -440,14 +440,15 @@ class JarElement: public Element {
 
 class BuiltinElement: public JarElement {
  public:
-  BuiltinElement(System* s, const char* name, unsigned nameLength):
-    JarElement(s, name, nameLength)
+  BuiltinElement(System* s, const char* name, unsigned nameLength,
+                 const char* libraryName):
+    JarElement(s, name, nameLength),
+    libraryName(libraryName)
   { }
 
   virtual void init() {
     if (index == 0) {
-      System::Library* library;
-      if (s->success(s->load(&library, 0, false))) {
+      if (s->success(s->load(&library, libraryName, true))) {
         void* p = library->resolve(name);
         if (p) {
           uint8_t* (*function)(unsigned*);
@@ -461,14 +462,21 @@ class BuiltinElement: public JarElement {
             index = JarIndex::open(s, region);
           }
         }
-        library->disposeAll();
       }
     }
   }
+
+  virtual void dispose() {
+    JarElement::dispose();
+    library->disposeAll();
+  }
+
+  System::Library* library;
+  const char* libraryName;
 };
 
 Element*
-parsePath(System* s, const char* path)
+parsePath(System* s, const char* path, const char* bootLibrary)
 {
   class Tokenizer {
    public:
@@ -509,7 +517,7 @@ parsePath(System* s, const char* path)
       name[token.length - 2] = 0; 
   
       e = new (allocate(s, sizeof(BuiltinElement)))
-        BuiltinElement(s, name, token.length - 2);
+        BuiltinElement(s, name, token.length - 2, bootLibrary);
     } else {
       char* name = static_cast<char*>(allocate(s, token.length + 1));
       memcpy(name, token.s, token.length);
@@ -548,9 +556,9 @@ parsePath(System* s, const char* path)
 
 class MyFinder: public Finder {
  public:
-  MyFinder(System* system, const char* path):
+  MyFinder(System* system, const char* path, const char* bootLibrary):
     system(system),
-    path_(parsePath(system, path)),
+    path_(parsePath(system, path, bootLibrary)),
     pathString(copy(system, &pathStringLength, path))
   { }
 
@@ -600,9 +608,9 @@ class MyFinder: public Finder {
 namespace vm {
 
 Finder*
-makeFinder(System* s, const char* path)
+makeFinder(System* s, const char* path, const char* bootLibrary)
 {
-  return new (allocate(s, sizeof(MyFinder))) MyFinder(s, path);
+  return new (allocate(s, sizeof(MyFinder))) MyFinder(s, path, bootLibrary);
 }
 
 } // namespace vm

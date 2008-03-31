@@ -623,7 +623,7 @@ class MySystem: public System {
   {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName) {
+    if (mapName and name) {
       unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
       char buffer[size];
       snprintf(buffer, size, SO_PREFIX "%s" SO_SUFFIX, name);

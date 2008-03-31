@@ -687,18 +687,18 @@ class MySystem: public System {
     bool alreadyAllocated = false;
     bool isMain = false;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName) {
+    if (mapName and name) {
       unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
       char buffer[size];
       snprintf(buffer, size, "lib%s" SO_SUFFIX, name);
-      p = dlopen(buffer, RTLD_LAZY);
+      p = dlopen(buffer, RTLD_LAZY | RTLD_LOCAL);
     } else {
       if (!name) {
         pathOfExecutable(this, &name, &nameLength);
         alreadyAllocated = true;
         isMain = true;
       }
-      p = dlopen(name, RTLD_LAZY);
+      p = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
     }
  
     if (p) {

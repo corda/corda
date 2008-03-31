@@ -1121,7 +1121,8 @@ class Machine {
     ImmortalAllocation
   };
 
-  Machine(System* system, Heap* heap, Finder* finder, Processor* processor);
+  Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
+          const char* bootLibrary, const char* builtins);
 
   ~Machine() { 
     dispose();

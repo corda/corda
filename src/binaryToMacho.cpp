@@ -30,10 +30,10 @@ pad(unsigned n)
 
 void
 writeObject(FILE* out, const uint8_t* data, unsigned size,
-            const char* dataName, const char* sizeName)
+            const char* startName, const char* endName)
 {
-  unsigned dataNameLength = strlen(dataName) + 1;
-  unsigned sizeNameLength = strlen(sizeName) + 1;
+  unsigned startNameLength = strlen(startName) + 1;
+  unsigned endNameLength = strlen(endName) + 1;
 
   mach_header header = {
     MH_MAGIC, // magic
@@ -42,7 +42,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     MH_OBJECT, // filetype,
     2, // ncmds
     sizeof(segment_command)
-    + sizeof(section)
+    + (sizeof(section) * 2)
     + sizeof(symtab_command), // sizeofcmds
     0 // flags
   };
@@ -55,24 +55,42 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     pad(size), // vmsize
     sizeof(mach_header)
     + sizeof(segment_command)
-    + sizeof(section)
+    + (sizeof(section) * 2)
     + sizeof(symtab_command), // fileoff
     pad(size), // filesize
     7, // maxprot
     7, // initprot
-    1, // nsects
+    2, // nsects
     0 // flags
   };
 
-  section sect = {
+  section sect1 = {
     "__const", // sectname
     "__TEXT", // segname
     0, // addr
     pad(size), // size
     sizeof(mach_header)
     + sizeof(segment_command)
-    + sizeof(section)
+    + (sizeof(section) * 2)
     + sizeof(symtab_command), // offset
+    0, // align
+    0, // reloff
+    0, // nreloc
+    S_REGULAR, // flags
+    0, // reserved1
+    0, // reserved2
+  };
+
+  section sect2 = {
+    "__const", // sectname
+    "__TEXT", // segname
+    0, // addr
+    0, // size
+    sizeof(mach_header)
+    + sizeof(segment_command)
+    + (sizeof(section) * 2)
+    + sizeof(symtab_command)
+    + size, // offset
     0, // align
     0, // reloff
     0, // nreloc
@@ -86,7 +104,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     sizeof(symtab_command), // cmdsize
     sizeof(mach_header)
     + sizeof(segment_command)
-    + sizeof(section)
+    + (sizeof(section) * 2)
     + sizeof(symtab_command)
     + pad(size), // symoff
     2, // nsyms
@@ -96,7 +114,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     + sizeof(symtab_command)
     + pad(size)
     + (sizeof(struct nlist) * 2), // stroff
-    1 + dataNameLength + sizeNameLength, // strsize
+    1 + startNameLength + endNameLength, // strsize
   };
 
   struct nlist symbolList[] = {
@@ -108,17 +126,18 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
       0 // n_value
     },
     {
-      reinterpret_cast<char*>(1 + dataNameLength), // n_un
-      N_ABS | N_EXT, // n_type
-      NO_SECT, // n_sect
+      reinterpret_cast<char*>(1 + startNameLength), // n_un
+      N_SECT | N_EXT, // n_type
+      2, // n_sect
       0, // n_desc
-      size // n_value
+      0 // n_value
     }
   };
 
   fwrite(&header, 1, sizeof(header), out);
   fwrite(&segment, 1, sizeof(segment), out);
-  fwrite(&sect, 1, sizeof(sect), out);
+  fwrite(&sect1, 1, sizeof(sect1), out);
+  fwrite(&sect2, 1, sizeof(sect2), out);
   fwrite(&symbolTable, 1, sizeof(symbolTable), out);
 
   fwrite(data, 1, size, out);
@@ -127,8 +146,8 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
   fwrite(&symbolList, 1, sizeof(symbolList), out);
 
   fputc(0, out);
-  fwrite(dataName, 1, dataNameLength, out);
-  fwrite(sizeName, 1, sizeNameLength, out);
+  fwrite(startName, 1, startNameLength, out);
+  fwrite(endName, 1, endNameLength, out);
 }
 
 } // namespace
@@ -138,7 +157,7 @@ main(int argc, const char** argv)
 {
   if (argc != 4) {
     fprintf(stderr,
-            "usage: %s <input file> <data symbol name> <size symbol name>\n",
+            "usage: %s <input file> <start symbol name> <end symbol name>\n",
             argv[0]);
     return -1;
   }

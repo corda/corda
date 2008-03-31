@@ -1986,27 +1986,37 @@ JNI_GetDefaultJavaVMInitArgs(void* args)
   return 0;
 }
 
-#define BUILTINS_PROPERTY "vm.builtins"
+#define BUILTINS_PROPERTY "avian.builtins"
+#define BOOTSTRAP_PROPERTY "avian.bootstrap"
 
 extern "C" JNIEXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 {
   JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
 
-  System* s = makeSystem();
-  Heap* h = makeHeap(s, a->maxHeapSize);
-  Finder* f = makeFinder(s, a->classpath);
-  Processor* p = makeProcessor(s, h);
-
-  *m = new (h->allocate(sizeof(Machine), false)) Machine(s, h, f, p);
-
+  const char* builtins = 0;
+  const char* bootLibrary = 0;
   if (a->properties) {
     for (const char** p = a->properties; *p; ++p) {
-      if (strncmp(*p, BUILTINS_PROPERTY "=", sizeof(BUILTINS_PROPERTY)) == 0) {
-        (*m)->builtins = (*p) + sizeof(BUILTINS_PROPERTY);
+      if (strncmp(*p, BUILTINS_PROPERTY "=",
+                  sizeof(BUILTINS_PROPERTY)) == 0)
+      {
+        builtins = (*p) + sizeof(BUILTINS_PROPERTY);
+      } else if (strncmp(*p, BOOTSTRAP_PROPERTY "=",
+                         sizeof(BOOTSTRAP_PROPERTY)) == 0)
+      {
+        bootLibrary = (*p) + sizeof(BOOTSTRAP_PROPERTY);
       }
     }
   }
+
+  System* s = makeSystem();
+  Heap* h = makeHeap(s, a->maxHeapSize);
+  Finder* f = makeFinder(s, a->classpath, bootLibrary);
+  Processor* p = makeProcessor(s, h);
+
+  *m = new (h->allocate(sizeof(Machine), false))
+    Machine(s, h, f, p, bootLibrary, builtins);
 
   *t = p->makeThread(*m, 0, 0);
 
