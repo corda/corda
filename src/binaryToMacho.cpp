@@ -42,7 +42,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     MH_OBJECT, // filetype,
     2, // ncmds
     sizeof(segment_command)
-    + (sizeof(section) * 2)
+    + sizeof(section)
     + sizeof(symtab_command), // sizeofcmds
     0 // flags
   };
@@ -55,42 +55,24 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     pad(size), // vmsize
     sizeof(mach_header)
     + sizeof(segment_command)
-    + (sizeof(section) * 2)
+    + sizeof(section)
     + sizeof(symtab_command), // fileoff
     pad(size), // filesize
     7, // maxprot
     7, // initprot
-    2, // nsects
+    1, // nsects
     0 // flags
   };
 
-  section sect1 = {
+  section sect = {
     "__const", // sectname
     "__TEXT", // segname
     0, // addr
     pad(size), // size
     sizeof(mach_header)
     + sizeof(segment_command)
-    + (sizeof(section) * 2)
+    + sizeof(section)
     + sizeof(symtab_command), // offset
-    0, // align
-    0, // reloff
-    0, // nreloc
-    S_REGULAR, // flags
-    0, // reserved1
-    0, // reserved2
-  };
-
-  section sect2 = {
-    "__const", // sectname
-    "__TEXT", // segname
-    0, // addr
-    0, // size
-    sizeof(mach_header)
-    + sizeof(segment_command)
-    + (sizeof(section) * 2)
-    + sizeof(symtab_command)
-    + size, // offset
     0, // align
     0, // reloff
     0, // nreloc
@@ -104,7 +86,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     sizeof(symtab_command), // cmdsize
     sizeof(mach_header)
     + sizeof(segment_command)
-    + (sizeof(section) * 2)
+    + sizeof(section)
     + sizeof(symtab_command)
     + pad(size), // symoff
     2, // nsyms
@@ -128,16 +110,15 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     {
       reinterpret_cast<char*>(1 + startNameLength), // n_un
       N_SECT | N_EXT, // n_type
-      2, // n_sect
+      1, // n_sect
       0, // n_desc
-      0 // n_value
+      size // n_value
     }
   };
 
   fwrite(&header, 1, sizeof(header), out);
   fwrite(&segment, 1, sizeof(segment), out);
-  fwrite(&sect1, 1, sizeof(sect1), out);
-  fwrite(&sect2, 1, sizeof(sect2), out);
+  fwrite(&sect, 1, sizeof(sect), out);
   fwrite(&symbolTable, 1, sizeof(symbolTable), out);
 
   fwrite(data, 1, size, out);

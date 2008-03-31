@@ -90,6 +90,7 @@ ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 		-I$(JAVA_HOME)/include/linux -I$(src)
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	rdynamic =
 	strip-all = -S -x
 	binaryToMacho = $(native-build)/binaryToMacho
 	so-suffix = .jnilib
@@ -330,6 +331,7 @@ $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)
 
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
+	@echo "creating $(@)"
 ifeq ($(platform),darwin)
 	$(binaryToMacho) $(build)/classpath.jar \
 		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
@@ -373,7 +375,7 @@ $(dynamic-library): \
 		$(boot-object)
 	@echo "linking $(@)"
 	$(cc) $(^) $(shared) $(lflags) -o $(@)
-	$(strip) $(@)
+	$(strip) $(strip-all) $(@)
 
 $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 	@echo "linking $(@)"
