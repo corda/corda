@@ -443,7 +443,7 @@ class BuiltinElement: public JarElement {
   BuiltinElement(System* s, const char* name, unsigned nameLength,
                  const char* libraryName):
     JarElement(s, name, nameLength),
-    libraryName(libraryName)
+    libraryName(libraryName ? copy(s, &libraryNameLength, libraryName) : 0)
   { }
 
   virtual void init() {
@@ -469,10 +469,12 @@ class BuiltinElement: public JarElement {
   virtual void dispose() {
     JarElement::dispose();
     library->disposeAll();
+    free(s, libraryName, libraryNameLength + 1);
   }
 
   System::Library* library;
   const char* libraryName;
+  unsigned libraryNameLength;
 };
 
 Element*
