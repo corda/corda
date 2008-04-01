@@ -1702,6 +1702,9 @@ makeString(Thread* t, const char* format, ...);
 void
 stringChars(Thread* t, object string, char* chars);
 
+void
+stringChars(Thread* t, object string, wchar_t* chars);
+
 bool
 isAssignableFrom(Thread* t, object a, object b);
 
