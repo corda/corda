@@ -1805,9 +1805,13 @@ GetJavaVM(Thread* t, Machine** m)
 jboolean JNICALL
 IsSameObject(Thread* t, jobject a, jobject b)
 {
-  ENTER(t, Thread::ActiveState);
+  if (a and b) {
+    ENTER(t, Thread::ActiveState);
 
-  return *a == *b;
+    return *a == *b;
+  } else {
+    return a == b;
+  }
 }
 
 struct JDK1_1InitArgs {

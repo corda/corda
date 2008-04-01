@@ -376,6 +376,10 @@ public final class Class <T> {
     return flags;
   }
 
+  public boolean isInterface() {
+    return (flags & Modifier.INTERFACE) != 0;
+  }
+
   public Class getSuperclass() {
     return super_;
   }
