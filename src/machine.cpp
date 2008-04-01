@@ -861,7 +861,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       if (flags & ACC_STATIC) {
         unsigned size = fieldSize(t, code);
-        unsigned excess = staticOffset % size;
+        unsigned excess = (staticOffset % size) % BytesPerWord;
         if (excess) {
           staticOffset += BytesPerWord - excess;
         }
@@ -878,7 +878,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           abort(t); // todo: handle non-static field initializers
         }
 
-        unsigned excess = memberOffset % fieldSize(t, code);
+        unsigned excess = (memberOffset % fieldSize(t, code)) % BytesPerWord;
         if (excess) {
           memberOffset += BytesPerWord - excess;
         }
