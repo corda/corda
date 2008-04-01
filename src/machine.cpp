@@ -2153,6 +2153,24 @@ stringChars(Thread* t, object string, char* chars)
   chars[stringLength(t, string)] = 0;
 }
 
+void
+stringChars(Thread* t, object string, wchar_t* chars)
+{
+  object data = stringData(t, string);
+  if (objectClass(t, data)
+      == arrayBody(t, t->m->types, Machine::ByteArrayType))
+  {
+    for (unsigned i = 0; i < stringLength(t, string); ++i) {
+      chars[i] = byteArrayBody(t, data, stringOffset(t, string) + i);
+    }
+  } else {
+    memcpy(chars,
+           &charArrayBody(t, data, stringOffset(t, string)),
+           stringLength(t, string) * sizeof(wchar_t));
+  }
+  chars[stringLength(t, string)] = 0;
+}
+
 bool
 isAssignableFrom(Thread* t, object a, object b)
 {

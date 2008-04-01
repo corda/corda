@@ -88,6 +88,35 @@ GetEnv(Machine* m, Thread** t, jint version)
 }
 
 jsize JNICALL
+GetStringLength(Thread* t, jstring s)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return stringLength(t, *s);
+}
+
+const jchar* JNICALL
+GetStringChars(Thread* t, jstring s, jboolean* isCopy)
+{
+  ENTER(t, Thread::ActiveState);
+
+  jchar* chars = static_cast<jchar*>
+    (t->m->heap->allocate((stringLength(t, *s) + 1) * sizeof(jchar), false));
+  stringChars(t, *s, reinterpret_cast<wchar_t*>(chars));
+
+  if (isCopy) *isCopy = true;
+  return chars;
+}
+
+void JNICALL
+ReleaseStringChars(Thread* t, jstring s, const jchar* chars)
+{
+  ENTER(t, Thread::ActiveState);
+
+  t->m->heap->free(chars, (stringLength(t, *s) + 1) * sizeof(jchar), false);
+}
+
+jsize JNICALL
 GetStringUTFLength(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
@@ -111,6 +140,8 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
 void JNICALL
 ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
 {
+  ENTER(t, Thread::ActiveState);
+
   t->m->heap->free(chars, stringLength(t, *s) + 1, false);
 }
 
@@ -1854,6 +1885,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
   memset(envTable, 0, sizeof(JNIEnvVTable));
 
+  envTable->GetStringLength = ::GetStringLength;
+  envTable->GetStringChars = ::GetStringChars;
+  envTable->ReleaseStringChars = ::ReleaseStringChars;
   envTable->GetStringUTFLength = ::GetStringUTFLength;
   envTable->GetStringUTFChars = ::GetStringUTFChars;
   envTable->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
