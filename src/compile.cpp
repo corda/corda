@@ -70,7 +70,8 @@ class MyThread: public Thread {
     base(0),
     stack(0),
     trace(0),
-    reference(0)
+    reference(0),
+    methodInvoked(0)
   { }
 
   void* ip;
@@ -78,6 +79,7 @@ class MyThread: public Thread {
   void* stack;
   CallTrace* trace;
   Reference* reference;
+  object methodInvoked;
 };
 
 object
@@ -4087,10 +4089,17 @@ uint64_t FORCE_ALIGN
 invokeNative(MyThread* t)
 {
   object node = findTraceNode(t, *static_cast<void**>(t->stack));
-  object target = traceNodeTarget(t, node);
-  if (traceNodeVirtualCall(t, node)) {
-    target = resolveTarget(t, t->stack, target);
+  object target;
+  if (node) {
+    target = traceNodeTarget(t, node);
+    if (traceNodeVirtualCall(t, node)) {
+      target = resolveTarget(t, t->stack, target);
+    }
+  } else {
+    target = t->methodInvoked;
+    t->methodInvoked = 0;
   }
+
   uint64_t result = 0;
 
   if (LIKELY(t->exception == 0)) {
@@ -4339,6 +4348,10 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
 
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    t->methodInvoked = method;
+  }
+
   uint64_t result;
 
   { MyThread::CallTrace trace(t);
@@ -4347,6 +4360,8 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
       (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
        arguments->position, returnType);
   }
+
+  assert(t, t->methodInvoked == 0);
 
   object r;
   switch (returnCode) {
@@ -4528,6 +4543,8 @@ class MyProcessor: public Processor {
       v->visit(&addressTable);
     }
 
+    v->visit(&(t->methodInvoked));
+
     for (Reference* r = t->reference; r; r = r->next) {
       v->visit(&(r->target));
     }
@@ -4577,6 +4594,8 @@ class MyProcessor: public Processor {
   virtual object
   invokeArray(Thread* t, object method, object this_, object arguments)
   {
+    if (UNLIKELY(t->exception)) return 0;
+
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
@@ -4605,6 +4624,8 @@ class MyProcessor: public Processor {
   invokeList(Thread* t, object method, object this_, bool indirectObjects,
              va_list arguments)
   {
+    if (UNLIKELY(t->exception)) return 0;
+
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
@@ -4634,6 +4655,8 @@ class MyProcessor: public Processor {
   invokeList(Thread* t, const char* className, const char* methodName,
              const char* methodSpec, object this_, va_list arguments)
   {
+    if (UNLIKELY(t->exception)) return 0;
+
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
