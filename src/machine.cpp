@@ -2154,7 +2154,7 @@ stringChars(Thread* t, object string, char* chars)
 }
 
 void
-stringChars(Thread* t, object string, wchar_t* chars)
+stringChars(Thread* t, object string, uint16_t* chars)
 {
   object data = stringData(t, string);
   if (objectClass(t, data)
@@ -2166,7 +2166,7 @@ stringChars(Thread* t, object string, wchar_t* chars)
   } else {
     memcpy(chars,
            &charArrayBody(t, data, stringOffset(t, string)),
-           stringLength(t, string) * sizeof(wchar_t));
+           stringLength(t, string) * sizeof(uint16_t));
   }
   chars[stringLength(t, string)] = 0;
 }

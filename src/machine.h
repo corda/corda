@@ -1704,7 +1704,7 @@ void
 stringChars(Thread* t, object string, char* chars);
 
 void
-stringChars(Thread* t, object string, wchar_t* chars);
+stringChars(Thread* t, object string, uint16_t* chars);
 
 bool
 isAssignableFrom(Thread* t, object a, object b);
