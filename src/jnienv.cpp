@@ -102,7 +102,7 @@ GetStringChars(Thread* t, jstring s, jboolean* isCopy)
 
   jchar* chars = static_cast<jchar*>
     (t->m->heap->allocate((stringLength(t, *s) + 1) * sizeof(jchar), false));
-  stringChars(t, *s, reinterpret_cast<wchar_t*>(chars));
+  stringChars(t, *s, chars);
 
   if (isCopy) *isCopy = true;
   return chars;
