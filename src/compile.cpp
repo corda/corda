@@ -4528,7 +4528,7 @@ class SegFaultHandler: public System::SignalHandler {
   {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
     if (t->state == Thread::ActiveState) {
-      object node = findCallNode(t, *ip);
+      object node = methodForIp(t, *ip);
       if (node) {
         t->ip = *ip;
         t->base = *base;
