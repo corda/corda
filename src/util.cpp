@@ -41,7 +41,7 @@ setTreeNodeValue(Thread* t, object n, object value)
 inline bool
 treeNodeRed(Thread*, object n)
 {
-  return (cast<intptr_t>(n, TreeNodeValue) & (~PointerMask)) != 1;
+  return (cast<intptr_t>(n, TreeNodeValue) & (~PointerMask)) == 1;
 }
 
 inline void
