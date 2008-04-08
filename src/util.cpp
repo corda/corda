@@ -15,13 +15,6 @@ using namespace vm;
 namespace {
 
 inline object
-cloneTreeNode(Thread* t, object n)
-{
-  return makeTreeNode
-    (t, treeNodeValue(t, n), treeNodeLeft(t, n), treeNodeRight(t, n));
-}
-
-inline object
 getTreeNodeValue(Thread*, object n)
 {
   return reinterpret_cast<object>
@@ -45,9 +38,22 @@ treeNodeRed(Thread*, object n)
 }
 
 inline void
-setTreeNodeRed(Thread*, object n, intptr_t red)
+setTreeNodeRed(Thread*, object n, bool red)
 {
-  cast<intptr_t>(n, TreeNodeValue) |= red;
+  if (red) {
+    cast<intptr_t>(n, TreeNodeValue) |= 1;
+  } else {
+    cast<intptr_t>(n, TreeNodeValue) &= PointerMask;
+  }
+}
+
+inline object
+cloneTreeNode(Thread* t, object n)
+{
+  object newNode = makeTreeNode
+    (t, getTreeNodeValue(t, n), treeNodeLeft(t, n), treeNodeRight(t, n));
+  setTreeNodeRed(t, newNode, treeNodeRed(t, n));
+  return newNode;
 }
 
 object
@@ -124,7 +130,7 @@ treeAdd(Thread* t, object path)
   PROTECT(t, ancestors);
 
   // rebalance
-  setTreeNodeRed(t, new_, 1);
+  setTreeNodeRed(t, new_, true);
   while (ancestors != 0 and treeNodeRed(t, pairFirst(t, ancestors))) {
     if (pairFirst(t, ancestors)
         == treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors))))
@@ -132,7 +138,7 @@ treeAdd(Thread* t, object path)
       if (treeNodeRed
           (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors)))))
       {
-        setTreeNodeRed(t, pairFirst(t, ancestors), 1);
+        setTreeNodeRed(t, pairFirst(t, ancestors), true);
 
         object n = cloneTreeNode
           (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors))));
@@ -141,9 +147,9 @@ treeAdd(Thread* t, object path)
 
         setTreeNodeRed
           (t, treeNodeRight
-           (t, pairFirst(t, pairSecond(t, ancestors))), 0);
+           (t, pairFirst(t, pairSecond(t, ancestors))), false);
 
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), 0);
+        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), false);
 
         new_ = pairFirst(t, pairSecond(t, ancestors));
         ancestors = pairSecond(t, pairSecond(t, ancestors));
@@ -161,8 +167,8 @@ treeAdd(Thread* t, object path)
           }
           ancestors = makePair(t, n, ancestors);
         }
-        setTreeNodeRed(t, pairFirst(t, ancestors), 0);
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), 1);
+        setTreeNodeRed(t, pairFirst(t, ancestors), false);
+        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), true);
 
         object n = rightRotate(t, pairFirst(t, pairSecond(t, ancestors)));
         if (pairSecond(t, pairSecond(t, ancestors)) == 0) {
@@ -184,7 +190,7 @@ treeAdd(Thread* t, object path)
       if (treeNodeRed
           (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors)))))
       {
-        setTreeNodeRed(t, pairFirst(t, ancestors), 1);
+        setTreeNodeRed(t, pairFirst(t, ancestors), true);
 
         object n = cloneTreeNode
           (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors))));
@@ -193,9 +199,9 @@ treeAdd(Thread* t, object path)
 
         setTreeNodeRed
           (t, treeNodeLeft
-           (t, pairFirst(t, pairSecond(t, ancestors))), 0);
+           (t, pairFirst(t, pairSecond(t, ancestors))), false);
 
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), 0);
+        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), false);
 
         new_ = pairFirst(t, pairSecond(t, ancestors));
         ancestors = pairSecond(t, pairSecond(t, ancestors));
@@ -213,8 +219,8 @@ treeAdd(Thread* t, object path)
           }
           ancestors = makePair(t, n, ancestors);
         }
-        setTreeNodeRed(t, pairFirst(t, ancestors), 0);
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), 1);
+        setTreeNodeRed(t, pairFirst(t, ancestors), false);
+        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), true);
 
         object n = leftRotate(t, pairFirst(t, pairSecond(t, ancestors)));
         if (pairSecond(t, pairSecond(t, ancestors)) == 0) {
@@ -234,7 +240,7 @@ treeAdd(Thread* t, object path)
     }
   }
 
-  setTreeNodeRed(t, newRoot, 0);
+  setTreeNodeRed(t, newRoot, false);
 
   return newRoot;
 }
