@@ -3979,9 +3979,9 @@ compileMethod2(MyThread* t)
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
         = &singletonValue(t, methodCompiled(t, target), 0);
     } else {
-      ACQUIRE(t, t->m->classLock);
-
-      removeCallNode(t, node);
+      { ACQUIRE(t, t->m->classLock);
+        removeCallNode(t, node);
+      }
 
       Context context(t);
       context.c->updateCall
