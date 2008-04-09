@@ -51,8 +51,7 @@ class Compiler {
   virtual Operand* memory(Operand* base,
                           int displacement = 0,
                           Operand* index = 0,
-                          unsigned scale = 1,
-                          TraceHandler* traceHandler = 0) = 0;
+                          unsigned scale = 1) = 0;
 
   virtual Operand* stack() = 0;
   virtual Operand* base() = 0;

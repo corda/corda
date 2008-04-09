@@ -1288,6 +1288,9 @@ class Thread {
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
+  uintptr_t* backupHeap;
+  unsigned backupHeapIndex;
+  unsigned backupHeapSizeInWords;
 #ifdef VM_STRESS
   bool stress;
 #endif // VM_STRESS
@@ -1426,6 +1429,20 @@ expect(Thread* t, bool v)
   expect(t->m->system, v);
 }
 
+inline void
+ensure(Thread* t, unsigned sizeInBytes)
+{
+  if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+      > Thread::HeapSizeInWords)
+  {
+    expect(t, t->backupHeap == 0);
+    t->backupHeap = static_cast<uintptr_t*>
+      (t->m->heap->allocate(pad(sizeInBytes), false));
+    t->backupHeapIndex = 0;
+    t->backupHeapSizeInWords = ceiling(sizeInBytes, BytesPerWord);
+  }
+}
+
 object
 allocate2(Thread* t, unsigned sizeInBytes, bool objectMask);
 
@@ -1448,7 +1465,7 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
   stress(t);
 
   if (UNLIKELY(t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-               >= Thread::HeapSizeInWords
+               > Thread::HeapSizeInWords
                or t->m->exclusive))
   {
     return allocate2(t, sizeInBytes, objectMask);
@@ -1527,7 +1544,13 @@ object
 makeTrace(Thread* t, Processor::StackWalker* walker);
 
 object
-makeTrace(Thread* t);
+makeTrace(Thread* t, Thread* target);
+
+inline object
+makeTrace(Thread* t)
+{
+  return makeTrace(t, t);
+}
 
 inline object
 makeRuntimeException(Thread* t, object message)

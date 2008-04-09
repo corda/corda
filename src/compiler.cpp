@@ -326,7 +326,7 @@ register_(Context* c, Register = NoRegister, Register = NoRegister);
 
 MemoryOperand*
 memory(Context* c, MyOperand* base, int displacement,
-       MyOperand* index, unsigned scale, Compiler::TraceHandler* traceHandler);
+       MyOperand* index, unsigned scale);
 
 class MyOperand: public Operand {
  public:
@@ -630,17 +630,15 @@ class AbsoluteOperand: public MyOperand {
 class MemoryOperand: public MyOperand {
  public:
   MemoryOperand(MyOperand* base, int displacement, MyOperand* index,
-                unsigned scale, Compiler::TraceHandler* traceHandler):
+                unsigned scale):
     base(base),
     displacement(displacement),
     index(index),
-    scale(scale),
-    traceHandler(traceHandler)
+    scale(scale)
   { }
 
   MemoryOperand* high(Context* c) {
-    return memory
-      (c, base, displacement + BytesPerWord, index, scale, traceHandler);
+    return memory(c, base, displacement + BytesPerWord, index, scale);
   }
 
   virtual Register asRegister(Context*);
@@ -670,7 +668,6 @@ class MemoryOperand: public MyOperand {
   int displacement;
   MyOperand* index;
   unsigned scale;
-  Compiler::TraceHandler* traceHandler;
 };
 
 class CodePromiseTask: public Task {
@@ -722,10 +719,10 @@ register_(Context* c, Register v, Register h)
 
 MemoryOperand*
 memory(Context* c, MyOperand* base, int displacement,
-       MyOperand* index, unsigned scale, Compiler::TraceHandler* traceHandler)
+       MyOperand* index, unsigned scale)
 {
   return new (c->zone->allocate(sizeof(MemoryOperand)))
-    MemoryOperand(base, displacement, index, scale, traceHandler);
+    MemoryOperand(base, displacement, index, scale);
 }
 
 RegisterOperand*
@@ -1038,8 +1035,7 @@ pushed(Context* c, MyStack* stack)
   int index = (stack ? stack->index + 1 : 0);
 
   MyOperand* value = memory
-    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1,
-     0);
+    (c, register_(c, rbp), - (c->reserved + index + 1) * BytesPerWord, 0, 1);
 
   stack = new (c->zone->allocate(sizeof(MyStack)))
     MyStack(value, index, stack);
@@ -1183,12 +1179,6 @@ encode(Context* c, uint8_t instruction, int a, MemoryOperand* b, bool rex)
   Register r = b->base->asRegister(c);
   int index = b->index ? b->index->asRegister(c) : -1;
 
-  if (b->traceHandler and c->codeLength >= 0) {
-    b->traceHandler->handleTrace
-      (resolved(c, reinterpret_cast<intptr_t>
-                (c->code.data + c->code.length())));
-  }
-
   if (rex) {
     ::rex(c);
   }
@@ -1200,12 +1190,6 @@ encode2(Context* c, uint16_t instruction, int a, MemoryOperand* b, bool rex)
 {
   Register r = b->base->asRegister(c);
   int index = b->index ? b->index->asRegister(c) : -1;
-
-  if (b->traceHandler and c->codeLength >= 0) {
-    b->traceHandler->handleTrace
-      (resolved(c, reinterpret_cast<intptr_t>
-                (c->code.data + c->code.length())));
-  }
 
   if (rex) {
     ::rex(c);
@@ -1572,7 +1556,7 @@ RegisterOperand::accept(Context* c, Operation op,
 
     RegisterOperand* tmp = temporary(c);
     tmp->accept(c, mov, ::value(c, operand));
-    accept(c, cmp, memory(c, tmp, 0, 0, 1, 0));
+    accept(c, cmp, memory(c, tmp, 0, 0, 1));
     tmp->release(c);
   } break;
 
@@ -1581,7 +1565,7 @@ RegisterOperand::accept(Context* c, Operation op,
     assert(c, BytesPerWord == 8 or op == mov4); // todo
 
     accept(c, mov, ::value(c, operand));
-    accept(c, mov, memory(c, this, 0, 0, 1, 0));
+    accept(c, mov, memory(c, this, 0, 0, 1));
   } break;
 
   default: abort(c);
@@ -1759,7 +1743,7 @@ absoluteApply(Context* c, MyOperand::Operation op,
 {
   RegisterOperand* tmp = temporary(c);
   tmp->accept(c, MyOperand::mov, value(c, operand));
-  memory(c, tmp, 0, 0, 1, 0)->apply(c, op);
+  memory(c, tmp, 0, 0, 1)->apply(c, op);
   tmp->release(c);
 }
 
@@ -2797,11 +2781,10 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* memory(Operand* base, int displacement,
-                          Operand* index, unsigned scale,
-                          TraceHandler* trace)
+                          Operand* index, unsigned scale)
   {
     return ::memory(&c, static_cast<MyOperand*>(base), displacement,
-                    static_cast<MyOperand*>(index), scale, trace);
+                    static_cast<MyOperand*>(index), scale);
   }
 
   virtual void prologue() {

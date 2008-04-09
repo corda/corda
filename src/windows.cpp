@@ -23,6 +23,23 @@ using namespace vm;
 
 namespace {
 
+class MutexResource {
+ public:
+  MutexResource(System* s, HANDLE m): s(s), m(m) {
+    int r UNUSED = WaitForSingleObject(m, INFINITE);
+    assert(s, r == WAIT_OBJECT_0);
+  }
+
+  ~MutexResource() {
+    bool success UNUSED = ReleaseMutex(m);
+    assert(s, success);
+  }
+
+ private:
+  System* s; 
+  HANDLE m;
+};
+
 System::SignalHandler* segFaultHandler = 0;
 LPTOP_LEVEL_EXCEPTION_FILTER oldSegFaultHandler = 0;
 
@@ -42,23 +59,6 @@ handleException(LPEXCEPTION_POINTERS e)
   }
   return EXCEPTION_CONTINUE_SEARCH;
 }
-
-class MutexResource {
- public:
-  MutexResource(System* s, HANDLE m): s(s), m(m) {
-    int r UNUSED = WaitForSingleObject(m, INFINITE);
-    assert(s, r == WAIT_OBJECT_0);
-  }
-
-  ~MutexResource() {
-    bool success UNUSED = ReleaseMutex(m);
-    assert(s, success);
-  }
-
- private:
-  System* s; 
-  HANDLE m;
-};
 
 DWORD WINAPI
 run(void* r)
@@ -562,6 +562,39 @@ class MySystem: public System {
     } else {
       return 1;
     }
+  }
+
+  virtual Status visit(System::Thread* st, System::Thread* sTarget,
+                       ThreadVisitor* visitor)
+  {
+    assert(this, st != sTarget);
+
+    Thread* t = static_cast<Thread*>(st);
+    Thread* target = static_cast<Thread*>(sTarget);
+
+    ACQUIRE_MONITOR(t, visitLock);
+
+    while (target->visitor) traceLock->wait(t);
+
+    target->visitor = visitor;
+
+    DWORD rv = SuspendThread(target->thread);
+    expect(this, rv != -1);
+
+    CONTEXT context;
+    rv = GetThreadContext(target->thread, &context);
+    expect(this, rv);
+
+    visitor->visit(reinterpret_cast<void*>(context->Eip),
+                   reinterpret_cast<void*>(context->Ebp),
+                   reinterpret_cast<void*>(context->Esp));
+
+    rv = ResumeThread(target->thread);
+    expect(this, rv != -1);
+    
+    target->visitor = 0;
+
+    return 0;
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,

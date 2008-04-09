@@ -1507,7 +1507,7 @@ writeOffset(Output* out, Object* offset, bool allocationStyle = false)
           out->write("length");
         } else {
           out->write(typeName(memberOwner(o)));
-          out->write(capitalize("length"));
+          out->write("Length");
           out->write("(o)");
         }
         out->write(" * ");
@@ -1760,6 +1760,49 @@ typeFixedSize(Object* type)
     }
   }
   return length;
+}
+
+unsigned
+typeArrayElementSize(Object* type)
+{
+  for (MemberIterator it(type); it.hasMore();) {
+    Object* m = it.next();
+    switch (m->type) {
+    case Object::Scalar: break;
+
+    case Object::Array: {
+      return memberElementSize(m);
+    } break;
+
+    default: UNREACHABLE;
+    }
+  }
+  return 0;
+}
+
+void
+writeSizes(Output* out, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    switch (o->type) {
+    case Object::Type: {
+      out->write("const unsigned FixedSizeOf");
+      out->write(capitalize(typeName(o)));
+      out->write(" = ");
+      out->write(typeFixedSize(o));
+      out->write(";\n\n");
+
+      out->write("const unsigned ArrayElementSizeOf");
+      out->write(capitalize(typeName(o)));
+      out->write(" = ");
+      out->write(typeArrayElementSize(o));
+      out->write(";\n\n");
+    } break;
+
+    default: break;
+    }
+  }
 }
 
 const char*
@@ -2049,24 +2092,6 @@ set(uint32_t* mask, unsigned index)
   }
 }
 
-unsigned
-typeArrayElementSize(Object* type)
-{
-  for (MemberIterator it(type); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: break;
-
-    case Object::Array: {
-      return memberElementSize(m);
-    } break;
-
-    default: UNREACHABLE;
-    }
-  }
-  return 0;
-}
-
 uint32_t
 typeObjectMask(Object* type)
 {
@@ -2274,6 +2299,7 @@ main(int ac, char** av)
 
     writePods(&out, declarations);
     writeAccessors(&out, declarations);
+    writeSizes(&out, declarations);
     writeInitializerDeclarations(&out, declarations);
     writeConstructorDeclarations(&out, declarations);
   }

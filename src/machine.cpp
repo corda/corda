@@ -501,6 +501,13 @@ postCollect(Thread* t)
   t->heapOffset = 0;
   t->heapIndex = 0;
 
+  if (t->backupHeap) {
+    t->m->heap->free
+      (t->backupHeap, t->backupHeapSizeInWords * BytesPerWord, false);
+    t->backupHeapIndex = 0;
+    t->backupHeapSizeInWords = 0;
+  }
+
   for (Thread* c = t->child; c; c = c->peer) {
     postCollect(c);
   }
@@ -1740,7 +1747,10 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   runnable(this),
   defaultHeap(static_cast<uintptr_t*>
               (m->heap->allocate(HeapSizeInBytes, false))),
-  heap(defaultHeap)
+  heap(defaultHeap),
+  backupHeap(0),
+  backupHeapIndex(0),
+  backupHeapSizeInWords(0)
 #ifdef VM_STRESS
   , stress(false)
 #endif // VM_STRESS
@@ -2043,6 +2053,16 @@ object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
           unsigned sizeInBytes, bool executable, bool objectMask)
 {
+  if (t->backupHeap) {
+    expect(t,  t->backupHeapIndex + ceiling(sizeInBytes, BytesPerWord)
+           <= t->backupHeapSizeInWords);
+    
+    object o = reinterpret_cast<object>(t->backupHeap + t->backupHeapIndex);
+    t->backupHeapIndex += ceiling(sizeInBytes, BytesPerWord);
+    cast<object>(o, 0) = 0;
+    return o;
+  }
+
   ACQUIRE_RAW(t, t->m->stateLock);
 
   while (t->m->exclusive and t->m->exclusive != t) {
@@ -2058,7 +2078,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       t->heap = 0;
     }
   } else if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-             >= Thread::HeapSizeInWords)
+             > Thread::HeapSizeInWords)
   {
     t->heap = 0;
     if (t->m->heapPoolIndex < Machine::HeapPoolSize) {
@@ -2839,7 +2859,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
 }
 
 object
-makeTrace(Thread* t)
+makeTrace(Thread* t, Thread* target)
 {
   class Visitor: public Processor::StackVisitor {
    public:
@@ -2854,7 +2874,7 @@ makeTrace(Thread* t)
     object trace;
   } v(t);
 
-  t->m->processor->walkStack(t, &v);
+  t->m->processor->walkStack(target, &v);
 
   return v.trace ? v.trace : makeArray(t, 0, true);
 }
