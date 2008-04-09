@@ -115,7 +115,7 @@ ifeq ($(platform),windows)
 	objcopy = i586-mingw32msvc-objcopy
 
 	rdynamic = -Wl,--export-dynamic
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -Wl,--kill-at -mwindows -mconsole
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
 endif
 
