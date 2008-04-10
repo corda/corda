@@ -26,9 +26,10 @@ vmCall();
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
+const bool DebugMethodTree = true;
 const bool DebugFrameMaps = false;
 
 const bool CheckArrayBounds = true;
@@ -119,9 +120,18 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 {
   intptr_t start = reinterpret_cast<intptr_t>
     (&singletonValue(t, methodCompiled(t, method), 0));
+
+  if (DebugMethodTree) {
+    fprintf(stderr, "find 0x%lx in (0x%lx,0x%lx)\n", ip, start,
+            start + (singletonCount(t, methodCompiled(t, method))
+                     * BytesPerWord));
+  }
+
   if (ip < start) {
     return -1;
-  } else if (ip < start + singletonCount(t, methodCompiled(t, method))) {
+  } else if (ip < start + (singletonCount(t, methodCompiled(t, method))
+                           * BytesPerWord))
+  {
     return 0;
   } else {
     return 1;
@@ -131,6 +141,10 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 object
 methodForIp(MyThread* t, void* ip)
 {
+  if (DebugMethodTree) {
+    fprintf(stderr, "query for method containing %p\n", ip);
+  }
+
   return treeQuery(t, methodTree(t), reinterpret_cast<intptr_t>(ip),
                    methodTreeSentinal(t), compareIpToMethodBounds);
 }
@@ -153,7 +167,7 @@ class MyStackWalker: public Processor::StackWalker {
 
   MyStackWalker(MyThread* t):
     t(t),
-    ip_(t->ip ? t->ip : (stack ? *static_cast<void**>(stack) : 0)),
+    ip_(t->ip ? t->ip : (t->stack ? *static_cast<void**>(t->stack) : 0)),
     base(t->base),
     stack(t->stack),
     trace(t->trace),
@@ -164,6 +178,7 @@ class MyStackWalker: public Processor::StackWalker {
 
   MyStackWalker(MyStackWalker* w):
     t(w->t),
+    ip_(w->ip_),
     base(w->base),
     stack(w->stack),
     trace(w->trace),
@@ -173,6 +188,8 @@ class MyStackWalker: public Processor::StackWalker {
   { }
 
   virtual void walk(Processor::StackVisitor* v) {
+    fprintf(stderr, "ip: %p stack: %p method: %p\n", ip_, stack, method_);
+
     if (stack == 0) {
       return;
     }
@@ -3714,6 +3731,12 @@ compareTraceElementPointers(const void* va, const void* vb)
 intptr_t
 compareMethodBounds(Thread* t, object a, object b)
 {
+  if (DebugMethodTree) {
+    fprintf(stderr, "compare %p to %p\n",
+            &singletonValue(t, methodCompiled(t, a), 0),
+            &singletonValue(t, methodCompiled(t, b), 0));
+  }
+
   return reinterpret_cast<intptr_t>
     (&singletonValue(t, methodCompiled(t, a), 0))
     -  reinterpret_cast<intptr_t>
@@ -3813,13 +3836,6 @@ finish(MyThread* t, Context* context, const char* name)
     updateLineNumberTable(t, c, methodCode(t, context->method),
                           reinterpret_cast<intptr_t>(start));
 
-    { object node = makeTreeNode
-        (t, context->method, methodTreeSentinal(t), methodTreeSentinal(t));
-
-      methodTree(t) = treeInsert
-        (t, methodTree(t), node, methodTreeSentinal(t), compareMethodBounds);
-    }
-
     if (Verbose) {
       logCompile
         (start, c->codeSize(),
@@ -3836,11 +3852,11 @@ finish(MyThread* t, Context* context, const char* name)
         strcmp
         (reinterpret_cast<const char*>
          (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-         "Misc") == 0 and
+         "java/lang/System") == 0 and
         strcmp
         (reinterpret_cast<const char*>
          (&byteArrayBody(t, methodName(t, context->method), 0)),
-         "main") == 0)
+         "getProperty") == 0)
     {
       asm("int3");
     }
@@ -4223,12 +4239,15 @@ invokeNative(MyThread* t)
     result = invokeNative2(t, t->trace->nativeMethod);
   }
 
+  t->trace->nativeMethod = 0;
+
   if (UNLIKELY(t->exception)) {
     unwind(t);
   } else {
     return result;
   }
 }
+
 unsigned
 frameMapIndex(MyThread* t, object method, int32_t offset)
 {
@@ -5001,6 +5020,7 @@ compile(MyThread* t, object method)
         } else {
           Context context(t, method, p->indirectCaller);
           compiled = compile(t, &context);
+          if (UNLIKELY(t->exception)) return;
         }
 
         set(t, method, MethodCompiled, compiled);
@@ -5008,6 +5028,17 @@ compile(MyThread* t, object method)
         if (methodVirtual(t, method)) {
           classVtable(t, methodClass(t, method), methodOffset(t, method))
             = &singletonValue(t, compiled, 0);
+        }
+
+        if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
+          if (DebugMethodTree) {
+            fprintf(stderr, "insert method at %p\n",
+                    &singletonValue(t, methodCompiled(t, method), 0));
+          }
+          
+          methodTree(t) = treeInsert
+            (t, methodTree(t), method, methodTreeSentinal(t),
+             compareMethodBounds);
         }
       }
     }

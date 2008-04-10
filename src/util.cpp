@@ -77,7 +77,7 @@ treeFind(Thread* t, object old, object node, object sentinal,
     ancestors = makePair(t, new_, ancestors);
 
     intptr_t difference = compare
-      (t, getTreeNodeValue(t, node), getTreeNodeValue(t, node));
+      (t, getTreeNodeValue(t, node), getTreeNodeValue(t, old));
 
     if (difference < 0) {
       old = treeNodeLeft(t, old);
@@ -522,7 +522,7 @@ treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
     } else if (difference > 0) {
       node = treeNodeRight(t, node);
     } else {
-      return node;
+      return getTreeNodeValue(t, node);
     }
   }
 
@@ -530,9 +530,14 @@ treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
 }
 
 object
-treeInsert(Thread* t, object tree, object node, object sentinal,
+treeInsert(Thread* t, object tree, object value, object sentinal,
            intptr_t (*compare)(Thread* t, object a, object b))
 {
+  PROTECT(t, tree);
+  PROTECT(t, sentinal);
+
+  object node = makeTreeNode(t, value, sentinal, sentinal);
+          
   object path = treeFind(t, tree, node, sentinal, compare);
   if (treePathFresh(t, path)) {
     return treeAdd(t, path);
