@@ -467,9 +467,9 @@ class BuiltinElement: public JarElement {
   }
 
   virtual void dispose() {
-    JarElement::dispose();
     library->disposeAll();
     free(s, libraryName, libraryNameLength + 1);
+    JarElement::dispose();
   }
 
   System::Library* library;
