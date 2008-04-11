@@ -564,35 +564,28 @@ class MySystem: public System {
     }
   }
 
-  virtual Status visit(System::Thread* st, System::Thread* sTarget,
+  virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
     assert(this, st != sTarget);
 
-    Thread* t = static_cast<Thread*>(st);
     Thread* target = static_cast<Thread*>(sTarget);
 
-    ACQUIRE_MONITOR(t, visitLock);
+    ACQUIRE(this, mutex);
 
-    while (target->visitor) traceLock->wait(t);
-
-    target->visitor = visitor;
-
-    DWORD rv = SuspendThread(target->thread);
+    int rv = SuspendThread(target->thread);
     expect(this, rv != -1);
 
     CONTEXT context;
     rv = GetThreadContext(target->thread, &context);
     expect(this, rv);
 
-    visitor->visit(reinterpret_cast<void*>(context->Eip),
-                   reinterpret_cast<void*>(context->Ebp),
-                   reinterpret_cast<void*>(context->Esp));
+    visitor->visit(reinterpret_cast<void*>(context.Eip),
+                   reinterpret_cast<void*>(context.Ebp),
+                   reinterpret_cast<void*>(context.Esp));
 
     rv = ResumeThread(target->thread);
     expect(this, rv != -1);
-    
-    target->visitor = 0;
 
     return 0;
   }

@@ -129,8 +129,9 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 
   if (ip < start) {
     return -1;
-  } else if (ip < start + (singletonCount(t, methodCompiled(t, method))
-                           * BytesPerWord))
+  } else if (ip < start + static_cast<intptr_t>
+             (singletonCount(t, methodCompiled(t, method))
+              * BytesPerWord))
   {
     return 0;
   } else {
