@@ -192,9 +192,6 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   }
 }
 
-ExceptionHandler*
-findExceptionHandler(Thread* t, object method, unsigned ip);
-
 int
 findLineNumber(Thread* t, object method, unsigned ip);
 

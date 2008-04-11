@@ -24,10 +24,10 @@
   (void* value))
 
 (pod exceptionHandler
-  (uint32_t start)
-  (uint32_t end)
-  (uint32_t ip)
-  (uint32_t catchType))
+  (uint16_t start)
+  (uint16_t end)
+  (uint16_t ip)
+  (uint16_t catchType))
 
 (type exceptionHandlerTable
   (array exceptionHandler body))

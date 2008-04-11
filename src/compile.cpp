@@ -26,10 +26,10 @@ vmCall();
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
-const bool DebugMethodTree = true;
+const bool DebugMethodTree = false;
 const bool DebugFrameMaps = false;
 
 const bool CheckArrayBounds = true;
@@ -188,8 +188,6 @@ class MyStackWalker: public Processor::StackWalker {
   { }
 
   virtual void walk(Processor::StackVisitor* v) {
-    fprintf(stderr, "ip: %p stack: %p method: %p\n", ip_, stack, method_);
-
     if (stack == 0) {
       return;
     }
@@ -212,6 +210,7 @@ class MyStackWalker: public Processor::StackWalker {
     } else {
       stack = static_cast<void**>(base) + 1;
       base = *static_cast<void**>(base);
+      ip_ = *static_cast<void**>(stack);
       method_ = methodForIp(t, *static_cast<void**>(stack));
       if (method_ == 0) {
         if (trace and trace->stack) {
@@ -1134,6 +1133,54 @@ insertCallNode(MyThread* t, object node);
 void
 removeCallNode(MyThread* t, object node);
 
+void*
+findExceptionHandler(Thread* t, object method, void* ip)
+{
+  PROTECT(t, method);
+
+  object table = codeExceptionHandlerTable(t, methodCode(t, method));
+  if (table) {
+    object index = arrayBody(t, table, 0);
+      
+    uint8_t* compiled = reinterpret_cast<uint8_t*>
+      (&singletonValue(t, methodCompiled(t, method), 0));
+
+    for (unsigned i = 0; i < arrayLength(t, table) - 1; ++i) {
+      unsigned start = intArrayBody(t, index, i * 3);
+      unsigned end = intArrayBody(t, index, (i * 3) + 1);
+      unsigned key = difference(ip, compiled) - 1;
+
+      if (key >= start and key < end) {
+        object catchType = 0;
+        if (arrayBody(t, table, i + 1)) {
+          object e = t->exception;
+          t->exception = 0;
+          PROTECT(t, e);
+
+          PROTECT(t, table);
+          PROTECT(t, index);
+
+          catchType = resolveClassInObject
+            (t, table, ArrayBody + ((i + 1) * BytesPerWord));
+
+          if (catchType) {
+            t->exception = e;
+          } else {
+            // can't find what we're supposed to catch - move on.
+            continue;
+          }
+        }
+
+        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+          return compiled + intArrayBody(t, index, (i * 3) + 2);
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
 void
 findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
                  void** targetStack)
@@ -1153,11 +1200,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
     if (method) {
       PROTECT(t, method);
 
-      uint8_t* compiled = reinterpret_cast<uint8_t*>
-        (&singletonValue(t, methodCompiled(t, method), 0));
-
-      ExceptionHandler* handler = findExceptionHandler
-        (t, method, difference(ip, compiled));
+      void* handler = findExceptionHandler(t, method, ip);
 
       if (handler) {
         unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -1169,7 +1212,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         *(--stack) = t->exception;
         t->exception = 0;
 
-        *targetIp = compiled + exceptionHandlerIp(handler);
+        *targetIp = handler;
         *targetBase = base;
         *targetStack = stack;
       } else {
@@ -3532,8 +3575,8 @@ logCompile(const void* code, unsigned size, const char* class_,
 }
 
 void
-updateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
-                            intptr_t start)
+translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
+                               intptr_t start)
 {
   object oldTable = codeExceptionHandlerTable(t, code);
   if (oldTable) {
@@ -3541,24 +3584,32 @@ updateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
     PROTECT(t, oldTable);
 
     unsigned length = exceptionHandlerTableLength(t, oldTable);
-    object newTable = makeExceptionHandlerTable(t, length, false);
+
+    object newIndex = makeIntArray(t, length * 3, false);
+    PROTECT(t, newIndex);
+
+    object newTable = makeArray(t, length + 1, false);
+    set(t, newTable, ArrayBody, newIndex);
+
     for (unsigned i = 0; i < length; ++i) {
       ExceptionHandler* oldHandler = exceptionHandlerTableBody
         (t, oldTable, i);
-      ExceptionHandler* newHandler = exceptionHandlerTableBody
-        (t, newTable, i);
 
-      exceptionHandlerStart(newHandler)
+      intArrayBody(t, newIndex, i * 3)
         = c->machineIp(exceptionHandlerStart(oldHandler))->value(c) - start;
 
-      exceptionHandlerEnd(newHandler)
+      intArrayBody(t, newIndex, (i * 3) + 1)
         = c->machineIp(exceptionHandlerEnd(oldHandler))->value(c) - start;
 
-      exceptionHandlerIp(newHandler)
+      intArrayBody(t, newIndex, (i * 3) + 2)
         = c->machineIp(exceptionHandlerIp(oldHandler))->value(c) - start;
 
-      exceptionHandlerCatchType(newHandler)
-        = exceptionHandlerCatchType(oldHandler);
+      object type =
+        (exceptionHandlerCatchType(oldHandler) ?
+         singletonObject(t, codePool(t, code),
+                         exceptionHandlerCatchType(oldHandler) - 1) : 0);
+
+      set(t, newTable, ArrayBody + ((i + 1) * BytesPerWord), type);
     }
 
     set(t, code, CodeExceptionHandlerTable, newTable);
@@ -3566,8 +3617,7 @@ updateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
 }
 
 void
-updateLineNumberTable(MyThread* t, Compiler* c, object code,
-                      intptr_t start)
+translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
 {
   object oldTable = codeLineNumberTable(t, code);
   if (oldTable) {
@@ -3764,6 +3814,12 @@ finish(MyThread* t, Context* context, const char* name)
   if (context->method) {
     PROTECT(t, result);
 
+    translateExceptionHandlerTable(t, c, methodCode(t, context->method),
+                                   reinterpret_cast<intptr_t>(start));
+
+    translateLineNumberTable(t, c, methodCode(t, context->method),
+                             reinterpret_cast<intptr_t>(start));
+
     { object code = methodCode(t, context->method);
 
       code = makeCode(t, 0,
@@ -3829,12 +3885,6 @@ finish(MyThread* t, Context* context, const char* name)
 
       set(t, result, SingletonBody + offset, p->value);
     }
-
-    updateExceptionHandlerTable(t, c, methodCode(t, context->method),
-                                reinterpret_cast<intptr_t>(start));
-
-    updateLineNumberTable(t, c, methodCode(t, context->method),
-                          reinterpret_cast<intptr_t>(start));
 
     if (Verbose) {
       logCompile

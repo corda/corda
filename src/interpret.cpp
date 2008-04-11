@@ -705,6 +705,50 @@ store(Thread* t, unsigned index)
 }
 
 ExceptionHandler*
+findExceptionHandler(Thread* t, object method, unsigned ip)
+{
+  PROTECT(t, method);
+
+  object eht = codeExceptionHandlerTable(t, methodCode(t, method));
+      
+  if (eht) {
+    for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
+      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+
+      if (ip - 1 >= exceptionHandlerStart(eh)
+          and ip - 1 < exceptionHandlerEnd(eh))
+      {
+        object catchType = 0;
+        if (exceptionHandlerCatchType(eh)) {
+          object e = t->exception;
+          t->exception = 0;
+          PROTECT(t, e);
+
+          PROTECT(t, eht);
+          catchType = resolveClassInPool
+            (t, codePool(t, methodCode(t, method)),
+             exceptionHandlerCatchType(eh) - 1);
+
+          if (catchType) {
+            eh = exceptionHandlerTableBody(t, eht, i);
+            t->exception = e;
+          } else {
+            // can't find what we're supposed to catch - move on.
+            continue;
+          }
+        }
+
+        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+          return eh;
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+ExceptionHandler*
 findExceptionHandler(Thread* t, int frame)
 {
   return findExceptionHandler(t, frameMethod(t, frame), frameIp(t, frame));
