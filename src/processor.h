@@ -115,6 +115,9 @@ class Processor {
   virtual void
   dispose() = 0;
 
+  virtual object
+  getStackTrace(Thread* t, Thread* target) = 0;
+
   object
   invoke(Thread* t, object method, object this_, ...)
   {

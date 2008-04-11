@@ -3051,6 +3051,11 @@ class MyProcessor: public Processor {
     }
   }
 
+  virtual object getStackTrace(Thread*, Thread*) {
+    // not implemented
+    return 0;
+  }
+
   virtual void dispose(vm::Thread* t) {
     t->m->heap->free(t, sizeof(Thread), false);
   }

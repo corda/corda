@@ -108,4 +108,14 @@ public class Thread implements Runnable {
       t.sleepLock.wait(milliseconds);
     }
   }
+
+  public StackTraceElement[] getStackTrace() {
+    return Throwable.resolveTrace(getStackTrace(peer));
+  }
+
+  private static native Object getStackTrace(long peer);
+
+  public static native int activeCount();
+
+  public static native int enumerate(Thread[] array);
 }
