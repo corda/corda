@@ -22,15 +22,9 @@ namespace {
 bool
 find(Thread* t, Thread* o)
 {
-  if (t == o) return true;
-
-  for (Thread* p = t->peer; p; p = p->peer) {
-    if (p == o) return true;
-  }
-
-  if (t->child) return find(t->child, o);
-
-  return false;
+  return (t == o)
+    or (t->peer and find(t->peer, o))
+    or (t->child and find(t->child, o));
 }
 
 void
@@ -48,11 +42,7 @@ count(Thread* t, Thread* o)
   unsigned c = 0;
 
   if (t != o) ++ c;
-
-  for (Thread* p = t->peer; p; p = p->peer) {
-    c += count(p, o);
-  }
-  
+  if (t->peer) c += count(t->peer, o);
   if (t->child) c += count(t->child, o);
 
   return c;
@@ -62,12 +52,8 @@ Thread**
 fill(Thread* t, Thread* o, Thread** array)
 {
   if (t != o) *(array++) = t;
-
-  for (Thread* p = t->peer; p; p = p->peer) {
-    array = fill(p, o, array);
-  }
-  
-  if (t->child) array = fill(t->child, o, array);
+  if (t->peer) fill(t->peer, o, array);
+  if (t->child) fill(t->child, o, array);
 
   return array;
 }
