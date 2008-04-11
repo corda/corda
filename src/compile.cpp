@@ -3793,6 +3793,13 @@ compareMethodBounds(Thread* t, object a, object b)
     (&singletonValue(t, methodCompiled(t, b), 0));
 }
 
+unsigned
+frameObjectMapSize(MyThread* t, object method, object map)
+{
+  int size = frameSize(t, method);
+  return ceiling(intArrayLength(t, map) * size, 32 + size);
+}
+
 object
 finish(MyThread* t, Context* context, const char* name)
 {
@@ -3836,6 +3843,8 @@ finish(MyThread* t, Context* context, const char* name)
       TraceElement* elements[context->traceLogCount];
       unsigned index = 0;
       for (TraceElement* p = context->traceLog; p; p = p->next) {
+        assert(t, index < context->traceLogCount);
+
         elements[index++] = p;
         p->addressValue = p->address->value(c);
 
@@ -3854,6 +3863,9 @@ finish(MyThread* t, Context* context, const char* name)
         (t, context->traceLogCount
          + ceiling(context->traceLogCount * size, 32),
          false);
+
+      assert(t, intArrayLength(t, map) == context->traceLogCount
+             + frameObjectMapSize(t, context->method, map));
 
       for (unsigned i = 0; i < context->traceLogCount; ++i) {
         TraceElement* p = elements[i];
@@ -4302,8 +4314,7 @@ unsigned
 frameMapIndex(MyThread* t, object method, int32_t offset)
 {
   object map = codePool(t, methodCode(t, method));
-  unsigned mapSize = ceiling
-    (intArrayLength(t, map), (32 / frameSize(t, method)) + 1);
+  unsigned mapSize = frameObjectMapSize(t, method, map);
   unsigned indexSize = intArrayLength(t, map) - mapSize;
     
   unsigned bottom = 0;

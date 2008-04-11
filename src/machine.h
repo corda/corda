@@ -2258,6 +2258,7 @@ inline object
 makeSingleton(Thread* t, unsigned count)
 {
   object o = makeSingleton(t, count + singletonMaskSize(count), true);
+  assert(t, singletonLength(t, o) == count + singletonMaskSize(t, o));
   if (count) {
     singletonMask(t, o)[0] = 1;
   }
