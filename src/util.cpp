@@ -50,6 +50,8 @@ setTreeNodeRed(Thread*, object n, bool red)
 inline object
 cloneTreeNode(Thread* t, object n)
 {
+  PROTECT(t, n);
+
   object newNode = makeTreeNode
     (t, getTreeNodeValue(t, n), treeNodeLeft(t, n), treeNodeRight(t, n));
   setTreeNodeRed(t, newNode, treeNodeRed(t, n));
