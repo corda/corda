@@ -217,6 +217,8 @@ class MyStackWalker: public Processor::StackWalker {
         if (trace and trace->stack) {
           base = trace->base;
           stack = static_cast<void**>(trace->stack);
+          ip_ = *static_cast<void**>(stack);
+          method_ = methodForIp(t, *static_cast<void**>(stack));
           nativeMethod = trace->nativeMethod;
           trace = trace->next;
         } else {
@@ -4077,9 +4079,13 @@ compileMethod2(MyThread* t)
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
         = &singletonValue(t, methodCompiled(t, target), 0);
     } else {
+#ifndef VM_STRESS
+      // valgrind doesn't like this, since the effect of updateCall
+      // below does not propagate to valgrind's interpreter:
       { ACQUIRE(t, t->m->classLock);
         removeCallNode(t, node);
       }
+#endif
 
       Context context(t);
       context.c->updateCall
