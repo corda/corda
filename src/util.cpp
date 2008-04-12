@@ -104,6 +104,8 @@ treeFind(Thread* t, object old, object node, object sentinal,
 object
 leftRotate(Thread* t, object n)
 {
+  PROTECT(t, n);
+
   object child = cloneTreeNode(t, treeNodeRight(t, n));
   set(t, n, TreeNodeRight, treeNodeLeft(t, child));
   set(t, child, TreeNodeLeft, n);
@@ -113,6 +115,8 @@ leftRotate(Thread* t, object n)
 object
 rightRotate(Thread* t, object n)
 {
+  PROTECT(t, n);
+
   object child = cloneTreeNode(t, treeNodeLeft(t, n));
   set(t, n, TreeNodeLeft, treeNodeRight(t, child));
   set(t, child, TreeNodeRight, n);
