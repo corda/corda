@@ -16,52 +16,389 @@ using namespace vm;
 namespace {
 
 class Context;
-class MyOperand;
-class ConstantValue;
-class AddressValue;
-class RegisterValue;
-class MemoryValue;
-class StackValue;
-class Event;
-class PushEvent;
-class Stack;
 
 void NO_RETURN abort(Context* c);
 
-class Value {
+// scratch
+
+class Value: public Compiler::Operand {
  public:
-  virtual ~Value() { }
-
-  virtual OperandType type(Context*) = 0;
-
-  virtual bool equals(Context*, Value*) { return false; }
-
-  virtual void preserve(Context*, Stack*, MyOperand*) { }
-  virtual void acquire(Context*, Stack*, MyOperand*) { }
-  virtual void release(Context*, MyOperand*) { }
-
-  virtual bool ready(Context*) { return true; }
-
-  virtual int registerValue(Context*) { return NoRegister; }
-  virtual int64_t constantValue(Context* c) { abort(c); }
-
-  virtual void asAssemblerOperand(Context*,
-                                  OperandType* type,
-                                  Assembler::Operand** operand) = 0;
-};
-
-class MyOperand: public Compiler::Operand {
- public:
-  MyOperand(Value* value):
-    event(0), value(value), target(0), push(0), pushed(false)
+  Value(Site* site):
+    reads(0), sites(site), source(0), target(0)
   { }
   
-  Event* event;
-  Value* value;
-  Value* target;
-  PushEvent* push;
-  bool pushed;
+  Read* reads;
+  Site* sites;
+  Site* source;
+  Site* target;
 };
+
+class Event {
+ public:
+  Event(Context* c): next(0), stack(c->state->stack), promises(0) {
+    assert(c, c->logicalIp >= 0);
+
+    if (c->event) {
+      c->event->next = this;
+    }
+
+    if (c->logicalCode[c->logicalIp].firstEvent == 0) {
+      c->logicalCode[c->logicalIp].firstEvent = this;
+    }
+
+    c->event = this;
+  }
+
+  virtual ~Event() { }
+
+  virtual void compile(Context* c) = 0;
+
+  Event* next;
+  Stack* stack;
+  CodePromise* promises;
+};
+
+class Stack {
+ public:
+  Stack(Value* value, unsigned size, unsigned index, Stack* next):
+    value(value), size(size), index(index), next(next)
+  { }
+
+  Value* value;
+  unsigned size;
+  unsigned index;
+  Stack* next;
+};
+
+class CallEvent: public Event {
+ public:
+  CallEvent(Context* c, Value* address, void* indirection, unsigned flags,
+            TraceHandler* traceHandler, Value* result, unsigned resultSize,
+            unsigned argumentCount):
+    Event(c),
+    address(address),
+    indirection(indirection),
+    flags(flags),
+    traceHandler(traceHandler),
+    result(result)
+  {
+    addRead(c, address, BytesPerWord,
+            (indirection ? registerSite(c, c->assembler->returnLow()) : 0));
+
+    unsigned index = 0;
+    Stack* s = stack;
+    for (unsigned i = 0; i < argumentCount; ++i) {
+      addRead(c, s->value, s->size * BytesPerWord,
+              index < c->assembler->argumentRegisterCount() ?
+              registerSite(c, c->assembler->argumentRegister(index)) :
+              stackSite(c, s));
+      index += s->size;
+      s = s->next;
+    }
+
+    if (result) {
+      addWrite(c, result, resultSize);
+    }
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "CallEvent.compile\n");
+    
+    UnaryOperation type = ((flags & Compiler::Aligned) ? AlignedCall : Call);
+    if (indirection) {
+      apply(c, type, BytesPerWord,
+            constantSite(c, reinterpret_cast<intptr_t>(indirection)));
+    } else {
+      apply(c, type, BytesPerWord, address->source);
+    }
+
+    if (traceHandler) {
+      traceHandler->handleTrace
+        (new (c->zone->allocate(sizeof(CodePromise)))
+         CodePromise(c, c->assembler->length()));
+    }
+  }
+
+  Value* address;
+  void* indirection;
+  unsigned flags;
+  TraceHandler* traceHandler;
+  Value* result;
+};
+
+void
+appendCall(Context* c, Value* address, void* indirection, unsigned flags,
+           TraceHandler* traceHandler, Value* result, unsigned argumentCount)
+{
+  new (c->zone->allocate(sizeof(CallEvent)))
+    CallEvent(c, address, indirection, flags, traceHandler, result,
+              argumentCount);
+}
+
+class ReturnEvent: public Event {
+ public:
+  ReturnEvent(Context* c, unsigned size, Value* value):
+    Event(c), value(value)
+  {
+    if (value) {
+      addRead(c, value, size, registerSite
+             (c, c->assembler->returnLow(),
+              size > BytesPerWord ?
+              c->assembler->returnHigh() : NoRegister));
+    }
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "ReturnEvent.compile\n");
+
+    Assembler::Register base(c->assembler->base());
+    Assembler::Register stack(c->assembler->stack());
+
+    c->assembler->apply(Move, BytesPerWord, Register, &base, Register, &stack);
+    c->assembler->apply(Pop, BytesPerWord, Register, &base);
+    c->assembler->apply(Return);
+  }
+
+  Value* value;
+};
+
+void
+appendReturn(Context* c, unsigned size, MyOperand* value)
+{
+  new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, size, value);
+}
+
+class MoveEvent: public Event {
+ public:
+  MoveEvent(Context* c, BinaryOperation type, unsigned size, Value* src,
+            Value* dst):
+    Event(c), type(type), size(size), src(src), dst(dst)
+  {
+    addRead(c, src, size, 0);
+    addWrite(c, dst, size);
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "MoveEvent.compile\n");
+
+    apply(c, type, size, src->source, dst->target);
+  }
+
+  BinaryOperation type;
+  unsigned size;
+  Value* src;
+  Value* dst;
+};
+
+void
+appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
+           Value* dst)
+{
+  new (c->zone->allocate(sizeof(MoveEvent)))
+    MoveEvent(c, type, size, src, dst);
+}
+
+class CompareEvent: public Event {
+ public:
+  CompareEvent(Context* c, unsigned size, Value* first, Value* second):
+    Event(c), size(size), first(first), second(second)
+  {
+    addRead(c, first, size, 0);
+    addRead(c, second, size, 0);
+  }
+
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "CompareEvent.compile\n");
+
+    apply(c, Compare, size, first->source, second->source);
+  }
+
+  unsigned size;
+  Value* first;
+  Value* second;
+};
+
+void
+appendCompare(Context* c, unsigned size, Value* first, Value* second)
+{
+  new (c->zone->allocate(sizeof(CompareEvent)))
+    CompareEvent(c, size, first, second);
+}
+
+class BranchEvent: public Event {
+ public:
+  BranchEvent(Context* c, UnaryOperation type, Value* address):
+    Event(c), type(type), address(address)
+  {
+    addRead(c, address, BytesPerWord, 0);
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "BranchEvent.compile\n");
+
+    apply(c, type, BytesPerWord, address->source);
+  }
+
+  UnaryOperation type;
+  Value* address;
+};
+
+void
+appendBranch(Context* c, UnaryOperation type, Value* address)
+{
+  new (c->zone->allocate(sizeof(BranchEvent))) BranchEvent(c, type, address);
+}
+
+class JumpEvent: public Event {
+ public:
+  JumpEvent(Context* c, Value* address):
+    Event(c),
+    address(address)
+  {
+    addRead(c, address, BytesPerWord, 0);
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "JumpEvent.compile\n");
+
+    apply(c, Jump, BytesPerWord, address->source);
+  }
+
+  Value* address;
+};
+
+void
+appendJump(Context* c, Value* address)
+{
+  new (c->zone->allocate(sizeof(JumpEvent))) JumpEvent(c, address);
+}
+
+class CombineEvent: public Event {
+ public:
+  CombineEvent(Context* c, BinaryOperation type, unsigned size, Value* first,
+               Value* second, Value* result):
+    Event(c), type(type), size(size), first(first), second(second),
+    result(result)
+  {
+    Assembler::Register r1(NoRegister);
+    Assembler::Register r2(NoRegister);
+    c->assembler->getTargets(type, size, &r1, &r2);
+
+    addRead(c, first, size,
+            r1.low == NoRegister ? 0 : registerSite(c, r1.low, r1.high));
+    addRead(c, second, size,
+            r2.low == NoRegister ?
+            valueSite(c, result) : registerSite(c, r2.low, r2.high));
+    addWrite(c, result, size);
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "CombineEvent.compile\n");
+
+    apply(c, type, size, first->source, second->source);
+  }
+
+  BinaryOperation type;
+  unsigned size;
+  Value* first;
+  Value* second;
+  MyOperand* result;
+};
+
+void
+appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
+              Value* second, Value* result)
+{
+  new (c->zone->allocate(sizeof(CombineEvent)))
+    CombineEvent(c, type, size, first, second, result);
+}
+
+class TranslateEvent: public Event {
+ public:
+  TranslateEvent(Context* c, UnaryOperation type, unsigned size, Value* value,
+                 Value* result):
+    Event(c), type(type), size(size), value(value), result(result)
+  {
+    addRead(c, value, size, valueSite(c, result));
+    addWrite(c, result, size);
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "TranslateEvent.compile\n");
+
+    apply(c, type, size, value->source);
+  }
+
+  UnaryOperation type;
+  unsigned size;
+  Value* value;
+  Value* result;
+};
+
+void
+appendTranslate(Context* c, UnaryOperation type, unsigned size, Value* value,
+                Value* result)
+{
+  new (c->zone->allocate(sizeof(TranslateEvent)))
+    TranslateEvent(c, type, size, value, result);
+}
+
+class MemoryEvent: public Event {
+ public:
+  MemoryEvent(Context* c, Value* base, Value* index, Value* result):
+    Event(c), base(base), index(index), result(result)
+  {
+    addRead(c, base, BytesPerWord, anyRegisterSite(c));
+    if (index) addRead(c, index, BytesPerWord, anyRegisterSite(c));
+    addWrite(c, BytesPerWord, size);
+  }
+
+  virtual void compile(Context*) {
+    fprintf(stderr, "MemoryEvent.compile\n");
+  }
+
+  Value* base;
+  Value* index;
+  Value* result;
+};
+
+void
+appendMemory(Context* c, Value* base, Value* index, Value* result)
+{
+  new (c->zone->allocate(sizeof(MemoryEvent)))
+    MemoryEvent(c, base, index, result);
+}
+
+
+void
+compile(Context* c)
+{
+  Assembler* a = c->assembler;
+
+  Assembler::Register base(a->base());
+  Assembler::Register stack(a->stack());
+  a->apply(Push, BytesPerWord, Register, &base);
+  a->apply(Move, BytesPerWord, Register, &stack, Register, &base);
+
+  if (c->stackOffset) {
+    Assembler::Constant offset(resolved(c, c->stackOffset * BytesPerWord));
+    a->apply(Subtract, BytesPerWord, Constant, &offset, Register, &stack);
+  }
+
+  for (Event* e = c->firstEvent; e; e = e->next) {
+    LogicalInstruction* li = c->logicalCode + e->logicalIp;
+    li->machineOffset = a->length();
+
+    e->compile(c);
+
+    for (CodePromise* p = e->promises; p; p = p->next) {
+      p->offset = a->length();
+    }
+  }
+}
+
+// end scratch
 
 class Stack {
  public:
@@ -998,8 +1335,8 @@ class MoveEvent: public Event {
         return;
       }
     } else if (type == Move
-               and (size == BytesPerWord
-                    or src->target->type(c) == Memory)
+               and size == BytesPerWord
+               and src->target->type(c) == Register
                and src->target->equals(c, src->value))
     {
       dst->value = src->value;
