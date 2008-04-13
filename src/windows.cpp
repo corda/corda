@@ -511,7 +511,8 @@ class MySystem: public System {
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
     assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
 
-    return VirtualAlloc(0, sizeInBytes, MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    return VirtualAlloc
+      (0, sizeInBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   }
 
   virtual void freeExecutable(const void* p, unsigned) {
