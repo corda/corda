@@ -27,7 +27,7 @@ class Finder {
 };
 
 Finder*
-makeFinder(System* s, const char* path);
+makeFinder(System* s, const char* path, const char* bootLibrary);
 
 } // namespace vm
 

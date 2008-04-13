@@ -83,6 +83,14 @@ listAppend(Thread* t, object list, object value);
 object
 vectorAppend(Thread* t, object vector, object value);
 
+object
+treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
+          intptr_t (*compare)(Thread* t, intptr_t key, object b));
+
+object
+treeInsert(Thread* t, object tree, object value, object sentinal,
+           intptr_t (*compare)(Thread* t, object a, object b));
+
 } // vm
 
 #endif//UTIL_H

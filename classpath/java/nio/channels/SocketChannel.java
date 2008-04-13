@@ -11,6 +11,7 @@
 package java.nio.channels;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
@@ -20,30 +21,33 @@ public class SocketChannel extends SelectableChannel
   public static final int InvalidSocket = -1;
 
   protected int socket = InvalidSocket;
-  protected boolean open = true;
   protected boolean connected = false;
 
   public static SocketChannel open() {
     return new SocketChannel();
   }
 
-  public void configureBlocking(boolean v) {
+  public SelectableChannel configureBlocking(boolean v) {
     if (v) throw new IllegalArgumentException();
+    return this;
   }
 
-  public void connect(InetSocketAddress address) throws Exception {
-    socket = doConnect(address.getHostName(), address.getPort());
+  public boolean connect(SocketAddress address) throws Exception {
+    InetSocketAddress a;
+    try {
+      a = (InetSocketAddress) address;
+    } catch (ClassCastException e) {
+      throw new UnsupportedAddressTypeException();
+    }
+    socket = doConnect(a.getHostName(), a.getPort());
+    return connected;
   }
 
   public void close() throws IOException {
-    super.close();
-    if (! open) return;
-    closeSocket();
-    open = false;
-  }
-
-  public boolean isOpen() {
-    return open;
+    if (isOpen()) {
+      super.close();
+      closeSocket();
+    }
   }
 
   private int doConnect(String host, int port) throws Exception {
@@ -54,7 +58,7 @@ public class SocketChannel extends SelectableChannel
   }
 
   public int read(ByteBuffer b) throws IOException {
-    if (! open) return -1;
+    if (! isOpen()) return -1;
     if (b.remaining() == 0) return 0;
     int r = natRead(socket, b.array(), b.arrayOffset() + b.position(), b.remaining());
     if (r > 0) {

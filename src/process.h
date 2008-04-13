@@ -40,8 +40,7 @@ inline object
 resolveClassInObject(Thread* t, object container, unsigned classOffset)
 {
   object o = cast<object>(container, classOffset);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
     PROTECT(t, container);
 
     o = resolveClass(t, o);
@@ -56,8 +55,7 @@ inline object
 resolveClassInPool(Thread* t, object pool, unsigned index)
 {
   object o = singletonObject(t, pool, index);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
     PROTECT(t, pool);
 
     o = resolveClass(t, o);
@@ -193,9 +191,6 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
     populateMultiArray(t, a, counts, index + 1, dimensions);
   }
 }
-
-ExceptionHandler*
-findExceptionHandler(Thread* t, object method, unsigned ip);
 
 int
 findLineNumber(Thread* t, object method, unsigned ip);

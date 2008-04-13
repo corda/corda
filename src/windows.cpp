@@ -23,6 +23,23 @@ using namespace vm;
 
 namespace {
 
+class MutexResource {
+ public:
+  MutexResource(System* s, HANDLE m): s(s), m(m) {
+    int r UNUSED = WaitForSingleObject(m, INFINITE);
+    assert(s, r == WAIT_OBJECT_0);
+  }
+
+  ~MutexResource() {
+    bool success UNUSED = ReleaseMutex(m);
+    assert(s, success);
+  }
+
+ private:
+  System* s; 
+  HANDLE m;
+};
+
 System::SignalHandler* segFaultHandler = 0;
 LPTOP_LEVEL_EXCEPTION_FILTER oldSegFaultHandler = 0;
 
@@ -43,23 +60,6 @@ handleException(LPEXCEPTION_POINTERS e)
   return EXCEPTION_CONTINUE_SEARCH;
 }
 
-class MutexResource {
- public:
-  MutexResource(System* s, HANDLE m): s(s), m(m) {
-    int r UNUSED = WaitForSingleObject(m, INFINITE);
-    assert(s, r == WAIT_OBJECT_0);
-  }
-
-  ~MutexResource() {
-    bool success UNUSED = ReleaseMutex(m);
-    assert(s, success);
-  }
-
- private:
-  System* s; 
-  HANDLE m;
-};
-
 DWORD WINAPI
 run(void* r)
 {
@@ -70,7 +70,7 @@ run(void* r)
 void*
 allocate(System* s, unsigned size)
 {
-  void* p = s->tryAllocate(size, false);
+  void* p = s->tryAllocate(size);
   if (p == 0) abort();
   return p;
 }
@@ -117,7 +117,7 @@ class MySystem: public System {
       CloseHandle(event);
       CloseHandle(mutex);
       CloseHandle(thread);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     HANDLE thread;
@@ -148,7 +148,7 @@ class MySystem: public System {
 
     virtual void dispose() {
       CloseHandle(mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -362,7 +362,7 @@ class MySystem: public System {
     virtual void dispose() {
       assert(s, owner_ == 0);
       CloseHandle(mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -393,7 +393,7 @@ class MySystem: public System {
       bool r UNUSED = TlsFree(key);
       assert(s, r);
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -425,7 +425,7 @@ class MySystem: public System {
         if (mapping) CloseHandle(mapping);
         if (file) CloseHandle(file);
       }
-      system->free(this, sizeof(*this), false);
+      system->free(this);
     }
 
     System* system;
@@ -437,12 +437,10 @@ class MySystem: public System {
 
   class Library: public System::Library {
    public:
-    Library(System* s, HMODULE handle, const char* name, size_t nameLength,
-	    bool mapName):
+    Library(System* s, HMODULE handle, const char* name, bool mapName):
       s(s),
       handle(handle),
       name_(name),
-      nameLength(nameLength),
       mapName_(mapName),
       next_(0)
     { }
@@ -484,16 +482,15 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_, nameLength + 1, false);
+        s->free(name_);
       }
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
     HMODULE handle;
     const char* name_;
-    size_t nameLength;
     bool mapName_;
     System::Library* next_;
   };
@@ -503,12 +500,24 @@ class MySystem: public System {
     assert(this, mutex);
   }
 
-  virtual void* tryAllocate(unsigned size, bool) {
-    return malloc(size);
+  virtual void* tryAllocate(unsigned sizeInBytes) {
+    return malloc(sizeInBytes);
   }
 
-  virtual void free(const void* p, unsigned, bool) {
+  virtual void free(const void* p) {
     if (p) ::free(const_cast<void*>(p));
+  }
+
+  virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
+    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
+
+    return VirtualAlloc
+      (0, sizeInBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  }
+
+  virtual void freeExecutable(const void* p, unsigned) {
+    int r UNUSED = VirtualFree(const_cast<void*>(p), 0, MEM_RELEASE);
+    assert(this, r);
   }
 
   virtual bool success(Status s) {
@@ -562,6 +571,32 @@ class MySystem: public System {
     } else {
       return 1;
     }
+  }
+
+  virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
+                       ThreadVisitor* visitor)
+  {
+    assert(this, st != sTarget);
+
+    Thread* target = static_cast<Thread*>(sTarget);
+
+    ACQUIRE(this, mutex);
+
+    int rv = SuspendThread(target->thread);
+    expect(this, rv != -1);
+
+    CONTEXT context;
+    rv = GetThreadContext(target->thread, &context);
+    expect(this, rv);
+
+    visitor->visit(reinterpret_cast<void*>(context.Eip),
+                   reinterpret_cast<void*>(context.Ebp),
+                   reinterpret_cast<void*>(context.Esp));
+
+    rv = ResumeThread(target->thread);
+    expect(this, rv != -1);
+
+    return 0;
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
@@ -623,7 +658,7 @@ class MySystem: public System {
   {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName) {
+    if (mapName and name) {
       unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
       char buffer[size];
       snprintf(buffer, size, SO_PREFIX "%s" SO_SUFFIX, name);
@@ -648,7 +683,7 @@ class MySystem: public System {
       }
 
       *lib = new (allocate(this, sizeof(Library)))
-        Library(this, handle, n, nameLength, mapName);
+        Library(this, handle, n, mapName);
 
       return 0;
     } else {

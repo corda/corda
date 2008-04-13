@@ -1121,7 +1121,8 @@ class Machine {
     ImmortalAllocation
   };
 
-  Machine(System* system, Heap* heap, Finder* finder, Processor* processor);
+  Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
+          const char* bootLibrary, const char* builtins);
 
   ~Machine() { 
     dispose();
@@ -1287,6 +1288,9 @@ class Thread {
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
+  uintptr_t* backupHeap;
+  unsigned backupHeapIndex;
+  unsigned backupHeapSizeInWords;
 #ifdef VM_STRESS
   bool stress;
 #endif // VM_STRESS
@@ -1327,7 +1331,7 @@ dispose(Thread* t, Reference* r)
   if (r->next) {
     r->next->handle = r->handle;
   }
-  t->m->heap->free(r, sizeof(*r), false);
+  t->m->heap->free(r, sizeof(*r));
 }
 
 void
@@ -1425,12 +1429,26 @@ expect(Thread* t, bool v)
   expect(t->m->system, v);
 }
 
+inline void
+ensure(Thread* t, unsigned sizeInBytes)
+{
+  if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+      > Thread::HeapSizeInWords)
+  {
+    expect(t, t->backupHeap == 0);
+    t->backupHeap = static_cast<uintptr_t*>
+      (t->m->heap->allocate(pad(sizeInBytes)));
+    t->backupHeapIndex = 0;
+    t->backupHeapSizeInWords = ceiling(sizeInBytes, BytesPerWord);
+  }
+}
+
 object
 allocate2(Thread* t, unsigned sizeInBytes, bool objectMask);
 
 object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
-          unsigned sizeInBytes, bool executable, bool objectMask);
+          unsigned sizeInBytes, bool objectMask);
 
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
@@ -1447,7 +1465,7 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
   stress(t);
 
   if (UNLIKELY(t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-               >= Thread::HeapSizeInWords
+               > Thread::HeapSizeInWords
                or t->m->exclusive))
   {
     return allocate2(t, sizeInBytes, objectMask);
@@ -1484,7 +1502,7 @@ setObjectClass(Thread*, object o, object value)
   cast<object>(o, 0)
     = reinterpret_cast<object>
     (reinterpret_cast<uintptr_t>(value)
-     | reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask));
+     | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
 }
 
 object&
@@ -1526,7 +1544,13 @@ object
 makeTrace(Thread* t, Processor::StackWalker* walker);
 
 object
-makeTrace(Thread* t);
+makeTrace(Thread* t, Thread* target);
+
+inline object
+makeTrace(Thread* t)
+{
+  return makeTrace(t, t);
+}
 
 inline object
 makeRuntimeException(Thread* t, object message)
@@ -1701,6 +1725,9 @@ makeString(Thread* t, const char* format, ...);
 
 void
 stringChars(Thread* t, object string, char* chars);
+
+void
+stringChars(Thread* t, object string, uint16_t* chars);
 
 bool
 isAssignableFrom(Thread* t, object a, object b);
@@ -2231,6 +2258,7 @@ inline object
 makeSingleton(Thread* t, unsigned count)
 {
   object o = makeSingleton(t, count + singletonMaskSize(count), true);
+  assert(t, singletonLength(t, o) == count + singletonMaskSize(t, o));
   if (count) {
     singletonMask(t, o)[0] = 1;
   }

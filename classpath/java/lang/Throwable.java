@@ -65,7 +65,7 @@ public class Throwable {
 
   private static native Object trace(int skipCount);
 
-  private static native StackTraceElement[] resolveTrace(Object trace);
+  static native StackTraceElement[] resolveTrace(Object trace);
 
   private StackTraceElement[] resolveTrace() {
     if (! (trace instanceof StackTraceElement[])) {

@@ -11,8 +11,10 @@
 package java.lang;
 
 public final class Long extends Number implements Comparable<Long> {
+  public static final Long MIN_VALUE = -9223372036854775808l;
+  public static final Long MAX_VALUE =  9223372036854775807l;
+
   public static final Class TYPE = Class.forCanonicalName("J");
-  public static final Long MAX_VALUE = 9223372036854775807l;
 
   private final long value;
 
@@ -131,16 +133,13 @@ public final class Long extends Number implements Comparable<Long> {
 
     for (; i < s.length(); ++i) {
       char c = s.charAt(i);
-      if (((c >= '0') && (c <= '9')) ||
-	  ((c >= 'a') && (c <= 'z'))) {
-	long digit = ((c >= '0' && c <= '9') ? (c - '0') : (c - 'a' + 10));
-        if (digit < radix) {
-          number += digit * pow(radix, (s.length() - i - 1));
-          continue;
-        }
+      int digit = Character.digit(c, radix);
+      if (digit >= 0) {
+        number += digit * pow(radix, (s.length() - i - 1));
+      } else {
+        throw new NumberFormatException("invalid character " + c + " code " +
+                                        (int) c);
       }
-      throw new NumberFormatException("invalid character " + c + " code " +
-                                      (int) c);
     }
 
     if (negative) {

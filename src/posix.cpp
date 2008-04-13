@@ -35,9 +35,6 @@ using namespace vm;
 
 namespace {
 
-System::SignalHandler* segFaultHandler = 0;
-struct sigaction oldSegFaultHandler;
-
 class MutexResource {
  public:
   MutexResource(pthread_mutex_t& m): m(&m) {
@@ -52,12 +49,22 @@ class MutexResource {
   pthread_mutex_t* m;
 };
 
-const int InterruptSignal = SIGUSR2;
+const int VisitSignal = SIGUSR1;
 #ifdef __APPLE__
 const int SegFaultSignal = SIGBUS;
 #else
 const int SegFaultSignal = SIGSEGV;
 #endif
+const int InterruptSignal = SIGUSR2;
+
+const unsigned VisitSignalIndex = 0;
+const unsigned SegFaultSignalIndex = 1;
+const unsigned InterruptSignalIndex = 2;
+
+class MySystem;
+MySystem* system;
+
+const int signals[] = { VisitSignal, SegFaultSignal, InterruptSignal };
 
 #ifdef __x86_64__
 #  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
@@ -65,10 +72,17 @@ const int SegFaultSignal = SIGSEGV;
 #  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
 #  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
 #elif defined __APPLE__
-#  define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
-#  define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
-#  define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
-#  define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
+#  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#    define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
+#    define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
+#    define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
+#  else
+#    define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
+#    define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
+#    define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
+#  endif
 #elif defined __i386__
 #  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
 #  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
@@ -79,41 +93,7 @@ const int SegFaultSignal = SIGSEGV;
 #endif
 
 void
-handleSignal(int signal, siginfo_t* info, void* context)
-{
-  if (signal == SegFaultSignal) {
-    ucontext_t* c = static_cast<ucontext_t*>(context);
-
-    void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
-    void* base = reinterpret_cast<void*>(BASE_REGISTER(c));
-    void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
-    void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
-
-    bool jump = segFaultHandler->handleSignal
-      (&ip, &base, &stack, &thread);
-
-    if (jump) {
-      // I'd like to use setcontext here (and get rid of the
-      // sigprocmask call), but it doesn't work on my Linux x86_64
-      // system, and I can't tell from the documentation if it's even
-      // supposed to work.
-
-      sigset_t set;
-
-      sigemptyset(&set);
-      sigaddset(&set, SegFaultSignal);
-      sigprocmask(SIG_UNBLOCK, &set, 0);
-
-      vmJump(ip, base, stack, thread);
-    } else if (oldSegFaultHandler.sa_flags & SA_SIGINFO) {
-      oldSegFaultHandler.sa_sigaction(signal, info, context);
-    } else if (oldSegFaultHandler.sa_handler) {
-      oldSegFaultHandler.sa_handler(signal);
-    } else {
-      abort();
-    }
-  }
-}
+handleSignal(int signal, siginfo_t* info, void* context);
 
 void*
 run(void* r)
@@ -125,7 +105,7 @@ run(void* r)
 void*
 allocate(System* s, unsigned size)
 {
-  void* p = s->tryAllocate(size, false);
+  void* p = s->tryAllocate(size);
   if (p == 0) abort();
   return p;
 }
@@ -187,7 +167,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     pthread_t thread;
@@ -215,7 +195,7 @@ class MySystem: public System {
 
     virtual void dispose() {
       pthread_mutex_destroy(&mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -414,7 +394,7 @@ class MySystem: public System {
     virtual void dispose() {
       expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -445,7 +425,7 @@ class MySystem: public System {
       int r UNUSED = pthread_key_delete(key);
       expect(s, r == 0);
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -472,7 +452,7 @@ class MySystem: public System {
       if (start_) {
         munmap(start_, length_);
       }
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -525,10 +505,10 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_, nameLength + 1, false);
+        s->free(name_);
       }
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -540,47 +520,61 @@ class MySystem: public System {
     System::Library* next_;
   };
 
-  MySystem() {
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(struct sigaction));
-    sigemptyset(&(sa.sa_mask));
-    sa.sa_flags = SA_SIGINFO;
-    sa.sa_sigaction = handleSignal;
+  MySystem(): threadVisitor(0), visitTarget(0) {
+    expect(this, system == 0);
+    system = this;
+
+    registerHandler(&nullHandler, InterruptSignalIndex);
+    registerHandler(&nullHandler, VisitSignalIndex);
+
+    expect(this, make(&visitLock) == 0);
+  }
+
+  int registerHandler(System::SignalHandler* handler, int index) {
+    if (handler) {
+      handlers[index] = handler;
+
+      struct sigaction sa;
+      memset(&sa, 0, sizeof(struct sigaction));
+      sigemptyset(&(sa.sa_mask));
+      sa.sa_flags = SA_SIGINFO;
+      sa.sa_sigaction = handleSignal;
     
-    int rv UNUSED = sigaction(InterruptSignal, &sa, 0);
-    expect(this, rv == 0);
-  }
-
-  virtual void* tryAllocate(unsigned size, bool executable) {
-    assert(this, (not executable) or (size % LikelyPageSizeInBytes == 0));
-
-#ifndef MAP_32BIT
-#define MAP_32BIT 0
-#endif
-
-    if (executable) {
-      void* p = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANON | MAP_32BIT, -1, 0);
-
-      if (p == MAP_FAILED) {
-        return 0;
-      } else {
-        return p;
-      }
+      return sigaction(signals[index], &sa, oldHandlers + index);
+    } else if (handlers[index]) {
+      handlers[index] = 0;
+      return sigaction(signals[index], oldHandlers + index, 0);
     } else {
-      return malloc(size);
+      return 1;
     }
   }
 
-  virtual void free(const void* p, unsigned size, bool executable) {
-    if (p) {
-      if (executable) {
-        int r UNUSED = munmap(const_cast<void*>(p), size);
-        assert(this, r == 0);
-      } else {
-        ::free(const_cast<void*>(p));
-      }
+  virtual void* tryAllocate(unsigned sizeInBytes) {
+    return malloc(sizeInBytes);
+  }
+
+  virtual void free(const void* p) {
+    if (p) ::free(const_cast<void*>(p));
+  }
+
+  virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
+    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
+
+    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANON, -1, 0);
+    
+    if (p == MAP_FAILED) {
+      return 0;
+    } else {
+      return p;
     }
+  }
+
+  virtual void freeExecutable(const void* p, unsigned sizeInBytes) {
+    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
+
+    int r UNUSED = munmap(const_cast<void*>(p), sizeInBytes);
+    assert(this, r == 0);
   }
 
   virtual bool success(Status s) {
@@ -618,22 +612,32 @@ class MySystem: public System {
   }
 
   virtual Status handleSegFault(SignalHandler* handler) {
-    if (handler) {
-      segFaultHandler = handler;
+    return registerHandler(handler, SegFaultSignalIndex);
+  }
 
-      struct sigaction sa;
-      memset(&sa, 0, sizeof(struct sigaction));
-      sigemptyset(&(sa.sa_mask));
-      sa.sa_flags = SA_SIGINFO;
-      sa.sa_sigaction = handleSignal;
-    
-      return sigaction(SegFaultSignal, &sa, &oldSegFaultHandler);
-    } else if (segFaultHandler) {
-      segFaultHandler = 0;
-      return sigaction(SegFaultSignal, &oldSegFaultHandler, 0);
-    } else {
-      return 1;
-    }
+  virtual Status visit(System::Thread* st, System::Thread* sTarget,
+                       ThreadVisitor* visitor)
+  {
+    assert(this, st != sTarget);
+
+    Thread* t = static_cast<Thread*>(st);
+    Thread* target = static_cast<Thread*>(sTarget);
+
+    ACQUIRE_MONITOR(t, visitLock);
+
+    while (threadVisitor) visitLock->wait(t, 0);
+
+    threadVisitor = visitor;
+    visitTarget = target;
+
+    int rv = pthread_kill(target->thread, VisitSignal);
+    expect(this, rv == 0);
+
+    while (visitTarget) visitLock->wait(t, 0);
+
+    threadVisitor = 0;
+
+    return 0;
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
@@ -687,18 +691,18 @@ class MySystem: public System {
     bool alreadyAllocated = false;
     bool isMain = false;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName) {
+    if (mapName and name) {
       unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
       char buffer[size];
       snprintf(buffer, size, "lib%s" SO_SUFFIX, name);
-      p = dlopen(buffer, RTLD_LAZY);
+      p = dlopen(buffer, RTLD_LAZY | RTLD_LOCAL);
     } else {
       if (!name) {
         pathOfExecutable(this, &name, &nameLength);
         alreadyAllocated = true;
         isMain = true;
       }
-      p = dlopen(name, RTLD_LAZY);
+      p = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
     }
  
     if (p) {
@@ -711,7 +715,7 @@ class MySystem: public System {
         n = static_cast<char*>(allocate(this, nameLength + 1));
         memcpy(n, name, nameLength + 1);
         if (alreadyAllocated) {
-          free(name, nameLength, false);
+          free(name);
         }
       } else {
         n = 0;
@@ -747,9 +751,88 @@ class MySystem: public System {
   }
 
   virtual void dispose() {
+    visitLock->dispose();
+
+    registerHandler(0, InterruptSignalIndex);
+    registerHandler(0, VisitSignalIndex);
+    system = 0;
+
     ::free(this);
   }
+
+
+  class NullSignalHandler: public SignalHandler {
+    virtual bool handleSignal(void**, void**, void**, void**) { return false; }
+  } nullHandler;
+
+  SignalHandler* handlers[3];
+  struct sigaction oldHandlers[3];
+
+  ThreadVisitor* threadVisitor;
+  Thread* visitTarget;
+  System::Monitor* visitLock;
 };
+
+void
+handleSignal(int signal, siginfo_t* info, void* context)
+{
+  ucontext_t* c = static_cast<ucontext_t*>(context);
+
+  void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
+  void* base = reinterpret_cast<void*>(BASE_REGISTER(c));
+  void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
+  void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
+
+  unsigned index;
+
+  switch (signal) {
+  case VisitSignal: {
+    index = VisitSignalIndex;
+
+    system->threadVisitor->visit(ip, base, stack);
+
+    System::Thread* t = system->visitTarget;
+    system->visitTarget = 0;
+    system->visitLock->notifyAll(t);
+  } break;
+
+  case SegFaultSignal: {
+    index = SegFaultSignalIndex;
+
+    bool jump = system->handlers[index]->handleSignal
+      (&ip, &base, &stack, &thread);
+
+    if (jump) {
+      // I'd like to use setcontext here (and get rid of the
+      // sigprocmask call), but it doesn't work on my Linux x86_64
+      // system, and I can't tell from the documentation if it's even
+      // supposed to work.
+
+      sigset_t set;
+
+      sigemptyset(&set);
+      sigaddset(&set, SegFaultSignal);
+      sigprocmask(SIG_UNBLOCK, &set, 0);
+
+      vmJump(ip, base, stack, thread);
+    }
+  } break;
+
+  case InterruptSignal: {
+    index = InterruptSignalIndex;
+  } break;
+
+  default: abort();
+  }
+
+  if (system->oldHandlers[index].sa_flags & SA_SIGINFO) {
+    system->oldHandlers[index].sa_sigaction(signal, info, context);
+  } else if (system->oldHandlers[index].sa_handler) {
+    system->oldHandlers[index].sa_handler(signal);
+  } else {
+    abort();
+  }
+}
 
 } // namespace
 

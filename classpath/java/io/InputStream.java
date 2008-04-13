@@ -52,5 +52,17 @@ public abstract class InputStream {
     return 0;
   }
 
+  public void mark(int limit) {
+    // ignore
+  }
+
+  public void reset() throws IOException {
+    // ignore
+  }
+
+  public boolean markSupported() {
+    return false;
+  }
+
   public void close() throws IOException { }
 }

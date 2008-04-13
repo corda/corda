@@ -2,7 +2,22 @@ public class Misc {
   private static int alpha;
   private static int beta;
   private static byte byte1, byte2, byte3;
+
   private int gamma;
+  private int pajama;
+  private boolean boolean1;
+  private boolean boolean2;
+  private long time;
+
+  public Misc() {
+    expect(! boolean1);
+    expect(! boolean2);
+    
+    time = 0xffffffffffffffffL;
+    
+    expect(! boolean1);
+    expect(! boolean2);
+  }
 
   private String foo(String s) {
     return s;

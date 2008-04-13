@@ -88,6 +88,35 @@ GetEnv(Machine* m, Thread** t, jint version)
 }
 
 jsize JNICALL
+GetStringLength(Thread* t, jstring s)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return stringLength(t, *s);
+}
+
+const jchar* JNICALL
+GetStringChars(Thread* t, jstring s, jboolean* isCopy)
+{
+  ENTER(t, Thread::ActiveState);
+
+  jchar* chars = static_cast<jchar*>
+    (t->m->heap->allocate((stringLength(t, *s) + 1) * sizeof(jchar)));
+  stringChars(t, *s, chars);
+
+  if (isCopy) *isCopy = true;
+  return chars;
+}
+
+void JNICALL
+ReleaseStringChars(Thread* t, jstring s, const jchar* chars)
+{
+  ENTER(t, Thread::ActiveState);
+
+  t->m->heap->free(chars, (stringLength(t, *s) + 1) * sizeof(jchar));
+}
+
+jsize JNICALL
 GetStringUTFLength(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
@@ -101,7 +130,7 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   char* chars = static_cast<char*>
-    (t->m->heap->allocate(stringLength(t, *s) + 1, false));
+    (t->m->heap->allocate(stringLength(t, *s) + 1));
   stringChars(t, *s, chars);
 
   if (isCopy) *isCopy = true;
@@ -111,7 +140,9 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
 void JNICALL
 ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
 {
-  t->m->heap->free(chars, stringLength(t, *s) + 1, false);
+  ENTER(t, Thread::ActiveState);
+
+  t->m->heap->free(chars, stringLength(t, *s) + 1);
 }
 
 jsize JNICALL
@@ -232,15 +263,13 @@ IsInstanceOf(Thread* t, jobject o, jclass c)
 }
 
 object
-findMethod(Thread* t, object c, const char* name, const char* spec)
+findMethod(Thread* t, jclass c, const char* name, const char* spec)
 {
-  PROTECT(t, c);
-
   object n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
   object s = makeByteArray(t, "%s", spec);
-  return vm::findMethod(t, c, n, s);
+  return vm::findMethod(t, *c, n, s);
 }
 
 jmethodID JNICALL
@@ -248,7 +277,7 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = findMethod(t, *c, name, spec);
+  object method = findMethod(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   if (classFlags(t, *c) & ACC_INTERFACE) {
@@ -278,7 +307,7 @@ GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = findMethod(t, *c, name, spec);
+  object method = findMethod(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return methodOffset(t, method) + 1;
@@ -289,11 +318,20 @@ getMethod(Thread* t, object o, jmethodID m)
 {
   if (m & InterfaceMethodID) {
     return vectorBody(t, t->m->jniInterfaceTable, m & (~InterfaceMethodID));
-  } else if (m & NonVirtualMethodID) {
-    return arrayBody(t, classMethodTable(t, objectClass(t, o)),
-                     m & (~NonVirtualMethodID));
   } else {
-    return arrayBody(t, classVirtualTable(t, objectClass(t, o)), m - 1);
+    if (classVmFlags(t, objectClass(t, o)) & BootstrapFlag) {
+      PROTECT(t, o);
+
+      resolveClass(t, className(t, objectClass(t, o)));
+      if (UNLIKELY(t->exception)) return 0;
+    }
+
+    if (m & NonVirtualMethodID) {
+      return arrayBody(t, classMethodTable(t, objectClass(t, o)),
+                       m & (~NonVirtualMethodID));
+    } else {
+      return arrayBody(t, classVirtualTable(t, objectClass(t, o)), m - 1);
+    }
   }
 }
 
@@ -328,8 +366,9 @@ CallObjectMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, t->m->processor->invokeList
-                            (t, getMethod(t, *o, m), *o, true, a));
+  object method = getMethod(t, *o, m);
+  return makeLocalReference
+    (t, t->m->processor->invokeList(t, method, *o, true, a));
 }
 
 jobject JNICALL
@@ -350,7 +389,8 @@ CallBooleanMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? false : (intValue(t, r) != 0));
 }
 
@@ -372,7 +412,8 @@ CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -394,7 +435,8 @@ CallCharMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -416,7 +458,8 @@ CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -438,7 +481,8 @@ CallIntMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -460,7 +504,8 @@ CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : longValue(t, r));
 }
 
@@ -482,7 +527,8 @@ CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : bitsToFloat(intValue(t, r)));
 }
 
@@ -504,7 +550,8 @@ CallDoubleMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : bitsToDouble(longValue(t, r)));
 }
 
@@ -526,7 +573,8 @@ CallVoidMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->processor->invokeList(t, getMethod(t, *o, m), *o, true, a);
+  object method = getMethod(t, *o, m);
+  t->m->processor->invokeList(t, method, *o, true, a);
 }
 
 void JNICALL
@@ -541,9 +589,16 @@ CallVoidMethod(Thread* t, jobject o, jmethodID m, ...)
 }
 
 inline object
-getStaticMethod(Thread* t, object class_, jmethodID m)
+getStaticMethod(Thread* t, object c, jmethodID m)
 {
-  return arrayBody(t, classMethodTable(t, class_), m - 1);
+  if (classVmFlags(t, c) & BootstrapFlag) {
+    PROTECT(t, c);
+
+    resolveClass(t, className(t, c));
+    if (UNLIKELY(t->exception)) return 0;
+  }
+
+  return arrayBody(t, classMethodTable(t, c), m - 1);
 }
 
 jobject JNICALL
@@ -772,13 +827,13 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 object
-findField(Thread* t, object class_, const char* name, const char* spec)
+findField(Thread* t, jclass c, const char* name, const char* spec)
 {
   object n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
   object s = makeByteArray(t, "%s", spec);
-  return vm::findField(t, class_, n, s);
+  return vm::findField(t, *c, n, s);
 }
 
 jfieldID JNICALL
@@ -786,7 +841,7 @@ GetFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, *c, name, spec);
+  object field = findField(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
@@ -797,7 +852,7 @@ GetStaticFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, *c, name, spec);
+  object field = findField(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
@@ -1122,7 +1177,7 @@ NewGlobalRef(Thread* t, jobject o)
   ACQUIRE(t, t->m->referenceLock);
   
   if (o) {
-    Reference* r = new (t->m->heap->allocate(sizeof(Reference), false))
+    Reference* r = new (t->m->heap->allocate(sizeof(Reference)))
       Reference(*o, &(t->m->jniReferences));
 
     return &(r->target);
@@ -1267,7 +1322,7 @@ GetBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = booleanArrayLength(t, *array) * sizeof(jboolean);
-  jboolean* p = static_cast<jboolean*>(t->m->heap->allocate(size, false));
+  jboolean* p = static_cast<jboolean*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &booleanArrayBody(t, *array, 0), size);
   }
@@ -1285,7 +1340,7 @@ GetByteArrayElements(Thread* t, jbyteArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = byteArrayLength(t, *array) * sizeof(jbyte);
-  jbyte* p = static_cast<jbyte*>(t->m->heap->allocate(size, false));
+  jbyte* p = static_cast<jbyte*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &byteArrayBody(t, *array, 0), size);
   }
@@ -1303,7 +1358,7 @@ GetCharArrayElements(Thread* t, jcharArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = charArrayLength(t, *array) * sizeof(jchar);
-  jchar* p = static_cast<jchar*>(t->m->heap->allocate(size, false));
+  jchar* p = static_cast<jchar*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &charArrayBody(t, *array, 0), size);
   }
@@ -1321,7 +1376,7 @@ GetShortArrayElements(Thread* t, jshortArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = shortArrayLength(t, *array) * sizeof(jshort);
-  jshort* p = static_cast<jshort*>(t->m->heap->allocate(size, false));
+  jshort* p = static_cast<jshort*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &shortArrayBody(t, *array, 0), size);
   }
@@ -1339,7 +1394,7 @@ GetIntArrayElements(Thread* t, jintArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = intArrayLength(t, *array) * sizeof(jint);
-  jint* p = static_cast<jint*>(t->m->heap->allocate(size, false));
+  jint* p = static_cast<jint*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &intArrayBody(t, *array, 0), size);
   }
@@ -1357,7 +1412,7 @@ GetLongArrayElements(Thread* t, jlongArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = longArrayLength(t, *array) * sizeof(jlong);
-  jlong* p = static_cast<jlong*>(t->m->heap->allocate(size, false));
+  jlong* p = static_cast<jlong*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &longArrayBody(t, *array, 0), size);
   }
@@ -1375,7 +1430,7 @@ GetFloatArrayElements(Thread* t, jfloatArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = floatArrayLength(t, *array) * sizeof(jfloat);
-  jfloat* p = static_cast<jfloat*>(t->m->heap->allocate(size, false));
+  jfloat* p = static_cast<jfloat*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &floatArrayBody(t, *array, 0), size);
   }
@@ -1393,7 +1448,7 @@ GetDoubleArrayElements(Thread* t, jdoubleArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = doubleArrayLength(t, *array) * sizeof(jdouble);
-  jdouble* p = static_cast<jdouble*>(t->m->heap->allocate(size, false));
+  jdouble* p = static_cast<jdouble*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &doubleArrayBody(t, *array, 0), size);
   }
@@ -1420,7 +1475,7 @@ ReleaseBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* p,
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1438,7 +1493,7 @@ ReleaseByteArrayElements(Thread* t, jbyteArray array, jbyte* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1456,7 +1511,7 @@ ReleaseCharArrayElements(Thread* t, jcharArray array, jchar* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1474,7 +1529,7 @@ ReleaseShortArrayElements(Thread* t, jshortArray array, jshort* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1492,7 +1547,7 @@ ReleaseIntArrayElements(Thread* t, jintArray array, jint* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1510,7 +1565,7 @@ ReleaseLongArrayElements(Thread* t, jlongArray array, jlong* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1528,7 +1583,7 @@ ReleaseFloatArrayElements(Thread* t, jfloatArray array, jfloat* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1547,7 +1602,7 @@ ReleaseDoubleArrayElements(Thread* t, jdoubleArray array, jdouble* p,
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1781,9 +1836,13 @@ GetJavaVM(Thread* t, Machine** m)
 jboolean JNICALL
 IsSameObject(Thread* t, jobject a, jobject b)
 {
-  ENTER(t, Thread::ActiveState);
+  if (a and b) {
+    ENTER(t, Thread::ActiveState);
 
-  return *a == *b;
+    return *a == *b;
+  } else {
+    return a == b;
+  }
 }
 
 struct JDK1_1InitArgs {
@@ -1826,6 +1885,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
   memset(envTable, 0, sizeof(JNIEnvVTable));
 
+  envTable->GetStringLength = ::GetStringLength;
+  envTable->GetStringChars = ::GetStringChars;
+  envTable->ReleaseStringChars = ::ReleaseStringChars;
   envTable->GetStringUTFLength = ::GetStringUTFLength;
   envTable->GetStringUTFChars = ::GetStringUTFChars;
   envTable->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
@@ -1988,27 +2050,37 @@ JNI_GetDefaultJavaVMInitArgs(void* args)
   return 0;
 }
 
-#define BUILTINS_PROPERTY "vm.builtins"
+#define BUILTINS_PROPERTY "avian.builtins"
+#define BOOTSTRAP_PROPERTY "avian.bootstrap"
 
 extern "C" JNIEXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 {
   JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
 
-  System* s = makeSystem();
-  Heap* h = makeHeap(s, a->maxHeapSize);
-  Finder* f = makeFinder(s, a->classpath);
-  Processor* p = makeProcessor(s, h);
-
-  *m = new (h->allocate(sizeof(Machine), false)) Machine(s, h, f, p);
-
+  const char* builtins = 0;
+  const char* bootLibrary = 0;
   if (a->properties) {
     for (const char** p = a->properties; *p; ++p) {
-      if (strncmp(*p, BUILTINS_PROPERTY "=", sizeof(BUILTINS_PROPERTY)) == 0) {
-        (*m)->builtins = (*p) + sizeof(BUILTINS_PROPERTY);
+      if (strncmp(*p, BUILTINS_PROPERTY "=",
+                  sizeof(BUILTINS_PROPERTY)) == 0)
+      {
+        builtins = (*p) + sizeof(BUILTINS_PROPERTY);
+      } else if (strncmp(*p, BOOTSTRAP_PROPERTY "=",
+                         sizeof(BOOTSTRAP_PROPERTY)) == 0)
+      {
+        bootLibrary = (*p) + sizeof(BOOTSTRAP_PROPERTY);
       }
     }
   }
+
+  System* s = makeSystem();
+  Heap* h = makeHeap(s, a->maxHeapSize);
+  Finder* f = makeFinder(s, a->classpath, bootLibrary);
+  Processor* p = makeProcessor(s, h);
+
+  *m = new (h->allocate(sizeof(Machine)))
+    Machine(s, h, f, p, bootLibrary, builtins);
 
   *t = p->makeThread(*m, 0, 0);
 

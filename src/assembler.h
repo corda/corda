@@ -120,17 +120,14 @@ class Assembler {
 
   class Memory: public Operand {
    public:
-    Memory(int base, int offset, int index = NoRegister, unsigned scale = 0,
-           TraceHandler* traceHandler = 0):
-      base(base), offset(offset), index(index), scale(scale),
-      traceHandler(traceHandler)
+    Memory(int base, int offset, int index = NoRegister, unsigned scale = 0):
+      base(base), offset(offset), index(index), scale(scale)
     { }
 
     int base;
     int offset;
     int index;
     unsigned scale;
-    TraceHandler* traceHandler;
   };
 
   class Client {

@@ -11,6 +11,9 @@
 package java.lang;
 
 public final class Character implements Comparable<Character> {
+  public static final int MIN_RADIX = 2;
+  public static final int MAX_RADIX = 36;
+
   public static final Class TYPE = Class.forCanonicalName("C");
 
   private final char value;
@@ -65,6 +68,23 @@ public final class Character implements Comparable<Character> {
 
   public static boolean isDigit(char c) {
     return c >= '0' && c <= '9';
+  }
+
+  public static int digit(char c, int radix) {
+    int digit = 0;
+    if ((c >= '0') && (c <= '9')) {
+      digit = c - '0';
+    } else if ((c >= 'a') && (c <= 'z')) {
+      digit = c - 'a' + 10;
+    } else {
+      return -1;
+    }
+
+    if (digit < radix) {
+      return digit;
+    } else {
+      return -1;
+    }
   }
 
   public static boolean isLetter(char c) {

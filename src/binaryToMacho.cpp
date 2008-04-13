@@ -30,10 +30,10 @@ pad(unsigned n)
 
 void
 writeObject(FILE* out, const uint8_t* data, unsigned size,
-            const char* dataName, const char* sizeName)
+            const char* startName, const char* endName)
 {
-  unsigned dataNameLength = strlen(dataName) + 1;
-  unsigned sizeNameLength = strlen(sizeName) + 1;
+  unsigned startNameLength = strlen(startName) + 1;
+  unsigned endNameLength = strlen(endName) + 1;
 
   mach_header header = {
     MH_MAGIC, // magic
@@ -96,7 +96,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     + sizeof(symtab_command)
     + pad(size)
     + (sizeof(struct nlist) * 2), // stroff
-    1 + dataNameLength + sizeNameLength, // strsize
+    1 + startNameLength + endNameLength, // strsize
   };
 
   struct nlist symbolList[] = {
@@ -108,9 +108,9 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
       0 // n_value
     },
     {
-      reinterpret_cast<char*>(1 + dataNameLength), // n_un
-      N_ABS | N_EXT, // n_type
-      NO_SECT, // n_sect
+      reinterpret_cast<char*>(1 + startNameLength), // n_un
+      N_SECT | N_EXT, // n_type
+      1, // n_sect
       0, // n_desc
       size // n_value
     }
@@ -127,8 +127,8 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
   fwrite(&symbolList, 1, sizeof(symbolList), out);
 
   fputc(0, out);
-  fwrite(dataName, 1, dataNameLength, out);
-  fwrite(sizeName, 1, sizeNameLength, out);
+  fwrite(startName, 1, startNameLength, out);
+  fwrite(endName, 1, endNameLength, out);
 }
 
 } // namespace
@@ -138,7 +138,7 @@ main(int argc, const char** argv)
 {
   if (argc != 4) {
     fprintf(stderr,
-            "usage: %s <input file> <data symbol name> <size symbol name>\n",
+            "usage: %s <input file> <start symbol name> <end symbol name>\n",
             argv[0]);
     return -1;
   }

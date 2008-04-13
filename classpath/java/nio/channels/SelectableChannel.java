@@ -16,22 +16,23 @@ import java.nio.ByteBuffer;
 public abstract class SelectableChannel implements Channel {
   private SelectionKey key;
 
-  public abstract int read(ByteBuffer b) throws Exception;
-  public abstract int write(ByteBuffer b) throws Exception;
-  public abstract boolean isOpen();
+  public abstract SelectableChannel configureBlocking(boolean v)
+    throws IOException;
 
   public SelectionKey register(Selector selector, int interestOps,
                                Object attachment)
   {
-    SelectionKey key = new SelectionKey
-      (this, selector, interestOps, attachment);
+    key = new SelectionKey(this, selector, interestOps, attachment);
     selector.add(key);
     return key;
   }
 
+  public boolean isOpen() {
+    return key != null;
+  }
+
   public void close() throws IOException {
     if (key != null) {
-      key.selector().remove(key);
       key = null;
     }
   }

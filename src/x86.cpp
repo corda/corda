@@ -214,21 +214,22 @@ encode(Context* c, uint8_t* instruction, unsigned length, int a, int b,
 }
 
 void
-rex(Context* c)
+rex(Context* c, uint8_t mask, int r)
 {
   if (BytesPerWord == 8) {
-    c->code.append(0x48);
+    c->code.append(mask | ((r & 8) >> 3));
   }
+}
+
+void
+rex(Context* c)
+{
+  rex(c, 0x48, rax);
 }
 
 void
 encode(Context* c, uint8_t instruction, int a, Assembler::Memory* b, bool rex)
 {
-  if (b->traceHandler) {
-    fprintf(stderr, "handle trace %p\n", b->traceHandler);
-    b->traceHandler->handleTrace(codePromise(c, c->code.length()));
-  }
-
   if (rex) {
     ::rex(c);
   }
@@ -240,11 +241,6 @@ void
 encode2(Context* c, uint16_t instruction, int a, Assembler::Memory* b,
         bool rex)
 {
-  if (b->traceHandler) {
-    fprintf(stderr, "handle trace %p\n", b->traceHandler);
-    b->traceHandler->handleTrace(codePromise(c, c->code.length()));
-  }
-
   if (rex) {
     ::rex(c);
   }
@@ -292,18 +288,31 @@ conditional(Context* c, unsigned condition, Assembler::Constant* a)
 }
 
 void
-callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+callC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
-  unconditional(c, 0xe8, a);  
+  if (BytesPerWord == 8) {
+    Assembler::Register r(r10);
+    moveCR(c, size, a, &r);
+    callR(c, size, &r);
+    c->client->releaseTemporary(r.low);
+  } else {
+    unconditional(c, 0xe8, a);
+  }
 }
 
 void
 alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  while ((c->code.length() + 1) % 4) {
-    c->code.append(0x90);
+  if (BytesPerWord == 8) {
+    while ((c->code.length() + 2) % 8) {
+      c->code.append(0x90);
+    }
+  } else {
+    while ((c->code.length() + 1) % 4) {
+      c->code.append(0x90);
+    }
   }
   callC(c, size, a);
 }
@@ -313,6 +322,7 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, size == BytesPerWord);
 
+  if (a->low & 8) rex(c, 0x40, a->low);
   c->code.append(0xff);
   c->code.append(0xd0 | a->low);
 }
@@ -521,7 +531,7 @@ moveCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
-  rex(c);
+  rex(c, 0x48, b->low);
   c->code.append(0xb8 | b->low);
   if (a->value->resolved()) {
     c->code.appendAddress(a->value->value());
@@ -1131,13 +1141,26 @@ class MyAssembler: public Assembler {
   }
 
   virtual void updateCall(void* returnAddress, void* newTarget) {
-    uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-    assert(&c, *instruction == 0xE8);
-    assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+    if (BytesPerWord == 8) {
+      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 13;
+      assert(&c, instruction[0] == 0x49);
+      assert(&c, instruction[1] == 0xba);
+      assert(&c, instruction[10] == 0x41);
+      assert(&c, instruction[11] == 0xff);
+      assert(&c, instruction[12] == 0xd2);
+      assert(&c, reinterpret_cast<uintptr_t>(instruction + 2) % 8 == 0);
 
-    int32_t v = static_cast<uint8_t*>(newTarget)
-      - static_cast<uint8_t*>(returnAddress);
-    memcpy(instruction + 1, &v, 4);
+      intptr_t v = reinterpret_cast<intptr_t>(newTarget);
+      memcpy(instruction + 2, &v, 8);
+    } else {
+      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
+      assert(&c, *instruction == 0xE8);
+      assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+
+      int32_t v = static_cast<uint8_t*>(newTarget)
+        - static_cast<uint8_t*>(returnAddress);
+      memcpy(instruction + 1, &v, 4);
+    }
   }
 
   virtual void dispose() {

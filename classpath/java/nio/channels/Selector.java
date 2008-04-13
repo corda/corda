@@ -40,9 +40,9 @@ public abstract class Selector {
 
   public abstract boolean isOpen();
 
-  public abstract void wakeup();
+  public abstract Selector wakeup();
 
-  public abstract void select(long interval) throws IOException;
+  public abstract int select(long interval) throws IOException;
 
   public abstract void close();
 }

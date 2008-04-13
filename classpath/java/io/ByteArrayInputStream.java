@@ -21,6 +21,10 @@ public class ByteArrayInputStream extends InputStream {
     this.limit = offset + length;
   }
 
+  public ByteArrayInputStream(byte[] array) {
+    this(array, 0, array.length);
+  }
+
   public int read() {
     if (position < limit) {
       return array[position++] & 0xff;

@@ -47,6 +47,19 @@ search(Thread* t, jstring name, object (*op)(Thread*, object),
   }
 }
 
+void
+enumerateThreads(Thread* t, Thread* x, object array, unsigned* index,
+                 unsigned limit)
+{
+  if (*index < limit) {
+    set(t, array, ArrayBody + (*index * BytesPerWord), x->javaThread);
+
+    if (x->peer) enumerateThreads(t, x->peer, array, index, limit);
+    
+    if (x->child) enumerateThreads(t, x->child, array, index, limit);
+  }
+}
+
 } // namespace
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -134,10 +147,10 @@ Java_java_lang_ClassLoader_defineClass
   ENTER(t, Thread::ActiveState);
 
   uint8_t* buffer = static_cast<uint8_t*>
-    (t->m->heap->allocate(length, false));
+    (t->m->heap->allocate(length));
   memcpy(buffer, &byteArrayBody(t, *b, offset), length);
   object c = parseClass(t, buffer, length);
-  t->m->heap->free(buffer, length, false);
+  t->m->heap->free(buffer, length);
   return makeLocalReference(t, c);
 }
 
@@ -695,6 +708,36 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Thread_interrupt(Thread* t, jclass, jlong peer)
 {
   interrupt(t, reinterpret_cast<Thread*>(peer));
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_java_lang_Thread_getTrace(Thread* t, jclass, jlong peer)
+{
+  if (reinterpret_cast<Thread*>(peer) == t) {
+    return makeLocalReference(t, makeTrace(t));
+  } else {
+    return makeLocalReference
+      (t, t->m->processor->getStackTrace(t, reinterpret_cast<Thread*>(peer)));
+  }
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_Thread_activeCount(Thread* t, jclass)
+{
+  return t->m->liveCount;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_java_lang_Thread_enumerate(Thread* t, jclass, jobjectArray array)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  ENTER(t, Thread::ActiveState);
+
+  unsigned count = min(t->m->liveCount, objectArrayLength(t, *array));
+  unsigned index = 0;
+  enumerateThreads(t, t->m->rootThread, *array, &index, count);
+  return count;
 }
 
 extern "C" JNIEXPORT jlong JNICALL

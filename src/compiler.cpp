@@ -745,9 +745,8 @@ register_(Context* c, int low, int high = NoRegister)
 
 class MemoryValue: public Value {
  public:
-  MemoryValue(int base, int offset, int index, unsigned scale,
-              TraceHandler* traceHandler):
-    value(base, offset, index, scale, traceHandler)
+  MemoryValue(int base, int offset, int index, unsigned scale):
+    value(base, offset, index, scale)
   { }
 
   virtual OperandType type(Context*) { return Memory; }
@@ -785,8 +784,8 @@ class MemoryValue: public Value {
 class AbstractMemoryValue: public MemoryValue {
  public:
   AbstractMemoryValue(MyOperand* base, int offset, MyOperand* index,
-                      unsigned scale, TraceHandler* traceHandler):
-    MemoryValue(NoRegister, offset, NoRegister, scale, traceHandler),
+                      unsigned scale):
+    MemoryValue(NoRegister, offset, NoRegister, scale),
     base_(base), index_(index)
   { }
 
@@ -831,10 +830,10 @@ class AbstractMemoryValue: public MemoryValue {
 
 AbstractMemoryValue*
 memory(Context* c, MyOperand* base, int offset, MyOperand* index,
-       unsigned scale, TraceHandler* traceHandler)
+       unsigned scale)
 {
   return new (c->zone->allocate(sizeof(AbstractMemoryValue)))
-    AbstractMemoryValue(base, offset, index, scale, traceHandler);
+    AbstractMemoryValue(base, offset, index, scale);
 }
 
 class StackValue: public Value {
@@ -1996,13 +1995,12 @@ class MyCompiler: public Compiler {
   virtual Operand* memory(Operand* base,
                           int displacement = 0,
                           Operand* index = 0,
-                          unsigned scale = 1,
-                          TraceHandler* traceHandler = 0)
+                          unsigned scale = 1)
   {
     MyOperand* result = operand
       (&c, ::memory
        (&c, static_cast<MyOperand*>(base), displacement,
-        static_cast<MyOperand*>(index), scale, traceHandler));
+        static_cast<MyOperand*>(index), scale));
 
     appendMemory(&c, static_cast<MyOperand*>(base),
                  static_cast<MyOperand*>(index), result);

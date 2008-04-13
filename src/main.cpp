@@ -14,36 +14,11 @@
 #include "stdint.h"
 #include "jni.h"
 
-// since we don't link against libstdc++, we must implement some dummy
-// functions:
-extern "C" void __cxa_pure_virtual(void) { abort(); }
-void operator delete(void*) { abort(); }
-
 #ifdef __MINGW32__
 #  define PATH_SEPARATOR ';'
-#  define EXPORT __declspec(dllexport)
-#  define SYMBOL(x) binary_classpath_jar_##x
 #else
 #  define PATH_SEPARATOR ':'
-#  define EXPORT __attribute__ ((visibility("default")))
-#  define SYMBOL(x) _binary_classpath_jar_##x
 #endif
-
-#define BOOT_CLASSPATH "[classpathJar]"
-
-extern "C" {
-
-  extern const uint8_t SYMBOL(start)[];
-  extern const uint8_t SYMBOL(size)[];
-
-  EXPORT const uint8_t*
-  classpathJar(unsigned* size)
-  {
-    *size = reinterpret_cast<uintptr_t>(SYMBOL(size));
-    return SYMBOL(start);
-  }
-
-}
 
 #ifdef JNI_VERSION_1_6
 // todo: use JavaVMInitArgs instead
@@ -121,13 +96,24 @@ main(int ac, const char** av)
   vmArgs.classpath = classpath;
 #endif
 
-  const char* properties[propertyCount + 1];
-  properties[propertyCount] = 0;
+#ifdef BOOT_LIBRARY
+  const int BootPropertyCount = 1;
+#else
+  const int BootPropertyCount = 0;
+#endif
+
+  const char* properties[propertyCount + BootPropertyCount + 1];
+  properties[propertyCount + BootPropertyCount] = 0;
   for (int i = 1; i < ac; ++i) {
     if (strncmp(av[i], "-D", 2) == 0) {
       properties[--propertyCount] = av[i] + 2;
     }
   }
+
+#ifdef BOOT_LIBRARY
+  properties[propertyCount + BootPropertyCount - 1]
+    = "avian.bootstrap=" BOOT_LIBRARY;
+#endif
 
   vmArgs.properties = const_cast<char**>(properties);
 

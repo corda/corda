@@ -52,12 +52,12 @@ strip-all = --strip-all
 
 rdynamic = -rdynamic
 
-warnings = -Wall -Wextra -Werror -Wunused-parameter \
-	-Winit-self -Wconversion
+warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \
-	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\"
+	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
+	-DBOOT_CLASSPATH=\"[classpathJar]\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
@@ -66,7 +66,7 @@ cflags = $(build-cflags)
 
 common-lflags = -lm -lz
 
-lflags = $(common-lflags) -lpthread -ldl -rdynamic
+lflags = $(common-lflags) -lpthread -ldl
 
 system = posix
 asm = x86
@@ -74,6 +74,11 @@ asm = x86
 object-arch = i386:x86-64
 object-format = elf64-x86-64
 pointer-size = 8
+
+so-prefix = lib
+so-suffix = .so
+
+shared = -shared
 
 ifeq ($(arch),i386)
 	object-arch = i386
@@ -85,8 +90,11 @@ ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 		-I$(JAVA_HOME)/include/linux -I$(src)
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	rdynamic =
 	strip-all = -S -x
 	binaryToMacho = $(native-build)/binaryToMacho
+	so-suffix = .jnilib
+	shared = -dynamiclib
 endif
 
 ifeq ($(platform),windows)
@@ -96,6 +104,9 @@ ifeq ($(platform),windows)
 	system = windows
 	object-format = pe-i386
 
+	so-prefix =
+	so-suffix = .dll
+
 	cxx = i586-mingw32msvc-g++
 	cc = i586-mingw32msvc-gcc
 	dlltool = i586-mingw32msvc-dlltool
@@ -104,7 +115,7 @@ ifeq ($(platform),windows)
 	objcopy = i586-mingw32msvc-objcopy
 
 	rdynamic = -Wl,--export-dynamic
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -Wl,--kill-at -mwindows -mconsole
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
 endif
 
@@ -185,9 +196,12 @@ vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(native-build))
 vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(native-build))
 vm-objects = $(vm-cpp-objects) $(vm-asm-objects)
 
-driver-sources = $(src)/main.cpp
+driver-source = $(src)/main.cpp
+driver-object = $(native-build)/main.o
+driver-dynamic-object = $(native-build)/main-dynamic.o
 
-driver-object = $(call cpp-objects,$(driver-sources),$(src),$(native-build))
+boot-source = $(src)/boot.cpp
+boot-object = $(native-build)/boot.o
 
 generator-headers =	$(src)/constants.h
 generator-sources = $(src)/type-generator.cpp
@@ -195,8 +209,10 @@ generator-objects = \
 	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
 generator = $(native-build)/generator
 
-libvm = $(native-build)/lib$(name).a
-vm = $(native-build)/$(name)
+static-library = $(native-build)/lib$(name).a
+executable = $(native-build)/$(name)
+dynamic-library = $(native-build)/$(so-prefix)$(name)$(so-suffix)
+executable-dynamic = $(native-build)/$(name)-dynamic
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
@@ -216,31 +232,36 @@ flags = -cp $(test-build)
 args = $(flags) $(input)
 
 .PHONY: build
-build: $(vm) $(libvm) $(classpath-dep) $(test-dep)
+build: $(static-library) $(executable) $(dynamic-library) \
+	$(executable-dynamic) $(classpath-dep) $(test-dep)
 
 $(test-classes): $(classpath-dep)
 
 .PHONY: run
 run: build
-	$(vm) $(args)
+	$(executable) $(args)
 
 .PHONY: debug
 debug: build
-	gdb --args $(vm) $(args)
+	gdb --args $(executable) $(args)
 
 .PHONY: vg
 vg: build
-	$(vg) $(vm) $(args)
+	$(vg) $(executable) $(args)
 
 .PHONY: test
 test: build
 	/bin/bash $(test)/test.sh 2>/dev/null \
-		$(vm) $(mode) "$(flags)" \
+		$(executable) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
 .PHONY: javadoc
 javadoc:
-	javadoc -sourcepath classpath -d build/javadoc -subpackages java
+	javadoc -sourcepath classpath -d build/javadoc -subpackages java \
+		-windowtitle "Avian v$(version) Class Library API" \
+		-doctitle "Avian v$(version) Class Library API" \
+		-header "Avian v$(version)" \
+		-bottom "<a href=\"http://oss.readytalk.com/avian/\">http://oss.readytalk.com/avian</a>"
 
 .PHONY: clean
 clean:
@@ -293,7 +314,16 @@ $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
 $(vm-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 	$(compile-object)
 
-$(driver-object): $(native-build)/%.o: $(src)/%.cpp
+$(driver-object): $(driver-source)
+	$(compile-object)
+
+$(driver-dynamic-object): $(driver-source)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(so-prefix)$(name)$(so-suffix)\" \
+		-c $(<) -o $(@)
+
+$(boot-object): $(boot-source)
 	$(compile-object)
 
 $(build)/classpath.jar: $(classpath-dep)
@@ -305,9 +335,10 @@ $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)
 
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
+	@echo "creating $(@)"
 ifeq ($(platform),darwin)
 	$(binaryToMacho) $(build)/classpath.jar \
-		__binary_classpath_jar_start __binary_classpath_jar_size > $(@)
+		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
 else
 	(wd=$$(pwd); \
 	 cd $(build); \
@@ -324,21 +355,35 @@ $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	$(compile-object)
 
-$(libvm): $(vm-objects) $(jni-objects)
+$(static-library): $(vm-objects) $(jni-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
-$(vm): $(vm-objects) $(classpath-object) $(jni-objects) $(driver-object)
+$(executable): \
+		$(vm-objects) $(classpath-object) $(jni-objects) $(driver-object) \
+		$(boot-object)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -k -d $(@).def -e $(@).exp
 	$(cc) $(@).exp $(^) $(lflags) -o $(@)
 else
-	$(cc) $(^) $(lflags) -o $(@)
+	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
+	$(strip) $(strip-all) $(@)
+
+$(dynamic-library): \
+		$(vm-objects) $(classpath-object) $(dynamic-object) $(jni-objects) \
+		$(boot-object)
+	@echo "linking $(@)"
+	$(cc) $(^) $(shared) $(lflags) -o $(@)
+	$(strip) $(strip-all) $(@)
+
+$(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
+	@echo "linking $(@)"
+	$(cc) $(^) $(lflags) -o $(@)
 	$(strip) $(strip-all) $(@)
 
 $(generator): $(generator-objects)

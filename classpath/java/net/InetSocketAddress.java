@@ -10,7 +10,7 @@
 
 package java.net;
 
-public class InetSocketAddress {
+public class InetSocketAddress extends SocketAddress {
   private final String host;
   private final int port;
 

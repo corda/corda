@@ -29,7 +29,8 @@ namespace {
 
 const bool Verbose = true;
 const bool DebugNatives = false;
-const bool DebugTraces = false;
+const bool DebugCallTable = false;
+const bool DebugMethodTree = false;
 const bool DebugFrameMaps = false;
 
 const bool CheckArrayBounds = true;
@@ -43,6 +44,7 @@ class MyThread: public Thread {
       ip(t->ip),
       base(t->base),
       stack(t->stack),
+      nativeMethod(0),
       next(t->trace)
     {
       t->trace = this;
@@ -62,6 +64,7 @@ class MyThread: public Thread {
     void* ip;
     void* base;
     void* stack;
+    object nativeMethod;
     CallTrace* next;
   };
 
@@ -82,37 +85,71 @@ class MyThread: public Thread {
 };
 
 object
-resolveTarget(MyThread* t, void* stack, object method)
+resolveThisPointer(MyThread* t, void* stack, object method)
 {
-  if (method) {
-    unsigned parameterFootprint = methodParameterFootprint(t, method);
-
-    object class_ = objectClass
-      (t, reinterpret_cast<object*>(stack)[parameterFootprint]);
-
-    if (classVmFlags(t, class_) & BootstrapFlag) {
-      PROTECT(t, method);
-      PROTECT(t, class_);
-
-      resolveClass(t, className(t, class_));
-      if (UNLIKELY(t->exception)) return 0;
-    }
-
-    if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
-      return findInterfaceMethod(t, method, class_);
-    } else {
-      return findMethod(t, method, class_);
-    }
-  }
-
-  return method;
+  return reinterpret_cast<object*>(stack)[methodParameterFootprint(t, method)];
 }
 
 object
-findTraceNode(MyThread* t, void* address);
+resolveTarget(MyThread* t, void* stack, object method)
+{
+  object class_ = objectClass(t, resolveThisPointer(t, stack, method));
 
-void
-insertTraceNode(MyThread* t, object node);
+  if (classVmFlags(t, class_) & BootstrapFlag) {
+    PROTECT(t, method);
+    PROTECT(t, class_);
+
+    resolveClass(t, className(t, class_));
+    if (UNLIKELY(t->exception)) return 0;
+  }
+
+  if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
+    return findInterfaceMethod(t, method, class_);
+  } else {
+    return findMethod(t, method, class_);
+  }
+}
+
+object&
+methodTree(MyThread* t);
+
+object
+methodTreeSentinal(MyThread* t);
+
+intptr_t
+compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
+{
+  intptr_t start = reinterpret_cast<intptr_t>
+    (&singletonValue(t, methodCompiled(t, method), 0));
+
+  if (DebugMethodTree) {
+    fprintf(stderr, "find 0x%lx in (0x%lx,0x%lx)\n", ip, start,
+            start + (singletonCount(t, methodCompiled(t, method))
+                     * BytesPerWord));
+  }
+
+  if (ip < start) {
+    return -1;
+  } else if (ip < start + static_cast<intptr_t>
+             (singletonCount(t, methodCompiled(t, method))
+              * BytesPerWord))
+  {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+object
+methodForIp(MyThread* t, void* ip)
+{
+  if (DebugMethodTree) {
+    fprintf(stderr, "query for method containing %p\n", ip);
+  }
+
+  return treeQuery(t, methodTree(t), reinterpret_cast<intptr_t>(ip),
+                   methodTreeSentinal(t), compareIpToMethodBounds);
+}
 
 class MyStackWalker: public Processor::StackWalker {
  public:
@@ -123,7 +160,7 @@ class MyStackWalker: public Processor::StackWalker {
     { }
 
     virtual void visit(Heap::Visitor* v) {
-      v->visit(&(walker->node));
+      v->visit(&(walker->method_));
       v->visit(&(walker->nativeMethod));
     }
 
@@ -132,38 +169,25 @@ class MyStackWalker: public Processor::StackWalker {
 
   MyStackWalker(MyThread* t):
     t(t),
+    ip_(t->ip ? t->ip : (t->stack ? *static_cast<void**>(t->stack) : 0)),
     base(t->base),
     stack(t->stack),
     trace(t->trace),
-    node(t->ip ? findTraceNode(t, t->ip) :
-         (stack ? findTraceNode(t, *static_cast<void**>(stack)) :
-          0)),
-    nativeMethod(resolveNativeMethod(t, stack, node)),
+    nativeMethod(trace->nativeMethod),
+    method_(ip_ ? methodForIp(t, ip_) : 0),
     protector(this)
   { }
 
   MyStackWalker(MyStackWalker* w):
     t(w->t),
+    ip_(w->ip_),
     base(w->base),
     stack(w->stack),
     trace(w->trace),
-    node(w->node),
     nativeMethod(w->nativeMethod),
+    method_(w->method_),
     protector(this)
   { }
-
-  static object resolveNativeMethod(MyThread* t, void* stack, object node) {
-    if (node) {
-      object target = traceNodeTarget(t, node);
-      if (traceNodeVirtualCall(t, node)) {
-        target = resolveTarget(t, stack, target);
-      }
-      if (target and methodFlags(t, target) & ACC_NATIVE) {
-        return target;
-      }
-    }
-    return 0;
-  }
 
   virtual void walk(Processor::StackVisitor* v) {
     if (stack == 0) {
@@ -188,14 +212,16 @@ class MyStackWalker: public Processor::StackWalker {
     } else {
       stack = static_cast<void**>(base) + 1;
       base = *static_cast<void**>(base);
-      node = findTraceNode(t, *static_cast<void**>(stack));
-      if (node == 0) {
+      ip_ = *static_cast<void**>(stack);
+      method_ = methodForIp(t, *static_cast<void**>(stack));
+      if (method_ == 0) {
         if (trace and trace->stack) {
           base = trace->base;
           stack = static_cast<void**>(trace->stack);
+          ip_ = *static_cast<void**>(stack);
+          method_ = methodForIp(t, *static_cast<void**>(stack));
+          nativeMethod = trace->nativeMethod;
           trace = trace->next;
-          node = findTraceNode(t, *static_cast<void**>(stack));
-          nativeMethod = resolveNativeMethod(t, stack, node);
         } else {
           return false;
         }
@@ -208,7 +234,7 @@ class MyStackWalker: public Processor::StackWalker {
     if (nativeMethod) {
       return nativeMethod;
     } else {
-      return traceNodeMethod(t, node);
+      return method_;
     }
   }
 
@@ -216,9 +242,8 @@ class MyStackWalker: public Processor::StackWalker {
     if (nativeMethod) {
       return 0;
     } else {
-      intptr_t start = reinterpret_cast<intptr_t>
-        (&singletonValue(t, methodCompiled(t, traceNodeMethod(t, node)), 0));
-      return traceNodeAddress(t, node) - start;
+      return reinterpret_cast<intptr_t>(ip_) - reinterpret_cast<intptr_t>
+        (&singletonValue(t, methodCompiled(t, method_), 0));
     }
   }
 
@@ -242,11 +267,12 @@ class MyStackWalker: public Processor::StackWalker {
   }
 
   MyThread* t;
+  void* ip_;
   void* base;
   void* stack;
   MyThread::CallTrace* trace;
-  object node;
   object nativeMethod;
+  object method_;
   MyProtector protector;
 };
 
@@ -384,13 +410,14 @@ class Context {
 
   Context(MyThread* t, object method, void* indirection):
     thread(t),
-    zone(t->m->system, t->m->heap, false, 16 * 1024),
+    zone(t->m->system, t->m->heap, 16 * 1024),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
     compiler(makeCompiler(t->m->system, assembler, &zone)),
     method(method),
     indirection(indirection),
     objectPool(0),
     traceLog(0),
+    traceLogCount(0),
     visitTable(makeVisitTable(t, &zone, method)),
     rootTable(makeRootTable(t, &zone, method)),
     eventLog(t->m->system, t->m->heap, 1024),
@@ -399,13 +426,14 @@ class Context {
 
   Context(MyThread* t):
     thread(t),
-    zone(t->m->system, t->m->heap, false, LikelyPageSizeInBytes),
+    zone(t->m->system, t->m->heap, LikelyPageSizeInBytes),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
     compiler(0),
     method(0),
     indirection(0),
     objectPool(0),
     traceLog(0),
+    traceLogCount(0),
     visitTable(0),
     rootTable(0),
     eventLog(t->m->system, t->m->heap, 0),
@@ -425,6 +453,7 @@ class Context {
   void* indirection;
   PoolElement* objectPool;
   TraceElement* traceLog;
+  unsigned traceLogCount;
   uint16_t* visitTable;
   uintptr_t* rootTable;
   bool dirtyRoots;
@@ -948,6 +977,8 @@ class Frame {
       (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
       TraceElement(context, target, virtualCall, context->traceLog);
 
+    ++ context->traceLogCount;
+
     context->eventLog.append(TraceEvent);
     context->eventLog.appendAddress(e);
 
@@ -969,6 +1000,63 @@ savedTargetIndex(MyThread* t, object method)
   return codeMaxLocals(t, methodCode(t, method));
 }
 
+object
+findCallNode(MyThread* t, void* address);
+
+void
+insertCallNode(MyThread* t, object node);
+
+void
+removeCallNode(MyThread* t, object node);
+
+void*
+findExceptionHandler(Thread* t, object method, void* ip)
+{
+  PROTECT(t, method);
+
+  object table = codeExceptionHandlerTable(t, methodCode(t, method));
+  if (table) {
+    object index = arrayBody(t, table, 0);
+      
+    uint8_t* compiled = reinterpret_cast<uint8_t*>
+      (&singletonValue(t, methodCompiled(t, method), 0));
+
+    for (unsigned i = 0; i < arrayLength(t, table) - 1; ++i) {
+      unsigned start = intArrayBody(t, index, i * 3);
+      unsigned end = intArrayBody(t, index, (i * 3) + 1);
+      unsigned key = difference(ip, compiled) - 1;
+
+      if (key >= start and key < end) {
+        object catchType = 0;
+        if (arrayBody(t, table, i + 1)) {
+          object e = t->exception;
+          t->exception = 0;
+          PROTECT(t, e);
+
+          PROTECT(t, table);
+          PROTECT(t, index);
+
+          catchType = resolveClassInObject
+            (t, table, ArrayBody + ((i + 1) * BytesPerWord));
+
+          if (catchType) {
+            t->exception = e;
+          } else {
+            // can't find what we're supposed to catch - move on.
+            continue;
+          }
+        }
+
+        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+          return compiled + intArrayBody(t, index, (i * 3) + 2);
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
 void
 findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
                  void** targetStack)
@@ -984,16 +1072,11 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
   *targetIp = 0;
   while (*targetIp == 0) {
-    object node = findTraceNode(t, ip);
-    if (node) {
-      object method = traceNodeMethod(t, node);
+    object method = methodForIp(t, ip);
+    if (method) {
       PROTECT(t, method);
 
-      uint8_t* compiled = reinterpret_cast<uint8_t*>
-        (&singletonValue(t, methodCompiled(t, method), 0));
-
-      ExceptionHandler* handler = findExceptionHandler
-        (t, method, difference(ip, compiled));
+      void* handler = findExceptionHandler(t, method, ip);
 
       if (handler) {
         unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -1005,7 +1088,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         *(--stack) = t->exception;
         t->exception = 0;
 
-        *targetIp = compiled + exceptionHandlerIp(handler);
+        *targetIp = handler;
         *targetBase = base;
         *targetStack = stack;
       } else {
@@ -1262,6 +1345,18 @@ intToFloat(int32_t a)
   return floatToBits(static_cast<float>(a));
 }
 
+uint64_t
+longToDouble(int64_t a)
+{
+  return doubleToBits(static_cast<double>(a));
+}
+
+uint32_t
+longToFloat(int64_t a)
+{
+  return floatToBits(static_cast<float>(a));
+}
+
 object FORCE_ALIGN
 makeBlankObjectArray(Thread* t, object class_, int32_t length)
 {
@@ -1409,6 +1504,14 @@ checkCast(MyThread* t, object class_, object o)
   }
 }
 
+void FORCE_ALIGN
+gcIfNecessary(MyThread* t)
+{
+  if (UNLIKELY(t->backupHeap)) {
+    collect(t, Heap::MinorCollection);
+  }
+}
+
 unsigned
 resultSize(MyThread* t, unsigned code)
 {
@@ -1469,6 +1572,12 @@ emptyMethod(MyThread* t, object method)
     and (codeBody(t, methodCode(t, method), 0) == return_);
 }
 
+object
+defaultCompiled(MyThread* t);
+
+object
+nativeCompiled(MyThread* t);
+
 void
 compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
@@ -1479,15 +1588,37 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
   Compiler::Operand* result = 0;
 
   if (not emptyMethod(t, target)) {
-    result = c->call
-      (c->constant
-       (reinterpret_cast<intptr_t>
-        (&singletonBody(t, methodCompiled(t, target), 0))),
-       0,
-       Compiler::Aligned,
-       frame->trace(target, false),
-       rSize,
-       0);
+    if (methodFlags(t, target) & ACC_NATIVE) {
+      result = c->call
+        (c->constant
+         (reinterpret_cast<intptr_t>
+          (&singletonBody(t, nativeCompiled(t), 0))),
+         0,
+         0,
+         frame->trace(target, false),
+         rSize,
+         0);
+    } else if (methodCompiled(t, target) == defaultCompiled(t)) {
+      result = c->call
+        (c->constant
+         (reinterpret_cast<intptr_t>
+          (&singletonBody(t, defaultCompiled(t), 0))),
+         0,
+         Compiler::Aligned,
+         frame->trace(target, false),
+         rSize,
+         0);
+    } else {
+      result = c->call
+        (c->constant
+         (reinterpret_cast<intptr_t>
+          (&singletonBody(t, methodCompiled(t, target), 0))),
+         0,
+         0,
+         frame->trace(0, false),
+         rSize,
+         0);
+    }
   }
 
   frame->pop(methodParameterFootprint(t, target));
@@ -1551,7 +1682,8 @@ handleExit(MyThread* t, Frame* frame)
 }
 
 void
-compile(MyThread* t, Frame* initialFrame, unsigned ip)
+compile(MyThread* t, Frame* initialFrame, unsigned ip,
+        bool exceptionHandler = false)
 {
   uint8_t stackMap
     [codeMaxStack(t, methodCode(t, initialFrame->context->method))];
@@ -1575,6 +1707,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
 
     if (ip == 0) {
       handleEntrance(t, frame);
+    } else if (exceptionHandler) {
+      exceptionHandler = false;
+      
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(gcIfNecessary)),
+         frame->trace(0, false),
+         1, c->thread());
     }
 
 //     fprintf(stderr, "ip: %d map: %ld\n", ip, *(frame->map));
@@ -1605,9 +1744,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
           c->jl(throw_);
         }
 
-        c->cmp(BytesPerWord,
-               index,
-               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)));
+        c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
         c->jge(load);
 
         if (not c->isConstant(index)) {
@@ -1721,9 +1858,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
           c->jl(throw_);
         }
 
-        c->cmp(BytesPerWord,
-               index,
-               c->memory(array, ArrayLength, 0, 1, frame->trace(0, false)));
+        c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
         c->jge(store);
 
         if (not c->isConstant(index)) {
@@ -1881,8 +2016,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
     case arraylength: {
       frame->pushInt
         (c->load
-         (BytesPerWord, c->memory
-          (frame->popObject(), ArrayLength, 0, 1, frame->trace(0, false))));
+         (BytesPerWord, c->memory(frame->popObject(), ArrayLength, 0, 1)));
     } break;
 
     case astore:
@@ -2204,45 +2338,39 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         table = frame->popObject();
       }
 
-      TraceElement* trace = 0;
-      if (instruction == getfield) {
-        trace = frame->trace(0, false);
-      }
-
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
         frame->pushInt
-          (c->load(1, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(1, c->memory(table, fieldOffset(t, field), 0, 1)));
         break;
 
       case CharField:
         frame->pushInt
-          (c->loadz(2, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->loadz(2, c->memory(table, fieldOffset(t, field), 0, 1)));
         break;
 
       case ShortField:
         frame->pushInt
-          (c->load(2, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(2, c->memory(table, fieldOffset(t, field), 0, 1)));
         break;
 
       case FloatField:
       case IntField:
         frame->pushInt
-          (c->load(4, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(4, c->memory(table, fieldOffset(t, field), 0, 1)));
         break;
 
       case DoubleField:
       case LongField:
         frame->pushLong
-          (c->load(8, c->memory(table, fieldOffset(t, field), 0, 1, trace)));
+          (c->load(8, c->memory(table, fieldOffset(t, field), 0, 1)));
         break;
 
       case ObjectField:
         frame->pushObject
           (c->load
-           (BytesPerWord, c->memory
-            (table, fieldOffset(t, field), 0, 1, trace)));
+           (BytesPerWord, c->memory(table, fieldOffset(t, field), 0, 1)));
         break;
 
       default:
@@ -2593,8 +2721,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       Compiler::Operand* result = c->call
         (c->memory
          (c->and_
-          (BytesPerWord, c->constant(PointerMask), c->memory
-           (instance, 0, 0, 1, frame->trace(0, false))), offset, 0, 1),
+          (BytesPerWord, c->constant(PointerMask),
+           c->memory(instance, 0, 0, 1)), offset, 0, 1),
          0,
          0,
          frame->trace(target, true),
@@ -2702,6 +2830,30 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
       if (UNLIKELY(t->exception)) return;
 
       frame->pop(1);
+    } break;
+
+    case l2d: {
+      Operand* a = frame->popLong();
+      
+      c->directCall
+        (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
+
+      Operand* result = c->result8();
+      frame->pushLong(result);
+      c->release(result);
+      c->release(a);
+    } break;
+
+    case l2f: {
+      Operand* a = frame->popLong();
+      
+      c->directCall
+        (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
+
+      Operand* result = c->result4();
+      frame->pushInt(result);
+      c->release(result);
+      c->release(a);
     } break;
 
     case l2i:
@@ -3155,34 +3307,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip)
         table = frame->popObject();
       }
 
-      TraceElement* trace = 0;
-      if (instruction == putfield and fieldCode(t, field) != ObjectField) {
-        trace = frame->trace(0, false);
-      }
-
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        c->store
-          (1, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store(1, value, c->memory(table, fieldOffset(t, field), 0, 1));
         break;
 
       case CharField:
       case ShortField:
-        c->store
-          (2, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store(2, value, c->memory(table, fieldOffset(t, field), 0, 1));
         break;
             
       case FloatField:
       case IntField:
-        c->store
-          (4, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store(4, value, c->memory(table, fieldOffset(t, field), 0, 1));
         break;
 
       case DoubleField:
       case LongField:
-        c->store
-          (8, value, c->memory(table, fieldOffset(t, field), 0, 1, trace));
+        c->store(8, value, c->memory(table, fieldOffset(t, field), 0, 1));
         break;
 
       case ObjectField:
@@ -3340,8 +3483,8 @@ logCompile(const void* code, unsigned size, const char* class_,
 }
 
 void
-updateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
-                            intptr_t start)
+translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
+                               intptr_t start)
 {
   object oldTable = codeExceptionHandlerTable(t, code);
   if (oldTable) {
@@ -3349,24 +3492,32 @@ updateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
     PROTECT(t, oldTable);
 
     unsigned length = exceptionHandlerTableLength(t, oldTable);
-    object newTable = makeExceptionHandlerTable(t, length, false);
+
+    object newIndex = makeIntArray(t, length * 3, false);
+    PROTECT(t, newIndex);
+
+    object newTable = makeArray(t, length + 1, false);
+    set(t, newTable, ArrayBody, newIndex);
+
     for (unsigned i = 0; i < length; ++i) {
       ExceptionHandler* oldHandler = exceptionHandlerTableBody
         (t, oldTable, i);
-      ExceptionHandler* newHandler = exceptionHandlerTableBody
-        (t, newTable, i);
 
-      exceptionHandlerStart(newHandler)
+      intArrayBody(t, newIndex, i * 3)
         = c->machineIp(exceptionHandlerStart(oldHandler))->value() - start;
 
-      exceptionHandlerEnd(newHandler)
+      intArrayBody(t, newIndex, (i * 3) + 1)
         = c->machineIp(exceptionHandlerEnd(oldHandler))->value() - start;
 
-      exceptionHandlerIp(newHandler)
+      intArrayBody(t, newIndex, (i * 3) + 2)
         = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
 
-      exceptionHandlerCatchType(newHandler)
-        = exceptionHandlerCatchType(oldHandler);
+      object type =
+        (exceptionHandlerCatchType(oldHandler) ?
+         singletonObject(t, codePool(t, code),
+                         exceptionHandlerCatchType(oldHandler) - 1) : 0);
+
+      set(t, newTable, ArrayBody + ((i + 1) * BytesPerWord), type);
     }
 
     set(t, code, CodeExceptionHandlerTable, newTable);
@@ -3374,8 +3525,7 @@ updateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
 }
 
 void
-updateLineNumberTable(MyThread* t, Compiler* c, object code,
-                      intptr_t start)
+translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
 {
   object oldTable = codeLineNumberTable(t, code);
   if (oldTable) {
@@ -3520,7 +3670,43 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 }
 
 Allocator*
-codeAllocator(MyThread* t);
+codeZone(MyThread* t);
+
+int
+compareTraceElementPointers(const void* va, const void* vb)
+{
+  TraceElement* a = *static_cast<TraceElement* const*>(va);
+  TraceElement* b = *static_cast<TraceElement* const*>(vb);
+  if (a->address->value() > b->address->value()) {
+    return 1;
+  } else if (a->address->value() < b->address->value()) {
+    return -1;
+  } else {
+    return 0;
+  }
+}
+
+intptr_t
+compareMethodBounds(Thread* t, object a, object b)
+{
+  if (DebugMethodTree) {
+    fprintf(stderr, "compare %p to %p\n",
+            &singletonValue(t, methodCompiled(t, a), 0),
+            &singletonValue(t, methodCompiled(t, b), 0));
+  }
+
+  return reinterpret_cast<intptr_t>
+    (&singletonValue(t, methodCompiled(t, a), 0))
+    -  reinterpret_cast<intptr_t>
+    (&singletonValue(t, methodCompiled(t, b), 0));
+}
+
+unsigned
+frameObjectMapSize(MyThread* t, object method, object map)
+{
+  int size = frameSize(t, method);
+  return ceiling(intArrayLength(t, map) * size, 32 + size);
+}
 
 object
 allocateCode(MyThread* t, unsigned codeSizeInBytes)
@@ -3528,8 +3714,8 @@ allocateCode(MyThread* t, unsigned codeSizeInBytes)
   unsigned count = ceiling(codeSizeInBytes, BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
   object result = allocate3
-    (t, codeAllocator(t), Machine::ImmortalAllocation,
-     SingletonBody + (size * BytesPerWord), true, true);
+    (t, codeZone(t), Machine::ImmortalAllocation,
+     SingletonBody + (size * BytesPerWord), true);
   initSingleton(t, result, size, true);
   mark(t, result, 0);
   singletonMask(t, result)[0] = 1;
@@ -3564,38 +3750,76 @@ finish(MyThread* t, Context* context)
 
   c->writeTo(start);
 
-  unsigned mapSize = frameMapSizeInWords(t, context->method);
+  translateExceptionHandlerTable(t, c, methodCode(t, context->method),
+                                 reinterpret_cast<intptr_t>(start));
 
-  for (TraceElement* p = context->traceLog; p; p = p->next) {
-    object node = makeTraceNode
-      (t, p->address->value(), 0, context->method, p->target,
-       p->virtualCall, mapSize, false);
+  translateLineNumberTable(t, c, methodCode(t, context->method),
+                           reinterpret_cast<intptr_t>(start));
 
-    if (mapSize) {
-      memcpy(&traceNodeMap(t, node, 0), p->map, mapSize * BytesPerWord);
+  { object code = methodCode(t, context->method);
+
+    code = makeCode(t, 0,
+                    codeExceptionHandlerTable(t, code),
+                    codeLineNumberTable(t, code),
+                    codeMaxStack(t, code),
+                    codeMaxLocals(t, code),
+                    0, false);
+
+    set(t, context->method, MethodCode, code);
+  }
+
+  if (context->traceLogCount) {
+    TraceElement* elements[context->traceLogCount];
+    unsigned index = 0;
+    for (TraceElement* p = context->traceLog; p; p = p->next) {
+      assert(t, index < context->traceLogCount);
+
+      elements[index++] = p;
+
+      if (p->target) {
+        insertCallNode
+          (t, makeCallNode
+           (t, p->address->value(), p->target, p->virtualCall, 0));
+      }
     }
 
-    insertTraceNode(t, node);
+    qsort(elements, context->traceLogCount, sizeof(TraceElement*),
+          compareTraceElementPointers);
+
+    unsigned size = frameSize(t, context->method);
+    object map = makeIntArray
+      (t, context->traceLogCount
+       + ceiling(context->traceLogCount * size, 32),
+       false);
+
+    assert(t, intArrayLength(t, map) == context->traceLogCount
+           + frameObjectMapSize(t, context->method, map));
+
+    for (unsigned i = 0; i < context->traceLogCount; ++i) {
+      TraceElement* p = elements[i];
+
+      intArrayBody(t, map, i) = static_cast<intptr_t>(p->address->value())
+        - reinterpret_cast<intptr_t>(start);
+
+      for (unsigned j = 0; j < size; ++j) {
+        unsigned index = ((i * size) + j);
+        int32_t* v = &intArrayBody
+          (t, map, context->traceLogCount + (index / 32));
+
+        if (getBit(p->map, j)) {
+          *v |= static_cast<int32_t>(1) << (index % 32);
+        } else {
+          *v &= ~(static_cast<int32_t>(1) << (index % 32));
+        }
+      }
+    }
+
+    set(t, methodCode(t, context->method), CodePool, map);
   }
-
-  for (PoolElement* p = context->objectPool; p; p = p->next) {
-    intptr_t offset = p->address->value()
-      - reinterpret_cast<intptr_t>(start);
-
-    singletonMarkObject(t, result, offset / BytesPerWord);
-
-    set(t, result, SingletonBody + offset, p->value);
-  }
-
-  updateExceptionHandlerTable(t, c, methodCode(t, context->method),
-                              reinterpret_cast<intptr_t>(start));
-
-  updateLineNumberTable(t, c, methodCode(t, context->method),
-                        reinterpret_cast<intptr_t>(start));
 
   if (Verbose) {
     logCompile
-      (start, codeSize,
+      (start, c->codeSize(),
        reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
        reinterpret_cast<const char*>
@@ -3605,15 +3829,15 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (true or//false and
+  if (false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Misc") == 0 and
+       "java/lang/System") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "main") == 0)
+       "getProperty") == 0)
   {
     asm("int3");
   }
@@ -3715,7 +3939,7 @@ compile(MyThread* t, Context* context)
             frame2.set(localSize(t, context->method) + i, Frame::Integer);
           }
 
-          compile(t, &frame2, exceptionHandlerIp(eh));
+          compile(t, &frame2, exceptionHandlerIp(eh), true);
           if (UNLIKELY(t->exception)) return 0;
 
           eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
@@ -3740,13 +3964,13 @@ compile(MyThread* t, object method);
 void*
 compileMethod2(MyThread* t)
 {
-  object node = findTraceNode(t, *static_cast<void**>(t->stack));
+  object node = findCallNode(t, *static_cast<void**>(t->stack));
   PROTECT(t, node);
 
-  object target = traceNodeTarget(t, node);
+  object target = callNodeTarget(t, node);
   PROTECT(t, target);
 
-  if (traceNodeVirtualCall(t, node)) {
+  if (callNodeVirtualCall(t, node)) {
     target = resolveTarget(t, t->stack, target);
   }
 
@@ -3757,10 +3981,23 @@ compileMethod2(MyThread* t)
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
-    if (not traceNodeVirtualCall(t, node)) {
+    if (callNodeVirtualCall(t, node)) {
+      classVtable
+        (t, objectClass
+         (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
+        = &singletonValue(t, methodCompiled(t, target), 0);
+    } else {
+#ifndef VM_STRESS
+      // valgrind doesn't like this, since the effect of updateCall
+      // below does not propagate to valgrind's interpreter:
+      { ACQUIRE(t, t->m->classLock);
+        removeCallNode(t, node);
+      }
+#endif
+
       Context context(t);
       context.assembler->updateCall
-        (reinterpret_cast<void*>(traceNodeAddress(t, node)),
+        (reinterpret_cast<void*>(callNodeAddress(t, node)),
          &singletonValue(t, methodCompiled(t, target), 0));
     }
     return &singletonValue(t, methodCompiled(t, target), 0);
@@ -3964,16 +4201,22 @@ invokeNative2(MyThread* t, object method)
 uint64_t FORCE_ALIGN
 invokeNative(MyThread* t)
 {
-  object node = findTraceNode(t, *static_cast<void**>(t->stack));
-  object target = traceNodeTarget(t, node);
-  if (traceNodeVirtualCall(t, node)) {
-    target = resolveTarget(t, t->stack, target);
+  if (t->trace->nativeMethod == 0) {
+    object node = findCallNode(t, *static_cast<void**>(t->stack));
+    t->trace->nativeMethod = callNodeTarget(t, node);
+    if (callNodeVirtualCall(t, node)) {
+      t->trace->nativeMethod = resolveTarget
+        (t, t->stack, t->trace->nativeMethod);
+    }
   }
+
   uint64_t result = 0;
 
   if (LIKELY(t->exception == 0)) {
-    result = invokeNative2(t, target);
+    result = invokeNative2(t, t->trace->nativeMethod);
   }
+
+  t->trace->nativeMethod = 0;
 
   if (UNLIKELY(t->exception)) {
     unwind(t);
@@ -3982,12 +4225,35 @@ invokeNative(MyThread* t)
   }
 }
 
-void
-visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node,
-                    void* calleeBase, unsigned argumentFootprint)
+unsigned
+frameMapIndex(MyThread* t, object method, int32_t offset)
 {
-  object method = traceNodeMethod(t, node);
+  object map = codePool(t, methodCode(t, method));
+  unsigned mapSize = frameObjectMapSize(t, method, map);
+  unsigned indexSize = intArrayLength(t, map) - mapSize;
+    
+  unsigned bottom = 0;
+  unsigned top = indexSize;
+  for (unsigned span = top - bottom; span; span = top - bottom) {
+    unsigned middle = bottom + (span / 2);
+    int32_t v = intArrayBody(t, map, middle);
+      
+    if (offset == v) {
+      return (indexSize * 32) + (frameSize(t, method) * middle);
+    } else if (offset < v) {
+      top = middle;
+    } else {
+      bottom = middle + 1;
+    }
+  }
 
+  abort(t);
+}
+
+void
+visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object method,
+                    void* ip, void* calleeBase, unsigned argumentFootprint)
+{
   unsigned count;
   if (calleeBase) {
     unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -4000,11 +4266,17 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object node,
   }
       
   if (count) {
-    uintptr_t* map = &traceNodeMap(t, node, 0);
+    object map = codePool(t, methodCode(t, method));
+    int index = frameMapIndex
+      (t, method, difference
+       (ip, &singletonValue(t, methodCompiled(t, method), 0)));
 
     for (unsigned i = 0; i < count; ++i) {
-      if (getBit(map, i)) {
-        v->visit(localObject(t, base, method, i));
+      int j = index + i;
+      if ((intArrayBody(t, map, j / 32)
+           & (static_cast<int32_t>(1) << (j % 32))))
+      {
+        v->visit(localObject(t, base, method, i));        
       }
     }
   }
@@ -4025,15 +4297,15 @@ visitStack(MyThread* t, Heap::Visitor* v)
   unsigned argumentFootprint = 0;
 
   while (stack) {
-    object node = findTraceNode(t, ip);
-    if (node) {
-      PROTECT(t, node);
+    object method = methodForIp(t, ip);
+    if (method) {
+      PROTECT(t, method);
 
-      visitStackAndLocals(t, v, base, node, calleeBase, argumentFootprint);
+      visitStackAndLocals
+        (t, v, base, method, ip, calleeBase, argumentFootprint);
 
       calleeBase = base;
-      argumentFootprint = methodParameterFootprint
-        (t, traceNodeMethod(t, node));
+      argumentFootprint = methodParameterFootprint(t, method);
 
       stack = static_cast<void**>(base) + 1;
       if (stack) {
@@ -4257,6 +4529,10 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
 
   { MyThread::CallTrace trace(t);
 
+    if (methodFlags(t, method) & ACC_NATIVE) {
+      trace.nativeMethod = method;
+    }
+
     result = vmInvoke
       (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
        arguments->position, returnType);
@@ -4293,6 +4569,28 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   return r;
 }
 
+unsigned
+traceSize(Thread* t)
+{
+  class Counter: public Processor::StackVisitor {
+   public:
+    Counter(Thread* t): t(t), count(0) { }
+
+    virtual bool visit(Processor::StackWalker*) {
+      ++ count;
+      return true;
+    }
+
+    Thread* t;
+    unsigned count;
+  } counter(t);
+
+  t->m->processor->walkStack(t, &counter);
+
+  return FixedSizeOfArray + (counter.count * ArrayElementSizeOfArray)
+    + (counter.count * FixedSizeOfTraceElement);
+}
+
 class SegFaultHandler: public System::SignalHandler {
  public:
   SegFaultHandler(): m(0) { }
@@ -4302,11 +4600,14 @@ class SegFaultHandler: public System::SignalHandler {
   {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
     if (t->state == Thread::ActiveState) {
-      object node = findTraceNode(t, *ip);
+      object node = methodForIp(t, *ip);
       if (node) {
         t->ip = *ip;
         t->base = *base;
         t->stack = *stack;
+
+        ensure(t, FixedSizeOfNullPointerException + traceSize(t));
+
         t->exception = makeNullPointerException(t);
 
         findUnwindTarget(t, ip, base, stack);
@@ -4322,22 +4623,46 @@ class SegFaultHandler: public System::SignalHandler {
 
 class MyProcessor: public Processor {
  public:
+  class CodeAllocator: public Allocator {
+   public:
+    CodeAllocator(System* s): s(s) { }
+
+    virtual void* tryAllocate(unsigned size) {
+      return s->tryAllocateExecutable(size);
+    }
+
+    virtual void* allocate(unsigned size) {
+      void* p = tryAllocate(size);
+      expect(s, p);
+      return p;
+    }
+
+    virtual void free(const void* p, unsigned size) {
+      s->freeExecutable(p, size);
+    }
+
+    System* s;
+  };
+
   MyProcessor(System* s, Allocator* allocator):
     s(s),
     allocator(allocator),
     defaultCompiled(0),
     nativeCompiled(0),
-    addressTable(0),
-    addressCount(0),
+    callTable(0),
+    callTableSize(0),
+    methodTree(0),
+    methodTreeSentinal(0),
     indirectCaller(0),
     indirectCallerSize(0),
-    codeAllocator(s, allocator, true, 64 * 1024)
+    codeAllocator(s),
+    codeZone(s, &codeAllocator, 64 * 1024)
   { }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
-    MyThread* t = new (m->heap->allocate(sizeof(MyThread), false))
+    MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
       MyThread(m, javaThread, parent);
     t->init();
     return t;
@@ -4439,7 +4764,13 @@ class MyProcessor: public Processor {
     if (t == t->m->rootThread) {
       v->visit(&defaultCompiled);
       v->visit(&nativeCompiled);
-      v->visit(&addressTable);
+      v->visit(&callTable);
+      v->visit(&methodTree);
+      v->visit(&methodTreeSentinal);
+    }
+
+    for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
+      v->visit(&(trace->nativeMethod));
     }
 
     for (Reference* r = t->reference; r; r = r->next) {
@@ -4471,7 +4802,7 @@ class MyProcessor: public Processor {
       MyThread* t = static_cast<MyThread*>(vmt);
       PROTECT(t, o);
 
-      Reference* r = new (t->m->heap->allocate(sizeof(Reference), false))
+      Reference* r = new (t->m->heap->allocate(sizeof(Reference)))
         Reference(o, &(t->reference));
 
       return &(r->target);
@@ -4491,6 +4822,8 @@ class MyProcessor: public Processor {
   virtual object
   invokeArray(Thread* t, object method, object this_, object arguments)
   {
+    if (UNLIKELY(t->exception)) return 0;
+
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
@@ -4519,6 +4852,8 @@ class MyProcessor: public Processor {
   invokeList(Thread* t, object method, object this_, bool indirectObjects,
              va_list arguments)
   {
+    if (UNLIKELY(t->exception)) return 0;
+
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
@@ -4548,6 +4883,8 @@ class MyProcessor: public Processor {
   invokeList(Thread* t, const char* className, const char* methodName,
              const char* methodSpec, object this_, va_list arguments)
   {
+    if (UNLIKELY(t->exception)) return 0;
+
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
@@ -4580,38 +4917,85 @@ class MyProcessor: public Processor {
       vm::dispose(t, t->reference);
     }
 
-    t->m->heap->free(t, sizeof(*t), false);
+    t->m->heap->free(t, sizeof(*t));
   }
 
   virtual void dispose() {
-    codeAllocator.dispose();
+    codeZone.dispose();
     
     s->handleSegFault(0);
 
-    allocator->free(this, sizeof(*this), false);
+    allocator->free(this, sizeof(*this));
+  }
+
+  virtual object getStackTrace(Thread* vmt, Thread* vmTarget) {
+    MyThread* t = static_cast<MyThread*>(vmt);
+    MyThread* target = static_cast<MyThread*>(vmTarget);
+
+    class Visitor: public System::ThreadVisitor {
+     public:
+      Visitor(MyThread* t, MyThread* target): t(t), target(target) { }
+
+      virtual void visit(void* ip, void* base, void* stack) {
+        ensure(t, traceSize(t));
+
+        void* oldIp = target->ip;
+        void* oldBase = target->ip;
+        void* oldStack = target->stack;
+
+        target->ip = ip;
+        target->base = base;
+        target->stack = stack;
+
+        trace = makeTrace(t, target);
+
+        target->ip = oldIp;
+        target->base = oldBase;
+        target->stack = oldStack;
+      }
+
+      MyThread* t;
+      MyThread* target;
+      object trace;
+    } visitor(t, target);
+
+    if (t->backupHeap) {
+      PROTECT(t, visitor.trace);
+
+      collect(t, Heap::MinorCollection);
+    }
+
+    return visitor.trace;
   }
   
   System* s;
   Allocator* allocator;
   object defaultCompiled;
   object nativeCompiled;
-  object addressTable;
-  unsigned addressCount;
+  object callTable;
+  unsigned callTableSize;
+  object methodTree;
+  object methodTreeSentinal;
   uint8_t* indirectCaller;
   unsigned indirectCallerSize;
   SegFaultHandler segFaultHandler;
-  Zone codeAllocator;
+  CodeAllocator codeAllocator;
+  Zone codeZone;
 };
 
 MyProcessor*
 processor(MyThread* t)
 {
   MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
-  if (p->addressTable == 0) {
+  if (p->callTable == 0) {
     ACQUIRE(t, t->m->classLock);
 
-    if (p->addressTable == 0) {
-      p->addressTable = makeArray(t, 128, true);
+    if (p->callTable == 0) {
+      p->callTable = makeArray(t, 128, true);
+
+      p->methodTree = p->methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
+      set(t, p->methodTree, TreeNodeLeft, p->methodTreeSentinal);
+      set(t, p->methodTree, TreeNodeRight, p->methodTreeSentinal);
 
       Context context(t);
       Assembler* a = context.assembler;
@@ -4623,7 +5007,7 @@ processor(MyThread* t)
 
       p->indirectCallerSize = a->length();
       p->indirectCaller = static_cast<uint8_t*>
-        (p->codeAllocator.allocate(p->indirectCallerSize));
+        (p->codeZone.allocate(p->indirectCallerSize));
       a->writeTo(p->indirectCaller);
 
       if (Verbose) {
@@ -4637,6 +5021,18 @@ processor(MyThread* t)
     }
   }
   return p;
+}
+
+object
+defaultCompiled(MyThread* t)
+{
+  return processor(t)->getDefaultCompiled(t);
+}
+
+object
+nativeCompiled(MyThread* t)
+{
+  return processor(t)->getNativeCompiled(t);
 }
 
 void
@@ -4660,6 +5056,7 @@ compile(MyThread* t, object method)
         } else {
           Context context(t, method, p->indirectCaller);
           compiled = compile(t, &context);
+          if (UNLIKELY(t->exception)) return;
         }
 
         set(t, method, MethodCompiled, compiled);
@@ -4668,29 +5065,40 @@ compile(MyThread* t, object method)
           classVtable(t, methodClass(t, method), methodOffset(t, method))
             = &singletonValue(t, compiled, 0);
         }
+
+        if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
+          if (DebugMethodTree) {
+            fprintf(stderr, "insert method at %p\n",
+                    &singletonValue(t, methodCompiled(t, method), 0));
+          }
+          
+          methodTree(t) = treeInsert
+            (t, methodTree(t), method, methodTreeSentinal(t),
+             compareMethodBounds);
+        }
       }
     }
   }
 }
 
 object
-findTraceNode(MyThread* t, void* address)
+findCallNode(MyThread* t, void* address)
 {
-  if (DebugTraces) {
+  if (DebugCallTable) {
     fprintf(stderr, "find trace node %p\n", address);
   }
 
   MyProcessor* p = processor(t);
-  object table = p->addressTable;
+  object table = p->callTable;
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
   unsigned index = static_cast<uintptr_t>(key) 
     & (arrayLength(t, table) - 1);
 
   for (object n = arrayBody(t, table, index);
-       n; n = traceNodeNext(t, n))
+       n; n = callNodeNext(t, n))
   {
-    intptr_t k = traceNodeAddress(t, n);
+    intptr_t k = callNodeAddress(t, n);
 
     if (k == key) {
       return n;
@@ -4714,26 +5122,17 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
   for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
     for (oldNode = arrayBody(t, oldTable, i);
          oldNode;
-         oldNode = traceNodeNext(t, oldNode))
+         oldNode = callNodeNext(t, oldNode))
     {
-      intptr_t k = traceNodeAddress(t, oldNode);
+      intptr_t k = callNodeAddress(t, oldNode);
 
       unsigned index = k & (newLength - 1);
 
-      object newNode = makeTraceNode
-        (t, traceNodeAddress(t, oldNode),
-         arrayBody(t, newTable, index),
-         traceNodeMethod(t, oldNode),
-         traceNodeTarget(t, oldNode),
-         traceNodeVirtualCall(t, oldNode),
-         traceNodeLength(t, oldNode),
-         false);
-
-      if (traceNodeLength(t, oldNode)) {
-        memcpy(&traceNodeMap(t, newNode, 0),
-               &traceNodeMap(t, oldNode, 0),
-               traceNodeLength(t, oldNode) * BytesPerWord);
-      }
+      object newNode = makeCallNode
+        (t, callNodeAddress(t, oldNode),
+         callNodeTarget(t, oldNode),
+         callNodeVirtualCall(t, oldNode),
+         arrayBody(t, newTable, index));
 
       set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
     }
@@ -4743,34 +5142,90 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
 }
 
 void
-insertTraceNode(MyThread* t, object node)
+insertCallNode(MyThread* t, object node)
 {
-  if (DebugTraces) {
+  if (DebugCallTable) {
     fprintf(stderr, "insert trace node %p\n",
-            reinterpret_cast<void*>(traceNodeAddress(t, node)));
+            reinterpret_cast<void*>(callNodeAddress(t, node)));
   }
 
   MyProcessor* p = processor(t);
   PROTECT(t, node);
 
-  ++ p->addressCount;
+  ++ p->callTableSize;
 
-  if (p->addressCount >= arrayLength(t, p->addressTable) * 2) { 
-    p->addressTable = resizeTable
-      (t, p->addressTable, arrayLength(t, p->addressTable) * 2);
+  if (p->callTableSize >= arrayLength(t, p->callTable) * 2) { 
+    p->callTable = resizeTable
+      (t, p->callTable, arrayLength(t, p->callTable) * 2);
   }
 
-  intptr_t key = traceNodeAddress(t, node);
+  intptr_t key = callNodeAddress(t, node);
   unsigned index = static_cast<uintptr_t>(key)
-    & (arrayLength(t, p->addressTable) - 1);
+    & (arrayLength(t, p->callTable) - 1);
 
-  set(t, node, TraceNodeNext, arrayBody(t, p->addressTable, index));
-  set(t, p->addressTable, ArrayBody + (index * BytesPerWord), node);
+  set(t, node, CallNodeNext, arrayBody(t, p->callTable, index));
+  set(t, p->callTable, ArrayBody + (index * BytesPerWord), node);
+}
+
+void
+removeCallNode(MyThread* t, object node)
+{
+  if (DebugCallTable) {
+    fprintf(stderr, "remove call node %p\n",
+            reinterpret_cast<void*>(callNodeAddress(t, node)));
+  }
+
+  MyProcessor* p = processor(t);
+  PROTECT(t, node);
+
+  object oldNode = 0;
+  PROTECT(t, oldNode);
+
+  object newNode = 0;
+  PROTECT(t, newNode);
+
+  intptr_t key = callNodeAddress(t, node);
+  unsigned index = static_cast<uintptr_t>(key)
+    & (arrayLength(t, p->callTable) - 1);
+
+  for (oldNode = arrayBody(t, p->callTable, index);
+       oldNode;
+       oldNode = callNodeNext(t, oldNode))
+  {
+    if (oldNode != node) {
+      newNode = makeCallNode
+        (t, callNodeAddress(t, oldNode),
+         callNodeTarget(t, oldNode),
+         callNodeVirtualCall(t, oldNode),
+         newNode);
+    }
+  }
+
+  set(t, p->callTable, ArrayBody + (index * BytesPerWord), newNode);
+
+  -- p->callTableSize;
+
+  if (p->callTableSize <= arrayLength(t, p->callTable) / 3) {
+    p->callTable = resizeTable
+      (t, p->callTable, arrayLength(t, p->callTable) / 2);
+  }
+}
+
+object&
+methodTree(MyThread* t)
+{
+  return processor(t)->methodTree;
+}
+
+object
+methodTreeSentinal(MyThread* t)
+{
+  return processor(t)->methodTreeSentinal;
 }
 
 Allocator*
-codeAllocator(MyThread* t) {
-  return &(processor(t)->codeAllocator);
+codeZone(MyThread* t) {
+  return &(processor(t)->codeZone);
 }
 
 } // namespace
@@ -4780,7 +5235,7 @@ namespace vm {
 Processor*
 makeProcessor(System* system, Allocator* allocator)
 {
-  return new (allocator->allocate(sizeof(MyProcessor), false))
+  return new (allocator->allocate(sizeof(MyProcessor)))
     MyProcessor(system, allocator);
 }
 
