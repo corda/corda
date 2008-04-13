@@ -1331,7 +1331,7 @@ dispose(Thread* t, Reference* r)
   if (r->next) {
     r->next->handle = r->handle;
   }
-  t->m->heap->free(r, sizeof(*r), false);
+  t->m->heap->free(r, sizeof(*r));
 }
 
 void
@@ -1437,7 +1437,7 @@ ensure(Thread* t, unsigned sizeInBytes)
   {
     expect(t, t->backupHeap == 0);
     t->backupHeap = static_cast<uintptr_t*>
-      (t->m->heap->allocate(pad(sizeInBytes), false));
+      (t->m->heap->allocate(pad(sizeInBytes)));
     t->backupHeapIndex = 0;
     t->backupHeapSizeInWords = ceiling(sizeInBytes, BytesPerWord);
   }
@@ -1448,7 +1448,7 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask);
 
 object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
-          unsigned sizeInBytes, bool executable, bool objectMask);
+          unsigned sizeInBytes, bool objectMask);
 
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)

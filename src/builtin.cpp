@@ -147,10 +147,10 @@ Java_java_lang_ClassLoader_defineClass
   ENTER(t, Thread::ActiveState);
 
   uint8_t* buffer = static_cast<uint8_t*>
-    (t->m->heap->allocate(length, false));
+    (t->m->heap->allocate(length));
   memcpy(buffer, &byteArrayBody(t, *b, offset), length);
   object c = parseClass(t, buffer, length);
-  t->m->heap->free(buffer, length, false);
+  t->m->heap->free(buffer, length);
   return makeLocalReference(t, c);
 }
 

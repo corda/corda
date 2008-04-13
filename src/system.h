@@ -123,8 +123,10 @@ class System {
   virtual ~System() { }
 
   virtual bool success(Status) = 0;
-  virtual void* tryAllocate(unsigned size, bool executable) = 0;
-  virtual void free(const void* p, unsigned size, bool executable) = 0;
+  virtual void* tryAllocate(unsigned sizeInBytes) = 0;
+  virtual void free(const void* p) = 0;
+  virtual void* tryAllocateExecutable(unsigned sizeInBytes) = 0;
+  virtual void freeExecutable(const void* p, unsigned sizeInBytes) = 0;
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
   virtual Status make(Mutex**) = 0;

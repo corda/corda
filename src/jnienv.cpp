@@ -101,7 +101,7 @@ GetStringChars(Thread* t, jstring s, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   jchar* chars = static_cast<jchar*>
-    (t->m->heap->allocate((stringLength(t, *s) + 1) * sizeof(jchar), false));
+    (t->m->heap->allocate((stringLength(t, *s) + 1) * sizeof(jchar)));
   stringChars(t, *s, chars);
 
   if (isCopy) *isCopy = true;
@@ -113,7 +113,7 @@ ReleaseStringChars(Thread* t, jstring s, const jchar* chars)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->heap->free(chars, (stringLength(t, *s) + 1) * sizeof(jchar), false);
+  t->m->heap->free(chars, (stringLength(t, *s) + 1) * sizeof(jchar));
 }
 
 jsize JNICALL
@@ -130,7 +130,7 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   char* chars = static_cast<char*>
-    (t->m->heap->allocate(stringLength(t, *s) + 1, false));
+    (t->m->heap->allocate(stringLength(t, *s) + 1));
   stringChars(t, *s, chars);
 
   if (isCopy) *isCopy = true;
@@ -142,7 +142,7 @@ ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->heap->free(chars, stringLength(t, *s) + 1, false);
+  t->m->heap->free(chars, stringLength(t, *s) + 1);
 }
 
 jsize JNICALL
@@ -1177,7 +1177,7 @@ NewGlobalRef(Thread* t, jobject o)
   ACQUIRE(t, t->m->referenceLock);
   
   if (o) {
-    Reference* r = new (t->m->heap->allocate(sizeof(Reference), false))
+    Reference* r = new (t->m->heap->allocate(sizeof(Reference)))
       Reference(*o, &(t->m->jniReferences));
 
     return &(r->target);
@@ -1322,7 +1322,7 @@ GetBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = booleanArrayLength(t, *array) * sizeof(jboolean);
-  jboolean* p = static_cast<jboolean*>(t->m->heap->allocate(size, false));
+  jboolean* p = static_cast<jboolean*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &booleanArrayBody(t, *array, 0), size);
   }
@@ -1340,7 +1340,7 @@ GetByteArrayElements(Thread* t, jbyteArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = byteArrayLength(t, *array) * sizeof(jbyte);
-  jbyte* p = static_cast<jbyte*>(t->m->heap->allocate(size, false));
+  jbyte* p = static_cast<jbyte*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &byteArrayBody(t, *array, 0), size);
   }
@@ -1358,7 +1358,7 @@ GetCharArrayElements(Thread* t, jcharArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = charArrayLength(t, *array) * sizeof(jchar);
-  jchar* p = static_cast<jchar*>(t->m->heap->allocate(size, false));
+  jchar* p = static_cast<jchar*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &charArrayBody(t, *array, 0), size);
   }
@@ -1376,7 +1376,7 @@ GetShortArrayElements(Thread* t, jshortArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = shortArrayLength(t, *array) * sizeof(jshort);
-  jshort* p = static_cast<jshort*>(t->m->heap->allocate(size, false));
+  jshort* p = static_cast<jshort*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &shortArrayBody(t, *array, 0), size);
   }
@@ -1394,7 +1394,7 @@ GetIntArrayElements(Thread* t, jintArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = intArrayLength(t, *array) * sizeof(jint);
-  jint* p = static_cast<jint*>(t->m->heap->allocate(size, false));
+  jint* p = static_cast<jint*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &intArrayBody(t, *array, 0), size);
   }
@@ -1412,7 +1412,7 @@ GetLongArrayElements(Thread* t, jlongArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = longArrayLength(t, *array) * sizeof(jlong);
-  jlong* p = static_cast<jlong*>(t->m->heap->allocate(size, false));
+  jlong* p = static_cast<jlong*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &longArrayBody(t, *array, 0), size);
   }
@@ -1430,7 +1430,7 @@ GetFloatArrayElements(Thread* t, jfloatArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = floatArrayLength(t, *array) * sizeof(jfloat);
-  jfloat* p = static_cast<jfloat*>(t->m->heap->allocate(size, false));
+  jfloat* p = static_cast<jfloat*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &floatArrayBody(t, *array, 0), size);
   }
@@ -1448,7 +1448,7 @@ GetDoubleArrayElements(Thread* t, jdoubleArray array, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   unsigned size = doubleArrayLength(t, *array) * sizeof(jdouble);
-  jdouble* p = static_cast<jdouble*>(t->m->heap->allocate(size, false));
+  jdouble* p = static_cast<jdouble*>(t->m->heap->allocate(size));
   if (size) {
     memcpy(p, &doubleArrayBody(t, *array, 0), size);
   }
@@ -1475,7 +1475,7 @@ ReleaseBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* p,
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1493,7 +1493,7 @@ ReleaseByteArrayElements(Thread* t, jbyteArray array, jbyte* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1511,7 +1511,7 @@ ReleaseCharArrayElements(Thread* t, jcharArray array, jchar* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1529,7 +1529,7 @@ ReleaseShortArrayElements(Thread* t, jshortArray array, jshort* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1547,7 +1547,7 @@ ReleaseIntArrayElements(Thread* t, jintArray array, jint* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1565,7 +1565,7 @@ ReleaseLongArrayElements(Thread* t, jlongArray array, jlong* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1583,7 +1583,7 @@ ReleaseFloatArrayElements(Thread* t, jfloatArray array, jfloat* p, jint mode)
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -1602,7 +1602,7 @@ ReleaseDoubleArrayElements(Thread* t, jdoubleArray array, jdouble* p,
   }
 
   if (mode == 0 or mode == JNI_ABORT) {
-    t->m->heap->free(p, size, false);
+    t->m->heap->free(p, size);
   }
 }
 
@@ -2079,7 +2079,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   Finder* f = makeFinder(s, a->classpath, bootLibrary);
   Processor* p = makeProcessor(s, h);
 
-  *m = new (h->allocate(sizeof(Machine), false))
+  *m = new (h->allocate(sizeof(Machine)))
     Machine(s, h, f, p, bootLibrary, builtins);
 
   *t = p->makeThread(*m, 0, 0);

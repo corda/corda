@@ -70,7 +70,7 @@ run(void* r)
 void*
 allocate(System* s, unsigned size)
 {
-  void* p = s->tryAllocate(size, false);
+  void* p = s->tryAllocate(size);
   if (p == 0) abort();
   return p;
 }
@@ -117,7 +117,7 @@ class MySystem: public System {
       CloseHandle(event);
       CloseHandle(mutex);
       CloseHandle(thread);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     HANDLE thread;
@@ -148,7 +148,7 @@ class MySystem: public System {
 
     virtual void dispose() {
       CloseHandle(mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -362,7 +362,7 @@ class MySystem: public System {
     virtual void dispose() {
       assert(s, owner_ == 0);
       CloseHandle(mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -393,7 +393,7 @@ class MySystem: public System {
       bool r UNUSED = TlsFree(key);
       assert(s, r);
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -425,7 +425,7 @@ class MySystem: public System {
         if (mapping) CloseHandle(mapping);
         if (file) CloseHandle(file);
       }
-      system->free(this, sizeof(*this), false);
+      system->free(this);
     }
 
     System* system;
@@ -437,12 +437,10 @@ class MySystem: public System {
 
   class Library: public System::Library {
    public:
-    Library(System* s, HMODULE handle, const char* name, size_t nameLength,
-	    bool mapName):
+    Library(System* s, HMODULE handle, const char* name, bool mapName):
       s(s),
       handle(handle),
       name_(name),
-      nameLength(nameLength),
       mapName_(mapName),
       next_(0)
     { }
@@ -484,16 +482,15 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_, nameLength + 1, false);
+        s->free(name_);
       }
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
     HMODULE handle;
     const char* name_;
-    size_t nameLength;
     bool mapName_;
     System::Library* next_;
   };
@@ -503,12 +500,23 @@ class MySystem: public System {
     assert(this, mutex);
   }
 
-  virtual void* tryAllocate(unsigned size, bool) {
-    return malloc(size);
+  virtual void* tryAllocate(unsigned sizeInBytes) {
+    return malloc(sizeInBytes);
   }
 
-  virtual void free(const void* p, unsigned, bool) {
+  virtual void free(const void* p) {
     if (p) ::free(const_cast<void*>(p));
+  }
+
+  virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
+    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
+
+    return VirtualAlloc(0, sizeInBytes, MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  }
+
+  virtual void freeExecutable(const void* p, unsigned) {
+    int r UNUSED = VirtualFree(const_cast<void*>(p), 0, MEM_RELEASE);
+    assert(this, r);
   }
 
   virtual bool success(Status s) {
@@ -674,7 +682,7 @@ class MySystem: public System {
       }
 
       *lib = new (allocate(this, sizeof(Library)))
-        Library(this, handle, n, nameLength, mapName);
+        Library(this, handle, n, mapName);
 
       return 0;
     } else {

@@ -60,8 +60,7 @@ class Heap: public Allocator {
   virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
                               bool objectMask, unsigned* totalInBytes) = 0;
   virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
-                                 bool executable, bool objectMask,
-                                 unsigned* totalInBytes) = 0;
+                                 bool objectMask, unsigned* totalInBytes) = 0;
   virtual bool needsMark(void* p) = 0;
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p) = 0;

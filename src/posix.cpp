@@ -105,7 +105,7 @@ run(void* r)
 void*
 allocate(System* s, unsigned size)
 {
-  void* p = s->tryAllocate(size, false);
+  void* p = s->tryAllocate(size);
   if (p == 0) abort();
   return p;
 }
@@ -167,7 +167,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     pthread_t thread;
@@ -195,7 +195,7 @@ class MySystem: public System {
 
     virtual void dispose() {
       pthread_mutex_destroy(&mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -394,7 +394,7 @@ class MySystem: public System {
     virtual void dispose() {
       expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -425,7 +425,7 @@ class MySystem: public System {
       int r UNUSED = pthread_key_delete(key);
       expect(s, r == 0);
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -452,7 +452,7 @@ class MySystem: public System {
       if (start_) {
         munmap(start_, length_);
       }
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -505,10 +505,10 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_, nameLength + 1, false);
+        s->free(name_);
       }
 
-      s->free(this, sizeof(*this), false);
+      s->free(this);
     }
 
     System* s;
@@ -549,36 +549,32 @@ class MySystem: public System {
     }
   }
 
-  virtual void* tryAllocate(unsigned size, bool executable) {
-    assert(this, (not executable) or (size % LikelyPageSizeInBytes == 0));
+  virtual void* tryAllocate(unsigned sizeInBytes) {
+    return malloc(sizeInBytes);
+  }
 
-#ifndef MAP_32BIT
-#define MAP_32BIT 0
-#endif
+  virtual void free(const void* p) {
+    if (p) ::free(const_cast<void*>(p));
+  }
 
-    if (executable) {
-      void* p = mmap(0, size, PROT_EXEC | PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANON | MAP_32BIT, -1, 0);
+  virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
+    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
 
-      if (p == MAP_FAILED) {
-        return 0;
-      } else {
-        return p;
-      }
+    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANON, -1, 0);
+    
+    if (p == MAP_FAILED) {
+      return 0;
     } else {
-      return malloc(size);
+      return p;
     }
   }
 
-  virtual void free(const void* p, unsigned size, bool executable) {
-    if (p) {
-      if (executable) {
-        int r UNUSED = munmap(const_cast<void*>(p), size);
-        assert(this, r == 0);
-      } else {
-        ::free(const_cast<void*>(p));
-      }
-    }
+  virtual void freeExecutable(const void* p, unsigned sizeInBytes) {
+    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
+
+    int r UNUSED = munmap(const_cast<void*>(p), sizeInBytes);
+    assert(this, r == 0);
   }
 
   virtual bool success(Status s) {
@@ -719,7 +715,7 @@ class MySystem: public System {
         n = static_cast<char*>(allocate(this, nameLength + 1));
         memcpy(n, name, nameLength + 1);
         if (alreadyAllocated) {
-          free(name, nameLength, false);
+          free(name);
         }
       } else {
         n = 0;

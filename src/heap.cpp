@@ -58,8 +58,8 @@ void assert(Context*, bool);
 #endif
 
 System* system(Context*);
-void* tryAllocate(Context* c, unsigned size, bool executable);
-void free(Context* c, const void* p, unsigned size, bool executable);
+void* tryAllocate(Context* c, unsigned size);
+void free(Context* c, const void* p, unsigned size);
 
 inline void*
 get(void* o, unsigned offsetInWords)
@@ -314,8 +314,7 @@ class Segment {
       capacity_ = desired;
       while (data == 0) {
         data = static_cast<uintptr_t*>
-          (tryAllocate
-           (context, (footprint(capacity_)) * BytesPerWord, false));
+          (tryAllocate(context, (footprint(capacity_)) * BytesPerWord));
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -353,7 +352,7 @@ class Segment {
 
   void replaceWith(Segment* s) {
     if (data) {
-      free(context, data, (footprint(capacity())) * BytesPerWord, false);
+      free(context, data, (footprint(capacity())) * BytesPerWord);
     }
     data = s->data;
     s->data = 0;
@@ -404,7 +403,7 @@ class Segment {
   }
 
   void dispose() {
-    free(context, data, (footprint(capacity())) * BytesPerWord, false);
+    free(context, data, (footprint(capacity())) * BytesPerWord);
     data = 0;
     map = 0;
   }
@@ -783,7 +782,7 @@ free(Context* c, Fixie** fixies)
       if (DebugFixies) {
         fprintf(stderr, "free fixie %p\n", f);
       }
-      free(c, f, f->totalSize(), false);
+      free(c, f, f->totalSize());
     }
   }
 }
@@ -1628,12 +1627,12 @@ collect(Context* c)
   }
 }
 
-void* tryAllocate(Context* c, unsigned size, bool executable)
+void* tryAllocate(Context* c, unsigned size)
 {
   ACQUIRE(c->lock);
 
   if (size + c->count < c->limit) {
-    void* p = c->system->tryAllocate(size, executable);
+    void* p = c->system->tryAllocate(size);
     if (p) {
       c->count += size;
       return p;
@@ -1642,16 +1641,16 @@ void* tryAllocate(Context* c, unsigned size, bool executable)
   return 0;
 }
 
-void free(Context* c, const void* p, unsigned size, bool executable) {
+void free(Context* c, const void* p, unsigned size) {
   ACQUIRE(c->lock);
 
   expect(c->system, c->count >= size);
-  c->system->free(p, size, executable);
+  c->system->free(p);
   c->count -= size;
 }
 
-void free_(Context* c, const void* p, unsigned size, bool executable) {
-  free(c, p, size, executable);
+void free_(Context* c, const void* p, unsigned size) {
+  free(c, p, size);
 }
 
 class MyHeap: public Heap {
@@ -1665,18 +1664,18 @@ class MyHeap: public Heap {
     c.client = client;
   }
 
-  virtual void* tryAllocate(unsigned size, bool executable) {
-    return ::tryAllocate(&c, size, executable);
+  virtual void* tryAllocate(unsigned size) {
+    return ::tryAllocate(&c, size);
   }
 
-  virtual void* allocate(unsigned size, bool executable) {
-    void* p = ::tryAllocate(&c, size, executable);
+  virtual void* allocate(unsigned size) {
+    void* p = ::tryAllocate(&c, size);
     expect(c.system, p);
     return p;
   }
 
-  virtual void free(const void* p, unsigned size, bool executable) {
-    free_(&c, p, size, executable);
+  virtual void free(const void* p, unsigned size) {
+    free_(&c, p, size);
   }
 
   virtual void collect(CollectionType type, unsigned incomingFootprint) {
@@ -1690,16 +1689,15 @@ class MyHeap: public Heap {
                               bool objectMask, unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(*totalInBytes, false))
+    return (new (allocator->allocate(*totalInBytes))
             Fixie(sizeInWords, objectMask, &(c.fixies), false))->body();
   }
 
   virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
-                                 bool executable, bool objectMask,
-                                 unsigned* totalInBytes)
+                                 bool objectMask, unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(*totalInBytes, executable))
+    return (new (allocator->allocate(*totalInBytes))
             Fixie(sizeInWords, objectMask, &(c.tenuredFixies), true))->body();
   }
 
@@ -1809,7 +1807,7 @@ class MyHeap: public Heap {
   virtual void dispose() {
     c.dispose();
     assert(&c, c.count == 0);
-    c.system->free(this, sizeof(*this), false);
+    c.system->free(this);
   }
 
   Context c;
@@ -1822,8 +1820,7 @@ namespace vm {
 Heap*
 makeHeap(System* system, unsigned limit)
 {  
-  return new (system->tryAllocate(sizeof(MyHeap), false))
-    MyHeap(system, limit);
+  return new (system->tryAllocate(sizeof(MyHeap))) MyHeap(system, limit);
 }
 
 } // namespace vm

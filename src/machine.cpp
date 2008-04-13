@@ -478,9 +478,9 @@ void
 postCollect(Thread* t)
 {
 #ifdef VM_STRESS
-  t->m->heap->free(t->defaultHeap, Thread::HeapSizeInBytes, false);
+  t->m->heap->free(t->defaultHeap, Thread::HeapSizeInBytes);
   t->defaultHeap = static_cast<uintptr_t*>
-    (t->m->heap->allocate(Thread::HeapSizeInBytes, false));
+    (t->m->heap->allocate(Thread::HeapSizeInBytes));
 #endif
 
   t->heap = t->defaultHeap;
@@ -489,7 +489,7 @@ postCollect(Thread* t)
 
   if (t->backupHeap) {
     t->m->heap->free
-      (t->backupHeap, t->backupHeapSizeInWords * BytesPerWord, false);
+      (t->backupHeap, t->backupHeapSizeInWords * BytesPerWord);
     t->backupHeapIndex = 0;
     t->backupHeapSizeInWords = 0;
   }
@@ -653,8 +653,7 @@ parsePool(Thread* t, Stream& s)
   PROTECT(t, pool);
 
   if (count) {
-    uint32_t* index = static_cast<uint32_t*>
-      (t->m->heap->allocate(count * 4, false));
+    uint32_t* index = static_cast<uint32_t*>(t->m->heap->allocate(count * 4));
 
     for (unsigned i = 0; i < count; ++i) {
       index[i] = s.position();
@@ -700,7 +699,7 @@ parsePool(Thread* t, Stream& s)
       i += parsePoolEntry(t, s, index, pool, i);
     }
 
-    t->m->heap->free(index, count * 4, false);
+    t->m->heap->free(index, count * 4);
 
     s.setPosition(end);
   }
@@ -1625,7 +1624,7 @@ class HeapClient: public Heap::Client {
   }
 
   void dispose() {
-    m->heap->free(this, sizeof(*this), false);
+    m->heap->free(this, sizeof(*this));
   }
     
  private:
@@ -1641,7 +1640,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
                  const char* builtins):
   vtable(&javaVMVTable),
   system(system),
-  heapClient(new (heap->allocate(sizeof(HeapClient), false))
+  heapClient(new (heap->allocate(sizeof(HeapClient)))
              HeapClient(this)),
   heap(heap),
   finder(finder),
@@ -1704,16 +1703,16 @@ Machine::dispose()
   for (Reference* r = jniReferences; r;) {
     Reference* tmp = r;
     r = r->next;
-    heap->free(tmp, sizeof(*tmp), false);
+    heap->free(tmp, sizeof(*tmp));
   }
 
   for (unsigned i = 0; i < heapPoolIndex; ++i) {
-    heap->free(heapPool[i], Thread::HeapSizeInBytes, false);
+    heap->free(heapPool[i], Thread::HeapSizeInBytes);
   }
 
   static_cast<HeapClient*>(heapClient)->dispose();
 
-  heap->free(this, sizeof(*this), false);
+  heap->free(this, sizeof(*this));
 }
 
 Thread::Thread(Machine* m, object javaThread, Thread* parent):
@@ -1732,7 +1731,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   protector(0),
   runnable(this),
   defaultHeap(static_cast<uintptr_t*>
-              (m->heap->allocate(HeapSizeInBytes, false))),
+              (m->heap->allocate(HeapSizeInBytes))),
   heap(defaultHeap),
   backupHeap(0),
   backupHeapIndex(0),
@@ -1872,7 +1871,7 @@ Thread::dispose()
     systemThread->dispose();
   }
 
-  m->heap->free(defaultHeap, Thread::HeapSizeInBytes, false);
+  m->heap->free(defaultHeap, Thread::HeapSizeInBytes);
 
   m->processor->dispose(this);
 }
@@ -2032,12 +2031,12 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
     (t, t->m->heap,
      ceiling(sizeInBytes, BytesPerWord) > Thread::HeapSizeInWords ?
      Machine::FixedAllocation : Machine::MovableAllocation,
-     sizeInBytes, false, objectMask);
+     sizeInBytes, objectMask);
 }
 
 object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
-          unsigned sizeInBytes, bool executable, bool objectMask)
+          unsigned sizeInBytes, bool objectMask)
 {
   if (t->backupHeap) {
     expect(t,  t->backupHeapIndex + ceiling(sizeInBytes, BytesPerWord)
@@ -2069,7 +2068,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     t->heap = 0;
     if (t->m->heapPoolIndex < Machine::HeapPoolSize) {
       t->heap = static_cast<uintptr_t*>
-        (t->m->heap->tryAllocate(Thread::HeapSizeInBytes, false));
+        (t->m->heap->tryAllocate(Thread::HeapSizeInBytes));
       if (t->heap) {
         t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
         t->heapOffset += t->heapIndex;
@@ -2107,8 +2106,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     unsigned total;
     object o = static_cast<object>
       (t->m->heap->allocateImmortal
-       (allocator, ceiling(sizeInBytes, BytesPerWord),
-        executable, objectMask, &total));
+       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
     cast<uintptr_t>(o, 0) = FixedMark;
 
@@ -2754,7 +2752,7 @@ collect(Thread* t, Heap::CollectionType type)
   killZombies(t, m->rootThread);
 
   for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
-    m->heap->free(m->heapPool[i], Thread::HeapSizeInBytes, false);
+    m->heap->free(m->heapPool[i], Thread::HeapSizeInBytes);
   }
   m->heapPoolIndex = 0;
 

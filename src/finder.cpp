@@ -19,26 +19,19 @@ namespace {
 void*
 allocate(System* s, unsigned size)
 {
-  void* p = s->tryAllocate(size, false);
+  void* p = s->tryAllocate(size);
   if (p == 0) abort();
   return p;
 }
 
-void
-free(System* s, const void* p, unsigned size)
-{
-  s->free(p, size, false);
-}
-
 const char*
-append(System* s, unsigned* length, const char* a, const char* b,
+append(System* s, const char* a, const char* b,
        const char* c)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
   unsigned cl = strlen(c);
-  *length = al + bl + cl;
-  char* p = static_cast<char*>(allocate(s, *length + 1));
+  char* p = static_cast<char*>(allocate(s, (al + bl + cl) + 1));
   memcpy(p, a, al);
   memcpy(p + al, b, bl);
   memcpy(p + al + bl, c, cl + 1);
@@ -46,11 +39,10 @@ append(System* s, unsigned* length, const char* a, const char* b,
 }
 
 const char*
-copy(System* s, unsigned* length, const char* a)
+copy(System* s, const char* a)
 {
   unsigned al = strlen(a);
-  *length = al;
-  char* p = static_cast<char*>(allocate(s, *length + 1));
+  char* p = static_cast<char*>(allocate(s, al + 1));
   memcpy(p, a, al + 1);
   return p;
 }
@@ -78,16 +70,15 @@ class Element {
 
 class DirectoryElement: public Element {
  public:
-  DirectoryElement(System* s, const char* name, unsigned nameLength):
-    s(s), name(name), nameLength(nameLength)
+  DirectoryElement(System* s, const char* name):
+    s(s), name(name)
   { }
 
   virtual System::Region* find(const char* name) {
-    unsigned length;
-    const char* file = append(s, &length, this->name, "/", name);
+    const char* file = append(s, this->name, "/", name);
     System::Region* region;
     System::Status status = s->map(&region, file);
-    free(s, file, length + 1);
+    s->free(file);
 
     if (s->success(status)) {
       return region;
@@ -97,21 +88,19 @@ class DirectoryElement: public Element {
   }
 
   virtual bool exists(const char* name)  {
-    unsigned length;
-    const char* file = append(s, &length, this->name, "/", name);
+    const char* file = append(s, this->name, "/", name);
     System::FileType type = s->identify(file);
-    free(s, file, length + 1);
+    s->free(file);
     return type != System::DoesNotExist;
   }
 
   virtual void dispose() {
-    free(s, name, nameLength + 1);
-    free(s, this, sizeof(*this));
+    s->free(name);
+    s->free(this);
   }
 
   System* s;
   const char* name;
-  unsigned nameLength;
 };
 
 class PointerRegion: public System::Region {
@@ -131,7 +120,7 @@ class PointerRegion: public System::Region {
   }
 
   virtual void dispose() {
-    free(s, this, sizeof(*this));
+    s->free(this);
   }
 
   System* s;
@@ -155,7 +144,7 @@ class DataRegion: public System::Region {
   }
 
   virtual void dispose() {
-    free(s, this, sizeof(*this) + length_);
+    s->free(this);
   }
 
   System* s;
@@ -376,8 +365,8 @@ class JarIndex {
   }
 
   void dispose() {
-    free(s, nodes, sizeof(Node) * capacity);
-    free(s, this, sizeof(*this) + (sizeof(Node*) * capacity));
+    s->free(nodes);
+    s->free(this);
   }
 
   System* s;
@@ -390,8 +379,8 @@ class JarIndex {
 
 class JarElement: public Element {
  public:
-  JarElement(System* s, const char* name, unsigned nameLength):
-    s(s), name(name), nameLength(nameLength), index(0)
+  JarElement(System* s, const char* name):
+    s(s), name(name), index(0)
   { }
 
   virtual void init() {
@@ -421,29 +410,27 @@ class JarElement: public Element {
   }
 
   virtual void dispose() {
-    free(s, name, nameLength + 1);
+    s->free(name);
     if (index) {
       index->dispose();
     }
     if (region) {
       region->dispose();
     }
-    free(s, this, sizeof(*this));
+    s->free(this);
   }
 
   System* s;
   const char* name;
-  unsigned nameLength;
   System::Region* region;
   JarIndex* index;
 };
 
 class BuiltinElement: public JarElement {
  public:
-  BuiltinElement(System* s, const char* name, unsigned nameLength,
-                 const char* libraryName):
-    JarElement(s, name, nameLength),
-    libraryName(libraryName ? copy(s, &libraryNameLength, libraryName) : 0)
+  BuiltinElement(System* s, const char* name, const char* libraryName):
+    JarElement(s, name),
+    libraryName(libraryName ? copy(s, libraryName) : 0)
   { }
 
   virtual void init() {
@@ -468,13 +455,12 @@ class BuiltinElement: public JarElement {
 
   virtual void dispose() {
     library->disposeAll();
-    free(s, libraryName, libraryNameLength + 1);
+    s->free(libraryName);
     JarElement::dispose();
   }
 
   System::Library* library;
   const char* libraryName;
-  unsigned libraryNameLength;
 };
 
 Element*
@@ -519,7 +505,7 @@ parsePath(System* s, const char* path, const char* bootLibrary)
       name[token.length - 2] = 0; 
   
       e = new (allocate(s, sizeof(BuiltinElement)))
-        BuiltinElement(s, name, token.length - 2, bootLibrary);
+        BuiltinElement(s, name, bootLibrary);
     } else {
       char* name = static_cast<char*>(allocate(s, token.length + 1));
       memcpy(name, token.s, token.length);
@@ -527,17 +513,16 @@ parsePath(System* s, const char* path, const char* bootLibrary)
 
       switch (s->identify(name)) {
       case System::File: {
-        e = new (allocate(s, sizeof(JarElement)))
-          JarElement(s, name, token.length);
+        e = new (allocate(s, sizeof(JarElement))) JarElement(s, name);
       } break;
 
       case System::Directory: {
         e = new (allocate(s, sizeof(DirectoryElement)))
-          DirectoryElement(s, name, token.length);
+          DirectoryElement(s, name);
       } break;
 
       default: {
-        free(s, name, token.length + 1);
+        s->free(name);
         e = 0;
       } break;
       }
@@ -561,7 +546,7 @@ class MyFinder: public Finder {
   MyFinder(System* system, const char* path, const char* bootLibrary):
     system(system),
     path_(parsePath(system, path, bootLibrary)),
-    pathString(copy(system, &pathStringLength, path))
+    pathString(copy(system, path))
   { }
 
   virtual System::Region* find(const char* name) {
@@ -595,14 +580,13 @@ class MyFinder: public Finder {
       e = e->next;
       t->dispose();
     }
-    free(system, pathString, pathStringLength + 1);
-    free(system, this, sizeof(*this));
+    system->free(pathString);
+    system->free(this);
   }
 
   System* system;
   Element* path_;
   const char* pathString;
-  unsigned pathStringLength;
 };
 
 } // namespace

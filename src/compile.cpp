@@ -487,7 +487,7 @@ class Context {
 
   Context(MyThread* t, object method, uint8_t* indirectCaller):
     t(t),
-    zone(t->m->system, t->m->heap, false, 16 * 1024),
+    zone(t->m->system, t->m->heap, 16 * 1024),
     c(makeCompiler(t->m->system, t->m->heap, &zone, indirectCaller)),
     method(method),
     objectPool(0),
@@ -501,7 +501,7 @@ class Context {
 
   Context(MyThread* t):
     t(t),
-    zone(t->m->system, t->m->heap, false, LikelyPageSizeInBytes),
+    zone(t->m->system, t->m->heap, LikelyPageSizeInBytes),
     c(makeCompiler(t->m->system, t->m->heap, &zone, 0)),
     method(0),
     objectPool(0),
@@ -3765,7 +3765,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 }
 
 Allocator*
-codeAllocator(MyThread* t);
+codeZone(MyThread* t);
 
 int
 compareTraceElementPointers(const void* va, const void* vb)
@@ -3811,8 +3811,8 @@ finish(MyThread* t, Context* context, const char* name)
   unsigned count = ceiling(c->codeSize() + c->poolSize(), BytesPerWord);
   unsigned size = count + singletonMaskSize(count);
   object result = allocate3
-    (t, codeAllocator(t), Machine::ImmortalAllocation,
-     SingletonBody + (size * BytesPerWord), true, true);
+    (t, codeZone(t), Machine::ImmortalAllocation,
+     SingletonBody + (size * BytesPerWord), true);
   initSingleton(t, result, size, true);
   mark(t, result, 0);
   singletonMask(t, result)[0] = 1;
@@ -4679,6 +4679,27 @@ class SegFaultHandler: public System::SignalHandler {
 
 class MyProcessor: public Processor {
  public:
+  class CodeAllocator: public Allocator {
+   public:
+    CodeAllocator(System* s): s(s) { }
+
+    virtual void* tryAllocate(unsigned size) {
+      return s->tryAllocateExecutable(size);
+    }
+
+    virtual void* allocate(unsigned size) {
+      void* p = tryAllocate(size);
+      expect(s, p);
+      return p;
+    }
+
+    virtual void free(const void* p, unsigned size) {
+      s->freeExecutable(p, size);
+    }
+
+    System* s;
+  };
+
   MyProcessor(System* s, Allocator* allocator):
     s(s),
     allocator(allocator),
@@ -4690,13 +4711,14 @@ class MyProcessor: public Processor {
     methodTreeSentinal(0),
     indirectCaller(0),
     indirectCallerSize(0),
-    codeAllocator(s, allocator, true, 64 * 1024)
+    codeAllocator(s),
+    codeZone(s, &codeAllocator, 64 * 1024)
   { }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
-    MyThread* t = new (m->heap->allocate(sizeof(MyThread), false))
+    MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
       MyThread(m, javaThread, parent);
     t->init();
     return t;
@@ -4836,7 +4858,7 @@ class MyProcessor: public Processor {
       MyThread* t = static_cast<MyThread*>(vmt);
       PROTECT(t, o);
 
-      Reference* r = new (t->m->heap->allocate(sizeof(Reference), false))
+      Reference* r = new (t->m->heap->allocate(sizeof(Reference)))
         Reference(o, &(t->reference));
 
       return &(r->target);
@@ -4951,15 +4973,15 @@ class MyProcessor: public Processor {
       vm::dispose(t, t->reference);
     }
 
-    t->m->heap->free(t, sizeof(*t), false);
+    t->m->heap->free(t, sizeof(*t));
   }
 
   virtual void dispose() {
-    codeAllocator.dispose();
+    codeZone.dispose();
     
     s->handleSegFault(0);
 
-    allocator->free(this, sizeof(*this), false);
+    allocator->free(this, sizeof(*this));
   }
 
   virtual object getStackTrace(Thread* vmt, Thread* vmTarget) {
@@ -5013,7 +5035,8 @@ class MyProcessor: public Processor {
   uint8_t* indirectCaller;
   unsigned indirectCallerSize;
   SegFaultHandler segFaultHandler;
-  Zone codeAllocator;
+  CodeAllocator codeAllocator;
+  Zone codeZone;
 };
 
 MyProcessor*
@@ -5040,7 +5063,7 @@ processor(MyThread* t)
 
       p->indirectCallerSize = c->codeSize();
       p->indirectCaller = static_cast<uint8_t*>
-        (p->codeAllocator.allocate(p->indirectCallerSize));
+        (p->codeZone.allocate(p->indirectCallerSize));
       c->writeTo(p->indirectCaller);
 
       if (Verbose) {
@@ -5256,8 +5279,8 @@ methodTreeSentinal(MyThread* t)
 }
 
 Allocator*
-codeAllocator(MyThread* t) {
-  return &(processor(t)->codeAllocator);
+codeZone(MyThread* t) {
+  return &(processor(t)->codeZone);
 }
 
 } // namespace
@@ -5267,7 +5290,7 @@ namespace vm {
 Processor*
 makeProcessor(System* system, Allocator* allocator)
 {
-  return new (allocator->allocate(sizeof(MyProcessor), false))
+  return new (allocator->allocate(sizeof(MyProcessor)))
     MyProcessor(system, allocator);
 }
 
