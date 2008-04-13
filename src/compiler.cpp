@@ -1131,11 +1131,17 @@ argumentFootprint(unsigned count)
 }
 
 void
-rex(Context* c)
+rex(Context* c, uint8_t mask, Register r)
 {
   if (BytesPerWord == 8) {
-    c->code.append(0x48);
+    c->code.append(mask | ((r & 8) >> 3));
   }
+}
+
+void
+rex(Context* c)
+{
+  rex(c, 0x48, rax);
 }
 
 void
@@ -1203,8 +1209,9 @@ RegisterOperand::apply(Context* c, Operation op)
 {
   switch (op) {
   case call: {
+    if (value(c) & 8) rex(c, 0x40, value(c));
     c->code.append(0xff);
-    c->code.append(0xd0 | value(c));
+    c->code.append(0xd0 | (value(c) & 7));
   } break;
 
   case jmp:
@@ -1410,8 +1417,8 @@ RegisterOperand::accept(Context* c, Operation op,
   case mov8: {
     assert(c, BytesPerWord == 8 or op == mov4); // todo
 
-    rex(c);
-    c->code.append(0xb8 | value(c));
+    rex(c, 0x48, value(c));
+    c->code.append(0xb8 | (value(c) & 7));
     c->code.appendAddress(operand->value);
   } break;
 
@@ -1620,14 +1627,27 @@ AddressOperand::apply(Context* c, Operation op)
 {
   switch (op) {
   case alignedCall: {
-    while ((c->code.length() + 1) % 4) {
-      c->code.append(0x90);
+    if (BytesPerWord == 8) {
+      while ((c->code.length() + 2) % 8) {
+        c->code.append(0x90);
+      }
+    } else {
+      while ((c->code.length() + 1) % 4) {
+        c->code.append(0x90);
+      }
     }
     apply(c, call);
   } break;
 
   case call: {
-    unconditional(c, 0xe8, this);
+    if (BytesPerWord == 8) {
+      RegisterOperand* t = temporary(c, r10);
+      t->accept(c, mov, this);
+      t->apply(c, call);
+      t->release(c);
+    } else {
+      unconditional(c, 0xe8, this);
+    }
   } break;
 
   case jmp:
@@ -1649,7 +1669,6 @@ AddressOperand::apply(Context* c, Operation op)
   case jge:
     conditional(c, 0x8d, this);
     break;
-
 
   case jl:
     conditional(c, 0x8c, this);
@@ -2836,13 +2855,26 @@ class MyCompiler: public Compiler {
   }
 
   virtual void updateCall(void* returnAddress, void* newTarget) {
-    uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-    assert(&c, *instruction == 0xE8);
-    assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+    if (BytesPerWord == 8) {
+      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 13;
+      assert(&c, instruction[0] == 0x49);
+      assert(&c, instruction[1] == 0xba);
+      assert(&c, instruction[10] == 0x41);
+      assert(&c, instruction[11] == 0xff);
+      assert(&c, instruction[12] == 0xd2);
+      assert(&c, reinterpret_cast<uintptr_t>(instruction + 2) % 8 == 0);
 
-    int32_t v = static_cast<uint8_t*>(newTarget)
-      - static_cast<uint8_t*>(returnAddress);
-    memcpy(instruction + 1, &v, 4);
+      intptr_t v = reinterpret_cast<intptr_t>(newTarget);
+      memcpy(instruction + 2, &v, 8);
+    } else {
+      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
+      assert(&c, *instruction == 0xE8);
+      assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+      
+      int32_t v = static_cast<uint8_t*>(newTarget)
+        - static_cast<uint8_t*>(returnAddress);
+      memcpy(instruction + 1, &v, 4);
+    }
   }
 
   virtual void dispose() {
