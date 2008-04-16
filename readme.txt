@@ -2,7 +2,7 @@ Quick Start
 -----------
 
 on Linux:
- $ export JAVA_HOME=/usr/local/java # or wherever you have Java installed
+ $ export JAVA_HOME=/usr/local/java # or wherever you have the JDK installed
  $ make
  $ build/linux-i386-compile-fast/avian -cp build/test Hello
 
