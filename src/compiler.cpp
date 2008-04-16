@@ -16,10 +16,239 @@ using namespace vm;
 namespace {
 
 class Context;
+class Value;
 
-void NO_RETURN abort(Context* c);
+void NO_RETURN abort(Context*);
 
 // scratch
+
+class Site {
+ public:
+  Site(): next(0) { }
+  
+  virtual ~Site() { }
+
+  virtual unsigned copyCost(Context*, Site*) = 0;
+
+  virtual void copyTo(Context*, unsigned, Site*) = 0;
+  
+  virtual void acquire(Context*, unsigned, Value*, Site*) { }
+
+  virtual void asAssemblerOperand(Context*,
+                                  OperandType* type,
+                                  Assembler::Operand** operand) = 0;
+
+  Site* next;
+};
+
+class ConstantSite: public Site {
+ public:
+  ConstantSite(Promise* value): value(value) { }
+
+  virtual unsigned copyCost(Context*, Site*) {
+    return 1;
+  }
+
+  virtual void copyTo(Context* c, unsigned size, Site* dst) {
+    apply(c, Move, size, this, dst);
+  }
+
+  virtual OperandType type(Context*) {
+    return Constant;
+  }
+
+  virtual Assembler::Operand* asAssemblerOperand(Context*) {
+    return &value;
+  }
+
+  Assembler::Constant value;
+};
+
+ConstantSite*
+constantSite(Context* c, Promise* value)
+{
+  return new (c->zone->allocate(sizeof(ConstantSite))) ConstantSite(value);
+}
+
+ResolvedPromise*
+resolved(Context* c, int64_t value)
+{
+  return new (c->zone->allocate(sizeof(ResolvedPromise)))
+    ResolvedPromise(value);
+}
+
+ConstantSite*
+constantSite(Context* c, int64_t value)
+{
+  return constantSite(c, resolved(c, value));
+}
+
+class AddressSite: public Site {
+ public:
+  AddressSite(Promise* address): address(address) { }
+
+  virtual unsigned copyCost(Context*, Site*) {
+    return 3;
+  }
+
+  virtual void copyTo(Context* c, unsigned size, Site* dst) {
+    apply(c, Move, size, this, dst);
+  }
+
+  virtual OperandType type(Context*) {
+    return Address;
+  }
+
+  virtual Assembler::Operand* asAssemblerOperand(Context*) {
+    return &address;
+  }
+
+  Assembler::Address address;
+};
+
+AddressSite*
+addressSite(Context* c, Promise* address)
+{
+  return new (c->zone->allocate(sizeof(AddressSite))) AddressSite(address);
+}
+
+void
+acquire(Context* c, int r, unsigned newSize, Value* newValue, Site* newSite)
+{
+  Value* oldValue = c->registers[r].value;
+  if (oldValue) {
+    for (Site** p = &(oldValue->sites); *p;) {
+      if (c->registers[r].site == *p) {
+        site = *p;
+        *p = (*p)->next;
+        break;
+      } else {
+        p = &((*p)->next);
+      }
+    }
+
+    if (old->sites == 0 and old->reads) {
+      apply(c, Push, c->registers[r].size, c->registers[r].site);
+      old->sites = ???;
+    }
+  }
+
+  c->registers[r].size = newSize;
+  c->registers[r].value = newValue;
+  c->registers[r].site = newSite;
+}
+
+class RegisterSite: public Site {
+ public:
+  RegisterSite(int low, int high): register_(low, high) { }
+
+  virtual unsigned copyCost(Context* c, Site* s) {
+    if (s and
+        (this == s or
+         (s->type(c) == Register
+          and static_cast<RegisterSite*>(s)->register_.low
+          == register_.low
+          and static_cast<RegisterSite*>(s)->register_.high
+          == register_.high)))
+    {
+      return 0;
+    } else {
+      return 2;
+    }
+  }
+
+  virtual void copyTo(Context* c, unsigned size, Site* dst) {
+    apply(c, Move, size, this, dst);
+  }
+
+  virtual void acquire(Context* c, unsigned size, Value* v, Site* s) {
+    ::acquire(c, register_.low, size, v, s);
+    if (register_.high >= 0) ::acquire(c, register_.high, size, v, s);
+  }
+
+  virtual OperandType type(Context*) {
+    return Register;
+  }
+
+  virtual Assembler::Operand* asAssemblerOperand(Context*) {
+    return &register_;
+  }
+
+  Assembler::Register register_;
+};
+
+RegisterSite*
+registerSite(Context* c, int low, int high = NoRegister)
+{
+  return new (c->zone->allocate(sizeof(RegisterSite)))
+    RegisterSite(low, high);
+}
+
+class MemorySite: public Site {
+ public:
+  RegisterSite(int base, int offset, int index, unsigned scale):
+    value(base, offset, index, scale)
+  { }
+
+  virtual unsigned copyCost(Context* c, Site* s) {
+    if (s and
+        (this == s or
+         (o->type(c) == Memory
+          and static_cast<MemorySite*>(o)->value.base == value.base
+          and static_cast<MemorySite*>(o)->value.offset == value.offset
+          and static_cast<MemorySite*>(o)->value.index == value.index
+          and static_cast<MemorySite*>(o)->value.scale == value.scale)))
+    {
+      return 0;
+    } else {
+      return 4;
+    }
+  }
+
+  virtual void copyTo(Context* c, unsigned size, Site* dst) {
+    apply(c, Move, size, this, dst);
+  }
+
+  virtual OperandType type(Context*) {
+    return Memory;
+  }
+
+  virtual Assembler::Operand* asAssemblerOperand(Context*) {
+    return &value;
+  }
+
+  Assembler::Memory value;
+};
+
+MemorySite*
+memorySite(Context* c, int base, int offset, int index, unsigned scale)
+{
+  return new (c->zone->allocate(sizeof(MemorySite)))
+    MemorySite(base, offset, index, scale);
+}
+
+class Read {
+ public:
+  Read(unsigned size, Value* value, Site* target):
+    size(size), value(value), target(target), next(0)
+  { }
+  
+  unsigned size;
+  Value* value;
+  Site* target;
+  Read* next;
+};
+
+class Write {
+ public:
+  Write(unsigned size, Value* value):
+    size(size), value(value), next(0)
+  { }
+  
+  unsigned size;
+  Value* value;
+  Write* next;
+};
 
 class Value: public Compiler::Operand {
  public:
@@ -142,9 +371,9 @@ class ReturnEvent: public Event {
   {
     if (value) {
       addRead(c, value, size, registerSite
-             (c, c->assembler->returnLow(),
-              size > BytesPerWord ?
-              c->assembler->returnHigh() : NoRegister));
+              (c, c->assembler->returnLow(),
+               size > BytesPerWord ?
+               c->assembler->returnHigh() : NoRegister));
     }
   }
 
@@ -250,30 +479,6 @@ appendBranch(Context* c, UnaryOperation type, Value* address)
   new (c->zone->allocate(sizeof(BranchEvent))) BranchEvent(c, type, address);
 }
 
-class JumpEvent: public Event {
- public:
-  JumpEvent(Context* c, Value* address):
-    Event(c),
-    address(address)
-  {
-    addRead(c, address, BytesPerWord, 0);
-  }
-
-  virtual void compile(Context* c) {
-    fprintf(stderr, "JumpEvent.compile\n");
-
-    apply(c, Jump, BytesPerWord, address->source);
-  }
-
-  Value* address;
-};
-
-void
-appendJump(Context* c, Value* address)
-{
-  new (c->zone->allocate(sizeof(JumpEvent))) JumpEvent(c, address);
-}
-
 class CombineEvent: public Event {
  public:
   CombineEvent(Context* c, BinaryOperation type, unsigned size, Value* first,
@@ -370,6 +575,13 @@ appendMemory(Context* c, Value* base, Value* index, Value* result)
     MemoryEvent(c, base, index, result);
 }
 
+void
+addSite(Context* c, int size, Value* v, Site* s)
+{
+  s->acquire(c, size, v, s);
+  s->next = v->sites;
+  v->sites = s;
+}
 
 void
 compile(Context* c)
@@ -389,6 +601,42 @@ compile(Context* c)
   for (Event* e = c->firstEvent; e; e = e->next) {
     LogicalInstruction* li = c->logicalCode + e->logicalIp;
     li->machineOffset = a->length();
+
+    for (Read* r = e->reads; r; r = r->next) {
+      Site* site = 0;
+      unsigned copyCost = Site::MaxCopyCost;
+      for (Site* s = r->value->sites; s; s = s->next) {
+        unsigned c = s->copyCost(c, r->target);
+        if (c < copyCost) {
+          site = s;
+          copyCost = c;
+        }
+      }
+
+      if (r->target) {
+        if (copyCost) {
+          addSite(c, r->size, r->value, r->target);
+
+          site->copyTo(c, r->size, r->target);
+        }
+
+        r->value->source = r->target;
+      } else {
+        r->value->source = site;
+      }
+
+      r->value->reads = r->value->reads->next;
+    }
+
+    for (Write* w = e->writes; w; w = w->next) {
+      if (w->value->reads and w->value->reads->target) {
+        w->value->target = w->value->reads->target;
+      } else {
+        w->value->target = freeRegister(c, w->size);
+      }
+
+      addSite(c, w->size, w->value, w->value->target);
+    }
 
     e->compile(c);
 
