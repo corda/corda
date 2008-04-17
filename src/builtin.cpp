@@ -713,6 +713,8 @@ Java_java_lang_Thread_interrupt(Thread* t, jclass, jlong peer)
 extern "C" JNIEXPORT jobject JNICALL
 Java_java_lang_Thread_getTrace(Thread* t, jclass, jlong peer)
 {
+  ENTER(t, Thread::ActiveState);
+
   if (reinterpret_cast<Thread*>(peer) == t) {
     return makeLocalReference(t, makeTrace(t));
   } else {

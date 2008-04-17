@@ -123,7 +123,7 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
     (&singletonValue(t, methodCompiled(t, method), 0));
 
   if (DebugMethodTree) {
-    fprintf(stderr, "find 0x%lx in (0x%lx,0x%lx)\n", ip, start,
+    fprintf(stderr, "find 0x%"LX" in (0x%"LX",0x%"LX")\n", ip, start,
             start + (singletonCount(t, methodCompiled(t, method))
                      * BytesPerWord));
   }

@@ -29,16 +29,18 @@
 
 #ifdef __i386__
 #  define LD "d"
+#  define LX "x"
+#  define LLD "lld"
 #ifdef __APPLE__
 #  define ULD "lu"
 #else
 #  define ULD "u"
 #endif
-#  define LLD "lld"
 #elif defined __x86_64__
 #  define LD "ld"
-#  define ULD "lu"
+#  define LX "lx"
 #  define LLD "ld"
+#  define ULD "lu"
 #else
 #  error "Unsupported architecture"
 #endif
