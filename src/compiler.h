@@ -77,7 +77,6 @@ class Compiler {
   virtual Operand* load(unsigned size, Operand* src) = 0;
   virtual Operand* loadz(unsigned size, Operand* src) = 0;
   virtual Operand* load4To8(Operand* src) = 0;
-  virtual Operand* dup(unsigned size, Operand* src) = 0;
   virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
   virtual void jl(Operand* address) = 0;
   virtual void jg(Operand* address) = 0;

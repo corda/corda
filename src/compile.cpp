@@ -847,7 +847,7 @@ class Frame {
   }
 
   void dup() {
-    c->push(BytesPerWord, c->dup(BytesPerWord, c->peek(BytesPerWord, 0)));
+    c->push(BytesPerWord, c->peek(BytesPerWord, 0));
 
     dupped();
   }
@@ -858,7 +858,7 @@ class Frame {
 
     c->push(BytesPerWord, s0);
     c->push(BytesPerWord, s1);
-    c->push(BytesPerWord, c->dup(BytesPerWord, s0));
+    c->push(BytesPerWord, s0);
 
     duppedX1();
   }
@@ -871,7 +871,7 @@ class Frame {
 
       c->push(BytesPerWord, s0);
       pushLongQuiet(s1);
-      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
+      c->push(BytesPerWord, s0);
     } else {
       Compiler::Operand* s1 = c->pop(BytesPerWord);
       Compiler::Operand* s2 = c->pop(BytesPerWord);
@@ -879,7 +879,7 @@ class Frame {
       c->push(BytesPerWord, s0);
       c->push(BytesPerWord, s2);
       c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
+      c->push(BytesPerWord, s0);
     }
 
     duppedX2();
@@ -887,15 +887,15 @@ class Frame {
 
   void dup2() {
     if (get(sp - 1) == Long) {
-      pushLongQuiet(c->dup(8, peekLong(0)));
+      pushLongQuiet(peekLong(0));
     } else {
       Compiler::Operand* s0 = c->pop(BytesPerWord);
       Compiler::Operand* s1 = c->pop(BytesPerWord);
 
       c->push(BytesPerWord, s1);
       c->push(BytesPerWord, s0);
-      c->push(BytesPerWord, c->dup(BytesPerWord, s1));
-      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
     }
 
     dupped2();
@@ -908,7 +908,7 @@ class Frame {
 
       pushLongQuiet(s0);
       c->push(BytesPerWord, s1);
-      pushLongQuiet(c->dup(8, s0));
+      pushLongQuiet(s0);
     } else {
       Compiler::Operand* s0 = c->pop(BytesPerWord);
       Compiler::Operand* s1 = c->pop(BytesPerWord);
@@ -917,8 +917,8 @@ class Frame {
       c->push(BytesPerWord, s1);
       c->push(BytesPerWord, s0);
       c->push(BytesPerWord, s2);
-      c->push(BytesPerWord, c->dup(BytesPerWord, s1));
-      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
     }
 
     dupped2X1();
@@ -933,7 +933,7 @@ class Frame {
 
         pushLongQuiet(s0);
         pushLongQuiet(s1);
-        pushLongQuiet(c->dup(8, s0));
+        pushLongQuiet(s0);
       } else {
         Compiler::Operand* s1 = c->pop(BytesPerWord);
         Compiler::Operand* s2 = c->pop(BytesPerWord);
@@ -941,7 +941,7 @@ class Frame {
         pushLongQuiet(s0);
         c->push(BytesPerWord, s2);
         c->push(BytesPerWord, s1);
-        pushLongQuiet(c->dup(8, s0));
+        pushLongQuiet(s0);
       }
     } else {
       Compiler::Operand* s0 = c->pop(BytesPerWord);
@@ -953,8 +953,8 @@ class Frame {
       c->push(BytesPerWord, s0);
       c->push(BytesPerWord, s3);
       c->push(BytesPerWord, s2);
-      c->push(BytesPerWord, c->dup(BytesPerWord, s1));
-      c->push(BytesPerWord, c->dup(BytesPerWord, s0));
+      c->push(BytesPerWord, s1);
+      c->push(BytesPerWord, s0);
     }
 
     dupped2X2();
@@ -1710,9 +1710,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } else if (exceptionHandler) {
       exceptionHandler = false;
       
-      c->indirectCall
+      c->call
         (c->constant(reinterpret_cast<intptr_t>(gcIfNecessary)),
+         context->indirection,
+         0,
          frame->trace(0, false),
+         0,
          1, c->thread());
     }
 
@@ -2098,7 +2101,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(doubleToInt)),
+         (c->constant(reinterpret_cast<intptr_t>(addDouble)),
           0, 0, 0, 8, 2, a, b));
     } break;
 
@@ -2833,27 +2836,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case l2d: {
-      Operand* a = frame->popLong();
-      
-      c->directCall
-        (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
-
-      Operand* result = c->result8();
-      frame->pushLong(result);
-      c->release(result);
-      c->release(a);
+      frame->pushLong
+        (c->call
+         (c->constant(reinterpret_cast<intptr_t>(longToDouble)),
+          0, 0, 0, 8, 1, frame->popLong()));
     } break;
 
     case l2f: {
-      Operand* a = frame->popLong();
-      
-      c->directCall
-        (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
-
-      Operand* result = c->result4();
-      frame->pushInt(result);
-      c->release(result);
-      c->release(a);
+      frame->pushInt
+        (c->call
+         (c->constant(reinterpret_cast<intptr_t>(longToFloat)),
+          0, 0, 0, 4, 1, frame->popLong()));
     } break;
 
     case l2i:
@@ -3819,7 +3812,7 @@ finish(MyThread* t, Context* context)
 
   if (Verbose) {
     logCompile
-      (start, c->codeSize(),
+      (start, codeSize,
        reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
        reinterpret_cast<const char*>
@@ -4332,11 +4325,13 @@ saveStackAndBase(MyThread* t, Assembler* a)
 {
   Assembler::Register base(a->base());
   Assembler::Memory baseDst(a->thread(), difference(&(t->base), t));
-  a->apply(Move, BytesPerWord, Register, &base, Memory, &baseDst);
+  a->apply(Move, BytesPerWord, RegisterOperand, &base,
+           MemoryOperand, &baseDst);
 
   Assembler::Register stack(a->stack());
   Assembler::Memory stackDst(a->thread(), difference(&(t->stack), t));
-  a->apply(Move, BytesPerWord, Register, &stack, Memory, &stackDst);
+  a->apply(Move, BytesPerWord, RegisterOperand, &stack,
+           MemoryOperand, &stackDst);
 }
 
 void
@@ -4346,9 +4341,10 @@ pushThread(MyThread*, Assembler* a)
 
   if (a->argumentRegisterCount()) {
     Assembler::Register arg(a->argumentRegister(0));
-    a->apply(Move, BytesPerWord, Register, &thread, Register, &arg);
+    a->apply(Move, BytesPerWord, RegisterOperand, &thread,
+             RegisterOperand, &arg);
   } else {
-    a->apply(Push, BytesPerWord, Register, &thread);
+    a->apply(Push, BytesPerWord, RegisterOperand, &thread);
   }
 }
 
@@ -4359,7 +4355,8 @@ popThread(MyThread*, Assembler* a)
     ResolvedPromise bpwPromise(BytesPerWord);
     Assembler::Constant bpw(&bpwPromise);
     Assembler::Register stack(a->stack());
-    a->apply(Add, BytesPerWord, Constant, &bpw, Register, &stack);
+    a->apply(Add, BytesPerWord, ConstantOperand, &bpw,
+             RegisterOperand, &stack);
   }
 }
 
@@ -4371,12 +4368,12 @@ compileDefault(MyThread* t, Assembler* a)
   
   ResolvedPromise procPromise(reinterpret_cast<intptr_t>(compileMethod));
   Assembler::Constant proc(&procPromise);
-  a->apply(Call, BytesPerWord, Constant, &proc);
+  a->apply(Call, BytesPerWord, ConstantOperand, &proc);
 
   popThread(t, a);
 
   Assembler::Register result(a->returnLow());
-  a->apply(Jump, BytesPerWord, Register, &result);
+  a->apply(Jump, BytesPerWord, RegisterOperand, &result);
 
   return finish(t, a, "default");
 }
@@ -4389,7 +4386,7 @@ compileNative(MyThread* t, Assembler* a)
 
   ResolvedPromise promise(reinterpret_cast<intptr_t>(invokeNative));
   Assembler::Constant proc(&promise);
-  a->apply(Call, BytesPerWord, Constant, &proc);
+  a->apply(Call, BytesPerWord, ConstantOperand, &proc);
   
   popThread(t, a);
 
@@ -5003,7 +5000,7 @@ processor(MyThread* t)
       saveStackAndBase(t, a);
 
       Assembler::Register proc(a->returnLow());
-      a->apply(Jump, BytesPerWord, Register, &proc);
+      a->apply(Jump, BytesPerWord, RegisterOperand, &proc);
 
       p->indirectCallerSize = a->length();
       p->indirectCaller = static_cast<uint8_t*>

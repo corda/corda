@@ -288,6 +288,12 @@ conditional(Context* c, unsigned condition, Assembler::Constant* a)
 }
 
 void
+moveCR(Context*, unsigned, Assembler::Constant*, Assembler::Register*);
+
+void
+callR(Context*, unsigned, Assembler::Register*);
+
+void
 callC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
@@ -399,9 +405,6 @@ jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 
   conditional(c, 0x8e, a);
 }
-
-void
-moveCR(Context*, unsigned, Assembler::Constant*, Assembler::Register*);
 
 void
 pushR(Context*, unsigned, Assembler::Register*);
@@ -950,6 +953,11 @@ void
 populateTables()
 {
   Operations[Return] = return_;
+
+  const int Constant = ConstantOperand;
+  const int Address = AddressOperand;
+  const int Register = RegisterOperand;
+  const int Memory = MemoryOperand;
 
   UnaryOperations[INDEX1(Call, Constant)] = CAST1(callC);
   UnaryOperations[INDEX1(Call, Register)] = CAST1(callR);

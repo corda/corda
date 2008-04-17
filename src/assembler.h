@@ -55,10 +55,10 @@ enum OperandType {
   AddressOperand,
   RegisterOperand,
   MemoryOperand,
-  StackOperand
+  StackOperand // for compiler use; not used in assembler
 };
 
-const unsigned OperandTypeCount = Memory + 1;
+const unsigned OperandTypeCount = MemoryOperand + 1;
 
 const int NoRegister = -1;
 const int AnyRegister = -2;
