@@ -51,10 +51,11 @@ enum BinaryOperation {
 const unsigned BinaryOperationCount = Xor + 1;
 
 enum OperandType {
-  Constant,
-  Address,
-  Register,
-  Memory
+  ConstantOperand,
+  AddressOperand,
+  RegisterOperand,
+  MemoryOperand,
+  StackOperand
 };
 
 const unsigned OperandTypeCount = Memory + 1;
