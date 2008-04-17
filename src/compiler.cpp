@@ -126,7 +126,7 @@ pick(Context* c, Site* sites, Site* target = 0, unsigned* cost = 0)
 }
 
 void
-syncStack(Context* c, Stack* start, unsigned count)
+stackSync(Context* c, Stack* start, unsigned count)
 {
   Stack* segment[count];
   unsigned index = count;
@@ -176,7 +176,7 @@ acquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
 
       assert(c, start);
 
-      syncStack(c, start, count);
+      stackSync(c, start, count);
     }
 
     for (Site** p = &(oldValue->sites); *p;) {
@@ -464,14 +464,17 @@ expect(Context* c, bool v)
 
 class Read {
  public:
-  Read(unsigned size, Value* value, Site* target, Read* next, Read* eventNext):
-    size(size), value(value), target(target), next(next), eventNext(eventNext)
+  Read(unsigned size, Value* value, Site* target, Read* next, Event* event,
+       Read* eventNext):
+    size(size), value(value), target(target), next(next), event(event),
+    eventNext(eventNext)
   { }
   
   unsigned size;
   Value* value;
   Site* target;
   Read* next;
+  Event* event;
   Read* eventNext;
 };
 
@@ -498,6 +501,12 @@ class Value: public Compiler::Operand {
   Site* source;
   Site* target;
 };
+
+Value*
+value(Context* c, Site* site = 0)
+{
+  return new (c->zone->allocate(sizeof(Value))) Value(site);
+}
 
 void
 apply(Context* c, UnaryOperation op, unsigned size, Value* a)
@@ -626,18 +635,39 @@ class Stack {
 };
 
 void
-addRead(Context* c, Value* v, unsigned size, Site* target)
+insertRead(Context* c, Event* thisEvent, Event* before, Value* v,
+           unsigned size, Site* target)
 {
   Read* r = new (c->zone->allocate(sizeof(Read)))
-    Read(v, size, target, 0, c->event-reads);
-  c->event->reads = r;
+    Read(v, size, target, 0, thisEvent, thisEvent-reads);
+  thisEvent->reads = r;
 
-  if (v->lastRead) {
-    r->lastRead->next = r;
-  } else {
-    v->reads = r;
+  if (before) {
+    for (Read** p = &(v->reads); *p;) {
+      if ((*p)->event->sequence >= before->sequence) {
+        r->next = *p;
+        *p = r;
+        break;
+      } else {
+        p = &((*p)->next);
+      }
+    }
   }
-  v->lastRead = r;
+
+  if (r->next == 0) {
+    if (v->lastRead) {
+      v->lastRead->next = r;
+    } else {
+      v->reads = r;
+    }
+    v->lastRead = r;
+  }
+}
+
+void
+addRead(Context* c, Value* v, unsigned size, Site* target)
+{
+  insertRead(c, c->event, 0, v, size, target);
 }
 
 void
@@ -651,27 +681,40 @@ class CallEvent: public Event {
  public:
   CallEvent(Context* c, Value* address, void* indirection, unsigned flags,
             TraceHandler* traceHandler, Value* result, unsigned resultSize,
+            Value** arguments, unsigned* argumentSizes,
             unsigned argumentCount):
     Event(c),
     address(address),
     indirection(indirection),
-    flags(flags),
     traceHandler(traceHandler),
-    result(result)
+    result(result),
+    flags(flags),
+    footprint(0)
   {
     addRead(c, address, BytesPerWord,
             (indirection ? registerSite(c, c->assembler->returnLow()) : 0));
 
+    Stack* oldStack = c.state->stack;
+
+    for (int i = argumentCount - 1; i >= 0; --i) {
+      ::push(c, argumentSizes[i], arguments[i]);
+    }
+
     unsigned index = 0;
-    Stack* s = stack;
-    for (unsigned i = 0; i < argumentCount; ++i) {
-      addRead(c, s->value, s->size * BytesPerWord,
-              index < c->assembler->argumentRegisterCount() ?
-              registerSite(c, c->assembler->argumentRegister(index)) :
-              stackSite(c, s));
+    for (int i = 0; i < argumentCount; ++i) {
+      Site* target;
+      if (index < c->assembler->argumentRegisterCount()) {
+        target = registerSite(c, c->assembler->argumentRegister(index));
+      } else {
+        target = stackSite(c, s);
+        footprint += s->size;
+      }
+      addRead(c, s->value, s->size * BytesPerWord, target);
       index += s->size;
       s = s->next;
     }
+
+    c.state->stack = oldStack;
 
     if (result) {
       addWrite(c, result, resultSize);
@@ -694,13 +737,21 @@ class CallEvent: public Event {
         (new (c->zone->allocate(sizeof(CodePromise)))
          CodePromise(c, c->assembler->length()));
     }
+
+    if (footprint) {
+      Assembler::Register stack(c->assembler->stack());
+      Assembler::Constant offset(resolved(c, footprint * BytesPerWord));
+      c->assembler->apply
+        (Add, BytesPerWord, Constant, &offset, Register, &stack);
+    }
   }
 
   Value* address;
   void* indirection;
-  unsigned flags;
   TraceHandler* traceHandler;
   Value* result;
+  unsigned flags;
+  unsigned footprint;
 };
 
 void
@@ -899,28 +950,88 @@ appendTranslate(Context* c, UnaryOperation type, unsigned size, Value* value,
 
 class MemoryEvent: public Event {
  public:
-  MemoryEvent(Context* c, Value* base, Value* index, Value* result):
-    Event(c), base(base), index(index), result(result)
+  MemoryEvent(Context* c, Value* base, int displacement, Value* index,
+              unsigned scale, Value* result):
+    Event(c), base(base), displacement(displacement), index(index),
+    scale(scale), result(result)
   {
     addRead(c, base, BytesPerWord, anyRegisterSite(c));
     if (index) addRead(c, index, BytesPerWord, anyRegisterSite(c));
-    addWrite(c, BytesPerWord, size);
   }
 
   virtual void compile(Context*) {
     fprintf(stderr, "MemoryEvent.compile\n");
+    
+    int baseRegister;
+    int indexRegister;
+    Read* read = reads;
+    if (index) {
+      assert(c, read->target->type(c) == RegisterOperand);
+      indexRegister = static_cast<RegisterSite*>(read->target)->register_.low;
+      read = read->eventNext;
+    } else {
+      indexRegister = NoRegister;
+    }
+    assert(c, read->target->type(c) == RegisterOperand);
+    baseRegister = static_cast<RegisterSite*>(read->target)->register_.low;
+
+    addSite(c, 0, 0, result, memorySite
+            (c, baseRegister, displacement, indexRegister, scale));
   }
 
   Value* base;
+  int displacement;
   Value* index;
+  unsigned scale;
   Value* result;
 };
 
 void
-appendMemory(Context* c, Value* base, Value* index, Value* result)
+appendMemory(Context* c, Value* base, int displacement, Value* index,
+             unsigned scale, Value* result)
 {
   new (c->zone->allocate(sizeof(MemoryEvent)))
-    MemoryEvent(c, base, index, result);
+    MemoryEvent(c, base, displacement, index, scale, result);
+}
+
+class StackSyncEvent: public Event {
+ public:
+  StackSyncEvent(Context* c, bool forCall):
+    Event(c)
+  {
+    unsigned i = 0;
+    for (Stack* s = stack; s; s = s->next) {
+      addRead(c, s->value, s->size * BytesPerWord,
+              forCall ? stackSite(c, s) : stackSyncSite(c, i, s->size));
+      i += s->size;
+    }
+  }
+
+  StackSyncEvent(Context* c, Event* next):
+    Event(c, next)
+  {
+    unsigned i = 0;
+    for (Stack* s = stack; s; s = s->next) {
+      insertRead(c, this, next, s->value, s->size * BytesPerWord,
+                 stackSyncSite(c, i, s->size));
+      i += s->size;
+    }
+  }
+
+  virtual void compile(Context* c) {
+    fprintf(stderr, "StackSyncEvent.compile\n");
+
+    for (Read* r = reads; r; r = r->eventNext) {
+      r->value->sites = r->target;
+      r->target->next = 0;
+    }
+  }
+};
+
+void
+appendStackSync(Context* c, bool forCall)
+{
+  new (c->zone->allocate(sizeof(StackSyncEvent))) StackSyncEvent(c, forCall);
 }
 
 void
@@ -1073,22 +1184,6 @@ pop(Context* c, unsigned size UNUSED)
   c->state->stack = s->next;
   return s->value;
 }
-// tbc
-void
-markStack(Context* c, Stack* stack)
-{
-  for (Stack* s = stack; s; s = s->next) {
-    if (s->operand->push) {
-      s->operand->push->markStack(c);
-    }
-  }
-}
-
-void
-markStack(Context* c)
-{
-  markStack(c, c->state->stack);
-}
 
 void
 updateJunctions(Context* c)
@@ -1099,7 +1194,9 @@ updateJunctions(Context* c)
     if (i->predecessor >= 0) {
       LogicalInstruction* p = c->logicalCode + i->predecessor;
 
-      markStack(c, p->lastEvent->stack);
+      p->lastEvent = p->lastEvent->next
+        = new (c->zone->allocate(sizeof(StackSyncEvent)))
+        StackSyncEvent(c, p->lastEvent->next);
     }
   }
 }
@@ -1239,11 +1336,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* promiseConstant(Promise* value) {
-    return operand(&c, ::constant(&c, value));
+    return ::value(&c, ::constantSite(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
-    return operand(&c, ::address(&c, address));
+    return value(&c, ::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -1251,41 +1348,38 @@ class MyCompiler: public Compiler {
                           Operand* index = 0,
                           unsigned scale = 1)
   {
-    MyOperand* result = operand
-      (&c, ::memory
-       (&c, static_cast<MyOperand*>(base), displacement,
-        static_cast<MyOperand*>(index), scale));
+    MyOperand* result = value(&c);
 
-    appendMemory(&c, static_cast<MyOperand*>(base),
-                 static_cast<MyOperand*>(index), result);
+    appendMemory(&c, static_cast<Value*>(base), displacement,
+                 static_cast<Value*>(index), scale, result);
 
     return result;
   }
 
   virtual Operand* stack() {
-    return operand(&c, register_(&c, c.assembler->stack()));
+    return value(&c, registerSite(&c, c.assembler->stack()));
   }
 
   virtual Operand* base() {
-    return operand(&c, register_(&c, c.assembler->base()));
+    return value(&c, registerSite(&c, c.assembler->base()));
   }
 
   virtual Operand* thread() {
-    return operand(&c, register_(&c, c.assembler->thread()));
+    return value(&c, registerSite(&c, c.assembler->thread()));
   }
 
   virtual bool isConstant(Operand* a) {
-    return static_cast<MyOperand*>(a)->value
-      and static_cast<MyOperand*>(a)->value->type(&c) == Constant;
+    return static_cast<Value*>(a)->value
+      and static_cast<Value*>(a)->value->type(&c) == ConstantOperand;
   }
 
   virtual int64_t constantValue(Operand* a) {
     assert(&c, isConstant(a));
-    return static_cast<MyOperand*>(a)->value->constantValue(&c);
+    return static_cast<Value*>(a)->value->constantValue(&c);
   }
 
   virtual Operand* label() {
-    return operand(&c, ::constant(&c, static_cast<Promise*>(0)));
+    return value(&c, ::constantSite(&c, static_cast<Promise*>(0)));
   }
 
   Promise* machineIp() {
@@ -1294,14 +1388,14 @@ class MyCompiler: public Compiler {
   }
 
   virtual void mark(Operand* label) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    static_cast<ConstantValue*>(static_cast<MyOperand*>(label)->value)->value
+    static_cast<ConstantValue*>(static_cast<Value*>(label)->value)->value
       = machineIp();
   }
 
   virtual void push(unsigned size, Operand* value) {
-    ::push(&c, size, static_cast<MyOperand*>(value));
+    ::push(&c, size, static_cast<Value*>(value));
   }
 
   virtual Operand* pop(unsigned size) {
@@ -1310,9 +1404,9 @@ class MyCompiler: public Compiler {
 
   virtual void pushed(unsigned count) {
     for (unsigned i = 0; i < count; ++i) {
-      MyOperand* a = operand(&c);
+      Value* a = value(&c);
       ::push(&c, BytesPerWord, a);
-      a->value = stackValue(&c, c.state->stack);
+      a->sites = stackSite(&c, c.state->stack);
     }
   }
 
@@ -1333,14 +1427,14 @@ class MyCompiler: public Compiler {
       i -= s->size;
     }
     assert(&c, s->size == ceiling(size, BytesPerWord));
-    return s->operand;
+    return s->value;
   }
 
   virtual Operand* call(Operand* address,
                         void* indirection,
                         unsigned flags,
                         TraceHandler* traceHandler,
-                        unsigned,
+                        unsigned resultSize,
                         unsigned argumentCount,
                         ...)
   {
@@ -1348,11 +1442,16 @@ class MyCompiler: public Compiler {
 
     unsigned footprint = 0;
     unsigned size = BytesPerWord;
+    Value* arguments[argumentCount];
+    unsigned argumentSizes[argumentCount];
+    unsigned index = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
-      MyOperand* o = va_arg(a, MyOperand*);
+      Value* o = va_arg(a, Value*);
       if (o) {
-        appendArgument(&c, size, o, footprint);
+        arguments[index] = o;
+        argumentSizes[index] = size;
         size = BytesPerWord;
+        ++ index;
       } else {
         size = 8;
       }
@@ -1361,174 +1460,176 @@ class MyCompiler: public Compiler {
 
     va_end(a);
 
-    markStack(&c);
+    appendStackSync(&c, true);
 
-    MyOperand* result = operand(&c);
-    appendCall(&c, static_cast<MyOperand*>(address), indirection, flags,
-               traceHandler, result);
+    Value* result = value(&c);
+    appendCall(&c, static_cast<Value*>(address), indirection, flags,
+               traceHandler, result, resultSize, arguments, argumentSizes,
+               index);
+
     return result;
   }
 
   virtual void return_(unsigned size, Operand* value) {
-    appendReturn(&c, size, static_cast<MyOperand*>(value));
+    appendReturn(&c, size, static_cast<Value*>(value));
   }
 
   virtual void store(unsigned size, Operand* src, Operand* dst) {
-    appendMove(&c, Move, size, static_cast<MyOperand*>(src),
-               static_cast<MyOperand*>(dst));
+    appendMove(&c, Move, size, static_cast<Value*>(src),
+               static_cast<Value*>(dst));
   }
 
   virtual Operand* load(unsigned size, Operand* src) {
-    MyOperand* dst = operand(&c);
-    appendMove(&c, Move, size, static_cast<MyOperand*>(src), dst);
+    Value* dst = value(&c);
+    appendMove(&c, Move, size, static_cast<Value*>(src), dst);
     return dst;
   }
 
   virtual Operand* loadz(unsigned size, Operand* src) {
-    MyOperand* dst = operand(&c);
-    appendMove(&c, MoveZ, size, static_cast<MyOperand*>(src), dst);
+    Value* dst = value(&c);
+    appendMove(&c, MoveZ, size, static_cast<Value*>(src), dst);
     return dst;
   }
 
   virtual Operand* load4To8(Operand* src) {
-    MyOperand* dst = operand(&c);
-    appendMove(&c, Move4To8, 0, static_cast<MyOperand*>(src), dst);
+    Value* dst = value(&c);
+    appendMove(&c, Move4To8, 0, static_cast<Value*>(src), dst);
     return dst;
   }
 
   virtual Operand* dup(unsigned size, Operand* src) {
-    MyOperand* dst = operand(&c);
-    appendDup(&c, size, static_cast<MyOperand*>(src), dst);
+    Value* dst = value(&c);
+    appendDup(&c, size, static_cast<Value*>(src), dst);
     return dst;
   }
 
   virtual void cmp(unsigned size, Operand* a, Operand* b) {
-    appendCompare(&c, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b));
+    appendCompare(&c, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b));
   }
 
   virtual void jl(Operand* address) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    appendBranch(&c, JumpIfLess, static_cast<MyOperand*>(address));
+    appendBranch(&c, JumpIfLess, static_cast<Value*>(address));
   }
 
   virtual void jg(Operand* address) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    appendBranch(&c, JumpIfGreater, static_cast<MyOperand*>(address));
+    appendBranch(&c, JumpIfGreater, static_cast<Value*>(address));
   }
 
   virtual void jle(Operand* address) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    appendBranch(&c, JumpIfLessOrEqual, static_cast<MyOperand*>(address));
+    appendBranch(&c, JumpIfLessOrEqual, static_cast<Value*>(address));
   }
 
   virtual void jge(Operand* address) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    appendBranch(&c, JumpIfGreaterOrEqual, static_cast<MyOperand*>(address));
+    appendBranch(&c, JumpIfGreaterOrEqual, static_cast<Value*>(address));
   }
 
   virtual void je(Operand* address) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    appendBranch(&c, JumpIfEqual, static_cast<MyOperand*>(address));
+    appendBranch(&c, JumpIfEqual, static_cast<Value*>(address));
   }
 
   virtual void jne(Operand* address) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    appendBranch(&c, JumpIfNotEqual, static_cast<MyOperand*>(address));
+    appendBranch(&c, JumpIfNotEqual, static_cast<Value*>(address));
   }
 
   virtual void jmp(Operand* address) {
-    markStack(&c);
+    appendStackSync(&c);
 
-    appendJump(&c, static_cast<MyOperand*>(address));
+    appendBranch(&c, Branch, static_cast<Value*>(address));
   }
 
   virtual Operand* add(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, Add, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, Add, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* sub(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, Subtract, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, Subtract, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* mul(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, Multiply, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, Multiply, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* div(unsigned size, Operand* a, Operand* b)  {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, Divide, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, Divide, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* rem(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, Remainder, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, Remainder, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* shl(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, ShiftLeft, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, ShiftLeft, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* shr(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, ShiftRight, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, ShiftRight, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* ushr(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, UnsignedShiftRight, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, UnsignedShiftRight, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* and_(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, And, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, And, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* or_(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, Or, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, Or, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) {
-    MyOperand* result = operand(&c);
-    appendCombine(&c, Xor, size, static_cast<MyOperand*>(a),
-                  static_cast<MyOperand*>(b), result);
+    Value* result = value(&c);
+    appendCombine(&c, Xor, size, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
     return result;
   }
 
   virtual Operand* neg(unsigned size, Operand* a) {
-    MyOperand* result = operand(&c);
-    appendTranslate(&c, Negate, size, static_cast<MyOperand*>(a), result);
+    Value* result = value(&c);
+    appendTranslate(&c, Negate, size, static_cast<Value*>(a), result);
     return result;
   }
 
