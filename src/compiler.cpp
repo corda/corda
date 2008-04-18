@@ -344,8 +344,8 @@ class ConstantSite: public Site {
  public:
   ConstantSite(Promise* value): value(value) { }
 
-  virtual unsigned copyCost(Context*, Site*) {
-    return 1;
+  virtual unsigned copyCost(Context*, Site* s) {
+    return (s == this ? 0 : 1);
   }
 
   virtual OperandType type(Context*) {
@@ -382,8 +382,8 @@ class AddressSite: public Site {
  public:
   AddressSite(Promise* address): address(address) { }
 
-  virtual unsigned copyCost(Context*, Site*) {
-    return 3;
+  virtual unsigned copyCost(Context*, Site* s) {
+    return (s == this ? 0 : 3);
   }
 
   virtual OperandType type(Context*) {
@@ -554,12 +554,12 @@ class ValueSite: public AbstractSite {
  public:
   ValueSite(Value* value): value(value) { }
 
-  virtual Site* readTarget(Context* c, Read*, Event* event) {
+  virtual Site* readTarget(Context* c, Read* r, Event* event) {
     Site* s = targetOrNull(c, value, event);
-    if (s->type(c) == RegisterOperand) {
+    if (s and s->type(c) == RegisterOperand) {
       return s;
     } else {
-      return 0;
+      return freeRegister(c, r->size, true);
     }
   }
 
@@ -598,19 +598,37 @@ class AnyRegisterSite: public AbstractSite {
   virtual Site* readTarget(Context* c, Read* r, Event*) {
     for (Site* s = r->value->sites; s; s = s->next) {
       if (s->type(c) == RegisterOperand) {
-        return 0;
+        return s;
       }
     }
     return freeRegister(c, r->size, true);
   }
-
-  Value* value;
 };
 
 AnyRegisterSite*
 anyRegisterSite(Context* c)
 {
   return new (c->zone->allocate(sizeof(AnyRegisterSite))) AnyRegisterSite();
+}
+
+class ConstantOrRegisterSite: public AbstractSite {
+ public:
+  virtual Site* readTarget(Context* c, Read* r, Event*) {
+    for (Site* s = r->value->sites; s; s = s->next) {
+      OperandType t = s->type(c);
+      if (t == ConstantOperand or t == RegisterOperand) {
+        return s;
+      }
+    }
+    return freeRegister(c, r->size, true);
+  }
+};
+
+ConstantOrRegisterSite*
+constantOrRegisterSite(Context* c)
+{
+  return new (c->zone->allocate(sizeof(ConstantOrRegisterSite)))
+    ConstantOrRegisterSite();
 }
 
 Value*
@@ -998,7 +1016,9 @@ class CombineEvent: public Event {
     c->assembler->getTargets(type, size, &r1, &r2);
 
     addRead(c, first, size,
-            r1.low == NoRegister ? 0 : registerSite(c, r1.low, r1.high));
+            r1.low == NoRegister ?
+            constantOrRegisterSite(c) :
+            static_cast<Site*>(registerSite(c, r1.low, r1.high)));
     addRead(c, second, size,
             r2.low == NoRegister ?
             valueSite(c, result) :
@@ -1328,7 +1348,9 @@ compile(Context* c)
 
     for (Read* r = e->reads; r; r = r->eventNext) {
       r->value->source = readSource(c, e->stack, r, e);
+    }
 
+    for (Read* r = e->reads; r; r = r->eventNext) {
       r->value->reads = r->value->reads->next;
     }
 
@@ -1420,11 +1442,16 @@ bool
 used(Context* c, int r)
 {
   Value* v = c->registers[r].value;
-  return v
-    and findSite(c, v, c->registers[r].site)
+  return v and findSite(c, v, c->registers[r].site) and v->reads;
+}
+
+bool
+usedExclusively(Context* c, int r)
+{
+  Value* v = c->registers[r].value;
+  return used(c, r)
     and v->pushCount == 0
-    and v->sites->next == 0
-    and v->reads;
+    and v->sites->next == 0;
 }
 
 int
@@ -1434,6 +1461,15 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
     if (i != except
         and (not c->registers[i].reserved)
         and (not used(c, i)))
+    {
+      return i;
+    }
+  }
+
+  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
+    if (i != except
+        and (not c->registers[i].reserved)
+        and (not usedExclusively(c, i)))
     {
       return i;
     }
