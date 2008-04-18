@@ -518,7 +518,10 @@ acquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
         Site* newSite)
 {
   Value* oldValue = c->registers[r].value;
-  if (oldValue and findSite(c, oldValue, c->registers[r].site)) {
+  if (oldValue
+      and oldValue != newValue
+      and findSite(c, oldValue, c->registers[r].site))
+  {
     if (oldValue->pushCount == 0
         and oldValue->sites->next == 0
         and oldValue->reads)
@@ -714,7 +717,7 @@ push(Context* c, unsigned size, Value* v);
 class CallEvent: public Event {
  public:
   CallEvent(Context* c, Value* address, void* indirection, unsigned flags,
-            TraceHandler* traceHandler, Value* result,
+            TraceHandler* traceHandler, Value* result, unsigned resultSize,
             unsigned argumentFootprint):
     Event(c),
     address(address),
@@ -722,6 +725,7 @@ class CallEvent: public Event {
     traceHandler(traceHandler),
     result(result),
     flags(flags),
+    resultSize(resultSize),
     argumentFootprint(argumentFootprint)
   {
     addRead(c, address, BytesPerWord,
@@ -740,7 +744,9 @@ class CallEvent: public Event {
     }
 
     addSite(c, 0, 0, result, registerSite
-            (c, c->assembler->returnLow(), c->assembler->returnHigh()));
+            (c, c->assembler->returnLow(),
+             resultSize > BytesPerWord ?
+             c->assembler->returnHigh() : NoRegister));
 
     if (traceHandler) {
       traceHandler->handleTrace
@@ -762,19 +768,20 @@ class CallEvent: public Event {
   TraceHandler* traceHandler;
   Value* result;
   unsigned flags;
+  unsigned resultSize;
   unsigned argumentFootprint;
 };
 
 void
 appendCall(Context* c, Value* address, void* indirection, unsigned flags,
-           TraceHandler* traceHandler, Value* result,
+           TraceHandler* traceHandler, Value* result, unsigned resultSize,
             unsigned argumentFootprint)
 {
   fprintf(stderr, "appendCall\n");
 
   new (c->zone->allocate(sizeof(CallEvent)))
     CallEvent(c, address, indirection, flags, traceHandler, result,
-              argumentFootprint);
+              resultSize, argumentFootprint);
 }
 
 class ReturnEvent: public Event {
@@ -1319,20 +1326,31 @@ updateJunctions(Context* c)
   }
 }
 
+bool
+used(Context* c, int r)
+{
+  Value* v = c->registers[r].value;
+  return v
+    and findSite(c, v, c->registers[r].site)
+    and v->pushCount == 0
+    and v->sites->next == 0
+    and v->reads;
+}
+
 int
 freeRegisterExcept(Context* c, int except, bool allowAcquired)
 {
-  for (int i = c->assembler->registerCount(); i >= 0; --i) {
+  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
     if (i != except
         and (not c->registers[i].reserved)
-        and c->registers[i].value == 0)
+        and (not used(c, i)))
     {
       return i;
     }
   }
 
   if (allowAcquired) {
-    for (int i = c->assembler->registerCount(); i >= 0; --i) {
+    for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
       if (i != except
           and (not c->registers[i].reserved))
       {
@@ -1562,7 +1580,7 @@ class MyCompiler: public Compiler {
                         void* indirection,
                         unsigned flags,
                         TraceHandler* traceHandler,
-                        unsigned,
+                        unsigned resultSize,
                         unsigned argumentCount,
                         ...)
   {
@@ -1617,7 +1635,7 @@ class MyCompiler: public Compiler {
 
     Value* result = value(&c);
     appendCall(&c, static_cast<Value*>(address), indirection, flags,
-               traceHandler, result, footprint);
+               traceHandler, result, resultSize, footprint);
 
     return result;
   }

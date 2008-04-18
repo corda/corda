@@ -3810,6 +3810,14 @@ finish(MyThread* t, Context* context)
     set(t, methodCode(t, context->method), CodePool, map);
   }
 
+  for (PoolElement* p = context->objectPool; p; p = p->next) {
+    intptr_t offset = p->address->value() - reinterpret_cast<intptr_t>(start);
+
+    singletonMarkObject(t, result, offset / BytesPerWord);
+
+    set(t, result, SingletonBody + offset, p->value);
+  }
+
   if (Verbose) {
     logCompile
       (start, codeSize,
@@ -3822,15 +3830,15 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (false and
+  if (true or//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/System") == 0 and
+       "Misc") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "getProperty") == 0)
+       "main") == 0)
   {
     asm("int3");
   }
