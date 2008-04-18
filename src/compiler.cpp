@@ -513,6 +513,20 @@ class AbstractSite: public Site {
 };
 
 Site*
+targetOrNull(Context* c, Read* r, Event* event)
+{
+  Value* v = r->value;
+  if (v->sites) {
+    assert(c, v->sites->next == 0);
+    return v->sites;
+  } else if (r->target) {
+    return r->target->readTarget(c, r, event);
+  } else {
+    return 0;
+  }
+}
+
+Site*
 targetOrNull(Context* c, Value* v, Event* event)
 {
   if (v->sites) {
@@ -563,7 +577,7 @@ class MoveSite: public AbstractSite {
   MoveSite(Value* value): value(value) { }
 
   virtual Site* readTarget(Context* c, Read* read, Event* event) {
-    if (read->event->sequence == event->sequence + 1) {
+    if (event->next == read->event) {
       return targetOrNull(c, value, event);
     } else {
       return 0;
@@ -884,9 +898,18 @@ class MoveEvent: public Event {
   virtual void compile(Context* c) {
     fprintf(stderr, "MoveEvent.compile\n");
 
-    Site* target = targetOrRegister(c, size, dst, this);
-    if (src->source->copyCost(c, target)) {
-      apply(c, type, size, src->source, target);
+    Site* target;
+    if (type == Move
+        and size >= BytesPerWord
+        and dst->reads
+        and next == dst->reads->event)
+    {
+      target = src->source;
+    } else {
+      target = targetOrRegister(c, size, dst, this);
+      if (src->source->copyCost(c, target)) {
+        apply(c, type, size, src->source, target);
+      }
     }
     addSite(c, stack, size, dst, target);
   }
@@ -1149,12 +1172,16 @@ appendStackSync(Context* c)
   new (c->zone->allocate(sizeof(StackSyncEvent))) StackSyncEvent(c);
 }
 
+Site*
+pushSite(Context*, PushEvent*);
+
 class PushEvent: public Event {
  public:
   PushEvent(Context* c):
     Event(c), active(false)
   {
     stack->pushEvent = this;
+    addRead(c, stack->value, stack->size * BytesPerWord, pushSite(c, this));
   }
 
   virtual void compile(Context* c) {
@@ -1167,6 +1194,27 @@ class PushEvent: public Event {
 
   bool active;
 };
+
+class PushSite: public AbstractSite {
+ public:
+  PushSite(PushEvent* event): event(event) { }
+
+  virtual Site* readTarget(Context* c, Read* r, Event* e) {
+    if (r->next and (not event->active)) {
+      return targetOrNull(c, r->next, e);
+    } else {
+      return 0;
+    }
+  }
+
+  PushEvent* event;
+};
+
+Site*
+pushSite(Context* c, PushEvent* e)
+{
+  return new (c->zone->allocate(sizeof(PushSite))) PushSite(e);
+}
 
 void
 appendPush(Context* c)
