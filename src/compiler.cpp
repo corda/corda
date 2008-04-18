@@ -37,7 +37,7 @@ class Site {
   
   virtual ~Site() { }
 
-  virtual Site* readTarget(Context*, Read*) { return this; }
+  virtual Site* readTarget(Context*, Read*, Event*) { return this; }
 
   virtual unsigned copyCost(Context*, Site*) = 0;
   
@@ -184,6 +184,130 @@ class Context {
   unsigned constantCount;
   Junction* junctions;
   uint8_t* machineCode;
+};
+
+class PoolPromise: public Promise {
+ public:
+  PoolPromise(Context* c, int key): c(c), key(key) { }
+
+  virtual int64_t value() {
+    if (resolved()) {
+      return reinterpret_cast<intptr_t>
+        (c->machineCode + pad(c->assembler->length()) + (key * BytesPerWord));
+    }
+    
+    abort(c);
+  }
+
+  virtual bool resolved() {
+    return c->machineCode != 0;
+  }
+
+  Context* c;
+  int key;
+};
+
+class CodePromise: public Promise {
+ public:
+  CodePromise(Context* c, CodePromise* next): c(c), offset(-1), next(next) { }
+
+  CodePromise(Context* c, int offset): c(c), offset(offset), next(0) { }
+
+  virtual int64_t value() {
+    if (resolved()) {
+      return reinterpret_cast<intptr_t>(c->machineCode + offset);
+    }
+    
+    abort(c);
+  }
+
+  virtual bool resolved() {
+    return c->machineCode != 0 and offset >= 0;
+  }
+
+  Context* c;
+  int offset;
+  CodePromise* next;
+};
+
+class IpPromise: public Promise {
+ public:
+  IpPromise(Context* c, int logicalIp):
+    c(c),
+    logicalIp(logicalIp)
+  { }
+
+  virtual int64_t value() {
+    if (resolved()) {
+      return reinterpret_cast<intptr_t>
+        (c->machineCode + c->logicalCode[logicalIp].machineOffset);
+    }
+
+    abort(c);
+  }
+
+  virtual bool resolved() {
+    return c->machineCode != 0;
+  }
+
+  Context* c;
+  int logicalIp;
+};
+
+inline void NO_RETURN
+abort(Context* c)
+{
+  abort(c->system);
+}
+
+#ifndef NDEBUG
+inline void
+assert(Context* c, bool v)
+{
+  assert(c->system, v);
+}
+#endif // not NDEBUG
+
+inline void
+expect(Context* c, bool v)
+{
+  expect(c->system, v);
+}
+
+class Event {
+ public:
+  Event(Context* c):
+    next(0), stack(c->state->stack), promises(0), reads(0),
+    logicalIp(c->logicalIp)
+  {
+    assert(c, c->logicalIp >= 0);
+
+    if (c->lastEvent) {
+      c->lastEvent->next = this;
+      sequence = c->lastEvent->sequence + 1;
+    } else {
+      c->firstEvent = this;
+      sequence = 0;
+    }
+
+    c->lastEvent = this;
+  }
+
+  Event(Context*, Event* next):
+    next(next), stack(next->stack), promises(0), reads(0),
+    sequence(next->sequence), logicalIp(next->logicalIp)
+  { }
+
+  virtual ~Event() { }
+
+  virtual void compile(Context* c) = 0;
+
+  Event* next;
+  Stack* stack;
+  CodePromise* promises;
+  Read* reads;
+  unsigned sequence;
+  unsigned logicalIp;
 };
 
 void
@@ -388,13 +512,38 @@ class AbstractSite: public Site {
   }
 };
 
+Site*
+targetOrNull(Context* c, Value* v, Event* event)
+{
+  if (v->sites) {
+    assert(c, v->sites->next == 0);
+    return v->sites;
+  } else if (v->reads and v->reads->target) {
+    return v->reads->target->readTarget(c, v->reads, event);
+  } else {
+    return 0;
+  }
+}
+
+Site*
+targetOrRegister(Context* c, unsigned size, Value* v, Event* event)
+{
+  Site* s = targetOrNull(c, v, event);
+  if (s) {
+    return s;
+  } else {
+    return freeRegister(c, size, true);
+  }
+}
+
 class ValueSite: public AbstractSite {
  public:
   ValueSite(Value* value): value(value) { }
 
-  virtual Site* readTarget(Context* c, Read*) {
-    if (value->reads and value->reads->target) {
-      return value->reads->target->readTarget(c, value->reads);
+  virtual Site* readTarget(Context* c, Read*, Event* event) {
+    Site* s = targetOrNull(c, value, event);
+    if (s->type(c) == RegisterOperand) {
+      return s;
     } else {
       return 0;
     }
@@ -409,9 +558,30 @@ valueSite(Context* c, Value* v)
   return new (c->zone->allocate(sizeof(ValueSite))) ValueSite(v);
 }
 
+class MoveSite: public AbstractSite {
+ public:
+  MoveSite(Value* value): value(value) { }
+
+  virtual Site* readTarget(Context* c, Read* read, Event* event) {
+    if (read->event->sequence == event->sequence + 1) {
+      return targetOrNull(c, value, event);
+    } else {
+      return 0;
+    }
+  }
+
+  Value* value;
+};
+
+MoveSite*
+moveSite(Context* c, Value* v)
+{
+  return new (c->zone->allocate(sizeof(MoveSite))) MoveSite(v);
+}
+
 class AnyRegisterSite: public AbstractSite {
  public:
-  virtual Site* readTarget(Context* c, Read* r) {
+  virtual Site* readTarget(Context* c, Read* r, Event*) {
     for (Site* s = r->value->sites; s; s = s->next) {
       if (s->type(c) == RegisterOperand) {
         return 0;
@@ -427,26 +597,6 @@ AnyRegisterSite*
 anyRegisterSite(Context* c)
 {
   return new (c->zone->allocate(sizeof(AnyRegisterSite))) AnyRegisterSite();
-}
-
-inline void NO_RETURN
-abort(Context* c)
-{
-  abort(c->system);
-}
-
-#ifndef NDEBUG
-inline void
-assert(Context* c, bool v)
-{
-  assert(c->system, v);
-}
-#endif // not NDEBUG
-
-inline void
-expect(Context* c, bool v)
-{
-  expect(c->system, v);
 }
 
 Value*
@@ -570,110 +720,6 @@ apply(Context* c, BinaryOperation op, unsigned size, Site* a, Site* b)
 
   c->assembler->apply(op, size, aType, aOperand, bType, bOperand);
 }
-
-class PoolPromise: public Promise {
- public:
-  PoolPromise(Context* c, int key): c(c), key(key) { }
-
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<intptr_t>
-        (c->machineCode + pad(c->assembler->length()) + (key * BytesPerWord));
-    }
-    
-    abort(c);
-  }
-
-  virtual bool resolved() {
-    return c->machineCode != 0;
-  }
-
-  Context* c;
-  int key;
-};
-
-class CodePromise: public Promise {
- public:
-  CodePromise(Context* c, CodePromise* next): c(c), offset(-1), next(next) { }
-
-  CodePromise(Context* c, int offset): c(c), offset(offset), next(0) { }
-
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<intptr_t>(c->machineCode + offset);
-    }
-    
-    abort(c);
-  }
-
-  virtual bool resolved() {
-    return c->machineCode != 0 and offset >= 0;
-  }
-
-  Context* c;
-  int offset;
-  CodePromise* next;
-};
-
-class IpPromise: public Promise {
- public:
-  IpPromise(Context* c, int logicalIp):
-    c(c),
-    logicalIp(logicalIp)
-  { }
-
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<intptr_t>
-        (c->machineCode + c->logicalCode[logicalIp].machineOffset);
-    }
-
-    abort(c);
-  }
-
-  virtual bool resolved() {
-    return c->machineCode != 0;
-  }
-
-  Context* c;
-  int logicalIp;
-};
-
-class Event {
- public:
-  Event(Context* c):
-    next(0), stack(c->state->stack), promises(0), reads(0),
-    logicalIp(c->logicalIp)
-  {
-    assert(c, c->logicalIp >= 0);
-
-    if (c->lastEvent) {
-      c->lastEvent->next = this;
-      sequence = c->lastEvent->sequence + 1;
-    } else {
-      c->firstEvent = this;
-      sequence = 0;
-    }
-
-    c->lastEvent = this;
-  }
-
-  Event(Context*, Event* next):
-    next(next), stack(next->stack), promises(0), reads(0),
-    sequence(next->sequence), logicalIp(next->logicalIp)
-  { }
-
-  virtual ~Event() { }
-
-  virtual void compile(Context* c) = 0;
-
-  Event* next;
-  Stack* stack;
-  CodePromise* promises;
-  Read* reads;
-  unsigned sequence;
-  unsigned logicalIp;
-};
 
 void
 insertRead(Context* c, Event* thisEvent, Event* before, Value* v,
@@ -820,33 +866,28 @@ appendReturn(Context* c, unsigned size, Value* value)
   new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, size, value);
 }
 
-Site*
-writeTarget(Context* c, unsigned size, Value* v)
-{
-  if (v->sites) {
-    assert(c, v->sites->next == 0);
-    return v->sites;
-  } else if (v->reads and v->reads->target) {
-    Site* s = v->reads->target->readTarget(c, v->reads);
-    if (s) return s;
-  }
-  return freeRegister(c, size, true);
-}
-
 class MoveEvent: public Event {
  public:
   MoveEvent(Context* c, BinaryOperation type, unsigned size, Value* src,
             Value* dst):
     Event(c), type(type), size(size), src(src), dst(dst)
   {
-    addRead(c, src, size, 0);
+    Site* target;
+    if (type == Move and size >= BytesPerWord) {
+      target = moveSite(c, dst);
+    } else {
+      target = 0;
+    }
+    addRead(c, src, size, target);
   }
 
   virtual void compile(Context* c) {
     fprintf(stderr, "MoveEvent.compile\n");
 
-    Site* target = writeTarget(c, size, dst);
-    apply(c, type, size, src->source, target);
+    Site* target = targetOrRegister(c, size, dst, this);
+    if (src->source->copyCost(c, target)) {
+      apply(c, type, size, src->source, target);
+    }
     addSite(c, stack, size, dst, target);
   }
 
@@ -1153,7 +1194,8 @@ class PopEvent: public Event {
 
           fprintf(stderr, "pop %p\n", s);
 
-          Site* target = writeTarget(c, s->size * BytesPerWord, s->value);
+          Site* target = targetOrRegister
+            (c, s->size * BytesPerWord, s->value, this);
 
           apply(c, Pop, BytesPerWord * s->size, target);
           -- s->value->pushCount;
@@ -1195,9 +1237,9 @@ appendPop(Context* c, unsigned count, bool ignore)
 }
 
 Site*
-readSource(Context* c, Stack* stack, Read* r)
+readSource(Context* c, Stack* stack, Read* r, Event* e)
 {
-  Site* target = (r->target ? r->target->readTarget(c, r) : 0);
+  Site* target = (r->target ? r->target->readTarget(c, r, e) : 0);
 
   unsigned copyCost;
   Site* site = pick(c, r->value->sites, target, &copyCost);
@@ -1237,7 +1279,7 @@ compile(Context* c)
     li->machineOffset = a->length();
 
     for (Read* r = e->reads; r; r = r->eventNext) {
-      r->value->source = readSource(c, e->stack, r);
+      r->value->source = readSource(c, e->stack, r, e);
 
       r->value->reads = r->value->reads->next;
     }
