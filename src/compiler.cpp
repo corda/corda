@@ -20,6 +20,7 @@ class Value;
 class Stack;
 class Site;
 class Event;
+class Read;
 
 void NO_RETURN abort(Context*);
 
@@ -35,7 +36,7 @@ class Site {
   
   virtual ~Site() { }
 
-  virtual Site* resolve(Context*, unsigned) { return this; }
+  virtual Site* readTarget(Context*, Read*) { return this; }
 
   virtual unsigned copyCost(Context*, Site*) = 0;
 
@@ -127,28 +128,16 @@ class Read {
   Read* eventNext;
 };
 
-class Write {
- public:
-  Write(unsigned size, Value* value, Write* eventNext):
-    size(size), value(value), eventNext(eventNext)
-  { }
-  
-  unsigned size;
-  Value* value;
-  Write* eventNext;
-};
-
 class Value: public Compiler::Operand {
  public:
   Value(Site* site):
-    reads(0), lastRead(0), sites(site), source(0), target(0)
+    reads(0), lastRead(0), sites(site), source(0)
   { }
   
   Read* reads;
   Read* lastRead;
   Site* sites;
   Site* source;
-  Site* target;
 };
 
 class Context {
@@ -203,6 +192,28 @@ addSite(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
   s->acquire(c, stack, size, v, s);
   s->next = v->sites;
   v->sites = s;
+}
+
+bool
+findSite(Context*, Value* v, Site* site)
+{
+  for (Site* s = v->sites; s; s = s->next) {
+    if (s == site) return true;
+  }
+  return false;
+}
+
+void
+removeSite(Context*, Value* v, Site* s)
+{
+  for (Site** p = &(v->sites); *p;) {
+    if (s == *p) {
+      *p = (*p)->next;
+      break;
+    } else {
+      p = &((*p)->next);
+    }
+  }
 }
 
 class ConstantSite: public Site {
@@ -381,8 +392,12 @@ class ValueSite: public AbstractSite {
  public:
   ValueSite(Value* value): value(value) { }
 
-  virtual Site* resolve(Context*, unsigned) {
-    return value->sites;
+  virtual Site* readTarget(Context* c, Read*) {
+    if (value->reads and value->reads->target) {
+      return value->reads->target->readTarget(c, value->reads);
+    } else {
+      return 0;
+    }
   }
 
   Value* value;
@@ -396,8 +411,13 @@ valueSite(Context* c, Value* v)
 
 class AnyRegisterSite: public AbstractSite {
  public:
-  virtual Site* resolve(Context* c, unsigned size) {
-    return freeRegister(c, size, true);
+  virtual Site* readTarget(Context* c, Read* r) {
+    for (Site* s = r->value->sites; s; s = s->next) {
+      if (s->type(c) == RegisterOperand) {
+        return 0;
+      }
+    }
+    return freeRegister(c, r->size, true);
   }
 
   Value* value;
@@ -516,7 +536,7 @@ acquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
         Site* newSite)
 {
   Value* oldValue = c->registers[r].value;
-  if (oldValue) {
+  if (oldValue and findSite(c, oldValue, c->registers[r].site)) {
     if (oldValue->sites->next == 0 and oldValue->reads) {
       unsigned count = 0;
       Stack* start = 0;
@@ -534,14 +554,7 @@ acquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
       stackSync(c, start, count);
     }
 
-    for (Site** p = &(oldValue->sites); *p;) {
-      if (c->registers[r].site == *p) {
-        *p = (*p)->next;
-        break;
-      } else {
-        p = &((*p)->next);
-      }
-    }
+    removeSite(c, oldValue, c->registers[r].site);
   }
 
   c->registers[r].size = newSize;
@@ -641,7 +654,7 @@ class IpPromise: public Promise {
 class Event {
  public:
   Event(Context* c):
-    next(0), stack(c->state->stack), promises(0), reads(0), writes(0),
+    next(0), stack(c->state->stack), promises(0), reads(0),
     logicalIp(c->logicalIp)
   {
     assert(c, c->logicalIp >= 0);
@@ -658,7 +671,7 @@ class Event {
   }
 
   Event(Context*, Event* next):
-    next(next), stack(next->stack), promises(0), reads(0), writes(0),
+    next(next), stack(next->stack), promises(0), reads(0),
     sequence(next->sequence), logicalIp(next->logicalIp)
   { }
 
@@ -670,7 +683,6 @@ class Event {
   Stack* stack;
   CodePromise* promises;
   Read* reads;
-  Write* writes;
   unsigned sequence;
   unsigned logicalIp;
 };
@@ -712,19 +724,12 @@ addRead(Context* c, Value* v, unsigned size, Site* target)
 }
 
 void
-addWrite(Context* c, Value* v, unsigned size)
-{
-  c->lastEvent->writes = new (c->zone->allocate(sizeof(Write)))
-    Write(size, v, c->lastEvent->writes);
-}
-
-void
 push(Context* c, unsigned size, Value* v);
 
 class CallEvent: public Event {
  public:
   CallEvent(Context* c, Value* address, void* indirection, unsigned flags,
-            TraceHandler* traceHandler, Value* result, unsigned resultSize,
+            TraceHandler* traceHandler, Value* result, unsigned,
             Value** arguments, unsigned* argumentSizes,
             unsigned argumentCount):
     Event(c),
@@ -758,10 +763,6 @@ class CallEvent: public Event {
     }
 
     c->state->stack = stack;
-
-    if (result) {
-      addWrite(c, result, resultSize);
-    }
   }
 
   virtual void compile(Context* c) {
@@ -774,6 +775,9 @@ class CallEvent: public Event {
     } else {
       apply(c, type, BytesPerWord, address->source);
     }
+
+    addSite(c, 0, 0, result, registerSite
+            (c, c->assembler->returnLow(), c->assembler->returnHigh()));
 
     if (traceHandler) {
       traceHandler->handleTrace
@@ -841,6 +845,19 @@ appendReturn(Context* c, unsigned size, Value* value)
   new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, size, value);
 }
 
+Site*
+writeTarget(Context* c, unsigned size, Value* v)
+{
+  if (v->sites) {
+    assert(c, v->sites->next == 0);
+    return v->sites;
+  } else if (v->reads and v->reads->target) {
+    Site* s = v->reads->target->readTarget(c, v->reads);
+    if (s) return s;
+  }
+  return freeRegister(c, size, true);
+}
+
 class MoveEvent: public Event {
  public:
   MoveEvent(Context* c, BinaryOperation type, unsigned size, Value* src,
@@ -848,13 +865,14 @@ class MoveEvent: public Event {
     Event(c), type(type), size(size), src(src), dst(dst)
   {
     addRead(c, src, size, 0);
-    addWrite(c, dst, size);
   }
 
   virtual void compile(Context* c) {
     fprintf(stderr, "MoveEvent.compile\n");
 
-    apply(c, type, size, src->source, dst->target);
+    Site* target = writeTarget(c, size, dst);
+    apply(c, type, size, src->source, target);
+    addSite(c, stack, size, dst, target);
   }
 
   BinaryOperation type;
@@ -940,13 +958,14 @@ class CombineEvent: public Event {
             r2.low == NoRegister ?
             valueSite(c, result) :
             static_cast<Site*>(registerSite(c, r2.low, r2.high)));
-    addWrite(c, result, size);
   }
 
   virtual void compile(Context* c) {
     fprintf(stderr, "CombineEvent.compile\n");
 
     apply(c, type, size, first->source, second->source);
+    removeSite(c, second, second->source);
+    addSite(c, 0, 0, result, second->source);
   }
 
   BinaryOperation type;
@@ -971,13 +990,14 @@ class TranslateEvent: public Event {
     Event(c), type(type), size(size), value(value), result(result)
   {
     addRead(c, value, size, valueSite(c, result));
-    addWrite(c, result, size);
   }
 
   virtual void compile(Context* c) {
     fprintf(stderr, "TranslateEvent.compile\n");
 
     apply(c, type, size, value->source);
+    removeSite(c, value, value->source);
+    addSite(c, 0, 0, result, value->source);
   }
 
   UnaryOperation type;
@@ -1008,18 +1028,15 @@ class MemoryEvent: public Event {
   virtual void compile(Context* c) {
     fprintf(stderr, "MemoryEvent.compile\n");
     
-    int baseRegister;
     int indexRegister;
-    Read* read = reads;
     if (index) {
-      assert(c, read->target->type(c) == RegisterOperand);
-      indexRegister = static_cast<RegisterSite*>(read->target)->register_.low;
-      read = read->eventNext;
+      assert(c, index->source->type(c) == RegisterOperand);
+      indexRegister = static_cast<RegisterSite*>(index->source)->register_.low;
     } else {
       indexRegister = NoRegister;
     }
-    assert(c, read->target->type(c) == RegisterOperand);
-    baseRegister = static_cast<RegisterSite*>(read->target)->register_.low;
+    assert(c, base->source->type(c) == RegisterOperand);
+    int baseRegister = static_cast<RegisterSite*>(base->source)->register_.low;
 
     addSite(c, 0, 0, result, memorySite
             (c, baseRegister, displacement, indexRegister, scale));
@@ -1103,15 +1120,43 @@ appendStackSync(Context* c, bool forCall = false)
 }
 
 Site*
-target(Context* c, unsigned size, Value* value)
+readSource(Context* c, Stack* stack, Read* r)
 {
-  if (value->reads
-      and value->reads->target
-      and not value->reads->target->type(c) == StackOperand)
-  {
-    return value->reads->target;
+  Site* target = (r->target ? r->target->readTarget(c, r) : 0);
+
+  unsigned copyCost;
+  Site* site = pick(c, r->value->sites, target, &copyCost);
+
+  if (site->type(c) == StackOperand) {
+    bool success = false;;
+    for (Stack* s = stack; s; s = s->next) {
+      if (s->pushed) {
+        target = writeTarget(c, s->size * BytesPerWord, s->value);
+
+        addSite(c, stack, s->size * BytesPerWord, s->value, target);
+
+        s->pushed = false;
+        if (s == static_cast<StackSite*>(site)->stack) {
+          site = pick(c, r->value->sites, target, &copyCost);
+          success = true;
+          break;
+        }
+      }
+    }
+
+    assert(c, success);
+  }
+
+  if (target) {
+    if (copyCost) {
+      addSite(c, stack, r->size, r->value, target);
+
+      target->accept(c, r->size, site);
+    }
+
+    return target;
   } else {
-    return freeRegister(c, size, true);
+    return site;
   }
 }
 
@@ -1137,46 +1182,9 @@ compile(Context* c)
     li->machineOffset = a->length();
 
     for (Read* r = e->reads; r; r = r->eventNext) {
-      Site* target = (r->target ? r->target->resolve(c, r->size) : 0);
-
-      unsigned copyCost;
-      Site* site = pick(c, r->value->sites, target, &copyCost);
-
-      if (site->type(c) == StackOperand) {
-        for (Stack* s = e->stack; s; s = s->next) {
-          if (s->pushed) {
-            target = ::target(c, s->size * BytesPerWord, s->value);
-
-            addSite(c, e->stack, s->size * BytesPerWord, s->value, target);
-
-            s->pushed = false;
-            if (s == static_cast<StackSite*>(site)->stack) {
-              site = pick(c, r->value->sites, target, &copyCost);
-              break;
-            }
-          }
-        }
-      }
-
-      if (target) {
-        if (copyCost) {
-          addSite(c, e->stack, r->size, r->value, target);
-
-          target->accept(c, r->size, site);
-        }
-
-        r->value->source = target;
-      } else {
-        r->value->source = site;
-      }
+      r->value->source = readSource(c, e->stack, r);
 
       r->value->reads = r->value->reads->next;
-    }
-
-    for (Write* w = e->writes; w; w = w->eventNext) {
-      w->value->target = target(c, w->size, w->value);
-
-      addSite(c, e->stack, w->size, w->value, w->value->target);
     }
 
     e->compile(c);
