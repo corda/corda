@@ -15,6 +15,10 @@ using namespace vm;
 
 namespace {
 
+const bool DebugStack = false;
+const bool DebugAppend = false;
+const bool DebugCompile = false;
+
 class Context;
 class Value;
 class Stack;
@@ -92,7 +96,6 @@ class Register {
   Value* value;
   Site* site;
   unsigned size;
-  unsigned refCount;
   bool reserved;
 };
 
@@ -169,11 +172,8 @@ class Context {
   {
     memset(registers, 0, sizeof(Register) * assembler->registerCount());
     
-    registers[assembler->base()].refCount = 1;
     registers[assembler->base()].reserved = true;
-    registers[assembler->stack()].refCount = 1;
     registers[assembler->stack()].reserved = true;
-    registers[assembler->thread()].refCount = 1;
     registers[assembler->thread()].reserved = true;
 
     unsigned fri = 0;
@@ -512,22 +512,6 @@ registerSite(Context* c, int low, int high = NoRegister)
 RegisterSite*
 freeRegister(Context* c, unsigned size, bool allowAcquired);
 
-void
-increment(Context* c, int r)
-{
-  fprintf(stderr, "increment %d\n", r);
-  ++ c->registers[r].refCount;
-}
-
-void
-decrement(Context* c, int r)
-{
-  assert(c, c->registers[r].refCount > 0);
-  assert(c, c->registers[r].refCount > 1 or (not c->registers[r].reserved));
-  fprintf(stderr, "decrement %d\n", r);
-  -- c->registers[r].refCount;
-}
-
 class MemorySite: public Site {
  public:
   MemorySite(int base, int offset, int index, unsigned scale):
@@ -549,17 +533,19 @@ class MemorySite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack*, unsigned, Value*, Site*) {
-    increment(c, value.base);
+  virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v,
+                       Site* s)
+  {
+    ::acquire(c, value.base, stack, size, v, s);
     if (value.index != NoRegister) {
-      increment(c, value.index);
+      ::acquire(c, value.index, stack, size, v, s);
     }
   }
 
   virtual void release(Context* c) {
-    decrement(c, value.base);
+    ::release(c, value.base);
     if (value.index != NoRegister) {
-      decrement(c, value.index);
+      ::release(c, value.index);
     }
   }
 
@@ -660,7 +646,7 @@ valueSite(Context* c, Value* v)
 
 class MoveSite: public AbstractSite {
  public:
-  MoveSite(Value* value): value(value) { }
+  MoveSite(Value* value): value(value)  { }
 
   virtual Site* readTarget(Context* c, Read* read, Event* event) {
     if (event->next == read->event) {
@@ -767,8 +753,10 @@ pushNow(Context* c, Stack* start, unsigned count)
          RegisterOperand, &stack);
     }
 
-    fprintf(stderr, "pushed %p value: %p sites: %p\n",
-            s, s->value, s->value->sites);
+    if (DebugStack) {
+      fprintf(stderr, "pushed %p value: %p sites: %p\n",
+              s, s->value, s->value->sites);
+    }
 
     s->pushed = true;
   }
@@ -790,8 +778,6 @@ acquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
         Site* newSite)
 {
   if (c->registers[r].reserved) return;
-
-  assert(c, c->registers[r].refCount == 0);
 
 //   fprintf(stderr, "acquire %d, value %p, site %p\n",
 //           r, newValue, newSite);
@@ -911,7 +897,9 @@ class PushEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "PushEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "PushEvent.compile\n");
+    }
 
     if (active) {
       pushNow(c, s);
@@ -972,7 +960,9 @@ class CallEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "CallEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "CallEvent.compile\n");
+    }
     
     UnaryOperation type = ((flags & Compiler::Aligned) ? AlignedCall : Call);
     if (indirection) {
@@ -1026,7 +1016,9 @@ appendCall(Context* c, Value* address, void* indirection, unsigned flags,
            TraceHandler* traceHandler, Value* result, unsigned resultSize,
            Stack* argumentStack, unsigned argumentCount)
 {
-  fprintf(stderr, "appendCall\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendCall\n");
+  }
 
   new (c->zone->allocate(sizeof(CallEvent)))
     CallEvent(c, address, indirection, flags, traceHandler, result,
@@ -1047,7 +1039,9 @@ class ReturnEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "ReturnEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "ReturnEvent.compile\n");
+    }
 
     if (value) {
       nextRead(c, value);
@@ -1068,7 +1062,9 @@ class ReturnEvent: public Event {
 void
 appendReturn(Context* c, unsigned size, Value* value)
 {
-  fprintf(stderr, "appendReturn\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendReturn\n");
+  }
 
   new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, size, value);
 }
@@ -1089,7 +1085,9 @@ class MoveEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "MoveEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "MoveEvent.compile\n");
+    }
 
     Site* target;
     if (type == Move
@@ -1120,7 +1118,9 @@ void
 appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
            Value* dst)
 {
-  fprintf(stderr, "appendMove\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendMove\n");
+  }
 
   new (c->zone->allocate(sizeof(MoveEvent)))
     MoveEvent(c, type, size, src, dst);
@@ -1136,7 +1136,9 @@ class CompareEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "CompareEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "CompareEvent.compile\n");
+    }
 
     apply(c, Compare, size, first->source, second->source);
 
@@ -1152,7 +1154,9 @@ class CompareEvent: public Event {
 void
 appendCompare(Context* c, unsigned size, Value* first, Value* second)
 {
-  fprintf(stderr, "appendCompare\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendCompare\n");
+  }
 
   new (c->zone->allocate(sizeof(CompareEvent)))
     CompareEvent(c, size, first, second);
@@ -1167,7 +1171,9 @@ class BranchEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "BranchEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "BranchEvent.compile\n");
+    }
 
     apply(c, type, BytesPerWord, address->source);
 
@@ -1181,7 +1187,9 @@ class BranchEvent: public Event {
 void
 appendBranch(Context* c, UnaryOperation type, Value* address)
 {
-  fprintf(stderr, "appendBranch\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendBranch\n");
+  }
 
   new (c->zone->allocate(sizeof(BranchEvent))) BranchEvent(c, type, address);
 }
@@ -1208,7 +1216,9 @@ class CombineEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "CombineEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "CombineEvent.compile\n");
+    }
 
     apply(c, type, size, first->source, second->source);
 
@@ -1230,7 +1240,9 @@ void
 appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
               Value* second, Value* result)
 {
-  fprintf(stderr, "appendCombine\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendCombine\n");
+  }
 
   new (c->zone->allocate(sizeof(CombineEvent)))
     CombineEvent(c, type, size, first, second, result);
@@ -1246,7 +1258,9 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "TranslateEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "TranslateEvent.compile\n");
+    }
 
     apply(c, type, size, value->source);
     
@@ -1266,7 +1280,9 @@ void
 appendTranslate(Context* c, UnaryOperation type, unsigned size, Value* value,
                 Value* result)
 {
-  fprintf(stderr, "appendTranslate\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendTranslate\n");
+  }
 
   new (c->zone->allocate(sizeof(TranslateEvent)))
     TranslateEvent(c, type, size, value, result);
@@ -1284,7 +1300,9 @@ class MemoryEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "MemoryEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "MemoryEvent.compile\n");
+    }
     
     int indexRegister;
     if (index) {
@@ -1301,8 +1319,9 @@ class MemoryEvent: public Event {
       nextRead(c, index);
     }
 
-    addSite(c, 0, 0, result, memorySite
-            (c, baseRegister, displacement, indexRegister, scale));
+    result->target = memorySite
+      (c, baseRegister, displacement, indexRegister, scale);
+    addSite(c, 0, 0, result, result->target);
   }
 
   Value* base;
@@ -1316,7 +1335,9 @@ void
 appendMemory(Context* c, Value* base, int displacement, Value* index,
              unsigned scale, Value* result)
 {
-  fprintf(stderr, "appendMemory\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendMemory\n");
+  }
 
   new (c->zone->allocate(sizeof(MemoryEvent)))
     MemoryEvent(c, base, displacement, index, scale, result);
@@ -1372,35 +1393,29 @@ popNow(Context* c, Event* event, Stack* stack, unsigned count, bool ignore)
         Site* target = targetOrRegister
           (c, s->size * BytesPerWord, s->value, event);
 
-        fprintf(stderr, "pop %p value: %p target: %p\n", s, s->value, target);
+        if (DebugStack) {
+          fprintf(stderr, "pop %p value: %p target: %p\n",
+                  s, s->value, target);
+        }
 
         apply(c, Pop, BytesPerWord * s->size, target);
 
         addSite(c, stack, s->size * BytesPerWord, s->value, target);
       } else {
-        fprintf(stderr, "ignore %p value: %p\n", s, s->value);
+        if (DebugStack) {
+          fprintf(stderr, "ignore %p value: %p\n", s, s->value);
+        }
           
         ignored += s->size;
       }
 
-      fprintf(stderr, "sites before: ");
-      for (Site* site = s->value->sites; site; site = site->next) {
-        fprintf(stderr, "%p ", site);
-      }
-      fprintf(stderr, "\n");
-
       removeSite(c, s->value, s->pushSite);
-
-      fprintf(stderr, "sites after: ");
-      for (Site* site = s->value->sites; site; site = site->next) {
-        fprintf(stderr, "%p ", site);
-      }
-      fprintf(stderr, "\n");
-
       s->pushSite = 0;
       s->pushed = false;
     } else {
-      fprintf(stderr, "%p not pushed\n", s);
+      if (DebugStack) {
+        fprintf(stderr, "%p not pushed\n", s);
+      }
     }
 
     i -= s->size;
@@ -1441,7 +1456,9 @@ class StackSyncEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "StackSyncEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "StackSyncEvent.compile\n");
+    }
 
     for (Read* r = reads; r; r = r->eventNext) {
       nextRead(c, r->value);
@@ -1452,7 +1469,9 @@ class StackSyncEvent: public Event {
 void
 appendStackSync(Context* c)
 {
-  fprintf(stderr, "appendStackSync\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendStackSync\n");
+  }
 
   new (c->zone->allocate(sizeof(StackSyncEvent))) StackSyncEvent(c);
 }
@@ -1481,7 +1500,9 @@ pushSite(Context* c, PushEvent* e)
 void
 appendPush(Context* c, Stack* s)
 {
-  fprintf(stderr, "appendPush\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendPush\n");
+  }
 
   new (c->zone->allocate(sizeof(PushEvent))) PushEvent(c, s);
 }
@@ -1499,7 +1520,9 @@ class PopEvent: public Event {
   { }
 
   virtual void compile(Context* c) {
-    fprintf(stderr, "PopEvent.compile\n");
+    if (DebugCompile) {
+      fprintf(stderr, "PopEvent.compile\n");
+    }
 
     popNow(c, this, stack, count, ignore);
   }
@@ -1511,7 +1534,9 @@ class PopEvent: public Event {
 void
 appendPop(Context* c, unsigned count, bool ignore)
 {
-  fprintf(stderr, "appendPop\n");
+  if (DebugAppend) {
+    fprintf(stderr, "appendPop\n");
+  }
 
   new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c, count, ignore);
 }
@@ -1559,7 +1584,9 @@ compile(Context* c)
     if (li->firstEvent) {
       li->machineOffset = a->length();
 
-      fprintf(stderr, " -- ip: %d\n", i);
+      if (DebugCompile) {
+        fprintf(stderr, " -- ip: %d\n", i);
+      }
 
       for (Event* e = li->firstEvent; e; e = e->next) {
         e->prepare(c);
@@ -1673,7 +1700,7 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
 {
   for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
     if (i != except
-        and c->registers[i].refCount == 0
+        and (not c->registers[i].reserved)
         and (not used(c, i)))
     {
       return i;
@@ -1692,7 +1719,7 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
   if (allowAcquired) {
     for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
       if (i != except
-          and c->registers[i].refCount == 0)
+          and (not c->registers[i].reserved))
       {
         return i;
       }
@@ -1729,15 +1756,15 @@ class Client: public Assembler::Client {
     if (r == NoRegister) {
       r = freeRegisterExcept(c, NoRegister, false);
     } else {
-      expect(c, c->registers[r].refCount == 0);
+      expect(c, not c->registers[r].reserved);
       expect(c, c->registers[r].value == 0);
     }
-    increment(c, r);
+    c->registers[r].reserved = true;
     return r;
   }
 
   virtual void releaseTemporary(int r) {
-    decrement(c, r);
+    c->registers[r].reserved = false;
   }
 
   Context* c;
@@ -1775,7 +1802,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
-    fprintf(stderr, " -- ip: %d\n", logicalIp);
+    if (DebugAppend) {
+      fprintf(stderr, " -- ip: %d\n", logicalIp);
+    }
     c.logicalIp = logicalIp;
   }
 
