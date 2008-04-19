@@ -81,9 +81,9 @@ class State {
 class LogicalInstruction {
  public:
   unsigned visits;
+  Event* firstEvent;
   Event* lastEvent;
   unsigned machineOffset;
-  int predecessor;
 };
 
 class Register {
@@ -151,16 +151,18 @@ class Context {
     zone(zone),
     logicalIp(-1),
     state(new (zone->allocate(sizeof(State))) State(0)),
-    firstEvent(0),
-    lastEvent(0),
     logicalCode(0),
     logicalCodeLength(0),
     stackOffset(0),
     registers(static_cast<Register*>
               (zone->allocate(sizeof(Register) * assembler->registerCount()))),
+    freeRegisterCount(assembler->registerCount() - 3),
+    freeRegisters(static_cast<int*>
+                  (zone->allocate(sizeof(int) * freeRegisterCount))),
     firstConstant(0),
     lastConstant(0),
     constantCount(0),
+    nextSequence(0),
     junctions(0),
     machineCode(0)
   {
@@ -172,6 +174,13 @@ class Context {
     registers[assembler->stack()].reserved = true;
     registers[assembler->thread()].refCount = 1;
     registers[assembler->thread()].reserved = true;
+
+    unsigned fri = 0;
+    for (int i = assembler->registerCount() - 1; i >= 0; --i) {
+      if (not registers[i].reserved) {
+        freeRegisters[fri++] = i;
+      }
+    }
   }
 
   System* system;
@@ -179,15 +188,16 @@ class Context {
   Zone* zone;
   int logicalIp;
   State* state;
-  Event* firstEvent;
-  Event* lastEvent;
   LogicalInstruction* logicalCode;
   unsigned logicalCodeLength;
   unsigned stackOffset;
   Register* registers;
+  unsigned freeRegisterCount;
+  int* freeRegisters;
   ConstantPoolNode* firstConstant;
   ConstantPoolNode* lastConstant;
   unsigned constantCount;
+  unsigned nextSequence;
   Junction* junctions;
   uint8_t* machineCode;
 };
@@ -284,24 +294,22 @@ class Event {
  public:
   Event(Context* c):
     next(0), stack(c->state->stack), promises(0), reads(0),
-    logicalIp(c->logicalIp)
+    sequence(c->nextSequence++)
   {
     assert(c, c->logicalIp >= 0);
 
-    if (c->lastEvent) {
-      c->lastEvent->next = this;
-      sequence = c->lastEvent->sequence + 1;
+    LogicalInstruction* i = c->logicalCode + c->logicalIp;
+    if (i->lastEvent) {
+      i->lastEvent->next = this;
     } else {
-      c->firstEvent = this;
-      sequence = 0;
+      i->firstEvent = this;
     }
-
-    c->lastEvent = this;
+    i->lastEvent = this;
   }
 
   Event(Context*, Event* next):
     next(next), stack(next->stack), promises(0), reads(0),
-    sequence(next->sequence), logicalIp(next->logicalIp)
+    sequence(next->sequence)
   { }
 
   virtual ~Event() { }
@@ -313,7 +321,6 @@ class Event {
   CodePromise* promises;
   Read* reads;
   unsigned sequence;
-  unsigned logicalIp;
 };
 
 bool
@@ -337,11 +344,12 @@ addSite(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
 }
 
 void
-removeSite(Context*, Value* v, Site* s)
+removeSite(Context* c, Value* v, Site* s)
 {
   for (Site** p = &(v->sites); *p;) {
     if (s == *p) {
       fprintf(stderr, "remove site %p from %p\n", s, v);
+      s->release(c);
       *p = (*p)->next;
       break;
     } else {
@@ -351,14 +359,22 @@ removeSite(Context*, Value* v, Site* s)
 }
 
 void
+clearSites(Context* c, Value* v)
+{
+  for (Site* s = v->sites; s; s = s->next) {
+    s->release(c);
+  }
+  v->sites = 0;
+}
+
+void
 nextRead(Context* c, Value* v)
 {
-  fprintf(stderr, "pop read %p from %p; next: %p\n", v->reads, v, v->reads->next);
+  fprintf(stderr, "pop read %p from %p\n", v->reads, v);
+
   v->reads = v->reads->next;
   if (v->reads == 0) {
-    for (Site* s = v->sites; s; s = s->next) {
-      s->release(c);
-    }
+    clearSites(c, v);
   }
 }
 
@@ -493,6 +509,22 @@ registerSite(Context* c, int low, int high = NoRegister)
 RegisterSite*
 freeRegister(Context* c, unsigned size, bool allowAcquired);
 
+void
+increment(Context* c, int r)
+{
+  fprintf(stderr, "increment %d\n", r);
+  ++ c->registers[r].refCount;
+}
+
+void
+decrement(Context* c, int r)
+{
+  assert(c, c->registers[r].refCount > 0);
+  assert(c, c->registers[r].refCount > 1 or (not c->registers[r].reserved));
+  fprintf(stderr, "decrement %d\n", r);
+  -- c->registers[r].refCount;
+}
+
 class MemorySite: public Site {
  public:
   MemorySite(int base, int offset, int index, unsigned scale):
@@ -515,20 +547,16 @@ class MemorySite: public Site {
   }
 
   virtual void acquire(Context* c, Stack*, unsigned, Value*, Site*) {
-    fprintf(stderr, "increment ref count for %d\n", value.base);
-    ++ c->registers[value.base].refCount;
+    increment(c, value.base);
     if (value.index != NoRegister) {
-      fprintf(stderr, "increment ref count for %d\n", value.index);
-      ++ c->registers[value.index].refCount;
+      increment(c, value.index);
     }
   }
 
   virtual void release(Context* c) {
-    fprintf(stderr, "decrement ref count for %d\n", value.base);
-    -- c->registers[value.base].refCount;
+    decrement(c, value.base);
     if (value.index != NoRegister) {
-      fprintf(stderr, "decrement ref count for %d\n", value.index);
-      -- c->registers[value.index].refCount;
+      decrement(c, value.index);
     }
   }
 
@@ -831,8 +859,9 @@ insertRead(Context* c, Event* thisEvent, Event* before, Value* v,
 {
   Read* r = new (c->zone->allocate(sizeof(Read)))
     Read(size, v, target, 0, thisEvent, thisEvent->reads);
-  fprintf(stderr, "add read %p to %p\n", r, v);
   thisEvent->reads = r;
+
+  fprintf(stderr, "add read %p to %p\n", r, v);
 
   if (before) {
     for (Read** p = &(v->reads); *p;) {
@@ -859,7 +888,7 @@ insertRead(Context* c, Event* thisEvent, Event* before, Value* v,
 void
 addRead(Context* c, Value* v, unsigned size, Site* target)
 {
-  insertRead(c, c->lastEvent, 0, v, size, target);
+  insertRead(c, c->logicalCode[c->logicalIp].lastEvent, 0, v, size, target);
 }
 
 Site*
@@ -867,23 +896,26 @@ pushSite(Context*, PushEvent*);
 
 class PushEvent: public Event {
  public:
-  PushEvent(Context* c):
-    Event(c), active(false)
+  PushEvent(Context* c, Stack* s):
+    Event(c), s(s), active(false)
   {
-    stack->pushEvent = this;
-    addRead(c, stack->value, stack->size * BytesPerWord, pushSite(c, this));
+    assert(c, s->pushEvent == 0);
+
+    s->pushEvent = this;
+    addRead(c, s->value, s->size * BytesPerWord, pushSite(c, this));
   }
 
   virtual void compile(Context* c) {
     fprintf(stderr, "PushEvent.compile\n");
 
     if (active) {
-      syncStack(c, stack);
+      syncStack(c, s);
     }
 
-    nextRead(c, stack->value);
+    nextRead(c, s->value);
   }
 
+  Stack* s;
   bool active;
 };
 
@@ -919,10 +951,6 @@ class CallEvent: public Event {
       s = s->next;
     }
 
-    for (Stack* s = stack; s; s = s->next) {
-      s->pushEvent->active = true;
-    }
-
     addRead(c, address, BytesPerWord,
             (indirection ? registerSite(c, c->assembler->returnLow()) : 0));
   }
@@ -938,11 +966,15 @@ class CallEvent: public Event {
       apply(c, type, BytesPerWord, address->source);
     }
 
+    for (Stack* s = stack; s; s = s->next) {
+      clearSites(c, s->value);
+    }
+
     for (Read* r = reads; r; r = r->eventNext) {
       nextRead(c, r->value);
     }
 
-    if (resultSize) {
+    if (resultSize and result->reads) {
       addSite(c, 0, 0, result, registerSite
               (c, c->assembler->returnLow(),
                resultSize > BytesPerWord ?
@@ -955,7 +987,7 @@ class CallEvent: public Event {
          CodePromise(c, c->assembler->length()));
     }
 
-    if (argumentFootprint) {
+    if (argumentFootprint and ((flags & Compiler::NoReturn) == 0)) {
       Assembler::Register stack(c->assembler->stack());
       Assembler::Constant offset
         (resolved(c, argumentFootprint * BytesPerWord));
@@ -1059,7 +1091,7 @@ class MoveEvent: public Event {
 
     nextRead(c, src);
 
-    addSite(c, stack, size, dst, target);
+    if (dst->reads) addSite(c, stack, size, dst, target);
   }
 
   BinaryOperation type;
@@ -1168,7 +1200,7 @@ class CombineEvent: public Event {
     nextRead(c, second);
 
     removeSite(c, second, second->source);
-    addSite(c, 0, 0, result, second->source);
+    if (result->reads) addSite(c, 0, 0, result, second->source);
   }
 
   BinaryOperation type;
@@ -1205,7 +1237,7 @@ class TranslateEvent: public Event {
     nextRead(c, value);
 
     removeSite(c, value, value->source);
-    addSite(c, 0, 0, result, value->source);
+    if (result->reads) addSite(c, 0, 0, result, value->source);
   }
 
   UnaryOperation type;
@@ -1277,23 +1309,38 @@ appendMemory(Context* c, Value* base, int displacement, Value* index,
 Site*
 stackSyncSite(Context* c, unsigned index, unsigned size)
 {
-  int high = NoRegister;
-  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-    if (not c->registers[i].reserved) {
-      if (index == 0) {
-        if (size == 1) {
-          return registerSite(c, i, high);
-        } else {
-          high = i;
-          -- size;
-        }
-      } else {
-        -- index;
-      }
+  assert(c, index + size <= c->freeRegisterCount);
+
+  return registerSite
+    (c, c->freeRegisters[index],
+     size == 2 ? c->freeRegisters[index + 1] : NoRegister);
+}
+
+Stack*
+stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
+{
+  return new (c->zone->allocate(sizeof(Stack)))
+    Stack(value, size, index, next);
+}
+
+void
+resetStack(Context* c)
+{
+  unsigned i = 0;
+  Stack* p = 0;
+  for (Stack* s = c->state->stack; s; s = s->next) {
+    Stack* n = stack
+      (c, value(c, stackSyncSite(c, i, s->size)), s->size, s->index, 0);
+
+    if (p) {
+      p->next = n;
+    } else {
+      c->state->stack = n;
     }
+    p = n;
+
+    i += s->size;
   }
-  
-  abort(c);
 }
 
 class StackSyncEvent: public Event {
@@ -1307,6 +1354,8 @@ class StackSyncEvent: public Event {
               stackSyncSite(c, i, s->size));
       i += s->size;
     }
+
+    resetStack(c);
   }
 
   StackSyncEvent(Context* c, Event* next):
@@ -1325,8 +1374,6 @@ class StackSyncEvent: public Event {
 
     for (Read* r = reads; r; r = r->eventNext) {
       nextRead(c, r->value);
-      r->value->sites = r->target;
-      r->target->next = 0;
     }
   }
 };
@@ -1361,11 +1408,28 @@ pushSite(Context* c, PushEvent* e)
 }
 
 void
-appendPush(Context* c)
+appendPush(Context* c, Stack* s)
 {
   fprintf(stderr, "appendPush\n");
 
-  new (c->zone->allocate(sizeof(PushEvent))) PushEvent(c);
+  new (c->zone->allocate(sizeof(PushEvent))) PushEvent(c, s);
+}
+
+void
+appendPush(Context* c)
+{
+  appendPush(c, c->state->stack);
+}
+
+void
+ignore(Context* c, unsigned count)
+{
+  if (count) {
+    Assembler::Register stack(c->assembler->stack());
+    Assembler::Constant offset(resolved(c, count * BytesPerWord));
+    c->assembler->apply
+      (Add, BytesPerWord, ConstantOperand, &offset, RegisterOperand, &stack);
+  }
 }
 
 void
@@ -1376,7 +1440,7 @@ popNow(Context* c, Event* event, Stack* stack, unsigned count, bool ignore)
   for (unsigned i = count; i;) {
     if (s->pushed) {
       if (s->value->reads and (not ignore)) {
-        assert(c, ignored == 0);
+        ::ignore(c, ignored);
 
         fprintf(stderr, "pop %p\n", s);
 
@@ -1402,12 +1466,7 @@ popNow(Context* c, Event* event, Stack* stack, unsigned count, bool ignore)
     s = s->next;
   }
 
-  if (ignored) {
-    Assembler::Register stack(c->assembler->stack());
-    Assembler::Constant offset(resolved(c, ignored * BytesPerWord));
-    c->assembler->apply
-      (Add, BytesPerWord, ConstantOperand, &offset, RegisterOperand, &stack);
-  }
+  ::ignore(c, ignored);
 }
 
 void
@@ -1497,20 +1556,24 @@ compile(Context* c)
              RegisterOperand, &stack);
   }
 
-  for (Event* e = c->firstEvent; e; e = e->next) {
-    fprintf(stderr, "ip: %d\n", e->logicalIp);
+  for (unsigned i = 0; i < c->logicalCodeLength; ++i) {
+    LogicalInstruction* li = c->logicalCode + i;
+    if (li->firstEvent) {
+      li->machineOffset = a->length();
 
-    LogicalInstruction* li = c->logicalCode + e->logicalIp;
-    li->machineOffset = a->length();
+      fprintf(stderr, "ip: %d\n", i);
 
-    for (Read* r = e->reads; r; r = r->eventNext) {
-      r->value->source = readSource(c, e->stack, r, e);
-    }
+      for (Event* e = li->firstEvent; e; e = e->next) {
+        for (Read* r = e->reads; r; r = r->eventNext) {
+          r->value->source = readSource(c, e->stack, r, e);
+        }
 
-    e->compile(c);
-
-    for (CodePromise* p = e->promises; p; p = p->next) {
-      p->offset = a->length();
+        e->compile(c);
+        
+        for (CodePromise* p = e->promises; p; p = p->next) {
+          p->offset = a->length();
+        }
+      }
     }
   }
 }
@@ -1538,13 +1601,8 @@ popState(Context* c)
 {
   c->state = new (c->zone->allocate(sizeof(State)))
     State(c->state->next);
-}
 
-Stack*
-stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
-{
-  return new (c->zone->allocate(sizeof(Stack)))
-    Stack(value, size, index, next);
+  resetStack(c);
 }
 
 Stack*
@@ -1581,12 +1639,13 @@ updateJunctions(Context* c)
   for (Junction* j = c->junctions; j; j = j->next) {
     LogicalInstruction* i = c->logicalCode + j->logicalIp;
 
-    if (i->predecessor >= 0) {
-      LogicalInstruction* p = c->logicalCode + i->predecessor;
-
-      p->lastEvent = p->lastEvent->next
-        = new (c->zone->allocate(sizeof(StackSyncEvent)))
-        StackSyncEvent(c, p->lastEvent->next);
+    for (int ip = j->logicalIp - 1; ip >= 0; --ip) {
+      LogicalInstruction* p = c->logicalCode + ip;
+      if (p->lastEvent) {
+        i->lastEvent = i->lastEvent->next
+          = new (c->zone->allocate(sizeof(StackSyncEvent)))
+          StackSyncEvent(c, 0);
+      }
     }
   }
 }
@@ -1600,14 +1659,14 @@ used(Context* c, int r)
   return v and findSite(c, v, c->registers[r].site);
 }
 
-bool
-usedExclusively(Context* c, int r)
-{
-  Value* v = c->registers[r].value;
-  return used(c, r)
-    and v->pushCount == 0
-    and v->sites->next == 0;
-}
+// bool
+// usedExclusively(Context* c, int r)
+// {
+//   Value* v = c->registers[r].value;
+//   return used(c, r)
+//     and v->pushCount == 0
+//     and v->sites->next == 0;
+// }
 
 int
 freeRegisterExcept(Context* c, int except, bool allowAcquired)
@@ -1621,14 +1680,14 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
     }
   }
 
-  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-    if (i != except
-        and c->registers[i].refCount == 0
-        and (not usedExclusively(c, i)))
-    {
-      return i;
-    }
-  }
+//   for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
+//     if (i != except
+//         and c->registers[i].refCount == 0
+//         and (not usedExclusively(c, i)))
+//     {
+//       return i;
+//     }
+//   }
 
   if (allowAcquired) {
     for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
@@ -1673,13 +1732,12 @@ class Client: public Assembler::Client {
       expect(c, c->registers[r].refCount == 0);
       expect(c, c->registers[r].value == 0);
     }
-    ++ c->registers[r].refCount;
-    fprintf(stderr, "acquire temporary: %d\n", r);
+    increment(c, r);
     return r;
   }
 
   virtual void releaseTemporary(int r) {
-    -- c->registers[r].refCount;
+    decrement(c, r);
   }
 
   Context* c;
@@ -1710,17 +1768,14 @@ class MyCompiler: public Compiler {
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
-    if ((++ c.logicalCode[logicalIp].visits) == 1) {
+    if ((++ c.logicalCode[logicalIp].visits) == 2) {
       c.junctions = new (c.zone->allocate(sizeof(Junction)))
         Junction(logicalIp, c.junctions);
     }
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
-    if (c.logicalIp >= 0) {
-      c.logicalCode[c.logicalIp].lastEvent = c.lastEvent;
-    }
-
+    fprintf(stderr, "ip: %d\n", logicalIp);
     c.logicalIp = logicalIp;
   }
 
@@ -1809,8 +1864,9 @@ class MyCompiler: public Compiler {
   }
 
   Promise* machineIp() {
-    return c.lastEvent->promises = new (c.zone->allocate(sizeof(CodePromise)))
-      CodePromise(&c, c.lastEvent->promises);
+    Event* e = c.logicalCode[c.logicalIp].lastEvent;
+    return e->promises = new (c.zone->allocate(sizeof(CodePromise)))
+      CodePromise(&c, e->promises);
   }
 
   virtual void mark(Operand* label) {
@@ -1890,9 +1946,15 @@ class MyCompiler: public Compiler {
 
     va_end(a);
 
+    for (Stack* s = c.state->stack; s; s = s->next) {
+      if (s->pushEvent == 0) {
+        appendPush(&c, s);
+      }
+      s->pushEvent->active = true;
+    }
+
     Stack* oldStack = c.state->stack;
 
-    fprintf(stderr, "argument count: %d\n", argumentCount);
     for (int i = argumentCount - 1; i >= 0; --i) {
       ::push(&c, argumentSizes[i], arguments[i]);
     }

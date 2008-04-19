@@ -1709,6 +1709,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       handleEntrance(t, frame);
     } else if (exceptionHandler) {
       exceptionHandler = false;
+
+      frame->pushObject();
       
       c->call
         (c->constant(reinterpret_cast<intptr_t>(gcIfNecessary)),
@@ -3850,15 +3852,15 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (false and
+  if (//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Misc") == 0 and
+       "java/lang/String") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "main") == 0)
+       "getBytes") == 0)
   {
     asm("int3");
   }
@@ -3950,8 +3952,6 @@ compile(MyThread* t, Context* context)
               frame2.set(i, Frame::Integer);
             }
           }
-
-          frame2.pushObject();
 
           for (unsigned i = 1;
                i < codeMaxStack(t, methodCode(t, context->method));
