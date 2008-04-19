@@ -1744,11 +1744,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         } else {
           throw_ = c->label();
           c->cmp(4, c->constant(0), index);
+
+          frame->pushObject(array);
+          frame->pushInt(index);
+
           c->jl(throw_);
+
+          index = frame->popInt();
+          array = frame->popObject();
         }
 
         c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
+
+        frame->pushObject(array);
+        frame->pushInt(index);
+
         c->jge(load);
+
+        index = frame->popInt();
+        array = frame->popObject();
 
         if (not c->isConstant(index)) {
           c->mark(throw_);
@@ -1762,7 +1776,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
            0,
            3, c->thread(), array, index);
 
+        frame->pushObject(array);
+        frame->pushInt(index);
+
         c->mark(load);
+
+        index = frame->popInt();
+        array = frame->popObject();
       }
 
       if (c->isConstant(index)) {
@@ -3830,7 +3850,7 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (true or//false and
+  if (false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),

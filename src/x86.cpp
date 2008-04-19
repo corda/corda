@@ -703,7 +703,7 @@ void
 moveMM(Context* c, unsigned size, Assembler::Memory* a,
        Assembler::Memory* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  assert(c, BytesPerWord == 8 or size <= 4); // todo
 
   Assembler::Register tmp(c->client->acquireTemporary());
   moveMR(c, size, a, &tmp);
@@ -938,6 +938,15 @@ compareRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
+compareMR(Context* c, unsigned size UNUSED, Assembler::Memory* a,
+          Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  encode(c, 0x3b, b->low, a, true);
+}
+
+void
 compareMM(Context* c, unsigned size UNUSED, Assembler::Memory* a,
           Assembler::Memory* b)
 {
@@ -1015,6 +1024,7 @@ populateTables()
   BinaryOperations[INDEX2(Compare, Constant, Register)] = CAST2(compareCR);
   BinaryOperations[INDEX2(Compare, Register, Register)] = CAST2(compareRR);
   BinaryOperations[INDEX2(Compare, Register, Memory)] = CAST2(compareRM);
+  BinaryOperations[INDEX2(Compare, Memory, Register)] = CAST2(compareMR);
   BinaryOperations[INDEX2(Compare, Constant, Memory)] = CAST2(compareCM);
   BinaryOperations[INDEX2(Compare, Memory, Memory)] = CAST2(compareMM);
 }
