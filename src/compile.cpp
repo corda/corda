@@ -1842,19 +1842,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case iastore:
     case lastore:
     case sastore: {
-      Compiler::Operand* value;
-      if (instruction == dastore or instruction == lastore) {
-        value = frame->popLong();
-      } else if (instruction == aastore) {
-        value = frame->popObject();
-      } else {
-        value = frame->popInt();
-      }
-
-      Compiler::Operand* index = frame->popInt();
-      Compiler::Operand* array = frame->popObject();
-
       if (CheckArrayBounds) {
+        unsigned valueSize
+          = (instruction == dastore or instruction == lastore ? 2 : 1);
+
+        Compiler::Operand* index = c->peek(4, valueSize);
+        Compiler::Operand* array = c->peek(BytesPerWord, valueSize + 1);
+
         Compiler::Operand* store = c->label();
         Compiler::Operand* throw_ = 0;
 
@@ -1883,6 +1877,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         c->mark(store);
       }
+
+      Compiler::Operand* value;
+      if (instruction == dastore or instruction == lastore) {
+        value = frame->popLong();
+      } else if (instruction == aastore) {
+        value = frame->popObject();
+      } else {
+        value = frame->popInt();
+      }
+
+      Compiler::Operand* index = frame->popInt();
+      Compiler::Operand* array = frame->popObject();
 
       if (c->isConstant(index)) {
         unsigned i = c->constantValue(index);
@@ -1985,7 +1991,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      Compiler::Operand* length = frame->popInt();
+      Compiler::Operand* length = c->peek(4, 0);
 
       if (c->isConstant(length)) {
         expect(t, c->constantValue(length) >= 0);
@@ -2005,6 +2011,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         c->mark(nonnegative);
       }
+
+      frame->popInt();
 
       frame->pushObject
         (c->call
@@ -3375,8 +3383,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       ip = (ip + 3) & ~3; // pad to four byte boundary
 
-      Compiler::Operand* key = frame->popInt();
-
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
       
@@ -3400,6 +3406,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       assert(t, start);
 
       Compiler::Operand* defaultCase = c->label();
+
+      Compiler::Operand* key = frame->popInt();
       
       c->cmp(4, c->constant(bottom), key);
       c->jl(defaultCase);
@@ -3841,11 +3849,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/io/PrintStream") == 0 and
+       "java/lang/String") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "println") == 0)
+       "getBytes") == 0)
   {
     asm("int3");
   }
