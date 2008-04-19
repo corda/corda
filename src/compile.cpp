@@ -1734,10 +1734,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case iaload:
     case laload:
     case saload: {
-      Compiler::Operand* index = frame->popInt();
-      Compiler::Operand* array = frame->popObject();
-
       if (CheckArrayBounds) {
+        Compiler::Operand* index = c->peek(4, 0);
+        Compiler::Operand* array = c->peek(BytesPerWord, 1);
+
         Compiler::Operand* load = c->label();
         Compiler::Operand* throw_ = 0;
 
@@ -1746,25 +1746,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         } else {
           throw_ = c->label();
           c->cmp(4, c->constant(0), index);
-
-          frame->pushObject(array);
-          frame->pushInt(index);
-
           c->jl(throw_);
-
-          index = frame->popInt();
-          array = frame->popObject();
         }
 
         c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
-
-        frame->pushObject(array);
-        frame->pushInt(index);
-
         c->jge(load);
-
-        index = frame->popInt();
-        array = frame->popObject();
 
         if (not c->isConstant(index)) {
           c->mark(throw_);
@@ -1778,14 +1764,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
            0,
            3, c->thread(), array, index);
 
-        frame->pushObject(array);
-        frame->pushInt(index);
-
         c->mark(load);
-
-        index = frame->popInt();
-        array = frame->popObject();
       }
+
+      Compiler::Operand* index = frame->popInt();
+      Compiler::Operand* array = frame->popObject();
 
       if (c->isConstant(index)) {
         unsigned i = c->constantValue(index);
@@ -3187,7 +3170,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case newarray: {
       uint8_t type = codeBody(t, code, ip++);
 
-      Compiler::Operand* length = frame->popInt();
+      Compiler::Operand* length = c->peek(4, 0);
 
       if (c->isConstant(length)) {
         expect(t, c->constantValue(length) >= 0);
@@ -3207,6 +3190,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         c->mark(nonnegative);
       }
+
+      frame->popInt();
 
       object (*constructor)(Thread*, uintptr_t, bool);
       switch (type) {
@@ -3856,11 +3841,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/String") == 0 and
+       "java/io/PrintStream") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "getBytes") == 0)
+       "println") == 0)
   {
     asm("int3");
   }
