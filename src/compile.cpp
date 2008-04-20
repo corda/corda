@@ -714,6 +714,8 @@ class Frame {
   }
 
   void visitLogicalIp(unsigned ip) {
+    c->visitLogicalIp(ip);
+
     context->eventLog.append(IpEvent);
     context->eventLog.append2(ip);
   }
@@ -3849,11 +3851,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/String") == 0 and
+       "Enums") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "getBytes") == 0)
+       "main") == 0)
   {
     asm("int3");
   }

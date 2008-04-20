@@ -837,7 +837,7 @@ andCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
   if (isInt8(v)) {
     c->code.append(0x83);
     c->code.append(0xe0 | b->low);
-    c->code.append(a->value->value());
+    c->code.append(v);
   } else if (isInt32(v)) {
     c->code.append(0x81);
     c->code.append(0xe0 | b->low);
@@ -860,6 +860,27 @@ andCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
     c->code.append(v);
   } else if (isInt32(v)) {
     c->code.append4(v);
+  } else {
+    abort(c);
+  }
+}
+
+void
+shiftLeftCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+            Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  int64_t v = a->value->value();
+
+  rex(c);
+  if (v == 1) {
+    c->code.append(0xd1);
+    c->code.append(0xe0 | b->low);
+  } else if (isInt8(v)) {
+    c->code.append(0xc1);
+    c->code.append(0xe0 | b->low);
+    c->code.append(v);
   } else {
     abort(c);
   }
@@ -1017,6 +1038,8 @@ populateTables()
 
   BinaryOperations[INDEX2(And, Constant, Register)] = CAST2(andCR);
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);
+
+  BinaryOperations[INDEX2(ShiftLeft, Constant, Register)] = CAST2(shiftLeftCR);
 
   BinaryOperations[INDEX2(Subtract, Constant, Register)] = CAST2(subtractCR);
   BinaryOperations[INDEX2(Subtract, Register, Register)] = CAST2(subtractRR);

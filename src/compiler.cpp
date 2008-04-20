@@ -15,9 +15,10 @@ using namespace vm;
 
 namespace {
 
-const bool DebugStack = false;
 const bool DebugAppend = false;
 const bool DebugCompile = false;
+const bool DebugStack = false;
+const bool DebugRegisters = false;
 
 class Context;
 class Value;
@@ -60,7 +61,7 @@ class Stack {
  public:
   Stack(Value* value, unsigned size, unsigned index, Stack* next):
     value(value), size(size), index(index), next(next), pushEvent(0),
-    pushSite(0), pushed(false)
+    pushSite(0), syncSite(0), pushed(false)
   { }
 
   Value* value;
@@ -69,6 +70,7 @@ class Stack {
   Stack* next;
   PushEvent* pushEvent;
   Site* pushSite;
+  Site* syncSite;
   bool pushed;
 };
 
@@ -96,6 +98,7 @@ class Register {
   Value* value;
   Site* site;
   unsigned size;
+  unsigned refCount;
   bool reserved;
 };
 
@@ -172,8 +175,11 @@ class Context {
   {
     memset(registers, 0, sizeof(Register) * assembler->registerCount());
     
+    registers[assembler->base()].refCount = 1;
     registers[assembler->base()].reserved = true;
+    registers[assembler->stack()].refCount = 1;
     registers[assembler->stack()].reserved = true;
+    registers[assembler->thread()].refCount = 1;
     registers[assembler->thread()].reserved = true;
 
     unsigned fri = 0;
@@ -308,9 +314,9 @@ class Event {
     i->lastEvent = this;
   }
 
-  Event(Context*, Event* next):
-    next(next), stack(next->stack), promises(0), reads(0),
-    sequence(next->sequence)
+  Event(Context*, Event* previous):
+    next(0), stack(previous->stack), promises(0), reads(0),
+    sequence(previous->sequence)
   { }
 
   virtual ~Event() { }
@@ -512,6 +518,26 @@ registerSite(Context* c, int low, int high = NoRegister)
 RegisterSite*
 freeRegister(Context* c, unsigned size, bool allowAcquired);
 
+void
+increment(Context* c, int r)
+{
+  if (DebugRegisters) {
+    fprintf(stderr, "increment %d\n", r);
+  }
+  ++ c->registers[r].refCount;
+}
+
+void
+decrement(Context* c, int r)
+{
+  assert(c, c->registers[r].refCount > 0);
+  assert(c, c->registers[r].refCount > 1 or (not c->registers[r].reserved));
+  if (DebugRegisters) {
+    fprintf(stderr, "decrement %d\n", r);
+  }
+  -- c->registers[r].refCount;
+}
+
 class MemorySite: public Site {
  public:
   MemorySite(int base, int offset, int index, unsigned scale):
@@ -533,19 +559,17 @@ class MemorySite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v,
-                       Site* s)
-  {
-    ::acquire(c, value.base, stack, size, v, s);
+  virtual void acquire(Context* c, Stack*, unsigned, Value*, Site*) {
+    increment(c, value.base);
     if (value.index != NoRegister) {
-      ::acquire(c, value.index, stack, size, v, s);
+      increment(c, value.index);
     }
   }
 
   virtual void release(Context* c) {
-    ::release(c, value.base);
+    decrement(c, value.base);
     if (value.index != NoRegister) {
-      ::release(c, value.index);
+      decrement(c, value.index);
     }
   }
 
@@ -779,16 +803,22 @@ acquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
 {
   if (c->registers[r].reserved) return;
 
-//   fprintf(stderr, "acquire %d, value %p, site %p\n",
-//           r, newValue, newSite);
+  if (DebugRegisters) {
+    fprintf(stderr, "acquire %d, value %p, site %p\n",
+            r, newValue, newSite);
+  }
 
   Value* oldValue = c->registers[r].value;
   if (oldValue
       and oldValue != newValue
       and findSite(c, oldValue, c->registers[r].site))
   {
-//     fprintf(stderr, "steal %d from %p: next: %p\n",
-//             r, oldValue, oldValue->sites->next);
+    assert(c, c->registers[r].refCount == 0);
+
+    if (DebugRegisters) {
+      fprintf(stderr, "steal %d from %p: next: %p\n",
+              r, oldValue, oldValue->sites->next);
+    }
 
     if (oldValue->sites->next == 0) {
       unsigned count = 0;
@@ -818,6 +848,10 @@ acquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
 void
 release(Context* c, int r)
 {
+  if (DebugRegisters) {
+    fprintf(stderr, "release %d\n", r);
+  }
+
   c->registers[r].size = 0;
   c->registers[r].value = 0;
   c->registers[r].site = 0;  
@@ -845,7 +879,7 @@ apply(Context* c, BinaryOperation op, unsigned size, Site* a, Site* b)
 }
 
 void
-insertRead(Context* c, Event* thisEvent, Event* before, Value* v,
+insertRead(Context* c, Event* thisEvent, Event* previousEvent, Value* v,
            unsigned size, Site* target)
 {
   Read* r = new (c->zone->allocate(sizeof(Read)))
@@ -854,9 +888,9 @@ insertRead(Context* c, Event* thisEvent, Event* before, Value* v,
 
   //  fprintf(stderr, "add read %p to %p\n", r, v);
 
-  if (before) {
+  if (previousEvent) {
     for (Read** p = &(v->reads); *p;) {
-      if ((*p)->event->sequence >= before->sequence) {
+      if ((*p)->event->sequence > previousEvent->sequence) {
         r->next = *p;
         *p = r;
         break;
@@ -955,6 +989,10 @@ class CallEvent: public Event {
       s = s->next;
     }
 
+    for (Stack* s = stack; s; s = s->next) {
+      addRead(c, s->value, s->size * BytesPerWord, 0);
+    }
+
     addRead(c, address, BytesPerWord,
             (indirection ? registerSite(c, c->assembler->returnLow()) : 0));
   }
@@ -963,6 +1001,8 @@ class CallEvent: public Event {
     if (DebugCompile) {
       fprintf(stderr, "CallEvent.compile\n");
     }
+
+    pushNow(c, stack);
     
     UnaryOperation type = ((flags & Compiler::Aligned) ? AlignedCall : Call);
     if (indirection) {
@@ -1432,21 +1472,23 @@ class StackSyncEvent: public Event {
   {
     unsigned i = 0;
     for (Stack* s = stack; s; s = s->next) {
-      addRead(c, s->value, s->size * BytesPerWord,
-              stackSyncSite(c, i, s->size));
+      s->syncSite = stackSyncSite(c, i, s->size);
+      addRead(c, s->value, s->size * BytesPerWord, s->syncSite);
       i += s->size;
     }
 
     resetStack(c);
   }
 
-  StackSyncEvent(Context* c, Event* next):
-    Event(c, next)
+  StackSyncEvent(Context* c, Event* previous):
+    Event(c, previous)
   {
     unsigned i = 0;
     for (Stack* s = stack; s; s = s->next) {
-      insertRead(c, this, next, s->value, s->size * BytesPerWord,
-                 stackSyncSite(c, i, s->size));
+      s->syncSite = stackSyncSite(c, i, s->size);
+      insertRead(c, this, previous, s->value, s->size * BytesPerWord,
+                 s->syncSite);
+      s->pushEvent->active = false;
       i += s->size;
     }
   }
@@ -1458,6 +1500,14 @@ class StackSyncEvent: public Event {
   virtual void compile(Context* c) {
     if (DebugCompile) {
       fprintf(stderr, "StackSyncEvent.compile\n");
+    }
+
+    for (Stack* s = stack; s; s = s->next) {
+      clearSites(c, s->value);
+    }
+
+    for (Stack* s = stack; s; s = s->next) {
+      addSite(c, 0, 0, s->value, s->syncSite);
     }
 
     for (Read* r = reads; r; r = r->eventNext) {
@@ -1664,14 +1714,14 @@ void
 updateJunctions(Context* c)
 {
   for (Junction* j = c->junctions; j; j = j->next) {
-    LogicalInstruction* i = c->logicalCode + j->logicalIp;
-
     for (int ip = j->logicalIp - 1; ip >= 0; --ip) {
       LogicalInstruction* p = c->logicalCode + ip;
       if (p->lastEvent) {
-        i->lastEvent = i->lastEvent->next
+//         fprintf(stderr, "update junction at %d, predecessor %d\n", j->logicalIp, ip);
+        p->lastEvent = p->lastEvent->next
           = new (c->zone->allocate(sizeof(StackSyncEvent)))
-          StackSyncEvent(c, 0);
+          StackSyncEvent(c, p->lastEvent);
+        break;
       }
     }
   }
@@ -1700,7 +1750,7 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
 {
   for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
     if (i != except
-        and (not c->registers[i].reserved)
+        and c->registers[i].refCount == 0
         and (not used(c, i)))
     {
       return i;
@@ -1719,7 +1769,7 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
   if (allowAcquired) {
     for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
       if (i != except
-          and (not c->registers[i].reserved))
+          and c->registers[i].refCount == 0)
       {
         return i;
       }
@@ -1756,15 +1806,15 @@ class Client: public Assembler::Client {
     if (r == NoRegister) {
       r = freeRegisterExcept(c, NoRegister, false);
     } else {
-      expect(c, not c->registers[r].reserved);
+      expect(c, c->registers[r].refCount == 0);
       expect(c, c->registers[r].value == 0);
     }
-    c->registers[r].reserved = true;
+    increment(c, r);
     return r;
   }
 
   virtual void releaseTemporary(int r) {
-    c->registers[r].reserved = false;
+    decrement(c, r);
   }
 
   Context* c;
@@ -1795,6 +1845,8 @@ class MyCompiler: public Compiler {
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
+//     fprintf(stderr, " ++ visit ip: %d visits: %d\n", logicalIp, c.logicalCode[logicalIp].visits + 1);
+
     if ((++ c.logicalCode[logicalIp].visits) == 2) {
       c.junctions = new (c.zone->allocate(sizeof(Junction)))
         Junction(logicalIp, c.junctions);
