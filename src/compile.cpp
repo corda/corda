@@ -4594,6 +4594,13 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
        arguments->position, returnType);
   }
 
+  if (t->exception) { 
+    if (t->backupHeap) {
+      collect(t, Heap::MinorCollection);
+    }
+    return 0;
+  }
+
   object r;
   switch (returnCode) {
   case ByteField:
