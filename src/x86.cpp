@@ -741,7 +741,7 @@ moveZRR(Context* c, unsigned size, Assembler::Register* a,
     rex(c);
     c->code.append(0x0f);
     c->code.append(0xb7);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    c->code.append(0xc0 | (b->low << 3) | a->low);
     break;
 
   default: abort(c); // todo
