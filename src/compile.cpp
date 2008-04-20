@@ -3436,8 +3436,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->cmp(4, c->constant(top), key);
       c->jg(defaultCase);
 
-      c->sub(4, c->constant(bottom), key);
-      c->jmp(c->memory(start, 0, key, BytesPerWord));
+      c->jmp(c->memory(start, 0, c->sub(4, c->constant(bottom), key),
+                       BytesPerWord));
 
       c->mark(defaultCase);
       c->jmp(frame->machineIp(defaultIp));
@@ -3870,11 +3870,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Enums$Suit") == 0 and
+       "Enums") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "<clinit>") == 0)
+       "main") == 0)
   {
     asm("int3");
   }

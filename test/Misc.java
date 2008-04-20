@@ -10,13 +10,13 @@ public class Misc {
   private long time;
 
   public Misc() {
-    expect(! boolean1);
-    expect(! boolean2);
+//     expect(! boolean1);
+//     expect(! boolean2);
     
-    time = 0xffffffffffffffffL;
+//     time = 0xffffffffffffffffL;
     
-    expect(! boolean1);
-    expect(! boolean2);
+//     expect(! boolean1);
+//     expect(! boolean2);
   }
 
   private String foo(String s) {
@@ -101,17 +101,17 @@ public class Misc {
 
 //     ClassLoader.getSystemClassLoader().toString();
 
-//     int a = 2;
-//     int b = 2;
-//     int c = a + b;
+    int a = 2;
+    int b = 2;
+    int c = a + b;
 
     Misc m = new Misc();
     m.toString();
 
-//     String s = "hello";
-//     m.foo(s);
-//     m.bar(s);
-//     baz(s);
+    String s = "hello";
+    m.foo(s);
+    m.bar(s);
+    baz(s);
 
 //     m.sync();
 //     syncStatic(false);

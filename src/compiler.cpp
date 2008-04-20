@@ -89,7 +89,10 @@ class LogicalInstruction {
  public:
   Event* firstEvent;
   Event* lastEvent;
+  LogicalInstruction* immediatePredecessor;
+  Stack* stack;
   unsigned machineOffset;
+  bool stackSaved;
 };
 
 class Register {
@@ -138,8 +141,8 @@ class Read {
 
 class Value: public Compiler::Operand {
  public:
-  Value(Site* site, Site* target):
-    reads(0), lastRead(0), sites(site), source(0), target(target)
+  Value(Site* site):
+    reads(0), lastRead(0), sites(site), source(0), target(site)
   { }
   
   Read* reads;
@@ -315,13 +318,14 @@ class Event {
     i->lastEvent = this;
 
     if (c->stackReset) {
+//       fprintf(stderr, "stack reset\n");
       c->stackReset = false;
     }
   }
 
-  Event(Context*, Event* previous, Event* next):
-    next(0), stack(next->stack), promises(0), reads(0),
-    sequence(previous->sequence), stackReset(false)
+  Event(Context*, unsigned sequence, Stack* stack):
+    next(0), stack(stack), promises(0), reads(0),
+    sequence(sequence), stackReset(false)
   { }
 
   virtual ~Event() { }
@@ -330,7 +334,7 @@ class Event {
 
   virtual void compile(Context* c) = 0;
 
-  virtual bool needStackSync() { return true; };
+  virtual bool isBranch() { return false; };
 
   Event* next;
   Stack* stack;
@@ -528,7 +532,7 @@ void
 increment(Context* c, int r)
 {
   if (DebugRegisters) {
-    fprintf(stderr, "increment %d\n", r);
+    fprintf(stderr, "increment %d to %d\n", r, c->registers[r].refCount + 1);
   }
   ++ c->registers[r].refCount;
 }
@@ -539,7 +543,7 @@ decrement(Context* c, int r)
   assert(c, c->registers[r].refCount > 0);
   assert(c, c->registers[r].refCount > 1 or (not c->registers[r].reserved));
   if (DebugRegisters) {
-    fprintf(stderr, "decrement %d\n", r);
+    fprintf(stderr, "decrement %d to %d\n", r, c->registers[r].refCount - 1);
   }
   -- c->registers[r].refCount;
 }
@@ -879,7 +883,7 @@ apply(Context* c, BinaryOperation op, unsigned size, Site* a, Site* b)
 }
 
 void
-insertRead(Context* c, Event* thisEvent, Event* previousEvent, Value* v,
+insertRead(Context* c, Event* thisEvent, int sequence, Value* v,
            unsigned size, Site* target)
 {
   Read* r = new (c->zone->allocate(sizeof(Read)))
@@ -888,9 +892,9 @@ insertRead(Context* c, Event* thisEvent, Event* previousEvent, Value* v,
 
   //  fprintf(stderr, "add read %p to %p\n", r, v);
 
-  if (previousEvent) {
+  if (sequence >= 0) {
     for (Read** p = &(v->reads); *p;) {
-      if ((*p)->event->sequence > previousEvent->sequence) {
+      if ((*p)->event->sequence > static_cast<unsigned>(sequence)) {
         r->next = *p;
         *p = r;
         break;
@@ -913,7 +917,7 @@ insertRead(Context* c, Event* thisEvent, Event* previousEvent, Value* v,
 void
 addRead(Context* c, Value* v, unsigned size, Site* target)
 {
-  insertRead(c, c->logicalCode[c->logicalIp].lastEvent, 0, v, size, target);
+  insertRead(c, c->logicalCode[c->logicalIp].lastEvent, -1, v, size, target);
 }
 
 Site*
@@ -1145,7 +1149,11 @@ class MoveEvent: public Event {
 
     nextRead(c, src);
 
-    if (dst->reads) addSite(c, stack, size, dst, target);
+    if (dst->reads) {
+      addSite(c, stack, size, dst, target);
+    } else {
+      removeSite(c, dst, target);
+    }
   }
 
   BinaryOperation type;
@@ -1369,15 +1377,9 @@ stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
 }
 
 Value*
-value(Context* c, Site* site, Site* target)
-{
-  return new (c->zone->allocate(sizeof(Value))) Value(site, target);
-}
-
-Value*
 value(Context* c, Site* site = 0)
 {
-  return value(c, site, site);
+  return new (c->zone->allocate(sizeof(Value))) Value(site);
 }
 
 void
@@ -1460,13 +1462,13 @@ class StackSyncEvent: public Event {
     }
   }
 
-  StackSyncEvent(Context* c, Event* previous, Event* next):
-    Event(c, previous, next)
+  StackSyncEvent(Context* c, unsigned sequence, Stack* stack):
+    Event(c, sequence, stack)
   {
     unsigned i = 0;
     for (Stack* s = stack; s; s = s->next) {
       s->syncSite = stackSyncSite(c, i, s->size);
-      insertRead(c, this, previous, s->value, s->size * BytesPerWord,
+      insertRead(c, this, sequence, s->value, s->size * BytesPerWord,
                  s->syncSite);
       if (s->pushEvent) s->pushEvent->active = false;
       i += s->size;
@@ -1494,8 +1496,6 @@ class StackSyncEvent: public Event {
       nextRead(c, r->value);
     }
   }
-
-  virtual bool needStackSync() { return false; };
 };
 
 void
@@ -1526,7 +1526,7 @@ class BranchEvent: public Event {
     nextRead(c, address);
   }
 
-  virtual bool needStackSync() { return false; };
+  virtual bool isBranch() { return true; };
 
   UnaryOperation type;
   Value* address;
@@ -1660,10 +1660,13 @@ compile(Context* c)
 
       for (Event* e = li->firstEvent; e; e = e->next) {
         if (e->stackReset) {
+//           fprintf(stderr, "stack reset\n");
           for (Stack* s = e->stack; s; s = s->next) {
-            assert(c, s->value->sites->next == 0);
-            if (s->value->reads) {
-              s->value->sites->acquire(c, 0, 0, s->value);
+            if (s->value->sites) {
+              assert(c, s->value->sites->next == 0);
+              if (s->value->reads) {
+                s->value->sites->acquire(c, 0, 0, s->value);
+              }
             }
           }
         }
@@ -1703,8 +1706,19 @@ pushState(Context* c)
 }
 
 void
+saveStack(Context* c)
+{
+  if (c->logicalIp >= 0 and not c->logicalCode[c->logicalIp].stackSaved) {
+    c->logicalCode[c->logicalIp].stackSaved = true;
+    c->logicalCode[c->logicalIp].stack = c->state->stack;
+  }
+}
+
+void
 popState(Context* c)
 {
+  saveStack(c);
+
   c->state = new (c->zone->allocate(sizeof(State)))
     State(c->state->next);
 
@@ -1744,19 +1758,11 @@ updateJunctions(Context* c)
 {
   for (Junction* j = c->junctions; j; j = j->next) {
     LogicalInstruction* i = c->logicalCode + j->logicalIp;
+    LogicalInstruction* p = i->immediatePredecessor;
 
-    for (int ip = j->logicalIp - 1; ip >= 0; --ip) {
-      LogicalInstruction* p = c->logicalCode + ip;
-      if (p->lastEvent) {
-//         fprintf(stderr, "update junction at %d, predecessor %d\n", j->logicalIp, ip);
-        if (p->lastEvent->needStackSync()) {
-          p->lastEvent = p->lastEvent->next
-            = new (c->zone->allocate(sizeof(StackSyncEvent)))
-            StackSyncEvent(c, p->lastEvent, i->firstEvent);
-        }
-        break;
-      }
-    }
+    p->lastEvent = p->lastEvent->next
+      = new (c->zone->allocate(sizeof(StackSyncEvent)))
+      StackSyncEvent(c, p->lastEvent->sequence, p->stack);
   }
 }
 
@@ -1810,6 +1816,18 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
   }
 
   abort(c);
+}
+
+void
+visit(Context* c, unsigned logicalIp)
+{
+  assert(c, logicalIp < c->logicalCodeLength);
+
+  if (c->logicalIp >= 0 and (not c->stackReset)) {
+    assert(c, c->logicalCode[logicalIp].immediatePredecessor == 0);
+    c->logicalCode[logicalIp].immediatePredecessor
+      = c->logicalCode + c->logicalIp;
+  }
 }
 
 int
@@ -1878,15 +1896,25 @@ class MyCompiler: public Compiler {
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
+    visit(&c, logicalIp);
+
     c.stackReset = false;
-    c.junctions = new (c.zone->allocate(sizeof(Junction)))
-      Junction(logicalIp, c.junctions);
+
+    if (c.logicalCode[logicalIp].immediatePredecessor) {
+      c.junctions = new (c.zone->allocate(sizeof(Junction)))
+        Junction(logicalIp, c.junctions);
+    }
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
     if (DebugAppend) {
       fprintf(stderr, " -- ip: %d\n", logicalIp);
     }
+
+    visit(&c, logicalIp);
+
+    saveStack(&c);
+
     c.logicalIp = logicalIp;
   }
 
@@ -1922,11 +1950,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* promiseConstant(Promise* value) {
-    return ::value(&c, ::constantSite(&c, value), 0);
+    return ::value(&c, ::constantSite(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
-    return value(&c, ::addressSite(&c, address), 0);
+    return value(&c, ::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -1971,7 +1999,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* label() {
-    return value(&c, ::constantSite(&c, static_cast<Promise*>(0)), 0);
+    return value(&c, ::constantSite(&c, static_cast<Promise*>(0)));
   }
 
   Promise* machineIp() {
@@ -2242,8 +2270,9 @@ class MyCompiler: public Compiler {
 
     int i = 0;
     for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {
-      *reinterpret_cast<intptr_t*>(dst + pad(c.assembler->length()) + (i++))
+      *reinterpret_cast<intptr_t*>(dst + pad(c.assembler->length()) + i)
         = n->promise->value();
+      i += BytesPerWord;
     }
   }
 

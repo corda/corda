@@ -359,6 +359,14 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
+jumpM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
+{
+  assert(c, size == BytesPerWord);
+
+  encode(c, 0xff, 4, a, false);
+}
+
+void
 jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
@@ -997,6 +1005,7 @@ populateTables()
 
   UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
   UnaryOperations[INDEX1(Jump, Constant)] = CAST1(jumpC);
+  UnaryOperations[INDEX1(Jump, Memory)] = CAST1(jumpM);
 
   UnaryOperations[INDEX1(JumpIfEqual, Constant)] = CAST1(jumpIfEqualC);
   UnaryOperations[INDEX1(JumpIfNotEqual, Constant)] = CAST1(jumpIfNotEqualC);
