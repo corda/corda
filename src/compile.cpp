@@ -722,6 +722,10 @@ class Frame {
 
   void startLogicalIp(unsigned ip) {
     c->startLogicalIp(ip);
+
+    context->eventLog.append(IpEvent);
+    context->eventLog.append2(ip);
+
     this->ip = ip;
   }
 
@@ -1698,10 +1702,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
   PROTECT(t, code);
     
   while (ip < codeLength(t, code)) {
-    frame->visitLogicalIp(ip);
-
     if (context->visitTable[ip] ++) {
       // we've already visited this part of the code
+      frame->visitLogicalIp(ip);
       return;
     }
 
@@ -1749,6 +1752,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           throw_ = c->label();
           c->cmp(4, c->constant(0), index);
           c->jl(throw_);
+
+          index = c->peek(4, 0);
+          array = c->peek(BytesPerWord, 1);
         }
 
         c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
@@ -1757,6 +1763,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         if (not c->isConstant(index)) {
           c->mark(throw_);
         }
+
+        index = c->peek(4, 0);
+        array = c->peek(BytesPerWord, 1);
 
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
@@ -1860,6 +1869,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           throw_ = c->label();
           c->cmp(4, c->constant(0), index);
           c->jl(throw_);
+
+          index = c->peek(4, valueSize);
+          array = c->peek(BytesPerWord, valueSize + 1);
         }
 
         c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
@@ -1868,6 +1880,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         if (not c->isConstant(index)) {
           c->mark(throw_);
         }
+
+        index = c->peek(4, valueSize);
+        array = c->peek(BytesPerWord, valueSize + 1);
 
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
@@ -2003,6 +2018,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->cmp(4, c->constant(0), length);
         c->jge(nonnegative);
 
+        length = c->peek(4, 0);
+
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
            context->indirection,
@@ -2014,7 +2031,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->mark(nonnegative);
       }
 
-      frame->popInt();
+      length = frame->popInt();
 
       frame->pushObject
         (c->call
@@ -3190,6 +3207,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->cmp(4, c->constant(0), length);
         c->jge(nonnegative);
 
+        length = c->peek(4, 0);
+
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
            context->indirection,
@@ -3201,7 +3220,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->mark(nonnegative);
       }
 
-      frame->popInt();
+      length = frame->popInt();
 
       object (*constructor)(Thread*, uintptr_t, bool);
       switch (type) {
@@ -3851,11 +3870,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Enums") == 0 and
+       "Enums$Suit") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "main") == 0)
+       "<clinit>") == 0)
   {
     asm("int3");
   }

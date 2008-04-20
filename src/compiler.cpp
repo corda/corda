@@ -46,7 +46,7 @@ class Site {
 
   virtual unsigned copyCost(Context*, Site*) = 0;
   
-  virtual void acquire(Context*, Stack*, unsigned, Value*, Site*) { }
+  virtual void acquire(Context*, Stack*, unsigned, Value*) { }
 
   virtual void release(Context*) { }
 
@@ -87,7 +87,6 @@ class State {
 
 class LogicalInstruction {
  public:
-  unsigned visits;
   Event* firstEvent;
   Event* lastEvent;
   unsigned machineOffset;
@@ -139,8 +138,8 @@ class Read {
 
 class Value: public Compiler::Operand {
  public:
-  Value(Site* site):
-    reads(0), lastRead(0), sites(site), source(0), target(site)
+  Value(Site* site, Site* target):
+    reads(0), lastRead(0), sites(site), source(0), target(target)
   { }
   
   Read* reads;
@@ -171,7 +170,8 @@ class Context {
     constantCount(0),
     nextSequence(0),
     junctions(0),
-    machineCode(0)
+    machineCode(0),
+    stackReset(false)
   {
     memset(registers, 0, sizeof(Register) * assembler->registerCount());
     
@@ -207,6 +207,7 @@ class Context {
   unsigned nextSequence;
   Junction* junctions;
   uint8_t* machineCode;
+  bool stackReset;
 };
 
 class PoolPromise: public Promise {
@@ -301,7 +302,7 @@ class Event {
  public:
   Event(Context* c):
     next(0), stack(c->state->stack), promises(0), reads(0),
-    sequence(c->nextSequence++)
+    sequence(c->nextSequence++), stackReset(c->stackReset)
   {
     assert(c, c->logicalIp >= 0);
 
@@ -312,11 +313,15 @@ class Event {
       i->firstEvent = this;
     }
     i->lastEvent = this;
+
+    if (c->stackReset) {
+      c->stackReset = false;
+    }
   }
 
-  Event(Context*, Event* previous):
-    next(0), stack(previous->stack), promises(0), reads(0),
-    sequence(previous->sequence)
+  Event(Context*, Event* previous, Event* next):
+    next(0), stack(next->stack), promises(0), reads(0),
+    sequence(previous->sequence), stackReset(false)
   { }
 
   virtual ~Event() { }
@@ -325,13 +330,14 @@ class Event {
 
   virtual void compile(Context* c) = 0;
 
-  virtual bool needsStackSync() { return true; };
+  virtual bool needStackSync() { return true; };
 
   Event* next;
   Stack* stack;
   CodePromise* promises;
   Read* reads;
   unsigned sequence;
+  bool stackReset;
 };
 
 bool
@@ -348,7 +354,7 @@ addSite(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
 {
   if (not findSite(c, v, s)) {
 //     fprintf(stderr, "add site %p to %p\n", s, v);
-    s->acquire(c, stack, size, v, s);
+    s->acquire(c, stack, size, v);
     s->next = v->sites;
     v->sites = s;
   }
@@ -478,12 +484,10 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v,
-                       Site* s)
-  {
-    ::acquire(c, register_.low, stack, size, v, s);
+  virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v) {
+    ::acquire(c, register_.low, stack, size, v, this);
     if (register_.high >= 0) {
-      ::acquire(c, register_.high, stack, size, v, s);
+      ::acquire(c, register_.high, stack, size, v, this);
     }
   }
 
@@ -561,7 +565,7 @@ class MemorySite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack*, unsigned, Value*, Site*) {
+  virtual void acquire(Context* c, Stack*, unsigned, Value*) {
     increment(c, value.base);
     if (value.index != NoRegister) {
       increment(c, value.index);
@@ -727,12 +731,6 @@ constantOrRegisterSite(Context* c)
 {
   return new (c->zone->allocate(sizeof(ConstantOrRegisterSite)))
     ConstantOrRegisterSite();
-}
-
-Value*
-value(Context* c, Site* site = 0)
-{
-  return new (c->zone->allocate(sizeof(Value))) Value(site);
 }
 
 Site*
@@ -1204,40 +1202,6 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
     CompareEvent(c, size, first, second);
 }
 
-class BranchEvent: public Event {
- public:
-  BranchEvent(Context* c, UnaryOperation type, Value* address):
-    Event(c), type(type), address(address)
-  {
-    addRead(c, address, BytesPerWord, 0);
-  }
-
-  virtual void compile(Context* c) {
-    if (DebugCompile) {
-      fprintf(stderr, "BranchEvent.compile\n");
-    }
-
-    apply(c, type, BytesPerWord, address->source);
-
-    nextRead(c, address);
-  }
-
-  virtual bool needsStackSync() { return false; };
-
-  UnaryOperation type;
-  Value* address;
-};
-
-void
-appendBranch(Context* c, UnaryOperation type, Value* address)
-{
-  if (DebugAppend) {
-    fprintf(stderr, "appendBranch\n");
-  }
-
-  new (c->zone->allocate(sizeof(BranchEvent))) BranchEvent(c, type, address);
-}
-
 class CombineEvent: public Event {
  public:
   CombineEvent(Context* c, BinaryOperation type, unsigned size, Value* first,
@@ -1404,6 +1368,18 @@ stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
     Stack(value, size, index, next);
 }
 
+Value*
+value(Context* c, Site* site, Site* target)
+{
+  return new (c->zone->allocate(sizeof(Value))) Value(site, target);
+}
+
+Value*
+value(Context* c, Site* site = 0)
+{
+  return value(c, site, site);
+}
+
 void
 resetStack(Context* c)
 {
@@ -1422,6 +1398,8 @@ resetStack(Context* c)
 
     i += s->size;
   }
+
+  c->stackReset = true;
 }
 
 void
@@ -1480,12 +1458,10 @@ class StackSyncEvent: public Event {
       addRead(c, s->value, s->size * BytesPerWord, s->syncSite);
       i += s->size;
     }
-
-    resetStack(c);
   }
 
-  StackSyncEvent(Context* c, Event* previous):
-    Event(c, previous)
+  StackSyncEvent(Context* c, Event* previous, Event* next):
+    Event(c, previous, next)
   {
     unsigned i = 0;
     for (Stack* s = stack; s; s = s->next) {
@@ -1519,7 +1495,7 @@ class StackSyncEvent: public Event {
     }
   }
 
-  virtual bool needsStackSync() { return false; };
+  virtual bool needStackSync() { return false; };
 };
 
 void
@@ -1530,6 +1506,44 @@ appendStackSync(Context* c)
   }
 
   new (c->zone->allocate(sizeof(StackSyncEvent))) StackSyncEvent(c);
+}
+
+class BranchEvent: public Event {
+ public:
+  BranchEvent(Context* c, UnaryOperation type, Value* address):
+    Event(c), type(type), address(address)
+  {
+    addRead(c, address, BytesPerWord, 0);
+  }
+
+  virtual void compile(Context* c) {
+    if (DebugCompile) {
+      fprintf(stderr, "BranchEvent.compile\n");
+    }
+
+    apply(c, type, BytesPerWord, address->source);
+
+    nextRead(c, address);
+  }
+
+  virtual bool needStackSync() { return false; };
+
+  UnaryOperation type;
+  Value* address;
+};
+
+void
+appendBranch(Context* c, UnaryOperation type, Value* address)
+{
+  appendStackSync(c);
+
+  if (DebugAppend) {
+    fprintf(stderr, "appendBranch\n");
+  }
+
+  new (c->zone->allocate(sizeof(BranchEvent))) BranchEvent(c, type, address);
+
+  resetStack(c);
 }
 
 class PushSite: public AbstractSite {
@@ -1645,6 +1659,15 @@ compile(Context* c)
       }
 
       for (Event* e = li->firstEvent; e; e = e->next) {
+        if (e->stackReset) {
+          for (Stack* s = e->stack; s; s = s->next) {
+            assert(c, s->value->sites->next == 0);
+            if (s->value->reads) {
+              s->value->sites->acquire(c, 0, 0, s->value);
+            }
+          }
+        }
+
         e->prepare(c);
 
         for (Read* r = e->reads; r; r = r->eventNext) {
@@ -1720,14 +1743,16 @@ void
 updateJunctions(Context* c)
 {
   for (Junction* j = c->junctions; j; j = j->next) {
+    LogicalInstruction* i = c->logicalCode + j->logicalIp;
+
     for (int ip = j->logicalIp - 1; ip >= 0; --ip) {
       LogicalInstruction* p = c->logicalCode + ip;
       if (p->lastEvent) {
 //         fprintf(stderr, "update junction at %d, predecessor %d\n", j->logicalIp, ip);
-        if (p->lastEvent->needsStackSync()) {
+        if (p->lastEvent->needStackSync()) {
           p->lastEvent = p->lastEvent->next
             = new (c->zone->allocate(sizeof(StackSyncEvent)))
-            StackSyncEvent(c, p->lastEvent);
+            StackSyncEvent(c, p->lastEvent, i->firstEvent);
         }
         break;
       }
@@ -1853,12 +1878,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
-//     fprintf(stderr, " ++ visit ip: %d visits: %d\n", logicalIp, c.logicalCode[logicalIp].visits + 1);
-
-    if ((++ c.logicalCode[logicalIp].visits) == 2) {
-      c.junctions = new (c.zone->allocate(sizeof(Junction)))
-        Junction(logicalIp, c.junctions);
-    }
+    c.stackReset = false;
+    c.junctions = new (c.zone->allocate(sizeof(Junction)))
+      Junction(logicalIp, c.junctions);
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
@@ -1900,11 +1922,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* promiseConstant(Promise* value) {
-    return ::value(&c, ::constantSite(&c, value));
+    return ::value(&c, ::constantSite(&c, value), 0);
   }
 
   virtual Operand* address(Promise* address) {
-    return value(&c, ::addressSite(&c, address));
+    return value(&c, ::addressSite(&c, address), 0);
   }
 
   virtual Operand* memory(Operand* base,
@@ -1949,7 +1971,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* label() {
-    return value(&c, ::constantSite(&c, static_cast<Promise*>(0)));
+    return value(&c, ::constantSite(&c, static_cast<Promise*>(0)), 0);
   }
 
   Promise* machineIp() {
@@ -1960,6 +1982,7 @@ class MyCompiler: public Compiler {
 
   virtual void mark(Operand* label) {
     appendStackSync(&c);
+    resetStack(&c);
 
     for (Site* s = static_cast<Value*>(label)->sites; s; s = s->next) {
       if (s->type(&c) == ConstantOperand) {
@@ -2093,44 +2116,30 @@ class MyCompiler: public Compiler {
   }
 
   virtual void jl(Operand* address) {
-    appendStackSync(&c);
-
     appendBranch(&c, JumpIfLess, static_cast<Value*>(address));
   }
 
   virtual void jg(Operand* address) {
-    appendStackSync(&c);
-
     appendBranch(&c, JumpIfGreater, static_cast<Value*>(address));
   }
 
   virtual void jle(Operand* address) {
-    appendStackSync(&c);
-
     appendBranch(&c, JumpIfLessOrEqual, static_cast<Value*>(address));
   }
 
   virtual void jge(Operand* address) {
-    appendStackSync(&c);
-
     appendBranch(&c, JumpIfGreaterOrEqual, static_cast<Value*>(address));
   }
 
   virtual void je(Operand* address) {
-    appendStackSync(&c);
-
     appendBranch(&c, JumpIfEqual, static_cast<Value*>(address));
   }
 
   virtual void jne(Operand* address) {
-    appendStackSync(&c);
-
     appendBranch(&c, JumpIfNotEqual, static_cast<Value*>(address));
   }
 
   virtual void jmp(Operand* address) {
-    appendStackSync(&c);
-
     appendBranch(&c, Jump, static_cast<Value*>(address));
   }
 
