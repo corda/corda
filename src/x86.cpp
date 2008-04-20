@@ -302,7 +302,6 @@ callC(Context* c, unsigned size, Assembler::Constant* a)
     Assembler::Register r(r10);
     moveCR(c, size, a, &r);
     callR(c, size, &r);
-    c->client->releaseTemporary(r.low);
   } else {
     unconditional(c, 0xe8, a);
   }
@@ -330,7 +329,7 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 
   if (a->low & 8) rex(c, 0x40, a->low);
   c->code.append(0xff);
-  c->code.append(0xd0 | a->low);
+  c->code.append(0xd0 | (a->low & 7));
 }
 
 void
