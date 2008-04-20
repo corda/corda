@@ -325,6 +325,8 @@ class Event {
 
   virtual void compile(Context* c) = 0;
 
+  virtual bool needsStackSync() { return true; };
+
   Event* next;
   Stack* stack;
   CodePromise* promises;
@@ -379,7 +381,7 @@ clearSites(Context* c, Value* v)
 void
 nextRead(Context* c, Value* v)
 {
-  //  fprintf(stderr, "pop read %p from %p\n", v->reads, v);
+//   fprintf(stderr, "pop read %p from %p; next: %p\n", v->reads, v, v->reads->next);
 
   v->reads = v->reads->next;
   if (v->reads == 0) {
@@ -1220,6 +1222,8 @@ class BranchEvent: public Event {
     nextRead(c, address);
   }
 
+  virtual bool needsStackSync() { return false; };
+
   UnaryOperation type;
   Value* address;
 };
@@ -1488,7 +1492,7 @@ class StackSyncEvent: public Event {
       s->syncSite = stackSyncSite(c, i, s->size);
       insertRead(c, this, previous, s->value, s->size * BytesPerWord,
                  s->syncSite);
-      s->pushEvent->active = false;
+      if (s->pushEvent) s->pushEvent->active = false;
       i += s->size;
     }
   }
@@ -1514,6 +1518,8 @@ class StackSyncEvent: public Event {
       nextRead(c, r->value);
     }
   }
+
+  virtual bool needsStackSync() { return false; };
 };
 
 void
@@ -1718,9 +1724,11 @@ updateJunctions(Context* c)
       LogicalInstruction* p = c->logicalCode + ip;
       if (p->lastEvent) {
 //         fprintf(stderr, "update junction at %d, predecessor %d\n", j->logicalIp, ip);
-        p->lastEvent = p->lastEvent->next
-          = new (c->zone->allocate(sizeof(StackSyncEvent)))
-          StackSyncEvent(c, p->lastEvent);
+        if (p->lastEvent->needsStackSync()) {
+          p->lastEvent = p->lastEvent->next
+            = new (c->zone->allocate(sizeof(StackSyncEvent)))
+            StackSyncEvent(c, p->lastEvent);
+        }
         break;
       }
     }
