@@ -1972,8 +1972,9 @@ class MyCompiler: public Compiler {
 
   virtual void pushed(unsigned count) {
     for (unsigned i = 0; i < count; ++i) {
-      Value* a = value(&c);
-      ::push(&c, BytesPerWord, a);
+      Value* v = value(&c);
+      c.state->stack = ::stack(&c, v, 1, c.state->stack);
+      c.state->stack->pushed = true;
     }
   }
 
