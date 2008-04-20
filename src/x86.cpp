@@ -873,6 +873,17 @@ andCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 }
 
 void
+xorRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+      Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  rex(c);
+  c->code.append(0x31);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
 shiftLeftCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
             Assembler::Register* b)
 {
@@ -1047,6 +1058,8 @@ populateTables()
   BinaryOperations[INDEX2(And, Constant, Register)] = CAST2(andCR);
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);
 
+  BinaryOperations[INDEX2(Xor, Register, Register)] = CAST2(xorRR);
+
   BinaryOperations[INDEX2(ShiftLeft, Constant, Register)] = CAST2(shiftLeftCR);
 
   BinaryOperations[INDEX2(Subtract, Constant, Register)] = CAST2(subtractCR);
@@ -1119,23 +1132,6 @@ class MyAssembler: public Assembler {
       return r8;
     case 5:
       return r9;
-    default:
-      abort(&c);
-    }
-  }
-
-  virtual int stackSyncRegister(unsigned index) {
-    switch (index) {
-    case 0:
-      return rax;
-    case 1:
-      return rcx;
-    case 2:
-      return rdx;
-    case 3:
-      return rsi;
-    case 4:
-      return rdi;
     default:
       abort(&c);
     }

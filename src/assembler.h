@@ -153,8 +153,6 @@ class Assembler {
   virtual unsigned argumentRegisterCount() = 0;
   virtual int argumentRegister(unsigned index) = 0;
 
-  virtual int stackSyncRegister(unsigned index) = 0;
-
   virtual void getTargets(UnaryOperation op, unsigned size,
                           Register* a) = 0;
 
