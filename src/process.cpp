@@ -223,7 +223,11 @@ findLineNumber(Thread* t, object method, unsigned ip)
       }
     }
 
-    abort(t);
+    if (top < lineNumberTableLength(t, lnt)) {
+      return lineNumberLine(lineNumberTableBody(t, lnt, top));
+    } else {
+      return UnknownLine;
+    }
   } else {
     return UnknownLine;
   }

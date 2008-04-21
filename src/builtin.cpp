@@ -53,6 +53,7 @@ enumerateThreads(Thread* t, Thread* x, object array, unsigned* index,
 {
   if (*index < limit) {
     set(t, array, ArrayBody + (*index * BytesPerWord), x->javaThread);
+    ++ (*index);
 
     if (x->peer) enumerateThreads(t, x->peer, array, index, limit);
     
@@ -711,7 +712,7 @@ Java_java_lang_Thread_interrupt(Thread* t, jclass, jlong peer)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-Java_java_lang_Thread_getTrace(Thread* t, jclass, jlong peer)
+Java_java_lang_Thread_getStackTrace(Thread* t, jclass, jlong peer)
 {
   ENTER(t, Thread::ActiveState);
 

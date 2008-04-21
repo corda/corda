@@ -172,7 +172,7 @@ class MyStackWalker: public Processor::StackWalker {
     base(t->base),
     stack(t->stack),
     trace(t->trace),
-    nativeMethod(trace->nativeMethod),
+    nativeMethod(trace ? trace->nativeMethod : 0),
     method_(ip_ ? methodForIp(t, ip_) : 0),
     protector(this)
   { }
@@ -208,7 +208,7 @@ class MyStackWalker: public Processor::StackWalker {
   bool next() {
     if (nativeMethod) {
       nativeMethod = 0;
-    } else {
+    } else if (stack) {
       stack = static_cast<void**>(base) + 1;
       base = *static_cast<void**>(base);
       ip_ = *static_cast<void**>(stack);
@@ -225,6 +225,8 @@ class MyStackWalker: public Processor::StackWalker {
           return false;
         }
       }
+    } else {
+      return false;
     }
     return true;
   }
@@ -4639,16 +4641,15 @@ traceSize(Thread* t)
 {
   class Counter: public Processor::StackVisitor {
    public:
-    Counter(Thread* t): t(t), count(0) { }
+    Counter(): count(0) { }
 
     virtual bool visit(Processor::StackWalker*) {
       ++ count;
       return true;
     }
 
-    Thread* t;
     unsigned count;
-  } counter(t);
+  } counter;
 
   t->m->processor->walkStack(t, &counter);
 
@@ -4673,7 +4674,9 @@ class SegFaultHandler: public System::SignalHandler {
 
         ensure(t, FixedSizeOfNullPointerException + traceSize(t));
 
+        t->tracing = true;
         t->exception = makeNullPointerException(t);
+        t->tracing = false;
 
         findUnwindTarget(t, ip, base, stack);
         *thread = t;
@@ -5002,10 +5005,10 @@ class MyProcessor: public Processor {
       Visitor(MyThread* t, MyThread* target): t(t), target(target) { }
 
       virtual void visit(void* ip, void* base, void* stack) {
-        ensure(t, traceSize(t));
+        ensure(t, traceSize(target));
 
         void* oldIp = target->ip;
-        void* oldBase = target->ip;
+        void* oldBase = target->base;
         void* oldStack = target->stack;
 
         if (methodForIp(t, ip)) {
@@ -5014,7 +5017,9 @@ class MyProcessor: public Processor {
           target->stack = stack;
         }
 
+        t->tracing = true;
         trace = makeTrace(t, target);
+        t->tracing = false;
 
         target->ip = oldIp;
         target->base = oldBase;
@@ -5025,6 +5030,8 @@ class MyProcessor: public Processor {
       MyThread* target;
       object trace;
     } visitor(t, target);
+
+    t->m->system->visit(t->systemThread, target->systemThread, &visitor);
 
     if (t->backupHeap) {
       PROTECT(t, visitor.trace);

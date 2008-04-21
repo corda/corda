@@ -1291,6 +1291,7 @@ class Thread {
   uintptr_t* backupHeap;
   unsigned backupHeapIndex;
   unsigned backupHeapSizeInWords;
+  bool tracing;
 #ifdef VM_STRESS
   bool stress;
 #endif // VM_STRESS

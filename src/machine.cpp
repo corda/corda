@@ -490,6 +490,7 @@ postCollect(Thread* t)
   if (t->backupHeap) {
     t->m->heap->free
       (t->backupHeap, t->backupHeapSizeInWords * BytesPerWord);
+    t->backupHeap = 0;
     t->backupHeapIndex = 0;
     t->backupHeapSizeInWords = 0;
   }
@@ -1735,7 +1736,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   heap(defaultHeap),
   backupHeap(0),
   backupHeapIndex(0),
-  backupHeapSizeInWords(0)
+  backupHeapSizeInWords(0),
+  tracing(false)
 #ifdef VM_STRESS
   , stress(false)
 #endif // VM_STRESS
@@ -2046,6 +2048,10 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     t->backupHeapIndex += ceiling(sizeInBytes, BytesPerWord);
     cast<object>(o, 0) = 0;
     return o;
+  } else if (t->tracing) {
+    expect(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+           <= Thread::HeapSizeInWords);
+    return allocateSmall(t, sizeInBytes);
   }
 
   ACQUIRE_RAW(t, t->m->stateLock);
