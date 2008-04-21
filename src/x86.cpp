@@ -643,11 +643,25 @@ void
 move4To8RR(Context* c, unsigned size UNUSED, Assembler::Register* a,
            Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8);
+  if (BytesPerWord == 8) {
+    rex(c);
+    c->code.append(0x63);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  } else {
+    if (a->low == rax and b->low == rax and b->high == rdx) {
+      c->code.append(0x99); // cdq
+    } else {
+      Assembler::Register axdx(c->client->acquireTemporary(rax),
+                               c->client->acquireTemporary(rdx));
 
-  rex(c);
-  c->code.append(0x63);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+      moveRR(c, 4, a, &axdx);
+      move4To8RR(c, 0, &axdx, &axdx);
+      moveRR(c, 8, &axdx, b);
+
+      c->client->releaseTemporary(axdx.low);
+      c->client->releaseTemporary(axdx.high);
+    }
+  }
 }
 
 void
@@ -710,20 +724,37 @@ void
 moveMM(Context* c, unsigned size, Assembler::Memory* a,
        Assembler::Memory* b)
 {
-  assert(c, BytesPerWord == 8 or size <= 4); // todo
-
-  Assembler::Register tmp(c->client->acquireTemporary());
-  moveMR(c, size, a, &tmp);
-  moveRM(c, size, &tmp, b);
-  c->client->releaseTemporary(tmp.low);
+  if (BytesPerWord == 8 or size <= 4) {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveMR(c, size, a, &tmp);
+    moveRM(c, size, &tmp, b);
+    c->client->releaseTemporary(tmp.low);
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary(),
+                            c->client->acquireTemporary());
+    moveMR(c, size, a, &tmp);
+    moveRM(c, size, &tmp, b);    
+    c->client->releaseTemporary(tmp.low);
+    c->client->releaseTemporary(tmp.high);
+  }
 }
 
 void
 move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8); // todo
+  if (BytesPerWord == 8) {
+    encode(c, 0x63, b->low, a, true);
+  } else {
+    Assembler::Register axdx(c->client->acquireTemporary(rax),
+                             c->client->acquireTemporary(rdx));
 
-  encode(c, 0x63, b->low, a, true);
+    moveMR(c, 4, a, &axdx);
+    move4To8RR(c, 0, &axdx, &axdx);
+    moveRR(c, 8, &axdx, b);
+
+    c->client->releaseTemporary(axdx.low);
+    c->client->releaseTemporary(axdx.high);
+  }
 }
 
 void

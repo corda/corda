@@ -15,8 +15,8 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = false;
-const bool DebugCompile = false;
+const bool DebugAppend = true;
+const bool DebugCompile = true;
 const bool DebugStack = false;
 const bool DebugRegisters = false;
 
@@ -824,8 +824,6 @@ bool
 tryAcquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
            Site* newSite)
 {
-  assert(c, newSize);
-
   if (c->registers[r].reserved) return true;
 
   if (DebugRegisters) {
@@ -2213,7 +2211,7 @@ class MyCompiler: public Compiler {
 
   virtual Operand* load4To8(Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, Move4To8, 0, static_cast<Value*>(src), dst);
+    appendMove(&c, Move4To8, 8, static_cast<Value*>(src), dst);
     return dst;
   }
 
