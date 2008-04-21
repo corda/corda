@@ -27,6 +27,34 @@ public class StackTraceElement {
     this.line = line;
   }
 
+  public int hashCode() {
+    return class_.hashCode() ^ method.hashCode() ^ line;
+  }
+
+  public boolean equals(Object o) {
+    if (o instanceof StackTraceElement) {
+      StackTraceElement e = (StackTraceElement) o;
+      return class_.equals(e.class_)
+        && method.equals(e.method)
+        && line == e.line;
+    } else {
+      return false;
+    }
+  }
+
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(class_).append(".").append(method);
+
+    if (line == NativeLine) {
+      sb.append(" (native)");
+    } else if (line >= 0) {
+      sb.append(" (line ").append(line).append(")");
+    }
+
+    return sb.toString();
+  }
+
   public String getClassName() {
     return class_;
   }
