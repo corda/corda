@@ -2181,7 +2181,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       
       c->indirectCall
-        (c->constant(reinterpret_cast<intptr_t>(negateDouble)), 0, 2, 0, a);
+        (c->constant(reinterpret_cast<intptr_t>(negateDouble)), 2, 0, a);
       c->release(a);
 
       Operand* result = c->result8();
