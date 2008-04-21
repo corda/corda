@@ -1793,11 +1793,14 @@ writeSizes(Output* out, Object* declarations)
       out->write(typeFixedSize(o));
       out->write(";\n\n");
 
-      out->write("const unsigned ArrayElementSizeOf");
-      out->write(capitalize(typeName(o)));
-      out->write(" = ");
-      out->write(typeArrayElementSize(o));
-      out->write(";\n\n");
+      int aes = typeArrayElementSize(o);
+      if (aes) {
+        out->write("const unsigned ArrayElementSizeOf");
+        out->write(capitalize(typeName(o)));
+        out->write(" = ");
+        out->write(aes);
+        out->write(";\n\n");
+      }
     } break;
 
     default: break;
