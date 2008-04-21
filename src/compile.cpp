@@ -3506,7 +3506,7 @@ void
 logCompile(const void* code, unsigned size, const char* class_,
            const char* name, const char* spec)
 {
-  fprintf(stderr, "%s.%s%s from %p to %p\n",
+  fprintf(stderr, "%s.%s%s: %p %p\n",
           class_, name, spec, code,
           static_cast<const uint8_t*>(code) + size);
 }
