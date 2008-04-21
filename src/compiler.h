@@ -66,6 +66,8 @@ class Compiler {
   virtual void mark(Operand*) = 0;
 
   virtual void indirectCall
+  (Operand* address, unsigned argumentCount, ...) = 0;
+  virtual void indirectCall
   (Operand* address, TraceHandler* traceHandler,
    unsigned argumentCount, ...) = 0;
   virtual void indirectCallNoReturn

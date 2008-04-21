@@ -1103,13 +1103,9 @@ pushArguments(Context* c, unsigned count, va_list list)
 
   unsigned index = 0;
   for (unsigned i = 0; i < count; ++i) {
-    if (BytesPerWord == 8) {
-      arguments[index] = va_arg(list, MyOperand*);
-      if (arguments[index]) {
-        ++ index;
-      }
-    } else {
-      arguments[index++] = va_arg(list, MyOperand*);
+    arguments[index] = va_arg(list, MyOperand*);
+    if (BytesPerWord == 4 or arguments[index]) {
+      ++ index;
     }
   }
 
@@ -2538,6 +2534,23 @@ class MyCompiler: public Compiler {
   virtual void mark(Operand* label) {
     static_cast<MyOperand*>(label)->setLabelValue
       (&c, static_cast<MyPromise*>(machineIp()));
+  }
+
+  virtual void indirectCall
+  (Operand* address, unsigned argumentCount, ...)
+  {
+    va_list a; va_start(a, argumentCount);
+    pushArguments(&c, argumentCount, a);
+    va_end(a);
+
+    appendOperation
+      (&c, MyOperand::mov, address, register_(&c, rax));
+    call(immediate(&c, c.indirectCaller), 0);
+
+    appendOperation
+      (&c, MyOperand::add,
+       immediate(&c, argumentFootprint(argumentCount)),
+       register_(&c, rsp));
   }
 
   virtual void indirectCall

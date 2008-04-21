@@ -2062,7 +2062,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case d2f: {
       Operand* a = frame->popLong();
 
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(doubleToFloat)), 2, 0, a);
       c->release(a);
 
@@ -2074,7 +2074,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case d2i: {
       Operand* a = frame->popLong();
 
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(doubleToInt)), 2, 0, a);
       c->release(a);
 
@@ -2086,7 +2086,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case d2l: {
       Operand* a = frame->popLong();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(doubleToLong)), 2, 0, a);
       c->release(a);
 
@@ -2099,7 +2099,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(addDouble)), 4, 0, a, 0, b);
       c->release(a);
       c->release(b);
@@ -2113,7 +2113,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(compareDoublesG)),
          4, 0, a, 0, b);
       c->release(a);
@@ -2128,7 +2128,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
 
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(compareDoublesL)),
          4, 0, a, 0, b);
       c->release(a);
@@ -2151,7 +2151,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
       
-      c->directCall
+      c->indirectCall
          (c->constant(reinterpret_cast<intptr_t>(divideDouble)),
           4, 0, a, 0, b);
       c->release(a);
@@ -2166,7 +2166,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(multiplyDouble)),
          4, 0, a, 0, b);
       c->release(a);
@@ -2180,8 +2180,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case dneg: {
       Operand* a = frame->popLong();
       
-      c->directCall
-        (c->constant(reinterpret_cast<intptr_t>(negateDouble)), 2, 0, a);
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(negateDouble)), 0, 2, 0, a);
       c->release(a);
 
       Operand* result = c->result8();
@@ -2193,8 +2193,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
       
-      c->directCall
-        (c->constant(reinterpret_cast<intptr_t>(moduloDouble)), 4, 0, a, 0, b);
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(moduloDouble)),
+         4, 0, a, 0, b);
       c->release(a);
       c->release(b);
 
@@ -2207,7 +2208,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popLong();
       Operand* b = frame->popLong();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(subtractDouble)),
          4, 0, a, 0, b);
       c->release(a);
@@ -2245,7 +2246,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case f2d: {
       Operand* a = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(floatToDouble)), 1, a);
       c->release(a);
 
@@ -2257,8 +2258,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case f2i: {
       Operand* a = frame->popInt();
       
-      c->directCall
-         (c->constant(reinterpret_cast<intptr_t>(floatToInt)), 1, a);
+      c->indirectCall
+        (c->constant(reinterpret_cast<intptr_t>(floatToInt)), 1, a);
       c->release(a);
 
       Operand* result = c->result4();
@@ -2269,7 +2270,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case f2l: {
       Operand* a = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(floatToLong)), 1, a);
       c->release(a);
 
@@ -2282,7 +2283,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(addFloat)), 2, a, b);
       c->release(a);
       c->release(b);
@@ -2296,7 +2297,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(compareFloatsG)), 2, a, b);
       c->release(a);
       c->release(b);
@@ -2310,7 +2311,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(compareFloatsL)), 2, a, b);
       c->release(a);
       c->release(b);
@@ -2336,7 +2337,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(divideFloat)), 2, a, b);
       c->release(a);
       c->release(b);
@@ -2350,7 +2351,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(multiplyFloat)), 2, a, b);
       c->release(a);
       c->release(b);
@@ -2363,7 +2364,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case fneg: {
       Operand* a = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(negateFloat)), 1, a);
       c->release(a);
 
@@ -2376,7 +2377,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(moduloFloat)), 2, a, b);
       c->release(a);
       c->release(b);
@@ -2390,7 +2391,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* a = frame->popInt();
       Operand* b = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(subtractFloat)), 2, a, b);
       c->release(a);
       c->release(b);
@@ -2486,7 +2487,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case i2d: {
       Operand* a = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(intToDouble)), 1, a);
 
       Operand* result = c->result8();
@@ -2498,7 +2499,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case i2f: {
       Operand* a = frame->popInt();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(intToFloat)), 1, a);
 
       Operand* result = c->result4();
@@ -2737,7 +2738,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Operand* classOperand = frame->append(class_);
 
-      c->directCall
+      c->indirectCall
          (c->constant(reinterpret_cast<intptr_t>(instanceOf)),
           3, c->thread(), classOperand, instance);
 
@@ -2923,7 +2924,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case l2d: {
       Operand* a = frame->popLong();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
 
       Operand* result = c->result8();
@@ -2935,7 +2936,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case l2f: {
       Operand* a = frame->popLong();
       
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(longToDouble)), 2, 0, a);
 
       Operand* result = c->result4();
@@ -3113,7 +3114,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
       assert(t, start);
 
-      c->directCall
+      c->indirectCall
         (c->constant(reinterpret_cast<intptr_t>(lookUpAddress)),
          4, key, start, c->constant(pairCount), default_);
 
@@ -3428,9 +3429,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
              frame->trace(0, false),
              4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
         } else {
-          c->directCall
+          c->indirectCall
             (c->constant(reinterpret_cast<intptr_t>(set)),
-             4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
+             4, c->thread(), table, c->constant(fieldOffset(t, field)),
+             value);
         }
         break;
 
@@ -5006,9 +5008,11 @@ class MyProcessor: public Processor {
         void* oldBase = target->ip;
         void* oldStack = target->stack;
 
-        target->ip = ip;
-        target->base = base;
-        target->stack = stack;
+        if (methodForIp(t, ip)) {
+          target->ip = ip;
+          target->base = base;
+          target->stack = stack;
+        }
 
         trace = makeTrace(t, target);
 
@@ -5147,7 +5151,7 @@ object
 findCallNode(MyThread* t, void* address)
 {
   if (DebugCallTable) {
-    fprintf(stderr, "find trace node %p\n", address);
+    fprintf(stderr, "find call node %p\n", address);
   }
 
   MyProcessor* p = processor(t);
@@ -5207,7 +5211,7 @@ void
 insertCallNode(MyThread* t, object node)
 {
   if (DebugCallTable) {
-    fprintf(stderr, "insert trace node %p\n",
+    fprintf(stderr, "insert call node %p\n",
             reinterpret_cast<void*>(callNodeAddress(t, node)));
   }
 
