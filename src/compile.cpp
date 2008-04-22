@@ -4689,6 +4689,11 @@ class SegFaultHandler: public System::SignalHandler {
   Machine* m;
 };
 
+class MyProcessor;
+
+MyProcessor*
+processor(MyThread* t);
+
 class MyProcessor: public Processor {
  public:
   class CodeAllocator: public Allocator {
@@ -5000,6 +5005,9 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
     MyThread* target = static_cast<MyThread*>(vmTarget);
 
+    processor(t)->getDefaultCompiled(t);
+    processor(t)->getNativeCompiled(t);
+
     class Visitor: public System::ThreadVisitor {
      public:
       Visitor(MyThread* t, MyThread* target): t(t), target(target) { }
@@ -5015,6 +5023,30 @@ class MyProcessor: public Processor {
           target->ip = ip;
           target->base = base;
           target->stack = stack;
+        } else {
+          MyProcessor* p = processor(t);
+
+          uint8_t* default_ = reinterpret_cast<uint8_t*>
+            (&singletonValue(t, p->defaultCompiled, 0));
+          unsigned defaultSize = singletonLength(t, p->defaultCompiled);
+          
+          uint8_t* native = reinterpret_cast<uint8_t*>
+            (&singletonValue(t, p->nativeCompiled, 0));
+          unsigned nativeSize = singletonLength(t, p->nativeCompiled);
+
+          if ((static_cast<uint8_t*>(ip) >= p->indirectCaller
+               and static_cast<uint8_t*>(ip)
+               < p->indirectCaller + p->indirectCallerSize)
+
+              or (static_cast<uint8_t*>(ip) >= default_
+                  and static_cast<uint8_t*>(ip) < default_ + defaultSize)
+
+              or (static_cast<uint8_t*>(ip) >= native
+                  and static_cast<uint8_t*>(ip) < native + nativeSize))
+          {
+            target->base = base;
+            target->stack = stack;            
+          }
         }
 
         t->tracing = true;
