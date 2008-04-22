@@ -213,22 +213,25 @@ class MyStackWalker: public Processor::StackWalker {
       base = *static_cast<void**>(base);
       ip_ = *static_cast<void**>(stack);
       method_ = methodForIp(t, *static_cast<void**>(stack));
-      if (method_ == 0) {
-        if (trace and trace->stack) {
-          base = trace->base;
-          stack = static_cast<void**>(trace->stack);
-          ip_ = *static_cast<void**>(stack);
-          method_ = methodForIp(t, *static_cast<void**>(stack));
-          nativeMethod = trace->nativeMethod;
-          trace = trace->next;
-        } else {
-          return false;
-        }
-      }
     } else {
       return false;
     }
-    return true;
+
+    if (method_ or nativeMethod) {
+      return true;
+    } else if (trace and trace->stack) {
+      base = trace->base;
+      stack = static_cast<void**>(trace->stack);
+      ip_ = *static_cast<void**>(stack);
+      method_ = methodForIp(t, *static_cast<void**>(stack));
+      nativeMethod = trace->nativeMethod;
+      trace = trace->next;
+
+      expect(t, method_ or nativeMethod);
+      return true;
+    } else {
+      return false;
+    }
   }
 
   virtual object method() {
