@@ -2457,10 +2457,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Operand* table;
 
       if (instruction == getstatic) {
-        c->indirectCall
-          (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
-           frame->trace(0, false),
-           2, c->thread(), frame->append(fieldClass(t, field)));
+        if ((classVmFlags(t, fieldClass(t, field)) & NeedInitFlag)
+            and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
+        {
+          c->indirectCall
+            (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
+             frame->trace(0, false),
+             2, c->thread(), frame->append(fieldClass(t, field)));
+        }
 
         table = frame->append(classStaticTable(t, fieldClass(t, field)));
       } else {
@@ -3408,10 +3412,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object staticTable = 0;
 
       if (instruction == putstatic) {
-        c->indirectCall
-          (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
-           frame->trace(0, false),
-           2, c->thread(), frame->append(fieldClass(t, field)));
+        if ((classVmFlags(t, fieldClass(t, field)) & NeedInitFlag)
+            and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
+        {
+          c->indirectCall
+            (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
+             frame->trace(0, false),
+             2, c->thread(), frame->append(fieldClass(t, field)));
+        }
 
         staticTable = classStaticTable(t, fieldClass(t, field));      
       }
