@@ -2832,6 +2832,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
+      assert(t, index < arrayLength(t, trace));
       set(t, trace, ArrayBody + (index * BytesPerWord), e);
       ++ index;
       return true;

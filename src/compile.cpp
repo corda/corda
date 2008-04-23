@@ -40,14 +40,12 @@ class MyThread: public Thread {
    public:
     CallTrace(MyThread* t):
       t(t),
-      ip(t->ip),
       base(t->base),
       stack(t->stack),
       nativeMethod(0),
       next(t->trace)
     {
       t->trace = this;
-      t->ip = 0;
       t->base = 0;
       t->stack = 0;
     }
@@ -55,7 +53,6 @@ class MyThread: public Thread {
     ~CallTrace() {
       t->stack = stack;
       t->base = base;
-      t->ip = ip;
       t->trace = next;
     }
 
@@ -152,6 +149,14 @@ methodForIp(MyThread* t, void* ip)
 
 class MyStackWalker: public Processor::StackWalker {
  public:
+  enum State {
+    Start,
+    Next,
+    Method,
+    NativeMethod,
+    Finish
+  };
+
   class MyProtector: public Thread::Protector {
    public:
     MyProtector(MyStackWalker* walker):
@@ -160,7 +165,6 @@ class MyStackWalker: public Processor::StackWalker {
 
     virtual void visit(Heap::Visitor* v) {
       v->visit(&(walker->method_));
-      v->visit(&(walker->nativeMethod));
     }
 
     MyStackWalker* walker;
@@ -168,114 +172,156 @@ class MyStackWalker: public Processor::StackWalker {
 
   MyStackWalker(MyThread* t):
     t(t),
-    ip_(t->ip ? t->ip : (t->stack ? *static_cast<void**>(t->stack) : 0)),
+    state(Start),
+    ip_(t->ip),
     base(t->base),
     stack(t->stack),
     trace(t->trace),
-    nativeMethod(trace ? trace->nativeMethod : 0),
-    method_(ip_ ? methodForIp(t, ip_) : 0),
+    method_(0),
     protector(this)
   { }
 
   MyStackWalker(MyStackWalker* w):
     t(w->t),
+    state(w->state),
     ip_(w->ip_),
     base(w->base),
     stack(w->stack),
     trace(w->trace),
-    nativeMethod(w->nativeMethod),
     method_(w->method_),
     protector(this)
   { }
 
   virtual void walk(Processor::StackVisitor* v) {
-    if (stack == 0) {
-      return;
-    }
-
-    if (not v->visit(this)) {
-      return;
-    }
-
-    for (MyStackWalker it(this); it.next();) {
+    for (MyStackWalker it(this); it.valid();) {
       MyStackWalker walker(it);
       if (not v->visit(&walker)) {
         break;
       }
+      it.next();
     }
   }
     
-  bool next() {
-    if (nativeMethod) {
-      nativeMethod = 0;
-    } else if (stack) {
-      stack = static_cast<void**>(base) + 1;
-      base = *static_cast<void**>(base);
-      ip_ = *static_cast<void**>(stack);
-      method_ = methodForIp(t, *static_cast<void**>(stack));
-    } else {
-      return false;
+  bool valid() {
+    while (true) {
+//       fprintf(stderr, "state: %d\n", state);
+      switch (state) {
+      case Start:
+        if (ip_ == 0 and stack) {
+          ip_ = *static_cast<void**>(stack);
+        }
+
+        if (trace and trace->nativeMethod) {
+          method_ = trace->nativeMethod;
+          state = NativeMethod;
+        } else if (ip_) {
+          state = Next;
+        } else {
+          state = Finish;
+        }
+        break;
+
+      case Next:
+        if (stack) {
+          method_ = methodForIp(t, ip_);
+          if (method_) {
+            state = Method;
+          } else if (trace) {
+            base = trace->base;
+            stack = static_cast<void**>(trace->stack);
+            ip_ = (stack ? *static_cast<void**>(stack) : 0);
+
+            if (trace->nativeMethod) {
+              method_ = trace->nativeMethod;
+              state = NativeMethod;
+            } else {
+              trace = trace->next;
+              state = Next;
+            }
+          } else {
+            state = Finish;
+          }
+        } else {
+          state = Finish;
+        }
+        break;
+
+      case Method:
+      case NativeMethod:
+        return true;
+
+      case Finish:
+        return false;
+   
+      default:
+        abort(t);
+      }
     }
+  }
+    
+  void next() {
+    switch (state) {
+    case Method:
+      stack = static_cast<void**>(base) + 1;
+      ip_ = (stack ? *static_cast<void**>(stack) : 0);
+      base = *static_cast<void**>(base);
+      state = Next;
+      break;
 
-    if (method_ or nativeMethod) {
-      return true;
-    } else if (trace and trace->stack) {
-      base = trace->base;
-      stack = static_cast<void**>(trace->stack);
-      ip_ = *static_cast<void**>(stack);
-      method_ = methodForIp(t, *static_cast<void**>(stack));
-      nativeMethod = trace->nativeMethod;
+    case NativeMethod:
       trace = trace->next;
-
-      expect(t, method_ or nativeMethod);
-      return true;
-    } else {
-      return false;
+      state = Next;
+      break;
+   
+    default:
+      abort(t);
     }
   }
 
   virtual object method() {
-    if (nativeMethod) {
-      return nativeMethod;
-    } else {
+    switch (state) {
+    case Method:
       return method_;
+        
+    case NativeMethod:
+      return trace->nativeMethod;
+
+    default:
+      abort(t);
     }
   }
 
   virtual int ip() {
-    if (nativeMethod) {
-      return 0;
-    } else {
+    switch (state) {
+    case Method:
       return reinterpret_cast<intptr_t>(ip_) - reinterpret_cast<intptr_t>
         (&singletonValue(t, methodCompiled(t, method_), 0));
+        
+    case NativeMethod:
+      return 0;
+
+    default:
+      abort(t);
     }
   }
 
   virtual unsigned count() {
-    class Visitor: public Processor::StackVisitor {
-     public:
-      Visitor(): count(0) { }
+    unsigned count = 0;
 
-      virtual bool visit(Processor::StackWalker*) {
-        ++ count;
-        return true;
-      }
-
-      unsigned count;
-    } v;
-
-    MyStackWalker walker(this);
-    walker.walk(&v);
+    for (MyStackWalker walker(this); walker.valid();) {
+      walker.next();
+      ++ count;
+    }
     
-    return v.count;
+    return count;
   }
 
   MyThread* t;
+  State state;
   void* ip_;
   void* base;
   void* stack;
   MyThread::CallTrace* trace;
-  object nativeMethod;
   object method_;
   MyProtector protector;
 };
@@ -1196,9 +1242,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
   void* ip = t->ip;
   void* base = t->base;
   void** stack = static_cast<void**>(t->stack);
-  if (ip) {
-    t->ip = 0;
-  } else {
+  if (ip == 0) {
     ip = *stack;
   }
 
@@ -4302,11 +4346,11 @@ invokeNative(MyThread* t)
 {
   if (t->trace->nativeMethod == 0) {
     object node = findCallNode(t, *static_cast<void**>(t->stack));
-    t->trace->nativeMethod = callNodeTarget(t, node);
+    object target = callNodeTarget(t, node);
     if (callNodeVirtualCall(t, node)) {
-      t->trace->nativeMethod = resolveTarget
-        (t, t->stack, t->trace->nativeMethod);
+      target = resolveTarget(t, t->stack, target);
     }
+    t->trace->nativeMethod = target;
   }
 
   uint64_t result = 0;
@@ -4671,6 +4715,10 @@ class SegFaultHandler: public System::SignalHandler {
     if (t->state == Thread::ActiveState) {
       object node = methodForIp(t, *ip);
       if (node) {
+        void* oldIp = t->ip;
+        void* oldBase = t->base;
+        void* oldStack = t->stack;
+
         t->ip = *ip;
         t->base = *base;
         t->stack = *stack;
@@ -4682,6 +4730,11 @@ class SegFaultHandler: public System::SignalHandler {
         t->tracing = false;
 
         findUnwindTarget(t, ip, base, stack);
+
+        t->ip = oldIp;
+        t->base = oldBase;
+        t->stack = oldStack;
+
         *thread = t;
         return true;
       }
@@ -5047,6 +5100,7 @@ class MyProcessor: public Processor {
               or (static_cast<uint8_t*>(ip) >= native
                   and static_cast<uint8_t*>(ip) < native + nativeSize))
           {
+            target->ip = *static_cast<void**>(stack);
             target->base = base;
             target->stack = stack;            
           }
