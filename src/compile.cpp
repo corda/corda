@@ -1184,9 +1184,6 @@ findCallNode(MyThread* t, void* address);
 void
 insertCallNode(MyThread* t, object node);
 
-void
-removeCallNode(MyThread* t, object node);
-
 void*
 findExceptionHandler(Thread* t, object method, void* ip)
 {
@@ -4130,14 +4127,6 @@ compileMethod2(MyThread* t)
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
         = &singletonValue(t, methodCompiled(t, target), 0);
     } else {
-#ifndef VM_STRESS
-      // valgrind doesn't like this, since the effect of updateCall
-      // below does not propagate to valgrind's interpreter:
-      { ACQUIRE(t, t->m->classLock);
-        removeCallNode(t, node);
-      }
-#endif
-
       Context context(t);
       context.c->updateCall
         (reinterpret_cast<void*>(callNodeAddress(t, node)),
@@ -5327,50 +5316,6 @@ insertCallNode(MyThread* t, object node)
 
   set(t, node, CallNodeNext, arrayBody(t, p->callTable, index));
   set(t, p->callTable, ArrayBody + (index * BytesPerWord), node);
-}
-
-void
-removeCallNode(MyThread* t, object node)
-{
-  if (DebugCallTable) {
-    fprintf(stderr, "remove call node %p\n",
-            reinterpret_cast<void*>(callNodeAddress(t, node)));
-  }
-
-  MyProcessor* p = processor(t);
-  PROTECT(t, node);
-
-  object oldNode = 0;
-  PROTECT(t, oldNode);
-
-  object newNode = 0;
-  PROTECT(t, newNode);
-
-  intptr_t key = callNodeAddress(t, node);
-  unsigned index = static_cast<uintptr_t>(key)
-    & (arrayLength(t, p->callTable) - 1);
-
-  for (oldNode = arrayBody(t, p->callTable, index);
-       oldNode;
-       oldNode = callNodeNext(t, oldNode))
-  {
-    if (oldNode != node) {
-      newNode = makeCallNode
-        (t, callNodeAddress(t, oldNode),
-         callNodeTarget(t, oldNode),
-         callNodeVirtualCall(t, oldNode),
-         newNode);
-    }
-  }
-
-  set(t, p->callTable, ArrayBody + (index * BytesPerWord), newNode);
-
-  -- p->callTableSize;
-
-  if (p->callTableSize <= arrayLength(t, p->callTable) / 3) {
-    p->callTable = resizeTable
-      (t, p->callTable, arrayLength(t, p->callTable) / 2);
-  }
 }
 
 object&
