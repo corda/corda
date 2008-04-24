@@ -1709,6 +1709,11 @@ class MyHeap: public Heap {
     }
   }
 
+  virtual bool needsMark(void* p, unsigned offset) {
+    return needsMark(p) and targetNeedsMark
+      (mask(*(static_cast<void**>(p) + offset)));
+  }
+
   bool targetNeedsMark(void* target) {
     return target
       and not c.gen2.contains(target)
