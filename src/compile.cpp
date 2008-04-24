@@ -1187,8 +1187,6 @@ insertCallNode(MyThread* t, object node);
 void*
 findExceptionHandler(Thread* t, object method, void* ip)
 {
-  PROTECT(t, method);
-
   object table = codeExceptionHandlerTable(t, methodCode(t, method));
   if (table) {
     object index = arrayBody(t, table, 0);
@@ -1202,25 +1200,7 @@ findExceptionHandler(Thread* t, object method, void* ip)
       unsigned key = difference(ip, compiled) - 1;
 
       if (key >= start and key < end) {
-        object catchType = 0;
-        if (arrayBody(t, table, i + 1)) {
-          object e = t->exception;
-          t->exception = 0;
-          PROTECT(t, e);
-
-          PROTECT(t, table);
-          PROTECT(t, index);
-
-          catchType = resolveClassInObject
-            (t, table, ArrayBody + ((i + 1) * BytesPerWord));
-
-          if (catchType) {
-            t->exception = e;
-          } else {
-            // can't find what we're supposed to catch - move on.
-            continue;
-          }
-        }
+        object catchType = arrayBody(t, table, i + 1);
 
         if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
           return compiled + intArrayBody(t, index, (i * 3) + 2);
@@ -3648,6 +3628,8 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
     PROTECT(t, newIndex);
 
     object newTable = makeArray(t, length + 1, false);
+    PROTECT(t, newTable);
+
     set(t, newTable, ArrayBody, newIndex);
 
     for (unsigned i = 0; i < length; ++i) {
@@ -3663,10 +3645,14 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
       intArrayBody(t, newIndex, (i * 3) + 2)
         = c->machineIp(exceptionHandlerIp(oldHandler))->value(c) - start;
 
-      object type =
-        (exceptionHandlerCatchType(oldHandler) ?
-         singletonObject(t, codePool(t, code),
-                         exceptionHandlerCatchType(oldHandler) - 1) : 0);
+      object type;
+      if (exceptionHandlerCatchType(oldHandler)) {
+        type = resolveClassInPool
+          (t, codePool(t, code), exceptionHandlerCatchType(oldHandler) - 1);
+        if (UNLIKELY(t->exception)) return;
+      } else {
+        type = 0;
+      }
 
       set(t, newTable, ArrayBody + ((i + 1) * BytesPerWord), type);
     }
@@ -3882,6 +3868,7 @@ finish(MyThread* t, Context* context, const char* name)
 
     translateExceptionHandlerTable(t, c, methodCode(t, context->method),
                                    reinterpret_cast<intptr_t>(start));
+    if (UNLIKELY(t->exception)) return 0;
 
     translateLineNumberTable(t, c, methodCode(t, context->method),
                              reinterpret_cast<intptr_t>(start));
