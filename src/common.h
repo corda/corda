@@ -29,11 +29,12 @@
 
 #ifdef __i386__
 #  define LD "d"
-#  define LX "x"
 #  define LLD "lld"
 #ifdef __APPLE__
 #  define ULD "lu"
+#  define LX "lx"
 #else
+#  define LX "x"
 #  define ULD "u"
 #endif
 #elif defined __x86_64__
