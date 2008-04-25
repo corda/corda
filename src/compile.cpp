@@ -5053,8 +5053,6 @@ class MyProcessor: public Processor {
       Visitor(MyThread* t, MyThread* target): t(t), target(target) { }
 
       virtual void visit(void* ip, void* base, void* stack) {
-        ensure(t, traceSize(target));
-
         void* oldIp = target->ip;
         void* oldBase = target->base;
         void* oldStack = target->stack;
@@ -5089,6 +5087,8 @@ class MyProcessor: public Processor {
             target->stack = stack;            
           }
         }
+
+        ensure(t, traceSize(target));
 
         t->tracing = true;
         trace = makeTrace(t, target);
