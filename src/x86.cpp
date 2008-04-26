@@ -35,6 +35,18 @@ enum {
   r15 = 15,
 };
 
+int64_t FORCE_ALIGN
+divideLong(int64_t a, int64_t b)
+{
+  return a / b;
+}
+
+int64_t FORCE_ALIGN
+moduloLong(int64_t a, int64_t b)
+{
+  return a % b;
+}
+
 inline bool
 isInt8(intptr_t v)
 {
@@ -524,6 +536,17 @@ popM(Context* c, unsigned size, Assembler::Memory* a)
 }
 
 void
+negateR(Context* c, unsigned size, Assembler::Register* a)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  rex(c);
+  c->code.append(0xf7);
+  c->code.append(0xd8 | a->low);
+}
+
+
+void
 leaMR(Context* c, unsigned size, Assembler::Memory* b, Assembler::Register* a)
 {
   if (BytesPerWord == 8 and size == 4) {
@@ -575,13 +598,19 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
   } else {
     switch (size) {
     case 1:
+      if (BytesPerWord == 8) {
+        c->code.append(0x0f);
+      }
       c->code.append(0xbe);
-      c->code.append(0xc0 | (a->low << 3) | b->low);
+      c->code.append(0xc0 | (b->low << 3) | a->low);
       break;
 
     case 2:
+      if (BytesPerWord == 8) {
+        c->code.append(0x0f);
+      }
       c->code.append(0xbf);
-      c->code.append(0xc0 | (a->low << 3) | b->low);
+      c->code.append(0xc0 | (b->low << 3) | a->low);
       break;
 
     case 8:
@@ -864,6 +893,54 @@ addRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
+divideRR(Context* c, unsigned size, Assembler::Register* a,
+         Assembler::Register* b)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register axdx(c->client->acquireTemporary(rax),
+                             c->client->acquireTemporary(rdx));
+
+    pushR(c, size, a);
+    pushR(c, size, b);
+    
+    ResolvedPromise addressPromise(reinterpret_cast<intptr_t>(divideLong));
+    Assembler::Constant address(&addressPromise);
+    callC(c, BytesPerWord, &address);
+
+    ResolvedPromise offsetPromise(16);
+    Assembler::Constant offset(&offsetPromise);
+    Assembler::Register stack(rsp);
+    addCR(c, BytesPerWord, &offset, &stack);
+
+    moveRR(c, size, &axdx, b);
+
+    c->client->releaseTemporary(axdx.low);
+    c->client->releaseTemporary(axdx.high);
+  } else {
+    Assembler::Register ax(rax);
+    Assembler::Register dx(c->client->acquireTemporary(rdx));
+
+    if (b->low != rax) {
+      c->client->acquireTemporary(ax.low);
+      moveRR(c, BytesPerWord, b, &ax);
+    }
+    
+    rex(c);
+    c->code.append(0x99);
+    rex(c);
+    c->code.append(0xf7);
+    c->code.append(0xf8 | a->low);
+
+    if (b->low != rax) {
+      moveRR(c, BytesPerWord, &ax, b);
+      c->client->releaseTemporary(ax.low);
+    }
+
+    c->client->releaseTemporary(dx.low);
+  }
+}
+
+void
 andCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
       Assembler::Register* b)
 {
@@ -1065,6 +1142,8 @@ populateTables()
   UnaryOperations[INDEX1(Pop, Register)] = CAST1(popR);
   UnaryOperations[INDEX1(Pop, Memory)] = CAST1(popM);
 
+  UnaryOperations[INDEX1(Negate, Register)] = CAST1(negateR);
+
   BinaryOperations[INDEX2(LoadAddress, Memory, Register)] = CAST2(leaMR);
 
   BinaryOperations[INDEX2(Move, Constant, Register)] = CAST2(moveCR);
@@ -1085,6 +1164,8 @@ populateTables()
   BinaryOperations[INDEX2(Add, Constant, Register)] = CAST2(addCR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
+
+  BinaryOperations[INDEX2(Divide, Register, Register)] = CAST2(divideRR);
 
   BinaryOperations[INDEX2(And, Constant, Register)] = CAST2(andCR);
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);

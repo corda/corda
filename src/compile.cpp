@@ -751,7 +751,7 @@ class Frame {
 
   void pushLongQuiet(Compiler::Operand* o) {
     if (BytesPerWord == 8) {
-      c->pushed(1);
+      c->push(8);
     }
     c->push(8, o);
   }
@@ -774,7 +774,7 @@ class Frame {
   Compiler::Operand* popLongQuiet() {
     Compiler::Operand* r = c->pop(8);
     if (BytesPerWord == 8) {
-      c->popped(1);
+      c->pop(8);
     }
     return r;
   }
@@ -1364,16 +1364,28 @@ longToFloat(int64_t a)
 }
 
 object FORCE_ALIGN
-makeBlankObjectArray(Thread* t, object class_, int32_t length)
+makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 {
-  return makeObjectArray(t, class_, length, true);
+  if (length >= 0) {
+    return makeObjectArray(t, class_, length, true);
+  } else {
+    object message = makeString(t, "%d", length);
+    t->exception = makeNegativeArraySizeException(t, message);
+    unwind(t);
+  }
 }
 
 object FORCE_ALIGN
-makeBlankArray(Thread* t, object (*constructor)(Thread*, uintptr_t, bool),
+makeBlankArray(MyThread* t, object (*constructor)(Thread*, uintptr_t, bool),
                int32_t length)
 {
-  return constructor(t, length, true);
+  if (length >= 0) {
+    return constructor(t, length, true);
+  } else {
+    object message = makeString(t, "%d", length);
+    t->exception = makeNegativeArraySizeException(t, message);
+    unwind(t);
+  }
 }
 
 uintptr_t
@@ -1474,14 +1486,6 @@ throwArrayIndexOutOfBounds(MyThread* t, object array, int32_t index)
 {
   object message = makeString
     (t, "array of length %d indexed at %d", arrayLength(t, array), index);
-  t->exception = makeArrayIndexOutOfBoundsException(t, message);
-  unwind(t);
-}
-
-void NO_RETURN FORCE_ALIGN
-throwNegativeArraySize(MyThread* t, int32_t length)
-{
-  object message = makeString(t, "%d", length);
   t->exception = makeArrayIndexOutOfBoundsException(t, message);
   unwind(t);
 }
@@ -2008,30 +2012,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      Compiler::Operand* length = c->peek(4, 0);
-
-      if (c->isConstant(length)) {
-        expect(t, c->constantValue(length) >= 0);
-      } else{
-        Compiler::Operand* nonnegative = c->label();
-
-        c->cmp(4, c->constant(0), length);
-        c->jge(nonnegative);
-
-        length = c->peek(4, 0);
-
-        c->call
-          (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
-           context->indirection,
-           Compiler::NoReturn,
-           frame->trace(0, false),
-           0,
-           2, c->thread(), length);
-
-        c->mark(nonnegative);
-      }
-
-      length = frame->popInt();
+      Compiler::Operand* length = frame->popInt();
 
       frame->pushObject
         (c->call
@@ -3197,30 +3178,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case newarray: {
       uint8_t type = codeBody(t, code, ip++);
 
-      Compiler::Operand* length = c->peek(4, 0);
-
-      if (c->isConstant(length)) {
-        expect(t, c->constantValue(length) >= 0);
-      } else{
-        Compiler::Operand* nonnegative = c->label();
-
-        c->cmp(4, c->constant(0), length);
-        c->jge(nonnegative);
-
-        length = c->peek(4, 0);
-
-        c->call
-          (c->constant(reinterpret_cast<intptr_t>(throwNegativeArraySize)),
-           context->indirection,
-           Compiler::NoReturn,
-           frame->trace(0, false),
-           0,
-           2, c->thread(), length);
-
-        c->mark(nonnegative);
-      }
-
-      length = frame->popInt();
+      Compiler::Operand* length = frame->popInt();
 
       object (*constructor)(Thread*, uintptr_t, bool);
       switch (type) {
@@ -3870,11 +3828,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Enums") == 0 and
+       "java/lang/StringBuilder") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "main") == 0)
+       "<init>") == 0)
   {
     asm("int3");
   }

@@ -17,8 +17,8 @@ namespace {
 
 const bool DebugAppend = true;
 const bool DebugCompile = true;
-const bool DebugStack = false;
-const bool DebugRegisters = false;
+const bool DebugStack = true;
+const bool DebugRegisters = true;
 
 class Context;
 class Value;
@@ -61,7 +61,7 @@ class Stack {
  public:
   Stack(Value* value, unsigned size, unsigned index, Stack* next):
     value(value), size(size), index(index), next(next), pushEvent(0),
-    pushSite(0), syncSite(0), pushed(false)
+    pushSite(0), pushed(false)
   { }
 
   Value* value;
@@ -70,7 +70,6 @@ class Stack {
   Stack* next;
   PushEvent* pushEvent;
   Site* pushSite;
-  Site* syncSite;
   bool pushed;
 };
 
@@ -141,8 +140,8 @@ class Read {
 
 class Value: public Compiler::Operand {
  public:
-  Value(Site* site):
-    reads(0), lastRead(0), sites(site), source(0), target(site)
+  Value(Site* site, Site* target):
+    reads(0), lastRead(0), sites(site), source(0), target(target)
   { }
   
   Read* reads;
@@ -329,8 +328,6 @@ class Event {
   { }
 
   virtual ~Event() { }
-
-  virtual void prepare(Context*) { }
 
   virtual void compile(Context* c) = 0;
 
@@ -773,6 +770,14 @@ pick(Context* c, Site* sites, Site* target = 0, unsigned* cost = 0)
   return site;
 }
 
+Site*
+pushSite(Context* c, unsigned index)
+{
+  return memorySite
+    (c, c->assembler->base(),
+     - (c->stackOffset + index + 1) * BytesPerWord, NoRegister, 1);
+}
+
 void
 pushNow(Context* c, Stack* start, unsigned count)
 {
@@ -787,11 +792,12 @@ pushNow(Context* c, Stack* start, unsigned count)
     assert(c, not s->pushed);
 
     if (s->value and s->value->sites) {
-      apply(c, Push, s->size * BytesPerWord, pick(c, s->value->sites));
-      s->pushSite = memorySite
-        (c, c->assembler->base(),
-         - (c->stackOffset + s->index + 1) * BytesPerWord, NoRegister, 1);
+      Site* source = pick(c, s->value->sites);
+
+      s->pushSite = pushSite(c, s->index);
       addSite(c, 0, s->size * BytesPerWord, s->value, s->pushSite);
+
+      apply(c, Push, s->size * BytesPerWord, source);
     } else {
       Assembler::Register stack(c->assembler->stack());
       Assembler::Constant offset(resolved(c, s->size * BytesPerWord));
@@ -959,7 +965,7 @@ class PushEvent: public Event {
 
   virtual void compile(Context* c) {
     if (DebugCompile) {
-      fprintf(stderr, "PushEvent.compile\n");
+      fprintf(stderr, "PushEvent.compile active: %d\n", active);
     }
 
     if (active) {
@@ -1161,17 +1167,17 @@ class MoveEvent: public Event {
     }
 
     Site* target;
+    unsigned cost;
     if (type == Move
         and size >= BytesPerWord
         and dst->reads
         and next == dst->reads->event)
     {
       target = src->source;
+      cost = 0;
     } else {
       target = targetOrRegister(c, size, dst, this);
-      if (src->source->copyCost(c, target)) {
-        apply(c, type, size, src->source, target);
-      }
+      cost = src->source->copyCost(c, target);
     }
 
     nextRead(c, src);
@@ -1180,6 +1186,10 @@ class MoveEvent: public Event {
       addSite(c, stack, size, dst, target);
     } else {
       removeSite(c, dst, target);
+    }
+
+    if (cost) {
+      apply(c, type, size, src->source, target);
     }
   }
 
@@ -1390,16 +1400,6 @@ appendMemory(Context* c, Value* base, int displacement, Value* index,
     MemoryEvent(c, base, displacement, index, scale, result);
 }
 
-Site*
-stackSyncSite(Context* c, unsigned index, unsigned size)
-{
-  assert(c, index + size <= c->freeRegisterCount);
-
-  return registerSite
-    (c, c->freeRegisters[index],
-     size == 2 ? c->freeRegisters[index + 1] : NoRegister);
-}
-
 Stack*
 stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
 {
@@ -1408,9 +1408,9 @@ stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
 }
 
 Value*
-value(Context* c, Site* site = 0)
+value(Context* c, Site* site = 0, Site* target = 0)
 {
-  return new (c->zone->allocate(sizeof(Value))) Value(site);
+  return new (c->zone->allocate(sizeof(Value))) Value(site, target);
 }
 
 void
@@ -1419,8 +1419,9 @@ resetStack(Context* c)
   unsigned i = 0;
   Stack* p = 0;
   for (Stack* s = c->state->stack; s; s = s->next) {
-    Stack* n = stack
-      (c, value(c, stackSyncSite(c, i, s->size)), s->size, s->index, 0);
+    Stack* n = stack(c, value(c), s->size, s->index, 0);
+    n->value->sites = n->pushSite = pushSite(c, s->index);
+    n->pushed = true;
 
     if (p) {
       p->next = n;
@@ -1453,9 +1454,9 @@ popNow(Context* c, Event* event, Stack* stack, unsigned count, bool ignore)
                   s, s->value, target);
         }
 
-        apply(c, Pop, BytesPerWord * s->size, target);
-
         addSite(c, stack, s->size * BytesPerWord, s->value, target);
+
+        apply(c, Pop, BytesPerWord * s->size, target);
       } else {
         if (DebugStack) {
           fprintf(stderr, "ignore %p value: %p\n", s, s->value);
@@ -1485,29 +1486,19 @@ class StackSyncEvent: public Event {
   StackSyncEvent(Context* c):
     Event(c)
   {
-    unsigned i = 0;
     for (Stack* s = stack; s; s = s->next) {
-      s->syncSite = stackSyncSite(c, i, s->size);
-      addRead(c, s->value, s->size * BytesPerWord, s->syncSite);
-      i += s->size;
-    }
+      if (s->pushEvent) s->pushEvent->active = true;
+      addRead(c, s->value, s->size * BytesPerWord, 0);
+    } 
   }
 
   StackSyncEvent(Context* c, unsigned sequence, Stack* stack):
     Event(c, sequence, stack)
   {
-    unsigned i = 0;
     for (Stack* s = stack; s; s = s->next) {
-      s->syncSite = stackSyncSite(c, i, s->size);
-      insertRead(c, this, sequence, s->value, s->size * BytesPerWord,
-                 s->syncSite);
-      if (s->pushEvent) s->pushEvent->active = false;
-      i += s->size;
+      if (s->pushEvent) s->pushEvent->active = true;
+      insertRead(c, this, sequence, s->value, s->size * BytesPerWord, 0);
     }
-  }
-
-  virtual void prepare(Context* c) {
-    popNow(c, this, stack, 0xFFFFFFFF, false);
   }
 
   virtual void compile(Context* c) {
@@ -1520,7 +1511,9 @@ class StackSyncEvent: public Event {
     }
 
     for (Stack* s = stack; s; s = s->next) {
-      addSite(c, 0, s->size * BytesPerWord, s->value, s->syncSite);
+      if (s->pushSite) {
+        addSite(c, 0, s->size * BytesPerWord, s->value, s->pushSite);
+      }
     }
 
     for (Read* r = reads; r; r = r->eventNext) {
@@ -1642,23 +1635,23 @@ appendPop(Context* c, unsigned count, bool ignore)
   new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c, count, ignore);
 }
 
-void
-swapRegisters(Context* c, int* ap, int* bp)
-{
-  Assembler::Register a(*ap);
-  Assembler::Register b(*bp);
+// void
+// swapRegisters(Context* c, int* ap, int* bp)
+// {
+//   Assembler::Register a(*ap);
+//   Assembler::Register b(*bp);
 
-  c->assembler->apply
-    (Xor, BytesPerWord, RegisterOperand, &a, RegisterOperand, &b);
-  c->assembler->apply
-    (Xor, BytesPerWord, RegisterOperand, &b, RegisterOperand, &a);
-  c->assembler->apply
-    (Xor, BytesPerWord, RegisterOperand, &a, RegisterOperand, &b);
+//   c->assembler->apply
+//     (Xor, BytesPerWord, RegisterOperand, &a, RegisterOperand, &b);
+//   c->assembler->apply
+//     (Xor, BytesPerWord, RegisterOperand, &b, RegisterOperand, &a);
+//   c->assembler->apply
+//     (Xor, BytesPerWord, RegisterOperand, &a, RegisterOperand, &b);
 
-  int t = *ap;
-  *ap = *bp;
-  *bp = t;
-}
+//   int t = *ap;
+//   *ap = *bp;
+//   *bp = t;
+// }
 
 Site*
 readSource(Context* c, Stack* stack, Read* r, Event* e)
@@ -1674,29 +1667,30 @@ readSource(Context* c, Stack* stack, Read* r, Event* e)
         apply(c, Move, r->size, site, target);
         return target;
       } else {
-        // this is a filthy hack, but I think the core idea is right:
+        abort(c);
+//         // this is a filthy hack, but I think the core idea is right:
 
-        assert(c, target->type(c) == RegisterOperand);
+//         assert(c, target->type(c) == RegisterOperand);
 
-        RegisterSite* ts = static_cast<RegisterSite*>(target);
+//         RegisterSite* ts = static_cast<RegisterSite*>(target);
 
-        for (Site* s = r->value->sites; s; s = s->next) {
-          if (s->type(c) == RegisterOperand) {
-            RegisterSite* rs = static_cast<RegisterSite*>(s);
+//         for (Site* s = r->value->sites; s; s = s->next) {
+//           if (s->type(c) == RegisterOperand) {
+//             RegisterSite* rs = static_cast<RegisterSite*>(s);
 
-            RegisterSite* os = static_cast<RegisterSite*>
-              (c->registers[ts->register_.low].site);
+//             RegisterSite* os = static_cast<RegisterSite*>
+//               (c->registers[ts->register_.low].site);
 
-            assert(c, os->register_.low == ts->register_.low);
-            assert(c, os->register_.high == NoRegister);
-            assert(c, ts->register_.high == NoRegister);
-            assert(c, rs->register_.high == NoRegister);
+//             assert(c, os->register_.low == ts->register_.low);
+//             assert(c, os->register_.high == NoRegister);
+//             assert(c, ts->register_.high == NoRegister);
+//             assert(c, rs->register_.high == NoRegister);
 
-            swapRegisters(c, &(os->register_.low), &(rs->register_.low));
+//             swapRegisters(c, &(os->register_.low), &(rs->register_.low));
 
-            return rs;
-          }
-        }
+//             return rs;
+//           }
+//         }
       }
       
       abort(c);
@@ -1736,7 +1730,7 @@ compile(Context* c)
 
       for (Event* e = li->firstEvent; e; e = e->next) {
         if (e->stackReset) {
-//           fprintf(stderr, "stack reset\n");
+          fprintf(stderr, "stack reset\n");
           for (Stack* s = e->stack; s; s = s->next) {
             if (s->value->sites) {
               assert(c, s->value->sites->next == 0);
@@ -1747,8 +1741,6 @@ compile(Context* c)
             }
           }
         }
-
-        e->prepare(c);
 
         for (Read* r = e->reads; r; r = r->eventNext) {
           r->value->source = readSource(c, e->stack, r, e);
@@ -1852,14 +1844,12 @@ used(Context* c, int r)
   return v and findSite(c, v, c->registers[r].site);
 }
 
-// bool
-// usedExclusively(Context* c, int r)
-// {
-//   Value* v = c->registers[r].value;
-//   return used(c, r)
-//     and v->pushCount == 0
-//     and v->sites->next == 0;
-// }
+bool
+usedExclusively(Context* c, int r)
+{
+  Value* v = c->registers[r].value;
+  return used(c, r) and v->sites->next == 0;
+}
 
 int
 freeRegisterExcept(Context* c, int except, bool allowAcquired)
@@ -1873,14 +1863,14 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
     }
   }
 
-//   for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-//     if (i != except
-//         and c->registers[i].refCount == 0
-//         and (not usedExclusively(c, i)))
-//     {
-//       return i;
-//     }
-//   }
+  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
+    if (i != except
+        and c->registers[i].refCount == 0
+        and (not usedExclusively(c, i)))
+    {
+      return i;
+    }
+  }
 
   if (allowAcquired) {
     for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
@@ -2048,15 +2038,18 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* stack() {
-    return value(&c, registerSite(&c, c.assembler->stack()));
+    Site* s = registerSite(&c, c.assembler->stack());
+    return value(&c, s, s);
   }
 
   virtual Operand* base() {
-    return value(&c, registerSite(&c, c.assembler->base()));
+    Site* s = registerSite(&c, c.assembler->base());
+    return value(&c, s, s);
   }
 
   virtual Operand* thread() {
-    return value(&c, registerSite(&c, c.assembler->thread()));
+    Site* s = registerSite(&c, c.assembler->thread());
+    return value(&c, s, s);
   }
 
   virtual bool isConstant(Operand* a) {
@@ -2096,6 +2089,10 @@ class MyCompiler: public Compiler {
       }
     }
     abort(&c);
+  }
+
+  virtual void push(unsigned size) {
+    ::push(&c, size, value(&c));
   }
 
   virtual void push(unsigned size, Operand* value) {

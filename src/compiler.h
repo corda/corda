@@ -57,6 +57,7 @@ class Compiler {
   virtual Operand* label() = 0;
   virtual void mark(Operand* label) = 0;
 
+  virtual void push(unsigned size) = 0;
   virtual void push(unsigned size, Operand* value) = 0;
   virtual Operand* pop(unsigned size) = 0;
   virtual void pushed(unsigned count) = 0;
