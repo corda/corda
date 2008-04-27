@@ -17,13 +17,14 @@
 .globl vmNativeCall
 vmNativeCall:
    pushq  %rbp
+   movq   %rsp,%rbp
 
-   // %rdi aka  0(%rbp): function
-   // %rsi aka  8(%rbp): stack
-   // %rdx aka 16(%rbp): stackSize
-   // %rcx aka 24(%rbp): gprTable
-   //  %r8 aka 32(%rbp): sseTable
-   //  %r9 aka 40(%rbp): returnType
+   // %rdi aka -48(%rbp): function
+   // %rsi aka -40(%rbp): stack
+   // %rdx aka -32(%rbp): stackSize
+   // %rcx aka -24(%rbp): gprTable
+   //  %r8 aka -16(%rbp): sseTable
+   //  %r9 aka  -8(%rbp): returnType
 
    // save our argument registers so we can clobber them
    pushq  %r9
@@ -32,8 +33,6 @@ vmNativeCall:
    pushq  %rdx
    pushq  %rsi
    pushq  %rdi
-   
-   movq   %rsp,%rbp
 
    // reserve space for arguments passed via memory
    subq   %rdx,%rsp
@@ -49,21 +48,21 @@ loop:
    movq   %rcx,%rax
    movq   %rcx,%rdx
    addq   %rsp,%rdx
-   addq   8(%rbp),%rax
-	 movq	  (%rax),%rax
+   addq   -40(%rbp),%rax
+   movq	  (%rax),%rax
    movq   %rax,(%rdx)
    addq   $8,%rcx
 
 test:
-   cmpq   16(%rbp),%rcx
+   cmpq   -32(%rbp),%rcx
    jb     loop
    
    // do we need to load the general-purpose registers?
-   cmpq   $0,24(%rbp)
+   cmpq   $0,-24(%rbp)
    je     sse
 
    // yes, we do
-   movq   24(%rbp),%rax
+   movq   -24(%rbp),%rax
    movq   0(%rax),%rdi
    movq   8(%rax),%rsi
    movq   16(%rax),%rdx
@@ -73,11 +72,11 @@ test:
 
 sse:
    // do we need to load the SSE registers?
-   cmpq   $0,32(%rbp)
+   cmpq   $0,-16(%rbp)
    je     call
 
    // yes, we do
-   movq   32(%rbp),%rax
+   movq   -16(%rbp),%rax
    movq   0(%rax),%xmm0
    movq   8(%rax),%xmm1
    movq   16(%rax),%xmm2
@@ -88,10 +87,10 @@ sse:
    movq   64(%rax),%xmm7
 
 call:
-   call   *0(%rbp)
+   call   *-48(%rbp)
    
    // handle return value based on expected type
-   movq   40(%rbp),%rcx
+   movq   -8(%rbp),%rcx
 
 void:   
    cmpq   $VOID_TYPE,%rcx
@@ -109,10 +108,6 @@ copy:
 
 exit:
    movq   %rbp,%rsp
-
-   // pop our argument registers
-   addq   $48,%rsp
-   
    popq   %rbp
    ret
 

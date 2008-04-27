@@ -793,6 +793,8 @@ handleSignal(int signal, siginfo_t* info, void* context)
 
     System::Thread* t = system->visitTarget;
     system->visitTarget = 0;
+
+    ACQUIRE_MONITOR(t, system->visitLock);
     system->visitLock->notifyAll(t);
   } break;
 
@@ -830,7 +832,13 @@ handleSignal(int signal, siginfo_t* info, void* context)
   } else if (system->oldHandlers[index].sa_handler) {
     system->oldHandlers[index].sa_handler(signal);
   } else {
-    abort();
+    switch (signal) {
+    case VisitSignal:
+      break;
+
+    default:
+      abort();
+    }
   }
 }
 

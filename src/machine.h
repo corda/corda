@@ -1291,6 +1291,7 @@ class Thread {
   uintptr_t* backupHeap;
   unsigned backupHeapIndex;
   unsigned backupHeapSizeInWords;
+  bool tracing;
 #ifdef VM_STRESS
   bool stress;
 #endif // VM_STRESS
@@ -1486,7 +1487,10 @@ mark(Thread* t, object o, unsigned offset, unsigned count)
 inline void
 mark(Thread* t, object o, unsigned offset)
 {
-  mark(t, o, offset, 1);
+  if (t->m->heap->needsMark(o, offset / BytesPerWord)) {
+    ACQUIRE_RAW(t, t->m->heapLock);
+    t->m->heap->mark(o, offset / BytesPerWord, 1);
+  }
 }
 
 inline void

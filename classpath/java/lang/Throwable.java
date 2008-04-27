@@ -101,21 +101,7 @@ public class Throwable {
 
     StackTraceElement[] trace = resolveTrace();
     for (int i = 0; i < trace.length; ++i) {
-      sb.append("  at ")
-        .append(trace[i].getClassName())
-        .append(".")
-        .append(trace[i].getMethodName());
-
-      if (trace[i].isNativeMethod()) {
-        sb.append(" (native)");
-      } else {
-        int line = trace[i].getLineNumber();
-        if (line >= 0) {
-          sb.append(" (line ").append(line).append(")");
-        }
-      }
-
-      sb.append(nl);
+      sb.append("  at ").append(trace[i].toString()).append(nl);
     }
 
     if (cause != null) {
