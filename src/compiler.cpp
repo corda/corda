@@ -75,9 +75,9 @@ class Stack {
 
 class State {
  public:
-  State(State* s):
-    stack(s ? s->stack : 0),
-    next(s)
+  State(State* next, Stack* stack):
+    stack(stack),
+    next(next)
   { }
 
   Stack* stack;
@@ -159,7 +159,7 @@ class Context {
     assembler(assembler),
     zone(zone),
     logicalIp(-1),
-    state(new (zone->allocate(sizeof(State))) State(0)),
+    state(new (zone->allocate(sizeof(State))) State(0, 0)),
     logicalCode(0),
     logicalCodeLength(0),
     stackOffset(0),
@@ -1784,7 +1784,7 @@ void
 pushState(Context* c)
 {
   c->state = new (c->zone->allocate(sizeof(State)))
-    State(c->state);
+    State(c->state, c->state->stack);
 }
 
 void
@@ -1802,8 +1802,8 @@ popState(Context* c)
   saveStack(c);
 
   c->state = new (c->zone->allocate(sizeof(State)))
-    State(c->state->next);
-
+    State(c->state->next->next, c->state->next->stack);
+ 
   resetStack(c);
 }
 
