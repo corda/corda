@@ -598,6 +598,7 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
   } else {
     switch (size) {
     case 1:
+      rex(c);
       if (BytesPerWord == 8) {
         c->code.append(0x0f);
       }
@@ -606,6 +607,7 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
       break;
 
     case 2:
+      rex(c);
       if (BytesPerWord == 8) {
         c->code.append(0x0f);
       }
@@ -675,7 +677,7 @@ move4To8RR(Context* c, unsigned size UNUSED, Assembler::Register* a,
   if (BytesPerWord == 8) {
     rex(c);
     c->code.append(0x63);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    c->code.append(0xc0 | (b->low << 3) | a->low);
   } else {
     if (a->low == rax and b->low == rax and b->high == rdx) {
       c->code.append(0x99); // cdq
@@ -897,6 +899,8 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
          Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
+    abort(c); // todo: sync stack first
+
     Assembler::Register axdx(c->client->acquireTemporary(rax),
                              c->client->acquireTemporary(rdx));
 
@@ -918,10 +922,18 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
     c->client->releaseTemporary(axdx.high);
   } else {
     Assembler::Register ax(rax);
-    Assembler::Register dx(c->client->acquireTemporary(rdx));
+    Assembler::Register divisor(a->low);
+
+    if (a->low == rdx) {
+      divisor.low = c->client->acquireTemporary();
+      moveRR(c, BytesPerWord, a, &divisor);      
+    } else if (b->low != rdx) {
+      c->client->save(rdx);
+    }
 
     if (b->low != rax) {
-      c->client->acquireTemporary(ax.low);
+      c->client->save(rax);
+      c->client->acquireTemporary(rax);
       moveRR(c, BytesPerWord, b, &ax);
     }
     
@@ -929,14 +941,85 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
     c->code.append(0x99);
     rex(c);
     c->code.append(0xf7);
-    c->code.append(0xf8 | a->low);
+    c->code.append(0xf8 | divisor.low);
 
     if (b->low != rax) {
       moveRR(c, BytesPerWord, &ax, b);
-      c->client->releaseTemporary(ax.low);
+      c->client->releaseTemporary(rax);
+      c->client->restore(rax);
     }
 
-    c->client->releaseTemporary(dx.low);
+    if (a->low == rdx) {
+      moveRR(c, BytesPerWord, &divisor, a);
+      c->client->releaseTemporary(divisor.low);
+    } else if (b->low != rdx) {
+      c->client->restore(rdx);
+    }
+  }
+}
+
+void
+remainderRR(Context* c, unsigned size, Assembler::Register* a,
+            Assembler::Register* b)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    abort(c); // todo: sync stack first
+
+    Assembler::Register axdx(c->client->acquireTemporary(rax),
+                             c->client->acquireTemporary(rdx));
+
+    pushR(c, size, a);
+    pushR(c, size, b);
+    
+    ResolvedPromise addressPromise(reinterpret_cast<intptr_t>(moduloLong));
+    Assembler::Constant address(&addressPromise);
+    callC(c, BytesPerWord, &address);
+
+    ResolvedPromise offsetPromise(16);
+    Assembler::Constant offset(&offsetPromise);
+    Assembler::Register stack(rsp);
+    addCR(c, BytesPerWord, &offset, &stack);
+
+    moveRR(c, size, &axdx, b);
+
+    c->client->releaseTemporary(axdx.low);
+    c->client->releaseTemporary(axdx.high);
+  } else {
+    Assembler::Register ax(rax);
+    Assembler::Register dx(rdx);
+    Assembler::Register divisor(a->low);
+
+    if (a->low == rdx) {
+      divisor.low = c->client->acquireTemporary();
+      moveRR(c, BytesPerWord, a, &divisor);      
+    } else if (b->low != rdx) {
+      c->client->save(rdx);
+    }
+
+    if (b->low != rax) {
+      c->client->save(rax);
+      c->client->acquireTemporary(rax);
+      moveRR(c, BytesPerWord, b, &ax);
+    }
+    
+    rex(c);
+    c->code.append(0x99);
+    rex(c);
+    c->code.append(0xf7);
+    c->code.append(0xf8 | divisor.low);
+
+    if (b->low != rdx) {
+      moveRR(c, BytesPerWord, &dx, b);
+      c->client->releaseTemporary(rax);
+      c->client->restore(rax);
+    }
+
+    if (a->low == rdx) {
+      moveRR(c, BytesPerWord, &divisor, a);
+      c->client->releaseTemporary(divisor.low);
+    } else if (b->low != rdx) {
+      c->client->restore(rdx);
+    }
   }
 }
 
@@ -1166,6 +1249,8 @@ populateTables()
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
 
   BinaryOperations[INDEX2(Divide, Register, Register)] = CAST2(divideRR);
+
+  BinaryOperations[INDEX2(Remainder, Register, Register)] = CAST2(remainderRR);
 
   BinaryOperations[INDEX2(And, Constant, Register)] = CAST2(andCR);
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);

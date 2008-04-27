@@ -136,6 +136,9 @@ class Assembler {
 
     virtual int acquireTemporary(int r = NoRegister) = 0;
     virtual void releaseTemporary(int r) = 0;
+
+    virtual void save(int r) = 0;
+    virtual void restore(int r) = 0;
   };
 
   virtual ~Assembler() { }

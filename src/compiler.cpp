@@ -15,10 +15,10 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = true;
-const bool DebugCompile = true;
-const bool DebugStack = true;
-const bool DebugRegisters = true;
+const bool DebugAppend = false;
+const bool DebugCompile = false;
+const bool DebugStack = false;
+const bool DebugRegisters = false;
 
 class Context;
 class Value;
@@ -101,6 +101,7 @@ class Register {
   unsigned size;
   unsigned refCount;
   bool reserved;
+  bool pushed;
 };
 
 class ConstantPoolNode {
@@ -827,6 +828,42 @@ pushNow(Context* c, Stack* start)
 }
 
 bool
+trySteal(Context* c, int r, Stack* stack)
+{
+  Value* v = c->registers[r].value;
+
+  assert(c, c->registers[r].refCount == 0);
+
+  if (DebugRegisters) {
+    fprintf(stderr, "try steal %d from %p: next: %p\n",
+            r, v, v->sites->next);
+  }
+
+  if (v->sites->next == 0) {
+    unsigned count = 0;
+    Stack* start = 0;
+    for (Stack* s = stack; s and (not s->pushed); s = s->next) {
+      if (s->value == v) {
+        start = s;
+      }
+      if (start) {
+        ++ count;
+      }
+    }
+
+    if (start) {
+      pushNow(c, start, count);
+    } else {
+      return false;
+    }
+  }
+
+  removeSite(c, v, c->registers[r].site);
+
+  return true;
+}
+
+bool
 tryAcquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
            Site* newSite)
 {
@@ -842,33 +879,9 @@ tryAcquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
       and oldValue != newValue
       and findSite(c, oldValue, c->registers[r].site))
   {
-    assert(c, c->registers[r].refCount == 0);
-
-    if (DebugRegisters) {
-      fprintf(stderr, "try steal %d from %p: next: %p\n",
-              r, oldValue, oldValue->sites->next);
+    if (not trySteal(c, r, stack)) {
+      return false;
     }
-
-    if (oldValue->sites->next == 0) {
-      unsigned count = 0;
-      Stack* start = 0;
-      for (Stack* s = stack; s and (not s->pushed); s = s->next) {
-        if (s->value == oldValue) {
-          start = s;
-        }
-        if (start) {
-          ++ count;
-        }
-      }
-
-      if (start) {
-        pushNow(c, start, count);
-      } else {
-        return false;
-      }
-    }
-
-    removeSite(c, oldValue, c->registers[r].site);
   }
 
   c->registers[r].size = newSize;
@@ -1182,14 +1195,14 @@ class MoveEvent: public Event {
 
     nextRead(c, src);
 
+    if (cost) {
+      apply(c, type, size, src->source, target);
+    }
+
     if (dst->reads) {
       addSite(c, stack, size, dst, target);
     } else {
       removeSite(c, dst, target);
-    }
-
-    if (cost) {
-      apply(c, type, size, src->source, target);
     }
   }
 
@@ -1730,7 +1743,7 @@ compile(Context* c)
 
       for (Event* e = li->firstEvent; e; e = e->next) {
         if (e->stackReset) {
-          fprintf(stderr, "stack reset\n");
+//           fprintf(stderr, "stack reset\n");
           for (Stack* s = e->stack; s; s = s->next) {
             if (s->value->sites) {
               assert(c, s->value->sites->next == 0);
@@ -1863,16 +1876,16 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
     }
   }
 
-  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-    if (i != except
-        and c->registers[i].refCount == 0
-        and (not usedExclusively(c, i)))
-    {
-      return i;
-    }
-  }
-
   if (allowAcquired) {
+    for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
+      if (i != except
+          and c->registers[i].refCount == 0
+          and (not usedExclusively(c, i)))
+      {
+        return i;
+      }
+    }
+
     for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
       if (i != except
           and c->registers[i].refCount == 0)
@@ -1924,8 +1937,9 @@ class Client: public Assembler::Client {
     if (r == NoRegister) {
       r = freeRegisterExcept(c, NoRegister, false);
     } else {
-      expect(c, c->registers[r].refCount == 0);
-      expect(c, c->registers[r].value == 0);
+      expect(c, (c->registers[r].refCount == 0
+                 and c->registers[r].value == 0)
+             or c->registers[r].pushed);
     }
     increment(c, r);
     return r;
@@ -1933,6 +1947,22 @@ class Client: public Assembler::Client {
 
   virtual void releaseTemporary(int r) {
     decrement(c, r);
+  }
+
+  virtual void save(int r) {
+    if (c->registers[r].refCount or c->registers[r].value) {
+      Assembler::Register operand(r);
+      c->assembler->apply(Push, BytesPerWord, RegisterOperand, &operand);
+      c->registers[r].pushed = true;
+    }
+  }
+
+  virtual void restore(int r) {
+    if (c->registers[r].pushed) {
+      Assembler::Register operand(r);
+      c->assembler->apply(Pop, BytesPerWord, RegisterOperand, &operand);
+      c->registers[r].pushed = false;
+    }
   }
 
   Context* c;
@@ -2092,7 +2122,10 @@ class MyCompiler: public Compiler {
   }
 
   virtual void push(unsigned size) {
-    ::push(&c, size, value(&c));
+    assert(&c, ceiling(size, BytesPerWord));
+
+    c.state->stack = ::stack
+      (&c, value(&c), ceiling(size, BytesPerWord), c.state->stack);
   }
 
   virtual void push(unsigned size, Operand* value) {
