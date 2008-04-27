@@ -536,7 +536,7 @@ popM(Context* c, unsigned size, Assembler::Memory* a)
 }
 
 void
-negateR(Context* c, unsigned size, Assembler::Register* a)
+negateR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
@@ -895,7 +895,7 @@ addRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
-multiplyRR(Context* c, unsigned size, Assembler::Register* a,
+multiplyRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
            Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
