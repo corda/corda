@@ -895,6 +895,46 @@ addRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
+multiplyRR(Context* c, unsigned size, Assembler::Register* a,
+           Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  rex(c);
+  c->code.append(0x0f);
+  c->code.append(0xaf);
+  c->code.append(0xc0 | (b->low << 3) | a->low);
+}
+
+void
+multiplyCR(Context* c, unsigned size, Assembler::Constant* a,
+           Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  int64_t v = a->value->value();
+  if (v) {
+    if (isInt32(v)) {
+      rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x6b);
+        c->code.append(0xc0 | (b->low << 3) | b->low);
+        c->code.append(v);
+      } else {
+        c->code.append(0x69);
+        c->code.append(0xc0 | (b->low << 3) | b->low);
+        c->code.append4(v);        
+      }
+    } else {
+      Assembler::Register tmp(c->client->acquireTemporary());
+      moveCR(c, size, a, &tmp);
+      multiplyRR(c, size, &tmp, b);
+      c->client->releaseTemporary(tmp.low);      
+    }
+  }
+}
+
+void
 divideRR(Context* c, unsigned size, Assembler::Register* a,
          Assembler::Register* b)
 {
@@ -956,6 +996,18 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
       c->client->restore(rdx);
     }
   }
+}
+
+void
+divideCR(Context* c, unsigned size, Assembler::Constant* a,
+         Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveCR(c, size, a, &tmp);
+  divideRR(c, size, &tmp, b);
+  c->client->releaseTemporary(tmp.low);  
 }
 
 void
@@ -1024,24 +1076,40 @@ remainderRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+andRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+      Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  rex(c);
+  c->code.append(0x21);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
 andCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
       Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  assert(c, BytesPerWord == 8 or size == 4); // todo
 
   int64_t v = a->value->value();
 
-  rex(c);
-  if (isInt8(v)) {
-    c->code.append(0x83);
-    c->code.append(0xe0 | b->low);
-    c->code.append(v);
-  } else if (isInt32(v)) {
-    c->code.append(0x81);
-    c->code.append(0xe0 | b->low);
-    c->code.append(v);
+  if (isInt32(v)) {
+    rex(c);
+    if (isInt8(v)) {
+      c->code.append(0x83);
+      c->code.append(0xe0 | b->low);
+      c->code.append(v);
+    } else {
+      c->code.append(0x81);
+      c->code.append(0xe0 | b->low);
+      c->code.append(v);
+    }
   } else {
-    abort(c);
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, size, a, &tmp);
+    andRR(c, size, &tmp, b);
+    c->client->releaseTemporary(tmp.low);
   }
 }
 
@@ -1072,6 +1140,34 @@ xorRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
   rex(c);
   c->code.append(0x31);
   c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
+xorCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+      Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  int64_t v = a->value->value();
+  if (v) {
+    if (isInt32(v)) {
+      rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x83);
+        c->code.append(0xf0 | b->low);
+        c->code.append(v);
+      } else {
+        c->code.append(0x81);
+        c->code.append(0xf0 | b->low);
+        c->code.append4(v);        
+      }
+    } else {
+      Assembler::Register tmp(c->client->acquireTemporary());
+      moveCR(c, size, a, &tmp);
+      xorRR(c, size, &tmp, b);
+      c->client->releaseTemporary(tmp.low);
+    }
+  }
 }
 
 void
@@ -1248,14 +1344,20 @@ populateTables()
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
 
+  BinaryOperations[INDEX2(Multiply, Register, Register)] = CAST2(multiplyRR);
+  BinaryOperations[INDEX2(Multiply, Constant, Register)] = CAST2(multiplyCR);
+
   BinaryOperations[INDEX2(Divide, Register, Register)] = CAST2(divideRR);
+  BinaryOperations[INDEX2(Divide, Constant, Register)] = CAST2(divideCR);
 
   BinaryOperations[INDEX2(Remainder, Register, Register)] = CAST2(remainderRR);
 
+  BinaryOperations[INDEX2(And, Register, Register)] = CAST2(andRR);
   BinaryOperations[INDEX2(And, Constant, Register)] = CAST2(andCR);
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);
 
   BinaryOperations[INDEX2(Xor, Register, Register)] = CAST2(xorRR);
+  BinaryOperations[INDEX2(Xor, Constant, Register)] = CAST2(xorCR);
 
   BinaryOperations[INDEX2(ShiftLeft, Constant, Register)] = CAST2(shiftLeftCR);
 
