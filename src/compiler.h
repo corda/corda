@@ -28,6 +28,8 @@ class Compiler {
 
   virtual void pushState() = 0;
   virtual void popState() = 0;
+  virtual void saveStack() = 0;
+  virtual void resetStack() = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned localFootprint) = 0;
 

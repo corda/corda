@@ -10,13 +10,13 @@ public class Misc {
   private long time;
 
   public Misc() {
-//     expect(! boolean1);
-//     expect(! boolean2);
+    expect(! boolean1);
+    expect(! boolean2);
     
-//     time = 0xffffffffffffffffL;
+    time = 0xffffffffffffffffL;
     
-//     expect(! boolean1);
-//     expect(! boolean2);
+    expect(! boolean1);
+    expect(! boolean2);
   }
 
   private String foo(String s) {
@@ -67,39 +67,44 @@ public class Misc {
   }
 
   public static void main(String[] args) {
-//     byte2 = 0;
-//     expect(byte2 == 0);
+    byte2 = 0;
+    expect(byte2 == 0);
 
-//     expect(Long.valueOf(231L) == 231L);
+    expect(Long.valueOf(231L) == 231L);
 
-//     long x = 231;
-//     expect((x >> 32) == 0);
-//     expect((x >>> 32) == 0);
-//     expect((x << 32) == 992137445376L);
+    long x = 231;
+    expect((x >> 32) == 0);
+    expect((x >>> 32) == 0);
+    expect((x << 32) == 992137445376L);
 
-//     long y = -231;
-//     expect((y >> 32) == 0xffffffffffffffffL);
-//     expect((y >>> 32) == 0xffffffffL);
+    int shift = 32;
+    expect((x >> shift) == 0);
+    expect((x >>> shift) == 0);
+    expect((x << shift) == 992137445376L);
 
-//     byte[] array = new byte[8];
-//     putLong(231, array, 0);
-//     expect((array[0] & 0xff) == 0);
-//     expect((array[1] & 0xff) == 0);
-//     expect((array[2] & 0xff) == 0);
-//     expect((array[3] & 0xff) == 0);
-//     expect((array[4] & 0xff) == 0);
-//     expect((array[5] & 0xff) == 0);
-//     expect((array[6] & 0xff) == 0);
-//     expect((array[7] & 0xff) == 231);
+    long y = -231;
+    expect((y >> 32) == 0xffffffffffffffffL);
+    expect((y >>> 32) == 0xffffffffL);
 
-//     java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8);
-//     buffer.putLong(231);
-//     buffer.flip();
-//     expect(buffer.getLong() == 231);
+    byte[] array = new byte[8];
+    putLong(231, array, 0);
+    expect((array[0] & 0xff) == 0);
+    expect((array[1] & 0xff) == 0);
+    expect((array[2] & 0xff) == 0);
+    expect((array[3] & 0xff) == 0);
+    expect((array[4] & 0xff) == 0);
+    expect((array[5] & 0xff) == 0);
+    expect((array[6] & 0xff) == 0);
+    expect((array[7] & 0xff) == 231);
 
-//     boolean v = Boolean.valueOf("true");
+    java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8);
+    buffer.putLong(231);
+    buffer.flip();
+    expect(buffer.getLong() == 231);
 
-//     ClassLoader.getSystemClassLoader().toString();
+    boolean v = Boolean.valueOf("true");
+
+    ClassLoader.getSystemClassLoader().toString();
 
     int a = 2;
     int b = 2;
@@ -113,23 +118,23 @@ public class Misc {
     m.bar(s);
     baz(s);
 
-//     m.sync();
-//     syncStatic(false);
-//     try {
-//       syncStatic(true);
-//     } catch (RuntimeException e) {
-//       e.printStackTrace();
-//     }
+    m.sync();
+    syncStatic(false);
+    try {
+      syncStatic(true);
+    } catch (RuntimeException e) {
+      e.printStackTrace();
+    }
 
-//     int d = alpha;
-//     beta = 42;
-//     alpha = 43;
-//     int e = beta;
-//     int f = alpha;
-//     m.gamma = 44;
+    int d = alpha;
+    beta = 42;
+    alpha = 43;
+    int e = beta;
+    int f = alpha;
+    m.gamma = 44;
 
-//     expect(beta == 42);
-//     expect(alpha == 43);
-//     expect(m.gamma == 44);
+    expect(beta == 42);
+    expect(alpha == 43);
+    expect(m.gamma == 44);
   }
 }

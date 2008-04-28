@@ -552,10 +552,16 @@ class Frame {
   }
 
   ~Frame() {
-    if (level > 1 and t->exception == 0) {
-      c->popState();
+    if (t->exception == 0) {
+      if (level > 0) {
+        c->saveStack();
+        c->popState();
+        c->resetStack();
+      }
 
-      context->eventLog.append(PopEvent);      
+      if (level > 1) {
+        context->eventLog.append(PopEvent);      
+      }
     }
   }
 
@@ -2913,17 +2919,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popLong();
 
       c->cmp(8, a, b);
+
       c->jl(less);
+      c->pushState();
+
       c->jg(greater);
+      c->pushState();
 
       c->push(4, c->constant(0));
       c->jmp(next);
-          
+
+      c->popState();
       c->mark(less);
+
       c->push(4, c->constant(-1));
       c->jmp(next);
 
+      c->popState();
       c->mark(greater);
+
       c->push(4, c->constant(1));
 
       c->mark(next);
@@ -3085,13 +3099,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } return;
 
     case lshl: {
-      Compiler::Operand* a = frame->popLong();
+      Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
       frame->pushLong(c->shl(8, a, b));
     } break;
 
     case lshr: {
-      Compiler::Operand* a = frame->popLong();
+      Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
       frame->pushLong(c->shr(8, a, b));
     } break;
@@ -3128,7 +3142,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case lushr: {
-      Compiler::Operand* a = frame->popLong();
+      Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
       frame->pushLong(c->ushr(8, a, b));
     } break;
@@ -3861,11 +3875,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/Class") == 0 and
+       "java/nio/ByteBuffer") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "replace") == 0)
+       "checkPut") == 0)
   {
     asm("int3");
   }

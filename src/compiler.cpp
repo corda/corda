@@ -556,11 +556,11 @@ increment(Context* c, int r)
 void
 decrement(Context* c, int r)
 {
-  assert(c, c->registers[r].refCount > 0);
-  assert(c, c->registers[r].refCount > 1 or (not c->registers[r].reserved));
   if (DebugRegisters) {
     fprintf(stderr, "decrement %d to %d\n", r, c->registers[r].refCount - 1);
   }
+  assert(c, c->registers[r].refCount > 0);
+  assert(c, c->registers[r].refCount > 1 or (not c->registers[r].reserved));
   -- c->registers[r].refCount;
 }
 
@@ -1783,6 +1783,13 @@ count(Stack* s)
 void
 pushState(Context* c)
 {
+  if (DebugAppend) {
+    unsigned count = 0; for (State* s = c->state; s; s = s->next) ++ count;
+    fprintf(stderr, "push at level %d\n", count);
+    count = 0; for (Stack* s = c->state->stack; s; s = s->next) ++ count;
+    fprintf(stderr, "stack count: %d\n", count);
+  }
+
   c->state = new (c->zone->allocate(sizeof(State)))
     State(c->state, c->state->stack);
 }
@@ -1793,18 +1800,27 @@ saveStack(Context* c)
   if (c->logicalIp >= 0 and not c->logicalCode[c->logicalIp].stackSaved) {
     c->logicalCode[c->logicalIp].stackSaved = true;
     c->logicalCode[c->logicalIp].stack = c->state->stack;
+
+    if (DebugAppend) {
+      unsigned count = 0;
+      for (Stack* s = c->state->stack; s; s = s->next) ++ count;
+      fprintf(stderr, "stack count after ip %d: %d\n", c->logicalIp, count);
+    }
   }
 }
 
 void
 popState(Context* c)
 {
-  saveStack(c);
-
   c->state = new (c->zone->allocate(sizeof(State)))
     State(c->state->next->next, c->state->next->stack);
  
-  resetStack(c);
+  if (DebugAppend) {
+    unsigned count = 0; for (State* s = c->state; s; s = s->next) ++ count;
+    fprintf(stderr, "pop to level %d\n", count);
+    count = 0; for (Stack* s = c->state->stack; s; s = s->next) ++ count;
+    fprintf(stderr, "stack count: %d\n", count);
+  }
 }
 
 Stack*
@@ -1984,6 +2000,14 @@ class MyCompiler: public Compiler {
     ::popState(&c);
   }
 
+  virtual void saveStack() {
+    ::saveStack(&c);
+  }
+
+  virtual void resetStack() {
+    ::resetStack(&c);
+  }
+
   virtual void init(unsigned logicalCodeLength, unsigned stackOffset) {
     c.logicalCodeLength = logicalCodeLength;
     c.stackOffset = stackOffset;
@@ -2010,7 +2034,7 @@ class MyCompiler: public Compiler {
 
     visit(&c, logicalIp);
 
-    saveStack(&c);
+    ::saveStack(&c);
 
     c.logicalIp = logicalIp;
   }
@@ -2110,7 +2134,7 @@ class MyCompiler: public Compiler {
 
   virtual void mark(Operand* label) {
     appendStackSync(&c);
-    resetStack(&c);
+    ::resetStack(&c);
 
     for (Site* s = static_cast<Value*>(label)->sites; s; s = s->next) {
       if (s->type(&c) == ConstantOperand) {
