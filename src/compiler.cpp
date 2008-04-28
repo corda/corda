@@ -1195,13 +1195,15 @@ class MoveEvent: public Event {
 
     nextRead(c, src);
 
+    if (dst->reads) {
+      addSite(c, stack, size, dst, target);
+    }
+
     if (cost) {
       apply(c, type, size, src->source, target);
     }
 
-    if (dst->reads) {
-      addSite(c, stack, size, dst, target);
-    } else {
+    if (dst->reads == 0) {
       removeSite(c, dst, target);
     }
   }
@@ -1263,22 +1265,20 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
 class CombineEvent: public Event {
  public:
   CombineEvent(Context* c, BinaryOperation type, unsigned size, Value* first,
-               Value* second, Value* result):
+               Value* second, Value* result, Assembler::Register* r1,
+               Assembler::Register* r2):
     Event(c), type(type), size(size), first(first), second(second),
     result(result)
   {
-    Assembler::Register r1(NoRegister);
-    Assembler::Register r2(NoRegister);
-    c->assembler->getTargets(type, size, &r1, &r2);
-
     addRead(c, first, size,
-            r1.low == NoRegister ?
+            r1->low == NoRegister ?
             constantOrRegisterSite(c) :
-            static_cast<Site*>(registerSite(c, r1.low, r1.high)));
+            static_cast<Site*>(registerSite(c, r1->low, r1->high)));
+
     addRead(c, second, size,
-            r2.low == NoRegister ?
+            r2->low == NoRegister ?
             valueSite(c, result) :
-            static_cast<Site*>(registerSite(c, r2.low, r2.high)));
+            static_cast<Site*>(registerSite(c, r2->low, r2->high)));
   }
 
   virtual void compile(Context* c) {
@@ -1305,15 +1305,27 @@ class CombineEvent: public Event {
 };
 
 void
+appendStackSync(Context* c);
+
+void
 appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
               Value* second, Value* result)
 {
+  Assembler::Register r1(NoRegister);
+  Assembler::Register r2(NoRegister);
+  bool syncStack;
+  c->assembler->getTargets(type, size, &r1, &r2, &syncStack);
+
+  if (syncStack) {
+    appendStackSync(c);
+  }
+
   if (DebugAppend) {
     fprintf(stderr, "appendCombine\n");
   }
 
   new (c->zone->allocate(sizeof(CombineEvent)))
-    CombineEvent(c, type, size, first, second, result);
+    CombineEvent(c, type, size, first, second, result, &r1, &r2);
 }
 
 class TranslateEvent: public Event {
@@ -1949,14 +1961,8 @@ class Client: public Assembler::Client {
  public:
   Client(Context* c): c(c) { }
 
-  virtual int acquireTemporary(int r) {
-    if (r == NoRegister) {
-      r = freeRegisterExcept(c, NoRegister, false);
-    } else {
-      expect(c, (c->registers[r].refCount == 0
-                 and c->registers[r].value == 0)
-             or c->registers[r].pushed);
-    }
+  virtual int acquireTemporary() {
+    int r = freeRegisterExcept(c, NoRegister, false);
     increment(c, r);
     return r;
   }

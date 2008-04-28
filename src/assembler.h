@@ -134,7 +134,7 @@ class Assembler {
    public:
     virtual ~Client() { }
 
-    virtual int acquireTemporary(int r = NoRegister) = 0;
+    virtual int acquireTemporary() = 0;
     virtual void releaseTemporary(int r) = 0;
 
     virtual void save(int r) = 0;
@@ -156,11 +156,8 @@ class Assembler {
   virtual unsigned argumentRegisterCount() = 0;
   virtual int argumentRegister(unsigned index) = 0;
 
-  virtual void getTargets(UnaryOperation op, unsigned size,
-                          Register* a) = 0;
-
   virtual void getTargets(BinaryOperation op, unsigned size,
-                          Register* a, Register* b) = 0;
+                          Register* a, Register* b, bool* syncStack) = 0;
 
   virtual void apply(Operation op) = 0;
 
