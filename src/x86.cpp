@@ -630,18 +630,14 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
     switch (size) {
     case 1:
       rex(c);
-      if (BytesPerWord == 8) {
-        c->code.append(0x0f);
-      }
+      c->code.append(0x0f);
       c->code.append(0xbe);
       c->code.append(0xc0 | (b->low << 3) | a->low);
       break;
 
     case 2:
       rex(c);
-      if (BytesPerWord == 8) {
-        c->code.append(0x0f);
-      }
+      c->code.append(0x0f);
       c->code.append(0xbf);
       c->code.append(0xc0 | (b->low << 3) | a->low);
       break;
