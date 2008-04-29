@@ -1860,7 +1860,7 @@ popState(Context* c)
 Stack*
 stack(Context* c, Value* value, unsigned size, Stack* next)
 {
-  return stack(c, value, size, (next ? next->index + size : 0), next);
+  return stack(c, value, size, (next ? next->index + next->size : 0), next);
 }
 
 void
