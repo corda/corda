@@ -1340,14 +1340,20 @@ remainderRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
-andRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+andRR(Context* c, unsigned size, Assembler::Register* a,
       Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
 
-  rex(c);
-  c->code.append(0x21);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+    andRR(c, 4, a, b);
+    andRR(c, 4, &ah, &bh);
+  } else {
+    rex(c);
+    c->code.append(0x21);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
 }
 
 void
@@ -1407,14 +1413,20 @@ andCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 }
 
 void
-orRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+orRR(Context* c, unsigned size, Assembler::Register* a,
       Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
 
-  rex(c);
-  c->code.append(0x09);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+    orRR(c, 4, a, b);
+    orRR(c, 4, &ah, &bh);
+  } else {
+    rex(c);
+    c->code.append(0x09);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
 }
 
 void
@@ -1474,104 +1486,203 @@ xorCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-shift(Context* c, int type, Assembler::Register* a, Assembler::Register* b) {
-  if (a->low == rcx) {
-    rex(c);
-    c->code.append(0xd3);
-    c->code.append(type | b->low);
-  } else {
-    Assembler::Register target(b->low);
+doShift(Context* c, void (*shift)
+        (Context*, unsigned, Assembler::Register*, Assembler::Register*),
+        unsigned size, Assembler::Register* a, Assembler::Register* b)
+{
+  Assembler::Register target(b->low, b->high);
 
-    if (b->low == rcx) {
-      target.low = c->client->acquireTemporary();
-      moveRR(c, BytesPerWord, b, &target);
-    } else {
-      c->client->save(rcx);
-    }
+  if (b->low == rcx) {
+    target.low = c->client->acquireTemporary();
+    moveRR(c, BytesPerWord, b, &target);
+  } else if (b->high == rcx) {
+    target.high = c->client->acquireTemporary();
+    moveRR(c, BytesPerWord, b, &target);
+  } else {
+    c->client->save(rcx);
+  }
+
+  Assembler::Register cx(rcx);
+  moveRR(c, BytesPerWord, a, &cx);
+  shift(c, size, &cx, b);
+
+  if (b->low == rcx) {
+    moveRR(c, BytesPerWord, &target, b);
+    c->client->releaseTemporary(target.low);
+  } else if (b->high == rcx) {
+    moveRR(c, BytesPerWord, &target, b);
+    c->client->releaseTemporary(target.high);
+  } else {
+    c->client->restore(rcx);
+  }
+}
+
+void
+doShift(Context* c, void (*shift)
+        (Context*, unsigned, Assembler::Register*, Assembler::Register*),
+        int type, unsigned size, Assembler::Constant* a,
+        Assembler::Register* b)
+{
+  int64_t v = a->value->value();
+
+  if (BytesPerWord == 4 and size == 8) {
+    c->client->save(rcx);
 
     Assembler::Register cx(rcx);
-    moveRR(c, BytesPerWord, a, &cx);
-    shift(c, type, &cx, b);
+    moveCR(c, 4, a, &cx);
+    shift(c, size, &cx, b);
 
-    if (b->low == rcx) {
-      moveRR(c, BytesPerWord, &target, b);
-      c->client->releaseTemporary(target.low);
+    c->client->restore(rcx);
+  } else {
+    rex(c);
+    if (v == 1) {
+      c->code.append(0xd1);
+      c->code.append(type | b->low);
+    } else if (isInt8(v)) {
+      c->code.append(0xc1);
+      c->code.append(type | b->low);
+      c->code.append(v);
     } else {
-      c->client->restore(rcx);
+      abort(c);
     }
   }
 }
 
 void
-shift(Context* c, int type, Assembler::Constant* a, Assembler::Register* b)
-{
-  int64_t v = a->value->value();
-
-  rex(c);
-  if (v == 1) {
-    c->code.append(0xd1);
-    c->code.append(type | b->low);
-  } else if (isInt8(v)) {
-    c->code.append(0xc1);
-    c->code.append(type | b->low);
-    c->code.append(v);
-  } else {
-    abort(c);
-  }  
-}
+compareCR(Context* c, unsigned size, Assembler::Constant* a,
+          Assembler::Register* b);
 
 void
-shiftLeftRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+shiftLeftRR(Context* c, unsigned size, Assembler::Register* a,
              Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  if (a->low == rcx) {
+    if (BytesPerWord == 4 and size == 8) {
+      // shld
+      c->code.append(0x0f);
+      c->code.append(0xa5);
+      c->code.append(0xc0 | (b->low << 3) | b->high);
 
-  shift(c, 0xe0, a, b);
+      // shl
+      c->code.append(0xd3);
+      c->code.append(0xe0 | b->low);
+
+      ResolvedPromise promise(32);
+      Assembler::Constant constant(&promise);
+      compareCR(c, 4, &constant, a);
+
+      c->code.append(0x0f);
+      c->code.append(0x8c); // jl
+      c->code.append4(2 + 2);
+
+      Assembler::Register bh(b->high);
+      moveRR(c, 4, b, &bh); // 2 bytes
+      xorRR(c, 4, b, b); // 2 bytes
+    } else {
+      rex(c);
+      c->code.append(0xd3);
+      c->code.append(0xe0 | b->low);
+    }
+  } else {
+    doShift(c, shiftLeftRR, size, a, b);    
+  }
 }
 
 void
-shiftLeftCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+shiftLeftCR(Context* c, unsigned size, Assembler::Constant* a,
             Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
-
-  shift(c, 0xe0, a, b);
+  doShift(c, shiftLeftRR, 0xe0, size, a, b);
 }
 
 void
-shiftRightRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+shiftRightRR(Context* c, unsigned size, Assembler::Register* a,
              Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  if (a->low == rcx) {
+    if (BytesPerWord == 4 and size == 8) {
+      // shrd
+      c->code.append(0x0f);
+      c->code.append(0xad);
+      c->code.append(0xc0 | (b->high << 3) | b->low);
 
-  shift(c, 0xf8, a, b);
+      // sar
+      c->code.append(0xd3);
+      c->code.append(0xf8 | b->high);
+
+      ResolvedPromise promise(32);
+      Assembler::Constant constant(&promise);
+      compareCR(c, 4, &constant, a);
+
+      c->code.append(0x0f);
+      c->code.append(0x8c); // jl
+      c->code.append4(2 + 3);
+
+      Assembler::Register bh(b->high);
+      moveRR(c, 4, &bh, b); // 2 bytes
+
+      // sar 31,high
+      c->code.append(0xc1);
+      c->code.append(0xf8 | b->high);
+      c->code.append(31);
+    } else {
+      rex(c);
+      c->code.append(0xd3);
+      c->code.append(0xf8 | b->low);
+    }
+  } else {
+    doShift(c, shiftRightRR, size, a, b);    
+  }
 }
 
 void
-shiftRightCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+shiftRightCR(Context* c, unsigned size, Assembler::Constant* a,
              Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
-
-  shift(c, 0xf8, a, b);
+  doShift(c, shiftRightRR, 0xf8, size, a, b);
 }
 
 void
-unsignedShiftRightRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+unsignedShiftRightRR(Context* c, unsigned size, Assembler::Register* a,
                      Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  if (a->low == rcx) {
+    if (BytesPerWord == 4 and size == 8) {
+      // shld
+      c->code.append(0x0f);
+      c->code.append(0xa5);
+      c->code.append(0xc0 | (b->high << 3) | b->low);
 
-  shift(c, 0xe8, a, b);
+      // shr
+      c->code.append(0xd3);
+      c->code.append(0xe8 | b->high);
+
+      ResolvedPromise promise(32);
+      Assembler::Constant constant(&promise);
+      compareCR(c, 4, &constant, a);
+
+      c->code.append(0x0f);
+      c->code.append(0x8c); // jl
+      c->code.append4(2 + 2);
+
+      Assembler::Register bh(b->high);
+      moveRR(c, 4, &bh, b); // 2 bytes
+      xorRR(c, 4, &bh, &bh); // 2 bytes
+    } else {
+      rex(c);
+      c->code.append(0xd3);
+      c->code.append(0xe8 | b->low);
+    }
+  } else {
+    doShift(c, unsignedShiftRightRR, size, a, b);    
+  }
 }
 
 void
-unsignedShiftRightCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+unsignedShiftRightCR(Context* c, unsigned size, Assembler::Constant* a,
                      Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
-
-  shift(c, 0xe8, a, b);
+  doShift(c, unsignedShiftRightRR, 0xe8, size, a, b);
 }
 
 void
