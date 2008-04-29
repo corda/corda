@@ -563,40 +563,104 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
        Assembler::Register* b);
 
 void
+xorRR(Context* c, unsigned size, Assembler::Register* a,
+      Assembler::Register* b);
+
+void
+swap(Context* c, Assembler::Register* a, Assembler::Register* b)
+{
+  xorRR(c, 4, a, b);
+  xorRR(c, 4, b, b);
+  xorRR(c, 4, a, b);
+}
+
+void
+marshal(Context* c, int sl, int sh, int dl, int dh)
+{
+  Assembler::Register slr(sl);
+  Assembler::Register shr(sh);
+  Assembler::Register dlr(dl);
+  Assembler::Register dhr(dh);
+
+  if (sl == dl or sh == dh) {
+    if (sl != dl) {
+      c->client->save(dl);
+      moveRR(c, BytesPerWord, &slr, &dlr);
+    } else if (sh != dh) {
+      c->client->save(dh);
+      moveRR(c, BytesPerWord, &shr, &dhr);
+    }
+  } else if (sl == dh or sh == dl) {
+    swap(c, &slr, &shr);
+
+    if (sl != dh) {
+      c->client->save(dh); 
+      moveRR(c, BytesPerWord, &slr, &dhr);
+    } else if (sh != dl) {
+      c->client->save(dl);
+      moveRR(c, BytesPerWord, &shr, &dlr);
+    }
+  } else {
+    c->client->save(dl); 
+    moveRR(c, BytesPerWord, &slr, &dlr);
+
+    c->client->save(dh);
+    moveRR(c, BytesPerWord, &shr, &dhr);
+  }
+}
+
+void
+unmarshal(Context* c, int sl, int sh, int dl, int dh)
+{
+  Assembler::Register slr(sl);
+  Assembler::Register shr(sh);
+  Assembler::Register dlr(dl);
+  Assembler::Register dhr(dh);
+
+  if (sl == dl or sh == dh) {
+    if (sl != dl) {
+      moveRR(c, BytesPerWord, &slr, &dlr);
+      c->client->restore(sl);
+    } else if (sh != dh) {
+      moveRR(c, BytesPerWord, &shr, &dhr);
+      c->client->restore(sh);
+    }
+  } else if (sl == dh or sh == dl) {
+    if (sl != dh) {
+      moveRR(c, BytesPerWord, &slr, &dhr);
+      c->client->restore(sh);
+    } else if (sh != dl) {
+      moveRR(c, BytesPerWord, &shr, &dlr);
+      c->client->restore(sl);
+    }
+
+    swap(c, &dlr, &dhr);
+  } else {
+    moveRR(c, BytesPerWord, &slr, &dlr);
+    c->client->restore(sl);
+
+    moveRR(c, BytesPerWord, &shr, &dhr);
+    c->client->restore(sh);
+  }
+}
+
+void
 negateR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
     Assembler::Register ax(rax);
     Assembler::Register dx(rdx);
 
-    Assembler::Register ah(a->high);
-
     ResolvedPromise zeroPromise(0);
     Assembler::Constant zero(&zeroPromise);
 
-    if (a->low != rax) {
-      c->client->save(rax);
-      moveRR(c, BytesPerWord, a, &ax);
-    }
-
-    if (a->high != rdx) {
-      c->client->save(rdx);
-      moveRR(c, BytesPerWord, &ah, &dx);
-    }
+    marshal(c, a->low, a->high, rax, rdx);
 
     negateR(c, 4, &ax);
     addCarryCR(c, 4, &zero, &dx);
     negateR(c, 4, &dx);
-
-    if (a->high != rdx) {
-      moveRR(c, BytesPerWord, &dx, a);
-      c->client->restore(rdx);
-    }
     
-    if (a->low != rax) {
-      moveRR(c, BytesPerWord, &ax, a);
-      c->client->restore(rax);
-    }
+    unmarshal(c, rax, rdx, a->low, a->high);
   } else {
     rex(c);
     c->code.append(0xf7);
@@ -788,6 +852,30 @@ moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
 }
 
 void
+move(Context* c, int sl, int sh, int dl, int dh)
+{
+  Assembler::Register slr(sl);
+  Assembler::Register shr(sh);
+  Assembler::Register dlr(dl);
+  Assembler::Register dhr(dh);
+
+  if (sl == dh and sh == dl) {
+    swap(c, &slr, &shr);
+  } else {
+    if (sl != dl) {
+      if (sh == dl) {
+        moveRR(c, 4, &shr, &dhr);
+      }
+      moveRR(c, 4, &slr, &dlr);        
+    }
+    
+    if (sh != dh and sh != dl) {
+      moveRR(c, 4, &shr, &dhr);
+    }
+  }
+}
+
+void
 move4To8RR(Context* c, unsigned size UNUSED, Assembler::Register* a,
            Assembler::Register* b)
 {
@@ -815,13 +903,7 @@ move4To8RR(Context* c, unsigned size UNUSED, Assembler::Register* a,
 
       move4To8RR(c, 0, &axdx, &axdx);
 
-      if (b->low != rax) {
-        moveRR(c, 4, &axdx, b);        
-      }
-
-      if (b->high != rdx) {
-        moveRR(c, 4, &dx, &bh);        
-      }
+      move(c, rax, rdx, b->low, b->high);
 
       if (saveAX) c->client->restore(rax);
       if (saveDX) c->client->restore(rdx);
@@ -923,13 +1005,7 @@ move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
     moveMR(c, 4, a, &axdx);
     move4To8RR(c, 0, &axdx, &axdx);
 
-    if (b->low != rax) {
-      moveRR(c, 4, &axdx, b);        
-    }
-
-    if (b->high != rdx) {
-      moveRR(c, 4, &dx, &bh);        
-    }
+    move(c, rax, rdx, b->low, b->high);
 
     if (saveAX) c->client->restore(rax);
     if (saveDX) c->client->restore(rdx);
@@ -1131,16 +1207,6 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
          Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
-    Assembler::Register axdx(rax, rdx);
-    Assembler::Register dx(rdx);
-    Assembler::Register bh(b->high);
-
-    bool saveAX = b->low != rax and b->high != rax;
-    bool saveDX = b->low != rdx and b->high != rdx;
-
-    if (saveDX) c->client->save(rdx);
-    if (saveAX) c->client->save(rax);
-
     pushR(c, size, a);
     pushR(c, size, b);
     
@@ -1148,21 +1214,13 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
       (resolved(c, reinterpret_cast<intptr_t>(divideLong)));
     callC(c, BytesPerWord, &address);
 
+    Assembler::Register axdx(rax, rdx);
+    moveRR(c, 4, &axdx, b);
+
     ResolvedPromise offsetPromise(16);
     Assembler::Constant offset(&offsetPromise);
     Assembler::Register stack(rsp);
     addCR(c, BytesPerWord, &offset, &stack);
-
-    if (b->low != rax) {
-      moveRR(c, 4, &axdx, b);        
-    }
-
-    if (b->high != rdx) {
-      moveRR(c, 4, &dx, &bh);        
-    }
-
-    if (saveAX) c->client->restore(rax);
-    if (saveDX) c->client->restore(rdx);
   } else {
     Assembler::Register ax(rax);
     Assembler::Register divisor(a->low);
@@ -1216,16 +1274,6 @@ remainderRR(Context* c, unsigned size, Assembler::Register* a,
             Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
-    Assembler::Register axdx(rax, rdx);
-    Assembler::Register dx(rdx);
-    Assembler::Register bh(b->high);
-
-    bool saveAX = b->low != rax and b->high != rax;
-    bool saveDX = b->low != rdx and b->high != rdx;
-
-    if (saveDX) c->client->save(rdx);
-    if (saveAX) c->client->save(rax);
-
     pushR(c, size, a);
     pushR(c, size, b);
     
@@ -1233,21 +1281,13 @@ remainderRR(Context* c, unsigned size, Assembler::Register* a,
       (resolved(c, reinterpret_cast<intptr_t>(moduloLong)));
     callC(c, BytesPerWord, &address);
 
+    Assembler::Register axdx(rax, rdx);
+    moveRR(c, 4, &axdx, b);
+
     ResolvedPromise offsetPromise(16);
     Assembler::Constant offset(&offsetPromise);
     Assembler::Register stack(rsp);
     addCR(c, BytesPerWord, &offset, &stack);
-
-    if (b->low != rax) {
-      moveRR(c, 4, &axdx, b);        
-    }
-
-    if (b->high != rdx) {
-      moveRR(c, 4, &dx, &bh);        
-    }
-
-    if (saveAX) c->client->restore(rax);
-    if (saveDX) c->client->restore(rdx);
   } else {
     Assembler::Register ax(rax);
     Assembler::Register dx(rdx);
