@@ -2147,7 +2147,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(addDouble)),
-          context->indirection, 0, 0, 8, 2, a, b));
+          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dcmpg: {
@@ -2157,7 +2157,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(compareDoublesG)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          context->indirection, 0, 0, 4, 4, 0, a, 0, b));
     } break;
 
     case dcmpl: {
@@ -2167,7 +2167,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(compareDoublesL)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          context->indirection, 0, 0, 4, 4, 0, a, 0, b));
     } break;
 
     case dconst_0:
@@ -2185,7 +2185,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(divideDouble)),
-          context->indirection, 0, 0, 8, 2, a, b));
+          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dmul: {
@@ -2195,14 +2195,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(multiplyDouble)),
-          context->indirection, 0, 0, 8, 2, a, b));
+          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dneg: {
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(negateDouble)),
-          context->indirection, 0, 0, 8, 1, frame->popLong()));
+          context->indirection, 0, 0, 8, 2, 0, frame->popLong()));
     } break;
 
     case vm::drem: {
@@ -2212,7 +2212,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(moduloDouble)),
-          context->indirection, 0, 0, 8, 2, a, b));
+          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dsub: {
@@ -2222,7 +2222,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(subtractDouble)),
-          context->indirection, 0, 0, 8, 2, a, b));
+          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dup:
@@ -3875,11 +3875,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/nio/ByteBuffer") == 0 and
+       "Floats") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "get") == 0)
+       "multiply") == 0)
   {
     asm("int3");
   }

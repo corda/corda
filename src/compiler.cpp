@@ -2255,7 +2255,7 @@ class MyCompiler: public Compiler {
 
     Stack* oldStack = c.state->stack;
 
-    for (int i = argumentCount - 1; i >= 0; --i) {
+    for (int i = index - 1; i >= 0; --i) {
       ::push(&c, argumentSizes[i], arguments[i]);
     }
 
