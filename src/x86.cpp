@@ -1042,24 +1042,35 @@ moveZRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
-addCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+addCR(Context* c, unsigned size, Assembler::Constant* a,
       Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
-
   int64_t v = a->value->value();
   if (v) {
-    rex(c);
-    if (isInt8(v)) {
-      c->code.append(0x83);
-      c->code.append(0xc0 | b->low);
-      c->code.append(v);
-    } else if (isInt32(v)) {
-      c->code.append(0x81);
-      c->code.append(0xc0 | b->low);
-      c->code.append4(v);        
+    if (BytesPerWord == 4 and size == 8) {
+      ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+      Assembler::Constant ah(&high);
+
+      ResolvedPromise low(v & 0xFFFFFFFF);
+      Assembler::Constant al(&low);
+
+      Assembler::Register bh(b->high);
+
+      addCR(c, 4, &al, b);
+      addCarryCR(c, 4, &ah, &bh);
     } else {
-      abort(c);
+      rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x83);
+        c->code.append(0xc0 | b->low);
+        c->code.append(v);
+      } else if (isInt32(v)) {
+        c->code.append(0x81);
+        c->code.append(0xc0 | b->low);
+        c->code.append4(v);        
+      } else {
+        abort(c);
+      }
     }
   }
 }
@@ -1340,29 +1351,40 @@ andRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
-andCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+andCR(Context* c, unsigned size, Assembler::Constant* a,
       Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
-
   int64_t v = a->value->value();
 
-  if (isInt32(v)) {
-    rex(c);
-    if (isInt8(v)) {
-      c->code.append(0x83);
-      c->code.append(0xe0 | b->low);
-      c->code.append(v);
-    } else {
-      c->code.append(0x81);
-      c->code.append(0xe0 | b->low);
-      c->code.append4(v);
-    }
+  if (BytesPerWord == 4 and size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+
+    andCR(c, 4, &al, b);
+    andCR(c, 4, &ah, &bh);
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, size, a, &tmp);
-    andRR(c, size, &tmp, b);
-    c->client->releaseTemporary(tmp.low);
+    if (isInt32(v)) {
+      rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x83);
+        c->code.append(0xe0 | b->low);
+        c->code.append(v);
+      } else {
+        c->code.append(0x81);
+        c->code.append(0xe0 | b->low);
+        c->code.append4(v);
+      }
+    } else {
+      Assembler::Register tmp(c->client->acquireTemporary());
+      moveCR(c, size, a, &tmp);
+      andRR(c, size, &tmp, b);
+      c->client->releaseTemporary(tmp.low);
+    }
   }
 }
 
@@ -1396,40 +1418,57 @@ orRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
-xorRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+xorRR(Context* c, unsigned size, Assembler::Register* a,
       Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
 
-  rex(c);
-  c->code.append(0x31);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+    xorRR(c, 4, a, b);
+    xorRR(c, 4, &ah, &bh);
+  } else {
+    rex(c);
+    c->code.append(0x31);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
 }
 
 void
-xorCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+xorCR(Context* c, unsigned size, Assembler::Constant* a,
       Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
-
   int64_t v = a->value->value();
   if (v) {
-    if (isInt32(v)) {
-      rex(c);
-      if (isInt8(v)) {
-        c->code.append(0x83);
-        c->code.append(0xf0 | b->low);
-        c->code.append(v);
-      } else {
-        c->code.append(0x81);
-        c->code.append(0xf0 | b->low);
-        c->code.append4(v);        
-      }
+    if (BytesPerWord == 4 and size == 8) {
+      ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+      Assembler::Constant ah(&high);
+
+      ResolvedPromise low(v & 0xFFFFFFFF);
+      Assembler::Constant al(&low);
+
+      Assembler::Register bh(b->high);
+
+      xorCR(c, 4, &al, b);
+      xorCR(c, 4, &ah, &bh);
     } else {
-      Assembler::Register tmp(c->client->acquireTemporary());
-      moveCR(c, size, a, &tmp);
-      xorRR(c, size, &tmp, b);
-      c->client->releaseTemporary(tmp.low);
+      if (isInt32(v)) {
+        rex(c);
+        if (isInt8(v)) {
+          c->code.append(0x83);
+          c->code.append(0xf0 | b->low);
+          c->code.append(v);
+        } else {
+          c->code.append(0x81);
+          c->code.append(0xf0 | b->low);
+          c->code.append4(v);        
+        }
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, size, a, &tmp);
+        xorRR(c, size, &tmp, b);
+        c->client->releaseTemporary(tmp.low);
+      }
     }
   }
 }
