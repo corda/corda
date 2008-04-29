@@ -355,7 +355,7 @@ bool
 tryAddSite(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
 {
   if (not findSite(c, v, s)) {
-//     fprintf(stderr, "add site %p to %p\n", s, v);
+//     fprintf(stderr, "add site %p (%d) to %p\n", s, s->type(c), v);
     if (s->tryAcquire(c, stack, size, v)) {
       s->next = v->sites;
       v->sites = s;
@@ -377,7 +377,7 @@ removeSite(Context* c, Value* v, Site* s)
 {
   for (Site** p = &(v->sites); *p;) {
     if (s == *p) {
-//       fprintf(stderr, "remove site %p from %p\n", s, v);
+//       fprintf(stderr, "remove site %p (%d) from %p\n", s, s->type(c), v);
       s->release(c);
       *p = (*p)->next;
       break;
@@ -1271,6 +1271,17 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
     CompareEvent(c, size, first, second);
 }
 
+void
+maybePreserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
+{
+  if (v->reads->next and v->sites->next == 0) {
+    assert(c, v->sites == s);
+    Site* r = freeRegister(c, size, true);
+    addSite(c, stack, size, v, r);
+    apply(c, Move, size, s, r);    
+  }
+}
+
 class CombineEvent: public Event {
  public:
   CombineEvent(Context* c, BinaryOperation type, unsigned size, Value* first,
@@ -1294,6 +1305,8 @@ class CombineEvent: public Event {
     if (DebugCompile) {
       fprintf(stderr, "CombineEvent.compile\n");
     }
+
+    maybePreserve(c, stack, size, second, second->source);
 
     apply(c, type, size, first->source, second->source);
 
@@ -1350,6 +1363,8 @@ class TranslateEvent: public Event {
     if (DebugCompile) {
       fprintf(stderr, "TranslateEvent.compile\n");
     }
+
+    maybePreserve(c, stack, size, value, value->source);
 
     apply(c, type, size, value->source);
     
