@@ -2209,8 +2209,8 @@ class MyCompiler: public Compiler {
   virtual Operand* peek(unsigned size UNUSED, unsigned index) {
     Stack* s = c.state->stack;
     for (unsigned i = index; i > 0;) {
-      s = s->next;
       i -= s->size;
+      s = s->next;
     }
     assert(&c, s->size == ceiling(size, BytesPerWord));
     return s->value;
