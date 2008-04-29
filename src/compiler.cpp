@@ -1781,10 +1781,8 @@ compile(Context* c)
           for (Stack* s = e->stack; s; s = s->next) {
             if (s->value->sites) {
               assert(c, s->value->sites->next == 0);
-              if (s->value->reads) {
-                expect(c, s->value->sites->tryAcquire
-                       (c, 0, s->size * BytesPerWord, s->value));
-              }
+              expect(c, s->value->sites->tryAcquire
+                     (c, 0, s->size * BytesPerWord, s->value));
             }
           }
         }
