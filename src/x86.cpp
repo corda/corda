@@ -471,11 +471,16 @@ pushC(Context* c, unsigned size, Assembler::Constant* a)
         c->client->releaseTemporary(tmp.low);
       }
     } else {
-      assert(c, BytesPerWord == 4);
-
-      c->code.append(0x68);
-      appendImmediateTask(c, a->value, c->code.length());
-      c->code.appendAddress(static_cast<uintptr_t>(0));
+      if (BytesPerWord == 4) {
+        c->code.append(0x68);
+        appendImmediateTask(c, a->value, c->code.length());
+        c->code.appendAddress(static_cast<uintptr_t>(0));
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, size, a, &tmp);
+        pushR(c, size, &tmp);
+        c->client->releaseTemporary(tmp.low);
+      }
     }
   }
 }
@@ -1475,6 +1480,45 @@ orRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+orCR(Context* c, unsigned size, Assembler::Constant* a,
+      Assembler::Register* b)
+{
+  int64_t v = a->value->value();
+  if (v) {
+    if (BytesPerWord == 4 and size == 8) {
+      ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+      Assembler::Constant ah(&high);
+
+      ResolvedPromise low(v & 0xFFFFFFFF);
+      Assembler::Constant al(&low);
+
+      Assembler::Register bh(b->high);
+
+      orCR(c, 4, &al, b);
+      orCR(c, 4, &ah, &bh);
+    } else {
+      if (isInt32(v)) {
+        rex(c);
+        if (isInt8(v)) {
+          c->code.append(0x83);
+          c->code.append(0xc8 | b->low);
+          c->code.append(v);
+        } else {
+          c->code.append(0x81);
+          c->code.append(0xc8 | b->low);
+          c->code.append4(v);        
+        }
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, size, a, &tmp);
+        orRR(c, size, &tmp, b);
+        c->client->releaseTemporary(tmp.low);
+      }
+    }
+  }
+}
+
+void
 xorRR(Context* c, unsigned size, Assembler::Register* a,
       Assembler::Register* b)
 {
@@ -1867,6 +1911,18 @@ compareMM(Context* c, unsigned size UNUSED, Assembler::Memory* a,
 }
 
 void
+compareRC(Context* c, unsigned size UNUSED, Assembler::Register* a,
+          Assembler::Constant* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveCR(c, size, b, &tmp);
+  compareRR(c, size, a, &tmp);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
 populateTables()
 {
   Operations[Return] = return_;
@@ -1939,6 +1995,7 @@ populateTables()
   BinaryOperations[INDEX2(And, Constant, Memory)] = CAST2(andCM);
 
   BinaryOperations[INDEX2(Or, Register, Register)] = CAST2(orRR);
+  BinaryOperations[INDEX2(Or, Constant, Register)] = CAST2(orCR);
 
   BinaryOperations[INDEX2(Xor, Register, Register)] = CAST2(xorRR);
   BinaryOperations[INDEX2(Xor, Constant, Register)] = CAST2(xorCR);
@@ -1960,6 +2017,7 @@ populateTables()
   BinaryOperations[INDEX2(Subtract, Register, Register)] = CAST2(subtractRR);
 
   BinaryOperations[INDEX2(Compare, Constant, Register)] = CAST2(compareCR);
+  BinaryOperations[INDEX2(Compare, Register, Constant)] = CAST2(compareRC);
   BinaryOperations[INDEX2(Compare, Register, Register)] = CAST2(compareRR);
   BinaryOperations[INDEX2(Compare, Register, Memory)] = CAST2(compareRM);
   BinaryOperations[INDEX2(Compare, Memory, Register)] = CAST2(compareMR);
