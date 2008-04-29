@@ -36,6 +36,12 @@ enum {
 };
 
 int64_t FORCE_ALIGN
+multiplyLong(int64_t a, int64_t b)
+{
+  return a * b;
+}
+
+int64_t FORCE_ALIGN
 divideLong(int64_t a, int64_t b)
 {
   return a / b;
@@ -438,9 +444,9 @@ pushR(Context*, unsigned, Assembler::Register*);
 void
 pushC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  int64_t v = a->value->value();
-
   if (BytesPerWord == 4 and size == 8) {
+    int64_t v = a->value->value();
+
     ResolvedPromise low(v & 0xFFFFFFFF);
     Assembler::Constant al(&low);
 
@@ -450,17 +456,26 @@ pushC(Context* c, unsigned size, Assembler::Constant* a)
     pushC(c, 4, &ah);
     pushC(c, 4, &al);
   } else {
-    if (isInt8(v)) {
-      c->code.append(0x6a);
-      c->code.append(v);
-    } else if (isInt32(v)) {
-      c->code.append(0x68);
-      c->code.append4(v);
+    if (a->value->resolved()) {
+      int64_t v = a->value->value();
+      if (isInt8(v)) {
+        c->code.append(0x6a);
+        c->code.append(v);
+      } else if (isInt32(v)) {
+        c->code.append(0x68);
+        c->code.append4(v);
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, size, a, &tmp);
+        pushR(c, size, &tmp);
+        c->client->releaseTemporary(tmp.low);
+      }
     } else {
-      Assembler::Register tmp(c->client->acquireTemporary());
-      moveCR(c, size, a, &tmp);
-      pushR(c, size, &tmp);
-      c->client->releaseTemporary(tmp.low);
+      assert(c, BytesPerWord == 4);
+
+      c->code.append(0x68);
+      appendImmediateTask(c, a->value, c->code.length());
+      c->code.appendAddress(static_cast<uintptr_t>(0));
     }
   }
 }
@@ -1174,41 +1189,71 @@ addRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
-multiplyRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+multiplyRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    pushR(c, size, a);
+    pushR(c, size, b);
+    
+    Assembler::Constant address
+      (resolved(c, reinterpret_cast<intptr_t>(multiplyLong)));
+    callC(c, BytesPerWord, &address);
 
-  rex(c);
-  c->code.append(0x0f);
-  c->code.append(0xaf);
-  c->code.append(0xc0 | (b->low << 3) | a->low);
+    Assembler::Register axdx(rax, rdx);
+    moveRR(c, 4, &axdx, b);
+
+    ResolvedPromise offsetPromise(16);
+    Assembler::Constant offset(&offsetPromise);
+    Assembler::Register stack(rsp);
+    addCR(c, BytesPerWord, &offset, &stack);
+  } else {
+    rex(c);
+    c->code.append(0x0f);
+    c->code.append(0xaf);
+    c->code.append(0xc0 | (b->low << 3) | a->low);
+  }
 }
 
 void
 multiplyCR(Context* c, unsigned size, Assembler::Constant* a,
            Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    pushC(c, size, a);
+    pushR(c, size, b);
+    
+    Assembler::Constant address
+      (resolved(c, reinterpret_cast<intptr_t>(multiplyLong)));
+    callC(c, BytesPerWord, &address);
 
-  int64_t v = a->value->value();
-  if (v) {
-    if (isInt32(v)) {
-      rex(c);
-      if (isInt8(v)) {
-        c->code.append(0x6b);
-        c->code.append(0xc0 | (b->low << 3) | b->low);
-        c->code.append(v);
+    Assembler::Register axdx(rax, rdx);
+    moveRR(c, 4, &axdx, b);
+
+    ResolvedPromise offsetPromise(16);
+    Assembler::Constant offset(&offsetPromise);
+    Assembler::Register stack(rsp);
+    addCR(c, BytesPerWord, &offset, &stack);
+  } else {
+    int64_t v = a->value->value();
+    if (v) {
+      if (isInt32(v)) {
+        rex(c);
+        if (isInt8(v)) {
+          c->code.append(0x6b);
+          c->code.append(0xc0 | (b->low << 3) | b->low);
+          c->code.append(v);
+        } else {
+          c->code.append(0x69);
+          c->code.append(0xc0 | (b->low << 3) | b->low);
+          c->code.append4(v);        
+        }
       } else {
-        c->code.append(0x69);
-        c->code.append(0xc0 | (b->low << 3) | b->low);
-        c->code.append4(v);        
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, size, a, &tmp);
+        multiplyRR(c, size, &tmp, b);
+        c->client->releaseTemporary(tmp.low);      
       }
-    } else {
-      Assembler::Register tmp(c->client->acquireTemporary());
-      moveCR(c, size, a, &tmp);
-      multiplyRR(c, size, &tmp, b);
-      c->client->releaseTemporary(tmp.low);      
     }
   }
 }
@@ -1996,6 +2041,7 @@ class MyAssembler: public Assembler {
     *syncStack = false;
 
     switch (op) {
+    case Multiply:
     case Divide:
     case Remainder:
       if (BytesPerWord == 4 and size == 8) {
