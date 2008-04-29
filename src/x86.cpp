@@ -1563,26 +1563,44 @@ void
 compareCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
           Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
-
   int64_t v = a->value->value();
 
-  if (isInt32(v)) {
-    if (size == 8) rex(c);
-    if (isInt8(v)) {
-      c->code.append(0x83);
-      c->code.append(0xf8 | b->low);
-      c->code.append(v);
-    } else {
-      c->code.append(0x81);
-      c->code.append(0xf8 | b->low);
-      c->code.append4(v);
-    }
+  if (BytesPerWord == 4 and size == 8) {
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    Assembler::Register bh(b->high);
+
+    compareCR(c, 4, &ah, &bh);
+
+    // if the high order bits are equal, we compare the low order
+    // bits; otherwise, we jump past that comparison
+    c->code.append(0x0f);
+    c->code.append(0x85); // jne
+    c->code.append4(2);
+
+    compareCR(c, 4, &al, b);
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, size, a, &tmp);
-    compareRR(c, size, &tmp, b);
-    c->client->releaseTemporary(tmp.low);
+    if (isInt32(v)) {
+      if (size == 8) rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x83);
+        c->code.append(0xf8 | b->low);
+        c->code.append(v);
+      } else {
+        c->code.append(0x81);
+        c->code.append(0xf8 | b->low);
+        c->code.append4(v);
+      }
+    } else {
+      Assembler::Register tmp(c->client->acquireTemporary());
+      moveCR(c, size, a, &tmp);
+      compareRR(c, size, &tmp, b);
+      c->client->releaseTemporary(tmp.low);
+    }
   }
 }
 
