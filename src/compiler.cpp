@@ -332,7 +332,7 @@ class Event {
 
   virtual void compile(Context* c) = 0;
 
-  virtual bool isBranch() { return false; };
+  virtual bool skipMove(unsigned) { return false; }
 
   Event* next;
   Stack* stack;
@@ -682,6 +682,11 @@ class ValueSite: public AbstractSite {
     if (s and s->type(c) == RegisterOperand) {
       return s;
     } else {
+      for (Site* s = r->value->sites; s; s = s->next) {
+        if (s->type(c) == RegisterOperand) {
+          return s;
+        }
+      }
       return freeRegister(c, r->size, true);
     }
   }
@@ -988,6 +993,10 @@ class PushEvent: public Event {
     nextRead(c, s->value);
   }
 
+  virtual bool skipMove(unsigned size) {
+    return active and size >= 4;
+  }
+
   Stack* s;
   bool active;
 };
@@ -1182,9 +1191,9 @@ class MoveEvent: public Event {
     Site* target;
     unsigned cost;
     if (type == Move
-        and size >= BytesPerWord
         and dst->reads
-        and next == dst->reads->event)
+        and next == dst->reads->event
+        and dst->reads->event->skipMove(size))
     {
       target = src->source;
       cost = 0;
@@ -1574,8 +1583,6 @@ class BranchEvent: public Event {
 
     nextRead(c, address);
   }
-
-  virtual bool isBranch() { return true; };
 
   UnaryOperation type;
   Value* address;

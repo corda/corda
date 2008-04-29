@@ -3875,11 +3875,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/Class") == 0 and
+       "java/lang/Number") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "replace") == 0)
+       "<init>") == 0)
   {
     asm("int3");
   }
