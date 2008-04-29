@@ -994,7 +994,7 @@ class PushEvent: public Event {
   }
 
   virtual bool skipMove(unsigned size) {
-    return active and size >= 4;
+    return active and size >= BytesPerWord;
   }
 
   Stack* s;
