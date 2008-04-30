@@ -3,7 +3,7 @@
 
 using namespace vm;
 
-#define INDEX1(a, b) ((a) + (BinaryOperationCount * (b)))
+#define INDEX1(a, b) ((a) + (UnaryOperationCount * (b)))
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 
