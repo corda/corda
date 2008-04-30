@@ -1517,7 +1517,8 @@ void NO_RETURN FORCE_ALIGN
 throwArrayIndexOutOfBounds(MyThread* t, object array, int32_t index)
 {
   object message = makeString
-    (t, "array of length %d indexed at %d", arrayLength(t, array), index);
+    (t, "array of length %d indexed at %d",
+     cast<uintptr_t>(array, BytesPerWord), index);
   t->exception = makeArrayIndexOutOfBoundsException(t, message);
   unwind(t);
 }
@@ -1794,7 +1795,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
 
         c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
-        c->jge(load);
+        c->jg(load);
 
         if (not c->isConstant(index)) {
           c->mark(throw_);
@@ -1911,7 +1912,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
 
         c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
-        c->jge(store);
+        c->jg(store);
 
         if (not c->isConstant(index)) {
           c->mark(throw_);
@@ -3875,11 +3876,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "org/eclipse/swt/graphics/ImageData") == 0 and
+       "Misc") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "<clinit>") == 0)
+       "main") == 0)
   {
     asm("int3");
   }

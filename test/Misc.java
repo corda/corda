@@ -99,30 +99,32 @@ public class Misc {
 
     expect(Long.valueOf(231L) == 231L);
 
-    long x = 231;
-    expect((x >> 32) == 0);
-    expect((x >>> 32) == 0);
-    expect((x << 32) == 992137445376L);
+    { long x = 231;
+      expect((x >> 32) == 0);
+      expect((x >>> 32) == 0);
+      expect((x << 32) == 992137445376L);
 
-    int shift = 32;
-    expect((x >> shift) == 0);
-    expect((x >>> shift) == 0);
-    expect((x << shift) == 992137445376L);
+      int shift = 32;
+      expect((x >> shift) == 0);
+      expect((x >>> shift) == 0);
+      expect((x << shift) == 992137445376L);
 
-    long y = -231;
-    expect((y >> 32) == 0xffffffffffffffffL);
-    expect((y >>> 32) == 0xffffffffL);
+      long y = -231;
+      expect((y >> 32) == 0xffffffffffffffffL);
+      expect((y >>> 32) == 0xffffffffL);
+    }
 
-    byte[] array = new byte[8];
-    putLong(231, array, 0);
-    expect((array[0] & 0xff) == 0);
-    expect((array[1] & 0xff) == 0);
-    expect((array[2] & 0xff) == 0);
-    expect((array[3] & 0xff) == 0);
-    expect((array[4] & 0xff) == 0);
-    expect((array[5] & 0xff) == 0);
-    expect((array[6] & 0xff) == 0);
-    expect((array[7] & 0xff) == 231);
+    { byte[] array = new byte[8];
+      putLong(231, array, 0);
+      expect((array[0] & 0xff) == 0);
+      expect((array[1] & 0xff) == 0);
+      expect((array[2] & 0xff) == 0);
+      expect((array[3] & 0xff) == 0);
+      expect((array[4] & 0xff) == 0);
+      expect((array[5] & 0xff) == 0);
+      expect((array[6] & 0xff) == 0);
+      expect((array[7] & 0xff) == 231);
+    }
 
     java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8);
     buffer.putLong(231);
@@ -133,37 +135,49 @@ public class Misc {
 
     ClassLoader.getSystemClassLoader().toString();
 
-    int a = 2;
-    int b = 2;
-    int c = a + b;
-
-    Misc m = new Misc();
-    m.toString();
-
-    String s = "hello";
-    m.foo(s);
-    m.bar(s);
-    baz(s);
-
-    m.sync();
-    syncStatic(false);
-    try {
-      syncStatic(true);
-    } catch (RuntimeException e) {
-      e.printStackTrace();
+    { int a = 2;
+      int b = 2;
+      int c = a + b;
     }
 
-    int d = alpha;
-    beta = 42;
-    alpha = 43;
-    int e = beta;
-    int f = alpha;
-    m.gamma = 44;
+    { Misc m = new Misc();
+      m.toString();
 
-    expect(beta == 42);
-    expect(alpha == 43);
-    expect(m.gamma == 44);
+      String s = "hello";
+      m.foo(s);
+      m.bar(s);
+      baz(s);
+
+      m.sync();
+      syncStatic(false);
+      try {
+        syncStatic(true);
+      } catch (RuntimeException e) {
+        e.printStackTrace();
+      }
+
+      int d = alpha;
+      beta = 42;
+      alpha = 43;
+      int e = beta;
+      int f = alpha;
+      m.gamma = 44;
+
+      expect(beta == 42);
+      expect(alpha == 43);
+      expect(m.gamma == 44);
+    }
 
     zip();
+
+    int[] array = new int[0];
+    Exception exception = null;
+    try {
+      int x = array[0];
+    } catch (ArrayIndexOutOfBoundsException e) {
+      exception = e;
+    }
+
+    expect(exception != null);
   }
 }
