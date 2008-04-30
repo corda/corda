@@ -1626,7 +1626,7 @@ doShift(Context* c, void (*shift)
 
   Assembler::Register cx(rcx);
   moveRR(c, BytesPerWord, a, &cx);
-  shift(c, size, &cx, b);
+  shift(c, size, &cx, &target);
 
   if (b->low == rcx) {
     moveRR(c, BytesPerWord, &target, b);
@@ -1656,7 +1656,7 @@ doShift(Context* c, void (*shift)
 
     c->client->restore(rcx);
   } else {
-    rex(c);
+    if (size == 8) rex(c);
     if (v == 1) {
       c->code.append(0xd1);
       c->code.append(type | b->low);
@@ -1701,7 +1701,7 @@ shiftLeftRR(Context* c, unsigned size, Assembler::Register* a,
       moveRR(c, 4, b, &bh); // 2 bytes
       xorRR(c, 4, b, b); // 2 bytes
     } else {
-      rex(c);
+      if (size == 8) rex(c);
       c->code.append(0xd3);
       c->code.append(0xe0 | b->low);
     }
@@ -1748,7 +1748,7 @@ shiftRightRR(Context* c, unsigned size, Assembler::Register* a,
       c->code.append(0xf8 | b->high);
       c->code.append(31);
     } else {
-      rex(c);
+      if (size == 8) rex(c);
       c->code.append(0xd3);
       c->code.append(0xf8 | b->low);
     }
