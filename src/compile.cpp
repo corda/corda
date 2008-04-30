@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -3875,11 +3875,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Floats") == 0 and
+       "org/eclipse/swt/graphics/ImageData") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "multiply") == 0)
+       "<clinit>") == 0)
   {
     asm("int3");
   }

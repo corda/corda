@@ -29,7 +29,7 @@ const unsigned InitialTenuredFixieCeilingInBytes = 4 * 1024 * 1024;
 
 const unsigned LowMemoryPaddingInBytes = 1024 * 1024;
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool Verbose2 = false;
 const bool Debug = false;
 const bool DebugFixies = false;

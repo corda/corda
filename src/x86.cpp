@@ -563,7 +563,7 @@ popM(Context* c, unsigned size, Assembler::Memory* a)
 }
 
 void
-addCarryCR(Context* c, unsigned size, Assembler::Constant* a,
+addCarryCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
            Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4);
@@ -1096,7 +1096,7 @@ addCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-subtractBorrowCR(Context* c, unsigned size, Assembler::Constant* a,
+subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
                  Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4);
@@ -1112,7 +1112,7 @@ subtractBorrowCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-subtractCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+subtractCR(Context* c, unsigned size, Assembler::Constant* a,
            Assembler::Register* b)
 {
   int64_t v = a->value->value();
@@ -1157,7 +1157,7 @@ subtractRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
-addCarryRR(Context* c, unsigned size, Assembler::Register* a,
+addCarryRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
            Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4);
@@ -1286,7 +1286,7 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
     Assembler::Register ax(rax);
     Assembler::Register divisor(a->low);
 
-    if (a->low == rdx) {
+    if (a->low == rdx or a->low == rax) {
       divisor.low = c->client->acquireTemporary();
       moveRR(c, BytesPerWord, a, &divisor);
     } else if (b->low != rdx) {
@@ -1294,7 +1294,9 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
     }
 
     if (b->low != rax) {
-      c->client->save(rax);
+      if (a->low != rax) {
+        c->client->save(rax);
+      }
       moveRR(c, BytesPerWord, b, &ax);
     }
     
@@ -1306,10 +1308,12 @@ divideRR(Context* c, unsigned size, Assembler::Register* a,
 
     if (b->low != rax) {
       moveRR(c, BytesPerWord, &ax, b);
-      c->client->restore(rax);
+      if (a->low != rax) {
+        c->client->restore(rax);
+      }
     }
 
-    if (a->low == rdx) {
+    if (a->low == rdx or a->low == rax) {
       moveRR(c, BytesPerWord, &divisor, a);
       c->client->releaseTemporary(divisor.low);
     } else if (b->low != rdx) {
@@ -1354,7 +1358,7 @@ remainderRR(Context* c, unsigned size, Assembler::Register* a,
     Assembler::Register dx(rdx);
     Assembler::Register divisor(a->low);
 
-    if (a->low == rdx) {
+    if (a->low == rdx or a->low == rax) {
       divisor.low = c->client->acquireTemporary();
       moveRR(c, BytesPerWord, a, &divisor);      
     } else if (b->low != rdx) {
@@ -1362,7 +1366,9 @@ remainderRR(Context* c, unsigned size, Assembler::Register* a,
     }
 
     if (b->low != rax) {
-      c->client->save(rax);
+      if (a->low != rax) {
+        c->client->save(rax);
+      }
       moveRR(c, BytesPerWord, b, &ax);
     }
     
@@ -1376,16 +1382,43 @@ remainderRR(Context* c, unsigned size, Assembler::Register* a,
       moveRR(c, BytesPerWord, &dx, b);
     }
 
-    if (b->low != rax) {
+    if (b->low != rax and a->low != rax) {
       c->client->restore(rax);
     }
 
-    if (a->low == rdx) {
+    if (a->low == rdx or a->low == rax) {
       moveRR(c, BytesPerWord, &divisor, a);
       c->client->releaseTemporary(divisor.low);
     } else if (b->low != rdx) {
       c->client->restore(rdx);
     }
+  }
+}
+
+void
+remainderCR(Context* c, unsigned size, Assembler::Constant* a,
+            Assembler::Register* b)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    pushC(c, size, a);
+    pushR(c, size, b);
+    
+    Assembler::Constant address
+      (resolved(c, reinterpret_cast<intptr_t>(moduloLong)));
+    callC(c, BytesPerWord, &address);
+
+    Assembler::Register axdx(rax, rdx);
+    moveRR(c, 4, &axdx, b);
+
+    ResolvedPromise offsetPromise(16);
+    Assembler::Constant offset(&offsetPromise);
+    Assembler::Register stack(rsp);
+    addCR(c, BytesPerWord, &offset, &stack);
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, size, a, &tmp);
+    remainderRR(c, size, &tmp, b);
+    c->client->releaseTemporary(tmp.low);    
   }
 }
 
@@ -1775,7 +1808,7 @@ unsignedShiftRightCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-compareRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+compareRR(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
@@ -1799,7 +1832,7 @@ compareRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
 }
 
 void
-compareCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+compareCR(Context* c, unsigned size, Assembler::Constant* a,
           Assembler::Register* b)
 {
   int64_t v = a->value->value();
@@ -1988,6 +2021,7 @@ populateTables()
   BinaryOperations[INDEX2(Divide, Register, Register)] = CAST2(divideRR);
   BinaryOperations[INDEX2(Divide, Constant, Register)] = CAST2(divideCR);
 
+  BinaryOperations[INDEX2(Remainder, Constant, Register)] = CAST2(remainderCR);
   BinaryOperations[INDEX2(Remainder, Register, Register)] = CAST2(remainderRR);
 
   BinaryOperations[INDEX2(And, Register, Register)] = CAST2(andRR);

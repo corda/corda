@@ -388,6 +388,21 @@ removeSite(Context* c, Value* v, Site* s)
 }
 
 void
+removeMemorySites(Context* c, Value* v)
+{
+  for (Site** p = &(v->sites); *p;) {
+    if ((*p)->type(c) == MemoryOperand) {
+//       fprintf(stderr, "remove site %p (%d) from %p\n", s, s->type(c), v);
+      (*p)->release(c);
+      *p = (*p)->next;
+      break;
+    } else {
+      p = &((*p)->next);
+    }
+  }
+}
+
+void
 clearSites(Context* c, Value* v)
 {
   for (Site* s = v->sites; s; s = s->next) {
@@ -542,7 +557,7 @@ registerSite(Context* c, int low, int high = NoRegister)
 }
 
 RegisterSite*
-freeRegister(Context* c, unsigned size, bool allowAcquired);
+freeRegister(Context* c, unsigned size);
 
 void
 increment(Context* c, int r)
@@ -662,14 +677,40 @@ targetOrNull(Context* c, Value* v, Event* event)
   }
 }
 
+bool
+used(Context* c, int r)
+{
+  Value* v = c->registers[r].value;
+//   fprintf(stderr, "v: %p found: %d\n",
+//           v, v and findSite(c, v, c->registers[r].site));
+  return v and findSite(c, v, c->registers[r].site);
+}
+
+bool
+usedExclusively(Context* c, int r)
+{
+  Value* v = c->registers[r].value;
+  return used(c, r) and v->sites->next == 0;
+}
+
+bool
+isFree(Context* c, Site* s)
+{
+  return s->type(c) != RegisterOperand
+    or not (usedExclusively(c, static_cast<RegisterSite*>(s)->register_.low)
+            or (static_cast<RegisterSite*>(s)->register_.high != NoRegister
+                and usedExclusively
+                (c, static_cast<RegisterSite*>(s)->register_.high)));
+}
+
 Site*
 targetOrRegister(Context* c, unsigned size, Value* v, Event* event)
 {
   Site* s = targetOrNull(c, v, event);
-  if (s) {
+  if (s and isFree(c, s)) {
     return s;
   } else {
-    return freeRegister(c, size, true);
+    return freeRegister(c, size);
   }
 }
 
@@ -687,7 +728,7 @@ class ValueSite: public AbstractSite {
           return s;
         }
       }
-      return freeRegister(c, r->size, true);
+      return freeRegister(c, r->size);
     }
   }
 
@@ -729,7 +770,7 @@ class AnyRegisterSite: public AbstractSite {
         return s;
       }
     }
-    return freeRegister(c, r->size, true);
+    return freeRegister(c, r->size);
   }
 };
 
@@ -748,7 +789,7 @@ class ConstantOrRegisterSite: public AbstractSite {
         return s;
       }
     }
-    return freeRegister(c, r->size, true);
+    return freeRegister(c, r->size);
   }
 };
 
@@ -799,6 +840,8 @@ pushNow(Context* c, Stack* start, unsigned count)
 
     if (s->value and s->value->sites) {
       Site* source = pick(c, s->value->sites);
+
+      removeMemorySites(c, s->value);
 
       s->pushSite = pushSite(c, s->index);
       addSite(c, 0, s->size * BytesPerWord, s->value, s->pushSite);
@@ -1276,7 +1319,7 @@ maybePreserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
 {
   if (v->reads->next and v->sites->next == 0) {
     assert(c, v->sites == s);
-    Site* r = freeRegister(c, size, true);
+    Site* r = freeRegister(c, size);
     addSite(c, stack, size, v, r);
     apply(c, Move, size, s, r);    
   }
@@ -1682,68 +1725,24 @@ appendPop(Context* c, unsigned count, bool ignore)
   new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c, count, ignore);
 }
 
-// void
-// swapRegisters(Context* c, int* ap, int* bp)
-// {
-//   Assembler::Register a(*ap);
-//   Assembler::Register b(*bp);
-
-//   c->assembler->apply
-//     (Xor, BytesPerWord, RegisterOperand, &a, RegisterOperand, &b);
-//   c->assembler->apply
-//     (Xor, BytesPerWord, RegisterOperand, &b, RegisterOperand, &a);
-//   c->assembler->apply
-//     (Xor, BytesPerWord, RegisterOperand, &a, RegisterOperand, &b);
-
-//   int t = *ap;
-//   *ap = *bp;
-//   *bp = t;
-// }
-
 Site*
 readSource(Context* c, Stack* stack, Read* r, Event* e)
 {
   Site* target = (r->target ? r->target->readTarget(c, r, e) : 0);
+
+  if (target and not isFree(c, target)) {
+    target = 0;
+  }
 
   unsigned copyCost;
   Site* site = pick(c, r->value->sites, target, &copyCost);
 
   if (target) {
     if (copyCost) {
-      if (tryAddSite(c, stack, r->size, r->value, target)) {
-        apply(c, Move, r->size, site, target);
-        return target;
-      } else {
-        abort(c);
-//         // this is a filthy hack, but I think the core idea is right:
-
-//         assert(c, target->type(c) == RegisterOperand);
-
-//         RegisterSite* ts = static_cast<RegisterSite*>(target);
-
-//         for (Site* s = r->value->sites; s; s = s->next) {
-//           if (s->type(c) == RegisterOperand) {
-//             RegisterSite* rs = static_cast<RegisterSite*>(s);
-
-//             RegisterSite* os = static_cast<RegisterSite*>
-//               (c->registers[ts->register_.low].site);
-
-//             assert(c, os->register_.low == ts->register_.low);
-//             assert(c, os->register_.high == NoRegister);
-//             assert(c, ts->register_.high == NoRegister);
-//             assert(c, rs->register_.high == NoRegister);
-
-//             swapRegisters(c, &(os->register_.low), &(rs->register_.low));
-
-//             return rs;
-//           }
-//         }
-      }
-      
-      abort(c);
-    } else {
-      return target;
+      addSite(c, stack, r->size, r->value, target);
+      apply(c, Move, r->size, site, target);
     }
+    return target;
   } else {
     return site;
   }
@@ -1896,24 +1895,8 @@ updateJunctions(Context* c)
   }
 }
 
-bool
-used(Context* c, int r)
-{
-  Value* v = c->registers[r].value;
-//   fprintf(stderr, "v: %p found: %d\n",
-//           v, v and findSite(c, v, c->registers[r].site));
-  return v and findSite(c, v, c->registers[r].site);
-}
-
-bool
-usedExclusively(Context* c, int r)
-{
-  Value* v = c->registers[r].value;
-  return used(c, r) and v->sites->next == 0;
-}
-
 int
-freeRegisterExcept(Context* c, int except, bool allowAcquired)
+freeRegisterExcept(Context* c, int except)
 {
   for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
     if (i != except
@@ -1924,22 +1907,20 @@ freeRegisterExcept(Context* c, int except, bool allowAcquired)
     }
   }
 
-  if (allowAcquired) {
-    for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-      if (i != except
-          and c->registers[i].refCount == 0
-          and (not usedExclusively(c, i)))
-      {
-        return i;
-      }
+  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
+    if (i != except
+        and c->registers[i].refCount == 0
+        and (not usedExclusively(c, i)))
+    {
+      return i;
     }
+  }
 
-    for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-      if (i != except
-          and c->registers[i].refCount == 0)
-      {
-        return i;
-      }
+  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
+    if (i != except
+        and c->registers[i].refCount == 0)
+    {
+      return i;
     }
   }
 
@@ -1959,21 +1940,21 @@ visit(Context* c, unsigned logicalIp)
 }
 
 int
-freeRegister(Context* c, bool allowAcquired)
+freeRegister(Context* c)
 {
-  int r = freeRegisterExcept(c, NoRegister, allowAcquired);
+  int r = freeRegisterExcept(c, NoRegister);
 //   fprintf(stderr, "free reg: %d\n", r);
   return r;
 }
 
 RegisterSite*
-freeRegister(Context* c, unsigned size, bool allowAcquired)
+freeRegister(Context* c, unsigned size)
 {
   if (BytesPerWord == 4 and size == 8) {
-    int low = freeRegister(c, allowAcquired);
-    return registerSite(c, low, freeRegisterExcept(c, low, allowAcquired));
+    int low = freeRegister(c);
+    return registerSite(c, low, freeRegisterExcept(c, low));
   } else {
-    return registerSite(c, freeRegister(c, allowAcquired));
+    return registerSite(c, freeRegister(c));
   }
 }
 
@@ -1982,13 +1963,15 @@ class Client: public Assembler::Client {
   Client(Context* c): c(c) { }
 
   virtual int acquireTemporary() {
-    int r = freeRegisterExcept(c, NoRegister, false);
+    int r = freeRegisterExcept(c, NoRegister);
+    save(r);
     increment(c, r);
     return r;
   }
 
   virtual void releaseTemporary(int r) {
     decrement(c, r);
+    restore(r);
   }
 
   virtual void save(int r) {
