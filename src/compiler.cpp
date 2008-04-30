@@ -2181,7 +2181,7 @@ MemoryOperand::accept(Context* c, Operation op, RegisterOperand* operand)
       c->code.append(0xa5);
       c->code.append(0xc0 | (high->value(c) << 3) | low->value(c));
 
-      // shl
+      // shr
       c->code.append(0xd3);
       c->code.append(0xe8 | high->value(c));
 
