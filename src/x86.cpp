@@ -1791,7 +1791,7 @@ unsignedShiftRightRR(Context* c, unsigned size, Assembler::Register* a,
       moveRR(c, 4, &bh, b); // 2 bytes
       xorRR(c, 4, &bh, &bh); // 2 bytes
     } else {
-      rex(c);
+      if (size == 8) rex(c);
       c->code.append(0xd3);
       c->code.append(0xe8 | b->low);
     }
