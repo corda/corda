@@ -156,8 +156,12 @@ class Assembler {
   virtual unsigned argumentRegisterCount() = 0;
   virtual int argumentRegister(unsigned index) = 0;
 
-  virtual void getTargets(BinaryOperation op, unsigned size,
-                          Register* a, Register* b, bool* syncStack) = 0;
+  virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
+                    uint64_t* registerMask, uintptr_t* procedure);
+
+  virtual void plan(UnaryOperation op, unsigned size, uint8_t* aTypeMask,
+                    uint64_t* aRegisterMask, uint8_t* bTypeMask,
+                    uint64_t* bRegisterMask, uintptr_t* procedure);
 
   virtual void apply(Operation op) = 0;
 

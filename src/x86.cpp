@@ -36,12 +36,6 @@ enum {
 };
 
 int64_t FORCE_ALIGN
-multiplyLong(int64_t a, int64_t b)
-{
-  return a * b;
-}
-
-int64_t FORCE_ALIGN
 divideLong(int64_t a, int64_t b)
 {
   return a / b;
@@ -589,105 +583,32 @@ xorRR(Context* c, unsigned size, Assembler::Register* a,
 void
 swap(Context* c, Assembler::Register* a, Assembler::Register* b)
 {
+  // todo: use xchg instead
   xorRR(c, 4, a, b);
   xorRR(c, 4, b, b);
   xorRR(c, 4, a, b);
 }
 
 void
-marshal(Context* c, int sl, int sh, int dl, int dh)
-{
-  Assembler::Register slr(sl);
-  Assembler::Register shr(sh);
-  Assembler::Register dlr(dl);
-  Assembler::Register dhr(dh);
-
-  if (sl == dl or sh == dh) {
-    if (sl != dl) {
-      c->client->save(dl);
-      moveRR(c, BytesPerWord, &slr, &dlr);
-    } else if (sh != dh) {
-      c->client->save(dh);
-      moveRR(c, BytesPerWord, &shr, &dhr);
-    }
-  } else if (sl == dh or sh == dl) {
-    swap(c, &slr, &shr);
-
-    if (sl != dh) {
-      c->client->save(dh); 
-      moveRR(c, BytesPerWord, &slr, &dhr);
-    } else if (sh != dl) {
-      c->client->save(dl);
-      moveRR(c, BytesPerWord, &shr, &dlr);
-    }
-  } else {
-    c->client->save(dl); 
-    moveRR(c, BytesPerWord, &slr, &dlr);
-
-    c->client->save(dh);
-    moveRR(c, BytesPerWord, &shr, &dhr);
-  }
-}
-
-void
-unmarshal(Context* c, int sl, int sh, int dl, int dh)
-{
-  Assembler::Register slr(sl);
-  Assembler::Register shr(sh);
-  Assembler::Register dlr(dl);
-  Assembler::Register dhr(dh);
-
-  if (sl == dl or sh == dh) {
-    if (sl != dl) {
-      moveRR(c, BytesPerWord, &slr, &dlr);
-      c->client->restore(sl);
-    } else if (sh != dh) {
-      moveRR(c, BytesPerWord, &shr, &dhr);
-      c->client->restore(sh);
-    }
-  } else if (sl == dh or sh == dl) {
-    if (sl != dh) {
-      moveRR(c, BytesPerWord, &slr, &dhr);
-      c->client->restore(sh);
-    } else if (sh != dl) {
-      moveRR(c, BytesPerWord, &shr, &dlr);
-      c->client->restore(sl);
-    }
-
-    swap(c, &dlr, &dhr);
-  } else {
-    moveRR(c, BytesPerWord, &slr, &dlr);
-    c->client->restore(sl);
-
-    moveRR(c, BytesPerWord, &shr, &dhr);
-    c->client->restore(sh);
-  }
-}
-
-void
 negateR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
-    Assembler::Register ax(rax);
-    Assembler::Register dx(rdx);
+    assert(c, a->low == rax and a->high == rdx);
 
     ResolvedPromise zeroPromise(0);
     Assembler::Constant zero(&zeroPromise);
 
-    marshal(c, a->low, a->high, rax, rdx);
+    Assembler::Register ah(a->high);
 
-    negateR(c, 4, &ax);
-    addCarryCR(c, 4, &zero, &dx);
-    negateR(c, 4, &dx);
-    
-    unmarshal(c, rax, rdx, a->low, a->high);
+    negateR(c, 4, a);
+    addCarryCR(c, 4, &zero, &ah);
+    negateR(c, 4, &ah);
   } else {
-    rex(c);
+    if (size == 8) rex(c);
     c->code.append(0xf7);
     c->code.append(0xd8 | a->low);
   }
 }
-
 
 void
 leaMR(Context* c, unsigned size, Assembler::Memory* b, Assembler::Register* a)
@@ -785,25 +706,12 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
   } else {
     switch (size) {
     case 1:
-      if (BytesPerWord == 4 and a->low > rbx) {
-        if (b->low > rbx) {
-          c->client->save(rax);
+      assert(c, BytesPerWord == 8 or (a->low <= rbx and b->low <= rbx));
 
-          Assembler::Register ax(rax);
-          moveRR(c, BytesPerWord, a, &ax);
-          moveRR(c, 1, &ax, b);
-
-          c->client->restore(rax);
-        } else {
-          moveRR(c, BytesPerWord, a, b);
-          moveRR(c, 1, b, b);
-        }
-      } else {
-        rex(c);
-        c->code.append(0x0f);
-        c->code.append(0xbe);
-        c->code.append(0xc0 | (b->low << 3) | a->low);
-      }
+      rex(c);
+      c->code.append(0x0f);
+      c->code.append(0xbe);
+      c->code.append(0xc0 | (b->low << 3) | a->low);
       break;
 
     case 2:
@@ -844,17 +752,9 @@ moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
           encode(c, 0x88, a->low, b, false);
         }
       } else {
-        if (a->low > rbx) {
-          c->client->save(rax);
+        assert(c, a->low <= rbx);
 
-          Assembler::Register ax(rax);
-          moveRR(c, BytesPerWord, a, &ax);
-          moveRM(c, 1, &ax, b);
-
-          c->client->restore(rax);
-        } else {
-          encode(c, 0x88, a->low, b, false);
-        }
+        encode(c, 0x88, a->low, b, false);
       }
       break;
 
@@ -872,31 +772,7 @@ moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
 }
 
 void
-move(Context* c, int sl, int sh, int dl, int dh)
-{
-  Assembler::Register slr(sl);
-  Assembler::Register shr(sh);
-  Assembler::Register dlr(dl);
-  Assembler::Register dhr(dh);
-
-  if (sl == dh and sh == dl) {
-    swap(c, &slr, &shr);
-  } else {
-    if (sl != dl) {
-      if (sh == dl) {
-        moveRR(c, 4, &shr, &dhr);
-      }
-      moveRR(c, 4, &slr, &dlr);        
-    }
-    
-    if (sh != dh and sh != dl) {
-      moveRR(c, 4, &shr, &dhr);
-    }
-  }
-}
-
-void
-move4To8RR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+move4To8RR(Context* c, unsigned, Assembler::Register* a,
            Assembler::Register* b)
 {
   if (BytesPerWord == 8) {
@@ -907,26 +783,10 @@ move4To8RR(Context* c, unsigned size UNUSED, Assembler::Register* a,
     if (a->low == rax and b->low == rax and b->high == rdx) {
       c->code.append(0x99); // cdq
     } else {
-      Assembler::Register axdx(rax, rdx);
-      Assembler::Register dx(rdx);
-      Assembler::Register bh(b->high);
+      assert(c, b->low == rax and b->high == rdx);
 
-      bool saveAX = a->low != rax and b->low != rax and b->high != rax;
-      bool saveDX = b->low != rdx and b->high != rdx;
-
-      if (saveDX) c->client->save(rdx);
-      if (saveAX) c->client->save(rax);
-
-      if (a->low != rax) {
-        moveRR(c, 4, a, &axdx);
-      }
-
-      move4To8RR(c, 0, &axdx, &axdx);
-
-      move(c, rax, rdx, b->low, b->high);
-
-      if (saveAX) c->client->restore(rax);
-      if (saveDX) c->client->restore(rdx);
+      moveRR(c, 4, a, b);
+      move4To8RR(c, 0, b, b);
     }
   }
 }
@@ -1012,23 +872,10 @@ move4To8MR(Context* c, unsigned, Assembler::Memory* a, Assembler::Register* b)
   if (BytesPerWord == 8) {
     encode(c, 0x63, b->low, a, true);
   } else {
-    Assembler::Register axdx(rax, rdx);
-    Assembler::Register dx(rdx);
-    Assembler::Register bh(b->high);
+    assert(c, b->low == rax and b->high == rdx);
 
-    bool saveAX = b->low != rax and b->high != rax;
-    bool saveDX = b->low != rdx and b->high != rdx;
-
-    if (saveDX) c->client->save(rdx);
-    if (saveAX) c->client->save(rax);
-
-    moveMR(c, 4, a, &axdx);
-    move4To8RR(c, 0, &axdx, &axdx);
-
-    move(c, rax, rdx, b->low, b->high);
-
-    if (saveAX) c->client->restore(rax);
-    if (saveDX) c->client->restore(rdx);
+    moveMR(c, 4, a, b);
+    move4To8RR(c, 0, b, b);
   }
 }
 
@@ -1079,7 +926,7 @@ addCR(Context* c, unsigned size, Assembler::Constant* a,
       addCR(c, 4, &al, b);
       addCarryCR(c, 4, &ah, &bh);
     } else {
-      rex(c);
+      if (size == 8) rex(c);
       if (isInt8(v)) {
         c->code.append(0x83);
         c->code.append(0xc0 | b->low);
@@ -1129,7 +976,7 @@ subtractCR(Context* c, unsigned size, Assembler::Constant* a,
       subtractCR(c, 4, &al, b);
       subtractBorrowCR(c, 4, &ah, &bh);
     } else {
-      rex(c);
+      if (size == 8) rex(c);
       if (isInt8(v)) {
         c->code.append(0x83);
         c->code.append(0xe8 | b->low);
@@ -1146,23 +993,23 @@ subtractCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-subtractRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+subtractRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
-  rex(c);
+  if (size == 8) rex(c);
   c->code.append(0x29);
   c->code.append(0xc0 | (a->low << 3) | b->low);
 }
 
 void
-addCarryRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+addCarryRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or size == 4);
   
-  rex(c);
+  if (size == 8) rex(c);
   c->code.append(0x11);
   c->code.append(0xc0 | (a->low << 3) | b->low);
 }
@@ -1178,7 +1025,7 @@ addRR(Context* c, unsigned size, Assembler::Register* a,
     addRR(c, 4, a, b);
     addCarryRR(c, 4, &ah, &bh);
   } else {
-    rex(c);
+    if (size == 8) rex(c);
     c->code.append(0x01);
     c->code.append(0xc0 | (a->low << 3) | b->low);
   }
@@ -1198,22 +1045,32 @@ multiplyRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
-    pushR(c, size, a);
-    pushR(c, size, b);
-    
-    Assembler::Constant address
-      (resolved(c, reinterpret_cast<intptr_t>(multiplyLong)));
-    callC(c, BytesPerWord, &address);
+    assert(c, b->high == rdx);
+    assert(c, b->low != rax);
+    assert(c, a->low != rax);
+    assert(c, a->high != rax);
+
+    c->client->save(rax);
 
     Assembler::Register axdx(rax, rdx);
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    moveRR(c, 4, b, &axdx);
+    multiplyRR(c, 4, &ah, b);
+    multiplyRR(c, 4, a, &bh);
+    addRR(c, 4, &bh, b);
+    
+    // mul a->low,%eax%edx
+    c->code.append(0xf7);
+    c->code.append(0xe8 | a->low);
+    
+    addRR(c, 4, b, &bh);
     moveRR(c, 4, &axdx, b);
 
-    ResolvedPromise offsetPromise(16);
-    Assembler::Constant offset(&offsetPromise);
-    Assembler::Register stack(rsp);
-    addCR(c, BytesPerWord, &offset, &stack);
+    c->client->restore(rax);
   } else {
-    rex(c);
+    if (size == 8) rex(c);
     c->code.append(0x0f);
     c->code.append(0xaf);
     c->code.append(0xc0 | (b->low << 3) | a->low);
@@ -1224,26 +1081,23 @@ void
 multiplyCR(Context* c, unsigned size, Assembler::Constant* a,
            Assembler::Register* b)
 {
+  assert(c, BytesPerWord == 8 or size == 4);
+
   if (BytesPerWord == 4 and size == 8) {
-    pushC(c, size, a);
-    pushR(c, size, b);
-    
-    Assembler::Constant address
-      (resolved(c, reinterpret_cast<intptr_t>(multiplyLong)));
-    callC(c, BytesPerWord, &address);
+    const uint32_t mask = ~((1 << rax) | (1 << rdx));
+    Assembler::Register tmp(c->client->acquireTemporary(mask),
+                            c->client->acquireTemporary(mask));
 
-    Assembler::Register axdx(rax, rdx);
-    moveRR(c, 4, &axdx, b);
+    moveCR(c, size, a, &tmp);
+    remainderRR(c, size, &tmp, b);
 
-    ResolvedPromise offsetPromise(16);
-    Assembler::Constant offset(&offsetPromise);
-    Assembler::Register stack(rsp);
-    addCR(c, BytesPerWord, &offset, &stack);
+    c->client->releaseTemporary(tmp.low);
+    c->client->releaseTemporary(tmp.high);
   } else {
     int64_t v = a->value->value();
     if (v) {
       if (isInt32(v)) {
-        rex(c);
+        if (size == 8) rex(c);
         if (isInt8(v)) {
           c->code.append(0x6b);
           c->code.append(0xc0 | (b->low << 3) | b->low);
@@ -1267,68 +1121,30 @@ void
 divideRR(Context* c, unsigned size, Assembler::Register* a,
          Assembler::Register* b)
 {
-  if (BytesPerWord == 4 and size == 8) {
-    pushR(c, size, a);
-    pushR(c, size, b);
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  assert(c, b->low == rax);
+  assert(c, a->low != rdx);
+
+  c->client->save(rdx);
     
-    Assembler::Constant address
-      (resolved(c, reinterpret_cast<intptr_t>(divideLong)));
-    callC(c, BytesPerWord, &address);
+  if (size == 8) rex(c);
+  c->code.append(0x99); // cdq
+  if (size == 8) rex(c);
+  c->code.append(0xf7);
+  c->code.append(0xf8 | a->low);
 
-    Assembler::Register axdx(rax, rdx);
-    moveRR(c, 4, &axdx, b);
-
-    ResolvedPromise offsetPromise(16);
-    Assembler::Constant offset(&offsetPromise);
-    Assembler::Register stack(rsp);
-    addCR(c, BytesPerWord, &offset, &stack);
-  } else {
-    Assembler::Register ax(rax);
-    Assembler::Register divisor(a->low);
-
-    if (a->low == rdx or a->low == rax) {
-      divisor.low = c->client->acquireTemporary();
-      moveRR(c, BytesPerWord, a, &divisor);
-    } else if (b->low != rdx) {
-      c->client->save(rdx);
-    }
-
-    if (b->low != rax) {
-      if (a->low != rax) {
-        c->client->save(rax);
-      }
-      moveRR(c, BytesPerWord, b, &ax);
-    }
-    
-    rex(c);
-    c->code.append(0x99);
-    rex(c);
-    c->code.append(0xf7);
-    c->code.append(0xf8 | divisor.low);
-
-    if (b->low != rax) {
-      moveRR(c, BytesPerWord, &ax, b);
-      if (a->low != rax) {
-        c->client->restore(rax);
-      }
-    }
-
-    if (a->low == rdx or a->low == rax) {
-      moveRR(c, BytesPerWord, &divisor, a);
-      c->client->releaseTemporary(divisor.low);
-    } else if (b->low != rdx) {
-      c->client->restore(rdx);
-    }
-  }
+  c->client->restore(rdx);
 }
 
 void
 divideCR(Context* c, unsigned size, Assembler::Constant* a,
          Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  assert(c, BytesPerWord == 8 or size == 4);
 
-  Assembler::Register tmp(c->client->acquireTemporary());
+  const uint32_t mask = ~((1 << rax) | (1 << rdx));
+  Assembler::Register tmp(c->client->acquireTemporary(mask));
   moveCR(c, size, a, &tmp);
   divideRR(c, size, &tmp, b);
   c->client->releaseTemporary(tmp.low);  
@@ -1338,88 +1154,36 @@ void
 remainderRR(Context* c, unsigned size, Assembler::Register* a,
             Assembler::Register* b)
 {
-  if (BytesPerWord == 4 and size == 8) {
-    pushR(c, size, a);
-    pushR(c, size, b);
+  assert(c, BytesPerWord == 8 or size == 4);
+
+  assert(c, b->low == rax);
+  assert(c, a->low != rdx);
+
+  c->client->save(rdx);
     
-    Assembler::Constant address
-      (resolved(c, reinterpret_cast<intptr_t>(moduloLong)));
-    callC(c, BytesPerWord, &address);
+  if (size == 8) rex(c);
+  c->code.append(0x99); // cdq
+  if (size == 8) rex(c);
+  c->code.append(0xf7);
+  c->code.append(0xf8 | a->low);
 
-    Assembler::Register axdx(rax, rdx);
-    moveRR(c, 4, &axdx, b);
+  Assembler::Register dx(rdx);
+  moveRR(c, BytesPerWord, &dx, b);
 
-    ResolvedPromise offsetPromise(16);
-    Assembler::Constant offset(&offsetPromise);
-    Assembler::Register stack(rsp);
-    addCR(c, BytesPerWord, &offset, &stack);
-  } else {
-    Assembler::Register ax(rax);
-    Assembler::Register dx(rdx);
-    Assembler::Register divisor(a->low);
-
-    if (a->low == rdx or a->low == rax) {
-      divisor.low = c->client->acquireTemporary();
-      moveRR(c, BytesPerWord, a, &divisor);      
-    } else if (b->low != rdx) {
-      c->client->save(rdx);
-    }
-
-    if (b->low != rax) {
-      if (a->low != rax) {
-        c->client->save(rax);
-      }
-      moveRR(c, BytesPerWord, b, &ax);
-    }
-    
-    rex(c);
-    c->code.append(0x99);
-    rex(c);
-    c->code.append(0xf7);
-    c->code.append(0xf8 | divisor.low);
-
-    if (b->low != rdx) {
-      moveRR(c, BytesPerWord, &dx, b);
-    }
-
-    if (b->low != rax and a->low != rax) {
-      c->client->restore(rax);
-    }
-
-    if (a->low == rdx or a->low == rax) {
-      moveRR(c, BytesPerWord, &divisor, a);
-      c->client->releaseTemporary(divisor.low);
-    } else if (b->low != rdx) {
-      c->client->restore(rdx);
-    }
-  }
+  c->client->restore(rdx);
 }
 
 void
 remainderCR(Context* c, unsigned size, Assembler::Constant* a,
             Assembler::Register* b)
 {
-  if (BytesPerWord == 4 and size == 8) {
-    pushC(c, size, a);
-    pushR(c, size, b);
-    
-    Assembler::Constant address
-      (resolved(c, reinterpret_cast<intptr_t>(moduloLong)));
-    callC(c, BytesPerWord, &address);
+  assert(c, BytesPerWord == 8 or size == 4);
 
-    Assembler::Register axdx(rax, rdx);
-    moveRR(c, 4, &axdx, b);
-
-    ResolvedPromise offsetPromise(16);
-    Assembler::Constant offset(&offsetPromise);
-    Assembler::Register stack(rsp);
-    addCR(c, BytesPerWord, &offset, &stack);
-  } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, size, a, &tmp);
-    remainderRR(c, size, &tmp, b);
-    c->client->releaseTemporary(tmp.low);    
-  }
+  const uint32_t mask = ~((1 << rax) | (1 << rdx));
+  Assembler::Register tmp(c->client->acquireTemporary(mask));
+  moveCR(c, size, a, &tmp);
+  remainderRR(c, size, &tmp, b);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -1433,7 +1197,7 @@ andRR(Context* c, unsigned size, Assembler::Register* a,
     andRR(c, 4, a, b);
     andRR(c, 4, &ah, &bh);
   } else {
-    rex(c);
+    if (size == 8) rex(c);
     c->code.append(0x21);
     c->code.append(0xc0 | (a->low << 3) | b->low);
   }
@@ -1458,7 +1222,7 @@ andCR(Context* c, unsigned size, Assembler::Constant* a,
     andCR(c, 4, &ah, &bh);
   } else {
     if (isInt32(v)) {
-      rex(c);
+      if (size == 8) rex(c);
       if (isInt8(v)) {
         c->code.append(0x83);
         c->code.append(0xe0 | b->low);
@@ -1497,7 +1261,7 @@ andCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 
 void
 orRR(Context* c, unsigned size, Assembler::Register* a,
-      Assembler::Register* b)
+     Assembler::Register* b)
 {
   if (BytesPerWord == 4 and size == 8) {
     Assembler::Register ah(a->high);
@@ -1506,7 +1270,7 @@ orRR(Context* c, unsigned size, Assembler::Register* a,
     orRR(c, 4, a, b);
     orRR(c, 4, &ah, &bh);
   } else {
-    rex(c);
+    if (size == 8) rex(c);
     c->code.append(0x09);
     c->code.append(0xc0 | (a->low << 3) | b->low);
   }
@@ -1514,7 +1278,7 @@ orRR(Context* c, unsigned size, Assembler::Register* a,
 
 void
 orCR(Context* c, unsigned size, Assembler::Constant* a,
-      Assembler::Register* b)
+     Assembler::Register* b)
 {
   int64_t v = a->value->value();
   if (v) {
@@ -1531,7 +1295,7 @@ orCR(Context* c, unsigned size, Assembler::Constant* a,
       orCR(c, 4, &ah, &bh);
     } else {
       if (isInt32(v)) {
-        rex(c);
+        if (size == 8) rex(c);
         if (isInt8(v)) {
           c->code.append(0x83);
           c->code.append(0xc8 | b->low);
@@ -1562,7 +1326,7 @@ xorRR(Context* c, unsigned size, Assembler::Register* a,
     xorRR(c, 4, a, b);
     xorRR(c, 4, &ah, &bh);
   } else {
-    rex(c);
+    if (size == 8) rex(c);
     c->code.append(0x31);
     c->code.append(0xc0 | (a->low << 3) | b->low);
   }
@@ -1587,7 +1351,7 @@ xorCR(Context* c, unsigned size, Assembler::Constant* a,
       xorCR(c, 4, &ah, &bh);
     } else {
       if (isInt32(v)) {
-        rex(c);
+        if (size == 8) rex(c);
         if (isInt8(v)) {
           c->code.append(0x83);
           c->code.append(0xf0 | b->low);
@@ -1604,38 +1368,6 @@ xorCR(Context* c, unsigned size, Assembler::Constant* a,
         c->client->releaseTemporary(tmp.low);
       }
     }
-  }
-}
-
-void
-doShift(Context* c, void (*shift)
-        (Context*, unsigned, Assembler::Register*, Assembler::Register*),
-        unsigned size, Assembler::Register* a, Assembler::Register* b)
-{
-  Assembler::Register target(b->low, b->high);
-
-  if (b->low == rcx) {
-    target.low = c->client->acquireTemporary();
-    moveRR(c, BytesPerWord, b, &target);
-  } else if (b->high == rcx) {
-    target.high = c->client->acquireTemporary();
-    moveRR(c, BytesPerWord, b, &target);
-  } else {
-    c->client->save(rcx);
-  }
-
-  Assembler::Register cx(rcx);
-  moveRR(c, BytesPerWord, a, &cx);
-  shift(c, size, &cx, &target);
-
-  if (b->low == rcx) {
-    moveRR(c, BytesPerWord, &target, b);
-    c->client->releaseTemporary(target.low);
-  } else if (b->high == rcx) {
-    moveRR(c, BytesPerWord, &target, b);
-    c->client->releaseTemporary(target.high);
-  } else {
-    c->client->restore(rcx);
   }
 }
 
@@ -1676,37 +1408,35 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
 
 void
 shiftLeftRR(Context* c, unsigned size, Assembler::Register* a,
-             Assembler::Register* b)
+            Assembler::Register* b)
 {
-  if (a->low == rcx) {
-    if (BytesPerWord == 4 and size == 8) {
-      // shld
-      c->code.append(0x0f);
-      c->code.append(0xa5);
-      c->code.append(0xc0 | (b->low << 3) | b->high);
+  assert(c, a->low == rcx);
 
-      // shl
-      c->code.append(0xd3);
-      c->code.append(0xe0 | b->low);
+  if (BytesPerWord == 4 and size == 8) {
+    // shld
+    c->code.append(0x0f);
+    c->code.append(0xa5);
+    c->code.append(0xc0 | (b->low << 3) | b->high);
 
-      ResolvedPromise promise(32);
-      Assembler::Constant constant(&promise);
-      compareCR(c, 4, &constant, a);
+    // shl
+    c->code.append(0xd3);
+    c->code.append(0xe0 | b->low);
 
-      c->code.append(0x0f);
-      c->code.append(0x8c); // jl
-      c->code.append4(2 + 2);
+    ResolvedPromise promise(32);
+    Assembler::Constant constant(&promise);
+    compareCR(c, 4, &constant, a);
 
-      Assembler::Register bh(b->high);
-      moveRR(c, 4, b, &bh); // 2 bytes
-      xorRR(c, 4, b, b); // 2 bytes
-    } else {
-      if (size == 8) rex(c);
-      c->code.append(0xd3);
-      c->code.append(0xe0 | b->low);
-    }
+    c->code.append(0x0f);
+    c->code.append(0x8c); // jl
+    c->code.append4(2 + 2);
+
+    Assembler::Register bh(b->high);
+    moveRR(c, 4, b, &bh); // 2 bytes
+    xorRR(c, 4, b, b); // 2 bytes
   } else {
-    doShift(c, shiftLeftRR, size, a, b);    
+    if (size == 8) rex(c);
+    c->code.append(0xd3);
+    c->code.append(0xe0 | b->low);
   }
 }
 
@@ -1721,39 +1451,37 @@ void
 shiftRightRR(Context* c, unsigned size, Assembler::Register* a,
              Assembler::Register* b)
 {
-  if (a->low == rcx) {
-    if (BytesPerWord == 4 and size == 8) {
-      // shrd
-      c->code.append(0x0f);
-      c->code.append(0xad);
-      c->code.append(0xc0 | (b->high << 3) | b->low);
+  assert(c, a->low == rcx);
 
-      // sar
-      c->code.append(0xd3);
-      c->code.append(0xf8 | b->high);
+  if (BytesPerWord == 4 and size == 8) {
+    // shrd
+    c->code.append(0x0f);
+    c->code.append(0xad);
+    c->code.append(0xc0 | (b->high << 3) | b->low);
 
-      ResolvedPromise promise(32);
-      Assembler::Constant constant(&promise);
-      compareCR(c, 4, &constant, a);
+    // sar
+    c->code.append(0xd3);
+    c->code.append(0xf8 | b->high);
 
-      c->code.append(0x0f);
-      c->code.append(0x8c); // jl
-      c->code.append4(2 + 3);
+    ResolvedPromise promise(32);
+    Assembler::Constant constant(&promise);
+    compareCR(c, 4, &constant, a);
 
-      Assembler::Register bh(b->high);
-      moveRR(c, 4, &bh, b); // 2 bytes
+    c->code.append(0x0f);
+    c->code.append(0x8c); // jl
+    c->code.append4(2 + 3);
 
-      // sar 31,high
-      c->code.append(0xc1);
-      c->code.append(0xf8 | b->high);
-      c->code.append(31);
-    } else {
-      if (size == 8) rex(c);
-      c->code.append(0xd3);
-      c->code.append(0xf8 | b->low);
-    }
+    Assembler::Register bh(b->high);
+    moveRR(c, 4, &bh, b); // 2 bytes
+
+    // sar 31,high
+    c->code.append(0xc1);
+    c->code.append(0xf8 | b->high);
+    c->code.append(31);
   } else {
-    doShift(c, shiftRightRR, size, a, b);    
+    if (size == 8) rex(c);
+    c->code.append(0xd3);
+    c->code.append(0xf8 | b->low);
   }
 }
 
@@ -1768,35 +1496,33 @@ void
 unsignedShiftRightRR(Context* c, unsigned size, Assembler::Register* a,
                      Assembler::Register* b)
 {
-  if (a->low == rcx) {
-    if (BytesPerWord == 4 and size == 8) {
-      // shld
-      c->code.append(0x0f);
-      c->code.append(0xa5);
-      c->code.append(0xc0 | (b->high << 3) | b->low);
+  assert(c, a->low == rcx);
 
-      // shr
-      c->code.append(0xd3);
-      c->code.append(0xe8 | b->high);
+  if (BytesPerWord == 4 and size == 8) {
+    // shld
+    c->code.append(0x0f);
+    c->code.append(0xa5);
+    c->code.append(0xc0 | (b->high << 3) | b->low);
 
-      ResolvedPromise promise(32);
-      Assembler::Constant constant(&promise);
-      compareCR(c, 4, &constant, a);
+    // shr
+    c->code.append(0xd3);
+    c->code.append(0xe8 | b->high);
 
-      c->code.append(0x0f);
-      c->code.append(0x8c); // jl
-      c->code.append4(2 + 2);
+    ResolvedPromise promise(32);
+    Assembler::Constant constant(&promise);
+    compareCR(c, 4, &constant, a);
 
-      Assembler::Register bh(b->high);
-      moveRR(c, 4, &bh, b); // 2 bytes
-      xorRR(c, 4, &bh, &bh); // 2 bytes
-    } else {
-      if (size == 8) rex(c);
-      c->code.append(0xd3);
-      c->code.append(0xe8 | b->low);
-    }
+    c->code.append(0x0f);
+    c->code.append(0x8c); // jl
+    c->code.append4(2 + 2);
+
+    Assembler::Register bh(b->high);
+    moveRR(c, 4, &bh, b); // 2 bytes
+    xorRR(c, 4, &bh, &bh); // 2 bytes
   } else {
-    doShift(c, unsignedShiftRightRR, size, a, b);    
+    if (size == 8) rex(c);
+    c->code.append(0xd3);
+    c->code.append(0xe8 | b->low);
   }
 }
 
@@ -1914,11 +1640,14 @@ compareCM(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-compareRM(Context* c, unsigned size UNUSED, Assembler::Register* a,
+compareRM(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Memory* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
+  if (BytesPerWord == 8 and size == 4) {
+    move4To8RR(c, size, a, a);
+  }
   encode(c, 0x39, a->low, b, true);
 }
 
@@ -1928,6 +1657,9 @@ compareMR(Context* c, unsigned size UNUSED, Assembler::Memory* a,
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
 
+  if (BytesPerWord == 8 and size == 4) {
+    move4To8RR(c, size, b, b);
+  }
   encode(c, 0x3b, b->low, a, true);
 }
 
@@ -2123,22 +1855,83 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual void getTargets(BinaryOperation op, unsigned size,
-                          Register* a, Register* b, bool* syncStack)
+  virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
+                    uint64_t* registerMask, uintptr_t* procedure)
   {
-    a->low = NoRegister;
-    a->high = NoRegister;
-    b->low = NoRegister;
-    b->high = NoRegister;
-    *syncStack = false;
+    if (op == Negate and BytesPerWord == 4 and size == 8) {
+      *typeMask = 1 << RegisterOperand;
+      *registerMask = (static_cast<uint64_t>(1) << (rdx + 32))
+        | (static_cast<uint64_t>(1) << rax);
+    } else {
+      *typeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      *registerMask = ~static_cast<uint64_t>(0);
+    }
+    *procedure = 0;
+  }
+
+  virtual void plan(UnaryOperation op, unsigned size, uint8_t* aTypeMask,
+                    uint64_t* aRegisterMask, uint8_t* bTypeMask,
+                    uint64_t* bRegisterMask, uintptr_t* procedure)
+  {
+    *aTypeMask = ~static_cast<uint8_t>(0);
+    *aRegisterMask = ~static_cast<uint64_t>(0);
+
+    *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+    *bRegisterMask = ~static_cast<uint64_t>(0);
+
+    *procedure = 0;
 
     switch (op) {
+    case Move:
+      if (BytesPerWord == 4 and size == 1) {
+        const uint32_t mask
+          = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
+        *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+      }
+      break;
+
+    case Move4To8:
+      if (BytesPerWord == 4) {
+        const uint32_t mask = ~((1 << rax) | (1 << rdx));
+        *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
+          | (static_cast<uint64_t>(1) << rax);
+      }
+      break;
+
     case Multiply:
+      if (BytesPerWord == 4 and size == 8) { 
+        const uint32_t mask = ~((1 << rax) | (1 << rdx));
+        *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32)) | mask;
+      }
+      break;
+
     case Divide:
+      if (BytesPerWord == 4 and size == 8) {
+        *procedure = reinterpret_cast<uintptr_t>(divideLong);        
+      } else {
+        *aRegisterMask = ~((1 << rax) | (1 << rdx));
+        *bRegisterMask = 1 << rax;      
+      }
+      break;
+
     case Remainder:
       if (BytesPerWord == 4 and size == 8) {
-        *syncStack = true;
+        *procedure = reinterpret_cast<uintptr_t>(moduloLong);
+      } else {
+        *aRegisterMask = ~((1 << rax) | (1 << rdx));
+        *bRegisterMask = 1 << rax;      
       }
+      break;
+
+    case ShiftLeft:
+    case ShiftRight:
+    case UnsignedShiftRight:
+      *aRegisterMask = static_cast<uint64_t>(1) << rcx;
+      const uint32_t mask = ~(1 << rcx);
+      *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
       break;
 
     default:
