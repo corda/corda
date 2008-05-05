@@ -1447,7 +1447,8 @@ makeArrayClass(Thread* t, object spec)
 void
 removeMonitor(Thread* t, object o)
 {
-  expect(t, t->state == Thread::ExclusiveState);
+  expect(t, t->state == Thread::ExclusiveState
+         or t->state == Thread::ExitState);
 
   unsigned hash;
   if (DebugMonitors) {
