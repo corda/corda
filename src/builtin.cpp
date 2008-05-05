@@ -575,8 +575,6 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
 extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_gc(Thread* t, jobject)
 {
-  ENTER(t, Thread::ExclusiveState);
-
   collect(t, Heap::MajorCollection);
 }
 

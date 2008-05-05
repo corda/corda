@@ -1447,6 +1447,8 @@ makeArrayClass(Thread* t, object spec)
 void
 removeMonitor(Thread* t, object o)
 {
+  expect(t, t->state == Thread::ExclusiveState);
+
   unsigned hash;
   if (DebugMonitors) {
     hash = objectHash(t, o);
@@ -1556,9 +1558,7 @@ class HeapClient: public Heap::Client {
   }
 
   virtual void collect(void* context, Heap::CollectionType type) {
-    Thread* t = static_cast<Thread*>(context);
-    ENTER(t, Thread::ExclusiveState);
-    collect(t, type);
+    collect(static_cast<Thread*>(context), type);
   }
 
   virtual bool isFixed(void* p) {
@@ -2084,7 +2084,6 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   }
 
   if (t->heap == 0) {
-    ENTER(t, Thread::ExclusiveState);
 //     fprintf(stderr, "gc");
 //     vmPrintTrace(t);
     collect(t, Heap::MinorCollection);
@@ -2735,6 +2734,8 @@ intern(Thread* t, object s)
 void
 collect(Thread* t, Heap::CollectionType type)
 {
+  ENTER(t, Thread::ExclusiveState);
+
 #ifdef VM_STRESS
   bool stress = t->stress;
   if (not stress) t->stress = true;

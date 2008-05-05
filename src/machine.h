@@ -1348,14 +1348,12 @@ stress(Thread* t)
       and t->state != Thread::IdleState)
   {
     t->stress = true;
-    { ENTER(t, Thread::ExclusiveState);
 
 #  ifdef VM_STRESS_MAJOR
       collect(t, Heap::MajorCollection);
 #  else // not VM_STRESS_MAJOR
       collect(t, Heap::MinorCollection);
 #  endif // not VM_STRESS_MAJOR
-    }
 
     t->stress = false;
   }
