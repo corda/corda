@@ -3627,7 +3627,7 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
     object newIndex = makeIntArray(t, length * 3, false);
     PROTECT(t, newIndex);
 
-    object newTable = makeArray(t, length + 1, false);
+    object newTable = makeArray(t, length + 1, true);
     PROTECT(t, newTable);
 
     set(t, newTable, ArrayBody, newIndex);
