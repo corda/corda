@@ -134,7 +134,8 @@ class Assembler {
    public:
     virtual ~Client() { }
 
-    virtual int acquireTemporary() = 0;
+    virtual int acquireTemporary
+    (uint32_t mask = ~static_cast<uint32_t>(0)) = 0;
     virtual void releaseTemporary(int r) = 0;
 
     virtual void save(int r) = 0;
@@ -157,11 +158,11 @@ class Assembler {
   virtual int argumentRegister(unsigned index) = 0;
 
   virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
-                    uint64_t* registerMask, uintptr_t* procedure);
+                    uint64_t* registerMask, uintptr_t* procedure) = 0;
 
-  virtual void plan(UnaryOperation op, unsigned size, uint8_t* aTypeMask,
+  virtual void plan(BinaryOperation op, unsigned size, uint8_t* aTypeMask,
                     uint64_t* aRegisterMask, uint8_t* bTypeMask,
-                    uint64_t* bRegisterMask, uintptr_t* procedure);
+                    uint64_t* bRegisterMask, uintptr_t* procedure) = 0;
 
   virtual void apply(Operation op) = 0;
 

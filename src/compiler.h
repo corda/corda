@@ -21,6 +21,7 @@ class Compiler {
  public:
   static const unsigned Aligned  = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
+  static const unsigned Indirect = 1 << 2;
 
   class Operand { };
 
@@ -67,7 +68,6 @@ class Compiler {
   virtual Operand* peek(unsigned size, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
-                        void* indirection,
                         unsigned flags,
                         TraceHandler* traceHandler,
                         unsigned resultSize,
@@ -109,7 +109,8 @@ class Compiler {
 };
 
 Compiler*
-makeCompiler(System* system, Assembler* assembler, Zone* zone);
+makeCompiler(System* system, Assembler* assembler, Zone* zone,
+             void* indirection);
 
 } // namespace vm
 

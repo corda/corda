@@ -1089,7 +1089,7 @@ multiplyCR(Context* c, unsigned size, Assembler::Constant* a,
                             c->client->acquireTemporary(mask));
 
     moveCR(c, size, a, &tmp);
-    remainderRR(c, size, &tmp, b);
+    multiplyRR(c, size, &tmp, b);
 
     c->client->releaseTemporary(tmp.low);
     c->client->releaseTemporary(tmp.high);
@@ -1869,7 +1869,7 @@ class MyAssembler: public Assembler {
     *procedure = 0;
   }
 
-  virtual void plan(UnaryOperation op, unsigned size, uint8_t* aTypeMask,
+  virtual void plan(BinaryOperation op, unsigned size, uint8_t* aTypeMask,
                     uint64_t* aRegisterMask, uint8_t* bTypeMask,
                     uint64_t* bRegisterMask, uintptr_t* procedure)
   {
@@ -1928,11 +1928,11 @@ class MyAssembler: public Assembler {
 
     case ShiftLeft:
     case ShiftRight:
-    case UnsignedShiftRight:
+    case UnsignedShiftRight: {
       *aRegisterMask = static_cast<uint64_t>(1) << rcx;
       const uint32_t mask = ~(1 << rcx);
       *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
-      break;
+    } break;
 
     default:
       break;

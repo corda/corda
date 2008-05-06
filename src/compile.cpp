@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -463,9 +463,8 @@ class Context {
     thread(t),
     zone(t->m->system, t->m->heap, 16 * 1024),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
-    compiler(makeCompiler(t->m->system, assembler, &zone)),
+    compiler(makeCompiler(t->m->system, assembler, &zone, indirection)),
     method(method),
-    indirection(indirection),
     objectPool(0),
     traceLog(0),
     traceLogCount(0),
@@ -481,7 +480,6 @@ class Context {
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
     compiler(0),
     method(0),
-    indirection(0),
     objectPool(0),
     traceLog(0),
     traceLogCount(0),
@@ -501,7 +499,6 @@ class Context {
   Assembler* assembler;
   Compiler* compiler;
   object method;
-  void* indirection;
   PoolElement* objectPool;
   TraceElement* traceLog;
   unsigned traceLogCount;
@@ -1637,7 +1634,6 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
          (reinterpret_cast<intptr_t>
           (&singletonBody(t, nativeCompiled(t), 0))),
          0,
-         0,
          frame->trace(target, false),
          rSize,
          0);
@@ -1646,7 +1642,6 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
         (c->constant
          (reinterpret_cast<intptr_t>
           (&singletonBody(t, defaultCompiled(t), 0))),
-         0,
          Compiler::Aligned,
          frame->trace(target, false),
          rSize,
@@ -1656,7 +1651,6 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
         (c->constant
          (reinterpret_cast<intptr_t>
           (&singletonBody(t, methodCompiled(t, target), 0))),
-         0,
          0,
          frame->trace(0, false),
          rSize,
@@ -1687,8 +1681,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     }
     
     c->call(c->constant(function),
-            frame->context->indirection,
-            0,
+            Compiler::Indirect,
             frame->trace(0, false),
             0,
             2, c->thread(), lock);
@@ -1756,8 +1749,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       
       c->call
         (c->constant(reinterpret_cast<intptr_t>(gcIfNecessary)),
-         context->indirection,
-         0,
+         Compiler::Indirect,
          frame->trace(0, false),
          0,
          1, c->thread());
@@ -1806,8 +1798,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
-           context->indirection,
-           Compiler::NoReturn,
+           Compiler::NoReturn | Compiler::Indirect,
            frame->trace(0, false),
            0,
            3, c->thread(), array, index);
@@ -1923,8 +1914,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         c->call
           (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
-           context->indirection,
-           Compiler::NoReturn,
+           Compiler::NoReturn | Compiler::Indirect,
            frame->trace(0, false),
            0,
            3, c->thread(), array, index);
@@ -1950,8 +1940,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         case aastore: {
           c->call
             (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
-             context->indirection,
-             0,
+             Compiler::Indirect,
              frame->trace(0, false),
              0,
              4, c->thread(), array,
@@ -1983,8 +1972,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         case aastore: {
           c->call
             (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
-             context->indirection,
-             0,
+             Compiler::Indirect,
              frame->trace(0, false),
              0,
              4, c->thread(), array,
@@ -2050,8 +2038,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushObject
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(makeBlankObjectArray)),
-          context->indirection,
-          0,
+          Compiler::Indirect,
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), frame->append(class_), length));
@@ -2091,8 +2078,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case athrow: {
       c->call
         (c->constant(reinterpret_cast<intptr_t>(throw_)),
-         context->indirection,
-         Compiler::NoReturn,
+         Compiler::NoReturn | Compiler::Indirect,
          frame->trace(0, false),
          0,
          2, c->thread(), frame->popObject());
@@ -2113,8 +2099,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       c->call
         (c->constant(reinterpret_cast<intptr_t>(checkCast)),
-         context->indirection,
-         0,
+         Compiler::Indirect,
          frame->trace(0, false),
          0,
          3, c->thread(), frame->append(class_), instance);
@@ -2124,21 +2109,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(doubleToFloat)),
-          context->indirection, 0, 0, 4, 1, frame->popLong()));
+          Compiler::Indirect, 0, 4, 1, frame->popLong()));
     } break;
 
     case d2i: {
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(doubleToInt)),
-          context->indirection, 0, 0, 4, 1, frame->popLong()));
+          Compiler::Indirect, 0, 4, 1, frame->popLong()));
     } break;
 
     case d2l: {
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(doubleToLong)),
-          context->indirection, 0, 0, 8, 1, frame->popLong()));
+          Compiler::Indirect, 0, 8, 1, frame->popLong()));
     } break;
 
     case dadd: {
@@ -2148,7 +2133,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(addDouble)),
-          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
+          Compiler::Indirect, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dcmpg: {
@@ -2158,7 +2143,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(compareDoublesG)),
-          context->indirection, 0, 0, 4, 4, 0, a, 0, b));
+          Compiler::Indirect, 0, 4, 4, 0, a, 0, b));
     } break;
 
     case dcmpl: {
@@ -2168,7 +2153,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(compareDoublesL)),
-          context->indirection, 0, 0, 4, 4, 0, a, 0, b));
+          Compiler::Indirect, 0, 4, 4, 0, a, 0, b));
     } break;
 
     case dconst_0:
@@ -2186,7 +2171,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(divideDouble)),
-          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
+          Compiler::Indirect, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dmul: {
@@ -2196,14 +2181,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(multiplyDouble)),
-          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
+          Compiler::Indirect, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dneg: {
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(negateDouble)),
-          context->indirection, 0, 0, 8, 2, 0, frame->popLong()));
+          Compiler::Indirect, 0, 8, 2, 0, frame->popLong()));
     } break;
 
     case vm::drem: {
@@ -2213,7 +2198,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(moduloDouble)),
-          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
+          Compiler::Indirect, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dsub: {
@@ -2223,7 +2208,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(subtractDouble)),
-          context->indirection, 0, 0, 8, 4, 0, a, 0, b));
+          Compiler::Indirect, 0, 8, 4, 0, a, 0, b));
     } break;
 
     case dup:
@@ -2254,21 +2239,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(floatToDouble)),
-          context->indirection, 0, 0, 8, 1, frame->popInt()));
+          Compiler::Indirect, 0, 8, 1, frame->popInt()));
     } break;
 
     case f2i: {
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(floatToInt)),
-          context->indirection, 0, 0, 4, 1, frame->popInt()));
+          Compiler::Indirect, 0, 4, 1, frame->popInt()));
     } break;
 
     case f2l: {
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(floatToLong)),
-          context->indirection, 0, 0, 8, 1, frame->popInt()));
+          Compiler::Indirect, 0, 8, 1, frame->popInt()));
     } break;
 
     case fadd: {
@@ -2278,7 +2263,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(addFloat)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          Compiler::Indirect, 0, 4, 2, a, b));
     } break;
 
     case fcmpg: {
@@ -2288,7 +2273,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(compareFloatsG)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          Compiler::Indirect, 0, 4, 2, a, b));
     } break;
 
     case fcmpl: {
@@ -2298,7 +2283,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(compareFloatsL)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          Compiler::Indirect, 0, 4, 2, a, b));
     } break;
 
     case fconst_0:
@@ -2320,7 +2305,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(divideFloat)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          Compiler::Indirect, 0, 4, 2, a, b));
     } break;
 
     case fmul: {
@@ -2330,14 +2315,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(multiplyFloat)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          Compiler::Indirect, 0, 4, 2, a, b));
     } break;
 
     case fneg: {
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(negateFloat)),
-          context->indirection, 0, 0, 4, 1, frame->popInt()));
+          Compiler::Indirect, 0, 4, 1, frame->popInt()));
     } break;
 
     case vm::frem: {
@@ -2347,7 +2332,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(moduloFloat)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          Compiler::Indirect, 0, 4, 2, a, b));
     } break;
 
     case fsub: {
@@ -2357,7 +2342,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(subtractFloat)),
-          context->indirection, 0, 0, 4, 2, a, b));
+          Compiler::Indirect, 0, 4, 2, a, b));
     } break;
 
     case getfield:
@@ -2375,8 +2360,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         {
           c->call
             (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
-             context->indirection,
-             0,
+             Compiler::Indirect,
              frame->trace(0, false),
              0,
              2, c->thread(), frame->append(fieldClass(t, field)));
@@ -2455,14 +2439,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(intToDouble)),
-          context->indirection, 0, 0, 8, 1, frame->popInt()));
+          Compiler::Indirect, 0, 8, 1, frame->popInt()));
     } break;
 
     case i2f: {
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(intToFloat)),
-          context->indirection, 0, 0, 4, 1, frame->popInt()));
+          Compiler::Indirect, 0, 4, 1, frame->popInt()));
     } break;
 
     case i2l:
@@ -2689,7 +2673,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(instanceOf)),
-          context->indirection, 0, 0, 4,
+          Compiler::Indirect, 0, 4,
           3, c->thread(), frame->append(class_), frame->popObject()));
     } break;
 
@@ -2710,13 +2694,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         (c->call
          (c->constant
           (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
-          context->indirection,
-          0,
+          Compiler::Indirect,
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), frame->append(target),
           c->peek(BytesPerWord, instance)),
-         0,
          0,
          frame->trace(target, true),
          rSize,
@@ -2772,7 +2754,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          (c->and_
           (BytesPerWord, c->constant(PointerMask),
            c->memory(instance, 0, 0, 1)), offset, 0, 1),
-         0,
          0,
          frame->trace(target, true),
          rSize,
@@ -2885,14 +2866,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(longToDouble)),
-          context->indirection, 0, 0, 8, 1, frame->popLong()));
+          Compiler::Indirect, 0, 8, 1, frame->popLong()));
     } break;
 
     case l2f: {
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(longToFloat)),
-          context->indirection, 0, 0, 4, 1, frame->popLong()));
+          Compiler::Indirect, 0, 4, 1, frame->popLong()));
     } break;
 
     case l2i:
@@ -3070,7 +3051,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->jmp
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(lookUpAddress)),
-          context->indirection, 0, 0, BytesPerWord,
+          Compiler::Indirect, 0, BytesPerWord,
           4, key, start, c->constant(pairCount), default_));
 
       for (int32_t i = 0; i < pairCount; ++i) {
@@ -3157,15 +3138,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case monitorenter: {
       c->call
         (c->constant(reinterpret_cast<intptr_t>(acquireMonitorForObject)),
-         context->indirection,
-         0, frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
+         Compiler::Indirect,
+         frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
     } break;
 
     case monitorexit: {
       c->call
         (c->constant(reinterpret_cast<intptr_t>(releaseMonitorForObject)),
-         context->indirection,
-         0, frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
+         Compiler::Indirect,
+         frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
     } break;
 
     case multianewarray: {
@@ -3178,8 +3159,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Compiler::Operand* result = c->call
         (c->constant(reinterpret_cast<intptr_t>(makeMultidimensionalArray)),
-         context->indirection,
-         0,
+         Compiler::Indirect,
          frame->trace(0, false),
          BytesPerWord,
          4, c->thread(), frame->append(class_),
@@ -3199,8 +3179,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         frame->pushObject
           (c->call
            (c->constant(reinterpret_cast<intptr_t>(makeNewWeakReference)),
-            context->indirection,
-            0,
+            Compiler::Indirect,
             frame->trace(0, false),
             BytesPerWord,
             2, c->thread(), frame->append(class_)));
@@ -3208,8 +3187,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         frame->pushObject
           (c->call
            (c->constant(reinterpret_cast<intptr_t>(makeNew)),
-            context->indirection,
-            0,
+            Compiler::Indirect,
             frame->trace(0, false),
             BytesPerWord,
             2, c->thread(), frame->append(class_)));
@@ -3261,8 +3239,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushObject
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(makeBlankArray)),
-          context->indirection,
-          0,
+          Compiler::Indirect,
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
@@ -3294,8 +3271,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         {
           c->call
             (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
-             context->indirection,
-             0,
+             Compiler::Indirect,
              frame->trace(0, false),
              0,
              2, c->thread(), frame->append(fieldClass(t, field)));
@@ -3360,15 +3336,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         if (instruction == putfield) {
           c->call
             (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
-             context->indirection,
-             0,
+             Compiler::Indirect,
              frame->trace(0, false),
              0,
              4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
         } else {
           c->call
             (c->constant(reinterpret_cast<intptr_t>(set)),
-             context->indirection, 0, 0, 0,
+             Compiler::Indirect, 0, 0,
              4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
         }
         break;
@@ -3872,7 +3847,7 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (false and
+  if (//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
