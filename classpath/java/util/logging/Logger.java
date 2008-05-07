@@ -30,8 +30,8 @@ public class Logger {
     this.name = name;
   }
 
-  public List<Handler> getHandlers() {
-    return new ArrayList<Handler>(handlers);
+  public Handler[] getHandlers() {
+    return handlers.toArray(new Handler[handlers.size()]);
   }
 
   public void addHandler(Handler handler) {

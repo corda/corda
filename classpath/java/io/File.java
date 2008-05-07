@@ -94,21 +94,36 @@ public class File {
     return exists(path);
   }
 
-  private static native void mkdir(String path);
+  private static native void mkdir(String path) throws IOException;
 
-  public void mkdir() {
-    mkdir(path);
+  public boolean mkdir() {
+    try {
+      mkdir(path);
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
-  private static native void createNewFile(String path);
+  private static native void createNewFile(String path) throws IOException;
 
-  public void createNewFile() {
-    createNewFile(path);
+  public boolean createNewFile() {
+    try {
+      createNewFile(path);
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
   }
 
-  public static native boolean delete(String path);
+  public static native void delete(String path) throws IOException;
 
   public boolean delete() {
-    return delete(path);
+    try {
+      delete(path);
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
   }
 }

@@ -161,16 +161,17 @@ Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
   }
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" JNIEXPORT void JNICALL
 Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
 {
   const char* chars = e->GetStringUTFChars(path, 0);
-  int r = -1;
   if (chars) {
-    r = UNLINK(chars);
+    int r = UNLINK(chars);
+    if (r != 0) {
+      throwNew(e, "java/io/IOException", strerror(errno));
+    }
     e->ReleaseStringUTFChars(path, chars);
   }
-  return r == 0;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
