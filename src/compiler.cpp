@@ -42,13 +42,17 @@ class Site {
   
   virtual ~Site() { }
 
-  virtual Site* readTarget(Context*, Read*, Event*) { return this; }
+  virtual Site* readTarget(Context*, Read*) { return this; }
 
   virtual unsigned copyCost(Context*, Site*) = 0;
   
-  virtual bool tryAcquire(Context*, Stack*, unsigned, Value*) { return true; }
+  virtual void acquire(Context*, Stack*, unsigned, Value*) { }
 
   virtual void release(Context*) { }
+
+  virtual void freeze(Context*) { }
+
+  virtual void thaw(Context*) { }
 
   virtual OperandType type(Context*) = 0;
 
@@ -96,10 +100,17 @@ class LogicalInstruction {
 
 class Register {
  public:
+  Register(int number):
+    value(0), site(0), number(number), size(0), refCount(0), freezeCount(0),
+    reserved(false), pushed(false)
+  { }
+
   Value* value;
   Site* site;
+  int number;
   unsigned size;
   unsigned refCount;
+  unsigned freezeCount;
   bool reserved;
   bool pushed;
 };
@@ -164,8 +175,9 @@ class Context {
     logicalCode(0),
     logicalCodeLength(0),
     stackOffset(0),
-    registers(static_cast<Register*>
-              (zone->allocate(sizeof(Register) * assembler->registerCount()))),
+    registers
+    (static_cast<Register**>
+     (zone->allocate(sizeof(Register*) * assembler->registerCount()))),
     firstConstant(0),
     lastConstant(0),
     constantCount(0),
@@ -174,14 +186,13 @@ class Context {
     machineCode(0),
     stackReset(false)
   {
-    memset(registers, 0, sizeof(Register) * assembler->registerCount());
-    
-    registers[assembler->base()].refCount = 1;
-    registers[assembler->base()].reserved = true;
-    registers[assembler->stack()].refCount = 1;
-    registers[assembler->stack()].reserved = true;
-    registers[assembler->thread()].refCount = 1;
-    registers[assembler->thread()].reserved = true;
+    for (unsigned i = 0; i < assembler->registerCount(); ++i) {
+      registers[i] = new (zone->allocate(sizeof(Register))) Register(i);
+    }
+
+    registers[assembler->base()]->reserved = true;
+    registers[assembler->stack()]->reserved = true;
+    registers[assembler->thread()]->reserved = true;
   }
 
   System* system;
@@ -193,7 +204,7 @@ class Context {
   LogicalInstruction* logicalCode;
   unsigned logicalCodeLength;
   unsigned stackOffset;
-  Register* registers;
+  Register** registers;
   ConstantPoolNode* firstConstant;
   ConstantPoolNode* lastConstant;
   unsigned constantCount;
@@ -341,25 +352,15 @@ findSite(Context*, Value* v, Site* site)
   return false;
 }
 
-bool
-tryAddSite(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
-{
-  if (not findSite(c, v, s)) {
-//     fprintf(stderr, "add site %p (%d) to %p\n", s, s->type(c), v);
-    if (s->tryAcquire(c, stack, size, v)) {
-      s->next = v->sites;
-      v->sites = s;
-    } else {
-      return false;
-    }
-  }
-  return true;
-}
-
 void
 addSite(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
 {
-  expect(c, tryAddSite(c, stack, size, v, s));
+  if (not findSite(c, v, s)) {
+//     fprintf(stderr, "add site %p (%d) to %p\n", s, s->type(c), v);
+    s->acquire(c, stack, size, v);
+    s->next = v->sites;
+    v->sites = s;
+  }
 }
 
 void
@@ -475,25 +476,37 @@ addressSite(Context* c, Promise* address)
   return new (c->zone->allocate(sizeof(AddressSite))) AddressSite(address);
 }
 
-bool
-tryAcquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
-           Site* newSite);
+Register*
+acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
+        Value* newValue, Site* newSite);
 
 void
-release(Context* c, int r);
+release(Context* c, Register* r);
 
 class RegisterSite: public Site {
  public:
-  RegisterSite(int low, int high): register_(low, high) { }
+  RegisterSite(uint64_t mask):
+    mask(mask), low(0), high(0), register_(NoRegister, NoRegister)
+  { }
+
+  void sync(Context* c) {
+    assert(c, low);
+
+    register_.low = low->number;
+    register_.high = (high? high->number : NoRegister);
+  }
 
   virtual unsigned copyCost(Context* c, Site* s) {
+    sync(c);
+
     if (s and
         (this == s or
          (s->type(c) == RegisterOperand
-          and static_cast<RegisterSite*>(s)->register_.low
-          == register_.low
-          and static_cast<RegisterSite*>(s)->register_.high
-          == register_.high)))
+          and (static_cast<RegisterSite*>(s)->mask
+               & (static_cast<uint64_t>(1) << register_.low))
+          and (register_.high == NoRegister
+               or (static_cast<RegisterSite*>(s)->mask
+                   & (static_cast<uint64_t>(1) << (register_.high + 32)))))))
     {
       return 0;
     } else {
@@ -501,36 +514,54 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual bool tryAcquire(Context* c, Stack* stack, unsigned size, Value* v) {
-    if (::tryAcquire(c, register_.low, stack, size, v, this)) {
-      if (register_.high != NoRegister) {
-        if (::tryAcquire(c, register_.high, stack, size, v, this)) {
-          return true;
-        } else {
-          ::release(c, register_.low);
-        }
-      } else {
-        return true;
-      }
+  virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v) {
+    low = ::acquire(c, mask, stack, size, v, this);
+    if (size > BytesPerWord) {
+      ++ low->freezeCount;
+      high = ::acquire(c, mask >> 32, stack, size, v, this);
+      -- low->freezeCount;
     }
-    return false;
   }
 
   virtual void release(Context* c) {
-    ::release(c, register_.low);
-    if (register_.high >= 0) {
-      ::release(c, register_.high);
-    }    
+    assert(c, low);
+
+    ::release(c, low);
+    if (high) {
+      ::release(c, high);
+    }
+  }
+
+  virtual void freeze(Context* c) {
+    assert(c, low);
+
+    ++ low->freezeCount;
+    if (high) {
+      ++ high->freezeCount;
+    }
+  }
+
+  virtual void thaw(Context* c) {
+    assert(c, low);
+
+    -- low->freezeCount;
+    if (high) {
+      -- high->freezeCount;
+    }
   }
 
   virtual OperandType type(Context*) {
     return RegisterOperand;
   }
 
-  virtual Assembler::Operand* asAssemblerOperand(Context*) {
+  virtual Assembler::Operand* asAssemblerOperand(Context* c) {
+    sync(c);
     return &register_;
   }
 
+  uint64_t mask;
+  Register* low;
+  Register* high;
   Assembler::Register register_;
 };
 
@@ -542,41 +573,67 @@ registerSite(Context* c, int low, int high = NoRegister)
   assert(c, high == NoRegister
          or high < static_cast<int>(c->assembler->registerCount()));
 
+  uint64_t mask;
+  if (high == NoRegister) {
+    mask = static_cast<uint64_t>(1) << low;
+  } else {
+    mask = (static_cast<uint64_t>(1) << (high + 32))
+      | (static_cast<uint64_t>(1) << low);
+  }
   return new (c->zone->allocate(sizeof(RegisterSite)))
-    RegisterSite(low, high);
+    RegisterSite(mask);
 }
 
 RegisterSite*
-freeRegister(Context* c, unsigned size,
-             uint64_t mask = ~static_cast<uint64_t>(0));
-
-void
-increment(Context* c, int r)
+freeRegister(Context* c, uint64_t mask = ~static_cast<uint64_t>(0))
 {
+  return new (c->zone->allocate(sizeof(RegisterSite)))
+    RegisterSite(mask);
+}
+
+Register*
+increment(Context* c, int i)
+{
+  Register* r = c->registers[i];
+
   if (DebugRegisters) {
-    fprintf(stderr, "increment %d to %d\n", r, c->registers[r].refCount + 1);
+    fprintf(stderr, "increment %d to %d\n", r->number, r->refCount + 1);
   }
-  ++ c->registers[r].refCount;
+
+  ++ r->refCount;
+
+  return r;
 }
 
 void
-decrement(Context* c, int r)
+decrement(Context* c, Register* r)
 {
+  assert(c, r->refCount > 0);
+
   if (DebugRegisters) {
-    fprintf(stderr, "decrement %d to %d\n", r, c->registers[r].refCount - 1);
+    fprintf(stderr, "decrement %d to %d\n",
+            r->number, r->refCount - 1);
   }
-  assert(c, c->registers[r].refCount > 0);
-  assert(c, c->registers[r].refCount > 1 or (not c->registers[r].reserved));
-  -- c->registers[r].refCount;
+
+  -- r->refCount;
 }
 
 class MemorySite: public Site {
  public:
   MemorySite(int base, int offset, int index, unsigned scale):
-    value(base, offset, index, scale)
+    base(0), index(0), value(base, offset, index, scale)
   { }
 
+  void sync(Context* c) {
+    assert(c, base);
+
+    value.base = base->number;
+    value.index = (index? index->number : NoRegister);
+  }
+
   virtual unsigned copyCost(Context* c, Site* s) {
+    sync(c);
+
     if (s and
         (this == s or
          (s->type(c) == MemoryOperand
@@ -591,18 +648,17 @@ class MemorySite: public Site {
     }
   }
 
-  virtual bool tryAcquire(Context* c, Stack*, unsigned, Value*) {
-    increment(c, value.base);
+  virtual void acquire(Context* c, Stack*, unsigned, Value*) {
+    base = increment(c, value.base);
     if (value.index != NoRegister) {
-      increment(c, value.index);
+      index = increment(c, value.index);
     }
-    return true;
   }
 
   virtual void release(Context* c) {
-    decrement(c, value.base);
-    if (value.index != NoRegister) {
-      decrement(c, value.index);
+    decrement(c, base);
+    if (index) {
+      decrement(c, index);
     }
   }
 
@@ -610,10 +666,13 @@ class MemorySite: public Site {
     return MemoryOperand;
   }
 
-  virtual Assembler::Operand* asAssemblerOperand(Context*) {
+  virtual Assembler::Operand* asAssemblerOperand(Context* c) {
+    sync(c);
     return &value;
   }
 
+  Register* base;
+  Register* index;
   Assembler::Memory value;
 };
 
@@ -644,25 +703,25 @@ match(Context* c, Site* s, uint8_t typeMask, uint64_t registerMask)
 }
 
 Site*
-targetOrNull(Context* c, Read* r, Event* event)
+targetOrNull(Context* c, Read* r)
 {
   Value* v = r->value;
   if (v->target) {
     return v->target;
   } else if (r->target) {
-    return r->target->readTarget(c, r, event);
+    return r->target->readTarget(c, r);
   } else {
     return 0;
   }
 }
 
 Site*
-targetOrNull(Context* c, Value* v, Event* event)
+targetOrNull(Context* c, Value* v)
 {
   if (v->target) {
     return v->target;
   } else if (v->reads and v->reads->target) {
-    return v->reads->target->readTarget(c, v->reads, event);
+    return v->reads->target->readTarget(c, v->reads);
   } else {
     return 0;
   }
@@ -693,9 +752,9 @@ class VirtualSite: public AbstractSite {
     value(value), registerMask(registerMask), typeMask(typeMask)
   { }
 
-  virtual Site* readTarget(Context* c, Read* r, Event* e) {
+  virtual Site* readTarget(Context* c, Read* r) {
     if (value) {
-      Site* s = targetOrNull(c, value, e);
+      Site* s = targetOrNull(c, value);
       if (s and match(c, s, typeMask, registerMask)) {
         return s;
       }
@@ -716,7 +775,7 @@ class VirtualSite: public AbstractSite {
     if (site) {
       return site;
     } else {
-      return freeRegister(c, r->size, registerMask);
+      return freeRegister(c, registerMask);
     }
   }
 
@@ -740,40 +799,14 @@ anyRegisterSite(Context* c)
   return virtualSite(c, 0, 1 << RegisterOperand, ~static_cast<uint64_t>(0));
 }
 
-bool
-used(Context* c, int r)
-{
-  Value* v = c->registers[r].value;
-//   fprintf(stderr, "v: %p found: %d\n",
-//           v, v and findSite(c, v, c->registers[r].site));
-  return v and findSite(c, v, c->registers[r].site);
-}
-
-bool
-usedExclusively(Context* c, int r)
-{
-  Value* v = c->registers[r].value;
-  return used(c, r) and v->sites->next == 0;
-}
-
-bool
-isFree(Context* c, Site* s)
-{
-  return s->type(c) != RegisterOperand
-    or not (usedExclusively(c, static_cast<RegisterSite*>(s)->register_.low)
-            or (static_cast<RegisterSite*>(s)->register_.high != NoRegister
-                and usedExclusively
-                (c, static_cast<RegisterSite*>(s)->register_.high)));
-}
-
 Site*
-targetOrRegister(Context* c, unsigned size, Value* v, Event* event)
+targetOrRegister(Context* c, Value* v)
 {
-  Site* s = targetOrNull(c, v, event);
-  if (s and isFree(c, s)) {
+  Site* s = targetOrNull(c, v);
+  if (s) {
     return s;
   } else {
-    return freeRegister(c, size);
+    return freeRegister(c);
   }
 }
 
@@ -853,15 +886,15 @@ pushNow(Context* c, Stack* start)
 }
 
 bool
-trySteal(Context* c, int r, Stack* stack)
+trySteal(Context* c, Register* r, Stack* stack)
 {
-  Value* v = c->registers[r].value;
+  assert(c, r->refCount == 0);
 
-  assert(c, c->registers[r].refCount == 0);
+  Value* v = r->value;
 
   if (DebugRegisters) {
     fprintf(stderr, "try steal %d from %p: next: %p\n",
-            r, v, v->sites->next);
+            r->number, v, v->sites->next);
   }
 
   if (v->sites->next == 0) {
@@ -883,49 +916,143 @@ trySteal(Context* c, int r, Stack* stack)
     }
   }
 
-  removeSite(c, v, c->registers[r].site);
+  removeSite(c, v, r->site);
 
   return true;
 }
 
 bool
-tryAcquire(Context* c, int r, Stack* stack, unsigned newSize, Value* newValue,
-           Site* newSite)
+used(Context* c, Register* r)
 {
-  if (c->registers[r].reserved) return true;
+  Value* v = r->value;
+  return v and findSite(c, v, r->site);
+}
 
-  if (DebugRegisters) {
-    fprintf(stderr, "try acquire %d, value %p, site %p\n",
-            r, newValue, newSite);
+bool
+usedExclusively(Context* c, Register* r)
+{
+  return used(c, r) and r->value->sites->next == 0;
+}
+
+unsigned
+registerCost(Context* c, Register* r)
+{
+  if (r->reserved or r->freezeCount) {
+    return 6;
   }
 
-  Value* oldValue = c->registers[r].value;
-  if (oldValue
-      and oldValue != newValue
-      and findSite(c, oldValue, c->registers[r].site))
-  {
-    if (not trySteal(c, r, stack)) {
-      return false;
+  unsigned cost = 0;
+
+  if (used(c, r)) {
+    ++ cost;
+    if (usedExclusively(c, r)) {
+      cost += 2;
     }
   }
 
-  c->registers[r].size = newSize;
-  c->registers[r].value = newValue;
-  c->registers[r].site = newSite;
+  if (r->refCount) {
+    cost += 2;
+  }
 
-  return true;
+  return cost;
+}
+
+Register*
+pickRegister(Context* c, uint32_t mask)
+{
+  Register* register_ = 0;
+  unsigned cost = 5;
+  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
+    if ((1 << i) & mask) {
+      Register* r = c->registers[i];
+      if ((static_cast<uint32_t>(1) << i) == mask) {
+        assert(c, r->freezeCount == 0);
+        return r;
+      }
+
+      unsigned myCost = registerCost(c, r);
+      if (myCost < cost) {
+        register_ = r;
+        cost = myCost;
+      }
+    }
+  }
+
+  expect(c, register_);
+
+  return register_;
 }
 
 void
-release(Context* c, int r)
+swap(Context* c, Register* a, Register* b)
 {
+  Assembler::Register ar(a->number);
+  Assembler::Register br(b->number);
+  c->assembler->apply
+    (Swap, BytesPerWord, RegisterOperand, &ar, RegisterOperand, &br);
+  
+  c->registers[a->number] = b;
+  c->registers[b->number] = a;
+
+  int t = a->number;
+  a->number = b->number;
+  b->number = t;
+}
+
+Register*
+replace(Context* c, Stack* stack, Register* r)
+{
+  ++ r->freezeCount;
+  Register* s = acquire(c, ~0, stack, r->size, r->value, r->site);
+  -- r->freezeCount;
+  swap(c, r, s);
+  return s;
+}
+
+Register*
+acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
+        Value* newValue, Site* newSite)
+{
+  Register* r = pickRegister(c, mask);
+
+  if (r->reserved) return r;
+
   if (DebugRegisters) {
-    fprintf(stderr, "release %d\n", r);
+    fprintf(stderr, "acquire %d, value %p, site %p\n",
+            r->number, newValue, newSite);
   }
 
-  c->registers[r].size = 0;
-  c->registers[r].value = 0;
-  c->registers[r].site = 0;  
+  if (r->refCount) {
+    r = replace(c, stack, r);
+  } else {
+    Value* oldValue = r->value;
+    if (oldValue
+        and oldValue != newValue
+        and findSite(c, oldValue, r->site))
+    {
+      if (not trySteal(c, r, stack)) {
+        r = replace(c, stack, r);
+      }
+    }
+  }
+
+  r->size = newSize;
+  r->value = newValue;
+  r->site = newSite;
+
+  return r;
+}
+
+void
+release(Context*, Register* r)
+{
+  if (DebugRegisters) {
+    fprintf(stderr, "release %d\n", r->number);
+  }
+
+  r->size = 0;
+  r->value = 0;
+  r->site = 0;  
 }
 
 void
@@ -1211,7 +1338,7 @@ class MoveEvent: public Event {
       target = src->source;
       cost = 0;
     } else {
-      target = targetOrRegister(c, size, dst, this);
+      target = targetOrRegister(c, dst);
       cost = src->source->copyCost(c, target);
     }
 
@@ -1300,7 +1427,8 @@ maybePreserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
 {
   if (v->reads->next and v->sites->next == 0) {
     assert(c, v->sites == s);
-    Site* r = freeRegister(c, size);
+    Site* r = targetOrNull(c, v->reads->next);
+    if (r == 0) r = freeRegister(c);
     addSite(c, stack, size, v, r);
     apply(c, Move, size, s, r);    
   }
@@ -1530,7 +1658,7 @@ resetStack(Context* c)
 }
 
 void
-popNow(Context* c, Event* event, Stack* stack, unsigned count, bool ignore)
+popNow(Context* c, Stack* stack, unsigned count, bool ignore)
 {
   Stack* s = stack;
   unsigned ignored = 0;
@@ -1539,8 +1667,7 @@ popNow(Context* c, Event* event, Stack* stack, unsigned count, bool ignore)
       if (s->value->reads and (not ignore)) {
         ::ignore(c, ignored);
 
-        Site* target = targetOrRegister
-          (c, s->size * BytesPerWord, s->value, event);
+        Site* target = targetOrRegister(c, s->value);
 
         if (DebugStack) {
           fprintf(stderr, "pop %p value: %p target: %p\n",
@@ -1665,9 +1792,9 @@ class PushSite: public AbstractSite {
  public:
   PushSite(PushEvent* event): event(event) { }
 
-  virtual Site* readTarget(Context* c, Read* r, Event* e) {
+  virtual Site* readTarget(Context* c, Read* r) {
     if (r->next and (not event->active)) {
-      return targetOrNull(c, r->next, e);
+      return targetOrNull(c, r->next);
     } else {
       return 0;
     }
@@ -1709,7 +1836,7 @@ class PopEvent: public Event {
       fprintf(stderr, "PopEvent.compile\n");
     }
 
-    popNow(c, this, stack, count, ignore);
+    popNow(c, stack, count, ignore);
   }
 
   unsigned count;
@@ -1727,13 +1854,9 @@ appendPop(Context* c, unsigned count, bool ignore)
 }
 
 Site*
-readSource(Context* c, Stack* stack, Read* r, Event* e)
+readSource(Context* c, Stack* stack, Read* r)
 {
-  Site* target = (r->target ? r->target->readTarget(c, r, e) : 0);
-
-  if (target and not isFree(c, target)) {
-    target = 0;
-  }
+  Site* target = (r->target ? r->target->readTarget(c, r) : 0);
 
   unsigned copyCost;
   Site* site = pick(c, r->value->sites, target, &copyCost);
@@ -1781,14 +1904,18 @@ compile(Context* c)
           for (Stack* s = e->stack; s; s = s->next) {
             if (s->value->sites) {
               assert(c, s->value->sites->next == 0);
-              expect(c, s->value->sites->tryAcquire
-                     (c, 0, s->size * BytesPerWord, s->value));
+              s->value->sites->acquire(c, 0, s->size * BytesPerWord, s->value);
             }
           }
         }
 
         for (Read* r = e->reads; r; r = r->eventNext) {
-          r->value->source = readSource(c, e->stack, r, e);
+          r->value->source = readSource(c, e->stack, r);
+          r->value->source->freeze(c);
+        }
+
+        for (Read* r = e->reads; r; r = r->eventNext) {
+          r->value->source->thaw(c);
         }
 
         e->compile(c);
@@ -1908,78 +2035,35 @@ visit(Context* c, unsigned logicalIp)
   }
 }
 
-int
-freeRegister2(Context* c, int32_t mask)
-{
-  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-    if (((1 << i) & mask)
-        and c->registers[i].refCount == 0
-        and (not used(c, i)))
-    {
-      return i;
-    }
-  }
-
-  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-    if (((1 << i) & mask)
-        and c->registers[i].refCount == 0
-        and (not usedExclusively(c, i)))
-    {
-      return i;
-    }
-  }
-
-  for (int i = c->assembler->registerCount() - 1; i >= 0; --i) {
-    if (((1 << i) & mask)
-        and not c->registers[i].reserved)
-    {
-      return i;
-    }
-  }
-
-  abort(c);
-}
-
-RegisterSite*
-freeRegister(Context* c, unsigned size, uint64_t mask)
-{
-  if (BytesPerWord == 4 and size == 8) {
-    int low = freeRegister2(c, mask);
-    return registerSite(c, low, freeRegister2(c, (mask >> 32) & ~(1 << low)));
-  } else {
-      return registerSite(c, freeRegister2(c, mask));
-  }
-}
-
 class Client: public Assembler::Client {
  public:
   Client(Context* c): c(c) { }
 
   virtual int acquireTemporary(uint32_t mask) {
-    int r = freeRegister2(c, mask);
+    int r = pickRegister(c, mask)->number;
     save(r);
     increment(c, r);
     return r;
   }
 
   virtual void releaseTemporary(int r) {
-    decrement(c, r);
+    decrement(c, c->registers[r]);
     restore(r);
   }
 
   virtual void save(int r) {
-    if (c->registers[r].refCount or c->registers[r].value) {
+    if (c->registers[r]->refCount or c->registers[r]->value) {
       Assembler::Register operand(r);
       c->assembler->apply(Push, BytesPerWord, RegisterOperand, &operand);
-      c->registers[r].pushed = true;
+      c->registers[r]->pushed = true;
     }
   }
 
   virtual void restore(int r) {
-    if (c->registers[r].pushed) {
+    if (c->registers[r]->pushed) {
       Assembler::Register operand(r);
       c->assembler->apply(Pop, BytesPerWord, RegisterOperand, &operand);
-      c->registers[r].pushed = false;
+      c->registers[r]->pushed = false;
     }
   }
 

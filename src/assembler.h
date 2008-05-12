@@ -34,6 +34,7 @@ enum BinaryOperation {
   Move,
   MoveZ,
   Move4To8,
+  Swap,
   Compare,
   Add,
   Subtract,
