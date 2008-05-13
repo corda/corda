@@ -485,8 +485,8 @@ release(Context* c, Register* r);
 
 class RegisterSite: public Site {
  public:
-  RegisterSite(uint64_t mask):
-    mask(mask), low(0), high(0), register_(NoRegister, NoRegister)
+  RegisterSite(uint64_t mask, Register* low = 0, Register* high = 0):
+    mask(mask), low(low), high(high), register_(NoRegister, NoRegister)
   { }
 
   void sync(Context* c) {
@@ -520,6 +520,11 @@ class RegisterSite: public Site {
       ++ low->freezeCount;
       high = ::acquire(c, mask >> 32, stack, size, v, this);
       -- low->freezeCount;
+
+      mask = (static_cast<uint64_t>(1) << (high->number + 32)) |
+        (static_cast<uint64_t>(1) << low->number);
+    } else {
+      mask = static_cast<uint64_t>(1) << low->number;
     }
   }
 
@@ -527,8 +532,10 @@ class RegisterSite: public Site {
     assert(c, low);
 
     ::release(c, low);
+    low = 0;
     if (high) {
       ::release(c, high);
+      high = 0;
     }
   }
 
@@ -574,14 +581,17 @@ registerSite(Context* c, int low, int high = NoRegister)
          or high < static_cast<int>(c->assembler->registerCount()));
 
   uint64_t mask;
+  Register* hr;
   if (high == NoRegister) {
+    hr = 0;
     mask = static_cast<uint64_t>(1) << low;
   } else {
+    hr = c->registers[high];
     mask = (static_cast<uint64_t>(1) << (high + 32))
       | (static_cast<uint64_t>(1) << low);
   }
   return new (c->zone->allocate(sizeof(RegisterSite)))
-    RegisterSite(mask);
+    RegisterSite(mask, c->registers[low], hr);
 }
 
 RegisterSite*
@@ -1340,6 +1350,9 @@ class MoveEvent: public Event {
     } else {
       target = targetOrRegister(c, dst);
       cost = src->source->copyCost(c, target);
+      if (cost == 0) {
+        target = src->source;
+      }
     }
 
     nextRead(c, src);
@@ -1596,11 +1609,11 @@ class MemoryEvent: public Event {
 
     nextRead(c, base);
     if (index) {
-      nextRead(c, index);
-
       if (BytesPerWord == 8) {
         apply(c, Move4To8, 0, index->source, index->source);
       }
+
+      nextRead(c, index);
     }
 
     result->target = memorySite
@@ -1861,9 +1874,9 @@ readSource(Context* c, Stack* stack, Read* r)
   unsigned copyCost;
   Site* site = pick(c, r->value->sites, target, &copyCost);
 
-  if (target) {
-    if (copyCost) {
-      addSite(c, stack, r->size, r->value, target);
+  if (target and copyCost) {
+    addSite(c, stack, r->size, r->value, target);
+    if (site) {
       apply(c, Move, r->size, site, target);
     }
     return target;
@@ -1911,11 +1924,11 @@ compile(Context* c)
 
         for (Read* r = e->reads; r; r = r->eventNext) {
           r->value->source = readSource(c, e->stack, r);
-          r->value->source->freeze(c);
+          if (r->value->source) r->value->source->freeze(c);
         }
 
         for (Read* r = e->reads; r; r = r->eventNext) {
-          r->value->source->thaw(c);
+          if (r->value->source) r->value->source->thaw(c);
         }
 
         e->compile(c);
@@ -2251,6 +2264,7 @@ class MyCompiler: public Compiler {
       Value* v = value(&c);
       c.state->stack = ::stack(&c, v, 1, c.state->stack);
       c.state->stack->pushed = true;
+//       v->sites = pushSite(&c, c.state->stack->index);
     }
   }
 
