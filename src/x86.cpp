@@ -909,6 +909,25 @@ moveZRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+addCM(Context* c, unsigned size, Assembler::Constant* a,
+      Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4); // todo
+
+  int64_t v = a->value->value();
+  unsigned i = (isInt8(v) ? 0x83 : 0x81);
+
+  encode(c, i, 0, b, true);
+  if (isInt8(v)) {
+    c->code.append(v);
+  } else if (isInt32(v)) {
+    c->code.append4(v);
+  } else {
+    abort(c);
+  }
+}
+
+void
 addCR(Context* c, unsigned size, Assembler::Constant* a,
       Assembler::Register* b)
 {
@@ -1746,6 +1765,7 @@ populateTables()
   BinaryOperations[INDEX2(Add, Constant, Register)] = CAST2(addCR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
   BinaryOperations[INDEX2(Add, Register, Memory)] = CAST2(addRM);
+  BinaryOperations[INDEX2(Add, Constant, Memory)] = CAST2(addCM);
 
   BinaryOperations[INDEX2(Multiply, Register, Register)] = CAST2(multiplyRR);
   BinaryOperations[INDEX2(Multiply, Constant, Register)] = CAST2(multiplyCR);
