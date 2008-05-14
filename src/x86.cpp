@@ -581,15 +581,6 @@ xorRR(Context* c, unsigned size, Assembler::Register* a,
       Assembler::Register* b);
 
 void
-swap(Context* c, Assembler::Register* a, Assembler::Register* b)
-{
-  // todo: use xchg instead
-  xorRR(c, 4, a, b);
-  xorRR(c, 4, b, b);
-  xorRR(c, 4, a, b);
-}
-
-void
 negateR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
@@ -906,6 +897,14 @@ moveZRR(Context* c, unsigned size, Assembler::Register* a,
 
   default: abort(c); // todo
   }
+}
+
+void
+swapRR(Context* c, unsigned, Assembler::Register* a, Assembler::Register* b)
+{
+  rex(c);
+  c->code.append(0x87);
+  c->code.append(0xc0 | (b->low << 3) | a->low);
 }
 
 void
@@ -1761,6 +1760,8 @@ populateTables()
 
   BinaryOperations[INDEX2(MoveZ, Memory, Register)] = CAST2(moveZMR);
   BinaryOperations[INDEX2(MoveZ, Register, Register)] = CAST2(moveZRR);
+
+  BinaryOperations[INDEX2(Swap, Register, Register)] = CAST2(swapRR);
 
   BinaryOperations[INDEX2(Add, Constant, Register)] = CAST2(addCR);
   BinaryOperations[INDEX2(Add, Register, Register)] = CAST2(addRR);
