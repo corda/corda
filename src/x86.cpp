@@ -909,7 +909,7 @@ moveZRR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
-addCM(Context* c, unsigned size, Assembler::Constant* a,
+addCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
       Assembler::Memory* b)
 {
   assert(c, BytesPerWord == 8 or size == 4); // todo
@@ -1138,7 +1138,7 @@ multiplyCR(Context* c, unsigned size, Assembler::Constant* a,
 
 void
 divideRR(Context* c, unsigned size, Assembler::Register* a,
-         Assembler::Register* b)
+         Assembler::Register* b UNUSED)
 {
   assert(c, BytesPerWord == 8 or size == 4);
 

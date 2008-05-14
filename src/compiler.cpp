@@ -489,7 +489,7 @@ class RegisterSite: public Site {
     mask(mask), low(low), high(high), register_(NoRegister, NoRegister)
   { }
 
-  void sync(Context* c) {
+  void sync(Context* c UNUSED) {
     assert(c, low);
 
     register_.low = low->number;
@@ -539,7 +539,7 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual void freeze(Context* c) {
+  virtual void freeze(Context* c UNUSED) {
     assert(c, low);
 
     ++ low->freezeCount;
@@ -548,7 +548,7 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual void thaw(Context* c) {
+  virtual void thaw(Context* c UNUSED) {
     assert(c, low);
 
     -- low->freezeCount;
@@ -616,7 +616,7 @@ increment(Context* c, int i)
 }
 
 void
-decrement(Context* c, Register* r)
+decrement(Context* c UNUSED, Register* r)
 {
   assert(c, r->refCount > 0);
 
@@ -634,7 +634,7 @@ class MemorySite: public Site {
     base(0), index(0), value(base, offset, index, scale)
   { }
 
-  void sync(Context* c) {
+  void sync(Context* c UNUSED) {
     assert(c, base);
 
     value.base = base->number;
@@ -694,7 +694,7 @@ memorySite(Context* c, int base, int offset, int index, unsigned scale)
 }
 
 bool
-matchRegister(Context* c, Site* s, uint64_t mask)
+matchRegister(Context* c UNUSED, Site* s, uint64_t mask)
 {
   assert(c, s->type(c) == RegisterOperand);
 
