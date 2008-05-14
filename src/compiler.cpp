@@ -1677,6 +1677,10 @@ popNow(Context* c, Stack* stack, unsigned count, bool ignore)
   unsigned ignored = 0;
   for (unsigned i = count; i and s;) {
     if (s->pushed) {
+      removeSite(c, s->value, s->pushSite);
+      s->pushSite = 0;
+      s->pushed = false;
+
       if (s->value->reads and (not ignore)) {
         ::ignore(c, ignored);
 
@@ -1697,10 +1701,6 @@ popNow(Context* c, Stack* stack, unsigned count, bool ignore)
           
         ignored += s->size;
       }
-
-      removeSite(c, s->value, s->pushSite);
-      s->pushSite = 0;
-      s->pushed = false;
     } else {
       if (DebugStack) {
         fprintf(stderr, "%p not pushed\n", s);
@@ -1876,9 +1876,7 @@ readSource(Context* c, Stack* stack, Read* r)
 
   if (target and copyCost) {
     addSite(c, stack, r->size, r->value, target);
-    if (site) {
-      apply(c, Move, r->size, site, target);
-    }
+    apply(c, Move, r->size, site, target);
     return target;
   } else {
     return site;
