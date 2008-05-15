@@ -305,7 +305,7 @@ expect(Context* c, bool v)
 class Event {
  public:
   Event(Context* c):
-    next(0), stack(c->state->stack), promises(0), reads(0),
+    next(0), stack(c->state->stack), promises(0), reads(0), readCount(0),
     sequence(c->nextSequence++), stackReset(c->stackReset)
   {
     assert(c, c->logicalIp >= 0);
@@ -325,7 +325,7 @@ class Event {
   }
 
   Event(Context*, unsigned sequence, Stack* stack):
-    next(0), stack(stack), promises(0), reads(0),
+    next(0), stack(stack), promises(0), reads(0), readCount(0),
     sequence(sequence), stackReset(false)
   { }
 
@@ -339,6 +339,7 @@ class Event {
   Stack* stack;
   CodePromise* promises;
   Read* reads;
+  unsigned readCount;
   unsigned sequence;
   bool stackReset;
 };
@@ -1106,12 +1107,13 @@ apply(Context* c, BinaryOperation op, unsigned size, Site* a, Site* b)
 }
 
 void
-insertRead(Context* c, Event* thisEvent, int sequence, Value* v,
+insertRead(Context* c, Event* event, int sequence, Value* v,
            unsigned size, Site* target)
 {
   Read* r = new (c->zone->allocate(sizeof(Read)))
-    Read(size, v, target, 0, thisEvent, thisEvent->reads);
-  thisEvent->reads = r;
+    Read(size, v, target, 0, event, event->reads);
+  event->reads = r;
+  ++ event->readCount;
 
   //  fprintf(stderr, "add read %p to %p\n", r, v);
 
@@ -1939,13 +1941,20 @@ compile(Context* c)
           }
         }
 
+        Site* sites[e->readCount];
+        unsigned si = 0;
         for (Read* r = e->reads; r; r = r->eventNext) {
           r->value->source = readSource(c, e->stack, r);
-          if (r->value->source) r->value->source->freeze(c);
+
+          if (r->value->source) {
+            assert(c, si < e->readCount);
+            sites[si++] = r->value->source;
+            r->value->source->freeze(c);
+          }
         }
 
-        for (Read* r = e->reads; r; r = r->eventNext) {
-          if (r->value->source) r->value->source->thaw(c);
+        while (si) {
+          sites[--si]->thaw(c);
         }
 
         e->compile(c);
