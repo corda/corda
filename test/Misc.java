@@ -74,6 +74,10 @@ public class Misc {
     return 5 + zap();
   }
 
+  private static int zup() {
+    return zap() + 5;
+  }
+
   public static void main(String[] args) {
     { int get_buffer = 2144642881;
       int bits_left = 30;
@@ -195,7 +199,8 @@ public class Misc {
       expect(m.gamma == 44);
     }
 
-    zip();
+    expect(zip() == 47);
+    expect(zup() == 47);
 
     int[] array = new int[0];
     Exception exception = null;

@@ -24,6 +24,7 @@ class Context;
 class Value;
 class Stack;
 class Site;
+class RegisterSite;
 class Event;
 class PushEvent;
 class Read;
@@ -103,13 +104,12 @@ class LogicalInstruction {
 class Register {
  public:
   Register(int number):
-    value(0), site(0), mask(0), number(number), size(0), refCount(0),
+    value(0), site(0), number(number), size(0), refCount(0),
     freezeCount(0), reserved(false), pushed(false)
   { }
 
   Value* value;
-  Site* site;
-  uint32_t mask;
+  RegisterSite* site;
   int number;
   unsigned size;
   unsigned refCount;
@@ -502,14 +502,14 @@ thaw(Register* r)
 
 Register*
 acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
-        Value* newValue, Site* newSite);
+        Value* newValue, RegisterSite* newSite);
 
 void
 release(Context* c, Register* r);
 
 Register*
 validate(Context* c, uint32_t mask, Stack* stack, unsigned size,
-         Value* value, Site* site, Register* current);
+         Value* value, RegisterSite* site, Register* current);
 
 class RegisterSite: public Site {
  public:
@@ -543,27 +543,15 @@ class RegisterSite: public Site {
   }
 
   virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v) {
-    low = ::acquire(c, mask, stack, size, v, this);
-    if (size > BytesPerWord) {
-      ::freeze(low);
-      high = ::acquire(c, mask >> 32, stack, size, v, this);
-      ::thaw(low);
-
-      mask = (static_cast<uint64_t>(1) << (high->number + 32)) |
-        (static_cast<uint64_t>(1) << low->number);
-    } else {
-      mask = static_cast<uint64_t>(1) << low->number;
-    }
+    validate(c, stack, size, v);
   }
 
   virtual void release(Context* c) {
     assert(c, low);
 
     ::release(c, low);
-    low = 0;
     if (high) {
       ::release(c, high);
-      high = 0;
     }
   }
 
@@ -617,23 +605,31 @@ registerSite(Context* c, int low, int high = NoRegister)
   assert(c, high == NoRegister
          or high < static_cast<int>(c->assembler->registerCount()));
 
-  uint64_t mask;
   Register* hr;
   if (high == NoRegister) {
     hr = 0;
-    mask = static_cast<uint64_t>(1) << low;
   } else {
     hr = c->registers[high];
-    mask = (static_cast<uint64_t>(1) << (high + 32))
-      | (static_cast<uint64_t>(1) << low);
   }
   return new (c->zone->allocate(sizeof(RegisterSite)))
-    RegisterSite(mask, c->registers[low], hr);
+    RegisterSite(~static_cast<uint64_t>(0), c->registers[low], hr);
 }
 
 RegisterSite*
-freeRegister(Context* c, uint64_t mask = ~static_cast<uint64_t>(0))
+freeRegisterSite(Context* c, uint64_t mask = ~static_cast<uint64_t>(0))
 {
+  return new (c->zone->allocate(sizeof(RegisterSite)))
+    RegisterSite(mask);
+}
+
+RegisterSite*
+fixedRegisterSite(Context* c, int low, int high = NoRegister)
+{
+  uint64_t mask = static_cast<uint64_t>(1) << low;
+  if (high != NoRegister) {
+    mask |= static_cast<uint64_t>(1) << (high + 32);
+  }
+
   return new (c->zone->allocate(sizeof(RegisterSite)))
     RegisterSite(mask);
 }
@@ -821,7 +817,7 @@ class VirtualSite: public AbstractSite {
     if (site) {
       return site;
     } else {
-      return freeRegister(c, registerMask);
+      return freeRegisterSite(c, registerMask);
     }
   }
 
@@ -852,7 +848,7 @@ targetOrRegister(Context* c, Value* v)
   if (s) {
     return s;
   } else {
-    return freeRegister(c);
+    return freeRegisterSite(c);
   }
 }
 
@@ -1031,6 +1027,9 @@ pickRegister(Context* c, uint32_t mask)
 void
 swap(Context* c, Register* a, Register* b)
 {
+  assert(c, a != b);
+  assert(c, a->number != b->number);
+
   Assembler::Register ar(a->number);
   Assembler::Register br(b->number);
   c->assembler->apply
@@ -1047,7 +1046,7 @@ swap(Context* c, Register* a, Register* b)
 Register*
 replace(Context* c, Stack* stack, Register* r)
 {
-  uint32_t mask = (r->freezeCount? r->mask : ~0);
+  uint32_t mask = (r->freezeCount? r->site->mask : ~0);
 
   freeze(r);
   Register* s = acquire(c, mask, stack, r->size, r->value, r->site);
@@ -1060,7 +1059,7 @@ replace(Context* c, Stack* stack, Register* r)
 
 Register*
 acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
-        Value* newValue, Site* newSite)
+        Value* newValue, RegisterSite* newSite)
 {
   Register* r = pickRegister(c, mask);
 
@@ -1085,7 +1084,6 @@ acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
     }
   }
 
-  r->mask = mask;
   r->size = newSize;
   r->value = newValue;
   r->site = newSite;
@@ -1100,7 +1098,6 @@ release(Context*, Register* r)
     fprintf(stderr, "release %d\n", r->number);
   }
 
-  r->mask = 0;
   r->size = 0;
   r->value = 0;
   r->site = 0;  
@@ -1108,21 +1105,33 @@ release(Context*, Register* r)
 
 Register*
 validate(Context* c, uint32_t mask, Stack* stack, unsigned size,
-         Value* value, Site* site, Register* current)
+         Value* value, RegisterSite* site, Register* current)
 {
-  if ((mask & (1 << current->number)) == 0) {
-    Register* r = acquire(c, mask, stack, size, value, site);
+  if (current and (mask & (1 << current->number))) {
+    if (current->reserved or current->value == value) {
+      return current;
+    }
+
+    if (current->value == 0) {
+      current->size = size;
+      current->value = value;
+      current->site = site;
+      return current;
+    }
+  }
+
+  Register* r = acquire(c, mask, stack, size, value, site);
+
+  if (current and current != r) {
     release(c, current);
     
     Assembler::Register rr(r->number);
     Assembler::Register cr(current->number);
     c->assembler->apply
       (Move, BytesPerWord, RegisterOperand, &cr, RegisterOperand, &rr);
-
-    return r;
-  } else {
-    return current;
   }
+
+  return r;
 }
 
 void
@@ -1253,7 +1262,7 @@ class CallEvent: public Event {
       Site* target;
       if (index < c->assembler->argumentRegisterCount()) {
         int r = c->assembler->argumentRegister(index);
-        target = registerSite(c, r);
+        target = fixedRegisterSite(c, r);
         mask &= ~(1 << r);
       } else {
         target = 0;
@@ -1267,7 +1276,7 @@ class CallEvent: public Event {
 
     if (flags & Compiler::Indirect) {
       int r = c->assembler->returnLow();
-      addRead(c, address, BytesPerWord, registerSite(c, r));
+      addRead(c, address, BytesPerWord, fixedRegisterSite(c, r));
       mask &= ~(1 << r);
     } else {
       addRead(c, address, BytesPerWord, virtualSite
@@ -1296,6 +1305,12 @@ class CallEvent: public Event {
       apply(c, type, BytesPerWord, address->source);
     }
 
+    if (traceHandler) {
+      traceHandler->handleTrace
+        (new (c->zone->allocate(sizeof(CodePromise)))
+         CodePromise(c, c->assembler->length()));
+    }
+
     for (Stack* s = stack; s; s = s->next) {
       clearSites(c, s->value);
     }
@@ -1315,12 +1330,6 @@ class CallEvent: public Event {
               (c, c->assembler->returnLow(),
                resultSize > BytesPerWord ?
                c->assembler->returnHigh() : NoRegister));
-    }
-
-    if (traceHandler) {
-      traceHandler->handleTrace
-        (new (c->zone->allocate(sizeof(CodePromise)))
-         CodePromise(c, c->assembler->length()));
     }
 
     if (argumentFootprint and ((flags & Compiler::NoReturn) == 0)) {
@@ -1356,7 +1365,7 @@ class ReturnEvent: public Event {
     Event(c), value(value)
   {
     if (value) {
-      addRead(c, value, size, registerSite
+      addRead(c, value, size, fixedRegisterSite
               (c, c->assembler->returnLow(),
                size > BytesPerWord ?
                c->assembler->returnHigh() : NoRegister));
@@ -1511,7 +1520,7 @@ maybePreserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
   if (v->reads->next and v->sites->next == 0) {
     assert(c, v->sites == s);
     Site* r = targetOrNull(c, v->reads->next);
-    if (r == 0 or r == s) r = freeRegister(c);
+    if (r == 0 or r == s) r = freeRegisterSite(c);
     addSite(c, stack, size, v, r);
     apply(c, Move, size, s, r);    
   }
@@ -1543,7 +1552,7 @@ class CombineEvent: public Event {
 
     removeSite(c, second, second->source);
     if (result->reads) {
-      addSite(c, 0, size, result, second->source);
+      addSite(c, 0, 0, result, second->source);
     }
   }
 
@@ -1621,7 +1630,7 @@ class TranslateEvent: public Event {
 
     removeSite(c, value, value->source);
     if (result->reads) {
-      addSite(c, 0, size, result, value->source);
+      addSite(c, 0, 0, result, value->source);
     }
   }
 
