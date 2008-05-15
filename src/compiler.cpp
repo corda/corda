@@ -54,6 +54,8 @@ class Site {
 
   virtual void thaw(Context*) { }
 
+  virtual void validate(Context*, Stack*, unsigned, Value*) { }
+
   virtual OperandType type(Context*) = 0;
 
   virtual Assembler::Operand* asAssemblerOperand(Context*) = 0;
@@ -101,12 +103,13 @@ class LogicalInstruction {
 class Register {
  public:
   Register(int number):
-    value(0), site(0), number(number), size(0), refCount(0), freezeCount(0),
-    reserved(false), pushed(false)
+    value(0), site(0), mask(0), number(number), size(0), refCount(0),
+    freezeCount(0), reserved(false), pushed(false)
   { }
 
   Value* value;
   Site* site;
+  uint32_t mask;
   int number;
   unsigned size;
   unsigned refCount;
@@ -384,7 +387,7 @@ removeMemorySites(Context* c, Value* v)
 {
   for (Site** p = &(v->sites); *p;) {
     if ((*p)->type(c) == MemoryOperand) {
-//       fprintf(stderr, "remove site %p (%d) from %p\n", s, s->type(c), v);
+//       fprintf(stderr, "remove site %p (%d) from %p\n", *p, (*p)->type(c), v);
       (*p)->release(c);
       *p = (*p)->next;
       break;
@@ -504,6 +507,10 @@ acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
 void
 release(Context* c, Register* r);
 
+Register*
+validate(Context* c, uint32_t mask, Stack* stack, unsigned size,
+         Value* value, Site* site, Register* current);
+
 class RegisterSite: public Site {
  public:
   RegisterSite(uint64_t mask, Register* low = 0, Register* high = 0):
@@ -575,6 +582,15 @@ class RegisterSite: public Site {
     ::thaw(low);
     if (high) {
       ::thaw(high);
+    }
+  }
+
+  virtual void validate(Context* c, Stack* stack, unsigned size, Value* v) {
+    low = ::validate(c, mask, stack, size, v, this, low);
+    if (size > BytesPerWord) {
+      ::freeze(low);
+      high = ::validate(c, mask >> 32, stack, size, v, this, high);
+      ::thaw(low);
     }
   }
 
@@ -816,8 +832,8 @@ class VirtualSite: public AbstractSite {
 
 VirtualSite*
 virtualSite(Context* c, Value* v = 0,
-             uint8_t typeMask = ~static_cast<uint8_t>(0),
-             uint64_t registerMask = ~static_cast<uint64_t>(0))
+            uint8_t typeMask = ~static_cast<uint8_t>(0),
+            uint64_t registerMask = ~static_cast<uint64_t>(0))
 {
   return new (c->zone->allocate(sizeof(VirtualSite)))
     VirtualSite(v, typeMask, registerMask);
@@ -996,7 +1012,6 @@ pickRegister(Context* c, uint32_t mask)
     if ((1 << i) & mask) {
       Register* r = c->registers[i];
       if ((static_cast<uint32_t>(1) << i) == mask) {
-        assert(c, r->freezeCount == 0);
         return r;
       }
 
@@ -1032,10 +1047,14 @@ swap(Context* c, Register* a, Register* b)
 Register*
 replace(Context* c, Stack* stack, Register* r)
 {
+  uint32_t mask = (r->freezeCount? r->mask : ~0);
+
   freeze(r);
-  Register* s = acquire(c, ~0, stack, r->size, r->value, r->site);
+  Register* s = acquire(c, mask, stack, r->size, r->value, r->site);
   thaw(r);
+
   swap(c, r, s);
+
   return s;
 }
 
@@ -1066,6 +1085,7 @@ acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
     }
   }
 
+  r->mask = mask;
   r->size = newSize;
   r->value = newValue;
   r->site = newSite;
@@ -1080,9 +1100,29 @@ release(Context*, Register* r)
     fprintf(stderr, "release %d\n", r->number);
   }
 
+  r->mask = 0;
   r->size = 0;
   r->value = 0;
   r->site = 0;  
+}
+
+Register*
+validate(Context* c, uint32_t mask, Stack* stack, unsigned size,
+         Value* value, Site* site, Register* current)
+{
+  if ((mask & (1 << current->number)) == 0) {
+    Register* r = acquire(c, mask, stack, size, value, site);
+    release(c, current);
+    
+    Assembler::Register rr(r->number);
+    Assembler::Register cr(current->number);
+    c->assembler->apply
+      (Move, BytesPerWord, RegisterOperand, &cr, RegisterOperand, &rr);
+
+    return r;
+  } else {
+    return current;
+  }
 }
 
 void
@@ -1206,17 +1246,15 @@ class CallEvent: public Event {
     resultSize(resultSize),
     argumentFootprint(0)
   {
-    for (Stack* s = stack; s; s = s->next) {
-      addRead(c, s->value, s->size * BytesPerWord, 0);
-    }
-
+    uint32_t mask = ~0;
     Stack* s = argumentStack;
     unsigned index = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       Site* target;
       if (index < c->assembler->argumentRegisterCount()) {
-        target = registerSite
-          (c, c->assembler->argumentRegister(index));
+        int r = c->assembler->argumentRegister(index);
+        target = registerSite(c, r);
+        mask &= ~(1 << r);
       } else {
         target = 0;
         s->pushEvent->active = true;
@@ -1227,9 +1265,20 @@ class CallEvent: public Event {
       s = s->next;
     }
 
-    addRead(c, address, BytesPerWord,
-            ((flags & Compiler::Indirect) ?
-             registerSite(c, c->assembler->returnLow()) : 0));
+    if (flags & Compiler::Indirect) {
+      int r = c->assembler->returnLow();
+      addRead(c, address, BytesPerWord, registerSite(c, r));
+      mask &= ~(1 << r);
+    } else {
+      addRead(c, address, BytesPerWord, virtualSite
+              (c, 0, ~0, (static_cast<uint64_t>(mask) << 32) | mask));
+    }
+
+    for (Stack* s = stack; s; s = s->next) {
+      s->pushEvent->active = true;
+      addRead(c, s->value, s->size * BytesPerWord, virtualSite
+              (c, 0, ~0, (static_cast<uint64_t>(mask) << 32) | mask));
+    }
   }
 
   virtual void compile(Context* c) {
@@ -1462,7 +1511,7 @@ maybePreserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
   if (v->reads->next and v->sites->next == 0) {
     assert(c, v->sites == s);
     Site* r = targetOrNull(c, v->reads->next);
-    if (r == 0) r = freeRegister(c);
+    if (r == 0 or r == s) r = freeRegister(c);
     addSite(c, stack, size, v, r);
     apply(c, Move, size, s, r);    
   }
@@ -1890,6 +1939,10 @@ appendPop(Context* c, unsigned count, bool ignore)
 Site*
 readSource(Context* c, Stack* stack, Read* r)
 {
+  if (r->value->sites == 0) {
+    return 0;
+  }
+
   Site* target = (r->target ? r->target->readTarget(c, r) : 0);
 
   unsigned copyCost;
@@ -1900,6 +1953,7 @@ readSource(Context* c, Stack* stack, Read* r)
     apply(c, Move, r->size, site, target);
     return target;
   } else {
+    site->validate(c, stack, r->size, r->value);
     return site;
   }
 }

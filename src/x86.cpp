@@ -1950,6 +1950,7 @@ class MyAssembler: public Assembler {
     case ShiftLeft:
     case ShiftRight:
     case UnsignedShiftRight: {
+      *aTypeMask = (1 << RegisterOperand);
       *aRegisterMask = static_cast<uint64_t>(1) << rcx;
       const uint32_t mask = ~(1 << rcx);
       *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
