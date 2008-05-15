@@ -476,6 +476,26 @@ addressSite(Context* c, Promise* address)
   return new (c->zone->allocate(sizeof(AddressSite))) AddressSite(address);
 }
 
+void
+freeze(Register* r)
+{
+  if (DebugRegisters) {
+    fprintf(stderr, "freeze %d to %d\n", r->number, r->freezeCount + 1);
+  }
+
+  ++ r->freezeCount;
+}
+
+void
+thaw(Register* r)
+{
+  if (DebugRegisters) {
+    fprintf(stderr, "thaw %d to %d\n", r->number, r->freezeCount - 1);
+  }
+
+  -- r->freezeCount;
+}
+
 Register*
 acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
         Value* newValue, Site* newSite);
@@ -517,9 +537,9 @@ class RegisterSite: public Site {
   virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v) {
     low = ::acquire(c, mask, stack, size, v, this);
     if (size > BytesPerWord) {
-      ++ low->freezeCount;
+      ::freeze(low);
       high = ::acquire(c, mask >> 32, stack, size, v, this);
-      -- low->freezeCount;
+      ::thaw(low);
 
       mask = (static_cast<uint64_t>(1) << (high->number + 32)) |
         (static_cast<uint64_t>(1) << low->number);
@@ -542,18 +562,18 @@ class RegisterSite: public Site {
   virtual void freeze(Context* c UNUSED) {
     assert(c, low);
 
-    ++ low->freezeCount;
+    ::freeze(low);
     if (high) {
-      ++ high->freezeCount;
+      ::freeze(high);
     }
   }
 
   virtual void thaw(Context* c UNUSED) {
     assert(c, low);
 
-    -- low->freezeCount;
+    ::thaw(low);
     if (high) {
-      -- high->freezeCount;
+      ::thaw(high);
     }
   }
 
@@ -621,8 +641,7 @@ decrement(Context* c UNUSED, Register* r)
   assert(c, r->refCount > 0);
 
   if (DebugRegisters) {
-    fprintf(stderr, "decrement %d to %d\n",
-            r->number, r->refCount - 1);
+    fprintf(stderr, "decrement %d to %d\n", r->number, r->refCount - 1);
   }
 
   -- r->refCount;
@@ -1012,9 +1031,9 @@ swap(Context* c, Register* a, Register* b)
 Register*
 replace(Context* c, Stack* stack, Register* r)
 {
-  ++ r->freezeCount;
+  freeze(r);
   Register* s = acquire(c, ~0, stack, r->size, r->value, r->site);
-  -- r->freezeCount;
+  thaw(r);
   swap(c, r, s);
   return s;
 }
@@ -1185,6 +1204,10 @@ class CallEvent: public Event {
     resultSize(resultSize),
     argumentFootprint(0)
   {
+    for (Stack* s = stack; s; s = s->next) {
+      addRead(c, s->value, s->size * BytesPerWord, 0);
+    }
+
     Stack* s = argumentStack;
     unsigned index = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
@@ -1200,10 +1223,6 @@ class CallEvent: public Event {
       addRead(c, s->value, s->size * BytesPerWord, target);
       index += s->size;
       s = s->next;
-    }
-
-    for (Stack* s = stack; s; s = s->next) {
-      addRead(c, s->value, s->size * BytesPerWord, 0);
     }
 
     addRead(c, address, BytesPerWord,
