@@ -1552,7 +1552,23 @@ class CombineEvent: public Event {
     Event(c), type(type), size(size), first(first), second(second),
     result(result)
   {
-    addRead(c, first, size, firstTarget);
+    // todo: we should really specify the sizes of each operand
+    // seperately for binary operations.  The following is a hack
+    // until then.
+    unsigned firstSize;
+    switch (type) {
+    case ShiftLeft:
+    case ShiftRight:
+    case UnsignedShiftRight:
+      firstSize = 4;
+      break;
+
+    default:
+      firstSize = size;
+      break;
+    }
+
+    addRead(c, first, firstSize, firstTarget);
     addRead(c, second, size, secondTarget);
   }
 
