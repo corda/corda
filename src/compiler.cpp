@@ -1586,6 +1586,8 @@ appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
                      &procedure);
 
   if (procedure) {
+    secondTarget->value = 0;
+
     Stack* oldStack = c->state->stack;
 
     ::push(c, size, second);
@@ -1594,7 +1596,6 @@ appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
     Stack* argumentStack = c->state->stack;
     c->state->stack = oldStack;
 
-    Value* result = value(c);
     appendCall(c, value(c, constantSite(c, procedure)), Compiler::Indirect,
                0, result, size, argumentStack, 2);
   } else {
