@@ -1596,9 +1596,14 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
     // bits; otherwise, we jump past that comparison
     c->code.append(0x0f);
     c->code.append(0x85); // jne
-    c->code.append4(2);
+
+    unsigned comparisonOffset = c->code.length();
+    c->code.append4(0);
 
     compareCR(c, 4, &al, b);
+
+    int32_t comparisonSize = c->code.length() - comparisonOffset - 4;
+    c->code.set(comparisonOffset, &comparisonSize, 4);
   } else {
     if (isInt32(v)) {
       if (size == 8) rex(c);
@@ -1641,9 +1646,14 @@ compareCM(Context* c, unsigned size, Assembler::Constant* a,
     // bits; otherwise, we jump past that comparison
     c->code.append(0x0f);
     c->code.append(0x85); // jne
-    c->code.append4(2);
+
+    unsigned comparisonOffset = c->code.length();
+    c->code.append4(0);
 
     compareCM(c, 4, &al, b);
+
+    int32_t comparisonSize = c->code.length() - comparisonOffset - 4;
+    c->code.set(comparisonOffset, &comparisonSize, 4);
   } else {
     encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
 
