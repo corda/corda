@@ -817,6 +817,7 @@ class VirtualSite: public AbstractSite {
     if (site) {
       return site;
     } else {
+      assert(c, typeMask & (1 << RegisterOperand));
       return freeRegisterSite(c, registerMask);
     }
   }
@@ -1267,7 +1268,7 @@ class CallEvent: public Event {
       } else {
         target = 0;
         s->pushEvent->active = true;
-        ++ argumentFootprint;
+        argumentFootprint += s->size;
       }
       addRead(c, s->value, s->size * BytesPerWord, target);
       index += s->size;
@@ -1406,8 +1407,8 @@ appendReturn(Context* c, unsigned size, Value* value)
 class MoveEvent: public Event {
  public:
   MoveEvent(Context* c, BinaryOperation type, unsigned size, Value* src,
-            Value* dst, Site* srcTarget):
-    Event(c), type(type), size(size), src(src), dst(dst)
+            Value* dst, Site* srcTarget, VirtualSite* dstTarget):
+    Event(c), type(type), size(size), src(src), dst(dst), dstTarget(dstTarget)
   {
     addRead(c, src, size, srcTarget);
   }
@@ -1429,6 +1430,9 @@ class MoveEvent: public Event {
     } else {
       target = targetOrRegister(c, dst);
       cost = src->source->copyCost(c, target);
+      if (type != Move) {
+        ++ cost;
+      }
       if (cost == 0) {
         target = src->source;
       }
@@ -1441,7 +1445,20 @@ class MoveEvent: public Event {
     }
 
     if (cost) {
-      apply(c, type, size, src->source, target);
+      if (match(c, target, dstTarget->typeMask, dstTarget->registerMask)) {
+        apply(c, type, size, src->source, target);
+      } else {
+        assert(c, dstTarget->typeMask & (1 << RegisterOperand));
+
+        Site* tmpTarget = freeRegisterSite(c, dstTarget->registerMask);
+
+        addSite(c, stack, size, dst, tmpTarget);
+
+        apply(c, type, size, src->source, tmpTarget);
+        apply(c, Move, max(size, BytesPerWord), tmpTarget, target);
+
+        removeSite(c, dst, tmpTarget);
+      }
     }
 
     if (dst->reads == 0) {
@@ -1453,6 +1470,7 @@ class MoveEvent: public Event {
   unsigned size;
   Value* src;
   Value* dst;
+  VirtualSite* dstTarget;
 };
 
 void
@@ -1475,7 +1493,7 @@ appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
   assert(c, procedure == 0); // todo
 
   new (c->zone->allocate(sizeof(MoveEvent)))
-    MoveEvent(c, type, size, src, dst, srcTarget);
+    MoveEvent(c, type, size, src, dst, srcTarget, dstTarget);
 }
 
 class CompareEvent: public Event {
@@ -1590,8 +1608,8 @@ appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
 
     Stack* oldStack = c->state->stack;
 
-    ::push(c, size, second);
     ::push(c, size, first);
+    ::push(c, size, second);
 
     Stack* argumentStack = c->state->stack;
     c->state->stack = oldStack;
@@ -1690,7 +1708,7 @@ class MemoryEvent: public Event {
     nextRead(c, base);
     if (index) {
       if (BytesPerWord == 8) {
-        apply(c, Move4To8, 0, index->source, index->source);
+        apply(c, Move4To8, 8, index->source, index->source);
       }
 
       nextRead(c, index);

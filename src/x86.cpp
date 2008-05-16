@@ -1941,6 +1941,7 @@ class MyAssembler: public Assembler {
 
     case Divide:
       if (BytesPerWord == 4 and size == 8) {
+        *bTypeMask = ~static_cast<uint8_t>(0);
         *procedure = reinterpret_cast<uintptr_t>(divideLong);        
       } else {
         *aRegisterMask = ~((1 << rax) | (1 << rdx));
@@ -1950,6 +1951,7 @@ class MyAssembler: public Assembler {
 
     case Remainder:
       if (BytesPerWord == 4 and size == 8) {
+        *bTypeMask = ~static_cast<uint8_t>(0);
         *procedure = reinterpret_cast<uintptr_t>(moduloLong);
       } else {
         *aRegisterMask = ~((1 << rax) | (1 << rdx));
