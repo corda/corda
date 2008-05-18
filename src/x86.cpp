@@ -714,9 +714,11 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
 
     case 8:
     case 4:
-      rex(c);
-      c->code.append(0x89);
-      c->code.append(0xc0 | (a->low << 3) | b->low);
+      if (a->low != b->low) {
+        rex(c);
+        c->code.append(0x89);
+        c->code.append(0xc0 | (a->low << 3) | b->low);
+      }
       break;
     }
   }
