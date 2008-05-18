@@ -625,9 +625,13 @@ freeRegisterSite(Context* c, uint64_t mask = ~static_cast<uint64_t>(0))
 RegisterSite*
 fixedRegisterSite(Context* c, int low, int high = NoRegister)
 {
-  uint64_t mask = static_cast<uint64_t>(1) << low;
-  if (high != NoRegister) {
-    mask |= static_cast<uint64_t>(1) << (high + 32);
+  uint64_t mask;
+  if (high == NoRegister) {
+    mask = (~static_cast<uint64_t>(0) << 32)
+      | (static_cast<uint64_t>(1) << low);
+  } else {
+    mask = (static_cast<uint64_t>(1) << (high + 32))
+      | (static_cast<uint64_t>(1) << low);
   }
 
   return new (c->zone->allocate(sizeof(RegisterSite)))
@@ -953,8 +957,14 @@ trySteal(Context* c, Register* r, Stack* stack)
     }
 
     if (start) {
+      if (DebugRegisters) {
+        fprintf(stderr, "push %p\n", v);
+      }
       pushNow(c, start, count);
     } else {
+      if (DebugRegisters) {
+        fprintf(stderr, "unable to steal %d from %p\n", r->number, v);
+      }
       return false;
     }
   }
@@ -1053,6 +1063,10 @@ replace(Context* c, Stack* stack, Register* r)
   Register* s = acquire(c, mask, stack, r->size, r->value, r->site);
   thaw(r);
 
+  if (DebugRegisters) {
+    fprintf(stderr, "replace %d with %d\n", r->number, s->number);
+  }
+
   swap(c, r, s);
 
   return s;
@@ -1067,8 +1081,8 @@ acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
   if (r->reserved) return r;
 
   if (DebugRegisters) {
-    fprintf(stderr, "acquire %d, value %p, site %p\n",
-            r->number, newValue, newSite);
+    fprintf(stderr, "acquire %d, value %p, site %p freeze count %d ref count %d used %d used exclusively %d\n",
+            r->number, newValue, newSite, r->freezeCount, r->refCount, used(c, r), usedExclusively(c, r));
   }
 
   if (r->refCount) {
@@ -1118,6 +1132,8 @@ validate(Context* c, uint32_t mask, Stack* stack, unsigned size,
       current->value = value;
       current->site = site;
       return current;
+    } else {
+      abort(c);
     }
   }
 
@@ -1430,21 +1446,20 @@ class MoveEvent: public Event {
     } else {
       target = targetOrRegister(c, dst);
       cost = src->source->copyCost(c, target);
-      if (type != Move) {
-        ++ cost;
-      }
       if (cost == 0) {
         target = src->source;
       }
     }
 
-    nextRead(c, src);
+    if (target == src->source) {
+      nextRead(c, src);
+    }
 
     if (dst->reads) {
       addSite(c, stack, size, dst, target);
     }
 
-    if (cost) {
+    if (cost or type != Move) {
       if (match(c, target, dstTarget->typeMask, dstTarget->registerMask)) {
         apply(c, type, size, src->source, target);
       } else {
@@ -1455,14 +1470,23 @@ class MoveEvent: public Event {
         addSite(c, stack, size, dst, tmpTarget);
 
         apply(c, type, size, src->source, tmpTarget);
-        apply(c, Move, max(size, BytesPerWord), tmpTarget, target);
 
-        removeSite(c, dst, tmpTarget);
+        if (dst->reads == 0) {
+          removeSite(c, dst, tmpTarget);
+
+          apply(c, Move, size, tmpTarget, target);
+        } else {
+          removeSite(c, dst, target);          
+        }
       }
     }
 
     if (dst->reads == 0) {
       removeSite(c, dst, target);
+    }
+
+    if (target != src->source) {
+      nextRead(c, src);
     }
   }
 

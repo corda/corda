@@ -125,6 +125,35 @@ public class Misc {
       expect(~a == ~5);
     }
 
+    { long a = -5;
+      long b = 2;
+      expect(a >> b == -5L >> 2);
+      expect(a >>> b == -5L >>> 2);
+      expect(a << b == -5L << 2);
+      expect(a * b == -5L * 2L);
+      expect(a / b == -5L / 2L);
+      expect(a % b == -5L % 2L);
+      expect((a & b) == (-5L & 2L));
+      expect((a | b) == (-5L | 2L));
+      expect((a ^ b) == (-5L ^ 2L));
+      expect(-a == 5L);
+      expect(~a == ~-5L);
+
+      a = 5;
+      b = 2;
+      expect(a >> b == 5L >> 2);
+      expect(a >>> b == 5L >>> 2);
+      expect(a << b == 5L << 2);
+      expect(a * b == 5L * 2L);
+      expect(a / b == 5L / 2L);
+      expect(a % b == 5L % 2L);
+      expect((a & b) == (5L & 2L));
+      expect((a | b) == (5L | 2L));
+      expect((a ^ b) == (5L ^ 2L));
+      expect(-a == -5L);
+      expect(~a == ~5L);
+    }
+
     byte2 = 0;
     expect(byte2 == 0);
 
@@ -173,6 +202,10 @@ public class Misc {
 
     { Misc m = new Misc();
       m.toString();
+
+      expect(m.time == 0xffffffffffffffffL);
+      long t = m.time;
+      expect(t == 0xffffffffffffffffL);
 
       String s = "hello";
       m.foo(s);
