@@ -1013,14 +1013,31 @@ subtractCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
+subtractBorrowRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+                 Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+  
+  if (size == 8) rex(c);
+  c->code.append(0x19);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
 subtractRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
 
-  if (size == 8) rex(c);
-  c->code.append(0x29);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+    subtractRR(c, 4, a, b);
+    subtractBorrowRR(c, 4, &ah, &bh);
+  } else {
+    if (size == 8) rex(c);
+    c->code.append(0x29);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
 }
 
 void
@@ -1962,7 +1979,7 @@ class MyAssembler: public Assembler {
     case ShiftLeft:
     case ShiftRight:
     case UnsignedShiftRight: {
-      *aTypeMask = (1 << RegisterOperand);
+      *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
       *aRegisterMask = (~static_cast<uint64_t>(0) << 32)
         | (static_cast<uint64_t>(1) << rcx);
       const uint32_t mask = ~(1 << rcx);
