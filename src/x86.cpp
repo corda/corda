@@ -1081,7 +1081,7 @@ multiplyRR(Context* c, unsigned size, Assembler::Register* a,
     
     // mul a->low,%eax%edx
     c->code.append(0xf7);
-    c->code.append(0xe8 | a->low);
+    c->code.append(0xe0 | a->low);
     
     addRR(c, 4, b, &bh);
     moveRR(c, 4, &axdx, b);
@@ -1099,8 +1099,6 @@ void
 multiplyCR(Context* c, unsigned size, Assembler::Constant* a,
            Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
-
   if (BytesPerWord == 4 and size == 8) {
     const uint32_t mask = ~((1 << rax) | (1 << rdx));
     Assembler::Register tmp(c->client->acquireTemporary(mask),
@@ -1517,9 +1515,9 @@ unsignedShiftRightRR(Context* c, unsigned size, Assembler::Register* a,
   assert(c, a->low == rcx);
 
   if (BytesPerWord == 4 and size == 8) {
-    // shld
+    // shrd
     c->code.append(0x0f);
-    c->code.append(0xa5);
+    c->code.append(0xad);
     c->code.append(0xc0 | (b->high << 3) | b->low);
 
     // shr
@@ -1963,7 +1961,8 @@ class MyAssembler: public Assembler {
     case ShiftRight:
     case UnsignedShiftRight: {
       *aTypeMask = (1 << RegisterOperand);
-      *aRegisterMask = static_cast<uint64_t>(1) << rcx;
+      *aRegisterMask = (~static_cast<uint64_t>(0) << 32)
+        | (static_cast<uint64_t>(1) << rcx);
       const uint32_t mask = ~(1 << rcx);
       *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
     } break;

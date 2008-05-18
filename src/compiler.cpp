@@ -625,9 +625,13 @@ freeRegisterSite(Context* c, uint64_t mask = ~static_cast<uint64_t>(0))
 RegisterSite*
 fixedRegisterSite(Context* c, int low, int high = NoRegister)
 {
-  uint64_t mask = static_cast<uint64_t>(1) << low;
-  if (high != NoRegister) {
-    mask |= static_cast<uint64_t>(1) << (high + 32);
+  uint64_t mask;
+  if (high == NoRegister) {
+    mask = (~static_cast<uint64_t>(0) << 32)
+      | (static_cast<uint64_t>(1) << low);
+  } else {
+    mask = (static_cast<uint64_t>(1) << (high + 32))
+      | (static_cast<uint64_t>(1) << low);
   }
 
   return new (c->zone->allocate(sizeof(RegisterSite)))
