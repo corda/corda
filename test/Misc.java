@@ -101,6 +101,8 @@ public class Misc {
       expect(a >> b == -5 >> 2);
       expect(a >>> b == -5 >>> 2);
       expect(a << b == -5 << 2);
+      expect(a + b == -5 + 2);
+      expect(a - b == -5 - 2);
       expect(a * b == -5 * 2);
       expect(a / b == -5 / 2);
       expect(a % b == -5 % 2);
@@ -115,6 +117,8 @@ public class Misc {
       expect(a >> b == 5 >> 2);
       expect(a >>> b == 5 >>> 2);
       expect(a << b == 5 << 2);
+      expect(a + b == 5 + 2);
+      expect(a - b == 5 - 2);
       expect(a * b == 5 * 2);
       expect(a / b == 5 / 2);
       expect(a % b == 5 % 2);
@@ -130,6 +134,8 @@ public class Misc {
       expect(a >> b == -5L >> 2);
       expect(a >>> b == -5L >>> 2);
       expect(a << b == -5L << 2);
+      expect(a + b == -5L + 2L);
+      expect(a - b == -5L - 2L);
       expect(a * b == -5L * 2L);
       expect(a / b == -5L / 2L);
       expect(a % b == -5L % 2L);
@@ -144,6 +150,8 @@ public class Misc {
       expect(a >> b == 5L >> 2);
       expect(a >>> b == 5L >>> 2);
       expect(a << b == 5L << 2);
+      expect(a + b == 5L + 2L);
+      expect(a - b == 5L - 2L);
       expect(a * b == 5L * 2L);
       expect(a / b == 5L / 2L);
       expect(a % b == 5L % 2L);
@@ -235,14 +243,20 @@ public class Misc {
     expect(zip() == 47);
     expect(zup() == 47);
 
-    int[] array = new int[0];
-    Exception exception = null;
-    try {
-      int x = array[0];
-    } catch (ArrayIndexOutOfBoundsException e) {
-      exception = e;
+    { int[] array = new int[0];
+      Exception exception = null;
+      try {
+        int x = array[0];
+      } catch (ArrayIndexOutOfBoundsException e) {
+        exception = e;
+      }
+
+      expect(exception != null);
     }
 
-    expect(exception != null);
+    { Object[][] array = new Object[1][1];
+      expect(array.length == 1);
+      expect(array[0].length == 1);
+    }
   }
 }
