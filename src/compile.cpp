@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -1499,8 +1499,8 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* stack,
 }
 
 object FORCE_ALIGN
-makeMultidimensionalArray(MyThread* t, object class_, uintptr_t* stack,
-                          int32_t dimensions)
+makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
+                          uintptr_t* stack)
 {
   object r = makeMultidimensionalArray2(t, class_, stack, dimensions);
   if (UNLIKELY(t->exception)) {
@@ -3177,8 +3177,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          Compiler::Indirect,
          frame->trace(0, false),
          BytesPerWord,
-         4, c->thread(), frame->append(class_),
-         c->load(BytesPerWord, c->stack()), c->constant(dimensions));
+         4, c->thread(), frame->append(class_), c->constant(dimensions),
+         c->stack());
 
       frame->pop(dimensions);
       frame->pushObject(result);
@@ -3866,11 +3866,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Enums") == 0 and
+       "org/eclipse/swt/widgets/CoolBar") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "checkFaceCard") == 0)
+       "layoutItems") == 0)
   {
     asm("int3");
   }
