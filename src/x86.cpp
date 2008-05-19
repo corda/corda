@@ -845,7 +845,14 @@ moveMM(Context* c, unsigned size, Assembler::Memory* a,
        Assembler::Memory* b)
 {
   if (BytesPerWord == 8 or size <= 4) {
-    Assembler::Register tmp(c->client->acquireTemporary());
+    uint32_t mask;
+    if (BytesPerWord == 4 and size == 1) {
+      mask = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
+    } else {
+      mask = ~static_cast<uint32_t>(0);
+    }
+
+    Assembler::Register tmp(c->client->acquireTemporary(mask));
     moveMR(c, size, a, &tmp);
     moveRM(c, size, &tmp, b);
     c->client->releaseTemporary(tmp.low);
