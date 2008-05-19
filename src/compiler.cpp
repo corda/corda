@@ -91,12 +91,26 @@ class State {
   State* next;
 };
 
+class Local {
+ public:
+  Local(unsigned size, unsigned index, Value* value, Site* site, Local* next):
+    size(size), index(index), value(value), site(site), next(next)
+  { }
+
+  unsigned size;
+  unsigned index;
+  Value* value;
+  Site* site;
+  Local* next;
+};
+
 class LogicalInstruction {
  public:
   Event* firstEvent;
   Event* lastEvent;
   LogicalInstruction* immediatePredecessor;
   Stack* stack;
+  Local* locals;
   unsigned machineOffset;
   bool stackSaved;
 };
@@ -177,7 +191,8 @@ class Context {
     state(new (zone->allocate(sizeof(State))) State(0, 0)),
     logicalCode(0),
     logicalCodeLength(0),
-    stackOffset(0),
+    parameterFootprint(0),
+    localFootprint(0),
     registers
     (static_cast<Register**>
      (zone->allocate(sizeof(Register*) * assembler->registerCount()))),
@@ -187,6 +202,8 @@ class Context {
     nextSequence(0),
     junctions(0),
     machineCode(0),
+    locals(0),
+    localTable(0),
     stackReset(false)
   {
     for (unsigned i = 0; i < assembler->registerCount(); ++i) {
@@ -206,7 +223,8 @@ class Context {
   State* state;
   LogicalInstruction* logicalCode;
   unsigned logicalCodeLength;
-  unsigned stackOffset;
+  unsigned parameterFootprint;
+  unsigned localFootprint;
   Register** registers;
   ConstantPoolNode* firstConstant;
   ConstantPoolNode* lastConstant;
@@ -214,6 +232,8 @@ class Context {
   unsigned nextSequence;
   Junction* junctions;
   uint8_t* machineCode;
+  Local* locals;
+  Local** localTable;
   bool stackReset;
 };
 
@@ -308,8 +328,8 @@ expect(Context* c, bool v)
 class Event {
  public:
   Event(Context* c):
-    next(0), stack(c->state->stack), promises(0), reads(0), readCount(0),
-    sequence(c->nextSequence++), stackReset(c->stackReset)
+    next(0), stack(c->state->stack), locals(c->locals), promises(0), reads(0),
+    readCount(0), sequence(c->nextSequence++), stackReset(c->stackReset)
   {
     assert(c, c->logicalIp >= 0);
 
@@ -327,8 +347,8 @@ class Event {
     }
   }
 
-  Event(Context*, unsigned sequence, Stack* stack):
-    next(0), stack(stack), promises(0), reads(0), readCount(0),
+  Event(Context*, unsigned sequence, Stack* stack, Local* locals):
+    next(0), stack(stack), locals(locals), promises(0), reads(0), readCount(0),
     sequence(sequence), stackReset(false)
   { }
 
@@ -340,12 +360,26 @@ class Event {
 
   Event* next;
   Stack* stack;
+  Local* locals;
   CodePromise* promises;
   Read* reads;
   unsigned readCount;
   unsigned sequence;
   bool stackReset;
 };
+
+int
+localOffset(Context* c, int v)
+{
+  int parameterFootprint = c->parameterFootprint * BytesPerWord;
+
+  v *= BytesPerWord;
+  if (v < parameterFootprint) {
+    return (parameterFootprint - v - BytesPerWord) + (BytesPerWord * 2);
+  } else {
+    return -(v + BytesPerWord - parameterFootprint);
+  }
+}
 
 bool
 findSite(Context*, Value* v, Site* site)
@@ -723,7 +757,8 @@ class MemorySite: public Site {
 };
 
 MemorySite*
-memorySite(Context* c, int base, int offset, int index, unsigned scale)
+memorySite(Context* c, int base, int offset = 0, int index = NoRegister,
+           unsigned scale = 1)
 {
   return new (c->zone->allocate(sizeof(MemorySite)))
     MemorySite(base, offset, index, scale);
@@ -874,12 +909,18 @@ pick(Context* c, Site* sites, Site* target = 0, unsigned* cost = 0)
   return site;
 }
 
+unsigned
+stackOffset(Context* c)
+{
+  return c->localFootprint - c->parameterFootprint;
+}
+
 Site*
 pushSite(Context* c, unsigned index)
 {
   return memorySite
     (c, c->assembler->base(),
-     - (c->stackOffset + index + 1) * BytesPerWord, NoRegister, 1);
+     - (stackOffset(c) + index + 1) * BytesPerWord, NoRegister, 1);
 }
 
 void
@@ -1259,6 +1300,41 @@ ignore(Context* c, unsigned count)
   }
 }
 
+void
+cleanStack(Context* c, Stack* stack, Local* locals, Read* reads)
+{
+  for (Local* l = locals; l; l = l->next) {
+    clearSites(c, l->value);
+  }
+
+  for (Local* l = locals; l; l = l->next) {
+    addSite(c, 0, l->size * BytesPerWord, l->value, l->site);
+  }
+
+  for (Stack* s = stack; s; s = s->next) {
+    clearSites(c, s->value);
+  }
+
+  for (Stack* s = stack; s; s = s->next) {
+    if (s->pushSite) {
+      addSite(c, 0, s->size * BytesPerWord, s->value, s->pushSite);
+    }
+  }
+
+  for (Read* r = reads; r; r = r->eventNext) {
+    nextRead(c, r->value);
+  }
+}
+
+void
+resetLocals(Context* c)
+{
+  for (Local* l = c->locals; l; l = l->next) {
+    c->localTable[l->index] = 0;
+  }
+  c->locals = 0;
+}
+
 class CallEvent: public Event {
  public:
   CallEvent(Context* c, Value* address, unsigned flags,
@@ -1305,6 +1381,8 @@ class CallEvent: public Event {
       addRead(c, s->value, s->size * BytesPerWord, virtualSite
               (c, 0, ~0, (static_cast<uint64_t>(mask) << 32) | mask));
     }
+
+    resetLocals(c);
   }
 
   virtual void compile(Context* c) {
@@ -1328,19 +1406,7 @@ class CallEvent: public Event {
          CodePromise(c, c->assembler->length()));
     }
 
-    for (Stack* s = stack; s; s = s->next) {
-      clearSites(c, s->value);
-    }
-
-    for (Stack* s = stack; s; s = s->next) {
-      if (s->pushSite) {
-        addSite(c, 0, s->size * BytesPerWord, s->value, s->pushSite);
-      }
-    }
-
-    for (Read* r = reads; r; r = r->eventNext) {
-      nextRead(c, r->value);
-    }
+    cleanStack(c, stack, locals, reads);
 
     if (resultSize and result->reads) {
       addSite(c, 0, resultSize, result, registerSite
@@ -1455,7 +1521,11 @@ class MoveEvent: public Event {
       nextRead(c, src);
     }
 
-    if (dst->reads) {
+    bool isStore = dst->reads == 0;
+
+    assert(c, isStore or target != src->source or src->reads == 0);
+
+    if (not isStore) {
       addSite(c, stack, size, dst, target);
     }
 
@@ -1471,7 +1541,7 @@ class MoveEvent: public Event {
 
         apply(c, type, size, src->source, tmpTarget);
 
-        if (dst->reads == 0) {
+        if (isStore) {
           removeSite(c, dst, tmpTarget);
 
           apply(c, Move, size, tmpTarget, target);
@@ -1481,7 +1551,7 @@ class MoveEvent: public Event {
       }
     }
 
-    if (dst->reads == 0) {
+    if (isStore) {
       removeSite(c, dst, target);
     }
 
@@ -1661,6 +1731,9 @@ appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
       fprintf(stderr, "appendCombine\n");
     }
 
+    firstTarget->typeMask &= ~(1 << MemoryOperand);
+    secondTarget->typeMask &= ~(1 << MemoryOperand);
+
     new (c->zone->allocate(sizeof(CombineEvent)))
       CombineEvent(c, type, size, first, second, result, firstTarget,
                    secondTarget);
@@ -1714,6 +1787,8 @@ appendTranslate(Context* c, UnaryOperation type, unsigned size, Value* value,
     (type, size, &(target->typeMask), &(target->registerMask), &procedure);
 
   assert(c, procedure == 0); // todo
+
+  target->typeMask &= ~(1 << MemoryOperand);
 
   new (c->zone->allocate(sizeof(TranslateEvent)))
     TranslateEvent(c, type, size, value, result, target);
@@ -1805,6 +1880,8 @@ resetStack(Context* c)
     i += s->size;
   }
 
+  resetLocals(c);
+
   c->stackReset = true;
 }
 
@@ -1863,8 +1940,8 @@ class StackSyncEvent: public Event {
     } 
   }
 
-  StackSyncEvent(Context* c, unsigned sequence, Stack* stack):
-    Event(c, sequence, stack)
+  StackSyncEvent(Context* c, unsigned sequence, Stack* stack, Local* locals):
+    Event(c, sequence, stack, locals)
   {
     for (Stack* s = stack; s; s = s->next) {
       if (s->pushEvent) s->pushEvent->active = true;
@@ -1877,19 +1954,7 @@ class StackSyncEvent: public Event {
       fprintf(stderr, "StackSyncEvent.compile\n");
     }
 
-    for (Stack* s = stack; s; s = s->next) {
-      clearSites(c, s->value);
-    }
-
-    for (Stack* s = stack; s; s = s->next) {
-      if (s->pushSite) {
-        addSite(c, 0, s->size * BytesPerWord, s->value, s->pushSite);
-      }
-    }
-
-    for (Read* r = reads; r; r = r->eventNext) {
-      nextRead(c, r->value);
-    }
+    cleanStack(c, stack, locals, reads);
   }
 };
 
@@ -2004,6 +2069,45 @@ appendPop(Context* c, unsigned count, bool ignore)
   new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c, count, ignore);
 }
 
+class LocalEvent: public Event {
+ public:
+  LocalEvent(Context* c, unsigned size, Value* newValue, Value* oldValue,
+             Site* site):
+    Event(c), size(size), newValue(newValue), oldValue(oldValue), site(site)
+  { }
+
+  virtual void compile(Context* c) {
+    if (DebugCompile) {
+      fprintf(stderr, "LocalEvent.compile\n");
+    }
+
+    if (oldValue) {
+      removeSite(c, oldValue, site);
+    }
+
+    if (newValue->reads) {
+      addSite(c, 0, size, newValue, site);
+    }
+  }
+
+  unsigned size;
+  Value* newValue;
+  Value* oldValue;
+  Site* site;
+};
+
+void
+appendLocal(Context* c, unsigned size, Value* newValue, Value* oldValue,
+            Site* site)
+{
+  if (DebugAppend) {
+    fprintf(stderr, "appendLocal\n");
+  }
+
+  new (c->zone->allocate(sizeof(LocalEvent)))
+    LocalEvent(c, size, newValue, oldValue, site);
+}
+
 Site*
 readSource(Context* c, Stack* stack, Read* r)
 {
@@ -2037,8 +2141,8 @@ compile(Context* c)
   a->apply(Move, BytesPerWord, RegisterOperand, &stack,
            RegisterOperand, &base);
 
-  if (c->stackOffset) {
-    Assembler::Constant offset(resolved(c, c->stackOffset * BytesPerWord));
+  if (stackOffset(c)) {
+    Assembler::Constant offset(resolved(c, stackOffset(c) * BytesPerWord));
     a->apply(Subtract, BytesPerWord, ConstantOperand, &offset,
              RegisterOperand, &stack);
   }
@@ -2120,6 +2224,7 @@ saveStack(Context* c)
   if (c->logicalIp >= 0 and not c->logicalCode[c->logicalIp].stackSaved) {
     c->logicalCode[c->logicalIp].stackSaved = true;
     c->logicalCode[c->logicalIp].stack = c->state->stack;
+    c->logicalCode[c->logicalIp].locals = c->locals;
 
     if (DebugAppend) {
       unsigned count = 0;
@@ -2159,6 +2264,27 @@ push(Context* c, unsigned size, Value* v)
   appendPush(c);
 }
 
+void
+addLocal(Context* c, unsigned size, unsigned index, Value* newValue)
+{
+  Value* oldValue;
+  unsigned s = ceiling(size, BytesPerWord);
+  Local* local = c->localTable[index];
+  if (local) {
+    oldValue = local->value;
+    c->localTable[index] = c->locals = new (c->zone->allocate(sizeof(Local)))
+      Local(s, index, newValue, local->site, c->locals);
+  } else {
+    oldValue = 0;
+    c->localTable[index] = c->locals = new (c->zone->allocate(sizeof(Local)))
+      Local(s, index, newValue, memorySite
+            (c, c->assembler->base(), localOffset(c, index)),
+            c->locals);
+  }
+
+  appendLocal(c, s, newValue, oldValue, c->localTable[index]->site);
+}
+
 Value*
 pop(Context* c, unsigned size UNUSED)
 {
@@ -2180,7 +2306,7 @@ updateJunctions(Context* c)
 
     p->lastEvent = p->lastEvent->next
       = new (c->zone->allocate(sizeof(StackSyncEvent)))
-      StackSyncEvent(c, p->lastEvent->sequence, p->stack);
+      StackSyncEvent(c, p->lastEvent->sequence, p->stack, p->locals);
   }
 }
 
@@ -2255,12 +2381,20 @@ class MyCompiler: public Compiler {
     ::resetStack(&c);
   }
 
-  virtual void init(unsigned logicalCodeLength, unsigned stackOffset) {
+  virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
+                    unsigned localFootprint)
+  {
     c.logicalCodeLength = logicalCodeLength;
-    c.stackOffset = stackOffset;
+    c.parameterFootprint = parameterFootprint;
+    c.localFootprint = localFootprint;
+
     c.logicalCode = static_cast<LogicalInstruction*>
       (c.zone->allocate(sizeof(LogicalInstruction) * logicalCodeLength));
     memset(c.logicalCode, 0, sizeof(LogicalInstruction) * logicalCodeLength);
+
+    c.localTable = static_cast<Local**>
+      (c.zone->allocate(sizeof(Local*) * localFootprint));
+    memset(c.localTable, 0, sizeof(Local*) * localFootprint);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
@@ -2491,6 +2625,20 @@ class MyCompiler: public Compiler {
 
   virtual void return_(unsigned size, Operand* value) {
     appendReturn(&c, size, static_cast<Value*>(value));
+  }
+
+  virtual void storeLocal(unsigned size, Operand* src, unsigned index) {
+    assert(&c, index < c.localFootprint);
+    store(size, src, memory(base(), localOffset(&c, index)));
+    addLocal(&c, size, index, value(&c));
+  }
+
+  virtual Operand* loadLocal(unsigned size, unsigned index) {
+    assert(&c, index < c.localFootprint);
+    if (c.localTable[index] == 0) {
+      addLocal(&c, size, index, value(&c));
+    }
+    return c.localTable[index]->value;
   }
 
   virtual void store(unsigned size, Operand* src, Operand* dst) {

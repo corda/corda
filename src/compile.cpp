@@ -849,51 +849,36 @@ class Frame {
 
   void loadInt(unsigned index) {
     assert(t, index < localSize());
-    pushInt
-      (c->load
-       (4, c->memory(c->base(), localOffset(t, index, context->method))));
+    pushInt(c->loadLocal(BytesPerWord, index));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLong
-      (c->load
-       (8, c->memory(c->base(), localOffset(t, index + 1, context->method))));
+    pushLong(c->loadLocal(8, index + 1));
   }
 
   void loadObject(unsigned index) {
     assert(t, index < localSize());
-    pushObject
-      (c->load
-       (BytesPerWord,
-        c->memory(c->base(), localOffset(t, index, context->method))));
+    pushObject(c->loadLocal(BytesPerWord, index));
   }
 
   void storeInt(unsigned index) {
-    c->store
-      (4, popInt(), c->memory
-       (c->base(), localOffset(t, index, context->method)));
+    c->storeLocal(BytesPerWord, popInt(), index);
     storedInt(index);
   }
 
   void storeLong(unsigned index) {
-    c->store
-      (8, popLong(), c->memory
-       (c->base(), localOffset(t, index + 1, context->method)));
+    c->storeLocal(8, popLong(), index + 1);
     storedLong(index);
   }
 
   void storeObject(unsigned index) {
-    c->store
-      (BytesPerWord, popObject(), c->memory
-       (c->base(), localOffset(t, index, context->method)));
+    c->storeLocal(BytesPerWord, popObject(), index);
     storedObject(index);
   }
 
   void storeObjectOrAddress(unsigned index) {
-    c->store
-      (BytesPerWord, c->pop(BytesPerWord), c->memory
-       (c->base(), localOffset(t, index, context->method)));
+    c->storeLocal(BytesPerWord, c->pop(BytesPerWord), index);
 
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
@@ -2641,7 +2626,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = c->memory
         (c->base(), localOffset(t, index, context->method));
 
-      c->store(4, c->add(4, c->constant(count), a), a);
+      c->storeLocal(4, c->add(4, c->constant(count), a), index);
     } break;
 
     case iload:
@@ -3456,7 +3441,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         Compiler::Operand* a = c->memory
           (c->base(), localOffset(t, index, context->method));
 
-        c->store(4, c->add(4, c->constant(count), a), a);
+        c->storeLocal(4, c->add(4, c->constant(count), a), index);
       } break;
 
       case iload: {
@@ -3866,11 +3851,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "org/eclipse/swt/widgets/CoolBar") == 0 and
+       "java/lang/String") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "layoutItems") == 0)
+       "<init>") == 0)
   {
     asm("int3");
   }
@@ -3890,7 +3875,7 @@ compile(MyThread* t, Context* context)
 
   unsigned footprint = methodParameterFootprint(t, context->method);
   unsigned locals = localSize(t, context->method);
-  c->init(codeLength(t, methodCode(t, context->method)), locals - footprint);
+  c->init(codeLength(t, methodCode(t, context->method)), footprint, locals);
 
   uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
   Frame frame(context, stackMap);

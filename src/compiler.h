@@ -32,7 +32,8 @@ class Compiler {
   virtual void saveStack() = 0;
   virtual void resetStack() = 0;
 
-  virtual void init(unsigned logicalCodeSize, unsigned localFootprint) = 0;
+  virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
+                    unsigned localFootprint) = 0;
 
   virtual void visitLogicalIp(unsigned logicalIp) = 0;
   virtual void startLogicalIp(unsigned logicalIp) = 0;
@@ -75,6 +76,9 @@ class Compiler {
                         ...) = 0;
 
   virtual void return_(unsigned size, Operand* value) = 0;
+
+  virtual void storeLocal(unsigned size, Operand* src, unsigned index) = 0;
+  virtual Operand* loadLocal(unsigned size, unsigned index) = 0;
 
   virtual void store(unsigned size, Operand* src, Operand* dst) = 0;
   virtual Operand* load(unsigned size, Operand* src) = 0;
