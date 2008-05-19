@@ -1500,6 +1500,9 @@ class MoveEvent: public Event {
       fprintf(stderr, "MoveEvent.compile\n");
     }
 
+    bool isLoad = src->reads->next == 0;
+    bool isStore = dst->reads == 0;
+
     Site* target;
     unsigned cost;
     if (type == Move
@@ -1512,7 +1515,7 @@ class MoveEvent: public Event {
     } else {
       target = targetOrRegister(c, dst);
       cost = src->source->copyCost(c, target);
-      if (cost == 0) {
+      if (cost == 0 and (isLoad or isStore)) {
         target = src->source;
       }
     }
@@ -1521,9 +1524,7 @@ class MoveEvent: public Event {
       nextRead(c, src);
     }
 
-    bool isStore = dst->reads == 0;
-
-    assert(c, isStore or target != src->source or src->reads == 0);
+    assert(c, isLoad or isStore or target != src->source);
 
     if (not isStore) {
       addSite(c, stack, size, dst, target);
