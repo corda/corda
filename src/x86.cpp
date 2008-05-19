@@ -1942,7 +1942,7 @@ class MyAssembler: public Assembler {
         *aTypeMask = ~(1 << MemoryOperand);
         *bTypeMask = ~(1 << MemoryOperand);
       } else {
-        *bTypeMask = ~0;
+        *bTypeMask = ~(1 << ConstantOperand);
       }
       break;
 
