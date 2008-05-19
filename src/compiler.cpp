@@ -1520,11 +1520,11 @@ class MoveEvent: public Event {
       }
     }
 
-    if (target == src->source) {
-      nextRead(c, src);
-    }
-
     assert(c, isLoad or isStore or target != src->source);
+
+    if (target == src->source) {
+      removeSite(c, src, target);
+    }
 
     if (not isStore) {
       addSite(c, stack, size, dst, target);
@@ -1556,9 +1556,7 @@ class MoveEvent: public Event {
       removeSite(c, dst, target);
     }
 
-    if (target != src->source) {
-      nextRead(c, src);
-    }
+    nextRead(c, src);
   }
 
   BinaryOperation type;
@@ -1640,14 +1638,21 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
 }
 
 void
+preserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s,
+         Read* read)
+{
+  assert(c, v->sites == s);
+  Site* r = targetOrNull(c, read);
+  if (r == 0 or r == s) r = freeRegisterSite(c);
+  addSite(c, stack, size, v, r);
+  apply(c, Move, size, s, r);
+}
+
+void
 maybePreserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
 {
   if (v->reads->next and v->sites->next == 0) {
-    assert(c, v->sites == s);
-    Site* r = targetOrNull(c, v->reads->next);
-    if (r == 0 or r == s) r = freeRegisterSite(c);
-    addSite(c, stack, size, v, r);
-    apply(c, Move, size, s, r);    
+    preserve(c, stack, size, v, s, v->reads->next);
   }
 }
 
@@ -2095,6 +2100,12 @@ class LocalEvent: public Event {
     }
 
     if (oldValue) {
+      if (oldValue->reads
+          and oldValue->sites->next == 0
+          and oldValue->sites == site)
+      {
+        preserve(c, stack, size, oldValue, site, oldValue->reads);
+      }
       removeSite(c, oldValue, site);
     }
 
