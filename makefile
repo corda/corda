@@ -43,7 +43,7 @@ ar = ar
 ranlib = ranlib
 objcopy = objcopy
 vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
-vg += --leak-check=full
+vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
 javac = javac
 jar = jar
