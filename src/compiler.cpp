@@ -2306,7 +2306,8 @@ addLocal(Context* c, unsigned size, unsigned index, Value* newValue)
             c->locals);
   }
 
-  appendLocal(c, s, newValue, oldValue, c->localTable[index]->site);
+  appendLocal(c, s * BytesPerWord, newValue, oldValue,
+              c->localTable[index]->site);
 }
 
 Value*
@@ -2653,8 +2654,8 @@ class MyCompiler: public Compiler {
 
   virtual void storeLocal(unsigned size, Operand* src, unsigned index) {
     assert(&c, index < c.localFootprint);
-    store(size, src, memory(base(), localOffset(&c, index)));
     addLocal(&c, size, index, value(&c));
+    store(size, src, memory(base(), localOffset(&c, index)));
   }
 
   virtual Operand* loadLocal(unsigned size, unsigned index) {
