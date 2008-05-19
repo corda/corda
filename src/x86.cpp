@@ -1928,7 +1928,7 @@ class MyAssembler: public Assembler {
                     uint64_t* aRegisterMask, uint8_t* bTypeMask,
                     uint64_t* bRegisterMask, uintptr_t* procedure)
   {
-    *aTypeMask = ~static_cast<uint8_t>(0);
+    *aTypeMask = ~0;
     *aRegisterMask = ~static_cast<uint64_t>(0);
 
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
@@ -1937,6 +1937,15 @@ class MyAssembler: public Assembler {
     *procedure = 0;
 
     switch (op) {
+    case Compare:
+      if (BytesPerWord == 8 and size != 8) {
+        *aTypeMask = ~(1 << MemoryOperand);
+        *bTypeMask = ~(1 << MemoryOperand);
+      } else {
+        *bTypeMask = ~0;
+      }
+      break;
+
     case Move:
       if (BytesPerWord == 4 and size == 1) {
         const uint32_t mask
@@ -1965,7 +1974,7 @@ class MyAssembler: public Assembler {
 
     case Divide:
       if (BytesPerWord == 4 and size == 8) {
-        *bTypeMask = ~static_cast<uint8_t>(0);
+        *bTypeMask = ~0;
         *procedure = reinterpret_cast<uintptr_t>(divideLong);        
       } else {
         *aRegisterMask = ~((1 << rax) | (1 << rdx));
@@ -1975,7 +1984,7 @@ class MyAssembler: public Assembler {
 
     case Remainder:
       if (BytesPerWord == 4 and size == 8) {
-        *bTypeMask = ~static_cast<uint8_t>(0);
+        *bTypeMask = ~0;
         *procedure = reinterpret_cast<uintptr_t>(moduloLong);
       } else {
         *aRegisterMask = ~((1 << rax) | (1 << rdx));

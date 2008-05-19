@@ -1592,11 +1592,12 @@ appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
 
 class CompareEvent: public Event {
  public:
-  CompareEvent(Context* c, unsigned size, Value* first, Value* second):
+  CompareEvent(Context* c, unsigned size, Value* first, Value* second,
+               Site* firstTarget, Site* secondTarget):
     Event(c), size(size), first(first), second(second)
   {
-    addRead(c, first, size, 0);
-    addRead(c, second, size, 0);
+    addRead(c, first, size, firstTarget);
+    addRead(c, second, size, secondTarget);
   }
 
   virtual void compile(Context* c) {
@@ -1618,12 +1619,23 @@ class CompareEvent: public Event {
 void
 appendCompare(Context* c, unsigned size, Value* first, Value* second)
 {
+  VirtualSite* firstTarget = virtualSite(c);
+  VirtualSite* secondTarget = virtualSite(c);
+  uintptr_t procedure;
+
+  c->assembler->plan(Compare, size,
+                     &(firstTarget->typeMask), &(firstTarget->registerMask),
+                     &(secondTarget->typeMask), &(secondTarget->registerMask),
+                     &procedure);
+
+  assert(c, procedure == 0); // todo
+
   if (DebugAppend) {
     fprintf(stderr, "appendCompare\n");
   }
 
   new (c->zone->allocate(sizeof(CompareEvent)))
-    CompareEvent(c, size, first, second);
+    CompareEvent(c, size, first, second, firstTarget, secondTarget);
 }
 
 void
