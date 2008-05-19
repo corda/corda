@@ -1818,7 +1818,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         case daload:
         case laload:
-          frame->pushInt(c->load(8, c->memory(array, ArrayBody + (i * 8))));
+          frame->pushLong(c->load(8, c->memory(array, ArrayBody + (i * 8))));
           break;
 
         case saload:
