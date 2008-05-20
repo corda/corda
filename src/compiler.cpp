@@ -93,8 +93,10 @@ class State {
 
 class Local {
  public:
-  Local(unsigned size, unsigned index, Value* value, Site* site, Local* next):
-    size(size), index(index), reuse(true), value(value), site(site), next(next)
+  Local(unsigned size, unsigned index, Value* value, Site* site, Local* old,
+        Local* next):
+    size(size), index(index), reuse(true), value(value), site(site), old(old),
+    next(next)
   { }
 
   unsigned size;
@@ -102,6 +104,7 @@ class Local {
   bool reuse;
   Value* value;
   Site* site;
+  Local* old;
   Local* next;
 };
 
@@ -2095,15 +2098,17 @@ class ClobberLocalEvent: public Event {
       fprintf(stderr, "ClobberLocalEvent.compile\n");
     }
 
-    Value* v = local->value;
-    Site* s = local->site;
-    if (v->reads
-        and v->sites->next == 0
-        and v->sites == s)
-    {
-      preserve(c, stack, size, v, s, v->reads);
+    for (Local* l = local; l; l = l->old) {
+      Value* v = l->value;
+      Site* s = l->site;
+      if (v->reads
+          and v->sites->next == 0
+          and v->sites == s)
+      {
+        preserve(c, stack, size, v, s, v->reads);
+      }
+      removeSite(c, v, s);
     }
-    removeSite(c, v, s);
   }
 
   unsigned size;
@@ -2123,11 +2128,11 @@ appendClobberLocal(Context* c, unsigned size, Local* local)
 
 class LocalEvent: public Event {
  public:
-  LocalEvent(Context* c, unsigned size, Local* oldLocal, Local* newLocal):
-    Event(c), size(size), oldLocal(oldLocal), newLocal(newLocal)
+  LocalEvent(Context* c, unsigned size, Local* local):
+    Event(c), size(size), local(local)
   {
-    if (oldLocal) {
-      addRead(c, oldLocal->value, size, 0);
+    if (local->old) {
+      addRead(c, local->old->value, size, 0);
     }
   }
 
@@ -2137,43 +2142,41 @@ class LocalEvent: public Event {
     }
 
     Site* sites = 0;
-    if (oldLocal) {
-      Value* v = oldLocal->value;
-      if (oldLocal->reuse and v->reads->next == 0) {
+    if (local->old) {
+      Value* v = local->old->value;
+      if (local->old->reuse and v->reads->next == 0) {
         sites = v->sites;
       }
 
       nextRead(c, v);
     }
 
-    Value* v = newLocal->value;
+    Value* v = local->value;
     if (v->reads) {
       for (Site* s = sites; s;) {
         Site* t = s->next;
         if (s->type(c) != MemoryOperand) {
-          addSite(c, stack, size, v, s);
+          addSite(c, 0, size, v, s);
         }
         s = t;
       }
 
-      addSite(c, 0, size, v, newLocal->site);
+      addSite(c, 0, size, v, local->site);
     }
   }
 
   unsigned size;
-  Local* oldLocal;
-  Local* newLocal;
+  Local* local;
 };
 
 void
-appendLocal(Context* c, unsigned size, Local* oldLocal, Local* newLocal)
+appendLocal(Context* c, unsigned size, Local* local)
 {
   if (DebugAppend) {
     fprintf(stderr, "appendLocal\n");
   }
 
-  new (c->zone->allocate(sizeof(LocalEvent)))
-    LocalEvent(c, size, oldLocal, newLocal);
+  new (c->zone->allocate(sizeof(LocalEvent))) LocalEvent(c, size, local);
 }
 
 Site*
@@ -2335,19 +2338,14 @@ push(Context* c, unsigned size, Value* v)
 void
 addLocal(Context* c, unsigned size, unsigned index, Value* newValue)
 {
-  unsigned s = ceiling(size, BytesPerWord);
-  Local* local = c->localTable[index];
-  if (local) {
-    c->localTable[index] = c->locals = new (c->zone->allocate(sizeof(Local)))
-      Local(s, index, newValue, local->site, c->locals);
-  } else {
-    c->localTable[index] = c->locals = new (c->zone->allocate(sizeof(Local)))
-      Local(s, index, newValue, memorySite
-            (c, c->assembler->base(), localOffset(c, index)),
-            c->locals);
-  }
+  unsigned sizeInWords = ceiling(size, BytesPerWord);
 
-  appendLocal(c, s * BytesPerWord, local, c->locals);
+  c->localTable[index] = c->locals = new (c->zone->allocate(sizeof(Local)))
+    Local(sizeInWords, index, newValue, memorySite
+          (c, c->assembler->base(), localOffset(c, index)),
+          c->localTable[index], c->locals);
+
+  appendLocal(c, sizeInWords * BytesPerWord, c->locals);
 }
 
 Value*

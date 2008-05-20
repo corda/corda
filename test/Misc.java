@@ -82,6 +82,7 @@ public class Misc {
     public int a;
     public int b;
     public int c;
+    public int[] array;
   }
 
   private static int bar(int a, int b, int c) {
@@ -298,6 +299,11 @@ public class Misc {
       d = (d == a) ? b : a;
 
       expect(c != d);
+    }
+
+    { Foo foo = new Foo();
+      foo.array = new int[3];
+      foo.a = (foo.a + 1) % foo.array.length;
     }
   }
 }
