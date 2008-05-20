@@ -89,7 +89,14 @@ public class Misc {
     return a + b + c;
   }
 
+  private static long roundUp(long a, long b) {
+    a += b - 1L;
+    return a - (a % b);
+  }
+
   public static void main(String[] args) {
+    expect(roundUp(156, 2) == 156);
+
     { Foo foo = new Foo();
       int x = foo.a + foo.b + foo.c;
       bar(foo.a, foo.b, foo.c);

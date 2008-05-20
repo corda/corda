@@ -55,8 +55,6 @@ class Site {
 
   virtual void thaw(Context*) { }
 
-  virtual void validate(Context*, Stack*, unsigned, Value*) { }
-
   virtual OperandType type(Context*) = 0;
 
   virtual Assembler::Operand* asAssemblerOperand(Context*) = 0;
@@ -581,7 +579,12 @@ class RegisterSite: public Site {
   }
 
   virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v) {
-    validate(c, stack, size, v);
+    low = ::validate(c, mask, stack, size, v, this, low);
+    if (size > BytesPerWord) {
+      ::freeze(low);
+      high = ::validate(c, mask >> 32, stack, size, v, this, high);
+      ::thaw(low);
+    }
   }
 
   virtual void release(Context* c) {
@@ -608,15 +611,6 @@ class RegisterSite: public Site {
     ::thaw(low);
     if (high) {
       ::thaw(high);
-    }
-  }
-
-  virtual void validate(Context* c, Stack* stack, unsigned size, Value* v) {
-    low = ::validate(c, mask, stack, size, v, this, low);
-    if (size > BytesPerWord) {
-      ::freeze(low);
-      high = ::validate(c, mask >> 32, stack, size, v, this, high);
-      ::thaw(low);
     }
   }
 
@@ -2196,7 +2190,6 @@ readSource(Context* c, Stack* stack, Read* r)
     apply(c, Move, r->size, site, target);
     return target;
   } else {
-    site->validate(c, stack, r->size, r->value);
     return site;
   }
 }
