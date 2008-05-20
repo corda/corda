@@ -78,7 +78,22 @@ public class Misc {
     return zap() + 5;
   }
 
+  private static class Foo {
+    public int a;
+    public int b;
+    public int c;
+  }
+
+  private static int bar(int a, int b, int c) {
+    return a + b + c;
+  }
+
   public static void main(String[] args) {
+    { Foo foo = new Foo();
+      int x = foo.a + foo.b + foo.c;
+      bar(foo.a, foo.b, foo.c);
+    }
+
     { int get_buffer = 2144642881;
       int bits_left = 30;
       int l = 9;
@@ -254,9 +269,35 @@ public class Misc {
       expect(exception != null);
     }
 
+    { int[] array = new int[3];
+      int i = 0;
+      array[i++] = 1;
+      array[i++] = 2;
+      array[i++] = 3;
+
+      expect(array[--i] == 3);
+      expect(array[--i] == 2);
+      expect(array[--i] == 1);
+    }
+
     { Object[][] array = new Object[1][1];
       expect(array.length == 1);
       expect(array[0].length == 1);
+    }
+
+    {
+      Object a = new Object();
+      Object b = new Object();
+      expect(a != b);
+
+      Object c = a;
+      Object d = b;
+      expect(c != d);
+
+      c = (c == a) ? b : a;
+      d = (d == a) ? b : a;
+
+      expect(c != d);
     }
   }
 }
