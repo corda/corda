@@ -312,5 +312,17 @@ public class Misc {
       foo.array = new int[3];
       foo.a = (foo.a + 1) % foo.array.length;
     }
+
+    { int j = 0;
+      byte[] decodeTable = new byte[256];
+      for (int i = 'A'; i <= 'Z'; ++i) decodeTable[i] = (byte) j++;
+      for (int i = 'a'; i <= 'z'; ++i) decodeTable[i] = (byte) j++;
+      for (int i = '0'; i <= '9'; ++i) decodeTable[i] = (byte) j++;
+      decodeTable['+'] = (byte) j++;
+      decodeTable['/'] = (byte) j++;
+      decodeTable['='] = 0;
+
+      expect(decodeTable['a'] != 0);
+    }
   }
 }

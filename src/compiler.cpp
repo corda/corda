@@ -768,9 +768,14 @@ matchRegister(Context* c UNUSED, Site* s, uint64_t mask)
   assert(c, s->type(c) == RegisterOperand);
 
   RegisterSite* r = static_cast<RegisterSite*>(s);
-  return ((static_cast<uint64_t>(1) << r->register_.low) & mask)
-    and (r->register_.high == NoRegister
-         or ((static_cast<uint64_t>(1) << (r->register_.high + 32)) & mask));
+  if (r->low) {
+    r->sync(c);
+    return ((static_cast<uint64_t>(1) << r->register_.low) & mask)
+      and (r->register_.high == NoRegister
+           or ((static_cast<uint64_t>(1) << (r->register_.high + 32)) & mask));
+  } else {
+    return false;
+  }
 }
 
 bool

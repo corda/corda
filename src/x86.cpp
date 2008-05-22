@@ -697,12 +697,17 @@ moveRR(Context* c, unsigned size, Assembler::Register* a,
   } else {
     switch (size) {
     case 1:
-      assert(c, BytesPerWord == 8 or (a->low <= rbx and b->low <= rbx));
+      if (BytesPerWord == 4 and a->low > rbx) {
+        assert(c, b->low <= rbx);
 
-      rex(c);
-      c->code.append(0x0f);
-      c->code.append(0xbe);
-      c->code.append(0xc0 | (b->low << 3) | a->low);
+        moveRR(c, BytesPerWord, a, b);
+        moveRR(c, 1, b, b);
+      } else {
+        rex(c);
+        c->code.append(0x0f);
+        c->code.append(0xbe);
+        c->code.append(0xc0 | (b->low << 3) | a->low);
+      }
       break;
 
     case 2:
@@ -1576,6 +1581,27 @@ unsignedShiftRightCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
+multiwordCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
+                 Assembler::Operand* bl, Assembler::Operand* bh,
+                 BinaryOperationType op)
+{
+  op(c, BytesPerWord, ah, bh);
+
+  // if the high order bits are equal, we compare the low order
+  // bits; otherwise, we jump past that comparison
+  c->code.append(0x0f);
+  c->code.append(0x85); // jne
+
+  unsigned comparisonOffset = c->code.length();
+  c->code.append4(0);
+
+  op(c, BytesPerWord, al, bl);
+
+  int32_t comparisonSize = c->code.length() - comparisonOffset - 4;
+  c->code.set(comparisonOffset, &comparisonSize, 4);
+}
+
+void
 compareRR(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Register* b)
 {
@@ -1583,15 +1609,7 @@ compareRR(Context* c, unsigned size, Assembler::Register* a,
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
-    compareRR(c, 4, &ah, &bh);
-
-    // if the high order bits are equal, we compare the low order
-    // bits; otherwise, we jump past that comparison
-    c->code.append(0x0f);
-    c->code.append(0x85); // jne
-    c->code.append4(2);
-
-    compareRR(c, 4, a, b);
+    multiwordCompare(c, a, &ah, b, &bh, CAST2(compareRR));
   } else {
     if (size == 8) rex(c);
     c->code.append(0x39);
@@ -1626,20 +1644,7 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
 
     Assembler::Register bh(b->high);
 
-    compareCR(c, 4, &ah, &bh);
-
-    // if the high order bits are equal, we compare the low order
-    // bits; otherwise, we jump past that comparison
-    c->code.append(0x0f);
-    c->code.append(0x85); // jne
-
-    unsigned comparisonOffset = c->code.length();
-    c->code.append4(0);
-
-    compareCR(c, 4, &al, b);
-
-    int32_t comparisonSize = c->code.length() - comparisonOffset - 4;
-    c->code.set(comparisonOffset, &comparisonSize, 4);
+    multiwordCompare(c, &al, &ah, b, &bh, CAST2(compareCR));
   } else {
     if (isInt32(v)) {
       if (size == 8) rex(c);
@@ -1676,20 +1681,7 @@ compareCM(Context* c, unsigned size, Assembler::Constant* a,
 
     Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
 
-    compareCM(c, 4, &ah, &bh);
-
-    // if the high order bits are equal, we compare the low order
-    // bits; otherwise, we jump past that comparison
-    c->code.append(0x0f);
-    c->code.append(0x85); // jne
-
-    unsigned comparisonOffset = c->code.length();
-    c->code.append4(0);
-
-    compareCM(c, 4, &al, b);
-
-    int32_t comparisonSize = c->code.length() - comparisonOffset - 4;
-    c->code.set(comparisonOffset, &comparisonSize, 4);
+    multiwordCompare(c, &al, &ah, b, &bh, CAST2(compareCM));
   } else {
     encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
 
@@ -1707,48 +1699,75 @@ void
 compareRM(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Memory* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
 
-  if (BytesPerWord == 8 and size == 4) {
-    move4To8RR(c, size, a, a);
+    multiwordCompare(c, a, &ah, b, &bh, CAST2(compareRM));
+  } else {
+    if (BytesPerWord == 8 and size == 4) {
+      move4To8RR(c, size, a, a);
+    }
+    encode(c, 0x39, a->low, b, true);
   }
-  encode(c, 0x39, a->low, b, true);
 }
 
 void
-compareMR(Context* c, unsigned size UNUSED, Assembler::Memory* a,
+compareMR(Context* c, unsigned size, Assembler::Memory* a,
           Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+    Assembler::Register bh(b->high);
 
-  if (BytesPerWord == 8 and size == 4) {
-    move4To8RR(c, size, b, b);
+    multiwordCompare(c, a, &ah, b, &bh, CAST2(compareMR));
+  } else {
+    if (BytesPerWord == 8 and size == 4) {
+      move4To8RR(c, size, b, b);
+    }
+    encode(c, 0x3b, b->low, a, true);
   }
-  encode(c, 0x3b, b->low, a, true);
 }
 
 void
-compareMM(Context* c, unsigned size UNUSED, Assembler::Memory* a,
+compareMM(Context* c, unsigned size, Assembler::Memory* a,
           Assembler::Memory* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+    Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
 
-  Assembler::Register tmp(c->client->acquireTemporary());
-  moveMR(c, size, a, &tmp);
-  compareRM(c, size, &tmp, b);
-  c->client->releaseTemporary(tmp.low);
+    multiwordCompare(c, a, &ah, b, &bh, CAST2(compareMM));
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveMR(c, size, a, &tmp);
+    compareRM(c, size, &tmp, b);
+    c->client->releaseTemporary(tmp.low);
+  }
 }
 
 void
-compareRC(Context* c, unsigned size UNUSED, Assembler::Register* a,
+compareRC(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Constant* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4); // todo
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
 
-  Assembler::Register tmp(c->client->acquireTemporary());
-  moveCR(c, size, b, &tmp);
-  compareRR(c, size, a, &tmp);
-  c->client->releaseTemporary(tmp.low);
+    int64_t v = b->value->value();
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant bl(&low);
+
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant bh(&high);
+
+    multiwordCompare(c, a, &ah, &bl, &bh, CAST2(compareRC));
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, size, b, &tmp);
+    compareRR(c, size, a, &tmp);
+    c->client->releaseTemporary(tmp.low);
+  }
 }
 
 void
