@@ -648,7 +648,23 @@ moveCM(Context* c, unsigned size, Assembler::Constant* a,
 {
   int64_t v = a->value->value();
 
-  if (BytesPerWord == 4 and size == 8) {
+  switch (size) {
+  case 1:
+    encode(c, 0xc6, 0, b, false);
+    c->code.append(a->value->value());
+    break;
+
+  case 2:
+    encode2(c, 0x66c7, 0, b, false);
+    c->code.append2(a->value->value());
+    break;
+
+  case 4:
+    encode(c, 0xc7, 0, b, true);
+    c->code.append4(a->value->value());
+    break;
+
+  case 8: {
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
     Assembler::Constant ah(&high);
 
@@ -659,28 +675,9 @@ moveCM(Context* c, unsigned size, Assembler::Constant* a,
 
     moveCM(c, 4, &al, b);
     moveCM(c, 4, &ah, &bh);
-  } else if (BytesPerWord == 8 and size == 4) {
-    encode(c, 0xc7, 0, b, false);
-    c->code.append4(a->value->value());
-  } else {
-    switch (size) {
-    case 1:
-      encode(c, 0xc6, 0, b, false);
-      c->code.append(a->value->value());
-      break;
+  } break;
 
-    case 2:
-      encode2(c, 0x66c7, 0, b, false);
-      c->code.append2(a->value->value());
-      break;
-
-    case BytesPerWord:
-      encode(c, 0xc7, 0, b, true);
-      c->code.append4(a->value->value());
-      break;
-
-    default: abort(c);
-    }
+  default: abort(c);
   }
 }
 
