@@ -2094,21 +2094,24 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(doubleToFloat)),
-          Compiler::Indirect, 0, 4, 1, frame->popLong()));
+          Compiler::Indirect, 0, 4, 2,
+          static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case d2i: {
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(doubleToInt)),
-          Compiler::Indirect, 0, 4, 1, frame->popLong()));
+          Compiler::Indirect, 0, 4, 2,
+          static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case d2l: {
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(doubleToLong)),
-          Compiler::Indirect, 0, 8, 1, frame->popLong()));
+          Compiler::Indirect, 0, 8, 2,
+          static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case dadd: {
@@ -2866,14 +2869,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushLong
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(longToDouble)),
-          Compiler::Indirect, 0, 8, 1, frame->popLong()));
+          Compiler::Indirect, 0, 8, 2,
+          static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case l2f: {
       frame->pushInt
         (c->call
          (c->constant(reinterpret_cast<intptr_t>(longToFloat)),
-          Compiler::Indirect, 0, 4, 1, frame->popLong()));
+          Compiler::Indirect, 0, 4, 2,
+          static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case l2i:
