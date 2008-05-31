@@ -4740,6 +4740,10 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
 
     if (t == t->m->rootThread) {
+      v->visit(&defaultThunk);
+      v->visit(&nativeThunk);
+      v->visit(&aioobThunk);
+      v->visit(&thunkTable);
       v->visit(&callTable);
       v->visit(&methodTree);
       v->visit(&methodTreeSentinal);
