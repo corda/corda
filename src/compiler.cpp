@@ -1342,6 +1342,19 @@ resetLocals(Context* c)
   c->locals = 0;
 }
 
+CodePromise*
+codePromise(Context* c, Event* e)
+{
+  return e->promises = new (c->zone->allocate(sizeof(CodePromise)))
+    CodePromise(c, e->promises);
+}
+
+CodePromise*
+codePromise(Context* c, int offset)
+{
+  return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
+}
+
 class CallEvent: public Event {
  public:
   CallEvent(Context* c, Value* address, unsigned flags,
@@ -1397,9 +1410,7 @@ class CallEvent: public Event {
     apply(c, type, BytesPerWord, address->source);
 
     if (traceHandler) {
-      traceHandler->handleTrace
-        (new (c->zone->allocate(sizeof(CodePromise)))
-         CodePromise(c, c->assembler->length()));
+      traceHandler->handleTrace(codePromise(c, c->assembler->length()));
     }
 
     cleanStack(c, stack, locals, reads);
@@ -2173,19 +2184,6 @@ appendLocal(Context* c, unsigned size, Local* local)
   }
 
   new (c->zone->allocate(sizeof(LocalEvent))) LocalEvent(c, size, local);
-}
-
-CodePromise*
-codePromise(Context* c, Event* e)
-{
-  return e->promises = new (c->zone->allocate(sizeof(CodePromise)))
-    CodePromise(c, e->promises);
-}
-
-CodePromise*
-codePromise(Context* c, int offset)
-{
-  return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
 }
 
 class BoundsCheckEvent: public Event {
