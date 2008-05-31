@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -438,6 +438,19 @@ makeRootTable(MyThread* t, Zone* zone, object method)
   return table;
 }
 
+enum Thunk {
+#define THUNK(s) s##Thunk,
+
+#include "thunks.cpp"
+
+#undef THUNK
+};
+
+const unsigned ThunkCount = gcIfNecessaryThunk + 1;
+
+intptr_t
+getThunk(MyThread* t, Thunk thunk);
+
 class Context {
  public:
   class MyProtector: public Thread::Protector {
@@ -459,11 +472,43 @@ class Context {
     Context* c;
   };
 
-  Context(MyThread* t, object method, void* indirection):
+  class MyClient: public Compiler::Client {
+   public:
+    MyClient(MyThread* t): t(t) { }
+
+    virtual intptr_t getThunk(UnaryOperation, unsigned) {
+      abort(t);
+    }
+
+    virtual intptr_t getThunk(BinaryOperation op, unsigned size) {
+      switch (op) {
+      case Divide:
+        if (size == 8) {
+          return ::getThunk(t, divideLongThunk);
+        }
+        break;
+
+      case Remainder:
+        if (size == 8) {
+          return ::getThunk(t, moduloLongThunk);
+        }
+        break;
+
+      default: break;
+      }
+
+      abort(t);
+    }
+
+    MyThread* t;
+  };
+
+  Context(MyThread* t, object method):
     thread(t),
     zone(t->m->system, t->m->heap, 16 * 1024),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
-    compiler(makeCompiler(t->m->system, assembler, &zone, indirection)),
+    client(t),
+    compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
     method(method),
     objectPool(0),
     traceLog(0),
@@ -478,6 +523,7 @@ class Context {
     thread(t),
     zone(t->m->system, t->m->heap, LikelyPageSizeInBytes),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
+    client(t),
     compiler(0),
     method(0),
     objectPool(0),
@@ -497,6 +543,7 @@ class Context {
   MyThread* thread;
   Zone zone;
   Assembler* assembler;
+  MyClient client;
   Compiler* compiler;
   object method;
   PoolElement* objectPool;
@@ -1323,13 +1370,13 @@ negateFloat(uint32_t a)
   return floatToBits(- bitsToFloat(a));
 }
 
-int64_t
+int64_t FORCE_ALIGN
 divideLong(int64_t b, int64_t a)
 {
   return a / b;
 }
 
-int64_t
+int64_t FORCE_ALIGN
 moduloLong(int64_t b, int64_t a)
 {
   return a % b;
@@ -1495,13 +1542,36 @@ makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
   }
 }
 
-void NO_RETURN FORCE_ALIGN
-throwArrayIndexOutOfBounds(MyThread* t, object array, int32_t index)
+unsigned
+traceSize(Thread* t)
 {
-  object message = makeString
-    (t, "array of length %d indexed at %d",
-     cast<uintptr_t>(array, BytesPerWord), index);
-  t->exception = makeArrayIndexOutOfBoundsException(t, message);
+  class Counter: public Processor::StackVisitor {
+   public:
+    Counter(): count(0) { }
+
+    virtual bool visit(Processor::StackWalker*) {
+      ++ count;
+      return true;
+    }
+
+    unsigned count;
+  } counter;
+
+  t->m->processor->walkStack(t, &counter);
+
+  return FixedSizeOfArray + (counter.count * ArrayElementSizeOfArray)
+    + (counter.count * FixedSizeOfTraceElement);
+}
+
+void NO_RETURN FORCE_ALIGN
+throwArrayIndexOutOfBounds(MyThread* t)
+{
+  ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t));
+  
+  t->tracing = true;
+  t->exception = makeArrayIndexOutOfBoundsException(t, 0);
+  t->tracing = false;
+
   unwind(t);
 }
 
@@ -1598,10 +1668,13 @@ emptyMethod(MyThread* t, object method)
 }
 
 object
-defaultCompiled(MyThread* t);
+defaultThunk(MyThread* t);
 
 object
-nativeCompiled(MyThread* t);
+nativeThunk(MyThread* t);
+
+object
+aioobThunk(MyThread* t);
 
 void
 compileDirectInvoke(MyThread* t, Frame* frame, object target)
@@ -1617,16 +1690,16 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
       result = c->call
         (c->constant
          (reinterpret_cast<intptr_t>
-          (&singletonBody(t, nativeCompiled(t), 0))),
+          (&singletonBody(t, nativeThunk(t), 0))),
          0,
          frame->trace(target, false),
          rSize,
          0);
-    } else if (methodCompiled(t, target) == defaultCompiled(t)) {
+    } else if (methodCompiled(t, target) == defaultThunk(t)) {
       result = c->call
         (c->constant
          (reinterpret_cast<intptr_t>
-          (&singletonBody(t, defaultCompiled(t), 0))),
+          (&singletonBody(t, defaultThunk(t), 0))),
          Compiler::Aligned,
          frame->trace(target, false),
          rSize,
@@ -1666,7 +1739,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     }
     
     c->call(c->constant(function),
-            Compiler::Indirect,
+            0,
             frame->trace(0, false),
             0,
             2, c->thread(), lock);
@@ -1692,14 +1765,14 @@ handleEntrance(MyThread* t, Frame* frame)
   }
 
   handleMonitorEvent
-    (t, frame, reinterpret_cast<intptr_t>(acquireMonitorForObject));
+    (t, frame, getThunk(t, acquireMonitorForObjectThunk));
 }
 
 void
 handleExit(MyThread* t, Frame* frame)
 {
   handleMonitorEvent
-    (t, frame, reinterpret_cast<intptr_t>(releaseMonitorForObject));
+    (t, frame, getThunk(t, releaseMonitorForObjectThunk));
 }
 
 void
@@ -1733,8 +1806,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       frame->pushObject();
       
       c->call
-        (c->constant(reinterpret_cast<intptr_t>(gcIfNecessary)),
-         Compiler::Indirect,
+        (c->constant(getThunk(t, gcIfNecessaryThunk)),
+         0,
          frame->trace(0, false),
          0,
          1, c->thread());
@@ -1753,46 +1826,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case iaload:
     case laload:
     case saload: {
-      if (CheckArrayBounds) {
-        Compiler::Operand* index = c->peek(4, 0);
-        Compiler::Operand* array = c->peek(BytesPerWord, 1);
-
-        Compiler::Operand* load = c->label();
-        Compiler::Operand* throw_ = 0;
-
-        if (c->isConstant(index)) {
-          expect(t, c->constantValue(index) >= 0);
-        } else {
-          throw_ = c->label();
-          c->cmp(4, c->constant(0), index);
-          c->jl(throw_);
-
-          index = c->peek(4, 0);
-          array = c->peek(BytesPerWord, 1);
-        }
-
-        c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
-        c->jg(load);
-
-        if (not c->isConstant(index)) {
-          c->mark(throw_);
-        }
-
-        index = c->peek(4, 0);
-        array = c->peek(BytesPerWord, 1);
-
-        c->call
-          (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
-           Compiler::NoReturn | Compiler::Indirect,
-           frame->trace(0, false),
-           0,
-           3, c->thread(), array, index);
-
-        c->mark(load);
-      }
-
       Compiler::Operand* index = frame->popInt();
       Compiler::Operand* array = frame->popObject();
+
+      if (CheckArrayBounds) {
+        c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
+                       (&singletonValue(t, aioobThunk(t), 0)));
+      }
 
       if (c->isConstant(index)) {
         unsigned i = c->constantValue(index);
@@ -1866,47 +1906,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case iastore:
     case lastore:
     case sastore: {
-      if (CheckArrayBounds) {
-        unsigned valueSize
-          = (instruction == dastore or instruction == lastore ? 2 : 1);
-
-        Compiler::Operand* index = c->peek(4, valueSize);
-        Compiler::Operand* array = c->peek(BytesPerWord, valueSize + 1);
-
-        Compiler::Operand* store = c->label();
-        Compiler::Operand* throw_ = 0;
-
-        if (c->isConstant(index)) {
-          expect(t, c->constantValue(index) >= 0);
-        } else {
-          throw_ = c->label();
-          c->cmp(4, c->constant(0), index);
-          c->jl(throw_);
-
-          index = c->peek(4, valueSize);
-          array = c->peek(BytesPerWord, valueSize + 1);
-        }
-
-        c->cmp(BytesPerWord, index, c->memory(array, ArrayLength, 0, 1));
-        c->jg(store);
-
-        if (not c->isConstant(index)) {
-          c->mark(throw_);
-        }
-
-        index = c->peek(4, valueSize);
-        array = c->peek(BytesPerWord, valueSize + 1);
-
-        c->call
-          (c->constant(reinterpret_cast<intptr_t>(throwArrayIndexOutOfBounds)),
-           Compiler::NoReturn | Compiler::Indirect,
-           frame->trace(0, false),
-           0,
-           3, c->thread(), array, index);
-
-        c->mark(store);
-      }
-
       Compiler::Operand* value;
       if (instruction == dastore or instruction == lastore) {
         value = frame->popLong();
@@ -1919,13 +1918,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* index = frame->popInt();
       Compiler::Operand* array = frame->popObject();
 
+      if (CheckArrayBounds) {
+        c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
+                       (&singletonValue(t, aioobThunk(t), 0)));
+      }
+
       if (c->isConstant(index)) {
         unsigned i = c->constantValue(index);
         switch (instruction) {
         case aastore: {
           c->call
-            (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
-             Compiler::Indirect,
+            (c->constant(getThunk(t, setMaybeNullThunk)),
+             0,
              frame->trace(0, false),
              0,
              4, c->thread(), array,
@@ -1956,8 +1960,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         switch (instruction) {
         case aastore: {
           c->call
-            (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
-             Compiler::Indirect,
+            (c->constant(getThunk(t, setMaybeNullThunk)),
+             0,
              frame->trace(0, false),
              0,
              4, c->thread(), array,
@@ -2022,8 +2026,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushObject
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(makeBlankObjectArray)),
-          Compiler::Indirect,
+         (c->constant(getThunk(t, makeBlankObjectArrayThunk)),
+          0,
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), frame->append(class_), length));
@@ -2062,8 +2066,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case athrow: {
       c->call
-        (c->constant(reinterpret_cast<intptr_t>(throw_)),
-         Compiler::NoReturn | Compiler::Indirect,
+        (c->constant(getThunk(t, throw_Thunk)),
+         Compiler::NoReturn,
          frame->trace(0, false),
          0,
          2, c->thread(), frame->popObject());
@@ -2083,8 +2087,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* instance = c->peek(BytesPerWord, 0);
 
       c->call
-        (c->constant(reinterpret_cast<intptr_t>(checkCast)),
-         Compiler::Indirect,
+        (c->constant(getThunk(t, checkCastThunk)),
+         0,
          frame->trace(0, false),
          0,
          3, c->thread(), frame->append(class_), instance);
@@ -2093,24 +2097,24 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case d2f: {
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(doubleToFloat)),
-          Compiler::Indirect, 0, 4, 2,
+         (c->constant(getThunk(t, doubleToFloatThunk)),
+          0, 0, 4, 2,
           static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case d2i: {
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(doubleToInt)),
-          Compiler::Indirect, 0, 4, 2,
+         (c->constant(getThunk(t, doubleToIntThunk)),
+          0, 0, 4, 2,
           static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case d2l: {
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(doubleToLong)),
-          Compiler::Indirect, 0, 8, 2,
+         (c->constant(getThunk(t, doubleToLongThunk)),
+          0, 0, 8, 2,
           static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
@@ -2120,8 +2124,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(addDouble)),
-          Compiler::Indirect, 0, 8, 4,
+         (c->constant(getThunk(t, addDoubleThunk)),
+          0, 0, 8, 4,
           static_cast<Compiler::Operand*>(0), a,
           static_cast<Compiler::Operand*>(0), b));
     } break;
@@ -2132,8 +2136,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(compareDoublesG)),
-          Compiler::Indirect, 0, 4, 4,
+         (c->constant(getThunk(t, compareDoublesGThunk)),
+          0, 0, 4, 4,
           static_cast<Compiler::Operand*>(0), a,
           static_cast<Compiler::Operand*>(0), b));
     } break;
@@ -2144,8 +2148,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(compareDoublesL)),
-          Compiler::Indirect, 0, 4, 4,
+         (c->constant(getThunk(t, compareDoublesLThunk)),
+          0, 0, 4, 4,
           static_cast<Compiler::Operand*>(0), a,
           static_cast<Compiler::Operand*>(0), b));
     } break;
@@ -2164,8 +2168,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(divideDouble)),
-          Compiler::Indirect, 0, 8, 4,
+         (c->constant(getThunk(t, divideDoubleThunk)),
+          0, 0, 8, 4,
           static_cast<Compiler::Operand*>(0), a,
           static_cast<Compiler::Operand*>(0), b));
     } break;
@@ -2176,8 +2180,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(multiplyDouble)),
-          Compiler::Indirect, 0, 8, 4,
+         (c->constant(getThunk(t, multiplyDoubleThunk)),
+          0, 0, 8, 4,
           static_cast<Compiler::Operand*>(0), a,
           static_cast<Compiler::Operand*>(0), b));
     } break;
@@ -2185,8 +2189,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case dneg: {
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(negateDouble)),
-          Compiler::Indirect, 0, 8, 2,
+         (c->constant(getThunk(t, negateDoubleThunk)),
+          0, 0, 8, 2,
           static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
@@ -2196,8 +2200,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(moduloDouble)),
-          Compiler::Indirect, 0, 8, 4,
+         (c->constant(getThunk(t, moduloDoubleThunk)),
+          0, 0, 8, 4,
           static_cast<Compiler::Operand*>(0), a,
           static_cast<Compiler::Operand*>(0), b));
     } break;
@@ -2208,8 +2212,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(subtractDouble)),
-          Compiler::Indirect, 0, 8, 4,
+         (c->constant(getThunk(t, subtractDoubleThunk)),
+          0, 0, 8, 4,
           static_cast<Compiler::Operand*>(0), a,
           static_cast<Compiler::Operand*>(0), b));
     } break;
@@ -2241,22 +2245,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case f2d: {
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(floatToDouble)),
-          Compiler::Indirect, 0, 8, 1, frame->popInt()));
+         (c->constant(getThunk(t, floatToDoubleThunk)),
+          0, 0, 8, 1, frame->popInt()));
     } break;
 
     case f2i: {
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(floatToInt)),
-          Compiler::Indirect, 0, 4, 1, frame->popInt()));
+         (c->constant(getThunk(t, floatToIntThunk)),
+          0, 0, 4, 1, frame->popInt()));
     } break;
 
     case f2l: {
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(floatToLong)),
-          Compiler::Indirect, 0, 8, 1, frame->popInt()));
+         (c->constant(getThunk(t, floatToLongThunk)),
+          0, 0, 8, 1, frame->popInt()));
     } break;
 
     case fadd: {
@@ -2265,8 +2269,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(addFloat)),
-          Compiler::Indirect, 0, 4, 2, a, b));
+         (c->constant(getThunk(t, addFloatThunk)),
+          0, 0, 4, 2, a, b));
     } break;
 
     case fcmpg: {
@@ -2275,8 +2279,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(compareFloatsG)),
-          Compiler::Indirect, 0, 4, 2, a, b));
+         (c->constant(getThunk(t, compareFloatsGThunk)),
+          0, 0, 4, 2, a, b));
     } break;
 
     case fcmpl: {
@@ -2285,8 +2289,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(compareFloatsL)),
-          Compiler::Indirect, 0, 4, 2, a, b));
+         (c->constant(getThunk(t, compareFloatsLThunk)),
+          0, 0, 4, 2, a, b));
     } break;
 
     case fconst_0:
@@ -2307,8 +2311,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(divideFloat)),
-          Compiler::Indirect, 0, 4, 2, a, b));
+         (c->constant(getThunk(t, divideFloatThunk)),
+          0, 0, 4, 2, a, b));
     } break;
 
     case fmul: {
@@ -2317,15 +2321,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(multiplyFloat)),
-          Compiler::Indirect, 0, 4, 2, a, b));
+         (c->constant(getThunk(t, multiplyFloatThunk)),
+          0, 0, 4, 2, a, b));
     } break;
 
     case fneg: {
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(negateFloat)),
-          Compiler::Indirect, 0, 4, 1, frame->popInt()));
+         (c->constant(getThunk(t, negateFloatThunk)),
+          0, 0, 4, 1, frame->popInt()));
     } break;
 
     case vm::frem: {
@@ -2334,8 +2338,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(moduloFloat)),
-          Compiler::Indirect, 0, 4, 2, a, b));
+         (c->constant(getThunk(t, moduloFloatThunk)),
+          0, 0, 4, 2, a, b));
     } break;
 
     case fsub: {
@@ -2344,8 +2348,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(subtractFloat)),
-          Compiler::Indirect, 0, 4, 2, a, b));
+         (c->constant(getThunk(t, subtractFloatThunk)),
+          0, 0, 4, 2, a, b));
     } break;
 
     case getfield:
@@ -2362,8 +2366,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
         {
           c->call
-            (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
-             Compiler::Indirect,
+            (c->constant(getThunk(t, tryInitClassThunk)),
+             0,
              frame->trace(0, false),
              0,
              2, c->thread(), frame->append(fieldClass(t, field)));
@@ -2441,15 +2445,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case i2d: {
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(intToDouble)),
-          Compiler::Indirect, 0, 8, 1, frame->popInt()));
+         (c->constant(getThunk(t, intToDoubleThunk)),
+          0, 0, 8, 1, frame->popInt()));
     } break;
 
     case i2f: {
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(intToFloat)),
-          Compiler::Indirect, 0, 4, 1, frame->popInt()));
+         (c->constant(getThunk(t, intToFloatThunk)),
+          0, 0, 4, 1, frame->popInt()));
     } break;
 
     case i2l:
@@ -2675,8 +2679,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(instanceOf)),
-          Compiler::Indirect, 0, 4,
+         (c->constant(getThunk(t, instanceOfThunk)),
+          0, 0, 4,
           3, c->thread(), frame->append(class_), frame->popObject()));
     } break;
 
@@ -2696,8 +2700,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* result = c->call
         (c->call
          (c->constant
-          (reinterpret_cast<intptr_t>(findInterfaceMethodFromInstance)),
-          Compiler::Indirect,
+          (getThunk(t, findInterfaceMethodFromInstanceThunk)),
+          0,
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), frame->append(target),
@@ -2868,16 +2872,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case l2d: {
       frame->pushLong
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(longToDouble)),
-          Compiler::Indirect, 0, 8, 2,
+         (c->constant(getThunk(t, longToDoubleThunk)),
+          0, 0, 8, 2,
           static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
     case l2f: {
       frame->pushInt
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(longToFloat)),
-          Compiler::Indirect, 0, 4, 2,
+         (c->constant(getThunk(t, longToFloatThunk)),
+          0, 0, 4, 2,
           static_cast<Compiler::Operand*>(0), frame->popLong()));
     } break;
 
@@ -3055,8 +3059,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       c->jmp
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(lookUpAddress)),
-          Compiler::Indirect, 0, BytesPerWord,
+         (c->constant(getThunk(t, lookUpAddressThunk)),
+          0, 0, BytesPerWord,
           4, key, start, c->constant(pairCount), default_));
 
       for (int32_t i = 0; i < pairCount; ++i) {
@@ -3142,15 +3146,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case monitorenter: {
       c->call
-        (c->constant(reinterpret_cast<intptr_t>(acquireMonitorForObject)),
-         Compiler::Indirect,
+        (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
+         0,
          frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
     } break;
 
     case monitorexit: {
       c->call
-        (c->constant(reinterpret_cast<intptr_t>(releaseMonitorForObject)),
-         Compiler::Indirect,
+        (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
+         0,
          frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
     } break;
 
@@ -3163,8 +3167,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       PROTECT(t, class_);
 
       Compiler::Operand* result = c->call
-        (c->constant(reinterpret_cast<intptr_t>(makeMultidimensionalArray)),
-         Compiler::Indirect,
+        (c->constant(getThunk(t, makeMultidimensionalArrayThunk)),
+         0,
          frame->trace(0, false),
          BytesPerWord,
          4, c->thread(), frame->append(class_), c->constant(dimensions),
@@ -3183,16 +3187,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
         frame->pushObject
           (c->call
-           (c->constant(reinterpret_cast<intptr_t>(makeNewWeakReference)),
-            Compiler::Indirect,
+           (c->constant(getThunk(t, makeNewWeakReferenceThunk)),
+            0,
             frame->trace(0, false),
             BytesPerWord,
             2, c->thread(), frame->append(class_)));
       } else {
         frame->pushObject
           (c->call
-           (c->constant(reinterpret_cast<intptr_t>(makeNew)),
-            Compiler::Indirect,
+           (c->constant(getThunk(t, makeNewThunk)),
+            0,
             frame->trace(0, false),
             BytesPerWord,
             2, c->thread(), frame->append(class_)));
@@ -3243,8 +3247,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushObject
         (c->call
-         (c->constant(reinterpret_cast<intptr_t>(makeBlankArray)),
-          Compiler::Indirect,
+         (c->constant(getThunk(t, makeBlankArrayThunk)),
+          0,
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
@@ -3275,8 +3279,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
         {
           c->call
-            (c->constant(reinterpret_cast<intptr_t>(tryInitClass)),
-             Compiler::Indirect,
+            (c->constant(getThunk(t, tryInitClassThunk)),
+             0,
              frame->trace(0, false),
              0,
              2, c->thread(), frame->append(fieldClass(t, field)));
@@ -3340,15 +3344,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       case ObjectField:
         if (instruction == putfield) {
           c->call
-            (c->constant(reinterpret_cast<intptr_t>(setMaybeNull)),
-             Compiler::Indirect,
+            (c->constant(getThunk(t, setMaybeNullThunk)),
+             0,
              frame->trace(0, false),
              0,
              4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
         } else {
           c->call
-            (c->constant(reinterpret_cast<intptr_t>(set)),
-             Compiler::Indirect, 0, 0,
+            (c->constant(getThunk(t, setThunk)),
+             0, 0, 0,
              4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
         }
         break;
@@ -3683,7 +3687,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
   return eventIndex;
 }
 
-Allocator*
+Zone*
 codeZone(MyThread* t);
 
 int
@@ -3720,6 +3724,14 @@ frameObjectMapSize(MyThread* t, object method, object map)
 {
   int size = frameSize(t, method);
   return ceiling(intArrayLength(t, map) * size, 32 + size);
+}
+
+unsigned
+codeSingletonSizeInBytes(MyThread*, unsigned codeSizeInBytes)
+{
+  unsigned count = ceiling(codeSizeInBytes, BytesPerWord);
+  unsigned size = count + singletonMaskSize(count);
+  return pad(SingletonBody + (size * BytesPerWord));
 }
 
 object
@@ -3860,7 +3872,7 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "<init>") == 0)
+       "compareTo") == 0)
   {
     asm("int3");
   }
@@ -4380,41 +4392,6 @@ popThread(MyThread*, Assembler* a)
   }
 }
 
-object
-compileDefault(MyThread* t, Assembler* a)
-{
-  saveStackAndBase(t, a);
-  pushThread(t, a);
-  
-  ResolvedPromise procPromise(reinterpret_cast<intptr_t>(compileMethod));
-  Assembler::Constant proc(&procPromise);
-  a->apply(Call, BytesPerWord, ConstantOperand, &proc);
-
-  popThread(t, a);
-
-  Assembler::Register result(a->returnLow());
-  a->apply(Jump, BytesPerWord, RegisterOperand, &result);
-
-  return finish(t, a, "default");
-}
-
-object
-compileNative(MyThread* t, Assembler* a)
-{
-  saveStackAndBase(t, a);
-  pushThread(t, a);
-
-  ResolvedPromise promise(reinterpret_cast<intptr_t>(invokeNative));
-  Assembler::Constant proc(&promise);
-  a->apply(Call, BytesPerWord, ConstantOperand, &proc);
-  
-  popThread(t, a);
-
-  a->apply(Return);
-
-  return finish(t, a, "native");
-}
-
 class ArgumentList {
  public:
   ArgumentList(Thread* t, uintptr_t* array, bool* objectMask, object this_,
@@ -4593,27 +4570,6 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   return r;
 }
 
-unsigned
-traceSize(Thread* t)
-{
-  class Counter: public Processor::StackVisitor {
-   public:
-    Counter(): count(0) { }
-
-    virtual bool visit(Processor::StackWalker*) {
-      ++ count;
-      return true;
-    }
-
-    unsigned count;
-  } counter;
-
-  t->m->processor->walkStack(t, &counter);
-
-  return FixedSizeOfArray + (counter.count * ArrayElementSizeOfArray)
-    + (counter.count * FixedSizeOfTraceElement);
-}
-
 class SegFaultHandler: public System::SignalHandler {
  public:
   SegFaultHandler(): m(0) { }
@@ -4686,14 +4642,13 @@ class MyProcessor: public Processor {
   MyProcessor(System* s, Allocator* allocator):
     s(s),
     allocator(allocator),
-    defaultCompiled(0),
-    nativeCompiled(0),
+    defaultThunk(0),
+    nativeThunk(0),
+    aioobThunk(0),
     callTable(0),
     callTableSize(0),
     methodTree(0),
     methodTreeSentinal(0),
-    indirectCaller(0),
-    indirectCallerSize(0),
     codeAllocator(s),
     codeZone(s, &codeAllocator, 64 * 1024)
   { }
@@ -4705,22 +4660,6 @@ class MyProcessor: public Processor {
       MyThread(m, javaThread, parent);
     t->init();
     return t;
-  }
-
-  object getDefaultCompiled(MyThread* t) {
-    if (defaultCompiled == 0) {
-      Context context(t);
-      defaultCompiled = compileDefault(t, context.assembler);
-    }
-    return defaultCompiled;
-  }
-
-  object getNativeCompiled(MyThread* t) {
-    if (nativeCompiled == 0) {
-      Context context(t);
-      nativeCompiled = compileNative(t, context.assembler);
-    }
-    return nativeCompiled;
   }
 
   virtual object
@@ -4739,7 +4678,7 @@ class MyProcessor: public Processor {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
        offset, name, spec, class_, code,
-       getDefaultCompiled(static_cast<MyThread*>(t)));
+       ::defaultThunk(static_cast<MyThread*>(t)));
   }
 
   virtual object
@@ -4770,7 +4709,7 @@ class MyProcessor: public Processor {
   initVtable(Thread* t, object c)
   {
     void* compiled = &singletonBody
-      (t, getDefaultCompiled(static_cast<MyThread*>(t)), 0);
+      (t, ::defaultThunk(static_cast<MyThread*>(t)), 0);
 
     for (unsigned i = 0; i < classLength(t, c); ++i) {
       classVtable(t, c, i) = compiled;
@@ -4801,8 +4740,6 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
 
     if (t == t->m->rootThread) {
-      v->visit(&defaultCompiled);
-      v->visit(&nativeCompiled);
       v->visit(&callTable);
       v->visit(&methodTree);
       v->visit(&methodTreeSentinal);
@@ -4970,13 +4907,13 @@ class MyProcessor: public Processor {
   virtual object getStackTrace(Thread* vmt, Thread* vmTarget) {
     MyThread* t = static_cast<MyThread*>(vmt);
     MyThread* target = static_cast<MyThread*>(vmTarget);
-
-    processor(t)->getDefaultCompiled(t);
-    processor(t)->getNativeCompiled(t);
+    MyProcessor* p = processor(t);
 
     class Visitor: public System::ThreadVisitor {
      public:
-      Visitor(MyThread* t, MyThread* target): t(t), target(target) { }
+      Visitor(MyThread* t, MyProcessor* p, MyThread* target):
+        t(t), p(p), target(target)
+      { }
 
       virtual void visit(void* ip, void* base, void* stack) {
         void* oldIp = target->ip;
@@ -4988,25 +4925,12 @@ class MyProcessor: public Processor {
           target->base = base;
           target->stack = stack;
         } else {
-          MyProcessor* p = processor(t);
+          uint8_t* thunkStart = reinterpret_cast<uint8_t*>
+            (&singletonValue(t, p->thunkTable, 0));
+          uint8_t* thunkEnd = thunkStart + (p->thunkSize * ThunkCount);
 
-          uint8_t* default_ = reinterpret_cast<uint8_t*>
-            (&singletonValue(t, p->defaultCompiled, 0));
-          unsigned defaultSize = singletonLength(t, p->defaultCompiled);
-          
-          uint8_t* native = reinterpret_cast<uint8_t*>
-            (&singletonValue(t, p->nativeCompiled, 0));
-          unsigned nativeSize = singletonLength(t, p->nativeCompiled);
-
-          if ((static_cast<uint8_t*>(ip) >= p->indirectCaller
-               and static_cast<uint8_t*>(ip)
-               < p->indirectCaller + p->indirectCallerSize)
-
-              or (static_cast<uint8_t*>(ip) >= default_
-                  and static_cast<uint8_t*>(ip) < default_ + defaultSize)
-
-              or (static_cast<uint8_t*>(ip) >= native
-                  and static_cast<uint8_t*>(ip) < native + nativeSize))
+          if (static_cast<uint8_t*>(ip) >= thunkStart
+              and static_cast<uint8_t*>(ip) < thunkEnd)
           {
             target->ip = *static_cast<void**>(stack);
             target->base = base;
@@ -5026,9 +4950,10 @@ class MyProcessor: public Processor {
       }
 
       MyThread* t;
+      MyProcessor* p;
       MyThread* target;
       object trace;
-    } visitor(t, target);
+    } visitor(t, p, target);
 
     t->m->system->visit(t->systemThread, target->systemThread, &visitor);
 
@@ -5043,18 +4968,158 @@ class MyProcessor: public Processor {
   
   System* s;
   Allocator* allocator;
-  object defaultCompiled;
-  object nativeCompiled;
+  object defaultThunk;
+  object nativeThunk;
+  object aioobThunk;
+  object thunkTable;
+  unsigned thunkSize;
   object callTable;
   unsigned callTableSize;
   object methodTree;
   object methodTreeSentinal;
-  uint8_t* indirectCaller;
-  unsigned indirectCallerSize;
   SegFaultHandler segFaultHandler;
   CodeAllocator codeAllocator;
   Zone codeZone;
 };
+
+intptr_t
+getThunk(MyThread* t, Thunk thunk)
+{
+  MyProcessor* p = processor(t);
+  
+  return reinterpret_cast<intptr_t>
+    (&singletonValue(t, p->thunkTable, (thunk * p->thunkSize) / BytesPerWord));
+}
+
+void
+compileThunks(MyThread* t, MyProcessor* p)
+{
+  class ThunkContext {
+   public:
+    class MyPromise: public Promise {
+     public:
+      MyPromise(): resolved_(false) { }
+
+      virtual int64_t value() {
+        return value_;
+      }
+    
+      virtual bool resolved() {
+        return resolved_;
+      }
+    
+      int64_t value_;
+      bool resolved_;
+    };
+
+    ThunkContext(MyThread* t): context(t) { }
+
+    Context context;
+    MyPromise promise;
+  };
+
+  ThunkContext defaultContext(t);
+
+  { Assembler* a = defaultContext.context.assembler;
+      
+    saveStackAndBase(t, a);
+    pushThread(t, a);
+  
+    defaultContext.promise.resolved_ = true;
+    defaultContext.promise.value_ = reinterpret_cast<intptr_t>(compileMethod);
+
+    Assembler::Constant proc(&(defaultContext.promise));
+    a->apply(Call, BytesPerWord, ConstantOperand, &proc);
+
+    popThread(t, a);
+
+    Assembler::Register result(a->returnLow());
+    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+  }
+
+  ThunkContext nativeContext(t);
+
+  { Assembler* a = nativeContext.context.assembler;
+      
+    saveStackAndBase(t, a);
+    pushThread(t, a);
+
+    nativeContext.promise.resolved_ = true;
+    nativeContext.promise.value_ = reinterpret_cast<intptr_t>(invokeNative);
+
+    Assembler::Constant proc(&(nativeContext.promise));
+    a->apply(Call, BytesPerWord, ConstantOperand, &proc);
+  
+    popThread(t, a);
+
+    a->apply(Return);
+  }
+
+  ThunkContext aioobContext(t);
+
+  { Assembler* a = aioobContext.context.assembler;
+      
+    saveStackAndBase(t, a);
+    pushThread(t, a);
+
+    aioobContext.promise.resolved_ = true;
+    aioobContext.promise.value_ = reinterpret_cast<intptr_t>
+      (throwArrayIndexOutOfBounds);
+
+    Assembler::Constant proc(&(aioobContext.promise));
+    a->apply(Jump, BytesPerWord, ConstantOperand, &proc);
+  }
+
+  ThunkContext tableContext(t);
+
+  { Assembler* a = tableContext.context.assembler;
+  
+    saveStackAndBase(t, a);
+
+    Assembler::Constant proc(&(tableContext.promise));
+    a->apply(Jump, BytesPerWord, ConstantOperand, &proc);
+  }
+
+  p->thunkSize = pad(tableContext.context.assembler->length());
+
+  expect(t, codeZone(t)->ensure
+         (codeSingletonSizeInBytes
+          (t, defaultContext.context.assembler->length())
+          + codeSingletonSizeInBytes
+          (t, nativeContext.context.assembler->length())
+          + codeSingletonSizeInBytes
+          (t, aioobContext.context.assembler->length())
+          + codeSingletonSizeInBytes
+          (t, p->thunkSize * ThunkCount)));
+
+  Zone::Segment* oldSegment = codeZone(t)->segment;
+
+  p->defaultThunk = finish(t, defaultContext.context.assembler, "default");
+  p->nativeThunk = finish(t, nativeContext.context.assembler, "native");
+  p->aioobThunk = finish(t, aioobContext.context.assembler, "aioob");
+
+  p->thunkTable = allocateCode(t, p->thunkSize * ThunkCount);
+  uint8_t* start = reinterpret_cast<uint8_t*>
+    (&singletonValue(t, p->thunkTable, 0));
+
+  if (Verbose) {
+    logCompile(start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
+    fprintf(stderr, "thunk size: %d\n", p->thunkSize);
+  }
+
+  tableContext.promise.resolved_ = true;
+
+#define THUNK(s)                                                \
+  tableContext.promise.value_ = reinterpret_cast<intptr_t>(s);  \
+  tableContext.context.assembler->writeTo(start);               \
+  start += p->thunkSize;
+
+#include "thunks.cpp"
+
+#undef THUNK
+
+  assert(t, oldSegment == codeZone(t)->segment);
+}
 
 MyProcessor*
 processor(MyThread* t)
@@ -5070,23 +5135,7 @@ processor(MyThread* t)
       set(t, p->methodTree, TreeNodeLeft, p->methodTreeSentinal);
       set(t, p->methodTree, TreeNodeRight, p->methodTreeSentinal);
 
-      Context context(t);
-      Assembler* a = context.assembler;
-
-      saveStackAndBase(t, a);
-
-      Assembler::Register proc(a->returnLow());
-      a->apply(Jump, BytesPerWord, RegisterOperand, &proc);
-
-      p->indirectCallerSize = a->length();
-      p->indirectCaller = static_cast<uint8_t*>
-        (p->codeZone.allocate(p->indirectCallerSize));
-      a->writeTo(p->indirectCaller);
-
-      if (Verbose) {
-        logCompile
-          (p->indirectCaller, p->indirectCallerSize, 0, "indirect caller", 0);
-      }
+      compileThunks(t, p);
 
       p->segFaultHandler.m = t->m;
       expect(t, t->m->system->success
@@ -5097,15 +5146,21 @@ processor(MyThread* t)
 }
 
 object
-defaultCompiled(MyThread* t)
+defaultThunk(MyThread* t)
 {
-  return processor(t)->getDefaultCompiled(t);
+  return processor(t)->defaultThunk;
 }
 
 object
-nativeCompiled(MyThread* t)
+nativeThunk(MyThread* t)
 {
-  return processor(t)->getNativeCompiled(t);
+  return processor(t)->nativeThunk;
+}
+
+object
+aioobThunk(MyThread* t)
+{
+  return processor(t)->aioobThunk;
 }
 
 void
@@ -5113,21 +5168,21 @@ compile(MyThread* t, object method)
 {
   MyProcessor* p = processor(t);
 
-  if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
+  if (methodCompiled(t, method) == p->defaultThunk) {
     PROTECT(t, method);
 
     ACQUIRE(t, t->m->classLock);
     
-    if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
+    if (methodCompiled(t, method) == p->defaultThunk) {
       initClass(t, methodClass(t, method));
       if (UNLIKELY(t->exception)) return;
 
-      if (methodCompiled(t, method) == p->getDefaultCompiled(t)) {
+      if (methodCompiled(t, method) == p->defaultThunk) {
         object compiled;
         if (methodFlags(t, method) & ACC_NATIVE) {
-          compiled = p->getNativeCompiled(t);
+          compiled = p->nativeThunk;
         } else {
-          Context context(t, method, p->indirectCaller);
+          Context context(t, method);
           compiled = compile(t, &context);
           if (UNLIKELY(t->exception)) return;
         }
@@ -5252,7 +5307,7 @@ methodTreeSentinal(MyThread* t)
   return processor(t)->methodTreeSentinal;
 }
 
-Allocator*
+Zone*
 codeZone(MyThread* t) {
   return &(processor(t)->codeZone);
 }

@@ -35,18 +35,6 @@ enum {
   r15 = 15,
 };
 
-int64_t FORCE_ALIGN
-divideLong(int64_t a, int64_t b)
-{
-  return a / b;
-}
-
-int64_t FORCE_ALIGN
-moduloLong(int64_t a, int64_t b)
-{
-  return a % b;
-}
-
 inline bool
 isInt8(intptr_t v)
 {
@@ -364,16 +352,23 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, size == BytesPerWord);
 
+  if (a->low & 8) rex(c, 0x40, a->low);
   c->code.append(0xff);
-  c->code.append(0xe0 | a->low);
+  c->code.append(0xe0 | (a->low & 7));
 }
 
 void
-jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+jumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
-  unconditional(c, 0xe9, a);
+  if (BytesPerWord == 8) {
+    Assembler::Register r(r10);
+    moveCR(c, size, a, &r);
+    jumpR(c, size, &r);
+  } else {
+    unconditional(c, 0xe9, a);
+  }
 }
 
 void
@@ -660,7 +655,7 @@ moveCM(Context* c, unsigned size, Assembler::Constant* a,
     break;
 
   case 4:
-    encode(c, 0xc7, 0, b, true);
+    encode(c, 0xc7, 0, b, false);
     c->code.append4(a->value->value());
     break;
 
@@ -1940,7 +1935,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
-                    uint64_t* registerMask, uintptr_t* procedure)
+                    uint64_t* registerMask, bool* thunk)
   {
     if (op == Negate and BytesPerWord == 4 and size == 8) {
       *typeMask = 1 << RegisterOperand;
@@ -1950,12 +1945,12 @@ class MyAssembler: public Assembler {
       *typeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
       *registerMask = ~static_cast<uint64_t>(0);
     }
-    *procedure = 0;
+    *thunk = false;
   }
 
   virtual void plan(BinaryOperation op, unsigned size, uint8_t* aTypeMask,
                     uint64_t* aRegisterMask, uint8_t* bTypeMask,
-                    uint64_t* bRegisterMask, uintptr_t* procedure)
+                    uint64_t* bRegisterMask, bool* thunk)
   {
     *aTypeMask = ~0;
     *aRegisterMask = ~static_cast<uint64_t>(0);
@@ -1963,7 +1958,7 @@ class MyAssembler: public Assembler {
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
     *bRegisterMask = ~static_cast<uint64_t>(0);
 
-    *procedure = 0;
+    *thunk = false;
 
     switch (op) {
     case Compare:
@@ -2004,7 +1999,7 @@ class MyAssembler: public Assembler {
     case Divide:
       if (BytesPerWord == 4 and size == 8) {
         *bTypeMask = ~0;
-        *procedure = reinterpret_cast<uintptr_t>(divideLong);        
+        *thunk = true;        
       } else {
         *aRegisterMask = ~((1 << rax) | (1 << rdx));
         *bRegisterMask = 1 << rax;      
@@ -2014,7 +2009,7 @@ class MyAssembler: public Assembler {
     case Remainder:
       if (BytesPerWord == 4 and size == 8) {
         *bTypeMask = ~0;
-        *procedure = reinterpret_cast<uintptr_t>(moduloLong);
+        *thunk = true;
       } else {
         *aRegisterMask = ~((1 << rax) | (1 << rdx));
         *bRegisterMask = 1 << rax;      

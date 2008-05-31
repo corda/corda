@@ -159,11 +159,11 @@ class Assembler {
   virtual int argumentRegister(unsigned index) = 0;
 
   virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
-                    uint64_t* registerMask, uintptr_t* procedure) = 0;
+                    uint64_t* registerMask, bool* thunk) = 0;
 
   virtual void plan(BinaryOperation op, unsigned size, uint8_t* aTypeMask,
                     uint64_t* aRegisterMask, uint8_t* bTypeMask,
-                    uint64_t* bRegisterMask, uintptr_t* procedure) = 0;
+                    uint64_t* bRegisterMask, bool* thunk) = 0;
 
   virtual void apply(Operation op) = 0;
 

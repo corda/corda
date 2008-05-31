@@ -19,9 +19,16 @@ namespace vm {
 
 class Compiler {
  public:
+  class Client {
+   public:
+    virtual ~Client() { }
+
+    virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
+    virtual intptr_t getThunk(BinaryOperation op, unsigned size) = 0;
+  };
+  
   static const unsigned Aligned  = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
-  static const unsigned Indirect = 1 << 2;
 
   class Operand { };
 
@@ -80,6 +87,9 @@ class Compiler {
   virtual void storeLocal(unsigned size, Operand* src, unsigned index) = 0;
   virtual Operand* loadLocal(unsigned size, unsigned index) = 0;
 
+  virtual void checkBounds(Operand* object, unsigned lengthOffset,
+                           Operand* index, intptr_t handler) = 0;
+
   virtual void store(unsigned size, Operand* src, Operand* dst) = 0;
   virtual Operand* load(unsigned size, Operand* src) = 0;
   virtual Operand* loadz(unsigned size, Operand* src) = 0;
@@ -114,7 +124,7 @@ class Compiler {
 
 Compiler*
 makeCompiler(System* system, Assembler* assembler, Zone* zone,
-             void* indirection);
+             Compiler::Client* client);
 
 } // namespace vm
 

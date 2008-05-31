@@ -184,11 +184,12 @@ class Value: public Compiler::Operand {
 
 class Context {
  public:
-  Context(System* system, Assembler* assembler, Zone* zone, void* indirection):
+  Context(System* system, Assembler* assembler, Zone* zone,
+          Compiler::Client* client):
     system(system),
     assembler(assembler),
     zone(zone),
-    indirection(indirection),
+    client(client),
     logicalIp(-1),
     state(new (zone->allocate(sizeof(State))) State(0, 0)),
     logicalCode(0),
@@ -220,7 +221,7 @@ class Context {
   System* system;
   Assembler* assembler;
   Zone* zone;
-  void* indirection;
+  Compiler::Client* client;
   int logicalIp;
   State* state;
   LogicalInstruction* logicalCode;
@@ -884,6 +885,13 @@ anyRegisterSite(Context* c)
   return virtualSite(c, 0, 1 << RegisterOperand, ~static_cast<uint64_t>(0));
 }
 
+VirtualSite*
+registerOrConstantSite(Context* c)
+{
+  return virtualSite(c, 0, (1 << RegisterOperand) | (1 << ConstantOperand),
+                     ~static_cast<uint64_t>(0));
+}
+
 Site*
 targetOrRegister(Context* c, Value* v)
 {
@@ -1366,14 +1374,8 @@ class CallEvent: public Event {
       s = s->next;
     }
 
-    if (flags & Compiler::Indirect) {
-      int r = c->assembler->returnLow();
-      addRead(c, address, BytesPerWord, fixedRegisterSite(c, r));
-      mask &= ~(1 << r);
-    } else {
-      addRead(c, address, BytesPerWord, virtualSite
-              (c, 0, ~0, (static_cast<uint64_t>(mask) << 32) | mask));
-    }
+    addRead(c, address, BytesPerWord, virtualSite
+            (c, 0, ~0, (static_cast<uint64_t>(mask) << 32) | mask));
 
     for (Stack* s = stack; s; s = s->next) {
       s->pushEvent->active = true;
@@ -1392,12 +1394,7 @@ class CallEvent: public Event {
     pushNow(c, stack);
     
     UnaryOperation type = ((flags & Compiler::Aligned) ? AlignedCall : Call);
-    if (flags & Compiler::Indirect) {
-      apply(c, type, BytesPerWord,
-            constantSite(c, reinterpret_cast<intptr_t>(c->indirection)));
-    } else {
-      apply(c, type, BytesPerWord, address->source);
-    }
+    apply(c, type, BytesPerWord, address->source);
 
     if (traceHandler) {
       traceHandler->handleTrace
@@ -1575,14 +1572,14 @@ appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
 
   VirtualSite* srcTarget = virtualSite(c, dst);
   VirtualSite* dstTarget = virtualSite(c);
-  uintptr_t procedure;
+  bool thunk;
 
   c->assembler->plan(type, size,
                      &(srcTarget->typeMask), &(srcTarget->registerMask),
                      &(dstTarget->typeMask), &(dstTarget->registerMask),
-                     &procedure);
+                     &thunk);
 
-  assert(c, procedure == 0); // todo
+  assert(c, not thunk); // todo
 
   new (c->zone->allocate(sizeof(MoveEvent)))
     MoveEvent(c, type, size, src, dst, srcTarget, dstTarget);
@@ -1619,14 +1616,14 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
 {
   VirtualSite* firstTarget = virtualSite(c);
   VirtualSite* secondTarget = virtualSite(c);
-  uintptr_t procedure;
+  bool thunk;
 
   c->assembler->plan(Compare, size,
                      &(firstTarget->typeMask), &(firstTarget->registerMask),
                      &(secondTarget->typeMask), &(secondTarget->registerMask),
-                     &procedure);
+                     &thunk);
 
-  assert(c, procedure == 0); // todo
+  assert(c, not thunk); // todo
 
   if (DebugAppend) {
     fprintf(stderr, "appendCompare\n");
@@ -1723,14 +1720,14 @@ appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
 {
   VirtualSite* firstTarget = virtualSite(c);
   VirtualSite* secondTarget = virtualSite(c, result);
-  uintptr_t procedure;
+  bool thunk;
 
   c->assembler->plan(type, size,
                      &(firstTarget->typeMask), &(firstTarget->registerMask),
                      &(secondTarget->typeMask), &(secondTarget->registerMask),
-                     &procedure);
+                     &thunk);
 
-  if (procedure) {
+  if (thunk) {
     secondTarget->value = 0;
 
     Stack* oldStack = c->state->stack;
@@ -1741,8 +1738,8 @@ appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
     Stack* argumentStack = c->state->stack;
     c->state->stack = oldStack;
 
-    appendCall(c, value(c, constantSite(c, procedure)), Compiler::Indirect,
-               0, result, size, argumentStack, 2);
+    appendCall(c, value(c, constantSite(c, c->client->getThunk(type, size))),
+               0, 0, result, size, argumentStack, 2);
   } else {
     if (DebugAppend) {
       fprintf(stderr, "appendCombine\n");
@@ -1798,12 +1795,12 @@ appendTranslate(Context* c, UnaryOperation type, unsigned size, Value* value,
   }
 
   VirtualSite* target = virtualSite(c, result);
-  uintptr_t procedure;
+  bool thunk;
 
   c->assembler->plan
-    (type, size, &(target->typeMask), &(target->registerMask), &procedure);
+    (type, size, &(target->typeMask), &(target->registerMask), &thunk);
 
-  assert(c, procedure == 0); // todo
+  assert(c, not thunk); // todo
 
   target->typeMask &= ~(1 << MemoryOperand);
 
@@ -2178,6 +2175,105 @@ appendLocal(Context* c, unsigned size, Local* local)
   new (c->zone->allocate(sizeof(LocalEvent))) LocalEvent(c, size, local);
 }
 
+CodePromise*
+codePromise(Context* c, Event* e)
+{
+  return e->promises = new (c->zone->allocate(sizeof(CodePromise)))
+    CodePromise(c, e->promises);
+}
+
+CodePromise*
+codePromise(Context* c, int offset)
+{
+  return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
+}
+
+class BoundsCheckEvent: public Event {
+ public:
+  BoundsCheckEvent(Context* c, Value* object, unsigned lengthOffset,
+                   Value* index, intptr_t handler):
+    Event(c), object(object), lengthOffset(lengthOffset), index(index),
+    handler(handler)
+  {
+    addRead(c, object, BytesPerWord, anyRegisterSite(c));
+    addRead(c, index, BytesPerWord, registerOrConstantSite(c));
+  }
+
+  virtual void compile(Context* c) {
+    if (DebugCompile) {
+      fprintf(stderr, "BoundsCheckEvent.compile\n");
+    }
+
+    Assembler* a = c->assembler;
+
+    ConstantSite* constant = 0;
+    for (Site* s = index->sites; s; s = s->next) {
+      if (s->type(c) == ConstantOperand) {
+        constant = static_cast<ConstantSite*>(s);
+        break;
+      }
+    }
+
+    CodePromise* nextPromise = codePromise(c, -1);
+    CodePromise* outOfBoundsPromise;
+
+    if (constant) {
+      expect(c, constant->value.value->value() >= 0);      
+    } else {
+      outOfBoundsPromise = codePromise(c, -1);
+
+      apply(c, Compare, 4, constantSite(c, resolved(c, 0)), index->source);
+
+      Assembler::Constant outOfBoundsConstant(outOfBoundsPromise);
+      a->apply
+        (JumpIfLess, BytesPerWord, ConstantOperand, &outOfBoundsConstant);
+    }
+
+    assert(c, object->source->type(c) == RegisterOperand);
+    int base = static_cast<RegisterSite*>(object->source)->register_.low;
+
+    Site* length = memorySite(c, base, lengthOffset);
+    length->acquire(c, 0, 0, 0);
+
+    apply(c, Compare, BytesPerWord, index->source, length);
+
+    length->release(c);
+
+    Assembler::Constant nextConstant(nextPromise);
+    a->apply(JumpIfGreater, BytesPerWord, ConstantOperand, &nextConstant);
+
+    if (constant == 0) {
+      outOfBoundsPromise->offset = a->length();
+    }
+
+    ResolvedPromise handlerPromise(handler);
+    Assembler::Constant handlerConstant(&handlerPromise);
+    a->apply(Call, BytesPerWord, ConstantOperand, &handlerConstant);
+
+    nextPromise->offset = a->length();
+
+    nextRead(c, object);
+    nextRead(c, index);
+  }
+
+  Value* object;
+  unsigned lengthOffset;
+  Value* index;
+  intptr_t handler;
+};
+
+void
+appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
+                  Value* index, intptr_t handler)
+{
+  if (DebugAppend) {
+    fprintf(stderr, "appendLocal\n");
+  }
+
+  new (c->zone->allocate(sizeof(BoundsCheckEvent))) BoundsCheckEvent
+    (c, object, lengthOffset, index, handler);
+}
+
 Site*
 readSource(Context* c, Stack* stack, Read* r)
 {
@@ -2420,8 +2516,9 @@ class Client: public Assembler::Client {
 
 class MyCompiler: public Compiler {
  public:
-  MyCompiler(System* s, Assembler* assembler, Zone* zone, void* indirection):
-    c(s, assembler, zone, indirection), client(&c)
+  MyCompiler(System* s, Assembler* assembler, Zone* zone,
+             Compiler::Client* compilerClient):
+    c(s, assembler, zone, compilerClient), client(&c)
   {
     assembler->setClient(&client);
   }
@@ -2569,9 +2666,7 @@ class MyCompiler: public Compiler {
   }
 
   Promise* machineIp() {
-    Event* e = c.logicalCode[c.logicalIp].lastEvent;
-    return e->promises = new (c.zone->allocate(sizeof(CodePromise)))
-      CodePromise(&c, e->promises);
+    return codePromise(&c, c.logicalCode[c.logicalIp].lastEvent);
   }
 
   virtual void mark(Operand* label) {
@@ -2708,6 +2803,13 @@ class MyCompiler: public Compiler {
     Value* v = value(&c);
     addLocal(&c, size, index, v);
     return v;
+  }
+
+  virtual void checkBounds(Operand* object, unsigned lengthOffset,
+                           Operand* index, intptr_t handler)
+  {
+    appendBoundsCheck(&c, static_cast<Value*>(object),
+                      lengthOffset, static_cast<Value*>(index), handler);
   }
 
   virtual void store(unsigned size, Operand* src, Operand* dst) {
@@ -2876,7 +2978,7 @@ class MyCompiler: public Compiler {
   }
 
   Context c;
-  Client client;
+  ::Client client;
 };
 
 } // namespace
@@ -2885,10 +2987,10 @@ namespace vm {
 
 Compiler*
 makeCompiler(System* system, Assembler* assembler, Zone* zone,
-             void* indirection)
+             Compiler::Client* client)
 {
   return new (zone->allocate(sizeof(MyCompiler)))
-    MyCompiler(system, assembler, zone, indirection);
+    MyCompiler(system, assembler, zone, client);
 }
 
 } // namespace vm
