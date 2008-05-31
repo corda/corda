@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = true;
+const bool Verbose = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -5096,8 +5096,6 @@ compileThunks(MyThread* t, MyProcessor* p)
           + codeSingletonSizeInBytes
           (t, p->thunkSize * ThunkCount)));
 
-  Zone::Segment* oldSegment = codeZone(t)->segment;
-
   p->defaultThunk = finish(t, defaultContext.context.assembler, "default");
   p->nativeThunk = finish(t, nativeContext.context.assembler, "native");
   p->aioobThunk = finish(t, aioobContext.context.assembler, "aioob");
@@ -5121,8 +5119,6 @@ compileThunks(MyThread* t, MyProcessor* p)
 #include "thunks.cpp"
 
 #undef THUNK
-
-  assert(t, oldSegment == codeZone(t)->segment);
 }
 
 MyProcessor*

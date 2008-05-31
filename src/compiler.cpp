@@ -2213,7 +2213,7 @@ class BoundsCheckEvent: public Event {
     }
 
     CodePromise* nextPromise = codePromise(c, -1);
-    CodePromise* outOfBoundsPromise;
+    CodePromise* outOfBoundsPromise = 0;
 
     if (constant) {
       expect(c, constant->value.value->value() >= 0);      
