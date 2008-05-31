@@ -5071,7 +5071,7 @@ compileThunks(MyThread* t, MyProcessor* p)
       (throwArrayIndexOutOfBounds);
 
     Assembler::Constant proc(&(aioobContext.promise));
-    a->apply(Jump, BytesPerWord, ConstantOperand, &proc);
+    a->apply(Call, BytesPerWord, ConstantOperand, &proc);
   }
 
   ThunkContext tableContext(t);

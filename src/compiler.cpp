@@ -1743,8 +1743,8 @@ appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
 
     Stack* oldStack = c->state->stack;
 
-    ::push(c, size, first);
     ::push(c, size, second);
+    ::push(c, size, first);
 
     Stack* argumentStack = c->state->stack;
     c->state->stack = oldStack;
@@ -2244,8 +2244,7 @@ class BoundsCheckEvent: public Event {
       outOfBoundsPromise->offset = a->length();
     }
 
-    ResolvedPromise handlerPromise(handler);
-    Assembler::Constant handlerConstant(&handlerPromise);
+    Assembler::Constant handlerConstant(resolved(c, handler));
     a->apply(Call, BytesPerWord, ConstantOperand, &handlerConstant);
 
     nextPromise->offset = a->length();
