@@ -2264,7 +2264,7 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
                   Value* index, intptr_t handler)
 {
   if (DebugAppend) {
-    fprintf(stderr, "appendLocal\n");
+    fprintf(stderr, "appendBoundsCheck\n");
   }
 
   new (c->zone->allocate(sizeof(BoundsCheckEvent))) BoundsCheckEvent
