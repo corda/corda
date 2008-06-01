@@ -7,6 +7,12 @@
 
 {
    <insert a suppression name here>
+   Memcheck:Cond
+   obj:/lib/ld-2.6.so
+}
+
+{
+   <insert a suppression name here>
    Memcheck:Addr4
    obj:/lib/ld-2.3.6.so
 }

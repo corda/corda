@@ -43,7 +43,7 @@ ar = ar
 ranlib = ranlib
 objcopy = objcopy
 vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
-vg += --leak-check=full
+vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
 javac = javac
 jar = jar
@@ -164,7 +164,9 @@ vm-depends = \
 	$(src)/jnienv.h \
 	$(src)/machine.h \
 	$(src)/util.h \
-	$(src)/zone.h
+	$(src)/zone.h \
+	$(src)/assembler.h \
+	$(src)/compiler.h
 
 vm-sources = \
 	$(src)/$(system).cpp \
@@ -175,7 +177,8 @@ vm-sources = \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
-	$(src)/process.cpp
+	$(src)/process.cpp \
+	$(src)/$(asm).cpp
 
 vm-asm-sources = $(src)/$(asm).S
 
