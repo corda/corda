@@ -66,34 +66,156 @@ public class Misc {
     return super.toString();
   }
 
+  private static int zap() {
+    return 42;
+  }
+
+  private static int zip() {
+    return 5 + zap();
+  }
+
+  private static int zup() {
+    return zap() + 5;
+  }
+
+  private static class Foo {
+    public int a;
+    public int b;
+    public int c;
+    public int[] array;
+  }
+
+  private static int bar(int a, int b, int c) {
+    return a + b + c;
+  }
+
+  private static long roundUp(long a, long b) {
+    a += b - 1L;
+    return a - (a % b);
+  }
+
   public static void main(String[] args) {
+    expect(roundUp(156, 2) == 156);
+
+    { Foo foo = new Foo();
+      int x = foo.a + foo.b + foo.c;
+      bar(foo.a, foo.b, foo.c);
+    }
+
+    { int get_buffer = 2144642881;
+      int bits_left = 30;
+      int l = 9;
+      int code = (((get_buffer >> (bits_left -= (l)))) & ((1<<(l))-1));
+      expect(code == 510);
+    }
+
+    { int width = 8;
+      int height = 8;
+      int depth = 24;
+      int scanlinePad = 4;
+
+      int bytesPerLine = (((width * depth + 7) / 8) + (scanlinePad - 1))
+        / scanlinePad * scanlinePad;
+      expect(bytesPerLine == 24);
+    }
+
+    { int a = -5;
+      int b = 2;
+      expect(a >> b == -5 >> 2);
+      expect(a >>> b == -5 >>> 2);
+      expect(a << b == -5 << 2);
+      expect(a + b == -5 + 2);
+      expect(a - b == -5 - 2);
+      expect(a * b == -5 * 2);
+      expect(a / b == -5 / 2);
+      expect(a % b == -5 % 2);
+      expect((a & b) == (-5 & 2));
+      expect((a | b) == (-5 | 2));
+      expect((a ^ b) == (-5 ^ 2));
+      expect(-a == 5);
+      expect(~a == ~-5);
+
+      a = 5;
+      b = 2;
+      expect(a >> b == 5 >> 2);
+      expect(a >>> b == 5 >>> 2);
+      expect(a << b == 5 << 2);
+      expect(a + b == 5 + 2);
+      expect(a - b == 5 - 2);
+      expect(a * b == 5 * 2);
+      expect(a / b == 5 / 2);
+      expect(a % b == 5 % 2);
+      expect((a & b) == (5 & 2));
+      expect((a | b) == (5 | 2));
+      expect((a ^ b) == (5 ^ 2));
+      expect(-a == -5);
+      expect(~a == ~5);
+    }
+
+    { long a = -5;
+      long b = 2;
+      expect(a >> b == -5L >> 2);
+      expect(a >>> b == -5L >>> 2);
+      expect(a << b == -5L << 2);
+      expect(a + b == -5L + 2L);
+      expect(a - b == -5L - 2L);
+      expect(a * b == -5L * 2L);
+      expect(a / b == -5L / 2L);
+      expect(a % b == -5L % 2L);
+      expect((a & b) == (-5L & 2L));
+      expect((a | b) == (-5L | 2L));
+      expect((a ^ b) == (-5L ^ 2L));
+      expect(-a == 5L);
+      expect(~a == ~-5L);
+
+      a = 5;
+      b = 2;
+      expect(a >> b == 5L >> 2);
+      expect(a >>> b == 5L >>> 2);
+      expect(a << b == 5L << 2);
+      expect(a + b == 5L + 2L);
+      expect(a - b == 5L - 2L);
+      expect(a * b == 5L * 2L);
+      expect(a / b == 5L / 2L);
+      expect(a % b == 5L % 2L);
+      expect((a & b) == (5L & 2L));
+      expect((a | b) == (5L | 2L));
+      expect((a ^ b) == (5L ^ 2L));
+      expect(-a == -5L);
+      expect(~a == ~5L);
+    }
+
     byte2 = 0;
     expect(byte2 == 0);
 
-    Misc m = new Misc();
-    m.toString();
-
     expect(Long.valueOf(231L) == 231L);
 
-    long x = 231;
-    expect((x >> 32) == 0);
-    expect((x >>> 32) == 0);
-    expect((x << 32) == 992137445376L);
+    { long x = 231;
+      expect((x >> 32) == 0);
+      expect((x >>> 32) == 0);
+      expect((x << 32) == 992137445376L);
 
-    long y = -231;
-    expect((y >> 32) == 0xffffffffffffffffL);
-    expect((y >>> 32) == 0xffffffffL);
+      int shift = 32;
+      expect((x >> shift) == 0);
+      expect((x >>> shift) == 0);
+      expect((x << shift) == 992137445376L);
 
-    byte[] array = new byte[8];
-    putLong(231, array, 0);
-    expect((array[0] & 0xff) == 0);
-    expect((array[1] & 0xff) == 0);
-    expect((array[2] & 0xff) == 0);
-    expect((array[3] & 0xff) == 0);
-    expect((array[4] & 0xff) == 0);
-    expect((array[5] & 0xff) == 0);
-    expect((array[6] & 0xff) == 0);
-    expect((array[7] & 0xff) == 231);
+      long y = -231;
+      expect((y >> 32) == 0xffffffffffffffffL);
+      expect((y >>> 32) == 0xffffffffL);
+    }
+
+    { byte[] array = new byte[8];
+      putLong(231, array, 0);
+      expect((array[0] & 0xff) == 0);
+      expect((array[1] & 0xff) == 0);
+      expect((array[2] & 0xff) == 0);
+      expect((array[3] & 0xff) == 0);
+      expect((array[4] & 0xff) == 0);
+      expect((array[5] & 0xff) == 0);
+      expect((array[6] & 0xff) == 0);
+      expect((array[7] & 0xff) == 231);
+    }
 
     java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8);
     buffer.putLong(231);
@@ -104,32 +226,103 @@ public class Misc {
 
     ClassLoader.getSystemClassLoader().toString();
 
-    int a = 2;
-    int b = 2;
-    int c = a + b;
-
-    String s = "hello";
-    m.foo(s);
-    m.bar(s);
-    baz(s);
-
-    m.sync();
-    syncStatic(false);
-    try {
-      syncStatic(true);
-    } catch (RuntimeException e) {
-      e.printStackTrace();
+    { int a = 2;
+      int b = 2;
+      int c = a + b;
     }
 
-    int d = alpha;
-    beta = 42;
-    alpha = 43;
-    int e = beta;
-    int f = alpha;
-    m.gamma = 44;
+    { Misc m = new Misc();
+      m.toString();
 
-    expect(beta == 42);
-    expect(alpha == 43);
-    expect(m.gamma == 44);
+      expect(m.time == 0xffffffffffffffffL);
+      long t = m.time;
+      expect(t == 0xffffffffffffffffL);
+
+      String s = "hello";
+      m.foo(s);
+      m.bar(s);
+      baz(s);
+
+      m.sync();
+      syncStatic(false);
+      try {
+        syncStatic(true);
+      } catch (RuntimeException e) {
+        e.printStackTrace();
+      }
+
+      int d = alpha;
+      beta = 42;
+      alpha = 43;
+      int e = beta;
+      int f = alpha;
+      m.gamma = 44;
+
+      expect(beta == 42);
+      expect(alpha == 43);
+      expect(m.gamma == 44);
+    }
+
+    expect(zip() == 47);
+    expect(zup() == 47);
+
+    { int[] array = new int[0];
+      Exception exception = null;
+      try {
+        int x = array[0];
+      } catch (ArrayIndexOutOfBoundsException e) {
+        exception = e;
+      }
+
+      expect(exception != null);
+    }
+
+    { int[] array = new int[3];
+      int i = 0;
+      array[i++] = 1;
+      array[i++] = 2;
+      array[i++] = 3;
+
+      expect(array[--i] == 3);
+      expect(array[--i] == 2);
+      expect(array[--i] == 1);
+    }
+
+    { Object[][] array = new Object[1][1];
+      expect(array.length == 1);
+      expect(array[0].length == 1);
+    }
+
+    {
+      Object a = new Object();
+      Object b = new Object();
+      expect(a != b);
+
+      Object c = a;
+      Object d = b;
+      expect(c != d);
+
+      c = (c == a) ? b : a;
+      d = (d == a) ? b : a;
+
+      expect(c != d);
+    }
+
+    { Foo foo = new Foo();
+      foo.array = new int[3];
+      foo.a = (foo.a + 1) % foo.array.length;
+    }
+
+    { int j = 0;
+      byte[] decodeTable = new byte[256];
+      for (int i = 'A'; i <= 'Z'; ++i) decodeTable[i] = (byte) j++;
+      for (int i = 'a'; i <= 'z'; ++i) decodeTable[i] = (byte) j++;
+      for (int i = '0'; i <= '9'; ++i) decodeTable[i] = (byte) j++;
+      decodeTable['+'] = (byte) j++;
+      decodeTable['/'] = (byte) j++;
+      decodeTable['='] = 0;
+
+      expect(decodeTable['a'] != 0);
+    }
   }
 }
