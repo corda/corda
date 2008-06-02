@@ -1358,7 +1358,7 @@ divideFloat(uint32_t b, uint32_t a)
   return floatToBits(bitsToFloat(a) / bitsToFloat(b));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 moduloFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(fmod(bitsToFloat(a), bitsToFloat(b)));
