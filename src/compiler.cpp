@@ -807,9 +807,8 @@ targetOrNull(Context* c, Value* v)
     return v->target;
   } else if (v->reads and v->reads->target) {
     return v->reads->target->readTarget(c, v->reads);
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 class AbstractSite: public Site {
