@@ -71,23 +71,25 @@ const int signals[] = { VisitSignal, SegFaultSignal, InterruptSignal };
 #  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
 #  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
 #  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
-#elif defined __APPLE__
-#  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#    define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
-#    define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
-#    define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
-#  else
-#    define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
-#    define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
-#    define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
-#  endif
 #elif defined __i386__
-#  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
-#  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
-#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
-#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
+#  ifdef __APPLE__
+#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
+#      define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
+#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
+#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
+#    else
+#      define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
+#      define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
+#      define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
+#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
+#    endif
+#  else
+#    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
+#    define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
+#    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
+#    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
+#  endif
 #else
 #  error unsupported architecture
 #endif
@@ -560,8 +562,14 @@ class MySystem: public System {
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
     assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
 
+#ifdef __x86_64__
+    const unsigned Extra = MAP_32BIT;
+#else
+    const unsigned Extra = 0;
+#endif
+
     void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANON, -1, 0);
+                   MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
     
     if (p == MAP_FAILED) {
       return 0;

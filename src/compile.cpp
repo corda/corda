@@ -5033,7 +5033,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     defaultContext.promise.value_ = reinterpret_cast<intptr_t>(compileMethod);
 
     Assembler::Constant proc(&(defaultContext.promise));
-    a->apply(Call, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
     popThread(t, a);
 
@@ -5052,7 +5052,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     nativeContext.promise.value_ = reinterpret_cast<intptr_t>(invokeNative);
 
     Assembler::Constant proc(&(nativeContext.promise));
-    a->apply(Call, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
   
     popThread(t, a);
 
@@ -5071,7 +5071,7 @@ compileThunks(MyThread* t, MyProcessor* p)
       (throwArrayIndexOutOfBounds);
 
     Assembler::Constant proc(&(aioobContext.promise));
-    a->apply(Call, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
   }
 
   ThunkContext tableContext(t);
@@ -5081,7 +5081,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     saveStackAndBase(t, a);
 
     Assembler::Constant proc(&(tableContext.promise));
-    a->apply(Jump, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
   }
 
   p->thunkSize = pad(tableContext.context.assembler->length());

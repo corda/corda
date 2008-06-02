@@ -305,26 +305,28 @@ callC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
+  unconditional(c, 0xe8, a);
+}
+
+void
+longCallC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
   if (BytesPerWord == 8) {
     Assembler::Register r(r10);
     moveCR(c, size, a, &r);
     callR(c, size, &r);
   } else {
-    unconditional(c, 0xe8, a);
+    callC(c, size, a);
   }
 }
 
 void
 alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  if (BytesPerWord == 8) {
-    while ((c->code.length() + 2) % 8) {
-      c->code.append(0x90);
-    }
-  } else {
-    while ((c->code.length() + 1) % 4) {
-      c->code.append(0x90);
-    }
+  while ((c->code.length() + 1) % 4) {
+    c->code.append(0x90);
   }
   callC(c, size, a);
 }
@@ -362,12 +364,20 @@ jumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
+  unconditional(c, 0xe9, a);
+}
+
+void
+longJumpC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
   if (BytesPerWord == 8) {
     Assembler::Register r(r10);
     moveCR(c, size, a, &r);
     jumpR(c, size, &r);
   } else {
-    unconditional(c, 0xe9, a);
+    jumpC(c, size, a);
   }
 }
 
@@ -1776,11 +1786,15 @@ populateTables()
   UnaryOperations[INDEX1(Call, Register)] = CAST1(callR);
   UnaryOperations[INDEX1(Call, Memory)] = CAST1(callM);
 
+  UnaryOperations[INDEX1(LongCall, Constant)] = CAST1(longCallC);
+
   UnaryOperations[INDEX1(AlignedCall, Constant)] = CAST1(alignedCallC);
 
-  UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
   UnaryOperations[INDEX1(Jump, Constant)] = CAST1(jumpC);
+  UnaryOperations[INDEX1(Jump, Register)] = CAST1(jumpR);
   UnaryOperations[INDEX1(Jump, Memory)] = CAST1(jumpM);
+
+  UnaryOperations[INDEX1(LongJump, Constant)] = CAST1(longJumpC);
 
   UnaryOperations[INDEX1(JumpIfEqual, Constant)] = CAST1(jumpIfEqualC);
   UnaryOperations[INDEX1(JumpIfNotEqual, Constant)] = CAST1(jumpIfNotEqualC);
@@ -2062,26 +2076,13 @@ class MyAssembler: public Assembler {
   }
 
   virtual void updateCall(void* returnAddress, void* newTarget) {
-    if (BytesPerWord == 8) {
-      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 13;
-      assert(&c, instruction[0] == 0x49);
-      assert(&c, instruction[1] == 0xba);
-      assert(&c, instruction[10] == 0x41);
-      assert(&c, instruction[11] == 0xff);
-      assert(&c, instruction[12] == 0xd2);
-      assert(&c, reinterpret_cast<uintptr_t>(instruction + 2) % 8 == 0);
+    uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
+    assert(&c, *instruction == 0xE8);
+    assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
 
-      intptr_t v = reinterpret_cast<intptr_t>(newTarget);
-      memcpy(instruction + 2, &v, 8);
-    } else {
-      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-      assert(&c, *instruction == 0xE8);
-      assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
-
-      int32_t v = static_cast<uint8_t*>(newTarget)
-        - static_cast<uint8_t*>(returnAddress);
-      memcpy(instruction + 1, &v, 4);
-    }
+    int32_t v = static_cast<uint8_t*>(newTarget)
+      - static_cast<uint8_t*>(returnAddress);
+    memcpy(instruction + 1, &v, 4);
   }
 
   virtual void dispose() {
