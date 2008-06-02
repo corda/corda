@@ -301,7 +301,7 @@ void
 callR(Context*, unsigned, Assembler::Register*);
 
 void
-callC(Context* c, unsigned size, Assembler::Constant* a)
+callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
@@ -360,7 +360,7 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 }
 
 void
-jumpC(Context* c, unsigned size, Assembler::Constant* a)
+jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
