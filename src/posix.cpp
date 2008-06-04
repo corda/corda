@@ -9,9 +9,10 @@
    details. */
 
 #ifdef __APPLE__
-#include "CoreFoundation/CoreFoundation.h"
-#undef assert
+#  include "CoreFoundation/CoreFoundation.h"
+#  undef assert
 #endif
+
 #include "sys/mman.h"
 #include "sys/types.h"
 #include "sys/stat.h"
@@ -26,7 +27,7 @@
 #include "ucontext.h"
 #include "stdint.h"
 
-#include "x86.h"
+#include "arch.h"
 #include "system.h"
 
 #define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_) (x)
@@ -65,34 +66,6 @@ class MySystem;
 MySystem* system;
 
 const int signals[] = { VisitSignal, SegFaultSignal, InterruptSignal };
-
-#ifdef __x86_64__
-#  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
-#  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
-#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
-#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
-#elif defined __i386__
-#  ifdef __APPLE__
-#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
-#      define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
-#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
-#    else
-#      define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
-#      define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
-#      define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
-#    endif
-#  else
-#    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
-#    define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
-#    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
-#    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
-#  endif
-#else
-#  error unsupported architecture
-#endif
 
 void
 handleSignal(int signal, siginfo_t* info, void* context);

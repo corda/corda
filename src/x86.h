@@ -12,13 +12,28 @@
 #define X86_H
 
 #include "types.h"
-#include "stdint.h"
 #include "common.h"
 
-extern "C" void NO_RETURN
-vmJump(void* address, void* base, void* stack, void* thread);
-
 #ifdef __i386__
+
+#  ifdef __APPLE__
+#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
+#      define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
+#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
+#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
+#    else
+#      define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
+#      define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
+#      define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
+#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
+#    endif
+#  else
+#    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
+#    define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
+#    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
+#    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
+#  endif
 
 extern "C" uint64_t
 vmNativeCall(void* function, void* stack, unsigned stackSize,
@@ -36,6 +51,11 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 } // namespace vm
 
 #elif defined __x86_64__
+
+#  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
+#  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
+#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
+#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
 
 extern "C" uint64_t
 vmNativeCall(void* function, void* stack, unsigned stackSize,
@@ -79,7 +99,7 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
     }
   }
 
-  return vmNativeCall(function, stack, stackIndex * 8,
+  return vmNativeCall(function, stack, stackIndex * BytesPerWord,
                       (gprIndex ? gprTable : 0),
                       (sseIndex ? sseTable : 0), returnType);
 }
@@ -87,7 +107,7 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
 } // namespace vm
 
 #else
-#  error unsupported platform
+#  error unsupported architecture
 #endif
 
 

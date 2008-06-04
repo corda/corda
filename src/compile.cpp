@@ -14,7 +14,7 @@
 #include "process.h"
 #include "assembler.h"
 #include "compiler.h"
-#include "x86.h"
+#include "arch.h"
 
 using namespace vm;
 

@@ -27,7 +27,7 @@
 #  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif
 
-#ifdef __i386__
+#if (defined __i386__) || (defined __POWERPC__)
 #  define LD "d"
 #  define LLD "lld"
 #ifdef __APPLE__
@@ -60,7 +60,7 @@
 #  define SO_SUFFIX ".so"
 #endif
 
-#ifdef __APPLE__
+#if (defined __APPLE__) && (defined __i386__)
 #  define FORCE_ALIGN __attribute__((force_align_arg_pointer))
 #else
 #  define FORCE_ALIGN

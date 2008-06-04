@@ -3,7 +3,10 @@ MAKEFLAGS = -s
 name = avian
 version = 0.0.1
 
-build-arch = $(shell uname -m)
+build-arch = "$(shell uname -m)"
+ifeq ($(build-arch),"Power Macintosh")
+	build-arch = powerpc
+endif
 ifeq ($(build-arch),i586)
 	build-arch = i386
 endif
@@ -83,6 +86,12 @@ shared = -shared
 ifeq ($(arch),i386)
 	object-arch = i386
 	object-format = elf32-i386
+	pointer-size = 4
+endif
+ifeq ($(arch),powerpc)
+	asm = powerpc
+	object-arch = powerpc
+	object-format = elf32-powerpc
 	pointer-size = 4
 endif
 
