@@ -29,3 +29,12 @@ vmNativeCall:
 ;;    mtlr r0                                  ;    into the link register
 ;;    addi r1,r1,spaceToSaveAligned            ; restore stack pointer
    blr                                      ;    and branch to the return address
+   
+#ifdef __APPLE__
+.globl _vmJump
+_vmJump:
+#else
+.globl vmJump
+vmJump:
+#endif
+   blr

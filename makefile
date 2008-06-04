@@ -346,7 +346,7 @@ $(binaryToMacho): $(src)/binaryToMacho.cpp
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
-	$(binaryToMacho) $(build)/classpath.jar \
+	$(binaryToMacho) $(asm) $(build)/classpath.jar \
 		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
 else
 	(wd=$$(pwd); \
