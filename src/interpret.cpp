@@ -2855,7 +2855,7 @@ class MyProcessor: public Processor {
   virtual vm::Thread*
   makeThread(Machine* m, object javaThread, vm::Thread* parent)
   {
-    Thread* t = new (m->heap->allocate(sizeof(Thread), false))
+    Thread* t = new (m->heap->allocate(sizeof(Thread)))
       Thread(m, javaThread, parent);
     t->init();
     return t;
@@ -3051,17 +3051,17 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual object getStackTrace(Thread*, Thread*) {
+  virtual object getStackTrace(vm::Thread*, vm::Thread*) {
     // not implemented
     return 0;
   }
 
   virtual void dispose(vm::Thread* t) {
-    t->m->heap->free(t, sizeof(Thread), false);
+    t->m->heap->free(t, sizeof(Thread));
   }
 
   virtual void dispose() {
-    allocator->free(this, sizeof(*this), false);
+    allocator->free(this, sizeof(*this));
   }
   
   System* s;
@@ -3075,7 +3075,7 @@ namespace vm {
 Processor*
 makeProcessor(System* system, Allocator* allocator)
 {
-  return new (allocator->allocate(sizeof(MyProcessor), false))
+  return new (allocator->allocate(sizeof(MyProcessor)))
     MyProcessor(system, allocator);
 }
 
