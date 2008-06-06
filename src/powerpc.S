@@ -12,6 +12,8 @@
 
 .text
 
+LinkageArea = 24
+
 #ifdef __APPLE__
 .globl _vmNativeCall
 _vmNativeCall: 
@@ -19,16 +21,44 @@ _vmNativeCall:
 .globl vmNativeCall
 vmNativeCall:
 #endif
-;;    mflr r0                                         ; extract return address
-;;    stw  r0,8(r1)                                   ; save the return address
-;;    stwu r1,-spaceToSaveAligned(r1)                 ; skip over caller save area
+   // save return address
+   mflr r0
+   stw  r0,8(r1)
 
-;;    ; todo
+   // r3 aka 24(r1): function
+   // r4 aka 28(r1): stack
+   // r5 aka 32(r1): stackSize
+   // r6 aka 36(r1): gprTable
+   // r7 aka 40(r1): fprTable
+   // r8 aka 48(r1): returnType
 
-;;    lwz  r0,spaceToSaveAligned + 8(r1)       ; get the return address
-;;    mtlr r0                                  ;    into the link register
-;;    addi r1,r1,spaceToSaveAligned            ; restore stack pointer
-   blr                                      ;    and branch to the return address
+   // calculate aligned stack frame size
+   add  r13,r5,LinkageArea + 15
+   and  r13,r13,-16
+
+   // save and update stack pointer
+   sub  r14,r1,r9
+   stwu r1,r14
+
+   // save our argument registers so we can clobber them
+   stw  r3,24(r1)
+   stw  r4,28(r1)
+   stw  r5,32(r1)
+   stw  r6,36(r1)
+   stw  r7,40(r1)
+   stw  r8,48(r1)
+   
+   // todo
+
+   // restore stack pointer
+   addi r1,r1,r13
+
+   // load return address
+   lwz  r0,8(r1)
+   mtlr r0
+
+   // return
+   blr
    
 #ifdef __APPLE__
 .globl _vmJump
@@ -37,4 +67,8 @@ _vmJump:
 .globl vmJump
 vmJump:
 #endif
+   mtlr r3
+   mr   r13,r4
+   mr   r1,r5
+   mr   r14,r6
    blr
