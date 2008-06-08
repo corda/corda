@@ -34,8 +34,9 @@
 #endif
 
 extern "C" uint64_t
-vmNativeCall(void* function, void* stack, unsigned stackSize,
-             void* gprTable, void* fprTable, unsigned returnType);
+vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
+             unsigned memoryCount, void* gprTable, void* fprTable,
+             unsigned returnType);
 
 namespace vm {
 
@@ -52,6 +53,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   unsigned fprIndex = 0;
 
   uint64_t stack[argumentsSize];
+  unsigned stackSkip = 0;
   unsigned stackIndex = 0;
 
   for (unsigned i = 0; i < argumentsSize; ++i) {
@@ -59,7 +61,8 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     case FLOAT_TYPE: {
       if (fprIndex < FprCount) {
         fprTable[fprIndex++] = arguments[i];
-        gprIndex += 1;
+        ++ gprIndex;
+        ++ stackSkip;
       } else {
         stack[stackIndex++] = arguments[i];
       }
@@ -68,8 +71,9 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     case DOUBLE_TYPE: {
       if (fprIndex < FprCount) {
         memcpy(fprTable + fprIndex, arguments + i, 8);
-        fprIndex += BytesPerWord / 4;
+        ++ fprIndex;
         gprIndex += BytesPerWord / 4;
+        stackSkip += BytesPerWord / 4;
         i += (BytesPerWord / 4) - 1;
       } else {
         memcpy(stack + stackIndex, arguments + i, 8);
@@ -82,6 +86,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
       if (gprIndex < GprCount) {
         memcpy(gprTable + gprIndex, arguments + i, 8);
         gprIndex += BytesPerWord / 4;
+        stackSkip += BytesPerWord / 4;
         i += (BytesPerWord / 4) - 1;
       } else {
         memcpy(stack + stackIndex, arguments + i, 8);
@@ -93,6 +98,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     default: {
       if (gprIndex < GprCount) {
         gprTable[gprIndex++] = arguments[i];
+        ++ stackSkip;
       } else {
         stack[stackIndex++] = arguments[i];
       }
@@ -100,7 +106,8 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     }
   }
 
-  return vmNativeCall(function, stack, stackIndex * BytesPerWord,
+  return vmNativeCall(function, (stackSkip + stackIndex) * BytesPerWord,
+                      stack, stackIndex,
                       (gprIndex ? gprTable : 0),
                       (fprIndex ? fprTable : 0), returnType);
 }
