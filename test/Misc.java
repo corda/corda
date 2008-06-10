@@ -95,6 +95,13 @@ public class Misc {
   }
 
   public static void main(String[] args) {
+    { boolean p = true;
+      int[] array = new int[] { 1, 2 };
+      expect(array[0] == array[p ? 0 : 1]);
+      p = false;
+      expect(array[1] == array[p ? 0 : 1]);
+    }
+
     expect(roundUp(156, 2) == 156);
 
     { Foo foo = new Foo();

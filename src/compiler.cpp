@@ -1826,7 +1826,7 @@ class MemoryEvent: public Event {
     scale(scale), result(result)
   {
     addRead(c, base, BytesPerWord, anyRegisterSite(c));
-    if (index) addRead(c, index, BytesPerWord, anyRegisterSite(c));
+    if (index) addRead(c, index, BytesPerWord, registerOrConstantSite(c));
   }
 
   virtual void compile(Context* c) {
@@ -1835,9 +1835,26 @@ class MemoryEvent: public Event {
     }
     
     int indexRegister;
+    int displacement = this->displacement;
+    unsigned scale = this->scale;
     if (index) {
-      assert(c, index->source->type(c) == RegisterOperand);
-      indexRegister = static_cast<RegisterSite*>(index->source)->register_.low;
+      ConstantSite* constant = 0;
+      for (Site* s = index->sites; s; s = s->next) {
+        if (s->type(c) == ConstantOperand) {
+          constant = static_cast<ConstantSite*>(s);
+          break;
+        }
+      }
+
+      if (constant) {
+        indexRegister = NoRegister;
+        displacement += (constant->value.value->value() * scale);
+        scale = 1;
+      } else {
+        assert(c, index->source->type(c) == RegisterOperand);
+        indexRegister = static_cast<RegisterSite*>
+          (index->source)->register_.low;
+      }
     } else {
       indexRegister = NoRegister;
     }
@@ -1846,7 +1863,7 @@ class MemoryEvent: public Event {
 
     nextRead(c, base);
     if (index) {
-      if (BytesPerWord == 8) {
+      if (BytesPerWord == 8 and indexRegister != NoRegister) {
         apply(c, Move4To8, 8, index->source, index->source);
       }
 
@@ -2641,22 +2658,6 @@ class MyCompiler: public Compiler {
     return value(&c, s, s);
   }
 
-  virtual bool isConstant(Operand* a) {
-    for (Site* s = static_cast<Value*>(a)->sites; s; s = s->next) {
-      if (s->type(&c) == ConstantOperand) return true;
-    }
-    return false;
-  }
-
-  virtual int64_t constantValue(Operand* a) {
-    for (Site* s = static_cast<Value*>(a)->sites; s; s = s->next) {
-      if (s->type(&c) == ConstantOperand) {
-        return static_cast<ConstantSite*>(s)->value.value->value();
-      }
-    }
-    abort(&c);
-  }
-
   virtual Operand* label() {
     return value(&c, ::constantSite(&c, static_cast<Promise*>(0)));
   }
@@ -2698,7 +2699,8 @@ class MyCompiler: public Compiler {
       Value* v = value(&c);
       c.state->stack = ::stack(&c, v, 1, c.state->stack);
       c.state->stack->pushed = true;
-//       v->sites = pushSite(&c, c.state->stack->index);
+      c.state->stack->pushSite
+        = v->sites = pushSite(&c, c.state->stack->index);
     }
   }
 
