@@ -2790,6 +2790,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, newIp < codeLength(t, code));
 
+      c->saveStack();
+
       frame->pushAddress(frame->machineIp(ip));
       c->jmp(frame->machineIp(newIp));
 
