@@ -772,6 +772,13 @@ moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
 }
 
 void
+move4To8CR(Context* c, unsigned, Assembler::Constant* a,
+           Assembler::Register* b)
+{
+  moveCR(c, 8, a, b);
+}
+
+void
 move4To8RR(Context* c, unsigned, Assembler::Register* a,
            Assembler::Register* b)
 {
@@ -1826,6 +1833,7 @@ populateTables()
   BinaryOperations[INDEX2(Move, Address, Memory)] = CAST2(moveAM);
   BinaryOperations[INDEX2(Move, Memory, Memory)] = CAST2(moveMM);
 
+  BinaryOperations[INDEX2(Move4To8, Constant, Register)] = CAST2(move4To8CR);
   BinaryOperations[INDEX2(Move4To8, Register, Register)] = CAST2(move4To8RR);
   BinaryOperations[INDEX2(Move4To8, Memory, Register)] = CAST2(move4To8MR);
 
