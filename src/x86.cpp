@@ -1144,7 +1144,7 @@ multiplyCR(Context* c, unsigned size, Assembler::Constant* a,
     c->client->releaseTemporary(tmp.high);
   } else {
     int64_t v = a->value->value();
-    if (v) {
+    if (v != 1) {
       if (isInt32(v)) {
         if (size == 8) rex(c);
         if (isInt8(v)) {
