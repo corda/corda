@@ -1969,22 +1969,23 @@ popNow(Context* c, Stack* stack, unsigned count, bool ignore)
       s->pushSite = 0;
       s->pushed = false;
 
-      if (s->value->reads and (not ignore)) {
+      Value* v = s->value;
+      if (v->reads and v->sites == 0 and (not ignore)) {
         ::ignore(c, ignored);
 
-        Site* target = targetOrRegister(c, s->value);
+        Site* target = targetOrRegister(c, v);
 
         if (DebugStack) {
           fprintf(stderr, "pop %p value: %p target: %p\n",
                   s, s->value, target);
         }
 
-        addSite(c, stack, s->size * BytesPerWord, s->value, target);
+        addSite(c, stack, s->size * BytesPerWord, v, target);
 
         apply(c, Pop, BytesPerWord * s->size, target);
       } else {
         if (DebugStack) {
-          fprintf(stderr, "ignore %p value: %p\n", s, s->value);
+          fprintf(stderr, "ignore %p value: %p\n", s, v);
         }
           
         ignored += s->size;
