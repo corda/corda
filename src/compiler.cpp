@@ -1008,7 +1008,7 @@ trySteal(Context* c, Register* r, Stack* stack)
     unsigned count = 0;
     Stack* start = 0;
     for (Stack* s = stack; s and (not s->pushed); s = s->next) {
-      if (s->value == v) {
+      if (start == 0 and s->value == v) {
         start = s;
       }
       if (start) {
