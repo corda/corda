@@ -37,6 +37,13 @@ apply(Context* c, UnaryOperation op, unsigned size, Site* a);
 void
 apply(Context* c, BinaryOperation op, unsigned size, Site* a, Site* b);
 
+enum ConstantCompare {
+  CompareNone,
+  CompareLess,
+  CompareGreater,
+  CompareEqual
+};
+
 class Site {
  public:
   Site(): next(0) { }
@@ -207,7 +214,8 @@ class Context {
     machineCode(0),
     locals(0),
     localTable(0),
-    stackReset(false)
+    stackReset(false),
+    constantCompare(CompareNone)
   {
     for (unsigned i = 0; i < assembler->registerCount(); ++i) {
       registers[i] = new (zone->allocate(sizeof(Register))) Register(i);
@@ -238,6 +246,7 @@ class Context {
   Local* locals;
   Local** localTable;
   bool stackReset;
+  ConstantCompare constantCompare;
 };
 
 class PoolPromise: public Promise {
@@ -1595,6 +1604,17 @@ appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
     MoveEvent(c, type, size, src, dst, srcTarget, dstTarget);
 }
 
+ConstantSite*
+findConstantSite(Context* c, Value* v)
+{
+  for (Site* s = v->sites; s; s = s->next) {
+    if (s->type(c) == ConstantOperand) {
+      return static_cast<ConstantSite*>(s);
+    }
+  }
+  return 0;
+}
+
 class CompareEvent: public Event {
  public:
   CompareEvent(Context* c, unsigned size, Value* first, Value* second,
@@ -1610,7 +1630,25 @@ class CompareEvent: public Event {
       fprintf(stderr, "CompareEvent.compile\n");
     }
 
-    apply(c, Compare, size, first->source, second->source);
+    ConstantSite* firstConstant = findConstantSite(c, first);
+    ConstantSite* secondConstant = findConstantSite(c, second);
+
+    if (firstConstant and secondConstant) {
+      int64_t d = firstConstant->value.value->value()
+        - secondConstant->value.value->value();
+
+      if (d < 0) {
+        c->constantCompare = CompareLess;
+      } else if (d > 0) {
+        c->constantCompare = CompareGreater;
+      } else {
+        c->constantCompare = CompareEqual;
+      }
+    } else {
+      c->constantCompare = CompareNone;
+
+      apply(c, Compare, size, first->source, second->source);
+    }
 
     nextRead(c, first);
     nextRead(c, second);
@@ -1838,13 +1876,7 @@ class MemoryEvent: public Event {
     int displacement = this->displacement;
     unsigned scale = this->scale;
     if (index) {
-      ConstantSite* constant = 0;
-      for (Site* s = index->sites; s; s = s->next) {
-        if (s->type(c) == ConstantOperand) {
-          constant = static_cast<ConstantSite*>(s);
-          break;
-        }
-      }
+      ConstantSite* constant = findConstantSite(c, index);
 
       if (constant) {
         indexRegister = NoRegister;
@@ -2022,7 +2054,65 @@ class BranchEvent: public Event {
       fprintf(stderr, "BranchEvent.compile\n");
     }
 
-    apply(c, type, BytesPerWord, address->source);
+    bool jump;
+    UnaryOperation type = this->type;
+    if (type != Jump) {
+      switch (c->constantCompare) {
+      case CompareLess:
+        switch (type) {
+        case JumpIfLess:
+        case JumpIfLessOrEqual:
+        case JumpIfNotEqual:
+          jump = true;
+          type = Jump;
+          break;
+
+        default:
+          jump = false;
+        }
+        break;
+
+      case CompareGreater:
+        switch (type) {
+        case JumpIfGreater:
+        case JumpIfGreaterOrEqual:
+        case JumpIfNotEqual:
+          jump = true;
+          type = Jump;
+          break;
+
+        default:
+          jump = false;
+        }
+        break;
+
+      case CompareEqual:
+        switch (type) {
+        case JumpIfEqual:
+        case JumpIfLessOrEqual:
+        case JumpIfGreaterOrEqual:
+          jump = true;
+          type = Jump;
+          break;
+
+        default:
+          jump = false;
+        }
+        break;
+
+      case CompareNone:
+        jump = true;
+        break;
+
+      default: abort(c);
+      }
+    } else {
+      jump = true;
+    }
+
+    if (jump) {
+      apply(c, type, BytesPerWord, address->source);
+    }
 
     nextRead(c, address);
   }
@@ -2220,14 +2310,7 @@ class BoundsCheckEvent: public Event {
 
     Assembler* a = c->assembler;
 
-    ConstantSite* constant = 0;
-    for (Site* s = index->sites; s; s = s->next) {
-      if (s->type(c) == ConstantOperand) {
-        constant = static_cast<ConstantSite*>(s);
-        break;
-      }
-    }
-
+    ConstantSite* constant = findConstantSite(c, index);
     CodePromise* nextPromise = codePromise(c, -1);
     CodePromise* outOfBoundsPromise = 0;
 
@@ -2249,7 +2332,7 @@ class BoundsCheckEvent: public Event {
     Site* length = memorySite(c, base, lengthOffset);
     length->acquire(c, 0, 0, 0);
 
-    apply(c, Compare, BytesPerWord, index->source, length);
+    apply(c, Compare, 4, index->source, length);
 
     length->release(c);
 
