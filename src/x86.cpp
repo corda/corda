@@ -1762,7 +1762,7 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-compareCM(Context* c, unsigned size, Assembler::Constant* a,
+compareCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
           Assembler::Memory* b)
 {
   assert(c, BytesPerWord == 8 or size == 4);
