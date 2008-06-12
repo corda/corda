@@ -1590,128 +1590,6 @@ unsignedShiftRightCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-longCompareCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
-              Assembler::Register* b)
-{
-  assert(c, size == 8);
-
-  int64_t v = a->value->value();
-  
-  ResolvedPromise negativePromise(-1);
-  Assembler::Constant negative(&negativePromise);
-
-  ResolvedPromise zeroPromise(0);
-  Assembler::Constant zero(&zeroPromise);
-
-  ResolvedPromise positivePromise(1);
-  Assembler::Constant positive(&positivePromise);
-
-  if (BytesPerWord == 8) {
-    compareCR(c, 8, a, b);
-    
-    c->code.append(0x0f);
-    c->code.append(0x8c); // jl
-    unsigned less = c->code.length();
-    c->code.append4(0);
-
-    c->code.append(0x0f);
-    c->code.append(0x8f); // jg
-    unsigned greater = c->code.length();
-    c->code.append4(0);
-
-    moveCR(c, 4, &zero, b);
-    
-    c->code.append(0xe9); // jmp
-    unsigned nextFirst = c->code.length();
-    c->code.append4(0);
-
-    int32_t lessOffset = c->code.length() - less - 4;
-    c->code.set(less, &lessOffset, 4);
-
-    moveCR(c, 4, &negative, b);
-
-    c->code.append(0xe9); // jmp
-    unsigned nextSecond = c->code.length();
-    c->code.append4(0);
-
-    int32_t greaterOffset = c->code.length() - greater - 4;
-    c->code.set(greater, &greaterOffset, 4);
-
-    moveCR(c, 4, &positive, b);
-
-    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
-    c->code.set(nextFirst, &nextFirstOffset, 4);
-
-    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
-    c->code.set(nextSecond, &nextSecondOffset, 4);
-  } else {
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    Assembler::Register bh(b->high);
-
-    compareCR(c, 4, &ah, &bh);
-    
-    c->code.append(0x0f);
-    c->code.append(0x8c); // jl
-    unsigned less = c->code.length();
-    c->code.append4(0);
-
-    c->code.append(0x0f);
-    c->code.append(0x8f); // jg
-    unsigned greater = c->code.length();
-    c->code.append4(0);
-
-    compareCR(c, 4, &al, b);
-
-    c->code.append(0x0f);
-    c->code.append(0x82); // ja
-    unsigned above = c->code.length();
-    c->code.append4(0);
-
-    c->code.append(0x0f);
-    c->code.append(0x87); // jb
-    unsigned below = c->code.length();
-    c->code.append4(0);
-
-    moveCR(c, 4, &zero, b);
-    
-    c->code.append(0xe9); // jmp
-    unsigned nextFirst = c->code.length();
-    c->code.append4(0);
-
-    int32_t lessOffset = c->code.length() - less - 4;
-    c->code.set(less, &lessOffset, 4);
-
-    int32_t aboveOffset = c->code.length() - above - 4;
-    c->code.set(above, &aboveOffset, 4);
-
-    moveCR(c, 4, &negative, b);
-
-    c->code.append(0xe9); // jmp
-    unsigned nextSecond = c->code.length();
-    c->code.append4(0);
-
-    int32_t greaterOffset = c->code.length() - greater - 4;
-    c->code.set(greater, &greaterOffset, 4);
-
-    int32_t belowOffset = c->code.length() - below - 4;
-    c->code.set(below, &belowOffset, 4);
-
-    moveCR(c, 4, &positive, b);
-
-    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
-    c->code.set(nextFirst, &nextFirstOffset, 4);
-
-    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
-    c->code.set(nextSecond, &nextSecondOffset, 4);
-  }
-}
-
-void
 compareRR(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Register* b)
 {
@@ -1829,6 +1707,148 @@ compareRC(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
+            Assembler::Operand* bl, Assembler::Operand* bh,
+            BinaryOperationType compare, BinaryOperationType move)
+{
+  ResolvedPromise negativePromise(-1);
+  Assembler::Constant negative(&negativePromise);
+
+  ResolvedPromise zeroPromise(0);
+  Assembler::Constant zero(&zeroPromise);
+
+  ResolvedPromise positivePromise(1);
+  Assembler::Constant positive(&positivePromise);
+
+  if (BytesPerWord == 8) {
+    compare(c, 8, al, bl);
+    
+    c->code.append(0x0f);
+    c->code.append(0x8c); // jl
+    unsigned less = c->code.length();
+    c->code.append4(0);
+
+    c->code.append(0x0f);
+    c->code.append(0x8f); // jg
+    unsigned greater = c->code.length();
+    c->code.append4(0);
+
+    move(c, 4, &zero, bl);
+    
+    c->code.append(0xe9); // jmp
+    unsigned nextFirst = c->code.length();
+    c->code.append4(0);
+
+    int32_t lessOffset = c->code.length() - less - 4;
+    c->code.set(less, &lessOffset, 4);
+
+    move(c, 4, &negative, bl);
+
+    c->code.append(0xe9); // jmp
+    unsigned nextSecond = c->code.length();
+    c->code.append4(0);
+
+    int32_t greaterOffset = c->code.length() - greater - 4;
+    c->code.set(greater, &greaterOffset, 4);
+
+    move(c, 4, &positive, bl);
+
+    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
+    c->code.set(nextFirst, &nextFirstOffset, 4);
+
+    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
+    c->code.set(nextSecond, &nextSecondOffset, 4);
+  } else {
+    compare(c, 4, ah, bh);
+    
+    c->code.append(0x0f);
+    c->code.append(0x8c); // jl
+    unsigned less = c->code.length();
+    c->code.append4(0);
+
+    c->code.append(0x0f);
+    c->code.append(0x8f); // jg
+    unsigned greater = c->code.length();
+    c->code.append4(0);
+
+    compare(c, 4, al, bl);
+
+    c->code.append(0x0f);
+    c->code.append(0x82); // ja
+    unsigned above = c->code.length();
+    c->code.append4(0);
+
+    c->code.append(0x0f);
+    c->code.append(0x87); // jb
+    unsigned below = c->code.length();
+    c->code.append4(0);
+
+    move(c, 4, &zero, bl);
+    
+    c->code.append(0xe9); // jmp
+    unsigned nextFirst = c->code.length();
+    c->code.append4(0);
+
+    int32_t lessOffset = c->code.length() - less - 4;
+    c->code.set(less, &lessOffset, 4);
+
+    int32_t aboveOffset = c->code.length() - above - 4;
+    c->code.set(above, &aboveOffset, 4);
+
+    move(c, 4, &negative, bl);
+
+    c->code.append(0xe9); // jmp
+    unsigned nextSecond = c->code.length();
+    c->code.append4(0);
+
+    int32_t greaterOffset = c->code.length() - greater - 4;
+    c->code.set(greater, &greaterOffset, 4);
+
+    int32_t belowOffset = c->code.length() - below - 4;
+    c->code.set(below, &belowOffset, 4);
+
+    move(c, 4, &positive, bl);
+
+    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
+    c->code.set(nextFirst, &nextFirstOffset, 4);
+
+    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
+    c->code.set(nextSecond, &nextSecondOffset, 4);
+  }
+}
+
+void
+longCompareCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+              Assembler::Register* b)
+{
+  assert(c, size == 8);
+  
+  int64_t v = a->value->value();
+
+  ResolvedPromise low(v & 0xFFFFFFFF);
+  Assembler::Constant al(&low);
+  
+  ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+  Assembler::Constant ah(&high);
+  
+  Assembler::Register bh(b->high);
+  
+  longCompare(c, &al, &ah, b, &bh, CAST2(compareCR), CAST2(moveCR));
+}
+
+void
+longCompareRR(Context* c, unsigned size UNUSED, Assembler::Register* a,
+              Assembler::Register* b)
+{
+  assert(c, size == 8);
+  
+  Assembler::Register ah(a->high);
+  Assembler::Register bh(b->high);
+  
+  longCompare(c, a, &ah, b, &bh, CAST2(compareRR), CAST2(moveCR));
+}
+
+void
 populateTables()
 {
   Operations[Return] = return_;
@@ -1933,6 +1953,8 @@ populateTables()
 
   BinaryOperations[INDEX2(LongCompare, Constant, Register)]
     = CAST2(longCompareCR);
+  BinaryOperations[INDEX2(LongCompare, Register, Register)]
+    = CAST2(longCompareRR);
 
   BinaryOperations[INDEX2(Compare, Constant, Register)] = CAST2(compareCR);
   BinaryOperations[INDEX2(Compare, Register, Constant)] = CAST2(compareRC);
