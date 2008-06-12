@@ -2836,38 +2836,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case lcmp: {
-      Compiler::Operand* next = c->label();
-      Compiler::Operand* less = c->label();
-      Compiler::Operand* greater = c->label();
-
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      c->cmp(8, a, b);
-
-      c->jl(less);
-      c->pushState();
-
-      c->jg(greater);
-      c->pushState();
-
-      c->push(4, c->constant(0));
-      c->jmp(next);
-
-      c->popState();
-      c->mark(less);
-
-      c->push(4, c->constant(-1));
-      c->jmp(next);
-
-      c->popState();
-      c->mark(greater);
-
-      c->push(4, c->constant(1));
-
-      c->mark(next);
-
-      frame->pushedInt();
+      frame->pushInt(c->load(4, c->lcmp(a, b)));
     } break;
 
     case lconst_0:

@@ -1742,7 +1742,7 @@ class CombineEvent: public Event {
 
     removeSite(c, second, second->source);
     if (result->reads) {
-      addSite(c, 0, 0, result, second->source);
+      addSite(c, 0, size, result, second->source);
     }
   }
 
@@ -1824,7 +1824,7 @@ class TranslateEvent: public Event {
 
     removeSite(c, value, value->source);
     if (result->reads) {
-      addSite(c, 0, 0, result, value->source);
+      addSite(c, 0, size, result, value->source);
     }
   }
 
@@ -2915,6 +2915,13 @@ class MyCompiler: public Compiler {
     Value* dst = value(&c);
     appendMove(&c, Move4To8, 8, static_cast<Value*>(src), dst);
     return dst;
+  }
+
+  virtual Operand* lcmp(Operand* a, Operand* b) {
+    Value* result = value(&c);
+    appendCombine(&c, LongCompare, 8, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
+    return result;
   }
 
   virtual void cmp(unsigned size, Operand* a, Operand* b) {
