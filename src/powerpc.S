@@ -13,6 +13,7 @@
 .text
 
 #define BYTES_PER_WORD 4
+#define LOCAL(x) L##x
 
 #ifdef __APPLE__
 .globl _vmNativeCall
@@ -52,20 +53,20 @@ vmNativeCall:
    mr   r14,r9
 
    li   r16,0
-   b    test
+   b    LOCAL(test)
    
-loop:
+LOCAL(loop):
    lwzx r17,r16,r5
    stwx r17,r16,r1
    addi r16,r16,BYTES_PER_WORD
    
-test:
+LOCAL(test):
    cmplw r16,r6
-   blt  loop
+   blt  LOCAL(loop)
 
    // do we need to load the floating point registers?
    cmpwi r8,0
-   beq   gpr
+   beq   LOCAL(gpr)
 
    // yes, we do
    lfd  f1,0(r8)
@@ -82,10 +83,10 @@ test:
    lfd  f12,88(r8)
    lfd  f13,96(r8)
    
-gpr:
+LOCAL(gpr):
    // do we need to load the general-purpose registers?
    cmpwi r7,0
-   beq  call
+   beq  LOCAL(call)
 
    // yes, we do
    mr   r16,r7
@@ -98,29 +99,29 @@ gpr:
    lwz  r9,24(r16)
    lwz  r10,28(r16)
 
-call:
+LOCAL(call):
    // load and call function address
    mtctr r13
    bctrl
 
    // handle return value based on expected type
    cmpwi r14,VOID_TYPE
-   bne  float
-   b    exit
+   bne  LOCAL(float)
+   b    LOCAL(exit)
 
-float:
+LOCAL(float):
    cmpwi r14,FLOAT_TYPE
-   beq  copy
+   beq  LOCAL(copy)
    cmpwi r14,DOUBLE_TYPE
-   bne  exit
+   bne  LOCAL(exit)
 
-copy:
+LOCAL(copy):
    // move floating point return value to GPRs via memory
    stfd f1,8(r1)
    lwz  r3,8(r1)
    lwz  r4,12(r1)
 
-exit:   
+LOCAL(exit):
    // restore stack pointer
 	 lwz	r1,0(r1)
 

@@ -10,6 +10,8 @@
 
 #include "types.h"
 
+#define LOCAL(x) .L##x
+
 .text
 
 #ifdef __x86_64__
@@ -37,15 +39,15 @@ vmInvoke:
    // copy arguments into place
    pushq  %rcx
    movq   $0,%r9
-   jmp    test
+   jmp    LOCAL(test)
 
-loop:
+LOCAL(loop):
    push   (%rdx,%r9,8)
    inc    %r9
 
-test:
+LOCAL(test):
    cmpq   %rcx,%r9
-   jb     loop
+   jb     LOCAL(loop)
    
    // call function
    call   *%rsi
@@ -97,15 +99,15 @@ vmInvoke:
    // copy arguments into place
    movl   $0,%ecx
    mov    16(%ebp),%edx
-   jmp    test
+   jmp    LOCAL(test)
 
-loop:
+LOCAL(loop):
    push   (%edx,%ecx,4)
    inc    %ecx
 
-test:
+LOCAL(test):
    cmpl   20(%ebp),%ecx
-   jb     loop
+   jb     LOCAL(loop)
 
    // call function
    call   *12(%ebp)
@@ -118,20 +120,20 @@ test:
    // handle return value based on expected type
    movl   24(%ebp),%ecx
    
-void:   
+LOCAL(void):
    cmpl   $VOID_TYPE,%ecx
-   jne    int64
-   jmp    exit
+   jne    LOCAL(int64)
+   jmp    LOCAL(exit)
 
-int64: 
+LOCAL(int64):
    cmpl   $INT64_TYPE,%ecx
-   jne    int32
-   jmp    exit
+   jne    LOCAL(int32)
+   jmp    LOCAL(exit)
    
-int32:
+LOCAL(int32):
    movl   $0,%edx
 
-exit:
+LOCAL(exit):
    popl   %edi
    popl   %esi
    popl   %ebx
