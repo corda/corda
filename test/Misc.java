@@ -95,6 +95,22 @@ public class Misc {
   }
 
   public static void main(String[] args) {
+    { long foo = 25214903884L;
+      int radix = 10;
+      expect(foo > 0);
+      foo /= radix;
+      expect(foo > 0);
+    }
+
+    expect(String.valueOf(25214903884l).equals("25214903884"));
+
+    { boolean p = true;
+      int[] array = new int[] { 1, 2 };
+      expect(array[0] == array[p ? 0 : 1]);
+      p = false;
+      expect(array[1] == array[p ? 0 : 1]);
+    }
+
     expect(roundUp(156, 2) == 156);
 
     { Foo foo = new Foo();
@@ -183,6 +199,39 @@ public class Misc {
       expect((a ^ b) == (5L ^ 2L));
       expect(-a == -5L);
       expect(~a == ~5L);
+    }
+
+    { long a = -25214903884L;
+      long b = 2;
+      expect(a >> b == -25214903884L >> 2);
+      expect(a >>> b == -25214903884L >>> 2);
+      expect(a << b == -25214903884L << 2);
+      expect(a + b == -25214903884L + 2L);
+      expect(a - b == -25214903884L - 2L);
+      expect(a * b == -25214903884L * 2L);
+      expect(a / b == -25214903884L / 2L);
+      expect(a % b == -25214903884L % 2L);
+      expect((a & b) == (-25214903884L & 2L));
+      expect((a | b) == (-25214903884L | 2L));
+      expect((a ^ b) == (-25214903884L ^ 2L));
+      expect(-a == 25214903884L);
+      expect(~a == ~-25214903884L);
+
+      a = 25214903884L;
+      b = 2;
+      expect(a >> b == 25214903884L >> 2);
+      expect(a >>> b == 25214903884L >>> 2);
+      expect(a << b == 25214903884L << 2);
+      expect(a + b == 25214903884L + 2L);
+      expect(a - b == 25214903884L - 2L);
+      expect(a * b == 25214903884L * 2L);
+      expect(a / b == 25214903884L / 2L);
+      expect(a % b == 25214903884L % 2L);
+      expect((a & b) == (25214903884L & 2L));
+      expect((a | b) == (25214903884L | 2L));
+      expect((a ^ b) == (25214903884L ^ 2L));
+      expect(-a == -25214903884L);
+      expect(~a == ~25214903884L);
     }
 
     byte2 = 0;

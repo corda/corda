@@ -1834,67 +1834,34 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
                        (&singletonValue(t, aioobThunk(t), 0)));
       }
 
-      if (c->isConstant(index)) {
-        unsigned i = c->constantValue(index);
-        switch (instruction) {
-        case aaload:
-          frame->pushObject
-            (c->load
-             (BytesPerWord, c->memory(array, ArrayBody + (i * BytesPerWord))));
-          break;
+      switch (instruction) {
+      case aaload:
+        frame->pushObject
+          (c->load
+           (BytesPerWord, c->memory(array, ArrayBody, index, BytesPerWord)));
+        break;
 
-        case faload:
-        case iaload:
-          frame->pushInt(c->load(4, c->memory(array, ArrayBody + (i * 4))));
-          break;
+      case faload:
+      case iaload:
+        frame->pushInt(c->load(4, c->memory(array, ArrayBody, index, 4)));
+        break;
 
-        case baload:
-          frame->pushInt(c->load(1, c->memory(array, ArrayBody + i)));
-          break;
+      case baload:
+        frame->pushInt(c->load(1, c->memory(array, ArrayBody, index, 1)));
+        break;
 
-        case caload:
-          frame->pushInt(c->loadz(2, c->memory(array, ArrayBody + (i * 2))));
-          break;
+      case caload:
+        frame->pushInt(c->loadz(2, c->memory(array, ArrayBody, index, 2)));
+        break;
 
-        case daload:
-        case laload:
-          frame->pushLong(c->load(8, c->memory(array, ArrayBody + (i * 8))));
-          break;
+      case daload:
+      case laload:
+        frame->pushLong(c->load(8, c->memory(array, ArrayBody, index, 8)));
+        break;
 
-        case saload:
-          frame->pushInt(c->load(2, c->memory(array, ArrayBody + (i * 2))));
-          break;
-        }        
-      } else {
-        switch (instruction) {
-        case aaload:
-          frame->pushObject
-            (c->load
-             (BytesPerWord, c->memory(array, ArrayBody, index, BytesPerWord)));
-          break;
-
-        case faload:
-        case iaload:
-          frame->pushInt(c->load(4, c->memory(array, ArrayBody, index, 4)));
-          break;
-
-        case baload:
-          frame->pushInt(c->load(1, c->memory(array, ArrayBody, index, 1)));
-          break;
-
-        case caload:
-          frame->pushInt(c->loadz(2, c->memory(array, ArrayBody, index, 2)));
-          break;
-
-        case daload:
-        case laload:
-          frame->pushLong(c->load(8, c->memory(array, ArrayBody, index, 8)));
-          break;
-
-        case saload:
-          frame->pushInt(c->load(2, c->memory(array, ArrayBody, index, 2)));
-          break;
-        }
+      case saload:
+        frame->pushInt(c->load(2, c->memory(array, ArrayBody, index, 2)));
+        break;
       }
     } break;
 
@@ -1923,72 +1890,37 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
                        (&singletonValue(t, aioobThunk(t), 0)));
       }
 
-      if (c->isConstant(index)) {
-        unsigned i = c->constantValue(index);
-        switch (instruction) {
-        case aastore: {
-          c->call
-            (c->constant(getThunk(t, setMaybeNullThunk)),
-             0,
-             frame->trace(0, false),
-             0,
-             4, c->thread(), array,
-             c->constant(ArrayBody + (i * BytesPerWord)),
-             value);
-        } break;
+      switch (instruction) {
+      case aastore: {
+        c->call
+          (c->constant(getThunk(t, setMaybeNullThunk)),
+           0,
+           frame->trace(0, false),
+           0,
+           4, c->thread(), array,
+           c->add(4, c->constant(ArrayBody),
+                  c->shl(4, c->constant(log(BytesPerWord)), index)),
+           value);
+      } break;
 
-        case fastore:
-        case iastore:
-          c->store(4, value, c->memory(array, ArrayBody + (i * 4)));
-          break;
+      case fastore:
+      case iastore:
+        c->store(4, value, c->memory(array, ArrayBody, index, 4));
+        break;
 
-        case bastore:
-          c->store(1, value, c->memory(array, ArrayBody + i));
-          break;
+      case bastore:
+        c->store(1, value, c->memory(array, ArrayBody, index, 1));
+        break;
 
-        case castore:
-        case sastore:
-          c->store(2, value, c->memory(array, ArrayBody + (i * 2)));
-          break;
+      case castore:
+      case sastore:
+        c->store(2, value, c->memory(array, ArrayBody, index, 2));
+        break;
 
-        case dastore:
-        case lastore:
-          c->store(8, value, c->memory(array, ArrayBody + (i * 8)));
-          break;
-        }
-      } else  {
-        switch (instruction) {
-        case aastore: {
-          c->call
-            (c->constant(getThunk(t, setMaybeNullThunk)),
-             0,
-             frame->trace(0, false),
-             0,
-             4, c->thread(), array,
-             c->add(4, c->constant(ArrayBody),
-                    c->shl(4, c->constant(log(BytesPerWord)), index)),
-             value);
-        } break;
-
-        case fastore:
-        case iastore:
-          c->store(4, value, c->memory(array, ArrayBody, index, 4));
-          break;
-
-        case bastore:
-          c->store(1, value, c->memory(array, ArrayBody, index, 1));
-          break;
-
-        case castore:
-        case sastore:
-          c->store(2, value, c->memory(array, ArrayBody, index, 2));
-          break;
-
-        case dastore:
-        case lastore:
-          c->store(8, value, c->memory(array, ArrayBody, index, 8));
-          break;
-        }
+      case dastore:
+      case lastore:
+        c->store(8, value, c->memory(array, ArrayBody, index, 8));
+        break;
       }
     } break;
 
@@ -2602,7 +2534,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->jle(target);
         break;
       }
-      
+
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
     } break;
@@ -2858,6 +2790,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, newIp < codeLength(t, code));
 
+      c->saveStack();
+
       frame->pushAddress(frame->machineIp(ip));
       c->jmp(frame->machineIp(newIp));
 
@@ -2902,38 +2836,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case lcmp: {
-      Compiler::Operand* next = c->label();
-      Compiler::Operand* less = c->label();
-      Compiler::Operand* greater = c->label();
-
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      c->cmp(8, a, b);
-
-      c->jl(less);
-      c->pushState();
-
-      c->jg(greater);
-      c->pushState();
-
-      c->push(4, c->constant(0));
-      c->jmp(next);
-
-      c->popState();
-      c->mark(less);
-
-      c->push(4, c->constant(-1));
-      c->jmp(next);
-
-      c->popState();
-      c->mark(greater);
-
-      c->push(4, c->constant(1));
-
-      c->mark(next);
-
-      frame->pushedInt();
+      frame->pushInt(c->load(4, c->lcmp(a, b)));
     } break;
 
     case lconst_0:

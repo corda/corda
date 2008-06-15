@@ -62,9 +62,6 @@ class Compiler {
   virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
 
-  virtual bool isConstant(Operand* value) = 0;
-  virtual int64_t constantValue(Operand* value) = 0;
-
   virtual Operand* label() = 0;
   virtual void mark(Operand* label) = 0;
 
@@ -94,6 +91,7 @@ class Compiler {
   virtual Operand* load(unsigned size, Operand* src) = 0;
   virtual Operand* loadz(unsigned size, Operand* src) = 0;
   virtual Operand* load4To8(Operand* src) = 0;
+  virtual Operand* lcmp(Operand* a, Operand* b) = 0;
   virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
   virtual void jl(Operand* address) = 0;
   virtual void jg(Operand* address) = 0;

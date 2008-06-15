@@ -37,6 +37,13 @@ apply(Context* c, UnaryOperation op, unsigned size, Site* a);
 void
 apply(Context* c, BinaryOperation op, unsigned size, Site* a, Site* b);
 
+enum ConstantCompare {
+  CompareNone,
+  CompareLess,
+  CompareGreater,
+  CompareEqual
+};
+
 class Site {
  public:
   Site(): next(0) { }
@@ -207,7 +214,8 @@ class Context {
     machineCode(0),
     locals(0),
     localTable(0),
-    stackReset(false)
+    stackReset(false),
+    constantCompare(CompareNone)
   {
     for (unsigned i = 0; i < assembler->registerCount(); ++i) {
       registers[i] = new (zone->allocate(sizeof(Register))) Register(i);
@@ -238,6 +246,7 @@ class Context {
   Local* locals;
   Local** localTable;
   bool stackReset;
+  ConstantCompare constantCompare;
 };
 
 class PoolPromise: public Promise {
@@ -999,7 +1008,7 @@ trySteal(Context* c, Register* r, Stack* stack)
     unsigned count = 0;
     Stack* start = 0;
     for (Stack* s = stack; s and (not s->pushed); s = s->next) {
-      if (s->value == v) {
+      if (start == 0 and s->value == v) {
         start = s;
       }
       if (start) {
@@ -1595,6 +1604,17 @@ appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
     MoveEvent(c, type, size, src, dst, srcTarget, dstTarget);
 }
 
+ConstantSite*
+findConstantSite(Context* c, Value* v)
+{
+  for (Site* s = v->sites; s; s = s->next) {
+    if (s->type(c) == ConstantOperand) {
+      return static_cast<ConstantSite*>(s);
+    }
+  }
+  return 0;
+}
+
 class CompareEvent: public Event {
  public:
   CompareEvent(Context* c, unsigned size, Value* first, Value* second,
@@ -1610,7 +1630,25 @@ class CompareEvent: public Event {
       fprintf(stderr, "CompareEvent.compile\n");
     }
 
-    apply(c, Compare, size, first->source, second->source);
+    ConstantSite* firstConstant = findConstantSite(c, first);
+    ConstantSite* secondConstant = findConstantSite(c, second);
+
+    if (firstConstant and secondConstant) {
+      int64_t d = firstConstant->value.value->value()
+        - secondConstant->value.value->value();
+
+      if (d < 0) {
+        c->constantCompare = CompareLess;
+      } else if (d > 0) {
+        c->constantCompare = CompareGreater;
+      } else {
+        c->constantCompare = CompareEqual;
+      }
+    } else {
+      c->constantCompare = CompareNone;
+
+      apply(c, Compare, size, first->source, second->source);
+    }
 
     nextRead(c, first);
     nextRead(c, second);
@@ -1704,7 +1742,7 @@ class CombineEvent: public Event {
 
     removeSite(c, second, second->source);
     if (result->reads) {
-      addSite(c, 0, 0, result, second->source);
+      addSite(c, 0, size, result, second->source);
     }
   }
 
@@ -1786,7 +1824,7 @@ class TranslateEvent: public Event {
 
     removeSite(c, value, value->source);
     if (result->reads) {
-      addSite(c, 0, 0, result, value->source);
+      addSite(c, 0, size, result, value->source);
     }
   }
 
@@ -1826,7 +1864,7 @@ class MemoryEvent: public Event {
     scale(scale), result(result)
   {
     addRead(c, base, BytesPerWord, anyRegisterSite(c));
-    if (index) addRead(c, index, BytesPerWord, anyRegisterSite(c));
+    if (index) addRead(c, index, BytesPerWord, registerOrConstantSite(c));
   }
 
   virtual void compile(Context* c) {
@@ -1835,9 +1873,20 @@ class MemoryEvent: public Event {
     }
     
     int indexRegister;
+    int displacement = this->displacement;
+    unsigned scale = this->scale;
     if (index) {
-      assert(c, index->source->type(c) == RegisterOperand);
-      indexRegister = static_cast<RegisterSite*>(index->source)->register_.low;
+      ConstantSite* constant = findConstantSite(c, index);
+
+      if (constant) {
+        indexRegister = NoRegister;
+        displacement += (constant->value.value->value() * scale);
+        scale = 1;
+      } else {
+        assert(c, index->source->type(c) == RegisterOperand);
+        indexRegister = static_cast<RegisterSite*>
+          (index->source)->register_.low;
+      }
     } else {
       indexRegister = NoRegister;
     }
@@ -1846,7 +1895,7 @@ class MemoryEvent: public Event {
 
     nextRead(c, base);
     if (index) {
-      if (BytesPerWord == 8) {
+      if (BytesPerWord == 8 and indexRegister != NoRegister) {
         apply(c, Move4To8, 8, index->source, index->source);
       }
 
@@ -1920,22 +1969,23 @@ popNow(Context* c, Stack* stack, unsigned count, bool ignore)
       s->pushSite = 0;
       s->pushed = false;
 
-      if (s->value->reads and (not ignore)) {
+      Value* v = s->value;
+      if (v->reads and v->sites == 0 and (not ignore)) {
         ::ignore(c, ignored);
 
-        Site* target = targetOrRegister(c, s->value);
+        Site* target = targetOrRegister(c, v);
 
         if (DebugStack) {
           fprintf(stderr, "pop %p value: %p target: %p\n",
                   s, s->value, target);
         }
 
-        addSite(c, stack, s->size * BytesPerWord, s->value, target);
+        addSite(c, stack, s->size * BytesPerWord, v, target);
 
         apply(c, Pop, BytesPerWord * s->size, target);
       } else {
         if (DebugStack) {
-          fprintf(stderr, "ignore %p value: %p\n", s, s->value);
+          fprintf(stderr, "ignore %p value: %p\n", s, v);
         }
           
         ignored += s->size;
@@ -2005,7 +2055,65 @@ class BranchEvent: public Event {
       fprintf(stderr, "BranchEvent.compile\n");
     }
 
-    apply(c, type, BytesPerWord, address->source);
+    bool jump;
+    UnaryOperation type = this->type;
+    if (type != Jump) {
+      switch (c->constantCompare) {
+      case CompareLess:
+        switch (type) {
+        case JumpIfLess:
+        case JumpIfLessOrEqual:
+        case JumpIfNotEqual:
+          jump = true;
+          type = Jump;
+          break;
+
+        default:
+          jump = false;
+        }
+        break;
+
+      case CompareGreater:
+        switch (type) {
+        case JumpIfGreater:
+        case JumpIfGreaterOrEqual:
+        case JumpIfNotEqual:
+          jump = true;
+          type = Jump;
+          break;
+
+        default:
+          jump = false;
+        }
+        break;
+
+      case CompareEqual:
+        switch (type) {
+        case JumpIfEqual:
+        case JumpIfLessOrEqual:
+        case JumpIfGreaterOrEqual:
+          jump = true;
+          type = Jump;
+          break;
+
+        default:
+          jump = false;
+        }
+        break;
+
+      case CompareNone:
+        jump = true;
+        break;
+
+      default: abort(c);
+      }
+    } else {
+      jump = true;
+    }
+
+    if (jump) {
+      apply(c, type, BytesPerWord, address->source);
+    }
 
     nextRead(c, address);
   }
@@ -2203,14 +2311,7 @@ class BoundsCheckEvent: public Event {
 
     Assembler* a = c->assembler;
 
-    ConstantSite* constant = 0;
-    for (Site* s = index->sites; s; s = s->next) {
-      if (s->type(c) == ConstantOperand) {
-        constant = static_cast<ConstantSite*>(s);
-        break;
-      }
-    }
-
+    ConstantSite* constant = findConstantSite(c, index);
     CodePromise* nextPromise = codePromise(c, -1);
     CodePromise* outOfBoundsPromise = 0;
 
@@ -2232,7 +2333,7 @@ class BoundsCheckEvent: public Event {
     Site* length = memorySite(c, base, lengthOffset);
     length->acquire(c, 0, 0, 0);
 
-    apply(c, Compare, BytesPerWord, index->source, length);
+    apply(c, Compare, 4, index->source, length);
 
     length->release(c);
 
@@ -2641,22 +2742,6 @@ class MyCompiler: public Compiler {
     return value(&c, s, s);
   }
 
-  virtual bool isConstant(Operand* a) {
-    for (Site* s = static_cast<Value*>(a)->sites; s; s = s->next) {
-      if (s->type(&c) == ConstantOperand) return true;
-    }
-    return false;
-  }
-
-  virtual int64_t constantValue(Operand* a) {
-    for (Site* s = static_cast<Value*>(a)->sites; s; s = s->next) {
-      if (s->type(&c) == ConstantOperand) {
-        return static_cast<ConstantSite*>(s)->value.value->value();
-      }
-    }
-    abort(&c);
-  }
-
   virtual Operand* label() {
     return value(&c, ::constantSite(&c, static_cast<Promise*>(0)));
   }
@@ -2698,7 +2783,8 @@ class MyCompiler: public Compiler {
       Value* v = value(&c);
       c.state->stack = ::stack(&c, v, 1, c.state->stack);
       c.state->stack->pushed = true;
-//       v->sites = pushSite(&c, c.state->stack->index);
+      c.state->stack->pushSite
+        = v->sites = pushSite(&c, c.state->stack->index);
     }
   }
 
@@ -2829,6 +2915,13 @@ class MyCompiler: public Compiler {
     Value* dst = value(&c);
     appendMove(&c, Move4To8, 8, static_cast<Value*>(src), dst);
     return dst;
+  }
+
+  virtual Operand* lcmp(Operand* a, Operand* b) {
+    Value* result = value(&c);
+    appendCombine(&c, LongCompare, 8, static_cast<Value*>(a),
+                  static_cast<Value*>(b), result);
+    return result;
   }
 
   virtual void cmp(unsigned size, Operand* a, Operand* b) {
