@@ -106,10 +106,12 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     }
   }
 
-  return vmNativeCall(function, (stackSkip + stackIndex) * BytesPerWord,
-                      stack, stackIndex,
-                      (gprIndex ? gprTable : 0),
-                      (fprIndex ? fprTable : 0), returnType);
+  return vmNativeCall
+    (function,
+     (((1 + LinkageArea + stackSkip + stackIndex) * BytesPerWord) + 15) & -16,
+     stack, stackIndex,
+     (gprIndex ? gprTable : 0),
+     (fprIndex ? fprTable : 0), returnType);
 }
 
 } // namespace vm

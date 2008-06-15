@@ -12,8 +12,7 @@
 
 .text
 
-BytesPerWord = 4
-LinkageArea = 24
+#define BYTES_PER_WORD 4
 
 #ifdef __APPLE__
 .globl _vmNativeCall
@@ -45,13 +44,8 @@ vmNativeCall:
    stw  r16,36(r1)
    stw  r17,40(r1)
 
-   // calculate aligned stack frame size
-   add  r15,r4,LinkageArea + LocalArea + 15
-   and  r15,r15,-16
-
-   // save and update stack pointer
-   sub  r16,r1,r15
-   stwu r16,(r1)
+   // allocate stack space
+	 stwux	r1,r1,r4
 
    // save our argument registers so we can clobber them
    mr   r13,r3
@@ -63,35 +57,35 @@ vmNativeCall:
 loop:
    lwzx r17,r16,r5
    stwx r17,r16,r1
-   add  r16,r16,BytesPerWord
+   addi r16,r16,BYTES_PER_WORD
    
 test:
-   cmp  r16,r6
+   cmplw r16,r6
    blt  loop
 
    // do we need to load the floating point registers?
-   cmp  r8,0
-   be   gpr
+   cmpwi r8,0
+   beq   gpr
 
    // yes, we do
-   lfd  fr1,0(r8)
-   lfd  fr2,8(r8)
-   lfd  fr3,16(r8)
-   lfd  fr4,24(r8)
-   lfd  fr5,32(r8)
-   lfd  fr6,40(r8)
-   lfd  fr7,48(r8)
-   lfd  fr8,56(r8)
-   lfd  fr9,64(r8)
-   lfd  fr10,72(r8)
-   lfd  fr11,80(r8)
-   lfd  fr12,88(r8)
-   lfd  fr13,96(r8)
+   lfd  f1,0(r8)
+   lfd  f2,8(r8)
+   lfd  f3,16(r8)
+   lfd  f4,24(r8)
+   lfd  f5,32(r8)
+   lfd  f6,40(r8)
+   lfd  f7,48(r8)
+   lfd  f8,56(r8)
+   lfd  f9,64(r8)
+   lfd  f10,72(r8)
+   lfd  f11,80(r8)
+   lfd  f12,88(r8)
+   lfd  f13,96(r8)
    
 gpr:
    // do we need to load the general-purpose registers?
-   cmp  r7,0
-   be   call
+   cmpwi r7,0
+   beq  call
 
    // yes, we do
    mr   r16,r7
@@ -107,28 +101,28 @@ gpr:
 call:
    // load and call function address
    mtctr r13
-   bcctrl
+   bctrl
 
    // handle return value based on expected type
-   cmp  r14,VOID_TYPE
+   cmpwi r14,VOID_TYPE
    bne  float
    b    exit
 
 float:
-   cmp  r14,FLOAT_TYPE
-   be   copy
-   cmp  r14,DOUBLE_TYPE
+   cmpwi r14,FLOAT_TYPE
+   beq  copy
+   cmpwi r14,DOUBLE_TYPE
    bne  exit
 
 copy:
    // move floating point return value to GPRs via memory
-   sfd  fr1,8(r1)
+   stfd f1,8(r1)
    lwz  r3,8(r1)
    lwz  r4,12(r1)
 
 exit:   
    // restore stack pointer
-   addi r1,r1,r13
+	 lwz	r1,0(r1)
 
    // restore registers used for local variables
    lwz  r13,24(r1)
