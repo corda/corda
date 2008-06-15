@@ -175,7 +175,8 @@ vm-depends = \
 	$(src)/util.h \
 	$(src)/zone.h \
 	$(src)/assembler.h \
-	$(src)/compiler.h
+	$(src)/compiler.h \
+	$(src)/$(asm).h
 
 vm-sources = \
 	$(src)/$(system).cpp \

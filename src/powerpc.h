@@ -44,6 +44,8 @@ inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned, unsigned argumentsSize, unsigned returnType)
 {
+  const unsigned LinkageArea = 24;
+
   const unsigned GprCount = 8;
   uintptr_t gprTable[GprCount];
   unsigned gprIndex = 0;
@@ -108,7 +110,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
 
   return vmNativeCall
     (function,
-     (((1 + LinkageArea + stackSkip + stackIndex) * BytesPerWord) + 15) & -16,
+     (((1 + stackSkip + stackIndex) * BytesPerWord) + LinkageArea + 15) & -16,
      stack, stackIndex,
      (gprIndex ? gprTable : 0),
      (fprIndex ? fprTable : 0), returnType);
