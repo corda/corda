@@ -42,7 +42,8 @@ namespace vm {
 
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
-            unsigned, unsigned argumentsSize, unsigned returnType)
+            unsigned argumentCount, unsigned argumentsSize,
+            unsigned returnType)
 {
   const unsigned LinkageArea = 24;
 
@@ -54,64 +55,66 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   uint64_t fprTable[FprCount];
   unsigned fprIndex = 0;
 
-  uint64_t stack[argumentsSize];
+  uintptr_t stack[argumentsSize / BytesPerWord];
   unsigned stackSkip = 0;
   unsigned stackIndex = 0;
 
-  for (unsigned i = 0; i < argumentsSize; ++i) {
-    switch (argumentTypes[i]) {
+  unsigned ai = 0;
+  for (unsigned ati = 0; ati < argumentCount; ++ ati) {
+    switch (argumentTypes[ati]) {
     case FLOAT_TYPE: {
       if (fprIndex < FprCount) {
-        fprTable[fprIndex++] = arguments[i];
+        fprTable[fprIndex++] = arguments[ai];
         ++ gprIndex;
         ++ stackSkip;
       } else {
-        stack[stackIndex++] = arguments[i];
+        stack[stackIndex++] = arguments[ai];
       }
+      ++ ai;
     } break;
 
     case DOUBLE_TYPE: {
       if (fprIndex < FprCount) {
-        memcpy(fprTable + fprIndex, arguments + i, 8);
+        memcpy(fprTable + fprIndex, arguments + ai, 8);
         ++ fprIndex;
         gprIndex += BytesPerWord / 4;
         stackSkip += BytesPerWord / 4;
-        i += (BytesPerWord / 4) - 1;
       } else {
-        memcpy(stack + stackIndex, arguments + i, 8);
+        memcpy(stack + stackIndex, arguments + ai, 8);
         stackIndex += BytesPerWord / 4;
-        i += (BytesPerWord / 4) - 1;
       }
+      ai += BytesPerWord / 4;
     } break;
 
     case INT64_TYPE: {
-      if (gprIndex < GprCount) {
-        memcpy(gprTable + gprIndex, arguments + i, 8);
+      if (gprIndex + BytesPerWord / 4 <= GprCount) {
+        memcpy(gprTable + gprIndex, arguments + ai, 8);
         gprIndex += BytesPerWord / 4;
         stackSkip += BytesPerWord / 4;
-        i += (BytesPerWord / 4) - 1;
       } else {
-        memcpy(stack + stackIndex, arguments + i, 8);
+        memcpy(stack + stackIndex, arguments + ai, 8);
         stackIndex += BytesPerWord / 4;
-        i += (BytesPerWord / 4) - 1;
       }
+      ai += BytesPerWord / 4;
     } break;
 
     default: {
       if (gprIndex < GprCount) {
-        gprTable[gprIndex++] = arguments[i];
+        gprTable[gprIndex++] = arguments[ai];
         ++ stackSkip;
       } else {
-        stack[stackIndex++] = arguments[i];
+        stack[stackIndex++] = arguments[ai];
       }
+      ++ ai;
     } break;
     }
   }
 
   return vmNativeCall
     (function,
-     (((1 + stackSkip + stackIndex) * BytesPerWord) + LinkageArea + 15) & -16,
-     stack, stackIndex,
+     - ((((1 + stackSkip + stackIndex) * BytesPerWord) + LinkageArea + 15)
+        & -16),
+     stack, stackIndex * BytesPerWord,
      (gprIndex ? gprTable : 0),
      (fprIndex ? fprTable : 0), returnType);
 }

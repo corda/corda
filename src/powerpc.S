@@ -113,13 +113,18 @@ LOCAL(float):
    cmpwi r14,FLOAT_TYPE
    beq  LOCAL(copy)
    cmpwi r14,DOUBLE_TYPE
-   bne  LOCAL(exit)
+   beq  LOCAL(copy)
+   cmpwi r14,INT64_TYPE
+   beq  LOCAL(exit)
+   mr   r4,r3
+   b    LOCAL(exit)
 
 LOCAL(copy):
    // move floating point return value to GPRs via memory
    stfd f1,8(r1)
    lwz  r3,8(r1)
    lwz  r4,12(r1)
+   b    LOCAL(exit)
 
 LOCAL(exit):
    // restore stack pointer

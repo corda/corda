@@ -137,6 +137,10 @@ struct JavaVMVTable {
   void* reserved1;
   void* reserved2;
 
+#if (! TARGET_RT_MAC_CFM) && defined(__ppc__)
+  void* cfm_vectors[4];
+#endif
+
   jint
   (JNICALL *DestroyJavaVM)
   (JavaVM*);
@@ -156,6 +160,10 @@ struct JavaVMVTable {
   jint
   (JNICALL *AttachCurrentThreadAsDaemon)
   (JavaVM*, JNIEnv**, void*);
+
+#if TARGET_RT_MAC_CFM && defined(__ppc__)
+    void* real_functions[5];
+#endif
 };
 
 struct JNIEnvVTable {
@@ -1083,6 +1091,10 @@ struct JNIEnvVTable {
   jlong
   (JNICALL *GetDirectBufferCapacity)
     (JNIEnv*, jobject);
+
+#if TARGET_RT_MAC_CFM && defined(__ppc__)
+  void* real_functions[228];
+#endif
 };
 
 inline int
