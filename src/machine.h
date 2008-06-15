@@ -164,6 +164,10 @@ struct JNIEnvVTable {
   void* reserved2;
   void* reserved3;
 
+#if (! TARGET_RT_MAC_CFM) && defined(__ppc__)
+  void* cfm_vectors[225];
+#endif
+
   jint
   (JNICALL *GetVersion)
     (JNIEnv*);
