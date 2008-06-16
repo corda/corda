@@ -18,6 +18,8 @@
 #  define JNIEXPORT __attribute__ ((visibility("default")))
 #endif
 
+#define UNUSED __attribute__((unused))
+
 namespace {
 
 inline void
