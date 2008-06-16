@@ -28,7 +28,7 @@ vmCall();
 namespace {
 
 const bool Verbose = false;
-const bool DebugNatives = false;
+const bool DebugNatives = true;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
 const bool DebugFrameMaps = false;
@@ -1212,7 +1212,7 @@ findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
   }
 }
 
-intptr_t
+intptr_t FORCE_ALIGN
 compareDoublesG(uint64_t bi, uint64_t ai)
 {
   double a = bitsToDouble(ai);
@@ -1229,7 +1229,7 @@ compareDoublesG(uint64_t bi, uint64_t ai)
   }
 }
 
-intptr_t
+intptr_t FORCE_ALIGN
 compareDoublesL(uint64_t bi, uint64_t ai)
 {
   double a = bitsToDouble(ai);
@@ -1246,7 +1246,7 @@ compareDoublesL(uint64_t bi, uint64_t ai)
   }
 }
 
-intptr_t
+intptr_t FORCE_ALIGN
 compareFloatsG(uint32_t bi, uint32_t ai)
 {
   float a = bitsToFloat(ai);
@@ -1263,7 +1263,7 @@ compareFloatsG(uint32_t bi, uint32_t ai)
   }
 }
 
-intptr_t
+intptr_t FORCE_ALIGN
 compareFloatsL(uint32_t bi, uint32_t ai)
 {
   float a = bitsToFloat(ai);
@@ -1280,79 +1280,79 @@ compareFloatsL(uint32_t bi, uint32_t ai)
   }
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 addDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) + bitsToDouble(b));
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 subtractDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) - bitsToDouble(b));
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 multiplyDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) * bitsToDouble(b));
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 divideDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) / bitsToDouble(b));
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 moduloDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(fmod(bitsToDouble(a), bitsToDouble(b)));
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 negateDouble(uint64_t a)
 {
   return doubleToBits(- bitsToDouble(a));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 doubleToFloat(int64_t a)
 {
   return floatToBits(static_cast<float>(bitsToDouble(a)));
 }
 
-int32_t
+int32_t FORCE_ALIGN
 doubleToInt(int64_t a)
 {
   return static_cast<int32_t>(bitsToDouble(a));
 }
 
-int64_t
+int64_t FORCE_ALIGN
 doubleToLong(int64_t a)
 {
   return static_cast<int64_t>(bitsToDouble(a));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 addFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) + bitsToFloat(b));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 subtractFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) - bitsToFloat(b));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 multiplyFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) * bitsToFloat(b));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 divideFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) / bitsToFloat(b));
@@ -1364,7 +1364,7 @@ moduloFloat(uint32_t b, uint32_t a)
   return floatToBits(fmod(bitsToFloat(a), bitsToFloat(b)));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 negateFloat(uint32_t a)
 {
   return floatToBits(- bitsToFloat(a));
@@ -1382,43 +1382,43 @@ moduloLong(int64_t b, int64_t a)
   return a % b;
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 floatToDouble(int32_t a)
 {
   return doubleToBits(static_cast<double>(bitsToFloat(a)));
 }
 
-int32_t
+int32_t FORCE_ALIGN
 floatToInt(int32_t a)
 {
   return static_cast<int32_t>(bitsToFloat(a));
 }
 
-int64_t
+int64_t FORCE_ALIGN
 floatToLong(int32_t a)
 {
   return static_cast<int64_t>(bitsToFloat(a));
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 intToDouble(int32_t a)
 {
   return doubleToBits(static_cast<double>(a));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 intToFloat(int32_t a)
 {
   return floatToBits(static_cast<float>(a));
 }
 
-uint64_t
+uint64_t FORCE_ALIGN
 longToDouble(int64_t a)
 {
   return doubleToBits(static_cast<double>(a));
 }
 
-uint32_t
+uint32_t FORCE_ALIGN
 longToFloat(int64_t a)
 {
   return floatToBits(static_cast<float>(a));
@@ -1449,7 +1449,7 @@ makeBlankArray(MyThread* t, object (*constructor)(Thread*, uintptr_t, bool),
   }
 }
 
-uintptr_t
+uintptr_t FORCE_ALIGN
 lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
               uintptr_t default_)
 {

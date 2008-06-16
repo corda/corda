@@ -1491,7 +1491,7 @@ mark(Thread* t, object o, unsigned offset)
   }
 }
 
-inline void
+inline void FORCE_ALIGN
 set(Thread* t, object target, unsigned offset, object value)
 {
   cast<object>(target, offset) = value;
