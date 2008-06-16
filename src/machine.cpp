@@ -2221,7 +2221,7 @@ isAssignableFrom(Thread* t, object a, object b)
   return false;
 }
 
-bool
+bool FORCE_ALIGN
 instanceOf(Thread* t, object class_, object o)
 {
   if (o == 0) {
