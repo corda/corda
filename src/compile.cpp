@@ -28,7 +28,7 @@ vmCall();
 namespace {
 
 const bool Verbose = false;
-const bool DebugNatives = true;
+const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
 const bool DebugFrameMaps = false;
