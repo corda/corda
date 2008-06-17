@@ -27,6 +27,8 @@
 #  include "winbase.h"
 #  include "io.h"
 #  include "tchar.h"
+#  include "sys/types.h"
+#  include "sys/timeb.h"
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
@@ -388,24 +390,9 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_java_lang_System_currentTimeMillis(JNIEnv*, jclass)
 {
 #ifdef WIN32
-  static LARGE_INTEGER frequency;
-  static LARGE_INTEGER time;
-  static bool init = true;
-
-  if (init) {
-    QueryPerformanceFrequency(&frequency);
-
-    if (frequency.QuadPart == 0) {
-      return 0;      
-    }
-
-    init = false;
-  }
-
-  QueryPerformanceCounter(&time);
-  return static_cast<int64_t>
-    (((static_cast<double>(time.QuadPart)) * 1000.0) /
-     (static_cast<double>(frequency.QuadPart)));
+  _timeb tb;
+  _ftime(&tb);
+  return (static_cast<jlong>(tb.time) * 1000) + static_cast<jlong>(tb.millitm);
 #else
   timeval tv = { 0, 0 };
   gettimeofday(&tv, 0);
