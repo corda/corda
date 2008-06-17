@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 0.1
+version = 0.1.1
 
 build-arch = $(shell uname -m)
 ifeq ($(build-arch),i586)
