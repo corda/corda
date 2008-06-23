@@ -1825,10 +1825,10 @@ longCompareCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
   
   int64_t v = a->value->value();
 
-  ResolvedPromise low(v & 0xFFFFFFFF);
+  ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
   Assembler::Constant al(&low);
   
-  ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+  ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
   Assembler::Constant ah(&high);
   
   Assembler::Register bh(b->high);

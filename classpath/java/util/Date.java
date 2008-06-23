@@ -24,4 +24,10 @@ public class Date {
   public long getTime() {
     return when;
   }
+
+  public String toString() {
+    return toString(when);
+  }
+
+  private static native String toString(long when);
 }
