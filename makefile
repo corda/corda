@@ -1,10 +1,10 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 name = avian
 version = 0.1.1
 
-build-arch = "$(shell uname -m)"
-ifeq ($(build-arch),"Power Macintosh")
+build-arch = $(shell uname -m)
+ifeq ($(build-arch),Power)
 	build-arch = powerpc
 endif
 ifeq ($(build-arch),i586)
