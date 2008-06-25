@@ -1190,6 +1190,9 @@ inline void stress(Thread* t);
 
 #endif // not VM_STRESS
 
+void
+runJavaThread(Thread* t);
+
 class Thread {
  public:
   enum State {
@@ -1242,8 +1245,7 @@ class Thread {
 
       t->m->localThread->set(t);
 
-      t->m->processor->invoke
-        (t, "java/lang/Thread", "run", "()V", t->javaThread);
+      runJavaThread(t);
 
       if (t->exception) {
         printTrace(t, t->exception);
@@ -2021,6 +2023,13 @@ findMethod(Thread* t, object class_, object name, object spec)
 {
   return findInHierarchy
     (t, class_, name, spec, findMethodInClass, makeNoSuchMethodError);
+}
+
+inline object
+findMethod(Thread* t, object method, object class_)
+{
+  return arrayBody(t, classVirtualTable(t, class_), 
+                   methodOffset(t, method));
 }
 
 inline unsigned

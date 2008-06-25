@@ -2873,6 +2873,17 @@ makeTrace(Thread* t, Thread* target)
 }
 
 void
+runJavaThread(Thread* t)
+{
+  object method = resolveMethod(t, "java/lang/Thread", "run", "()V");
+  if (t->exception == 0) {
+    t->m->processor->invoke
+      (t, findMethod(t, method, objectClass(t, t->javaThread)),
+       t->javaThread);
+  }
+}
+
+void
 noop()
 { }
 
