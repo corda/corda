@@ -1346,6 +1346,7 @@ inline void
 stress(Thread* t)
 {
   if ((not t->stress)
+      and (not t->tracing)
       and t->state != Thread::NoState
       and t->state != Thread::IdleState)
   {
