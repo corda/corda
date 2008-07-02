@@ -960,6 +960,10 @@ addCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
 }
 
 void
+addRR(Context* c, unsigned size, Assembler::Register* a,
+      Assembler::Register* b);
+
+void
 addCR(Context* c, unsigned size, Assembler::Constant* a,
       Assembler::Register* b)
 {
@@ -987,7 +991,10 @@ addCR(Context* c, unsigned size, Assembler::Constant* a,
         c->code.append(0xc0 | b->low);
         c->code.append4(v);        
       } else {
-        abort(c);
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, size, a, &tmp);
+        addRR(c, size, &tmp, b);
+        c->client->releaseTemporary(tmp.low);
       }
     }
   }
@@ -1008,6 +1015,10 @@ subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
     abort(c);
   }
 }
+
+void
+subtractRR(Context* c, unsigned size, Assembler::Register* a,
+           Assembler::Register* b);
 
 void
 subtractCR(Context* c, unsigned size, Assembler::Constant* a,
@@ -1037,7 +1048,10 @@ subtractCR(Context* c, unsigned size, Assembler::Constant* a,
         c->code.append(0xe8 | b->low);
         c->code.append4(v);        
       } else {
-        abort(c);
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, size, a, &tmp);
+        subtractRR(c, size, &tmp, b);
+        c->client->releaseTemporary(tmp.low);
       }
     }
   }
