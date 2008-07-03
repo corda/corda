@@ -53,6 +53,15 @@ public abstract class System {
 
     return null;
   }
+  
+  public static String getProperty(String name, String defaultValue) {
+	  String result = getProperty(name);
+	  if (result==null) {
+		  return defaultValue;
+	  }
+	  return result;
+  }
+  
 
   public static String setProperty(String name, String value) {
     for (Property p = properties; p != null; p = p.next) {

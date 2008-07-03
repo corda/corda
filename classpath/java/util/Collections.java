@@ -187,4 +187,53 @@ public class Collections {
       }
     }
   }
+
+  static class UnmodifiableSet<T> implements Set<T> {
+	  Set<T> inner;
+
+	  UnmodifiableSet(Set<T> inner) {
+		  this.inner = inner;
+	  }
+	  
+	public boolean add(T element) {
+		throw new UnsupportedOperationException("not supported");
+	}
+
+	public boolean addAll(Collection<? extends T> collection) {
+		throw new UnsupportedOperationException("not supported");
+	}
+
+	public void clear() {
+		throw new UnsupportedOperationException("not supported");
+	}
+
+	public boolean contains(T element) {
+		return inner.contains(element);
+	}
+
+	public boolean isEmpty() {
+		return inner.isEmpty();
+	}
+
+	public Iterator<T> iterator() {
+		return inner.iterator();
+	}
+
+	public boolean remove(T element) {
+		throw new UnsupportedOperationException("not supported");
+	}
+
+	public int size() {
+		return inner.size();
+	}
+
+	public <S> S[] toArray(S[] array) {
+		return inner.toArray(array);
+	}
+	  
+  }
+  
+    public static <T> Set<T> unmodifiableSet(Set<T> hs) {
+		return new UnmodifiableSet<T>(hs);
+	}
 }

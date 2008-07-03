@@ -10,7 +10,7 @@
 
 package java.lang;
 
-public class StringBuilder {
+public class StringBuilder implements CharSequence {
   private static final int BufferSize = 32;
 
   private Cell chain;
@@ -287,5 +287,16 @@ public class StringBuilder {
       this.value = value;
       this.next = next;
     }
+  }
+
+  public String substring(int start, int end) {
+    int len = end-start;
+    char[] buf = new char[len]; 
+    getChars(start, len, buf,0 );
+    return new String(buf, 0, len, false);
+  }
+	
+  public CharSequence subSequence(int start, int end) {
+    return substring(start, end);
   }
 }

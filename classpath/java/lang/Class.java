@@ -415,4 +415,8 @@ public final class Class <T> {
       return null;
     }
   }
+  
+  public boolean desiredAssertionStatus() {
+	  return false;
+  }
 }

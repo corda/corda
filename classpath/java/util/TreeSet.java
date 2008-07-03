@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class TreeSet<T> implements Collection<T> {
+public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
   private PersistentSet<Cell<T>> set;
   private int size;
 
@@ -41,12 +41,6 @@ public class TreeSet<T> implements Collection<T> {
     return false;
   }
 
-  public boolean addAll(Collection<? extends T> collection) {
-    boolean change = false;
-    for (T t: collection) if (add(t)) change = true;
-    return change;
-  }
-
   // Used by hashMaps for replacement
   public void addAndReplace(T value) {
     PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
@@ -73,10 +67,6 @@ public class TreeSet<T> implements Collection<T> {
 
       return true;
     }
-  }
-
-  public <T> T[] toArray(T[] array) {
-    return Collections.toArray(this, array);
   }
 
   public int size() {

@@ -12,7 +12,7 @@ package java.lang;
 
 import java.io.UnsupportedEncodingException;
 
-public final class String implements Comparable<String> {
+public final class String implements Comparable<String>, CharSequence {
   private Object data;
   private int offset;
   private int length;
@@ -425,6 +425,10 @@ public final class String implements Comparable<String> {
     return array;
   }
 
+	public CharSequence subSequence(int start, int end) {
+		return substring(start, end);
+	}
+  
   public native String intern();
 
   public static String valueOf(Object s) {

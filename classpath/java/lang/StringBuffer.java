@@ -10,7 +10,7 @@
 
 package java.lang;
 
-public class StringBuffer {
+public class StringBuffer implements CharSequence {
   private final StringBuilder sb;
 
   public StringBuffer(String s) {
@@ -115,5 +115,13 @@ public class StringBuffer {
 
   public synchronized String toString() {
     return sb.toString();
+  }
+  
+  public String substring(int start, int end) {
+    return sb.substring(start, end);
+  }
+  
+  public CharSequence subSequence(int start, int end) {
+    return sb.subSequence(start, end);
   }
 }
