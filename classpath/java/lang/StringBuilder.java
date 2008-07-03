@@ -295,7 +295,7 @@ public class StringBuilder implements CharSequence {
     getChars(start, len, buf,0 );
     return new String(buf, 0, len, false);
   }
-	
+        
   public CharSequence subSequence(int start, int end) {
     return substring(start, end);
   }

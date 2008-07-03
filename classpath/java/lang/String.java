@@ -44,12 +44,12 @@ public final class String implements Comparable<String>, CharSequence {
 
   public String(byte[] data, String charset)
     throws UnsupportedEncodingException
-  {
-    this(data);
-    if (! charset.equals("US-ASCII")) {
-      throw new UnsupportedEncodingException(charset);
+    {
+      this(data);
+      if (! charset.equals("US-ASCII")) {
+        throw new UnsupportedEncodingException(charset);
+      }
     }
-  }
 
   private String(Object data, int offset, int length, boolean copy) {
     int l;
@@ -253,11 +253,11 @@ public final class String implements Comparable<String>, CharSequence {
     if (data instanceof char[]) {
       char[] buf = new char[length];
       for (int i=0; i < length; i++) {
-	if (charAt(i) == oldChar) {
-	  buf[i] = newChar;
-	} else {
-	  buf[i] = charAt(i);
-	}
+        if (charAt(i) == oldChar) {
+          buf[i] = newChar;
+        } else {
+          buf[i] = charAt(i);
+        }
       }
       return new String(buf, 0, length, false);
     } else {
@@ -266,11 +266,11 @@ public final class String implements Comparable<String>, CharSequence {
       byte oldByte = (byte)oldChar;
       byte newByte = (byte)newChar;
       for (int i=0; i < length; i++) {
-	if (orig[i+offset] == oldByte) {
-	  buf[i] = newByte;
-	} else {
-	  buf[i] = orig[i+offset];
-	}
+        if (orig[i+offset] == oldByte) {
+          buf[i] = newByte;
+        } else {
+          buf[i] = orig[i+offset];
+        }
       }
       return new String(buf, 0, length, false);
     }
@@ -425,9 +425,9 @@ public final class String implements Comparable<String>, CharSequence {
     return array;
   }
 
-	public CharSequence subSequence(int start, int end) {
-		return substring(start, end);
-	}
+  public CharSequence subSequence(int start, int end) {
+    return substring(start, end);
+  }
   
   public native String intern();
 
