@@ -161,6 +161,8 @@ class Assembler {
   virtual unsigned argumentRegisterCount() = 0;
   virtual int argumentRegister(unsigned index) = 0;
 
+  virtual unsigned stackAlignment() = 0;
+
   virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
                     uint64_t* registerMask, bool* thunk) = 0;
 

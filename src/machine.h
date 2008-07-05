@@ -1507,7 +1507,7 @@ mark(Thread* t, object o, unsigned offset)
   }
 }
 
-inline void FORCE_ALIGN
+inline void
 set(Thread* t, object target, unsigned offset, object value)
 {
   cast<object>(target, offset) = value;
@@ -1694,7 +1694,7 @@ makeExceptionInInitializerError(Thread* t, object cause)
   return makeExceptionInInitializerError(t, 0, trace, cause);
 }
 
-inline object FORCE_ALIGN
+inline object
 makeNew(Thread* t, object class_)
 {
   assert(t, t->state == Thread::ActiveState);
@@ -1709,7 +1709,7 @@ makeNew(Thread* t, object class_)
   return instance;
 }
 
-inline object FORCE_ALIGN
+inline object
 makeNewWeakReference(Thread* t, object class_)
 {
   assert(t, t->state == Thread::ActiveState);

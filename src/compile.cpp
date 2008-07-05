@@ -386,6 +386,8 @@ class TraceElement: public TraceHandler {
 };
 
 enum Event {
+  PushContextEvent,
+  PopContextEvent,
   PushEvent,
   PopEvent,
   IpEvent,
@@ -407,15 +409,16 @@ localSize(MyThread* t, object method)
 }
 
 unsigned
-frameSize(MyThread* t, object method)
+alignedFrameSize(MyThread* t, object method)
 {
-  return localSize(t, method) + codeMaxStack(t, methodCode(t, method));
+  return Assembler::alignFrameSize
+    (localSize(t, method) + codeMaxStack(t, methodCode(t, method)));
 }
 
 unsigned
 frameMapSizeInWords(MyThread* t, object method)
 {
-  return ceiling(frameSize(t, method), BitsPerWord) * BytesPerWord;
+  return ceiling(alignedFrameSize(t, method), BitsPerWord) * BytesPerWord;
 }
 
 uint16_t*
@@ -591,7 +594,7 @@ class Frame {
            (t, methodCode(t, context->method)));
 
     if (level > 1) {
-      context->eventLog.append(PushEvent);
+      context->eventLog.append(PushContextEvent);
     }
   }
 
@@ -604,7 +607,7 @@ class Frame {
       }
 
       if (level > 1) {
-        context->eventLog.append(PopEvent);      
+        context->eventLog.append(PopContextEvent);      
       }
     }
   }
@@ -830,54 +833,82 @@ class Frame {
     this->ip = ip;
   }
 
+  void pushQuiet(unsigned size, Compiler::Operand* o) {
+    if (size == 8 and BytesPerWord == 8) {
+      c->push(8);
+
+      context->eventLog.append(PushEvent);
+      context->eventLog.appendAddress(c->top());
+    }
+
+    c->push(size, o);
+    
+    context->eventLog.append(PushEvent);
+    context->eventLog.appendAddress(c->top());
+  }
+
+  Compiler::Operand* popQuiet(unsigned size) {
+    context->eventLog.append(PopEvent);
+    context->eventLog.appendAddress(c->top());
+
+    Compiler::Operand* r = c->pop(8);
+
+    if (size == 8 and BytesPerWord == 8) {
+      context->eventLog.append(PopEvent);
+      context->eventLog.appendAddress(c->top());
+
+      c->pop(8);
+    }
+
+    return r;
+  }
+
   void pushInt(Compiler::Operand* o) {
-    c->push(4, o);
+    pushQuiet(4, o);
     pushedInt();
   }
 
   void pushAddress(Compiler::Operand* o) {
-    c->push(BytesPerWord, o);
+    pushQuiet(BytesPerWord, o);
     pushedInt();
   }
 
   void pushObject(Compiler::Operand* o) {
-    c->push(BytesPerWord, o);
+    pushQuiet(BytesPerWord, o);
     pushedObject();
   }
 
   void pushObject() {
-    c->pushed(1);
+    c->pushed();
+
+    context->eventLog.append(PushEvent);
+    context->eventLog.appendAddress(c->top());
+
     pushedObject();
   }
 
-  void pushLongQuiet(Compiler::Operand* o) {
-    if (BytesPerWord == 8) {
-      c->push(8);
-    }
-    c->push(8, o);
-  }
-
   void pushLong(Compiler::Operand* o) {
-    pushLongQuiet(o);
+    pushQuiet(8, o);
     pushedLong();
   }
 
   void pop(unsigned count) {
     popped(count);
-    c->popped(count);
+
+    for (unsigned i = count; i;) {
+      Compiler::StackElement* s = c->top();
+
+      context->eventLog.append(PopEvent);
+      context->eventLog.appendAddress(s);
+
+      c->popped();
+      i -= c->size(s);
+    }
   }
 
   Compiler::Operand* popInt() {
     poppedInt();
-    return c->pop(4);
-  }
-
-  Compiler::Operand* popLongQuiet() {
-    Compiler::Operand* r = c->pop(8);
-    if (BytesPerWord == 8) {
-      c->pop(8);
-    }
-    return r;
+    return popQuiet(4);
   }
 
   Compiler::Operand* peekLong(unsigned index) {
@@ -886,12 +917,12 @@ class Frame {
 
   Compiler::Operand* popLong() {
     poppedLong();
-    return popLongQuiet();
+    return popQuiet(8);
   }
 
   Compiler::Operand* popObject() {
     poppedObject();
-    return c->pop(BytesPerWord);
+    return popQuiet(BytesPerWord);
   }
 
   void loadInt(unsigned index) {
@@ -925,7 +956,7 @@ class Frame {
   }
 
   void storeObjectOrAddress(unsigned index) {
-    c->storeLocal(BytesPerWord, c->pop(BytesPerWord), index);
+    c->storeLocal(BytesPerWord, popQuiet(BytesPerWord), index);
 
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
@@ -939,39 +970,39 @@ class Frame {
   }
 
   void dup() {
-    c->push(BytesPerWord, c->peek(BytesPerWord, 0));
+    pushQuiet(BytesPerWord, c->peek(BytesPerWord, 0));
 
     dupped();
   }
 
   void dupX1() {
-    Compiler::Operand* s0 = c->pop(BytesPerWord);
-    Compiler::Operand* s1 = c->pop(BytesPerWord);
+    Compiler::Operand* s0 = popQuiet(BytesPerWord);
+    Compiler::Operand* s1 = popQuiet(BytesPerWord);
 
-    c->push(BytesPerWord, s0);
-    c->push(BytesPerWord, s1);
-    c->push(BytesPerWord, s0);
+    pushQuiet(BytesPerWord, s0);
+    pushQuiet(BytesPerWord, s1);
+    pushQuiet(BytesPerWord, s0);
 
     duppedX1();
   }
 
   void dupX2() {
-    Compiler::Operand* s0 = c->pop(BytesPerWord);
+    Compiler::Operand* s0 = popQuiet(BytesPerWord);
 
     if (get(sp - 2) == Long) {
-      Compiler::Operand* s1 = popLongQuiet();
+      Compiler::Operand* s1 = popQuiet(8);
 
-      c->push(BytesPerWord, s0);
-      pushLongQuiet(s1);
-      c->push(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s0);
+      pushQuiet(8, s1);
+      pushQuiet(BytesPerWord, s0);
     } else {
-      Compiler::Operand* s1 = c->pop(BytesPerWord);
-      Compiler::Operand* s2 = c->pop(BytesPerWord);
+      Compiler::Operand* s1 = popQuiet(BytesPerWord);
+      Compiler::Operand* s2 = popQuiet(BytesPerWord);
 
-      c->push(BytesPerWord, s0);
-      c->push(BytesPerWord, s2);
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s2);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(BytesPerWord, s0);
     }
 
     duppedX2();
@@ -979,15 +1010,15 @@ class Frame {
 
   void dup2() {
     if (get(sp - 1) == Long) {
-      pushLongQuiet(peekLong(0));
+      pushQuiet(8, peekLong(0));
     } else {
-      Compiler::Operand* s0 = c->pop(BytesPerWord);
-      Compiler::Operand* s1 = c->pop(BytesPerWord);
+      Compiler::Operand* s0 = popQuiet(BytesPerWord);
+      Compiler::Operand* s1 = popQuiet(BytesPerWord);
 
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(BytesPerWord, s0);
     }
 
     dupped2();
@@ -995,22 +1026,22 @@ class Frame {
 
   void dup2X1() {
     if (get(sp - 1) == Long) {
-      Compiler::Operand* s0 = popLongQuiet();
-      Compiler::Operand* s1 = c->pop(BytesPerWord);
+      Compiler::Operand* s0 = popQuiet(8);
+      Compiler::Operand* s1 = popQuiet(BytesPerWord);
 
-      pushLongQuiet(s0);
-      c->push(BytesPerWord, s1);
-      pushLongQuiet(s0);
+      pushQuiet(8, s0);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(8, s0);
     } else {
-      Compiler::Operand* s0 = c->pop(BytesPerWord);
-      Compiler::Operand* s1 = c->pop(BytesPerWord);
-      Compiler::Operand* s2 = c->pop(BytesPerWord);
+      Compiler::Operand* s0 = popQuiet(BytesPerWord);
+      Compiler::Operand* s1 = popQuiet(BytesPerWord);
+      Compiler::Operand* s2 = popQuiet(BytesPerWord);
 
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
-      c->push(BytesPerWord, s2);
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s2);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(BytesPerWord, s0);
     }
 
     dupped2X1();
@@ -1018,46 +1049,46 @@ class Frame {
 
   void dup2X2() {
     if (get(sp - 1) == Long) {
-      Compiler::Operand* s0 = popLongQuiet();
+      Compiler::Operand* s0 = popQuiet(8);
 
       if (get(sp - 3) == Long) {
-        Compiler::Operand* s1 = popLongQuiet();
+        Compiler::Operand* s1 = popQuiet(8);
 
-        pushLongQuiet(s0);
-        pushLongQuiet(s1);
-        pushLongQuiet(s0);
+        pushQuiet(8, s0);
+        pushQuiet(8, s1);
+        pushQuiet(8, s0);
       } else {
-        Compiler::Operand* s1 = c->pop(BytesPerWord);
-        Compiler::Operand* s2 = c->pop(BytesPerWord);
+        Compiler::Operand* s1 = popQuiet(BytesPerWord);
+        Compiler::Operand* s2 = popQuiet(BytesPerWord);
 
-        pushLongQuiet(s0);
-        c->push(BytesPerWord, s2);
-        c->push(BytesPerWord, s1);
-        pushLongQuiet(s0);
+        pushQuiet(8, s0);
+        pushQuiet(BytesPerWord, s2);
+        pushQuiet(BytesPerWord, s1);
+        pushQuiet(8, s0);
       }
     } else {
-      Compiler::Operand* s0 = c->pop(BytesPerWord);
-      Compiler::Operand* s1 = c->pop(BytesPerWord);
-      Compiler::Operand* s2 = c->pop(BytesPerWord);
-      Compiler::Operand* s3 = c->pop(BytesPerWord);
+      Compiler::Operand* s0 = popQuiet(BytesPerWord);
+      Compiler::Operand* s1 = popQuiet(BytesPerWord);
+      Compiler::Operand* s2 = popQuiet(BytesPerWord);
+      Compiler::Operand* s3 = popQuiet(BytesPerWord);
 
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
-      c->push(BytesPerWord, s3);
-      c->push(BytesPerWord, s2);
-      c->push(BytesPerWord, s1);
-      c->push(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(BytesPerWord, s0);
+      pushQuiet(BytesPerWord, s3);
+      pushQuiet(BytesPerWord, s2);
+      pushQuiet(BytesPerWord, s1);
+      pushQuiet(BytesPerWord, s0);
     }
 
     dupped2X2();
   }
 
   void swap() {
-    Compiler::Operand* s0 = c->pop(BytesPerWord);
-    Compiler::Operand* s1 = c->pop(BytesPerWord);
+    Compiler::Operand* s0 = popQuiet(BytesPerWord);
+    Compiler::Operand* s1 = popQuiet(BytesPerWord);
 
-    c->push(BytesPerWord, s0);
-    c->push(BytesPerWord, s1);
+    pushQuiet(BytesPerWord, s0);
+    pushQuiet(BytesPerWord, s1);
 
     swapped();
   }
@@ -1192,14 +1223,14 @@ unwind(MyThread* t)
   vmJump(ip, base, stack, t);
 }
 
-void FORCE_ALIGN
+void
 tryInitClass(MyThread* t, object class_)
 {
   initClass(t, class_);
   if (UNLIKELY(t->exception)) unwind(t);
 }
 
-void* FORCE_ALIGN
+void*
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
@@ -1212,7 +1243,7 @@ findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
   }
 }
 
-intptr_t FORCE_ALIGN
+intptr_t
 compareDoublesG(uint64_t bi, uint64_t ai)
 {
   double a = bitsToDouble(ai);
@@ -1229,7 +1260,7 @@ compareDoublesG(uint64_t bi, uint64_t ai)
   }
 }
 
-intptr_t FORCE_ALIGN
+intptr_t
 compareDoublesL(uint64_t bi, uint64_t ai)
 {
   double a = bitsToDouble(ai);
@@ -1246,7 +1277,7 @@ compareDoublesL(uint64_t bi, uint64_t ai)
   }
 }
 
-intptr_t FORCE_ALIGN
+intptr_t
 compareFloatsG(uint32_t bi, uint32_t ai)
 {
   float a = bitsToFloat(ai);
@@ -1263,7 +1294,7 @@ compareFloatsG(uint32_t bi, uint32_t ai)
   }
 }
 
-intptr_t FORCE_ALIGN
+intptr_t
 compareFloatsL(uint32_t bi, uint32_t ai)
 {
   float a = bitsToFloat(ai);
@@ -1280,151 +1311,151 @@ compareFloatsL(uint32_t bi, uint32_t ai)
   }
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 addDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) + bitsToDouble(b));
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 subtractDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) - bitsToDouble(b));
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 multiplyDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) * bitsToDouble(b));
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 divideDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(bitsToDouble(a) / bitsToDouble(b));
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 moduloDouble(uint64_t b, uint64_t a)
 {
   return doubleToBits(fmod(bitsToDouble(a), bitsToDouble(b)));
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 negateDouble(uint64_t a)
 {
   return doubleToBits(- bitsToDouble(a));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 doubleToFloat(int64_t a)
 {
   return floatToBits(static_cast<float>(bitsToDouble(a)));
 }
 
-int32_t FORCE_ALIGN
+int32_t
 doubleToInt(int64_t a)
 {
   return static_cast<int32_t>(bitsToDouble(a));
 }
 
-int64_t FORCE_ALIGN
+int64_t
 doubleToLong(int64_t a)
 {
   return static_cast<int64_t>(bitsToDouble(a));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 addFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) + bitsToFloat(b));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 subtractFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) - bitsToFloat(b));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 multiplyFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) * bitsToFloat(b));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 divideFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) / bitsToFloat(b));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 moduloFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(fmod(bitsToFloat(a), bitsToFloat(b)));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 negateFloat(uint32_t a)
 {
   return floatToBits(- bitsToFloat(a));
 }
 
-int64_t FORCE_ALIGN
+int64_t
 divideLong(int64_t b, int64_t a)
 {
   return a / b;
 }
 
-int64_t FORCE_ALIGN
+int64_t
 moduloLong(int64_t b, int64_t a)
 {
   return a % b;
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 floatToDouble(int32_t a)
 {
   return doubleToBits(static_cast<double>(bitsToFloat(a)));
 }
 
-int32_t FORCE_ALIGN
+int32_t
 floatToInt(int32_t a)
 {
   return static_cast<int32_t>(bitsToFloat(a));
 }
 
-int64_t FORCE_ALIGN
+int64_t
 floatToLong(int32_t a)
 {
   return static_cast<int64_t>(bitsToFloat(a));
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 intToDouble(int32_t a)
 {
   return doubleToBits(static_cast<double>(a));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 intToFloat(int32_t a)
 {
   return floatToBits(static_cast<float>(a));
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 longToDouble(int64_t a)
 {
   return doubleToBits(static_cast<double>(a));
 }
 
-uint32_t FORCE_ALIGN
+uint32_t
 longToFloat(int64_t a)
 {
   return floatToBits(static_cast<float>(a));
 }
 
-object FORCE_ALIGN
+object
 makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 {
   if (length >= 0) {
@@ -1436,7 +1467,7 @@ makeBlankObjectArray(MyThread* t, object class_, int32_t length)
   }
 }
 
-object FORCE_ALIGN
+object
 makeBlankArray(MyThread* t, object (*constructor)(Thread*, uintptr_t, bool),
                int32_t length)
 {
@@ -1449,7 +1480,7 @@ makeBlankArray(MyThread* t, object (*constructor)(Thread*, uintptr_t, bool),
   }
 }
 
-uintptr_t FORCE_ALIGN
+uintptr_t
 lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
               uintptr_t default_)
 {
@@ -1472,7 +1503,7 @@ lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
   return default_;
 }
 
-void FORCE_ALIGN
+void
 setMaybeNull(MyThread* t, object o, unsigned offset, object value)
 {
   if (LIKELY(o)) {
@@ -1483,7 +1514,7 @@ setMaybeNull(MyThread* t, object o, unsigned offset, object value)
   }
 }
 
-void FORCE_ALIGN
+void
 acquireMonitorForObject(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -1494,7 +1525,7 @@ acquireMonitorForObject(MyThread* t, object o)
   }
 }
 
-void FORCE_ALIGN
+void
 releaseMonitorForObject(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -1530,7 +1561,7 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* stack,
   return array;
 }
 
-object FORCE_ALIGN
+object
 makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
                           uintptr_t* stack)
 {
@@ -1563,7 +1594,7 @@ traceSize(Thread* t)
     + (counter.count * FixedSizeOfTraceElement);
 }
 
-void NO_RETURN FORCE_ALIGN
+void NO_RETURN
 throwArrayIndexOutOfBounds(MyThread* t)
 {
   ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t));
@@ -1575,7 +1606,7 @@ throwArrayIndexOutOfBounds(MyThread* t)
   unwind(t);
 }
 
-void NO_RETURN FORCE_ALIGN
+void NO_RETURN
 throw_(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -1586,7 +1617,7 @@ throw_(MyThread* t, object o)
   unwind(t);
 }
 
-void FORCE_ALIGN
+void
 checkCast(MyThread* t, object class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
@@ -1599,7 +1630,7 @@ checkCast(MyThread* t, object class_, object o)
   }
 }
 
-void FORCE_ALIGN
+void
 gcIfNecessary(MyThread* t)
 {
   if (UNLIKELY(t->backupHeap)) {
@@ -1687,32 +1718,32 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
 
   if (not emptyMethod(t, target)) {
     if (methodFlags(t, target) & ACC_NATIVE) {
-      result = c->call
+      result = c->stackCall
         (c->constant
          (reinterpret_cast<intptr_t>
           (&singletonBody(t, nativeThunk(t), 0))),
          0,
          frame->trace(target, false),
          rSize,
-         0);
+         methodParameterFootprint(t, target));
     } else if (methodCompiled(t, target) == defaultThunk(t)) {
-      result = c->call
+      result = c->stackCall
         (c->constant
          (reinterpret_cast<intptr_t>
           (&singletonBody(t, defaultThunk(t), 0))),
          Compiler::Aligned,
          frame->trace(target, false),
          rSize,
-         0);
+         methodParameterFootprint(t, target));
     } else {
-      result = c->call
+      result = c->stackCall
         (c->constant
          (reinterpret_cast<intptr_t>
           (&singletonBody(t, methodCompiled(t, target), 0))),
          0,
          frame->trace(0, false),
          rSize,
-         0);
+         methodParameterFootprint(t, target));
     }
   }
 
@@ -2629,7 +2660,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-      Compiler::Operand* result = c->call
+      Compiler::Operand* result = c->stackCall
         (c->call
          (c->constant
           (getThunk(t, findInterfaceMethodFromInstanceThunk)),
@@ -2641,7 +2672,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          0,
          frame->trace(target, true),
          rSize,
-         0);
+         parameterFootprint);
 
       frame->pop(parameterFootprint);
 
@@ -2688,7 +2719,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-      Compiler::Operand* result = c->call
+      Compiler::Operand* result = c->stackCall
         (c->memory
          (c->and_
           (BytesPerWord, c->constant(PointerMask),
@@ -2696,7 +2727,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          0,
          frame->trace(target, true),
          rSize,
-         0);
+         parameterFootprint);
 
       frame->pop(parameterFootprint);
 
@@ -3486,7 +3517,7 @@ printSet(uintptr_t m)
 
 unsigned
 calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
-                   unsigned eventIndex)
+                   unsigned stackPadding, unsigned eventIndex)
 {
   // for each instruction with more than one predecessor, and for each
   // stack position, determine if there exists a path to that
@@ -3494,6 +3525,9 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
   // stack position (i.e. it is uninitialized or contains primitive
   // data).
 
+  Compiler* c = context->compiler;
+
+  unsigned localSize = ::localSize(t, context->method);
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   uintptr_t roots[mapSize];
@@ -3517,12 +3551,29 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
   while (eventIndex < length) {
     Event e = static_cast<Event>(context->eventLog.get(eventIndex++));
     switch (e) {
-    case PushEvent: {
-      eventIndex = calculateFrameMaps(t, context, roots, eventIndex);
+    case PushContextEvent: {
+      eventIndex = calculateFrameMaps
+        (t, context, roots, stackPadding, eventIndex);
     } break;
 
-    case PopEvent:
+    case PopContextEvent:
       return eventIndex;
+
+    case PushEvent: {
+      Compiler::StackElement* s;
+      context->eventLog.get(eventIndex, &s, BytesPerWord);
+      stackPadding += c->padding(s);
+
+      eventIndex += BytesPerWord;
+    } break;
+
+    case PopEvent: {
+      Compiler::StackElement* s;
+      context->eventLog.get(eventIndex, &s, BytesPerWord);
+      stackPadding -= c->padding(s);
+
+      eventIndex += BytesPerWord;
+    } break;
 
     case IpEvent: {
       ip = context->eventLog.get2(eventIndex);
@@ -3541,7 +3592,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
           uintptr_t newRoots = tableRoots[wi] & roots[wi];
 
           if ((eventIndex == length
-               or context->eventLog.get(eventIndex) == PopEvent)
+               or context->eventLog.get(eventIndex) == PopContextEvent)
               and newRoots != tableRoots[wi])
           {
             if (DebugFrameMaps) {
@@ -3569,12 +3620,20 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       unsigned i = context->eventLog.get2(eventIndex);
       eventIndex += 2;
 
+      if (i > localSize) {
+        i += stackPadding;
+      }
+
       markBit(roots, i);
     } break;
 
     case ClearEvent: {
       unsigned i = context->eventLog.get2(eventIndex);
       eventIndex += 2;
+
+      if (i > localSize) {
+        i += stackPadding;
+      }
 
       clearBit(roots, i);
     } break;
@@ -3628,7 +3687,7 @@ compareMethodBounds(Thread* t, object a, object b)
 unsigned
 frameObjectMapSize(MyThread* t, object method, object map)
 {
-  int size = frameSize(t, method);
+  int size = alignedFrameSize(t, method);
   return ceiling(intArrayLength(t, map) * size, 32 + size);
 }
 
@@ -3719,7 +3778,7 @@ finish(MyThread* t, Context* context)
     qsort(elements, context->traceLogCount, sizeof(TraceElement*),
           compareTraceElementPointers);
 
-    unsigned size = frameSize(t, context->method);
+    unsigned size = alignedFrameSize(t, context->method);
     object map = makeIntArray
       (t, context->traceLogCount
        + ceiling(context->traceLogCount * size, 32),
@@ -3835,7 +3894,7 @@ compile(MyThread* t, Context* context)
   if (UNLIKELY(t->exception)) return 0;
 
   context->dirtyRoots = false;
-  unsigned eventIndex = calculateFrameMaps(t, context, 0, 0);
+  unsigned eventIndex = calculateFrameMaps(t, context, 0, 0, 0);
 
   object eht = codeExceptionHandlerTable(t, methodCode(t, context->method));
   if (eht) {
@@ -3881,7 +3940,7 @@ compile(MyThread* t, Context* context)
           compile(t, &frame2, exceptionHandlerIp(eh), true);
           if (UNLIKELY(t->exception)) return 0;
 
-          eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
+          eventIndex = calculateFrameMaps(t, context, 0, 0, eventIndex);
         }
       }
 
@@ -3891,7 +3950,7 @@ compile(MyThread* t, Context* context)
 
   while (context->dirtyRoots) {
     context->dirtyRoots = false;
-    calculateFrameMaps(t, context, 0, 0);
+    calculateFrameMaps(t, context, 0, 0, 0);
   }
 
   return finish(t, context);
@@ -3935,7 +3994,7 @@ compileMethod2(MyThread* t)
   }
 }
 
-void* FORCE_ALIGN
+void*
 compileMethod(MyThread* t)
 {
   void* r = compileMethod2(t);
@@ -4129,7 +4188,7 @@ invokeNative2(MyThread* t, object method)
   return result;
 }
 
-uint64_t FORCE_ALIGN
+uint64_t
 invokeNative(MyThread* t)
 {
   if (t->trace->nativeMethod == 0) {
@@ -4170,7 +4229,7 @@ frameMapIndex(MyThread* t, object method, int32_t offset)
     int32_t v = intArrayBody(t, map, middle);
       
     if (offset == v) {
-      return (indexSize * 32) + (frameSize(t, method) * middle);
+      return (indexSize * 32) + (alignedFrameSize(t, method) * middle);
     } else if (offset < v) {
       top = middle;
     } else {
@@ -4193,7 +4252,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object method,
 
     count = parameterFootprint + height - argumentFootprint;
   } else {
-    count = frameSize(t, method);
+    count = alignedFrameSize(t, method);
   }
       
   if (count) {

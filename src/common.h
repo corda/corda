@@ -60,12 +60,6 @@
 #  define SO_SUFFIX ".so"
 #endif
 
-#if (defined __APPLE__) && (defined __i386__)
-#  define FORCE_ALIGN __attribute__((force_align_arg_pointer))
-#else
-#  define FORCE_ALIGN
-#endif
-
 #define NO_RETURN __attribute__((noreturn))
 
 #define LIKELY(v) __builtin_expect((v) != 0, true)

@@ -2030,6 +2030,15 @@ class MyAssembler: public Assembler {
     }
   }
 
+  virtual unsigned stackPadding(unsigned footprint) {
+#if (defined __APPLE__) || (defined __x86_64__)
+    const unsigned alignment = 16 / BytesPerWord;
+    return (ceiling(footprint, alignment) * alignment) - footprint;
+#else
+    return 0;
+#endif
+  }
+
   virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
                     uint64_t* registerMask, bool* thunk)
   {

@@ -31,6 +31,7 @@ class Compiler {
   static const unsigned NoReturn = 1 << 1;
 
   class Operand { };
+  class StackElement { };
 
   virtual ~Compiler() { }
 
@@ -68,8 +69,11 @@ class Compiler {
   virtual void push(unsigned size) = 0;
   virtual void push(unsigned size, Operand* value) = 0;
   virtual Operand* pop(unsigned size) = 0;
-  virtual void pushed(unsigned count) = 0;
-  virtual void popped(unsigned count) = 0;
+  virtual void pushed() = 0;
+  virtual void popped() = 0;
+  virtual StackElement* top() = 0;
+  virtual unsigned size(StackElement*) = 0;
+  virtual unsigned padding(StackElement*) = 0;
   virtual Operand* peek(unsigned size, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
@@ -78,6 +82,12 @@ class Compiler {
                         unsigned resultSize,
                         unsigned argumentCount,
                         ...) = 0;
+
+  virtual Operand* stackCall(Operand* address,
+                             unsigned flags,
+                             TraceHandler* traceHandler,
+                             unsigned resultSize,
+                             unsigned argumentFootprint) = 0;
 
   virtual void return_(unsigned size, Operand* value) = 0;
 
