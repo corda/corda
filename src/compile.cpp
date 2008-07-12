@@ -2623,6 +2623,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object target = resolveMethod(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
+      assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+
       unsigned parameterFootprint = methodParameterFootprint(t, target);
 
       unsigned instance = parameterFootprint - 1;
@@ -2661,6 +2663,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         target = findMethod(t, target, classSuper(t, class_));
       }
 
+      assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+
       compileDirectInvoke(t, frame, target);
     } break;
 
@@ -2670,6 +2674,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object target = resolveMethod(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
+      assert(t, methodFlags(t, target) & ACC_STATIC);
+
       compileDirectInvoke(t, frame, target);
     } break;
 
@@ -2678,6 +2684,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       object target = resolveMethod(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
+
+      assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
       unsigned parameterFootprint = methodParameterFootprint(t, target);
 
