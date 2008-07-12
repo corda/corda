@@ -320,6 +320,7 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 
           unsigned index = hash(t, k) & (newLength - 1);
 
+          expect(t, p != arrayBody(t, newArray, index));
           set(t, p, TripleThird, arrayBody(t, newArray, index));
           set(t, newArray, ArrayBody + (index * BytesPerWord), p);
         }
@@ -332,7 +333,7 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 
 void
 hashMapInsert(Thread* t, object map, object key, object value,
-               uint32_t (*hash)(Thread*, object))
+              uint32_t (*hash)(Thread*, object))
 {
   // note that we reinitialize the array and index variables whenever
   // an allocation (and thus possibly a collection) occurs, in case
@@ -386,6 +387,7 @@ object
 hashMapRemoveNode(Thread* t, object map, unsigned index, object p, object n)
 {
   if (p) {
+    expect(t, p != tripleThird(t, n));
     set(t, p, TripleThird, tripleThird(t, n));
   } else {
     set(t, hashMapArray(t, map), ArrayBody + (index * BytesPerWord),
