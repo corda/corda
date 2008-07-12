@@ -168,7 +168,7 @@ killZombies(Thread* t, Thread* o)
 unsigned
 footprint(Thread* t)
 {
-  unsigned n = t->heapOffset + t->heapIndex;
+  unsigned n = t->heapOffset + t->heapIndex + t->backupHeapIndex;
 
   for (Thread* c = t->child; c; c = c->peer) {
     n += footprint(c);

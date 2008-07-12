@@ -5107,7 +5107,7 @@ compile(MyThread* t, object method)
 
       if (methodVirtual(t, method)) {
         classVtable(t, methodClass(t, method), methodOffset(t, method))
-          = &singletonValue(t, compiled, 0);
+          = &singletonValue(t, methodCompiled(t, method), 0);
       }
     }
   }
