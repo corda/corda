@@ -301,6 +301,12 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 
     newArray = makeArray(t, newLength, true);
 
+    if (oldArray != hashMapArray(t, map)) {
+      // a resize was performed during a GC via the makeArray call
+      // above; nothing left to do
+      return;
+    }
+
     if (oldArray) {
       bool weak = objectClass(t, map)
         == arrayBody(t, t->m->types, Machine::WeakHashMapType);
@@ -320,7 +326,6 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 
           unsigned index = hash(t, k) & (newLength - 1);
 
-          expect(t, p != arrayBody(t, newArray, index));
           set(t, p, TripleThird, arrayBody(t, newArray, index));
           set(t, newArray, ArrayBody + (index * BytesPerWord), p);
         }
@@ -387,7 +392,6 @@ object
 hashMapRemoveNode(Thread* t, object map, unsigned index, object p, object n)
 {
   if (p) {
-    expect(t, p != tripleThird(t, n));
     set(t, p, TripleThird, tripleThird(t, n));
   } else {
     set(t, hashMapArray(t, map), ArrayBody + (index * BytesPerWord),
