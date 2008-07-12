@@ -3610,21 +3610,6 @@ compareTraceElementPointers(const void* va, const void* vb)
   }
 }
 
-intptr_t
-compareMethodBounds(Thread* t, object a, object b)
-{
-  if (DebugMethodTree) {
-    fprintf(stderr, "compare %p to %p\n",
-            &singletonValue(t, methodCompiled(t, a), 0),
-            &singletonValue(t, methodCompiled(t, b), 0));
-  }
-
-  return reinterpret_cast<intptr_t>
-    (&singletonValue(t, methodCompiled(t, a), 0))
-    -  reinterpret_cast<intptr_t>
-    (&singletonValue(t, methodCompiled(t, b), 0));
-}
-
 unsigned
 frameObjectMapSize(MyThread* t, object method, object map)
 {
@@ -5074,40 +5059,78 @@ compile(MyThread* t, object method)
 {
   MyProcessor* p = processor(t);
 
-  PROTECT(t, method);
-
-  ACQUIRE(t, t->m->classLock);
-    
   if (methodCompiled(t, method) == p->defaultThunk) {
-    initClass(t, methodClass(t, method));
-    if (UNLIKELY(t->exception)) return;
+    PROTECT(t, method);
 
+    ACQUIRE(t, t->m->classLock);
+    
     if (methodCompiled(t, method) == p->defaultThunk) {
-      object compiled;
-      if (methodFlags(t, method) & ACC_NATIVE) {
-        compiled = p->nativeThunk;
-      } else {
-        Context context(t, method);
-        compiled = compile(t, &context);
-        if (UNLIKELY(t->exception)) return;
-      }
+      initClass(t, methodClass(t, method));
+      if (UNLIKELY(t->exception)) return;
 
-      set(t, method, MethodCompiled, compiled);
-
-      if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
-        if (DebugMethodTree) {
-          fprintf(stderr, "insert method at %p\n",
-                  &singletonValue(t, methodCompiled(t, method), 0));
-        }
+      if (methodCompiled(t, method) == p->defaultThunk) {
+        object node;
+        object compiled;
+        if (methodFlags(t, method) & ACC_NATIVE) {
+          node = 0;
+          compiled = p->nativeThunk;
+        } else {
+          Context context(t, method);
+          compiled = compile(t, &context);
+          if (UNLIKELY(t->exception)) return;
           
-        methodTree(t) = treeInsert
-          (t, methodTree(t), method, methodTreeSentinal(t),
-           compareMethodBounds);
-      }
+          PROTECT(t, compiled);
 
-      if (methodVirtual(t, method)) {
-        classVtable(t, methodClass(t, method), methodOffset(t, method))
-          = &singletonValue(t, methodCompiled(t, method), 0);
+          if (DebugMethodTree) {
+            fprintf(stderr, "insert method at %p\n",
+                    &singletonValue(t, compiled, 0));
+          }
+
+          // We can't set the MethodCompiled field on the original
+          // method before it is placed into the method tree, since
+          // another thread might call the method, from which stack
+          // unwinding would fail (since there is not yet an entry in
+          // the method tree).  However, we can't insert the original
+          // method into the tree before setting the MethodCompiled
+          // field on it since we rely on that field to determine its
+          // position in the tree.  Therefore, we insert a clone in
+          // its place.  Later, we'll replace the clone with the
+          // original to save memory.
+
+          object clone = makeMethod
+            (t, methodVmFlags(t, method),
+             methodReturnCode(t, method),
+             methodParameterCount(t, method),
+             methodParameterFootprint(t, method),
+             methodFlags(t, method),
+             methodOffset(t, method),
+             methodName(t, method),
+             methodSpec(t, method),
+             methodClass(t, method),
+             methodCode(t, method),
+             compiled);
+
+          node = makeTreeNode
+            (t, clone, methodTreeSentinal(t), methodTreeSentinal(t));
+
+          PROTECT(t, node);
+
+          methodTree(t) = treeInsertNode
+            (t, methodTree(t), reinterpret_cast<intptr_t>
+             (&singletonValue(t, compiled, 0)), node, methodTreeSentinal(t),
+             compareIpToMethodBounds);
+        }
+
+        set(t, method, MethodCompiled, compiled);
+
+        if (methodVirtual(t, method)) {
+          classVtable(t, methodClass(t, method), methodOffset(t, method))
+            = &singletonValue(t, compiled, 0);
+        }
+
+        if (node) {
+          set(t, node, TreeNodeValue, method);
+        }
       }
     }
   }
