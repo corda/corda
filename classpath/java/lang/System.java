@@ -21,9 +21,9 @@ import java.io.FileDescriptor;
 public abstract class System {
   private static Property properties;
   
-//   static {
-//     loadLibrary("natives");
-//   }
+  //   static {
+  //     loadLibrary("natives");
+  //   }
 
   public static final PrintStream out = new PrintStream
     (new BufferedOutputStream(new FileOutputStream(FileDescriptor.out)), true);
@@ -55,11 +55,11 @@ public abstract class System {
   }
   
   public static String getProperty(String name, String defaultValue) {
-	  String result = getProperty(name);
-	  if (result==null) {
-		  return defaultValue;
-	  }
-	  return result;
+    String result = getProperty(name);
+    if (result==null) {
+      return defaultValue;
+    }
+    return result;
   }
   
 
