@@ -5094,11 +5094,6 @@ compile(MyThread* t, object method)
 
       set(t, method, MethodCompiled, compiled);
 
-      if (methodVirtual(t, method)) {
-        classVtable(t, methodClass(t, method), methodOffset(t, method))
-          = &singletonValue(t, compiled, 0);
-      }
-
       if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
         if (DebugMethodTree) {
           fprintf(stderr, "insert method at %p\n",
@@ -5108,6 +5103,11 @@ compile(MyThread* t, object method)
         methodTree(t) = treeInsert
           (t, methodTree(t), method, methodTreeSentinal(t),
            compareMethodBounds);
+      }
+
+      if (methodVirtual(t, method)) {
+        classVtable(t, methodClass(t, method), methodOffset(t, method))
+          = &singletonValue(t, compiled, 0);
       }
     }
   }
