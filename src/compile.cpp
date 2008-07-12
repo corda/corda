@@ -4255,7 +4255,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
     } else {
       break;
     }
-  }  
+  }
 }
 
 void
@@ -5074,42 +5074,40 @@ compile(MyThread* t, object method)
 {
   MyProcessor* p = processor(t);
 
-  if (methodCompiled(t, method) == p->defaultThunk) {
-    PROTECT(t, method);
+  PROTECT(t, method);
 
-    ACQUIRE(t, t->m->classLock);
+  ACQUIRE(t, t->m->classLock);
     
+  if (methodCompiled(t, method) == p->defaultThunk) {
+    initClass(t, methodClass(t, method));
+    if (UNLIKELY(t->exception)) return;
+
     if (methodCompiled(t, method) == p->defaultThunk) {
-      initClass(t, methodClass(t, method));
-      if (UNLIKELY(t->exception)) return;
+      object compiled;
+      if (methodFlags(t, method) & ACC_NATIVE) {
+        compiled = p->nativeThunk;
+      } else {
+        Context context(t, method);
+        compiled = compile(t, &context);
+        if (UNLIKELY(t->exception)) return;
+      }
 
-      if (methodCompiled(t, method) == p->defaultThunk) {
-        object compiled;
-        if (methodFlags(t, method) & ACC_NATIVE) {
-          compiled = p->nativeThunk;
-        } else {
-          Context context(t, method);
-          compiled = compile(t, &context);
-          if (UNLIKELY(t->exception)) return;
+      set(t, method, MethodCompiled, compiled);
+
+      if (methodVirtual(t, method)) {
+        classVtable(t, methodClass(t, method), methodOffset(t, method))
+          = &singletonValue(t, compiled, 0);
+      }
+
+      if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
+        if (DebugMethodTree) {
+          fprintf(stderr, "insert method at %p\n",
+                  &singletonValue(t, methodCompiled(t, method), 0));
         }
-
-        set(t, method, MethodCompiled, compiled);
-
-        if (methodVirtual(t, method)) {
-          classVtable(t, methodClass(t, method), methodOffset(t, method))
-            = &singletonValue(t, compiled, 0);
-        }
-
-        if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
-          if (DebugMethodTree) {
-            fprintf(stderr, "insert method at %p\n",
-                    &singletonValue(t, methodCompiled(t, method), 0));
-          }
           
-          methodTree(t) = treeInsert
-            (t, methodTree(t), method, methodTreeSentinal(t),
-             compareMethodBounds);
-        }
+        methodTree(t) = treeInsert
+          (t, methodTree(t), method, methodTreeSentinal(t),
+           compareMethodBounds);
       }
     }
   }
