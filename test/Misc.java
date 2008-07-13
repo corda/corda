@@ -102,7 +102,10 @@ public class Misc {
       expect(foo > 0);
     }
 
-    expect(String.valueOf(25214903884l).equals("25214903884"));
+    expect(String.valueOf(25214903884L).equals("25214903884"));
+
+    expect(String.valueOf(-9223372036854775808L).equals
+           ("-9223372036854775808"));
 
     { boolean p = true;
       int[] array = new int[] { 1, 2 };
