@@ -88,8 +88,9 @@ treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
           intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
 object
-treeInsert(Thread* t, object tree, object value, object sentinal,
-           intptr_t (*compare)(Thread* t, object a, object b));
+treeInsertNode(Thread* t, object tree, intptr_t key, object node,
+               object sentinal,
+               intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
 } // vm
 

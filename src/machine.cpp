@@ -168,7 +168,7 @@ killZombies(Thread* t, Thread* o)
 unsigned
 footprint(Thread* t)
 {
-  unsigned n = t->heapOffset + t->heapIndex;
+  unsigned n = t->heapOffset + t->heapIndex + t->backupHeapIndex;
 
   for (Thread* c = t->child; c; c = c->peer) {
     n += footprint(c);
@@ -2870,6 +2870,17 @@ makeTrace(Thread* t, Thread* target)
   t->m->processor->walkStack(target, &v);
 
   return v.trace ? v.trace : makeArray(t, 0, true);
+}
+
+void
+runJavaThread(Thread* t)
+{
+  object method = resolveMethod(t, "java/lang/Thread", "run", "()V");
+  if (t->exception == 0) {
+    t->m->processor->invoke
+      (t, findMethod(t, method, objectClass(t, t->javaThread)),
+       t->javaThread);
+  }
 }
 
 void

@@ -257,7 +257,7 @@ Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path)
 {
   const char* chars = e->GetStringUTFChars(path, 0);
   if (chars) {
-    int fd = doOpen(e, chars, O_WRONLY | O_CREAT);
+    int fd = doOpen(e, chars, O_WRONLY | O_CREAT | O_TRUNC);
     e->ReleaseStringUTFChars(path, chars);
     return fd;
   } else {

@@ -125,13 +125,6 @@ isSpecialMethod(Thread* t, object method, object class_)
     and isSuperclass(t, methodClass(t, method), class_);
 }
 
-inline object
-findMethod(Thread* t, object method, object class_)
-{
-  return arrayBody(t, classVirtualTable(t, class_), 
-                   methodOffset(t, method));
-}
-
 void*
 resolveNativeMethod2(Thread* t, object method);
 
