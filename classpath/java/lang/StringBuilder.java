@@ -209,6 +209,29 @@ public class StringBuilder implements CharSequence {
     insert(start, str);
     return this;
   }
+  
+  public int indexOf(String s) {
+    return indexOf(s, 0);
+  }
+  
+  public int indexOf(String s, int start) {
+    int slength = s.length();
+    if (slength == 0) return start;
+
+    for (int i = start; i < length - slength + 1; ++i) {
+      int j = 0;
+      for (; j < slength; ++j) {
+        if (charAt(i + j) != s.charAt(j)) {
+          break;
+        }
+      }
+      if (j == slength) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
 
   public int length() {
     return length;
