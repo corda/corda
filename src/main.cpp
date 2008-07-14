@@ -25,8 +25,12 @@ namespace {
 void
 usageAndExit(const char* name)
 {
-  fprintf(stderr, "usage: %s [-cp <classpath>] [-Xmx<maximum heap size>] "
-          "<class name> [<argument> ...]\n", name);
+  fprintf
+    (stderr, "usage: %s\n"
+     "\t[{-cp|-classpath} <classpath>]\n"
+     "\t[-Xmx<maximum heap size>]\n"
+     "\t[-Xbootclasspath/p:<classpath to prepend to bootstrap classpath>]\n"
+     "\t<class name> [<argument> ...]\n", name);
   exit(-1);
 }
 
