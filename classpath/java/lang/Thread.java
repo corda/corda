@@ -23,7 +23,7 @@ public class Thread implements Runnable {
   private String name;
 
   public Thread(Runnable task, String name) {
-    this(task);
+    this.task = task;
     this.name = name;
 
     Thread current = currentThread();
