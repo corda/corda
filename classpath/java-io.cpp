@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <dirent.h>
 
 #include "jni.h"
 #include "jni-util.h"
@@ -199,6 +200,42 @@ Java_java_io_File_exists(JNIEnv* e, jclass, jstring path)
     return v;
   } else {
     return false;
+  }
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
+{
+  const char* chars = e->GetStringUTFChars(path, 0);
+  if (chars) {
+    jlong handle = reinterpret_cast<jlong>(opendir(chars));
+    e->ReleaseStringUTFChars(path, chars);
+    return handle;
+  } else {
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_java_io_File_readDir(JNIEnv* e, jclass, jlong handle)
+{
+  struct dirent * directoryEntry;
+  
+  if (handle!=0) {
+    directoryEntry = readdir(reinterpret_cast<DIR*>(handle));
+    if (directoryEntry == NULL) {
+      return NULL;
+    }
+    return e->NewStringUTF(directoryEntry->d_name);
+  }
+  return NULL;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_io_File_closeDir(JNIEnv* , jclass, jlong handle)
+{
+  if (handle!=0) {
+    closedir(reinterpret_cast<DIR*>(handle));
   }
 }
 

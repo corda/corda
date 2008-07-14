@@ -126,4 +126,64 @@ public class File {
       return false;
     }
   }
+
+  public boolean mkdirs() {
+    File parent = getParentFile();
+    if (parent != null) {
+      if (!parent.exists()) {
+        if (!parent.mkdirs()) {
+          return false;
+        }
+      }
+    }
+    return mkdir();
+  }
+
+  public String[] list() {
+    return list(null);
+  }
+
+  public String[] list(FilenameFilter filter) {
+    long handle = 0;
+    try {
+      handle = openDir(path);
+      Pair list = null;
+      int count = 0;
+      for (String s = readDir(handle); s != null; s = readDir(handle)) {
+        if (filter == null || filter.accept(this, s)) {
+          list = new Pair(s, list);
+          ++ count;
+        }
+      }
+
+      String[] result = new String[count];
+      for (int i = count; i >= 0; --i) {
+        result[i] = list.value;
+        list = list.next;
+      }
+
+      return result;
+    } finally {
+      if (handle != 0) {
+        closeDir(handle);
+      }
+    }
+  }
+
+  private static native long openDir(String path);
+
+  private static native String readDir(long handle);
+
+  private static native long closeDir(long handle);
+
+  private static class Pair {
+    public final String value;
+    public final Pair next;
+    
+    public Pair(String value, Pair next) {
+      this.value = value;
+      this.next = next;
+    }
+  }
+
 }
