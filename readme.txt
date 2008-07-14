@@ -176,40 +176,18 @@ extern "C" {
 
 } // extern "C"
 
-#ifdef JNI_VERSION_1_6
-typedef struct JDK1_1InitArgs {
-    jint version;
-
-    char **properties;
-    jint checkSource;
-    jint nativeStackSize;
-    jint javaStackSize;
-    jint minHeapSize;
-    jint maxHeapSize;
-    jint verifyMode;
-    char *classpath;
-
-    jint (JNICALL *vfprintf)(FILE *fp, const char *format, va_list args);
-    void (JNICALL *exit)(jint code);
-    void (JNICALL *abort)(void);
-
-    jint enableClassGC;
-    jint enableVerboseGC;
-    jint disableAsyncGC;
-    jint verbose;
-    jboolean debugging;
-    jint debugPort;
-} JDK1_1InitArgs;
-#endif
-
 int
 main(int ac, const char** av)
 {
-  JDK1_1InitArgs vmArgs;
-  vmArgs.version = 0x00010001;
-  JNI_GetDefaultJavaVMInitArgs(&vmArgs);
+  JavaVMInitArgs vmArgs;
+  vmArgs.version = JNI_VERSION_1_2;
+  vmArgs.nOptions = 1;
+  vmArgs.ignoreUnrecognized = JNI_TRUE;
 
-  vmArgs.classpath = const_cast<char*>("[bootJar]");
+  JavaVMOption options[vmArgs.nOptions];
+  vmArgs.options = options;
+
+  options[0].optionString = const_cast<char*>("-Djava.class.path=[bootJar]");
 
   JavaVM* vm;
   void* env;

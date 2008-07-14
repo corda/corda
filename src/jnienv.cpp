@@ -1845,29 +1845,38 @@ IsSameObject(Thread* t, jobject a, jobject b)
   }
 }
 
-struct JDK1_1InitArgs {
+struct JavaVMOption {
+  char* optionString;
+  void* extraInfo;
+};
+
+struct JavaVMInitArgs {
   jint version;
 
-  const char** properties;
-  jint checkSource;
-  jint nativeStackSize;
-  jint javaStackSize;
-  jint minHeapSize;
-  jint maxHeapSize;
-  jint verifyMode;
-  const char* classpath;
-
-  jint (JNICALL *vfprintf)(FILE* fp, const char* format, va_list args);
-  void (JNICALL *exit)(jint code);
-  void (JNICALL *abort)(void);
-
-  jint enableClassGC;
-  jint enableVerboseGC;
-  jint disableAsyncGC;
-  jint verbose;
-  jboolean debugging;
-  jint debugPort;
+  jint nOptions;
+  JavaVMOption* options;
+  jboolean ignoreUnrecognized;
 };
+
+int
+parseSize(const char* s)
+{
+  unsigned length = strlen(s);
+  char buffer[length + 1];
+  if (length == 0) {
+    return 0;
+  } else if (s[length - 1] == 'k') {
+    memcpy(buffer, s, length - 1);
+    buffer[length] = 0;
+    return atoi(buffer) * 1024;
+  } else if (s[length - 1] == 'm') {
+    memcpy(buffer, s, length - 1);
+    buffer[length] = 0;
+    return atoi(buffer) * 1024 * 1024;
+  } else {
+    return atoi(s);
+  }
+}
 
 } // namespace
 
@@ -2040,43 +2049,74 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
 } // namespace vm
 
-extern "C" JNIEXPORT jint JNICALL
-JNI_GetDefaultJavaVMInitArgs(void* args)
-{
-  JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
-  a->maxHeapSize = 128 * 1024 * 1024;
-  a->classpath = ".";
-  a->properties = 0;
-  return 0;
-}
-
 #define BUILTINS_PROPERTY "avian.builtins"
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
+#define CLASSPATH_PROPERTY "java.class.path"
+
+extern "C" JNIEXPORT jint JNICALL
+JNI_GetDefaultJavaVMInitArgs(void*)
+{
+  return 0;
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 {
-  JDK1_1InitArgs* a = static_cast<JDK1_1InitArgs*>(args);
+  JavaVMInitArgs* a = static_cast<JavaVMInitArgs*>(args);
 
+  unsigned heapLimit = 0;
   const char* builtins = 0;
   const char* bootLibrary = 0;
-  if (a->properties) {
-    for (const char** p = a->properties; *p; ++p) {
-      if (strncmp(*p, BUILTINS_PROPERTY "=",
+  const char* classpath = 0;
+  const char* bootClasspath = 0;
+
+  for (int i = 0; i < a->nOptions; ++i) {
+    if (strncmp(a->options[i].optionString, "-Xmx", 4) == 0) {
+      heapLimit = parseSize(a->options[i].optionString + 4);
+    } else if (strncmp(a->options[i].optionString,
+                       "-Xbootclasspath:", 16) == 0)
+    {
+      bootClasspath = a->options[i].optionString + 16;
+    } else if (strncmp(a->options[i].optionString, "-D", 2) == 0) {
+      const char* p = a->options[i].optionString + 2;
+      if (strncmp(p, BUILTINS_PROPERTY "=",
                   sizeof(BUILTINS_PROPERTY)) == 0)
       {
-        builtins = (*p) + sizeof(BUILTINS_PROPERTY);
-      } else if (strncmp(*p, BOOTSTRAP_PROPERTY "=",
+        builtins = p + sizeof(BUILTINS_PROPERTY);
+      } else if (strncmp(p, BOOTSTRAP_PROPERTY "=",
                          sizeof(BOOTSTRAP_PROPERTY)) == 0)
       {
-        bootLibrary = (*p) + sizeof(BOOTSTRAP_PROPERTY);
+        bootLibrary = p + sizeof(BOOTSTRAP_PROPERTY);
+      } else if (strncmp(p, CLASSPATH_PROPERTY "=",
+                         sizeof(CLASSPATH_PROPERTY)) == 0)
+      {
+        classpath = p + sizeof(CLASSPATH_PROPERTY);
       }
+
+      // todo: add properties to VM
     }
   }
 
+  if (heapLimit == 0) heapLimit = 128 * 1024 * 1024;
+  
+  if (classpath == 0) classpath = ".";
+  
+  unsigned bcpl = bootClasspath ? strlen(bootClasspath) : 0;
+  unsigned cpl = strlen(classpath);
+
+  unsigned classpathBufferSize = bcpl + cpl + 2;
+  char classpathBuffer[classpathBufferSize];
+
+  if (bootClasspath) {
+    snprintf(classpathBuffer, classpathBufferSize, "%s%c%s",
+             bootClasspath, PATH_SEPARATOR, classpath);
+  } else {
+    memcpy(classpathBuffer, classpath, cpl + 1);
+  }
+
   System* s = makeSystem();
-  Heap* h = makeHeap(s, a->maxHeapSize);
-  Finder* f = makeFinder(s, a->classpath, bootLibrary);
+  Heap* h = makeHeap(s, heapLimit);
+  Finder* f = makeFinder(s, classpathBuffer, bootLibrary);
   Processor* p = makeProcessor(s, h);
 
   *m = new (h->allocate(sizeof(Machine)))
