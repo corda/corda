@@ -30,6 +30,8 @@ usageAndExit(const char* name)
      "\t[{-cp|-classpath} <classpath>]\n"
      "\t[-Xmx<maximum heap size>]\n"
      "\t[-Xbootclasspath/p:<classpath to prepend to bootstrap classpath>]\n"
+     "\t[-Xbootclasspath:<bootstrap classpath>]\n"
+     "\t[-Xbootclasspath/a:<classpath to append to bootstrap classpath>]\n"
      "\t[-D<property name>=<property value> ...]\n"
      "\t<class name> [<argument> ...]\n", name);
   exit(-1);
@@ -73,20 +75,19 @@ main(int ac, const char** av)
   ++ vmArgs.nOptions;
 #endif
 
+#ifdef BOOT_CLASSPATH
+  ++ vmArgs.nOptions;
+#endif
+
   JavaVMOption options[vmArgs.nOptions];
   vmArgs.options = options;
 
-#ifdef BOOT_CLASSPATH
-  unsigned classpathBufferSize
-    = sizeof(BOOT_CLASSPATH) + 1 + strlen(classpath);
-  char classpathBuffer[classpathBufferSize];
-
-  snprintf(classpathBuffer, classpathBufferSize, "%s%c%s",
-           BOOT_CLASSPATH, PATH_SEPARATOR, classpath);
-  classpath = classpathBuffer;
-#endif
-
   unsigned optionIndex = 0;
+
+#ifdef BOOT_CLASSPATH
+  options[optionIndex++].optionString
+    = const_cast<char*>("-Xbootclasspath:" BOOT_CLASSPATH);
+#endif
 
 #ifdef BOOT_LIBRARY
   options[optionIndex++].optionString

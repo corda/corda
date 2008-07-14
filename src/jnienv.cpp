@@ -1878,6 +1878,16 @@ parseSize(const char* s)
   }
 }
 
+void
+append(char** p, const char* value, unsigned length, char tail)
+{
+  if (length) {
+    memcpy(*p, value, length);
+    *p += length;
+    *((*p)++) = tail;
+  }
+}
+
 } // namespace
 
 namespace vm {
@@ -2052,6 +2062,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 #define BUILTINS_PROPERTY "avian.builtins"
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
 #define CLASSPATH_PROPERTY "java.class.path"
+#define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
+#define BOOTCLASSPATH_OPTION "bootclasspath"
+#define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
 
 extern "C" JNIEXPORT jint JNICALL
 JNI_GetDefaultJavaVMInitArgs(void*)
@@ -2068,15 +2081,28 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   const char* builtins = 0;
   const char* bootLibrary = 0;
   const char* classpath = 0;
-  const char* bootClasspathPrepend = 0;
+  const char* bootClasspathPrepend = "";
+  const char* bootClasspath = "";
+  const char* bootClasspathAppend = "";
 
   for (int i = 0; i < a->nOptions; ++i) {
-    if (strncmp(a->options[i].optionString, "-Xmx", 4) == 0) {
-      heapLimit = parseSize(a->options[i].optionString + 4);
-    } else if (strncmp(a->options[i].optionString,
-                       "-Xbootclasspath/p:", 16) == 0)
-    {
-      bootClasspathPrepend = a->options[i].optionString + 16;
+    if (strncmp(a->options[i].optionString, "-X", 2) == 0) {
+      const char* p = a->options[i].optionString + 2;
+      if (strncmp(p, "mx", 2) == 0) {
+        heapLimit = parseSize(p + 2);
+      } else if (strncmp(p, BOOTCLASSPATH_PREPEND_OPTION ":",
+                         sizeof(BOOTCLASSPATH_PREPEND_OPTION)) == 0)
+      {
+        bootClasspathPrepend = p + sizeof(BOOTCLASSPATH_PREPEND_OPTION);
+      } else if (strncmp(p, BOOTCLASSPATH_OPTION ":",
+                         sizeof(BOOTCLASSPATH_OPTION)) == 0)
+      {
+        bootClasspath = p + sizeof(BOOTCLASSPATH_OPTION);
+      } else if (strncmp(p, BOOTCLASSPATH_APPEND_OPTION ":",
+                         sizeof(BOOTCLASSPATH_APPEND_OPTION)) == 0)
+      {
+        bootClasspathAppend = p + sizeof(BOOTCLASSPATH_APPEND_OPTION);
+      }
     } else if (strncmp(a->options[i].optionString, "-D", 2) == 0) {
       const char* p = a->options[i].optionString + 2;
       if (strncmp(p, BUILTINS_PROPERTY "=",
@@ -2101,18 +2127,19 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   
   if (classpath == 0) classpath = ".";
   
-  unsigned bcppl = bootClasspathPrepend ? strlen(bootClasspathPrepend) : 0;
+  unsigned bcppl = strlen(bootClasspathPrepend);
+  unsigned bcpl = strlen(bootClasspath);
+  unsigned bcpal = strlen(bootClasspathAppend);
   unsigned cpl = strlen(classpath);
 
-  unsigned classpathBufferSize = bcppl + cpl + 2;
+  unsigned classpathBufferSize = bcppl + bcpl + bcpal + cpl + 4;
   char classpathBuffer[classpathBufferSize];
+  char* classpathPointer = classpathBuffer;
 
-  if (bootClasspathPrepend) {
-    snprintf(classpathBuffer, classpathBufferSize, "%s%c%s",
-             bootClasspathPrepend, PATH_SEPARATOR, classpath);
-  } else {
-    memcpy(classpathBuffer, classpath, cpl + 1);
-  }
+  append(&classpathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
+  append(&classpathPointer, bootClasspath, bcpl, PATH_SEPARATOR);
+  append(&classpathPointer, bootClasspathAppend, bcpal, PATH_SEPARATOR);
+  append(&classpathPointer, classpath, cpl, 0);
 
   System* s = makeSystem();
   Heap* h = makeHeap(s, heapLimit);
