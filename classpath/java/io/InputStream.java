@@ -41,8 +41,7 @@ public abstract class InputStream {
     int c;
     while ((c = read(buffer, 0, (int) (size < remaining ? size : remaining)))
            >= 0
-           && remaining > 0)
-    {
+           && remaining > 0) {
       remaining -= c;
     }
     return count - remaining;    
