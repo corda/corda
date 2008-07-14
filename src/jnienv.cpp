@@ -2068,15 +2068,15 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   const char* builtins = 0;
   const char* bootLibrary = 0;
   const char* classpath = 0;
-  const char* bootClasspath = 0;
+  const char* bootClasspathPrepend = 0;
 
   for (int i = 0; i < a->nOptions; ++i) {
     if (strncmp(a->options[i].optionString, "-Xmx", 4) == 0) {
       heapLimit = parseSize(a->options[i].optionString + 4);
     } else if (strncmp(a->options[i].optionString,
-                       "-Xbootclasspath:", 16) == 0)
+                       "-Xbootclasspath/p:", 16) == 0)
     {
-      bootClasspath = a->options[i].optionString + 16;
+      bootClasspathPrepend = a->options[i].optionString + 16;
     } else if (strncmp(a->options[i].optionString, "-D", 2) == 0) {
       const char* p = a->options[i].optionString + 2;
       if (strncmp(p, BUILTINS_PROPERTY "=",
@@ -2101,15 +2101,15 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   
   if (classpath == 0) classpath = ".";
   
-  unsigned bcpl = bootClasspath ? strlen(bootClasspath) : 0;
+  unsigned bcppl = bootClasspathPrepend ? strlen(bootClasspathPrepend) : 0;
   unsigned cpl = strlen(classpath);
 
-  unsigned classpathBufferSize = bcpl + cpl + 2;
+  unsigned classpathBufferSize = bcppl + cpl + 2;
   char classpathBuffer[classpathBufferSize];
 
-  if (bootClasspath) {
+  if (bootClasspathPrepend) {
     snprintf(classpathBuffer, classpathBufferSize, "%s%c%s",
-             bootClasspath, PATH_SEPARATOR, classpath);
+             bootClasspathPrepend, PATH_SEPARATOR, classpath);
   } else {
     memcpy(classpathBuffer, classpath, cpl + 1);
   }
