@@ -30,6 +30,7 @@ usageAndExit(const char* name)
      "\t[{-cp|-classpath} <classpath>]\n"
      "\t[-Xmx<maximum heap size>]\n"
      "\t[-Xbootclasspath/p:<classpath to prepend to bootstrap classpath>]\n"
+     "\t[-D<property name>=<property value> ...]\n"
      "\t<class name> [<argument> ...]\n", name);
   exit(-1);
 }
