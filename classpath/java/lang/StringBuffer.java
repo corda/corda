@@ -70,6 +70,11 @@ public class StringBuffer implements CharSequence {
     return this;
   }
 
+  public synchronized StringBuffer append(char[] b) {
+    sb.append(b, 0, b.length);
+    return this;
+  }
+  
   public synchronized StringBuffer insert(int i, String s) {
     sb.insert(i, s);
     return this;
