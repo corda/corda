@@ -17,6 +17,7 @@ import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileDescriptor;
+import java.util.Properties;
 
 public abstract class System {
   private static Property properties;
@@ -76,6 +77,14 @@ public abstract class System {
     return null;
   }
 
+  public static Properties getProperties () {
+    Properties prop = new Properties();
+    for (Property p = properties; p != null; p = p.next) {
+      prop.put(p.name, p.value);
+    }
+    return prop;
+  }
+  
   private static native String getProperty(String name, boolean[] found);
 
   private static native String getVMProperty(String name, boolean[] found);

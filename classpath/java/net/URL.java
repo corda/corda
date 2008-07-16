@@ -100,6 +100,10 @@ public final class URL {
       super(url);
     }
 
+    public int getContentLength() {
+      return ResourceInputStream.getContentLength(url.getFile());
+    }
+
     public InputStream getInputStream() throws IOException {
       return new ResourceInputStream(url.getFile());
     }
@@ -115,6 +119,8 @@ public final class URL {
         throw new FileNotFoundException(path);
       }
     }
+
+    private static native int getContentLength(String path);
 
     private static native long open(String path) throws IOException;
 

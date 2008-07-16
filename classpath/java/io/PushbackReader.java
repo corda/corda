@@ -38,11 +38,11 @@ public class PushbackReader extends Reader {
     if (length > 0) {
       int c = in.read(b, offset, length);
       if (c == -1) {
-	if (count == 0) {
-	  count = -1;
-	}
+        if (count == 0) {
+          count = -1;
+        }
       } else {
-	count += c;
+        count += c;
       }
     }
 

@@ -58,6 +58,14 @@ public final class Character implements Comparable<Character> {
     }
   }
 
+  public static int toLowerCase(int codePoint) {
+    if (isSupplementaryCodePoint(codePoint)) {
+      return codePoint;
+    } else {
+      return toLowerCase((char) codePoint);
+    }
+  }
+
   public static char toUpperCase(char c) {
     if (c >= 'a' && c <= 'z') {
       return (char) ((c - 'a') + 'A');
@@ -66,7 +74,19 @@ public final class Character implements Comparable<Character> {
     }
   }
 
+  public static int toUpperCase(int codePoint) {
+    if (isSupplementaryCodePoint(codePoint)) {
+      return codePoint;
+    } else {
+      return toUpperCase((char) codePoint);
+    }
+  }
+
   public static boolean isDigit(char c) {
+    return c >= '0' && c <= '9';
+  }
+
+  public static boolean isDigit(int c) {
     return c >= '0' && c <= '9';
   }
 
@@ -87,12 +107,24 @@ public final class Character implements Comparable<Character> {
     }
   }
 
+  public static boolean isLetter(int c) {
+    return canCastToChar(c) && isLetter((char) c);
+  }
+
   public static boolean isLetter(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
   }
 
   public static boolean isLetterOrDigit(char c) {
     return isDigit(c) || isLetter(c);
+  }
+
+  public static boolean isLetterOrDigit(int c) {
+    return canCastToChar(c) && (isDigit((char) c) || isLetter((char) c));
+  }
+
+  public static boolean isLowerCase(int c) {
+    return canCastToChar(c) && isLowerCase((char) c);
   }
 
   public static boolean isLowerCase(char c) {
@@ -103,6 +135,14 @@ public final class Character implements Comparable<Character> {
     return (c >= 'A' && c <= 'Z');
   }
 
+  public static boolean isUpperCase(int c) {
+    return canCastToChar(c) && isUpperCase((char) c);
+  }
+
+  public static boolean isWhitespace(int c) {
+    return canCastToChar(c) && isWhitespace((char) c);
+  }
+
   public static boolean isWhitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
   }
@@ -110,4 +150,39 @@ public final class Character implements Comparable<Character> {
   public static boolean isSpaceChar(char c) {
     return isWhitespace(c);
   }
+
+  public static boolean isHighSurrogate(char ch) {
+    return ch >= '\uD800' && ch <= '\uDBFF';
+  }
+
+  public static boolean isLowSurrogate(char ch) {
+    return ch >= '\uDC00' && ch <= '\uDFFF';
+  }
+
+  public static int toCodePoint(char high, char low) {
+    return (((high & 0x3FF) << 10) | (low & 0x3FF)) + 0x10000;
+  }
+
+  public static boolean isSupplementaryCodePoint(int codePoint) {
+    return codePoint >= 0x10000 && codePoint <= 0x10FFFF;
+  }
+
+  private static boolean canCastToChar(int codePoint) {
+    return (codePoint >= 0 && codePoint <= 0xFFFF);
+  }
+
+  public static char[] toChars(int codePoint) {
+    if (isSupplementaryCodePoint(codePoint)) {
+      int cpPrime = codePoint - 0x10000;
+      int high = 0xD800 | ((cpPrime >> 10) & 0x3FF);
+      int low = 0xDC00 | (cpPrime & 0x3FF);
+      return new char[] { (char) high, (char) low };
+    }
+    return new char[] { (char) codePoint };
+  }
+
+  public static boolean isSurrogatePair(char high, char low) {
+    return isHighSurrogate(high) && isLowSurrogate(low);
+  }
+
 }

@@ -20,40 +20,20 @@
 #  define PATH_SEPARATOR ':'
 #endif
 
-#ifdef JNI_VERSION_1_6
-// todo: use JavaVMInitArgs instead
-typedef struct JDK1_1InitArgs {
-    jint version;
-
-    char **properties;
-    jint checkSource;
-    jint nativeStackSize;
-    jint javaStackSize;
-    jint minHeapSize;
-    jint maxHeapSize;
-    jint verifyMode;
-    char *classpath;
-
-    jint (JNICALL *vfprintf)(FILE *fp, const char *format, va_list args);
-    void (JNICALL *exit)(jint code);
-    void (JNICALL *abort)(void);
-
-    jint enableClassGC;
-    jint enableVerboseGC;
-    jint disableAsyncGC;
-    jint verbose;
-    jboolean debugging;
-    jint debugPort;
-} JDK1_1InitArgs;
-#endif
-
 namespace {
 
 void
 usageAndExit(const char* name)
 {
-  fprintf(stderr, "usage: %s [-cp <classpath>] [-Xmx<maximum heap size>] "
-          "<class name> [<argument> ...]\n", name);
+  fprintf
+    (stderr, "usage: %s\n"
+     "\t[{-cp|-classpath} <classpath>]\n"
+     "\t[-Xmx<maximum heap size>]\n"
+     "\t[-Xbootclasspath/p:<classpath to prepend to bootstrap classpath>]\n"
+     "\t[-Xbootclasspath:<bootstrap classpath>]\n"
+     "\t[-Xbootclasspath/a:<classpath to append to bootstrap classpath>]\n"
+     "\t[-D<property name>=<property value> ...]\n"
+     "\t<class name> [<argument> ...]\n", name);
   exit(-1);
 }
 
@@ -62,22 +42,25 @@ usageAndExit(const char* name)
 int
 main(int ac, const char** av)
 {
-  JDK1_1InitArgs vmArgs;
-  vmArgs.version = 0x00010001;
-  JNI_GetDefaultJavaVMInitArgs(&vmArgs);
+  JavaVMInitArgs vmArgs;
+  vmArgs.version = JNI_VERSION_1_2;
+  vmArgs.nOptions = 1;
+  vmArgs.ignoreUnrecognized = JNI_TRUE;
 
   const char* class_ = 0;
   int argc = 0;
   const char** argv = 0;
-  int propertyCount = 0;
+  const char* classpath = ".";
 
   for (int i = 1; i < ac; ++i) {
-    if (strcmp(av[i], "-cp") == 0) {
-      vmArgs.classpath = const_cast<char*>(av[++i]);
-    } else if (strncmp(av[i], "-Xmx", 4) == 0) {
-      vmArgs.maxHeapSize = atoi(av[i] + 4);
-    } else if (strncmp(av[i], "-D", 2) == 0) {
-      ++ propertyCount;
+    if (strcmp(av[i], "-cp") == 0
+        or strcmp(av[i], "-classpath") == 0)
+    {
+      classpath = av[++i];
+    } else if (strncmp(av[i], "-X", 2) == 0
+               or strncmp(av[i], "-D", 2) == 0)
+    {
+      ++ vmArgs.nOptions;
     } else {
       class_ = av[i++];
       if (i < ac) {
@@ -88,34 +71,52 @@ main(int ac, const char** av)
     }
   }
 
+#ifdef BOOT_LIBRARY
+  ++ vmArgs.nOptions;
+#endif
+
 #ifdef BOOT_CLASSPATH
-  unsigned size = sizeof(BOOT_CLASSPATH) + 1 + strlen(vmArgs.classpath);
-  char classpath[size];
-  snprintf(classpath, size, "%s%c%s",
-           BOOT_CLASSPATH, PATH_SEPARATOR, vmArgs.classpath);
-  vmArgs.classpath = classpath;
+  ++ vmArgs.nOptions;
+#endif
+
+  JavaVMOption options[vmArgs.nOptions];
+  vmArgs.options = options;
+
+  unsigned optionIndex = 0;
+
+#ifdef BOOT_CLASSPATH
+  options[optionIndex++].optionString
+    = const_cast<char*>("-Xbootclasspath:" BOOT_CLASSPATH);
 #endif
 
 #ifdef BOOT_LIBRARY
-  const int BootPropertyCount = 1;
-#else
-  const int BootPropertyCount = 0;
+  options[optionIndex++].optionString
+    = const_cast<char*>("-Davian.bootstrap=" BOOT_LIBRARY);
 #endif
 
-  const char* properties[propertyCount + BootPropertyCount + 1];
-  properties[propertyCount + BootPropertyCount] = 0;
+#define CLASSPATH_PROPERTY "-Djava.class.path="
+
+  unsigned classpathSize = strlen(classpath);
+  unsigned classpathPropertyBufferSize
+    = sizeof(CLASSPATH_PROPERTY) + classpathSize;
+
+  char classpathPropertyBuffer[classpathPropertyBufferSize];
+  memcpy(classpathPropertyBuffer,
+         CLASSPATH_PROPERTY,
+         sizeof(CLASSPATH_PROPERTY) - 1);
+  memcpy(classpathPropertyBuffer + sizeof(CLASSPATH_PROPERTY) - 1,
+         classpath,
+         classpathSize + 1);
+
+  options[optionIndex++].optionString = classpathPropertyBuffer;
+
   for (int i = 1; i < ac; ++i) {
-    if (strncmp(av[i], "-D", 2) == 0) {
-      properties[--propertyCount] = av[i] + 2;
+    if (strncmp(av[i], "-X", 2) == 0
+        or strncmp(av[i], "-D", 2) == 0)
+    {
+      options[optionIndex++].optionString = const_cast<char*>(av[i]);
     }
   }
-
-#ifdef BOOT_LIBRARY
-  properties[propertyCount + BootPropertyCount - 1]
-    = "avian.bootstrap=" BOOT_LIBRARY;
-#endif
-
-  vmArgs.properties = const_cast<char**>(properties);
 
   if (class_ == 0) {
     usageAndExit(av[0]);

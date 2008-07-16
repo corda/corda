@@ -59,8 +59,8 @@ cloneTreeNode(Thread* t, object n)
 }
 
 object
-treeFind(Thread* t, object old, object node, object sentinal,
-         intptr_t (*compare)(Thread* t, object a, object b))
+treeFind(Thread* t, object old, intptr_t key, object node, object sentinal,
+         intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   PROTECT(t, old);
   PROTECT(t, node);
@@ -78,8 +78,7 @@ treeFind(Thread* t, object old, object node, object sentinal,
   while (old != sentinal) {
     ancestors = makePair(t, new_, ancestors);
 
-    intptr_t difference = compare
-      (t, getTreeNodeValue(t, node), getTreeNodeValue(t, old));
+    intptr_t difference = compare(t, key, getTreeNodeValue(t, old));
 
     if (difference < 0) {
       old = treeNodeLeft(t, old);
@@ -302,6 +301,12 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 
     newArray = makeArray(t, newLength, true);
 
+    if (oldArray != hashMapArray(t, map)) {
+      // a resize was performed during a GC via the makeArray call
+      // above; nothing left to do
+      return;
+    }
+
     if (oldArray) {
       bool weak = objectClass(t, map)
         == arrayBody(t, t->m->types, Machine::WeakHashMapType);
@@ -333,7 +338,7 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
 
 void
 hashMapInsert(Thread* t, object map, object key, object value,
-               uint32_t (*hash)(Thread*, object))
+              uint32_t (*hash)(Thread*, object))
 {
   // note that we reinitialize the array and index variables whenever
   // an allocation (and thus possibly a collection) occurs, in case
@@ -536,20 +541,16 @@ treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
 }
 
 object
-treeInsert(Thread* t, object tree, object value, object sentinal,
-           intptr_t (*compare)(Thread* t, object a, object b))
+treeInsertNode(Thread* t, object tree, intptr_t key, object node,
+               object sentinal,
+               intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   PROTECT(t, tree);
   PROTECT(t, sentinal);
 
-  object node = makeTreeNode(t, value, sentinal, sentinal);
-          
-  object path = treeFind(t, tree, node, sentinal, compare);
-  if (treePathFresh(t, path)) {
-    return treeAdd(t, path);
-  } else {
-    return tree;
-  }  
+  object path = treeFind(t, tree, key, node, sentinal, compare);
+  expect(t, treePathFresh(t, path));
+  return treeAdd(t, path);
 }
 
 } // namespace vm

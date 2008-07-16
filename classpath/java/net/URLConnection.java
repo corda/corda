@@ -25,6 +25,10 @@ public abstract class URLConnection {
     return getInputStream();
   }
 
+  public int getContentLength() {
+    return -1;
+  }
+
   public InputStream getInputStream() throws IOException {
     throw new UnknownServiceException();
   }
