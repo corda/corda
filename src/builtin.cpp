@@ -741,6 +741,26 @@ Java_java_lang_Thread_enumerate(Thread* t, jclass, jobjectArray array)
   return count;
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_java_net_URL_00024ResourceInputStream_getContentLength
+(Thread* t, jclass, jstring path)
+{
+  ENTER(t, Thread::ActiveState);
+
+  if (LIKELY(path)) {
+    char p[stringLength(t, *path) + 1];
+    stringChars(t, *path, p);
+
+    System::Region* r = t->m->finder->find(p);
+    if (r) {
+      jint rSize = r->length();
+      r->dispose();
+      return rSize;
+    }
+  }
+  return -1;
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_net_URL_00024ResourceInputStream_open
 (Thread* t, jclass, jstring path)

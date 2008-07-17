@@ -20,9 +20,11 @@ public class Thread implements Runnable {
   private boolean interrupted;
   private Object sleepLock;
   private ClassLoader classLoader;
+  private String name;
 
-  public Thread(Runnable task) {
+  public Thread(Runnable task, String name) {
     this.task = task;
+    this.name = name;
 
     Thread current = currentThread();
 
@@ -39,8 +41,8 @@ public class Thread implements Runnable {
     classLoader = current.classLoader;
   }
 
-  public Thread(Runnable task, String name) {
-    this(task);
+  public Thread(Runnable task) {
+    this(task, "Thread["+task+"]");
   }
 
   public synchronized void start() {
@@ -118,4 +120,9 @@ public class Thread implements Runnable {
   public static native int activeCount();
 
   public static native int enumerate(Thread[] array);
+  
+  public String getName() {
+    return name;
+  }
+  
 }

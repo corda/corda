@@ -106,4 +106,17 @@ public class Arrays {
       }
     };
   }
+
+  public static void fill(int[] array, int value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+  public static void fill(char[] array, char value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
 }

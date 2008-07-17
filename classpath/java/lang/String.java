@@ -11,6 +11,7 @@
 package java.lang;
 
 import java.io.UnsupportedEncodingException;
+import java.util.regex.Pattern;
 
 public final class String implements Comparable<String>, CharSequence {
   private Object data;
@@ -199,14 +200,8 @@ public final class String implements Comparable<String>, CharSequence {
     return -1;
   }
 
-  public int lastIndexOf(int c) {
-    for (int i = length - 1; i >= 0; --i) {
-      if (charAt(i) == c) {
-        return i;
-      }
-    }
-
-    return -1;
+  public int lastIndexOf(int ch) {
+    return lastIndexOf(ch, length-1);
   }
 
   public int indexOf(String s) {
@@ -303,6 +298,14 @@ public final class String implements Comparable<String>, CharSequence {
     }
   }
 
+  public boolean startsWith(String s, int start) {
+    if (length >= s.length + start) {
+      return substring(start, s.length).compareTo(s) == 0;
+    } else {
+      return false;
+    }
+  }
+  
   public boolean endsWith(String s) {
     if (length >= s.length) {
       return substring(length - s.length).compareTo(s) == 0;
@@ -429,6 +432,10 @@ public final class String implements Comparable<String>, CharSequence {
     return substring(start, end);
   }
   
+  public boolean matches(String regex) {
+    return Pattern.matches(regex, this);
+  }
+  
   public native String intern();
 
   public static String valueOf(Object s) {
@@ -465,5 +472,15 @@ public final class String implements Comparable<String>, CharSequence {
 
   public static String valueOf(double v) {
     return Double.toString(v);
+  }
+
+  public int lastIndexOf(int ch, int lastIndex) {
+    for (int i = lastIndex ; i >= 0; --i) {
+      if (charAt(i) == ch) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 }

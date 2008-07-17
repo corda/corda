@@ -23,8 +23,10 @@
 #undef JNIEXPORT
 #ifdef __MINGW32__
 #  define JNIEXPORT __declspec(dllexport)
+#  define PATH_SEPARATOR ';'
 #else
 #  define JNIEXPORT __attribute__ ((visibility("default")))
+#  define PATH_SEPARATOR ':'
 #endif
 
 #if (defined __i386__) || (defined __POWERPC__)

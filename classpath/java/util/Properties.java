@@ -37,6 +37,14 @@ public class Properties extends Hashtable {
     return (String)get(key);
   }
 
+  public String getProperty(String key, String defaultValue) {
+    String value = (String) get(key);
+    if (value == null) {
+      return defaultValue;
+    }
+    return value;
+  }
+
   public void setProperty(String key, String value) {
     put(key, value);
   }

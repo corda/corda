@@ -60,16 +60,17 @@ public final class Long extends Number implements Comparable<Long> {
     }
 
     boolean negative = v < 0;
-    if (negative) v = -v;
 
     int size = (negative ? 1 : 0);
-    for (long n = v; n > 0; n /= radix) ++size;
+    for (long n = v; n != 0; n /= radix) ++size;
 
     char[] array = new char[size];
 
     int i = array.length - 1;
-    for (long n = v; n > 0; n /= radix) {
+    for (long n = v; n != 0; n /= radix) {
       long digit = n % radix;
+      if (negative) digit = -digit;
+
       if (digit >= 0 && digit <= 9) {
         array[i] = (char) ('0' + digit);
       } else {

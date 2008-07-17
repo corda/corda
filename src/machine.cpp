@@ -1847,7 +1847,7 @@ Thread::init()
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   } else {
     this->javaThread = makeThread
-      (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader);
+      (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader, 0);
   }
 }
 
