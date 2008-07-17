@@ -54,7 +54,7 @@ class Site {
 
   virtual unsigned copyCost(Context*, Site*) = 0;
   
-  virtual void acquire(Context*, Stack*, unsigned, Value*) { }
+  virtual void acquire(Context*, Stack*, Value**, unsigned, Value*) { }
 
   virtual void release(Context*) { }
 
@@ -390,11 +390,12 @@ findSite(Context*, Value* v, Site* site)
 }
 
 void
-addSite(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
+addSite(Context* c, Stack* stack, Value** locals, unsigned size, Value* v,
+        Site* s)
 {
   if (not findSite(c, v, s)) {
 //     fprintf(stderr, "add site %p (%d) to %p\n", s, s->type(c), v);
-    s->acquire(c, stack, size, v);
+    s->acquire(c, stack, locals, size, v);
     s->next = v->sites;
     v->sites = s;
   }
@@ -546,8 +547,8 @@ thaw(Register* r)
 }
 
 Register*
-acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
-        Value* newValue, RegisterSite* newSite);
+acquire(Context* c, uint32_t mask, Stack* stack, Value** locals,
+        unsigned newSize, Value* newValue, RegisterSite* newSite);
 
 void
 release(Context* c, Register* r);
@@ -587,11 +588,13 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack* stack, unsigned size, Value* v) {
-    low = ::validate(c, mask, stack, size, v, this, low);
+  virtual void acquire(Context* c, Stack* stack, Value** locals, unsigned size,
+                       Value* v)
+  {
+    low = ::validate(c, mask, stack, locals, size, v, this, low);
     if (size > BytesPerWord) {
       ::freeze(low);
-      high = ::validate(c, mask >> 32, stack, size, v, this, high);
+      high = ::validate(c, mask >> 32, stack, locals, size, v, this, high);
       ::thaw(low);
     }
   }
@@ -735,7 +738,7 @@ class MemorySite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack*, unsigned, Value*) {
+  virtual void acquire(Context* c, Stack*, Value**, unsigned, Value*) {
     base = increment(c, value.base);
     if (value.index != NoRegister) {
       index = increment(c, value.index);
@@ -983,6 +986,7 @@ trySteal(Context* c, Register* r, Stack* stack, Value** locals)
   assert(c, r->refCount == 0);
 
   Value* v = r->value;
+  assert(c, v->reads);
 
   if (DebugRegisters) {
     fprintf(stderr, "try steal %d from %p: next: %p\n",
@@ -990,22 +994,35 @@ trySteal(Context* c, Register* r, Stack* stack, Value** locals)
   }
 
   if (v->sites->next == 0) {
-    unsigned count = 0;
-    Stack* start = 0;
-    for (Stack* s = stack; s and (not s->pushed); s = s->next) {
-      if (start == 0 and s->value == v) {
-        start = s;
-      }
-      if (start) {
-        ++ count;
+    Site* saveSite = 0;
+    for (unsigned i = 0; i < localFootprint; ++i) {
+      if (locals[i] == v) {
+        saveSite = frameSite(c, i);
+        break;
       }
     }
 
-    if (start) {
-      if (DebugRegisters) {
-        fprintf(stderr, "push %p\n", v);
+    if (saveSite == 0) {
+      for (Stack* s = stack; s and (not s->pushed); s = s->next) {
+        if (s->value == v) {
+          uint8_t typeMask;
+          uint64_t registerMask;
+          int frameIndex = AnyFrameIndex;
+          v->reads->intersect(&typeMask, &registerMask, &frameIndex);
+
+          if (frameIndex >= 0) {
+            saveSite = frameSite(c, frameIndex);
+          } else {
+            saveSite = stackSite(c, s);
+          }
+          break;
+        }
       }
-      pushNow(c, start, count);
+    }
+
+    if (saveSite) {
+      apply(c, Move, r->size, r->site, saveSite);
+      addSite(c, 0, 0, r->size, v, saveSite);
     } else {
       if (DebugRegisters) {
         fprintf(stderr, "unable to steal %d from %p\n", r->number, v);
@@ -1100,12 +1117,12 @@ swap(Context* c, Register* a, Register* b)
 }
 
 Register*
-replace(Context* c, Stack* stack, Register* r)
+replace(Context* c, Stack* stack, Value** locals, Register* r)
 {
   uint32_t mask = (r->freezeCount? r->site->mask : ~0);
 
   freeze(r);
-  Register* s = acquire(c, mask, stack, r->size, r->value, r->site);
+  Register* s = acquire(c, mask, stack, locals, r->size, r->value, r->site);
   thaw(r);
 
   if (DebugRegisters) {
@@ -1118,16 +1135,18 @@ replace(Context* c, Stack* stack, Register* r)
 }
 
 Register*
-acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
-        Value* newValue, RegisterSite* newSite)
+acquire(Context* c, uint32_t mask, Stack* stack, Value** locals,
+        unsigned newSize, Value* newValue, RegisterSite* newSite)
 {
   Register* r = pickRegister(c, mask);
 
   if (r->reserved) return r;
 
   if (DebugRegisters) {
-    fprintf(stderr, "acquire %d, value %p, site %p freeze count %d ref count %d used %d used exclusively %d\n",
-            r->number, newValue, newSite, r->freezeCount, r->refCount, used(c, r), usedExclusively(c, r));
+    fprintf(stderr, "acquire %d, value %p, site %p freeze count %d "
+            "ref count %d used %d used exclusively %d\n",
+            r->number, newValue, newSite, r->freezeCount, r->refCount,
+            used(c, r), usedExclusively(c, r));
   }
 
   if (r->refCount) {
@@ -1138,7 +1157,7 @@ acquire(Context* c, uint32_t mask, Stack* stack, unsigned newSize,
         and oldValue != newValue
         and findSite(c, oldValue, r->site))
     {
-      if (not trySteal(c, r, stack)) {
+      if (not trySteal(c, r, stack, locals)) {
         r = replace(c, stack, r);
       }
     }
@@ -1164,8 +1183,8 @@ release(Context*, Register* r)
 }
 
 Register*
-validate(Context* c, uint32_t mask, Stack* stack, unsigned size,
-         Value* value, RegisterSite* site, Register* current)
+validate(Context* c, uint32_t mask, Stack* stack, Value** locals,
+         unsigned size, Value* value, RegisterSite* site, Register* current)
 {
   if (current and (mask & (1 << current->number))) {
     if (current->reserved or current->value == value) {
@@ -1182,7 +1201,7 @@ validate(Context* c, uint32_t mask, Stack* stack, unsigned size,
     }
   }
 
-  Register* r = acquire(c, mask, stack, size, value, site);
+  Register* r = acquire(c, mask, stack, locals, size, value, site);
 
   if (current and current != r) {
     release(c, current);
@@ -1360,7 +1379,8 @@ cleanStack(Context* c, Stack* stack, Local* locals, Read* reads)
 
   for (Stack* s = stack; s; s = s->next) {
     if (s->pushSite) {
-      addSite(c, 0, s->geometry->size * BytesPerWord, s->value, s->pushSite);
+      addSite(c, 0, 0, s->geometry->size * BytesPerWord, s->value,
+              s->pushSite);
     }
   }
 
@@ -1455,7 +1475,7 @@ class CallEvent: public Event {
     cleanStack(c, stack, locals, reads);
 
     if (resultSize and live(result)) {
-      addSite(c, 0, resultSize, result, registerSite
+      addSite(c, 0, 0, resultSize, result, registerSite
               (c, c->assembler->returnLow(),
                resultSize > BytesPerWord ?
                c->assembler->returnHigh() : NoRegister));
@@ -1563,7 +1583,7 @@ class MoveEvent: public Event {
     }
 
     if (not isStore) {
-      addSite(c, stack, size, dst, target);
+      addSite(c, stack, locals, size, dst, target);
     }
 
     if (cost or type != Move) {
@@ -1574,7 +1594,7 @@ class MoveEvent: public Event {
 
         Site* tmpTarget = freeRegisterSite(c, dstTarget->registerMask);
 
-        addSite(c, stack, size, dst, tmpTarget);
+        addSite(c, stack, locals, size, dst, tmpTarget);
 
         apply(c, type, size, src->source, tmpTarget);
 
@@ -1709,7 +1729,7 @@ preserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s,
   assert(c, v->sites == s);
   Site* r = targetOrNull(c, read);
   if (r == 0 or r == s) r = freeRegisterSite(c);
-  addSite(c, stack, size, v, r);
+  addSite(c, stack, locals, size, v, r);
   apply(c, Move, size, s, r);
 }
 
@@ -1763,7 +1783,7 @@ class CombineEvent: public Event {
 
     removeSite(c, second, second->source);
     if (live(result)) {
-      addSite(c, 0, size, result, second->source);
+      addSite(c, 0, 0, size, result, second->source);
     }
   }
 
@@ -1845,7 +1865,7 @@ class TranslateEvent: public Event {
 
     removeSite(c, value, value->source);
     if (live(result)) {
-      addSite(c, 0, size, result, value->source);
+      addSite(c, 0, 0, size, result, value->source);
     }
   }
 
@@ -1925,7 +1945,7 @@ class MemoryEvent: public Event {
 
     result->target = memorySite
       (c, baseRegister, displacement, indexRegister, scale);
-    addSite(c, 0, 0, result, result->target);
+    addSite(c, 0, 0, 0, result, result->target);
   }
 
   Value* base;
@@ -1983,53 +2003,6 @@ resetStack(Context* c)
   resetLocals(c);
 
   c->stackReset = true;
-}
-
-void
-popNow(Context* c, Stack* stack, unsigned count, bool ignore)
-{
-  Stack* s = stack;
-  unsigned ignored = 0;
-  for (unsigned i = count; i and s;) {
-    if (s->pushed) {
-      removeSite(c, s->value, s->pushSite);
-      s->pushSite = 0;
-      s->pushed = false;
-
-      Value* v = s->value;
-      if (live(v) and v->sites == 0 and (not ignore)) {
-        ::ignore(c, ignored);
-
-        Site* target = targetOrRegister(c, v);
-
-        if (DebugStack) {
-          fprintf(stderr, "pop %p value: %p target: %p\n",
-                  s, s->value, target);
-        }
-
-        addSite(c, stack, s->geometry->size * BytesPerWord, v, target);
-
-        apply(c, Pop, BytesPerWord * s->geometry->size, target);
-      } else {
-        if (DebugStack) {
-          fprintf(stderr, "ignore %p value: %p\n", s, v);
-        }
-          
-        ignored += s->geometry->size;
-      }
-    } else {
-      if (DebugStack) {
-        fprintf(stderr, "%p not pushed\n", s);
-      }
-    }
-
-    c->stackPadding -= s->geometry->padding;
-    ignored += s->geometry->padding;
-    i -= s->geometry->size;
-    s = s->next;
-  }
-
-  ::ignore(c, ignored);
 }
 
 class StackSyncEvent: public Event {
@@ -2215,98 +2188,6 @@ appendPop(Context* c, unsigned count, bool ignore)
   new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c, count, ignore);
 }
 
-class ClobberLocalEvent: public Event {
- public:
-  ClobberLocalEvent(Context* c, unsigned size, Local* local):
-    Event(c), size(size), local(local)
-  { }
-
-  virtual void compile(Context* c) {
-    if (DebugCompile) {
-      fprintf(stderr, "ClobberLocalEvent.compile\n");
-    }
-
-    for (Local* l = local; l; l = l->old) {
-      Value* v = l->value;
-      Site* s = l->site;
-      if (live(v)
-          and v->sites->next == 0
-          and v->sites == s)
-      {
-        preserve(c, stack, size, v, s, v->reads);
-      }
-      removeSite(c, v, s);
-    }
-  }
-
-  unsigned size;
-  Local* local;
-};
-
-void
-appendClobberLocal(Context* c, unsigned size, Local* local)
-{
-  if (DebugAppend) {
-    fprintf(stderr, "appendClobberLocal\n");
-  }
-
-  new (c->zone->allocate(sizeof(ClobberLocalEvent)))
-    ClobberLocalEvent(c, size, local);
-}
-
-class LocalEvent: public Event {
- public:
-  LocalEvent(Context* c, unsigned size, Local* local):
-    Event(c), size(size), local(local)
-  {
-    if (local->old) {
-      addRead(c, local->old->value, size, 0);
-    }
-  }
-
-  virtual void compile(Context* c) {
-    if (DebugCompile) {
-      fprintf(stderr, "LocalEvent.compile\n");
-    }
-
-    Site* sites = 0;
-    if (local->old) {
-      Value* v = local->old->value;
-      if (local->old->reuse and valid(v->reads->next) == 0) {
-        sites = v->sites;
-      }
-
-      nextRead(c, v);
-    }
-
-    Value* v = local->value;
-    if (live(v)) {
-      for (Site* s = sites; s;) {
-        Site* t = s->next;
-        if (s->type(c) != MemoryOperand) {
-          addSite(c, 0, size, v, s);
-        }
-        s = t;
-      }
-
-      addSite(c, 0, size, v, local->site);
-    }
-  }
-
-  unsigned size;
-  Local* local;
-};
-
-void
-appendLocal(Context* c, unsigned size, Local* local)
-{
-  if (DebugAppend) {
-    fprintf(stderr, "appendLocal\n");
-  }
-
-  new (c->zone->allocate(sizeof(LocalEvent))) LocalEvent(c, size, local);
-}
-
 class BoundsCheckEvent: public Event {
  public:
   BoundsCheckEvent(Context* c, Value* object, unsigned lengthOffset,
@@ -2386,7 +2267,7 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
 }
 
 Site*
-readSource(Context* c, Stack* stack, Read* r)
+readSource(Context* c, Stack* stack, Value** locals, Read* r)
 {
   if (r->value->sites == 0) {
     return 0;
@@ -2398,7 +2279,7 @@ readSource(Context* c, Stack* stack, Read* r)
   Site* site = pick(c, r->value->sites, target, &copyCost);
 
   if (target and copyCost) {
-    addSite(c, stack, r->size, r->value, target);
+    addSite(c, stack, locals, r->size, r->value, target);
     apply(c, Move, r->size, site, target);
     return target;
   } else {
@@ -2449,7 +2330,7 @@ compile(Context* c)
         Site* sites[e->readCount];
         unsigned si = 0;
         for (Read* r = e->reads; r; r = r->eventNext) {
-          r->value->source = readSource(c, e->stack, r);
+          r->value->source = readSource(c, e->stack, e->locals, r);
 
           if (r->value->source) {
             assert(c, si < e->readCount);
@@ -2543,19 +2424,6 @@ push(Context* c, unsigned size, Value* v)
   c->state->stack = stack(c, v, ceiling(size, BytesPerWord), c->state->stack);
 
   appendPush(c);
-}
-
-void
-addLocal(Context* c, unsigned size, unsigned index, Value* newValue)
-{
-  unsigned sizeInWords = ceiling(size, BytesPerWord);
-
-  c->localTable[index] = c->locals = new (c->zone->allocate(sizeof(Local)))
-    Local(sizeInWords, index, newValue, memorySite
-          (c, c->assembler->base(), localOffset(c, index)),
-          c->localTable[index], c->locals);
-
-  appendLocal(c, sizeInWords * BytesPerWord, c->locals);
 }
 
 Value*
@@ -2930,23 +2798,21 @@ class MyCompiler: public Compiler {
   virtual void storeLocal(unsigned size, Operand* src, unsigned index) {
     assert(&c, index < c.localFootprint);
 
-    if (c.localTable[index]) {
-      appendClobberLocal(&c, size, c.localTable[index]);
-      c.localTable[index] = 0;
+    if (c.state->locals[index]) {
+      appendClobberLocal(&c, size, c.state->locals[index]);
     }
 
-    store(size, src, memory(base(), localOffset(&c, index)));
+    Value* v = static_cast<Value*>(memory(base(), localOffset(&c, index)));
+    store(size, src, v);
 
-    // todo: find out why this doesn't work and fix it:
-//     addLocal(&c, size, index, static_cast<Value*>(src));
+    c.state->locals[index] = v;
   }
 
   virtual Operand* loadLocal(unsigned size, unsigned index) {
     assert(&c, index < c.localFootprint);
+    assert(&c, c.state->locals[index]);
 
-    Value* v = value(&c);
-    addLocal(&c, size, index, v);
-    return v;
+    return c.state->locals[index];
   }
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
