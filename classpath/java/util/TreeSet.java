@@ -24,12 +24,11 @@ public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
   }
 
   public TreeSet() {
-    set = new PersistentSet(new Comparator<Cell<T>>() {
-      public int compare(Cell<T> a, Cell<T> b) {
-          return ((Comparable)a).compareTo(b);
-      }
+    this(new Comparator<T>() {
+        public int compare(T a, T b) {
+          return ((Comparable) a).compareTo(b);
+        }
     });
-    size = 0;
   }
   
   public Iterator<T> iterator() {
