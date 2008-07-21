@@ -95,7 +95,11 @@ init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
     hostent* host = gethostbyname(chars);
     e->ReleaseStringUTFChars(hostString, chars);
     if (host == 0) {
+#ifdef WIN32
+      throwIOException(e);
+#else
       throwIOException(e, hstrerror(h_errno));
+#endif
       return;
     }
     memset(address, 0, sizeof(sockaddr_in));
