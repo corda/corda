@@ -52,8 +52,8 @@ Thread**
 fill(Thread* t, Thread* o, Thread** array)
 {
   if (t != o) *(array++) = t;
-  if (t->peer) fill(t->peer, o, array);
-  if (t->child) fill(t->child, o, array);
+  if (t->peer) array = fill(t->peer, o, array);
+  if (t->child) array = fill(t->child, o, array);
 
   return array;
 }

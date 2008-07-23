@@ -95,8 +95,11 @@ init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
     hostent* host = gethostbyname(chars);
     e->ReleaseStringUTFChars(hostString, chars);
     if (host == 0) {
-      //     herror("init: gethostbyname");
+#ifdef WIN32
       throwIOException(e);
+#else
+      throwIOException(e, hstrerror(h_errno));
+#endif
       return;
     }
     memset(address, 0, sizeof(sockaddr_in));
@@ -236,7 +239,10 @@ makeSocket(JNIEnv* e, bool blocking = false)
 #endif
 
   int s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (s < 0) { throwIOException(e); return s; }
+  if (s < 0) {
+    throwIOException(e);
+    return s;
+  }
 
   if (not blocking) makeNonblocking(e, s);
 
@@ -260,9 +266,11 @@ Java_java_nio_channels_ServerSocketChannel_natDoListen(JNIEnv *e,
 {
   int s = makeSocket(e);
   if (s < 0) return s;
+  if (e->ExceptionOccurred()) return 0;
   
   sockaddr_in address;
   init(e, &address, host, port);
+  if (e->ExceptionOccurred()) return 0;
 
   ::doListen(e, s, &address);
   return s;
@@ -276,9 +284,11 @@ Java_java_nio_channels_SocketChannel_natDoConnect(JNIEnv *e,
 						  jbooleanArray retVal)
 {
   int s = makeSocket(e);
-  
+  if (e->ExceptionOccurred()) return 0;
+
   sockaddr_in address;
   init(e, &address, host, port);
+  if (e->ExceptionOccurred()) return 0;
   
   jboolean connected = ::doConnect(e, s, &address);
   e->SetBooleanArrayRegion(retVal, 0, 1, &connected);
