@@ -2287,6 +2287,58 @@ readSource(Context* c, Stack* stack, Value** locals, Read* r)
   }
 }
 
+Site*
+pickJunctionSite(Context* c, Value* v)
+{
+  Site* s = r->pickSite(c, v);
+  if (s) return s;
+  return r->allocateSite(c);  
+}
+
+unsigned
+resolveJunctionSite(Context* c, Event* e, Event* successor, Value* v,
+                    unsigned index, Site** frozenSites,
+                    unsigned frozenSiteIndex)
+{
+  if (live(v)) {
+    Site* original = e->junctionSites[index];
+
+    if (original == 0) {
+      e->junctionSites[i] = pickJunctionSite(c, v);
+    }
+
+    Site* target = e->junctionSites[index];
+    unsigned copyCost;
+    Site* site = pick(c, v->sites, target, &copyCost);
+    if (copyCost) {
+      addSite(c, successor->stack, successor->locals, v, target);
+      apply(c, Move, site, target);
+    }
+
+    if (original == 0) {
+      frozenSites[frozenSiteIndex++] = target;
+      target->freeze(c);
+    }
+  }
+
+  return frozenSiteIndex;
+}
+
+void
+propagateJunctionSites(Context* c, Event* e, Site** sites)
+{
+  for (Cell* pc = e->predecessors; pc; pc = pc->next) {
+    Event* p = static_cast<Event*>(pc->value);
+    if (p->junctionSites == 0) {
+      p->junctionSites = sites;
+      for (Cell* sc = p->successors; sc; sc = sc->next) {
+        Event* s = static_cast<Event*>(sc->value);
+        propagateJunctionSites(c, e, sites);
+      }
+    }
+  }
+}
+
 void
 compile(Context* c)
 {
@@ -2306,49 +2358,102 @@ compile(Context* c)
              RegisterOperand, &stack);
   }
 
-  for (unsigned i = 0; i < c->logicalCodeLength; ++i) {
-    LogicalInstruction* li = c->logicalCode + i;
-    if (li->firstEvent) {
-      li->machineOffset = a->length();
+  for (Event* e = c->firstEvent; e; e = e->next) {
+    if (e->predecessors->next) {
+      setSites(e, static_cast<Event*>(e->predecessors->value)->junctionSites);
+    } else if (e->predecessors->successors->next) {
+      setSites(e, static_cast<Event*>(e->predecessors->value)->savedSites);
+    }
 
-      if (DebugCompile) {
-        fprintf(stderr, " -- ip: %d\n", i);
+    { Site* frozenSites[e->readCount];
+      unsigned frozenSiteIndex = 0;
+      for (Read* r = e->reads; r; r = r->eventNext) {
+        r->value->source = readSource(c, e->stack, e->locals, r);
+
+        if (r->value->source) {
+          assert(c, frozenSiteIndex < e->readCount);
+          frozenSites[frozenSiteIndex++] = r->value->source;
+          r->value->source->freeze(c);
+        }
       }
 
-      for (Event* e = li->firstEvent; e; e = e->next) {
-        if (e->stackReset) {
-//           fprintf(stderr, "stack reset\n");
-          for (Stack* s = e->stack; s; s = s->next) {
-            if (s->value->sites) {
-              assert(c, s->value->sites->next == 0);
-              s->value->sites->acquire
-                (c, 0, s->geometry->size * BytesPerWord, s->value);
-            }
+      while (frozenSiteIndex) {
+        frozenSites[--frozenSiteIndex]->thaw(c);
+      }
+    }
+
+    e->compilePresync(c);
+
+    unsigned frameCount
+      = c->localCount + s->stack->index + footprint(s->stack);
+
+    { Site* frozenSites[frameCount];
+      unsigned frozenSiteIndex = 0;
+
+      if (e->junctionSites) {
+        for (unsigned i = 0; i < frameCount; ++i) {
+          Site* site = e->junctionSites[i];
+          if (site) {
+            frozenSites[frozenSiteIndex++] = site;
+            site->freeze(c);
           }
         }
+      } else {
+        for (Cell* sc = e->successors; sc; sc = sc->next) {
+          Event* s = static_cast<Event*>(sc->value);
+          if (s->predecessors->next) {
+            unsigned size = sizeof(Site*) * frameCount;
+            Site** junctionSites = static_cast<Site**>
+              (c->zone->allocate(size));
+            memset(junctionSites, 0, size);
 
-        Site* sites[e->readCount];
-        unsigned si = 0;
-        for (Read* r = e->reads; r; r = r->eventNext) {
-          r->value->source = readSource(c, e->stack, e->locals, r);
-
-          if (r->value->source) {
-            assert(c, si < e->readCount);
-            sites[si++] = r->value->source;
-            r->value->source->freeze(c);
+            propagateJunctionSites(c, s, junctionSites);
+            break;
           }
         }
+      }
 
-        while (si) {
-          sites[--si]->thaw(c);
+      if (e->junctionSites) {
+        Event* s = e->next;
+        for (unsigned i = 0; i < c->localCount; ++i) {
+          frozenSiteIndex = resolveJunctionSite
+            (c, e, s, s->locals[i], i, frozenSites, frozenSiteIndex);
         }
 
-        e->compile(c);
+        unsigned i = s->stack->index + c->localCount;
+        for (Stack* stack = s->stack; stack; stack = stack->next) {
+          frozenSiteIndex = resolveJunctionSite
+            (c, e, s, stack->value, i, frozenSites, frozenSiteIndex);
+
+          i -= footprint(stack);
+        }
+      }
+
+      while (frozenSiteIndex) {
+        frozenSites[--frozenSiteIndex]->thaw(c);
+      }
+    }
+
+    if (e->successors->next) {
+      unsigned size = sizeof(Site*) * frameCount;
+      Site** savedSites = static_cast<Site**>(c->zone->allocate(size));
+
+      for (unsigned i = 0; i < c->localCount; ++i) {
+        savedSites = s->locals[i]->sites;
+      }
+
+      unsigned i = s->stack->index + c->localCount;
+      for (Stack* stack = s->stack; stack; stack = stack->next) {
+        savedSites = stack->value->sites;
+
+        i -= footprint(stack);
+      }
+    }
+
+    e->compilePostsync(c);
         
-        for (CodePromise* p = e->promises; p; p = p->next) {
-          p->offset = a->length();
-        }
-      }
+    for (CodePromise* p = e->promises; p; p = p->next) {
+      p->offset = a->offset();
     }
   }
 }
