@@ -380,11 +380,12 @@ hashMapInsert(Thread* t, object map, object key, object value,
 
   unsigned index = h & (arrayLength(t, array) - 1);
 
-  object n = makeTriple(t, k, value, arrayBody(t, array, index));
+  object n = makeTriple(t, k, value, 0);
 
   array = hashMapArray(t, map);
   index = h & (arrayLength(t, array) - 1);
 
+  set(t, n, TripleThird, arrayBody(t, array, index));
   set(t, array, ArrayBody + (index * BytesPerWord), n);
 }
 
