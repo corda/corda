@@ -356,15 +356,7 @@ postVisit(Thread* t, Heap::Visitor* v)
   Machine* m = t->m;
   bool major = m->heap->collectionType() == Heap::MajorCollection;
 
-  for (object* p = &(m->finalizeQueue); *p; p = &(finalizerNext(t, *p))) {
-    v->visit(p);
-    v->visit(&finalizerTarget(t, *p));
-  }
-
-  for (object* p = &(m->finalizeQueue); *p; p = &(finalizerNext(t, *p))) {
-    v->visit(p);
-    v->visit(&finalizerTarget(t, *p));
-  }
+  assert(t, m->finalizeQueue == 0);
 
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
@@ -469,7 +461,8 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 
   if (lastNewTenuredWeakReference) {
-    jreferenceVmNext(t, lastNewTenuredWeakReference) = m->tenuredWeakReferences;
+    jreferenceVmNext(t, lastNewTenuredWeakReference)
+      = m->tenuredWeakReferences;
     m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
 }
@@ -1457,7 +1450,7 @@ removeMonitor(Thread* t, object o)
 
   object p = hashMapRemove(t, t->m->monitorMap, o, objectHash, objectEqual);
 
-  assert(t, p);
+  expect(t, p);
 
   if (DebugMonitors) {
     fprintf(stderr, "dispose monitor %p for object %x\n",
