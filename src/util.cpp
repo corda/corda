@@ -340,9 +340,9 @@ void
 hashMapInsert(Thread* t, object map, object key, object value,
               uint32_t (*hash)(Thread*, object))
 {
-  // note that we reinitialize the array and index variables whenever
-  // an allocation (and thus possibly a collection) occurs, in case
-  // the array changes due to a table resize.
+  // note that we reinitialize the array variable whenever an
+  // allocation (and thus possibly a collection) occurs, in case the
+  // array changes due to a table resize.
 
   PROTECT(t, map);
 
@@ -378,12 +378,11 @@ hashMapInsert(Thread* t, object map, object key, object value,
     array = hashMapArray(t, map);
   }
 
-  unsigned index = h & (arrayLength(t, array) - 1);
-
   object n = makeTriple(t, k, value, 0);
 
   array = hashMapArray(t, map);
-  index = h & (arrayLength(t, array) - 1);
+
+  unsigned index = h & (arrayLength(t, array) - 1);
 
   set(t, n, TripleThird, arrayBody(t, array, index));
   set(t, array, ArrayBody + (index * BytesPerWord), n);
