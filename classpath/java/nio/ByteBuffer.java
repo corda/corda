@@ -149,6 +149,16 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
     return array[arrayOffset+position];
   }
 
+  public int getInt(int position) {
+    checkGet(position, 4);
+
+    int p = arrayOffset + position;
+    return ((array[p] & 0xFF) << 24)
+      | ((array[p + 1] & 0xFF) << 16)
+      | ((array[p + 2] & 0xFF) <<  8)
+      | ((array[p + 3] & 0xFF));
+  }
+
   public int getInt() {
     checkGet(4);
     int i = get() << 24;
