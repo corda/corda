@@ -34,6 +34,14 @@ DestroyJavaVM(Machine* m)
   Finder* f = m->finder;
   Thread* t = m->rootThread;
 
+  // wait for other threads to exit
+  { ACQUIRE(t, m->stateLock);
+
+    while (m->liveCount > 1) {
+      t->m->stateLock->wait(t->systemThread, 0);
+    }
+  }
+
   int exitCode = (t->exception ? -1 : 0);
   enter(t, Thread::ActiveState);
   t->exit();
