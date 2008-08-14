@@ -215,10 +215,8 @@ class MyStackWalker: public Processor::StackWalker {
         if (trace and trace->nativeMethod) {
           method_ = trace->nativeMethod;
           state = NativeMethod;
-        } else if (ip_) {
-          state = Next;
         } else {
-          state = Finish;
+          state = Next;
         }
         break;
 
@@ -228,16 +226,14 @@ class MyStackWalker: public Processor::StackWalker {
           if (method_) {
             state = Method;
           } else if (trace) {
-            base = trace->base;
             stack = static_cast<void**>(trace->stack);
             ip_ = (stack ? *static_cast<void**>(stack) : 0);
+            base = trace->base;
+            trace = trace->next;
 
-            if (trace->nativeMethod) {
+            if (trace and trace->nativeMethod) {
               method_ = trace->nativeMethod;
               state = NativeMethod;
-            } else {
-              trace = trace->next;
-              state = Next;
             }
           } else {
             state = Finish;
@@ -266,30 +262,23 @@ class MyStackWalker: public Processor::StackWalker {
       stack = static_cast<void**>(base) + 1;
       ip_ = (stack ? *static_cast<void**>(stack) : 0);
       base = *static_cast<void**>(base);
-      state = Next;
       break;
 
     case NativeMethod:
-      trace = trace->next;
-      state = Next;
       break;
    
     default:
       abort(t);
     }
+
+    state = Next;
   }
 
   virtual object method() {
-    switch (state) {
-    case Method:
-      return method_;
-        
-    case NativeMethod:
-      return trace->nativeMethod;
-
-    default:
-      abort(t);
-    }
+//     fprintf(stderr, "method %s.%s\n", &byteArrayBody
+//             (t, className(t, methodClass(t, method_)), 0),
+//             &byteArrayBody(t, methodName(t, method_), 0));
+    return method_;
   }
 
   virtual int ip() {
