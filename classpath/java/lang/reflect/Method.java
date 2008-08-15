@@ -17,6 +17,7 @@ public class Method<T> extends AccessibleObject implements Member {
   private byte parameterFootprint;
   private short flags;
   private short offset;
+  private int nativeID;
   private byte[] name;
   private byte[] spec;
   private Class<T> class_;

@@ -280,6 +280,23 @@ findMethod(Thread* t, jclass c, const char* name, const char* spec)
   return vm::findMethod(t, *c, n, s);
 }
 
+jint
+methodID(Thread* t, object method)
+{
+  if (methodNativeID(t, method) == 0) {
+    PROTECT(t, method);
+
+    ACQUIRE(t, t->m->referenceLock);
+    
+    if (methodNativeID(t, method) == 0) {
+      t->m->jniMethodTable = vectorAppend(t, t->m->jniMethodTable, method);
+      methodNativeID(t, method) = vectorSize(t, t->m->jniMethodTable);
+    }
+  }
+
+  return methodNativeID(t, method);
+}
+
 jmethodID JNICALL
 GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
 {
@@ -288,26 +305,9 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
   object method = findMethod(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
-  if (classFlags(t, *c) & ACC_INTERFACE) {
-    PROTECT(t, method);
+  assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
 
-    ACQUIRE(t, t->m->referenceLock);
-    
-    for (unsigned i = 0; i < vectorSize(t, t->m->jniInterfaceTable); ++i) {
-      if (method == vectorBody(t, t->m->jniInterfaceTable, i)) {
-        return i;
-      }
-    }
-
-    t->m->jniInterfaceTable
-      = vectorAppend(t, t->m->jniInterfaceTable, method);
-
-    return (vectorSize(t, t->m->jniInterfaceTable) - 1) | InterfaceMethodID;
-  } else if (methodVirtual(t, method)) {
-    return methodOffset(t, method) + 1;
-  } else {
-    return methodOffset(t, method) | NonVirtualMethodID;
-  }
+  return methodID(t, method);
 }
 
 jmethodID JNICALL
@@ -318,29 +318,19 @@ GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
   object method = findMethod(t, c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
-  return methodOffset(t, method) + 1;
+  assert(t, methodFlags(t, method) & ACC_STATIC);
+
+  return methodID(t, method);
 }
 
 inline object
-getMethod(Thread* t, object o, jmethodID m)
+getMethod(Thread* t, jmethodID m)
 {
-  if (m & InterfaceMethodID) {
-    return vectorBody(t, t->m->jniInterfaceTable, m & (~InterfaceMethodID));
-  } else {
-    if (classVmFlags(t, objectClass(t, o)) & BootstrapFlag) {
-      PROTECT(t, o);
+  object method = vectorBody(t, t->m->jniMethodTable, m - 1);
 
-      resolveClass(t, className(t, objectClass(t, o)));
-      if (UNLIKELY(t->exception)) return 0;
-    }
+  assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
 
-    if (m & NonVirtualMethodID) {
-      return arrayBody(t, classMethodTable(t, objectClass(t, o)),
-                       m & (~NonVirtualMethodID));
-    } else {
-      return arrayBody(t, classVirtualTable(t, objectClass(t, o)), m - 1);
-    }
-  }
+  return method;
 }
 
 jobject JNICALL
@@ -351,7 +341,7 @@ NewObjectV(Thread* t, jclass c, jmethodID m, va_list a)
   object o = make(t, *c);
   PROTECT(t, o);
 
-  t->m->processor->invokeList(t, getMethod(t, o, m), o, true, a);
+  t->m->processor->invokeList(t, getMethod(t, m), o, true, a);
 
   return makeLocalReference(t, o);
 }
@@ -374,7 +364,7 @@ CallObjectMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   return makeLocalReference
     (t, t->m->processor->invokeList(t, method, *o, true, a));
 }
@@ -397,7 +387,7 @@ CallBooleanMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? false : (intValue(t, r) != 0));
 }
@@ -420,7 +410,7 @@ CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
@@ -443,7 +433,7 @@ CallCharMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
@@ -466,7 +456,7 @@ CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
@@ -489,7 +479,7 @@ CallIntMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
@@ -512,7 +502,7 @@ CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : longValue(t, r));
 }
@@ -535,7 +525,7 @@ CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : bitsToFloat(intValue(t, r)));
 }
@@ -558,7 +548,7 @@ CallDoubleMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
   return (t->exception ? 0 : bitsToDouble(longValue(t, r)));
 }
@@ -581,7 +571,7 @@ CallVoidMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getMethod(t, *o, m);
+  object method = getMethod(t, m);
   t->m->processor->invokeList(t, method, *o, true, a);
 }
 
@@ -597,25 +587,22 @@ CallVoidMethod(Thread* t, jobject o, jmethodID m, ...)
 }
 
 inline object
-getStaticMethod(Thread* t, object c, jmethodID m)
+getStaticMethod(Thread* t, jmethodID m)
 {
-  if (classVmFlags(t, c) & BootstrapFlag) {
-    PROTECT(t, c);
+  object method = vectorBody(t, t->m->jniMethodTable, m - 1);
 
-    resolveClass(t, className(t, c));
-    if (UNLIKELY(t->exception)) return 0;
-  }
+  assert(t, methodFlags(t, method) & ACC_STATIC);
 
-  return arrayBody(t, classMethodTable(t, c), m - 1);
+  return method;
 }
 
 jobject JNICALL
-CallStaticObjectMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticObjectMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
   return makeLocalReference(t, t->m->processor->invokeList
-                            (t, getStaticMethod(t, *c, m), 0, true, a));
+                            (t, getStaticMethod(t, m), 0, true, a));
 }
 
 jobject JNICALL
@@ -632,12 +619,11 @@ CallStaticObjectMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jboolean JNICALL
-CallStaticBooleanMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticBooleanMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : (intValue(t, r) != 0));
 }
 
@@ -655,12 +641,11 @@ CallStaticBooleanMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jbyte JNICALL
-CallStaticByteMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticByteMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -678,12 +663,11 @@ CallStaticByteMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jchar JNICALL
-CallStaticCharMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticCharMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -701,12 +685,11 @@ CallStaticCharMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jshort JNICALL
-CallStaticShortMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticShortMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -724,12 +707,11 @@ CallStaticShortMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jint JNICALL
-CallStaticIntMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticIntMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : intValue(t, r));
 }
 
@@ -747,12 +729,11 @@ CallStaticIntMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jlong JNICALL
-CallStaticLongMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticLongMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : longValue(t, r));
 }
 
@@ -770,12 +751,11 @@ CallStaticLongMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jfloat JNICALL
-CallStaticFloatMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticFloatMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : bitsToFloat(intValue(t, r)));
 }
 
@@ -793,12 +773,11 @@ CallStaticFloatMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 jdouble JNICALL
-CallStaticDoubleMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticDoubleMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  object r = t->m->processor->invokeList
-    (t, getStaticMethod(t, *c, m), 0, true, a);
+  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
   return (t->exception ? 0 : bitsToDouble(longValue(t, r)));
 }
 
@@ -816,11 +795,11 @@ CallStaticDoubleMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 void JNICALL
-CallStaticVoidMethodV(Thread* t, jclass c, jmethodID m, va_list a)
+CallStaticVoidMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->processor->invokeList(t, getStaticMethod(t, *c, m), 0, true, a);
+  t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
 }
 
 void JNICALL

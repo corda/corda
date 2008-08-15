@@ -1158,7 +1158,7 @@ class Machine {
   object monitorMap;
   object stringMap;
   object types;
-  object jniInterfaceTable;
+  object jniMethodTable;
   object finalizers;
   object tenuredFinalizers;
   object finalizeQueue;

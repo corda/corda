@@ -4565,7 +4565,7 @@ class MyProcessor: public Processor {
   {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, name, spec, class_, code,
+       offset, 0, name, spec, class_, code,
        ::defaultThunk(static_cast<MyThread*>(t)));
   }
 
@@ -5101,6 +5101,7 @@ compile(MyThread* t, object method)
              methodParameterFootprint(t, method),
              methodFlags(t, method),
              methodOffset(t, method),
+             methodNativeID(t, method),
              methodName(t, method),
              methodSpec(t, method),
              methodClass(t, method),

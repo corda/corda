@@ -1088,6 +1088,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                  methodParameterFootprint(t, method),
                  methodFlags(t, method),
                  virtualCount++,
+                 0,
                  methodName(t, method),
                  methodSpec(t, method),
                  class_,
@@ -1538,7 +1539,7 @@ class HeapClient: public Heap::Client {
     v->visit(&(m->monitorMap));
     v->visit(&(m->stringMap));
     v->visit(&(m->types));
-    v->visit(&(m->jniInterfaceTable));
+    v->visit(&(m->jniMethodTable));
 
     for (Reference* r = m->jniReferences; r; r = r->next) {
       v->visit(&(r->target));
@@ -1658,7 +1659,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   monitorMap(0),
   stringMap(0),
   types(0),
-  jniInterfaceTable(0),
+  jniMethodTable(0),
   finalizers(0),
   tenuredFinalizers(0),
   finalizeQueue(0),
@@ -1819,14 +1820,14 @@ Thread::init()
     m->monitorMap = makeWeakHashMap(this, 0, 0);
     m->stringMap = makeWeakHashMap(this, 0, 0);
 
-    m->jniInterfaceTable = makeVector(this, 0, 0, false);
+    m->jniMethodTable = makeVector(this, 0, 0, false);
 
     m->localThread->set(this);
 
     { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
       codeBody(t, bootCode, 0) = impdep1;
       object bootMethod = makeMethod
-        (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
+        (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
       PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
