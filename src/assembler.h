@@ -17,14 +17,14 @@
 namespace vm {
 
 enum Operation {
+  PopFrame,
   Return
 };
 
 const unsigned OperationCount = Return + 1;
 
 enum UnaryOperation {
-  Push,
-  Pop,
+  PushFrame,
   Call,
   LongCall,
   AlignedCall,
@@ -42,13 +42,16 @@ enum UnaryOperation {
 const unsigned UnaryOperationCount = Negate + 1;
 
 enum BinaryOperation {
-  LoadAddress,
   Move,
   MoveZ,
-  Move4To8,
   Swap,
+  Compare
+};
+
+const unsigned BinaryOperationCount = Compare + 1;
+
+enum TernaryOperation {
   LongCompare,
-  Compare,
   Add,
   Subtract,
   Multiply,
@@ -62,7 +65,7 @@ enum BinaryOperation {
   Xor
 };
 
-const unsigned BinaryOperationCount = Xor + 1;
+const unsigned TernaryOperationCount = Xor + 1;
 
 enum OperandType {
   ConstantOperand,
@@ -156,14 +159,20 @@ class Assembler {
     virtual void restore(int r) = 0;
   };
 
+  class Offset {
+   public:
+    virtual ~Offset() { }
+
+    virtual unsigned calculate(unsigned start) = 0;
+  };
+
   virtual ~Assembler() { }
 
   virtual void setClient(Client* client) = 0;
 
   virtual unsigned registerCount() = 0;
 
-  virtual int base() = 0;
-  virtual int stack() = 0;
+  virtual int frame() = 0;
   virtual int thread() = 0;
   virtual int returnLow() = 0;
   virtual int returnHigh() = 0;
@@ -171,22 +180,37 @@ class Assembler {
   virtual unsigned argumentRegisterCount() = 0;
   virtual int argumentRegister(unsigned index) = 0;
 
-  virtual unsigned stackAlignment() = 0;
+  virtual void plan
+  (UnaryOperation op,
+   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   bool* thunk) = 0;
 
-  virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
-                    uint64_t* registerMask, bool* thunk) = 0;
+  virtual void plan
+  (BinaryOperation op,
+   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+   bool* thunk) = 0;
 
-  virtual void plan(BinaryOperation op, unsigned size, uint8_t* aTypeMask,
-                    uint64_t* aRegisterMask, uint8_t* bTypeMask,
-                    uint64_t* bRegisterMask, bool* thunk) = 0;
+  virtual void plan
+  (TernaryOperation op,
+   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+   unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask,
+   bool* thunk) = 0;
 
   virtual void apply(Operation op) = 0;
 
-  virtual void apply(UnaryOperation op, unsigned size, OperandType type,
-                     Operand* operand) = 0;
+  virtual void apply(UnaryOperation op,
+                     unsigned aSize, OperandType aType, Operand* aOperand) = 0;
 
-  virtual void apply(BinaryOperation op, unsigned size, OperandType aType,
-                     Operand* a, OperandType bType, Operand* b) = 0;
+  virtual void apply(BinaryOperation op,
+                     unsigned aSize, OperandType aType, Operand* aOperand,
+                     unsigned bSize, OperandType bType, Operand* bOperand) = 0;
+
+  virtual void apply(TernaryOperation op,
+                     unsigned aSize, OperandType aType, Operand* aOperand,
+                     unsigned bSize, OperandType bType, Operand* bOperand,
+                     unsigned cSize, OperandType cType, Operand* cOperand) = 0;
 
   virtual void writeTo(uint8_t* dst) = 0;
 
@@ -195,6 +219,8 @@ class Assembler {
   virtual void updateCall(void* returnAddress, void* newTarget) = 0;
 
   virtual void dispose() = 0;
+
+  static unsigned alignFrameSize(unsigned sizeInWords);
 };
 
 Assembler*

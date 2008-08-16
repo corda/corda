@@ -41,26 +41,22 @@ class MyThread: public Thread {
    public:
     CallTrace(MyThread* t):
       t(t),
-      base(t->base),
-      stack(t->stack),
+      frame(t->frame),
       nativeMethod(0),
       next(t->trace)
     {
       t->trace = this;
-      t->base = 0;
-      t->stack = 0;
+      t->frame = 0;
     }
 
     ~CallTrace() {
-      t->stack = stack;
-      t->base = base;
+      t->frame = frame;
       t->trace = next;
     }
 
     MyThread* t;
     void* ip;
-    void* base;
-    void* stack;
+    void* frame;
     object nativeMethod;
     CallTrace* next;
   };
@@ -68,15 +64,13 @@ class MyThread: public Thread {
   MyThread(Machine* m, object javaThread, Thread* parent):
     Thread(m, javaThread, parent),
     ip(0),
-    base(0),
-    stack(0),
+    frame(0),
     trace(0),
     reference(0)
   { }
 
   void* ip;
-  void* base;
-  void* stack;
+  void* frame;
   CallTrace* trace;
   Reference* reference;
 };
@@ -4311,42 +4305,34 @@ visitStack(MyThread* t, Heap::Visitor* v)
 }
 
 void
-saveStackAndBase(MyThread* t, Assembler* a)
+saveFrame(MyThread* t, Assembler* a)
 {
-  Assembler::Register base(a->base());
-  Assembler::Memory baseDst(a->thread(), difference(&(t->base), t));
-  a->apply(Move, BytesPerWord, RegisterOperand, &base,
-           MemoryOperand, &baseDst);
-
-  Assembler::Register stack(a->stack());
-  Assembler::Memory stackDst(a->thread(), difference(&(t->stack), t));
-  a->apply(Move, BytesPerWord, RegisterOperand, &stack,
-           MemoryOperand, &stackDst);
+  Assembler::Register frame(a->frame());
+  Assembler::Memory frameDst(a->thread(), difference(&(t->frame), t));
+  a->apply(Move, BytesPerWord, RegisterOperand, &frame,
+           BytesPerWord, MemoryOperand, &frameDst);
 }
 
 void
-pushThread(MyThread*, Assembler* a)
+pushFrame(MyThread* t, Assembler* a, unsigned size)
+{
+  Assembler::Constant offset(resolved(c, Assembler::alignFrameSize(size)));
+  a->apply(PushFrame, BytesPerWord, ConstantOperand, &offset);
+}
+
+void
+setThreadArgument(MyThread*, Assembler* a)
 {
   Assembler::Register thread(a->thread());
 
   if (a->argumentRegisterCount()) {
     Assembler::Register arg(a->argumentRegister(0));
     a->apply(Move, BytesPerWord, RegisterOperand, &thread,
-             RegisterOperand, &arg);
+             BytesPerWord, RegisterOperand, &arg);
   } else {
-    a->apply(Push, BytesPerWord, RegisterOperand, &thread);
-  }
-}
-
-void
-popThread(MyThread*, Assembler* a)
-{
-  if (a->argumentRegisterCount() == 0) {
-    ResolvedPromise bpwPromise(BytesPerWord);
-    Assembler::Constant bpw(&bpwPromise);
-    Assembler::Register stack(a->stack());
-    a->apply(Add, BytesPerWord, ConstantOperand, &bpw,
-             RegisterOperand, &stack);
+    Assembler::Memory arg(a->frame(), a->argumentPosition(0));
+    a->apply(Move, BytesPerWord, RegisterOperand, &thread,
+             BytesPerWord, MemoryOperand, &arg);
   }
 }
 
@@ -4984,8 +4970,9 @@ compileThunks(MyThread* t, MyProcessor* p)
 
   { Assembler* a = defaultContext.context.assembler;
       
-    saveStackAndBase(t, a);
-    pushThread(t, a);
+    saveFrame(t, a);
+    pushFrame(t, a, 1);
+    setThreadArgument(t, a);
   
     defaultContext.promise.resolved_ = true;
     defaultContext.promise.value_ = reinterpret_cast<intptr_t>(compileMethod);
@@ -4993,7 +4980,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     Assembler::Constant proc(&(defaultContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
-    popThread(t, a);
+    a->apply(PopFrame);
 
     Assembler::Register result(a->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
@@ -5003,8 +4990,9 @@ compileThunks(MyThread* t, MyProcessor* p)
 
   { Assembler* a = nativeContext.context.assembler;
       
-    saveStackAndBase(t, a);
-    pushThread(t, a);
+    saveFrame(t, a);
+    pushFrame(t, a, 1);
+    setThreadArgument(t, a);
 
     nativeContext.promise.resolved_ = true;
     nativeContext.promise.value_ = reinterpret_cast<intptr_t>(invokeNative);
@@ -5012,7 +5000,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     Assembler::Constant proc(&(nativeContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
   
-    popThread(t, a);
+    a->apply(PopFrame);
 
     a->apply(Return);
   }
@@ -5021,8 +5009,9 @@ compileThunks(MyThread* t, MyProcessor* p)
 
   { Assembler* a = aioobContext.context.assembler;
       
-    saveStackAndBase(t, a);
-    pushThread(t, a);
+    saveFrame(t, a);
+    pushFrame(t, a, 1);
+    setThreadArgument(t, a);
 
     aioobContext.promise.resolved_ = true;
     aioobContext.promise.value_ = reinterpret_cast<intptr_t>
@@ -5036,7 +5025,7 @@ compileThunks(MyThread* t, MyProcessor* p)
 
   { Assembler* a = tableContext.context.assembler;
   
-    saveStackAndBase(t, a);
+    saveFrame(t, a);
 
     Assembler::Constant proc(&(tableContext.promise));
     a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
