@@ -1695,6 +1695,18 @@ compareRM(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+compareAM(Context* c, unsigned size, Assembler::Address* a,
+          Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+  
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveAR(c, size, a, &tmp);
+  compareRM(c, size, &tmp, b);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
 compareMR(Context* c, unsigned size, Assembler::Memory* a,
           Assembler::Register* b)
 {
@@ -1984,6 +1996,7 @@ populateTables()
   BinaryOperations[INDEX2(Compare, Register, Constant)] = CAST2(compareRC);
   BinaryOperations[INDEX2(Compare, Register, Register)] = CAST2(compareRR);
   BinaryOperations[INDEX2(Compare, Address, Register)] = CAST2(compareAR);
+  BinaryOperations[INDEX2(Compare, Address, Memory)] = CAST2(compareAM);
   BinaryOperations[INDEX2(Compare, Register, Memory)] = CAST2(compareRM);
   BinaryOperations[INDEX2(Compare, Memory, Register)] = CAST2(compareMR);
   BinaryOperations[INDEX2(Compare, Constant, Memory)] = CAST2(compareCM);
