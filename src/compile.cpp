@@ -208,8 +208,8 @@ class MyStackWalker: public Processor::StackWalker {
 //       fprintf(stderr, "state: %d\n", state);
       switch (state) {
       case Start:
-        if (ip_ == 0 and stack) {
-          ip_ = *static_cast<void**>(stack);
+        if (ip_ == 0) {
+          ip_ = t->arch->ipForFrame(stack, base);
         }
 
         if (trace and trace->nativeMethod) {
@@ -226,9 +226,9 @@ class MyStackWalker: public Processor::StackWalker {
           if (method_) {
             state = Method;
           } else if (trace) {
-            stack = static_cast<void**>(trace->stack);
-            ip_ = (stack ? *static_cast<void**>(stack) : 0);
+            stack = trace->stack;
             base = trace->base;
+            ip_ = t->arch->ipForFrame(stack, base);
             trace = trace->next;
 
             if (trace and trace->nativeMethod) {
@@ -259,9 +259,8 @@ class MyStackWalker: public Processor::StackWalker {
   void next() {
     switch (state) {
     case Method:
-      stack = static_cast<void**>(base) + 1;
-      ip_ = (stack ? *static_cast<void**>(stack) : 0);
-      base = *static_cast<void**>(base);
+      t->arch->nextFrame(&stack, &base);
+      ip_ = t->arch->ipForFrame(stack, base);
       break;
 
     case NativeMethod:
@@ -1152,9 +1151,9 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 {
   void* ip = t->ip;
   void* base = t->base;
-  void** stack = static_cast<void**>(t->stack);
+  void* stack = t->stack;
   if (ip == 0) {
-    ip = *stack;
+    ip = t->arch->ipForFrame(stack, base);
   }
 
   *targetIp = 0;
@@ -1169,11 +1168,16 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         unsigned parameterFootprint = methodParameterFootprint(t, method);
         unsigned localFootprint = localSize(t, method);
 
-        stack = static_cast<void**>(base)
-          - (localFootprint - parameterFootprint);
-
-        *(--stack) = t->exception;
+        t->arch->copyIntoFrame
+          (stack, base, localFootprint - parameterFootprint,
+           BytesPerWord, &(t->exception));
         t->exception = 0;
+
+        stack = t->arch->pushFrame
+          (stack, base,
+           localFootprint
+           - parameterFootprint
+           + codeMaxStack(t, methodCode(t, method)));
 
         *targetIp = handler;
         *targetBase = base;
@@ -1190,9 +1194,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
           release(t, lock);
         }
 
-        stack = static_cast<void**>(base) + 1;
-        ip = *stack;
-        base = *static_cast<void**>(base);
+        t->arch->nextFrame(&stack, &base);
+        ip_ = t->arch->ipForFrame(stack, base);
       }
     } else {
       *targetIp = ip;
@@ -3944,7 +3947,7 @@ compile(MyThread* t, object method);
 void*
 compileMethod2(MyThread* t)
 {
-  object node = findCallNode(t, *static_cast<void**>(t->stack));
+  object node = findCallNode(t, t->arch->ipForFrame(t->stack, t->base));
   PROTECT(t, node);
 
   object target = callNodeTarget(t, node);
@@ -4174,7 +4177,7 @@ uint64_t
 invokeNative(MyThread* t)
 {
   if (t->trace->nativeMethod == 0) {
-    object node = findCallNode(t, *static_cast<void**>(t->stack));
+    object node = findCallNode(t, t->arch->ipForFrame(t->stack, t->base));
     object target = callNodeTarget(t, node);
     if (callNodeVirtualCall(t, node)) {
       target = resolveTarget(t, t->stack, target);
@@ -4259,9 +4262,9 @@ visitStack(MyThread* t, Heap::Visitor* v)
 {
   void* ip = t->ip;
   void* base = t->base;
-  void** stack = static_cast<void**>(t->stack);
-  if (ip == 0 and stack) {
-    ip = *stack;
+  void* stack = t->stack;
+  if (ip == 0) {
+    ip = t->arch->ipForFrame(stack, base);
   }
 
   MyThread::CallTrace* trace = t->trace;
@@ -4279,19 +4282,14 @@ visitStack(MyThread* t, Heap::Visitor* v)
       calleeBase = base;
       argumentFootprint = methodParameterFootprint(t, method);
 
-      stack = static_cast<void**>(base) + 1;
-      if (stack) {
-        ip = *stack;
-      }
-      base = *static_cast<void**>(base);
+      t->arch->nextFrame(&stack, &base);
+      ip_ = t->arch->ipForFrame(stack, base);
     } else if (trace) {
       calleeBase = 0;
       argumentFootprint = 0;
+      stack = trace->stack;
       base = trace->base;
-      stack = static_cast<void**>(trace->stack);
-      if (stack) {
-        ip = *stack;
-      }
+      ip_ = t->arch->ipForFrame(stack, base);
       trace = trace->next;
     } else {
       break;

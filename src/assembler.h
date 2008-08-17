@@ -165,42 +165,55 @@ class Assembler {
     virtual unsigned calculate(unsigned start) = 0;
   };
 
+  class Architecture {
+   public:
+    virtual ~Architecture() { }
+
+    virtual unsigned registerCount() = 0;
+
+    virtual int stack() = 0;
+    virtual int base() = 0;
+    virtual int thread() = 0;
+    virtual int returnLow() = 0;
+    virtual int returnHigh() = 0;  
+
+    virtual unsigned argumentRegisterCount() = 0;
+    virtual int argumentRegister(unsigned index) = 0;
+
+    virtual void updateCall(void* returnAddress, void* newTarget) = 0;
+
+    virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
+
+    virtual void* ipForFrame(void* stack, void* base);
+
+    virtual void plan
+    (UnaryOperation op,
+     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     bool* thunk) = 0;
+
+    virtual void plan
+    (BinaryOperation op,
+     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+     bool* thunk) = 0;
+
+    virtual void plan
+    (TernaryOperation op,
+     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+     unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask,
+     bool* thunk) = 0; 
+
+    virtual void dispose() = 0;
+  };
+
   virtual ~Assembler() { }
 
   virtual void setClient(Client* client) = 0;
 
-  virtual unsigned registerCount() = 0;
-
-  virtual int stack() = 0;
-  virtual int base() = 0;
-  virtual int thread() = 0;
-  virtual int returnLow() = 0;
-  virtual int returnHigh() = 0;
-
-  virtual unsigned argumentRegisterCount() = 0;
-  virtual int argumentRegister(unsigned index) = 0;
-
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset);
   virtual void pushFrame(unsigned argumentCount, ...);
   virtual void popFrame();
-
-  virtual void plan
-  (UnaryOperation op,
-   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   bool* thunk) = 0;
-
-  virtual void plan
-  (BinaryOperation op,
-   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-   bool* thunk) = 0;
-
-  virtual void plan
-  (TernaryOperation op,
-   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-   unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask,
-   bool* thunk) = 0;
 
   virtual void apply(Operation op) = 0;
 
@@ -220,15 +233,14 @@ class Assembler {
 
   virtual unsigned length() = 0;
 
-  virtual void updateCall(void* returnAddress, void* newTarget) = 0;
-
   virtual void dispose() = 0;
-
-  static unsigned alignFrameSize(unsigned sizeInWords);
 };
 
 Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone);
+
+Assembler::Architecture*
+makeArchitecture(System* system);
 
 } // namespace vm
 
