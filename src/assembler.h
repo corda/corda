@@ -184,7 +184,11 @@ class Assembler {
 
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
 
-    virtual void* ipForFrame(void* stack, void* base);
+    virtual void* frameIp(void* stack) = 0;
+    virtual unsigned frameHeaderSize() = 0;
+    virtual unsigned frameFooterSize() = 0;
+    virtual void nextFrame(void** stack, void** base) = 0;
+    virtual void* popReturnAddress(void* stack) = 0;
 
     virtual void plan
     (UnaryOperation op,
@@ -204,7 +208,8 @@ class Assembler {
      unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask,
      bool* thunk) = 0; 
 
-    virtual void dispose() = 0;
+    virtual void acquire() = 0;
+    virtual void release() = 0;
   };
 
   virtual ~Assembler() { }

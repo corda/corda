@@ -65,26 +65,31 @@ class MyThread: public Thread {
     CallTrace* next;
   };
 
-  MyThread(Machine* m, object javaThread, Thread* parent):
+  MyThread(Machine* m, object javaThread, MyThread* parent):
     Thread(m, javaThread, parent),
     ip(0),
     base(0),
     stack(0),
     trace(0),
-    reference(0)
-  { }
+    reference(0),
+    arch(parent ? parent->arch : makeArchitecture(m->system))
+  {
+    arch->acquire();
+  }
 
   void* ip;
   void* base;
   void* stack;
   CallTrace* trace;
   Reference* reference;
+  Assembler::Architecture* arch;
 };
 
 object
 resolveThisPointer(MyThread* t, void* stack, object method)
 {
-  return reinterpret_cast<object*>(stack)[methodParameterFootprint(t, method)];
+  return reinterpret_cast<object*>(stack)
+    [methodParameterFootprint(t, method) + t->arch->frameFooterSize()];
 }
 
 object
@@ -209,7 +214,7 @@ class MyStackWalker: public Processor::StackWalker {
       switch (state) {
       case Start:
         if (ip_ == 0) {
-          ip_ = t->arch->ipForFrame(stack, base);
+          ip_ = t->arch->frameIp(stack);
         }
 
         if (trace and trace->nativeMethod) {
@@ -228,7 +233,7 @@ class MyStackWalker: public Processor::StackWalker {
           } else if (trace) {
             stack = trace->stack;
             base = trace->base;
-            ip_ = t->arch->ipForFrame(stack, base);
+            ip_ = t->arch->frameIp(stack);
             trace = trace->next;
 
             if (trace and trace->nativeMethod) {
@@ -260,7 +265,7 @@ class MyStackWalker: public Processor::StackWalker {
     switch (state) {
     case Method:
       t->arch->nextFrame(&stack, &base);
-      ip_ = t->arch->ipForFrame(stack, base);
+      ip_ = t->arch->frameIp(stack);
       break;
 
     case NativeMethod:
@@ -315,24 +320,57 @@ class MyStackWalker: public Processor::StackWalker {
   MyProtector protector;
 };
 
+unsigned
+localSize(MyThread* t, object method)
+{
+  unsigned size = codeMaxLocals(t, methodCode(t, method));
+  if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
+      == ACC_SYNCHRONIZED)
+  {
+    ++ size;
+  }
+  return size;
+}
+
+unsigned
+alignedFrameSize(MyThread* t, object method)
+{
+  return t->arch->alignFrameSize
+    (localSize(t, method)
+     - methodParameterFootprint(t, method)
+     + codeMaxStack(t, methodCode(t, method)));
+}
+
+unsigned
+alignedFrameSizeWithParameters(MyThread* t, object method)
+{
+  return methodParameterFootprint(t, method) + alignedFrameSize(t, method);
+}
+
 int
 localOffset(MyThread* t, int v, object method)
 {
+  return alignedFrameSize(t, method) - t->arch->frameHeaderSize() - v;
+
   int parameterFootprint = methodParameterFootprint(t, method) * BytesPerWord;
 
   v *= BytesPerWord;
   if (v < parameterFootprint) {
-    return (parameterFootprint - v - BytesPerWord) + (BytesPerWord * 2);
+    return alignedFrameSize(t, method)
+      + parameterFootprint
+      + t->arch->frameFooterSize()
+      + t->arch->frameHeaderSize()
+      - v;
   } else {
-    return -(v + BytesPerWord - parameterFootprint);
+    return alignedFrameSize(t, method) - t->arch->frameHeaderSize() - v;
   }
 }
 
 inline object*
-localObject(MyThread* t, void* base, object method, unsigned index)
+localObject(MyThread* t, void* stack, object method, unsigned index)
 {
   return reinterpret_cast<object*>
-    (static_cast<uint8_t*>(base) + localOffset(t, index, method));
+    (static_cast<uint8_t*>(stack) + localOffset(t, index, method));
 }
 
 class PoolElement {
@@ -385,28 +423,10 @@ enum Event {
 };
 
 unsigned
-localSize(MyThread* t, object method)
-{
-  unsigned size = codeMaxLocals(t, methodCode(t, method));
-  if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
-      == ACC_SYNCHRONIZED)
-  {
-    ++ size;
-  }
-  return size;
-}
-
-unsigned
-alignedFrameSize(MyThread* t, object method)
-{
-  return Assembler::alignFrameSize
-    (localSize(t, method) + codeMaxStack(t, methodCode(t, method)));
-}
-
-unsigned
 frameMapSizeInWords(MyThread* t, object method)
 {
-  return ceiling(alignedFrameSize(t, method), BitsPerWord) * BytesPerWord;
+  return ceiling(alignedFrameSizeWithParameters(t, method), BitsPerWord)
+    * BytesPerWord;
 }
 
 uint16_t*
@@ -1153,7 +1173,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
   void* base = t->base;
   void* stack = t->stack;
   if (ip == 0) {
-    ip = t->arch->ipForFrame(stack, base);
+    ip = t->arch->frameIp(stack);
   }
 
   *targetIp = 0;
@@ -1168,16 +1188,12 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         unsigned parameterFootprint = methodParameterFootprint(t, method);
         unsigned localFootprint = localSize(t, method);
 
-        t->arch->copyIntoFrame
-          (stack, base, localFootprint - parameterFootprint,
-           BytesPerWord, &(t->exception));
-        t->exception = 0;
+        reinterpret_cast<void**>(stack)
+          [alignedFrameSize(t, method) - t->arch->frameHeaderSize()
+           - (localFootprint - parameterFootprint - 1)]
+          = t->exception;
 
-        stack = t->arch->pushFrame
-          (stack, base,
-           localFootprint
-           - parameterFootprint
-           + codeMaxStack(t, methodCode(t, method)));
+        t->exception = 0;
 
         *targetIp = handler;
         *targetBase = base;
@@ -1195,12 +1211,12 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         }
 
         t->arch->nextFrame(&stack, &base);
-        ip_ = t->arch->ipForFrame(stack, base);
+        ip = t->arch->frameIp(stack);
       }
     } else {
       *targetIp = ip;
       *targetBase = base;
-      *targetStack = stack + 1;
+      *targetStack = t->arch->popReturnAddress(stack);
     }
   }
 }
@@ -1758,7 +1774,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
       lock = frame->append(methodClass(t, method));
     } else {
       lock = c->memory
-        (c->base(), localOffset(t, savedTargetIndex(t, method), method));
+        (c->stack(), localOffset(t, savedTargetIndex(t, method), method));
     }
     
     c->call(c->constant(function),
@@ -1782,8 +1798,8 @@ handleEntrance(MyThread* t, Frame* frame)
     // save 'this' pointer in case it is overwritten.
     unsigned index = savedTargetIndex(t, method);
     c->store(BytesPerWord,
-             c->memory(c->base(), localOffset(t, 0, method)),
-             c->memory(c->base(), localOffset(t, index, method)));
+             c->memory(c->stack(), localOffset(t, 0, method)),
+             c->memory(c->stack(), localOffset(t, index, method)));
     frame->set(index, Frame::Object);
   }
 
@@ -2586,7 +2602,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       int8_t count = codeBody(t, code, ip++);
 
       Compiler::Operand* a = c->memory
-        (c->base(), localOffset(t, index, context->method));
+        (c->stack(), localOffset(t, index, context->method));
 
       c->storeLocal(4, c->add(4, c->constant(count), a), index);
     } break;
@@ -3109,7 +3125,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          frame->trace(0, false),
          BytesPerWord,
          4, c->thread(), frame->append(class_), c->constant(dimensions),
-         c->stack());
+         c->stackTop());
 
       frame->pop(dimensions);
       frame->pushObject(result);
@@ -3301,7 +3317,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case ret:
       c->jmp
         (c->memory
-         (c->base(), localOffset
+         (c->stack(), localOffset
           (t, codeBody(t, code, ip), context->method)));
       return;
 
@@ -3385,7 +3401,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         uint16_t count = codeReadInt16(t, code, ip);
 
         Compiler::Operand* a = c->memory
-          (c->base(), localOffset(t, index, context->method));
+          (c->stack(), localOffset(t, index, context->method));
 
         c->storeLocal(4, c->add(4, c->constant(count), a), index);
       } break;
@@ -3409,7 +3425,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       case ret:
         c->jmp
           (c->memory
-           (c->base(), localOffset
+           (c->stack(), localOffset
             (t, codeReadInt16(t, code, ip), context->method)));
         return;
 
@@ -3672,7 +3688,7 @@ compareTraceElementPointers(const void* va, const void* vb)
 unsigned
 frameObjectMapSize(MyThread* t, object method, object map)
 {
-  int size = alignedFrameSize(t, method);
+  int size = alignedFrameSizeWithParameters(t, method);
   return ceiling(intArrayLength(t, map) * size, 32 + size);
 }
 
@@ -3763,7 +3779,7 @@ finish(MyThread* t, Context* context)
     qsort(elements, context->traceLogCount, sizeof(TraceElement*),
           compareTraceElementPointers);
 
-    unsigned size = alignedFrameSize(t, context->method);
+    unsigned size = alignedFrameSizeWithParameters(t, context->method);
     object map = makeIntArray
       (t, context->traceLogCount
        + ceiling(context->traceLogCount * size, 32),
@@ -3947,7 +3963,7 @@ compile(MyThread* t, object method);
 void*
 compileMethod2(MyThread* t)
 {
-  object node = findCallNode(t, t->arch->ipForFrame(t->stack, t->base));
+  object node = findCallNode(t, t->arch->frameIp(t->stack));
   PROTECT(t, node);
 
   object target = callNodeTarget(t, node);
@@ -3970,8 +3986,7 @@ compileMethod2(MyThread* t)
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
         = &singletonValue(t, methodCompiled(t, target), 0);
     } else {
-      Context context(t);
-      context.assembler->updateCall
+      t->arch->updateCall
         (reinterpret_cast<void*>(callNodeAddress(t, node)),
          &singletonValue(t, methodCompiled(t, target), 0));
     }
@@ -4035,7 +4050,7 @@ invokeNative2(MyThread* t, object method)
   types[typeOffset++] = POINTER_TYPE;
 
   uintptr_t* sp = static_cast<uintptr_t*>(t->stack)
-    + methodParameterFootprint(t, method);
+    + methodParameterFootprint(t, method) + t->arch->frameFooterSize();
 
   if (methodFlags(t, method) & ACC_STATIC) {
     args[argOffset++] = reinterpret_cast<uintptr_t>(&class_);
@@ -4177,7 +4192,7 @@ uint64_t
 invokeNative(MyThread* t)
 {
   if (t->trace->nativeMethod == 0) {
-    object node = findCallNode(t, t->arch->ipForFrame(t->stack, t->base));
+    object node = findCallNode(t, t->arch->frameIp(t->stack));
     object target = callNodeTarget(t, node);
     if (callNodeVirtualCall(t, node)) {
       target = resolveTarget(t, t->stack, target);
@@ -4214,7 +4229,8 @@ frameMapIndex(MyThread* t, object method, int32_t offset)
     int32_t v = intArrayBody(t, map, middle);
       
     if (offset == v) {
-      return (indexSize * 32) + (alignedFrameSize(t, method) * middle);
+      return (indexSize * 32)
+        + (alignedFrameSizeWithParameters(t, method) * middle);
     } else if (offset < v) {
       top = middle;
     } else {
@@ -4226,18 +4242,14 @@ frameMapIndex(MyThread* t, object method, int32_t offset)
 }
 
 void
-visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object method,
-                    void* ip, void* calleeBase, unsigned argumentFootprint)
+visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* stack, object method,
+                    void* ip, void* calleeStack, unsigned argumentFootprint)
 {
   unsigned count;
-  if (calleeBase) {
-    unsigned parameterFootprint = methodParameterFootprint(t, method);
-    unsigned height = static_cast<uintptr_t*>(base)
-      - static_cast<uintptr_t*>(calleeBase) - 2;
-
-    count = parameterFootprint + height - argumentFootprint;
+  if (calleeStack) {
+    count = alignedFrameSize(t, method) - argumentFootprint;
   } else {
-    count = alignedFrameSize(t, method);
+    count = alignedFrameSizeWithParameters(t, method);
   }
       
   if (count) {
@@ -4251,7 +4263,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object method,
       if ((intArrayBody(t, map, j / 32)
            & (static_cast<int32_t>(1) << (j % 32))))
       {
-        v->visit(localObject(t, base, method, i));        
+        v->visit(localObject(t, stack, method, i));        
       }
     }
   }
@@ -4264,11 +4276,11 @@ visitStack(MyThread* t, Heap::Visitor* v)
   void* base = t->base;
   void* stack = t->stack;
   if (ip == 0) {
-    ip = t->arch->ipForFrame(stack, base);
+    ip = t->arch->frameIp(stack);
   }
 
   MyThread::CallTrace* trace = t->trace;
-  void* calleeBase = 0;
+  void* calleeStack = 0;
   unsigned argumentFootprint = 0;
 
   while (stack) {
@@ -4277,19 +4289,19 @@ visitStack(MyThread* t, Heap::Visitor* v)
       PROTECT(t, method);
 
       visitStackAndLocals
-        (t, v, base, method, ip, calleeBase, argumentFootprint);
+        (t, v, stack, method, ip, calleeStack, argumentFootprint);
 
-      calleeBase = base;
+      calleeStack = stack;
       argumentFootprint = methodParameterFootprint(t, method);
 
       t->arch->nextFrame(&stack, &base);
-      ip_ = t->arch->ipForFrame(stack, base);
+      ip = t->arch->frameIp(stack);
     } else if (trace) {
-      calleeBase = 0;
+      calleeStack = 0;
       argumentFootprint = 0;
       stack = trace->stack;
       base = trace->base;
-      ip_ = t->arch->ipForFrame(stack, base);
+      ip = t->arch->frameIp(stack);
       trace = trace->next;
     } else {
       break;
@@ -4562,7 +4574,7 @@ class MyProcessor: public Processor {
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
     MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
-      MyThread(m, javaThread, parent);
+      MyThread(m, javaThread, static_cast<MyThread*>(parent));
     t->init();
     return t;
   }
@@ -4802,6 +4814,8 @@ class MyProcessor: public Processor {
       vm::dispose(t, t->reference);
     }
 
+    t->arch->release();
+
     t->m->heap->free(t, sizeof(*t));
   }
 
@@ -4841,7 +4855,7 @@ class MyProcessor: public Processor {
           if (static_cast<uint8_t*>(ip) >= thunkStart
               and static_cast<uint8_t*>(ip) < thunkEnd)
           {
-            target->ip = *static_cast<void**>(stack);
+            target->ip = t->arch->frameIp(stack);
             target->base = base;
             target->stack = stack;            
           }
@@ -4933,7 +4947,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     
     a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
 
-    Assembler::Register thread(a->thread());
+    Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
   
     defaultContext.promise.resolved_ = true;
@@ -4944,7 +4958,7 @@ compileThunks(MyThread* t, MyProcessor* p)
 
     a->popFrame();
 
-    Assembler::Register result(a->returnLow());
+    Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
   }
 
@@ -4954,7 +4968,7 @@ compileThunks(MyThread* t, MyProcessor* p)
       
     a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
 
-    Assembler::Register thread(a->thread());
+    Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
 
     nativeContext.promise.resolved_ = true;
@@ -4974,7 +4988,7 @@ compileThunks(MyThread* t, MyProcessor* p)
       
     a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
 
-    Assembler::Register thread(a->thread());
+    Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
 
     aioobContext.promise.resolved_ = true;
