@@ -517,7 +517,7 @@ class Context {
   Context(MyThread* t, object method):
     thread(t),
     zone(t->m->system, t->m->heap, 16 * 1024),
-    assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
+    assembler(makeAssembler(t->m->system, t->m->heap, &zone, t->arch)),
     client(t),
     compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
     method(method),
@@ -533,7 +533,7 @@ class Context {
   Context(MyThread* t):
     thread(t),
     zone(t->m->system, t->m->heap, LikelyPageSizeInBytes),
-    assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
+    assembler(makeAssembler(t->m->system, t->m->heap, &zone, t->arch)),
     client(t),
     compiler(0),
     method(0),

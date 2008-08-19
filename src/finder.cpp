@@ -16,14 +16,6 @@ using namespace vm;
 
 namespace {
 
-void*
-allocate(System* s, unsigned size)
-{
-  void* p = s->tryAllocate(size);
-  if (p == 0) abort();
-  return p;
-}
-
 const char*
 append(System* s, const char* a, const char* b,
        const char* c)

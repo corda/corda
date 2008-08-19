@@ -23,7 +23,6 @@ enum Operation {
 const unsigned OperationCount = Return + 1;
 
 enum UnaryOperation {
-  PushFrame,
   Call,
   LongCall,
   AlignedCall,
@@ -34,20 +33,20 @@ enum UnaryOperation {
   JumpIfLessOrEqual,
   JumpIfGreaterOrEqual,
   JumpIfEqual,
-  JumpIfNotEqual,
-  Negate
+  JumpIfNotEqual
 };
 
-const unsigned UnaryOperationCount = Negate + 1;
+const unsigned UnaryOperationCount = JumpIfNotEqual + 1;
 
 enum BinaryOperation {
   Move,
   MoveZ,
   Swap,
-  Compare
+  Compare,
+  Negate
 };
 
-const unsigned BinaryOperationCount = Compare + 1;
+const unsigned BinaryOperationCount = Negate + 1;
 
 enum TernaryOperation {
   LongCompare,
@@ -172,7 +171,6 @@ class Assembler {
     virtual unsigned registerCount() = 0;
 
     virtual int stack() = 0;
-    virtual int base() = 0;
     virtual int thread() = 0;
     virtual int returnLow() = 0;
     virtual int returnHigh() = 0;  
@@ -241,11 +239,12 @@ class Assembler {
   virtual void dispose() = 0;
 };
 
-Assembler*
-makeAssembler(System* system, Allocator* allocator, Zone* zone);
-
 Assembler::Architecture*
 makeArchitecture(System* system);
+
+Assembler*
+makeAssembler(System* system, Allocator* allocator, Zone* zone,
+              Assembler::Architecture* architecture);
 
 } // namespace vm
 
