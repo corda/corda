@@ -385,6 +385,18 @@ class MyArchitecture: public Assembler::Architecture {
     return rax;
   }
 
+  virtual bool reserved(int register_) {
+    switch (register_) {
+    case rbp:
+    case rsp:
+    case rbx:
+      return true;
+
+    default:
+      return false;
+    }
+  }
+
   virtual int returnHigh() {
     return (BytesPerWord == 4 ? rdx : NoRegister);
   } 
@@ -540,8 +552,8 @@ class MyArchitecture: public Assembler::Architecture {
 
 class MyAssembler: public Assembler {
  public:
-  MyAssembler(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
-    c(s, a, zone), ac(ac)
+  MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch):
+    c(s, a, zone), arch_(arch)
   { }
 
   virtual void setClient(Client* client) {
@@ -549,21 +561,25 @@ class MyAssembler: public Assembler {
     c.client = client;
   }
 
+  virtual Architecture* arch() {
+    return arch_;
+  }
+
   virtual void apply(Operation op) {
-    ac->operations[op](&c);
+    arch_->c.operations[op](&c);
   }
 
   virtual void apply(UnaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand)
   {
-    ac->unaryOperations[index(op, aType)](&c, aSize, aOperand);
+    arch_->c.unaryOperations[index(op, aType)](&c, aSize, aOperand);
   }
 
   virtual void apply(BinaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType, Operand* bOperand)
   {
-    ac->binaryOperations[index(op, aType, bType)]
+    arch_->c.binaryOperations[index(op, aType, bType)]
       (&c, aSize, aOperand, bSize, bOperand);
   }
 
@@ -572,7 +588,7 @@ class MyAssembler: public Assembler {
                      unsigned bSize, OperandType bType, Operand* bOperand,
                      unsigned cSize, OperandType cType, Operand* cOperand)
   {
-    ac->ternaryOperations[index(op, aType, bType, cType)]
+    arch_->c.ternaryOperations[index(op, aType, bType, cType)]
       (&c, aSize, aOperand, bSize, bOperand, cSize, cOperand);
   }
 
@@ -594,7 +610,7 @@ class MyAssembler: public Assembler {
   }
 
   Context c;
-  ArchitectureContext* ac;
+  MyArchitecture* arch_;
 };
 
 } // namespace
@@ -613,7 +629,7 @@ makeAssembler(System* system, Allocator* allocator, Zone* zone,
 {
   return new (zone->allocate(sizeof(MyAssembler)))
     MyAssembler(system, allocator, zone,
-                &(static_cast<MyArchitecture*>(architecture)->c));
+                static_cast<MyArchitecture*>(architecture));
 }
 
 

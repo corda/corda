@@ -173,7 +173,9 @@ class Assembler {
     virtual int stack() = 0;
     virtual int thread() = 0;
     virtual int returnLow() = 0;
-    virtual int returnHigh() = 0;  
+    virtual int returnHigh() = 0;
+
+    virtual bool reserved(int register_) = 0;
 
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
@@ -213,6 +215,8 @@ class Assembler {
   virtual ~Assembler() { }
 
   virtual void setClient(Client* client) = 0;
+
+  virtual Architecture* arch() = 0;
 
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset);
   virtual void pushFrame(unsigned argumentCount, ...);

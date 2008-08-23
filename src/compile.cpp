@@ -350,8 +350,6 @@ alignedFrameSizeWithParameters(MyThread* t, object method)
 int
 localOffset(MyThread* t, int v, object method)
 {
-  return alignedFrameSize(t, method) - t->arch->frameHeaderSize() - v;
-
   int parameterFootprint = methodParameterFootprint(t, method) * BytesPerWord;
 
   v *= BytesPerWord;
@@ -3858,7 +3856,8 @@ compile(MyThread* t, Context* context)
 
   unsigned footprint = methodParameterFootprint(t, context->method);
   unsigned locals = localSize(t, context->method);
-  c->init(codeLength(t, methodCode(t, context->method)), footprint, locals);
+  c->init(codeLength(t, methodCode(t, context->method)), footprint, locals,
+          codeMaxStack(t, methodCode(t, context->method)));
 
   uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
   Frame frame(context, stackMap);

@@ -41,7 +41,7 @@ class Compiler {
   virtual void resetStack() = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
-                    unsigned localFootprint) = 0;
+                    unsigned localFootprint, unsigned maxStackFootprint) = 0;
 
   virtual void visitLogicalIp(unsigned logicalIp) = 0;
   virtual void startLogicalIp(unsigned logicalIp) = 0;
