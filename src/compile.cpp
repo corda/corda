@@ -489,7 +489,7 @@ class Context {
       abort(t);
     }
 
-    virtual intptr_t getThunk(BinaryOperation op, unsigned size) {
+    virtual intptr_t getThunk(TernaryOperation op, unsigned size) {
       switch (op) {
       case Divide:
         if (size == 8) {

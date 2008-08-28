@@ -24,7 +24,7 @@ class Compiler {
     virtual ~Client() { }
 
     virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
-    virtual intptr_t getThunk(BinaryOperation op, unsigned size) = 0;
+    virtual intptr_t getThunk(TernaryOperation op, unsigned size) = 0;
   };
   
   static const unsigned Aligned  = 1 << 0;

@@ -93,11 +93,13 @@ class Site {
 
 class Stack: public Compiler::StackElement {
  public:
-  Stack(unsigned index, Value* value, Stack* next):
-    index(index), value(value), next(next)
+  Stack(unsigned index, unsigned size, Value* value, Stack* next):
+    index(index), size(size), padding(0), value(value), next(next)
   { }
 
   unsigned index;
+  unsigned size;
+  unsigned padding;
   Value* value;
   Stack* next;
 };
@@ -165,12 +167,8 @@ class Junction {
 class Read {
  public:
   Read():
-    next(0), event(0), eventNext(0)
+    next(0), value(0), event(0), eventNext(0)
   { }
-  
-  Read* next;
-  Event* event;
-  Read* eventNext;
 
   virtual Site* pickSite(Context* c, Value* v) = 0;
 
@@ -180,7 +178,22 @@ class Read {
                          int* frameIndex) = 0;
   
   virtual bool valid() = 0;
+  
+  Read* next;
+  Value* value;
+  Event* event;
+  Read* eventNext;
 };
+
+int
+intersectFrameIndexes(int a, int b)
+{
+  if (a == NoFrameIndex or b == NoFrameIndex) return NoFrameIndex;
+  if (a == AnyFrameIndex) return b;
+  if (b == AnyFrameIndex) return a;
+  if (a == b) return a;
+  return NoFrameIndex;
+}
 
 class Value: public Compiler::Operand {
  public:
@@ -724,22 +737,6 @@ freeRegisterSite(Context* c, uint64_t mask = ~static_cast<uint64_t>(0))
     RegisterSite(mask);
 }
 
-RegisterSite*
-fixedRegisterSite(Context* c, int low, int high = NoRegister)
-{
-  uint64_t mask;
-  if (high == NoRegister) {
-    mask = (~static_cast<uint64_t>(0) << 32)
-      | (static_cast<uint64_t>(1) << low);
-  } else {
-    mask = (static_cast<uint64_t>(1) << (high + 32))
-      | (static_cast<uint64_t>(1) << low);
-  }
-
-  return new (c->zone->allocate(sizeof(RegisterSite)))
-    RegisterSite(mask);
-}
-
 Register*
 increment(Context* c, int i)
 {
@@ -912,6 +909,77 @@ allocateSite(Context* c, uint8_t typeMask, uint64_t registerMask,
   }
 }
 
+class SingleRead: public Read {
+ public:
+  SingleRead(unsigned size, uint8_t typeMask, uint64_t registerMask,
+             int frameIndex):
+    size(size), typeMask(typeMask), registerMask(registerMask),
+    frameIndex(frameIndex)
+  { }
+
+  virtual Site* pickSite(Context* c, Value* value) {
+    return ::pickSite(c, value, typeMask, registerMask, frameIndex);
+  }
+
+  virtual Site* allocateSite(Context* c) {
+    return ::allocateSite(c, typeMask, registerMask, frameIndex);
+  }
+
+  virtual void intersect(uint8_t* typeMask, uint64_t* registerMask,
+                         int* frameIndex)
+  {
+    *typeMask &= this->typeMask;
+    *registerMask &= this->registerMask;
+    *frameIndex = intersectFrameIndexes(*frameIndex, this->frameIndex);
+  }
+  
+  virtual bool valid() {
+    return true;
+  }
+
+  unsigned size;
+  uint8_t typeMask;
+  uint64_t registerMask;
+  int frameIndex;
+};
+
+Read*
+read(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
+     int frameIndex)
+{
+  return new (c->zone->allocate(sizeof(SingleRead)))
+    SingleRead(size, typeMask, registerMask, frameIndex);
+}
+
+Read*
+anyRegisterRead(Context* c, unsigned size)
+{
+  return read(c, size, 1 << RegisterOperand, ~static_cast<uint64_t>(0),
+              NoFrameIndex);
+}
+
+Read*
+registerOrConstantRead(Context* c, unsigned size)
+{
+  return read(c, size, (1 << RegisterOperand) | (1 << ConstantOperand),
+              ~static_cast<uint64_t>(0), NoFrameIndex);
+}
+
+Read*
+fixedRegisterRead(Context* c, unsigned size, int low, int high = NoRegister)
+{
+  uint64_t mask;
+  if (high == NoRegister) {
+    mask = (~static_cast<uint64_t>(0) << 32)
+      | (static_cast<uint64_t>(1) << low);
+  } else {
+    mask = (static_cast<uint64_t>(1) << (high + 32))
+      | (static_cast<uint64_t>(1) << low);
+  }
+
+  return read(c, size, 1 << RegisterOperand, mask, NoFrameIndex);
+}
+
 class MultiRead: public Read {
  public:
   MultiRead():
@@ -1025,7 +1093,7 @@ trySteal(Context* c, Register* r, Stack* stack, Value** locals)
           if (frameIndex >= 0) {
             saveSite = frameSite(c, frameIndex);
           } else {
-            saveSite = stackSite(c, s);
+            saveSite = frameSite(c, s->index + c->localFootprint);
           }
           break;
         }
@@ -1163,7 +1231,7 @@ acquire(Context* c, uint32_t mask, Stack* stack, Value** locals,
   }
 
   if (r->refCount) {
-    r = replace(c, stack, r);
+    r = replace(c, stack, locals, r);
   } else {
     Value* oldValue = r->value;
     if (oldValue
@@ -1171,7 +1239,7 @@ acquire(Context* c, uint32_t mask, Stack* stack, Value** locals,
         and findSite(c, oldValue, r->site))
     {
       if (not trySteal(c, r, stack, locals)) {
-        r = replace(c, stack, r);
+        r = replace(c, stack, locals, r);
       }
     }
   }
@@ -1275,8 +1343,10 @@ apply(Context* c, TernaryOperation op,
 }
 
 void
-insertRead(Context* c, Event* event, int sequence, Value* v, Read* r)
+insertRead(Context*, Event* event, int sequence, Value* v, Read* r)
 {
+  r->value = v;
+  r->event = event;
   event->reads = r;
   ++ event->readCount;
 
@@ -1326,8 +1396,8 @@ clean(Context* c, Value* v)
 void
 clean(Context* c, Stack* stack, Value** locals, Read* reads)
 {
-  for (unsigned i = 0; i < c->localCount; ++i) {
-    clean(c, locals[i]);
+  for (unsigned i = 0; i < c->localFootprint; ++i) {
+    if (locals[i]) clean(c, locals[i]);
   }
 
   for (Stack* s = stack; s; s = s->next) {
@@ -1336,7 +1406,7 @@ clean(Context* c, Stack* stack, Value** locals, Read* reads)
 
   for (Read* r = reads; r; r = r->eventNext) {
     nextRead(c, r->value);
-  }
+  }  
 }
 
 CodePromise*
@@ -1371,40 +1441,40 @@ class CallEvent: public Event {
     unsigned frameIndex = alignedFrameSize(c) + c->parameterFootprint;
     for (unsigned i = 0; i < argumentCount; ++i) {
       Read* target;
-      if (index < c->assembler->argumentRegisterCount()) {
-        int r = c->assembler->argumentRegister(index);
-        target = fixedRegisterRead(c, r);
+      if (index < c->arch->argumentRegisterCount()) {
+        int r = c->arch->argumentRegister(index);
+        target = fixedRegisterRead(c, s->size * BytesPerWord, r);
         mask &= ~(1 << r);
       } else {
-        frameIndex -= s->geometry->size;
-        target = read(c, 1 << MemoryOperand, 0, frameIndex);
-        s->pushEvent->active = true;
+        frameIndex -= s->size;
+        target = read(c, s->size * BytesPerWord, 1 << MemoryOperand, 0,
+                      frameIndex);
       }
-      addRead(c, s->value, s->geometry->size * BytesPerWord, target);
-      index += s->geometry->size;
+      addRead(c, s->value, target);
+      index += s->size;
       s = s->next;
     }
 
-    addRead(c, address, BytesPerWord, read
-            (c, ~0, (static_cast<uint64_t>(mask) << 32) | mask,
+    addRead(c, address, read
+            (c, BytesPerWord, ~0, (static_cast<uint64_t>(mask) << 32) | mask,
              AnyFrameIndex));
 
     int footprint = stackArgumentFootprint;
     for (Stack* s = stack; s; s = s->next) {
       if (footprint) {
-        addRead(c, s->value, s->geometry->size * BytesPerWord, read
-                (c, 1 << MemoryOperand, 0, frameIndex));
+        addRead(c, s->value, read(c, s->size * BytesPerWord,
+                                  1 << MemoryOperand, 0, frameIndex));
       } else {
-        unsigned index = s->geometry->index + c->localFootprint;
+        unsigned index = s->index + c->localFootprint;
         if (footprint == 0) {
           assert(c, index <= frameIndex);
-          s->geometry->padding = frameIndex - index;
+          s->padding = frameIndex - index;
         }
-        addRead(c, s->value, s->geometry->size * BytesPerWord, read
-                (c, 1 << MemoryOperand, 0, index));
+        addRead(c, s->value, read(c, s->size * BytesPerWord,
+                                  1 << MemoryOperand, 0, index));
       }
-      frameIndex -= s->geometry->size;
-      footprint -= s->geometry->size;
+      frameIndex -= s->size;
+      footprint -= s->size;
     }
   }
 
@@ -1424,9 +1494,9 @@ class CallEvent: public Event {
 
     if (resultSize and live(result)) {
       addSite(c, 0, 0, resultSize, result, registerSite
-              (c, c->assembler->returnLow(),
+              (c, c->arch->returnLow(),
                resultSize > BytesPerWord ?
-               c->assembler->returnHigh() : NoRegister));
+               c->arch->returnHigh() : NoRegister));
     }
   }
 
@@ -1459,10 +1529,10 @@ class ReturnEvent: public Event {
     Event(c), value(value)
   {
     if (value) {
-      addRead(c, value, size, fixedRegisterSite
-              (c, c->assembler->returnLow(),
+      addRead(c, value, fixedRegisterRead
+              (c, size, c->arch->returnLow(),
                size > BytesPerWord ?
-               c->assembler->returnHigh() : NoRegister));
+               c->arch->returnHigh() : NoRegister));
     }
   }
 
@@ -1475,11 +1545,7 @@ class ReturnEvent: public Event {
       nextRead(c, value);
     }
 
-    Assembler::Register frame(c->assembler->frame());
-    Assembler::Memory oldFrame(c->assembler->frame(), 0);
-
-    c->assembler->apply(Move, BytesPerWord, MemoryOperand, &oldFrame,
-                        BytesPerWord, RegisterOperand, &frame);
+    c->assembler->popFrame();
     c->assembler->apply(Return);
   }
 
@@ -1499,12 +1565,11 @@ appendReturn(Context* c, unsigned size, Value* value)
 class MoveEvent: public Event {
  public:
   MoveEvent(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
-            unsigned dstSize, Value* dst, Site* srcTarget,
-            VirtualSite* dstTarget):
+            unsigned dstSize, Value* dst, Read* srcRead, Read* dstRead):
     Event(c), type(type), srcSize(srcSize), src(src), dstSize(dstSize),
-    dst(dst), dstTarget(dstTarget)
+    dst(dst), dstRead(dstRead)
   {
-    addRead(c, src, size, srcTarget);
+    addRead(c, src, srcRead);
   }
 
   virtual void compile(Context* c) {
@@ -1531,13 +1596,18 @@ class MoveEvent: public Event {
       addSite(c, stack, locals, dstSize, dst, target);
     }
 
-    if (cost or type != Move) {
-      if (match(c, target, dstTarget->typeMask, dstTarget->registerMask)) {
+    if (cost or type != Move) {    
+      uint8_t typeMask = ~static_cast<uint8_t>(0);
+      uint64_t registerMask = ~static_cast<uint64_t>(0);
+      int frameIndex = AnyFrameIndex;
+      dstRead->intersect(&typeMask, &registerMask, &frameIndex);
+
+      if (target->match(c, typeMask, registerMask, frameIndex)) {
         apply(c, type, srcSize, src->source, dstSize, target);
       } else {
-        assert(c, dstTarget->typeMask & (1 << RegisterOperand));
+        assert(c, typeMask & (1 << RegisterOperand));
 
-        Site* tmpTarget = freeRegisterSite(c, dstTarget->registerMask);
+        Site* tmpTarget = freeRegisterSite(c, registerMask);
 
         addSite(c, stack, locals, dstSize, dst, tmpTarget);
 
@@ -1565,30 +1635,33 @@ class MoveEvent: public Event {
   Value* src;
   unsigned dstSize;
   Value* dst;
-  VirtualSite* dstTarget;
+  Read* dstRead;
 };
 
 void
-appendMove(Context* c, BinaryOperation type, unsigned size, Value* src,
-           Value* dst)
+appendMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
+           unsigned dstSize, Value* dst)
 {
   if (DebugAppend) {
     fprintf(stderr, "appendMove\n");
   }
 
-  VirtualSite* srcTarget = virtualSite(c, dst);
-  VirtualSite* dstTarget = virtualSite(c);
   bool thunk;
+  uint8_t srcTypeMask;
+  uint64_t srcRegisterMask;
+  uint8_t dstTypeMask;
+  uint64_t dstRegisterMask;
 
-  c->assembler->plan(type, size,
-                     &(srcTarget->typeMask), &(srcTarget->registerMask),
-                     &(dstTarget->typeMask), &(dstTarget->registerMask),
-                     &thunk);
+  c->arch->plan(type, srcSize, &srcTypeMask, &srcRegisterMask,
+                dstSize, &dstTypeMask, &dstRegisterMask,
+                &thunk);
 
   assert(c, not thunk); // todo
 
   new (c->zone->allocate(sizeof(MoveEvent)))
-    MoveEvent(c, type, size, src, dst, srcTarget, dstTarget);
+    MoveEvent(c, type, srcSize, src, dstSize, dst,
+              read(c, srcSize, srcTypeMask, srcRegisterMask, AnyFrameIndex),
+              read(c, dstSize, dstTypeMask, dstRegisterMask, AnyFrameIndex));
 }
 
 ConstantSite*
@@ -1605,11 +1678,11 @@ findConstantSite(Context* c, Value* v)
 class CompareEvent: public Event {
  public:
   CompareEvent(Context* c, unsigned size, Value* first, Value* second,
-               Site* firstTarget, Site* secondTarget):
+               Read* firstRead, Read* secondRead):
     Event(c), size(size), first(first), second(second)
   {
-    addRead(c, first, size, firstTarget);
-    addRead(c, second, size, secondTarget);
+    addRead(c, first, firstRead);
+    addRead(c, second, secondRead);
   }
 
   virtual void compile(Context* c) {
@@ -1649,14 +1722,15 @@ class CompareEvent: public Event {
 void
 appendCompare(Context* c, unsigned size, Value* first, Value* second)
 {
-  VirtualSite* firstTarget = virtualSite(c);
-  VirtualSite* secondTarget = virtualSite(c);
   bool thunk;
+  uint8_t firstTypeMask;
+  uint64_t firstRegisterMask;
+  uint8_t secondTypeMask;
+  uint64_t secondRegisterMask;
 
-  c->assembler->plan(Compare, size,
-                     &(firstTarget->typeMask), &(firstTarget->registerMask),
-                     &(secondTarget->typeMask), &(secondTarget->registerMask),
-                     &thunk);
+  c->arch->plan(Compare, size, &firstTypeMask, &firstRegisterMask,
+                size, &secondTypeMask, &secondRegisterMask,
+                &thunk);
 
   assert(c, not thunk); // todo
 
@@ -1665,25 +1739,29 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
   }
 
   new (c->zone->allocate(sizeof(CompareEvent)))
-    CompareEvent(c, size, first, second, firstTarget, secondTarget);
+    CompareEvent
+    (c, size, first, second,
+     read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex),
+     read(c, size, secondTypeMask, secondRegisterMask, AnyFrameIndex));
 }
 
 void
-preserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s,
-         Read* read)
+preserve(Context* c, Stack* stack, Value** locals, unsigned size, Value* v,
+         Site* s, Read* read)
 {
   assert(c, v->sites == s);
-  Site* r = targetOrNull(c, read);
+  Site* r = targetOrNull(c, v, read);
   if (r == 0 or r == s) r = freeRegisterSite(c);
   addSite(c, stack, locals, size, v, r);
   apply(c, Move, size, s, size, r);
 }
 
 void
-maybePreserve(Context* c, Stack* stack, unsigned size, Value* v, Site* s)
+maybePreserve(Context* c, Stack* stack, Value** locals, unsigned size,
+              Value* v, Site* s)
 {
   if (valid(v->reads->next) and v->sites->next == 0) {
-    preserve(c, stack, size, v, s, v->reads->next);
+    preserve(c, stack, locals, size, v, s, v->reads->next);
   }
 }
 
@@ -1693,13 +1771,13 @@ class CombineEvent: public Event {
                unsigned firstSize, Value* first,
                unsigned secondSize, Value* second,
                unsigned resultSize, Value* result,
-               Site* firstTarget, Site* secondTarget):
+               Read* firstRead, Read* secondRead):
     Event(c), type(type), firstSize(firstSize), first(first),
     secondSize(secondSize), second(second), resultSize(resultSize),
     result(result)
   {
-    addRead(c, first, firstSize, firstTarget);
-    addRead(c, second, secondSize, secondTarget);
+    addRead(c, first, firstRead);
+    addRead(c, second, secondRead);
   }
 
   virtual void compile(Context* c) {
@@ -1707,7 +1785,7 @@ class CombineEvent: public Event {
       fprintf(stderr, "CombineEvent.compile\n");
     }
 
-    maybePreserve(c, stack, secondSize, second, second->source);
+    maybePreserve(c, stack, locals, secondSize, second, second->source);
 
     Site* target = targetOrRegister(c, result);
     apply(c, type, firstSize, first->source, secondSize, second->source,
@@ -1716,12 +1794,12 @@ class CombineEvent: public Event {
     nextRead(c, first);
     nextRead(c, second);
 
-    if (live(target)) {
+    if (live(result)) {
       addSite(c, 0, 0, resultSize, result, target);
     }
   }
 
-  BinaryOperation type;
+  TernaryOperation type;
   unsigned firstSize;
   Value* first;
   unsigned secondSize;
@@ -1739,53 +1817,94 @@ value(Context* c, Site* site = 0, Site* target = 0)
   return new (c->zone->allocate(sizeof(Value))) Value(site, target);
 }
 
-void
-appendCombine(Context* c, BinaryOperation type, unsigned size, Value* first,
-              Value* second, Value* result)
+Stack*
+stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
 {
-  VirtualSite* firstTarget = virtualSite(c);
-  VirtualSite* secondTarget = virtualSite(c, result);
-  bool thunk;
+  return new (c->zone->allocate(sizeof(Stack)))
+    Stack(index, size, value, next);
+}
 
-  c->assembler->plan(type, size,
-                     &(firstTarget->typeMask), &(firstTarget->registerMask),
-                     &(secondTarget->typeMask), &(secondTarget->registerMask),
-                     &thunk);
+Stack*
+stack(Context* c, Value* value, unsigned size, Stack* next)
+{
+  return stack
+    (c, value, size, (next ? next->index + next->size : 0), next);
+}
+
+void
+push(Context* c, unsigned size, Value* v)
+{
+  assert(c, ceiling(size, BytesPerWord));
+
+  c->state->stack = stack(c, v, ceiling(size, BytesPerWord), c->state->stack);
+}
+
+Value*
+pop(Context* c, unsigned size UNUSED)
+{
+  Stack* s = c->state->stack;
+  assert(c, ceiling(size, BytesPerWord) == s->size);
+
+  c->state->stack = s->next;
+  return s->value;
+}
+
+void
+appendCombine(Context* c, TernaryOperation type,
+              unsigned firstSize, Value* first,
+              unsigned secondSize, Value* second,
+              unsigned resultSize, Value* result)
+{
+  bool thunk;
+  uint8_t firstTypeMask;
+  uint64_t firstRegisterMask;
+  uint8_t secondTypeMask;
+  uint64_t secondRegisterMask;
+  uint8_t resultTypeMask;
+  uint64_t resultRegisterMask;
+
+  c->arch->plan(type, firstSize, &firstTypeMask, &firstRegisterMask,
+                secondSize, &secondTypeMask, &secondRegisterMask,
+                resultSize, &resultTypeMask, &resultRegisterMask,
+                &thunk);
 
   if (thunk) {
-    secondTarget->value = 0;
-
     Stack* oldStack = c->state->stack;
 
-    ::push(c, size, second);
-    ::push(c, size, first);
+    ::push(c, secondSize, second);
+    ::push(c, firstSize, first);
 
     Stack* argumentStack = c->state->stack;
     c->state->stack = oldStack;
 
-    appendCall(c, value(c, constantSite(c, c->client->getThunk(type, size))),
-               0, 0, result, size, argumentStack, 2);
+    appendCall
+      (c, value(c, constantSite(c, c->client->getThunk(type, resultSize))),
+       0, 0, result, resultSize, argumentStack, 2, 0);
   } else {
     if (DebugAppend) {
       fprintf(stderr, "appendCombine\n");
     }
 
-    firstTarget->typeMask &= ~(1 << MemoryOperand);
-    secondTarget->typeMask &= ~(1 << MemoryOperand);
+    // todo: respect resultTypeMask and resultRegisterMask
 
     new (c->zone->allocate(sizeof(CombineEvent)))
-      CombineEvent(c, type, size, first, second, result, firstTarget,
-                   secondTarget);
+      CombineEvent
+      (c, type,
+       firstSize, first,
+       secondSize, second,
+       resultSize, result,
+       read(c, firstSize, firstTypeMask, firstRegisterMask, AnyFrameIndex),
+       read(c, secondSize, secondTypeMask, secondRegisterMask, AnyFrameIndex));
   }
 }
 
 class TranslateEvent: public Event {
  public:
-  TranslateEvent(Context* c, UnaryOperation type, unsigned size, Value* value,
-                 Value* result, Site* target):
+  TranslateEvent(Context* c, BinaryOperation type, unsigned size, Value* value,
+                 Value* result, Read* read):
     Event(c), type(type), size(size), value(value), result(result)
   {
-    addRead(c, value, size, target);
+    addRead(c, value, read);
   }
 
   virtual void compile(Context* c) {
@@ -1793,9 +1912,10 @@ class TranslateEvent: public Event {
       fprintf(stderr, "TranslateEvent.compile\n");
     }
 
-    maybePreserve(c, stack, size, value, value->source);
+    maybePreserve(c, stack, locals, size, value, value->source);
 
-    apply(c, type, size, value->source);
+    Site* target = targetOrRegister(c, result);
+    apply(c, type, size, value->source, size, target);
     
     nextRead(c, value);
 
@@ -1805,32 +1925,38 @@ class TranslateEvent: public Event {
     }
   }
 
-  UnaryOperation type;
+  BinaryOperation type;
   unsigned size;
   Value* value;
   Value* result;
 };
 
 void
-appendTranslate(Context* c, UnaryOperation type, unsigned size, Value* value,
+appendTranslate(Context* c, BinaryOperation type, unsigned size, Value* value,
                 Value* result)
 {
   if (DebugAppend) {
     fprintf(stderr, "appendTranslate\n");
   }
 
-  VirtualSite* target = virtualSite(c, result);
   bool thunk;
+  uint8_t firstTypeMask;
+  uint64_t firstRegisterMask;
+  uint8_t resultTypeMask;
+  uint64_t resultRegisterMask;
 
-  c->assembler->plan
-    (type, size, &(target->typeMask), &(target->registerMask), &thunk);
+  c->arch->plan(type, size, &firstTypeMask, &firstRegisterMask,
+                size, &resultTypeMask, &resultRegisterMask,
+                &thunk);
 
   assert(c, not thunk); // todo
 
-  target->typeMask &= ~(1 << MemoryOperand);
+  // todo: respect resultTypeMask and resultRegisterMask
 
   new (c->zone->allocate(sizeof(TranslateEvent)))
-    TranslateEvent(c, type, size, value, result, target);
+    TranslateEvent
+    (c, type, size, value, result,
+     read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex));
 }
 
 class MemoryEvent: public Event {
@@ -1840,8 +1966,8 @@ class MemoryEvent: public Event {
     Event(c), base(base), displacement(displacement), index(index),
     scale(scale), result(result)
   {
-    addRead(c, base, BytesPerWord, anyRegisterSite(c));
-    if (index) addRead(c, index, BytesPerWord, registerOrConstantSite(c));
+    addRead(c, base, anyRegisterRead(c, BytesPerWord));
+    if (index) addRead(c, index, registerOrConstantRead(c, BytesPerWord));
   }
 
   virtual void compile(Context* c) {
@@ -1873,7 +1999,7 @@ class MemoryEvent: public Event {
     nextRead(c, base);
     if (index) {
       if (BytesPerWord == 8 and indexRegister != NoRegister) {
-        apply(c, Move4To8, 8, index->source, index->source);
+        apply(c, Move, 4, index->source, 8, index->source);
       }
 
       nextRead(c, index);
@@ -1903,65 +2029,13 @@ appendMemory(Context* c, Value* base, int displacement, Value* index,
     MemoryEvent(c, base, displacement, index, scale, result);
 }
 
-Stack*
-stack(Context* c, Value* value, StackGeometry* geometry, Stack* next)
-{
-  return new (c->zone->allocate(sizeof(Stack))) Stack(value, geometry, next);
-}
-
-Stack*
-stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
-{
-  return stack(c, value, new (c->zone->allocate(sizeof(StackGeometry)))
-               StackGeometry(size, index), next);
-}
-
-class StackSyncEvent: public Event {
- public:
-  StackSyncEvent(Context* c):
-    Event(c)
-  {
-    for (Stack* s = stack; s; s = s->next) {
-      if (s->pushEvent) s->pushEvent->active = true;
-      addRead(c, s->value, s->geometry->size * BytesPerWord, 0);
-    } 
-  }
-
-  StackSyncEvent(Context* c, unsigned sequence, Stack* stack, Local* locals):
-    Event(c, sequence, stack, locals)
-  {
-    for (Stack* s = stack; s; s = s->next) {
-      if (s->pushEvent) s->pushEvent->active = true;
-      insertRead
-        (c, this, sequence, s->value, s->geometry->size * BytesPerWord, 0);
-    }
-  }
-
-  virtual void compile(Context* c) {
-    if (DebugCompile) {
-      fprintf(stderr, "StackSyncEvent.compile\n");
-    }
-
-    clean(c, stack, locals, reads);
-  }
-};
-
-void
-appendStackSync(Context* c)
-{
-  if (DebugAppend) {
-    fprintf(stderr, "appendStackSync\n");
-  }
-
-  new (c->zone->allocate(sizeof(StackSyncEvent))) StackSyncEvent(c);
-}
-
 class BranchEvent: public Event {
  public:
   BranchEvent(Context* c, UnaryOperation type, Value* address):
     Event(c), type(type), address(address)
   {
-    addRead(c, address, BytesPerWord, 0);
+    addRead(c, address, read(c, BytesPerWord, ~0, ~static_cast<uint64_t>(0),
+                             AnyFrameIndex));
   }
 
   virtual void compile(Context* c) {
@@ -2106,8 +2180,8 @@ class BoundsCheckEvent: public Event {
     Event(c), object(object), lengthOffset(lengthOffset), index(index),
     handler(handler)
   {
-    addRead(c, object, BytesPerWord, anyRegisterSite(c));
-    addRead(c, index, BytesPerWord, registerOrConstantSite(c));
+    addRead(c, object, anyRegisterRead(c, BytesPerWord));
+    addRead(c, index, registerOrConstantRead(c, BytesPerWord));
   }
 
   virtual void compile(Context* c) {
@@ -2513,36 +2587,6 @@ popState(Context* c)
   }
 }
 
-Stack*
-stack(Context* c, Value* value, unsigned size, Stack* next)
-{
-  return stack
-    (c, value, size, (next ? next->geometry->index + next->geometry->size : 0),
-     next);
-}
-
-void
-push(Context* c, unsigned size, Value* v)
-{
-  assert(c, ceiling(size, BytesPerWord));
-
-  c->state->stack = stack(c, v, ceiling(size, BytesPerWord), c->state->stack);
-
-  appendPush(c);
-}
-
-Value*
-pop(Context* c, unsigned size UNUSED)
-{
-  Stack* s = c->state->stack;
-  assert(c, ceiling(size, BytesPerWord) == s->size);
-
-  appendPop(c, s->geometry->size, false);
-
-  c->state->stack = s->next;
-  return s->value;
-}
-
 void
 updateJunctions(Context* c)
 {
@@ -2793,20 +2837,20 @@ class MyCompiler: public Compiler {
   }
 
   virtual unsigned size(StackElement* e) {
-    return static_cast<Stack*>(e)->geometry->size;
+    return static_cast<Stack*>(e)->size;
   }
 
   virtual unsigned padding(StackElement* e) {
-    return static_cast<Stack*>(e)->geometry->padding;
+    return static_cast<Stack*>(e)->padding;
   }
 
   virtual Operand* peek(unsigned size UNUSED, unsigned index) {
     Stack* s = c.state->stack;
     for (unsigned i = index; i > 0;) {
-      i -= s->geometry->size;
+      i -= s->size;
       s = s->next;
     }
-    assert(&c, s->geometry->size == ceiling(size, BytesPerWord));
+    assert(&c, s->size == ceiling(size, BytesPerWord));
     return s->value;
   }
 
@@ -2859,10 +2903,10 @@ class MyCompiler: public Compiler {
     c.state->stack = oldStack;
 
     unsigned padding = c->assembler->stackPadding
-      (c.state->stack->geometry->index + c.state->stack->geometry->size);
+      (c.state->stack->index + c.state->stack->size);
 
     if (bottomArgument) {
-      bottomArgument->geometry->padding = padding;
+      bottomArgument->padding = padding;
     }
 
     Value* result = value(&c);
