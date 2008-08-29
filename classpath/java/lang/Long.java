@@ -128,15 +128,19 @@ public final class Long extends Number implements Comparable<Long> {
     int i = 0;
     long number = 0;
     boolean negative = s.startsWith("-");
+    int length = s.length();
     if (negative) {
       i = 1;
+      -- length;
     }
 
+    long factor = pow(radix, length - 1);
     for (; i < s.length(); ++i) {
       char c = s.charAt(i);
       int digit = Character.digit(c, radix);
       if (digit >= 0) {
-        number += digit * pow(radix, (s.length() - i - 1));
+        number += digit * factor;
+        factor /= radix;
       } else {
         throw new NumberFormatException("invalid character " + c + " code " +
                                         (int) c);

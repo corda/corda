@@ -102,6 +102,10 @@ public class Misc {
       expect(foo > 0);
     }
 
+    expect(Long.parseLong("25214903884") == 25214903884L);
+
+    expect(Long.parseLong("-9223372036854775808") == -9223372036854775808L);
+
     expect(String.valueOf(25214903884L).equals("25214903884"));
 
     expect(String.valueOf(-9223372036854775808L).equals
