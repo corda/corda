@@ -601,6 +601,15 @@ class MyAssembler: public Assembler {
     }
   }
 
+  virtual Offset* offset() {
+    // todo
+    return 0;
+  }
+
+  virtual void endBlock() {
+    // todo
+  }
+
   virtual unsigned length() {
     return c.code.length();
   }

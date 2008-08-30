@@ -161,7 +161,11 @@ class Assembler {
    public:
     virtual ~Offset() { }
 
-    virtual unsigned calculate(unsigned start) = 0;
+    virtual unsigned resolve(unsigned start) = 0;
+
+    virtual bool resolved() = 0;
+
+    virtual unsigned value() = 0;
   };
 
   class Architecture {
@@ -220,6 +224,7 @@ class Assembler {
 
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset);
   virtual void pushFrame(unsigned argumentCount, ...);
+  virtual void allocateFrame(unsigned footprint);
   virtual void popFrame();
 
   virtual void apply(Operation op) = 0;
@@ -237,6 +242,10 @@ class Assembler {
                      unsigned cSize, OperandType cType, Operand* cOperand) = 0;
 
   virtual void writeTo(uint8_t* dst) = 0;
+
+  virtual Offset* offset() = 0;
+
+  virtual void endBlock() = 0;
 
   virtual unsigned length() = 0;
 

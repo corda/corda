@@ -31,6 +31,7 @@ class RegisterSite;
 class Event;
 class PushEvent;
 class Read;
+class Block;
 
 void NO_RETURN abort(Context*);
 
@@ -125,6 +126,7 @@ class LogicalInstruction {
   Stack* stack;
   Value** locals;
   Promise* machineOffset;
+  int index;
   bool stackSaved;
 };
 
@@ -153,17 +155,6 @@ class ConstantPoolNode {
   ConstantPoolNode* next;
 };
 
-class Junction {
- public:
-  Junction(unsigned logicalIp, Junction* next):
-    logicalIp(logicalIp),
-    next(next)
-  { }
-
-  unsigned logicalIp;
-  Junction* next;
-};
-
 class Read {
  public:
   Read():
@@ -178,6 +169,8 @@ class Read {
                          int* frameIndex) = 0;
   
   virtual bool valid() = 0;
+
+  virtual unsigned size(Context* c) = 0;
   
   Read* next;
   Value* value;
@@ -222,25 +215,25 @@ class Context {
     arch(assembler->arch()),
     zone(zone),
     client(client),
-    logicalIp(-1),
     state(new (zone->allocate(sizeof(State))) State(0, 0, 0)),
     logicalCode(0),
-    logicalCodeLength(0),
-    parameterFootprint(0),
-    localFootprint(0),
     registers
     (static_cast<Register**>
      (zone->allocate(sizeof(Register*) * arch->registerCount()))),
     firstConstant(0),
     lastConstant(0),
+    machineCode(0),
+    firstEvent(0),
+    logicalIp(-1),
     constantCount(0),
     nextSequence(0),
-    junctions(0),
-    machineCode(0),
-    stackReset(false),
+    logicalCodeLength(0),
+    parameterFootprint(0),
+    localFootprint(0),
+    maxStackFootprint(0),
+    stackPadding(0),
     constantCompare(CompareNone),
-    pass(ScanPass),
-    stackPadding(0)
+    pass(ScanPass)
   {
     for (unsigned i = 0; i < arch->registerCount(); ++i) {
       registers[i] = new (zone->allocate(sizeof(Register))) Register(i);
@@ -253,24 +246,23 @@ class Context {
   Assembler::Architecture* arch;
   Zone* zone;
   Compiler::Client* client;
-  int logicalIp;
   State* state;
   LogicalInstruction** logicalCode;
+  Register** registers;
+  ConstantPoolNode* firstConstant;
+  ConstantPoolNode* lastConstant;
+  uint8_t* machineCode;
+  Event* firstEvent;
+  int logicalIp;
+  unsigned constantCount;
+  unsigned nextSequence;
   unsigned logicalCodeLength;
   unsigned parameterFootprint;
   unsigned localFootprint;
   unsigned maxStackFootprint;
-  Register** registers;
-  ConstantPoolNode* firstConstant;
-  ConstantPoolNode* lastConstant;
-  unsigned constantCount;
-  unsigned nextSequence;
-  Junction* junctions;
-  uint8_t* machineCode;
-  bool stackReset;
+  unsigned stackPadding;
   ConstantCompare constantCompare;
   Pass pass;
-  unsigned stackPadding;
 };
 
 class PoolPromise: public Promise {
@@ -296,24 +288,28 @@ class PoolPromise: public Promise {
 
 class CodePromise: public Promise {
  public:
-  CodePromise(Context* c, CodePromise* next): c(c), offset(-1), next(next) { }
+  CodePromise(Context* c, CodePromise* next):
+    c(c), offset(0), next(next)
+  { }
 
-  CodePromise(Context* c, int offset): c(c), offset(offset), next(0) { }
+  CodePromise(Context* c, Assembler::Offset* offset):
+    c(c), offset(offset), next(0)
+  { }
 
   virtual int64_t value() {
     if (resolved()) {
-      return reinterpret_cast<intptr_t>(c->machineCode + offset);
+      return reinterpret_cast<intptr_t>(c->machineCode + offset->value());
     }
     
     abort(c);
   }
 
   virtual bool resolved() {
-    return c->machineCode != 0 and offset >= 0;
+    return c->machineCode != 0 and offset and offset->resolved();
   }
 
   Context* c;
-  int offset;
+  Assembler::Offset* offset;
   CodePromise* next;
 };
 
@@ -365,42 +361,45 @@ class Event {
  public:
   Event(Context* c):
     next(0), stack(c->state->stack), locals(c->state->locals), promises(0),
-    reads(0), readCount(0), sequence(c->nextSequence++),
-    stackReset(c->stackReset)
+    reads(0), junctionSites(0), savedSites(0), predecessors(0), successors(0),
+    block(0), logicalInstruction(c->logicalCode[c->logicalIp]), readCount(0),
+    sequence(c->nextSequence++)
   {
     assert(c, c->logicalIp >= 0);
 
-    LogicalInstruction* i = c->logicalCode[c->logicalIp];
-    if (i->lastEvent) {
-      i->lastEvent->next = this;
+    if (logicalInstruction->lastEvent) {
+      logicalInstruction->lastEvent->next = this;
     } else {
-      i->firstEvent = this;
+      logicalInstruction->firstEvent = this;
     }
-    i->lastEvent = this;
-
-    if (c->stackReset) {
-//       fprintf(stderr, "stack reset\n");
-      c->stackReset = false;
-    }
+    logicalInstruction->lastEvent = this;
   }
 
   Event(Context*, unsigned sequence, Stack* stack, Value** locals):
-    next(0), stack(stack), locals(locals), promises(0), reads(0), readCount(0),
-    sequence(sequence), stackReset(false)
+    next(0), stack(stack), locals(locals), promises(0), reads(0),
+    junctionSites(0), savedSites(0), predecessors(0), successors(0), block(0),
+    logicalInstruction(0), readCount(0), sequence(sequence)
   { }
 
   virtual ~Event() { }
 
   virtual void compile(Context* c) = 0;
 
+  virtual void compilePostsync(Context*) { }
+
   Event* next;
   Stack* stack;
   Value** locals;
   CodePromise* promises;
   Read* reads;
+  Site** junctionSites;
+  Site** savedSites;
+  Cell* predecessors;
+  Cell* successors;
+  Block* block;
+  LogicalInstruction* logicalInstruction;
   unsigned readCount;
   unsigned sequence;
-  bool stackReset;
 };
 
 unsigned
@@ -913,7 +912,7 @@ class SingleRead: public Read {
  public:
   SingleRead(unsigned size, uint8_t typeMask, uint64_t registerMask,
              int frameIndex):
-    size(size), typeMask(typeMask), registerMask(registerMask),
+    size_(size), typeMask(typeMask), registerMask(registerMask),
     frameIndex(frameIndex)
   { }
 
@@ -937,7 +936,11 @@ class SingleRead: public Read {
     return true;
   }
 
-  unsigned size;
+  virtual unsigned size(Context*) {
+    return size_;
+  }
+
+  unsigned size_;
   uint8_t typeMask;
   uint64_t registerMask;
   int frameIndex;
@@ -1021,6 +1024,10 @@ class MultiRead: public Read {
       }
     }
     return false;
+  }
+
+  virtual unsigned size(Context* c) {
+    return static_cast<Read*>(reads->value)->size(c);
   }
 
   Cell* reads;
@@ -1417,7 +1424,7 @@ codePromise(Context* c, Event* e)
 }
 
 CodePromise*
-codePromise(Context* c, int offset)
+codePromise(Context* c, Assembler::Offset* offset)
 {
   return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
 }
@@ -1487,7 +1494,7 @@ class CallEvent: public Event {
           address->source);
 
     if (traceHandler) {
-      traceHandler->handleTrace(codePromise(c, c->assembler->length()));
+      traceHandler->handleTrace(codePromise(c, c->assembler->offset()));
     }
 
     clean(c, stack, locals, reads);
@@ -1808,9 +1815,6 @@ class CombineEvent: public Event {
   Value* result;
 };
 
-void
-appendStackSync(Context* c);
-
 Value*
 value(Context* c, Site* site = 0, Site* target = 0)
 {
@@ -2113,64 +2117,11 @@ class BranchEvent: public Event {
 void
 appendBranch(Context* c, UnaryOperation type, Value* address)
 {
-  appendStackSync(c);
-
   if (DebugAppend) {
     fprintf(stderr, "appendBranch\n");
   }
 
   new (c->zone->allocate(sizeof(BranchEvent))) BranchEvent(c, type, address);
-
-  resetStack(c);
-}
-
-class PushSite: public AbstractSite {
- public:
-  PushSite(PushEvent* event): event(event) { }
-
-  virtual Site* readTarget(Context* c, Read* r) {
-    if (r->next and (not event->active)) {
-      return targetOrNull(c, r->next);
-    } else {
-      return 0;
-    }
-  }
-
-  PushEvent* event;
-};
-
-Site*
-pushSite(Context* c, PushEvent* e)
-{
-  return new (c->zone->allocate(sizeof(PushSite))) PushSite(e);
-}
-
-class PopEvent: public Event {
- public:
-  PopEvent(Context* c, unsigned count, bool ignore):
-    Event(c), count(count), ignore(ignore)
-  { }
-
-  virtual void compile(Context* c) {
-    if (DebugCompile) {
-      fprintf(stderr, "PopEvent.compile\n");
-    }
-
-    popNow(c, stack, count, ignore);
-  }
-
-  unsigned count;
-  bool ignore;
-};
-
-void
-appendPop(Context* c, unsigned count, bool ignore)
-{
-  if (DebugAppend) {
-    fprintf(stderr, "appendPop\n");
-  }
-
-  new (c->zone->allocate(sizeof(PopEvent))) PopEvent(c, count, ignore);
 }
 
 class BoundsCheckEvent: public Event {
@@ -2192,15 +2143,16 @@ class BoundsCheckEvent: public Event {
     Assembler* a = c->assembler;
 
     ConstantSite* constant = findConstantSite(c, index);
-    CodePromise* nextPromise = codePromise(c, -1);
+    CodePromise* nextPromise = codePromise
+      (c, static_cast<Assembler::Offset*>(0));
     CodePromise* outOfBoundsPromise = 0;
 
     if (constant) {
       expect(c, constant->value.value->value() >= 0);      
     } else {
-      outOfBoundsPromise = codePromise(c, -1);
+      outOfBoundsPromise = codePromise(c, static_cast<Assembler::Offset*>(0));
 
-      apply(c, Compare, 4, constantSite(c, resolved(c, 0)), index->source);
+      apply(c, Compare, 4, constantSite(c, resolved(c, 0)), 4, index->source);
 
       Assembler::Constant outOfBoundsConstant(outOfBoundsPromise);
       a->apply
@@ -2211,9 +2163,9 @@ class BoundsCheckEvent: public Event {
     int base = static_cast<RegisterSite*>(object->source)->register_.low;
 
     Site* length = memorySite(c, base, lengthOffset);
-    length->acquire(c, 0, 0, 0);
+    length->acquire(c, 0, 0, 0, 0);
 
-    apply(c, Compare, 4, index->source, length);
+    apply(c, Compare, 4, index->source, 4, length);
 
     length->release(c);
 
@@ -2221,13 +2173,13 @@ class BoundsCheckEvent: public Event {
     a->apply(JumpIfGreater, BytesPerWord, ConstantOperand, &nextConstant);
 
     if (constant == 0) {
-      outOfBoundsPromise->offset = a->length();
+      outOfBoundsPromise->offset = a->offset();
     }
 
     Assembler::Constant handlerConstant(resolved(c, handler));
     a->apply(Call, BytesPerWord, ConstantOperand, &handlerConstant);
 
-    nextPromise->offset = a->length();
+    nextPromise->offset = a->offset();
 
     nextRead(c, object);
     nextRead(c, index);
@@ -2258,22 +2210,24 @@ readSource(Context* c, Stack* stack, Value** locals, Read* r)
     return 0;
   }
 
-  Site* target = (r->target ? r->target->readTarget(c, r) : 0);
+  Site* site = r->pickSite(c, r->value);
 
-  unsigned copyCost;
-  Site* site = pick(c, r->value->sites, target, &copyCost);
-
-  if (target and copyCost) {
-    addSite(c, stack, locals, r->size, r->value, target);
-    apply(c, Move, r->size, site, target);
-    return target;
-  } else {
+  if (site) {
     return site;
+  } else {
+    Site* target = r->allocateSite(c);
+    unsigned copyCost;
+    site = pick(c, r->value->sites, target, &copyCost);
+    assert(c, copyCost);
+
+    addSite(c, stack, locals, r->size(c), r->value, target);
+    apply(c, Move, r->size(c), site, r->size(c), target);
+    return target;    
   }
 }
 
 Site*
-pickJunctionSite(Context* c, Value* v)
+pickJunctionSite(Context* c, Value* v, Read* r)
 {
   Site* s = r->pickSite(c, v);
   if (s) return s;
@@ -2286,18 +2240,19 @@ resolveJunctionSite(Context* c, Event* e, Event* successor, Value* v,
                     unsigned frozenSiteIndex)
 {
   if (live(v)) {
+    Read* r = v->reads;
     Site* original = e->junctionSites[index];
 
     if (original == 0) {
-      e->junctionSites[i] = pickJunctionSite(c, v);
+      e->junctionSites[index] = pickJunctionSite(c, v, r);
     }
 
     Site* target = e->junctionSites[index];
     unsigned copyCost;
     Site* site = pick(c, v->sites, target, &copyCost);
     if (copyCost) {
-      addSite(c, successor->stack, successor->locals, v, target);
-      apply(c, Move, site, target);
+      addSite(c, successor->stack, successor->locals, r->size(c), v, target);
+      apply(c, Move, r->size(c), site, r->size(c), target);
     }
 
     if (original == 0) {
@@ -2318,16 +2273,16 @@ propagateJunctionSites(Context* c, Event* e, Site** sites)
       p->junctionSites = sites;
       for (Cell* sc = p->successors; sc; sc = sc->next) {
         Event* s = static_cast<Event*>(sc->value);
-        propagateJunctionSites(c, e, sites);
+        propagateJunctionSites(c, s, sites);
       }
     }
   }
 }
 
-void
-frameCount(Context* c, Stack* s)
+unsigned
+frameFootprint(Context* c, Stack* s)
 {
-  return c->localCount + s->index + footprint(s);
+  return c->localFootprint + s->index + s->size;
 }
 
 void
@@ -2335,13 +2290,13 @@ populateSiteTables(Context* c, Event* e)
 {
   Event* successor = static_cast<Event*>(e->successors->value);
 
-  unsigned frameCount = ::frameCount(c, successor->stack);
+  unsigned frameFootprint = ::frameFootprint(c, successor->stack);
 
-  { Site* frozenSites[frameCount];
+  { Site* frozenSites[frameFootprint];
     unsigned frozenSiteIndex = 0;
 
     if (e->junctionSites) {
-      for (unsigned i = 0; i < frameCount; ++i) {
+      for (unsigned i = 0; i < frameFootprint; ++i) {
         Site* site = e->junctionSites[i];
         if (site) {
           frozenSites[frozenSiteIndex++] = site;
@@ -2352,7 +2307,7 @@ populateSiteTables(Context* c, Event* e)
       for (Cell* sc = e->successors; sc; sc = sc->next) {
         Event* s = static_cast<Event*>(sc->value);
         if (s->predecessors->next) {
-          unsigned size = sizeof(Site*) * frameCount;
+          unsigned size = sizeof(Site*) * frameFootprint;
           Site** junctionSites = static_cast<Site**>
             (c->zone->allocate(size));
           memset(junctionSites, 0, size);
@@ -2365,17 +2320,17 @@ populateSiteTables(Context* c, Event* e)
 
     if (e->junctionSites) {
       Event* s = e->next;
-      for (unsigned i = 0; i < c->localCount; ++i) {
+      for (unsigned i = 0; i < c->localFootprint; ++i) {
         frozenSiteIndex = resolveJunctionSite
           (c, e, s, s->locals[i], i, frozenSites, frozenSiteIndex);
       }
 
-      unsigned i = s->stack->index + c->localCount;
+      unsigned i = s->stack->index + c->localFootprint;
       for (Stack* stack = s->stack; stack; stack = stack->next) {
         frozenSiteIndex = resolveJunctionSite
           (c, e, s, stack->value, i, frozenSites, frozenSiteIndex);
 
-        i -= footprint(stack);
+        i -= stack->size;
       }
     }
 
@@ -2385,18 +2340,18 @@ populateSiteTables(Context* c, Event* e)
   }
 
   if (e->successors->next) {
-    unsigned size = sizeof(Site*) * frameCount;
+    unsigned size = sizeof(Site*) * frameFootprint;
     Site** savedSites = static_cast<Site**>(c->zone->allocate(size));
 
-    for (unsigned i = 0; i < c->localCount; ++i) {
-      savedSites = successor->locals[i]->sites;
+    for (unsigned i = 0; i < c->localFootprint; ++i) {
+      savedSites[i] = successor->locals[i]->sites;
     }
 
-    unsigned i = successor->stack->index + c->localCount;
+    unsigned i = successor->stack->index + c->localFootprint;
     for (Stack* stack = successor->stack; stack; stack = stack->next) {
-      savedSites = stack->value->sites;
+      savedSites[i] = stack->value->sites;
 
-      i -= footprint(stack);
+      i -= stack->size;
     }
   }
 }
@@ -2404,17 +2359,18 @@ populateSiteTables(Context* c, Event* e)
 void
 setSites(Context* c, Event* e, Site** sites)
 {
-  for (unsigned i = 0; i < c->localCount; ++i) {
+  for (unsigned i = 0; i < c->localFootprint; ++i) {
     Value* v = e->locals[i];
     clearSites(c, v);
-    addSites(c, v, sites);
+    addSite(c, 0, 0, v->reads->size(c), v, sites[i]);
   }
 
-  unsigned i = e->stack->index + c->localCount;
+  unsigned i = e->stack->index + c->localFootprint;
   for (Stack* stack = e->stack; stack; stack = stack->next) {
     Value* v = stack->value;
     clearSites(c, v);
-    addSites(c, v, sites);
+    addSite(c, 0, 0, v->reads->size(c), v, sites[i]);
+    i -= stack->size;
   }
 }
 
@@ -2476,18 +2432,16 @@ compile(Context* c)
   Block* firstBlock = block(c, c->firstEvent);
   Block* block = firstBlock;
 
-  Assembler::Constant offset(resolved(c, alignedFrameSize(c)));
-  a->apply(PushFrame, BytesPerWord, ConstantOperand, &offset);
+  a->allocateFrame(alignedFrameSize(c));
 
   for (Event* e = c->firstEvent; e; e = e->next) {
     e->block = block;
 
+    Event* predecessor = static_cast<Event*>(e->predecessors->value);
     if (e->predecessors->next) {
-      setSites
-        (c, e, static_cast<Event*>(e->predecessors->value)->junctionSites);
-    } else if (e->predecessors->successors->next) {
-      setSites
-        (c, e, static_cast<Event*>(e->predecessors->value)->savedSites);
+      setSites(c, e, predecessor->junctionSites);
+    } else if (predecessor->successors->next) {
+      setSites(c, e, predecessor->savedSites);
     }
 
     populateSources(c, e);
@@ -2511,7 +2465,7 @@ compile(Context* c)
 
         block->nextInstruction = nextInstruction;
         block->offset = a->offset();
-        Block* block = block(c, e->next);
+        block = ::block(c, e->next);
       }
     }
   }
@@ -2524,11 +2478,11 @@ compile(Context* c)
   block = firstBlock;
   while (block->nextInstruction) {
     Block* next = block->nextInstruction->firstEvent->block;
-    next->start = block->offset->calculate(block->start);
+    next->start = block->offset->resolve(block->start);
     block = next;
   }
 
-  return block->offset->calculate(block->start);
+  return block->offset->resolve(block->start);
 }
 
 unsigned
@@ -2553,7 +2507,7 @@ pushState(Context* c)
   }
 
   c->state = new (c->zone->allocate(sizeof(State)))
-    State(c->state, c->state->stack);
+    State(c->state, c->state->stack, c->state->locals);
 }
 
 void
@@ -2563,7 +2517,7 @@ saveStack(Context* c)
     LogicalInstruction* i = c->logicalCode[c->logicalIp];
     i->stackSaved = true;
     i->stack = c->state->stack;
-    i->locals = c->locals;
+    i->locals = c->state->locals;
 
     if (DebugAppend) {
       unsigned count = 0;
@@ -2577,7 +2531,7 @@ void
 popState(Context* c)
 {
   c->state = new (c->zone->allocate(sizeof(State)))
-    State(c->state->next->next, c->state->next->stack);
+    State(c->state->next->next, c->state->next->stack, c->state->next->locals);
  
   if (DebugAppend) {
     unsigned count = 0; for (State* s = c->state; s; s = s->next) ++ count;
@@ -2588,32 +2542,12 @@ popState(Context* c)
 }
 
 void
-updateJunctions(Context* c)
-{
-  for (Junction* j = c->junctions; j; j = j->next) {
-    LogicalInstruction* i = c->logicalCode[j->logicalIp];
-    LogicalInstruction* p = i->immediatePredecessor;
-
-    p->lastEvent = p->lastEvent->next
-      = new (c->zone->allocate(sizeof(StackSyncEvent)))
-      StackSyncEvent(c, p->lastEvent->sequence, p->stack, p->locals);
-  }
-}
-
-void
 visit(Context* c, unsigned logicalIp)
 {
   assert(c, logicalIp < c->logicalCodeLength);
 
-  LogicalInstruction* i = new (c->zone->allocate(sizeof(LogicalInstruction)))
-    LogicalInstruction;
-
-  c->logicalCode[logicalIp] = i;
-
-  if (c->logicalIp >= 0 and (not c->stackReset)) {
-    assert(c, i->immediatePredecessor == 0);
-    i->immediatePredecessor = c->logicalCode[c->logicalIp];
-  }
+  c->logicalCode[logicalIp] = new 
+    (c->zone->allocate(sizeof(LogicalInstruction))) LogicalInstruction;
 }
 
 class Client: public Assembler::Client {
@@ -2695,13 +2629,6 @@ class MyCompiler: public Compiler {
 
   virtual void visitLogicalIp(unsigned logicalIp) {
     visit(&c, logicalIp);
-
-    c.stackReset = false;
-
-    if (c.logicalCode[logicalIp]->immediatePredecessor) {
-      c.junctions = new (c.zone->allocate(sizeof(Junction)))
-        Junction(logicalIp, c.junctions);
-    }
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
