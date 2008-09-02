@@ -38,7 +38,7 @@ public class BufferedInputStream extends InputStream {
       }
     }
 
-    return buffer[position++];
+    return buffer[position++] & 0xFF;
   }
 
   public int read(byte[] b, int offset, int length) throws IOException {
