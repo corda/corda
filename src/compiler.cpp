@@ -2203,6 +2203,42 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
     (c, object, lengthOffset, index, handler);
 }
 
+// class ClobberLocalEvent: public Event {
+//  public:
+//   ClobberLocalEvent(Context* c, unsigned size, int index):
+//     Event(c), size(size), index(index)
+//   { }
+
+//   virtual void compile(Context* c) {
+//     if (DebugCompile) {
+//       fprintf(stderr, "ClobberLocalEvent.compile\n");
+//     }
+
+//     Value* v = locals[index];
+//     if (live(v)
+//         and v->sites->next == 0
+//         and v->sites->match(c, 1 << MemoryOperand, 0, index))
+//     {
+//       preserve(c, stack, locals, size, v, v->sites, v->reads);
+//       removeSite(c, v, v->sites);
+//     }
+//   }
+
+//   unsigned size;
+//   int index;
+// };
+
+// void
+// appendClobberLocal(Context* c, unsigned size, int index)
+// {
+//   if (DebugAppend) {
+//     fprintf(stderr, "appendClobberLocal\n");
+//   }
+
+//   new (c->zone->allocate(sizeof(ClobberLocalEvent)))
+//     ClobberLocalEvent(c, size, index);
+// }
+
 Site*
 readSource(Context* c, Stack* stack, Value** locals, Read* r)
 {
@@ -2567,19 +2603,13 @@ class Client: public Assembler::Client {
   }
 
   virtual void save(int r) {
-    if (c->registers[r]->refCount or c->registers[r]->value) {
-      Assembler::Register operand(r);
-      c->assembler->apply(Push, BytesPerWord, RegisterOperand, &operand);
-      c->registers[r]->pushed = true;
-    }
+    // todo
+    expect(c, c->registers[r]->refCount == 0);
+    expect(c, c->registers[r]->value == 0);
   }
 
-  virtual void restore(int r) {
-    if (c->registers[r]->pushed) {
-      Assembler::Register operand(r);
-      c->assembler->apply(Pop, BytesPerWord, RegisterOperand, &operand);
-      c->registers[r]->pushed = false;
-    }
+  virtual void restore(int) {
+    // todo
   }
 
   Context* c;
@@ -2607,7 +2637,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void resetStack() {
-    ::resetStack(&c);
+    // todo: anything?
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -2622,9 +2652,9 @@ class MyCompiler: public Compiler {
       (c.zone->allocate(sizeof(LogicalInstruction*) * logicalCodeLength));
     memset(c.logicalCode, 0, sizeof(LogicalInstruction*) * logicalCodeLength);
 
-    c.localTable = static_cast<Local**>
-      (c.zone->allocate(sizeof(Local*) * localFootprint));
-    memset(c.localTable, 0, sizeof(Local*) * localFootprint);
+    c.state->locals = static_cast<Value**>
+      (c.zone->allocate(sizeof(Value*) * localFootprint));
+    memset(c.state->locals, 0, sizeof(Value*) * localFootprint);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
@@ -2696,17 +2726,17 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* stack() {
-    Site* s = registerSite(&c, c.assembler->stack());
-    return value(&c, s, s);
-  }
-
-  virtual Operand* base() {
-    Site* s = registerSite(&c, c.assembler->base());
+    Site* s = registerSite(&c, c.arch->stack());
     return value(&c, s, s);
   }
 
   virtual Operand* thread() {
-    Site* s = registerSite(&c, c.assembler->thread());
+    Site* s = registerSite(&c, c.arch->thread());
+    return value(&c, s, s);
+  }
+
+  virtual Operand* stackTop() {
+    Site* s = frameSite(&c, c.state->stack->index);
     return value(&c, s, s);
   }
 
@@ -2719,9 +2749,6 @@ class MyCompiler: public Compiler {
   }
 
   virtual void mark(Operand* label) {
-    appendStackSync(&c);
-    ::resetStack(&c);
-
     for (Site* s = static_cast<Value*>(label)->sites; s; s = s->next) {
       if (s->type(&c) == ConstantOperand) {
         static_cast<ConstantSite*>(s)->value.value = machineIp();
@@ -2749,13 +2776,9 @@ class MyCompiler: public Compiler {
   virtual void pushed() {
     Value* v = value(&c);
     c.state->stack = ::stack(&c, v, 1, c.state->stack);
-    c.state->stack->pushed = true;
-    appendPushed(&c, c.state->stack);
   }
 
   virtual void popped() {
-    appendPop(&c, c.state->stack->size, true);
-
     c.state->stack = c.state->stack->next;
   }
 
@@ -2794,7 +2817,7 @@ class MyCompiler: public Compiler {
     unsigned size = BytesPerWord;
     Value* arguments[argumentCount];
     unsigned argumentSizes[argumentCount];
-    unsigned index = 0;
+    int index = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       Value* o = va_arg(a, Value*);
       if (o) {
@@ -2810,13 +2833,6 @@ class MyCompiler: public Compiler {
 
     va_end(a);
 
-    for (Stack* s = c.state->stack; s; s = s->next) {
-      if (s->pushEvent == 0) {
-        appendPush(&c, s);
-      }
-      s->pushEvent->active = true;
-    }
-
     Stack* oldStack = c.state->stack;
     Stack* bottomArgument = 0;
 
@@ -2828,13 +2844,6 @@ class MyCompiler: public Compiler {
     }
     Stack* argumentStack = c.state->stack;
     c.state->stack = oldStack;
-
-    unsigned padding = c->assembler->stackPadding
-      (c.state->stack->index + c.state->stack->size);
-
-    if (bottomArgument) {
-      bottomArgument->padding = padding;
-    }
 
     Value* result = value(&c);
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
@@ -2860,20 +2869,20 @@ class MyCompiler: public Compiler {
     appendReturn(&c, size, static_cast<Value*>(value));
   }
 
-  virtual void storeLocal(unsigned size, Operand* src, unsigned index) {
+  virtual void storeLocal(unsigned, Operand* src, unsigned index) {
     assert(&c, index < c.localFootprint);
 
-    if (c.state->locals[index]) {
-      appendClobberLocal(&c, size, c.state->locals[index]);
-    }
+//     if (c.state->locals[index]) {
+//       appendClobberLocal(&c, size, index);
+//     }
 
-    Value* v = static_cast<Value*>(memory(base(), localOffset(&c, index)));
-    store(size, src, v);
+//     Value* v = static_cast<Value*>(memory(base(), localOffset(&c, index)));
+//     store(size, src, v);
 
-    c.state->locals[index] = v;
+    c.state->locals[index] = static_cast<Value*>(src);
   }
 
-  virtual Operand* loadLocal(unsigned size, unsigned index) {
+  virtual Operand* loadLocal(unsigned, unsigned index) {
     assert(&c, index < c.localFootprint);
     assert(&c, c.state->locals[index]);
 
@@ -2889,31 +2898,31 @@ class MyCompiler: public Compiler {
 
   virtual void store(unsigned size, Operand* src, Operand* dst) {
     appendMove(&c, Move, size, static_cast<Value*>(src),
-               static_cast<Value*>(dst));
+               size, static_cast<Value*>(dst));
   }
 
   virtual Operand* load(unsigned size, Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, Move, size, static_cast<Value*>(src), dst);
+    appendMove(&c, Move, size, static_cast<Value*>(src), size, dst);
     return dst;
   }
 
   virtual Operand* loadz(unsigned size, Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, MoveZ, size, static_cast<Value*>(src), dst);
+    appendMove(&c, MoveZ, size, static_cast<Value*>(src), size, dst);
     return dst;
   }
 
   virtual Operand* load4To8(Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, Move4To8, 8, static_cast<Value*>(src), dst);
+    appendMove(&c, Move, 4, static_cast<Value*>(src), 8, dst);
     return dst;
   }
 
   virtual Operand* lcmp(Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, LongCompare, 8, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  8, static_cast<Value*>(b), 8, result);
     return result;
   }
 
@@ -2953,77 +2962,77 @@ class MyCompiler: public Compiler {
   virtual Operand* add(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, Add, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* sub(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, Subtract, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* mul(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, Multiply, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* div(unsigned size, Operand* a, Operand* b)  {
     Value* result = value(&c);
     appendCombine(&c, Divide, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* rem(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, Remainder, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* shl(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
-    appendCombine(&c, ShiftLeft, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+    appendCombine(&c, ShiftLeft, BytesPerWord, static_cast<Value*>(a),
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* shr(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
-    appendCombine(&c, ShiftRight, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+    appendCombine(&c, ShiftRight, BytesPerWord, static_cast<Value*>(a),
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* ushr(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
-    appendCombine(&c, UnsignedShiftRight, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+    appendCombine(&c, UnsignedShiftRight, BytesPerWord, static_cast<Value*>(a),
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* and_(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, And, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* or_(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, Or, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) {
     Value* result = value(&c);
     appendCombine(&c, Xor, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b), result);
+                  size, static_cast<Value*>(b), size, result);
     return result;
   }
 
@@ -3034,7 +3043,6 @@ class MyCompiler: public Compiler {
   }
 
   virtual unsigned compile() {
-    updateJunctions(&c);
     return ::compile(&c);
   }
 
@@ -3044,7 +3052,7 @@ class MyCompiler: public Compiler {
 
   virtual void writeTo(uint8_t* dst) {
     c.machineCode = dst;
-    c.assembler->writeTo(&c, dst);
+    c.assembler->writeTo(dst);
 
     int i = 0;
     for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {

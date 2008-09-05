@@ -222,10 +222,10 @@ class Assembler {
 
   virtual Architecture* arch() = 0;
 
-  virtual void saveFrame(unsigned stackOffset, unsigned baseOffset);
-  virtual void pushFrame(unsigned argumentCount, ...);
-  virtual void allocateFrame(unsigned footprint);
-  virtual void popFrame();
+  virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
+  virtual void pushFrame(unsigned argumentCount, ...) = 0;
+  virtual void allocateFrame(unsigned footprint) = 0;
+  virtual void popFrame() = 0;
 
   virtual void apply(Operation op) = 0;
 

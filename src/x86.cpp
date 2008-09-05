@@ -349,6 +349,97 @@ index(TernaryOperation operation,
 }
 
 void
+pushR(Context* c, unsigned size, Assembler::Register* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+
+    pushR(c, 4, &ah);
+    pushR(c, 4, a);
+  } else {
+    c->code.append(0x50 | a->low);      
+  }
+}
+
+void
+moveRR(Context* c, unsigned aSize, Assembler::Register* a,
+       unsigned bSize, Assembler::Register* b)
+{
+  if (BytesPerWord == 4 and aSize == 8 and bSize == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    moveRR(c, 4, a, 4, b);
+    moveRR(c, 4, &ah, 4, &bh);
+  } else {
+    switch (aSize) {
+    case 1:
+      if (BytesPerWord == 4 and a->low > rbx) {
+        assert(c, b->low <= rbx);
+
+        moveRR(c, BytesPerWord, a, BytesPerWord, b);
+        moveRR(c, 1, b, BytesPerWord, b);
+      } else {
+        rex(c);
+        c->code.append(0x0f);
+        c->code.append(0xbe);
+        c->code.append(0xc0 | (b->low << 3) | a->low);
+      }
+      break;
+
+    case 2:
+      rex(c);
+      c->code.append(0x0f);
+      c->code.append(0xbf);
+      c->code.append(0xc0 | (b->low << 3) | a->low);
+      break;
+
+    case 8:
+    case 4:
+      if (aSize == 4 and bSize == 8) {
+        if (BytesPerWord == 8) {
+          rex(c);
+          c->code.append(0x63);
+          c->code.append(0xc0 | (b->low << 3) | a->low);
+        } else {
+          if (a->low == rax and b->low == rax and b->high == rdx) {
+            c->code.append(0x99); // cdq
+          } else {
+            assert(c, b->low == rax and b->high == rdx);
+
+            moveRR(c, 4, a, 4, b);
+            moveRR(c, 4, b, 8, b);
+          }
+        }
+      } else {
+        if (a->low != b->low) {
+          rex(c);
+          c->code.append(0x89);
+          c->code.append(0xc0 | (a->low << 3) | b->low);
+        }
+      }
+      break;
+    }
+  }  
+}
+
+void
+popR(Context* c, unsigned size, Assembler::Register* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+
+    popR(c, 4, a);
+    popR(c, 4, &ah);
+  } else {
+    c->code.append(0x58 | a->low);
+    if (BytesPerWord == 8 and size == 4) {
+      moveRR(c, 4, a, 8, a);
+    }
+  }
+}
+
+void
 populateTables(ArchitectureContext*)
 {
   // todo
@@ -563,6 +654,69 @@ class MyAssembler: public Assembler {
 
   virtual Architecture* arch() {
     return arch_;
+  }
+
+  virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) {
+    Register stack(rsp);
+    Memory stackDst(rbx, stackOffset);
+    apply(Move, BytesPerWord, RegisterOperand, &stack,
+          BytesPerWord, MemoryOperand, &stackDst);
+
+    Register base(rbp);
+    Memory baseDst(rbx, baseOffset);
+    apply(Move, BytesPerWord, RegisterOperand, &base,
+          BytesPerWord, MemoryOperand, &baseDst);
+  }
+
+  virtual void pushFrame(unsigned argumentCount, ...) {
+    struct {
+      unsigned size;
+      OperandType type;
+      Operand* operand;
+    } arguments[argumentCount];
+    va_list a; va_start(a, argumentCount);
+    unsigned footprint = 0;
+    for (unsigned i = 0; i < argumentCount; ++i) {
+      arguments[i].size = va_arg(a, unsigned);
+      arguments[i].type = static_cast<OperandType>(va_arg(a, int));
+      arguments[i].operand = va_arg(a, Operand*);
+      footprint += ceiling(arguments[i].size, BytesPerWord);
+    }
+    va_end(a);
+
+    allocateFrame(footprint);
+    
+    for (unsigned i = 0; i < argumentCount; ++i) {
+      Memory dst(rsp, footprint);
+      apply(Move,
+            arguments[i].size, arguments[i].type, arguments[i].operand,
+            pad(arguments[i].size), MemoryOperand, &dst);
+      footprint -= ceiling(arguments[i].size, BytesPerWord);
+    }
+  }
+
+  virtual void allocateFrame(unsigned footprint) {
+    Register base(rbp);
+    pushR(&c, BytesPerWord, &base);
+
+    Register stack(rsp);
+    apply(Move, BytesPerWord, RegisterOperand, &stack,
+          BytesPerWord, RegisterOperand, &base);
+
+    Constant footprintConstant
+      (resolved(&c, arch_->alignFrameSize(footprint) * BytesPerWord));
+    apply(Subtract, BytesPerWord, ConstantOperand, &footprintConstant,
+          BytesPerWord, RegisterOperand, &stack,
+          BytesPerWord, RegisterOperand, &stack);
+  }
+
+  virtual void popFrame() {
+    Register base(rbp);
+    Register stack(rsp);
+    apply(Move, BytesPerWord, RegisterOperand, &base,
+          BytesPerWord, RegisterOperand, &stack);
+
+    popR(&c, BytesPerWord, &base);
   }
 
   virtual void apply(Operation op) {

@@ -62,7 +62,7 @@ class Compiler {
   virtual Operand* stack() = 0;
   virtual Operand* thread() = 0;
 
-  virtual Operand* stackTop();
+  virtual Operand* stackTop() = 0;
 
   virtual Operand* label() = 0;
   virtual void mark(Operand* label) = 0;
