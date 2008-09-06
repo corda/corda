@@ -161,6 +161,8 @@ class Read {
     next(0), value(0), event(0), eventNext(0)
   { }
 
+  virtual ~Read() { }
+
   virtual Site* pickSite(Context* c, Value* v) = 0;
 
   virtual Site* allocateSite(Context* c) = 0;

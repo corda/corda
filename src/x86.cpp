@@ -69,10 +69,6 @@ typedef void (*UnaryOperationType)(Context*, unsigned, Assembler::Operand*);
 typedef void (*BinaryOperationType)
 (Context*, unsigned, Assembler::Operand*, unsigned, Assembler::Operand*);
 
-typedef void (*TernaryOperationType)
-(Context*, unsigned, Assembler::Operand*, unsigned, Assembler::Operand*,
- unsigned, Assembler::Operand*);
-
 class ArchitectureContext {
  public:
   ArchitectureContext(System* s): s(s) { }
@@ -81,13 +77,10 @@ class ArchitectureContext {
   OperationType operations[OperationCount];
   UnaryOperationType unaryOperations[UnaryOperationCount
                                      * OperandTypeCount];
-  BinaryOperationType binaryOperations[BinaryOperationCount
-                                       * OperandTypeCount
-                                       * OperandTypeCount];
-  TernaryOperationType ternaryOperations[TernaryOperationCount
-                                         * OperandTypeCount
-                                         * OperandTypeCount
-                                         * OperandTypeCount];
+  BinaryOperationType binaryOperations
+  [(BinaryOperationCount + TernaryOperationCount)
+   * OperandTypeCount
+   * OperandTypeCount];
 };
 
 inline void NO_RETURN
@@ -332,20 +325,88 @@ index(BinaryOperation operation,
       OperandType operand2)
 {
   return operation
-    + (BinaryOperationCount * operand1)
-    + (BinaryOperationCount * OperandTypeCount * operand2);
+    + ((BinaryOperationCount + TernaryOperationCount) * operand1)
+    + ((BinaryOperationCount + TernaryOperationCount)
+       * OperandTypeCount * operand2);
 }
 
 inline unsigned
 index(TernaryOperation operation,
       OperandType operand1,
-      OperandType operand2,
-      OperandType operand3)
+      OperandType operand2)
 {
   return operation
-    + (TernaryOperationCount * operand1)
-    + (TernaryOperationCount * OperandTypeCount * operand2)
-    + (TernaryOperationCount * OperandTypeCount * OperandTypeCount * operand3);
+    + ((BinaryOperationCount + TernaryOperationCount) * operand1)
+    + ((BinaryOperationCount + TernaryOperationCount)
+       * OperandTypeCount * operand2);
+}
+
+void
+jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
+{
+  assert(c, size == BytesPerWord);
+
+  if (a->low & 8) rex(c, 0x40, a->low);
+  c->code.append(0xff);
+  c->code.append(0xe0 | (a->low & 7));
+}
+
+void
+jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  unconditional(c, 0xe9, a);
+}
+
+void
+moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
+       unsigned bSize, Assembler::Register* b);
+
+void
+longJumpC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  if (BytesPerWord == 8) {
+    Assembler::Register r(r10);
+    moveCR(c, size, a, size, &r);
+    jumpR(c, size, &r);
+  } else {
+    jumpC(c, size, a);
+  }
+}
+
+void
+callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
+{
+  assert(c, size == BytesPerWord);
+
+  if (a->low & 8) rex(c, 0x40, a->low);
+  c->code.append(0xff);
+  c->code.append(0xd0 | (a->low & 7));
+}
+
+void
+callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  unconditional(c, 0xe8, a);
+}
+
+void
+longCallC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  if (BytesPerWord == 8) {
+    Assembler::Register r(r10);
+    moveCR(c, size, a, size, &r);
+    callR(c, size, &r);
+  } else {
+    callC(c, size, a);
+  }
 }
 
 void
@@ -358,6 +419,26 @@ pushR(Context* c, unsigned size, Assembler::Register* a)
     pushR(c, 4, a);
   } else {
     c->code.append(0x50 | a->low);      
+  }
+}
+
+void
+moveRR(Context* c, unsigned aSize, Assembler::Register* a,
+       unsigned bSize, Assembler::Register* b);
+
+void
+popR(Context* c, unsigned size, Assembler::Register* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Register ah(a->high);
+
+    popR(c, 4, a);
+    popR(c, 4, &ah);
+  } else {
+    c->code.append(0x58 | a->low);
+    if (BytesPerWord == 8 and size == 4) {
+      moveRR(c, 4, a, 8, a);
+    }
   }
 }
 
@@ -424,34 +505,236 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-popR(Context* c, unsigned size, Assembler::Register* a)
+moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
+       unsigned bSize UNUSED, Assembler::Register* b)
 {
-  if (BytesPerWord == 4 and size == 8) {
-    Assembler::Register ah(a->high);
+  assert(c, aSize == bSize);
 
-    popR(c, 4, a);
-    popR(c, 4, &ah);
+  switch (aSize) {
+  case 1:
+    encode2(c, 0x0fbe, b->low, a, true);
+    break;
+
+  case 2:
+    encode2(c, 0x0fbf, b->low, a, true);
+    break;
+
+  case 4:
+  case 8:
+    if (BytesPerWord == 4 and aSize == 8) {
+      Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+      Assembler::Register bh(b->high);
+
+      moveMR(c, 4, a, 4, b);    
+      moveMR(c, 4, &ah, 4, &bh);
+    } else if (BytesPerWord == 8 and aSize == 4) {
+      encode(c, 0x63, b->low, a, true);
+    } else {
+      encode(c, 0x8b, b->low, a, true);
+    }
+    break;
+
+  default: abort(c);
+  }
+}
+
+void
+moveRM(Context* c, unsigned aSize, Assembler::Register* a,
+       unsigned bSize UNUSED, Assembler::Memory* b)
+{
+  assert(c, aSize == bSize);
+
+  if (BytesPerWord == 4 and aSize == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
+
+    moveRM(c, 4, a, 4, b);    
+    moveRM(c, 4, &ah, 4, &bh);
+  } else if (BytesPerWord == 8 and aSize == 4) {
+    encode(c, 0x89, a->low, b, false);
   } else {
-    c->code.append(0x58 | a->low);
-    if (BytesPerWord == 8 and size == 4) {
-      moveRR(c, 4, a, 8, a);
+    switch (aSize) {
+    case 1:
+      if (BytesPerWord == 8) {
+        if (a->low > rbx) {
+          encode2(c, 0x4088, a->low, b, false);
+        } else {
+          encode(c, 0x88, a->low, b, false);
+        }
+      } else {
+        assert(c, a->low <= rbx);
+
+        encode(c, 0x88, a->low, b, false);
+      }
+      break;
+
+    case 2:
+      encode2(c, 0x6689, a->low, b, false);
+      break;
+
+    case BytesPerWord:
+      encode(c, 0x89, a->low, b, true);
+      break;
+
+    default: abort(c);
     }
   }
 }
 
 void
-populateTables(ArchitectureContext*)
+moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
+       unsigned bSize UNUSED, Assembler::Register* b)
 {
-  // todo
+  assert(c, aSize == bSize);
 
-//   const int Constant = ConstantOperand;
-//   const int Address = AddressOperand;
-//   const int Register = RegisterOperand;
-//   const int Memory = MemoryOperand;
+  if (BytesPerWord == 4 and aSize == 8) {
+    int64_t v = a->value->value();
 
-// #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
-// #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
-// #define CAST3(x) reinterpret_cast<TernaryOperationType>(x)
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+
+    moveCR(c, 4, &al, 4, b);
+    moveCR(c, 4, &ah, 4, &bh);
+  } else {
+    rex(c, 0x48, b->low);
+    c->code.append(0xb8 | b->low);
+    if (a->value->resolved()) {
+      c->code.appendAddress(a->value->value());
+    } else {
+      appendImmediateTask(c, a->value, c->code.length());
+      c->code.appendAddress(static_cast<uintptr_t>(0));
+    }
+  }
+}
+
+void
+subtractBorrowCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
+                 unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  
+  int64_t v = a->value->value();
+  if (isInt8(v)) {
+    c->code.append(0x83);
+    c->code.append(0xd8 | b->low);
+    c->code.append(v);
+  } else {
+    abort(c);
+  }
+}
+
+void
+subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
+           unsigned bSize, Assembler::Register* b);
+
+void
+subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
+           unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+
+  int64_t v = a->value->value();
+  if (v) {
+    if (BytesPerWord == 4 and aSize == 8) {
+      ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+      Assembler::Constant ah(&high);
+
+      ResolvedPromise low(v & 0xFFFFFFFF);
+      Assembler::Constant al(&low);
+
+      Assembler::Register bh(b->high);
+
+      subtractCR(c, 4, &al, 4, b);
+      subtractBorrowCR(c, 4, &ah, 4, &bh);
+    } else {
+      if (aSize == 8) rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x83);
+        c->code.append(0xe8 | b->low);
+        c->code.append(v);
+      } else if (isInt32(v)) {
+        c->code.append(0x81);
+        c->code.append(0xe8 | b->low);
+        c->code.append4(v);        
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, aSize, a, aSize, &tmp);
+        subtractRR(c, aSize, &tmp, bSize, b);
+        c->client->releaseTemporary(tmp.low);
+      }
+    }
+  }
+}
+
+void
+subtractBorrowRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+                 unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  
+  if (aSize == 8) rex(c);
+  c->code.append(0x19);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
+subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
+           unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+
+  if (BytesPerWord == 4 and aSize == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    subtractRR(c, 4, a, 4, b);
+    subtractBorrowRR(c, 4, &ah, 4, &bh);
+  } else {
+    if (aSize == 8) rex(c);
+    c->code.append(0x29);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
+}
+
+void
+populateTables(ArchitectureContext* c)
+{
+#define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
+#define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
+
+  const OperandType C = ConstantOperand;
+  //const OperandType A = AddressOperand;
+  const OperandType R = RegisterOperand;
+  const OperandType M = MemoryOperand;
+
+  OperationType* zo = c->operations;
+  UnaryOperationType* uo = c->unaryOperations;
+  BinaryOperationType* bo = c->binaryOperations;
+
+  zo[Return] = return_;
+
+  uo[index(Call, C)] = CAST1(callC);
+
+  uo[index(LongCall, C)] = CAST1(longCallC);
+
+  uo[index(Jump, R)] = CAST1(jumpR);
+
+  uo[index(Jump, C)] = CAST1(jumpC);
+
+  uo[index(LongJump, C)] = CAST1(longJumpC);
+
+  bo[index(Move, R, R)] = CAST2(moveRR);
+  bo[index(Move, M, R)] = CAST2(moveMR);
+  bo[index(Move, R, M)] = CAST2(moveRM);
+
+  bo[index(Subtract, C, R)] = CAST2(subtractCR);
 }
 
 class MyArchitecture: public Assembler::Architecture {
@@ -742,8 +1025,12 @@ class MyAssembler: public Assembler {
                      unsigned bSize, OperandType bType, Operand* bOperand,
                      unsigned cSize, OperandType cType, Operand* cOperand)
   {
-    arch_->c.ternaryOperations[index(op, aType, bType, cType)]
-      (&c, aSize, aOperand, bSize, bOperand, cSize, cOperand);
+    assert(&c, bSize == cSize);
+    assert(&c, bType == cType);
+    assert(&c, bOperand == cOperand);
+
+    arch_->c.binaryOperations[index(op, aType, bType)]
+      (&c, aSize, aOperand, bSize, bOperand);
   }
 
   virtual void writeTo(uint8_t* dst) {

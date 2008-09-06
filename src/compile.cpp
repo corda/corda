@@ -857,7 +857,7 @@ class Frame {
     context->eventLog.append(PopEvent);
     context->eventLog.appendAddress(c->top());
 
-    Compiler::Operand* r = c->pop(8);
+    Compiler::Operand* r = c->pop(size);
 
     if (size == 8 and BytesPerWord == 8) {
       context->eventLog.append(PopEvent);
