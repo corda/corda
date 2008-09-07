@@ -66,6 +66,10 @@ public class HashSet<T> implements Set<T> {
     return new MyIterator(map.iterator());
   }
 
+  public String toString() {
+    return Collections.toString(this);
+  }
+
   private static class MyIterator<T> implements Iterator<T> {
     private final Iterator<Map.Entry<T, Object>> it;
 
