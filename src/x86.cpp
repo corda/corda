@@ -48,10 +48,19 @@ isInt32(intptr_t v)
 
 class Task;
 
+class Block {
+ public:
+  Block(unsigned offset): offset(offset), start(~0) { }
+
+  unsigned offset;
+  unsigned start;
+};
+
 class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
-    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0)
+    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
+    block(0)
   { }
 
   System* s;
@@ -60,6 +69,7 @@ class Context {
   Vector code;
   Task* tasks;
   uint8_t* result;
+  Block* block;
 };
 
 typedef void (*OperationType)(Context*);
@@ -924,6 +934,31 @@ class MyArchitecture: public Assembler::Architecture {
   unsigned referenceCount;
 };
 
+class MyOffset: public Assembler::Offset {
+ public:
+  MyOffset(Context* c, Block* block, unsigned offset):
+    c(c), block(block), offset(offset)
+  { }
+
+  virtual unsigned resolve(unsigned start) {
+    block->start = start;
+    return value();
+  }
+
+  virtual bool resolved() {
+    return block->start != static_cast<unsigned>(~0);
+  }
+  
+  virtual unsigned value() {
+    assert(c, resolved());
+    return block->start + (offset - block->offset);
+  }
+
+  Context* c;
+  Block* block;
+  unsigned offset;
+};
+
 class MyAssembler: public Assembler {
  public:
   MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch):
@@ -1043,12 +1078,12 @@ class MyAssembler: public Assembler {
   }
 
   virtual Offset* offset() {
-    // todo
-    return 0;
+    return new (c.zone->allocate(sizeof(MyOffset)))
+      MyOffset(&c, c.block, c.code.length());
   }
 
   virtual void endBlock() {
-    // todo
+    c.block = new (c.zone->allocate(sizeof(Block))) Block(c.code.length());
   }
 
   virtual unsigned length() {

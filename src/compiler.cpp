@@ -120,12 +120,16 @@ class State {
 
 class LogicalInstruction {
  public:
+  LogicalInstruction() {
+    memset(this, 0, sizeof(LogicalInstruction));
+  }
+
   Event* firstEvent;
   Event* lastEvent;
   LogicalInstruction* immediatePredecessor;
   Stack* stack;
   Value** locals;
-  Promise* machineOffset;
+  Assembler::Offset* machineOffset;
   int index;
   bool stackSaved;
 };
@@ -226,6 +230,7 @@ class Context {
     lastConstant(0),
     machineCode(0),
     firstEvent(0),
+    lastEvent(0),
     logicalIp(-1),
     constantCount(0),
     nextSequence(0),
@@ -255,6 +260,7 @@ class Context {
   ConstantPoolNode* lastConstant;
   uint8_t* machineCode;
   Event* firstEvent;
+  Event* lastEvent;
   int logicalIp;
   unsigned constantCount;
   unsigned nextSequence;
@@ -369,9 +375,14 @@ class Event {
   {
     assert(c, c->logicalIp >= 0);
 
-    if (logicalInstruction->lastEvent) {
-      logicalInstruction->lastEvent->next = this;
+    if (c->lastEvent) {
+      c->lastEvent->next = this;
     } else {
+      c->firstEvent = this;
+    }
+    c->lastEvent = this;
+
+    if (logicalInstruction->firstEvent == 0) {
       logicalInstruction->firstEvent = this;
     }
     logicalInstruction->lastEvent = this;
@@ -2474,6 +2485,10 @@ compile(Context* c)
 
   for (Event* e = c->firstEvent; e; e = e->next) {
     e->block = block;
+
+    if (e->logicalInstruction->machineOffset == 0) {
+      e->logicalInstruction->machineOffset = a->offset();
+    }
 
     Event* predecessor = static_cast<Event*>(e->predecessors->value);
     if (e->predecessors->next) {
