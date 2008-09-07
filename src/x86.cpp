@@ -34,6 +34,8 @@ enum {
   r15 = 15,
 };
 
+const unsigned FrameHeaderSize = 2;
+
 inline bool
 isInt8(intptr_t v)
 {
@@ -48,19 +50,28 @@ isInt32(intptr_t v)
 
 class Task;
 
-class Block {
+class MyBlock: public Assembler::Block {
  public:
-  Block(unsigned offset): offset(offset), start(~0) { }
+  MyBlock(unsigned offset): offset(offset), start(~0), size(0), next(0) { }
+
+  virtual unsigned resolve(unsigned start, Assembler::Block* next) {
+    this->start = start;
+    this->next = static_cast<MyBlock*>(next);
+    return start + size;
+  }
 
   unsigned offset;
   unsigned start;
+  unsigned size;
+  MyBlock* next;
 };
 
 class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    block(0)
+    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
+    lastBlock(firstBlock)
   { }
 
   System* s;
@@ -69,7 +80,8 @@ class Context {
   Vector code;
   Task* tasks;
   uint8_t* result;
-  Block* block;
+  MyBlock* firstBlock;
+  MyBlock* lastBlock;
 };
 
 typedef void (*OperationType)(Context*);
@@ -623,11 +635,95 @@ moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-subtractBorrowCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
-                 unsigned bSize UNUSED, Assembler::Register* b)
+addCarryRR(Context* c, unsigned size, Assembler::Register* a,
+           Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+  
+  if (size == 8) rex(c);
+  c->code.append(0x11);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
+addRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
+
+  if (BytesPerWord == 4 and aSize == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    addRR(c, 4, a, 4, b);
+    addCarryRR(c, 4, &ah, &bh);
+  } else {
+    if (aSize == 8) rex(c);
+    c->code.append(0x01);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
+}
+
+void
+addCarryCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+           Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+  
+  int64_t v = a->value->value();
+  if (isInt8(v)) {
+    c->code.append(0x83);
+    c->code.append(0xd0 | b->low);
+    c->code.append(v);
+  } else {
+    abort(c);
+  }
+}
+
+void
+addCR(Context* c, unsigned aSize, Assembler::Constant* a,
+      unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+
+  int64_t v = a->value->value();
+  if (v) {
+    if (BytesPerWord == 4 and aSize == 8) {
+      ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+      Assembler::Constant ah(&high);
+
+      ResolvedPromise low(v & 0xFFFFFFFF);
+      Assembler::Constant al(&low);
+
+      Assembler::Register bh(b->high);
+
+      addCR(c, 4, &al, 4, b);
+      addCarryCR(c, 4, &ah, &bh);
+    } else {
+      if (aSize == 8) rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x83);
+        c->code.append(0xc0 | b->low);
+        c->code.append(v);
+      } else if (isInt32(v)) {
+        c->code.append(0x81);
+        c->code.append(0xc0 | b->low);
+        c->code.append4(v);        
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, aSize, a, aSize, &tmp);
+        addRR(c, aSize, &tmp, bSize, b);
+        c->client->releaseTemporary(tmp.low);
+      }
+    }
+  }
+}
+
+void
+subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+                 Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
   
   int64_t v = a->value->value();
   if (isInt8(v)) {
@@ -661,7 +757,7 @@ subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
       Assembler::Register bh(b->high);
 
       subtractCR(c, 4, &al, 4, b);
-      subtractBorrowCR(c, 4, &ah, 4, &bh);
+      subtractBorrowCR(c, 4, &ah, &bh);
     } else {
       if (aSize == 8) rex(c);
       if (isInt8(v)) {
@@ -683,13 +779,12 @@ subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-subtractBorrowRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
-                 unsigned bSize UNUSED, Assembler::Register* b)
+subtractBorrowRR(Context* c, unsigned size, Assembler::Register* a,
+                 Assembler::Register* b)
 {
-  assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
+  assert(c, BytesPerWord == 8 or size == 4);
   
-  if (aSize == 8) rex(c);
+  if (size == 8) rex(c);
   c->code.append(0x19);
   c->code.append(0xc0 | (a->low << 3) | b->low);
 }
@@ -705,7 +800,7 @@ subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
     Assembler::Register bh(b->high);
 
     subtractRR(c, 4, a, 4, b);
-    subtractBorrowRR(c, 4, &ah, 4, &bh);
+    subtractBorrowRR(c, 4, &ah, &bh);
   } else {
     if (aSize == 8) rex(c);
     c->code.append(0x29);
@@ -741,8 +836,11 @@ populateTables(ArchitectureContext* c)
   uo[index(LongJump, C)] = CAST1(longJumpC);
 
   bo[index(Move, R, R)] = CAST2(moveRR);
+  bo[index(Move, C, R)] = CAST2(moveCR);
   bo[index(Move, M, R)] = CAST2(moveMR);
   bo[index(Move, R, M)] = CAST2(moveRM);
+
+  bo[index(Add, C, R)] = CAST2(addCR);
 
   bo[index(Subtract, C, R)] = CAST2(subtractCR);
 }
@@ -767,6 +865,10 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual int returnLow() {
     return rax;
+  }
+
+  virtual bool condensedAddressing() {
+    return true;
   }
 
   virtual bool reserved(int register_) {
@@ -822,7 +924,8 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
     const unsigned alignment = 16 / BytesPerWord;
-    return (ceiling(sizeInWords + 2, alignment) * alignment);
+    return (ceiling(sizeInWords + FrameHeaderSize, alignment) * alignment)
+      - FrameHeaderSize;
   }
 
   virtual void* frameIp(void* stack) {
@@ -830,7 +933,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameHeaderSize() {
-    return 2;
+    return FrameHeaderSize;
   }
 
   virtual unsigned frameFooterSize() {
@@ -936,7 +1039,7 @@ class MyArchitecture: public Assembler::Architecture {
 
 class MyOffset: public Assembler::Offset {
  public:
-  MyOffset(Context* c, Block* block, unsigned offset):
+  MyOffset(Context* c, MyBlock* block, unsigned offset):
     c(c), block(block), offset(offset)
   { }
 
@@ -955,7 +1058,7 @@ class MyOffset: public Assembler::Offset {
   }
 
   Context* c;
-  Block* block;
+  MyBlock* block;
   unsigned offset;
 };
 
@@ -1002,14 +1105,15 @@ class MyAssembler: public Assembler {
     }
     va_end(a);
 
-    allocateFrame(footprint);
+    allocateFrame(arch_->alignFrameSize(footprint));
     
+    unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
-      Memory dst(rsp, footprint);
+      Memory dst(rsp, offset * BytesPerWord);
       apply(Move,
             arguments[i].size, arguments[i].type, arguments[i].operand,
             pad(arguments[i].size), MemoryOperand, &dst);
-      footprint -= ceiling(arguments[i].size, BytesPerWord);
+      offset += ceiling(arguments[i].size, BytesPerWord);
     }
   }
 
@@ -1021,8 +1125,7 @@ class MyAssembler: public Assembler {
     apply(Move, BytesPerWord, RegisterOperand, &stack,
           BytesPerWord, RegisterOperand, &base);
 
-    Constant footprintConstant
-      (resolved(&c, arch_->alignFrameSize(footprint) * BytesPerWord));
+    Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
     apply(Subtract, BytesPerWord, ConstantOperand, &footprintConstant,
           BytesPerWord, RegisterOperand, &stack,
           BytesPerWord, RegisterOperand, &stack);
@@ -1070,7 +1173,10 @@ class MyAssembler: public Assembler {
 
   virtual void writeTo(uint8_t* dst) {
     c.result = dst;
-    memcpy(dst, c.code.data, c.code.length());
+    
+    for (MyBlock* b = c.firstBlock; b; b = b->next) {
+      memcpy(dst + b->start, c.code.data + b->offset, b->size);
+    }
     
     for (Task* t = c.tasks; t; t = t->next) {
       t->run(&c);
@@ -1079,11 +1185,15 @@ class MyAssembler: public Assembler {
 
   virtual Offset* offset() {
     return new (c.zone->allocate(sizeof(MyOffset)))
-      MyOffset(&c, c.block, c.code.length());
+      MyOffset(&c, c.lastBlock, c.code.length());
   }
 
-  virtual void endBlock() {
-    c.block = new (c.zone->allocate(sizeof(Block))) Block(c.code.length());
+  virtual Block* endBlock() {
+    MyBlock* b = c.lastBlock;
+    b->size = c.code.length() - b->offset;
+    c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
+      MyBlock(c.code.length());
+    return b;
   }
 
   virtual unsigned length() {
