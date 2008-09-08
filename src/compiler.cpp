@@ -447,18 +447,20 @@ alignedFrameSize(Context* c)
 int
 localOffset(Context* c, int v)
 {
-  int parameterFootprint = c->parameterFootprint * BytesPerWord;
-  int frameSize = alignedFrameSize(c) * BytesPerWord;
+  int parameterFootprint = c->parameterFootprint;
+  int frameSize = alignedFrameSize(c);
 
-  v *= BytesPerWord;
   if (v < parameterFootprint) {
-    return frameSize
-      + parameterFootprint
-      + c->arch->frameFooterSize()
-      + c->arch->frameHeaderSize()
-      - v;
+    return (frameSize
+            + parameterFootprint
+            + (c->arch->frameFooterSize() * 2)
+            + c->arch->frameHeaderSize()
+            - v) * BytesPerWord;
   } else {
-    return frameSize - c->arch->frameHeaderSize() - v;
+    return (frameSize
+            + parameterFootprint
+            + c->arch->frameFooterSize()
+            - v) * BytesPerWord;
   }
 }
 
