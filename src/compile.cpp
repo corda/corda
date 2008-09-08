@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = false;
+const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -3832,11 +3832,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/String") == 0 and
+       "Simple") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "compareTo") == 0)
+       "main") == 0)
   {
     asm("int3");
   }
@@ -4959,6 +4959,8 @@ compileThunks(MyThread* t, MyProcessor* p)
 
     Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+
+    a->endBlock()->resolve(0, 0);
   }
 
   ThunkContext nativeContext(t);
@@ -4979,6 +4981,8 @@ compileThunks(MyThread* t, MyProcessor* p)
     a->popFrame();
 
     a->apply(Return);
+
+    a->endBlock()->resolve(0, 0);
   }
 
   ThunkContext aioobContext(t);
@@ -4996,6 +5000,8 @@ compileThunks(MyThread* t, MyProcessor* p)
 
     Assembler::Constant proc(&(aioobContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+
+    a->endBlock()->resolve(0, 0);
   }
 
   ThunkContext tableContext(t);
@@ -5006,6 +5012,8 @@ compileThunks(MyThread* t, MyProcessor* p)
 
     Assembler::Constant proc(&(tableContext.promise));
     a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
+
+    a->endBlock()->resolve(0, 0);
   }
 
   p->thunkSize = pad(tableContext.context.assembler->length());

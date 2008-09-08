@@ -15,8 +15,8 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = false;
-const bool DebugCompile = false;
+const bool DebugAppend = true;
+const bool DebugCompile = true;
 const bool DebugStack = false;
 const bool DebugRegisters = false;
 
@@ -120,9 +120,10 @@ class State {
 
 class LogicalInstruction {
  public:
-  LogicalInstruction() {
-    memset(this, 0, sizeof(LogicalInstruction));
-  }
+  LogicalInstruction(int index):
+    firstEvent(0), lastEvent(0), immediatePredecessor(0), stack(0), locals(0),
+    machineOffset(0), index(index), stackSaved(false)
+  { }
 
   Event* firstEvent;
   Event* lastEvent;
@@ -321,6 +322,17 @@ class CodePromise: public Promise {
   CodePromise* next;
 };
 
+unsigned
+machineOffset(Context* c, int logicalIp)
+{
+  for (unsigned n = logicalIp; n < c->logicalCodeLength; ++n) {
+    LogicalInstruction* i = c->logicalCode[n];
+    if (i and i->machineOffset) return i->machineOffset->value();
+  }
+
+  abort(c);
+}
+
 class IpPromise: public Promise {
  public:
   IpPromise(Context* c, int logicalIp):
@@ -331,7 +343,7 @@ class IpPromise: public Promise {
   virtual int64_t value() {
     if (resolved()) {
       return reinterpret_cast<intptr_t>
-        (c->machineCode + c->logicalCode[logicalIp]->machineOffset->value());
+        (c->machineCode + machineOffset(c, logicalIp));
     }
 
     abort(c);
@@ -365,6 +377,12 @@ expect(Context* c, bool v)
   expect(c->system, v);
 }
 
+Cell*
+cons(Context* c, void* value, Cell* next)
+{
+  return new (c->zone->allocate(sizeof(Cell))) Cell(next, value);
+}
+
 class Event {
  public:
   Event(Context* c):
@@ -377,6 +395,8 @@ class Event {
 
     if (c->lastEvent) {
       c->lastEvent->next = this;
+      predecessors = cons(c, c->lastEvent, 0);
+      c->lastEvent->successors = cons(c, this, c->lastEvent->successors);
     } else {
       c->firstEvent = this;
     }
@@ -1367,6 +1387,7 @@ insertRead(Context*, Event* event, int sequence, Value* v, Read* r)
 {
   r->value = v;
   r->event = event;
+  r->eventNext = event->reads;
   event->reads = r;
   ++ event->readCount;
 
@@ -1791,10 +1812,12 @@ class CombineEvent: public Event {
                unsigned firstSize, Value* first,
                unsigned secondSize, Value* second,
                unsigned resultSize, Value* result,
-               Read* firstRead, Read* secondRead):
+               Read* firstRead,
+               Read* secondRead,
+               Read* resultRead):
     Event(c), type(type), firstSize(firstSize), first(first),
     secondSize(secondSize), second(second), resultSize(resultSize),
-    result(result)
+    result(result), resultRead(resultRead)
   {
     addRead(c, first, firstRead);
     addRead(c, second, secondRead);
@@ -1805,18 +1828,20 @@ class CombineEvent: public Event {
       fprintf(stderr, "CombineEvent.compile\n");
     }
 
-    maybePreserve(c, stack, locals, secondSize, second, second->source);
+    Site* target;
+    if (c->arch->condensedAddressing()) {
+      maybePreserve(c, stack, locals, secondSize, second, second->source);
+      target = second->source;
+    } else {
+      target = resultRead->allocateSite(c);
+      addSite(c, stack, locals, resultSize, result, target);
+    }
 
-    Site* target = targetOrRegister(c, result);
     apply(c, type, firstSize, first->source, secondSize, second->source,
           resultSize, target);
 
     nextRead(c, first);
     nextRead(c, second);
-
-    if (live(result)) {
-      addSite(c, 0, 0, resultSize, result, target);
-    }
   }
 
   TernaryOperation type;
@@ -1826,6 +1851,7 @@ class CombineEvent: public Event {
   Value* second;
   unsigned resultSize;
   Value* result;
+  Read* resultRead;
 };
 
 Value*
@@ -1902,7 +1928,15 @@ appendCombine(Context* c, TernaryOperation type,
       fprintf(stderr, "appendCombine\n");
     }
 
-    // todo: respect resultTypeMask and resultRegisterMask
+    Read* resultRead = read
+      (c, resultSize, resultTypeMask, resultRegisterMask, AnyFrameIndex);
+    Read* secondRead;
+    if (c->arch->condensedAddressing()) {
+      secondRead = resultRead;
+    } else {
+      secondRead = read
+        (c, secondSize, secondTypeMask, secondRegisterMask, AnyFrameIndex);
+    }
 
     new (c->zone->allocate(sizeof(CombineEvent)))
       CombineEvent
@@ -1911,7 +1945,8 @@ appendCombine(Context* c, TernaryOperation type,
        secondSize, second,
        resultSize, result,
        read(c, firstSize, firstTypeMask, firstRegisterMask, AnyFrameIndex),
-       read(c, secondSize, secondTypeMask, secondRegisterMask, AnyFrameIndex));
+       secondRead,
+       resultRead);
   }
 }
 
@@ -2331,7 +2366,7 @@ propagateJunctionSites(Context* c, Event* e, Site** sites)
 unsigned
 frameFootprint(Context* c, Stack* s)
 {
-  return c->localFootprint + s->index + s->size;
+  return c->localFootprint + (s ? (s->index + s->size) : 0);
 }
 
 void
@@ -2448,7 +2483,7 @@ next(Context* c, LogicalInstruction* i)
 {
   for (unsigned n = i->index + 1; n < c->logicalCodeLength; ++n) {
     i = c->logicalCode[n];
-    if (i) return i;
+    if (i and i->firstEvent) return i;
   }
   return 0;
 }
@@ -2456,12 +2491,12 @@ next(Context* c, LogicalInstruction* i)
 class Block {
  public:
   Block(Event* head):
-    head(head), nextInstruction(0), offset(0), start(0)
+    head(head), nextInstruction(0), assemblerBlock(0), start(0)
   { }
 
   Event* head;
   LogicalInstruction* nextInstruction;
-  Assembler::Offset* offset;
+  Assembler::Block* assemblerBlock;
   unsigned start;
 };
 
@@ -2490,11 +2525,13 @@ compile(Context* c)
       e->logicalInstruction->machineOffset = a->offset();
     }
 
-    Event* predecessor = static_cast<Event*>(e->predecessors->value);
-    if (e->predecessors->next) {
-      setSites(c, e, predecessor->junctionSites);
-    } else if (predecessor->successors->next) {
-      setSites(c, e, predecessor->savedSites);
+    if (e->predecessors) {
+      Event* predecessor = static_cast<Event*>(e->predecessors->value);
+      if (e->predecessors->next) {
+        setSites(c, e, predecessor->junctionSites);
+      } else if (predecessor->successors->next) {
+        setSites(c, e, predecessor->savedSites);
+      }
     }
 
     populateSources(c, e);
@@ -2514,28 +2551,25 @@ compile(Context* c)
     if (e->next and e->logicalInstruction->lastEvent == e) {
       LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
       if (nextInstruction != e->next->logicalInstruction) {
-        a->endBlock();
-
         block->nextInstruction = nextInstruction;
-        block->offset = a->offset();
+        block->assemblerBlock = a->endBlock();
         block = ::block(c, e->next);
       }
     }
   }
 
-  a->endBlock();
-
   block->nextInstruction = 0;
-  block->offset = a->offset();
+  block->assemblerBlock = a->endBlock();
 
   block = firstBlock;
   while (block->nextInstruction) {
     Block* next = block->nextInstruction->firstEvent->block;
-    next->start = block->offset->resolve(block->start);
+    next->start = block->assemblerBlock->resolve
+      (block->start, next->assemblerBlock);
     block = next;
   }
 
-  return block->offset->resolve(block->start);
+  return block->assemblerBlock->resolve(block->start, 0);
 }
 
 unsigned
@@ -2599,8 +2633,11 @@ visit(Context* c, unsigned logicalIp)
 {
   assert(c, logicalIp < c->logicalCodeLength);
 
-  c->logicalCode[logicalIp] = new 
-    (c->zone->allocate(sizeof(LogicalInstruction))) LogicalInstruction;
+  if (c->logicalCode[logicalIp] == 0) {
+    c->logicalCode[logicalIp] = new 
+      (c->zone->allocate(sizeof(LogicalInstruction)))
+      LogicalInstruction(logicalIp);
+  }
 }
 
 class Client: public Assembler::Client {

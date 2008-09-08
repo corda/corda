@@ -168,6 +168,13 @@ class Assembler {
     virtual unsigned value() = 0;
   };
 
+  class Block {
+   public:
+    virtual ~Block() { }
+
+    virtual unsigned resolve(unsigned start, Block* next) = 0;
+  };
+
   class Architecture {
    public:
     virtual ~Architecture() { }
@@ -178,6 +185,8 @@ class Assembler {
     virtual int thread() = 0;
     virtual int returnLow() = 0;
     virtual int returnHigh() = 0;
+
+    virtual bool condensedAddressing() = 0;
 
     virtual bool reserved(int register_) = 0;
 
@@ -245,7 +254,7 @@ class Assembler {
 
   virtual Offset* offset() = 0;
 
-  virtual void endBlock() = 0;
+  virtual Block* endBlock() = 0;
 
   virtual unsigned length() = 0;
 
