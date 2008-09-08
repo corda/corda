@@ -49,21 +49,31 @@ isInt32(intptr_t v)
 }
 
 class Task;
+class AlignmentPadding;
+
+unsigned
+padding(AlignmentPadding* p, unsigned index, unsigned offset, unsigned limit);
 
 class MyBlock: public Assembler::Block {
  public:
-  MyBlock(unsigned offset): offset(offset), start(~0), size(0), next(0) { }
+  MyBlock(unsigned offset):
+    next(0), firstPadding(0), lastPadding(0), offset(offset), start(~0),
+    size(0)
+  { }
 
   virtual unsigned resolve(unsigned start, Assembler::Block* next) {
     this->start = start;
     this->next = static_cast<MyBlock*>(next);
-    return start + size;
+
+    return start + size + padding(firstPadding, start, offset, ~0);
   }
 
+  MyBlock* next;
+  AlignmentPadding* firstPadding;
+  AlignmentPadding* lastPadding;
   unsigned offset;
   unsigned start;
   unsigned size;
-  MyBlock* next;
 };
 
 class Context {
@@ -237,6 +247,36 @@ appendImmediateTask(Context* c, Promise* promise, unsigned offset)
 {
   c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
     (c->tasks, promise, offset);
+}
+
+class AlignmentPadding {
+ public:
+  AlignmentPadding(Context* c): offset(c->code.length()), next(0) {
+    if (c->lastBlock->firstPadding) {
+      c->lastBlock->lastPadding->next = this;
+    } else {
+      c->lastBlock->firstPadding = this;
+    }
+    c->lastBlock->lastPadding = this;
+  }
+
+  unsigned offset;
+  AlignmentPadding* next;
+};
+
+unsigned
+padding(AlignmentPadding* p, unsigned index, unsigned offset, unsigned limit)
+{
+  unsigned padding = 0;
+  for (; p; p = p->next) {
+    if (p->offset <= limit) {
+      index += p->offset - offset;
+      while ((index + padding + 1) % 4) {
+        ++ padding;
+      }
+    }
+  }
+  return padding;
 }
 
 void
@@ -418,6 +458,13 @@ callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
+alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c);
+  callC(c, size, a);
+}
+
+void
 longCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
@@ -528,10 +575,8 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
 
 void
 moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
-       unsigned bSize UNUSED, Assembler::Register* b)
+       unsigned bSize, Assembler::Register* b)
 {
-  assert(c, aSize == bSize);
-
   switch (aSize) {
   case 1:
     encode2(c, 0x0fbe, b->low, a, true);
@@ -543,16 +588,27 @@ moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
 
   case 4:
   case 8:
-    if (BytesPerWord == 4 and aSize == 8) {
-      Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
-      Assembler::Register bh(b->high);
-
-      moveMR(c, 4, a, 4, b);    
-      moveMR(c, 4, &ah, 4, &bh);
-    } else if (BytesPerWord == 8 and aSize == 4) {
-      encode(c, 0x63, b->low, a, true);
+    if (aSize == 4 and bSize == 8) {
+      if (BytesPerWord == 8) {
+        encode(c, 0x63, b->low, a, true);
+      } else {
+        assert(c, b->low == rax and b->high == rdx);
+        
+        moveMR(c, 4, a, 4, b);
+        moveRR(c, 4, b, 8, b);
+      }
     } else {
-      encode(c, 0x8b, b->low, a, true);
+      if (BytesPerWord == 4 and aSize == 8) {
+        Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+        Assembler::Register bh(b->high);
+
+        moveMR(c, 4, a, 4, b);    
+        moveMR(c, 4, &ah, 4, &bh);
+      } else if (BytesPerWord == 8 and aSize == 4) {
+        encode(c, 0x63, b->low, a, true);
+      } else {
+        encode(c, 0x8b, b->low, a, true);
+      }
     }
     break;
 
@@ -604,6 +660,31 @@ moveRM(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+moveAR(Context* c, unsigned aSize, Assembler::Address* a,
+       unsigned bSize, Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or (aSize == 4 and bSize == 4));
+
+  Assembler::Constant constant(a->address);
+  Assembler::Memory memory(b->low, 0, -1, 0);
+
+  moveCR(c, aSize, &constant, bSize, b);
+  moveMR(c, bSize, &memory, bSize, b);
+}
+
+void
+moveAM(Context* c, unsigned aSize, Assembler::Address* a,
+       unsigned bSize, Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or (aSize == 4 and bSize == 4));
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveAR(c, aSize, a, aSize, &tmp);
+  moveRM(c, aSize, &tmp, bSize, b);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
 moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
        unsigned bSize UNUSED, Assembler::Register* b)
 {
@@ -631,6 +712,45 @@ moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
       appendImmediateTask(c, a->value, c->code.length());
       c->code.appendAddress(static_cast<uintptr_t>(0));
     }
+  }
+}
+
+void
+moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
+       unsigned bSize, Assembler::Memory* b)
+{
+  int64_t v = a->value->value();
+
+  switch (bSize) {
+  case 1:
+    encode(c, 0xc6, 0, b, false);
+    c->code.append(a->value->value());
+    break;
+
+  case 2:
+    encode2(c, 0x66c7, 0, b, false);
+    c->code.append2(a->value->value());
+    break;
+
+  case 4:
+    encode(c, 0xc7, 0, b, false);
+    c->code.append4(a->value->value());
+    break;
+
+  case 8: {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
+
+    moveCM(c, 4, &al, 4, b);
+    moveCM(c, 4, &ah, 4, &bh);
+  } break;
+
+  default: abort(c);
   }
 }
 
@@ -791,7 +911,7 @@ subtractBorrowRR(Context* c, unsigned size, Assembler::Register* a,
 
 void
 subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
-           unsigned bSize, Assembler::Register* b)
+           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
 
@@ -809,13 +929,72 @@ subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+andRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+
+  if (BytesPerWord == 4 and aSize == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    andRR(c, 4, a, 4, b);
+    andRR(c, 4, &ah, 4, &bh);
+  } else {
+    if (aSize == 8) rex(c);
+    c->code.append(0x21);
+    c->code.append(0xc0 | (a->low << 3) | b->low);
+  }
+}
+
+void
+andCR(Context* c, unsigned aSize, Assembler::Constant* a,
+      unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+
+  int64_t v = a->value->value();
+
+  if (BytesPerWord == 4 and aSize == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+
+    andCR(c, 4, &al, 4, b);
+    andCR(c, 4, &ah, 4, &bh);
+  } else {
+    if (isInt32(v)) {
+      if (aSize == 8) rex(c);
+      if (isInt8(v)) {
+        c->code.append(0x83);
+        c->code.append(0xe0 | b->low);
+        c->code.append(v);
+      } else {
+        c->code.append(0x81);
+        c->code.append(0xe0 | b->low);
+        c->code.append4(v);
+      }
+    } else {
+      Assembler::Register tmp(c->client->acquireTemporary());
+      moveCR(c, aSize, a, aSize, &tmp);
+      andRR(c, aSize, &tmp, bSize, b);
+      c->client->releaseTemporary(tmp.low);
+    }
+  }
+}
+
+void
 populateTables(ArchitectureContext* c)
 {
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
 
   const OperandType C = ConstantOperand;
-  //const OperandType A = AddressOperand;
+  const OperandType A = AddressOperand;
   const OperandType R = RegisterOperand;
   const OperandType M = MemoryOperand;
 
@@ -826,6 +1005,8 @@ populateTables(ArchitectureContext* c)
   zo[Return] = return_;
 
   uo[index(Call, C)] = CAST1(callC);
+
+  uo[index(AlignedCall, C)] = CAST1(alignedCallC);
 
   uo[index(LongCall, C)] = CAST1(longCallC);
 
@@ -839,10 +1020,14 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, C, R)] = CAST2(moveCR);
   bo[index(Move, M, R)] = CAST2(moveMR);
   bo[index(Move, R, M)] = CAST2(moveRM);
+  bo[index(Move, C, M)] = CAST2(moveCM);
+  bo[index(Move, A, M)] = CAST2(moveAM);
 
   bo[index(Add, C, R)] = CAST2(addCR);
 
   bo[index(Subtract, C, R)] = CAST2(subtractCR);
+
+  bo[index(And, C, R)] = CAST2(andCR);
 }
 
 class MyArchitecture: public Assembler::Architecture {
@@ -1054,7 +1239,9 @@ class MyOffset: public Assembler::Offset {
   
   virtual unsigned value() {
     assert(c, resolved());
-    return block->start + (offset - block->offset);
+
+    return block->start + (offset - block->offset)
+      + padding(block->firstPadding, block->start, block->offset, offset);
   }
 
   Context* c;
