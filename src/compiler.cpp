@@ -130,7 +130,7 @@ class LogicalInstruction {
   LogicalInstruction* immediatePredecessor;
   Stack* stack;
   Value** locals;
-  Assembler::Offset* machineOffset;
+  Promise* machineOffset;
   int index;
   bool stackSaved;
 };
@@ -301,7 +301,7 @@ class CodePromise: public Promise {
     c(c), offset(0), next(next)
   { }
 
-  CodePromise(Context* c, Assembler::Offset* offset):
+  CodePromise(Context* c, Promise* offset):
     c(c), offset(offset), next(0)
   { }
 
@@ -318,7 +318,7 @@ class CodePromise: public Promise {
   }
 
   Context* c;
-  Assembler::Offset* offset;
+  Promise* offset;
   CodePromise* next;
 };
 
@@ -450,18 +450,19 @@ localOffset(Context* c, int v)
   int parameterFootprint = c->parameterFootprint;
   int frameSize = alignedFrameSize(c);
 
-  if (v < parameterFootprint) {
-    return (frameSize
-            + parameterFootprint
-            + (c->arch->frameFooterSize() * 2)
-            + c->arch->frameHeaderSize()
-            - v) * BytesPerWord;
-  } else {
-    return (frameSize
-            + parameterFootprint
-            + c->arch->frameFooterSize()
-            - v) * BytesPerWord;
-  }
+  int offset = ((v < parameterFootprint) ?
+                (frameSize
+                 + parameterFootprint
+                 + (c->arch->frameFooterSize() * 2)
+                 + c->arch->frameHeaderSize()
+                 - v) :
+                (frameSize
+                 + parameterFootprint
+                 + c->arch->frameFooterSize()
+                 - v)) * BytesPerWord;
+
+  assert(c, offset >= 0);
+  return offset;
 }
 
 bool
@@ -1460,7 +1461,7 @@ codePromise(Context* c, Event* e)
 }
 
 CodePromise*
-codePromise(Context* c, Assembler::Offset* offset)
+codePromise(Context* c, Promise* offset)
 {
   return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
 }
@@ -2194,13 +2195,13 @@ class BoundsCheckEvent: public Event {
 
     ConstantSite* constant = findConstantSite(c, index);
     CodePromise* nextPromise = codePromise
-      (c, static_cast<Assembler::Offset*>(0));
+      (c, static_cast<Promise*>(0));
     CodePromise* outOfBoundsPromise = 0;
 
     if (constant) {
       expect(c, constant->value.value->value() >= 0);      
     } else {
-      outOfBoundsPromise = codePromise(c, static_cast<Assembler::Offset*>(0));
+      outOfBoundsPromise = codePromise(c, static_cast<Promise*>(0));
 
       apply(c, Compare, 4, constantSite(c, resolved(c, 0)), 4, index->source);
 
@@ -2251,6 +2252,36 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
 
   new (c->zone->allocate(sizeof(BoundsCheckEvent))) BoundsCheckEvent
     (c, object, lengthOffset, index, handler);
+}
+
+class ParameterEvent: public Event {
+ public:
+  ParameterEvent(Context* c, Value* value, unsigned size, int index):
+    Event(c), value(value), size(size), index(index)
+  { }
+
+  virtual void compile(Context* c) {
+    if (DebugCompile) {
+      fprintf(stderr, "ParameterEvent.compile\n");
+    }
+
+    addSite(c, stack, locals, size, value, frameSite(c, index));
+  }
+
+  Value* value;
+  unsigned size;
+  int index;
+};
+
+void
+appendParameter(Context* c, Value* value, unsigned size, int index)
+{
+  if (DebugAppend) { 
+    fprintf(stderr, "appendParameter\n");
+  }
+
+  new (c->zone->allocate(sizeof(ParameterEvent))) ParameterEvent
+    (c, value, size, index);
 }
 
 // class ClobberLocalEvent: public Event {
@@ -2550,18 +2581,17 @@ compile(Context* c)
       p->offset = a->offset();
     }
 
-    if (e->next and e->logicalInstruction->lastEvent == e) {
+    if (e->logicalInstruction->lastEvent == e) {
       LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
-      if (nextInstruction != e->next->logicalInstruction) {
+      if (e->next == 0 or nextInstruction != e->next->logicalInstruction) {
         block->nextInstruction = nextInstruction;
-        block->assemblerBlock = a->endBlock();
-        block = ::block(c, e->next);
+        block->assemblerBlock = a->endBlock(e->next != 0);
+        if (e->next) {
+          block = ::block(c, e->next);
+        }
       }
     }
   }
-
-  block->nextInstruction = 0;
-  block->assemblerBlock = a->endBlock();
 
   block = firstBlock;
   while (block->nextInstruction) {
@@ -2710,6 +2740,7 @@ class MyCompiler: public Compiler {
 
     c.state->locals = static_cast<Value**>
       (c.zone->allocate(sizeof(Value*) * localFootprint));
+
     memset(c.state->locals, 0, sizeof(Value*) * localFootprint);
   }
 
@@ -2923,6 +2954,14 @@ class MyCompiler: public Compiler {
 
   virtual void return_(unsigned size, Operand* value) {
     appendReturn(&c, size, static_cast<Value*>(value));
+  }
+
+  virtual void initParameter(unsigned size, unsigned index) {
+    assert(&c, index < c.parameterFootprint);
+
+    Value* v = value(&c);
+    appendParameter(&c, v, size, index);
+    c.state->locals[index] = v;
   }
 
   virtual void storeLocal(unsigned, Operand* src, unsigned index) {

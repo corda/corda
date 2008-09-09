@@ -350,18 +350,22 @@ alignedFrameSizeWithParameters(MyThread* t, object method)
 int
 localOffset(MyThread* t, int v, object method)
 {
-  int parameterFootprint = methodParameterFootprint(t, method) * BytesPerWord;
+  int parameterFootprint = methodParameterFootprint(t, method);
+  int frameSize = alignedFrameSize(t, method);
 
-  v *= BytesPerWord;
-  if (v < parameterFootprint) {
-    return alignedFrameSize(t, method)
-      + parameterFootprint
-      + t->arch->frameFooterSize()
-      + t->arch->frameHeaderSize()
-      - v;
-  } else {
-    return alignedFrameSize(t, method) - t->arch->frameHeaderSize() - v;
-  }
+  int offset = ((v < parameterFootprint) ?
+                (frameSize
+                 + parameterFootprint
+                 + (t->arch->frameFooterSize() * 2)
+                 + t->arch->frameHeaderSize()
+                 - v) :
+                (frameSize
+                 + parameterFootprint
+                 + t->arch->frameFooterSize()
+                 - v)) * BytesPerWord;
+
+  assert(t, offset >= 0);
+  return offset;
 }
 
 inline object*
@@ -1837,6 +1841,26 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     if (ip == 0) {
       handleEntrance(t, frame);
+
+      int index = 0;
+      for (MethodSpecIterator it
+             (t, reinterpret_cast<const char*>
+              (&byteArrayBody(t, methodSpec(t, context->method), 0)));
+           it.hasNext();)
+      {
+        switch (*it.next()) {
+        case 'J':
+        case 'D':
+          c->initParameter(2, index);
+          index += 2;
+          break;
+
+        default:
+          c->initParameter(1, index);
+          index += 1;
+          break;
+        }
+      }
     } else if (exceptionHandler) {
       exceptionHandler = false;
 
@@ -2599,10 +2623,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint8_t index = codeBody(t, code, ip++);
       int8_t count = codeBody(t, code, ip++);
 
-      Compiler::Operand* a = c->memory
-        (c->stack(), localOffset(t, index, context->method));
-
-      c->storeLocal(4, c->add(4, c->constant(count), a), index);
+      c->storeLocal
+        (4, c->add(4, c->constant(count), c->loadLocal(4, index)), index);
     } break;
 
     case iload:
@@ -3313,10 +3335,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case ret:
-      c->jmp
-        (c->memory
-         (c->stack(), localOffset
-          (t, codeBody(t, code, ip), context->method)));
+      c->jmp(c->loadLocal(BytesPerWord, codeBody(t, code, ip)));
       return;
 
     case return_:
@@ -3398,10 +3417,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         uint16_t index = codeReadInt16(t, code, ip);
         uint16_t count = codeReadInt16(t, code, ip);
 
-        Compiler::Operand* a = c->memory
-          (c->stack(), localOffset(t, index, context->method));
-
-        c->storeLocal(4, c->add(4, c->constant(count), a), index);
+        c->storeLocal
+          (4, c->add(4, c->constant(count), c->loadLocal(4, index)), index);
       } break;
 
       case iload: {
@@ -3421,10 +3438,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       } break;
 
       case ret:
-        c->jmp
-          (c->memory
-           (c->stack(), localOffset
-            (t, codeReadInt16(t, code, ip), context->method)));
+        c->jmp(c->loadLocal(BytesPerWord, codeReadInt16(t, code, ip)));
         return;
 
       default: abort(t);
@@ -4960,7 +4974,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
 
-    a->endBlock()->resolve(0, 0);
+    a->endBlock(false)->resolve(0, 0);
   }
 
   ThunkContext nativeContext(t);
@@ -4982,7 +4996,7 @@ compileThunks(MyThread* t, MyProcessor* p)
 
     a->apply(Return);
 
-    a->endBlock()->resolve(0, 0);
+    a->endBlock(false)->resolve(0, 0);
   }
 
   ThunkContext aioobContext(t);
@@ -5001,7 +5015,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     Assembler::Constant proc(&(aioobContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
-    a->endBlock()->resolve(0, 0);
+    a->endBlock(false)->resolve(0, 0);
   }
 
   ThunkContext tableContext(t);
@@ -5013,7 +5027,7 @@ compileThunks(MyThread* t, MyProcessor* p)
     Assembler::Constant proc(&(tableContext.promise));
     a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
 
-    a->endBlock()->resolve(0, 0);
+    a->endBlock(false)->resolve(0, 0);
   }
 
   p->thunkSize = pad(tableContext.context.assembler->length());

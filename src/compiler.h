@@ -92,6 +92,7 @@ class Compiler {
 
   virtual void return_(unsigned size, Operand* value) = 0;
 
+  virtual void initParameter(unsigned size, unsigned index) = 0;
   virtual void storeLocal(unsigned size, Operand* src, unsigned index) = 0;
   virtual Operand* loadLocal(unsigned size, unsigned index) = 0;
 

@@ -157,17 +157,6 @@ class Assembler {
     virtual void restore(int r) = 0;
   };
 
-  class Offset {
-   public:
-    virtual ~Offset() { }
-
-    virtual unsigned resolve(unsigned start) = 0;
-
-    virtual bool resolved() = 0;
-
-    virtual unsigned value() = 0;
-  };
-
   class Block {
    public:
     virtual ~Block() { }
@@ -252,9 +241,9 @@ class Assembler {
 
   virtual void writeTo(uint8_t* dst) = 0;
 
-  virtual Offset* offset() = 0;
+  virtual Promise* offset() = 0;
 
-  virtual Block* endBlock() = 0;
+  virtual Block* endBlock(bool startNew) = 0;
 
   virtual unsigned length() = 0;
 
