@@ -598,8 +598,6 @@ class Frame {
     sp(f->sp),
     level(f->level + 1)
   {
-    c->pushState();
-
     memcpy(stackMap, f->stackMap, codeMaxStack
            (t, methodCode(t, context->method)));
 
@@ -610,12 +608,6 @@ class Frame {
 
   ~Frame() {
     if (t->exception == 0) {
-      if (level > 0) {
-        c->saveStack();
-        c->popState();
-        c->resetStack();
-      }
-
       if (level > 1) {
         context->eventLog.append(PopContextEvent);      
       }
@@ -2518,9 +2510,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       } else {
         c->jne(target);
       }
-      
+
+      Compiler::State* state = c->saveState();
+
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
+
+      c->restoreState(state);
     } break;
 
     case if_icmpeq:
@@ -2558,8 +2554,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         break;
       }
       
+      Compiler::State* state = c->saveState();
+
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
+
+      c->restoreState(state);
     } break;
 
     case ifeq:
@@ -2596,8 +2596,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         break;
       }
 
+      Compiler::State* state = c->saveState();
+
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
+
+      c->restoreState(state);
     } break;
 
     case ifnull:
@@ -2614,9 +2618,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       } else {
         c->jne(target);
       }
+
+      Compiler::State* state = c->saveState();
       
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
+
+      c->restoreState(state);
     } break;
 
     case iinc: {
@@ -2857,7 +2865,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, newIp < codeLength(t, code));
 
-      c->saveStack();
+      // todo: flush stack to memory here
+      Compiler::State* state = c->saveState();
 
       frame->pushAddress(frame->machineIp(ip));
       c->jmp(frame->machineIp(newIp));
@@ -2868,6 +2877,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (UNLIKELY(t->exception)) return;
 
       frame->pop(1);
+
+      c->restoreState(state);
     } break;
 
     case l2d: {
@@ -3036,9 +3047,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           0, 0, BytesPerWord,
           4, key, start, c->constant(pairCount), default_));
 
+      Compiler::State* state = c->saveState();
+
       for (int32_t i = 0; i < pairCount; ++i) {
         compile(t, frame, ipTable[i]);
         if (UNLIKELY(t->exception)) return;
+
+        c->restoreState(state);
       }
 
       ip = defaultIp;
@@ -3395,9 +3410,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->mark(defaultCase);
       c->jmp(frame->machineIp(defaultIp));
 
+      Compiler::State* state = c->saveState();
+
       for (int32_t i = 0; i < top - bottom + 1; ++i) {
         compile(t, frame, ipTable[i]);
         if (UNLIKELY(t->exception)) return;
+
+        c->restoreState(state);
       }
 
       ip = defaultIp;
@@ -3904,6 +3923,8 @@ compile(MyThread* t, Context* context)
     }
   }
 
+  Compiler::State* state = c->saveState();
+
   compile(t, &frame, 0);
   if (UNLIKELY(t->exception)) return 0;
 
@@ -3922,6 +3943,8 @@ compile(MyThread* t, Context* context)
       bool progress = false;
 
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
+        c->restoreState(state);
+
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
         unsigned start = exceptionHandlerStart(eh);
 

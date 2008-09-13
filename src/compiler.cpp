@@ -31,6 +31,7 @@ class RegisterSite;
 class Event;
 class PushEvent;
 class Read;
+class MultiRead;
 class Block;
 
 void NO_RETURN abort(Context*);
@@ -105,17 +106,19 @@ class Stack: public Compiler::StackElement {
   Stack* next;
 };
 
-class State {
+class MyState: public Compiler::State {
  public:
-  State(State* next, Stack* stack, Value** locals):
+  MyState(Stack* stack, Value** locals, Cell* predecessors, MultiRead** reads):
     stack(stack),
     locals(locals),
-    next(next)
+    predecessors(predecessors),
+    reads(reads)
   { }
 
   Stack* stack;
   Value** locals;
-  State* next;
+  Cell* predecessors;
+  MultiRead** reads;
 };
 
 class LogicalInstruction {
@@ -163,7 +166,7 @@ class ConstantPoolNode {
 class Read {
  public:
   Read():
-    next(0), value(0), event(0), eventNext(0)
+    value(0), event(0), eventNext(0)
   { }
 
   virtual ~Read() { }
@@ -178,8 +181,11 @@ class Read {
   virtual bool valid() = 0;
 
   virtual unsigned size(Context* c) = 0;
+
+  virtual void append(Context* c, Read* r) = 0;
+
+  virtual Read* next() = 0;
   
-  Read* next;
   Value* value;
   Event* event;
   Read* eventNext;
@@ -200,6 +206,10 @@ class Value: public Compiler::Operand {
   Value(Site* site, Site* target):
     reads(0), lastRead(0), sites(site), source(0), target(target)
   { }
+
+  virtual ~Value() { }
+
+  virtual void addPredecessor(Context*, Event*) { }
   
   Read* reads;
   Read* lastRead;
@@ -222,7 +232,9 @@ class Context {
     arch(assembler->arch()),
     zone(zone),
     client(client),
-    state(new (zone->allocate(sizeof(State))) State(0, 0, 0)),
+    stack(0),
+    locals(0),
+    predecessors(0),
     logicalCode(0),
     registers
     (static_cast<Register**>
@@ -254,7 +266,9 @@ class Context {
   Assembler::Architecture* arch;
   Zone* zone;
   Compiler::Client* client;
-  State* state;
+  Stack* stack;
+  Value** locals;
+  Cell* predecessors;
   LogicalInstruction** logicalCode;
   Register** registers;
   ConstantPoolNode* firstConstant;
@@ -383,10 +397,31 @@ cons(Context* c, void* value, Cell* next)
   return new (c->zone->allocate(sizeof(Cell))) Cell(next, value);
 }
 
+Cell*
+append(Context* c, Cell* first, Cell* second)
+{
+  if (first) {
+    if (second) {
+      Cell* start = cons(c, first->value, second);
+      Cell* end = start;
+      for (Cell* cell = first->next; cell; cell = cell->next) {
+        Cell* n = cons(c, cell->value, second);
+        end->next = n;
+        end = n;
+      }
+      return start;
+    } else {
+      return first;
+    }
+  } else {
+    return second;
+  }
+}
+
 class Event {
  public:
   Event(Context* c):
-    next(0), stack(c->state->stack), locals(c->state->locals), promises(0),
+    next(0), stack(c->stack), locals(c->locals), promises(0),
     reads(0), junctionSites(0), savedSites(0), predecessors(0), successors(0),
     block(0), logicalInstruction(c->logicalCode[c->logicalIp]), readCount(0),
     sequence(c->nextSequence++)
@@ -395,8 +430,6 @@ class Event {
 
     if (c->lastEvent) {
       c->lastEvent->next = this;
-      predecessors = cons(c, c->lastEvent, 0);
-      c->lastEvent->successors = cons(c, this, c->lastEvent->successors);
     } else {
       c->firstEvent = this;
     }
@@ -542,7 +575,7 @@ nextRead(Context* c, Value* v)
 {
 //   fprintf(stderr, "pop read %p from %p; next: %p\n", v->reads, v, v->reads->next);
 
-  v->reads = v->reads->next;
+  v->reads = v->reads->next();
   if (not live(v)) {
     clearSites(c, v);
   }
@@ -948,7 +981,7 @@ class SingleRead: public Read {
  public:
   SingleRead(unsigned size, uint8_t typeMask, uint64_t registerMask,
              int frameIndex):
-    size_(size), typeMask(typeMask), registerMask(registerMask),
+    next_(0), size_(size), typeMask(typeMask), registerMask(registerMask),
     frameIndex(frameIndex)
   { }
 
@@ -976,6 +1009,16 @@ class SingleRead: public Read {
     return size_;
   }
 
+  virtual void append(Context* c, Read* r) {
+    assert(c, next_ == 0);
+    next_ = r;
+  }
+
+  virtual Read* next() {
+    return next_;
+  }
+
+  Read* next_;
   unsigned size_;
   uint8_t typeMask;
   uint64_t registerMask;
@@ -1022,7 +1065,7 @@ fixedRegisterRead(Context* c, unsigned size, int low, int high = NoRegister)
 class MultiRead: public Read {
  public:
   MultiRead():
-    reads(0)
+    reads(0), lastRead(0), current(0), visited(false)
   { }
 
   virtual Site* pickSite(Context* c, Value* value) {
@@ -1046,18 +1089,27 @@ class MultiRead: public Read {
   virtual void intersect(uint8_t* typeMask, uint64_t* registerMask,
                          int* frameIndex)
   {
-    for (Cell* cell = reads; cell; cell = cell->next) {
-      Read* r = static_cast<Read*>(cell->value);
-      r->intersect(typeMask, registerMask, frameIndex);
+    if (not visited) {
+      visited = true;
+      for (Cell* cell = reads; cell; cell = cell->next) {
+        Read* r = static_cast<Read*>(cell->value);
+        r->intersect(typeMask, registerMask, frameIndex);
+      }
+      visited = false;
     }
   }
 
   virtual bool valid() {
-    for (Cell* cell = reads; cell; cell = cell->next) {
-      Read* r = static_cast<Read*>(cell->value);
-      if (r->valid()) {
-        return true;
+    if (not visited) {
+      visited = true;
+      for (Cell* cell = reads; cell; cell = cell->next) {
+        Read* r = static_cast<Read*>(cell->value);
+        if (r->valid()) {
+          visited = false;
+          return true;
+        }
       }
+      visited = false;
     }
     return false;
   }
@@ -1066,7 +1118,30 @@ class MultiRead: public Read {
     return static_cast<Read*>(reads->value)->size(c);
   }
 
+  virtual void append(Context* c, Read* r) {
+    Cell* cell = cons(c, r, 0);
+    if (lastRead == 0) {
+      reads = cell;
+      current = cell;
+    } else {
+      lastRead->next = cell;
+    }
+    lastRead = cell;
+  }
+
+  virtual Read* next() {
+    return static_cast<Read*>(current->value);
+  }
+
+  Read* step() {
+    current = current->next;
+    return next();
+  }
+
   Cell* reads;
+  Cell* lastRead;
+  Cell* current;
+  bool visited;
 };
 
 MultiRead*
@@ -1386,42 +1461,21 @@ apply(Context* c, TernaryOperation op,
 }
 
 void
-insertRead(Context*, Event* event, int sequence, Value* v, Read* r)
-{
-  r->value = v;
-  r->event = event;
-  r->eventNext = event->reads;
-  event->reads = r;
-  ++ event->readCount;
-
-  //  fprintf(stderr, "add read %p to %p\n", r, v);
-
-  if (sequence >= 0) {
-    for (Read** p = &(v->reads); *p;) {
-      if ((*p)->event->sequence > static_cast<unsigned>(sequence)) {
-        r->next = *p;
-        *p = r;
-        break;
-      } else {
-        p = &((*p)->next);
-      }
-    }
-  }
-
-  if (r->next == 0) {
-    if (v->lastRead) {
-      v->lastRead->next = r;
-    } else {
-      v->reads = r;
-    }
-    v->lastRead = r;
-  }
-}
-
-void
 addRead(Context* c, Value* v, Read* r)
 {
-  insertRead(c, c->logicalCode[c->logicalIp]->lastEvent, -1, v, r);
+  Event* e = c->logicalCode[c->logicalIp]->lastEvent;
+  r->value = v;
+  r->event = e;
+  r->eventNext = e->reads;
+  e->reads = r;
+  ++ e->readCount;
+
+  if (v->lastRead) {
+    v->lastRead->append(c, r);
+  } else {
+    v->reads = r;
+  }
+  v->lastRead = r;
 }
 
 void
@@ -1621,7 +1675,7 @@ class MoveEvent: public Event {
       fprintf(stderr, "MoveEvent.compile\n");
     }
 
-    bool isLoad = not valid(src->reads->next);
+    bool isLoad = not valid(src->reads->next());
     bool isStore = not valid(dst->reads);
 
     Site* target = targetOrRegister(c, dst);
@@ -1804,8 +1858,8 @@ void
 maybePreserve(Context* c, Stack* stack, Value** locals, unsigned size,
               Value* v, Site* s)
 {
-  if (valid(v->reads->next) and v->sites->next == 0) {
-    preserve(c, stack, locals, size, v, s, v->reads->next);
+  if (valid(v->reads->next()) and v->sites->next == 0) {
+    preserve(c, stack, locals, size, v, s, v->reads->next());
   }
 }
 
@@ -1863,6 +1917,24 @@ value(Context* c, Site* site = 0, Site* target = 0)
   return new (c->zone->allocate(sizeof(Value))) Value(site, target);
 }
 
+class LabelValue: public Value {
+ public:
+  LabelValue(Site* site): Value(site, 0), predecessors(0) { }
+
+  virtual void addPredecessor(Context* c, Event* e) {
+    predecessors = cons(c, e, predecessors);
+  }
+  
+  Cell* predecessors;
+};
+
+LabelValue*
+labelValue(Context* c)
+{
+  return new (c->zone->allocate(sizeof(LabelValue))) LabelValue
+    (constantSite(c, static_cast<Promise*>(0)));
+}
+
 Stack*
 stack(Context* c, Value* value, unsigned size, unsigned index, Stack* next)
 {
@@ -1882,16 +1954,16 @@ push(Context* c, unsigned size, Value* v)
 {
   assert(c, ceiling(size, BytesPerWord));
 
-  c->state->stack = stack(c, v, ceiling(size, BytesPerWord), c->state->stack);
+  c->stack = stack(c, v, ceiling(size, BytesPerWord), c->stack);
 }
 
 Value*
 pop(Context* c, unsigned size UNUSED)
 {
-  Stack* s = c->state->stack;
+  Stack* s = c->stack;
   assert(c, ceiling(size, BytesPerWord) == s->size);
 
-  c->state->stack = s->next;
+  c->stack = s->next;
   return s->value;
 }
 
@@ -1915,13 +1987,13 @@ appendCombine(Context* c, TernaryOperation type,
                 &thunk);
 
   if (thunk) {
-    Stack* oldStack = c->state->stack;
+    Stack* oldStack = c->stack;
 
     ::push(c, secondSize, second);
     ::push(c, firstSize, first);
 
-    Stack* argumentStack = c->state->stack;
-    c->state->stack = oldStack;
+    Stack* argumentStack = c->stack;
+    c->stack = oldStack;
 
     appendCall
       (c, value(c, constantSite(c, c->client->getThunk(type, resultSize))),
@@ -2172,7 +2244,8 @@ appendBranch(Context* c, UnaryOperation type, Value* address)
     fprintf(stderr, "appendBranch\n");
   }
 
-  new (c->zone->allocate(sizeof(BranchEvent))) BranchEvent(c, type, address);
+  new (c->zone->allocate(sizeof(BranchEvent)))
+    BranchEvent(c, type, address);
 }
 
 class BoundsCheckEvent: public Event {
@@ -2282,6 +2355,21 @@ appendParameter(Context* c, Value* value, unsigned size, int index)
 
   new (c->zone->allocate(sizeof(ParameterEvent))) ParameterEvent
     (c, value, size, index);
+}
+
+class DummyEvent: public Event {
+ public:
+  DummyEvent(Context* c):
+    Event(c)
+  { }
+
+  virtual void compile(Context*) { }
+};
+
+void
+appendDummy(Context* c)
+{
+  new (c->zone->allocate(sizeof(DummyEvent))) DummyEvent(c);
 }
 
 // class ClobberLocalEvent: public Event {
@@ -2516,7 +2604,7 @@ next(Context* c, LogicalInstruction* i)
 {
   for (unsigned n = i->index + 1; n < c->logicalCodeLength; ++n) {
     i = c->logicalCode[n];
-    if (i and i->firstEvent) return i;
+    if (i) return i;
   }
   return 0;
 }
@@ -2615,48 +2703,51 @@ count(Stack* s)
   return c;
 }
 
-void
-pushState(Context* c)
+MyState*
+saveState(Context* c)
 {
-  if (DebugAppend) {
-    unsigned count = 0; for (State* s = c->state; s; s = s->next) ++ count;
-    fprintf(stderr, "push at level %d\n", count);
-    count = 0; for (Stack* s = c->state->stack; s; s = s->next) ++ count;
-    fprintf(stderr, "stack count: %d\n", count);
-  }
+  MultiRead** reads;
 
-  c->state = new (c->zone->allocate(sizeof(State)))
-    State(c->state, c->state->stack, c->state->locals);
-}
+  if (c->predecessors) {
+    reads = static_cast<MultiRead**>
+      (c->zone->allocate(sizeof(MultiRead*) * frameFootprint(c, c->stack)));
 
-void
-saveStack(Context* c)
-{
-  if (c->logicalIp >= 0 and not c->logicalCode[c->logicalIp]->stackSaved) {
-    LogicalInstruction* i = c->logicalCode[c->logicalIp];
-    i->stackSaved = true;
-    i->stack = c->state->stack;
-    i->locals = c->state->locals;
-
-    if (DebugAppend) {
-      unsigned count = 0;
-      for (Stack* s = c->state->stack; s; s = s->next) ++ count;
-      fprintf(stderr, "stack count after ip %d: %d\n", c->logicalIp, count);
+    unsigned index = 0;
+    for (unsigned i = 0; i < c->localFootprint; ++i) {
+      MultiRead* r = multiRead(c);
+      addRead(c, c->locals[i], r);
+      reads[index++] = r;
     }
+  
+    for (Stack* s = c->stack; s; s = s->next) {
+      MultiRead* r = multiRead(c);
+      addRead(c, s->value, r);
+      reads[index++] = r;
+    }
+  } else {
+    reads = 0;
   }
+
+  return new (c->zone->allocate(sizeof(MyState)))
+    MyState(c->stack, c->locals, c->predecessors, reads);
 }
 
 void
-popState(Context* c)
+restoreState(Context* c, MyState* s)
 {
-  c->state = new (c->zone->allocate(sizeof(State)))
-    State(c->state->next->next, c->state->next->stack, c->state->next->locals);
- 
-  if (DebugAppend) {
-    unsigned count = 0; for (State* s = c->state; s; s = s->next) ++ count;
-    fprintf(stderr, "pop to level %d\n", count);
-    count = 0; for (Stack* s = c->state->stack; s; s = s->next) ++ count;
-    fprintf(stderr, "stack count: %d\n", count);
+  c->stack = s->stack;
+  c->locals = s->locals;
+  c->predecessors = s->predecessors;
+
+  if (c->predecessors) {
+    unsigned index = 0;
+    for (unsigned i = 0; i < c->localFootprint; ++i) {
+      c->locals[i]->reads = s->reads[index++]->step();
+    }
+  
+    for (Stack* stack = c->stack; stack; stack = stack->next) {
+      stack->value->reads = s->reads[index++]->step();
+    }
   }
 }
 
@@ -2664,6 +2755,16 @@ void
 visit(Context* c, unsigned logicalIp)
 {
   assert(c, logicalIp < c->logicalCodeLength);
+
+  if (c->predecessors) {
+    c->lastEvent->predecessors = c->predecessors;
+    c->predecessors = cons(c, c->lastEvent, 0);
+
+    for (Cell* cell = c->lastEvent->predecessors; cell; cell = cell->next) {
+      Event* p = static_cast<Event*>(cell->value);
+      p->successors = cons(c, c->lastEvent, p->successors);
+    }
+  }
 
   if (c->logicalCode[logicalIp] == 0) {
     c->logicalCode[logicalIp] = new 
@@ -2710,20 +2811,12 @@ class MyCompiler: public Compiler {
     assembler->setClient(&client);
   }
 
-  virtual void pushState() {
-    ::pushState(&c);
+  virtual State* saveState() {
+    return ::saveState(&c);
   }
 
-  virtual void popState() {
-    ::popState(&c);
-  }
-
-  virtual void saveStack() {
-    ::saveStack(&c);
-  }
-
-  virtual void resetStack() {
-    // todo: anything?
+  virtual void restoreState(State* state) {
+    ::restoreState(&c, static_cast<MyState*>(state));
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -2738,10 +2831,10 @@ class MyCompiler: public Compiler {
       (c.zone->allocate(sizeof(LogicalInstruction*) * logicalCodeLength));
     memset(c.logicalCode, 0, sizeof(LogicalInstruction*) * logicalCodeLength);
 
-    c.state->locals = static_cast<Value**>
+    c.locals = static_cast<Value**>
       (c.zone->allocate(sizeof(Value*) * localFootprint));
 
-    memset(c.state->locals, 0, sizeof(Value*) * localFootprint);
+    memset(c.locals, 0, sizeof(Value*) * localFootprint);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
@@ -2753,9 +2846,11 @@ class MyCompiler: public Compiler {
       fprintf(stderr, " -- ip: %d\n", logicalIp);
     }
 
-    visit(&c, logicalIp);
+    if (c.logicalIp >= 0 and c.logicalCode[c.logicalIp]->lastEvent == 0) {
+      appendDummy(&c);
+    }
 
-    ::saveStack(&c);
+    visit(&c, logicalIp);
 
     c.logicalIp = logicalIp;
   }
@@ -2823,12 +2918,12 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* stackTop() {
-    Site* s = frameSite(&c, c.state->stack->index);
+    Site* s = frameSite(&c, c.stack->index);
     return value(&c, s, s);
   }
 
   virtual Operand* label() {
-    return value(&c, ::constantSite(&c, static_cast<Promise*>(0)));
+    return labelValue(&c);
   }
 
   Promise* machineIp() {
@@ -2836,20 +2931,18 @@ class MyCompiler: public Compiler {
   }
 
   virtual void mark(Operand* label) {
-    for (Site* s = static_cast<Value*>(label)->sites; s; s = s->next) {
-      if (s->type(&c) == ConstantOperand) {
-        static_cast<ConstantSite*>(s)->value.value = machineIp();
-        return;
-      }
-    }
-    abort(&c);
+    LabelValue* v = static_cast<LabelValue*>(label);
+    assert(&c, v->sites);
+    assert(&c, v->sites->next == 0);
+    assert(&c, v->sites->type(&c) == ConstantOperand);
+    static_cast<ConstantSite*>(v->sites)->value.value = machineIp();
+    c.predecessors = append(&c, v->predecessors, c.predecessors);
   }
 
   virtual void push(unsigned size) {
     assert(&c, ceiling(size, BytesPerWord));
 
-    c.state->stack = ::stack
-      (&c, value(&c), ceiling(size, BytesPerWord), c.state->stack);
+    c.stack = ::stack(&c, value(&c), ceiling(size, BytesPerWord), c.stack);
   }
 
   virtual void push(unsigned size, Operand* value) {
@@ -2862,15 +2955,15 @@ class MyCompiler: public Compiler {
 
   virtual void pushed() {
     Value* v = value(&c);
-    c.state->stack = ::stack(&c, v, 1, c.state->stack);
+    c.stack = ::stack(&c, v, 1, c.stack);
   }
 
   virtual void popped() {
-    c.state->stack = c.state->stack->next;
+    c.stack = c.stack->next;
   }
 
   virtual StackElement* top() {
-    return c.state->stack;
+    return c.stack;
   }
 
   virtual unsigned size(StackElement* e) {
@@ -2882,7 +2975,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* peek(unsigned size UNUSED, unsigned index) {
-    Stack* s = c.state->stack;
+    Stack* s = c.stack;
     for (unsigned i = index; i > 0;) {
       i -= s->size;
       s = s->next;
@@ -2920,17 +3013,17 @@ class MyCompiler: public Compiler {
 
     va_end(a);
 
-    Stack* oldStack = c.state->stack;
+    Stack* oldStack = c.stack;
     Stack* bottomArgument = 0;
 
     for (int i = index - 1; i >= 0; --i) {
       ::push(&c, argumentSizes[i], arguments[i]);
       if (i == index - 1) {
-        bottomArgument = c.state->stack;
+        bottomArgument = c.stack;
       }
     }
-    Stack* argumentStack = c.state->stack;
-    c.state->stack = oldStack;
+    Stack* argumentStack = c.stack;
+    c.stack = oldStack;
 
     Value* result = value(&c);
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
@@ -2947,7 +3040,7 @@ class MyCompiler: public Compiler {
   {
     Value* result = value(&c);
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
-               resultSize, c.state->stack, 0, argumentFootprint);
+               resultSize, c.stack, 0, argumentFootprint);
 
     return result;
   }
@@ -2961,27 +3054,32 @@ class MyCompiler: public Compiler {
 
     Value* v = value(&c);
     appendParameter(&c, v, size, index);
-    c.state->locals[index] = v;
+    c.locals[index] = v;
   }
 
   virtual void storeLocal(unsigned, Operand* src, unsigned index) {
     assert(&c, index < c.localFootprint);
 
-//     if (c.state->locals[index]) {
+//     if (c.locals[index]) {
 //       appendClobberLocal(&c, size, index);
 //     }
 
 //     Value* v = static_cast<Value*>(memory(base(), localOffset(&c, index)));
 //     store(size, src, v);
 
-    c.state->locals[index] = static_cast<Value*>(src);
+    unsigned size = sizeof(Value*) * c.localFootprint;
+    Value** newLocals = static_cast<Value**>(c.zone->allocate(size));
+    memcpy(newLocals, c.locals, size);
+    c.locals = newLocals;
+
+    c.locals[index] = static_cast<Value*>(src);
   }
 
   virtual Operand* loadLocal(unsigned, unsigned index) {
     assert(&c, index < c.localFootprint);
-    assert(&c, c.state->locals[index]);
+    assert(&c, c.locals[index]);
 
-    return c.state->locals[index];
+    return c.locals[index];
   }
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,

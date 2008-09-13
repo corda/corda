@@ -32,13 +32,12 @@ class Compiler {
 
   class Operand { };
   class StackElement { };
+  class State { };
 
   virtual ~Compiler() { }
 
-  virtual void pushState() = 0;
-  virtual void popState() = 0;
-  virtual void saveStack() = 0;
-  virtual void resetStack() = 0;
+  virtual State* saveState() = 0;
+  virtual void restoreState(State* state) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned maxStackFootprint) = 0;
