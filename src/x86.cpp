@@ -1569,7 +1569,19 @@ class MyAssembler: public Assembler {
     c.result = dst;
     
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
-      memcpy(dst + b->start, c.code.data + b->offset, b->size);
+      unsigned index = 0;
+      for (AlignmentPadding* p = b->firstPadding; p; p = p->next) {
+        unsigned size = p->offset - b->offset;
+        memcpy(dst + b->start + index, c.code.data + b->offset + index, size);
+        index += size;
+        while ((b->start + index + 1) % 4) {
+          *(dst + b->start + index) = 0x90;
+          ++ index;
+        }
+      }
+
+      memcpy(dst + b->start + index, c.code.data + b->offset + index,
+             b->size - index);
     }
     
     for (Task* t = c.tasks; t; t = t->next) {
