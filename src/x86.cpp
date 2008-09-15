@@ -1351,12 +1351,8 @@ class MyArchitecture: public Assembler::Architecture {
 
     switch (op) {
     case Compare:
-      if (BytesPerWord == 8 and aSize != 8) {
-        *aTypeMask = ~(1 << MemoryOperand);
-        *bTypeMask = ~((1 << MemoryOperand) | (1 << ConstantOperand));
-      } else {
-        *bTypeMask = ~(1 << ConstantOperand);
-      }
+      *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
+      *bTypeMask = (1 << RegisterOperand);
       break;
 
     case Move:
@@ -1387,10 +1383,10 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask,
    bool* thunk)
   {
-    *aTypeMask = ~0;
+    *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
     *aRegisterMask = ~static_cast<uint64_t>(0);
 
-    *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+    *bTypeMask = (1 << RegisterOperand);
     *bRegisterMask = ~static_cast<uint64_t>(0);
 
     *thunk = false;
@@ -1427,7 +1423,6 @@ class MyArchitecture: public Assembler::Architecture {
     case ShiftLeft:
     case ShiftRight:
     case UnsignedShiftRight: {
-      *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
       *aRegisterMask = (~static_cast<uint64_t>(0) << 32)
         | (static_cast<uint64_t>(1) << rcx);
       const uint32_t mask = ~(1 << rcx);
@@ -1570,17 +1565,21 @@ class MyAssembler: public Assembler {
     
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       unsigned index = 0;
+      unsigned padding = 0;
       for (AlignmentPadding* p = b->firstPadding; p; p = p->next) {
         unsigned size = p->offset - b->offset;
-        memcpy(dst + b->start + index, c.code.data + b->offset + index, size);
+        memcpy(dst + b->start + index + padding,
+               c.code.data + b->offset + index,
+               size);
         index += size;
-        while ((b->start + index + 1) % 4) {
-          *(dst + b->start + index) = 0x90;
-          ++ index;
+        while ((b->start + index + padding + 1) % 4) {
+          *(dst + b->start + index + padding) = 0x90;
+          ++ padding;
         }
       }
 
-      memcpy(dst + b->start + index, c.code.data + b->offset + index,
+      memcpy(dst + b->start + index + padding,
+             c.code.data + b->offset + index,
              b->size - index);
     }
     

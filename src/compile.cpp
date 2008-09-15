@@ -358,11 +358,11 @@ localOffset(MyThread* t, int v, object method)
                  + parameterFootprint
                  + (t->arch->frameFooterSize() * 2)
                  + t->arch->frameHeaderSize()
-                 - v) :
+                 - v - 1) :
                 (frameSize
                  + parameterFootprint
                  + t->arch->frameFooterSize()
-                 - v)) * BytesPerWord;
+                 - v - 1)) * BytesPerWord;
 
   assert(t, offset >= 0);
   return offset;
@@ -3869,7 +3869,7 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "main") == 0)
+       "pow") == 0)
   {
     asm("int3");
   }
