@@ -937,26 +937,6 @@ addCR(Context* c, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-addCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
-      unsigned bSize UNUSED, Assembler::Memory* b)
-{
-  assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
-
-  int64_t v = a->value->value();
-  unsigned i = (isInt8(v) ? 0x83 : 0x81);
-
-  encode(c, i, 0, b, true);
-  if (isInt8(v)) {
-    c->code.append(v);
-  } else if (isInt32(v)) {
-    c->code.append4(v);
-  } else {
-    abort(c);
-  }
-}
-
-void
 subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
                  Assembler::Register* b)
 {
@@ -1144,28 +1124,6 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-multiplyMR(Context* c, unsigned aSize, Assembler::Memory* a,
-           unsigned bSize, Assembler::Register* b)
-{
-  assert(c, aSize == bSize);
-
-  if (BytesPerWord == 4 and aSize == 8) {
-    const uint32_t mask = ~((1 << rax) | (1 << rdx));
-    Assembler::Register tmp(c->client->acquireTemporary(mask),
-                            c->client->acquireTemporary(mask));
-
-    moveMR(c, aSize, a, aSize, &tmp);
-    multiplyRR(c, aSize, &tmp, bSize, b);
-
-    c->client->releaseTemporary(tmp.low);
-    c->client->releaseTemporary(tmp.high);
-  } else {
-    if (aSize == 8) rex(c);
-    encode2(c, 0x0faf, b->low, a, true);
-  }
-}
-
-void
 populateTables(ArchitectureContext* c)
 {
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
@@ -1211,14 +1169,12 @@ populateTables(ArchitectureContext* c)
   bo[index(Compare, R, R)] = CAST2(compareRR);
 
   bo[index(Add, C, R)] = CAST2(addCR);
-  bo[index(Add, C, M)] = CAST2(addCM);
 
   bo[index(Subtract, C, R)] = CAST2(subtractCR);
 
   bo[index(And, C, R)] = CAST2(andCR);
 
   bo[index(Multiply, R, R)] = CAST2(multiplyRR);
-  bo[index(Multiply, M, R)] = CAST2(multiplyMR);
 }
 
 class MyArchitecture: public Assembler::Architecture {
