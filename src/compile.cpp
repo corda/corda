@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -3399,7 +3399,7 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
     const char* path = findProperty(t, "avian.jit.log");
     if (name) {
       log = fopen(path, "wb");
-    } else {
+    } else if (DebugCompile) {
       log = stderr;
     }
   }
@@ -3658,9 +3658,7 @@ finish(MyThread* t, Assembler* a, const char* name)
 
   a->writeTo(start);
 
-  if (DebugCompile) {
-    logCompile(t, start, a->length(), 0, name, 0);
-  }
+  logCompile(t, start, a->length(), 0, name, 0);
 
   return result;
 }
@@ -3754,16 +3752,14 @@ finish(MyThread* t, Context* context)
     set(t, result, SingletonBody + offset, p->value);
   }
 
-  if (DebugCompile) {
-    logCompile
-      (t, start, codeSize,
-       reinterpret_cast<const char*>
-       (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       reinterpret_cast<const char*>
-       (&byteArrayBody(t, methodName(t, context->method), 0)),
-       reinterpret_cast<const char*>
-       (&byteArrayBody(t, methodSpec(t, context->method), 0)));
-  }
+  logCompile
+    (t, start, codeSize,
+     reinterpret_cast<const char*>
+     (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
+     reinterpret_cast<const char*>
+     (&byteArrayBody(t, methodName(t, context->method), 0)),
+     reinterpret_cast<const char*>
+     (&byteArrayBody(t, methodSpec(t, context->method), 0)));
 
   // for debugging:
   if (false and
@@ -5006,10 +5002,7 @@ compileThunks(MyThread* t, MyProcessor* p)
   uint8_t* start = reinterpret_cast<uint8_t*>
     (&singletonValue(t, p->thunkTable, 0));
 
-  if (DebugCompile) {
-    logCompile(t, start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
-    //fprintf(stderr, "thunk size: %d\n", p->thunkSize);
-  }
+  logCompile(t, start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
 
   tableContext.promise.resolved_ = true;
 
