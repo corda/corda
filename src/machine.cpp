@@ -1633,7 +1633,8 @@ namespace vm {
 
 Machine::Machine(System* system, Heap* heap, Finder* finder,
                  Processor* processor, const char* bootLibrary,
-                 const char* builtins):
+                 const char* builtins, const char** properties,
+                 unsigned propertyCount):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -1645,6 +1646,8 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   exclusive(0),
   jniReferences(0),
   builtins(builtins),
+  properties(properties),
+  propertyCount(propertyCount),
   activeCount(0),
   liveCount(0),
   fixedFootprint(0),

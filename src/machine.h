@@ -1122,7 +1122,8 @@ class Machine {
   };
 
   Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
-          const char* bootLibrary, const char* builtins);
+          const char* bootLibrary, const char* builtins,
+          const char** properties, unsigned propertyCount);
 
   ~Machine() { 
     dispose();
@@ -1144,6 +1145,8 @@ class Machine {
   Thread* exclusive;
   Reference* jniReferences;
   const char* builtins;
+  const char** properties;
+  unsigned propertyCount;
   unsigned activeCount;
   unsigned liveCount;
   unsigned fixedFootprint;
@@ -1508,6 +1511,23 @@ setObjectClass(Thread*, object o, object value)
     = reinterpret_cast<object>
     (reinterpret_cast<uintptr_t>(value)
      | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
+}
+
+inline const char*
+findProperty(Thread* t, const char* name)
+{
+  for (unsigned i = 0; i < t->m->propertyCount; ++i) {
+    const char* p = t->m->properties[i];
+    const char* n = name;
+    while (*p and *p != '=' and *n and *p == *n) {
+      ++ p;
+      ++ n;
+    }
+    if (*p == '=' and *n == 0) {
+      return p + 1;
+    }
+  }
+  return 0;
 }
 
 object&

@@ -20,7 +20,7 @@ void*
 allocate(System* s, unsigned size)
 {
   void* p = s->tryAllocate(size);
-  if (p == 0) abort();
+  if (p == 0) s->abort();
   return p;
 }
 

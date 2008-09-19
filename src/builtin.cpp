@@ -456,6 +456,11 @@ Java_java_lang_System_getVMProperty(Thread* t, jclass, jstring name,
     r = makeLocalReference(t, makeString(t, "%s", t->m->finder->path()));
   } else if (strcmp(n, "avian.version") == 0) {
     r = makeLocalReference(t, makeString(t, AVIAN_VERSION));
+  } else {
+    const char* v = findProperty(t, n);
+    if (v) {
+      r = makeLocalReference(t, makeString(t, v));
+    }
   }
   
   if (r) {

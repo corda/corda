@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -3389,12 +3389,26 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 }
 
 void
-logCompile(const void* code, unsigned size, const char* class_,
+logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
            const char* name, const char* spec)
 {
-  fprintf(stderr, "%s.%s%s: %p %p\n",
-          class_, name, spec, code,
-          static_cast<const uint8_t*>(code) + size);
+  static FILE* log = 0;
+  static bool open = false;
+  if (not open) {
+    open = true;
+    const char* path = findProperty(t, "avian.jit.log");
+    if (name) {
+      log = fopen(path, "wb");
+    } else {
+      log = stderr;
+    }
+  }
+
+  if (log) {
+    fprintf(log, "%p %p %s.%s%s\n",
+            code, static_cast<const uint8_t*>(code) + size,
+            class_, name, spec);
+  }
 }
 
 void
@@ -3644,8 +3658,8 @@ finish(MyThread* t, Assembler* a, const char* name)
 
   a->writeTo(start);
 
-  if (Verbose) {
-    logCompile(start, a->length(), 0, name, 0);
+  if (DebugCompile) {
+    logCompile(t, start, a->length(), 0, name, 0);
   }
 
   return result;
@@ -3740,9 +3754,9 @@ finish(MyThread* t, Context* context)
     set(t, result, SingletonBody + offset, p->value);
   }
 
-  if (Verbose) {
+  if (DebugCompile) {
     logCompile
-      (start, codeSize,
+      (t, start, codeSize,
        reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
        reinterpret_cast<const char*>
@@ -4992,9 +5006,9 @@ compileThunks(MyThread* t, MyProcessor* p)
   uint8_t* start = reinterpret_cast<uint8_t*>
     (&singletonValue(t, p->thunkTable, 0));
 
-  if (Verbose) {
-    logCompile(start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
-    fprintf(stderr, "thunk size: %d\n", p->thunkSize);
+  if (DebugCompile) {
+    logCompile(t, start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
+    //fprintf(stderr, "thunk size: %d\n", p->thunkSize);
   }
 
   tableContext.promise.resolved_ = true;

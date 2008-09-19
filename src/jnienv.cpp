@@ -2072,6 +2072,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   const char* bootClasspath = "";
   const char* bootClasspathAppend = "";
 
+  unsigned propertyCount = 0;
+
   for (int i = 0; i < a->nOptions; ++i) {
     if (strncmp(a->options[i].optionString, "-X", 2) == 0) {
       const char* p = a->options[i].optionString + 2;
@@ -2106,7 +2108,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
         classpath = p + sizeof(CLASSPATH_PROPERTY);
       }
 
-      // todo: add properties to VM
+      ++ propertyCount;
     }
   }
 
@@ -2133,8 +2135,17 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   Finder* f = makeFinder(s, classpathBuffer, bootLibrary);
   Processor* p = makeProcessor(s, h);
 
+  const char** properties = static_cast<const char**>
+    (h->allocate(sizeof(const char*) * propertyCount));
+  const char** propertyPointer = properties;
+  for (int i = 0; i < a->nOptions; ++i) {
+    if (strncmp(a->options[i].optionString, "-D", 2) == 0) {
+      *(propertyPointer++) = a->options[i].optionString + 2;
+    }
+  }
+
   *m = new (h->allocate(sizeof(Machine)))
-    Machine(s, h, f, p, bootLibrary, builtins);
+    Machine(s, h, f, p, bootLibrary, builtins, properties, propertyCount);
 
   *t = p->makeThread(*m, 0, 0);
 
