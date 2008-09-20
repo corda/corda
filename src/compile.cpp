@@ -1810,6 +1810,19 @@ handleExit(MyThread* t, Frame* frame)
 
 void
 compile(MyThread* t, Frame* initialFrame, unsigned ip,
+        bool exceptionHandler = false);
+
+void
+saveStateAndCompile(MyThread* t, Frame* initialFrame, unsigned ip,
+                    bool exceptionHandler = false)
+{
+  Compiler::State* state = c->saveState();
+  compile(t, frame, ipTable[i], exceptionHandler);  
+  c->restoreState(state);
+}
+
+void
+compile(MyThread* t, Frame* initialFrame, unsigned ip,
         bool exceptionHandler = false)
 {
   uint8_t stackMap
@@ -2511,12 +2524,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->jne(target);
       }
 
-      Compiler::State* state = c->saveState();
-
-      compile(t, frame, newIp);
+      saveStateAndCompile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
-
-      c->restoreState(state);
     } break;
 
     case if_icmpeq:
@@ -2554,12 +2563,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         break;
       }
       
-      Compiler::State* state = c->saveState();
-
-      compile(t, frame, newIp);
+      saveStateAndCompile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
-
-      c->restoreState(state);
     } break;
 
     case ifeq:
@@ -2596,12 +2601,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         break;
       }
 
-      Compiler::State* state = c->saveState();
-
-      compile(t, frame, newIp);
+      saveStateAndCompile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
-
-      c->restoreState(state);
     } break;
 
     case ifnull:
@@ -2619,12 +2620,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->jne(target);
       }
 
-      Compiler::State* state = c->saveState();
-      
-      compile(t, frame, newIp);
+      saveStateAndCompile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
-
-      c->restoreState(state);
     } break;
 
     case iinc: {
@@ -3394,21 +3391,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
       assert(t, start);
 
-      Compiler::Operand* defaultCase = c->label();
-
       Compiler::Operand* key = frame->popInt();
       
       c->cmp(4, c->constant(bottom), key);
-      c->jl(defaultCase);
+      c->jl(frame->machineIp(defaultIp));
+
+      saveStateAndCompile(t, frame, defaultIp);
 
       c->cmp(4, c->constant(top), key);
-      c->jg(defaultCase);
+      c->jg(frame->machineIp(defaultIp));
+
+      saveStateAndCompile(t, frame, defaultIp);
 
       c->jmp(c->memory(start, 0, c->sub(4, c->constant(bottom), key),
                        BytesPerWord));
-
-      c->mark(defaultCase);
-      c->jmp(frame->machineIp(defaultIp));
 
       Compiler::State* state = c->saveState();
 
