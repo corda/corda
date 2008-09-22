@@ -322,4 +322,10 @@ public class StringBuilder implements CharSequence {
   public CharSequence subSequence(int start, int end) {
     return substring(start, end);
   }
+
+  public void setCharAt(int index, char ch) {
+    if(index < 0 || index >= length) throw new IndexOutOfBoundsException();
+    deleteCharAt(index);
+    insert(index, ch);
+  }
 }
