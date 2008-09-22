@@ -63,6 +63,7 @@ class Compiler {
 
   virtual Operand* stackTop() = 0;
 
+  virtual void push(unsigned size) = 0;
   virtual void push(unsigned size, Operand* value) = 0;
   virtual Operand* pop(unsigned size) = 0;
   virtual void pushed() = 0;

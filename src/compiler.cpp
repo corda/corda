@@ -32,6 +32,7 @@ class Event;
 class PushEvent;
 class Read;
 class MultiRead;
+class StubRead;
 class Block;
 
 void NO_RETURN abort(Context*);
@@ -104,6 +105,12 @@ class Stack: public Compiler::StackElement {
   unsigned padding;
   Value* value;
   Stack* next;
+};
+
+class MultiReadPair {
+ public:
+  Value* value;
+  MultiRead* read;
 };
 
 class MyState: public Compiler::State {
@@ -344,7 +351,7 @@ class CodePromise: public Promise {
 unsigned
 machineOffset(Context* c, int logicalIp)
 {
-  return c->logicalCode[n]->machineOffset->value();
+  return c->logicalCode[logicalIp]->machineOffset->value();
 }
 
 class IpPromise: public Promise {
@@ -426,13 +433,19 @@ count(Cell* c)
   return n;
 }
 
+class StubReadPair {
+ public:
+  Value* value;
+  StubRead* read;
+};
+
 class Event {
  public:
   Event(Context* c):
     next(0), stack(c->stack), locals(c->locals), promises(0),
     reads(0), junctionSites(0), savedSites(0), predecessors(0),
     successors(0), block(0), logicalInstruction(c->logicalCode[c->logicalIp]),
-    state(c->state), junctionReads(0), junctionReadCount(0), readCount(0)
+    state(c->state), junctionReads(0), readCount(0)
   {
     assert(c, c->logicalIp >= 0);
 
@@ -479,7 +492,6 @@ class Event {
   LogicalInstruction* logicalInstruction;
   MyState* state;
   StubReadPair* junctionReads;
-  unsigned junctionReadCount;
   unsigned readCount;
 };
 
@@ -1191,12 +1203,6 @@ multiRead(Context* c)
   return new (c->zone->allocate(sizeof(MultiRead))) MultiRead();
 }
 
-class MultiReadPair {
- public:
-  Value* value;
-  MultiRead* read;
-};
-
 class StubRead: public Read {
  public:
   StubRead():
@@ -1262,12 +1268,6 @@ stubRead(Context* c)
 {
   return new (c->zone->allocate(sizeof(StubRead))) StubRead();
 }
-
-class StubReadPair {
- public:
-  Value* value;
-  StubRead* read;
-};
 
 Site*
 targetOrRegister(Context* c, Value* v)
@@ -2653,12 +2653,12 @@ populateSources(Context* c, Event* e)
 }
 
 void
-addStubRead(Context* c, Value* v, StubReadPair* reads, unsigned* count)
+addStubRead(Context* c, Value* v, StubReadPair** reads)
 {
   if (v) {
     StubRead* r;
     if (v->visited) {
-      r = static_cast<StubRead*>(e->lastRead);
+      r = static_cast<StubRead*>(v->lastRead);
     } else {
       v->visited = true;
 
@@ -2666,7 +2666,7 @@ addStubRead(Context* c, Value* v, StubReadPair* reads, unsigned* count)
       addRead(c, 0, v, r);
     }
 
-    StubReadPair* p = reads + ((*count)++);
+    StubReadPair* p = (*reads)++;
     p->value = v;
     p->read = r;
   }
@@ -2677,26 +2677,24 @@ populateJunctionReads(Context* c, Event* e)
 {
   StubReadPair* reads = static_cast<StubReadPair*>
     (c->zone->allocate(sizeof(StubReadPair) * frameFootprint(c, c->stack)));
-  unsigned count = 0;
+
+  e->junctionReads = reads;  
      
   for (unsigned i = 0; i < c->localFootprint; ++i) {
-    addStubRead(c, c->locals[i], reads, &count);
+    addStubRead(c, c->locals[i], &reads);
   }
   
   for (Stack* s = c->stack; s; s = s->next) {
-    addStubRead(c, s->value, reads, &count);
+    addStubRead(c, s->value, &reads);
   }
-     
-  for (unsigned i = 0; i < count; ++i) {
-    reads[i]->value->visited = false;
+  
+  for (StubReadPair* r = e->junctionReads; r < reads; ++r) {
+    r->value->visited = false;
   }
-
-  e->junctionReads = reads;
-  e->junctionReadCount = count;
 }
 
 void
-updateStubRead(Context* c, StubReadPair* p, Read* r)
+updateStubRead(Context*, StubReadPair* p, Read* r)
 {
   if (p->read->read == 0) p->read->read = r;
 }
@@ -2705,7 +2703,6 @@ void
 updateJunctionReads(Context* c, Event* e, Event* successor)
 {
   StubReadPair* reads = e->junctionReads;
-  unsigned count = 0;
      
   for (unsigned i = 0; i < c->localFootprint; ++i) {
     updateStubRead(c, reads++, successor->locals[i]->reads);
@@ -2774,7 +2771,7 @@ compile(Context* c)
     MyState* state = e->state;
     if (state) {
       for (unsigned i = 0; i < state->readCount; ++i) {
-        MultiReadPair* p = state->reads[i];
+        MultiReadPair* p = state->reads + i;
         p->value->reads = p->read->nextTarget();
       }
     }
@@ -2782,7 +2779,7 @@ compile(Context* c)
     if (e->predecessors) {
       Event* predecessor = static_cast<Event*>(e->predecessors->value);
       if (e->predecessors->next) {
-        for (Cell* cell = e->predecessors->next; cell; cell = cell->next) {
+        for (Cell* cell = e->predecessors; cell->next; cell = cell->next) {
           updateJunctionReads(c, static_cast<Event*>(cell->value), e);
         }
         setSites(c, e, predecessor->junctionSites);
@@ -2845,7 +2842,7 @@ void
 allocateTargets(Context* c, MyState* state)
 {
   for (unsigned i = 0; i < state->readCount; ++i) {
-    MultiReadPair* p = state->reads[i];
+    MultiReadPair* p = state->reads + i;
     p->value->lastRead = p->read;
     p->read->allocateTarget(c);
   }
@@ -2870,9 +2867,8 @@ MyState*
 saveState(Context* c)
 {
   MyState* state = new
-    (c->zone->allocate(sizeof(MyState))
-     + (c->zone->allocate
-        (sizeof(MultiReadPair) * frameFootprint(c, c->stack))))
+    (c->zone->allocate
+     (sizeof(MyState) + (sizeof(MultiReadPair) * frameFootprint(c, c->stack))))
     MyState(c->stack, c->locals, c->predecessor, c->logicalIp);
 
   if (c->predecessor) {
@@ -2889,7 +2885,7 @@ saveState(Context* c)
     }
 
     for (unsigned i = 0; i < count; ++i) {
-      state->reads[i]->value->visited = false;
+      state->reads[i].value->visited = false;
     }
 
     state->readCount = count;
@@ -2910,7 +2906,7 @@ restoreState(Context* c, MyState* s)
   c->stack = s->stack;
   c->locals = s->locals;
   c->predecessor = s->predecessor;
-  c->logicalIp = logicalIp;
+  c->logicalIp = s->logicalIp;
 
   if (c->predecessor) {
     c->state = s;

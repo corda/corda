@@ -1816,14 +1816,13 @@ void
 saveStateAndCompile(MyThread* t, Frame* initialFrame, unsigned ip,
                     bool exceptionHandler = false)
 {
-  Compiler::State* state = c->saveState();
-  compile(t, frame, ipTable[i], exceptionHandler);  
-  c->restoreState(state);
+  Compiler::State* state = initialFrame->c->saveState();
+  compile(t, initialFrame, ip, exceptionHandler);  
+  initialFrame->c->restoreState(state);
 }
 
 void
-compile(MyThread* t, Frame* initialFrame, unsigned ip,
-        bool exceptionHandler = false)
+compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
 {
   uint8_t stackMap
     [codeMaxStack(t, methodCode(t, initialFrame->context->method))];
@@ -3857,7 +3856,7 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (false and
+  if (//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
