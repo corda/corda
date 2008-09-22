@@ -106,12 +106,6 @@ class Stack: public Compiler::StackElement {
   Stack* next;
 };
 
-class ReadPair {
- public:
-  Value* value;
-  MultiRead* read;
-};
-
 class MyState: public Compiler::State {
  public:
   MyState(Stack* stack, Value** locals, Event* predecessor,
@@ -128,7 +122,7 @@ class MyState: public Compiler::State {
   Event* predecessor;
   unsigned logicalIp;
   unsigned readCount;
-  ReadPair reads[0];
+  MultiReadPair reads[0];
 };
 
 class LogicalInstruction {
@@ -438,7 +432,7 @@ class Event {
     next(0), stack(c->stack), locals(c->locals), promises(0),
     reads(0), junctionSites(0), savedSites(0), predecessors(0),
     successors(0), block(0), logicalInstruction(c->logicalCode[c->logicalIp]),
-    state(c->state), readCount(0)
+    state(c->state), junctionReads(0), junctionReadCount(0), readCount(0)
   {
     assert(c, c->logicalIp >= 0);
 
@@ -484,6 +478,8 @@ class Event {
   Block* block;
   LogicalInstruction* logicalInstruction;
   MyState* state;
+  StubReadPair* junctionReads;
+  unsigned junctionReadCount;
   unsigned readCount;
 };
 
@@ -1194,6 +1190,84 @@ multiRead(Context* c)
 {
   return new (c->zone->allocate(sizeof(MultiRead))) MultiRead();
 }
+
+class MultiReadPair {
+ public:
+  Value* value;
+  MultiRead* read;
+};
+
+class StubRead: public Read {
+ public:
+  StubRead():
+    read(0), visited(false)
+  { }
+
+  virtual Site* pickSite(Context* c, Value* value) {
+    uint8_t typeMask = ~static_cast<uint8_t>(0);
+    uint64_t registerMask = ~static_cast<uint64_t>(0);
+    int frameIndex = AnyFrameIndex;
+    intersect(&typeMask, &registerMask, &frameIndex);
+
+    return ::pickSite(c, value, typeMask, registerMask, frameIndex);
+  }
+
+  virtual Site* allocateSite(Context* c) {
+    uint8_t typeMask = ~static_cast<uint8_t>(0);
+    uint64_t registerMask = ~static_cast<uint64_t>(0);
+    int frameIndex = AnyFrameIndex;
+    intersect(&typeMask, &registerMask, &frameIndex);
+
+    return ::allocateSite(c, typeMask, registerMask, frameIndex);
+  }
+
+  virtual bool intersect(uint8_t* typeMask, uint64_t* registerMask,
+                         int* frameIndex)
+  {
+    if (not visited) {
+      visited = true;
+      if (read) {
+        bool valid = read->intersect(typeMask, registerMask, frameIndex);
+        if (not valid) {
+          read = 0;
+        }
+      }
+      visited = false;
+    }
+    return true;
+  }
+
+  virtual bool valid() {
+    return true;
+  }
+
+  virtual unsigned size(Context* c) {
+    return read->size(c);
+  }
+
+  virtual void append(Context*, Read* r) {
+    read = r;
+  }
+
+  virtual Read* next(Context* c) {
+    abort(c);
+  }
+
+  Read* read;
+  bool visited;
+};
+
+StubRead*
+stubRead(Context* c)
+{
+  return new (c->zone->allocate(sizeof(StubRead))) StubRead();
+}
+
+class StubReadPair {
+ public:
+  Value* value;
+  StubRead* read;
+};
 
 Site*
 targetOrRegister(Context* c, Value* v)
@@ -2578,6 +2652,70 @@ populateSources(Context* c, Event* e)
   }
 }
 
+void
+addStubRead(Context* c, Value* v, StubReadPair* reads, unsigned* count)
+{
+  if (v) {
+    StubRead* r;
+    if (v->visited) {
+      r = static_cast<StubRead*>(e->lastRead);
+    } else {
+      v->visited = true;
+
+      r = stubRead(c);
+      addRead(c, 0, v, r);
+    }
+
+    StubReadPair* p = reads + ((*count)++);
+    p->value = v;
+    p->read = r;
+  }
+}
+
+void
+populateJunctionReads(Context* c, Event* e)
+{
+  StubReadPair* reads = static_cast<StubReadPair*>
+    (c->zone->allocate(sizeof(StubReadPair) * frameFootprint(c, c->stack)));
+  unsigned count = 0;
+     
+  for (unsigned i = 0; i < c->localFootprint; ++i) {
+    addStubRead(c, c->locals[i], reads, &count);
+  }
+  
+  for (Stack* s = c->stack; s; s = s->next) {
+    addStubRead(c, s->value, reads, &count);
+  }
+     
+  for (unsigned i = 0; i < count; ++i) {
+    reads[i]->value->visited = false;
+  }
+
+  e->junctionReads = reads;
+  e->junctionReadCount = count;
+}
+
+void
+updateStubRead(Context* c, StubReadPair* p, Read* r)
+{
+  if (p->read->read == 0) p->read->read = r;
+}
+
+void
+updateJunctionReads(Context* c, Event* e, Event* successor)
+{
+  StubReadPair* reads = e->junctionReads;
+  unsigned count = 0;
+     
+  for (unsigned i = 0; i < c->localFootprint; ++i) {
+    updateStubRead(c, reads++, successor->locals[i]->reads);
+  }
+  
+  for (Stack* s = successor->stack; s; s = s->next) {
+    updateStubRead(c, reads++, s->value->reads);
+  }
+}
+
 LogicalInstruction*
 next(Context* c, LogicalInstruction* i)
 {
@@ -2636,7 +2774,7 @@ compile(Context* c)
     MyState* state = e->state;
     if (state) {
       for (unsigned i = 0; i < state->readCount; ++i) {
-        ReadPair* p = state->reads[i];
+        MultiReadPair* p = state->reads[i];
         p->value->reads = p->read->nextTarget();
       }
     }
@@ -2644,6 +2782,9 @@ compile(Context* c)
     if (e->predecessors) {
       Event* predecessor = static_cast<Event*>(e->predecessors->value);
       if (e->predecessors->next) {
+        for (Cell* cell = e->predecessors->next; cell; cell = cell->next) {
+          updateJunctionReads(c, static_cast<Event*>(cell->value), e);
+        }
         setSites(c, e, predecessor->junctionSites);
       } else if (predecessor->successors->next) {
         setSites(c, e, predecessor->savedSites);
@@ -2664,7 +2805,12 @@ compile(Context* c)
       p->offset = a->offset();
     }
     
-    if (e->next == 0 or e->next->blockStart) {
+    LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
+    if (e->next == 0
+        or (e->next->logicalInstruction != e->logicalInstruction
+            and (e->logicalInstruction->lastEvent == e
+                 or e->next->logicalInstruction != nextInstruction)))
+    {
       block->nextInstruction = nextInstruction;
       block->assemblerBlock = a->endBlock(e->next != 0);
       if (e->next) {
@@ -2699,9 +2845,24 @@ void
 allocateTargets(Context* c, MyState* state)
 {
   for (unsigned i = 0; i < state->readCount; ++i) {
-    ReadPair* p = state->reads[i];
+    MultiReadPair* p = state->reads[i];
     p->value->lastRead = p->read;
     p->read->allocateTarget(c);
+  }
+}
+
+void
+addMultiRead(Context* c, Value* v, MyState* state, unsigned* count)
+{
+  if (v and not v->visited) {
+    v->visited = true;
+
+    MultiRead* r = multiRead(c);
+    addRead(c, 0, v, r);
+
+    MultiReadPair* p = state->reads + ((*count)++);
+    p->value = v;
+    p->read = r;
   }
 }
 
@@ -2710,7 +2871,8 @@ saveState(Context* c)
 {
   MyState* state = new
     (c->zone->allocate(sizeof(MyState))
-     + (c->zone->allocate(sizeof(ReadPair) * frameFootprint(c, c->stack))))
+     + (c->zone->allocate
+        (sizeof(MultiReadPair) * frameFootprint(c, c->stack))))
     MyState(c->stack, c->locals, c->predecessor, c->logicalIp);
 
   if (c->predecessor) {
@@ -2719,31 +2881,11 @@ saveState(Context* c)
     unsigned count = 0;
 
     for (unsigned i = 0; i < c->localFootprint; ++i) {
-      Value* v = c->locals[i];
-      if (v and not v->visited) {
-        v->visited = true;
-
-        MultiRead* r = multiRead(c);
-        addRead(c, 0, c->locals[i], r);
-
-        ReadPair* p = state->reads + (count++);
-        p->value = v;
-        p->read = r;
-      }
+      addMultiRead(c, c->locals[i], state, &count);
     }
   
     for (Stack* s = c->stack; s; s = s->next) {
-      Value* v = s->value;
-      if (not v->visited) {
-        v->visited = true;
-
-        MultiRead* r = multiRead(c);
-        addRead(c, 0, s->value, r);
-
-        ReadPair* p = state->reads + (count++);
-        p->value = v;
-        p->read = r;
-      }
+      addMultiRead(c, s->value, state, &count);
     }
 
     for (unsigned i = 0; i < count; ++i) {
@@ -2847,7 +2989,6 @@ class MyCompiler: public Compiler {
 
     if (c.predecessor) {
       c.predecessor->successors = cons(&c, e, c.predecessor->successors);
-#error tbc
       populateJunctionReads(&c, c.predecessor);
       e->predecessors = cons(&c, c.predecessor, e->predecessors);
     }
