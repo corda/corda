@@ -836,26 +836,34 @@ class Frame {
   }
 
   void pushQuiet(unsigned size, Compiler::Operand* o) {
-    if (size == 8 and BytesPerWord == 8) {
-      c->push(8);
-
-      context->eventLog.append(PushEvent);
-      context->eventLog.appendAddress(c->top());
-    }
-
     c->push(size, o);
     
     context->eventLog.append(PushEvent);
     context->eventLog.appendAddress(c->top());
   }
 
+  void pushLongQuiet(Compiler::Operand* o) {
+    if (BytesPerWord == 8) {
+      c->push(8);
+
+      context->eventLog.append(PushEvent);
+      context->eventLog.appendAddress(c->top());
+    }
+
+    pushQuiet(8, o);
+  }
+
   Compiler::Operand* popQuiet(unsigned size) {
     context->eventLog.append(PopEvent);
     context->eventLog.appendAddress(c->top());
 
-    Compiler::Operand* r = c->pop(size);
+    return c->pop(size);
+  }
 
-    if (size == 8 and BytesPerWord == 8) {
+  Compiler::Operand* popLongQuiet() {
+    Compiler::Operand* r = popQuiet(8);
+
+    if (BytesPerWord == 8) {
       context->eventLog.append(PopEvent);
       context->eventLog.appendAddress(c->top());
 
@@ -890,7 +898,7 @@ class Frame {
   }
 
   void pushLong(Compiler::Operand* o) {
-    pushQuiet(8, o);
+    pushLongQuiet(o);
     pushedLong();
   }
 
@@ -919,7 +927,7 @@ class Frame {
 
   Compiler::Operand* popLong() {
     poppedLong();
-    return popQuiet(8);
+    return popLongQuiet();
   }
 
   Compiler::Operand* popObject() {
@@ -992,10 +1000,10 @@ class Frame {
     Compiler::Operand* s0 = popQuiet(BytesPerWord);
 
     if (get(sp - 2) == Long) {
-      Compiler::Operand* s1 = popQuiet(8);
+      Compiler::Operand* s1 = popLongQuiet();
 
       pushQuiet(BytesPerWord, s0);
-      pushQuiet(8, s1);
+      pushLongQuiet(s1);
       pushQuiet(BytesPerWord, s0);
     } else {
       Compiler::Operand* s1 = popQuiet(BytesPerWord);
@@ -1012,7 +1020,7 @@ class Frame {
 
   void dup2() {
     if (get(sp - 1) == Long) {
-      pushQuiet(8, peekLong(0));
+      pushLongQuiet(peekLong(0));
     } else {
       Compiler::Operand* s0 = popQuiet(BytesPerWord);
       Compiler::Operand* s1 = popQuiet(BytesPerWord);
@@ -1028,12 +1036,12 @@ class Frame {
 
   void dup2X1() {
     if (get(sp - 1) == Long) {
-      Compiler::Operand* s0 = popQuiet(8);
+      Compiler::Operand* s0 = popLongQuiet();
       Compiler::Operand* s1 = popQuiet(BytesPerWord);
 
-      pushQuiet(8, s0);
+      pushLongQuiet(s0);
       pushQuiet(BytesPerWord, s1);
-      pushQuiet(8, s0);
+      pushLongQuiet(s0);
     } else {
       Compiler::Operand* s0 = popQuiet(BytesPerWord);
       Compiler::Operand* s1 = popQuiet(BytesPerWord);
@@ -1051,22 +1059,22 @@ class Frame {
 
   void dup2X2() {
     if (get(sp - 1) == Long) {
-      Compiler::Operand* s0 = popQuiet(8);
+      Compiler::Operand* s0 = popLongQuiet();
 
       if (get(sp - 3) == Long) {
-        Compiler::Operand* s1 = popQuiet(8);
+        Compiler::Operand* s1 = popLongQuiet();
 
-        pushQuiet(8, s0);
-        pushQuiet(8, s1);
-        pushQuiet(8, s0);
+        pushLongQuiet(s0);
+        pushLongQuiet(s1);
+        pushLongQuiet(s0);
       } else {
         Compiler::Operand* s1 = popQuiet(BytesPerWord);
         Compiler::Operand* s2 = popQuiet(BytesPerWord);
 
-        pushQuiet(8, s0);
+        pushLongQuiet(s0);
         pushQuiet(BytesPerWord, s2);
         pushQuiet(BytesPerWord, s1);
-        pushQuiet(8, s0);
+        pushLongQuiet(s0);
       }
     } else {
       Compiler::Operand* s0 = popQuiet(BytesPerWord);
@@ -1847,6 +1855,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
       handleEntrance(t, frame);
 
       int index = 0;
+      if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
+        c->initParameter(1, index++);
+      }
+
       for (MethodSpecIterator it
              (t, reinterpret_cast<const char*>
               (&byteArrayBody(t, methodSpec(t, context->method), 0)));
@@ -1860,8 +1872,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
           break;
 
         default:
-          c->initParameter(1, index);
-          index += 1;
+          c->initParameter(1, index++);
           break;
         }
       }
@@ -3856,15 +3867,15 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (//false and
+  if (false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Simple") == 0 and
+       "Hello") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "pow") == 0)
+       "main") == 0)
   {
     asm("int3");
   }

@@ -264,6 +264,7 @@ class Context {
     localFootprint(0),
     maxStackFootprint(0),
     stackPadding(0),
+    machineCodeSize(0),
     constantCompare(CompareNone),
     pass(ScanPass)
   {
@@ -296,6 +297,7 @@ class Context {
   unsigned localFootprint;
   unsigned maxStackFootprint;
   unsigned stackPadding;
+  unsigned machineCodeSize;
   ConstantCompare constantCompare;
   Pass pass;
 };
@@ -307,7 +309,7 @@ class PoolPromise: public Promise {
   virtual int64_t value() {
     if (resolved()) {
       return reinterpret_cast<intptr_t>
-        (c->machineCode + pad(c->assembler->length()) + (key * BytesPerWord));
+        (c->machineCode + pad(c->machineCodeSize) + (key * BytesPerWord));
     }
     
     abort(c);
@@ -1681,7 +1683,7 @@ class CallEvent: public Event {
     int footprint = stackArgumentFootprint;
     for (Stack* s = stack; s; s = s->next) {
       frameIndex -= s->size;
-      if (footprint) {
+      if (footprint > 0) {
         addRead(c, this, s->value, read(c, s->size * BytesPerWord,
                                   1 << MemoryOperand, 0, frameIndex));
       } else {
@@ -1690,8 +1692,8 @@ class CallEvent: public Event {
           assert(c, index <= frameIndex);
           s->padding = frameIndex - index;
         }
-        addRead(c, this, s->value, read(c, s->size * BytesPerWord,
-                                  1 << MemoryOperand, 0, index));
+        addRead(c, this, s->value, read
+                (c, s->size * BytesPerWord, 1 << MemoryOperand, 0, index));
       }
       footprint -= s->size;
     }
@@ -2005,6 +2007,13 @@ class CombineEvent: public Event {
 
     nextRead(c, first);
     nextRead(c, second);
+
+    if (c->arch->condensedAddressing()) {
+      removeSite(c, second, second->source);
+      if (result->reads) {
+        addSite(c, 0, 0, resultSize, result, second->source);
+      }
+    }
   }
 
   TernaryOperation type;
@@ -2564,9 +2573,11 @@ populateSiteTables(Context* c, Event* e)
 
     if (e->junctionSites) {
       for (unsigned i = 0; i < c->localFootprint; ++i) {
-        frozenSiteIndex = resolveJunctionSite
-          (c, e, successor, successor->locals[i], i, frozenSites,
-           frozenSiteIndex);
+        if (successor->locals[i]) {
+          frozenSiteIndex = resolveJunctionSite
+            (c, e, successor, successor->locals[i], i, frozenSites,
+             frozenSiteIndex);
+        }
       }
 
       if (successor->stack) {
@@ -2588,9 +2599,12 @@ populateSiteTables(Context* c, Event* e)
   if (e->successors->next) {
     unsigned size = sizeof(Site*) * frameFootprint;
     Site** savedSites = static_cast<Site**>(c->zone->allocate(size));
+    memset(savedSites, 0, size);
 
     for (unsigned i = 0; i < c->localFootprint; ++i) {
-      savedSites[i] = successor->locals[i]->sites;
+      if (successor->locals[i]) {
+        savedSites[i] = successor->locals[i]->sites;
+      }
     }
 
     if (successor->stack) {
@@ -2613,9 +2627,11 @@ setSites(Context* c, Event* e, Site** sites)
 {
   for (unsigned i = 0; i < c->localFootprint; ++i) {
     Value* v = e->locals[i];
-    clearSites(c, v);
-    if (live(v)) {
-      addSite(c, 0, 0, v->reads->size(c), v, sites[i]);
+    if (v) {
+      clearSites(c, v);
+      if (live(v)) {
+        addSite(c, 0, 0, v->reads->size(c), v, sites[i]);
+      }
     }
   }
 
@@ -2705,7 +2721,9 @@ updateJunctionReads(Context* c, Event* e, Event* successor)
   StubReadPair* reads = e->junctionReads;
      
   for (unsigned i = 0; i < c->localFootprint; ++i) {
-    updateStubRead(c, reads++, successor->locals[i]->reads);
+    if (successor->locals[i]) {
+      updateStubRead(c, reads++, successor->locals[i]->reads);
+    }
   }
   
   for (Stack* s = successor->stack; s; s = s->next) {
@@ -3182,7 +3200,6 @@ class MyCompiler: public Compiler {
     Value* result = value(&c);
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
                resultSize, c.stack, 0, argumentFootprint);
-
     return result;
   }
 
@@ -3193,6 +3210,7 @@ class MyCompiler: public Compiler {
   virtual void initParameter(unsigned size, unsigned index) {
     assert(&c, index < c.parameterFootprint);
 
+    fprintf(stderr, "init parameter %d size %d\n", index, size);
     Value* v = value(&c);
     appendParameter(&c, v, size, index);
     c.locals[index] = v;
@@ -3370,7 +3388,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual unsigned compile() {
-    return ::compile(&c);
+    return c.machineCodeSize = ::compile(&c);
   }
 
   virtual unsigned poolSize() {
@@ -3383,7 +3401,7 @@ class MyCompiler: public Compiler {
 
     int i = 0;
     for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {
-      *reinterpret_cast<intptr_t*>(dst + pad(c.assembler->length()) + i)
+      *reinterpret_cast<intptr_t*>(dst + pad(c.machineCodeSize) + i)
         = n->promise->value();
       i += BytesPerWord;
     }

@@ -745,6 +745,34 @@ moveRM(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+moveMM(Context* c, unsigned aSize, Assembler::Memory* a,
+       unsigned bSize, Assembler::Memory* b)
+{
+  assert(c, aSize == bSize);
+
+  if (BytesPerWord == 8 or aSize <= 4) {
+    uint32_t mask;
+    if (BytesPerWord == 4 and aSize == 1) {
+      mask = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
+    } else {
+      mask = ~static_cast<uint32_t>(0);
+    }
+
+    Assembler::Register tmp(c->client->acquireTemporary(mask));
+    moveMR(c, aSize, a, aSize, &tmp);
+    moveRM(c, aSize, &tmp, bSize, b);
+    c->client->releaseTemporary(tmp.low);
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary(),
+                            c->client->acquireTemporary());
+    moveMR(c, aSize, a, aSize, &tmp);
+    moveRM(c, aSize, &tmp, bSize, b);    
+    c->client->releaseTemporary(tmp.low);
+    c->client->releaseTemporary(tmp.high);
+  }
+}
+
+void
 moveAR(Context* c, unsigned aSize, Assembler::Address* a,
        unsigned bSize, Assembler::Register* b)
 {
@@ -851,6 +879,33 @@ compareRR(Context* c, unsigned aSize, Assembler::Register* a,
   c->code.append(0xc0 | (a->low << 3) | b->low);
 }
 
+void
+compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
+          unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  
+  int64_t v = a->value->value();
+
+  if (isInt32(v)) {
+    if (aSize == 8) rex(c);
+    if (isInt8(v)) {
+      c->code.append(0x83);
+      c->code.append(0xf8 | b->low);
+      c->code.append(v);
+    } else {
+      c->code.append(0x81);
+      c->code.append(0xf8 | b->low);
+      c->code.append4(v);
+    }
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, aSize, a, aSize, &tmp);
+    compareRR(c, aSize, &tmp, bSize, b);
+    c->client->releaseTemporary(tmp.low);
+  }
+}
 void
 addCarryRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
@@ -1141,6 +1196,7 @@ populateTables(ArchitectureContext* c)
   zo[Return] = return_;
 
   uo[index(Call, C)] = CAST1(callC);
+  uo[index(Call, R)] = CAST1(callR);
 
   uo[index(AlignedCall, C)] = CAST1(alignedCallC);
 
@@ -1165,8 +1221,11 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, R, M)] = CAST2(moveRM);
   bo[index(Move, C, M)] = CAST2(moveCM);
   bo[index(Move, A, M)] = CAST2(moveAM);
+  bo[index(Move, A, R)] = CAST2(moveAR);
+  bo[index(Move, M, M)] = CAST2(moveMM);
 
   bo[index(Compare, R, R)] = CAST2(compareRR);
+  bo[index(Compare, C, R)] = CAST2(compareCR);
 
   bo[index(Add, C, R)] = CAST2(addCR);
 
@@ -1454,11 +1513,18 @@ class MyAssembler: public Assembler {
     
     unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
-      Memory dst(rsp, offset * BytesPerWord);
-      apply(Move,
-            arguments[i].size, arguments[i].type, arguments[i].operand,
-            pad(arguments[i].size), MemoryOperand, &dst);
-      offset += ceiling(arguments[i].size, BytesPerWord);
+      if (i < arch_->argumentRegisterCount()) {
+        Register dst(arch_->argumentRegister(i));
+        apply(Move,
+              arguments[i].size, arguments[i].type, arguments[i].operand,
+              pad(arguments[i].size), RegisterOperand, &dst);
+      } else {
+        Memory dst(rsp, offset * BytesPerWord);
+        apply(Move,
+              arguments[i].size, arguments[i].type, arguments[i].operand,
+              pad(arguments[i].size), MemoryOperand, &dst);
+        offset += ceiling(arguments[i].size, BytesPerWord);
+      }
     }
   }
 
