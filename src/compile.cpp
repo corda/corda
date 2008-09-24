@@ -1856,7 +1856,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
 
       int index = 0;
       if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
-        c->initParameter(1, index++);
+        c->initParameter(BytesPerWord, index++);
       }
 
       for (MethodSpecIterator it
@@ -1867,12 +1867,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
         switch (*it.next()) {
         case 'J':
         case 'D':
-          c->initParameter(2, index);
+          c->initParameter(2 * BytesPerWord, index);
           index += 2;
           break;
 
         default:
-          c->initParameter(1, index++);
+          c->initParameter(BytesPerWord, index++);
           break;
         }
       }

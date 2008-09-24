@@ -868,6 +868,18 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
 }
 
 void
+swapRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+       unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, aSize == BytesPerWord);
+  
+  rex(c);
+  c->code.append(0x87);
+  c->code.append(0xc0 | (b->low << 3) | a->low);
+}
+
+void
 compareRR(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
@@ -1224,9 +1236,12 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, A, R)] = CAST2(moveAR);
   bo[index(Move, M, M)] = CAST2(moveMM);
 
+  bo[index(Swap, R, R)] = CAST2(swapRR);
+
   bo[index(Compare, R, R)] = CAST2(compareRR);
   bo[index(Compare, C, R)] = CAST2(compareCR);
 
+  bo[index(Add, R, R)] = CAST2(addRR);
   bo[index(Add, C, R)] = CAST2(addCR);
 
   bo[index(Subtract, C, R)] = CAST2(subtractCR);
