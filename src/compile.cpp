@@ -1818,19 +1818,19 @@ handleExit(MyThread* t, Frame* frame)
 
 void
 compile(MyThread* t, Frame* initialFrame, unsigned ip,
-        bool exceptionHandler = false);
+        int exceptionHandlerStart = -1);
 
 void
-saveStateAndCompile(MyThread* t, Frame* initialFrame, unsigned ip,
-                    bool exceptionHandler = false)
+saveStateAndCompile(MyThread* t, Frame* initialFrame, unsigned ip)
 {
   Compiler::State* state = initialFrame->c->saveState();
-  compile(t, initialFrame, ip, exceptionHandler);  
+  compile(t, initialFrame, ip);  
   initialFrame->c->restoreState(state);
 }
 
 void
-compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
+compile(MyThread* t, Frame* initialFrame, unsigned ip,
+        int exceptionHandlerStart)
 {
   uint8_t stackMap
     [codeMaxStack(t, methodCode(t, initialFrame->context->method))];
@@ -1856,7 +1856,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
 
       int index = 0;
       if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
-        c->initParameter(BytesPerWord, index++);
+        c->initLocal(BytesPerWord, index++);
       }
 
       for (MethodSpecIterator it
@@ -1867,17 +1867,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip, bool exceptionHandler)
         switch (*it.next()) {
         case 'J':
         case 'D':
-          c->initParameter(2 * BytesPerWord, index);
+          c->initLocal(2 * BytesPerWord, index);
           index += 2;
           break;
 
         default:
-          c->initParameter(BytesPerWord, index++);
+          c->initLocal(BytesPerWord, index++);
           break;
         }
       }
-    } else if (exceptionHandler) {
-      exceptionHandler = false;
+    } else if (exceptionHandlerStart >= 0) {
+      c->initLocalsFromLogicalIp(exceptionHandlerStart);
+
+      exceptionHandlerStart = -1;
 
       frame->pushObject();
       
@@ -3980,7 +3982,7 @@ compile(MyThread* t, Context* context)
             frame2.set(localSize(t, context->method) + i, Frame::Integer);
           }
 
-          compile(t, &frame2, exceptionHandlerIp(eh), true);
+          compile(t, &frame2, exceptionHandlerIp(eh), start);
           if (UNLIKELY(t->exception)) return 0;
 
           eventIndex = calculateFrameMaps(t, context, 0, 0, eventIndex);

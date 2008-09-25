@@ -587,6 +587,7 @@ removeMemorySites(Context* c, Value* v)
 void
 clearSites(Context* c, Value* v)
 {
+  //fprintf(stderr, "clear sites for %p\n", v);
   for (Site* s = v->sites; s; s = s->next) {
     s->release(c);
   }
@@ -606,9 +607,12 @@ live(Value* v)
 }
 
 void
-nextRead(Context* c, Value* v)
+nextRead(Context* c, Event* e, Value* v)
 {
-//   fprintf(stderr, "pop read %p from %p; next: %p\n", v->reads, v, v->reads->next);
+  assert(c, e == v->reads->event);
+
+//   fprintf(stderr, "pop read %p from %p; next: %p\n",
+//           v->reads, v, v->reads->next(c));
 
   v->reads = v->reads->next(c);
   if (not live(v)) {
@@ -1577,6 +1581,8 @@ apply(Context* c, TernaryOperation op,
 void
 addRead(Context* c, Event* e, Value* v, Read* r)
 {
+//   fprintf(stderr, "add read %p to %p\n", r, v);
+
   r->value = v;
   if (e) {
     r->event = e;
@@ -1608,7 +1614,7 @@ clean(Context* c, Value* v)
 }
 
 void
-clean(Context* c, Stack* stack, Local* locals, Read* reads)
+clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads)
 {
   for (unsigned i = 0; i < c->localFootprint; ++i) {
     if (locals[i].value) clean(c, locals[i].value);
@@ -1619,7 +1625,7 @@ clean(Context* c, Stack* stack, Local* locals, Read* reads)
   }
 
   for (Read* r = reads; r; r = r->eventNext) {
-    nextRead(c, r->value);
+    nextRead(c, e, r->value);
   }  
 }
 
@@ -1677,8 +1683,9 @@ class CallEvent: public Event {
     for (Stack* s = stack; s; s = s->next) {
       frameIndex -= s->size;
       if (footprint > 0) {
-        addRead(c, this, s->value, read(c, s->size * BytesPerWord,
-                                  1 << MemoryOperand, 0, frameIndex));
+        addRead(c, this, s->value, read
+                (c, s->size * BytesPerWord,
+                 1 << MemoryOperand, 0, frameIndex));
       } else {
         unsigned index = s->index + c->localFootprint;
         if (footprint == 0) {
@@ -1689,6 +1696,14 @@ class CallEvent: public Event {
                 (c, s->size * BytesPerWord, 1 << MemoryOperand, 0, index));
       }
       footprint -= s->size;
+    }
+
+    for (unsigned i = 0; i < c->localFootprint; ++i) {
+      Local* local = locals + i;
+      if (local->value) {
+        addRead(c, this, local->value, read
+                (c, local->size, 1 << MemoryOperand, 0, i));
+      }
     }
   }
 
@@ -1704,7 +1719,7 @@ class CallEvent: public Event {
       traceHandler->handleTrace(codePromise(c, c->assembler->offset()));
     }
 
-    clean(c, stack, locals, reads);
+    clean(c, this, stack, locals, reads);
 
     if (resultSize and live(result)) {
       addSite(c, 0, 0, resultSize, result, registerSite
@@ -1752,7 +1767,7 @@ class ReturnEvent: public Event {
 
   virtual void compile(Context* c) {
     if (value) {
-      nextRead(c, value);
+      nextRead(c, this, value);
     }
 
     c->assembler->popFrame();
@@ -1833,7 +1848,7 @@ class MoveEvent: public Event {
       removeSite(c, dst, target);
     }
 
-    nextRead(c, src);
+    nextRead(c, this, src);
   }
 
   BinaryOperation type;
@@ -1912,8 +1927,8 @@ class CompareEvent: public Event {
       apply(c, Compare, size, first->source, size, second->source);
     }
 
-    nextRead(c, first);
-    nextRead(c, second);
+    nextRead(c, this, first);
+    nextRead(c, this, second);
   }
 
   unsigned size;
@@ -1998,8 +2013,8 @@ class CombineEvent: public Event {
     apply(c, type, firstSize, first->source, secondSize, second->source,
           resultSize, target);
 
-    nextRead(c, first);
-    nextRead(c, second);
+    nextRead(c, this, first);
+    nextRead(c, this, second);
 
     if (c->arch->condensedAddressing()) {
       removeSite(c, second, second->source);
@@ -2130,7 +2145,7 @@ class TranslateEvent: public Event {
     Site* target = targetOrRegister(c, result);
     apply(c, type, size, value->source, size, target);
     
-    nextRead(c, value);
+    nextRead(c, this, value);
 
     removeSite(c, value, value->source);
     if (live(result)) {
@@ -2205,13 +2220,13 @@ class MemoryEvent: public Event {
     assert(c, base->source->type(c) == RegisterOperand);
     int baseRegister = static_cast<RegisterSite*>(base->source)->register_.low;
 
-    nextRead(c, base);
+    nextRead(c, this, base);
     if (index) {
       if (BytesPerWord == 8 and indexRegister != NoRegister) {
         apply(c, Move, 4, index->source, 8, index->source);
       }
 
-      nextRead(c, index);
+      nextRead(c, this, index);
     }
 
     result->target = memorySite
@@ -2310,7 +2325,7 @@ class BranchEvent: public Event {
       apply(c, type, BytesPerWord, address->source);
     }
 
-    nextRead(c, address);
+    nextRead(c, this, address);
   }
 
   UnaryOperation type;
@@ -2381,8 +2396,8 @@ class BoundsCheckEvent: public Event {
 
     nextPromise->offset = a->offset();
 
-    nextRead(c, object);
-    nextRead(c, index);
+    nextRead(c, this, object);
+    nextRead(c, this, index);
   }
 
   Value* object;
@@ -2399,14 +2414,14 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
     (c, object, lengthOffset, index, handler);
 }
 
-class ParameterEvent: public Event {
+class FrameSiteEvent: public Event {
  public:
-  ParameterEvent(Context* c, Value* value, unsigned size, int index):
+  FrameSiteEvent(Context* c, Value* value, unsigned size, int index):
     Event(c), value(value), size(size), index(index)
   { }
 
   virtual const char* name() {
-    return "ParameterEvent";
+    return "FrameSiteEvent";
   }
 
   virtual void compile(Context* c) {
@@ -2419,9 +2434,9 @@ class ParameterEvent: public Event {
 };
 
 void
-appendParameter(Context* c, Value* value, unsigned size, int index)
+appendFrameSite(Context* c, Value* value, unsigned size, int index)
 {
-  new (c->zone->allocate(sizeof(ParameterEvent))) ParameterEvent
+  new (c->zone->allocate(sizeof(FrameSiteEvent))) FrameSiteEvent
     (c, value, size, index);
 }
 
@@ -2494,6 +2509,8 @@ resolveJunctionSite(Context* c, Event* e, Event* successor, Value* v,
   assert(c, index < frameFootprint(c, successor->stack));
 
   if (live(v)) {
+    assert(c, v->sites);
+    
     Read* r = v->reads;
     Site* original = e->junctionSites[index];
 
@@ -2507,6 +2524,8 @@ resolveJunctionSite(Context* c, Event* e, Event* successor, Value* v,
     if (copyCost) {
       addSite(c, successor->stack, successor->locals, r->size, v, target);
       apply(c, Move, r->size, site, r->size, target);
+    } else {
+      target = site;
     }
 
     if (original == 0) {
@@ -2597,17 +2616,20 @@ populateSiteTables(Context* c, Event* e)
     memset(savedSites, 0, size);
 
     for (unsigned i = 0; i < c->localFootprint; ++i) {
-      if (successor->locals[i].value) {
-        savedSites[i] = successor->locals[i].value->sites;
+      Value* v = successor->locals[i].value;
+      if (v) {
+        savedSites[i] = v->sites;
+
+//         fprintf(stderr, "save %p for %p at %d\n", savedSites[i], v, i);
       }
     }
 
     if (successor->stack) {
       unsigned i = successor->stack->index + c->localFootprint;
       for (Stack* stack = successor->stack; stack; stack = stack->next) {
-        savedSites[i] = stack->value->sites;        
-        fprintf(stderr, "save %p at %d of %d in %p\n",
-                savedSites[i], i, frameFootprint, savedSites);
+        savedSites[i] = stack->value->sites;
+//         fprintf(stderr, "save %p for %p at %d\n",
+//                 savedSites[i], stack->value, i);
 
         i -= stack->size;
       }
@@ -2625,6 +2647,8 @@ setSites(Context* c, Event* e, Site** sites)
     if (v) {
       clearSites(c, v);
       if (live(v)) {
+//         fprintf(stderr, "set sites %p for %p at %d\n", sites[i], v, i);
+
         addSite(c, 0, 0, v->reads->size, v, sites[i]);
       }
     }
@@ -2636,6 +2660,8 @@ setSites(Context* c, Event* e, Site** sites)
       Value* v = stack->value;
       clearSites(c, v);
       if (live(v)) {
+//         fprintf(stderr, "set sites %p for %p at %d\n", sites[i], v, i);
+
         addSite(c, 0, 0, v->reads->size, v, sites[i]);
       }
       i -= stack->size;
@@ -3114,6 +3140,9 @@ class MyCompiler: public Compiler {
 
   virtual void pushed() {
     Value* v = value(&c);
+    appendFrameSite
+      (&c, v, BytesPerWord, (c.stack ? c.stack->index + c.stack->size : 0));
+
     c.stack = ::stack(&c, v, 1, c.stack);
   }
 
@@ -3207,22 +3236,36 @@ class MyCompiler: public Compiler {
     appendReturn(&c, size, static_cast<Value*>(value));
   }
 
-  virtual void initParameter(unsigned size, unsigned index) {
-    assert(&c, index < c.parameterFootprint);
-
-    //fprintf(stderr, "init parameter of size %d at %d\n", size, index);
+  virtual void initLocal(unsigned size, unsigned index) {
+    assert(&c, index < c.localFootprint);
 
     Value* v = value(&c);
-    appendParameter(&c, v, size, index);
+//     fprintf(stderr, "init local %p of size %d at %d\n", v, size, index);
+    appendFrameSite(&c, v, size, index);
 
     Local* local = c.locals + index;
     local->value = v;
     local->size = size;
   }
 
-  virtual void storeLocal(unsigned size, Operand* src, unsigned index) {
-    //fprintf(stderr, "store local of size %d at %d\n", size, index);
+  virtual void initLocalsFromLogicalIp(unsigned logicalIp) {
+    assert(&c, logicalIp < c.logicalCodeLength);
 
+    unsigned footprint = sizeof(Local) * c.localFootprint;
+    Local* newLocals = static_cast<Local*>(c.zone->allocate(footprint));
+    memset(newLocals, 0, footprint);
+    c.locals = newLocals;
+
+    Event* e = c.logicalCode[logicalIp]->firstEvent;
+    for (unsigned i = 0; i < c.localFootprint; ++i) {
+      Local* local = e->locals + i;
+      if (local->value) {
+        initLocal(local->size, i);
+      }
+    }
+  }
+
+  virtual void storeLocal(unsigned size, Operand* src, unsigned index) {
     assert(&c, index < c.localFootprint);
 
     unsigned footprint = sizeof(Local) * c.localFootprint;
@@ -3230,17 +3273,20 @@ class MyCompiler: public Compiler {
     memcpy(newLocals, c.locals, footprint);
     c.locals = newLocals;
 
+//     fprintf(stderr, "store local %p of size %d at %d\n", src, size, index);
+
     Local* local = c.locals + index;
     local->value = static_cast<Value*>(src);
     local->size = size;
   }
 
   virtual Operand* loadLocal(unsigned size UNUSED, unsigned index) {
-    //fprintf(stderr, "load local of size %d at %d\n", size, index);
-
     assert(&c, index < c.localFootprint);
     assert(&c, c.locals[index].value);
     assert(&c, pad(c.locals[index].size) == pad(size));
+
+//     fprintf(stderr, "load local %p of size %d at %d\n",
+//             c.locals[index].value, size, index);
 
     return c.locals[index].value;
   }
