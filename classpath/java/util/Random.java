@@ -58,6 +58,21 @@ public class Random {
     return next(32);
   }
 
+  public void nextBytes(byte[] bytes) {
+    final int length = bytes.length;
+    for (int i = 0; i < length;) {
+      int r = nextInt();
+      for (int j = Math.min(length - i, 4); j > 0; --j) {
+        bytes[i++] = (byte) r;
+        r >>= 8;
+      }
+    }
+  }
+
+  public long nextLong() {
+    return ((long) next(32) << 32) + next(32);
+  }
+
   public double nextDouble() {
     return (((long) next(26) << 27) + next(27)) / (double) (1L << 53);
   }
