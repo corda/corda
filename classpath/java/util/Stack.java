@@ -12,7 +12,7 @@ package java.util;
 
 public class Stack<T> extends Vector<T> {
   public boolean empty() {
-    return size() != 0;
+    return size() == 0;
   }
 
   public T peek() {
