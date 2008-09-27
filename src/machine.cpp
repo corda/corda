@@ -2598,12 +2598,14 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   PROTECT(t, class_);
 
   object o = 0;
-  if (classFlags(t, class_) & ACC_INTERFACE) {
-    if (classVirtualTable(t, class_)) {
-      o = findInTable
-        (t, classVirtualTable(t, class_), name, spec, methodName, methodSpec);
-    }
-  } else {
+  if ((classFlags(t, class_) & ACC_INTERFACE)
+      and classVirtualTable(t, class_))
+  {
+    o = findInTable
+      (t, classVirtualTable(t, class_), name, spec, methodName, methodSpec);
+  }
+
+  if (o == 0) {
     for (; o == 0 and class_; class_ = classSuper(t, class_)) {
       o = find(t, class_, name, spec);
     }
