@@ -18,7 +18,7 @@ namespace {
 const bool DebugAppend = true;
 const bool DebugCompile = true;
 const bool DebugStack = false;
-const bool DebugRegisters = false;
+const bool DebugRegisters = true;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -270,12 +270,16 @@ class Context {
     maxStackFootprint(0),
     stackPadding(0),
     machineCodeSize(0),
+    availableRegisterCount(arch->registerCount()),
     constantCompare(CompareNone),
     pass(ScanPass)
   {
     for (unsigned i = 0; i < arch->registerCount(); ++i) {
       registers[i] = new (zone->allocate(sizeof(Register))) Register(i);
-      registers[i]->reserved = arch->reserved(i);
+      if (arch->reserved(i)) {
+        registers[i]->reserved = true;
+        -- availableRegisterCount;
+      }
     }
   }
 
@@ -303,6 +307,7 @@ class Context {
   unsigned maxStackFootprint;
   unsigned stackPadding;
   unsigned machineCodeSize;
+  unsigned availableRegisterCount;
   ConstantCompare constantCompare;
   Pass pass;
 };
@@ -692,23 +697,29 @@ addressSite(Context* c, Promise* address)
 }
 
 void
-freeze(Register* r)
+freeze(Context* c, Register* r)
 {
+  assert(c, c->availableRegisterCount);
+
   if (DebugRegisters) {
     fprintf(stderr, "freeze %d to %d\n", r->number, r->freezeCount + 1);
   }
 
   ++ r->freezeCount;
+  -- c->availableRegisterCount;
 }
 
 void
-thaw(Register* r)
+thaw(Context* c, Register* r)
 {
+  assert(c, r->freezeCount);
+
   if (DebugRegisters) {
     fprintf(stderr, "thaw %d to %d\n", r->number, r->freezeCount - 1);
   }
 
   -- r->freezeCount;
+  ++ c->availableRegisterCount;
 }
 
 Register*
@@ -771,9 +782,9 @@ class RegisterSite: public Site {
   {
     low = ::validate(c, mask, stack, locals, size, v, this, low);
     if (size > BytesPerWord) {
-      ::freeze(low);
+      ::freeze(c, low);
       high = ::validate(c, mask >> 32, stack, locals, size, v, this, high);
-      ::thaw(low);
+      ::thaw(c, low);
     }
   }
 
@@ -789,18 +800,18 @@ class RegisterSite: public Site {
   virtual void freeze(Context* c UNUSED) {
     assert(c, low);
 
-    ::freeze(low);
+    ::freeze(c, low);
     if (high) {
-      ::freeze(high);
+      ::freeze(c, high);
     }
   }
 
   virtual void thaw(Context* c UNUSED) {
     assert(c, low);
 
-    ::thaw(low);
+    ::thaw(c, low);
     if (high) {
-      ::thaw(high);
+      ::thaw(c, high);
     }
   }
 
@@ -1438,9 +1449,9 @@ replace(Context* c, Stack* stack, Local* locals, Register* r)
 {
   uint32_t mask = (r->freezeCount? r->site->mask : ~0);
 
-  freeze(r);
+  freeze(c, r);
   Register* s = acquire(c, mask, stack, locals, r->size, r->value, r->site);
-  thaw(r);
+  thaw(c, r);
 
   if (DebugRegisters) {
     fprintf(stderr, "replace %d with %d\n", r->number, s->number);
@@ -2486,13 +2497,17 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
 }
 
 Site*
-pickJunctionSite(Context* c, Value* v, Read* r)
+pickJunctionSite(Context* c, Value* v, Read* r, unsigned index)
 {
-  Site* s = r->pickSite(c, v);
-  if (s) return s;
-  s = r->allocateSite(c);
-  if (s) return s;
-  return freeRegisterSite(c, ~0);
+  if (c->availableRegisterCount > 1) {
+    Site* s = r->pickSite(c, v);
+    if (s) return s;
+    s = r->allocateSite(c);
+    if (s) return s;
+    return freeRegisterSite(c);
+  } else {
+    return frameSite(c, index);
+  }
 }
 
 unsigned
@@ -2515,7 +2530,7 @@ resolveJunctionSite(Context* c, Event* e, Event* successor, Value* v,
     Site* original = e->junctionSites[index];
 
     if (original == 0) {
-      e->junctionSites[index] = pickJunctionSite(c, v, r);
+      e->junctionSites[index] = pickJunctionSite(c, v, r, index);
     }
 
     Site* target = e->junctionSites[index];
