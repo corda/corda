@@ -868,6 +868,22 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
 }
 
 void
+moveZRR(Context* c, unsigned aSize, Assembler::Register* a,
+        unsigned bSize UNUSED, Assembler::Register* b)
+{
+  switch (aSize) {
+  case 2:
+    rex(c);
+    c->code.append(0x0f);
+    c->code.append(0xb7);
+    c->code.append(0xc0 | (b->low << 3) | a->low);
+    break;
+
+  default: abort(c);
+  }
+}
+
+void
 swapRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
        unsigned bSize UNUSED, Assembler::Register* b)
 {
@@ -918,6 +934,40 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
     c->client->releaseTemporary(tmp.low);
   }
 }
+
+void
+compareRM(Context* c, unsigned aSize, Assembler::Register* a,
+          unsigned bSize UNUSED, Assembler::Memory* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  
+  if (BytesPerWord == 8 and aSize == 4) {
+    moveRR(c, 4, a, 8, a);
+  }
+  encode(c, 0x39, a->low, b, true);
+}
+
+void
+compareCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
+          unsigned bSize UNUSED, Assembler::Memory* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  
+  int64_t v = a->value->value();
+
+  encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
+
+  if (isInt8(v)) {
+    c->code.append(v);
+  } else if (isInt32(v)) {
+    c->code.append4(v);
+  } else {
+    abort(c);
+  }
+}
+
 void
 addCarryRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
@@ -1236,10 +1286,14 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, A, R)] = CAST2(moveAR);
   bo[index(Move, M, M)] = CAST2(moveMM);
 
+  bo[index(MoveZ, R, R)] = CAST2(moveZRR);
+
   bo[index(Swap, R, R)] = CAST2(swapRR);
 
   bo[index(Compare, R, R)] = CAST2(compareRR);
   bo[index(Compare, C, R)] = CAST2(compareCR);
+  bo[index(Compare, C, M)] = CAST2(compareCM);
+  bo[index(Compare, R, M)] = CAST2(compareRM);
 
   bo[index(Add, R, R)] = CAST2(addRR);
   bo[index(Add, C, R)] = CAST2(addCR);
