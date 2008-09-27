@@ -61,8 +61,8 @@ public class Vector<T> implements List<T> {
       return list.set(index, value);
   }
 
-  public T setElementAt(T value, int index) {
-      return set(index, value);
+  public void setElementAt(T value, int index) {
+    set(index, value);
   }
 
   public T elementAt(int index) {
