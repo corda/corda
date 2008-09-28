@@ -40,7 +40,7 @@ class Compiler {
   virtual void restoreState(State* state) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
-                    unsigned localFootprint, unsigned maxStackFootprint) = 0;
+                    unsigned localFootprint, unsigned alignedFrameSize) = 0;
 
   virtual void visitLogicalIp(unsigned logicalIp) = 0;
   virtual void startLogicalIp(unsigned logicalIp) = 0;

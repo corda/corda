@@ -267,9 +267,9 @@ class Context {
     logicalCodeLength(0),
     parameterFootprint(0),
     localFootprint(0),
-    maxStackFootprint(0),
     stackPadding(0),
     machineCodeSize(0),
+    alignedFrameSize(0),
     availableRegisterCount(arch->registerCount()),
     constantCompare(CompareNone),
     pass(ScanPass)
@@ -304,9 +304,9 @@ class Context {
   unsigned logicalCodeLength;
   unsigned parameterFootprint;
   unsigned localFootprint;
-  unsigned maxStackFootprint;
   unsigned stackPadding;
   unsigned machineCodeSize;
+  unsigned alignedFrameSize;
   unsigned availableRegisterCount;
   ConstantCompare constantCompare;
   Pass pass;
@@ -507,20 +507,11 @@ class Event {
   unsigned readCount;
 };
 
-unsigned
-alignedFrameSize(Context* c)
-{
-  return c->arch->alignFrameSize
-    (c->localFootprint
-     - c->parameterFootprint
-     + c->maxStackFootprint);
-}
-
 int
 localOffset(Context* c, int v)
 {
   int parameterFootprint = c->parameterFootprint;
-  int frameSize = alignedFrameSize(c);
+  int frameSize = c->alignedFrameSize;
 
   int offset = ((v < parameterFootprint) ?
                 (frameSize
@@ -1669,7 +1660,7 @@ class CallEvent: public Event {
     uint32_t mask = ~0;
     Stack* s = argumentStack;
     unsigned index = 0;
-    unsigned frameIndex = alignedFrameSize(c) + c->parameterFootprint;
+    unsigned frameIndex = c->alignedFrameSize + c->parameterFootprint;
     for (unsigned i = 0; i < argumentCount; ++i) {
       Read* target;
       if (index < c->arch->argumentRegisterCount()) {
@@ -2806,7 +2797,7 @@ compile(Context* c)
   Block* firstBlock = block(c, c->firstEvent);
   Block* block = firstBlock;
 
-  a->allocateFrame(alignedFrameSize(c));
+  a->allocateFrame(c->alignedFrameSize);
 
   for (Event* e = c->firstEvent; e; e = e->next) {
     e->block = block;
@@ -3020,12 +3011,12 @@ class MyCompiler: public Compiler {
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
-                    unsigned localFootprint, unsigned maxStackFootprint)
+                    unsigned localFootprint, unsigned alignedFrameSize)
   {
     c.logicalCodeLength = logicalCodeLength;
     c.parameterFootprint = parameterFootprint;
     c.localFootprint = localFootprint;
-    c.maxStackFootprint = maxStackFootprint;
+    c.alignedFrameSize = alignedFrameSize;
 
     c.logicalCode = static_cast<LogicalInstruction**>
       (c.zone->allocate(sizeof(LogicalInstruction*) * logicalCodeLength));

@@ -35,6 +35,8 @@ const bool DebugFrameMaps = false;
 
 const bool CheckArrayBounds = true;
 
+const unsigned MaxNativeCallFootprint = 4;
+
 class MyThread: public Thread {
  public:
   class CallTrace {
@@ -338,7 +340,9 @@ alignedFrameSize(MyThread* t, object method)
   return t->arch->alignFrameSize
     (localSize(t, method)
      - methodParameterFootprint(t, method)
-     + codeMaxStack(t, methodCode(t, method)));
+     + codeMaxStack(t, methodCode(t, method))
+     + MaxNativeCallFootprint
+     - t->arch->argumentRegisterCount());
 }
 
 unsigned
@@ -3898,7 +3902,7 @@ compile(MyThread* t, Context* context)
   unsigned footprint = methodParameterFootprint(t, context->method);
   unsigned locals = localSize(t, context->method);
   c->init(codeLength(t, methodCode(t, context->method)), footprint, locals,
-          codeMaxStack(t, methodCode(t, context->method)));
+          alignedFrameSize(t, context->method));
 
   uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
   Frame frame(context, stackMap);
