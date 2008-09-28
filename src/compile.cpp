@@ -342,7 +342,7 @@ alignedFrameSize(MyThread* t, object method)
      - methodParameterFootprint(t, method)
      + codeMaxStack(t, methodCode(t, method))
      + MaxNativeCallFootprint
-     - t->arch->argumentRegisterCount());
+     - min(MaxNativeCallFootprint, t->arch->argumentRegisterCount()));
 }
 
 unsigned

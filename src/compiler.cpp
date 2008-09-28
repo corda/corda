@@ -28,6 +28,7 @@ class Value;
 class Stack;
 class Site;
 class RegisterSite;
+class MemorySite;
 class Event;
 class PushEvent;
 class Read;
@@ -158,7 +159,7 @@ class Register {
  public:
   Register(int number):
     value(0), site(0), number(number), size(0), refCount(0),
-    freezeCount(0), reserved(false), pushed(false)
+    freezeCount(0), reserved(false)
   { }
 
   Value* value;
@@ -168,7 +169,14 @@ class Register {
   unsigned refCount;
   unsigned freezeCount;
   bool reserved;
-  bool pushed;
+};
+
+class FrameResource {
+ public:
+  Value* value;
+  MemorySite* site;
+  unsigned size;
+  unsigned freezeCount;
 };
 
 class ConstantPoolNode {
@@ -256,6 +264,7 @@ class Context {
     registers
     (static_cast<Register**>
      (zone->allocate(sizeof(Register*) * arch->registerCount()))),
+    frameResources(0),
     firstConstant(0),
     lastConstant(0),
     machineCode(0),
@@ -293,6 +302,7 @@ class Context {
   Event* predecessor;
   LogicalInstruction** logicalCode;
   Register** registers;
+  FrameResource* frameResources;
   ConstantPoolNode* firstConstant;
   ConstantPoolNode* lastConstant;
   uint8_t* machineCode;
@@ -508,25 +518,50 @@ class Event {
 };
 
 int
-localOffset(Context* c, int v)
+localOffset(Context* c, int frameIndex)
 {
   int parameterFootprint = c->parameterFootprint;
   int frameSize = c->alignedFrameSize;
 
-  int offset = ((v < parameterFootprint) ?
+  int offset = ((frameIndex < parameterFootprint) ?
                 (frameSize
                  + parameterFootprint
                  + (c->arch->frameFooterSize() * 2)
                  + c->arch->frameHeaderSize()
-                 - v - 1) :
+                 - frameIndex - 1) :
                 (frameSize
                  + parameterFootprint
                  + c->arch->frameFooterSize()
-                 - v - 1)) * BytesPerWord;
+                 - frameIndex - 1)) * BytesPerWord;
 
   assert(c, offset >= 0);
 
   return offset;
+}
+
+int
+localOffsetToFrameIndex(Context* c, int offset)
+{
+  int parameterFootprint = c->parameterFootprint;
+  int frameSize = c->alignedFrameSize;
+
+  int normalizedOffset = offset / BytesPerWord;
+
+  int frameIndex = ((normalizedOffset > frameSize) ?
+                    (frameSize
+                     + parameterFootprint
+                     + (c->arch->frameFooterSize() * 2)
+                     + c->arch->frameHeaderSize()
+                     - normalizedOffset - 1) :
+                    (frameSize
+                     + parameterFootprint
+                     + c->arch->frameFooterSize()
+                     - normalizedOffset - 1));
+
+  assert(c, frameIndex >= 0);
+  assert(c, localOffset(c, frameIndex) == offset);
+
+  return frameIndex;
 }
 
 bool
@@ -872,6 +907,14 @@ decrement(Context* c UNUSED, Register* r)
   -- r->refCount;
 }
 
+void
+acquireFrameIndex(Context* c, int index, Stack* stack, Local* locals,
+                  unsigned newSize, Value* newValue, MemorySite* newSite,
+                  bool recurse = true);
+
+void
+releaseFrameIndex(Context* c, int index, bool recurse = true);
+
 class MemorySite: public Site {
  public:
   MemorySite(int base, int offset, int index, unsigned scale):
@@ -918,14 +961,28 @@ class MemorySite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack*, Local*, unsigned, Value*) {
+  virtual void acquire(Context* c, Stack* stack, Local* locals, unsigned size,
+                       Value* v)
+  {
     base = increment(c, value.base);
     if (value.index != NoRegister) {
       index = increment(c, value.index);
     }
+
+    if (value.base == c->arch->stack()) {
+      assert(c, value.index == NoRegister);
+      acquireFrameIndex
+        (c, localOffsetToFrameIndex(c, value.offset), stack, locals, size, v,
+         this);
+    }
   }
 
   virtual void release(Context* c) {
+    if (value.base == c->arch->stack()) {
+      assert(c, value.index == NoRegister);
+      releaseFrameIndex(c, localOffsetToFrameIndex(c, value.offset));
+    }
+
     decrement(c, base);
     if (index) {
       decrement(c, index);
@@ -1014,6 +1071,7 @@ allocateSite(Context* c, uint8_t typeMask, uint64_t registerMask,
   } else if (frameIndex >= 0) {
     return frameSite(c, frameIndex);
   } else {
+    fprintf(stderr, "type mask %02x reg mask %016lx frame index %d\n", typeMask, registerMask, frameIndex);
     return 0;
   }
 }
@@ -1066,6 +1124,7 @@ Read*
 read(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
      int frameIndex)
 {
+  assert(c, (typeMask != 1 << MemoryOperand) or frameIndex >= 0);
   return new (c->zone->allocate(sizeof(SingleRead)))
     SingleRead(size, typeMask, registerMask, frameIndex);
 }
@@ -1533,6 +1592,70 @@ validate(Context* c, uint32_t mask, Stack* stack, Local* locals,
   }
 
   return r;
+}
+
+bool
+trySteal(Context* c, FrameResource* r, Stack*, Local*)
+{
+  Value* v = r->value;
+  assert(c, v->reads);
+
+  if (v->sites->next == 0) {
+    return false; // todo
+  }
+
+  removeSite(c, v, r->site);
+
+  return true;
+}
+
+void
+acquireFrameIndex(Context* c, int index, Stack* stack, Local* locals,
+                  unsigned newSize, Value* newValue, MemorySite* newSite,
+                  bool recurse)
+{
+  assert(c, index >= 0);
+  assert(c, index < static_cast<int>
+         (c->alignedFrameSize + c->parameterFootprint));
+
+  FrameResource* r = c->frameResources + index;
+
+  if (recurse and newSize > BytesPerWord) {
+    acquireFrameIndex
+      (c, index + 1, stack, locals, newSize, newValue, newSite, false);
+  }
+
+  Value* oldValue = r->value;
+  if (oldValue
+      and oldValue != newValue
+      and findSite(c, oldValue, r->site))
+  {
+    if (not trySteal(c, r, stack, locals)) {
+      abort(c);
+    }
+  }
+
+  r->size = newSize;
+  r->value = newValue;
+  r->site = 0;
+}
+
+void
+releaseFrameIndex(Context* c, int index, bool recurse)
+{
+  assert(c, index >= 0);
+  assert(c, index < static_cast<int>
+         (c->alignedFrameSize + c->parameterFootprint));
+
+  FrameResource* r = c->frameResources + index;
+
+  if (recurse and r->size > BytesPerWord) {
+    releaseFrameIndex(c, index + 1, false);
+  }
+
+  r->size = 0;
+  r->value = 0;
+  r->site = 0;
 }
 
 void
@@ -3017,6 +3140,14 @@ class MyCompiler: public Compiler {
     c.parameterFootprint = parameterFootprint;
     c.localFootprint = localFootprint;
     c.alignedFrameSize = alignedFrameSize;
+
+    unsigned frameResourceSize = sizeof(FrameResource)
+      * (alignedFrameSize + parameterFootprint);
+
+    c.frameResources = static_cast<FrameResource*>
+      (c.zone->allocate(frameResourceSize));
+
+    memset(c.frameResources, 0, frameResourceSize);
 
     c.logicalCode = static_cast<LogicalInstruction**>
       (c.zone->allocate(sizeof(LogicalInstruction*) * logicalCodeLength));

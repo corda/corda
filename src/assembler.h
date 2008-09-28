@@ -75,7 +75,6 @@ enum OperandType {
 const unsigned OperandTypeCount = MemoryOperand + 1;
 
 const int NoRegister = -1;
-const int AnyRegister = -2;
 
 class Promise {
  public:
