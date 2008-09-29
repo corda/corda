@@ -2340,7 +2340,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case goto_: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
       c->jmp(frame->machineIp(newIp));
@@ -2348,7 +2349,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case goto_w: {
-      uint32_t newIp = (ip - 5) + codeReadInt32(t, code, ip);
+      uint32_t offset = codeReadInt32(t, code, ip);
+      uint32_t newIp = (ip - 5) + offset;
       assert(t, newIp < codeLength(t, code));
 
       c->jmp(frame->machineIp(newIp));
@@ -2433,7 +2435,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case if_acmpeq:
     case if_acmpne: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
         
       Compiler::Operand* a = frame->popObject();
@@ -2457,7 +2460,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case if_icmpge:
     case if_icmplt:
     case if_icmple: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
         
       Compiler::Operand* a = frame->popInt();
@@ -2496,7 +2500,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case ifge:
     case iflt:
     case ifle: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
       Compiler::Operand* a = frame->popInt();
@@ -2530,7 +2535,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case ifnull:
     case ifnonnull: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
       Compiler::Operand* a = frame->popObject();
@@ -2780,9 +2786,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint32_t newIp;
 
       if (instruction == jsr) {
-        newIp = (ip - 3) + codeReadInt16(t, code, ip);
+        uint32_t offset = codeReadInt16(t, code, ip);
+        newIp = (ip - 3) + offset;
       } else {
-        newIp = (ip - 5) + codeReadInt32(t, code, ip);
+        uint32_t offset = codeReadInt32(t, code, ip);
+        newIp = (ip - 5) + offset;
       }
 
       assert(t, newIp < codeLength(t, code));
