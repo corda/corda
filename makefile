@@ -135,6 +135,10 @@ ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG
 	strip = strip
 endif
+ifeq ($(mode),small)
+	cflags += -Os -g3 -DNDEBUG
+	strip = strip
+endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
