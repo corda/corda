@@ -1363,6 +1363,9 @@ codePromise(Context* c, int offset)
   return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
 }
 
+void
+appendPush(Context* c, Stack* s);
+
 class CallEvent: public Event {
  public:
   CallEvent(Context* c, Value* address, unsigned flags,
@@ -1399,6 +1402,9 @@ class CallEvent: public Event {
             (c, 0, ~0, (static_cast<uint64_t>(mask) << 32) | mask));
 
     for (Stack* s = stack; s; s = s->next) {
+      if (s->pushEvent == 0) {
+        appendPush(c, s);
+      }
       s->pushEvent->active = true;
       addRead(c, s->value, s->size * BytesPerWord, virtualSite
               (c, 0, ~0, (static_cast<uint64_t>(mask) << 32) | mask));
