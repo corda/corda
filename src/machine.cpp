@@ -1709,6 +1709,8 @@ Machine::dispose()
     heap->free(heapPool[i], Thread::HeapSizeInBytes);
   }
 
+  heap->free(properties, sizeof(const char*) * propertyCount);
+
   static_cast<HeapClient*>(heapClient)->dispose();
 
   heap->free(this, sizeof(*this));
