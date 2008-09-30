@@ -380,7 +380,7 @@ class JarIndex {
 class JarElement: public Element {
  public:
   JarElement(System* s, const char* name):
-    s(s), name(name), index(0)
+    s(s), name(name), region(0), index(0)
   { }
 
   virtual void init() {
