@@ -292,9 +292,10 @@ class MySystem: public System {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
-        bool interrupted;
-        bool notified;
-        unsigned depth;
+        // Initialized here to make gcc 4.2 a happy compiler
+        bool interrupted = false;
+        bool notified = false;
+        unsigned depth = 0;
 
         { ACQUIRE(t->mutex);
       
