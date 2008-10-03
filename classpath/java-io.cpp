@@ -14,12 +14,14 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <dirent.h>
 
 #include "jni.h"
 #include "jni-util.h"
 
 #ifdef WIN32
+#  include <windows.h>
 #  include <io.h>
 
 #  define OPEN _open
@@ -34,6 +36,7 @@
 #  define OPEN_MASK O_BINARY
 #else
 #  include <unistd.h>
+#  include "sys/mman.h"
 
 #  define OPEN open
 #  define CLOSE close
@@ -46,6 +49,8 @@
 #  define UNLINK unlink
 #  define OPEN_MASK 0
 #endif
+
+inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace {
 
@@ -95,8 +100,117 @@ doWrite(JNIEnv* e, jint fd, const jbyte* data, jint length)
   int r = WRITE(fd, data, length);
   if (r != length) {
     throwNew(e, "java/io/IOException", strerror(errno));
-  }  
+  }
 }
+
+#ifdef WIN32
+
+class Mapping {
+ public:
+  Mapping(uint8_t* start, size_t length, HANDLE mapping, HANDLE file):
+    start(start),
+    length(length),
+    mapping(mapping),
+    file(file)
+  { }
+
+  uint8_t* start;
+  size_t length;
+  HANDLE mapping;
+  HANDLE file;
+};
+
+inline Mapping*
+map(JNIEnv* e, const char* path)
+{
+  Mapping* result = 0;
+  HANDLE file = CreateFile(path, FILE_READ_DATA, FILE_SHARE_READ, 0,
+                           OPEN_EXISTING, 0, 0);
+  if (file != INVALID_HANDLE_VALUE) {
+    unsigned size = GetFileSize(file, 0);
+    if (size != INVALID_FILE_SIZE) {
+      HANDLE mapping = CreateFileMapping(file, 0, PAGE_READONLY, 0, size, 0);
+      if (mapping) {
+        void* data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+        if (data) {
+          void* p = allocate(e, sizeof(Mapping));
+          if (not e->ExceptionOccurred()) {
+            result = new (p)
+              Mapping(static_cast<uint8_t*>(data), size, file, mapping);
+          }   
+        }
+
+        if (result == 0) {
+          CloseHandle(mapping);
+        }
+      }
+    }
+
+    if (result == 0) {
+      CloseHandle(file);
+    }
+  }
+  if (result == 0 and not e->ExceptionOccurred()) {
+    throwNew(e, "java/io/IOException", "%d", GetLastError());
+  }
+  return result;
+}
+
+inline void
+unmap(JNIEnv*, Mapping* mapping)
+{
+  UnmapViewOfFile(mapping->start);
+  CloseHandle(mapping->mapping);
+  CloseHandle(mapping->file);
+  free(mapping);
+}
+
+#else // not WIN32
+
+class Mapping {
+ public:
+  Mapping(uint8_t* start, size_t length):
+    start(start),
+    length(length)
+  { }
+
+  uint8_t* start;
+  size_t length;
+};
+
+inline Mapping*
+map(JNIEnv* e, const char* path)
+{
+  Mapping* result = 0;
+  int fd = open(path, O_RDONLY);
+  if (fd != -1) {
+    struct stat s;
+    int r = fstat(fd, &s);
+    if (r != -1) {
+      void* data = mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+      if (data) {
+        void* p = allocate(e, sizeof(Mapping));
+        if (not e->ExceptionOccurred()) {
+          result = new (p) Mapping(static_cast<uint8_t*>(data), s.st_size);
+        }
+      }
+    }
+    close(fd);
+  }
+  if (result == 0 and not e->ExceptionOccurred()) {
+    throwNew(e, "java/io/IOException", strerror(errno));
+  }
+  return result;
+}
+
+inline void
+unmap(JNIEnv*, Mapping* mapping)
+{
+  munmap(mapping->start, mapping->length);
+  free(mapping);
+}
+
+#endif // not WIN32
 
 } // namespace
 
@@ -332,4 +446,43 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_io_FileOutputStream_close(JNIEnv* e, jclass, jint fd)
 {
   doClose(e, fd);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
+                                   jlongArray result)
+{
+  const char* chars = e->GetStringUTFChars(path, 0);
+  if (chars) {
+    Mapping* mapping = map(e, chars);
+
+    jlong peer = reinterpret_cast<jlong>(mapping);
+    e->SetLongArrayRegion(result, 0, 1, &peer);
+
+    jlong length = mapping->length;
+    e->SetLongArrayRegion(result, 1, 1, &length);
+
+    e->ReleaseStringUTFChars(path, chars);
+  }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_io_RandomAccessFile_copy(JNIEnv* e, jclass, jlong peer,
+                                   jlong position, jbyteArray buffer,
+                                   int offset, int length)
+{
+  uint8_t* dst = reinterpret_cast<uint8_t*>
+    (e->GetPrimitiveArrayCritical(buffer, 0));
+
+  memcpy(dst + offset,
+         reinterpret_cast<Mapping*>(peer)->start + position,
+         length);
+
+  e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_io_RandomAccessFile_close(JNIEnv* e, jclass, jlong peer)
+{
+  unmap(e, reinterpret_cast<Mapping*>(peer));
 }
