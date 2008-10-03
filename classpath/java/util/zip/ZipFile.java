@@ -205,7 +205,6 @@ public class ZipFile {
           this.start = fileLength - this.length;
         }
         file.seek(this.start);
-//         System.out.println("start " + start + " length " + length + " this start " + this.start + " this.length " + this.length + " file length " + fileLength);
         file.readFully(data, 0, this.length);
       }
 
