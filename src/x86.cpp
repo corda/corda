@@ -744,33 +744,33 @@ moveRM(Context* c, unsigned aSize, Assembler::Register* a,
   }
 }
 
-void
-moveMM(Context* c, unsigned aSize, Assembler::Memory* a,
-       unsigned bSize, Assembler::Memory* b)
-{
-  assert(c, aSize == bSize);
+// void
+// moveMM(Context* c, unsigned aSize, Assembler::Memory* a,
+//        unsigned bSize, Assembler::Memory* b)
+// {
+//   assert(c, aSize == bSize);
 
-  if (BytesPerWord == 8 or aSize <= 4) {
-    uint32_t mask;
-    if (BytesPerWord == 4 and aSize == 1) {
-      mask = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
-    } else {
-      mask = ~static_cast<uint32_t>(0);
-    }
+//   if (BytesPerWord == 8 or aSize <= 4) {
+//     uint32_t mask;
+//     if (BytesPerWord == 4 and aSize == 1) {
+//       mask = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
+//     } else {
+//       mask = ~static_cast<uint32_t>(0);
+//     }
 
-    Assembler::Register tmp(c->client->acquireTemporary(mask));
-    moveMR(c, aSize, a, aSize, &tmp);
-    moveRM(c, aSize, &tmp, bSize, b);
-    c->client->releaseTemporary(tmp.low);
-  } else {
-    Assembler::Register tmp(c->client->acquireTemporary(),
-                            c->client->acquireTemporary());
-    moveMR(c, aSize, a, aSize, &tmp);
-    moveRM(c, aSize, &tmp, bSize, b);    
-    c->client->releaseTemporary(tmp.low);
-    c->client->releaseTemporary(tmp.high);
-  }
-}
+//     Assembler::Register tmp(c->client->acquireTemporary(mask));
+//     moveMR(c, aSize, a, aSize, &tmp);
+//     moveRM(c, aSize, &tmp, bSize, b);
+//     c->client->releaseTemporary(tmp.low);
+//   } else {
+//     Assembler::Register tmp(c->client->acquireTemporary(),
+//                             c->client->acquireTemporary());
+//     moveMR(c, aSize, a, aSize, &tmp);
+//     moveRM(c, aSize, &tmp, bSize, b);    
+//     c->client->releaseTemporary(tmp.low);
+//     c->client->releaseTemporary(tmp.high);
+//   }
+// }
 
 void
 moveAR(Context* c, unsigned aSize, Assembler::Address* a,
@@ -1284,7 +1284,7 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, C, M)] = CAST2(moveCM);
   bo[index(Move, A, M)] = CAST2(moveAM);
   bo[index(Move, A, R)] = CAST2(moveAR);
-  bo[index(Move, M, M)] = CAST2(moveMM);
+//   bo[index(Move, M, M)] = CAST2(moveMM);
 
   bo[index(MoveZ, R, R)] = CAST2(moveZRR);
 
@@ -1299,6 +1299,7 @@ populateTables(ArchitectureContext* c)
   bo[index(Add, C, R)] = CAST2(addCR);
 
   bo[index(Subtract, C, R)] = CAST2(subtractCR);
+  bo[index(Subtract, R, R)] = CAST2(subtractRR);
 
   bo[index(And, C, R)] = CAST2(andCR);
 
