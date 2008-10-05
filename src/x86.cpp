@@ -1390,7 +1390,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void* frameIp(void* stack) {
-    return *static_cast<void**>(stack);
+    return stack ? *static_cast<void**>(stack) : 0;
   }
 
   virtual unsigned frameHeaderSize() {
