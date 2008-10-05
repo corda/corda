@@ -470,7 +470,7 @@ class Event {
  public:
   Event(Context* c):
     next(0), stackBefore(c->stack), localsBefore(c->locals),
-    stackAfter(c->stack), localsAfter(c->locals), promises(0), reads(0),
+    stackAfter(0), localsAfter(0), promises(0), reads(0),
     junctionSites(0), savedSites(0), predecessors(0), successors(0), block(0),
     logicalInstruction(c->logicalCode[c->logicalIp]), state(c->state),
     junctionReads(0), readCount(0)
@@ -668,7 +668,7 @@ class ConstantSite: public Site {
 
   virtual void toString(Context*, char* buffer, unsigned bufferSize) {
     if (value.value->resolved()) {
-      snprintf(buffer, bufferSize, "constant %ld", value.value->value());
+      snprintf(buffer, bufferSize, "constant %"LLD, value.value->value());
     } else {
       snprintf(buffer, bufferSize, "constant unresolved");
     }
@@ -718,7 +718,7 @@ class AddressSite: public Site {
 
   virtual void toString(Context*, char* buffer, unsigned bufferSize) {
     if (address.address->resolved()) {
-      snprintf(buffer, bufferSize, "address %ld", address.address->value());
+      snprintf(buffer, bufferSize, "address %"LLD, address.address->value());
     } else {
       snprintf(buffer, bufferSize, "address unresolved");
     }
@@ -2672,14 +2672,17 @@ appendFrameSite(Context* c, Value* value, unsigned size, int index)
     (c, value, size, index);
 }
 
+unsigned
+frameFootprint(Context* c, Stack* s)
+{
+  return c->localFootprint + (s ? (s->index + s->size) : 0);
+}
+
 class DummyEvent: public Event {
  public:
   DummyEvent(Context* c):
     Event(c)
-  {
-    stackBefore = stackAfter = logicalInstruction->stack;
-    localsBefore = localsAfter = logicalInstruction->locals;
-  }
+  { }
 
   virtual const char* name() {
     return "DummyEvent";
@@ -2691,7 +2694,17 @@ class DummyEvent: public Event {
 void
 appendDummy(Context* c)
 {
+  Stack* stack = c->stack;
+  Local* locals = c->locals;
+  LogicalInstruction* i = c->logicalCode[c->logicalIp];
+
+  c->stack = i->stack;
+  c->locals = i->locals;
+
   new (c->zone->allocate(sizeof(DummyEvent))) DummyEvent(c);
+
+  c->stack = stack;
+  c->locals = locals;  
 }
 
 Site*
@@ -2735,12 +2748,6 @@ pickJunctionSite(Context* c, Value* v, Read* r, unsigned index)
   } else {
     return frameSite(c, index);
   }
-}
-
-unsigned
-frameFootprint(Context* c, Stack* s)
-{
-  return c->localFootprint + (s ? (s->index + s->size) : 0);
 }
 
 unsigned
@@ -3039,6 +3046,10 @@ block(Context* c, Event* head)
 unsigned
 compile(Context* c)
 {
+  if (c->logicalIp >= 0 and c->logicalCode[c->logicalIp]->lastEvent == 0) {
+    appendDummy(c);
+  }
+
   Assembler* a = c->assembler;
 
   c->pass = CompilePass;
