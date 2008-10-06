@@ -459,7 +459,7 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
     jlong peer = reinterpret_cast<jlong>(mapping);
     e->SetLongArrayRegion(result, 0, 1, &peer);
 
-    jlong length = mapping->length;
+    jlong length = (mapping ? mapping->length : 0);
     e->SetLongArrayRegion(result, 1, 1, &length);
 
     e->ReleaseStringUTFChars(path, chars);
