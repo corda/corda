@@ -10,6 +10,7 @@
 
 package java.util.zip;
 
+import java.io.File;
 import java.io.RandomAccessFile;
 import java.io.InputStream;
 import java.io.IOException;
@@ -52,6 +53,10 @@ public class ZipFile {
         -- pointer;
       }
     }
+  }
+
+  public ZipFile(File file) throws IOException {
+    this(file.getAbsolutePath());
   }
 
   public int size() {
@@ -175,6 +180,10 @@ public class ZipFile {
     throws IOException
   {
     return get2(w, p + 28);
+  }
+
+  public void close() throws IOException {
+    file.close();
   }
 
   private static class Window {
