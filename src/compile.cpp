@@ -3873,15 +3873,15 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (false and
+  if (//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/System") == 0 and
+       "java/lang/Class") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "<clinit>") == 0)
+       "getName") == 0)
   {
     asm("int3");
   }

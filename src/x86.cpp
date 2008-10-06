@@ -785,17 +785,17 @@ moveAR(Context* c, unsigned aSize, Assembler::Address* a,
   moveMR(c, bSize, &memory, bSize, b);
 }
 
-void
-moveAM(Context* c, unsigned aSize, Assembler::Address* a,
-       unsigned bSize, Assembler::Memory* b)
-{
-  assert(c, BytesPerWord == 8 or (aSize == 4 and bSize == 4));
+// void
+// moveAM(Context* c, unsigned aSize, Assembler::Address* a,
+//        unsigned bSize, Assembler::Memory* b)
+// {
+//   assert(c, BytesPerWord == 8 or (aSize == 4 and bSize == 4));
 
-  Assembler::Register tmp(c->client->acquireTemporary());
-  moveAR(c, aSize, a, aSize, &tmp);
-  moveRM(c, aSize, &tmp, bSize, b);
-  c->client->releaseTemporary(tmp.low);
-}
+//   Assembler::Register tmp(c->client->acquireTemporary());
+//   moveAR(c, aSize, a, aSize, &tmp);
+//   moveRM(c, aSize, &tmp, bSize, b);
+//   c->client->releaseTemporary(tmp.low);
+// }
 
 void
 moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
@@ -1282,7 +1282,7 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, M, R)] = CAST2(moveMR);
   bo[index(Move, R, M)] = CAST2(moveRM);
   bo[index(Move, C, M)] = CAST2(moveCM);
-  bo[index(Move, A, M)] = CAST2(moveAM);
+//   bo[index(Move, A, M)] = CAST2(moveAM);
   bo[index(Move, A, R)] = CAST2(moveAR);
 //   bo[index(Move, M, M)] = CAST2(moveMM);
 

@@ -15,10 +15,10 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = false;
-const bool DebugCompile = false;
+const bool DebugAppend = true;
+const bool DebugCompile = true;
 const bool DebugStack = false;
-const bool DebugRegisters = false;
+const bool DebugRegisters = true;
 const bool DebugFrameIndexes = false;
 
 const int AnyFrameIndex = -2;
@@ -181,7 +181,6 @@ class FrameResource {
   Value* value;
   MemorySite* site;
   unsigned size;
-  unsigned freezeCount;
 };
 
 class ConstantPoolNode {
@@ -486,9 +485,6 @@ class Event {
 
     Event* p = c->predecessor;
     if (p) {
-      p->stackAfter = stackBefore;
-      p->localsAfter = localsBefore;
-
       predecessors = cons(c, p, 0);
       p->successors = cons(c, this, p->successors);
     }
@@ -1809,10 +1805,14 @@ addRead(Context* c, Event* e, Value* v, Read* r)
 }
 
 void
-clean(Context* c, Value* v)
+clean(Context* c, Value* v, unsigned popIndex)
 {
   for (Site** s = &(v->sites); *s;) {
-    if ((*s)->match(c, 1 << MemoryOperand, 0, AnyFrameIndex)) {
+    if ((*s)->match(c, 1 << MemoryOperand, 0, AnyFrameIndex)
+        and localOffsetToFrameIndex
+        (c, static_cast<MemorySite*>(*s)->value.offset)
+        < static_cast<int>(popIndex))
+    {
       s = &((*s)->next);
     } else {
       (*s)->release(c);
@@ -1822,14 +1822,15 @@ clean(Context* c, Value* v)
 }
 
 void
-clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads)
+clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
+      unsigned popIndex)
 {
   for (unsigned i = 0; i < c->localFootprint; ++i) {
-    if (locals[i].value) clean(c, locals[i].value);
+    if (locals[i].value) clean(c, locals[i].value, c->localFootprint);
   }
 
   for (Stack* s = stack; s; s = s->next) {
-    clean(c, s->value);
+    clean(c, s->value, popIndex);
   }
 
   for (Read* r = reads; r; r = r->eventNext) {
@@ -1860,6 +1861,7 @@ class CallEvent: public Event {
     address(address),
     traceHandler(traceHandler),
     result(result),
+    popIndex(c->localFootprint),
     flags(flags),
     resultSize(resultSize)
   {
@@ -1894,11 +1896,12 @@ class CallEvent: public Event {
         addRead(c, this, s->value, read
                 (c, s->size * BytesPerWord,
                  1 << MemoryOperand, 0, frameIndex));
-      } else {
+      } else {        
         unsigned index = s->index + c->localFootprint;
         if (footprint == 0) {
           assert(c, index <= frameIndex);
           s->padding = frameIndex - index;
+          popIndex = index + s->size;
         }
         addRead(c, this, s->value, read
                 (c, s->size * BytesPerWord, 1 << MemoryOperand, 0, index));
@@ -1927,7 +1930,7 @@ class CallEvent: public Event {
       traceHandler->handleTrace(codePromise(c, c->assembler->offset()));
     }
 
-    clean(c, this, stackBefore, localsBefore, reads);
+    clean(c, this, stackBefore, localsBefore, reads, popIndex);
 
     if (resultSize and live(result)) {
       addSite(c, 0, 0, resultSize, result, registerSite
@@ -1940,6 +1943,7 @@ class CallEvent: public Event {
   Value* address;
   TraceHandler* traceHandler;
   Value* result;
+  unsigned popIndex;
   unsigned flags;
   unsigned resultSize;
 };
@@ -2178,7 +2182,8 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
      Site* src, Site* dst)
 {
   if (dst->type(c) == MemoryOperand
-      and src->type(c) == MemoryOperand)
+      and (src->type(c) == MemoryOperand
+           or src->type(c) == AddressOperand))
   {
     Site* tmp = freeRegisterSite(c);
     addSite(c, stack, locals, size, value, tmp);
@@ -2732,17 +2737,18 @@ Site*
 pickJunctionSite(Context* c, Value* v, Read* r, unsigned index)
 {
   if (c->availableRegisterCount > 1) {
-    Site* s = r->pickSite(c, v);
-    if (s
-        and ((1 << s->type(c))
-             & ((1 << MemoryOperand)
-                | (1 << RegisterOperand))))
-    {
-      return s;
-    }
+    if (not v->visited) {
+      Site* s = r->pickSite(c, v);
+      if (s and s->match
+          (c, (1 << MemoryOperand) | (1 << RegisterOperand),
+           ~0, AnyFrameIndex))
+      {
+        return s;
+      }
 
-    s = r->allocateSite(c);
-    if (s) return s;
+      s = r->allocateSite(c);
+      if (s) return s;
+    }
 
     return freeRegisterSite(c);
   } else {
@@ -2769,7 +2775,7 @@ resolveJunctionSite(Context* c, Event* e, Value* v, unsigned index,
     Site* target = e->junctionSites[index];
     unsigned copyCost;
     Site* site = pick(c, v->sites, target, &copyCost);
-    if (copyCost) {
+    if (v->visited or copyCost) {
       move(c, e->stackAfter, e->localsAfter, r->size, v, site, target);
     } else {
       target = site;
@@ -2778,13 +2784,15 @@ resolveJunctionSite(Context* c, Event* e, Value* v, unsigned index,
     target->makeSpecific(c);
 
     char buffer[256]; target->toString(c, buffer, 256);
-//     fprintf(stderr, "resolve junction site %d %s %p\n", index, buffer, target);
+    fprintf(stderr, "resolve junction site %d %s %p\n", index, buffer, v);
 
     if (original == 0) {
       frozenSites[frozenSiteIndex++] = target;
       target->freeze(c);
     }
   }
+
+  v->visited = true;
 
   return frozenSiteIndex;
 }
@@ -2863,6 +2871,18 @@ populateSiteTables(Context* c, Event* e)
         if (e->localsAfter[i].value and e->junctionSites[i] == 0) {
           frozenSiteIndex = resolveJunctionSite
             (c, e, e->localsAfter[i].value, i, frozenSites, frozenSiteIndex);
+        }
+      }
+
+      if (e->stackAfter) {
+        for (Stack* stack = e->stackAfter; stack; stack = stack->next) {
+          stack->value->visited = false;
+        }
+      }
+
+      for (int i = c->localFootprint - 1; i >= 0; --i) {
+        if (e->localsAfter[i].value) {
+          e->localsAfter[i].value->visited = false;
         }
       }
     }
@@ -3064,11 +3084,14 @@ compile(Context* c)
 
     if (DebugCompile) {
       fprintf(stderr,
-              "compile %s at %d with %d preds, %d succs, %d stack\n",
+              "compile %s at %d with %d preds %d succs %d stack before "
+              "%d after\n",
               e->name(), e->logicalInstruction->index,
               count(e->predecessors), count(e->successors),
               e->stackBefore ?
-              e->stackBefore->index + e->stackBefore->size : 0);
+              e->stackBefore->index + e->stackBefore->size : 0,
+              e->stackAfter ?
+              e->stackAfter->index + e->stackAfter->size : 0);
     }
 
     if (e->logicalInstruction->machineOffset == 0) {
@@ -3323,6 +3346,12 @@ class MyCompiler: public Compiler {
 
     if (c.logicalIp >= 0 and c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
+    }
+
+    Event* p = c.predecessor;
+    if (p) {
+      p->stackAfter = c.stack;
+      p->localsAfter = c.locals;
     }
 
     c.logicalCode[logicalIp] = new 
