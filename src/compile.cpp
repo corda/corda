@@ -3881,7 +3881,7 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "getName") == 0)
+       "replace") == 0)
   {
     asm("int3");
   }

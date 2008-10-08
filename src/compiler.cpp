@@ -19,7 +19,7 @@ const bool DebugAppend = true;
 const bool DebugCompile = true;
 const bool DebugStack = false;
 const bool DebugRegisters = true;
-const bool DebugFrameIndexes = false;
+const bool DebugFrameIndexes = true;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -505,6 +505,8 @@ class Event {
   virtual void compile(Context* c) = 0;
 
   virtual void compilePostsync(Context*) { }
+
+  virtual bool isBranch() { return false; }
 
   Event* next;
   Stack* stackBefore;
@@ -1635,8 +1637,6 @@ validate(Context* c, uint32_t mask, Stack* stack, Local* locals,
       current->value = value;
       current->site = site;
       return current;
-    } else {
-      removeSite(c, current->value, current->site);
     }
   }
 
@@ -2565,6 +2565,8 @@ class BranchEvent: public Event {
     nextRead(c, this, address);
   }
 
+  virtual bool isBranch() { return true; }
+
   UnaryOperation type;
   Value* address;
 };
@@ -2775,7 +2777,7 @@ resolveJunctionSite(Context* c, Event* e, Value* v, unsigned index,
     Site* target = e->junctionSites[index];
     unsigned copyCost;
     Site* site = pick(c, v->sites, target, &copyCost);
-    if (v->visited or copyCost) {
+    if ((v->visited and target->type(c) == RegisterOperand) or copyCost) {
       move(c, e->stackAfter, e->localsAfter, r->size, v, site, target);
     } else {
       target = site;
@@ -2931,7 +2933,8 @@ setSites(Context* c, Event* e, Site** sites)
       if (live(v)) {
 //         fprintf(stderr, "set sites %p for %p at %d\n", sites[i], v, i);
 
-        addSite(c, 0, 0, v->reads->size, v, sites[i]);
+        addSite(c, e->stackBefore, e->localsBefore, v->reads->size, v,
+                sites[i]);
       }
     }
   }
@@ -2944,7 +2947,8 @@ setSites(Context* c, Event* e, Site** sites)
       if (live(v)) {
 //         fprintf(stderr, "set sites %p for %p at %d\n", sites[i], v, i);
 
-        addSite(c, 0, 0, v->reads->size, v, sites[i]);
+        addSite(c, e->stackBefore, e->localsBefore, v->reads->size, v,
+                sites[i]);
       }
       i -= stack->size;
     }
@@ -3120,9 +3124,14 @@ compile(Context* c)
 
     populateSources(c, e);
 
+    bool branch = e->isBranch();
+    if (branch and e->successors) {
+      populateSiteTables(c, e);
+    }
+
     e->compile(c);
 
-    if (e->successors) {
+    if ((not branch) and e->successors) {
       populateSiteTables(c, e);
     }
 
