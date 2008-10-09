@@ -2794,8 +2794,10 @@ class MyCompiler: public Compiler {
     }
   }
 
-  virtual void popped(unsigned count) {
-    appendPop(&c, count, true);
+  virtual void popped(unsigned count, bool isEvent) {
+    if (isEvent) {
+      appendPop(&c, count, true);
+    }
 
     for (unsigned i = count; i;) {
       Stack* s = c.state->stack;

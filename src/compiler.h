@@ -69,7 +69,7 @@ class Compiler {
   virtual void push(unsigned size, Operand* value) = 0;
   virtual Operand* pop(unsigned size) = 0;
   virtual void pushed(unsigned count) = 0;
-  virtual void popped(unsigned count) = 0;
+  virtual void popped(unsigned count, bool isEvent) = 0;
   virtual Operand* peek(unsigned size, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,

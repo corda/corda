@@ -851,9 +851,9 @@ class Frame {
     pushedLong();
   }
 
-  void pop(unsigned count) {
+  void pop(unsigned count, bool isEvent = true) {
     popped(count);
-    c->popped(count);
+    c->popped(count, isEvent);
   }
 
   Compiler::Operand* popInt() {
@@ -2805,7 +2805,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
 
-      frame->pop(1);
+      frame->pop(1, false);
     } break;
 
     case l2d: {
