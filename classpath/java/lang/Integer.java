@@ -30,6 +30,10 @@ public final class Integer extends Number implements Comparable<Integer> {
     return new Integer(value);
   }
 
+  public static Integer valueOf(String value) {
+    return valueOf(parseInt(value));
+  }
+
   public boolean equals(Object o) {
     return o instanceof Integer && ((Integer) o).value == value;
   }
