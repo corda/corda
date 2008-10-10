@@ -42,7 +42,7 @@ vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
 javac = "$(JAVA_HOME)/bin/javac"
-jar = jar
+jar = "$(JAVA_HOME)/bin/jar"
 strip = :
 strip-all = --strip-all
 
