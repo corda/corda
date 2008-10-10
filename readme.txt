@@ -251,7 +251,7 @@ on Mac OS X:
 
 on Windows:
  $ dlltool -z hello.def *.o
- $ dlltool -k -d hello.def -e hello.exp
+ $ dlltool -d hello.def -e hello.exp
  $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
      -mwindows -mconsole -o hello 
  $ strip --strip-all hello.exe

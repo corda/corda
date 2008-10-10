@@ -371,7 +371,7 @@ $(executable): \
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
-	$(dlltool) -k -d $(@).def -e $(@).exp
+	$(dlltool) -d $(@).def -e $(@).exp
 	$(cc) $(@).exp $(^) $(lflags) -o $(@)
 else
 	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
