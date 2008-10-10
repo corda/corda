@@ -3,15 +3,10 @@ MAKEFLAGS = -s
 name = avian
 version = 0.1.1
 
-build-arch = $(shell uname -m)
-ifeq ($(build-arch),i586)
-	build-arch = i386
-endif
-ifeq ($(build-arch),i686)
-	build-arch = i386
-endif
+build-arch = $(shell uname -m | sed 's/^i.86$$/i386/')
 
-build-platform = $(shell uname -s | tr [:upper:] [:lower:])
+build-platform = \
+	$(shell uname -s | tr [:upper:] [:lower:] | sed 's/^mingw32.*$$/windows/')
 
 arch = $(build-arch)
 platform = $(build-platform)
@@ -41,11 +36,12 @@ cxx = $(build-cxx)
 cc = $(build-cc)
 ar = ar
 ranlib = ranlib
+dlltool = dlltool
 objcopy = objcopy
 vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
-javac = javac
+javac = "$(JAVA_HOME)/bin/javac"
 jar = jar
 strip = :
 strip-all = --strip-all
@@ -55,12 +51,12 @@ rdynamic = -rdynamic
 warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
-	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \
+	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DBOOT_CLASSPATH=\"[classpathJar]\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
+	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
 cflags = $(build-cflags)
 
@@ -77,8 +73,6 @@ pointer-size = 8
 
 so-prefix = lib
 so-suffix = .so
-exe-suffix = 
-
 
 shared = -shared
 
@@ -89,8 +83,7 @@ ifeq ($(arch),i386)
 endif
 
 ifeq ($(platform),darwin)
-	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-		-I$(JAVA_HOME)/include/linux -I$(src)
+	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
 	rdynamic =
 	strip-all = -S -x
@@ -99,35 +92,7 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 endif
 
-ifeq ($(platform),mingw32_nt-6.0)
-	# A native Windows build (i.e. not cross-compiled).
-	build-cflags = $(common-cflags) \
-		-I$(JAVA_HOME)/include/win32 -I$(src) -mthreads
-	lflags = $(common-lflags) -lmthreads -ldl		
-	inc = $(root)/win32/include
-	lib = $(root)/win32/lib
-
-	system = windows
-	object-format = pe-i386
-
-	so-prefix =
-	so-suffix = .dll
-	exe-suffix = .exe
-
-	cxx = g++
-	cc = gcc
-	dlltool = dlltool
-	ar = ar
-	ranlib = ranlib
-	objcopy = objcopy
-
-	rdynamic = -Wl,--export-dynamic
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = $(common-cflags) -I$(inc)
-endif
-
 ifeq ($(platform),windows)
-	# A Windows cross-compiled build
 	inc = $(root)/win32/include
 	lib = $(root)/win32/lib
 
@@ -138,14 +103,18 @@ ifeq ($(platform),windows)
 	so-suffix = .dll
 	exe-suffix = .exe
 
-	cxx = i586-mingw32msvc-g++
-	cc = i586-mingw32msvc-gcc
-	dlltool = i586-mingw32msvc-dlltool
-	ar = i586-mingw32msvc-ar
-	ranlib = i586-mingw32msvc-ranlib
-	objcopy = i586-mingw32msvc-objcopy
+	ifeq ($(build-platform),windows)
+		build-cflags = $(common-cflags) \
+			"-I$(JAVA_HOME)/include/win32" -I$(src) -mthreads
+	else
+		cxx = i586-mingw32msvc-g++
+		cc = i586-mingw32msvc-gcc
+		dlltool = i586-mingw32msvc-dlltool
+		ar = i586-mingw32msvc-ar
+		ranlib = i586-mingw32msvc-ranlib
+		objcopy = i586-mingw32msvc-objcopy
+	endif
 
-	rdynamic = -Wl,--export-dynamic
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
 endif
@@ -324,7 +293,7 @@ $(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s --no-print-directory $(classpath-classes))
+		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -334,7 +303,7 @@ $(test-dep): $(test-sources)
 	@echo "compiling test classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s --no-print-directory $(test-classes))
+		$(shell $(MAKE) -s --no-print-directory $(test-classes))
 	@touch $(@)
 
 define compile-object
@@ -400,9 +369,7 @@ $(executable): \
 		$(vm-objects) $(classpath-object) $(jni-objects) $(driver-object) \
 		$(boot-object)
 	@echo "linking $(@)"
-
-ifneq (,$(filter $(platform),windows mingw32_nt-6.0))
-	# This is either cross-compiled or native Windows build
+ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -k -d $(@).def -e $(@).exp
 	$(cc) $(@).exp $(^) $(lflags) -o $(@)
