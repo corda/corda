@@ -77,6 +77,8 @@ pointer-size = 8
 
 so-prefix = lib
 so-suffix = .so
+exe-suffix = 
+
 
 shared = -shared
 
@@ -97,7 +99,11 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 endif
 
-ifeq ($(platform),windows)
+ifeq ($(platform),mingw32_nt-6.0)
+	# A native Windows build (i.e. not cross-compiled).
+	build-cflags = $(common-cflags) \
+		-I$(JAVA_HOME)/include/win32 -I$(src) -mthreads
+	lflags = $(common-lflags) -lmthreads -ldl		
 	inc = $(root)/win32/include
 	lib = $(root)/win32/lib
 
@@ -106,6 +112,31 @@ ifeq ($(platform),windows)
 
 	so-prefix =
 	so-suffix = .dll
+	exe-suffix = .exe
+
+	cxx = g++
+	cc = gcc
+	dlltool = dlltool
+	ar = ar
+	ranlib = ranlib
+	objcopy = objcopy
+
+	rdynamic = -Wl,--export-dynamic
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
+	cflags = $(common-cflags) -I$(inc)
+endif
+
+ifeq ($(platform),windows)
+	# A Windows cross-compiled build
+	inc = $(root)/win32/include
+	lib = $(root)/win32/lib
+
+	system = windows
+	object-format = pe-i386
+
+	so-prefix =
+	so-suffix = .dll
+	exe-suffix = .exe
 
 	cxx = i586-mingw32msvc-g++
 	cc = i586-mingw32msvc-gcc
@@ -214,9 +245,9 @@ generator-objects = \
 generator = $(native-build)/generator
 
 static-library = $(native-build)/lib$(name).a
-executable = $(native-build)/$(name)
+executable = $(native-build)/$(name)${exe-suffix}
 dynamic-library = $(native-build)/$(so-prefix)$(name)$(so-suffix)
-executable-dynamic = $(native-build)/$(name)-dynamic
+executable-dynamic = $(native-build)/$(name)-dynamic${exe-suffix}
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
@@ -369,7 +400,9 @@ $(executable): \
 		$(vm-objects) $(classpath-object) $(jni-objects) $(driver-object) \
 		$(boot-object)
 	@echo "linking $(@)"
-ifeq ($(platform),windows)
+
+ifneq (,$(filter $(platform),windows mingw32_nt-6.0))
+	# This is either cross-compiled or native Windows build
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -k -d $(@).def -e $(@).exp
 	$(cc) $(@).exp $(^) $(lflags) -o $(@)

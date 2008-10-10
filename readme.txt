@@ -10,7 +10,17 @@ on Mac OS X:
  $ export JAVA_HOME=/Library/Java/Home
  $ make
  $ build/darwin-i386-compile-fast/avian -cp build/test Hello
-
+ 
+on Windows:
+Install the current MSYS from the MinGW page (selecting the C and C++
+compilers). Follow the post-install options to create the file system
+link to the compiler. Upgrade to GNU make 3.81 by downloading the
+current release of GNU make from the same download page as the MSYS
+download page. Extract the tarball into your MSYS installation
+directory. Open the MSYS shell and:
+ $ export JAVA_HOME=C:/my/java/install # be sure to use forward slashes
+ $ make
+ $ build/mingw32_nt-6.0-i386-compile-fast/avian -cp build/test Hello
 
 Introduction
 ------------
@@ -237,3 +247,9 @@ on Mac OS X:
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello -framework CoreFoundation
  $ strip -S -x hello
 
+on Windows:
+ $ g++ -I$JAVA_HOME/include -I../../win32/include -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+ $ dlltool -z hello.def *.o
+ $ dlltool -k -d hello.def -e hello.exp
+ $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 -mwindows -mconsole -o hello 
+ $ strip --strip-all hello.exe
