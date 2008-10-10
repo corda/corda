@@ -12,9 +12,9 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 
-#include "machine.h"
 #include "jni.h"
 #include "jni-util.h"
 
@@ -35,6 +35,8 @@
 #ifdef WIN32
 typedef int socklen_t;
 #endif
+
+inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace {
 
