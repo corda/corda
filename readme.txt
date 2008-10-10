@@ -237,6 +237,8 @@ main(int ac, const char** av)
 EOF
  $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
 
+Add -I$JAVA_HOME/include/win32 to the above when building on Windows.
+
 
 Step 5: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
@@ -253,5 +255,5 @@ on Windows:
  $ dlltool -z hello.def *.o
  $ dlltool -d hello.def -e hello.exp
  $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
-     -mwindows -mconsole -o hello 
+     -mwindows -mconsole -o hello.exe
  $ strip --strip-all hello.exe
