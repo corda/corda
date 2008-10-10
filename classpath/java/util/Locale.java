@@ -11,7 +11,7 @@
 package java.util;
 
 public class Locale {
-  public static final Locale ENGLISH = new Locale("en");
+  public static final Locale ENGLISH = new Locale("en", "us");
 
   private final String language;
   private final String country;
