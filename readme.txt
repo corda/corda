@@ -12,15 +12,21 @@ on Mac OS X:
  $ build/darwin-i386-compile-fast/avian -cp build/test Hello
  
 on Windows:
+
 Install the current MSYS from the MinGW page (selecting the C and C++
-compilers). Follow the post-install options to create the file system
-link to the compiler. Upgrade to GNU make 3.81 by downloading the
+compilers).  Follow the post-install options to create the file system
+link to the compiler.  Upgrade to GNU make 3.81 by downloading the
 current release of GNU make from the same download page as the MSYS
-download page. Extract the tarball into your MSYS installation
-directory. Open the MSYS shell and:
- $ export JAVA_HOME=C:/my/java/install # be sure to use forward slashes
+download page.  Extract the tarball into your MSYS installation
+directory.  Open the MSYS shell and:
+
+ $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
- $ build/mingw32_nt-6.0-i386-compile-fast/avian -cp build/test Hello
+ $ build/windows-i386-compile-fast/avian -cp build/test Hello
+
+Adjust JAVA_HOME according to your system, but be sure to use forward
+slashes in the path.
+
 
 Introduction
 ------------
@@ -49,10 +55,6 @@ Avian can currently target the following platforms:
   Linux (i386 and x86_64)
   Win32 (i386)
   Mac OS X (i386)
-
-The Win32 port may be built on Linux using a MinGW cross compiler and
-build environment.  Builds on MSYS or Cygwin are not yet supported,
-but patches to enable them are welcome.
 
 
 Building
@@ -83,7 +85,7 @@ The build is directed by a single makefile and may be influenced via
 certain flags described below.
 
  $ make platform={linux,windows,darwin} arch={i386,x86_64} \
-     process={compile,interpret} mode={debug,debug-fast,fast}
+     process={compile,interpret} mode={debug,debug-fast,fast,small}
 
   * platform - the target platform
       default: output of $(uname -s | tr [:upper:] [:lower:])
@@ -233,7 +235,7 @@ main(int ac, const char** av)
   return exitCode;
 }
 EOF
- $ g++ -I$JAVA_HOME/include -c main.cpp -o main.o
+ $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
 
 
 Step 5: Link the objects produced above to produce the final
@@ -248,8 +250,8 @@ on Mac OS X:
  $ strip -S -x hello
 
 on Windows:
- $ g++ -I$JAVA_HOME/include -I../../win32/include -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
  $ dlltool -z hello.def *.o
  $ dlltool -k -d hello.def -e hello.exp
- $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 -mwindows -mconsole -o hello 
+ $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
+     -mwindows -mconsole -o hello 
  $ strip --strip-all hello.exe
