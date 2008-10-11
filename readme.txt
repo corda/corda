@@ -235,9 +235,17 @@ main(int ac, const char** av)
   return exitCode;
 }
 EOF
+
+on Linux:
+ $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
+     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+
+on Mac OS X:
  $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
 
-Add -I$JAVA_HOME/include/win32 to the above when building on Windows.
+on Windows:
+ $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/win32 \
+     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
 
 
 Step 5: Link the objects produced above to produce the final
