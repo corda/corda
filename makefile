@@ -255,7 +255,7 @@ vg: build
 
 .PHONY: test
 test: build
-	/bin/bash $(test)/test.sh 2>/dev/null \
+	/bin/sh $(test)/test.sh 2>/dev/null \
 		$(executable) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
