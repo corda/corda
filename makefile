@@ -93,8 +93,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	inc = $(root)/win32/include
-	lib = $(root)/win32/lib
+	inc = "$(root)/win32/include"
+	lib = "$(root)/win32/lib"
 
 	system = windows
 	object-format = pe-i386
@@ -333,7 +333,7 @@ $(boot-object): $(boot-source)
 $(build)/classpath.jar: $(classpath-dep)
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
-	 $(jar) c0f $${wd}/$(@) $$(find . -name '*.class'))
+	 $(jar) c0f "$${wd}/$(@)" $$(find . -name '*.class'))
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)
@@ -347,7 +347,7 @@ else
 	(wd=$$(pwd); \
 	 cd $(build); \
 	 $(objcopy) -I binary classpath.jar \
-		 -O $(object-format) -B $(object-arch) $${wd}/$(@))
+		 -O $(object-format) -B $(object-arch) "$${wd}/$(@)")
 endif
 
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
