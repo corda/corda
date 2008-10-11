@@ -6,10 +6,12 @@ version = 0.1.1
 build-arch = $(shell uname -m | sed 's/^i.86$$/i386/')
 
 build-platform = \
-	$(shell uname -s | tr [:upper:] [:lower:] | sed 's/^mingw32.*$$/windows/')
+	$(shell uname -s | tr [:upper:] [:lower:] \
+		| sed 's/^mingw32.*$$/mingw32/' \
+		| sed 's/^cygwin.*$$/cygwin/')
 
 arch = $(build-arch)
-platform = $(build-platform)
+platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 
 ifeq ($(platform),windows)
 	arch = i386
@@ -62,6 +64,8 @@ cflags = $(build-cflags)
 
 common-lflags = -lm -lz
 
+build-lflags =
+
 lflags = $(common-lflags) -lpthread -ldl
 
 system = posix
@@ -75,6 +79,8 @@ so-prefix = lib
 so-suffix = .so
 
 shared = -shared
+
+native-path = echo
 
 ifeq ($(arch),i386)
 	object-arch = i386
@@ -103,20 +109,27 @@ ifeq ($(platform),windows)
 	so-suffix = .dll
 	exe-suffix = .exe
 
-	ifeq ($(build-platform),windows)
-		build-cflags = $(common-cflags) \
-			"-I$(JAVA_HOME)/include/win32" -I$(src) -mthreads
-	else
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
+	cflags = $(common-cflags) -I$(inc)
+
+	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		cxx = i586-mingw32msvc-g++
 		cc = i586-mingw32msvc-gcc
 		dlltool = i586-mingw32msvc-dlltool
 		ar = i586-mingw32msvc-ar
 		ranlib = i586-mingw32msvc-ranlib
 		objcopy = i586-mingw32msvc-objcopy
+	else
+		build-cflags = $(common-cflags) \
+			"-I$(JAVA_HOME)/include/win32" -I$(src) -mthreads
+		ifeq ($(build-platform),cygwin)
+			build-lflags += -mno-cygwin
+			build-cflags += -mno-cygwin
+			lflags += -mno-cygwin
+			cflags += -mno-cygwin
+			native-path = cygpath -m
+		endif
 	endif
-
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = $(common-cflags) -I$(inc)
 endif
 
 ifeq ($(mode),debug)
@@ -333,7 +346,7 @@ $(boot-object): $(boot-source)
 $(build)/classpath.jar: $(classpath-dep)
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
-	 $(jar) c0f "$${wd}/$(@)" $$(find . -name '*.class'))
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" $$(find . -name '*.class'))
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)
@@ -392,5 +405,5 @@ $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
-	$(build-cc) $(^) -o $(@)
+	$(build-cc) $(^) $(build-lflags) -o $(@)
 

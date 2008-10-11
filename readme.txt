@@ -11,16 +11,15 @@ on Mac OS X:
  $ make
  $ build/darwin-i386-compile-fast/avian -cp build/test Hello
  
-on Windows:
-
-Install the current MSYS from the MinGW page (selecting the C and C++
-compilers).  Follow the post-install options to create the file system
-link to the compiler.  Upgrade to GNU make 3.81 by downloading the
-current release of GNU make from the same download page as the MSYS
-download page.  Extract the tarball into your MSYS installation
-directory.  Open the MSYS shell and:
+on Windows (MSYS):
 
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
+ $ make
+ $ build/windows-i386-compile-fast/avian -cp build/test Hello
+
+on Windows (Cygwin):
+
+ $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386-compile-fast/avian -cp build/test Hello
 
@@ -72,15 +71,6 @@ Build requirements include:
 Earlier versions of some of these packages may also work but have not
 been tested.
 
-If you are cross-compiling for Windows, you may find it useful to use
-our win32 repository: (run this from the directory containing the
-avian directory)
-
-  $ git clone git://oss.readytalk.com/win32.git
-
-This gives you the Windows JNI headers, zlib headers and library, and
-a few other useful libraries like OpenSSL and libjpeg.
-
 The build is directed by a single makefile and may be influenced via
 certain flags described below.
 
@@ -101,6 +91,33 @@ certain flags described below.
   * process - choice between pure interpreter or JIT compiler
       default: compile
 
+If you are compiling for Windows, you may either cross-compile using
+MinGW or build natively on Windows under MSYS or Cygwin.
+
+Installing MSYS:
+
+  1. Download and install the current MinGW and MSYS packages from
+  mingw.org, selecting the C and C++ compilers when prompted.  Use the
+  post-install script to create the filesystem link to the compiler.
+
+  2. Download GNU Make 3.81 from the MSYS download page
+  (make-3.81-MSYS-1.0.11-2.tar.bz2) and extract the tar file into
+  e.g. c:/msys/1.0.
+
+Installing Cygwin:
+
+  1. Download and run setup.exe from cygwin.com, installing the base
+  system and these packages: make, gcc-mingw-g++, and (optionally)
+  git.
+
+You may also find our win32 repository useful: (run this from the
+directory containing the avian directory)
+
+  $ git clone git://oss.readytalk.com/win32.git
+
+This gives you the Windows JNI headers, zlib headers and library, and
+a few other useful libraries like OpenSSL and libjpeg.
+
 
 Installing
 ----------
@@ -113,6 +130,9 @@ Embedding
 
 The following series of commands illustrates how to produce a
 stand-alone executable out of a Java application using Avian.
+
+Note: if you are building on Cygwin, add -mno-cygwin to each of the
+compile and link commands below.
 
 Step 1: Build Avian, create a new directory, and populate it with the
 VM object files and bootstrap classpath jar.
