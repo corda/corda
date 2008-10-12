@@ -18,8 +18,8 @@ namespace {
 const bool DebugAppend = true;
 const bool DebugCompile = true;
 const bool DebugStack = false;
-const bool DebugRegisters = true;
-const bool DebugFrameIndexes = true;
+const bool DebugRegisters = false;
+const bool DebugFrameIndexes = false;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -28,6 +28,8 @@ class Context;
 class Value;
 class Stack;
 class Site;
+class ConstantSite;
+class AddressSite;
 class RegisterSite;
 class MemorySite;
 class Event;
@@ -101,7 +103,7 @@ class Site {
 
   virtual Assembler::Operand* asAssemblerOperand(Context*) = 0;
 
-  virtual void makeSpecific(Context*) { }
+  virtual Site* copy(Context*) = 0;
 
   Site* next;
 };
@@ -660,6 +662,9 @@ nextRead(Context* c, Event* e, Value* v)
   }
 }
 
+ConstantSite*
+constantSite(Context* c, Promise* value);
+
 class ConstantSite: public Site {
  public:
   ConstantSite(Promise* value): value(value) { }
@@ -688,6 +693,10 @@ class ConstantSite: public Site {
     return &value;
   }
 
+  virtual Site* copy(Context* c) {
+    return constantSite(c, value.value);
+  }
+
   Assembler::Constant value;
 };
 
@@ -709,6 +718,9 @@ constantSite(Context* c, int64_t value)
 {
   return constantSite(c, resolved(c, value));
 }
+
+AddressSite*
+addressSite(Context* c, Promise* address);
 
 class AddressSite: public Site {
  public:
@@ -736,6 +748,10 @@ class AddressSite: public Site {
 
   virtual Assembler::Operand* asAssemblerOperand(Context*) {
     return &address;
+  }
+
+  virtual Site* copy(Context* c) {
+    return addressSite(c, address.address);
   }
 
   Assembler::Address address;
@@ -783,6 +799,9 @@ release(Context* c, Register* r);
 Register*
 validate(Context* c, uint32_t mask, Stack* stack, Local* locals,
          unsigned size, Value* value, RegisterSite* site, Register* current);
+
+RegisterSite*
+freeRegisterSite(Context* c, uint64_t mask = ~static_cast<uint64_t>(0));
 
 class RegisterSite: public Site {
  public:
@@ -886,13 +905,20 @@ class RegisterSite: public Site {
     return &register_;
   }
 
-  virtual void makeSpecific(Context* c UNUSED) {
-    assert(c, low);
-
-    mask = static_cast<uint64_t>(1) << low->number;
-    if (high) {
-      mask |= static_cast<uint64_t>(1) << (high->number + 32);
+  virtual Site* copy(Context* c) {
+    uint64_t mask;
+    
+    if (low) {
+      sync(c);
+      mask = static_cast<uint64_t>(1) << register_.low;
+      if (register_.high != NoRegister) {
+        mask |= static_cast<uint64_t>(1) << register_.high;
+      }
+    } else {
+      mask = this->mask;
     }
+
+    return freeRegisterSite(c, mask);
   }
 
   uint64_t mask;
@@ -920,7 +946,7 @@ registerSite(Context* c, int low, int high = NoRegister)
 }
 
 RegisterSite*
-freeRegisterSite(Context* c, uint64_t mask = ~static_cast<uint64_t>(0))
+freeRegisterSite(Context* c, uint64_t mask)
 {
   return new (c->zone->allocate(sizeof(RegisterSite)))
     RegisterSite(mask);
@@ -959,6 +985,10 @@ acquireFrameIndex(Context* c, int index, Stack* stack, Local* locals,
 
 void
 releaseFrameIndex(Context* c, int index, bool recurse = true);
+
+MemorySite*
+memorySite(Context* c, int base, int offset = 0, int index = NoRegister,
+           unsigned scale = 1);
 
 class MemorySite: public Site {
  public:
@@ -1054,14 +1084,17 @@ class MemorySite: public Site {
     return &value;
   }
 
+  virtual Site* copy(Context* c) {
+    return memorySite(c, value.base, value.offset, value.index, value.scale);
+  }
+
   Register* base;
   Register* index;
   Assembler::Memory value;
 };
 
 MemorySite*
-memorySite(Context* c, int base, int offset = 0, int index = NoRegister,
-           unsigned scale = 1)
+memorySite(Context* c, int base, int offset, int index, unsigned scale)
 {
   return new (c->zone->allocate(sizeof(MemorySite)))
     MemorySite(base, offset, index, scale);
@@ -1412,6 +1445,34 @@ pick(Context* c, Site* sites, Site* target = 0, unsigned* cost = 0)
   return site;
 }
 
+void
+move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
+     Site* src, Site* dst)
+{
+  if (dst->type(c) == MemoryOperand
+      and (src->type(c) == MemoryOperand
+           or src->type(c) == AddressOperand))
+  {
+    Site* tmp = freeRegisterSite(c);
+    addSite(c, stack, locals, size, value, tmp);
+
+//     char srcb[256]; src->toString(c, srcb, 256);
+//     char tmpb[256]; tmp->toString(c, tmpb, 256);
+//     fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
+      
+    apply(c, Move, size, src, size, tmp);
+    src = tmp;
+  }
+
+  addSite(c, stack, locals, size, value, dst);
+
+//   char srcb[256]; src->toString(c, srcb, 256);
+//   char dstb[256]; dst->toString(c, dstb, 256);
+//   fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
+  
+  apply(c, Move, size, src, size, dst);
+}
+
 bool
 trySteal(Context* c, Register* r, Stack* stack, Local* locals)
 {
@@ -1453,8 +1514,7 @@ trySteal(Context* c, Register* r, Stack* stack, Local* locals)
     }
 
     if (saveSite) {
-      addSite(c, 0, 0, r->size, v, saveSite);
-      apply(c, Move, r->size, r->site, r->size, saveSite);
+      move(c, stack, locals, r->size, v, r->site, saveSite);
     } else {
       if (DebugRegisters) {
         fprintf(stderr, "unable to steal %d from %p\n", r->number, v);
@@ -2178,24 +2238,6 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
 }
 
 void
-move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
-     Site* src, Site* dst)
-{
-  if (dst->type(c) == MemoryOperand
-      and (src->type(c) == MemoryOperand
-           or src->type(c) == AddressOperand))
-  {
-    Site* tmp = freeRegisterSite(c);
-    addSite(c, stack, locals, size, value, tmp);
-    apply(c, Move, size, src, size, tmp);
-    src = tmp;
-  }
-
-  addSite(c, stack, locals, size, value, dst);
-  apply(c, Move, size, src, size, dst);
-}
-
-void
 preserve(Context* c, Stack* stack, Local* locals, unsigned size, Value* v,
          Site* s, Read* read)
 {
@@ -2741,6 +2783,11 @@ pickJunctionSite(Context* c, Value* v, Read* r, unsigned index)
   if (c->availableRegisterCount > 1) {
     if (not v->visited) {
       Site* s = r->pickSite(c, v);
+      
+      if (s == 0) {
+        s = pick(c, v->sites);
+      }
+
       if (s and s->match
           (c, (1 << MemoryOperand) | (1 << RegisterOperand),
            ~0, AnyFrameIndex))
@@ -2769,29 +2816,34 @@ resolveJunctionSite(Context* c, Event* e, Value* v, unsigned index,
     
     Read* r = v->reads;
     Site* original = e->junctionSites[index];
+    Site* target;
 
-    if (original == 0) {
-      e->junctionSites[index] = pickJunctionSite(c, v, r, index);
+    if (original) {
+      target = original;
+    } else {
+      target = pickJunctionSite(c, v, r, index);
     }
 
-    Site* target = e->junctionSites[index];
     unsigned copyCost;
     Site* site = pick(c, v->sites, target, &copyCost);
-    if ((v->visited and target->type(c) == RegisterOperand) or copyCost) {
+    if ((v->visited
+         and site->type(c) == RegisterOperand
+         and target->type(c) == RegisterOperand)
+        or copyCost)
+    {
       move(c, e->stackAfter, e->localsAfter, r->size, v, site, target);
     } else {
       target = site;
     }
 
-    target->makeSpecific(c);
-
-    char buffer[256]; target->toString(c, buffer, 256);
-    fprintf(stderr, "resolve junction site %d %s %p\n", index, buffer, v);
-
     if (original == 0) {
       frozenSites[frozenSiteIndex++] = target;
       target->freeze(c);
+      e->junctionSites[index] = target->copy(c);
     }
+
+    char buffer[256]; target->toString(c, buffer, 256);
+    fprintf(stderr, "resolved junction site %d %s %p\n", index, buffer, v);
   }
 
   v->visited = true;
@@ -2812,6 +2864,36 @@ propagateJunctionSites(Context* c, Event* e, Site** sites)
       }
     }
   }
+}
+
+void
+toString(Context* c, Site* sites, char* buffer, unsigned size)
+{
+  sites->toString(c, buffer, size);
+  if (sites->next) {
+    unsigned length = strlen(buffer);
+    assert(c, length + 2 < size);
+    memcpy(buffer + length, ", ", 2);
+    length += 2;
+    sites->next->toString(c, buffer + length, size - length);
+  }
+}
+
+Site*
+copy(Context* c, Site* s)
+{
+  Site* start = 0;
+  Site* end = 0;
+  for (; s; s = s->next) {
+    Site* n = s->copy(c);
+    if (end) {
+      end->next = n;
+    } else {
+      start = n;
+    }
+    end = n;
+  }
+  return start;
 }
 
 void
@@ -2883,8 +2965,9 @@ populateSiteTables(Context* c, Event* e)
       }
 
       for (int i = c->localFootprint - 1; i >= 0; --i) {
-        if (e->localsAfter[i].value) {
-          e->localsAfter[i].value->visited = false;
+        Value* v = e->localsAfter[i].value;
+        if (v) {
+          v->visited = false;
         }
       }
     }
@@ -2899,28 +2982,64 @@ populateSiteTables(Context* c, Event* e)
     Site** savedSites = static_cast<Site**>(c->zone->allocate(size));
     memset(savedSites, 0, size);
 
-    for (unsigned i = 0; i < c->localFootprint; ++i) {
-      Value* v = e->localsAfter[i].value;
-      if (v) {
-        savedSites[i] = v->sites;
+    if (e->stackAfter) {
+      unsigned i = e->stackAfter->index + c->localFootprint;
+      for (Stack* stack = e->stackAfter; stack; stack = stack->next) {
+        Value* v = stack->value;
+        if (not v->visited) {
+          v->visited = true;
+          if (v->sites) {
+            char buffer[256]; toString(c, v->sites, buffer, 256);
+            fprintf(stderr, "save %s for %p at %d\n", buffer, v, i);
+          }
 
-//         fprintf(stderr, "save %p for %p at %d\n", savedSites[i], v, i);
+          savedSites[i] = copy(c, v->sites);
+
+          i -= stack->size;
+        }
+      }
+    }
+
+    for (int i = c->localFootprint - 1; i >= 0; --i) {
+      Value* v = e->localsAfter[i].value;
+      if (v and not v->visited) {
+        v->visited = true;
+        if (v->sites) {
+          char buffer[256]; toString(c, v->sites, buffer, 256);
+          fprintf(stderr, "save %s for %p at %d\n", buffer, v, i);
+        }
+
+        savedSites[i] = copy(c, v->sites);
       }
     }
 
     if (e->stackAfter) {
-      unsigned i = e->stackAfter->index + c->localFootprint;
       for (Stack* stack = e->stackAfter; stack; stack = stack->next) {
-        savedSites[i] = stack->value->sites;
-//         fprintf(stderr, "save %p for %p at %d\n",
-//                 savedSites[i], stack->value, i);
+        stack->value->visited = false;
+      }
+    }
 
-        i -= stack->size;
+    for (int i = c->localFootprint - 1; i >= 0; --i) {
+      Value* v = e->localsAfter[i].value;
+      if (v) {
+        v->visited = false;
       }
     }
 
     e->savedSites = savedSites;
   }
+}
+
+void
+setSites(Context* c, Event* e, Value* v, Site* s, unsigned i)
+{
+  for (; s; s = s->next) {
+    addSite(c, e->stackBefore, e->localsBefore, v->reads->size, v,
+            s->copy(c));
+  }
+
+  char buffer[256]; toString(c, v->sites, buffer, 256);
+  fprintf(stderr, "set sites %s for %p at %d\n", buffer, v, i);
 }
 
 void
@@ -2930,12 +3049,6 @@ setSites(Context* c, Event* e, Site** sites)
     Value* v = e->localsBefore[i].value;
     if (v) {
       clearSites(c, v);
-      if (live(v)) {
-//         fprintf(stderr, "set sites %p for %p at %d\n", sites[i], v, i);
-
-        addSite(c, e->stackBefore, e->localsBefore, v->reads->size, v,
-                sites[i]);
-      }
     }
   }
 
@@ -2944,13 +3057,35 @@ setSites(Context* c, Event* e, Site** sites)
     for (Stack* stack = e->stackBefore; stack; stack = stack->next) {
       Value* v = stack->value;
       clearSites(c, v);
-      if (live(v)) {
-//         fprintf(stderr, "set sites %p for %p at %d\n", sites[i], v, i);
+      i -= stack->size;
+    }
+  }
 
-        addSite(c, e->stackBefore, e->localsBefore, v->reads->size, v,
-                sites[i]);
+  // todo: we should be releasing these resources at block ends:
+
+  for (unsigned i = 0; i < c->arch->registerCount(); ++i) {
+    release(c, c->registers[i]);
+  }
+
+  for (unsigned i = 0; i < c->alignedFrameSize + c->parameterFootprint; ++i) {
+    releaseFrameIndex(c, i, false);
+  }
+
+  if (e->stackBefore) {
+    unsigned i = e->stackBefore->index + c->localFootprint;
+    for (Stack* stack = e->stackBefore; stack; stack = stack->next) {
+      Value* v = stack->value;
+      if (live(v)) {
+        setSites(c, e, v, sites[i], i);
       }
       i -= stack->size;
+    }
+  }
+
+  for (int i = c->localFootprint - 1; i >= 0; --i) {
+    Value* v = e->localsBefore[i].value;
+    if (v and live(v) and sites[i]) {
+      setSites(c, e, v, sites[i], i);
     }
   }
 }
@@ -3088,7 +3223,7 @@ compile(Context* c)
 
     if (DebugCompile) {
       fprintf(stderr,
-              "compile %s at %d with %d preds %d succs %d stack before "
+              " -- compile %s at %d with %d preds %d succs %d stack before "
               "%d after\n",
               e->name(), e->logicalInstruction->index,
               count(e->predecessors), count(e->successors),
@@ -3113,11 +3248,14 @@ compile(Context* c)
     if (e->predecessors) {
       Event* predecessor = static_cast<Event*>(e->predecessors->value);
       if (e->predecessors->next) {
+        fprintf(stderr, "ima junction\n");
         for (Cell* cell = e->predecessors; cell->next; cell = cell->next) {
           updateJunctionReads(c, static_cast<Event*>(cell->value));
         }
         setSites(c, e, predecessor->junctionSites);
       } else if (predecessor->successors->next) {
+        fprintf(stderr, "ima fork from %d\n",
+                predecessor->logicalInstruction->index);
         setSites(c, e, predecessor->savedSites);
       }
     }
