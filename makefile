@@ -64,7 +64,7 @@ build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 
 cflags = $(build-cflags)
 
-common-lflags = -lm -lz
+common-lflags = -lm -lz -lstdc++
 
 lflags = $(common-lflags) -lpthread -ldl
 
