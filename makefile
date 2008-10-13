@@ -62,7 +62,14 @@ build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 
 cflags = $(build-cflags)
 
-common-lflags = -lm -lz -lstdc++
+use-libstdcpp = true
+
+common-lflags = -lm -lz
+
+ifeq ($(use-libstdcpp),true)
+	common-lflags += -lstdc++
+	common-cflags += -DUSE_LIBSTDCPP
+endif
 
 build-lflags =
 

@@ -11,10 +11,12 @@
 #include "stdint.h"
 #include "stdlib.h"
 
-// since we don't link against libstdc++, we must implement some dummy
-// functions:
+#ifndef USE_LIBSTDCPP
+// since we aren't linking against libstdc++, we must implement some
+// dummy functions:
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 void operator delete(void*) { abort(); }
+#endif
 
 #ifdef __MINGW32__
 #  define EXPORT __declspec(dllexport)
