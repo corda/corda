@@ -93,6 +93,11 @@ public class StringBuffer implements CharSequence {
     return this;
   }
 
+  public synchronized StringBuffer insert(int i, int v) {
+    sb.insert(i, v);
+    return this;
+  }
+
   public synchronized StringBuffer delete(int start, int end) {
     sb.delete(start, end);
     return this;

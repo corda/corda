@@ -3,18 +3,15 @@ MAKEFLAGS = -s
 name = avian
 version = 0.1.1
 
-build-arch = $(shell uname -m)
-ifeq ($(build-arch),i586)
-	build-arch = i386
-endif
-ifeq ($(build-arch),i686)
-	build-arch = i386
-endif
+build-arch = $(shell uname -m | sed 's/^i.86$$/i386/')
 
-build-platform = $(shell uname -s | tr [:upper:] [:lower:])
+build-platform = \
+	$(shell uname -s | tr [:upper:] [:lower:] \
+		| sed 's/^mingw32.*$$/mingw32/' \
+		| sed 's/^cygwin.*$$/cygwin/')
 
 arch = $(build-arch)
-platform = $(build-platform)
+platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 
 ifeq ($(platform),windows)
 	arch = i386
@@ -41,12 +38,13 @@ cxx = $(build-cxx)
 cc = $(build-cc)
 ar = ar
 ranlib = ranlib
+dlltool = dlltool
 objcopy = objcopy
 vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
-javac = javac
-jar = jar
+javac = "$(JAVA_HOME)/bin/javac"
+jar = "$(JAVA_HOME)/bin/jar"
 strip = :
 strip-all = --strip-all
 
@@ -55,16 +53,18 @@ rdynamic = -rdynamic
 warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
-	-I$(JAVA_HOME)/include -idirafter $(src) -I$(native-build) \
+	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DBOOT_CLASSPATH=\"[classpathJar]\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-	-I$(JAVA_HOME)/include/linux -I$(src) -pthread
+	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
 cflags = $(build-cflags)
 
 common-lflags = -lm -lz -lstdc++
+
+build-lflags =
 
 lflags = $(common-lflags) -lpthread -ldl
 
@@ -80,6 +80,8 @@ so-suffix = .so
 
 shared = -shared
 
+native-path = echo
+
 ifeq ($(arch),i386)
 	object-arch = i386
 	object-format = elf32-i386
@@ -87,8 +89,7 @@ ifeq ($(arch),i386)
 endif
 
 ifeq ($(platform),darwin)
-	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
-		-I$(JAVA_HOME)/include/linux -I$(src)
+	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
 	rdynamic =
 	strip-all = -S -x
@@ -98,25 +99,37 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	inc = $(root)/win32/include
-	lib = $(root)/win32/lib
+	inc = "$(root)/win32/include"
+	lib = "$(root)/win32/lib"
 
 	system = windows
 	object-format = pe-i386
 
 	so-prefix =
 	so-suffix = .dll
+	exe-suffix = .exe
 
-	cxx = i586-mingw32msvc-g++
-	cc = i586-mingw32msvc-gcc
-	dlltool = i586-mingw32msvc-dlltool
-	ar = i586-mingw32msvc-ar
-	ranlib = i586-mingw32msvc-ranlib
-	objcopy = i586-mingw32msvc-objcopy
-
-	rdynamic = -Wl,--export-dynamic
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
 	cflags = $(common-cflags) -I$(inc)
+
+	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
+		cxx = i586-mingw32msvc-g++
+		cc = i586-mingw32msvc-gcc
+		dlltool = i586-mingw32msvc-dlltool
+		ar = i586-mingw32msvc-ar
+		ranlib = i586-mingw32msvc-ranlib
+		objcopy = i586-mingw32msvc-objcopy
+	else
+		build-cflags = $(common-cflags) \
+			"-I$(JAVA_HOME)/include/win32" -I$(src) -mthreads
+		ifeq ($(build-platform),cygwin)
+			build-lflags += -mno-cygwin
+			build-cflags += -mno-cygwin
+			lflags += -mno-cygwin
+			cflags += -mno-cygwin
+			native-path = cygpath -m
+		endif
+	endif
 endif
 
 ifeq ($(mode),debug)
@@ -214,9 +227,9 @@ generator-objects = \
 generator = $(native-build)/generator
 
 static-library = $(native-build)/lib$(name).a
-executable = $(native-build)/$(name)
+executable = $(native-build)/$(name)${exe-suffix}
 dynamic-library = $(native-build)/$(so-prefix)$(name)$(so-suffix)
-executable-dynamic = $(native-build)/$(name)-dynamic
+executable-dynamic = $(native-build)/$(name)-dynamic${exe-suffix}
 
 classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
@@ -255,7 +268,7 @@ vg: build
 
 .PHONY: test
 test: build
-	/bin/bash $(test)/test.sh 2>/dev/null \
+	/bin/sh $(test)/test.sh 2>/dev/null \
 		$(executable) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
@@ -293,7 +306,7 @@ $(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s --no-print-directory $(classpath-classes))
+		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -303,7 +316,7 @@ $(test-dep): $(test-sources)
 	@echo "compiling test classes"
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
-		$(shell make -s --no-print-directory $(test-classes))
+		$(shell $(MAKE) -s --no-print-directory $(test-classes))
 	@touch $(@)
 
 define compile-object
@@ -333,7 +346,7 @@ $(boot-object): $(boot-source)
 $(build)/classpath.jar: $(classpath-dep)
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
-	 $(jar) c0f $${wd}/$(@) $$(find . -name '*.class'))
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" $$(find . -name '*.class'))
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)
@@ -347,7 +360,7 @@ else
 	(wd=$$(pwd); \
 	 cd $(build); \
 	 $(objcopy) -I binary classpath.jar \
-		 -O $(object-format) -B $(object-arch) $${wd}/$(@))
+		 -O $(object-format) -B $(object-arch) "$${wd}/$(@)")
 endif
 
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
@@ -371,7 +384,7 @@ $(executable): \
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
-	$(dlltool) -k -d $(@).def -e $(@).exp
+	$(dlltool) -d $(@).def -e $(@).exp
 	$(cc) $(@).exp $(^) $(lflags) -o $(@)
 else
 	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
@@ -392,5 +405,5 @@ $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
-	$(build-cc) $(^) -o $(@)
+	$(build-cc) $(^) $(build-lflags) -o $(@)
 
