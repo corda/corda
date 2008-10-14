@@ -127,10 +127,10 @@ class MultiReadPair {
   MultiRead* read;
 };
 
-class MyState: public Compiler::State {
+class ForkState: public Compiler::State {
  public:
-  MyState(Stack* stack, Local* locals, Event* predecessor,
-          unsigned logicalIp):
+  ForkState(Stack* stack, Local* locals, Event* predecessor,
+            unsigned logicalIp):
     stack(stack),
     locals(locals),
     predecessor(predecessor),
@@ -276,7 +276,7 @@ class Context {
     machineCode(0),
     firstEvent(0),
     lastEvent(0),
-    state(0),
+    forkState(0),
     logicalIp(-1),
     constantCount(0),
     logicalCodeLength(0),
@@ -314,7 +314,7 @@ class Context {
   uint8_t* machineCode;
   Event* firstEvent;
   Event* lastEvent;
-  MyState* state;
+  ForkState* forkState;
   int logicalIp;
   unsigned constantCount;
   unsigned logicalCodeLength;
@@ -453,60 +453,83 @@ append(Context* c, Cell* first, Cell* second)
   }
 }
 
-unsigned
-count(Cell* c)
-{
-  unsigned n = 0;
-  for (; c; c = c->next) ++ n;
-  return n;
-}
-
 class StubReadPair {
  public:
   Value* value;
   StubRead* read;
 };
 
+class JunctionState {
+ public:
+  JunctionState(): readCount(0) { }
+
+  unsigned readCount;
+  StubReadPair reads[0];
+};
+
+class Link {
+ public:
+  Link(Event* predecessor, Link* nextPredecessor, Event* successor,
+       Link* nextSuccessor, ForkState* forkState):
+    predecessor(predecessor), nextPredecessor(nextPredecessor),
+    successor(successor), nextSuccessor(nextSuccessor), forkState(forkState),
+    junctionState(0)
+  { }
+
+  Event* predecessor;
+  Link* nextPredecessor;
+  Event* successor;
+  Link* nextSuccessor;
+  ForkState* forkState;
+  JunctionState* junctionState;
+};
+
+Link*
+link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
+     Link* nextSuccessor, ForkState* forkState)
+{
+  return new (c->zone->allocate(sizeof(Link))) Link
+    (predecessor, nextPredecessor, successor, nextSuccessor, forkState);
+}
+
+unsigned
+countPredecessors(Link* link)
+{
+  unsigned c = 0;
+  for (; link; link = link->nextPredecessor) ++ c;
+  return c;
+}
+
+Link*
+lastPredecessor(Link* link)
+{
+  while (link->nextPredecessor) link = link->nextPredecessor;
+  return link;
+}
+
+unsigned
+countSuccessors(Link* link)
+{
+  unsigned c = 0;
+  for (; link; link = link->nextSuccessor) ++ c;
+  return c;
+}
+
 class Event {
  public:
   Event(Context* c):
     next(0), stackBefore(c->stack), localsBefore(c->locals),
     stackAfter(0), localsAfter(0), promises(0), reads(0),
-    junctionSites(0), savedSites(0), predecessors(0), successors(0), block(0),
-    logicalInstruction(c->logicalCode[c->logicalIp]), state(c->state),
-    junctionReads(0), readCount(0)
-  {
-    assert(c, c->logicalIp >= 0);
-
-    if (c->lastEvent) {
-      c->lastEvent->next = this;
-    } else {
-      c->firstEvent = this;
-    }
-    c->lastEvent = this;
-
-    Event* p = c->predecessor;
-    if (p) {
-      predecessors = cons(c, p, 0);
-      p->successors = cons(c, this, p->successors);
-    }
-
-    c->predecessor = this;
-
-    if (logicalInstruction->firstEvent == 0) {
-      logicalInstruction->firstEvent = this;
-    }
-    logicalInstruction->lastEvent = this;
-
-    c->state = 0;
-  }
+    junctionSites(0), savedSites(0), predecessors(0), successors(0),
+    cleanLink(0), block(0), logicalInstruction(c->logicalCode[c->logicalIp]),
+    readCount(0)
+  { }
 
   virtual ~Event() { }
 
   virtual const char* name() = 0;
-  virtual void compile(Context* c) = 0;
 
-  virtual void compilePostsync(Context*) { }
+  virtual void compile(Context* c) = 0;
 
   virtual bool isBranch() { return false; }
 
@@ -519,12 +542,11 @@ class Event {
   Read* reads;
   Site** junctionSites;
   Site** savedSites;
-  Cell* predecessors;
-  Cell* successors;
+  Link* predecessors;
+  Link* successors;
+  Link* cleanLink;
   Block* block;
   LogicalInstruction* logicalInstruction;
-  MyState* state;
-  StubReadPair* junctionReads;
   unsigned readCount;
 };
 
@@ -653,8 +675,8 @@ nextRead(Context* c, Event* e, Value* v)
 {
   assert(c, e == v->reads->event);
 
-//   fprintf(stderr, "pop read %p from %p; next: %p\n",
-//           v->reads, v, v->reads->next(c));
+  fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
+          v->reads, v, v->reads->next(c), e, (e ? e->name() : 0));
 
   v->reads = v->reads->next(c);
   if (not live(v)) {
@@ -1328,15 +1350,17 @@ class MultiRead: public Read {
 
   void allocateTarget(Context* c) {
     Cell* cell = cons(c, 0, 0);
-    if (lastTarget == 0) {
-      firstTarget = cell;
-    } else {
+    fprintf(stderr, "allocate target %p in %p\n", cell, this);
+    if (lastTarget) {
       lastTarget->next = cell;
+    } else {
+      firstTarget = cell;
     }
     lastTarget = cell;
   }
 
   Read* nextTarget() {
+    fprintf(stderr, "next target %p in %p\n", firstTarget, this);
     Read* r = static_cast<Read*>(firstTarget->value);
     firstTarget = firstTarget->next;
     return r;
@@ -1358,7 +1382,7 @@ multiRead(Context* c, unsigned size)
 class StubRead: public Read {
  public:
   StubRead(unsigned size):
-    Read(size), read(0), visited(false)
+    Read(size), next_(0), read(0), visited(false)
   { }
 
   virtual Site* pickSite(Context* c, Value* value) {
@@ -1399,14 +1423,16 @@ class StubRead: public Read {
     return true;
   }
 
-  virtual void append(Context*, Read* r) {
-    read = r;
+  virtual void append(Context* c, Read* r) {
+    assert(c, next_ == 0);
+    next_ = r;
   }
 
-  virtual Read* next(Context* c) {
-    abort(c);
+  virtual Read* next(Context*) {
+    return next_;
   }
 
+  Read* next_;
   Read* read;
   bool visited;
 };
@@ -1845,7 +1871,7 @@ apply(Context* c, TernaryOperation op,
 void
 addRead(Context* c, Event* e, Value* v, Read* r)
 {
-//   fprintf(stderr, "add read %p to %p\n", r, v);
+  fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
 
   r->value = v;
   if (e) {
@@ -1910,6 +1936,9 @@ codePromise(Context* c, Promise* offset)
 {
   return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
 }
+
+void
+append(Context* c, Event* e);
 
 class CallEvent: public Event {
  public:
@@ -2014,10 +2043,10 @@ appendCall(Context* c, Value* address, unsigned flags,
            Stack* argumentStack, unsigned argumentCount,
            unsigned stackArgumentFootprint)
 {
-  new (c->zone->allocate(sizeof(CallEvent)))
-    CallEvent(c, address, flags, traceHandler, result,
-              resultSize, argumentStack, argumentCount,
-              stackArgumentFootprint);
+  append(c, new (c->zone->allocate(sizeof(CallEvent)))
+         CallEvent(c, address, flags, traceHandler, result,
+                   resultSize, argumentStack, argumentCount,
+                   stackArgumentFootprint));
 }
 
 class ReturnEvent: public Event {
@@ -2052,7 +2081,8 @@ class ReturnEvent: public Event {
 void
 appendReturn(Context* c, unsigned size, Value* value)
 {
-  new (c->zone->allocate(sizeof(ReturnEvent))) ReturnEvent(c, size, value);
+  append(c, new (c->zone->allocate(sizeof(ReturnEvent)))
+         ReturnEvent(c, size, value));
 }
 
 class MoveEvent: public Event {
@@ -2154,10 +2184,11 @@ appendMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
 
   assert(c, not thunk); // todo
 
-  new (c->zone->allocate(sizeof(MoveEvent)))
-    MoveEvent(c, type, srcSize, src, dstSize, dst,
-              read(c, srcSize, srcTypeMask, srcRegisterMask, AnyFrameIndex),
-              read(c, dstSize, dstTypeMask, dstRegisterMask, AnyFrameIndex));
+  append(c, new (c->zone->allocate(sizeof(MoveEvent)))
+         MoveEvent
+         (c, type, srcSize, src, dstSize, dst,
+          read(c, srcSize, srcTypeMask, srcRegisterMask, AnyFrameIndex),
+          read(c, dstSize, dstTypeMask, dstRegisterMask, AnyFrameIndex)));
 }
 
 ConstantSite*
@@ -2230,11 +2261,11 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
 
   assert(c, not thunk); // todo
 
-  new (c->zone->allocate(sizeof(CompareEvent)))
-    CompareEvent
-    (c, size, first, second,
-     read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex),
-     read(c, size, secondTypeMask, secondRegisterMask, AnyFrameIndex));
+  append(c, new (c->zone->allocate(sizeof(CompareEvent)))
+         CompareEvent
+         (c, size, first, second,
+          read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex),
+          read(c, size, secondTypeMask, secondRegisterMask, AnyFrameIndex)));
 }
 
 void
@@ -2393,15 +2424,16 @@ appendCombine(Context* c, TernaryOperation type,
         (c, secondSize, secondTypeMask, secondRegisterMask, AnyFrameIndex);
     }
 
-    new (c->zone->allocate(sizeof(CombineEvent)))
-      CombineEvent
-      (c, type,
-       firstSize, first,
-       secondSize, second,
-       resultSize, result,
-       read(c, firstSize, firstTypeMask, firstRegisterMask, AnyFrameIndex),
-       secondRead,
-       resultRead);
+    append
+      (c, new (c->zone->allocate(sizeof(CombineEvent)))
+       CombineEvent
+       (c, type,
+        firstSize, first,
+        secondSize, second,
+        resultSize, result,
+        read(c, firstSize, firstTypeMask, firstRegisterMask, AnyFrameIndex),
+        secondRead,
+        resultRead));
   }
 }
 
@@ -2456,10 +2488,10 @@ appendTranslate(Context* c, BinaryOperation type, unsigned size, Value* value,
 
   // todo: respect resultTypeMask and resultRegisterMask
 
-  new (c->zone->allocate(sizeof(TranslateEvent)))
-    TranslateEvent
-    (c, type, size, value, result,
-     read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex));
+  append(c, new (c->zone->allocate(sizeof(TranslateEvent)))
+         TranslateEvent
+         (c, type, size, value, result,
+          read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex)));
 }
 
 class MemoryEvent: public Event {
@@ -2524,8 +2556,8 @@ void
 appendMemory(Context* c, Value* base, int displacement, Value* index,
              unsigned scale, Value* result)
 {
-  new (c->zone->allocate(sizeof(MemoryEvent)))
-    MemoryEvent(c, base, displacement, index, scale, result);
+  append(c, new (c->zone->allocate(sizeof(MemoryEvent)))
+         MemoryEvent(c, base, displacement, index, scale, result));
 }
 
 class BranchEvent: public Event {
@@ -2616,8 +2648,8 @@ class BranchEvent: public Event {
 void
 appendBranch(Context* c, UnaryOperation type, Value* address)
 {
-  new (c->zone->allocate(sizeof(BranchEvent)))
-    BranchEvent(c, type, address);
+  append(c, new (c->zone->allocate(sizeof(BranchEvent)))
+         BranchEvent(c, type, address));
 }
 
 class BoundsCheckEvent: public Event {
@@ -2691,8 +2723,8 @@ void
 appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
                   Value* index, intptr_t handler)
 {
-  new (c->zone->allocate(sizeof(BoundsCheckEvent))) BoundsCheckEvent
-    (c, object, lengthOffset, index, handler);
+  append(c, new (c->zone->allocate(sizeof(BoundsCheckEvent)))
+         BoundsCheckEvent(c, object, lengthOffset, index, handler));
 }
 
 class FrameSiteEvent: public Event {
@@ -2717,14 +2749,54 @@ class FrameSiteEvent: public Event {
 void
 appendFrameSite(Context* c, Value* value, unsigned size, int index)
 {
-  new (c->zone->allocate(sizeof(FrameSiteEvent))) FrameSiteEvent
-    (c, value, size, index);
+  append(c, new (c->zone->allocate(sizeof(FrameSiteEvent)))
+         FrameSiteEvent(c, value, size, index));
 }
 
 unsigned
 frameFootprint(Context* c, Stack* s)
 {
   return c->localFootprint + (s ? (s->index + s->size) : 0);
+}
+
+void
+skipRead(Context* c, Value* v, StubReadPair* p)
+{
+  if (v and not v->visited) {
+    assert(c, v->reads == p->read);
+    v->visited = true;
+    nextRead(c, 0, v);
+  }
+}
+
+void
+clean(Context* c, Link* link)
+{
+  fprintf(stderr, "clean link from %d to %d\n",
+          link->predecessor->logicalInstruction->index,
+          link->successor->logicalInstruction->index);
+
+  ForkState* forkState = link->forkState;
+  if (forkState) {
+    for (unsigned i = 0; i < forkState->readCount; ++i) {
+      MultiReadPair* p = forkState->reads + i;
+      Value* v = p->value;
+      v->reads = p->read->nextTarget();
+      fprintf(stderr, "next read %p for %p\n", v->reads, v);
+      if (not live(v)) {
+        clearSites(c, v);
+      }
+    }
+  }
+
+  JunctionState* junctionState = link->junctionState;
+  if (junctionState) {
+    for (unsigned i = 0; i < junctionState->readCount; ++i) {
+      assert(c, junctionState->reads[i].value->reads
+             == junctionState->reads[i].read);
+      nextRead(c, 0, junctionState->reads[i].value);
+    }
+  }
 }
 
 class DummyEvent: public Event {
@@ -2750,10 +2822,43 @@ appendDummy(Context* c)
   c->stack = i->stack;
   c->locals = i->locals;
 
-  new (c->zone->allocate(sizeof(DummyEvent))) DummyEvent(c);
+  append(c, new (c->zone->allocate(sizeof(DummyEvent))) DummyEvent(c));
 
   c->stack = stack;
   c->locals = locals;  
+}
+
+void
+append(Context* c, Event* e)
+{
+  if (DebugAppend) {
+    fprintf(stderr, " -- append %s at %d\n",
+            e->name(), e->logicalInstruction->index);
+  }
+
+  assert(c, c->logicalIp >= 0);
+
+  if (c->lastEvent) {
+    c->lastEvent->next = e;
+  } else {
+    c->firstEvent = e;
+  }
+  c->lastEvent = e;
+
+  Event* p = c->predecessor;
+  if (p) {
+    Link* link = ::link(c, p, e->predecessors, e, p->successors, c->forkState);
+    e->predecessors = link;
+    p->successors = link;
+  }
+  c->forkState = 0;
+
+  c->predecessor = e;
+
+  if (e->logicalInstruction->firstEvent == 0) {
+    e->logicalInstruction->firstEvent = e;
+  }
+  e->logicalInstruction->lastEvent = e;
 }
 
 Site*
@@ -2854,12 +2959,12 @@ resolveJunctionSite(Context* c, Event* e, Value* v, unsigned index,
 void
 propagateJunctionSites(Context* c, Event* e, Site** sites)
 {
-  for (Cell* pc = e->predecessors; pc; pc = pc->next) {
-    Event* p = static_cast<Event*>(pc->value);
+  for (Link* pl = e->predecessors; pl; pl = pl->nextPredecessor) {
+    Event* p = pl->predecessor;
     if (p->junctionSites == 0) {
       p->junctionSites = sites;
-      for (Cell* sc = p->successors; sc; sc = sc->next) {
-        Event* s = static_cast<Event*>(sc->value);
+      for (Link* sl = p->successors; sl; sl = sl->nextSuccessor) {
+        Event* s = sl->successor;
         propagateJunctionSites(c, s, sites);
       }
     }
@@ -2924,9 +3029,9 @@ populateSiteTables(Context* c, Event* e)
         }
       }
     } else {
-      for (Cell* sc = e->successors; sc; sc = sc->next) {
-        Event* s = static_cast<Event*>(sc->value);
-        if (s->predecessors->next) {
+      for (Link* sl = e->successors; sl; sl = sl->nextSuccessor) {
+        Event* s = sl->successor;
+        if (s->predecessors->nextPredecessor) {
           unsigned size = sizeof(Site*) * frameFootprint;
           Site** junctionSites = static_cast<Site**>
             (c->zone->allocate(size));
@@ -2977,7 +3082,7 @@ populateSiteTables(Context* c, Event* e)
     }
   }
 
-  if (e->successors->next) {
+  if (e->successors->nextSuccessor) {
     unsigned size = sizeof(Site*) * frameFootprint;
     Site** savedSites = static_cast<Site**>(c->zone->allocate(size));
     memset(savedSites, 0, size);
@@ -3111,66 +3216,56 @@ populateSources(Context* c, Event* e)
 }
 
 void
-addStubRead(Context* c, Value* v, unsigned size, StubReadPair** reads)
+addStubRead(Context* c, Value* v, unsigned size, JunctionState* state,
+            unsigned* count)
 {
-  if (v) {
-    StubRead* r;
-    if (v->visited) {
-      r = static_cast<StubRead*>(v->lastRead);
-    } else {
-      v->visited = true;
+  if (v and (not v->visited)) {
+    v->visited = true;
+    StubRead* r = stubRead(c, size);
+    fprintf(stderr, "add stub read %p to %p\n", r, v);
+    addRead(c, 0, v, r);
 
-      r = stubRead(c, size);
-      addRead(c, 0, v, r);
-    }
-
-    StubReadPair* p = (*reads)++;
+    StubReadPair* p = state->reads + ((*count)++);
     p->value = v;
     p->read = r;
   }
 }
 
 void
-populateJunctionReads(Context* c, Event* e)
+populateJunctionReads(Context* c, Link* link)
 {
-  StubReadPair* reads = static_cast<StubReadPair*>
-    (c->zone->allocate(sizeof(StubReadPair) * frameFootprint(c, c->stack)));
+  JunctionState* state = new
+    (c->zone->allocate
+     (sizeof(JunctionState)
+      + (sizeof(StubReadPair) * frameFootprint(c, c->stack))))
+    JunctionState;
 
-  e->junctionReads = reads;  
+  link->junctionState = state;
+
+  unsigned count = 0;
      
   for (unsigned i = 0; i < c->localFootprint; ++i) {
     Local* local = c->locals + i;
-    addStubRead(c, local->value, local->size, &reads);
+    addStubRead(c, local->value, local->size, state, &count);
   }
   
   for (Stack* s = c->stack; s; s = s->next) {
-    addStubRead(c, s->value, s->size * BytesPerWord, &reads);
+    addStubRead(c, s->value, s->size * BytesPerWord, state, &count);
   }
   
-  for (StubReadPair* r = e->junctionReads; r < reads; ++r) {
-    r->value->visited = false;
+  for (unsigned i = 0; i < count; ++i) {
+    state->reads[i].value->visited = false;
   }
+
+  state->readCount = count;
 }
 
 void
-updateStubRead(Context*, StubReadPair* p, Read* r)
+updateJunctionReads(Context*, JunctionState* state)
 {
-  if (p->read->read == 0) p->read->read = r;
-}
-
-void
-updateJunctionReads(Context* c, Event* e)
-{
-  StubReadPair* reads = e->junctionReads;
-     
-  for (unsigned i = 0; i < c->localFootprint; ++i) {
-    if (e->localsAfter[i].value) {
-      updateStubRead(c, reads++, e->localsAfter[i].value->reads);
-    }
-  }
-  
-  for (Stack* s = e->stackAfter; s; s = s->next) {
-    updateStubRead(c, reads++, s->value->reads);
+  for (unsigned i = 0; i < state->readCount; ++i) {
+    StubReadPair* p = state->reads + i;
+    if (p->read->read == 0) p->read->read = p->value->reads;
   }
 }
 
@@ -3226,7 +3321,8 @@ compile(Context* c)
               " -- compile %s at %d with %d preds %d succs %d stack before "
               "%d after\n",
               e->name(), e->logicalInstruction->index,
-              count(e->predecessors), count(e->successors),
+              countPredecessors(e->predecessors),
+              countSuccessors(e->successors),
               e->stackBefore ?
               e->stackBefore->index + e->stackBefore->size : 0,
               e->stackAfter ?
@@ -3237,26 +3333,23 @@ compile(Context* c)
       e->logicalInstruction->machineOffset = a->offset();
     }
 
-    MyState* state = e->state;
-    if (state) {
-      for (unsigned i = 0; i < state->readCount; ++i) {
-        MultiReadPair* p = state->reads + i;
-        p->value->reads = p->read->nextTarget();
-      }
-    }
-
     if (e->predecessors) {
-      Event* predecessor = static_cast<Event*>(e->predecessors->value);
-      if (e->predecessors->next) {
+      clean(c, lastPredecessor(e->predecessors));
+
+      Event* first = e->predecessors->predecessor;
+      if (e->predecessors->nextPredecessor) {
         fprintf(stderr, "ima junction\n");
-        for (Cell* cell = e->predecessors; cell->next; cell = cell->next) {
-          updateJunctionReads(c, static_cast<Event*>(cell->value));
+        for (Link* pl = e->predecessors;
+             pl->nextPredecessor;
+             pl = pl->nextPredecessor)
+        {
+          updateJunctionReads(c, pl->junctionState);
         }
-        setSites(c, e, predecessor->junctionSites);
-      } else if (predecessor->successors->next) {
+        setSites(c, e, first->junctionSites);
+      } else if (first->successors->nextSuccessor) {
         fprintf(stderr, "ima fork from %d\n",
-                predecessor->logicalInstruction->index);
-        setSites(c, e, predecessor->savedSites);
+                first->logicalInstruction->index);
+        setSites(c, e, first->savedSites);
       }
     }
 
@@ -3273,7 +3366,9 @@ compile(Context* c)
       populateSiteTables(c, e);
     }
 
-    e->compilePostsync(c);
+    if (e->cleanLink) {
+      clean(c, e->cleanLink);
+    }
 
     for (CodePromise* p = e->promises; p; p = p->next) {
       p->offset = a->offset();
@@ -3316,7 +3411,7 @@ count(Stack* s)
 }
 
 void
-allocateTargets(Context* c, MyState* state)
+allocateTargets(Context* c, ForkState* state)
 {
   for (unsigned i = 0; i < state->readCount; ++i) {
     MultiReadPair* p = state->reads + i;
@@ -3326,13 +3421,14 @@ allocateTargets(Context* c, MyState* state)
 }
 
 void
-addMultiRead(Context* c, Value* v, unsigned size, MyState* state,
+addMultiRead(Context* c, Value* v, unsigned size, ForkState* state,
              unsigned* count)
 {
   if (v and not v->visited) {
     v->visited = true;
 
     MultiRead* r = multiRead(c, size);
+    fprintf(stderr, "add multi read %p to %p\n", r, v);
     addRead(c, 0, v, r);
 
     MultiReadPair* p = state->reads + ((*count)++);
@@ -3341,16 +3437,17 @@ addMultiRead(Context* c, Value* v, unsigned size, MyState* state,
   }
 }
 
-MyState*
+ForkState*
 saveState(Context* c)
 {
-  MyState* state = new
+  ForkState* state = new
     (c->zone->allocate
-     (sizeof(MyState) + (sizeof(MultiReadPair) * frameFootprint(c, c->stack))))
-    MyState(c->stack, c->locals, c->predecessor, c->logicalIp);
+     (sizeof(ForkState)
+      + (sizeof(MultiReadPair) * frameFootprint(c, c->stack))))
+    ForkState(c->stack, c->locals, c->predecessor, c->logicalIp);
 
   if (c->predecessor) {
-    c->state = state;
+    c->forkState = state;
 
     unsigned count = 0;
 
@@ -3378,7 +3475,7 @@ saveState(Context* c)
 }
 
 void
-restoreState(Context* c, MyState* s)
+restoreState(Context* c, ForkState* s)
 {
   if (c->logicalIp >= 0 and c->logicalCode[c->logicalIp]->lastEvent == 0) {
     appendDummy(c);
@@ -3390,7 +3487,7 @@ restoreState(Context* c, MyState* s)
   c->logicalIp = s->logicalIp;
 
   if (c->predecessor) {
-    c->state = s;
+    c->forkState = s;
     allocateTargets(c, s);
   }
 }
@@ -3438,7 +3535,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void restoreState(State* state) {
-    ::restoreState(&c, static_cast<MyState*>(state));
+    ::restoreState(&c, static_cast<ForkState*>(state));
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -3477,19 +3574,23 @@ class MyCompiler: public Compiler {
       p->stackAfter = c.stack;
       p->localsAfter = c.locals;
 
-      p->successors = cons(&c, e, p->successors);
-      populateJunctionReads(&c, p);
-      e->predecessors = cons(&c, p, e->predecessors);
+      Link* link = ::link
+        (&c, p, e->predecessors, e, p->successors, c.forkState);
+      e->predecessors = link;
+      p->successors = link;
+      c.lastEvent->cleanLink = link;
+
+      fprintf(stderr, "populate junction reads for %d to %d\n",
+              p->logicalInstruction->index, logicalIp);
+      populateJunctionReads(&c, e->predecessors);
     }
+
+    c.forkState = false;
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
     assert(&c, logicalIp < c.logicalCodeLength);
     assert(&c, c.logicalCode[logicalIp] == 0);
-
-    if (DebugAppend) {
-      fprintf(stderr, " -- ip: %d\n", logicalIp);
-    }
 
     if (c.logicalIp >= 0 and c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
