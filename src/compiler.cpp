@@ -99,6 +99,8 @@ class Site {
 
   virtual void thaw(Context*) { }
 
+  virtual bool usesRegister(Context*, int) { return false; }
+
   virtual OperandType type(Context*) = 0;
 
   virtual Assembler::Operand* asAssemblerOperand(Context*) = 0;
@@ -453,6 +455,19 @@ append(Context* c, Cell* first, Cell* second)
   }
 }
 
+Cell*
+reverseDestroy(Cell* cell)
+{
+  Cell* previous = 0;
+  while (cell) {
+    Cell* next = cell->next;
+    cell->next = previous;
+    previous = cell;
+    cell = next;
+  }
+  return previous;
+}
+
 class StubReadPair {
  public:
   Value* value;
@@ -521,7 +536,7 @@ class Event {
     next(0), stackBefore(c->stack), localsBefore(c->locals),
     stackAfter(0), localsAfter(0), promises(0), reads(0),
     junctionSites(0), savedSites(0), predecessors(0), successors(0),
-    cleanLink(0), block(0), logicalInstruction(c->logicalCode[c->logicalIp]),
+    visitLinks(0), block(0), logicalInstruction(c->logicalCode[c->logicalIp]),
     readCount(0)
   { }
 
@@ -544,7 +559,7 @@ class Event {
   Site** savedSites;
   Link* predecessors;
   Link* successors;
-  Link* cleanLink;
+  Cell* visitLinks;
   Block* block;
   LogicalInstruction* logicalInstruction;
   unsigned readCount;
@@ -675,8 +690,8 @@ nextRead(Context* c, Event* e, Value* v)
 {
   assert(c, e == v->reads->event);
 
-  fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
-          v->reads, v, v->reads->next(c), e, (e ? e->name() : 0));
+//   fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
+//           v->reads, v, v->reads->next(c), e, (e ? e->name() : 0));
 
   v->reads = v->reads->next(c);
   if (not live(v)) {
@@ -918,6 +933,11 @@ class RegisterSite: public Site {
     }
   }
 
+  virtual bool usesRegister(Context* c, int r) {
+    sync(c);
+    return register_.low == r or register_.high == r;
+  }
+
   virtual OperandType type(Context*) {
     return RegisterOperand;
   }
@@ -1095,6 +1115,11 @@ class MemorySite: public Site {
     if (index) {
       decrement(c, index);
     }
+  }
+
+  virtual bool usesRegister(Context* c, int r) {
+    sync(c);
+    return value.base == r or value.index == r;
   }
 
   virtual OperandType type(Context*) {
@@ -1499,6 +1524,62 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
   apply(c, Move, size, src, size, dst);
 }
 
+void
+toString(Context* c, Site* sites, char* buffer, unsigned size)
+{
+  sites->toString(c, buffer, size);
+  if (sites->next) {
+    unsigned length = strlen(buffer);
+    assert(c, length + 2 < size);
+    memcpy(buffer + length, ", ", 2);
+    length += 2;
+    sites->next->toString(c, buffer + length, size - length);
+  }
+}
+
+void
+releaseRegister(Context* c, Value* v, unsigned index, unsigned size, int r)
+{
+  if (v) {
+    Site* source = 0;
+    for (Site** s = &(v->sites); *s;) {
+      if ((*s)->usesRegister(c, r)) {
+        char buffer[256]; (*s)->toString(c, buffer, 256);
+        fprintf(stderr, "%p (%s) in %p at %d uses %d\n", *s, buffer, v, index, r);
+
+        source = *s;
+        *s = (*s)->next;
+        
+        source->release(c);
+      } else {
+        char buffer[256]; (*s)->toString(c, buffer, 256);
+        fprintf(stderr, "%p (%s) in %p at %d does not use %d\n", *s, buffer, v, index, r);
+        s = &((*s)->next);
+      }
+    }
+
+    if (v->sites == 0) {
+      move(c, c->stack, c->locals, size, v, source, frameSite(c, index));
+    }
+
+    char buffer[256]; toString(c, v->sites, buffer, 256);
+    fprintf(stderr, "%p is left with %s\n", v, buffer);
+  }
+}
+
+void
+releaseRegister(Context* c, int r)
+{
+  for (unsigned i = 0; i < c->localFootprint; ++i) {
+    releaseRegister(c, c->locals[i].value, i, c->locals[i].size, r);
+  }
+
+  for (Stack* s = c->stack; s; s = s->next) {
+    releaseRegister(c, s->value, s->index + c->localFootprint,
+                    s->size * BytesPerWord, r);
+  }
+}
+
 bool
 trySteal(Context* c, Register* r, Stack* stack, Local* locals)
 {
@@ -1747,9 +1828,9 @@ trySteal(Context* c, FrameResource* r, Stack*, Local*)
   Value* v = r->value;
   assert(c, v->reads);
 
-//   if (v->sites->next == 0) {
-//     return false; // todo
-//   }
+  if (v->sites->next == 0) {
+    return false; // todo
+  }
 
   if (DebugFrameIndexes) {
     int index = r - c->frameResources;
@@ -2313,6 +2394,7 @@ class CombineEvent: public Event {
     if (c->arch->condensedAddressing()) {
       maybePreserve(c, stackBefore, localsBefore, secondSize, second,
                     second->source);
+      removeSite(c, second, second->source);
       target = second->source;
     } else {
       target = resultRead->allocateSite(c);
@@ -2326,11 +2408,8 @@ class CombineEvent: public Event {
     nextRead(c, this, first);
     nextRead(c, this, second);
 
-    if (c->arch->condensedAddressing()) {
-      removeSite(c, second, second->source);
-      if (result->reads) {
-        addSite(c, 0, 0, resultSize, result, second->source);
-      }
+    if (c->arch->condensedAddressing() and live(result)) {
+      addSite(c, 0, 0, resultSize, result, target);
     }
   }
 
@@ -2440,10 +2519,11 @@ appendCombine(Context* c, TernaryOperation type,
 class TranslateEvent: public Event {
  public:
   TranslateEvent(Context* c, BinaryOperation type, unsigned size, Value* value,
-                 Value* result, Read* read):
-    Event(c), type(type), size(size), value(value), result(result)
+                 Value* result, Read* valueRead, Read* resultRead):
+    Event(c), type(type), size(size), value(value), result(result),
+    resultRead(resultRead)
   {
-    addRead(c, this, value, read);
+    addRead(c, this, value, valueRead);
   }
 
   virtual const char* name() {
@@ -2451,16 +2531,22 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    maybePreserve(c, stackBefore, localsBefore, size, value, value->source);
+    Site* target;
+    if (c->arch->condensedAddressing()) {
+      maybePreserve(c, stackBefore, localsBefore, size, value, value->source);
+      removeSite(c, value, value->source);
+      target = value->source;
+    } else {
+      target = resultRead->allocateSite(c);
+      addSite(c, stackBefore, localsBefore, size, result, target);
+    }
 
-    Site* target = targetOrRegister(c, result);
     apply(c, type, size, value->source, size, target);
     
     nextRead(c, this, value);
 
-    removeSite(c, value, value->source);
-    if (live(result)) {
-      addSite(c, 0, 0, size, result, value->source);
+    if (c->arch->condensedAddressing() and live(result)) {
+      addSite(c, 0, 0, size, result, target);
     }
   }
 
@@ -2468,6 +2554,7 @@ class TranslateEvent: public Event {
   unsigned size;
   Value* value;
   Value* result;
+  Read* resultRead;
 };
 
 void
@@ -2486,12 +2573,20 @@ appendTranslate(Context* c, BinaryOperation type, unsigned size, Value* value,
 
   assert(c, not thunk); // todo
 
+  Read* resultRead = read
+    (c, size, resultTypeMask, resultRegisterMask, AnyFrameIndex);
+  Read* firstRead;
+  if (c->arch->condensedAddressing()) {
+    firstRead = resultRead;
+  } else {
+    firstRead = read
+      (c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex);
+  }
   // todo: respect resultTypeMask and resultRegisterMask
 
   append(c, new (c->zone->allocate(sizeof(TranslateEvent)))
          TranslateEvent
-         (c, type, size, value, result,
-          read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex)));
+         (c, type, size, value, result, firstRead, resultRead));
 }
 
 class MemoryEvent: public Event {
@@ -2770,9 +2865,9 @@ skipRead(Context* c, Value* v, StubReadPair* p)
 }
 
 void
-clean(Context* c, Link* link)
+visit(Context* c, Link* link)
 {
-  fprintf(stderr, "clean link from %d to %d\n",
+  fprintf(stderr, "visit link from %d to %d\n",
           link->predecessor->logicalInstruction->index,
           link->successor->logicalInstruction->index);
 
@@ -2971,19 +3066,6 @@ propagateJunctionSites(Context* c, Event* e, Site** sites)
   }
 }
 
-void
-toString(Context* c, Site* sites, char* buffer, unsigned size)
-{
-  sites->toString(c, buffer, size);
-  if (sites->next) {
-    unsigned length = strlen(buffer);
-    assert(c, length + 2 < size);
-    memcpy(buffer + length, ", ", 2);
-    length += 2;
-    sites->next->toString(c, buffer + length, size - length);
-  }
-}
-
 Site*
 copy(Context* c, Site* s)
 {
@@ -3166,16 +3248,6 @@ setSites(Context* c, Event* e, Site** sites)
     }
   }
 
-  // todo: we should be releasing these resources at block ends:
-
-  for (unsigned i = 0; i < c->arch->registerCount(); ++i) {
-    release(c, c->registers[i]);
-  }
-
-  for (unsigned i = 0; i < c->alignedFrameSize + c->parameterFootprint; ++i) {
-    releaseFrameIndex(c, i, false);
-  }
-
   if (e->stackBefore) {
     unsigned i = e->stackBefore->index + c->localFootprint;
     for (Stack* stack = e->stackBefore; stack; stack = stack->next) {
@@ -3314,8 +3386,6 @@ compile(Context* c)
   a->allocateFrame(c->alignedFrameSize);
 
   for (Event* e = c->firstEvent; e; e = e->next) {
-    e->block = block;
-
     if (DebugCompile) {
       fprintf(stderr,
               " -- compile %s at %d with %d preds %d succs %d stack before "
@@ -3329,12 +3399,17 @@ compile(Context* c)
               e->stackAfter->index + e->stackAfter->size : 0);
     }
 
+    e->block = block;
+
+    c->stack = e->stackBefore;
+    c->locals = e->localsBefore;
+
     if (e->logicalInstruction->machineOffset == 0) {
       e->logicalInstruction->machineOffset = a->offset();
     }
 
     if (e->predecessors) {
-      clean(c, lastPredecessor(e->predecessors));
+      visit(c, lastPredecessor(e->predecessors));
 
       Event* first = e->predecessors->predecessor;
       if (e->predecessors->nextPredecessor) {
@@ -3366,8 +3441,12 @@ compile(Context* c)
       populateSiteTables(c, e);
     }
 
-    if (e->cleanLink) {
-      clean(c, e->cleanLink);
+    if (e->visitLinks) {
+      for (Cell* cell = reverseDestroy(e->visitLinks); cell; cell = cell->next)
+      {
+        visit(c, static_cast<Link*>(cell->value));
+      }
+      e->visitLinks = 0;
     }
 
     for (CodePromise* p = e->promises; p; p = p->next) {
@@ -3509,9 +3588,12 @@ class Client: public Assembler::Client {
   }
 
   virtual void save(int r) {
-    // todo
-    expect(c, c->registers[r]->refCount == 0);
-    expect(c, c->registers[r]->value == 0);
+    Register* reg = c->registers[r];
+    if (reg->refCount or reg->value) {
+      releaseRegister(c, r);
+    }
+    assert(c, reg->refCount == 0);
+    assert(c, reg->value == 0);
   }
 
   virtual void restore(int) {
@@ -3578,7 +3660,7 @@ class MyCompiler: public Compiler {
         (&c, p, e->predecessors, e, p->successors, c.forkState);
       e->predecessors = link;
       p->successors = link;
-      c.lastEvent->cleanLink = link;
+      c.lastEvent->visitLinks = cons(&c, link, c.lastEvent->visitLinks);
 
       fprintf(stderr, "populate junction reads for %d to %d\n",
               p->logicalInstruction->index, logicalIp);
@@ -3797,7 +3879,7 @@ class MyCompiler: public Compiler {
     assert(&c, index < c.localFootprint);
 
     Value* v = value(&c);
-//     fprintf(stderr, "init local %p of size %d at %d\n", v, size, index);
+    fprintf(stderr, "init local %p of size %d at %d\n", v, size, index);
     appendFrameSite(&c, v, size, index);
 
     Local* local = c.locals + index;

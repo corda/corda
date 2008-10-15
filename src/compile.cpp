@@ -946,7 +946,7 @@ class Frame {
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLong(c->loadLocal(8, index + 1));
+    pushLong(c->loadLocal(8, index));
   }
 
   void loadObject(unsigned index) {
@@ -960,7 +960,7 @@ class Frame {
   }
 
   void storeLong(unsigned index) {
-    c->storeLocal(8, popLong(), index + 1);
+    c->storeLocal(8, popLong(), index);
     storedLong(index);
   }
 
@@ -1871,7 +1871,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         switch (*it.next()) {
         case 'J':
         case 'D':
-          c->initLocal(2 * BytesPerWord, index);
+          c->initLocal(8, index);
           index += 2;
           break;
 

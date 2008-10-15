@@ -11,6 +11,9 @@
 #include "assembler.h"
 #include "vector.h"
 
+#define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
+#define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
+
 using namespace vm;
 
 namespace {
@@ -594,6 +597,41 @@ popR(Context* c, unsigned size, Assembler::Register* a)
       moveRR(c, 4, a, 8, a);
     }
   }
+}
+
+void
+addCarryCR(Context* c, unsigned size, Assembler::Constant* a,
+           Assembler::Register* b);
+
+void
+negateR(Context* c, unsigned size, Assembler::Register* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    assert(c, a->low == rax and a->high == rdx);
+
+    ResolvedPromise zeroPromise(0);
+    Assembler::Constant zero(&zeroPromise);
+
+    Assembler::Register ah(a->high);
+
+    negateR(c, 4, a);
+    addCarryCR(c, 4, &zero, &ah);
+    negateR(c, 4, &ah);
+  } else {
+    if (size == 8) rex(c);
+    c->code.append(0xf7);
+    c->code.append(0xd8 | a->low);
+  }
+}
+
+void
+negateRR(Context* c, unsigned aSize, Assembler::Register* a,
+         unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, a == b);
+
+  negateR(c, aSize, a);
 }
 
 void
@@ -1241,11 +1279,197 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
+            Assembler::Operand* bl, Assembler::Operand* bh,
+            BinaryOperationType compare, BinaryOperationType move)
+{
+  ResolvedPromise negativePromise(-1);
+  Assembler::Constant negative(&negativePromise);
+
+  ResolvedPromise zeroPromise(0);
+  Assembler::Constant zero(&zeroPromise);
+
+  ResolvedPromise positivePromise(1);
+  Assembler::Constant positive(&positivePromise);
+
+  if (BytesPerWord == 8) {
+    compare(c, 8, al, 8, bl);
+    
+    c->code.append(0x0f);
+    c->code.append(0x8c); // jl
+    unsigned less = c->code.length();
+    c->code.append4(0);
+
+    c->code.append(0x0f);
+    c->code.append(0x8f); // jg
+    unsigned greater = c->code.length();
+    c->code.append4(0);
+
+    move(c, 4, &zero, 4, bl);
+    
+    c->code.append(0xe9); // jmp
+    unsigned nextFirst = c->code.length();
+    c->code.append4(0);
+
+    int32_t lessOffset = c->code.length() - less - 4;
+    c->code.set(less, &lessOffset, 4);
+
+    move(c, 4, &negative, 4, bl);
+
+    c->code.append(0xe9); // jmp
+    unsigned nextSecond = c->code.length();
+    c->code.append4(0);
+
+    int32_t greaterOffset = c->code.length() - greater - 4;
+    c->code.set(greater, &greaterOffset, 4);
+
+    move(c, 4, &positive, 4, bl);
+
+    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
+    c->code.set(nextFirst, &nextFirstOffset, 4);
+
+    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
+    c->code.set(nextSecond, &nextSecondOffset, 4);
+  } else {
+    compare(c, 4, ah, 4, bh);
+    
+    c->code.append(0x0f);
+    c->code.append(0x8c); // jl
+    unsigned less = c->code.length();
+    c->code.append4(0);
+
+    c->code.append(0x0f);
+    c->code.append(0x8f); // jg
+    unsigned greater = c->code.length();
+    c->code.append4(0);
+
+    compare(c, 4, al, 4, bl);
+
+    c->code.append(0x0f);
+    c->code.append(0x82); // ja
+    unsigned above = c->code.length();
+    c->code.append4(0);
+
+    c->code.append(0x0f);
+    c->code.append(0x87); // jb
+    unsigned below = c->code.length();
+    c->code.append4(0);
+
+    move(c, 4, &zero, 4, bl);
+    
+    c->code.append(0xe9); // jmp
+    unsigned nextFirst = c->code.length();
+    c->code.append4(0);
+
+    int32_t lessOffset = c->code.length() - less - 4;
+    c->code.set(less, &lessOffset, 4);
+
+    int32_t aboveOffset = c->code.length() - above - 4;
+    c->code.set(above, &aboveOffset, 4);
+
+    move(c, 4, &negative, 4, bl);
+
+    c->code.append(0xe9); // jmp
+    unsigned nextSecond = c->code.length();
+    c->code.append4(0);
+
+    int32_t greaterOffset = c->code.length() - greater - 4;
+    c->code.set(greater, &greaterOffset, 4);
+
+    int32_t belowOffset = c->code.length() - below - 4;
+    c->code.set(below, &belowOffset, 4);
+
+    move(c, 4, &positive, 4, bl);
+
+    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
+    c->code.set(nextFirst, &nextFirstOffset, 4);
+
+    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
+    c->code.set(nextSecond, &nextSecondOffset, 4);
+  }
+}
+
+void
+divideRR(Context* c, unsigned aSize, Assembler::Register* a,
+         unsigned bSize, Assembler::Register* b UNUSED)
+{
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  assert(c, aSize == bSize);
+
+  assert(c, b->low == rax);
+  assert(c, a->low != rdx);
+
+  c->client->save(rdx);
+    
+  if (aSize == 8) rex(c);
+  c->code.append(0x99); // cdq
+  if (aSize == 8) rex(c);
+  c->code.append(0xf7);
+  c->code.append(0xf8 | a->low);
+
+  c->client->restore(rdx);
+}
+
+void
+remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
+            unsigned bSize, Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  assert(c, aSize == bSize);
+
+  assert(c, b->low == rax);
+  assert(c, a->low != rdx);
+
+  c->client->save(rdx);
+    
+  if (aSize == 8) rex(c);
+  c->code.append(0x99); // cdq
+  if (aSize == 8) rex(c);
+  c->code.append(0xf7);
+  c->code.append(0xf8 | a->low);
+
+  Assembler::Register dx(rdx);
+  moveRR(c, BytesPerWord, &dx, BytesPerWord, b);
+
+  c->client->restore(rdx);
+}
+
+void
+longCompareCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
+              unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == 8);
+  assert(c, bSize == 8);
+  
+  int64_t v = a->value->value();
+
+  ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
+  Assembler::Constant al(&low);
+  
+  ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
+  Assembler::Constant ah(&high);
+  
+  Assembler::Register bh(b->high);
+  
+  longCompare(c, &al, &ah, b, &bh, CAST2(compareCR), CAST2(moveCR));
+}
+
+void
+longCompareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+              unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == 8);
+  assert(c, bSize == 8);
+  
+  Assembler::Register ah(a->high);
+  Assembler::Register bh(b->high);
+  
+  longCompare(c, a, &ah, b, &bh, CAST2(compareRR), CAST2(moveCR));
+}
+
+void
 populateTables(ArchitectureContext* c)
 {
-#define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
-#define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
-
   const OperandType C = ConstantOperand;
   const OperandType A = AddressOperand;
   const OperandType R = RegisterOperand;
@@ -1277,6 +1501,8 @@ populateTables(ArchitectureContext* c)
 
   uo[index(LongJump, C)] = CAST1(longJumpC);
 
+  bo[index(Negate, R, R)] = CAST2(negateRR);
+
   bo[index(Move, R, R)] = CAST2(moveRR);
   bo[index(Move, C, R)] = CAST2(moveCR);
   bo[index(Move, M, R)] = CAST2(moveMR);
@@ -1304,6 +1530,13 @@ populateTables(ArchitectureContext* c)
   bo[index(And, C, R)] = CAST2(andCR);
 
   bo[index(Multiply, R, R)] = CAST2(multiplyRR);
+
+  bo[index(Divide, R, R)] = CAST2(divideRR);
+
+  bo[index(Remainder, R, R)] = CAST2(remainderRR);
+
+  bo[index(LongCompare, C, R)] = CAST2(longCompareCR);
+  bo[index(LongCompare, R, R)] = CAST2(longCompareRR);
 }
 
 class MyArchitecture: public Assembler::Architecture {
