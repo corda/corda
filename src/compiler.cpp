@@ -1375,7 +1375,6 @@ class MultiRead: public Read {
 
   void allocateTarget(Context* c) {
     Cell* cell = cons(c, 0, 0);
-    fprintf(stderr, "allocate target %p in %p\n", cell, this);
     if (lastTarget) {
       lastTarget->next = cell;
     } else {
@@ -1385,7 +1384,6 @@ class MultiRead: public Read {
   }
 
   Read* nextTarget() {
-    fprintf(stderr, "next target %p in %p\n", firstTarget, this);
     Read* r = static_cast<Read*>(firstTarget->value);
     firstTarget = firstTarget->next;
     return r;
@@ -1581,18 +1579,9 @@ releaseRegister(Context* c, int r)
 }
 
 bool
-trySteal(Context* c, Register* r, Stack* stack, Local* locals)
+trySteal(Context* c, Site* site, Value* v, unsigned size, Stack* stack,
+         Local* locals)
 {
-  assert(c, r->refCount == 0);
-
-  Value* v = r->value;
-  assert(c, v->reads);
-
-  if (DebugRegisters) {
-    fprintf(stderr, "try steal %d from %p: next: %p\n",
-            r->number, v, v->sites->next);
-  }
-
   if (v->sites->next == 0) {
     Site* saveSite = 0;
     for (unsigned i = 0; i < c->localFootprint; ++i) {
@@ -1621,18 +1610,34 @@ trySteal(Context* c, Register* r, Stack* stack, Local* locals)
     }
 
     if (saveSite) {
-      move(c, stack, locals, r->size, v, r->site, saveSite);
+      move(c, stack, locals, size, v, site, saveSite);
     } else {
       if (DebugRegisters) {
-        fprintf(stderr, "unable to steal %d from %p\n", r->number, v);
+        fprintf(stderr, "unable to steal %p from %p\n", site, v);
       }
       return false;
     }
   }
 
-  removeSite(c, v, r->site);
+  removeSite(c, v, site);
 
   return true;
+}
+
+bool
+trySteal(Context* c, Register* r, Stack* stack, Local* locals)
+{
+  assert(c, r->refCount == 0);
+
+  Value* v = r->value;
+  assert(c, v->reads);
+
+  if (DebugRegisters) {
+    fprintf(stderr, "try steal %d from %p: next: %p\n",
+            r->number, v, v->sites->next);
+  }
+
+  return trySteal(c, r->site, r->value, r->size, stack, locals);
 }
 
 bool
@@ -1823,25 +1828,18 @@ validate(Context* c, uint32_t mask, Stack* stack, Local* locals,
 }
 
 bool
-trySteal(Context* c, FrameResource* r, Stack*, Local*)
+trySteal(Context* c, FrameResource* r, Stack* stack, Local* locals)
 {
-  Value* v = r->value;
-  assert(c, v->reads);
-
-  if (v->sites->next == 0) {
-    return false; // todo
-  }
+  assert(c, r->value->reads);
 
   if (DebugFrameIndexes) {
     int index = r - c->frameResources;
     fprintf(stderr,
-            "steal frame index %d offset 0x%x from value %p site %p\n",
+            "try steal frame index %d offset 0x%x from value %p site %p\n",
             index, localOffset(c, index), r->value, r->site);
   }
 
-  removeSite(c, v, r->site);
-
-  return true;
+  return trySteal(c, r->site, r->value, r->size, stack, locals);
 }
 
 void
@@ -1952,7 +1950,7 @@ apply(Context* c, TernaryOperation op,
 void
 addRead(Context* c, Event* e, Value* v, Read* r)
 {
-  fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
+//   fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
 
   r->value = v;
   if (e) {
@@ -2867,9 +2865,9 @@ skipRead(Context* c, Value* v, StubReadPair* p)
 void
 visit(Context* c, Link* link)
 {
-  fprintf(stderr, "visit link from %d to %d\n",
-          link->predecessor->logicalInstruction->index,
-          link->successor->logicalInstruction->index);
+//   fprintf(stderr, "visit link from %d to %d\n",
+//           link->predecessor->logicalInstruction->index,
+//           link->successor->logicalInstruction->index);
 
   ForkState* forkState = link->forkState;
   if (forkState) {
@@ -2877,7 +2875,7 @@ visit(Context* c, Link* link)
       MultiReadPair* p = forkState->reads + i;
       Value* v = p->value;
       v->reads = p->read->nextTarget();
-      fprintf(stderr, "next read %p for %p\n", v->reads, v);
+//       fprintf(stderr, "next read %p for %p\n", v->reads, v);
       if (not live(v)) {
         clearSites(c, v);
       }
@@ -3413,7 +3411,6 @@ compile(Context* c)
 
       Event* first = e->predecessors->predecessor;
       if (e->predecessors->nextPredecessor) {
-        fprintf(stderr, "ima junction\n");
         for (Link* pl = e->predecessors;
              pl->nextPredecessor;
              pl = pl->nextPredecessor)
@@ -3422,8 +3419,6 @@ compile(Context* c)
         }
         setSites(c, e, first->junctionSites);
       } else if (first->successors->nextSuccessor) {
-        fprintf(stderr, "ima fork from %d\n",
-                first->logicalInstruction->index);
         setSites(c, e, first->savedSites);
       }
     }
