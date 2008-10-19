@@ -566,7 +566,7 @@ class Event {
 };
 
 int
-localOffset(Context* c, int frameIndex)
+frameIndexToLocalOffset(Context* c, int frameIndex)
 {
   int parameterFootprint = c->parameterFootprint;
   int frameSize = c->alignedFrameSize;
@@ -607,7 +607,7 @@ localOffsetToFrameIndex(Context* c, int offset)
                      - normalizedOffset - 1));
 
   assert(c, frameIndex >= 0);
-  assert(c, localOffset(c, frameIndex) == offset);
+  assert(c, frameIndexToLocalOffset(c, frameIndex) == offset);
 
   return frameIndex;
 }
@@ -1080,9 +1080,9 @@ class MemorySite: public Site {
         assert(c, value.index == NoRegister);
         return frameIndex == AnyFrameIndex
           || (frameIndex != NoFrameIndex
-              && localOffset(c, frameIndex) == value.offset);
+              && frameIndexToLocalOffset(c, frameIndex) == value.offset);
       } else {
-        return false;
+        return true;
       }
     } else {
       return false;
@@ -1151,7 +1151,8 @@ MemorySite*
 frameSite(Context* c, int frameIndex)
 {
   assert(c, frameIndex >= 0);
-  return memorySite(c, c->arch->stack(), localOffset(c, frameIndex));
+  return memorySite
+    (c, c->arch->stack(), frameIndexToLocalOffset(c, frameIndex));
 }
 
 Site*
@@ -1505,9 +1506,9 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
     Site* tmp = freeRegisterSite(c);
     addSite(c, stack, locals, size, value, tmp);
 
-//     char srcb[256]; src->toString(c, srcb, 256);
-//     char tmpb[256]; tmp->toString(c, tmpb, 256);
-//     fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
+    char srcb[256]; src->toString(c, srcb, 256);
+    char tmpb[256]; tmp->toString(c, tmpb, 256);
+    fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
       
     apply(c, Move, size, src, size, tmp);
     src = tmp;
@@ -1515,9 +1516,9 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
 
   addSite(c, stack, locals, size, value, dst);
 
-//   char srcb[256]; src->toString(c, srcb, 256);
-//   char dstb[256]; dst->toString(c, dstb, 256);
-//   fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
+  char srcb[256]; src->toString(c, srcb, 256);
+  char dstb[256]; dst->toString(c, dstb, 256);
+  fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
   
   apply(c, Move, size, src, size, dst);
 }
@@ -1836,7 +1837,7 @@ trySteal(Context* c, FrameResource* r, Stack* stack, Local* locals)
     int index = r - c->frameResources;
     fprintf(stderr,
             "try steal frame index %d offset 0x%x from value %p site %p\n",
-            index, localOffset(c, index), r->value, r->site);
+            index, frameIndexToLocalOffset(c, index), r->value, r->site);
   }
 
   return trySteal(c, r->site, r->value, r->size, stack, locals);
@@ -1854,7 +1855,7 @@ acquireFrameIndex(Context* c, int index, Stack* stack, Local* locals,
   if (DebugFrameIndexes) {
     fprintf(stderr,
             "acquire frame index %d offset 0x%x value %p site %p\n",
-            index, localOffset(c, index), newValue, newSite);
+            index, frameIndexToLocalOffset(c, index), newValue, newSite);
   }
 
   FrameResource* r = c->frameResources + index;
@@ -1888,7 +1889,7 @@ releaseFrameIndex(Context* c, int index, bool recurse)
 
   if (DebugFrameIndexes) {
     fprintf(stderr, "release frame index %d offset 0x%x\n",
-            index, localOffset(c, index));
+            index, frameIndexToLocalOffset(c, index));
   }
 
   FrameResource* r = c->frameResources + index;
@@ -2061,6 +2062,7 @@ class CallEvent: public Event {
     for (Stack* s = stackBefore; s; s = s->next) {
       frameIndex -= s->size;
       if (footprint > 0) {
+        fprintf(stderr, "stack arg of size %d at %d of %d\n", s->size, frameIndex, c->alignedFrameSize + c->parameterFootprint);
         addRead(c, this, s->value, read
                 (c, s->size * BytesPerWord,
                  1 << MemoryOperand, 0, frameIndex));
@@ -2179,16 +2181,13 @@ class MoveEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    bool isLoad = not valid(src->reads->next(c));
     bool isStore = not valid(dst->reads);
 
     Site* target = targetOrRegister(c, dst);
     unsigned cost = src->source->copyCost(c, target);
-    if (cost == 0 and (isLoad or isStore)) {
+    if (cost == 0) {
       target = src->source;
     }
-
-    assert(c, isLoad or isStore or target != src->source);
 
     if (target == src->source) {
       removeSite(c, src, target);
@@ -2210,6 +2209,10 @@ class MoveEvent: public Event {
       if (target->match(c, typeMask, registerMask, frameIndex)
           and not memoryToMemory)
       {
+        char srcb[256]; src->source->toString(c, srcb, 256);
+        char dstb[256]; target->toString(c, dstb, 256);
+        fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+
         apply(c, type, srcSize, src->source, dstSize, target);
       } else {
         assert(c, typeMask & (1 << RegisterOperand));
@@ -2218,6 +2221,10 @@ class MoveEvent: public Event {
 
         addSite(c, stackBefore, localsBefore, dstSize, dst, tmpTarget);
 
+        char srcb[256]; src->source->toString(c, srcb, 256);
+        char dstb[256]; tmpTarget->toString(c, dstb, 256);
+        fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+
         apply(c, type, srcSize, src->source, dstSize, tmpTarget);
 
         if (isStore) {
@@ -2225,6 +2232,10 @@ class MoveEvent: public Event {
         }
 
         if (memoryToMemory or isStore) {
+          char srcb[256]; tmpTarget->toString(c, srcb, 256);
+          char dstb[256]; target->toString(c, dstb, 256);
+          fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+
           apply(c, Move, dstSize, tmpTarget, dstSize, target);
         } else {
           removeSite(c, dst, target);          

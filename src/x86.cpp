@@ -546,6 +546,14 @@ callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
+callM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
+{
+  assert(c, size == BytesPerWord);
+
+  encode(c, 0xff, 2, a, false);
+}
+
+void
 alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
   new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c);
@@ -919,6 +927,16 @@ moveZRR(Context* c, unsigned aSize, Assembler::Register* a,
 
   default: abort(c);
   }
+}
+
+void
+moveZMR(Context* c, unsigned aSize UNUSED, Assembler::Memory* a,
+        unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, aSize == 2);
+
+  encode2(c, 0x0fb7, b->low, a, true);
 }
 
 void
@@ -1483,6 +1501,7 @@ populateTables(ArchitectureContext* c)
 
   uo[index(Call, C)] = CAST1(callC);
   uo[index(Call, R)] = CAST1(callR);
+  uo[index(Call, M)] = CAST1(callM);
 
   uo[index(AlignedCall, C)] = CAST1(alignedCallC);
 
@@ -1513,6 +1532,7 @@ populateTables(ArchitectureContext* c)
 //   bo[index(Move, M, M)] = CAST2(moveMM);
 
   bo[index(MoveZ, R, R)] = CAST2(moveZRR);
+  bo[index(MoveZ, M, R)] = CAST2(moveZMR);
 
   bo[index(Swap, R, R)] = CAST2(swapRR);
 
