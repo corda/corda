@@ -178,33 +178,14 @@ footprint(Thread* t)
 }
 
 void
-visitRoots(Thread* t, Heap::Visitor* v)
-{
-  if (t->state != Thread::ZombieState) {
-    v->visit(&(t->javaThread));
-    v->visit(&(t->exception));
-
-    t->m->processor->visitObjects(t, v);
-
-    for (Thread::Protector* p = t->protector; p; p = p->next) {
-      p->visit(v);
-    }
-  }
-
-  for (Thread* c = t->child; c; c = c->peer) {
-    visitRoots(c, v);
-  }
-}
-
-void
 walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
-     unsigned arrayElementSize, unsigned arrayLength)
+     unsigned arrayElementSize, unsigned arrayLength, unsigned start)
 {
   unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
   unsigned arrayElementSizeInWords
     = ceiling(arrayElementSize, BytesPerWord);
 
-  for (unsigned i = 0; i < fixedSizeInWords; ++i) {
+  for (unsigned i = start; i < fixedSizeInWords; ++i) {
     if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
       if (not w->visit(i)) {
         return;
@@ -222,8 +203,19 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
   }
 
   if (arrayObjectElements) {
-    for (unsigned i = 0; i < arrayLength; ++i) {
-      for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+    unsigned arrayStart;
+    unsigned elementStart;
+    if (start > fixedSizeInWords) {
+      unsigned s = start - fixedSizeInWords;
+      arrayStart = s / arrayElementSizeInWords;
+      elementStart = s % arrayElementSizeInWords;
+    } else {
+      arrayStart = 0;
+      elementStart = 0;
+    }
+
+    for (unsigned i = arrayStart; i < arrayLength; ++i) {
+      for (unsigned j = elementStart; j < arrayElementSizeInWords; ++j) {
         unsigned k = fixedSizeInWords + j;
         if (mask[k / 32] & (static_cast<uint32_t>(1) << (k % 32))) {
           if (not w->visit
@@ -238,7 +230,7 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
 }
 
 void
-walk(Thread* t, Heap::Walker* w, object o)
+walk(Thread* t, Heap::Walker* w, object o, unsigned start)
 {
   object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
   object objectMask = static_cast<object>
@@ -255,16 +247,16 @@ walk(Thread* t, Heap::Walker* w, object o)
     memcpy(mask, &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
-    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength);
+    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
   } else if (classVmFlags(t, class_) & SingletonFlag) {
     unsigned length = singletonLength(t, o);
     if (length) {
       walk(t, w, singletonMask(t, o),
-           (singletonCount(t, o) + 2) * BytesPerWord, 0, 0);
-    } else {
+           (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
+    } else if (start == 0) {
       w->visit(0);
     }
-  } else {
+  } else if (start == 0) {
     w->visit(0);
   }
 }
@@ -1616,7 +1608,7 @@ class HeapClient: public Heap::Client {
 
   virtual void walk(void* p, Heap::Walker* w) {
     object o = static_cast<object>(m->heap->follow(mask(p)));
-    ::walk(m->rootThread, w, o);
+    ::walk(m->rootThread, w, o, 0);
   }
 
   void dispose() {
@@ -2770,6 +2762,44 @@ collect(Thread* t, Heap::CollectionType type)
 #ifdef VM_STRESS
   if (not stress) t->stress = false;
 #endif
+}
+
+int
+walkNext(Thread* t, object o, int previous)
+{
+  class Walker: public Heap::Walker {
+   public:
+    Walker(): value(-1) { }
+
+    bool visit(unsigned offset) {
+      value = offset;
+      return false;
+    }
+
+    int value;
+  } walker;
+
+  walk(t, &walker, o, previous + 1);
+  return walker.value;
+}
+
+void
+visitRoots(Thread* t, Heap::Visitor* v)
+{
+  if (t->state != Thread::ZombieState) {
+    v->visit(&(t->javaThread));
+    v->visit(&(t->exception));
+
+    t->m->processor->visitObjects(t, v);
+
+    for (Thread::Protector* p = t->protector; p; p = p->next) {
+      p->visit(v);
+    }
+  }
+
+  for (Thread* c = t->child; c; c = c->peer) {
+    visitRoots(c, v);
+  }
 }
 
 void

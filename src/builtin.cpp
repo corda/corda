@@ -585,6 +585,26 @@ Java_java_lang_Runtime_gc(Thread* t, jobject)
   collect(t, Heap::MajorCollection);
 }
 
+#ifdef AVIAN_HEAPDUMP
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_dumpHeap(Thread* t, jclass, jstring outputFile)
+{
+  unsigned length = stringLength(t, *outputFile);
+  char n[length + 1];
+  stringChars(t, *outputFile, n);
+  FILE* out = fopen(n, "wb");
+  if (out) {
+    dumpHeap(t, out);
+    fclose(out);
+  } else {
+    object message = makeString(t, "file not found: %s", n);
+    t->exception = makeRuntimeException(t, message);
+  }
+}
+
+#endif//AVIAN_HEAPDUMP
+
 extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_exit(Thread* t, jobject, jint code)
 {

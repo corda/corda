@@ -204,6 +204,11 @@ vm-sources = \
 	$(src)/process.cpp \
 	$(src)/$(asm).cpp
 
+ifeq ($(heapdump),true)
+	vm-sources += $(src)/heapdump.cpp
+	cflags += -DAVIAN_HEAPDUMP
+endif
+
 vm-asm-sources = $(src)/$(asm).S
 
 ifeq ($(process),compile)

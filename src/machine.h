@@ -2204,6 +2204,12 @@ intern(Thread* t, object s);
 void
 exit(Thread* t);
 
+int
+walkNext(Thread* t, object o, int previous);
+
+void
+visitRoots(Thread* t, Heap::Visitor* v);
+
 inline jobject
 makeLocalReference(Thread* t, object o)
 {
@@ -2296,6 +2302,9 @@ makeSingleton(Thread* t, unsigned count)
   }
   return o;
 }
+
+void
+dumpHeap(Thread* t, FILE* out);
 
 } // namespace vm
 
