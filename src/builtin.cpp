@@ -595,7 +595,9 @@ Java_java_lang_Runtime_dumpHeap(Thread* t, jclass, jstring outputFile)
   stringChars(t, *outputFile, n);
   FILE* out = fopen(n, "wb");
   if (out) {
-    dumpHeap(t, out);
+    { ENTER(t, Thread::ExclusiveState);
+      dumpHeap(t, out);
+    }
     fclose(out);
   } else {
     object message = makeString(t, "file not found: %s", n);
