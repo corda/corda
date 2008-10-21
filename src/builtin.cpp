@@ -590,6 +590,8 @@ Java_java_lang_Runtime_gc(Thread* t, jobject)
 extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_dumpHeap(Thread* t, jclass, jstring outputFile)
 {
+  ENTER(t, Thread::ActiveState);
+
   unsigned length = stringLength(t, *outputFile);
   char n[length + 1];
   stringChars(t, *outputFile, n);
