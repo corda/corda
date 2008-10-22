@@ -371,7 +371,6 @@ class Scalar : public Object {
   unsigned elementSize;
   bool noassert;
   bool nogc;
-  bool hide;
 
   static Scalar* make(Object* owner, Object* typeObject, const char* typeName,
                       const char* name, unsigned size)
@@ -385,7 +384,6 @@ class Scalar : public Object {
     o->elementSize = size;
     o->noassert = false;
     o->nogc = false;
-    o->hide = false;
     return o;
   }
 };
@@ -527,19 +525,6 @@ memberGC(Object* o)
   return not memberNoGC(o) and equal(memberTypeName(o), "object");
 }
 
-bool&
-memberHide(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-    return static_cast<Scalar*>(o)->hide;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
 class Method : public Object {
  public:
   Object* owner;
@@ -588,7 +573,6 @@ class Type : public Object {
   Object* super;
   List members;
   List methods;
-  bool hideConstructor;
   bool overridesMethods;
 
   static Type* make(Object::ObjectType type, const char* name,
@@ -601,7 +585,6 @@ class Type : public Object {
     o->super = 0;
     o->members.first = o->members.last = 0;
     o->methods.first = o->methods.last = 0;
-    o->hideConstructor = false;
     o->overridesMethods = false;
     return o;
   }  
@@ -712,18 +695,6 @@ typeSuper(Object* o)
   switch (o->type) {
   case Object::Type:
     return static_cast<Type*>(o)->super;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-bool&
-typeHideConstructor(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->hideConstructor;
 
   default:
     UNREACHABLE;
@@ -1141,15 +1112,7 @@ void
 parseSubdeclaration(Object* t, Object* p, Object* declarations)
 {
   const char* front = string(car(p));
-  if (equal(front, "hide")) {
-    if (equal(string(car(cdr(p))), "constructor")) {
-      typeHideConstructor(t) = true;
-    } else {
-      Object* member = parseMember(t, cdr(p), declarations);
-      memberHide(member) = true;
-      addMember(t, member);
-    }
-  } else if (equal(front, "extends")) {
+  if (equal(front, "extends")) {
     assert(t->type == Object::Type);
     assert(typeSuper(t) == 0);
     typeSuper(t) = declaration(string(car(cdr(p))), declarations);
@@ -1169,8 +1132,7 @@ memberEqual(Object* a, Object* b)
     case Object::Scalar:
       return equal(memberTypeName(a), memberTypeName(b))
         and memberNoAssert(a) == memberNoAssert(b)
-        and memberNoGC(a) == memberNoGC(b)
-        and memberHide(a) == memberHide(b);
+        and memberNoGC(a) == memberNoGC(b);
 
       // todo: compare array fields
 
@@ -1468,17 +1430,13 @@ parse(Input* in, const char* javaClassDirectory)
 }
 
 void
-writeAccessorName(Output* out, Object* member, bool respectHide = false,
-                  bool unsafe = false)
+writeAccessorName(Output* out, Object* member, bool unsafe = false)
 {
   const char* owner = typeName(memberOwner(member));
   out->write(owner);
   out->write(capitalize(memberName(member)));
   if (unsafe) {
     out->write("Unsafe");
-  }
-  if (respectHide and memberHide(member)) {
-    out->write("0");
   }
 }
 
@@ -1557,7 +1515,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   }
 
   out->write("\n");
-  writeAccessorName(out, member, true, unsafe);
+  writeAccessorName(out, member, unsafe);
   if (memberOwner(member)->type == Object::Pod) {
     out->write("(");
     out->write(capitalize(::typeName(memberOwner(member))));
@@ -1876,7 +1834,7 @@ writeConstructorInitializations(Output* out, Object* t)
     switch (m->type) {
     case Object::Scalar: {
       out->write("  ");
-      writeAccessorName(out, m, true);
+      writeAccessorName(out, m);
       out->write("(t, o) = ");
       out->write(obfuscate(memberName(m)));
       out->write(";\n");
@@ -1887,7 +1845,7 @@ writeConstructorInitializations(Output* out, Object* t)
       if (memberTypeObject(m) == 0) {
         out->write("&");
       }
-      writeAccessorName(out, m, true);
+      writeAccessorName(out, m);
       out->write("(t, o, 0), 0, length * ");
       out->write(arrayElementSize(m));
       out->write(");\n");
@@ -1914,7 +1872,6 @@ writeInitializerDeclarations(Output* out, Object* declarations)
     case Object::Type: {
       out->write("void init");
       out->write(capitalize(typeName(o)));
-      if (typeHideConstructor(o)) out->write("0");
       out->write("(Thread* t, object o");
       
       writeConstructorParameters(out, o);
@@ -1936,7 +1893,6 @@ writeConstructorDeclarations(Output* out, Object* declarations)
     case Object::Type: {
       out->write("object make");
       out->write(capitalize(typeName(o)));
-      if (typeHideConstructor(o)) out->write("0");
       out->write("(Thread* t");
       
       writeConstructorParameters(out, o);
@@ -1958,7 +1914,6 @@ writeInitializers(Output* out, Object* declarations)
     case Object::Type: {
       out->write("void\ninit");
       out->write(capitalize(typeName(o)));
-      if (typeHideConstructor(o)) out->write("0");
       out->write("(Thread* t, object o");
       
       writeConstructorParameters(out, o);
@@ -1989,7 +1944,6 @@ writeConstructors(Output* out, Object* declarations)
     case Object::Type: {
       out->write("object make");
       out->write(capitalize(typeName(o)));
-      if (typeHideConstructor(o)) out->write("0");
       out->write("(Thread* t");
       
       writeConstructorParameters(out, o);
@@ -2027,7 +1981,6 @@ writeConstructors(Output* out, Object* declarations)
 
       out->write("  init");
       out->write(capitalize(typeName(o)));
-      if (typeHideConstructor(o)) out->write("0");
       out->write("(t, o");
       writeConstructorArguments(out, o);
       out->write(");\n");
