@@ -337,11 +337,17 @@ define compile-object
 	$(cxx) $(cflags) -c $(<) -o $(@)
 endef
 
+define compile-asm-object
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cc) -I$(src) -c $(<) -o $(@)
+endef
+
 $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
 $(vm-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
-	$(compile-object)
+	$(compile-asm-object)
 
 $(driver-object): $(driver-source)
 	$(compile-object)
