@@ -147,7 +147,7 @@ find(Context* c, object p)
 }
 
 Set::Entry*
-add(Context* c UNUSED, Set* set, object p)
+add(Context* c UNUSED, Set* set, object p, uint32_t number)
 {
   assert(c->thread, set->size < set->capacity);
 
@@ -156,6 +156,7 @@ add(Context* c UNUSED, Set* set, object p)
   int offset = set->size++;
   Set::Entry* e = set->entries + offset;
   e->value = p;
+  e->number = number;
   e->next = set->index[index];
   set->index[index] = offset;
   return e;
@@ -181,7 +182,7 @@ add(Context* c, object p)
       for (unsigned i = 0; i < c->objects->capacity; ++i) {
         for (int j = c->objects->index[i]; j >= 0;) {
           Set::Entry* e = c->objects->entries + j;
-          add(c, set, e->value);
+          add(c, set, e->value, e->number);
           j = e->next;
         }
       }
@@ -193,16 +194,15 @@ add(Context* c, object p)
     c->objects = set;
   }
 
-  return add(c, c->objects, p);
+  return add(c, c->objects, p, 0);
 }
 
 enum {
   Root,
+  Size,
   ClassName,
   Push,
-  LastChild,
-  Pop,
-  Size
+  Pop
 };
 
 inline object
@@ -241,8 +241,6 @@ objectSize(Thread* t, object o)
   }
   return n;
 }
-
-
 
 void
 visit(Context* c, object p)
@@ -284,13 +282,8 @@ visit(Context* c, object p)
   goto pop;
 
  children: {
-    int next = walkNext(t, p, nextChildOffset);
-    if (next >= 0) {
-      write1(c, Push);
-      push(c, p, next);
-    } else {
-      write1(c, LastChild);
-    }
+    write1(c, Push);
+    push(c, p, nextChildOffset);
     p = get(p, nextChildOffset);
     goto visit;
   }
@@ -298,7 +291,12 @@ visit(Context* c, object p)
  pop: {
     if (pop(c, &p, &nextChildOffset)) {
       write1(c, Pop);
-      goto children;
+      nextChildOffset = walkNext(t, p, nextChildOffset);
+      if (nextChildOffset >= 0) {
+        goto children;
+      } else {
+        goto pop;
+      }
     }
   }
 }
