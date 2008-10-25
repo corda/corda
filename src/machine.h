@@ -2208,7 +2208,7 @@ int
 walkNext(Thread* t, object o, int previous);
 
 void
-visitRoots(Thread* t, Heap::Visitor* v);
+visitRoots(Machine* m, Heap::Visitor* v);
 
 inline jobject
 makeLocalReference(Thread* t, object o)

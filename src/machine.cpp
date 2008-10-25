@@ -178,6 +178,25 @@ footprint(Thread* t)
 }
 
 void
+visitRoots(Thread* t, Heap::Visitor* v)
+{
+  if (t->state != Thread::ZombieState) {
+    v->visit(&(t->javaThread));
+    v->visit(&(t->exception));
+
+    t->m->processor->visitObjects(t, v);
+
+    for (Thread::Protector* p = t->protector; p; p = p->next) {
+      p->visit(v);
+    }
+  }
+
+  for (Thread* c = t->child; c; c = c->peer) {
+    visitRoots(c, v);
+  }
+}
+
+void
 walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
      unsigned arrayElementSize, unsigned arrayLength, unsigned start)
 {
@@ -1526,20 +1545,7 @@ class HeapClient: public Heap::Client {
   HeapClient(Machine* m): m(m) { }
 
   virtual void visitRoots(Heap::Visitor* v) {
-    v->visit(&(m->loader));
-    v->visit(&(m->bootstrapClassMap));
-    v->visit(&(m->monitorMap));
-    v->visit(&(m->stringMap));
-    v->visit(&(m->types));
-    v->visit(&(m->jniMethodTable));
-
-    for (Reference* r = m->jniReferences; r; r = r->next) {
-      v->visit(&(r->target));
-    }
-
-    for (Thread* t = m->rootThread; t; t = t->peer) {
-      ::visitRoots(t, v);
-    }
+    ::visitRoots(m, v);
 
     postVisit(m->rootThread, v);
   }
@@ -2784,21 +2790,21 @@ walkNext(Thread* t, object o, int previous)
 }
 
 void
-visitRoots(Thread* t, Heap::Visitor* v)
+visitRoots(Machine* m, Heap::Visitor* v)
 {
-  if (t->state != Thread::ZombieState) {
-    v->visit(&(t->javaThread));
-    v->visit(&(t->exception));
+  v->visit(&(m->loader));
+  v->visit(&(m->bootstrapClassMap));
+  v->visit(&(m->monitorMap));
+  v->visit(&(m->stringMap));
+  v->visit(&(m->types));
+  v->visit(&(m->jniMethodTable));
 
-    t->m->processor->visitObjects(t, v);
-
-    for (Thread::Protector* p = t->protector; p; p = p->next) {
-      p->visit(v);
-    }
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    v->visit(&(r->target));
   }
 
-  for (Thread* c = t->child; c; c = c->peer) {
-    visitRoots(c, v);
+  for (Thread* t = m->rootThread; t; t = t->peer) {
+    ::visitRoots(t, v);
   }
 }
 

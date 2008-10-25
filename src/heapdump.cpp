@@ -323,7 +323,7 @@ dumpHeap(Thread* t, FILE* out)
 
   add(&context, 0)->number = 0;
 
-  visitRoots(t, &v);
+  visitRoots(t->m, &v);
 }
 
 } // namespace vm
