@@ -593,8 +593,6 @@ Java_java_lang_Runtime_dumpHeap(Thread* t, jclass, jstring outputFile)
 {
   ENTER(t, Thread::ActiveState);
 
-  abort(t);
-
   unsigned length = stringLength(t, *outputFile);
   char n[length + 1];
   stringChars(t, *outputFile, n);
