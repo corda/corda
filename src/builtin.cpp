@@ -543,8 +543,9 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
   char n[length + 1];
   stringChars(t, *name, n);
 
-  if (mapName and t->m->builtins) {
-    const char* s = t->m->builtins;
+  const char* builtins = findProperty(t, "avian.builtins");
+  if (mapName and builtins) {
+    const char* s = builtins;
     while (*s) {
       if (strncmp(s, n, length) == 0
           and (s[length] == ',' or s[length] == 0))
@@ -591,6 +592,8 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_dumpHeap(Thread* t, jclass, jstring outputFile)
 {
   ENTER(t, Thread::ActiveState);
+
+  abort(t);
 
   unsigned length = stringLength(t, *outputFile);
   char n[length + 1];

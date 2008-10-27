@@ -185,7 +185,7 @@ assert(System* s, bool v)
 #endif // not NDEBUG
 
 System*
-makeSystem();
+makeSystem(const char* crashDumpDirectory);
 
 } // namespace vm
 

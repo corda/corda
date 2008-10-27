@@ -2046,11 +2046,12 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
 } // namespace vm
 
-#define BUILTINS_PROPERTY "avian.builtins"
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
+#define CRASHDIR_PROPERTY "avian.crash.dir"
 #define CLASSPATH_PROPERTY "java.class.path"
 #define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
 #define BOOTCLASSPATH_OPTION "bootclasspath"
+#define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
 #define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
 
 extern "C" JNIEXPORT jint JNICALL
@@ -2065,12 +2066,12 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   JavaVMInitArgs* a = static_cast<JavaVMInitArgs*>(args);
 
   unsigned heapLimit = 0;
-  const char* builtins = 0;
   const char* bootLibrary = 0;
   const char* classpath = 0;
   const char* bootClasspathPrepend = "";
   const char* bootClasspath = "";
   const char* bootClasspathAppend = "";
+  const char* crashDumpDirectory = 0;
 
   unsigned propertyCount = 0;
 
@@ -2094,14 +2095,14 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
       }
     } else if (strncmp(a->options[i].optionString, "-D", 2) == 0) {
       const char* p = a->options[i].optionString + 2;
-      if (strncmp(p, BUILTINS_PROPERTY "=",
-                  sizeof(BUILTINS_PROPERTY)) == 0)
-      {
-        builtins = p + sizeof(BUILTINS_PROPERTY);
-      } else if (strncmp(p, BOOTSTRAP_PROPERTY "=",
-                         sizeof(BOOTSTRAP_PROPERTY)) == 0)
+      if (strncmp(p, BOOTSTRAP_PROPERTY "=",
+                  sizeof(BOOTSTRAP_PROPERTY)) == 0)
       {
         bootLibrary = p + sizeof(BOOTSTRAP_PROPERTY);
+      } else if (strncmp(p, CRASHDIR_PROPERTY "=",
+                         sizeof(CRASHDIR_PROPERTY)) == 0)
+      {
+        crashDumpDirectory = p + sizeof(CRASHDIR_PROPERTY);
       } else if (strncmp(p, CLASSPATH_PROPERTY "=",
                          sizeof(CLASSPATH_PROPERTY)) == 0)
       {
@@ -2130,7 +2131,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   append(&classpathPointer, bootClasspathAppend, bcpal, PATH_SEPARATOR);
   append(&classpathPointer, classpath, cpl, 0);
 
-  System* s = makeSystem();
+  System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
   Finder* f = makeFinder(s, classpathBuffer, bootLibrary);
   Processor* p = makeProcessor(s, h);
@@ -2145,7 +2146,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   }
 
   *m = new (h->allocate(sizeof(Machine)))
-    Machine(s, h, f, p, bootLibrary, builtins, properties, propertyCount);
+    Machine(s, h, f, p, properties, propertyCount);
 
   *t = p->makeThread(*m, 0, 0);
 

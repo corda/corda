@@ -856,7 +856,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
 namespace vm {
 
 System*
-makeSystem()
+makeSystem(const char*)
 {
   return new (malloc(sizeof(MySystem))) MySystem();
 }

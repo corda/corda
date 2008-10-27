@@ -1630,8 +1630,7 @@ class HeapClient: public Heap::Client {
 namespace vm {
 
 Machine::Machine(System* system, Heap* heap, Finder* finder,
-                 Processor* processor, const char* bootLibrary,
-                 const char* builtins, const char** properties,
+                 Processor* processor, const char** properties,
                  unsigned propertyCount):
   vtable(&javaVMVTable),
   system(system),
@@ -1643,7 +1642,6 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   rootThread(0),
   exclusive(0),
   jniReferences(0),
-  builtins(builtins),
   properties(properties),
   propertyCount(propertyCount),
   activeCount(0),
@@ -1678,7 +1676,8 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
       not system->success(system->make(&referenceLock)) or
-      not system->success(system->load(&libraries, bootLibrary, false)))
+      not system->success
+      (system->load(&libraries, findProperty(this, "avian.bootstrap"), false)))
   {
     system->abort();
   }

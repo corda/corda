@@ -1122,7 +1122,6 @@ class Machine {
   };
 
   Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
-          const char* bootLibrary, const char* builtins,
           const char** properties, unsigned propertyCount);
 
   ~Machine() { 
@@ -1144,7 +1143,6 @@ class Machine {
   Thread* rootThread;
   Thread* exclusive;
   Reference* jniReferences;
-  const char* builtins;
   const char** properties;
   unsigned propertyCount;
   unsigned activeCount;
@@ -1514,10 +1512,10 @@ setObjectClass(Thread*, object o, object value)
 }
 
 inline const char*
-findProperty(Thread* t, const char* name)
+findProperty(Machine* m, const char* name)
 {
-  for (unsigned i = 0; i < t->m->propertyCount; ++i) {
-    const char* p = t->m->properties[i];
+  for (unsigned i = 0; i < m->propertyCount; ++i) {
+    const char* p = m->properties[i];
     const char* n = name;
     while (*p and *p != '=' and *n and *p == *n) {
       ++ p;
@@ -1528,6 +1526,12 @@ findProperty(Thread* t, const char* name)
     }
   }
   return 0;
+}
+
+inline const char*
+findProperty(Thread* t, const char* name)
+{
+  return findProperty(t->m, name);
 }
 
 object&
