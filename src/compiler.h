@@ -21,8 +21,6 @@ class Compiler {
  public:
   class Client {
    public:
-    virtual ~Client() { }
-
     virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
     virtual intptr_t getThunk(BinaryOperation op, unsigned size) = 0;
   };
@@ -31,8 +29,6 @@ class Compiler {
   static const unsigned NoReturn = 1 << 1;
 
   class Operand { };
-
-  virtual ~Compiler() { }
 
   virtual void pushState() = 0;
   virtual void popState() = 0;

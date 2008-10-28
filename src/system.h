@@ -28,7 +28,6 @@ class System {
 
   class Thread {
    public:
-    virtual ~Thread() { }
     virtual void interrupt() = 0;
     virtual void join() = 0;
     virtual void dispose() = 0;
@@ -36,13 +35,11 @@ class System {
 
   class ThreadVisitor {
    public:
-    virtual ~ThreadVisitor() { }
     virtual void visit(void* ip, void* base, void* stack) = 0;
   };
 
   class Runnable {
    public:
-    virtual ~Runnable() { }
     virtual void attach(Thread*) = 0;
     virtual void run() = 0;
     virtual bool interrupted() = 0;
@@ -51,7 +48,6 @@ class System {
 
   class Mutex {
    public:
-    virtual ~Mutex() { }
     virtual void acquire() = 0;
     virtual void release() = 0;
     virtual void dispose() = 0;
@@ -59,7 +55,6 @@ class System {
 
   class Monitor {
    public:
-    virtual ~Monitor() { }
     virtual bool tryAcquire(Thread* context) = 0;
     virtual void acquire(Thread* context) = 0;
     virtual void release(Thread* context) = 0;
@@ -72,7 +67,6 @@ class System {
 
   class Local {
    public:
-    virtual ~Local() { }
     virtual void* get() = 0;
     virtual void set(void* p) = 0;
     virtual void dispose() = 0;
@@ -80,7 +74,6 @@ class System {
 
   class Region {
    public:
-    virtual ~Region() { }
     virtual const uint8_t* start() = 0;
     virtual size_t length() = 0;
     virtual void dispose() = 0;
@@ -88,7 +81,6 @@ class System {
 
   class Library {
    public:
-    virtual ~Library() { }
     virtual void* resolve(const char* function) = 0;
     virtual const char* name() = 0;
     virtual bool mapName() = 0;
@@ -99,8 +91,6 @@ class System {
 
   class SignalHandler {
    public:
-    virtual ~SignalHandler() { }
-
     virtual bool handleSignal(void** ip, void** base, void** stack,
                               void** thread) = 0;
   };
@@ -119,8 +109,6 @@ class System {
     System::Thread* t;
     System::Monitor* m;
   };
-
-  virtual ~System() { }
 
   virtual bool success(Status) = 0;
   virtual void* tryAllocate(unsigned sizeInBytes) = 0;

@@ -19,7 +19,6 @@ class Stream {
  public:
   class Client {
    public:
-    virtual ~Client() { }
     virtual void NO_RETURN handleError() = 0;
   };
 

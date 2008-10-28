@@ -60,7 +60,7 @@ equal(const void* a, unsigned al, const void* b, unsigned bl)
 class Element {
  public:
   Element(): next(0) { }
-  virtual ~Element() { }
+
   virtual System::Region* find(const char* name) = 0;
   virtual bool exists(const char* name) = 0;
   virtual void dispose() = 0;

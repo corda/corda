@@ -1212,7 +1212,7 @@ class Thread {
       t->protector = this;
     }
 
-    virtual ~Protector() {
+    ~Protector() {
       t->protector = next;
     }
 

@@ -50,7 +50,11 @@ strip-all = --strip-all
 
 rdynamic = -rdynamic
 
-warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self
+# note that we supress the non-virtual-dtor warning because we never
+# use the delete operator, which means we don't need virtual
+# destructors:
+warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
+	-Wno-non-virtual-dtor
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
@@ -62,14 +66,7 @@ build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 
 cflags = $(build-cflags)
 
-use-libstdcpp = true
-
 common-lflags = -lm -lz
-
-ifeq ($(use-libstdcpp),true)
-	common-lflags += -lstdc++
-	common-cflags += -DUSE_LIBSTDCPP
-endif
 
 build-lflags =
 

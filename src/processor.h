@@ -23,15 +23,11 @@ class Processor {
 
   class StackVisitor {
    public:
-    virtual ~StackVisitor() { }
-
     virtual bool visit(StackWalker* walker) = 0;
   };
 
   class StackWalker {
    public:
-    virtual ~StackWalker() { }
-
     virtual void walk(StackVisitor* v) = 0;
 
     virtual object method() = 0;
@@ -40,8 +36,6 @@ class Processor {
 
     virtual unsigned count() = 0;
   };
-
-  virtual ~Processor() { }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent) = 0;

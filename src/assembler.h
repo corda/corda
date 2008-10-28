@@ -78,8 +78,6 @@ const int AnyRegister = -2;
 
 class Promise {
  public:
-  virtual ~Promise() { }
-
   virtual int64_t value() = 0;
   virtual bool resolved() = 0;
 };
@@ -101,8 +99,6 @@ class ResolvedPromise: public Promise {
 
 class TraceHandler {
  public:
-  virtual ~TraceHandler() { }
-
   virtual void handleTrace(Promise* address) = 0;
 };
 
@@ -146,8 +142,6 @@ class Assembler {
 
   class Client {
    public:
-    virtual ~Client() { }
-
     virtual int acquireTemporary
     (uint32_t mask = ~static_cast<uint32_t>(0)) = 0;
     virtual void releaseTemporary(int r) = 0;
@@ -155,8 +149,6 @@ class Assembler {
     virtual void save(int r) = 0;
     virtual void restore(int r) = 0;
   };
-
-  virtual ~Assembler() { }
 
   virtual void setClient(Client* client) = 0;
 

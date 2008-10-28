@@ -48,8 +48,6 @@ class Site {
  public:
   Site(): next(0) { }
   
-  virtual ~Site() { }
-
   virtual Site* readTarget(Context*, Read*) { return this; }
 
   virtual unsigned copyCost(Context*, Site*) = 0;
@@ -363,8 +361,6 @@ class Event {
     next(0), stack(stack), locals(locals), promises(0), reads(0), readCount(0),
     sequence(sequence), stackReset(false)
   { }
-
-  virtual ~Event() { }
 
   virtual void compile(Context* c) = 0;
 
