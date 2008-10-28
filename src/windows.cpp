@@ -721,6 +721,7 @@ class MySystem: public System {
   }
 
   virtual void dispose() {
+    system = 0;
     CloseHandle(mutex);
     ::free(this);
   }
