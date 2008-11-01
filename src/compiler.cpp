@@ -38,6 +38,7 @@ class Read;
 class MultiRead;
 class StubRead;
 class Block;
+class Snapshot;
 
 void NO_RETURN abort(Context*);
 
@@ -535,7 +536,7 @@ class Event {
   Event(Context* c):
     next(0), stackBefore(c->stack), localsBefore(c->locals),
     stackAfter(0), localsAfter(0), promises(0), reads(0),
-    junctionSites(0), savedSites(0), predecessors(0), successors(0),
+    junctionSites(0), snapshots(0), predecessors(0), successors(0),
     visitLinks(0), block(0), logicalInstruction(c->logicalCode[c->logicalIp]),
     readCount(0)
   { }
@@ -556,7 +557,7 @@ class Event {
   CodePromise* promises;
   Read* reads;
   Site** junctionSites;
-  Site** savedSites;
+  Snapshot* snapshots;
   Link* predecessors;
   Link* successors;
   Cell* visitLinks;
@@ -705,6 +706,25 @@ class SiteIterator {
 };
 
 bool
+hasMoreThanOneSite(Value* v)
+{
+  SiteIterator it(v);
+  if (it.hasMore()) {
+    it.next();
+    return it.hasMore();
+  } else {
+    return false;
+  }
+}
+
+bool
+hasSite(Value* v)
+{
+  SiteIterator it(v);
+  return it.hasMore();
+}
+
+bool
 findSite(Context*, Value* v, Site* site)
 {
   for (Site* s = v->sites; s; s = s->next) {
@@ -741,10 +761,10 @@ void
 clearSites(Context* c, Value* v)
 {
 //   fprintf(stderr, "clear sites for %p\n", v);
-  for (Site* s = v->sites; s; s = s->next) {
-    s->release(c);
+  for (SiteIterator it(v); it.hasMore();) {
+    it.next();
+    it.remove(c);
   }
-  v->sites = 0;
 }
 
 bool
@@ -753,28 +773,29 @@ valid(Read* r)
   return r and r->valid();
 }
 
-bool
+Read*
 live(Value* v)
 {
-  if (valid(v->reads)) return true;
+  if (valid(v->reads)) return v->reads;
 
   for (Value* p = v->buddy; p != v; p = p->buddy) {
-    if (valid(p->reads)) return true;
+    if (valid(p->reads)) return p->reads;
   }
 
-  return false;
+  return 0;
 }
 
-bool
+Read*
 liveNext(Context* c, Value* v)
 {
-  if (valid(v->reads->next(c))) return true;
+  Read* r = v->reads->next(c);
+  if (valid(r)) return r;
 
   for (Value* p = v->buddy; p != v; p = p->buddy) {
-    if (valid(v->reads)) return true;
+    if (valid(p->reads)) return p->reads;
   }
 
-  return false;
+  return 0;
 }
 
 void
@@ -1636,6 +1657,9 @@ toString(Context* c, Site* sites, char* buffer, unsigned size)
       length += 2;
       sites->next->toString(c, buffer + length, size - length);
     }
+  } else {
+    assert(c, size);
+    *buffer = 0;
   }
 }
 
@@ -1659,7 +1683,7 @@ releaseRegister(Context* c, Value* v, unsigned frameIndex, unsigned sizeInBytes,
     }
   }
 
-  if (v->sites == 0) {
+  if (not hasSite(v)) {
     move(c, c->stack, c->locals, sizeInBytes, v, source, frameSite(c, frameIndex));
   }
 
@@ -1680,7 +1704,7 @@ bool
 trySteal(Context* c, Site* site, Value* v, unsigned size, Stack* stack,
          Local* locals)
 {
-  if (v->sites->next == 0) {
+  if (not hasMoreThanOneSite(v)) {
     Site* saveSite = 0;
     for (unsigned li = 0; li < c->localFootprint; ++li) {
       Local* local = locals + li;
@@ -1734,8 +1758,7 @@ trySteal(Context* c, Register* r, Stack* stack, Local* locals)
   assert(c, live(v));
 
   if (DebugRegisters) {
-    fprintf(stderr, "try steal %d from %p: next: %p\n",
-            r->number, v, v->sites->next);
+    fprintf(stderr, "try steal %d from %p\n", r->number, v);
   }
 
   return trySteal(c, r->site, r->value, r->size, stack, locals);
@@ -1751,7 +1774,7 @@ used(Context* c, Register* r)
 bool
 usedExclusively(Context* c, Register* r)
 {
-  return used(c, r) and r->value->sites->next == 0;
+  return used(c, r) and not hasMoreThanOneSite(r->value);
 }
 
 unsigned
@@ -1931,7 +1954,7 @@ validate(Context* c, uint32_t mask, Stack* stack, Local* locals,
 bool
 trySteal(Context* c, FrameResource* r, Stack* stack, Local* locals)
 {
-  assert(c, r->value->reads);
+  assert(c, live(r->value));
 
   if (DebugFrameIndexes) {
     int index = r - c->frameResources;
@@ -2073,21 +2096,18 @@ addRead(Context* c, Event* e, Value* v, Read* r)
 void
 clean(Context* c, Value* v, unsigned popIndex)
 {
-  for (Site** s = &(v->sites); *s;) {
-    if ((*s)->match(c, 1 << MemoryOperand, 0, AnyFrameIndex)
-        and offsetToFrameIndex
-        (c, static_cast<MemorySite*>(*s)->value.offset)
-        >= popIndex)
+  for (SiteIterator it(v); it.hasMore();) {
+    Site* s = it.next();
+    if (not (s->match(c, 1 << MemoryOperand, 0, AnyFrameIndex)
+             and offsetToFrameIndex
+             (c, static_cast<MemorySite*>(s)->value.offset)
+             >= popIndex))
     {
-      s = &((*s)->next);
-    } else {
-      char buffer[256]; (*s)->toString(c, buffer, 256);
-      fprintf(stderr, "remove %s from %p at %d pop index %d\n", buffer, v, offsetToFrameIndex
-              (c, static_cast<MemorySite*>(*s)->value.offset), popIndex);
-      (*s)->release(c);
-      *s = (*s)->next;
-      toString(c, v->sites, buffer, 256);
-      fprintf(stderr, "%p has %s remaining\n", v, buffer);
+      char buffer[256]; s->toString(c, buffer, 256);
+      fprintf(stderr, "remove %s from %p at %d pop index %d\n",
+              buffer, v, offsetToFrameIndex
+              (c, static_cast<MemorySite*>(s)->value.offset), popIndex);
+      it.remove(c);
     }
   }
 }
@@ -2280,7 +2300,6 @@ void
 preserve(Context* c, Stack* stack, Local* locals, unsigned size, Value* v,
          Site* s, Read* read)
 {
-  assert(c, v->sites == s);
   Site* r = targetOrRegister(c, v, read);
   move(c, stack, locals, size, v, s, r);
 }
@@ -2289,8 +2308,9 @@ void
 maybePreserve(Context* c, Stack* stack, Local* locals, unsigned size,
               Value* v, Site* s)
 {
-  if (liveNext(c, v) and v->sites->next == 0) {
-    preserve(c, stack, locals, size, v, s, v->reads->next(c));
+  Read* r = liveNext(c, v);
+  if (r and not hasMoreThanOneSite(v)) {
+    preserve(c, stack, locals, size, v, s, r);
   }
 }
 
@@ -2416,7 +2436,8 @@ appendMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
 ConstantSite*
 findConstantSite(Context* c, Value* v)
 {
-  for (Site* s = v->sites; s; s = s->next) {
+  for (SiteIterator it(v); it.hasMore();) {
+    Site* s = it.next();
     if (s->type(c) == ConstantOperand) {
       return static_cast<ConstantSite*>(s);
     }
@@ -2552,10 +2573,10 @@ value(Context* c, Site* site = 0, Site* target = 0)
 }
 
 void
-removeBuddy(Value* v)
+removeBuddy(Context* c, Value* v)
 {
   if (v->buddy != v) {
-    fprintf(stderr, "remove %p from", v);
+    fprintf(stderr, "remove buddy %p from", v);
     for (Value* p = v->buddy; p != v; p = p->buddy) {
       fprintf(stderr, " %p", p);
     }
@@ -2568,7 +2589,50 @@ removeBuddy(Value* v)
     Value* p = next;
     while (p->buddy != v) p = p->buddy;
     p->buddy = next;
+
+    if (not live(next)) {
+      clearSites(c, next);
+    }
   }
+}
+
+Site*
+copy(Context* c, Site* s)
+{
+  Site* start = 0;
+  Site* end = 0;
+  for (; s; s = s->next) {
+    Site* n = s->copy(c);
+    if (end) {
+      end->next = n;
+    } else {
+      start = n;
+    }
+    end = n;
+  }
+  return start;
+}
+
+class Snapshot {
+ public:
+  Snapshot(Context* c, Value* value, Snapshot* next):
+    value(value), buddy(value->buddy), sites(copy(c, value->sites)), next(next)
+  { }
+
+  Value* value;
+  Value* buddy;
+  Site* sites;
+  Snapshot* next;
+};
+
+Snapshot*
+snapshot(Context* c, Value* value, Snapshot* next)
+{
+  char buffer[256]; toString(c, value->sites, buffer, 256);
+  fprintf(stderr, "snapshot %p buddy %p sites %s\n",
+          value, value->buddy, buffer);
+
+  return new (c->zone->allocate(sizeof(Snapshot))) Snapshot(c, value, next);
 }
 
 Stack*
@@ -3047,8 +3111,8 @@ class BuddyEvent: public Event {
     while (p->buddy != original) p = p->buddy;
     p->buddy = buddy;
     
-    fprintf(stderr, "buddies %p", original);
-    for (Value* p = original->buddy; p != original; p = p->buddy) {
+    fprintf(stderr, "add buddy %p to ", buddy);
+    for (Value* p = buddy->buddy; p != buddy; p = p->buddy) {
       fprintf(stderr, " %p", p);
     }
     fprintf(stderr, "\n");
@@ -3188,7 +3252,7 @@ resolveJunctionSite(Context* c, Event* e, Value* v,
   assert(c, siteIndex < frameFootprint(c, e->stackAfter));
 
   if (live(v)) {
-    assert(c, v->sites);
+    assert(c, hasSite(v));
     
     Read* r = v->reads;
     Site* original = e->junctionSites[siteIndex];
@@ -3202,6 +3266,7 @@ resolveJunctionSite(Context* c, Event* e, Value* v,
 
     unsigned copyCost;
     Site* site = pick(c, v, target, &copyCost);
+
     if (copyCost) {
       move(c, e->stackAfter, e->localsAfter, r->size, v, site, target);
     } else {
@@ -3234,23 +3299,6 @@ propagateJunctionSites(Context* c, Event* e, Site** sites)
       }
     }
   }
-}
-
-Site*
-copy(Context* c, Site* s)
-{
-  Site* start = 0;
-  Site* end = 0;
-  for (; s; s = s->next) {
-    Site* n = s->copy(c);
-    if (end) {
-      end->next = n;
-    } else {
-      start = n;
-    }
-    end = n;
-  }
-  return start;
 }
 
 void
@@ -3297,10 +3345,6 @@ populateSiteTables(Context* c, Event* e)
 
       fprintf(stderr, "resolved junction sites %p at %d\n",
               e->junctionSites, e->logicalInstruction->index);
-
-      for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
-        removeBuddy(it.next(c).value);
-      }
     }
 
     while (frozenSiteIndex) {
@@ -3309,49 +3353,81 @@ populateSiteTables(Context* c, Event* e)
   }
 
   if (e->successors->nextSuccessor) {
-    unsigned size = sizeof(Site*) * frameFootprint;
-    Site** savedSites = static_cast<Site**>(c->zone->allocate(size));
-    memset(savedSites, 0, size);
-
     for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
       FrameIterator::Element el = it.next(c);
-      char buffer[256]; toString(c, el.value->sites, buffer, 256);
-      fprintf(stderr, "save %s for %p at %d\n", buffer, el.value, el.localIndex);
-
-      savedSites[el.localIndex] = copy(c, el.value->sites);
+      e->snapshots = snapshot(c, el.value, e->snapshots);
+      for (Value* p = el.value->buddy; p != el.value; p = p->buddy) {
+        e->snapshots = snapshot(c, p, e->snapshots);
+      }
     }
 
-    e->savedSites = savedSites;
+    fprintf(stderr, "captured snapshots %p at %d\n",
+            e->snapshots, e->logicalInstruction->index);
+  }
 
-    fprintf(stderr, "captured saved sites %p at %d\n",
-            e->savedSites, e->logicalInstruction->index);
+  if (e->junctionSites) {
+    for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
+      FrameIterator::Element el = it.next(c);
+      removeBuddy(c, el.value);
+    }
   }
 }
 
 void
-setSites(Context* c, Event* e, Value* v, Site* s, unsigned frameIndex)
+setSites(Context* c, Event* e, Value* v, Site* s, unsigned size)
 {
   for (; s; s = s->next) {
-    addSite(c, e->stackBefore, e->localsBefore, v->reads->size, v,
-            s->copy(c));
+    addSite(c, e->stackBefore, e->localsBefore, size, v, s->copy(c));
   }
 
   char buffer[256]; toString(c, v->sites, buffer, 256);
-  fprintf(stderr, "set sites %s for %p at %d\n", buffer, v, frameIndex);
+  fprintf(stderr, "set sites %s for %p\n", buffer, v);
 }
 
 void
-setSites(Context* c, Event* e, Site** sites)
+resetFrame(Context* c, Event* e)
 {
   for (FrameIterator it(c, e->stackBefore, e->localsBefore); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     clearSites(c, el.value);
   }
+}
+
+void
+setSites(Context* c, Event* e, Site** sites)
+{
+  resetFrame(c, e);
 
   for (FrameIterator it(c, e->stackBefore, e->localsBefore); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
-    if (sites[el.localIndex] and live(el.value)) {
-      setSites(c, e, el.value, sites[el.localIndex], frameIndex(c, &el));      
+    if (sites[el.localIndex]) {
+      Read* r = live(el.value);
+      if (r) {
+        setSites(c, e, el.value, sites[el.localIndex], r->size);
+      }
+    }
+  }
+}
+
+void
+restore(Context* c, Event* e, Snapshot* snapshots)
+{
+  for (Snapshot* s = snapshots; s; s = s->next) {
+    char buffer[256]; toString(c, s->sites, buffer, 256);
+    fprintf(stderr, "restore %p buddy %p sites %s\n",
+            s->value, s->value->buddy, buffer);
+
+    s->value->buddy = s->buddy;
+  }
+
+  resetFrame(c, e);
+
+  for (Snapshot* s = snapshots; s; s = s->next) {
+    if (live(s->value)) {
+      Read* r = live(s->value);
+      if (r and s->sites) {
+        setSites(c, e, s->value, s->sites, r->size);
+      }
     }
   }
 }
@@ -3503,9 +3579,9 @@ compile(Context* c)
                 first->junctionSites, first->logicalInstruction->index);
         setSites(c, e, first->junctionSites);
       } else if (first->successors->nextSuccessor) {
-        fprintf(stderr, "set sites to saved sites %p at %d\n",
-                first->savedSites, first->logicalInstruction->index);
-        setSites(c, e, first->savedSites);
+        fprintf(stderr, "restore snapshots %p at %d\n",
+                first->snapshots, first->logicalInstruction->index);
+        restore(c, e, first->snapshots);
       }
     }
 
