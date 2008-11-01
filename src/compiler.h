@@ -63,15 +63,15 @@ class Compiler {
 
   virtual Operand* stackTop() = 0;
 
-  virtual void push(unsigned size) = 0;
-  virtual void push(unsigned size, Operand* value) = 0;
-  virtual Operand* pop(unsigned size) = 0;
+  virtual void push(unsigned sizeInBytes) = 0;
+  virtual void push(unsigned sizeInBytes, Operand* value) = 0;
+  virtual Operand* pop(unsigned sizeInBytes) = 0;
   virtual void pushed() = 0;
   virtual void popped() = 0;
   virtual StackElement* top() = 0;
   virtual unsigned size(StackElement*) = 0;
   virtual unsigned padding(StackElement*) = 0;
-  virtual Operand* peek(unsigned size, unsigned index) = 0;
+  virtual Operand* peek(unsigned sizeInBytes, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
                         unsigned flags,
