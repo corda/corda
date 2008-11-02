@@ -839,56 +839,42 @@ class Frame {
     this->ip = ip;
   }
 
-  void pushQuiet(unsigned size, Compiler::Operand* o) {
-    c->push(size, o);
+  void pushQuiet(unsigned footprint, Compiler::Operand* o) {
+    c->push(footprint, o);
     
     context->eventLog.append(PushEvent);
     context->eventLog.appendAddress(c->top());
   }
 
   void pushLongQuiet(Compiler::Operand* o) {
-    if (BytesPerWord == 8) {
-      c->push(8);
-
-      context->eventLog.append(PushEvent);
-      context->eventLog.appendAddress(c->top());
-    }
-
-    pushQuiet(8, o);
+    pushQuiet(2, o);
   }
 
-  Compiler::Operand* popQuiet(unsigned size) {
+  Compiler::Operand* popQuiet(unsigned footprint) {
     context->eventLog.append(PopEvent);
     context->eventLog.appendAddress(c->top());
 
-    return c->pop(size);
+    return c->pop(footprint);
   }
 
   Compiler::Operand* popLongQuiet() {
-    Compiler::Operand* r = popQuiet(8);
-
-    if (BytesPerWord == 8) {
-      context->eventLog.append(PopEvent);
-      context->eventLog.appendAddress(c->top());
-
-      c->pop(8);
-    }
+    Compiler::Operand* r = popQuiet(2);
 
     return r;
   }
 
   void pushInt(Compiler::Operand* o) {
-    pushQuiet(4, o);
+    pushQuiet(1, o);
     pushedInt();
   }
 
   void pushAddress(Compiler::Operand* o) {
-    pushQuiet(BytesPerWord, o);
+    pushQuiet(1, o);
     pushedInt();
   }
 
   void pushObject(Compiler::Operand* o) {
-    pushQuiet(BytesPerWord, o);
+    pushQuiet(1, o);
     pushedObject();
   }
 
@@ -916,17 +902,17 @@ class Frame {
       context->eventLog.appendAddress(s);
 
       c->popped();
-      i -= c->size(s);
+      i -= c->footprint(s);
     }
   }
 
   Compiler::Operand* popInt() {
     poppedInt();
-    return popQuiet(4);
+    return popQuiet(1);
   }
 
   Compiler::Operand* peekLong(unsigned index) {
-    return c->peek(8, index);
+    return c->peek(2, index);
   }
 
   Compiler::Operand* popLong() {
@@ -936,41 +922,41 @@ class Frame {
 
   Compiler::Operand* popObject() {
     poppedObject();
-    return popQuiet(BytesPerWord);
+    return popQuiet(1);
   }
 
   void loadInt(unsigned index) {
     assert(t, index < localSize());
-    pushInt(c->loadLocal(BytesPerWord, index));
+    pushInt(c->loadLocal(1, index));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLong(c->loadLocal(8, index));
+    pushLong(c->loadLocal(2, index));
   }
 
   void loadObject(unsigned index) {
     assert(t, index < localSize());
-    pushObject(c->loadLocal(BytesPerWord, index));
+    pushObject(c->loadLocal(1, index));
   }
 
   void storeInt(unsigned index) {
-    c->storeLocal(BytesPerWord, popInt(), index);
+    c->storeLocal(1, popInt(), index);
     storedInt(index);
   }
 
   void storeLong(unsigned index) {
-    c->storeLocal(8, popLong(), index);
+    c->storeLocal(2, popLong(), index);
     storedLong(index);
   }
 
   void storeObject(unsigned index) {
-    c->storeLocal(BytesPerWord, popObject(), index);
+    c->storeLocal(1, popObject(), index);
     storedObject(index);
   }
 
   void storeObjectOrAddress(unsigned index) {
-    c->storeLocal(BytesPerWord, popQuiet(BytesPerWord), index);
+    c->storeLocal(1, popQuiet(1), index);
 
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
@@ -984,39 +970,39 @@ class Frame {
   }
 
   void dup() {
-    pushQuiet(BytesPerWord, c->peek(BytesPerWord, 0));
+    pushQuiet(1, c->peek(1, 0));
 
     dupped();
   }
 
   void dupX1() {
-    Compiler::Operand* s0 = popQuiet(BytesPerWord);
-    Compiler::Operand* s1 = popQuiet(BytesPerWord);
+    Compiler::Operand* s0 = popQuiet(1);
+    Compiler::Operand* s1 = popQuiet(1);
 
-    pushQuiet(BytesPerWord, s0);
-    pushQuiet(BytesPerWord, s1);
-    pushQuiet(BytesPerWord, s0);
+    pushQuiet(1, s0);
+    pushQuiet(1, s1);
+    pushQuiet(1, s0);
 
     duppedX1();
   }
 
   void dupX2() {
-    Compiler::Operand* s0 = popQuiet(BytesPerWord);
+    Compiler::Operand* s0 = popQuiet(1);
 
     if (get(sp - 2) == Long) {
       Compiler::Operand* s1 = popLongQuiet();
 
-      pushQuiet(BytesPerWord, s0);
+      pushQuiet(1, s0);
       pushLongQuiet(s1);
-      pushQuiet(BytesPerWord, s0);
+      pushQuiet(1, s0);
     } else {
-      Compiler::Operand* s1 = popQuiet(BytesPerWord);
-      Compiler::Operand* s2 = popQuiet(BytesPerWord);
+      Compiler::Operand* s1 = popQuiet(1);
+      Compiler::Operand* s2 = popQuiet(1);
 
-      pushQuiet(BytesPerWord, s0);
-      pushQuiet(BytesPerWord, s2);
-      pushQuiet(BytesPerWord, s1);
-      pushQuiet(BytesPerWord, s0);
+      pushQuiet(1, s0);
+      pushQuiet(1, s2);
+      pushQuiet(1, s1);
+      pushQuiet(1, s0);
     }
 
     duppedX2();
@@ -1026,13 +1012,13 @@ class Frame {
     if (get(sp - 1) == Long) {
       pushLongQuiet(peekLong(0));
     } else {
-      Compiler::Operand* s0 = popQuiet(BytesPerWord);
-      Compiler::Operand* s1 = popQuiet(BytesPerWord);
+      Compiler::Operand* s0 = popQuiet(1);
+      Compiler::Operand* s1 = popQuiet(1);
 
-      pushQuiet(BytesPerWord, s1);
-      pushQuiet(BytesPerWord, s0);
-      pushQuiet(BytesPerWord, s1);
-      pushQuiet(BytesPerWord, s0);
+      pushQuiet(1, s1);
+      pushQuiet(1, s0);
+      pushQuiet(1, s1);
+      pushQuiet(1, s0);
     }
 
     dupped2();
@@ -1041,21 +1027,21 @@ class Frame {
   void dup2X1() {
     if (get(sp - 1) == Long) {
       Compiler::Operand* s0 = popLongQuiet();
-      Compiler::Operand* s1 = popQuiet(BytesPerWord);
+      Compiler::Operand* s1 = popQuiet(1);
 
       pushLongQuiet(s0);
-      pushQuiet(BytesPerWord, s1);
+      pushQuiet(1, s1);
       pushLongQuiet(s0);
     } else {
-      Compiler::Operand* s0 = popQuiet(BytesPerWord);
-      Compiler::Operand* s1 = popQuiet(BytesPerWord);
-      Compiler::Operand* s2 = popQuiet(BytesPerWord);
+      Compiler::Operand* s0 = popQuiet(1);
+      Compiler::Operand* s1 = popQuiet(1);
+      Compiler::Operand* s2 = popQuiet(1);
 
-      pushQuiet(BytesPerWord, s1);
-      pushQuiet(BytesPerWord, s0);
-      pushQuiet(BytesPerWord, s2);
-      pushQuiet(BytesPerWord, s1);
-      pushQuiet(BytesPerWord, s0);
+      pushQuiet(1, s1);
+      pushQuiet(1, s0);
+      pushQuiet(1, s2);
+      pushQuiet(1, s1);
+      pushQuiet(1, s0);
     }
 
     dupped2X1();
@@ -1072,37 +1058,37 @@ class Frame {
         pushLongQuiet(s1);
         pushLongQuiet(s0);
       } else {
-        Compiler::Operand* s1 = popQuiet(BytesPerWord);
-        Compiler::Operand* s2 = popQuiet(BytesPerWord);
+        Compiler::Operand* s1 = popQuiet(1);
+        Compiler::Operand* s2 = popQuiet(1);
 
         pushLongQuiet(s0);
-        pushQuiet(BytesPerWord, s2);
-        pushQuiet(BytesPerWord, s1);
+        pushQuiet(1, s2);
+        pushQuiet(1, s1);
         pushLongQuiet(s0);
       }
     } else {
-      Compiler::Operand* s0 = popQuiet(BytesPerWord);
-      Compiler::Operand* s1 = popQuiet(BytesPerWord);
-      Compiler::Operand* s2 = popQuiet(BytesPerWord);
-      Compiler::Operand* s3 = popQuiet(BytesPerWord);
+      Compiler::Operand* s0 = popQuiet(1);
+      Compiler::Operand* s1 = popQuiet(1);
+      Compiler::Operand* s2 = popQuiet(1);
+      Compiler::Operand* s3 = popQuiet(1);
 
-      pushQuiet(BytesPerWord, s1);
-      pushQuiet(BytesPerWord, s0);
-      pushQuiet(BytesPerWord, s3);
-      pushQuiet(BytesPerWord, s2);
-      pushQuiet(BytesPerWord, s1);
-      pushQuiet(BytesPerWord, s0);
+      pushQuiet(1, s1);
+      pushQuiet(1, s0);
+      pushQuiet(1, s3);
+      pushQuiet(1, s2);
+      pushQuiet(1, s1);
+      pushQuiet(1, s0);
     }
 
     dupped2X2();
   }
 
   void swap() {
-    Compiler::Operand* s0 = popQuiet(BytesPerWord);
-    Compiler::Operand* s1 = popQuiet(BytesPerWord);
+    Compiler::Operand* s0 = popQuiet(1);
+    Compiler::Operand* s1 = popQuiet(1);
 
-    pushQuiet(BytesPerWord, s0);
-    pushQuiet(BytesPerWord, s1);
+    pushQuiet(1, s0);
+    pushQuiet(1, s1);
 
     swapped();
   }
@@ -1860,7 +1846,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       int index = 0;
       if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
-        c->initLocal(BytesPerWord, index++);
+        c->initLocal(1, index++);
       }
 
       for (MethodSpecIterator it
@@ -1871,12 +1857,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         switch (*it.next()) {
         case 'J':
         case 'D':
-          c->initLocal(8, index);
+          c->initLocal(2, index);
           index += 2;
           break;
 
         default:
-          c->initLocal(BytesPerWord, index++);
+          c->initLocal(1, index++);
           break;
         }
       }
@@ -2098,7 +2084,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      Compiler::Operand* instance = c->peek(BytesPerWord, 0);
+      Compiler::Operand* instance = c->peek(1, 0);
 
       c->call
         (c->constant(getThunk(t, checkCastThunk)),
@@ -2645,7 +2631,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       int8_t count = codeBody(t, code, ip++);
 
       c->storeLocal
-        (4, c->add(4, c->constant(count), c->loadLocal(4, index)), index);
+        (1, c->add(4, c->constant(count), c->loadLocal(1, index)), index);
     } break;
 
     case iload:
@@ -2719,7 +2705,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           frame->trace(0, false),
           BytesPerWord,
           3, c->thread(), frame->append(target),
-          c->peek(BytesPerWord, instance)),
+          c->peek(1, instance)),
          0,
          frame->trace(target, true),
          rSize,
@@ -2771,8 +2757,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned offset = ClassVtable + (methodOffset(t, target) * BytesPerWord);
 
-      Compiler::Operand* instance = c->peek
-        (BytesPerWord, parameterFootprint - 1);
+      Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
 
       unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
@@ -3363,7 +3348,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case ret:
-      c->jmp(c->loadLocal(BytesPerWord, codeBody(t, code, ip)));
+      c->jmp(c->loadLocal(1, codeBody(t, code, ip)));
       return;
 
     case return_:
@@ -3449,7 +3434,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         uint16_t count = codeReadInt16(t, code, ip);
 
         c->storeLocal
-          (4, c->add(4, c->constant(count), c->loadLocal(4, index)), index);
+          (1, c->add(4, c->constant(count), c->loadLocal(1, index)), index);
       } break;
 
       case iload: {
@@ -3469,7 +3454,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       } break;
 
       case ret:
-        c->jmp(c->loadLocal(BytesPerWord, codeReadInt16(t, code, ip)));
+        c->jmp(c->loadLocal(1, codeReadInt16(t, code, ip)));
         return;
 
       default: abort(t);
@@ -3873,15 +3858,15 @@ finish(MyThread* t, Context* context)
   }
 
   // for debugging:
-  if (//false and
+  if (false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/Long") == 0 and
+       "Simple") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "toString") == 0)
+       "size") == 0)
   {
     asm("int3");
   }

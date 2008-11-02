@@ -63,15 +63,15 @@ class Compiler {
 
   virtual Operand* stackTop() = 0;
 
-  virtual void push(unsigned sizeInBytes) = 0;
-  virtual void push(unsigned sizeInBytes, Operand* value) = 0;
-  virtual Operand* pop(unsigned sizeInBytes) = 0;
+  virtual void push(unsigned footprint) = 0;
+  virtual void push(unsigned footprint, Operand* value) = 0;
+  virtual Operand* pop(unsigned footprint) = 0;
   virtual void pushed() = 0;
   virtual void popped() = 0;
   virtual StackElement* top() = 0;
-  virtual unsigned size(StackElement*) = 0;
+  virtual unsigned footprint(StackElement*) = 0;
   virtual unsigned padding(StackElement*) = 0;
-  virtual Operand* peek(unsigned sizeInBytes, unsigned index) = 0;
+  virtual Operand* peek(unsigned footprint, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
                         unsigned flags,
@@ -90,8 +90,9 @@ class Compiler {
 
   virtual void initLocal(unsigned size, unsigned index) = 0;
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) = 0;
-  virtual void storeLocal(unsigned size, Operand* src, unsigned index) = 0;
-  virtual Operand* loadLocal(unsigned size, unsigned index) = 0;
+  virtual void storeLocal(unsigned footprint, Operand* src,
+                          unsigned index) = 0;
+  virtual Operand* loadLocal(unsigned footprint, unsigned index) = 0;
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
                            Operand* index, intptr_t handler) = 0;

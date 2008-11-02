@@ -15,11 +15,13 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = true;
-const bool DebugCompile = true;
+const bool DebugAppend = false;
+const bool DebugCompile = false;
 const bool DebugStack = false;
-const bool DebugRegisters = true;
+const bool DebugRegisters = false;
 const bool DebugFrameIndexes = false;
+const bool DebugFrame = false;
+const bool DebugControl = false;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -75,7 +77,7 @@ class Cell {
 class Local {
  public:
   Value* value;
-  unsigned sizeInBytes;
+  unsigned footprint;
 };
 
 class Site {
@@ -113,13 +115,13 @@ class Site {
 
 class Stack: public Compiler::StackElement {
  public:
-  Stack(unsigned index, unsigned sizeInWords, Value* value, Stack* next):
-    index(index), sizeInWords(sizeInWords), paddingInWords(0), value(value),
+  Stack(unsigned index, unsigned footprint, Value* value, Stack* next):
+    index(index), footprint(footprint), paddingInWords(0), value(value),
     next(next)
   { }
 
   unsigned index;
-  unsigned sizeInWords;
+  unsigned footprint;
   unsigned paddingInWords;
   Value* value;
   Stack* next;
@@ -568,9 +570,9 @@ class Event {
 };
 
 int
-frameIndex(Context* c, int index, unsigned sizeInWords)
+frameIndex(Context* c, int index, unsigned footprint)
 {
-  return c->alignedFrameSize + c->parameterFootprint - index - sizeInWords;
+  return c->alignedFrameSize + c->parameterFootprint - index - footprint;
 }
 
 unsigned
@@ -603,13 +605,13 @@ class FrameIterator {
  public:
   class Element {
    public:
-    Element(Value* value, unsigned localIndex, unsigned sizeInBytes):
-      value(value), localIndex(localIndex), sizeInBytes(sizeInBytes)
+    Element(Value* value, unsigned localIndex, unsigned footprint):
+      value(value), localIndex(localIndex), footprint(footprint)
     { }
 
     Value* const value;
     const unsigned localIndex;
-    const unsigned sizeInBytes;
+    const unsigned footprint;
   };
 
   FrameIterator(Context* c, Stack* stack, Local* locals):
@@ -625,21 +627,21 @@ class FrameIterator {
   Element next(Context* c) {
     Value* v;
     unsigned li;
-    unsigned sizeInBytes;
+    unsigned footprint;
     if (stack) {
       Stack* s = stack;
       v = s->value;
       li = s->index + c->localFootprint;
-      sizeInBytes = s->sizeInWords * BytesPerWord;
+      footprint = s->footprint;
       stack = stack->next;
     } else {
       Local* l = locals + localIndex;
       v = l->value;
       li = localIndex;
-      sizeInBytes = l->sizeInBytes;
+      footprint = l->footprint;
       -- localIndex;
     }
-    return Element(v, li, sizeInBytes);
+    return Element(v, li, footprint);
   }
 
   Stack* stack;
@@ -650,8 +652,7 @@ class FrameIterator {
 int
 frameIndex(Context* c, FrameIterator::Element* element)
 {
-  return frameIndex
-    (c, element->localIndex, ceiling(element->sizeInBytes, BytesPerWord));;
+  return frameIndex(c, element->localIndex, element->footprint);
 }
 
 class SiteIterator {
@@ -1637,9 +1638,9 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
     Site* tmp = freeRegisterSite(c);
     addSite(c, stack, locals, size, value, tmp);
 
-    char srcb[256]; src->toString(c, srcb, 256);
-    char tmpb[256]; tmp->toString(c, tmpb, 256);
-    fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
+//     char srcb[256]; src->toString(c, srcb, 256);
+//     char tmpb[256]; tmp->toString(c, tmpb, 256);
+//     fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
       
     apply(c, Move, size, src, size, tmp);
     src = tmp;
@@ -1647,9 +1648,9 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
 
   addSite(c, stack, locals, size, value, dst);
 
-  char srcb[256]; src->toString(c, srcb, 256);
-  char dstb[256]; dst->toString(c, dstb, 256);
-  fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
+//   char srcb[256]; src->toString(c, srcb, 256);
+//   char dstb[256]; dst->toString(c, dstb, 256);
+//   fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
   
   apply(c, Move, size, src, size, dst);
 }
@@ -1673,31 +1674,49 @@ toString(Context* c, Site* sites, char* buffer, unsigned size)
 }
 
 void
-releaseRegister(Context* c, Value* v, unsigned frameIndex, unsigned sizeInBytes, int r)
+releaseRegister(Context* c, Value* v, unsigned frameIndex,
+                unsigned sizeInBytes, int r)
 {
   Site* source = 0;
-  for (Site** s = &(v->sites); *s;) {
-    if ((*s)->usesRegister(c, r)) {
-      char buffer[256]; (*s)->toString(c, buffer, 256);
-      fprintf(stderr, "%p (%s) in %p at %d uses %d\n", *s, buffer, v, frameIndex, r);
+  for (SiteIterator it(v); it.hasMore();) {
+    Site* s = it.next();
+    if (s->usesRegister(c, r)) {
+      if (DebugRegisters) {
+        char buffer[256]; s->toString(c, buffer, 256);
+        fprintf(stderr, "%p (%s) in %p at %d uses %d\n",
+                s, buffer, v, frameIndex, r);
+      }
 
-      source = *s;
-      *s = (*s)->next;
-        
-      source->release(c);
+      source = s;
+      it.remove(c);
     } else {
-      char buffer[256]; (*s)->toString(c, buffer, 256);
-      fprintf(stderr, "%p (%s) in %p at %d does not use %d\n", *s, buffer, v, frameIndex, r);
-      s = &((*s)->next);
+      if (DebugRegisters) {
+        char buffer[256]; s->toString(c, buffer, 256);
+        fprintf(stderr, "%p (%s) in %p at %d does not use %d\n",
+                s, buffer, v, frameIndex, r);
+      }
     }
   }
 
   if (not hasSite(v)) {
-    move(c, c->stack, c->locals, sizeInBytes, v, source, frameSite(c, frameIndex));
+    move(c, c->stack, c->locals, sizeInBytes, v, source,
+         frameSite(c, frameIndex));
   }
 
-  char buffer[256]; toString(c, v->sites, buffer, 256);
-  fprintf(stderr, "%p is left with %s\n", v, buffer);
+  if (DebugRegisters) {
+    char buffer[256]; toString(c, v->sites, buffer, 256);
+    fprintf(stderr, "%p is left with %s\n", v, buffer);
+  }
+}
+
+unsigned
+footprintSizeInBytes(unsigned footprint)
+{
+  if (BytesPerWord == 8) {
+    return 8;
+  } else {
+    return footprint * 4;
+  }
 }
 
 void
@@ -1705,7 +1724,8 @@ releaseRegister(Context* c, int r)
 {
   for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
     FrameIterator::Element e = it.next(c);
-    releaseRegister(c, e.value, frameIndex(c, &e), e.sizeInBytes, r);
+    releaseRegister(c, e.value, frameIndex(c, &e),
+                    footprintSizeInBytes(e.footprint), r);
   }
 }
 
@@ -1718,8 +1738,7 @@ trySteal(Context* c, Site* site, Value* v, unsigned size, Stack* stack,
     for (unsigned li = 0; li < c->localFootprint; ++li) {
       Local* local = locals + li;
       if (local->value == v) {
-        saveSite = frameSite
-          (c, frameIndex(c, li, ceiling(local->sizeInBytes, BytesPerWord)));
+        saveSite = frameSite(c, frameIndex(c, li, local->footprint));
         break;
       }
     }
@@ -1736,7 +1755,7 @@ trySteal(Context* c, Site* site, Value* v, unsigned size, Stack* stack,
             saveSite = frameSite(c, frameIndex);
           } else {
             saveSite = frameSite
-              (c, ::frameIndex(c, s->index + c->localFootprint, s->sizeInWords));
+              (c, ::frameIndex(c, s->index + c->localFootprint, s->footprint));
           }
           break;
         }
@@ -2083,7 +2102,7 @@ apply(Context* c, TernaryOperation op,
 void
 addRead(Context* c, Event* e, Value* v, Read* r)
 {
-  fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
+//   fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
 
   r->value = v;
   if (e) {
@@ -2112,10 +2131,10 @@ clean(Context* c, Value* v, unsigned popIndex)
              (c, static_cast<MemorySite*>(s)->value.offset)
              >= popIndex))
     {
-      char buffer[256]; s->toString(c, buffer, 256);
-      fprintf(stderr, "remove %s from %p at %d pop index %d\n",
-              buffer, v, offsetToFrameIndex
-              (c, static_cast<MemorySite*>(s)->value.offset), popIndex);
+//       char buffer[256]; s->toString(c, buffer, 256);
+//       fprintf(stderr, "remove %s from %p at %d pop index %d\n",
+//               buffer, v, offsetToFrameIndex
+//               (c, static_cast<MemorySite*>(s)->value.offset), popIndex);
       it.remove(c);
     }
   }
@@ -2173,21 +2192,21 @@ class CallEvent: public Event {
       Read* target;
       if (index < c->arch->argumentRegisterCount()) {
         int r = c->arch->argumentRegister(index);
-        fprintf(stderr, "reg %d arg read %p\n", r, s->value);
-        target = fixedRegisterRead(c, s->sizeInWords * BytesPerWord, r);
+//         fprintf(stderr, "reg %d arg read %p\n", r, s->value);
+        target = fixedRegisterRead(c, footprintSizeInBytes(s->footprint), r);
         mask &= ~(1 << r);
       } else {
-        fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
-        target = read(c, s->sizeInWords * BytesPerWord, 1 << MemoryOperand, 0,
-                      frameIndex);
-        frameIndex += s->sizeInWords;
+//         fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+        target = read(c, footprintSizeInBytes(s->footprint),
+                      1 << MemoryOperand, 0, frameIndex);
+        frameIndex += s->footprint;
       }
       addRead(c, this, s->value, target);
-      index += s->sizeInWords;
+      index += s->footprint;
       s = s->next;
     }
 
-    fprintf(stderr, "address read %p\n", address);
+//     fprintf(stderr, "address read %p\n", address);
     addRead(c, this, address, read
             (c, BytesPerWord, ~0, (static_cast<uint64_t>(mask) << 32) | mask,
              AnyFrameIndex));
@@ -2195,34 +2214,34 @@ class CallEvent: public Event {
     int footprint = stackArgumentFootprint;
     for (Stack* s = stackBefore; s; s = s->next) {
       if (footprint > 0) {
-        fprintf(stderr, "stack arg read %p of size %d at %d of %d\n", s->value, s->sizeInWords, frameIndex, c->alignedFrameSize + c->parameterFootprint);
+//         fprintf(stderr, "stack arg read %p of footprint %d at %d of %d\n", s->value, s->footprint, frameIndex, c->alignedFrameSize + c->parameterFootprint);
         addRead(c, this, s->value, read
-                (c, s->sizeInWords * BytesPerWord,
+                (c, footprintSizeInBytes(s->footprint),
                  1 << MemoryOperand, 0, frameIndex));
       } else {        
         unsigned index = ::frameIndex
-          (c, s->index + c->localFootprint, s->sizeInWords);
+          (c, s->index + c->localFootprint, s->footprint);
         if (footprint == 0) {
           assert(c, index >= frameIndex);
           s->paddingInWords = index - frameIndex;
           popIndex = index;
         }
-        fprintf(stderr, "stack save read %p of size %d at %d of %d\n", s->value, s->sizeInWords, index, c->alignedFrameSize + c->parameterFootprint);
+//         fprintf(stderr, "stack save read %p of footprint %d at %d of %d\n", s->value, s->footprint, index, c->alignedFrameSize + c->parameterFootprint);
         addRead(c, this, s->value, read
-                (c, s->sizeInWords * BytesPerWord, 1 << MemoryOperand, 0, index));
+                (c, footprintSizeInBytes(s->footprint), 1 << MemoryOperand, 0,
+                 index));
       }
-      frameIndex += s->sizeInWords;
-      footprint -= s->sizeInWords;
+      frameIndex += s->footprint;
+      footprint -= s->footprint;
     }
 
     for (unsigned li = 0; li < c->localFootprint; ++li) {
       Local* local = localsBefore + li;
       if (local->value) {
-        fprintf(stderr, "local save read %p of size %d at %d of %d\n", local->value, local->sizeInBytes, ::frameIndex(c, li, ceiling(local->sizeInBytes, BytesPerWord)), c->alignedFrameSize + c->parameterFootprint);
+//         fprintf(stderr, "local save read %p of footprint %d at %d of %d\n", local->value, local->footprint, ::frameIndex(c, li, local->footprint), c->alignedFrameSize + c->parameterFootprint);
         addRead(c, this, local->value, read
-                (c, local->sizeInBytes, 1 << MemoryOperand, 0,
-                 ::frameIndex
-                 (c, li, ceiling(local->sizeInBytes, BytesPerWord))));
+                (c, footprintSizeInBytes(local->footprint), 1 << MemoryOperand,
+                 0, ::frameIndex(c, li, local->footprint)));
       }
     }
   }
@@ -2345,8 +2364,8 @@ class MoveEvent: public Event {
     if (cost == 0) {
       target = src->source;
 
-      char dstb[256]; target->toString(c, dstb, 256);
-      fprintf(stderr, "null move in %s for %p to %p\n", dstb, src, dst);
+//       char dstb[256]; target->toString(c, dstb, 256);
+//       fprintf(stderr, "null move in %s for %p to %p\n", dstb, src, dst);
     }
 
     if (target == src->source) {
@@ -2370,9 +2389,9 @@ class MoveEvent: public Event {
       if (target->match(c, typeMask, registerMask, frameIndex)
           and not memoryToMemory)
       {
-        char srcb[256]; src->source->toString(c, srcb, 256);
-        char dstb[256]; target->toString(c, dstb, 256);
-        fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+//         char srcb[256]; src->source->toString(c, srcb, 256);
+//         char dstb[256]; target->toString(c, dstb, 256);
+//         fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
 
         apply(c, type, srcSize, src->source, dstSize, target);
       } else {
@@ -2382,9 +2401,9 @@ class MoveEvent: public Event {
 
         addSite(c, stackBefore, localsBefore, dstSize, dst, tmpTarget);
 
-        char srcb[256]; src->source->toString(c, srcb, 256);
-        char dstb[256]; tmpTarget->toString(c, dstb, 256);
-        fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+//         char srcb[256]; src->source->toString(c, srcb, 256);
+//         char dstb[256]; tmpTarget->toString(c, dstb, 256);
+//         fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
 
         apply(c, type, srcSize, src->source, dstSize, tmpTarget);
 
@@ -2393,9 +2412,9 @@ class MoveEvent: public Event {
         }
 
         if (memoryToMemory or isStore) {
-          char srcb[256]; tmpTarget->toString(c, srcb, 256);
-          char dstb[256]; target->toString(c, dstb, 256);
-          fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+//           char srcb[256]; tmpTarget->toString(c, srcb, 256);
+//           char dstb[256]; target->toString(c, dstb, 256);
+//           fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
 
           apply(c, Move, dstSize, tmpTarget, dstSize, target);
         } else {
@@ -2585,14 +2604,12 @@ void
 removeBuddy(Context* c, Value* v)
 {
   if (v->buddy != v) {
-    fprintf(stderr, "remove buddy %p from", v);
-    for (Value* p = v->buddy; p != v; p = p->buddy) {
-      fprintf(stderr, " %p", p);
-    }
-    fprintf(stderr, "\n");
-  }
+//     fprintf(stderr, "remove buddy %p from", v);
+//     for (Value* p = v->buddy; p != v; p = p->buddy) {
+//       fprintf(stderr, " %p", p);
+//     }
+//     fprintf(stderr, "\n");
 
-  if (v->buddy != v) {
     Value* next = v->buddy;
     v->buddy = v;
     Value* p = next;
@@ -2637,9 +2654,11 @@ class Snapshot {
 Snapshot*
 snapshot(Context* c, Value* value, Snapshot* next)
 {
-  char buffer[256]; toString(c, value->sites, buffer, 256);
-  fprintf(stderr, "snapshot %p buddy %p sites %s\n",
-          value, value->buddy, buffer);
+  if (DebugControl) {
+    char buffer[256]; toString(c, value->sites, buffer, 256);
+    fprintf(stderr, "snapshot %p buddy %p sites %s\n",
+            value, value->buddy, buffer);
+  }
 
   return new (c->zone->allocate(sizeof(Snapshot))) Snapshot(c, value, next);
 }
@@ -2655,33 +2674,37 @@ Stack*
 stack(Context* c, Value* value, unsigned size, Stack* next)
 {
   return stack
-    (c, value, size, (next ? next->index + next->sizeInWords : 0), next);
+    (c, value, size, (next ? next->index + next->footprint : 0), next);
 }
 
 Value*
 maybeBuddy(Context* c, Value* v, unsigned sizeInBytes);
 
 void
-push(Context* c, unsigned sizeInBytes, Value* v)
+push(Context* c, unsigned footprint, Value* v)
 {
-  assert(c, ceiling(sizeInBytes, BytesPerWord));
+  assert(c, footprint);
 
-  v = maybeBuddy(c, v, sizeInBytes);
+  v = maybeBuddy(c, v, footprintSizeInBytes(footprint));
 
-  fprintf(stderr, "push %p of size %d\n", v, sizeInBytes);
+  if (DebugFrame) {
+    fprintf(stderr, "push %p of footprint %d\n", v, footprint);
+  }
 
   v->local = true;
-  c->stack = stack(c, v, ceiling(sizeInBytes, BytesPerWord), c->stack);
+  c->stack = stack(c, v, footprint, c->stack);
 }
 
 Value*
-pop(Context* c, unsigned sizeInBytes UNUSED)
+pop(Context* c, unsigned footprint UNUSED)
 {
   Stack* s = c->stack;
-  assert(c, ceiling(sizeInBytes, BytesPerWord) == s->sizeInWords);
+  assert(c, footprint == s->footprint);
   assert(c, s->value->local);
 
-  fprintf(stderr, "pop %p of size %d\n", s->value, sizeInBytes);
+  if (DebugFrame) {
+    fprintf(stderr, "pop %p of size %d\n", s->value, footprint);
+  }
 
   c->stack = s->next;
   s->value->local = false;
@@ -2710,8 +2733,8 @@ appendCombine(Context* c, TernaryOperation type,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    ::push(c, secondSize, second);
-    ::push(c, firstSize, first);
+    ::push(c, ceiling(secondSize, BytesPerWord), second);
+    ::push(c, ceiling(firstSize, BytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -3078,7 +3101,7 @@ appendFrameSite(Context* c, Value* value, unsigned size, int index)
 unsigned
 frameFootprint(Context* c, Stack* s)
 {
-  return c->localFootprint + (s ? (s->index + s->sizeInWords) : 0);
+  return c->localFootprint + (s ? (s->index + s->footprint) : 0);
 }
 
 void
@@ -3130,11 +3153,11 @@ class BuddyEvent: public Event {
     while (p->buddy != original) p = p->buddy;
     p->buddy = buddy;
     
-    fprintf(stderr, "add buddy %p to ", buddy);
-    for (Value* p = buddy->buddy; p != buddy; p = p->buddy) {
-      fprintf(stderr, " %p", p);
-    }
-    fprintf(stderr, "\n");
+//     fprintf(stderr, "add buddy %p to", buddy);
+//     for (Value* p = buddy->buddy; p != buddy; p = p->buddy) {
+//       fprintf(stderr, " %p", p);
+//     }
+//     fprintf(stderr, "\n");
 
     nextRead(c, this, original);
   }
@@ -3192,7 +3215,7 @@ append(Context* c, Event* e)
   if (DebugAppend) {
     fprintf(stderr, " -- append %s at %d with %d stack before\n",
             e->name(), e->logicalInstruction->index, c->stack ?
-            c->stack->index + c->stack->sizeInWords : 0);
+            c->stack->index + c->stack->footprint : 0);
   }
 
   if (c->lastEvent) {
@@ -3223,7 +3246,7 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
 {
   if (not hasSite(r->value)) return 0;
 
-  fprintf(stderr, "read source for %p\n", r->value);
+//   fprintf(stderr, "read source for %p\n", r->value);
 
   Site* site = r->pickSite(c, r->value, true);
 
@@ -3302,8 +3325,11 @@ resolveJunctionSite(Context* c, Event* e, Value* v,
       e->junctionSites[siteIndex] = target->copy(c);
     }
 
-    char buffer[256]; target->toString(c, buffer, 256);
-    fprintf(stderr, "resolved junction site %d %s %p\n", frameIndex, buffer, v);
+    if (DebugControl) {
+      char buffer[256]; target->toString(c, buffer, 256);
+      fprintf(stderr, "resolved junction site %d %s %p\n",
+              frameIndex, buffer, v);
+    }
   }
 
   return frozenSiteIndex;
@@ -3366,8 +3392,10 @@ populateSiteTables(Context* c, Event* e)
         }
       }
 
-      fprintf(stderr, "resolved junction sites %p at %d\n",
-              e->junctionSites, e->logicalInstruction->index);
+      if (DebugControl) {
+        fprintf(stderr, "resolved junction sites %p at %d\n",
+                e->junctionSites, e->logicalInstruction->index);
+      }
 
       for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
         FrameIterator::Element el = it.next(c);
@@ -3389,8 +3417,10 @@ populateSiteTables(Context* c, Event* e)
       }
     }
 
-    fprintf(stderr, "captured snapshots %p at %d\n",
-            e->snapshots, e->logicalInstruction->index);
+    if (DebugControl) {
+      fprintf(stderr, "captured snapshots %p at %d\n",
+              e->snapshots, e->logicalInstruction->index);
+    }
   }
 }
 
@@ -3401,8 +3431,10 @@ setSites(Context* c, Event* e, Value* v, Site* s, unsigned size)
     addSite(c, e->stackBefore, e->localsBefore, size, v, s->copy(c));
   }
 
-  char buffer[256]; toString(c, v->sites, buffer, 256);
-  fprintf(stderr, "set sites %s for %p\n", buffer, v);
+  if (DebugControl) {
+    char buffer[256]; toString(c, v->sites, buffer, 256);
+    fprintf(stderr, "set sites %s for %p\n", buffer, v);
+  }
 }
 
 void
@@ -3434,9 +3466,9 @@ void
 restore(Context* c, Event* e, Snapshot* snapshots)
 {
   for (Snapshot* s = snapshots; s; s = s->next) {
-    char buffer[256]; toString(c, s->sites, buffer, 256);
-    fprintf(stderr, "restore %p buddy %p sites %s\n",
-            s->value, s->value->buddy, buffer);
+//     char buffer[256]; toString(c, s->sites, buffer, 256);
+//     fprintf(stderr, "restore %p buddy %p sites %s\n",
+//             s->value, s->value->buddy, buffer);
 
     s->value->buddy = s->buddy;
   }
@@ -3479,7 +3511,7 @@ addStubRead(Context* c, Value* v, unsigned size, JunctionState* state,
 {
   if (v) {
     StubRead* r = stubRead(c, size);
-    fprintf(stderr, "add stub read %p to %p\n", r, v);
+//     fprintf(stderr, "add stub read %p to %p\n", r, v);
     addRead(c, 0, v, r);
 
     StubReadPair* p = state->reads + ((*count)++);
@@ -3503,7 +3535,7 @@ populateJunctionReads(Context* c, Link* link)
 
   for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
     FrameIterator::Element e = it.next(c);
-    addStubRead(c, e.value, e.sizeInBytes, state, &count);
+    addStubRead(c, e.value, footprintSizeInBytes(e.footprint), state, &count);
   }
 
   state->readCount = count;
@@ -3571,9 +3603,9 @@ compile(Context* c)
               countPredecessors(e->predecessors),
               countSuccessors(e->successors),
               e->stackBefore ?
-              e->stackBefore->index + e->stackBefore->sizeInWords : 0,
+              e->stackBefore->index + e->stackBefore->footprint : 0,
               e->stackAfter ?
-              e->stackAfter->index + e->stackAfter->sizeInWords : 0);
+              e->stackAfter->index + e->stackAfter->footprint : 0);
     }
 
     e->block = block;
@@ -3596,12 +3628,19 @@ compile(Context* c)
         {
           updateJunctionReads(c, pl->junctionState);
         }
-        fprintf(stderr, "set sites to junction sites %p at %d\n",
-                first->junctionSites, first->logicalInstruction->index);
+
+        if (DebugControl) {
+          fprintf(stderr, "set sites to junction sites %p at %d\n",
+                  first->junctionSites, first->logicalInstruction->index);
+        }
+
         setSites(c, e, first->junctionSites);
       } else if (first->successors->nextSuccessor) {
-        fprintf(stderr, "restore snapshots %p at %d\n",
-                first->snapshots, first->logicalInstruction->index);
+        if (DebugControl) {
+          fprintf(stderr, "restore snapshots %p at %d\n",
+                  first->snapshots, first->logicalInstruction->index);
+        }
+
         restore(c, e, first->snapshots);
       }
     }
@@ -3683,7 +3722,7 @@ addMultiRead(Context* c, Value* v, unsigned size, ForkState* state,
              unsigned* count)
 {
   MultiRead* r = multiRead(c, size);
-  fprintf(stderr, "add multi read %p to %p\n", r, v);
+//   fprintf(stderr, "add multi read %p to %p\n", r, v);
   addRead(c, 0, v, r);
 
   ForkElement* p = state->elements + ((*count)++);
@@ -3709,8 +3748,8 @@ saveState(Context* c)
     for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
       FrameIterator::Element e = it.next(c);
 
-      MultiRead* r = multiRead(c, e.sizeInBytes);
-      fprintf(stderr, "add multi read %p to %p\n", r, e.value);
+      MultiRead* r = multiRead(c, footprintSizeInBytes(e.footprint));
+//       fprintf(stderr, "add multi read %p to %p\n", r, e.value);
       addRead(c, 0, e.value, r);
 
       ForkElement* p = state->elements + (count++);
@@ -3848,8 +3887,8 @@ class MyCompiler: public Compiler {
       p->successors = link;
       c.lastEvent->visitLinks = cons(&c, link, c.lastEvent->visitLinks);
 
-      fprintf(stderr, "populate junction reads for %d to %d\n",
-              p->logicalInstruction->index, logicalIp);
+//       fprintf(stderr, "populate junction reads for %d to %d\n",
+//               p->logicalInstruction->index, logicalIp);
       populateJunctionReads(&c, e->predecessors);
     }
 
@@ -3942,7 +3981,7 @@ class MyCompiler: public Compiler {
   virtual Operand* stackTop() {
     Site* s = frameSite
       (&c, frameIndex
-       (&c, c.stack->index + c.localFootprint, c.stack->sizeInWords));
+       (&c, c.stack->index + c.localFootprint, c.stack->footprint));
     return value(&c, s, s);
   }
 
@@ -3950,20 +3989,20 @@ class MyCompiler: public Compiler {
     return codePromise(&c, c.logicalCode[c.logicalIp]->lastEvent);
   }
 
-  virtual void push(unsigned sizeInBytes) {
-    assert(&c, ceiling(sizeInBytes, BytesPerWord));
+  virtual void push(unsigned footprint) {
+    assert(&c, footprint);
 
     Value* v = value(&c);
     v->local = true;
-    c.stack = ::stack(&c, v, ceiling(sizeInBytes, BytesPerWord), c.stack);
+    c.stack = ::stack(&c, v, footprint, c.stack);
   }
 
-  virtual void push(unsigned sizeInBytes, Operand* value) {
-    ::push(&c, sizeInBytes, static_cast<Value*>(value));
+  virtual void push(unsigned footprint, Operand* value) {
+    ::push(&c, footprint, static_cast<Value*>(value));
   }
 
-  virtual Operand* pop(unsigned sizeInBytes) {
-    return ::pop(&c, sizeInBytes);
+  virtual Operand* pop(unsigned footprint) {
+    return ::pop(&c, footprint);
   }
 
   virtual void pushed() {
@@ -3985,21 +4024,21 @@ class MyCompiler: public Compiler {
     return c.stack;
   }
 
-  virtual unsigned size(StackElement* e) {
-    return static_cast<Stack*>(e)->sizeInWords;
+  virtual unsigned footprint(StackElement* e) {
+    return static_cast<Stack*>(e)->footprint;
   }
 
   virtual unsigned padding(StackElement* e) {
     return static_cast<Stack*>(e)->paddingInWords;
   }
 
-  virtual Operand* peek(unsigned sizeInBytes UNUSED, unsigned index) {
+  virtual Operand* peek(unsigned footprint UNUSED, unsigned index) {
     Stack* s = c.stack;
     for (unsigned i = index; i > 0;) {
-      i -= s->sizeInWords;
+      i -= s->footprint;
       s = s->next;
     }
-    assert(&c, s->sizeInWords == ceiling(sizeInBytes, BytesPerWord));
+    assert(&c, s->footprint == footprint);
     return s->value;
   }
 
@@ -4036,7 +4075,7 @@ class MyCompiler: public Compiler {
     Stack* bottomArgument = 0;
 
     for (int i = index - 1; i >= 0; --i) {
-      ::push(&c, argumentSizes[i], arguments[i]);
+      ::push(&c, ceiling(argumentSizes[i], BytesPerWord), arguments[i]);
       if (i == index - 1) {
         bottomArgument = c.stack;
       }
@@ -4067,19 +4106,24 @@ class MyCompiler: public Compiler {
     appendReturn(&c, size, static_cast<Value*>(value));
   }
 
-  virtual void initLocal(unsigned size, unsigned index) {
+  virtual void initLocal(unsigned footprint, unsigned index) {
     assert(&c, index < c.localFootprint);
 
     Value* v = value(&c);
-    fprintf(stderr, "init local %p of size %d at %d (%d)\n", v, size, index,
-            frameIndex(&c, index, ceiling(size, BytesPerWord)));
+
+    if (DebugFrame) {
+      fprintf(stderr, "init local %p of footprint %d at %d (%d)\n",
+              v, footprint, index, frameIndex(&c, index, footprint));
+    }
+
     appendFrameSite
-      (&c, v, size, frameIndex(&c, index, ceiling(size, BytesPerWord)));
+      (&c, v, footprintSizeInBytes(footprint),
+       frameIndex(&c, index, footprint));
 
     Local* local = c.locals + index;
     local->value = v;
     v->local = true;
-    local->sizeInBytes = size;
+    local->footprint = footprint;
   }
 
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) {
@@ -4094,40 +4138,45 @@ class MyCompiler: public Compiler {
     for (unsigned i = 0; i < c.localFootprint; ++i) {
       Local* local = e->localsBefore + i;
       if (local->value) {
-        initLocal(local->sizeInBytes, i);
+        initLocal(local->footprint, i);
       }
     }
   }
 
-  virtual void storeLocal(unsigned sizeInBytes, Operand* src, unsigned index) {
+  virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
     assert(&c, index < c.localFootprint);
 
     Local* local = c.locals + index;
     if (local->value) local->value->local = false;
 
-    unsigned footprint = sizeof(Local) * c.localFootprint;
-    Local* newLocals = static_cast<Local*>(c.zone->allocate(footprint));
-    memcpy(newLocals, c.locals, footprint);
+    unsigned sizeInBytes = sizeof(Local) * c.localFootprint;
+    Local* newLocals = static_cast<Local*>(c.zone->allocate(sizeInBytes));
+    memcpy(newLocals, c.locals, sizeInBytes);
     c.locals = newLocals;
 
     local = c.locals + index;
-    local->value = maybeBuddy(&c, static_cast<Value*>(src), sizeInBytes);
+    local->value = maybeBuddy
+      (&c, static_cast<Value*>(src), footprintSizeInBytes(footprint));
 
-    fprintf(stderr, "store local %p of size %d at %d\n",
-            local->value, sizeInBytes, index);
+    if (DebugFrame) {
+      fprintf(stderr, "store local %p of footprint %d at %d\n",
+              local->value, footprint, index);
+    }
 
     local->value->local = true;
-    local->sizeInBytes = sizeInBytes;
+    local->footprint = footprint;
   }
 
-  virtual Operand* loadLocal(unsigned sizeInBytes UNUSED, unsigned index) {
+  virtual Operand* loadLocal(unsigned footprint UNUSED, unsigned index) {
     assert(&c, index < c.localFootprint);
     assert(&c, c.locals[index].value);
     assert(&c, c.locals[index].value->local);
-    assert(&c, pad(c.locals[index].sizeInBytes) == pad(sizeInBytes));
+    assert(&c, c.locals[index].footprint == footprint);
 
-    fprintf(stderr, "load local %p of size %d at %d\n",
-            c.locals[index].value, sizeInBytes, index);
+    if (DebugFrame) {
+      fprintf(stderr, "load local %p of size %d at %d\n",
+              c.locals[index].value, footprint, index);
+    }
 
     return c.locals[index].value;
   }
