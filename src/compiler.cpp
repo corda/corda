@@ -18,7 +18,7 @@ namespace {
 const bool DebugAppend = true;
 const bool DebugCompile = true;
 const bool DebugStack = false;
-const bool DebugRegisters = false;
+const bool DebugRegisters = true;
 const bool DebugFrameIndexes = false;
 
 const int AnyFrameIndex = -2;
@@ -125,10 +125,11 @@ class Stack: public Compiler::StackElement {
   Stack* next;
 };
 
-class MultiReadPair {
+class ForkElement {
  public:
   Value* value;
   MultiRead* read;
+  bool local;
 };
 
 class ForkState: public Compiler::State {
@@ -147,7 +148,7 @@ class ForkState: public Compiler::State {
   Event* predecessor;
   unsigned logicalIp;
   unsigned readCount;
-  MultiReadPair reads[0];
+  ForkElement elements[0];
 };
 
 class LogicalInstruction {
@@ -205,7 +206,7 @@ class Read {
 
   virtual ~Read() { }
 
-  virtual Site* pickSite(Context* c, Value* v) = 0;
+  virtual Site* pickSite(Context* c, Value* v, bool includeBuddies) = 0;
 
   virtual Site* allocateSite(Context* c) = 0;
 
@@ -655,9 +656,10 @@ frameIndex(Context* c, FrameIterator::Element* element)
 
 class SiteIterator {
  public:
-  SiteIterator(Value* v):
+  SiteIterator(Value* v, bool includeBuddies = true):
     originalValue(v),
     currentValue(v),
+    includeBuddies(includeBuddies),
     next_(findNext(&(v->sites))),
     previous(0)
   { }
@@ -666,13 +668,15 @@ class SiteIterator {
     if (*p) {
       return p;
     } else {
-      for (Value* v = currentValue->buddy;
-           v != originalValue;
-           v = v->buddy)
-      {
-        if (v->sites) {
-          currentValue = v;
-          return &(v->sites);
+      if (includeBuddies) {
+        for (Value* v = currentValue->buddy;
+             v != originalValue;
+             v = v->buddy)
+        {
+          if (v->sites) {
+            currentValue = v;
+            return &(v->sites);
+          }
         }
       }
       return 0;
@@ -701,6 +705,7 @@ class SiteIterator {
 
   Value* originalValue;
   Value* currentValue;
+  bool includeBuddies;
   Site** next_;
   Site** previous;
 };
@@ -1162,7 +1167,7 @@ class MemorySite: public Site {
     if (base) {
       sync(c);
 
-      snprintf(buffer, bufferSize, "memory %d %d %d %d",
+      snprintf(buffer, bufferSize, "memory %d 0x%x %d %d",
                value.base, value.offset, value.index, value.scale);
     } else {
       snprintf(buffer, bufferSize, "memory unacquired");
@@ -1292,11 +1297,11 @@ targetOrNull(Context* c, Value* v)
 
 Site*
 pickSite(Context* c, Value* value, uint8_t typeMask, uint64_t registerMask,
-         int frameIndex)
+         int frameIndex, bool includeBuddies)
 {
   Site* site = 0;
   unsigned copyCost = 0xFFFFFFFF;
-  for (SiteIterator it(value); it.hasMore();) {
+  for (SiteIterator it(value, includeBuddies); it.hasMore();) {
     Site* s = it.next();
     if (s->match(c, typeMask, registerMask, frameIndex)) {
       unsigned v = s->copyCost(c, 0);
@@ -1330,8 +1335,9 @@ class SingleRead: public Read {
     frameIndex(frameIndex)
   { }
 
-  virtual Site* pickSite(Context* c, Value* value) {
-    return ::pickSite(c, value, typeMask, registerMask, frameIndex);
+  virtual Site* pickSite(Context* c, Value* value, bool includeBuddies) {
+    return ::pickSite
+      (c, value, typeMask, registerMask, frameIndex, includeBuddies);
   }
 
   virtual Site* allocateSite(Context* c) {
@@ -1411,13 +1417,14 @@ class MultiRead: public Read {
     visited(false)
   { }
 
-  virtual Site* pickSite(Context* c, Value* value) {
+  virtual Site* pickSite(Context* c, Value* value, bool includeBuddies) {
     uint8_t typeMask = ~static_cast<uint8_t>(0);
     uint64_t registerMask = ~static_cast<uint64_t>(0);
     int frameIndex = AnyFrameIndex;
     intersect(&typeMask, &registerMask, &frameIndex);
 
-    return ::pickSite(c, value, typeMask, registerMask, frameIndex);
+    return ::pickSite
+      (c, value, typeMask, registerMask, frameIndex, includeBuddies);
   }
 
   virtual Site* allocateSite(Context* c) {
@@ -1519,13 +1526,14 @@ class StubRead: public Read {
     Read(size), next_(0), read(0), visited(false)
   { }
 
-  virtual Site* pickSite(Context* c, Value* value) {
+  virtual Site* pickSite(Context* c, Value* value, bool includeBuddies) {
     uint8_t typeMask = ~static_cast<uint8_t>(0);
     uint64_t registerMask = ~static_cast<uint64_t>(0);
     int frameIndex = AnyFrameIndex;
     intersect(&typeMask, &registerMask, &frameIndex);
 
-    return ::pickSite(c, value, typeMask, registerMask, frameIndex);
+    return ::pickSite
+      (c, value, typeMask, registerMask, frameIndex, includeBuddies);
   }
 
   virtual Site* allocateSite(Context* c) {
@@ -1600,11 +1608,12 @@ targetOrRegister(Context* c, Value* v, Read* r)
 }
 
 Site*
-pick(Context* c, Value* value, Site* target = 0, unsigned* cost = 0)
+pick(Context* c, Value* value, Site* target, unsigned* cost,
+     bool includeBuddies)
 {
   Site* site = 0;
   unsigned copyCost = 0xFFFFFFFF;
-  for (SiteIterator it(value); it.hasMore();) {
+  for (SiteIterator it(value, includeBuddies); it.hasMore();) {
     Site* s = it.next();
     unsigned v = s->copyCost(c, target);
     if (v < copyCost) {
@@ -2649,10 +2658,17 @@ stack(Context* c, Value* value, unsigned size, Stack* next)
     (c, value, size, (next ? next->index + next->sizeInWords : 0), next);
 }
 
+Value*
+maybeBuddy(Context* c, Value* v, unsigned sizeInBytes);
+
 void
 push(Context* c, unsigned sizeInBytes, Value* v)
 {
   assert(c, ceiling(sizeInBytes, BytesPerWord));
+
+  v = maybeBuddy(c, v, sizeInBytes);
+
+  fprintf(stderr, "push %p of size %d\n", v, sizeInBytes);
 
   v->local = true;
   c->stack = stack(c, v, ceiling(sizeInBytes, BytesPerWord), c->stack);
@@ -2663,6 +2679,9 @@ pop(Context* c, unsigned sizeInBytes UNUSED)
 {
   Stack* s = c->stack;
   assert(c, ceiling(sizeInBytes, BytesPerWord) == s->sizeInWords);
+  assert(c, s->value->local);
+
+  fprintf(stderr, "pop %p of size %d\n", s->value, sizeInBytes);
 
   c->stack = s->next;
   s->value->local = false;
@@ -3072,7 +3091,7 @@ visit(Context* c, Link* link)
   ForkState* forkState = link->forkState;
   if (forkState) {
     for (unsigned i = 0; i < forkState->readCount; ++i) {
-      MultiReadPair* p = forkState->reads + i;
+      ForkElement* p = forkState->elements + i;
       Value* v = p->value;
       v->reads = p->read->nextTarget();
 //       fprintf(stderr, "next read %p for %p\n", v->reads, v);
@@ -3202,16 +3221,18 @@ append(Context* c, Event* e)
 Site*
 readSource(Context* c, Stack* stack, Local* locals, Read* r)
 {
+  if (not hasSite(r->value)) return 0;
+
   fprintf(stderr, "read source for %p\n", r->value);
 
-  Site* site = r->pickSite(c, r->value);
+  Site* site = r->pickSite(c, r->value, true);
 
   if (site) {
     return site;
   } else {
     Site* target = r->allocateSite(c);
     unsigned copyCost;
-    site = pick(c, r->value, target, &copyCost);
+    site = pick(c, r->value, target, &copyCost, true);
     assert(c, copyCost);
     move(c, stack, locals, r->size, r->value, site, target);
     return target;    
@@ -3221,23 +3242,25 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
 Site*
 pickJunctionSite(Context* c, Value* v, Read* r, unsigned frameIndex)
 {
+  Site* s = r->pickSite(c, v, false);
+   
+  if (s == 0) {
+    s = pick(c, v, 0, 0, false);
+  }
+
+  if (s and s->match
+      (c, (1 << RegisterOperand) | (1 << MemoryOperand), ~0, AnyFrameIndex))
+  {
+    return s;
+  }
+
+  s = r->allocateSite(c);
+
+  if (s and (c->availableRegisterCount > 1 or s->type(c) != RegisterOperand)) {
+    return s;
+  }
+
   if (c->availableRegisterCount > 1) {
-    Site* s = r->pickSite(c, v);
-      
-    if (s == 0) {
-      s = pick(c, v);
-    }
-
-    if (s and s->match
-        (c, (1 << MemoryOperand) | (1 << RegisterOperand),
-         ~0, AnyFrameIndex))
-    {
-      return s;
-    }
-
-    s = r->allocateSite(c);
-    if (s) return s;
-
     return freeRegisterSite(c);
   } else {
     return frameSite(c, frameIndex);
@@ -3265,9 +3288,9 @@ resolveJunctionSite(Context* c, Event* e, Value* v,
     }
 
     unsigned copyCost;
-    Site* site = pick(c, v, target, &copyCost);
+    Site* site = pick(c, v, target, &copyCost, true);
 
-    if (copyCost) {
+    if (copyCost or not findSite(c, v, site)) {
       move(c, e->stackAfter, e->localsAfter, r->size, v, site, target);
     } else {
       target = site;
@@ -3345,6 +3368,11 @@ populateSiteTables(Context* c, Event* e)
 
       fprintf(stderr, "resolved junction sites %p at %d\n",
               e->junctionSites, e->logicalInstruction->index);
+
+      for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
+        FrameIterator::Element el = it.next(c);
+        removeBuddy(c, el.value);
+      }
     }
 
     while (frozenSiteIndex) {
@@ -3363,13 +3391,6 @@ populateSiteTables(Context* c, Event* e)
 
     fprintf(stderr, "captured snapshots %p at %d\n",
             e->snapshots, e->logicalInstruction->index);
-  }
-
-  if (e->junctionSites) {
-    for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
-      FrameIterator::Element el = it.next(c);
-      removeBuddy(c, el.value);
-    }
   }
 }
 
@@ -3425,7 +3446,7 @@ restore(Context* c, Event* e, Snapshot* snapshots)
   for (Snapshot* s = snapshots; s; s = s->next) {
     if (live(s->value)) {
       Read* r = live(s->value);
-      if (r and s->sites) {
+      if (r and s->sites and s->value->sites == 0) {
         setSites(c, e, s->value, s->sites, r->size);
       }
     }
@@ -3647,12 +3668,13 @@ count(Stack* s)
 }
 
 void
-allocateTargets(Context* c, ForkState* state)
+restore(Context* c, ForkState* state)
 {
   for (unsigned i = 0; i < state->readCount; ++i) {
-    MultiReadPair* p = state->reads + i;
+    ForkElement* p = state->elements + i;
     p->value->lastRead = p->read;
     p->read->allocateTarget(c);
+    p->value->local = p->local;
   }
 }
 
@@ -3660,15 +3682,14 @@ void
 addMultiRead(Context* c, Value* v, unsigned size, ForkState* state,
              unsigned* count)
 {
-  if (v) {
-    MultiRead* r = multiRead(c, size);
-    fprintf(stderr, "add multi read %p to %p\n", r, v);
-    addRead(c, 0, v, r);
+  MultiRead* r = multiRead(c, size);
+  fprintf(stderr, "add multi read %p to %p\n", r, v);
+  addRead(c, 0, v, r);
 
-    MultiReadPair* p = state->reads + ((*count)++);
-    p->value = v;
-    p->read = r;
-  }
+  ForkElement* p = state->elements + ((*count)++);
+  p->value = v;
+  p->local = v->local;
+  p->read = r;
 }
 
 ForkState*
@@ -3677,7 +3698,7 @@ saveState(Context* c)
   ForkState* state = new
     (c->zone->allocate
      (sizeof(ForkState)
-      + (sizeof(MultiReadPair) * frameFootprint(c, c->stack))))
+      + (sizeof(ForkElement) * frameFootprint(c, c->stack))))
     ForkState(c->stack, c->locals, c->predecessor, c->logicalIp);
 
   if (c->predecessor) {
@@ -3687,12 +3708,20 @@ saveState(Context* c)
 
     for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
       FrameIterator::Element e = it.next(c);
-      addMultiRead(c, e.value, e.sizeInBytes, state, &count);
+
+      MultiRead* r = multiRead(c, e.sizeInBytes);
+      fprintf(stderr, "add multi read %p to %p\n", r, e.value);
+      addRead(c, 0, e.value, r);
+
+      ForkElement* p = state->elements + (count++);
+      p->value = e.value;
+      p->local = e.value->local;
+      p->read = r;
     }
 
     state->readCount = count;
 
-    allocateTargets(c, state);
+    restore(c, state);
   }
 
   return state;
@@ -3712,7 +3741,7 @@ restoreState(Context* c, ForkState* s)
 
   if (c->predecessor) {
     c->forkState = s;
-    allocateTargets(c, s);
+    restore(c, s);
   }
 }
 
@@ -3924,13 +3953,13 @@ class MyCompiler: public Compiler {
   virtual void push(unsigned sizeInBytes) {
     assert(&c, ceiling(sizeInBytes, BytesPerWord));
 
-    c.stack = ::stack
-      (&c, value(&c), ceiling(sizeInBytes, BytesPerWord), c.stack);
+    Value* v = value(&c);
+    v->local = true;
+    c.stack = ::stack(&c, v, ceiling(sizeInBytes, BytesPerWord), c.stack);
   }
 
   virtual void push(unsigned sizeInBytes, Operand* value) {
-    ::push(&c, sizeInBytes, maybeBuddy
-           (&c, static_cast<Value*>(value), sizeInBytes));
+    ::push(&c, sizeInBytes, static_cast<Value*>(value));
   }
 
   virtual Operand* pop(unsigned sizeInBytes) {
@@ -3939,6 +3968,7 @@ class MyCompiler: public Compiler {
 
   virtual void pushed() {
     Value* v = value(&c);
+    v->local = true;
     appendFrameSite
       (&c, v, BytesPerWord,
        frameIndex(&c, (c.stack ? c.stack->index : 0) + c.localFootprint, 1));
@@ -3947,6 +3977,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void popped() {
+    assert(&c, c.stack->value->local);
     c.stack = c.stack->next;
   }
 
@@ -4047,6 +4078,7 @@ class MyCompiler: public Compiler {
 
     Local* local = c.locals + index;
     local->value = v;
+    v->local = true;
     local->sizeInBytes = size;
   }
 
@@ -4078,10 +4110,12 @@ class MyCompiler: public Compiler {
     memcpy(newLocals, c.locals, footprint);
     c.locals = newLocals;
 
-//     fprintf(stderr, "store local %p of size %d at %d\n", src, size, index);
-
     local = c.locals + index;
     local->value = maybeBuddy(&c, static_cast<Value*>(src), sizeInBytes);
+
+    fprintf(stderr, "store local %p of size %d at %d\n",
+            local->value, sizeInBytes, index);
+
     local->value->local = true;
     local->sizeInBytes = sizeInBytes;
   }
@@ -4089,10 +4123,11 @@ class MyCompiler: public Compiler {
   virtual Operand* loadLocal(unsigned sizeInBytes UNUSED, unsigned index) {
     assert(&c, index < c.localFootprint);
     assert(&c, c.locals[index].value);
+    assert(&c, c.locals[index].value->local);
     assert(&c, pad(c.locals[index].sizeInBytes) == pad(sizeInBytes));
 
-//     fprintf(stderr, "load local %p of size %d at %d\n",
-//             c.locals[index].value, size, index);
+    fprintf(stderr, "load local %p of size %d at %d\n",
+            c.locals[index].value, sizeInBytes, index);
 
     return c.locals[index].value;
   }
