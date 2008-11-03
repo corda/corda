@@ -23,4 +23,8 @@ public class PropertyResourceBundle extends ResourceBundle {
   public Object handleGetObject(String key) {
     return map.get(key);
   }
+
+  public Enumeration<String> getKeys() {
+    return map.keys();
+  }
 }
