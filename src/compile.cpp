@@ -911,10 +911,6 @@ class Frame {
     return popQuiet(1);
   }
 
-  Compiler::Operand* peekLong(unsigned index) {
-    return c->peek(2, index);
-  }
-
   Compiler::Operand* popLong() {
     poppedLong();
     return popLongQuiet();
@@ -1010,7 +1006,7 @@ class Frame {
 
   void dup2() {
     if (get(sp - 1) == Long) {
-      pushLongQuiet(peekLong(0));
+      pushLongQuiet(c->peek(2, 0));
     } else {
       Compiler::Operand* s0 = popQuiet(1);
       Compiler::Operand* s1 = popQuiet(1);
@@ -1814,7 +1810,7 @@ void
 saveStateAndCompile(MyThread* t, Frame* initialFrame, unsigned ip)
 {
   Compiler::State* state = initialFrame->c->saveState();
-  compile(t, initialFrame, ip);  
+  compile(t, initialFrame, ip);
   initialFrame->c->restoreState(state);
 }
 
@@ -3397,10 +3393,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->cmp(4, c->constant(bottom), key);
       c->jl(frame->machineIp(defaultIp));
 
+      c->save(1, key);
+
       saveStateAndCompile(t, frame, defaultIp);
 
       c->cmp(4, c->constant(top), key);
       c->jg(frame->machineIp(defaultIp));
+
+      c->save(1, key);
 
       saveStateAndCompile(t, frame, defaultIp);
 
