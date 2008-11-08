@@ -15,13 +15,14 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = true;
-const bool DebugCompile = true;
+const bool DebugAppend = false;
+const bool DebugCompile = false;
 const bool DebugStack = false;
 const bool DebugRegisters = false;
-const bool DebugFrameIndexes = true;
+const bool DebugFrameIndexes = false;
 const bool DebugFrame = false;
-const bool DebugControl = true;
+const bool DebugControl = false;
+const bool DebugReads = false;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -824,8 +825,10 @@ nextRead(Context* c, Event* e, Value* v)
 {
   assert(c, e == v->reads->event);
 
-  fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
-          v->reads, v, v->reads->next(c), e, (e ? e->name() : 0));
+  if (DebugReads) {
+    fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
+            v->reads, v, v->reads->next(c), e, (e ? e->name() : 0));
+  }
 
   v->reads = v->reads->next(c);
   if (not live(v)) {
@@ -2134,7 +2137,9 @@ apply(Context* c, TernaryOperation op,
 void
 addRead(Context* c, Event* e, Value* v, Read* r)
 {
-  fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
+  if (DebugReads) {
+    fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
+  }
 
   r->value = v;
   if (e) {
@@ -2145,7 +2150,10 @@ addRead(Context* c, Event* e, Value* v, Read* r)
   }
 
   if (v->lastRead) {
-    fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
+    if (DebugReads) {
+      fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
+    }
+
     v->lastRead->append(c, r);
   } else {
     v->reads = r;
@@ -2224,11 +2232,18 @@ class CallEvent: public Event {
       Read* target;
       if (index < c->arch->argumentRegisterCount()) {
         int r = c->arch->argumentRegister(index);
-        fprintf(stderr, "reg %d arg read %p\n", r, s->value);
+        
+        if (DebugReads) {
+          fprintf(stderr, "reg %d arg read %p\n", r, s->value);
+        }
+
         target = fixedRegisterRead(c, footprintSizeInBytes(s->footprint), r);
         mask &= ~(1 << r);
       } else {
-        fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+        if (DebugReads) {
+          fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+        }
+
         target = read(c, footprintSizeInBytes(s->footprint),
                       1 << MemoryOperand, 0, frameIndex);
         frameIndex += s->footprint;
@@ -2238,7 +2253,10 @@ class CallEvent: public Event {
       s = s->next;
     }
 
-    fprintf(stderr, "address read %p\n", address);
+    if (DebugReads) {
+      fprintf(stderr, "address read %p\n", address);
+    }
+
     addRead(c, this, address, read
             (c, BytesPerWord, ~0, (static_cast<uint64_t>(mask) << 32) | mask,
              AnyFrameIndex));
@@ -2246,7 +2264,10 @@ class CallEvent: public Event {
     int footprint = stackArgumentFootprint;
     for (Stack* s = stackBefore; s; s = s->next) {
       if (footprint > 0) {
-        fprintf(stderr, "stack arg read %p of footprint %d at %d of %d\n", s->value, s->footprint, frameIndex, c->alignedFrameSize + c->parameterFootprint);
+        if (DebugReads) {
+          fprintf(stderr, "stack arg read %p of footprint %d at %d of %d\n", s->value, s->footprint, frameIndex, c->alignedFrameSize + c->parameterFootprint);
+        }
+
         addRead(c, this, s->value, read
                 (c, footprintSizeInBytes(s->footprint),
                  1 << MemoryOperand, 0, frameIndex));
@@ -2258,7 +2279,11 @@ class CallEvent: public Event {
           s->paddingInWords = index - frameIndex;
           popIndex = index;
         }
-        fprintf(stderr, "stack save read %p of footprint %d at %d of %d\n", s->value, s->footprint, index, c->alignedFrameSize + c->parameterFootprint);
+
+        if (DebugReads) {
+          fprintf(stderr, "stack save read %p of footprint %d at %d of %d\n", s->value, s->footprint, index, c->alignedFrameSize + c->parameterFootprint);
+        }
+
         addRead(c, this, s->value, read
                 (c, footprintSizeInBytes(s->footprint), 1 << MemoryOperand, 0,
                  index));
@@ -2409,17 +2434,19 @@ class MoveEvent: public Event {
       addSite(c, stackBefore, localsBefore, dstSize, dst, target);
     }
 
-    if (cost or type != Move) {    
+    if (cost or srcSize != dstSize) {    
       uint8_t typeMask = ~static_cast<uint8_t>(0);
       uint64_t registerMask = ~static_cast<uint64_t>(0);
       int frameIndex = AnyFrameIndex;
       dstRead->intersect(&typeMask, &registerMask, &frameIndex);
 
-      bool memoryToMemory = (target->type(c) == MemoryOperand
-                             and src->source->type(c) == MemoryOperand);
+      bool useTemporary = ((target->type(c) == MemoryOperand
+                            and src->source->type(c) == MemoryOperand)
+                           or (srcSize != dstSize
+                               and target->type(c) != RegisterOperand));
 
       if (target->match(c, typeMask, registerMask, frameIndex)
-          and not memoryToMemory)
+          and not useTemporary)
       {
 //         char srcb[256]; src->source->toString(c, srcb, 256);
 //         char dstb[256]; target->toString(c, dstb, 256);
@@ -2443,7 +2470,7 @@ class MoveEvent: public Event {
           removeSite(c, dst, tmpTarget);
         }
 
-        if (memoryToMemory or isStore) {
+        if (useTemporary or isStore) {
 //           char srcb[256]; tmpTarget->toString(c, srcb, 256);
 //           char dstb[256]; target->toString(c, dstb, 256);
 //           fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
@@ -3736,7 +3763,7 @@ compile(Context* c)
       }
       block->nextInstruction = nextInstruction;
       block->assemblerBlock = a->endBlock(e->next != 0);
-      fprintf(stderr, "end block %p at %d\n", block->assemblerBlock, e->logicalInstruction->index);
+//       fprintf(stderr, "end block %p at %d\n", block->assemblerBlock, e->logicalInstruction->index);
 
       if (e->next) {
         block = ::block(c, e->next);
@@ -3751,7 +3778,7 @@ compile(Context* c)
       : block->nextInstruction->firstEvent->block;
     next->start = block->assemblerBlock->resolve
       (block->start, next->assemblerBlock);
-    fprintf(stderr, "resolve block %p\n", block->assemblerBlock);
+//     fprintf(stderr, "resolve block %p\n", block->assemblerBlock);
     block = next;
   }
 
@@ -4281,13 +4308,13 @@ class MyCompiler: public Compiler {
 
   virtual Operand* load(unsigned size, Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, Move, size, static_cast<Value*>(src), size, dst);
+    appendMove(&c, Move, size, static_cast<Value*>(src), BytesPerWord, dst);
     return dst;
   }
 
   virtual Operand* loadz(unsigned size, Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, MoveZ, size, static_cast<Value*>(src), size, dst);
+    appendMove(&c, MoveZ, size, static_cast<Value*>(src), BytesPerWord, dst);
     return dst;
   }
 

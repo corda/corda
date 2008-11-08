@@ -31,7 +31,7 @@ const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
-const bool DebugFrameMaps = false;
+const bool DebugFrameMaps = true;
 
 const bool CheckArrayBounds = true;
 

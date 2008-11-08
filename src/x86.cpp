@@ -933,7 +933,7 @@ void
 moveZMR(Context* c, unsigned aSize UNUSED, Assembler::Memory* a,
         unsigned bSize UNUSED, Assembler::Register* b)
 {
-  assert(c, aSize == bSize);
+  assert(c, bSize == BytesPerWord);
   assert(c, aSize == 2);
 
   encode2(c, 0x0fb7, b->low, a, true);
