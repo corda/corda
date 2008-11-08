@@ -1415,6 +1415,45 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
+           unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+
+  if (BytesPerWord == 4 and aSize == 8) {
+    const uint32_t mask = ~((1 << rax) | (1 << rdx));
+    Assembler::Register tmp(c->client->acquireTemporary(mask),
+                            c->client->acquireTemporary(mask));
+
+    moveCR(c, aSize, a, aSize, &tmp);
+    multiplyRR(c, aSize, &tmp, bSize, b);
+
+    c->client->releaseTemporary(tmp.low);
+    c->client->releaseTemporary(tmp.high);
+  } else {
+    int64_t v = a->value->value();
+    if (v != 1) {
+      if (isInt32(v)) {
+        if (bSize == 8) rex(c);
+        if (isInt8(v)) {
+          c->code.append(0x6b);
+          c->code.append(0xc0 | (b->low << 3) | b->low);
+          c->code.append(v);
+        } else {
+          c->code.append(0x69);
+          c->code.append(0xc0 | (b->low << 3) | b->low);
+          c->code.append4(v);        
+        }
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, aSize, a, aSize, &tmp);
+        multiplyRR(c, aSize, &tmp, bSize, b);
+        c->client->releaseTemporary(tmp.low);      
+      }
+    }
+  }
+}
+void
 longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
             Assembler::Operand* bl, Assembler::Operand* bh,
             BinaryOperationType compare, BinaryOperationType move)
@@ -1545,6 +1584,21 @@ divideRR(Context* c, unsigned aSize, Assembler::Register* a,
 
   c->client->restore(rdx);
 }
+
+void
+divideCR(Context* c, unsigned aSize, Assembler::Constant* a,
+         unsigned bSize, Assembler::Register* b)
+{
+  assert(c, BytesPerWord == 8 or aSize == 4);
+  assert(c, aSize == bSize);
+
+  const uint32_t mask = ~((1 << rax) | (1 << rdx));
+  Assembler::Register tmp(c->client->acquireTemporary(mask));
+  moveCR(c, aSize, a, aSize, &tmp);
+  divideRR(c, aSize, &tmp, bSize, b);
+  c->client->releaseTemporary(tmp.low);  
+}
+
 
 void
 remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
@@ -1848,8 +1902,10 @@ populateTables(ArchitectureContext* c)
   bo[index(Xor, C, R)] = CAST2(xorCR);
 
   bo[index(Multiply, R, R)] = CAST2(multiplyRR);
+  bo[index(Multiply, C, R)] = CAST2(multiplyCR);
 
   bo[index(Divide, R, R)] = CAST2(divideRR);
+  bo[index(Divide, C, R)] = CAST2(divideCR);
 
   bo[index(Remainder, R, R)] = CAST2(remainderRR);
   bo[index(Remainder, C, R)] = CAST2(remainderCR);

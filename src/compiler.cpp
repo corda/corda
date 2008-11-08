@@ -2604,7 +2604,6 @@ class CompareEvent: public Event {
     } else {
       c->constantCompare = CompareNone;
 
-      fprintf(stderr, "compare %p and %p\n", first, second);
       apply(c, Compare, size, first->source, size, second->source);
     }
 
