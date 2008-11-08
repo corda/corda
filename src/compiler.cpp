@@ -15,13 +15,13 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = false;
-const bool DebugCompile = false;
+const bool DebugAppend = true;
+const bool DebugCompile = true;
 const bool DebugStack = false;
 const bool DebugRegisters = false;
 const bool DebugFrameIndexes = false;
 const bool DebugFrame = false;
-const bool DebugControl = false;
+const bool DebugControl = true;
 const bool DebugReads = false;
 
 const int AnyFrameIndex = -2;
@@ -3322,8 +3322,6 @@ appendDummy(Context* c)
 void
 append(Context* c, Event* e)
 {
-  assert(c, c->logicalIp >= 0);
-
   LogicalInstruction* i = c->logicalCode[c->logicalIp];
   if (c->stack != i->stack or c->locals != i->locals) {
     appendDummy(c);
@@ -3700,7 +3698,7 @@ block(Context* c, Event* head)
 unsigned
 compile(Context* c)
 {
-  if (c->logicalIp >= 0 and c->logicalCode[c->logicalIp]->lastEvent == 0) {
+  if (c->logicalCode[c->logicalIp]->lastEvent == 0) {
     appendDummy(c);
   }
 
@@ -3910,7 +3908,7 @@ saveState(Context* c)
 void
 restoreState(Context* c, ForkState* s)
 {
-  if (c->logicalIp >= 0 and c->logicalCode[c->logicalIp]->lastEvent == 0) {
+  if (c->logicalCode[c->logicalIp]->lastEvent == 0) {
     appendDummy(c);
   }
 
@@ -4006,20 +4004,28 @@ class MyCompiler: public Compiler {
 
     memset(c.frameResources, 0, frameResourceSize);
 
+    // leave room for logical instruction -1
+    unsigned codeSize = sizeof(LogicalInstruction*)
+      * (logicalCodeLength + 1);
     c.logicalCode = static_cast<LogicalInstruction**>
-      (c.zone->allocate(sizeof(LogicalInstruction*) * logicalCodeLength));
-    memset(c.logicalCode, 0, sizeof(LogicalInstruction*) * logicalCodeLength);
+      (c.zone->allocate(codeSize));
+    memset(c.logicalCode, 0, codeSize);
+    c.logicalCode++;
 
     c.locals = static_cast<Local*>
       (c.zone->allocate(sizeof(Local) * localFootprint));
 
     memset(c.locals, 0, sizeof(Local) * localFootprint);
+
+    c.logicalCode[-1] = new 
+      (c.zone->allocate(sizeof(LogicalInstruction)))
+      LogicalInstruction(-1, c.stack, c.locals);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
     assert(&c, logicalIp < c.logicalCodeLength);
 
-    if (c.logicalIp >= 0 and c.logicalCode[c.logicalIp]->lastEvent == 0) {
+    if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
     }
 
@@ -4051,7 +4057,7 @@ class MyCompiler: public Compiler {
     assert(&c, logicalIp < c.logicalCodeLength);
     assert(&c, c.logicalCode[logicalIp] == 0);
 
-    if (c.logicalIp >= 0 and c.logicalCode[c.logicalIp]->lastEvent == 0) {
+    if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
     }
 

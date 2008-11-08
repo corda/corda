@@ -1839,32 +1839,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     frame->startLogicalIp(ip);
 
-    if (ip == 0) {
-      handleEntrance(t, frame);
-
-      int index = 0;
-      if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
-        c->initLocal(1, index++);
-      }
-
-      for (MethodSpecIterator it
-             (t, reinterpret_cast<const char*>
-              (&byteArrayBody(t, methodSpec(t, context->method), 0)));
-           it.hasNext();)
-      {
-        switch (*it.next()) {
-        case 'J':
-        case 'D':
-          c->initLocal(2, index);
-          index += 2;
-          break;
-
-        default:
-          c->initLocal(1, index++);
-          break;
-        }
-      }
-    } else if (exceptionHandlerStart >= 0) {
+    if (exceptionHandlerStart >= 0) {
       c->initLocalsFromLogicalIp(exceptionHandlerStart);
 
       exceptionHandlerStart = -1;
@@ -3894,8 +3869,11 @@ compile(MyThread* t, Context* context)
   uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
   Frame frame(context, stackMap);
 
+  handleEntrance(t, &frame);
+
   unsigned index = 0;
   if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
+    c->initLocal(1, index);
     frame.set(index++, Frame::Object);    
   }
 
@@ -3907,16 +3885,19 @@ compile(MyThread* t, Context* context)
     switch (*it.next()) {
     case 'L':
     case '[':
+      c->initLocal(1, index);
       frame.set(index++, Frame::Object);
       break;
       
     case 'J':
     case 'D':
+      c->initLocal(2, index);
       frame.set(index++, Frame::Long);
       frame.set(index++, Frame::Long);
       break;
 
     default:
+      c->initLocal(1, index);
       frame.set(index++, Frame::Integer);
       break;
     }
