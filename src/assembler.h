@@ -187,6 +187,7 @@ class Assembler {
 
     virtual void* frameIp(void* stack) = 0;
     virtual unsigned frameHeaderSize() = 0;
+    virtual unsigned frameReturnAddressSize() = 0;
     virtual unsigned frameFooterSize() = 0;
     virtual void nextFrame(void** stack, void** base) = 0;
     virtual void* popReturnAddress(void* stack) = 0;

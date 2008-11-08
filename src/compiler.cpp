@@ -2208,6 +2208,17 @@ codePromise(Context* c, Promise* offset)
 }
 
 void
+setPadding(Context* c, Stack* s, unsigned realIndex)
+{
+  unsigned logicalIndex = frameIndex
+    (c, s->index + c->localFootprint, s->footprint);
+
+  assert(c, logicalIndex >= realIndex);
+
+  s->paddingInWords = logicalIndex - realIndex;
+}
+
+void
 append(Context* c, Event* e);
 
 class CallEvent: public Event {
@@ -2228,29 +2239,38 @@ class CallEvent: public Event {
     Stack* s = argumentStack;
     unsigned index = 0;
     unsigned frameIndex = 0;
-    for (unsigned i = 0; i < argumentCount; ++i) {
-      Read* target;
-      if (index < c->arch->argumentRegisterCount()) {
-        int r = c->arch->argumentRegister(index);
+
+    if (argumentCount) {
+      unsigned ai = 0;
+      while (true) {
+        Read* target;
+        if (index < c->arch->argumentRegisterCount()) {
+          int r = c->arch->argumentRegister(index);
         
-        if (DebugReads) {
-          fprintf(stderr, "reg %d arg read %p\n", r, s->value);
-        }
+          if (DebugReads) {
+            fprintf(stderr, "reg %d arg read %p\n", r, s->value);
+          }
 
-        target = fixedRegisterRead(c, footprintSizeInBytes(s->footprint), r);
-        mask &= ~(1 << r);
-      } else {
-        if (DebugReads) {
-          fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
-        }
+          target = fixedRegisterRead(c, footprintSizeInBytes(s->footprint), r);
+          mask &= ~(1 << r);
+        } else {
+          if (DebugReads) {
+            fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+          }
 
-        target = read(c, footprintSizeInBytes(s->footprint),
-                      1 << MemoryOperand, 0, frameIndex);
-        frameIndex += s->footprint;
+          target = read(c, footprintSizeInBytes(s->footprint),
+                        1 << MemoryOperand, 0, frameIndex);
+          frameIndex += s->footprint;
+        }
+        addRead(c, this, s->value, target);
+        index += s->footprint;
+
+        if ((++ ai) < argumentCount) {
+          s = s->next;
+        } else {
+          break;
+        }
       }
-      addRead(c, this, s->value, target);
-      index += s->footprint;
-      s = s->next;
     }
 
     if (DebugReads) {
@@ -2262,40 +2282,60 @@ class CallEvent: public Event {
              AnyFrameIndex));
 
     int footprint = stackArgumentFootprint;
+
+    if (footprint == 0 and s) {
+      setPadding(c, s, frameIndex);
+    }
+
     for (Stack* s = stackBefore; s; s = s->next) {
       if (footprint > 0) {
         if (DebugReads) {
-          fprintf(stderr, "stack arg read %p of footprint %d at %d of %d\n", s->value, s->footprint, frameIndex, c->alignedFrameSize + c->parameterFootprint);
+          fprintf(stderr, "stack arg read %p of footprint %d at %d of %d\n",
+                  s->value, s->footprint, frameIndex,
+                  c->alignedFrameSize + c->parameterFootprint);
         }
 
         addRead(c, this, s->value, read
                 (c, footprintSizeInBytes(s->footprint),
                  1 << MemoryOperand, 0, frameIndex));
-      } else {        
-        unsigned index = ::frameIndex
-          (c, s->index + c->localFootprint, s->footprint);
+      } else {
         if (footprint == 0) {
-          assert(c, index >= frameIndex);
-          s->paddingInWords = index - frameIndex;
-          popIndex = index;
+          popIndex = frameIndex;
         }
 
+        unsigned index = ::frameIndex
+          (c, s->index + c->localFootprint, s->footprint);
+
         if (DebugReads) {
-          fprintf(stderr, "stack save read %p of footprint %d at %d of %d\n", s->value, s->footprint, index, c->alignedFrameSize + c->parameterFootprint);
+          fprintf(stderr, "stack save read %p of footprint %d at %d of %d\n",
+                  s->value, s->footprint, index,
+                  c->alignedFrameSize + c->parameterFootprint);
         }
 
         addRead(c, this, s->value, read
-                (c, footprintSizeInBytes(s->footprint), 1 << MemoryOperand, 0,
-                 index));
+                (c, footprintSizeInBytes(s->footprint), 1 << MemoryOperand,
+                 0, index));
       }
-      frameIndex += s->footprint;
+
       footprint -= s->footprint;
+
+      if (footprint == 0) {
+        setPadding(c, s, frameIndex);
+      }
+
+      frameIndex += s->footprint;
     }
 
     for (unsigned li = 0; li < c->localFootprint; ++li) {
       Local* local = localsBefore + li;
       if (local->value) {
-        fprintf(stderr, "local save read %p of footprint %d at %d of %d\n", local->value, local->footprint, ::frameIndex(c, li, local->footprint), c->alignedFrameSize + c->parameterFootprint);
+        if (DebugReads) {
+          fprintf(stderr, "local save read %p of footprint %d at %d of %d\n",
+                  local->value, local->footprint,
+                  ::frameIndex(c, li, local->footprint),
+                  c->alignedFrameSize + c->parameterFootprint);
+        }
+
         addRead(c, this, local->value, read
                 (c, footprintSizeInBytes(local->footprint), 1 << MemoryOperand,
                  0, ::frameIndex(c, li, local->footprint)));
@@ -3988,8 +4028,8 @@ class MyCompiler: public Compiler {
 
     Event* p = c.predecessor;
     if (p) {
-      fprintf(stderr, "visit %d pred %d\n", logicalIp,
-              p->logicalInstruction->index);
+//       fprintf(stderr, "visit %d pred %d\n", logicalIp,
+//               p->logicalInstruction->index);
 
       p->stackAfter = c.stack;
       p->localsAfter = c.locals;

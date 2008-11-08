@@ -31,7 +31,7 @@ const bool Verbose = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
-const bool DebugFrameMaps = true;
+const bool DebugFrameMaps = false;
 
 const bool CheckArrayBounds = true;
 
@@ -376,7 +376,9 @@ inline object*
 localObject(MyThread* t, void* stack, object method, unsigned index)
 {
   return reinterpret_cast<object*>
-    (static_cast<uint8_t*>(stack) + localOffset(t, index, method));
+    (static_cast<uint8_t*>(stack)
+     + localOffset(t, index, method)
+     + (t->arch->frameReturnAddressSize() * BytesPerWord));
 }
 
 class PoolElement {
@@ -1192,7 +1194,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
           if (methodFlags(t, method) & ACC_STATIC) {
             lock = methodClass(t, method);
           } else {
-            lock = *localObject(t, base, method, savedTargetIndex(t, method));
+            lock = *localObject(t, stack, method, savedTargetIndex(t, method));
           }
     
           release(t, lock);
@@ -3664,7 +3666,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       unsigned i = context->eventLog.get2(eventIndex);
       eventIndex += 2;
 
-      if (i > localSize) {
+      if (i >= localSize) {
         i += stackPadding;
       }
 
@@ -3675,7 +3677,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       unsigned i = context->eventLog.get2(eventIndex);
       eventIndex += 2;
 
-      if (i > localSize) {
+      if (i >= localSize) {
         i += stackPadding;
       }
 
@@ -3862,11 +3864,11 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Simple") == 0 and
+       "GC") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "size") == 0)
+       "main") == 0)
   {
     asm("int3");
   }

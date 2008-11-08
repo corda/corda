@@ -1958,6 +1958,10 @@ class MyArchitecture: public Assembler::Architecture {
     return FrameHeaderSize;
   }
 
+  virtual unsigned frameReturnAddressSize() {
+    return 1;
+  }
+
   virtual unsigned frameFooterSize() {
     return 0;
   }
