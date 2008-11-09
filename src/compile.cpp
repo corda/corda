@@ -400,30 +400,36 @@ class TraceElement: public TraceHandler {
                bool virtualCall, TraceElement* next):
     context(context),
     address(0),
+    next(next),
     target(target),
-    virtualCall(virtualCall),
-    next(next)
+    padIndex(0),
+    padding(0),
+    virtualCall(virtualCall)
   { }
 
-  virtual void handleTrace(Promise* address) {
+  virtual void handleTrace(Promise* address, unsigned padIndex,
+                           unsigned padding)
+  {
     if (this->address == 0) {
       this->address = address;
+      this->padIndex = padIndex;
+      this->padding = padding;
     }
   }
 
   Context* context;
   Promise* address;
-  object target;
-  bool virtualCall;
   TraceElement* next;
+  object target;
+  unsigned padIndex;
+  unsigned padding;
+  bool virtualCall;
   uintptr_t map[0];
 };
 
 enum Event {
   PushContextEvent,
   PopContextEvent,
-  PushEvent,
-  PopEvent,
   IpEvent,
   MarkEvent,
   ClearEvent,
@@ -843,9 +849,6 @@ class Frame {
 
   void pushQuiet(unsigned footprint, Compiler::Operand* o) {
     c->push(footprint, o);
-    
-    context->eventLog.append(PushEvent);
-    context->eventLog.appendAddress(c->top());
   }
 
   void pushLongQuiet(Compiler::Operand* o) {
@@ -853,9 +856,6 @@ class Frame {
   }
 
   Compiler::Operand* popQuiet(unsigned footprint) {
-    context->eventLog.append(PopEvent);
-    context->eventLog.appendAddress(c->top());
-
     return c->pop(footprint);
   }
 
@@ -883,9 +883,6 @@ class Frame {
   void pushObject() {
     c->pushed();
 
-    context->eventLog.append(PushEvent);
-    context->eventLog.appendAddress(c->top());
-
     pushedObject();
   }
 
@@ -899,10 +896,6 @@ class Frame {
 
     for (unsigned i = count; i;) {
       Compiler::StackElement* s = c->top();
-
-      context->eventLog.append(PopEvent);
-      context->eventLog.appendAddress(s);
-
       c->popped();
       i -= c->footprint(s);
     }
@@ -1178,16 +1171,18 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         unsigned parameterFootprint = methodParameterFootprint(t, method);
         unsigned localFootprint = localSize(t, method);
 
-        reinterpret_cast<void**>(stack)
+        static_cast<void**>(stack)
           [alignedFrameSize(t, method) - t->arch->frameHeaderSize()
-           - (localFootprint - parameterFootprint - 1)]
+           - (localFootprint - parameterFootprint - 1)
+           + t->arch->frameReturnAddressSize()]
           = t->exception;
 
         t->exception = 0;
 
         *targetIp = handler;
         *targetBase = base;
-        *targetStack = stack;
+        *targetStack = static_cast<void**>(stack)
+          + t->arch->frameReturnAddressSize();
       } else {
         if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
           object lock;
@@ -1206,7 +1201,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
     } else {
       *targetIp = ip;
       *targetBase = base;
-      *targetStack = t->arch->popReturnAddress(stack);
+      *targetStack = static_cast<void**>(stack)
+        + t->arch->frameReturnAddressSize();
     }
   }
 }
@@ -1763,8 +1759,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     if (methodFlags(t, method) & ACC_STATIC) {
       lock = frame->append(methodClass(t, method));
     } else {
-      lock = c->memory
-        (c->stack(), localOffset(t, savedTargetIndex(t, method), method));
+      lock = c->loadLocal(1, savedTargetIndex(t, method));
     }
     
     c->call(c->constant(function),
@@ -1787,9 +1782,7 @@ handleEntrance(MyThread* t, Frame* frame)
 
     // save 'this' pointer in case it is overwritten.
     unsigned index = savedTargetIndex(t, method);
-    c->store(BytesPerWord,
-             c->memory(c->stack(), localOffset(t, 0, method)),
-             c->memory(c->stack(), localOffset(t, index, method)));
+    c->storeLocal(1, c->loadLocal(1, 0), index);
     frame->set(index, Frame::Object);
   }
 
@@ -3546,8 +3539,6 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
   // stack position (i.e. it is uninitialized or contains primitive
   // data).
 
-  Compiler* c = context->compiler;
-
   unsigned localSize = ::localSize(t, context->method);
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
@@ -3579,22 +3570,6 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
     case PopContextEvent:
       return eventIndex;
-
-    case PushEvent: {
-      Compiler::StackElement* s;
-      context->eventLog.get(eventIndex, &s, BytesPerWord);
-      stackPadding += c->padding(s);
-
-      eventIndex += BytesPerWord;
-    } break;
-
-    case PopEvent: {
-      Compiler::StackElement* s;
-      context->eventLog.get(eventIndex, &s, BytesPerWord);
-      stackPadding -= c->padding(s);
-
-      eventIndex += BytesPerWord;
-    } break;
 
     case IpEvent: {
       ip = context->eventLog.get2(eventIndex);
@@ -3661,6 +3636,11 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
     case TraceEvent: {
       TraceElement* te; context->eventLog.get(eventIndex, &te, BytesPerWord);
+      if (DebugFrameMaps) {
+        fprintf(stderr, "trace roots at ip %3d: ", ip);
+        printSet(*roots);
+        fprintf(stderr, "\n");
+      }
       memcpy(te->map, roots, mapSize * BytesPerWord);
 
       eventIndex += BytesPerWord;
@@ -3734,6 +3714,24 @@ finish(MyThread* t, Assembler* a, const char* name)
   return result;
 }
 
+void
+setBit(MyThread* t, object map, unsigned count, unsigned size, unsigned i,
+       unsigned j)
+{
+  unsigned index = ((i * size) + j);
+  intArrayBody(t, map, count + (index / 32))
+    |= static_cast<int32_t>(1) << (index % 32);
+}
+
+void
+clearBit(MyThread* t, object map, unsigned count, unsigned size, unsigned i,
+         unsigned j)
+{
+  unsigned index = ((i * size) + j);
+  intArrayBody(t, map, count + (index / 32))
+    &= ~(static_cast<int32_t>(1) << (index % 32));
+}
+
 object
 finish(MyThread* t, Context* context)
 {
@@ -3799,16 +3797,46 @@ finish(MyThread* t, Context* context)
       intArrayBody(t, map, i) = static_cast<intptr_t>(p->address->value())
         - reinterpret_cast<intptr_t>(start);
 
-      for (unsigned j = 0; j < size; ++j) {
-        unsigned index = ((i * size) + j);
-        int32_t* v = &intArrayBody
-          (t, map, context->traceLogCount + (index / 32));
+      if (DebugFrameMaps) {
+        fprintf(stderr, " orig roots at ip %p: ", reinterpret_cast<void*>
+                (p->address->value()));
+        printSet(p->map[0]);
+        fprintf(stderr, "\n");
 
-        if (getBit(p->map, j)) {
-          *v |= static_cast<int32_t>(1) << (index % 32);
-        } else {
-          *v &= ~(static_cast<int32_t>(1) << (index % 32));
+        fprintf(stderr, "final roots at ip %p: ", reinterpret_cast<void*>
+                (p->address->value()));
+      }
+
+      for (unsigned j = 0, k = 0; j < size; ++j, ++k) {
+        if (j == p->padIndex) {
+          unsigned limit = j + p->padding;
+          assert(t, limit <= size);
+
+          for (; j < limit; ++j) {
+            if (DebugFrameMaps) {
+              fprintf(stderr, "_");
+            }
+            clearBit(t, map, context->traceLogCount, size, i, j);
+          }
+
+          if (j == size) break;
         }
+
+        if (getBit(p->map, k)) {
+          if (DebugFrameMaps) {
+            fprintf(stderr, "1");
+          }
+          setBit(t, map, context->traceLogCount, size, i, j);
+        } else {
+          if (DebugFrameMaps) {
+            fprintf(stderr, "_");
+          }
+          clearBit(t, map, context->traceLogCount, size, i, j);
+        }
+      }
+
+      if (DebugFrameMaps) {
+        fprintf(stderr, "\n");
       }
     }
 
@@ -3839,7 +3867,7 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "GC") == 0 and
+       "NullPointer") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
@@ -3868,8 +3896,6 @@ compile(MyThread* t, Context* context)
 
   uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
   Frame frame(context, stackMap);
-
-  handleEntrance(t, &frame);
 
   unsigned index = 0;
   if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
@@ -3902,6 +3928,8 @@ compile(MyThread* t, Context* context)
       break;
     }
   }
+
+  handleEntrance(t, &frame);
 
   Compiler::State* state = c->saveState();
 
@@ -4263,7 +4291,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* stack, object method,
 {
   unsigned count;
   if (calleeStack) {
-    count = alignedFrameSize(t, method) - argumentFootprint;
+    count = alignedFrameSizeWithParameters(t, method) - argumentFootprint;
   } else {
     count = alignedFrameSizeWithParameters(t, method);
   }
@@ -4520,7 +4548,8 @@ class SegFaultHandler: public System::SignalHandler {
 
         t->ip = *ip;
         t->base = *base;
-        t->stack = *stack;
+        t->stack = static_cast<void**>(*stack)
+          - t->arch->frameReturnAddressSize();
 
         ensure(t, FixedSizeOfNullPointerException + traceSize(t));
 

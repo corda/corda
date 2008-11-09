@@ -15,13 +15,13 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = true;
-const bool DebugCompile = true;
+const bool DebugAppend = false;
+const bool DebugCompile = false;
 const bool DebugStack = false;
 const bool DebugRegisters = false;
 const bool DebugFrameIndexes = false;
 const bool DebugFrame = false;
-const bool DebugControl = true;
+const bool DebugControl = false;
 const bool DebugReads = false;
 
 const int AnyFrameIndex = -2;
@@ -117,13 +117,11 @@ class Site {
 class Stack: public Compiler::StackElement {
  public:
   Stack(unsigned index, unsigned footprint, Value* value, Stack* next):
-    index(index), footprint(footprint), paddingInWords(0), value(value),
-    next(next)
+    index(index), footprint(footprint), value(value), next(next)
   { }
 
   unsigned index;
   unsigned footprint;
-  unsigned paddingInWords;
   Value* value;
   Stack* next;
 };
@@ -825,10 +823,10 @@ nextRead(Context* c, Event* e, Value* v)
 {
   assert(c, e == v->reads->event);
 
-  if (DebugReads) {
-    fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
-            v->reads, v, v->reads->next(c), e, (e ? e->name() : 0));
-  }
+//   if (DebugReads) {
+//     fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
+//             v->reads, v, v->reads->next(c), e, (e ? e->name() : 0));
+//   }
 
   v->reads = v->reads->next(c);
   if (not live(v)) {
@@ -1763,47 +1761,59 @@ find(Value* needle, Value* haystack)
 
 bool
 trySteal(Context* c, Site* site, Value* v, unsigned size, Stack* stack,
-         Local* locals)
+         Local* locals, int avoid)
 {
   if (not hasMoreThanOneSite(v)) {
-    int index = NoFrameIndex;
-    for (unsigned li = 0; li < c->localFootprint; ++li) {
-      Local* local = locals + li;
-      if (find(v, local->value)) {
-        index = frameIndex(c, li, local->footprint);
-        break;
-      }
-    }
-
-    if (index == NoFrameIndex) {
-      for (Stack* s = stack; s; s = s->next) {
-        if (find(v, s->value)) {
-          uint8_t typeMask;
-          uint64_t registerMask;
-          int frameIndex = AnyFrameIndex;
-          live(v)->intersect(&typeMask, &registerMask, &frameIndex);
-
-          if (frameIndex >= 0) {
-            index = frameIndex;
-          } else {
-            index = ::frameIndex
-              (c, s->index + c->localFootprint, s->footprint);
+    Read* r = live(v);
+    if (r->pickSite(c, v, true)) {
+      int index = NoFrameIndex;
+      for (unsigned li = 0; li < c->localFootprint; ++li) {
+        Local* local = locals + li;
+        if (find(v, local->value)) {
+          int fi = frameIndex(c, li, local->footprint);
+          if (fi != avoid) {
+            index = fi;
+            break;
           }
-          break;
         }
       }
-    }
 
-    if (index != NoFrameIndex
-        and (not site->match(c, 1 << MemoryOperand, 0, index)))
-    {
-      Site* saveSite = frameSite(c, index);
-      move(c, stack, locals, size, v, site, saveSite);
-    } else {
-      if (DebugRegisters or DebugFrameIndexes) {
-        fprintf(stderr, "unable to steal %p from %p\n", site, v);
+      if (index == NoFrameIndex) {
+        for (Stack* s = stack; s; s = s->next) {
+          fprintf(stderr, "%p belongs at %d\n", s->value, frameIndex
+                  (c, s->index + c->localFootprint, s->footprint));
+
+          if (find(v, s->value)) {
+            uint8_t typeMask;
+            uint64_t registerMask;
+            int frameIndex = AnyFrameIndex;
+            live(v)->intersect(&typeMask, &registerMask, &frameIndex);
+
+            if (frameIndex >= 0 and frameIndex != avoid) {
+              index = frameIndex;
+              break;
+            } else {
+              int fi = ::frameIndex
+                (c, s->index + c->localFootprint, s->footprint);
+              if (fi != avoid) {
+                index = fi;
+                break;
+              }
+            }
+          }
+        }
       }
-      return false;
+
+      if (index != NoFrameIndex) {
+        move(c, stack, locals, size, v, site, frameSite(c, index));
+      } else {
+        if (DebugRegisters or DebugFrameIndexes) {
+          fprintf(stderr, "unable to steal %p from %p\n", site, v);
+        }
+        return false;
+      }
+    } else {
+      move(c, stack, locals, size, v, site, r->allocateSite(c));      
     }
   }
 
@@ -1824,7 +1834,7 @@ trySteal(Context* c, Register* r, Stack* stack, Local* locals)
     fprintf(stderr, "try steal %d from %p\n", r->number, v);
   }
 
-  return trySteal(c, r->site, r->value, r->size, stack, locals);
+  return trySteal(c, r->site, r->value, r->size, stack, locals, NoFrameIndex);
 }
 
 bool
@@ -2026,7 +2036,8 @@ trySteal(Context* c, FrameResource* r, Stack* stack, Local* locals)
             index, frameIndexToOffset(c, index), r->value, r->site);
   }
 
-  return trySteal(c, r->site, r->value, r->size, stack, locals);
+  return trySteal(c, r->site, r->value, r->size, stack, locals,
+                  r - c->frameResources);
 }
 
 void
@@ -2208,17 +2219,6 @@ codePromise(Context* c, Promise* offset)
 }
 
 void
-setPadding(Context* c, Stack* s, unsigned realIndex)
-{
-  unsigned logicalIndex = frameIndex
-    (c, s->index + c->localFootprint, s->footprint);
-
-  assert(c, logicalIndex >= realIndex);
-
-  s->paddingInWords = logicalIndex - realIndex;
-}
-
-void
 append(Context* c, Event* e);
 
 class CallEvent: public Event {
@@ -2232,6 +2232,8 @@ class CallEvent: public Event {
     traceHandler(traceHandler),
     result(result),
     popIndex(0),
+    padIndex(0),
+    padding(0),
     flags(flags),
     resultSize(resultSize)
   {
@@ -2282,11 +2284,6 @@ class CallEvent: public Event {
              AnyFrameIndex));
 
     int footprint = stackArgumentFootprint;
-
-    if (footprint == 0 and s) {
-      setPadding(c, s, frameIndex);
-    }
-
     for (Stack* s = stackBefore; s; s = s->next) {
       if (footprint > 0) {
         if (DebugReads) {
@@ -2299,10 +2296,6 @@ class CallEvent: public Event {
                 (c, footprintSizeInBytes(s->footprint),
                  1 << MemoryOperand, 0, frameIndex));
       } else {
-        if (footprint == 0) {
-          popIndex = frameIndex;
-        }
-
         unsigned index = ::frameIndex
           (c, s->index + c->localFootprint, s->footprint);
 
@@ -2320,7 +2313,14 @@ class CallEvent: public Event {
       footprint -= s->footprint;
 
       if (footprint == 0) {
-        setPadding(c, s, frameIndex);
+        unsigned logicalIndex = ::frameIndex
+          (c, s->index + c->localFootprint, s->footprint);
+
+        assert(c, logicalIndex >= frameIndex);
+
+        padding = logicalIndex - frameIndex;
+        padIndex = s->index + c->localFootprint;
+        popIndex = frameIndex + s->footprint;
       }
 
       frameIndex += s->footprint;
@@ -2352,7 +2352,8 @@ class CallEvent: public Event {
           address->source);
 
     if (traceHandler) {
-      traceHandler->handleTrace(codePromise(c, c->assembler->offset()));
+      traceHandler->handleTrace(codePromise(c, c->assembler->offset()),
+                                padIndex, padding);
     }
 
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
@@ -2369,6 +2370,8 @@ class CallEvent: public Event {
   TraceHandler* traceHandler;
   Value* result;
   unsigned popIndex;
+  unsigned padIndex;
+  unsigned padding;
   unsigned flags;
   unsigned resultSize;
 };
@@ -3714,15 +3717,12 @@ compile(Context* c)
   for (Event* e = c->firstEvent; e; e = e->next) {
     if (DebugCompile) {
       fprintf(stderr,
-              " -- compile %s at %d with %d preds %d succs %d stack before "
-              "%d after\n",
+              " -- compile %s at %d with %d preds %d succs %d stack\n",
               e->name(), e->logicalInstruction->index,
               countPredecessors(e->predecessors),
               countSuccessors(e->successors),
               e->stackBefore ?
-              e->stackBefore->index + e->stackBefore->footprint : 0,
-              e->stackAfter ?
-              e->stackAfter->index + e->stackAfter->footprint : 0);
+              e->stackBefore->index + e->stackBefore->footprint : 0);
     }
 
     e->block = block;
@@ -4184,10 +4184,6 @@ class MyCompiler: public Compiler {
 
   virtual unsigned footprint(StackElement* e) {
     return static_cast<Stack*>(e)->footprint;
-  }
-
-  virtual unsigned padding(StackElement* e) {
-    return static_cast<Stack*>(e)->paddingInWords;
   }
 
   virtual Operand* peek(unsigned footprint UNUSED, unsigned index) {

@@ -71,7 +71,6 @@ class Compiler {
   virtual void popped() = 0;
   virtual StackElement* top() = 0;
   virtual unsigned footprint(StackElement*) = 0;
-  virtual unsigned padding(StackElement*) = 0;
   virtual Operand* peek(unsigned footprint, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,

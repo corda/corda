@@ -103,7 +103,8 @@ class TraceHandler {
  public:
   virtual ~TraceHandler() { }
 
-  virtual void handleTrace(Promise* address) = 0;
+  virtual void handleTrace(Promise* address, unsigned padIndex,
+                           unsigned padding) = 0;
 };
 
 class Assembler {
@@ -190,7 +191,6 @@ class Assembler {
     virtual unsigned frameReturnAddressSize() = 0;
     virtual unsigned frameFooterSize() = 0;
     virtual void nextFrame(void** stack, void** base) = 0;
-    virtual void* popReturnAddress(void* stack) = 0;
 
     virtual void plan
     (UnaryOperation op,

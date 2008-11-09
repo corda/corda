@@ -2023,12 +2023,10 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void** stack, void** base) {
+    assert(&c, *static_cast<void**>(*base) != *base);
+
     *stack = static_cast<void**>(*base) + 1;
     *base = *static_cast<void**>(*base);
-  }
-
-  virtual void* popReturnAddress(void* stack) {
-    return static_cast<void**>(stack) + 1;
   }
 
   virtual void plan
