@@ -3405,7 +3405,7 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
   if (not open) {
     open = true;
     const char* path = findProperty(t, "avian.jit.log");
-    if (name) {
+    if (path) {
       log = fopen(path, "wb");
     } else if (DebugCompile) {
       log = stderr;
