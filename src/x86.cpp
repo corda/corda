@@ -2069,6 +2069,9 @@ class MyArchitecture: public Assembler::Architecture {
     case Negate:
       *aTypeMask = (1 << RegisterOperand);
       *bTypeMask = (1 << RegisterOperand);
+      *aRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
+        | (static_cast<uint64_t>(1) << rax);
+      *bRegisterMask = *aRegisterMask;
       break;
 
     case Move:
