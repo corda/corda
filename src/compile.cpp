@@ -1531,14 +1531,14 @@ releaseMonitorForObject(MyThread* t, object o)
 }
 
 object
-makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* stack,
+makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* countStack,
                            int32_t dimensions)
 {
   PROTECT(t, class_);
 
   int32_t counts[dimensions];
   for (int i = dimensions - 1; i >= 0; --i) {
-    counts[i] = stack[dimensions - i - 1];
+    counts[i] = countStack[dimensions - i - 1];
     if (UNLIKELY(counts[i] < 0)) {
       object message = makeString(t, "%d", counts[i]);
       t->exception = makeNegativeArraySizeException(t, message);
@@ -1557,9 +1557,11 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* stack,
 
 object
 makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
-                          uintptr_t* stack)
+                          int32_t offset)
 {
-  object r = makeMultidimensionalArray2(t, class_, stack, dimensions);
+  object r = makeMultidimensionalArray2
+    (t, class_, static_cast<uintptr_t*>(t->stack) + offset, dimensions);
+
   if (UNLIKELY(t->exception)) {
     unwind(t);
   } else {
@@ -3118,13 +3120,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
+      unsigned offset = alignedFrameSize(t, context->method)
+        - t->arch->frameHeaderSize()
+        - (localSize(t, context->method)
+           - methodParameterFootprint(t, context->method)
+           - 1)
+        + t->arch->frameReturnAddressSize()
+        - c->index(c->top());
+
       Compiler::Operand* result = c->call
         (c->constant(getThunk(t, makeMultidimensionalArrayThunk)),
          0,
          frame->trace(0, false),
          BytesPerWord,
          4, c->thread(), frame->append(class_), c->constant(dimensions),
-         c->stackTop());
+         c->constant(offset));
 
       frame->pop(dimensions);
       frame->pushObject(result);
@@ -3867,7 +3877,7 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "NullPointer") == 0 and
+       "Longs") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),

@@ -61,8 +61,6 @@ class Compiler {
   virtual Operand* stack() = 0;
   virtual Operand* thread() = 0;
 
-  virtual Operand* stackTop() = 0;
-
   virtual void push(unsigned footprint) = 0;
   virtual void push(unsigned footprint, Operand* value) = 0;
   virtual void save(unsigned footprint, Operand* value) = 0;
@@ -71,6 +69,7 @@ class Compiler {
   virtual void popped() = 0;
   virtual StackElement* top() = 0;
   virtual unsigned footprint(StackElement*) = 0;
+  virtual unsigned index(StackElement*) = 0;
   virtual Operand* peek(unsigned footprint, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,

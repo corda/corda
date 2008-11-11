@@ -844,12 +844,10 @@ moveAR(Context* c, unsigned aSize, Assembler::Address* a,
 // }
 
 void
-moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
-       unsigned bSize UNUSED, Assembler::Register* b)
+moveCR(Context* c, unsigned, Assembler::Constant* a,
+       unsigned bSize, Assembler::Register* b)
 {
-  assert(c, aSize == bSize);
-
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (BytesPerWord == 4 and bSize == 8) {
     int64_t v = a->value->value();
 
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
@@ -2056,6 +2054,11 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Compare:
       *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
+      *bTypeMask = (1 << RegisterOperand);
+      break;
+
+    case Negate:
+      *aTypeMask = (1 << RegisterOperand);
       *bTypeMask = (1 << RegisterOperand);
       break;
 

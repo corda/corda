@@ -1780,9 +1780,6 @@ trySteal(Context* c, Site* site, Value* v, unsigned size, Stack* stack,
 
       if (index == NoFrameIndex) {
         for (Stack* s = stack; s; s = s->next) {
-          fprintf(stderr, "%p belongs at %d\n", s->value, frameIndex
-                  (c, s->index + c->localFootprint, s->footprint));
-
           if (find(v, s->value)) {
             uint8_t typeMask;
             uint64_t registerMask;
@@ -2667,7 +2664,6 @@ class CombineEvent: public Event {
     if (c->arch->condensedAddressing()) {
       maybePreserve(c, stackBefore, localsBefore, secondSize, second,
                     second->source);
-      removeSite(c, second, second->source);
       target = second->source;
     } else {
       target = resultRead->allocateSite(c);
@@ -2681,8 +2677,11 @@ class CombineEvent: public Event {
     nextRead(c, this, first);
     nextRead(c, this, second);
 
-    if (c->arch->condensedAddressing() and live(result)) {
-      addSite(c, 0, 0, resultSize, result, target);
+    if (c->arch->condensedAddressing()) {
+      removeSite(c, second, second->source);
+      if (live(result)) {
+        addSite(c, 0, 0, resultSize, result, target);
+      }
     }
   }
 
@@ -2904,7 +2903,6 @@ class TranslateEvent: public Event {
     Site* target;
     if (c->arch->condensedAddressing()) {
       maybePreserve(c, stackBefore, localsBefore, size, value, value->source);
-      removeSite(c, value, value->source);
       target = value->source;
     } else {
       target = resultRead->allocateSite(c);
@@ -2915,8 +2913,11 @@ class TranslateEvent: public Event {
     
     nextRead(c, this, value);
 
-    if (c->arch->condensedAddressing() and live(result)) {
-      addSite(c, 0, 0, size, result, target);
+    if (c->arch->condensedAddressing()) {
+      removeSite(c, value, value->source);
+      if (live(result)) {
+        addSite(c, 0, 0, size, result, target);
+      }
     }
   }
 
@@ -3445,8 +3446,8 @@ resolveJunctionSite(Context* c, Event* e, Value* v,
 
     if (DebugControl) {
       char buffer[256]; target->toString(c, buffer, 256);
-      fprintf(stderr, "resolved junction site %d %s %p\n",
-              frameIndex, buffer, v);
+      fprintf(stderr, "resolved junction site local %d frame %d %s %p\n",
+              siteIndex, frameIndex, buffer, v);
     }
   }
 
@@ -4136,13 +4137,6 @@ class MyCompiler: public Compiler {
     return value(&c, s, s);
   }
 
-  virtual Operand* stackTop() {
-    Site* s = frameSite
-      (&c, frameIndex
-       (&c, c.stack->index + c.localFootprint, c.stack->footprint));
-    return value(&c, s, s);
-  }
-
   Promise* machineIp() {
     return codePromise(&c, c.logicalCode[c.logicalIp]->lastEvent);
   }
@@ -4184,6 +4178,10 @@ class MyCompiler: public Compiler {
 
   virtual unsigned footprint(StackElement* e) {
     return static_cast<Stack*>(e)->footprint;
+  }
+
+  virtual unsigned index(StackElement* e) {
+    return static_cast<Stack*>(e)->index;
   }
 
   virtual Operand* peek(unsigned footprint UNUSED, unsigned index) {
@@ -4311,6 +4309,12 @@ class MyCompiler: public Compiler {
     local = c.locals + index;
     local->value = maybeBuddy
       (&c, static_cast<Value*>(src), footprintSizeInBytes(footprint));
+
+    if (footprint == 2) {
+      Local* clobber = local + 1;
+      clobber->value = 0;
+      clobber->footprint = 0;
+    }
 
     if (DebugFrame) {
       fprintf(stderr, "store local %p of footprint %d at %d\n",
