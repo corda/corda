@@ -1694,62 +1694,6 @@ toString(Context* c, Site* sites, char* buffer, unsigned size)
   }
 }
 
-void
-releaseRegister(Context* c, Value* v, unsigned frameIndex,
-                unsigned sizeInBytes, int r)
-{
-  Site* source = 0;
-  for (SiteIterator it(v); it.hasMore();) {
-    Site* s = it.next();
-    if (s->usesRegister(c, r)) {
-      if (DebugRegisters) {
-        char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "%p (%s) in %p at %d uses %d\n",
-                s, buffer, v, frameIndex, r);
-      }
-
-      source = s;
-      it.remove(c);
-    } else {
-      if (DebugRegisters) {
-        char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "%p (%s) in %p at %d does not use %d\n",
-                s, buffer, v, frameIndex, r);
-      }
-    }
-  }
-
-  if (not hasSite(v)) {
-    move(c, c->stack, c->locals, sizeInBytes, v, source,
-         frameSite(c, frameIndex));
-  }
-
-  if (DebugRegisters) {
-    char buffer[256]; toString(c, v->sites, buffer, 256);
-    fprintf(stderr, "%p is left with %s\n", v, buffer);
-  }
-}
-
-unsigned
-footprintSizeInBytes(unsigned footprint)
-{
-  if (BytesPerWord == 8) {
-    return 8;
-  } else {
-    return footprint * 4;
-  }
-}
-
-void
-releaseRegister(Context* c, int r)
-{
-  for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
-    FrameIterator::Element e = it.next(c);
-    releaseRegister(c, e.value, frameIndex(c, &e),
-                    footprintSizeInBytes(e.footprint), r);
-  }
-}
-
 bool
 find(Value* needle, Value* haystack)
 {
@@ -1850,6 +1794,68 @@ bool
 usedExclusively(Context* c, Register* r)
 {
   return used(c, r) and not hasMoreThanOneSite(r->value);
+}
+
+void
+releaseRegister(Context* c, Value* v, unsigned frameIndex,
+                unsigned sizeInBytes, int r)
+{
+  Site* source = 0;
+  for (SiteIterator it(v); it.hasMore();) {
+    Site* s = it.next();
+    if (s->usesRegister(c, r)) {
+      if (DebugRegisters) {
+        char buffer[256]; s->toString(c, buffer, 256);
+        fprintf(stderr, "%p (%s) in %p at %d uses %d\n",
+                s, buffer, v, frameIndex, r);
+      }
+
+      source = s;
+      it.remove(c);
+    } else {
+      if (DebugRegisters) {
+        char buffer[256]; s->toString(c, buffer, 256);
+        fprintf(stderr, "%p (%s) in %p at %d does not use %d\n",
+                s, buffer, v, frameIndex, r);
+      }
+    }
+  }
+
+  if (not hasSite(v)) {
+    move(c, c->stack, c->locals, sizeInBytes, v, source,
+         frameSite(c, frameIndex));
+  }
+
+  if (DebugRegisters) {
+    char buffer[256]; toString(c, v->sites, buffer, 256);
+    fprintf(stderr, "%p is left with %s\n", v, buffer);
+  }
+}
+
+unsigned
+footprintSizeInBytes(unsigned footprint)
+{
+  if (BytesPerWord == 8) {
+    return 8;
+  } else {
+    return footprint * 4;
+  }
+}
+
+void
+releaseRegister(Context* c, int r)
+{
+  Register* reg = c->registers[r];
+  if (used(c, reg) and not usedExclusively(c, reg)) {
+    removeSite(c, reg->value, reg->site);
+    if (reg->refCount == 0) return;
+  }
+
+  for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
+    FrameIterator::Element e = it.next(c);
+    releaseRegister(c, e.value, frameIndex(c, &e),
+                    footprintSizeInBytes(e.footprint), r);
+  }
 }
 
 unsigned
