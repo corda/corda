@@ -23,6 +23,7 @@ const bool DebugFrameIndexes = false;
 const bool DebugFrame = false;
 const bool DebugControl = false;
 const bool DebugReads = false;
+const bool DebugMoves = false;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -1089,7 +1090,7 @@ class RegisterSite: public Site {
       sync(c);
       mask = static_cast<uint64_t>(1) << register_.low;
       if (register_.high != NoRegister) {
-        mask |= static_cast<uint64_t>(1) << register_.high;
+        mask |= static_cast<uint64_t>(1) << (register_.high + 32);
       }
     } else {
       mask = this->mask;
@@ -1654,9 +1655,11 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
     Site* tmp = freeRegisterSite(c);
     addSite(c, stack, locals, size, value, tmp);
 
-//     char srcb[256]; src->toString(c, srcb, 256);
-//     char tmpb[256]; tmp->toString(c, tmpb, 256);
-//     fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
+    if (DebugMoves) {
+      char srcb[256]; src->toString(c, srcb, 256);
+      char tmpb[256]; tmp->toString(c, tmpb, 256);
+      fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
+    }
       
     apply(c, Move, size, src, size, tmp);
     src = tmp;
@@ -1664,9 +1667,11 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
 
   addSite(c, stack, locals, size, value, dst);
 
-//   char srcb[256]; src->toString(c, srcb, 256);
-//   char dstb[256]; dst->toString(c, dstb, 256);
-//   fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
+  if (DebugMoves) {
+    char srcb[256]; src->toString(c, srcb, 256);
+    char dstb[256]; dst->toString(c, dstb, 256);
+    fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
+  }
   
   apply(c, Move, size, src, size, dst);
 }
@@ -2461,8 +2466,10 @@ class MoveEvent: public Event {
     if (cost == 0) {
       target = src->source;
 
-//       char dstb[256]; target->toString(c, dstb, 256);
-//       fprintf(stderr, "null move in %s for %p to %p\n", dstb, src, dst);
+      if (DebugMoves) {
+        char dstb[256]; target->toString(c, dstb, 256);
+        fprintf(stderr, "null move in %s for %p to %p\n", dstb, src, dst);
+      }
     }
 
     if (target == src->source) {
@@ -2488,9 +2495,12 @@ class MoveEvent: public Event {
       if (target->match(c, typeMask, registerMask, frameIndex)
           and not useTemporary)
       {
-//         char srcb[256]; src->source->toString(c, srcb, 256);
-//         char dstb[256]; target->toString(c, dstb, 256);
-//         fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+        if (DebugMoves) {
+          char srcb[256]; src->source->toString(c, srcb, 256);
+          char dstb[256]; target->toString(c, dstb, 256);
+          fprintf(stderr, "move %s to %s for %p to %p\n",
+                  srcb, dstb, src, dst);
+        }
 
         apply(c, type, srcSize, src->source, dstSize, target);
       } else {
@@ -2500,9 +2510,12 @@ class MoveEvent: public Event {
 
         addSite(c, stackBefore, localsBefore, dstSize, dst, tmpTarget);
 
-//         char srcb[256]; src->source->toString(c, srcb, 256);
-//         char dstb[256]; tmpTarget->toString(c, dstb, 256);
-//         fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+        if (DebugMoves) {
+          char srcb[256]; src->source->toString(c, srcb, 256);
+          char dstb[256]; tmpTarget->toString(c, dstb, 256);
+          fprintf(stderr, "move %s to %s for %p to %p\n",
+                  srcb, dstb, src, dst);
+        }
 
         apply(c, type, srcSize, src->source, dstSize, tmpTarget);
 
@@ -2511,9 +2524,12 @@ class MoveEvent: public Event {
         }
 
         if (useTemporary or isStore) {
-//           char srcb[256]; tmpTarget->toString(c, srcb, 256);
-//           char dstb[256]; target->toString(c, dstb, 256);
-//           fprintf(stderr, "move %s to %s for %p to %p\n", srcb, dstb, src, dst);
+          if (DebugMoves) {
+            char srcb[256]; tmpTarget->toString(c, srcb, 256);
+            char dstb[256]; target->toString(c, dstb, 256);
+            fprintf(stderr, "move %s to %s for %p to %p\n",
+                    srcb, dstb, src, dst);
+          }
 
           apply(c, Move, dstSize, tmpTarget, dstSize, target);
         } else {
@@ -4353,13 +4369,15 @@ class MyCompiler: public Compiler {
 
   virtual Operand* load(unsigned size, Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, Move, size, static_cast<Value*>(src), BytesPerWord, dst);
+    appendMove(&c, Move, size, static_cast<Value*>(src),
+               max(size, BytesPerWord), dst);
     return dst;
   }
 
   virtual Operand* loadz(unsigned size, Operand* src) {
     Value* dst = value(&c);
-    appendMove(&c, MoveZ, size, static_cast<Value*>(src), BytesPerWord, dst);
+    appendMove(&c, MoveZ, size, static_cast<Value*>(src),
+               max(size, BytesPerWord), dst);
     return dst;
   }
 
