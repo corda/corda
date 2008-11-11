@@ -643,6 +643,18 @@ negateRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+swapRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+       unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, aSize == BytesPerWord);
+  
+  rex(c);
+  c->code.append(0x87);
+  c->code.append(0xc0 | (b->low << 3) | a->low);
+}
+
+void
 moveRR(Context* c, unsigned aSize, Assembler::Register* a,
        unsigned bSize, Assembler::Register* b)
 {
@@ -650,8 +662,17 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
-    moveRR(c, 4, a, 4, b);
-    moveRR(c, 4, &ah, 4, &bh);
+    if (a->high == b->low) {
+      if (a->low == b->high) {
+        swapRR(c, 4, a, 4, b);
+      } else {
+        moveRR(c, 4, &ah, 4, &bh);
+        moveRR(c, 4, a, 4, b);
+      }
+    } else {
+      moveRR(c, 4, a, 4, b);
+      moveRR(c, 4, &ah, 4, &bh);
+    }
   } else {
     switch (aSize) {
     case 1:
@@ -935,18 +956,6 @@ moveZMR(Context* c, unsigned aSize UNUSED, Assembler::Memory* a,
   assert(c, aSize == 2);
 
   encode2(c, 0x0fb7, b->low, a, true);
-}
-
-void
-swapRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
-       unsigned bSize UNUSED, Assembler::Register* b)
-{
-  assert(c, aSize == bSize);
-  assert(c, aSize == BytesPerWord);
-  
-  rex(c);
-  c->code.append(0x87);
-  c->code.append(0xc0 | (b->low << 3) | a->low);
 }
 
 void
