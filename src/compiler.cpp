@@ -2263,6 +2263,10 @@ class CallEvent: public Event {
           target = read(c, footprintSizeInBytes(s->footprint),
                         1 << MemoryOperand, 0, frameIndex);
           frameIndex += s->footprint;
+
+          if (stackArgumentFootprint == 0) {
+            popIndex = frameIndex;
+          }
         }
         addRead(c, this, s->value, target);
         index += s->footprint;
