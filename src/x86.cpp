@@ -895,8 +895,6 @@ void
 moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
        unsigned bSize, Assembler::Memory* b)
 {
-  int64_t v = a->value->value();
-
   switch (bSize) {
   case 1:
     encode(c, 0xc6, 0, b, false);
@@ -910,10 +908,17 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
 
   case 4:
     encode(c, 0xc7, 0, b, false);
-    c->code.append4(a->value->value());
+    if (a->value->resolved()) {
+      c->code.append4(a->value->value());
+    } else {
+      appendImmediateTask(c, a->value, offset(c));
+      c->code.append4(0);
+    }
     break;
 
   case 8: {
+    int64_t v = a->value->value();
+
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
     Assembler::Constant ah(&high);
 
