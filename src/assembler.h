@@ -78,8 +78,6 @@ const int NoRegister = -1;
 
 class Promise {
  public:
-  virtual ~Promise() { }
-
   virtual int64_t value() = 0;
   virtual bool resolved() = 0;
 };
@@ -101,8 +99,6 @@ class ResolvedPromise: public Promise {
 
 class TraceHandler {
  public:
-  virtual ~TraceHandler() { }
-
   virtual void handleTrace(Promise* address, unsigned padIndex,
                            unsigned padding) = 0;
 };
@@ -147,8 +143,6 @@ class Assembler {
 
   class Client {
    public:
-    virtual ~Client() { }
-
     virtual int acquireTemporary
     (uint32_t mask = ~static_cast<uint32_t>(0)) = 0;
     virtual void releaseTemporary(int r) = 0;
@@ -159,15 +153,11 @@ class Assembler {
 
   class Block {
    public:
-    virtual ~Block() { }
-
     virtual unsigned resolve(unsigned start, Block* next) = 0;
   };
 
   class Architecture {
    public:
-    virtual ~Architecture() { }
-
     virtual unsigned registerCount() = 0;
 
     virtual int stack() = 0;
@@ -213,8 +203,6 @@ class Assembler {
     virtual void acquire() = 0;
     virtual void release() = 0;
   };
-
-  virtual ~Assembler() { }
 
   virtual void setClient(Client* client) = 0;
 

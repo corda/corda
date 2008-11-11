@@ -111,8 +111,8 @@ public class Method<T> extends AccessibleObject implements Member {
     }
   }
 
-  public static native Object invoke(Method method, Object instance,
-                                     Object ... arguments)
+  private static native Object invoke(Method method, Object instance,
+                                      Object ... arguments)
     throws InvocationTargetException, IllegalAccessException;
 
   public Class getReturnType() {

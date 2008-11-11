@@ -167,8 +167,7 @@ resolveNativeMethod2(Thread* t, object method)
   }
 
 #ifdef __MINGW32__
-  // on windows, we also try the _%s@%d variant, since the SWT
-  // libraries use it.
+  // on windows, we also try the _%s@%d and %s@%d variants
   unsigned footprint = methodParameterFootprint(t, method) + 1;
   if (methodFlags(t, method) & ACC_STATIC) {
     ++ footprint;
@@ -183,6 +182,12 @@ resolveNativeMethod2(Thread* t, object method)
            footprint * BytesPerWord);
 
   p = ::resolveNativeMethod(t, undecorated, decorated);
+  if (p) {
+    return p;
+  }
+
+  // one more try without the leading underscore
+  p = ::resolveNativeMethod(t, undecorated + 1, decorated + 1);
   if (p) {
     return p;
   }

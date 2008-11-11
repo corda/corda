@@ -198,13 +198,13 @@ visitRoots(Thread* t, Heap::Visitor* v)
 
 void
 walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
-     unsigned arrayElementSize, unsigned arrayLength)
+     unsigned arrayElementSize, unsigned arrayLength, unsigned start)
 {
   unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
   unsigned arrayElementSizeInWords
     = ceiling(arrayElementSize, BytesPerWord);
 
-  for (unsigned i = 0; i < fixedSizeInWords; ++i) {
+  for (unsigned i = start; i < fixedSizeInWords; ++i) {
     if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
       if (not w->visit(i)) {
         return;
@@ -222,8 +222,19 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
   }
 
   if (arrayObjectElements) {
-    for (unsigned i = 0; i < arrayLength; ++i) {
-      for (unsigned j = 0; j < arrayElementSizeInWords; ++j) {
+    unsigned arrayStart;
+    unsigned elementStart;
+    if (start > fixedSizeInWords) {
+      unsigned s = start - fixedSizeInWords;
+      arrayStart = s / arrayElementSizeInWords;
+      elementStart = s % arrayElementSizeInWords;
+    } else {
+      arrayStart = 0;
+      elementStart = 0;
+    }
+
+    for (unsigned i = arrayStart; i < arrayLength; ++i) {
+      for (unsigned j = elementStart; j < arrayElementSizeInWords; ++j) {
         unsigned k = fixedSizeInWords + j;
         if (mask[k / 32] & (static_cast<uint32_t>(1) << (k % 32))) {
           if (not w->visit
@@ -238,7 +249,7 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
 }
 
 void
-walk(Thread* t, Heap::Walker* w, object o)
+walk(Thread* t, Heap::Walker* w, object o, unsigned start)
 {
   object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
   object objectMask = static_cast<object>
@@ -255,16 +266,16 @@ walk(Thread* t, Heap::Walker* w, object o)
     memcpy(mask, &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
-    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength);
+    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
   } else if (classVmFlags(t, class_) & SingletonFlag) {
     unsigned length = singletonLength(t, o);
     if (length) {
       walk(t, w, singletonMask(t, o),
-           (singletonCount(t, o) + 2) * BytesPerWord, 0, 0);
-    } else {
+           (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
+    } else if (start == 0) {
       w->visit(0);
     }
-  } else {
+  } else if (start == 0) {
     w->visit(0);
   }
 }
@@ -1534,20 +1545,7 @@ class HeapClient: public Heap::Client {
   HeapClient(Machine* m): m(m) { }
 
   virtual void visitRoots(Heap::Visitor* v) {
-    v->visit(&(m->loader));
-    v->visit(&(m->bootstrapClassMap));
-    v->visit(&(m->monitorMap));
-    v->visit(&(m->stringMap));
-    v->visit(&(m->types));
-    v->visit(&(m->jniMethodTable));
-
-    for (Reference* r = m->jniReferences; r; r = r->next) {
-      v->visit(&(r->target));
-    }
-
-    for (Thread* t = m->rootThread; t; t = t->peer) {
-      ::visitRoots(t, v);
-    }
+    ::visitRoots(m, v);
 
     postVisit(m->rootThread, v);
   }
@@ -1616,7 +1614,7 @@ class HeapClient: public Heap::Client {
 
   virtual void walk(void* p, Heap::Walker* w) {
     object o = static_cast<object>(m->heap->follow(mask(p)));
-    ::walk(m->rootThread, w, o);
+    ::walk(m->rootThread, w, o, 0);
   }
 
   void dispose() {
@@ -1632,8 +1630,8 @@ class HeapClient: public Heap::Client {
 namespace vm {
 
 Machine::Machine(System* system, Heap* heap, Finder* finder,
-                 Processor* processor, const char* bootLibrary,
-                 const char* builtins):
+                 Processor* processor, const char** properties,
+                 unsigned propertyCount):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -1644,7 +1642,8 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   rootThread(0),
   exclusive(0),
   jniReferences(0),
-  builtins(builtins),
+  properties(properties),
+  propertyCount(propertyCount),
   activeCount(0),
   liveCount(0),
   fixedFootprint(0),
@@ -1677,7 +1676,8 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
       not system->success(system->make(&referenceLock)) or
-      not system->success(system->load(&libraries, bootLibrary, false)))
+      not system->success
+      (system->load(&libraries, findProperty(this, "avian.bootstrap"), false)))
   {
     system->abort();
   }
@@ -1705,6 +1705,8 @@ Machine::dispose()
   for (unsigned i = 0; i < heapPoolIndex; ++i) {
     heap->free(heapPool[i], Thread::HeapSizeInBytes);
   }
+
+  heap->free(properties, sizeof(const char*) * propertyCount);
 
   static_cast<HeapClient*>(heapClient)->dispose();
 
@@ -2595,12 +2597,14 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   PROTECT(t, class_);
 
   object o = 0;
-  if (classFlags(t, class_) & ACC_INTERFACE) {
-    if (classVirtualTable(t, class_)) {
-      o = findInTable
-        (t, classVirtualTable(t, class_), name, spec, methodName, methodSpec);
-    }
-  } else {
+  if ((classFlags(t, class_) & ACC_INTERFACE)
+      and classVirtualTable(t, class_))
+  {
+    o = findInTable
+      (t, classVirtualTable(t, class_), name, spec, methodName, methodSpec);
+  }
+
+  if (o == 0) {
     for (; o == 0 and class_; class_ = classSuper(t, class_)) {
       o = find(t, class_, name, spec);
     }
@@ -2763,6 +2767,44 @@ collect(Thread* t, Heap::CollectionType type)
 #ifdef VM_STRESS
   if (not stress) t->stress = false;
 #endif
+}
+
+int
+walkNext(Thread* t, object o, int previous)
+{
+  class Walker: public Heap::Walker {
+   public:
+    Walker(): value(-1) { }
+
+    bool visit(unsigned offset) {
+      value = offset;
+      return false;
+    }
+
+    int value;
+  } walker;
+
+  walk(t, &walker, o, previous + 1);
+  return walker.value;
+}
+
+void
+visitRoots(Machine* m, Heap::Visitor* v)
+{
+  v->visit(&(m->loader));
+  v->visit(&(m->bootstrapClassMap));
+  v->visit(&(m->monitorMap));
+  v->visit(&(m->stringMap));
+  v->visit(&(m->types));
+  v->visit(&(m->jniMethodTable));
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    v->visit(&(r->target));
+  }
+
+  for (Thread* t = m->rootThread; t; t = t->peer) {
+    ::visitRoots(t, v);
+  }
 }
 
 void

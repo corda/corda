@@ -301,8 +301,6 @@ class Task {
  public:
   Task(Task* next): next(next) { }
 
-  virtual ~Task() { }
-
   virtual void run(Context* c) = 0;
 
   Task* next;

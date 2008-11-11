@@ -154,6 +154,10 @@ public class StringBuilder implements CharSequence {
     return insert(i, new String(new char[] { c }, 0, 1, false));
   }
 
+  public StringBuilder insert(int i, int v) {
+    return insert(i, String.valueOf(v));
+  }
+
   public StringBuilder delete(int start, int end) {
     if (start >= end) {
       return this;
@@ -321,5 +325,11 @@ public class StringBuilder implements CharSequence {
         
   public CharSequence subSequence(int start, int end) {
     return substring(start, end);
+  }
+
+  public void setCharAt(int index, char ch) {
+    if(index < 0 || index >= length) throw new IndexOutOfBoundsException();
+    deleteCharAt(index);
+    insert(index, ch);
   }
 }

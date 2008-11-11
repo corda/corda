@@ -118,4 +118,6 @@ public abstract class ResourceBundle {
   }
 
   protected abstract Object handleGetObject(String key);
+
+  public abstract Enumeration<String> getKeys();
 }

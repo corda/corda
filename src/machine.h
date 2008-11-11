@@ -1138,7 +1138,7 @@ class Machine {
   };
 
   Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
-          const char* bootLibrary, const char* builtins);
+          const char** properties, unsigned propertyCount);
 
   ~Machine() { 
     dispose();
@@ -1159,7 +1159,8 @@ class Machine {
   Thread* rootThread;
   Thread* exclusive;
   Reference* jniReferences;
-  const char* builtins;
+  const char** properties;
+  unsigned propertyCount;
   unsigned activeCount;
   unsigned liveCount;
   unsigned fixedFootprint;
@@ -1227,7 +1228,7 @@ class Thread {
       t->protector = this;
     }
 
-    virtual ~Protector() {
+    ~Protector() {
       t->protector = next;
     }
 
@@ -1524,6 +1525,29 @@ setObjectClass(Thread*, object o, object value)
     = reinterpret_cast<object>
     (reinterpret_cast<uintptr_t>(value)
      | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
+}
+
+inline const char*
+findProperty(Machine* m, const char* name)
+{
+  for (unsigned i = 0; i < m->propertyCount; ++i) {
+    const char* p = m->properties[i];
+    const char* n = name;
+    while (*p and *p != '=' and *n and *p == *n) {
+      ++ p;
+      ++ n;
+    }
+    if (*p == '=' and *n == 0) {
+      return p + 1;
+    }
+  }
+  return 0;
+}
+
+inline const char*
+findProperty(Thread* t, const char* name)
+{
+  return findProperty(t->m, name);
 }
 
 object&
@@ -2200,6 +2224,12 @@ intern(Thread* t, object s);
 void
 exit(Thread* t);
 
+int
+walkNext(Thread* t, object o, int previous);
+
+void
+visitRoots(Machine* m, Heap::Visitor* v);
+
 inline jobject
 makeLocalReference(Thread* t, object o)
 {
@@ -2292,6 +2322,9 @@ makeSingleton(Thread* t, unsigned count)
   }
   return o;
 }
+
+void
+dumpHeap(Thread* t, FILE* out);
 
 } // namespace vm
 

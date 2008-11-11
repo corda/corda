@@ -75,6 +75,8 @@ public class Runtime {
 
   public native long totalMemory();
 
+  public static native void dumpHeap(String outputFile);
+
   private static class MyProcess extends Process {
     private long pid;
     private final int in;

@@ -21,8 +21,6 @@ class Compiler {
  public:
   class Client {
    public:
-    virtual ~Client() { }
-
     virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
     virtual intptr_t getThunk(TernaryOperation op, unsigned size) = 0;
   };
@@ -33,8 +31,6 @@ class Compiler {
   class Operand { };
   class StackElement { };
   class State { };
-
-  virtual ~Compiler() { }
 
   virtual State* saveState() = 0;
   virtual void restoreState(State* state) = 0;

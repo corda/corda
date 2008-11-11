@@ -19,7 +19,6 @@ namespace vm {
 
 class Finder {
  public:
-  virtual ~Finder() { }
   virtual System::Region* find(const char* name) = 0;
   virtual bool exists(const char* name) = 0;
   virtual const char* path() = 0;

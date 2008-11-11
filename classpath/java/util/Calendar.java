@@ -45,6 +45,12 @@ public abstract class Calendar {
     fields[field] = value;
   }
 
+  public void set(int year, int month, int date) {
+    set(YEAR, year);
+    set(MONTH, month);
+    set(DAY_OF_MONTH, date);
+  }
+
   public void setTime(Date date) {
     time = date.getTime();
   }

@@ -10,6 +10,7 @@
 
 #include "sys/stat.h"
 #include "windows.h"
+#include "sys/timeb.h"
 
 #undef max
 #undef min
@@ -40,25 +41,11 @@ class MutexResource {
   HANDLE m;
 };
 
-System::SignalHandler* segFaultHandler = 0;
-LPTOP_LEVEL_EXCEPTION_FILTER oldSegFaultHandler = 0;
+class MySystem;
+MySystem* system;
 
 LONG CALLBACK
-handleException(LPEXCEPTION_POINTERS e)
-{
-  if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-    bool jump = segFaultHandler->handleSignal
-      (reinterpret_cast<void**>(&(e->ContextRecord->Eip)),
-       reinterpret_cast<void**>(&(e->ContextRecord->Ebp)),
-       reinterpret_cast<void**>(&(e->ContextRecord->Esp)),
-       reinterpret_cast<void**>(&(e->ContextRecord->Ebx)));
-
-    if (jump) {
-      return EXCEPTION_CONTINUE_EXECUTION;
-    }
-  }
-  return EXCEPTION_CONTINUE_SEARCH;
-}
+handleException(LPEXCEPTION_POINTERS e);
 
 DWORD WINAPI
 run(void* r)
@@ -495,7 +482,14 @@ class MySystem: public System {
     System::Library* next_;
   };
 
-  MySystem() {
+  MySystem(const char* crashDumpDirectory):
+    segFaultHandler(0),
+    oldSegFaultHandler(0),
+    crashDumpDirectory(crashDumpDirectory)
+  {
+    expect(this, system == 0);
+    system = this;
+
     mutex = CreateMutex(0, false, 0);
     assert(this, mutex);
   }
@@ -721,26 +715,116 @@ class MySystem: public System {
   }
 
   virtual void abort() {
-    asm("int3");
-    ::abort();
+    // trigger an EXCEPTION_ACCESS_VIOLATION, which we will catch and
+    // generate a debug dump for
+    *static_cast<int*>(0) = 0;
   }
 
   virtual void dispose() {
+    system = 0;
     CloseHandle(mutex);
     ::free(this);
   }
 
   HANDLE mutex;
+  System::SignalHandler* segFaultHandler;
+  LPTOP_LEVEL_EXCEPTION_FILTER oldSegFaultHandler;
+  const char* crashDumpDirectory;
 };
+
+struct MINIDUMP_EXCEPTION_INFORMATION {
+  DWORD thread;
+  LPEXCEPTION_POINTERS exception;
+  BOOL exceptionInCurrentAddressSpace;
+};
+
+struct MINIDUMP_USER_STREAM_INFORMATION;
+struct MINIDUMP_CALLBACK_INFORMATION;
+
+enum MINIDUMP_TYPE {
+  MiniDumpNormal = 0
+};
+
+typedef BOOL (*MiniDumpWriteDumpType)
+(HANDLE processHandle,
+ DWORD processId,
+ HANDLE file,
+ MINIDUMP_TYPE type,
+ const MINIDUMP_EXCEPTION_INFORMATION* exception,
+ const MINIDUMP_USER_STREAM_INFORMATION* userStream,
+ const MINIDUMP_CALLBACK_INFORMATION* callback);
+
+void
+dump(LPEXCEPTION_POINTERS e, const char* directory)
+{
+  HINSTANCE dbghelp = LoadLibrary("dbghelp.dll");
+
+  if (dbghelp) {
+    MiniDumpWriteDumpType MiniDumpWriteDump = reinterpret_cast
+      <MiniDumpWriteDumpType>(GetProcAddress(dbghelp, "MiniDumpWriteDump"));
+
+    if (MiniDumpWriteDump) {
+      char name[MAX_PATH];
+      _timeb tb;
+      _ftime(&tb);
+      snprintf(name, MAX_PATH, "%s\\crash-%lld.mdmp", directory,
+               (static_cast<int64_t>(tb.time) * 1000)
+               + static_cast<int64_t>(tb.millitm));
+
+      HANDLE file = CreateFile
+        (name, FILE_WRITE_DATA, 0, 0, CREATE_ALWAYS, 0, 0);
+
+      if (file != INVALID_HANDLE_VALUE) {
+        MINIDUMP_EXCEPTION_INFORMATION exception
+          = { GetCurrentThreadId(), e, true };
+
+        MiniDumpWriteDump
+          (GetCurrentProcess(),
+           GetCurrentProcessId(),
+           file,
+           MiniDumpNormal,
+           &exception,
+           0,
+           0);
+
+        CloseHandle(file);
+      }
+    }
+
+    FreeLibrary(dbghelp);
+  }
+}
+
+LONG CALLBACK
+handleException(LPEXCEPTION_POINTERS e)
+{
+  if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+    bool jump = system->segFaultHandler->handleSignal
+      (reinterpret_cast<void**>(&(e->ContextRecord->Eip)),
+       reinterpret_cast<void**>(&(e->ContextRecord->Ebp)),
+       reinterpret_cast<void**>(&(e->ContextRecord->Esp)),
+       reinterpret_cast<void**>(&(e->ContextRecord->Ebx)));
+
+    if (jump) {
+      return EXCEPTION_CONTINUE_EXECUTION;
+    }
+  }
+
+  if (system->crashDumpDirectory) {
+    dump(e, system->crashDumpDirectory);
+  }
+
+  return EXCEPTION_CONTINUE_SEARCH;
+}
 
 } // namespace
 
 namespace vm {
 
 System*
-makeSystem()
+makeSystem(const char* crashDumpDirectory)
 {
-  return new (malloc(sizeof(MySystem))) MySystem();
+  return new (malloc(sizeof(MySystem))) MySystem(crashDumpDirectory);
 }
 
 } // namespace vm

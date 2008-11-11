@@ -74,7 +74,15 @@ public class StringBuffer implements CharSequence {
     sb.append(b, 0, b.length);
     return this;
   }
-  
+
+  public synchronized int indexOf(String s) {
+    return sb.indexOf(s);
+  }
+
+  public synchronized int indexOf(String s, int fromIndex) {
+    return sb.indexOf(s, fromIndex);
+  }
+
   public synchronized StringBuffer insert(int i, String s) {
     sb.insert(i, s);
     return this;
@@ -82,6 +90,11 @@ public class StringBuffer implements CharSequence {
 
   public synchronized StringBuffer insert(int i, char c) {
     sb.insert(i, c);
+    return this;
+  }
+
+  public synchronized StringBuffer insert(int i, int v) {
+    sb.insert(i, v);
     return this;
   }
 
@@ -110,6 +123,10 @@ public class StringBuffer implements CharSequence {
 
   public synchronized void setLength(int v) {
     sb.setLength(v);
+  }
+
+  public synchronized void setCharAt(int index, char ch) {
+    sb.setCharAt(index, ch);
   }
 
   public synchronized void getChars(int srcOffset, int srcLength, char[] dst,

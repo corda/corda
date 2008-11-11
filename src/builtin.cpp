@@ -456,6 +456,13 @@ Java_java_lang_System_getVMProperty(Thread* t, jclass, jstring name,
     r = makeLocalReference(t, makeString(t, "%s", t->m->finder->path()));
   } else if (strcmp(n, "avian.version") == 0) {
     r = makeLocalReference(t, makeString(t, AVIAN_VERSION));
+  } else if (strcmp(n, "file.encoding") == 0) {
+    r = makeLocalReference(t, makeString(t, "ASCII"));
+  } else {
+    const char* v = findProperty(t, n);
+    if (v) {
+      r = makeLocalReference(t, makeString(t, v));
+    }
   }
   
   if (r) {
@@ -536,8 +543,9 @@ Java_java_lang_Runtime_load(Thread* t, jclass, jstring name, jboolean mapName)
   char n[length + 1];
   stringChars(t, *name, n);
 
-  if (mapName and t->m->builtins) {
-    const char* s = t->m->builtins;
+  const char* builtins = findProperty(t, "avian.builtins");
+  if (mapName and builtins) {
+    const char* s = builtins;
     while (*s) {
       if (strncmp(s, n, length) == 0
           and (s[length] == ',' or s[length] == 0))
@@ -577,6 +585,30 @@ Java_java_lang_Runtime_gc(Thread* t, jobject)
 {
   collect(t, Heap::MajorCollection);
 }
+
+#ifdef AVIAN_HEAPDUMP
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_dumpHeap(Thread* t, jclass, jstring outputFile)
+{
+  ENTER(t, Thread::ActiveState);
+
+  unsigned length = stringLength(t, *outputFile);
+  char n[length + 1];
+  stringChars(t, *outputFile, n);
+  FILE* out = fopen(n, "wb");
+  if (out) {
+    { ENTER(t, Thread::ExclusiveState);
+      dumpHeap(t, out);
+    }
+    fclose(out);
+  } else {
+    object message = makeString(t, "file not found: %s", n);
+    t->exception = makeRuntimeException(t, message);
+  }
+}
+
+#endif//AVIAN_HEAPDUMP
 
 extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_exit(Thread* t, jobject, jint code)

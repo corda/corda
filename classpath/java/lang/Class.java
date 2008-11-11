@@ -219,6 +219,25 @@ public final class Class <T> {
     }
   }
 
+  public Constructor getDeclaredConstructor(Class ... parameterTypes)
+    throws NoSuchMethodException
+  {
+    Constructor c = null;
+    Constructor[] constructors = getDeclaredConstructors();
+
+    for (int i = 0; i < constructors.length; ++i) {
+      if (match(parameterTypes, constructors[i].getParameterTypes())) {
+        c = constructors[i];
+      }
+    }
+
+    if (c == null) {
+      throw new NoSuchMethodException();
+    } else {
+      return c;
+    }
+  }
+
   private int countConstructors(boolean publicOnly) {
     int count = 0;
     if (methodTable != null) {

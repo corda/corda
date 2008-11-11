@@ -32,19 +32,16 @@ class Heap: public Allocator {
 
   class Visitor {
    public:
-    virtual ~Visitor() { }
     virtual void visit(void*) = 0;
   };
 
   class Walker {
    public:
-    virtual ~Walker() { }
     virtual bool visit(unsigned) = 0;
   };
 
   class Client {
    public:
-    virtual ~Client() { }
     virtual void collect(void* context, CollectionType type) = 0;
     virtual void visitRoots(Visitor*) = 0;
     virtual bool isFixed(void*) = 0;
@@ -54,7 +51,6 @@ class Heap: public Allocator {
     virtual void walk(void*, Walker*) = 0;
   };
 
-  virtual ~Heap() { }
   virtual void setClient(Client* client) = 0;
   virtual void collect(CollectionType type, unsigned footprint) = 0;
   virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,

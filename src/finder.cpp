@@ -52,7 +52,7 @@ equal(const void* a, unsigned al, const void* b, unsigned bl)
 class Element {
  public:
   Element(): next(0) { }
-  virtual ~Element() { }
+
   virtual System::Region* find(const char* name) = 0;
   virtual bool exists(const char* name) = 0;
   virtual void dispose() = 0;
@@ -372,7 +372,7 @@ class JarIndex {
 class JarElement: public Element {
  public:
   JarElement(System* s, const char* name):
-    s(s), name(name), index(0)
+    s(s), name(name), region(0), index(0)
   { }
 
   virtual void init() {

@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool Verbose = true;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -2387,7 +2387,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case goto_: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
       c->jmp(frame->machineIp(newIp));
@@ -2395,7 +2396,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case goto_w: {
-      uint32_t newIp = (ip - 5) + codeReadInt32(t, code, ip);
+      uint32_t offset = codeReadInt32(t, code, ip);
+      uint32_t newIp = (ip - 5) + offset;
       assert(t, newIp < codeLength(t, code));
 
       c->jmp(frame->machineIp(newIp));
@@ -2480,7 +2482,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case if_acmpeq:
     case if_acmpne: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
         
       Compiler::Operand* a = frame->popObject();
@@ -2504,7 +2507,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case if_icmpge:
     case if_icmplt:
     case if_icmple: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
         
       Compiler::Operand* a = frame->popInt();
@@ -2543,7 +2547,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case ifge:
     case iflt:
     case ifle: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
       Compiler::Operand* a = frame->popInt();
@@ -2577,7 +2582,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case ifnull:
     case ifnonnull: {
-      uint32_t newIp = (ip - 3) + codeReadInt16(t, code, ip);
+      uint32_t offset = codeReadInt16(t, code, ip);
+      uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
       Compiler::Operand* a = frame->popObject();
@@ -2824,14 +2830,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint32_t newIp;
 
       if (instruction == jsr) {
-        newIp = (ip - 3) + codeReadInt16(t, code, ip);
+        uint32_t offset = codeReadInt16(t, code, ip);
+        newIp = (ip - 3) + offset;
       } else {
-        newIp = (ip - 5) + codeReadInt32(t, code, ip);
+        uint32_t offset = codeReadInt32(t, code, ip);
+        newIp = (ip - 5) + offset;
       }
 
       assert(t, newIp < codeLength(t, code));
 
       // todo: flush stack to memory here
+      abort(t);
+
       Compiler::State* state = c->saveState();
 
       frame->pushAddress(frame->machineIp(ip));
@@ -3447,12 +3457,26 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 }
 
 void
-logCompile(const void* code, unsigned size, const char* class_,
+logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
            const char* name, const char* spec)
 {
-  fprintf(stderr, "%s.%s%s: %p %p\n",
-          class_, name, spec, code,
-          static_cast<const uint8_t*>(code) + size);
+  static FILE* log = 0;
+  static bool open = false;
+  if (not open) {
+    open = true;
+    const char* path = findProperty(t, "avian.jit.log");
+    if (name) {
+      log = fopen(path, "wb");
+    } else if (DebugCompile) {
+      log = stderr;
+    }
+  }
+
+  if (log) {
+    fprintf(log, "%p %p %s.%s%s\n",
+            code, static_cast<const uint8_t*>(code) + size,
+            class_, name, spec);
+  }
 }
 
 void
@@ -3717,9 +3741,7 @@ finish(MyThread* t, Assembler* a, const char* name)
 
   a->writeTo(start);
 
-  if (Verbose) {
-    logCompile(start, a->length(), 0, name, 0);
-  }
+  logCompile(t, start, a->length(), 0, name, 0);
 
   return result;
 }
@@ -3861,16 +3883,14 @@ finish(MyThread* t, Context* context)
     set(t, result, SingletonBody + offset, p->value);
   }
 
-  if (Verbose) {
-    logCompile
-      (start, codeSize,
-       reinterpret_cast<const char*>
-       (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       reinterpret_cast<const char*>
-       (&byteArrayBody(t, methodName(t, context->method), 0)),
-       reinterpret_cast<const char*>
-       (&byteArrayBody(t, methodSpec(t, context->method), 0)));
-  }
+  logCompile
+    (t, start, codeSize,
+     reinterpret_cast<const char*>
+     (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
+     reinterpret_cast<const char*>
+     (&byteArrayBody(t, methodName(t, context->method), 0)),
+     reinterpret_cast<const char*>
+     (&byteArrayBody(t, methodSpec(t, context->method), 0)));
 
   // for debugging:
   if (false and
@@ -5092,10 +5112,7 @@ compileThunks(MyThread* t, MyProcessor* p)
   uint8_t* start = reinterpret_cast<uint8_t*>
     (&singletonValue(t, p->thunkTable, 0));
 
-  if (Verbose) {
-    logCompile(start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
-    fprintf(stderr, "thunk size: %d\n", p->thunkSize);
-  }
+  logCompile(t, start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
 
   tableContext.promise.resolved_ = true;
 

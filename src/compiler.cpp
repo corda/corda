@@ -86,8 +86,6 @@ class Site {
  public:
   Site(): next(0) { }
   
-  virtual ~Site() { }
-
   virtual Site* readTarget(Context*, Read*) { return this; }
 
   virtual void toString(Context*, char*, unsigned) = 0;
@@ -219,8 +217,6 @@ class Read {
     value(0), event(0), eventNext(0), size(size)
   { }
 
-  virtual ~Read() { }
-
   virtual Site* pickSite(Context* c, Value* v, bool includeBuddies) = 0;
 
   virtual Site* allocateSite(Context* c) = 0;
@@ -256,8 +252,6 @@ class Value: public Compiler::Operand {
     reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
     local(false)
   { }
-
-  virtual ~Value() { }
 
   virtual void addPredecessor(Context*, Event*) { }
   
@@ -558,8 +552,6 @@ class Event {
     visitLinks(0), block(0), logicalInstruction(c->logicalCode[c->logicalIp]),
     readCount(0)
   { }
-
-  virtual ~Event() { }
 
   virtual const char* name() = 0;
 

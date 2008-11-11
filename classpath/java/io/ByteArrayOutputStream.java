@@ -24,6 +24,13 @@ public class ByteArrayOutputStream extends OutputStream {
     this(0);
   }
 
+  public void reset() {
+    chain = null;
+    length = 0;
+    buffer = null;
+    position = 0;
+  }
+
   public int size() {
     return length;
   }
