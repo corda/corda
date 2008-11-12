@@ -2485,9 +2485,7 @@ class MoveEvent: public Event {
 
     if (cost == 0) {
       target = src->source;
-    }
 
-    if (target == src->source) {
       addBuddy(src, dst);
 
       if (DebugMoves) {
