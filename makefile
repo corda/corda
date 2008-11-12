@@ -336,6 +336,8 @@ $(test-dep): $(test-sources)
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-classes))
+	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(dir $(@)) \
+		test/Subroutine.java
 	@touch $(@)
 
 define compile-object
