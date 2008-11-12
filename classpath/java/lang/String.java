@@ -52,7 +52,7 @@ public final class String implements Comparable<String>, CharSequence {
     throws UnsupportedEncodingException
     {
       this(data);
-      if (! charset.equals("US-ASCII")) {
+      if (! charset.equals("UTF-8")) {
         throw new UnsupportedEncodingException(charset);
       }
     }
