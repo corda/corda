@@ -632,7 +632,7 @@ negateR(Context* c, unsigned size, Assembler::Register* a)
 
 void
 negateRR(Context* c, unsigned aSize, Assembler::Register* a,
-         unsigned bSize, Assembler::Register* b)
+         unsigned bSize UNUSED, Assembler::Register* b UNUSED)
 {
   assert(c, aSize == bSize);
   assert(c, a == b);
@@ -1387,7 +1387,7 @@ xorCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
 void
 multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
-           unsigned bSize, Assembler::Register* b)
+           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
 
@@ -1576,7 +1576,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
 
 void
 divideRR(Context* c, unsigned aSize, Assembler::Register* a,
-         unsigned bSize, Assembler::Register* b UNUSED)
+         unsigned bSize UNUSED, Assembler::Register* b UNUSED)
 {
   assert(c, BytesPerWord == 8 or aSize == 4);
   assert(c, aSize == bSize);
@@ -1612,7 +1612,7 @@ divideCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
 void
 remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
-            unsigned bSize, Assembler::Register* b)
+            unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, BytesPerWord == 8 or aSize == 4);
   assert(c, aSize == bSize);
@@ -2279,7 +2279,8 @@ class MyAssembler: public Assembler {
   virtual void apply(TernaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType, Operand* bOperand,
-                     unsigned cSize, OperandType cType, Operand* cOperand)
+                     unsigned cSize UNUSED, OperandType cType UNUSED,
+                     Operand* cOperand UNUSED)
   {
     assert(&c, bSize == cSize);
     assert(&c, bType == cType);

@@ -812,7 +812,7 @@ liveNext(Context* c, Value* v)
 }
 
 void
-nextRead(Context* c, Event* e, Value* v)
+nextRead(Context* c, Event* e UNUSED, Value* v)
 {
   assert(c, e == v->reads->event);
 
@@ -1367,7 +1367,7 @@ class SingleRead: public Read {
     return true;
   }
 
-  virtual void append(Context* c, Read* r) {
+  virtual void append(Context* c UNUSED, Read* r) {
     assert(c, next_ == 0);
     next_ = r;
   }
@@ -1575,7 +1575,7 @@ class StubRead: public Read {
     return true;
   }
 
-  virtual void append(Context* c, Read* r) {
+  virtual void append(Context* c UNUSED, Read* r) {
     assert(c, next_ == 0);
     next_ = r;
   }
