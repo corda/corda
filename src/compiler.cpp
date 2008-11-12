@@ -2446,6 +2446,21 @@ maybePreserve(Context* c, Stack* stack, Local* locals, unsigned size,
   }
 }
 
+void
+addBuddy(Value* original, Value* buddy)
+{
+  buddy->buddy = original;
+  Value* p = original;
+  while (p->buddy != original) p = p->buddy;
+  p->buddy = buddy;
+
+//     fprintf(stderr, "add buddy %p to", buddy);
+//     for (Value* p = buddy->buddy; p != buddy; p = p->buddy) {
+//       fprintf(stderr, " %p", p);
+//     }
+//     fprintf(stderr, "\n");
+}
+
 class MoveEvent: public Event {
  public:
   MoveEvent(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
@@ -2465,8 +2480,15 @@ class MoveEvent: public Event {
 
     Site* target = targetOrRegister(c, dst);
     unsigned cost = src->source->copyCost(c, target);
+
+    if (srcSize != dstSize) cost = 1;
+
     if (cost == 0) {
       target = src->source;
+    }
+
+    if (target == src->source) {
+      addBuddy(src, dst);
 
       if (DebugMoves) {
         char dstb[256]; target->toString(c, dstb, 256);
@@ -2474,16 +2496,11 @@ class MoveEvent: public Event {
       }
     }
 
-    if (target == src->source) {
-      maybePreserve(c, stackBefore, localsBefore, srcSize, src, target);
-      removeSite(c, src, target);
-    }
-
     if (not isStore) {
       addSite(c, stackBefore, localsBefore, dstSize, dst, target);
     }
 
-    if (cost or srcSize != dstSize) {    
+    if (cost) {    
       uint8_t typeMask = ~static_cast<uint8_t>(0);
       uint64_t registerMask = ~static_cast<uint64_t>(0);
       int frameIndex = AnyFrameIndex;
@@ -3287,16 +3304,7 @@ class BuddyEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    buddy->buddy = original;
-    Value* p = original;
-    while (p->buddy != original) p = p->buddy;
-    p->buddy = buddy;
-    
-//     fprintf(stderr, "add buddy %p to", buddy);
-//     for (Value* p = buddy->buddy; p != buddy; p = p->buddy) {
-//       fprintf(stderr, " %p", p);
-//     }
-//     fprintf(stderr, "\n");
+    addBuddy(original, buddy);
 
     nextRead(c, this, original);
   }
