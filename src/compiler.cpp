@@ -164,11 +164,18 @@ class ForkState: public Compiler::State {
   ForkElement elements[0];
 };
 
+class MySubroutine: public Compiler::Subroutine {
+ public:
+  MySubroutine(): forkState(0) { }
+
+  ForkState* forkState;
+};
+
 class LogicalInstruction {
  public:
   LogicalInstruction(int index, Stack* stack, Local* locals):
     firstEvent(0), lastEvent(0), immediatePredecessor(0), stack(stack),
-    locals(locals), machineOffset(0), index(index)
+    locals(locals), machineOffset(0), subroutine(0), index(index)
   { }
 
   Event* firstEvent;
@@ -177,6 +184,7 @@ class LogicalInstruction {
   Stack* stack;
   Local* locals;
   Promise* machineOffset;
+  MySubroutine* subroutine;
   int index;
 };
 
@@ -293,6 +301,7 @@ class Context {
     firstEvent(0),
     lastEvent(0),
     forkState(0),
+    subroutine(0),
     logicalIp(-1),
     constantCount(0),
     logicalCodeLength(0),
@@ -331,6 +340,7 @@ class Context {
   Event* firstEvent;
   Event* lastEvent;
   ForkState* forkState;
+  MySubroutine* subroutine;
   int logicalIp;
   unsigned constantCount;
   unsigned logicalCodeLength;
@@ -3237,7 +3247,9 @@ class FrameSiteEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    addSite(c, stackBefore, localsBefore, size, value, frameSite(c, index));
+    if (live(value)) {
+      addSite(c, stackBefore, localsBefore, size, value, frameSite(c, index));
+    }
   }
 
   Value* value;
@@ -4005,12 +4017,30 @@ class MyCompiler: public Compiler {
     return ::saveState(&c);
   }
 
-  virtual void save(unsigned footprint, Operand* value) {
-    c.saved = savedValue(&c, static_cast<Value*>(value), footprint, c.saved);
-  }
-
   virtual void restoreState(State* state) {
     ::restoreState(&c, static_cast<ForkState*>(state));
+  }
+
+  virtual Subroutine* startSubroutine() {
+    return c.subroutine = new (c.zone->allocate(sizeof(MySubroutine)))
+      MySubroutine;
+  }
+
+  virtual void endSubroutine(Subroutine* subroutine) {
+    MySubroutine* sr = static_cast<MySubroutine*>(subroutine);
+    if (sr->forkState) {
+      fprintf(stderr, "restore sr forkstate\n");
+      Local* locals = c.locals;
+      ::restoreState(&c, sr->forkState);
+      for (int i = c.localFootprint - 1; i >= 0; --i) {
+        if (locals[i].value and c.locals[i].value == 0) {
+          storeLocal(locals[i].footprint, locals[i].value, i);
+        }
+      }
+    } else {
+      fprintf(stderr, "save sr forkstate\n");
+      sr->forkState = ::saveState(&c);
+    }
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -4075,6 +4105,12 @@ class MyCompiler: public Compiler {
       populateJunctionReads(&c, e->predecessors);
     }
 
+    if (c.subroutine) {
+      c.subroutine->forkState
+        = c.logicalCode[logicalIp]->subroutine->forkState;
+      c.subroutine = 0;
+    }
+
     c.forkState = false;
   }
 
@@ -4095,6 +4131,11 @@ class MyCompiler: public Compiler {
     c.logicalCode[logicalIp] = new 
       (c.zone->allocate(sizeof(LogicalInstruction)))
       LogicalInstruction(logicalIp, c.stack, c.locals);
+
+    if (c.subroutine) {
+      c.logicalCode[logicalIp]->subroutine = c.subroutine;
+      c.subroutine = 0;
+    }
 
     c.logicalIp = logicalIp;
   }
@@ -4175,6 +4216,10 @@ class MyCompiler: public Compiler {
 
   virtual void push(unsigned footprint, Operand* value) {
     ::push(&c, footprint, static_cast<Value*>(value));
+  }
+
+  virtual void save(unsigned footprint, Operand* value) {
+    c.saved = savedValue(&c, static_cast<Value*>(value), footprint, c.saved);
   }
 
   virtual Operand* pop(unsigned footprint) {

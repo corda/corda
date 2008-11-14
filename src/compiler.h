@@ -31,9 +31,13 @@ class Compiler {
   class Operand { };
   class StackElement { };
   class State { };
+  class Subroutine { };
 
   virtual State* saveState() = 0;
   virtual void restoreState(State* state) = 0;
+
+  virtual Subroutine* startSubroutine() = 0;
+  virtual void endSubroutine(Subroutine* subroutine) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned alignedFrameSize) = 0;

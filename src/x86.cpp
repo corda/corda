@@ -257,26 +257,41 @@ appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
 
 class ImmediateTask: public Task {
  public:
-  ImmediateTask(Task* next, Promise* promise, Promise* offset):
+  ImmediateTask(Task* next, Promise* promise, Promise* offset, unsigned size):
     Task(next),
     promise(promise),
-    offset(offset)
+    offset(offset),
+    size(size)
   { }
 
   virtual void run(Context* c) {
-    intptr_t v = promise->value();
-    memcpy(c->result + offset->value(), &v, BytesPerWord);
+    switch (size) {
+    case 4: {
+      int32_t v = promise->value();
+      memcpy(c->result + offset->value(), &v, size);
+    } break;
+
+    case 8: {
+      int64_t v = promise->value();
+      memcpy(c->result + offset->value(), &v, size);
+    } break;
+
+    default:
+      abort(c);
+    }
   }
 
   Promise* promise;
   Promise* offset;
+  unsigned size;
 };
 
 void
-appendImmediateTask(Context* c, Promise* promise, Promise* offset)
+appendImmediateTask(Context* c, Promise* promise, Promise* offset,
+                    unsigned size)
 {
   c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
-    (c->tasks, promise, offset);
+    (c->tasks, promise, offset, size);
 }
 
 class AlignmentPadding {
@@ -885,10 +900,36 @@ moveCR(Context* c, unsigned, Assembler::Constant* a,
     if (a->value->resolved()) {
       c->code.appendAddress(a->value->value());
     } else {
-      appendImmediateTask(c, a->value, offset(c));
+      appendImmediateTask(c, a->value, offset(c), BytesPerWord);
       c->code.appendAddress(static_cast<uintptr_t>(0));
     }
   }
+}
+
+class ShiftMaskPromise: public Promise {
+ public:
+  ShiftMaskPromise(Promise* base, unsigned shift, int64_t mask):
+    base(base), shift(shift), mask(mask)
+  { }
+
+  virtual int64_t value() {
+    return (base->value() >> shift) & mask;
+  }
+
+  virtual bool resolved() {
+    return base->resolved();
+  }
+
+  Promise* base;
+  unsigned shift;
+  int64_t mask;
+};
+
+ShiftMaskPromise*
+shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
+{
+  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
+    ShiftMaskPromise(base, shift, mask);
 }
 
 void
@@ -911,19 +952,14 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
     if (a->value->resolved()) {
       c->code.append4(a->value->value());
     } else {
-      appendImmediateTask(c, a->value, offset(c));
+      appendImmediateTask(c, a->value, offset(c), 4);
       c->code.append4(0);
     }
     break;
 
   case 8: {
-    int64_t v = a->value->value();
-
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
+    Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
+    Assembler::Constant al(shiftMaskPromise(c, a->value, 0, 0xFFFFFFFF));
 
     Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
 

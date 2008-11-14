@@ -2839,22 +2839,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, newIp < codeLength(t, code));
 
-      // todo: flush stack to memory here
-      abort(t);
-
-      Compiler::State* state = c->saveState();
-
       frame->pushAddress(frame->machineIp(ip));
       c->jmp(frame->machineIp(newIp));
 
-      // NB: we assume that the stack will look the same on return
-      // from the subroutine as at call time.
+      Compiler::Subroutine* sr = c->startSubroutine();
+
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
 
-      frame->pop(1);
+      frame->poppedInt();
 
-      c->restoreState(state);
+      c->endSubroutine(sr);
     } break;
 
     case l2d: {

@@ -21,9 +21,12 @@ public class Subroutine {
         Integer.valueOf(z).toString();
       } finally {
         a = x + y;
+        System.gc();
       }
       expect(a == x + y);
-    } catch (DummyException ignored) { }
+    } catch (DummyException e) {
+      e.printStackTrace();
+    }
   }
 
   public static void main(String[] args) {
