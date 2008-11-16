@@ -2911,7 +2911,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         // wasn't already a live value there, which is something we
         // should verify once we have complete data flow information
         // (todo).
-        c->storeLocal(BytesPerWord, c->constant(0), index);
+        c->storeLocal(1, c->constant(0), index);
         frame->storedObject(index);
       }
 

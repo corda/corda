@@ -4029,16 +4029,8 @@ class MyCompiler: public Compiler {
   virtual void endSubroutine(Subroutine* subroutine) {
     MySubroutine* sr = static_cast<MySubroutine*>(subroutine);
     if (sr->forkState) {
-      fprintf(stderr, "restore sr forkstate\n");
-      Local* locals = c.locals;
       ::restoreState(&c, sr->forkState);
-      for (int i = c.localFootprint - 1; i >= 0; --i) {
-        if (locals[i].value and c.locals[i].value == 0) {
-          storeLocal(locals[i].footprint, locals[i].value, i);
-        }
-      }
     } else {
-      fprintf(stderr, "save sr forkstate\n");
       sr->forkState = ::saveState(&c);
     }
   }
