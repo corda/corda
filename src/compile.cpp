@@ -1764,6 +1764,67 @@ handleExit(MyThread* t, Frame* frame)
     (t, frame, getThunk(t, releaseMonitorForObjectThunk));
 }
 
+int
+exceptionIndex(MyThread* t, object code, unsigned jsrIp, unsigned dstIp)
+{
+  object table = codeExceptionHandlerTable(t, code);
+  unsigned length = exceptionHandlerTableLength(t, table);
+  for (unsigned i = 0; i < length; ++i) {
+    ExceptionHandler* eh = exceptionHandlerTableBody(t, table, i);
+    if (exceptionHandlerCatchType(eh) == 0) {
+      unsigned ip = exceptionHandlerIp(eh);
+      unsigned index;
+      switch (codeBody(t, code, ip++)) {
+      case astore:
+        index = codeBody(t, code, ip++);
+        break;
+
+      case astore_0:
+        index = 0;
+        break;
+
+      case astore_1:
+        index = 1;
+        break;
+
+      case astore_2:
+        index = 2;
+        break;
+
+      case astore_3:
+        index = 3;
+        break;
+
+      default: abort(t);
+      }
+
+      if (ip == jsrIp) {
+        return -1;
+      }
+
+      switch (codeBody(t, code, ip++)) {
+      case jsr: {
+        uint32_t offset = codeReadInt16(t, code, ip);
+        if ((ip - 3) + offset == dstIp) {
+          return index;
+        }
+      } break;
+
+      case jsr_w: {
+        uint32_t offset = codeReadInt32(t, code, ip);
+        if ((ip - 5) + offset == dstIp) {
+          return index;
+        }
+      } break;
+
+      default: break;
+      }
+    }
+  }
+
+  abort(t);
+}
+
 void
 compile(MyThread* t, Frame* initialFrame, unsigned ip,
         bool exceptionHandler = false)
@@ -2783,17 +2844,32 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case jsr:
     case jsr_w: {
+      uint32_t thisIp;
       uint32_t newIp;
 
       if (instruction == jsr) {
         uint32_t offset = codeReadInt16(t, code, ip);
-        newIp = (ip - 3) + offset;
+        thisIp = ip - 3;
+        newIp = thisIp + offset;
       } else {
         uint32_t offset = codeReadInt32(t, code, ip);
-        newIp = (ip - 5) + offset;
+        thisIp = ip - 5;
+        newIp = thisIp + offset;
       }
 
       assert(t, newIp < codeLength(t, code));
+
+      int index = exceptionIndex(t, code, thisIp, newIp);
+      if (index >= 0) {
+        // store a null pointer at the same index the exception would
+        // be stored in the finally block so we can safely treat that
+        // location as a GC root.  Of course, this assumes there
+        // wasn't already a live value there, which is something we
+        // should verify once we have complete data flow information
+        // (todo).
+        c->storeLocal(BytesPerWord, c->constant(0), index);
+        frame->storedObject(index);
+      }
 
       c->saveStack();
 
