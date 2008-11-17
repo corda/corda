@@ -1972,12 +1972,12 @@ swap(Context* c, Register* a, Register* b)
 }
 
 Register*
-replace(Context* c, Stack* stack, Local* locals, Register* r)
+replace(Context* c, Register* r, Value* newValue, Stack* stack, Local* locals)
 {
   uint32_t mask = (r->freezeCount? r->site->mask : ~0);
 
   freeze(c, r);
-  Register* s = acquire(c, mask, stack, locals, r->size, r->value, r->site);
+  Register* s = acquire(c, mask, stack, locals, r->size, newValue, r->site);
   thaw(c, r);
 
   if (DebugRegisters) {
@@ -2005,7 +2005,7 @@ acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
   }
 
   if (r->refCount) {
-    r = replace(c, stack, locals, r);
+    r = replace(c, r, newValue, stack, locals);
   } else {
     Value* oldValue = r->value;
     if (oldValue
@@ -2013,7 +2013,7 @@ acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
         and findSite(c, oldValue, r->site))
     {
       if (not trySteal(c, r, newValue, stack, locals)) {
-        r = replace(c, stack, locals, r);
+        r = replace(c, r, newValue, stack, locals);
       }
     }
   }
