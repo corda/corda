@@ -10,7 +10,7 @@ public class Subroutine {
   //
   // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4381996
   //
-  private static void test(boolean throw_) {
+  private static void test(boolean throw_, boolean predicate) {
     int x = 42;
     int y = 99;
     int a = 0;
@@ -18,6 +18,9 @@ public class Subroutine {
       try {
         int z = x + y;
         if (throw_) throw new DummyException();
+        if (predicate) {
+          return;
+        }
         Integer.valueOf(z).toString();
       } finally {
         a = x + y;
@@ -30,8 +33,9 @@ public class Subroutine {
   }
 
   public static void main(String[] args) {
-    test(false);
-    test(true);
+    test(false, false);
+    test(false, true);
+    test(true, false);
   }
 
   private static class DummyException extends RuntimeException { }
