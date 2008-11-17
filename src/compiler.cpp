@@ -209,6 +209,8 @@ class FrameResource {
   Value* value;
   MemorySite* site;
   unsigned size;
+  bool frozen;
+  bool includeNeighbor;
 };
 
 class ConstantPoolNode {
@@ -258,7 +260,7 @@ class Value: public Compiler::Operand {
  public:
   Value(Site* site, Site* target):
     reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
-    local(false)
+    local(false), thief(false)
   { }
 
   virtual void addPredecessor(Context*, Event*) { }
@@ -270,6 +272,7 @@ class Value: public Compiler::Operand {
   Site* target;
   Value* buddy;
   bool local;
+  bool thief;
 };
 
 enum Pass {
@@ -1053,7 +1056,7 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual void freeze(Context* c UNUSED) {
+  virtual void freeze(Context* c) {
     assert(c, low);
 
     ::freeze(c, low);
@@ -1062,7 +1065,7 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual void thaw(Context* c UNUSED) {
+  virtual void thaw(Context* c) {
     assert(c, low);
 
     ::thaw(c, low);
@@ -1161,10 +1164,16 @@ decrement(Context* c UNUSED, Register* r)
 void
 acquireFrameIndex(Context* c, int index, Stack* stack, Local* locals,
                   unsigned newSize, Value* newValue, MemorySite* newSite,
-                  bool recurse = true);
+                  bool includeNeighbor);
 
 void
-releaseFrameIndex(Context* c, int index, bool recurse = true);
+releaseFrameIndex(Context* c, int index);
+
+void
+freezeFrameIndex(Context* c, int index);
+
+void
+thawFrameIndex(Context* c, int index);
 
 MemorySite*
 memorySite(Context* c, int base, int offset = 0, int index = NoRegister,
@@ -1240,7 +1249,7 @@ class MemorySite: public Site {
       assert(c, value.index == NoRegister);
       acquireFrameIndex
         (c, offsetToFrameIndex(c, value.offset), stack, locals, size, v,
-         this);
+         this, true);
     }
   }
 
@@ -1253,6 +1262,18 @@ class MemorySite: public Site {
     decrement(c, base);
     if (index) {
       decrement(c, index);
+    }
+  }
+
+  virtual void freeze(Context* c) {
+    if (value.base == c->arch->stack()) {
+      freezeFrameIndex(c, offsetToFrameIndex(c, value.offset));
+    }
+  }
+
+  virtual void thaw(Context* c) {
+    if (value.base == c->arch->stack()) {
+      thawFrameIndex(c, offsetToFrameIndex(c, value.offset));
     }
   }
 
@@ -1711,67 +1732,88 @@ find(Value* needle, Value* haystack)
 }
 
 bool
-trySteal(Context* c, Site* site, Value* v, unsigned size, Stack* stack,
-         Local* locals, int avoid)
+save(Context* c, Site* src, Value* v, unsigned size, Stack* stack,
+     Local* locals, int avoid, bool includeNeighbor)
 {
-  if (not hasMoreThanOneSite(v)) {
-    Read* r = live(v);
-    if (r->pickSite(c, v, true)) {
-      int index = NoFrameIndex;
-      for (unsigned li = 0; li < c->localFootprint; ++li) {
-        Local* local = locals + li;
-        if (find(v, local->value)) {
-          int fi = frameIndex(c, li, local->footprint);
-          if (fi != avoid) {
-            index = fi;
-            break;
-          }
-        }
+  int index = NoFrameIndex;
+  int avoid2 = (includeNeighbor ? avoid + 1 : NoFrameIndex);
+  for (unsigned li = 0; li < c->localFootprint; ++li) {
+    Local* local = locals + li;
+    if (find(v, local->value)) {
+      int fi = frameIndex(c, li, local->footprint);
+      if (fi != avoid and fi != avoid2) {
+        index = fi;
+        break;
       }
-
-      if (index == NoFrameIndex) {
-        for (Stack* s = stack; s; s = s->next) {
-          if (find(v, s->value)) {
-            uint8_t typeMask;
-            uint64_t registerMask;
-            int frameIndex = AnyFrameIndex;
-            live(v)->intersect(&typeMask, &registerMask, &frameIndex);
-
-            if (frameIndex >= 0 and frameIndex != avoid) {
-              index = frameIndex;
-              break;
-            } else {
-              int fi = ::frameIndex
-                (c, s->index + c->localFootprint, s->footprint);
-              if (fi != avoid) {
-                index = fi;
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (index != NoFrameIndex) {
-        move(c, stack, locals, size, v, site, frameSite(c, index));
-      } else {
-        if (DebugRegisters or DebugFrameIndexes) {
-          fprintf(stderr, "unable to steal %p from %p\n", site, v);
-        }
-        return false;
-      }
-    } else {
-      move(c, stack, locals, size, v, site, r->allocateSite(c));      
     }
   }
 
-  removeSite(c, v, site);
+  if (index == NoFrameIndex) {
+    for (Stack* s = stack; s; s = s->next) {
+      if (find(v, s->value)) {
+        int fi = ::frameIndex
+          (c, s->index + c->localFootprint, s->footprint);
+        if (fi != avoid and fi != avoid2) {
+          index = fi;
+          break;
+        }
+      }
+    }
+  }
 
-  return true;
+  if (index != NoFrameIndex) {
+    move(c, stack, locals, size, v, src, frameSite(c, index));
+    return true;
+  } else {
+    if (DebugRegisters or DebugFrameIndexes) {
+      fprintf(stderr, "unable to save %p\n", v);
+    }
+    return false;
+  }
 }
 
 bool
-trySteal(Context* c, Register* r, Stack* stack, Local* locals)
+trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
+         Stack* stack, Local* locals, int avoid, bool includeNeighbor)
+{
+  bool success = true;
+  if (not hasMoreThanOneSite(victim)) {
+    thief->thief = true;
+
+    Read* read = live(victim);
+    uint8_t typeMask = ~static_cast<uint8_t>(0);
+    uint64_t registerMask = ~static_cast<uint64_t>(0);
+    int frameIndex = AnyFrameIndex;
+    read->intersect(&typeMask, &registerMask, &frameIndex);
+
+    if (pickSite(c, victim, typeMask, registerMask, frameIndex, true)
+        or victim->thief)
+    {
+      success = save(c, site, victim, size, stack, locals, avoid,
+                     includeNeighbor);
+    } else {
+      Site* s = allocateSite(c, typeMask, registerMask, frameIndex);
+      if (s) {
+        move(c, stack, locals, size, victim, site, s);
+        success = true;
+      } else {
+        success = save(c, site, victim, size, stack, locals, avoid,
+                       includeNeighbor);
+      }
+    }
+
+    thief->thief = false;
+  }
+
+  if (success) {
+    removeSite(c, victim, site);
+  }
+
+  return success;
+}
+
+bool
+trySteal(Context* c, Register* r, Value* thief, Stack* stack, Local* locals)
 {
   assert(c, r->refCount == 0);
 
@@ -1782,7 +1824,8 @@ trySteal(Context* c, Register* r, Stack* stack, Local* locals)
     fprintf(stderr, "try steal %d from %p\n", r->number, v);
   }
 
-  return trySteal(c, r->site, r->value, r->size, stack, locals, NoFrameIndex);
+  return trySteal(c, r->site, thief, r->value, r->size, stack, locals,
+                  NoFrameIndex, 0);
 }
 
 bool
@@ -1969,7 +2012,7 @@ acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
         and oldValue != newValue
         and findSite(c, oldValue, r->site))
     {
-      if (not trySteal(c, r, stack, locals)) {
+      if (not trySteal(c, r, newValue, stack, locals)) {
         r = replace(c, stack, locals, r);
       }
     }
@@ -2035,7 +2078,8 @@ validate(Context* c, uint32_t mask, Stack* stack, Local* locals,
 }
 
 bool
-trySteal(Context* c, FrameResource* r, Stack* stack, Local* locals)
+trySteal(Context* c, FrameResource* r, Value* thief, Stack* stack,
+         Local* locals)
 {
   assert(c, live(r->value));
 
@@ -2046,14 +2090,14 @@ trySteal(Context* c, FrameResource* r, Stack* stack, Local* locals)
             index, frameIndexToOffset(c, index), r->value, r->site);
   }
 
-  return trySteal(c, r->site, r->value, r->size, stack, locals,
-                  r - c->frameResources);
+  return trySteal(c, r->site, thief, r->value, r->size, stack, locals,
+                  r - c->frameResources, r->includeNeighbor);
 }
 
 void
 acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
                   unsigned newSize, Value* newValue, MemorySite* newSite,
-                  bool recurse)
+                  bool includeNeighbor)
 {
   assert(c, frameIndex >= 0);
   assert(c, frameIndex < static_cast<int>
@@ -2066,8 +2110,11 @@ acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
   }
 
   FrameResource* r = c->frameResources + frameIndex;
+  expect(c, not r->frozen);
 
-  if (recurse and newSize > BytesPerWord) {
+  includeNeighbor &= newSize > BytesPerWord;
+
+  if (includeNeighbor) {
     acquireFrameIndex
       (c, frameIndex + 1, stack, locals, newSize, newValue, newSite, false);
   }
@@ -2077,18 +2124,19 @@ acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
       and oldValue != newValue
       and findSite(c, oldValue, r->site))
   {
-    if (not trySteal(c, r, stack, locals)) {
+    if (not trySteal(c, r, newValue, stack, locals)) {
       abort(c);
     }
   }
 
+  r->includeNeighbor = includeNeighbor;
   r->size = newSize;
   r->value = newValue;
   r->site = newSite;
 }
 
 void
-releaseFrameIndex(Context* c, int frameIndex, bool recurse)
+releaseFrameIndex(Context* c, int frameIndex)
 {
   assert(c, frameIndex >= 0);
   assert(c, frameIndex < static_cast<int>
@@ -2101,13 +2149,47 @@ releaseFrameIndex(Context* c, int frameIndex, bool recurse)
 
   FrameResource* r = c->frameResources + frameIndex;
 
-  if (recurse and r->size > BytesPerWord) {
-    releaseFrameIndex(c, frameIndex + 1, false);
+  if (r->includeNeighbor) {
+    releaseFrameIndex(c, frameIndex + 1);
   }
 
   r->size = 0;
   r->value = 0;
   r->site = 0;
+}
+
+void
+freezeFrameIndex(Context* c, int frameIndex)
+{
+  assert(c, frameIndex >= 0);
+  assert(c, frameIndex < static_cast<int>
+         (c->alignedFrameSize + c->parameterFootprint));
+
+  FrameResource* r = c->frameResources + frameIndex;
+  assert(c, not r->frozen);
+
+  if (r->includeNeighbor) {
+    freezeFrameIndex(c, frameIndex + 1);
+  }
+  
+  r->frozen = true;
+}
+
+void
+thawFrameIndex(Context* c, int frameIndex)
+{
+  assert(c, frameIndex >= 0);
+  assert(c, frameIndex < static_cast<int>
+         (c->alignedFrameSize + c->parameterFootprint));
+
+  FrameResource* r = c->frameResources + frameIndex;
+  assert(c, r->frozen);
+
+  if (r->includeNeighbor) {
+    thawFrameIndex(c, frameIndex + 1);
+  }
+  
+  r->frozen = false;
 }
 
 void
@@ -4029,7 +4111,6 @@ class MyCompiler: public Compiler {
   virtual void endSubroutine(Subroutine* subroutine) {
     MySubroutine* sr = static_cast<MySubroutine*>(subroutine);
     if (sr->forkState) {
-      fprintf(stderr, "restore sr forkstate\n");
       Local* locals = c.locals;
       ::restoreState(&c, sr->forkState);
       for (int i = c.localFootprint - 1; i >= 0; --i) {
@@ -4038,7 +4119,6 @@ class MyCompiler: public Compiler {
         }
       }
     } else {
-      fprintf(stderr, "save sr forkstate\n");
       sr->forkState = ::saveState(&c);
     }
   }
