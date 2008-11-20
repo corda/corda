@@ -56,7 +56,7 @@ rdynamic = -rdynamic
 warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 	-Wno-non-virtual-dtor
 
-common-cflags = $(warnings) -fno-rtti -fno-exceptions \
+common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DBOOT_CLASSPATH=\"[classpathJar]\"
