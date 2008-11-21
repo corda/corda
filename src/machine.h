@@ -1128,7 +1128,7 @@ class Machine {
     dispose();
   }
 
-  static const unsigned HeapPoolSize = 8;
+  static const unsigned HeapPoolSize = 64;
 
   static const unsigned FixedFootprintThresholdInBytes = 256 * 1024;
 
@@ -2207,6 +2207,9 @@ intern(Thread* t, object s);
 
 void
 exit(Thread* t);
+
+void
+walk(Thread* t, Heap::Walker* w, object o, unsigned start);
 
 int
 walkNext(Thread* t, object o, int previous);

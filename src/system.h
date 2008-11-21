@@ -20,10 +20,10 @@ class System {
   typedef intptr_t Status;
 
   enum FileType {
-    Unknown,
-    DoesNotExist,
-    File,
-    Directory
+    TypeUnknown,
+    TypeDoesNotExist,
+    TypeFile,
+    TypeDirectory
   };
 
   class Thread {
@@ -79,6 +79,12 @@ class System {
     virtual void dispose() = 0;
   };
 
+  class Directory {
+   public:
+    virtual const char* next() = 0;
+    virtual void dispose() = 0;
+  };
+
   class Library {
    public:
     virtual void* resolve(const char* function) = 0;
@@ -128,6 +134,7 @@ class System {
                         unsigned returnType) = 0;
   virtual Status map(Region**, const char* name) = 0;
   virtual FileType identify(const char* name) = 0;
+  virtual Status open(Directory**, const char* name) = 0;
   virtual Status load(Library**, const char* name, bool mapName) = 0;
   virtual char pathSeparator() = 0;
   virtual int64_t now() = 0;

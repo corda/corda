@@ -201,11 +201,6 @@ vm-sources = \
 	$(src)/process.cpp \
 	$(src)/$(asm).cpp
 
-ifeq ($(heapdump),true)
-	vm-sources += $(src)/heapdump.cpp
-	cflags += -DAVIAN_HEAPDUMP
-endif
-
 vm-asm-sources = $(src)/$(asm).S
 
 ifeq ($(process),compile)
@@ -221,6 +216,21 @@ endif
 vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(native-build))
 vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(native-build))
 vm-objects = $(vm-cpp-objects) $(vm-asm-objects)
+
+heapwalk-sources = $(src)/heapwalk.cpp 
+heapwalk-objects = \
+	$(call cpp-objects,$(heapwalk-sources),$(src),$(native-build))
+
+ifeq ($(heapdump),true)
+	vm-sources += $(src)/heapdump.cpp
+	vm-heapwalk-objects = $(heapwalk-objects)
+	cflags += -DAVIAN_HEAPDUMP
+endif
+
+bootimage-sources = $(src)/bootimage.cpp 
+bootimage-objects = \
+	$(call cpp-objects,$(bootimage-sources),$(src),$(native-build))
+bootimage = $(native-build)/bootimage
 
 driver-source = $(src)/main.cpp
 driver-object = $(native-build)/main.o
@@ -259,7 +269,7 @@ args = $(flags) $(input)
 
 .PHONY: build
 build: $(static-library) $(executable) $(dynamic-library) \
-	$(executable-dynamic) $(classpath-dep) $(test-dep)
+	$(executable-dynamic) $(classpath-dep) $(test-dep) $(bootimage)
 
 $(test-classes): $(classpath-dep)
 
@@ -346,6 +356,12 @@ $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
 $(vm-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 	$(compile-asm-object)
 
+$(bootimage-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+	$(compile-object)
+
+$(heapwalk-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+	$(compile-object)
+
 $(driver-object): $(driver-source)
 	$(compile-object)
 
@@ -395,7 +411,20 @@ $(static-library): $(vm-objects) $(jni-objects)
 
 $(executable): \
 		$(vm-objects) $(classpath-object) $(jni-objects) $(driver-object) \
-		$(boot-object)
+		$(vm-heapwalk-objects) $(boot-object)
+	@echo "linking $(@)"
+ifeq ($(platform),windows)
+	$(dlltool) -z $(@).def $(^)
+	$(dlltool) -d $(@).def -e $(@).exp
+	$(cc) $(@).exp $(^) $(lflags) -o $(@)
+else
+	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
+endif
+	$(strip) $(strip-all) $(@)
+
+$(bootimage): \
+		$(vm-objects) $(classpath-object) $(jni-objects) $(heapwalk-objects) \
+		$(bootimage-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
@@ -408,7 +437,7 @@ endif
 
 $(dynamic-library): \
 		$(vm-objects) $(classpath-object) $(dynamic-object) $(jni-objects) \
-		$(boot-object)
+		$(vm-heapwalk-objects) $(boot-object)
 	@echo "linking $(@)"
 	$(cc) $(^) $(shared) $(lflags) -o $(@)
 	$(strip) $(strip-all) $(@)

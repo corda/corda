@@ -249,38 +249,6 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
 }
 
 void
-walk(Thread* t, Heap::Walker* w, object o, unsigned start)
-{
-  object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
-  object objectMask = static_cast<object>
-    (t->m->heap->follow(classObjectMask(t, class_)));
-
-  if (objectMask) {
-    unsigned fixedSize = classFixedSize(t, class_);
-    unsigned arrayElementSize = classArrayElementSize(t, class_);
-    unsigned arrayLength
-      = (arrayElementSize ?
-         cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
-
-    uint32_t mask[intArrayLength(t, objectMask)];
-    memcpy(mask, &intArrayBody(t, objectMask, 0),
-           intArrayLength(t, objectMask) * 4);
-
-    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
-  } else if (classVmFlags(t, class_) & SingletonFlag) {
-    unsigned length = singletonLength(t, o);
-    if (length) {
-      walk(t, w, singletonMask(t, o),
-           (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
-    } else if (start == 0) {
-      w->visit(0);
-    }
-  } else if (start == 0) {
-    w->visit(0);
-  }
-}
-
-void
 finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 {
   v->visit(&finalizerTarget(t, *p));
@@ -770,12 +738,8 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     PROTECT(t, interfaceTable);
 
     unsigned i = 0;
-    object it = hashMapIterator(t, map);
-    PROTECT(t, it);
-
-    for (; it; it = hashMapIteratorNext(t, it)) {
-      object interface = resolveClass
-        (t, tripleFirst(t, hashMapIteratorNode(t, it)));
+    for (HashMapIterator it(t, map); it.hasMore();) {
+      object interface = resolveClass(t, tripleFirst(t, it.next()));
       if (UNLIKELY(t->exception)) return;
 
       set(t, interfaceTable, ArrayBody + (i * BytesPerWord), interface);
@@ -1243,10 +1207,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     if (classFlags(t, class_) & ACC_INTERFACE) {
       PROTECT(t, vtable);
 
-      for (object it = hashMapIterator(t, virtualMap); it;
-           it = hashMapIteratorNext(t, it))
-      {
-        object method = tripleFirst(t, hashMapIteratorNode(t, it));
+      for (HashMapIterator it(t, virtualMap); it.hasMore();) {
+        object method = tripleFirst(t, it.next());
         assert(t, arrayBody(t, vtable, methodOffset(t, method)) == 0);
         set(t, vtable, ArrayBody + (methodOffset(t, method) * BytesPerWord),
             method);
@@ -2767,6 +2729,38 @@ collect(Thread* t, Heap::CollectionType type)
 #ifdef VM_STRESS
   if (not stress) t->stress = false;
 #endif
+}
+
+void
+walk(Thread* t, Heap::Walker* w, object o, unsigned start)
+{
+  object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
+  object objectMask = static_cast<object>
+    (t->m->heap->follow(classObjectMask(t, class_)));
+
+  if (objectMask) {
+    unsigned fixedSize = classFixedSize(t, class_);
+    unsigned arrayElementSize = classArrayElementSize(t, class_);
+    unsigned arrayLength
+      = (arrayElementSize ?
+         cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
+
+    uint32_t mask[intArrayLength(t, objectMask)];
+    memcpy(mask, &intArrayBody(t, objectMask, 0),
+           intArrayLength(t, objectMask) * 4);
+
+    ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
+  } else if (classVmFlags(t, class_) & SingletonFlag) {
+    unsigned length = singletonLength(t, o);
+    if (length) {
+      ::walk(t, w, singletonMask(t, o),
+             (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
+    } else if (start == 0) {
+      w->visit(0);
+    }
+  } else if (start == 0) {
+    w->visit(0);
+  }
 }
 
 int

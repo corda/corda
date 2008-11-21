@@ -19,6 +19,44 @@ namespace vm {
 
 class Finder {
  public:
+  class IteratorImp {
+   public:
+    virtual const char* next(unsigned* size) = 0;
+    virtual void dispose() = 0;
+  };
+
+  class Iterator {
+   public:
+    Iterator(Finder* finder):
+      it(finder->iterator()),
+      current(it->next(&currentSize))
+    { }
+
+    ~Iterator() {
+      it->dispose();
+    }
+
+    bool hasMore() {
+      return current != 0;
+    }
+
+    const char* next(unsigned* size) {
+      if (current) {
+        const char* v = current;
+        *size = currentSize;
+        current = it->next(&currentSize);
+        return v;
+      } else {
+        return 0;
+      }
+    }
+
+    IteratorImp* it;
+    const char* current;
+    unsigned currentSize;
+  };
+
+  virtual IteratorImp* iterator();
   virtual System::Region* find(const char* name) = 0;
   virtual bool exists(const char* name) = 0;
   virtual const char* path() = 0;
