@@ -95,12 +95,6 @@
   (object value)
   (object left)
   (object right))
- 
-(type treePath
-  (uintptr_t fresh)
-  (object node)
-  (object root)
-  (object ancestors))
 
 (type callNode
   (intptr_t address)

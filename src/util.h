@@ -12,6 +12,7 @@
 #define UTIL_H
 
 #include "machine.h"
+#include "zone.h"
 
 namespace vm {
 
@@ -88,7 +89,7 @@ treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
           intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
 object
-treeInsertNode(Thread* t, object tree, intptr_t key, object node,
+treeInsertNode(Thread* t, Zone* zone, object tree, intptr_t key, object node,
                object sentinal,
                intptr_t (*compare)(Thread* t, intptr_t key, object b));
 

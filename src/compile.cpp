@@ -5205,7 +5205,7 @@ compile(MyThread* t, object method)
           PROTECT(t, node);
 
           methodTree(t) = treeInsertNode
-            (t, methodTree(t), reinterpret_cast<intptr_t>
+            (t, &(context.zone), methodTree(t), reinterpret_cast<intptr_t>
              (&singletonValue(t, compiled, 0)), node, methodTreeSentinal(t),
              compareIpToMethodBounds);
         }
