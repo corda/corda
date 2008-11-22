@@ -482,40 +482,6 @@ hashMapRemove(Thread* t, object map, object key,
   return o;
 }
 
-object
-hashMapIterator(Thread* t, object map)
-{
-  object array = hashMapArray(t, map);
-  if (array) {
-    for (unsigned i = 0; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-  }
-  return 0;
-}
-
-object
-hashMapIteratorNext(Thread* t, object it)
-{
-  object map = hashMapIteratorMap(t, it);
-  object node = hashMapIteratorNode(t, it);
-  unsigned index = hashMapIteratorIndex(t, it);
-
-  if (tripleThird(t, node)) {
-    return makeHashMapIterator(t, map, tripleThird(t, node), index);
-  } else {
-    object array = hashMapArray(t, map);
-    for (unsigned i = index; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        return makeHashMapIterator(t, map, arrayBody(t, array, i), i + 1);
-      }
-    }
-    return 0;
-  }  
-}
-
 void
 listAppend(Thread* t, object list, object value)
 {

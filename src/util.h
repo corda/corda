@@ -93,6 +93,54 @@ treeInsertNode(Thread* t, Zone* zone, object tree, intptr_t key, object node,
                object sentinal,
                intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
+class HashMapIterator: public Thread::Protector {
+ public:
+  HashMapIterator(Thread* t, object map):
+    Protector(t), map(map), node(0), index(0)
+  {
+    find();
+  }
+
+  void find() {
+    object array = hashMapArray(t, map);
+    for (unsigned i = index; i < arrayLength(t, array); ++i) {
+      if (arrayBody(t, array, i)) {
+        node = arrayBody(t, array, i);
+        index = i + 1;
+        return;
+      }
+    }
+    node = 0;
+  }
+
+  bool hasMore() {
+    return node != 0;
+  }
+
+  object next() {
+    if (node) {
+      object n = node;
+      if (tripleThird(t, node)) {
+        node = tripleThird(t, node);
+      } else {
+        find();
+      }
+      return n;
+    } else {
+      return 0;
+    }
+  }
+
+  virtual void visit(Heap::Visitor* v) {
+    v->visit(&map);
+    v->visit(&node);
+  }
+
+  object map;
+  object node;
+  unsigned index;
+};
+
 } // vm
 
 #endif//UTIL_H

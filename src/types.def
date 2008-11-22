@@ -73,11 +73,6 @@
 (type weakHashMap
   (extends hashMap))
 
-(type hashMapIterator
-  (object map)
-  (object node)
-  (unsigned index))
-
 (type list
   (uint32_t size)
   (object front)
