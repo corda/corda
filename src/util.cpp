@@ -143,7 +143,7 @@ treeAdd(Thread* t, object path)
       if (treeNodeRed
           (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors)))))
       {
-        setTreeNodeRed(t, pairFirst(t, ancestors), true);
+        setTreeNodeRed(t, pairFirst(t, ancestors), false);
 
         object n = cloneTreeNode
           (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors))));
@@ -154,7 +154,7 @@ treeAdd(Thread* t, object path)
           (t, treeNodeRight
            (t, pairFirst(t, pairSecond(t, ancestors))), false);
 
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), false);
+        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), true);
 
         new_ = pairFirst(t, pairSecond(t, ancestors));
         ancestors = pairSecond(t, pairSecond(t, ancestors));
@@ -195,7 +195,7 @@ treeAdd(Thread* t, object path)
       if (treeNodeRed
           (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors)))))
       {
-        setTreeNodeRed(t, pairFirst(t, ancestors), true);
+        setTreeNodeRed(t, pairFirst(t, ancestors), false);
 
         object n = cloneTreeNode
           (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors))));
@@ -206,7 +206,7 @@ treeAdd(Thread* t, object path)
           (t, treeNodeLeft
            (t, pairFirst(t, pairSecond(t, ancestors))), false);
 
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), false);
+        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), true);
 
         new_ = pairFirst(t, pairSecond(t, ancestors));
         ancestors = pairSecond(t, pairSecond(t, ancestors));
