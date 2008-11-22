@@ -48,7 +48,7 @@ const uintptr_t FixedMark = 3;
 const unsigned ThreadHeapSizeInBytes = 64 * 1024;
 const unsigned ThreadHeapSizeInWords = ThreadHeapSizeInBytes / BytesPerWord;
 
-const unsigned ThreadHeapPoolSize = 32;
+const unsigned ThreadHeapPoolSize = 64;
 
 const unsigned FixedFootprintThresholdInBytes
 = ThreadHeapPoolSize * ThreadHeapSizeInBytes;
