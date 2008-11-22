@@ -45,6 +45,14 @@ const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
 const uintptr_t FixedMark = 3;
 
+const unsigned ThreadHeapSizeInBytes = 64 * 1024;
+const unsigned ThreadHeapSizeInWords = ThreadHeapSizeInBytes / BytesPerWord;
+
+const unsigned ThreadHeapPoolSize = 32;
+
+const unsigned FixedFootprintThresholdInBytes
+= ThreadHeapPoolSize * ThreadHeapSizeInBytes;
+
 enum FieldCode {
   VoidField,
   ByteField,
@@ -1128,10 +1136,6 @@ class Machine {
     dispose();
   }
 
-  static const unsigned HeapPoolSize = 8;
-
-  static const unsigned FixedFootprintThresholdInBytes = 256 * 1024;
-
   void dispose();
 
   JavaVMVTable* vtable;
@@ -1168,7 +1172,7 @@ class Machine {
   bool unsafe;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
-  uintptr_t* heapPool[HeapPoolSize];
+  uintptr_t* heapPool[ThreadHeapPoolSize];
   unsigned heapPoolIndex;
 };
 
@@ -1265,9 +1269,6 @@ class Thread {
 
     Thread* t;
   };
-
-  static const unsigned HeapSizeInBytes = 64 * 1024;
-  static const unsigned HeapSizeInWords = HeapSizeInBytes / BytesPerWord;
 
   Thread(Machine* m, object javaThread, Thread* parent);
 
@@ -1436,7 +1437,7 @@ inline void
 ensure(Thread* t, unsigned sizeInBytes)
 {
   if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-      > Thread::HeapSizeInWords)
+      > ThreadHeapSizeInWords)
   {
     expect(t, t->backupHeap == 0);
     t->backupHeap = static_cast<uintptr_t*>
@@ -1468,7 +1469,7 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
   stress(t);
 
   if (UNLIKELY(t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-               > Thread::HeapSizeInWords
+               > ThreadHeapSizeInWords
                or t->m->exclusive))
   {
     return allocate2(t, sizeInBytes, objectMask);
