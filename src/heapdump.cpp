@@ -55,9 +55,9 @@ namespace vm {
 void
 dumpHeap(Thread* t, FILE* out)
 {
-  class Walker: public HeapWalker {
+  class Visitor: public HeapVisitor {
    public:
-    Walker(Thread* t, FILE* out): t(t), out(out), nextNumber(1) { }
+    Visitor(Thread* t, FILE* out): t(t), out(out), nextNumber(1) { }
 
     virtual void root() {
       write1(out, Root);      
@@ -102,9 +102,11 @@ dumpHeap(Thread* t, FILE* out)
     Thread* t;
     FILE* out;
     unsigned nextNumber;
-  } walker(t, out);
+  } visitor(t, out);
 
-  walk(t, &walker)->dispose();
+  HeapWalker* w = makeHeapWalker(t, &visitor);
+  w->visitAllRoots();
+  w->dispose();
 }
 
 } // namespace vm

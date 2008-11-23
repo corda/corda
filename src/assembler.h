@@ -80,6 +80,7 @@ class Promise {
  public:
   virtual int64_t value() = 0;
   virtual bool resolved() = 0;
+  virtual bool offer(void*) { return false; }
 };
 
 class ResolvedPromise: public Promise {
@@ -95,6 +96,27 @@ class ResolvedPromise: public Promise {
   }
 
   int64_t value_;
+};
+
+class OfferPromise: public Promise {
+ public:
+  OfferPromise(System* s): s(s), offset(0) { }
+
+  virtual int64_t value() {
+    abort(s);
+  }
+
+  virtual bool resolved() {
+    return false;
+  }
+
+  virtual bool offer(void* offset) {
+    this->offset = offset;
+    return true;
+  }
+
+  System* s;
+  void* offset;
 };
 
 class TraceHandler {

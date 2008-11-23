@@ -1,3 +1,14 @@
+/* Copyright (c) 2008, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
+#include "machine.h"
 #include "heapwalk.h"
 
 using namespace vm;
@@ -69,7 +80,11 @@ class Context {
     thread(thread), objects(0), stack(0)
   { }
 
-  ~Context() {
+  void dispose() {
+    if (objects) {
+      objects->dispose();
+    }
+
     while (stack) {
       Stack* dead = stack;
       stack = dead->next;
@@ -224,21 +239,22 @@ objectSize(Thread* t, object o)
   return n;
 }
 
-void
-walk(Context* c, HeapWalker* w, object p)
+unsigned
+walk(Context* c, HeapVisitor* v, object p)
 {
   Thread* t = c->thread;
+  object root = p;
   int nextChildOffset;
 
-  w->root();
+  v->root();
 
  visit: {
     Set::Entry* e = find(c, p);
     if (e) {
-      w->visitOld(p, e->number);
+      v->visitOld(p, e->number);
     } else {
       e = add(c, p);
-      e->number = w->visitNew(p);
+      e->number = v->visitNew(p);
 
       nextChildOffset = walkNext(t, p, -1);
       if (nextChildOffset != -1) {
@@ -250,7 +266,7 @@ walk(Context* c, HeapWalker* w, object p)
   goto pop;
 
  children: {
-    w->push(nextChildOffset);
+    v->push(nextChildOffset);
     push(c, p, nextChildOffset);
     p = get(p, nextChildOffset);
     goto visit;
@@ -258,7 +274,7 @@ walk(Context* c, HeapWalker* w, object p)
 
  pop: {
     if (pop(c, &p, &nextChildOffset)) {
-      w->pop();
+      v->pop();
       nextChildOffset = walkNext(t, p, nextChildOffset);
       if (nextChildOffset >= 0) {
         goto children;
@@ -267,34 +283,59 @@ walk(Context* c, HeapWalker* w, object p)
       }
     }
   }
+
+  return find(c, root)->number;
 }
+
+class MyHeapWalker: public HeapWalker {
+ public:
+  MyHeapWalker(Thread* t, HeapVisitor* v):
+    context(t), visitor(v)
+  {
+    add(&context, 0)->number = v->visitNew(0);
+  }
+
+  virtual unsigned visitRoot(object root) {
+    return walk(&context, visitor, root);
+  }
+
+  virtual void visitAllRoots() {
+    class Visitor: public Heap::Visitor {
+     public:
+      Visitor(Context* c, HeapVisitor* v): c(c), v(v) { }
+
+      virtual void visit(void* p) {
+        walk(c, v, static_cast<object>(mask(*static_cast<void**>(p))));
+      }
+
+      Context* c;
+      HeapVisitor* v;
+    } v(&context, visitor);
+
+    visitRoots(context.thread->m, &v);
+  }
+
+  virtual HeapMap* map() {
+    return context.objects;
+  }
+
+  virtual void dispose() {
+    context.dispose();
+    context.thread->m->heap->free(this, sizeof(MyHeapWalker));
+  }
+
+  Context context;
+  HeapVisitor* visitor;
+};
 
 } // namespace
 
 namespace vm {
 
-HeapMap*
-walk(Thread* t, HeapWalker* w)
+HeapWalker*
+makeHeapWalker(Thread* t, HeapVisitor* v)
 {
-  Context context(t);
-
-  class Visitor: public Heap::Visitor {
-   public:
-    Visitor(Context* c, HeapWalker* w): c(c), w(w) { }
-
-    virtual void visit(void* p) {
-      walk(c, w, static_cast<object>(mask(*static_cast<void**>(p))));
-    }
-
-    Context* c;
-    HeapWalker* w;
-  } v(&context, w);
-
-  add(&context, 0)->number = w->visitNew(0);
-
-  visitRoots(t->m, &v);
-
-  return context.objects;
+  return new (t->m->heap->allocate(sizeof(MyHeapWalker))) MyHeapWalker(t, v);
 }
 
 } // namespace vm

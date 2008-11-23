@@ -14,6 +14,9 @@
 #include "common.h"
 #include "system.h"
 #include "heap.h"
+#include "bootimage.h"
+#include "heapwalk.h"
+#include "zone.h"
 
 namespace vm {
 
@@ -111,6 +114,17 @@ class Processor {
 
   virtual object
   getStackTrace(Thread* t, Thread* target) = 0;
+
+  virtual void
+  compileThunks(Thread* t, BootImage* image, uint8_t* code, unsigned* size,
+                unsigned capacity) = 0;
+
+  virtual void
+  compileMethod(Thread* t, Zone* zone, uint8_t* code, unsigned* offset,
+                unsigned capacity, object table, object method) = 0;
+
+  virtual void
+  visitRoots(BootImage* image, HeapWalker* w) = 0;
 
   object
   invoke(Thread* t, object method, object this_, ...)

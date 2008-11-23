@@ -113,23 +113,25 @@ methodTree(MyThread* t);
 object
 methodTreeSentinal(MyThread* t);
 
+unsigned
+compiledSize(intptr_t address)
+{
+  return reinterpret_cast<uintptr_t*>(address)[-1];
+}
+
 intptr_t
 compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 {
-  intptr_t start = reinterpret_cast<intptr_t>
-    (&singletonValue(t, methodCompiled(t, method), 0));
+  intptr_t start = methodCompiled(t, method);
 
   if (DebugMethodTree) {
     fprintf(stderr, "find 0x%"LX" in (0x%"LX",0x%"LX")\n", ip, start,
-            start + (singletonCount(t, methodCompiled(t, method))
-                     * BytesPerWord));
+            start + compiledSize(start));
   }
 
   if (ip < start) {
     return -1;
-  } else if (ip < start + static_cast<intptr_t>
-             (singletonCount(t, methodCompiled(t, method))
-              * BytesPerWord))
+  } else if (ip < start + compiledSize(start))
   {
     return 0;
   } else {
@@ -284,8 +286,7 @@ class MyStackWalker: public Processor::StackWalker {
   virtual int ip() {
     switch (state) {
     case Method:
-      return reinterpret_cast<intptr_t>(ip_) - reinterpret_cast<intptr_t>
-        (&singletonValue(t, methodCompiled(t, method_), 0));
+      return reinterpret_cast<intptr_t>(ip_) - methodCompiled(t, method_);
         
     case NativeMethod:
       return 0;
@@ -336,14 +337,24 @@ localObject(MyThread* t, void* base, object method, unsigned index)
     (static_cast<uint8_t*>(base) + localOffset(t, index, method));
 }
 
-class PoolElement {
+class PoolElement: public Promise {
  public:
-  PoolElement(object value, Promise* address, PoolElement* next):
-    value(value), address(address), next(next)
+  PoolElement(Thread* t, object target, PoolElement* next):
+    t(t), target(target), address(0), next(next)
   { }
 
-  object value;
-  Promise* address;
+  virtual int64_t value() {
+    assert(t, resolved());
+    return address;
+  }
+
+  virtual bool resolved() {
+    return address != 0;
+  }
+
+  Thread* t;
+  object target;
+  intptr_t address;
   PoolElement* next;
 };
 
@@ -440,6 +451,28 @@ const unsigned ThunkCount = gcIfNecessaryThunk + 1;
 intptr_t
 getThunk(MyThread* t, Thunk thunk);
 
+class BootContext {
+ public:
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(Thread* t, BootContext* c): Protector(t), c(c) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(&(c->objectTable));
+    }
+
+    BootContext* c;
+  };
+
+  BootContext(Thread* t, object objectTable, Zone* zone):
+    protector(t, this), objectTable(objectTable), zone(zone)
+  { }
+
+  MyProtector protector;
+  object objectTable;
+  Zone* zone;
+};
+
 class Context {
  public:
   class MyProtector: public Thread::Protector {
@@ -450,7 +483,7 @@ class Context {
       v->visit(&(c->method));
 
       for (PoolElement* p = c->objectPool; p; p = p->next) {
-        v->visit(&(p->value));
+        v->visit(&(p->target));
       }
 
       for (TraceElement* p = c->traceLog; p; p = p->next) {
@@ -492,13 +525,14 @@ class Context {
     MyThread* t;
   };
 
-  Context(MyThread* t, object method):
+  Context(MyThread* t, BootContext* bootContext, object method):
     thread(t),
     zone(t->m->system, t->m->heap, 16 * 1024),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
     client(t),
     compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
     method(method),
+    bootContext(bootContext),
     objectPool(0),
     traceLog(0),
     traceLogCount(0),
@@ -515,6 +549,7 @@ class Context {
     client(t),
     compiler(0),
     method(0),
+    bootContext(0),
     objectPool(0),
     traceLog(0),
     traceLogCount(0),
@@ -535,6 +570,7 @@ class Context {
   MyClient client;
   Compiler* compiler;
   object method;
+  BootContext* bootContext;
   PoolElement* objectPool;
   TraceElement* traceLog;
   unsigned traceLogCount;
@@ -599,11 +635,36 @@ class Frame {
   }
 
   Compiler::Operand* append(object o) {
-    Promise* p = c->poolAppend(0);
-    context->objectPool = new
-      (context->zone.allocate(sizeof(PoolElement)))
-      PoolElement(o, p, context->objectPool);
-    return c->address(p);
+    if (context->bootContext) {
+      BootContext* bc = context->bootContext;
+
+      object node = hashMapFindNode
+        (t, bc->objectTable, o, objectHash, objectEqual);
+      PROTECT(t, node);
+
+      Promise* p = new (bc->zone->allocate(sizeof(OfferPromise)))
+        OfferPromise(t->m->system);
+
+      object pointer = makePointer(t, p);
+
+      if (node) {
+        object fixup = makePair(t, pointer, tripleSecond(t, node));
+        vm::set(t, node, TripleSecond, fixup);
+      } else {
+        PROTECT(t, o);
+        object fixup = makePair(t, pointer, 0);
+        // todo: use a hash function that compares by value
+        hashMapInsert(t, bc->objectTable, o, fixup, objectHash);
+      }
+
+      return c->promiseConstant(p);
+    } else {
+      context->objectPool = new
+        (context->zone.allocate(sizeof(PoolElement)))
+        PoolElement(t, o, context->objectPool);
+
+      return c->address(context->objectPool);
+    }
   }
 
   unsigned localSize() {
@@ -1094,8 +1155,7 @@ findExceptionHandler(Thread* t, object method, void* ip)
   if (table) {
     object index = arrayBody(t, table, 0);
       
-    uint8_t* compiled = reinterpret_cast<uint8_t*>
-      (&singletonValue(t, methodCompiled(t, method), 0));
+    uint8_t* compiled = reinterpret_cast<uint8_t*>(methodCompiled(t, method));
 
     for (unsigned i = 0; i < arrayLength(t, table) - 1; ++i) {
       unsigned start = intArrayBody(t, index, i * 3);
@@ -1192,9 +1252,9 @@ void* FORCE_ALIGN
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
-    return &singletonValue
-      (t, methodCompiled
-       (t, findInterfaceMethod(t, method, objectClass(t, instance))), 0);
+    return reinterpret_cast<void*>
+      (methodCompiled
+       (t, findInterfaceMethod(t, method, objectClass(t, instance))));
   } else {
     t->exception = makeNullPointerException(t);
     unwind(t);
@@ -1656,13 +1716,16 @@ emptyMethod(MyThread* t, object method)
     and (codeBody(t, methodCode(t, method), 0) == return_);
 }
 
-object
+object&
+objectPools(MyThread* t);
+
+uintptr_t
 defaultThunk(MyThread* t);
 
-object
+uintptr_t
 nativeThunk(MyThread* t);
 
-object
+uintptr_t
 aioobThunk(MyThread* t);
 
 void
@@ -1677,27 +1740,27 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
   if (not emptyMethod(t, target)) {
     if (methodFlags(t, target) & ACC_NATIVE) {
       result = c->call
-        (c->constant
-         (reinterpret_cast<intptr_t>
-          (&singletonBody(t, nativeThunk(t), 0))),
+        (c->constant(nativeThunk(t)),
          0,
          frame->trace(target, false),
          rSize,
          0);
-    } else if (methodCompiled(t, target) == defaultThunk(t)) {
+    } else if (methodCompiled(t, target) == defaultThunk(t)
+               or (frame->context->bootContext
+                   and methodClass(t, target)
+                   != methodClass(t, frame->context->method)))
+    {
+      // todo: when creating a boot image, log intra-class calls for
+      // later fixup
       result = c->call
-        (c->constant
-         (reinterpret_cast<intptr_t>
-          (&singletonBody(t, defaultThunk(t), 0))),
+        (c->constant(defaultThunk(t)),
          Compiler::Aligned,
          frame->trace(target, false),
          rSize,
          0);
     } else {
       result = c->call
-        (c->constant
-         (reinterpret_cast<intptr_t>
-          (&singletonBody(t, methodCompiled(t, target), 0))),
+        (c->constant(methodCompiled(t, target)),
          0,
          frame->trace(0, false),
          rSize,
@@ -1880,8 +1943,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* array = frame->popObject();
 
       if (CheckArrayBounds) {
-        c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
-                       (&singletonValue(t, aioobThunk(t), 0)));
+        c->checkBounds(array, ArrayLength, index, aioobThunk(t));
       }
 
       switch (instruction) {
@@ -1936,8 +1998,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* array = frame->popObject();
 
       if (CheckArrayBounds) {
-        c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
-                       (&singletonValue(t, aioobThunk(t), 0)));
+        c->checkBounds(array, ArrayLength, index, aioobThunk(t));
       }
 
       switch (instruction) {
@@ -3720,43 +3781,49 @@ codeSingletonSizeInBytes(MyThread*, unsigned codeSizeInBytes)
   return pad(SingletonBody + (size * BytesPerWord));
 }
 
-object
-allocateCode(MyThread* t, unsigned codeSizeInBytes)
+uint8_t*
+finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name)
 {
-  unsigned count = ceiling(codeSizeInBytes, BytesPerWord);
-  unsigned size = count + singletonMaskSize(count);
-  object result = allocate3
-    (t, codeZone(t), Machine::ImmortalAllocation,
-     SingletonBody + (size * BytesPerWord), true);
-  initSingleton(t, result, size, true);
-  mark(t, result, 0);
-  singletonMask(t, result)[0] = 1;
-  return result;
-}
-
-object
-finish(MyThread* t, Assembler* a, const char* name)
-{
-  object result = allocateCode(t, a->length());
-  uint8_t* start = reinterpret_cast<uint8_t*>(&singletonValue(t, result, 0));
+  uint8_t* start = static_cast<uint8_t*>
+    (allocator->allocate(pad(a->length())));
 
   a->writeTo(start);
 
   logCompile(t, start, a->length(), 0, name, 0);
 
-  return result;
+  return start;
 }
 
-object
-finish(MyThread* t, Context* context)
+uint8_t*
+finish(MyThread* t, Allocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
 
   unsigned codeSize = c->compile();
-  object result = allocateCode(t, pad(codeSize) + c->poolSize());
-  PROTECT(t, result);
+  uintptr_t* code = static_cast<uintptr_t*>
+    (allocator->allocate(pad(codeSize) + BytesPerWord));
+  code[0] = codeSize;
+  uint8_t* start = reinterpret_cast<uint8_t*>(code + 1);
 
-  uint8_t* start = reinterpret_cast<uint8_t*>(&singletonValue(t, result, 0));
+  if (context->objectPool) {
+    object pool = allocate3
+      (t, allocator, Machine::ImmortalAllocation,
+       FixedSizeOfArray + c->poolSize() + BytesPerWord, true);
+
+    initArray(t, pool, (c->poolSize() / BytesPerWord) + 1, false);
+
+    set(t, pool, ArrayBody, objectPools(t));
+    objectPools(t) = pool;
+
+    unsigned i = 1;
+    for (PoolElement* p = context->objectPool; p; p = p->next) {
+      unsigned offset = ArrayBody + ((i++) * BytesPerWord);
+
+      p->address = reinterpret_cast<uintptr_t>(pool) + offset;
+
+      set(t, pool, offset, p->target);
+    }
+  }
 
   c->writeTo(start);
 
@@ -3828,14 +3895,6 @@ finish(MyThread* t, Context* context)
     set(t, methodCode(t, context->method), CodePool, map);
   }
 
-  for (PoolElement* p = context->objectPool; p; p = p->next) {
-    intptr_t offset = p->address->value() - reinterpret_cast<intptr_t>(start);
-
-    singletonMarkObject(t, result, offset / BytesPerWord);
-
-    set(t, result, SingletonBody + offset, p->value);
-  }
-
   logCompile
     (t, start, codeSize,
      reinterpret_cast<const char*>
@@ -3859,11 +3918,11 @@ finish(MyThread* t, Context* context)
     asm("int3");
   }
 
-  return result;
+  return start;
 }
 
-object
-compile(MyThread* t, Context* context)
+uint8_t*
+compile(MyThread* t, Allocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
 
@@ -3970,11 +4029,12 @@ compile(MyThread* t, Context* context)
     calculateFrameMaps(t, context, 0, 0);
   }
 
-  return finish(t, context);
+  return finish(t, allocator, context);
 }
 
 void
-compile(MyThread* t, object method);
+compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+        object method);
 
 void*
 compileMethod2(MyThread* t)
@@ -3990,24 +4050,24 @@ compileMethod2(MyThread* t)
   }
 
   if (LIKELY(t->exception == 0)) {
-    compile(t, target);
+    compile(t, codeZone(t), 0, target);
   }
 
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
+    void* address = reinterpret_cast<void*>(methodCompiled(t, target));
     if (callNodeVirtualCall(t, node)) {
       classVtable
         (t, objectClass
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
-        = &singletonValue(t, methodCompiled(t, target), 0);
+        = address;
     } else {
       Context context(t);
       context.assembler->updateCall
-        (reinterpret_cast<void*>(callNodeAddress(t, node)),
-         &singletonValue(t, methodCompiled(t, target), 0));
+        (reinterpret_cast<void*>(callNodeAddress(t, node)), address);
     }
-    return &singletonValue(t, methodCompiled(t, target), 0);
+    return address;
   }
 }
 
@@ -4276,7 +4336,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object method,
     object map = codePool(t, methodCode(t, method));
     int index = frameMapIndex
       (t, method, difference
-       (ip, &singletonValue(t, methodCompiled(t, method), 0)));
+       (ip, reinterpret_cast<void*>(methodCompiled(t, method))));
 
     for (unsigned i = 0; i < count; ++i) {
       int j = index + i;
@@ -4510,7 +4570,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
     }
 
     result = vmInvoke
-      (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
+      (t, reinterpret_cast<void*>(methodCompiled(t, method)), arguments->array,
        arguments->position, returnType);
   }
 
@@ -4593,7 +4653,40 @@ class SegFaultHandler: public System::SignalHandler {
   Machine* m;
 };
 
+class FixedAllocator: public Allocator {
+ public:
+  FixedAllocator(Thread* t, uint8_t* base, unsigned capacity):
+    t(t), base(base), offset(0), capacity(capacity)
+  { }
+
+  virtual void* tryAllocate(unsigned) {
+    abort(t);
+  }
+
+  virtual void* allocate(unsigned size) {
+    unsigned paddedSize = pad(size);
+    expect(t, offset + paddedSize < capacity);
+
+    void* p = base + offset;
+    offset += paddedSize;
+    return p;
+  }
+
+  virtual void free(const void*, unsigned) {
+    abort(t);
+  }
+
+  Thread* t;
+  uint8_t* base;
+  unsigned offset;
+  unsigned capacity;
+};
+
 class MyProcessor;
+
+void
+compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
+              BootImage* image, uint8_t* imageBase);
 
 MyProcessor*
 processor(MyThread* t);
@@ -4690,8 +4783,8 @@ class MyProcessor: public Processor {
   virtual void
   initVtable(Thread* t, object c)
   {
-    void* compiled = &singletonBody
-      (t, ::defaultThunk(static_cast<MyThread*>(t)), 0);
+    void* compiled = reinterpret_cast<void*>
+      (::defaultThunk(static_cast<MyThread*>(t)));
 
     for (unsigned i = 0; i < classLength(t, c); ++i) {
       classVtable(t, c, i) = compiled;
@@ -4722,13 +4815,10 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
 
     if (t == t->m->rootThread) {
-      v->visit(&defaultThunk);
-      v->visit(&nativeThunk);
-      v->visit(&aioobThunk);
-      v->visit(&thunkTable);
       v->visit(&callTable);
       v->visit(&methodTree);
       v->visit(&methodTreeSentinal);
+      v->visit(&objectPools);
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
@@ -4801,7 +4891,7 @@ class MyProcessor: public Processor {
     
     PROTECT(t, method);
 
-    compile(static_cast<MyThread*>(t), method);
+    compile(static_cast<MyThread*>(t), &codeZone, 0, method);
 
     if (LIKELY(t->exception == 0)) {
       return ::invoke(t, method, &list);
@@ -4832,7 +4922,7 @@ class MyProcessor: public Processor {
 
     PROTECT(t, method);
 
-    compile(static_cast<MyThread*>(t), method);
+    compile(static_cast<MyThread*>(t), &codeZone, 0, method);
 
     if (LIKELY(t->exception == 0)) {
       return ::invoke(t, method, &list);
@@ -4862,7 +4952,7 @@ class MyProcessor: public Processor {
 
       PROTECT(t, method);
       
-      compile(static_cast<MyThread*>(t), method);
+      compile(static_cast<MyThread*>(t), &codeZone, 0, method);
 
       if (LIKELY(t->exception == 0)) {
         return ::invoke(t, method, &list);
@@ -4911,8 +5001,7 @@ class MyProcessor: public Processor {
           target->base = base;
           target->stack = stack;
         } else {
-          uint8_t* thunkStart = reinterpret_cast<uint8_t*>
-            (&singletonValue(t, p->thunkTable, 0));
+          uint8_t* thunkStart = p->thunkTable;
           uint8_t* thunkEnd = thunkStart + (p->thunkSize * ThunkCount);
 
           if (static_cast<uint8_t*>(ip) >= thunkStart
@@ -4951,18 +5040,50 @@ class MyProcessor: public Processor {
 
     return visitor.trace;
   }
+
+  virtual void compileThunks(Thread* vmt, BootImage* image, uint8_t* code,
+                             unsigned* offset, unsigned capacity)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+    FixedAllocator allocator(t, code + *offset, capacity);
+
+    ::compileThunks(t, &allocator, processor(t), image, code);
+
+    *offset += allocator.offset;
+  }
+
+  virtual void compileMethod(Thread* vmt, Zone* zone, uint8_t* code,
+                             unsigned* offset, unsigned capacity, object table,
+                             object method)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+    FixedAllocator allocator(t, code + *offset, capacity);
+    BootContext bootContext(t, table, zone);
+
+    compile(t, &allocator, &bootContext, method);
+
+    *offset += allocator.offset;
+  }
+
+  virtual void visitRoots(BootImage* image, HeapWalker* w) {
+    image->callTable = w->visitRoot(callTable);
+    image->methodTree = w->visitRoot(methodTree);
+    image->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
+    image->objectPools = w->visitRoot(objectPools);
+  }
   
   System* s;
   Allocator* allocator;
-  object defaultThunk;
-  object nativeThunk;
-  object aioobThunk;
-  object thunkTable;
+  uint8_t* defaultThunk;
+  uint8_t* nativeThunk;
+  uint8_t* aioobThunk;
+  uint8_t* thunkTable;
   unsigned thunkSize;
   object callTable;
   unsigned callTableSize;
   object methodTree;
   object methodTreeSentinal;
+  object objectPools;
   SegFaultHandler segFaultHandler;
   CodeAllocator codeAllocator;
   Zone codeZone;
@@ -4974,34 +5095,19 @@ getThunk(MyThread* t, Thunk thunk)
   MyProcessor* p = processor(t);
   
   return reinterpret_cast<intptr_t>
-    (&singletonValue(t, p->thunkTable, (thunk * p->thunkSize) / BytesPerWord));
+    (p->thunkTable + ((thunk * p->thunkSize) / BytesPerWord));
 }
 
 void
-compileThunks(MyThread* t, MyProcessor* p)
+compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
+              BootImage* image, uint8_t* imageBase)
 {
   class ThunkContext {
    public:
-    class MyPromise: public Promise {
-     public:
-      MyPromise(): resolved_(false) { }
-
-      virtual int64_t value() {
-        return value_;
-      }
-    
-      virtual bool resolved() {
-        return resolved_;
-      }
-    
-      int64_t value_;
-      bool resolved_;
-    };
-
-    ThunkContext(MyThread* t): context(t) { }
+    ThunkContext(MyThread* t): context(t), promise(t->m->system) { }
 
     Context context;
-    MyPromise promise;
+    OfferPromise promise;
   };
 
   ThunkContext defaultContext(t);
@@ -5011,9 +5117,6 @@ compileThunks(MyThread* t, MyProcessor* p)
     saveStackAndBase(t, a);
     pushThread(t, a);
   
-    defaultContext.promise.resolved_ = true;
-    defaultContext.promise.value_ = reinterpret_cast<intptr_t>(compileMethod);
-
     Assembler::Constant proc(&(defaultContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
@@ -5021,6 +5124,17 @@ compileThunks(MyThread* t, MyProcessor* p)
 
     Assembler::Register result(a->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+
+    if (image) {
+      image->defaultThunk = static_cast<uint8_t*>
+        (defaultContext.promise.offset) - imageBase;
+
+      memset(defaultContext.promise.offset, 0, BytesPerWord);
+    } else {
+      memcpy(defaultContext.promise.offset,
+             voidPointer(compileMethod),
+             BytesPerWord);
+    }
   }
 
   ThunkContext nativeContext(t);
@@ -5029,16 +5143,23 @@ compileThunks(MyThread* t, MyProcessor* p)
       
     saveStackAndBase(t, a);
     pushThread(t, a);
-
-    nativeContext.promise.resolved_ = true;
-    nativeContext.promise.value_ = reinterpret_cast<intptr_t>(invokeNative);
-
     Assembler::Constant proc(&(nativeContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
   
     popThread(t, a);
 
     a->apply(Return);
+
+    if (image) {
+      image->nativeThunk = static_cast<uint8_t*>
+        (nativeContext.promise.offset) - imageBase;
+
+      memset(nativeContext.promise.offset, 0, BytesPerWord);
+    } else {
+      memcpy(nativeContext.promise.offset,
+             voidPointer(invokeNative),
+             BytesPerWord);
+    }
   }
 
   ThunkContext aioobContext(t);
@@ -5048,12 +5169,19 @@ compileThunks(MyThread* t, MyProcessor* p)
     saveStackAndBase(t, a);
     pushThread(t, a);
 
-    aioobContext.promise.resolved_ = true;
-    aioobContext.promise.value_ = reinterpret_cast<intptr_t>
-      (throwArrayIndexOutOfBounds);
-
     Assembler::Constant proc(&(aioobContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+
+    if (image) {
+      image->aioobThunk = static_cast<uint8_t*>
+        (aioobContext.promise.offset) - imageBase;
+
+      memset(aioobContext.promise.offset, 0, BytesPerWord);
+    } else {
+      memcpy(aioobContext.promise.offset,
+             voidPointer(throwArrayIndexOutOfBounds),
+             BytesPerWord);
+    }
   }
 
   ThunkContext tableContext(t);
@@ -5078,22 +5206,32 @@ compileThunks(MyThread* t, MyProcessor* p)
           + codeSingletonSizeInBytes
           (t, p->thunkSize * ThunkCount)));
 
-  p->defaultThunk = finish(t, defaultContext.context.assembler, "default");
-  p->nativeThunk = finish(t, nativeContext.context.assembler, "native");
-  p->aioobThunk = finish(t, aioobContext.context.assembler, "aioob");
+  p->defaultThunk = finish
+    (t, allocator, defaultContext.context.assembler, "default");
 
-  p->thunkTable = allocateCode(t, p->thunkSize * ThunkCount);
-  uint8_t* start = reinterpret_cast<uint8_t*>
-    (&singletonValue(t, p->thunkTable, 0));
+  p->nativeThunk = finish
+    (t, allocator, nativeContext.context.assembler, "native");
 
-  logCompile(t, start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
+  p->aioobThunk = finish
+    (t, allocator, aioobContext.context.assembler, "aioob");
 
-  tableContext.promise.resolved_ = true;
+  p->thunkTable = static_cast<uint8_t*>
+    (allocator->allocate(p->thunkSize * ThunkCount));
 
-#define THUNK(s)                                                \
-  tableContext.promise.value_ = reinterpret_cast<intptr_t>(s);  \
-  tableContext.context.assembler->writeTo(start);               \
-  start += p->thunkSize;
+  logCompile(t, p->thunkTable, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
+
+  uint8_t* start = p->thunkTable;
+
+#define THUNK(s)                                                        \
+  tableContext.context.assembler->writeTo(start);                       \
+  start += p->thunkSize;                                                \
+  if (image) {                                                          \
+    image->s##Thunk = static_cast<uint8_t*>                             \
+      (tableContext.promise.offset) - imageBase;                        \
+    memset(tableContext.promise.offset, 0, BytesPerWord);               \
+  } else {                                                              \
+    memcpy(tableContext.promise.offset, voidPointer(s), BytesPerWord);  \
+  }
 
 #include "thunks.cpp"
 
@@ -5114,7 +5252,7 @@ processor(MyThread* t)
       set(t, p->methodTree, TreeNodeLeft, p->methodTreeSentinal);
       set(t, p->methodTree, TreeNodeRight, p->methodTreeSentinal);
 
-      compileThunks(t, p);
+      compileThunks(t, codeZone(t), p, 0, 0);
 
       p->segFaultHandler.m = t->m;
       expect(t, t->m->system->success
@@ -5124,54 +5262,58 @@ processor(MyThread* t)
   return p;
 }
 
-object
+object&
+objectPools(MyThread* t)
+{
+  return processor(t)->objectPools;
+}
+
+uintptr_t
 defaultThunk(MyThread* t)
 {
-  return processor(t)->defaultThunk;
+  return reinterpret_cast<uintptr_t>(processor(t)->defaultThunk);
 }
 
-object
+uintptr_t
 nativeThunk(MyThread* t)
 {
-  return processor(t)->nativeThunk;
+  return reinterpret_cast<uintptr_t>(processor(t)->nativeThunk);
 }
 
-object
+uintptr_t
 aioobThunk(MyThread* t)
 {
-  return processor(t)->aioobThunk;
+  return reinterpret_cast<uintptr_t>(processor(t)->aioobThunk);
 }
 
 void
-compile(MyThread* t, object method)
+compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+        object method)
 {
   MyProcessor* p = processor(t);
 
-  if (methodCompiled(t, method) == p->defaultThunk) {
+  if (methodCompiled(t, method) == defaultThunk(t)) {
     PROTECT(t, method);
 
     ACQUIRE(t, t->m->classLock);
     
-    if (methodCompiled(t, method) == p->defaultThunk) {
+    if (methodCompiled(t, method) == defaultThunk(t)) {
       initClass(t, methodClass(t, method));
       if (UNLIKELY(t->exception)) return;
 
-      if (methodCompiled(t, method) == p->defaultThunk) {
+      if (methodCompiled(t, method) == defaultThunk(t)) {
         object node;
-        object compiled;
+        uint8_t* compiled;
         if (methodFlags(t, method) & ACC_NATIVE) {
           node = 0;
           compiled = p->nativeThunk;
         } else {
-          Context context(t, method);
-          compiled = compile(t, &context);
+          Context context(t, bootContext, method);
+          compiled = compile(t, allocator, &context);
           if (UNLIKELY(t->exception)) return;
-          
-          PROTECT(t, compiled);
 
           if (DebugMethodTree) {
-            fprintf(stderr, "insert method at %p\n",
-                    &singletonValue(t, compiled, 0));
+            fprintf(stderr, "insert method at %p\n", compiled);
           }
 
           // We can't set the MethodCompiled field on the original
@@ -5197,7 +5339,7 @@ compile(MyThread* t, object method)
              methodSpec(t, method),
              methodClass(t, method),
              methodCode(t, method),
-             compiled);
+             reinterpret_cast<intptr_t>(compiled));
 
           node = makeTreeNode
             (t, clone, methodTreeSentinal(t), methodTreeSentinal(t));
@@ -5205,16 +5347,15 @@ compile(MyThread* t, object method)
           PROTECT(t, node);
 
           methodTree(t) = treeInsertNode
-            (t, methodTree(t), reinterpret_cast<intptr_t>
-             (&singletonValue(t, compiled, 0)), node, methodTreeSentinal(t),
-             compareIpToMethodBounds);
+            (t, methodTree(t), reinterpret_cast<intptr_t>(compiled), node,
+             methodTreeSentinal(t), compareIpToMethodBounds);
         }
 
-        set(t, method, MethodCompiled, compiled);
+        methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
 
         if (methodVirtual(t, method)) {
           classVtable(t, methodClass(t, method), methodOffset(t, method))
-            = &singletonValue(t, compiled, 0);
+            = compiled;
         }
 
         if (node) {

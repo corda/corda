@@ -178,8 +178,12 @@ class ImmediateTask: public Task {
   { }
 
   virtual void run(Context* c) {
-    intptr_t v = promise->value();
-    memcpy(c->result + offset, &v, BytesPerWord);
+    if (promise->resolved()) {
+      intptr_t v = promise->value();
+      memcpy(c->result + offset, &v, BytesPerWord);
+    } else if (not promise->offer(c->result + offset)) {
+      abort(c);
+    }
   }
 
   Promise* promise;

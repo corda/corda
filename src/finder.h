@@ -56,7 +56,7 @@ class Finder {
     unsigned currentSize;
   };
 
-  virtual IteratorImp* iterator();
+  virtual IteratorImp* iterator() = 0;
   virtual System::Region* find(const char* name) = 0;
   virtual bool exists(const char* name) = 0;
   virtual const char* path() = 0;

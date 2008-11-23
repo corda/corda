@@ -1,8 +1,23 @@
+/* Copyright (c) 2008, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
 #include "bootimage.h"
 #include "heapwalk.h"
 #include "common.h"
 #include "machine.h"
 #include "util.h"
+#include "assembler.h"
+
+// since we aren't linking against libstdc++, we must implement this
+// ourselves:
+extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 using namespace vm;
 
@@ -26,11 +41,12 @@ object
 makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
 {
   unsigned size;
-  compileThunks(t, code, &size, image);
+  t->m->processor->compileThunks(t, image, code, &size, capacity);
 
-  unsigned fixupCount = 0;
-  object table = makeHashMap(t, 0, 0);
-  PROTECT(t, table);
+  object objectTable = makeHashMap(t, 0, 0);
+  PROTECT(t, objectTable);
+
+  Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
   for (Finder::Iterator it(t->m->finder); it.hasMore();) {
     unsigned nameSize;
@@ -44,8 +60,8 @@ makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
       for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
         object method = arrayBody(t, classMethodTable(t, c), i);
         if (methodCode(t, method)) {
-          compileMethod(t, method, code, &size, capacity,
-                        &table, &fixupCount);
+          t->m->processor->compileMethod
+            (t, &zone, code, &size, capacity, objectTable, method);
         }
       }
     }
@@ -53,7 +69,7 @@ makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
 
   image->codeSize = size;
 
-  return table;
+  return objectTable;
 }
 
 unsigned
@@ -69,13 +85,23 @@ objectSize(Thread* t, object o)
   return baseSize(t, o, objectClass(t, o));
 }
 
-HeapMap*
+void
+visitRoots(Machine* m, BootImage* image, HeapWalker* w)
+{
+  image->loader = w->visitRoot(m->loader);
+  image->stringMap = w->visitRoot(m->stringMap);
+  image->types = w->visitRoot(m->types);
+
+  m->processor->visitRoots(image, w);
+}
+
+HeapWalker*
 makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
               unsigned capacity)
 {
-  class Walker: public HeapWalker {
+  class Visitor: public HeapVisitor {
    public:
-    Walker(Thread* t, uintptr_t* heap, uintptr_t* map, unsigned capacity):
+    Visitor(Thread* t, uintptr_t* heap, uintptr_t* map, unsigned capacity):
       t(t), currentObject(0), currentOffset(0), heap(heap), map(map),
       position(0), capacity(capacity)
     { }
@@ -130,13 +156,14 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
     uintptr_t* map;
     unsigned position;
     unsigned capacity;
-  } walker(t, heap, map, capacity / BytesPerWord);
+  } visitor(t, heap, map, capacity / BytesPerWord);
 
-  HeapMap* table = walk(t, &walker);
+  HeapWalker* w = makeHeapWalker(t, &visitor);
+  visitRoots(t->m, image, w);
   
-  image->heapSize = walker.position * BytesPerWord;
+  image->heapSize = visitor.position * BytesPerWord;
 
-  return table;
+  return w;
 }
 
 void
@@ -153,9 +180,13 @@ updateCodeTable(Thread* t, object codeTable, uint8_t* code, uintptr_t* codeMap,
          fixup;
          fixup = pairSecond(t, fixup))
     {
-      int32_t v = intValue(t, pairFirst(t, fixup));
-      memcpy(code + v, &target, BytesPerWord);
-      markBit(codeMap, v);
+      OfferPromise* p = static_cast<OfferPromise*>
+        (pointerValue(t, pairFirst(t, fixup)));
+      assert(t, p->offset);
+
+      memcpy(p->offset, &target, BytesPerWord);
+      markBit(codeMap, reinterpret_cast<intptr_t>(p->offset)
+              - reinterpret_cast<intptr_t>(code));
     }
   }
 }
@@ -186,24 +217,14 @@ writeBootImage(Thread* t, FILE* out)
     (t->m->heap->allocate(heapMapSize(HeapCapacity)));
   memset(heapMap, 0, heapMapSize(HeapCapacity));
 
-  HeapMap* heapTable = makeHeapImage(t, &image, heap, heapMap, HeapCapacity);
+  HeapWalker* heapWalker = makeHeapImage
+    (t, &image, heap, heapMap, HeapCapacity);
 
-  updateCodeTable(t, codeTable, code, codeMap, heapTable);
+  updateCodeTable(t, codeTable, code, codeMap, heapWalker->map());
+
+  heapWalker->dispose();
 
   image.magic = BootImage::Magic;
-
-  image.codeTable = offset(codeTable, heap);
-
-  image.loader = offset(t->m->loader, heap);
-  image.bootstrapClassMap = offset(t->m->bootstrapClassMap, heap);
-  image.stringMap = offset(t->m->stringMap, heap);
-  image.types = offset(t->m->types, heap);
-  image.jniMethodTable = offset(t->m->jniMethodTable, heap);
-  image.finalizers = offset(t->m->finalizers, heap);
-  image.tenuredFinalizers = offset(t->m->tenuredFinalizers, heap);
-  image.finalizeQueue = offset(t->m->finalizeQueue, heap);
-  image.weakReferences = offset(t->m->weakReferences, heap);
-  image.tenuredWeakReferences = offset(t->m->tenuredWeakReferences, heap);
 
   fwrite(&image, sizeof(BootImage), 1, out);
 

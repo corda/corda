@@ -293,6 +293,15 @@ difference(void* a, void* b)
   return reinterpret_cast<intptr_t>(a) - reinterpret_cast<intptr_t>(b);
 }
 
+template <class T>
+inline void*
+voidPointer(T function)
+{
+  void* p;
+  memcpy(&p, &function, sizeof(void*));
+  return p;
+}
+
 class Machine;
 class Thread;
 
