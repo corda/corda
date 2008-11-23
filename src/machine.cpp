@@ -2052,24 +2052,33 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     // collection or some other reason.  We give it a chance here.
     ENTER(t, Thread::IdleState);
   }
+  
+  switch (type) {
+  case Machine::MovableAllocation:
+    if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+        > ThreadHeapSizeInWords)
+    {
+      t->heap = 0;
+      if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
+        t->heap = static_cast<uintptr_t*>
+          (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
+        if (t->heap) {
+          t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
+          t->heapOffset += t->heapIndex;
+          t->heapIndex = 0;
+        }
+      }
+    }
+    break;
 
-  if (type == Machine::FixedAllocation) {
+  case Machine::FixedAllocation:
     if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes) {
       t->heap = 0;
     }
-  } else if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-             > ThreadHeapSizeInWords)
-  {
-    t->heap = 0;
-    if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
-      t->heap = static_cast<uintptr_t*>
-        (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
-      if (t->heap) {
-        t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
-        t->heapOffset += t->heapIndex;
-        t->heapIndex = 0;
-      }
-    }
+    break;
+
+  case Machine::ImmortalAllocation:
+    break;
   }
 
   if (t->heap == 0) {
