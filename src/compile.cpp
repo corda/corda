@@ -5347,8 +5347,9 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
           PROTECT(t, node);
 
           methodTree(t) = treeInsertNode
-            (t, methodTree(t), reinterpret_cast<intptr_t>(compiled), node,
-             methodTreeSentinal(t), compareIpToMethodBounds);
+            (t, &(context.zone), methodTree(t),
+             reinterpret_cast<intptr_t>(compiled), node, methodTreeSentinal(t),
+             compareIpToMethodBounds);
         }
 
         methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);

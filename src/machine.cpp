@@ -450,9 +450,9 @@ void
 postCollect(Thread* t)
 {
 #ifdef VM_STRESS
-  t->m->heap->free(t->defaultHeap, Thread::HeapSizeInBytes);
+  t->m->heap->free(t->defaultHeap, ThreadHeapSizeInBytes);
   t->defaultHeap = static_cast<uintptr_t*>
-    (t->m->heap->allocate(Thread::HeapSizeInBytes));
+    (t->m->heap->allocate(ThreadHeapSizeInBytes));
 #endif
 
   t->heap = t->defaultHeap;
@@ -1665,7 +1665,7 @@ Machine::dispose()
   }
 
   for (unsigned i = 0; i < heapPoolIndex; ++i) {
-    heap->free(heapPool[i], Thread::HeapSizeInBytes);
+    heap->free(heapPool[i], ThreadHeapSizeInBytes);
   }
 
   heap->free(properties, sizeof(const char*) * propertyCount);
@@ -1691,7 +1691,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   protector(0),
   runnable(this),
   defaultHeap(static_cast<uintptr_t*>
-              (m->heap->allocate(HeapSizeInBytes))),
+              (m->heap->allocate(ThreadHeapSizeInBytes))),
   heap(defaultHeap),
   backupHeap(0),
   backupHeapIndex(0),
@@ -1832,7 +1832,7 @@ Thread::dispose()
     systemThread->dispose();
   }
 
-  m->heap->free(defaultHeap, Thread::HeapSizeInBytes);
+  m->heap->free(defaultHeap, ThreadHeapSizeInBytes);
 
   m->processor->dispose(this);
 }
@@ -1990,7 +1990,7 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
 {
   return allocate3
     (t, t->m->heap,
-     ceiling(sizeInBytes, BytesPerWord) > Thread::HeapSizeInWords ?
+     ceiling(sizeInBytes, BytesPerWord) > ThreadHeapSizeInWords ?
      Machine::FixedAllocation : Machine::MovableAllocation,
      sizeInBytes, objectMask);
 }
@@ -2009,7 +2009,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     return o;
   } else if (t->tracing) {
     expect(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-           <= Thread::HeapSizeInWords);
+           <= ThreadHeapSizeInWords);
     return allocateSmall(t, sizeInBytes);
   }
 
@@ -2020,26 +2020,33 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     // collection or some other reason.  We give it a chance here.
     ENTER(t, Thread::IdleState);
   }
-
-  if (type == Machine::FixedAllocation) {
-    if (t->m->fixedFootprint + sizeInBytes
-        > Machine::FixedFootprintThresholdInBytes)
+  
+  switch (type) {
+  case Machine::MovableAllocation:
+    if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+        > ThreadHeapSizeInWords)
     {
       t->heap = 0;
-    }
-  } else if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-             > Thread::HeapSizeInWords)
-  {
-    t->heap = 0;
-    if (t->m->heapPoolIndex < Machine::HeapPoolSize) {
-      t->heap = static_cast<uintptr_t*>
-        (t->m->heap->tryAllocate(Thread::HeapSizeInBytes));
-      if (t->heap) {
-        t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
-        t->heapOffset += t->heapIndex;
-        t->heapIndex = 0;
+      if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
+        t->heap = static_cast<uintptr_t*>
+          (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
+        if (t->heap) {
+          t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
+          t->heapOffset += t->heapIndex;
+          t->heapIndex = 0;
+        }
       }
     }
+    break;
+
+  case Machine::FixedAllocation:
+    if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes) {
+      t->heap = 0;
+    }
+    break;
+
+  case Machine::ImmortalAllocation:
+    break;
   }
 
   if (t->heap == 0) {
@@ -2720,7 +2727,7 @@ collect(Thread* t, Heap::CollectionType type)
   killZombies(t, m->rootThread);
 
   for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
-    m->heap->free(m->heapPool[i], Thread::HeapSizeInBytes);
+    m->heap->free(m->heapPool[i], ThreadHeapSizeInBytes);
   }
   m->heapPoolIndex = 0;
 

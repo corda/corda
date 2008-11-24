@@ -14,6 +14,54 @@ using namespace vm;
 
 namespace {
 
+class TreeContext {
+ public:
+  class Path {
+   public:
+    Path(object node, Path* next): node(node), next(next) { }
+
+    object node;
+    Path* next;
+  };
+
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(Thread* thread, TreeContext* context):
+      Protector(thread), context(context)
+    { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(&(context->root));
+      v->visit(&(context->node));
+
+      for (Path* p = context->ancestors; p; p = p->next) {
+        v->visit(&(p->node));
+      }
+    }
+
+    TreeContext* context;
+  };
+
+  TreeContext(Thread* thread, Zone* zone):
+    zone(zone), root(0), node(0), ancestors(0), protector(thread, this),
+    fresh(false)
+  { }
+  
+  Zone* zone;
+  object root;
+  object node;
+  Path* ancestors;
+  MyProtector protector;
+  bool fresh;
+};
+
+TreeContext::Path*
+path(TreeContext* c, object node, TreeContext::Path* next)
+{
+  return new (c->zone->allocate(sizeof(TreeContext::Path)))
+    TreeContext::Path(node, next);
+}
+
 inline object
 getTreeNodeValue(Thread*, object n)
 {
@@ -58,8 +106,9 @@ cloneTreeNode(Thread* t, object n)
   return newNode;
 }
 
-object
-treeFind(Thread* t, object old, intptr_t key, object node, object sentinal,
+void
+treeFind(Thread* t, TreeContext* c, object old, intptr_t key, object node,
+         object sentinal,
          intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   PROTECT(t, old);
@@ -72,11 +121,8 @@ treeFind(Thread* t, object old, intptr_t key, object node, object sentinal,
   object new_ = newRoot;
   PROTECT(t, new_);
 
-  object ancestors = 0;
-  PROTECT(t, ancestors);
-
   while (old != sentinal) {
-    ancestors = makePair(t, new_, ancestors);
+    c->ancestors = path(c, new_, c->ancestors);
 
     intptr_t difference = compare(t, key, getTreeNodeValue(t, old));
 
@@ -91,13 +137,20 @@ treeFind(Thread* t, object old, intptr_t key, object node, object sentinal,
       set(t, new_, TreeNodeRight, n);
       new_ = n;
     } else {
-      return makeTreePath(t, false, new_, newRoot, pairSecond(t, ancestors));
+      c->fresh = false;
+      c->root = newRoot;
+      c->node = new_;
+      c->ancestors = c->ancestors->next;
+      return;
     }
   }
 
   setTreeNodeValue(t, new_, getTreeNodeValue(t, node));
 
-  return makeTreePath(t, true, new_, newRoot, ancestors);
+  c->fresh = true;
+  c->root = newRoot;
+  c->node = new_;
+  c->ancestors = c->ancestors;
 }
 
 object
@@ -123,122 +176,109 @@ rightRotate(Thread* t, object n)
 }
 
 object
-treeAdd(Thread* t, object path)
+treeAdd(Thread* t, TreeContext* c)
 {
-  object new_ = treePathNode(t, path);
+  object new_ = c->node;
   PROTECT(t, new_);
 
-  object newRoot = treePathRoot(t, path);
+  object newRoot = c->root;
   PROTECT(t, newRoot);
-
-  object ancestors = treePathAncestors(t, path);
-  PROTECT(t, ancestors);
 
   // rebalance
   setTreeNodeRed(t, new_, true);
-  while (ancestors != 0 and treeNodeRed(t, pairFirst(t, ancestors))) {
-    if (pairFirst(t, ancestors)
-        == treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors))))
+  while (c->ancestors != 0 and treeNodeRed(t, c->ancestors->node)) {
+    if (c->ancestors->node
+        == treeNodeLeft(t, c->ancestors->next->node))
     {
       if (treeNodeRed
-          (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors)))))
+          (t, treeNodeRight(t, c->ancestors->next->node)))
       {
-        setTreeNodeRed(t, pairFirst(t, ancestors), true);
+        setTreeNodeRed(t, c->ancestors->node, false);
 
         object n = cloneTreeNode
-          (t, treeNodeRight(t, pairFirst(t, pairSecond(t, ancestors))));
+          (t, treeNodeRight(t, c->ancestors->next->node));
 
-        set(t, pairFirst(t, pairSecond(t, ancestors)), TreeNodeRight, n);
+        set(t, c->ancestors->next->node, TreeNodeRight, n);
 
-        setTreeNodeRed
-          (t, treeNodeRight
-           (t, pairFirst(t, pairSecond(t, ancestors))), false);
+        setTreeNodeRed(t, treeNodeRight(t, c->ancestors->next->node), false);
 
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), false);
+        setTreeNodeRed(t, c->ancestors->next->node, true);
 
-        new_ = pairFirst(t, pairSecond(t, ancestors));
-        ancestors = pairSecond(t, pairSecond(t, ancestors));
+        new_ = c->ancestors->next->node;
+        c->ancestors = c->ancestors->next->next;
       } else {
-        if (new_ == treeNodeRight(t, pairFirst(t, ancestors))) {
-          new_ = pairFirst(t, ancestors);
-          ancestors = pairSecond(t, ancestors);
+        if (new_ == treeNodeRight(t, c->ancestors->node)) {
+          new_ = c->ancestors->node;
+          c->ancestors = c->ancestors->next;
 
           object n = leftRotate(t, new_);
 
-          if (new_ == treeNodeRight(t, pairFirst(t, ancestors))) {
-            set(t, pairFirst(t, ancestors), TreeNodeRight, n);
+          if (new_ == treeNodeRight(t, c->ancestors->node)) {
+            set(t, c->ancestors->node, TreeNodeRight, n);
           } else {
-            set(t, pairFirst(t, ancestors), TreeNodeLeft, n);
+            set(t, c->ancestors->node, TreeNodeLeft, n);
           }
-          ancestors = makePair(t, n, ancestors);
+          c->ancestors = path(c, n, c->ancestors);
         }
-        setTreeNodeRed(t, pairFirst(t, ancestors), false);
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), true);
+        setTreeNodeRed(t, c->ancestors->node, false);
+        setTreeNodeRed(t, c->ancestors->next->node, true);
 
-        object n = rightRotate(t, pairFirst(t, pairSecond(t, ancestors)));
-        if (pairSecond(t, pairSecond(t, ancestors)) == 0) {
+        object n = rightRotate(t, c->ancestors->next->node);
+        if (c->ancestors->next->next == 0) {
           newRoot = n;
-        } else if (treeNodeRight
-                   (t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))))
-                   == pairFirst(t, pairSecond(t, ancestors)))
+        } else if (treeNodeRight(t, c->ancestors->next->next->node)
+                   == c->ancestors->next->node)
         {
-          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
-              TreeNodeRight, n);
+          set(t, c->ancestors->next->next->node, TreeNodeRight, n);
         } else {
-          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
-              TreeNodeLeft, n);
+          set(t, c->ancestors->next->next->node, TreeNodeLeft, n);
         }
         // done
       }
     } else { // this is just the reverse of the code above (right and
              // left swapped):
       if (treeNodeRed
-          (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors)))))
+          (t, treeNodeLeft(t, c->ancestors->next->node)))
       {
-        setTreeNodeRed(t, pairFirst(t, ancestors), true);
+        setTreeNodeRed(t, c->ancestors->node, false);
 
         object n = cloneTreeNode
-          (t, treeNodeLeft(t, pairFirst(t, pairSecond(t, ancestors))));
+          (t, treeNodeLeft(t, c->ancestors->next->node));
 
-        set(t, pairFirst(t, pairSecond(t, ancestors)), TreeNodeLeft, n);
+        set(t, c->ancestors->next->node, TreeNodeLeft, n);
 
-        setTreeNodeRed
-          (t, treeNodeLeft
-           (t, pairFirst(t, pairSecond(t, ancestors))), false);
+        setTreeNodeRed(t, treeNodeLeft(t, c->ancestors->next->node), false);
 
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), false);
+        setTreeNodeRed(t, c->ancestors->next->node, true);
 
-        new_ = pairFirst(t, pairSecond(t, ancestors));
-        ancestors = pairSecond(t, pairSecond(t, ancestors));
+        new_ = c->ancestors->next->node;
+        c->ancestors = c->ancestors->next->next;
       } else {
-        if (new_ == treeNodeLeft(t, pairFirst(t, ancestors))) {
-          new_ = pairFirst(t, ancestors);
-          ancestors = pairSecond(t, ancestors);
+        if (new_ == treeNodeLeft(t, c->ancestors->node)) {
+          new_ = c->ancestors->node;
+          c->ancestors = c->ancestors->next;
 
           object n = rightRotate(t, new_);
 
-          if (new_ == treeNodeLeft(t, pairFirst(t, ancestors))) {
-            set(t, pairFirst(t, ancestors), TreeNodeLeft, n);
+          if (new_ == treeNodeLeft(t, c->ancestors->node)) {
+            set(t, c->ancestors->node, TreeNodeLeft, n);
           } else {
-            set(t, pairFirst(t, ancestors), TreeNodeRight, n);
+            set(t, c->ancestors->node, TreeNodeRight, n);
           }
-          ancestors = makePair(t, n, ancestors);
+          c->ancestors = path(c, n, c->ancestors);
         }
-        setTreeNodeRed(t, pairFirst(t, ancestors), false);
-        setTreeNodeRed(t, pairFirst(t, pairSecond(t, ancestors)), true);
+        setTreeNodeRed(t, c->ancestors->node, false);
+        setTreeNodeRed(t, c->ancestors->next->node, true);
 
-        object n = leftRotate(t, pairFirst(t, pairSecond(t, ancestors)));
-        if (pairSecond(t, pairSecond(t, ancestors)) == 0) {
+        object n = leftRotate(t, c->ancestors->next->node);
+        if (c->ancestors->next->next == 0) {
           newRoot = n;
-        } else if (treeNodeLeft
-                   (t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))))
-                   == pairFirst(t, pairSecond(t, ancestors)))
+        } else if (treeNodeLeft(t, c->ancestors->next->next->node)
+                   == c->ancestors->next->node)
         {
-          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
-              TreeNodeLeft, n);
+          set(t, c->ancestors->next->next->node, TreeNodeLeft, n);
         } else {
-          set(t, pairFirst(t, pairSecond(t, pairSecond(t, ancestors))),
-              TreeNodeRight, n);
+          set(t, c->ancestors->next->next->node, TreeNodeRight, n);
         }
         // done
       }
@@ -507,16 +547,18 @@ treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
 }
 
 object
-treeInsertNode(Thread* t, object tree, intptr_t key, object node,
+treeInsertNode(Thread* t, Zone* zone, object tree, intptr_t key, object node,
                object sentinal,
                intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   PROTECT(t, tree);
   PROTECT(t, sentinal);
 
-  object path = treeFind(t, tree, key, node, sentinal, compare);
-  expect(t, treePathFresh(t, path));
-  return treeAdd(t, path);
+  TreeContext c(t, zone);
+  treeFind(t, &c, tree, key, node, sentinal, compare);
+  expect(t, c.fresh);
+
+  return treeAdd(t, &c);
 }
 
 } // namespace vm

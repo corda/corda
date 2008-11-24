@@ -26,6 +26,7 @@
 #  include <errno.h>
 #  include <netdb.h>
 #  include <sys/select.h>
+#  include <netinet/tcp.h>
 #endif
 
 #define java_nio_channels_SelectionKey_OP_READ 1L
@@ -89,6 +90,26 @@ throwIOException(JNIEnv* e)
 }
 
 void
+throwSocketException(JNIEnv* e, const char* s)
+{
+  throwNew(e, "java/net/SocketException", s);
+}
+
+void
+throwSocketException(JNIEnv* e, jbyteArray a)
+{
+  jbyte* s = static_cast<jbyte*>(e->GetPrimitiveArrayCritical(a, 0));
+  throwSocketException(e, reinterpret_cast<const char*>(s));
+  e->ReleasePrimitiveArrayCritical(a, s, 0);
+}
+
+void
+throwSocketException(JNIEnv* e)
+{
+  throwSocketException(e, errorString(e));
+}
+
+void
 init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
 {
   const char* chars = e->GetStringUTFChars(hostString, 0);
@@ -149,6 +170,19 @@ makeNonblocking(JNIEnv* e, int d)
     return false;
   }
 #endif
+  return true;
+}
+
+bool
+setTcpNoDelay(JNIEnv* e, int d, bool on)
+{
+  int flag = on;
+  int r = setsockopt
+    (d, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&flag), sizeof(int));
+  if (r < 0) {
+    throwSocketException(e);
+    return false;
+  }
   return true;
 }
 
@@ -275,6 +309,15 @@ Java_java_nio_channels_ServerSocketChannel_natDoListen(JNIEnv *e,
 
   ::doListen(e, s, &address);
   return s;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_nio_channels_SocketChannel_natSetTcpNoDelay(JNIEnv *e,
+                                                      jclass,
+                                                      jint socket,
+                                                      jboolean on)
+{
+  setTcpNoDelay(e, socket, on);
 }
 
 extern "C" JNIEXPORT jint JNICALL
