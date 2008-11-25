@@ -267,7 +267,7 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     
     // Error if here
     char c = errno;
-    write(msg[1], &c, 1);
+    ssize_t rv UNUSED = write(msg[1], &c, 1);
     exit(127);
   } break;
     
