@@ -133,7 +133,7 @@ hash(object p, unsigned capacity)
 Set::Entry*
 find(Context* c, object p)
 {
-  if (c->objects == 0) return false;
+  if (c->objects == 0) return 0;
 
   for (int i = c->objects->index[hash(p, c->objects->capacity)]; i >= 0;) {
     Set::Entry* e = c->objects->entries + i;
@@ -143,7 +143,7 @@ find(Context* c, object p)
     i = e->next;
   }
 
-  return false;
+  return 0;
 }
 
 Set::Entry*

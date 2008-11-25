@@ -11,8 +11,10 @@
 package java.nio.channels;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.net.SocketAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 
 public class SocketChannel extends SelectableChannel
@@ -20,8 +22,8 @@ public class SocketChannel extends SelectableChannel
 {
   public static final int InvalidSocket = -1;
 
-  protected int socket = InvalidSocket;
-  protected boolean connected = false;
+  int socket = InvalidSocket;
+  boolean connected = false;
 
   public static SocketChannel open() {
     return new SocketChannel();
@@ -30,6 +32,10 @@ public class SocketChannel extends SelectableChannel
   public SelectableChannel configureBlocking(boolean v) {
     if (v) throw new IllegalArgumentException();
     return this;
+  }
+
+  public Socket socket() {
+    return new Handle();
   }
 
   public boolean connect(SocketAddress address) throws Exception {
@@ -86,6 +92,15 @@ public class SocketChannel extends SelectableChannel
   int socketFD() {
     return socket;
   }
+
+  public class Handle extends Socket {
+    public void setTcpNoDelay(boolean on) throws SocketException {
+      natSetTcpNoDelay(socket, on);
+    }
+  }
+
+  private static native void natSetTcpNoDelay(int socket, boolean on)
+    throws SocketException;
 
   private static native int natDoConnect(String host, int port, boolean[] connected)
     throws Exception;

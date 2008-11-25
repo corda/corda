@@ -16,9 +16,19 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.ServerSocket;
 
-public class ServerSocketChannel extends SocketChannel {
+public class ServerSocketChannel extends SelectableChannel {
+  private final SocketChannel channel = new SocketChannel();
+
   public static ServerSocketChannel open() {
     return new ServerSocketChannel();
+  }
+
+  public SelectableChannel configureBlocking(boolean v) {
+    return channel.configureBlocking(v);
+  }
+
+  public void close() throws IOException {
+    channel.close();
   }
 
   public SocketChannel accept() throws Exception {
@@ -33,7 +43,7 @@ public class ServerSocketChannel extends SocketChannel {
   }
 
   private int doAccept() throws IOException {
-    return natDoAccept(socket);
+    return natDoAccept(channel.socket);
   }
 
   private int doListen(String host, int port) throws IOException {
@@ -50,7 +60,7 @@ public class ServerSocketChannel extends SocketChannel {
       } catch (ClassCastException e) {
         throw new IllegalArgumentException();
       }
-      socket = doListen(a.getHostName(), a.getPort());
+      channel.socket = doListen(a.getHostName(), a.getPort());
     }
   }
 
