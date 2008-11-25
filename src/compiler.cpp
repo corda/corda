@@ -2375,10 +2375,6 @@ class CallEvent: public Event {
           target = read(c, footprintSizeInBytes(s->footprint),
                         1 << MemoryOperand, 0, frameIndex);
           frameIndex += s->footprint;
-
-          if (stackArgumentFootprint == 0) {
-            popIndex = frameIndex;
-          }
         }
         addRead(c, this, s->value, target);
         index += s->footprint;
@@ -2412,18 +2408,18 @@ class CallEvent: public Event {
                 (c, footprintSizeInBytes(s->footprint),
                  1 << MemoryOperand, 0, frameIndex));
       } else {
-        unsigned index = ::frameIndex
+        unsigned logicalIndex = ::frameIndex
           (c, s->index + c->localFootprint, s->footprint);
 
         if (DebugReads) {
           fprintf(stderr, "stack save read %p of footprint %d at %d of %d\n",
-                  s->value, s->footprint, index,
+                  s->value, s->footprint, logicalIndex,
                   c->alignedFrameSize + c->parameterFootprint);
         }
 
         addRead(c, this, s->value, read
                 (c, footprintSizeInBytes(s->footprint), 1 << MemoryOperand,
-                 0, index));
+                 0, logicalIndex));
       }
 
       footprint -= s->footprint;
@@ -2436,11 +2432,18 @@ class CallEvent: public Event {
 
         padding = logicalIndex - frameIndex;
         padIndex = s->index + c->localFootprint;
-        popIndex = frameIndex + s->footprint;
       }
 
       frameIndex += s->footprint;
     }
+
+    popIndex = ::frameIndex
+      (c, (stackBefore
+           ? stackBefore->index
+           + stackBefore->footprint
+           - stackArgumentFootprint
+           : 0)
+       + c->localFootprint, 0);
 
     saveLocals(c, this);
   }
