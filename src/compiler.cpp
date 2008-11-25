@@ -2294,7 +2294,7 @@ clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
 
   for (Read* r = reads; r; r = r->eventNext) {
     nextRead(c, e, r->value);
-  }  
+  }
 }
 
 CodePromise*
@@ -2312,6 +2312,26 @@ codePromise(Context* c, Promise* offset)
 
 void
 append(Context* c, Event* e);
+
+void
+saveLocals(Context* c, Event* e)
+{
+  for (unsigned li = 0; li < c->localFootprint; ++li) {
+    Local* local = e->localsBefore + li;
+    if (local->value) {
+      if (DebugReads) {
+        fprintf(stderr, "local save read %p of footprint %d at %d of %d\n",
+                local->value, local->footprint,
+                ::frameIndex(c, li, local->footprint),
+                c->alignedFrameSize + c->parameterFootprint);
+      }
+
+      addRead(c, e, local->value, read
+              (c, footprintSizeInBytes(local->footprint), 1 << MemoryOperand,
+               0, ::frameIndex(c, li, local->footprint)));
+    }
+  }
+}
 
 class CallEvent: public Event {
  public:
@@ -2422,21 +2442,7 @@ class CallEvent: public Event {
       frameIndex += s->footprint;
     }
 
-    for (unsigned li = 0; li < c->localFootprint; ++li) {
-      Local* local = localsBefore + li;
-      if (local->value) {
-        if (DebugReads) {
-          fprintf(stderr, "local save read %p of footprint %d at %d of %d\n",
-                  local->value, local->footprint,
-                  ::frameIndex(c, li, local->footprint),
-                  c->alignedFrameSize + c->parameterFootprint);
-        }
-
-        addRead(c, this, local->value, read
-                (c, footprintSizeInBytes(local->footprint), 1 << MemoryOperand,
-                 0, ::frameIndex(c, li, local->footprint)));
-      }
-    }
+    saveLocals(c, this);
   }
 
   virtual const char* name() {
@@ -3410,6 +3416,32 @@ appendBuddy(Context* c, Value* original, Value* buddy, unsigned size)
 {
   append(c, new (c->zone->allocate(sizeof(BuddyEvent)))
          BuddyEvent(c, original, buddy, size));
+}
+
+class SaveLocalsEvent: public Event {
+ public:
+  SaveLocalsEvent(Context* c):
+    Event(c)
+  {
+    saveLocals(c, this);
+  }
+
+  virtual const char* name() {
+    return "SaveLocalsEvent";
+  }
+
+  virtual void compile(Context* c) {
+    for (Read* r = reads; r; r = r->eventNext) {
+      nextRead(c, this, r->value);
+    }
+  }
+};
+
+void
+appendSaveLocals(Context* c)
+{
+  append(c, new (c->zone->allocate(sizeof(SaveLocalsEvent)))
+         SaveLocalsEvent(c));
 }
 
 class DummyEvent: public Event {
@@ -4480,6 +4512,10 @@ class MyCompiler: public Compiler {
     }
 
     return c.locals[index].value;
+  }
+
+  virtual void saveLocals() {
+    appendSaveLocals(&c);
   }
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,

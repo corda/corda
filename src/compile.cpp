@@ -530,7 +530,7 @@ class Context {
 
   Context(MyThread* t, object method):
     thread(t),
-    zone(t->m->system, t->m->heap, 16 * 1024),
+    zone(t->m->system, t->m->heap, 64 * 1024),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone, t->arch)),
     client(t),
     compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
@@ -1860,6 +1860,24 @@ exceptionIndex(MyThread* t, object code, unsigned jsrIp, unsigned dstIp)
   abort(t);
 }
 
+bool
+inTryBlock(MyThread* t, object code, unsigned ip)
+{
+  object table = codeExceptionHandlerTable(t, code);
+  if (table) {
+    unsigned length = exceptionHandlerTableLength(t, table);
+    for (unsigned i = 0; i < length; ++i) {
+      ExceptionHandler* eh = exceptionHandlerTableBody(t, table, i);
+      if (ip >= exceptionHandlerStart(eh)
+          and ip < exceptionHandlerEnd(eh))
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void
 compile(MyThread* t, Frame* initialFrame, unsigned ip,
         int exceptionHandlerStart = -1);
@@ -1926,6 +1944,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* index = frame->popInt();
       Compiler::Operand* array = frame->popObject();
 
+      if (inTryBlock(t, code, ip - 1)) {
+        c->saveLocals();
+      }
+
       if (CheckArrayBounds) {
         c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
                        (&singletonValue(t, aioobThunk(t), 0)));
@@ -1981,6 +2003,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Compiler::Operand* index = frame->popInt();
       Compiler::Operand* array = frame->popObject();
+
+      if (inTryBlock(t, code, ip - 1)) {
+        c->saveLocals();
+      }
 
       if (CheckArrayBounds) {
         c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
@@ -2405,6 +2431,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         table = frame->append(classStaticTable(t, fieldClass(t, field)));
       } else {
         table = frame->popObject();
+
+        if (inTryBlock(t, code, ip - 3)) {
+          c->saveLocals();
+        }
       }
 
       switch (fieldCode(t, field)) {
@@ -3330,6 +3360,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
 
         staticTable = classStaticTable(t, fieldClass(t, field));      
+      } else if (inTryBlock(t, code, ip - 3)) {
+        c->saveLocals();
       }
 
       Compiler::Operand* value;
@@ -3968,7 +4000,7 @@ finish(MyThread* t, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Longs") == 0 and
+       "Arrays") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),

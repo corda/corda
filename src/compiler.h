@@ -92,6 +92,7 @@ class Compiler {
   virtual void storeLocal(unsigned footprint, Operand* src,
                           unsigned index) = 0;
   virtual Operand* loadLocal(unsigned footprint, unsigned index) = 0;
+  virtual void saveLocals() = 0;
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
                            Operand* index, intptr_t handler) = 0;
