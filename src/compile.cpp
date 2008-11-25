@@ -37,6 +37,8 @@ const bool CheckArrayBounds = true;
 
 const unsigned MaxNativeCallFootprint = 4;
 
+const unsigned InitialZoneCapacityInBytes = 64 * 1024;
+
 class MyThread: public Thread {
  public:
   class CallTrace {
@@ -530,7 +532,7 @@ class Context {
 
   Context(MyThread* t, object method):
     thread(t),
-    zone(t->m->system, t->m->heap, 64 * 1024),
+    zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone, t->arch)),
     client(t),
     compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
@@ -546,7 +548,7 @@ class Context {
 
   Context(MyThread* t):
     thread(t),
-    zone(t->m->system, t->m->heap, LikelyPageSizeInBytes),
+    zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone, t->arch)),
     client(t),
     compiler(0),
@@ -3655,13 +3657,15 @@ translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
 }
 
 void
-printSet(uintptr_t m)
+printSet(uintptr_t m, unsigned limit)
 {
-  for (unsigned i = 0; i < 16; ++i) {
-    if ((m >> i) & 1) {
-      fprintf(stderr, "1");
-    } else {
-      fprintf(stderr, "_");
+  if (limit) {
+    for (unsigned i = 0; i < 16; ++i) {
+      if ((m >> i) & 1) {
+        fprintf(stderr, "1");
+      } else {
+        fprintf(stderr, "_");
+      }
     }
   }
 }
@@ -3714,7 +3718,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
       if (DebugFrameMaps) {
         fprintf(stderr, "      roots at ip %3d: ", ip);
-        printSet(*roots);
+        printSet(*roots, mapSize);
         fprintf(stderr, "\n");
       }
 
@@ -3741,7 +3745,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
         if (DebugFrameMaps) {
           fprintf(stderr, "table roots at ip %3d: ", ip);
-          printSet(*tableRoots);
+          printSet(*tableRoots, mapSize);
           fprintf(stderr, "\n");
         }
       } else {
@@ -3775,7 +3779,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       TraceElement* te; context->eventLog.get(eventIndex, &te, BytesPerWord);
       if (DebugFrameMaps) {
         fprintf(stderr, "trace roots at ip %3d: ", ip);
-        printSet(*roots);
+        printSet(*roots, mapSize);
         fprintf(stderr, "\n");
       }
       memcpy(te->map, roots, mapSize * BytesPerWord);
@@ -3935,7 +3939,7 @@ finish(MyThread* t, Context* context)
       if (DebugFrameMaps) {
         fprintf(stderr, " orig roots at ip %p: ", reinterpret_cast<void*>
                 (p->address->value()));
-        printSet(p->map[0]);
+        printSet(p->map[0], frameMapSizeInWords(t, context->method));
         fprintf(stderr, "\n");
 
         fprintf(stderr, "final roots at ip %p: ", reinterpret_cast<void*>
