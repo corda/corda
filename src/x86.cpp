@@ -958,13 +958,21 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
     break;
 
   case 8: {
-    Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
-    Assembler::Constant al(shiftMaskPromise(c, a->value, 0, 0xFFFFFFFF));
+    if (BytesPerWord == 8
+        and a->value->resolved()
+        and isInt32(a->value->value()))
+    {
+      encode(c, 0xc7, 0, b, true);
+      c->code.append4(a->value->value());      
+    } else {
+      Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
+      Assembler::Constant al(shiftMaskPromise(c, a->value, 0, 0xFFFFFFFF));
 
-    Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
+      Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
 
-    moveCM(c, 4, &al, 4, b);
-    moveCM(c, 4, &ah, 4, &bh);
+      moveCM(c, 4, &al, 4, b);
+      moveCM(c, 4, &ah, 4, &bh);
+    }
   } break;
 
   default: abort(c);
