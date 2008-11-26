@@ -1709,7 +1709,7 @@ toString(Context* c, Site* sites, char* buffer, unsigned size)
       assert(c, length + 2 < size);
       memcpy(buffer + length, ", ", 2);
       length += 2;
-      sites->next->toString(c, buffer + length, size - length);
+      toString(c, sites->next, buffer + length, size - length);
     }
   } else {
     assert(c, size);
@@ -3585,7 +3585,10 @@ resolveJunctionSite(Context* c, Event* e, Value* v,
     unsigned copyCost;
     Site* site = pick(c, v, target, &copyCost, true);
 
-    if (copyCost or not findSite(c, v, site)) {
+    if (copyCost or not (original or findSite(c, v, site))) {
+      if (original) {
+        target = target->copy(c);
+      }
       move(c, e->stackAfter, e->localsAfter, r->size, v, site, target);
     } else {
       target = site;
