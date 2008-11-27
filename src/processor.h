@@ -121,7 +121,8 @@ class Processor {
 
   virtual void
   compileMethod(Thread* t, Zone* zone, uint8_t* code, unsigned* offset,
-                unsigned capacity, object table, object method) = 0;
+                unsigned capacity, object* constants, object* calls,
+                object method) = 0;
 
   virtual void
   visitRoots(BootImage* image, HeapWalker* w) = 0;

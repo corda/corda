@@ -43,10 +43,13 @@ makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
   unsigned size;
   t->m->processor->compileThunks(t, image, code, &size, capacity);
 
-  object objectTable = makeHashMap(t, 0, 0);
-  PROTECT(t, objectTable);
-
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
+  
+  object constants = 0;
+  PROTECT(t, constants);
+  
+  object calls = 0;
+  PROTECT(t, calls);
 
   for (Finder::Iterator it(t->m->finder); it.hasMore();) {
     unsigned nameSize;
@@ -61,15 +64,20 @@ makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
         object method = arrayBody(t, classMethodTable(t, c), i);
         if (methodCode(t, method)) {
           t->m->processor->compileMethod
-            (t, &zone, code, &size, capacity, objectTable, method);
+            (t, &zone, code, &size, capacity, &constants, &calls, method);
         }
       }
     }
   }
 
+  for (; calls; calls = tripleThird(t, calls)) {
+    static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))
+      ->listener->resolve(methodCompiled(t, tripleFirst(t, calls)));
+  }
+
   image->codeSize = size;
 
-  return objectTable;
+  return constants;
 }
 
 unsigned
@@ -167,27 +175,21 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
 }
 
 void
-updateCodeTable(Thread* t, object codeTable, uint8_t* code, uintptr_t* codeMap,
+updateConstants(Thread* t, object constants, uint8_t* code, uintptr_t* codeMap,
                 HeapMap* heapTable)
 {
-  intptr_t i = 0;
-  for (HashMapIterator it(t, codeTable); it.hasMore(); ++i) {
-    object mapEntry = it.next();
-    intptr_t target = heapTable->find(tripleFirst(t, mapEntry));
+  for (; constants; constants = tripleThird(t, constants)) {
+    intptr_t target = heapTable->find(tripleFirst(t, constants));
     assert(t, target >= 0);
 
-    for (object fixup = tripleSecond(t, mapEntry);
-         fixup;
-         fixup = pairSecond(t, fixup))
-    {
-      OfferPromise* p = static_cast<OfferPromise*>
-        (pointerValue(t, pairFirst(t, fixup)));
-      assert(t, p->offset);
+    void* dst = static_cast<ListenPromise*>
+      (pointerValue(t, tripleSecond(t, constants)))->listener->resolve(target);
 
-      memcpy(p->offset, &target, BytesPerWord);
-      markBit(codeMap, reinterpret_cast<intptr_t>(p->offset)
-              - reinterpret_cast<intptr_t>(code));
-    }
+    assert(t, reinterpret_cast<intptr_t>(dst)
+           >= reinterpret_cast<intptr_t>(code));
+
+    markBit(codeMap, reinterpret_cast<intptr_t>(dst)
+            - reinterpret_cast<intptr_t>(code));
   }
 }
 
@@ -208,7 +210,7 @@ writeBootImage(Thread* t, FILE* out)
     (t->m->heap->allocate(codeMapSize(CodeCapacity)));
   memset(codeMap, 0, codeMapSize(CodeCapacity));
 
-  object codeTable = makeCodeImage(t, &image, code, CodeCapacity);
+  object constants = makeCodeImage(t, &image, code, CodeCapacity);
 
   const unsigned HeapCapacity = 32 * 1024 * 1024;
   uintptr_t* heap = static_cast<uintptr_t*>
@@ -220,7 +222,7 @@ writeBootImage(Thread* t, FILE* out)
   HeapWalker* heapWalker = makeHeapImage
     (t, &image, heap, heapMap, HeapCapacity);
 
-  updateCodeTable(t, codeTable, code, codeMap, heapWalker->map());
+  updateConstants(t, constants, code, codeMap, heapWalker->map());
 
   heapWalker->dispose();
 

@@ -131,7 +131,7 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 
   if (ip < start) {
     return -1;
-  } else if (ip < start + compiledSize(start))
+  } else if (ip < start + static_cast<intptr_t>(compiledSize(start)))
   {
     return 0;
   } else {
@@ -458,18 +458,20 @@ class BootContext {
     MyProtector(Thread* t, BootContext* c): Protector(t), c(c) { }
 
     virtual void visit(Heap::Visitor* v) {
-      v->visit(&(c->objectTable));
+      v->visit(&(c->constants));
+      v->visit(&(c->calls));
     }
 
     BootContext* c;
   };
 
-  BootContext(Thread* t, object objectTable, Zone* zone):
-    protector(t, this), objectTable(objectTable), zone(zone)
+  BootContext(Thread* t, object constants, object calls, Zone* zone):
+    protector(t, this), constants(constants), calls(calls), zone(zone)
   { }
 
   MyProtector protector;
-  object objectTable;
+  object constants;
+  object calls;
   Zone* zone;
 };
 
@@ -638,24 +640,12 @@ class Frame {
     if (context->bootContext) {
       BootContext* bc = context->bootContext;
 
-      object node = hashMapFindNode
-        (t, bc->objectTable, o, objectHash, objectEqual);
-      PROTECT(t, node);
+      Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
+        ListenPromise(t->m->system, bc->zone);
 
-      Promise* p = new (bc->zone->allocate(sizeof(OfferPromise)))
-        OfferPromise(t->m->system);
-
+      PROTECT(t, o);
       object pointer = makePointer(t, p);
-
-      if (node) {
-        object fixup = makePair(t, pointer, tripleSecond(t, node));
-        vm::set(t, node, TripleSecond, fixup);
-      } else {
-        PROTECT(t, o);
-        object fixup = makePair(t, pointer, 0);
-        // todo: use a hash function that compares by value
-        hashMapInsert(t, bc->objectTable, o, fixup, objectHash);
-      }
+      bc->constants = makeTriple(t, o, pointer, bc->constants);
 
       return c->promiseConstant(p);
     } else {
@@ -1745,26 +1735,37 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
          frame->trace(target, false),
          rSize,
          0);
-    } else if (methodCompiled(t, target) == defaultThunk(t)
-               or (frame->context->bootContext
-                   and methodClass(t, target)
-                   != methodClass(t, frame->context->method)))
-    {
-      // todo: when creating a boot image, log intra-class calls for
-      // later fixup
-      result = c->call
-        (c->constant(defaultThunk(t)),
-         Compiler::Aligned,
-         frame->trace(target, false),
-         rSize,
-         0);
     } else {
-      result = c->call
-        (c->constant(methodCompiled(t, target)),
-         0,
-         frame->trace(0, false),
-         rSize,
-         0);
+      BootContext* bc = frame->context->bootContext;
+      if (bc) {
+        Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
+          ListenPromise(t->m->system, bc->zone);
+
+        PROTECT(t, target);
+        object pointer = makePointer(t, p);
+        bc->calls = makeTriple(t, target, pointer, bc->calls);
+
+        result = c->call
+          (c->promiseConstant(p),
+           0,
+           frame->trace(0, false),
+           rSize,
+           0);
+      } else if (methodCompiled(t, target) == defaultThunk(t)) {
+        result = c->call
+          (c->constant(defaultThunk(t)),
+           Compiler::Aligned,
+           frame->trace(target, false),
+           rSize,
+           0);
+      } else {
+        result = c->call
+          (c->constant(methodCompiled(t, target)),
+           0,
+           frame->trace(0, false),
+           rSize,
+           0);
+      }
     }
   }
 
@@ -5053,15 +5054,17 @@ class MyProcessor: public Processor {
   }
 
   virtual void compileMethod(Thread* vmt, Zone* zone, uint8_t* code,
-                             unsigned* offset, unsigned capacity, object table,
-                             object method)
+                             unsigned* offset, unsigned capacity,
+                             object* constants, object* calls, object method)
   {
     MyThread* t = static_cast<MyThread*>(vmt);
     FixedAllocator allocator(t, code + *offset, capacity);
-    BootContext bootContext(t, table, zone);
+    BootContext bootContext(t, *constants, *calls, zone);
 
     compile(t, &allocator, &bootContext, method);
 
+    *constants = bootContext.constants;
+    *calls = bootContext.calls;
     *offset += allocator.offset;
   }
 
@@ -5104,13 +5107,16 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 {
   class ThunkContext {
    public:
-    ThunkContext(MyThread* t): context(t), promise(t->m->system) { }
+    ThunkContext(MyThread* t, Zone* zone):
+      context(t), promise(t->m->system, zone)
+    { }
 
     Context context;
-    OfferPromise promise;
+    ListenPromise promise;
   };
 
-  ThunkContext defaultContext(t);
+  Zone zone(t->m->system, t->m->heap, 1024);
+  ThunkContext defaultContext(t, &zone);
 
   { Assembler* a = defaultContext.context.assembler;
       
@@ -5125,19 +5131,15 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     Assembler::Register result(a->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
 
-    if (image) {
-      image->defaultThunk = static_cast<uint8_t*>
-        (defaultContext.promise.offset) - imageBase;
+    void* p = defaultContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(compileMethod)));
 
-      memset(defaultContext.promise.offset, 0, BytesPerWord);
-    } else {
-      memcpy(defaultContext.promise.offset,
-             voidPointer(compileMethod),
-             BytesPerWord);
+    if (image) {
+      image->defaultThunk = static_cast<uint8_t*>(p) - imageBase;
     }
   }
 
-  ThunkContext nativeContext(t);
+  ThunkContext nativeContext(t, &zone);
 
   { Assembler* a = nativeContext.context.assembler;
       
@@ -5150,19 +5152,15 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
     a->apply(Return);
 
-    if (image) {
-      image->nativeThunk = static_cast<uint8_t*>
-        (nativeContext.promise.offset) - imageBase;
+    void* p = nativeContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(invokeNative)));
 
-      memset(nativeContext.promise.offset, 0, BytesPerWord);
-    } else {
-      memcpy(nativeContext.promise.offset,
-             voidPointer(invokeNative),
-             BytesPerWord);
+    if (image) {
+      image->nativeThunk = static_cast<uint8_t*>(p) - imageBase;
     }
   }
 
-  ThunkContext aioobContext(t);
+  ThunkContext aioobContext(t, &zone);
 
   { Assembler* a = aioobContext.context.assembler;
       
@@ -5172,19 +5170,15 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     Assembler::Constant proc(&(aioobContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
-    if (image) {
-      image->aioobThunk = static_cast<uint8_t*>
-        (aioobContext.promise.offset) - imageBase;
+    void* p = aioobContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds)));
 
-      memset(aioobContext.promise.offset, 0, BytesPerWord);
-    } else {
-      memcpy(aioobContext.promise.offset,
-             voidPointer(throwArrayIndexOutOfBounds),
-             BytesPerWord);
+    if (image) {
+      image->aioobThunk = static_cast<uint8_t*>(p) - imageBase;
     }
   }
 
-  ThunkContext tableContext(t);
+  ThunkContext tableContext(t, &zone);
 
   { Assembler* a = tableContext.context.assembler;
   
@@ -5225,12 +5219,11 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 #define THUNK(s)                                                        \
   tableContext.context.assembler->writeTo(start);                       \
   start += p->thunkSize;                                                \
-  if (image) {                                                          \
-    image->s##Thunk = static_cast<uint8_t*>                             \
-      (tableContext.promise.offset) - imageBase;                        \
-    memset(tableContext.promise.offset, 0, BytesPerWord);               \
-  } else {                                                              \
-    memcpy(tableContext.promise.offset, voidPointer(s), BytesPerWord);  \
+  { void* p = tableContext.promise.listener->resolve                    \
+      (reinterpret_cast<intptr_t>(voidPointer(s)));                     \
+    if (image) {                                                        \
+      image->s##Thunk = static_cast<uint8_t*>(p) - imageBase;           \
+    }                                                                   \
   }
 
 #include "thunks.cpp"

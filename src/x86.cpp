@@ -135,6 +135,38 @@ class Task {
   Task* next;
 };
 
+void
+resolveOffset(System* s, uint8_t* instruction, unsigned instructionSize,
+              int64_t value)
+{
+  intptr_t v = reinterpret_cast<uint8_t*>(value)
+    - instruction - instructionSize;
+    
+  expect(s, isInt32(v));
+    
+  int32_t v4 = v;
+  memcpy(instruction + instructionSize - 4, &v4, 4);
+}
+
+class OffsetListener: public Promise::Listener {
+ public:
+  OffsetListener(System* s, uint8_t* instruction,
+                 unsigned instructionSize):
+    s(s),
+    instruction(instruction),
+    instructionSize(instructionSize)
+  { }
+
+  virtual void* resolve(int64_t value) {
+    resolveOffset(s, instruction, instructionSize, value);
+    return 0;
+  }
+
+  System* s;
+  uint8_t* instruction;
+  unsigned instructionSize;
+};
+
 class OffsetTask: public Task {
  public:
   OffsetTask(Task* next, Promise* promise, unsigned instructionOffset,
@@ -146,14 +178,14 @@ class OffsetTask: public Task {
   { }
 
   virtual void run(Context* c) {
-    uint8_t* instruction = c->result + instructionOffset;
-    intptr_t v = reinterpret_cast<uint8_t*>(promise->value())
-      - instruction - instructionSize;
-    
-    expect(c, isInt32(v));
-    
-    int32_t v4 = v;
-    memcpy(instruction + instructionSize - 4, &v4, 4);
+    if (promise->resolved()) {
+      resolveOffset
+        (c->s, c->result + instructionOffset, instructionSize,
+         promise->value());
+    } else {
+      new (promise->listen(sizeof(OffsetListener)))
+        OffsetListener(c->s, c->result + instructionOffset, instructionSize);
+    }
   }
 
   Promise* promise;
@@ -169,6 +201,25 @@ appendOffsetTask(Context* c, Promise* promise, int instructionOffset,
     (c->tasks, promise, instructionOffset, instructionSize);
 }
 
+void
+copyWord(void* dst, int64_t src)
+{
+  intptr_t v = src;
+  memcpy(dst, &v, BytesPerWord);
+}
+
+class ImmediateListener: public Promise::Listener {
+ public:
+  ImmediateListener(void* dst): dst(dst) { }
+
+  virtual void* resolve(int64_t value) {
+    copyWord(dst, value);
+    return 0;
+  }
+
+  void* dst;
+};
+
 class ImmediateTask: public Task {
  public:
   ImmediateTask(Task* next, Promise* promise, unsigned offset):
@@ -179,10 +230,10 @@ class ImmediateTask: public Task {
 
   virtual void run(Context* c) {
     if (promise->resolved()) {
-      intptr_t v = promise->value();
-      memcpy(c->result + offset, &v, BytesPerWord);
-    } else if (not promise->offer(c->result + offset)) {
-      abort(c);
+      copyWord(c->result + offset, promise->value());
+    } else {
+      new (promise->listen(sizeof(ImmediateListener)))
+        ImmediateListener(c->result + offset);
     }
   }
 

@@ -78,9 +78,14 @@ const int AnyRegister = -2;
 
 class Promise {
  public:
+  class Listener {
+   public:
+    virtual void* resolve(int64_t value) = 0;
+  };
+
   virtual int64_t value() = 0;
   virtual bool resolved() = 0;
-  virtual bool offer(void*) { return false; }
+  virtual Listener* listen(unsigned) { return 0; }
 };
 
 class ResolvedPromise: public Promise {
@@ -98,9 +103,11 @@ class ResolvedPromise: public Promise {
   int64_t value_;
 };
 
-class OfferPromise: public Promise {
+class ListenPromise: public Promise {
  public:
-  OfferPromise(System* s): s(s), offset(0) { }
+  ListenPromise(System* s, Allocator* allocator):
+    s(s), allocator(allocator), listener(0)
+  { }
 
   virtual int64_t value() {
     abort(s);
@@ -110,13 +117,13 @@ class OfferPromise: public Promise {
     return false;
   }
 
-  virtual bool offer(void* offset) {
-    this->offset = offset;
-    return true;
+  virtual Listener* listen(unsigned sizeInBytes) {
+    return listener = static_cast<Listener*>(allocator->allocate(sizeInBytes));
   }
 
   System* s;
-  void* offset;
+  Allocator* allocator;
+  Listener* listener;
 };
 
 class TraceHandler {
