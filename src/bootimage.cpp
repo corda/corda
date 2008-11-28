@@ -55,7 +55,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     const char* name = it.next(&nameSize);
 
     if (endsWith(".class", name, nameSize)) {
-      fprintf(stderr, "%.*s\n", nameSize - 6, name);
+      //fprintf(stderr, "%.*s\n", nameSize - 6, name);
       object c = resolveClass
         (t, makeByteArray(t, "%.*s", nameSize - 6, name));
       PROTECT(t, c);
@@ -96,18 +96,24 @@ objectSize(Thread* t, object o)
 }
 
 void
-visitRoots(Machine* m, BootImage* image, HeapWalker* w)
+visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
 {
+  Machine* m = t->m;
+
   image->loader = w->visitRoot(m->loader);
   image->stringMap = w->visitRoot(m->stringMap);
   image->types = w->visitRoot(m->types);
 
   m->processor->visitRoots(image, w);
+
+  for (; constants; constants = tripleThird(t, constants)) {
+    w->visitRoot(tripleFirst(t, constants));
+  }
 }
 
 HeapWalker*
 makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
-              unsigned capacity)
+              unsigned capacity, object constants)
 {
   class Visitor: public HeapVisitor {
    public:
@@ -170,7 +176,7 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
   } visitor(t, heap, map, capacity / BytesPerWord);
 
   HeapWalker* w = makeHeapWalker(t, &visitor);
-  visitRoots(t->m, image, w);
+  visitRoots(t, image, w, constants);
   
   image->heapSize = visitor.position * BytesPerWord;
 
@@ -203,7 +209,7 @@ offset(object a, uintptr_t* b)
 }
 
 void
-writeBootImage(Thread* t, FILE*)
+writeBootImage(Thread* t, FILE* out)
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
   BootImage image;
@@ -224,7 +230,7 @@ writeBootImage(Thread* t, FILE*)
   memset(heapMap, 0, heapMapSize(HeapCapacity));
 
   HeapWalker* heapWalker = makeHeapImage
-    (t, &image, heap, heapMap, HeapCapacity);
+    (t, &image, heap, heapMap, HeapCapacity, constants);
 
   updateConstants(t, constants, code, codeMap, heapWalker->map());
 
@@ -232,15 +238,15 @@ writeBootImage(Thread* t, FILE*)
 
   image.magic = BootImage::Magic;
 
-  fprintf(stderr, "heap size %d code size %d\n",
-          image.heapSize, image.codeSize);
-//   fwrite(&image, sizeof(BootImage), 1, out);
+//   fprintf(stderr, "heap size %d code size %d\n",
+//           image.heapSize, image.codeSize);
+  fwrite(&image, sizeof(BootImage), 1, out);
 
-//   fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
-//   fwrite(heap, pad(image.heapSize), 1, out);
+  fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
+  fwrite(heap, pad(image.heapSize), 1, out);
 
-//   fwrite(codeMap, pad(codeMapSize(image.codeSize)), 1, out);
-//   fwrite(code, pad(image.codeSize), 1, out);
+  fwrite(codeMap, pad(codeMapSize(image.codeSize)), 1, out);
+  fwrite(code, pad(image.codeSize), 1, out);
 }
 
 } // namespace
