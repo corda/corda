@@ -37,14 +37,16 @@ class Finder {
     }
 
     bool hasMore() {
+      if (current) return true;
+      current = it->next(&currentSize);
       return current != 0;
     }
 
     const char* next(unsigned* size) {
-      if (current) {
-        const char* v = current;
+      if (hasMore()) {
         *size = currentSize;
-        current = it->next(&currentSize);
+        const char* v = current;
+        current = 0;
         return v;
       } else {
         return 0;

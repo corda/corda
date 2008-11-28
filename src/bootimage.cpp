@@ -40,7 +40,7 @@ codeMapSize(unsigned codeSize)
 object
 makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
 {
-  unsigned size;
+  unsigned size = 0;
   t->m->processor->compileThunks(t, image, code, &size, capacity);
 
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
@@ -56,15 +56,18 @@ makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
     const char* name = it.next(&nameSize);
 
     if (endsWith(".class", name, nameSize)) {
+      fprintf(stderr, "%.*s\n", nameSize - 6, name);
       object c = resolveClass
-        (t, makeByteArray(t, "%*s", nameSize - 5, name));
+        (t, makeByteArray(t, "%.*s", nameSize - 6, name));
       PROTECT(t, c);
-      
-      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
-        object method = arrayBody(t, classMethodTable(t, c), i);
-        if (methodCode(t, method)) {
-          t->m->processor->compileMethod
-            (t, &zone, code, &size, capacity, &constants, &calls, method);
+
+      if (classMethodTable(t, c)) {
+        for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+          object method = arrayBody(t, classMethodTable(t, c), i);
+          if (methodCode(t, method)) {
+            t->m->processor->compileMethod
+              (t, &zone, code, &size, capacity, &constants, &calls, method);
+          }
         }
       }
     }
@@ -114,13 +117,14 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
       position(0), capacity(capacity)
     { }
 
-    void visit(object p, unsigned number) {
+    void visit(unsigned number) {
       if (currentObject) {
-        markBit(map, (currentObject - heap) + currentOffset);
-        currentObject[currentOffset] = number;
+        unsigned index = currentObject - 1 + currentOffset;
+        markBit(map, index);
+        heap[index] = number;
       }
 
-      currentObject = reinterpret_cast<uintptr_t*>(p);
+      currentObject = number;
     }
 
     virtual void root() {
@@ -137,7 +141,7 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
         unsigned number = position + 1;
         position += size;
 
-        visit(p, number);
+        visit(number);
 
         return number;
       } else {
@@ -146,7 +150,7 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
     }
 
     virtual void visitOld(object, unsigned number) {
-      visit(0, number);
+      visit(number);
     }
 
     virtual void push(unsigned offset) {
@@ -158,7 +162,7 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
     }
 
     Thread* t;
-    uintptr_t* currentObject;
+    unsigned currentObject;
     unsigned currentOffset;
     uintptr_t* heap;
     uintptr_t* map;
@@ -200,7 +204,7 @@ offset(object a, uintptr_t* b)
 }
 
 void
-writeBootImage(Thread* t, FILE* out)
+writeBootImage(Thread* t, FILE*)
 {
   BootImage image;
 
@@ -228,13 +232,15 @@ writeBootImage(Thread* t, FILE* out)
 
   image.magic = BootImage::Magic;
 
-  fwrite(&image, sizeof(BootImage), 1, out);
+  fprintf(stderr, "heap size %d code size %d\n",
+          image.heapSize, image.codeSize);
+//   fwrite(&image, sizeof(BootImage), 1, out);
 
-  fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
-  fwrite(heap, pad(image.heapSize), 1, out);
+//   fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
+//   fwrite(heap, pad(image.heapSize), 1, out);
 
-  fwrite(codeMap, pad(codeMapSize(image.codeSize)), 1, out);
-  fwrite(code, pad(image.codeSize), 1, out);
+//   fwrite(codeMap, pad(codeMapSize(image.codeSize)), 1, out);
+//   fwrite(code, pad(image.codeSize), 1, out);
 }
 
 } // namespace
@@ -249,7 +255,7 @@ main(int ac, const char** av)
 
   System* s = makeSystem(0);
   Heap* h = makeHeap(s, 128 * 1024 * 1024);
-  Finder* f = makeFinder(s, av[0], 0);
+  Finder* f = makeFinder(s, av[1], 0);
   Processor* p = makeProcessor(s, h);
   Machine* m = new (h->allocate(sizeof(Machine))) Machine(s, h, f, p, 0, 0);
   Thread* t = p->makeThread(m, 0, 0);

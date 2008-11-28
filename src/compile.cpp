@@ -4725,6 +4725,7 @@ class MyProcessor: public Processor {
     callTableSize(0),
     methodTree(0),
     methodTreeSentinal(0),
+    objectPools(0),
     codeAllocator(s),
     codeZone(s, &codeAllocator, 64 * 1024)
   { }
@@ -5130,13 +5131,6 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
     Assembler::Register result(a->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
-
-    void* p = defaultContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(compileMethod)));
-
-    if (image) {
-      image->defaultThunk = static_cast<uint8_t*>(p) - imageBase;
-    }
   }
 
   ThunkContext nativeContext(t, &zone);
@@ -5151,13 +5145,6 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     popThread(t, a);
 
     a->apply(Return);
-
-    void* p = nativeContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(invokeNative)));
-
-    if (image) {
-      image->nativeThunk = static_cast<uint8_t*>(p) - imageBase;
-    }
   }
 
   ThunkContext aioobContext(t, &zone);
@@ -5169,13 +5156,6 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
     Assembler::Constant proc(&(aioobContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
-
-    void* p = aioobContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds)));
-
-    if (image) {
-      image->aioobThunk = static_cast<uint8_t*>(p) - imageBase;
-    }
   }
 
   ThunkContext tableContext(t, &zone);
@@ -5203,11 +5183,34 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
   p->defaultThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
 
+  { void* p = defaultContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(compileMethod))); 
+    if (image) {
+      image->defaultThunk = static_cast<uint8_t*>(p) - imageBase;
+    }
+  }
+
   p->nativeThunk = finish
     (t, allocator, nativeContext.context.assembler, "native");
 
+  { void* p = nativeContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(invokeNative)));
+
+    if (image) {
+      image->nativeThunk = static_cast<uint8_t*>(p) - imageBase;
+    }
+  }
+
   p->aioobThunk = finish
     (t, allocator, aioobContext.context.assembler, "aioob");
+
+  { void* p = aioobContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds)));
+
+    if (image) {
+      image->aioobThunk = static_cast<uint8_t*>(p) - imageBase;
+    }
+  }
 
   p->thunkTable = static_cast<uint8_t*>
     (allocator->allocate(p->thunkSize * ThunkCount));
@@ -5291,8 +5294,10 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == defaultThunk(t)) {
-      initClass(t, methodClass(t, method));
-      if (UNLIKELY(t->exception)) return;
+      if (bootContext == 0) {
+        initClass(t, methodClass(t, method));
+        if (UNLIKELY(t->exception)) return;
+      }
 
       if (methodCompiled(t, method) == defaultThunk(t)) {
         object node;

@@ -79,8 +79,8 @@ class DirectoryElement: public Element {
  public:
   class Iterator: public Element::Iterator {
    public:
-    Iterator(System* s, const char* name):
-      s(s), directory(0)
+    Iterator(System* s, const char* name, unsigned skip):
+      s(s), name(name), skip(skip), directory(0), last(0), it(0)
     {
       if (not s->success(s->open(&directory, name))) {
         directory = 0;
@@ -88,14 +88,35 @@ class DirectoryElement: public Element {
     }
 
     virtual const char* next(unsigned* size) {
+      if (it) {
+        const char* v = it->next(size);
+        if (v) {
+          return v;
+        } else {
+          it->dispose();
+          it = 0;
+        }
+      }
+
+      if (last) {
+        s->free(last);
+      }
+
       if (directory) {
         for (const char* v = directory->next(); v; v = directory->next()) {
           if (v[0] != '.') {
-            *size = strlen(v);
-            return v;
+            last = append(s, name, "/", v);
+            if (s->identify(last) == System::TypeDirectory) {
+              it = new (allocate(s, sizeof(Iterator))) Iterator(s, last, skip);
+              it->name = last;
+            }
+            const char* result = last + skip;
+            *size = strlen(result);
+            return result;
           }
         }
       }
+
       return 0;
     }
 
@@ -105,7 +126,11 @@ class DirectoryElement: public Element {
     }
 
     System* s;
+    const char* name;
+    unsigned skip;
     System::Directory* directory;
+    const char* last;
+    Iterator* it;
   };
 
   DirectoryElement(System* s, const char* name):
@@ -113,7 +138,8 @@ class DirectoryElement: public Element {
   { }
 
   virtual Element::Iterator* iterator() {
-    return new (allocate(s, sizeof(Iterator))) Iterator(s, name);
+    return new (allocate(s, sizeof(Iterator)))
+      Iterator(s, name, strlen(name) + 1);
   }
 
   virtual System::Region* find(const char* name) {
@@ -449,6 +475,8 @@ class JarElement: public Element {
   { }
 
   virtual Element::Iterator* iterator() {
+    init();
+
     return new (allocate(s, sizeof(Iterator))) Iterator(s, index);
   }
 
@@ -626,6 +654,8 @@ class MyIterator: public Finder::IteratorImp {
         if (e) {
           it = e->iterator();
           e = e->next;
+        } else {
+          it = 0;
         }
       }
     }
