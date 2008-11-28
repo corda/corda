@@ -38,12 +38,11 @@ codeMapSize(unsigned codeSize)
 }
 
 object
-makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
+makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
+              unsigned capacity)
 {
   unsigned size = 0;
   t->m->processor->compileThunks(t, image, code, &size, capacity);
-
-  Zone zone(t->m->system, t->m->heap, 64 * 1024);
   
   object constants = 0;
   PROTECT(t, constants);
@@ -66,7 +65,7 @@ makeCodeImage(Thread* t, BootImage* image, uint8_t* code, unsigned capacity)
           object method = arrayBody(t, classMethodTable(t, c), i);
           if (methodCode(t, method)) {
             t->m->processor->compileMethod
-              (t, &zone, code, &size, capacity, &constants, &calls, method);
+              (t, zone, code, &size, capacity, &constants, &calls, method);
           }
         }
       }
@@ -206,6 +205,7 @@ offset(object a, uintptr_t* b)
 void
 writeBootImage(Thread* t, FILE*)
 {
+  Zone zone(t->m->system, t->m->heap, 64 * 1024);
   BootImage image;
 
   const unsigned CodeCapacity = 32 * 1024 * 1024;
@@ -214,7 +214,7 @@ writeBootImage(Thread* t, FILE*)
     (t->m->heap->allocate(codeMapSize(CodeCapacity)));
   memset(codeMap, 0, codeMapSize(CodeCapacity));
 
-  object constants = makeCodeImage(t, &image, code, CodeCapacity);
+  object constants = makeCodeImage(t, &zone, &image, code, CodeCapacity);
 
   const unsigned HeapCapacity = 32 * 1024 * 1024;
   uintptr_t* heap = static_cast<uintptr_t*>
