@@ -202,50 +202,68 @@ appendOffsetTask(Context* c, Promise* promise, int instructionOffset,
 }
 
 void
-copyWord(void* dst, int64_t src)
+copy(System* s, void* dst, int64_t src, unsigned size)
 {
-  intptr_t v = src;
-  memcpy(dst, &v, BytesPerWord);
+  switch (size) {
+  case 4: {
+    int32_t v = src;
+    memcpy(dst, &v, 4);
+  } break;
+
+  case 8: {
+    int64_t v = src;
+    memcpy(dst, &v, 8);
+  } break;
+
+  default: abort(s);
+  }
 }
 
 class ImmediateListener: public Promise::Listener {
  public:
-  ImmediateListener(void* dst): dst(dst) { }
+  ImmediateListener(System* s, void* dst, unsigned size):
+    s(s), dst(dst), size(size)
+  { }
 
   virtual void* resolve(int64_t value) {
-    copyWord(dst, value);
-    return 0;
+    copy(s, dst, value, size);
+    return dst;
   }
 
+  System* s;
   void* dst;
+  unsigned size;
 };
 
 class ImmediateTask: public Task {
  public:
-  ImmediateTask(Task* next, Promise* promise, unsigned offset):
+  ImmediateTask(Task* next, Promise* promise, unsigned offset, unsigned size):
     Task(next),
     promise(promise),
-    offset(offset)
+    offset(offset),
+    size(size)
   { }
 
   virtual void run(Context* c) {
     if (promise->resolved()) {
-      copyWord(c->result + offset, promise->value());
+      copy(c->s, c->result + offset, promise->value(), size);
     } else {
       new (promise->listen(sizeof(ImmediateListener)))
-        ImmediateListener(c->result + offset);
+        ImmediateListener(c->s, c->result + offset, size);
     }
   }
 
   Promise* promise;
   unsigned offset;
+  unsigned size;
 };
 
 void
-appendImmediateTask(Context* c, Promise* promise, unsigned offset)
+appendImmediateTask(Context* c, Promise* promise, unsigned offset,
+                    unsigned size)
 {
   c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
-    (c->tasks, promise, offset);
+    (c->tasks, promise, offset, size);
 }
 
 void
@@ -535,7 +553,7 @@ pushC(Context* c, unsigned size, Assembler::Constant* a)
     } else {
       if (BytesPerWord == 4) {
         c->code.append(0x68);
-        appendImmediateTask(c, a->value, c->code.length());
+        appendImmediateTask(c, a->value, c->code.length(), BytesPerWord);
         c->code.appendAddress(static_cast<uintptr_t>(0));
       } else {
         Assembler::Register tmp(c->client->acquireTemporary());
@@ -704,7 +722,7 @@ moveCR(Context* c, unsigned size, Assembler::Constant* a,
     if (a->value->resolved()) {
       c->code.appendAddress(a->value->value());
     } else {
-      appendImmediateTask(c, a->value, c->code.length());
+      appendImmediateTask(c, a->value, c->code.length(), BytesPerWord);
       c->code.appendAddress(static_cast<uintptr_t>(0));
     }
   }
@@ -714,8 +732,6 @@ void
 moveCM(Context* c, unsigned size, Assembler::Constant* a,
        Assembler::Memory* b)
 {
-  int64_t v = a->value->value();
-
   switch (size) {
   case 1:
     encode(c, 0xc6, 0, b, false);
@@ -729,10 +745,17 @@ moveCM(Context* c, unsigned size, Assembler::Constant* a,
 
   case 4:
     encode(c, 0xc7, 0, b, false);
-    c->code.append4(a->value->value());
+    if (a->value->resolved()) {
+      c->code.append4(a->value->value());
+    } else {
+      appendImmediateTask(c, a->value, c->code.length(), 4);
+      c->code.append4(0);
+    }
     break;
 
   case 8: {
+    int64_t v = a->value->value();
+
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
     Assembler::Constant ah(&high);
 
