@@ -31,12 +31,6 @@ endsWith(const char* suffix, const char* s, unsigned length)
     and memcmp(suffix, s + (length - suffixLength), suffixLength) == 0;
 }
 
-unsigned
-codeMapSize(unsigned codeSize)
-{
-  return ceiling(codeSize, BitsPerWord) * BytesPerWord;
-}
-
 object
 makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
               unsigned capacity)
@@ -80,12 +74,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   image->codeSize = size;
 
   return constants;
-}
-
-unsigned
-heapMapSize(unsigned heapSize)
-{
-  return ceiling(heapSize, BitsPerWord * 8) * BytesPerWord;
 }
 
 unsigned
@@ -238,15 +226,18 @@ writeBootImage(Thread* t, FILE* out)
 
   image.magic = BootImage::Magic;
 
-//   fprintf(stderr, "heap size %d code size %d\n",
-//           image.heapSize, image.codeSize);
-  fwrite(&image, sizeof(BootImage), 1, out);
+  if (true) {
+    fprintf(stderr, "heap size %d code size %d\n",
+            image.heapSize, image.codeSize);
+  } else {
+    fwrite(&image, sizeof(BootImage), 1, out);
 
-  fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
-  fwrite(heap, pad(image.heapSize), 1, out);
+    fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
+    fwrite(heap, pad(image.heapSize), 1, out);
 
-  fwrite(codeMap, pad(codeMapSize(image.codeSize)), 1, out);
-  fwrite(code, pad(image.codeSize), 1, out);
+    fwrite(codeMap, pad(codeMapSize(image.codeSize)), 1, out);
+    fwrite(code, pad(image.codeSize), 1, out);
+  }
 }
 
 } // namespace

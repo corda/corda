@@ -1502,6 +1502,156 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
   hashMapInsert(t, t->m->bootstrapClassMap, n, class_, byteArrayHash);
 }
 
+void
+boot(Thread* t, BootImage* image)
+{
+  assert(t, image->magic == BootImage::Magic);
+
+  uintptr_t* heapMap = reinterpret_cast<uintptr_t*>(image + 1);
+  unsigned heapMapSizeInWords = ceiling
+    (heapMapSize(image->heapSize), BytesPerWord);
+  uintptr_t* heap = heapMap + heapMapSizeInWords;
+  
+  for (unsigned word = 0; word < heapMapSizeInWords; ++word) {
+    uintptr_t w = heapMap[word];
+    if (w) {
+      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
+        if (w & (static_cast<uintptr_t>(1) << bit)) {
+          unsigned index = ::indexOf(word, bit);
+          uintptr_t* p = heap + index;
+          if (*p) {
+            *p = reinterpret_cast<uintptr_t>(heap + *p - 1);
+          }
+        }
+      }
+    }
+  }
+
+  t->m->loader = reinterpret_cast<object>(heap + image->loader);
+  t->m->stringMap = reinterpret_cast<object>(heap + image->stringMap);
+  t->m->types = reinterpret_cast<object>(heap + image->types);
+
+  uintptr_t* codeMap = heap + ceiling(image->heapSize, BytesPerWord);
+  unsigned codeMapSizeInWords = ceiling
+    (codeMapSize(image->codeSize), BytesPerWord);
+  uint8_t* code = reinterpret_cast<uint8_t*>(codeMap + codeMapSizeInWords);
+ 
+  for (unsigned word = 0; word < codeMapSizeInWords; ++word) {
+    uintptr_t w = codeMap[word];
+    if (w) {
+      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
+        if (w & (static_cast<uintptr_t>(1) << bit)) {
+          unsigned index = ::indexOf(word, bit);
+          uintptr_t v; memcpy(&v, code + index, BytesPerWord);
+          if (v) {
+            v = reinterpret_cast<uintptr_t>(heap + v - 1);
+            memcpy(code + index, &v, BytesPerWord);
+          }
+        }
+      }
+    }
+  }
+
+  t->m->processor->boot(t, image, heap, code);
+
+  for (HashMapIterator it(t, systemClassLoaderMap(t, t->m->loader));
+       it.hasMore();)
+  {
+    object c = tripleSecond(t, it.next());
+
+    if (classMethodTable(t, c)) {
+      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+        object method = arrayBody(t, classMethodTable(t, c), i);
+        methodCompiled(t, method)
+          = (methodCompiled(t, method) - image->codeBase)
+          + reinterpret_cast<uintptr_t>(code);
+      }
+    }
+
+    t->m->processor->initVtable(t, c);
+  }
+}
+
+void
+boot(Thread* t)
+{
+  Machine* m = t->m;
+
+  m->loader = allocate(t, sizeof(void*) * 3, true);
+  memset(m->loader, 0, sizeof(void*) * 2);
+
+  m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
+  arrayLength(t, m->types) = TypeCount;
+  memset(&arrayBody(t, m->types, 0), 0, TypeCount * BytesPerWord);
+
+#include "type-initializations.cpp"
+
+  object arrayClass = arrayBody(t, m->types, Machine::ArrayType);
+  set(t, m->types, 0, arrayClass);
+
+  object loaderClass = arrayBody
+    (t, m->types, Machine::SystemClassLoaderType);
+  set(t, m->loader, 0, loaderClass);
+
+  object objectClass = arrayBody(t, m->types, Machine::JobjectType);
+
+  object classClass = arrayBody(t, m->types, Machine::ClassType);
+  set(t, classClass, 0, classClass);
+  set(t, classClass, ClassSuper, objectClass);
+
+  object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
+  set(t, intArrayClass, 0, classClass);
+  set(t, intArrayClass, ClassSuper, objectClass);
+
+  m->unsafe = false;
+
+  classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+    |= SingletonFlag;
+
+  classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
+    |= ReferenceFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
+    |= ReferenceFlag | WeakReferenceFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
+    |= ReferenceFlag | WeakReferenceFlag;
+
+  classVmFlags(t, arrayBody(t, m->types, Machine::JbooleanType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JbyteType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JcharType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JshortType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JintType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JlongType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JfloatType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JdoubleType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
+    |= PrimitiveFlag;
+
+  m->bootstrapClassMap = makeHashMap(t, 0, 0);
+
+  { object loaderMap = makeHashMap(t, 0, 0);
+    set(t, m->loader, SystemClassLoaderMap, loaderMap);
+  }
+
+  m->stringMap = makeWeakHashMap(t, 0, 0);
+
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
+    codeBody(t, bootCode, 0) = impdep1;
+    object bootMethod = makeMethod
+      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
+    PROTECT(t, bootMethod);
+
+#include "type-java-initializations.cpp"
+  }
+}
+
 class HeapClient: public Heap::Client {
  public:
   HeapClient(Machine* m): m(m) { }
@@ -1716,86 +1866,30 @@ Thread::init()
       abort(this);
     }
 
-    Thread* t = this;
+    BootImage* image = 0;
+    const char* imageFunctionName = findProperty(m, "avian.bootimage");
+    if (imageFunctionName) {
+      void* p = m->libraries->resolve(imageFunctionName);
+      if (p) {
+        BootImage* (*function)(unsigned*);
+        memcpy(&function, &p, BytesPerWord);
 
-    t->m->loader = allocate(t, sizeof(void*) * 3, true);
-    memset(t->m->loader, 0, sizeof(void*) * 2);
+        unsigned size;
+        image = function(&size);
+      }
+    }
 
-    t->m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
-    arrayLength(t, t->m->types) = TypeCount;
-    memset(&arrayBody(t, t->m->types, 0), 0, TypeCount * BytesPerWord);
-
-#include "type-initializations.cpp"
-
-    object arrayClass = arrayBody(t, t->m->types, Machine::ArrayType);
-    set(t, t->m->types, 0, arrayClass);
-
-    object loaderClass = arrayBody
-      (t, t->m->types, Machine::SystemClassLoaderType);
-    set(t, t->m->loader, 0, loaderClass);
-
-    object objectClass = arrayBody(t, m->types, Machine::JobjectType);
-
-    object classClass = arrayBody(t, m->types, Machine::ClassType);
-    set(t, classClass, 0, classClass);
-    set(t, classClass, ClassSuper, objectClass);
-
-    object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
-    set(t, intArrayClass, 0, classClass);
-    set(t, intArrayClass, ClassSuper, objectClass);
-
-    m->unsafe = false;
-
-    classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
-      |= SingletonFlag;
-
-    classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
-      |= ReferenceFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
-      |= ReferenceFlag | WeakReferenceFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
-      |= ReferenceFlag | WeakReferenceFlag;
-
-    classVmFlags(t, arrayBody(t, m->types, Machine::JbooleanType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JbyteType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JcharType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JshortType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JintType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JlongType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JfloatType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JdoubleType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
-      |= PrimitiveFlag;
-
-    m->bootstrapClassMap = makeHashMap(this, 0, 0);
-
-    { object loaderMap = makeHashMap(this, 0, 0);
-      set(t, m->loader, SystemClassLoaderMap, loaderMap);
+    if (image) {
+      boot(this, image);
+    } else {
+      boot(this);
     }
 
     m->monitorMap = makeWeakHashMap(this, 0, 0);
-    m->stringMap = makeWeakHashMap(this, 0, 0);
 
     m->jniMethodTable = makeVector(this, 0, 0, false);
 
     m->localThread->set(this);
-
-    { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
-      codeBody(t, bootCode, 0) = impdep1;
-      object bootMethod = makeMethod
-        (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
-      PROTECT(t, bootMethod);
-
-#include "type-java-initializations.cpp"
-    }
   } else {
     peer = parent->child;
     parent->child = this;

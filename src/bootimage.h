@@ -28,20 +28,39 @@ class BootImage {
   unsigned stringMap;
   unsigned types;
 
-  uintptr_t codeBase;
   unsigned callTable;
   unsigned methodTree;
   unsigned methodTreeSentinal;
-  unsigned objectPools;
+
+  uintptr_t codeBase;
 
   unsigned defaultThunk;
   unsigned nativeThunk;
   unsigned aioobThunk;
-  
-#define THUNK(s) unsigned s##Thunk;
+
+  unsigned thunkTable;
+  unsigned thunkSize;
+
+  unsigned compileMethodCall;
+  unsigned invokeNativeCall;
+  unsigned throwArrayIndexOutOfBoundsCall;
+
+#define THUNK(s) unsigned s##Call;
 #include "thunks.cpp"
 #undef THUNK
 };
+
+inline unsigned
+codeMapSize(unsigned codeSize)
+{
+  return ceiling(codeSize, BitsPerWord) * BytesPerWord;
+}
+
+inline unsigned
+heapMapSize(unsigned heapSize)
+{
+  return ceiling(heapSize, BitsPerWord * 8) * BytesPerWord;
+}
 
 } // namespace vm
 

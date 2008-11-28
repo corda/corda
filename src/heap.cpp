@@ -121,12 +121,12 @@ class Segment {
         for (; word <= wordLimit and (word < wordLimit or bit < bitLimit);
              ++word)
         {
-          uintptr_t* p = map->data() + word;
-          if (*p) {
+          uintptr_t w = map->data()[word];
+          if (2) {
             for (; bit < BitsPerWord and (word < wordLimit or bit < bitLimit);
                  ++bit)
             {
-              if (map->data()[word] & (static_cast<uintptr_t>(1) << bit)) {
+              if (w & (static_cast<uintptr_t>(1) << bit)) {
                 index = ::indexOf(word, bit);
 //                 printf("hit at index %d\n", index);
                 return true;

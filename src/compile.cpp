@@ -1738,19 +1738,28 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
     } else {
       BootContext* bc = frame->context->bootContext;
       if (bc) {
-        Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
-          ListenPromise(t->m->system, bc->zone);
+        if (objectClass(t, target) == objectClass(t, frame->context->method)) {
+          Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
+            ListenPromise(t->m->system, bc->zone);
 
-        PROTECT(t, target);
-        object pointer = makePointer(t, p);
-        bc->calls = makeTriple(t, target, pointer, bc->calls);
+          PROTECT(t, target);
+          object pointer = makePointer(t, p);
+          bc->calls = makeTriple(t, target, pointer, bc->calls);
 
-        result = c->call
-          (c->promiseConstant(p),
-           0,
-           frame->trace(0, false),
-           rSize,
-           0);
+          result = c->call
+            (c->promiseConstant(p),
+             0,
+             frame->trace(0, false),
+             rSize,
+             0);
+        } else {
+          result = c->call
+            (c->constant(defaultThunk(t)),
+             Compiler::Aligned,
+             frame->trace(target, false),
+             rSize,
+             0);
+        }
       } else if (methodCompiled(t, target) == defaultThunk(t)) {
         result = c->call
           (c->constant(defaultThunk(t)),
@@ -4654,6 +4663,31 @@ class SegFaultHandler: public System::SignalHandler {
   Machine* m;
 };
 
+object
+fixupCallTable(MyThread* t, object oldTable, uintptr_t oldBase,
+               uintptr_t newBase)
+{
+  PROTECT(t, oldTable);
+
+  object newTable = makeArray(t, arrayLength(t, oldTable), true);
+
+  for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
+    object next;
+    for (object p = arrayBody(t, oldTable, i); p; p = next) {
+      next = callNodeNext(t, p);
+
+      intptr_t k = (callNodeAddress(t, p) - oldBase) + newBase;
+
+      unsigned index = k & (arrayLength(t, newTable) - 1);
+
+      set(t, p, CallNodeNext, arrayBody(t, newTable, index));
+      set(t, newTable, ArrayBody + (index * BytesPerWord), p);
+    }
+  }
+
+  return newTable;
+}
+
 class FixedAllocator: public Allocator {
  public:
   FixedAllocator(Thread* t, uint8_t* base, unsigned capacity):
@@ -5073,7 +5107,43 @@ class MyProcessor: public Processor {
     image->callTable = w->visitRoot(callTable);
     image->methodTree = w->visitRoot(methodTree);
     image->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
-    image->objectPools = w->visitRoot(objectPools);
+  }
+
+  virtual void boot(Thread* t, BootImage* image, uintptr_t* heap,
+                    uint8_t* code)
+  {
+    methodTree = reinterpret_cast<object>(heap + image->methodTree);
+    methodTreeSentinal = reinterpret_cast<object>
+      (heap + image->methodTreeSentinal);
+
+    callTable = fixupCallTable
+      (static_cast<MyThread*>(t),
+       reinterpret_cast<object>(heap + image->callTable),
+       image->codeBase,
+       reinterpret_cast<uintptr_t>(code));
+
+    defaultThunk = code + image->defaultThunk;
+    { void* p = voidPointer(::compileMethod);
+      memcpy(code + image->compileMethodCall, &p, BytesPerWord); }
+
+    nativeThunk = code + image->nativeThunk;
+    { void* p = voidPointer(invokeNative);
+      memcpy(code + image->invokeNativeCall, &p, BytesPerWord); }
+
+    aioobThunk = code + image->aioobThunk;
+    { void* p = voidPointer(throwArrayIndexOutOfBounds);
+      memcpy(code + image->throwArrayIndexOutOfBoundsCall, &p, BytesPerWord); }
+
+    thunkTable = code + image->thunkTable;
+    thunkSize = image->thunkSize;
+
+#define THUNK(s)                                                \
+    { void* p = voidPointer(s);                                 \
+      memcpy(code + image->s##Call, &p, BytesPerWord); }
+
+#include "thunks.cpp"
+
+#undef THUNK
   }
   
   System* s;
@@ -5183,37 +5253,46 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
   p->defaultThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
 
-  { void* p = defaultContext.promise.listener->resolve
+  { void* call = defaultContext.promise.listener->resolve
       (reinterpret_cast<intptr_t>(voidPointer(compileMethod))); 
     if (image) {
-      image->defaultThunk = static_cast<uint8_t*>(p) - imageBase;
+      image->defaultThunk = p->defaultThunk - imageBase;
+      image->compileMethodCall = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
   p->nativeThunk = finish
     (t, allocator, nativeContext.context.assembler, "native");
 
-  { void* p = nativeContext.promise.listener->resolve
+  { void* call = nativeContext.promise.listener->resolve
       (reinterpret_cast<intptr_t>(voidPointer(invokeNative)));
 
     if (image) {
-      image->nativeThunk = static_cast<uint8_t*>(p) - imageBase;
+      image->nativeThunk = p->nativeThunk - imageBase;
+      image->invokeNativeCall = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
   p->aioobThunk = finish
     (t, allocator, aioobContext.context.assembler, "aioob");
 
-  { void* p = aioobContext.promise.listener->resolve
+  { void* call = aioobContext.promise.listener->resolve
       (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds)));
 
     if (image) {
-      image->aioobThunk = static_cast<uint8_t*>(p) - imageBase;
+      image->aioobThunk = p->aioobThunk - imageBase;
+      image->throwArrayIndexOutOfBoundsCall
+        = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
   p->thunkTable = static_cast<uint8_t*>
     (allocator->allocate(p->thunkSize * ThunkCount));
+
+  if (image) {
+    image->thunkTable = p->thunkTable - imageBase;
+    image->thunkSize = p->thunkSize;
+  }
 
   logCompile(t, p->thunkTable, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
 
@@ -5222,10 +5301,10 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 #define THUNK(s)                                                        \
   tableContext.context.assembler->writeTo(start);                       \
   start += p->thunkSize;                                                \
-  { void* p = tableContext.promise.listener->resolve                    \
+  { void* call = tableContext.promise.listener->resolve                 \
       (reinterpret_cast<intptr_t>(voidPointer(s)));                     \
     if (image) {                                                        \
-      image->s##Thunk = static_cast<uint8_t*>(p) - imageBase;           \
+      image->s##Call = static_cast<uint8_t*>(call) - imageBase;         \
     }                                                                   \
   }
 
