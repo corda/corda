@@ -440,17 +440,23 @@ class Fixie {
     }
   }
 
-  void remove() {
-    if (handle) *handle = next;
-    if (next) next->handle = handle;
+  void remove(Context* c) {
+    if (handle) {
+      assert(c, *handle == this);
+      *handle = next;
+    }
+    if (next) {
+      next->handle = handle;
+    }
+    handle = 0;
   }
 
-  void move(Fixie** handle) {
+  void move(Context* c, Fixie** handle) {
     if (DebugFixies) {
       fprintf(stderr, "move fixie %p\n", this);
     }
 
-    remove();
+    remove(c);
     add(handle);
   }
 
@@ -802,9 +808,9 @@ sweepFixies(Context* c)
 
   c->untenuredFixieFootprint = 0;
 
-  for (Fixie** p = &(c->visitedFixies); *p;) {
-    Fixie* f = *p;
-    *p = f->next;
+  while (c->visitedFixies) {
+    Fixie* f = c->visitedFixies;
+    f->remove(c);
 
     if (not f->immortal()) {
       ++ f->age;
@@ -825,14 +831,14 @@ sweepFixies(Context* c)
       }
 
       if (f->dirty) {
-        f->move(&(c->dirtyTenuredFixies));
+        f->add(&(c->dirtyTenuredFixies));
       } else {
-        f->move(&(c->tenuredFixies));
+        f->add(&(c->tenuredFixies));
       }
     } else {
       c->untenuredFixieFootprint += f->totalSize();
 
-      f->move(&(c->fixies));
+      f->add(&(c->fixies));
     }
 
     f->marked = false;
@@ -926,7 +932,7 @@ update3(Context* c, void* o, bool* needsVisit)
         fprintf(stderr, "mark fixie %p\n", f);
       }
       f->marked = true;
-      f->move(&(c->markedFixies));
+      f->move(c, &(c->markedFixies));
     }
     *needsVisit = false;
     return o;
@@ -966,7 +972,7 @@ markDirty(Context* c, Fixie* f)
 {
   if (not f->dirty) {
     f->dirty = true;
-    f->move(&(c->dirtyTenuredFixies));
+    f->move(c, &(c->dirtyTenuredFixies));
   }
 }
 
@@ -975,7 +981,7 @@ markClean(Context* c, Fixie* f)
 {
   if (f->dirty) {
     f->dirty = false;
-    f->move(&(c->tenuredFixies));
+    f->move(c, &(c->tenuredFixies));
   }
 }
 
@@ -1007,7 +1013,7 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
                   f, offset, f->body() + offset);
         }
 
-        markDirty(c, f);
+        f->dirty = true;
         markBit(f->mask(), offset);
       }
     } else if (seg->contains(p)) {
@@ -1399,7 +1405,6 @@ visitDirtyFixies(Context* c, Fixie** p)
     assert(c, wasDirty);
 
     if (clean) {
-      *p = f->next;
       markClean(c, f);
     } else {
       p = &(f->next);
@@ -1410,9 +1415,9 @@ visitDirtyFixies(Context* c, Fixie** p)
 void
 visitMarkedFixies(Context* c)
 {
-  for (Fixie** p = &(c->markedFixies); *p;) {
-    Fixie* f = *p;
-    *p = f->next;
+  while (c->markedFixies) {
+    Fixie* f = c->markedFixies;
+    f->remove(c);
 
     if (DebugFixies) {
       fprintf(stderr, "visit fixie %p\n", f);
@@ -1435,7 +1440,7 @@ visitMarkedFixies(Context* c)
 
     c->client->walk(f->body(), &w);
 
-    f->move(&(c->visitedFixies));
+    f->add(&(c->visitedFixies));
   }  
 }
 
