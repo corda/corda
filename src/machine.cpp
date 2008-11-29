@@ -1512,8 +1512,6 @@ boot(Thread* t, BootImage* image)
     (heapMapSize(image->heapSize), BytesPerWord);
   uintptr_t* heap = heapMap + heapMapSizeInWords;
   
-  t->m->heap->setImmortalHeap(heap, image->heapSize);
-
   for (unsigned word = 0; word < heapMapSizeInWords; ++word) {
     uintptr_t w = heapMap[word];
     if (w) {
@@ -1526,8 +1524,11 @@ boot(Thread* t, BootImage* image)
           }
         }
       }
+      heapMap[word] = 0;
     }
   }
+
+  t->m->heap->setImmortalHeap(heap, image->heapSize, heapMap);
 
   t->m->loader = reinterpret_cast<object>(heap + image->loader);
   t->m->stringMap = reinterpret_cast<object>(heap + image->stringMap);

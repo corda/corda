@@ -121,17 +121,17 @@ class Segment {
         for (; word <= wordLimit and (word < wordLimit or bit < bitLimit);
              ++word)
         {
-          uintptr_t w = map->data()[word];
+          uintptr_t w = map->data[word];
           if (2) {
             for (; bit < BitsPerWord and (word < wordLimit or bit < bitLimit);
                  ++bit)
             {
               if (w & (static_cast<uintptr_t>(1) << bit)) {
                 index = ::indexOf(word, bit);
-//                 printf("hit at index %d\n", index);
+                //                 printf("hit at index %d\n", index);
                 return true;
               } else {
-//                 printf("miss at index %d\n", indexOf(word, bit));
+                //                 printf("miss at index %d\n", indexOf(word, bit));
               }
             }
           }
@@ -153,14 +153,26 @@ class Segment {
 
     Segment* segment;
     Map* child;
+    uintptr_t* data;
     unsigned bitsPerRecord;
     unsigned scale;
     bool clearNewData;
 
-    Map(Segment* segment, unsigned bitsPerRecord, unsigned scale,
-        Map* child, bool clearNewData):
+    Map(Segment* segment, uintptr_t* data, unsigned bitsPerRecord,
+        unsigned scale, Map* child, bool clearNewData):
       segment(segment),
       child(child),
+      data(data),
+      bitsPerRecord(bitsPerRecord),
+      scale(scale),
+      clearNewData(clearNewData)
+    { }
+
+    Map(Segment* segment, unsigned bitsPerRecord, unsigned scale, Map* child,
+        bool clearNewData):
+      segment(segment),
+      child(child),
+      data(0),
       bitsPerRecord(bitsPerRecord),
       scale(scale),
       clearNewData(clearNewData)
@@ -171,8 +183,13 @@ class Segment {
       assert(segment->context, scale);
       assert(segment->context, powerOfTwo(scale));
 
+      if (data == 0) {
+        data = segment->data + segment->capacity()
+          + calculateOffset(segment->capacity());
+      }
+
       if (clearNewData) {
-        memset(data(), 0, size() * BytesPerWord);
+        memset(data, 0, size() * BytesPerWord);
       }
 
       if (child) {
@@ -180,38 +197,45 @@ class Segment {
       }
     }
 
+    unsigned calculateOffset(unsigned capacity) {
+      unsigned n = 0;
+      if (child) n += child->calculateFootprint(capacity);
+      return n;
+    }
+
+    static unsigned calculateSize(Context* c, unsigned capacity,
+                                  unsigned scale, unsigned bitsPerRecord)
+    {
+      unsigned result
+        = ceiling(ceiling(capacity, scale) * bitsPerRecord, BitsPerWord);
+      assert(c, result);
+      return result;
+    }
+
+    unsigned calculateSize(unsigned capacity) {
+      return calculateSize(segment->context, capacity, scale, bitsPerRecord);
+    }
+
+    unsigned size() {
+      return calculateSize(segment->capacity());
+    }
+
+    unsigned calculateFootprint(unsigned capacity) {
+      unsigned n = calculateSize(capacity);
+      if (child) n += child->calculateFootprint(capacity);
+      return n;
+    }
+
     void replaceWith(Map* m) {
       assert(segment->context, bitsPerRecord == m->bitsPerRecord);
       assert(segment->context, scale == m->scale);
 
+      data = m->data;
+
       m->segment = 0;
+      m->data = 0;
       
       if (child) child->replaceWith(m->child);
-    }
-
-    unsigned offset(unsigned capacity) {
-      unsigned n = 0;
-      if (child) n += child->footprint(capacity);
-      return n;
-    }
-
-    unsigned offset() {
-      return offset(segment->capacity());
-    }
-
-    uintptr_t* data() {
-      return segment->data + segment->capacity() + offset();
-    }
-
-    unsigned size(unsigned capacity) {
-      unsigned result
-        = ceiling(ceiling(capacity, scale) * bitsPerRecord, BitsPerWord);
-      assert(segment->context, result);
-      return result;
-    }
-
-    unsigned size() {
-      return size(max(segment->capacity(), 1));
     }
 
     unsigned indexOf(unsigned segmentIndex) {
@@ -224,33 +248,20 @@ class Segment {
       return indexOf(segment->indexOf(p));
     }
 
-    void update(uintptr_t* newData, unsigned capacity) {
-      assert(segment->context, capacity >= segment->capacity());
-
-      uintptr_t* p = newData + offset(capacity);
-      if (segment->position()) {
-        memcpy(p, data(), size(segment->position()) * BytesPerWord);
-      }
-
-      if (child) {
-        child->update(newData, capacity);
-      }
-    }
-
     void clearBit(unsigned i) {
       assert(segment->context, wordOf(i) < size());
 
-      vm::clearBit(data(), i);
+      vm::clearBit(data, i);
     }
 
     void setBit(unsigned i) {
       assert(segment->context, wordOf(i) < size());
 
-      vm::markBit(data(), i);
+      vm::markBit(data, i);
     }
 
     void clearOnlyIndex(unsigned index) {
-      clearBits(data(), bitsPerRecord, index);
+      clearBits(data, bitsPerRecord, index);
     }
 
     void clearOnly(unsigned segmentIndex) {
@@ -267,7 +278,7 @@ class Segment {
     }
 
     void setOnlyIndex(unsigned index, unsigned v = 1) {
-      setBits(data(), bitsPerRecord, index, v);
+      setBits(data, bitsPerRecord, index, v);
     }
 
     void setOnly(unsigned segmentIndex, unsigned v = 1) {
@@ -285,13 +296,7 @@ class Segment {
     }
 
     unsigned get(void* p) {
-      return getBits(data(), bitsPerRecord, indexOf(p));
-    }
-
-    unsigned footprint(unsigned capacity) {
-      unsigned n = size(capacity);
-      if (child) n += child->footprint(capacity);
-      return n;
+      return getBits(data, bitsPerRecord, indexOf(p));
     }
   };
 
@@ -334,8 +339,22 @@ class Segment {
     }
   }
 
+  Segment(Context* context, Map* map, uintptr_t* data, unsigned position,
+          unsigned capacity):
+    context(context),
+    data(data),
+    position_(position),
+    capacity_(capacity),
+    map(map)
+  {
+    if (map) {
+      map->init();
+    }
+  }
+
   unsigned footprint(unsigned capacity) {
-    return capacity + (map and capacity ? map->footprint(capacity) : 0);
+    return capacity
+      + (map and capacity ? map->calculateFootprint(capacity) : 0);
   }
 
   unsigned capacity() {
@@ -508,9 +527,13 @@ class Context {
     limit(limit),
     lowMemoryThreshold(limit / 2),
     lock(0),
-
-    immortalHeapStart(0),
-    immortalHeapEnd(0),
+    
+    immortalPointerMap(&immortalHeap, 1, 1, 0, true),
+    immortalPageMap(&immortalHeap, 1, LikelyPageSizeInBytes / BytesPerWord,
+                    &immortalPointerMap, true),
+    immortalHeapMap(&immortalHeap, 1, immortalPageMap.scale * 1024,
+                    &immortalPageMap, true),
+    immortalHeap(this, &immortalHeapMap, 0, 0),
 
     ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
@@ -563,6 +586,15 @@ class Context {
     nextGen1.dispose();
     gen2.dispose();
     nextGen2.dispose();
+
+    if (immortalHeapMap.data) {
+      free(this, immortalHeapMap.data, immortalHeapMap.size() * BytesPerWord);
+    }
+
+    if (immortalPageMap.data)  {
+      free(this, immortalPageMap.data, immortalPageMap.size() * BytesPerWord);
+    }
+
     lock->dispose();
   }
 
@@ -581,9 +613,11 @@ class Context {
 
   System::Mutex* lock;
 
-  void* immortalHeapStart;
-  void* immortalHeapEnd;
-  
+  Segment::Map immortalPointerMap;
+  Segment::Map immortalPageMap;
+  Segment::Map immortalHeapMap;
+  Segment immortalHeap;
+
   Segment::Map ageMap;
   Segment gen1;
 
@@ -702,7 +736,7 @@ inline void
 initNextGen1(Context* c)
 {
   new (&(c->nextAgeMap)) Segment::Map
-    (&(c->nextGen1),  max(1, log(TenureThreshold)), 1, 0, false);
+    (&(c->nextGen1), max(1, log(TenureThreshold)), 1, 0, false);
 
   unsigned minimum = minimumNextGen1Capacity(c);
   unsigned desired = minimum;
@@ -954,7 +988,7 @@ update3(Context* c, void* o, bool* needsVisit)
 void*
 update2(Context* c, void* o, bool* needsVisit)
 {
-  if ((o < c->immortalHeapEnd and o > c->immortalHeapStart)
+  if (c->immortalHeap.contains(o)
       or (c->mode == Heap::MinorCollection and c->gen2.contains(o)))
   {
     *needsVisit = false;
@@ -1677,9 +1711,34 @@ class MyHeap: public Heap {
     c.client = client;
   }
 
-  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) {
-    c.immortalHeapStart = start;
-    c.immortalHeapEnd = start + sizeInWords;
+  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords,
+                               uintptr_t* map)
+  {
+    new (&(c.immortalPointerMap)) Segment::Map
+      (&(c.immortalHeap), map, 1, 1, 0, false);
+
+    unsigned pageMapScale = LikelyPageSizeInBytes / BytesPerWord;
+    unsigned pageMapSize = Segment::Map::calculateSize
+      (&c, sizeInWords, pageMapScale, 1);
+    uintptr_t* pageMap = static_cast<uintptr_t*>
+      (allocate(pageMapSize * BytesPerWord));
+
+    new (&(c.immortalPageMap)) Segment::Map
+      (&(c.immortalHeap), pageMap, 1, pageMapScale, &(c.immortalPointerMap),
+       true);
+
+    unsigned heapMapScale = pageMapScale * 1024;
+    unsigned heapMapSize = Segment::Map::calculateSize
+      (&c, sizeInWords, heapMapScale, 1);
+    uintptr_t* heapMap = static_cast<uintptr_t*>
+      (allocate(heapMapSize * BytesPerWord));
+
+    new (&(c.immortalHeapMap)) Segment::Map
+      (&(c.immortalHeap), heapMap, 1, heapMapScale, &(c.immortalPageMap),
+       true);
+
+    new (&(c.immortalHeap)) Segment
+      (&c, &(c.immortalHeapMap), start, sizeInWords, sizeInWords);
   }
 
   virtual void* tryAllocate(unsigned size) {
