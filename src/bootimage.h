@@ -59,7 +59,17 @@ codeMapSize(unsigned codeSize)
 inline unsigned
 heapMapSize(unsigned heapSize)
 {
-  return ceiling(heapSize, BitsPerWord * 8) * BytesPerWord;
+  return ceiling(heapSize, BitsPerWord * BytesPerWord) * BytesPerWord;
+}
+
+inline object
+bootObject(uintptr_t* heap, unsigned offset)
+{
+  if (offset) {
+    return reinterpret_cast<object>(heap + offset - 1);
+  } else {
+    return 0;
+  }
 }
 
 } // namespace vm

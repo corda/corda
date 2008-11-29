@@ -4051,6 +4051,14 @@ compile(MyThread* t, Allocator* allocator, Context* context)
 }
 
 void
+updateCall(MyThread* t, UnaryOperation op, bool assertAlignment,
+           void* returnAddress, void* target)
+{
+  Context context(t);
+  context.assembler->updateCall(op, assertAlignment, returnAddress, target);
+}
+
+void
 compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
         object method);
 
@@ -4081,9 +4089,9 @@ compileMethod2(MyThread* t)
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
         = address;
     } else {
-      Context context(t);
-      context.assembler->updateCall
-        (reinterpret_cast<void*>(callNodeAddress(t, node)), address);
+      updateCall
+        (t, LongCall, true, reinterpret_cast<void*>(callNodeAddress(t, node)),
+         address);
     }
     return address;
   }
@@ -5117,37 +5125,38 @@ class MyProcessor: public Processor {
     image->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
   }
 
-  virtual void boot(Thread* t, BootImage* image, uintptr_t* heap,
+  virtual void boot(Thread* vmt, BootImage* image, uintptr_t* heap,
                     uint8_t* code)
   {
-    methodTree = reinterpret_cast<object>(heap + image->methodTree);
-    methodTreeSentinal = reinterpret_cast<object>
-      (heap + image->methodTreeSentinal);
+    MyThread* t = static_cast<MyThread*>(vmt);
+    methodTree = bootObject(heap, image->methodTree);
+    methodTreeSentinal = bootObject(heap, image->methodTreeSentinal);
 
     callTable = fixupCallTable
-      (static_cast<MyThread*>(t),
-       reinterpret_cast<object>(heap + image->callTable),
-       image->codeBase,
+      (t, bootObject(heap, image->callTable), image->codeBase,
        reinterpret_cast<uintptr_t>(code));
 
     defaultThunk = code + image->defaultThunk;
-    { void* p = voidPointer(::compileMethod);
-      memcpy(code + image->compileMethodCall, &p, BytesPerWord); }
+
+    updateCall(t, LongCall, false, code + image->compileMethodCall,
+               voidPointer(::compileMethod));
 
     nativeThunk = code + image->nativeThunk;
-    { void* p = voidPointer(invokeNative);
-      memcpy(code + image->invokeNativeCall, &p, BytesPerWord); }
+
+    updateCall(t, LongCall, false, code + image->invokeNativeCall,
+               voidPointer(invokeNative));
 
     aioobThunk = code + image->aioobThunk;
-    { void* p = voidPointer(throwArrayIndexOutOfBounds);
-      memcpy(code + image->throwArrayIndexOutOfBoundsCall, &p, BytesPerWord); }
+
+    updateCall(t, LongCall, false,
+               code + image->throwArrayIndexOutOfBoundsCall,
+               voidPointer(throwArrayIndexOutOfBounds));
 
     thunkTable = code + image->thunkTable;
     thunkSize = image->thunkSize;
 
 #define THUNK(s)                                                \
-    { void* p = voidPointer(s);                                 \
-      memcpy(code + image->s##Call, &p, BytesPerWord); }
+    updateCall(t, LongJump, false, code + image->s##Call, voidPointer(s));
 
 #include "thunks.cpp"
 
@@ -5261,36 +5270,42 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
   p->defaultThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
 
-  { void* call = defaultContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(compileMethod))); 
+  { uint8_t* call = static_cast<uint8_t*>
+      (defaultContext.promise.listener->resolve
+       (reinterpret_cast<intptr_t>(voidPointer(compileMethod))))
+      + BytesPerWord;
+
     if (image) {
       image->defaultThunk = p->defaultThunk - imageBase;
-      image->compileMethodCall = static_cast<uint8_t*>(call) - imageBase;
+      image->compileMethodCall = call - imageBase;
     }
   }
 
   p->nativeThunk = finish
     (t, allocator, nativeContext.context.assembler, "native");
 
-  { void* call = nativeContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(invokeNative)));
+  { uint8_t* call = static_cast<uint8_t*>
+      (nativeContext.promise.listener->resolve
+       (reinterpret_cast<intptr_t>(voidPointer(invokeNative))))
+      + BytesPerWord;
 
     if (image) {
       image->nativeThunk = p->nativeThunk - imageBase;
-      image->invokeNativeCall = static_cast<uint8_t*>(call) - imageBase;
+      image->invokeNativeCall = call - imageBase;
     }
   }
 
   p->aioobThunk = finish
     (t, allocator, aioobContext.context.assembler, "aioob");
 
-  { void* call = aioobContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds)));
+  { uint8_t* call = static_cast<uint8_t*>
+      (aioobContext.promise.listener->resolve
+       (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds))))
+      + BytesPerWord;
 
     if (image) {
       image->aioobThunk = p->aioobThunk - imageBase;
-      image->throwArrayIndexOutOfBoundsCall
-        = static_cast<uint8_t*>(call) - imageBase;
+      image->throwArrayIndexOutOfBoundsCall = call - imageBase;
     }
   }
 
@@ -5309,10 +5324,11 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 #define THUNK(s)                                                        \
   tableContext.context.assembler->writeTo(start);                       \
   start += p->thunkSize;                                                \
-  { void* call = tableContext.promise.listener->resolve                 \
-      (reinterpret_cast<intptr_t>(voidPointer(s)));                     \
+  { uint8_t* call = static_cast<uint8_t*>                               \
+      (tableContext.promise.listener->resolve                           \
+       (reinterpret_cast<intptr_t>(voidPointer(s)))) + BytesPerWord;    \
     if (image) {                                                        \
-      image->s##Call = static_cast<uint8_t*>(call) - imageBase;         \
+      image->s##Call = call - imageBase;                                \
     }                                                                   \
   }
 

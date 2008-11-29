@@ -211,7 +211,8 @@ class Assembler {
 
   virtual unsigned length() = 0;
 
-  virtual void updateCall(void* returnAddress, void* newTarget) = 0;
+  virtual void updateCall(UnaryOperation op, bool assertAlignment,
+                          void* returnAddress, void* newTarget) = 0;
 
   virtual void dispose() = 0;
 };

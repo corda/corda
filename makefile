@@ -59,7 +59,6 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DBOOT_CLASSPATH=\"[classpathJar]\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
@@ -187,7 +186,9 @@ vm-depends = \
 	$(src)/util.h \
 	$(src)/zone.h \
 	$(src)/assembler.h \
-	$(src)/compiler.h
+	$(src)/compiler.h \
+	$(src)/heapwalk.h \
+	$(src)/bootimage.h
 
 vm-sources = \
 	$(src)/$(system).cpp \
@@ -227,10 +228,21 @@ ifeq ($(heapdump),true)
 	cflags += -DAVIAN_HEAPDUMP
 endif
 
-bootimage-sources = $(src)/bootimage.cpp 
-bootimage-objects = \
-	$(call cpp-objects,$(bootimage-sources),$(src),$(native-build))
-bootimage = $(native-build)/bootimage
+bootimage-generator-sources = $(src)/bootimage.cpp 
+bootimage-generator-objects = \
+	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
+bootimage-generator = $(native-build)/bootimage-generator
+
+bootimage-bin = $(native-build)/bootimage.bin
+bootimage-object = $(native-build)/bootimage-bin.o
+
+ifeq ($(bootimage),true)
+	vm-classpath-object = $(bootimage-object)
+	cflags += -DBOOT_IMAGE=\"bootimageBin\"
+else
+	vm-classpath-object = $(classpath-object)
+	cflags += -DBOOT_CLASSPATH=\"[classpathJar]\"
+endif
 
 driver-source = $(src)/main.cpp
 driver-object = $(native-build)/main.o
@@ -269,7 +281,7 @@ args = $(flags) $(input)
 
 .PHONY: build
 build: $(static-library) $(executable) $(dynamic-library) \
-	$(executable-dynamic) $(classpath-dep) $(test-dep) $(bootimage)
+	$(executable-dynamic) $(classpath-dep) $(test-dep)
 
 $(test-classes): $(classpath-dep)
 
@@ -356,7 +368,7 @@ $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
 $(vm-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 	$(compile-asm-object)
 
-$(bootimage-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+$(bootimage-generator-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
 $(heapwalk-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
@@ -409,9 +421,24 @@ $(static-library): $(vm-objects) $(jni-objects)
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
+$(bootimage-bin): $(bootimage-generator)
+	$(<) $(classpath-build) > $(@)
+
+$(bootimage-object): $(bootimage-bin)
+	@echo "creating $(@)"
+ifeq ($(platform),darwin)
+	$(binaryToMacho) $(<) \
+		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
+else
+	(wd=$$(pwd); \
+	 cd $(native-build); \
+	 $(objcopy) -I binary bootimage.bin \
+		 -O $(object-format) -B $(object-arch) "$${wd}/$(@)")
+endif
+
 $(executable): \
-		$(vm-objects) $(classpath-object) $(jni-objects) $(driver-object) \
-		$(vm-heapwalk-objects) $(boot-object)
+		$(vm-objects) $(jni-objects) $(driver-object) $(vm-heapwalk-objects) \
+		$(boot-object) $(vm-classpath-object)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
@@ -422,9 +449,9 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage): \
+$(bootimage-generator): \
 		$(vm-objects) $(classpath-object) $(jni-objects) $(heapwalk-objects) \
-		$(bootimage-objects)
+		$(bootimage-generator-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
@@ -436,8 +463,8 @@ endif
 	$(strip) $(strip-all) $(@)
 
 $(dynamic-library): \
-		$(vm-objects) $(classpath-object) $(dynamic-object) $(jni-objects) \
-		$(vm-heapwalk-objects) $(boot-object)
+		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
+		$(boot-object) $(vm-classpath-object)
 	@echo "linking $(@)"
 	$(cc) $(^) $(shared) $(lflags) -o $(@)
 	$(strip) $(strip-all) $(@)

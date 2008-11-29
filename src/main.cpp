@@ -79,10 +79,19 @@ main(int ac, const char** av)
   ++ vmArgs.nOptions;
 #endif
 
+#ifdef BOOT_IMAGE
+  ++ vmArgs.nOptions;
+#endif
+
   JavaVMOption options[vmArgs.nOptions];
   vmArgs.options = options;
 
   unsigned optionIndex = 0;
+
+#ifdef BOOT_IMAGE
+  options[optionIndex++].optionString
+    = const_cast<char*>("-Davian.bootimage=" BOOT_IMAGE);
+#endif
 
 #ifdef BOOT_CLASSPATH
   options[optionIndex++].optionString

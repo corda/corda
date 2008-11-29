@@ -28,7 +28,8 @@ class HeapVisitor {
   virtual void root() = 0;
   virtual unsigned visitNew(object value) = 0;
   virtual void visitOld(object value, unsigned number) = 0;
-  virtual void push(unsigned offset) = 0;
+  virtual void push(object parent, unsigned parentNumber,
+                    unsigned childOffset) = 0;
   virtual void pop() = 0;
 };
 

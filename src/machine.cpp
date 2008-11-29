@@ -1517,11 +1517,8 @@ boot(Thread* t, BootImage* image)
     if (w) {
       for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
         if (w & (static_cast<uintptr_t>(1) << bit)) {
-          unsigned index = ::indexOf(word, bit);
-          uintptr_t* p = heap + index;
-          if (*p) {
-            *p = reinterpret_cast<uintptr_t>(heap + *p - 1);
-          }
+          uintptr_t* p = heap + indexOf(word, bit);
+          *p = reinterpret_cast<uintptr_t>(heap + (*p - 1));
         }
       }
       heapMap[word] = 0;
@@ -1530,9 +1527,9 @@ boot(Thread* t, BootImage* image)
 
   t->m->heap->setImmortalHeap(heap, image->heapSize, heapMap);
 
-  t->m->loader = reinterpret_cast<object>(heap + image->loader);
-  t->m->stringMap = reinterpret_cast<object>(heap + image->stringMap);
-  t->m->types = reinterpret_cast<object>(heap + image->types);
+  t->m->loader = bootObject(heap, image->loader);
+  t->m->stringMap = bootObject(heap, image->stringMap);
+  t->m->types = bootObject(heap, image->types);
 
   uintptr_t* codeMap = heap + ceiling(image->heapSize, BytesPerWord);
   unsigned codeMapSizeInWords = ceiling
@@ -1544,12 +1541,10 @@ boot(Thread* t, BootImage* image)
     if (w) {
       for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
         if (w & (static_cast<uintptr_t>(1) << bit)) {
-          unsigned index = ::indexOf(word, bit);
+          unsigned index = indexOf(word, bit);
           uintptr_t v; memcpy(&v, code + index, BytesPerWord);
-          if (v) {
-            v = reinterpret_cast<uintptr_t>(heap + v - 1);
-            memcpy(code + index, &v, BytesPerWord);
-          }
+          v = reinterpret_cast<uintptr_t>(heap + v - 1);
+          memcpy(code + index, &v, BytesPerWord);
         }
       }
     }
@@ -1579,6 +1574,8 @@ void
 boot(Thread* t)
 {
   Machine* m = t->m;
+
+  m->unsafe = true;
 
   m->loader = allocate(t, sizeof(void*) * 3, true);
   memset(m->loader, 0, sizeof(void*) * 2);
@@ -1881,6 +1878,8 @@ Thread::init()
         image = function(&size);
       }
     }
+
+    m->unsafe = false;
 
     if (image) {
       boot(this, image);

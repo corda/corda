@@ -135,7 +135,7 @@ class Task {
   Task* next;
 };
 
-void
+void*
 resolveOffset(System* s, uint8_t* instruction, unsigned instructionSize,
               int64_t value)
 {
@@ -146,6 +146,7 @@ resolveOffset(System* s, uint8_t* instruction, unsigned instructionSize,
     
   int32_t v4 = v;
   memcpy(instruction + instructionSize - 4, &v4, 4);
+  return instruction + instructionSize - 4;
 }
 
 class OffsetListener: public Promise::Listener {
@@ -158,8 +159,7 @@ class OffsetListener: public Promise::Listener {
   { }
 
   virtual void* resolve(int64_t value) {
-    resolveOffset(s, instruction, instructionSize, value);
-    return 0;
+    return resolveOffset(s, instruction, instructionSize, value);
   }
 
   System* s;
@@ -2270,10 +2270,15 @@ class MyAssembler: public Assembler {
     return c.code.length();
   }
 
-  virtual void updateCall(void* returnAddress, void* newTarget) {
+  virtual void updateCall(UnaryOperation op UNUSED,
+                          bool assertAlignment UNUSED, void* returnAddress,
+                          void* newTarget)
+  {
     uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-    assert(&c, *instruction == 0xE8);
-    assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+    assert(&c, (op == LongCall and *instruction == 0xE8)
+           or (op == LongJump and *instruction == 0xE9));
+    assert(&c, (not assertAlignment)
+           or reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
 
     int32_t v = static_cast<uint8_t*>(newTarget)
       - static_cast<uint8_t*>(returnAddress);

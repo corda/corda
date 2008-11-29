@@ -266,7 +266,7 @@ walk(Context* c, HeapVisitor* v, object p)
   goto pop;
 
  children: {
-    v->push(nextChildOffset);
+    v->push(p, find(c, p)->number, nextChildOffset);
     push(c, p, nextChildOffset);
     p = get(p, nextChildOffset);
     goto visit;

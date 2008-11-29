@@ -106,22 +106,18 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
   class Visitor: public HeapVisitor {
    public:
     Visitor(Thread* t, uintptr_t* heap, uintptr_t* map, unsigned capacity):
-      t(t), currentObject(0), currentOffset(0), heap(heap), map(map),
-      position(0), capacity(capacity)
+      t(t), current(0), heap(heap), map(map), position(0), capacity(capacity)
     { }
 
     void visit(unsigned number) {
-      if (currentObject) {
-        unsigned index = currentObject - 1 + currentOffset;
-        markBit(map, index);
-        heap[index] = number;
+      if (current) {
+        if (number) markBit(map, current - 1);
+        heap[current - 1] = number;
       }
-
-      currentObject = number;
     }
 
     virtual void root() {
-      currentObject = 0;
+      current = 0;
     }
 
     virtual unsigned visitNew(object p) {
@@ -146,17 +142,16 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
       visit(number);
     }
 
-    virtual void push(unsigned offset) {
-      currentOffset = offset;
+    virtual void push(object, unsigned number, unsigned offset) {
+      current = number + offset;
     }
 
     virtual void pop() {
-      currentObject = 0;
+      current = 0;
     }
 
     Thread* t;
-    unsigned currentObject;
-    unsigned currentOffset;
+    unsigned current;
     uintptr_t* heap;
     uintptr_t* map;
     unsigned position;
@@ -176,8 +171,8 @@ updateConstants(Thread* t, object constants, uint8_t* code, uintptr_t* codeMap,
                 HeapMap* heapTable)
 {
   for (; constants; constants = tripleThird(t, constants)) {
-    intptr_t target = heapTable->find(tripleFirst(t, constants));
-    assert(t, target >= 0);
+    unsigned target = heapTable->find(tripleFirst(t, constants));
+    assert(t, target > 0);
 
     void* dst = static_cast<ListenPromise*>
       (pointerValue(t, tripleSecond(t, constants)))->listener->resolve(target);
@@ -226,7 +221,7 @@ writeBootImage(Thread* t, FILE* out)
 
   image.magic = BootImage::Magic;
 
-  if (true) {
+  if (false) {
     fprintf(stderr, "heap size %d code size %d\n",
             image.heapSize, image.codeSize);
   } else {
