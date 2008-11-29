@@ -131,7 +131,8 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 
   if (ip < start) {
     return -1;
-  } else if (ip < start + static_cast<intptr_t>(compiledSize(start)))
+  } else if (ip < start + static_cast<intptr_t>
+             (compiledSize(start) + BytesPerWord))
   {
     return 0;
   } else {
@@ -536,6 +537,7 @@ class Context {
     method(method),
     bootContext(bootContext),
     objectPool(0),
+    objectPoolCount(0),
     traceLog(0),
     traceLogCount(0),
     visitTable(makeVisitTable(t, &zone, method)),
@@ -553,6 +555,7 @@ class Context {
     method(0),
     bootContext(0),
     objectPool(0),
+    objectPoolCount(0),
     traceLog(0),
     traceLogCount(0),
     visitTable(0),
@@ -574,6 +577,7 @@ class Context {
   object method;
   BootContext* bootContext;
   PoolElement* objectPool;
+  unsigned objectPoolCount;
   TraceElement* traceLog;
   unsigned traceLogCount;
   uint16_t* visitTable;
@@ -652,6 +656,8 @@ class Frame {
       context->objectPool = new
         (context->zone.allocate(sizeof(PoolElement)))
         PoolElement(t, o, context->objectPool);
+
+      ++ context->objectPoolCount;
 
       return c->address(context->objectPool);
     }
@@ -3811,16 +3817,18 @@ finish(MyThread* t, Allocator* allocator, Context* context)
 
   unsigned codeSize = c->compile();
   uintptr_t* code = static_cast<uintptr_t*>
-    (allocator->allocate(pad(codeSize) + BytesPerWord));
+    (allocator->allocate(pad(codeSize) + pad(c->poolSize()) + BytesPerWord));
   code[0] = codeSize;
   uint8_t* start = reinterpret_cast<uint8_t*>(code + 1);
 
   if (context->objectPool) {
     object pool = allocate3
       (t, allocator, Machine::ImmortalAllocation,
-       FixedSizeOfArray + c->poolSize() + BytesPerWord, true);
+       FixedSizeOfArray + ((context->objectPoolCount + 1) * BytesPerWord),
+       true);
 
-    initArray(t, pool, (c->poolSize() / BytesPerWord) + 1, false);
+    initArray(t, pool, context->objectPoolCount + 1, false);
+    mark(t, pool, 0);
 
     set(t, pool, ArrayBody, objectPools(t));
     objectPools(t) = pool;
@@ -5169,7 +5177,7 @@ getThunk(MyThread* t, Thunk thunk)
   MyProcessor* p = processor(t);
   
   return reinterpret_cast<intptr_t>
-    (p->thunkTable + ((thunk * p->thunkSize) / BytesPerWord));
+    (p->thunkTable + (thunk * p->thunkSize));
 }
 
 void
