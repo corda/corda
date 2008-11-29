@@ -509,6 +509,9 @@ class Context {
     lowMemoryThreshold(limit / 2),
     lock(0),
 
+    immortalHeapStart(0),
+    immortalHeapEnd(0),
+
     ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
 
@@ -577,6 +580,9 @@ class Context {
   unsigned lowMemoryThreshold;
 
   System::Mutex* lock;
+
+  void* immortalHeapStart;
+  void* immortalHeapEnd;
   
   Segment::Map ageMap;
   Segment gen1;
@@ -948,7 +954,9 @@ update3(Context* c, void* o, bool* needsVisit)
 void*
 update2(Context* c, void* o, bool* needsVisit)
 {
-  if (c->mode == Heap::MinorCollection and c->gen2.contains(o)) {
+  if ((o < c->immortalHeapEnd and o > c->immortalHeapStart)
+      or (c->mode == Heap::MinorCollection and c->gen2.contains(o)))
+  {
     *needsVisit = false;
     return o;
   }
@@ -1669,6 +1677,11 @@ class MyHeap: public Heap {
     c.client = client;
   }
 
+  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) {
+    c.immortalHeapStart = start;
+    c.immortalHeapEnd = start + sizeInWords;
+  }
+
   virtual void* tryAllocate(unsigned size) {
     return ::tryAllocate(&c, size);
   }
@@ -1698,8 +1711,9 @@ class MyHeap: public Heap {
             Fixie(sizeInWords, objectMask, &(c.fixies), false))->body();
   }
 
-  virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
-                                 bool objectMask, unsigned* totalInBytes)
+  virtual void* allocateImmortalFixed(Allocator* allocator,
+                                      unsigned sizeInWords, bool objectMask,
+                                      unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
     return (new (allocator->allocate(*totalInBytes))

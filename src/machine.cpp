@@ -1512,6 +1512,8 @@ boot(Thread* t, BootImage* image)
     (heapMapSize(image->heapSize), BytesPerWord);
   uintptr_t* heap = heapMap + heapMapSizeInWords;
   
+  t->m->heap->setImmortalHeap(heap, image->heapSize);
+
   for (unsigned word = 0; word < heapMapSizeInWords; ++word) {
     uintptr_t w = heapMap[word];
     if (w) {
@@ -2170,7 +2172,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   case Machine::ImmortalAllocation: {
     unsigned total;
     object o = static_cast<object>
-      (t->m->heap->allocateImmortal
+      (t->m->heap->allocateImmortalFixed
        (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
     cast<uintptr_t>(o, 0) = FixedMark;
