@@ -1482,10 +1482,46 @@ makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 }
 
 object FORCE_ALIGN
-makeBlankArray(MyThread* t, object (*constructor)(Thread*, uintptr_t, bool),
-               int32_t length)
+makeBlankArray(MyThread* t, unsigned type, int32_t length)
 {
   if (length >= 0) {
+    object (*constructor)(Thread*, uintptr_t, bool);
+    switch (type) {
+    case T_BOOLEAN:
+      constructor = makeBooleanArray;
+      break;
+
+    case T_CHAR:
+      constructor = makeCharArray;
+      break;
+
+    case T_FLOAT:
+      constructor = makeFloatArray;
+      break;
+
+    case T_DOUBLE:
+      constructor = makeDoubleArray;
+      break;
+
+    case T_BYTE:
+      constructor = makeByteArray;
+      break;
+
+    case T_SHORT:
+      constructor = makeShortArray;
+      break;
+
+    case T_INT:
+      constructor = makeIntArray;
+      break;
+
+    case T_LONG:
+      constructor = makeLongArray;
+      break;
+
+    default: abort(t);
+    }
+
     return constructor(t, length, true);
   } else {
     object message = makeString(t, "%d", length);
@@ -3272,51 +3308,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Compiler::Operand* length = frame->popInt();
 
-      object (*constructor)(Thread*, uintptr_t, bool);
-      switch (type) {
-      case T_BOOLEAN:
-        constructor = makeBooleanArray;
-        break;
-
-      case T_CHAR:
-        constructor = makeCharArray;
-        break;
-
-      case T_FLOAT:
-        constructor = makeFloatArray;
-        break;
-
-      case T_DOUBLE:
-        constructor = makeDoubleArray;
-        break;
-
-      case T_BYTE:
-        constructor = makeByteArray;
-        break;
-
-      case T_SHORT:
-        constructor = makeShortArray;
-        break;
-
-      case T_INT:
-        constructor = makeIntArray;
-        break;
-
-      case T_LONG:
-        constructor = makeLongArray;
-        break;
-
-      default: abort(t);
-      }
-
       frame->pushObject
         (c->call
          (c->constant(getThunk(t, makeBlankArrayThunk)),
           0,
           frame->trace(0, false),
           BytesPerWord,
-          3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
-          length));
+          3, c->thread(), c->constant(type), length));
     } break;
 
     case nop: break;
@@ -4693,6 +4691,7 @@ fixupCallTable(MyThread* t, object oldTable, uintptr_t oldBase,
       next = callNodeNext(t, p);
 
       intptr_t k = (callNodeAddress(t, p) - oldBase) + newBase;
+      callNodeAddress(t, p) = k;
 
       unsigned index = k & (arrayLength(t, newTable) - 1);
 

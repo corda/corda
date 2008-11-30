@@ -99,6 +99,21 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
   }
 }
 
+void
+visitReference(Thread* t, HeapWalker* w, uintptr_t* heap, uintptr_t* map,
+               object r)
+{
+  int target = w->map()->find(jreferenceTarget(t, r));
+  assert(t, target > 0);
+
+  int reference = w->map()->find(r);
+  assert(t, reference > 0);
+
+  unsigned index = reference - 1 + (JreferenceTarget / BytesPerWord);
+  markBit(map, index);
+  heap[index] = target;
+}
+
 HeapWalker*
 makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
               unsigned capacity, object constants)
@@ -161,6 +176,14 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
   HeapWalker* w = makeHeapWalker(t, &visitor);
   visitRoots(t, image, w, constants);
   
+  for (object r = t->m->weakReferences; r; r = jreferenceVmNext(t, r)) {
+    visitReference(t, w, heap, map, r);
+  }
+
+  for (object r = t->m->tenuredWeakReferences; r; r = jreferenceVmNext(t, r)) {
+    visitReference(t, w, heap, map, r);
+  }
+
   image->heapSize = visitor.position * BytesPerWord;
 
   return w;
@@ -212,6 +235,9 @@ writeBootImage(Thread* t, FILE* out)
     (t->m->heap->allocate(heapMapSize(HeapCapacity)));
   memset(heapMap, 0, heapMapSize(HeapCapacity));
 
+  PROTECT(t, constants);
+  collect(t, Heap::MajorCollection);
+
   HeapWalker* heapWalker = makeHeapImage
     (t, &image, heap, heapMap, HeapCapacity, constants);
 
@@ -220,11 +246,12 @@ writeBootImage(Thread* t, FILE* out)
   heapWalker->dispose();
 
   image.magic = BootImage::Magic;
+  image.codeBase = reinterpret_cast<uintptr_t>(code);
 
-  if (false) {
-    fprintf(stderr, "heap size %d code size %d\n",
-            image.heapSize, image.codeSize);
-  } else {
+  fprintf(stderr, "heap size %d code size %d\n",
+          image.heapSize, image.codeSize);
+
+  if (true) {
     fwrite(&image, sizeof(BootImage), 1, out);
 
     fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
