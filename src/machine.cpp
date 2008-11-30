@@ -1560,7 +1560,7 @@ boot(Thread* t, BootImage* image)
     if (classMethodTable(t, c)) {
       for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
         object method = arrayBody(t, classMethodTable(t, c), i);
-        if (methodCode(t, method)) {
+        if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
           assert(t, (methodCompiled(t, method) - image->codeBase)
                  <= image->codeSize);
 
@@ -1568,13 +1568,17 @@ boot(Thread* t, BootImage* image)
             = (methodCompiled(t, method) - image->codeBase)
             + reinterpret_cast<uintptr_t>(code);
 
-//         fprintf(stderr, "%p %p %s.%s%s\n",
-//                 reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
-//                 reinterpret_cast<uint8_t*>(methodCompiled(t, method)) + 
-//                 reinterpret_cast<uintptr_t*>(methodCompiled(t, method))[-1],
-//                 &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-//                 &byteArrayBody(t, methodName(t, method), 0),
-//                 &byteArrayBody(t, methodSpec(t, method), 0));
+          if (false and (methodFlags(t, method) & ACC_NATIVE) == 0) {
+             fprintf(stderr, "%p %p %s.%s%s\n",
+                    reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
+                    reinterpret_cast<uint8_t*>(methodCompiled(t, method)) + 
+                    reinterpret_cast<uintptr_t*>
+                     (methodCompiled(t, method))[-1],
+                     &byteArrayBody
+                     (t, className(t, methodClass(t, method)), 0),
+                     &byteArrayBody(t, methodName(t, method), 0),
+                     &byteArrayBody(t, methodSpec(t, method), 0));
+          }
         }
       }
     }

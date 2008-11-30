@@ -57,7 +57,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
       if (classMethodTable(t, c)) {
         for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
           object method = arrayBody(t, classMethodTable(t, c), i);
-          if (methodCode(t, method)) {
+          if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
             t->m->processor->compileMethod
               (t, zone, code, &size, capacity, &constants, &calls, method);
           }

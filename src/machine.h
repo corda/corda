@@ -2004,10 +2004,19 @@ resolveMethod(Thread* t, const char* className, const char* methodName,
 object
 resolveObjectArrayClass(Thread* t, object elementSpec);
 
+inline bool
+classNeedsInit(Thread* t, object c)
+{
+  return classVmFlags(t, c) & NeedInitFlag
+    and (classVmFlags(t, c) & InitFlag) == 0;
+}
+
 inline void
 initClass(Thread* t, object c)
 {
-  t->m->processor->initClass(t, c);
+  if (classNeedsInit(t, c)) {
+    t->m->processor->initClass(t, c);
+  }
 }
 
 object

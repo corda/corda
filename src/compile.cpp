@@ -1770,53 +1770,55 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
   Compiler::Operand* result = 0;
 
   if (not emptyMethod(t, target)) {
-    if (methodFlags(t, target) & ACC_NATIVE) {
-      result = c->call
-        (c->constant(nativeThunk(t)),
-         0,
-         frame->trace(target, false),
-         rSize,
-         0);
-    } else {
-      BootContext* bc = frame->context->bootContext;
-      if (bc) {
-        if (objectClass(t, target) == objectClass(t, frame->context->method)) {
-          Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
-            ListenPromise(t->m->system, bc->zone);
+    BootContext* bc = frame->context->bootContext;
+    if (bc) {
+      if (methodClass(t, target) == methodClass(t, frame->context->method)
+          or (not classNeedsInit(t, methodClass(t, target))))
+      {
+        Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
+          ListenPromise(t->m->system, bc->zone);
 
-          PROTECT(t, target);
-          object pointer = makePointer(t, p);
-          bc->calls = makeTriple(t, target, pointer, bc->calls);
+        PROTECT(t, target);
+        object pointer = makePointer(t, p);
+        bc->calls = makeTriple(t, target, pointer, bc->calls);
 
-          result = c->call
-            (c->promiseConstant(p),
-             0,
-             frame->trace(0, false),
-             rSize,
-             0);
-        } else {
-          result = c->call
-            (c->constant(defaultThunk(t)),
-             Compiler::Aligned,
-             frame->trace(target, false),
-             rSize,
-             0);
-        }
-      } else if (methodCompiled(t, target) == defaultThunk(t)) {
+        result = c->call
+          (c->promiseConstant(p),
+           0,
+           frame->trace(0, false),
+           rSize,
+           0);
+      } else {
         result = c->call
           (c->constant(defaultThunk(t)),
            Compiler::Aligned,
            frame->trace(target, false),
            rSize,
            0);
-      } else {
-        result = c->call
-          (c->constant(methodCompiled(t, target)),
-           0,
-           frame->trace(0, false),
-           rSize,
-           0);
       }
+    } else if (methodFlags(t, target) & ACC_NATIVE) {
+      result = c->call
+        (c->constant(nativeThunk(t)),
+         0,
+         frame->trace(target, false),
+         rSize,
+         0);
+    } else if (methodCompiled(t, target) == defaultThunk(t)
+               or classNeedsInit(t, methodClass(t, target)))
+    {
+      result = c->call
+        (c->constant(defaultThunk(t)),
+         Compiler::Aligned,
+         frame->trace(target, false),
+         rSize,
+         0);
+    } else {
+      result = c->call
+        (c->constant(methodCompiled(t, target)),
+         0,
+         frame->trace(0, false),
+         rSize,
+         0);
     }
   }
 
@@ -2457,8 +2459,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* table;
 
       if (instruction == getstatic) {
-        if ((classVmFlags(t, fieldClass(t, field)) & NeedInitFlag)
-            and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
+        if (fieldClass(t, field) != methodClass(t, context->method)
+            and classNeedsInit(t, fieldClass(t, field)));
         {
           c->call
             (c->constant(getThunk(t, tryInitClassThunk)),
@@ -3337,8 +3339,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object staticTable = 0;
 
       if (instruction == putstatic) {
-        if ((classVmFlags(t, fieldClass(t, field)) & NeedInitFlag)
-            and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
+        if (fieldClass(t, field) != methodClass(t, context->method)
+            and classNeedsInit(t, fieldClass(t, field)))
         {
           c->call
             (c->constant(getThunk(t, tryInitClassThunk)),
@@ -4848,9 +4850,7 @@ class MyProcessor: public Processor {
     PROTECT(t, c);
     
     ACQUIRE(t, t->m->classLock);
-    if (classVmFlags(t, c) & NeedInitFlag
-        and (classVmFlags(t, c) & InitFlag) == 0)
-    {
+    if (classNeedsInit(t, c)) {
       classVmFlags(t, c) |= InitFlag;
       invoke(t, classInitializer(t, c), 0);
       if (t->exception) {
@@ -5388,19 +5388,19 @@ void
 compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
         object method)
 {
+  PROTECT(t, method);
+
+  if (bootContext == 0) {
+    initClass(t, methodClass(t, method));
+    if (UNLIKELY(t->exception)) return;
+  }
+
   MyProcessor* p = processor(t);
 
   if (methodCompiled(t, method) == defaultThunk(t)) {
-    PROTECT(t, method);
-
     ACQUIRE(t, t->m->classLock);
     
     if (methodCompiled(t, method) == defaultThunk(t)) {
-      if (bootContext == 0) {
-        initClass(t, methodClass(t, method));
-        if (UNLIKELY(t->exception)) return;
-      }
-
       if (methodCompiled(t, method) == defaultThunk(t)) {
         object node;
         uint8_t* compiled;
