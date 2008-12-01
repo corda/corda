@@ -215,21 +215,21 @@ get(object o, unsigned offsetInWords)
 void
 write1(Context* c, uint8_t v)
 {
-  fwrite(&v, 1, 1, c->out);
+  size_t n UNUSED = fwrite(&v, 1, 1, c->out);
 }
 
 void
 write4(Context* c, uint32_t v)
 {
   uint8_t b[] = { v >> 24, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF };
-  fwrite(b, 4, 1, c->out);
+  size_t n UNUSED = fwrite(b, 4, 1, c->out);
 }
 
 void
 writeString(Context* c, int8_t* p, unsigned size)
 {
   write4(c, size);
-  fwrite(p, size, 1, c->out);
+  size_t n UNUSED = fwrite(p, size, 1, c->out);
 }
 
 unsigned
