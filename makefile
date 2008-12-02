@@ -432,8 +432,10 @@ ifeq ($(platform),darwin)
 else
 	(wd=$$(pwd); \
 	 cd $(native-build); \
-	 $(objcopy) -I binary bootimage.bin \
-		 -O $(object-format) -B $(object-arch) "$${wd}/$(@)")
+	 $(objcopy) --rename-section=.data=.boot -I binary bootimage.bin \
+		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp"; \
+	 $(objcopy) --set-section-flags .boot=alloc,load,code "$${wd}/$(@).tmp" \
+		"$${wd}/$(@)")
 endif
 
 $(executable): \
