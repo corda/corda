@@ -17,6 +17,7 @@
 #include "bootimage.h"
 #include "heapwalk.h"
 #include "zone.h"
+#include "assembler.h"
 
 namespace vm {
 
@@ -122,7 +123,7 @@ class Processor {
   virtual void
   compileMethod(Thread* t, Zone* zone, uint8_t* code, unsigned* offset,
                 unsigned capacity, object* constants, object* calls,
-                object method) = 0;
+                DelayedPromise** addresses, object method) = 0;
 
   virtual void
   visitRoots(BootImage* image, HeapWalker* w) = 0;

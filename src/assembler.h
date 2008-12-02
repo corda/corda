@@ -129,6 +129,33 @@ class ListenPromise: public Promise {
   System* s;
   Allocator* allocator;
   Listener* listener;
+  Promise* promise;
+};
+
+class DelayedPromise: public ListenPromise {
+ public:
+  DelayedPromise(System* s, Allocator* allocator, Promise* basis,
+                 DelayedPromise* next):
+    ListenPromise(s, allocator), basis(basis), next(next)
+  { }
+
+  virtual int64_t value() {
+    abort(s);
+  }
+
+  virtual bool resolved() {
+    return false;
+  }
+
+  virtual Listener* listen(unsigned sizeInBytes) {
+    Listener* l = static_cast<Listener*>(allocator->allocate(sizeInBytes));
+    l->next = listener;
+    listener = l;
+    return l;
+  }
+
+  Promise* basis;
+  DelayedPromise* next;
 };
 
 class TraceHandler {

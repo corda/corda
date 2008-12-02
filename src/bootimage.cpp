@@ -33,7 +33,7 @@ endsWith(const char* suffix, const char* s, unsigned length)
 
 object
 makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
-              unsigned capacity)
+              unsigned capacity, uintptr_t* codeMap)
 {
   unsigned size = 0;
   t->m->processor->compileThunks(t, image, code, &size, capacity);
@@ -43,6 +43,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   
   object calls = 0;
   PROTECT(t, calls);
+
+  DelayedPromise* addresses = 0;
 
   for (Finder::Iterator it(t->m->finder); it.hasMore();) {
     unsigned nameSize;
@@ -59,7 +61,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           object method = arrayBody(t, classMethodTable(t, c), i);
           if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
             t->m->processor->compileMethod
-              (t, zone, code, &size, capacity, &constants, &calls, method);
+              (t, zone, code, &size, capacity, &constants, &calls, &addresses,
+               method);
           }
         }
       }
@@ -77,6 +80,19 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
     static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))
       ->listener->resolve(address);
+  }
+
+  for (; addresses; addresses = addresses->next) {
+    uint8_t* value = reinterpret_cast<uint8_t*>(addresses->basis->value());
+    assert(t, value >= code);
+
+    void* dst = addresses->listener->resolve
+      ((value - code) | (1 << BootShift));
+    assert(t, reinterpret_cast<intptr_t>(dst)
+           >= reinterpret_cast<intptr_t>(code));
+
+    markBit(codeMap, reinterpret_cast<intptr_t>(dst)
+            - reinterpret_cast<intptr_t>(code));
   }
 
   image->codeSize = size;
@@ -250,7 +266,8 @@ writeBootImage(Thread* t, FILE* out)
     (t->m->heap->allocate(codeMapSize(CodeCapacity)));
   memset(codeMap, 0, codeMapSize(CodeCapacity));
 
-  object constants = makeCodeImage(t, &zone, &image, code, CodeCapacity);
+  object constants = makeCodeImage
+    (t, &zone, &image, code, CodeCapacity, codeMap);
   PROTECT(t, constants);
 
   const unsigned HeapCapacity = 32 * 1024 * 1024;

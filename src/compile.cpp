@@ -466,13 +466,17 @@ class BootContext {
     BootContext* c;
   };
 
-  BootContext(Thread* t, object constants, object calls, Zone* zone):
-    protector(t, this), constants(constants), calls(calls), zone(zone)
+  BootContext(Thread* t, object constants, object calls,
+              DelayedPromise* addresses, Zone* zone):
+    protector(t, this), constants(constants), calls(calls),
+    addresses(addresses), addressSentinal(addresses), zone(zone)
   { }
 
   MyProtector protector;
   object constants;
   object calls;
+  DelayedPromise* addresses;
+  DelayedPromise* addressSentinal;
   Zone* zone;
 };
 
@@ -854,6 +858,21 @@ class Frame {
 
     set(sp - 1, get(sp - 2));
     set(sp - 2, saved);
+  }
+
+  Promise* addressPromise(Promise* p) {
+    BootContext* bc = context->bootContext;
+    if (bc) {
+      bc->addresses = new (bc->zone->allocate(sizeof(DelayedPromise)))
+        DelayedPromise(t->m->system, bc->zone, p, bc->addresses);
+      return bc->addresses;
+    } else {
+      return p;
+    }
+  }
+
+  Compiler::Operand* addressOperand(Promise* p) {
+    return c->promiseConstant(addressPromise(p));
   }
 
   Compiler::Operand* machineIp(unsigned logicalIp) {
@@ -2997,7 +3016,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       c->saveStack();
 
-      frame->pushAddress(frame->machineIp(ip));
+      frame->pushAddress(frame->addressOperand(c->machineIp(ip)));
       c->jmp(frame->machineIp(newIp));
 
       // NB: we assume that the stack will look the same on return
@@ -3145,8 +3164,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
-      Compiler::Operand* default_ = c->address
-        (c->poolAppendPromise(c->machineIp(defaultIp)));
+      Compiler::Operand* default_ = frame->addressOperand
+        (c->machineIp(defaultIp));
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
@@ -3162,9 +3181,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         Promise* p = c->poolAppend(key);
         if (i == 0) {
-          start = c->promiseConstant(p);
+          start = frame->addressOperand(p);
         }
-        c->poolAppendPromise(c->machineIp(newIp));
+        c->poolAppendPromise(frame->addressPromise(c->machineIp(newIp)));
       }
       assert(t, start);
 
@@ -3475,9 +3494,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         ipTable[i] = newIp;
 
-        Promise* p = c->poolAppendPromise(c->machineIp(newIp));
+        Promise* p = c->poolAppendPromise
+          (frame->addressPromise(c->machineIp(newIp)));
         if (i == 0) {
-          start = c->promiseConstant(p);
+          start = frame->addressOperand(p);
         }
       }
       assert(t, start);
@@ -3853,6 +3873,17 @@ finish(MyThread* t, Allocator* allocator, Context* context)
   }
 
   c->writeTo(start);
+
+  BootContext* bc = context->bootContext;
+  if (bc) {
+    for (DelayedPromise* p = bc->addresses;
+         p != bc->addressSentinal;
+         p = p->next)
+    {
+      p->basis = new (bc->zone->allocate(sizeof(ResolvedPromise)))
+        ResolvedPromise(p->basis->value());
+    }
+  }
 
   translateExceptionHandlerTable(t, c, methodCode(t, context->method),
                                  reinterpret_cast<intptr_t>(start));
@@ -5063,16 +5094,18 @@ class MyProcessor: public Processor {
 
   virtual void compileMethod(Thread* vmt, Zone* zone, uint8_t* code,
                              unsigned* offset, unsigned capacity,
-                             object* constants, object* calls, object method)
+                             object* constants, object* calls,
+                             DelayedPromise** addresses, object method)
   {
     MyThread* t = static_cast<MyThread*>(vmt);
     FixedAllocator allocator(t, code + *offset, capacity);
-    BootContext bootContext(t, *constants, *calls, zone);
+    BootContext bootContext(t, *constants, *calls, *addresses, zone);
 
     compile(t, &allocator, &bootContext, method);
 
     *constants = bootContext.constants;
     *calls = bootContext.calls;
+    *addresses = bootContext.addresses;
     *offset += allocator.offset;
   }
 
@@ -5334,8 +5367,14 @@ fixupCode(Thread*, uintptr_t* map, unsigned size, uint8_t* code,
         if (w & (static_cast<uintptr_t>(1) << bit)) {
           unsigned index = indexOf(word, bit);
           uintptr_t v; memcpy(&v, code + index, BytesPerWord);
-          v = reinterpret_cast<uintptr_t>(heap + v - 1);
-          memcpy(code + index, &v, BytesPerWord);
+          uintptr_t mark = v >> BootShift;
+          if (mark) {
+            v = reinterpret_cast<uintptr_t>(code + (v & BootMask));
+            memcpy(code + index, &v, BytesPerWord);
+          } else {
+            v = reinterpret_cast<uintptr_t>(heap + v - 1);
+            memcpy(code + index, &v, BytesPerWord);
+          }
         }
       }
     }
@@ -5435,8 +5474,8 @@ boot(MyThread* t, BootImage* image)
     (codeMapSize(image->codeSize), BytesPerWord);
   uint8_t* code = reinterpret_cast<uint8_t*>(codeMap + codeMapSizeInWords);
 
-  fprintf(stderr, "code from %p to %p\n",
-          code, code + image->codeSize);
+//   fprintf(stderr, "code from %p to %p\n",
+//           code, code + image->codeSize);
  
   fixupHeap(t, heapMap, heapMapSizeInWords, heap);
   

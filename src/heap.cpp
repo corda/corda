@@ -1759,6 +1759,7 @@ class MyHeap: public Heap {
   bool targetNeedsMark(void* target) {
     return target
       and not c.gen2.contains(target)
+      and not immortalHeapContains(&c, target)
       and not (c.client->isFixed(target)
                and fixie(target)->age >= FixieTenureThreshold);
   }
