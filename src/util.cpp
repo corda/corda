@@ -106,6 +106,25 @@ cloneTreeNode(Thread* t, object n)
   return newNode;
 }
 
+object
+treeFind(Thread* t, object tree, intptr_t key, object sentinal,
+          intptr_t (*compare)(Thread* t, intptr_t key, object b))
+{
+  object node = tree;
+  while (node != sentinal) {
+    intptr_t difference = compare(t, key, getTreeNodeValue(t, node));
+    if (difference < 0) {
+      node = treeNodeLeft(t, node);
+    } else if (difference > 0) {
+      node = treeNodeRight(t, node);
+    } else {
+      return node;
+    }
+  }
+
+  return 0;
+}
+
 void
 treeFind(Thread* t, TreeContext* c, object old, intptr_t key, object node,
          object sentinal,
@@ -531,34 +550,32 @@ object
 treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
           intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
-  object node = tree;
-  while (node != sentinal) {
-    intptr_t difference = compare(t, key, getTreeNodeValue(t, node));
-    if (difference < 0) {
-      node = treeNodeLeft(t, node);
-    } else if (difference > 0) {
-      node = treeNodeRight(t, node);
-    } else {
-      return getTreeNodeValue(t, node);
-    }
-  }
-
-  return 0;
+  object node = treeFind(t, tree, key, sentinal, compare);
+  return (node ? getTreeNodeValue(t, node) : 0);
 }
 
 object
-treeInsertNode(Thread* t, Zone* zone, object tree, intptr_t key, object node,
-               object sentinal,
-               intptr_t (*compare)(Thread* t, intptr_t key, object b))
+treeInsert(Thread* t, Zone* zone, object tree, intptr_t key, object value,
+           object sentinal,
+           intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   PROTECT(t, tree);
   PROTECT(t, sentinal);
+
+  object node = makeTreeNode(t, value, sentinal, sentinal);
 
   TreeContext c(t, zone);
   treeFind(t, &c, tree, key, node, sentinal, compare);
   expect(t, c.fresh);
 
   return treeAdd(t, &c);
+}
+
+void
+treeUpdate(Thread* t, object tree, intptr_t key, object value, object sentinal,
+           intptr_t (*compare)(Thread* t, intptr_t key, object b))
+{
+  setTreeNodeValue(t, treeFind(t, tree, key, sentinal, compare), value);
 }
 
 } // namespace vm

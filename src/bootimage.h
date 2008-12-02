@@ -15,6 +15,10 @@
 
 namespace vm {
 
+const unsigned BootMask = (~static_cast<unsigned>(0)) / BytesPerWord;
+
+const unsigned BootShift = 32 - log(BytesPerWord);
+
 class BootImage {
  public:
   static const unsigned Magic = 0x22377322;
@@ -24,11 +28,12 @@ class BootImage {
   unsigned heapSize;
   unsigned codeSize;
 
-  unsigned loader;
-  unsigned stringMap;
-  unsigned types;
+  unsigned classCount;
+  unsigned stringCount;
+  unsigned callCount;
 
-  unsigned callTable;
+  unsigned loader;
+  unsigned types;
   unsigned methodTree;
   unsigned methodTreeSentinal;
 

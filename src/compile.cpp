@@ -1244,12 +1244,34 @@ tryInitClass(MyThread* t, object class_)
   if (UNLIKELY(t->exception)) unwind(t);
 }
 
+object&
+objectPools(MyThread* t);
+
+uintptr_t
+defaultThunk(MyThread* t);
+
+uintptr_t
+nativeThunk(MyThread* t);
+
+uintptr_t
+aioobThunk(MyThread* t);
+
+uintptr_t
+methodAddress(Thread* t, object method)
+{
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    return nativeThunk(static_cast<MyThread*>(t));
+  } else {
+    return methodCompiled(t, method);
+  }
+}
+
 void* FORCE_ALIGN
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
     return reinterpret_cast<void*>
-      (methodCompiled
+      (methodAddress
        (t, findInterfaceMethod(t, method, objectClass(t, instance))));
   } else {
     t->exception = makeNullPointerException(t);
@@ -1748,18 +1770,6 @@ emptyMethod(MyThread* t, object method)
     and (codeBody(t, methodCode(t, method), 0) == return_);
 }
 
-object&
-objectPools(MyThread* t);
-
-uintptr_t
-defaultThunk(MyThread* t);
-
-uintptr_t
-nativeThunk(MyThread* t);
-
-uintptr_t
-aioobThunk(MyThread* t);
-
 void
 compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
@@ -1782,10 +1792,13 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
         object pointer = makePointer(t, p);
         bc->calls = makeTriple(t, target, pointer, bc->calls);
 
+        object traceTarget
+          = (methodFlags(t, target) & ACC_NATIVE) ? target : 0;
+
         result = c->call
           (c->promiseConstant(p),
            0,
-           frame->trace(0, false),
+           frame->trace(traceTarget, false),
            rSize,
            0);
       } else {
@@ -1796,14 +1809,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
            rSize,
            0);
       }
-    } else if (methodFlags(t, target) & ACC_NATIVE) {
-      result = c->call
-        (c->constant(nativeThunk(t)),
-         0,
-         frame->trace(target, false),
-         rSize,
-         0);
-    } else if (methodCompiled(t, target) == defaultThunk(t)
+    } else if (methodAddress(t, target) == defaultThunk(t)
                or classNeedsInit(t, methodClass(t, target)))
     {
       result = c->call
@@ -1813,10 +1819,13 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
          rSize,
          0);
     } else {
+      object traceTarget
+        = (methodFlags(t, target) & ACC_NATIVE) ? target : 0;
+
       result = c->call
-        (c->constant(methodCompiled(t, target)),
+        (c->constant(methodAddress(t, target)),
          0,
-         frame->trace(0, false),
+         frame->trace(traceTarget, false),
          rSize,
          0);
     }
@@ -2460,7 +2469,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (instruction == getstatic) {
         if (fieldClass(t, field) != methodClass(t, context->method)
-            and classNeedsInit(t, fieldClass(t, field)));
+            and classNeedsInit(t, fieldClass(t, field)))
         {
           c->call
             (c->constant(getThunk(t, tryInitClassThunk)),
@@ -4082,7 +4091,7 @@ compileMethod2(MyThread* t)
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
-    void* address = reinterpret_cast<void*>(methodCompiled(t, target));
+    void* address = reinterpret_cast<void*>(methodAddress(t, target));
     if (callNodeVirtualCall(t, node)) {
       classVtable
         (t, objectClass
@@ -4090,7 +4099,7 @@ compileMethod2(MyThread* t)
         = address;
     } else {
       updateCall
-        (t, LongCall, true, reinterpret_cast<void*>(callNodeAddress(t, node)),
+        (t, Call, true, reinterpret_cast<void*>(callNodeAddress(t, node)),
          address);
     }
     return address;
@@ -4119,7 +4128,7 @@ invokeNative2(MyThread* t, object method)
   initClass(t, methodClass(t, method));
   if (UNLIKELY(t->exception)) return 0;
 
-  if (methodCode(t, method) == 0) {
+  if (methodCompiled(t, method) == defaultThunk(t)) {
     void* function = resolveNativeMethod(t, method);
     if (UNLIKELY(function == 0)) {
       object message = makeString
@@ -4131,8 +4140,7 @@ invokeNative2(MyThread* t, object method)
       return 0;
     }
 
-    object p = makePointer(t, function);
-    set(t, method, MethodCode, p);
+    methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
   }
 
   object class_ = methodClass(t, method);
@@ -4198,7 +4206,7 @@ invokeNative2(MyThread* t, object method)
     }
   }
 
-  void* function = pointerValue(t, methodCode(t, method));
+  void* function = reinterpret_cast<void*>(methodCompiled(t, method));
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
   uint64_t result;
@@ -4362,7 +4370,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object method,
     object map = codePool(t, methodCode(t, method));
     int index = frameMapIndex
       (t, method, difference
-       (ip, reinterpret_cast<void*>(methodCompiled(t, method))));
+       (ip, reinterpret_cast<void*>(methodAddress(t, method))));
 
     for (unsigned i = 0; i < count; ++i) {
       int j = index + i;
@@ -4596,8 +4604,8 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
     }
 
     result = vmInvoke
-      (t, reinterpret_cast<void*>(methodCompiled(t, method)), arguments->array,
-       arguments->position, returnType);
+      (t, reinterpret_cast<void*>(methodAddress(t, method)),
+       arguments->array, arguments->position, returnType);
   }
 
   if (t->exception) { 
@@ -4679,60 +4687,8 @@ class SegFaultHandler: public System::SignalHandler {
   Machine* m;
 };
 
-object
-fixupCallTable(MyThread* t, object oldTable, uintptr_t oldBase,
-               uintptr_t newBase)
-{
-  PROTECT(t, oldTable);
-
-  object newTable = makeArray(t, arrayLength(t, oldTable), true);
-
-  for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
-    object next;
-    for (object p = arrayBody(t, oldTable, i); p; p = next) {
-      next = callNodeNext(t, p);
-
-      intptr_t k = (callNodeAddress(t, p) - oldBase) + newBase;
-      callNodeAddress(t, p) = k;
-
-      unsigned index = k & (arrayLength(t, newTable) - 1);
-
-      set(t, p, CallNodeNext, arrayBody(t, newTable, index));
-      set(t, newTable, ArrayBody + (index * BytesPerWord), p);
-    }
-  }
-
-  return newTable;
-}
-
-class FixedAllocator: public Allocator {
- public:
-  FixedAllocator(Thread* t, uint8_t* base, unsigned capacity):
-    t(t), base(base), offset(0), capacity(capacity)
-  { }
-
-  virtual void* tryAllocate(unsigned) {
-    abort(t);
-  }
-
-  virtual void* allocate(unsigned size) {
-    unsigned paddedSize = pad(size);
-    expect(t, offset + paddedSize < capacity);
-
-    void* p = base + offset;
-    offset += paddedSize;
-    return p;
-  }
-
-  virtual void free(const void*, unsigned) {
-    abort(t);
-  }
-
-  Thread* t;
-  uint8_t* base;
-  unsigned offset;
-  unsigned capacity;
-};
+void
+boot(MyThread* t, BootImage* image);
 
 class MyProcessor;
 
@@ -4777,6 +4733,7 @@ class MyProcessor: public Processor {
     methodTree(0),
     methodTreeSentinal(0),
     objectPools(0),
+    staticTableArray(0),
     codeAllocator(s),
     codeZone(s, &codeAllocator, 64 * 1024)
   { }
@@ -4870,6 +4827,7 @@ class MyProcessor: public Processor {
       v->visit(&methodTree);
       v->visit(&methodTreeSentinal);
       v->visit(&objectPools);
+      v->visit(&staticTableArray);
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
@@ -5034,7 +4992,7 @@ class MyProcessor: public Processor {
   virtual object getStackTrace(Thread* vmt, Thread* vmTarget) {
     MyThread* t = static_cast<MyThread*>(vmt);
     MyThread* target = static_cast<MyThread*>(vmTarget);
-    MyProcessor* p = processor(t);
+    MyProcessor* p = this;
 
     class Visitor: public System::ThreadVisitor {
      public:
@@ -5098,7 +5056,7 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
     FixedAllocator allocator(t, code + *offset, capacity);
 
-    ::compileThunks(t, &allocator, processor(t), image, code);
+    ::compileThunks(t, &allocator, this, image, code);
 
     *offset += allocator.offset;
   }
@@ -5119,47 +5077,47 @@ class MyProcessor: public Processor {
   }
 
   virtual void visitRoots(BootImage* image, HeapWalker* w) {
-    image->callTable = w->visitRoot(callTable);
     image->methodTree = w->visitRoot(methodTree);
     image->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
   }
 
-  virtual void boot(Thread* vmt, BootImage* image, uintptr_t* heap,
-                    uint8_t* code)
+  virtual unsigned* makeCallTable(Thread* t, BootImage* image, HeapWalker* w,
+                                  uint8_t* code)
   {
-    MyThread* t = static_cast<MyThread*>(vmt);
-    methodTree = bootObject(heap, image->methodTree);
-    methodTreeSentinal = bootObject(heap, image->methodTreeSentinal);
+    image->callCount = callTableSize;
 
-    callTable = fixupCallTable
-      (t, bootObject(heap, image->callTable), image->codeBase,
-       reinterpret_cast<uintptr_t>(code));
+    unsigned* table = static_cast<unsigned*>
+      (t->m->heap->allocate(callTableSize * sizeof(unsigned) * 2));
 
-    defaultThunk = code + image->defaultThunk;
+    unsigned index = 0;
+    for (unsigned i = 0; i < arrayLength(t, callTable); ++i) {
+      for (object p = arrayBody(t, callTable, i); p; p = callNodeNext(t, p)) {
+        table[index++] = callNodeAddress(t, p)
+          - reinterpret_cast<uintptr_t>(code);
+        table[index++] = w->map()->find(callNodeTarget(t, p))
+          | (static_cast<unsigned>(callNodeVirtualCall(t, p)) << BootShift);
+      }
+    }
 
-    updateCall(t, LongCall, false, code + image->compileMethodCall,
-               voidPointer(::compileMethod));
+    return table;
+  }
 
-    nativeThunk = code + image->nativeThunk;
+  virtual void boot(Thread* t, BootImage* image) {
+    if (image) {
+      ::boot(static_cast<MyThread*>(t), image);
+    } else {
+      callTable = makeArray(t, 128, true);
 
-    updateCall(t, LongCall, false, code + image->invokeNativeCall,
-               voidPointer(invokeNative));
+      methodTree = methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
+      set(t, methodTree, TreeNodeLeft, methodTreeSentinal);
+      set(t, methodTree, TreeNodeRight, methodTreeSentinal);
 
-    aioobThunk = code + image->aioobThunk;
+      ::compileThunks(static_cast<MyThread*>(t), &codeZone, this, 0, 0);      
+    }
 
-    updateCall(t, LongCall, false,
-               code + image->throwArrayIndexOutOfBoundsCall,
-               voidPointer(throwArrayIndexOutOfBounds));
-
-    thunkTable = code + image->thunkTable;
-    thunkSize = image->thunkSize;
-
-#define THUNK(s)                                                \
-    updateCall(t, LongJump, false, code + image->s##Call, voidPointer(s));
-
-#include "thunks.cpp"
-
-#undef THUNK
+    segFaultHandler.m = t->m;
+    expect(t, t->m->system->success
+           (t->m->system->handleSegFault(&segFaultHandler)));
   }
   
   System* s;
@@ -5174,10 +5132,343 @@ class MyProcessor: public Processor {
   object methodTree;
   object methodTreeSentinal;
   object objectPools;
+  object staticTableArray;
   SegFaultHandler segFaultHandler;
   CodeAllocator codeAllocator;
   Zone codeZone;
 };
+
+object
+findCallNode(MyThread* t, void* address)
+{
+  if (DebugCallTable) {
+    fprintf(stderr, "find call node %p\n", address);
+  }
+
+  MyProcessor* p = processor(t);
+  object table = p->callTable;
+
+  intptr_t key = reinterpret_cast<intptr_t>(address);
+  unsigned index = static_cast<uintptr_t>(key) 
+    & (arrayLength(t, table) - 1);
+
+  for (object n = arrayBody(t, table, index);
+       n; n = callNodeNext(t, n))
+  {
+    intptr_t k = callNodeAddress(t, n);
+
+    if (k == key) {
+      return n;
+    }
+  }
+
+  return 0;
+}
+
+object
+resizeTable(MyThread* t, object oldTable, unsigned newLength)
+{
+  PROTECT(t, oldTable);
+
+  object oldNode = 0;
+  PROTECT(t, oldNode);
+
+  object newTable = makeArray(t, newLength, true);
+  PROTECT(t, newTable);
+
+  for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
+    for (oldNode = arrayBody(t, oldTable, i);
+         oldNode;
+         oldNode = callNodeNext(t, oldNode))
+    {
+      intptr_t k = callNodeAddress(t, oldNode);
+
+      unsigned index = k & (newLength - 1);
+
+      object newNode = makeCallNode
+        (t, callNodeAddress(t, oldNode),
+         callNodeTarget(t, oldNode),
+         callNodeVirtualCall(t, oldNode),
+         arrayBody(t, newTable, index));
+
+      set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
+    }
+  }
+
+  return newTable;
+}
+
+object
+insertCallNode(MyThread* t, object table, unsigned* size, object node)
+{
+  if (DebugCallTable) {
+    fprintf(stderr, "insert call node %p\n",
+            reinterpret_cast<void*>(callNodeAddress(t, node)));
+  }
+
+  PROTECT(t, table);
+  PROTECT(t, node);
+
+  ++ (*size);
+
+  if (*size >= arrayLength(t, table) * 2) { 
+    table = resizeTable(t, table, arrayLength(t, table) * 2);
+  }
+
+  intptr_t key = callNodeAddress(t, node);
+  unsigned index = static_cast<uintptr_t>(key) & (arrayLength(t, table) - 1);
+
+  set(t, node, CallNodeNext, arrayBody(t, table, index));
+  set(t, table, ArrayBody + (index * BytesPerWord), node);
+
+  return table;
+}
+
+void
+insertCallNode(MyThread* t, object node)
+{
+  MyProcessor* p = processor(t);
+  p->callTable = insertCallNode(t, p->callTable, &(p->callTableSize), node);
+}
+
+object
+makeClassMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
+{
+  object array = makeArray(t, nextPowerOfTwo(count), true);
+  object map = makeHashMap(t, 0, array);
+  PROTECT(t, map);
+  
+  for (unsigned i = 0; i < count; ++i) {
+    object c = bootObject(heap, table[i]);
+    hashMapInsert(t, map, className(t, c), c, byteArrayHash);
+  }
+
+  return map;
+}
+
+object
+makeStaticTableArray(Thread* t, unsigned* table, unsigned count,
+                     uintptr_t* heap)
+{
+  object array = makeArray(t, count, false);
+  
+  for (unsigned i = 0; i < count; ++i) {
+    set(t, array, ArrayBody + (i * BytesPerWord),
+        classStaticTable(t, bootObject(heap, table[i])));
+  }
+
+  return array;
+}
+
+object
+makeStringMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
+{
+  object array = makeArray(t, nextPowerOfTwo(count), true);
+  object map = makeWeakHashMap(t, 0, array);
+  PROTECT(t, map);
+  
+  for (unsigned i = 0; i < count; ++i) {
+    object s = bootObject(heap, table[i]);
+    hashMapInsert(t, map, s, 0, stringHash);
+  }
+
+  return map;
+}
+
+object
+makeCallTable(MyThread* t, uintptr_t* heap, unsigned* calls, unsigned count,
+              uintptr_t base)
+{
+  object table = makeArray(t, nextPowerOfTwo(count), true);
+  PROTECT(t, table);
+
+  unsigned size = 0;
+  for (unsigned i = 0; i < count; ++i) {
+    unsigned address = calls[i * 2];
+    unsigned target = calls[(i * 2) + 1];
+
+    object node = makeCallNode
+       (t, base + address, bootObject(heap, target & BootMask),
+        target >> BootShift, 0);
+
+    table = insertCallNode(t, table, &size, node);
+  }
+
+  return table;
+}
+
+void
+fixupHeap(MyThread* t, uintptr_t* map, unsigned size, uintptr_t* heap)
+{
+  for (unsigned word = 0; word < size; ++word) {
+    uintptr_t w = map[word];
+    if (w) {
+      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
+        if (w & (static_cast<uintptr_t>(1) << bit)) {
+          unsigned index = indexOf(word, bit);
+          uintptr_t* p = heap + index;
+          assert(t, *p);
+          
+          uintptr_t number = *p & BootMask;
+          uintptr_t mark = *p >> BootShift;
+
+          if (number) {
+            *p = reinterpret_cast<uintptr_t>(heap + (number - 1)) | mark;
+          } else {
+            *p = mark;
+          }
+        }
+      }
+    }
+  }
+}
+
+void
+fixupCode(Thread*, uintptr_t* map, unsigned size, uint8_t* code,
+          uintptr_t* heap)
+{
+  for (unsigned word = 0; word < size; ++word) {
+    uintptr_t w = map[word];
+    if (w) {
+      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
+        if (w & (static_cast<uintptr_t>(1) << bit)) {
+          unsigned index = indexOf(word, bit);
+          uintptr_t v; memcpy(&v, code + index, BytesPerWord);
+          v = reinterpret_cast<uintptr_t>(heap + v - 1);
+          memcpy(code + index, &v, BytesPerWord);
+        }
+      }
+    }
+  }
+}
+
+void
+fixupMethods(Thread* t, BootImage* image, uint8_t* code)
+{
+  for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
+    object c = tripleSecond(t, it.next());
+
+    if (classMethodTable(t, c)) {
+      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+        object method = arrayBody(t, classMethodTable(t, c), i);
+        if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
+          assert(t, (methodCompiled(t, method) - image->codeBase)
+                 <= image->codeSize);
+
+          methodCompiled(t, method)
+            = (methodCompiled(t, method) - image->codeBase)
+            + reinterpret_cast<uintptr_t>(code);
+
+          if (DebugCompile and (methodFlags(t, method) & ACC_NATIVE) == 0) {
+            logCompile
+              (static_cast<MyThread*>(t),
+               reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
+               reinterpret_cast<uintptr_t*>
+               (methodCompiled(t, method))[-1],
+               reinterpret_cast<char*>
+               (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
+               reinterpret_cast<char*>
+               (&byteArrayBody(t, methodName(t, method), 0)),
+               reinterpret_cast<char*>
+               (&byteArrayBody(t, methodSpec(t, method), 0)));
+          }
+        }
+      }
+    }
+
+    t->m->processor->initVtable(t, c);
+  }
+}
+
+void
+fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
+{
+  MyProcessor* p = processor(t);
+  
+  p->defaultThunk = code + image->defaultThunk;
+
+  updateCall(t, LongCall, false, code + image->compileMethodCall,
+             voidPointer(::compileMethod));
+
+  p->nativeThunk = code + image->nativeThunk;
+
+  updateCall(t, LongCall, false, code + image->invokeNativeCall,
+             voidPointer(invokeNative));
+
+  p->aioobThunk = code + image->aioobThunk;
+
+  updateCall(t, LongCall, false,
+             code + image->throwArrayIndexOutOfBoundsCall,
+             voidPointer(throwArrayIndexOutOfBounds));
+
+  p->thunkTable = code + image->thunkTable;
+  p->thunkSize = image->thunkSize;
+
+#define THUNK(s)                                                        \
+  updateCall(t, LongJump, false, code + image->s##Call, voidPointer(s));
+
+#include "thunks.cpp"
+
+#undef THUNK
+}
+
+void
+boot(MyThread* t, BootImage* image)
+{
+  assert(t, image->magic == BootImage::Magic);
+
+  unsigned* classTable = reinterpret_cast<unsigned*>(image + 1);
+  unsigned* stringTable = classTable + image->classCount;
+  unsigned* callTable = stringTable + image->stringCount;
+
+  uintptr_t* heapMap = reinterpret_cast<uintptr_t*>
+    (pad(reinterpret_cast<uintptr_t>(callTable + (image->callCount * 2))));
+  unsigned heapMapSizeInWords = ceiling
+    (heapMapSize(image->heapSize), BytesPerWord);
+  uintptr_t* heap = heapMap + heapMapSizeInWords;
+
+//   fprintf(stderr, "heap from %p to %p\n",
+//           heap, heap + ceiling(image->heapSize, BytesPerWord));
+
+  uintptr_t* codeMap = heap + ceiling(image->heapSize, BytesPerWord);
+  unsigned codeMapSizeInWords = ceiling
+    (codeMapSize(image->codeSize), BytesPerWord);
+  uint8_t* code = reinterpret_cast<uint8_t*>(codeMap + codeMapSizeInWords);
+
+  fprintf(stderr, "code from %p to %p\n",
+          code, code + image->codeSize);
+ 
+  fixupHeap(t, heapMap, heapMapSizeInWords, heap);
+  
+  t->m->heap->setImmortalHeap(heap, image->heapSize / BytesPerWord);
+
+  t->m->loader = bootObject(heap, image->loader);
+  t->m->types = bootObject(heap, image->types);
+
+  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+  
+  p->methodTree = bootObject(heap, image->methodTree);
+  p->methodTreeSentinal = bootObject(heap, image->methodTreeSentinal);
+
+  fixupCode(t, codeMap, codeMapSizeInWords, code, heap);
+
+  t->m->classMap = makeClassMap(t, classTable, image->classCount, heap);
+  t->m->stringMap = makeStringMap(t, stringTable, image->stringCount, heap);
+
+  p->callTableSize = image->callCount;
+  p->callTable = makeCallTable
+    (t, heap, callTable, image->callCount,
+     reinterpret_cast<uintptr_t>(code));
+
+  p->staticTableArray = makeStaticTableArray
+    (t, classTable, image->classCount, heap);
+
+  fixupThunks(t, image, code);
+
+  fixupMethods(t, image, code);
+
+  t->m->bootstrapClassMap = makeHashMap(t, 0, 0);
+}
 
 intptr_t
 getThunk(MyThread* t, Thunk thunk)
@@ -5271,8 +5562,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   { uint8_t* call = static_cast<uint8_t*>
       (defaultContext.promise.listener->resolve
-       (reinterpret_cast<intptr_t>(voidPointer(compileMethod))))
-      + BytesPerWord;
+       (reinterpret_cast<intptr_t>(voidPointer(compileMethod))));
 
     if (image) {
       image->defaultThunk = p->defaultThunk - imageBase;
@@ -5285,8 +5575,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   { uint8_t* call = static_cast<uint8_t*>
       (nativeContext.promise.listener->resolve
-       (reinterpret_cast<intptr_t>(voidPointer(invokeNative))))
-      + BytesPerWord;
+       (reinterpret_cast<intptr_t>(voidPointer(invokeNative))));
 
     if (image) {
       image->nativeThunk = p->nativeThunk - imageBase;
@@ -5299,8 +5588,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   { uint8_t* call = static_cast<uint8_t*>
       (aioobContext.promise.listener->resolve
-       (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds))))
-      + BytesPerWord;
+       (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds))));
 
     if (image) {
       image->aioobThunk = p->aioobThunk - imageBase;
@@ -5325,7 +5613,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
   start += p->thunkSize;                                                \
   { uint8_t* call = static_cast<uint8_t*>                               \
       (tableContext.promise.listener->resolve                           \
-       (reinterpret_cast<intptr_t>(voidPointer(s)))) + BytesPerWord;    \
+       (reinterpret_cast<intptr_t>(voidPointer(s))));                   \
     if (image) {                                                        \
       image->s##Call = call - imageBase;                                \
     }                                                                   \
@@ -5339,25 +5627,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 MyProcessor*
 processor(MyThread* t)
 {
-  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
-  if (p->callTable == 0) {
-    ACQUIRE(t, t->m->classLock);
-
-    if (p->callTable == 0) {
-      p->callTable = makeArray(t, 128, true);
-
-      p->methodTree = p->methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
-      set(t, p->methodTree, TreeNodeLeft, p->methodTreeSentinal);
-      set(t, p->methodTree, TreeNodeRight, p->methodTreeSentinal);
-
-      compileThunks(t, codeZone(t), p, 0, 0);
-
-      p->segFaultHandler.m = t->m;
-      expect(t, t->m->system->success
-             (t->m->system->handleSegFault(&(p->segFaultHandler))));
-    }
-  }
-  return p;
+  return static_cast<MyProcessor*>(t->m->processor);
 }
 
 object&
@@ -5395,162 +5665,60 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
     if (UNLIKELY(t->exception)) return;
   }
 
-  MyProcessor* p = processor(t);
-
-  if (methodCompiled(t, method) == defaultThunk(t)) {
+  if (methodAddress(t, method) == defaultThunk(t)) {
     ACQUIRE(t, t->m->classLock);
     
-    if (methodCompiled(t, method) == defaultThunk(t)) {
-      if (methodCompiled(t, method) == defaultThunk(t)) {
-        object node;
-        uint8_t* compiled;
-        if (methodFlags(t, method) & ACC_NATIVE) {
-          node = 0;
-          compiled = p->nativeThunk;
-        } else {
-          Context context(t, bootContext, method);
-          compiled = compile(t, allocator, &context);
-          if (UNLIKELY(t->exception)) return;
+    if (methodAddress(t, method) == defaultThunk(t)) {
+      assert(t, (methodFlags(t, method) & ACC_NATIVE) == 0);
 
-          if (DebugMethodTree) {
-            fprintf(stderr, "insert method at %p\n", compiled);
-          }
+      Context context(t, bootContext, method);
+      uint8_t* compiled = compile(t, allocator, &context);
+      if (UNLIKELY(t->exception)) return;
 
-          // We can't set the MethodCompiled field on the original
-          // method before it is placed into the method tree, since
-          // another thread might call the method, from which stack
-          // unwinding would fail (since there is not yet an entry in
-          // the method tree).  However, we can't insert the original
-          // method into the tree before setting the MethodCompiled
-          // field on it since we rely on that field to determine its
-          // position in the tree.  Therefore, we insert a clone in
-          // its place.  Later, we'll replace the clone with the
-          // original to save memory.
-
-          object clone = makeMethod
-            (t, methodVmFlags(t, method),
-             methodReturnCode(t, method),
-             methodParameterCount(t, method),
-             methodParameterFootprint(t, method),
-             methodFlags(t, method),
-             methodOffset(t, method),
-             methodNativeID(t, method),
-             methodName(t, method),
-             methodSpec(t, method),
-             methodClass(t, method),
-             methodCode(t, method),
-             reinterpret_cast<intptr_t>(compiled));
-
-          node = makeTreeNode
-            (t, clone, methodTreeSentinal(t), methodTreeSentinal(t));
-
-          PROTECT(t, node);
-
-          methodTree(t) = treeInsertNode
-            (t, &(context.zone), methodTree(t),
-             reinterpret_cast<intptr_t>(compiled), node, methodTreeSentinal(t),
-             compareIpToMethodBounds);
-        }
-
-        methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
-
-        if (methodVirtual(t, method)) {
-          classVtable(t, methodClass(t, method), methodOffset(t, method))
-            = compiled;
-        }
-
-        if (node) {
-          set(t, node, TreeNodeValue, method);
-        }
+      if (DebugMethodTree) {
+        fprintf(stderr, "insert method at %p\n", compiled);
       }
+
+      // We can't set the MethodCompiled field on the original method
+      // before it is placed into the method tree, since another
+      // thread might call the method, from which stack unwinding
+      // would fail (since there is not yet an entry in the method
+      // tree).  However, we can't insert the original method into the
+      // tree before setting the MethodCompiled field on it since we
+      // rely on that field to determine its position in the tree.
+      // Therefore, we insert a clone in its place.  Later, we'll
+      // replace the clone with the original to save memory.
+
+      object clone = makeMethod
+        (t, methodVmFlags(t, method),
+         methodReturnCode(t, method),
+         methodParameterCount(t, method),
+         methodParameterFootprint(t, method),
+         methodFlags(t, method),
+         methodOffset(t, method),
+         methodNativeID(t, method),
+         methodName(t, method),
+         methodSpec(t, method),
+         methodClass(t, method),
+         methodCode(t, method),
+         reinterpret_cast<intptr_t>(compiled));
+
+      methodTree(t) = treeInsert
+        (t, &(context.zone), methodTree(t),
+         reinterpret_cast<intptr_t>(compiled), clone, methodTreeSentinal(t),
+         compareIpToMethodBounds);
+
+      methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
+
+      if (methodVirtual(t, method)) {
+        classVtable(t, methodClass(t, method), methodOffset(t, method))
+          = compiled;
+      }
+
+      treeUpdate(t, methodTree(t), reinterpret_cast<intptr_t>(compiled),
+                 method, methodTreeSentinal(t), compareIpToMethodBounds);
     }
   }
-}
-
-object
-findCallNode(MyThread* t, void* address)
-{
-  if (DebugCallTable) {
-    fprintf(stderr, "find call node %p\n", address);
-  }
-
-  MyProcessor* p = processor(t);
-  object table = p->callTable;
-
-  intptr_t key = reinterpret_cast<intptr_t>(address);
-  unsigned index = static_cast<uintptr_t>(key) 
-    & (arrayLength(t, table) - 1);
-
-  for (object n = arrayBody(t, table, index);
-       n; n = callNodeNext(t, n))
-  {
-    intptr_t k = callNodeAddress(t, n);
-
-    if (k == key) {
-      return n;
-    }
-  }
-
-  return 0;
-}
-
-object
-resizeTable(MyThread* t, object oldTable, unsigned newLength)
-{
-  PROTECT(t, oldTable);
-
-  object oldNode = 0;
-  PROTECT(t, oldNode);
-
-  object newTable = makeArray(t, newLength, true);
-  PROTECT(t, newTable);
-
-  for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
-    for (oldNode = arrayBody(t, oldTable, i);
-         oldNode;
-         oldNode = callNodeNext(t, oldNode))
-    {
-      intptr_t k = callNodeAddress(t, oldNode);
-
-      unsigned index = k & (newLength - 1);
-
-      object newNode = makeCallNode
-        (t, callNodeAddress(t, oldNode),
-         callNodeTarget(t, oldNode),
-         callNodeVirtualCall(t, oldNode),
-         arrayBody(t, newTable, index));
-
-      set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
-    }
-  }
-
-  return newTable;
-}
-
-void
-insertCallNode(MyThread* t, object node)
-{
-  if (DebugCallTable) {
-    fprintf(stderr, "insert call node %p\n",
-            reinterpret_cast<void*>(callNodeAddress(t, node)));
-  }
-
-  MyProcessor* p = processor(t);
-  PROTECT(t, node);
-
-  ++ p->callTableSize;
-
-  if (p->callTableSize >= arrayLength(t, p->callTable) * 2) { 
-    p->callTable = resizeTable
-      (t, p->callTable, arrayLength(t, p->callTable) * 2);
-  }
-
-  intptr_t key = callNodeAddress(t, node);
-  unsigned index = static_cast<uintptr_t>(key)
-    & (arrayLength(t, p->callTable) - 1);
-
-  set(t, node, CallNodeNext, arrayBody(t, p->callTable, index));
-  set(t, p->callTable, ArrayBody + (index * BytesPerWord), node);
 }
 
 object&

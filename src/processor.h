@@ -127,8 +127,11 @@ class Processor {
   virtual void
   visitRoots(BootImage* image, HeapWalker* w) = 0;
 
+  virtual unsigned*
+  makeCallTable(Thread* t, BootImage* image, HeapWalker* w, uint8_t* code) = 0;
+
   virtual void
-  boot(Thread* t, BootImage* image, uintptr_t* heap, uint8_t* code) = 0;
+  boot(Thread* t, BootImage* image) = 0;
 
   object
   invoke(Thread* t, object method, object this_, ...)

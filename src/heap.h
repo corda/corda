@@ -52,8 +52,7 @@ class Heap: public Allocator {
   };
 
   virtual void setClient(Client* client) = 0;
-  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords,
-                               uintptr_t* map) = 0;
+  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) = 0;
   virtual void collect(CollectionType type, unsigned footprint) = 0;
   virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
                               bool objectMask, unsigned* totalInBytes) = 0;

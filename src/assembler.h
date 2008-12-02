@@ -81,6 +81,8 @@ class Promise {
   class Listener {
    public:
     virtual void* resolve(int64_t value) = 0;
+
+    Listener* next;
   };
 
   virtual int64_t value() = 0;
@@ -118,7 +120,10 @@ class ListenPromise: public Promise {
   }
 
   virtual Listener* listen(unsigned sizeInBytes) {
-    return listener = static_cast<Listener*>(allocator->allocate(sizeInBytes));
+    Listener* l = static_cast<Listener*>(allocator->allocate(sizeInBytes));
+    l->next = listener;
+    listener = l;
+    return l;
   }
 
   System* s;

@@ -528,12 +528,8 @@ class Context {
     lowMemoryThreshold(limit / 2),
     lock(0),
     
-    immortalPointerMap(&immortalHeap, 1, 1, 0, true),
-    immortalPageMap(&immortalHeap, 1, LikelyPageSizeInBytes / BytesPerWord,
-                    &immortalPointerMap, true),
-    immortalHeapMap(&immortalHeap, 1, immortalPageMap.scale * 1024,
-                    &immortalPageMap, true),
-    immortalHeap(this, &immortalHeapMap, 0, 0),
+    immortalHeapStart(0),
+    immortalHeapEnd(0),
 
     ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
@@ -586,15 +582,6 @@ class Context {
     nextGen1.dispose();
     gen2.dispose();
     nextGen2.dispose();
-
-    if (immortalHeapMap.data) {
-      free(this, immortalHeapMap.data, immortalHeapMap.size() * BytesPerWord);
-    }
-
-    if (immortalPageMap.data)  {
-      free(this, immortalPageMap.data, immortalPageMap.size() * BytesPerWord);
-    }
-
     lock->dispose();
   }
 
@@ -613,10 +600,8 @@ class Context {
 
   System::Mutex* lock;
 
-  Segment::Map immortalPointerMap;
-  Segment::Map immortalPageMap;
-  Segment::Map immortalHeapMap;
-  Segment immortalHeap;
+  uintptr_t* immortalHeapStart;
+  uintptr_t* immortalHeapEnd;
 
   Segment::Map ageMap;
   Segment gen1;
@@ -821,6 +806,7 @@ free(Context* c, Fixie** fixies)
 {
   for (Fixie** p = fixies; *p;) {
     Fixie* f = *p;
+
     if (f->immortal()) {
       p = &(f->next);
     } else {
@@ -959,6 +945,12 @@ copy(Context* c, void* o)
   return r;
 }
 
+bool
+immortalHeapContains(Context* c, void* p)
+{
+  return p < c->immortalHeapEnd and p >= c->immortalHeapStart;
+}
+
 void*
 update3(Context* c, void* o, bool* needsVisit)
 {
@@ -976,6 +968,9 @@ update3(Context* c, void* o, bool* needsVisit)
     }
     *needsVisit = false;
     return o;
+  } else if (immortalHeapContains(c, o)) {
+    *needsVisit = false;
+    return o;    
   } else if (wasCollected(c, o)) {
     *needsVisit = false;
     return follow(c, o);
@@ -988,25 +983,12 @@ update3(Context* c, void* o, bool* needsVisit)
 void*
 update2(Context* c, void* o, bool* needsVisit)
 {
-  if (c->immortalHeap.contains(o)
-      or (c->mode == Heap::MinorCollection and c->gen2.contains(o)))
-  {
+  if (c->mode == Heap::MinorCollection and c->gen2.contains(o)) {
     *needsVisit = false;
     return o;
   }
 
   return update3(c, o, needsVisit);
-}
-
-void*
-update(Context* c, void** p, bool* needsVisit)
-{
-  if (mask(*p) == 0) {
-    *needsVisit = false;
-    return 0;
-  }
-
-  return update2(c, mask(*p), needsVisit);
 }
 
 void
@@ -1023,7 +1005,11 @@ markClean(Context* c, Fixie* f)
 {
   if (f->dirty) {
     f->dirty = false;
-    f->move(c, &(c->tenuredFixies));
+    if (f->immortal()) {
+      f->remove(c);
+    } else {
+      f->move(c, &(c->tenuredFixies));
+    }
   }
 }
 
@@ -1041,9 +1027,10 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
     map = &(c->nextHeapMap);
   }
 
-  if (not (c->client->isFixed(result)
-           and fixie(result)->age >= FixieTenureThreshold)
-      and not seg->contains(result))
+  if (not (immortalHeapContains(c, result)
+           or (c->client->isFixed(result)
+               and fixie(result)->age >= FixieTenureThreshold)
+           or seg->contains(result)))
   {
     if (target and c->client->isFixed(target)) {
       Fixie* f = fixie(target);
@@ -1051,8 +1038,8 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
 
       if (static_cast<unsigned>(f->age + 1) >= FixieTenureThreshold) {
         if (DebugFixies) {
-          fprintf(stderr, "dirty fixie %p at %d (%p)\n",
-                  f, offset, f->body() + offset);
+          fprintf(stderr, "dirty fixie %p at %d (%p): %p\n",
+                  f, offset, f->body() + offset, result);
         }
 
         f->dirty = true;
@@ -1711,34 +1698,9 @@ class MyHeap: public Heap {
     c.client = client;
   }
 
-  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords,
-                               uintptr_t* map)
-  {
-    new (&(c.immortalPointerMap)) Segment::Map
-      (&(c.immortalHeap), map, 1, 1, 0, false);
-
-    unsigned pageMapScale = LikelyPageSizeInBytes / BytesPerWord;
-    unsigned pageMapSize = Segment::Map::calculateSize
-      (&c, sizeInWords, pageMapScale, 1);
-    uintptr_t* pageMap = static_cast<uintptr_t*>
-      (allocate(pageMapSize * BytesPerWord));
-
-    new (&(c.immortalPageMap)) Segment::Map
-      (&(c.immortalHeap), pageMap, 1, pageMapScale, &(c.immortalPointerMap),
-       true);
-
-    unsigned heapMapScale = pageMapScale * 1024;
-    unsigned heapMapSize = Segment::Map::calculateSize
-      (&c, sizeInWords, heapMapScale, 1);
-    uintptr_t* heapMap = static_cast<uintptr_t*>
-      (allocate(heapMapSize * BytesPerWord));
-
-    new (&(c.immortalHeapMap)) Segment::Map
-      (&(c.immortalHeap), heapMap, 1, heapMapScale, &(c.immortalPageMap),
-       true);
-
-    new (&(c.immortalHeap)) Segment
-      (&c, &(c.immortalHeapMap), start, sizeInWords, sizeInWords);
+  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) {
+    c.immortalHeapStart = start;
+    c.immortalHeapEnd = start + sizeInWords;
   }
 
   virtual void* tryAllocate(unsigned size) {
@@ -1776,10 +1738,12 @@ class MyHeap: public Heap {
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
     return (new (allocator->allocate(*totalInBytes))
-            Fixie(sizeInWords, objectMask, &(c.tenuredFixies), true))->body();
+            Fixie(sizeInWords, objectMask, 0, true))->body();
   }
 
   virtual bool needsMark(void* p) {
+    assert(&c, c.client->isFixed(p) or (not immortalHeapContains(&c, p)));
+
     if (c.client->isFixed(p)) {
       return fixie(p)->age >= FixieTenureThreshold;
     } else {
@@ -1809,8 +1773,8 @@ class MyHeap: public Heap {
         void** target = static_cast<void**>(p) + offset + i;
         if (targetNeedsMark(mask(*target))) {
           if (DebugFixies) {
-            fprintf(stderr, "dirty fixie %p at %d (%p)\n",
-                    f, offset, f->body() + offset);
+            fprintf(stderr, "dirty fixie %p at %d (%p): %p\n",
+                    f, offset, f->body() + offset, mask(*target));
           }
 
           dirty = true;

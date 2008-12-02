@@ -1503,93 +1503,6 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
 }
 
 void
-boot(Thread* t, BootImage* image)
-{
-  assert(t, image->magic == BootImage::Magic);
-
-  uintptr_t* heapMap = reinterpret_cast<uintptr_t*>(image + 1);
-  unsigned heapMapSizeInWords = ceiling
-    (heapMapSize(image->heapSize), BytesPerWord);
-  uintptr_t* heap = heapMap + heapMapSizeInWords;
-  
-  for (unsigned word = 0; word < heapMapSizeInWords; ++word) {
-    uintptr_t w = heapMap[word];
-    if (w) {
-      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
-        if (w & (static_cast<uintptr_t>(1) << bit)) {
-          uintptr_t* p = heap + indexOf(word, bit);
-          *p = reinterpret_cast<uintptr_t>(heap + (*p - 1));
-        }
-      }
-      heapMap[word] = 0;
-    }
-  }
-
-  t->m->heap->setImmortalHeap(heap, image->heapSize, heapMap);
-
-  t->m->loader = bootObject(heap, image->loader);
-  t->m->stringMap = bootObject(heap, image->stringMap);
-  t->m->types = bootObject(heap, image->types);
-
-  uintptr_t* codeMap = heap + ceiling(image->heapSize, BytesPerWord);
-  unsigned codeMapSizeInWords = ceiling
-    (codeMapSize(image->codeSize), BytesPerWord);
-  uint8_t* code = reinterpret_cast<uint8_t*>(codeMap + codeMapSizeInWords);
- 
-  for (unsigned word = 0; word < codeMapSizeInWords; ++word) {
-    uintptr_t w = codeMap[word];
-    if (w) {
-      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
-        if (w & (static_cast<uintptr_t>(1) << bit)) {
-          unsigned index = indexOf(word, bit);
-          uintptr_t v; memcpy(&v, code + index, BytesPerWord);
-          v = reinterpret_cast<uintptr_t>(heap + v - 1);
-          memcpy(code + index, &v, BytesPerWord);
-        }
-      }
-    }
-  }
-
-  t->m->processor->boot(t, image, heap, code);
-
-  for (HashMapIterator it(t, systemClassLoaderMap(t, t->m->loader));
-       it.hasMore();)
-  {
-    object c = tripleSecond(t, it.next());
-
-    if (classMethodTable(t, c)) {
-      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
-        object method = arrayBody(t, classMethodTable(t, c), i);
-        if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
-          assert(t, (methodCompiled(t, method) - image->codeBase)
-                 <= image->codeSize);
-
-          methodCompiled(t, method)
-            = (methodCompiled(t, method) - image->codeBase)
-            + reinterpret_cast<uintptr_t>(code);
-
-          if (false and (methodFlags(t, method) & ACC_NATIVE) == 0) {
-             fprintf(stderr, "%p %p %s.%s%s\n",
-                    reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
-                    reinterpret_cast<uint8_t*>(methodCompiled(t, method)) + 
-                    reinterpret_cast<uintptr_t*>
-                     (methodCompiled(t, method))[-1],
-                     &byteArrayBody
-                     (t, className(t, methodClass(t, method)), 0),
-                     &byteArrayBody(t, methodName(t, method), 0),
-                     &byteArrayBody(t, methodSpec(t, method), 0));
-          }
-        }
-      }
-    }
-
-    t->m->processor->initVtable(t, c);
-  }
-
-  t->m->bootstrapClassMap = makeHashMap(t, 0, 0);
-}
-
-void
 boot(Thread* t)
 {
   Machine* m = t->m;
@@ -1655,9 +1568,7 @@ boot(Thread* t)
 
   m->bootstrapClassMap = makeHashMap(t, 0, 0);
 
-  { object loaderMap = makeHashMap(t, 0, 0);
-    set(t, m->loader, SystemClassLoaderMap, loaderMap);
-  }
+  m->classMap = makeHashMap(t, 0, 0);
 
   m->stringMap = makeWeakHashMap(t, 0, 0);
 
@@ -1785,6 +1696,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   referenceLock(0),
   libraries(0),
   loader(0),
+  classMap(0),
   bootstrapClassMap(0),
   monitorMap(0),
   stringMap(0),
@@ -1901,9 +1813,10 @@ Thread::init()
     m->unsafe = false;
 
     if (image) {
-      boot(this, image);
+      m->processor->boot(this, image);
     } else {
       boot(this);
+      m->processor->boot(this, 0);
     }
 
     m->monitorMap = makeWeakHashMap(this, 0, 0);
@@ -2412,8 +2325,7 @@ findLoadedClass(Thread* t, object spec)
   PROTECT(t, spec);
   ACQUIRE(t, t->m->classLock);
 
-  return hashMapFind(t, systemClassLoaderMap(t, t->m->loader),
-                     spec, byteArrayHash, byteArrayEqual);
+  return hashMapFind(t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
 }
 
 object
@@ -2517,8 +2429,9 @@ resolveClass(Thread* t, object spec)
   PROTECT(t, spec);
   ACQUIRE(t, t->m->classLock);
 
-  object class_ = hashMapFind(t, systemClassLoaderMap(t, t->m->loader),
-                              spec, byteArrayHash, byteArrayEqual);
+  object class_ = hashMapFind
+    (t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
+
   if (class_ == 0) {
     if (byteArrayBody(t, spec, 0) == '[') {
       class_ = hashMapFind
@@ -2570,8 +2483,7 @@ resolveClass(Thread* t, object spec)
     if (class_) {
       PROTECT(t, class_);
 
-      hashMapInsert(t, systemClassLoaderMap(t, t->m->loader),
-                    spec, class_, byteArrayHash);
+      hashMapInsert(t, t->m->classMap, spec, class_, byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
       t->exception = makeClassNotFoundException(t, message);
@@ -2908,6 +2820,7 @@ void
 visitRoots(Machine* m, Heap::Visitor* v)
 {
   v->visit(&(m->loader));
+  v->visit(&(m->classMap));
   v->visit(&(m->bootstrapClassMap));
   v->visit(&(m->monitorMap));
   v->visit(&(m->stringMap));

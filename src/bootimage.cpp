@@ -67,8 +67,16 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   }
 
   for (; calls; calls = tripleThird(t, calls)) {
+    object method = tripleFirst(t, calls);
+    uintptr_t address;
+    if (methodFlags(t, method) & ACC_NATIVE) {
+      address = reinterpret_cast<uintptr_t>(code + image->nativeThunk);
+    } else {
+      address = methodCompiled(t, method);
+    }
+
     static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))
-      ->listener->resolve(methodCompiled(t, tripleFirst(t, calls)));
+      ->listener->resolve(address);
   }
 
   image->codeSize = size;
@@ -80,6 +88,7 @@ unsigned
 objectSize(Thread* t, object o)
 {
   assert(t, not objectExtended(t, o));
+
   return baseSize(t, o, objectClass(t, o));
 }
 
@@ -88,8 +97,11 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
 {
   Machine* m = t->m;
 
+  for (HashMapIterator it(t, m->classMap); it.hasMore();) {
+    w->visitRoot(tripleSecond(t, it.next()));
+  }
+
   image->loader = w->visitRoot(m->loader);
-  image->stringMap = w->visitRoot(m->stringMap);
   image->types = w->visitRoot(m->types);
 
   m->processor->visitRoots(image, w);
@@ -99,21 +111,6 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
   }
 }
 
-void
-visitReference(Thread* t, HeapWalker* w, uintptr_t* heap, uintptr_t* map,
-               object r)
-{
-  int target = w->map()->find(jreferenceTarget(t, r));
-  assert(t, target > 0);
-
-  int reference = w->map()->find(r);
-  assert(t, reference > 0);
-
-  unsigned index = reference - 1 + (JreferenceTarget / BytesPerWord);
-  markBit(map, index);
-  heap[index] = target;
-}
-
 HeapWalker*
 makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
               unsigned capacity, object constants)
@@ -121,29 +118,56 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
   class Visitor: public HeapVisitor {
    public:
     Visitor(Thread* t, uintptr_t* heap, uintptr_t* map, unsigned capacity):
-      t(t), current(0), heap(heap), map(map), position(0), capacity(capacity)
+      t(t), currentObject(0), currentNumber(0), currentOffset(0), heap(heap),
+      map(map), position(0), capacity(capacity)
     { }
 
     void visit(unsigned number) {
-      if (current) {
-        if (number) markBit(map, current - 1);
-        heap[current - 1] = number;
+      if (currentObject) {
+        unsigned offset = currentNumber - 1 + currentOffset;
+        unsigned mark = heap[offset] & (~PointerMask);
+        unsigned value = number | (mark << BootShift);
+
+        if (value) markBit(map, offset);
+
+        heap[offset] = value;
       }
     }
 
     virtual void root() {
-      current = 0;
+      currentObject = 0;
     }
 
     virtual unsigned visitNew(object p) {
       if (p) {
         unsigned size = objectSize(t, p);
-        assert(t, position + size < capacity);
 
-        memcpy(heap + position, p, size * BytesPerWord);
+        unsigned number;
+        if (currentObject
+            and (currentOffset * BytesPerWord) == ClassStaticTable)
+        {
+          FixedAllocator allocator
+            (t, reinterpret_cast<uint8_t*>(heap + position),
+             (capacity - position) * BytesPerWord);
 
-        unsigned number = position + 1;
-        position += size;
+          unsigned totalInBytes;
+          uintptr_t* dst = static_cast<uintptr_t*>
+            (t->m->heap->allocateImmortalFixed
+             (&allocator, size, true, &totalInBytes));
+
+          memcpy(dst, p, size * BytesPerWord);
+
+          dst[0] |= FixedMark;
+
+          number = (dst - heap) + 1;
+          position += ceiling(totalInBytes, BytesPerWord);
+        } else {
+          assert(t, position + size < capacity);
+          memcpy(heap + position, p, size * BytesPerWord);
+
+          number = position + 1;
+          position += size;
+        }
 
         visit(number);
 
@@ -157,16 +181,20 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
       visit(number);
     }
 
-    virtual void push(object, unsigned number, unsigned offset) {
-      current = number + offset;
+    virtual void push(object object, unsigned number, unsigned offset) {
+      currentObject = object;
+      currentNumber = number;
+      currentOffset = offset;
     }
 
     virtual void pop() {
-      current = 0;
+      currentObject = 0;
     }
 
     Thread* t;
-    unsigned current;
+    object currentObject;
+    unsigned currentNumber;
+    unsigned currentOffset;
     uintptr_t* heap;
     uintptr_t* map;
     unsigned position;
@@ -176,14 +204,6 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
   HeapWalker* w = makeHeapWalker(t, &visitor);
   visitRoots(t, image, w, constants);
   
-  for (object r = t->m->weakReferences; r; r = jreferenceVmNext(t, r)) {
-    visitReference(t, w, heap, map, r);
-  }
-
-  for (object r = t->m->tenuredWeakReferences; r; r = jreferenceVmNext(t, r)) {
-    visitReference(t, w, heap, map, r);
-  }
-
   image->heapSize = visitor.position * BytesPerWord;
 
   return w;
@@ -197,14 +217,18 @@ updateConstants(Thread* t, object constants, uint8_t* code, uintptr_t* codeMap,
     unsigned target = heapTable->find(tripleFirst(t, constants));
     assert(t, target > 0);
 
-    void* dst = static_cast<ListenPromise*>
-      (pointerValue(t, tripleSecond(t, constants)))->listener->resolve(target);
+    for (Promise::Listener* pl = static_cast<ListenPromise*>
+           (pointerValue(t, tripleSecond(t, constants)))->listener;
+         pl; pl = pl->next)
+    {
+      void* dst = pl->resolve(target);
 
-    assert(t, reinterpret_cast<intptr_t>(dst)
-           >= reinterpret_cast<intptr_t>(code));
+      assert(t, reinterpret_cast<intptr_t>(dst)
+             >= reinterpret_cast<intptr_t>(code));
 
-    markBit(codeMap, reinterpret_cast<intptr_t>(dst)
-            - reinterpret_cast<intptr_t>(code));
+      markBit(codeMap, reinterpret_cast<intptr_t>(dst)
+              - reinterpret_cast<intptr_t>(code));
+    }
   }
 }
 
@@ -227,6 +251,7 @@ writeBootImage(Thread* t, FILE* out)
   memset(codeMap, 0, codeMapSize(CodeCapacity));
 
   object constants = makeCodeImage(t, &zone, &image, code, CodeCapacity);
+  PROTECT(t, constants);
 
   const unsigned HeapCapacity = 32 * 1024 * 1024;
   uintptr_t* heap = static_cast<uintptr_t*>
@@ -235,7 +260,6 @@ writeBootImage(Thread* t, FILE* out)
     (t->m->heap->allocate(heapMapSize(HeapCapacity)));
   memset(heapMap, 0, heapMapSize(HeapCapacity));
 
-  PROTECT(t, constants);
   collect(t, Heap::MajorCollection);
 
   HeapWalker* heapWalker = makeHeapImage
@@ -243,16 +267,56 @@ writeBootImage(Thread* t, FILE* out)
 
   updateConstants(t, constants, code, codeMap, heapWalker->map());
 
+  image.classCount = hashMapSize(t, t->m->classMap);
+  unsigned* classTable = static_cast<unsigned*>
+    (t->m->heap->allocate(image.classCount * sizeof(unsigned)));
+
+  { unsigned i = 0;
+    for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
+      classTable[i++] = heapWalker->map()->find(tripleSecond(t, it.next()));
+    }
+  }
+
+  image.stringCount = hashMapSize(t, t->m->stringMap);
+  unsigned* stringTable = static_cast<unsigned*>
+    (t->m->heap->allocate(image.stringCount * sizeof(unsigned)));
+
+  { unsigned i = 0;
+    for (HashMapIterator it(t, t->m->stringMap); it.hasMore();) {
+      stringTable[i++] = heapWalker->map()->find
+        (jreferenceTarget(t, tripleFirst(t, it.next())));
+    }
+  }
+
+  unsigned* callTable = t->m->processor->makeCallTable
+    (t, &image, heapWalker, code);
+
   heapWalker->dispose();
 
   image.magic = BootImage::Magic;
   image.codeBase = reinterpret_cast<uintptr_t>(code);
 
-  fprintf(stderr, "heap size %d code size %d\n",
-          image.heapSize, image.codeSize);
+  fprintf(stderr, "class count %d string count %d call count %d\n"
+          "heap size %d code size %d\n",
+          image.classCount, image.stringCount, image.callCount, image.heapSize,
+          image.codeSize);
 
   if (true) {
     fwrite(&image, sizeof(BootImage), 1, out);
+
+    fwrite(classTable, image.classCount * sizeof(unsigned), 1, out);
+    fwrite(stringTable, image.stringCount * sizeof(unsigned), 1, out);
+    fwrite(callTable, image.callCount * sizeof(unsigned) * 2, 1, out);
+
+    unsigned offset = (image.classCount * sizeof(unsigned))
+      + (image.stringCount * sizeof(unsigned))
+      + (image.callCount * sizeof(unsigned) * 2);
+
+    while (offset % BytesPerWord) {
+      uint8_t c = 0;
+      fwrite(&c, 1, 1, out);
+      ++ offset;
+    }
 
     fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
     fwrite(heap, pad(image.heapSize), 1, out);

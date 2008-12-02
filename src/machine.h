@@ -1159,6 +1159,7 @@ class Machine {
   System::Monitor* referenceLock;
   System::Library* libraries;
   object loader;
+  object classMap;
   object bootstrapClassMap;
   object monitorMap;
   object stringMap;
@@ -1432,6 +1433,35 @@ expect(Thread* t, bool v)
 {
   expect(t->m->system, v);
 }
+
+class FixedAllocator: public Allocator {
+ public:
+  FixedAllocator(Thread* t, uint8_t* base, unsigned capacity):
+    t(t), base(base), offset(0), capacity(capacity)
+  { }
+
+  virtual void* tryAllocate(unsigned) {
+    abort(t);
+  }
+
+  virtual void* allocate(unsigned size) {
+    unsigned paddedSize = pad(size);
+    expect(t, offset + paddedSize < capacity);
+
+    void* p = base + offset;
+    offset += paddedSize;
+    return p;
+  }
+
+  virtual void free(const void*, unsigned) {
+    abort(t);
+  }
+
+  Thread* t;
+  uint8_t* base;
+  unsigned offset;
+  unsigned capacity;
+};
 
 inline void
 ensure(Thread* t, unsigned sizeInBytes)
