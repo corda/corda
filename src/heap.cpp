@@ -203,7 +203,7 @@ class Segment {
       return n;
     }
 
-    static unsigned calculateSize(Context* c, unsigned capacity,
+    static unsigned calculateSize(Context* c UNUSED, unsigned capacity,
                                   unsigned scale, unsigned bitsPerRecord)
     {
       unsigned result
@@ -459,7 +459,7 @@ class Fixie {
     }
   }
 
-  void remove(Context* c) {
+  void remove(Context* c UNUSED) {
     if (handle) {
       assert(c, *handle == this);
       *handle = next;
@@ -884,6 +884,12 @@ copyTo(Context* c, Segment* s, void* o, unsigned size)
   return dst;
 }
 
+bool
+immortalHeapContains(Context* c, void* p)
+{
+  return p < c->immortalHeapEnd and p >= c->immortalHeapStart;
+}
+
 void*
 copy2(Context* c, void* o)
 {
@@ -920,6 +926,7 @@ copy2(Context* c, void* o)
   } else {
     assert(c, not c->nextGen1.contains(o));
     assert(c, not c->nextGen2.contains(o));
+    assert(c, not immortalHeapContains(c, o));
 
     o = copyTo(c, &(c->nextGen1), o, size);
 
@@ -943,12 +950,6 @@ copy(Context* c, void* o)
   cast<void*>(o, 0) = r;
 
   return r;
-}
-
-bool
-immortalHeapContains(Context* c, void* p)
-{
-  return p < c->immortalHeapEnd and p >= c->immortalHeapStart;
 }
 
 void*
@@ -1832,6 +1833,7 @@ class MyHeap: public Heap {
     } else if (c.nextGen1.contains(p)) {
       return Reachable;
     } else if (c.nextGen2.contains(p)
+               or immortalHeapContains(&c, p)
                or (c.gen2.contains(p)
                    and (c.mode == Heap::MinorCollection
                         or c.gen2.indexOf(p) >= c.gen2Base)))
