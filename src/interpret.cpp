@@ -2876,7 +2876,7 @@ class MyProcessor: public Processor {
   {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, name, spec, class_, code, 0);
+       offset, 0, name, spec, class_, code, 0);
   }
 
   virtual object
@@ -3056,6 +3056,32 @@ class MyProcessor: public Processor {
     return 0;
   }
 
+  virtual void compileThunks(vm::Thread*, BootImage*, uint8_t*, unsigned*,
+                             unsigned)
+  {
+    abort(s);
+  }
+
+  virtual void compileMethod(vm::Thread*, Zone*, uint8_t*, unsigned*, unsigned,
+                             object*, object*, DelayedPromise**, object)
+  {
+    abort(s);
+  }
+
+  virtual void visitRoots(BootImage*, HeapWalker*) {
+    abort(s);
+  }
+
+  virtual unsigned* makeCallTable(vm::Thread*, BootImage*, HeapWalker*,
+                                  uint8_t*)
+  {
+    abort(s);
+  }
+
+  virtual void boot(vm::Thread*, BootImage* image) {
+    expect(s, image == 0);
+  }
+  
   virtual void dispose(vm::Thread* t) {
     t->m->heap->free(t, sizeof(Thread));
   }

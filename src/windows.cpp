@@ -11,6 +11,7 @@
 #include "sys/stat.h"
 #include "windows.h"
 #include "sys/timeb.h"
+#include "dirent.h"
 
 #undef max
 #undef min
@@ -422,6 +423,31 @@ class MySystem: public System {
     HANDLE file;
   };
 
+  class Directory: public System::Directory {
+   public:
+    Directory(System* s, DIR* directory): s(s), directory(directory) { }
+
+    virtual const char* next() {
+      if (directory) {
+        dirent* e = readdir(directory);
+        if (e) {
+          return e->d_name;
+        }
+      }
+      return 0;
+    }
+
+    virtual void dispose() {
+      if (directory) {
+        closedir(directory);
+      }
+      s->free(this);
+    }
+
+    System* s;
+    DIR* directory;
+  };
+
   class Library: public System::Library {
    public:
     Library(System* s, HMODULE handle, const char* name, bool mapName):
@@ -630,19 +656,31 @@ class MySystem: public System {
     return status;
   }
 
+  virtual Status open(System::Directory** directory, const char* name) {
+    Status status = 1;
+    
+    DIR* d = opendir(name);
+    if (d) {
+      *directory = new (allocate(this, sizeof(Directory))) Directory(this, d);
+      status = 0;
+    }
+    
+    return status;
+  }
+
   virtual FileType identify(const char* name) {
     struct _stat s;
     int r = _stat(name, &s);
     if (r == 0) {
       if (S_ISREG(s.st_mode)) {
-        return File;
+        return TypeFile;
       } else if (S_ISDIR(s.st_mode)) {
-        return Directory;
+        return TypeDirectory;
       } else {
-        return Unknown;
+        return TypeUnknown;
       }
     } else {
-      return DoesNotExist;
+      return TypeDoesNotExist;
     }
   }
 
