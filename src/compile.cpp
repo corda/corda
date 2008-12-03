@@ -5331,7 +5331,7 @@ makeCallTable(MyThread* t, uintptr_t* heap, unsigned* calls, unsigned count,
 }
 
 void
-fixupHeap(MyThread* t, uintptr_t* map, unsigned size, uintptr_t* heap)
+fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
 {
   for (unsigned word = 0; word < size; ++word) {
     uintptr_t w = map[word];
