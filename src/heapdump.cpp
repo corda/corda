@@ -8,6 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include "machine.h"
 #include "heapwalk.h"
 
 using namespace vm;
@@ -91,7 +92,7 @@ dumpHeap(Thread* t, FILE* out)
       write4(out, number);      
     }
 
-    virtual void push(unsigned) {
+    virtual void push(object, unsigned, unsigned) {
       write1(out, Push);
     }
 
