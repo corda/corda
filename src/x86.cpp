@@ -1746,9 +1746,9 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
 {
   assert(c, BytesPerWord == 8 or size == 4);
   
-  int64_t v = a->value->value();
+  if (a->value->resolved() and isInt32(a->value->value())) {
+    int64_t v = a->value->value();
 
-  if (isInt32(v)) {
     if (size == 8) rex(c);
     if (isInt8(v)) {
       c->code.append(0x83);
@@ -1768,25 +1768,6 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-compareCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
-          Assembler::Memory* b)
-{
-  assert(c, BytesPerWord == 8 or size == 4);
-  
-  int64_t v = a->value->value();
-
-  encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
-
-  if (isInt8(v)) {
-    c->code.append(v);
-  } else if (isInt32(v)) {
-    c->code.append4(v);
-  } else {
-    abort(c);
-  }
-}
-
-void
 compareRM(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Memory* b)
 {
@@ -1796,6 +1777,32 @@ compareRM(Context* c, unsigned size, Assembler::Register* a,
     move4To8RR(c, size, a, a);
   }
   encode(c, 0x39, a->low, b, true);
+}
+
+void
+compareCM(Context* c, unsigned size, Assembler::Constant* a,
+          Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+  
+  if (a->value->resolved()) {
+    int64_t v = a->value->value();
+    
+    encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
+    
+    if (isInt8(v)) {
+      c->code.append(v);
+    } else if (isInt32(v)) {
+      c->code.append4(v);
+    } else {
+      abort(c);
+    }
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, size, a, &tmp);
+    compareRM(c, size, &tmp, b);
+    c->client->releaseTemporary(tmp.low);
+  }
 }
 
 void
