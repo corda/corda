@@ -123,6 +123,7 @@ ifeq ($(platform),windows)
 		ar = i586-mingw32msvc-ar
 		ranlib = i586-mingw32msvc-ranlib
 		objcopy = i586-mingw32msvc-objcopy
+		strip = i586-mingw32msvc-strip
 	else
 		build-cflags = $(common-cflags) \
 			"-I$(JAVA_HOME)/include/win32" -I$(src) -mthreads
@@ -150,11 +151,9 @@ ifeq ($(mode),stress-major)
 endif
 ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG
-	strip = strip
 endif
 ifeq ($(mode),small)
 	cflags += -Os -g3 -DNDEBUG
-	strip = strip
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
