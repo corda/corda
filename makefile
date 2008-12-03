@@ -415,7 +415,7 @@ $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	$(compile-object)
 
-$(static-library): $(vm-objects) $(jni-objects)
+$(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
@@ -462,7 +462,6 @@ ifeq ($(platform),windows)
 else
 	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
-	$(strip) $(strip-all) $(@)
 
 $(dynamic-library): \
 		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
