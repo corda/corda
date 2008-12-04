@@ -26,7 +26,7 @@ enum {
 void
 write1(FILE* out, uint8_t v)
 {
-  size_t n UNUSED = fwrite(&v, 1, 1, c->out);
+  size_t n UNUSED = fwrite(&v, 1, 1, out);
 }
 
 void
@@ -39,7 +39,7 @@ write4(FILE* out, uint32_t v)
 void
 writeString(FILE* out, int8_t* p, unsigned size)
 {
-  write4(c, size);
+  write4(out, size);
   size_t n UNUSED = fwrite(p, size, 1, out);
 }
 
