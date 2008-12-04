@@ -1572,6 +1572,8 @@ boot(Thread* t)
 
   m->stringMap = makeWeakHashMap(t, 0, 0);
 
+  m->processor->boot(t, 0);
+
   { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
@@ -1816,7 +1818,6 @@ Thread::init()
       m->processor->boot(this, image);
     } else {
       boot(this);
-      m->processor->boot(this, 0);
     }
 
     m->monitorMap = makeWeakHashMap(this, 0, 0);

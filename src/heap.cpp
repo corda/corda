@@ -430,15 +430,18 @@ class Segment {
 
 class Fixie {
  public:
-  Fixie(unsigned size, bool hasMask, Fixie** handle, bool immortal):
+  Fixie(Context* c, unsigned size, bool hasMask, Fixie** handle,
+        bool immortal):
     age(immortal ? FixieTenureThreshold + 1 : 0),
     hasMask(hasMask),
     marked(false),
     dirty(false),
-    size(size)
+    size(size),
+    next(0),
+    handle(0)
   {
     memset(mask(), 0, maskSize(size, hasMask));
-    add(handle);
+    add(c, handle);
     if (DebugFixies) {
       fprintf(stderr, "make fixie %p of size %d\n", this, totalSize());
     }
@@ -448,7 +451,10 @@ class Fixie {
     return age == FixieTenureThreshold + 1;
   }
 
-  void add(Fixie** handle) {
+  void add(Context* c UNUSED, Fixie** handle) {
+    assert(c, this->handle == 0);
+    assert(c, next == 0);
+
     this->handle = handle;
     if (handle) {
       next = *handle;
@@ -467,6 +473,7 @@ class Fixie {
     if (next) {
       next->handle = handle;
     }
+    next = 0;
     handle = 0;
   }
 
@@ -476,7 +483,7 @@ class Fixie {
     }
 
     remove(c);
-    add(handle);
+    add(c, handle);
   }
 
   void** body() {
@@ -857,14 +864,14 @@ sweepFixies(Context* c)
       }
 
       if (f->dirty) {
-        f->add(&(c->dirtyTenuredFixies));
+        f->add(c, &(c->dirtyTenuredFixies));
       } else {
-        f->add(&(c->tenuredFixies));
+        f->add(c, &(c->tenuredFixies));
       }
     } else {
       c->untenuredFixieFootprint += f->totalSize();
 
-      f->add(&(c->fixies));
+      f->add(c, &(c->fixies));
     }
 
     f->marked = false;
@@ -1470,7 +1477,7 @@ visitMarkedFixies(Context* c)
 
     c->client->walk(f->body(), &w);
 
-    f->add(&(c->visitedFixies));
+    f->move(c, &(c->visitedFixies));
   }  
 }
 
@@ -1730,7 +1737,7 @@ class MyHeap: public Heap {
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
     return (new (allocator->allocate(*totalInBytes))
-            Fixie(sizeInWords, objectMask, &(c.fixies), false))->body();
+            Fixie(&c, sizeInWords, objectMask, &(c.fixies), false))->body();
   }
 
   virtual void* allocateImmortalFixed(Allocator* allocator,
@@ -1739,7 +1746,7 @@ class MyHeap: public Heap {
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
     return (new (allocator->allocate(*totalInBytes))
-            Fixie(sizeInWords, objectMask, 0, true))->body();
+            Fixie(&c, sizeInWords, objectMask, 0, true))->body();
   }
 
   virtual bool needsMark(void* p) {
