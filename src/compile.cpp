@@ -113,23 +113,26 @@ methodTree(MyThread* t);
 object
 methodTreeSentinal(MyThread* t);
 
+unsigned
+compiledSize(intptr_t address)
+{
+  return reinterpret_cast<uintptr_t*>(address)[-1];
+}
+
 intptr_t
 compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 {
-  intptr_t start = reinterpret_cast<intptr_t>
-    (&singletonValue(t, methodCompiled(t, method), 0));
+  intptr_t start = methodCompiled(t, method);
 
   if (DebugMethodTree) {
     fprintf(stderr, "find 0x%"LX" in (0x%"LX",0x%"LX")\n", ip, start,
-            start + (singletonCount(t, methodCompiled(t, method))
-                     * BytesPerWord));
+            start + compiledSize(start));
   }
 
   if (ip < start) {
     return -1;
   } else if (ip < start + static_cast<intptr_t>
-             (singletonCount(t, methodCompiled(t, method))
-              * BytesPerWord))
+             (compiledSize(start) + BytesPerWord))
   {
     return 0;
   } else {
@@ -284,8 +287,7 @@ class MyStackWalker: public Processor::StackWalker {
   virtual int ip() {
     switch (state) {
     case Method:
-      return reinterpret_cast<intptr_t>(ip_) - reinterpret_cast<intptr_t>
-        (&singletonValue(t, methodCompiled(t, method_), 0));
+      return reinterpret_cast<intptr_t>(ip_) - methodCompiled(t, method_);
         
     case NativeMethod:
       return 0;
@@ -336,14 +338,24 @@ localObject(MyThread* t, void* base, object method, unsigned index)
     (static_cast<uint8_t*>(base) + localOffset(t, index, method));
 }
 
-class PoolElement {
+class PoolElement: public Promise {
  public:
-  PoolElement(object value, Promise* address, PoolElement* next):
-    value(value), address(address), next(next)
+  PoolElement(Thread* t, object target, PoolElement* next):
+    t(t), target(target), address(0), next(next)
   { }
 
-  object value;
-  Promise* address;
+  virtual int64_t value() {
+    assert(t, resolved());
+    return address;
+  }
+
+  virtual bool resolved() {
+    return address != 0;
+  }
+
+  Thread* t;
+  object target;
+  intptr_t address;
   PoolElement* next;
 };
 
@@ -440,6 +452,34 @@ const unsigned ThunkCount = gcIfNecessaryThunk + 1;
 intptr_t
 getThunk(MyThread* t, Thunk thunk);
 
+class BootContext {
+ public:
+  class MyProtector: public Thread::Protector {
+   public:
+    MyProtector(Thread* t, BootContext* c): Protector(t), c(c) { }
+
+    virtual void visit(Heap::Visitor* v) {
+      v->visit(&(c->constants));
+      v->visit(&(c->calls));
+    }
+
+    BootContext* c;
+  };
+
+  BootContext(Thread* t, object constants, object calls,
+              DelayedPromise* addresses, Zone* zone):
+    protector(t, this), constants(constants), calls(calls),
+    addresses(addresses), addressSentinal(addresses), zone(zone)
+  { }
+
+  MyProtector protector;
+  object constants;
+  object calls;
+  DelayedPromise* addresses;
+  DelayedPromise* addressSentinal;
+  Zone* zone;
+};
+
 class Context {
  public:
   class MyProtector: public Thread::Protector {
@@ -450,7 +490,7 @@ class Context {
       v->visit(&(c->method));
 
       for (PoolElement* p = c->objectPool; p; p = p->next) {
-        v->visit(&(p->value));
+        v->visit(&(p->target));
       }
 
       for (TraceElement* p = c->traceLog; p; p = p->next) {
@@ -492,14 +532,16 @@ class Context {
     MyThread* t;
   };
 
-  Context(MyThread* t, object method):
+  Context(MyThread* t, BootContext* bootContext, object method):
     thread(t),
     zone(t->m->system, t->m->heap, 16 * 1024),
     assembler(makeAssembler(t->m->system, t->m->heap, &zone)),
     client(t),
     compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
     method(method),
+    bootContext(bootContext),
     objectPool(0),
+    objectPoolCount(0),
     traceLog(0),
     traceLogCount(0),
     visitTable(makeVisitTable(t, &zone, method)),
@@ -515,7 +557,9 @@ class Context {
     client(t),
     compiler(0),
     method(0),
+    bootContext(0),
     objectPool(0),
+    objectPoolCount(0),
     traceLog(0),
     traceLogCount(0),
     visitTable(0),
@@ -535,7 +579,9 @@ class Context {
   MyClient client;
   Compiler* compiler;
   object method;
+  BootContext* bootContext;
   PoolElement* objectPool;
+  unsigned objectPoolCount;
   TraceElement* traceLog;
   unsigned traceLogCount;
   uint16_t* visitTable;
@@ -599,11 +645,26 @@ class Frame {
   }
 
   Compiler::Operand* append(object o) {
-    Promise* p = c->poolAppend(0);
-    context->objectPool = new
-      (context->zone.allocate(sizeof(PoolElement)))
-      PoolElement(o, p, context->objectPool);
-    return c->address(p);
+    if (context->bootContext) {
+      BootContext* bc = context->bootContext;
+
+      Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
+        ListenPromise(t->m->system, bc->zone);
+
+      PROTECT(t, o);
+      object pointer = makePointer(t, p);
+      bc->constants = makeTriple(t, o, pointer, bc->constants);
+
+      return c->promiseConstant(p);
+    } else {
+      context->objectPool = new
+        (context->zone.allocate(sizeof(PoolElement)))
+        PoolElement(t, o, context->objectPool);
+
+      ++ context->objectPoolCount;
+
+      return c->address(context->objectPool);
+    }
   }
 
   unsigned localSize() {
@@ -797,6 +858,21 @@ class Frame {
 
     set(sp - 1, get(sp - 2));
     set(sp - 2, saved);
+  }
+
+  Promise* addressPromise(Promise* p) {
+    BootContext* bc = context->bootContext;
+    if (bc) {
+      bc->addresses = new (bc->zone->allocate(sizeof(DelayedPromise)))
+        DelayedPromise(t->m->system, bc->zone, p, bc->addresses);
+      return bc->addresses;
+    } else {
+      return p;
+    }
+  }
+
+  Compiler::Operand* addressOperand(Promise* p) {
+    return c->promiseConstant(addressPromise(p));
   }
 
   Compiler::Operand* machineIp(unsigned logicalIp) {
@@ -1094,8 +1170,7 @@ findExceptionHandler(Thread* t, object method, void* ip)
   if (table) {
     object index = arrayBody(t, table, 0);
       
-    uint8_t* compiled = reinterpret_cast<uint8_t*>
-      (&singletonValue(t, methodCompiled(t, method), 0));
+    uint8_t* compiled = reinterpret_cast<uint8_t*>(methodCompiled(t, method));
 
     for (unsigned i = 0; i < arrayLength(t, table) - 1; ++i) {
       unsigned start = intArrayBody(t, index, i * 3);
@@ -1188,13 +1263,35 @@ tryInitClass(MyThread* t, object class_)
   if (UNLIKELY(t->exception)) unwind(t);
 }
 
+object&
+objectPools(MyThread* t);
+
+uintptr_t
+defaultThunk(MyThread* t);
+
+uintptr_t
+nativeThunk(MyThread* t);
+
+uintptr_t
+aioobThunk(MyThread* t);
+
+uintptr_t
+methodAddress(Thread* t, object method)
+{
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    return nativeThunk(static_cast<MyThread*>(t));
+  } else {
+    return methodCompiled(t, method);
+  }
+}
+
 void* FORCE_ALIGN
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
-    return &singletonValue
-      (t, methodCompiled
-       (t, findInterfaceMethod(t, method, objectClass(t, instance))), 0);
+    return reinterpret_cast<void*>
+      (methodAddress
+       (t, findInterfaceMethod(t, method, objectClass(t, instance))));
   } else {
     t->exception = makeNullPointerException(t);
     unwind(t);
@@ -1426,10 +1523,46 @@ makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 }
 
 object FORCE_ALIGN
-makeBlankArray(MyThread* t, object (*constructor)(Thread*, uintptr_t, bool),
-               int32_t length)
+makeBlankArray(MyThread* t, unsigned type, int32_t length)
 {
   if (length >= 0) {
+    object (*constructor)(Thread*, uintptr_t, bool);
+    switch (type) {
+    case T_BOOLEAN:
+      constructor = makeBooleanArray;
+      break;
+
+    case T_CHAR:
+      constructor = makeCharArray;
+      break;
+
+    case T_FLOAT:
+      constructor = makeFloatArray;
+      break;
+
+    case T_DOUBLE:
+      constructor = makeDoubleArray;
+      break;
+
+    case T_BYTE:
+      constructor = makeByteArray;
+      break;
+
+    case T_SHORT:
+      constructor = makeShortArray;
+      break;
+
+    case T_INT:
+      constructor = makeIntArray;
+      break;
+
+    case T_LONG:
+      constructor = makeLongArray;
+      break;
+
+    default: abort(t);
+    }
+
     return constructor(t, length, true);
   } else {
     object message = makeString(t, "%d", length);
@@ -1656,15 +1789,6 @@ emptyMethod(MyThread* t, object method)
     and (codeBody(t, methodCode(t, method), 0) == return_);
 }
 
-object
-defaultThunk(MyThread* t);
-
-object
-nativeThunk(MyThread* t);
-
-object
-aioobThunk(MyThread* t);
-
 void
 compileDirectInvoke(MyThread* t, Frame* frame, object target)
 {
@@ -1675,31 +1799,52 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
   Compiler::Operand* result = 0;
 
   if (not emptyMethod(t, target)) {
-    if (methodFlags(t, target) & ACC_NATIVE) {
+    BootContext* bc = frame->context->bootContext;
+    if (bc) {
+      if (methodClass(t, target) == methodClass(t, frame->context->method)
+          or (not classNeedsInit(t, methodClass(t, target))))
+      {
+        Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
+          ListenPromise(t->m->system, bc->zone);
+
+        PROTECT(t, target);
+        object pointer = makePointer(t, p);
+        bc->calls = makeTriple(t, target, pointer, bc->calls);
+
+        object traceTarget
+          = (methodFlags(t, target) & ACC_NATIVE) ? target : 0;
+
+        result = c->call
+          (c->promiseConstant(p),
+           0,
+           frame->trace(traceTarget, false),
+           rSize,
+           0);
+      } else {
+        result = c->call
+          (c->constant(defaultThunk(t)),
+           Compiler::Aligned,
+           frame->trace(target, false),
+           rSize,
+           0);
+      }
+    } else if (methodAddress(t, target) == defaultThunk(t)
+               or classNeedsInit(t, methodClass(t, target)))
+    {
       result = c->call
-        (c->constant
-         (reinterpret_cast<intptr_t>
-          (&singletonBody(t, nativeThunk(t), 0))),
-         0,
-         frame->trace(target, false),
-         rSize,
-         0);
-    } else if (methodCompiled(t, target) == defaultThunk(t)) {
-      result = c->call
-        (c->constant
-         (reinterpret_cast<intptr_t>
-          (&singletonBody(t, defaultThunk(t), 0))),
+        (c->constant(defaultThunk(t)),
          Compiler::Aligned,
          frame->trace(target, false),
          rSize,
          0);
     } else {
+      object traceTarget
+        = (methodFlags(t, target) & ACC_NATIVE) ? target : 0;
+
       result = c->call
-        (c->constant
-         (reinterpret_cast<intptr_t>
-          (&singletonBody(t, methodCompiled(t, target), 0))),
+        (c->constant(methodAddress(t, target)),
          0,
-         frame->trace(0, false),
+         frame->trace(traceTarget, false),
          rSize,
          0);
     }
@@ -1880,8 +2025,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* array = frame->popObject();
 
       if (CheckArrayBounds) {
-        c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
-                       (&singletonValue(t, aioobThunk(t), 0)));
+        c->checkBounds(array, ArrayLength, index, aioobThunk(t));
       }
 
       switch (instruction) {
@@ -1936,8 +2080,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* array = frame->popObject();
 
       if (CheckArrayBounds) {
-        c->checkBounds(array, ArrayLength, index, reinterpret_cast<intptr_t>
-                       (&singletonValue(t, aioobThunk(t), 0)));
+        c->checkBounds(array, ArrayLength, index, aioobThunk(t));
       }
 
       switch (instruction) {
@@ -2344,8 +2487,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* table;
 
       if (instruction == getstatic) {
-        if ((classVmFlags(t, fieldClass(t, field)) & NeedInitFlag)
-            and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
+        if (fieldClass(t, field) != methodClass(t, context->method)
+            and classNeedsInit(t, fieldClass(t, field)))
         {
           c->call
             (c->constant(getThunk(t, tryInitClassThunk)),
@@ -2873,7 +3016,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       c->saveStack();
 
-      frame->pushAddress(frame->machineIp(ip));
+      frame->pushAddress(frame->addressOperand(c->machineIp(ip)));
       c->jmp(frame->machineIp(newIp));
 
       // NB: we assume that the stack will look the same on return
@@ -3021,8 +3164,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
-      Compiler::Operand* default_ = c->address
-        (c->poolAppendPromise(c->machineIp(defaultIp)));
+      Compiler::Operand* default_ = frame->addressOperand
+        (c->machineIp(defaultIp));
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
@@ -3038,9 +3181,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         Promise* p = c->poolAppend(key);
         if (i == 0) {
-          start = c->promiseConstant(p);
+          start = frame->addressOperand(p);
         }
-        c->poolAppendPromise(c->machineIp(newIp));
+        c->poolAppendPromise(frame->addressPromise(c->machineIp(newIp)));
       }
       assert(t, start);
 
@@ -3195,51 +3338,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Compiler::Operand* length = frame->popInt();
 
-      object (*constructor)(Thread*, uintptr_t, bool);
-      switch (type) {
-      case T_BOOLEAN:
-        constructor = makeBooleanArray;
-        break;
-
-      case T_CHAR:
-        constructor = makeCharArray;
-        break;
-
-      case T_FLOAT:
-        constructor = makeFloatArray;
-        break;
-
-      case T_DOUBLE:
-        constructor = makeDoubleArray;
-        break;
-
-      case T_BYTE:
-        constructor = makeByteArray;
-        break;
-
-      case T_SHORT:
-        constructor = makeShortArray;
-        break;
-
-      case T_INT:
-        constructor = makeIntArray;
-        break;
-
-      case T_LONG:
-        constructor = makeLongArray;
-        break;
-
-      default: abort(t);
-      }
-
       frame->pushObject
         (c->call
          (c->constant(getThunk(t, makeBlankArrayThunk)),
           0,
           frame->trace(0, false),
           BytesPerWord,
-          3, c->thread(), c->constant(reinterpret_cast<intptr_t>(constructor)),
-          length));
+          3, c->thread(), c->constant(type), length));
     } break;
 
     case nop: break;
@@ -3262,8 +3367,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object staticTable = 0;
 
       if (instruction == putstatic) {
-        if ((classVmFlags(t, fieldClass(t, field)) & NeedInitFlag)
-            and (classVmFlags(t, fieldClass(t, field)) & InitFlag) == 0)
+        if (fieldClass(t, field) != methodClass(t, context->method)
+            and classNeedsInit(t, fieldClass(t, field)))
         {
           c->call
             (c->constant(getThunk(t, tryInitClassThunk)),
@@ -3389,9 +3494,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         ipTable[i] = newIp;
 
-        Promise* p = c->poolAppendPromise(c->machineIp(newIp));
+        Promise* p = c->poolAppendPromise
+          (frame->addressPromise(c->machineIp(newIp)));
         if (i == 0) {
-          start = c->promiseConstant(p);
+          start = frame->addressOperand(p);
         }
       }
       assert(t, start);
@@ -3720,45 +3826,64 @@ codeSingletonSizeInBytes(MyThread*, unsigned codeSizeInBytes)
   return pad(SingletonBody + (size * BytesPerWord));
 }
 
-object
-allocateCode(MyThread* t, unsigned codeSizeInBytes)
+uint8_t*
+finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name)
 {
-  unsigned count = ceiling(codeSizeInBytes, BytesPerWord);
-  unsigned size = count + singletonMaskSize(count);
-  object result = allocate3
-    (t, codeZone(t), Machine::ImmortalAllocation,
-     SingletonBody + (size * BytesPerWord), true);
-  initSingleton(t, result, size, true);
-  mark(t, result, 0);
-  singletonMask(t, result)[0] = 1;
-  return result;
-}
-
-object
-finish(MyThread* t, Assembler* a, const char* name)
-{
-  object result = allocateCode(t, a->length());
-  uint8_t* start = reinterpret_cast<uint8_t*>(&singletonValue(t, result, 0));
+  uint8_t* start = static_cast<uint8_t*>
+    (allocator->allocate(pad(a->length())));
 
   a->writeTo(start);
 
   logCompile(t, start, a->length(), 0, name, 0);
 
-  return result;
+  return start;
 }
 
-object
-finish(MyThread* t, Context* context)
+uint8_t*
+finish(MyThread* t, Allocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
 
   unsigned codeSize = c->compile();
-  object result = allocateCode(t, pad(codeSize) + c->poolSize());
-  PROTECT(t, result);
+  uintptr_t* code = static_cast<uintptr_t*>
+    (allocator->allocate(pad(codeSize) + pad(c->poolSize()) + BytesPerWord));
+  code[0] = codeSize;
+  uint8_t* start = reinterpret_cast<uint8_t*>(code + 1);
 
-  uint8_t* start = reinterpret_cast<uint8_t*>(&singletonValue(t, result, 0));
+  if (context->objectPool) {
+    object pool = allocate3
+      (t, allocator, Machine::ImmortalAllocation,
+       FixedSizeOfArray + ((context->objectPoolCount + 1) * BytesPerWord),
+       true);
+
+    initArray(t, pool, context->objectPoolCount + 1, false);
+    mark(t, pool, 0);
+
+    set(t, pool, ArrayBody, objectPools(t));
+    objectPools(t) = pool;
+
+    unsigned i = 1;
+    for (PoolElement* p = context->objectPool; p; p = p->next) {
+      unsigned offset = ArrayBody + ((i++) * BytesPerWord);
+
+      p->address = reinterpret_cast<uintptr_t>(pool) + offset;
+
+      set(t, pool, offset, p->target);
+    }
+  }
 
   c->writeTo(start);
+
+  BootContext* bc = context->bootContext;
+  if (bc) {
+    for (DelayedPromise* p = bc->addresses;
+         p != bc->addressSentinal;
+         p = p->next)
+    {
+      p->basis = new (bc->zone->allocate(sizeof(ResolvedPromise)))
+        ResolvedPromise(p->basis->value());
+    }
+  }
 
   translateExceptionHandlerTable(t, c, methodCode(t, context->method),
                                  reinterpret_cast<intptr_t>(start));
@@ -3828,14 +3953,6 @@ finish(MyThread* t, Context* context)
     set(t, methodCode(t, context->method), CodePool, map);
   }
 
-  for (PoolElement* p = context->objectPool; p; p = p->next) {
-    intptr_t offset = p->address->value() - reinterpret_cast<intptr_t>(start);
-
-    singletonMarkObject(t, result, offset / BytesPerWord);
-
-    set(t, result, SingletonBody + offset, p->value);
-  }
-
   logCompile
     (t, start, codeSize,
      reinterpret_cast<const char*>
@@ -3859,11 +3976,11 @@ finish(MyThread* t, Context* context)
     asm("int3");
   }
 
-  return result;
+  return start;
 }
 
-object
-compile(MyThread* t, Context* context)
+uint8_t*
+compile(MyThread* t, Allocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
 
@@ -3970,11 +4087,20 @@ compile(MyThread* t, Context* context)
     calculateFrameMaps(t, context, 0, 0);
   }
 
-  return finish(t, context);
+  return finish(t, allocator, context);
 }
 
 void
-compile(MyThread* t, object method);
+updateCall(MyThread* t, UnaryOperation op, bool assertAlignment,
+           void* returnAddress, void* target)
+{
+  Context context(t);
+  context.assembler->updateCall(op, assertAlignment, returnAddress, target);
+}
+
+void
+compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+        object method);
 
 void*
 compileMethod2(MyThread* t)
@@ -3990,24 +4116,24 @@ compileMethod2(MyThread* t)
   }
 
   if (LIKELY(t->exception == 0)) {
-    compile(t, target);
+    compile(t, codeZone(t), 0, target);
   }
 
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
+    void* address = reinterpret_cast<void*>(methodAddress(t, target));
     if (callNodeVirtualCall(t, node)) {
       classVtable
         (t, objectClass
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
-        = &singletonValue(t, methodCompiled(t, target), 0);
+        = address;
     } else {
-      Context context(t);
-      context.assembler->updateCall
-        (reinterpret_cast<void*>(callNodeAddress(t, node)),
-         &singletonValue(t, methodCompiled(t, target), 0));
+      updateCall
+        (t, Call, true, reinterpret_cast<void*>(callNodeAddress(t, node)),
+         address);
     }
-    return &singletonValue(t, methodCompiled(t, target), 0);
+    return address;
   }
 }
 
@@ -4033,7 +4159,7 @@ invokeNative2(MyThread* t, object method)
   initClass(t, methodClass(t, method));
   if (UNLIKELY(t->exception)) return 0;
 
-  if (methodCode(t, method) == 0) {
+  if (methodCompiled(t, method) == defaultThunk(t)) {
     void* function = resolveNativeMethod(t, method);
     if (UNLIKELY(function == 0)) {
       object message = makeString
@@ -4045,8 +4171,7 @@ invokeNative2(MyThread* t, object method)
       return 0;
     }
 
-    object p = makePointer(t, function);
-    set(t, method, MethodCode, p);
+    methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
   }
 
   object class_ = methodClass(t, method);
@@ -4112,7 +4237,7 @@ invokeNative2(MyThread* t, object method)
     }
   }
 
-  void* function = pointerValue(t, methodCode(t, method));
+  void* function = reinterpret_cast<void*>(methodCompiled(t, method));
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
   uint64_t result;
@@ -4276,7 +4401,7 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* base, object method,
     object map = codePool(t, methodCode(t, method));
     int index = frameMapIndex
       (t, method, difference
-       (ip, &singletonValue(t, methodCompiled(t, method), 0)));
+       (ip, reinterpret_cast<void*>(methodAddress(t, method))));
 
     for (unsigned i = 0; i < count; ++i) {
       int j = index + i;
@@ -4510,8 +4635,8 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
     }
 
     result = vmInvoke
-      (t, &singletonValue(t, methodCompiled(t, method), 0), arguments->array,
-       arguments->position, returnType);
+      (t, reinterpret_cast<void*>(methodAddress(t, method)),
+       arguments->array, arguments->position, returnType);
   }
 
   if (t->exception) { 
@@ -4593,7 +4718,14 @@ class SegFaultHandler: public System::SignalHandler {
   Machine* m;
 };
 
+void
+boot(MyThread* t, BootImage* image);
+
 class MyProcessor;
+
+void
+compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
+              BootImage* image, uint8_t* imageBase);
 
 MyProcessor*
 processor(MyThread* t);
@@ -4631,6 +4763,8 @@ class MyProcessor: public Processor {
     callTableSize(0),
     methodTree(0),
     methodTreeSentinal(0),
+    objectPools(0),
+    staticTableArray(0),
     codeAllocator(s),
     codeZone(s, &codeAllocator, 64 * 1024)
   { }
@@ -4690,8 +4824,8 @@ class MyProcessor: public Processor {
   virtual void
   initVtable(Thread* t, object c)
   {
-    void* compiled = &singletonBody
-      (t, ::defaultThunk(static_cast<MyThread*>(t)), 0);
+    void* compiled = reinterpret_cast<void*>
+      (::defaultThunk(static_cast<MyThread*>(t)));
 
     for (unsigned i = 0; i < classLength(t, c); ++i) {
       classVtable(t, c, i) = compiled;
@@ -4704,9 +4838,7 @@ class MyProcessor: public Processor {
     PROTECT(t, c);
     
     ACQUIRE(t, t->m->classLock);
-    if (classVmFlags(t, c) & NeedInitFlag
-        and (classVmFlags(t, c) & InitFlag) == 0)
-    {
+    if (classNeedsInit(t, c)) {
       classVmFlags(t, c) |= InitFlag;
       invoke(t, classInitializer(t, c), 0);
       if (t->exception) {
@@ -4722,13 +4854,11 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
 
     if (t == t->m->rootThread) {
-      v->visit(&defaultThunk);
-      v->visit(&nativeThunk);
-      v->visit(&aioobThunk);
-      v->visit(&thunkTable);
       v->visit(&callTable);
       v->visit(&methodTree);
       v->visit(&methodTreeSentinal);
+      v->visit(&objectPools);
+      v->visit(&staticTableArray);
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
@@ -4801,7 +4931,7 @@ class MyProcessor: public Processor {
     
     PROTECT(t, method);
 
-    compile(static_cast<MyThread*>(t), method);
+    compile(static_cast<MyThread*>(t), &codeZone, 0, method);
 
     if (LIKELY(t->exception == 0)) {
       return ::invoke(t, method, &list);
@@ -4832,7 +4962,7 @@ class MyProcessor: public Processor {
 
     PROTECT(t, method);
 
-    compile(static_cast<MyThread*>(t), method);
+    compile(static_cast<MyThread*>(t), &codeZone, 0, method);
 
     if (LIKELY(t->exception == 0)) {
       return ::invoke(t, method, &list);
@@ -4862,7 +4992,7 @@ class MyProcessor: public Processor {
 
       PROTECT(t, method);
       
-      compile(static_cast<MyThread*>(t), method);
+      compile(static_cast<MyThread*>(t), &codeZone, 0, method);
 
       if (LIKELY(t->exception == 0)) {
         return ::invoke(t, method, &list);
@@ -4893,7 +5023,7 @@ class MyProcessor: public Processor {
   virtual object getStackTrace(Thread* vmt, Thread* vmTarget) {
     MyThread* t = static_cast<MyThread*>(vmt);
     MyThread* target = static_cast<MyThread*>(vmTarget);
-    MyProcessor* p = processor(t);
+    MyProcessor* p = this;
 
     class Visitor: public System::ThreadVisitor {
      public:
@@ -4911,8 +5041,7 @@ class MyProcessor: public Processor {
           target->base = base;
           target->stack = stack;
         } else {
-          uint8_t* thunkStart = reinterpret_cast<uint8_t*>
-            (&singletonValue(t, p->thunkTable, 0));
+          uint8_t* thunkStart = p->thunkTable;
           uint8_t* thunkEnd = thunkStart + (p->thunkSize * ThunkCount);
 
           if (static_cast<uint8_t*>(ip) >= thunkStart
@@ -4951,279 +5080,96 @@ class MyProcessor: public Processor {
 
     return visitor.trace;
   }
+
+  virtual void compileThunks(Thread* vmt, BootImage* image, uint8_t* code,
+                             unsigned* offset, unsigned capacity)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+    FixedAllocator allocator(t, code + *offset, capacity);
+
+    ::compileThunks(t, &allocator, this, image, code);
+
+    *offset += allocator.offset;
+  }
+
+  virtual void compileMethod(Thread* vmt, Zone* zone, uint8_t* code,
+                             unsigned* offset, unsigned capacity,
+                             object* constants, object* calls,
+                             DelayedPromise** addresses, object method)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+    FixedAllocator allocator(t, code + *offset, capacity);
+    BootContext bootContext(t, *constants, *calls, *addresses, zone);
+
+    compile(t, &allocator, &bootContext, method);
+
+    *constants = bootContext.constants;
+    *calls = bootContext.calls;
+    *addresses = bootContext.addresses;
+    *offset += allocator.offset;
+  }
+
+  virtual void visitRoots(BootImage* image, HeapWalker* w) {
+    image->methodTree = w->visitRoot(methodTree);
+    image->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
+  }
+
+  virtual unsigned* makeCallTable(Thread* t, BootImage* image, HeapWalker* w,
+                                  uint8_t* code)
+  {
+    image->callCount = callTableSize;
+
+    unsigned* table = static_cast<unsigned*>
+      (t->m->heap->allocate(callTableSize * sizeof(unsigned) * 2));
+
+    unsigned index = 0;
+    for (unsigned i = 0; i < arrayLength(t, callTable); ++i) {
+      for (object p = arrayBody(t, callTable, i); p; p = callNodeNext(t, p)) {
+        table[index++] = callNodeAddress(t, p)
+          - reinterpret_cast<uintptr_t>(code);
+        table[index++] = w->map()->find(callNodeTarget(t, p))
+          | (static_cast<unsigned>(callNodeVirtualCall(t, p)) << BootShift);
+      }
+    }
+
+    return table;
+  }
+
+  virtual void boot(Thread* t, BootImage* image) {
+    if (image) {
+      ::boot(static_cast<MyThread*>(t), image);
+    } else {
+      callTable = makeArray(t, 128, true);
+
+      methodTree = methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
+      set(t, methodTree, TreeNodeLeft, methodTreeSentinal);
+      set(t, methodTree, TreeNodeRight, methodTreeSentinal);
+
+      ::compileThunks(static_cast<MyThread*>(t), &codeZone, this, 0, 0);      
+    }
+
+    segFaultHandler.m = t->m;
+    expect(t, t->m->system->success
+           (t->m->system->handleSegFault(&segFaultHandler)));
+  }
   
   System* s;
   Allocator* allocator;
-  object defaultThunk;
-  object nativeThunk;
-  object aioobThunk;
-  object thunkTable;
+  uint8_t* defaultThunk;
+  uint8_t* nativeThunk;
+  uint8_t* aioobThunk;
+  uint8_t* thunkTable;
   unsigned thunkSize;
   object callTable;
   unsigned callTableSize;
   object methodTree;
   object methodTreeSentinal;
+  object objectPools;
+  object staticTableArray;
   SegFaultHandler segFaultHandler;
   CodeAllocator codeAllocator;
   Zone codeZone;
 };
-
-intptr_t
-getThunk(MyThread* t, Thunk thunk)
-{
-  MyProcessor* p = processor(t);
-  
-  return reinterpret_cast<intptr_t>
-    (&singletonValue(t, p->thunkTable, (thunk * p->thunkSize) / BytesPerWord));
-}
-
-void
-compileThunks(MyThread* t, MyProcessor* p)
-{
-  class ThunkContext {
-   public:
-    class MyPromise: public Promise {
-     public:
-      MyPromise(): resolved_(false) { }
-
-      virtual int64_t value() {
-        return value_;
-      }
-    
-      virtual bool resolved() {
-        return resolved_;
-      }
-    
-      int64_t value_;
-      bool resolved_;
-    };
-
-    ThunkContext(MyThread* t): context(t) { }
-
-    Context context;
-    MyPromise promise;
-  };
-
-  ThunkContext defaultContext(t);
-
-  { Assembler* a = defaultContext.context.assembler;
-      
-    saveStackAndBase(t, a);
-    pushThread(t, a);
-  
-    defaultContext.promise.resolved_ = true;
-    defaultContext.promise.value_ = reinterpret_cast<intptr_t>(compileMethod);
-
-    Assembler::Constant proc(&(defaultContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
-
-    popThread(t, a);
-
-    Assembler::Register result(a->returnLow());
-    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
-  }
-
-  ThunkContext nativeContext(t);
-
-  { Assembler* a = nativeContext.context.assembler;
-      
-    saveStackAndBase(t, a);
-    pushThread(t, a);
-
-    nativeContext.promise.resolved_ = true;
-    nativeContext.promise.value_ = reinterpret_cast<intptr_t>(invokeNative);
-
-    Assembler::Constant proc(&(nativeContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
-  
-    popThread(t, a);
-
-    a->apply(Return);
-  }
-
-  ThunkContext aioobContext(t);
-
-  { Assembler* a = aioobContext.context.assembler;
-      
-    saveStackAndBase(t, a);
-    pushThread(t, a);
-
-    aioobContext.promise.resolved_ = true;
-    aioobContext.promise.value_ = reinterpret_cast<intptr_t>
-      (throwArrayIndexOutOfBounds);
-
-    Assembler::Constant proc(&(aioobContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
-  }
-
-  ThunkContext tableContext(t);
-
-  { Assembler* a = tableContext.context.assembler;
-  
-    saveStackAndBase(t, a);
-
-    Assembler::Constant proc(&(tableContext.promise));
-    a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
-  }
-
-  p->thunkSize = pad(tableContext.context.assembler->length());
-
-  expect(t, codeZone(t)->ensure
-         (codeSingletonSizeInBytes
-          (t, defaultContext.context.assembler->length())
-          + codeSingletonSizeInBytes
-          (t, nativeContext.context.assembler->length())
-          + codeSingletonSizeInBytes
-          (t, aioobContext.context.assembler->length())
-          + codeSingletonSizeInBytes
-          (t, p->thunkSize * ThunkCount)));
-
-  p->defaultThunk = finish(t, defaultContext.context.assembler, "default");
-  p->nativeThunk = finish(t, nativeContext.context.assembler, "native");
-  p->aioobThunk = finish(t, aioobContext.context.assembler, "aioob");
-
-  p->thunkTable = allocateCode(t, p->thunkSize * ThunkCount);
-  uint8_t* start = reinterpret_cast<uint8_t*>
-    (&singletonValue(t, p->thunkTable, 0));
-
-  logCompile(t, start, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
-
-  tableContext.promise.resolved_ = true;
-
-#define THUNK(s)                                                \
-  tableContext.promise.value_ = reinterpret_cast<intptr_t>(s);  \
-  tableContext.context.assembler->writeTo(start);               \
-  start += p->thunkSize;
-
-#include "thunks.cpp"
-
-#undef THUNK
-}
-
-MyProcessor*
-processor(MyThread* t)
-{
-  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
-  if (p->callTable == 0) {
-    ACQUIRE(t, t->m->classLock);
-
-    if (p->callTable == 0) {
-      p->callTable = makeArray(t, 128, true);
-
-      p->methodTree = p->methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
-      set(t, p->methodTree, TreeNodeLeft, p->methodTreeSentinal);
-      set(t, p->methodTree, TreeNodeRight, p->methodTreeSentinal);
-
-      compileThunks(t, p);
-
-      p->segFaultHandler.m = t->m;
-      expect(t, t->m->system->success
-             (t->m->system->handleSegFault(&(p->segFaultHandler))));
-    }
-  }
-  return p;
-}
-
-object
-defaultThunk(MyThread* t)
-{
-  return processor(t)->defaultThunk;
-}
-
-object
-nativeThunk(MyThread* t)
-{
-  return processor(t)->nativeThunk;
-}
-
-object
-aioobThunk(MyThread* t)
-{
-  return processor(t)->aioobThunk;
-}
-
-void
-compile(MyThread* t, object method)
-{
-  MyProcessor* p = processor(t);
-
-  if (methodCompiled(t, method) == p->defaultThunk) {
-    PROTECT(t, method);
-
-    ACQUIRE(t, t->m->classLock);
-    
-    if (methodCompiled(t, method) == p->defaultThunk) {
-      initClass(t, methodClass(t, method));
-      if (UNLIKELY(t->exception)) return;
-
-      if (methodCompiled(t, method) == p->defaultThunk) {
-        object node;
-        object compiled;
-        if (methodFlags(t, method) & ACC_NATIVE) {
-          node = 0;
-          compiled = p->nativeThunk;
-        } else {
-          Context context(t, method);
-          compiled = compile(t, &context);
-          if (UNLIKELY(t->exception)) return;
-          
-          PROTECT(t, compiled);
-
-          if (DebugMethodTree) {
-            fprintf(stderr, "insert method at %p\n",
-                    &singletonValue(t, compiled, 0));
-          }
-
-          // We can't set the MethodCompiled field on the original
-          // method before it is placed into the method tree, since
-          // another thread might call the method, from which stack
-          // unwinding would fail (since there is not yet an entry in
-          // the method tree).  However, we can't insert the original
-          // method into the tree before setting the MethodCompiled
-          // field on it since we rely on that field to determine its
-          // position in the tree.  Therefore, we insert a clone in
-          // its place.  Later, we'll replace the clone with the
-          // original to save memory.
-
-          object clone = makeMethod
-            (t, methodVmFlags(t, method),
-             methodReturnCode(t, method),
-             methodParameterCount(t, method),
-             methodParameterFootprint(t, method),
-             methodFlags(t, method),
-             methodOffset(t, method),
-             methodNativeID(t, method),
-             methodName(t, method),
-             methodSpec(t, method),
-             methodClass(t, method),
-             methodCode(t, method),
-             compiled);
-
-          node = makeTreeNode
-            (t, clone, methodTreeSentinal(t), methodTreeSentinal(t));
-
-          PROTECT(t, node);
-
-          methodTree(t) = treeInsertNode
-            (t, &(context.zone), methodTree(t), reinterpret_cast<intptr_t>
-             (&singletonValue(t, compiled, 0)), node, methodTreeSentinal(t),
-             compareIpToMethodBounds);
-        }
-
-        set(t, method, MethodCompiled, compiled);
-
-        if (methodVirtual(t, method)) {
-          classVtable(t, methodClass(t, method), methodOffset(t, method))
-            = &singletonValue(t, compiled, 0);
-        }
-
-        if (node) {
-          set(t, node, TreeNodeValue, method);
-        }
-      }
-    }
-  }
-}
 
 object
 findCallNode(MyThread* t, void* address)
@@ -5285,30 +5231,533 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
   return newTable;
 }
 
-void
-insertCallNode(MyThread* t, object node)
+object
+insertCallNode(MyThread* t, object table, unsigned* size, object node)
 {
   if (DebugCallTable) {
     fprintf(stderr, "insert call node %p\n",
             reinterpret_cast<void*>(callNodeAddress(t, node)));
   }
 
-  MyProcessor* p = processor(t);
+  PROTECT(t, table);
   PROTECT(t, node);
 
-  ++ p->callTableSize;
+  ++ (*size);
 
-  if (p->callTableSize >= arrayLength(t, p->callTable) * 2) { 
-    p->callTable = resizeTable
-      (t, p->callTable, arrayLength(t, p->callTable) * 2);
+  if (*size >= arrayLength(t, table) * 2) { 
+    table = resizeTable(t, table, arrayLength(t, table) * 2);
   }
 
   intptr_t key = callNodeAddress(t, node);
-  unsigned index = static_cast<uintptr_t>(key)
-    & (arrayLength(t, p->callTable) - 1);
+  unsigned index = static_cast<uintptr_t>(key) & (arrayLength(t, table) - 1);
 
-  set(t, node, CallNodeNext, arrayBody(t, p->callTable, index));
-  set(t, p->callTable, ArrayBody + (index * BytesPerWord), node);
+  set(t, node, CallNodeNext, arrayBody(t, table, index));
+  set(t, table, ArrayBody + (index * BytesPerWord), node);
+
+  return table;
+}
+
+void
+insertCallNode(MyThread* t, object node)
+{
+  MyProcessor* p = processor(t);
+  p->callTable = insertCallNode(t, p->callTable, &(p->callTableSize), node);
+}
+
+object
+makeClassMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
+{
+  object array = makeArray(t, nextPowerOfTwo(count), true);
+  object map = makeHashMap(t, 0, array);
+  PROTECT(t, map);
+  
+  for (unsigned i = 0; i < count; ++i) {
+    object c = bootObject(heap, table[i]);
+    hashMapInsert(t, map, className(t, c), c, byteArrayHash);
+  }
+
+  return map;
+}
+
+object
+makeStaticTableArray(Thread* t, unsigned* table, unsigned count,
+                     uintptr_t* heap)
+{
+  object array = makeArray(t, count, false);
+  
+  for (unsigned i = 0; i < count; ++i) {
+    set(t, array, ArrayBody + (i * BytesPerWord),
+        classStaticTable(t, bootObject(heap, table[i])));
+  }
+
+  return array;
+}
+
+object
+makeStringMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
+{
+  object array = makeArray(t, nextPowerOfTwo(count), true);
+  object map = makeWeakHashMap(t, 0, array);
+  PROTECT(t, map);
+  
+  for (unsigned i = 0; i < count; ++i) {
+    object s = bootObject(heap, table[i]);
+    hashMapInsert(t, map, s, 0, stringHash);
+  }
+
+  return map;
+}
+
+object
+makeCallTable(MyThread* t, uintptr_t* heap, unsigned* calls, unsigned count,
+              uintptr_t base)
+{
+  object table = makeArray(t, nextPowerOfTwo(count), true);
+  PROTECT(t, table);
+
+  unsigned size = 0;
+  for (unsigned i = 0; i < count; ++i) {
+    unsigned address = calls[i * 2];
+    unsigned target = calls[(i * 2) + 1];
+
+    object node = makeCallNode
+       (t, base + address, bootObject(heap, target & BootMask),
+        target >> BootShift, 0);
+
+    table = insertCallNode(t, table, &size, node);
+  }
+
+  return table;
+}
+
+void
+fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
+{
+  for (unsigned word = 0; word < size; ++word) {
+    uintptr_t w = map[word];
+    if (w) {
+      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
+        if (w & (static_cast<uintptr_t>(1) << bit)) {
+          unsigned index = indexOf(word, bit);
+          uintptr_t* p = heap + index;
+          assert(t, *p);
+          
+          uintptr_t number = *p & BootMask;
+          uintptr_t mark = *p >> BootShift;
+
+          if (number) {
+            *p = reinterpret_cast<uintptr_t>(heap + (number - 1)) | mark;
+          } else {
+            *p = mark;
+          }
+        }
+      }
+    }
+  }
+}
+
+void
+fixupCode(Thread*, uintptr_t* map, unsigned size, uint8_t* code,
+          uintptr_t* heap)
+{
+  for (unsigned word = 0; word < size; ++word) {
+    uintptr_t w = map[word];
+    if (w) {
+      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
+        if (w & (static_cast<uintptr_t>(1) << bit)) {
+          unsigned index = indexOf(word, bit);
+          uintptr_t v; memcpy(&v, code + index, BytesPerWord);
+          uintptr_t mark = v >> BootShift;
+          if (mark) {
+            v = reinterpret_cast<uintptr_t>(code + (v & BootMask));
+            memcpy(code + index, &v, BytesPerWord);
+          } else {
+            v = reinterpret_cast<uintptr_t>(heap + v - 1);
+            memcpy(code + index, &v, BytesPerWord);
+          }
+        }
+      }
+    }
+  }
+}
+
+void
+fixupMethods(Thread* t, BootImage* image, uint8_t* code)
+{
+  for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
+    object c = tripleSecond(t, it.next());
+
+    if (classMethodTable(t, c)) {
+      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+        object method = arrayBody(t, classMethodTable(t, c), i);
+        if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
+          assert(t, (methodCompiled(t, method) - image->codeBase)
+                 <= image->codeSize);
+
+          methodCompiled(t, method)
+            = (methodCompiled(t, method) - image->codeBase)
+            + reinterpret_cast<uintptr_t>(code);
+
+          if (DebugCompile and (methodFlags(t, method) & ACC_NATIVE) == 0) {
+            logCompile
+              (static_cast<MyThread*>(t),
+               reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
+               reinterpret_cast<uintptr_t*>
+               (methodCompiled(t, method))[-1],
+               reinterpret_cast<char*>
+               (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
+               reinterpret_cast<char*>
+               (&byteArrayBody(t, methodName(t, method), 0)),
+               reinterpret_cast<char*>
+               (&byteArrayBody(t, methodSpec(t, method), 0)));
+          }
+        }
+      }
+    }
+
+    t->m->processor->initVtable(t, c);
+  }
+}
+
+void
+fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
+{
+  MyProcessor* p = processor(t);
+  
+  p->defaultThunk = code + image->defaultThunk;
+
+  updateCall(t, LongCall, false, code + image->compileMethodCall,
+             voidPointer(::compileMethod));
+
+  p->nativeThunk = code + image->nativeThunk;
+
+  updateCall(t, LongCall, false, code + image->invokeNativeCall,
+             voidPointer(invokeNative));
+
+  p->aioobThunk = code + image->aioobThunk;
+
+  updateCall(t, LongCall, false,
+             code + image->throwArrayIndexOutOfBoundsCall,
+             voidPointer(throwArrayIndexOutOfBounds));
+
+  p->thunkTable = code + image->thunkTable;
+  p->thunkSize = image->thunkSize;
+
+#define THUNK(s)                                                        \
+  updateCall(t, LongJump, false, code + image->s##Call, voidPointer(s));
+
+#include "thunks.cpp"
+
+#undef THUNK
+}
+
+void
+boot(MyThread* t, BootImage* image)
+{
+  assert(t, image->magic == BootImage::Magic);
+
+  unsigned* classTable = reinterpret_cast<unsigned*>(image + 1);
+  unsigned* stringTable = classTable + image->classCount;
+  unsigned* callTable = stringTable + image->stringCount;
+
+  uintptr_t* heapMap = reinterpret_cast<uintptr_t*>
+    (pad(reinterpret_cast<uintptr_t>(callTable + (image->callCount * 2))));
+  unsigned heapMapSizeInWords = ceiling
+    (heapMapSize(image->heapSize), BytesPerWord);
+  uintptr_t* heap = heapMap + heapMapSizeInWords;
+
+//   fprintf(stderr, "heap from %p to %p\n",
+//           heap, heap + ceiling(image->heapSize, BytesPerWord));
+
+  uintptr_t* codeMap = heap + ceiling(image->heapSize, BytesPerWord);
+  unsigned codeMapSizeInWords = ceiling
+    (codeMapSize(image->codeSize), BytesPerWord);
+  uint8_t* code = reinterpret_cast<uint8_t*>(codeMap + codeMapSizeInWords);
+
+//   fprintf(stderr, "code from %p to %p\n",
+//           code, code + image->codeSize);
+ 
+  fixupHeap(t, heapMap, heapMapSizeInWords, heap);
+  
+  t->m->heap->setImmortalHeap(heap, image->heapSize / BytesPerWord);
+
+  t->m->loader = bootObject(heap, image->loader);
+  t->m->types = bootObject(heap, image->types);
+
+  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+  
+  p->methodTree = bootObject(heap, image->methodTree);
+  p->methodTreeSentinal = bootObject(heap, image->methodTreeSentinal);
+
+  fixupCode(t, codeMap, codeMapSizeInWords, code, heap);
+
+  t->m->classMap = makeClassMap(t, classTable, image->classCount, heap);
+  t->m->stringMap = makeStringMap(t, stringTable, image->stringCount, heap);
+
+  p->callTableSize = image->callCount;
+  p->callTable = makeCallTable
+    (t, heap, callTable, image->callCount,
+     reinterpret_cast<uintptr_t>(code));
+
+  p->staticTableArray = makeStaticTableArray
+    (t, classTable, image->classCount, heap);
+
+  fixupThunks(t, image, code);
+
+  fixupMethods(t, image, code);
+
+  t->m->bootstrapClassMap = makeHashMap(t, 0, 0);
+}
+
+intptr_t
+getThunk(MyThread* t, Thunk thunk)
+{
+  MyProcessor* p = processor(t);
+  
+  return reinterpret_cast<intptr_t>
+    (p->thunkTable + (thunk * p->thunkSize));
+}
+
+void
+compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
+              BootImage* image, uint8_t* imageBase)
+{
+  class ThunkContext {
+   public:
+    ThunkContext(MyThread* t, Zone* zone):
+      context(t), promise(t->m->system, zone)
+    { }
+
+    Context context;
+    ListenPromise promise;
+  };
+
+  Zone zone(t->m->system, t->m->heap, 1024);
+  ThunkContext defaultContext(t, &zone);
+
+  { Assembler* a = defaultContext.context.assembler;
+      
+    saveStackAndBase(t, a);
+    pushThread(t, a);
+  
+    Assembler::Constant proc(&(defaultContext.promise));
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+
+    popThread(t, a);
+
+    Assembler::Register result(a->returnLow());
+    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+  }
+
+  ThunkContext nativeContext(t, &zone);
+
+  { Assembler* a = nativeContext.context.assembler;
+      
+    saveStackAndBase(t, a);
+    pushThread(t, a);
+    Assembler::Constant proc(&(nativeContext.promise));
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+  
+    popThread(t, a);
+
+    a->apply(Return);
+  }
+
+  ThunkContext aioobContext(t, &zone);
+
+  { Assembler* a = aioobContext.context.assembler;
+      
+    saveStackAndBase(t, a);
+    pushThread(t, a);
+
+    Assembler::Constant proc(&(aioobContext.promise));
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+  }
+
+  ThunkContext tableContext(t, &zone);
+
+  { Assembler* a = tableContext.context.assembler;
+  
+    saveStackAndBase(t, a);
+
+    Assembler::Constant proc(&(tableContext.promise));
+    a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
+  }
+
+  p->thunkSize = pad(tableContext.context.assembler->length());
+
+  expect(t, codeZone(t)->ensure
+         (codeSingletonSizeInBytes
+          (t, defaultContext.context.assembler->length())
+          + codeSingletonSizeInBytes
+          (t, nativeContext.context.assembler->length())
+          + codeSingletonSizeInBytes
+          (t, aioobContext.context.assembler->length())
+          + codeSingletonSizeInBytes
+          (t, p->thunkSize * ThunkCount)));
+
+  p->defaultThunk = finish
+    (t, allocator, defaultContext.context.assembler, "default");
+
+  { uint8_t* call = static_cast<uint8_t*>
+      (defaultContext.promise.listener->resolve
+       (reinterpret_cast<intptr_t>(voidPointer(compileMethod))));
+
+    if (image) {
+      image->defaultThunk = p->defaultThunk - imageBase;
+      image->compileMethodCall = call - imageBase;
+    }
+  }
+
+  p->nativeThunk = finish
+    (t, allocator, nativeContext.context.assembler, "native");
+
+  { uint8_t* call = static_cast<uint8_t*>
+      (nativeContext.promise.listener->resolve
+       (reinterpret_cast<intptr_t>(voidPointer(invokeNative))));
+
+    if (image) {
+      image->nativeThunk = p->nativeThunk - imageBase;
+      image->invokeNativeCall = call - imageBase;
+    }
+  }
+
+  p->aioobThunk = finish
+    (t, allocator, aioobContext.context.assembler, "aioob");
+
+  { uint8_t* call = static_cast<uint8_t*>
+      (aioobContext.promise.listener->resolve
+       (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds))));
+
+    if (image) {
+      image->aioobThunk = p->aioobThunk - imageBase;
+      image->throwArrayIndexOutOfBoundsCall = call - imageBase;
+    }
+  }
+
+  p->thunkTable = static_cast<uint8_t*>
+    (allocator->allocate(p->thunkSize * ThunkCount));
+
+  if (image) {
+    image->thunkTable = p->thunkTable - imageBase;
+    image->thunkSize = p->thunkSize;
+  }
+
+  logCompile(t, p->thunkTable, p->thunkSize * ThunkCount, 0, "thunkTable", 0);
+
+  uint8_t* start = p->thunkTable;
+
+#define THUNK(s)                                                        \
+  tableContext.context.assembler->writeTo(start);                       \
+  start += p->thunkSize;                                                \
+  { uint8_t* call = static_cast<uint8_t*>                               \
+      (tableContext.promise.listener->resolve                           \
+       (reinterpret_cast<intptr_t>(voidPointer(s))));                   \
+    if (image) {                                                        \
+      image->s##Call = call - imageBase;                                \
+    }                                                                   \
+  }
+
+#include "thunks.cpp"
+
+#undef THUNK
+}
+
+MyProcessor*
+processor(MyThread* t)
+{
+  return static_cast<MyProcessor*>(t->m->processor);
+}
+
+object&
+objectPools(MyThread* t)
+{
+  return processor(t)->objectPools;
+}
+
+uintptr_t
+defaultThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->defaultThunk);
+}
+
+uintptr_t
+nativeThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->nativeThunk);
+}
+
+uintptr_t
+aioobThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->aioobThunk);
+}
+
+void
+compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+        object method)
+{
+  PROTECT(t, method);
+
+  if (bootContext == 0) {
+    initClass(t, methodClass(t, method));
+    if (UNLIKELY(t->exception)) return;
+  }
+
+  if (methodAddress(t, method) == defaultThunk(t)) {
+    ACQUIRE(t, t->m->classLock);
+    
+    if (methodAddress(t, method) == defaultThunk(t)) {
+      assert(t, (methodFlags(t, method) & ACC_NATIVE) == 0);
+
+      Context context(t, bootContext, method);
+      uint8_t* compiled = compile(t, allocator, &context);
+      if (UNLIKELY(t->exception)) return;
+
+      if (DebugMethodTree) {
+        fprintf(stderr, "insert method at %p\n", compiled);
+      }
+
+      // We can't set the MethodCompiled field on the original method
+      // before it is placed into the method tree, since another
+      // thread might call the method, from which stack unwinding
+      // would fail (since there is not yet an entry in the method
+      // tree).  However, we can't insert the original method into the
+      // tree before setting the MethodCompiled field on it since we
+      // rely on that field to determine its position in the tree.
+      // Therefore, we insert a clone in its place.  Later, we'll
+      // replace the clone with the original to save memory.
+
+      object clone = makeMethod
+        (t, methodVmFlags(t, method),
+         methodReturnCode(t, method),
+         methodParameterCount(t, method),
+         methodParameterFootprint(t, method),
+         methodFlags(t, method),
+         methodOffset(t, method),
+         methodNativeID(t, method),
+         methodName(t, method),
+         methodSpec(t, method),
+         methodClass(t, method),
+         methodCode(t, method),
+         reinterpret_cast<intptr_t>(compiled));
+
+      methodTree(t) = treeInsert
+        (t, &(context.zone), methodTree(t),
+         reinterpret_cast<intptr_t>(compiled), clone, methodTreeSentinal(t),
+         compareIpToMethodBounds);
+
+      methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
+
+      if (methodVirtual(t, method)) {
+        classVtable(t, methodClass(t, method), methodOffset(t, method))
+          = compiled;
+      }
+
+      treeUpdate(t, methodTree(t), reinterpret_cast<intptr_t>(compiled),
+                 method, methodTreeSentinal(t), compareIpToMethodBounds);
+    }
+  }
 }
 
 object&

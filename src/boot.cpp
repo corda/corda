@@ -15,6 +15,34 @@
 // ourselves:
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 
+#ifdef BOOT_IMAGE
+
+#ifdef __MINGW32__
+#  define EXPORT __declspec(dllexport)
+#  define SYMBOL(x) binary_bootimage_bin_##x
+#else
+#  define EXPORT __attribute__ ((visibility("default")))
+#  define SYMBOL(x) _binary_bootimage_bin_##x
+#endif
+
+extern "C" {
+
+  extern const uint8_t SYMBOL(start)[];
+  extern const uint8_t SYMBOL(end)[];
+
+  EXPORT const uint8_t*
+  bootimageBin(unsigned* size)
+  {
+    *size = SYMBOL(end) - SYMBOL(start);
+    return SYMBOL(start);
+  }
+
+}
+
+#endif//BOOT_IMAGE
+
+#ifdef BOOT_CLASSPATH
+
 #ifdef __MINGW32__
 #  define EXPORT __declspec(dllexport)
 #  define SYMBOL(x) binary_classpath_jar_##x
@@ -36,3 +64,5 @@ extern "C" {
   }
 
 }
+
+#endif//BOOT_CLASSPATH

@@ -135,6 +135,38 @@ class Task {
   Task* next;
 };
 
+void*
+resolveOffset(System* s, uint8_t* instruction, unsigned instructionSize,
+              int64_t value)
+{
+  intptr_t v = reinterpret_cast<uint8_t*>(value)
+    - instruction - instructionSize;
+    
+  expect(s, isInt32(v));
+    
+  int32_t v4 = v;
+  memcpy(instruction + instructionSize - 4, &v4, 4);
+  return instruction + instructionSize;
+}
+
+class OffsetListener: public Promise::Listener {
+ public:
+  OffsetListener(System* s, uint8_t* instruction,
+                 unsigned instructionSize):
+    s(s),
+    instruction(instruction),
+    instructionSize(instructionSize)
+  { }
+
+  virtual void* resolve(int64_t value) {
+    return resolveOffset(s, instruction, instructionSize, value);
+  }
+
+  System* s;
+  uint8_t* instruction;
+  unsigned instructionSize;
+};
+
 class OffsetTask: public Task {
  public:
   OffsetTask(Task* next, Promise* promise, unsigned instructionOffset,
@@ -146,14 +178,14 @@ class OffsetTask: public Task {
   { }
 
   virtual void run(Context* c) {
-    uint8_t* instruction = c->result + instructionOffset;
-    intptr_t v = reinterpret_cast<uint8_t*>(promise->value())
-      - instruction - instructionSize;
-    
-    expect(c, isInt32(v));
-    
-    int32_t v4 = v;
-    memcpy(instruction + instructionSize - 4, &v4, 4);
+    if (promise->resolved()) {
+      resolveOffset
+        (c->s, c->result + instructionOffset, instructionSize,
+         promise->value());
+    } else {
+      new (promise->listen(sizeof(OffsetListener)))
+        OffsetListener(c->s, c->result + instructionOffset, instructionSize);
+    }
   }
 
   Promise* promise;
@@ -169,28 +201,73 @@ appendOffsetTask(Context* c, Promise* promise, int instructionOffset,
     (c->tasks, promise, instructionOffset, instructionSize);
 }
 
+void
+copy(System* s, void* dst, int64_t src, unsigned size)
+{
+  switch (size) {
+  case 4: {
+    int32_t v = src;
+    memcpy(dst, &v, 4);
+  } break;
+
+  case 8: {
+    int64_t v = src;
+    memcpy(dst, &v, 8);
+  } break;
+
+  default: abort(s);
+  }
+}
+
+class ImmediateListener: public Promise::Listener {
+ public:
+  ImmediateListener(System* s, void* dst, unsigned size, unsigned offset):
+    s(s), dst(dst), size(size), offset(offset)
+  { }
+
+  virtual void* resolve(int64_t value) {
+    copy(s, dst, value, size);
+    return static_cast<uint8_t*>(dst) + offset;
+  }
+
+  System* s;
+  void* dst;
+  unsigned size;
+  unsigned offset;
+};
+
 class ImmediateTask: public Task {
  public:
-  ImmediateTask(Task* next, Promise* promise, unsigned offset):
+  ImmediateTask(Task* next, Promise* promise, unsigned offset, unsigned size,
+                unsigned promiseOffset):
     Task(next),
     promise(promise),
-    offset(offset)
+    offset(offset),
+    size(size),
+    promiseOffset(promiseOffset)
   { }
 
   virtual void run(Context* c) {
-    intptr_t v = promise->value();
-    memcpy(c->result + offset, &v, BytesPerWord);
+    if (promise->resolved()) {
+      copy(c->s, c->result + offset, promise->value(), size);
+    } else {
+      new (promise->listen(sizeof(ImmediateListener)))
+        ImmediateListener(c->s, c->result + offset, size, promiseOffset);
+    }
   }
 
   Promise* promise;
   unsigned offset;
+  unsigned size;
+  unsigned promiseOffset;
 };
 
 void
-appendImmediateTask(Context* c, Promise* promise, unsigned offset)
+appendImmediateTask(Context* c, Promise* promise, unsigned offset,
+                    unsigned size, unsigned promiseOffset = 0)
 {
   c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
-    (c->tasks, promise, offset);
+    (c->tasks, promise, offset, size, promiseOffset);
 }
 
 void
@@ -306,6 +383,10 @@ void
 moveCR(Context*, unsigned, Assembler::Constant*, Assembler::Register*);
 
 void
+moveCR2(Context*, unsigned, Assembler::Constant*, Assembler::Register*,
+        unsigned promiseOffset);
+
+void
 callR(Context*, unsigned, Assembler::Register*);
 
 void
@@ -323,7 +404,7 @@ longCallC(Context* c, unsigned size, Assembler::Constant* a)
 
   if (BytesPerWord == 8) {
     Assembler::Register r(r10);
-    moveCR(c, size, a, &r);
+    moveCR2(c, size, a, &r, 11);
     callR(c, size, &r);
   } else {
     callC(c, size, a);
@@ -382,7 +463,7 @@ longJumpC(Context* c, unsigned size, Assembler::Constant* a)
 
   if (BytesPerWord == 8) {
     Assembler::Register r(r10);
-    moveCR(c, size, a, &r);
+    moveCR2(c, size, a, &r, 11);
     jumpR(c, size, &r);
   } else {
     jumpC(c, size, a);
@@ -480,7 +561,7 @@ pushC(Context* c, unsigned size, Assembler::Constant* a)
     } else {
       if (BytesPerWord == 4) {
         c->code.append(0x68);
-        appendImmediateTask(c, a->value, c->code.length());
+        appendImmediateTask(c, a->value, c->code.length(), BytesPerWord);
         c->code.appendAddress(static_cast<uintptr_t>(0));
       } else {
         Assembler::Register tmp(c->client->acquireTemporary());
@@ -627,8 +708,8 @@ leaMR(Context* c, unsigned size, Assembler::Memory* b, Assembler::Register* a)
 }
 
 void
-moveCR(Context* c, unsigned size, Assembler::Constant* a,
-       Assembler::Register* b)
+moveCR2(Context* c, unsigned size, Assembler::Constant* a,
+        Assembler::Register* b, unsigned promiseOffset)
 {
   if (BytesPerWord == 4 and size == 8) {
     int64_t v = a->value->value();
@@ -649,49 +730,18 @@ moveCR(Context* c, unsigned size, Assembler::Constant* a,
     if (a->value->resolved()) {
       c->code.appendAddress(a->value->value());
     } else {
-      appendImmediateTask(c, a->value, c->code.length());
+      appendImmediateTask
+        (c, a->value, c->code.length(), BytesPerWord, promiseOffset);
       c->code.appendAddress(static_cast<uintptr_t>(0));
     }
   }
 }
 
 void
-moveCM(Context* c, unsigned size, Assembler::Constant* a,
-       Assembler::Memory* b)
+moveCR(Context* c, unsigned size, Assembler::Constant* a,
+       Assembler::Register* b)
 {
-  int64_t v = a->value->value();
-
-  switch (size) {
-  case 1:
-    encode(c, 0xc6, 0, b, false);
-    c->code.append(a->value->value());
-    break;
-
-  case 2:
-    encode2(c, 0x66c7, 0, b, false);
-    c->code.append2(a->value->value());
-    break;
-
-  case 4:
-    encode(c, 0xc7, 0, b, false);
-    c->code.append4(a->value->value());
-    break;
-
-  case 8: {
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
-
-    moveCM(c, 4, &al, b);
-    moveCM(c, 4, &ah, &bh);
-  } break;
-
-  default: abort(c);
-  }
+  moveCR2(c, size, a, b, 0);
 }
 
 void
@@ -776,6 +826,62 @@ moveRM(Context* c, unsigned size, Assembler::Register* a, Assembler::Memory* b)
 
     default: abort(c);
     }
+  }
+}
+
+void
+moveCM(Context* c, unsigned size, Assembler::Constant* a,
+       Assembler::Memory* b)
+{
+  switch (size) {
+  case 1:
+    encode(c, 0xc6, 0, b, false);
+    c->code.append(a->value->value());
+    break;
+
+  case 2:
+    encode2(c, 0x66c7, 0, b, false);
+    c->code.append2(a->value->value());
+    break;
+
+  case 4:
+    encode(c, 0xc7, 0, b, false);
+    if (a->value->resolved()) {
+      c->code.append4(a->value->value());
+    } else {
+      appendImmediateTask(c, a->value, c->code.length(), 4);
+      c->code.append4(0);
+    }
+    break;
+
+  case 8: {
+    if (BytesPerWord == 8) {
+      if(a->value->resolved() and isInt32(a->value->value())) {
+        encode(c, 0xc7, 0, b, true);
+        c->code.append4(a->value->value());
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, 8, a, &tmp);
+        moveRM(c, 8, &tmp, b);
+        c->client->releaseTemporary(tmp.low);
+      }
+    } else {
+      int64_t v = a->value->value();
+
+      ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+      Assembler::Constant ah(&high);
+
+      ResolvedPromise low(v & 0xFFFFFFFF);
+      Assembler::Constant al(&low);
+
+      Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
+
+      moveCM(c, 4, &al, b);
+      moveCM(c, 4, &ah, &bh);
+    }
+  } break;
+
+  default: abort(c);
   }
 }
 
@@ -1640,9 +1746,9 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
 {
   assert(c, BytesPerWord == 8 or size == 4);
   
-  int64_t v = a->value->value();
+  if (a->value->resolved() and isInt32(a->value->value())) {
+    int64_t v = a->value->value();
 
-  if (isInt32(v)) {
     if (size == 8) rex(c);
     if (isInt8(v)) {
       c->code.append(0x83);
@@ -1662,25 +1768,6 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-compareCM(Context* c, unsigned size UNUSED, Assembler::Constant* a,
-          Assembler::Memory* b)
-{
-  assert(c, BytesPerWord == 8 or size == 4);
-  
-  int64_t v = a->value->value();
-
-  encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
-
-  if (isInt8(v)) {
-    c->code.append(v);
-  } else if (isInt32(v)) {
-    c->code.append4(v);
-  } else {
-    abort(c);
-  }
-}
-
-void
 compareRM(Context* c, unsigned size, Assembler::Register* a,
           Assembler::Memory* b)
 {
@@ -1690,6 +1777,32 @@ compareRM(Context* c, unsigned size, Assembler::Register* a,
     move4To8RR(c, size, a, a);
   }
   encode(c, 0x39, a->low, b, true);
+}
+
+void
+compareCM(Context* c, unsigned size, Assembler::Constant* a,
+          Assembler::Memory* b)
+{
+  assert(c, BytesPerWord == 8 or size == 4);
+  
+  if (a->value->resolved()) {
+    int64_t v = a->value->value();
+    
+    encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
+    
+    if (isInt8(v)) {
+      c->code.append(v);
+    } else if (isInt32(v)) {
+      c->code.append4(v);
+    } else {
+      abort(c);
+    }
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, size, a, &tmp);
+    compareRM(c, size, &tmp, b);
+    c->client->releaseTemporary(tmp.low);
+  }
 }
 
 void
@@ -2192,14 +2305,36 @@ class MyAssembler: public Assembler {
     return c.code.length();
   }
 
-  virtual void updateCall(void* returnAddress, void* newTarget) {
-    uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-    assert(&c, *instruction == 0xE8);
-    assert(&c, reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+  virtual void updateCall(UnaryOperation op UNUSED,
+                          bool assertAlignment UNUSED, void* returnAddress,
+                          void* newTarget)
+  {
+    if (BytesPerWord == 4 or op == Call or op == Jump) {
+      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
 
-    int32_t v = static_cast<uint8_t*>(newTarget)
-      - static_cast<uint8_t*>(returnAddress);
-    memcpy(instruction + 1, &v, 4);
+      assert(&c, ((op == Call or op == LongCall) and *instruction == 0xE8)
+             or ((op == Jump or op == LongJump) and *instruction == 0xE9));
+
+      assert(&c, (not assertAlignment)
+             or reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+      
+      int32_t v = static_cast<uint8_t*>(newTarget)
+        - static_cast<uint8_t*>(returnAddress);
+      memcpy(instruction + 1, &v, 4);
+    } else {
+      uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 13;
+
+      assert(&c, instruction[0] == 0x49 and instruction[1] == 0xBA);
+      assert(&c, instruction[10] == 0x41 and instruction[11] == 0xFF);
+
+      assert(&c, (op == LongCall and instruction[12] == 0xD2)
+             or (op == LongJump and instruction[12] == 0xE2));
+
+      assert(&c, (not assertAlignment)
+             or reinterpret_cast<uintptr_t>(instruction + 2) % 8 == 0);
+      
+      memcpy(instruction + 2, &newTarget, 8);
+    }
   }
 
   virtual void dispose() {

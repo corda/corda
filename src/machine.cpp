@@ -249,38 +249,6 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
 }
 
 void
-walk(Thread* t, Heap::Walker* w, object o, unsigned start)
-{
-  object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
-  object objectMask = static_cast<object>
-    (t->m->heap->follow(classObjectMask(t, class_)));
-
-  if (objectMask) {
-    unsigned fixedSize = classFixedSize(t, class_);
-    unsigned arrayElementSize = classArrayElementSize(t, class_);
-    unsigned arrayLength
-      = (arrayElementSize ?
-         cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
-
-    uint32_t mask[intArrayLength(t, objectMask)];
-    memcpy(mask, &intArrayBody(t, objectMask, 0),
-           intArrayLength(t, objectMask) * 4);
-
-    walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
-  } else if (classVmFlags(t, class_) & SingletonFlag) {
-    unsigned length = singletonLength(t, o);
-    if (length) {
-      walk(t, w, singletonMask(t, o),
-           (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
-    } else if (start == 0) {
-      w->visit(0);
-    }
-  } else if (start == 0) {
-    w->visit(0);
-  }
-}
-
-void
 finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 {
   v->visit(&finalizerTarget(t, *p));
@@ -1534,6 +1502,88 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
   hashMapInsert(t, t->m->bootstrapClassMap, n, class_, byteArrayHash);
 }
 
+void
+boot(Thread* t)
+{
+  Machine* m = t->m;
+
+  m->unsafe = true;
+
+  m->loader = allocate(t, sizeof(void*) * 3, true);
+  memset(m->loader, 0, sizeof(void*) * 2);
+
+  m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
+  arrayLength(t, m->types) = TypeCount;
+  memset(&arrayBody(t, m->types, 0), 0, TypeCount * BytesPerWord);
+
+#include "type-initializations.cpp"
+
+  object arrayClass = arrayBody(t, m->types, Machine::ArrayType);
+  set(t, m->types, 0, arrayClass);
+
+  object loaderClass = arrayBody
+    (t, m->types, Machine::SystemClassLoaderType);
+  set(t, m->loader, 0, loaderClass);
+
+  object objectClass = arrayBody(t, m->types, Machine::JobjectType);
+
+  object classClass = arrayBody(t, m->types, Machine::ClassType);
+  set(t, classClass, 0, classClass);
+  set(t, classClass, ClassSuper, objectClass);
+
+  object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
+  set(t, intArrayClass, 0, classClass);
+  set(t, intArrayClass, ClassSuper, objectClass);
+
+  m->unsafe = false;
+
+  classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+    |= SingletonFlag;
+
+  classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
+    |= ReferenceFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
+    |= ReferenceFlag | WeakReferenceFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
+    |= ReferenceFlag | WeakReferenceFlag;
+
+  classVmFlags(t, arrayBody(t, m->types, Machine::JbooleanType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JbyteType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JcharType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JshortType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JintType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JlongType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JfloatType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JdoubleType))
+    |= PrimitiveFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
+    |= PrimitiveFlag;
+
+  m->bootstrapClassMap = makeHashMap(t, 0, 0);
+
+  m->classMap = makeHashMap(t, 0, 0);
+
+  m->stringMap = makeWeakHashMap(t, 0, 0);
+
+  m->processor->boot(t, 0);
+
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
+    codeBody(t, bootCode, 0) = impdep1;
+    object bootMethod = makeMethod
+      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
+    PROTECT(t, bootMethod);
+
+#include "type-java-initializations.cpp"
+  }
+}
+
 class HeapClient: public Heap::Client {
  public:
   HeapClient(Machine* m): m(m) { }
@@ -1648,6 +1698,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   referenceLock(0),
   libraries(0),
   loader(0),
+  classMap(0),
   bootstrapClassMap(0),
   monitorMap(0),
   stringMap(0),
@@ -1748,86 +1799,32 @@ Thread::init()
       abort(this);
     }
 
-    Thread* t = this;
+    BootImage* image = 0;
+    const char* imageFunctionName = findProperty(m, "avian.bootimage");
+    if (imageFunctionName) {
+      void* p = m->libraries->resolve(imageFunctionName);
+      if (p) {
+        BootImage* (*function)(unsigned*);
+        memcpy(&function, &p, BytesPerWord);
 
-    t->m->loader = allocate(t, sizeof(void*) * 3, true);
-    memset(t->m->loader, 0, sizeof(void*) * 2);
-
-    t->m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
-    arrayLength(t, t->m->types) = TypeCount;
-    memset(&arrayBody(t, t->m->types, 0), 0, TypeCount * BytesPerWord);
-
-#include "type-initializations.cpp"
-
-    object arrayClass = arrayBody(t, t->m->types, Machine::ArrayType);
-    set(t, t->m->types, 0, arrayClass);
-
-    object loaderClass = arrayBody
-      (t, t->m->types, Machine::SystemClassLoaderType);
-    set(t, t->m->loader, 0, loaderClass);
-
-    object objectClass = arrayBody(t, m->types, Machine::JobjectType);
-
-    object classClass = arrayBody(t, m->types, Machine::ClassType);
-    set(t, classClass, 0, classClass);
-    set(t, classClass, ClassSuper, objectClass);
-
-    object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
-    set(t, intArrayClass, 0, classClass);
-    set(t, intArrayClass, ClassSuper, objectClass);
+        unsigned size;
+        image = function(&size);
+      }
+    }
 
     m->unsafe = false;
 
-    classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
-      |= SingletonFlag;
-
-    classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
-      |= ReferenceFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
-      |= ReferenceFlag | WeakReferenceFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
-      |= ReferenceFlag | WeakReferenceFlag;
-
-    classVmFlags(t, arrayBody(t, m->types, Machine::JbooleanType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JbyteType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JcharType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JshortType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JintType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JlongType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JfloatType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JdoubleType))
-      |= PrimitiveFlag;
-    classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
-      |= PrimitiveFlag;
-
-    m->bootstrapClassMap = makeHashMap(this, 0, 0);
-
-    { object loaderMap = makeHashMap(this, 0, 0);
-      set(t, m->loader, SystemClassLoaderMap, loaderMap);
+    if (image) {
+      m->processor->boot(this, image);
+    } else {
+      boot(this);
     }
 
     m->monitorMap = makeWeakHashMap(this, 0, 0);
-    m->stringMap = makeWeakHashMap(this, 0, 0);
 
     m->jniMethodTable = makeVector(this, 0, 0, false);
 
     m->localThread->set(this);
-
-    { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
-      codeBody(t, bootCode, 0) = impdep1;
-      object bootMethod = makeMethod
-        (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
-      PROTECT(t, bootMethod);
-
-#include "type-java-initializations.cpp"
-    }
   } else {
     peer = parent->child;
     parent->child = this;
@@ -2108,7 +2105,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   case Machine::ImmortalAllocation: {
     unsigned total;
     object o = static_cast<object>
-      (t->m->heap->allocateImmortal
+      (t->m->heap->allocateImmortalFixed
        (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
     cast<uintptr_t>(o, 0) = FixedMark;
@@ -2329,8 +2326,7 @@ findLoadedClass(Thread* t, object spec)
   PROTECT(t, spec);
   ACQUIRE(t, t->m->classLock);
 
-  return hashMapFind(t, systemClassLoaderMap(t, t->m->loader),
-                     spec, byteArrayHash, byteArrayEqual);
+  return hashMapFind(t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
 }
 
 object
@@ -2434,8 +2430,9 @@ resolveClass(Thread* t, object spec)
   PROTECT(t, spec);
   ACQUIRE(t, t->m->classLock);
 
-  object class_ = hashMapFind(t, systemClassLoaderMap(t, t->m->loader),
-                              spec, byteArrayHash, byteArrayEqual);
+  object class_ = hashMapFind
+    (t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
+
   if (class_ == 0) {
     if (byteArrayBody(t, spec, 0) == '[') {
       class_ = hashMapFind
@@ -2487,8 +2484,7 @@ resolveClass(Thread* t, object spec)
     if (class_) {
       PROTECT(t, class_);
 
-      hashMapInsert(t, systemClassLoaderMap(t, t->m->loader),
-                    spec, class_, byteArrayHash);
+      hashMapInsert(t, t->m->classMap, spec, class_, byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
       t->exception = makeClassNotFoundException(t, message);
@@ -2770,6 +2766,38 @@ collect(Thread* t, Heap::CollectionType type)
 #endif
 }
 
+void
+walk(Thread* t, Heap::Walker* w, object o, unsigned start)
+{
+  object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
+  object objectMask = static_cast<object>
+    (t->m->heap->follow(classObjectMask(t, class_)));
+
+  if (objectMask) {
+    unsigned fixedSize = classFixedSize(t, class_);
+    unsigned arrayElementSize = classArrayElementSize(t, class_);
+    unsigned arrayLength
+      = (arrayElementSize ?
+         cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
+
+    uint32_t mask[intArrayLength(t, objectMask)];
+    memcpy(mask, &intArrayBody(t, objectMask, 0),
+           intArrayLength(t, objectMask) * 4);
+
+    ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
+  } else if (classVmFlags(t, class_) & SingletonFlag) {
+    unsigned length = singletonLength(t, o);
+    if (length) {
+      ::walk(t, w, singletonMask(t, o),
+             (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
+    } else if (start == 0) {
+      w->visit(0);
+    }
+  } else if (start == 0) {
+    w->visit(0);
+  }
+}
+
 int
 walkNext(Thread* t, object o, int previous)
 {
@@ -2793,6 +2821,7 @@ void
 visitRoots(Machine* m, Heap::Visitor* v)
 {
   v->visit(&(m->loader));
+  v->visit(&(m->classMap));
   v->visit(&(m->bootstrapClassMap));
   v->visit(&(m->monitorMap));
   v->visit(&(m->stringMap));
