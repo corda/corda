@@ -230,12 +230,17 @@ endif
 bootimage-generator-sources = $(src)/bootimage.cpp 
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
-bootimage-generator = $(native-build)/bootimage-generator
+bootimage-generator = \
+	$(build)/$(build-platform)-$(build-arch)-compile-fast/bootimage-generator
 
 bootimage-bin = $(native-build)/bootimage.bin
 bootimage-object = $(native-build)/bootimage-bin.o
 
 ifeq ($(bootimage),true)
+	ifneq ($(build-arch),$(arch))
+		error "can't cross-build a bootimage"
+	endif
+
 	vm-classpath-object = $(bootimage-object)
 	cflags += -DBOOT_IMAGE=\"bootimageBin\"
 else
@@ -450,7 +455,16 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage-generator): \
+$(bootimage-generator):
+	(unset MAKEFLAGS && \
+	 make mode=fast process=compile \
+		arch=$(build-arch) \
+		platform=$(build-platform) \
+		bootimage-generator= \
+		build-bootimage-generator=$(bootimage-generator) \
+		$(bootimage-generator))
+
+$(build-bootimage-generator): \
 		$(vm-objects) $(classpath-object) $(jni-objects) $(heapwalk-objects) \
 		$(bootimage-generator-objects)
 	@echo "linking $(@)"
