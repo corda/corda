@@ -143,5 +143,24 @@ public class Misc {
       foo.array = new int[3];
       foo.a = (foo.a + 1) % foo.array.length;
     }
+
+    { boolean foo = false;
+      boolean iconic = false;
+      do {
+        zap();
+        iconic = foo ? true : false;
+      } while (foo);
+      zap();
+    }
+
+    { int x = 0;
+      if (x == 0) {
+        x = 1;
+        do {
+          int y = x;
+          x = 1;
+        } while (x != 1);
+      }
+    }
   }
 }
