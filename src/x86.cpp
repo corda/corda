@@ -1507,6 +1507,7 @@ multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
     }
   }
 }
+
 void
 longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
             Assembler::Operand* bl, Assembler::Operand* bh,
@@ -1640,21 +1641,6 @@ divideRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-divideCR(Context* c, unsigned aSize, Assembler::Constant* a,
-         unsigned bSize, Assembler::Register* b)
-{
-  assert(c, BytesPerWord == 8 or aSize == 4);
-  assert(c, aSize == bSize);
-
-  const uint32_t mask = ~((1 << rax) | (1 << rdx));
-  Assembler::Register tmp(c->client->acquireTemporary(mask));
-  moveCR(c, aSize, a, aSize, &tmp);
-  divideRR(c, aSize, &tmp, bSize, b);
-  c->client->releaseTemporary(tmp.low);  
-}
-
-
-void
 remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
             unsigned bSize UNUSED, Assembler::Register* b)
 {
@@ -1676,20 +1662,6 @@ remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
   moveRR(c, BytesPerWord, &dx, BytesPerWord, b);
 
   c->client->restore(rdx);
-}
-
-void
-remainderCR(Context* c, unsigned aSize, Assembler::Constant* a,
-            unsigned bSize, Assembler::Register* b)
-{
-  assert(c, BytesPerWord == 8 or aSize == 4);
-  assert(c, aSize == bSize);
-
-  const uint32_t mask = ~((1 << rax) | (1 << rdx));
-  Assembler::Register tmp(c->client->acquireTemporary(mask));
-  moveCR(c, aSize, a, aSize, &tmp);
-  remainderRR(c, aSize, &tmp, bSize, b);
-  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -1959,10 +1931,8 @@ populateTables(ArchitectureContext* c)
   bo[index(Multiply, C, R)] = CAST2(multiplyCR);
 
   bo[index(Divide, R, R)] = CAST2(divideRR);
-  bo[index(Divide, C, R)] = CAST2(divideCR);
 
   bo[index(Remainder, R, R)] = CAST2(remainderRR);
-  bo[index(Remainder, C, R)] = CAST2(remainderCR);
 
   bo[index(LongCompare, C, R)] = CAST2(longCompareCR);
   bo[index(LongCompare, R, R)] = CAST2(longCompareRR);
@@ -2171,6 +2141,7 @@ class MyArchitecture: public Assembler::Architecture {
         *bTypeMask = ~0;
         *thunk = true;        
       } else {
+        *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = ~((1 << rax) | (1 << rdx));
         *bRegisterMask = 1 << rax;      
       }
@@ -2181,6 +2152,7 @@ class MyArchitecture: public Assembler::Architecture {
         *bTypeMask = ~0;
         *thunk = true;
       } else {
+        *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = ~((1 << rax) | (1 << rdx));
         *bRegisterMask = 1 << rax;      
       }
