@@ -1895,7 +1895,7 @@ releaseRegister(Context* c, Value* v, unsigned frameIndex,
     }
   }
 
-  if (not remaining) {
+  if (live(v) and not remaining) {
     move(c, c->stack, c->locals, sizeInBytes, v, source,
          frameSite(c, frameIndex));
   }
@@ -2034,6 +2034,16 @@ replace(Context* c, Register* r, Value* newValue, Stack* stack, Local* locals)
   return s;
 }
 
+bool
+buddies(Value* a, Value* b)
+{
+  if (a == b) return true;
+  for (Value* p = a->buddy; p != a; p = p->buddy) {
+    if (p == b) return true;
+  }
+  return false;
+}
+
 Register*
 acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
         unsigned newSize, Value* newValue, RegisterSite* newSite)
@@ -2057,7 +2067,11 @@ acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
         and oldValue != newValue
         and findSite(c, oldValue, r->site))
     {
-      if (r->freezeCount or (not trySteal(c, r, newValue, stack, locals))) {
+      if (buddies(oldValue, newValue)) {
+        removeSite(c, oldValue, r->site);
+      } else if (r->freezeCount
+                 or (not trySteal(c, r, newValue, stack, locals)))
+      {
         r = replace(c, r, newValue, stack, locals);
       }
     }
@@ -2169,7 +2183,9 @@ acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
       and oldValue != newValue
       and findSite(c, oldValue, r->site))
   {
-    if (not trySteal(c, r, newValue, stack, locals)) {
+    if (buddies(oldValue, newValue)) {
+      removeSite(c, oldValue, r->site);
+    } else if (not trySteal(c, r, newValue, stack, locals)) {
       abort(c);
     }
   }
@@ -3695,7 +3711,7 @@ resolveJunctionSites(Context* c, Event* e)
       if (e->junctionSites[el.localIndex]) {
         frozenSiteIndex = resolveJunctionSite
           (c, e, el.value, el.localIndex, frameIndex(c, &el), frozenSites,
-           frozenSiteIndex);      
+           frozenSiteIndex);
       }
     }
   } else {
