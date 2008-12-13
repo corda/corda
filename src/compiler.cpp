@@ -3728,11 +3728,6 @@ resolveJunctionSites(Context* c, Event* e)
               e->junctionSites, e->logicalInstruction->index);
     }
 
-    for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
-      FrameIterator::Element el = it.next(c);
-      removeBuddy(c, el.value);
-    }
-
     while (frozenSiteIndex) {
       frozenSites[--frozenSiteIndex]->thaw(c);
     }
@@ -3762,9 +3757,9 @@ captureBranchSnapshots(Context* c, Event* e)
 void
 populateSiteTables(Context* c, Event* e)
 {
-  captureBranchSnapshots(c, e);
-
   resolveJunctionSites(c, e);
+
+  captureBranchSnapshots(c, e);
 }
 
 void
@@ -3802,6 +3797,15 @@ setSites(Context* c, Event* e, Site** sites)
         setSites(c, e, el.value, sites[el.localIndex], r->size);
       }
     }
+  }
+}
+
+void
+removeBuddies(Context* c)
+{
+  for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
+    FrameIterator::Element el = it.next(c);
+    removeBuddy(c, el.value);
   }
 }
 
@@ -3987,6 +3991,7 @@ compile(Context* c)
         }
 
         setSites(c, e, first->junctionSites);
+        removeBuddies(c);
       } else if (first->successors->nextSuccessor) {
         if (DebugControl) {
           fprintf(stderr, "restore snapshots %p at %d\n",
