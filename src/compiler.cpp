@@ -504,9 +504,9 @@ class StubReadPair {
 
 class JunctionState {
  public:
-  JunctionState(): readCount(0) { }
+  JunctionState(unsigned frameFootprint): frameFootprint(frameFootprint) { }
 
-  unsigned readCount;
+  unsigned frameFootprint;
   StubReadPair reads[0];
 };
 
@@ -3449,10 +3449,13 @@ visit(Context* c, Link* link)
 
   JunctionState* junctionState = link->junctionState;
   if (junctionState) {
-    for (unsigned i = 0; i < junctionState->readCount; ++i) {
-      assert(c, junctionState->reads[i].value->reads
-             == junctionState->reads[i].read);
-      nextRead(c, 0, junctionState->reads[i].value);
+    for (unsigned i = 0; i < junctionState->frameFootprint; ++i) {
+      StubReadPair* p = junctionState->reads + i;
+      
+      if (p->value) {
+        assert(c, p->value->reads == p->read);
+        nextRead(c, 0, p->value);
+      }
     }
   }
 }
@@ -3873,15 +3876,15 @@ populateSources(Context* c, Event* e)
 }
 
 void
-addStubRead(Context* c, Value* v, unsigned size, JunctionState* state,
-            unsigned* count)
+setStubRead(Context* c, StubReadPair* p, Value* v, unsigned size)
 {
   if (v) {
     StubRead* r = stubRead(c, size);
-//     fprintf(stderr, "add stub read %p to %p\n", r, v);
+    if (DebugReads) {
+      fprintf(stderr, "add stub read %p to %p\n", r, v);
+    }
     addRead(c, 0, v, r);
 
-    StubReadPair* p = state->reads + ((*count)++);
     p->value = v;
     p->read = r;
   }
@@ -3894,32 +3897,44 @@ populateJunctionReads(Context* c, Link* link)
     (c->zone->allocate
      (sizeof(JunctionState)
       + (sizeof(StubReadPair) * frameFootprint(c, c->stack))))
-    JunctionState;
+    JunctionState(frameFootprint(c, c->stack));
+
+  memset(state->reads, 0, sizeof(StubReadPair) * frameFootprint(c, c->stack));
 
   link->junctionState = state;
 
-  unsigned count = 0;
-
   for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
     FrameIterator::Element e = it.next(c);
-    addStubRead(c, e.value, footprintSizeInBytes(e.footprint), state, &count);
+    setStubRead(c, state->reads + e.localIndex, e.value,
+                footprintSizeInBytes(e.footprint));
   }
-
-  state->readCount = count;
 }
 
 void
-updateJunctionReads(Context*, JunctionState* state)
+updateJunctionReads(Context* c, JunctionState* state)
 {
-  for (unsigned i = 0; i < state->readCount; ++i) {
-    StubReadPair* p = state->reads + i;
-    if (p->read->read == 0) {
-      Read* r = live(p->value);
+  for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
+    FrameIterator::Element e = it.next(c);
+    StubReadPair* p = state->reads + e.localIndex;
+    if (p->value and p->read->read == 0) {
+      Read* r = live(e.value);
       if (r) {
+        if (DebugReads) {
+          fprintf(stderr, "stub read %p for %p valid: %p\n",
+                  p->read, p->value, r);
+        }
         p->read->read = r;
-      } else {
-        p->read->valid_ = false;
       }
+    }
+  }
+
+  for (unsigned i = 0; i < frameFootprint(c, c->stack); ++i) {
+    StubReadPair* p = state->reads + i;
+    if (p->value and p->read->read == 0) {
+      if (DebugReads) {
+        fprintf(stderr, "stub read %p for %p invalid\n", p->read, p->value);
+      }
+      p->read->valid_ = false;
     }
   }
 }
@@ -4105,7 +4120,9 @@ addForkElement(Context* c, Value* v, unsigned size, ForkState* state,
                unsigned index)
 {
   MultiRead* r = multiRead(c, size);
-//   fprintf(stderr, "add multi read %p to %p\n", r, v);
+  if (DebugReads) {
+    fprintf(stderr, "add multi read %p to %p\n", r, v);
+  }
   addRead(c, 0, v, r);
 
   ForkElement* p = state->elements + index;
