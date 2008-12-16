@@ -2859,7 +2859,9 @@ class CombineEvent: public Event {
       maybePreserve(c, stackBefore, localsBefore, secondSize, second,
                     second->source);
       target = second->source;
-      c->forfeitedSite = target;
+      if (liveNext(c, second)) {
+        c->forfeitedSite = target;
+      }
     } else {
       target = resultRead->allocateSite(c);
       addSite(c, stackBefore, localsBefore, resultSize, result, target);
@@ -2874,7 +2876,7 @@ class CombineEvent: public Event {
 
     if (c->arch->condensedAddressing()) {
       c->forfeitedSite = 0;
-      removeSite(c, second, second->source);
+      removeSite(c, second, target);
       if (live(result)) {
         addSite(c, 0, 0, resultSize, result, target);
       }
@@ -3100,7 +3102,9 @@ class TranslateEvent: public Event {
     if (c->arch->condensedAddressing()) {
       maybePreserve(c, stackBefore, localsBefore, size, value, value->source);
       target = value->source;
-      c->forfeitedSite = target;
+      if (liveNext(c, value)) {
+        c->forfeitedSite = target;
+      }
     } else {
       target = resultRead->allocateSite(c);
       addSite(c, stackBefore, localsBefore, size, result, target);
@@ -3112,7 +3116,7 @@ class TranslateEvent: public Event {
 
     if (c->arch->condensedAddressing()) {
       c->forfeitedSite = 0;
-      removeSite(c, value, value->source);
+      removeSite(c, value, target);
       if (live(result)) {
         addSite(c, 0, 0, size, result, target);
       }
