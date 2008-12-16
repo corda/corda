@@ -2918,6 +2918,10 @@ removeBuddy(Context* c, Value* v)
     if (not live(next)) {
       clearSites(c, next);
     }
+
+    if (not live(v)) {
+      clearSites(c, v);
+    }
   }
 }
 
@@ -3788,6 +3792,8 @@ populateSiteTables(Context* c, Event* e)
 void
 setSites(Context* c, Event* e, Value* v, Site* s, unsigned size)
 {
+  assert(c, live(v));
+
   for (; s; s = s->next) {
     addSite(c, e->stackBefore, e->localsBefore, size, v, s->copy(c));
   }
