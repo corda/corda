@@ -2483,6 +2483,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
+      if (throwIfVolatileField(t, field)) return;
 
       Compiler::Operand* table;
 
@@ -3363,6 +3364,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
+      if (throwIfVolatileField(t, field)) return;
 
       object staticTable = 0;
 

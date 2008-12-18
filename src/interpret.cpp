@@ -1452,6 +1452,7 @@ interpret(Thread* t)
     
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
+      if (throwIfVolatileField(t, field)) goto throw_;
       
       pushField(t, popObject(t), field);
     } else {
@@ -1465,6 +1466,8 @@ interpret(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    if (throwIfVolatileField(t, field)) goto throw_;
+
     PROTECT(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
@@ -2396,6 +2399,7 @@ interpret(Thread* t)
     
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    if (throwIfVolatileField(t, field)) goto throw_;
 
     switch (fieldCode(t, field)) {
     case ByteField:
@@ -2461,6 +2465,8 @@ interpret(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    if (throwIfVolatileField(t, field)) goto throw_;
+
     PROTECT(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
