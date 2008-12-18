@@ -47,7 +47,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   DelayedPromise* addresses = 0;
 
   for (Finder::Iterator it(t->m->finder); it.hasMore();) {
-    unsigned nameSize;
+    unsigned nameSize = 0;
     const char* name = it.next(&nameSize);
 
     if (endsWith(".class", name, nameSize)) {
