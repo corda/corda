@@ -94,6 +94,9 @@ endif
 ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	ifeq ($(bootimage),true)
+		bootimage-lflags = -Wl,-segprot,__BOOT,rwx,rwx
+	endif
 	rdynamic =
 	strip-all = -S -x
 	binaryToMacho = $(native-build)/binaryToMacho
@@ -401,7 +404,7 @@ $(binaryToMacho): $(src)/binaryToMacho.cpp
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
-	$(binaryToMacho) $(build)/classpath.jar \
+	$(binaryToMacho) $(build)/classpath.jar __TEXT __text \
 		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
 else
 	(wd=$$(pwd); \
@@ -431,7 +434,7 @@ $(bootimage-bin): $(bootimage-generator)
 $(bootimage-object): $(bootimage-bin)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
-	$(binaryToMacho) $(<) \
+	$(binaryToMacho) $(<) __BOOT __boot \
 		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
 else
 	(wd=$$(pwd); \
@@ -451,7 +454,7 @@ ifeq ($(platform),windows)
 	$(dlltool) -d $(@).def -e $(@).exp
 	$(cc) $(@).exp $(^) $(lflags) -o $(@)
 else
-	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
+	$(cc) $(^) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
@@ -480,7 +483,7 @@ $(dynamic-library): \
 		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
 		$(boot-object) $(vm-classpath-object)
 	@echo "linking $(@)"
-	$(cc) $(^) $(shared) $(lflags) -o $(@)
+	$(cc) $(^) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
 	$(strip) $(strip-all) $(@)
 
 $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)

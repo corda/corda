@@ -30,6 +30,7 @@ pad(unsigned n)
 
 void
 writeObject(FILE* out, const uint8_t* data, unsigned size,
+            const char* segmentName, const char* sectionName,
             const char* startName, const char* endName)
 {
   unsigned startNameLength = strlen(startName) + 1;
@@ -39,7 +40,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     MH_MAGIC, // magic
     CPU_TYPE_I386, // cputype
     CPU_SUBTYPE_I386_ALL, // cpusubtype
-    MH_OBJECT, // filetype,
+    MH_OBJECT, // filetype
     2, // ncmds
     sizeof(segment_command)
     + sizeof(section)
@@ -50,7 +51,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
   segment_command segment = {
     LC_SEGMENT, // cmd
     sizeof(segment_command) + sizeof(section), // cmdsize
-    "__TEXT", // segname
+    "", // segname
     0, // vmaddr
     pad(size), // vmsize
     sizeof(mach_header)
@@ -64,9 +65,11 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     0 // flags
   };
 
+  strncpy(segment.segname, segmentName, sizeof(segment.segname));
+
   section sect = {
-    "__const", // sectname
-    "__TEXT", // segname
+    "", // sectname
+    "", // segname
     0, // addr
     pad(size), // size
     sizeof(mach_header)
@@ -80,6 +83,9 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
     0, // reserved1
     0, // reserved2
   };
+
+  strncpy(sect.segname, segmentName, sizeof(sect.segname));
+  strncpy(sect.sectname, sectionName, sizeof(sect.sectname));
 
   symtab_command symbolTable = {
     LC_SYMTAB, // cmd
@@ -136,9 +142,10 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
 int
 main(int argc, const char** argv)
 {
-  if (argc != 4) {
+  if (argc != 6) {
     fprintf(stderr,
-            "usage: %s <input file> <start symbol name> <end symbol name>\n",
+            "usage: %s <input file> <segment name> <section name> "
+            "<start symbol name> <end symbol name>\n",
             argv[0]);
     return -1;
   }
@@ -158,7 +165,7 @@ main(int argc, const char** argv)
   }
 
   if (data) {
-    writeObject(stdout, data, size, argv[2], argv[3]);
+    writeObject(stdout, data, size, argv[2], argv[3], argv[4], argv[5]);
     munmap(data, size);
     return 0;
   } else {
