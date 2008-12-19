@@ -431,7 +431,7 @@ $(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 $(bootimage-bin): $(bootimage-generator)
 	$(<) $(classpath-build) > $(@)
 
-$(bootimage-object): $(bootimage-bin)
+$(bootimage-object): $(bootimage-bin) $(binaryToMacho)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
 	$(binaryToMacho) $(<) __BOOT __boot \
