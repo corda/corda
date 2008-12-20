@@ -958,14 +958,16 @@ addressSite(Context* c, Promise* address)
 void
 freeze(Context* c, Register* r)
 {
-  assert(c, c->availableRegisterCount);
-
   if (DebugRegisters) {
-    fprintf(stderr, "freeze %d to %d\n", r->number, r->freezeCount + 1);
+    fprintf(stderr, "freeze %d to %d for %p\n",
+            r->number, r->freezeCount + 1, r->value);
   }
 
   ++ r->freezeCount;
-  -- c->availableRegisterCount;
+  if (r->freezeCount == 1) {
+    assert(c, c->availableRegisterCount);
+    -- c->availableRegisterCount;
+  }
 }
 
 void
@@ -978,7 +980,9 @@ thaw(Context* c, Register* r)
   }
 
   -- r->freezeCount;
-  ++ c->availableRegisterCount;
+  if (r->freezeCount == 0) {
+    ++ c->availableRegisterCount;
+  }
 }
 
 Register*
@@ -1686,6 +1690,12 @@ void
 move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
      Site* src, Site* dst)
 {
+  src->freeze(c);
+
+  addSite(c, stack, locals, size, value, dst);
+
+  src->thaw(c);
+
   if (dst->type(c) == MemoryOperand
       and (src->type(c) == MemoryOperand
            or src->type(c) == AddressOperand))
@@ -1707,12 +1717,6 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
 
     src = tmp;
   }
-
-  src->freeze(c);
-
-  addSite(c, stack, locals, size, value, dst);
-
-  src->thaw(c);
 
   if (DebugMoves) {
     char srcb[256]; src->toString(c, srcb, 256);
@@ -1802,6 +1806,36 @@ save(Context* c, Site* src, Value* v, unsigned size, Stack* stack,
 }
 
 bool
+registerAvailable(Context* c, uint32_t mask)
+{
+  for (int i = c->arch->registerCount() - 1; i >= 0; --i) {
+    if ((1 << i) & mask) {
+      Register* r = c->registers[i];
+      if (not (r->reserved or r->freezeCount)) {
+        return true;
+      } else if ((static_cast<uint32_t>(1) << i) == mask) {
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
+bool
+available(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
+          int frameIndex)
+{
+  return
+    ((typeMask & (1 << RegisterOperand))
+     and registerMask
+     and (size <= BytesPerWord or registerAvailable(c, registerMask >> 32))
+     and registerAvailable(c, registerMask))
+    or ((typeMask & (1 << MemoryOperand))
+        and (frameIndex == AnyFrameIndex
+             or (frameIndex >= 0 and frameIndexAvailable(c, frameIndex))));
+}
+
+bool
 trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
          Stack* stack, Local* locals)
 {
@@ -1820,8 +1854,8 @@ trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
     {
       success = save(c, site, victim, size, stack, locals);
     } else {
-      Site* s = allocateSite(c, typeMask, registerMask, frameIndex);
-      if (s) {
+      if (available(c, size, typeMask, registerMask, frameIndex)) {
+        Site* s = allocateSite(c, typeMask, registerMask, frameIndex);
         move(c, stack, locals, size, victim, site, s);
         success = true;
       } else {
@@ -2071,9 +2105,9 @@ acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
     {
       if (buddies(oldValue, newValue)) {
         removeSite(c, oldValue, r->site);
-      } else if (r->freezeCount
-                 or (not trySteal(c, r, newValue, stack, locals)))
-      {
+      } else if (r->freezeCount) {
+        abort(c);
+      } else if (not trySteal(c, r, newValue, stack, locals)) {
         r = replace(c, r, newValue, stack, locals);
       }
     }
@@ -2183,7 +2217,6 @@ acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
   }
 
   FrameResource* r = c->frameResources + frameIndex;
-  expect(c, r->freezeCount == 0);
 
   includeNeighbor &= newSize > BytesPerWord;
 
@@ -2199,6 +2232,8 @@ acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
   {
     if (buddies(oldValue, newValue)) {
       removeSite(c, oldValue, r->site);
+    } else if (r->freezeCount) {
+      abort(c);
     } else if (not trySteal(c, r, newValue, stack, locals)) {
       abort(c);
     }
@@ -2245,6 +2280,11 @@ freezeFrameIndex(Context* c, int frameIndex)
   if (r->includeNeighbor) {
     freezeFrameIndex(c, frameIndex + 1);
   }
+
+  if (DebugFrameIndexes) {
+    fprintf(stderr, "freeze frame index %d offset 0x%x\n",
+            frameIndex, frameIndexToOffset(c, frameIndex));
+  }
   
   ++ r->freezeCount;
 }
@@ -2261,6 +2301,11 @@ thawFrameIndex(Context* c, int frameIndex)
 
   if (r->includeNeighbor) {
     thawFrameIndex(c, frameIndex + 1);
+  }
+
+  if (DebugFrameIndexes) {
+    fprintf(stderr, "thaw frame index %d offset 0x%x\n",
+            frameIndex, frameIndexToOffset(c, frameIndex));
   }
   
   -- r->freezeCount;
@@ -2669,9 +2714,7 @@ class MoveEvent: public Event {
       }
     }
 
-    if (not isStore) {
-      addSite(c, stackBefore, localsBefore, dstSize, dst, target);
-    }
+    addSite(c, stackBefore, localsBefore, dstSize, dst, target);
 
     if (cost) {    
       uint8_t typeMask = ~static_cast<uint8_t>(0);
@@ -2711,10 +2754,6 @@ class MoveEvent: public Event {
 
         apply(c, type, srcSize, src->source, dstSize, tmpTarget);
 
-        if (isStore) {
-          removeSite(c, dst, tmpTarget);
-        }
-
         if (useTemporary or isStore) {
           if (DebugMoves) {
             char srcb[256]; tmpTarget->toString(c, srcb, 256);
@@ -2724,6 +2763,10 @@ class MoveEvent: public Event {
           }
 
           apply(c, Move, dstSize, tmpTarget, dstSize, target);
+
+          if (isStore) {
+            removeSite(c, dst, tmpTarget);
+          }
         } else {
           removeSite(c, dst, target);          
         }
@@ -3612,8 +3655,10 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
 {
   if (not hasSite(r->value)) return 0;
 
-//   char buffer[256]; toString(c, r->value->sites, buffer, 256);
-//   fprintf(stderr, "read source for %p from %s\n", r->value, buffer);
+  if (DebugReads) {
+    char buffer[256]; toString(c, r->value->sites, buffer, 256);
+    fprintf(stderr, "read source for %p from %s\n", r->value, buffer);
+  }
 
   Site* site = r->pickSite(c, r->value, true);
 
@@ -3629,16 +3674,23 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
   }
 }
 
+bool
+acceptJunctionSite(Context* c, Site* s)
+{
+  return s
+    and (c->availableRegisterCount > 1 or s->type(c) != RegisterOperand);
+}
+
 Site*
 pickJunctionSite(Context* c, Value* v, Read* r, unsigned frameIndex)
 {
   Site* s = r->pickSite(c, v, false);
    
-  if (s == 0) {
+  if (not acceptJunctionSite(c, s)) {
     s = pick(c, v, 0, 0, false);
   }
 
-  if (s and s->match
+  if (acceptJunctionSite(c, s) and s->match
       (c, (1 << RegisterOperand) | (1 << MemoryOperand), ~0, AnyFrameIndex))
   {
     return s;
@@ -3646,7 +3698,7 @@ pickJunctionSite(Context* c, Value* v, Read* r, unsigned frameIndex)
 
   s = r->allocateSite(c);
 
-  if (s and (c->availableRegisterCount > 1 or s->type(c) != RegisterOperand)) {
+  if (acceptJunctionSite(c, s)) {
     return s;
   }
 
@@ -3884,9 +3936,11 @@ populateSources(Context* c, Event* e)
     r->value->source = readSource(c, e->stackBefore, e->localsBefore, r);
 
     if (r->value->source) {
-      char buffer[256]; r->value->source->toString(c, buffer, 256);
-//       fprintf(stderr, "freeze source %s for %p\n",
-//               buffer, r->value);
+      if (DebugReads) {
+        char buffer[256]; r->value->source->toString(c, buffer, 256);
+        fprintf(stderr, "freeze source %s for %p\n",
+                buffer, r->value);
+      }
 
       assert(c, frozenSiteIndex < e->readCount);
       frozenSites[frozenSiteIndex++] = r->value->source;
