@@ -1756,16 +1756,21 @@ find(Value* needle, Value* haystack)
 }
 
 bool
+frameIndexAvailable(Context* c, int index)
+{
+  return c->frameResources[index].freezeCount == 0;
+}
+
+bool
 save(Context* c, Site* src, Value* v, unsigned size, Stack* stack,
-     Local* locals, int avoid, bool includeNeighbor)
+     Local* locals)
 {
   int index = NoFrameIndex;
-  int avoid2 = (includeNeighbor ? avoid + 1 : NoFrameIndex);
   for (unsigned li = 0; li < c->localFootprint; ++li) {
     Local* local = locals + li;
     if (find(v, local->value)) {
       int fi = frameIndex(c, li, local->footprint);
-      if (fi != avoid and fi != avoid2) {
+      if (frameIndexAvailable(c, fi)) {
         index = fi;
         break;
       }
@@ -1777,7 +1782,7 @@ save(Context* c, Site* src, Value* v, unsigned size, Stack* stack,
       if (find(v, s->value)) {
         int fi = ::frameIndex
           (c, s->index + c->localFootprint, s->footprint);
-        if (fi != avoid and fi != avoid2) {
+        if (frameIndexAvailable(c, fi)) {
           index = fi;
           break;
         }
@@ -1798,7 +1803,7 @@ save(Context* c, Site* src, Value* v, unsigned size, Stack* stack,
 
 bool
 trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
-         Stack* stack, Local* locals, int avoid, bool includeNeighbor)
+         Stack* stack, Local* locals)
 {
   bool success = true;
   if (not hasMoreThanOneSite(victim)) {
@@ -1813,16 +1818,14 @@ trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
     if (pickSite(c, victim, typeMask, registerMask, frameIndex, true)
         or victim->thief)
     {
-      success = save(c, site, victim, size, stack, locals, avoid,
-                     includeNeighbor);
+      success = save(c, site, victim, size, stack, locals);
     } else {
       Site* s = allocateSite(c, typeMask, registerMask, frameIndex);
       if (s) {
         move(c, stack, locals, size, victim, site, s);
         success = true;
       } else {
-        success = save(c, site, victim, size, stack, locals, avoid,
-                       includeNeighbor);
+        success = save(c, site, victim, size, stack, locals);
       }
     }
 
@@ -1848,8 +1851,7 @@ trySteal(Context* c, Register* r, Value* thief, Stack* stack, Local* locals)
     fprintf(stderr, "try steal %d from %p\n", r->number, v);
   }
 
-  return trySteal(c, r->site, thief, r->value, r->size, stack, locals,
-                  NoFrameIndex, 0);
+  return trySteal(c, r->site, thief, r->value, r->size, stack, locals);
 }
 
 bool
@@ -2142,15 +2144,27 @@ trySteal(Context* c, FrameResource* r, Value* thief, Stack* stack,
 {
   assert(c, live(r->value));
 
+  int index =  r - c->frameResources;
+
   if (DebugFrameIndexes) {
-    int index = r - c->frameResources;
     fprintf(stderr,
             "try steal frame index %d offset 0x%x from value %p site %p\n",
             index, frameIndexToOffset(c, index), r->value, r->site);
   }
 
-  return trySteal(c, r->site, thief, r->value, r->size, stack, locals,
-                  r - c->frameResources, r->includeNeighbor);
+  freezeFrameIndex(c, index);
+  if (r->includeNeighbor) {
+    freezeFrameIndex(c, index + 1);
+  }
+
+  bool success = trySteal(c, r->site, thief, r->value, r->size, stack, locals);
+
+  if (r->includeNeighbor) {
+    thawFrameIndex(c, index + 1);
+  }
+  thawFrameIndex(c, index);
+
+  return success;
 }
 
 void

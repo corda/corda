@@ -3,7 +3,26 @@ public class Integers {
     if (! v) throw new RuntimeException();
   }
 
+  private static int gcd(int m, int n) {
+    int temp;
+    m = Math.abs(m);
+    n = Math.abs(n);
+    if (m < n) {
+      temp = m;
+      m = n;
+      n = temp;
+    }
+    while (n != 0) {
+      temp = m;
+      m = n;
+      n = temp % n;
+    }
+    return m;
+  }
+
   public static void main(String[] args) {
+    expect(gcd(12, 4) == 4);
+
     { int a = 2;
       int b = 2;
       int c = a + b;
