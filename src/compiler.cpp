@@ -2911,6 +2911,8 @@ class CombineEvent: public Event {
   }
 
   virtual void compile(Context* c) {
+    first->source->freeze(c);
+
     Site* target;
     if (c->arch->condensedAddressing()) {
       maybePreserve(c, stackBefore, localsBefore, secondSize, second,
@@ -2923,6 +2925,8 @@ class CombineEvent: public Event {
       target = resultRead->allocateSite(c);
       addSite(c, stackBefore, localsBefore, resultSize, result, target);
     }
+
+    first->source->thaw(c);
 
 //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
     apply(c, type, firstSize, first->source, secondSize, second->source,
