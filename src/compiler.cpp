@@ -1853,14 +1853,12 @@ trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
         or victim->thief)
     {
       success = save(c, site, victim, size, stack, locals);
+    } else if (available(c, size, typeMask, registerMask, frameIndex)) {
+      Site* s = allocateSite(c, typeMask, registerMask, frameIndex);
+      move(c, stack, locals, size, victim, site, s);
+      success = true;
     } else {
-      if (available(c, size, typeMask, registerMask, frameIndex)) {
-        Site* s = allocateSite(c, typeMask, registerMask, frameIndex);
-        move(c, stack, locals, size, victim, site, s);
-        success = true;
-      } else {
-        success = save(c, site, victim, size, stack, locals);
-      }
+      success = save(c, site, victim, size, stack, locals);
     }
 
     thief->thief = false;
@@ -2103,10 +2101,10 @@ acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
         and oldValue != newValue
         and findSite(c, oldValue, r->site))
     {
+      assert(c, r->freezeCount == 0);
+
       if (buddies(oldValue, newValue)) {
         removeSite(c, oldValue, r->site);
-      } else if (r->freezeCount) {
-        abort(c);
       } else if (not trySteal(c, r, newValue, stack, locals)) {
         r = replace(c, r, newValue, stack, locals);
       }
@@ -2230,10 +2228,10 @@ acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
       and oldValue != newValue
       and findSite(c, oldValue, r->site))
   {
+    assert(c, r->freezeCount == 0);
+
     if (buddies(oldValue, newValue)) {
       removeSite(c, oldValue, r->site);
-    } else if (r->freezeCount) {
-      abort(c);
     } else if (not trySteal(c, r, newValue, stack, locals)) {
       abort(c);
     }
@@ -3685,25 +3683,68 @@ acceptJunctionSite(Context* c, Site* s)
     and (c->availableRegisterCount > 1 or s->type(c) != RegisterOperand);
 }
 
+bool
+registerUnused(Context* c, uint32_t mask)
+{
+  for (int i = c->arch->registerCount() - 1; i >= 0; --i) {
+    if ((1 << i) & mask) {
+      Register* r = c->registers[i];
+      if (not (r->reserved or r->value or r->refCount)) {
+        return true;
+      } else if ((static_cast<uint32_t>(1) << i) == mask) {
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
+bool
+frameIndexUnused(Context* c, int index)
+{
+  return c->frameResources[index].value == 0;
+}
+
+bool
+unused(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
+       int frameIndex)
+{
+  return
+    ((typeMask & (1 << RegisterOperand))
+     and registerMask
+     and (size <= BytesPerWord or registerUnused(c, registerMask >> 32))
+     and registerUnused(c, registerMask))
+    or ((typeMask & (1 << MemoryOperand))
+        and (frameIndex == AnyFrameIndex
+             or (frameIndex >= 0 and frameIndexUnused(c, frameIndex))));
+}
+
 Site*
 pickJunctionSite(Context* c, Value* v, Read* r, unsigned frameIndex)
 {
   Site* s = r->pickSite(c, v, false);
-   
+
   if (not acceptJunctionSite(c, s)) {
     s = pick(c, v, 0, 0, false);
   }
 
-  if (acceptJunctionSite(c, s) and s->match
-      (c, (1 << RegisterOperand) | (1 << MemoryOperand), ~0, AnyFrameIndex))
+  if (acceptJunctionSite(c, s)
+      and s->match(c, (1 << RegisterOperand)
+                   | (1 << MemoryOperand), ~0, AnyFrameIndex))
   {
     return s;
   }
 
-  s = r->allocateSite(c);
+  uint8_t typeMask = ~static_cast<uint8_t>(0);
+  uint64_t registerMask = ~static_cast<uint64_t>(0);
+  int frameIndexDesired = AnyFrameIndex;
+  r->intersect(&typeMask, &registerMask, &frameIndexDesired);
 
-  if (acceptJunctionSite(c, s)) {
-    return s;
+  if (unused(c, r->size, typeMask, registerMask, frameIndexDesired)) {
+    s = allocateSite(c, typeMask, registerMask, frameIndexDesired);
+    if (acceptJunctionSite(c, s)) {
+      return s;
+    }
   }
 
   if (c->availableRegisterCount > 1) {

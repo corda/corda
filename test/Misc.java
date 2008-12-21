@@ -76,7 +76,18 @@ public class Misc {
     return a + b + c;
   }
 
+  private static Object gimmeNull() {
+    return null;
+  }
+
+  private static Object queryDefault(Object default_) {
+    Object o = gimmeNull();
+    return (o == null ? default_ : o);
+  }
+
   public static void main(String[] args) {
+    expect(queryDefault(new Object()) != null);
+
     { Foo foo = new Foo();
       int x = foo.a + foo.b + foo.c;
       bar(foo.a, foo.b, foo.c);
