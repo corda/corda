@@ -1949,8 +1949,10 @@ releaseRegister(Context* c, Value* v, unsigned frameIndex,
   }
 
   if (live(v) and not remaining) {
+    addSite(c, 0, 0, sizeInBytes, v, source);
     move(c, c->stack, c->locals, sizeInBytes, v, source,
          frameSite(c, frameIndex));
+    removeSite(c, v, source);
   }
 
   if (DebugRegisters) {
