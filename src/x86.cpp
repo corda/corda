@@ -763,7 +763,7 @@ moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
         moveRR(c, 4, b, 8, b);
       }
     } else {
-      if (BytesPerWord == 4 and aSize == 8) {
+      if (BytesPerWord == 4 and aSize == 8 and bSize == 8) {
         Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
         Assembler::Register bh(b->high);
 
