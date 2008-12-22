@@ -191,13 +191,12 @@ class LogicalInstruction {
 class Register {
  public:
   Register(int number):
-    value(0), site(0), freezeValue(0), number(number), size(0), refCount(0),
+    value(0), site(0), number(number), size(0), refCount(0),
     freezeCount(0), acquireCount(0), reserved(false)
   { }
 
   Value* value;
   RegisterSite* site;
-  Value* freezeValue;
   int number;
   unsigned size;
   unsigned refCount;
@@ -210,7 +209,6 @@ class FrameResource {
  public:
   Value* value;
   MemorySite* site;
-  Value* freezeValue;
   unsigned size;
   unsigned freezeCount;
   unsigned acquireCount;
@@ -972,9 +970,6 @@ buddies(Value* a, Value* b)
 void
 freeze(Context* c, Register* r, Value* v)
 {
-  assert(c, (r->freezeCount == 0 and r->freezeValue == 0)
-         or r->reserved or buddies(r->freezeValue, v));
-
   if (DebugRegisters) {
     fprintf(stderr, "freeze %d to %d for %p\n",
             r->number, r->freezeCount + 1, v);
@@ -982,9 +977,6 @@ freeze(Context* c, Register* r, Value* v)
 
   ++ r->freezeCount;
   if ((not r->reserved) and r->freezeCount == 1) {
-    assert(c, buddies(r->value, v));
-    r->freezeValue = v;
-
     assert(c, c->availableRegisterCount);
     -- c->availableRegisterCount;
   }
@@ -994,7 +986,6 @@ void
 thaw(Context* c, Register* r, Value* v)
 {
   assert(c, r->freezeCount);
-  assert(c, r->reserved or buddies(r->freezeValue, v));
 
   if (DebugRegisters) {
     fprintf(stderr, "thaw %d to %d for %p\n",
@@ -1003,7 +994,6 @@ thaw(Context* c, Register* r, Value* v)
 
   -- r->freezeCount;
   if ((not r->reserved) and r->freezeCount == 0) {
-    r->freezeValue = 0;
     ++ c->availableRegisterCount;
   }
 }
@@ -1855,6 +1845,42 @@ available(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
 }
 
 bool
+registerUnused(Context* c, uint32_t mask)
+{
+  for (int i = c->arch->registerCount() - 1; i >= 0; --i) {
+    if ((1 << i) & mask) {
+      Register* r = c->registers[i];
+      if (not (r->reserved or r->value or r->refCount)) {
+        return true;
+      } else if ((static_cast<uint32_t>(1) << i) == mask) {
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
+bool
+frameIndexUnused(Context* c, int index)
+{
+  return c->frameResources[index].value == 0;
+}
+
+bool
+unused(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
+       int frameIndex)
+{
+  return
+    ((typeMask & (1 << RegisterOperand))
+     and registerMask
+     and (size <= BytesPerWord or registerUnused(c, registerMask >> 32))
+     and registerUnused(c, registerMask))
+    or ((typeMask & (1 << MemoryOperand))
+        and (frameIndex == AnyFrameIndex
+             or (frameIndex >= 0 and frameIndexUnused(c, frameIndex))));
+}
+
+bool
 trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
          Stack* stack, Local* locals)
 {
@@ -1872,12 +1898,19 @@ trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
         or victim->thief)
     {
       success = save(c, site, victim, size, stack, locals);
-    } else if (available(c, size, typeMask, registerMask, frameIndex)) {
-      Site* s = allocateSite(c, typeMask, registerMask, frameIndex);
-      move(c, stack, locals, size, victim, site, s);
+    } else if (unused(c, size, typeMask, registerMask, frameIndex)) {
+      move(c, stack, locals, size, victim, site,
+           allocateSite(c, typeMask, registerMask, frameIndex));
       success = true;
     } else {
       success = save(c, site, victim, size, stack, locals);
+      if ((not success)
+          and available(c, size, typeMask, registerMask, frameIndex))
+      {
+        move(c, stack, locals, size, victim, site,
+             allocateSite(c, typeMask, registerMask, frameIndex));
+        success = true;
+      }
     }
 
     thief->thief = false;
@@ -2072,21 +2105,17 @@ swap(Context* c, Register* a, Register* b)
 }
 
 Register*
-acquire(Context* c, uint32_t mask, uint32_t replaceMask, Stack* stack,
-        Local* locals, unsigned newSize, Value* newValue,
-        RegisterSite* newSite);
+acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
+        unsigned newSize, Value* newValue, RegisterSite* newSite);
 
 Register*
-replace(Context* c, uint32_t replaceMask, Register* r, Value* newValue,
-        Stack* stack, Local* locals)
+replace(Context* c, Register* r, Value* newValue, Stack* stack, Local* locals)
 {
-  replaceMask &= ~(1 << r->number);
+  uint32_t mask = (r->freezeCount ? r->site->mask : ~0);
 
-  uint32_t mask = replaceMask;
-  if (r->freezeCount) mask &= r->site->mask;
-
-  Register* s = acquire
-    (c, mask, replaceMask, stack, locals, r->size, newValue, r->site);
+  freeze(c, r, r->value);
+  Register* s = acquire(c, mask, stack, locals, r->size, newValue, r->site);
+  thaw(c, r, r->value);
 
   if (DebugRegisters) {
     fprintf(stderr, "replace %d with %d\n", r->number, s->number);
@@ -2098,28 +2127,28 @@ replace(Context* c, uint32_t replaceMask, Register* r, Value* newValue,
 }
 
 Register*
-acquire(Context* c, uint32_t mask, uint32_t replaceMask, Stack* stack,
-        Local* locals, unsigned newSize, Value* newValue,
-        RegisterSite* newSite)
+acquire(Context* c, uint32_t mask, Stack* stack, Local* locals,
+        unsigned newSize, Value* newValue, RegisterSite* newSite)
 {
   Register* r = pickRegister(c, mask);
 
   if (r->reserved) return r;
 
   if (r->refCount) {
-    r = replace(c, replaceMask, r, newValue, stack, locals);
+    r = replace(c, r, newValue, stack, locals);
   } else {
     Value* oldValue = r->value;
     if (oldValue
         and oldValue != newValue
         and findSite(c, oldValue, r->site))
     {
-      assert(c, r->freezeCount == 0);
-
       if (buddies(oldValue, newValue)) {
         removeSite(c, oldValue, r->site);
-      } else if (not trySteal(c, r, newValue, stack, locals)) {
-        r = replace(c, replaceMask, r, newValue, stack, locals);
+      } else {
+        assert(c, r->freezeCount == 0);
+        if (not trySteal(c, r, newValue, stack, locals)) {
+          r = replace(c, r, newValue, stack, locals);
+        }
       }
     }
   }
@@ -2189,7 +2218,7 @@ validate(Context* c, uint32_t mask, Stack* stack, Local* locals,
     }
   }
 
-  Register* r = acquire(c, mask, ~0, stack, locals, size, value, site);
+  Register* r = acquire(c, mask, stack, locals, size, value, site);
 
   if (current and current != r) {
     release(c, current);
@@ -2254,12 +2283,13 @@ acquireFrameIndex(Context* c, int frameIndex, Stack* stack, Local* locals,
       and oldValue != newValue
       and findSite(c, oldValue, r->site))
   {
-    assert(c, r->freezeCount == 0);
-
     if (buddies(oldValue, newValue)) {
       removeSite(c, oldValue, r->site);
-    } else if (not trySteal(c, r, newValue, stack, locals)) {
-      abort(c);
+    } else {
+      assert(c, r->freezeCount == 0);
+      if (not trySteal(c, r, newValue, stack, locals)) {
+        abort(c);
+      }
     }
   }
 
@@ -2316,8 +2346,6 @@ freezeFrameIndex(Context* c, int frameIndex, Value* v, unsigned size)
          (c->alignedFrameSize + c->parameterFootprint));
 
   FrameResource* r = c->frameResources + frameIndex;
-  assert(c, (r->freezeCount == 0 and r->freezeValue == 0)
-         or buddies(r->freezeValue, v));
 
   if (r->includeNeighbor and (size > BytesPerWord)) {
     freezeFrameIndex(c, frameIndex + 1, v, BytesPerWord);
@@ -2330,10 +2358,6 @@ freezeFrameIndex(Context* c, int frameIndex, Value* v, unsigned size)
   }
   
   ++ r->freezeCount;
-  if (r->freezeCount == 1) {
-    assert(c, buddies(r->value, v));
-    r->freezeValue = v;
-  }
 }
 
 void
@@ -2345,7 +2369,6 @@ thawFrameIndex(Context* c, int frameIndex, Value* v, unsigned size)
 
   FrameResource* r = c->frameResources + frameIndex;
   assert(c, r->freezeCount);
-  assert(c, buddies(r->freezeValue, v));
 
   if (r->includeNeighbor and (size > BytesPerWord)) {
     thawFrameIndex(c, frameIndex + 1, v, BytesPerWord);
@@ -2358,9 +2381,6 @@ thawFrameIndex(Context* c, int frameIndex, Value* v, unsigned size)
   }
   
   -- r->freezeCount;
-  if (r->freezeCount == 0) {
-    r->freezeValue = 0;
-  }
 }
 
 void
@@ -3735,42 +3755,6 @@ acceptJunctionSite(Context* c, Site* s)
     and (c->availableRegisterCount > 1 or s->type(c) != RegisterOperand);
 }
 
-bool
-registerUnused(Context* c, uint32_t mask)
-{
-  for (int i = c->arch->registerCount() - 1; i >= 0; --i) {
-    if ((1 << i) & mask) {
-      Register* r = c->registers[i];
-      if (not (r->reserved or r->value or r->refCount)) {
-        return true;
-      } else if ((static_cast<uint32_t>(1) << i) == mask) {
-        return false;
-      }
-    }
-  }
-  return false;
-}
-
-bool
-frameIndexUnused(Context* c, int index)
-{
-  return c->frameResources[index].value == 0;
-}
-
-bool
-unused(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
-       int frameIndex)
-{
-  return
-    ((typeMask & (1 << RegisterOperand))
-     and registerMask
-     and (size <= BytesPerWord or registerUnused(c, registerMask >> 32))
-     and registerUnused(c, registerMask))
-    or ((typeMask & (1 << MemoryOperand))
-        and (frameIndex == AnyFrameIndex
-             or (frameIndex >= 0 and frameIndexUnused(c, frameIndex))));
-}
-
 Site*
 pickJunctionSite(Context* c, Value* v, Read* r, unsigned frameIndex)
 {
@@ -3789,22 +3773,29 @@ pickJunctionSite(Context* c, Value* v, Read* r, unsigned frameIndex)
       and s->match(c, (1 << RegisterOperand)
                    | (1 << MemoryOperand), ~0, AnyFrameIndex))
   {
-//     fprintf(stderr, "use picked\n");
+    if (DebugControl) {
+      fprintf(stderr, "use picked\n");
+    }
     return s;
-  }
-  if (unused(c, r->size, typeMask, registerMask, frameIndexDesired)) {
+  } else if (unused(c, r->size, typeMask, registerMask, frameIndexDesired)) {
     s = allocateSite(c, typeMask, registerMask, frameIndexDesired);
     if (acceptJunctionSite(c, s)) {
-//       fprintf(stderr, "use allocated\n");
+      if (DebugControl) {
+        fprintf(stderr, "use allocated\n");
+      }
       return s;
     }
   }
 
   if (c->availableRegisterCount > 1) {
-//     fprintf(stderr, "use register\n");
+    if (DebugControl) {
+      fprintf(stderr, "use register\n");
+    }
     return freeRegisterSite(c);
-  } else {
-//     fprintf(stderr, "use frame\n");
+  } else if (frameIndexAvailable(c, frameIndex)) {
+    if (DebugControl) {
+      fprintf(stderr, "use frame\n");
+    }
     return frameSite(c, frameIndex);
   }
 }
