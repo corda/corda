@@ -3797,6 +3797,8 @@ pickJunctionSite(Context* c, Value* v, Read* r, unsigned frameIndex)
       fprintf(stderr, "use frame\n");
     }
     return frameSite(c, frameIndex);
+  } else {
+    abort(c);
   }
 }
 
