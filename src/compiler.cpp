@@ -3592,7 +3592,7 @@ visit(Context* c, Link* link)
     for (unsigned i = 0; i < junctionState->frameFootprint; ++i) {
       StubReadPair* p = junctionState->reads + i;
       
-      if (p->value) {
+      if (p->value and p->value->reads) {
         assert(c, p->value->reads == p->read);
         nextRead(c, 0, p->value);
       }
@@ -4506,8 +4506,10 @@ class MyCompiler: public Compiler {
 
     Event* p = c.predecessor;
     if (p) {
-//       fprintf(stderr, "visit %d pred %d\n", logicalIp,
-//               p->logicalInstruction->index);
+      if (DebugAppend) {
+        fprintf(stderr, "visit %d pred %d\n", logicalIp,
+                p->logicalInstruction->index);
+      }
 
       p->stackAfter = c.stack;
       p->localsAfter = c.locals;
@@ -4518,8 +4520,11 @@ class MyCompiler: public Compiler {
       p->successors = link;
       c.lastEvent->visitLinks = cons(&c, link, c.lastEvent->visitLinks);
 
-//       fprintf(stderr, "populate junction reads for %d to %d\n",
-//               p->logicalInstruction->index, logicalIp);
+      if (DebugAppend) {
+        fprintf(stderr, "populate junction reads for %d to %d\n",
+                p->logicalInstruction->index, logicalIp);
+      }
+
       populateJunctionReads(&c, link);
     }
 
