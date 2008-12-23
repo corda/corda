@@ -1904,13 +1904,14 @@ trySteal(Context* c, Site* site, Value* thief, Value* victim, unsigned size,
       success = true;
     } else {
       success = save(c, site, victim, size, stack, locals);
-      if ((not success)
-          and available(c, size, typeMask, registerMask, frameIndex))
-      {
-        move(c, stack, locals, size, victim, site,
-             allocateSite(c, typeMask, registerMask, frameIndex));
-        success = true;
-      }
+    }
+
+    if ((not success)
+        and available(c, size, typeMask, registerMask, frameIndex))
+    {
+      move(c, stack, locals, size, victim, site,
+           allocateSite(c, typeMask, registerMask, frameIndex));
+      success = true;
     }
 
     thief->thief = false;
@@ -4798,6 +4799,12 @@ class MyCompiler: public Compiler {
 
     if (footprint == 2) {
       Local* clobber = local + 1;
+      clobber->value = 0;
+      clobber->footprint = 0;
+    }
+
+    if (index > 0 and local[-1].footprint == 2) {
+      Local* clobber = local - 1;
       clobber->value = 0;
       clobber->footprint = 0;
     }
