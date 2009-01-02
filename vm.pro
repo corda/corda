@@ -50,6 +50,7 @@
 -keep public class java.lang.ExceptionInInitializerError
 -keep public class java.lang.OutOfMemoryError
 -keep public class java.lang.reflect.InvocationTargetException
+-keep public class java.io.IOException
 
 # ClassLoader.getSystemClassloader() depends on the existence of this class:
 

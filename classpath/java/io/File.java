@@ -14,6 +14,8 @@ public class File {
   private static final String FileSeparator
     = System.getProperty("file.separator");
 
+  public static final String separator = FileSeparator;
+
   //   static {
   //     System.loadLibrary("natives");
   //   }
