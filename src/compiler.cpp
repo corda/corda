@@ -16,13 +16,13 @@ using namespace vm;
 namespace {
 
 const bool DebugAppend = false;
-const bool DebugCompile = true;
-const bool DebugResources = true;
+const bool DebugCompile = false;
+const bool DebugResources = false;
 const bool DebugFrame = false;
-const bool DebugControl = true;
+const bool DebugControl = false;
 const bool DebugReads = false;
 const bool DebugSites = false;
-const bool DebugMoves = true;
+const bool DebugMoves = false;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -959,9 +959,7 @@ resourceCost(Context* c, Value* v, Resource* r)
 {
   if (r->reserved or r->freezeCount or r->referenceCount) {
     return Target::Impossible;
-  }
-
-  if (r->value) {
+  } else if (r->value) {
     assert(c, findSite(c, r->value, r->site));
 
     if (v and buddies(r->value, v)) {
@@ -1676,6 +1674,13 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
   unsigned total = 0;
   Value* p = v;
   do {
+    if (size < total + 32) {
+      assert(c, size > total + 4);
+      memcpy(buffer + total, "...", 3);
+      total += 3;
+      break;
+    }
+
     if (total) {
       assert(c, size > total + 2);
       memcpy(buffer + total, "; ", 2);
@@ -2179,10 +2184,12 @@ clean(Context* c, Value* v, unsigned popIndex)
              (c, static_cast<MemorySite*>(s)->value.offset)
              >= popIndex))
     {
-      char buffer[256]; s->toString(c, buffer, 256);
-      fprintf(stderr, "remove %s from %p at %d pop index %d\n",
-              buffer, v, offsetToFrameIndex
-              (c, static_cast<MemorySite*>(s)->value.offset), popIndex);
+      if (false) {
+        char buffer[256]; s->toString(c, buffer, 256);
+        fprintf(stderr, "remove %s from %p at %d pop index %d\n",
+                buffer, v, offsetToFrameIndex
+                (c, static_cast<MemorySite*>(s)->value.offset), popIndex);
+      }
       it.remove(c);
     }
   }
@@ -3028,7 +3035,9 @@ class MemoryEvent: public Event {
     scale(scale), result(result)
   {
     addRead(c, this, base, anyRegisterRead(c, BytesPerWord));
-    if (index) addRead(c, this, index, registerOrConstantRead(c, BytesPerWord));
+    if (index) {
+      addRead(c, this, index, registerOrConstantRead(c, BytesPerWord));
+    }
   }
 
   virtual const char* name() {
