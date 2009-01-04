@@ -1132,7 +1132,7 @@ addCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and aSize == 8) {
+    if (BytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1144,15 +1144,17 @@ addCR(Context* c, unsigned aSize, Assembler::Constant* a,
       addCR(c, 4, &al, 4, b);
       addCarryCR(c, 4, &ah, &bh);
     } else {
-      if (aSize == 8) rex(c);
-      if (isInt8(v)) {
-        c->code.append(0x83);
-        c->code.append(0xc0 | b->low);
-        c->code.append(v);
-      } else if (isInt32(v)) {
-        c->code.append(0x81);
-        c->code.append(0xc0 | b->low);
-        c->code.append4(v);        
+      if (isInt32(v)) {
+        if (bSize == 8) rex(c);
+        if (isInt8(v)) {
+          c->code.append(0x83);
+          c->code.append(0xc0 | b->low);
+          c->code.append(v);
+        } else {
+          c->code.append(0x81);
+          c->code.append(0xc0 | b->low);
+          c->code.append4(v);
+        }
       } else {
         Assembler::Register tmp(c->client->acquireTemporary());
         moveCR(c, aSize, a, aSize, &tmp);
@@ -1191,7 +1193,7 @@ subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and aSize == 8) {
+    if (BytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1203,15 +1205,17 @@ subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
       subtractCR(c, 4, &al, 4, b);
       subtractBorrowCR(c, 4, &ah, &bh);
     } else {
-      if (aSize == 8) rex(c);
-      if (isInt8(v)) {
-        c->code.append(0x83);
-        c->code.append(0xe8 | b->low);
-        c->code.append(v);
-      } else if (isInt32(v)) {
-        c->code.append(0x81);
-        c->code.append(0xe8 | b->low);
-        c->code.append4(v);        
+      if (isInt32(v)) {
+        if (bSize == 8) rex(c);
+        if (isInt8(v)) {
+          c->code.append(0x83);
+          c->code.append(0xe8 | b->low);
+          c->code.append(v);
+        } else {
+          c->code.append(0x81);
+          c->code.append(0xe8 | b->low);
+          c->code.append4(v);
+        }
       } else {
         Assembler::Register tmp(c->client->acquireTemporary());
         moveCR(c, aSize, a, aSize, &tmp);
@@ -1279,7 +1283,7 @@ andCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (BytesPerWord == 4 and bSize == 8) {
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
     Assembler::Constant ah(&high);
 
@@ -1292,7 +1296,7 @@ andCR(Context* c, unsigned aSize, Assembler::Constant* a,
     andCR(c, 4, &ah, 4, &bh);
   } else {
     if (isInt32(v)) {
-      if (aSize == 8) rex(c);
+      if (bSize == 8) rex(c);
       if (isInt8(v)) {
         c->code.append(0x83);
         c->code.append(0xe0 | b->low);
@@ -1338,7 +1342,7 @@ orCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and aSize == 8) {
+    if (BytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1351,7 +1355,7 @@ orCR(Context* c, unsigned aSize, Assembler::Constant* a,
       orCR(c, 4, &ah, 4, &bh);
     } else {
       if (isInt32(v)) {
-        if (aSize == 8) rex(c);
+        if (bSize == 8) rex(c);
         if (isInt8(v)) {
           c->code.append(0x83);
           c->code.append(0xc8 | b->low);
@@ -1396,7 +1400,7 @@ xorCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and aSize == 8) {
+    if (BytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1409,7 +1413,7 @@ xorCR(Context* c, unsigned aSize, Assembler::Constant* a,
       xorCR(c, 4, &ah, 4, &bh);
     } else {
       if (isInt32(v)) {
-        if (aSize == 8) rex(c);
+        if (bSize == 8) rex(c);
         if (isInt8(v)) {
           c->code.append(0x83);
           c->code.append(0xf0 | b->low);
