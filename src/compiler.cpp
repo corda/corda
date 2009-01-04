@@ -1693,7 +1693,7 @@ steal(Context* c, Resource* r, Value* thief, Stack* stack, Local* locals)
 {
   if (DebugResources) {
     char resourceBuffer[256]; r->toString(c, resourceBuffer, 256);
-    char siteBuffer[256]; sitesToString(c, r->value, siteBuffer, 256);
+    char siteBuffer[1024]; sitesToString(c, r->value, siteBuffer, 1024);
     fprintf(stderr, "%p steal %s from %p (%s)\n",
             thief, resourceBuffer, r->value, siteBuffer);
   }
@@ -3472,7 +3472,7 @@ Site*
 readSource(Context* c, Stack* stack, Local* locals, Read* r)
 {
   if (DebugReads) {
-    char buffer[256]; sitesToString(c, r->value, buffer, 256);
+    char buffer[1024]; sitesToString(c, r->value, buffer, 1024);
     fprintf(stderr, "read source for %p from %s\n", r->value, buffer);
   }
 
