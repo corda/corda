@@ -101,6 +101,8 @@ class Site {
 
   virtual void thaw(Context*, Value*, unsigned) { }
 
+  virtual bool frozen(Context*, unsigned) { return false; }
+
   virtual bool usesRegister(Context*, int) { return false; }
 
   virtual OperandType type(Context*) = 0;
@@ -1049,7 +1051,7 @@ frameCost(Context* c, Value* v, int frameIndex, unsigned size)
     highCost = 0;
   }
 
-  return lowCost + highCost;
+  return lowCost + highCost + 1;
 }
 
 Target
@@ -1353,6 +1355,12 @@ class RegisterSite: public Site {
     }
   }
 
+  virtual bool frozen(Context* c UNUSED, unsigned size) {
+    assert(c, low);
+    
+    return low->freezeCount or (size > BytesPerWord and high->freezeCount);
+  }
+
   virtual bool usesRegister(Context* c, int r) {
     sync(c);
     return register_.low == r or register_.high == r;
@@ -1549,6 +1557,17 @@ class MemorySite: public Site {
       if (size > BytesPerWord) {
         ::thaw(c, low + 1, v);
       }
+    }
+  }
+
+  virtual bool frozen(Context* c, unsigned size) {
+    if (value.base == c->arch->stack()) {
+      FrameResource* low = c->frameResources
+        + offsetToFrameIndex(c, value.offset);
+    
+      return low->freezeCount or (size > BytesPerWord and low[1].freezeCount);
+    } else {
+      return false;
     }
   }
 
@@ -3427,22 +3446,25 @@ append(Context* c, Event* e)
 }
 
 Site*
-pickSourceSite(Context* c, Read* read, Value* value, Site* target = 0,
-               unsigned* cost = 0, uint8_t typeMask = ~static_cast<uint8_t>(0),
-               bool includeBuddies = true)
+pickSourceSite(Context* c, Read* read, Site* target = 0,
+               unsigned* cost = 0, uint8_t typeMask = ~0,
+               bool includeBuddies = true, bool includeFrozen = true,
+               bool intersectRead = true)
 {
   uint64_t registerMask = ~static_cast<uint64_t>(0);
   int frameIndex = AnyFrameIndex;
 
-  if (read) {
+  if (intersectRead) {
     read->intersect(&typeMask, &registerMask, &frameIndex);
   }
   
   Site* site = 0;
   unsigned copyCost = 0xFFFFFFFF;
-  for (SiteIterator it(value, includeBuddies); it.hasMore();) {
+  for (SiteIterator it(read->value, includeBuddies); it.hasMore();) {
     Site* s = it.next();
-    if (s->match(c, typeMask, registerMask, frameIndex)) {
+    if ((includeFrozen or not s->frozen(c, read->size))
+        and s->match(c, typeMask, registerMask, frameIndex))
+    {
       unsigned v = s->copyCost(c, target);
       if (v < copyCost) {
         site = s;
@@ -3455,17 +3477,11 @@ pickSourceSite(Context* c, Read* read, Value* value, Site* target = 0,
     char srcb[256]; site->toString(c, srcb, 256);
     char dstb[256]; target->toString(c, dstb, 256);
     fprintf(stderr, "pick source %s to %s for %p cost %d\n",
-            srcb, dstb, value, copyCost);
+            srcb, dstb, read->value, copyCost);
   }
 
   if (cost) *cost = copyCost;
   return site;
-}
-
-Site*
-pickSourceSite(Context* c, Read* read)
-{
-  return pickSourceSite(c, read, read->value);
 }
 
 Site*
@@ -3485,7 +3501,7 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
   } else {
     Site* target = pickTargetSite(c, r, true);
     unsigned copyCost;
-    site = pickSourceSite(c, 0, r->value, target, &copyCost);
+    site = pickSourceSite(c, r, target, &copyCost, ~0, true, true, false);
     assert(c, copyCost);
     move(c, stack, locals, r->size, r->value, site, target);
     return target;    
@@ -3553,7 +3569,7 @@ acquireJunctionSite(Context* c, Event* e, Site* target, Value* v,
   assert(c, hasSite(v));
 
   unsigned copyCost;
-  Site* site = pickSourceSite(c, 0, v, target, &copyCost);
+  Site* site = pickSourceSite(c, r, target, &copyCost, ~0, true, true, false);
 
   if (copyCost) {
     target = target->copy(c);
@@ -3606,9 +3622,15 @@ resolveSourceJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
     if (r and e->junctionSites[el.localIndex] == 0) {
       const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
 
-      Site* s = pickSourceSite(c, r, v, 0, 0, mask, false);
+      Site* s = pickSourceSite(c, r, 0, 0, mask, false, false, true);
       if (s == 0) {
-        s = pickSourceSite(c, 0, v, 0, 0, mask, false);
+        s = pickSourceSite(c, r, 0, 0, mask, false, false, false);
+        if (s == 0) {
+          s = pickSourceSite(c, r, 0, 0, mask, true, false, true);
+          if (s == 0) {
+            s = pickSourceSite(c, r, 0, 0, mask, true, false, false);
+          }
+        }
       }
 
       if (s) {
