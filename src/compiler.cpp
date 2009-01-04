@@ -962,10 +962,12 @@ resourceCost(Context* c, Value* v, Resource* r)
   if (r->value) {
     assert(c, findSite(c, r->value, r->site));
 
-    if (hasMoreThanOneSite(r->value) or (v and buddies(r->value, v))) {
+    if (v and buddies(r->value, v)) {
       return 0;
-    } else {
+    } else if (hasMoreThanOneSite(r->value)) {
       return 1;
+    } else {
+      return 2;
     }
   } else {
     return 0;
@@ -4167,6 +4169,8 @@ class Client: public Assembler::Client {
 
   virtual void save(int r) {
     RegisterResource* reg = c->registerResources + r;
+//     fprintf(stderr, "save register %d %p %d\n",
+//             r, reg->value, reg->referenceCount);
     if (reg->value or reg->referenceCount) {
       releaseRegister(c, r);
     }
