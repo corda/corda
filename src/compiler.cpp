@@ -3508,19 +3508,6 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
   }
 }
 
-class SiteRecord {
- public:
-  SiteRecord(Site* site, Value* value, unsigned size):
-    site(site), value(value), size(size)
-  { }
-
-  SiteRecord() { }
-
-  Site* site;
-  Value* value;
-  unsigned size;
-};
-
 void
 propagateJunctionSites(Context* c, Event* e, Site** sites)
 {
@@ -3554,16 +3541,7 @@ propagateJunctionSites(Context* c, Event* e)
 }
 
 void
-freeze(Context* c, Site* s, Value* v, unsigned size, SiteRecord* frozenSites,
-       unsigned* frozenSiteIndex)
-{
-  new (frozenSites + ((*frozenSiteIndex)++)) SiteRecord(s, v, size);
-  s->freeze(c, v, size);
-}
-
-void
-acquireJunctionSite(Context* c, Event* e, Site* target, Value* v,
-                    SiteRecord* frozenSites, unsigned* frozenSiteIndex)
+acquireSite(Context* c, Event* e, Site* target, Value* v)
 {
   Read* r = live(v);
   assert(c, hasSite(v));
@@ -3578,28 +3556,25 @@ acquireJunctionSite(Context* c, Event* e, Site* target, Value* v,
     target = site;
   }
 
-  freeze(c, target, v, r->size, frozenSites, frozenSiteIndex);
+  target->freeze(c, v, r->size);
 }
 
 bool
-resolveOriginalJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
-                             unsigned* frozenSiteIndex)
+resolveOriginalSites(Context* c, Event* e, Site** sites)
 {
   bool complete = true;
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     if (live(el.value)) {
-      if (e->junctionSites[el.localIndex]) {
+      if (sites[el.localIndex]) {
         if (DebugControl) {
           char buffer[256];
-          e->junctionSites[el.localIndex]->toString(c, buffer, 256);
+          sites[el.localIndex]->toString(c, buffer, 256);
           fprintf(stderr, "resolve original %s for %p local %d frame %d\n",
                   buffer, el.value, el.localIndex, frameIndex(c, &el));
         }
 
-        acquireJunctionSite
-          (c, e, e->junctionSites[el.localIndex], el.value, frozenSites,
-           frozenSiteIndex);
+        acquireSite(c, e, sites[el.localIndex], el.value);
       } else {
         complete = false;
       }
@@ -3610,8 +3585,7 @@ resolveOriginalJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
 }
 
 bool
-resolveSourceJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
-                           unsigned* frozenSiteIndex)
+resolveSourceSites(Context* c, Event* e, Site** sites)
 {
   bool complete = true;
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
@@ -3619,18 +3593,12 @@ resolveSourceJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
     Value* v = el.value;
     Read* r = live(v);
 
-    if (r and e->junctionSites[el.localIndex] == 0) {
+    if (r and sites[el.localIndex] == 0) {
       const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
 
       Site* s = pickSourceSite(c, r, 0, 0, mask, false, false, true);
       if (s == 0) {
         s = pickSourceSite(c, r, 0, 0, mask, false, false, false);
-        if (s == 0) {
-          s = pickSourceSite(c, r, 0, 0, mask, true, false, true);
-          if (s == 0) {
-            s = pickSourceSite(c, r, 0, 0, mask, true, false, false);
-          }
-        }
       }
 
       if (s) {
@@ -3640,9 +3608,9 @@ resolveSourceJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
                   buffer, v, el.localIndex, frameIndex(c, &el));
         }
 
-        e->junctionSites[el.localIndex] = s;
+        sites[el.localIndex] = s;
 
-        freeze(c, s, v, r->size, frozenSites, frozenSiteIndex);
+        s->freeze(c, v, r->size);
       } else {
         complete = false;
       }
@@ -3653,15 +3621,22 @@ resolveSourceJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
 }
 
 void
-resolveTargetJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
-                           unsigned* frozenSiteIndex)
+resolveTargetSites(Context* c, Event* e, Site** sites)
 {
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     Read* r = live(el.value);
 
-    if (r and e->junctionSites[el.localIndex] == 0) {
-      Site* s = pickTargetSite(c, r);
+    if (r and sites[el.localIndex] == 0) {
+      const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
+
+      Site* s = pickSourceSite(c, r, 0, 0, mask, true, false, true);
+      if (s == 0) {
+        s = pickSourceSite(c, r, 0, 0, mask, true, false, false);
+        if (s == 0) {
+          s = pickTargetSite(c, r);
+        }
+      }
 
       if (DebugControl) {
         char buffer[256]; s->toString(c, buffer, 256);
@@ -3669,9 +3644,22 @@ resolveTargetJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
                 buffer, el.value, el.localIndex, frameIndex(c, &el));
       }
 
-      e->junctionSites[el.localIndex] = s;
+      sites[el.localIndex] = s;
 
-      acquireJunctionSite(c, e, s, el.value, frozenSites, frozenSiteIndex);
+      acquireSite(c, e, s, el.value);
+    }
+  }
+}
+
+void
+thawSites(Context* c, Event* e, Site** sites)
+{
+  for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
+    FrameIterator::Element el = it.next(c);
+    Read* r = live(el.value);
+    Site* s = sites[el.localIndex];
+    if (r and s) {
+      s->thaw(c, el.value, r->size);
     }
   }
 }
@@ -3679,33 +3667,27 @@ resolveTargetJunctionSites(Context* c, Event* e, SiteRecord* frozenSites,
 void
 resolveJunctionSites(Context* c, Event* e)
 {
-  SiteRecord frozenSites[frameFootprint(c, e->stackAfter)];
-  unsigned frozenSiteIndex = 0;
   bool complete;
-
   if (e->junctionSites) {
-    complete = resolveOriginalJunctionSites
-      (c, e, frozenSites, &frozenSiteIndex);
+    complete = resolveOriginalSites(c, e, e->junctionSites);
   } else {
     propagateJunctionSites(c, e);
     complete = false;
   }
 
   if (e->junctionSites) {
-    if (not (complete or resolveSourceJunctionSites
-             (c, e, frozenSites, &frozenSiteIndex)))
-    {
-      resolveTargetJunctionSites(c, e, frozenSites, &frozenSiteIndex);
+    if (not complete) {
+      complete = resolveSourceSites(c, e, e->junctionSites);
+      if (not complete) {
+        resolveTargetSites(c, e, e->junctionSites);
+      }
     }
+
+    thawSites(c, e, e->junctionSites);
 
     if (DebugControl) {
       fprintf(stderr, "resolved junction sites %p at %d\n",
               e->junctionSites, e->logicalInstruction->index);
-    }
-
-    while (frozenSiteIndex) {
-      SiteRecord* sr = frozenSites + (--frozenSiteIndex);
-      sr->site->thaw(c, sr->value, sr->size);
     }
   }
 }
@@ -3714,6 +3696,18 @@ void
 captureBranchSnapshots(Context* c, Event* e)
 {
   if (e->successors->nextSuccessor) {
+    if (e->junctionSites == 0) {
+      unsigned footprint = frameFootprint(c, e->stackAfter);
+      Site* sites[footprint];
+      memset(sites, 0, sizeof(Site*) * footprint);
+
+      if (not resolveSourceSites(c, e, sites)) {
+        resolveTargetSites(c, e, sites);
+      }
+
+      thawSites(c, e, sites);
+    }
+
     for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
       FrameIterator::Element el = it.next(c);
       e->snapshots = makeSnapshots(c, el.value, e->snapshots);
@@ -3813,6 +3807,19 @@ restore(Context* c, Event* e, Snapshot* snapshots)
 void
 populateSources(Context* c, Event* e)
 {
+  class SiteRecord {
+   public:
+    SiteRecord(Site* site, Value* value, unsigned size):
+      site(site), value(value), size(size)
+    { }
+
+    SiteRecord() { }
+
+    Site* site;
+    Value* value;
+    unsigned size;
+  };
+
   SiteRecord frozenSites[e->readCount];
   unsigned frozenSiteIndex = 0;
   for (Read* r = e->reads; r; r = r->eventNext) {
