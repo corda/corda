@@ -3511,8 +3511,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       saveStateAndCompile(t, frame, defaultIp);
 
-      c->jmp(c->memory(start, 0, c->sub(4, c->constant(bottom), key),
-                       BytesPerWord));
+      c->jmp(c->load(BytesPerWord, BytesPerWord,
+                     c->memory(start, 0, c->sub(4, c->constant(bottom), key),
+                               BytesPerWord)));
 
       Compiler::State* state = c->saveState();
 
