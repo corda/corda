@@ -3,6 +3,8 @@ public class Misc {
   private static int beta;
   private static byte byte1, byte2, byte3;
 
+  private final int NonStaticConstant = 42;
+
   private int gamma;
   private int pajama;
   private boolean boolean1;
@@ -337,6 +339,8 @@ public class Misc {
 
     { Misc m = new Misc();
       m.toString();
+
+      expect(m.NonStaticConstant == 42);
 
       expect(m.time == 0xffffffffffffffffL);
       long t = m.time;

@@ -1453,7 +1453,9 @@ interpret(Thread* t)
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
       if (throwIfVolatileField(t, field)) goto throw_;
-      
+
+      assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+
       pushField(t, popObject(t), field);
     } else {
       exception = makeNullPointerException(t);
@@ -1467,6 +1469,8 @@ interpret(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     if (throwIfVolatileField(t, field)) goto throw_;
+
+    assert(t, fieldFlags(t, field) & ACC_STATIC);
 
     PROTECT(t, field);
 
@@ -2401,6 +2405,8 @@ interpret(Thread* t)
     if (UNLIKELY(exception)) goto throw_;
     if (throwIfVolatileField(t, field)) goto throw_;
 
+    assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+
     switch (fieldCode(t, field)) {
     case ByteField:
     case BooleanField:
@@ -2466,6 +2472,8 @@ interpret(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     if (throwIfVolatileField(t, field)) goto throw_;
+
+    assert(t, fieldFlags(t, field) & ACC_STATIC);
 
     PROTECT(t, field);
 

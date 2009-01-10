@@ -2488,6 +2488,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* table;
 
       if (instruction == getstatic) {
+        assert(t, fieldFlags(t, field) & ACC_STATIC);
+
         if (fieldClass(t, field) != methodClass(t, context->method)
             and classNeedsInit(t, fieldClass(t, field)))
         {
@@ -2501,6 +2503,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         table = frame->append(classStaticTable(t, fieldClass(t, field)));
       } else {
+        assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+
         table = frame->popObject();
       }
 
@@ -3369,6 +3373,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object staticTable = 0;
 
       if (instruction == putstatic) {
+        assert(t, fieldFlags(t, field) & ACC_STATIC);
+
         if (fieldClass(t, field) != methodClass(t, context->method)
             and classNeedsInit(t, fieldClass(t, field)))
         {
@@ -3381,6 +3387,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
 
         staticTable = classStaticTable(t, fieldClass(t, field));      
+      } else {
+        assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
       }
 
       Compiler::Operand* value;
