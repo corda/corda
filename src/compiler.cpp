@@ -103,8 +103,6 @@ class Site {
 
   virtual bool frozen(Context*, unsigned) { return false; }
 
-  virtual bool usesRegister(Context*, int) { return false; }
-
   virtual OperandType type(Context*) = 0;
 
   virtual Assembler::Operand* asAssemblerOperand(Context*) = 0;
@@ -196,6 +194,10 @@ class Resource {
     reserved(reserved)
   { }
 
+  virtual void freeze(Context*, Value*) = 0;
+
+  virtual void thaw(Context*, Value*) = 0;
+
   virtual unsigned toString(Context*, char*, unsigned) = 0;
 
   Value* value;
@@ -212,10 +214,19 @@ class RegisterResource: public Resource {
     Resource(reserved)
   { }
 
+  virtual void freeze(Context*, Value*);
+
+  virtual void thaw(Context*, Value*);
+
   virtual unsigned toString(Context*, char*, unsigned);
 };
 
 class FrameResource: public Resource {
+ public:
+  virtual void freeze(Context*, Value*);
+
+  virtual void thaw(Context*, Value*);
+
   virtual unsigned toString(Context*, char*, unsigned);
 };
 
@@ -306,7 +317,6 @@ class Context {
     lastEvent(0),
     forkState(0),
     subroutine(0),
-    forfeitedSite(0),
     logicalIp(-1),
     constantCount(0),
     logicalCodeLength(0),
@@ -314,11 +324,15 @@ class Context {
     localFootprint(0),
     machineCodeSize(0),
     alignedFrameSize(0),
+    availableRegisterCount(arch->registerCount()),
     constantCompare(CompareNone),
     pass(ScanPass)
   {
     for (unsigned i = 0; i < arch->registerCount(); ++i) {
       new (registerResources + i) RegisterResource(arch->reserved(i));
+      if (registerResources[i].reserved) {
+        -- availableRegisterCount;
+      }
     }
   }
 
@@ -341,7 +355,6 @@ class Context {
   Event* lastEvent;
   ForkState* forkState;
   MySubroutine* subroutine;
-  Site* forfeitedSite;
   int logicalIp;
   unsigned constantCount;
   unsigned logicalCodeLength;
@@ -349,6 +362,7 @@ class Context {
   unsigned localFootprint;
   unsigned machineCodeSize;
   unsigned alignedFrameSize;
+  unsigned availableRegisterCount;
   ConstantCompare constantCompare;
   Pass pass;
 };
@@ -905,22 +919,39 @@ decrement(Context* c, Resource* r)
 }
 
 void
-freeze(Context* c, Resource* r, Value* v)
+freezeResource(Context* c, Resource* r, Value* v)
 {
-  if (not r->reserved) {
-    if (DebugResources) {
-      char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "%p freeze %s to %d\n", v, buffer, r->freezeCount + 1);
+  if (DebugResources) {
+    char buffer[256]; r->toString(c, buffer, 256);
+    fprintf(stderr, "%p freeze %s to %d\n", v, buffer, r->freezeCount + 1);
+  }
+    
+  assert(c, (r->value == 0 and v == 0) or buddies(r->value, v));
+    
+  ++ r->freezeCount;
+}
+
+void
+RegisterResource::freeze(Context* c, Value* v)
+{
+  if (not reserved) {
+    freezeResource(c, this, v);
+
+    if (freezeCount == 1) {
+      assert(c, c->availableRegisterCount);
+      -- c->availableRegisterCount;
     }
-    
-    assert(c, buddies(r->value, v));
-    
-    ++ r->freezeCount;
   }
 }
 
 void
-thaw(Context* c, Resource* r, Value* v)
+FrameResource::freeze(Context* c, Value* v)
+{
+  freezeResource(c, this, v);
+}
+
+void
+thawResource(Context* c, Resource* r, Value* v)
 {
   if (not r->reserved) {
     if (DebugResources) {
@@ -929,10 +960,28 @@ thaw(Context* c, Resource* r, Value* v)
     }
 
     assert(c, r->freezeCount);
-    assert(c, buddies(r->value, v));
+    assert(c, (r->value == 0 and v == 0) or buddies(r->value, v));
 
     -- r->freezeCount;
   }
+}
+
+void
+RegisterResource::thaw(Context* c, Value* v)
+{
+  if (not reserved) {
+    thawResource(c, this, v);
+
+    if (freezeCount == 0) {
+      ++ c->availableRegisterCount;
+    }
+  }
+}
+
+void
+FrameResource::thaw(Context* c, Value* v)
+{
+  thawResource(c, this, v);
 }
 
 class Target {
@@ -952,7 +1001,7 @@ class Target {
 };
 
 Target
-pickTarget(Context* c, Read* r, bool strict);
+pickTarget(Context* c, Read* r, bool intersectRead, bool acceptLastRegister);
 
 unsigned
 resourceCost(Context* c, Value* v, Resource* r)
@@ -1074,15 +1123,18 @@ pickFrameTarget(Context* c, Value* v, unsigned size)
 }
 
 Target
-pickTarget(Context* c, Read* read, bool strict)
+pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
 {
   uint8_t typeMask = ~static_cast<uint8_t>(0);
   uint64_t registerMask = ~static_cast<uint64_t>(0);
   int frameIndex = AnyFrameIndex;
   read->intersect(&typeMask, &registerMask, &frameIndex);
+
+  bool tryRegister = acceptLastRegister
+    or (c->availableRegisterCount > ceiling(read->size, BytesPerWord));
   
   Target best;
-  if (typeMask & (1 << RegisterOperand)) {
+  if (tryRegister and (typeMask & (1 << RegisterOperand))) {
     Target mine = pickRegisterTarget(c, read->value, registerMask, read->size);
     if (mine.cost == 0) {
       return mine;
@@ -1101,11 +1153,12 @@ pickTarget(Context* c, Read* read, bool strict)
     }
   }
 
-  if (strict) {
+  if (intersectRead) {
     return best;
   }
 
-  { Target mine = pickRegisterTarget
+  if (tryRegister) {
+    Target mine = pickRegisterTarget
       (c, read->value, ~static_cast<uint64_t>(0), read->size);
     if (mine.cost == 0) {
       return mine;
@@ -1317,12 +1370,12 @@ class RegisterSite: public Site {
     low = c->registerResources + target.low;
     ::acquire(c, low, size, v, this, stack, locals);
     if (size > BytesPerWord) {
-      ::freeze(c, low, v);
+      low->freeze(c, v);
 
       high = c->registerResources + target.high;
       ::acquire(c, high, size, v, this, stack, locals);
 
-      ::thaw(c, low, v);
+      low->thaw(c, v);
     }
   }
 
@@ -1338,18 +1391,18 @@ class RegisterSite: public Site {
   virtual void freeze(Context* c, Value* v, unsigned size) {
     assert(c, low);
 
-    ::freeze(c, low, v);
+    low->freeze(c, v);
     if (size > BytesPerWord) {
-      ::freeze(c, high, v);
+      high->freeze(c, v);
     }
   }
 
   virtual void thaw(Context* c, Value* v, unsigned size) {
     assert(c, low);
 
-    ::thaw(c, low, v);
+    low->thaw(c, v);
     if (size > BytesPerWord) {
-      ::thaw(c, high, v);
+      high->thaw(c, v);
     }
   }
 
@@ -1357,11 +1410,6 @@ class RegisterSite: public Site {
     assert(c, low);
     
     return low->freezeCount or (size > BytesPerWord and high->freezeCount);
-  }
-
-  virtual bool usesRegister(Context* c, int r) {
-    sync(c);
-    return register_.low == r or register_.high == r;
   }
 
   virtual OperandType type(Context*) {
@@ -1506,11 +1554,11 @@ class MemorySite: public Site {
         assert(c, (low - c->frameResources) < static_cast<int>
                (c->alignedFrameSize + c->parameterFootprint));
 
-        ::freeze(c, low, v);
+        low->freeze(c, v);
         
         ::acquire(c, low + 1, size, v, this, stack, locals);
         
-        ::thaw(c, low, v);
+        low->thaw(c, v);
       }
     }
   }
@@ -1539,9 +1587,9 @@ class MemorySite: public Site {
       FrameResource* low = c->frameResources
         + offsetToFrameIndex(c, value.offset);
 
-      ::freeze(c, low, v);
+      low->freeze(c, v);
       if (size > BytesPerWord) {
-        ::freeze(c, low + 1, v);
+        low[1].freeze(c, v);
       }
     }
   }
@@ -1551,9 +1599,9 @@ class MemorySite: public Site {
       FrameResource* low = c->frameResources
         + offsetToFrameIndex(c, value.offset);
 
-      ::thaw(c, low, v);
+      low->thaw(c, v);
       if (size > BytesPerWord) {
-        ::thaw(c, low + 1, v);
+        low[1].thaw(c, v);
       }
     }
   }
@@ -1567,11 +1615,6 @@ class MemorySite: public Site {
     } else {
       return false;
     }
-  }
-
-  virtual bool usesRegister(Context* c, int r) {
-    sync(c);
-    return value.base == r or value.index == r;
   }
 
   virtual OperandType type(Context*) {
@@ -1701,9 +1744,10 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
 }
 
 Site*
-pickTargetSite(Context* c, Read* read, bool strict = false)
+pickTargetSite(Context* c, Read* read, bool intersectRead = false,
+               bool acceptLastRegister = true)
 {
-  Target target(pickTarget(c, read, strict));
+  Target target(pickTarget(c, read, intersectRead, acceptLastRegister));
   expect(c, target.cost < Target::Impossible);
   if (target.high == Target::FrameIndex) {
     return frameSite(c, target.low);
@@ -1722,13 +1766,15 @@ steal(Context* c, Resource* r, Value* thief, Stack* stack, Local* locals)
             thief, resourceBuffer, r->value, siteBuffer);
   }
 
-  if (not (buddies(thief, r->value) or hasMoreThanOneSite(r->value))) {
-    freeze(c, r, r->value);
+  if (not ((thief and buddies(thief, r->value))
+           or hasMoreThanOneSite(r->value)))
+  {
+    r->freeze(c, r->value);
 
     move(c, stack, locals, r->size, r->value, r->site,
          pickTargetSite(c, live(r->value)));
 
-    thaw(c, r, r->value);
+    r->thaw(c, r->value);
   }
 
   removeSite(c, r->value, r->site);
@@ -2004,62 +2050,6 @@ find(Value* needle, Value* haystack)
   return false;
 }
 
-bool
-used(Context* c, RegisterResource* r)
-{
-  Value* v = r->value;
-  return v and findSite(c, v, r->site);
-}
-
-bool
-usedExclusively(Context* c, RegisterResource* r)
-{
-  return used(c, r) and not hasMoreThanOneSite(r->value);
-}
-
-void
-releaseRegister(Context* c, Value* v, unsigned frameIndex,
-                unsigned sizeInBytes, int r)
-{
-  Site* source = 0;
-  bool remaining = false;
-  for (SiteIterator it(v); it.hasMore();) {
-    Site* s = it.next();
-    if (s->usesRegister(c, r)) {
-      if (DebugResources) {
-        char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "%p (%s) in %p at %d uses %d\n",
-                s, buffer, v, frameIndex, r);
-      }
-
-      source = s;
-      it.remove(c);
-    } else {
-      if (DebugResources) {
-        char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "%p (%s) in %p at %d does not use %d\n",
-                s, buffer, v, frameIndex, r);
-      }
-
-      if (s != c->forfeitedSite) {
-        remaining = true;
-      }
-    }
-  }
-
-  if (live(v) and not remaining) {
-    addSite(c, 0, 0, sizeInBytes, v, source);
-    move(c, c->stack, c->locals, sizeInBytes, v, source,
-         frameSite(c, frameIndex));
-    removeSite(c, v, source);
-  }
-
-  if (DebugResources) {
-    char buffer[256]; sitesToString(c, v->sites, buffer, 256);
-    fprintf(stderr, "%p is left with %s\n", v, buffer);
-  }
-}
-
 unsigned
 footprintSizeInBytes(unsigned footprint)
 {
@@ -2067,38 +2057,6 @@ footprintSizeInBytes(unsigned footprint)
     return 8;
   } else {
     return footprint * 4;
-  }
-}
-
-bool
-remainingForfeited(Context* c, Value* v, Site* toRemove)
-{
-  for (SiteIterator it(v); it.hasMore();) {
-    Site* s = it.next();
-    if (not (s == toRemove or s == c->forfeitedSite)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void
-releaseRegister(Context* c, int r)
-{
-  RegisterResource* reg = c->registerResources + r;
-  if (used(c, reg)
-      and (not usedExclusively(c, reg))
-      and (not remainingForfeited(c, reg->value, reg->site)))
-  {
-    removeSite(c, reg->value, reg->site);
-
-    if (reg->referenceCount == 0) return;
-  }
-
-  for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
-    FrameIterator::Element e = it.next(c);
-    releaseRegister(c, e.value, frameIndex(c, &e),
-                    footprintSizeInBytes(e.footprint), r);
   }
 }
 
@@ -2498,6 +2456,8 @@ class MoveEvent: public Event {
     Site* target;
     if (dst->target) {
       target = dst->target;
+    } else if (isStore) {
+      return;
     } else {
       target = pickTargetSite(c, read);
     }
@@ -2717,27 +2677,29 @@ class CombineEvent: public Event {
     if (c->arch->condensedAddressing()) {
       maybePreserve(c, stackBefore, localsBefore, secondSize, second,
                     second->source);
+
       target = second->source;
-      if (liveNext(c, second)) {
-        c->forfeitedSite = target;
-      }
+
+      removeSite(c, second, target);
+
+      target->freeze(c, 0, secondSize);
     } else {
       target = pickTargetSite(c, resultRead);
       addSite(c, stackBefore, localsBefore, resultSize, result, target);
     }
 
-    first->source->thaw(c, first, firstSize);
-
 //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
     apply(c, type, firstSize, first->source, secondSize, second->source,
           resultSize, target);
+
+    first->source->thaw(c, first, firstSize);
 
     nextRead(c, this, first);
     nextRead(c, this, second);
 
     if (c->arch->condensedAddressing()) {
-      c->forfeitedSite = 0;
-      removeSite(c, second, target);
+      target->thaw(c, 0, secondSize);
+
       if (live(result)) {
         addSite(c, 0, 0, resultSize, result, target);
       }
@@ -2966,22 +2928,30 @@ class TranslateEvent: public Event {
     Site* target;
     if (c->arch->condensedAddressing()) {
       maybePreserve(c, stackBefore, localsBefore, size, value, value->source);
+
       target = value->source;
-      if (liveNext(c, value)) {
-        c->forfeitedSite = target;
-      }
+
+      removeSite(c, value, target);
+
+      target->freeze(c, 0, size);
     } else {
+      value->source->freeze(c, value, size);
+
       target = pickTargetSite(c, resultRead);
       addSite(c, stackBefore, localsBefore, size, result, target);
     }
 
     apply(c, type, size, value->source, size, target);
+
+    if (not c->arch->condensedAddressing()) {
+      value->source->thaw(c, value, size);
+    }
     
     nextRead(c, this, value);
 
     if (c->arch->condensedAddressing()) {
-      c->forfeitedSite = 0;
-      removeSite(c, value, target);
+      target->thaw(c, 0, size);
+
       if (live(result)) {
         addSite(c, 0, 0, size, result, target);
       }
@@ -3457,8 +3427,8 @@ append(Context* c, Event* e)
 Site*
 pickSourceSite(Context* c, Read* read, Site* target = 0,
                unsigned* cost = 0, uint8_t typeMask = ~0,
-               bool includeBuddies = true, bool includeFrozen = true,
-               bool intersectRead = true)
+               bool intersectRead = true, bool includeBuddies = true,
+               bool acceptFrozenOrLastRegister = true)
 {
   uint64_t registerMask = ~static_cast<uint64_t>(0);
   int frameIndex = AnyFrameIndex;
@@ -3466,12 +3436,17 @@ pickSourceSite(Context* c, Read* read, Site* target = 0,
   if (intersectRead) {
     read->intersect(&typeMask, &registerMask, &frameIndex);
   }
+
+  bool tryRegister = acceptFrozenOrLastRegister
+    or (c->availableRegisterCount > ceiling(read->size, BytesPerWord));
   
   Site* site = 0;
   unsigned copyCost = 0xFFFFFFFF;
   for (SiteIterator it(read->value, includeBuddies); it.hasMore();) {
     Site* s = it.next();
-    if ((includeFrozen or not s->frozen(c, read->size))
+    if ((acceptFrozenOrLastRegister
+         or ((not s->frozen(c, read->size))
+             and (tryRegister or s->type(c) != RegisterOperand)))
         and s->match(c, typeMask, registerMask, frameIndex))
     {
       unsigned v = s->copyCost(c, target);
@@ -3510,7 +3485,7 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
   } else {
     Site* target = pickTargetSite(c, r, true);
     unsigned copyCost;
-    site = pickSourceSite(c, r, target, &copyCost, ~0, true, true, false);
+    site = pickSourceSite(c, r, target, &copyCost, ~0, false);
     assert(c, copyCost);
     move(c, stack, locals, r->size, r->value, site, target);
     return target;    
@@ -3556,7 +3531,7 @@ acquireSite(Context* c, Event* e, Site* target, Value* v)
   assert(c, hasSite(v));
 
   unsigned copyCost;
-  Site* site = pickSourceSite(c, r, target, &copyCost, ~0, true, true, false);
+  Site* site = pickSourceSite(c, r, target, &copyCost, ~0, false);
 
   if (copyCost) {
     target = target->copy(c);
@@ -3605,7 +3580,7 @@ resolveSourceSites(Context* c, Event* e, Site** sites)
     if (r and sites[el.localIndex] == 0) {
       const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
 
-      Site* s = pickSourceSite(c, r, 0, 0, mask, false, false, true);
+      Site* s = pickSourceSite(c, r, 0, 0, mask, true, false, false);
       if (s == 0) {
         s = pickSourceSite(c, r, 0, 0, mask, false, false, false);
       }
@@ -3639,11 +3614,11 @@ resolveTargetSites(Context* c, Event* e, Site** sites)
     if (r and sites[el.localIndex] == 0) {
       const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
 
-      Site* s = pickSourceSite(c, r, 0, 0, mask, true, false, true);
+      Site* s = pickSourceSite(c, r, 0, 0, mask, true, true, false);
       if (s == 0) {
-        s = pickSourceSite(c, r, 0, 0, mask, true, false, false);
+        s = pickSourceSite(c, r, 0, 0, mask, false, true, false);
         if (s == 0) {
-          s = pickTargetSite(c, r);
+          s = pickTargetSite(c, r, false, false);
         }
       }
 
@@ -3663,12 +3638,14 @@ resolveTargetSites(Context* c, Event* e, Site** sites)
 void
 thawSites(Context* c, Event* e, Site** sites)
 {
-  for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
-    FrameIterator::Element el = it.next(c);
-    Read* r = live(el.value);
-    Site* s = sites[el.localIndex];
-    if (r and s) {
-      s->thaw(c, el.value, r->size);
+  if (sites) {
+    for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
+      FrameIterator::Element el = it.next(c);
+      Read* r = live(el.value);
+      Site* s = sites[el.localIndex];
+      if (r and s) {
+        s->thaw(c, el.value, r->size);
+      }
     }
   }
 }
@@ -3692,8 +3669,6 @@ resolveJunctionSites(Context* c, Event* e)
       }
     }
 
-    thawSites(c, e, e->junctionSites);
-
     if (DebugControl) {
       fprintf(stderr, "resolved junction sites %p at %d\n",
               e->junctionSites, e->logicalInstruction->index);
@@ -3701,22 +3676,26 @@ resolveJunctionSites(Context* c, Event* e)
   }
 }
 
+Site**
+resolveBranchSites(Context* c, Event* e, Site** branchSites)
+{
+  if (e->successors->nextSuccessor and e->junctionSites == 0) {
+    memset(branchSites, 0, sizeof(Site*) * frameFootprint(c, e->stackAfter));
+
+    if (not resolveSourceSites(c, e, branchSites)) {
+      resolveTargetSites(c, e, branchSites);
+    }
+
+    return branchSites;
+  } else {
+    return e->junctionSites;
+  }
+}
+
 void
 captureBranchSnapshots(Context* c, Event* e)
 {
   if (e->successors->nextSuccessor) {
-    if (e->junctionSites == 0) {
-      unsigned footprint = frameFootprint(c, e->stackAfter);
-      Site* sites[footprint];
-      memset(sites, 0, sizeof(Site*) * footprint);
-
-      if (not resolveSourceSites(c, e, sites)) {
-        resolveTargetSites(c, e, sites);
-      }
-
-      thawSites(c, e, sites);
-    }
-
     for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
       FrameIterator::Element el = it.next(c);
       e->snapshots = makeSnapshots(c, el.value, e->snapshots);
@@ -3733,12 +3712,16 @@ captureBranchSnapshots(Context* c, Event* e)
   }
 }
 
-void
-populateSiteTables(Context* c, Event* e)
+Site**
+populateSiteTables(Context* c, Event* e, Site** branchSites)
 {
   resolveJunctionSites(c, e);
 
+  Site** thawSites = resolveBranchSites(c, e, branchSites);
+
   captureBranchSnapshots(c, e);
+
+  return thawSites;
 }
 
 void
@@ -4014,17 +3997,22 @@ compile(Context* c)
       }
     }
 
-    populateSources(c, e);
+    Site* branchSites[frameFootprint(c, e->stackAfter)];
+    Site** thawSites = 0;
 
     bool branch = e->isBranch();
     if (branch and e->successors) {
-      populateSiteTables(c, e);
+      thawSites = populateSiteTables(c, e, branchSites);
     }
+
+    populateSources(c, e);
+
+    ::thawSites(c, e, thawSites);
 
     e->compile(c);
 
     if ((not branch) and e->successors) {
-      populateSiteTables(c, e);
+      ::thawSites(c, e, populateSiteTables(c, e, branchSites));
     }
 
     if (e->visitLinks) {
@@ -4207,13 +4195,14 @@ class Client: public Assembler::Client {
 
   virtual void save(int r) {
     RegisterResource* reg = c->registerResources + r;
-//     fprintf(stderr, "save register %d %p %d\n",
-//             r, reg->value, reg->referenceCount);
-    if (reg->value or reg->referenceCount) {
-      releaseRegister(c, r);
-    }
+
     assert(c, reg->referenceCount == 0);
-    assert(c, reg->value == 0);
+    assert(c, reg->freezeCount == 0);
+    assert(c, not reg->reserved);
+
+    if (reg->value) {
+      steal(c, reg, 0, c->stack, c->locals);
+    }
   }
 
   virtual void restore(int) {
