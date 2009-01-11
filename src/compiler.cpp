@@ -16,10 +16,10 @@ using namespace vm;
 namespace {
 
 const bool DebugAppend = false;
-const bool DebugCompile = true;
-const bool DebugResources = true;
+const bool DebugCompile = false;
+const bool DebugResources = false;
 const bool DebugFrame = false;
-const bool DebugControl = true;
+const bool DebugControl = false;
 const bool DebugReads = false;
 const bool DebugSites = false;
 const bool DebugMoves = false;
@@ -1078,7 +1078,6 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
       RegisterResource* r = c->registerResources + i;
       unsigned myCost = resourceCost(c, v, r);
       if ((static_cast<uint32_t>(1) << i) == mask) {
-        fprintf(stderr,  "%d costs %d\n", i, myCost);
         *cost = myCost;
         return i;
       } else if (myCost < bestCost) {
