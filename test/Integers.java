@@ -28,6 +28,10 @@ public class Integers {
       int c = a + b;
     }
 
+    { int a = 2;
+      int c = a + a;
+    }
+
     { int a = -5;
       int b = 2;
       expect(a >> b == -5 >> 2);

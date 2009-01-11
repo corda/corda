@@ -16,13 +16,14 @@ using namespace vm;
 namespace {
 
 const bool DebugAppend = false;
-const bool DebugCompile = false;
-const bool DebugResources = false;
+const bool DebugCompile = true;
+const bool DebugResources = true;
 const bool DebugFrame = false;
-const bool DebugControl = false;
+const bool DebugControl = true;
 const bool DebugReads = false;
 const bool DebugSites = false;
 const bool DebugMoves = false;
+const bool DebugBuddies = false;
 
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
@@ -842,11 +843,13 @@ valid(Read* r)
 Read*
 live(Value* v)
 {
-  if (valid(v->reads)) return v->reads;
-
-  for (Value* p = v->buddy; p != v; p = p->buddy) {
-    if (valid(p->reads)) return p->reads;
-  }
+  Value* p = v;
+  do {
+    if (valid(p->reads)) {
+      return p->reads;
+    }
+    p = p->buddy;
+  } while (p != v);
 
   return 0;
 }
@@ -865,6 +868,34 @@ liveNext(Context* c, Value* v)
 }
 
 void
+deadBuddy(Context* c, Value* v, Read* r)
+{
+  assert(c, v->buddy != v);
+  assert(c, r);
+
+  if (DebugBuddies) {
+    fprintf(stderr, "dead buddy %p from", v);
+    for (Value* p = v->buddy; p != v; p = p->buddy) {
+      fprintf(stderr, " %p", p);
+    }
+    fprintf(stderr, "\n");
+  }
+
+  Value* next = v->buddy;
+  v->buddy = v;
+  Value* p = next;
+  while (p->buddy != v) p = p->buddy;
+  p->buddy = next;
+
+  for (SiteIterator it(v); it.hasMore();) {
+    Site* s = it.next();
+    it.remove(c);
+    
+    addSite(c, 0, 0, r->size, next, s);
+  }
+}
+
+void
 nextRead(Context* c, Event* e UNUSED, Value* v)
 {
   assert(c, e == v->reads->event);
@@ -875,8 +906,14 @@ nextRead(Context* c, Event* e UNUSED, Value* v)
   }
 
   v->reads = v->reads->next(c);
-  if (not live(v)) {
-    clearSites(c, v);
+
+  if (not valid(v->reads)) {
+    Read* r = live(v);
+    if (r) {
+      deadBuddy(c, v, r);
+    } else {
+      clearSites(c, v);
+    }
   }
 }
 
@@ -926,7 +963,7 @@ freezeResource(Context* c, Resource* r, Value* v)
     fprintf(stderr, "%p freeze %s to %d\n", v, buffer, r->freezeCount + 1);
   }
     
-  assert(c, (r->value == 0 and v == 0) or buddies(r->value, v));
+  assert(c, r->value == 0 or buddies(r->value, v));
     
   ++ r->freezeCount;
 }
@@ -940,6 +977,10 @@ RegisterResource::freeze(Context* c, Value* v)
     if (freezeCount == 1) {
       assert(c, c->availableRegisterCount);
       -- c->availableRegisterCount;
+
+      if (DebugResources) {
+        fprintf(stderr, "%d registers available\n", c->availableRegisterCount);
+      }
     }
   }
 }
@@ -960,7 +1001,7 @@ thawResource(Context* c, Resource* r, Value* v)
     }
 
     assert(c, r->freezeCount);
-    assert(c, (r->value == 0 and v == 0) or buddies(r->value, v));
+    assert(c, r->value == 0 or buddies(r->value, v));
 
     -- r->freezeCount;
   }
@@ -974,6 +1015,10 @@ RegisterResource::thaw(Context* c, Value* v)
 
     if (freezeCount == 0) {
       ++ c->availableRegisterCount;
+
+      if (DebugResources) {
+        fprintf(stderr, "%d registers available\n", c->availableRegisterCount);
+      }
     }
   }
 }
@@ -1717,7 +1762,7 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
   unsigned total = 0;
   Value* p = v;
   do {
-    if (size < total + 32) {
+    if (size <= total + 32) {
       assert(c, size > total + 4);
       memcpy(buffer + total, "...", 3);
       total += 3;
@@ -2428,11 +2473,13 @@ addBuddy(Value* original, Value* buddy)
   while (p->buddy != original) p = p->buddy;
   p->buddy = buddy;
 
-//     fprintf(stderr, "add buddy %p to", buddy);
-//     for (Value* p = buddy->buddy; p != buddy; p = p->buddy) {
-//       fprintf(stderr, " %p", p);
-//     }
-//     fprintf(stderr, "\n");
+  if (DebugBuddies) {
+    fprintf(stderr, "add buddy %p to", buddy);
+    for (Value* p = buddy->buddy; p != buddy; p = p->buddy) {
+      fprintf(stderr, " %p", p);
+    }
+    fprintf(stderr, "\n");
+  }
 }
 
 class MoveEvent: public Event {
@@ -2682,7 +2729,7 @@ class CombineEvent: public Event {
 
       removeSite(c, second, target);
 
-      target->freeze(c, 0, secondSize);
+      target->freeze(c, second, secondSize);
     } else {
       target = pickTargetSite(c, resultRead);
       addSite(c, stackBefore, localsBefore, resultSize, result, target);
@@ -2698,7 +2745,7 @@ class CombineEvent: public Event {
     nextRead(c, this, second);
 
     if (c->arch->condensedAddressing()) {
-      target->thaw(c, 0, secondSize);
+      target->thaw(c, second, secondSize);
 
       if (live(result)) {
         addSite(c, 0, 0, resultSize, result, target);
@@ -2726,11 +2773,13 @@ void
 removeBuddy(Context* c, Value* v)
 {
   if (v->buddy != v) {
-//     fprintf(stderr, "remove buddy %p from", v);
-//     for (Value* p = v->buddy; p != v; p = p->buddy) {
-//       fprintf(stderr, " %p", p);
-//     }
-//     fprintf(stderr, "\n");
+    if (DebugBuddies) {
+      fprintf(stderr, "remove buddy %p from", v);
+      for (Value* p = v->buddy; p != v; p = p->buddy) {
+        fprintf(stderr, " %p", p);
+      }
+      fprintf(stderr, "\n");
+    }
 
     Value* next = v->buddy;
     v->buddy = v;
@@ -3424,11 +3473,52 @@ append(Context* c, Event* e)
   e->logicalInstruction->lastEvent = e;
 }
 
+bool
+acceptMatch(Context* c, Site* s, Read*, uint8_t typeMask,
+            uint64_t registerMask, int frameIndex)
+{
+  return s->match(c, typeMask, registerMask, frameIndex);
+}
+
+bool
+isHome(Value* v, int frameIndex)
+{
+  Value* p = v;
+  do {
+    if (p->home == frameIndex) {
+      return true;
+    }
+    p = p->buddy;
+  } while (p != v);
+
+  return false;
+}
+
+bool
+acceptForResolve(Context* c, Site* s, Read* read, uint8_t typeMask,
+                 uint64_t registerMask, int frameIndex)
+{
+  if (acceptMatch(c, s, read, typeMask, registerMask, frameIndex)
+      and (not s->frozen(c, read->size)))
+  {
+    if (s->type(c) == RegisterOperand) {
+      return c->availableRegisterCount > ceiling(read->size, BytesPerWord);
+    } else {
+      assert(c, s->match(c, 1 << MemoryOperand, 0, AnyFrameIndex));
+      return isHome(read->value, offsetToFrameIndex
+                    (c, static_cast<MemorySite*>(s)->value.offset));
+    }
+  } else {
+    return false;
+  }
+}
+
 Site*
 pickSourceSite(Context* c, Read* read, Site* target = 0,
                unsigned* cost = 0, uint8_t typeMask = ~0,
                bool intersectRead = true, bool includeBuddies = true,
-               bool acceptFrozenOrLastRegister = true)
+               bool (*accept)(Context*, Site*, Read*, uint8_t, uint64_t, int)
+               = acceptMatch)
 {
   uint64_t registerMask = ~static_cast<uint64_t>(0);
   int frameIndex = AnyFrameIndex;
@@ -3437,18 +3527,11 @@ pickSourceSite(Context* c, Read* read, Site* target = 0,
     read->intersect(&typeMask, &registerMask, &frameIndex);
   }
 
-  bool tryRegister = acceptFrozenOrLastRegister
-    or (c->availableRegisterCount > ceiling(read->size, BytesPerWord));
-  
   Site* site = 0;
   unsigned copyCost = 0xFFFFFFFF;
   for (SiteIterator it(read->value, includeBuddies); it.hasMore();) {
     Site* s = it.next();
-    if ((acceptFrozenOrLastRegister
-         or ((not s->frozen(c, read->size))
-             and (tryRegister or s->type(c) != RegisterOperand)))
-        and s->match(c, typeMask, registerMask, frameIndex))
-    {
+    if (accept(c, s, read, typeMask, registerMask, frameIndex)) {
       unsigned v = s->copyCost(c, target);
       if (v < copyCost) {
         site = s;
@@ -3524,32 +3607,86 @@ propagateJunctionSites(Context* c, Event* e)
   }
 }
 
+class SiteRecord {
+ public:
+  SiteRecord(Site* site, Value* value, unsigned size):
+    site(site), value(value), size(size)
+  { }
+
+  SiteRecord() { }
+
+  Site* site;
+  Value* value;
+  unsigned size;
+};
+
+class SiteRecordList {
+ public:
+  SiteRecordList(SiteRecord* records, unsigned capacity):
+    records(records), index(0), capacity(capacity)
+  { }
+
+  SiteRecord* records;
+  unsigned index;
+  unsigned capacity;
+};
+
 void
-acquireSite(Context* c, Event* e, Site* target, Value* v)
+freeze(Context* c, SiteRecordList* frozen, Site* s, Value* v, unsigned size)
 {
-  Read* r = live(v);
+  assert(c, frozen->index < frozen->capacity);
+
+  s->freeze(c, v, size);
+  new (frozen->records + (frozen->index ++)) SiteRecord(s, v, size);
+}
+
+void
+thaw(Context* c, SiteRecordList* frozen)
+{
+  while (frozen->index) {
+    SiteRecord* sr = frozen->records + (-- frozen->index);
+    sr->site->thaw(c, sr->value, sr->size);
+  }
+}
+
+Site*
+acquireSite(Context* c, Event* e, SiteRecordList* frozen, Site* target,
+            Value* v, Read* r, bool pickSource)
+{
   assert(c, hasSite(v));
 
   unsigned copyCost;
-  Site* site = pickSourceSite(c, r, target, &copyCost, ~0, false);
+  Site* source;
+  if (pickSource) {
+    source = pickSourceSite(c, r, target, &copyCost, ~0, false);
+  } else {
+    copyCost = 0;
+    source = target;
+  }
 
   if (copyCost) {
     target = target->copy(c);
-    move(c, e->stackAfter, e->localsAfter, r->size, v, site, target);
+    move(c, e->stackAfter, e->localsAfter, r->size, v, source, target);
   } else {
-    target = site;
+    target = source;
   }
 
-  target->freeze(c, v, r->size);
+  freeze(c, frozen, target, v, r->size);
+
+  return target;
 }
 
 bool
-resolveOriginalSites(Context* c, Event* e, Site** sites)
+resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
+                     Site** sites)
 {
   bool complete = true;
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
-    if (live(el.value)) {
+    Value* v = el.value;
+    Read* r = live(v);
+
+    if (r) {
       if (sites[el.localIndex]) {
         if (DebugControl) {
           char buffer[256];
@@ -3558,7 +3695,7 @@ resolveOriginalSites(Context* c, Event* e, Site** sites)
                   buffer, el.value, el.localIndex, frameIndex(c, &el));
         }
 
-        acquireSite(c, e, sites[el.localIndex], el.value);
+        acquireSite(c, e, frozen, sites[el.localIndex], v, r, true);
       } else {
         complete = false;
       }
@@ -3569,7 +3706,7 @@ resolveOriginalSites(Context* c, Event* e, Site** sites)
 }
 
 bool
-resolveSourceSites(Context* c, Event* e, Site** sites)
+resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 {
   bool complete = true;
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
@@ -3580,9 +3717,10 @@ resolveSourceSites(Context* c, Event* e, Site** sites)
     if (r and sites[el.localIndex] == 0) {
       const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
 
-      Site* s = pickSourceSite(c, r, 0, 0, mask, true, false, false);
+      Site* s = pickSourceSite
+        (c, r, 0, 0, mask, true, false, acceptForResolve);
       if (s == 0) {
-        s = pickSourceSite(c, r, 0, 0, mask, false, false, false);
+        s = pickSourceSite(c, r, 0, 0, mask, false, false, acceptForResolve);
       }
 
       if (s) {
@@ -3592,9 +3730,8 @@ resolveSourceSites(Context* c, Event* e, Site** sites)
                   buffer, v, el.localIndex, frameIndex(c, &el));
         }
 
-        sites[el.localIndex] = s;
-
-        s->freeze(c, v, r->size);
+        sites[el.localIndex] = acquireSite
+          (c, e, frozen, s, v, r, false)->copy(c);
       } else {
         complete = false;
       }
@@ -3605,20 +3742,23 @@ resolveSourceSites(Context* c, Event* e, Site** sites)
 }
 
 void
-resolveTargetSites(Context* c, Event* e, Site** sites)
+resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 {
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
-    Read* r = live(el.value);
+    Value* v = el.value;
+    Read* r = live(v);
 
     if (r and sites[el.localIndex] == 0) {
       const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
 
-      Site* s = pickSourceSite(c, r, 0, 0, mask, true, true, false);
+      bool useTarget = false;
+      Site* s = pickSourceSite(c, r, 0, 0, mask, true, true, acceptForResolve);
       if (s == 0) {
-        s = pickSourceSite(c, r, 0, 0, mask, false, true, false);
+        s = pickSourceSite(c, r, 0, 0, mask, false, true, acceptForResolve);
         if (s == 0) {
           s = pickTargetSite(c, r, false, false);
+          useTarget = true;
         }
       }
 
@@ -3628,34 +3768,19 @@ resolveTargetSites(Context* c, Event* e, Site** sites)
                 buffer, el.value, el.localIndex, frameIndex(c, &el));
       }
 
-      sites[el.localIndex] = s;
+      Site* acquired = acquireSite(c, e, frozen, s, v, r, useTarget)->copy(c);
 
-      acquireSite(c, e, s, el.value);
+      sites[el.localIndex] = (useTarget ? s : acquired->copy(c));
     }
   }
 }
 
 void
-thawSites(Context* c, Event* e, Site** sites)
-{
-  if (sites) {
-    for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
-      FrameIterator::Element el = it.next(c);
-      Read* r = live(el.value);
-      Site* s = sites[el.localIndex];
-      if (r and s) {
-        s->thaw(c, el.value, r->size);
-      }
-    }
-  }
-}
-
-void
-resolveJunctionSites(Context* c, Event* e)
+resolveJunctionSites(Context* c, Event* e, SiteRecordList* frozen)
 {
   bool complete;
   if (e->junctionSites) {
-    complete = resolveOriginalSites(c, e, e->junctionSites);
+    complete = resolveOriginalSites(c, e, frozen, e->junctionSites);
   } else {
     propagateJunctionSites(c, e);
     complete = false;
@@ -3663,9 +3788,9 @@ resolveJunctionSites(Context* c, Event* e)
 
   if (e->junctionSites) {
     if (not complete) {
-      complete = resolveSourceSites(c, e, e->junctionSites);
+      complete = resolveSourceSites(c, e, frozen, e->junctionSites);
       if (not complete) {
-        resolveTargetSites(c, e, e->junctionSites);
+        resolveTargetSites(c, e, frozen, e->junctionSites);
       }
     }
 
@@ -3676,19 +3801,17 @@ resolveJunctionSites(Context* c, Event* e)
   }
 }
 
-Site**
-resolveBranchSites(Context* c, Event* e, Site** branchSites)
+void
+resolveBranchSites(Context* c, Event* e, SiteRecordList* frozen)
 {
   if (e->successors->nextSuccessor and e->junctionSites == 0) {
-    memset(branchSites, 0, sizeof(Site*) * frameFootprint(c, e->stackAfter));
+    unsigned footprint = frameFootprint(c, e->stackAfter);
+    Site* branchSites[footprint];
+    memset(branchSites, 0, sizeof(Site*) * footprint);
 
-    if (not resolveSourceSites(c, e, branchSites)) {
-      resolveTargetSites(c, e, branchSites);
+    if (not resolveSourceSites(c, e, frozen, branchSites)) {
+      resolveTargetSites(c, e, frozen, branchSites);
     }
-
-    return branchSites;
-  } else {
-    return e->junctionSites;
   }
 }
 
@@ -3712,16 +3835,14 @@ captureBranchSnapshots(Context* c, Event* e)
   }
 }
 
-Site**
-populateSiteTables(Context* c, Event* e, Site** branchSites)
+void
+populateSiteTables(Context* c, Event* e, SiteRecordList* frozen)
 {
-  resolveJunctionSites(c, e);
+  resolveJunctionSites(c, e, frozen);
 
-  Site** thawSites = resolveBranchSites(c, e, branchSites);
+  resolveBranchSites(c, e, frozen);
 
   captureBranchSnapshots(c, e);
-
-  return thawSites;
 }
 
 void
@@ -3799,21 +3920,9 @@ restore(Context* c, Event* e, Snapshot* snapshots)
 void
 populateSources(Context* c, Event* e)
 {
-  class SiteRecord {
-   public:
-    SiteRecord(Site* site, Value* value, unsigned size):
-      site(site), value(value), size(size)
-    { }
+  SiteRecord frozenRecords[e->readCount];
+  SiteRecordList frozen(frozenRecords, e->readCount);
 
-    SiteRecord() { }
-
-    Site* site;
-    Value* value;
-    unsigned size;
-  };
-
-  SiteRecord frozenSites[e->readCount];
-  unsigned frozenSiteIndex = 0;
   for (Read* r = e->reads; r; r = r->eventNext) {
     r->value->source = readSource(c, e->stackBefore, e->localsBefore, r);
 
@@ -3824,19 +3933,11 @@ populateSources(Context* c, Event* e)
                 buffer, r->value);
       }
 
-      assert(c, frozenSiteIndex < e->readCount);
-
-      new (frozenSites + (frozenSiteIndex++))
-        SiteRecord(r->value->source, r->value, r->size);
-
-      r->value->source->freeze(c, r->value, r->size);
+      freeze(c, &frozen, r->value->source, r->value, r->size);
     }
   }
 
-  while (frozenSiteIndex) {
-    SiteRecord* sr = frozenSites + (--frozenSiteIndex);
-    sr->site->thaw(c, sr->value, sr->size);
-  }
+  thaw(c, &frozen);
 }
 
 void
@@ -3997,22 +4098,24 @@ compile(Context* c)
       }
     }
 
-    Site* branchSites[frameFootprint(c, e->stackAfter)];
-    Site** thawSites = 0;
+    unsigned footprint = frameFootprint(c, e->stackAfter);
+    SiteRecord frozenRecords[footprint];
+    SiteRecordList frozen(frozenRecords, footprint);
 
     bool branch = e->isBranch();
     if (branch and e->successors) {
-      thawSites = populateSiteTables(c, e, branchSites);
+      populateSiteTables(c, e, &frozen);
     }
 
     populateSources(c, e);
 
-    ::thawSites(c, e, thawSites);
+    thaw(c, &frozen);
 
     e->compile(c);
 
     if ((not branch) and e->successors) {
-      ::thawSites(c, e, populateSiteTables(c, e, branchSites));
+      populateSiteTables(c, e, &frozen);
+      thaw(c, &frozen);
     }
 
     if (e->visitLinks) {
