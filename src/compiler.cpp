@@ -1032,7 +1032,7 @@ FrameResource::thaw(Context* c, Value* v)
 class Target {
  public:
   static const int FrameIndex = -2;
-  static const unsigned Impossible = 4;
+  static const unsigned Impossible = 5;
 
   Target(): cost(Impossible) { }
 
@@ -1078,6 +1078,7 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
       RegisterResource* r = c->registerResources + i;
       unsigned myCost = resourceCost(c, v, r);
       if ((static_cast<uint32_t>(1) << i) == mask) {
+        fprintf(stderr,  "%d costs %d\n", i, myCost);
         *cost = myCost;
         return i;
       } else if (myCost < bestCost) {
@@ -1105,7 +1106,7 @@ pickRegisterTarget(Context* c, Value* v, uint64_t mask, unsigned size)
   if (size > BytesPerWord) {
     increment(c, c->registerResources + low);
 
-    high = pickRegisterTarget(c, v, mask, &highCost);
+    high = pickRegisterTarget(c, v, mask >> 32, &highCost);
 
     decrement(c, c->registerResources + low);
 
