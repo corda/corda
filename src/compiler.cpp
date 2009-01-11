@@ -874,7 +874,7 @@ deadBuddy(Context* c, Value* v, Read* r)
   assert(c, r);
 
   if (DebugBuddies) {
-    fprintf(stderr, "dead buddy %p from", v);
+    fprintf(stderr, "remove dead buddy %p from", v);
     for (Value* p = v->buddy; p != v; p = p->buddy) {
       fprintf(stderr, " %p", p);
     }
@@ -1615,10 +1615,10 @@ class MemorySite: public Site {
       FrameResource* low = c->frameResources
         + offsetToFrameIndex(c, value.offset);
 
-      ::release(c, low);
       if (low->size > BytesPerWord) {
         ::release(c, low + 1);
       }
+      ::release(c, low);
     }
 
     decrement(c, base);
@@ -1836,7 +1836,7 @@ acquire(Context* c, Resource* r, unsigned newSize, Value* newValue,
   if (not r->reserved) {
     if (DebugResources) {
       char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "%p acquire %s\n", newValue, buffer);
+      fprintf(stderr, "%p acquire %s size %d\n", newValue, buffer, newSize);
     }
 
     if (r->value) {
@@ -1856,7 +1856,7 @@ release(Context* c, Resource* r)
   if (not r->reserved) {
     if (DebugResources) {
       char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "%p release %s\n", r->value, buffer);
+      fprintf(stderr, "%p release %s size %d\n", r->value, buffer, r->size);
     }
 
     assert(c, r->value);
