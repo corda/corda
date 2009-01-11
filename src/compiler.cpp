@@ -1763,13 +1763,6 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
   unsigned total = 0;
   Value* p = v;
   do {
-    if (size <= total + 32) {
-      assert(c, size > total + 4);
-      memcpy(buffer + total, "...", 3);
-      total += 3;
-      break;
-    }
-
     if (total) {
       assert(c, size > total + 2);
       memcpy(buffer + total, "; ", 2);
