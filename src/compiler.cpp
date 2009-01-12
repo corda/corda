@@ -16,13 +16,13 @@ using namespace vm;
 namespace {
 
 const bool DebugAppend = false;
-const bool DebugCompile = false;
-const bool DebugResources = false;
+const bool DebugCompile = true;
+const bool DebugResources = true;
 const bool DebugFrame = false;
-const bool DebugControl = false;
+const bool DebugControl = true;
 const bool DebugReads = false;
 const bool DebugSites = false;
-const bool DebugMoves = false;
+const bool DebugMoves = true;
 const bool DebugBuddies = false;
 
 const int AnyFrameIndex = -2;
@@ -1032,7 +1032,7 @@ FrameResource::thaw(Context* c, Value* v)
 class Target {
  public:
   static const int FrameIndex = -2;
-  static const unsigned Impossible = 5;
+  static const unsigned Impossible = 6;
 
   Target(): cost(Impossible) { }
 
@@ -1503,7 +1503,8 @@ registerSite(Context* c, int low, int high = NoRegister)
     mask = ((~static_cast<uint64_t>(1)) << 32) | (1 << low);
   } else {
     hr = c->registerResources + high;
-    mask = (1 << (high + 32)) | (1 << low);
+    mask = (static_cast<uint64_t>(1) << (high + 32))
+      | (static_cast<uint64_t>(1) << low);
   }
   return new (c->zone->allocate(sizeof(RegisterSite)))
     RegisterSite(mask, c->registerResources + low, hr);
@@ -1807,12 +1808,12 @@ steal(Context* c, Resource* r, Value* thief, Stack* stack, Local* locals)
   if (not ((thief and buddies(thief, r->value))
            or hasMoreThanOneSite(r->value)))
   {
-    r->freeze(c, r->value);
+    r->site->freeze(c, r->value, r->size);
 
     move(c, stack, locals, r->size, r->value, r->site,
          pickTargetSite(c, live(r->value)));
 
-    r->thaw(c, r->value);
+    r->site->thaw(c, r->value, r->size);
   }
 
   removeSite(c, r->value, r->site);
