@@ -48,18 +48,18 @@ void NO_RETURN abort(Context*);
 
 void
 apply(Context* c, UnaryOperation op,
-      unsigned s1Size, Site* s1);
+      unsigned s1Size, Site* s1Low, Site* s1High);
 
 void
 apply(Context* c, BinaryOperation op,
-      unsigned s1Size, Site* s1,
-      unsigned s2Size, Site* s2);
+      unsigned s1Size, Site* s1Low, Site* s1High,
+      unsigned s2Size, Site* s2Low, Site* s2High);
 
 void
 apply(Context* c, TernaryOperation op,
-      unsigned s1Size, Site* s1,
-      unsigned s2Size, Site* s2,
-      unsigned s3Size, Site* s3);
+      unsigned s1Size, Site* s1Low, Site* s1High,
+      unsigned s2Size, Site* s2Low, Site* s2High,
+      unsigned s3Size, Site* s3Low, Site* s3High);
 
 enum ConstantCompare {
   CompareNone,
@@ -79,7 +79,19 @@ class Cell {
 class Local {
  public:
   Value* value;
-  unsigned footprint;
+};
+
+class SiteMask {
+ public:
+  SiteMask(): typeMask(~0), registerMask(~0), frameIndex(AnyFrameIndex) { }
+
+  SiteMask(uint8_t typeMask, uint32_t registerMask, int frameIndex):
+    typeMask(typeMask), registerMask(registerMask), frameIndex(frameIndex)
+  { }
+
+  uint8_t typeMask;
+  uint32_t registerMask;
+  int frameIndex;
 };
 
 class Site {
@@ -92,48 +104,44 @@ class Site {
 
   virtual unsigned copyCost(Context*, Site*) = 0;
 
-  virtual bool match(Context*, uint8_t, uint64_t, int) = 0;
+  virtual bool match(Context*, const SiteMask&) = 0;
   
-  virtual void acquire(Context*, Stack*, Local*, unsigned, Value*) { }
+  virtual void acquire(Context*, Value*) { }
 
-  virtual void release(Context*) { }
+  virtual void release(Context*, Value*) { }
 
-  virtual void freeze(Context*, Value*, unsigned) { }
+  virtual void freeze(Context*, Value*) { }
 
-  virtual void thaw(Context*, Value*, unsigned) { }
+  virtual void thaw(Context*, Value*) { }
 
-  virtual bool frozen(Context*, unsigned) { return false; }
+  virtual bool frozen(Context*) { return false; }
 
   virtual OperandType type(Context*) = 0;
 
-  virtual Assembler::Operand* asAssemblerOperand(Context*) = 0;
+  virtual void asAssemblerOperandLow(Context*, Assembler::Operand* result) = 0;
+
+  virtual void asAssemblerOperandHigh(Context*, Assembler::Operand*) { }
 
   virtual Site* copy(Context*) = 0;
 
   Site* next;
 };
 
+class SitePair {
+ public:
+  Site* low;
+  Site* high;
+};
+
 class Stack: public Compiler::StackElement {
  public:
-  Stack(unsigned index, unsigned footprint, Value* value, Stack* next):
-    index(index), footprint(footprint), value(value), next(next)
+  Stack(unsigned index, Value* value, Stack* next):
+    index(index), value(value), next(next)
   { }
 
   unsigned index;
-  unsigned footprint;
   Value* value;
   Stack* next;
-};
-
-class SavedValue {
- public:
-  SavedValue(unsigned footprint, Value* value, SavedValue* next):
-    footprint(footprint), value(value), next(next)
-  { }
-
-  unsigned footprint;
-  Value* value;
-  SavedValue* next;
 };
 
 class ForkElement {
@@ -145,7 +153,7 @@ class ForkElement {
 
 class ForkState: public Compiler::State {
  public:
-  ForkState(Stack* stack, Local* locals, SavedValue* saved, Event* predecessor,
+  ForkState(Stack* stack, Local* locals, Cell* saved, Event* predecessor,
             unsigned logicalIp):
     stack(stack),
     locals(locals),
@@ -157,7 +165,7 @@ class ForkState: public Compiler::State {
 
   Stack* stack;
   Local* locals;
-  SavedValue* saved;
+  Cell* saved;
   Event* predecessor;
   unsigned logicalIp;
   unsigned readCount;
@@ -191,8 +199,7 @@ class LogicalInstruction {
 class Resource {
  public:
   Resource(bool reserved = false):
-    value(0), site(0), size(0), freezeCount(0), referenceCount(0),
-    reserved(reserved)
+    value(0), site(0), freezeCount(0), referenceCount(0), reserved(reserved)
   { }
 
   virtual void freeze(Context*, Value*) = 0;
@@ -203,7 +210,6 @@ class Resource {
 
   Value* value;
   Site* site;
-  uint8_t size;
   uint8_t freezeCount;
   uint8_t referenceCount;
   bool reserved;
@@ -241,12 +247,11 @@ class ConstantPoolNode {
 
 class Read {
  public:
-  Read(unsigned size):
-    value(0), event(0), eventNext(0), size(size)
+  Read():
+    value(0), event(0), eventNext(0)
   { }
 
-  virtual bool intersect(uint8_t* typeMask, uint64_t* registerMask,
-                         int* frameIndex) = 0;
+  virtual bool intersect(SiteMask* mask) = 0;
   
   virtual bool valid() = 0;
 
@@ -257,7 +262,6 @@ class Read {
   Value* value;
   Event* event;
   Read* eventNext;
-  unsigned size;
 };
 
 int
@@ -270,11 +274,18 @@ intersectFrameIndexes(int a, int b)
   return NoFrameIndex;
 }
 
+SiteMask
+intersect(const SiteMask& a, const SiteMask& b)
+{
+  return SiteMask(a.typeMask & b.typeMask, a.registerMask & b.registerMask,
+                  intersectFrameIndexes(a.frameIndex, b.frameIndex));
+}
+
 class Value: public Compiler::Operand {
  public:
   Value(Site* site, Site* target):
     reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
-    home(NoFrameIndex)
+    high(0), home(NoFrameIndex)
   { }
 
   virtual void addPredecessor(Context*, Event*) { }
@@ -285,12 +296,8 @@ class Value: public Compiler::Operand {
   Site* source;
   Site* target;
   Value* buddy;
+  Value* high;
   int8_t home;
-};
-
-enum Pass {
-  ScanPass,
-  CompilePass
 };
 
 class Context {
@@ -326,8 +333,7 @@ class Context {
     machineCodeSize(0),
     alignedFrameSize(0),
     availableRegisterCount(arch->registerCount()),
-    constantCompare(CompareNone),
-    pass(ScanPass)
+    constantCompare(CompareNone)
   {
     for (unsigned i = 0; i < arch->registerCount(); ++i) {
       new (registerResources + i) RegisterResource(arch->reserved(i));
@@ -344,7 +350,7 @@ class Context {
   Compiler::Client* client;
   Stack* stack;
   Local* locals;
-  SavedValue* saved;
+  Cell* saved;
   Event* predecessor;
   LogicalInstruction** logicalCode;
   RegisterResource* registerResources;
@@ -365,7 +371,6 @@ class Context {
   unsigned alignedFrameSize;
   unsigned availableRegisterCount;
   ConstantCompare constantCompare;
-  Pass pass;
 };
 
 unsigned
@@ -477,6 +482,17 @@ inline void
 expect(Context* c, bool v)
 {
   expect(c->system, v);
+}
+
+unsigned
+count(Cell* c)
+{
+  unsigned count = 0;
+  while (c) {
+    ++ count;
+    c = c->next;
+  }
+  return count;
 }
 
 Cell*
@@ -615,13 +631,13 @@ class Event {
 };
 
 int
-frameIndex(Context* c, int index, unsigned footprint)
+frameIndex(Context* c, int index)
 {
   assert(c, static_cast<int>
-         (c->alignedFrameSize + c->parameterFootprint - index - footprint)
+         (c->alignedFrameSize + c->parameterFootprint - index - 1)
          >= 0);
 
-  return c->alignedFrameSize + c->parameterFootprint - index - footprint;
+  return c->alignedFrameSize + c->parameterFootprint - index - 1;
 }
 
 unsigned
@@ -654,13 +670,12 @@ class FrameIterator {
  public:
   class Element {
    public:
-    Element(Value* value, unsigned localIndex, unsigned footprint):
-      value(value), localIndex(localIndex), footprint(footprint)
+    Element(Value* value, unsigned localIndex):
+      value(value), localIndex(localIndex)
     { }
 
     Value* const value;
     const unsigned localIndex;
-    const unsigned footprint;
   };
 
   FrameIterator(Context* c, Stack* stack, Local* locals):
@@ -676,21 +691,18 @@ class FrameIterator {
   Element next(Context* c) {
     Value* v;
     unsigned li;
-    unsigned footprint;
     if (stack) {
       Stack* s = stack;
       v = s->value;
       li = s->index + c->localFootprint;
-      footprint = s->footprint;
       stack = stack->next;
     } else {
       Local* l = locals + localIndex;
       v = l->value;
       li = localIndex;
-      footprint = l->footprint;
       -- localIndex;
     }
-    return Element(v, li, footprint);
+    return Element(v, li);
   }
 
   Stack* stack;
@@ -701,7 +713,7 @@ class FrameIterator {
 int
 frameIndex(Context* c, FrameIterator::Element* element)
 {
-  return frameIndex(c, element->localIndex, element->footprint);
+  return frameIndex(c, element->localIndex);
 }
 
 class SiteIterator {
@@ -747,7 +759,7 @@ class SiteIterator {
   }
 
   void remove(Context* c) {
-    (*previous)->release(c);
+    (*previous)->release(c, originalValue);
     *previous = (*previous)->next;
     next_ = findNext(previous);
     previous = 0;
@@ -789,15 +801,14 @@ findSite(Context*, Value* v, Site* site)
 }
 
 void
-addSite(Context* c, Stack* stack, Local* locals, unsigned size, Value* v,
-        Site* s)
+addSite(Context* c, Value* v, Site* s)
 {
   if (not findSite(c, v, s)) {
     if (DebugSites) {
       char buffer[256]; s->toString(c, buffer, 256);
       fprintf(stderr, "add site %s to %p\n", buffer, v);
     }
-    s->acquire(c, stack, locals, size, v);
+    s->acquire(c, v);
     s->next = v->sites;
     v->sites = s;
   }
@@ -891,12 +902,12 @@ deadBuddy(Context* c, Value* v, Read* r)
     Site* s = it.next();
     it.remove(c);
     
-    addSite(c, 0, 0, r->size, next, s);
+    addSite(c, next, s);
   }
 }
 
 void
-nextRead(Context* c, Event* e UNUSED, Value* v)
+popRead(Context* c, Event* e UNUSED, Value* v)
 {
   assert(c, e == v->reads->event);
 
@@ -1018,7 +1029,7 @@ RegisterResource::thaw(Context* c, Value* v)
 
       if (DebugResources) {
         fprintf(stderr, "%d registers available\n", c->availableRegisterCount);
-      }
+      } 
     }
   }
 }
@@ -1031,17 +1042,16 @@ FrameResource::thaw(Context* c, Value* v)
 
 class Target {
  public:
-  static const int FrameIndex = -2;
-  static const unsigned Impossible = 6;
+  static const unsigned Impossible = 10;
 
   Target(): cost(Impossible) { }
 
-  Target(int low, int high, unsigned cost):
-    low(low), high(high), cost(cost)
+  Target(int index, OperandType type, unsigned cost):
+    index(index), type(type), cost(cost)
   { }
 
-  int16_t low;
-  int8_t high;
+  int16_t index;
+  OperandType type;
   uint8_t cost;
 };
 
@@ -1092,69 +1102,28 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
 }
 
 Target
-pickRegisterTarget(Context* c, Value* v, uint64_t mask, unsigned size)
+pickRegisterTarget(Context* c, Value* v, uint32_t mask)
 {
-  unsigned lowCost;
-  int low = pickRegisterTarget(c, v, mask, &lowCost);
-  if (lowCost >= Target::Impossible) {
-    return Target();
-  }
-
-  unsigned highCost;
-  int high;
-  if (size > BytesPerWord) {
-    increment(c, c->registerResources + low);
-
-    high = pickRegisterTarget(c, v, mask >> 32, &highCost);
-
-    decrement(c, c->registerResources + low);
-
-    if (highCost >= Target::Impossible) {
-      return Target();
-    }
-  } else {
-    highCost = 0;
-    high = NoRegister;
-  }
-
-  return Target(low, high, lowCost + highCost);
+  unsigned cost;
+  int number = pickRegisterTarget(c, v, mask, &cost);
+  return Target(number, RegisterOperand, cost);
 }
 
 unsigned
-frameCost(Context* c, Value* v, int frameIndex, unsigned size)
+frameCost(Context* c, Value* v, int frameIndex)
 {
-  unsigned lowCost = resourceCost(c, v, c->frameResources + frameIndex);
-  if (lowCost >= Target::Impossible) {
-    return Target::Impossible;
-  }
-
-  unsigned highCost;
-  if (size > BytesPerWord) {
-    increment(c, c->frameResources + frameIndex);
-
-    highCost = resourceCost(c, v, c->frameResources + frameIndex + 1);
-
-    decrement(c, c->frameResources + frameIndex);
-
-    if (highCost >= Target::Impossible) {
-      return Target::Impossible;
-    }
-  } else {
-    highCost = 0;
-  }
-
-  return lowCost + highCost + 1;
+  return resourceCost(c, v, c->frameResources + frameIndex) + 1;
 }
 
 Target
-pickFrameTarget(Context* c, Value* v, unsigned size)
+pickFrameTarget(Context* c, Value* v)
 {
   Target best;
 
   Value* p = v;
   do {
     if (p->home >= 0) {
-      Target mine(p->home, Target::FrameIndex, frameCost(c, v, p->home, size));
+      Target mine(p->home, MemoryOperand, frameCost(c, v, p->home));
       if (mine.cost == 0) {
         return mine;
       } else if (mine.cost < best.cost) {
@@ -1170,17 +1139,14 @@ pickFrameTarget(Context* c, Value* v, unsigned size)
 Target
 pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
 {
-  uint8_t typeMask = ~static_cast<uint8_t>(0);
-  uint64_t registerMask = ~static_cast<uint64_t>(0);
-  int frameIndex = AnyFrameIndex;
-  read->intersect(&typeMask, &registerMask, &frameIndex);
+  SiteMask mask;
+  read->intersect(&mask);
 
-  bool tryRegister = acceptLastRegister
-    or (c->availableRegisterCount > ceiling(read->size, BytesPerWord));
+  bool tryRegister = acceptLastRegister or (c->availableRegisterCount > 1);
   
   Target best;
-  if (tryRegister and (typeMask & (1 << RegisterOperand))) {
-    Target mine = pickRegisterTarget(c, read->value, registerMask, read->size);
+  if (tryRegister and (mask.typeMask & (1 << RegisterOperand))) {
+    Target mine = pickRegisterTarget(c, read->value, mask.registerMask);
     if (mine.cost == 0) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1188,9 +1154,9 @@ pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
     }
   }
 
-  if ((typeMask & (1 << MemoryOperand)) && frameIndex >= 0) {
-    Target mine(frameIndex, Target::FrameIndex,
-                frameCost(c, read->value, frameIndex, read->size));
+  if ((mask.typeMask & (1 << MemoryOperand)) && mask.frameIndex >= 0) {
+    Target mine(mask.frameIndex, MemoryOperand,
+                frameCost(c, read->value, mask.frameIndex));
     if (mine.cost == 0) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1203,8 +1169,7 @@ pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
   }
 
   if (tryRegister) {
-    Target mine = pickRegisterTarget
-      (c, read->value, ~static_cast<uint64_t>(0), read->size);
+    Target mine = pickRegisterTarget(c, read->value, ~0);
     if (mine.cost == 0) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1212,7 +1177,7 @@ pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
     }
   }
 
-  { Target mine = pickFrameTarget(c, read->value, read->size);
+  { Target mine = pickFrameTarget(c, read->value);
     if (mine.cost == 0) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1224,11 +1189,10 @@ pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
 }
 
 void
-acquire(Context* c, Resource* r, unsigned newSize, Value* newValue,
-        Site* newSite, Stack* stack, Local* locals);
+acquire(Context* c, Resource* resource, Value* value, Site* site);
 
 void
-release(Context* c, Resource* r);
+release(Context* c, Resource* resource, Value* value, Site* site);
 
 ConstantSite*
 constantSite(Context* c, Promise* value);
@@ -1238,9 +1202,9 @@ class ConstantSite: public Site {
   ConstantSite(Promise* value): value(value) { }
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
-    if (value.value->resolved()) {
+    if (value->resolved()) {
       return snprintf
-        (buffer, bufferSize, "constant %"LLD, value.value->value());
+        (buffer, bufferSize, "constant %"LLD, value->value());
     } else {
       return snprintf(buffer, bufferSize, "constant unresolved");
     }
@@ -1250,23 +1214,23 @@ class ConstantSite: public Site {
     return (s == this ? 0 : 3);
   }
 
-  virtual bool match(Context*, uint8_t typeMask, uint64_t, int) {
-    return typeMask & (1 << ConstantOperand);
+  virtual bool match(Context*, const SiteMask& mask) {
+    return mask.typeMask & (1 << ConstantOperand);
   }
 
   virtual OperandType type(Context*) {
     return ConstantOperand;
   }
 
-  virtual Assembler::Operand* asAssemblerOperand(Context*) {
-    return &value;
+  virtual void asAssemblerOperandLow(Context*, Assembler::Operand* result) {
+    new (result) Assembler::Constant(value);
   }
 
   virtual Site* copy(Context* c) {
-    return constantSite(c, value.value);
+    return constantSite(c, value);
   }
 
-  Assembler::Constant value;
+  Promise* value;
 };
 
 ConstantSite*
@@ -1296,9 +1260,9 @@ class AddressSite: public Site {
   AddressSite(Promise* address): address(address) { }
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
-    if (address.address->resolved()) {
+    if (address->resolved()) {
       return snprintf
-        (buffer, bufferSize, "address %"LLD, address.address->value());
+        (buffer, bufferSize, "address %"LLD, address->value());
     } else {
       return snprintf(buffer, bufferSize, "address unresolved");
     }
@@ -1308,23 +1272,23 @@ class AddressSite: public Site {
     return (s == this ? 0 : 2);
   }
 
-  virtual bool match(Context*, uint8_t typeMask, uint64_t, int) {
-    return typeMask & (1 << AddressOperand);
+  virtual bool match(Context*, const SiteMask& mask) {
+    return mask.typeMask & (1 << AddressOperand);
   }
 
   virtual OperandType type(Context*) {
     return AddressOperand;
   }
 
-  virtual Assembler::Operand* asAssemblerOperand(Context*) {
-    return &address;
+  virtual void asAssemblerOperandLow(Context*, Assembler::Operand* result) {
+    new (result) Assembler::Address(address);
   }
 
   virtual Site* copy(Context* c) {
-    return addressSite(c, address.address);
+    return addressSite(c, address);
   }
 
-  Assembler::Address address;
+  Promise* address;
 };
 
 AddressSite*
@@ -1333,52 +1297,30 @@ addressSite(Context* c, Promise* address)
   return new (c->zone->allocate(sizeof(AddressSite))) AddressSite(address);
 }
 
-void
-acquire(Context* c, Resource* r, unsigned newSize, Value* newValue,
-        Site* newSite, Stack* stack, Local* locals);
-
-void
-release(Context* c, Resource* r);
-
 RegisterSite*
-freeRegisterSite(Context* c, uint64_t mask = ~static_cast<uint64_t>(0));
+freeRegisterSite(Context* c, uint32_t mask = ~0);
 
 class RegisterSite: public Site {
  public:
-  RegisterSite(uint64_t mask, RegisterResource* low = 0,
-               RegisterResource* high = 0):
-    mask(mask), low(low), high(high), register_(NoRegister, NoRegister)
+  RegisterSite(uint32_t mask, int number):
+    mask(mask), number(number)
   { }
 
-  void sync(Context* c) {
-    assert(c, low);
-
-    register_.low = low - c->registerResources;
-    register_.high = (high? high - c->registerResources : NoRegister);
-  }
-
-  virtual unsigned toString(Context* c, char* buffer, unsigned bufferSize) {
-    if (low) {
-      sync(c);
-
-      return snprintf(buffer, bufferSize, "%p register %d %d",
-                      this, register_.low, register_.high);
+  virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
+    if (number != NoRegister) {
+      return snprintf(buffer, bufferSize, "%p register %d", this, number);
     } else {
       return snprintf(buffer, bufferSize, "%p register unacquired", this);
     }
   }
 
   virtual unsigned copyCost(Context* c, Site* s) {
-    sync(c);
+    assert(c, number != NoRegister);
 
     if (s and
         (this == s or
          (s->type(c) == RegisterOperand
-          and (static_cast<RegisterSite*>(s)->mask
-               & (static_cast<uint64_t>(1) << register_.low))
-          and (register_.high == NoRegister
-               or (static_cast<RegisterSite*>(s)->mask
-                   & (static_cast<uint64_t>(1) << (register_.high + 32)))))))
+          and (static_cast<RegisterSite*>(s)->mask & (1 << number)))))
     {
       return 0;
     } else {
@@ -1386,95 +1328,80 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual bool match(Context* c, uint8_t typeMask, uint64_t registerMask, int)
-  {
-    if ((typeMask & (1 << RegisterOperand)) and low) {
-      sync(c);
-      return ((static_cast<uint64_t>(1) << register_.low) & registerMask)
-        and (register_.high == NoRegister
-             or ((static_cast<uint64_t>(1) << (register_.high + 32))
-                 & registerMask));
+  virtual bool match(Context* c, const SiteMask& mask) {
+    assert(c, number != NoRegister);
+
+    if ((mask.typeMask & (1 << RegisterOperand))) {
+      return ((static_cast<uint64_t>(1) << number) & mask.registerMask);
     } else {
       return false;
     }
   }
 
-  virtual void acquire(Context* c, Stack* stack, Local* locals, unsigned size,
-                       Value* v)
-  {
+  virtual void acquire(Context* c, Value* v) {
     Target target;
-    if (low) {
-      target = Target(low - c->registerResources,
-                      high ? high - c->registerResources : NoRegister,
-                      0);
+    if (number != NoRegister) {
+      target = Target(number, RegisterOperand, 0);
     } else {
-      target = pickRegisterTarget(c, v, mask, size);
+      target = pickRegisterTarget(c, v, mask);
       expect(c, target.cost < Target::Impossible);
     }
 
-    low = c->registerResources + target.low;
-    ::acquire(c, low, size, v, this, stack, locals);
-    if (size > BytesPerWord) {
-      low->freeze(c, v);
+    RegisterResource* resource = c->registerResources + target.index;
+    ::acquire(c, resource, v, this);
 
-      high = c->registerResources + target.high;
-      ::acquire(c, high, size, v, this, stack, locals);
-
-      low->thaw(c, v);
-    }
+    number = target.index;
   }
 
-  virtual void release(Context* c) {
-    assert(c, low);
+  virtual void release(Context* c, Value* v) {
+    assert(c, number != NoRegister);
 
-    ::release(c, low);
-    if (high) {
-      ::release(c, high);
-    }
+    ::release(c, c->registerResources + number, v, this);
   }
 
-  virtual void freeze(Context* c, Value* v, unsigned size) {
-    assert(c, low);
+  virtual void freeze(Context* c, Value* v) {
+    assert(c, number != NoRegister);
 
-    low->freeze(c, v);
-    if (size > BytesPerWord) {
-      high->freeze(c, v);
-    }
+    c->registerResources[number].freeze(c, v);
   }
 
-  virtual void thaw(Context* c, Value* v, unsigned size) {
-    assert(c, low);
+  virtual void thaw(Context* c, Value* v) {
+    assert(c, number != NoRegister);
 
-    low->thaw(c, v);
-    if (size > BytesPerWord) {
-      high->thaw(c, v);
-    }
+    c->registerResources[number].thaw(c, v);
   }
 
-  virtual bool frozen(Context* c UNUSED, unsigned size) {
-    assert(c, low);
-    
-    return low->freezeCount or (size > BytesPerWord and high->freezeCount);
+  virtual bool frozen(Context* c UNUSED) {
+    assert(c, number != NoRegister);
+
+    return c->registerResources[number].freezeCount != 0;
   }
 
   virtual OperandType type(Context*) {
     return RegisterOperand;
   }
 
-  virtual Assembler::Operand* asAssemblerOperand(Context* c) {
-    sync(c);
-    return &register_;
+  virtual void asAssemblerOperandLow(Context* c UNUSED,
+                                     Assembler::Operand* result)
+  {
+    assert(c, number != NoRegister);
+
+    static_cast<Assembler::Register*>(result)->low = number;
+  }
+
+  virtual void asAssemblerOperandHigh(Context* c UNUSED,
+                                      Assembler::Operand* result)
+  {
+    assert(c, number != NoRegister);
+
+    static_cast<Assembler::Register*>(result)->high = number;
   }
 
   virtual Site* copy(Context* c) {
-    uint64_t mask;
+    uint32_t mask;
     
-    if (low) {
-      sync(c);
-      mask = static_cast<uint64_t>(1) << register_.low;
-      if (register_.high != NoRegister) {
-        mask |= static_cast<uint64_t>(1) << (register_.high + 32);
-      }
+    if (number != NoRegister) {
+      mask = 1 << number;
     } else {
       mask = this->mask;
     }
@@ -1482,38 +1409,25 @@ class RegisterSite: public Site {
     return freeRegisterSite(c, mask);
   }
 
-  uint64_t mask;
-  RegisterResource* low;
-  RegisterResource* high;
-  Assembler::Register register_;
+  uint32_t mask;
+  int number;
 };
 
 RegisterSite*
-registerSite(Context* c, int low, int high = NoRegister)
+registerSite(Context* c, int number)
 {
-  assert(c, low != NoRegister);
-  assert(c, low < static_cast<int>(c->arch->registerCount()));
-  assert(c, high == NoRegister
-         or high < static_cast<int>(c->arch->registerCount()));
+  assert(c, number >= 0);
+  assert(c, number < static_cast<int>(c->arch->registerCount()));
 
-  uint64_t mask;
-  RegisterResource* hr;
-  if (high == NoRegister) {
-    hr = 0;
-    mask = ((~static_cast<uint64_t>(1)) << 32) | (1 << low);
-  } else {
-    hr = c->registerResources + high;
-    mask = (static_cast<uint64_t>(1) << (high + 32))
-      | (static_cast<uint64_t>(1) << low);
-  }
   return new (c->zone->allocate(sizeof(RegisterSite)))
-    RegisterSite(mask, c->registerResources + low, hr);
+    RegisterSite(1 << number, number);
 }
 
 RegisterSite*
-freeRegisterSite(Context* c, uint64_t mask)
+freeRegisterSite(Context* c, uint32_t mask)
 {
-  return new (c->zone->allocate(sizeof(RegisterSite))) RegisterSite(mask);
+  return new (c->zone->allocate(sizeof(RegisterSite)))
+    RegisterSite(mask, NoRegister);
 }
 
 MemorySite*
@@ -1523,37 +1437,28 @@ memorySite(Context* c, int base, int offset = 0, int index = NoRegister,
 class MemorySite: public Site {
  public:
   MemorySite(int base, int offset, int index, unsigned scale):
-    base(0), index(0), value(base, offset, index, scale)
+    acquired(false), base(base), offset(offset), index(index), scale(scale)
   { }
 
-  void sync(Context* c UNUSED) {
-    assert(c, base);
-
-    value.base = base - c->registerResources;
-    value.index = (index? index - c->registerResources : NoRegister);
-  }
-
-  virtual unsigned toString(Context* c, char* buffer, unsigned bufferSize) {
-    if (base) {
-      sync(c);
-
+  virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
+    if (acquired) {
       return snprintf(buffer, bufferSize, "memory %d 0x%x %d %d",
-                      value.base, value.offset, value.index, value.scale);
+                      base, offset, index, scale);
     } else {
       return snprintf(buffer, bufferSize, "memory unacquired");
     }
   }
 
   virtual unsigned copyCost(Context* c, Site* s) {
-    sync(c);
+    assert(c, acquired);    
 
     if (s and
         (this == s or
          (s->type(c) == MemoryOperand
-          and static_cast<MemorySite*>(s)->value.base == value.base
-          and static_cast<MemorySite*>(s)->value.offset == value.offset
-          and static_cast<MemorySite*>(s)->value.index == value.index
-          and static_cast<MemorySite*>(s)->value.scale == value.scale)))
+          and static_cast<MemorySite*>(s)->base == base
+          and static_cast<MemorySite*>(s)->offset == offset
+          and static_cast<MemorySite*>(s)->index == index
+          and static_cast<MemorySite*>(s)->scale == scale)))
     {
       return 0;
     } else {
@@ -1561,15 +1466,16 @@ class MemorySite: public Site {
     }
   }
 
-  virtual bool match(Context* c, uint8_t typeMask, uint64_t, int frameIndex) {
-    if (typeMask & (1 << MemoryOperand)) {
-      sync(c);
-      if (value.base == c->arch->stack()) {
-        assert(c, value.index == NoRegister);
-        return frameIndex == AnyFrameIndex
-          || (frameIndex != NoFrameIndex
-              && static_cast<int>(frameIndexToOffset(c, frameIndex))
-              == value.offset);
+  virtual bool match(Context* c, const SiteMask& mask) {
+    assert(c, acquired);
+
+    if (mask.typeMask & (1 << MemoryOperand)) {
+      if (base == c->arch->stack()) {
+        assert(c, index == NoRegister);
+        return mask.frameIndex == AnyFrameIndex
+          || (mask.frameIndex != NoFrameIndex
+              && static_cast<int>(frameIndexToOffset(c, mask.frameIndex))
+              == offset);
       } else {
         return true;
       }
@@ -1578,107 +1484,74 @@ class MemorySite: public Site {
     }
   }
 
-  virtual void acquire(Context* c, Stack* stack, Local* locals, unsigned size,
-                       Value* v)
-  {
-    base = c->registerResources + value.base;
-    increment(c, base);
-    if (value.index != NoRegister) {
-      index = c->registerResources + value.index;
-      increment(c, index);
+  virtual void acquire(Context* c, Value* v) {
+    increment(c, c->registerResources + base);
+    if (index != NoRegister) {
+      increment(c, c->registerResources + index);
     }
 
-    if (value.base == c->arch->stack()) {
-      assert(c, value.index == NoRegister);
+    if (base == c->arch->stack()) {
+      assert(c, index == NoRegister);
 
-      FrameResource* low = c->frameResources
-        + offsetToFrameIndex(c, value.offset);
-
-      ::acquire(c, low, size, v, this, stack, locals);
-
-      if (size > BytesPerWord) {
-        assert(c, (low - c->frameResources) < static_cast<int>
-               (c->alignedFrameSize + c->parameterFootprint));
-
-        low->freeze(c, v);
-        
-        ::acquire(c, low + 1, size, v, this, stack, locals);
-        
-        low->thaw(c, v);
-      }
+      ::acquire(c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
     }
+
+    acquired = true;
   }
 
-  virtual void release(Context* c) {
-    if (value.base == c->arch->stack()) {
-      assert(c, value.index == NoRegister);
+  virtual void release(Context* c, Value* v) {
+    if (base == c->arch->stack()) {
+      assert(c, index == NoRegister);
 
-      FrameResource* low = c->frameResources
-        + offsetToFrameIndex(c, value.offset);
-
-      if (low->size > BytesPerWord) {
-        ::release(c, low + 1);
-      }
-      ::release(c, low);
+      ::release(c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
     }
 
-    decrement(c, base);
+    decrement(c, c->registerResources + base);
     if (index) {
-      decrement(c, index);
+      decrement(c, c->registerResources + index);
+    }
+
+    acquired = false;
+  }
+
+  virtual void freeze(Context* c, Value* v) {
+    if (base == c->arch->stack()) {
+      c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
     }
   }
 
-  virtual void freeze(Context* c, Value* v, unsigned size) {
-    if (value.base == c->arch->stack()) {
-      FrameResource* low = c->frameResources
-        + offsetToFrameIndex(c, value.offset);
-
-      low->freeze(c, v);
-      if (size > BytesPerWord) {
-        low[1].freeze(c, v);
-      }
+  virtual void thaw(Context* c, Value* v) {
+    if (base == c->arch->stack()) {
+      c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
     }
   }
 
-  virtual void thaw(Context* c, Value* v, unsigned size) {
-    if (value.base == c->arch->stack()) {
-      FrameResource* low = c->frameResources
-        + offsetToFrameIndex(c, value.offset);
-
-      low->thaw(c, v);
-      if (size > BytesPerWord) {
-        low[1].thaw(c, v);
-      }
-    }
-  }
-
-  virtual bool frozen(Context* c, unsigned size) {
-    if (value.base == c->arch->stack()) {
-      FrameResource* low = c->frameResources
-        + offsetToFrameIndex(c, value.offset);
-    
-      return low->freezeCount or (size > BytesPerWord and low[1].freezeCount);
-    } else {
-      return false;
-    }
+  virtual bool frozen(Context* c) {
+    return base == c->arch->stack()
+      and c->frameResources[offsetToFrameIndex(c, offset)].freezeCount != 0;
   }
 
   virtual OperandType type(Context*) {
     return MemoryOperand;
   }
 
-  virtual Assembler::Operand* asAssemblerOperand(Context* c) {
-    sync(c);
-    return &value;
+  virtual void asAssemblerOperandLow(Context* c UNUSED,
+                                     Assembler::Operand* result)
+  {
+    assert(c, acquired);
+
+    new (result) Assembler::Memory(base, offset, index, scale);
   }
 
   virtual Site* copy(Context* c) {
-    return memorySite(c, value.base, value.offset, value.index, value.scale);
+    return memorySite(c, base, offset, index, scale);
   }
 
-  RegisterResource* base;
-  RegisterResource* index;
-  Assembler::Memory value;
+  bool acquired;
+  int base;
+  int offset;
+  int index;
+  unsigned scale;
 };
 
 MemorySite*
@@ -1693,29 +1566,28 @@ frameSite(Context* c, int frameIndex)
 {
   assert(c, frameIndex >= 0);
   return memorySite
-    (c, c->arch->stack(), frameIndexToOffset(c, frameIndex));
+    (c, c->arch->stack(), frameIndexToOffset(c, frameIndex), NoRegister, 0);
 }
 
 void
-move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
-     Site* src, Site* dst)
+move(Context* c, Value* value, Site* src, Site* dst)
 {
-  src->freeze(c, value, size);
+  src->freeze(c, value);
 
-  addSite(c, stack, locals, size, value, dst);
+  addSite(c, value, dst);
 
-  src->thaw(c, value, size);
+  src->thaw(c, value);
 
   if (dst->type(c) == MemoryOperand
       and (src->type(c) == MemoryOperand
            or src->type(c) == AddressOperand))
   {
-    src->freeze(c, value, size);
+    src->freeze(c, value);
 
     Site* tmp = freeRegisterSite(c);
-    addSite(c, stack, locals, size, value, tmp);
+    addSite(c, value, tmp);
 
-    src->thaw(c, value, size);
+    src->thaw(c, value);
 
     if (DebugMoves) {
       char srcb[256]; src->toString(c, srcb, 256);
@@ -1723,7 +1595,7 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
       fprintf(stderr, "move %s to %s for %p\n", srcb, tmpb, value);
     }
       
-    apply(c, Move, size, src, size, tmp);
+    apply(c, Move, BytesPerWord, src, 0, BytesPerWord, tmp, 0);
 
     src = tmp;
   }
@@ -1734,7 +1606,7 @@ move(Context* c, Stack* stack, Local* locals, unsigned size, Value* value,
     fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
   }
   
-  apply(c, Move, size, src, size, dst);
+  apply(c, Move, BytesPerWord, src, 0, BytesPerWord, dst, 0);
 }
 
 unsigned
@@ -1788,15 +1660,15 @@ pickTargetSite(Context* c, Read* read, bool intersectRead = false,
 {
   Target target(pickTarget(c, read, intersectRead, acceptLastRegister));
   expect(c, target.cost < Target::Impossible);
-  if (target.high == Target::FrameIndex) {
-    return frameSite(c, target.low);
+  if (target.type == MemoryOperand) {
+    return frameSite(c, target.index);
   } else {
-    return registerSite(c, target.low, target.high);
+    return registerSite(c, target.index);
   }
 }
 
 void
-steal(Context* c, Resource* r, Value* thief, Stack* stack, Local* locals)
+steal(Context* c, Resource* r, Value* thief)
 {
   if (DebugResources) {
     char resourceBuffer[256]; r->toString(c, resourceBuffer, 256);
@@ -1808,75 +1680,67 @@ steal(Context* c, Resource* r, Value* thief, Stack* stack, Local* locals)
   if (not ((thief and buddies(thief, r->value))
            or hasMoreThanOneSite(r->value)))
   {
-    r->site->freeze(c, r->value, r->size);
+    r->site->freeze(c, r->value);
 
-    move(c, stack, locals, r->size, r->value, r->site,
-         pickTargetSite(c, live(r->value)));
+    move(c, r->value, r->site, pickTargetSite(c, live(r->value)));
 
-    r->site->thaw(c, r->value, r->size);
+    r->site->thaw(c, r->value);
   }
 
   removeSite(c, r->value, r->site);
 }
 
 void
-acquire(Context* c, Resource* r, unsigned newSize, Value* newValue,
-        Site* newSite, Stack* stack, Local* locals)
+acquire(Context* c, Resource* resource, Value* value, Site* site)
 {
-  assert(c, newValue);
-  assert(c, newSite);
-  assert(c, newSize);
+  assert(c, value);
+  assert(c, site);
 
-  if (not r->reserved) {
+  if (not resource->reserved) {
     if (DebugResources) {
-      char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "%p acquire %s size %d\n", newValue, buffer, newSize);
+      char buffer[256]; resource->toString(c, buffer, 256);
+      fprintf(stderr, "%p acquire %s\n", value, buffer);
     }
 
-    if (r->value) {
-      assert(c, findSite(c, r->value, r->site));
-      steal(c, r, newValue, stack, locals);
+    if (resource->value) {
+      assert(c, findSite(c, resource->value, resource->site));
+      steal(c, resource, value);
     }
 
-    r->size = newSize;
-    r->value = newValue;
-    r->site = newSite;
+    resource->value = value;
+    resource->site = site;
   }
 }
 
 void
-release(Context* c, Resource* r)
+release(Context* c, Resource* resource, Value* value, Site* site)
 {
-  if (not r->reserved) {
+  if (not resource->reserved) {
     if (DebugResources) {
-      char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "%p release %s size %d\n", r->value, buffer, r->size);
+      char buffer[256]; resource->toString(c, buffer, 256);
+      fprintf(stderr, "%p release %s\n", resource->value, buffer);
     }
 
-    assert(c, r->value);
-    assert(c, r->site);
-    assert(c, r->size);
+    assert(c, resource->value);
+    assert(c, resource->site);
+
+    assert(c, buddies(resource->value, value));
+    assert(c, site == resource->site);
     
-    r->size = 0;
-    r->value = 0;
-    r->site = 0;
+    resource->value = 0;
+    resource->site = 0;
   }
 }
 
 class SingleRead: public Read {
  public:
-  SingleRead(unsigned size, uint8_t typeMask, uint64_t registerMask,
-             int frameIndex):
-    Read(size), next_(0), typeMask(typeMask), registerMask(registerMask),
-    frameIndex(frameIndex)
+  SingleRead(const SiteMask& mask):
+    next_(0), mask(mask)
   { }
 
-  virtual bool intersect(uint8_t* typeMask, uint64_t* registerMask,
-                         int* frameIndex)
-  {
-    *typeMask &= this->typeMask;
-    *registerMask &= this->registerMask;
-    *frameIndex = intersectFrameIndexes(*frameIndex, this->frameIndex);
+  virtual bool intersect(SiteMask* mask) {
+    *mask = ::intersect(*mask, this->mask);
+
     return true;
   }
   
@@ -1894,65 +1758,51 @@ class SingleRead: public Read {
   }
 
   Read* next_;
-  uint8_t typeMask;
-  uint64_t registerMask;
-  int frameIndex;
+  SiteMask mask;
 };
 
 Read*
-read(Context* c, unsigned size, uint8_t typeMask, uint64_t registerMask,
-     int frameIndex)
+read(Context* c, const SiteMask& mask)
 {
-  assert(c, (typeMask != 1 << MemoryOperand) or frameIndex >= 0);
+  assert(c, (mask.typeMask != 1 << MemoryOperand) or mask.frameIndex >= 0);
+
   return new (c->zone->allocate(sizeof(SingleRead)))
-    SingleRead(size, typeMask, registerMask, frameIndex);
+    SingleRead(mask);
 }
 
 Read*
-anyRegisterRead(Context* c, unsigned size)
+anyRegisterRead(Context* c)
 {
-  return read(c, size, 1 << RegisterOperand, ~static_cast<uint64_t>(0),
-              NoFrameIndex);
+  return read(c, SiteMask(1 << RegisterOperand, ~0, NoFrameIndex));
 }
 
 Read*
-registerOrConstantRead(Context* c, unsigned size)
+registerOrConstantRead(Context* c)
 {
-  return read(c, size, (1 << RegisterOperand) | (1 << ConstantOperand),
-              ~static_cast<uint64_t>(0), NoFrameIndex);
+  return read
+    (c, SiteMask
+     ((1 << RegisterOperand) | (1 << ConstantOperand), ~0, NoFrameIndex));
 }
 
 Read*
-fixedRegisterRead(Context* c, unsigned size, int low, int high = NoRegister)
+fixedRegisterRead(Context* c, int number)
 {
-  uint64_t mask;
-  if (high == NoRegister) {
-    mask = (~static_cast<uint64_t>(0) << 32)
-      | (static_cast<uint64_t>(1) << low);
-  } else {
-    mask = (static_cast<uint64_t>(1) << (high + 32))
-      | (static_cast<uint64_t>(1) << low);
-  }
-
-  return read(c, size, 1 << RegisterOperand, mask, NoFrameIndex);
+  return read(c, SiteMask(1 << RegisterOperand, 1 << number, NoFrameIndex));
 }
 
 class MultiRead: public Read {
  public:
-  MultiRead(unsigned size):
-    Read(size), reads(0), lastRead(0), firstTarget(0), lastTarget(0),
-    visited(false)
+  MultiRead():
+    reads(0), lastRead(0), firstTarget(0), lastTarget(0), visited(false)
   { }
 
-  virtual bool intersect(uint8_t* typeMask, uint64_t* registerMask,
-                         int* frameIndex)
-  {
+  virtual bool intersect(SiteMask* mask) {
     bool result = false;
     if (not visited) {
       visited = true;
       for (Cell** cell = &reads; *cell;) {
         Read* r = static_cast<Read*>((*cell)->value);
-        bool valid = r->intersect(typeMask, registerMask, frameIndex);
+        bool valid = r->intersect(mask);
         if (valid) {
           result = true;
           cell = &((*cell)->next);
@@ -2023,24 +1873,22 @@ class MultiRead: public Read {
 };
 
 MultiRead*
-multiRead(Context* c, unsigned size)
+multiRead(Context* c)
 {
-  return new (c->zone->allocate(sizeof(MultiRead))) MultiRead(size);
+  return new (c->zone->allocate(sizeof(MultiRead))) MultiRead;
 }
 
 class StubRead: public Read {
  public:
-  StubRead(unsigned size):
-    Read(size), next_(0), read(0), visited(false), valid_(true)
+  StubRead():
+    next_(0), read(0), visited(false), valid_(true)
   { }
 
-  virtual bool intersect(uint8_t* typeMask, uint64_t* registerMask,
-                         int* frameIndex)
-  {
+  virtual bool intersect(SiteMask* mask) {
     if (not visited) {
       visited = true;
       if (read) {
-        bool valid = read->intersect(typeMask, registerMask, frameIndex);
+        bool valid = read->intersect(mask);
         if (not valid) {
           read = 0;
         }
@@ -2070,78 +1918,78 @@ class StubRead: public Read {
 };
 
 StubRead*
-stubRead(Context* c, unsigned size)
+stubRead(Context* c)
 {
-  return new (c->zone->allocate(sizeof(StubRead))) StubRead(size);
-}
-
-bool
-find(Value* needle, Value* haystack)
-{
-  if (haystack) {
-    if (needle == haystack) return true;
-    
-    for (Value* p = haystack->buddy; p != haystack; p = p->buddy) {
-      if (needle == p) return true;
-    }
-  }
-
-  return false;
-}
-
-unsigned
-footprintSizeInBytes(unsigned footprint)
-{
-  if (BytesPerWord == 8) {
-    return 8;
-  } else {
-    return footprint * 4;
-  }
+  return new (c->zone->allocate(sizeof(StubRead))) StubRead;
 }
 
 void
-apply(Context* c, UnaryOperation op,
-      unsigned s1Size, Site* s1)
+asAssemblerOperand(Context* c, Site* low, Site* high,
+                   Assembler::Operand* result)
 {
-  OperandType s1Type = s1->type(c);
-  Assembler::Operand* s1Operand = s1->asAssemblerOperand(c);
+  low->asAssemblerOperandLow(c, result);
+  if (high) {
+    high->asAssemblerOperandHigh(c, result);
+  }
+}
 
-  c->assembler->apply(op, s1Size, s1Type, s1Operand);
+class OperandUnion: public Assembler::Operand {
+  // must be large enough to hold any operand type:
+  uintptr_t padding[4];
+};
+
+void
+apply(Context* c, UnaryOperation op,
+      unsigned s1Size, Site* s1Low, Site* s1High)
+{
+  assert(c, s1High == 0 or s1Low->type(c) == s1High->type(c));
+
+  OperandType s1Type = s1Low->type(c);
+  OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
+
+  c->assembler->apply(op, s1Size, s1Type, &s1Union);
 }
 
 void
 apply(Context* c, BinaryOperation op,
-      unsigned s1Size, Site* s1,
-      unsigned s2Size, Site* s2)
+      unsigned s1Size, Site* s1Low, Site* s1High,
+      unsigned s2Size, Site* s2Low, Site* s2High)
 {
-  OperandType s1Type = s1->type(c);
-  Assembler::Operand* s1Operand = s1->asAssemblerOperand(c);
+  assert(c, s1High == 0 or s1Low->type(c) == s1High->type(c));
+  assert(c, s2High == 0 or s2Low->type(c) == s2High->type(c));
 
-  OperandType s2Type = s2->type(c);
-  Assembler::Operand* s2Operand = s2->asAssemblerOperand(c);
+  OperandType s1Type = s1Low->type(c);
+  OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
-  c->assembler->apply(op, s1Size, s1Type, s1Operand,
-                      s2Size, s2Type, s2Operand);
+  OperandType s2Type = s2Low->type(c);
+  OperandUnion s2Union; asAssemblerOperand(c, s2Low, s2High, &s2Union);
+
+  c->assembler->apply(op, s1Size, s1Type, &s1Union,
+                      s2Size, s2Type, &s2Union);
 }
 
 void
 apply(Context* c, TernaryOperation op,
-      unsigned s1Size, Site* s1,
-      unsigned s2Size, Site* s2,
-      unsigned s3Size, Site* s3)
+      unsigned s1Size, Site* s1Low, Site* s1High,
+      unsigned s2Size, Site* s2Low, Site* s2High,
+      unsigned s3Size, Site* s3Low, Site* s3High)
 {
-  OperandType s1Type = s1->type(c);
-  Assembler::Operand* s1Operand = s1->asAssemblerOperand(c);
+  assert(c, s1High == 0 or s1Low->type(c) == s1High->type(c));
+  assert(c, s2High == 0 or s2Low->type(c) == s2High->type(c));
+  assert(c, s3High == 0 or s3Low->type(c) == s3High->type(c));
 
-  OperandType s2Type = s2->type(c);
-  Assembler::Operand* s2Operand = s2->asAssemblerOperand(c);
+  OperandType s1Type = s1Low->type(c);
+  OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
-  OperandType s3Type = s3->type(c);
-  Assembler::Operand* s3Operand = s3->asAssemblerOperand(c);
+  OperandType s2Type = s2Low->type(c);
+  OperandUnion s2Union; asAssemblerOperand(c, s2Low, s2High, &s2Union);
 
-  c->assembler->apply(op, s1Size, s1Type, s1Operand,
-                      s2Size, s2Type, s2Operand,
-                      s3Size, s3Type, s3Operand);
+  OperandType s3Type = s3Low->type(c);
+  OperandUnion s3Union; asAssemblerOperand(c, s3Low, s3High, &s3Union);
+
+  c->assembler->apply(op, s1Size, s1Type, &s1Union,
+                      s2Size, s2Type, &s2Union,
+                      s3Size, s3Type, &s3Union);
 }
 
 void
@@ -2176,16 +2024,16 @@ clean(Context* c, Value* v, unsigned popIndex)
 {
   for (SiteIterator it(v); it.hasMore();) {
     Site* s = it.next();
-    if (not (s->match(c, 1 << MemoryOperand, 0, AnyFrameIndex)
+    if (not (s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex))
              and offsetToFrameIndex
-             (c, static_cast<MemorySite*>(s)->value.offset)
+             (c, static_cast<MemorySite*>(s)->offset)
              >= popIndex))
     {
       if (false) {
         char buffer[256]; s->toString(c, buffer, 256);
         fprintf(stderr, "remove %s from %p at %d pop index %d\n",
                 buffer, v, offsetToFrameIndex
-                (c, static_cast<MemorySite*>(s)->value.offset), popIndex);
+                (c, static_cast<MemorySite*>(s)->offset), popIndex);
       }
       it.remove(c);
     }
@@ -2202,7 +2050,7 @@ clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
   }
 
   for (Read* r = reads; r; r = r->eventNext) {
-    nextRead(c, e, r->value);
+    popRead(c, e, r->value);
   }
 }
 
@@ -2229,15 +2077,13 @@ saveLocals(Context* c, Event* e)
     Local* local = e->localsBefore + li;
     if (local->value) {
       if (DebugReads) {
-        fprintf(stderr, "local save read %p of footprint %d at %d of %d\n",
-                local->value, local->footprint,
-                ::frameIndex(c, li, local->footprint),
+        fprintf(stderr, "local save read %p at %d of %d\n",
+                local->value, ::frameIndex(c, li),
                 c->alignedFrameSize + c->parameterFootprint);
       }
 
       addRead(c, e, local->value, read
-              (c, footprintSizeInBytes(local->footprint), 1 << MemoryOperand,
-               0, ::frameIndex(c, li, local->footprint)));
+              (c, SiteMask(1 << MemoryOperand, 0, ::frameIndex(c, li))));
     }
   }
 }
@@ -2258,37 +2104,34 @@ class CallEvent: public Event {
     flags(flags),
     resultSize(resultSize)
   {
-    uint32_t mask = ~0;
+    uint32_t registerMask = ~0;
     Stack* s = argumentStack;
     unsigned index = 0;
     unsigned frameIndex = 0;
 
     if (argumentCount) {
-      unsigned ai = 0;
       while (true) {
         Read* target;
         if (index < c->arch->argumentRegisterCount()) {
-          int r = c->arch->argumentRegister(index);
+          int number = c->arch->argumentRegister(index);
         
           if (DebugReads) {
-            fprintf(stderr, "reg %d arg read %p\n", r, s->value);
+            fprintf(stderr, "reg %d arg read %p\n", number, s->value);
           }
 
-          target = fixedRegisterRead(c, footprintSizeInBytes(s->footprint), r);
-          mask &= ~(1 << r);
+          target = fixedRegisterRead(c, number);
+          registerMask &= ~(1 << number);
         } else {
           if (DebugReads) {
             fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
           }
 
-          target = read(c, footprintSizeInBytes(s->footprint),
-                        1 << MemoryOperand, 0, frameIndex);
-          frameIndex += s->footprint;
+          target = read(c, SiteMask(1 << MemoryOperand, 0, frameIndex));
+          ++ frameIndex;
         }
         addRead(c, this, s->value, target);
-        index += s->footprint;
 
-        if ((++ ai) < argumentCount) {
+        if ((++ index) < argumentCount) {
           s = s->next;
         } else {
           break;
@@ -2301,41 +2144,36 @@ class CallEvent: public Event {
     }
 
     addRead(c, this, address, read
-            (c, BytesPerWord, ~0, (static_cast<uint64_t>(mask) << 32) | mask,
-             AnyFrameIndex));
+            (c, SiteMask(~0, registerMask, AnyFrameIndex)));
 
     int footprint = stackArgumentFootprint;
     for (Stack* s = stackBefore; s; s = s->next) {
       if (footprint > 0) {
         if (DebugReads) {
-          fprintf(stderr, "stack arg read %p of footprint %d at %d of %d\n",
-                  s->value, s->footprint, frameIndex,
+          fprintf(stderr, "stack arg read %p at %d of %d\n",
+                  s->value, frameIndex,
                   c->alignedFrameSize + c->parameterFootprint);
         }
 
         addRead(c, this, s->value, read
-                (c, footprintSizeInBytes(s->footprint),
-                 1 << MemoryOperand, 0, frameIndex));
+                (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
       } else {
-        unsigned logicalIndex = ::frameIndex
-          (c, s->index + c->localFootprint, s->footprint);
+        unsigned logicalIndex = ::frameIndex(c, s->index + c->localFootprint);
 
         if (DebugReads) {
-          fprintf(stderr, "stack save read %p of footprint %d at %d of %d\n",
-                  s->value, s->footprint, logicalIndex,
+          fprintf(stderr, "stack save read %p at %d of %d\n",
+                  s->value, logicalIndex,
                   c->alignedFrameSize + c->parameterFootprint);
         }
 
         addRead(c, this, s->value, read
-                (c, footprintSizeInBytes(s->footprint), 1 << MemoryOperand,
-                 0, logicalIndex));
+                (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
       }
 
-      footprint -= s->footprint;
+      -- footprint;
 
       if (footprint == 0) {
-        unsigned logicalIndex = ::frameIndex
-          (c, s->index + c->localFootprint, s->footprint);
+        unsigned logicalIndex = ::frameIndex(c, s->index + c->localFootprint);
 
         assert(c, logicalIndex >= frameIndex);
 
@@ -2343,16 +2181,12 @@ class CallEvent: public Event {
         padIndex = s->index + c->localFootprint;
       }
 
-      frameIndex += s->footprint;
+      ++ frameIndex;
     }
 
     popIndex = ::frameIndex
-      (c, (stackBefore
-           ? stackBefore->index
-           + stackBefore->footprint
-           - stackArgumentFootprint
-           : 0)
-       + c->localFootprint, 0);
+      (c, (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
+       + c->localFootprint);
 
     saveLocals(c, this);
   }
@@ -2363,7 +2197,7 @@ class CallEvent: public Event {
 
   virtual void compile(Context* c) {
     apply(c, (flags & Compiler::Aligned) ? AlignedCall : Call, BytesPerWord,
-          address->source);
+          address->source, 0);
 
     if (traceHandler) {
       traceHandler->handleTrace(codePromise(c, c->assembler->offset()),
@@ -2373,10 +2207,10 @@ class CallEvent: public Event {
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
 
     if (resultSize and live(result)) {
-      addSite(c, 0, 0, resultSize, result, registerSite
-              (c, c->arch->returnLow(),
-               resultSize > BytesPerWord ?
-               c->arch->returnHigh() : NoRegister));
+      addSite(c, result, registerSite(c, c->arch->returnLow()));
+      if (resultSize > BytesPerWord) {
+        addSite(c, result->high, registerSite(c, c->arch->returnHigh()));
+      }
     }
   }
 
@@ -2408,10 +2242,11 @@ class ReturnEvent: public Event {
     Event(c), value(value)
   {
     if (value) {
-      addRead(c, this, value, fixedRegisterRead
-              (c, size, c->arch->returnLow(),
-               size > BytesPerWord ?
-               c->arch->returnHigh() : NoRegister));
+      addRead(c, this, value, fixedRegisterRead(c, c->arch->returnLow()));
+      if (size > BytesPerWord) {
+        addRead(c, this, value->high,
+                fixedRegisterRead(c, c->arch->returnHigh()));
+      }
     }
   }
 
@@ -2420,10 +2255,10 @@ class ReturnEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    if (value) {
-      nextRead(c, this, value);
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
     }
-
+    
     c->assembler->popFrame();
     c->assembler->apply(Return);
   }
@@ -2436,27 +2271,6 @@ appendReturn(Context* c, unsigned size, Value* value)
 {
   append(c, new (c->zone->allocate(sizeof(ReturnEvent)))
          ReturnEvent(c, size, value));
-}
-
-void
-preserve(Context* c, Stack* stack, Local* locals, unsigned size, Value* v,
-         Site* s, Read* r)
-{
-  s->freeze(c, v, size);
-
-  move(c, stack, locals, size, v, s, pickTargetSite(c, r));
-
-  s->thaw(c, v, size);
-}
-
-void
-maybePreserve(Context* c, Stack* stack, Local* locals, unsigned size,
-              Value* v, Site* s)
-{
-  Read* r = liveNext(c, v);
-  if (r and not hasMoreThanOneSite(v)) {
-    preserve(c, stack, locals, size, v, s, r);
-  }
 }
 
 void
@@ -2476,14 +2290,105 @@ addBuddy(Value* original, Value* buddy)
   }
 }
 
+void
+maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
+          unsigned dstSize, Value* dst, const SiteMask& dstMask)
+{
+  Read* read = live(dst);
+  bool isStore = read == 0;
+
+  Site* target;
+  if (dst->target) {
+    target = dst->target;
+  } else if (isStore) {
+    return;
+  } else {
+    target = pickTargetSite(c, read);
+  }
+
+  unsigned cost = src->source->copyCost(c, target);
+
+  if (srcSize != dstSize) cost = 1;
+
+  if (cost) { 
+    addSite(c, dst, target);
+
+    bool useTemporary = ((target->type(c) == MemoryOperand
+                          and src->source->type(c) == MemoryOperand)
+                         or (srcSize != dstSize
+                             and target->type(c) != RegisterOperand));
+
+    if (target->match(c, dstMask) and not useTemporary) {
+      if (DebugMoves) {
+        char srcb[256]; src->source->toString(c, srcb, 256);
+        char dstb[256]; target->toString(c, dstb, 256);
+        fprintf(stderr, "move %s to %s for %p to %p\n",
+                srcb, dstb, src, dst);
+      }
+
+      apply(c, type, srcSize, src->source, 0, dstSize, target, 0);
+    } else {
+      assert(c, dstMask.typeMask & (1 << RegisterOperand));
+
+      Site* tmpTarget = freeRegisterSite(c, dstMask.registerMask);
+
+      addSite(c, dst, tmpTarget);
+
+      if (DebugMoves) {
+        char srcb[256]; src->source->toString(c, srcb, 256);
+        char dstb[256]; tmpTarget->toString(c, dstb, 256);
+        fprintf(stderr, "move %s to %s for %p to %p\n",
+                srcb, dstb, src, dst);
+      }
+
+      apply(c, type, srcSize, src->source, 0, dstSize, tmpTarget, 0);
+
+      if (useTemporary or isStore) {
+        if (DebugMoves) {
+          char srcb[256]; tmpTarget->toString(c, srcb, 256);
+          char dstb[256]; target->toString(c, dstb, 256);
+          fprintf(stderr, "move %s to %s for %p to %p\n",
+                  srcb, dstb, src, dst);
+        }
+
+        apply(c, Move, dstSize, tmpTarget, 0, dstSize, target, 0);
+
+        if (isStore) {
+          removeSite(c, dst, tmpTarget);
+        }
+      } else {
+        removeSite(c, dst, target);          
+      }
+    }
+  } else {
+    target = src->source;
+
+    addBuddy(src, dst);
+
+    if (DebugMoves) {
+      char dstb[256]; target->toString(c, dstb, 256);
+      fprintf(stderr, "null move in %s for %p to %p\n", dstb, src, dst);
+    }
+  }
+
+  if (isStore) {
+    removeSite(c, dst, target);
+  }
+}
+
 class MoveEvent: public Event {
  public:
   MoveEvent(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
-            unsigned dstSize, Value* dst, Read* srcRead, Read* dstRead):
+            unsigned dstSize, Value* dst,
+            const SiteMask& srcLowMask, const SiteMask& srcHighMask,
+            const SiteMask& dstLowMask, const SiteMask& dstHighMask):
     Event(c), type(type), srcSize(srcSize), src(src), dstSize(dstSize),
-    dst(dst), dstRead(dstRead)
+    dst(dst), dstLowMask(dstLowMask), dstHighMask(dstHighMask)
   {
-    addRead(c, this, src, srcRead);
+    addRead(c, this, src, read(c, srcLowMask));
+    if (srcSize > BytesPerWord) {
+      addRead(c, this, src->high, read(c, srcHighMask));
+    }
   }
 
   virtual const char* name() {
@@ -2491,94 +2396,43 @@ class MoveEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    Read* read = live(dst);
-    bool isStore = read == 0;
+    if (srcSize <= BytesPerWord and dstSize <= BytesPerWord) {
+      maybeMove(c, type, srcSize, src, dstSize, dst, dstLowMask);
+    } else if (srcSize == dstSize) {
+      maybeMove(c, Move, BytesPerWord, src, BytesPerWord, dst, dstLowMask);
+      maybeMove(c, Move, BytesPerWord, src->high,
+                BytesPerWord, dst->high, dstHighMask);
+    } else if (srcSize > BytesPerWord) {
+      assert(c, dstSize == BytesPerWord);
 
-    Site* target;
-    if (dst->target) {
-      target = dst->target;
-    } else if (isStore) {
-      return;
+      maybeMove(c, Move, BytesPerWord, src, BytesPerWord, dst, dstLowMask);
     } else {
-      target = pickTargetSite(c, read);
-    }
-    unsigned cost = src->source->copyCost(c, target);
+      assert(c, srcSize == BytesPerWord);
 
-    if (srcSize != dstSize) cost = 1;
+      if (dst->high->target or live(dst->high)) {
+        assert(c, dstLowMask.typeMask & (1 << RegisterOperand));
 
-    if (cost) { 
-      addSite(c, stackBefore, localsBefore, dstSize, dst, target);
-   
-      uint8_t typeMask = ~static_cast<uint8_t>(0);
-      uint64_t registerMask = ~static_cast<uint64_t>(0);
-      int frameIndex = AnyFrameIndex;
-      dstRead->intersect(&typeMask, &registerMask, &frameIndex);
+        Site* low = freeRegisterSite(c, dstLowMask.registerMask);
 
-      bool useTemporary = ((target->type(c) == MemoryOperand
-                            and src->source->type(c) == MemoryOperand)
-                           or (srcSize != dstSize
-                               and target->type(c) != RegisterOperand));
+        addSite(c, dst, low);
+          
+        apply(c, Move, BytesPerWord, src->source, 0, BytesPerWord, low, 0);
 
-      if (target->match(c, typeMask, registerMask, frameIndex)
-          and not useTemporary)
-      {
-        if (DebugMoves) {
-          char srcb[256]; src->source->toString(c, srcb, 256);
-          char dstb[256]; target->toString(c, dstb, 256);
-          fprintf(stderr, "move %s to %s for %p to %p\n",
-                  srcb, dstb, src, dst);
-        }
+        assert(c, dstHighMask.typeMask & (1 << RegisterOperand));
 
-        apply(c, type, srcSize, src->source, dstSize, target);
+        Site* high = freeRegisterSite(c, dstHighMask.registerMask);
+
+        addSite(c, dst->high, high);
+        
+        apply(c, Move, BytesPerWord, low, 0, dstSize, low, high);
       } else {
-        assert(c, typeMask & (1 << RegisterOperand));
-
-        Site* tmpTarget = freeRegisterSite(c, registerMask);
-
-        addSite(c, stackBefore, localsBefore, dstSize, dst, tmpTarget);
-
-        if (DebugMoves) {
-          char srcb[256]; src->source->toString(c, srcb, 256);
-          char dstb[256]; tmpTarget->toString(c, dstb, 256);
-          fprintf(stderr, "move %s to %s for %p to %p\n",
-                  srcb, dstb, src, dst);
-        }
-
-        apply(c, type, srcSize, src->source, dstSize, tmpTarget);
-
-        if (useTemporary or isStore) {
-          if (DebugMoves) {
-            char srcb[256]; tmpTarget->toString(c, srcb, 256);
-            char dstb[256]; target->toString(c, dstb, 256);
-            fprintf(stderr, "move %s to %s for %p to %p\n",
-                    srcb, dstb, src, dst);
-          }
-
-          apply(c, Move, dstSize, tmpTarget, dstSize, target);
-
-          if (isStore) {
-            removeSite(c, dst, tmpTarget);
-          }
-        } else {
-          removeSite(c, dst, target);          
-        }
-      }
-    } else {
-      target = src->source;
-
-      addBuddy(src, dst);
-
-      if (DebugMoves) {
-        char dstb[256]; target->toString(c, dstb, 256);
-        fprintf(stderr, "null move in %s for %p to %p\n", dstb, src, dst);
+        maybeMove(c, Move, BytesPerWord, src, BytesPerWord, dst, dstLowMask);
       }
     }
 
-    if (isStore) {
-      removeSite(c, dst, target);
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
     }
-
-    nextRead(c, this, src);
   }
 
   BinaryOperation type;
@@ -2586,7 +2440,8 @@ class MoveEvent: public Event {
   Value* src;
   unsigned dstSize;
   Value* dst;
-  Read* dstRead;
+  SiteMask dstLowMask;
+  SiteMask dstHighMask;
 };
 
 void
@@ -2603,13 +2458,15 @@ appendMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
                 dstSize, &dstTypeMask, &dstRegisterMask,
                 &thunk);
 
-  assert(c, not thunk); // todo
+  assert(c, not thunk);
 
   append(c, new (c->zone->allocate(sizeof(MoveEvent)))
          MoveEvent
          (c, type, srcSize, src, dstSize, dst,
-          read(c, srcSize, srcTypeMask, srcRegisterMask, AnyFrameIndex),
-          read(c, dstSize, dstTypeMask, dstRegisterMask, AnyFrameIndex)));
+          SiteMask(srcTypeMask, srcRegisterMask, AnyFrameIndex),
+          SiteMask(srcTypeMask, srcRegisterMask >> 32, AnyFrameIndex),
+          SiteMask(dstTypeMask, dstRegisterMask, AnyFrameIndex),
+          SiteMask(dstTypeMask, dstRegisterMask >> 32, AnyFrameIndex)));
 }
 
 ConstantSite*
@@ -2627,11 +2484,11 @@ findConstantSite(Context* c, Value* v)
 class CompareEvent: public Event {
  public:
   CompareEvent(Context* c, unsigned size, Value* first, Value* second,
-               Read* firstRead, Read* secondRead):
+               const SiteMask& firstMask, const SiteMask& secondMask):
     Event(c), size(size), first(first), second(second)
   {
-    addRead(c, this, first, firstRead);
-    addRead(c, this, second, secondRead);
+    addRead(c, this, first, read(c, firstMask));
+    addRead(c, this, second, read(c, secondMask));
   }
 
   virtual const char* name() {
@@ -2643,8 +2500,8 @@ class CompareEvent: public Event {
     ConstantSite* secondConstant = findConstantSite(c, second);
 
     if (firstConstant and secondConstant) {
-      int64_t d = firstConstant->value.value->value()
-        - secondConstant->value.value->value();
+      int64_t d = firstConstant->value->value()
+        - secondConstant->value->value();
 
       if (d < 0) {
         c->constantCompare = CompareLess;
@@ -2656,11 +2513,11 @@ class CompareEvent: public Event {
     } else {
       c->constantCompare = CompareNone;
 
-      apply(c, Compare, size, first->source, size, second->source);
+      apply(c, Compare, size, first->source, 0, size, second->source, 0);
     }
 
-    nextRead(c, this, first);
-    nextRead(c, this, second);
+    popRead(c, this, first);
+    popRead(c, this, second);
   }
 
   unsigned size;
@@ -2686,8 +2543,74 @@ appendCompare(Context* c, unsigned size, Value* first, Value* second)
   append(c, new (c->zone->allocate(sizeof(CompareEvent)))
          CompareEvent
          (c, size, first, second,
-          read(c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex),
-          read(c, size, secondTypeMask, secondRegisterMask, AnyFrameIndex)));
+          SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
+          SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex)));
+}
+
+void
+preserve(Context* c, Value* v, Site* s, Read* r)
+{
+  s->freeze(c, v);
+
+  move(c, v, s, pickTargetSite(c, r));
+
+  s->thaw(c, v);
+}
+
+void
+maybePreserve(Context* c, Value* v, Site* s)
+{
+  Read* r = liveNext(c, v);
+  if (r and not hasMoreThanOneSite(v)) {
+    preserve(c, v, s, r);
+  }
+}
+
+Site*
+getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
+{
+  if (c->arch->condensedAddressing()) {
+    Site* s = value->source;
+
+    maybePreserve(c, value, s);
+
+    removeSite(c, value, s);
+
+    s->freeze(c, value);
+
+    return s;
+  } else {
+    SingleRead r(resultMask);
+    Site* s = pickTargetSite(c, &r);
+
+    addSite(c, result, s);
+
+    return s;
+  }
+}
+
+Site*
+source(Value* v)
+{
+  return v ? v->source : 0;
+}
+
+void
+freezeSource(Context* c, unsigned size, Value* v)
+{
+  v->source->freeze(c, v);
+  if (size > BytesPerWord) {
+    v->high->source->freeze(c, v->high);
+  }
+}
+
+void
+thawSource(Context* c, unsigned size, Value* v)
+{
+  v->source->thaw(c, v);
+  if (size > BytesPerWord) {
+    v->high->source->thaw(c, v->high);
+  }
 }
 
 class CombineEvent: public Event {
@@ -2696,15 +2619,26 @@ class CombineEvent: public Event {
                unsigned firstSize, Value* first,
                unsigned secondSize, Value* second,
                unsigned resultSize, Value* result,
-               Read* firstRead,
-               Read* secondRead,
-               Read* resultRead):
+               const SiteMask& firstLowMask,
+               const SiteMask& firstHighMask,
+               const SiteMask& secondLowMask,
+               const SiteMask& secondHighMask,
+               const SiteMask& resultLowMask,
+               const SiteMask& resultHighMask):
     Event(c), type(type), firstSize(firstSize), first(first),
     secondSize(secondSize), second(second), resultSize(resultSize),
-    result(result), resultRead(resultRead)
+    result(result), resultLowMask(resultLowMask),
+    resultHighMask(resultHighMask)
   {
-    addRead(c, this, first, firstRead);
-    addRead(c, this, second, secondRead);
+    addRead(c, this, first, read(c, firstLowMask));
+    if (firstSize > BytesPerWord) {
+      addRead(c, this, first->high, read(c, firstHighMask));
+    }
+
+    addRead(c, this, second, read(c, secondLowMask));
+    if (secondSize > BytesPerWord) {
+      addRead(c, this, second->high, read(c, secondHighMask));
+    }
   }
 
   virtual const char* name() {
@@ -2712,37 +2646,36 @@ class CombineEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    first->source->freeze(c, first, firstSize);
+    freezeSource(c, firstSize, first);
 
-    Site* target;
-    if (c->arch->condensedAddressing()) {
-      maybePreserve(c, stackBefore, localsBefore, secondSize, second,
-                    second->source);
-
-      target = second->source;
-
-      removeSite(c, second, target);
-
-      target->freeze(c, second, secondSize);
-    } else {
-      target = pickTargetSite(c, resultRead);
-      addSite(c, stackBefore, localsBefore, resultSize, result, target);
-    }
+    Site* low = getTarget(c, second, result, resultLowMask);
+    Site* high
+      = (resultSize > BytesPerWord
+         ? getTarget(c, second->high, result->high, resultHighMask)
+         : 0);
 
 //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
-    apply(c, type, firstSize, first->source, secondSize, second->source,
-          resultSize, target);
+    apply(c, type, firstSize, first->source, source(first->high),
+          secondSize, second->source, source(second->high),
+          resultSize, low, high);
 
-    first->source->thaw(c, first, firstSize);
+    thawSource(c, firstSize, first);
 
-    nextRead(c, this, first);
-    nextRead(c, this, second);
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
 
     if (c->arch->condensedAddressing()) {
-      target->thaw(c, second, secondSize);
+      low->thaw(c, second);
+      if (resultSize > BytesPerWord) {
+        high->thaw(c, second->high);
+      }
 
       if (live(result)) {
-        addSite(c, 0, 0, resultSize, result, target);
+        addSite(c, result, low);
+        if (resultSize > BytesPerWord) {
+          addSite(c, result->high, high);
+        }
       }
     }
   }
@@ -2754,7 +2687,8 @@ class CombineEvent: public Event {
   Value* second;
   unsigned resultSize;
   Value* result;
-  Read* resultRead;
+  SiteMask resultLowMask;
+  SiteMask resultHighMask;
 };
 
 Value*
@@ -2843,59 +2777,64 @@ makeSnapshots(Context* c, Value* value, Snapshot* next)
 }
 
 Stack*
-stack(Context* c, Value* value, unsigned footprint, unsigned index,
-      Stack* next)
+stack(Context* c, Value* value, unsigned index, Stack* next)
 {
   return new (c->zone->allocate(sizeof(Stack)))
-    Stack(index, footprint, value, next);
+    Stack(index, value, next);
 }
 
 Stack*
-stack(Context* c, Value* value, unsigned footprint, Stack* next)
+stack(Context* c, Value* value, Stack* next)
 {
-  return stack
-    (c, value, footprint, (next ? next->index + next->footprint : 0), next);
-}
-
-SavedValue*
-savedValue(Context* c, Value* value, unsigned footprint, SavedValue* next)
-{
-  return new (c->zone->allocate(sizeof(SavedValue)))
-    SavedValue(footprint, value, next);
+  return stack(c, value, (next ? next->index + 1 : 0), next);
 }
 
 Value*
-maybeBuddy(Context* c, Value* v, unsigned sizeInBytes);
+maybeBuddy(Context* c, Value* v);
 
 void
 push(Context* c, unsigned footprint, Value* v)
 {
   assert(c, footprint);
 
-  v = maybeBuddy(c, v, footprintSizeInBytes(footprint));
+  if (BytesPerWord == 4 and footprint > 1) {
+    assert(c, footprint == 2);
+    push(c, 1, v->high);
+  }
+
+  v = maybeBuddy(c, v); 
 
   if (DebugFrame) {
     fprintf(stderr, "push %p of footprint %d\n", v, footprint);
   }
-
+    
   Stack* s = stack(c, v, footprint, c->stack);
-  v->home = frameIndex(c, s->index + c->localFootprint, s->footprint);
+  v->home = frameIndex(c, s->index + c->localFootprint);
   c->stack = s;
 }
 
 Value*
-pop(Context* c, unsigned footprint UNUSED)
+pop(Context* c, unsigned footprint)
 {
+  assert(c, footprint);
+
   Stack* s = c->stack;
-  assert(c, footprint == s->footprint);
   assert(c, s->value->home >= 0);
 
   if (DebugFrame) {
-    fprintf(stderr, "pop %p of size %d\n", s->value, footprint);
+    fprintf(stderr, "pop %p of footprint %d\n", s->value, footprint);
+  }
+    
+  c->stack = s->next;
+
+  if (footprint > 1) {
+    assert(c, footprint == 2);
+    assert(c, s->value->high);
+    pop(c, 1);
   }
 
-  c->stack = s->next;
   return s->value;
+
 }
 
 void
@@ -2930,16 +2869,6 @@ appendCombine(Context* c, TernaryOperation type,
       (c, value(c, constantSite(c, c->client->getThunk(type, resultSize))),
        0, 0, result, resultSize, argumentStack, 2, 0);
   } else {
-    Read* resultRead = read
-      (c, resultSize, resultTypeMask, resultRegisterMask, AnyFrameIndex);
-    Read* secondRead;
-    if (c->arch->condensedAddressing()) {
-      secondRead = resultRead;
-    } else {
-      secondRead = read
-        (c, secondSize, secondTypeMask, secondRegisterMask, AnyFrameIndex);
-    }
-
     append
       (c, new (c->zone->allocate(sizeof(CombineEvent)))
        CombineEvent
@@ -2947,20 +2876,30 @@ appendCombine(Context* c, TernaryOperation type,
         firstSize, first,
         secondSize, second,
         resultSize, result,
-        read(c, firstSize, firstTypeMask, firstRegisterMask, AnyFrameIndex),
-        secondRead,
-        resultRead));
+        SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
+        SiteMask(firstTypeMask, firstRegisterMask >> 32, AnyFrameIndex),
+        SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex),
+        SiteMask(secondTypeMask, secondRegisterMask >> 32, AnyFrameIndex),
+        SiteMask(resultTypeMask, resultRegisterMask, AnyFrameIndex),
+        SiteMask(resultTypeMask, resultRegisterMask >> 32, AnyFrameIndex)));
   }
 }
 
 class TranslateEvent: public Event {
  public:
   TranslateEvent(Context* c, BinaryOperation type, unsigned size, Value* value,
-                 Value* result, Read* valueRead, Read* resultRead):
+                 Value* result,
+                 const SiteMask& valueLowMask,
+                 const SiteMask& valueHighMask,
+                 const SiteMask& resultLowMask,
+                 const SiteMask& resultHighMask):
     Event(c), type(type), size(size), value(value), result(result),
-    resultRead(resultRead)
+    resultLowMask(resultLowMask), resultHighMask(resultHighMask)
   {
-    addRead(c, this, value, valueRead);
+    addRead(c, this, value, read(c, valueLowMask));
+    if (size > BytesPerWord) {
+      addRead(c, this, value->high, read(c, valueHighMask));
+    }
   }
 
   virtual const char* name() {
@@ -2968,35 +2907,31 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    Site* target;
-    if (c->arch->condensedAddressing()) {
-      maybePreserve(c, stackBefore, localsBefore, size, value, value->source);
+    Site* low = getTarget(c, value, result, resultLowMask);
+    Site* high
+      = (size > BytesPerWord
+         ? getTarget(c, value->high, result->high, resultHighMask)
+         : 0);
 
-      target = value->source;
+    apply(c, type,
+          size, value->source, source(value->high),
+          size, low, high);
 
-      removeSite(c, value, target);
-
-      target->freeze(c, 0, size);
-    } else {
-      value->source->freeze(c, value, size);
-
-      target = pickTargetSite(c, resultRead);
-      addSite(c, stackBefore, localsBefore, size, result, target);
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
     }
 
-    apply(c, type, size, value->source, size, target);
-
-    if (not c->arch->condensedAddressing()) {
-      value->source->thaw(c, value, size);
-    }
-    
-    nextRead(c, this, value);
-
     if (c->arch->condensedAddressing()) {
-      target->thaw(c, 0, size);
+      low->thaw(c, value);
+      if (size > BytesPerWord) {
+        high->thaw(c, value->high);
+      }
 
       if (live(result)) {
-        addSite(c, 0, 0, size, result, target);
+        addSite(c, result, low);
+        if (size > BytesPerWord) {
+          addSite(c, result->high, high);
+        }
       }
     }
   }
@@ -3006,6 +2941,8 @@ class TranslateEvent: public Event {
   Value* value;
   Value* result;
   Read* resultRead;
+  SiteMask resultLowMask;
+  SiteMask resultHighMask;
 };
 
 void
@@ -3024,20 +2961,13 @@ appendTranslate(Context* c, BinaryOperation type, unsigned size, Value* value,
 
   assert(c, not thunk); // todo
 
-  Read* resultRead = read
-    (c, size, resultTypeMask, resultRegisterMask, AnyFrameIndex);
-  Read* firstRead;
-  if (c->arch->condensedAddressing()) {
-    firstRead = resultRead;
-  } else {
-    firstRead = read
-      (c, size, firstTypeMask, firstRegisterMask, AnyFrameIndex);
-  }
-  // todo: respect resultTypeMask and resultRegisterMask
-
   append(c, new (c->zone->allocate(sizeof(TranslateEvent)))
          TranslateEvent
-         (c, type, size, value, result, firstRead, resultRead));
+         (c, type, size, value, result,
+          SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
+          SiteMask(firstTypeMask, firstRegisterMask >> 32, AnyFrameIndex),
+          SiteMask(resultTypeMask, resultRegisterMask, AnyFrameIndex),
+          SiteMask(resultTypeMask, resultRegisterMask >> 32, AnyFrameIndex)));
 }
 
 class MemoryEvent: public Event {
@@ -3047,9 +2977,9 @@ class MemoryEvent: public Event {
     Event(c), base(base), displacement(displacement), index(index),
     scale(scale), result(result)
   {
-    addRead(c, this, base, anyRegisterRead(c, BytesPerWord));
+    addRead(c, this, base, anyRegisterRead(c));
     if (index) {
-      addRead(c, this, index, registerOrConstantRead(c, BytesPerWord));
+      addRead(c, this, index, registerOrConstantRead(c));
     }
   }
 
@@ -3066,31 +2996,31 @@ class MemoryEvent: public Event {
 
       if (constant) {
         indexRegister = NoRegister;
-        displacement += (constant->value.value->value() * scale);
+        displacement += (constant->value->value() * scale);
         scale = 1;
       } else {
         assert(c, index->source->type(c) == RegisterOperand);
-        indexRegister = static_cast<RegisterSite*>
-          (index->source)->register_.low;
+        indexRegister = static_cast<RegisterSite*>(index->source)->number;
       }
     } else {
       indexRegister = NoRegister;
     }
     assert(c, base->source->type(c) == RegisterOperand);
-    int baseRegister = static_cast<RegisterSite*>(base->source)->register_.low;
+    int baseRegister = static_cast<RegisterSite*>(base->source)->number;
 
-    nextRead(c, this, base);
+    popRead(c, this, base);
     if (index) {
       if (BytesPerWord == 8 and indexRegister != NoRegister) {
-        apply(c, Move, 4, index->source, 8, index->source);
+        apply(c, Move, 4, index->source, 0, 8, index->source, 0);
       }
 
-      nextRead(c, this, index);
+      popRead(c, this, index);
     }
 
     result->target = memorySite
       (c, baseRegister, displacement, indexRegister, scale);
-    addSite(c, c->stack, c->locals, 0, result, result->target);
+
+    addSite(c, result, result->target);
   }
 
   Value* base;
@@ -3115,8 +3045,7 @@ class BranchEvent: public Event {
   {
     address->addPredecessor(c, this);
 
-    addRead(c, this, address, read
-            (c, BytesPerWord, ~0, ~static_cast<uint64_t>(0), AnyFrameIndex));
+    addRead(c, this, address, read(c, SiteMask(~0, ~0, AnyFrameIndex)));
   }
 
   virtual const char* name() {
@@ -3181,10 +3110,10 @@ class BranchEvent: public Event {
     }
 
     if (jump) {
-      apply(c, type, BytesPerWord, address->source);
+      apply(c, type, BytesPerWord, address->source, 0);
     }
 
-    nextRead(c, this, address);
+    popRead(c, this, address);
   }
 
   virtual bool isBranch() { return true; }
@@ -3207,8 +3136,8 @@ class BoundsCheckEvent: public Event {
     Event(c), object(object), lengthOffset(lengthOffset), index(index),
     handler(handler)
   {
-    addRead(c, this, object, anyRegisterRead(c, BytesPerWord));
-    addRead(c, this, index, registerOrConstantRead(c, BytesPerWord));
+    addRead(c, this, object, anyRegisterRead(c));
+    addRead(c, this, index, registerOrConstantRead(c));
   }
 
   virtual const char* name() {
@@ -3224,11 +3153,12 @@ class BoundsCheckEvent: public Event {
     CodePromise* outOfBoundsPromise = 0;
 
     if (constant) {
-      expect(c, constant->value.value->value() >= 0);      
+      expect(c, constant->value->value() >= 0);      
     } else {
       outOfBoundsPromise = codePromise(c, static_cast<Promise*>(0));
 
-      apply(c, Compare, 4, constantSite(c, resolved(c, 0)), 4, index->source);
+      apply(c, Compare, 4, constantSite(c, resolved(c, 0)), 0,
+            4, index->source, 0);
 
       Assembler::Constant outOfBoundsConstant(outOfBoundsPromise);
       a->apply
@@ -3236,12 +3166,10 @@ class BoundsCheckEvent: public Event {
     }
 
     assert(c, object->source->type(c) == RegisterOperand);
-    int base = static_cast<RegisterSite*>(object->source)->register_.low;
+    MemorySite length(static_cast<RegisterSite*>(object->source)->number,
+                      lengthOffset, NoRegister, 1);
 
-    MemorySite length(base, lengthOffset, NoRegister, 1);
-    length.base = c->registerResources + base;
-
-    apply(c, Compare, 4, index->source, 4, &length);
+    apply(c, Compare, 4, index->source, 0, 4, &length, 0);
 
     Assembler::Constant nextConstant(nextPromise);
     a->apply(JumpIfGreater, BytesPerWord, ConstantOperand, &nextConstant);
@@ -3255,8 +3183,8 @@ class BoundsCheckEvent: public Event {
 
     nextPromise->offset = a->offset();
 
-    nextRead(c, this, object);
-    nextRead(c, this, index);
+    popRead(c, this, object);
+    popRead(c, this, index);
   }
 
   Value* object;
@@ -3275,8 +3203,8 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
 
 class FrameSiteEvent: public Event {
  public:
-  FrameSiteEvent(Context* c, Value* value, unsigned size, int index):
-    Event(c), value(value), size(size), index(index)
+  FrameSiteEvent(Context* c, Value* value, int index):
+    Event(c), value(value), index(index)
   { }
 
   virtual const char* name() {
@@ -3285,26 +3213,25 @@ class FrameSiteEvent: public Event {
 
   virtual void compile(Context* c) {
     if (live(value)) {
-      addSite(c, stackBefore, localsBefore, size, value, frameSite(c, index));
+      addSite(c, value, frameSite(c, index));
     }
   }
 
   Value* value;
-  unsigned size;
   int index;
 };
 
 void
-appendFrameSite(Context* c, Value* value, unsigned size, int index)
+appendFrameSite(Context* c, Value* value, int index)
 {
   append(c, new (c->zone->allocate(sizeof(FrameSiteEvent)))
-         FrameSiteEvent(c, value, size, index));
+         FrameSiteEvent(c, value, index));
 }
 
 unsigned
 frameFootprint(Context* c, Stack* s)
 {
-  return c->localFootprint + (s ? (s->index + s->footprint) : 0);
+  return c->localFootprint + (s ? (s->index + 1) : 0);
 }
 
 void
@@ -3336,7 +3263,7 @@ visit(Context* c, Link* link)
       
       if (p->value and p->value->reads) {
         assert(c, p->value->reads == p->read);
-        nextRead(c, 0, p->value);
+        popRead(c, 0, p->value);
       }
     }
   }
@@ -3344,11 +3271,10 @@ visit(Context* c, Link* link)
 
 class BuddyEvent: public Event {
  public:
-  BuddyEvent(Context* c, Value* original, Value* buddy, unsigned size):
+  BuddyEvent(Context* c, Value* original, Value* buddy):
     Event(c), original(original), buddy(buddy)
   {
-    addRead(c, this, original,
-            read(c, size, ~0, ~static_cast<uint64_t>(0), AnyFrameIndex));
+    addRead(c, this, original, read(c, SiteMask(~0, ~0, AnyFrameIndex)));
   }
 
   virtual const char* name() {
@@ -3361,7 +3287,7 @@ class BuddyEvent: public Event {
 
     addBuddy(original, buddy);
 
-    nextRead(c, this, original);
+    popRead(c, this, original);
   }
 
   Value* original;
@@ -3369,10 +3295,10 @@ class BuddyEvent: public Event {
 };
 
 void
-appendBuddy(Context* c, Value* original, Value* buddy, unsigned size)
+appendBuddy(Context* c, Value* original, Value* buddy)
 {
   append(c, new (c->zone->allocate(sizeof(BuddyEvent)))
-         BuddyEvent(c, original, buddy, size));
+         BuddyEvent(c, original, buddy));
 }
 
 class SaveLocalsEvent: public Event {
@@ -3389,7 +3315,7 @@ class SaveLocalsEvent: public Event {
 
   virtual void compile(Context* c) {
     for (Read* r = reads; r; r = r->eventNext) {
-      nextRead(c, this, r->value);
+      popRead(c, this, r->value);
     }
   }
 };
@@ -3441,7 +3367,7 @@ append(Context* c, Event* e)
   if (DebugAppend) {
     fprintf(stderr, " -- append %s at %d with %d stack before\n",
             e->name(), e->logicalInstruction->index, c->stack ?
-            c->stack->index + c->stack->footprint : 0);
+            c->stack->index + 1 : 0);
   }
 
   if (c->lastEvent) {
@@ -3468,10 +3394,9 @@ append(Context* c, Event* e)
 }
 
 bool
-acceptMatch(Context* c, Site* s, Read*, uint8_t typeMask,
-            uint64_t registerMask, int frameIndex)
+acceptMatch(Context* c, Site* s, Read*, const SiteMask& mask)
 {
-  return s->match(c, typeMask, registerMask, frameIndex);
+  return s->match(c, mask);
 }
 
 bool
@@ -3489,18 +3414,16 @@ isHome(Value* v, int frameIndex)
 }
 
 bool
-acceptForResolve(Context* c, Site* s, Read* read, uint8_t typeMask,
-                 uint64_t registerMask, int frameIndex)
+acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
 {
-  if (acceptMatch(c, s, read, typeMask, registerMask, frameIndex)
-      and (not s->frozen(c, read->size)))
-  {
+  if (acceptMatch(c, s, read, mask) and (not s->frozen(c))) {
     if (s->type(c) == RegisterOperand) {
-      return c->availableRegisterCount > ceiling(read->size, BytesPerWord);
+      return c->availableRegisterCount > 1;
     } else {
-      assert(c, s->match(c, 1 << MemoryOperand, 0, AnyFrameIndex));
+      assert(c, s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex)));
+
       return isHome(read->value, offsetToFrameIndex
-                    (c, static_cast<MemorySite*>(s)->value.offset));
+                    (c, static_cast<MemorySite*>(s)->offset));
     }
   } else {
     return false;
@@ -3511,21 +3434,20 @@ Site*
 pickSourceSite(Context* c, Read* read, Site* target = 0,
                unsigned* cost = 0, uint8_t typeMask = ~0,
                bool intersectRead = true, bool includeBuddies = true,
-               bool (*accept)(Context*, Site*, Read*, uint8_t, uint64_t, int)
+               bool (*accept)(Context*, Site*, Read*, const SiteMask&)
                = acceptMatch)
 {
-  uint64_t registerMask = ~static_cast<uint64_t>(0);
-  int frameIndex = AnyFrameIndex;
+  SiteMask mask(typeMask, ~0, AnyFrameIndex);
 
   if (intersectRead) {
-    read->intersect(&typeMask, &registerMask, &frameIndex);
+    read->intersect(&mask);
   }
 
   Site* site = 0;
   unsigned copyCost = 0xFFFFFFFF;
   for (SiteIterator it(read->value, includeBuddies); it.hasMore();) {
     Site* s = it.next();
-    if (accept(c, s, read, typeMask, registerMask, frameIndex)) {
+    if (accept(c, s, read, mask)) {
       unsigned v = s->copyCost(c, target);
       if (v < copyCost) {
         site = s;
@@ -3546,7 +3468,7 @@ pickSourceSite(Context* c, Read* read, Site* target = 0,
 }
 
 Site*
-readSource(Context* c, Stack* stack, Local* locals, Read* r)
+readSource(Context* c, Read* r)
 {
   if (DebugReads) {
     char buffer[1024]; sitesToString(c, r->value, buffer, 1024);
@@ -3564,7 +3486,7 @@ readSource(Context* c, Stack* stack, Local* locals, Read* r)
     unsigned copyCost;
     site = pickSourceSite(c, r, target, &copyCost, ~0, false);
     assert(c, copyCost);
-    move(c, stack, locals, r->size, r->value, site, target);
+    move(c, r->value, site, target);
     return target;    
   }
 }
@@ -3603,15 +3525,14 @@ propagateJunctionSites(Context* c, Event* e)
 
 class SiteRecord {
  public:
-  SiteRecord(Site* site, Value* value, unsigned size):
-    site(site), value(value), size(size)
+  SiteRecord(Site* site, Value* value):
+    site(site), value(value)
   { }
 
   SiteRecord() { }
 
   Site* site;
   Value* value;
-  unsigned size;
 };
 
 class SiteRecordList {
@@ -3626,12 +3547,12 @@ class SiteRecordList {
 };
 
 void
-freeze(Context* c, SiteRecordList* frozen, Site* s, Value* v, unsigned size)
+freeze(Context* c, SiteRecordList* frozen, Site* s, Value* v)
 {
   assert(c, frozen->index < frozen->capacity);
 
-  s->freeze(c, v, size);
-  new (frozen->records + (frozen->index ++)) SiteRecord(s, v, size);
+  s->freeze(c, v);
+  new (frozen->records + (frozen->index ++)) SiteRecord(s, v);
 }
 
 void
@@ -3639,13 +3560,13 @@ thaw(Context* c, SiteRecordList* frozen)
 {
   while (frozen->index) {
     SiteRecord* sr = frozen->records + (-- frozen->index);
-    sr->site->thaw(c, sr->value, sr->size);
+    sr->site->thaw(c, sr->value);
   }
 }
 
 Site*
-acquireSite(Context* c, Event* e, SiteRecordList* frozen, Site* target,
-            Value* v, Read* r, bool pickSource)
+acquireSite(Context* c, SiteRecordList* frozen, Site* target, Value* v,
+            Read* r, bool pickSource)
 {
   assert(c, hasSite(v));
 
@@ -3660,12 +3581,12 @@ acquireSite(Context* c, Event* e, SiteRecordList* frozen, Site* target,
 
   if (copyCost) {
     target = target->copy(c);
-    move(c, e->stackAfter, e->localsAfter, r->size, v, source, target);
+    move(c, v, source, target);
   } else {
     target = source;
   }
 
-  freeze(c, frozen, target, v, r->size);
+  freeze(c, frozen, target, v);
 
   return target;
 }
@@ -3689,7 +3610,7 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
                   buffer, el.value, el.localIndex, frameIndex(c, &el));
         }
 
-        acquireSite(c, e, frozen, sites[el.localIndex], v, r, true);
+        acquireSite(c, frozen, sites[el.localIndex], v, r, true);
       } else {
         complete = false;
       }
@@ -3724,8 +3645,7 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
                   buffer, v, el.localIndex, frameIndex(c, &el));
         }
 
-        sites[el.localIndex] = acquireSite
-          (c, e, frozen, s, v, r, false)->copy(c);
+        sites[el.localIndex] = acquireSite(c, frozen, s, v, r, false)->copy(c);
       } else {
         complete = false;
       }
@@ -3762,7 +3682,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
                 buffer, el.value, el.localIndex, frameIndex(c, &el));
       }
 
-      Site* acquired = acquireSite(c, e, frozen, s, v, r, useTarget)->copy(c);
+      Site* acquired = acquireSite(c, frozen, s, v, r, useTarget)->copy(c);
 
       sites[el.localIndex] = (useTarget ? s : acquired->copy(c));
     }
@@ -3818,8 +3738,9 @@ captureBranchSnapshots(Context* c, Event* e)
       e->snapshots = makeSnapshots(c, el.value, e->snapshots);
     }
 
-    for (SavedValue* sv = e->successors->forkState->saved; sv; sv = sv->next) {
-      e->snapshots = makeSnapshots(c, sv->value, e->snapshots);
+    for (Cell* sv = e->successors->forkState->saved; sv; sv = sv->next) {
+      e->snapshots = makeSnapshots
+        (c, static_cast<Value*>(sv->value), e->snapshots);
     }
 
     if (DebugControl) {
@@ -3840,12 +3761,12 @@ populateSiteTables(Context* c, Event* e, SiteRecordList* frozen)
 }
 
 void
-setSites(Context* c, Event* e, Value* v, Site* s, unsigned size)
+setSites(Context* c, Value* v, Site* s)
 {
   assert(c, live(v));
 
   for (; s; s = s->next) {
-    addSite(c, e->stackBefore, e->localsBefore, size, v, s->copy(c));
+    addSite(c, v, s->copy(c));
   }
 
   if (DebugControl) {
@@ -3871,9 +3792,8 @@ setSites(Context* c, Event* e, Site** sites)
   for (FrameIterator it(c, e->stackBefore, e->localsBefore); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     if (sites[el.localIndex]) {
-      Read* r = live(el.value);
-      if (r) {
-        setSites(c, e, el.value, sites[el.localIndex], r->size);
+      if (live(el.value)) {
+        setSites(c, el.value, sites[el.localIndex]);
       }
     }
   }
@@ -3903,9 +3823,8 @@ restore(Context* c, Event* e, Snapshot* snapshots)
 
   for (Snapshot* s = snapshots; s; s = s->next) {
     if (live(s->value)) {
-      Read* r = live(s->value);
-      if (r and s->sites and s->value->sites == 0) {
-        setSites(c, e, s->value, s->sites, r->size);
+      if (live(s->value) and s->sites and s->value->sites == 0) {
+        setSites(c, s->value, s->sites);
       }
     }
   }
@@ -3918,7 +3837,7 @@ populateSources(Context* c, Event* e)
   SiteRecordList frozen(frozenRecords, e->readCount);
 
   for (Read* r = e->reads; r; r = r->eventNext) {
-    r->value->source = readSource(c, e->stackBefore, e->localsBefore, r);
+    r->value->source = readSource(c, r);
 
     if (r->value->source) {
       if (DebugReads) {
@@ -3927,7 +3846,7 @@ populateSources(Context* c, Event* e)
                 buffer, r->value);
       }
 
-      freeze(c, &frozen, r->value->source, r->value, r->size);
+      freeze(c, &frozen, r->value->source, r->value);
     }
   }
 
@@ -3935,10 +3854,10 @@ populateSources(Context* c, Event* e)
 }
 
 void
-setStubRead(Context* c, StubReadPair* p, Value* v, unsigned size)
+setStubRead(Context* c, StubReadPair* p, Value* v)
 {
   if (v) {
-    StubRead* r = stubRead(c, size);
+    StubRead* r = stubRead(c);
     if (DebugReads) {
       fprintf(stderr, "add stub read %p to %p\n", r, v);
     }
@@ -3964,8 +3883,7 @@ populateJunctionReads(Context* c, Link* link)
 
   for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
     FrameIterator::Element e = it.next(c);
-    setStubRead(c, state->reads + e.localIndex, e.value,
-                footprintSizeInBytes(e.footprint));
+    setStubRead(c, state->reads + e.localIndex, e.value);
   }
 }
 
@@ -4036,8 +3954,6 @@ compile(Context* c)
 
   Assembler* a = c->assembler;
 
-  c->pass = CompilePass;
-
   Block* firstBlock = block(c, c->firstEvent);
   Block* block = firstBlock;
 
@@ -4050,8 +3966,7 @@ compile(Context* c)
               e->name(), e->logicalInstruction->index,
               countPredecessors(e->predecessors),
               countSuccessors(e->successors),
-              e->stackBefore ?
-              e->stackBefore->index + e->stackBefore->footprint : 0);
+              e->stackBefore ? e->stackBefore->index + 1 : 0);
     }
 
     e->block = block;
@@ -4181,10 +4096,9 @@ restore(Context* c, ForkState* state)
 }
 
 void
-addForkElement(Context* c, Value* v, unsigned size, ForkState* state,
-               unsigned index)
+addForkElement(Context* c, Value* v, ForkState* state, unsigned index)
 {
-  MultiRead* r = multiRead(c, size);
+  MultiRead* r = multiRead(c);
   if (DebugReads) {
     fprintf(stderr, "add multi read %p to %p\n", r, v);
   }
@@ -4193,17 +4107,6 @@ addForkElement(Context* c, Value* v, unsigned size, ForkState* state,
   ForkElement* p = state->elements + index;
   p->value = v;
   p->read = r;
-}
-
-unsigned
-count(SavedValue* sv)
-{
-  unsigned count = 0;
-  while (sv) {
-    ++ count;
-    sv = sv->next;
-  }
-  return count;
 }
 
 ForkState*
@@ -4223,13 +4126,11 @@ saveState(Context* c)
 
     for (FrameIterator it(c, c->stack, c->locals); it.hasMore();) {
       FrameIterator::Element e = it.next(c);
-      addForkElement
-        (c, e.value, footprintSizeInBytes(e.footprint), state, count++);
+      addForkElement(c, e.value, state, count++);
     }
 
-    for (SavedValue* sv = c->saved; sv; sv = sv->next) {
-      addForkElement
-        (c, sv->value, footprintSizeInBytes(sv->footprint), state, count++);
+    for (Cell* sv = c->saved; sv; sv = sv->next) {
+      addForkElement(c, static_cast<Value*>(sv->value), state, count++);
     }
 
     state->readCount = count;
@@ -4261,11 +4162,11 @@ restoreState(Context* c, ForkState* s)
 }
 
 Value*
-maybeBuddy(Context* c, Value* v, unsigned sizeInBytes)
+maybeBuddy(Context* c, Value* v)
 {
   if (v->home >= 0) {
     Value* n = value(c);
-    appendBuddy(c, v, n, sizeInBytes);
+    appendBuddy(c, v, n);
     return n;
   } else {
     return v;
@@ -4298,7 +4199,7 @@ class Client: public Assembler::Client {
     assert(c, not reg->reserved);
 
     if (reg->value) {
-      steal(c, reg, 0, c->stack, c->locals);
+      steal(c, reg, 0);
     }
   }
 
@@ -4514,7 +4415,7 @@ class MyCompiler: public Compiler {
 
     Value* v = value(&c);
     Stack* s = ::stack(&c, v, footprint, c.stack);
-    v->home = frameIndex(&c, s->index + c.localFootprint, s->footprint);
+    v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
 
@@ -4523,7 +4424,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual void save(unsigned footprint, Operand* value) {
-    c.saved = savedValue(&c, static_cast<Value*>(value), footprint, c.saved);
+    c.saved = cons(&c, static_cast<Value*>(value), c.saved);
+    if (BytesPerWord == 4 and footprint > 1) {
+      assert(&c, footprint == 2);
+      save(1, static_cast<Value*>(value)->high);
+    }
   }
 
   virtual Operand* pop(unsigned footprint) {
@@ -4533,11 +4438,11 @@ class MyCompiler: public Compiler {
   virtual void pushed() {
     Value* v = value(&c);
     appendFrameSite
-      (&c, v, BytesPerWord,
-       frameIndex(&c, (c.stack ? c.stack->index : 0) + c.localFootprint, 1));
+      (&c, v, frameIndex
+       (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
 
     Stack* s = ::stack(&c, v, 1, c.stack);
-    v->home = frameIndex(&c, s->index + c.localFootprint, s->footprint);
+    v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
 
@@ -4551,7 +4456,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual unsigned footprint(StackElement* e) {
-    return static_cast<Stack*>(e)->footprint;
+    return static_cast<Stack*>(e)->value->high ? 2 : 1;
   }
 
   virtual unsigned index(StackElement* e) {
@@ -4560,11 +4465,10 @@ class MyCompiler: public Compiler {
 
   virtual Operand* peek(unsigned footprint UNUSED, unsigned index) {
     Stack* s = c.stack;
-    for (unsigned i = index; i > 0;) {
-      i -= s->footprint;
+    for (unsigned i = index; i > 0; --i) {
       s = s->next;
     }
-    assert(&c, s->footprint == footprint);
+    assert(&c, footprint == 1 or (s->value->high and footprint == 2));
     return s->value;
   }
 
@@ -4580,13 +4484,14 @@ class MyCompiler: public Compiler {
     unsigned footprint = 0;
     unsigned size = BytesPerWord;
     Value* arguments[argumentCount];
-    unsigned argumentSizes[argumentCount];
     int index = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       Value* o = va_arg(a, Value*);
       if (o) {
         arguments[index] = o;
-        argumentSizes[index] = size;
+        if (size > BytesPerWord) {
+          arguments[++index] = o->high;
+        }
         size = BytesPerWord;
         ++ index;
       } else {
@@ -4601,9 +4506,7 @@ class MyCompiler: public Compiler {
     Stack* bottomArgument = 0;
 
     for (int i = index - 1; i >= 0; --i) {
-      argumentStack = ::stack
-        (&c, arguments[i], ceiling(argumentSizes[i], BytesPerWord),
-         argumentStack);
+      argumentStack = ::stack(&c, arguments[i], 1, argumentStack);
 
       if (i == index - 1) {
         bottomArgument = argumentStack;
@@ -4638,19 +4541,22 @@ class MyCompiler: public Compiler {
 
     Value* v = value(&c);
 
-    if (DebugFrame) {
-      fprintf(stderr, "init local %p of footprint %d at %d (%d)\n",
-              v, footprint, index, frameIndex(&c, index, footprint));
+    if (BytesPerWord == 4 and footprint > 1) {
+      assert(&c, footprint == 2);
+      initLocal(1, index + 1);
+      v->high = c.locals[index + 1].value;
     }
 
-    appendFrameSite
-      (&c, v, footprintSizeInBytes(footprint),
-       frameIndex(&c, index, footprint));
+    if (DebugFrame) {
+      fprintf(stderr, "init local %p at %d (%d)\n",
+              v, index, frameIndex(&c, index));
+    }
+
+    appendFrameSite(&c, v, frameIndex(&c, index));
 
     Local* local = c.locals + index;
     local->value = v;
-    v->home = frameIndex(&c, index, footprint);
-    local->footprint = footprint;
+    v->home = frameIndex(&c, index);
   }
 
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) {
@@ -4665,13 +4571,18 @@ class MyCompiler: public Compiler {
     for (unsigned i = 0; i < c.localFootprint; ++i) {
       Local* local = e->localsBefore + i;
       if (local->value) {
-        initLocal(local->footprint, i);
+        initLocal(1, i);
       }
     }
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
     assert(&c, index < c.localFootprint);
+
+    if (BytesPerWord == 4 and footprint > 1) {
+      assert(&c, footprint == 2);
+      storeLocal(1, static_cast<Value*>(src)->high, index + 1);
+    }
 
     Local* local = c.locals + index;
 
@@ -4681,39 +4592,22 @@ class MyCompiler: public Compiler {
     c.locals = newLocals;
 
     local = c.locals + index;
-    local->value = maybeBuddy
-      (&c, static_cast<Value*>(src), footprintSizeInBytes(footprint));
-
-    if (footprint == 2) {
-      Local* clobber = local + 1;
-      clobber->value = 0;
-      clobber->footprint = 0;
-    }
-
-    if (index > 0 and local[-1].footprint == 2) {
-      Local* clobber = local - 1;
-      clobber->value = 0;
-      clobber->footprint = 0;
-    }
+    local->value = maybeBuddy(&c, static_cast<Value*>(src));
 
     if (DebugFrame) {
-      fprintf(stderr, "store local %p of footprint %d at %d\n",
-              local->value, footprint, index);
+      fprintf(stderr, "store local %p at %d\n", local->value, index);
     }
 
-    local->value->home = frameIndex(&c, index, footprint);
-    local->footprint = footprint;
+    local->value->home = frameIndex(&c, index);
   }
 
   virtual Operand* loadLocal(unsigned footprint UNUSED, unsigned index) {
-    assert(&c, index < c.localFootprint);
+    assert(&c, index + footprint <= c.localFootprint);
     assert(&c, c.locals[index].value);
     assert(&c, c.locals[index].value->home >= 0);
-    assert(&c, c.locals[index].footprint == footprint);
 
     if (DebugFrame) {
-      fprintf(stderr, "load local %p of size %d at %d\n",
-              c.locals[index].value, footprint, index);
+      fprintf(stderr, "load local %p at %d\n", c.locals[index].value, index);
     }
 
     return c.locals[index].value;
