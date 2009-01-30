@@ -650,7 +650,6 @@ negateRR(Context* c, unsigned aSize, Assembler::Register* a,
          unsigned bSize UNUSED, Assembler::Register* b UNUSED)
 {
   assert(c, aSize == bSize);
-  assert(c, a == b);
 
   negateR(c, aSize, a);
 }
