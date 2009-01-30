@@ -2300,11 +2300,10 @@ class MyAssembler: public Assembler {
                      unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType, Operand* bOperand,
                      unsigned cSize UNUSED, OperandType cType UNUSED,
-                     Operand* cOperand UNUSED)
+                     Operand*)
   {
     assert(&c, bSize == cSize);
     assert(&c, bType == cType);
-    assert(&c, bOperand == cOperand);
 
     arch_->c.binaryOperations[index(op, aType, bType)]
       (&c, aSize, aOperand, bSize, bOperand);

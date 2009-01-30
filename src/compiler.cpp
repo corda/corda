@@ -15,12 +15,12 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = false;
+const bool DebugAppend = true;
 const bool DebugCompile = true;
 const bool DebugResources = true;
-const bool DebugFrame = false;
+const bool DebugFrame = true;
 const bool DebugControl = true;
-const bool DebugReads = false;
+const bool DebugReads = true;
 const bool DebugSites = false;
 const bool DebugMoves = true;
 const bool DebugBuddies = false;
@@ -683,6 +683,8 @@ class FrameIterator {
   { }
 
   bool hasMore() {
+    while (stack and stack->value == 0) stack = stack->next;
+
     while (localIndex >= 0 and locals[localIndex].value == 0) -- localIndex;
 
     return stack != 0 or localIndex >= 0;
@@ -1507,7 +1509,7 @@ class MemorySite: public Site {
     }
 
     decrement(c, c->registerResources + base);
-    if (index) {
+    if (index != NoRegister) {
       decrement(c, c->registerResources + index);
     }
 
@@ -2148,26 +2150,29 @@ class CallEvent: public Event {
 
     int footprint = stackArgumentFootprint;
     for (Stack* s = stackBefore; s; s = s->next) {
-      if (footprint > 0) {
-        if (DebugReads) {
-          fprintf(stderr, "stack arg read %p at %d of %d\n",
-                  s->value, frameIndex,
-                  c->alignedFrameSize + c->parameterFootprint);
+      if (s->value) {
+        if (footprint > 0) {
+          if (DebugReads) {
+            fprintf(stderr, "stack arg read %p at %d of %d\n",
+                    s->value, frameIndex,
+                    c->alignedFrameSize + c->parameterFootprint);
+          }
+
+          addRead(c, this, s->value, read
+                  (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
+        } else {
+          unsigned logicalIndex = ::frameIndex
+            (c, s->index + c->localFootprint);
+
+          if (DebugReads) {
+            fprintf(stderr, "stack save read %p at %d of %d\n",
+                    s->value, logicalIndex,
+                    c->alignedFrameSize + c->parameterFootprint);
+          }
+
+          addRead(c, this, s->value, read
+                  (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
         }
-
-        addRead(c, this, s->value, read
-                (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
-      } else {
-        unsigned logicalIndex = ::frameIndex(c, s->index + c->localFootprint);
-
-        if (DebugReads) {
-          fprintf(stderr, "stack save read %p at %d of %d\n",
-                  s->value, logicalIndex,
-                  c->alignedFrameSize + c->parameterFootprint);
-        }
-
-        addRead(c, this, s->value, read
-                (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
       }
 
       -- footprint;
@@ -2184,8 +2189,12 @@ class CallEvent: public Event {
       ++ frameIndex;
     }
 
+    fprintf(stderr, "%d %d\n",
+            stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0,
+            c->localFootprint);
+
     popIndex = ::frameIndex
-      (c, (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
+      (c, (stackBefore ? stackBefore->index - stackArgumentFootprint : 0)
        + c->localFootprint);
 
     saveLocals(c, this);
@@ -2777,16 +2786,10 @@ makeSnapshots(Context* c, Value* value, Snapshot* next)
 }
 
 Stack*
-stack(Context* c, Value* value, unsigned index, Stack* next)
-{
-  return new (c->zone->allocate(sizeof(Stack)))
-    Stack(index, value, next);
-}
-
-Stack*
 stack(Context* c, Value* value, Stack* next)
 {
-  return stack(c, value, (next ? next->index + 1 : 0), next);
+  return new (c->zone->allocate(sizeof(Stack)))
+    Stack(next ? next->index + 1 : 0, value, next);
 }
 
 Value*
@@ -2797,19 +2800,25 @@ push(Context* c, unsigned footprint, Value* v)
 {
   assert(c, footprint);
 
-  if (BytesPerWord == 4 and footprint > 1) {
+  if (footprint > 1) {
     assert(c, footprint == 2);
+    assert(c, (BytesPerWord == 8) xor (v->high != 0));
     push(c, 1, v->high);
   }
 
-  v = maybeBuddy(c, v); 
-
-  if (DebugFrame) {
-    fprintf(stderr, "push %p of footprint %d\n", v, footprint);
+  if (v) {
+    v = maybeBuddy(c, v);
   }
     
-  Stack* s = stack(c, v, footprint, c->stack);
-  v->home = frameIndex(c, s->index + c->localFootprint);
+  Stack* s = stack(c, v, c->stack);
+
+  if (DebugFrame) {
+    fprintf(stderr, "push %p\n", v);
+  }
+
+  if (v) {
+    v->home = frameIndex(c, s->index + c->localFootprint);
+  }
   c->stack = s;
 }
 
@@ -2819,17 +2828,19 @@ pop(Context* c, unsigned footprint)
   assert(c, footprint);
 
   Stack* s = c->stack;
-  assert(c, s->value->home >= 0);
+  assert(c, s->value == 0 or s->value->home >= 0);
 
   if (DebugFrame) {
-    fprintf(stderr, "pop %p of footprint %d\n", s->value, footprint);
+    fprintf(stderr, "pop %p\n", s->value);
   }
     
   c->stack = s->next;
 
   if (footprint > 1) {
     assert(c, footprint == 2);
-    assert(c, s->value->high);
+    assert(c, s->value->high == s->next->value
+           and ((BytesPerWord == 8) xor (s->value->high != 0)));
+
     pop(c, 1);
   }
 
@@ -3168,6 +3179,7 @@ class BoundsCheckEvent: public Event {
     assert(c, object->source->type(c) == RegisterOperand);
     MemorySite length(static_cast<RegisterSite*>(object->source)->number,
                       lengthOffset, NoRegister, 1);
+    length.acquired = true;
 
     apply(c, Compare, 4, index->source, 0, 4, &length, 0);
 
@@ -4414,7 +4426,7 @@ class MyCompiler: public Compiler {
     assert(&c, footprint);
 
     Value* v = value(&c);
-    Stack* s = ::stack(&c, v, footprint, c.stack);
+    Stack* s = ::stack(&c, v, c.stack);
     v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
@@ -4427,6 +4439,8 @@ class MyCompiler: public Compiler {
     c.saved = cons(&c, static_cast<Value*>(value), c.saved);
     if (BytesPerWord == 4 and footprint > 1) {
       assert(&c, footprint == 2);
+      assert(&c, static_cast<Value*>(value)->high);
+
       save(1, static_cast<Value*>(value)->high);
     }
   }
@@ -4441,13 +4455,26 @@ class MyCompiler: public Compiler {
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
 
-    Stack* s = ::stack(&c, v, 1, c.stack);
+    Stack* s = ::stack(&c, v, c.stack);
     v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
 
-  virtual void popped() {
+  virtual void popped(unsigned footprint) {
     assert(&c, c.stack->value->home >= 0);
+
+    if (footprint > 1) {
+      assert(&c, footprint == 2);
+      assert(&c, c.stack->value->high == c.stack->next->value
+             and ((BytesPerWord == 8) xor (c.stack->value->high != 0)));
+
+      popped(1);
+    }
+
+    if (DebugFrame) {
+      fprintf(stderr, "popped %p\n", c.stack->value);
+    }
+
     c.stack = c.stack->next;
   }
 
@@ -4456,7 +4483,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual unsigned footprint(StackElement* e) {
-    return static_cast<Stack*>(e)->value->high ? 2 : 1;
+    return (static_cast<Stack*>(e)->next
+            and (static_cast<Stack*>(e)->next->value
+                 == static_cast<Stack*>(e)->value->high)) ? 2 : 1;
   }
 
   virtual unsigned index(StackElement* e) {
@@ -4506,7 +4535,7 @@ class MyCompiler: public Compiler {
     Stack* bottomArgument = 0;
 
     for (int i = index - 1; i >= 0; --i) {
-      argumentStack = ::stack(&c, arguments[i], 1, argumentStack);
+      argumentStack = ::stack(&c, arguments[i], argumentStack);
 
       if (i == index - 1) {
         bottomArgument = argumentStack;
@@ -4581,6 +4610,8 @@ class MyCompiler: public Compiler {
 
     if (BytesPerWord == 4 and footprint > 1) {
       assert(&c, footprint == 2);
+      assert(&c, static_cast<Value*>(src)->high);
+
       storeLocal(1, static_cast<Value*>(src)->high, index + 1);
     }
 

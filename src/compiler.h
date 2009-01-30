@@ -66,7 +66,7 @@ class Compiler {
   virtual void save(unsigned footprint, Operand* value) = 0;
   virtual Operand* pop(unsigned footprint) = 0;
   virtual void pushed() = 0;
-  virtual void popped() = 0;
+  virtual void popped(unsigned footprint) = 0;
   virtual StackElement* top() = 0;
   virtual unsigned footprint(StackElement*) = 0;
   virtual unsigned index(StackElement*) = 0;

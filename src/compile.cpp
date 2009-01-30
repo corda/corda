@@ -898,8 +898,9 @@ class Frame {
 
     for (unsigned i = count; i;) {
       Compiler::StackElement* s = c->top();
-      c->popped();
-      i -= c->footprint(s);
+      unsigned footprint = c->footprint(s);
+      c->popped(footprint);
+      i -= footprint;
     }
   }
 
