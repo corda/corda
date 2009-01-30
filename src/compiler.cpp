@@ -4497,7 +4497,10 @@ class MyCompiler: public Compiler {
     for (unsigned i = index; i > 0; --i) {
       s = s->next;
     }
-    assert(&c, footprint == 1 or (s->value->high and footprint == 2));
+    assert(&c, footprint == 1 or
+           (c.stack->value->high == c.stack->next->value
+            and ((BytesPerWord == 8) xor (c.stack->value->high != 0))));
+
     return s->value;
   }
 
