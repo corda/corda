@@ -2189,13 +2189,13 @@ class CallEvent: public Event {
       ++ frameIndex;
     }
 
-    fprintf(stderr, "%d %d\n",
-            stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0,
-            c->localFootprint);
+    popIndex
+      = c->alignedFrameSize
+      + c->parameterFootprint
+      - (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
+      - c->localFootprint;
 
-    popIndex = ::frameIndex
-      (c, (stackBefore ? stackBefore->index - stackArgumentFootprint : 0)
-       + c->localFootprint);
+    assert(c, static_cast<int>(popIndex) >= 0);
 
     saveLocals(c, this);
   }
