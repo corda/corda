@@ -4569,14 +4569,19 @@ class MyCompiler: public Compiler {
   }
 
   virtual void initLocal(unsigned footprint, unsigned index) {
-    assert(&c, index < c.localFootprint);
+    assert(&c, index + footprint <= c.localFootprint);
 
     Value* v = value(&c);
 
-    if (BytesPerWord == 4 and footprint > 1) {
+    if (footprint > 1) {
       assert(&c, footprint == 2);
-      initLocal(1, index + 1);
-      v->high = c.locals[index + 1].value;
+
+      if (BytesPerWord == 4) {
+        initLocal(1, index);
+        v->high = c.locals[index].value;
+      }
+
+      ++ index;
     }
 
     if (DebugFrame) {
@@ -4609,13 +4614,18 @@ class MyCompiler: public Compiler {
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
-    assert(&c, index < c.localFootprint);
+    assert(&c, index + footprint <= c.localFootprint);
 
-    if (BytesPerWord == 4 and footprint > 1) {
+    if (footprint > 1) {
       assert(&c, footprint == 2);
-      assert(&c, static_cast<Value*>(src)->high);
 
-      storeLocal(1, static_cast<Value*>(src)->high, index + 1);
+      if (BytesPerWord == 4) {
+        assert(&c, static_cast<Value*>(src)->high);
+
+        storeLocal(1, static_cast<Value*>(src)->high, index);
+      }
+
+      ++ index;
     }
 
     Local* local = c.locals + index;
@@ -4637,6 +4647,13 @@ class MyCompiler: public Compiler {
 
   virtual Operand* loadLocal(unsigned footprint UNUSED, unsigned index) {
     assert(&c, index + footprint <= c.localFootprint);
+
+    if (footprint > 1) {
+      assert(&c, footprint == 2);
+
+      ++ index;
+    }
+
     assert(&c, c.locals[index].value);
     assert(&c, c.locals[index].value->home >= 0);
 
