@@ -15,14 +15,14 @@ using namespace vm;
 
 namespace {
 
-const bool DebugAppend = true;
-const bool DebugCompile = true;
-const bool DebugResources = true;
-const bool DebugFrame = true;
-const bool DebugControl = true;
-const bool DebugReads = true;
+const bool DebugAppend = false;
+const bool DebugCompile = false;
+const bool DebugResources = false;
+const bool DebugFrame = false;
+const bool DebugControl = false;
+const bool DebugReads = false;
 const bool DebugSites = false;
-const bool DebugMoves = true;
+const bool DebugMoves = false;
 const bool DebugBuddies = false;
 
 const int AnyFrameIndex = -2;
@@ -2798,7 +2798,6 @@ class CombineEvent: public Event {
 
       if (live(result)) {
         addSite(c, result, low);
-        fprintf(stderr, "result %p high %p\n", result, result->high);
         if (resultSize > BytesPerWord and live(result->high)) {
           addSite(c, result->high, high);
         }
