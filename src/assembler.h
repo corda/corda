@@ -97,6 +97,43 @@ class ResolvedPromise: public Promise {
   int64_t value_;
 };
 
+class ShiftMaskPromise: public Promise {
+ public:
+  ShiftMaskPromise(Promise* base, unsigned shift, int64_t mask):
+    base(base), shift(shift), mask(mask)
+  { }
+
+  virtual int64_t value() {
+    return (base->value() >> shift) & mask;
+  }
+
+  virtual bool resolved() {
+    return base->resolved();
+  }
+
+  Promise* base;
+  unsigned shift;
+  int64_t mask;
+};
+
+class CombinedPromise: public Promise {
+ public:
+  CombinedPromise(Promise* low, Promise* high):
+    low(low), high(high)
+  { }
+
+  virtual int64_t value() {
+    return low->value() | (high->value() << 32);
+  }
+
+  virtual bool resolved() {
+    return low->resolved() and high->resolved();
+  }
+
+  Promise* low;
+  Promise* high;
+};
+
 class TraceHandler {
  public:
   virtual void handleTrace(Promise* address, unsigned padIndex,

@@ -118,11 +118,13 @@ class Site {
 
   virtual OperandType type(Context*) = 0;
 
-  virtual void asAssemblerOperandLow(Context*, Assembler::Operand* result) = 0;
-
-  virtual void asAssemblerOperandHigh(Context*, Assembler::Operand*) { }
+  virtual void asAssemblerOperand(Context*, Site*, Assembler::Operand*) = 0;
 
   virtual Site* copy(Context*) = 0;
+
+  virtual Site* copyLow(Context*) = 0;
+
+  virtual Site* copyHigh(Context*) = 0;
 
   Site* next;
 };
@@ -1199,6 +1201,20 @@ release(Context* c, Resource* resource, Value* value, Site* site);
 ConstantSite*
 constantSite(Context* c, Promise* value);
 
+ShiftMaskPromise*
+shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
+{
+  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
+    ShiftMaskPromise(base, shift, mask);
+}
+
+CombinedPromise*
+combinedPromise(Context* c, Promise* low, Promise* high)
+{
+  return new (c->zone->allocate(sizeof(CombinedPromise)))
+    CombinedPromise(low, high);
+}
+
 class ConstantSite: public Site {
  public:
   ConstantSite(Promise* value): value(value) { }
@@ -1224,12 +1240,26 @@ class ConstantSite: public Site {
     return ConstantOperand;
   }
 
-  virtual void asAssemblerOperandLow(Context*, Assembler::Operand* result) {
-    new (result) Assembler::Constant(value);
+  virtual void asAssemblerOperand(Context* c, Site* high,
+                                  Assembler::Operand* result)
+  {
+    Promise* v = value;
+    if (high) {
+      v = combinedPromise(c, value, static_cast<ConstantSite*>(high)->value);
+    }
+    new (result) Assembler::Constant(v);
   }
 
   virtual Site* copy(Context* c) {
     return constantSite(c, value);
+  }
+
+  virtual Site* copyLow(Context* c) {
+    return constantSite(c, shiftMaskPromise(c, value, 0, 0xFFFFFFFF));
+  }
+
+  virtual Site* copyHigh(Context* c) {
+    return constantSite(c, shiftMaskPromise(c, value, 32, 0xFFFFFFFF));
   }
 
   Promise* value;
@@ -1282,12 +1312,24 @@ class AddressSite: public Site {
     return AddressOperand;
   }
 
-  virtual void asAssemblerOperandLow(Context*, Assembler::Operand* result) {
+  virtual void asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
+                                  Assembler::Operand* result)
+  {
+    assert(c, high == 0);
+
     new (result) Assembler::Address(address);
   }
 
   virtual Site* copy(Context* c) {
     return addressSite(c, address);
+  }
+
+  virtual Site* copyLow(Context* c) {
+    abort(c);
+  }
+
+  virtual Site* copyHigh(Context* c) {
+    abort(c);
   }
 
   Promise* address;
@@ -1383,20 +1425,20 @@ class RegisterSite: public Site {
     return RegisterOperand;
   }
 
-  virtual void asAssemblerOperandLow(Context* c UNUSED,
-                                     Assembler::Operand* result)
+  virtual void asAssemblerOperand(Context* c UNUSED, Site* high,
+                                  Assembler::Operand* result)
   {
     assert(c, number != NoRegister);
 
-    static_cast<Assembler::Register*>(result)->low = number;
-  }
+    int highNumber;
+    if (high) {
+      highNumber = static_cast<RegisterSite*>(high)->number;
+      assert(c, highNumber != NoRegister);
+    } else {
+      highNumber = NoRegister;
+    }
 
-  virtual void asAssemblerOperandHigh(Context* c UNUSED,
-                                      Assembler::Operand* result)
-  {
-    assert(c, number != NoRegister);
-
-    static_cast<Assembler::Register*>(result)->high = number;
+    new (result) Assembler::Register(number, highNumber);
   }
 
   virtual Site* copy(Context* c) {
@@ -1409,6 +1451,14 @@ class RegisterSite: public Site {
     }
 
     return freeRegisterSite(c, mask);
+  }
+
+  virtual Site* copyLow(Context* c) {
+    abort(c);
+  }
+
+  virtual Site* copyHigh(Context* c) {
+    abort(c);
   }
 
   uint32_t mask;
@@ -1537,9 +1587,16 @@ class MemorySite: public Site {
     return MemoryOperand;
   }
 
-  virtual void asAssemblerOperandLow(Context* c UNUSED,
-                                     Assembler::Operand* result)
+  virtual void asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
+                                  Assembler::Operand* result)
   {
+    assert(c, high == 0
+           or (static_cast<MemorySite*>(high)->base == base
+               and static_cast<MemorySite*>(high)->offset
+               == static_cast<int>(offset + BytesPerWord)
+               and static_cast<MemorySite*>(high)->index == index
+               and static_cast<MemorySite*>(high)->scale == scale));
+
     assert(c, acquired);
 
     new (result) Assembler::Memory(base, offset, index, scale);
@@ -1547,6 +1604,14 @@ class MemorySite: public Site {
 
   virtual Site* copy(Context* c) {
     return memorySite(c, base, offset, index, scale);
+  }
+
+  virtual Site* copyLow(Context* c) {
+    return copy(c);
+  }
+
+  virtual Site* copyHigh(Context* c) {
+    return memorySite(c, base, offset + BytesPerWord, index, scale);
   }
 
   bool acquired;
@@ -1929,14 +1994,13 @@ void
 asAssemblerOperand(Context* c, Site* low, Site* high,
                    Assembler::Operand* result)
 {
-  low->asAssemblerOperandLow(c, result);
-  if (high) {
-    high->asAssemblerOperandHigh(c, result);
-  }
+  low->asAssemblerOperand(c, high, result);
 }
 
 class OperandUnion: public Assembler::Operand {
-  // must be large enough to hold any operand type:
+  // must be large enough and aligned properly to hold any operand
+  // type (we'd use an actual union type here, except that classes
+  // with constructors cannot be used in a union):
   uintptr_t padding[4];
 };
 
@@ -2217,7 +2281,7 @@ class CallEvent: public Event {
 
     if (resultSize and live(result)) {
       addSite(c, result, registerSite(c, c->arch->returnLow()));
-      if (resultSize > BytesPerWord) {
+      if (resultSize > BytesPerWord and live(result->high)) {
         addSite(c, result->high, registerSite(c, c->arch->returnHigh()));
       }
     }
@@ -2385,6 +2449,48 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
   }
 }
 
+Value*
+value(Context* c, Site* site = 0, Site* target = 0)
+{
+  return new (c->zone->allocate(sizeof(Value))) Value(site, target);
+}
+
+void
+split(Context* c, Value* v)
+{
+  assert(c, v->high == 0);
+
+  v->high = value(c);
+  for (SiteIterator it(v); it.hasMore();) {
+    Site* s = it.next();
+    removeSite(c, v, s);
+    
+    addSite(c, v, s->copyLow(c));
+    addSite(c, v->high, s->copyHigh(c));
+
+    char s1[256]; s->toString(c, s1, 256);
+    char s2[256]; v->sites->toString(c, s2, 256);
+    char s3[256]; v->high->sites->toString(c, s3, 256);
+    fprintf(stderr, "split %s into %s for %p and %s for %p\n", s1, s2, v, s3, v->high);
+  }
+}
+
+void
+maybeSplit(Context* c, Value* v)
+{
+  if (v->high == 0) {
+    split(c, v);
+  }
+}
+
+void
+grow(Context* c, Value* v)
+{
+  assert(c, v->high == 0);
+
+  v->high = value(c);
+}
+
 class MoveEvent: public Event {
  public:
   MoveEvent(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
@@ -2396,7 +2502,12 @@ class MoveEvent: public Event {
   {
     addRead(c, this, src, read(c, srcLowMask));
     if (srcSize > BytesPerWord) {
+      maybeSplit(c, src);
       addRead(c, this, src->high, read(c, srcHighMask));
+    }
+    
+    if (dstSize > BytesPerWord) {
+      grow(c, dst);
     }
   }
 
@@ -2648,6 +2759,11 @@ class CombineEvent: public Event {
     if (secondSize > BytesPerWord) {
       addRead(c, this, second->high, read(c, secondHighMask));
     }
+
+    if (resultSize > BytesPerWord) {
+      grow(c, result);
+      fprintf(stderr, "grew %p into %p\n", result, result->high);
+    }
   }
 
   virtual const char* name() {
@@ -2682,7 +2798,8 @@ class CombineEvent: public Event {
 
       if (live(result)) {
         addSite(c, result, low);
-        if (resultSize > BytesPerWord) {
+        fprintf(stderr, "result %p high %p\n", result, result->high);
+        if (resultSize > BytesPerWord and live(result->high)) {
           addSite(c, result->high, high);
         }
       }
@@ -2699,12 +2816,6 @@ class CombineEvent: public Event {
   SiteMask resultLowMask;
   SiteMask resultHighMask;
 };
-
-Value*
-value(Context* c, Site* site = 0, Site* target = 0)
-{
-  return new (c->zone->allocate(sizeof(Value))) Value(site, target);
-}
 
 void
 removeBuddy(Context* c, Value* v)
@@ -2795,31 +2906,41 @@ stack(Context* c, Value* value, Stack* next)
 Value*
 maybeBuddy(Context* c, Value* v);
 
-void
+Value*
 push(Context* c, unsigned footprint, Value* v)
 {
   assert(c, footprint);
 
+  Value* high;
   if (footprint > 1) {
     assert(c, footprint == 2);
-    assert(c, (BytesPerWord == 8) xor (v->high != 0));
-    push(c, 1, v->high);
+
+    if (BytesPerWord == 4 and v->high == 0) {
+      split(c, v);
+    }
+
+    high = push(c, 1, v->high);
+  } else {
+    high = v->high;
   }
 
   if (v) {
     v = maybeBuddy(c, v);
+    v->high = high;
   }
     
   Stack* s = stack(c, v, c->stack);
 
   if (DebugFrame) {
-    fprintf(stderr, "push %p\n", v);
+    fprintf(stderr, "push %p fp %d high %p\n", v, footprint, v->high);
   }
 
   if (v) {
     v->home = frameIndex(c, s->index + c->localFootprint);
   }
   c->stack = s;
+
+  return v;
 }
 
 Value*
@@ -2831,7 +2952,7 @@ pop(Context* c, unsigned footprint)
   assert(c, s->value == 0 or s->value->home >= 0);
 
   if (DebugFrame) {
-    fprintf(stderr, "pop %p\n", s->value);
+    fprintf(stderr, "pop %p fp %d high %p\n", s->value, footprint, s->value->high);
   }
     
   c->stack = s->next;
@@ -2845,7 +2966,69 @@ pop(Context* c, unsigned footprint)
   }
 
   return s->value;
+}
 
+Value*
+storeLocal(Context* c, unsigned footprint, Value* v, unsigned index)
+{
+  assert(c, index + footprint <= c->localFootprint);
+
+  Value* high;
+  if (footprint > 1) {
+    assert(c, footprint == 2);
+
+    if (BytesPerWord == 4) {
+      assert(c, v->high);
+
+      high = storeLocal(c, 1, v->high, index);
+    }
+
+    ++ index;
+  } else {
+    high = v->high;
+  }
+
+  v = maybeBuddy(c, v);
+  v->high = high;
+
+  Local* local = c->locals + index;
+
+  unsigned sizeInBytes = sizeof(Local) * c->localFootprint;
+  Local* newLocals = static_cast<Local*>(c->zone->allocate(sizeInBytes));
+  memcpy(newLocals, c->locals, sizeInBytes);
+  c->locals = newLocals;
+
+  local = c->locals + index;
+  local->value = v;
+
+  if (DebugFrame) {
+    fprintf(stderr, "store local %p at %d\n", local->value, index);
+  }
+
+  local->value->home = frameIndex(c, index);
+
+  return v;
+}
+
+Value*
+loadLocal(Context* c, unsigned footprint UNUSED, unsigned index)
+{
+  assert(c, index + footprint <= c->localFootprint);
+
+  if (footprint > 1) {
+    assert(c, footprint == 2);
+
+    ++ index;
+  }
+
+  assert(c, c->locals[index].value);
+  assert(c, c->locals[index].value->home >= 0);
+
+  if (DebugFrame) {
+    fprintf(stderr, "load local %p at %d\n", c->locals[index].value, index);
+  }
+
+  return c->locals[index].value;
 }
 
 void
@@ -2878,7 +3061,9 @@ appendCombine(Context* c, TernaryOperation type,
 
     appendCall
       (c, value(c, constantSite(c, c->client->getThunk(type, resultSize))),
-       0, 0, result, resultSize, argumentStack, 2, 0);
+       0, 0, result, resultSize, argumentStack,
+       ceiling(secondSize, BytesPerWord) + ceiling(firstSize, BytesPerWord),
+       0);
   } else {
     append
       (c, new (c->zone->allocate(sizeof(CombineEvent)))
@@ -2910,6 +3095,7 @@ class TranslateEvent: public Event {
     addRead(c, this, value, read(c, valueLowMask));
     if (size > BytesPerWord) {
       addRead(c, this, value->high, read(c, valueHighMask));
+      grow(c, result);
     }
   }
 
@@ -2940,7 +3126,7 @@ class TranslateEvent: public Event {
 
       if (live(result)) {
         addSite(c, result, low);
-        if (size > BytesPerWord) {
+        if (size > BytesPerWord and live(result->high)) {
           addSite(c, result->high, high);
         }
       }
@@ -3028,10 +3214,22 @@ class MemoryEvent: public Event {
       popRead(c, this, index);
     }
 
-    result->target = memorySite
-      (c, baseRegister, displacement, indexRegister, scale);
+    Site* site = memorySite
+        (c, baseRegister, displacement, indexRegister, scale);
 
-    addSite(c, result, result->target);
+    result->target = site;
+    if (live(result)) {
+      addSite(c, result, site);
+    }
+
+    if (result->high) {
+      Site* high = site->copyHigh(c);
+
+      result->high->target = high;
+      if (live(result->high)) {
+        addSite(c, result->high, high);
+      }
+    }
   }
 
   Value* base;
@@ -4614,54 +4812,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
-    assert(&c, index + footprint <= c.localFootprint);
-
-    if (footprint > 1) {
-      assert(&c, footprint == 2);
-
-      if (BytesPerWord == 4) {
-        assert(&c, static_cast<Value*>(src)->high);
-
-        storeLocal(1, static_cast<Value*>(src)->high, index);
-      }
-
-      ++ index;
-    }
-
-    Local* local = c.locals + index;
-
-    unsigned sizeInBytes = sizeof(Local) * c.localFootprint;
-    Local* newLocals = static_cast<Local*>(c.zone->allocate(sizeInBytes));
-    memcpy(newLocals, c.locals, sizeInBytes);
-    c.locals = newLocals;
-
-    local = c.locals + index;
-    local->value = maybeBuddy(&c, static_cast<Value*>(src));
-
-    if (DebugFrame) {
-      fprintf(stderr, "store local %p at %d\n", local->value, index);
-    }
-
-    local->value->home = frameIndex(&c, index);
+    ::storeLocal(&c, footprint, static_cast<Value*>(src), index);
   }
 
-  virtual Operand* loadLocal(unsigned footprint UNUSED, unsigned index) {
-    assert(&c, index + footprint <= c.localFootprint);
-
-    if (footprint > 1) {
-      assert(&c, footprint == 2);
-
-      ++ index;
-    }
-
-    assert(&c, c.locals[index].value);
-    assert(&c, c.locals[index].value->home >= 0);
-
-    if (DebugFrame) {
-      fprintf(stderr, "load local %p at %d\n", c.locals[index].value, index);
-    }
-
-    return c.locals[index].value;
+  virtual Operand* loadLocal(unsigned footprint, unsigned index) {
+    return ::loadLocal(&c, footprint, index);
   }
 
   virtual void saveLocals() {

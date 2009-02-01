@@ -905,25 +905,6 @@ moveCR(Context* c, unsigned, Assembler::Constant* a,
   }
 }
 
-class ShiftMaskPromise: public Promise {
- public:
-  ShiftMaskPromise(Promise* base, unsigned shift, int64_t mask):
-    base(base), shift(shift), mask(mask)
-  { }
-
-  virtual int64_t value() {
-    return (base->value() >> shift) & mask;
-  }
-
-  virtual bool resolved() {
-    return base->resolved();
-  }
-
-  Promise* base;
-  unsigned shift;
-  int64_t mask;
-};
-
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
