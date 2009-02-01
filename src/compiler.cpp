@@ -2920,8 +2920,10 @@ push(Context* c, unsigned footprint, Value* v)
     }
 
     high = push(c, 1, v->high);
-  } else {
+  } else if (v) {
     high = v->high;
+  } else {
+    high = 0;
   }
 
   if (v) {
@@ -2932,7 +2934,7 @@ push(Context* c, unsigned footprint, Value* v)
   Stack* s = stack(c, v, c->stack);
 
   if (DebugFrame) {
-    fprintf(stderr, "push %p fp %d high %p\n", v, footprint, v->high);
+    fprintf(stderr, "push %p\n", v);
   }
 
   if (v) {
@@ -2952,7 +2954,7 @@ pop(Context* c, unsigned footprint)
   assert(c, s->value == 0 or s->value->home >= 0);
 
   if (DebugFrame) {
-    fprintf(stderr, "pop %p fp %d high %p\n", s->value, footprint, s->value->high);
+    fprintf(stderr, "pop %p\n", s->value);
   }
     
   c->stack = s->next;
@@ -2981,6 +2983,8 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index)
       assert(c, v->high);
 
       high = storeLocal(c, 1, v->high, index);
+    } else {
+      high = 0;
     }
 
     ++ index;
