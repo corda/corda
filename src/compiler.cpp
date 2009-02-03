@@ -2534,16 +2534,38 @@ class MoveEvent: public Event {
 
         Site* low = freeRegisterSite(c, dstLowMask.registerMask);
 
+        src->source->freeze(c, src);
+
         addSite(c, dst, low);
+
+        src->source->thaw(c, src);
           
+        if (DebugMoves) {
+          char srcb[256]; src->source->toString(c, srcb, 256);
+          char dstb[256]; low->toString(c, dstb, 256);
+          fprintf(stderr, "move %s to %s for %p\n",
+                  srcb, dstb, src);
+        }
+
         apply(c, Move, BytesPerWord, src->source, 0, BytesPerWord, low, 0);
 
         assert(c, dstHighMask.typeMask & (1 << RegisterOperand));
 
         Site* high = freeRegisterSite(c, dstHighMask.registerMask);
 
+        low->freeze(c, dst);
+
         addSite(c, dst->high, high);
+
+        low->thaw(c, dst);
         
+        if (DebugMoves) {
+          char srcb[256]; low->toString(c, srcb, 256);
+          char dstb[256]; high->toString(c, dstb, 256);
+          fprintf(stderr, "extend %s to %s for %p %p\n",
+                  srcb, dstb, dst, dst->high);
+        }
+
         apply(c, Move, BytesPerWord, low, 0, dstSize, low, high);
       } else {
         maybeMove(c, Move, BytesPerWord, src, BytesPerWord, dst, dstLowMask);
@@ -2762,7 +2784,6 @@ class CombineEvent: public Event {
 
     if (resultSize > BytesPerWord) {
       grow(c, result);
-      fprintf(stderr, "grew %p into %p\n", result, result->high);
     }
   }
 
