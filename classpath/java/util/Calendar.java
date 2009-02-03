@@ -126,7 +126,7 @@ public abstract class Calendar {
       int hour = remainder / MILLIS_PER_HOUR;
       remainder = remainder % MILLIS_PER_HOUR;
       int minute = remainder / MILLIS_PER_MINUTE;
-      remainder = remainder / MILLIS_PER_MINUTE;
+      remainder = remainder % MILLIS_PER_MINUTE;
       int second = remainder / MILLIS_PER_SECOND;
       fields[YEAR] = year;
       fields[MONTH] = month;
