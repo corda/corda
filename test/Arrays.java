@@ -31,6 +31,11 @@ public class Arrays {
       expect(array[0].length == 1);
     }
 
+    { Object[][] array = new Object[2][3];
+      expect(array.length == 2);
+      expect(array[0].length == 3);
+    }
+
     { int j = 0;
       byte[] decodeTable = new byte[256];
       for (int i = 'A'; i <= 'Z'; ++i) decodeTable[i] = (byte) j++;

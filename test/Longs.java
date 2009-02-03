@@ -30,6 +30,7 @@ public class Longs {
     }
 
     expect(roundUp(156, 2) == 156);
+    expect(((int) roundUp(156, 2)) == 156);
 
     expect(Long.parseLong("25214903884") == 25214903884L);
 
