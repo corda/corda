@@ -4835,6 +4835,10 @@ class MyCompiler: public Compiler {
       Local* local = e->localsBefore + i;
       if (local->value) {
         initLocal(1, i);
+
+        if (i > 0 and local->value->high == local[-1].value) {
+          c.locals[i].value->high = c.locals[i - 1].value;
+        }
       }
     }
   }
