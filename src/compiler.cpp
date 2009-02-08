@@ -2476,11 +2476,6 @@ split(Context* c, Value* v)
     
     addSite(c, v, s->copyLow(c));
     addSite(c, v->high, s->copyHigh(c));
-
-    char s1[256]; s->toString(c, s1, 256);
-    char s2[256]; v->sites->toString(c, s2, 256);
-    char s3[256]; v->high->sites->toString(c, s3, 256);
-    fprintf(stderr, "split %s into %s for %p and %s for %p\n", s1, s2, v, s3, v->high);
   }
 }
 
