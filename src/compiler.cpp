@@ -28,6 +28,9 @@ const bool DebugBuddies = false;
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
 
+const unsigned StealRegisterReserveCount = 1;
+const unsigned ResolveRegisterReserveCount = 2;
+
 class Context;
 class Value;
 class Stack;
@@ -943,7 +946,28 @@ buddies(Value* a, Value* b)
 }
 
 void
-increment(Context* c, Resource* r)
+decrementAvailableRegisterCount(Context* c)
+{
+  assert(c, c->availableRegisterCount);
+  -- c->availableRegisterCount;
+  
+  if (DebugResources) {
+    fprintf(stderr, "%d registers available\n", c->availableRegisterCount);
+  }
+}
+
+void
+incrementAvailableRegisterCount(Context* c)
+{
+  ++ c->availableRegisterCount;
+
+  if (DebugResources) {
+    fprintf(stderr, "%d registers available\n", c->availableRegisterCount);
+  }
+}
+
+void
+increment(Context* c, RegisterResource* r)
 {
   if (not r->reserved) {
     if (DebugResources) {
@@ -952,6 +976,10 @@ increment(Context* c, Resource* r)
     }
 
     ++ r->referenceCount;
+
+    if (r->referenceCount == 1) {
+      decrementAvailableRegisterCount(c);
+    }
   }
 }
 
@@ -967,6 +995,10 @@ decrement(Context* c, Resource* r)
     assert(c, r->referenceCount > 0);
 
     -- r->referenceCount;
+
+    if (r->referenceCount == 0) {
+      incrementAvailableRegisterCount(c);
+    }
   }
 }
 
@@ -990,12 +1022,7 @@ RegisterResource::freeze(Context* c, Value* v)
     freezeResource(c, this, v);
 
     if (freezeCount == 1) {
-      assert(c, c->availableRegisterCount);
-      -- c->availableRegisterCount;
-
-      if (DebugResources) {
-        fprintf(stderr, "%d registers available\n", c->availableRegisterCount);
-      }
+      decrementAvailableRegisterCount(c);
     }
   }
 }
@@ -1029,11 +1056,7 @@ RegisterResource::thaw(Context* c, Value* v)
     thawResource(c, this, v);
 
     if (freezeCount == 0) {
-      ++ c->availableRegisterCount;
-
-      if (DebugResources) {
-        fprintf(stderr, "%d registers available\n", c->availableRegisterCount);
-      } 
+      incrementAvailableRegisterCount(c);
     }
   }
 }
@@ -1062,7 +1085,7 @@ class Target {
 
 Target
 pickTarget(Context* c, Read* r, bool intersectRead,
-           unsigned reserveRegisterCount);
+           unsigned registerReserveCount);
 
 unsigned
 resourceCost(Context* c UNUSED, Value* v, Resource* r)
@@ -1144,12 +1167,12 @@ pickFrameTarget(Context* c, Value* v)
 
 Target
 pickTarget(Context* c, Read* read, bool intersectRead,
-           unsigned reserveRegisterCount)
+           unsigned registerReserveCount)
 {
   SiteMask mask;
   read->intersect(&mask);
 
-  unsigned registerPenalty = (c->availableRegisterCount > reserveRegisterCount
+  unsigned registerPenalty = (c->availableRegisterCount > registerReserveCount
                               ? 0 : Target::Penalty);
   
   Target best;
@@ -1732,9 +1755,9 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
 
 Site*
 pickTargetSite(Context* c, Read* read, bool intersectRead = false,
-               unsigned reserveRegisterCount = 0)
+               unsigned registerReserveCount = 0)
 {
-  Target target(pickTarget(c, read, intersectRead, reserveRegisterCount));
+  Target target(pickTarget(c, read, intersectRead, registerReserveCount));
   expect(c, target.cost < Target::Impossible);
   if (target.type == MemoryOperand) {
     return frameSite(c, target.index);
@@ -1758,7 +1781,8 @@ steal(Context* c, Resource* r, Value* thief)
   {
     r->site->freeze(c, r->value);
 
-    move(c, r->value, r->site, pickTargetSite(c, live(r->value), false, 1));
+    move(c, r->value, r->site, pickTargetSite
+         (c, live(r->value), false, StealRegisterReserveCount));
 
     r->site->thaw(c, r->value);
   }
@@ -3656,7 +3680,7 @@ acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
 {
   if (acceptMatch(c, s, read, mask) and (not s->frozen(c))) {
     if (s->type(c) == RegisterOperand) {
-      return c->availableRegisterCount > 1;
+      return c->availableRegisterCount > ResolveRegisterReserveCount;
     } else {
       assert(c, s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex)));
 
@@ -3909,7 +3933,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
       if (s == 0) {
         s = pickSourceSite(c, r, 0, 0, mask, false, true, acceptForResolve);
         if (s == 0) {
-          s = pickTargetSite(c, r, false, 2);
+          s = pickTargetSite(c, r, false, ResolveRegisterReserveCount);
           useTarget = true;
         }
       }
