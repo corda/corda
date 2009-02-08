@@ -883,7 +883,7 @@ liveNext(Context* c, Value* v)
 }
 
 void
-deadBuddy(Context* c, Value* v, Read* r)
+deadBuddy(Context* c, Value* v, Read* r UNUSED)
 {
   assert(c, v->buddy != v);
   assert(c, r);
@@ -1046,7 +1046,8 @@ FrameResource::thaw(Context* c, Value* v)
 
 class Target {
  public:
-  static const unsigned Impossible = 10;
+  static const unsigned Penalty = 10;
+  static const unsigned Impossible = 20;
 
   Target(): cost(Impossible) { }
 
@@ -1060,10 +1061,11 @@ class Target {
 };
 
 Target
-pickTarget(Context* c, Read* r, bool intersectRead, bool acceptLastRegister);
+pickTarget(Context* c, Read* r, bool intersectRead,
+           unsigned reserveRegisterCount);
 
 unsigned
-resourceCost(Context* c, Value* v, Resource* r)
+resourceCost(Context* c UNUSED, Value* v, Resource* r)
 {
   if (r->reserved or r->freezeCount or r->referenceCount) {
     return Target::Impossible;
@@ -1073,9 +1075,9 @@ resourceCost(Context* c, Value* v, Resource* r)
     if (v and buddies(r->value, v)) {
       return 0;
     } else if (hasMoreThanOneSite(r->value)) {
-      return 1;
-    } else {
       return 2;
+    } else {
+      return 4;
     }
   } else {
     return 0;
@@ -1141,16 +1143,21 @@ pickFrameTarget(Context* c, Value* v)
 }
 
 Target
-pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
+pickTarget(Context* c, Read* read, bool intersectRead,
+           unsigned reserveRegisterCount)
 {
   SiteMask mask;
   read->intersect(&mask);
 
-  bool tryRegister = acceptLastRegister or (c->availableRegisterCount > 1);
+  unsigned registerPenalty = (c->availableRegisterCount > reserveRegisterCount
+                              ? 0 : Target::Penalty);
   
   Target best;
-  if (tryRegister and (mask.typeMask & (1 << RegisterOperand))) {
+  if ((mask.typeMask & (1 << RegisterOperand))) {
     Target mine = pickRegisterTarget(c, read->value, mask.registerMask);
+
+    mine.cost += registerPenalty;
+
     if (mine.cost == 0) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1168,12 +1175,14 @@ pickTarget(Context* c, Read* read, bool intersectRead, bool acceptLastRegister)
     }
   }
 
-  if (intersectRead) {
+  if (intersectRead or best.cost < Target::Penalty) {
     return best;
   }
 
-  if (tryRegister) {
-    Target mine = pickRegisterTarget(c, read->value, ~0);
+  { Target mine = pickRegisterTarget(c, read->value, ~0);
+
+    mine.cost += registerPenalty;
+
     if (mine.cost == 0) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1372,7 +1381,7 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual bool match(Context* c, const SiteMask& mask) {
+  virtual bool match(Context* c UNUSED, const SiteMask& mask) {
     assert(c, number != NoRegister);
 
     if ((mask.typeMask & (1 << RegisterOperand))) {
@@ -1723,9 +1732,9 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
 
 Site*
 pickTargetSite(Context* c, Read* read, bool intersectRead = false,
-               bool acceptLastRegister = true)
+               unsigned reserveRegisterCount = 0)
 {
-  Target target(pickTarget(c, read, intersectRead, acceptLastRegister));
+  Target target(pickTarget(c, read, intersectRead, reserveRegisterCount));
   expect(c, target.cost < Target::Impossible);
   if (target.type == MemoryOperand) {
     return frameSite(c, target.index);
@@ -1749,7 +1758,7 @@ steal(Context* c, Resource* r, Value* thief)
   {
     r->site->freeze(c, r->value);
 
-    move(c, r->value, r->site, pickTargetSite(c, live(r->value)));
+    move(c, r->value, r->site, pickTargetSite(c, live(r->value), false, 1));
 
     r->site->thaw(c, r->value);
   }
@@ -1780,7 +1789,7 @@ acquire(Context* c, Resource* resource, Value* value, Site* site)
 }
 
 void
-release(Context* c, Resource* resource, Value* value, Site* site)
+release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNUSED)
 {
   if (not resource->reserved) {
     if (DebugResources) {
@@ -3905,7 +3914,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
       if (s == 0) {
         s = pickSourceSite(c, r, 0, 0, mask, false, true, acceptForResolve);
         if (s == 0) {
-          s = pickTargetSite(c, r, false, false);
+          s = pickTargetSite(c, r, false, 2);
           useTarget = true;
         }
       }
@@ -4644,8 +4653,8 @@ class MyCompiler: public Compiler {
     return codePromise(&c, c.logicalCode[c.logicalIp]->lastEvent);
   }
 
-  virtual void push(unsigned footprint) {
-    assert(&c, footprint);
+  virtual void push(unsigned footprint UNUSED) {
+    assert(&c, footprint == 1);
 
     Value* v = value(&c);
     Stack* s = ::stack(&c, v, c.stack);
