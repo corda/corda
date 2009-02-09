@@ -3274,17 +3274,13 @@ class MemoryEvent: public Event {
       (c, baseRegister, displacement, indexRegister, scale);
 
     result->target = site;
-    if (live(result)) {
-      addSite(c, result, site);
-    }
+    addSite(c, result, site);
 
     if (result->high) {
       Site* high = site->copyHigh(c);
 
       result->high->target = high;
-      if (live(result->high)) {
-        addSite(c, result->high, high);
-      }
+      addSite(c, result->high, high);
     }
   }
 
