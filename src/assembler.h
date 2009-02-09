@@ -41,7 +41,6 @@ const unsigned UnaryOperationCount = JumpIfNotEqual + 1;
 enum BinaryOperation {
   Move,
   MoveZ,
-  Swap,
   Compare,
   Negate
 };

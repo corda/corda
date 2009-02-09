@@ -354,7 +354,7 @@ appendImmediateTask(Context* c, Promise* promise, Promise* offset,
                     unsigned size, unsigned promiseOffset = 0)
 {
   c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
-    (c->tasks, promise, offset, size);
+    (c->tasks, promise, offset, size, promiseOffset);
 }
 
 class AlignmentPadding {
@@ -563,20 +563,6 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
-longJumpC(Context* c, unsigned size, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  if (BytesPerWord == 8) {
-    Assembler::Register r(r10);
-    moveCR2(c, size, a, &r, 11);
-    jumpR(c, size, &r);
-  } else {
-    jumpC(c, size, a);
-  }
-}
-
-void
 jumpM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 {
   assert(c, size == BytesPerWord);
@@ -633,45 +619,16 @@ jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
-moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
-       unsigned bSize, Assembler::Register* b);
-
-void
 longJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
   if (BytesPerWord == 8) {
     Assembler::Register r(r10);
-    moveCR(c, size, a, size, &r);
+    moveCR2(c, size, a, size, &r, 11);
     jumpR(c, size, &r);
   } else {
-    if (a->value->resolved()) {
-      int64_t v = a->value->value();
-      if (isInt8(v)) {
-        c->code.append(0x6a);
-        c->code.append(v);
-      } else if (isInt32(v)) {
-        c->code.append(0x68);
-        c->code.append4(v);
-      } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
-        moveCR(c, size, a, size, &tmp);
-        pushR(c, size, &tmp);
-        c->client->releaseTemporary(tmp.low);
-      }
-    } else {
-      if (BytesPerWord == 4) {
-        c->code.append(0x68);
-        appendImmediateTask(c, a->value, c->code.length(), BytesPerWord);
-        c->code.appendAddress(static_cast<uintptr_t>(0));
-      } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
-        moveCR(c, size, a, size, &tmp);
-        pushR(c, size, &tmp);
-        c->client->releaseTemporary(tmp.low);
-      }
-    }
+    jumpC(c, size, a);
   }
 }
 
@@ -683,14 +640,6 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
   if (a->low & 8) rex(c, 0x40, a->low);
   c->code.append(0xff);
   c->code.append(0xd0 | (a->low & 7));
-}
-
-void
-callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  unconditional(c, 0xe8, a);
 }
 
 void
@@ -706,20 +655,6 @@ alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
   new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c);
   callC(c, size, a);
-}
-
-void
-longCallC(Context* c, unsigned size, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  if (BytesPerWord == 8) {
-    Assembler::Register r(r10);
-    moveCR(c, size, a, size, &r);
-    callR(c, size, &r);
-  } else {
-    callC(c, size, a);
-  }
 }
 
 void
@@ -813,7 +748,7 @@ moveCR2(Context* c, unsigned, Assembler::Constant* a,
       c->code.appendAddress(a->value->value());
     } else {
       appendImmediateTask
-        (c, a->value, c->code.length(), BytesPerWord, promiseOffset);
+        (c, a->value, offset(c), BytesPerWord, promiseOffset);
       c->code.appendAddress(static_cast<uintptr_t>(0));
     }
   }
@@ -1008,35 +943,6 @@ moveAR(Context* c, unsigned aSize, Assembler::Address* a,
   moveMR(c, bSize, &memory, bSize, b);
 }
 
-void
-moveCR(Context* c, unsigned, Assembler::Constant* a,
-       unsigned bSize, Assembler::Register* b)
-{
-  if (BytesPerWord == 4 and bSize == 8) {
-    int64_t v = a->value->value();
-
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    Assembler::Register bh(b->high);
-
-    moveCR(c, 4, &al, 4, b);
-    moveCR(c, 4, &ah, 4, &bh);
-  } else {
-    rex(c, 0x48, b->low);
-    c->code.append(0xb8 | b->low);
-    if (a->value->resolved()) {
-      c->code.appendAddress(a->value->value());
-    } else {
-      appendImmediateTask(c, a->value, offset(c), BytesPerWord);
-      c->code.appendAddress(static_cast<uintptr_t>(0));
-    }
-  }
-}
-
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
@@ -1064,7 +970,7 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
     if (a->value->resolved()) {
       c->code.append4(a->value->value());
     } else {
-      appendImmediateTask(c, a->value, c->code.length(), 4);
+      appendImmediateTask(c, a->value, offset(c), 4);
       c->code.append4(0);
     }
     break;
@@ -1115,79 +1021,6 @@ moveZMR(Context* c, unsigned aSize UNUSED, Assembler::Memory* a,
   assert(c, aSize == 2);
 
   encode2(c, 0x0fb7, b->low, a, true);
-}
-
-void
-compareRR(Context* c, unsigned aSize, Assembler::Register* a,
-          unsigned bSize UNUSED, Assembler::Register* b)
-{
-  assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
-
-  if (aSize == 8) rex(c);
-  c->code.append(0x39);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
-}
-
-void
-compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
-          unsigned bSize, Assembler::Register* b)
-{
-  assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
-  
-  int64_t v = a->value->value();
-
-  if (isInt32(v)) {
-    if (aSize == 8) rex(c);
-    if (isInt8(v)) {
-      c->code.append(0x83);
-      c->code.append(0xf8 | b->low);
-      c->code.append(v);
-    } else {
-      c->code.append(0x81);
-      c->code.append(0xf8 | b->low);
-      c->code.append4(v);
-    }
-  } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, aSize, a, aSize, &tmp);
-    compareRR(c, aSize, &tmp, bSize, b);
-    c->client->releaseTemporary(tmp.low);
-  }
-}
-
-void
-compareRM(Context* c, unsigned aSize, Assembler::Register* a,
-          unsigned bSize UNUSED, Assembler::Memory* b)
-{
-  assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
-  
-  if (BytesPerWord == 8 and aSize == 4) {
-    moveRR(c, 4, a, 8, a);
-  }
-  encode(c, 0x39, a->low, b, true);
-}
-
-void
-compareCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
-          unsigned bSize UNUSED, Assembler::Memory* b)
-{
-  assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
-  
-  int64_t v = a->value->value();
-
-  encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
-
-  if (isInt8(v)) {
-    c->code.append(v);
-  } else if (isInt32(v)) {
-    c->code.append4(v);
-  } else {
-    abort(c);
-  }
 }
 
 void
@@ -1585,14 +1418,27 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-compareCR(Context* c, unsigned size, Assembler::Constant* a,
-          Assembler::Register* b)
+compareRR(Context* c, unsigned aSize, Assembler::Register* a,
+          unsigned bSize UNUSED, Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  assert(c, aSize == bSize);
+  assert(c, BytesPerWord == 8 or aSize == 4);
+
+  if (aSize == 8) rex(c);
+  c->code.append(0x39);
+  c->code.append(0xc0 | (a->low << 3) | b->low);
+}
+
+void
+compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
+          unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+  assert(c, BytesPerWord == 8 or aSize == 4);
   
   if (a->value->resolved() and isInt32(a->value->value())) {
     int64_t v = a->value->value();
-    if (size == 8) rex(c);
+    if (aSize == 8) rex(c);
     if (isInt8(v)) {
       c->code.append(0x83);
       c->code.append(0xf8 | b->low);
@@ -1604,9 +1450,9 @@ compareCR(Context* c, unsigned size, Assembler::Constant* a,
     }
   } else {
     Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, size, a, &tmp);
-    compareRR(c, size, &tmp, b);
-    c->client->releaseTemporary(tmp.high);
+    moveCR(c, aSize, a, aSize, &tmp);
+    compareRR(c, aSize, &tmp, bSize, b);
+    c->client->releaseTemporary(tmp.low);
   }
 }
 
@@ -1669,7 +1515,8 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
   assert(c, aSize == bSize);
   assert(c, BytesPerWord == 8 or aSize == 4);
   
-  if (a->value->resolved()) {    
+  if (a->value->resolved()) { 
+    int64_t v = a->value->value();   
     encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
     
     if (isInt8(v)) {

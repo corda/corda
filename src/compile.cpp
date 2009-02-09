@@ -5708,9 +5708,6 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
 
-    nativeContext.promise.resolved_ = true;
-    nativeContext.promise.value_ = reinterpret_cast<intptr_t>(invokeNative);
-
     Assembler::Constant proc(&(nativeContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
   

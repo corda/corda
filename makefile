@@ -198,7 +198,7 @@ vm-depends = \
 	$(src)/zone.h \
 	$(src)/assembler.h \
 	$(src)/compiler.h \
-	$(src)/$(asm).h
+	$(src)/$(asm).h \
 	$(src)/heapwalk.h \
 	$(src)/bootimage.h
 

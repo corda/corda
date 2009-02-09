@@ -5045,7 +5045,7 @@ class MyCompiler: public Compiler {
     int i = 0;
     for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {
       intptr_t* target = reinterpret_cast<intptr_t*>
-        (dst + pad(c.assembler->length()) + i);
+        (dst + pad(c.machineCodeSize) + i);
 
       if (n->promise->resolved()) {
         *target = n->promise->value();
