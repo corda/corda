@@ -78,8 +78,16 @@ const int NoRegister = -1;
 
 class Promise {
  public:
+  class Listener {
+   public:
+    virtual void* resolve(int64_t value) = 0;
+
+    Listener* next;
+  };
+
   virtual int64_t value() = 0;
   virtual bool resolved() = 0;
+  virtual Listener* listen(unsigned) { return 0; }
 };
 
 class ResolvedPromise: public Promise {
@@ -132,6 +140,59 @@ class CombinedPromise: public Promise {
 
   Promise* low;
   Promise* high;
+};
+
+class ListenPromise: public Promise {
+ public:
+  ListenPromise(System* s, Allocator* allocator):
+    s(s), allocator(allocator), listener(0)
+  { }
+
+  virtual int64_t value() {
+    abort(s);
+  }
+
+  virtual bool resolved() {
+    return false;
+  }
+
+  virtual Listener* listen(unsigned sizeInBytes) {
+    Listener* l = static_cast<Listener*>(allocator->allocate(sizeInBytes));
+    l->next = listener;
+    listener = l;
+    return l;
+  }
+
+  System* s;
+  Allocator* allocator;
+  Listener* listener;
+  Promise* promise;
+};
+
+class DelayedPromise: public ListenPromise {
+ public:
+  DelayedPromise(System* s, Allocator* allocator, Promise* basis,
+                 DelayedPromise* next):
+    ListenPromise(s, allocator), basis(basis), next(next)
+  { }
+
+  virtual int64_t value() {
+    abort(s);
+  }
+
+  virtual bool resolved() {
+    return false;
+  }
+
+  virtual Listener* listen(unsigned sizeInBytes) {
+    Listener* l = static_cast<Listener*>(allocator->allocate(sizeInBytes));
+    l->next = listener;
+    listener = l;
+    return l;
+  }
+
+  Promise* basis;
+  DelayedPromise* next;
 };
 
 class TraceHandler {
@@ -209,7 +270,8 @@ class Assembler {
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 
-    virtual void updateCall(void* returnAddress, void* newTarget) = 0;
+    virtual void updateCall(UnaryOperation op, bool assertAlignment,
+                            void* returnAddress, void* newTarget) = 0;
 
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
 

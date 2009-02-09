@@ -5044,8 +5044,26 @@ class MyCompiler: public Compiler {
 
     int i = 0;
     for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {
-      *reinterpret_cast<intptr_t*>(dst + pad(c.machineCodeSize) + i)
-        = n->promise->value();
+      intptr_t* target = reinterpret_cast<intptr_t*>
+        (dst + pad(c.assembler->length()) + i);
+
+      if (n->promise->resolved()) {
+        *target = n->promise->value();
+      } else {
+        class Listener: public Promise::Listener {
+         public:
+          Listener(intptr_t* target): target(target){ }
+
+          virtual void* resolve(int64_t value) {
+            *target = value;
+            return target;
+          }
+
+          intptr_t* target;
+        };
+        new (n->promise->listen(sizeof(Listener))) Listener(target);
+      }
+
       i += BytesPerWord;
     }
   }

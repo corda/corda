@@ -89,9 +89,13 @@ treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
           intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
 object
-treeInsertNode(Thread* t, Zone* zone, object tree, intptr_t key, object node,
-               object sentinal,
-               intptr_t (*compare)(Thread* t, intptr_t key, object b));
+treeInsert(Thread* t, Zone* zone, object tree, intptr_t key, object value,
+           object sentinal,
+           intptr_t (*compare)(Thread* t, intptr_t key, object b));
+
+void
+treeUpdate(Thread* t, object tree, intptr_t key, object value, object sentinal,
+           intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
 class HashMapIterator: public Thread::Protector {
  public:
@@ -103,11 +107,13 @@ class HashMapIterator: public Thread::Protector {
 
   void find() {
     object array = hashMapArray(t, map);
-    for (unsigned i = index; i < arrayLength(t, array); ++i) {
-      if (arrayBody(t, array, i)) {
-        node = arrayBody(t, array, i);
-        index = i + 1;
-        return;
+    if (array) {
+      for (unsigned i = index; i < arrayLength(t, array); ++i) {
+        if (arrayBody(t, array, i)) {
+          node = arrayBody(t, array, i);
+          index = i + 1;
+          return;
+        }
       }
     }
     node = 0;

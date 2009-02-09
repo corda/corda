@@ -26,6 +26,7 @@
 #include "signal.h"
 #include "ucontext.h"
 #include "stdint.h"
+#include "dirent.h"
 
 #include "arch.h"
 #include "system.h"
@@ -428,6 +429,31 @@ class MySystem: public System {
     size_t length_;
   };
 
+  class Directory: public System::Directory {
+   public:
+    Directory(System* s, DIR* directory): s(s), directory(directory) { }
+
+    virtual const char* next() {
+      if (directory) {
+        dirent* e = readdir(directory);
+        if (e) {
+          return e->d_name;
+        }
+      }
+      return 0;
+    }
+
+    virtual void dispose() {
+      if (directory) {
+        closedir(directory);
+      }
+      s->free(this);
+    }
+
+    System* s;
+    DIR* directory;
+  };
+
   class Library: public System::Library {
    public:
     Library(System* s, void* p, const char* name, unsigned nameLength,
@@ -623,7 +649,7 @@ class MySystem: public System {
   virtual Status map(System::Region** region, const char* name) {
     Status status = 1;
 
-    int fd = open(name, O_RDONLY);
+    int fd = ::open(name, O_RDONLY);
     if (fd != -1) {
       struct stat s;
       int r = fstat(fd, &s);
@@ -641,19 +667,31 @@ class MySystem: public System {
     return status;
   }
 
+  virtual Status open(System::Directory** directory, const char* name) {
+    Status status = 1;
+    
+    DIR* d = opendir(name);
+    if (d) {
+      *directory = new (allocate(this, sizeof(Directory))) Directory(this, d);
+      status = 0;
+    }
+    
+    return status;
+  }
+
   virtual FileType identify(const char* name) {
     struct stat s;
     int r = stat(name, &s);
     if (r == 0) {
       if (S_ISREG(s.st_mode)) {
-        return File;
+        return TypeFile;
       } else if (S_ISDIR(s.st_mode)) {
-        return Directory;
+        return TypeDirectory;
       } else {
-        return Unknown;
+        return TypeUnknown;
       }
     } else {
-      return DoesNotExist;
+      return TypeDoesNotExist;
     }
   }
 

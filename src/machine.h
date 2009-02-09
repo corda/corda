@@ -1175,6 +1175,7 @@ class Machine {
   System::Monitor* referenceLock;
   System::Library* libraries;
   object loader;
+  object classMap;
   object bootstrapClassMap;
   object monitorMap;
   object stringMap;
@@ -1448,6 +1449,35 @@ expect(Thread* t, bool v)
 {
   expect(t->m->system, v);
 }
+
+class FixedAllocator: public Allocator {
+ public:
+  FixedAllocator(Thread* t, uint8_t* base, unsigned capacity):
+    t(t), base(base), offset(0), capacity(capacity)
+  { }
+
+  virtual void* tryAllocate(unsigned) {
+    abort(t);
+  }
+
+  virtual void* allocate(unsigned size) {
+    unsigned paddedSize = pad(size);
+    expect(t, offset + paddedSize < capacity);
+
+    void* p = base + offset;
+    offset += paddedSize;
+    return p;
+  }
+
+  virtual void free(const void*, unsigned) {
+    abort(t);
+  }
+
+  Thread* t;
+  uint8_t* base;
+  unsigned offset;
+  unsigned capacity;
+};
 
 inline void
 ensure(Thread* t, unsigned sizeInBytes)
@@ -2020,10 +2050,19 @@ resolveMethod(Thread* t, const char* className, const char* methodName,
 object
 resolveObjectArrayClass(Thread* t, object elementSpec);
 
+inline bool
+classNeedsInit(Thread* t, object c)
+{
+  return classVmFlags(t, c) & NeedInitFlag
+    and (classVmFlags(t, c) & InitFlag) == 0;
+}
+
 inline void
 initClass(Thread* t, object c)
 {
-  t->m->processor->initClass(t, c);
+  if (classNeedsInit(t, c)) {
+    t->m->processor->initClass(t, c);
+  }
 }
 
 object
@@ -2224,6 +2263,9 @@ intern(Thread* t, object s);
 
 void
 exit(Thread* t);
+
+void
+walk(Thread* t, Heap::Walker* w, object o, unsigned start);
 
 int
 walkNext(Thread* t, object o, int previous);

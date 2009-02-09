@@ -22,7 +22,7 @@ public class Method<T> extends AccessibleObject implements Member {
   private byte[] spec;
   private Class<T> class_;
   private Object code;
-  private Object compiled;
+  private long compiled;
 
   private Method() { }
 

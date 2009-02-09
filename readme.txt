@@ -174,7 +174,7 @@ for darwin-i386: (objcopy is not currently supported on this platform,
 so we use the binaryToMacho utility instead)
 
  $ ../build/darwin-i386-compile-fast/binaryToMacho boot.jar \
-     __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
+     __TEXT __text __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
 
 
 Step 4: Write a driver which starts the VM and runs the desired main

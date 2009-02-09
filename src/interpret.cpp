@@ -1452,7 +1452,10 @@ interpret(Thread* t)
     
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
-      
+      if (throwIfVolatileField(t, field)) goto throw_;
+
+      assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+
       pushField(t, popObject(t), field);
     } else {
       exception = makeNullPointerException(t);
@@ -1465,6 +1468,10 @@ interpret(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    if (throwIfVolatileField(t, field)) goto throw_;
+
+    assert(t, fieldFlags(t, field) & ACC_STATIC);
+
     PROTECT(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
@@ -2396,6 +2403,9 @@ interpret(Thread* t)
     
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    if (throwIfVolatileField(t, field)) goto throw_;
+
+    assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
     switch (fieldCode(t, field)) {
     case ByteField:
@@ -2461,6 +2471,10 @@ interpret(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
+    if (throwIfVolatileField(t, field)) goto throw_;
+
+    assert(t, fieldFlags(t, field) & ACC_STATIC);
+
     PROTECT(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
@@ -2876,7 +2890,7 @@ class MyProcessor: public Processor {
   {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, name, spec, class_, code, 0);
+       offset, 0, name, spec, class_, code, 0);
   }
 
   virtual object
@@ -3056,6 +3070,32 @@ class MyProcessor: public Processor {
     return 0;
   }
 
+  virtual void compileThunks(vm::Thread*, BootImage*, uint8_t*, unsigned*,
+                             unsigned)
+  {
+    abort(s);
+  }
+
+  virtual void compileMethod(vm::Thread*, Zone*, uint8_t*, unsigned*, unsigned,
+                             object*, object*, DelayedPromise**, object)
+  {
+    abort(s);
+  }
+
+  virtual void visitRoots(BootImage*, HeapWalker*) {
+    abort(s);
+  }
+
+  virtual unsigned* makeCallTable(vm::Thread*, BootImage*, HeapWalker*,
+                                  uint8_t*)
+  {
+    abort(s);
+  }
+
+  virtual void boot(vm::Thread*, BootImage* image) {
+    expect(s, image == 0);
+  }
+  
   virtual void dispose(vm::Thread* t) {
     t->m->heap->free(t, sizeof(Thread));
   }

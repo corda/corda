@@ -51,8 +51,15 @@ equal(const void* a, unsigned al, const void* b, unsigned bl)
 
 class Element {
  public:
+  class Iterator {
+   public:
+    virtual const char* next(unsigned* size) = 0;
+    virtual void dispose() = 0;
+  };
+
   Element(): next(0) { }
 
+  virtual Iterator* iterator() = 0;
   virtual System::Region* find(const char* name) = 0;
   virtual bool exists(const char* name) = 0;
   virtual void dispose() = 0;
@@ -62,9 +69,70 @@ class Element {
 
 class DirectoryElement: public Element {
  public:
+  class Iterator: public Element::Iterator {
+   public:
+    Iterator(System* s, const char* name, unsigned skip):
+      s(s), name(name), skip(skip), directory(0), last(0), it(0)
+    {
+      if (not s->success(s->open(&directory, name))) {
+        directory = 0;
+      }
+    }
+
+    virtual const char* next(unsigned* size) {
+      if (it) {
+        const char* v = it->next(size);
+        if (v) {
+          return v;
+        } else {
+          it->dispose();
+          it = 0;
+        }
+      }
+
+      if (last) {
+        s->free(last);
+      }
+
+      if (directory) {
+        for (const char* v = directory->next(); v; v = directory->next()) {
+          if (v[0] != '.') {
+            last = append(s, name, "/", v);
+            if (s->identify(last) == System::TypeDirectory) {
+              it = new (allocate(s, sizeof(Iterator))) Iterator(s, last, skip);
+              it->name = last;
+            }
+            const char* result = last + skip;
+            *size = strlen(result);
+            return result;
+          }
+        }
+      }
+
+      return 0;
+    }
+
+    virtual void dispose() {
+      directory->dispose();
+      s->free(this);
+    }
+
+    System* s;
+    const char* name;
+    unsigned skip;
+    System::Directory* directory;
+    const char* last;
+    Iterator* it;
+  };
+
   DirectoryElement(System* s, const char* name):
     s(s), name(name)
   { }
+
+  virtual Element::Iterator* iterator() {
+    return new (allocate(s, sizeof(Iterator)))
+      Iterator(s, name, strlen(name) + 1);
+  }
 
   virtual System::Region* find(const char* name) {
     const char* file = append(s, this->name, "/", name);
@@ -83,7 +151,7 @@ class DirectoryElement: public Element {
     const char* file = append(s, this->name, "/", name);
     System::FileType type = s->identify(file);
     s->free(file);
-    return type != System::DoesNotExist;
+    return type != System::TypeDoesNotExist;
   }
 
   virtual void dispose() {
@@ -371,9 +439,38 @@ class JarIndex {
 
 class JarElement: public Element {
  public:
+  class Iterator: public Element::Iterator {
+   public:
+    Iterator(System* s, JarIndex* index): s(s), index(index), position(0) { }
+
+    virtual const char* next(unsigned* size) {
+      if (position < index->position) {
+        JarIndex::Node* n = index->nodes + (position++);
+        *size = JarIndex::fileNameLength(n->entry);
+        return reinterpret_cast<const char*>(JarIndex::fileName(n->entry));
+      } else {
+        return 0;
+      }
+    }
+
+    virtual void dispose() {
+      s->free(this);
+    }
+
+    System* s;
+    JarIndex* index;
+    unsigned position;
+  };
+
   JarElement(System* s, const char* name):
     s(s), name(name), region(0), index(0)
   { }
+
+  virtual Element::Iterator* iterator() {
+    init();
+
+    return new (allocate(s, sizeof(Iterator))) Iterator(s, index);
+  }
 
   virtual void init() {
     if (index == 0) {
@@ -504,11 +601,11 @@ parsePath(System* s, const char* path, const char* bootLibrary)
       name[token.length] = 0;
 
       switch (s->identify(name)) {
-      case System::File: {
+      case System::TypeFile: {
         e = new (allocate(s, sizeof(JarElement))) JarElement(s, name);
       } break;
 
-      case System::Directory: {
+      case System::TypeDirectory: {
         e = new (allocate(s, sizeof(DirectoryElement)))
           DirectoryElement(s, name);
       } break;
@@ -533,6 +630,40 @@ parsePath(System* s, const char* path, const char* bootLibrary)
   return first;
 }
 
+class MyIterator: public Finder::IteratorImp {
+ public:
+  MyIterator(System* s, Element* path):
+    s(s), e(path ? path->next : 0), it(path ? path->iterator() : 0)
+  { }
+
+  virtual const char* next(unsigned* size) {
+    while (it) {
+      const char* v = it->next(size);
+      if (v) {
+        return v;
+      } else {
+        it->dispose();
+        if (e) {
+          it = e->iterator();
+          e = e->next;
+        } else {
+          it = 0;
+        }
+      }
+    }
+    return 0;
+  }
+
+  virtual void dispose() {
+    if (it) it->dispose();
+    s->free(this);
+  }
+
+  System* s;
+  Element* e;
+  Element::Iterator* it;
+};
+
 class MyFinder: public Finder {
  public:
   MyFinder(System* system, const char* path, const char* bootLibrary):
@@ -540,6 +671,11 @@ class MyFinder: public Finder {
     path_(parsePath(system, path, bootLibrary)),
     pathString(copy(system, path))
   { }
+
+  virtual IteratorImp* iterator() {
+    return new (allocate(system, sizeof(MyIterator)))
+      MyIterator(system, path_);
+  }
 
   virtual System::Region* find(const char* name) {
     for (Element* e = path_; e; e = e->next) {

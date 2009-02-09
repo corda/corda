@@ -33,6 +33,7 @@ pad(unsigned n)
 void
 writeObject(const char* architecture,
             FILE* out, const uint8_t* data, unsigned size,
+            const char* segmentName, const char* sectionName,
             const char* startName, const char* endName)
 {
   unsigned startNameLength = strlen(startName) + 1;
@@ -63,7 +64,7 @@ writeObject(const char* architecture,
   segment_command segment = {
     LC_SEGMENT, // cmd
     sizeof(segment_command) + sizeof(section), // cmdsize
-    "__TEXT", // segname
+    "", // segname
     0, // vmaddr
     pad(size), // vmsize
     sizeof(mach_header)
@@ -77,9 +78,11 @@ writeObject(const char* architecture,
     0 // flags
   };
 
+  strncpy(segment.segname, segmentName, sizeof(segment.segname));
+
   section sect = {
-    "__const", // sectname
-    "__TEXT", // segname
+    "", // sectname
+    "", // segname
     0, // addr
     pad(size), // size
     sizeof(mach_header)
@@ -93,6 +96,9 @@ writeObject(const char* architecture,
     0, // reserved1
     0, // reserved2
   };
+
+  strncpy(sect.segname, segmentName, sizeof(sect.segname));
+  strncpy(sect.sectname, sectionName, sizeof(sect.sectname));
 
   symtab_command symbolTable = {
     LC_SYMTAB, // cmd
@@ -149,10 +155,10 @@ writeObject(const char* architecture,
 int
 main(int argc, const char** argv)
 {
-  if (argc != 5) {
+  if (argc != 7) {
     fprintf(stderr,
-            "usage: %s <architecture> <input file> <start symbol name> "
-            "<end symbol name>\n",
+            "usage: %s <architecture> <input file> <segment name> "
+            "<section name> <start symbol name> <end symbol name>\n",
             argv[0]);
     return -1;
   }
@@ -172,8 +178,11 @@ main(int argc, const char** argv)
   }
 
   if (data) {
-    writeObject(argv[1], stdout, data, size, argv[3], argv[4]);
+    writeObject
+      (argv[1], stdout, data, size, argv[3], argv[4], argv[5], argv[6]);
+
     munmap(data, size);
+
     return 0;
   } else {
     perror(argv[0]);

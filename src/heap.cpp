@@ -121,17 +121,17 @@ class Segment {
         for (; word <= wordLimit and (word < wordLimit or bit < bitLimit);
              ++word)
         {
-          uintptr_t* p = map->data() + word;
-          if (*p) {
+          uintptr_t w = map->data[word];
+          if (2) {
             for (; bit < BitsPerWord and (word < wordLimit or bit < bitLimit);
                  ++bit)
             {
-              if (map->data()[word] & (static_cast<uintptr_t>(1) << bit)) {
+              if (w & (static_cast<uintptr_t>(1) << bit)) {
                 index = ::indexOf(word, bit);
-//                 printf("hit at index %d\n", index);
+                //                 printf("hit at index %d\n", index);
                 return true;
               } else {
-//                 printf("miss at index %d\n", indexOf(word, bit));
+                //                 printf("miss at index %d\n", indexOf(word, bit));
               }
             }
           }
@@ -153,14 +153,26 @@ class Segment {
 
     Segment* segment;
     Map* child;
+    uintptr_t* data;
     unsigned bitsPerRecord;
     unsigned scale;
     bool clearNewData;
 
-    Map(Segment* segment, unsigned bitsPerRecord, unsigned scale,
-        Map* child, bool clearNewData):
+    Map(Segment* segment, uintptr_t* data, unsigned bitsPerRecord,
+        unsigned scale, Map* child, bool clearNewData):
       segment(segment),
       child(child),
+      data(data),
+      bitsPerRecord(bitsPerRecord),
+      scale(scale),
+      clearNewData(clearNewData)
+    { }
+
+    Map(Segment* segment, unsigned bitsPerRecord, unsigned scale, Map* child,
+        bool clearNewData):
+      segment(segment),
+      child(child),
+      data(0),
       bitsPerRecord(bitsPerRecord),
       scale(scale),
       clearNewData(clearNewData)
@@ -171,8 +183,13 @@ class Segment {
       assert(segment->context, scale);
       assert(segment->context, powerOfTwo(scale));
 
+      if (data == 0) {
+        data = segment->data + segment->capacity()
+          + calculateOffset(segment->capacity());
+      }
+
       if (clearNewData) {
-        memset(data(), 0, size() * BytesPerWord);
+        memset(data, 0, size() * BytesPerWord);
       }
 
       if (child) {
@@ -180,38 +197,45 @@ class Segment {
       }
     }
 
+    unsigned calculateOffset(unsigned capacity) {
+      unsigned n = 0;
+      if (child) n += child->calculateFootprint(capacity);
+      return n;
+    }
+
+    static unsigned calculateSize(Context* c UNUSED, unsigned capacity,
+                                  unsigned scale, unsigned bitsPerRecord)
+    {
+      unsigned result
+        = ceiling(ceiling(capacity, scale) * bitsPerRecord, BitsPerWord);
+      assert(c, result);
+      return result;
+    }
+
+    unsigned calculateSize(unsigned capacity) {
+      return calculateSize(segment->context, capacity, scale, bitsPerRecord);
+    }
+
+    unsigned size() {
+      return calculateSize(segment->capacity());
+    }
+
+    unsigned calculateFootprint(unsigned capacity) {
+      unsigned n = calculateSize(capacity);
+      if (child) n += child->calculateFootprint(capacity);
+      return n;
+    }
+
     void replaceWith(Map* m) {
       assert(segment->context, bitsPerRecord == m->bitsPerRecord);
       assert(segment->context, scale == m->scale);
 
+      data = m->data;
+
       m->segment = 0;
+      m->data = 0;
       
       if (child) child->replaceWith(m->child);
-    }
-
-    unsigned offset(unsigned capacity) {
-      unsigned n = 0;
-      if (child) n += child->footprint(capacity);
-      return n;
-    }
-
-    unsigned offset() {
-      return offset(segment->capacity());
-    }
-
-    uintptr_t* data() {
-      return segment->data + segment->capacity() + offset();
-    }
-
-    unsigned size(unsigned capacity) {
-      unsigned result
-        = ceiling(ceiling(capacity, scale) * bitsPerRecord, BitsPerWord);
-      assert(segment->context, result);
-      return result;
-    }
-
-    unsigned size() {
-      return size(max(segment->capacity(), 1));
     }
 
     unsigned indexOf(unsigned segmentIndex) {
@@ -224,33 +248,20 @@ class Segment {
       return indexOf(segment->indexOf(p));
     }
 
-    void update(uintptr_t* newData, unsigned capacity) {
-      assert(segment->context, capacity >= segment->capacity());
-
-      uintptr_t* p = newData + offset(capacity);
-      if (segment->position()) {
-        memcpy(p, data(), size(segment->position()) * BytesPerWord);
-      }
-
-      if (child) {
-        child->update(newData, capacity);
-      }
-    }
-
     void clearBit(unsigned i) {
       assert(segment->context, wordOf(i) < size());
 
-      vm::clearBit(data(), i);
+      vm::clearBit(data, i);
     }
 
     void setBit(unsigned i) {
       assert(segment->context, wordOf(i) < size());
 
-      vm::markBit(data(), i);
+      vm::markBit(data, i);
     }
 
     void clearOnlyIndex(unsigned index) {
-      clearBits(data(), bitsPerRecord, index);
+      clearBits(data, bitsPerRecord, index);
     }
 
     void clearOnly(unsigned segmentIndex) {
@@ -267,7 +278,7 @@ class Segment {
     }
 
     void setOnlyIndex(unsigned index, unsigned v = 1) {
-      setBits(data(), bitsPerRecord, index, v);
+      setBits(data, bitsPerRecord, index, v);
     }
 
     void setOnly(unsigned segmentIndex, unsigned v = 1) {
@@ -285,13 +296,7 @@ class Segment {
     }
 
     unsigned get(void* p) {
-      return getBits(data(), bitsPerRecord, indexOf(p));
-    }
-
-    unsigned footprint(unsigned capacity) {
-      unsigned n = size(capacity);
-      if (child) n += child->footprint(capacity);
-      return n;
+      return getBits(data, bitsPerRecord, indexOf(p));
     }
   };
 
@@ -334,8 +339,22 @@ class Segment {
     }
   }
 
+  Segment(Context* context, Map* map, uintptr_t* data, unsigned position,
+          unsigned capacity):
+    context(context),
+    data(data),
+    position_(position),
+    capacity_(capacity),
+    map(map)
+  {
+    if (map) {
+      map->init();
+    }
+  }
+
   unsigned footprint(unsigned capacity) {
-    return capacity + (map and capacity ? map->footprint(capacity) : 0);
+    return capacity
+      + (map and capacity ? map->calculateFootprint(capacity) : 0);
   }
 
   unsigned capacity() {
@@ -411,15 +430,18 @@ class Segment {
 
 class Fixie {
  public:
-  Fixie(unsigned size, bool hasMask, Fixie** handle, bool immortal):
+  Fixie(Context* c, unsigned size, bool hasMask, Fixie** handle,
+        bool immortal):
     age(immortal ? FixieTenureThreshold + 1 : 0),
     hasMask(hasMask),
     marked(false),
     dirty(false),
-    size(size)
+    size(size),
+    next(0),
+    handle(0)
   {
     memset(mask(), 0, maskSize(size, hasMask));
-    add(handle);
+    add(c, handle);
     if (DebugFixies) {
       fprintf(stderr, "make fixie %p of size %d\n", this, totalSize());
     }
@@ -429,7 +451,10 @@ class Fixie {
     return age == FixieTenureThreshold + 1;
   }
 
-  void add(Fixie** handle) {
+  void add(Context* c UNUSED, Fixie** handle) {
+    assert(c, this->handle == 0);
+    assert(c, next == 0);
+
     this->handle = handle;
     if (handle) {
       next = *handle;
@@ -440,18 +465,25 @@ class Fixie {
     }
   }
 
-  void remove() {
-    if (handle) *handle = next;
-    if (next) next->handle = handle;
+  void remove(Context* c UNUSED) {
+    if (handle) {
+      assert(c, *handle == this);
+      *handle = next;
+    }
+    if (next) {
+      next->handle = handle;
+    }
+    next = 0;
+    handle = 0;
   }
 
-  void move(Fixie** handle) {
+  void move(Context* c, Fixie** handle) {
     if (DebugFixies) {
       fprintf(stderr, "move fixie %p\n", this);
     }
 
-    remove();
-    add(handle);
+    remove(c);
+    add(c, handle);
   }
 
   void** body() {
@@ -502,6 +534,9 @@ class Context {
     limit(limit),
     lowMemoryThreshold(limit / 2),
     lock(0),
+    
+    immortalHeapStart(0),
+    immortalHeapEnd(0),
 
     ageMap(&gen1, max(1, log(TenureThreshold)), 1, 0, false),
     gen1(this, &ageMap, 0, 0),
@@ -571,7 +606,10 @@ class Context {
   unsigned lowMemoryThreshold;
 
   System::Mutex* lock;
-  
+
+  uintptr_t* immortalHeapStart;
+  uintptr_t* immortalHeapEnd;
+
   Segment::Map ageMap;
   Segment gen1;
 
@@ -690,7 +728,7 @@ inline void
 initNextGen1(Context* c)
 {
   new (&(c->nextAgeMap)) Segment::Map
-    (&(c->nextGen1),  max(1, log(TenureThreshold)), 1, 0, false);
+    (&(c->nextGen1), max(1, log(TenureThreshold)), 1, 0, false);
 
   unsigned minimum = minimumNextGen1Capacity(c);
   unsigned desired = minimum;
@@ -775,6 +813,7 @@ free(Context* c, Fixie** fixies)
 {
   for (Fixie** p = fixies; *p;) {
     Fixie* f = *p;
+
     if (f->immortal()) {
       p = &(f->next);
     } else {
@@ -802,9 +841,9 @@ sweepFixies(Context* c)
 
   c->untenuredFixieFootprint = 0;
 
-  for (Fixie** p = &(c->visitedFixies); *p;) {
-    Fixie* f = *p;
-    *p = f->next;
+  while (c->visitedFixies) {
+    Fixie* f = c->visitedFixies;
+    f->remove(c);
 
     if (not f->immortal()) {
       ++ f->age;
@@ -825,14 +864,14 @@ sweepFixies(Context* c)
       }
 
       if (f->dirty) {
-        f->move(&(c->dirtyTenuredFixies));
+        f->add(c, &(c->dirtyTenuredFixies));
       } else {
-        f->move(&(c->tenuredFixies));
+        f->add(c, &(c->tenuredFixies));
       }
     } else {
       c->untenuredFixieFootprint += f->totalSize();
 
-      f->move(&(c->fixies));
+      f->add(c, &(c->fixies));
     }
 
     f->marked = false;
@@ -850,6 +889,12 @@ copyTo(Context* c, Segment* s, void* o, unsigned size)
   void* dst = s->allocate(size);
   c->client->copy(o, dst);
   return dst;
+}
+
+bool
+immortalHeapContains(Context* c, void* p)
+{
+  return p < c->immortalHeapEnd and p >= c->immortalHeapStart;
 }
 
 void*
@@ -888,6 +933,7 @@ copy2(Context* c, void* o)
   } else {
     assert(c, not c->nextGen1.contains(o));
     assert(c, not c->nextGen2.contains(o));
+    assert(c, not immortalHeapContains(c, o));
 
     o = copyTo(c, &(c->nextGen1), o, size);
 
@@ -926,10 +972,13 @@ update3(Context* c, void* o, bool* needsVisit)
         fprintf(stderr, "mark fixie %p\n", f);
       }
       f->marked = true;
-      f->move(&(c->markedFixies));
+      f->move(c, &(c->markedFixies));
     }
     *needsVisit = false;
     return o;
+  } else if (immortalHeapContains(c, o)) {
+    *needsVisit = false;
+    return o;    
   } else if (wasCollected(c, o)) {
     *needsVisit = false;
     return follow(c, o);
@@ -950,23 +999,12 @@ update2(Context* c, void* o, bool* needsVisit)
   return update3(c, o, needsVisit);
 }
 
-void*
-update(Context* c, void** p, bool* needsVisit)
-{
-  if (mask(*p) == 0) {
-    *needsVisit = false;
-    return 0;
-  }
-
-  return update2(c, mask(*p), needsVisit);
-}
-
 void
 markDirty(Context* c, Fixie* f)
 {
   if (not f->dirty) {
     f->dirty = true;
-    f->move(&(c->dirtyTenuredFixies));
+    f->move(c, &(c->dirtyTenuredFixies));
   }
 }
 
@@ -975,7 +1013,11 @@ markClean(Context* c, Fixie* f)
 {
   if (f->dirty) {
     f->dirty = false;
-    f->move(&(c->tenuredFixies));
+    if (f->immortal()) {
+      f->remove(c);
+    } else {
+      f->move(c, &(c->tenuredFixies));
+    }
   }
 }
 
@@ -993,9 +1035,10 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
     map = &(c->nextHeapMap);
   }
 
-  if (not (c->client->isFixed(result)
-           and fixie(result)->age >= FixieTenureThreshold)
-      and not seg->contains(result))
+  if (not (immortalHeapContains(c, result)
+           or (c->client->isFixed(result)
+               and fixie(result)->age >= FixieTenureThreshold)
+           or seg->contains(result)))
   {
     if (target and c->client->isFixed(target)) {
       Fixie* f = fixie(target);
@@ -1003,11 +1046,11 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
 
       if (static_cast<unsigned>(f->age + 1) >= FixieTenureThreshold) {
         if (DebugFixies) {
-          fprintf(stderr, "dirty fixie %p at %d (%p)\n",
-                  f, offset, f->body() + offset);
+          fprintf(stderr, "dirty fixie %p at %d (%p): %p\n",
+                  f, offset, f->body() + offset, result);
         }
 
-        markDirty(c, f);
+        f->dirty = true;
         markBit(f->mask(), offset);
       }
     } else if (seg->contains(p)) {
@@ -1399,7 +1442,6 @@ visitDirtyFixies(Context* c, Fixie** p)
     assert(c, wasDirty);
 
     if (clean) {
-      *p = f->next;
       markClean(c, f);
     } else {
       p = &(f->next);
@@ -1410,9 +1452,9 @@ visitDirtyFixies(Context* c, Fixie** p)
 void
 visitMarkedFixies(Context* c)
 {
-  for (Fixie** p = &(c->markedFixies); *p;) {
-    Fixie* f = *p;
-    *p = f->next;
+  while (c->markedFixies) {
+    Fixie* f = c->markedFixies;
+    f->remove(c);
 
     if (DebugFixies) {
       fprintf(stderr, "visit fixie %p\n", f);
@@ -1435,7 +1477,7 @@ visitMarkedFixies(Context* c)
 
     c->client->walk(f->body(), &w);
 
-    f->move(&(c->visitedFixies));
+    f->move(c, &(c->visitedFixies));
   }  
 }
 
@@ -1664,6 +1706,11 @@ class MyHeap: public Heap {
     c.client = client;
   }
 
+  virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) {
+    c.immortalHeapStart = start;
+    c.immortalHeapEnd = start + sizeInWords;
+  }
+
   virtual void* tryAllocate(unsigned size) {
     return ::tryAllocate(&c, size);
   }
@@ -1690,18 +1737,21 @@ class MyHeap: public Heap {
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
     return (new (allocator->allocate(*totalInBytes))
-            Fixie(sizeInWords, objectMask, &(c.fixies), false))->body();
+            Fixie(&c, sizeInWords, objectMask, &(c.fixies), false))->body();
   }
 
-  virtual void* allocateImmortal(Allocator* allocator, unsigned sizeInWords,
-                                 bool objectMask, unsigned* totalInBytes)
+  virtual void* allocateImmortalFixed(Allocator* allocator,
+                                      unsigned sizeInWords, bool objectMask,
+                                      unsigned* totalInBytes)
   {
     *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
     return (new (allocator->allocate(*totalInBytes))
-            Fixie(sizeInWords, objectMask, &(c.tenuredFixies), true))->body();
+            Fixie(&c, sizeInWords, objectMask, 0, true))->body();
   }
 
   virtual bool needsMark(void* p) {
+    assert(&c, c.client->isFixed(p) or (not immortalHeapContains(&c, p)));
+
     if (c.client->isFixed(p)) {
       return fixie(p)->age >= FixieTenureThreshold;
     } else {
@@ -1717,6 +1767,7 @@ class MyHeap: public Heap {
   bool targetNeedsMark(void* target) {
     return target
       and not c.gen2.contains(target)
+      and not immortalHeapContains(&c, target)
       and not (c.client->isFixed(target)
                and fixie(target)->age >= FixieTenureThreshold);
   }
@@ -1731,8 +1782,8 @@ class MyHeap: public Heap {
         void** target = static_cast<void**>(p) + offset + i;
         if (targetNeedsMark(mask(*target))) {
           if (DebugFixies) {
-            fprintf(stderr, "dirty fixie %p at %d (%p)\n",
-                    f, offset, f->body() + offset);
+            fprintf(stderr, "dirty fixie %p at %d (%p): %p\n",
+                    f, offset, f->body() + offset, mask(*target));
           }
 
           dirty = true;
@@ -1789,6 +1840,7 @@ class MyHeap: public Heap {
     } else if (c.nextGen1.contains(p)) {
       return Reachable;
     } else if (c.nextGen2.contains(p)
+               or immortalHeapContains(&c, p)
                or (c.gen2.contains(p)
                    and (c.mode == Heap::MinorCollection
                         or c.gen2.indexOf(p) >= c.gen2Base)))

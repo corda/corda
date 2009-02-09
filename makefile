@@ -62,7 +62,6 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DBOOT_CLASSPATH=\"[classpathJar]\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
@@ -104,6 +103,9 @@ endif
 ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	ifeq ($(bootimage),true)
+		bootimage-lflags = -Wl,-segprot,__BOOT,rwx,rwx
+	endif
 	rdynamic =
 	strip-all = -S -x
 	binaryToMacho = $(native-build)/binaryToMacho
@@ -132,6 +134,7 @@ ifeq ($(platform),windows)
 		ar = i586-mingw32msvc-ar
 		ranlib = i586-mingw32msvc-ranlib
 		objcopy = i586-mingw32msvc-objcopy
+		strip = i586-mingw32msvc-strip
 	else
 		build-cflags = $(common-cflags) \
 			"-I$(JAVA_HOME)/include/win32" -I$(src) -mthreads
@@ -159,11 +162,9 @@ ifeq ($(mode),stress-major)
 endif
 ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG
-	strip = strip
 endif
 ifeq ($(mode),small)
 	cflags += -Os -g3 -DNDEBUG
-	strip = strip
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
@@ -198,6 +199,8 @@ vm-depends = \
 	$(src)/assembler.h \
 	$(src)/compiler.h \
 	$(src)/$(asm).h
+	$(src)/heapwalk.h \
+	$(src)/bootimage.h
 
 vm-sources = \
 	$(src)/$(system).cpp \
@@ -210,11 +213,6 @@ vm-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/process.cpp \
 	$(src)/$(asm).cpp
-
-ifeq ($(heapdump),true)
-	vm-sources += $(src)/heapdump.cpp
-	cflags += -DAVIAN_HEAPDUMP
-endif
 
 vm-asm-sources = $(src)/$(asm).S
 
@@ -231,6 +229,37 @@ endif
 vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(native-build))
 vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(native-build))
 vm-objects = $(vm-cpp-objects) $(vm-asm-objects)
+
+heapwalk-sources = $(src)/heapwalk.cpp 
+heapwalk-objects = \
+	$(call cpp-objects,$(heapwalk-sources),$(src),$(native-build))
+
+ifeq ($(heapdump),true)
+	vm-sources += $(src)/heapdump.cpp
+	vm-heapwalk-objects = $(heapwalk-objects)
+	cflags += -DAVIAN_HEAPDUMP
+endif
+
+bootimage-generator-sources = $(src)/bootimage.cpp 
+bootimage-generator-objects = \
+	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
+bootimage-generator = \
+	$(build)/$(build-platform)-$(build-arch)-compile-fast/bootimage-generator
+
+bootimage-bin = $(native-build)/bootimage.bin
+bootimage-object = $(native-build)/bootimage-bin.o
+
+ifeq ($(bootimage),true)
+	ifneq ($(build-arch),$(arch))
+		error "can't cross-build a bootimage"
+	endif
+
+	vm-classpath-object = $(bootimage-object)
+	cflags += -DBOOT_IMAGE=\"bootimageBin\"
+else
+	vm-classpath-object = $(classpath-object)
+	cflags += -DBOOT_CLASSPATH=\"[classpathJar]\"
+endif
 
 driver-source = $(src)/main.cpp
 driver-object = $(native-build)/main.o
@@ -358,6 +387,12 @@ $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
 $(vm-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
 	$(compile-asm-object)
 
+$(bootimage-generator-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+	$(compile-object)
+
+$(heapwalk-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+	$(compile-object)
+
 $(driver-object): $(driver-source)
 	$(compile-object)
 
@@ -381,7 +416,7 @@ $(binaryToMacho): $(src)/binaryToMacho.cpp
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
-	$(binaryToMacho) $(asm) $(build)/classpath.jar \
+	$(binaryToMacho) $(asm) $(build)/classpath.jar __TEXT __text \
 		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
 else
 	(wd=$$(pwd); \
@@ -399,15 +434,54 @@ $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	$(compile-object)
 
-$(static-library): $(vm-objects) $(jni-objects)
+$(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
+$(bootimage-bin): $(bootimage-generator)
+	$(<) $(classpath-build) > $(@)
+
+$(bootimage-object): $(bootimage-bin) $(binaryToMacho)
+	@echo "creating $(@)"
+ifeq ($(platform),darwin)
+	$(binaryToMacho) $(<) __BOOT __boot \
+		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
+else
+	(wd=$$(pwd); \
+	 cd $(native-build); \
+	 $(objcopy) --rename-section=.data=.boot -I binary bootimage.bin \
+		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp"; \
+	 $(objcopy) --set-section-flags .boot=alloc,load,code "$${wd}/$(@).tmp" \
+		"$${wd}/$(@)")
+endif
+
 $(executable): \
-		$(vm-objects) $(classpath-object) $(jni-objects) $(driver-object) \
-		$(boot-object)
+		$(vm-objects) $(jni-objects) $(driver-object) $(vm-heapwalk-objects) \
+		$(boot-object) $(vm-classpath-object)
+	@echo "linking $(@)"
+ifeq ($(platform),windows)
+	$(dlltool) -z $(@).def $(^)
+	$(dlltool) -d $(@).def -e $(@).exp
+	$(cc) $(@).exp $(^) $(lflags) -o $(@)
+else
+	$(cc) $(^) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
+endif
+	$(strip) $(strip-all) $(@)
+
+$(bootimage-generator):
+	(unset MAKEFLAGS && \
+	 make mode=fast process=compile \
+		arch=$(build-arch) \
+		platform=$(build-platform) \
+		bootimage-generator= \
+		build-bootimage-generator=$(bootimage-generator) \
+		$(bootimage-generator))
+
+$(build-bootimage-generator): \
+		$(vm-objects) $(classpath-object) $(jni-objects) $(heapwalk-objects) \
+		$(bootimage-generator-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 	$(dlltool) -z $(@).def $(^)
@@ -416,13 +490,12 @@ ifeq ($(platform),windows)
 else
 	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
-	$(strip) $(strip-all) $(@)
 
 $(dynamic-library): \
-		$(vm-objects) $(classpath-object) $(dynamic-object) $(jni-objects) \
-		$(boot-object)
+		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
+		$(boot-object) $(vm-classpath-object)
 	@echo "linking $(@)"
-	$(cc) $(^) $(shared) $(lflags) -o $(@)
+	$(cc) $(^) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
 	$(strip) $(strip-all) $(@)
 
 $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)

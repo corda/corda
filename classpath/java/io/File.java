@@ -14,6 +14,8 @@ public class File {
   private static final String FileSeparator
     = System.getProperty("file.separator");
 
+  public static final String separator = FileSeparator;
+
   //   static {
   //     System.loadLibrary("natives");
   //   }
@@ -157,7 +159,7 @@ public class File {
       }
 
       String[] result = new String[count];
-      for (int i = count; i >= 0; --i) {
+      for (int i = count - 1; i >= 0; --i) {
         result[i] = list.value;
         list = list.next;
       }
