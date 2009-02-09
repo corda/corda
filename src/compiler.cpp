@@ -2416,13 +2416,13 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
 
   if (srcSize != dstSize) cost = 1;
 
-  if (cost) { 
-    addSite(c, dst, target);
-
+  if (cost) {
     bool useTemporary = ((target->type(c) == MemoryOperand
                           and src->source->type(c) == MemoryOperand)
                          or (srcSize != dstSize
                              and target->type(c) != RegisterOperand));
+
+    addSite(c, dst, target);
 
     if (target->match(c, dstMask) and not useTemporary) {
       if (DebugMoves) {
@@ -2434,6 +2434,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
 
       apply(c, type, srcSize, src->source, 0, dstSize, target, 0);
     } else {
+      target->freeze(c, dst);
+
       assert(c, dstMask.typeMask & (1 << RegisterOperand));
 
       Site* tmpTarget = freeRegisterSite(c, dstMask.registerMask);
@@ -2463,8 +2465,10 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
           removeSite(c, dst, tmpTarget);
         }
       } else {
-        removeSite(c, dst, target);          
+        removeSite(c, dst, target);
       }
+
+      target->thaw(c, dst);
     }
   } else {
     target = src->source;
@@ -3267,7 +3271,7 @@ class MemoryEvent: public Event {
     }
 
     Site* site = memorySite
-        (c, baseRegister, displacement, indexRegister, scale);
+      (c, baseRegister, displacement, indexRegister, scale);
 
     result->target = site;
     if (live(result)) {
