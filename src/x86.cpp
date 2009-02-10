@@ -976,12 +976,16 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
     break;
 
   case 8: {
-    if (BytesPerWord == 8
-        and a->value->resolved()
-        and isInt32(a->value->value()))
-    {
-      encode(c, 0xc7, 0, b, true);
-      c->code.append4(a->value->value());      
+    if (BytesPerWord == 8) {
+      if(a->value->resolved() and isInt32(a->value->value())) {
+        encode(c, 0xc7, 0, b, true);
+        c->code.append4(a->value->value());
+      } else {
+        Assembler::Register tmp(c->client->acquireTemporary());
+        moveCR(c, 8, a, 8, &tmp);
+        moveRM(c, 8, &tmp, 8, b);
+        c->client->releaseTemporary(tmp.low);
+      }
     } else {
       Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
       Assembler::Constant al(shiftMaskPromise(c, a->value, 0, 0xFFFFFFFF));
