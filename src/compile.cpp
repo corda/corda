@@ -641,6 +641,7 @@ class Frame {
     context(context),
     t(context->thread),
     c(context->compiler),
+    subroutine(0),
     stackMap(stackMap),
     ip(0),
     sp(localSize()),
@@ -653,6 +654,7 @@ class Frame {
     context(f->context),
     t(context->thread),
     c(context->compiler),
+    subroutine(f->subroutine),
     stackMap(stackMap),
     ip(f->ip),
     sp(f->sp),
@@ -1181,6 +1183,7 @@ class Frame {
   Context* context;
   MyThread* t;
   Compiler* c;
+  Compiler::Subroutine* subroutine;
   uint8_t* stackMap;
   unsigned ip;
   unsigned sp;
@@ -3112,14 +3115,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       c->jmp(frame->machineIp(newIp));
 
-      Compiler::Subroutine* sr = c->startSubroutine();
+      frame->subroutine = c->startSubroutine();
 
       compile(t, frame, newIp);
       if (UNLIKELY(t->exception)) return;
 
       frame->poppedInt();
 
-      c->endSubroutine(sr);
+      c->restoreFromSubroutine(frame->subroutine);
     } break;
 
     case l2d: {
@@ -3571,6 +3574,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case ret:
       c->jmp(c->loadLocal(1, codeBody(t, code, ip)));
+      c->endSubroutine(frame->subroutine);
       return;
 
     case return_:
@@ -3683,6 +3687,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       case ret:
         c->jmp(c->loadLocal(1, codeReadInt16(t, code, ip)));
+        c->endSubroutine(frame->subroutine);
         return;
 
       default: abort(t);

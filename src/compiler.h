@@ -38,6 +38,7 @@ class Compiler {
 
   virtual Subroutine* startSubroutine() = 0;
   virtual void endSubroutine(Subroutine* subroutine) = 0;
+  virtual void restoreFromSubroutine(Subroutine* subroutine) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned alignedFrameSize) = 0;

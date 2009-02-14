@@ -1198,7 +1198,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     }
   }
 
-  if (intersectRead or best.cost < Target::Penalty) {
+  if (intersectRead) {
     return best;
   }
 
@@ -1682,10 +1682,12 @@ move(Context* c, Value* value, Site* src, Site* dst)
            or src->type(c) == AddressOperand))
   {
     src->freeze(c, value);
+    dst->freeze(c, value);
 
     Site* tmp = freeRegisterSite(c);
     addSite(c, value, tmp);
 
+    dst->thaw(c, value);
     src->thaw(c, value);
 
     if (DebugMoves) {
@@ -1942,6 +1944,8 @@ class MultiRead: public Read {
     }
     lastRead = cell;
 
+//     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
+
     lastTarget->value = r;
   }
 
@@ -1951,6 +1955,9 @@ class MultiRead: public Read {
 
   void allocateTarget(Context* c) {
     Cell* cell = cons(c, 0, 0);
+
+//     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
+
     if (lastTarget) {
       lastTarget->next = cell;
     } else {
@@ -1960,6 +1967,8 @@ class MultiRead: public Read {
   }
 
   Read* nextTarget() {
+//     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
+
     Read* r = static_cast<Read*>(firstTarget->value);
     firstTarget = firstTarget->next;
     return r;
@@ -3023,9 +3032,16 @@ pop(Context* c, unsigned footprint)
 }
 
 Value*
-storeLocal(Context* c, unsigned footprint, Value* v, unsigned index)
+storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
 {
   assert(c, index + footprint <= c->localFootprint);
+
+  if (copy) {
+    unsigned sizeInBytes = sizeof(Local) * c->localFootprint;
+    Local* newLocals = static_cast<Local*>(c->zone->allocate(sizeInBytes));
+    memcpy(newLocals, c->locals, sizeInBytes);
+    c->locals = newLocals;
+  }
 
   Value* high;
   if (footprint > 1) {
@@ -3034,7 +3050,7 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index)
     if (BytesPerWord == 4) {
       assert(c, v->high);
 
-      high = storeLocal(c, 1, v->high, index);
+      high = storeLocal(c, 1, v->high, index, false);
     } else {
       high = 0;
     }
@@ -3048,13 +3064,6 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index)
   v->high = high;
 
   Local* local = c->locals + index;
-
-  unsigned sizeInBytes = sizeof(Local) * c->localFootprint;
-  Local* newLocals = static_cast<Local*>(c->zone->allocate(sizeInBytes));
-  memcpy(newLocals, c->locals, sizeInBytes);
-  c->locals = newLocals;
-
-  local = c->locals + index;
   local->value = v;
 
   if (DebugFrame) {
@@ -3511,7 +3520,7 @@ visit(Context* c, Link* link)
       ForkElement* p = forkState->elements + i;
       Value* v = p->value;
       v->reads = p->read->nextTarget();
-//       fprintf(stderr, "next read %p for %p\n", v->reads, v);
+//       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
       if (not live(v)) {
         clearSites(c, v);
       }
@@ -3641,6 +3650,11 @@ append(Context* c, Event* e)
 
   Event* p = c->predecessor;
   if (p) {
+    if (DebugAppend) {
+      fprintf(stderr, "%d precedes %d\n", p->logicalInstruction->index,
+              e->logicalInstruction->index);
+    }
+
     Link* link = ::link(c, p, e->predecessors, e, p->successors, c->forkState);
     e->predecessors = link;
     p->successors = link;
@@ -4074,9 +4088,9 @@ void
 restore(Context* c, Event* e, Snapshot* snapshots)
 {
   for (Snapshot* s = snapshots; s; s = s->next) {
-//     char buffer[256]; toString(c, s->sites, buffer, 256);
-//     fprintf(stderr, "restore %p buddy %p sites %s\n",
-//             s->value, s->value->buddy, buffer);
+//     char buffer[256]; sitesToString(c, s->sites, buffer, 256);
+//     fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
+//             s->value, s->value->buddy, buffer, live(s->value));
 
     s->value->buddy = s->buddy;
   }
@@ -4396,8 +4410,6 @@ saveState(Context* c)
     }
 
     state->readCount = count;
-
-    restore(c, state);
   }
 
   c->saved = 0;
@@ -4482,7 +4494,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual State* saveState() {
-    return ::saveState(&c);
+    State* s = ::saveState(&c);
+    restoreState(s);
+    return s;
   }
 
   virtual void restoreState(State* state) {
@@ -4495,12 +4509,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual void endSubroutine(Subroutine* subroutine) {
-    MySubroutine* sr = static_cast<MySubroutine*>(subroutine);
-    if (sr->forkState) {
-      ::restoreState(&c, sr->forkState);
-    } else {
-      sr->forkState = ::saveState(&c);
-    }
+    static_cast<MySubroutine*>(subroutine)->forkState = ::saveState(&c);
+  }
+
+  virtual void restoreFromSubroutine(Subroutine* subroutine) {
+    ::restoreState(&c, static_cast<MySubroutine*>(subroutine)->forkState);
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -4868,7 +4881,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
-    ::storeLocal(&c, footprint, static_cast<Value*>(src), index);
+    ::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
   }
 
   virtual Operand* loadLocal(unsigned footprint, unsigned index) {
