@@ -240,11 +240,13 @@ ifeq ($(heapdump),true)
 	cflags += -DAVIAN_HEAPDUMP
 endif
 
+bootimage-mode = $(mode)
+
 bootimage-generator-sources = $(src)/bootimage.cpp 
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
 bootimage-generator = \
-	$(build)/$(build-platform)-$(build-arch)-compile-fast/bootimage-generator
+	$(build)/$(build-platform)-$(build-arch)-compile-$(bootimage-mode)/bootimage-generator
 
 bootimage-bin = $(native-build)/bootimage.bin
 bootimage-object = $(native-build)/bootimage-bin.o
@@ -470,9 +472,11 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage-generator):
+$(bootimage-generator): make-bootimage-generator
+
+make-bootimage-generator:
 	(unset MAKEFLAGS && \
-	 make mode=fast process=compile \
+	 make mode=$(bootimage-mode) process=compile \
 		arch=$(build-arch) \
 		platform=$(build-platform) \
 		bootimage-generator= \
