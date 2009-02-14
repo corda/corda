@@ -3111,7 +3111,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         frame->storedObject(index);
       }
 
-      frame->pushAddress(frame->machineIp(ip));
+      frame->pushAddress(frame->addressOperand(c->machineIp(ip)));
 
       c->jmp(frame->machineIp(newIp));
 
