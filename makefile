@@ -127,8 +127,8 @@ ifeq ($(platform),windows)
 		objcopy = i586-mingw32msvc-objcopy
 		strip = i586-mingw32msvc-strip
 	else
-		build-cflags = $(common-cflags) \
-			"-I$(JAVA_HOME)/include/win32" -I$(src) -mthreads
+		common-cflags += "-I$(JAVA_HOME)/include/win32"
+		build-cflags = $(common-cflags) -I$(src) -mthreads
 		ifeq ($(build-platform),cygwin)
 			build-lflags += -mno-cygwin
 			build-cflags += -mno-cygwin

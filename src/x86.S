@@ -120,7 +120,7 @@ vmJump:
 
 #elif defined __i386__
 
-#  if defined __APPLE__ || defined __MINGW32__
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
 .globl _vmNativeCall
 _vmNativeCall: 
 #  else
@@ -197,7 +197,7 @@ exit:
    popl   %ebp
    ret
      
-#  if defined __APPLE__ || defined __MINGW32__
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
 .globl _vmJump
 _vmJump:
 #  else
