@@ -4318,16 +4318,21 @@ compile(Context* c)
     LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
     if (e->next == 0
         or (e->next->logicalInstruction != e->logicalInstruction
-            and e->next->logicalInstruction != nextInstruction))
+            and (e->next->logicalInstruction != nextInstruction
+                 or e != e->logicalInstruction->lastEvent)))
     {
       Block* b = e->logicalInstruction->firstEvent->block;
+
+      while (b->nextBlock) {
+        b = b->nextBlock;
+      }
+
       if (b != block) {
-        while (b->nextBlock) b = b->nextBlock;
         b->nextBlock = block;
       }
+
       block->nextInstruction = nextInstruction;
       block->assemblerBlock = a->endBlock(e->next != 0);
-//       fprintf(stderr, "end block %p at %d\n", block->assemblerBlock, e->logicalInstruction->index);
 
       if (e->next) {
         block = ::block(c, e->next);
@@ -4340,9 +4345,10 @@ compile(Context* c)
     Block* next = block->nextBlock
       ? block->nextBlock
       : block->nextInstruction->firstEvent->block;
+
     next->start = block->assemblerBlock->resolve
       (block->start, next->assemblerBlock);
-//     fprintf(stderr, "resolve block %p\n", block->assemblerBlock);
+
     block = next;
   }
 
