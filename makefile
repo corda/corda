@@ -4,7 +4,7 @@ name = avian
 version = 0.1.1
 
 build-arch = $(shell uname -m | sed 's/^i.86$$/i386/')
-ifeq ($(build-arch),Power)
+ifeq (Power,$(filter Power,$(build-arch)))
 	build-arch = powerpc
 endif
 
@@ -211,8 +211,7 @@ vm-sources = \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
-	$(src)/process.cpp \
-	$(src)/$(asm).cpp
+	$(src)/process.cpp
 
 vm-asm-sources = $(src)/$(asm).S
 
@@ -221,7 +220,9 @@ ifeq ($(process),compile)
 		$(src)/compiler.h \
 		$(src)/vector.h
 
-	vm-sources += $(src)/compiler.cpp
+	vm-sources += \
+		$(src)/compiler.cpp \
+		$(src)/$(asm).cpp
 
 	vm-asm-sources += $(src)/compile.S
 endif
