@@ -13,6 +13,9 @@
 .text
 
 #define BYTES_PER_WORD 4
+#define LINKAGE_AREA 6
+#define GPR_COUNT 8
+#define MEMORY_BASE BYTES_PER_WORD * (LINKAGE_AREA + GPR_COUNT)
 #define LOCAL(x) L##x
 
 #ifdef __APPLE__
@@ -37,6 +40,7 @@ vmNativeCall:
    // r15       : stack frame size
    // r16       : temporary
    // r17       : temporary
+   // r18       : temporary
    
    // save registers used for local variables
    stw  r13,24(r1)
@@ -44,6 +48,7 @@ vmNativeCall:
    stw  r15,32(r1)
    stw  r16,36(r1)
    stw  r17,40(r1)
+   stw  r18,44(r1)
 
    // allocate stack space
 	 stwux	r1,r1,r4
@@ -57,7 +62,8 @@ vmNativeCall:
    
 LOCAL(loop):
    lwzx r17,r16,r5
-   stwx r17,r16,r1
+   addi r18,r16,MEMORY_BASE
+   stwx r17,r18,r1
    addi r16,r16,BYTES_PER_WORD
    
 LOCAL(test):
@@ -136,6 +142,7 @@ LOCAL(exit):
    lwz  r15,32(r1)
    lwz  r16,36(r1)
    lwz  r17,40(r1)
+   lwz  r18,44(r1)
 
    // load return address
    lwz  r0,8(r1)

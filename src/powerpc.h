@@ -74,28 +74,28 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     } break;
 
     case DOUBLE_TYPE: {
-      if (fprIndex < FprCount) {
+      if (fprIndex + (8 / BytesPerWord) <= FprCount) {
         memcpy(fprTable + fprIndex, arguments + ai, 8);
         ++ fprIndex;
-        gprIndex += BytesPerWord / 4;
-        stackSkip += BytesPerWord / 4;
+        gprIndex += 8 / BytesPerWord;
+        stackSkip += 8 / BytesPerWord;
       } else {
         memcpy(stack + stackIndex, arguments + ai, 8);
-        stackIndex += BytesPerWord / 4;
+        stackIndex += 8 / BytesPerWord;
       }
-      ai += BytesPerWord / 4;
+      ai += 8 / BytesPerWord;
     } break;
 
     case INT64_TYPE: {
-      if (gprIndex + BytesPerWord / 4 <= GprCount) {
+      if (gprIndex + (8 / BytesPerWord) <= GprCount) {
         memcpy(gprTable + gprIndex, arguments + ai, 8);
-        gprIndex += BytesPerWord / 4;
-        stackSkip += BytesPerWord / 4;
+        gprIndex += 8 / BytesPerWord;
+        stackSkip += 8 / BytesPerWord;
       } else {
         memcpy(stack + stackIndex, arguments + ai, 8);
-        stackIndex += BytesPerWord / 4;
+        stackIndex += 8 / BytesPerWord;
       }
-      ai += BytesPerWord / 4;
+      ai += 8 / BytesPerWord;
     } break;
 
     default: {
