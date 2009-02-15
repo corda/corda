@@ -4318,8 +4318,7 @@ compile(Context* c)
     LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
     if (e->next == 0
         or (e->next->logicalInstruction != e->logicalInstruction
-            and (e->logicalInstruction->lastEvent == e
-                 or e->next->logicalInstruction != nextInstruction)))
+            and e->next->logicalInstruction != nextInstruction))
     {
       Block* b = e->logicalInstruction->firstEvent->block;
       if (b != block) {

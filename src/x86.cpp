@@ -55,7 +55,8 @@ class Task;
 class AlignmentPadding;
 
 unsigned
-padding(AlignmentPadding* p, unsigned index, unsigned offset, unsigned limit);
+padding(AlignmentPadding* p, unsigned index, unsigned offset,
+        AlignmentPadding* limit);
 
 class MyBlock: public Assembler::Block {
  public:
@@ -68,7 +69,7 @@ class MyBlock: public Assembler::Block {
     this->start = start;
     this->next = static_cast<MyBlock*>(next);
 
-    return start + size + padding(firstPadding, start, offset, ~0);
+    return start + size + padding(firstPadding, start, offset, lastPadding);
   }
 
   MyBlock* next;
@@ -185,8 +186,8 @@ codePromise(Context* c, unsigned offset)
 
 class Offset: public Promise {
  public:
-  Offset(Context* c, MyBlock* block, unsigned offset):
-    c(c), block(block), offset(offset)
+  Offset(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit):
+    c(c), block(block), offset(offset), limit(limit)
   { }
 
   virtual bool resolved() {
@@ -197,19 +198,20 @@ class Offset: public Promise {
     assert(c, resolved());
 
     return block->start + (offset - block->offset)
-      + padding(block->firstPadding, block->start, block->offset, offset);
+      + padding(block->firstPadding, block->start, block->offset, limit);
   }
 
   Context* c;
   MyBlock* block;
   unsigned offset;
+  AlignmentPadding* limit;
 };
 
 Promise*
 offset(Context* c)
 {
   return new (c->zone->allocate(sizeof(Offset)))
-    Offset(c, c->lastBlock, c->code.length());
+    Offset(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
 }
 
 class Task {
@@ -373,15 +375,19 @@ class AlignmentPadding {
 };
 
 unsigned
-padding(AlignmentPadding* p, unsigned index, unsigned offset, unsigned limit)
+padding(AlignmentPadding* p, unsigned start, unsigned offset,
+        AlignmentPadding* limit)
 {
   unsigned padding = 0;
-  for (; p; p = p->next) {
-    if (p->offset <= limit) {
-      index += p->offset - offset;
-      while ((index + padding + 1) % 4) {
+  if (limit) {
+    unsigned index = 0;
+    for (; p; p = p->next) {
+      index = p->offset - offset;
+      while ((start + index + padding + 1) % 4) {
         ++ padding;
       }
+      
+      if (p == limit) break;
     }
   }
   return padding;
@@ -2359,11 +2365,14 @@ class MyAssembler: public Assembler {
       unsigned index = 0;
       unsigned padding = 0;
       for (AlignmentPadding* p = b->firstPadding; p; p = p->next) {
-        unsigned size = p->offset - b->offset;
+        unsigned size = p->offset - b->offset - index;
+
         memcpy(dst + b->start + index + padding,
                c.code.data + b->offset + index,
                size);
+
         index += size;
+
         while ((b->start + index + padding + 1) % 4) {
           *(dst + b->start + index + padding) = 0x90;
           ++ padding;
