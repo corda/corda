@@ -145,6 +145,10 @@ struct JavaVMVTable {
   void* reserved1;
   void* reserved2;
 
+#if (! TARGET_RT_MAC_CFM) && defined(__ppc__)
+  void* cfm_vectors[4];
+#endif
+
   jint
   (JNICALL *DestroyJavaVM)
   (JavaVM*);
@@ -164,6 +168,10 @@ struct JavaVMVTable {
   jint
   (JNICALL *AttachCurrentThreadAsDaemon)
   (JavaVM*, JNIEnv**, void*);
+
+#if TARGET_RT_MAC_CFM && defined(__ppc__)
+    void* real_functions[5];
+#endif
 };
 
 struct JNIEnvVTable {
@@ -171,6 +179,10 @@ struct JNIEnvVTable {
   void* reserved1;
   void* reserved2;
   void* reserved3;
+
+#if (! TARGET_RT_MAC_CFM) && defined(__ppc__)
+  void* cfm_vectors[225];
+#endif
 
   jint
   (JNICALL *GetVersion)
@@ -1087,6 +1099,10 @@ struct JNIEnvVTable {
   jlong
   (JNICALL *GetDirectBufferCapacity)
     (JNIEnv*, jobject);
+
+#if TARGET_RT_MAC_CFM && defined(__ppc__)
+  void* real_functions[228];
+#endif
 };
 
 inline int
@@ -1526,7 +1542,7 @@ mark(Thread* t, object o, unsigned offset)
   }
 }
 
-inline void FORCE_ALIGN
+inline void
 set(Thread* t, object target, unsigned offset, object value)
 {
   cast<object>(target, offset) = value;
@@ -1736,7 +1752,7 @@ makeExceptionInInitializerError(Thread* t, object cause)
   return makeExceptionInInitializerError(t, 0, trace, cause);
 }
 
-inline object FORCE_ALIGN
+inline object
 makeNew(Thread* t, object class_)
 {
   assert(t, t->state == Thread::ActiveState);
@@ -1751,7 +1767,7 @@ makeNew(Thread* t, object class_)
   return instance;
 }
 
-inline object FORCE_ALIGN
+inline object
 makeNewWeakReference(Thread* t, object class_)
 {
   assert(t, t->state == Thread::ActiveState);

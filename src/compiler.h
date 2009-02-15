@@ -22,21 +22,26 @@ class Compiler {
   class Client {
    public:
     virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
-    virtual intptr_t getThunk(BinaryOperation op, unsigned size) = 0;
+    virtual intptr_t getThunk(TernaryOperation op, unsigned size) = 0;
   };
   
   static const unsigned Aligned  = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
 
   class Operand { };
+  class StackElement { };
+  class State { };
+  class Subroutine { };
 
-  virtual void pushState() = 0;
-  virtual void popState() = 0;
-  virtual void saveStack() = 0;
-  virtual void resetStack() = 0;
+  virtual State* saveState() = 0;
+  virtual void restoreState(State* state) = 0;
+
+  virtual Subroutine* startSubroutine() = 0;
+  virtual void endSubroutine(Subroutine* subroutine) = 0;
+  virtual void restoreFromSubroutine(Subroutine* subroutine) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
-                    unsigned localFootprint) = 0;
+                    unsigned localFootprint, unsigned alignedFrameSize) = 0;
 
   virtual void visitLogicalIp(unsigned logicalIp) = 0;
   virtual void startLogicalIp(unsigned logicalIp) = 0;
@@ -55,18 +60,18 @@ class Compiler {
                           unsigned scale = 1) = 0;
 
   virtual Operand* stack() = 0;
-  virtual Operand* base() = 0;
   virtual Operand* thread() = 0;
 
-  virtual Operand* label() = 0;
-  virtual void mark(Operand* label) = 0;
-
-  virtual void push(unsigned size) = 0;
-  virtual void push(unsigned size, Operand* value) = 0;
-  virtual Operand* pop(unsigned size) = 0;
-  virtual void pushed(unsigned count) = 0;
-  virtual void popped(unsigned count, bool isEvent) = 0;
-  virtual Operand* peek(unsigned size, unsigned index) = 0;
+  virtual void push(unsigned footprint) = 0;
+  virtual void push(unsigned footprint, Operand* value) = 0;
+  virtual void save(unsigned footprint, Operand* value) = 0;
+  virtual Operand* pop(unsigned footprint) = 0;
+  virtual void pushed() = 0;
+  virtual void popped(unsigned footprint) = 0;
+  virtual StackElement* top() = 0;
+  virtual unsigned footprint(StackElement*) = 0;
+  virtual unsigned index(StackElement*) = 0;
+  virtual Operand* peek(unsigned footprint, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
                         unsigned flags,
@@ -75,18 +80,27 @@ class Compiler {
                         unsigned argumentCount,
                         ...) = 0;
 
+  virtual Operand* stackCall(Operand* address,
+                             unsigned flags,
+                             TraceHandler* traceHandler,
+                             unsigned resultSize,
+                             unsigned argumentFootprint) = 0;
+
   virtual void return_(unsigned size, Operand* value) = 0;
 
-  virtual void storeLocal(unsigned size, Operand* src, unsigned index) = 0;
-  virtual Operand* loadLocal(unsigned size, unsigned index) = 0;
+  virtual void initLocal(unsigned size, unsigned index) = 0;
+  virtual void initLocalsFromLogicalIp(unsigned logicalIp) = 0;
+  virtual void storeLocal(unsigned footprint, Operand* src,
+                          unsigned index) = 0;
+  virtual Operand* loadLocal(unsigned footprint, unsigned index) = 0;
+  virtual void saveLocals() = 0;
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
                            Operand* index, intptr_t handler) = 0;
 
   virtual void store(unsigned size, Operand* src, Operand* dst) = 0;
-  virtual Operand* load(unsigned size, Operand* src) = 0;
-  virtual Operand* loadz(unsigned size, Operand* src) = 0;
-  virtual Operand* load4To8(Operand* src) = 0;
+  virtual Operand* load(unsigned srcSize, unsigned dstSize, Operand* src) = 0;
+  virtual Operand* loadz(unsigned size, unsigned dstSize, Operand* src) = 0;
   virtual Operand* lcmp(Operand* a, Operand* b) = 0;
   virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
   virtual void jl(Operand* address) = 0;

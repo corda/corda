@@ -33,7 +33,8 @@ endsWith(const char* suffix, const char* s, unsigned length)
 
 object
 makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
-              unsigned capacity, uintptr_t* codeMap)
+              unsigned capacity, uintptr_t* codeMap, const char* className,
+              const char* methodName, const char* methodSpec)
 {
   unsigned size = 0;
   t->m->processor->compileThunks(t, image, code, &size, capacity);
@@ -50,7 +51,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     unsigned nameSize = 0;
     const char* name = it.next(&nameSize);
 
-    if (endsWith(".class", name, nameSize)) {
+    if (endsWith(".class", name, nameSize)
+        and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
+    {
       //fprintf(stderr, "%.*s\n", nameSize - 6, name);
       object c = resolveClass
         (t, makeByteArray(t, "%.*s", nameSize - 6, name));
@@ -59,7 +62,19 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
       if (classMethodTable(t, c)) {
         for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
           object method = arrayBody(t, classMethodTable(t, c), i);
-          if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
+          if ((methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE))
+              and ((methodName == 0
+                    or strcmp
+                    (reinterpret_cast<char*>
+                     (&byteArrayBody
+                      (t, vm::methodName(t, method), 0)), methodName) == 0)
+                   and (methodSpec == 0
+                        or strcmp
+                        (reinterpret_cast<char*>
+                         (&byteArrayBody
+                          (t, vm::methodSpec(t, method), 0)), methodSpec)
+                        == 0)))
+          {
             t->m->processor->compileMethod
               (t, zone, code, &size, capacity, &constants, &calls, &addresses,
                method);
@@ -255,7 +270,8 @@ offset(object a, uintptr_t* b)
 }
 
 void
-writeBootImage(Thread* t, FILE* out)
+writeBootImage(Thread* t, FILE* out, const char* className,
+               const char* methodName, const char* methodSpec)
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
   BootImage image;
@@ -267,7 +283,8 @@ writeBootImage(Thread* t, FILE* out)
   memset(codeMap, 0, codeMapSize(CodeCapacity));
 
   object constants = makeCodeImage
-    (t, &zone, &image, code, CodeCapacity, codeMap);
+    (t, &zone, &image, code, CodeCapacity, codeMap, className, methodName,
+     methodSpec);
   PROTECT(t, constants);
 
   const unsigned HeapCapacity = 32 * 1024 * 1024;
@@ -348,8 +365,9 @@ writeBootImage(Thread* t, FILE* out)
 int
 main(int ac, const char** av)
 {
-  if (ac != 2) {
-    fprintf(stderr, "usage: %s <classpath>\n", av[0]);
+  if (ac < 2 or ac > 5) {
+    fprintf(stderr, "usage: %s <classpath> "
+            "[<class name> [<method name> [<method spec>]]]\n", av[0]);
     return -1;
   }
 
@@ -363,7 +381,9 @@ main(int ac, const char** av)
   enter(t, Thread::ActiveState);
   enter(t, Thread::IdleState);
 
-  writeBootImage(t, stdout);
+  writeBootImage
+    (t, stdout, (ac > 2 ? av[2] : 0), (ac > 3 ? av[3] : 0),
+     (ac > 4 ? av[4] : 0));
 
   return 0;
 }

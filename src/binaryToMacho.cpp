@@ -20,6 +20,8 @@
 #include "mach-o/loader.h"
 #include "mach-o/nlist.h"
 
+
+
 namespace {
 
 inline unsigned
@@ -29,18 +31,29 @@ pad(unsigned n)
 }
 
 void
-writeObject(FILE* out, const uint8_t* data, unsigned size,
+writeObject(const char* architecture,
+            FILE* out, const uint8_t* data, unsigned size,
             const char* segmentName, const char* sectionName,
             const char* startName, const char* endName)
 {
   unsigned startNameLength = strlen(startName) + 1;
   unsigned endNameLength = strlen(endName) + 1;
 
+  cpu_type_t cpuType;
+  cpu_subtype_t cpuSubtype;
+  if (strcmp(architecture, "x86") == 0) {
+    cpuType = CPU_TYPE_I386;
+    cpuSubtype = CPU_SUBTYPE_I386_ALL;
+  } else if (strcmp(architecture, "powerpc") == 0) {
+    cpuType = CPU_TYPE_POWERPC;
+    cpuSubtype = CPU_SUBTYPE_POWERPC_ALL;
+  }
+
   mach_header header = {
     MH_MAGIC, // magic
-    CPU_TYPE_I386, // cputype
-    CPU_SUBTYPE_I386_ALL, // cpusubtype
-    MH_OBJECT, // filetype
+    cpuType,
+    cpuSubtype,
+    MH_OBJECT, // filetype,
     2, // ncmds
     sizeof(segment_command)
     + sizeof(section)
@@ -142,17 +155,17 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
 int
 main(int argc, const char** argv)
 {
-  if (argc != 6) {
+  if (argc != 7) {
     fprintf(stderr,
-            "usage: %s <input file> <segment name> <section name> "
-            "<start symbol name> <end symbol name>\n",
+            "usage: %s <architecture> <input file> <segment name> "
+            "<section name> <start symbol name> <end symbol name>\n",
             argv[0]);
     return -1;
   }
 
   uint8_t* data = 0;
   unsigned size;
-  int fd = open(argv[1], O_RDONLY);
+  int fd = open(argv[2], O_RDONLY);
   if (fd != -1) {
     struct stat s;
     int r = fstat(fd, &s);
@@ -165,8 +178,11 @@ main(int argc, const char** argv)
   }
 
   if (data) {
-    writeObject(stdout, data, size, argv[2], argv[3], argv[4], argv[5]);
+    writeObject
+      (argv[1], stdout, data, size, argv[3], argv[4], argv[5], argv[6]);
+
     munmap(data, size);
+
     return 0;
   } else {
     perror(argv[0]);

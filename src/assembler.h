@@ -23,8 +23,6 @@ enum Operation {
 const unsigned OperationCount = Return + 1;
 
 enum UnaryOperation {
-  Push,
-  Pop,
   Call,
   LongCall,
   AlignedCall,
@@ -35,20 +33,22 @@ enum UnaryOperation {
   JumpIfLessOrEqual,
   JumpIfGreaterOrEqual,
   JumpIfEqual,
-  JumpIfNotEqual,
+  JumpIfNotEqual
+};
+
+const unsigned UnaryOperationCount = JumpIfNotEqual + 1;
+
+enum BinaryOperation {
+  Move,
+  MoveZ,
+  Compare,
   Negate
 };
 
-const unsigned UnaryOperationCount = Negate + 1;
+const unsigned BinaryOperationCount = Negate + 1;
 
-enum BinaryOperation {
-  LoadAddress,
-  Move,
-  MoveZ,
-  Move4To8,
-  Swap,
+enum TernaryOperation {
   LongCompare,
-  Compare,
   Add,
   Subtract,
   Multiply,
@@ -62,7 +62,7 @@ enum BinaryOperation {
   Xor
 };
 
-const unsigned BinaryOperationCount = Xor + 1;
+const unsigned TernaryOperationCount = Xor + 1;
 
 enum OperandType {
   ConstantOperand,
@@ -74,7 +74,6 @@ enum OperandType {
 const unsigned OperandTypeCount = MemoryOperand + 1;
 
 const int NoRegister = -1;
-const int AnyRegister = -2;
 
 class Promise {
  public:
@@ -103,6 +102,43 @@ class ResolvedPromise: public Promise {
   }
 
   int64_t value_;
+};
+
+class ShiftMaskPromise: public Promise {
+ public:
+  ShiftMaskPromise(Promise* base, unsigned shift, int64_t mask):
+    base(base), shift(shift), mask(mask)
+  { }
+
+  virtual int64_t value() {
+    return (base->value() >> shift) & mask;
+  }
+
+  virtual bool resolved() {
+    return base->resolved();
+  }
+
+  Promise* base;
+  unsigned shift;
+  int64_t mask;
+};
+
+class CombinedPromise: public Promise {
+ public:
+  CombinedPromise(Promise* low, Promise* high):
+    low(low), high(high)
+  { }
+
+  virtual int64_t value() {
+    return low->value() | (high->value() << 32);
+  }
+
+  virtual bool resolved() {
+    return low->resolved() and high->resolved();
+  }
+
+  Promise* low;
+  Promise* high;
 };
 
 class ListenPromise: public Promise {
@@ -160,7 +196,8 @@ class DelayedPromise: public ListenPromise {
 
 class TraceHandler {
  public:
-  virtual void handleTrace(Promise* address) = 0;
+  virtual void handleTrace(Promise* address, unsigned padIndex,
+                           unsigned padding) = 0;
 };
 
 class Assembler {
@@ -211,46 +248,100 @@ class Assembler {
     virtual void restore(int r) = 0;
   };
 
+  class Block {
+   public:
+    virtual unsigned resolve(unsigned start, Block* next) = 0;
+  };
+
+  class Architecture {
+   public:
+    virtual unsigned registerCount() = 0;
+
+    virtual int stack() = 0;
+    virtual int thread() = 0;
+    virtual int returnLow() = 0;
+    virtual int returnHigh() = 0;
+
+    virtual bool condensedAddressing() = 0;
+
+    virtual bool reserved(int register_) = 0;
+
+    virtual unsigned argumentRegisterCount() = 0;
+    virtual int argumentRegister(unsigned index) = 0;
+
+    virtual void updateCall(UnaryOperation op, bool assertAlignment,
+                            void* returnAddress, void* newTarget) = 0;
+
+    virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
+
+    virtual void* frameIp(void* stack) = 0;
+    virtual unsigned frameHeaderSize() = 0;
+    virtual unsigned frameReturnAddressSize() = 0;
+    virtual unsigned frameFooterSize() = 0;
+    virtual void nextFrame(void** stack, void** base) = 0;
+
+    virtual void plan
+    (UnaryOperation op,
+     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     bool* thunk) = 0;
+
+    virtual void plan
+    (BinaryOperation op,
+     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+     bool* thunk) = 0;
+
+    virtual void plan
+    (TernaryOperation op,
+     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+     unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask,
+     bool* thunk) = 0; 
+
+    virtual void acquire() = 0;
+    virtual void release() = 0;
+  };
+
   virtual void setClient(Client* client) = 0;
 
-  virtual unsigned registerCount() = 0;
+  virtual Architecture* arch() = 0;
 
-  virtual int base() = 0;
-  virtual int stack() = 0;
-  virtual int thread() = 0;
-  virtual int returnLow() = 0;
-  virtual int returnHigh() = 0;
-
-  virtual unsigned argumentRegisterCount() = 0;
-  virtual int argumentRegister(unsigned index) = 0;
-
-  virtual void plan(UnaryOperation op, unsigned size, uint8_t* typeMask,
-                    uint64_t* registerMask, bool* thunk) = 0;
-
-  virtual void plan(BinaryOperation op, unsigned size, uint8_t* aTypeMask,
-                    uint64_t* aRegisterMask, uint8_t* bTypeMask,
-                    uint64_t* bRegisterMask, bool* thunk) = 0;
+  virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
+  virtual void pushFrame(unsigned argumentCount, ...) = 0;
+  virtual void allocateFrame(unsigned footprint) = 0;
+  virtual void popFrame() = 0;
 
   virtual void apply(Operation op) = 0;
 
-  virtual void apply(UnaryOperation op, unsigned size, OperandType type,
-                     Operand* operand) = 0;
+  virtual void apply(UnaryOperation op,
+                     unsigned aSize, OperandType aType, Operand* aOperand) = 0;
 
-  virtual void apply(BinaryOperation op, unsigned size, OperandType aType,
-                     Operand* a, OperandType bType, Operand* b) = 0;
+  virtual void apply(BinaryOperation op,
+                     unsigned aSize, OperandType aType, Operand* aOperand,
+                     unsigned bSize, OperandType bType, Operand* bOperand) = 0;
+
+  virtual void apply(TernaryOperation op,
+                     unsigned aSize, OperandType aType, Operand* aOperand,
+                     unsigned bSize, OperandType bType, Operand* bOperand,
+                     unsigned cSize, OperandType cType, Operand* cOperand) = 0;
 
   virtual void writeTo(uint8_t* dst) = 0;
 
-  virtual unsigned length() = 0;
+  virtual Promise* offset() = 0;
 
-  virtual void updateCall(UnaryOperation op, bool assertAlignment,
-                          void* returnAddress, void* newTarget) = 0;
+  virtual Block* endBlock(bool startNew) = 0;
+
+  virtual unsigned length() = 0;
 
   virtual void dispose() = 0;
 };
 
+Assembler::Architecture*
+makeArchitecture(System* system);
+
 Assembler*
-makeAssembler(System* system, Allocator* allocator, Zone* zone);
+makeAssembler(System* system, Allocator* allocator, Zone* zone,
+              Assembler::Architecture* architecture);
 
 } // namespace vm
 

@@ -4,6 +4,9 @@ name = avian
 version = 0.1.1
 
 build-arch = $(shell uname -m | sed 's/^i.86$$/i386/')
+ifeq ($(build-arch),Power)
+	build-arch = powerpc
+endif
 
 build-platform = \
 	$(shell uname -s | tr [:upper:] [:lower:] \
@@ -88,6 +91,12 @@ native-path = echo
 ifeq ($(arch),i386)
 	object-arch = i386
 	object-format = elf32-i386
+	pointer-size = 4
+endif
+ifeq ($(arch),powerpc)
+	asm = powerpc
+	object-arch = powerpc
+	object-format = elf32-powerpc
 	pointer-size = 4
 endif
 
@@ -189,6 +198,7 @@ vm-depends = \
 	$(src)/zone.h \
 	$(src)/assembler.h \
 	$(src)/compiler.h \
+	$(src)/$(asm).h \
 	$(src)/heapwalk.h \
 	$(src)/bootimage.h
 
@@ -230,11 +240,13 @@ ifeq ($(heapdump),true)
 	cflags += -DAVIAN_HEAPDUMP
 endif
 
+bootimage-mode = $(mode)
+
 bootimage-generator-sources = $(src)/bootimage.cpp 
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
 bootimage-generator = \
-	$(build)/$(build-platform)-$(build-arch)-compile-fast/bootimage-generator
+	$(build)/$(build-platform)-$(build-arch)-compile-$(bootimage-mode)/bootimage-generator
 
 bootimage-bin = $(native-build)/bootimage.bin
 bootimage-object = $(native-build)/bootimage-bin.o
@@ -355,6 +367,8 @@ $(test-dep): $(test-sources)
 	@mkdir -p $(dir $(@))
 	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-classes))
+	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(dir $(@)) \
+		test/Subroutine.java
 	@touch $(@)
 
 define compile-object
@@ -404,7 +418,7 @@ $(binaryToMacho): $(src)/binaryToMacho.cpp
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
-	$(binaryToMacho) $(build)/classpath.jar __TEXT __text \
+	$(binaryToMacho) $(asm) $(build)/classpath.jar __TEXT __text \
 		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
 else
 	(wd=$$(pwd); \
@@ -458,9 +472,11 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage-generator):
+$(bootimage-generator): make-bootimage-generator
+
+make-bootimage-generator:
 	(unset MAKEFLAGS && \
-	 make mode=fast process=compile \
+	 make mode=$(bootimage-mode) process=compile \
 		arch=$(build-arch) \
 		platform=$(build-platform) \
 		bootimage-generator= \

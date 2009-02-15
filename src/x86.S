@@ -10,6 +10,8 @@
 
 #include "types.h"
 
+#define LOCAL(x) .L##x
+   
 .text
    
 #ifdef __x86_64__
@@ -42,9 +44,9 @@ vmNativeCall:
 
    // copy memory arguments into place
    movq   $0,%rcx
-   jmp    test
+   jmp    LOCAL(test)
 
-loop:
+LOCAL(loop):
    movq   %rcx,%rax
    movq   %rcx,%rdx
    addq   %rsp,%rdx
@@ -53,13 +55,13 @@ loop:
    movq   %rax,(%rdx)
    addq   $8,%rcx
 
-test:
+LOCAL(test):
    cmpq   -32(%rbp),%rcx
-   jb     loop
+   jb     LOCAL(loop)
    
    // do we need to load the general-purpose registers?
    cmpq   $0,-24(%rbp)
-   je     sse
+   je     LOCAL(sse)
 
    // yes, we do
    movq   -24(%rbp),%rax
@@ -70,10 +72,10 @@ test:
    movq   32(%rax),%r8
    movq   40(%rax),%r9
 
-sse:
+LOCAL(sse):
    // do we need to load the SSE registers?
    cmpq   $0,-16(%rbp)
-   je     call
+   je     LOCAL(call)
 
    // yes, we do
    movq   -16(%rbp),%rax
@@ -86,27 +88,27 @@ sse:
    movq   48(%rax),%xmm6
    movq   64(%rax),%xmm7
 
-call:
+LOCAL(call):
    call   *-48(%rbp)
    
    // handle return value based on expected type
    movq   -8(%rbp),%rcx
 
-void:   
+LOCAL(void):
    cmpq   $VOID_TYPE,%rcx
-   jne    float
-   jmp    exit
+   jne    LOCAL(float)
+   jmp    LOCAL(exit)
    
-float:   
+LOCAL(float):
    cmpq   $FLOAT_TYPE,%rcx
-   je     copy
+   je     LOCAL(copy)
    cmpq   $DOUBLE_TYPE,%rcx
-   jne    exit
+   jne    LOCAL(exit)
    
-copy:
+LOCAL(copy):
    movq   %xmm0,%rax
 
-exit:
+LOCAL(exit):
    movq   %rbp,%rsp
    popq   %rbp
    ret
@@ -147,9 +149,9 @@ vmNativeCall:
    
    // copy arguments into place
    movl   $0,%ecx
-   jmp    test
+   jmp    LOCAL(test)
 
-loop:
+LOCAL(loop):
    movl   %ecx,%eax
    movl   %ecx,%edx
    addl   %esp,%edx
@@ -158,9 +160,9 @@ loop:
    movl   %eax,(%edx)
    addl   $4,%ecx
 
-test:
+LOCAL(test):
    cmpl   16(%ebp),%ecx
-   jb     loop
+   jb     LOCAL(loop)
 
    // call function
    call   *8(%ebp)
@@ -168,31 +170,31 @@ test:
    // handle return value based on expected type
    movl   20(%ebp),%ecx
    
-void:   
+LOCAL(void):
    cmpl   $VOID_TYPE,%ecx
-   jne    int64
-   jmp    exit
+   jne    LOCAL(int64)
+   jmp    LOCAL(exit)
 
-int64: 
+LOCAL(int64):
    cmpl   $INT64_TYPE,%ecx
-   jne    float
-   jmp    exit
+   jne    LOCAL(float)
+   jmp    LOCAL(exit)
    
-float:   
+LOCAL(float):
    cmpl   $FLOAT_TYPE,%ecx
-   jne    double
+   jne    LOCAL(double)
    fstps  8(%ebp)
    movl   8(%ebp),%eax
-   jmp    exit
+   jmp    LOCAL(exit)
 
-double:
+LOCAL(double):
    cmpl   $DOUBLE_TYPE,%ecx
-   jne    exit
+   jne    LOCAL(exit)
    fstpl  8(%ebp)
    movl   8(%ebp),%eax
    movl   12(%ebp),%edx
 
-exit:
+LOCAL(exit):
    movl   %ebp,%esp
    popl   %ebp
    ret

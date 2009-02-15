@@ -143,6 +143,14 @@ class System {
   virtual void dispose() = 0;
 };
 
+inline void*
+allocate(System* s, unsigned size)
+{
+  void* p = s->tryAllocate(size);
+  if (p == 0) s->abort();
+  return p;
+}
+
 #define ACQUIRE_MONITOR(t, m) \
   System::MonitorResource MAKE_NAME(monitorResource_) (t, m)
 
