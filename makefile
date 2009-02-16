@@ -224,7 +224,7 @@ ifeq ($(process),compile)
 		$(src)/compiler.cpp \
 		$(src)/$(asm).cpp
 
-	vm-asm-sources += $(src)/compile.S
+	vm-asm-sources += $(src)/compile-$(asm).S
 endif
 
 vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(native-build))

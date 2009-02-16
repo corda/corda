@@ -34,6 +34,7 @@ vmInvoke:
    // %rcx: stackSize
    // %r8 : returnType
 
+   // we use rbx to hold the thread pointer, by convention
    mov    %rdi,%rbx
 
    // copy arguments into place
@@ -94,6 +95,7 @@ vmInvoke:
    // 20(%ebp): stackSize
    // 24(%ebp): returnType
    
+   // we use ebx to hold the thread pointer, by convention
    mov    8(%ebp),%ebx
    
    // copy arguments into place
