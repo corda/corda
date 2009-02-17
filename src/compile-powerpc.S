@@ -14,8 +14,7 @@
 
 #define BYTES_PER_WORD 4
 #define LINKAGE_AREA 6
-#define GPR_COUNT 8
-#define MEMORY_BASE BYTES_PER_WORD * (LINKAGE_AREA + GPR_COUNT)
+#define ARGUMENT_BASE BYTES_PER_WORD * LINKAGE_AREA
 
 #define LOCAL(x) L##x
 
@@ -32,12 +31,15 @@ vmInvoke:
 
    // r3: thread
    // r4: function
-   // r5: parameters
-   // r6: parameterCount
+   // r5: arguments
+   // r6: argumentFootprint
    // r7: frameSize
-   // r8: returnType (ignored)
+   // r8: returnType
 
    // r9: temporary
+
+   // save return type
+   stw  r8,44(r1)
 
    // allocate stack space, adding room for callee-saved registers
    addi r9,r7,80
@@ -75,7 +77,7 @@ vmInvoke:
    
 LOCAL(loop):
    lwzx r17,r16,r5
-   addi r18,r16,MEMORY_BASE
+   addi r18,r16,ARGUMENT_BASE
    stwx r17,r18,r1
    addi r16,r16,BYTES_PER_WORD
    
@@ -113,6 +115,24 @@ LOCAL(test):
    lwz  r30,68(r9)
    lwz  r31,72(r9)
    
+   // handle return value based on expected type
+   lwz  r8,44(r1)
+   
+LOCAL(void):
+   cmplw  VOID_TYPE,r8
+   bne    LOCAL(int64)
+   b      LOCAL(exit)
+
+LOCAL(int64):
+   cmplw  INT64_TYPE,r8
+   bne    LOCAL(int32)
+   b      LOCAL(exit)
+   
+LOCAL(int32):
+   mr   r3,r4
+   li   r3,0
+
+LOCAL(exit):
    // load return address
    lwz  r0,8(r1)
    mtlr r0

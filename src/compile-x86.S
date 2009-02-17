@@ -20,31 +20,39 @@
 vmInvoke:
    pushq  %rbp
    movq   %rsp,%rbp
-   
-   // push callee-saved registers
-   pushq  %rbx
-   pushq  %r12
-   pushq  %r13
-   pushq  %r14
-   pushq  %r15
       
    // %rdi: thread
    // %rsi: function
-   // %rdx: stack
-   // %rcx: stackSize
-   // %r8 : returnType
+   // %rdx: arguments
+   // %rcx: argumentFootprint
+   // %r8 : frameSize
+   // %r9 : returnType (ignored)
+   
+   // allocate stack space, adding room for callee-saved registers
+	 subq   %r8,%rsp
+	 subq   $48,%rsp
+   
+   // save callee-saved registers
+   movq   %rsp,%r9
+   addq   %r8,%r9
+
+   movq   %rbx,0(%r9)
+   movq   %r12,8(%r9)
+   movq   %r13,16(%r9)
+   movq   %r14,24(%r9)
+   movq   %r15,32(%r9)
 
    // we use rbx to hold the thread pointer, by convention
    mov    %rdi,%rbx
 
    // copy arguments into place
-   pushq  %rcx
    movq   $0,%r9
    jmp    LOCAL(test)
 
 LOCAL(loop):
-   push   (%rdx,%r9,8)
-   inc    %r9
+   movq   (%rdx,%r9,1),%r8
+   movq   %r8,(%rsp,%r9,1)
+   addq   $8,%r9
 
 LOCAL(test):
    cmpq   %rcx,%r9
@@ -52,23 +60,21 @@ LOCAL(test):
    
    // call function
    call   *%rsi
-
-   // pop arguments
-   mov    -48(%rbp),%rcx
-   sal    $3,%rcx
-   addq   %rcx,%rsp
-
-   // pop argument stack size
-   addq   $8,%rsp
    
-   // pop callee-saved registers
-   popq   %r15
-   popq   %r14
-   popq   %r13
-   popq   %r12
-   popq   %rbx
+   // restore stack pointer
+   movq   %rbp,%rsp
    
-   movq   %rbp,%rsp   
+   // restore callee-saved registers
+   movq   %rsp,%r9
+   subq   $48,%r9
+
+   movq   0(%r9),%rbx
+   movq   8(%r9),%r12
+   movq   16(%r9),%r13
+   movq   24(%r9),%r14
+   movq   32(%r9),%r15
+
+   // return
    popq   %rbp
    ret
 
@@ -84,28 +90,37 @@ vmInvoke:
    pushl  %ebp
    movl   %esp,%ebp
 
-   // ebx, esi and edi are callee-saved registers
-   pushl  %ebx
-   pushl  %esi
-   pushl  %edi
-
    //  8(%ebp): thread
    // 12(%ebp): function
-   // 16(%ebp): stack
-   // 20(%ebp): stackSize
-   // 24(%ebp): returnType
+   // 16(%ebp): arguments
+   // 20(%ebp): argumentFootprint
+   // 24(%ebp): frameSize
+   // 28(%ebp): returnType
+
+   // allocate stack space, adding room for callee-saved registers
+	 subl   24(%ebp),%esp
+	 subl   $16,%esp
+   
+   // save callee-saved registers
+   movl   %esp,%ecx
+   addl   24(%ebp),%ecx
+
+   movl   %ebx,0(%ecx)
+   movl   %esi,4(%ecx)
+   movl   %edi,8(%ecx)
    
    // we use ebx to hold the thread pointer, by convention
    mov    8(%ebp),%ebx
    
    // copy arguments into place
    movl   $0,%ecx
-   mov    16(%ebp),%edx
+   movl   16(%ebp),%edx
    jmp    LOCAL(test)
 
 LOCAL(loop):
-   push   (%edx,%ecx,4)
-   inc    %ecx
+   movl   (%edx,%ecx,1),%eax
+   movl   %eax,(%esp,%ecx,1)
+   addl   $4,%ecx
 
 LOCAL(test):
    cmpl   20(%ebp),%ecx
@@ -113,14 +128,20 @@ LOCAL(test):
 
    // call function
    call   *12(%ebp)
+   
+   // restore stack pointer
+   movl   %ebp,%esp
+   
+   // restore callee-saved registers
+   movl   %esp,%ecx
+   subl   $16,%ecx
 
-   // pop arguments
-   mov    20(%ebp),%ecx
-   sal    $2,%ecx
-   addl   %ecx,%esp
+   movl   0(%ecx),%ebx
+   movl   4(%ecx),%esi
+   movl   8(%ecx),%edi
 
    // handle return value based on expected type
-   movl   24(%ebp),%ecx
+   movl   28(%ebp),%ecx
    
 LOCAL(void):
    cmpl   $VOID_TYPE,%ecx
@@ -136,10 +157,6 @@ LOCAL(int32):
    movl   $0,%edx
 
 LOCAL(exit):
-   popl   %edi
-   popl   %esi
-   popl   %ebx
-   movl   %ebp,%esp
    popl   %ebp
    ret
    

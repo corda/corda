@@ -19,15 +19,15 @@
 using namespace vm;
 
 extern "C" uint64_t
-vmInvoke(void* thread, void* function, void* stack, unsigned stackSize,
-         unsigned returnType);
+vmInvoke(void* thread, void* function, void* arguments,
+         unsigned argumentFootprint, unsigned frameSize, unsigned returnType);
 
 extern "C" void
 vmCall();
 
 namespace {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -4649,12 +4649,14 @@ visitStack(MyThread* t, Heap::Visitor* v)
 
 class ArgumentList {
  public:
-  ArgumentList(Thread* t, uintptr_t* array, bool* objectMask, object this_,
-               const char* spec, bool indirectObjects, va_list arguments):
+  ArgumentList(Thread* t, uintptr_t* array, unsigned size, bool* objectMask,
+               object this_, const char* spec, bool indirectObjects,
+               va_list arguments):
     t(static_cast<MyThread*>(t)),
     array(array),
     objectMask(objectMask),
-    position(0),
+    size(size),
+    position(size),
     protector(this)
   {
     if (this_) {
@@ -4685,12 +4687,13 @@ class ArgumentList {
     }
   }
 
-  ArgumentList(Thread* t, uintptr_t* array, bool* objectMask, object this_,
-               const char* spec, object arguments):
+  ArgumentList(Thread* t, uintptr_t* array, unsigned size, bool* objectMask,
+               object this_, const char* spec, object arguments):
     t(static_cast<MyThread*>(t)),
     array(array),
     objectMask(objectMask),
-    position(0),
+    size(size),
+    position(size),
     protector(this)
   {
     if (this_) {
@@ -4720,34 +4723,41 @@ class ArgumentList {
   }
 
   void addObject(object v) {
+    assert(t, position);
+
+    -- position;
     array[position] = reinterpret_cast<uintptr_t>(v);
     objectMask[position] = true;
-    ++ position;
   }
 
   void addInt(uintptr_t v) {
+    assert(t, position);
+
+    -- position;
     array[position] = v;
     objectMask[position] = false;
-    ++ position;
   }
 
   void addLong(uint64_t v) {
+    assert(t, position >= 2);
+
+    position -= 2;
+
     if (BytesPerWord == 8) {
-      memcpy(array + position + 1, &v, 8);
+      memcpy(array + position, &v, 8);
     } else {
-      // push words in reverse order, since they will be switched back
-      // when pushed on the stack:
-      array[position] = v >> 32;
-      array[position + 1] = v;
+      array[position] = v;
+      array[position + 1] = v >> 32;
     }
+
     objectMask[position] = false;
     objectMask[position + 1] = false;
-    position += 2;
   }
 
   MyThread* t;
   uintptr_t* array;
   bool* objectMask;
+  unsigned size;
   unsigned position;
 
   class MyProtector: public Thread::Protector {
@@ -4755,7 +4765,7 @@ class ArgumentList {
     MyProtector(ArgumentList* list): Protector(list->t), list(list) { }
 
     virtual void visit(Heap::Visitor* v) {
-      for (unsigned i = 0; i < list->position; ++i) {
+      for (unsigned i = list->position; i < list->size; ++i) {
         if (list->objectMask[i]) {
           v->visit(reinterpret_cast<object*>(list->array + i));
         }
@@ -4782,9 +4792,14 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
       trace.nativeMethod = method;
     }
 
+    unsigned count = arguments->size - arguments->position;
+
     result = vmInvoke
       (t, reinterpret_cast<void*>(methodAddress(t, method)),
-       arguments->array, arguments->position, returnType);
+       arguments->array + arguments->position,
+       count * BytesPerWord,
+       t->arch->alignFrameSize(count) * BytesPerWord,
+       returnType);
   }
 
   if (t->exception) { 
@@ -5076,7 +5091,7 @@ class MyProcessor: public Processor {
     unsigned size = methodParameterFootprint(t, method);
     uintptr_t array[size];
     bool objectMask[size];
-    ArgumentList list(t, array, objectMask, this_, spec, arguments);
+    ArgumentList list(t, array, size, objectMask, this_, spec, arguments);
     
     PROTECT(t, method);
 
@@ -5107,7 +5122,7 @@ class MyProcessor: public Processor {
     uintptr_t array[size];
     bool objectMask[size];
     ArgumentList list
-      (t, array, objectMask, this_, spec, indirectObjects, arguments);
+      (t, array, size, objectMask, this_, spec, indirectObjects, arguments);
 
     PROTECT(t, method);
 
@@ -5133,7 +5148,7 @@ class MyProcessor: public Processor {
     uintptr_t array[size];
     bool objectMask[size];
     ArgumentList list
-      (t, array, objectMask, this_, methodSpec, false, arguments);
+      (t, array, size, objectMask, this_, methodSpec, false, arguments);
 
     object method = resolveMethod(t, className, methodName, methodSpec);
     if (LIKELY(t->exception == 0)) {
