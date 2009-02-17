@@ -67,15 +67,34 @@ public class Logger {
     log(level, Method.getCaller(), message, exception);
   }
 
+  public void logp(Level level, String sourceClass, String sourceMethod, String msg) {
+	if (!isLoggable(level)) {
+		return;
+	}
+    publish(new LogRecord(name, sourceMethod, level, msg, null));
+  }
+  
+  public void logp(Level level, String sourceClass, String sourceMethod,
+          String msg, Throwable thrown) {
+	if (!isLoggable(level)) {
+	  return;
+	}
+	publish(new LogRecord(name, sourceMethod, level, msg, thrown));
+  }
+  
   private void log(Level level, Method caller, String message,
                    Throwable exception) {
 	if (level.intValue()<levelValue) {
-		return;
+	  return;
 	}
     LogRecord r = new LogRecord(name, caller.getName(), level, message,
                                 exception);
+    publish(r);
+  }
+
+  private void publish(LogRecord logRecord) {
     for (Handler h : handlers) {
-      h.publish(r);
+      h.publish(logRecord);
     }
   }
 
