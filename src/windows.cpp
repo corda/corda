@@ -55,14 +55,6 @@ run(void* r)
   return 0;
 }
 
-void*
-allocate(System* s, unsigned size)
-{
-  void* p = s->tryAllocate(size);
-  if (p == 0) abort();
-  return p;
-}
-
 const bool Verbose = false;
 
 const unsigned Waiting = 1 << 0;
