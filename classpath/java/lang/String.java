@@ -32,6 +32,13 @@ public final class String implements Comparable<String>, CharSequence {
     this(data, 0, data.length);
   }
 
+  public String(byte bytes[], int offset, int length, String charsetName) throws UnsupportedEncodingException {
+    this(bytes, offset, length);
+    if (!charsetName.equals("UTF-8")) {
+      throw new UnsupportedEncodingException(charsetName);
+    }
+  }
+  
   public String(byte[] data, int offset, int length, boolean copy) {
     this((Object) data, offset, length, copy);
   }
