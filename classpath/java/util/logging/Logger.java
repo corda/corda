@@ -16,6 +16,7 @@ import java.util.List;
 
 public class Logger {
   private final String name;
+  private int levelValue = Level.INFO.intValue();
   private static final ArrayList<Handler> handlers;
   static {
     handlers = new ArrayList<Handler>();
@@ -68,6 +69,9 @@ public class Logger {
 
   private void log(Level level, Method caller, String message,
                    Throwable exception) {
+	if (level.intValue()<levelValue) {
+		return;
+	}
     LogRecord r = new LogRecord(name, caller.getName(), level, message,
                                 exception);
     for (Handler h : handlers) {
@@ -76,9 +80,13 @@ public class Logger {
   }
 
   public void setLevel(Level level) {
-    // Currently ignored
+	  this.levelValue = level.intValue();
   }
-
+  
+  public boolean isLoggable(Level level) {
+	return level.intValue() >= levelValue; 
+  }
+  
   private static class DefaultHandler extends Handler {
     private static final int NAME_WIDTH = 14;
     private static final int METHOD_WIDTH = 15;
