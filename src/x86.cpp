@@ -1997,8 +1997,12 @@ class MyArchitecture: public Assembler::Architecture {
     return rbx;
   }
 
-  virtual int returnLow() {
+  virtual int returnLow(unsigned) {
     return rax;
+  }
+
+  virtual int returnHigh() {
+    return (BytesPerWord == 4 ? rdx : NoRegister);
   }
 
   virtual bool condensedAddressing() {
@@ -2016,10 +2020,6 @@ class MyArchitecture: public Assembler::Architecture {
       return false;
     }
   }
-
-  virtual int returnHigh() {
-    return (BytesPerWord == 4 ? rdx : NoRegister);
-  } 
 
   virtual unsigned argumentRegisterCount() {
     return (BytesPerWord == 4 ? 0 : 6);

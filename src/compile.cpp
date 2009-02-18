@@ -5713,7 +5713,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
     a->popFrame();
 
-    Assembler::Register result(t->arch->returnLow());
+    Assembler::Register result(t->arch->returnLow(BytesPerWord));
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
 
     a->endBlock(false)->resolve(0, 0);
