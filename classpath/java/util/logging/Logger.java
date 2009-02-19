@@ -16,15 +16,23 @@ import java.util.List;
 
 public class Logger {
   private final String name;
-  private int levelValue = Level.INFO.intValue();
+  private Level levelValue = null;
   private static final ArrayList<Handler> handlers;
+  private static Logger rootLogger;
+  private Logger parent;
+
   static {
+    rootLogger = new Logger("");
+    rootLogger.setLevel(Level.INFO);
     handlers = new ArrayList<Handler>();
     handlers.add(new DefaultHandler());
   }
 
   public static Logger getLogger(String name) {
-    return new Logger(name);
+    if (name.equals("")) return rootLogger;
+    Logger logger = new Logger(name);
+    logger.parent = rootLogger;
+    return logger;
   }
 
   private Logger(String name) {
@@ -41,6 +49,10 @@ public class Logger {
 
   public void removeHandler(Handler handler) {
     handlers.remove(handler);
+  }
+
+  public Logger getParent() {
+    return parent;
   }
 
   public void fine(String message) {
@@ -81,12 +93,26 @@ public class Logger {
 	}
 	publish(new LogRecord(name, sourceMethod, level, msg, thrown));
   }
-  
+
+  public Level getLevel() {
+    return levelValue;
+  }
+
+  private Level getEffectiveLevel() {
+    Logger logger = this;
+
+    while (logger.levelValue == null) {
+      logger = logger.getParent();
+    }
+    return logger.getLevel();
+  }
+      
   private void log(Level level, Method caller, String message,
                    Throwable exception) {
-	if (level.intValue()<levelValue) {
-	  return;
-	}
+    
+    if (level.intValue() < getEffectiveLevel().intValue()) {
+      return;
+    }
     LogRecord r = new LogRecord(name, caller.getName(), level, message,
                                 exception);
     publish(r);
@@ -99,11 +125,11 @@ public class Logger {
   }
 
   public void setLevel(Level level) {
-	  this.levelValue = level.intValue();
+    levelValue = level;
   }
   
   public boolean isLoggable(Level level) {
-	return level.intValue() >= levelValue; 
+    return level.intValue() >= levelValue.intValue();
   }
   
   private static class DefaultHandler extends Handler {
