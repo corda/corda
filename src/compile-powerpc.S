@@ -119,12 +119,12 @@ LOCAL(test):
    lwz  r8,44(r1)
    
 LOCAL(void):
-   cmplw  VOID_TYPE,r8
+   cmplwi r8,VOID_TYPE
    bne    LOCAL(int64)
    b      LOCAL(exit)
 
 LOCAL(int64):
-   cmplw  INT64_TYPE,r8
+   cmplwi r8,INT64_TYPE
    bne    LOCAL(int32)
    b      LOCAL(exit)
    
