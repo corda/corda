@@ -116,7 +116,7 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = $(common-cflags) -I$(inc)
+	cflags = -I$(inc) $(common-cflags)
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		cxx = i586-mingw32msvc-g++
