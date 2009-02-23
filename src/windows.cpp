@@ -238,9 +238,11 @@ class MySystem: public System {
       assert(s, t);
 
       if (owner_ == t) {
-        bool interrupted;
-        bool notified;
-        unsigned depth;
+        // Initialized here to make gcc 4.2 a happy compiler
+        bool interrupted = false;
+        bool notified = false;
+        unsigned depth = 0;
+
         int r UNUSED;
 
         { ACQUIRE(s, t->mutex);
