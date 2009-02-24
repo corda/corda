@@ -157,6 +157,147 @@ offset(Context* c)
     Offset(c, c->lastBlock, c->code.length());
 }
 
+bool
+bounded(int right, int left, int32_t v)
+{
+  return ((v << left) >> left) == v and ((v >> right) << right) == v;
+}
+
+void*
+updateOffset(System* s, uint8_t* instruction, bool conditional, int64_t value)
+{
+  int32_t v = reinterpret_cast<uint8_t*>(value) - instruction - 4;
+    
+  if (conditional) {
+    expect(s, bounded(2, 16, v));
+    *reinterpret_cast<int32_t*>(instruction) |= v & 0xFFFC;
+  } else {
+    expect(s, bounded(2, 6, v));
+    *reinterpret_cast<int32_t*>(instruction) |= v & 0x3FFFFFC;
+  }
+
+  *reinterpret_cast<int32_t*>(instruction) |= v;
+
+  return instruction + 4;
+}
+
+class OffsetListener: public Promise::Listener {
+ public:
+  OffsetListener(System* s, uint8_t* instruction, bool conditional):
+    s(s),
+    instruction(instruction),
+    conditional(conditional)
+  { }
+
+  virtual void* resolve(int64_t value) {
+    return updateOffset(s, instruction, conditional, value);
+  }
+
+  System* s;
+  uint8_t* instruction;
+  bool conditional;
+};
+
+class OffsetTask: public Task {
+ public:
+  OffsetTask(Task* next, Promise* promise, Promise* instructionOffset,
+             bool conditional):
+    Task(next),
+    promise(promise),
+    instructionOffset(instructionOffset),
+    conditional(conditional)
+  { }
+
+  virtual void run(Context* c) {
+    if (promise->resolved()) {
+      updateOffset
+        (c->s, c->result + instructionOffset->value(), conditional,
+         promise->value());
+    } else {
+      new (promise->listen(sizeof(OffsetListener)))
+        OffsetListener(c->s, c->result + instructionOffset->value(),
+                       conditional);
+    }
+  }
+
+  Promise* promise;
+  Promise* instructionOffset;
+  bool conditional;
+};
+
+void
+appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
+                 bool conditional)
+{
+  c->tasks = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
+    (c->tasks, promise, instructionOffset, conditional);
+}
+
+void
+updateImmediate(System* s, void* dst, int64_t src, unsigned size)
+{
+  switch (size) {
+  case 4: {
+    static_cast<int32_t*>(dst)[0] |= src & 0xFFFF;
+    static_cast<int32_t*>(dst)[1] |= src >> 16;
+  } break;
+
+  default: abort(s);
+  }
+}
+
+class ImmediateListener: public Promise::Listener {
+ public:
+  ImmediateListener(System* s, void* dst, unsigned size, unsigned offset):
+    s(s), dst(dst), size(size), offset(offset)
+  { }
+
+  virtual void* resolve(int64_t value) {
+    updateImmediate(s, dst, value, size);
+    return static_cast<uint8_t*>(dst) + offset;
+  }
+
+  System* s;
+  void* dst;
+  unsigned size;
+  unsigned offset;
+};
+
+class ImmediateTask: public Task {
+ public:
+  ImmediateTask(Task* next, Promise* promise, Promise* offset, unsigned size,
+                unsigned promiseOffset):
+    Task(next),
+    promise(promise),
+    offset(offset),
+    size(size),
+    promiseOffset(promiseOffset)
+  { }
+
+  virtual void run(Context* c) {
+    if (promise->resolved()) {
+      updateImmediate
+        (c->s, c->result + offset->value(), promise->value(), size);
+    } else {
+      new (promise->listen(sizeof(ImmediateListener))) ImmediateListener
+        (c->s, c->result + offset->value(), size, promiseOffset);
+    }
+  }
+
+  Promise* promise;
+  Promise* offset;
+  unsigned size;
+  unsigned promiseOffset;
+};
+
+void
+appendImmediateTask(Context* c, Promise* promise, Promise* offset,
+                    unsigned size, unsigned promiseOffset = 0)
+{
+  c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
+    (c->tasks, promise, offset, size, promiseOffset);
+}
+
 inline unsigned
 index(UnaryOperation operation, OperandType operand)
 {
@@ -180,14 +321,20 @@ index(TernaryOperation operation,
   return operation + (TernaryOperationCount * operand1);
 }
 
-namespace powerpc {
+namespace isa {
 
 // formats:
 
 inline int32_t
 formatD(int32_t op, int32_t rt, int32_t ra, int32_t d)
 {
-  return op<<26|rt<<21|ra<<16|d;
+  return op<<26|rt<<21|ra<<16|(d & 0xFFFF);
+}
+
+inline int32_t
+formatI(int32_t op, int32_t li, int32_t aa, int32_t lk)
+{
+  return op<<26|li<<2|aa<<1|lk;
 }
 
 inline int32_t
@@ -200,6 +347,13 @@ formatM(int32_t op, int32_t rs, int32_t ra, int32_t rb, int32_t mb, int32_t me,
 inline int32_t
 formatX(int32_t op, int32_t rt, int32_t ra, int32_t rb, int32_t xo, int32_t rc) {
   return op<<26|rt<<21|ra<<16|rb<<11|xo<<1|rc;
+}
+
+inline int32_t
+formatXL(int32_t op, int32_t bt, int32_t ba, int32_t bb, int32_t xo,
+         int32_t lk)
+{
+  return op<<26|bt<<21|ba<<16|bb<<11|xo<<1|lk;
 }
 
 inline int32_t
@@ -220,6 +374,24 @@ inline void
 addis(Context* c, int rt, int ra, int i)
 {
   c->code.append4(formatD(15, rt, ra, i));
+}
+
+inline void
+ba(Context* c, int i)
+{
+  c->code.append4(formatI(18, i, 1, 0));
+}
+
+inline void
+bcctr(Context* c, int bo, int bi, int lk)
+{
+  c->code.append4(formatXL(19, bo, bi, 0, 528, lk));  
+}
+
+inline void
+bclr(Context* c, int bo, int bi, int lk)
+{
+  c->code.append4(formatXL(19, bo, bi, 0, 16, lk));  
 }
 
 inline void
@@ -345,6 +517,36 @@ stwx(Context* c, int rs, int ra, int rb)
 // mnemonics:
 
 inline void
+bctr(Context* c)
+{
+  bcctr(c, 20, 0, 0);
+}
+
+inline void
+bctrl(Context* c)
+{
+  bcctr(c, 20, 0, 1);
+}
+
+inline void
+blr(Context* c)
+{
+  bclr(c, 20, 0, 0);
+}
+
+inline void
+li(Context* c, int rd, int i)
+{
+  addi(c, rd, 0, i);
+}
+
+inline void
+lis(Context* c, int rd, int i)
+{
+  addis(c, rd, 0, i);
+}
+
+inline void
 mflr(Context* c, int rd)
 {
   mfspr(c, rd, 8);
@@ -353,7 +555,7 @@ mflr(Context* c, int rd)
 inline void
 mr(Context* c, int rt, int ra)
 {
-  or_(c, rt, ra, ra);
+  return or_(c, rt, ra, ra);
 }
 
 inline void
@@ -363,14 +565,35 @@ mtlr(Context* c, int rd)
 }
 
 inline void
+mtctr(Context* c, int rd)
+{
+  mtspr(c, 9, rd);
+}
+
+inline void
 slwi(Context* c, int rt, int ra, int i)
 {
   rlwinm(c, rt, ra, i, 0, 31 - i);
 }
 
-} // namespace powerpc
+} // namespace isa
 
-using namespace powerpc;
+using namespace isa;
+
+void
+return_(Context* c)
+{
+  blr(c);
+}
+
+void
+jumpR(Context* c, unsigned size UNUSED, Assembler::Register* target)
+{
+  assert(c, size == BytesPerWord);
+
+  mtctr(c, target->low);
+  bctr(c);
+}
 
 void
 shiftLeftCRR(Context* c, unsigned size, Assembler::Constant* shift,
@@ -647,19 +870,133 @@ moveMR(Context* c, unsigned srcSize, Assembler::Memory* src,
 }
 
 void
-populateTables(ArchitectureContext* /*c*/)
+moveCR2(Context* c, unsigned, Assembler::Constant* src,
+       unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
 {
-//   const OperandType C = ConstantOperand;
-//   const OperandType A = AddressOperand;
-//   const OperandType R = RegisterOperand;
-//   const OperandType M = MemoryOperand;
+  if (dstSize == 4) {
+    if (src->value->resolved()) {
+      int32_t v = src->value->value();
+      li(c, dst->low, v);
+      if (v >> 16) {
+        lis(c, dst->low, v >> 16);
+      }
+    } else {
+      appendImmediateTask
+        (c, src->value, offset(c), BytesPerWord, promiseOffset);
+      li(c, dst->low, 0);
+      lis(c, dst->low, 0);
+    }
+  } else {
+    abort(c); // todo
+  }
+}
 
-//   OperationType* zo = c->operations;
-//   UnaryOperationType* uo = c->unaryOperations;
-//   BinaryOperationType* bo = c->binaryOperations;
+void
+moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
+       unsigned dstSize, Assembler::Register* dst)
+{
+  moveCR2(c, srcSize, src, dstSize, dst, 0);
+}
+
+ShiftMaskPromise*
+shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
+{
+  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
+    ShiftMaskPromise(base, shift, mask);
+}
+
+void
+moveCM(Context* c, unsigned srcSize, Assembler::Constant* src,
+       unsigned dstSize, Assembler::Memory* dst)
+{
+  switch (dstSize) {
+  case 8: {
+    Assembler::Constant srcHigh
+      (shiftMaskPromise(c, src->value, 32, 0xFFFFFFFF));
+    Assembler::Constant srcLow
+      (shiftMaskPromise(c, src->value, 0, 0xFFFFFFFF));
+    
+    Assembler::Memory dstLow
+      (dst->base, dst->offset + 4, dst->index, dst->scale);
+    
+    moveCM(c, 4, &srcLow, 4, &dstLow);
+    moveCM(c, 4, &srcHigh, 4, dst);
+  } break;
+
+  default:
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, srcSize, src, dstSize, &tmp);
+    moveRM(c, dstSize, &tmp, dstSize, dst);
+  }
+}
+
+void
+callR(Context* c, unsigned size, Assembler::Register* target)
+{
+  assert(c, size == BytesPerWord);
+
+  mtctr(c, target->low);
+  bctrl(c);
+}
+
+void
+callC(Context* c, unsigned size, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  appendOffsetTask(c, target->value, offset(c), false);
+  ba(c, 0);
+}
+
+void
+longCallC(Context* c, unsigned size, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  Assembler::Register tmp(0);
+  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, 12);
+  callR(c, BytesPerWord, &tmp);
+}
+
+void
+longJumpC(Context* c, unsigned size, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  Assembler::Register tmp(0);
+  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, 12);
+  jumpR(c, BytesPerWord, &tmp);
+}
+
+void
+populateTables(ArchitectureContext* c)
+{
+  const OperandType C = ConstantOperand;
+//   const OperandType A = AddressOperand;
+  const OperandType R = RegisterOperand;
+  const OperandType M = MemoryOperand;
+
+  OperationType* zo = c->operations;
+  UnaryOperationType* uo = c->unaryOperations;
+  BinaryOperationType* bo = c->binaryOperations;
 //   TernaryOperationType* to = c->ternaryOperations;
 
-  
+  zo[Return] = return_;
+
+  uo[index(LongCall, C)] = CAST1(longCallC);
+
+  uo[index(LongJump, C)] = CAST1(longJumpC);
+
+  uo[index(Jump, R)] = CAST1(jumpR);
+
+  uo[index(Call, C)] = CAST1(callC);
+  uo[index(AlignedCall, C)] = CAST1(callC);
+
+  bo[index(Move, R, R)] = CAST2(moveRR);
+  bo[index(Move, C, R)] = CAST2(moveCR);
+  bo[index(Move, C, M)] = CAST2(moveCM);
+  bo[index(Move, M, R)] = CAST2(moveMR);
+  bo[index(Move, R, M)] = CAST2(moveRM);
 }
 
 class MyArchitecture: public Assembler::Architecture {
