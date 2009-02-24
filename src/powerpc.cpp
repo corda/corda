@@ -41,8 +41,8 @@ inline int B(int op, int bo, int bi, int bd, int aa, int lk) { return op<<26|bo<
 inline int SC(int op, int lev) { return op<<26|lev<<5|2; }
 inline int X(int op, int rt, int ra, int rb, int xo, int rc) { return op<<26|rt<<21|ra<<16|rb<<11|xo<<1|rc; }
 inline int XL(int op, int bt, int ba, int bb, int xo, int lk) { return op<<26|bt<<21|ba<<16|bb<<11|xo<<1|lk; }
-inline int XFX(int op, int rt, int spr, int xo) { return op<<26|rt<<21|spr<<11|xo<<1; }
-inline int XFL(int op, int flm, int frb, int xo, int rc) { return op<<26|flm<<17|frb<<11|((xo&0x01f)<<6)|((xo>>5)<<1)|rc; }
+inline int XFX(int op, int rt, int spr, int xo) { return op<<26|rt<<21|((spr >> 5) | ((spr << 5) & 0x3E0))<<11|xo<<1; }
+inline int XFL(int op, int flm, int frb, int xo, int rc) { return op<<26|flm<<17|frb<<11|xo<<1|rc; }
 inline int XS(int op, int rs, int ra, int sh, int xo, int sh2, int rc) { return op<<26|rs<<21|ra<<16|sh<<11|xo<<2|sh2<<1|rc; }
 inline int XO(int op, int rt, int ra, int rb, int oe, int xo, int rc) { return op<<26|rt<<21|ra<<16|rb<<11|oe<<10|xo<<1|rc; }
 inline int A(int op, int frt, int fra, int frb, int frc, int xo, int rc) { return op<<26|frt<<21|fra<<16|frb<<11|frc<<6|xo<<1|rc; }
@@ -93,8 +93,8 @@ inline int bl(int i) { return I(18, i, 0, 1); }
 inline int bcctr(int bo, int bi, int lk) { return XL(19, bo, bi, 0, 528, lk); }
 inline int bclr(int bo, int bi, int lk) { return XL(19, bo, bi, 0, 16, lk); }
 // PSEUDO-INSTRUCTIONS
-inline int li(int rt, int i) { return ori(rt, 0, i); }
-inline int lis(int rt, int i) { return oris(rt, 0, i); }
+inline int li(int rt, int i) { return addi(rt, 0, i); }
+inline int lis(int rt, int i) { return addis(rt, 0, i); }
 inline int slwi(int rt, int ra, int i) { return rlwinm(rt, ra, i, 0, 31-i); }
 inline int srwi(int rt, int ra, int i) { return rlwinm(rt, ra, 32-i, i, 31); }
 inline int sub(int rt, int ra, int rb) { return subf(rt, rb, ra); }
@@ -115,7 +115,7 @@ namespace {
 const unsigned FrameFooterSize = 6;
 
 const int StackRegister = 1;
-const int ThreadRegister = 20;
+const int ThreadRegister = 13;
 
 class MyBlock: public Assembler::Block {
  public:
@@ -259,7 +259,7 @@ bounded(int right, int left, int32_t v)
 void*
 updateOffset(System* s, uint8_t* instruction, bool conditional, int64_t value)
 {
-  int32_t v = reinterpret_cast<uint8_t*>(value) - instruction - 4;
+  int32_t v = reinterpret_cast<uint8_t*>(value) - instruction;
     
   if (conditional) {
     expect(s, bounded(2, 16, v));
@@ -268,8 +268,6 @@ updateOffset(System* s, uint8_t* instruction, bool conditional, int64_t value)
     expect(s, bounded(2, 6, v));
     *reinterpret_cast<int32_t*>(instruction) |= v & 0x3FFFFFC;
   }
-
-  *reinterpret_cast<int32_t*>(instruction) |= v;
 
   return instruction + 4;
 }
@@ -422,8 +420,8 @@ updateImmediate(System* s, void* dst, int64_t src, unsigned size)
 {
   switch (size) {
   case 4: {
-    static_cast<int32_t*>(dst)[0] |= src & 0xFFFF;
-    static_cast<int32_t*>(dst)[1] |= src >> 16;
+    static_cast<int32_t*>(dst)[0] |= src >> 16;
+    static_cast<int32_t*>(dst)[1] |= src & 0xFFFF;
   } break;
 
   default: abort(s);
@@ -482,13 +480,6 @@ appendImmediateTask(Context* c, Promise* promise, Promise* offset,
     (c->tasks, promise, offset, size, promiseOffset);
 }
 
-
-void
-return_(Context* c)
-{
-  issue(c, blr());
-}
-
 void
 jumpR(Context* c, unsigned size UNUSED, Assembler::Register* target)
 {
@@ -497,7 +488,6 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* target)
   issue(c, mtctr(target->low));
   issue(c, bctr());
 }
-
 
 void
 moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
@@ -717,9 +707,6 @@ void subCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
   }
 }
 
-// END OPERATION COMPILERS
-
-
 void
 moveAndUpdateRM(Context* c, unsigned srcSize, Assembler::Register* src,
                 unsigned dstSize UNUSED, Assembler::Memory* dst)
@@ -813,15 +800,17 @@ moveCR2(Context* c, unsigned, Assembler::Constant* src,
   if (dstSize == 4) {
     if (src->value->resolved()) {
       int32_t v = src->value->value();
-      issue(c, li(dst->low, v));
       if (v >> 16) {
         issue(c, lis(dst->low, v >> 16));
+        issue(c, ori(dst->low, dst->low, v));
+      } else {
+        issue(c, li(dst->low, v));
       }
     } else {
       appendImmediateTask
         (c, src->value, offset(c), BytesPerWord, promiseOffset);
-      issue(c, li(dst->low, 0));
       issue(c, lis(dst->low, 0));
+      issue(c, ori(dst->low, dst->low, 0));
     }
   } else {
     abort(c); // todo
@@ -916,6 +905,17 @@ longJumpC(Context* c, unsigned size, Assembler::Constant* target)
   Assembler::Register tmp(0);
   moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, 12);
   jumpR(c, BytesPerWord, &tmp);
+}
+
+void
+return_(Context* c)
+{
+  Assembler::Register returnAddress(0);
+  Assembler::Memory returnAddressSrc(StackRegister, 8);
+  moveMR(c, BytesPerWord, &returnAddressSrc, BytesPerWord, &returnAddress);
+  
+  issue(c, mtlr(returnAddress.low));
+  issue(c, blr());
 }
 
 // END OPERATION COMPILERS
@@ -1214,12 +1214,6 @@ class MyAssembler: public Assembler {
     Register stack(StackRegister);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
-
-    Register returnAddress(0);
-    Memory returnAddressSrc(StackRegister, 8);
-    moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &returnAddress);
-    
-    issue(&c, mtlr(returnAddress.low));
   }
 
   virtual void apply(Operation op) {
