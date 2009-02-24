@@ -364,7 +364,7 @@ inline int R(Reg* r) { return r->low; }
 inline int H(Reg* r) { return r->high; }
 
 
-void shiftLeftRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void shiftLeftR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
   if(size == 8) {
     abort(con); // todo
@@ -372,7 +372,7 @@ void shiftLeftRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
     issue(con, slw(R(t), R(b), R(a)));
 }
 
-void shiftLeftCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
+void shiftLeftC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if (size == 8) {
@@ -381,7 +381,7 @@ void shiftLeftCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
     issue(con, slwi(R(t), R(b), sh));
 }
 
-void shiftRightRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void shiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
   if(size == 8) {
     abort(con); // todo
@@ -389,7 +389,7 @@ void shiftRightRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
     issue(con, sraw(R(t), R(b), R(a)));
 }
 
-void shiftRightCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
+void shiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if(size == 8) {
@@ -398,7 +398,7 @@ void shiftRightCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
     issue(con, srawi(R(t), R(b), sh));
 }
 
-void unsignedShiftRightRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void unsignedShiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
   if(size == 8) {
     abort(con); // todo
@@ -406,7 +406,7 @@ void unsignedShiftRightRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
     issue(con, srw(R(t), R(b), R(a)));
 }
 
-void unsignedShiftRightCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
+void unsignedShiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if (size == 8) {
@@ -548,7 +548,7 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
   }
 }
 
-void addCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
+void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
   assert(con, size == BytesPerWord);
 
   int32_t i = getVal(a);
@@ -577,8 +577,8 @@ normalize(Context* c, int offset, int index, unsigned scale,
       ResolvedPromise scalePromise(log(scale));
       Assembler::Constant scaleConstant(&scalePromise);
       
-      shiftLeftCRR(c, BytesPerWord, &scaleConstant,
-                   &unscaledIndex, &normalizedIndex);
+      shiftLeftC(c, BytesPerWord, &scaleConstant,
+                 &unscaledIndex, &normalizedIndex);
 
       scaled = normalizedIndex.low;
     } else {
@@ -591,8 +591,8 @@ normalize(Context* c, int offset, int index, unsigned scale,
       ResolvedPromise offsetPromise(offset);
       Assembler::Constant offsetConstant(&offsetPromise);
 
-      addCRR(c, BytesPerWord, &offsetConstant,
-             &untranslatedIndex, &normalizedIndex);
+      addC(c, BytesPerWord, &offsetConstant,
+           &untranslatedIndex, &normalizedIndex);
     }
 
     return normalizedIndex.low;
@@ -679,7 +679,7 @@ storeLinkRegisterR(Context* c, unsigned srcSize, Assembler::Register* src)
   issue(c, mtlr(src->low));
 }
 
-void addRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void addR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   if(size == 8) {
     issue(con, addc(R(t), R(a), R(b)));
     issue(con, adde(H(t), H(a), H(b)));
@@ -688,7 +688,7 @@ void addRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   }
 }
 
-void subRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void subR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   if(size == 8) {
     issue(con, subfc(R(t), R(a), R(b)));
     issue(con, subfe(H(t), H(a), H(b)));
@@ -697,7 +697,7 @@ void subRRR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   }
 }
 
-void subCRR(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
+void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
   assert(con, size == BytesPerWord);
 
   int64_t i = getVal(a);
@@ -932,7 +932,7 @@ populateTables(ArchitectureContext* c)
   OperationType* zo = c->operations;
   UnaryOperationType* uo = c->unaryOperations;
   BinaryOperationType* bo = c->binaryOperations;
-//   TernaryOperationType* to = c->ternaryOperations;
+  TernaryOperationType* to = c->ternaryOperations;
 
   zo[Return] = return_;
 
@@ -950,6 +950,12 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, C, M)] = CAST2(moveCM);
   bo[index(Move, M, R)] = CAST2(moveMR);
   bo[index(Move, R, M)] = CAST2(moveRM);
+
+  to[index(Add, R)] = CAST3(addR);
+  to[index(Add, C)] = CAST3(addC);
+
+  to[index(Subtract, R)] = CAST3(subR);
+  to[index(Subtract, C)] = CAST3(subC);
 }
 
 class MyArchitecture: public Assembler::Architecture {
