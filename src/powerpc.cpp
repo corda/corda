@@ -34,7 +34,7 @@ inline int hi8(int64_t i) { return lo8(i >> 8); }
 
 namespace isa {
 // INSTRUCTION FORMATS
-inline int D(int op, int rt, int ra, int d) { return op<<26|rt<<21|ra<<16|d; }
+inline int D(int op, int rt, int ra, int d) { return op<<26|rt<<21|ra<<16|(d & 0xFFFF); }
 inline int DS(int op, int rt, int ra, int ds, int xo) { return op<<26|rt<<21|ra<<16|ds<<2|xo; }
 inline int I(int op, int li, int aa, int lk) { return op<<26|li<<2|aa<<1|lk; }
 inline int B(int op, int bo, int bi, int bd, int aa, int lk) { return op<<26|bo<<21|bi<<16|bd<<2|aa<<1|lk; }
@@ -1018,7 +1018,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void* frameIp(void* stack) {
-    return stack ? *static_cast<void**>(stack) : 0;
+    return stack ? static_cast<void**>(stack)[2] : 0;
   }
 
   virtual unsigned frameHeaderSize() {
