@@ -73,6 +73,14 @@ inline int addis(int rt, int ra, int i) { return D(15, rt, ra, i); }
 inline int subf(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 40, 0); }
 inline int subfc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 8, 0); }
 inline int subfe(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 136, 0); }
+inline int mullw(int rt, ra, rb) { return XO(31, rt, ra, rb, 0, 235, 0); }
+inline int mulhw(int rt, ra, rb) { return XO(31, rt, ra, rb, 0, 75, 0); }
+inline int mulhwu(int rt, ra, rb) { return XO(31, rt, ra, rb, 0, 11, 0); }
+inline int mulli(int rt, ra, i) { return D(7, rt, ra, i); }
+inline int divw(int rt, ra, rb) { return XO(31, rt, ra, rb, 0, 491, 0); }
+inline int divwu(int rt, ra, rb) { return XO(31, rt, ra, rb, 0, 459, 0); }
+inline int divd(int rt, ra, rb) { return XO(31, rt, ra, rb, 0, 489, 0); }
+inline int divdu(int rt, ra, rb) { return XO(31, rt, ra, rb, 0, 457, 0); }
 inline int and_(int rt, int ra, int rb) { return X(31, ra, rt, rb, 28, 0); }
 inline int andi(int rt, int ra, int i) { return D(28, ra, rt, i); }
 inline int andis(int rt, int ra, int i) { return D(29, ra, rt, i); }
@@ -105,6 +113,7 @@ inline int srwi(int rt, int ra, int i) { return rlwinm(rt, ra, 32-i, i, 31); }
 inline int sub(int rt, int ra, int rb) { return subf(rt, rb, ra); }
 inline int subc(int rt, int ra, int rb) { return subfc(rt, rb, ra); }
 inline int subi(int rt, int ra, int i) { return addi(rt, ra, -i); }
+inline int subis(int rt, int ra, int i) { return addis(rt, ra, -i); }
 inline int mr(int rt, int ra) { return or_(rt, ra, ra); }
 inline int mflr(int rx) { return mfspr(rx, 8); }
 inline int mtlr(int rx) { return mtspr(8, rx); }
@@ -566,6 +575,15 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
   }
 }
 
+void addR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+  if(size == 8) {
+    issue(con, addc(R(t), R(a), R(b)));
+    issue(con, adde(H(t), H(a), H(b)));
+  } else {
+    issue(con, add(R(t), R(a), R(b)));
+  }
+}
+
 void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
   assert(con, size == BytesPerWord);
 
@@ -575,6 +593,58 @@ void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
     if(not isInt16(i))
       issue(con, addis(R(t), R(t), hi16(i)));
   }
+}
+
+void subR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+  if(size == 8) {
+    issue(con, subfc(R(t), R(a), R(b)));
+    issue(con, subfe(H(t), H(a), H(b)));
+  } else {
+    issue(con, subf(R(t), R(a), R(b)));
+  }
+}
+
+void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
+  assert(con, size == BytesPerWord);
+
+  int64_t i = getVal(a);
+  if(i) {
+    issue(con, subi(R(t), R(b), lo16(i)));
+    if(not isInt16(i))
+      issue(con, subis(R(t), R(t), hi16(i)));
+  }
+}
+
+void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+  if(size == 8) {
+    if(BytesPerWord == 8) {
+      issue(con, mulld(R(t), R(a), R(b)));
+    } else {
+      abort(con); // todo
+    }
+  } else {
+    issue(con, mullw(R(t), R(a), R(b)));
+  }
+}
+
+void multiplyC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
+  assert(con, size == BytesPerWord);
+  int64_t i = getVal(a);
+  issue(con, mulli(R(t), R(a), i));
+}
+
+void divideR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+  if(size == 8 && BytesPerWord == 8) {
+    issue(con, divd(R(t), R(b), R(a)));
+  } else {
+    issue(con, divw(R(t), R(b), R(a)));
+  }
+}
+
+void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+  divideR(con, size, a, b, t);
+  multiplyR(con, size, b, t, t);
+  subR(con, size, t, a, t);
 }
 
 int
@@ -695,34 +765,6 @@ storeLinkRegisterR(Context* c, unsigned srcSize, Assembler::Register* src)
   assert(c, srcSize == BytesPerWord);
 
   issue(c, mtlr(src->low));
-}
-
-void addR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  if(size == 8) {
-    issue(con, addc(R(t), R(a), R(b)));
-    issue(con, adde(H(t), H(a), H(b)));
-  } else {
-    issue(con, add(R(t), R(a), R(b)));
-  }
-}
-
-void subR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  if(size == 8) {
-    issue(con, subfc(R(t), R(a), R(b)));
-    issue(con, subfe(H(t), H(a), H(b)));
-  } else {
-    issue(con, subf(R(t), R(a), R(b)));
-  }
-}
-
-void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
-  assert(con, size == BytesPerWord);
-
-  int64_t i = getVal(a);
-  if(i) {
-    issue(con, subi(R(t), R(b), lo16(i)));
-    issue(con, subi(R(t), R(t), hi16(i)));
-  }
 }
 
 void
