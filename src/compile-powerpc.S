@@ -42,7 +42,7 @@ vmInvoke:
    stw  r8,44(r1)
 
    // allocate stack space, adding room for callee-saved registers
-   addi r9,r7,80
+   subfic r9,r7,-80
 	 stwux r1,r1,r9
    
    // save callee-saved registers
