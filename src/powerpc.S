@@ -159,7 +159,6 @@ _vmJump:
 vmJump:
 #endif
    mtlr r3
-   mr   r13,r4
    mr   r1,r5
-   mr   r14,r6
+   mr   r13,r6
    blr
