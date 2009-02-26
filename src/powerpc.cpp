@@ -725,6 +725,31 @@ void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
   }
 }
 
+void andC(Context* c, unsigned size, Assembler::Constant* a,
+          Assembler::Register* b, Assembler::Register* dst)
+{
+  int64_t v = a->value->value();
+
+  if(size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+
+    andC(c, 4, &al, b, dst);
+    andC(c, 4, &ah, &bh, &dh);
+  } else {
+    issue(c, andi(dst->low, b->low, v));
+    if (not isInt16(v)) {
+      issue(c, andis(dst->low, b->low, v >> 16));
+    }
+  }
+}
+
 void
 moveAndUpdateRM(Context* c, unsigned srcSize, Assembler::Register* src,
                 unsigned dstSize UNUSED, Assembler::Memory* dst)
@@ -854,6 +879,19 @@ moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
 //   issue(con, lis(R(t), hi16(i)));
 //   issue(con, ori(R(t), R(t), lo16(i)));
 // }
+
+void
+moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
+       unsigned dstSize, Assembler::Register* dst)
+{
+  assert(c, srcSize == 4 and dstSize == 4);
+
+  Assembler::Constant constant(src->address);
+  Assembler::Memory memory(dst->low, 0, -1, 0);
+
+  moveCR(c, srcSize, &constant, dstSize, dst);
+  moveMR(c, dstSize, &memory, dstSize, dst);
+}
 
 void
 compareRR(Context* c, unsigned aSize, Assembler::Register* a,
@@ -1057,7 +1095,7 @@ void
 populateTables(ArchitectureContext* c)
 {
   const OperandType C = ConstantOperand;
-//   const OperandType A = AddressOperand;
+  const OperandType A = AddressOperand;
   const OperandType R = RegisterOperand;
   const OperandType M = MemoryOperand;
 
@@ -1078,14 +1116,17 @@ populateTables(ArchitectureContext* c)
   uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
 
   uo[index(Call, C)] = CAST1(callC);
+  uo[index(Call, R)] = CAST1(callR);
 
   uo[index(AlignedCall, C)] = CAST1(callC);
+  uo[index(AlignedCall, R)] = CAST1(callR);
 
   bo[index(Move, R, R)] = CAST2(moveRR);
   bo[index(Move, C, R)] = CAST2(moveCR);
   bo[index(Move, C, M)] = CAST2(moveCM);
   bo[index(Move, M, R)] = CAST2(moveMR);
   bo[index(Move, R, M)] = CAST2(moveRM);
+  bo[index(Move, A, R)] = CAST2(moveAR);
 
   bo[index(Compare, R, R)] = CAST2(compareRR);
 
@@ -1094,6 +1135,8 @@ populateTables(ArchitectureContext* c)
 
   to[index(Subtract, R)] = CAST3(subR);
   to[index(Subtract, C)] = CAST3(subC);
+
+  to[index(And, C)] = CAST3(andC);
 
   to[index(LongCompare, R)] = CAST3(longCompareR);
 }
@@ -1186,7 +1229,9 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void** stack, void**) {
-    *stack = static_cast<void**>(*stack);
+    assert(&c, *static_cast<void**>(*stack) != *stack);
+
+    *stack = *static_cast<void**>(*stack);
   }
 
   virtual void plan
