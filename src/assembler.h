@@ -266,6 +266,7 @@ class Assembler {
 
     virtual bool reserved(int register_) = 0;
 
+    virtual unsigned argumentFootprint(unsigned footprint) = 0;
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 

@@ -635,20 +635,25 @@ class Event {
   unsigned readCount;
 };
 
+unsigned
+usableFrameSize(Context* c)
+{
+  return c->alignedFrameSize - c->arch->frameFooterSize();
+}
+
 int
 frameIndex(Context* c, int index)
 {
   assert(c, static_cast<int>
-         (c->alignedFrameSize + c->parameterFootprint - index - 1)
-         >= 0);
+         (usableFrameSize(c) + c->parameterFootprint - index - 1) >= 0);
 
-  return c->alignedFrameSize + c->parameterFootprint - index - 1;
+  return usableFrameSize(c) + c->parameterFootprint - index - 1;
 }
 
 unsigned
 frameIndexToOffset(Context* c, unsigned frameIndex)
 {
-  return ((frameIndex >= c->alignedFrameSize) ?
+  return ((frameIndex >= usableFrameSize(c)) ?
           (frameIndex
            + (c->arch->frameFooterSize() * 2)
            + c->arch->frameHeaderSize()) :
@@ -662,7 +667,7 @@ offsetToFrameIndex(Context* c, unsigned offset)
   unsigned normalizedOffset = offset / BytesPerWord;
 
   return ((normalizedOffset
-           >= c->alignedFrameSize
+           >= usableFrameSize(c)
            + c->arch->frameFooterSize()) ?
           (normalizedOffset
            - (c->arch->frameFooterSize() * 2)
@@ -2187,7 +2192,7 @@ saveLocals(Context* c, Event* e)
       if (DebugReads) {
         fprintf(stderr, "local save read %p at %d of %d\n",
                 local->value, ::frameIndex(c, li),
-                c->alignedFrameSize + c->parameterFootprint);
+                usableFrameSize(c) + c->parameterFootprint);
       }
 
       addRead(c, e, local->value, read
@@ -2272,7 +2277,7 @@ class CallEvent: public Event {
           if (DebugReads) {
             fprintf(stderr, "stack arg read %p at %d of %d\n",
                     s->value, frameIndex,
-                    c->alignedFrameSize + c->parameterFootprint);
+                    usableFrameSize(c) + c->parameterFootprint);
           }
 
           addRead(c, this, s->value, read
@@ -2284,7 +2289,7 @@ class CallEvent: public Event {
           if (DebugReads) {
             fprintf(stderr, "stack save read %p at %d of %d\n",
                     s->value, logicalIndex,
-                    c->alignedFrameSize + c->parameterFootprint);
+                    usableFrameSize(c) + c->parameterFootprint);
           }
 
           addRead(c, this, s->value, read
@@ -2307,7 +2312,7 @@ class CallEvent: public Event {
     }
 
     popIndex
-      = c->alignedFrameSize
+      = usableFrameSize(c)
       + c->parameterFootprint
       - (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
       - c->localFootprint;
@@ -4540,7 +4545,7 @@ class MyCompiler: public Compiler {
     c.localFootprint = localFootprint;
     c.alignedFrameSize = alignedFrameSize;
 
-    unsigned frameResourceCount = alignedFrameSize + parameterFootprint;
+    unsigned frameResourceCount = usableFrameSize(&c) + parameterFootprint;
 
     c.frameResources = static_cast<FrameResource*>
       (c.zone->allocate(sizeof(FrameResource) * frameResourceCount));

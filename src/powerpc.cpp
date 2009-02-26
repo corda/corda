@@ -651,6 +651,8 @@ void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
 void andC(Context* c, unsigned size, Assembler::Constant* a,
           Assembler::Register* b, Assembler::Register* dst)
 {
+  abort(c); // todo
+
   int64_t v = a->value->value();
 
   if(size == 8) {
@@ -667,7 +669,7 @@ void andC(Context* c, unsigned size, Assembler::Constant* a,
     andC(c, 4, &ah, &bh, &dh);
   } else {
     issue(c, andi(dst->low, b->low, v));
-    if (not isInt16(v)) {
+    if (v >> 16) {
       issue(c, andis(dst->low, b->low, v >> 16));
     }
   }
@@ -1209,6 +1211,10 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned argumentFootprint(unsigned footprint) {
+    return footprint;
+  }
+
   virtual unsigned argumentRegisterCount() {
     return 8;
   }
@@ -1266,7 +1272,7 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    bool* thunk)
   {
-    *aTypeMask = (1 << RegisterOperand);
+    *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
     *aRegisterMask = ~static_cast<uint64_t>(0);
     *thunk = false;
   }

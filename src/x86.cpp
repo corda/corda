@@ -2021,6 +2021,11 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned argumentFootprint(unsigned footprint) {
+    return footprint > argumentRegisterCount() ?
+      footprint - argumentRegisterCount() : 0;
+  }
+
   virtual unsigned argumentRegisterCount() {
     return (BytesPerWord == 4 ? 0 : 6);
   }
