@@ -1547,7 +1547,7 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
 void
 longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
             Assembler::Operand* bl, Assembler::Operand* bh,
-            BinaryOperationType compare, BinaryOperationType move)
+            BinaryOperationType compare)
 {
   ResolvedPromise negativePromise(-1);
   Assembler::Constant negative(&negativePromise);
@@ -1571,7 +1571,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
     unsigned greater = c->code.length();
     c->code.append4(0);
 
-    move(c, 4, &zero, 4, bl);
+    moveCR(c, 4, &zero, 4, bl);
     
     c->code.append(0xe9); // jmp
     unsigned nextFirst = c->code.length();
@@ -1580,7 +1580,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
     int32_t lessOffset = c->code.length() - less - 4;
     c->code.set(less, &lessOffset, 4);
 
-    move(c, 4, &negative, 4, bl);
+    moveCR(c, 4, &negative, 4, bl);
 
     c->code.append(0xe9); // jmp
     unsigned nextSecond = c->code.length();
@@ -1589,7 +1589,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
     int32_t greaterOffset = c->code.length() - greater - 4;
     c->code.set(greater, &greaterOffset, 4);
 
-    move(c, 4, &positive, 4, bl);
+    moveCR(c, 4, &positive, 4, bl);
 
     int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
     c->code.set(nextFirst, &nextFirstOffset, 4);
@@ -1621,7 +1621,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
     unsigned below = c->code.length();
     c->code.append4(0);
 
-    move(c, 4, &zero, 4, bl);
+    moveCR(c, 4, &zero, 4, bl);
     
     c->code.append(0xe9); // jmp
     unsigned nextFirst = c->code.length();
@@ -1633,7 +1633,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
     int32_t aboveOffset = c->code.length() - above - 4;
     c->code.set(above, &aboveOffset, 4);
 
-    move(c, 4, &negative, 4, bl);
+    moveCR(c, 4, &negative, 4, bl);
 
     c->code.append(0xe9); // jmp
     unsigned nextSecond = c->code.length();
@@ -1645,7 +1645,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
     int32_t belowOffset = c->code.length() - below - 4;
     c->code.set(below, &belowOffset, 4);
 
-    move(c, 4, &positive, 4, bl);
+    moveCR(c, 4, &positive, 4, bl);
 
     int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
     c->code.set(nextFirst, &nextFirstOffset, 4);
@@ -1717,7 +1717,7 @@ longCompareCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
   
   Assembler::Register bh(b->high);
   
-  longCompare(c, &al, &ah, b, &bh, CAST2(compareCR), CAST2(moveCR));
+  longCompare(c, &al, &ah, b, &bh, CAST2(compareCR));
 }
 
 void
@@ -1730,7 +1730,7 @@ longCompareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
   Assembler::Register ah(a->high);
   Assembler::Register bh(b->high);
   
-  longCompare(c, a, &ah, b, &bh, CAST2(compareRR), CAST2(moveCR));
+  longCompare(c, a, &ah, b, &bh, CAST2(compareRR));
 }
 
 void
@@ -2111,7 +2111,8 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    bool* thunk)
   {
-    *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+    *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand)
+      | (1 << ConstantOperand);
     *aRegisterMask = ~static_cast<uint64_t>(0);
     *thunk = false;
   }
