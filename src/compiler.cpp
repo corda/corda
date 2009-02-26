@@ -2251,8 +2251,19 @@ class CallEvent: public Event {
       fprintf(stderr, "address read %p\n", address);
     }
 
-    addRead(c, this, address, read
-            (c, SiteMask(~0, registerMask, AnyFrameIndex)));
+    { bool thunk;
+      uint8_t typeMask;
+      uint64_t planRegisterMask;
+      c->arch->plan
+        ((flags & Compiler::Aligned) ? AlignedCall : Call, BytesPerWord,
+         &typeMask, &planRegisterMask, &thunk);
+
+      assert(c, thunk == 0);
+
+      addRead(c, this, address, read
+              (c, SiteMask
+               (typeMask, registerMask & planRegisterMask, AnyFrameIndex)));
+    }
 
     int footprint = stackArgumentFootprint;
     for (Stack* s = stackBefore; s; s = s->next) {
