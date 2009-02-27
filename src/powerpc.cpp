@@ -73,6 +73,7 @@ inline int addis(int rt, int ra, int i) { return D(15, rt, ra, i); }
 inline int subf(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 40, 0); }
 inline int subfc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 8, 0); }
 inline int subfe(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 136, 0); }
+inline int subfic(int rt, int ra, int i) { return D(8, rt, ra, ri); }
 inline int mullw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 235, 0); }
 inline int mulhw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 75, 0); }
 inline int mulhwu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 11, 0); }
@@ -393,7 +394,14 @@ inline int H(Reg* r) { return r->high; }
 void shiftLeftR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
   if(size == 8) {
-    abort(con); // todo
+    issue(con, subfic(31, R(a), 32));
+    issue(con, slw(R(b), R(b), R(a)));
+    issue(con, srw(0, H(b), 31));
+    issue(con, or_(R(b), R(b), 0));
+    issue(con, addi(31, R(a), -32));
+    issue(con, slw(0, H(b), 31));
+    issue(con, or_(R(b), R(b), 0));
+    issue(con, slw(H(b), H(b), R(a)));
   } else
     issue(con, slw(R(t), R(b), R(a)));
 }
@@ -585,7 +593,7 @@ void addR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
 }
 
 void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
-  assert(con, size == BytesPerWord);
+  assert(con, size == 4);
 
   int32_t i = getVal(a);
   if(i) {
@@ -605,7 +613,7 @@ void subR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
 }
 
 void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
-  assert(con, size == BytesPerWord);
+  assert(con, size == 4);
 
   int64_t i = getVal(a);
   if(i) {
@@ -617,26 +625,28 @@ void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
 
 void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   if(size == 8) {
-    if(BytesPerWord == 8) {
-//       issue(con, mulld(R(t), R(a), R(b)));
-      abort(con);
-    } else {
-      abort(con); // todo
-    }
+    Reg tmp(getTemp(con));
+    issue(con, mullw(H(t), H(a), R(b)));
+    issue(con, mullw(R(tmp), R(a), H(b)));
+    issue(con, add(H(t), H(t), R(tmp)));
+    issue(con, mulhw(R(tmp), R(a), R(b)));
+    issue(con, add(H(t), H(t), R(tmp)));
+    freeTemp(con, R(tmp));
   } else {
     issue(con, mullw(R(t), R(a), R(b)));
   }
 }
 
 void multiplyC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
-  assert(con, size == BytesPerWord);
+  assert(con, size == 4);
   int64_t i = getVal(a);
   issue(con, mulli(R(t), R(b), i));
 }
 
 void divideR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  if(size == 8 && BytesPerWord == 8) {
-    issue(con, divd(R(t), R(b), R(a)));
+  if(size == 8) {
+    issue(con, 0);
+    issue(con, 0);
   } else {
     issue(con, divw(R(t), R(b), R(a)));
   }
@@ -646,6 +656,33 @@ void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   divideR(con, size, a, b, t);
   multiplyR(con, size, b, t, t);
   subR(con, size, t, a, t);
+}
+
+void andC(Context* c, unsigned size, Assembler::Constant* a,
+          Assembler::Register* b, Assembler::Register* dst)
+{
+  abort(c); // todo
+
+  int64_t v = a->value->value();
+
+  if(size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+
+    andC(c, 4, &al, b, dst);
+    andC(c, 4, &ah, &bh, &dh);
+  } else {
+    issue(c, andi(dst->low, b->low, v));
+    if (v >> 16) {
+      issue(c, andis(dst->low, b->low, v >> 16));
+    }
+  }
 }
 
 int
@@ -881,90 +918,6 @@ moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
 //   issue(con, lis(R(t), hi16(i)));
 //   issue(con, ori(R(t), R(t), lo16(i)));
 // }
-
-void
-andR(Context* c, unsigned size, Assembler::Register* a,
-     Assembler::Register* b, Assembler::Register* dst)
-{
-  if (size == 8) {
-    Assembler::Register ah(a->high);
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-    
-    andR(c, 4, a, b, dst);
-    andR(c, 4, &ah, &bh, &dh);
-  } else {
-    issue(c, and_(dst->low, a->low, b->low));
-  }
-}
-
-void
-andC(Context* c, unsigned size, Assembler::Constant* a,
-     Assembler::Register* b, Assembler::Register* dst)
-{
-  int64_t v = a->value->value();
-
-  if (size == 8) {
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-
-    andC(c, 4, &al, b, dst);
-    andC(c, 4, &ah, &bh, &dh);
-  } else {
-    // bitmasks of the form regex 0*1*0* can be handled in a single
-    // rlwinm instruction, hence the following:
-
-    uint32_t v32 = static_cast<uint32_t>(v);
-    unsigned state = 0;
-    unsigned start;
-    unsigned end = 31;
-    for (unsigned i = 0; i < 32; ++i) {
-      unsigned bit = (v32 >> i) & 1;
-      switch (state) {
-      case 0:
-        if (bit) {
-          start = i;
-          state = 1;
-        }
-        break;
-
-      case 1:
-        if (bit == 0) {
-          end = i - 1;
-          state = 2;
-        }
-        break;
-
-      case 2:
-        if (bit) {
-          // not in 0*1*0* form.  We can only use andi(s) if either
-          // the topmost or bottommost 16 bits are zero.
-
-          if ((v32 >> 16) == 0) {
-            issue(c, andi(dst->low, b->low, v32));
-          } else if ((v32 & 0xFFFF) == 0) {
-            issue(c, andis(dst->low, b->low, v32 >> 16));
-          } else {
-            moveCR(c, 4, a, 4, dst);
-            andR(c, 4, b, dst, dst);
-          }
-          return;
-        }
-        break;
-      }
-    }
-
-    if (state) {
-      issue(c, rlwinm(dst->low, b->low, 0, 31 - end, 31 - start));
-    }
-  }
-}
 
 void
 moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
@@ -1223,7 +1176,6 @@ populateTables(ArchitectureContext* c)
   to[index(Subtract, C)] = CAST3(subC);
 
   to[index(And, C)] = CAST3(andC);
-  to[index(And, R)] = CAST3(andR);
 
   to[index(LongCompare, R)] = CAST3(longCompareR);
 }
@@ -1312,7 +1264,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameReturnAddressSize() {
-    return 0;
+    return 1;
   }
 
   virtual unsigned frameFooterSize() {
@@ -1383,6 +1335,7 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Add:
     case Subtract:
+    case Multiply:
       if (BytesPerWord == 4 and aSize == 8) {
         *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       }
@@ -1393,6 +1346,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Divide:
+      *aTypeMask = (1 << RegisterOperand);
       if (BytesPerWord == 4 and aSize == 8) {
         *bTypeMask = ~0;
         *thunk = true;        
@@ -1400,6 +1354,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Remainder:
+      *aTypeMask = (1 << RegisterOperand);
       if (BytesPerWord == 4 and aSize == 8) {
         *bTypeMask = ~0;
         *thunk = true;
