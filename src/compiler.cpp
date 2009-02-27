@@ -666,9 +666,7 @@ offsetToFrameIndex(Context* c, unsigned offset)
 {
   unsigned normalizedOffset = offset / BytesPerWord;
 
-  return ((normalizedOffset
-           >= usableFrameSize(c)
-           + c->arch->frameFooterSize()) ?
+  return ((normalizedOffset >= c->alignedFrameSize) ?
           (normalizedOffset
            - (c->arch->frameFooterSize() * 2)
            - c->arch->frameHeaderSize()) :
