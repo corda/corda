@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -93,7 +93,9 @@ object
 resolveThisPointer(MyThread* t, void* stack, object method)
 {
   return reinterpret_cast<object*>(stack)
-    [methodParameterFootprint(t, method) + t->arch->frameFooterSize()];
+    [methodParameterFootprint(t, method)
+     + t->arch->frameFooterSize()
+     + t->arch->frameReturnAddressSize() - 1];
 }
 
 object
@@ -349,9 +351,15 @@ alignedFrameSize(MyThread* t, object method)
 }
 
 unsigned
-alignedFrameSizeWithParameters(MyThread* t, object method)
+usableFrameSize(MyThread* t, object method)
 {
-  return methodParameterFootprint(t, method) + alignedFrameSize(t, method);
+  return alignedFrameSize(t, method) - t->arch->frameFooterSize();
+}
+
+unsigned
+usableFrameSizeWithParameters(MyThread* t, object method)
+{
+  return methodParameterFootprint(t, method) + usableFrameSize(t, method);
 }
 
 int
@@ -363,12 +371,11 @@ localOffset(MyThread* t, int v, object method)
   int offset = ((v < parameterFootprint) ?
                 (frameSize
                  + parameterFootprint
-                 + (t->arch->frameFooterSize() * 2)
+                 + t->arch->frameFooterSize()
                  + t->arch->frameHeaderSize()
                  - v - 1) :
                 (frameSize
                  + parameterFootprint
-                 + t->arch->frameFooterSize()
                  - v - 1)) * BytesPerWord;
 
   assert(t, offset >= 0);
@@ -452,7 +459,7 @@ enum Event {
 unsigned
 frameMapSizeInWords(MyThread* t, object method)
 {
-  return ceiling(alignedFrameSizeWithParameters(t, method), BitsPerWord)
+  return ceiling(usableFrameSizeWithParameters(t, method), BitsPerWord)
     * BytesPerWord;
 }
 
@@ -1248,21 +1255,17 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
       void* handler = findExceptionHandler(t, method, ip);
 
       if (handler) {
-        unsigned parameterFootprint = methodParameterFootprint(t, method);
-        unsigned localFootprint = localSize(t, method);
+        void** sp = static_cast<void**>(stack)
+          + t->arch->frameReturnAddressSize();
 
-        static_cast<void**>(stack)
-          [alignedFrameSize(t, method) - t->arch->frameHeaderSize()
-           - (localFootprint - parameterFootprint - 1)
-           + t->arch->frameReturnAddressSize()]
+        sp[localOffset(t, localSize(t, method), method) / BytesPerWord]
           = t->exception;
 
         t->exception = 0;
 
         *targetIp = handler;
         *targetBase = base;
-        *targetStack = static_cast<void**>(stack)
-          + t->arch->frameReturnAddressSize();
+        *targetStack = sp;
       } else {
         if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
           object lock;
@@ -3951,7 +3954,7 @@ compareTraceElementPointers(const void* va, const void* vb)
 unsigned
 frameObjectMapSize(MyThread* t, object method, object map)
 {
-  int size = alignedFrameSizeWithParameters(t, method);
+  int size = usableFrameSizeWithParameters(t, method);
   return ceiling(intArrayLength(t, map) * size, 32 + size);
 }
 
@@ -4077,7 +4080,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     qsort(elements, context->traceLogCount, sizeof(TraceElement*),
           compareTraceElementPointers);
 
-    unsigned size = alignedFrameSizeWithParameters(t, context->method);
+    unsigned size = usableFrameSizeWithParameters(t, context->method);
     object map = makeIntArray
       (t, context->traceLogCount
        + ceiling(context->traceLogCount * size, 32),
@@ -4567,7 +4570,7 @@ frameMapIndex(MyThread* t, object method, int32_t offset)
       
     if (offset == v) {
       return (indexSize * 32)
-        + (alignedFrameSizeWithParameters(t, method) * middle);
+        + (usableFrameSizeWithParameters(t, method) * middle);
     } else if (offset < v) {
       top = middle;
     } else {
@@ -4584,9 +4587,9 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* stack, object method,
 {
   unsigned count;
   if (calleeStack) {
-    count = alignedFrameSizeWithParameters(t, method) - argumentFootprint;
+    count = usableFrameSizeWithParameters(t, method) - argumentFootprint;
   } else {
-    count = alignedFrameSizeWithParameters(t, method);
+    count = usableFrameSizeWithParameters(t, method);
   }
       
   if (count) {
