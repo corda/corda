@@ -648,33 +648,6 @@ void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   subR(con, size, t, a, t);
 }
 
-void andC(Context* c, unsigned size, Assembler::Constant* a,
-          Assembler::Register* b, Assembler::Register* dst)
-{
-  abort(c); // todo
-
-  int64_t v = a->value->value();
-
-  if(size == 8) {
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-
-    andC(c, 4, &al, b, dst);
-    andC(c, 4, &ah, &bh, &dh);
-  } else {
-    issue(c, andi(dst->low, b->low, v));
-    if (v >> 16) {
-      issue(c, andis(dst->low, b->low, v >> 16));
-    }
-  }
-}
-
 int
 normalize(Context* c, int offset, int index, unsigned scale, 
           bool* preserveIndex)
@@ -908,6 +881,90 @@ moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
 //   issue(con, lis(R(t), hi16(i)));
 //   issue(con, ori(R(t), R(t), lo16(i)));
 // }
+
+void
+andR(Context* c, unsigned size, Assembler::Register* a,
+     Assembler::Register* b, Assembler::Register* dst)
+{
+  if (size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+    
+    andR(c, 4, a, b, dst);
+    andR(c, 4, &ah, &bh, &dh);
+  } else {
+    issue(c, and_(dst->low, a->low, b->low));
+  }
+}
+
+void
+andC(Context* c, unsigned size, Assembler::Constant* a,
+     Assembler::Register* b, Assembler::Register* dst)
+{
+  int64_t v = a->value->value();
+
+  if (size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+
+    andC(c, 4, &al, b, dst);
+    andC(c, 4, &ah, &bh, &dh);
+  } else {
+    // bitmasks of the form regex 0*1*0* can be handled in a single
+    // rlwinm instruction, hence the following:
+
+    uint32_t v32 = static_cast<uint32_t>(v);
+    unsigned state = 0;
+    unsigned start;
+    unsigned end = 31;
+    for (unsigned i = 0; i < 32; ++i) {
+      unsigned bit = (v32 >> i) & 1;
+      switch (state) {
+      case 0:
+        if (bit) {
+          start = i;
+          state = 1;
+        }
+        break;
+
+      case 1:
+        if (bit == 0) {
+          end = i - 1;
+          state = 2;
+        }
+        break;
+
+      case 2:
+        if (bit) {
+          // not in 0*1*0* form.  We can only use andi(s) if either
+          // the topmost or bottommost 16 bits are zero.
+
+          if ((v32 >> 16) == 0) {
+            issue(c, andi(dst->low, b->low, v32));
+          } else if ((v32 & 0xFFFF) == 0) {
+            issue(c, andis(dst->low, b->low, v32 >> 16));
+          } else {
+            moveCR(c, 4, a, 4, dst);
+            andR(c, 4, b, dst, dst);
+          }
+          return;
+        }
+        break;
+      }
+    }
+
+    if (state) {
+      issue(c, rlwinm(dst->low, b->low, 0, 31 - end, 31 - start));
+    }
+  }
+}
 
 void
 moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
@@ -1166,6 +1223,7 @@ populateTables(ArchitectureContext* c)
   to[index(Subtract, C)] = CAST3(subC);
 
   to[index(And, C)] = CAST3(andC);
+  to[index(And, R)] = CAST3(andR);
 
   to[index(LongCompare, R)] = CAST3(longCompareR);
 }
@@ -1254,7 +1312,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameReturnAddressSize() {
-    return 1;
+    return 0;
   }
 
   virtual unsigned frameFooterSize() {
