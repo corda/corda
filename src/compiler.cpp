@@ -4913,12 +4913,14 @@ class MyCompiler: public Compiler {
                       lengthOffset, static_cast<Value*>(index), handler);
   }
 
-  virtual void store(unsigned size, Operand* src, Operand* dst) {
-    appendMove(&c, Move, size, static_cast<Value*>(src),
-               size, static_cast<Value*>(dst));
+  virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
+                     Operand* dst)
+  {
+    appendMove(&c, Move, srcSize, static_cast<Value*>(src),
+               dstSize, static_cast<Value*>(dst));
   }
 
-  virtual Operand* load(unsigned srcSize, unsigned dstSize, Operand* src) {
+  virtual Operand* load(unsigned srcSize, Operand* src, unsigned dstSize) {
     assert(&c, dstSize >= BytesPerWord);
 
     Value* dst = value(&c);
@@ -4926,7 +4928,7 @@ class MyCompiler: public Compiler {
     return dst;
   }
 
-  virtual Operand* loadz(unsigned srcSize, unsigned dstSize, Operand* src) {
+  virtual Operand* loadz(unsigned srcSize, Operand* src, unsigned dstSize) {
     assert(&c, dstSize >= BytesPerWord);
 
     Value* dst = value(&c);

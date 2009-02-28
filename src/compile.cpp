@@ -2133,35 +2133,35 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       case aaload:
         frame->pushObject
           (c->load
-           (BytesPerWord, BytesPerWord,
-            c->memory(array, ArrayBody, index, BytesPerWord)));
+           (BytesPerWord, c->memory(array, ArrayBody, index, BytesPerWord),
+            BytesPerWord));
         break;
 
       case faload:
       case iaload:
         frame->pushInt
-          (c->load(4, BytesPerWord, c->memory(array, ArrayBody, index, 4)));
+          (c->load(4, c->memory(array, ArrayBody, index, 4), BytesPerWord));
         break;
 
       case baload:
         frame->pushInt
-          (c->load(1, BytesPerWord, c->memory(array, ArrayBody, index, 1)));
+          (c->load(1, c->memory(array, ArrayBody, index, 1), BytesPerWord));
         break;
 
       case caload:
         frame->pushInt
-          (c->loadz(2, BytesPerWord, c->memory(array, ArrayBody, index, 2)));
+          (c->loadz(2, c->memory(array, ArrayBody, index, 2), BytesPerWord));
         break;
 
       case daload:
       case laload:
         frame->pushLong
-          (c->load(8, 8, c->memory(array, ArrayBody, index, 8)));
+          (c->load(8, c->memory(array, ArrayBody, index, 8), 8));
         break;
 
       case saload:
         frame->pushInt
-          (c->load(2, BytesPerWord, c->memory(array, ArrayBody, index, 2)));
+          (c->load(2, c->memory(array, ArrayBody, index, 2), BytesPerWord));
         break;
       }
     } break;
@@ -2209,21 +2209,24 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       case fastore:
       case iastore:
-        c->store(4, value, c->memory(array, ArrayBody, index, 4));
+        c->store
+          (BytesPerWord, value, 4, c->memory(array, ArrayBody, index, 4));
         break;
 
       case bastore:
-        c->store(1, value, c->memory(array, ArrayBody, index, 1));
+        c->store
+          (BytesPerWord, value, 1, c->memory(array, ArrayBody, index, 1));
         break;
 
       case castore:
       case sastore:
-        c->store(2, value, c->memory(array, ArrayBody, index, 2));
+        c->store
+          (BytesPerWord, value, 2, c->memory(array, ArrayBody, index, 2));
         break;
 
       case dastore:
       case lastore:
-        c->store(8, value, c->memory(array, ArrayBody, index, 8));
+        c->store(8, value, 8, c->memory(array, ArrayBody, index, 8));
         break;
       }
     } break;
@@ -2277,8 +2280,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case arraylength: {
       frame->pushInt
         (c->load
-         (BytesPerWord, BytesPerWord,
-          c->memory(frame->popObject(), ArrayLength, 0, 1)));
+         (BytesPerWord, c->memory(frame->popObject(), ArrayLength, 0, 1),
+          BytesPerWord));
     } break;
 
     case astore:
@@ -2629,39 +2632,39 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       case BooleanField:
         frame->pushInt
           (c->load
-           (1, BytesPerWord, c->memory(table, fieldOffset(t, field), 0, 1)));
+           (1, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
         break;
 
       case CharField:
         frame->pushInt
           (c->loadz
-           (2, BytesPerWord, c->memory(table, fieldOffset(t, field), 0, 1)));
+           (2, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
         break;
 
       case ShortField:
         frame->pushInt
           (c->load
-           (2, BytesPerWord, c->memory(table, fieldOffset(t, field), 0, 1)));
+           (2, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
         break;
 
       case FloatField:
       case IntField:
         frame->pushInt
           (c->load
-           (4, BytesPerWord, c->memory(table, fieldOffset(t, field), 0, 1)));
+           (4, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
         break;
 
       case DoubleField:
       case LongField:
         frame->pushLong
-          (c->load(8, 8, c->memory(table, fieldOffset(t, field), 0, 1)));
+          (c->load(8, c->memory(table, fieldOffset(t, field), 0, 1), 8));
         break;
 
       case ObjectField:
         frame->pushObject
           (c->load
-           (BytesPerWord, BytesPerWord,
-            c->memory(table, fieldOffset(t, field), 0, 1)));
+           (BytesPerWord, c->memory(table, fieldOffset(t, field), 0, 1),
+            BytesPerWord));
         break;
 
       default:
@@ -2688,11 +2691,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case i2b: {
-      frame->pushInt(c->load(1, BytesPerWord, frame->popInt()));
+      frame->pushInt(c->load(1, frame->popInt(), BytesPerWord));
     } break;
 
     case i2c: {
-      frame->pushInt(c->loadz(2, BytesPerWord, frame->popInt()));
+      frame->pushInt(c->loadz(2, frame->popInt(), BytesPerWord));
     } break;
 
     case i2d: {
@@ -2710,11 +2713,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case i2l:
-      frame->pushLong(c->load(4, 8, frame->popInt()));
+      frame->pushLong(c->load(4, frame->popInt(), 8));
       break;
 
     case i2s: {
-      frame->pushInt(c->load(2, BytesPerWord, frame->popInt()));
+      frame->pushInt(c->load(2, frame->popInt(), BytesPerWord));
     } break;
       
     case iadd: {
@@ -3168,7 +3171,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case l2i:
-      frame->pushInt(c->load(8, BytesPerWord, frame->popLong()));
+      frame->pushInt(c->load(8, frame->popLong(), BytesPerWord));
       break;
 
     case ladd: {
@@ -3560,22 +3563,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
-        c->store(1, value, c->memory(table, fieldOffset(t, field), 0, 1));
+        c->store(BytesPerWord, value, 1,
+                 c->memory(table, fieldOffset(t, field), 0, 1));
         break;
 
       case CharField:
       case ShortField:
-        c->store(2, value, c->memory(table, fieldOffset(t, field), 0, 1));
+        c->store(BytesPerWord, value, 2,
+                 c->memory(table, fieldOffset(t, field), 0, 1));
         break;
             
       case FloatField:
       case IntField:
-        c->store(4, value, c->memory(table, fieldOffset(t, field), 0, 1));
+        c->store(BytesPerWord, value, 4,
+                 c->memory(table, fieldOffset(t, field), 0, 1));
         break;
 
       case DoubleField:
       case LongField:
-        c->store(8, value, c->memory(table, fieldOffset(t, field), 0, 1));
+        c->store(8, value, 8, c->memory(table, fieldOffset(t, field), 0, 1));
         break;
 
       case ObjectField:
@@ -3661,9 +3667,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       saveStateAndCompile(t, frame, defaultIp);
 
-      c->jmp(c->load(BytesPerWord, BytesPerWord,
+      c->jmp(c->load(BytesPerWord,
                      c->memory(start, 0, c->sub(4, c->constant(bottom), key),
-                               BytesPerWord)));
+                               BytesPerWord), BytesPerWord));
 
       Compiler::State* state = c->saveState();
 
