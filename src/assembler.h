@@ -258,7 +258,7 @@ class Assembler {
 
     virtual int stack() = 0;
     virtual int thread() = 0;
-    virtual int returnLow(unsigned size) = 0;
+    virtual int returnLow() = 0;
     virtual int returnHigh() = 0;
 
     virtual bool condensedAddressing() = 0;

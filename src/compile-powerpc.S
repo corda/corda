@@ -129,7 +129,6 @@ LOCAL(int64):
    b      LOCAL(exit)
    
 LOCAL(int32):
-   mr   r3,r4
    li   r3,0
 
 LOCAL(exit):

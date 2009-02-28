@@ -129,6 +129,7 @@ inline int bgt(int i) { return bc(12, 1, i, 0); }
 inline int bge(int i) { return bc(4, 0, i, 0); }
 inline int ble(int i) { return bc(4, 1, i, 0); }
 inline int be(int i) { return bc(12, 2, i, 0); }
+inline int bne(int i) { return bc(4, 2, i, 0); }
 inline int cmpw(int ra, int rb) { return cmp(0, ra, rb); }
 inline int cmplw(int ra, int rb) { return cmpl(0, ra, rb); }
 inline int cmpwi(int ra, int i) { return cmpi(0, ra, i); }
@@ -1275,6 +1276,15 @@ jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 }
 
 void
+jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  appendOffsetTask(c, target->value, offset(c), true);
+  issue(c, bne(0));
+}
+
+void
 jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
@@ -1344,6 +1354,7 @@ populateTables(ArchitectureContext* c)
   uo[index(Jump, C)] = CAST1(jumpC);
 
   uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
+  uo[index(JumpIfNotEqual, C)] = CAST1(jumpIfNotEqualC);
   uo[index(JumpIfGreater, C)] = CAST1(jumpIfGreaterC);
   uo[index(JumpIfGreaterOrEqual, C)] = CAST1(jumpIfGreaterOrEqualC);
   uo[index(JumpIfLess, C)] = CAST1(jumpIfLessC);
@@ -1397,8 +1408,8 @@ class MyArchitecture: public Assembler::Architecture {
     return ThreadRegister;
   }
 
-  virtual int returnLow(unsigned size) {
-    return (size > BytesPerWord ? 4 : 3);
+  virtual int returnLow() {
+    return 4;
   }
 
   virtual int returnHigh() {

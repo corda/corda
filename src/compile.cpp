@@ -1305,13 +1305,6 @@ unwind(MyThread* t)
   vmJump(ip, base, stack, t);
 }
 
-void
-tryInitClass(MyThread* t, object class_)
-{
-  initClass(t, class_);
-  if (UNLIKELY(t->exception)) unwind(t);
-}
-
 object&
 objectPools(MyThread* t);
 
@@ -1334,20 +1327,26 @@ methodAddress(Thread* t, object method)
   }
 }
 
-void*
+void
+tryInitClass(MyThread* t, object class_)
+{
+  initClass(t, class_);
+  if (UNLIKELY(t->exception)) unwind(t);
+}
+
+int64_t
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
-    return reinterpret_cast<void*>
-      (methodAddress
-       (t, findInterfaceMethod(t, method, objectClass(t, instance))));
+    return methodAddress
+       (t, findInterfaceMethod(t, method, objectClass(t, instance)));
   } else {
     t->exception = makeNullPointerException(t);
     unwind(t);
   }
 }
 
-intptr_t
+int64_t
 compareDoublesG(uint64_t bi, uint64_t ai)
 {
   double a = bitsToDouble(ai);
@@ -1364,7 +1363,7 @@ compareDoublesG(uint64_t bi, uint64_t ai)
   }
 }
 
-intptr_t
+int64_t
 compareDoublesL(uint64_t bi, uint64_t ai)
 {
   double a = bitsToDouble(ai);
@@ -1381,7 +1380,7 @@ compareDoublesL(uint64_t bi, uint64_t ai)
   }
 }
 
-intptr_t
+int64_t
 compareFloatsG(uint32_t bi, uint32_t ai)
 {
   float a = bitsToFloat(ai);
@@ -1398,7 +1397,7 @@ compareFloatsG(uint32_t bi, uint32_t ai)
   }
 }
 
-intptr_t
+int64_t
 compareFloatsL(uint32_t bi, uint32_t ai)
 {
   float a = bitsToFloat(ai);
@@ -1451,13 +1450,13 @@ negateDouble(uint64_t a)
   return doubleToBits(- bitsToDouble(a));
 }
 
-uint32_t
+uint64_t
 doubleToFloat(int64_t a)
 {
   return floatToBits(static_cast<float>(bitsToDouble(a)));
 }
 
-int32_t
+int64_t
 doubleToInt(int64_t a)
 {
   return static_cast<int32_t>(bitsToDouble(a));
@@ -1469,37 +1468,37 @@ doubleToLong(int64_t a)
   return static_cast<int64_t>(bitsToDouble(a));
 }
 
-uint32_t
+uint64_t
 addFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) + bitsToFloat(b));
 }
 
-uint32_t
+uint64_t
 subtractFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) - bitsToFloat(b));
 }
 
-uint32_t
+uint64_t
 multiplyFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) * bitsToFloat(b));
 }
 
-uint32_t
+uint64_t
 divideFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(bitsToFloat(a) / bitsToFloat(b));
 }
 
-uint32_t
+uint64_t
 moduloFloat(uint32_t b, uint32_t a)
 {
   return floatToBits(fmod(bitsToFloat(a), bitsToFloat(b)));
 }
 
-uint32_t
+uint64_t
 negateFloat(uint32_t a)
 {
   return floatToBits(- bitsToFloat(a));
@@ -1523,7 +1522,7 @@ floatToDouble(int32_t a)
   return doubleToBits(static_cast<double>(bitsToFloat(a)));
 }
 
-int32_t
+int64_t
 floatToInt(int32_t a)
 {
   return static_cast<int32_t>(bitsToFloat(a));
@@ -1541,7 +1540,7 @@ intToDouble(int32_t a)
   return doubleToBits(static_cast<double>(a));
 }
 
-uint32_t
+uint64_t
 intToFloat(int32_t a)
 {
   return floatToBits(static_cast<float>(a));
@@ -1553,17 +1552,18 @@ longToDouble(int64_t a)
   return doubleToBits(static_cast<double>(a));
 }
 
-uint32_t
+uint64_t
 longToFloat(int64_t a)
 {
   return floatToBits(static_cast<float>(a));
 }
 
-object
+uint64_t
 makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 {
   if (length >= 0) {
-    return makeObjectArray(t, class_, length, true);
+    return reinterpret_cast<uint64_t>
+      (makeObjectArray(t, class_, length, true));
   } else {
     object message = makeString(t, "%d", length);
     t->exception = makeNegativeArraySizeException(t, message);
@@ -1571,7 +1571,7 @@ makeBlankObjectArray(MyThread* t, object class_, int32_t length)
   }
 }
 
-object
+uint64_t
 makeBlankArray(MyThread* t, unsigned type, int32_t length)
 {
   if (length >= 0) {
@@ -1612,7 +1612,7 @@ makeBlankArray(MyThread* t, unsigned type, int32_t length)
     default: abort(t);
     }
 
-    return constructor(t, length, true);
+    return reinterpret_cast<uintptr_t>(constructor(t, length, true));
   } else {
     object message = makeString(t, "%d", length);
     t->exception = makeNegativeArraySizeException(t, message);
@@ -1620,7 +1620,7 @@ makeBlankArray(MyThread* t, unsigned type, int32_t length)
   }
 }
 
-uintptr_t
+uint64_t
 lookUpAddress(int32_t key, uintptr_t* start, int32_t count,
               uintptr_t default_)
 {
@@ -1701,7 +1701,7 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* countStack,
   return array;
 }
 
-object
+uint64_t
 makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
                           int32_t offset)
 {
@@ -1711,7 +1711,7 @@ makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
   if (UNLIKELY(t->exception)) {
     unwind(t);
   } else {
-    return r;
+    return reinterpret_cast<uintptr_t>(r);
   }
 }
 
@@ -1770,6 +1770,24 @@ checkCast(MyThread* t, object class_, object o)
     t->exception = makeClassCastException(t, message);
     unwind(t);
   }
+}
+
+uint64_t
+instanceOf64(Thread* t, object class_, object o)
+{
+  return instanceOf(t, class_, o);
+}
+
+uint64_t
+makeNewWeakReference64(Thread* t, object class_)
+{
+  return reinterpret_cast<uintptr_t>(makeNewWeakReference(t, class_));
+}
+
+uint64_t
+makeNew64(Thread* t, object class_)
+{
+  return reinterpret_cast<uintptr_t>(makeNew(t, class_));
 }
 
 void
@@ -2915,7 +2933,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       frame->pushInt
         (c->call
-         (c->constant(getThunk(t, instanceOfThunk)),
+         (c->constant(getThunk(t, instanceOf64Thunk)),
           0, 0, 4,
           3, c->thread(), frame->append(class_), frame->popObject()));
     } break;
@@ -3434,7 +3452,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (classVmFlags(t, class_) & WeakReferenceFlag) {
         frame->pushObject
           (c->call
-           (c->constant(getThunk(t, makeNewWeakReferenceThunk)),
+           (c->constant(getThunk(t, makeNewWeakReference64Thunk)),
             0,
             frame->trace(0, false),
             BytesPerWord,
@@ -3442,7 +3460,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       } else {
         frame->pushObject
           (c->call
-           (c->constant(getThunk(t, makeNewThunk)),
+           (c->constant(getThunk(t, makeNew64Thunk)),
             0,
             frame->trace(0, false),
             BytesPerWord,
@@ -4344,7 +4362,7 @@ compileMethod2(MyThread* t)
   }
 }
 
-void*
+uint64_t
 compileMethod(MyThread* t)
 {
   void* r = compileMethod2(t);
@@ -4352,7 +4370,7 @@ compileMethod(MyThread* t)
   if (UNLIKELY(t->exception)) {
     unwind(t);
   } else {
-    return r;
+    return reinterpret_cast<uintptr_t>(r);
   }
 }
 
@@ -4512,7 +4530,6 @@ invokeNative2(MyThread* t, object method)
 
     case LongField:
     case DoubleField:
-      result = result;
       break;
 
     case ObjectField:
@@ -5724,7 +5741,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
     a->popFrame();
 
-    Assembler::Register result(t->arch->returnLow(BytesPerWord));
+    Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
 
     a->endBlock(false)->resolve(0, 0);

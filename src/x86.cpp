@@ -1989,7 +1989,7 @@ class MyArchitecture: public Assembler::Architecture {
     return rbx;
   }
 
-  virtual int returnLow(unsigned) {
+  virtual int returnLow() {
     return rax;
   }
 

@@ -2336,7 +2336,7 @@ class CallEvent: public Event {
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
 
     if (resultSize and live(result)) {
-      addSite(c, result, registerSite(c, c->arch->returnLow(resultSize)));
+      addSite(c, result, registerSite(c, c->arch->returnLow()));
       if (resultSize > BytesPerWord and live(result->high)) {
         addSite(c, result->high, registerSite(c, c->arch->returnHigh()));
       }
@@ -2371,7 +2371,7 @@ class ReturnEvent: public Event {
     Event(c), value(value)
   {
     if (value) {
-      addRead(c, this, value, fixedRegisterRead(c, c->arch->returnLow(size)));
+      addRead(c, this, value, fixedRegisterRead(c, c->arch->returnLow()));
       if (size > BytesPerWord) {
         addRead(c, this, value->high,
                 fixedRegisterRead(c, c->arch->returnHigh()));
