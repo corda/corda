@@ -812,7 +812,8 @@ class Frame {
   void dupped() {
     assert(t, sp + 1 <= frameSize());
     assert(t, sp - 1 >= localSize());
-    set(sp++, get(sp - 1));
+    set(sp, get(sp - 1));
+    ++ sp;
   }
 
   void duppedX1() {
