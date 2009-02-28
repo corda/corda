@@ -1427,6 +1427,7 @@ populateTables(ArchitectureContext* c)
   to[index(And, R)] = CAST3(andR);
 
   to[index(LongCompare, R)] = CAST3(longCompareR);
+  to[index(LongCompare, C)] = CAST3(longCompareC);
 }
 
 class MyArchitecture: public Assembler::Architecture {
