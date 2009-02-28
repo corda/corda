@@ -245,7 +245,6 @@ class Assembler {
     virtual void releaseTemporary(int r) = 0;
 
     virtual void save(int r) = 0;
-    virtual void restore(int r) = 0;
   };
 
   class Block {

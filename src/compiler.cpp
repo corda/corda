@@ -4481,7 +4481,6 @@ class Client: public Assembler::Client {
 
   virtual void releaseTemporary(int r) {
     decrement(c, c->registerResources + r);
-    restore(r);
   }
 
   virtual void save(int r) {
@@ -4494,10 +4493,6 @@ class Client: public Assembler::Client {
     if (reg->value) {
       steal(c, reg, 0);
     }
-  }
-
-  virtual void restore(int) {
-    // todo
   }
 
   Context* c;

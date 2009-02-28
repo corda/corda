@@ -106,6 +106,8 @@ inline int bclr(int bo, int bi, int lk) { return XL(19, bo, bi, 0, 16, lk); }
 inline int bc(int bo, int bi, int bd, int lk) { return B(16, bo, bi, bd, 0, lk); }
 inline int cmp(int bf, int ra, int rb) { return X(31, bf << 2, ra, rb, 0, 0); }
 inline int cmpl(int bf, int ra, int rb) { return X(31, bf << 2, ra, rb, 32, 0); }
+inline int cmpi(int bf, int ra, int i) { return D(11, bf << 2, ra, i); }
+inline int cmpli(int bf, int ra, int i) { return D(10, bf << 2, ra, i); }
 // PSEUDO-INSTRUCTIONS
 inline int li(int rt, int i) { return addi(rt, 0, i); }
 inline int lis(int rt, int i) { return addis(rt, 0, i); }
@@ -129,6 +131,8 @@ inline int ble(int i) { return bc(4, 1, i, 0); }
 inline int be(int i) { return bc(12, 2, i, 0); }
 inline int cmpw(int ra, int rb) { return cmp(0, ra, rb); }
 inline int cmplw(int ra, int rb) { return cmpl(0, ra, rb); }
+inline int cmpwi(int ra, int i) { return cmpi(0, ra, i); }
+inline int cmplwi(int ra, int i) { return cmpli(0, ra, i); }
 }
 
 inline bool
@@ -387,6 +391,7 @@ typedef Assembler::Constant Const;
 
 inline void issue(Context* con, int code) { con->code.append4(code); }
 inline int getTemp(Context* con) { return con->client->acquireTemporary(); }
+inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
 inline int64_t getVal(Const* c) { return c->value->value(); }
 inline int R(Reg* r) { return r->low; }
 inline int H(Reg* r) { return r->high; }
@@ -540,6 +545,7 @@ swapRR(Context* c, unsigned aSize, Assembler::Register* a,
   moveRR(c, aSize, a, bSize, &tmp);
   moveRR(c, bSize, b, aSize, a);
   moveRR(c, bSize, &tmp, bSize, b);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -632,6 +638,7 @@ void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
     issue(con, add(H(t), H(t), R(&tmp)));
     issue(con, mulhw(R(&tmp), R(a), R(b)));
     issue(con, add(H(t), H(t), R(&tmp)));
+    freeTemp(con, R(&tmp));
   } else {
     issue(con, mullw(R(t), R(a), R(b)));
   }
@@ -660,13 +667,18 @@ void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
 
 int
 normalize(Context* c, int offset, int index, unsigned scale, 
-          bool* preserveIndex)
+          bool* preserveIndex, bool* release)
 {
   if (offset != 0 or scale != 1) {
     Assembler::Register normalizedIndex
       (*preserveIndex ? c->client->acquireTemporary() : index);
     
-    *preserveIndex = false;
+    if (*preserveIndex) {
+      *release = true;
+      *preserveIndex = false;
+    } else {
+      *release = false;
+    }
 
     int scaled;
 
@@ -696,6 +708,7 @@ normalize(Context* c, int offset, int index, unsigned scale,
 
     return normalizedIndex.low;
   } else {
+    *release = false;
     return index;
   }
 }
@@ -705,7 +718,9 @@ store(Context* c, unsigned size, Assembler::Register* src,
       int base, int offset, int index, unsigned scale, bool preserveIndex)
 {
   if (index != NoRegister) {
-    int normalized = normalize(c, offset, index, scale, &preserveIndex);
+    bool release;
+    int normalized = normalize
+      (c, offset, index, scale, &preserveIndex, &release);
 
     switch (size) {
     case 1:
@@ -728,6 +743,8 @@ store(Context* c, unsigned size, Assembler::Register* src,
 
     default: abort(c);
     }
+
+    if (release) c->client->releaseTemporary(normalized);
   } else {
     switch (size) {
     case 1:
@@ -779,7 +796,9 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
      bool preserveIndex)
 {
   if (index != NoRegister) {
-    int normalized = normalize(c, offset, index, scale, &preserveIndex);
+    bool release;
+    int normalized = normalize
+      (c, offset, index, scale, &preserveIndex, &release);
 
     switch (srcSize) {
     case 1:
@@ -807,6 +826,8 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
 
     default: abort(c);
     }
+
+    if (release) c->client->releaseTemporary(normalized);
   } else {
     switch (srcSize) {
     case 1:
@@ -1004,9 +1025,26 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
 {
   assert(c, aSize == 4 and bSize == 4);
 
+  if (a->value->resolved() and isInt16(a->value->value())) {
+    issue(c, cmpwi(b->low, a->value->value()));
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, aSize, a, bSize, &tmp);
+    compareRR(c, bSize, &tmp, bSize, b);
+    c->client->releaseTemporary(tmp.low);
+  }
+}
+
+void
+compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
+          unsigned bSize, Assembler::Memory* b)
+{
+  assert(c, aSize == 4 and bSize == 4);
+
   Assembler::Register tmp(c->client->acquireTemporary());
-  moveCR(c, aSize, a, bSize, &tmp);
-  compareRR(c, bSize, &tmp, bSize, b);
+  moveMR(c, bSize, b, bSize, &tmp);
+  compareCR(c, aSize, a, bSize, &tmp);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -1018,6 +1056,7 @@ compareRM(Context* c, unsigned aSize, Assembler::Register* a,
   Assembler::Register tmp(c->client->acquireTemporary());
   moveMR(c, bSize, b, bSize, &tmp);
   compareRR(c, aSize, a, bSize, &tmp);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -1027,6 +1066,22 @@ compareUnsignedRR(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, aSize == 4 and bSize == 4);
   
   issue(c, cmplw(b->low, a->low));
+}
+
+void
+compareUnsignedCR(Context* c, unsigned aSize, Assembler::Constant* a,
+                  unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == 4 and bSize == 4);
+  
+  if (a->value->resolved() and isInt16(a->value->value())) {
+    issue(c, cmplwi(b->low, a->value->value()));
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    moveCR(c, aSize, a, bSize, &tmp);
+    compareUnsignedRR(c, bSize, &tmp, bSize, b);
+    c->client->releaseTemporary(tmp.low);
+  }
 }
 
 void
@@ -1110,6 +1165,26 @@ longCompareR(Context* c, unsigned size UNUSED, Assembler::Register* a,
               CAST2(compareUnsignedRR));
 }
 
+void
+longCompareC(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+             Assembler::Register* b, Assembler::Register* dst)
+{
+  assert(c, size == 8);
+
+  int64_t v = a->value->value();
+
+  ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
+  Assembler::Constant al(&low);
+  
+  ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
+  Assembler::Constant ah(&high);
+  
+  Assembler::Register bh(b->high);
+  
+  longCompare(c, &al, &ah, b, &bh, dst, CAST2(compareCR),
+              CAST2(compareUnsignedCR));
+}
+
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
@@ -1139,6 +1214,7 @@ moveCM(Context* c, unsigned srcSize, Assembler::Constant* src,
     Assembler::Register tmp(c->client->acquireTemporary());
     moveCR(c, srcSize, src, dstSize, &tmp);
     moveRM(c, dstSize, &tmp, dstSize, dst);
+    c->client->releaseTemporary(tmp.low);
   }
 }
 
@@ -1289,6 +1365,7 @@ populateTables(ArchitectureContext* c)
   bo[index(Compare, R, R)] = CAST2(compareRR);
   bo[index(Compare, C, R)] = CAST2(compareCR);
   bo[index(Compare, R, M)] = CAST2(compareRM);
+  bo[index(Compare, C, M)] = CAST2(compareCM);
 
   to[index(Add, R)] = CAST3(addR);
   to[index(Add, C)] = CAST3(addC);
@@ -1425,7 +1502,7 @@ class MyArchitecture: public Assembler::Architecture {
 
     switch (op) {
     case Compare:
-      *aTypeMask = (1 << RegisterOperand);
+      *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
       *bTypeMask = (1 << RegisterOperand);
       break;
 
@@ -1464,7 +1541,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case LongCompare:
-      *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+      *bTypeMask = (1 << RegisterOperand);
       break;
 
     case Divide:

@@ -990,7 +990,7 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
         Assembler::Register tmp(c->client->acquireTemporary());
         moveCR(c, 8, a, 8, &tmp);
         moveRM(c, 8, &tmp, 8, b);
-        c->client->releaseTemporary(tmp.low);
+
       }
     } else {
       Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
@@ -1417,8 +1417,6 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
     
     addRR(c, 4, b, 4, &bh);
     moveRR(c, 4, &axdx, 4, b);
-
-    c->client->restore(rax);
   } else {
     if (aSize == 8) rex(c);
     c->code.append(0x0f);
@@ -1672,8 +1670,6 @@ divideRR(Context* c, unsigned aSize, Assembler::Register* a,
   if (aSize == 8) rex(c);
   c->code.append(0xf7);
   c->code.append(0xf8 | a->low);
-
-  c->client->restore(rdx);
 }
 
 void
@@ -1696,8 +1692,6 @@ remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
 
   Assembler::Register dx(rdx);
   moveRR(c, BytesPerWord, &dx, BytesPerWord, b);
-
-  c->client->restore(rdx);
 }
 
 void
@@ -1748,8 +1742,6 @@ doShift(Context* c, void (*shift)
     Assembler::Register cx(rcx);
     moveCR(c, 4, a, 4, &cx);
     shift(c, aSize, &cx, bSize, b);
-
-    c->client->restore(rcx);
   } else {
     if (bSize == 8) rex(c);
     if (v == 1) {
