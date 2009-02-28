@@ -53,9 +53,10 @@ inline int MDS(int op, int rs, int ra, int rb, int mb, int xo, int rc) { return 
 // INSTRUCTIONS
 inline int lbz(int rt, int ra, int i) { return D(34, rt, ra, i); }
 inline int lbzx(int rt, int ra, int rb) { return X(34, rt, ra, rb, 87, 0); }
-inline int lhz(int rt, int ra, int i) { return D(40, rt, ra, i); }
 inline int lha(int rt, int ra, int i) { return D(42, rt, ra, i); }
 inline int lhax(int rt, int ra, int rb) { return X(31, rt, ra, rb, 343, 0); }
+inline int lhz(int rt, int ra, int i) { return D(40, rt, ra, i); }
+inline int lhzx(int rt, int ra, int rb) { return X(31, rt, ra, rb, 279, 0); }
 inline int lwz(int rt, int ra, int i) { return D(32, rt, ra, i); }
 inline int lwzx(int rt, int ra, int rb) { return X(31, rt, ra, rb, 23, 0); }
 inline int stb(int rs, int ra, int i) { return D(38, rs, ra, i); }
@@ -588,6 +589,21 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
       issue(c, mr(dst->low, src->low));
     }
     break;
+
+  default: abort(c);
+  }
+}
+
+void
+moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
+        unsigned, Assembler::Register* dst)
+{
+  switch (srcSize) {
+  case 2:
+    issue(c, andi(dst->low, src->low, 0xFFFF));
+    break;
+
+  default: abort(c);
   }
 }
 
@@ -794,7 +810,7 @@ moveAndUpdateRM(Context* c, unsigned srcSize, Assembler::Register* src,
 void
 load(Context* c, unsigned srcSize, int base, int offset, int index,
      unsigned scale, unsigned dstSize, Assembler::Register* dst,
-     bool preserveIndex)
+     bool preserveIndex, bool signExtend)
 {
   if (index != NoRegister) {
     bool release;
@@ -804,22 +820,28 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
     switch (srcSize) {
     case 1:
       issue(c, lbzx(dst->low, base, normalized));
-      moveRR(c, 1, dst, BytesPerWord, dst);
+      if (signExtend) {
+        issue(c, extsb(dst->low, dst->low));
+      }
       break;
 
     case 2:
-      issue(c, lhax(dst->low, base, normalized));
+      if (signExtend) {
+        issue(c, lhax(dst->low, base, normalized));
+      } else {
+        issue(c, lhzx(dst->low, base, normalized));
+      }
       break;
 
     case 4:
     case 8: {
       if (srcSize == 4 and dstSize == 8) {
-        load(c, 4, base, 0, normalized, 1, 4, dst, preserveIndex);
+        load(c, 4, base, 0, normalized, 1, 4, dst, preserveIndex, false);
         moveRR(c, 4, dst, 8, dst);
       } else if (srcSize == 8 and dstSize == 8) {
         Assembler::Register dstHigh(dst->high);
-        load(c, 4, base, 0, normalized, 1, 4, &dstHigh, preserveIndex);
-        load(c, 4, base, 4, normalized, 1, 4, dst, preserveIndex);
+        load(c, 4, base, 0, normalized, 1, 4, &dstHigh, preserveIndex, false);
+        load(c, 4, base, 4, normalized, 1, 4, dst, preserveIndex, false);
       } else {
         issue(c, lwzx(dst->low, base, offset));
       }
@@ -833,11 +855,17 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
     switch (srcSize) {
     case 1:
       issue(c, lbz(dst->low, base, offset));
-      issue(c, extsb(dst->low, dst->low));
+      if (signExtend) {
+        issue(c, extsb(dst->low, dst->low));
+      }
       break;
 
     case 2:
-      issue(c, lha(dst->low, base, offset));
+      if (signExtend) {
+        issue(c, lha(dst->low, base, offset));
+      } else {
+        issue(c, lha(dst->low, base, offset));
+      }
       break;
 
     case 4:
@@ -846,12 +874,12 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
 
     case 8: {
       if (srcSize == 4 and dstSize == 8) {
-        load(c, 4, base, offset, NoRegister, 1, 4, dst, false);
+        load(c, 4, base, offset, NoRegister, 1, 4, dst, false, false);
         moveRR(c, 4, dst, 8, dst);
       } else if (srcSize == 8 and dstSize == 8) {
         Assembler::Register dstHigh(dst->high);
-        load(c, 4, base, offset, NoRegister, 1, 4, &dstHigh, false);
-        load(c, 4, base, offset + 4, NoRegister, 1, 4, dst, false);
+        load(c, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
+        load(c, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
       } else {
         issue(c, lwzx(dst->low, base, offset));
       }
@@ -867,7 +895,15 @@ moveMR(Context* c, unsigned srcSize, Assembler::Memory* src,
        unsigned dstSize, Assembler::Register* dst)
 {
   load(c, srcSize, src->base, src->offset, src->index, src->scale,
-       dstSize, dst, true);
+       dstSize, dst, true, true);
+}
+
+void
+moveZMR(Context* c, unsigned srcSize, Assembler::Memory* src,
+        unsigned dstSize, Assembler::Register* dst)
+{
+  load(c, srcSize, src->base, src->offset, src->index, src->scale,
+       dstSize, dst, true, false);
 }
 
 void
@@ -1372,6 +1408,9 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, M, R)] = CAST2(moveMR);
   bo[index(Move, R, M)] = CAST2(moveRM);
   bo[index(Move, A, R)] = CAST2(moveAR);
+
+  bo[index(MoveZ, R, R)] = CAST2(moveZRR);
+  bo[index(MoveZ, M, R)] = CAST2(moveZMR);
 
   bo[index(Compare, R, R)] = CAST2(compareRR);
   bo[index(Compare, C, R)] = CAST2(compareCR);
