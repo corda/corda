@@ -73,7 +73,7 @@ inline int addis(int rt, int ra, int i) { return D(15, rt, ra, i); }
 inline int subf(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 40, 0); }
 inline int subfc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 8, 0); }
 inline int subfe(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 136, 0); }
-inline int subfic(int rt, int ra, int i) { return D(8, rt, ra, ri); }
+inline int subfic(int rt, int ra, int i) { return D(8, rt, ra, i); }
 inline int mullw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 235, 0); }
 inline int mulhw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 75, 0); }
 inline int mulhwu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 11, 0); }
@@ -387,7 +387,6 @@ typedef Assembler::Constant Const;
 
 inline void issue(Context* con, int code) { con->code.append4(code); }
 inline int getTemp(Context* con) { return con->client->acquireTemporary(); }
-inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
 inline int64_t getVal(Const* c) { return c->value->value(); }
 inline int R(Reg* r) { return r->low; }
 inline int H(Reg* r) { return r->high; }
@@ -629,11 +628,10 @@ void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   if(size == 8) {
     Reg tmp(getTemp(con));
     issue(con, mullw(H(t), H(a), R(b)));
-    issue(con, mullw(R(tmp), R(a), H(b)));
-    issue(con, add(H(t), H(t), R(tmp)));
-    issue(con, mulhw(R(tmp), R(a), R(b)));
-    issue(con, add(H(t), H(t), R(tmp)));
-    freeTemp(con, R(tmp));
+    issue(con, mullw(R(&tmp), R(a), H(b)));
+    issue(con, add(H(t), H(t), R(&tmp)));
+    issue(con, mulhw(R(&tmp), R(a), R(b)));
+    issue(con, add(H(t), H(t), R(&tmp)));
   } else {
     issue(con, mullw(R(t), R(a), R(b)));
   }
