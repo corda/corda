@@ -123,6 +123,8 @@ inline int bctrl() { return bcctr(20, 0, 1); }
 inline int blr() { return bclr(20, 0, 0); }
 inline int blt(int i) { return bc(12, 0, i, 0); }
 inline int bgt(int i) { return bc(12, 1, i, 0); }
+inline int bge(int i) { return bc(4, 0, i, 0); }
+inline int ble(int i) { return bc(4, 1, i, 0); }
 inline int be(int i) { return bc(12, 2, i, 0); }
 inline int cmpw(int ra, int rb) { return cmp(0, ra, rb); }
 inline int cmplw(int ra, int rb) { return cmpl(0, ra, rb); }
@@ -983,20 +985,40 @@ void
 compareRR(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize, Assembler::Register* b)
 {
-  assert(c, aSize == 4);
-  assert(c, bSize == 4);
+  assert(c, aSize == 4 and bSize == 4);
   
-  issue(c, cmpw(a->low, b->low));
+  issue(c, cmpw(b->low, a->low));
+}
+
+void
+compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
+          unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == 4 and bSize == 4);
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveCR(c, aSize, a, bSize, &tmp);
+  compareRR(c, bSize, &tmp, bSize, b);
+}
+
+void
+compareRM(Context* c, unsigned aSize, Assembler::Register* a,
+          unsigned bSize, Assembler::Memory* b)
+{
+  assert(c, aSize == 4 and bSize == 4);
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  moveMR(c, bSize, b, bSize, &tmp);
+  compareRR(c, aSize, a, bSize, &tmp);
 }
 
 void
 compareUnsignedRR(Context* c, unsigned aSize, Assembler::Register* a,
                   unsigned bSize, Assembler::Register* b)
 {
-  assert(c, aSize == 4);
-  assert(c, bSize == 4);
+  assert(c, aSize == 4 and bSize == 4);
   
-  issue(c, cmplw(a->low, b->low));
+  issue(c, cmplw(b->low, a->low));
 }
 
 void
@@ -1169,6 +1191,44 @@ jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 }
 
 void
+jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  appendOffsetTask(c, target->value, offset(c), true);
+  issue(c, bgt(0));
+}
+
+void
+jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED,
+                      Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  appendOffsetTask(c, target->value, offset(c), true);
+  issue(c, bge(0));
+}
+
+void
+jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  appendOffsetTask(c, target->value, offset(c), true);
+  issue(c, blt(0));
+}
+
+void
+jumpIfLessOrEqualC(Context* c, unsigned size UNUSED,
+                   Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  appendOffsetTask(c, target->value, offset(c), true);
+  issue(c, ble(0));
+}
+
+void
 return_(Context* c)
 {
   issue(c, blr());
@@ -1200,6 +1260,10 @@ populateTables(ArchitectureContext* c)
   uo[index(Jump, C)] = CAST1(jumpC);
 
   uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
+  uo[index(JumpIfGreater, C)] = CAST1(jumpIfGreaterC);
+  uo[index(JumpIfGreaterOrEqual, C)] = CAST1(jumpIfGreaterOrEqualC);
+  uo[index(JumpIfLess, C)] = CAST1(jumpIfLessC);
+  uo[index(JumpIfLessOrEqual, C)] = CAST1(jumpIfLessOrEqualC);
 
   uo[index(Call, C)] = CAST1(callC);
   uo[index(Call, R)] = CAST1(callR);
@@ -1215,6 +1279,8 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, A, R)] = CAST2(moveAR);
 
   bo[index(Compare, R, R)] = CAST2(compareRR);
+  bo[index(Compare, C, R)] = CAST2(compareCR);
+  bo[index(Compare, R, M)] = CAST2(compareRM);
 
   to[index(Add, R)] = CAST3(addR);
   to[index(Add, C)] = CAST3(addC);
