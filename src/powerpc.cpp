@@ -52,7 +52,7 @@ inline int MD(int op, int rs, int ra, int sh, int mb, int xo, int sh2, int rc) {
 inline int MDS(int op, int rs, int ra, int rb, int mb, int xo, int rc) { return op<<26|rs<<21|ra<<16|rb<<11|mb<<5|xo<<1|rc; }
 // INSTRUCTIONS
 inline int lbz(int rt, int ra, int i) { return D(34, rt, ra, i); }
-inline int lbzx(int rt, int ra, int rb) { return X(34, rt, ra, rb, 87, 0); }
+inline int lbzx(int rt, int ra, int rb) { return X(31, rt, ra, rb, 87, 0); }
 inline int lha(int rt, int ra, int i) { return D(42, rt, ra, i); }
 inline int lhax(int rt, int ra, int rb) { return X(31, rt, ra, rb, 343, 0); }
 inline int lhz(int rt, int ra, int i) { return D(40, rt, ra, i); }
