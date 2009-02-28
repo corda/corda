@@ -89,13 +89,18 @@ class MyThread: public Thread {
   Assembler::Architecture* arch;
 };
 
+unsigned
+parameterOffset(MyThread* t, object method)
+{
+  return methodParameterFootprint(t, method)
+    + t->arch->frameFooterSize()
+    + t->arch->frameReturnAddressSize() - 1;
+}
+
 object
 resolveThisPointer(MyThread* t, void* stack, object method)
 {
-  return reinterpret_cast<object*>(stack)
-    [methodParameterFootprint(t, method)
-     + t->arch->frameFooterSize()
-     + t->arch->frameReturnAddressSize() - 1];
+  return reinterpret_cast<object*>(stack)[parameterOffset(t, method)];
 }
 
 object
@@ -4161,7 +4166,11 @@ finish(MyThread* t, Allocator* allocator, Context* context)
        (&byteArrayBody(t, methodName(t, context->method), 0)),
        "main") == 0)
   {
+#ifdef __POWERPC__
+    asm("trap");
+#else
     asm("int3");
+#endif
   }
 
   return start;
@@ -4390,7 +4399,7 @@ invokeNative2(MyThread* t, object method)
   types[typeOffset++] = POINTER_TYPE;
 
   uintptr_t* sp = static_cast<uintptr_t*>(t->stack)
-    + methodParameterFootprint(t, method) + t->arch->frameFooterSize();
+    + parameterOffset(t, method);
 
   if (methodFlags(t, method) & ACC_STATIC) {
     args[argOffset++] = reinterpret_cast<uintptr_t>(&class_);
