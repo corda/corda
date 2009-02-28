@@ -1035,6 +1035,48 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
+orR(Context* c, unsigned size, Assembler::Register* a,
+    Assembler::Register* b, Assembler::Register* dst)
+{
+  if (size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+    
+    orR(c, 4, a, b, dst);
+    orR(c, 4, &ah, &bh, &dh);
+  } else {
+    issue(c, or_(dst->low, a->low, b->low));
+  }
+}
+
+void
+orC(Context* c, unsigned size, Assembler::Constant* a,
+    Assembler::Register* b, Assembler::Register* dst)
+{
+  int64_t v = a->value->value();
+
+  if (size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+
+    orC(c, 4, &al, b, dst);
+    orC(c, 4, &ah, &bh, &dh);
+  } else {
+    issue(c, ori(dst->low, b->low, v));
+    if (v >> 16) {
+      issue(c, oris(dst->low, b->low, v >> 16));
+    }
+  }
+}
+
+void
 moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
        unsigned dstSize, Assembler::Register* dst)
 {
@@ -1423,8 +1465,20 @@ populateTables(ArchitectureContext* c)
   to[index(Subtract, R)] = CAST3(subR);
   to[index(Subtract, C)] = CAST3(subC);
 
+  to[index(ShiftLeft, R)] = CAST3(shiftLeftR);
+  to[index(ShiftLeft, C)] = CAST3(shiftLeftC);
+
+  to[index(ShiftRight, R)] = CAST3(shiftRightR);
+  to[index(ShiftRight, C)] = CAST3(shiftRightC);
+
+  to[index(UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
+  to[index(UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
+
   to[index(And, C)] = CAST3(andC);
   to[index(And, R)] = CAST3(andR);
+
+  to[index(Or, C)] = CAST3(orC);
+  to[index(Or, R)] = CAST3(orR);
 
   to[index(LongCompare, R)] = CAST3(longCompareR);
   to[index(LongCompare, C)] = CAST3(longCompareC);
