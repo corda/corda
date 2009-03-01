@@ -3427,13 +3427,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
-      unsigned offset = alignedFrameSize(t, context->method)
-        - t->arch->frameHeaderSize()
-        - (localSize(t, context->method)
-           - methodParameterFootprint(t, context->method)
-           - 1)
-        + t->arch->frameReturnAddressSize()
-        - c->index(c->top());
+      unsigned offset = localOffset
+        (t, localSize(t, context->method) + c->index(c->top()),
+         context->method) / BytesPerWord;
 
       Compiler::Operand* result = c->call
         (c->constant(getThunk(t, makeMultidimensionalArrayThunk)),
@@ -4185,11 +4181,11 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Arrays") == 0 and
+       "java/lang/Throwable") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "main") == 0)
+       "printStackTrace") == 0)
   {
 #ifdef __POWERPC__
     asm("trap");
