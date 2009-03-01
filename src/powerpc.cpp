@@ -556,11 +556,11 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
 {
   switch (srcSize) {
   case 1:
-    issue(c, extsb(src->low, dst->low));
+    issue(c, extsb(dst->low, src->low));
     break;
     
   case 2:
-    issue(c, extsh(src->low, dst->low));
+    issue(c, extsh(dst->low, src->low));
     break;
     
   case 4:
