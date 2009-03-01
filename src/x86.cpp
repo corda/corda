@@ -2001,6 +2001,10 @@ class MyArchitecture: public Assembler::Architecture {
     return true;
   }
 
+  virtual bool bigEndian() {
+    return false;
+  }
+
   virtual bool reserved(int register_) {
     switch (register_) {
     case rbp:

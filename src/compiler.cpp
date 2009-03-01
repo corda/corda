@@ -2980,28 +2980,10 @@ Value*
 maybeBuddy(Context* c, Value* v);
 
 Value*
-push(Context* c, unsigned footprint, Value* v)
+pushWord(Context* c, Value* v)
 {
-  assert(c, footprint);
-
-  Value* high;
-  if (footprint > 1) {
-    assert(c, footprint == 2);
-
-    if (BytesPerWord == 4 and v->high == 0) {
-      split(c, v);
-    }
-
-    high = push(c, 1, v->high);
-  } else if (v) {
-    high = v->high;
-  } else {
-    high = 0;
-  }
-
   if (v) {
     v = maybeBuddy(c, v);
-    v->high = high;
   }
     
   Stack* s = stack(c, v, c->stack);
@@ -3019,10 +3001,47 @@ push(Context* c, unsigned footprint, Value* v)
 }
 
 Value*
-pop(Context* c, unsigned footprint)
+push(Context* c, unsigned footprint, Value* v)
 {
   assert(c, footprint);
 
+  bool bigEndian = c->arch->bigEndian();
+  
+  Value* low = v;
+  
+  if (bigEndian) {
+    v = pushWord(c, v);
+  }
+
+  Value* high;
+  if (footprint > 1) {
+    assert(c, footprint == 2);
+
+    if (BytesPerWord == 4 and low->high == 0) {
+      split(c, low);
+    }
+
+    high = pushWord(c, low->high);
+  } else if (v) {
+    high = v->high;
+  } else {
+    high = 0;
+  }
+  
+  if (not bigEndian) {
+    v = pushWord(c, v);
+  }
+
+  if (v) {
+    v->high = high;
+  }
+
+  return v;
+}
+
+void
+popWord(Context* c)
+{
   Stack* s = c->stack;
   assert(c, s->value == 0 or s->value->home >= 0);
 
@@ -3030,15 +3049,48 @@ pop(Context* c, unsigned footprint)
     fprintf(stderr, "pop %p\n", s->value);
   }
     
-  c->stack = s->next;
+  c->stack = s->next;  
+}
+
+Value*
+pop(Context* c, unsigned footprint)
+{
+  assert(c, footprint);
+
+  Stack* s;
+
+  bool bigEndian = c->arch->bigEndian();
+
+  if (not bigEndian) {
+    s = c->stack;
+  }
 
   if (footprint > 1) {
     assert(c, footprint == 2);
-    assert(c, s->value->high == s->next->value
-           and ((BytesPerWord == 8) xor (s->value->high != 0)));
 
-    pop(c, 1);
+#ifndef NDEBUG
+    Stack* low;
+    Stack* high;
+    if (bigEndian) {
+      high = c->stack;
+      low = high->next;
+    } else {
+      low = c->stack;
+      high = low->next;
+    }
+
+    assert(c, low->value->high == high->value
+           and ((BytesPerWord == 8) xor (low->value->high != 0)));
+#endif // not NDEBUG
+
+    popWord(c);
   }
+
+  if (bigEndian) {
+    s = c->stack;
+  }
+
+  popWord(c);
 
   return s->value;
 }
@@ -3059,15 +3111,25 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
   if (footprint > 1) {
     assert(c, footprint == 2);
 
+    unsigned highIndex;
+    unsigned lowIndex;
+    if (c->arch->bigEndian()) {
+      highIndex = index + 1;
+      lowIndex = index;
+    } else {
+      lowIndex = index + 1;
+      highIndex = index;      
+    }
+
     if (BytesPerWord == 4) {
       assert(c, v->high);
 
-      high = storeLocal(c, 1, v->high, index, false);
+      high = storeLocal(c, 1, v->high, highIndex, false);
     } else {
       high = 0;
     }
 
-    ++ index;
+    index = lowIndex;
   } else {
     high = v->high;
   }
@@ -3088,14 +3150,16 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
 }
 
 Value*
-loadLocal(Context* c, unsigned footprint UNUSED, unsigned index)
+loadLocal(Context* c, unsigned footprint, unsigned index)
 {
   assert(c, index + footprint <= c->localFootprint);
 
   if (footprint > 1) {
     assert(c, footprint == 2);
 
-    ++ index;
+    if (not c->arch->bigEndian()) {
+      ++ index;
+    }
   }
 
   assert(c, c->locals[index].value);
@@ -4786,6 +4850,8 @@ class MyCompiler: public Compiler {
   {
     va_list a; va_start(a, argumentCount);
 
+    bool bigEndian = c.arch->bigEndian();
+
     unsigned footprint = 0;
     unsigned size = BytesPerWord;
     Value* arguments[argumentCount];
@@ -4793,8 +4859,11 @@ class MyCompiler: public Compiler {
     for (unsigned i = 0; i < argumentCount; ++i) {
       Value* o = va_arg(a, Value*);
       if (o) {
+        if (bigEndian and size > BytesPerWord) {
+          arguments[index++] = o->high;
+        }
         arguments[index] = o;
-        if (size > BytesPerWord) {
+        if ((not bigEndian) and size > BytesPerWord) {
           arguments[++index] = o->high;
         }
         size = BytesPerWord;
@@ -4849,12 +4918,22 @@ class MyCompiler: public Compiler {
     if (footprint > 1) {
       assert(&c, footprint == 2);
 
-      if (BytesPerWord == 4) {
-        initLocal(1, index);
-        v->high = c.locals[index].value;
+      unsigned highIndex;
+      unsigned lowIndex;
+      if (c.arch->bigEndian()) {
+        highIndex = index + 1;
+        lowIndex = index;
+      } else {
+        lowIndex = index + 1;
+        highIndex = index;      
       }
 
-      ++ index;
+      if (BytesPerWord == 4) {
+        initLocal(1, highIndex);
+        v->high = c.locals[highIndex].value;
+      }
+
+      index = lowIndex;
     }
 
     if (DebugFrame) {
@@ -4883,8 +4962,13 @@ class MyCompiler: public Compiler {
       if (local->value) {
         initLocal(1, i);
 
-        if (i > 0 and local->value->high == local[-1].value) {
-          c.locals[i].value->high = c.locals[i - 1].value;
+        unsigned highOffset = c.arch->bigEndian() ? 1 : -1;
+
+        if (i + highOffset > 0
+            and i + highOffset < c.localFootprint
+            and local->value->high == local[highOffset].value)
+        {
+          c.locals[i].value->high = c.locals[i + highOffset].value;
         }
       }
     }

@@ -263,6 +263,8 @@ class Assembler {
 
     virtual bool condensedAddressing() = 0;
 
+    virtual bool bigEndian() = 0;
+
     virtual bool reserved(int register_) = 0;
 
     virtual unsigned argumentFootprint(unsigned footprint) = 0;

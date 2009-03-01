@@ -1514,8 +1514,13 @@ class MyArchitecture: public Assembler::Architecture {
     return false;
   }
 
+  virtual bool bigEndian() {
+    return true;
+  }
+
   virtual bool reserved(int register_) {
     switch (register_) {
+    case 0: // r0 has special meaning in addi and other instructions
     case StackRegister:
     case ThreadRegister:
       return true;
