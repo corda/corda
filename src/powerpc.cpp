@@ -910,7 +910,7 @@ void
 moveCR2(Context* c, unsigned, Assembler::Constant* src,
        unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
 {
-  if (dstSize == 4) {
+  if (dstSize <= 4) {
     if (src->value->resolved()) {
       int32_t v = src->value->value();
       if (isInt16(v)) {
