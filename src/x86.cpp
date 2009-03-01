@@ -990,7 +990,7 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
         Assembler::Register tmp(c->client->acquireTemporary());
         moveCR(c, 8, a, 8, &tmp);
         moveRM(c, 8, &tmp, 8, b);
-
+        c->client->releaseTemporary(tmp.low);
       }
     } else {
       Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
