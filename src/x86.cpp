@@ -1544,7 +1544,7 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
 
 void
 longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
-            Assembler::Operand* bl, Assembler::Operand* bh,
+            Assembler::Register* bl, Assembler::Operand* bh,
             BinaryOperationType compare)
 {
   ResolvedPromise negativePromise(-1);
