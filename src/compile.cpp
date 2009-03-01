@@ -3427,9 +3427,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
-      unsigned offset = localOffset
-        (t, localSize(t, context->method) + c->index(c->top()),
-         context->method) / BytesPerWord;
+      unsigned offset
+        = (localOffset
+           (t, localSize(t, context->method) + c->index(c->top()),
+            context->method) / BytesPerWord)
+        + t->arch->frameReturnAddressSize();
 
       Compiler::Operand* result = c->call
         (c->constant(getThunk(t, makeMultidimensionalArrayThunk)),
