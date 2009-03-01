@@ -2459,9 +2459,23 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
     } else {
       target->freeze(c, dst);
 
-      assert(c, dstMask.typeMask & (1 << RegisterOperand));
+      // pick a temporary register which is valid as both a
+      // destination and a source for the moves we need to perform:
 
-      Site* tmpTarget = freeRegisterSite(c, dstMask.registerMask);
+      bool thunk;
+      uint8_t srcTypeMask;
+      uint64_t srcRegisterMask;
+      uint8_t dstTypeMask;
+      uint64_t dstRegisterMask;
+
+      c->arch->plan(type, dstSize, &srcTypeMask, &srcRegisterMask,
+                    dstSize, &dstTypeMask, &dstRegisterMask,
+                    &thunk);
+
+      assert(c, dstMask.typeMask & srcTypeMask & (1 << RegisterOperand));
+
+      Site* tmpTarget = freeRegisterSite
+        (c, dstMask.registerMask & srcRegisterMask);
 
       addSite(c, dst, tmpTarget);
 
