@@ -2766,24 +2766,24 @@ maybePreserve(Context* c, Value* v, Site* s)
 Site*
 getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
 {
+  Site* s;
+  Value* v;
   if (c->arch->condensedAddressing()) {
-    Site* s = value->source;
-
+    s = value->source;
+    v = value;
     maybePreserve(c, value, s);
-
-    removeSite(c, value, s);
-
-    s->freeze(c, value);
-
-    return s;
   } else {
     SingleRead r(resultMask);
-    Site* s = pickTargetSite(c, &r);
-
+    s = pickTargetSite(c, &r);
+    v = result;
     addSite(c, result, s);
-
-    return s;
   }
+
+  removeSite(c, v, s);
+
+  s->freeze(c, v);
+
+  return s;
 }
 
 Site*
@@ -2866,17 +2866,15 @@ class CombineEvent: public Event {
       popRead(c, this, r->value);
     }
 
-    if (c->arch->condensedAddressing()) {
-      low->thaw(c, second);
-      if (resultSize > BytesPerWord) {
-        high->thaw(c, second->high);
-      }
+    low->thaw(c, second);
+    if (resultSize > BytesPerWord) {
+      high->thaw(c, second->high);
+    }
 
-      if (live(result)) {
-        addSite(c, result, low);
-        if (resultSize > BytesPerWord and live(result->high)) {
-          addSite(c, result->high, high);
-        }
+    if (live(result)) {
+      addSite(c, result, low);
+      if (resultSize > BytesPerWord and live(result->high)) {
+        addSite(c, result->high, high);
       }
     }
   }
@@ -3197,17 +3195,15 @@ class TranslateEvent: public Event {
       popRead(c, this, r->value);
     }
 
-    if (c->arch->condensedAddressing()) {
-      low->thaw(c, value);
-      if (size > BytesPerWord) {
-        high->thaw(c, value->high);
-      }
+    low->thaw(c, value);
+    if (size > BytesPerWord) {
+      high->thaw(c, value->high);
+    }
 
-      if (live(result)) {
-        addSite(c, result, low);
-        if (size > BytesPerWord and live(result->high)) {
-          addSite(c, result->high, high);
-        }
+    if (live(result)) {
+      addSite(c, result, low);
+      if (size > BytesPerWord and live(result->high)) {
+        addSite(c, result->high, high);
       }
     }
   }
