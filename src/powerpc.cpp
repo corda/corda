@@ -843,7 +843,7 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
         load(c, 4, base, 0, normalized, 1, 4, &dstHigh, preserveIndex, false);
         load(c, 4, base, 4, normalized, 1, 4, dst, preserveIndex, false);
       } else {
-        issue(c, lwzx(dst->low, base, offset));
+        issue(c, lwzx(dst->low, base, normalized));
       }
     } break;
 
