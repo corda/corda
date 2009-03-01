@@ -4993,15 +4993,15 @@ class MyCompiler: public Compiler {
     c.locals = newLocals;
 
     Event* e = c.logicalCode[logicalIp]->firstEvent;
-    for (unsigned i = 0; i < c.localFootprint; ++i) {
+    for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
       Local* local = e->localsBefore + i;
       if (local->value) {
         initLocal(1, i);
 
-        unsigned highOffset = c.arch->bigEndian() ? 1 : -1;
+        int highOffset = c.arch->bigEndian() ? 1 : -1;
 
         if (i + highOffset > 0
-            and i + highOffset < c.localFootprint
+            and i + highOffset < static_cast<int>(c.localFootprint)
             and local->value->high == local[highOffset].value)
         {
           c.locals[i].value->high = c.locals[i + highOffset].value;
