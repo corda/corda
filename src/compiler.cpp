@@ -4829,14 +4829,36 @@ class MyCompiler: public Compiler {
     return static_cast<Stack*>(e)->index;
   }
 
-  virtual Operand* peek(unsigned footprint UNUSED, unsigned index) {
+  virtual Operand* peek(unsigned footprint, unsigned index) {
     Stack* s = c.stack;
     for (unsigned i = index; i > 0; --i) {
       s = s->next;
     }
-    assert(&c, footprint == 1 or
-           (c.stack->value->high == c.stack->next->value
-            and ((BytesPerWord == 8) xor (c.stack->value->high != 0))));
+
+    if (footprint > 1) {
+      assert(&c, footprint == 2);
+
+      bool bigEndian = c.arch->bigEndian();
+
+#ifndef NDEBUG
+      Stack* low;
+      Stack* high;
+      if (bigEndian) {
+        high = s;
+        low = s->next;
+      } else {
+        low = s;
+        high = s->next;
+      }
+
+      assert(&c, low->value->high == high->value
+             and ((BytesPerWord == 8) xor (low->value->high != 0)));
+#endif // not NDEBUG
+
+      if (bigEndian) {
+        s = s->next;
+      }
+    }
 
     return s->value;
   }
