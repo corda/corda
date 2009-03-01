@@ -68,6 +68,7 @@ inline int stwu(int rs, int ra, int i) { return D(37, rs, ra, i); }
 inline int stwx(int rs, int ra, int rb) { return X(31, rs, ra, rb, 151, 0); }
 inline int add(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 266, 0); }
 inline int addc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 10, 0); }
+inline int addci(int rt, int ra, int i) { return D(12, rt, ra, i); }
 inline int adde(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 138, 0); }
 inline int addi(int rt, int ra, int i) { return D(14, rt, ra, i); }
 inline int addis(int rt, int ra, int i) { return D(15, rt, ra, i); }
@@ -83,6 +84,7 @@ inline int divw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 491, 0); 
 inline int divwu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 459, 0); }
 inline int divd(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 489, 0); }
 inline int divdu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 457, 0); }
+inline int neg(int rt, int ra) { return XO(31, rt, ra, 0, 0, 104, 0); }
 inline int and_(int rt, int ra, int rb) { return X(31, ra, rt, rb, 28, 0); }
 inline int andi(int rt, int ra, int i) { return D(28, ra, rt, i); }
 inline int andis(int rt, int ra, int i) { return D(29, ra, rt, i); }
@@ -1343,6 +1345,23 @@ moveCM(Context* c, unsigned srcSize, Assembler::Constant* src,
 }
 
 void
+negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
+         unsigned dstSize, Assembler::Register* dst)
+{
+  assert(c, srcSize == dstSize);
+
+  if (srcSize == 8) {
+    Assembler::Register dstHigh(dst->high);
+
+    negateRR(c, 4, src, 4, dst);
+    issue(c, addci(dst->high, dst->high, 0));
+    negateRR(c, 4, &dstHigh, 4, &dstHigh);
+  } else {
+    issue(c, neg(dst->low, src->low));
+  }
+}
+
+void
 callR(Context* c, unsigned size, Assembler::Register* target)
 {
   assert(c, size == BytesPerWord);
@@ -1503,6 +1522,8 @@ populateTables(ArchitectureContext* c)
   bo[index(Compare, C, R)] = CAST2(compareCR);
   bo[index(Compare, R, M)] = CAST2(compareRM);
   bo[index(Compare, C, M)] = CAST2(compareCM);
+
+  bo[index(Negate, R, R)] = CAST2(negateRR);
 
   to[index(Add, R)] = CAST3(addR);
   to[index(Add, C)] = CAST3(addC);
