@@ -88,7 +88,10 @@ inline int andi(int rt, int ra, int i) { return D(28, ra, rt, i); }
 inline int andis(int rt, int ra, int i) { return D(29, ra, rt, i); }
 inline int or_(int rt, int ra, int rb) { return X(31, ra, rt, rb, 444, 0); }
 inline int ori(int rt, int ra, int i) { return D(24, rt, ra, i); }
+inline int xor_(int rt, int ra, int rb) { return X(31, ra, rt, rb, 316, 0); }
 inline int oris(int rt, int ra, int i) { return D(25, rt, ra, i); }
+inline int xori(int rt, int ra, int i) { return D(26, rt, ra, i); }
+inline int xoris(int rt, int ra, int i) { return D(27, rt, ra, i); }
 inline int rlwinm(int rt, int ra, int i, int mb, int me) { return M(21, ra, rt, i, mb, me, 0); }
 inline int rlwimi(int rt, int ra, int i, int mb, int me) { return M(20, ra, rt, i, mb, me, 0); }
 inline int slw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 21, 0); }
@@ -1077,6 +1080,48 @@ orC(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
+xorR(Context* c, unsigned size, Assembler::Register* a,
+     Assembler::Register* b, Assembler::Register* dst)
+{
+  if (size == 8) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+    
+    xorR(c, 4, a, b, dst);
+    xorR(c, 4, &ah, &bh, &dh);
+  } else {
+    issue(c, xor_(dst->low, a->low, b->low));
+  }
+}
+
+void
+xorC(Context* c, unsigned size, Assembler::Constant* a,
+     Assembler::Register* b, Assembler::Register* dst)
+{
+  int64_t v = a->value->value();
+
+  if (size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+
+    xorC(c, 4, &al, b, dst);
+    xorC(c, 4, &ah, &bh, &dh);
+  } else {
+    issue(c, xori(dst->low, b->low, v));
+    if (v >> 16) {
+      issue(c, xoris(dst->low, b->low, v >> 16));
+    }
+  }
+}
+
+void
 moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
        unsigned dstSize, Assembler::Register* dst)
 {
@@ -1479,6 +1524,9 @@ populateTables(ArchitectureContext* c)
 
   to[index(Or, C)] = CAST3(orC);
   to[index(Or, R)] = CAST3(orR);
+
+  to[index(Xor, C)] = CAST3(xorC);
+  to[index(Xor, R)] = CAST3(xorR);
 
   to[index(LongCompare, R)] = CAST3(longCompareR);
   to[index(LongCompare, C)] = CAST3(longCompareC);
