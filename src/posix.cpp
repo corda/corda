@@ -790,6 +790,10 @@ handleSignal(int signal, siginfo_t* info, void* context)
 {
   ucontext_t* c = static_cast<ucontext_t*>(context);
 
+#ifndef BASE_REGISTER
+#  define BASE_REGISTER(x) 0
+#endif
+
   void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
   void* base = reinterpret_cast<void*>(BASE_REGISTER(c));
   void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));

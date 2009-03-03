@@ -17,20 +17,17 @@
 #ifdef __APPLE__
 #  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
 #    define IP_REGISTER(context) (context->uc_mcontext->__ss.__srr0)
-#    define BASE_REGISTER(context) (context->uc_mcontext->__ss.__r13)
 #    define STACK_REGISTER(context) (context->uc_mcontext->__ss.__r1)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__r14)
+#    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__r13)
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext->ss.srr0)
-#    define BASE_REGISTER(context) (context->uc_mcontext->ss.r13)
 #    define STACK_REGISTER(context) (context->uc_mcontext->ss.r1)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->ss.r14)
+#    define THREAD_REGISTER(context) (context->uc_mcontext->ss.r13)
 #  endif
 #else
 #  define IP_REGISTER(context) (context->uc_mcontext.gregs[32])
-#  define BASE_REGISTER(context) (context->uc_mcontext.gregs[13])
 #  define STACK_REGISTER(context) (context->uc_mcontext.gregs[1])
-#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[14])
+#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[13])
 #endif
 
 extern "C" uint64_t
@@ -39,6 +36,18 @@ vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
              unsigned returnType);
 
 namespace vm {
+
+inline void
+trap()
+{
+  asm("trap");
+}
+
+inline void
+memoryBarrier()
+{
+  __asm__ __volatile__("sync": : :"memory");
+}
 
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,

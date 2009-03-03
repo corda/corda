@@ -163,6 +163,11 @@ methodForIp(MyThread* t, void* ip)
     fprintf(stderr, "query for method containing %p\n", ip);
   }
 
+  // we must use a version of the method tree at least as recent as the
+  // compiled form of the method containing the specified address (see
+  // compile(MyThread*, Allocator*, BootContext*, object)):
+  memoryBarrier();
+
   return treeQuery(t, methodTree(t), reinterpret_cast<intptr_t>(ip),
                    methodTreeSentinal(t), compareIpToMethodBounds);
 }
@@ -4189,11 +4194,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
        (&byteArrayBody(t, methodName(t, context->method), 0)),
        "printStackTrace") == 0)
   {
-#ifdef __POWERPC__
-    asm("trap");
-#else
-    asm("int3");
-#endif
+    trap();
   }
 
   return start;
@@ -5377,6 +5378,11 @@ findCallNode(MyThread* t, void* address)
     fprintf(stderr, "find call node %p\n", address);
   }
 
+  // we must use a version of the call table at least as recent as the
+  // compiled form of the method containing the specified address (see
+  // compile(MyThread*, Allocator*, BootContext*, object)):
+  memoryBarrier();
+
   MyProcessor* p = processor(t);
   object table = p->callTable;
 
@@ -5960,6 +5966,8 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
         (t, &(context.zone), methodTree(t),
          reinterpret_cast<intptr_t>(compiled), clone, methodTreeSentinal(t),
          compareIpToMethodBounds);
+
+      memoryBarrier();
 
       methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
 

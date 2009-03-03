@@ -41,6 +41,18 @@ vmNativeCall(void* function, void* stack, unsigned stackSize,
 
 namespace vm {
 
+inline void
+trap()
+{
+  asm("int3");
+}
+
+inline void
+memoryBarrier()
+{
+  __asm__ __volatile__("": : :"memory");
+}
+
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
             unsigned, unsigned argumentsSize, unsigned returnType)
