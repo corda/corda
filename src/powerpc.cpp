@@ -114,6 +114,7 @@ inline int cmp(int bf, int ra, int rb) { return X(31, bf << 2, ra, rb, 0, 0); }
 inline int cmpl(int bf, int ra, int rb) { return X(31, bf << 2, ra, rb, 32, 0); }
 inline int cmpi(int bf, int ra, int i) { return D(11, bf << 2, ra, i); }
 inline int cmpli(int bf, int ra, int i) { return D(10, bf << 2, ra, i); }
+inline int sync(int L) { return X(31, L, 0, 0, 598, 0); }
 // PSEUDO-INSTRUCTIONS
 inline int li(int rt, int i) { return addi(rt, 0, i); }
 inline int lis(int rt, int i) { return addis(rt, 0, i); }
@@ -1470,6 +1471,12 @@ return_(Context* c)
   issue(c, blr());
 }
 
+void
+memoryBarrier(Context* c)
+{
+  issue(c, sync(0));
+}
+
 // END OPERATION COMPILERS
 
 
@@ -1487,6 +1494,9 @@ populateTables(ArchitectureContext* c)
   TernaryOperationType* to = c->ternaryOperations;
 
   zo[Return] = return_;
+  zo[LoadBarrier] = memoryBarrier;
+  zo[StoreStoreBarrier] = memoryBarrier;
+  zo[StoreLoadBarrier] = memoryBarrier;
 
   uo[index(LongCall, C)] = CAST1(longCallC);
 

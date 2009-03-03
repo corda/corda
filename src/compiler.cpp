@@ -3320,6 +3320,29 @@ appendTranslate(Context* c, BinaryOperation type, unsigned size, Value* value,
           SiteMask(resultTypeMask, resultRegisterMask >> 32, AnyFrameIndex)));
 }
 
+class BarrierEvent: public Event {
+ public:
+  BarrierEvent(Context* c, Operation op):
+    Event(c), op(op)
+  { }
+
+  virtual const char* name() {
+    return "BarrierEvent";
+  }
+
+  virtual void compile(Context* c) {
+    c->assembler->apply(op);
+  }
+
+  Operation op;
+};
+
+void
+appendBarrier(Context* c, Operation op)
+{
+  append(c, new (c->zone->allocate(sizeof(BarrierEvent))) BarrierEvent(c, op));
+}
+
 class MemoryEvent: public Event {
  public:
   MemoryEvent(Context* c, Value* base, int displacement, Value* index,
@@ -5173,6 +5196,18 @@ class MyCompiler: public Compiler {
     Value* result = value(&c);
     appendTranslate(&c, Negate, size, static_cast<Value*>(a), result);
     return result;
+  }
+
+  virtual void loadBarrier() {
+    appendBarrier(&c, LoadBarrier);
+  }
+
+  virtual void storeStoreBarrier() {
+    appendBarrier(&c, StoreStoreBarrier);
+  }
+
+  virtual void storeLoadBarrier() {
+    appendBarrier(&c, StoreLoadBarrier);
   }
 
   virtual unsigned compile() {

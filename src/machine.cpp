@@ -835,6 +835,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
         staticTypes[staticCount++] = code;
       } else {
+        if (flags & ACC_FINAL) {
+          classFlags(t, class_) |= HasFinalMemberFlag;
+        }
+
         unsigned excess = (memberOffset % fieldSize(t, code)) % BytesPerWord;
         if (excess) {
           memberOffset += BytesPerWord - excess;
@@ -1160,6 +1164,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         {
           methodVmFlags(t, method) |= ClassInitFlag;
           classVmFlags(t, class_) |= NeedInitFlag;
+        } else if (strcmp(reinterpret_cast<const int8_t*>("<init>"), 
+                          &byteArrayBody(t, methodName(t, method), 0)) == 0)
+        {
+          methodVmFlags(t, method) |= ConstructorFlag;
         }
       }
 

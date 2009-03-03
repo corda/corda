@@ -82,10 +82,12 @@ const unsigned InitFlag = 1 << 3;
 const unsigned PrimitiveFlag = 1 << 4;
 const unsigned SingletonFlag = 1 << 5;
 const unsigned BootstrapFlag = 1 << 6;
+const unsigned HasFinalMemberFlag = 1 << 7;
 
 // method flags:
 const unsigned ClassInitFlag = 1 << 0;
 const unsigned CompiledFlag = 1 << 1;
+const unsigned ConstructorFlag = 1 << 2;
 
 typedef Machine JavaVM;
 typedef Thread JNIEnv;

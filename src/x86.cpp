@@ -471,6 +471,10 @@ return_(Context* c)
 }
 
 void
+ignore(Context*)
+{ }
+
+void
 unconditional(Context* c, unsigned jump, Assembler::Constant* a)
 {
   appendOffsetTask(c, a->value, offset(c), 5);
@@ -1897,6 +1901,9 @@ populateTables(ArchitectureContext* c)
   BinaryOperationType* bo = c->binaryOperations;
 
   zo[Return] = return_;
+  zo[LoadBarrier] = ignore;
+  zo[StoreStoreBarrier] = ignore;
+  zo[StoreLoadBarrier] = ignore;
 
   uo[index(Call, C)] = CAST1(callC);
   uo[index(Call, R)] = CAST1(callR);

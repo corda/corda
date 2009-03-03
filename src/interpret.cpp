@@ -14,6 +14,7 @@
 #include "machine.h"
 #include "processor.h"
 #include "process.h"
+#include "arch.h"
 
 using namespace vm;
 
@@ -1452,11 +1453,14 @@ interpret(Thread* t)
     
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
-      if (throwIfVolatileField(t, field)) goto throw_;
 
       assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
       pushField(t, popObject(t), field);
+
+      if (fieldFlags(t, field) & ACC_VOLATILE) {
+        loadMemoryBarrier();
+      }
     } else {
       exception = makeNullPointerException(t);
       goto throw_;
@@ -1468,7 +1472,6 @@ interpret(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
-    if (throwIfVolatileField(t, field)) goto throw_;
 
     assert(t, fieldFlags(t, field) & ACC_STATIC);
 
@@ -1477,6 +1480,10 @@ interpret(Thread* t)
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
 
     pushField(t, classStaticTable(t, fieldClass(t, field)), field);
+
+    if (fieldFlags(t, field) & ACC_VOLATILE) {
+      loadMemoryBarrier();
+    }
   } goto loop;
 
   case goto_: {
@@ -2403,7 +2410,10 @@ interpret(Thread* t)
     
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
-    if (throwIfVolatileField(t, field)) goto throw_;
+
+    if (fieldFlags(t, field) & ACC_VOLATILE) {
+      storeStoreMemoryBarrier();
+    }
 
     assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
@@ -2464,6 +2474,10 @@ interpret(Thread* t)
 
     default: abort(t);
     }
+
+    if (fieldFlags(t, field) & ACC_VOLATILE) {
+      storeLoadMemoryBarrier();
+    }
   } goto loop;
 
   case putstatic: {
@@ -2471,7 +2485,10 @@ interpret(Thread* t)
 
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
-    if (throwIfVolatileField(t, field)) goto throw_;
+
+    if (fieldFlags(t, field) & ACC_VOLATILE) {
+      storeStoreMemoryBarrier();
+    }
 
     assert(t, fieldFlags(t, field) & ACC_STATIC);
 
@@ -2518,6 +2535,10 @@ interpret(Thread* t)
 
     default: abort(t);
     }
+
+    if (fieldFlags(t, field) & ACC_VOLATILE) {
+      storeLoadMemoryBarrier();
+    }
   } goto loop;
 
   case ret: {
@@ -2525,6 +2546,13 @@ interpret(Thread* t)
   } goto loop;
 
   case return_: {
+    object method = frameMethod(t, frame);
+    if ((methodFlags(t, method) & ConstructorFlag)
+        and (classFlags(t, methodClass(t, method)) & HasFinalMemberFlag))
+    {
+      storeStoreMemoryBarrier();
+    }
+
     if (frame > base) {
       popFrame(t);
       goto loop;

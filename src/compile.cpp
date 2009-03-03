@@ -2603,7 +2603,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
-      if (throwIfVolatileField(t, field)) return;
 
       Compiler::Operand* table;
 
@@ -2674,6 +2673,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       default:
         abort(t);
+      }
+
+      if (fieldFlags(t, field) & ACC_VOLATILE) {
+        c->loadBarrier();
       }
     } break;
 
@@ -3505,7 +3508,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     
       object field = resolveField(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
-      if (throwIfVolatileField(t, field)) return;
 
       object staticTable = 0;
 
@@ -3563,6 +3565,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         table = frame->popObject();
       }
 
+      if (fieldFlags(t, field) & ACC_VOLATILE) {
+        c->storeStoreBarrier();
+      }
+
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
@@ -3605,6 +3611,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       default: abort(t);
       }
+
+      if (fieldFlags(t, field) & ACC_VOLATILE) {
+        c->storeLoadBarrier();
+      }
     } break;
 
     case ret:
@@ -3613,6 +3623,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       return;
 
     case return_:
+      if ((methodFlags(t, context->method) & ConstructorFlag)
+          and (classFlags(t, methodClass(t, context->method))
+               & HasFinalMemberFlag))
+      {
+        c->storeStoreBarrier();
+      }
+
       handleExit(t, frame);
       c->return_(0, 0);
       return;

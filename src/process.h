@@ -188,21 +188,6 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
 int
 findLineNumber(Thread* t, object method, unsigned ip);
 
-inline bool
-throwIfVolatileField(Thread* t, object field)
-{
-  if (fieldFlags(t, field) & ACC_VOLATILE) {
-    object message = makeString
-      (t, "volatile fields are not yet supported: %s.%s",
-       &byteArrayBody(t, className(t, fieldClass(t, field)), 0),
-       &byteArrayBody(t, fieldName(t, field), 0));
-    t->exception = makeNoSuchFieldError(t, message);
-    return true;
-  } else {
-    return false;
-  }
-}
-
 } // namespace vm
 
 #endif//PROCESS_H

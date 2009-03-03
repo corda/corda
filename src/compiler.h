@@ -124,6 +124,10 @@ class Compiler {
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* neg(unsigned size, Operand* a) = 0;
 
+  virtual void loadBarrier() = 0;
+  virtual void storeStoreBarrier() = 0;
+  virtual void storeLoadBarrier() = 0;
+
   virtual unsigned compile() = 0;
   virtual unsigned poolSize() = 0;
   virtual void writeTo(uint8_t* dst) = 0;

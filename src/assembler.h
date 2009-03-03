@@ -17,10 +17,13 @@
 namespace vm {
 
 enum Operation {
-  Return
+  Return,
+  LoadBarrier,
+  StoreStoreBarrier,
+  StoreLoadBarrier
 };
 
-const unsigned OperationCount = Return + 1;
+const unsigned OperationCount = StoreLoadBarrier + 1;
 
 enum UnaryOperation {
   Call,

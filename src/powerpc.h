@@ -49,6 +49,24 @@ memoryBarrier()
   __asm__ __volatile__("sync": : :"memory");
 }
 
+inline void
+storeStoreMemoryBarrier()
+{
+  memoryBarrier();
+}
+
+inline void
+storeLoadMemoryBarrier()
+{
+  memoryBarrier();
+}
+
+inline void
+loadMemoryBarrier()
+{
+  memoryBarrier();
+}
+
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned argumentsSize,
