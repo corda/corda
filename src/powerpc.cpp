@@ -68,9 +68,9 @@ inline int stwu(int rs, int ra, int i) { return D(37, rs, ra, i); }
 inline int stwx(int rs, int ra, int rb) { return X(31, rs, ra, rb, 151, 0); }
 inline int add(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 266, 0); }
 inline int addc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 10, 0); }
-inline int addci(int rt, int ra, int i) { return D(12, rt, ra, i); }
 inline int adde(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 138, 0); }
 inline int addi(int rt, int ra, int i) { return D(14, rt, ra, i); }
+inline int addic(int rt, int ra, int i) { return D(12, rt, ra, i); }
 inline int addis(int rt, int ra, int i) { return D(15, rt, ra, i); }
 inline int subf(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 40, 0); }
 inline int subfc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 8, 0); }
@@ -408,59 +408,88 @@ inline int H(Reg* r) { return r->high; }
 void shiftLeftR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
   if(size == 8) {
-    issue(con, subfic(31, R(a), 32));
-    issue(con, slw(R(b), R(b), R(a)));
-    issue(con, srw(0, H(b), 31));
-    issue(con, or_(R(b), R(b), 0));
-    issue(con, addi(31, R(a), -32));
-    issue(con, slw(0, H(b), 31));
-    issue(con, or_(R(b), R(b), 0));
-    issue(con, slw(H(b), H(b), R(a)));
-  } else
-    issue(con, slw(R(t), R(b), R(a)));
+    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
+    issue(con, subfic(H(tmp), R(a), 32));
+    issue(con, slw(H(t), H(b), R(a)));
+    issue(con, srw(R(tmp), R(b), H(tmp)));
+    issue(con, or_(H(t), H(t), R(tmp)));
+    issue(con, addi(H(tmp), R(a), -32));
+    issue(con, slw(R(tmp), R(b), H(tmp)));
+    issue(con, or_(H(t), H(t), R(tmp)));
+    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
+  }
+  issue(con, slw(R(t), R(b), R(a)));
 }
 
 void shiftLeftC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if (size == 8) {
-    abort(con); // todo
-  } else
-    issue(con, slwi(R(t), R(b), sh));
+    issue(con, rlwinm(H(t),H(b),sh,0,31-sh));
+    issue(con, rlwimi(H(t),R(b),sh,32-sh,31));
+  }
+  issue(con, slwi(R(t), R(b), sh));
 }
+
+void jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target);
 
 void shiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
   if(size == 8) {
-    abort(con); // todo
-  } else
+    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
+    issue(con, subfic(H(tmp), R(a), 32));
+    issue(con, srw(R(t), R(b), R(a)));
+    issue(con, slw(R(tmp), H(b), H(tmp)));
+    issue(con, or_(R(t), R(t), R(tmp)));
+    issue(con, addic(H(tmp), R(a), -32));
+    issue(con, sraw(R(tmp), H(b), H(tmp)));
+    ResolvedPromise prom(8);
+    Const offset(&prom);
+    jumpIfLessOrEqualC(con, 0, &offset);
+    issue(con, ori(R(t), R(tmp), 0));
+    issue(con, sraw(H(t), H(b), R(a)));
+    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
+  } else {
     issue(con, sraw(R(t), R(b), R(a)));
+  }
 }
 
 void shiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if(size == 8) {
-    abort(con); // todo
-  } else
+    issue(con, rlwinm(R(t),R(b),32-sh,sh,31));
+    issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
+    issue(con, srawi(H(t),H(b),sh));
+  } else {
     issue(con, srawi(R(t), R(b), sh));
+  }
 }
 
 void unsignedShiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
+  issue(con, srw(R(t), R(b), R(a)));
   if(size == 8) {
-    abort(con); // todo
-  } else
-    issue(con, srw(R(t), R(b), R(a)));
+    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
+    issue(con, subfic(H(tmp), R(a), 32));
+    issue(con, slw(R(tmp), H(b), H(tmp)));
+    issue(con, or_(R(t), R(t), R(tmp)));
+    issue(con, addi(H(tmp), R(a), -32));
+    issue(con, srw(R(tmp), H(b), H(tmp)));
+    issue(con, or_(R(t), R(t), R(tmp)));
+    issue(con, srw(H(t), H(b), R(a)));
+    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
+  }
 }
 
 void unsignedShiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
+  issue(con, srwi(R(t), R(b), sh));
   if (size == 8) {
-    abort(con); // todo
-  } else
-    issue(con, srwi(R(t), R(b), sh));
+    issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
+    issue(con, rlwinm(H(t),H(b),32-sh,sh,31));
+  }
 }
 
 void
@@ -674,12 +703,8 @@ void multiplyC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
 }
 
 void divideR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  if(size == 8) {
-    issue(con, 0);
-    issue(con, 0);
-  } else {
-    issue(con, divw(R(t), R(b), R(a)));
-  }
+  assert(con, size == 4);
+  issue(con, divw(R(t), R(b), R(a)));
 }
 
 void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
@@ -1355,7 +1380,7 @@ negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
     Assembler::Register dstHigh(dst->high);
 
     negateRR(c, 4, src, 4, dst);
-    issue(c, addci(dst->high, dst->high, 0));
+    issue(c, addic(dst->high, dst->high, 0));
     negateRR(c, 4, &dstHigh, 4, &dstHigh);
   } else {
     issue(c, neg(dst->low, src->low));
@@ -1724,7 +1749,7 @@ class MyArchitecture: public Assembler::Architecture {
     case Add:
     case Subtract:
     case Multiply:
-      if (BytesPerWord == 4 and aSize == 8) {
+      if (aSize == 8) {
         *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       }
       break;
@@ -1734,18 +1759,20 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Divide:
-      *aTypeMask = (1 << RegisterOperand);
       if (BytesPerWord == 4 and aSize == 8) {
         *bTypeMask = ~0;
         *thunk = true;        
+      } else {
+        *aTypeMask = (1 << RegisterOperand);
       }
       break;
 
     case Remainder:
-      *aTypeMask = (1 << RegisterOperand);
       if (BytesPerWord == 4 and aSize == 8) {
         *bTypeMask = ~0;
         *thunk = true;
+      } else {
+        *aTypeMask = (1 << RegisterOperand);
       }
       break;
 
