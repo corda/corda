@@ -453,9 +453,16 @@ postCollect(Thread* t)
   t->m->heap->free(t->defaultHeap, ThreadHeapSizeInBytes);
   t->defaultHeap = static_cast<uintptr_t*>
     (t->m->heap->allocate(ThreadHeapSizeInBytes));
+  memset(t->defaultHeap, 0, ThreadHeapSizeInBytes);
 #endif
 
-  t->heap = t->defaultHeap;
+  if (t->heap == t->defaultHeap) {
+    memset(t->defaultHeap, 0, t->heapIndex * BytesPerWord);
+  } else {
+    memset(t->defaultHeap, 0, ThreadHeapSizeInBytes);
+    t->heap = t->defaultHeap;
+  }
+
   t->heapOffset = 0;
   t->heapIndex = 0;
 
@@ -481,7 +488,7 @@ makeByteArray(Thread* t, const char* format, va_list a)
   int r = vsnprintf(buffer, Size - 1, format, a);
   expect(t, r >= 0 and r < Size - 1);
 
-  object s = makeByteArray(t, strlen(buffer) + 1, false);
+  object s = makeByteArray(t, strlen(buffer) + 1);
   memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
 
   return s;
@@ -490,7 +497,7 @@ makeByteArray(Thread* t, const char* format, va_list a)
 object
 parseUtf8(Thread* t, Stream& s, unsigned length)
 {
-  object value = makeByteArray(t, length + 1, false);
+  object value = makeByteArray(t, length + 1);
   unsigned vi = 0;
   for (unsigned si = 0; si < length; ++si) {
     unsigned a = s.read1();
@@ -523,7 +530,7 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
   if (vi < length) {
     PROTECT(t, value);
     
-    object v = makeByteArray(t, vi + 1, false);
+    object v = makeByteArray(t, vi + 1);
     memcpy(&byteArrayBody(t, v, 0), &byteArrayBody(t, value, 0), vi);
     value = v;
   }
@@ -622,7 +629,7 @@ parsePool(Thread* t, Stream& s)
 {
   unsigned count = s.read2() - 1;
 
-  object pool = makeSingleton(t, count);
+  object pool = makeSingletonOfSize(t, count);
   PROTECT(t, pool);
 
   if (count) {
@@ -734,7 +741,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
       length *= 2;
     }
-    interfaceTable = makeArray(t, length, true);
+    interfaceTable = makeArray(t, length);
     PROTECT(t, interfaceTable);
 
     unsigned i = 0;
@@ -749,7 +756,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
         if (classVirtualTable(t, interface)) {
           // we'll fill in this table in parseMethodTable():
           object vtable = makeArray
-            (t, arrayLength(t, classVirtualTable(t, interface)), true);
+            (t, arrayLength(t, classVirtualTable(t, interface)));
           
           set(t, interfaceTable, ArrayBody + (i * BytesPerWord), vtable);
         }
@@ -778,10 +785,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     unsigned staticOffset = BytesPerWord * 2;
     unsigned staticCount = 0;
   
-    object fieldTable = makeArray(t, count, true);
+    object fieldTable = makeArray(t, count);
     PROTECT(t, fieldTable);
 
-    object staticValueTable = makeIntArray(t, count, false);
+    object staticValueTable = makeIntArray(t, count);
     PROTECT(t, staticValueTable);
 
     uint8_t staticTypes[count];
@@ -856,7 +863,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     if (staticCount) {
       unsigned footprint = ceiling(staticOffset - (BytesPerWord * 2),
                                    BytesPerWord);
-      object staticTable = makeSingleton(t, footprint);
+      object staticTable = makeSingletonOfSize(t, footprint);
 
       uint8_t* body = reinterpret_cast<uint8_t*>
         (&singletonBody(t, staticTable, 0));
@@ -901,8 +908,6 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
           default: abort(t);
           }
-        } else {
-          memset(body + offset, 0, size);
         }
 
         if (staticTypes[i] == ObjectField) {
@@ -925,7 +930,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         classObjectMask(t, classSuper(t, class_)));
   } else {
     object mask = makeIntArray
-      (t, ceiling(classFixedSize(t, class_), 32 * BytesPerWord), true);
+      (t, ceiling(classFixedSize(t, class_), 32 * BytesPerWord));
     intArrayBody(t, mask, 0) = 1;
 
     object superMask = 0;
@@ -970,13 +975,13 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  object code = makeCode(t, pool, 0, 0, maxStack, maxLocals, length, false);
+  object code = makeCode(t, pool, 0, 0, maxStack, maxLocals, length);
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 
   unsigned ehtLength = s.read2();
   if (ehtLength) {
-    object eht = makeExceptionHandlerTable(t, ehtLength, false);
+    object eht = makeExceptionHandlerTable(t, ehtLength);
     for (unsigned i = 0; i < ehtLength; ++i) {
       ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
       exceptionHandlerStart(eh) = s.read2();
@@ -997,7 +1002,7 @@ parseCode(Thread* t, Stream& s, object pool)
                &byteArrayBody(t, name, 0)) == 0)
     {
       unsigned lntLength = s.read2();
-      object lnt = makeLineNumberTable(t, lntLength, false);
+      object lnt = makeLineNumberTable(t, lntLength);
       for (unsigned i = 0; i < lntLength; ++i) {
         LineNumber* ln = lineNumberTableBody(t, lnt, i);
         lineNumberIp(ln) = s.read2();
@@ -1094,7 +1099,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   
   unsigned count = s.read2();
   if (count) {
-    object methodTable = makeArray(t, count, true);
+    object methodTable = makeArray(t, count);
     PROTECT(t, methodTable);
 
     for (unsigned i = 0; i < count; ++i) {
@@ -1199,13 +1204,13 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     } else {
       // apparently, Object does not have any virtual methods.  We
       // give it a vtable anyway so code doesn't break elsewhere.
-      object vtable = makeArray(t, 0, false);
+      object vtable = makeArray(t, 0);
       set(t, class_, ClassVirtualTable, vtable);
     }
   } else if (virtualCount) {
     // generate class vtable
 
-    object vtable = makeArray(t, virtualCount, true);
+    object vtable = makeArray(t, virtualCount);
 
     unsigned i = 0;
     if (classFlags(t, class_) & ACC_INTERFACE) {
@@ -1384,7 +1389,7 @@ makeArrayClass(Thread* t, object spec)
     const char* elementSpecStart = s;
     while (*s and *s != ';') ++ s;
     
-    elementSpec = makeByteArray(t, s - elementSpecStart + 1, false);
+    elementSpec = makeByteArray(t, s - elementSpecStart + 1);
     memcpy(&byteArrayBody(t, elementSpec, 0),
            &byteArrayBody(t, spec, elementSpecStart - start),
            s - elementSpecStart);
@@ -1394,7 +1399,7 @@ makeArrayClass(Thread* t, object spec)
   default:
     if (dimensions > 1) {
       char c = *s;
-      elementSpec = makeByteArray(t, 3, false);
+      elementSpec = makeByteArray(t, 3);
       byteArrayBody(t, elementSpec, 0) = '[';
       byteArrayBody(t, elementSpec, 1) = c;
       byteArrayBody(t, elementSpec, 2) = 0;
@@ -1460,7 +1465,7 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
     {
       mask = classObjectMask(t, arrayBody(t, t->m->types, superType));
     } else {
-      mask = makeIntArray(t, 1, false);
+      mask = makeIntArray(t, 1);
       intArrayBody(t, mask, 0) = objectMask;
     }
   } else {
@@ -1491,7 +1496,7 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
   if (vtableLength >= 0) {
     PROTECT(t, class_);
 
-    vtable = makeArray(t, vtableLength, false);
+    vtable = makeArray(t, vtableLength);
     for (int i = 0; i < vtableLength; ++ i) {
       arrayBody(t, vtable, i) = bootMethod;
     }
@@ -1514,11 +1519,9 @@ boot(Thread* t)
   m->unsafe = true;
 
   m->loader = allocate(t, sizeof(void*) * 3, true);
-  memset(m->loader, 0, sizeof(void*) * 2);
 
   m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
   arrayLength(t, m->types) = TypeCount;
-  memset(&arrayBody(t, m->types, 0), 0, TypeCount * BytesPerWord);
 
 #include "type-initializations.cpp"
 
@@ -1578,7 +1581,7 @@ boot(Thread* t)
 
   m->processor->boot(t, 0);
 
-  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1, false);
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
       (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
@@ -1792,6 +1795,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
 void
 Thread::init()
 {
+  memset(defaultHeap, 0, ThreadHeapSizeInBytes);
+
   if (parent == 0) {
     assert(this, m->rootThread == 0);
     assert(this, javaThread == 0);
@@ -1826,7 +1831,7 @@ Thread::init()
 
     m->monitorMap = makeWeakHashMap(this, 0, 0);
 
-    m->jniMethodTable = makeVector(this, 0, 0, false);
+    m->jniMethodTable = makeVector(this, 0, 0);
 
     m->localThread->set(this);
   } else {
@@ -2063,7 +2068,10 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
         t->heap = static_cast<uintptr_t*>
           (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
+
         if (t->heap) {
+          memset(t->heap, 0, ThreadHeapSizeInBytes);
+
           t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
           t->heapOffset += t->heapIndex;
           t->heapIndex = 0;
@@ -2099,6 +2107,8 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       (t->m->heap->allocateFixed
        (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
+    memset(o, 0, sizeInBytes);
+
     cast<uintptr_t>(o, 0) = FixedMark;
 
     t->m->fixedFootprint += total;
@@ -2111,6 +2121,8 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     object o = static_cast<object>
       (t->m->heap->allocateImmortalFixed
        (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+
+    memset(o, 0, sizeInBytes);
 
     cast<uintptr_t>(o, 0) = FixedMark;
 
@@ -2376,8 +2388,7 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
                             0, // methods
                             0, // static table
                             t->m->loader,
-                            0, // vtable length
-                            false);
+                            0);// vtable length
   PROTECT(t, class_);
   
   unsigned super = s.read2();
@@ -2526,13 +2537,13 @@ resolveObjectArrayClass(Thread* t, object elementSpec)
 
   object spec;
   if (byteArrayBody(t, elementSpec, 0) == '[') {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1, false);
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1);
     byteArrayBody(t, spec, 0) = '[';
     memcpy(&byteArrayBody(t, spec, 1),
            &byteArrayBody(t, elementSpec, 0),
            byteArrayLength(t, elementSpec));
   } else {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3, false);
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3);
     byteArrayBody(t, spec, 0) = '[';
     byteArrayBody(t, spec, 1) = 'L';
     memcpy(&byteArrayBody(t, spec, 2),
@@ -2546,12 +2557,12 @@ resolveObjectArrayClass(Thread* t, object elementSpec)
 }
 
 object
-makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear)
+makeObjectArray(Thread* t, object elementClass, unsigned count)
 {
   object arrayClass = resolveObjectArrayClass(t, className(t, elementClass));
   PROTECT(t, arrayClass);
 
-  object array = makeArray(t, count, clear);
+  object array = makeArray(t, count);
   setObjectClass(t, array, arrayClass);
 
   return array;
@@ -2900,7 +2911,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
 
     virtual bool visit(Processor::StackWalker* walker) {
       if (trace == 0) {
-        trace = makeArray(t, walker->count(), true);
+        trace = makeArray(t, walker->count());
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
@@ -2918,7 +2929,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
 
   walker->walk(&v);
 
-  return v.trace ? v.trace : makeArray(t, 0, true);
+  return v.trace ? v.trace : makeArray(t, 0);
 }
 
 object
@@ -2939,7 +2950,7 @@ makeTrace(Thread* t, Thread* target)
 
   t->m->processor->walkStack(target, &v);
 
-  return v.trace ? v.trace : makeArray(t, 0, true);
+  return v.trace ? v.trace : makeArray(t, 0);
 }
 
 void

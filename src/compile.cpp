@@ -1568,8 +1568,7 @@ uint64_t
 makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 {
   if (length >= 0) {
-    return reinterpret_cast<uint64_t>
-      (makeObjectArray(t, class_, length, true));
+    return reinterpret_cast<uint64_t>(makeObjectArray(t, class_, length));
   } else {
     object message = makeString(t, "%d", length);
     t->exception = makeNegativeArraySizeException(t, message);
@@ -1581,7 +1580,7 @@ uint64_t
 makeBlankArray(MyThread* t, unsigned type, int32_t length)
 {
   if (length >= 0) {
-    object (*constructor)(Thread*, uintptr_t, bool);
+    object (*constructor)(Thread*, uintptr_t);
     switch (type) {
     case T_BOOLEAN:
       constructor = makeBooleanArray;
@@ -1618,7 +1617,7 @@ makeBlankArray(MyThread* t, unsigned type, int32_t length)
     default: abort(t);
     }
 
-    return reinterpret_cast<uintptr_t>(constructor(t, length, true));
+    return reinterpret_cast<uintptr_t>(constructor(t, length));
   } else {
     object message = makeString(t, "%d", length);
     t->exception = makeNegativeArraySizeException(t, message);
@@ -1698,7 +1697,7 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* countStack,
     }
   }
 
-  object array = makeArray(t, counts[0], true);
+  object array = makeArray(t, counts[0]);
   setObjectClass(t, array, class_);
   PROTECT(t, array);
 
@@ -3828,10 +3827,10 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
 
     unsigned length = exceptionHandlerTableLength(t, oldTable);
 
-    object newIndex = makeIntArray(t, length * 3, false);
+    object newIndex = makeIntArray(t, length * 3);
     PROTECT(t, newIndex);
 
-    object newTable = makeArray(t, length + 1, true);
+    object newTable = makeArray(t, length + 1);
     PROTECT(t, newTable);
 
     set(t, newTable, ArrayBody, newIndex);
@@ -3874,7 +3873,7 @@ translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
     PROTECT(t, oldTable);
 
     unsigned length = lineNumberTableLength(t, oldTable);
-    object newTable = makeLineNumberTable(t, length, false);
+    object newTable = makeLineNumberTable(t, length);
     for (unsigned i = 0; i < length; ++i) {
       LineNumber* oldLine = lineNumberTableBody(t, oldTable, i);
       LineNumber* newLine = lineNumberTableBody(t, newTable, i);
@@ -4107,7 +4106,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
        FixedSizeOfArray + ((context->objectPoolCount + 1) * BytesPerWord),
        true);
 
-    initArray(t, pool, context->objectPoolCount + 1, false);
+    initArray(t, pool, context->objectPoolCount + 1);
     mark(t, pool, 0);
 
     set(t, pool, ArrayBody, objectPools(t));
@@ -4150,7 +4149,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
                     codeLineNumberTable(t, code),
                     codeMaxStack(t, code),
                     codeMaxLocals(t, code),
-                    0, false);
+                    0);
 
     set(t, context->method, MethodCode, code);
   }
@@ -4176,8 +4175,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     unsigned size = usableFrameSizeWithParameters(t, context->method);
     object map = makeIntArray
       (t, context->traceLogCount
-       + ceiling(context->traceLogCount * size, 32),
-       false);
+       + ceiling(context->traceLogCount * size, 32));
 
     assert(t, intArrayLength(t, map) == context->traceLogCount
            + frameObjectMapSize(t, context->method, map));
@@ -5076,7 +5074,7 @@ class MyProcessor: public Processor {
     return vm::makeClass
       (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
        objectMask, name, super, interfaceTable, virtualTable, fieldTable,
-       methodTable, staticTable, loader, vtableLength, false);
+       methodTable, staticTable, loader, vtableLength);
   }
 
   virtual void
@@ -5399,7 +5397,7 @@ class MyProcessor: public Processor {
     if (image) {
       ::boot(static_cast<MyThread*>(t), image);
     } else {
-      callTable = makeArray(t, 128, true);
+      callTable = makeArray(t, 128);
 
       methodTree = methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
       set(t, methodTree, TreeNodeLeft, methodTreeSentinal);
@@ -5471,7 +5469,7 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
   object oldNode = 0;
   PROTECT(t, oldNode);
 
-  object newTable = makeArray(t, newLength, true);
+  object newTable = makeArray(t, newLength);
   PROTECT(t, newTable);
 
   for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
@@ -5532,7 +5530,7 @@ insertCallNode(MyThread* t, object node)
 object
 makeClassMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
 {
-  object array = makeArray(t, nextPowerOfTwo(count), true);
+  object array = makeArray(t, nextPowerOfTwo(count));
   object map = makeHashMap(t, 0, array);
   PROTECT(t, map);
   
@@ -5548,7 +5546,7 @@ object
 makeStaticTableArray(Thread* t, unsigned* table, unsigned count,
                      uintptr_t* heap)
 {
-  object array = makeArray(t, count, false);
+  object array = makeArray(t, count);
   
   for (unsigned i = 0; i < count; ++i) {
     set(t, array, ArrayBody + (i * BytesPerWord),
@@ -5561,7 +5559,7 @@ makeStaticTableArray(Thread* t, unsigned* table, unsigned count,
 object
 makeStringMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
 {
-  object array = makeArray(t, nextPowerOfTwo(count), true);
+  object array = makeArray(t, nextPowerOfTwo(count));
   object map = makeWeakHashMap(t, 0, array);
   PROTECT(t, map);
   
@@ -5577,7 +5575,7 @@ object
 makeCallTable(MyThread* t, uintptr_t* heap, unsigned* calls, unsigned count,
               uintptr_t base)
 {
-  object table = makeArray(t, nextPowerOfTwo(count), true);
+  object table = makeArray(t, nextPowerOfTwo(count));
   PROTECT(t, table);
 
   unsigned size = 0;

@@ -1796,10 +1796,6 @@ writeConstructorParameters(Output* out, Object* t)
       out->write(" ");
       out->write(obfuscate(memberName(m)));
     } break;
-
-    case Object::Array: {
-      out->write(", bool clear");
-    } break;
             
     default: break;
     }    
@@ -1815,10 +1811,6 @@ writeConstructorArguments(Output* out, Object* t)
     case Object::Scalar: {
       out->write(", ");
       out->write(obfuscate(memberName(m)));
-    } break;
-
-    case Object::Array: {
-      out->write(", clear");
     } break;
             
     default: break;
@@ -1838,17 +1830,6 @@ writeConstructorInitializations(Output* out, Object* t)
       out->write("(t, o) = ");
       out->write(obfuscate(memberName(m)));
       out->write(";\n");
-    } break;
-            
-    case Object::Array: {
-      out->write("  if (clear and length) memset(");
-      if (memberTypeObject(m) == 0) {
-        out->write("&");
-      }
-      writeAccessorName(out, m);
-      out->write("(t, o, 0), 0, length * ");
-      out->write(arrayElementSize(m));
-      out->write(");\n");
     } break;
 
     default: break;

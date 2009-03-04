@@ -358,7 +358,7 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
       return;
     }
 
-    newArray = makeArray(t, newLength, true);
+    newArray = makeArray(t, newLength);
 
     if (oldArray != hashMapArray(t, map)) {
       // a resize was performed during a GC via the makeArray call
@@ -525,7 +525,7 @@ vectorAppend(Thread* t, object vector, object value)
     PROTECT(t, value);
 
     object newVector = makeVector
-      (t, vectorSize(t, vector), max(16, vectorSize(t, vector) * 2), false);
+      (t, vectorSize(t, vector), max(16, vectorSize(t, vector) * 2));
 
     if (vectorSize(t, vector)) {
       memcpy(&vectorBody(t, newVector, 0),

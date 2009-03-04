@@ -168,7 +168,7 @@ NewString(Thread* t, const jchar* chars, jsize size)
 
   object a = 0;
   if (size) {
-    a = makeCharArray(t, size, false);
+    a = makeCharArray(t, size);
     memcpy(&charArrayBody(t, a, 0), chars, size * sizeof(jchar));
   }
   object s = makeString(t, a, 0, size, 0);
@@ -184,7 +184,7 @@ NewStringUTF(Thread* t, const char* chars)
   object a = 0;
   unsigned size = strlen(chars);
   if (size) {
-    a = makeByteArray(t, size, false);
+    a = makeByteArray(t, size);
     memcpy(&byteArrayBody(t, a, 0), chars, size);
   }
   object s = makeString(t, a, 0, size, 0);
@@ -208,7 +208,7 @@ FindClass(Thread* t, const char* name)
 {
   ENTER(t, Thread::ActiveState);
 
-  object n = makeByteArray(t, strlen(name) + 1, false);
+  object n = makeByteArray(t, strlen(name) + 1);
   replace('.', '/', name, &byteArrayBody(t, n, 0));
 
   return makeLocalReference(t, resolveClass(t, n));
@@ -1214,7 +1214,7 @@ NewObjectArray(Thread* t, jsize length, jclass class_, jobject init)
 {
   ENTER(t, Thread::ActiveState);
 
-  object a = makeObjectArray(t, *class_, length, false);
+  object a = makeObjectArray(t, *class_, length);
   object value = (init ? *init : 0);
   for (jsize i = 0; i < length; ++i) {
     set(t, a, ArrayBody + (i * BytesPerWord), value);
@@ -1244,7 +1244,7 @@ NewBooleanArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeBooleanArray(t, length, true));
+  return makeLocalReference(t, makeBooleanArray(t, length));
 }
 
 jbyteArray JNICALL
@@ -1252,7 +1252,7 @@ NewByteArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeByteArray(t, length, true));
+  return makeLocalReference(t, makeByteArray(t, length));
 }
 
 jcharArray JNICALL
@@ -1260,7 +1260,7 @@ NewCharArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeCharArray(t, length, true));
+  return makeLocalReference(t, makeCharArray(t, length));
 }
 
 jshortArray JNICALL
@@ -1268,7 +1268,7 @@ NewShortArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeShortArray(t, length, true));
+  return makeLocalReference(t, makeShortArray(t, length));
 }
 
 jintArray JNICALL
@@ -1276,7 +1276,7 @@ NewIntArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeIntArray(t, length, true));
+  return makeLocalReference(t, makeIntArray(t, length));
 }
 
 jlongArray JNICALL
@@ -1284,7 +1284,7 @@ NewLongArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeLongArray(t, length, true));
+  return makeLocalReference(t, makeLongArray(t, length));
 }
 
 jfloatArray JNICALL
@@ -1292,7 +1292,7 @@ NewFloatArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeFloatArray(t, length, true));
+  return makeLocalReference(t, makeFloatArray(t, length));
 }
 
 jdoubleArray JNICALL
@@ -1300,7 +1300,7 @@ NewDoubleArray(Thread* t, jsize length)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeDoubleArray(t, length, true));
+  return makeLocalReference(t, makeDoubleArray(t, length));
 }
 
 jboolean* JNICALL

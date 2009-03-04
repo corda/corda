@@ -27,7 +27,7 @@ search(Thread* t, jstring name, object (*op)(Thread*, object),
        bool replaceDots)
 {
   if (LIKELY(name)) {
-    object n = makeByteArray(t, stringLength(t, *name) + 1, false);
+    object n = makeByteArray(t, stringLength(t, *name) + 1);
     char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
     stringChars(t, *name, s);
     
@@ -406,7 +406,7 @@ Java_java_lang_reflect_Array_makeObjectArray
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, makeObjectArray(t, *elementType, length, true));
+  return makeLocalReference(t, makeObjectArray(t, *elementType, length));
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -671,7 +671,7 @@ Java_java_lang_Throwable_trace(Thread* t, jclass, jint skipCount)
 
   t->m->processor->walkStack(t, &v);
 
-  if (v.trace == 0) v.trace = makeArray(t, 0, true);
+  if (v.trace == 0) v.trace = makeArray(t, 0);
 
   return makeLocalReference(t, v.trace);
 }
@@ -683,8 +683,7 @@ Java_java_lang_Throwable_resolveTrace(Thread* t, jclass, jobject trace)
 
   unsigned length = arrayLength(t, *trace);
   object array = makeObjectArray
-    (t, arrayBody(t, t->m->types, Machine::StackTraceElementType),
-     length, true);
+    (t, arrayBody(t, t->m->types, Machine::StackTraceElementType), length);
   PROTECT(t, array);
 
   object e = 0;

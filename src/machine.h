@@ -1490,6 +1490,9 @@ ensure(Thread* t, unsigned sizeInBytes)
     expect(t, t->backupHeap == 0);
     t->backupHeap = static_cast<uintptr_t*>
       (t->m->heap->allocate(pad(sizeInBytes)));
+
+    memset(t->backupHeap, 0, sizeInBytes);
+
     t->backupHeapIndex = 0;
     t->backupHeapSizeInWords = ceiling(sizeInBytes, BytesPerWord);
   }
@@ -1763,8 +1766,6 @@ makeNew(Thread* t, object class_)
   unsigned sizeInBytes = pad(classFixedSize(t, class_));
   object instance = allocate(t, sizeInBytes, classObjectMask(t, class_));
   setObjectClass(t, instance, class_);
-  memset(&cast<object>(instance, BytesPerWord), 0,
-         sizeInBytes - BytesPerWord);
 
   return instance;
 }
@@ -2068,7 +2069,7 @@ initClass(Thread* t, object c)
 }
 
 object
-makeObjectArray(Thread* t, object elementClass, unsigned count, bool clear);
+makeObjectArray(Thread* t, object elementClass, unsigned count);
 
 object
 findInTable(Thread* t, object table, object name, object spec,
@@ -2358,9 +2359,9 @@ singletonValue(Thread* t, object singleton, unsigned index)
 }
 
 inline object
-makeSingleton(Thread* t, unsigned count)
+makeSingletonOfSize(Thread* t, unsigned count)
 {
-  object o = makeSingleton(t, count + singletonMaskSize(count), true);
+  object o = makeSingleton(t, count + singletonMaskSize(count));
   assert(t, singletonLength(t, o) == count + singletonMaskSize(t, o));
   if (count) {
     singletonMask(t, o)[0] = 1;
