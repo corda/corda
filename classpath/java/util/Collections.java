@@ -13,6 +13,25 @@ package java.util;
 public class Collections {
   private Collections() { }
 
+  public static void shuffle(List list, Random random) {
+    Object[] array = toArray(list, new Object[list.size()]);
+    for (int i = 0; i < array.length; ++i) {
+      int j = random.nextInt(array.length);
+      Object tmp = array[i];
+      array[i] = array[j];
+      array[j] = tmp;
+    }
+ 
+    list.clear();
+    for (int i = 0; i < array.length; ++i) {
+      list.add(array[i]);
+    }
+  }
+
+  public static void shuffle(List list) {
+    shuffle(list, new Random());
+  }
+
   static <T> T[] toArray(Collection collection, T[] array) {
     Class c = array.getClass().getComponentType();
 
