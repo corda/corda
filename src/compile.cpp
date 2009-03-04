@@ -2631,6 +2631,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
       }
 
+      Compiler::Operand* fieldOperand = 0;
+
+      if ((fieldFlags(t, field) & ACC_VOLATILE)
+          and BytesPerWord == 4
+          and (fieldCode(t, field) == DoubleField
+               or fieldCode(t, field) == LongField))
+      {
+        fieldOperand = frame->append(field);
+
+        c->call
+          (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
+           0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+      }
+
       switch (fieldCode(t, field)) {
       case ByteField:
       case BooleanField:
@@ -2676,7 +2690,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
 
       if (fieldFlags(t, field) & ACC_VOLATILE) {
-        c->loadBarrier();
+        if (BytesPerWord == 4
+            and (fieldCode(t, field) == DoubleField
+                 or fieldCode(t, field) == LongField))
+        {
+          c->call
+            (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
+             0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+        } else {
+          c->loadBarrier();
+        }
       }
     } break;
 
@@ -3416,15 +3439,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case monitorenter: {
       c->call
         (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
-         0,
-         frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
+         0, frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
     } break;
 
     case monitorexit: {
       c->call
         (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
-         0,
-         frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
+         0, frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
     } break;
 
     case multianewarray: {
@@ -3565,8 +3586,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         table = frame->popObject();
       }
 
+      Compiler::Operand* fieldOperand = 0;
+
       if (fieldFlags(t, field) & ACC_VOLATILE) {
-        c->storeStoreBarrier();
+        if (BytesPerWord == 4
+            and (fieldCode(t, field) == DoubleField
+                 or fieldCode(t, field) == LongField))
+        {
+          fieldOperand = frame->append(field);
+
+          c->call
+            (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
+             0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+        } else {
+          c->storeStoreBarrier();
+        }
       }
 
       switch (fieldCode(t, field)) {
@@ -3613,7 +3647,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
 
       if (fieldFlags(t, field) & ACC_VOLATILE) {
-        c->storeLoadBarrier();
+        if (BytesPerWord == 4
+            and (fieldCode(t, field) == DoubleField
+                 or fieldCode(t, field) == LongField))
+        {
+          c->call
+            (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
+             0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+        } else {
+          c->storeLoadBarrier();
+        }
       }
     } break;
 

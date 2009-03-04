@@ -3,6 +3,8 @@ public class Misc {
   private static int beta;
   private static byte byte1, byte2, byte3;
 
+  private static volatile int volatileStatic;
+
   private final int NonStaticConstant = 42;
 
   private int gamma;
@@ -10,6 +12,7 @@ public class Misc {
   private boolean boolean1;
   private boolean boolean2;
   private long time;
+  private volatile int volatileMember;
 
   public Misc() {
     expect(! boolean1);
@@ -132,13 +135,18 @@ public class Misc {
       int d = alpha;
       beta = 42;
       alpha = 43;
+      volatileStatic = 55;
       int e = beta;
       int f = alpha;
+      m.volatileMember = 23;
       m.gamma = 44;
+      m.volatileMember = 27;
 
       expect(beta == 42);
       expect(alpha == 43);
       expect(m.gamma == 44);
+      expect(volatileStatic == 55);
+      expect(m.volatileMember == 27);
     }
 
     expect(zip() == 47);

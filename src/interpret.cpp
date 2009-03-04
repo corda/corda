@@ -1456,10 +1456,25 @@ interpret(Thread* t)
 
       assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
+      if (UNLIKELY((fieldFlags(t, field) & ACC_VOLATILE)
+                   and BytesPerWord == 4
+                   and (fieldCode(t, field) == DoubleField
+                        or fieldCode(t, field) == LongField)))
+      {
+        acquire(t, field);        
+      }
+
       pushField(t, popObject(t), field);
 
-      if (fieldFlags(t, field) & ACC_VOLATILE) {
-        loadMemoryBarrier();
+      if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+        if (BytesPerWord == 4
+            and (fieldCode(t, field) == DoubleField
+                 or fieldCode(t, field) == LongField))
+        {
+          release(t, field);        
+        } else {
+          loadMemoryBarrier();
+        }
       }
     } else {
       exception = makeNullPointerException(t);
@@ -1479,10 +1494,25 @@ interpret(Thread* t)
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
 
+    if (UNLIKELY((fieldFlags(t, field) & ACC_VOLATILE)
+                 and BytesPerWord == 4
+                 and (fieldCode(t, field) == DoubleField
+                      or fieldCode(t, field) == LongField)))
+    {
+      acquire(t, field);        
+    }
+
     pushField(t, classStaticTable(t, fieldClass(t, field)), field);
 
-    if (fieldFlags(t, field) & ACC_VOLATILE) {
-      loadMemoryBarrier();
+    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+      if (BytesPerWord == 4
+          and (fieldCode(t, field) == DoubleField
+               or fieldCode(t, field) == LongField))
+      {
+        release(t, field);        
+      } else {
+        loadMemoryBarrier();
+      }
     }
   } goto loop;
 
@@ -2411,8 +2441,15 @@ interpret(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    if (fieldFlags(t, field) & ACC_VOLATILE) {
-      storeStoreMemoryBarrier();
+    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+      if (BytesPerWord == 4
+          and (fieldCode(t, field) == DoubleField
+               or fieldCode(t, field) == LongField))
+      {
+        acquire(t, field);        
+      } else {
+        storeStoreMemoryBarrier();
+      }
     }
 
     assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
@@ -2445,7 +2482,6 @@ interpret(Thread* t)
         }
       } else {
         exception = makeNullPointerException(t);
-        goto throw_;
       }
     } break;
 
@@ -2457,7 +2493,6 @@ interpret(Thread* t)
         cast<int64_t>(o, fieldOffset(t, field)) = value;
       } else {
         exception = makeNullPointerException(t);
-        goto throw_;
       }
     } break;
 
@@ -2468,15 +2503,25 @@ interpret(Thread* t)
         set(t, o, fieldOffset(t, field), value);
       } else {
         exception = makeNullPointerException(t);
-        goto throw_;
       }
     } break;
 
     default: abort(t);
     }
 
-    if (fieldFlags(t, field) & ACC_VOLATILE) {
-      storeLoadMemoryBarrier();
+    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+      if (BytesPerWord == 4
+          and (fieldCode(t, field) == DoubleField
+               or fieldCode(t, field) == LongField))
+      {
+        release(t, field);        
+      } else {
+        storeLoadMemoryBarrier();
+      }
+    }
+
+    if (UNLIKELY(exception)) {
+      goto throw_;
     }
   } goto loop;
 
@@ -2486,8 +2531,15 @@ interpret(Thread* t)
     object field = resolveField(t, codePool(t, code), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
-    if (fieldFlags(t, field) & ACC_VOLATILE) {
-      storeStoreMemoryBarrier();
+    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+      if (BytesPerWord == 4
+          and (fieldCode(t, field) == DoubleField
+               or fieldCode(t, field) == LongField))
+      {
+        acquire(t, field);        
+      } else {
+        storeStoreMemoryBarrier();
+      }
     }
 
     assert(t, fieldFlags(t, field) & ACC_STATIC);
@@ -2536,8 +2588,15 @@ interpret(Thread* t)
     default: abort(t);
     }
 
-    if (fieldFlags(t, field) & ACC_VOLATILE) {
-      storeLoadMemoryBarrier();
+    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+      if (BytesPerWord == 4
+          and (fieldCode(t, field) == DoubleField
+               or fieldCode(t, field) == LongField))
+      {
+        release(t, field);        
+      } else {
+        storeLoadMemoryBarrier();
+      }
     }
   } goto loop;
 
