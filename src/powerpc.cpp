@@ -1117,7 +1117,7 @@ xorR(Context* c, unsigned size, Assembler::Register* a,
     xorR(c, 4, a, b, dst);
     xorR(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, xor_(dst->low, a->low, b->low));
+    issue(c, xor_(a->low, dst->low, b->low));
   }
 }
 
@@ -1125,7 +1125,7 @@ void
 xorC(Context* c, unsigned size, Assembler::Constant* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  int64_t v = a->value->value();
+  uint64_t v = a->value->value();
 
   if (size == 8) {
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
@@ -1140,9 +1140,11 @@ xorC(Context* c, unsigned size, Assembler::Constant* a,
     xorC(c, 4, &al, b, dst);
     xorC(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, xori(dst->low, b->low, v));
     if (v >> 16) {
-      issue(c, xoris(dst->low, b->low, v >> 16));
+      issue(c, xoris(b->low, dst->low, v >> 16));
+      issue(c, xori(dst->low, dst->low, v));
+    } else {
+      issue(c, xori(b->low, dst->low, v));
     }
   }
 }
