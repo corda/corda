@@ -23,15 +23,28 @@ public class Floats {
     expect(multiply(0.5d, 0.5d) == 0.25d);
     expect(multiply(0.5f, 0.5f) == 0.25f);
 
+    expect(multiply(0.5d, 0.1d) == 0.05d);
+    expect(multiply(0.5f, 0.1f) == 0.05f);
+
     expect(multiply(0.5d, 0.5d) < 0.5d);
     expect(multiply(0.5f, 0.5f) < 0.5f);
+
+    expect(multiply(0.5d, 0.1d) < 0.5d);
+    expect(multiply(0.5f, 0.1f) < 0.5f);
 
     expect(multiply(0.5d, 0.5d) > 0.1d);
     expect(multiply(0.5f, 0.5f) > 0.1f);
 
+    expect(multiply(0.5d, 0.1d) > 0.01d);
+    expect(multiply(0.5f, 0.1f) > 0.01f);
+
     expect(divide(0.5d, 0.5d) == 1.0d);
 
+    expect(divide(0.5d, 0.1d) == 5.0d);
+
     expect(subtract(0.5d, 0.5d) == 0.0d);
+
+    expect(subtract(0.5d, 0.1d) == 0.4d);
 
     double d = 1d;
     expect(((int) d) == 1);
