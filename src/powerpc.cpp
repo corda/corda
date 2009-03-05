@@ -431,8 +431,6 @@ void shiftLeftC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
   issue(con, slwi(R(t), R(b), sh));
 }
 
-void jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target);
-
 void shiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 {
   if(size == 8) {
@@ -443,9 +441,7 @@ void shiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
     issue(con, or_(R(t), R(t), R(tmp)));
     issue(con, addic(H(tmp), R(a), -32));
     issue(con, sraw(R(tmp), H(b), H(tmp)));
-    ResolvedPromise prom(8);
-    Const offset(&prom);
-    jumpIfLessOrEqualC(con, 0, &offset);
+    issue(con, ble(8));
     issue(con, ori(R(t), R(tmp), 0));
     issue(con, sraw(H(t), H(b), R(a)));
     freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
@@ -1277,7 +1273,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
      (c->code.data + c->code.length()));
 
   updateOffset
-    (c->s, c->code.data + above, true, reinterpret_cast<intptr_t>
+    (c->s, c->code.data + below, true, reinterpret_cast<intptr_t>
      (c->code.data + c->code.length()));
 
   moveCR(c, 4, &negative, 4, dst);
@@ -1290,7 +1286,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
      (c->code.data + c->code.length()));
 
   updateOffset
-    (c->s, c->code.data + below, true, reinterpret_cast<intptr_t>
+    (c->s, c->code.data + above, true, reinterpret_cast<intptr_t>
      (c->code.data + c->code.length()));
 
   moveCR(c, 4, &positive, 4, dst);
@@ -1565,6 +1561,13 @@ populateTables(ArchitectureContext* c)
 
   to[index(Subtract, R)] = CAST3(subR);
   to[index(Subtract, C)] = CAST3(subC);
+
+  to[index(Multiply, R)] = CAST3(multiplyR);
+  to[index(Multiply, C)] = CAST3(multiplyC);
+
+  to[index(Divide, R)] = CAST3(divideR);
+
+  to[index(Remainder, R)] = CAST3(remainderR);
 
   to[index(ShiftLeft, R)] = CAST3(shiftLeftR);
   to[index(ShiftLeft, C)] = CAST3(shiftLeftC);
