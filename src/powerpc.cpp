@@ -686,6 +686,7 @@ void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
     issue(con, add(H(t), H(t), R(&tmp)));
     issue(con, mulhw(R(&tmp), R(a), R(b)));
     issue(con, add(H(t), H(t), R(&tmp)));
+    issue(con, mullw(R(t), R(a), R(b)));
     freeTemp(con, R(&tmp));
   } else {
     issue(con, mullw(R(t), R(a), R(b)));
