@@ -4936,14 +4936,8 @@ class MyCompiler: public Compiler {
     va_end(a);
 
     Stack* argumentStack = c.stack;
-    Stack* bottomArgument = 0;
-
     for (int i = index - 1; i >= 0; --i) {
       argumentStack = ::stack(&c, arguments[i], argumentStack);
-
-      if (i == index - 1) {
-        bottomArgument = argumentStack;
-      }
     }
 
     Value* result = value(&c);
