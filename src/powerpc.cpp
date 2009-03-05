@@ -1117,7 +1117,7 @@ xorR(Context* c, unsigned size, Assembler::Register* a,
     xorR(c, 4, a, b, dst);
     xorR(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, xor_(a->low, dst->low, b->low));
+    issue(c, xor_(dst->low, a->low, b->low));
   }
 }
 
