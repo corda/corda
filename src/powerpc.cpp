@@ -38,7 +38,7 @@ namespace isa {
 inline int D(int op, int rt, int ra, int d) { return op<<26|rt<<21|ra<<16|(d & 0xFFFF); }
 inline int DS(int op, int rt, int ra, int ds, int xo) { return op<<26|rt<<21|ra<<16|ds<<2|xo; }
 inline int I(int op, int li, int aa, int lk) { return op<<26|li<<2|aa<<1|lk; }
-inline int B(int op, int bo, int bi, int bd, int aa, int lk) { return op<<26|bo<<21|bi<<16|bd<<2|aa<<1|lk; }
+inline int B(int op, int bo, int bi, int bd, int aa, int lk) { return op<<26|bo<<21|bi<<16|(bd & 0xFFFC)|aa<<1|lk; }
 inline int SC(int op, int lev) { return op<<26|lev<<5|2; }
 inline int X(int op, int rt, int ra, int rb, int xo, int rc) { return op<<26|rt<<21|ra<<16|rb<<11|xo<<1|rc; }
 inline int XL(int op, int bt, int ba, int bb, int xo, int lk) { return op<<26|bt<<21|ba<<16|bb<<11|xo<<1|lk; }
@@ -96,7 +96,7 @@ inline int xori(int rt, int ra, int i) { return D(26, rt, ra, i); }
 inline int xoris(int rt, int ra, int i) { return D(27, rt, ra, i); }
 inline int rlwinm(int rt, int ra, int i, int mb, int me) { return M(21, ra, rt, i, mb, me, 0); }
 inline int rlwimi(int rt, int ra, int i, int mb, int me) { return M(20, ra, rt, i, mb, me, 0); }
-inline int slw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 21, 0); }
+inline int slw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 24, 0); }
 inline int sld(int rt, int ra, int rb) { return X(31, ra, rt, rb, 27, 0); }
 inline int srw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 536, 0); }
 inline int sraw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 792, 0); }
