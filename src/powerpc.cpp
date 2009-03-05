@@ -681,14 +681,12 @@ void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
 
 void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   if(size == 8) {
-    Reg tmp(getTemp(con));
     issue(con, mullw(H(t), H(a), R(b)));
-    issue(con, mullw(R(&tmp), R(a), H(b)));
-    issue(con, add(H(t), H(t), R(&tmp)));
-    issue(con, mulhw(R(&tmp), R(a), R(b)));
-    issue(con, add(H(t), H(t), R(&tmp)));
+    issue(con, mullw(R(t), R(a), H(b)));
+    issue(con, add(H(t), H(t), R(t)));
+    issue(con, mulhwu(R(t), R(a), R(b)));
+    issue(con, add(H(t), H(t), R(t)));
     issue(con, mullw(R(t), R(a), R(b)));
-    freeTemp(con, R(&tmp));
   } else {
     issue(con, mullw(R(t), R(a), R(b)));
   }
