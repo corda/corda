@@ -76,6 +76,7 @@ inline int subf(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 40, 0); }
 inline int subfc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 8, 0); }
 inline int subfe(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 136, 0); }
 inline int subfic(int rt, int ra, int i) { return D(8, rt, ra, i); }
+inline int subfze(int rt, int ra) { return XO(31, rt, ra, 0, 0, 200, 0); }
 inline int mullw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 235, 0); }
 inline int mulhw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 75, 0); }
 inline int mulhwu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 11, 0); }
@@ -1376,9 +1377,8 @@ negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
   if (srcSize == 8) {
     Assembler::Register dstHigh(dst->high);
 
-    negateRR(c, 4, src, 4, dst);
-    issue(c, addic(dst->high, dst->high, 0));
-    negateRR(c, 4, &dstHigh, 4, &dstHigh);
+    issue(c, subfic(dst->low, src->low, 0));
+    issue(c, subfze(dst->high, src->high));
   } else {
     issue(c, neg(dst->low, src->low));
   }
