@@ -100,8 +100,10 @@ class Compiler {
 
   virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
                      Operand* dst) = 0;
-  virtual Operand* load(unsigned srcSize, Operand* src, unsigned dstSize) = 0;
-  virtual Operand* loadz(unsigned size, Operand* src, unsigned dstSize) = 0;
+  virtual Operand* load(unsigned srcSize, unsigned srcSelectSize, Operand* src,
+                        unsigned dstSize) = 0;
+  virtual Operand* loadz(unsigned size, unsigned srcSelectSize, Operand* src,
+                         unsigned dstSize) = 0;
   virtual Operand* lcmp(Operand* a, Operand* b) = 0;
   virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
   virtual void jl(Operand* address) = 0;

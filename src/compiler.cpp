@@ -2420,8 +2420,9 @@ addBuddy(Value* original, Value* buddy)
 }
 
 void
-maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
-          unsigned dstSize, Value* dst, const SiteMask& dstMask)
+maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
+          unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
+          const SiteMask& dstMask)
 {
   Read* read = live(dst);
   bool isStore = read == 0;
@@ -2437,15 +2438,23 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
 
   unsigned cost = src->source->copyCost(c, target);
 
-  if (srcSize != dstSize) cost = 1;
+  if (srcSelectSize != dstSize) cost = 1;
 
   if (cost) {
     bool useTemporary = ((target->type(c) == MemoryOperand
                           and src->source->type(c) == MemoryOperand)
-                         or (srcSize != dstSize
+                         or (srcSelectSize != dstSize
                              and target->type(c) != RegisterOperand));
 
     addSite(c, dst, target);
+
+    if (srcSize != srcSelectSize
+        and c->arch->bigEndian()
+        and src->source->type(c) == MemoryOperand)
+    {
+      static_cast<MemorySite*>(src->source)->offset
+        += (srcSize - srcSelectSize);
+    }
 
     if (target->match(c, dstMask) and not useTemporary) {
       if (DebugMoves) {
@@ -2455,7 +2464,7 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
                 srcb, dstb, src, dst);
       }
 
-      apply(c, type, srcSize, src->source, 0, dstSize, target, 0);
+      apply(c, type, srcSelectSize, src->source, 0, dstSize, target, 0);
     } else {
       target->freeze(c, dst);
 
@@ -2486,7 +2495,7 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
                 srcb, dstb, src, dst);
       }
 
-      apply(c, type, srcSize, src->source, 0, dstSize, tmpTarget, 0);
+      apply(c, type, srcSelectSize, src->source, 0, dstSize, tmpTarget, 0);
 
       if (useTemporary or isStore) {
         if (DebugMoves) {
@@ -2562,15 +2571,18 @@ grow(Context* c, Value* v)
 
 class MoveEvent: public Event {
  public:
-  MoveEvent(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
-            unsigned dstSize, Value* dst,
+  MoveEvent(Context* c, BinaryOperation type, unsigned srcSize,
+            unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
             const SiteMask& srcLowMask, const SiteMask& srcHighMask,
             const SiteMask& dstLowMask, const SiteMask& dstHighMask):
-    Event(c), type(type), srcSize(srcSize), src(src), dstSize(dstSize),
-    dst(dst), dstLowMask(dstLowMask), dstHighMask(dstHighMask)
+    Event(c), type(type), srcSize(srcSize), srcSelectSize(srcSelectSize),
+    src(src), dstSize(dstSize), dst(dst), dstLowMask(dstLowMask),
+    dstHighMask(dstHighMask)
   {
+    assert(c, srcSelectSize <= srcSize);
+
     addRead(c, this, src, read(c, srcLowMask));
-    if (srcSize > BytesPerWord) {
+    if (srcSelectSize > BytesPerWord) {
       maybeSplit(c, src);
       addRead(c, this, src->high, read(c, srcHighMask));
     }
@@ -2585,18 +2597,22 @@ class MoveEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    if (srcSize <= BytesPerWord and dstSize <= BytesPerWord) {
-      maybeMove(c, type, srcSize, src, dstSize, dst, dstLowMask);
-    } else if (srcSize == dstSize) {
-      maybeMove(c, Move, BytesPerWord, src, BytesPerWord, dst, dstLowMask);
-      maybeMove(c, Move, BytesPerWord, src->high,
-                BytesPerWord, dst->high, dstHighMask);
+    if (srcSelectSize <= BytesPerWord and dstSize <= BytesPerWord) {
+      maybeMove(c, type, srcSize, srcSelectSize, src, dstSize, dst,
+                dstLowMask);
+    } else if (srcSelectSize == dstSize) {
+      maybeMove(c, Move, BytesPerWord, BytesPerWord, src, BytesPerWord, dst,
+                dstLowMask);
+      maybeMove(c, Move, BytesPerWord, BytesPerWord, src->high, BytesPerWord,
+                dst->high, dstHighMask);
     } else if (srcSize > BytesPerWord) {
       assert(c, dstSize == BytesPerWord);
 
-      maybeMove(c, Move, BytesPerWord, src, BytesPerWord, dst, dstLowMask);
+      maybeMove(c, Move, BytesPerWord, BytesPerWord, src, BytesPerWord, dst,
+                dstLowMask);
     } else {
       assert(c, srcSize == BytesPerWord);
+      assert(c, srcSelectSize == BytesPerWord);
 
       if (dst->high->target or live(dst->high)) {
         assert(c, dstLowMask.typeMask & (1 << RegisterOperand));
@@ -2637,7 +2653,8 @@ class MoveEvent: public Event {
 
         apply(c, Move, BytesPerWord, low, 0, dstSize, low, high);
       } else {
-        maybeMove(c, Move, BytesPerWord, src, BytesPerWord, dst, dstLowMask);
+        maybeMove(c, Move, BytesPerWord, BytesPerWord, src, BytesPerWord, dst,
+                  dstLowMask);
       }
     }
 
@@ -2648,6 +2665,7 @@ class MoveEvent: public Event {
 
   BinaryOperation type;
   unsigned srcSize;
+  unsigned srcSelectSize;
   Value* src;
   unsigned dstSize;
   Value* dst;
@@ -2656,8 +2674,8 @@ class MoveEvent: public Event {
 };
 
 void
-appendMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
-           unsigned dstSize, Value* dst)
+appendMove(Context* c, BinaryOperation type, unsigned srcSize,
+           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst)
 {
   bool thunk;
   uint8_t srcTypeMask;
@@ -2673,7 +2691,7 @@ appendMove(Context* c, BinaryOperation type, unsigned srcSize, Value* src,
 
   append(c, new (c->zone->allocate(sizeof(MoveEvent)))
          MoveEvent
-         (c, type, srcSize, src, dstSize, dst,
+         (c, type, srcSize, srcSelectSize, src, dstSize, dst,
           SiteMask(srcTypeMask, srcRegisterMask, AnyFrameIndex),
           SiteMask(srcTypeMask, srcRegisterMask >> 32, AnyFrameIndex),
           SiteMask(dstTypeMask, dstRegisterMask, AnyFrameIndex),
@@ -5058,23 +5076,29 @@ class MyCompiler: public Compiler {
   virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
                      Operand* dst)
   {
-    appendMove(&c, Move, srcSize, static_cast<Value*>(src),
+    appendMove(&c, Move, srcSize, srcSize, static_cast<Value*>(src),
                dstSize, static_cast<Value*>(dst));
   }
 
-  virtual Operand* load(unsigned srcSize, Operand* src, unsigned dstSize) {
+  virtual Operand* load(unsigned srcSize, unsigned srcSelectSize, Operand* src,
+                        unsigned dstSize)
+  {
     assert(&c, dstSize >= BytesPerWord);
 
     Value* dst = value(&c);
-    appendMove(&c, Move, srcSize, static_cast<Value*>(src), dstSize, dst);
+    appendMove(&c, Move, srcSize, srcSelectSize, static_cast<Value*>(src),
+               dstSize, dst);
     return dst;
   }
 
-  virtual Operand* loadz(unsigned srcSize, Operand* src, unsigned dstSize) {
+  virtual Operand* loadz(unsigned srcSize, unsigned srcSelectSize,
+                         Operand* src, unsigned dstSize)
+  {
     assert(&c, dstSize >= BytesPerWord);
 
     Value* dst = value(&c);
-    appendMove(&c, MoveZ, srcSize, static_cast<Value*>(src), dstSize, dst);
+    appendMove(&c, MoveZ, srcSize, srcSelectSize, static_cast<Value*>(src),
+               dstSize, dst);
     return dst;
   }
 

@@ -2137,35 +2137,36 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       case aaload:
         frame->pushObject
           (c->load
-           (BytesPerWord, c->memory(array, ArrayBody, index, BytesPerWord),
-            BytesPerWord));
+           (BytesPerWord, BytesPerWord,
+            c->memory(array, ArrayBody, index, BytesPerWord), BytesPerWord));
         break;
 
       case faload:
       case iaload:
         frame->pushInt
-          (c->load(4, c->memory(array, ArrayBody, index, 4), BytesPerWord));
+          (c->load(4, 4, c->memory(array, ArrayBody, index, 4), BytesPerWord));
         break;
 
       case baload:
         frame->pushInt
-          (c->load(1, c->memory(array, ArrayBody, index, 1), BytesPerWord));
+          (c->load(1, 1, c->memory(array, ArrayBody, index, 1), BytesPerWord));
         break;
 
       case caload:
         frame->pushInt
-          (c->loadz(2, c->memory(array, ArrayBody, index, 2), BytesPerWord));
+          (c->loadz(2, 2, c->memory(array, ArrayBody, index, 2),
+                    BytesPerWord));
         break;
 
       case daload:
       case laload:
         frame->pushLong
-          (c->load(8, c->memory(array, ArrayBody, index, 8), 8));
+          (c->load(8, 8, c->memory(array, ArrayBody, index, 8), 8));
         break;
 
       case saload:
         frame->pushInt
-          (c->load(2, c->memory(array, ArrayBody, index, 2), BytesPerWord));
+          (c->load(2, 2, c->memory(array, ArrayBody, index, 2), BytesPerWord));
         break;
       }
     } break;
@@ -2284,8 +2285,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case arraylength: {
       frame->pushInt
         (c->load
-         (BytesPerWord, c->memory(frame->popObject(), ArrayLength, 0, 1),
-          BytesPerWord));
+         (BytesPerWord, BytesPerWord,
+          c->memory(frame->popObject(), ArrayLength, 0, 1), BytesPerWord));
     } break;
 
     case astore:
@@ -2648,40 +2649,40 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       case ByteField:
       case BooleanField:
         frame->pushInt
-          (c->load
-           (1, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
+          (c->load(1, 1, c->memory(table, fieldOffset(t, field), 0, 1),
+                   BytesPerWord));
         break;
 
       case CharField:
         frame->pushInt
-          (c->loadz
-           (2, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
+          (c->loadz(2, 2, c->memory(table, fieldOffset(t, field), 0, 1),
+                    BytesPerWord));
         break;
 
       case ShortField:
         frame->pushInt
-          (c->load
-           (2, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
+          (c->load(2, 2, c->memory(table, fieldOffset(t, field), 0, 1),
+                   BytesPerWord));
         break;
 
       case FloatField:
       case IntField:
         frame->pushInt
-          (c->load
-           (4, c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
+          (c->load(4, 4, c->memory(table, fieldOffset(t, field), 0, 1),
+                   BytesPerWord));
         break;
 
       case DoubleField:
       case LongField:
         frame->pushLong
-          (c->load(8, c->memory(table, fieldOffset(t, field), 0, 1), 8));
+          (c->load(8, 8, c->memory(table, fieldOffset(t, field), 0, 1), 8));
         break;
 
       case ObjectField:
         frame->pushObject
           (c->load
-           (BytesPerWord, c->memory(table, fieldOffset(t, field), 0, 1),
-            BytesPerWord));
+           (BytesPerWord, BytesPerWord,
+            c->memory(table, fieldOffset(t, field), 0, 1), BytesPerWord));
         break;
 
       default:
@@ -2721,11 +2722,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case i2b: {
-      frame->pushInt(c->load(1, frame->popInt(), BytesPerWord));
+      frame->pushInt(c->load(BytesPerWord, 1, frame->popInt(), BytesPerWord));
     } break;
 
     case i2c: {
-      frame->pushInt(c->loadz(2, frame->popInt(), BytesPerWord));
+      frame->pushInt(c->loadz(BytesPerWord, 2, frame->popInt(), BytesPerWord));
     } break;
 
     case i2d: {
@@ -2743,11 +2744,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case i2l:
-      frame->pushLong(c->load(4, frame->popInt(), 8));
+      frame->pushLong(c->load(BytesPerWord, 4, frame->popInt(), 8));
       break;
 
     case i2s: {
-      frame->pushInt(c->load(2, frame->popInt(), BytesPerWord));
+      frame->pushInt(c->load(BytesPerWord, 2, frame->popInt(), BytesPerWord));
     } break;
       
     case iadd: {
@@ -3201,7 +3202,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case l2i:
-      frame->pushInt(c->load(8, frame->popLong(), BytesPerWord));
+      frame->pushInt(c->load(8, 8, frame->popLong(), BytesPerWord));
       break;
 
     case ladd: {
@@ -3729,7 +3730,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       saveStateAndCompile(t, frame, defaultIp);
 
-      c->jmp(c->load(BytesPerWord,
+      c->jmp(c->load(BytesPerWord, BytesPerWord,
                      c->memory(start, 0, c->sub(4, c->constant(bottom), key),
                                BytesPerWord), BytesPerWord));
 
