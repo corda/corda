@@ -426,8 +426,13 @@ void shiftLeftC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if (size == 8) {
-    issue(con, rlwinm(H(t),H(b),sh,0,31-sh));
-    issue(con, rlwimi(H(t),R(b),sh,32-sh,31));
+    if (sh < 32) {
+      issue(con, rlwinm(H(t),H(b),sh,0,31-sh));
+      issue(con, rlwimi(H(t),R(b),sh,32-sh,31));
+    } else {
+      issue(con, rlwinm(H(t),R(b),sh-32,0,63-sh));
+      issue(con, li(R(t),0));
+    }
   }
   issue(con, slwi(R(t), R(b), sh));
 }
@@ -455,9 +460,14 @@ void shiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if(size == 8) {
-    issue(con, rlwinm(R(t),R(b),32-sh,sh,31));
-    issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
-    issue(con, srawi(H(t),H(b),sh));
+    if (sh < 32) {
+      issue(con, rlwinm(R(t),R(b),32-sh,sh,31));
+      issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
+      issue(con, srawi(H(t),H(b),sh));
+    } else {
+      issue(con, srawi(H(t),H(b),31));
+      issue(con, srawi(R(t),H(b),sh-32));
+    }
   } else {
     issue(con, srawi(R(t), R(b), sh));
   }
@@ -482,10 +492,17 @@ void unsignedShiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
 void unsignedShiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
-  issue(con, srwi(R(t), R(b), sh));
   if (size == 8) {
-    issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
-    issue(con, rlwinm(H(t),H(b),32-sh,sh,31));
+    if (sh < 32) {
+      issue(con, srwi(R(t), R(b), sh));
+      issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
+      issue(con, rlwinm(H(t),H(b),32-sh,sh,31));
+    } else {
+      issue(con, rlwinm(R(t),H(b),64-sh,sh-32,31));
+      issue(con, li(H(t),0));
+    }
+  } else {
+    issue(con, srwi(R(t), R(b), sh));
   }
 }
 
