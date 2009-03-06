@@ -615,10 +615,8 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
   case 4:
   case 8:
     if (srcSize == 4 and dstSize == 8) {
-      Assembler::Register dstHigh(dst->high);
       moveRR(c, 4, src, 4, dst);
-      moveRR(c, 4, src, 4, &dstHigh);
-      issue(c, srawi(dst->high, dst->high, 31));
+      issue(c, srawi(dst->high, src->low, 31));
     } else if (srcSize == 8 and dstSize == 8) {
       Assembler::Register srcHigh(src->high);
       Assembler::Register dstHigh(dst->high);
@@ -1073,7 +1071,13 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
     }
 
     if (state) {
-      issue(c, rlwinm(dst->low, b->low, 0, 31 - end, 31 - start));
+      if (start != 0 or end != 31) {
+        issue(c, rlwinm(dst->low, b->low, 0, 31 - end, 31 - start));
+      } else {
+        moveRR(c, 4, b, 4, dst);
+      }
+    } else {
+      issue(c, li(dst->low, 0));
     }
   }
 }

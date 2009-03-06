@@ -16,6 +16,20 @@ public class Longs {
     putInt((int)val, dst, offset + 4);
   }
 
+  public static int getInt(byte[] src, int offset) {
+    int r = ((src[offset] & 0xFF) << 24)
+      | ((src[offset + 1] & 0xFF) << 16)
+      | ((src[offset + 2] & 0xFF) <<  8)
+      | ((src[offset + 3] & 0xFF));
+    System.out.println("get " + r);
+    return r;
+  }
+
+  public static long getLong(byte[] src, int offset) {
+    return ((long) getInt(src, offset) << 32)
+      | ((long) getInt(src, offset + 4) & 0xffffffffL);
+  }
+
   private static long roundUp(long a, long b) {
     a += b - 1L;
     return a - (a % b);
@@ -174,6 +188,7 @@ public class Longs {
 
     { byte[] array = new byte[8];
       putLong(231, array, 0);
+
       expect((array[0] & 0xff) == 0);
       expect((array[1] & 0xff) == 0);
       expect((array[2] & 0xff) == 0);
@@ -182,6 +197,8 @@ public class Longs {
       expect((array[5] & 0xff) == 0);
       expect((array[6] & 0xff) == 0);
       expect((array[7] & 0xff) == 231);
+
+      expect(getLong(array, 0) == 231);
     }
 
     java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8);
