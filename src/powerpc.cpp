@@ -722,8 +722,8 @@ void divideR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
 
 void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   divideR(con, size, a, b, t);
-  multiplyR(con, size, b, t, t);
-  subR(con, size, t, a, t);
+  multiplyR(con, size, a, t, t);
+  subR(con, size, t, b, t);
 }
 
 int
