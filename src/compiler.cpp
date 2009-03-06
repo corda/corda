@@ -2448,10 +2448,11 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
     addSite(c, dst, target);
 
-    if (srcSize != srcSelectSize
-        and c->arch->bigEndian()
-        and src->source->type(c) == MemoryOperand)
-    {
+    bool addOffset = srcSize != srcSelectSize
+      and c->arch->bigEndian()
+      and src->source->type(c) == MemoryOperand;
+
+    if (addOffset) {
       static_cast<MemorySite*>(src->source)->offset
         += (srcSize - srcSelectSize);
     }
@@ -2515,6 +2516,11 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
       }
 
       target->thaw(c, dst);
+    }
+
+    if (addOffset) {
+      static_cast<MemorySite*>(src->source)->offset
+        -= (srcSize - srcSelectSize);
     }
   } else {
     target = src->source;
