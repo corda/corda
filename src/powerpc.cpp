@@ -1096,9 +1096,9 @@ orC(Context* c, unsigned size, Assembler::Constant* a,
     orC(c, 4, &al, b, dst);
     orC(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, ori(dst->low, b->low, v));
+    issue(c, ori(b->low, dst->low, v));
     if (v >> 16) {
-      issue(c, oris(dst->low, b->low, v >> 16));
+      issue(c, oris(dst->low, dst->low, v >> 16));
     }
   }
 }
