@@ -3426,7 +3426,16 @@ class BranchEvent: public Event {
   {
     address->addPredecessor(c, this);
 
-    addRead(c, this, address, read(c, SiteMask(~0, ~0, AnyFrameIndex)));
+    bool thunk;
+    uint8_t typeMask;
+    uint64_t registerMask;
+    
+    c->arch->plan(type, BytesPerWord, &typeMask, &registerMask, &thunk);
+
+    assert(c, thunk == 0);
+
+    addRead(c, this, address, read
+            (c, SiteMask(typeMask, registerMask, AnyFrameIndex)));
   }
 
   virtual const char* name() {
