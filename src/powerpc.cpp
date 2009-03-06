@@ -37,7 +37,7 @@ namespace isa {
 // INSTRUCTION FORMATS
 inline int D(int op, int rt, int ra, int d) { return op<<26|rt<<21|ra<<16|(d & 0xFFFF); }
 inline int DS(int op, int rt, int ra, int ds, int xo) { return op<<26|rt<<21|ra<<16|ds<<2|xo; }
-inline int I(int op, int li, int aa, int lk) { return op<<26|li<<2|aa<<1|lk; }
+inline int I(int op, int li, int aa, int lk) { return op<<26|(li & 0x3FFFFFC)|aa<<1|lk; }
 inline int B(int op, int bo, int bi, int bd, int aa, int lk) { return op<<26|bo<<21|bi<<16|(bd & 0xFFFC)|aa<<1|lk; }
 inline int SC(int op, int lev) { return op<<26|lev<<5|2; }
 inline int X(int op, int rt, int ra, int rb, int xo, int rc) { return op<<26|rt<<21|ra<<16|rb<<11|xo<<1|rc; }
@@ -1223,8 +1223,8 @@ compareUnsignedCR(Context* c, unsigned aSize, Assembler::Constant* a,
                   unsigned bSize, Assembler::Register* b)
 {
   assert(c, aSize == 4 and bSize == 4);
-  
-  if (a->value->resolved() and isInt16(a->value->value())) {
+
+  if (a->value->resolved() and (a->value->value() >> 16) == 0) {
     issue(c, cmplwi(b->low, a->value->value()));
   } else {
     Assembler::Register tmp(c->client->acquireTemporary());
