@@ -63,6 +63,8 @@ const unsigned VisitSignalIndex = 0;
 const unsigned SegFaultSignalIndex = 1;
 const unsigned InterruptSignalIndex = 2;
 
+const unsigned ExecutableAreaSizeInBytes = 16 * 1024 * 1024;
+
 class MySystem;
 MySystem* system;
 
@@ -514,7 +516,12 @@ class MySystem: public System {
     System::Library* next_;
   };
 
-  MySystem(): threadVisitor(0), visitTarget(0) {
+  MySystem():
+    threadVisitor(0),
+    visitTarget(0),
+    executableArea(0),
+    executableOffset(0)
+  {
     expect(this, system == 0);
     system = this;
 
@@ -552,29 +559,33 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
-
+    if (executableArea == 0) {
 #ifdef __x86_64__
-    const unsigned Extra = MAP_32BIT;
+      const unsigned Extra = MAP_32BIT;
 #else
-    const unsigned Extra = 0;
+      const unsigned Extra = 0;
 #endif
+      void* p = mmap(0, ExecutableAreaSizeInBytes, PROT_EXEC | PROT_READ
+                     | PROT_WRITE, MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
 
-    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
-    
-    if (p == MAP_FAILED) {
-      return 0;
+      if (p != MAP_FAILED) {
+        executableArea = static_cast<uint8_t*>(p);
+      }
+    }
+
+    if (executableArea
+        and executableOffset + pad(sizeInBytes) < ExecutableAreaSizeInBytes)
+    {
+      void* r = executableArea + executableOffset;
+      executableOffset += pad(sizeInBytes);
+      return r;
     } else {
-      return p;
+      return 0;
     }
   }
 
-  virtual void freeExecutable(const void* p, unsigned sizeInBytes) {
-    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
-
-    int r UNUSED = munmap(const_cast<void*>(p), sizeInBytes);
-    assert(this, r == 0);
+  virtual void freeExecutable(const void*, unsigned) {
+    // ignore
   }
 
   virtual bool success(Status s) {
@@ -769,9 +780,13 @@ class MySystem: public System {
     registerHandler(0, VisitSignalIndex);
     system = 0;
 
+    if (executableArea) {
+      int r UNUSED = munmap(executableArea, ExecutableAreaSizeInBytes);
+      assert(this, r == 0);
+    }
+
     ::free(this);
   }
-
 
   class NullSignalHandler: public SignalHandler {
     virtual bool handleSignal(void**, void**, void**, void**) { return false; }
@@ -783,6 +798,9 @@ class MySystem: public System {
   ThreadVisitor* threadVisitor;
   Thread* visitTarget;
   System::Monitor* visitLock;
+  
+  uint8_t* executableArea;
+  unsigned executableOffset;
 };
 
 void
