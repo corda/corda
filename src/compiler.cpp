@@ -2812,7 +2812,7 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
     maybePreserve(c, value, s);
   } else {
     SingleRead r(resultMask);
-    s = pickTargetSite(c, &r);
+    s = pickTargetSite(c, &r, true);
     v = result;
     addSite(c, result, s);
   }
