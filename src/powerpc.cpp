@@ -654,6 +654,37 @@ moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
   }
 }
 
+void
+moveCR2(Context* c, unsigned, Assembler::Constant* src,
+       unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
+{
+  if (dstSize <= 4) {
+    if (src->value->resolved()) {
+      int32_t v = src->value->value();
+      if (isInt16(v)) {
+        issue(c, li(dst->low, v));
+      } else {
+        issue(c, lis(dst->low, v >> 16));
+        issue(c, ori(dst->low, dst->low, v));
+      }
+    } else {
+      appendImmediateTask
+        (c, src->value, offset(c), BytesPerWord, promiseOffset);
+      issue(c, lis(dst->low, 0));
+      issue(c, ori(dst->low, dst->low, 0));
+    }
+  } else {
+    abort(c); // todo
+  }
+}
+
+void
+moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
+       unsigned dstSize, Assembler::Register* dst)
+{
+  moveCR2(c, srcSize, src, dstSize, dst, 0);
+}
+
 void addR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   if(size == 8) {
     issue(con, addc(R(t), R(a), R(b)));
@@ -671,6 +702,8 @@ void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
     issue(con, addi(R(t), R(b), lo16(i)));
     if(not isInt16(i))
       issue(con, addis(R(t), R(t), hi16(i)));
+  } else {
+    moveCR(con, size, a, size, t);
   }
 }
 
@@ -691,6 +724,8 @@ void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
     issue(con, subi(R(t), R(b), lo16(i)));
     if(not isInt16(i))
       issue(con, subis(R(t), R(t), hi16(i)));
+  } else {
+    moveCR(con, size, a, size, t);
   }
 }
 
@@ -946,37 +981,6 @@ moveZMR(Context* c, unsigned srcSize, Assembler::Memory* src,
 {
   load(c, srcSize, src->base, src->offset, src->index, src->scale,
        dstSize, dst, true, false);
-}
-
-void
-moveCR2(Context* c, unsigned, Assembler::Constant* src,
-       unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
-{
-  if (dstSize <= 4) {
-    if (src->value->resolved()) {
-      int32_t v = src->value->value();
-      if (isInt16(v)) {
-        issue(c, li(dst->low, v));
-      } else {
-        issue(c, lis(dst->low, v >> 16));
-        issue(c, ori(dst->low, dst->low, v));
-      }
-    } else {
-      appendImmediateTask
-        (c, src->value, offset(c), BytesPerWord, promiseOffset);
-      issue(c, lis(dst->low, 0));
-      issue(c, ori(dst->low, dst->low, 0));
-    }
-  } else {
-    abort(c); // todo
-  }
-}
-
-void
-moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
-       unsigned dstSize, Assembler::Register* dst)
-{
-  moveCR2(c, srcSize, src, dstSize, dst, 0);
 }
 
 // void moveCR3(Context* con, unsigned aSize, Const* a, unsigned tSize, Reg* t) {
