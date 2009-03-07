@@ -57,6 +57,8 @@ public class SocketChannel extends SelectableChannel
   }
 
   private int doConnect(String host, int port) throws Exception {
+    if (host == null) throw new NullPointerException();
+
     boolean b[] = new boolean[1];
     int s = natDoConnect(host, port, b);
     connected = b[0];
@@ -66,7 +68,11 @@ public class SocketChannel extends SelectableChannel
   public int read(ByteBuffer b) throws IOException {
     if (! isOpen()) return -1;
     if (b.remaining() == 0) return 0;
-    int r = natRead(socket, b.array(), b.arrayOffset() + b.position(), b.remaining());
+
+    byte[] array = b.array();
+    if (array == null) throw new NullPointerException();
+
+    int r = natRead(socket, array, b.arrayOffset() + b.position(), b.remaining());
     if (r > 0) {
       b.position(b.position() + r);
     }
@@ -78,7 +84,11 @@ public class SocketChannel extends SelectableChannel
       natThrowWriteError(socket);
     }
     if (b.remaining() == 0) return 0;
-    int w = natWrite(socket, b.array(), b.arrayOffset() + b.position(), b.remaining());
+
+    byte[] array = b.array();
+    if (array == null) throw new NullPointerException();
+
+    int w = natWrite(socket, array, b.arrayOffset() + b.position(), b.remaining());
     if (w > 0) {
       b.position(b.position() + w);
     }

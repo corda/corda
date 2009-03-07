@@ -13,6 +13,25 @@ package java.util;
 public class Collections {
   private Collections() { }
 
+  public static void shuffle(List list, Random random) {
+    Object[] array = toArray(list, new Object[list.size()]);
+    for (int i = 0; i < array.length; ++i) {
+      int j = random.nextInt(array.length);
+      Object tmp = array[i];
+      array[i] = array[j];
+      array[j] = tmp;
+    }
+ 
+    list.clear();
+    for (int i = 0; i < array.length; ++i) {
+      list.add(array[i]);
+    }
+  }
+
+  public static void shuffle(List list) {
+    shuffle(list, new Random());
+  }
+
   static <T> T[] toArray(Collection collection, T[] array) {
     Class c = array.getClass().getComponentType();
 
@@ -106,6 +125,63 @@ public class Collections {
       return new SynchronizedIterator(lock, collection.iterator());
     }
   }
+  
+  static class SynchronizedMap<K,V> implements Map<K,V> {
+    protected final Object lock;
+    protected final Map<K,V> map;
+
+    SynchronizedMap(Map<K,V> map) {
+      this.map = map;
+      this.lock = this;
+    }
+
+    SynchronizedMap(Object lock, Map<K,V> map) {
+      this.lock = lock;
+      this.map = map;
+    }
+    
+    public void clear() {
+      synchronized (lock) { map.clear(); }
+    }
+    public boolean containsKey(K key) {
+      synchronized (lock) { return map.containsKey(key); }
+    }
+    public boolean containsValue(V value) {
+      synchronized (lock) { return map.containsValue(value); }
+    }
+    public Set<java.util.Map.Entry<K, V>> entrySet() {
+      synchronized (lock) { return new SynchronizedSet<java.util.Map.Entry<K, V>>(lock, map.entrySet()); }
+    }
+    public V get(K key) {
+      synchronized (lock) { return map.get(key); }
+    }
+    public boolean isEmpty() {
+      synchronized (lock) { return map.isEmpty(); }
+    }
+    public Set<K> keySet() {
+      synchronized (lock) { return new SynchronizedSet<K>(lock, map.keySet()); }
+    }
+    public V put(K key, V value) {
+      synchronized (lock) { return map.put(key, value); }
+    }
+    public void putAll(Map<? extends K, ? extends V> elts) {
+      synchronized (lock) { map.putAll(elts); }
+    }
+    public V remove(K key) {
+      synchronized (lock) { return map.remove(key); }
+    }
+    public int size() {
+      synchronized (lock) { return map.size(); }
+    }
+    public Collection<V> values() {
+      synchronized (lock) { return new SynchronizedCollection<V>(lock, map.values()); }
+    }
+  }
+  
+  public static <K,V> Map<K,V> synchronizedMap(Map<K,V> map) {
+    return new SynchronizedMap<K, V> (map); 
+  }
+  
 
   static class SynchronizedSet<T>
     extends SynchronizedCollection<T>

@@ -16,14 +16,23 @@ import java.util.List;
 
 public class Logger {
   private final String name;
+  private Level levelValue = null;
   private static final ArrayList<Handler> handlers;
+  private static Logger rootLogger;
+  private Logger parent;
+
   static {
+    rootLogger = new Logger("");
+    rootLogger.setLevel(Level.INFO);
     handlers = new ArrayList<Handler>();
     handlers.add(new DefaultHandler());
   }
 
   public static Logger getLogger(String name) {
-    return new Logger(name);
+    if (name.equals("")) return rootLogger;
+    Logger logger = new Logger(name);
+    logger.parent = rootLogger;
+    return logger;
   }
 
   private Logger(String name) {
@@ -40,6 +49,10 @@ public class Logger {
 
   public void removeHandler(Handler handler) {
     handlers.remove(handler);
+  }
+
+  public Logger getParent() {
+    return parent;
   }
 
   public void fine(String message) {
@@ -66,19 +79,59 @@ public class Logger {
     log(level, Method.getCaller(), message, exception);
   }
 
+  public void logp(Level level, String sourceClass, String sourceMethod, String msg) {
+	if (!isLoggable(level)) {
+		return;
+	}
+    publish(new LogRecord(name, sourceMethod, level, msg, null));
+  }
+  
+  public void logp(Level level, String sourceClass, String sourceMethod,
+          String msg, Throwable thrown) {
+	if (!isLoggable(level)) {
+	  return;
+	}
+	publish(new LogRecord(name, sourceMethod, level, msg, thrown));
+  }
+
+  public Level getLevel() {
+    return levelValue;
+  }
+
+  private Level getEffectiveLevel() {
+    Logger logger = this;
+
+    while (logger.levelValue == null) {
+      logger = logger.getParent();
+    }
+    return logger.getLevel();
+  }
+      
   private void log(Level level, Method caller, String message,
                    Throwable exception) {
+    
+    if (level.intValue() < getEffectiveLevel().intValue()) {
+      return;
+    }
     LogRecord r = new LogRecord(name, caller.getName(), level, message,
                                 exception);
+    publish(r);
+  }
+
+  private void publish(LogRecord logRecord) {
     for (Handler h : handlers) {
-      h.publish(r);
+      h.publish(logRecord);
     }
   }
 
   public void setLevel(Level level) {
-    // Currently ignored
+    levelValue = level;
   }
-
+  
+  public boolean isLoggable(Level level) {
+    return level.intValue() >= levelValue.intValue();
+  }
+  
   private static class DefaultHandler extends Handler {
     private static final int NAME_WIDTH = 14;
     private static final int METHOD_WIDTH = 15;
