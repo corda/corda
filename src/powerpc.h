@@ -91,7 +91,9 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     switch (argumentTypes[ati]) {
     case FLOAT_TYPE: {
       if (fprIndex < FprCount) {
-        fprTable[fprIndex++] = arguments[ai];
+        double d = bitsToFloat(arguments[ai]);
+        memcpy(fprTable + fprIndex, &d, 8);
+        ++ fprIndex;
         ++ gprIndex;
         ++ stackSkip;
       } else {
