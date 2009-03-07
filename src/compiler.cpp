@@ -1690,9 +1690,6 @@ move(Context* c, Value* value, Site* src, Site* dst)
     Site* tmp = freeRegisterSite(c);
     addSite(c, value, tmp);
 
-    dst->thaw(c, value);
-    src->thaw(c, value);
-
     if (DebugMoves) {
       char srcb[256]; src->toString(c, srcb, 256);
       char tmpb[256]; tmp->toString(c, tmpb, 256);
@@ -1700,6 +1697,9 @@ move(Context* c, Value* value, Site* src, Site* dst)
     }
       
     apply(c, Move, BytesPerWord, src, 0, BytesPerWord, tmp, 0);
+
+    dst->thaw(c, value);
+    src->thaw(c, value);
 
     src = tmp;
   }
@@ -1709,8 +1709,12 @@ move(Context* c, Value* value, Site* src, Site* dst)
     char dstb[256]; dst->toString(c, dstb, 256);
     fprintf(stderr, "move %s to %s for %p\n", srcb, dstb, value);
   }
+
+  src->freeze(c, value);
   
   apply(c, Move, BytesPerWord, src, 0, BytesPerWord, dst, 0);
+
+  src->thaw(c, value);
 }
 
 unsigned
@@ -2465,7 +2469,11 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
                 srcb, dstb, src, dst);
       }
 
+      src->source->freeze(c, src);
+
       apply(c, type, srcSelectSize, src->source, 0, dstSize, target, 0);
+
+      src->source->thaw(c, src);
     } else {
       target->freeze(c, dst);
 
@@ -2487,6 +2495,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
       Site* tmpTarget = freeRegisterSite
         (c, dstMask.registerMask & srcRegisterMask);
 
+      src->source->freeze(c, src);
+
       addSite(c, dst, tmpTarget);
 
       if (DebugMoves) {
@@ -2498,6 +2508,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
       apply(c, type, srcSelectSize, src->source, 0, dstSize, tmpTarget, 0);
 
+      src->source->thaw(c, src);
+
       if (useTemporary or isStore) {
         if (DebugMoves) {
           char srcb[256]; tmpTarget->toString(c, srcb, 256);
@@ -2506,7 +2518,11 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
                   srcb, dstb, src, dst);
         }
 
+        tmpTarget->freeze(c, dst);
+
         apply(c, Move, dstSize, tmpTarget, 0, dstSize, target, 0);
+
+        tmpTarget->thaw(c, dst);
 
         if (isStore) {
           removeSite(c, dst, tmpTarget);
@@ -2628,8 +2644,6 @@ class MoveEvent: public Event {
         src->source->freeze(c, src);
 
         addSite(c, dst, low);
-
-        src->source->thaw(c, src);
           
         if (DebugMoves) {
           char srcb[256]; src->source->toString(c, srcb, 256);
@@ -2640,6 +2654,8 @@ class MoveEvent: public Event {
 
         apply(c, Move, BytesPerWord, src->source, 0, BytesPerWord, low, 0);
 
+        src->source->thaw(c, src);
+
         assert(c, dstHighMask.typeMask & (1 << RegisterOperand));
 
         Site* high = freeRegisterSite(c, dstHighMask.registerMask);
@@ -2647,8 +2663,6 @@ class MoveEvent: public Event {
         low->freeze(c, dst);
 
         addSite(c, dst->high, high);
-
-        low->thaw(c, dst);
         
         if (DebugMoves) {
           char srcb[256]; low->toString(c, srcb, 256);
@@ -2658,6 +2672,8 @@ class MoveEvent: public Event {
         }
 
         apply(c, Move, BytesPerWord, low, 0, dstSize, low, high);
+
+        low->thaw(c, dst);
       } else {
         maybeMove(c, Move, BytesPerWord, BytesPerWord, src, BytesPerWord, dst,
                   dstLowMask);
