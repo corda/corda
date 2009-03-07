@@ -54,9 +54,12 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
-      //fprintf(stderr, "%.*s\n", nameSize - 6, name);
+//       fprintf(stderr, "%.*s\n", nameSize - 6, name);
       object c = resolveClass
         (t, makeByteArray(t, "%.*s", nameSize - 6, name));
+
+      if (t->exception) return 0;
+
       PROTECT(t, c);
 
       if (classMethodTable(t, c)) {
@@ -285,6 +288,9 @@ writeBootImage(Thread* t, FILE* out, const char* className,
   object constants = makeCodeImage
     (t, &zone, &image, code, CodeCapacity, codeMap, className, methodName,
      methodSpec);
+
+  if (t->exception) return;
+
   PROTECT(t, constants);
 
   const unsigned HeapCapacity = 32 * 1024 * 1024;
@@ -384,6 +390,10 @@ main(int ac, const char** av)
   writeBootImage
     (t, stdout, (ac > 2 ? av[2] : 0), (ac > 3 ? av[3] : 0),
      (ac > 4 ? av[4] : 0));
+
+  if (t->exception) {
+    printTrace(t, t->exception);
+  }
 
   return 0;
 }
