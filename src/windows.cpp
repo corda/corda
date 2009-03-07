@@ -230,9 +230,11 @@ class MySystem: public System {
       assert(s, t);
 
       if (owner_ == t) {
-        bool interrupted;
-        bool notified;
-        unsigned depth;
+        // Initialized here to make gcc 4.2 a happy compiler
+        bool interrupted = false;
+        bool notified = false;
+        unsigned depth = 0;
+
         int r UNUSED;
 
         { ACQUIRE(s, t->mutex);
@@ -829,11 +831,18 @@ LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e)
 {
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+    void* ip = reinterpret_cast<void*>(e->ContextRecord->Eip);
+    void* base = reinterpret_cast<void*>(e->ContextRecord->Ebp);
+    void* stack = reinterpret_cast<void*>(e->ContextRecord->Esp);
+    void* thread = reinterpret_cast<void*>(e->ContextRecord->Ebx);
+
     bool jump = system->segFaultHandler->handleSignal
-      (reinterpret_cast<void**>(&(e->ContextRecord->Eip)),
-       reinterpret_cast<void**>(&(e->ContextRecord->Ebp)),
-       reinterpret_cast<void**>(&(e->ContextRecord->Esp)),
-       reinterpret_cast<void**>(&(e->ContextRecord->Ebx)));
+      (&ip, &base, &stack, &thread);
+
+    e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
+    e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
+    e->ContextRecord->Esp = reinterpret_cast<DWORD>(stack);
+    e->ContextRecord->Ebx = reinterpret_cast<DWORD>(thread);
 
     if (jump) {
       return EXCEPTION_CONTINUE_EXECUTION;

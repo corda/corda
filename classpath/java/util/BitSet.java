@@ -45,16 +45,20 @@ public class BitSet implements Serializable, Cloneable {
   }
 
   public void and(BitSet otherBits) {
-    int max = Math.max(bits.length, otherBits.bits.length);
-    for (int i = 0; i < max; i++) {
+    int min = Math.min(bits.length, otherBits.bits.length);
+    for (int i = 0; i < min; i++) {
       bits[i] &= otherBits.bits[i];
+    }
+    for (int i = min; i < bits.length; i++) { 
+      bits[i] = 0;
     }
   }
 
   public void andNot(BitSet otherBits) {
     int max = Math.max(bits.length, otherBits.bits.length);
     enlarge(max);
-    for (int i = 0; i < max; i++) {
+    int min = Math.min(bits.length, otherBits.bits.length);
+    for (int i = 0; i < min; i++) {
       bits[i] &= ~otherBits.bits[i];
     }
   }
@@ -62,7 +66,8 @@ public class BitSet implements Serializable, Cloneable {
   public void or(BitSet otherBits) {
     int max = Math.max(bits.length, otherBits.bits.length);
     enlarge(max);
-    for (int i = 0; i < max; i++) {
+    int min = Math.min(bits.length, otherBits.bits.length);
+    for (int i = 0; i < min; i++) {
       bits[i] |= otherBits.bits[i];
     }
   }
@@ -70,13 +75,14 @@ public class BitSet implements Serializable, Cloneable {
   public void xor(BitSet otherBits) {
     int max = Math.max(bits.length, otherBits.bits.length);
     enlarge(max);
-    for (int i = 0; i < max; i++) {
+    int min = Math.min(bits.length, otherBits.bits.length);
+    for (int i = 0; i < min; i++) {
       bits[i] ^= otherBits.bits[i];
     }
   }
 
   private void enlarge(int newSize) {
-    if (bits == null || bits.length <= newSize) {
+    if (bits == null || bits.length < newSize) {
       long[] newBits = new long[newSize + 1];
       if (bits != null) {
         System.arraycopy(bits, 0, newBits, 0, bits.length);

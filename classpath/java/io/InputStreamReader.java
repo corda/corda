@@ -16,6 +16,17 @@ public class InputStreamReader extends Reader {
   public InputStreamReader(InputStream in) {
     this.in = in;
   }
+
+  public InputStreamReader(InputStream in, String encoding)
+    throws UnsupportedEncodingException
+  {
+    this(in);
+
+    if (! encoding.equals("UTF-8")) {
+      throw new UnsupportedEncodingException(encoding);
+    }    
+  }
+
   
   public int read(char[] b, int offset, int length) throws IOException {
     byte[] buffer = new byte[length];
