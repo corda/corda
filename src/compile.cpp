@@ -3730,9 +3730,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       saveStateAndCompile(t, frame, defaultIp);
 
+      Compiler::Operand* normalizedKey
+        = (bottom ? c->sub(4, c->constant(bottom), key) : key);
+
       c->jmp(c->load(BytesPerWord, BytesPerWord,
-                     c->memory(start, 0, c->sub(4, c->constant(bottom), key),
-                               BytesPerWord), BytesPerWord));
+                     c->memory(start, 0, normalizedKey, BytesPerWord),
+                     BytesPerWord));
 
       Compiler::State* state = c->saveState();
 
