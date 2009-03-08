@@ -4327,8 +4327,9 @@ compile(MyThread* t, Allocator* allocator, Context* context)
     PROTECT(t, eht);
 
     unsigned visitCount = exceptionHandlerTableLength(t, eht);
+
     bool visited[visitCount];
-    memset(visited, 0, visitCount);
+    memset(visited, 0, visitCount * sizeof(bool));
 
     while (visitCount) {
       bool progress = false;
@@ -4339,7 +4340,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
         unsigned start = exceptionHandlerStart(eh);
 
-        if (not visited[i] and context->visitTable[start]) {
+        if ((not visited[i]) and context->visitTable[start]) {
           -- visitCount;
           visited[i] = true;
           progress = true;
