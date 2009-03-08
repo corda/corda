@@ -742,13 +742,13 @@ void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   }
 }
 
-void multiplyC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
+void multiplyC(Context* con, unsigned size UNUSED, Const* a, Reg* b, Reg* t) {
   assert(con, size == 4);
   int64_t i = getVal(a);
   issue(con, mulli(R(t), R(b), i));
 }
 
-void divideR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void divideR(Context* con, unsigned size UNUSED, Reg* a, Reg* b, Reg* t) {
   assert(con, size == 4);
   issue(con, divw(R(t), R(b), R(a)));
 }
@@ -874,7 +874,7 @@ moveRM(Context* c, unsigned srcSize, Assembler::Register* src,
 }
 
 void
-moveAndUpdateRM(Context* c, unsigned srcSize, Assembler::Register* src,
+moveAndUpdateRM(Context* c, unsigned srcSize UNUSED, Assembler::Register* src,
                 unsigned dstSize UNUSED, Assembler::Memory* dst)
 {
   assert(c, srcSize == BytesPerWord);
@@ -1036,7 +1036,7 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
 
     uint32_t v32 = static_cast<uint32_t>(v);
     unsigned state = 0;
-    unsigned start;
+    unsigned start = 0;
     unsigned end = 31;
     for (unsigned i = 0; i < 32; ++i) {
       unsigned bit = (v32 >> i) & 1;
@@ -1186,8 +1186,8 @@ moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
 }
 
 void
-compareRR(Context* c, unsigned aSize, Assembler::Register* a,
-          unsigned bSize, Assembler::Register* b)
+compareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+          unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == 4 and bSize == 4);
   
@@ -1235,8 +1235,8 @@ compareRM(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-compareUnsignedRR(Context* c, unsigned aSize, Assembler::Register* a,
-                  unsigned bSize, Assembler::Register* b)
+compareUnsignedRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+                  unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == 4 and bSize == 4);
   
@@ -1395,7 +1395,7 @@ moveCM(Context* c, unsigned srcSize, Assembler::Constant* src,
 
 void
 negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
-         unsigned dstSize, Assembler::Register* dst)
+         unsigned dstSize UNUSED, Assembler::Register* dst)
 {
   assert(c, srcSize == dstSize);
 
@@ -1410,7 +1410,7 @@ negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
 }
 
 void
-callR(Context* c, unsigned size, Assembler::Register* target)
+callR(Context* c, unsigned size UNUSED, Assembler::Register* target)
 {
   assert(c, size == BytesPerWord);
 
@@ -1419,7 +1419,7 @@ callR(Context* c, unsigned size, Assembler::Register* target)
 }
 
 void
-callC(Context* c, unsigned size, Assembler::Constant* target)
+callC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
 
@@ -1428,7 +1428,7 @@ callC(Context* c, unsigned size, Assembler::Constant* target)
 }
 
 void
-longCallC(Context* c, unsigned size, Assembler::Constant* target)
+longCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
 
@@ -1438,7 +1438,7 @@ longCallC(Context* c, unsigned size, Assembler::Constant* target)
 }
 
 void
-longJumpC(Context* c, unsigned size, Assembler::Constant* target)
+longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
 
@@ -1936,7 +1936,7 @@ class MyAssembler: public Assembler {
                      unsigned, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType UNUSED,
                      Operand* bOperand,
-                     unsigned cSize, OperandType cType UNUSED,
+                     unsigned cSize UNUSED, OperandType cType UNUSED,
                      Operand* cOperand)
   {
     assert(&c, bSize == cSize);

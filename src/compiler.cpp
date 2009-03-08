@@ -3111,7 +3111,7 @@ pop(Context* c, unsigned footprint)
 {
   assert(c, footprint);
 
-  Stack* s;
+  Stack* s = 0;
 
   bool bigEndian = c->arch->bigEndian();
 
