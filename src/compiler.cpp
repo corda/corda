@@ -5063,10 +5063,15 @@ class MyCompiler: public Compiler {
       Local* local = e->localsBefore + i;
       if (local->value) {
         initLocal(1, i);
+      }
+    }
 
+    for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
+      Local* local = e->localsBefore + i;
+      if (local->value) {
         int highOffset = c.arch->bigEndian() ? 1 : -1;
 
-        if (i + highOffset > 0
+        if (i + highOffset >= 0
             and i + highOffset < static_cast<int>(c.localFootprint)
             and local->value->high == local[highOffset].value)
         {
