@@ -41,42 +41,6 @@ vmNativeCall(void* function, void* stack, unsigned stackSize,
 
 namespace vm {
 
-inline void
-trap()
-{
-  asm("int3");
-}
-
-inline void
-memoryBarrier()
-{
-  __asm__ __volatile__("": : :"memory");
-}
-
-inline void
-storeStoreMemoryBarrier()
-{
-  memoryBarrier();
-}
-
-inline void
-storeLoadMemoryBarrier()
-{
-  memoryBarrier();
-}
-
-inline void
-loadMemoryBarrier()
-{
-  memoryBarrier();
-}
-
-inline void
-syncInstructionCache(const void*, unsigned)
-{
-  // ignore
-}
-
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
             unsigned, unsigned argumentsSize, unsigned returnType)
@@ -146,5 +110,44 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
 #  error unsupported architecture
 #endif
 
+namespace vm {
+
+inline void
+trap()
+{
+  asm("int3");
+}
+
+inline void
+memoryBarrier()
+{
+  __asm__ __volatile__("": : :"memory");
+}
+
+inline void
+storeStoreMemoryBarrier()
+{
+  memoryBarrier();
+}
+
+inline void
+storeLoadMemoryBarrier()
+{
+  memoryBarrier();
+}
+
+inline void
+loadMemoryBarrier()
+{
+  memoryBarrier();
+}
+
+inline void
+syncInstructionCache(const void*, unsigned)
+{
+  // ignore
+}
+
+} // namespace vm
 
 #endif//X86_H
