@@ -150,6 +150,12 @@ isInt16(intptr_t v)
   return v == static_cast<int16_t>(v);
 }
 
+inline int
+carry16(intptr_t v)
+{
+  return static_cast<int16_t>(v) < 0 ? 1 : 0;
+}
+
 const unsigned FrameFooterSize = 6;
 
 const int StackRegister = 1;
@@ -701,7 +707,7 @@ void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
   if(i) {
     issue(con, addi(R(t), R(b), lo16(i)));
     if(not isInt16(i))
-      issue(con, addis(R(t), R(t), hi16(i)));
+      issue(con, addis(R(t), R(t), hi16(i) + carry16(i)));
   } else {
     moveCR(con, size, a, size, t);
   }
@@ -716,17 +722,12 @@ void subR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   }
 }
 
-void subC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
-  assert(con, size == BytesPerWord);
+void subC(Context* c, unsigned size, Const* a, Reg* b, Reg* t) {
+  assert(c, size == BytesPerWord);
 
-  int64_t i = getVal(a);
-  if(i) {
-    issue(con, subi(R(t), R(b), lo16(i)));
-    if(not isInt16(i))
-      issue(con, subis(R(t), R(t), hi16(i)));
-  } else {
-    moveCR(con, size, a, size, t);
-  }
+  ResolvedPromise promise(- a->value->value());
+  Assembler::Constant constant(&promise);
+  addC(c, size, &constant, b, t);
 }
 
 void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {

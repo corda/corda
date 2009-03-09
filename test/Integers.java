@@ -81,5 +81,8 @@ public class Integers {
         / scanlinePad * scanlinePad;
       expect(bytesPerLine == 24);
     }
+
+    int y = -11760768;
+    expect((y + 0x8000) == (-11760768 + 0x8000));
   }
 }
