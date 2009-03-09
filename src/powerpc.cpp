@@ -709,7 +709,7 @@ void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
     if(not isInt16(i))
       issue(con, addis(R(t), R(t), hi16(i) + carry16(i)));
   } else {
-    moveCR(con, size, a, size, t);
+    moveRR(con, size, b, size, t);
   }
 }
 
