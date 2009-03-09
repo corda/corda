@@ -90,6 +90,10 @@ public final class Long extends Number implements Comparable<Long> {
     return toString(v, 10);
   }
 
+  public static String toHexString(long v) {
+    return toString(v, 16);
+  }
+
   public byte byteValue() {
     return (byte) value;
   }
