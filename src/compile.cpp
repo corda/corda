@@ -4259,6 +4259,8 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     trap();
   }
 
+  syncInstructionCache(start, codeSize);
+
   return start;
 }
 

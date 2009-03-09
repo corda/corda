@@ -71,6 +71,11 @@ loadMemoryBarrier()
   memoryBarrier();
 }
 
+inline void
+syncInstructionCache(const void*, unsigned)
+{
+  // ignore
+}
 
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t*,

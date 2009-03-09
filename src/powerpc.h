@@ -67,6 +67,29 @@ loadMemoryBarrier()
   memoryBarrier();
 }
 
+inline void
+syncInstructionCache(const void* start, unsigned size)
+{
+  const unsigned CacheLineSize = 32;
+  const uintptr_t Mask = ~(CacheLineSize - 1);
+
+  uintptr_t cacheLineStart = reinterpret_cast<uintptr_t>(start) & Mask;
+  uintptr_t cacheLineEnd
+    = (reinterpret_cast<uintptr_t>(start) + size + CacheLineSize - 1) & Mask;
+
+  for (uintptr_t p = cacheLineStart; p < cacheLineEnd; p += CacheLineSize) {
+    __asm__ __volatile__("dcbf 0, %0" : : "r" (p));
+  }
+
+  __asm__ __volatile__("sync");
+
+  for (uintptr_t p = cacheLineStart; p < cacheLineEnd; p += CacheLineSize) {
+    __asm__ __volatile__("icbi 0, %0" : : "r" (p));
+  }
+
+  __asm__ __volatile__("isync");
+}
+
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned argumentsSize,
