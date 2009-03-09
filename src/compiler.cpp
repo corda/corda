@@ -2705,7 +2705,7 @@ appendMove(Context* c, BinaryOperation type, unsigned srcSize,
   uint8_t dstTypeMask;
   uint64_t dstRegisterMask;
 
-  c->arch->plan(type, srcSize, &srcTypeMask, &srcRegisterMask,
+  c->arch->plan(type, srcSelectSize, &srcTypeMask, &srcRegisterMask,
                 dstSize, &dstTypeMask, &dstRegisterMask,
                 &thunk);
 
