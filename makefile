@@ -449,7 +449,7 @@ $(bootimage-bin): $(bootimage-generator)
 $(bootimage-object): $(bootimage-bin) $(binaryToMacho)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
-	$(binaryToMacho) $(<) __BOOT __boot \
+	$(binaryToMacho) $(asm) $(<) __BOOT __boot \
 		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
 else
 	(wd=$$(pwd); \

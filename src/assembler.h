@@ -277,6 +277,9 @@ class Assembler {
     virtual void updateCall(UnaryOperation op, bool assertAlignment,
                             void* returnAddress, void* newTarget) = 0;
 
+    virtual uintptr_t getConstant(const void* src) = 0;
+    virtual void setConstant(void* dst, uintptr_t constant) = 0;
+
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
 
     virtual void* frameIp(void* stack) = 0;

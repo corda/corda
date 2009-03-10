@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -5627,28 +5627,33 @@ fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
 }
 
 void
-fixupCode(Thread*, uintptr_t* map, unsigned size, uint8_t* code,
+fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
           uintptr_t* heap)
 {
+  Assembler::Architecture* arch = makeArchitecture(t->m->system);
+  arch->acquire();
+
   for (unsigned word = 0; word < size; ++word) {
     uintptr_t w = map[word];
     if (w) {
       for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
         if (w & (static_cast<uintptr_t>(1) << bit)) {
           unsigned index = indexOf(word, bit);
-          uintptr_t v; memcpy(&v, code + index, BytesPerWord);
+          uintptr_t v = arch->getConstant(code + index);
           uintptr_t mark = v >> BootShift;
           if (mark) {
-            v = reinterpret_cast<uintptr_t>(code + (v & BootMask));
-            memcpy(code + index, &v, BytesPerWord);
+            arch->setConstant(code + index, reinterpret_cast<uintptr_t>
+                              (code + (v & BootMask)));
           } else {
-            v = reinterpret_cast<uintptr_t>(heap + v - 1);
-            memcpy(code + index, &v, BytesPerWord);
+            arch->setConstant(code + index, reinterpret_cast<uintptr_t>
+                              (heap + v - 1));
           }
         }
       }
     }
   }
+
+  arch->release();
 }
 
 void

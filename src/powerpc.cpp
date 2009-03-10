@@ -1690,8 +1690,23 @@ class MyArchitecture: public Assembler::Architecture {
                    reinterpret_cast<intptr_t>(newTarget));
     } break;
 
+    case LongCall:
+    case LongJump: {
+      updateImmediate(c.s, static_cast<uint8_t*>(returnAddress) - 12,
+                      reinterpret_cast<intptr_t>(newTarget), BytesPerWord);
+    } break;
+
     default: abort(&c);
     }
+  }
+
+  virtual uintptr_t getConstant(const void* src) {
+    const int32_t* p = static_cast<const int32_t*>(src);
+    return (p[0] << 16) | (p[1] & 0xFFFF);    
+  }
+
+  virtual void setConstant(void* dst, uintptr_t constant) {
+    updateImmediate(c.s, dst, constant, BytesPerWord);
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {

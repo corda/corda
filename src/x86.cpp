@@ -2085,6 +2085,16 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual uintptr_t getConstant(const void* src) {
+    uintptr_t v;
+    memcpy(&v, src, BytesPerWord);
+    return v;
+  }
+
+  virtual void setConstant(void* dst, uintptr_t constant) {
+    memcpy(dst, &constant, BytesPerWord);
+  }
+
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
     const unsigned alignment = 16 / BytesPerWord;
     return (ceiling(sizeInWords + FrameHeaderSize, alignment) * alignment)
