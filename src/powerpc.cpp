@@ -328,8 +328,10 @@ class OffsetListener: public Promise::Listener {
     conditional(conditional)
   { }
 
-  virtual void* resolve(int64_t value) {
-    return updateOffset(s, instruction, conditional, value);
+  virtual bool resolve(int64_t value, void** location) {
+    void* p = updateOffset(s, instruction, conditional, value);
+    if (location) *location = p;
+    return false;
   }
 
   System* s;
@@ -518,8 +520,10 @@ updateImmediate(System* s, void* dst, int64_t src, unsigned size)
   switch (size) {
   case 4: {
     int32_t* p = static_cast<int32_t*>(dst);
-    p[0] = (src >> 16) | ((~0xFFFF) & p[0]);
-    p[1] = (src & 0xFFFF) | ((~0xFFFF) & p[1]);
+    int r = (p[1] >> 21) & 31;
+
+    p[0] = lis(r, src >> 16);
+    p[1] = ori(r, r, src);
   } break;
 
   default: abort(s);
@@ -532,9 +536,10 @@ class ImmediateListener: public Promise::Listener {
     s(s), dst(dst), size(size), offset(offset)
   { }
 
-  virtual void* resolve(int64_t value) {
+  virtual bool resolve(int64_t value, void** location) {
     updateImmediate(s, dst, value, size);
-    return static_cast<uint8_t*>(dst) + offset;
+    if (location) *location = static_cast<uint8_t*>(dst) + offset;
+    return false;
   }
 
   System* s;

@@ -82,7 +82,7 @@ class Promise {
  public:
   class Listener {
    public:
-    virtual void* resolve(int64_t value) = 0;
+    virtual bool resolve(int64_t value, void** location) = 0;
 
     Listener* next;
   };

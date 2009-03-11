@@ -97,19 +97,25 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     }
 
     static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))
-      ->listener->resolve(address);
+      ->listener->resolve(address, 0);
   }
 
   for (; addresses; addresses = addresses->next) {
     uint8_t* value = reinterpret_cast<uint8_t*>(addresses->basis->value());
     assert(t, value >= code);
 
-    void* dst = addresses->listener->resolve
-      ((value - code) | (1 << BootShift));
-    assert(t, reinterpret_cast<intptr_t>(dst)
+    void* location;
+    bool flat = addresses->listener->resolve(0, &location);
+    uintptr_t offset = value - code;
+    if (flat) {
+      offset |= BootFlatConstant;
+    }
+    memcpy(location, &offset, BytesPerWord);
+
+    assert(t, reinterpret_cast<intptr_t>(location)
            >= reinterpret_cast<intptr_t>(code));
 
-    markBit(codeMap, reinterpret_cast<intptr_t>(dst)
+    markBit(codeMap, reinterpret_cast<intptr_t>(location)
             - reinterpret_cast<intptr_t>(code));
   }
 
@@ -255,12 +261,18 @@ updateConstants(Thread* t, object constants, uint8_t* code, uintptr_t* codeMap,
            (pointerValue(t, tripleSecond(t, constants)))->listener;
          pl; pl = pl->next)
     {
-      void* dst = pl->resolve(target);
+      void* location;
+      bool flat = pl->resolve(0, &location);
+      uintptr_t offset = target | BootHeapOffset;
+      if (flat) {
+        offset |= BootFlatConstant;
+      }
+      memcpy(location, &offset, BytesPerWord);
 
-      assert(t, reinterpret_cast<intptr_t>(dst)
+      assert(t, reinterpret_cast<intptr_t>(location)
              >= reinterpret_cast<intptr_t>(code));
 
-      markBit(codeMap, reinterpret_cast<intptr_t>(dst)
+      markBit(codeMap, reinterpret_cast<intptr_t>(location)
               - reinterpret_cast<intptr_t>(code));
     }
   }

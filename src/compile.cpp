@@ -5639,14 +5639,19 @@ fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
       for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
         if (w & (static_cast<uintptr_t>(1) << bit)) {
           unsigned index = indexOf(word, bit);
-          uintptr_t v = arch->getConstant(code + index);
-          uintptr_t mark = v >> BootShift;
-          if (mark) {
-            arch->setConstant(code + index, reinterpret_cast<uintptr_t>
-                              (code + (v & BootMask)));
+          uintptr_t oldValue; memcpy(&oldValue, code + index, BytesPerWord);
+          uintptr_t newValue;
+          if (oldValue & BootHeapOffset) {
+            newValue = reinterpret_cast<uintptr_t>
+              (heap + (oldValue & BootMask) - 1);
           } else {
-            arch->setConstant(code + index, reinterpret_cast<uintptr_t>
-                              (heap + v - 1));
+            newValue = reinterpret_cast<uintptr_t>
+              (code + (oldValue & BootMask));
+          }
+          if (oldValue & BootFlatConstant) {
+            memcpy(code + index, &newValue, BytesPerWord);
+          } else {
+            arch->setConstant(code + index, newValue);
           }
         }
       }
@@ -5765,6 +5770,8 @@ boot(MyThread* t, BootImage* image)
   p->methodTreeSentinal = bootObject(heap, image->methodTreeSentinal);
 
   fixupCode(t, codeMap, codeMapSizeInWords, code, heap);
+
+  syncInstructionCache(code, image->codeSize);
 
   t->m->classMap = makeClassMap(t, classTable, image->classCount, heap);
   t->m->stringMap = makeStringMap(t, stringTable, image->stringCount, heap);
@@ -5889,39 +5896,41 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
   p->defaultThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
 
-  { uint8_t* call = static_cast<uint8_t*>
-      (defaultContext.promise.listener->resolve
-       (reinterpret_cast<intptr_t>(voidPointer(compileMethod))));
+  { void* call;
+    defaultContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(compileMethod)), &call);
 
     if (image) {
       image->defaultThunk = p->defaultThunk - imageBase;
-      image->compileMethodCall = call - imageBase;
+      image->compileMethodCall = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
   p->nativeThunk = finish
     (t, allocator, nativeContext.context.assembler, "native");
 
-  { uint8_t* call = static_cast<uint8_t*>
-      (nativeContext.promise.listener->resolve
-       (reinterpret_cast<intptr_t>(voidPointer(invokeNative))));
+  { void* call;
+    nativeContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(invokeNative)), &call);
 
     if (image) {
       image->nativeThunk = p->nativeThunk - imageBase;
-      image->invokeNativeCall = call - imageBase;
+      image->invokeNativeCall = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
   p->aioobThunk = finish
     (t, allocator, aioobContext.context.assembler, "aioob");
 
-  { uint8_t* call = static_cast<uint8_t*>
-      (aioobContext.promise.listener->resolve
-       (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds))));
+  { void* call;
+    aioobContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds)),
+       &call);
 
     if (image) {
       image->aioobThunk = p->aioobThunk - imageBase;
-      image->throwArrayIndexOutOfBoundsCall = call - imageBase;
+      image->throwArrayIndexOutOfBoundsCall
+        = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
@@ -5940,11 +5949,11 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 #define THUNK(s)                                                        \
   tableContext.context.assembler->writeTo(start);                       \
   start += p->thunkSize;                                                \
-  { uint8_t* call = static_cast<uint8_t*>                               \
-      (tableContext.promise.listener->resolve                           \
-       (reinterpret_cast<intptr_t>(voidPointer(s))));                   \
+  { void* call;                                                         \
+    tableContext.promise.listener->resolve                              \
+      (reinterpret_cast<intptr_t>(voidPointer(s)), &call);              \
     if (image) {                                                        \
-      image->s##Call = call - imageBase;                                \
+      image->s##Call = static_cast<uint8_t*>(call) - imageBase;         \
     }                                                                   \
   }
 

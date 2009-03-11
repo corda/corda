@@ -5288,9 +5288,10 @@ class MyCompiler: public Compiler {
          public:
           Listener(intptr_t* target): target(target){ }
 
-          virtual void* resolve(int64_t value) {
+          virtual bool resolve(int64_t value, void** location) {
             *target = value;
-            return target;
+            if (location) *location = target;
+            return true;
           }
 
           intptr_t* target;

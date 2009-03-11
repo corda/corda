@@ -246,8 +246,10 @@ class OffsetListener: public Promise::Listener {
     instructionSize(instructionSize)
   { }
 
-  virtual void* resolve(int64_t value) {
-    return resolveOffset(s, instruction, instructionSize, value);
+  virtual bool resolve(int64_t value, void** location) {
+    void* p = resolveOffset(s, instruction, instructionSize, value);
+    if (location) *location = p;
+    return false;
   }
 
   System* s;
@@ -314,9 +316,10 @@ class ImmediateListener: public Promise::Listener {
     s(s), dst(dst), size(size), offset(offset)
   { }
 
-  virtual void* resolve(int64_t value) {
+  virtual bool resolve(int64_t value, void** location) {
     copy(s, dst, value, size);
-    return static_cast<uint8_t*>(dst) + offset;
+    if (location) *location = static_cast<uint8_t*>(dst) + offset;
+    return offset == 0;
   }
 
   System* s;

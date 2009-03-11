@@ -19,6 +19,9 @@ const unsigned BootMask = (~static_cast<unsigned>(0)) / BytesPerWord;
 
 const unsigned BootShift = 32 - log(BytesPerWord);
 
+const unsigned BootFlatConstant = 1 << BootShift;
+const unsigned BootHeapOffset = 1 << (BootShift + 1);
+
 class BootImage {
  public:
   static const unsigned Magic = 0x22377322;
