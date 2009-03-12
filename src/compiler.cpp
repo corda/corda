@@ -1641,12 +1641,20 @@ class MemorySite: public Site {
     return memorySite(c, base, offset, index, scale);
   }
 
+  Site* copyHalf(Context* c, bool add) {
+    if (add) {
+      return memorySite(c, base, offset + BytesPerWord, index, scale);
+    } else {
+      return copy(c);
+    }
+  }
+
   virtual Site* copyLow(Context* c) {
-    return copy(c);
+    return copyHalf(c, c->arch->bigEndian());
   }
 
   virtual Site* copyHigh(Context* c) {
-    return memorySite(c, base, offset + BytesPerWord, index, scale);
+    return copyHalf(c, not c->arch->bigEndian());
   }
 
   bool acquired;
@@ -3433,15 +3441,19 @@ class MemoryEvent: public Event {
     Site* site = memorySite
       (c, baseRegister, displacement, indexRegister, scale);
 
-    result->target = site;
-    addSite(c, result, site);
-
+    Site* low;
     if (result->high) {
       Site* high = site->copyHigh(c);
+      low = site->copyLow(c);
 
       result->high->target = high;
       addSite(c, result->high, high);
+    } else {
+      low = site;
     }
+
+    result->target = low;
+    addSite(c, result, low);
   }
 
   Value* base;
