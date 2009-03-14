@@ -1013,8 +1013,6 @@ freezeResource(Context* c, Resource* r, Value* v)
     fprintf(stderr, "%p freeze %s to %d\n", v, buffer, r->freezeCount + 1);
   }
     
-  assert(c, r->value == 0 or buddies(r->value, v));
-    
   ++ r->freezeCount;
 }
 
@@ -1046,7 +1044,6 @@ thawResource(Context* c, Resource* r, Value* v)
     }
 
     assert(c, r->freezeCount);
-    assert(c, r->value == 0 or buddies(r->value, v));
 
     -- r->freezeCount;
   }
@@ -2455,15 +2452,19 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
   unsigned cost = src->source->copyCost(c, target);
 
-  if (srcSelectSize != dstSize) cost = 1;
+  if (srcSelectSize < dstSize) cost = 1;
 
   if (cost) {
     bool useTemporary = ((target->type(c) == MemoryOperand
                           and src->source->type(c) == MemoryOperand)
-                         or (srcSelectSize != dstSize
+                         or (srcSelectSize < dstSize
                              and target->type(c) != RegisterOperand));
 
+    src->source->freeze(c, src);
+
     addSite(c, dst, target);
+
+    src->source->thaw(c, src);
 
     bool addOffset = srcSize != srcSelectSize
       and c->arch->bigEndian()
@@ -2486,7 +2487,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
       src->source->freeze(c, src);
 
-      apply(c, type, srcSelectSize, src->source, 0, dstSize, target, 0);
+      apply(c, type, min(srcSelectSize, dstSize), src->source, 0,
+            dstSize, target, 0);
 
       src->source->thaw(c, src);
     } else {

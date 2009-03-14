@@ -2173,7 +2173,7 @@ class MyArchitecture: public Assembler::Architecture {
           *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
           *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
             | (static_cast<uint64_t>(1) << rax);        
-        } else if (aSize == 1) {
+        } else if (aSize == 1 or bSize == 1) {
           const uint32_t mask
             = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
           *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
