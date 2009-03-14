@@ -23,9 +23,22 @@ endif
 mode = fast
 process = compile
 
+ifneq ($(process),compile)
+	options := -$(process)
+endif
+ifneq ($(mode),fast)
+	options := $(options)-$(mode)
+endif
+ifeq ($(bootimage),true)
+	options := $(options)-bootimage
+endif
+ifeq ($(heapdump),true)
+	options := $(options)-heapdump
+endif
+
 root = $(shell (cd .. && pwd))
 build = build
-native-build = $(build)/$(platform)-$(arch)-$(process)-$(mode)
+native-build = $(build)/$(platform)-$(arch)$(options)
 classpath-build = $(build)/classpath
 test-build = $(build)/test
 src = src
@@ -53,7 +66,7 @@ strip-all = --strip-all
 
 rdynamic = -rdynamic
 
-# note that we supress the non-virtual-dtor warning because we never
+# note that we suppress the non-virtual-dtor warning because we never
 # use the delete operator, which means we don't need virtual
 # destructors:
 warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
@@ -247,7 +260,7 @@ bootimage-generator-sources = $(src)/bootimage.cpp
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
 bootimage-generator = \
-	$(build)/$(build-platform)-$(build-arch)-compile-$(bootimage-mode)/bootimage-generator
+	$(build)/$(build-platform)-$(build-arch)-$(bootimage-mode)/bootimage-generator
 
 bootimage-bin = $(native-build)/bootimage.bin
 bootimage-object = $(native-build)/bootimage-bin.o
@@ -477,7 +490,7 @@ $(bootimage-generator): make-bootimage-generator
 
 make-bootimage-generator:
 	(unset MAKEFLAGS && \
-	 make mode=$(bootimage-mode) process=compile \
+	 make mode=$(bootimage-mode) \
 		arch=$(build-arch) \
 		platform=$(build-platform) \
 		bootimage-generator= \
