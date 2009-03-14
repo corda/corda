@@ -1091,8 +1091,18 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
           } else if ((v32 & 0xFFFF) == 0) {
             issue(c, andis(dst->low, b->low, v32 >> 16));
           } else {
-            moveCR(c, 4, a, 4, dst);
-            andR(c, 4, b, dst, dst);
+            bool useTemporary = b->low == dst->low;
+            Assembler::Register tmp(dst->low);
+            if (useTemporary) {
+              tmp.low = c->client->acquireTemporary();
+            }
+
+            moveCR(c, 4, a, 4, &tmp);
+            andR(c, 4, b, &tmp, dst);
+
+            if (useTemporary) {
+              c->client->releaseTemporary(tmp.low);
+            }
           }
           return;
         }
