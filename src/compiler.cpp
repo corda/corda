@@ -1698,6 +1698,8 @@ move(Context* c, Value* value, Site* src, Site* dst)
     Site* tmp = freeRegisterSite(c);
     addSite(c, value, tmp);
 
+    tmp->freeze(c, value);
+
     if (DebugMoves) {
       char srcb[256]; src->toString(c, srcb, 256);
       char tmpb[256]; tmp->toString(c, tmpb, 256);
@@ -1706,6 +1708,7 @@ move(Context* c, Value* value, Site* src, Site* dst)
       
     apply(c, Move, BytesPerWord, src, 0, BytesPerWord, tmp, 0);
 
+    tmp->thaw(c, value);
     dst->thaw(c, value);
     src->thaw(c, value);
 
@@ -1719,9 +1722,11 @@ move(Context* c, Value* value, Site* src, Site* dst)
   }
 
   src->freeze(c, value);
+  dst->freeze(c, value);
   
   apply(c, Move, BytesPerWord, src, 0, BytesPerWord, dst, 0);
 
+  dst->thaw(c, value);
   src->thaw(c, value);
 }
 
@@ -2469,6 +2474,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
         += (srcSize - srcSelectSize);
     }
 
+    target->freeze(c, dst);
+
     if (target->match(c, dstMask) and not useTemporary) {
       if (DebugMoves) {
         char srcb[256]; src->source->toString(c, srcb, 256);
@@ -2483,8 +2490,6 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
       src->source->thaw(c, src);
     } else {
-      target->freeze(c, dst);
-
       // pick a temporary register which is valid as both a
       // destination and a source for the moves we need to perform:
 
@@ -2507,6 +2512,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
       addSite(c, dst, tmpTarget);
 
+      tmpTarget->freeze(c, dst);
+
       if (DebugMoves) {
         char srcb[256]; src->source->toString(c, srcb, 256);
         char dstb[256]; tmpTarget->toString(c, dstb, 256);
@@ -2515,6 +2522,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
       }
 
       apply(c, type, srcSelectSize, src->source, 0, dstSize, tmpTarget, 0);
+
+      tmpTarget->thaw(c, dst);
 
       src->source->thaw(c, src);
 
@@ -2538,9 +2547,9 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
       } else {
         removeSite(c, dst, target);
       }
-
-      target->thaw(c, dst);
     }
+
+    target->thaw(c, dst);
 
     if (addOffset) {
       static_cast<MemorySite*>(src->source)->offset
@@ -2652,6 +2661,8 @@ class MoveEvent: public Event {
         src->source->freeze(c, src);
 
         addSite(c, dst, low);
+
+        low->freeze(c, dst);
           
         if (DebugMoves) {
           char srcb[256]; src->source->toString(c, srcb, 256);
@@ -2662,6 +2673,8 @@ class MoveEvent: public Event {
 
         apply(c, Move, BytesPerWord, src->source, 0, BytesPerWord, low, 0);
 
+        low->thaw(c, dst);
+
         src->source->thaw(c, src);
 
         assert(c, dstHighMask.typeMask & (1 << RegisterOperand));
@@ -2671,6 +2684,8 @@ class MoveEvent: public Event {
         low->freeze(c, dst);
 
         addSite(c, dst->high, high);
+
+        high->freeze(c, dst->high);
         
         if (DebugMoves) {
           char srcb[256]; low->toString(c, srcb, 256);
@@ -2680,6 +2695,8 @@ class MoveEvent: public Event {
         }
 
         apply(c, Move, BytesPerWord, low, 0, dstSize, low, high);
+
+        high->thaw(c, dst->high);
 
         low->thaw(c, dst);
       } else {
