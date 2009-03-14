@@ -748,12 +748,6 @@ void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   }
 }
 
-void multiplyC(Context* con, unsigned size UNUSED, Const* a, Reg* b, Reg* t) {
-  assert(con, size == 4);
-  int64_t i = getVal(a);
-  issue(con, mulli(R(t), R(b), i));
-}
-
 void divideR(Context* con, unsigned size UNUSED, Reg* a, Reg* b, Reg* t) {
   assert(con, size == 4);
   issue(con, divw(R(t), R(b), R(a)));
@@ -1596,7 +1590,6 @@ populateTables(ArchitectureContext* c)
   to[index(Subtract, C)] = CAST3(subC);
 
   to[index(Multiply, R)] = CAST3(multiplyR);
-  to[index(Multiply, C)] = CAST3(multiplyC);
 
   to[index(Divide, R)] = CAST3(divideR);
 
@@ -1799,10 +1792,13 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Add:
     case Subtract:
-    case Multiply:
       if (aSize == 8) {
         *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       }
+      break;
+
+    case Multiply:
+      *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       break;
 
     case LongCompare:
@@ -1810,18 +1806,10 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Divide:
-      if (BytesPerWord == 4 and aSize == 8) {
-        *bTypeMask = ~0;
-        *thunk = true;        
-      } else {
-        *aTypeMask = (1 << RegisterOperand);
-      }
-      break;
-
     case Remainder:
       if (BytesPerWord == 4 and aSize == 8) {
         *bTypeMask = ~0;
-        *thunk = true;
+        *thunk = true;        
       } else {
         *aTypeMask = (1 << RegisterOperand);
       }
