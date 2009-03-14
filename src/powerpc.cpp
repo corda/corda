@@ -737,12 +737,28 @@ void subC(Context* c, unsigned size, Const* a, Reg* b, Reg* t) {
 
 void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
   if(size == 8) {
-    issue(con, mullw(H(t), H(a), R(b)));
-    issue(con, mullw(R(t), R(a), H(b)));
-    issue(con, add(H(t), H(t), R(t)));
-    issue(con, mulhwu(R(t), R(a), R(b)));
-    issue(con, add(H(t), H(t), R(t)));
+    bool useTemporaries = b->low == t->low;
+    int tmpLow;
+    int tmpHigh;
+    if (useTemporaries) {
+      tmpLow = con->client->acquireTemporary();
+      tmpHigh = con->client->acquireTemporary();
+    } else {
+      tmpLow = t->low;
+      tmpHigh = t->high;
+    }
+
+    issue(con, mullw(tmpHigh, H(a), R(b)));
+    issue(con, mullw(tmpLow, R(a), H(b)));
+    issue(con, add(H(t), tmpHigh, tmpLow));
+    issue(con, mulhwu(tmpLow, R(a), R(b)));
+    issue(con, add(H(t), H(t), tmpLow));
     issue(con, mullw(R(t), R(a), R(b)));
+
+    if (useTemporaries) {
+      con->client->releaseTemporary(tmpLow);
+      con->client->releaseTemporary(tmpHigh);
+    }
   } else {
     issue(con, mullw(R(t), R(a), R(b)));
   }
@@ -754,9 +770,19 @@ void divideR(Context* con, unsigned size UNUSED, Reg* a, Reg* b, Reg* t) {
 }
 
 void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  divideR(con, size, a, b, t);
-  multiplyR(con, size, a, t, t);
-  subR(con, size, t, b, t);
+  bool useTemporary = b->low == t->low;
+  Assembler::Register tmp(t->low);
+  if (useTemporary) {
+    tmp.low = con->client->acquireTemporary();
+  }
+
+  divideR(con, size, a, b, &tmp);
+  multiplyR(con, size, a, &tmp, &tmp);
+  subR(con, size, &tmp, b, t);
+
+  if (useTemporary) {
+    con->client->releaseTemporary(tmp.low);
+  }
 }
 
 int
