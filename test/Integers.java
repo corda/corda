@@ -65,6 +65,105 @@ public class Integers {
       expect(~a == ~5);
     }
 
+    { int a = -5;
+      int b = 1234567;
+      expect(a >> b == -5 >> 2);
+      expect(a >>> b == -5 >>> 2);
+      expect(a << b == -5 << 2);
+      expect(a + b == -5 + 2);
+      expect(a - b == -5 - 2);
+      expect(a * b == -5 * 2);
+      expect(a / b == -5 / 2);
+      expect(a % b == -5 % 2);
+      expect((a & b) == (-5 & 2));
+      expect((a | b) == (-5 | 2));
+      expect((a ^ b) == (-5 ^ 2));
+      expect(-a == 5);
+      expect(~a == ~-5);
+
+      a = 5;
+      b = 1234567;
+      expect(a >> b == 5 >> 2);
+      expect(a >>> b == 5 >>> 2);
+      expect(a << b == 5 << 2);
+      expect(a + b == 5 + 2);
+      expect(a - b == 5 - 2);
+      expect(a * b == 5 * 2);
+      expect(a / b == 5 / 2);
+      expect(a % b == 5 % 2);
+      expect((a & b) == (5 & 2));
+      expect((a | b) == (5 | 2));
+      expect((a ^ b) == (5 ^ 2));
+      expect(-a == -5);
+      expect(~a == ~5);
+    }
+
+    { int a = -1223457;
+      int b = 2;
+      expect(a >> b == -5 >> 2);
+      expect(a >>> b == -5 >>> 2);
+      expect(a << b == -5 << 2);
+      expect(a + b == -5 + 2);
+      expect(a - b == -5 - 2);
+      expect(a * b == -5 * 2);
+      expect(a / b == -5 / 2);
+      expect(a % b == -5 % 2);
+      expect((a & b) == (-5 & 2));
+      expect((a | b) == (-5 | 2));
+      expect((a ^ b) == (-5 ^ 2));
+      expect(-a == 5);
+      expect(~a == ~-5);
+
+      a = 1234567;
+      b = 2;
+      expect(a >> b == 5 >> 2);
+      expect(a >>> b == 5 >>> 2);
+      expect(a << b == 5 << 2);
+      expect(a + b == 5 + 2);
+      expect(a - b == 5 - 2);
+      expect(a * b == 5 * 2);
+      expect(a / b == 5 / 2);
+      expect(a % b == 5 % 2);
+      expect((a & b) == (5 & 2));
+      expect((a | b) == (5 | 2));
+      expect((a ^ b) == (5 ^ 2));
+      expect(-a == -5);
+      expect(~a == ~5);
+    }
+
+    { int a = -1223457;
+      int b = 1234567;
+      expect(a >> b == -5 >> 2);
+      expect(a >>> b == -5 >>> 2);
+      expect(a << b == -5 << 2);
+      expect(a + b == -5 + 2);
+      expect(a - b == -5 - 2);
+      expect(a * b == -5 * 2);
+      expect(a / b == -5 / 2);
+      expect(a % b == -5 % 2);
+      expect((a & b) == (-5 & 2));
+      expect((a | b) == (-5 | 2));
+      expect((a ^ b) == (-5 ^ 2));
+      expect(-a == 5);
+      expect(~a == ~-5);
+
+      a = 1234567;
+      b = 1234567;
+      expect(a >> b == 5 >> 2);
+      expect(a >>> b == 5 >>> 2);
+      expect(a << b == 5 << 2);
+      expect(a + b == 5 + 2);
+      expect(a - b == 5 - 2);
+      expect(a * b == 5 * 2);
+      expect(a / b == 5 / 2);
+      expect(a % b == 5 % 2);
+      expect((a & b) == (5 & 2));
+      expect((a | b) == (5 | 2));
+      expect((a ^ b) == (5 ^ 2));
+      expect(-a == -5);
+      expect(~a == ~5);
+    }
+
     { int get_buffer = 2144642881;
       int bits_left = 30;
       int l = 9;
@@ -84,5 +183,7 @@ public class Integers {
 
     int y = -11760768;
     expect((y + 0x8000) == (-11760768 + 0x8000));
+
+    expect(Math.min(796, 1069) == 796);
   }
 }
