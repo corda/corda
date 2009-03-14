@@ -2833,24 +2833,18 @@ preserve(Context* c, Value* v, Site* s, Read* r)
   s->thaw(c, v);
 }
 
-void
-maybePreserve(Context* c, Value* v, Site* s)
-{
-  Read* r = liveNext(c, v);
-  if (r and not hasMoreThanOneSite(v)) {
-    preserve(c, v, s, r);
-  }
-}
-
 Site*
 getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
 {
   Site* s;
   Value* v;
-  if (c->arch->condensedAddressing()) {
+  Read* r = liveNext(c, value);
+  if (c->arch->condensedAddressing() or r == 0) {
     s = value->source;
     v = value;
-    maybePreserve(c, value, s);
+    if (r and not hasMoreThanOneSite(v)) {
+      preserve(c, v, s, r);
+    }
   } else {
     SingleRead r(resultMask);
     s = pickTargetSite(c, &r, true);
