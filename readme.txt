@@ -401,10 +401,10 @@ Step 7: Make an object file out of the boot image.
 
 for linux-i386:
 
-	$ objcopy --rename-section=.data=.boot -I binary bootimage.bin \
-      -O elf32-i386 -B i386 bootimage.tmp
-	$ objcopy --set-section-flags .boot=alloc,load,code bootimage.tmp \
-      bootimage.o
+ $ objcopy --rename-section=.data=.boot -I binary bootimage.bin \
+     -O elf32-i386 -B i386 bootimage.tmp
+ $ objcopy --set-section-flags .boot=alloc,load,code bootimage.tmp \
+     bootimage.o
 
 for darwin-i386:
 
