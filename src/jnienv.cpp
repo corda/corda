@@ -63,6 +63,8 @@ AttachCurrentThread(Machine* m, Thread** t, void*)
   if (*t == 0) {
     *t = m->processor->makeThread(m, 0, m->rootThread);
 
+    enter(*t, Thread::ActiveState);
+
     m->localThread->set(*t);
   }
   return 0;
