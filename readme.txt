@@ -341,7 +341,7 @@ For boot image builds:
 
  * Cons: the pre-parsed classes and AOT-compiled methods take up more
    space in the executable than the equivalent class files.  In
-   practice, this can make the executable 50-100% larger.  Also, AOT
+   practice, this can make the executable 30-50% larger.  Also, AOT
    compilation does not yet yield significantly faster or smaller code
    than JIT compilation.
 
