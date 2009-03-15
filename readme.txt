@@ -4,24 +4,24 @@ Quick Start
 on Linux:
  $ export JAVA_HOME=/usr/local/java # or wherever you have the JDK installed
  $ make
- $ build/linux-i386-compile-fast/avian -cp build/test Hello
+ $ build/linux-i386/avian -cp build/test Hello
 
 on Mac OS X:
  $ export JAVA_HOME=/Library/Java/Home
  $ make
- $ build/darwin-i386-compile-fast/avian -cp build/test Hello
+ $ build/darwin-i386/avian -cp build/test Hello
  
 on Windows (MSYS):
 
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
- $ build/windows-i386-compile-fast/avian -cp build/test Hello
+ $ build/windows-i386/avian -cp build/test Hello
 
 on Windows (Cygwin):
 
  $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
- $ build/windows-i386-compile-fast/avian -cp build/test Hello
+ $ build/windows-i386/avian -cp build/test Hello
 
 Adjust JAVA_HOME according to your system, but be sure to use forward
 slashes in the path.
@@ -53,7 +53,7 @@ Avian can currently target the following platforms:
 
   Linux (i386 and x86_64)
   Win32 (i386)
-  Mac OS X (i386)
+  Mac OS X (i386 and 32-bit PowerPC)
 
 
 Building
@@ -65,23 +65,26 @@ Build requirements include:
   * GCC 3.4 or later
   * JDK 1.5 or later
   * GNU binutils 2.17 or later (not needed on OS X)
-  * MinGW 3.4 or later (only if cross-compiling for Windows)
+  * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later
 
 Earlier versions of some of these packages may also work but have not
 been tested.
 
 The build is directed by a single makefile and may be influenced via
-certain flags described below.
+certain flags described below, all of which are optional.
 
- $ make platform={linux,windows,darwin} arch={i386,x86_64} \
-     process={compile,interpret} mode={debug,debug-fast,fast,small}
+ $ make platform={linux,windows,darwin} arch={i386,x86_64,powerpc} \
+     process={compile,interpret} mode={debug,debug-fast,fast,small} \
+     bootimage={true,false} heapdump={true,false}
 
   * platform - the target platform
-      default: output of $(uname -s | tr [:upper:] [:lower:])
+      default: output of $(uname -s | tr [:upper:] [:lower:]),
+      normalized in some cases (e.g. CYGWIN_NT-5.1 -> windows)
 
   * arch - the target architecture
-      default: output of $(uname -m)
+      default: output of $(uname -m), normalized in some cases
+      (e.g. i686 -> i386)
 
   * mode - which set of compilation flags to use, which determine
     optimization level, debug symbols, and whether to enable
@@ -90,6 +93,25 @@ certain flags described below.
 
   * process - choice between pure interpreter or JIT compiler
       default: compile
+
+  * bootimage - if true, create a boot image containing the pre-parsed
+    class library and ahead-of-time compiled methods.  This option is
+    only valid for process=compile builds.
+      default: false
+
+  * heapdump - if true, implement java.lang.Runtime.dumpHeap(String),
+    which, when called, will generate a snapshot of the heap in a
+    simple, ad-hoc format for memory profiling purposes.  See
+    heapdump.cpp for details.
+      default: false
+
+These flags determine the name of the directory used for the build.
+The name always starts with ${platform}-${arch}, and each non-default
+build option is appended to the name.  For example, a debug build with
+bootimage enabled on Linux/i386 would be built in
+build/linux-i386-debug-bootimage.  This allows you to build with
+several different sets of options independently and even
+simultaneously without doing a clean build each time.
 
 If you are compiling for Windows, you may either cross-compile using
 MinGW or build natively on Windows under MSYS or Cygwin.
@@ -116,13 +138,16 @@ directory containing the avian directory)
   $ git clone git://oss.readytalk.com/win32.git
 
 This gives you the Windows JNI headers, zlib headers and library, and
-a few other useful libraries like OpenSSL and libjpeg.
+a few other useful libraries like OpenSSL, libjpeg, and libpng.
 
 
 Installing
 ----------
 
- $ cp build/${platform}-${arch}-${process}-${mode}/avian ~/bin/
+Installing Avian is as simple as copying the executable to the desired
+directory:
+
+ $ cp build/${platform}-${arch}/avian ~/bin/
 
 
 Embedding
@@ -140,7 +165,7 @@ VM object files and bootstrap classpath jar.
  $ make
  $ mkdir hello
  $ cd hello
- $ ar x ../build/${platform}-${arch}-${process}-${mode}/libavian.a
+ $ ar x ../build/${platform}-${arch}/libavian.a
  $ cp ../build/classpath.jar boot.jar
 
 Step 2: Build the Java code and add it to the jar.
@@ -173,7 +198,12 @@ for windows-i386:
 for darwin-i386: (objcopy is not currently supported on this platform,
 so we use the binaryToMacho utility instead)
 
- $ ../build/darwin-i386-compile-fast/binaryToMacho boot.jar \
+ $ ../build/darwin-i386/binaryToMacho x86 boot.jar \
+     __TEXT __text __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
+
+for darwin-powerpc:
+
+ $ ../build/darwin-i386/binaryToMacho powerpc boot.jar \
      __TEXT __text __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
 
 
@@ -285,3 +315,195 @@ on Windows:
  $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
      -mwindows -mconsole -o hello.exe
  $ strip --strip-all hello.exe
+
+
+Embedding with ProGuard and a Boot Image
+----------------------------------------
+
+The following illustrates how to embed an application as above, except
+this time we preprocess the code using ProGuard and build a boot image
+from it for quicker startup.  The pros and cons of using ProGuard are
+as follow:
+
+ * Pros: ProGuard will eliminate unused code, optimize the rest, and
+   obfuscate it as well for maximum space savings
+
+ * Cons: increased build time, especially for large applications, and
+   extra effort needed to configure it for applications which rely
+   heavily on reflection and/or calls to Java from native code
+
+For boot image builds:
+
+ * Pros: the boot image build pre-parses all the classes and compiles
+   all the methods, obviating the need for JIT compilation at runtime.
+   This also makes garbage collection faster, since the pre-parsed
+   classes are never visited.
+
+ * Cons: the pre-parsed classes and AOT-compiled methods take up more
+   space in the executable than the equivalent class files.  In
+   practice, this can make the executable 50-100% larger.  Also, AOT
+   compilation does not yet yield significantly faster or smaller code
+   than JIT compilation.
+
+Note you can use ProGuard without using a boot image and vice-versa,
+as desired.
+
+The following instructions assume we are building for Linux/i386.
+Please refer to the previous example for guidance on other platforms.
+
+Step 1: Build Avian, create a new directory, and populate it with the
+VM object files.
+
+ $ make bootimage=true
+ $ mkdir hello
+ $ cd hello
+ $ ar x ../build/linux-i386-bootimage/libavian.a
+
+Step 2: Create a stage1 directory and extract the contents of the
+class library jar into it.
+
+ $ mkdir stage1
+ $ (cd stage1 && jar xf ../../build/classpath.jar)
+
+Step 3: Build the Java code and add it to stage1.
+
+ $ cat >Hello.java <<EOF
+public class Hello {
+  public static void main(String[] args) {
+    System.out.println("hello, world!");
+  }
+}
+EOF
+ $ javac -bootclasspath stage1 -d stage1 Hello.java
+
+Step 4: Create a ProGuard configuration file specifying Hello.main as
+the entry point.
+
+ $ cat >hello.pro <<EOF
+-keep class Hello {
+   public static void main(java.lang.String[]);
+ }
+EOF
+
+Step 5: Run ProGuard with stage1 as input and stage2 as output.
+
+ $ java -jar ../../proguard4.3/lib/proguard.jar \
+     -injars stage1 -outjars stage2 @../vm.pro @hello.pro
+
+(note: pass -dontusemixedcaseclassnames to ProGuard when building on systems with case-insensitive filesystems such as Windows and OS X)
+
+Step 6: Build the boot image.
+
+ $ ../build/linux-i386-bootimage/bootimage-generator stage2 \
+     > bootimage.bin
+
+Step 7: Make an object file out of the boot image.
+
+for linux-i386:
+
+	$ objcopy --rename-section=.data=.boot -I binary bootimage.bin \
+      -O elf32-i386 -B i386 bootimage.tmp
+	$ objcopy --set-section-flags .boot=alloc,load,code bootimage.tmp \
+      bootimage.o
+
+for darwin-i386:
+
+ $ ../build/darwin-i386/binaryToMacho x86 boot.jar \
+     __BOOT __boot __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
+
+for other platforms: See the previous example for
+architecture-specific parameters.
+
+Step 8: Write a driver which starts the VM and runs the desired main
+method.  Note the bootimageBin function, which will be called by the
+VM to get a handle to the embedded jar.  We tell the VM about this
+function via the "avian.bootimage" property.
+
+Note also that this example includes no resources besides class files.
+If our application loaded resources such as images and properties
+files via the classloader, we would also need to embed the jar file
+containing them.  See the previous example for instructions.
+
+ $ cat >main.cpp <<EOF
+#include "stdint.h"
+#include "jni.h"
+
+#ifdef __MINGW32__
+#  define EXPORT __declspec(dllexport)
+#  define BOOTIMAGE_BIN(x) binary_bootimage_bin_##x
+#else
+#  define EXPORT __attribute__ ((visibility("default")))
+#  define BOOTIMAGE_BIN(x) _binary_bootimage_bin_##x
+#endif
+
+extern "C" {
+
+  extern const uint8_t BOOTIMAGE_BIN(start)[];
+  extern const uint8_t BOOTIMAGE_BIN(end)[];
+
+  EXPORT const uint8_t*
+  bootimageBin(unsigned* size)
+  {
+    *size = BOOTIMAGE_BIN(end) - BOOTIMAGE_BIN(start);
+    return BOOTIMAGE_BIN(start);
+  }
+
+} // extern "C"
+
+int
+main(int ac, const char** av)
+{
+  JavaVMInitArgs vmArgs;
+  vmArgs.version = JNI_VERSION_1_2;
+  vmArgs.nOptions = 1;
+  vmArgs.ignoreUnrecognized = JNI_TRUE;
+
+  JavaVMOption options[vmArgs.nOptions];
+  vmArgs.options = options;
+
+  options[0].optionString
+    = const_cast<char*>("-Davian.bootimage=bootimageBin");
+
+  JavaVM* vm;
+  void* env;
+  JNI_CreateJavaVM(&vm, &env, &vmArgs);
+  JNIEnv* e = static_cast<JNIEnv*>(env);
+
+  jclass c = e->FindClass("Hello");
+  if (not e->ExceptionOccurred()) {
+    jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
+    if (not e->ExceptionOccurred()) {
+      jclass stringClass = e->FindClass("java/lang/String");
+      if (not e->ExceptionOccurred()) {
+        jobjectArray a = e->NewObjectArray(ac-1, stringClass, 0);
+        if (not e->ExceptionOccurred()) {
+          for (int i = 1; i < ac; ++i) {
+            e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
+          }
+          
+          e->CallStaticVoidMethod(c, m, a);
+        }
+      }
+    }
+  }
+
+  int exitCode = 0;
+  if (e->ExceptionOccurred()) {
+    exitCode = -1;
+    e->ExceptionDescribe();
+  }
+
+  vm->DestroyJavaVM();
+
+  return exitCode;
+}
+EOF
+
+ $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
+     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+
+Step 9: Link the objects produced above to produce the final
+executable, and optionally strip its symbols.
+
+ $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello
+ $ strip --strip-all hello
