@@ -408,8 +408,9 @@ for linux-i386:
 
 for darwin-i386:
 
- $ ../build/darwin-i386/binaryToMacho x86 boot.jar \
-     __BOOT __boot __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
+ $ ../build/darwin-i386/binaryToMacho x86 bootimage.bin \
+     __BOOT __boot __binary_bootimage_bin_start __binary_bootimage_bin_end \
+     > bootimage.o
 
 for other platforms: See the previous example for
 architecture-specific parameters.
