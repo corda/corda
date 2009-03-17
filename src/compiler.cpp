@@ -28,7 +28,7 @@ const bool DebugBuddies = false;
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
 
-const unsigned StealRegisterReserveCount = 1;
+const unsigned StealRegisterReserveCount = 2;
 const unsigned ResolveRegisterReserveCount = 2;
 
 class Context;
