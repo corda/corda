@@ -341,7 +341,7 @@ For boot image builds:
 
  * Cons: the pre-parsed classes and AOT-compiled methods take up more
    space in the executable than the equivalent class files.  In
-   practice, this can make the executable 50-100% larger.  Also, AOT
+   practice, this can make the executable 30-50% larger.  Also, AOT
    compilation does not yet yield significantly faster or smaller code
    than JIT compilation.
 
@@ -401,15 +401,16 @@ Step 7: Make an object file out of the boot image.
 
 for linux-i386:
 
-	$ objcopy --rename-section=.data=.boot -I binary bootimage.bin \
-      -O elf32-i386 -B i386 bootimage.tmp
-	$ objcopy --set-section-flags .boot=alloc,load,code bootimage.tmp \
-      bootimage.o
+ $ objcopy --rename-section=.data=.boot -I binary bootimage.bin \
+     -O elf32-i386 -B i386 bootimage.tmp
+ $ objcopy --set-section-flags .boot=alloc,load,code bootimage.tmp \
+     bootimage.o
 
 for darwin-i386:
 
- $ ../build/darwin-i386/binaryToMacho x86 boot.jar \
-     __BOOT __boot __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
+ $ ../build/darwin-i386/binaryToMacho x86 bootimage.bin \
+     __BOOT __boot __binary_bootimage_bin_start __binary_bootimage_bin_end \
+     > bootimage.o
 
 for other platforms: See the previous example for
 architecture-specific parameters.
