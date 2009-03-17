@@ -1153,7 +1153,7 @@ pickFrameTarget(Context* c, Value* v)
   do {
     if (p->home >= 0) {
       Target mine(p->home, MemoryOperand, frameCost(c, v, p->home));
-      if (mine.cost == 0) {
+      if (mine.cost == 1) {
         return mine;
       } else if (mine.cost < best.cost) {
         best = mine;
@@ -1161,6 +1161,24 @@ pickFrameTarget(Context* c, Value* v)
     }
     p = p->buddy;
   } while (p != v);
+
+  return best;
+}
+
+Target
+pickAnyFrameTarget(Context* c, Value* v)
+{
+  Target best;
+
+  unsigned count = usableFrameSize(c) + c->parameterFootprint;
+  for (unsigned i = 0; i < count; ++i) {
+    Target mine(i, MemoryOperand, frameCost(c, v, i));
+    if (mine.cost == 1) {
+      return mine;
+    } else if (mine.cost < best.cost) {
+      best = mine;
+    }    
+  }
 
   return best;
 }
@@ -1219,6 +1237,14 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     } else if (mine.cost < best.cost) {
       best = mine;
     }
+  }
+
+  if (best.cost > 3 and c->availableRegisterCount == 0) {
+    // there are no free registers left, so moving from memory to
+    // memory isn't an option - try harder to find an available frame
+    // site:
+    best = pickAnyFrameTarget(c, read->value);
+    assert(c, best.cost <= 3);
   }
 
   return best;
