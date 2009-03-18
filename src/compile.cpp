@@ -2310,12 +2310,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       break;
 
     case athrow: {
+      Compiler::Operand* target = frame->popObject();
       c->call
         (c->constant(getThunk(t, throw_Thunk)),
          Compiler::NoReturn,
          frame->trace(0, false),
          0,
-         2, c->thread(), frame->popObject());
+         2, c->thread(), target);
     } return;
 
     case bipush:
@@ -3437,15 +3438,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case monitorenter: {
+      Compiler::Operand* target = frame->popObject();
       c->call
         (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
-         0, frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
+         0, frame->trace(0, false), 0, 2, c->thread(), target);
     } break;
 
     case monitorexit: {
+      Compiler::Operand* target = frame->popObject();
       c->call
         (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
-         0, frame->trace(0, false), 0, 2, c->thread(), frame->popObject());
+         0, frame->trace(0, false), 0, 2, c->thread(), target);
     } break;
 
     case multianewarray: {
