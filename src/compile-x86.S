@@ -133,15 +133,16 @@ LOCAL(test):
    movl   %ebp,%esp
    
    // restore callee-saved registers
-   movl   %esp,%ecx
-   subl   $16,%ecx
+   subl   $16,%esp
 
-   movl   0(%ecx),%ebx
-   movl   4(%ecx),%esi
-   movl   8(%ecx),%edi
+   movl   0(%esp),%ebx
+   movl   4(%esp),%esi
+   movl   8(%esp),%edi
 
    // handle return value based on expected type
    movl   28(%ebp),%ecx
+   
+   addl   $16,%esp
    
 LOCAL(void):
    cmpl   $VOID_TYPE,%ecx
