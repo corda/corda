@@ -27,6 +27,7 @@ class Compiler {
   
   static const unsigned Aligned  = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
+  static const unsigned TailCall = 1 << 2;
 
   class Operand { };
   class StackElement { };

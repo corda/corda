@@ -2088,6 +2088,10 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned constantCallSize() {
+    return 5;
+  }
+
   virtual uintptr_t getConstant(const void* src) {
     uintptr_t v;
     memcpy(&v, src, BytesPerWord);

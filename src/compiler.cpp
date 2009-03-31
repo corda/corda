@@ -2258,7 +2258,12 @@ class CallEvent: public Event {
     uint32_t registerMask = ~0;
     Stack* s = argumentStack;
     unsigned index = 0;
-    unsigned frameIndex = 0;
+    unsigned frameIndex;
+    if (flags & (Compiler::TailJump | Compiler::TailCall)) {
+      frameIndex = usableFrameSize(c);
+    } else {
+      frameIndex = 0;
+    }
 
     if (argumentCount) {
       while (true) {
@@ -2308,56 +2313,59 @@ class CallEvent: public Event {
                (typeMask, registerMask & planRegisterMask, AnyFrameIndex)));
     }
 
-    int footprint = stackArgumentFootprint;
-    for (Stack* s = stackBefore; s; s = s->next) {
-      if (s->value) {
-        if (footprint > 0) {
-          if (DebugReads) {
-            fprintf(stderr, "stack arg read %p at %d of %d\n",
-                    s->value, frameIndex,
-                    usableFrameSize(c) + c->parameterFootprint);
-          }
+    if ((flags & (Compiler::TailJump | Compiler::TailCall)_ == 0) {
+      int footprint = stackArgumentFootprint;
+      for (Stack* s = stackBefore; s; s = s->next) {
+        if (s->value) {
+          if (footprint > 0) {
+            if (DebugReads) {
+              fprintf(stderr, "stack arg read %p at %d of %d\n",
+                      s->value, frameIndex,
+                      usableFrameSize(c) + c->parameterFootprint);
+            }
 
-          addRead(c, this, s->value, read
-                  (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
-        } else {
+            addRead(c, this, s->value, read
+                    (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
+          } else {
+            unsigned logicalIndex = ::frameIndex
+              (c, s->index + c->localFootprint);
+
+            if (DebugReads) {
+              fprintf(stderr, "stack save read %p at %d of %d\n",
+                      s->value, logicalIndex,
+                      usableFrameSize(c) + c->parameterFootprint);
+            }
+
+            addRead(c, this, s->value, read
+                    (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
+          }
+        }
+
+        -- footprint;
+
+        if (footprint == 0) {
           unsigned logicalIndex = ::frameIndex
             (c, s->index + c->localFootprint);
 
-          if (DebugReads) {
-            fprintf(stderr, "stack save read %p at %d of %d\n",
-                    s->value, logicalIndex,
-                    usableFrameSize(c) + c->parameterFootprint);
-          }
+          assert(c, logicalIndex >= frameIndex);
 
-          addRead(c, this, s->value, read
-                  (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
+          padding = logicalIndex - frameIndex;
+          padIndex = s->index + c->localFootprint;
         }
+
+        ++ frameIndex;
       }
 
-      -- footprint;
+      popIndex
+        = usableFrameSize(c)
+        + c->parameterFootprint
+        - (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
+        - c->localFootprint;
 
-      if (footprint == 0) {
-        unsigned logicalIndex = ::frameIndex(c, s->index + c->localFootprint);
+      assert(c, static_cast<int>(popIndex) >= 0);
 
-        assert(c, logicalIndex >= frameIndex);
-
-        padding = logicalIndex - frameIndex;
-        padIndex = s->index + c->localFootprint;
-      }
-
-      ++ frameIndex;
+      saveLocals(c, this);
     }
-
-    popIndex
-      = usableFrameSize(c)
-      + c->parameterFootprint
-      - (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
-      - c->localFootprint;
-
-    assert(c, static_cast<int>(popIndex) >= 0);
-
-    saveLocals(c, this);
   }
 
   virtual const char* name() {
@@ -2365,8 +2373,33 @@ class CallEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    apply(c, (flags & Compiler::Aligned) ? AlignedCall : Call, BytesPerWord,
-          address->source, 0);
+    UnaryOperation op;
+
+    if (flags & Compiler::TailJump) {
+      c->assembler->popFrame();
+
+      if (flags & Compiler::Aligned) {
+        op = AlignedJump;
+      } else {
+        op = Jump;
+      }
+    } else if (flags & Compiler::TailCall) {
+      c->assembler->popFrame();
+
+      if (flags & Compiler::Aligned) {
+        op = AlignedCall;
+      } else {
+        op = Call;
+      }
+    } else {
+      if (flags & Compiler::Aligned) {
+        op = AlignedCall;
+      } else {
+        op = Call;
+      }
+    }
+
+    apply(c, op, BytesPerWord, address->source, 0);
 
     if (traceHandler) {
       traceHandler->handleTrace(codePromise(c, c->assembler->offset()),

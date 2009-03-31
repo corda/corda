@@ -94,7 +94,7 @@
 (type callNode
   (intptr_t address)
   (object target)
-  (uintptr_t virtualCall)
+  (uintptr_t flags)
   (object next))
 
 (type array

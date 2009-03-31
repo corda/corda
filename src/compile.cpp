@@ -426,15 +426,18 @@ class Context;
 
 class TraceElement: public TraceHandler {
  public:
+  const unsigned VirtualCall = 1 << 0;
+  const unsigned TailCall    = 1 << 1;
+
   TraceElement(Context* context, object target,
-               bool virtualCall, TraceElement* next):
+               unsigned flags, TraceElement* next):
     context(context),
     address(0),
     next(next),
     target(target),
     padIndex(0),
     padding(0),
-    virtualCall(virtualCall)
+    flags(flags)
   { }
 
   virtual void handleTrace(Promise* address, unsigned padIndex,
@@ -453,8 +456,25 @@ class TraceElement: public TraceHandler {
   object target;
   unsigned padIndex;
   unsigned padding;
-  bool virtualCall;
+  unsigned flags;
   uintptr_t map[0];
+};
+
+class TraceElementPromise: public Promise {
+ public:
+  TraceElementPromise(TraceElement* trace): trace(trace) { }
+
+  virtual int64_t value() {
+    assert(s, resolved());
+    return reinterpret_cast<uintptr_t>(trace->address);
+  }
+
+  virtual bool resolved() {
+    return trace->address != 0;
+  }
+
+  System* s;
+  TraceElement* trace;
 };
 
 enum Event {
@@ -1182,12 +1202,12 @@ class Frame {
     swapped();
   }
 
-  TraceElement* trace(object target, bool virtualCall) {
+  TraceElement* trace(object target, unsigned flags) {
     unsigned mapSize = frameMapSizeInWords(t, context->method);
 
     TraceElement* e = context->traceLog = new
       (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
-      TraceElement(context, target, virtualCall, context->traceLog);
+      TraceElement(context, target, flags, context->traceLog);
 
     ++ context->traceLogCount;
 
@@ -1863,8 +1883,75 @@ emptyMethod(MyThread* t, object method)
     and (codeBody(t, methodCode(t, method), 0) == return_);
 }
 
+Compiler::Operand*
+compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
+                    bool useThunk, unsigned rSize, Promise* addressPromise)
+{
+  if (tailCall and methodParameterFootprint(t, target)
+      > methodParameterFootprint(t, frame->context->method))
+  {
+    return c->stackCall
+      (c->constant(tailHelperThunk(t)),      
+       0,
+       frame->trace(target, 0),
+       rSize,
+       methodParameterFootprint(t, target));
+  } else if (tailCall and (methodFlags(t, target) & ACC_NATIVE)) {
+    return c->stackCall
+      (c->constant(nativeTailThunk(t)),
+       Compiler::TailCall,
+       frame->trace(target, TraceElement::TailCall),
+       trace,
+       rSize,
+       methodParameterFootprint(t, target));
+  } else {
+    unsigned flags = (tailCall ? Compiler::TailCall : 0);
+
+    if (useThunk) {
+      if (tailCall) {
+        Compiler::Operand* result = c->stackCall
+          (c->promiseConstant
+           (new (frame->context->zone.allocate(sizeof(TraceElementPromise)))
+            TraceElementPromise(t->m->system, frame->trace(0, 0))),
+           flags | Compiler::Aligned,
+           0,
+           rSize,
+           methodParameterFootprint(t, target));
+
+        c->call(c->constant(defaultTailThunk(t)),
+                0,
+                frame->trace(target, TraceElement::TailCall),
+                0,
+                0);
+
+        return result;
+      } else {
+        return c->stackCall
+        (address,      
+         flags | Compiler::Aligned,
+         frame->trace(target, 0),
+         rSize,
+         methodParameterFootprint(t, target));
+      }
+    } else {
+      Compiler::Operand* address =
+        (addressPromise
+         ? c->promiseConstant(addressPromise)
+         : c->constant(methodAddress(t, target)));
+
+      return c->stackCall
+        (c->promiseConstant(p),
+         flags,
+         tailCall ? 0 : frame->trace
+         ((methodFlags(t, target) & ACC_NATIVE) ? target, 0),
+         rSize,
+         methodParameterFootprint(t, target));
+    }
+  }
+}
+
 void
-compileDirectInvoke(MyThread* t, Frame* frame, object target)
+compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
 {
   Compiler* c = frame->c;
 
@@ -1885,42 +1972,20 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target)
         object pointer = makePointer(t, p);
         bc->calls = makeTriple(t, target, pointer, bc->calls);
 
-        object traceTarget
-          = (methodFlags(t, target) & ACC_NATIVE) ? target : 0;
-
-        result = c->stackCall
-          (c->promiseConstant(p),
-           0,
-           frame->trace(traceTarget, false),
-           rSize,
-           methodParameterFootprint(t, target));
+        result = compileDirectInvoke
+          (t, frame, target, tailCall, false, rSize, p);
       } else {
-        result = c->stackCall
-          (c->constant(defaultThunk(t)),
-           Compiler::Aligned,
-           frame->trace(target, false),
-           rSize,
-           methodParameterFootprint(t, target));
+        result = compileDirectInvoke
+          (t, frame, target, tailCall, true, rSize, 0);
       }
     } else if (methodAddress(t, target) == defaultThunk(t)
                or classNeedsInit(t, methodClass(t, target)))
     {
-      result = c->stackCall
-        (c->constant(defaultThunk(t)),
-         Compiler::Aligned,
-         frame->trace(target, false),
-         rSize,
-         methodParameterFootprint(t, target));
+      result = compileDirectInvoke
+        (t, frame, target, tailCall, true, rSize, 0);
     } else {
-      object traceTarget
-        = (methodFlags(t, target) & ACC_NATIVE) ? target : 0;
-
-      result = c->stackCall
-        (c->constant(methodAddress(t, target)),
-         0,
-         frame->trace(traceTarget, false),
-         rSize,
-         methodParameterFootprint(t, target));
+      result = compileDirectInvoke
+        (t, frame, target, tailCall, false, rSize, 0);
     }
   }
 
@@ -1947,7 +2012,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     
     c->call(c->constant(function),
             0,
-            frame->trace(0, false),
+            frame->trace(0, 0),
             0,
             2, c->thread(), lock);
   }
@@ -2059,6 +2124,35 @@ inTryBlock(MyThread* t, object code, unsigned ip)
   return false;
 }
 
+bool
+needsReturnBarrier(MyThread* t, object method)
+{
+  return (methodFlags(t, method) & ConstructorFlag)
+    and (classFlags(t, methodClass(t, method)) & HasFinalMemberFlag);
+}
+
+bool
+isTailCall(MyThread* t, object code, unsigned ip, object caller, object callee)
+{
+  if (((methodFlags(t, caller) & ACC_SYNCHRONIZED) == 0)
+      and (not inTryBlock(t, code, ip - 1))
+      and (not needsReturnBarrier(t, caller))
+      and (methodReturnCode(t, caller) == VoidField
+           or methodReturnCode(t, caller) == methodReturnCode(t, callee)))
+  {
+    switch (codeBody(t, code, ip)) {
+    case return_:
+    case areturn:
+    case ireturn:
+    case freturn:
+    case lreturn:
+    case dreturn:
+      return true;
+    }
+  }
+  return false;
+}
+
 void
 compile(MyThread* t, Frame* initialFrame, unsigned ip,
         int exceptionHandlerStart = -1);
@@ -2104,7 +2198,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->call
         (c->constant(getThunk(t, gcIfNecessaryThunk)),
          0,
-         frame->trace(0, false),
+         frame->trace(0, 0),
          0,
          1, c->thread());
     }
@@ -2204,7 +2298,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         c->call
           (c->constant(getThunk(t, setMaybeNullThunk)),
            0,
-           frame->trace(0, false),
+           frame->trace(0, 0),
            0,
            4, c->thread(), array,
            c->add(4, c->constant(ArrayBody),
@@ -2272,7 +2366,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         (c->call
          (c->constant(getThunk(t, makeBlankObjectArrayThunk)),
           0,
-          frame->trace(0, false),
+          frame->trace(0, 0),
           BytesPerWord,
           3, c->thread(), frame->append(class_), length));
     } break;
@@ -2314,7 +2408,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->call
         (c->constant(getThunk(t, throw_Thunk)),
          Compiler::NoReturn,
-         frame->trace(0, false),
+         frame->trace(0, 0),
          0,
          2, c->thread(), target);
     } return;
@@ -2335,7 +2429,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->call
         (c->constant(getThunk(t, checkCastThunk)),
          0,
-         frame->trace(0, false),
+         frame->trace(0, 0),
          0,
          3, c->thread(), frame->append(class_), instance);
     } break;
@@ -2616,7 +2710,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           c->call
             (c->constant(getThunk(t, tryInitClassThunk)),
              0,
-             frame->trace(0, false),
+             frame->trace(0, 0),
              0,
              2, c->thread(), frame->append(fieldClass(t, field)));
         }
@@ -2643,7 +2737,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         c->call
           (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
-           0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+           0, frame->trace(0, 0), 0, 2, c->thread(), fieldOperand);
       }
 
       switch (fieldCode(t, field)) {
@@ -2697,7 +2791,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         {
           c->call
             (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
-             0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+             0, frame->trace(0, 0), 0, 2, c->thread(), fieldOperand);
         } else {
           c->loadBarrier();
         }
@@ -2994,12 +3088,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          (c->constant
           (getThunk(t, findInterfaceMethodFromInstanceThunk)),
           0,
-          frame->trace(0, false),
+          frame->trace(0, 0),
           BytesPerWord,
           3, c->thread(), frame->append(target),
           c->peek(1, instance)),
          0,
-         frame->trace(target, true),
+         frame->trace(target, TraceElement::VirtualCall),
          rSize,
          parameterFootprint);
 
@@ -3023,7 +3117,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
-      compileDirectInvoke(t, frame, target);
+      compileDirectInvoke
+        (t, frame, target, isTailCall(t, code, ip, context->method, target));
     } break;
 
     case invokestatic: {
@@ -3034,7 +3129,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, methodFlags(t, target) & ACC_STATIC);
 
-      compileDirectInvoke(t, frame, target);
+      compileDirectInvoke
+        (t, frame, target, isTailCall(t, code, ip, context->method, target));
     } break;
 
     case invokevirtual: {
@@ -3059,7 +3155,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (BytesPerWord, c->constant(PointerMask),
            c->memory(instance, 0, 0, 1)), offset, 0, 1),
          0,
-         frame->trace(target, true),
+         frame->trace(target, TraceElement::VirtualCall),
          rSize,
          parameterFootprint);
 
@@ -3441,14 +3537,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* target = frame->popObject();
       c->call
         (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
-         0, frame->trace(0, false), 0, 2, c->thread(), target);
+         0, frame->trace(0, 0), 0, 2, c->thread(), target);
     } break;
 
     case monitorexit: {
       Compiler::Operand* target = frame->popObject();
       c->call
         (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
-         0, frame->trace(0, false), 0, 2, c->thread(), target);
+         0, frame->trace(0, 0), 0, 2, c->thread(), target);
     } break;
 
     case multianewarray: {
@@ -3468,7 +3564,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* result = c->call
         (c->constant(getThunk(t, makeMultidimensionalArrayThunk)),
          0,
-         frame->trace(0, false),
+         frame->trace(0, 0),
          BytesPerWord,
          4, c->thread(), frame->append(class_), c->constant(dimensions),
          c->constant(offset));
@@ -3488,7 +3584,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (c->call
            (c->constant(getThunk(t, makeNewWeakReference64Thunk)),
             0,
-            frame->trace(0, false),
+            frame->trace(0, 0),
             BytesPerWord,
             2, c->thread(), frame->append(class_)));
       } else {
@@ -3496,7 +3592,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (c->call
            (c->constant(getThunk(t, makeNew64Thunk)),
             0,
-            frame->trace(0, false),
+            frame->trace(0, 0),
             BytesPerWord,
             2, c->thread(), frame->append(class_)));
       }
@@ -3511,7 +3607,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         (c->call
          (c->constant(getThunk(t, makeBlankArrayThunk)),
           0,
-          frame->trace(0, false),
+          frame->trace(0, 0),
           BytesPerWord,
           3, c->thread(), c->constant(type), length));
     } break;
@@ -3544,7 +3640,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           c->call
             (c->constant(getThunk(t, tryInitClassThunk)),
              0,
-             frame->trace(0, false),
+             frame->trace(0, 0),
              0,
              2, c->thread(), frame->append(fieldClass(t, field)));
         }
@@ -3600,7 +3696,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
           c->call
             (c->constant(getThunk(t, acquireMonitorForObjectThunk)),
-             0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+             0, frame->trace(0, 0), 0, 2, c->thread(), fieldOperand);
         } else {
           c->storeStoreBarrier();
         }
@@ -3635,7 +3731,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           c->call
             (c->constant(getThunk(t, setMaybeNullThunk)),
              0,
-             frame->trace(0, false),
+             frame->trace(0, 0),
              0,
              4, c->thread(), table, c->constant(fieldOffset(t, field)), value);
         } else {
@@ -3656,7 +3752,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         {
           c->call
             (c->constant(getThunk(t, releaseMonitorForObjectThunk)),
-             0, frame->trace(0, false), 0, 2, c->thread(), fieldOperand);
+             0, frame->trace(0, 0), 0, 2, c->thread(), fieldOperand);
         } else {
           c->storeLoadBarrier();
         }
@@ -3669,10 +3765,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       return;
 
     case return_:
-      if ((methodFlags(t, context->method) & ConstructorFlag)
-          and (classFlags(t, methodClass(t, context->method))
-               & HasFinalMemberFlag))
-      {
+      if (needsReturnBarrier(t, context->method)) {
         c->storeStoreBarrier();
       }
 
@@ -3909,6 +4002,28 @@ printSet(uintptr_t m, unsigned limit)
   }
 }
 
+void
+shiftLeftZeroPadded(void* data, int dataSizeInBytes, int shiftCountInBits)
+{
+  uint8_t* p = static_cast<uint8_t*>(data);
+  int shiftCountInBytes = shiftCountInBits / 8;
+  int shift = shiftCountInBits % 8;
+
+  int count = dataSizeInBytes - shiftCountInBytes - 1;
+  for (int i = 0; i < count; ++i) {
+    int si = i + shiftCountInBytes;
+    p[i] = (p[si] >> shift) | ((p[si + 1] >> shift) << (8 - shift));
+  }
+
+  if (count >= 0) {
+    p[count] = (p[count + shiftCountInBytes] >> shift);
+  }
+
+  for (int i = count + 1; i < dataSizeInBytes; ++i) {
+    p[i] = 0;
+  }
+}
+
 unsigned
 calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
                    unsigned stackPadding, unsigned eventIndex)
@@ -4021,7 +4136,14 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
         printSet(*roots, mapSize);
         fprintf(stderr, "\n");
       }
+
       memcpy(te->map, roots, mapSize * BytesPerWord);
+
+      if (te->flags & TraceElement::TailCall) {
+        shiftLeftZeroPadded
+          (te->map, mapSize * BytesPerWord,
+           usableFrameSize(t, context->method));
+      }
 
       eventIndex += BytesPerWord;
     } break;
@@ -4172,7 +4294,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       if (p->target) {
         insertCallNode
           (t, makeCallNode
-           (t, p->address->value(), p->target, p->virtualCall, 0));
+           (t, p->address->value(), p->target, p->flags, 0));
       }
     }
 
@@ -4402,15 +4524,15 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
         object method);
 
 void*
-compileMethod2(MyThread* t)
+compileMethod2(MyThread* t, uintptr_t ip)
 {
-  object node = findCallNode(t, t->arch->frameIp(t->stack));
+  object node = findCallNode(t, ip);
   PROTECT(t, node);
 
   object target = callNodeTarget(t, node);
   PROTECT(t, target);
 
-  if (callNodeVirtualCall(t, node)) {
+  if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
     target = resolveTarget(t, t->stack, target);
   }
 
@@ -4422,15 +4544,19 @@ compileMethod2(MyThread* t)
     return 0;
   } else {
     void* address = reinterpret_cast<void*>(methodAddress(t, target));
-    if (callNodeVirtualCall(t, node)) {
+    if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
       classVtable
         (t, objectClass
          (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
         = address;
     } else {
+      uintptr_t updateIp = ip;
+      if (callNode(t, node) & TraceElement::TailCall) {
+        updateIp -= t->arch->constantCallSize();
+      }
+
       updateCall
-        (t, Call, true, reinterpret_cast<void*>(callNodeAddress(t, node)),
-         address);
+        (t, Call, true, reinterpret_cast<void*>(updateIp), address);
     }
     return address;
   }
@@ -4439,7 +4565,73 @@ compileMethod2(MyThread* t)
 uint64_t
 compileMethod(MyThread* t)
 {
-  void* r = compileMethod2(t);
+  uintptr_t ip;
+  if (t->tailAddress) {
+    ip = t->tailAddress;
+    t->tailAddress = 0;
+  } else {
+    ip = t->arch->frameIp(t->stack);
+  }
+
+  void* r = compileMethod2(t, ip);
+
+  if (UNLIKELY(t->exception)) {
+    unwind(t);
+  } else {
+    return reinterpret_cast<uintptr_t>(r);
+  }
+}
+
+void*
+tailCall2(MyThread* t, uintptr_t ip)
+{
+  object node = findCallNode(t, ip);
+  PROTECT(t, node);
+
+  object target = callNodeTarget(t, node);
+  PROTECT(t, target);
+
+  if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
+    target = resolveTarget(t, t->stack, target);
+  }
+
+  if (LIKELY(t->exception == 0)) {
+    compile(t, codeZone(t), 0, target);
+  }
+
+  if (UNLIKELY(t->exception)) {
+    return 0;
+  } else {
+    void* base = t->base;
+    void* stack = t->stack;
+    t->arch->nextFrame(&stack, &base);
+
+    if (t->arch->matchCall(t->arch->frameIp(stack), tailHelperThunk(t))) {
+      void* nextBase = base;
+      void* nextStack = stack;
+      t->arch->nextFrame(&nextStack, &nextBase);
+
+      if (((reinterpret_cast<uintptr_t>(nextStack)
+            - reinterpret_cast<uintptr_t>(stack))
+           / BytesPerWord)
+          - t->arch->frameFooterSize()
+          - t->arch->frameHeaderSize()
+          >= methodParameterFootprint(t, target))
+      {
+        // there's room for the parameters in the previous frame, so use it
+        t->base = base;
+        t->stack = stack;
+      }
+    }
+
+    return reinterpret_cast<void*>(methodAddress(t, target));
+  }
+}
+
+uint64_t
+tailCall(MyThread* t)
+{
+  void* r = tailCall2(t, t->arch->frameIp(t->stack));
 
   if (UNLIKELY(t->exception)) {
     unwind(t);
@@ -4632,13 +4824,23 @@ uint64_t
 invokeNative(MyThread* t)
 {
   if (t->trace->nativeMethod == 0) {
-    object node = findCallNode(t, t->arch->frameIp(t->stack));
+    uintptr_t ip;
+    if (t->tailAddress) {
+      ip = t->tailAddress;
+      t->tailAddress = 0;
+    } else {
+      ip = t->arch->frameIp(t->stack);
+    }
+
+    object node = findCallNode(t, ip);
     object target = callNodeTarget(t, node);
-    if (callNodeVirtualCall(t, node)) {
+    if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
       target = resolveTarget(t, t->stack, target);
     }
     t->trace->nativeMethod = target;
   }
+
+  assert(t, t->tailAddress == 0);
 
   uint64_t result = 0;
 
@@ -5396,7 +5598,7 @@ class MyProcessor: public Processor {
         table[index++] = callNodeAddress(t, p)
           - reinterpret_cast<uintptr_t>(code);
         table[index++] = w->map()->find(callNodeTarget(t, p))
-          | (static_cast<unsigned>(callNodeVirtualCall(t, p)) << BootShift);
+          | (static_cast<unsigned>(callNodeFlags(t, node)) << BootShift);
       }
     }
 
@@ -5494,7 +5696,7 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
       object newNode = makeCallNode
         (t, callNodeAddress(t, oldNode),
          callNodeTarget(t, oldNode),
-         callNodeVirtualCall(t, oldNode),
+         callNodeFlags(t, oldNode),
          arrayBody(t, newTable, index));
 
       set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
@@ -5818,9 +6020,15 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
   };
 
   Zone zone(t->m->system, t->m->heap, 1024);
+
   ThunkContext defaultContext(t, &zone);
+  unsigned defaultTailOffset;
 
   { Assembler* a = defaultContext.context.assembler;
+
+    a->popReturnAddress(difference(&(t->tailAddress), t));
+
+    defaultTailOffset = a->length();
     
     a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
 
@@ -5838,10 +6046,35 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     a->endBlock(false)->resolve(0, 0);
   }
 
+  ThunkContext tailHelperContext(t, &zone);
+
+  { Assembler* a = tailHelperContext.context.assembler;
+    
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+
+    Assembler::Register thread(t->arch->thread());
+    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+  
+    Assembler::Constant proc(&(tailHelperContext.promise));
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+
+    a->restoreFrame(difference(&(t->stack), t), difference(&(t->base), t));
+
+    Assembler::Register result(t->arch->returnLow());
+    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+
+    a->endBlock(false)->resolve(0, 0);
+  }
+
   ThunkContext nativeContext(t, &zone);
+  unsigned nativeTailOffset;
 
   { Assembler* a = nativeContext.context.assembler;
-      
+
+    a->popReturnAddress(difference(&(t->tailAddress), t));
+
+    nativeTailOffset = a->length();
+
     a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
 
     Assembler::Register thread(t->arch->thread());
@@ -5890,33 +6123,54 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
          (codeSingletonSizeInBytes
           (t, defaultContext.context.assembler->length())
           + codeSingletonSizeInBytes
+          (t, tailHelperContext.context.assembler->length())
+          + codeSingletonSizeInBytes
           (t, nativeContext.context.assembler->length())
           + codeSingletonSizeInBytes
           (t, aioobContext.context.assembler->length())
           + codeSingletonSizeInBytes
           (t, p->thunkSize * ThunkCount)));
 
-  p->defaultThunk = finish
+  p->defaultTailThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
+
+  p->defaultThunk = p->defaultTailThunk + defaultTailOffset;
 
   { void* call;
     defaultContext.promise.listener->resolve
       (reinterpret_cast<intptr_t>(voidPointer(compileMethod)), &call);
 
     if (image) {
+      image->defaultTailThunk = p->defaultTailThunk - imageBase;
       image->defaultThunk = p->defaultThunk - imageBase;
       image->compileMethodCall = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
-  p->nativeThunk = finish
+  p->tailHelperThunk = finish
+    (t, allocator, defaultContext.context.assembler, "tailHelper");
+
+  { void* call;
+    tailHelperContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(tailCall)), &call);
+
+    if (image) {
+      image->tailHelperThunk = p->tailHelperThunk - imageBase;
+      image->tailHelperCall = static_cast<uint8_t*>(call) - imageBase;
+    }
+  }
+
+  p->nativeTailThunk = finish
     (t, allocator, nativeContext.context.assembler, "native");
+
+  p->nativeThunk = p->nativeTailThunk + nativeTailOffset;
 
   { void* call;
     nativeContext.promise.listener->resolve
       (reinterpret_cast<intptr_t>(voidPointer(invokeNative)), &call);
 
     if (image) {
+      image->nativeTailThunk = p->nativeTailThunk - imageBase;
       image->nativeThunk = p->nativeThunk - imageBase;
       image->invokeNativeCall = static_cast<uint8_t*>(call) - imageBase;
     }

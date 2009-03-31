@@ -1734,6 +1734,10 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned constantCallSize() {
+    return 4;
+  }
+
   virtual uintptr_t getConstant(const void* src) {
     const int32_t* p = static_cast<const int32_t*>(src);
     return (p[0] << 16) | (p[1] & 0xFFFF);    
