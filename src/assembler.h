@@ -274,6 +274,8 @@ class Assembler {
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 
+    virtual bool matchCall(void* returnAddress, void* target) = 0;
+
     virtual void updateCall(UnaryOperation op, bool assertAlignment,
                             void* returnAddress, void* newTarget) = 0;
 

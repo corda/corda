@@ -117,12 +117,11 @@ class Processor {
   getStackTrace(Thread* t, Thread* target) = 0;
 
   virtual void
-  compileThunks(Thread* t, BootImage* image, uint8_t* code, unsigned* size,
-                unsigned capacity) = 0;
+  initialize(Thread* t, BootImage* image, uint8_t* code,
+             unsigned capacity) = 0;
 
   virtual void
-  compileMethod(Thread* t, Zone* zone, uint8_t* code, unsigned* offset,
-                unsigned capacity, object* constants, object* calls,
+  compileMethod(Thread* t, Zone* zone, object* constants, object* calls,
                 DelayedPromise** addresses, object method) = 0;
 
   virtual void

@@ -1194,7 +1194,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
                               ? 0 : Target::Penalty);
   
   Target best;
-  if ((mask.typeMask & (1 << RegisterOperand))) {
+  if (mask.typeMask & (1 << RegisterOperand)) {
     Target mine = pickRegisterTarget(c, read->value, mask.registerMask);
 
     mine.cost += registerPenalty;
@@ -3842,6 +3842,61 @@ appendSaveLocals(Context* c)
          SaveLocalsEvent(c));
 }
 
+class FreezeRegisterEvent: public Event {
+ public:
+  FreezeRegisterEvent(Context* c, int number, Value* value):
+    Event(c), number(number), value(value)
+  {
+    addRead(c, this, value, fixedRegisterRead(c, number));
+  }
+
+  virtual const char* name() {
+    return "FreezeRegisterEvent";
+  }
+
+  virtual void compile(Context* c) {
+    c->registers[number].freeze(c, value);
+
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
+  }
+
+  int number;
+  Value* value;
+};
+
+void
+appendFreezeRegister(Context* c, int number, Value* value)
+{
+  append(c, new (c->zone->allocate(sizeof(FreezeRegisterEvent)))
+         FreezeRegisterEvent(c, number, value));
+}
+
+class ThawRegisterEvent: public Event {
+ public:
+  ThawRegisterEvent(Context* c, int number):
+    Event(c), number(number)
+  { }
+
+  virtual const char* name() {
+    return "ThawRegisterEvent";
+  }
+
+  virtual void compile(Context* c) {
+    c->registers[number].thaw(c, value);
+  }
+
+  int number;
+};
+
+void
+appendThawRegister(Context* c, int number, Value* value)
+{
+  append(c, new (c->zone->allocate(sizeof(ThawRegisterEvent)))
+         ThawRegisterEvent(c, number, value));
+}
+
 class DummyEvent: public Event {
  public:
   DummyEvent(Context* c):
@@ -4923,6 +4978,14 @@ class MyCompiler: public Compiler {
   virtual Operand* thread() {
     Site* s = registerSite(&c, c.arch->thread());
     return value(&c, s, s);
+  }
+
+  virtual void freezeRegister(int number, Operand* value) {
+    appendFreezeRegister(&c, number, static_cast<Value*>(value));
+  }
+
+  virtual void thawRegister(int number) {
+    appendThawRegister(&c, number);
   }
 
   Promise* machineIp() {

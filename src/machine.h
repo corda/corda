@@ -1454,17 +1454,17 @@ expect(Thread* t, bool v)
 
 class FixedAllocator: public Allocator {
  public:
-  FixedAllocator(Thread* t, uint8_t* base, unsigned capacity):
-    t(t), base(base), offset(0), capacity(capacity)
+  FixedAllocator(System* s, uint8_t* base, unsigned capacity):
+    s(s), base(base), offset(0), capacity(capacity)
   { }
 
   virtual void* tryAllocate(unsigned) {
-    abort(t);
+    abort(s);
   }
 
   virtual void* allocate(unsigned size) {
     unsigned paddedSize = pad(size);
-    expect(t, offset + paddedSize < capacity);
+    expect(s, offset + paddedSize < capacity);
 
     void* p = base + offset;
     offset += paddedSize;
@@ -1472,10 +1472,10 @@ class FixedAllocator: public Allocator {
   }
 
   virtual void free(const void*, unsigned) {
-    abort(t);
+    abort(s);
   }
 
-  Thread* t;
+  System* s;
   uint8_t* base;
   unsigned offset;
   unsigned capacity;

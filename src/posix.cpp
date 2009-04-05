@@ -63,8 +63,6 @@ const unsigned VisitSignalIndex = 0;
 const unsigned SegFaultSignalIndex = 1;
 const unsigned InterruptSignalIndex = 2;
 
-const unsigned ExecutableAreaSizeInBytes = 16 * 1024 * 1024;
-
 class MySystem;
 MySystem* system;
 
@@ -518,9 +516,7 @@ class MySystem: public System {
 
   MySystem():
     threadVisitor(0),
-    visitTarget(0),
-    executableArea(0),
-    executableOffset(0)
+    visitTarget(0)
   {
     expect(this, system == 0);
     system = this;
@@ -559,33 +555,23 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-    if (executableArea == 0) {
 #ifdef __x86_64__
-      const unsigned Extra = MAP_32BIT;
+    const unsigned Extra = MAP_32BIT;
 #else
-      const unsigned Extra = 0;
+    const unsigned Extra = 0;
 #endif
-      void* p = mmap(0, ExecutableAreaSizeInBytes, PROT_EXEC | PROT_READ
-                     | PROT_WRITE, MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
+    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ
+                   | PROT_WRITE, MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
 
-      if (p != MAP_FAILED) {
-        executableArea = static_cast<uint8_t*>(p);
-      }
-    }
-
-    if (executableArea
-        and executableOffset + pad(sizeInBytes) < ExecutableAreaSizeInBytes)
-    {
-      void* r = executableArea + executableOffset;
-      executableOffset += pad(sizeInBytes);
-      return r;
-    } else {
+    if (p == MAP_FAILED) {
       return 0;
+    } else {
+      return static_cast<uint8_t*>(p);
     }
   }
 
-  virtual void freeExecutable(const void*, unsigned) {
-    // ignore
+  virtual void freeExecutable(const void* p, unsigned sizeInBytes) {
+    munmap(p, sizeInBytes);
   }
 
   virtual bool success(Status s) {

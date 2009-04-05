@@ -39,6 +39,7 @@ class BootImage {
   unsigned types;
   unsigned methodTree;
   unsigned methodTreeSentinal;
+  unsigned virtualThunks;
 
   uintptr_t codeBase;
 

@@ -39,6 +39,8 @@ const unsigned MaxNativeCallFootprint = 4;
 
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
 
+const unsigned ExecutableAreaSizeInBytes = 16 * 1024 * 1024;
+
 class MyThread: public Thread {
  public:
   class CallTrace {
@@ -121,6 +123,19 @@ resolveTarget(MyThread* t, void* stack, object method)
   } else {
     return findMethod(t, method, class_);
   }
+}
+
+object
+resolveTarget(MyThread* t, object class_, unsigned index)
+{
+  if (classVmFlags(t, class_) & BootstrapFlag) {
+    PROTECT(t, class_);
+
+    resolveClass(t, className(t, class_));
+    if (UNLIKELY(t->exception)) return 0;
+  }
+
+  return arrayBody(t, classVirtualTable(t, class_), index);
 }
 
 object&
@@ -1360,12 +1375,26 @@ tryInitClass(MyThread* t, object class_)
   if (UNLIKELY(t->exception)) unwind(t);
 }
 
+FixedAllocator*
+codeAllocator(MyThread* t);
+
 int64_t
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
-    return methodAddress
-       (t, findInterfaceMethod(t, method, objectClass(t, instance)));
+    object target = findInterfaceMethod(t, method, objectClass(t, instance));
+
+    if (methodAddress(t, target) == defaultThunk(t)) {
+      PROTECT(t, target);
+
+      compile(t, codeAllocator(t), 0, target);
+    }
+
+    if (UNLIKELY(t->exception)) {
+      unwind(t);
+    } else {
+      return methodAddress(t, target);
+    }
   } else {
     t->exception = makeNullPointerException(t);
     unwind(t);
@@ -3093,7 +3122,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           3, c->thread(), frame->append(target),
           c->peek(1, instance)),
          0,
-         frame->trace(target, TraceElement::VirtualCall),
+         frame->trace(0, 0),
          rSize,
          parameterFootprint);
 
@@ -3149,15 +3178,32 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-      Compiler::Operand* result = c->stackCall
-        (c->memory
-         (c->and_
-          (BytesPerWord, c->constant(PointerMask),
-           c->memory(instance, 0, 0, 1)), offset, 0, 1),
-         0,
-         frame->trace(target, TraceElement::VirtualCall),
-         rSize,
-         parameterFootprint);
+      bool tailCall = isTailCall(t, code, ip, context->method, target);
+
+      Compiler::Operand* result;
+      if (tailCall and methodParameterFootprint(t, target)
+          > methodParameterFootprint(t, context->method))
+      {
+        result = c->stackCall
+          (c->constant(tailHelperThunk(t)),
+           0,
+           frame->trace(target, TraceElement::VirtualCall),
+           rSize,
+           parameterFootprint);
+      } else {
+        c->freezeRegister(t->arch->returnLow(),
+                          c->and_(BytesPerWord, c->constant(PointerMask),
+                                  c->memory(instance, 0, 0, 1)));
+
+        result = c->stackCall
+          (c->memory(c->register_(t->arch->returnLow()), offset, 0, 1),
+           tailCall ? Compiler::TailCall : 0,
+           frame->trace(0, 0),
+           rSize,
+           parameterFootprint);
+
+        c->thawRegister(t->arch->returnLow());
+      }
 
       frame->pop(parameterFootprint);
 
@@ -4155,9 +4201,6 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
   return eventIndex;
 }
 
-Zone*
-codeZone(MyThread* t);
-
 int
 compareTraceElementPointers(const void* va, const void* vb)
 {
@@ -4532,32 +4575,21 @@ compileMethod2(MyThread* t, uintptr_t ip)
   object target = callNodeTarget(t, node);
   PROTECT(t, target);
 
-  if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
-    target = resolveTarget(t, t->stack, target);
-  }
-
   if (LIKELY(t->exception == 0)) {
-    compile(t, codeZone(t), 0, target);
+    compile(t, codeAllocator(t), 0, target);
   }
 
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
     void* address = reinterpret_cast<void*>(methodAddress(t, target));
-    if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
-      classVtable
-        (t, objectClass
-         (t, resolveThisPointer(t, t->stack, target)), methodOffset(t, target))
-        = address;
-    } else {
-      uintptr_t updateIp = ip;
-      if (callNode(t, node) & TraceElement::TailCall) {
-        updateIp -= t->arch->constantCallSize();
-      }
-
-      updateCall
-        (t, Call, true, reinterpret_cast<void*>(updateIp), address);
+    uintptr_t updateIp = ip;
+    if (callNode(t, node) & TraceElement::TailCall) {
+      updateIp -= t->arch->constantCallSize();
     }
+    
+    updateCall(t, Call, true, reinterpret_cast<void*>(updateIp), address);
+
     return address;
   }
 }
@@ -4583,6 +4615,46 @@ compileMethod(MyThread* t)
 }
 
 void*
+compileVirtualMethod2(MyThread* t, object class_, unsigned index)
+{
+  PROTECT(t, class_);
+
+  object target = resolveTarget(t, class_, index);
+
+  if (LIKELY(t->exception == 0)) {
+    compile(t, codeAllocator(t), 0, target);
+  }
+
+  if (UNLIKELY(t->exception)) {
+    return 0;
+  } else {
+    void* address = reinterpret_cast<void*>(methodAddress(t, target));
+    if (address != nativeThunk(t, method)) {
+      classVtable(t, class_, methodOffset(t, target)) = address;
+    }
+    return address;
+  }
+}
+
+uint64_t
+compileVirtualMethod(MyThread* t)
+{
+  object class_ = t->virtualCallClass;
+  t->virtualCallClass = 0;
+
+  unsigned index = t->virtualCallIndex;
+  t->virtualCallIndex = 0;
+
+  void* r = compileVirtualMethod2(t, class_, index);
+
+  if (UNLIKELY(t->exception)) {
+    unwind(t);
+  } else {
+    return reinterpret_cast<uintptr_t>(r);
+  }
+}
+
+void*
 tailCall2(MyThread* t, uintptr_t ip)
 {
   object node = findCallNode(t, ip);
@@ -4596,7 +4668,7 @@ tailCall2(MyThread* t, uintptr_t ip)
   }
 
   if (LIKELY(t->exception == 0)) {
-    compile(t, codeZone(t), 0, target);
+    compile(t, codeAllocator(t), 0, target);
   }
 
   if (UNLIKELY(t->exception)) {
@@ -5200,27 +5272,6 @@ processor(MyThread* t);
 
 class MyProcessor: public Processor {
  public:
-  class CodeAllocator: public Allocator {
-   public:
-    CodeAllocator(System* s): s(s) { }
-
-    virtual void* tryAllocate(unsigned size) {
-      return s->tryAllocateExecutable(size);
-    }
-
-    virtual void* allocate(unsigned size) {
-      void* p = tryAllocate(size);
-      expect(s, p);
-      return p;
-    }
-
-    virtual void free(const void* p, unsigned size) {
-      s->freeExecutable(p, size);
-    }
-
-    System* s;
-  };
-
   MyProcessor(System* s, Allocator* allocator):
     s(s),
     allocator(allocator),
@@ -5233,9 +5284,11 @@ class MyProcessor: public Processor {
     methodTreeSentinal(0),
     objectPools(0),
     staticTableArray(0),
-    codeAllocator(s),
-    codeZone(s, &codeAllocator, 64 * 1024)
-  { }
+    virtualThunks(0),
+    codeAllocator(s, 0, 0)
+  {
+    expect(s, codeAllocator.base);
+  }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
@@ -5292,11 +5345,8 @@ class MyProcessor: public Processor {
   virtual void
   initVtable(Thread* t, object c)
   {
-    void* compiled = reinterpret_cast<void*>
-      (::defaultThunk(static_cast<MyThread*>(t)));
-
     for (unsigned i = 0; i < classLength(t, c); ++i) {
-      classVtable(t, c, i) = compiled;
+      classVtable(t, c, i) = virtualThunk(static_cast<MyThread*>(t), i);
     }
   }
 
@@ -5399,7 +5449,8 @@ class MyProcessor: public Processor {
     
     PROTECT(t, method);
 
-    compile(static_cast<MyThread*>(t), &codeZone, 0, method);
+    compile(static_cast<MyThread*>(t),
+            ::codeAllocator(static_cast<MyThread*>(t)), 0, method);
 
     if (LIKELY(t->exception == 0)) {
       return ::invoke(t, method, &list);
@@ -5430,7 +5481,8 @@ class MyProcessor: public Processor {
 
     PROTECT(t, method);
 
-    compile(static_cast<MyThread*>(t), &codeZone, 0, method);
+    compile(static_cast<MyThread*>(t),
+            ::codeAllocator(static_cast<MyThread*>(t)), 0, method);
 
     if (LIKELY(t->exception == 0)) {
       return ::invoke(t, method, &list);
@@ -5460,7 +5512,8 @@ class MyProcessor: public Processor {
 
       PROTECT(t, method);
       
-      compile(static_cast<MyThread*>(t), &codeZone, 0, method);
+      compile(static_cast<MyThread*>(t), 
+              ::codeAllocator(static_cast<MyThread*>(t)), 0, method);
 
       if (LIKELY(t->exception == 0)) {
         return ::invoke(t, method, &list);
@@ -5483,8 +5536,10 @@ class MyProcessor: public Processor {
   }
 
   virtual void dispose() {
-    codeZone.dispose();
-    
+    if (codeAllocator.base) {
+      s->freeExecutable(codeAllocator.base, codeAllocator.capacity);
+    }
+
     s->handleSegFault(0);
 
     allocator->free(this, sizeof(*this));
@@ -5551,37 +5606,34 @@ class MyProcessor: public Processor {
     return visitor.trace;
   }
 
-  virtual void compileThunks(Thread* vmt, BootImage* image, uint8_t* code,
-                             unsigned* offset, unsigned capacity)
+  virtual void initialize(Thread* vmt, BootImage* image, uint8_t* code,
+                          unsigned capacity)
   {
-    MyThread* t = static_cast<MyThread*>(vmt);
-    FixedAllocator allocator(t, code + *offset, capacity);
+    codeAllocator.base = code;
+    codeAllocator.capacity = capacity;
 
-    ::compileThunks(t, &allocator, this, image, code);
-
-    *offset += allocator.offset;
+    ::compileThunks
+        (static_cast<MyThread*>(vmt), &codeAllocator, this, image, code);
   }
 
-  virtual void compileMethod(Thread* vmt, Zone* zone, uint8_t* code,
-                             unsigned* offset, unsigned capacity,
-                             object* constants, object* calls,
-                             DelayedPromise** addresses, object method)
+  virtual void compileMethod(Thread* vmt, Zone* zone, object* constants,
+                             object* calls, DelayedPromise** addresses,
+                             object method)
   {
     MyThread* t = static_cast<MyThread*>(vmt);
-    FixedAllocator allocator(t, code + *offset, capacity);
     BootContext bootContext(t, *constants, *calls, *addresses, zone);
 
-    compile(t, &allocator, &bootContext, method);
+    compile(t, &codeAllocator, &bootContext, method);
 
     *constants = bootContext.constants;
     *calls = bootContext.calls;
     *addresses = bootContext.addresses;
-    *offset += allocator.offset;
   }
 
   virtual void visitRoots(BootImage* image, HeapWalker* w) {
     image->methodTree = w->visitRoot(methodTree);
     image->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
+    image->virtualThunks = w->visitRoot(virtualThunks);
   }
 
   virtual unsigned* makeCallTable(Thread* t, BootImage* image, HeapWalker* w,
@@ -5606,6 +5658,9 @@ class MyProcessor: public Processor {
   }
 
   virtual void boot(Thread* t, BootImage* image) {
+    codeAllocator.base = s->tryAllocateExecutable(ExecutableAreaSizeInBytes);
+    codeAllocator.capacity = ExecutableAreaSizeInBytes;
+
     if (image) {
       ::boot(static_cast<MyThread*>(t), image);
     } else {
@@ -5615,7 +5670,7 @@ class MyProcessor: public Processor {
       set(t, methodTree, TreeNodeLeft, methodTreeSentinal);
       set(t, methodTree, TreeNodeRight, methodTreeSentinal);
 
-      ::compileThunks(static_cast<MyThread*>(t), &codeZone, this, 0, 0);      
+      ::compileThunks(static_cast<MyThread*>(t), &codeAllocator, this, 0, 0);
     }
 
     segFaultHandler.m = t->m;
@@ -5636,9 +5691,9 @@ class MyProcessor: public Processor {
   object methodTreeSentinal;
   object objectPools;
   object staticTableArray;
+  object virtualThunks;
   SegFaultHandler segFaultHandler;
-  CodeAllocator codeAllocator;
-  Zone codeZone;
+  FixedAllocator codeAllocator;
 };
 
 object
@@ -5937,6 +5992,20 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
 }
 
 void
+fixupVirtualThunks(MyThread* t, BootImage* image, uint8_t* code)
+{
+  MyProcessor* p = processor(t);
+  
+  for (unsigned i = 0; i < wordArrayLength(t, p->virtualThunks); ++i) {
+    if (wordArrayBody(t, p->virtualThunks, 0)) {
+      wordArrayBody(t, p->virtualThunks, 0)
+        = (wordArrayBody(t, p->virtualThunks, 0) - image->codeBase)
+        + reinterpret_cast<uintptr_t>(code);
+    }
+  }
+}
+
+void
 boot(MyThread* t, BootImage* image)
 {
   assert(t, image->magic == BootImage::Magic);
@@ -5974,6 +6043,8 @@ boot(MyThread* t, BootImage* image)
   p->methodTree = bootObject(heap, image->methodTree);
   p->methodTreeSentinal = bootObject(heap, image->methodTreeSentinal);
 
+  p->virtualThunks = bootObject(heap, image->virtualThunks);
+
   fixupCode(t, codeMap, codeMapSizeInWords, code, heap);
 
   syncInstructionCache(code, image->codeSize);
@@ -5990,6 +6061,8 @@ boot(MyThread* t, BootImage* image)
     (t, classTable, image->classCount, heap);
 
   fixupThunks(t, image, code);
+
+  fixupVirtualThunks(t, image, code);
 
   fixupMethods(t, image, code);
 
@@ -6036,6 +6109,38 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
   
     Assembler::Constant proc(&(defaultContext.promise));
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+
+    a->popFrame();
+
+    Assembler::Register result(t->arch->returnLow());
+    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+
+    a->endBlock(false)->resolve(0, 0);
+  }
+
+  ThunkContext defaultVirtualContext(t, &zone);
+
+  { Assembler* a = defaultVirtualContext.context.assembler;
+
+    Assembler::Register class_(t->arch->returnLow());
+    Assembler::Memory virtualCallClass
+      (t->arch->thread(), difference(&(t->virtualCallClass), t));
+    a->apply(Move, BytesPerWord, RegisterOperand, &class_,
+             BytesPerWord, MemoryOperand, &virtualCallClass);
+
+    Assembler::Register index(t->arch->returnHigh());
+    Assembler::Memory virtualCallIndex
+      (t->arch->thread(), difference(&(t->virtualCallIndex), t));
+    a->apply(Move, BytesPerWord, RegisterOperand, &index,
+             BytesPerWord, MemoryOperand, &virtualCallIndex);
+    
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+
+    Assembler::Register thread(t->arch->thread());
+    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+  
+    Assembler::Constant proc(&(defaultVirtualContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
     a->popFrame();
@@ -6119,18 +6224,6 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   p->thunkSize = pad(tableContext.context.assembler->length());
 
-  expect(t, codeZone(t)->ensure
-         (codeSingletonSizeInBytes
-          (t, defaultContext.context.assembler->length())
-          + codeSingletonSizeInBytes
-          (t, tailHelperContext.context.assembler->length())
-          + codeSingletonSizeInBytes
-          (t, nativeContext.context.assembler->length())
-          + codeSingletonSizeInBytes
-          (t, aioobContext.context.assembler->length())
-          + codeSingletonSizeInBytes
-          (t, p->thunkSize * ThunkCount)));
-
   p->defaultTailThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
 
@@ -6144,6 +6237,20 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
       image->defaultTailThunk = p->defaultTailThunk - imageBase;
       image->defaultThunk = p->defaultThunk - imageBase;
       image->compileMethodCall = static_cast<uint8_t*>(call) - imageBase;
+    }
+  }
+
+  p->defaultVirtualThunk = finish
+    (t, allocator, defaultVirtualContext.context.assembler, "defaultVirtual");
+
+  { void* call;
+    defaultVirtualContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(compileVirtualMethod)), &call);
+
+    if (image) {
+      image->defaultVirtualThunk = p->defaultVirtualThunk - imageBase;
+      image->compileVirtualMethodCall
+        = static_cast<uint8_t*>(call) - imageBase;
     }
   }
 
@@ -6249,6 +6356,51 @@ aioobThunk(MyThread* t)
   return reinterpret_cast<uintptr_t>(processor(t)->aioobThunk);
 }
 
+uintptr_t
+compileVirtualThunk(MyThread* t, unsigned index)
+{
+  Context context;
+  Assembler* a = context.assembler;
+
+  Assembler::Constant indexConstant(index);
+  Assembler::Register indexRegister(t->arch->returnHigh());
+  a->apply(Move, BytesPerWord, ConstantOperand, &indexConstant,
+           BytesPerWord, ConstantOperand, &indexRegister);
+  
+  Assembler::Constant thunk(defaultVirtualThunk(t));
+  a->apply(Jump, BytesPerWord, ConstantOperand, &thunk);
+
+  uint8_t* start = codeAllocator(t)->allocate(a->length());
+  a->writeTo(start);
+}
+
+uintptr_t
+virtualThunk(MyThread* t, unsigned index)
+{
+  MyProcessor* p = processor(t);
+
+  if (p->virtualThunks == 0 or wordArrayLength(t, p->virtualThunks) <= index) {
+    object newArray = makeWordArray(t, nextPowerOfTwo(index));
+    if (p->virtualThunks) {
+      memcpy(&wordArrayBody(t, newArray, 0),
+             &wordArrayBody(t, p->virtualThunks, 0),
+             wordArrayLength(t, p->virtualThunks) * BytesPerWord);
+    }
+    p->virtualThunks = newArray;
+  }
+
+  if (wordArrayBody(t, p->virtualThunks, index) == 0) {
+    ACQUIRE(t, t->m->classLock);
+
+    if (wordArrayBody(t, p->virtualThunks, index) == 0) {
+      uintptr_t thunk = compileVirtualThunk(t, index);
+      wordArrayBody(t, p->virtualThunks, index) = thunk;
+    }
+  }
+
+  return wordArrayBody(t, p->virtualThunks, index);
+}
+
 void
 compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
         object method)
@@ -6330,9 +6482,10 @@ methodTreeSentinal(MyThread* t)
   return processor(t)->methodTreeSentinal;
 }
 
-Zone*
-codeZone(MyThread* t) {
-  return &(processor(t)->codeZone);
+FixedAllocator*
+codeAllocator(MyThread* t)
+{
+  return &(processor(t)->codeAllocator);
 }
 
 } // namespace

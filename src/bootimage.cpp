@@ -37,7 +37,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
               const char* methodName, const char* methodSpec)
 {
   unsigned size = 0;
-  t->m->processor->compileThunks(t, image, code, &size, capacity);
+  t->m->processor->initialize(t, image, code, &size, capacity);
   
   object constants = 0;
   PROTECT(t, constants);
@@ -79,8 +79,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
                         == 0)))
           {
             t->m->processor->compileMethod
-              (t, zone, code, &size, capacity, &constants, &calls, &addresses,
-               method);
+              (t, zone, &constants, &calls, &addresses, method);
           }
         }
       }

@@ -97,6 +97,9 @@
   (uintptr_t flags)
   (object next))
 
+(type wordArray
+  (array uintptr_t body))
+
 (type array
   (noassert array object body))
 
