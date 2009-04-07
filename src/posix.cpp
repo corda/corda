@@ -571,7 +571,7 @@ class MySystem: public System {
   }
 
   virtual void freeExecutable(const void* p, unsigned sizeInBytes) {
-    munmap(p, sizeInBytes);
+    munmap(const_cast<void*>(p), sizeInBytes);
   }
 
   virtual bool success(Status s) {
@@ -765,11 +765,6 @@ class MySystem: public System {
     registerHandler(0, InterruptSignalIndex);
     registerHandler(0, VisitSignalIndex);
     system = 0;
-
-    if (executableArea) {
-      int r UNUSED = munmap(executableArea, ExecutableAreaSizeInBytes);
-      assert(this, r == 0);
-    }
 
     ::free(this);
   }

@@ -286,6 +286,13 @@ intersect(const SiteMask& a, const SiteMask& b)
                   intersectFrameIndexes(a.frameIndex, b.frameIndex));
 }
 
+bool
+valid(const SiteMask& a)
+{
+  return a.typeMask
+    and ((a.typeMask & ~(1 << RegisterOperand)) or a.registerMask);
+}
+
 class Value: public Compiler::Operand {
  public:
   Value(Site* site, Site* target):
@@ -1879,12 +1886,25 @@ release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNUSED)
 
 class SingleRead: public Read {
  public:
-  SingleRead(const SiteMask& mask):
-    next_(0), mask(mask)
+  SingleRead(const SiteMask& mask, Value* successor):
+    next_(0), mask(mask), successor(successor)
   { }
 
   virtual bool intersect(SiteMask* mask) {
-    *mask = ::intersect(*mask, this->mask);
+    SiteMask result = ::intersect(*mask, this->mask);
+
+    if (successor) {
+      Read* r = live(successor);
+      if (r) {
+        SiteMask intersection = result;
+        bool valid = r->intersect(&intersection);
+        if (valid and ::valid(intersection)) {
+          result = intersection;
+        }
+      }
+    }
+
+    *mask = result;
 
     return true;
   }
@@ -1904,15 +1924,16 @@ class SingleRead: public Read {
 
   Read* next_;
   SiteMask mask;
+  Value* successor;
 };
 
 Read*
-read(Context* c, const SiteMask& mask)
+read(Context* c, const SiteMask& mask, Value* successor = 0)
 {
   assert(c, (mask.typeMask != 1 << MemoryOperand) or mask.frameIndex >= 0);
 
   return new (c->zone->allocate(sizeof(SingleRead)))
-    SingleRead(mask);
+    SingleRead(mask, successor);
 }
 
 Read*
@@ -2681,14 +2702,18 @@ class MoveEvent: public Event {
   {
     assert(c, srcSelectSize <= srcSize);
 
-    addRead(c, this, src, read(c, srcLowMask));
-    if (srcSelectSize > BytesPerWord) {
-      maybeSplit(c, src);
-      addRead(c, this, src->high, read(c, srcHighMask));
-    }
+    bool noop = srcSelectSize >= dstSize;
     
     if (dstSize > BytesPerWord) {
       grow(c, dst);
+    }
+
+    addRead(c, this, src, read(c, srcLowMask, noop ? dst : 0));
+    if (srcSelectSize > BytesPerWord) {
+      maybeSplit(c, src);
+      addRead(c, this, src->high, read
+              (c, srcHighMask,
+               noop and dstSize > BytesPerWord ? dst->high : 0));
     }
   }
 
@@ -2966,13 +2991,16 @@ class CombineEvent: public Event {
       addRead(c, this, first->high, read(c, firstHighMask));
     }
 
-    addRead(c, this, second, read(c, secondLowMask));
-    if (secondSize > BytesPerWord) {
-      addRead(c, this, second->high, read(c, secondHighMask));
-    }
-
     if (resultSize > BytesPerWord) {
       grow(c, result);
+    }
+
+    bool condensed = c->arch->condensedAddressing();
+
+    addRead(c, this, second, read(c, secondLowMask, condensed ? result : 0));
+    if (secondSize > BytesPerWord) {
+      addRead(c, this, second->high, read
+              (c, secondHighMask, condensed ? result->high : 0));
     }
   }
 
@@ -3367,10 +3395,13 @@ class TranslateEvent: public Event {
     Event(c), type(type), size(size), value(value), result(result),
     resultLowMask(resultLowMask), resultHighMask(resultHighMask)
   {
-    addRead(c, this, value, read(c, valueLowMask));
+    bool condensed = c->arch->condensedAddressing();
+
+    addRead(c, this, value, read(c, valueLowMask, condensed ? result : 0));
     if (size > BytesPerWord) {
-      addRead(c, this, value->high, read(c, valueHighMask));
       grow(c, result);
+      addRead(c, this, value->high, read
+              (c, valueHighMask, condensed ? result->high : 0));
     }
   }
 

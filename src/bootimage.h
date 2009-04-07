@@ -44,13 +44,19 @@ class BootImage {
   uintptr_t codeBase;
 
   unsigned defaultThunk;
+  unsigned defaultTailThunk;
+  unsigned defaultVirtualThunk;
+  unsigned tailHelperThunk;
   unsigned nativeThunk;
+  unsigned nativeTailThunk;
   unsigned aioobThunk;
 
   unsigned thunkTable;
   unsigned thunkSize;
 
   unsigned compileMethodCall;
+  unsigned compileVirtualMethodCall;
+  unsigned tailCallCall;
   unsigned invokeNativeCall;
   unsigned throwArrayIndexOutOfBoundsCall;
 

@@ -2057,9 +2057,16 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual void updateCall(UnaryOperation op UNUSED,
-                          bool assertAlignment UNUSED, void* returnAddress,
-                          void* newTarget)
+  virtual bool matchCall(void* returnAddress, void* target) {
+    uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
+    int32_t actualOffset; memcpy(&actualOffset, instruction + 1, 4);
+    void* actualTarget = static_cast<uint8_t*>(returnAddress) + actualOffset;
+
+    return *instruction == 0xE8 and actualTarget == target;
+  }
+
+  virtual void updateCall(UnaryOperation op, bool assertAlignment UNUSED,
+                          void* returnAddress, void* newTarget)
   {
     if (BytesPerWord == 4 or op == Call or op == Jump) {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;

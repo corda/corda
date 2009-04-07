@@ -60,8 +60,7 @@ class Compiler {
                           Operand* index = 0,
                           unsigned scale = 1) = 0;
 
-  virtual Operand* thread() = 0;
-  virtual Operand* stack() = 0;
+  virtual Operand* register_(int number) = 0;
 
   virtual void freezeRegister(int number, Operand* value) = 0;
   virtual void thawRegister(int number) = 0;
