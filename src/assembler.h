@@ -31,6 +31,7 @@ enum UnaryOperation {
   AlignedCall,
   Jump,
   LongJump,
+  AlignedJump,
   JumpIfLess,
   JumpIfGreater,
   JumpIfLessOrEqual,
@@ -318,7 +319,9 @@ class Assembler {
 
   virtual Architecture* arch() = 0;
 
+  virtual void popReturnAddress(unsigned addressOffset) = 0;
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
+  virtual void restoreFrame(unsigned stackOffset, unsigned baseOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
   virtual void popFrame() = 0;

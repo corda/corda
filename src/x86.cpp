@@ -704,6 +704,21 @@ popR(Context* c, unsigned size, Assembler::Register* a)
 }
 
 void
+popM(Context* c, unsigned size, Assembler::Memory* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+
+    popM(c, 4, a);
+    popM(c, 4, &ah);
+  } else {
+    assert(c, BytesPerWord == 4 or size == 8);
+
+    encode(c, 0x8f, 0, a, false);
+  }
+}
+
+void
 addCarryCR(Context* c, unsigned size, Assembler::Constant* a,
            Assembler::Register* b);
 
@@ -2290,6 +2305,11 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
+  virtual void popReturnAddress(unsigned addressOffset) {
+    Memory addressDst(rbx, addressOffset);
+    popM(&c, BytesPerWord, &addressDst);
+  }
+
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) {
     Register stack(rsp);
     Memory stackDst(rbx, stackOffset);
@@ -2300,6 +2320,18 @@ class MyAssembler: public Assembler {
     Memory baseDst(rbx, baseOffset);
     apply(Move, BytesPerWord, RegisterOperand, &base,
           BytesPerWord, MemoryOperand, &baseDst);
+  }
+
+  virtual void restoreFrame(unsigned stackOffset, unsigned baseOffset) {
+    Register stack(rsp);
+    Memory stackDst(rbx, stackOffset);
+    apply(Move, BytesPerWord, MemoryOperand, &stackDst,
+          BytesPerWord, RegisterOperand, &stack);
+
+    Register base(rbp);
+    Memory baseDst(rbx, baseOffset);
+    apply(Move, BytesPerWord, MemoryOperand, &baseDst,
+          BytesPerWord, RegisterOperand, &base);
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {

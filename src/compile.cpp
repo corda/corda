@@ -1957,7 +1957,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
        rSize,
        methodParameterFootprint(t, target));
   } else {
-    unsigned flags = (tailCall ? Compiler::TailCall : 0);
+    unsigned flags = (tailCall ? Compiler::TailJump : 0);
 
     if (useThunk) {
       if (tailCall) {
@@ -6450,6 +6450,8 @@ compileVirtualThunk(MyThread* t, unsigned index)
     (codeAllocator(t)->allocate(a->length()));
 
   a->writeTo(start);
+
+  return reinterpret_cast<uintptr_t>(start);
 }
 
 uintptr_t

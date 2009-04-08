@@ -257,6 +257,8 @@ class Read {
   { }
 
   virtual bool intersect(SiteMask* mask) = 0;
+
+  virtual Value* successor() = 0;
   
   virtual bool valid() = 0;
 
@@ -284,13 +286,6 @@ intersect(const SiteMask& a, const SiteMask& b)
 {
   return SiteMask(a.typeMask & b.typeMask, a.registerMask & b.registerMask,
                   intersectFrameIndexes(a.frameIndex, b.frameIndex));
-}
-
-bool
-valid(const SiteMask& a)
-{
-  return a.typeMask
-    and ((a.typeMask & ~(1 << RegisterOperand)) or a.registerMask);
 }
 
 class Value: public Compiler::Operand {
@@ -1191,18 +1186,11 @@ pickAnyFrameTarget(Context* c, Value* v)
 }
 
 Target
-pickTarget(Context* c, Read* read, bool intersectRead,
-           unsigned registerReserveCount)
+pickTarget(Context* c, Value* value, const SiteMask& mask,
+           unsigned registerPenalty, Target best)
 {
-  SiteMask mask;
-  read->intersect(&mask);
-
-  unsigned registerPenalty = (c->availableRegisterCount > registerReserveCount
-                              ? 0 : Target::Penalty);
-  
-  Target best;
   if (mask.typeMask & (1 << RegisterOperand)) {
-    Target mine = pickRegisterTarget(c, read->value, mask.registerMask);
+    Target mine = pickRegisterTarget(c, value, mask.registerMask);
 
     mine.cost += registerPenalty;
 
@@ -1215,12 +1203,46 @@ pickTarget(Context* c, Read* read, bool intersectRead,
 
   if ((mask.typeMask & (1 << MemoryOperand)) && mask.frameIndex >= 0) {
     Target mine(mask.frameIndex, MemoryOperand,
-                frameCost(c, read->value, mask.frameIndex));
+                frameCost(c, value, mask.frameIndex));
     if (mine.cost == 0) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
     }
+  }
+
+  return best;
+}
+
+Target
+pickTarget(Context* c, Read* read, bool intersectRead,
+           unsigned registerReserveCount)
+{
+  unsigned registerPenalty = (c->availableRegisterCount > registerReserveCount
+                              ? 0 : Target::Penalty);
+
+  SiteMask mask;
+  read->intersect(&mask);
+
+  Target best;
+
+  Value* successor = read->successor();
+  if (successor) {
+    Read* r = live(successor);
+    if (r) {
+      SiteMask intersection = mask;
+      if (r->intersect(&intersection)) {
+        best = pickTarget(c, read->value, mask, registerPenalty, best);
+        if (best.cost == 0) {
+          return best;
+        }
+      }
+    }
+  }
+  
+  best = pickTarget(c, read->value, mask, registerPenalty, best);
+  if (best.cost == 0) {
+    return best;
   }
 
   if (intersectRead) {
@@ -1887,26 +1909,17 @@ release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNUSED)
 class SingleRead: public Read {
  public:
   SingleRead(const SiteMask& mask, Value* successor):
-    next_(0), mask(mask), successor(successor)
+    next_(0), mask(mask), successor_(successor)
   { }
 
   virtual bool intersect(SiteMask* mask) {
-    SiteMask result = ::intersect(*mask, this->mask);
-
-    if (successor) {
-      Read* r = live(successor);
-      if (r) {
-        SiteMask intersection = result;
-        bool valid = r->intersect(&intersection);
-        if (valid and ::valid(intersection)) {
-          result = intersection;
-        }
-      }
-    }
-
-    *mask = result;
+    *mask = ::intersect(*mask, this->mask);
 
     return true;
+  }
+
+  virtual Value* successor() {
+    return successor_;
   }
   
   virtual bool valid() {
@@ -1924,7 +1937,7 @@ class SingleRead: public Read {
 
   Read* next_;
   SiteMask mask;
-  Value* successor;
+  Value* successor_;
 };
 
 Read*
@@ -1981,6 +1994,10 @@ class MultiRead: public Read {
     return result;
   }
 
+  virtual Value* successor() {
+    return 0;
+  }
+
   virtual bool valid() {
     bool result = false;
     if (not visited) {
@@ -2008,7 +2025,7 @@ class MultiRead: public Read {
     }
     lastRead = cell;
 
-//     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
+    //     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
 
     lastTarget->value = r;
   }
@@ -2020,7 +2037,7 @@ class MultiRead: public Read {
   void allocateTarget(Context* c) {
     Cell* cell = cons(c, 0, 0);
 
-//     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
+    //     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
 
     if (lastTarget) {
       lastTarget->next = cell;
@@ -2031,7 +2048,7 @@ class MultiRead: public Read {
   }
 
   Read* nextTarget() {
-//     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
+    //     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
 
     Read* r = static_cast<Read*>(firstTarget->value);
     firstTarget = firstTarget->next;
@@ -2069,6 +2086,10 @@ class StubRead: public Read {
       visited = false;
     }
     return valid_;
+  }
+
+  virtual Value* successor() {
+    return 0;
   }
 
   virtual bool valid() {
@@ -2180,9 +2201,9 @@ addRead(Context* c, Event* e, Value* v, Read* r)
   }
 
   if (v->lastRead) {
-//     if (DebugReads) {
-//       fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
-//     }
+    //     if (DebugReads) {
+    //       fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
+    //     }
 
     v->lastRead->append(c, r);
   } else {
@@ -2334,7 +2355,7 @@ class CallEvent: public Event {
                (typeMask, registerMask & planRegisterMask, AnyFrameIndex)));
     }
 
-    if ((flags & (Compiler::TailJump | Compiler::TailCall)_ == 0) {
+    if ((flags & (Compiler::TailJump | Compiler::TailCall)) == 0) {
       int footprint = stackArgumentFootprint;
       for (Stack* s = stackBefore; s; s = s->next) {
         if (s->value) {
@@ -2932,7 +2953,7 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
       preserve(c, v, s, r);
     }
   } else {
-    SingleRead r(resultMask);
+    SingleRead r(resultMask, 0);
     s = pickTargetSite(c, &r, true);
     v = result;
     addSite(c, result, s);
@@ -3017,7 +3038,7 @@ class CombineEvent: public Event {
          ? getTarget(c, second->high, result->high, resultHighMask)
          : 0);
 
-//     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
+    //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
     apply(c, type, firstSize, first->source, source(first->high),
           secondSize, second->source, source(second->high),
           resultSize, low, high);
@@ -3783,11 +3804,11 @@ frameFootprint(Context* c, Stack* s)
 void
 visit(Context* c, Link* link)
 {
-//   fprintf(stderr, "visit link from %d to %d fork %p junction %p\n",
-//           link->predecessor->logicalInstruction->index,
-//           link->successor->logicalInstruction->index,
-//           link->forkState,
-//           link->junctionState);
+  //   fprintf(stderr, "visit link from %d to %d fork %p junction %p\n",
+  //           link->predecessor->logicalInstruction->index,
+  //           link->successor->logicalInstruction->index,
+  //           link->forkState,
+  //           link->junctionState);
 
   ForkState* forkState = link->forkState;
   if (forkState) {
@@ -3795,7 +3816,7 @@ visit(Context* c, Link* link)
       ForkElement* p = forkState->elements + i;
       Value* v = p->value;
       v->reads = p->read->nextTarget();
-//       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
+      //       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
       if (not live(v)) {
         clearSites(c, v);
       }
@@ -3828,7 +3849,7 @@ class BuddyEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-//     fprintf(stderr, "original %p buddy %p\n", original, buddy);
+    //     fprintf(stderr, "original %p buddy %p\n", original, buddy);
     assert(c, hasSite(original));
 
     addBuddy(original, buddy);
@@ -3886,7 +3907,7 @@ class FreezeRegisterEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    c->registers[number].freeze(c, value);
+    c->registerResources[number].freeze(c, value);
 
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
@@ -3915,17 +3936,17 @@ class ThawRegisterEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    c->registers[number].thaw(c, value);
+    c->registerResources[number].thaw(c, 0);
   }
 
   int number;
 };
 
 void
-appendThawRegister(Context* c, int number, Value* value)
+appendThawRegister(Context* c, int number)
 {
   append(c, new (c->zone->allocate(sizeof(ThawRegisterEvent)))
-         ThawRegisterEvent(c, number, value));
+         ThawRegisterEvent(c, number));
 }
 
 class DummyEvent: public Event {
@@ -4418,9 +4439,9 @@ void
 restore(Context* c, Event* e, Snapshot* snapshots)
 {
   for (Snapshot* s = snapshots; s; s = s->next) {
-//     char buffer[256]; sitesToString(c, s->sites, buffer, 256);
-//     fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
-//             s->value, s->value->buddy, buffer, live(s->value));
+    //     char buffer[256]; sitesToString(c, s->sites, buffer, 256);
+    //     fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
+    //             s->value, s->value->buddy, buffer, live(s->value));
 
     s->value->buddy = s->buddy;
   }
@@ -5001,13 +5022,8 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* stack() {
-    Site* s = registerSite(&c, c.arch->stack());
-    return value(&c, s, s);
-  }
-
-  virtual Operand* thread() {
-    Site* s = registerSite(&c, c.arch->thread());
+  virtual Operand* register_(int number) {
+    Site* s = registerSite(&c, number);
     return value(&c, s, s);
   }
 
