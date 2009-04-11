@@ -334,6 +334,13 @@ test: build
 		$(executable) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
+.PHONY: tarball
+tarball:
+	@echo "creating build/avian-$(version).tar.bz2"
+	@mkdir -p build
+	(cd .. && tar --exclude=build --exclude='.*' --exclude='*~' -cjf \
+		avian/build/avian-$(version).tar.bz2 avian)
+
 .PHONY: javadoc
 javadoc:
 	javadoc -sourcepath classpath -d build/javadoc -subpackages java \
