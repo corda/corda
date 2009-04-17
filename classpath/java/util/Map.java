@@ -15,9 +15,9 @@ public interface Map<K, V> {
 
   public int size();
 
-  public boolean containsKey(K key);
+  public boolean containsKey(Object key);
 
-  public boolean containsValue(V value);
+  public boolean containsValue(Object value);
 
   public V get(K key);
 
