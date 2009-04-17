@@ -40,11 +40,11 @@ public class Hashtable<K, V> implements Map<K, V> {
     return map.size();
   }
 
-  public synchronized boolean containsKey(K key) {
+  public synchronized boolean containsKey(Object key) {
     return map.containsKey(key);
   }
 
-  public synchronized boolean containsValue(V value) {
+  public synchronized boolean containsValue(Object value) {
     return map.containsValue(value);
   }
 

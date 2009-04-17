@@ -158,12 +158,12 @@ public class HashMap<K, V> implements Map<K, V> {
     return c;
   }
 
-  public boolean containsKey(K key) {
-    return find(key) != null;
+  public boolean containsKey(Object key) {
+    return find((K)key) != null;
   }
 
-  public boolean containsValue(V value) {
-    return values().contains(value);
+  public boolean containsValue(Object value) {
+    return values().contains((V)value);
   }
 
   public V get(K key) {
