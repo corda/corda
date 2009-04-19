@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -1359,16 +1359,7 @@ uintptr_t
 defaultThunk(MyThread* t);
 
 uintptr_t
-defaultTailThunk(MyThread* t);
-
-uintptr_t
 nativeThunk(MyThread* t);
-
-uintptr_t
-nativeTailThunk(MyThread* t);
-
-uintptr_t
-tailHelperThunk(MyThread* t);
 
 uintptr_t
 aioobThunk(MyThread* t);
@@ -1940,65 +1931,54 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
 {
   Compiler* c = frame->c;
 
-  if (tailCall and methodParameterFootprint(t, target)
-      > methodParameterFootprint(t, frame->context->method))
-  {
-    return c->stackCall
-      (c->constant(tailHelperThunk(t)),      
-       0,
-       frame->trace(target, 0),
-       rSize,
-       methodParameterFootprint(t, target));
-  } else if (tailCall and (methodFlags(t, target) & ACC_NATIVE)) {
-    return c->stackCall
-      (c->constant(nativeTailThunk(t)),
-       Compiler::TailCall,
-       frame->trace(target, TraceElement::TailCall),
-       rSize,
-       methodParameterFootprint(t, target));
-  } else {
-    unsigned flags = (tailCall ? Compiler::TailJump : 0);
+  unsigned flags = (tailCall ? Compiler::TailJump : 0);
 
-    if (useThunk) {
-      if (tailCall) {
-        Compiler::Operand* result = c->stackCall
-          (c->promiseConstant
-           (new (frame->context->zone.allocate(sizeof(TraceElementPromise)))
-            TraceElementPromise(t->m->system, frame->trace(0, 0))),
-           flags | Compiler::Aligned,
-           0,
-           rSize,
-           methodParameterFootprint(t, target));
+  if (useThunk or (tailCall and (methodFlags(t, target) & ACC_NATIVE))) {
+    if (tailCall) {
+      TraceElement* trace = frame->trace(target, TraceElement::TailCall);
+      Compiler::Operand* returnAddress = c->promiseConstant
+        (new (frame->context->zone.allocate(sizeof(TraceElementPromise)))
+         TraceElementPromise(t->m->system, trace));;
 
-        c->call(c->constant(defaultTailThunk(t)),
-                0,
-                frame->trace(target, TraceElement::TailCall),
-                0,
-                0);
+      Compiler::Operand* result = c->stackCall
+        (returnAddress,
+         flags | Compiler::Aligned,
+         0,
+         rSize,
+         methodParameterFootprint(t, target));
 
-        return result;
+      c->store(BytesPerWord, returnAddress, BytesPerWord,
+               c->memory(c->register_(t->arch->thread()),
+                         difference(&(t->tailAddress), t)));
+
+      if (methodFlags(t, target) & ACC_NATIVE) {
+        c->jmp(c->constant(nativeThunk(t)));
       } else {
-        return c->stackCall
-          (c->constant(defaultThunk(t)),
-           flags | Compiler::Aligned,
-           frame->trace(target, 0),
-           rSize,
-           methodParameterFootprint(t, target));
+        c->jmp(c->constant(defaultThunk(t)));
       }
-    } else {
-      Compiler::Operand* address =
-        (addressPromise
-         ? c->promiseConstant(addressPromise)
-         : c->constant(methodAddress(t, target)));
 
+      return result;
+    } else {
       return c->stackCall
-        (address,
-         flags,
-         tailCall ? 0 : frame->trace
-         ((methodFlags(t, target) & ACC_NATIVE) ? target : 0, 0),
+        (c->constant(defaultThunk(t)),
+         flags | Compiler::Aligned,
+         frame->trace(target, 0),
          rSize,
          methodParameterFootprint(t, target));
     }
+  } else {
+    Compiler::Operand* address =
+      (addressPromise
+       ? c->promiseConstant(addressPromise)
+       : c->constant(methodAddress(t, target)));
+
+    return c->stackCall
+      (address,
+       flags,
+       tailCall ? 0 : frame->trace
+       ((methodFlags(t, target) & ACC_NATIVE) ? target : 0, 0),
+       rSize,
+       methodParameterFootprint(t, target));
   }
 }
 
@@ -2225,6 +2205,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
   Frame* frame = &myFrame;
   Compiler* c = frame->c;
   Context* context = frame->context;
+  bool tailCall = false;
 
   object code = methodCode(t, context->method);
   PROTECT(t, code);
@@ -2422,8 +2403,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case areturn: {
-      handleExit(t, frame);
-      c->return_(BytesPerWord, frame->popObject());
+      Compiler::Operand* value = frame->popObject();
+      if (not tailCall) {
+        handleExit(t, frame);
+        c->return_(BytesPerWord, value);
+      }
     } return;
 
     case arraylength: {
@@ -3171,8 +3155,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
-      compileDirectInvoke
-        (t, frame, target, isTailCall(t, code, ip, context->method, target));
+      tailCall = isTailCall(t, code, ip, context->method, target);
+
+      compileDirectInvoke(t, frame, target, tailCall);
     } break;
 
     case invokestatic: {
@@ -3183,8 +3168,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, methodFlags(t, target) & ACC_STATIC);
 
-      compileDirectInvoke
-        (t, frame, target, isTailCall(t, code, ip, context->method, target));
+      tailCall = isTailCall(t, code, ip, context->method, target);
+
+      compileDirectInvoke(t, frame, target, tailCall);
     } break;
 
     case invokevirtual: {
@@ -3203,32 +3189,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-      bool tailCall = isTailCall(t, code, ip, context->method, target);
+      tailCall = isTailCall(t, code, ip, context->method, target);
 
-      Compiler::Operand* result;
-      if (tailCall and methodParameterFootprint(t, target)
-          > methodParameterFootprint(t, context->method))
-      {
-        result = c->stackCall
-          (c->constant(tailHelperThunk(t)),
-           0,
-           frame->trace(target, TraceElement::VirtualCall),
-           rSize,
-           parameterFootprint);
-      } else {
-        c->freezeRegister(t->arch->returnLow(),
-                          c->and_(BytesPerWord, c->constant(PointerMask),
-                                  c->memory(instance, 0, 0, 1)));
+      Compiler::Operand* classOperand = c->and_
+        (BytesPerWord, c->constant(PointerMask),
+         c->memory(instance, 0, 0, 1));
 
-        result = c->stackCall
-          (c->memory(c->register_(t->arch->returnLow()), offset, 0, 1),
-           tailCall ? Compiler::TailCall : 0,
-           frame->trace(0, 0),
-           rSize,
-           parameterFootprint);
+      c->freezeRegister(t->arch->virtualCallClass(), classOperand);
 
-        c->thawRegister(t->arch->returnLow());
-      }
+      Compiler::Operand* result = c->stackCall
+        (c->memory(classOperand, offset, 0, 1),
+         tailCall ? Compiler::TailCall : 0,
+         frame->trace(0, 0),
+         rSize,
+         parameterFootprint);
+
+      c->thawRegister(t->arch->virtualCallClass());
 
       frame->pop(parameterFootprint);
 
@@ -3251,8 +3227,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case ireturn:
     case freturn: {
-      handleExit(t, frame);
-      c->return_(4, frame->popInt());
+      Compiler::Operand* value = frame->popInt();
+      if (not tailCall) {
+        handleExit(t, frame);
+        c->return_(4, value);
+      }
     } return;
 
     case ishl: {
@@ -3545,8 +3524,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case lreturn:
     case dreturn: {
-      handleExit(t, frame);
-      c->return_(8, frame->popLong());
+      Compiler::Operand* value = frame->popLong();
+      if (not tailCall) {
+        handleExit(t, frame);
+        c->return_(8, value);
+      }
     } return;
 
     case lshl: {
@@ -3841,12 +3823,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       return;
 
     case return_:
-      if (needsReturnBarrier(t, context->method)) {
-        c->storeStoreBarrier();
-      }
+      if (not tailCall) {
+        if (needsReturnBarrier(t, context->method)) {
+          c->storeStoreBarrier();
+        }
 
-      handleExit(t, frame);
-      c->return_(0, 0);
+        handleExit(t, frame);
+        c->return_(0, 0);
+      }
       return;
 
     case sipush:
@@ -4680,66 +4664,6 @@ compileVirtualMethod(MyThread* t)
   }
 }
 
-void*
-tailCall2(MyThread* t, void* ip)
-{
-  object node = findCallNode(t, ip);
-  PROTECT(t, node);
-
-  object target = callNodeTarget(t, node);
-  PROTECT(t, target);
-
-  if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
-    target = resolveTarget(t, t->stack, target);
-  }
-
-  if (LIKELY(t->exception == 0)) {
-    compile(t, codeAllocator(t), 0, target);
-  }
-
-  if (UNLIKELY(t->exception)) {
-    return 0;
-  } else {
-    void* base = t->base;
-    void* stack = t->stack;
-    t->arch->nextFrame(&stack, &base);
-
-    if (t->arch->matchCall(t->arch->frameIp(stack),
-                           reinterpret_cast<void*>(tailHelperThunk(t))))
-    {
-      void* nextBase = base;
-      void* nextStack = stack;
-      t->arch->nextFrame(&nextStack, &nextBase);
-
-      if (((reinterpret_cast<uintptr_t>(nextStack)
-            - reinterpret_cast<uintptr_t>(stack))
-           / BytesPerWord)
-          - t->arch->frameFooterSize()
-          - t->arch->frameHeaderSize()
-          >= methodParameterFootprint(t, target))
-      {
-        // there's room for the parameters in the previous frame, so use it
-        t->base = base;
-        t->stack = stack;
-      }
-    }
-
-    return reinterpret_cast<void*>(methodAddress(t, target));
-  }
-}
-
-uint64_t
-tailCall(MyThread* t)
-{
-  void* r = tailCall2(t, t->arch->frameIp(t->stack));
-
-  if (UNLIKELY(t->exception)) {
-    unwind(t);
-  } else {
-    return reinterpret_cast<uintptr_t>(r);
-  }
-}
-
 uint64_t
 invokeNative2(MyThread* t, object method)
 {
@@ -5304,11 +5228,8 @@ class MyProcessor: public Processor {
     s(s),
     allocator(allocator),
     defaultThunk(0),
-    defaultTailThunk(0),
     defaultVirtualThunk(0),
-    tailHelperThunk(0),
     nativeThunk(0),
-    nativeTailThunk(0),
     aioobThunk(0),
     callTable(0),
     callTableSize(0),
@@ -5318,9 +5239,7 @@ class MyProcessor: public Processor {
     staticTableArray(0),
     virtualThunks(0),
     codeAllocator(s, 0, 0)
-  {
-    expect(s, codeAllocator.base);
-  }
+  { }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
@@ -5377,7 +5296,7 @@ class MyProcessor: public Processor {
   virtual void
   initVtable(Thread* t, object c)
   {
-    for (unsigned i = 0; i < classLength(t, c); ++i) {
+    for (int i = classLength(t, c) - 1; i >= 0; --i) {
       classVtable(t, c, i) = reinterpret_cast<void*>
         (virtualThunk(static_cast<MyThread*>(t), i));
     }
@@ -5715,11 +5634,8 @@ class MyProcessor: public Processor {
   System* s;
   Allocator* allocator;
   uint8_t* defaultThunk;
-  uint8_t* defaultTailThunk;
   uint8_t* defaultVirtualThunk;
-  uint8_t* tailHelperThunk;
   uint8_t* nativeThunk;
-  uint8_t* nativeTailThunk;
   uint8_t* aioobThunk;
   uint8_t* thunkTable;
   unsigned thunkSize;
@@ -6003,7 +5919,6 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
   MyProcessor* p = processor(t);
   
   p->defaultThunk = code + image->defaultThunk;
-  p->defaultTailThunk = code + image->defaultTailThunk;
 
   updateCall(t, LongCall, false, code + image->compileMethodCall,
              voidPointer(::compileMethod));
@@ -6013,13 +5928,7 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
   updateCall(t, LongCall, false, code + image->compileVirtualMethodCall,
              voidPointer(::compileVirtualMethod));
 
-  p->tailHelperThunk = code + image->tailHelperThunk;
-
-  updateCall(t, LongCall, false, code + image->tailCallCall,
-             voidPointer(::tailCall));
-
   p->nativeThunk = code + image->nativeThunk;
-  p->nativeTailThunk = code + image->nativeTailThunk;
 
   updateCall(t, LongCall, false, code + image->invokeNativeCall,
              voidPointer(invokeNative));
@@ -6145,13 +6054,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
   Zone zone(t->m->system, t->m->heap, 1024);
 
   ThunkContext defaultContext(t, &zone);
-  unsigned defaultTailOffset;
 
   { Assembler* a = defaultContext.context.assembler;
-
-    a->popReturnAddress(difference(&(t->tailAddress), t));
-
-    defaultTailOffset = a->length();
     
     a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
 
@@ -6173,13 +6077,13 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   { Assembler* a = defaultVirtualContext.context.assembler;
 
-    Assembler::Register class_(t->arch->returnLow());
+    Assembler::Register class_(t->arch->virtualCallClass());
     Assembler::Memory virtualCallClass
       (t->arch->thread(), difference(&(t->virtualCallClass), t));
     a->apply(Move, BytesPerWord, RegisterOperand, &class_,
              BytesPerWord, MemoryOperand, &virtualCallClass);
 
-    Assembler::Register index(t->arch->returnHigh());
+    Assembler::Register index(t->arch->virtualCallIndex());
     Assembler::Memory virtualCallIndex
       (t->arch->thread(), difference(&(t->virtualCallIndex), t));
     a->apply(Move, BytesPerWord, RegisterOperand, &index,
@@ -6201,34 +6105,9 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     a->endBlock(false)->resolve(0, 0);
   }
 
-  ThunkContext tailHelperContext(t, &zone);
-
-  { Assembler* a = tailHelperContext.context.assembler;
-    
-    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
-
-    Assembler::Register thread(t->arch->thread());
-    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
-  
-    Assembler::Constant proc(&(tailHelperContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
-
-    a->restoreFrame(difference(&(t->stack), t), difference(&(t->base), t));
-
-    Assembler::Register result(t->arch->returnLow());
-    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
-
-    a->endBlock(false)->resolve(0, 0);
-  }
-
   ThunkContext nativeContext(t, &zone);
-  unsigned nativeTailOffset;
 
   { Assembler* a = nativeContext.context.assembler;
-
-    a->popReturnAddress(difference(&(t->tailAddress), t));
-
-    nativeTailOffset = a->length();
 
     a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
 
@@ -6274,17 +6153,14 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   p->thunkSize = pad(tableContext.context.assembler->length());
 
-  p->defaultTailThunk = finish
+  p->defaultThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
-
-  p->defaultThunk = p->defaultTailThunk + defaultTailOffset;
 
   { void* call;
     defaultContext.promise.listener->resolve
       (reinterpret_cast<intptr_t>(voidPointer(compileMethod)), &call);
 
     if (image) {
-      image->defaultTailThunk = p->defaultTailThunk - imageBase;
       image->defaultThunk = p->defaultThunk - imageBase;
       image->compileMethodCall = static_cast<uint8_t*>(call) - imageBase;
     }
@@ -6304,30 +6180,14 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     }
   }
 
-  p->tailHelperThunk = finish
-    (t, allocator, defaultContext.context.assembler, "tailHelper");
-
-  { void* call;
-    tailHelperContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(tailCall)), &call);
-
-    if (image) {
-      image->tailHelperThunk = p->tailHelperThunk - imageBase;
-      image->tailCallCall = static_cast<uint8_t*>(call) - imageBase;
-    }
-  }
-
-  p->nativeTailThunk = finish
+  p->nativeThunk = finish
     (t, allocator, nativeContext.context.assembler, "native");
-
-  p->nativeThunk = p->nativeTailThunk + nativeTailOffset;
 
   { void* call;
     nativeContext.promise.listener->resolve
       (reinterpret_cast<intptr_t>(voidPointer(invokeNative)), &call);
 
     if (image) {
-      image->nativeTailThunk = p->nativeTailThunk - imageBase;
       image->nativeThunk = p->nativeThunk - imageBase;
       image->invokeNativeCall = static_cast<uint8_t*>(call) - imageBase;
     }
@@ -6395,33 +6255,15 @@ defaultThunk(MyThread* t)
 }
 
 uintptr_t
-defaultTailThunk(MyThread* t)
-{
-  return reinterpret_cast<uintptr_t>(processor(t)->defaultTailThunk);
-}
-
-uintptr_t
 defaultVirtualThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>(processor(t)->defaultVirtualThunk);
 }
 
 uintptr_t
-tailHelperThunk(MyThread* t)
-{
-  return reinterpret_cast<uintptr_t>(processor(t)->tailHelperThunk);
-}
-
-uintptr_t
 nativeThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>(processor(t)->nativeThunk);
-}
-
-uintptr_t
-nativeTailThunk(MyThread* t)
-{
-  return reinterpret_cast<uintptr_t>(processor(t)->nativeTailThunk);
 }
 
 uintptr_t
@@ -6438,18 +6280,22 @@ compileVirtualThunk(MyThread* t, unsigned index)
 
   ResolvedPromise indexPromise(index);
   Assembler::Constant indexConstant(&indexPromise);
-  Assembler::Register indexRegister(t->arch->returnHigh());
+  Assembler::Register indexRegister(t->arch->virtualCallIndex());
   a->apply(Move, BytesPerWord, ConstantOperand, &indexConstant,
-           BytesPerWord, ConstantOperand, &indexRegister);
+           BytesPerWord, RegisterOperand, &indexRegister);
   
   ResolvedPromise defaultVirtualThunkPromise(defaultVirtualThunk(t));
   Assembler::Constant thunk(&defaultVirtualThunkPromise);
   a->apply(Jump, BytesPerWord, ConstantOperand, &thunk);
 
+  a->endBlock(false)->resolve(0, 0);
+
   uint8_t* start = static_cast<uint8_t*>
     (codeAllocator(t)->allocate(a->length()));
 
   a->writeTo(start);
+
+  logCompile(t, start, a->length(), 0, "virtualThunk", 0);
 
   return reinterpret_cast<uintptr_t>(start);
 }
@@ -6460,7 +6306,7 @@ virtualThunk(MyThread* t, unsigned index)
   MyProcessor* p = processor(t);
 
   if (p->virtualThunks == 0 or wordArrayLength(t, p->virtualThunks) <= index) {
-    object newArray = makeWordArray(t, nextPowerOfTwo(index));
+    object newArray = makeWordArray(t, nextPowerOfTwo(index + 1));
     if (p->virtualThunks) {
       memcpy(&wordArrayBody(t, newArray, 0),
              &wordArrayBody(t, p->virtualThunks, 0),

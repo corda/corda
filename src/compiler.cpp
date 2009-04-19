@@ -638,42 +638,43 @@ class Event {
 };
 
 unsigned
-usableFrameSize(Context* c)
+totalFrameSize(Context* c)
 {
-  return c->alignedFrameSize - c->arch->frameFooterSize();
+  return c->alignedFrameSize
+    + c->arch->frameHeaderSize()
+    + c->arch->argumentFootprint(c->parameterFootprint);
 }
 
 int
-frameIndex(Context* c, int index)
+frameIndex(Context* c, int localIndex)
 {
-  assert(c, static_cast<int>
-         (usableFrameSize(c) + c->parameterFootprint - index - 1) >= 0);
+  assert(c, localIndex >= 0);
+  assert(c, localIndex < static_cast<int>
+         (c->parameterFootprint + c->localFootprint));
 
-  return usableFrameSize(c) + c->parameterFootprint - index - 1;
+  int index = c->alignedFrameSize + c->parameterFootprint - localIndex;
+
+  if (localIndex < static_cast<int>(c->parameterFootprint)) {
+    index += c->arch->frameHeaderSize();
+  } else {
+    index -= c->arch->frameFooterSize();
+  }
+
+  assert(c, index >= 0);
+
+  return index;
 }
 
 unsigned
 frameIndexToOffset(Context* c, unsigned frameIndex)
 {
-  return ((frameIndex >= usableFrameSize(c)) ?
-          (frameIndex
-           + (c->arch->frameFooterSize() * 2)
-           + c->arch->frameHeaderSize()) :
-          (frameIndex
-           + c->arch->frameFooterSize())) * BytesPerWord;
+  return (frameIndex + c->arch->frameFooterSize()) * BytesPerWord;
 }
 
 unsigned
 offsetToFrameIndex(Context* c, unsigned offset)
 {
-  unsigned normalizedOffset = offset / BytesPerWord;
-
-  return ((normalizedOffset >= c->alignedFrameSize) ?
-          (normalizedOffset
-           - (c->arch->frameFooterSize() * 2)
-           - c->arch->frameHeaderSize()) :
-          (normalizedOffset
-           - c->arch->frameFooterSize()));
+  return (offset / BytesPerWord) - c->arch->frameFooterSize();
 }
 
 class FrameIterator {
@@ -1172,7 +1173,7 @@ pickAnyFrameTarget(Context* c, Value* v)
 {
   Target best;
 
-  unsigned count = usableFrameSize(c) + c->parameterFootprint;
+  unsigned count = totalFrameSize(c);
   for (unsigned i = 0; i < count; ++i) {
     Target mine(i, MemoryOperand, frameCost(c, v, i));
     if (mine.cost == 1) {
@@ -2271,8 +2272,7 @@ saveLocals(Context* c, Event* e)
     if (local->value) {
       if (DebugReads) {
         fprintf(stderr, "local save read %p at %d of %d\n",
-                local->value, ::frameIndex(c, li),
-                usableFrameSize(c) + c->parameterFootprint);
+                local->value, ::frameIndex(c, li), totalFrameSize(c));
       }
 
       addRead(c, e, local->value, read
@@ -2291,48 +2291,61 @@ class CallEvent: public Event {
     address(address),
     traceHandler(traceHandler),
     result(result),
+    returnAddressSurrogate(0),
+    framePointerSurrogate(0),
     popIndex(0),
     padIndex(0),
     padding(0),
     flags(flags),
-    resultSize(resultSize)
+    resultSize(resultSize),
+    stackArgumentFootprint(stackArgumentFootprint)
   {
     uint32_t registerMask = ~0;
     Stack* s = argumentStack;
     unsigned index = 0;
     unsigned frameIndex;
+    int returnAddressIndex = -1;
+    int framePointerIndex = -1;
+
     if (flags & (Compiler::TailJump | Compiler::TailCall)) {
-      frameIndex = usableFrameSize(c);
+      assert(c, argumentCount == 0);
+
+      unsigned base = c->alignedFrameSize - c->arch->frameFooterSize();
+      returnAddressIndex = base + c->arch->returnAddressOffset();
+      framePointerIndex = base + c->arch->framePointerOffset();
+
+      frameIndex = totalFrameSize(c) - c->arch->argumentFootprint
+        (stackArgumentFootprint);
     } else {
       frameIndex = 0;
-    }
 
-    if (argumentCount) {
-      while (true) {
-        Read* target;
-        if (index < c->arch->argumentRegisterCount()) {
-          int number = c->arch->argumentRegister(index);
+      if (argumentCount) {
+        while (true) {
+          Read* target;
+          if (index < c->arch->argumentRegisterCount()) {
+            int number = c->arch->argumentRegister(index);
         
-          if (DebugReads) {
-            fprintf(stderr, "reg %d arg read %p\n", number, s->value);
+            if (DebugReads) {
+              fprintf(stderr, "reg %d arg read %p\n", number, s->value);
+            }
+
+            target = fixedRegisterRead(c, number);
+            registerMask &= ~(1 << number);
+          } else {
+            if (DebugReads) {
+              fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+            }
+
+            target = read(c, SiteMask(1 << MemoryOperand, 0, frameIndex));
+            ++ frameIndex;
           }
+          addRead(c, this, s->value, target);
 
-          target = fixedRegisterRead(c, number);
-          registerMask &= ~(1 << number);
-        } else {
-          if (DebugReads) {
-            fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+          if ((++ index) < argumentCount) {
+            s = s->next;
+          } else {
+            break;
           }
-
-          target = read(c, SiteMask(1 << MemoryOperand, 0, frameIndex));
-          ++ frameIndex;
-        }
-        addRead(c, this, s->value, target);
-
-        if ((++ index) < argumentCount) {
-          s = s->next;
-        } else {
-          break;
         }
       }
     }
@@ -2355,52 +2368,60 @@ class CallEvent: public Event {
                (typeMask, registerMask & planRegisterMask, AnyFrameIndex)));
     }
 
-    if ((flags & (Compiler::TailJump | Compiler::TailCall)) == 0) {
-      int footprint = stackArgumentFootprint;
-      for (Stack* s = stackBefore; s; s = s->next) {
-        if (s->value) {
-          if (footprint > 0) {
-            if (DebugReads) {
-              fprintf(stderr, "stack arg read %p at %d of %d\n",
-                      s->value, frameIndex,
-                      usableFrameSize(c) + c->parameterFootprint);
-            }
+    int footprint = stackArgumentFootprint;
+    for (Stack* s = stackBefore; s; s = s->next) {
+      if (s->value) {
+        if (footprint > 0) {
+          if (DebugReads) {
+            fprintf(stderr, "stack arg read %p at %d of %d\n",
+                    s->value, frameIndex, totalFrameSize(c));
+          }
 
+          if (static_cast<int>(frameIndex) == returnAddressIndex) {
+            returnAddressSurrogate = s->value;
+            addRead(c, this, s->value, anyRegisterRead(c));
+          } else if (static_cast<int>(frameIndex) == framePointerIndex) {
+            framePointerSurrogate = s->value;
+            addRead(c, this, s->value, anyRegisterRead(c));
+          } else {
             addRead(c, this, s->value, read
                     (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
-          } else {
-            unsigned logicalIndex = ::frameIndex
-              (c, s->index + c->localFootprint);
-
-            if (DebugReads) {
-              fprintf(stderr, "stack save read %p at %d of %d\n",
-                      s->value, logicalIndex,
-                      usableFrameSize(c) + c->parameterFootprint);
-            }
-
-            addRead(c, this, s->value, read
-                    (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
           }
         }
-
-        -- footprint;
-
-        if (footprint == 0) {
+        else if ((flags & (Compiler::TailJump | Compiler::TailCall)) == 0)
+        {
           unsigned logicalIndex = ::frameIndex
             (c, s->index + c->localFootprint);
 
-          assert(c, logicalIndex >= frameIndex);
+          if (DebugReads) {
+            fprintf(stderr, "stack save read %p at %d of %d\n",
+                    s->value, logicalIndex, totalFrameSize(c));
+          }
 
-          padding = logicalIndex - frameIndex;
-          padIndex = s->index + c->localFootprint;
+          addRead(c, this, s->value, read
+                  (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
         }
-
-        ++ frameIndex;
       }
 
+      -- footprint;
+
+      if (footprint == 0) {
+        unsigned logicalIndex = ::frameIndex
+          (c, s->index + c->localFootprint);
+
+        assert(c, logicalIndex >= frameIndex);
+
+        padding = logicalIndex - frameIndex;
+        padIndex = s->index + c->localFootprint;
+      }
+
+      ++ frameIndex;
+    }
+
+    if ((flags & (Compiler::TailJump | Compiler::TailCall)) == 0) {
       popIndex
-        = usableFrameSize(c)
-        + c->parameterFootprint
+        = c->alignedFrameSize
+        - c->arch->frameFooterSize()
         - (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
         - c->localFootprint;
 
@@ -2417,28 +2438,40 @@ class CallEvent: public Event {
   virtual void compile(Context* c) {
     UnaryOperation op;
 
-    if (flags & Compiler::TailJump) {
-      c->assembler->popFrame();
-
-      if (flags & Compiler::Aligned) {
-        op = AlignedJump;
+    if (flags & (Compiler::TailJump | Compiler::TailCall)) {
+      if (flags & Compiler::TailJump) {
+        if (flags & Compiler::Aligned) {
+          op = AlignedJump;
+        } else {
+          op = Jump;
+        }
       } else {
-        op = Jump;
+        if (flags & Compiler::Aligned) {
+          op = AlignedCall;
+        } else {
+          op = Call;
+        }
       }
-    } else if (flags & Compiler::TailCall) {
-      c->assembler->popFrame();
 
-      if (flags & Compiler::Aligned) {
-        op = AlignedCall;
-      } else {
-        op = Call;
-      }
+      assert(c, returnAddressSurrogate == 0
+             or returnAddressSurrogate->source->type(c) == RegisterOperand);
+      assert(c, framePointerSurrogate == 0
+             or framePointerSurrogate->source->type(c) == RegisterOperand);
+
+      int ras = (returnAddressSurrogate ? static_cast<RegisterSite*>
+                 (returnAddressSurrogate->source)->number : NoRegister);
+      int fps = (framePointerSurrogate ? static_cast<RegisterSite*>
+                 (framePointerSurrogate->source)->number : NoRegister);
+
+      int offset
+        = static_cast<int>(c->arch->argumentFootprint(c->parameterFootprint))
+        - static_cast<int>(c->arch->argumentFootprint(stackArgumentFootprint));
+
+      c->assembler->popFrameForTailCall(c->alignedFrameSize, offset, ras, fps);
+    } else if (flags & Compiler::Aligned) {
+      op = AlignedCall;
     } else {
-      if (flags & Compiler::Aligned) {
-        op = AlignedCall;
-      } else {
-        op = Call;
-      }
+      op = Call;
     }
 
     apply(c, op, BytesPerWord, address->source, 0);
@@ -2461,11 +2494,14 @@ class CallEvent: public Event {
   Value* address;
   TraceHandler* traceHandler;
   Value* result;
+  Value* returnAddressSurrogate;
+  Value* framePointerSurrogate;
   unsigned popIndex;
   unsigned padIndex;
   unsigned padding;
   unsigned flags;
   unsigned resultSize;
+  unsigned stackArgumentFootprint;
 };
 
 void
@@ -2503,8 +2539,8 @@ class ReturnEvent: public Event {
       popRead(c, this, r->value);
     }
     
-    c->assembler->popFrame();
-    c->assembler->apply(Return);
+    c->assembler->popFrameAndPopArgumentsAndReturn
+      (c->arch->argumentFootprint(c->parameterFootprint));
   }
 
   Value* value;
@@ -4875,7 +4911,7 @@ class MyCompiler: public Compiler {
     c.localFootprint = localFootprint;
     c.alignedFrameSize = alignedFrameSize;
 
-    unsigned frameResourceCount = usableFrameSize(&c) + parameterFootprint;
+    unsigned frameResourceCount = totalFrameSize(&c);
 
     c.frameResources = static_cast<FrameResource*>
       (c.zone->allocate(sizeof(FrameResource) * frameResourceCount));
@@ -4884,9 +4920,12 @@ class MyCompiler: public Compiler {
       new (c.frameResources + i) FrameResource;
     }
 
+    unsigned base = alignedFrameSize - c.arch->frameFooterSize();
+    c.frameResources[base + c.arch->returnAddressOffset()].reserved = true;
+    c.frameResources[base + c.arch->framePointerOffset()].reserved = true;
+
     // leave room for logical instruction -1
-    unsigned codeSize = sizeof(LogicalInstruction*)
-      * (logicalCodeLength + 1);
+    unsigned codeSize = sizeof(LogicalInstruction*) * (logicalCodeLength + 1);
     c.logicalCode = static_cast<LogicalInstruction**>
       (c.zone->allocate(codeSize));
     memset(c.logicalCode, 0, codeSize);

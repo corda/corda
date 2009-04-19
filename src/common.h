@@ -104,10 +104,17 @@ avg(unsigned a, unsigned b)
 }
 
 inline unsigned
+pad(unsigned n, unsigned alignment)
+{
+  return (n + (alignment - 1)) & ~(alignment - 1);
+}
+
+inline unsigned
 pad(unsigned n)
 {
-  return (n + (BytesPerWord - 1)) & ~(BytesPerWord - 1);
+  return pad(n, BytesPerWord);
 }
+
 
 inline unsigned
 ceiling(unsigned n, unsigned d)

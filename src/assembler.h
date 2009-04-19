@@ -264,6 +264,8 @@ class Assembler {
     virtual int thread() = 0;
     virtual int returnLow() = 0;
     virtual int returnHigh() = 0;
+    virtual int virtualCallClass() = 0;
+    virtual int virtualCallIndex() = 0;
 
     virtual bool condensedAddressing() = 0;
 
@@ -291,6 +293,8 @@ class Assembler {
     virtual unsigned frameHeaderSize() = 0;
     virtual unsigned frameReturnAddressSize() = 0;
     virtual unsigned frameFooterSize() = 0;
+    virtual unsigned returnAddressOffset() = 0;
+    virtual unsigned framePointerOffset() = 0;
     virtual void nextFrame(void** stack, void** base) = 0;
 
     virtual void plan
@@ -319,12 +323,16 @@ class Assembler {
 
   virtual Architecture* arch() = 0;
 
-  virtual void popReturnAddress(unsigned addressOffset) = 0;
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
   virtual void restoreFrame(unsigned stackOffset, unsigned baseOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
   virtual void popFrame() = 0;
+  virtual void popFrameForTailCall(unsigned footprint, int offset,
+                                   int returnAddressSurrogate,
+                                   int framePointerSurrogate) = 0;
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint)
+  = 0;
 
   virtual void apply(Operation op) = 0;
 

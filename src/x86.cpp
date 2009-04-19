@@ -39,6 +39,9 @@ enum {
 
 const unsigned FrameHeaderSize = 2;
 
+const unsigned StackAlignmentInBytes = 16;
+const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
+
 inline bool
 isInt8(intptr_t v)
 {
@@ -2022,6 +2025,14 @@ class MyArchitecture: public Assembler::Architecture {
     return (BytesPerWord == 4 ? rdx : NoRegister);
   }
 
+  virtual int virtualCallClass() {
+    return rax;
+  }
+
+  virtual int virtualCallIndex() {
+    return rdx;
+  }
+
   virtual bool condensedAddressing() {
     return true;
   }
@@ -2042,9 +2053,14 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned stackPadding(unsigned footprint) {
+    return max(footprint > argumentRegisterCount() ?
+               footprint - argumentRegisterCount() : 0,
+               StackAlignmentInWords);
+  }
+
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return footprint > argumentRegisterCount() ?
-      footprint - argumentRegisterCount() : 0;
+    return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
   }
 
   virtual unsigned argumentRegisterCount() {
@@ -2125,7 +2141,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
-    const unsigned alignment = 16 / BytesPerWord;
+    const unsigned alignment = StackAlignmentInBytes / BytesPerWord;
     return (ceiling(sizeInWords + FrameHeaderSize, alignment) * alignment)
       - FrameHeaderSize;
   }
@@ -2143,6 +2159,14 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFooterSize() {
+    return 0;
+  }
+
+  virtual unsigned returnAddressOffset() {
+    return 1;
+  }
+
+  virtual unsigned framePointerOffset() {
     return 0;
   }
 
@@ -2305,11 +2329,6 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
-  virtual void popReturnAddress(unsigned addressOffset) {
-    Memory addressDst(rbx, addressOffset);
-    popM(&c, BytesPerWord, &addressDst);
-  }
-
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) {
     Register stack(rsp);
     Memory stackDst(rbx, stackOffset);
@@ -2390,6 +2409,72 @@ class MyAssembler: public Assembler {
           BytesPerWord, RegisterOperand, &stack);
 
     popR(&c, BytesPerWord, &base);
+  }
+
+  virtual void popFrameForTailCall(unsigned footprint,
+                                   int offset,
+                                   int returnAddressSurrogate,
+                                   int framePointerSurrogate)
+  {
+    if (offset) {
+      Register tmp(c.client->acquireTemporary());
+      
+      Memory returnAddressSrc(rsp, (footprint + 1) * BytesPerWord);
+      moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
+    
+      Memory returnAddressDst(rsp, (footprint - offset + 1) * BytesPerWord);
+      moveRM(&c, BytesPerWord, &tmp, BytesPerWord, &returnAddressDst);
+
+      c.client->releaseTemporary(tmp.low);
+
+      Memory baseSrc(rbp, footprint * BytesPerWord);
+      Register base(rbp);
+      moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
+
+      Register stack(rsp);
+      Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
+      addCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack);
+
+      if (returnAddressSurrogate != NoRegister) {
+        assert(&c, offset > 0);
+
+        Register ras(returnAddressSurrogate);
+        Memory dst(rsp, offset * BytesPerWord);
+        moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
+      }
+
+      if (framePointerSurrogate != NoRegister) {
+        assert(&c, offset > 0);
+
+        Register fps(framePointerSurrogate);
+        Memory dst(rsp, (offset - 1) * BytesPerWord);
+        moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+      }
+    } else {
+      popFrame();
+    }    
+  }
+
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
+    popFrame();
+
+    assert(&c, argumentFootprint >= StackAlignmentInWords);
+    assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
+
+    if (argumentFootprint > StackAlignmentInWords) {
+      Register returnAddress(rcx);
+      popR(&c, BytesPerWord, &returnAddress);
+
+      Register stack(rsp);
+      Constant adjustment
+        (resolved(&c, (argumentFootprint - StackAlignmentInWords)
+                  * BytesPerWord));
+      addCR(&c, BytesPerWord, &adjustment, BytesPerWord, &stack);
+
+      jumpR(&c, BytesPerWord, &returnAddress);
+    } else {
+      return_(&c);
+    }
   }
 
   virtual void apply(Operation op) {
