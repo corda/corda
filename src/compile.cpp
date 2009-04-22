@@ -487,11 +487,11 @@ class TraceElementPromise: public Promise {
 
   virtual int64_t value() {
     assert(s, resolved());
-    return reinterpret_cast<uintptr_t>(trace->address);
+    return trace->address->value();
   }
 
   virtual bool resolved() {
-    return trace->address != 0;
+    return trace->address != 0 and trace->address->resolved();
   }
 
   System* s;
@@ -1943,7 +1943,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
       Compiler::Operand* result = c->stackCall
         (returnAddress,
          flags | Compiler::Aligned,
-         0,
+         trace,
          rSize,
          methodParameterFootprint(t, target));
 
@@ -1982,14 +1982,16 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
   }
 }
 
-void
+bool
 compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
 {
   unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
   Compiler::Operand* result = 0;
 
-  if (not emptyMethod(t, target)) {
+  if (emptyMethod(t, target)) {
+    tailCall = false;
+  } else {
     BootContext* bc = frame->context->bootContext;
     if (bc) {
       if (methodClass(t, target) == methodClass(t, frame->context->method)
@@ -2024,6 +2026,8 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
   if (rSize) {
     pushReturnValue(t, frame, methodReturnCode(t, target), result);
   }
+
+  return tailCall;
 }
 
 void
@@ -3157,7 +3161,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       tailCall = isTailCall(t, code, ip, context->method, target);
 
-      compileDirectInvoke(t, frame, target, tailCall);
+      tailCall = compileDirectInvoke(t, frame, target, tailCall);
     } break;
 
     case invokestatic: {
@@ -3170,7 +3174,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       tailCall = isTailCall(t, code, ip, context->method, target);
 
-      compileDirectInvoke(t, frame, target, tailCall);
+      tailCall = compileDirectInvoke(t, frame, target, tailCall);
     } break;
 
     case invokevirtual: {
@@ -3199,7 +3203,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Compiler::Operand* result = c->stackCall
         (c->memory(classOperand, offset, 0, 1),
-         tailCall ? Compiler::TailCall : 0,
+         tailCall ? Compiler::TailJump : 0,
          frame->trace(0, 0),
          rSize,
          parameterFootprint);
@@ -4594,11 +4598,9 @@ compileMethod2(MyThread* t, void* ip)
   } else {
     void* address = reinterpret_cast<void*>(methodAddress(t, target));
     uint8_t* updateIp = static_cast<uint8_t*>(ip);
-    if (callNodeFlags(t, node) & TraceElement::TailCall) {
-      updateIp -= t->arch->constantCallSize();
-    }
     
-    updateCall(t, Call, true, updateIp, address);
+    updateCall(t, (callNodeFlags(t, node) & TraceElement::TailCall)
+               ? Jump : Call, true, updateIp, address);
 
     return address;
   }

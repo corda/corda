@@ -282,8 +282,6 @@ class Assembler {
     virtual void updateCall(UnaryOperation op, bool assertAlignment,
                             void* returnAddress, void* newTarget) = 0;
 
-    virtual unsigned constantCallSize() = 0;
-
     virtual uintptr_t getConstant(const void* src) = 0;
     virtual void setConstant(void* dst, uintptr_t constant) = 0;
 
@@ -293,8 +291,8 @@ class Assembler {
     virtual unsigned frameHeaderSize() = 0;
     virtual unsigned frameReturnAddressSize() = 0;
     virtual unsigned frameFooterSize() = 0;
-    virtual unsigned returnAddressOffset() = 0;
-    virtual unsigned framePointerOffset() = 0;
+    virtual int returnAddressOffset() = 0;
+    virtual int framePointerOffset() = 0;
     virtual void nextFrame(void** stack, void** base) = 0;
 
     virtual void plan

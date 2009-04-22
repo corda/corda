@@ -674,6 +674,13 @@ alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 }
 
 void
+alignedJumpC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c);
+  jumpC(c, size, a);
+}
+
+void
 pushR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
@@ -1938,6 +1945,8 @@ populateTables(ArchitectureContext* c)
   uo[index(Jump, C)] = CAST1(jumpC);
   uo[index(Jump, M)] = CAST1(jumpM);
 
+  uo[index(AlignedJump, C)] = CAST1(alignedJumpC);
+
   uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
   uo[index(JumpIfNotEqual, C)] = CAST1(jumpIfNotEqualC);
   uo[index(JumpIfGreater, C)] = CAST1(jumpIfGreaterC);
@@ -2126,10 +2135,6 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual unsigned constantCallSize() {
-    return 5;
-  }
-
   virtual uintptr_t getConstant(const void* src) {
     uintptr_t v;
     memcpy(&v, src, BytesPerWord);
@@ -2162,12 +2167,12 @@ class MyArchitecture: public Assembler::Architecture {
     return 0;
   }
 
-  virtual unsigned returnAddressOffset() {
-    return 1;
+  virtual int returnAddressOffset() {
+    return 0;
   }
 
-  virtual unsigned framePointerOffset() {
-    return 0;
+  virtual int framePointerOffset() {
+    return -1;
   }
 
   virtual void nextFrame(void** stack, void** base) {
@@ -2427,12 +2432,13 @@ class MyAssembler: public Assembler {
 
       c.client->releaseTemporary(tmp.low);
 
-      Memory baseSrc(rbp, footprint * BytesPerWord);
+      Memory baseSrc(rsp, footprint * BytesPerWord);
       Register base(rbp);
       moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
 
       Register stack(rsp);
-      Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
+      Constant footprintConstant
+        (resolved(&c, (footprint - offset + 1) * BytesPerWord));
       addCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack);
 
       if (returnAddressSurrogate != NoRegister) {

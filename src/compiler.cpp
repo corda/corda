@@ -649,10 +649,8 @@ int
 frameIndex(Context* c, int localIndex)
 {
   assert(c, localIndex >= 0);
-  assert(c, localIndex < static_cast<int>
-         (c->parameterFootprint + c->localFootprint));
 
-  int index = c->alignedFrameSize + c->parameterFootprint - localIndex;
+  int index = c->alignedFrameSize + c->parameterFootprint - localIndex - 1;
 
   if (localIndex < static_cast<int>(c->parameterFootprint)) {
     index += c->arch->frameHeaderSize();
@@ -661,6 +659,7 @@ frameIndex(Context* c, int localIndex)
   }
 
   assert(c, index >= 0);
+  assert(c, static_cast<unsigned>(index) < totalFrameSize(c));
 
   return index;
 }
@@ -668,13 +667,29 @@ frameIndex(Context* c, int localIndex)
 unsigned
 frameIndexToOffset(Context* c, unsigned frameIndex)
 {
+  assert(c, frameIndex < totalFrameSize(c));
+
   return (frameIndex + c->arch->frameFooterSize()) * BytesPerWord;
 }
 
 unsigned
 offsetToFrameIndex(Context* c, unsigned offset)
 {
+  assert(c, static_cast<int>
+         ((offset / BytesPerWord) - c->arch->frameFooterSize()) >= 0);
+
+  assert(c, (offset / BytesPerWord) - c->arch->frameFooterSize()
+         < totalFrameSize(c));
+
   return (offset / BytesPerWord) - c->arch->frameFooterSize();
+}
+
+unsigned
+frameBase(Context* c)
+{
+  return c->alignedFrameSize - 1
+    - c->arch->frameFooterSize()
+    + c->arch->frameHeaderSize();
 }
 
 class FrameIterator {
@@ -2307,10 +2322,10 @@ class CallEvent: public Event {
     int returnAddressIndex = -1;
     int framePointerIndex = -1;
 
-    if (flags & (Compiler::TailJump | Compiler::TailCall)) {
+    if (flags & Compiler::TailJump) {
       assert(c, argumentCount == 0);
 
-      unsigned base = c->alignedFrameSize - c->arch->frameFooterSize();
+      int base = frameBase(c);
       returnAddressIndex = base + c->arch->returnAddressOffset();
       framePointerIndex = base + c->arch->framePointerOffset();
 
@@ -2387,9 +2402,7 @@ class CallEvent: public Event {
             addRead(c, this, s->value, read
                     (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
           }
-        }
-        else if ((flags & (Compiler::TailJump | Compiler::TailCall)) == 0)
-        {
+        } else if ((flags & Compiler::TailJump) == 0) {
           unsigned logicalIndex = ::frameIndex
             (c, s->index + c->localFootprint);
 
@@ -2405,7 +2418,7 @@ class CallEvent: public Event {
 
       -- footprint;
 
-      if (footprint == 0) {
+      if (footprint == 0 and (flags & Compiler::TailJump) == 0) {
         unsigned logicalIndex = ::frameIndex
           (c, s->index + c->localFootprint);
 
@@ -2418,7 +2431,7 @@ class CallEvent: public Event {
       ++ frameIndex;
     }
 
-    if ((flags & (Compiler::TailJump | Compiler::TailCall)) == 0) {
+    if ((flags & Compiler::TailJump) == 0) {
       popIndex
         = c->alignedFrameSize
         - c->arch->frameFooterSize()
@@ -2438,19 +2451,11 @@ class CallEvent: public Event {
   virtual void compile(Context* c) {
     UnaryOperation op;
 
-    if (flags & (Compiler::TailJump | Compiler::TailCall)) {
-      if (flags & Compiler::TailJump) {
-        if (flags & Compiler::Aligned) {
-          op = AlignedJump;
-        } else {
-          op = Jump;
-        }
+    if (flags & Compiler::TailJump) {
+      if (flags & Compiler::Aligned) {
+        op = AlignedJump;
       } else {
-        if (flags & Compiler::Aligned) {
-          op = AlignedCall;
-        } else {
-          op = Call;
-        }
+        op = Jump;
       }
 
       assert(c, returnAddressSurrogate == 0
@@ -2464,8 +2469,8 @@ class CallEvent: public Event {
                  (framePointerSurrogate->source)->number : NoRegister);
 
       int offset
-        = static_cast<int>(c->arch->argumentFootprint(c->parameterFootprint))
-        - static_cast<int>(c->arch->argumentFootprint(stackArgumentFootprint));
+        = static_cast<int>(c->arch->argumentFootprint(stackArgumentFootprint))
+        - static_cast<int>(c->arch->argumentFootprint(c->parameterFootprint));
 
       c->assembler->popFrameForTailCall(c->alignedFrameSize, offset, ras, fps);
     } else if (flags & Compiler::Aligned) {
@@ -4920,7 +4925,7 @@ class MyCompiler: public Compiler {
       new (c.frameResources + i) FrameResource;
     }
 
-    unsigned base = alignedFrameSize - c.arch->frameFooterSize();
+    unsigned base = frameBase(&c);
     c.frameResources[base + c.arch->returnAddressOffset()].reserved = true;
     c.frameResources[base + c.arch->framePointerOffset()].reserved = true;
 
