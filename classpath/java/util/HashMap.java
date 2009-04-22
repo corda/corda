@@ -107,7 +107,7 @@ public class HashMap<K, V> implements Map<K, V> {
     array = newArray;
   }
 
-  private Cell<K, V> find(K key) {
+  private Cell<K, V> find(Object key) {
     if (array != null) {
       int index = helper.hash(key) & (array.length - 1);
       for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
@@ -158,20 +158,29 @@ public class HashMap<K, V> implements Map<K, V> {
     return c;
   }
 
-  public boolean containsKey(K key) {
+  public boolean containsKey(Object key) {
     return find(key) != null;
   }
 
-  public boolean containsValue(V value) {
-    return values().contains(value);
+  public boolean containsValue(Object value) {
+  	if (array != null) {
+      int index = array.length - 1;
+      for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
+        if (helper.equal(value, c.getValue())) {
+          return true;
+        }
+      }
+    }  
+	
+		return false;
   }
 
-  public V get(K key) {
+  public V get(Object key) {
     Cell<K, V> c = find(key);
     return (c == null ? null : c.getValue());
   }
 
-  public Cell<K, V> removeCell(K key) {
+  public Cell<K, V> removeCell(Object key) {
     Cell<K, V> old = null;
     if (array != null) {
       int index = helper.hash(key) & (array.length - 1);
@@ -213,8 +222,8 @@ public class HashMap<K, V> implements Map<K, V> {
     }
   }
 
-  public V remove(K key) {
-    Cell<K, V> c = removeCell(key);
+  public V remove(Object key) {
+    Cell<K, V> c = removeCell((K)key);
     return (c == null ? null : c.getValue());
   }
 
@@ -314,8 +323,8 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.isEmpty();
     }
 
-    public boolean contains(Entry<K, V> e) {
-      return containsKey(e.getKey());
+    public boolean contains(Object o) {
+      return (o instanceof Entry<?,?>) ? containsKey(((Entry<?,?>)o).getKey()) : false;
     }
 
     public boolean add(Entry<K, V> e) {
@@ -354,7 +363,7 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.isEmpty();
     }
 
-    public boolean contains(K key) {
+    public boolean contains(Object key) {
       return containsKey(key);
     }
 
@@ -368,7 +377,7 @@ public class HashMap<K, V> implements Map<K, V> {
       return change;
     }
 
-    public boolean remove(K key) {
+    public boolean remove(Object key) {
       return removeCell(key) != null;
     }
 
@@ -395,7 +404,7 @@ public class HashMap<K, V> implements Map<K, V> {
       return HashMap.this.isEmpty();
     }
 
-    public boolean contains(V value) {
+    public boolean contains(Object value) {
       return containsValue(value);
     }
 
