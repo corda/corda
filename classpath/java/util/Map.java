@@ -15,15 +15,9 @@ public interface Map<K, V> {
 
   public int size();
 
-<<<<<<< HEAD:classpath/java/util/Map.java
   public boolean containsKey(Object obj);
 
   public boolean containsValue(Object obj);
-=======
-  public boolean containsKey(Object key);
-
-  public boolean containsValue(Object value);
->>>>>>> af784f4cbc18911e29127bcda8110de9bb56d654:classpath/java/util/Map.java
 
   public V get(Object key);
 
