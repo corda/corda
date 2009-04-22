@@ -15,17 +15,17 @@ public interface Map<K, V> {
 
   public int size();
 
-  public boolean containsKey(Object key);
+  public boolean containsKey(Object obj);
 
-  public boolean containsValue(Object value);
+  public boolean containsValue(Object obj);
 
-  public V get(K key);
+  public V get(Object key);
 
   public V put(K key, V value);
 
   public void putAll(Map<? extends K,? extends V> elts);
 
-  public V remove(K key);
+  public V remove(Object key);
 
   public void clear();
 

@@ -15,7 +15,7 @@ public interface Collection<T> extends Iterable<T> {
 
   public boolean isEmpty();
 
-  public boolean contains(T element);
+  public boolean contains(Object element);
 
   public boolean add(T element);
 
