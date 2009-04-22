@@ -337,6 +337,10 @@ public class HashMap<K, V> implements Map<K, V> {
       return change;
     }
 
+		public boolean remove(Object o) {
+			return (o instanceof Entry<?,?>) ? remove((Entry<?,?>)o) : false;
+		}
+
     public boolean remove(Entry<K, V> e) {
       return removeCell(e.getKey()) != null;
     }
@@ -416,7 +420,7 @@ public class HashMap<K, V> implements Map<K, V> {
       throw new UnsupportedOperationException();      
     }
 
-    public boolean remove(V value) {
+    public boolean remove(Object value) {
       throw new UnsupportedOperationException();
     }
 

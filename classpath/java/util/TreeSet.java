@@ -60,7 +60,7 @@ public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
     }
   }
     
-  public boolean remove(T value) {
+  public boolean remove(Object value) {
     PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
     if (p.fresh()) {
       return false;
@@ -85,7 +85,7 @@ public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
     return size == 0;
   }
 
-  public boolean contains(T value) {
+  public boolean contains(Object value) {
     return !set.find(new Cell(value, null)).fresh();
   }
 

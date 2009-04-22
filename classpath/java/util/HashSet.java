@@ -36,7 +36,7 @@ public class HashSet<T> implements Set<T> {
     return map.isEmpty();
   }
 
-  public boolean contains(T element) {
+  public boolean contains(Object element) {
     return map.containsKey(element);
   }
 
@@ -50,7 +50,7 @@ public class HashSet<T> implements Set<T> {
     return change;
   }
 
-  public boolean remove(T element) {
+  public boolean remove(Object element) {
     return map.remove(element) != Value;
   }
 
