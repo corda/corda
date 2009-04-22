@@ -143,10 +143,10 @@ public class Collections {
     public void clear() {
       synchronized (lock) { map.clear(); }
     }
-    public boolean containsKey(K key) {
+    public boolean containsKey(Object key) {
       synchronized (lock) { return map.containsKey(key); }
     }
-    public boolean containsValue(V value) {
+    public boolean containsValue(Object value) {
       synchronized (lock) { return map.containsValue(value); }
     }
     public Set<java.util.Map.Entry<K, V>> entrySet() {

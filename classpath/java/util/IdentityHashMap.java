@@ -29,11 +29,11 @@ public class IdentityHashMap<K, V> implements Map<K, V> {
     return map.size();
   }
 
-  public boolean containsKey(K key) {
+  public boolean containsKey(Object key) {
     return map.containsKey(key);
   }
 
-  public boolean containsValue(V value) {
+  public boolean containsValue(Object value) {
     return map.containsValue(value);
   }
 
