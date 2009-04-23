@@ -48,7 +48,7 @@ public class Hashtable<K, V> implements Map<K, V> {
     return map.containsValue(value);
   }
 
-  public synchronized V get(K key) {
+  public synchronized V get(Object key) {
     return map.get(key);
   }
 
@@ -60,7 +60,7 @@ public class Hashtable<K, V> implements Map<K, V> {
     map.putAll(elts);
   }
 
-  public synchronized V remove(K key) {
+  public synchronized V remove(Object key) {
     return map.remove(key);
   }
 

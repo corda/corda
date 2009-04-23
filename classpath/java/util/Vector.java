@@ -29,7 +29,7 @@ public class Vector<T> implements List<T> {
     return list.size();
   }
 
-  public synchronized boolean contains(T element) {
+  public synchronized boolean contains(Object element) {
     return list.contains(element);
   }
 
@@ -85,7 +85,7 @@ public class Vector<T> implements List<T> {
     remove(index);
   }
 
-  public synchronized boolean remove(T element) {
+  public synchronized boolean remove(Object element) {
     return list.remove(element);
   }
 

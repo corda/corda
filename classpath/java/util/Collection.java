@@ -21,7 +21,7 @@ public interface Collection<T> extends Iterable<T> {
 
   public boolean addAll(Collection<? extends T> collection);
 
-  public boolean remove(T element);
+  public boolean remove(Object element);
 
   public <S> S[] toArray(S[] array);
 

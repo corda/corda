@@ -64,7 +64,7 @@ public class Arrays {
         throw new UnsupportedOperationException();
       }
 
-      public boolean contains(T element) {
+      public boolean contains(Object element) {
         for (int i = 0; i < array.length; ++i) {
           if (equal(element, array[i])) {
             return true;
@@ -93,7 +93,7 @@ public class Arrays {
         throw new UnsupportedOperationException();        
       }
 
-      public boolean remove(T element) {
+      public boolean remove(Object element) {
         throw new UnsupportedOperationException();
       }
 

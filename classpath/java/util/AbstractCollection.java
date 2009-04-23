@@ -33,7 +33,7 @@ public abstract class AbstractCollection<T> implements Collection<T> {
                                             + this.getClass().getName());
   }
 
-  public boolean contains(T element) {
+  public boolean contains(Object element) {
     if (element != null) {
       for (Iterator<T> iter = iterator(); iter.hasNext();) {
         if (element.equals(iter.next())) {
@@ -55,7 +55,7 @@ public abstract class AbstractCollection<T> implements Collection<T> {
     return size() == 0;
   }
 
-  public boolean remove(T element) {
+  public boolean remove(Object element) {
     throw new UnsupportedOperationException("remove(T) in "
                                             + this.getClass().getName());
   }
