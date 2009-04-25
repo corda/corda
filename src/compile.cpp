@@ -4836,16 +4836,17 @@ invokeNative2(MyThread* t, object method)
     default: abort(t);
     }
 
-    if (t->arch->argumentFootprint(footprint)
+    unsigned parameterFootprint = methodParameterFootprint(t, method);
+    if (t->arch->argumentFootprint(parameterFootprint)
         > t->arch->stackAlignmentInWords())
     {
       t->stack = static_cast<uintptr_t*>(t->stack)
-        + (t->arch->argumentFootprint(footprint)
+        + (t->arch->argumentFootprint(parameterFootprint)
            - t->arch->stackAlignmentInWords());
     }
 
     t->stack = static_cast<uintptr_t*>(t->stack)
-      - t->arch->frameReturnAddressSize();
+      + t->arch->frameReturnAddressSize();
   } else {
     result = 0;
   }
@@ -5139,7 +5140,8 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
       (t, reinterpret_cast<void*>(methodAddress(t, method)),
        arguments->array + arguments->position,
        count * BytesPerWord,
-       t->arch->alignFrameSize(count) * BytesPerWord,
+       t->arch->alignFrameSize(count + t->arch->frameFootprint(0))
+       * BytesPerWord,
        returnType);
   }
 
