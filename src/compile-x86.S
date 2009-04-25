@@ -129,11 +129,10 @@ LOCAL(test):
    // call function
    call   *12(%ebp)
    
-   // restore stack pointer
-   movl   %ebp,%esp
-   
-   // restore callee-saved registers
-   subl   $16,%esp
+   // restore stack pointer and callee-saved registers
+   movl   %ebp,%ecx
+   subl   $16,%ecx
+   movl   %ecx,%esp
 
    movl   0(%esp),%ebx
    movl   4(%esp),%esi
