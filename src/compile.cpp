@@ -4641,7 +4641,9 @@ compileVirtualMethod2(MyThread* t, object class_, unsigned index)
     return 0;
   } else {
     void* address = reinterpret_cast<void*>(methodAddress(t, target));
-    if (address != reinterpret_cast<void*>(nativeThunk(t))) {
+    if (methodFlags(t, target) & ACC_NATIVE) {
+      t->trace->nativeMethod = target;
+    } else {
       classVtable(t, class_, methodOffset(t, target)) = address;
     }
     return address;
