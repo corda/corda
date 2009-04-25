@@ -378,7 +378,7 @@ alignedFrameSize(MyThread* t, object method)
     (localSize(t, method)
      - methodParameterFootprint(t, method)
      + codeMaxStack(t, methodCode(t, method))
-     + t->arch->argumentFootprint(MaxNativeCallFootprint));
+     + t->arch->frameFootprint(MaxNativeCallFootprint));
 }
 
 unsigned
@@ -4835,6 +4835,17 @@ invokeNative2(MyThread* t, object method)
 
     default: abort(t);
     }
+
+    if (t->arch->argumentFootprint(footprint)
+        > t->arch->stackAlignmentInWords())
+    {
+      t->stack = static_cast<uintptr_t*>(t->stack)
+        + (t->arch->argumentFootprint(footprint)
+           - t->arch->stackAlignmentInWords());
+    }
+
+    t->stack = static_cast<uintptr_t*>(t->stack)
+      - t->arch->frameReturnAddressSize();
   } else {
     result = 0;
   }
@@ -6119,9 +6130,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     Assembler::Constant proc(&(nativeContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
   
-    a->popFrame();
-
-    a->apply(Return);
+    a->popFrameAndUpdateStackAndReturn(difference(&(t->stack), t));
 
     a->endBlock(false)->resolve(0, 0);
   }

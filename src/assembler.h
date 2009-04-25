@@ -273,9 +273,12 @@ class Assembler {
 
     virtual bool reserved(int register_) = 0;
 
+    virtual unsigned frameFootprint(unsigned footprint) = 0;
     virtual unsigned argumentFootprint(unsigned footprint) = 0;
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
+
+    virtual unsigned stackAlignmentInWords() = 0;
 
     virtual bool matchCall(void* returnAddress, void* target) = 0;
 
@@ -322,7 +325,6 @@ class Assembler {
   virtual Architecture* arch() = 0;
 
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
-  virtual void restoreFrame(unsigned stackOffset, unsigned baseOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
   virtual void popFrame() = 0;
@@ -330,6 +332,8 @@ class Assembler {
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate) = 0;
   virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint)
+  = 0;
+  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
   = 0;
 
   virtual void apply(Operation op) = 0;

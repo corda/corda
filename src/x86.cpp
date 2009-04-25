@@ -2062,7 +2062,7 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual unsigned stackPadding(unsigned footprint) {
+  virtual unsigned frameFootprint(unsigned footprint) {
     return max(footprint > argumentRegisterCount() ?
                footprint - argumentRegisterCount() : 0,
                StackAlignmentInWords);
@@ -2095,6 +2095,10 @@ class MyArchitecture: public Assembler::Architecture {
     default:
       abort(&c);
     }
+  }
+
+  virtual unsigned stackAlignmentInWords() {
+    return StackAlignmentInWords;
   }
 
   virtual bool matchCall(void* returnAddress, void* target) {
@@ -2346,18 +2350,6 @@ class MyAssembler: public Assembler {
           BytesPerWord, MemoryOperand, &baseDst);
   }
 
-  virtual void restoreFrame(unsigned stackOffset, unsigned baseOffset) {
-    Register stack(rsp);
-    Memory stackDst(rbx, stackOffset);
-    apply(Move, BytesPerWord, MemoryOperand, &stackDst,
-          BytesPerWord, RegisterOperand, &stack);
-
-    Register base(rbp);
-    Memory baseDst(rbx, baseOffset);
-    apply(Move, BytesPerWord, MemoryOperand, &baseDst,
-          BytesPerWord, RegisterOperand, &base);
-  }
-
   virtual void pushFrame(unsigned argumentCount, ...) {
     struct {
       unsigned size;
@@ -2481,6 +2473,20 @@ class MyAssembler: public Assembler {
     } else {
       return_(&c);
     }
+  }
+
+  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  {
+    popFrame();
+
+    Register returnAddress(rcx);
+    popR(&c, BytesPerWord, &returnAddress);
+
+    Register stack(rsp);
+    Memory stackSrc(rbx, stackOffsetFromThread);
+    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
+
+    jumpR(&c, BytesPerWord, &returnAddress);
   }
 
   virtual void apply(Operation op) {

@@ -65,6 +65,7 @@ inline int sth(int rs, int ra, int i) { return D(44, rs, ra, i); }
 inline int sthx(int rs, int ra, int rb) { return X(31, rs, ra, rb, 407, 0); }
 inline int stw(int rs, int ra, int i) { return D(36, rs, ra, i); }
 inline int stwu(int rs, int ra, int i) { return D(37, rs, ra, i); }
+inline int stwux(int rs, int ra, int i) { return X(31, rs, ra, rb, 183, 0); }
 inline int stwx(int rs, int ra, int rb) { return X(31, rs, ra, rb, 151, 0); }
 inline int add(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 266, 0); }
 inline int addc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 10, 0); }
@@ -907,9 +908,15 @@ moveAndUpdateRM(Context* c, unsigned srcSize UNUSED, Assembler::Register* src,
 {
   assert(c, srcSize == BytesPerWord);
   assert(c, dstSize == BytesPerWord);
-  assert(c, dst->index == NoRegister);
 
-  issue(c, stwu(src->low, dst->base, dst->offset));
+  if (dst->index == NoRegister) {
+    issue(c, stwu(src->low, dst->base, dst->offset));
+  } else {
+    assert(c, dst->offset == 0);
+    assert(c, dst->scale == 1);
+    
+    issue(c, stwux(src->low, dst->base, dst->index));
+  }
 }
 
 void
@@ -2030,6 +2037,26 @@ class MyAssembler: public Assembler {
                       * BytesPerWord);
       moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
     }
+
+    return_(&c);
+  }
+
+  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffset) {
+    popFrame();
+
+    Register tmp1(0);
+    Memory stackSrc(StackRegister, 0);
+    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp1);
+
+    Register tmp2(arch_->returnLow());
+    Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
+    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp2);
+
+    Register stack(StackRegister);
+    subR(&c, BytesPerWord, &tmp2, &stack, &tmp2);
+
+    Memory stackDst(StackRegister, 0, tmp2.low);
+    moveAndUpdateRM(&c, BytesPerWord, &tmp1, BytesPerWord, &stackDst);
 
     return_(&c);
   }
