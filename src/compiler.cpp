@@ -2486,6 +2486,20 @@ class CallEvent: public Event {
                                 padIndex, padding);
     }
 
+    if ((flags & Compiler::TailJump) == 0) {
+      unsigned footprint = c->arch->argumentFootprint(stackArgumentFootprint);
+      if (footprint > c->arch->stackAlignmentInWords()) {
+        Assembler::Register stack(c->arch->stack());
+        ResolvedPromise adjustmentPromise
+          ((footprint - c->arch->stackAlignmentInWords()) * BytesPerWord);
+        Assembler::Constant adjustmentConstant(&adjustmentPromise);
+        c->assembler->apply
+          (Subtract, BytesPerWord, ConstantOperand, &adjustmentConstant,
+           BytesPerWord, RegisterOperand, &stack,
+           BytesPerWord, RegisterOperand, &stack);
+      }
+    }
+
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
 
     if (resultSize and live(result)) {
