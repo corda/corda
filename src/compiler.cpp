@@ -1089,7 +1089,11 @@ FrameResource::thaw(Context* c, Value* v)
 
 class Target {
  public:
-  static const unsigned Penalty = 10;
+  static const unsigned MinimumRegisterCost = 0;
+  static const unsigned MinimumFrameCost = 1;
+  static const unsigned StealPenalty = 2;
+  static const unsigned StealUniquePenalty = 4;
+  static const unsigned LowRegisterPenalty = 10;
   static const unsigned Impossible = 20;
 
   Target(): cost(Impossible) { }
@@ -1118,9 +1122,9 @@ resourceCost(Context* c UNUSED, Value* v, Resource* r)
     if (v and buddies(r->value, v)) {
       return 0;
     } else if (hasMoreThanOneSite(r->value)) {
-      return 2;
+      return Target::StealPenalty;
     } else {
-      return 4;
+      return Target::StealUniquePenalty;
     }
   } else {
     return 0;
@@ -1135,7 +1139,7 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
   for (int i = c->arch->registerCount() - 1; i >= 0; --i) {
     if ((1 << i) & mask) {
       RegisterResource* r = c->registerResources + i;
-      unsigned myCost = resourceCost(c, v, r);
+      unsigned myCost = resourceCost(c, v, r) + Target::MinimumRegisterCost;
       if ((static_cast<uint32_t>(1) << i) == mask) {
         *cost = myCost;
         return i;
@@ -1161,7 +1165,8 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask)
 unsigned
 frameCost(Context* c, Value* v, int frameIndex)
 {
-  return resourceCost(c, v, c->frameResources + frameIndex) + 1;
+  return resourceCost(c, v, c->frameResources + frameIndex)
+    + Target::MinimumFrameCost;
 }
 
 Target
@@ -1173,7 +1178,7 @@ pickFrameTarget(Context* c, Value* v)
   do {
     if (p->home >= 0) {
       Target mine(p->home, MemoryOperand, frameCost(c, v, p->home));
-      if (mine.cost == 1) {
+      if (mine.cost == Target::MinimumFrameCost) {
         return mine;
       } else if (mine.cost < best.cost) {
         best = mine;
@@ -1193,7 +1198,7 @@ pickAnyFrameTarget(Context* c, Value* v)
   unsigned count = totalFrameSize(c);
   for (unsigned i = 0; i < count; ++i) {
     Target mine(i, MemoryOperand, frameCost(c, v, i));
-    if (mine.cost == 1) {
+    if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
@@ -1212,7 +1217,7 @@ pickTarget(Context* c, Value* value, const SiteMask& mask,
 
     mine.cost += registerPenalty;
 
-    if (mine.cost == 0) {
+    if (mine.cost == Target::MinimumRegisterCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
@@ -1222,7 +1227,7 @@ pickTarget(Context* c, Value* value, const SiteMask& mask,
   if ((mask.typeMask & (1 << MemoryOperand)) && mask.frameIndex >= 0) {
     Target mine(mask.frameIndex, MemoryOperand,
                 frameCost(c, value, mask.frameIndex));
-    if (mine.cost == 0) {
+    if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
@@ -1237,7 +1242,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
            unsigned registerReserveCount)
 {
   unsigned registerPenalty = (c->availableRegisterCount > registerReserveCount
-                              ? 0 : Target::Penalty);
+                              ? 0 : Target::LowRegisterPenalty);
 
   SiteMask mask;
   read->intersect(&mask);
@@ -1250,8 +1255,8 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     if (r) {
       SiteMask intersection = mask;
       if (r->intersect(&intersection)) {
-        best = pickTarget(c, read->value, mask, registerPenalty, best);
-        if (best.cost == 0) {
+        best = pickTarget(c, read->value, intersection, registerPenalty, best);
+        if (best.cost <= Target::MinimumFrameCost) {
           return best;
         }
       }
@@ -1259,7 +1264,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
   }
   
   best = pickTarget(c, read->value, mask, registerPenalty, best);
-  if (best.cost == 0) {
+  if (best.cost <= Target::MinimumFrameCost) {
     return best;
   }
 
@@ -1271,7 +1276,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
 
     mine.cost += registerPenalty;
 
-    if (mine.cost == 0) {
+    if (mine.cost == Target::MinimumRegisterCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
@@ -1279,14 +1284,16 @@ pickTarget(Context* c, Read* read, bool intersectRead,
   }
 
   { Target mine = pickFrameTarget(c, read->value);
-    if (mine.cost == 0) {
+    if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
     }
   }
 
-  if (best.cost > 3 and c->availableRegisterCount == 0) {
+  if (best.cost >= Target::StealUniquePenalty
+      and c->availableRegisterCount == 0)
+  {
     // there are no free registers left, so moving from memory to
     // memory isn't an option - try harder to find an available frame
     // site:
