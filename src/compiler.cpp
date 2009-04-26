@@ -620,6 +620,8 @@ class Event {
 
   virtual bool isBranch() { return false; }
 
+  virtual bool allTailCalls() { return false; }
+
   Event* next;
   Stack* stackBefore;
   Local* localsBefore;
@@ -2510,6 +2512,10 @@ class CallEvent: public Event {
     }
   }
 
+  virtual bool allTailCalls() {
+    return (flags & Compiler::TailJump) != 0;
+  }
+
   Value* address;
   TraceHandler* traceHandler;
   Value* result;
@@ -2535,6 +2541,15 @@ appendCall(Context* c, Value* address, unsigned flags,
                    stackArgumentFootprint));
 }
 
+bool
+followsOnlyTailCalls(Event* event)
+{
+  for (Link* p = event->predecessors; p; p = p->nextPredecessor) {
+    if (not p->predecessor->allTailCalls()) return false;
+  }
+  return true;
+}
+
 class ReturnEvent: public Event {
  public:
   ReturnEvent(Context* c, unsigned size, Value* value):
@@ -2558,8 +2573,10 @@ class ReturnEvent: public Event {
       popRead(c, this, r->value);
     }
     
-    c->assembler->popFrameAndPopArgumentsAndReturn
-      (c->arch->argumentFootprint(c->parameterFootprint));
+    if (not followsOnlyTailCalls(this)) {
+      c->assembler->popFrameAndPopArgumentsAndReturn
+        (c->arch->argumentFootprint(c->parameterFootprint));
+    }
   }
 
   Value* value;
@@ -3738,6 +3755,10 @@ class BranchEvent: public Event {
   }
 
   virtual bool isBranch() { return true; }
+
+  virtual bool allTailCalls() {
+    return type == Jump and followsOnlyTailCalls(this);
+  }
 
   UnaryOperation type;
   Value* address;

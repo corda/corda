@@ -2166,25 +2166,47 @@ needsReturnBarrier(MyThread* t, object method)
 }
 
 bool
+returnsNext(MyThread* t, object code, unsigned ip)
+{
+  switch (codeBody(t, code, ip)) {
+  case return_:
+  case areturn:
+  case ireturn:
+  case freturn:
+  case lreturn:
+  case dreturn:
+    return true;
+
+  case goto_: {
+    uint32_t offset = codeReadInt16(t, code, ++ip);
+    uint32_t newIp = (ip - 3) + offset;
+    assert(t, newIp < codeLength(t, code));
+
+    return returnsNext(t, code, newIp);
+  }
+
+  case goto_w: {
+    uint32_t offset = codeReadInt32(t, code, ++ip);
+    uint32_t newIp = (ip - 5) + offset;
+    assert(t, newIp < codeLength(t, code));
+    
+    return returnsNext(t, code, newIp);
+  }
+
+  default:
+    return false;
+  }
+}
+
+bool
 isTailCall(MyThread* t, object code, unsigned ip, object caller, object callee)
 {
-  if (((methodFlags(t, caller) & ACC_SYNCHRONIZED) == 0)
-      and (not inTryBlock(t, code, ip - 1))
-      and (not needsReturnBarrier(t, caller))
-      and (methodReturnCode(t, caller) == VoidField
-           or methodReturnCode(t, caller) == methodReturnCode(t, callee)))
-  {
-    switch (codeBody(t, code, ip)) {
-    case return_:
-    case areturn:
-    case ireturn:
-    case freturn:
-    case lreturn:
-    case dreturn:
-      return true;
-    }
-  }
-  return false;
+  return (((methodFlags(t, caller) & ACC_SYNCHRONIZED) == 0)
+          and (not inTryBlock(t, code, ip - 1))
+          and (not needsReturnBarrier(t, caller))
+          and (methodReturnCode(t, caller) == VoidField
+               or methodReturnCode(t, caller) == methodReturnCode(t, callee))
+          and returnsNext(t, code, ip));
 }
 
 void
@@ -2209,7 +2231,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
   Frame* frame = &myFrame;
   Compiler* c = frame->c;
   Context* context = frame->context;
-  bool tailCall = false;
 
   object code = methodCode(t, context->method);
   PROTECT(t, code);
@@ -2408,10 +2429,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case areturn: {
       Compiler::Operand* value = frame->popObject();
-      if (not tailCall) {
-        handleExit(t, frame);
-        c->return_(BytesPerWord, value);
-      }
+      handleExit(t, frame);
+      c->return_(BytesPerWord, value);
     } return;
 
     case arraylength: {
@@ -3159,9 +3178,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
-      tailCall = isTailCall(t, code, ip, context->method, target);
+      bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-      tailCall = compileDirectInvoke(t, frame, target, tailCall);
+      compileDirectInvoke(t, frame, target, tailCall);
     } break;
 
     case invokestatic: {
@@ -3172,9 +3191,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, methodFlags(t, target) & ACC_STATIC);
 
-      tailCall = isTailCall(t, code, ip, context->method, target);
+      bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-      tailCall = compileDirectInvoke(t, frame, target, tailCall);
+      compileDirectInvoke(t, frame, target, tailCall);
     } break;
 
     case invokevirtual: {
@@ -3193,7 +3212,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-      tailCall = isTailCall(t, code, ip, context->method, target);
+      bool tailCall = isTailCall(t, code, ip, context->method, target);
 
       Compiler::Operand* classOperand = c->and_
         (BytesPerWord, c->constant(PointerMask),
@@ -3232,10 +3251,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case ireturn:
     case freturn: {
       Compiler::Operand* value = frame->popInt();
-      if (not tailCall) {
-        handleExit(t, frame);
-        c->return_(4, value);
-      }
+      handleExit(t, frame);
+      c->return_(4, value);
     } return;
 
     case ishl: {
@@ -3529,10 +3546,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case lreturn:
     case dreturn: {
       Compiler::Operand* value = frame->popLong();
-      if (not tailCall) {
-        handleExit(t, frame);
-        c->return_(8, value);
-      }
+      handleExit(t, frame);
+      c->return_(8, value);
     } return;
 
     case lshl: {
@@ -3827,14 +3842,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       return;
 
     case return_:
-      if (not tailCall) {
-        if (needsReturnBarrier(t, context->method)) {
-          c->storeStoreBarrier();
-        }
-
-        handleExit(t, frame);
-        c->return_(0, 0);
+      if (needsReturnBarrier(t, context->method)) {
+        c->storeStoreBarrier();
       }
+
+      handleExit(t, frame);
+      c->return_(0, 0);
       return;
 
     case sipush:
