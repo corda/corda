@@ -116,6 +116,7 @@ class Compiler {
   virtual void je(Operand* address) = 0;
   virtual void jne(Operand* address) = 0;
   virtual void jmp(Operand* address) = 0;
+  virtual void exit(Operand* address) = 0;
   virtual Operand* add(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* sub(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* mul(unsigned size, Operand* a, Operand* b) = 0;

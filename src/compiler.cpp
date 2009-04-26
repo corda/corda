@@ -620,7 +620,7 @@ class Event {
 
   virtual bool isBranch() { return false; }
 
-  virtual bool allTailCalls() { return false; }
+  virtual bool allExits() { return false; }
 
   Event* next;
   Stack* stackBefore;
@@ -2535,7 +2535,7 @@ class CallEvent: public Event {
     }
   }
 
-  virtual bool allTailCalls() {
+  virtual bool allExits() {
     return (flags & Compiler::TailJump) != 0;
   }
 
@@ -2565,10 +2565,10 @@ appendCall(Context* c, Value* address, unsigned flags,
 }
 
 bool
-followsOnlyTailCalls(Event* event)
+unreachable(Event* event)
 {
   for (Link* p = event->predecessors; p; p = p->nextPredecessor) {
-    if (not p->predecessor->allTailCalls()) return false;
+    if (not p->predecessor->allExits()) return false;
   }
   return true;
 }
@@ -2596,7 +2596,7 @@ class ReturnEvent: public Event {
       popRead(c, this, r->value);
     }
     
-    if (not followsOnlyTailCalls(this)) {
+    if (not unreachable(this)) {
       c->assembler->popFrameAndPopArgumentsAndReturn
         (c->arch->argumentFootprint(c->parameterFootprint));
     }
@@ -3692,8 +3692,8 @@ appendMemory(Context* c, Value* base, int displacement, Value* index,
 
 class BranchEvent: public Event {
  public:
-  BranchEvent(Context* c, UnaryOperation type, Value* address):
-    Event(c), type(type), address(address)
+  BranchEvent(Context* c, UnaryOperation type, Value* address, bool exit):
+    Event(c), type(type), address(address), exit(exit)
   {
     address->addPredecessor(c, this);
 
@@ -3779,19 +3779,21 @@ class BranchEvent: public Event {
 
   virtual bool isBranch() { return true; }
 
-  virtual bool allTailCalls() {
-    return type == Jump and followsOnlyTailCalls(this);
+  virtual bool allExits() {
+    return type == Jump and (exit or unreachable(this));
   }
 
   UnaryOperation type;
   Value* address;
+  bool exit;
 };
 
 void
-appendBranch(Context* c, UnaryOperation type, Value* address)
+appendBranch(Context* c, UnaryOperation type, Value* address,
+             bool exit = false)
 {
   append(c, new (c->zone->allocate(sizeof(BranchEvent)))
-         BranchEvent(c, type, address));
+         BranchEvent(c, type, address, exit));
 }
 
 class BoundsCheckEvent: public Event {
@@ -5463,6 +5465,10 @@ class MyCompiler: public Compiler {
 
   virtual void jmp(Operand* address) {
     appendBranch(&c, Jump, static_cast<Value*>(address));
+  }
+
+  virtual void exit(Operand* address) {
+    appendBranch(&c, Jump, static_cast<Value*>(address), true);
   }
 
   virtual Operand* add(unsigned size, Operand* a, Operand* b) {

@@ -1952,9 +1952,9 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
                          difference(&(t->tailAddress), t)));
 
       if (methodFlags(t, target) & ACC_NATIVE) {
-        c->jmp(c->constant(nativeThunk(t)));
+        c->exit(c->constant(nativeThunk(t)));
       } else {
-        c->jmp(c->constant(defaultThunk(t)));
+        c->exit(c->constant(defaultThunk(t)));
       }
 
       return result;
