@@ -1314,36 +1314,37 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
       void* handler = findExceptionHandler(t, method, ip);
 
-      t->arch->nextFrame(&stack, &base);
-
-      void* canonicalStack = stackForFrame(t, stack, method);
-
       if (handler) {
-        void** sp = static_cast<void**>(canonicalStack)
+        *targetIp = handler;
+        *targetBase = base;
+
+        t->arch->nextFrame(&stack, &base);
+
+        void** sp = static_cast<void**>(stackForFrame(t, stack, method))
           + t->arch->frameReturnAddressSize();
+
+        *targetStack = sp;
 
         sp[localOffset(t, localSize(t, method), method) / BytesPerWord]
           = t->exception;
 
         t->exception = 0;
-
-        *targetIp = handler;
-        *targetBase = base;
-        *targetStack = sp;
       } else {
+        t->arch->nextFrame(&stack, &base);
+        ip = t->arch->frameIp(stack);
+
         if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
           object lock;
           if (methodFlags(t, method) & ACC_STATIC) {
             lock = methodClass(t, method);
           } else {
             lock = *localObject
-              (t, canonicalStack, method, savedTargetIndex(t, method));
+              (t, stackForFrame(t, stack, method), method,
+               savedTargetIndex(t, method));
           }
     
           release(t, lock);
         }
-
-        ip = t->arch->frameIp(stack);
       }
     } else {
       *targetIp = ip;
@@ -4457,15 +4458,15 @@ finish(MyThread* t, Allocator* allocator, Context* context)
      (&byteArrayBody(t, methodSpec(t, context->method), 0)));
 
   // for debugging:
-  if (//false and
+  if (false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/Long") == 0 and
+       "java/lang/Throwable") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "toString") == 0)
+       "printStackTrace") == 0)
   {
     trap();
   }
