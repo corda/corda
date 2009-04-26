@@ -5359,6 +5359,7 @@ class MyProcessor: public Processor {
       v->visit(&methodTreeSentinal);
       v->visit(&objectPools);
       v->visit(&staticTableArray);
+      v->visit(&virtualThunks);
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
