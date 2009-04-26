@@ -413,13 +413,21 @@ localOffset(MyThread* t, int v, object method)
   return offset;
 }
 
-inline object*
+object*
 localObject(MyThread* t, void* stack, object method, unsigned index)
 {
   return reinterpret_cast<object*>
     (static_cast<uint8_t*>(stack)
      + localOffset(t, index, method)
      + (t->arch->frameReturnAddressSize() * BytesPerWord));
+}
+
+void*
+stackForFrame(MyThread* t, void* frame, object method)
+{
+  return static_cast<void**>(frame)
+    - alignedFrameSize(t, method)
+    - t->arch->frameHeaderSize();
 }
 
 class PoolElement: public Promise {
@@ -1306,8 +1314,12 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
       void* handler = findExceptionHandler(t, method, ip);
 
+      t->arch->nextFrame(&stack, &base);
+
+      void* canonicalStack = stackForFrame(t, stack, method);
+
       if (handler) {
-        void** sp = static_cast<void**>(stack)
+        void** sp = static_cast<void**>(canonicalStack)
           + t->arch->frameReturnAddressSize();
 
         sp[localOffset(t, localSize(t, method), method) / BytesPerWord]
@@ -1324,13 +1336,13 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
           if (methodFlags(t, method) & ACC_STATIC) {
             lock = methodClass(t, method);
           } else {
-            lock = *localObject(t, stack, method, savedTargetIndex(t, method));
+            lock = *localObject
+              (t, canonicalStack, method, savedTargetIndex(t, method));
           }
     
           release(t, lock);
         }
 
-        t->arch->nextFrame(&stack, &base);
         ip = t->arch->frameIp(stack);
       }
     } else {
@@ -4445,15 +4457,15 @@ finish(MyThread* t, Allocator* allocator, Context* context)
      (&byteArrayBody(t, methodSpec(t, context->method), 0)));
 
   // for debugging:
-  if (false and
+  if (//false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/Throwable") == 0 and
+       "java/lang/Long") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "printStackTrace") == 0)
+       "toString") == 0)
   {
     trap();
   }
@@ -4937,21 +4949,23 @@ frameMapIndex(MyThread* t, object method, int32_t offset)
 }
 
 void
-visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* stack, object method,
-                    void* ip, void* calleeStack, unsigned argumentFootprint)
+visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame, object method,
+                    void* ip, bool skipArguments, unsigned argumentFootprint)
 {
   unsigned count;
-  if (calleeStack) {
+  if (skipArguments) {
     count = usableFrameSizeWithParameters(t, method) - argumentFootprint;
   } else {
     count = usableFrameSizeWithParameters(t, method);
   }
-      
+
   if (count) {
     object map = codePool(t, methodCode(t, method));
     int index = frameMapIndex
       (t, method, difference
        (ip, reinterpret_cast<void*>(methodAddress(t, method))));
+
+    void* stack = stackForFrame(t, frame, method);
 
     for (unsigned i = 0; i < count; ++i) {
       int j = index + i;
@@ -4975,7 +4989,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
   }
 
   MyThread::CallTrace* trace = t->trace;
-  void* calleeStack = 0;
+  bool skipArguments = false;
   unsigned argumentFootprint = 0;
 
   while (stack) {
@@ -4983,16 +4997,17 @@ visitStack(MyThread* t, Heap::Visitor* v)
     if (method) {
       PROTECT(t, method);
 
-      visitStackAndLocals
-        (t, v, stack, method, ip, calleeStack, argumentFootprint);
+      t->arch->nextFrame(&stack, &base);
 
-      calleeStack = stack;
+      visitStackAndLocals
+        (t, v, stack, method, ip, skipArguments, argumentFootprint);
+
+      skipArguments = true;
       argumentFootprint = methodParameterFootprint(t, method);
 
-      t->arch->nextFrame(&stack, &base);
       ip = t->arch->frameIp(stack);
     } else if (trace) {
-      calleeStack = 0;
+      skipArguments = false;
       argumentFootprint = 0;
       stack = trace->stack;
       base = trace->base;
