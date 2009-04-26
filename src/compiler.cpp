@@ -2465,10 +2465,25 @@ class CallEvent: public Event {
       assert(c, framePointerSurrogate == 0
              or framePointerSurrogate->source->type(c) == RegisterOperand);
 
-      int ras = (returnAddressSurrogate ? static_cast<RegisterSite*>
-                 (returnAddressSurrogate->source)->number : NoRegister);
-      int fps = (framePointerSurrogate ? static_cast<RegisterSite*>
-                 (framePointerSurrogate->source)->number : NoRegister);
+      int ras;
+      if (returnAddressSurrogate) {
+        returnAddressSurrogate->source->freeze(c, returnAddressSurrogate);
+
+        ras = static_cast<RegisterSite*>
+          (returnAddressSurrogate->source)->number;
+      } else {
+        ras = NoRegister;
+      }
+
+      int fps;
+      if (framePointerSurrogate) {
+        framePointerSurrogate->source->freeze(c, framePointerSurrogate);
+
+        fps = static_cast<RegisterSite*>
+          (framePointerSurrogate->source)->number;
+      } else {
+        fps = NoRegister;
+      }
 
       int offset
         = static_cast<int>(c->arch->argumentFootprint(stackArgumentFootprint))
@@ -2488,7 +2503,15 @@ class CallEvent: public Event {
                                 padIndex, padding);
     }
 
-    if ((flags & Compiler::TailJump) == 0) {
+    if (flags & Compiler::TailJump) {
+      if (returnAddressSurrogate) {
+        returnAddressSurrogate->source->thaw(c, returnAddressSurrogate);
+      }
+
+      if (framePointerSurrogate) {
+        framePointerSurrogate->source->thaw(c, framePointerSurrogate);
+      }
+    } else {
       unsigned footprint = c->arch->argumentFootprint(stackArgumentFootprint);
       if (footprint > c->arch->stackAlignmentInWords()) {
         Assembler::Register stack(c->arch->stack());
