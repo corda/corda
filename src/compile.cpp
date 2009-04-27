@@ -383,18 +383,6 @@ alignedFrameSize(MyThread* t, object method)
      + t->arch->frameFootprint(MaxNativeCallFootprint));
 }
 
-unsigned
-usableFrameSize(MyThread* t, object method)
-{
-  return alignedFrameSize(t, method) - t->arch->frameFooterSize();
-}
-
-unsigned
-usableFrameSizeWithParameters(MyThread* t, object method)
-{
-  return methodParameterFootprint(t, method) + usableFrameSize(t, method);
-}
-
 int
 localOffset(MyThread* t, int v, object method)
 {
@@ -513,10 +501,15 @@ enum Event {
 };
 
 unsigned
+frameMapSizeInBits(MyThread* t, object method)
+{
+  return localSize(t, method) + codeMaxStack(t, methodCode(t, method));
+}
+
+unsigned
 frameMapSizeInWords(MyThread* t, object method)
 {
-  return ceiling(usableFrameSizeWithParameters(t, method), BitsPerWord)
-    * BytesPerWord;
+  return ceiling(frameMapSizeInBits(t, method), BitsPerWord) * BytesPerWord;
 }
 
 uint16_t*
@@ -4221,7 +4214,7 @@ compareTraceElementPointers(const void* va, const void* vb)
 unsigned
 frameObjectMapSize(MyThread* t, object method, object map)
 {
-  int size = usableFrameSizeWithParameters(t, method);
+  int size = frameMapSizeInBits(t, method);
   return ceiling(intArrayLength(t, map) * size, 32 + size);
 }
 
@@ -4347,7 +4340,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     qsort(elements, context->traceLogCount, sizeof(TraceElement*),
           compareTraceElementPointers);
 
-    unsigned size = usableFrameSizeWithParameters(t, context->method);
+    unsigned size = frameMapSizeInBits(t, context->method);
     object map = makeIntArray
       (t, context->traceLogCount
        + ceiling(context->traceLogCount * size, 32));
@@ -4619,6 +4612,7 @@ compileVirtualMethod2(MyThread* t, object class_, unsigned index)
   PROTECT(t, class_);
 
   object target = resolveTarget(t, class_, index);
+  PROTECT(t, target);
 
   if (LIKELY(t->exception == 0)) {
     compile(t, codeAllocator(t), 0, target);
@@ -4903,8 +4897,7 @@ frameMapIndex(MyThread* t, object method, int32_t offset)
     int32_t v = intArrayBody(t, map, middle);
       
     if (offset == v) {
-      return (indexSize * 32)
-        + (usableFrameSizeWithParameters(t, method) * middle);
+      return (indexSize * 32) + (frameMapSizeInBits(t, method) * middle);
     } else if (offset < v) {
       top = middle;
     } else {
@@ -4919,7 +4912,7 @@ void
 visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame, object method,
                     void* ip)
 {
-  unsigned count = usableFrameSizeWithParameters(t, method);
+  unsigned count = frameMapSizeInBits(t, method);
 
   if (count) {
     object map = codePool(t, methodCode(t, method));
