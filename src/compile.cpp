@@ -50,6 +50,7 @@ class MyThread: public Thread {
       base(t->base),
       stack(t->stack),
       nativeMethod(0),
+      targetMethod(0),
       next(t->trace)
     {
       t->trace = this;
@@ -68,6 +69,7 @@ class MyThread: public Thread {
     void* base;
     void* stack;
     object nativeMethod;
+    object targetMethod;
     CallTrace* next;
   };
 
@@ -464,18 +466,14 @@ class TraceElement: public TraceHandler {
     address(0),
     next(next),
     target(target),
-    padIndex(0),
-    padding(0),
+    argumentIndex(0),
     flags(flags)
   { }
 
-  virtual void handleTrace(Promise* address, unsigned padIndex,
-                           unsigned padding)
-  {
+  virtual void handleTrace(Promise* address, unsigned argumentIndex) {
     if (this->address == 0) {
       this->address = address;
-      this->padIndex = padIndex;
-      this->padding = padding;
+      this->argumentIndex = argumentIndex;
     }
   }
 
@@ -483,8 +481,7 @@ class TraceElement: public TraceHandler {
   Promise* address;
   TraceElement* next;
   object target;
-  unsigned padIndex;
-  unsigned padding;
+  unsigned argumentIndex;
   unsigned flags;
   uintptr_t map[0];
 };
@@ -4092,31 +4089,9 @@ printSet(uintptr_t m, unsigned limit)
   }
 }
 
-void
-shiftLeftZeroPadded(void* data, int dataSizeInBytes, int shiftCountInBits)
-{
-  uint8_t* p = static_cast<uint8_t*>(data);
-  int shiftCountInBytes = shiftCountInBits / 8;
-  int shift = shiftCountInBits % 8;
-
-  int count = dataSizeInBytes - shiftCountInBytes - 1;
-  for (int i = 0; i < count; ++i) {
-    int si = i + shiftCountInBytes;
-    p[i] = (p[si] >> shift) | ((p[si + 1] >> shift) << (8 - shift));
-  }
-
-  if (count >= 0) {
-    p[count] = (p[count + shiftCountInBytes] >> shift);
-  }
-
-  for (int i = count + 1; i < dataSizeInBytes; ++i) {
-    p[i] = 0;
-  }
-}
-
 unsigned
 calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
-                   unsigned stackPadding, unsigned eventIndex)
+                   unsigned eventIndex)
 {
   // for each instruction with more than one predecessor, and for each
   // stack position, determine if there exists a path to that
@@ -4124,7 +4099,6 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
   // stack position (i.e. it is uninitialized or contains primitive
   // data).
 
-  unsigned localSize = ::localSize(t, context->method);
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
   uintptr_t roots[mapSize];
@@ -4149,8 +4123,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
     Event e = static_cast<Event>(context->eventLog.get(eventIndex++));
     switch (e) {
     case PushContextEvent: {
-      eventIndex = calculateFrameMaps
-        (t, context, roots, stackPadding, eventIndex);
+      eventIndex = calculateFrameMaps(t, context, roots, eventIndex);
     } break;
 
     case PopContextEvent:
@@ -4201,20 +4174,12 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       unsigned i = context->eventLog.get2(eventIndex);
       eventIndex += 2;
 
-      if (i >= localSize) {
-        i += stackPadding;
-      }
-
       markBit(roots, i);
     } break;
 
     case ClearEvent: {
       unsigned i = context->eventLog.get2(eventIndex);
       eventIndex += 2;
-
-      if (i >= localSize) {
-        i += stackPadding;
-      }
 
       clearBit(roots, i);
     } break;
@@ -4228,12 +4193,6 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       }
 
       memcpy(te->map, roots, mapSize * BytesPerWord);
-
-      if (te->flags & TraceElement::TailCall) {
-        shiftLeftZeroPadded
-          (te->map, mapSize * BytesPerWord,
-           usableFrameSize(t, context->method));
-      }
 
       eventIndex += BytesPerWord;
     } break;
@@ -4412,22 +4371,8 @@ finish(MyThread* t, Allocator* allocator, Context* context)
                 (p->address->value()));
       }
 
-      for (unsigned j = 0, k = 0; j < size; ++j, ++k) {
-        if (j == p->padIndex) {
-          unsigned limit = j + p->padding;
-          assert(t, limit <= size);
-
-          for (; j < limit; ++j) {
-            if (DebugFrameMaps) {
-              fprintf(stderr, "_");
-            }
-            clearBit(t, map, context->traceLogCount, size, i, j);
-          }
-
-          if (j == size) break;
-        }
-
-        if (getBit(p->map, k)) {
+      for (unsigned j = 0; j < p->argumentIndex; ++j) {
+        if (getBit(p->map, j)) {
           if (DebugFrameMaps) {
             fprintf(stderr, "1");
           }
@@ -4534,7 +4479,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
   if (UNLIKELY(t->exception)) return 0;
 
   context->dirtyRoots = false;
-  unsigned eventIndex = calculateFrameMaps(t, context, 0, 0, 0);
+  unsigned eventIndex = calculateFrameMaps(t, context, 0, 0);
 
   object eht = codeExceptionHandlerTable(t, methodCode(t, context->method));
   if (eht) {
@@ -4583,7 +4528,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
           compile(t, &frame2, exceptionHandlerIp(eh), start);
           if (UNLIKELY(t->exception)) return 0;
 
-          eventIndex = calculateFrameMaps(t, context, 0, 0, eventIndex);
+          eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
         }
       }
 
@@ -4593,7 +4538,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
 
   while (context->dirtyRoots) {
     context->dirtyRoots = false;
-    calculateFrameMaps(t, context, 0, 0, 0);
+    calculateFrameMaps(t, context, 0, 0);
   }
 
   return finish(t, allocator, context);
@@ -4610,13 +4555,17 @@ void*
 compileMethod2(MyThread* t, void* ip)
 {
   object node = findCallNode(t, ip);
-  PROTECT(t, node);
-
   object target = callNodeTarget(t, node);
-  PROTECT(t, target);
 
   if (LIKELY(t->exception == 0)) {
+    PROTECT(t, node);
+    PROTECT(t, target);
+
+    t->trace->targetMethod = target;
+
     compile(t, codeAllocator(t), 0, target);
+
+    t->trace->targetMethod = 0;
   }
 
   if (UNLIKELY(t->exception)) {
@@ -4655,6 +4604,18 @@ compileMethod(MyThread* t)
 void*
 compileVirtualMethod2(MyThread* t, object class_, unsigned index)
 {
+  // If class_ has BootstrapFlag set, that means its vtable is not yet
+  // available.  However, we must set t->trace->targetMethod to an
+  // appropriate method to ensure we can accurately scan the stack for
+  // GC roots.  We find such a method by looking for a superclass with
+  // a vtable and using it instead:
+
+  object c = class_;
+  while (classVmFlags(t, c) & BootstrapFlag) {
+    c = classSuper(t, c);
+  }
+  t->trace->targetMethod = arrayBody(t, classVirtualTable(t, c), index);
+
   PROTECT(t, class_);
 
   object target = resolveTarget(t, class_, index);
@@ -4662,6 +4623,8 @@ compileVirtualMethod2(MyThread* t, object class_, unsigned index)
   if (LIKELY(t->exception == 0)) {
     compile(t, codeAllocator(t), 0, target);
   }
+
+  t->trace->targetMethod = 0;
 
   if (UNLIKELY(t->exception)) {
     return 0;
@@ -4910,10 +4873,13 @@ invokeNative(MyThread* t)
 
   uint64_t result = 0;
 
+  t->trace->targetMethod = t->trace->nativeMethod;
+
   if (LIKELY(t->exception == 0)) {
     result = invokeNative2(t, t->trace->nativeMethod);
   }
 
+  t->trace->targetMethod = 0;
   t->trace->nativeMethod = 0;
 
   if (UNLIKELY(t->exception)) {
@@ -4951,14 +4917,9 @@ frameMapIndex(MyThread* t, object method, int32_t offset)
 
 void
 visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame, object method,
-                    void* ip, bool skipArguments, unsigned argumentFootprint)
+                    void* ip)
 {
-  unsigned count;
-  if (skipArguments) {
-    count = usableFrameSizeWithParameters(t, method) - argumentFootprint;
-  } else {
-    count = usableFrameSizeWithParameters(t, method);
-  }
+  unsigned count = usableFrameSizeWithParameters(t, method);
 
   if (count) {
     object map = codePool(t, methodCode(t, method));
@@ -4980,6 +4941,49 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame, object method,
 }
 
 void
+visitArgument(MyThread* t, Heap::Visitor* v, void* stack, object method,
+              unsigned index)
+{
+  v->visit(static_cast<object*>(stack)
+           + (methodParameterFootprint(t, method) - index - 1)
+           + t->arch->frameReturnAddressSize()
+           + t->arch->frameFooterSize());
+}
+
+void
+visitArguments(MyThread* t, Heap::Visitor* v, void* stack, object method)
+{
+  unsigned index = 0;
+
+  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+    visitArgument(t, v, stack, method, index++);
+  }
+
+  for (MethodSpecIterator it
+         (t, reinterpret_cast<const char*>
+          (&byteArrayBody(t, methodSpec(t, method), 0)));
+       it.hasNext();)
+  {
+    switch (*it.next()) {
+    case 'L':
+    case '[':
+      visitArgument(t, v, stack, method, index++);
+      break;
+      
+    case 'J':
+    case 'D':
+      index += 2;
+      break;
+
+    default:
+      ++ index;
+      break;
+    }
+  }
+  
+}
+
+void
 visitStack(MyThread* t, Heap::Visitor* v)
 {
   void* ip = t->ip;
@@ -4990,30 +4994,32 @@ visitStack(MyThread* t, Heap::Visitor* v)
   }
 
   MyThread::CallTrace* trace = t->trace;
-  bool skipArguments = false;
-  unsigned argumentFootprint = 0;
+  object targetMethod = (trace ? trace->targetMethod : 0);
 
   while (stack) {
     object method = methodForIp(t, ip);
     if (method) {
       PROTECT(t, method);
 
+      if (targetMethod) {
+        visitArguments(t, v, stack, targetMethod);
+        targetMethod = 0;
+      }
+
       t->arch->nextFrame(&stack, &base);
 
-      visitStackAndLocals
-        (t, v, stack, method, ip, skipArguments, argumentFootprint);
-
-      skipArguments = true;
-      argumentFootprint = methodParameterFootprint(t, method);
+      visitStackAndLocals(t, v, stack, method, ip);
 
       ip = t->arch->frameIp(stack);
     } else if (trace) {
-      skipArguments = false;
-      argumentFootprint = 0;
       stack = trace->stack;
       base = trace->base;
       ip = t->arch->frameIp(stack);
       trace = trace->next;
+
+      if (trace) {
+        targetMethod = trace->targetMethod;
+      }
     } else {
       break;
     }
@@ -5380,6 +5386,7 @@ class MyProcessor: public Processor {
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
       v->visit(&(trace->nativeMethod));
+      v->visit(&(trace->targetMethod));
     }
 
     for (Reference* r = t->reference; r; r = r->next) {

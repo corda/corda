@@ -2318,8 +2318,7 @@ class CallEvent: public Event {
     returnAddressSurrogate(0),
     framePointerSurrogate(0),
     popIndex(0),
-    padIndex(0),
-    padding(0),
+    stackArgumentIndex(0),
     flags(flags),
     resultSize(resultSize),
     stackArgumentFootprint(stackArgumentFootprint)
@@ -2428,19 +2427,18 @@ class CallEvent: public Event {
       -- footprint;
 
       if (footprint == 0 and (flags & Compiler::TailJump) == 0) {
-        unsigned logicalIndex = ::frameIndex
-          (c, s->index + c->localFootprint);
-
-        assert(c, logicalIndex >= frameIndex);
-
-        padding = logicalIndex - frameIndex;
-        padIndex = s->index + c->localFootprint;
+        stackArgumentIndex = s->index + c->localFootprint;
       }
 
       ++ frameIndex;
     }
 
     if ((flags & Compiler::TailJump) == 0) {
+      if (stackArgumentFootprint == 0) {
+        stackArgumentIndex = (stackBefore ? stackBefore->index + 1 : 0)
+          + c->localFootprint;
+      }
+
       popIndex
         = c->alignedFrameSize
         - c->arch->frameFooterSize()
@@ -2507,7 +2505,7 @@ class CallEvent: public Event {
 
     if (traceHandler) {
       traceHandler->handleTrace(codePromise(c, c->assembler->offset()),
-                                padIndex, padding);
+                                stackArgumentIndex);
     }
 
     if (flags & Compiler::TailJump) {
@@ -2552,8 +2550,7 @@ class CallEvent: public Event {
   Value* returnAddressSurrogate;
   Value* framePointerSurrogate;
   unsigned popIndex;
-  unsigned padIndex;
-  unsigned padding;
+  unsigned stackArgumentIndex;
   unsigned flags;
   unsigned resultSize;
   unsigned stackArgumentFootprint;
@@ -3777,7 +3774,7 @@ class BranchEvent: public Event {
       jump = true;
     }
 
-    if (jump) {
+    if (jump and not unreachable(this)) {
       apply(c, type, BytesPerWord, address->source, 0);
     }
 

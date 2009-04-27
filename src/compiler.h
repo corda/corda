@@ -17,6 +17,11 @@
 
 namespace vm {
 
+class TraceHandler {
+ public:
+  virtual void handleTrace(Promise* address, unsigned argumentIndex) = 0;
+};
+
 class Compiler {
  public:
   class Client {

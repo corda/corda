@@ -198,12 +198,6 @@ class DelayedPromise: public ListenPromise {
   DelayedPromise* next;
 };
 
-class TraceHandler {
- public:
-  virtual void handleTrace(Promise* address, unsigned padIndex,
-                           unsigned padding) = 0;
-};
-
 class Assembler {
  public:
   class Operand { };
