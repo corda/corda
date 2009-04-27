@@ -66,7 +66,7 @@ public class ArrayList<T> implements List<T> {
     return size;
   }
 
-  public boolean contains(T element) {
+  public boolean contains(Object element) {
     for (int i = 0; i < size; ++i) {
       if (equal(element, array[i])) {
         return true;
@@ -145,7 +145,7 @@ public class ArrayList<T> implements List<T> {
     return v;
   }
 
-  public boolean remove(T element) {
+  public boolean remove(Object element) {
     for (int i = 0; i < size; ++i) {
       if (equal(element, array[i])) {
         remove(i);

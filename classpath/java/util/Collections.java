@@ -97,7 +97,7 @@ public class Collections {
       return size() == 0;
     }
 
-    public boolean contains(T e) {
+    public boolean contains(Object e) {
       synchronized (lock) { return collection.contains(e); }
     }
 
@@ -109,8 +109,8 @@ public class Collections {
       synchronized (lock) { return this.collection.addAll(collection); }
     }
 
-    public boolean remove(T e) {
-      synchronized (lock) { return collection.remove(e); }
+    public boolean remove(Object e) {
+      synchronized (lock) { return collection.remove((T)e); }
     }
 
     public <T> T[] toArray(T[] array) {
@@ -143,16 +143,16 @@ public class Collections {
     public void clear() {
       synchronized (lock) { map.clear(); }
     }
-    public boolean containsKey(K key) {
+    public boolean containsKey(Object key) {
       synchronized (lock) { return map.containsKey(key); }
     }
-    public boolean containsValue(V value) {
+    public boolean containsValue(Object value) {
       synchronized (lock) { return map.containsValue(value); }
     }
     public Set<java.util.Map.Entry<K, V>> entrySet() {
       synchronized (lock) { return new SynchronizedSet<java.util.Map.Entry<K, V>>(lock, map.entrySet()); }
     }
-    public V get(K key) {
+    public V get(Object key) {
       synchronized (lock) { return map.get(key); }
     }
     public boolean isEmpty() {
@@ -167,7 +167,7 @@ public class Collections {
     public void putAll(Map<? extends K, ? extends V> elts) {
       synchronized (lock) { map.putAll(elts); }
     }
-    public V remove(K key) {
+    public V remove(Object key) {
       synchronized (lock) { return map.remove(key); }
     }
     public int size() {
@@ -283,7 +283,7 @@ public class Collections {
       throw new UnsupportedOperationException("not supported");
     }
 
-    public boolean contains(T element) {
+    public boolean contains(Object element) {
       return inner.contains(element);
     }
 
@@ -295,7 +295,7 @@ public class Collections {
       return inner.iterator();
     }
 
-    public boolean remove(T element) {
+    public boolean remove(Object element) {
       throw new UnsupportedOperationException("not supported");
     }
 

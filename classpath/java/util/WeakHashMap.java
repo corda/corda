@@ -44,17 +44,17 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     return map.size();
   }
 
-  public boolean containsKey(K key) {
+  public boolean containsKey(Object key) {
     poll();
     return map.containsKey(key);
   }
 
-  public boolean containsValue(V value) {
+  public boolean containsValue(Object  value) {
     poll();
     return map.containsValue(value);
   }
 
-  public V get(K key) {
+  public V get(Object key) {
     poll();
     return map.get(key);
   }
@@ -68,7 +68,7 @@ public class WeakHashMap<K, V> implements Map<K, V> {
     map.putAll(elts);
   }
 
-  public V remove(K key) {
+  public V remove(Object key) {
     poll();
     return map.remove(key);
   }

@@ -15,13 +15,13 @@ public interface Collection<T> extends Iterable<T> {
 
   public boolean isEmpty();
 
-  public boolean contains(T element);
+  public boolean contains(Object element);
 
   public boolean add(T element);
 
   public boolean addAll(Collection<? extends T> collection);
 
-  public boolean remove(T element);
+  public boolean remove(Object element);
 
   public <S> S[] toArray(S[] array);
 

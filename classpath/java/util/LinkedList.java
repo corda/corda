@@ -60,7 +60,7 @@ public class LinkedList<T> implements List<T> {
     }
   }
   
-  private Cell<T> find(T element) {
+  private Cell<T> find(Object element) {
     for (Cell<T> c = front; c != null; c = c.next) {
       if (equal(c.value, element)) {
         return c;
@@ -93,7 +93,7 @@ public class LinkedList<T> implements List<T> {
     return size;
   }
 
-  public boolean contains(T element) {
+  public boolean contains(Object element) {
     return find(element) != null;
   }
 
@@ -186,7 +186,7 @@ public class LinkedList<T> implements List<T> {
     }
   }
 
-  public boolean remove(T element) {
+  public boolean remove(Object element) {
     Cell<T> c = find(element);
     if (c == null) {
       return false;

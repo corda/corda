@@ -40,15 +40,15 @@ public class Hashtable<K, V> implements Map<K, V> {
     return map.size();
   }
 
-  public synchronized boolean containsKey(K key) {
+  public synchronized boolean containsKey(Object key) {
     return map.containsKey(key);
   }
 
-  public synchronized boolean containsValue(V value) {
+  public synchronized boolean containsValue(Object value) {
     return map.containsValue(value);
   }
 
-  public synchronized V get(K key) {
+  public synchronized V get(Object key) {
     return map.get(key);
   }
 
@@ -60,7 +60,7 @@ public class Hashtable<K, V> implements Map<K, V> {
     map.putAll(elts);
   }
 
-  public synchronized V remove(K key) {
+  public synchronized V remove(Object key) {
     return map.remove(key);
   }
 
