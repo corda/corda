@@ -2247,11 +2247,14 @@ clean(Context* c, Value* v, unsigned popIndex)
              (c, static_cast<MemorySite*>(s)->offset)
              >= popIndex))
     {
-      if (false) {
+      if (false and
+          s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex)))
+      {
         char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "remove %s from %p at %d pop index %d\n",
+        fprintf(stderr, "remove %s from %p at %d pop offset 0x%x\n",
                 buffer, v, offsetToFrameIndex
-                (c, static_cast<MemorySite*>(s)->offset), popIndex);
+                (c, static_cast<MemorySite*>(s)->offset),
+                frameIndexToOffset(c, popIndex));
       }
       it.remove(c);
     }
@@ -2425,25 +2428,20 @@ class CallEvent: public Event {
       }
 
       -- footprint;
-
-      if (footprint == 0 and (flags & Compiler::TailJump) == 0) {
-        stackArgumentIndex = s->index + c->localFootprint;
-      }
-
       ++ frameIndex;
     }
 
     if ((flags & Compiler::TailJump) == 0) {
-      if (stackArgumentFootprint == 0) {
-        stackArgumentIndex = (stackBefore ? stackBefore->index + 1 : 0)
-          + c->localFootprint;
+      stackArgumentIndex = c->localFootprint;
+      if (stackBefore) {
+        stackArgumentIndex += stackBefore->index + 1 - stackArgumentFootprint;
       }
 
       popIndex
         = c->alignedFrameSize
+        + c->parameterFootprint
         - c->arch->frameFooterSize()
-        - (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
-        - c->localFootprint;
+        - stackArgumentIndex;
 
       assert(c, static_cast<int>(popIndex) >= 0);
 
