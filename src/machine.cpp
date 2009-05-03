@@ -1544,8 +1544,11 @@ boot(Thread* t)
 
   m->unsafe = false;
 
-  classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+  classFlags(t, arrayBody(t, m->types, Machine::SingletonType))
     |= SingletonFlag;
+
+  classFlags(t, arrayBody(t, m->types, Machine::ContinuationType))
+    |= ContinuationFlag;
 
   classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
     |= ReferenceFlag;
@@ -2754,6 +2757,8 @@ collect(Thread* t, Heap::CollectionType type)
 
   Machine* m = t->m;
 
+  m->continuationClass = arrayBody(t, t->m->types, Machine::ContinuationType);
+
   m->unsafe = true;
   m->heap->collect(type, footprint(m->rootThread));
   m->unsafe = false;
@@ -2800,7 +2805,7 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
            intArrayLength(t, objectMask) * 4);
 
     ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
-  } else if (classVmFlags(t, class_) & SingletonFlag) {
+  } else if (classFlags(t, class_) & SingletonFlag) {
     unsigned length = singletonLength(t, o);
     if (length) {
       ::walk(t, w, singletonMask(t, o),
@@ -2810,6 +2815,10 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
     }
   } else if (start == 0) {
     w->visit(0);
+  }
+
+  if (classFlags(t, class_) & ContinuationFlag) {
+    t->m->processor->walkContinuationBody(t, w, o, start);
   }
 }
 
@@ -2843,12 +2852,12 @@ visitRoots(Machine* m, Heap::Visitor* v)
   v->visit(&(m->types));
   v->visit(&(m->jniMethodTable));
 
-  for (Reference* r = m->jniReferences; r; r = r->next) {
-    v->visit(&(r->target));
-  }
-
   for (Thread* t = m->rootThread; t; t = t->peer) {
     ::visitRoots(t, v);
+  }
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    v->visit(&(r->target));
   }
 }
 

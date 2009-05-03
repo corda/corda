@@ -128,13 +128,31 @@ isSpecialMethod(Thread* t, object method, object class_)
 void*
 resolveNativeMethod2(Thread* t, object method);
 
-inline void*
-resolveNativeMethod(Thread* t, object method)
+inline void
+resolveNativeMethod(MyThread* t, object method)
 {
-  if (methodCode(t, method)) {
-    return pointerValue(t, methodCode(t, method));
-  } else {
-    return resolveNativeMethod2(t, method);
+  PROTECT(t, method);
+
+  assert(t, methodFlags(t, method) & ACC_NATIVE);
+
+  initClass(t, methodClass(t, method));
+  if (UNLIKELY(t->exception)) return 0;
+
+  unsigned flags = methodVmFlags(t, method);
+  uintptr_t address = methodCompiled(t, method);
+  if ((flags & NativeResolved) == 0 or address == defaultThunk(t)) {
+    void* function = resolveNativeMethod2(t, method);
+    if (UNLIKELY(function == 0)) {
+      object message = makeString
+        (t, "%s.%s%s",
+         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+         &byteArrayBody(t, methodName(t, method), 0),
+         &byteArrayBody(t, methodSpec(t, method), 0));
+      t->exception = makeUnsatisfiedLinkError(t, message);
+      return;
+    }
+
+    methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
   }
 }
 

@@ -258,7 +258,7 @@ class Assembler {
     virtual int thread() = 0;
     virtual int returnLow() = 0;
     virtual int returnHigh() = 0;
-    virtual int virtualCallClass() = 0;
+    virtual int virtualCallTarget() = 0;
     virtual int virtualCallIndex() = 0;
 
     virtual bool condensedAddressing() = 0;

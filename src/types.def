@@ -103,6 +103,14 @@
 (type array
   (noassert array object body))
 
+(type continuation
+  (object next)
+  (object method)
+  (void* address)
+  (uintptr_t returnAddressOffset)
+  (uintptr_t framePointerOffset)
+  (array uintptr_t body))
+
 (type string java/lang/String)
 
 (type thread java/lang/Thread)

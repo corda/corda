@@ -27,7 +27,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -49,6 +49,7 @@ class MyThread: public Thread {
       t(t),
       base(t->base),
       stack(t->stack),
+      continuation(t->continuation),
       nativeMethod(0),
       targetMethod(0),
       next(t->trace)
@@ -61,13 +62,14 @@ class MyThread: public Thread {
     ~CallTrace() {
       t->stack = stack;
       t->base = base;
+      t->continuation = continuation;
       t->trace = next;
     }
 
     MyThread* t;
-    void* ip;
     void* base;
     void* stack;
+    object continuation;
     object nativeMethod;
     object targetMethod;
     CallTrace* next;
@@ -78,8 +80,12 @@ class MyThread: public Thread {
     ip(0),
     base(0),
     stack(0),
+    continuation(0),
+    exceptionStack(0),
+    exceptionOffset(0),
+    exceptionHandler(0),
     tailAddress(0),
-    virtualCallClass(0),
+    virtualCallTarget(0),
     virtualCallIndex(0),
     trace(0),
     reference(0),
@@ -91,8 +97,12 @@ class MyThread: public Thread {
   void* ip;
   void* base;
   void* stack;
+  object continuation;
+  void* exceptionStack;
+  uintptr_t exceptionOffset;
+  void* exceptionHandler;
   void* tailAddress;
-  void* virtualCallClass;
+  void* virtualCallTarget;
   uintptr_t virtualCallIndex;
   CallTrace* trace;
   Reference* reference;
@@ -110,7 +120,8 @@ parameterOffset(MyThread* t, object method)
 object
 resolveThisPointer(MyThread* t, void* stack, object method)
 {
-  return reinterpret_cast<object*>(stack)[parameterOffset(t, method)];
+  return reinterpret_cast<object*>(stack)
+    [t->arch->frameFooterSize() + t->arch->frameReturnAddressSize()];
 }
 
 object
@@ -213,6 +224,7 @@ class MyStackWalker: public Processor::StackWalker {
 
     virtual void visit(Heap::Visitor* v) {
       v->visit(&(walker->method_));
+      v->visit(&(walker->continuation));
     }
 
     MyStackWalker* walker;
@@ -226,6 +238,7 @@ class MyStackWalker: public Processor::StackWalker {
     stack(t->stack),
     trace(t->trace),
     method_(0),
+    continuation(t->continuation),
     protector(this)
   { }
 
@@ -272,7 +285,10 @@ class MyStackWalker: public Processor::StackWalker {
           method_ = methodForIp(t, ip_);
           if (method_) {
             state = Method;
+          } else if (continuation) {
+            state = Continuation;
           } else if (trace) {
+            continuation = trace->continuation;
             stack = trace->stack;
             base = trace->base;
             ip_ = t->arch->frameIp(stack);
@@ -290,6 +306,7 @@ class MyStackWalker: public Processor::StackWalker {
         }
         break;
 
+      case Continuation:
       case Method:
       case NativeMethod:
         return true;
@@ -305,6 +322,10 @@ class MyStackWalker: public Processor::StackWalker {
     
   void next() {
     switch (state) {
+    case Continuation:
+      continuation = continuationNext(t, continuation);
+      break;
+
     case Method:
       t->arch->nextFrame(&stack, &base);
       ip_ = t->arch->frameIp(stack);
@@ -329,6 +350,10 @@ class MyStackWalker: public Processor::StackWalker {
 
   virtual int ip() {
     switch (state) {
+    case Continuation:
+      return continuationAddress(t, continuation)
+        - methodCompiled(t, continuationMethod(t, continuation));
+
     case Method:
       return reinterpret_cast<intptr_t>(ip_) - methodCompiled(t, method_);
         
@@ -358,6 +383,7 @@ class MyStackWalker: public Processor::StackWalker {
   void* stack;
   MyThread::CallTrace* trace;
   object method_;
+  object continuation;
   MyProtector protector;
 };
 
@@ -403,21 +429,30 @@ localOffset(MyThread* t, int v, object method)
   return offset;
 }
 
+int
+localOffsetFromStack(MyThread* t, int index, object method)
+{
+  return localOffset(t, index, method)
+    + (t->arch->frameReturnAddressSize() * BytesPerWord);
+}
+
 object*
 localObject(MyThread* t, void* stack, object method, unsigned index)
 {
   return reinterpret_cast<object*>
-    (static_cast<uint8_t*>(stack)
-     + localOffset(t, index, method)
-     + (t->arch->frameReturnAddressSize() * BytesPerWord));
+    (static_cast<uint8_t*>(stack) + localOffsetFromStack(t, index, method));
+}
+
+int
+stackOffsetFromFrame(MyThread* t, object method)
+{
+  return alignedFrameSize(t, method) + t->arch->frameHeaderSize();
 }
 
 void*
 stackForFrame(MyThread* t, void* frame, object method)
 {
-  return static_cast<void**>(frame)
-    - alignedFrameSize(t, method)
-    - t->arch->frameHeaderSize();
+  return static_cast<void**>(frame) - stackOffsetFromFrame(t, method);
 }
 
 class PoolElement: public Promise {
@@ -683,6 +718,41 @@ class Context {
   Vector eventLog;
   MyProtector protector;
 };
+
+unsigned
+translateLocalIndex(Context* context, unsigned footprint, unsigned index)
+{
+  unsigned parameterFootprint = methodParameterFootprint
+    (context->thread, context->method);
+
+  if (index < parameterFootprint) {
+    return parameterFootprint - index - footprint;
+  } else {
+    return index;
+  }
+}
+
+void
+initLocal(Context* context, unsigned footprint, unsigned index)
+{
+  context->compiler->initLocal
+    (footprint, translateLocalIndex(context, footprint, index));
+}
+
+Compiler::Operand*
+loadLocal(Context* context, unsigned footprint, unsigned index)
+{
+  return context->compiler->loadLocal
+    (footprint, translateLocalIndex(context, footprint, index));
+}
+
+void
+storeLocal(Context* context, unsigned footprint, Compiler::Operand* value,
+           unsigned index)
+{
+  context->compiler->storeLocal
+    (footprint, value, translateLocalIndex(context, footprint, index));
+}
 
 class Frame {
  public:
@@ -1055,36 +1125,36 @@ class Frame {
 
   void loadInt(unsigned index) {
     assert(t, index < localSize());
-    pushInt(c->loadLocal(1, index));
+    pushInt(loadLocal(context, 1, index));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLong(c->loadLocal(2, index));
+    pushLong(loadLocal(context, 2, index));
   }
 
   void loadObject(unsigned index) {
     assert(t, index < localSize());
-    pushObject(c->loadLocal(1, index));
+    pushObject(loadLocal(context, 1, index));
   }
 
   void storeInt(unsigned index) {
-    c->storeLocal(1, popInt(), index);
+    storeLocal(context, 1, popInt(), index);
     storedInt(index);
   }
 
   void storeLong(unsigned index) {
-    c->storeLocal(2, popLong(), index);
+    storeLocal(context, 2, popLong(), index);
     storedLong(index);
   }
 
   void storeObject(unsigned index) {
-    c->storeLocal(1, popObject(), index);
+    storeLocal(context, 1, popObject(), index);
     storedObject(index);
   }
 
   void storeObjectOrAddress(unsigned index) {
-    c->storeLocal(1, popQuiet(1), index);
+    storeLocal(context, 1, popQuiet(1), index);
 
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
@@ -1261,28 +1331,48 @@ insertCallNode(MyThread* t, object node);
 void*
 findExceptionHandler(Thread* t, object method, void* ip)
 {
-  object table = codeExceptionHandlerTable(t, methodCode(t, method));
-  if (table) {
-    object index = arrayBody(t, table, 0);
+  if (t->exception) {
+    object table = codeExceptionHandlerTable(t, methodCode(t, method));
+    if (table) {
+      object index = arrayBody(t, table, 0);
       
-    uint8_t* compiled = reinterpret_cast<uint8_t*>(methodCompiled(t, method));
+      uint8_t* compiled = reinterpret_cast<uint8_t*>
+        (methodCompiled(t, method));
 
-    for (unsigned i = 0; i < arrayLength(t, table) - 1; ++i) {
-      unsigned start = intArrayBody(t, index, i * 3);
-      unsigned end = intArrayBody(t, index, (i * 3) + 1);
-      unsigned key = difference(ip, compiled) - 1;
+      for (unsigned i = 0; i < arrayLength(t, table) - 1; ++i) {
+        unsigned start = intArrayBody(t, index, i * 3);
+        unsigned end = intArrayBody(t, index, (i * 3) + 1);
+        unsigned key = difference(ip, compiled) - 1;
 
-      if (key >= start and key < end) {
-        object catchType = arrayBody(t, table, i + 1);
+        if (key >= start and key < end) {
+          object catchType = arrayBody(t, table, i + 1);
 
-        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
-          return compiled + intArrayBody(t, index, (i * 3) + 2);
+          if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+            return compiled + intArrayBody(t, index, (i * 3) + 2);
+          }
         }
       }
     }
   }
 
   return 0;
+}
+
+void
+releaseLock(MyThread* t, object method)
+{
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    object lock;
+    if (methodFlags(t, method) & ACC_STATIC) {
+      lock = methodClass(t, method);
+    } else {
+      lock = *localObject
+        (t, stackForFrame(t, stack, method), method,
+         savedTargetIndex(t, method));
+    }
+    
+    release(t, lock);
+  }
 }
 
 void
@@ -1323,19 +1413,98 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         t->arch->nextFrame(&stack, &base);
         ip = t->arch->frameIp(stack);
 
-        if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
-          object lock;
-          if (methodFlags(t, method) & ACC_STATIC) {
-            lock = methodClass(t, method);
-          } else {
-            lock = *localObject
-              (t, stackForFrame(t, stack, method), method,
-               savedTargetIndex(t, method));
-          }
-    
-          release(t, lock);
-        }
+        releaseLock(t, method);
       }
+    } else {
+      *targetIp = ip;
+      *targetBase = base;
+      *targetStack = static_cast<void**>(stack)
+        + t->arch->frameReturnAddressSize();
+
+      while (t->continuation) {
+        void* handler = findExceptionHandler
+          (t, continuationMethod(t, t->continuation),
+           continuationAddress(t, t->continuation));
+
+        if (handler) {
+          t->exceptionHandler = handler;
+
+          t->exceptionStack = stackForFrame
+            (t, *targetStack, continuationMethod(t, t->continuation));
+
+          t->exceptionOffset = localOffset(t, localSize(t, method), method);
+          break;
+        } else {
+          releaseLock(t, continuationMethod(t, t->continuation));
+        }
+
+        t->continuation = continuationNext(t, t->continuation)
+      }
+    }
+  }
+}
+
+object
+makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
+                        void** targetStack)
+{
+  void* ip = t->ip;
+  void* base = t->base;
+  void* stack = t->stack;
+  if (ip == 0) {
+    ip = t->arch->frameIp(stack);
+  }
+
+  object target = t->trace->targetMethod;
+  PROTECT(t, target);
+
+  object first = 0;
+  PROTECT(t, first);
+
+  object last = 0;
+  PROTECT(t, last);
+
+  *targetIp = 0;
+  while (*targetIp == 0) {
+    object method = methodForIp(t, ip);
+    if (method) {
+      PROTECT(t, method);
+
+      void** top = static_cast<void**>(stack) - t->arch->frameHeader();;
+      unsigned argumentFootprint
+        = t->arch->argumentFootprint(methodParameterFootprint(t, target));
+      unsigned alignment = t->arch->stackAlignmentInWords();
+      if (argumentFootprint > alignment) {
+        top += argumentFootprint - alignment;
+      }
+
+      t->arch->nextFrame(&stack, &base);
+
+      void** bottom = static_cast<void**>(stack);
+      unsigned frameSize = bottom - top;
+      unsigned totalSize = frameSize
+        + t->arch->frameHeaderSize()
+        + t->arch->frameFooterSize()
+        + t->arch->argumentFootprint(methodParameterFootprint(t, method));
+
+      object c = makeContinuation
+        (t, 0, method, ip,
+         ((frameSize + t->arch->returnAddressOffset()) * BytesPerWord),
+         ((frameSize + t->arch->framePointerOffset()) * BytesPerWord),
+         totalSize);
+
+      memcpy(&continuationBody(t, c, 0), top, totalSize * BytesPerWord);
+
+      if (last) {
+        set(t, last, ContinuationNext, c);
+      } else {
+        first = c;
+      }
+      last = c;
+
+      ip = t->arch->frameIp(stack);
+
+      target = method;
     } else {
       *targetIp = ip;
       *targetBase = base;
@@ -1343,6 +1512,11 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         + t->arch->frameReturnAddressSize();
     }
   }
+
+  expect(t, last);
+  set(t, last, ContinuationNext, t->continuation);
+
+  return first;
 }
 
 void NO_RETURN
@@ -2044,7 +2218,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     if (methodFlags(t, method) & ACC_STATIC) {
       lock = frame->append(methodClass(t, method));
     } else {
-      lock = c->loadLocal(1, savedTargetIndex(t, method));
+      lock = loadLocal(frame->context, 1, savedTargetIndex(t, method));
     }
     
     c->call(c->constant(function),
@@ -2063,11 +2237,9 @@ handleEntrance(MyThread* t, Frame* frame)
   if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
       == ACC_SYNCHRONIZED)
   {
-    Compiler* c = frame->c;
-
     // save 'this' pointer in case it is overwritten.
     unsigned index = savedTargetIndex(t, method);
-    c->storeLocal(1, c->loadLocal(1, 0), index);
+    storeLocal(frame->context, 1, loadLocal(frame->context, 1, 0), index);
     frame->set(index, Frame::Object);
   }
 
@@ -3080,7 +3252,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       int8_t count = codeBody(t, code, ip++);
 
       c->storeLocal
-        (1, c->add(4, c->constant(count), c->loadLocal(1, index)), index);
+        (1, c->add(4, c->constant(count), loadLocal(context, 1, index)),
+         index);
     } break;
 
     case iload:
@@ -3217,20 +3390,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-      Compiler::Operand* classOperand = c->and_
-        (BytesPerWord, c->constant(PointerMask),
-         c->memory(instance, 0, 0, 1));
-
-      c->freezeRegister(t->arch->virtualCallClass(), classOperand);
-
       Compiler::Operand* result = c->stackCall
-        (c->memory(classOperand, offset, 0, 1),
+        (c->memory
+         (c->and_
+          (BytesPerWord, c->constant(PointerMask),
+           c->memory(instance, 0, 0, 1)), offset, 0, 1),
          tailCall ? Compiler::TailJump : 0,
          frame->trace(0, 0),
          rSize,
          parameterFootprint);
-
-      c->thawRegister(t->arch->virtualCallClass());
 
       frame->pop(parameterFootprint);
 
@@ -3338,7 +3506,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         // wasn't already a live value there, which is something we
         // should verify once we have complete data flow information
         // (todo).
-        c->storeLocal(1, c->constant(0), index);
+        storeLocal(context, 1, c->constant(0), index);
         frame->storedObject(index);
       }
 
@@ -3840,7 +4008,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case ret:
-      c->jmp(c->loadLocal(1, codeBody(t, code, ip)));
+      c->jmp(loadLocal(context, 1, codeBody(t, code, ip)));
       c->endSubroutine(frame->subroutine);
       return;
 
@@ -3940,7 +4108,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         uint16_t count = codeReadInt16(t, code, ip);
 
         c->storeLocal
-          (1, c->add(4, c->constant(count), c->loadLocal(1, index)), index);
+          (1, c->add(4, c->constant(count), loadLocal(context, 1, index)),
+           index);
       } break;
 
       case iload: {
@@ -3960,7 +4129,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       } break;
 
       case ret:
-        c->jmp(c->loadLocal(1, codeReadInt16(t, code, ip)));
+        c->jmp(loadLocal(context, 1, codeReadInt16(t, code, ip)));
         c->endSubroutine(frame->subroutine);
         return;
 
@@ -4434,7 +4603,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
 
   unsigned index = 0;
   if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
-    c->initLocal(1, index);
+    initLocal(context, 1, index);
     frame.set(index++, Frame::Object);    
   }
 
@@ -4446,19 +4615,19 @@ compile(MyThread* t, Allocator* allocator, Context* context)
     switch (*it.next()) {
     case 'L':
     case '[':
-      c->initLocal(1, index);
+      initLocal(context, 1, index);
       frame.set(index++, Frame::Object);
       break;
       
     case 'J':
     case 'D':
-      c->initLocal(2, index);
+      initLocal(context, 2, index);
       frame.set(index++, Frame::Long);
       frame.set(index++, Frame::Long);
       break;
 
     default:
-      c->initLocal(1, index);
+      initLocal(context, 1, index);
       frame.set(index++, Frame::Integer);
       break;
     }
@@ -4636,8 +4805,8 @@ compileVirtualMethod2(MyThread* t, object class_, unsigned index)
 uint64_t
 compileVirtualMethod(MyThread* t)
 {
-  object class_ = static_cast<object>(t->virtualCallClass);
-  t->virtualCallClass = 0;
+  object class_ = objectClass(t, static_cast<object>(t->virtualCallTarget));
+  t->virtualCallTarget = 0;
 
   unsigned index = t->virtualCallIndex;
   t->virtualCallIndex = 0;
@@ -4651,30 +4820,20 @@ compileVirtualMethod(MyThread* t)
   }
 }
 
+inline uint64_t
+invokeNativeFast(MyThread* t, object method)
+{
+  return reinterpret_cast<FastNativeFunction>(methodCompiled(t, method))
+    (t, method,
+     static_cast<uintptr_t*>(t->stack)
+     + t->arch->frameFooterSize()
+     + t->arch->frameReturnAddressSize());
+}
+
 uint64_t
-invokeNative2(MyThread* t, object method)
+invokeNativeSlow(MyThread* t, object method)
 {
   PROTECT(t, method);
-
-  assert(t, methodFlags(t, method) & ACC_NATIVE);
-
-  initClass(t, methodClass(t, method));
-  if (UNLIKELY(t->exception)) return 0;
-
-  if (methodCompiled(t, method) == defaultThunk(t)) {
-    void* function = resolveNativeMethod(t, method);
-    if (UNLIKELY(function == 0)) {
-      object message = makeString
-        (t, "%s.%s%s",
-         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-         &byteArrayBody(t, methodName(t, method), 0),
-         &byteArrayBody(t, methodSpec(t, method), 0));
-      t->exception = makeUnsatisfiedLinkError(t, message);
-      return 0;
-    }
-
-    methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
-  }
 
   object class_ = methodClass(t, method);
   PROTECT(t, class_);
@@ -4694,12 +4853,13 @@ invokeNative2(MyThread* t, object method)
   types[typeOffset++] = POINTER_TYPE;
 
   uintptr_t* sp = static_cast<uintptr_t*>(t->stack)
-    + parameterOffset(t, method);
+    + t->arch->frameFooterSize()
+    + t->arch->frameReturnAddressSize();
 
   if (methodFlags(t, method) & ACC_STATIC) {
     args[argOffset++] = reinterpret_cast<uintptr_t>(&class_);
   } else {
-    args[argOffset++] = reinterpret_cast<uintptr_t>(sp--);
+    args[argOffset++] = reinterpret_cast<uintptr_t>(sp++);
   }
   types[typeOffset++] = POINTER_TYPE;
 
@@ -4716,14 +4876,14 @@ invokeNative2(MyThread* t, object method)
     case INT16_TYPE:
     case INT32_TYPE:
     case FLOAT_TYPE:
-      args[argOffset++] = *(sp--);
+      args[argOffset++] = *(sp++);
       break;
 
     case INT64_TYPE:
     case DOUBLE_TYPE: {
-      memcpy(args + argOffset, sp - 1, 8);
+      memcpy(args + argOffset, sp, 8);
       argOffset += (8 / BytesPerWord);
-      sp -= 2;
+      sp += 2;
     } break;
 
     case POINTER_TYPE: {
@@ -4732,7 +4892,7 @@ invokeNative2(MyThread* t, object method)
       } else {
         args[argOffset++] = 0;
       }
-      -- sp;
+      ++ sp;
     } break;
 
     default: abort(t);
@@ -4842,6 +5002,16 @@ invokeNative2(MyThread* t, object method)
 
   return result;
 }
+  
+uint64_t
+invokeNative2(MyThread* t, object method)
+{
+  if (methodVmFlags(t, method) & FastNative) {
+    return invokeNativeFast(t, method);
+  } else {
+    return invokeNativeSlow(t, method);
+  }
+}
 
 uint64_t
 invokeNative(MyThread* t)
@@ -4870,7 +5040,11 @@ invokeNative(MyThread* t)
   t->trace->targetMethod = t->trace->nativeMethod;
 
   if (LIKELY(t->exception == 0)) {
-    result = invokeNative2(t, t->trace->nativeMethod);
+    resolveNative(t, t->trace->nativeMethod);
+
+    if (LIKELY(t->exception == 0)) {
+      result = invokeNative2(t, t->trace->nativeMethod);
+    }
   }
 
   t->trace->targetMethod = 0;
@@ -5019,6 +5193,61 @@ visitStack(MyThread* t, Heap::Visitor* v)
   }
 }
 
+void
+walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
+{
+  const int ContinuationReferenceCount = 3;
+
+  int bodyStart = max(0, start - ContinuationReferenceCount);
+
+  object method = t->m->heap->follow(continuationMethod(t, c));
+  unsigned count = frameMapSizeInBits(t, method);
+
+  if (count) {
+    object map = codePool(t, methodCode(t, method));
+    int index = frameMapIndex
+      (t, method, difference
+       (continuationAddress(t, c),
+        reinterpret_cast<void*>(methodAddress(t, method))));
+
+    for (unsigned i = bodyStart; i < count; ++i) {
+      int j = index + i;
+      if ((intArrayBody(t, map, j / 32)
+           & (static_cast<int32_t>(1) << (j % 32))))
+      {
+        if (not w->visit
+            ((continuationFramePointerOffset(t, c) / BytesPerWord)
+             - t->arch->framePointerOffset()
+             - stackOffsetFromFrame(t, method)
+             + localOffsetFromStack(c, i, method)))
+        {
+          return;
+        }        
+      }
+    }
+  }
+}
+
+void
+callWithContinuation(MyThread* t, object method, object this_,
+                     object continuation, void* base, void* stack)
+{
+  t->trace->targetMethod = 0;
+
+  if (methodFlags(t, method) & ACC_NATIVE) {
+    t->trace->nativeMethod = method;
+  } else {
+    t->trace->nativeMethod = 0;
+  }
+  
+  vmCallWithContinuation
+    (t, methodAddress(t, method), this_, continuation, base,
+     static_cast<void**>(stack)
+     - t->arch->argumentFootprint(methodParameterFootprint(t, method))
+     - t->arch->frameFooterSize()
+     - t->arch->returnAddressSize());
+}
+
 class ArgumentList {
  public:
   ArgumentList(Thread* t, uintptr_t* array, unsigned size, bool* objectMask,
@@ -5028,7 +5257,7 @@ class ArgumentList {
     array(array),
     objectMask(objectMask),
     size(size),
-    position(size),
+    position(0),
     protector(this)
   {
     if (this_) {
@@ -5065,7 +5294,7 @@ class ArgumentList {
     array(array),
     objectMask(objectMask),
     size(size),
-    position(size),
+    position(0),
     protector(this)
   {
     if (this_) {
@@ -5095,35 +5324,30 @@ class ArgumentList {
   }
 
   void addObject(object v) {
-    assert(t, position);
+    assert(t, position < size);
 
-    -- position;
     array[position] = reinterpret_cast<uintptr_t>(v);
     objectMask[position] = true;
+    ++ position;
   }
 
   void addInt(uintptr_t v) {
-    assert(t, position);
+    assert(t, position < size);
 
-    -- position;
     array[position] = v;
     objectMask[position] = false;
+    ++ position;
   }
 
   void addLong(uint64_t v) {
-    assert(t, position >= 2);
+    assert(t, position < size - 1);
 
-    position -= 2;
-
-    if (BytesPerWord == 8) {
-      memcpy(array + position, &v, 8);
-    } else {
-      array[position] = v;
-      array[position + 1] = v >> 32;
-    }
+    memcpy(array + position, &v, 8);
 
     objectMask[position] = false;
     objectMask[position + 1] = false;
+
+    position += 2;
   }
 
   MyThread* t;
@@ -5378,9 +5602,12 @@ class MyProcessor: public Processor {
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
+      v->visit(&(trace->continuation));
       v->visit(&(trace->nativeMethod));
       v->visit(&(trace->targetMethod));
     }
+
+    v->visit(&(t->continuation));
 
     for (Reference* r = t->reference; r; r = r->next) {
       v->visit(&(r->target));
@@ -5676,6 +5903,53 @@ class MyProcessor: public Processor {
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success
            (t->m->system->handleSegFault(&segFaultHandler)));
+  }
+
+  virtual void callWithCurrentContinuation(Thread* t, object method,
+                                           object this_)
+  {
+    object coninuation;
+    void* base;
+    void* stack;
+
+    { PROTECT(t, method);
+      PROTECT(t, this_);
+
+      compile(static_cast<MyThread*>(t), 
+              ::codeAllocator(static_cast<MyThread*>(t)), 0, method);
+
+      if (LIKELY(t->exception == 0)) {
+        void* ip;
+        continuation = makeCurrentContinuation
+          (static_cast<MyThread*>(t), &ip, &base, &stack);
+      }
+    }
+
+    if (LIKELY(t->exception == 0)) {
+      callWithContinuation(t, method, this_, continuation, base, stack);
+    }
+  }
+
+  virtual void callContinuation(Thread* t, object continuation, object result)
+  {
+    assert(t, t->exception == 0);
+
+    void* ip;
+    void* base;
+    void* stack;
+    findUnwindTarget(t, &ip, &base, &stack);
+
+    t->trace->nativeMethod = 0;
+    t->trace->targetMethod = 0;
+
+    t->continuation = continuation;
+    vmJump(ip, base, stack, t, result, 0);
+  }
+
+  virtual void walkContinuationBody(Thread* t, Heap::Walker* w, object o,
+                                    unsigned start)
+  {
+    ::walkContinuationBody(static_cast<MyThread*>(t), w, o, start);
   }
   
   System* s;
@@ -6124,15 +6398,24 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   { Assembler* a = defaultVirtualContext.context.assembler;
 
-    Assembler::Register class_(t->arch->virtualCallClass());
-    Assembler::Memory virtualCallClass
-      (t->arch->thread(), difference(&(t->virtualCallClass), t));
+    Assembler::Register class_(t->arch->virtualCallTarget());
+    Assembler::Memory virtualCallTargetSrc
+      (t->arch->stack(),
+       t->arch->frameFooterSize() + t->arch->returnAddressSize());
+
+    a->apply(Move, BytesPerWord, MemoryOperand, &virtualCallTargetSrc,
+             BytesPerWord, RegisterOperand, &class_);
+
+    Assembler::Memory virtualCallTargetDst
+      (t->arch->thread(), difference(&(t->virtualCallTarget), t));
+
     a->apply(Move, BytesPerWord, RegisterOperand, &class_,
-             BytesPerWord, MemoryOperand, &virtualCallClass);
+             BytesPerWord, MemoryOperand, &virtualCallTargetDst);
 
     Assembler::Register index(t->arch->virtualCallIndex());
     Assembler::Memory virtualCallIndex
       (t->arch->thread(), difference(&(t->virtualCallIndex), t));
+
     a->apply(Move, BytesPerWord, RegisterOperand, &index,
              BytesPerWord, MemoryOperand, &virtualCallIndex);
     

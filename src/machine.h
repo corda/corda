@@ -74,20 +74,26 @@ enum StackTag {
 const int NativeLine = -1;
 const int UnknownLine = -2;
 
-// class flags:
+// class flags (note that we must be careful not to overlap the
+// standard ACC_* flags):
+const unsigned SingletonFlag = 1 << 14;
+const unsigned ContinuationFlag = 1 << 15;
+
+// class vmFlags:
 const unsigned ReferenceFlag = 1 << 0;
 const unsigned WeakReferenceFlag = 1 << 1;
 const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
 const unsigned PrimitiveFlag = 1 << 4;
-const unsigned SingletonFlag = 1 << 5;
-const unsigned BootstrapFlag = 1 << 6;
-const unsigned HasFinalMemberFlag = 1 << 7;
+const unsigned BootstrapFlag = 1 << 5;
+const unsigned HasFinalMemberFlag = 1 << 6;
 
-// method flags:
+// method vmFlags:
 const unsigned ClassInitFlag = 1 << 0;
 const unsigned CompiledFlag = 1 << 1;
 const unsigned ConstructorFlag = 1 << 2;
+const unsigned NativeResolved = 1 << 3;
+const unsigned FastNative = 1 << 4;
 
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
@@ -1319,6 +1325,8 @@ class Thread {
   bool stress;
 #endif // VM_STRESS
 };
+
+typedef uint64_t (*FastNativeFunction)(Thread*, object, uintptr_t*) = 0;
 
 inline object
 objectClass(Thread*, object o)

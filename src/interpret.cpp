@@ -460,7 +460,7 @@ makeNativeMethodData(Thread* t, object method, void* function)
   return data;
 }
 
-inline object
+inline void
 resolveNativeMethodData(Thread* t, object method)
 {
   if (methodCode(t, method) == 0) {
@@ -479,9 +479,7 @@ resolveNativeMethodData(Thread* t, object method)
       t->exception = makeUnsatisfiedLinkError(t, message);
       return 0;
     }
-  } else {
-    return methodCode(t, method);
-  }  
+  } 
 }
 
 inline void
@@ -498,16 +496,73 @@ checkStack(Thread* t, object method)
   }
 }
 
+void
+pushResult(Thread* t, unsigned returnCode, uint64_t result)
+{
+  switch (returnCode) {
+  case ByteField:
+  case BooleanField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<int8_t>(result));
+    }
+    pushInt(t, static_cast<int8_t>(result));
+    break;
+
+  case CharField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<uint16_t>(result));
+    }
+    pushInt(t, static_cast<uint16_t>(result));
+    break;
+
+  case ShortField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<int16_t>(result));
+    }
+    pushInt(t, static_cast<int16_t>(result));
+    break;
+
+  case FloatField:
+  case IntField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<int32_t>(result));
+    }
+    pushInt(t, result);
+    break;
+
+  case LongField:
+  case DoubleField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %"LLD"\n", result);
+    }
+    pushLong(t, result);
+    break;
+
+  case ObjectField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %p at %p\n",
+              static_cast<uintptr_t>(result) == 0 ? 0 :
+              *reinterpret_cast<object*>(static_cast<uintptr_t>(result)),
+              reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+    }
+    pushObject(t, static_cast<uintptr_t>(result) == 0 ? 0 :
+               *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+    break;
+
+  case VoidField:
+    break;
+
+  default:
+    abort(t);
+  }
+}
+
 unsigned
-invokeNative(Thread* t, object method)
+invokeNativeSlow(Thread* t, object method)
 {
   PROTECT(t, method);
 
-  object data = resolveNativeMethodData(t, method);
-  if (UNLIKELY(t->exception)) {
-    return VoidField;
-  }
-
+  object data = methodCode(t, method);
   PROTECT(t, data);
 
   pushFrame(t, method);
@@ -609,64 +664,44 @@ invokeNative(Thread* t, object method)
     return VoidField;
   }
 
-  switch (returnCode) {
-  case ByteField:
-  case BooleanField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<int8_t>(result));
-    }
-    pushInt(t, static_cast<int8_t>(result));
-    break;
-
-  case CharField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<uint16_t>(result));
-    }
-    pushInt(t, static_cast<uint16_t>(result));
-    break;
-
-  case ShortField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<int16_t>(result));
-    }
-    pushInt(t, static_cast<int16_t>(result));
-    break;
-
-  case FloatField:
-  case IntField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<int32_t>(result));
-    }
-    pushInt(t, result);
-    break;
-
-  case LongField:
-  case DoubleField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", result);
-    }
-    pushLong(t, result);
-    break;
-
-  case ObjectField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %p at %p\n",
-              static_cast<uintptr_t>(result) == 0 ? 0 :
-              *reinterpret_cast<object*>(static_cast<uintptr_t>(result)),
-              reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
-    }
-    pushObject(t, static_cast<uintptr_t>(result) == 0 ? 0 :
-               *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
-    break;
-
-  case VoidField:
-    break;
-
-  default:
-    abort(t);
-  }
+  pushResult(t, returnCode, result);
 
   return returnCode;
+}
+
+unsigned
+invokeNative(MyThread* t, object method)
+{
+  PROTECT(t, method);
+
+  resolveNativeMethodData(t, method);
+
+  if (UNLIKELY(t->exception)) {
+    return VoidField;
+  }
+
+  if (methodVmFlags(t, method) & FastNative) {
+    pushFrame(t, method);
+
+    uint64_t result = reinterpret_cast<FastNativeFunction>
+      (methodCompiled(t, method))
+      (t, method,
+       static_cast<uintptr_t*>(t->stack)
+       + t->arch->frameFooterSize()
+       + t->arch->frameReturnAddressSize());
+
+    popFrame(t);
+
+    if (UNLIKELY(t->exception)) {
+      return VoidField;
+    }
+
+    pushResult(t, methodReturnCode(t, method), result);
+
+    return methodReturnCode(t, method);
+  } else {
+    return invokeNativeSlow(t, method);
+  }
 }
 
 bool

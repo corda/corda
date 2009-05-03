@@ -2327,51 +2327,41 @@ class CallEvent: public Event {
     stackArgumentFootprint(stackArgumentFootprint)
   {
     uint32_t registerMask = ~0;
-    Stack* s = argumentStack;
-    unsigned index = 0;
-    unsigned frameIndex;
-    int returnAddressIndex = -1;
-    int framePointerIndex = -1;
 
-    if (flags & Compiler::TailJump) {
-      assert(c, argumentCount == 0);
+    if (argumentCount) {
+      assert(c, (flags & Compiler::TailJump) == 0);
+      assert(c, stackArgumentFootprint == 0);
 
-      int base = frameBase(c);
-      returnAddressIndex = base + c->arch->returnAddressOffset();
-      framePointerIndex = base + c->arch->framePointerOffset();
+      Stack* s = argumentStack;
+      unsigned frameIndex = 0;
+      unsigned index = 0;
 
-      frameIndex = totalFrameSize(c) - c->arch->argumentFootprint
-        (stackArgumentFootprint);
-    } else {
-      frameIndex = 0;
-
-      if (argumentCount) {
-        while (true) {
-          Read* target;
-          if (index < c->arch->argumentRegisterCount()) {
-            int number = c->arch->argumentRegister(index);
+      while (true) {
+        Read* target;
+        if (index < c->arch->argumentRegisterCount()) {
+          int number = c->arch->argumentRegister(index);
         
-            if (DebugReads) {
-              fprintf(stderr, "reg %d arg read %p\n", number, s->value);
-            }
-
-            target = fixedRegisterRead(c, number);
-            registerMask &= ~(1 << number);
-          } else {
-            if (DebugReads) {
-              fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
-            }
-
-            target = read(c, SiteMask(1 << MemoryOperand, 0, frameIndex));
-            ++ frameIndex;
+          if (DebugReads) {
+            fprintf(stderr, "reg %d arg read %p\n", number, s->value);
           }
-          addRead(c, this, s->value, target);
 
-          if ((++ index) < argumentCount) {
-            s = s->next;
-          } else {
-            break;
+          target = fixedRegisterRead(c, number);
+          registerMask &= ~(1 << number);
+        } else {
+          if (DebugReads) {
+            fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
           }
+
+          target = read(c, SiteMask(1 << MemoryOperand, 0, frameIndex));
+          ++ frameIndex;
+        }
+
+        addRead(c, this, s->value, target);
+
+        if ((++ index) < argumentCount) {
+          s = s->next;
+        } else {
+          break;
         }
       }
     }
@@ -2394,41 +2384,53 @@ class CallEvent: public Event {
                (typeMask, registerMask & planRegisterMask, AnyFrameIndex)));
     }
 
-    int footprint = stackArgumentFootprint;
-    for (Stack* s = stackBefore; s; s = s->next) {
-      if (s->value) {
-        if (footprint > 0) {
+    Stack* stack = stackBefore;
+
+    if (stackArgumentFootprint) {
+      int footprint = stackArgumentFootprint;
+      int returnAddressIndex;
+      int framePointerIndex;
+      int frameOffset;
+
+      if (flags & Compiler::TailJump) {
+        assert(c, argumentCount == 0);
+
+        int base = frameBase(c);
+        returnAddressIndex = base + c->arch->returnAddressOffset();
+        framePointerIndex = base + c->arch->framePointerOffset();
+
+        frameOffset = totalFrameSize(c)
+          - c->arch->argumentFootprint(stackArgumentFootprint) - 1;
+      } else {
+        returnAddressIndex = -1;
+        framePointerIndex = -1;
+        frameOffset = -1;
+      }
+
+      while (footprint > 0) {
+        if (stack->value) {
+          int frameIndex = footprint + frameOffset;
+
           if (DebugReads) {
             fprintf(stderr, "stack arg read %p at %d of %d\n",
-                    s->value, frameIndex, totalFrameSize(c));
+                    stack->value, frameIndex, totalFrameSize(c));
           }
 
           if (static_cast<int>(frameIndex) == returnAddressIndex) {
-            returnAddressSurrogate = s->value;
-            addRead(c, this, s->value, anyRegisterRead(c));
+            returnAddressSurrogate = stack->value;
+            addRead(c, this, stack->value, anyRegisterRead(c));
           } else if (static_cast<int>(frameIndex) == framePointerIndex) {
             framePointerSurrogate = s->value;
-            addRead(c, this, s->value, anyRegisterRead(c));
+            addRead(c, this, stack->value, anyRegisterRead(c));
           } else {
-            addRead(c, this, s->value, read
+            addRead(c, this, stack->value, read
                     (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
           }
-        } else if ((flags & Compiler::TailJump) == 0) {
-          unsigned logicalIndex = ::frameIndex
-            (c, s->index + c->localFootprint);
-
-          if (DebugReads) {
-            fprintf(stderr, "stack save read %p at %d of %d\n",
-                    s->value, logicalIndex, totalFrameSize(c));
-          }
-
-          addRead(c, this, s->value, read
-                  (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
         }
-      }
 
-      -- footprint;
-      ++ frameIndex;
+        stack = stack->next;
+        -- footprint;
+      }
     }
 
     if ((flags & Compiler::TailJump) == 0) {
@@ -2444,6 +2446,23 @@ class CallEvent: public Event {
         - stackArgumentIndex;
 
       assert(c, static_cast<int>(popIndex) >= 0);
+
+      while (stack) {
+        if (stack->value) {
+          unsigned logicalIndex = ::frameIndex
+            (c, stack->index + c->localFootprint);
+
+          if (DebugReads) {
+            fprintf(stderr, "stack save read %p at %d of %d\n",
+                    stack->value, logicalIndex, totalFrameSize(c));
+          }
+
+          addRead(c, this, stack->value, read
+                  (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
+        }
+
+        stack = stack->next;
+      }
 
       saveLocals(c, this);
     }
@@ -3289,7 +3308,7 @@ push(Context* c, unsigned footprint, Value* v)
   
   Value* low = v;
   
-  if (bigEndian) {
+  if (not bigEndian) {
     v = pushWord(c, v);
   }
 
@@ -3308,7 +3327,7 @@ push(Context* c, unsigned footprint, Value* v)
     high = 0;
   }
   
-  if (not bigEndian) {
+  if (bigEndian) {
     v = pushWord(c, v);
   }
 
@@ -3341,7 +3360,7 @@ pop(Context* c, unsigned footprint)
 
   bool bigEndian = c->arch->bigEndian();
 
-  if (not bigEndian) {
+  if (bigEndian) {
     s = c->stack;
   }
 
@@ -3352,11 +3371,11 @@ pop(Context* c, unsigned footprint)
     Stack* low;
     Stack* high;
     if (bigEndian) {
-      high = c->stack;
-      low = high->next;
-    } else {
       low = c->stack;
       high = low->next;
+    } else {
+      high = c->stack;
+      low = high->next;
     }
 
     assert(c, low->value->high == high->value
@@ -3366,7 +3385,7 @@ pop(Context* c, unsigned footprint)
     popWord(c);
   }
 
-  if (bigEndian) {
+  if (not bigEndian) {
     s = c->stack;
   }
 
@@ -3995,61 +4014,6 @@ appendSaveLocals(Context* c)
 {
   append(c, new (c->zone->allocate(sizeof(SaveLocalsEvent)))
          SaveLocalsEvent(c));
-}
-
-class FreezeRegisterEvent: public Event {
- public:
-  FreezeRegisterEvent(Context* c, int number, Value* value):
-    Event(c), number(number), value(value)
-  {
-    addRead(c, this, value, fixedRegisterRead(c, number));
-  }
-
-  virtual const char* name() {
-    return "FreezeRegisterEvent";
-  }
-
-  virtual void compile(Context* c) {
-    c->registerResources[number].freeze(c, value);
-
-    for (Read* r = reads; r; r = r->eventNext) {
-      popRead(c, this, r->value);
-    }
-  }
-
-  int number;
-  Value* value;
-};
-
-void
-appendFreezeRegister(Context* c, int number, Value* value)
-{
-  append(c, new (c->zone->allocate(sizeof(FreezeRegisterEvent)))
-         FreezeRegisterEvent(c, number, value));
-}
-
-class ThawRegisterEvent: public Event {
- public:
-  ThawRegisterEvent(Context* c, int number):
-    Event(c), number(number)
-  { }
-
-  virtual const char* name() {
-    return "ThawRegisterEvent";
-  }
-
-  virtual void compile(Context* c) {
-    c->registerResources[number].thaw(c, 0);
-  }
-
-  int number;
-};
-
-void
-appendThawRegister(Context* c, int number)
-{
-  append(c, new (c->zone->allocate(sizeof(ThawRegisterEvent)))
-         ThawRegisterEvent(c, number));
 }
 
 class DummyEvent: public Event {
@@ -5133,14 +5097,6 @@ class MyCompiler: public Compiler {
     return value(&c, s, s);
   }
 
-  virtual void freezeRegister(int number, Operand* value) {
-    appendFreezeRegister(&c, number, static_cast<Value*>(value));
-  }
-
-  virtual void thawRegister(int number) {
-    appendThawRegister(&c, number);
-  }
-
   Promise* machineIp() {
     return codePromise(&c, c.logicalCode[c.logicalIp]->lastEvent);
   }
@@ -5230,18 +5186,18 @@ class MyCompiler: public Compiler {
       Stack* low;
       Stack* high;
       if (bigEndian) {
-        high = s;
-        low = s->next;
-      } else {
         low = s;
         high = s->next;
+      } else {
+        high = s;
+        low = s->next;
       }
 
       assert(&c, low->value->high == high->value
              and ((BytesPerWord == 8) xor (low->value->high != 0)));
 #endif // not NDEBUG
 
-      if (bigEndian) {
+      if (not bigEndian) {
         s = s->next;
       }
     }

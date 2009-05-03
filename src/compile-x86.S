@@ -47,23 +47,70 @@ vmInvoke:
 
    // copy arguments into place
    movq   $0,%r9
-   jmp    LOCAL(test)
+   jmp    LOCAL(vmInvoke_argumentTest)
 
-LOCAL(loop):
+LOCAL(vmInvoke_argumentLoop):
    movq   (%rdx,%r9,1),%r8
    movq   %r8,(%rsp,%r9,1)
    addq   $8,%r9
 
-LOCAL(test):
+LOCAL(vmInvoke_argumentTest):
    cmpq   %rcx,%r9
-   jb     LOCAL(loop)
+   jb     LOCAL(vmInvoke_argumentLoop)
    
    // call function
    call   *%rsi
    
+LOCAL(vmInvoke_returnAddress):
    // restore stack pointer
    movq   %rbp,%rsp
+
+   // call the next continuation frame, if any
+   movq   THREAD_CONTINUATION(%rbx),%rcx
+   cmpq   $0,%rcx
+   je     LOCAL(vmInvoke_exit)
+
+   movq   CONTINUATION_SIZE(%rcx),%rsi
+	 subq   %rsi,%rsp
    
+   movq   CONTINUATION_BODY(%rcx),%rdi
+   
+   movq   $0,%r9
+   jmp    LOCAL(vmInvoke_continuationTest)
+
+LOCAL(vmInvoke_continuationLoop):
+   movq   (%rdi,%r9,1),%r8
+   movq   %r8,(%rsp,%r9,1)
+   addq   $8,%r9
+   
+LOCAL(vmInvoke_continuationTest):
+   cmpq   %rsi,%r9
+   jb     LOCAL(vmInvoke_continuationLoop)
+   
+   movq   CONTINUATION_RETURN_ADDRESS_OFFSET(%rcx),%rdi
+   movq   LOCAL(vmInvoke_returnAddress),(%rsp,%rdi,1)
+   
+   movq   CONTINUATION_FRAME_POINTER_OFFSET(%rcx),%rdi
+   movq   %rbp,(%rsp,%rdi,1)
+   subq   %rdi,%rbp
+   
+   movq   CONTINUATION_NEXT(%rcx),%rdi
+   movq   %rdi,THREAD_CONTINUATION(%rbx)
+
+   // call the continuation unless we're handling an exception
+   movq   THREAD_EXCEPTION(%rbx),%rsi
+   cmpq   $0,%rsi
+   je     *CONTINUATION_ADDRESS(%rcx)
+
+   // we're handling an exception - call the exception handler instead
+   movq   $0,THREAD_EXCEPTION(%rbx)
+   movq   THREAD_EXCEPTION_STACK(%rbx),%rsp
+   movq   THREAD_EXCEPTION_OFFSET(%rbx),%rdi
+   movq   %rsi,(%rsp,%rdi,1)
+   
+   jmp    *THREAD_EXCEPTION_HANDLER(%rbx)
+
+LOCAL(vmInvoke_exit):
    // restore callee-saved registers
    movq   %rsp,%r9
    subq   $48,%r9
@@ -77,7 +124,24 @@ LOCAL(test):
    // return
    popq   %rbp
    ret
-
+   
+.globl vmCallWithContinuation
+vmCallWithContinuation:
+   // %rdi: thread
+   // %rsi: address
+   // %rdx: targetObject
+   // %rcx: continuation
+   // %r8 : base
+   // %r9 : stack
+   
+   movq   %rdi,%rdx
+   movq   %r8,%rbp
+   movq   %r9,%rsp
+   movq   LOCAL(vmInvoke_returnAddress),(%rsp)
+   movq   %rcx,8(%rsp)
+   movq   %rdx,16(%rsp)
+   jmp    *%rsi
+   
 #elif defined __i386__
 
 #  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__

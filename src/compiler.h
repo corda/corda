@@ -67,9 +67,6 @@ class Compiler {
 
   virtual Operand* register_(int number) = 0;
 
-  virtual void freezeRegister(int number, Operand* value) = 0;
-  virtual void thawRegister(int number) = 0;
-
   virtual void push(unsigned footprint) = 0;
   virtual void push(unsigned footprint, Operand* value) = 0;
   virtual void save(unsigned footprint, Operand* value) = 0;

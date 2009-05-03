@@ -2034,7 +2034,7 @@ class MyArchitecture: public Assembler::Architecture {
     return (BytesPerWord == 4 ? rdx : NoRegister);
   }
 
-  virtual int virtualCallClass() {
+  virtual int virtualCallTarget() {
     return rax;
   }
 
