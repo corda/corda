@@ -15,6 +15,19 @@
 .text
 
 #ifdef __x86_64__
+   
+#define THREAD_CONTINUATION 168
+#define THREAD_EXCEPTION 64
+#define THREAD_EXCEPTION_STACK 176
+#define THREAD_EXCEPTION_OFFSET 184
+#define THREAD_EXCEPTION_HANDLER 192
+
+#define CONTINUATION_NEXT 8
+#define CONTINUATION_ADDRESS 24
+#define CONTINUATION_RETURN_ADDRESS_OFFSET 32
+#define CONTINUATION_FRAME_POINTER_OFFSET 40
+#define CONTINUATION_LENGTH 48
+#define CONTINUATION_BODY 56
 
 .globl vmInvoke
 vmInvoke:
@@ -65,12 +78,13 @@ LOCAL(vmInvoke_returnAddress):
    // restore stack pointer
    movq   %rbp,%rsp
 
-   // call the next continuation frame, if any
+   // call the next continuation, if any
    movq   THREAD_CONTINUATION(%rbx),%rcx
    cmpq   $0,%rcx
    je     LOCAL(vmInvoke_exit)
 
-   movq   CONTINUATION_SIZE(%rcx),%rsi
+   movq   CONTINUATION_LENGTH(%rcx),%rsi
+   shrq   $3,%rsi
 	 subq   %rsi,%rsp
    
    movq   CONTINUATION_BODY(%rcx),%rdi
@@ -88,7 +102,8 @@ LOCAL(vmInvoke_continuationTest):
    jb     LOCAL(vmInvoke_continuationLoop)
    
    movq   CONTINUATION_RETURN_ADDRESS_OFFSET(%rcx),%rdi
-   movq   LOCAL(vmInvoke_returnAddress),(%rsp,%rdi,1)
+   movq   LOCAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
+   movq   %r10,(%rsp,%rdi,1)
    
    movq   CONTINUATION_FRAME_POINTER_OFFSET(%rcx),%rdi
    movq   %rbp,(%rsp,%rdi,1)
@@ -100,8 +115,10 @@ LOCAL(vmInvoke_continuationTest):
    // call the continuation unless we're handling an exception
    movq   THREAD_EXCEPTION(%rbx),%rsi
    cmpq   $0,%rsi
-   je     *CONTINUATION_ADDRESS(%rcx)
+   jne    LOCAL(vmInvoke_handleException)
+   jmp    *CONTINUATION_ADDRESS(%rcx)
 
+LOCAL(vmInvoke_handleException):
    // we're handling an exception - call the exception handler instead
    movq   $0,THREAD_EXCEPTION(%rbx)
    movq   THREAD_EXCEPTION_STACK(%rbx),%rsp
@@ -137,7 +154,8 @@ vmCallWithContinuation:
    movq   %rdi,%rdx
    movq   %r8,%rbp
    movq   %r9,%rsp
-   movq   LOCAL(vmInvoke_returnAddress),(%rsp)
+   movq   LOCAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
+   movq   %r10,(%rsp)
    movq   %rcx,8(%rsp)
    movq   %rdx,16(%rsp)
    jmp    *%rsi

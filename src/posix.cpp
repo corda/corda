@@ -831,7 +831,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       sigaddset(&set, SegFaultSignal);
       sigprocmask(SIG_UNBLOCK, &set, 0);
 
-      vmJump(ip, base, stack, thread);
+      vmJump(ip, base, stack, thread, 0, 0);
     }
   } break;
 

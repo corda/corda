@@ -199,17 +199,16 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
 namespace vm {
 
 void*
-resolveNativeMethod2(Thread* t, object method)
+resolveNativeMethod(Thread* t, object method)
 {
   void* p = ::resolveNativeMethod(t, method, "Java_", 5);
   if (p) {
-    methodVmFlags(t, method) |= NativeResolved;
     return p;
   }
 
   p = ::resolveNativeMethod(t, method, "Avian_", 6);
   if (p) {
-    methodVmFlags(t, method) |= NativeResolved & FastNative;
+    methodVmFlags(t, method) |= FastNative;
     return p;
   }
 

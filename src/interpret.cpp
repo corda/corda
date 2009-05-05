@@ -468,6 +468,12 @@ resolveNativeMethodData(Thread* t, object method)
     if (LIKELY(p)) {
       PROTECT(t, method);
       object data = makeNativeMethodData(t, method, p);
+
+      // ensure other threads see updated methodVmFlags before
+      // methodCode, and that the native method data is initialized
+      // before it is visible to those threads:
+      memoryBarrier();
+
       set(t, method, MethodCode, data);
       return data;
     } else {

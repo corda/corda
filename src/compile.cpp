@@ -22,6 +22,10 @@ extern "C" uint64_t
 vmInvoke(void* thread, void* function, void* arguments,
          unsigned argumentFootprint, unsigned frameSize, unsigned returnType);
 
+extern "C" uint64_t
+vmCallWithContinuation(void* thread, void* function, void* targetObject,
+                       object continuation, void* base, void* stack);
+
 extern "C" void
 vmCall();
 
@@ -118,7 +122,7 @@ parameterOffset(MyThread* t, object method)
 }
 
 object
-resolveThisPointer(MyThread* t, void* stack, object method)
+resolveThisPointer(MyThread* t, void* stack)
 {
   return reinterpret_cast<object*>(stack)
     [t->arch->frameFooterSize() + t->arch->frameReturnAddressSize()];
@@ -127,7 +131,7 @@ resolveThisPointer(MyThread* t, void* stack, object method)
 object
 resolveTarget(MyThread* t, void* stack, object method)
 {
-  object class_ = objectClass(t, resolveThisPointer(t, stack, method));
+  object class_ = objectClass(t, resolveThisPointer(t, stack));
 
   if (classVmFlags(t, class_) & BootstrapFlag) {
     PROTECT(t, method);
@@ -211,6 +215,7 @@ class MyStackWalker: public Processor::StackWalker {
   enum State {
     Start,
     Next,
+    Continuation,
     Method,
     NativeMethod,
     Finish
@@ -351,7 +356,7 @@ class MyStackWalker: public Processor::StackWalker {
   virtual int ip() {
     switch (state) {
     case Continuation:
-      return continuationAddress(t, continuation)
+      return reinterpret_cast<intptr_t>(continuationAddress(t, continuation))
         - methodCompiled(t, continuationMethod(t, continuation));
 
     case Method:
@@ -1359,7 +1364,7 @@ findExceptionHandler(Thread* t, object method, void* ip)
 }
 
 void
-releaseLock(MyThread* t, object method)
+releaseLock(MyThread* t, object method, void* stack)
 {
   if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
     object lock;
@@ -1413,7 +1418,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         t->arch->nextFrame(&stack, &base);
         ip = t->arch->frameIp(stack);
 
-        releaseLock(t, method);
+        releaseLock(t, method, stack);
       }
     } else {
       *targetIp = ip;
@@ -1430,15 +1435,19 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
           t->exceptionHandler = handler;
 
           t->exceptionStack = stackForFrame
-            (t, *targetStack, continuationMethod(t, t->continuation));
+            (t, stack, continuationMethod(t, t->continuation));
 
           t->exceptionOffset = localOffset(t, localSize(t, method), method);
           break;
         } else {
-          releaseLock(t, continuationMethod(t, t->continuation));
+          releaseLock(t, continuationMethod(t, t->continuation),
+                      reinterpret_cast<uint8_t*>(t->continuation)
+                      + ContinuationBody
+                      + continuationReturnAddressOffset(t, t->continuation)
+                      -t->arch->returnAddressOffset());
         }
 
-        t->continuation = continuationNext(t, t->continuation)
+        t->continuation = continuationNext(t, t->continuation);
       }
     }
   }
@@ -1470,7 +1479,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
     if (method) {
       PROTECT(t, method);
 
-      void** top = static_cast<void**>(stack) - t->arch->frameHeader();;
+      void** top = static_cast<void**>(stack) - t->arch->frameHeaderSize();
       unsigned argumentFootprint
         = t->arch->argumentFootprint(methodParameterFootprint(t, target));
       unsigned alignment = t->arch->stackAlignmentInWords();
@@ -1526,7 +1535,7 @@ unwind(MyThread* t)
   void* base;
   void* stack;
   findUnwindTarget(t, &ip, &base, &stack);
-  vmJump(ip, base, stack, t);
+  vmJump(ip, base, stack, t, 0, 0);
 }
 
 object&
@@ -4820,7 +4829,40 @@ compileVirtualMethod(MyThread* t)
   }
 }
 
-inline uint64_t
+void
+resolveNative(MyThread* t, object method)
+{
+  PROTECT(t, method);
+
+  assert(t, methodFlags(t, method) & ACC_NATIVE);
+
+  initClass(t, methodClass(t, method));
+
+  if (LIKELY(t->exception == 0)
+      and methodCompiled(t, method) == defaultThunk(t))
+  {
+    void* function = resolveNativeMethod(t, method);
+    if (UNLIKELY(function == 0)) {
+      object message = makeString
+        (t, "%s.%s%s",
+         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+         &byteArrayBody(t, methodName(t, method), 0),
+         &byteArrayBody(t, methodSpec(t, method), 0));
+      t->exception = makeUnsatisfiedLinkError(t, message);
+      return;
+    }
+
+    // ensure other threads see updated methodVmFlags before
+    // methodCompiled, since we don't want them using the slow calling
+    // convention on a function that expects the fast calling
+    // convention:
+    memoryBarrier();
+
+    methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
+  }
+}
+
+uint64_t
 invokeNativeFast(MyThread* t, object method)
 {
   return reinterpret_cast<FastNativeFunction>(methodCompiled(t, method))
@@ -5200,7 +5242,8 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
 
   int bodyStart = max(0, start - ContinuationReferenceCount);
 
-  object method = t->m->heap->follow(continuationMethod(t, c));
+  object method = static_cast<object>
+    (t->m->heap->follow(continuationMethod(t, c)));
   unsigned count = frameMapSizeInBits(t, method);
 
   if (count) {
@@ -5219,7 +5262,7 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
             ((continuationFramePointerOffset(t, c) / BytesPerWord)
              - t->arch->framePointerOffset()
              - stackOffsetFromFrame(t, method)
-             + localOffsetFromStack(c, i, method)))
+             + localOffsetFromStack(t, i, method)))
         {
           return;
         }        
@@ -5241,11 +5284,14 @@ callWithContinuation(MyThread* t, object method, object this_,
   }
   
   vmCallWithContinuation
-    (t, methodAddress(t, method), this_, continuation, base,
+    (t, reinterpret_cast<void*>(methodAddress(t, method)),
+     this_,
+     continuation,
+     base,
      static_cast<void**>(stack)
      - t->arch->argumentFootprint(methodParameterFootprint(t, method))
      - t->arch->frameFooterSize()
-     - t->arch->returnAddressSize());
+     - t->arch->frameReturnAddressSize());
 }
 
 class ArgumentList {
@@ -5516,6 +5562,7 @@ class MyProcessor: public Processor {
     MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
       MyThread(m, javaThread, static_cast<MyThread*>(parent));
     t->init();
+
     return t;
   }
 
@@ -5905,23 +5952,23 @@ class MyProcessor: public Processor {
            (t->m->system->handleSegFault(&segFaultHandler)));
   }
 
-  virtual void callWithCurrentContinuation(Thread* t, object method,
+  virtual void callWithCurrentContinuation(Thread* vmt, object method,
                                            object this_)
   {
-    object coninuation;
+    MyThread* t = static_cast<MyThread*>(vmt);
+
+    object continuation;
     void* base;
     void* stack;
 
     { PROTECT(t, method);
       PROTECT(t, this_);
 
-      compile(static_cast<MyThread*>(t), 
-              ::codeAllocator(static_cast<MyThread*>(t)), 0, method);
+      compile(t, ::codeAllocator(t), 0, method);
 
       if (LIKELY(t->exception == 0)) {
         void* ip;
-        continuation = makeCurrentContinuation
-          (static_cast<MyThread*>(t), &ip, &base, &stack);
+        continuation = makeCurrentContinuation(t, &ip, &base, &stack);
       }
     }
 
@@ -5930,8 +5977,11 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual void callContinuation(Thread* t, object continuation, object result)
+  virtual void callContinuation(Thread* vmt, object continuation,
+                                object result)
   {
+    MyThread* t = static_cast<MyThread*>(vmt);
+
     assert(t, t->exception == 0);
 
     void* ip;
@@ -5943,7 +5993,8 @@ class MyProcessor: public Processor {
     t->trace->targetMethod = 0;
 
     t->continuation = continuation;
-    vmJump(ip, base, stack, t, result, 0);
+
+    vmJump(ip, base, stack, t, reinterpret_cast<uintptr_t>(result), 0);
   }
 
   virtual void walkContinuationBody(Thread* t, Heap::Walker* w, object o,
@@ -6401,7 +6452,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     Assembler::Register class_(t->arch->virtualCallTarget());
     Assembler::Memory virtualCallTargetSrc
       (t->arch->stack(),
-       t->arch->frameFooterSize() + t->arch->returnAddressSize());
+       t->arch->frameFooterSize() + t->arch->frameReturnAddressSize());
 
     a->apply(Move, BytesPerWord, MemoryOperand, &virtualCallTargetSrc,
              BytesPerWord, RegisterOperand, &class_);

@@ -140,7 +140,7 @@ class Processor {
   callContinuation(Thread* t, object continuation, object result) = 0;
 
   virtual void
-  walkContiuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
+  walkContinuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
   = 0;
 
   object

@@ -92,8 +92,7 @@ const unsigned HasFinalMemberFlag = 1 << 6;
 const unsigned ClassInitFlag = 1 << 0;
 const unsigned CompiledFlag = 1 << 1;
 const unsigned ConstructorFlag = 1 << 2;
-const unsigned NativeResolved = 1 << 3;
-const unsigned FastNative = 1 << 4;
+const unsigned FastNative = 1 << 3;
 
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
@@ -1326,7 +1325,7 @@ class Thread {
 #endif // VM_STRESS
 };
 
-typedef uint64_t (*FastNativeFunction)(Thread*, object, uintptr_t*) = 0;
+typedef uint64_t (*FastNativeFunction)(Thread*, object, uintptr_t*);
 
 inline object
 objectClass(Thread*, object o)

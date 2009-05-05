@@ -2757,8 +2757,6 @@ collect(Thread* t, Heap::CollectionType type)
 
   Machine* m = t->m;
 
-  m->continuationClass = arrayBody(t, t->m->types, Machine::ContinuationType);
-
   m->unsafe = true;
   m->heap->collect(type, footprint(m->rootThread));
   m->unsafe = false;

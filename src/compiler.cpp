@@ -2420,7 +2420,7 @@ class CallEvent: public Event {
             returnAddressSurrogate = stack->value;
             addRead(c, this, stack->value, anyRegisterRead(c));
           } else if (static_cast<int>(frameIndex) == framePointerIndex) {
-            framePointerSurrogate = s->value;
+            framePointerSurrogate = stack->value;
             addRead(c, this, stack->value, anyRegisterRead(c));
           } else {
             addRead(c, this, stack->value, read
