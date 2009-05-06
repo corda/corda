@@ -5553,6 +5553,7 @@ class MyProcessor: public Processor {
     objectPools(0),
     staticTableArray(0),
     virtualThunks(0),
+    receiveMethod(0),
     codeAllocator(s, 0, 0)
   { }
 
@@ -5952,33 +5953,52 @@ class MyProcessor: public Processor {
            (t->m->system->handleSegFault(&segFaultHandler)));
   }
 
-  virtual void callWithCurrentContinuation(Thread* vmt, object method,
-                                           object this_)
-  {
+  virtual void callWithCurrentContinuation(Thread* vmt, object receiver) {
     MyThread* t = static_cast<MyThread*>(vmt);
 
+    object method;
     object continuation;
     void* base;
     void* stack;
 
-    { PROTECT(t, method);
-      PROTECT(t, this_);
+    { PROTECT(t, receiver);
 
-      compile(t, ::codeAllocator(t), 0, method);
+      if (receiveMethod == 0) {
+        const char* const className = "avian/CallbackReceiver";
+        const char* const methodName = "receive";
+        const char* const methodSpec = "(Lavian/Callback;)Ljava/lang/Object;";
+
+        receiveMethod = resolveMethod(t, className, methodName, methodSpec);
+
+        if (receiveMethod == 0) {
+          object message = makeString
+            (t, "%s %s not found in %s", methodName, methodSpec, className);
+          t->exception = makeNoSuchMethodError(t, message);
+        }
+      }
 
       if (LIKELY(t->exception == 0)) {
-        void* ip;
-        continuation = makeCurrentContinuation(t, &ip, &base, &stack);
+        method = findInterfaceMethod
+          (t, receiveMethod, objectClass(t, receiver));
+        PROTECT(t, method);
+        
+        compile(t, ::codeAllocator(t), 0, method);
+        if (LIKELY(t->exception == 0)) {
+          void* ip;
+          continuation = makeCurrentContinuation(t, &ip, &base, &stack);
+        }
       }
     }
 
     if (LIKELY(t->exception == 0)) {
-      callWithContinuation(t, method, this_, continuation, base, stack);
+      callWithContinuation(t, method, receiver, continuation, base, stack);
+    } else {
+      unwind(t);
     }
   }
 
-  virtual void callContinuation(Thread* vmt, object continuation,
-                                object result)
+  virtual void feedResultToContinuation(Thread* vmt, object continuation,
+                                        object result)
   {
     MyThread* t = static_cast<MyThread*>(vmt);
 
@@ -5995,6 +6015,30 @@ class MyProcessor: public Processor {
     t->continuation = continuation;
 
     vmJump(ip, base, stack, t, reinterpret_cast<uintptr_t>(result), 0);
+  }
+
+  virtual void feedExceptionToContinuation(Thread* vmt, object continuation,
+                                           object exception)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+
+    assert(t, t->exception == 0);
+
+    void* ip;
+    void* base;
+    void* stack;
+    findUnwindTarget(t, &ip, &base, &stack);
+
+    t->trace->nativeMethod = 0;
+    t->trace->targetMethod = 0;
+
+    t->continuation = continuation;
+
+    t->exception = exception;
+
+    findUnwindTarget(t, &ip, &base, &stack);
+
+    vmJump(ip, base, stack, t, 0, 0);
   }
 
   virtual void walkContinuationBody(Thread* t, Heap::Walker* w, object o,
@@ -6018,6 +6062,7 @@ class MyProcessor: public Processor {
   object objectPools;
   object staticTableArray;
   object virtualThunks;
+  object receiveMethod;
   SegFaultHandler segFaultHandler;
   FixedAllocator codeAllocator;
 };

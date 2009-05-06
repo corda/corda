@@ -1,6 +1,7 @@
 (type jobject java/lang/Object)
 
-(type class java/lang/Class)
+(type class java/lang/Class
+  (array void* vtable))
 
 (type singleton
   (array uintptr_t body))
@@ -103,13 +104,15 @@
 (type array
   (noassert array object body))
 
-(type continuation
+(type continuation avian/Continuations$Continuation
   (object next)
   (object method)
   (void* address)
   (uintptr_t returnAddressOffset)
   (uintptr_t framePointerOffset)
   (array uintptr_t body))
+
+(type callbackReceiver avian/CallbackReceiver)
 
 (type string java/lang/String)
 

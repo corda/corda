@@ -847,3 +847,38 @@ Java_java_net_URL_00024ResourceInputStream_close(Thread*, jclass, jlong peer)
 {
   reinterpret_cast<System::Region*>(peer)->dispose();
 }
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Continuations_callWithCurrentContinuation(Thread* t,
+                                                      object,
+                                                      uintptr_t* arguments)
+{
+  t->m->processor->callWithCurrentContinuation
+    (t, reinterpret_cast<object>(*arguments));
+
+  abort(t);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Continuation_handleResult(Thread* t,
+                                      object,
+                                      uintptr_t* arguments)
+{
+  t->m->processor->feedResultToContinuation
+    (t, reinterpret_cast<object>(arguments[0]),
+     reinterpret_cast<object>(arguments[1]));
+
+  abort(t);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Continuation_handleException(Thread* t,
+                                         object,
+                                         uintptr_t* arguments)
+{
+  t->m->processor->feedExceptionToContinuation
+    (t, reinterpret_cast<object>(arguments[0]),
+     reinterpret_cast<object>(arguments[1]));
+
+  abort(t);
+}

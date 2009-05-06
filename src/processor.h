@@ -134,10 +134,14 @@ class Processor {
   boot(Thread* t, BootImage* image) = 0;
 
   virtual void
-  callWithCurrentContinuation(Thread* t, object method, object this_) = 0;
+  callWithCurrentContinuation(Thread* t, object receiver) = 0;
 
   virtual void
-  callContinuation(Thread* t, object continuation, object result) = 0;
+  feedResultToContinuation(Thread* t, object continuation, object result) = 0;
+
+  virtual void
+  feedExceptionToContinuation(Thread* t, object continuation,
+                              object exception) = 0;
 
   virtual void
   walkContinuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
