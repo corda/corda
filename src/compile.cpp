@@ -31,7 +31,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -255,6 +255,7 @@ class MyStackWalker: public Processor::StackWalker {
     stack(w->stack),
     trace(w->trace),
     method_(w->method_),
+    continuation(w->continuation),
     protector(this)
   { }
 
@@ -6497,7 +6498,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
     Assembler::Register class_(t->arch->virtualCallTarget());
     Assembler::Memory virtualCallTargetSrc
       (t->arch->stack(),
-       t->arch->frameFooterSize() + t->arch->frameReturnAddressSize());
+       (t->arch->frameFooterSize() + t->arch->frameReturnAddressSize())
+       * BytesPerWord);
 
     a->apply(Move, BytesPerWord, MemoryOperand, &virtualCallTargetSrc,
              BytesPerWord, RegisterOperand, &class_);
