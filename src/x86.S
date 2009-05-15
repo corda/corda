@@ -115,11 +115,11 @@ LOCAL(exit):
 
 .globl vmJump
 vmJump:
-   movq   %r8,%rax
-   movq   %r9,%rdx
    movq   %rsi,%rbp
    movq   %rdx,%rsp
    movq   %rcx,%rbx
+   movq   %r8,%rax
+   movq   %r9,%rdx
    jmp    *%rdi
 
 #elif defined __i386__

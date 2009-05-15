@@ -138,7 +138,7 @@ class SitePair {
   Site* high;
 };
 
-class Stack: public Compiler::StackElement {
+class Stack {
  public:
   Stack(unsigned index, Value* value, Stack* next):
     index(index), value(value), next(next)
@@ -5140,35 +5140,19 @@ class MyCompiler: public Compiler {
   }
 
   virtual void popped(unsigned footprint) {
-    assert(&c, c.stack->value->home >= 0);
+    for (; footprint; -- footprint) {
+      assert(&c, c.stack->value == 0 or c.stack->value->home >= 0);
 
-    if (footprint > 1) {
-      assert(&c, footprint == 2);
-      assert(&c, c.stack->value->high == c.stack->next->value
-             and ((BytesPerWord == 8) xor (c.stack->value->high != 0)));
-
-      popped(1);
+      if (DebugFrame) {
+        fprintf(stderr, "popped %p\n", c.stack->value);
+      }
+      
+      c.stack = c.stack->next;
     }
-
-    if (DebugFrame) {
-      fprintf(stderr, "popped %p\n", c.stack->value);
-    }
-
-    c.stack = c.stack->next;
   }
 
-  virtual StackElement* top() {
-    return c.stack;
-  }
-
-  virtual unsigned footprint(StackElement* e) {
-    return (static_cast<Stack*>(e)->next
-            and (static_cast<Stack*>(e)->next->value
-                 == static_cast<Stack*>(e)->value->high)) ? 2 : 1;
-  }
-
-  virtual unsigned index(StackElement* e) {
-    return static_cast<Stack*>(e)->index;
+  virtual unsigned topOfStack() {
+    return c.stack->index;
   }
 
   virtual Operand* peek(unsigned footprint, unsigned index) {

@@ -35,7 +35,6 @@ class Compiler {
   static const unsigned TailJump = 1 << 2;
 
   class Operand { };
-  class StackElement { };
   class State { };
   class Subroutine { };
 
@@ -73,9 +72,7 @@ class Compiler {
   virtual Operand* pop(unsigned footprint) = 0;
   virtual void pushed() = 0;
   virtual void popped(unsigned footprint) = 0;
-  virtual StackElement* top() = 0;
-  virtual unsigned footprint(StackElement*) = 0;
-  virtual unsigned index(StackElement*) = 0;
+  virtual unsigned topOfStack() = 0;
   virtual Operand* peek(unsigned footprint, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,

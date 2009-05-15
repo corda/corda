@@ -738,13 +738,6 @@ translateLocalIndex(Context* context, unsigned footprint, unsigned index)
   }
 }
 
-void
-initLocal(Context* context, unsigned footprint, unsigned index)
-{
-  context->compiler->initLocal
-    (footprint, translateLocalIndex(context, footprint, index));
-}
-
 Compiler::Operand*
 loadLocal(Context* context, unsigned footprint, unsigned index)
 {
@@ -1105,13 +1098,7 @@ class Frame {
 
   void pop(unsigned count) {
     popped(count);
-
-    for (unsigned i = count; i;) {
-      Compiler::StackElement* s = c->top();
-      unsigned footprint = c->footprint(s);
-      c->popped(footprint);
-      i -= footprint;
-    }
+    c->popped(count);
   }
 
   Compiler::Operand* popInt() {
@@ -3261,8 +3248,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint8_t index = codeBody(t, code, ip++);
       int8_t count = codeBody(t, code, ip++);
 
-      c->storeLocal
-        (1, c->add(4, c->constant(count), loadLocal(context, 1, index)),
+      storeLocal
+        (context, 1,
+         c->add(4, c->constant(count), loadLocal(context, 1, index)),
          index);
     } break;
 
@@ -3810,7 +3798,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned offset
         = (localOffset
-           (t, localSize(t, context->method) + c->index(c->top()),
+           (t, localSize(t, context->method) + c->topOfStack(),
             context->method) / BytesPerWord)
         + t->arch->frameReturnAddressSize();
 
@@ -4117,8 +4105,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         uint16_t index = codeReadInt16(t, code, ip);
         uint16_t count = codeReadInt16(t, code, ip);
 
-        c->storeLocal
-          (1, c->add(4, c->constant(count), loadLocal(context, 1, index)),
+        storeLocal
+          (context, 1,
+           c->add(4, c->constant(count), loadLocal(context, 1, index)),
            index);
       } break;
 
@@ -4611,10 +4600,10 @@ compile(MyThread* t, Allocator* allocator, Context* context)
   uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
   Frame frame(context, stackMap);
 
-  unsigned index = 0;
+  unsigned index = methodParameterFootprint(t, context->method);
   if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
-    initLocal(context, 1, index);
-    frame.set(index++, Frame::Object);    
+    frame.set(--index, Frame::Object);
+    c->initLocal(1, index);
   }
 
   for (MethodSpecIterator it
@@ -4625,20 +4614,20 @@ compile(MyThread* t, Allocator* allocator, Context* context)
     switch (*it.next()) {
     case 'L':
     case '[':
-      initLocal(context, 1, index);
-      frame.set(index++, Frame::Object);
+      frame.set(--index, Frame::Object);
+      c->initLocal(1, index);
       break;
       
     case 'J':
     case 'D':
-      initLocal(context, 2, index);
-      frame.set(index++, Frame::Long);
-      frame.set(index++, Frame::Long);
+      frame.set(--index, Frame::Long);
+      frame.set(--index, Frame::Long);
+      c->initLocal(2, index);
       break;
 
     default:
-      initLocal(context, 1, index);
-      frame.set(index++, Frame::Integer);
+      frame.set(--index, Frame::Integer);
+      c->initLocal(1, index);
       break;
     }
   }
@@ -5151,11 +5140,10 @@ visitStackAndLocals(MyThread* t, Heap::Visitor* v, void* frame, object method,
 }
 
 void
-visitArgument(MyThread* t, Heap::Visitor* v, void* stack, object method,
-              unsigned index)
+visitArgument(MyThread* t, Heap::Visitor* v, void* stack, unsigned index)
 {
   v->visit(static_cast<object*>(stack)
-           + (methodParameterFootprint(t, method) - index - 1)
+           + index
            + t->arch->frameReturnAddressSize()
            + t->arch->frameFooterSize());
 }
@@ -5166,7 +5154,7 @@ visitArguments(MyThread* t, Heap::Visitor* v, void* stack, object method)
   unsigned index = 0;
 
   if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-    visitArgument(t, v, stack, method, index++);
+    visitArgument(t, v, stack, index++);
   }
 
   for (MethodSpecIterator it
@@ -5177,7 +5165,7 @@ visitArguments(MyThread* t, Heap::Visitor* v, void* stack, object method)
     switch (*it.next()) {
     case 'L':
     case '[':
-      visitArgument(t, v, stack, method, index++);
+      visitArgument(t, v, stack, index++);
       break;
       
     case 'J':
@@ -5435,13 +5423,14 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
       trace.nativeMethod = method;
     }
 
-    unsigned count = arguments->size - arguments->position;
+    assert(t, arguments->position == arguments->size);
 
     result = vmInvoke
       (t, reinterpret_cast<void*>(methodAddress(t, method)),
-       arguments->array + arguments->position,
-       count * BytesPerWord,
-       t->arch->alignFrameSize(count + t->arch->frameFootprint(0))
+       arguments->array,
+       arguments->position * BytesPerWord,
+       t->arch->alignFrameSize
+       (arguments->position + t->arch->frameFootprint(0))
        * BytesPerWord,
        returnType);
   }
