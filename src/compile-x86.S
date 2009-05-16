@@ -74,7 +74,8 @@ LOCAL(vmInvoke_argumentTest):
    // call function
    call   *%rsi
    
-LOCAL(vmInvoke_returnAddress):
+.globl vmInvoke_returnAddress
+vmInvoke_returnAddress:
    // restore stack pointer
    movq   %rbp,%rsp
 
@@ -84,10 +85,10 @@ LOCAL(vmInvoke_returnAddress):
    je     LOCAL(vmInvoke_exit)
 
    movq   CONTINUATION_LENGTH(%rcx),%rsi
-   shrq   $3,%rsi
-	 subq   %rsi,%rsp
+   shlq   $3,%rsi
+   subq   %rsi,%rsp
    
-   movq   CONTINUATION_BODY(%rcx),%rdi
+   leaq   CONTINUATION_BODY(%rcx),%rdi
    
    movq   $0,%r9
    jmp    LOCAL(vmInvoke_continuationTest)
@@ -102,12 +103,13 @@ LOCAL(vmInvoke_continuationTest):
    jb     LOCAL(vmInvoke_continuationLoop)
    
    movq   CONTINUATION_RETURN_ADDRESS_OFFSET(%rcx),%rdi
-   movq   LOCAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
+   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
    movq   %r10,(%rsp,%rdi,1)
    
    movq   CONTINUATION_FRAME_POINTER_OFFSET(%rcx),%rdi
    movq   %rbp,(%rsp,%rdi,1)
-   subq   %rdi,%rbp
+   addq   %rsp,%rdi
+   movq   %rdi,%rbp
    
    movq   CONTINUATION_NEXT(%rcx),%rdi
    movq   %rdi,THREAD_CONTINUATION(%rbx)
@@ -151,13 +153,13 @@ vmCallWithContinuation:
    // %r8 : base
    // %r9 : stack
    
-   movq   %rdi,%rdx
+   movq   %rdi,%rbx
    movq   %r8,%rbp
    movq   %r9,%rsp
-   movq   LOCAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
+   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
    movq   %r10,(%rsp)
-   movq   %rcx,8(%rsp)
-   movq   %rdx,16(%rsp)
+   movq   %rdx,8(%rsp)
+   movq   %rcx,16(%rsp)
    jmp    *%rsi
    
 #elif defined __i386__

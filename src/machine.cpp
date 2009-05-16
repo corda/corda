@@ -1313,14 +1313,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   expect(t, classSuper(t, bootstrapClass) == classSuper(t, class_));
 
   expect(t, bootstrapClass == arrayBody(t, t->m->types, Machine::ClassType)
-         or classFixedSize(t, bootstrapClass) == classFixedSize(t, class_));
-
-  expect(t,
-         (classVmFlags(t, bootstrapClass) & ReferenceFlag)
-         or (classObjectMask(t, bootstrapClass) == 0
-             and classObjectMask(t, class_) == 0)
-         or intArrayEqual(t, classObjectMask(t, bootstrapClass),
-                          classObjectMask(t, class_)));
+         or classFixedSize(t, bootstrapClass) >= classFixedSize(t, class_));
 
   PROTECT(t, bootstrapClass);
   PROTECT(t, class_);
@@ -1329,7 +1322,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   classVmFlags(t, bootstrapClass) &= ~BootstrapFlag;
   classVmFlags(t, bootstrapClass) |= classVmFlags(t, class_);
-  classFlags(t, bootstrapClass) = classFlags(t, class_);
+  classFlags(t, bootstrapClass) |= classFlags(t, class_);
 
   set(t, bootstrapClass, ClassSuper, classSuper(t, class_));
   set(t, bootstrapClass, ClassInterfaceTable, classInterfaceTable(t, class_));

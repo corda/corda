@@ -1432,7 +1432,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
                       reinterpret_cast<uint8_t*>(t->continuation)
                       + ContinuationBody
                       + continuationReturnAddressOffset(t, t->continuation)
-                      -t->arch->returnAddressOffset());
+                      - t->arch->returnAddressOffset());
         }
 
         t->continuation = continuationNext(t, t->continuation);
@@ -1467,7 +1467,8 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
     if (method) {
       PROTECT(t, method);
 
-      void** top = static_cast<void**>(stack) - t->arch->frameHeaderSize();
+      void** top = static_cast<void**>(stack)
+          + t->arch->frameReturnAddressSize();
       unsigned argumentFootprint
         = t->arch->argumentFootprint(methodParameterFootprint(t, target));
       unsigned alignment = t->arch->stackAlignmentInWords();
@@ -1477,17 +1478,21 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
 
       t->arch->nextFrame(&stack, &base);
 
-      void** bottom = static_cast<void**>(stack);
+      void** bottom = static_cast<void**>(stack)
+          + t->arch->frameReturnAddressSize();
       unsigned frameSize = bottom - top;
       unsigned totalSize = frameSize
-        + t->arch->frameHeaderSize()
         + t->arch->frameFooterSize()
         + t->arch->argumentFootprint(methodParameterFootprint(t, method));
 
       object c = makeContinuation
         (t, 0, method, ip,
-         ((frameSize + t->arch->returnAddressOffset()) * BytesPerWord),
-         ((frameSize + t->arch->framePointerOffset()) * BytesPerWord),
+         ((frameSize
+           + t->arch->returnAddressOffset()
+           - t->arch->frameReturnAddressSize()) * BytesPerWord),
+         ((frameSize
+           + t->arch->framePointerOffset() 
+           - t->arch->frameReturnAddressSize()) * BytesPerWord),
          totalSize);
 
       memcpy(&continuationBody(t, c, 0), top, totalSize * BytesPerWord);
@@ -1580,6 +1585,9 @@ findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
     if (UNLIKELY(t->exception)) {
       unwind(t);
     } else {
+      if (methodFlags(t, target) & ACC_NATIVE) {
+        t->trace->nativeMethod = target;
+      }
       return methodAddress(t, target);
     }
   } else {
@@ -5964,6 +5972,15 @@ class MyProcessor: public Processor {
           object message = makeString
             (t, "%s %s not found in %s", methodName, methodSpec, className);
           t->exception = makeNoSuchMethodError(t, message);
+        }
+
+        if (LIKELY(t->exception == 0)) {
+          object continuationClass = arrayBody
+            (t, t->m->types, Machine::ContinuationType);
+        
+          if (classVmFlags(t, continuationClass) & BootstrapFlag) {
+            resolveClass(t, vm::className(t, continuationClass));
+          }
         }
       }
 

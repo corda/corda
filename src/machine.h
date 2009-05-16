@@ -1943,15 +1943,6 @@ stringEqual(Thread* t, object a, object b)
   }
 }
 
-inline bool
-intArrayEqual(Thread* t, object a, object b)
-{
-  return a == b or
-    ((intArrayLength(t, a) == intArrayLength(t, b)) and
-     memcmp(&intArrayBody(t, a, 0), &intArrayBody(t, b, 0),
-            intArrayLength(t, a) * 4) == 0);
-}
-
 inline uint32_t
 methodHash(Thread* t, object method)
 {
