@@ -299,7 +299,7 @@ classpath-classes = \
 classpath-object = $(native-build)/classpath-jar.o
 classpath-dep = $(classpath-build)/dep
 
-test-sources = $(wildcard $(test)/*.java)
+test-sources = $(shell find $(test) -name '*.java')
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 test-dep = $(test-build)/dep
 
