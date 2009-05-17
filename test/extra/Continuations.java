@@ -14,7 +14,7 @@ public class Continuations {
     expect(callWithCurrentContinuation(new CallbackReceiver<Integer>() {
           public Integer receive(Callback<Integer> continuation) {
             continuation.handleResult(42);
-            throw new RuntimeException("unreachable");
+            throw new AssertionError();
           }
         }) == 42);
 
@@ -28,10 +28,10 @@ public class Continuations {
       callWithCurrentContinuation(new CallbackReceiver<Integer>() {
           public Integer receive(Callback<Integer> continuation) {
             continuation.handleException(new MyException());
-            throw new RuntimeException("unreachable");
+            throw new AssertionError();
           }
         });
-      throw new RuntimeException("unreachable");      
+      throw new AssertionError();      
     } catch (MyException e) {
       e.printStackTrace();
     }
@@ -44,7 +44,7 @@ public class Continuations {
             throw new MyException();
           }
         });
-      throw new RuntimeException("unreachable");
+      throw new AssertionError();
     } catch (MyException e) {
       e.printStackTrace();
     }

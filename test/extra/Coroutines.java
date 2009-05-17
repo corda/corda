@@ -33,13 +33,13 @@ public class Coroutines {
 
               state.consumeNext.handleResult(c);
 
-              throw new RuntimeException("unreachable");
+              throw new AssertionError();
             }
           });
       }
     };
 
-    Producer<Character> producer = new Producer<Character>() {
+    final Producer<Character> producer = new Producer<Character>() {
       public Character produce() throws Exception {
         return callWithCurrentContinuation(new CallbackReceiver<Character>() {
           public Character receive(Callback<Character> continuation)
@@ -53,7 +53,7 @@ public class Coroutines {
               state.produceNext.handleResult(null);
             }
 
-            throw new RuntimeException("unreachable");
+            throw new AssertionError();
           }
         });
       }
@@ -63,7 +63,7 @@ public class Coroutines {
   }
 
   private static class CoroutineState<T> {
-    public Callback<T> produceNext;
+    public Callback produceNext;
     public Callback<T> consumeNext;
   }
 
