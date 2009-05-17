@@ -2150,8 +2150,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
-    const unsigned alignment = StackAlignmentInBytes / BytesPerWord;
-    return (ceiling(sizeInWords + FrameHeaderSize, alignment) * alignment)
+    return pad(sizeInWords + FrameHeaderSize, StackAlignmentInWords)
       - FrameHeaderSize;
   }
 

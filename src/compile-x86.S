@@ -87,6 +87,7 @@ vmInvoke_returnAddress:
    movq   CONTINUATION_LENGTH(%rcx),%rsi
    shlq   $3,%rsi
    subq   %rsi,%rsp
+   subq   $48,%rsp
    
    leaq   CONTINUATION_BODY(%rcx),%rdi
    

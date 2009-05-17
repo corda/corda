@@ -61,6 +61,7 @@ class MyThread: public Thread {
       t->trace = this;
       t->base = 0;
       t->stack = 0;
+      t->continuation = 0;
     }
 
     ~CallTrace() {
@@ -292,6 +293,7 @@ class MyStackWalker: public Processor::StackWalker {
           if (method_) {
             state = Method;
           } else if (continuation) {
+            method_ = continuationMethod(t, continuation);
             state = Continuation;
           } else if (trace) {
             continuation = trace->continuation;
@@ -1379,12 +1381,12 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
     ip = t->arch->frameIp(stack);
   }
 
+  object target = t->trace->targetMethod;
+
   *targetIp = 0;
   while (*targetIp == 0) {
     object method = methodForIp(t, ip);
     if (method) {
-      PROTECT(t, method);
-
       void* handler = findExceptionHandler(t, method, ip);
 
       if (handler) {
@@ -1407,6 +1409,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         ip = t->arch->frameIp(stack);
 
         releaseLock(t, method, stack);
+
+        target = method;
       }
     } else {
       *targetIp = ip;
@@ -1415,20 +1419,23 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
         + t->arch->frameReturnAddressSize();
 
       while (t->continuation) {
+        object method = continuationMethod(t, t->continuation);
+
         void* handler = findExceptionHandler
-          (t, continuationMethod(t, t->continuation),
-           continuationAddress(t, t->continuation));
+          (t, method, continuationAddress(t, t->continuation));
 
         if (handler) {
           t->exceptionHandler = handler;
 
-          t->exceptionStack = stackForFrame
-            (t, stack, continuationMethod(t, t->continuation));
+          t->exceptionStack = static_cast<void**>(*targetStack)
+            + t->arch->argumentFootprint(methodParameterFootprint(t, target))
+            - t->arch->argumentFootprint(methodParameterFootprint(t, method))
+            - stackOffsetFromFrame(t, method);
 
           t->exceptionOffset = localOffset(t, localSize(t, method), method);
           break;
         } else {
-          releaseLock(t, continuationMethod(t, t->continuation),
+          releaseLock(t, method,
                       reinterpret_cast<uint8_t*>(t->continuation)
                       + ContinuationBody
                       + continuationReturnAddressOffset(t, t->continuation)
@@ -1443,7 +1450,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
 object
 makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
-                        void** targetStack)
+                        void** targetStack, unsigned* oldArgumentFootprint)
 {
   void* ip = t->ip;
   void* base = t->base;
@@ -1468,7 +1475,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       PROTECT(t, method);
 
       void** top = static_cast<void**>(stack)
-          + t->arch->frameReturnAddressSize();
+        + t->arch->frameReturnAddressSize();
       unsigned argumentFootprint
         = t->arch->argumentFootprint(methodParameterFootprint(t, target));
       unsigned alignment = t->arch->stackAlignmentInWords();
@@ -1512,6 +1519,8 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       *targetBase = base;
       *targetStack = static_cast<void**>(stack)
         + t->arch->frameReturnAddressSize();
+      *oldArgumentFootprint
+        = t->arch->argumentFootprint(methodParameterFootprint(t, target));
     }
   }
 
@@ -5020,18 +5029,6 @@ invokeNativeSlow(MyThread* t, object method)
 
     default: abort(t);
     }
-
-    unsigned parameterFootprint = methodParameterFootprint(t, method);
-    if (t->arch->argumentFootprint(parameterFootprint)
-        > t->arch->stackAlignmentInWords())
-    {
-      t->stack = static_cast<uintptr_t*>(t->stack)
-        + (t->arch->argumentFootprint(parameterFootprint)
-           - t->arch->stackAlignmentInWords());
-    }
-
-    t->stack = static_cast<uintptr_t*>(t->stack)
-      + t->arch->frameReturnAddressSize();
   } else {
     result = 0;
   }
@@ -5087,12 +5084,26 @@ invokeNative(MyThread* t)
     }
   }
 
+  unsigned parameterFootprint = methodParameterFootprint
+    (t, t->trace->targetMethod);
+
   t->trace->targetMethod = 0;
   t->trace->nativeMethod = 0;
 
   if (UNLIKELY(t->exception)) {
     unwind(t);
   } else {
+    if (t->arch->argumentFootprint(parameterFootprint)
+        > t->arch->stackAlignmentInWords())
+    {
+      t->stack = static_cast<uintptr_t*>(t->stack)
+        + (t->arch->argumentFootprint(parameterFootprint)
+           - t->arch->stackAlignmentInWords());
+    }
+
+    t->stack = static_cast<uintptr_t*>(t->stack)
+      + t->arch->frameReturnAddressSize();
+
     return result;
   }
 }
@@ -5270,7 +5281,8 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
 
 void
 callWithContinuation(MyThread* t, object method, object this_,
-                     object continuation, void* base, void* stack)
+                     object continuation, void* base, void* stack,
+                     unsigned oldArgumentFootprint)
 {
   t->trace->targetMethod = 0;
 
@@ -5286,6 +5298,7 @@ callWithContinuation(MyThread* t, object method, object this_,
      continuation,
      base,
      static_cast<void**>(stack)
+     + oldArgumentFootprint
      - t->arch->argumentFootprint(methodParameterFootprint(t, method))
      - t->arch->frameFooterSize()
      - t->arch->frameReturnAddressSize());
@@ -5438,7 +5451,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
        arguments->array,
        arguments->position * BytesPerWord,
        t->arch->alignFrameSize
-       (arguments->position + t->arch->frameFootprint(0))
+       (t->arch->argumentFootprint(arguments->position))
        * BytesPerWord,
        returnType);
   }
@@ -5958,6 +5971,7 @@ class MyProcessor: public Processor {
     object continuation;
     void* base;
     void* stack;
+    unsigned oldArgumentFootprint;
 
     { PROTECT(t, receiver);
 
@@ -5992,13 +6006,16 @@ class MyProcessor: public Processor {
         compile(t, ::codeAllocator(t), 0, method);
         if (LIKELY(t->exception == 0)) {
           void* ip;
-          continuation = makeCurrentContinuation(t, &ip, &base, &stack);
+          continuation = makeCurrentContinuation
+            (t, &ip, &base, &stack, &oldArgumentFootprint);
         }
       }
     }
 
     if (LIKELY(t->exception == 0)) {
-      callWithContinuation(t, method, receiver, continuation, base, stack);
+      t->continuation = continuation;
+      callWithContinuation(t, method, receiver, continuation, base, stack,
+                           oldArgumentFootprint);
     } else {
       unwind(t);
     }
