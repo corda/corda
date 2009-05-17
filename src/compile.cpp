@@ -431,7 +431,7 @@ localOffset(MyThread* t, int v, object method)
                  - v - 1) :
                 (frameSize
                  + parameterFootprint
-                 - v - 1)) * BytesPerWord;
+                 - v - 1));
 
   assert(t, offset >= 0);
   return offset;
@@ -441,14 +441,13 @@ int
 localOffsetFromStack(MyThread* t, int index, object method)
 {
   return localOffset(t, index, method)
-    + (t->arch->frameReturnAddressSize() * BytesPerWord);
+    + t->arch->frameReturnAddressSize();
 }
 
 object*
 localObject(MyThread* t, void* stack, object method, unsigned index)
 {
-  return reinterpret_cast<object*>
-    (static_cast<uint8_t*>(stack) + localOffsetFromStack(t, index, method));
+  return static_cast<object*>(stack) + localOffsetFromStack(t, index, method);
 }
 
 int
@@ -1400,8 +1399,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
         *targetStack = sp;
 
-        sp[localOffset(t, localSize(t, method), method) / BytesPerWord]
-          = t->exception;
+        sp[localOffset(t, localSize(t, method), method)] = t->exception;
 
         t->exception = 0;
       } else {
@@ -1432,7 +1430,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
             - t->arch->argumentFootprint(methodParameterFootprint(t, method))
             - stackOffsetFromFrame(t, method);
 
-          t->exceptionOffset = localOffset(t, localSize(t, method), method);
+          t->exceptionOffset
+            = localOffset(t, localSize(t, method), method) * BytesPerWord;
           break;
         } else {
           releaseLock(t, method,
@@ -3814,9 +3813,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       PROTECT(t, class_);
 
       unsigned offset
-        = (localOffset
-           (t, localSize(t, context->method) + c->topOfStack(),
-            context->method) / BytesPerWord)
+        = localOffset
+        (t, localSize(t, context->method) + c->topOfStack(), context->method)
         + t->arch->frameReturnAddressSize();
 
       Compiler::Operand* result = c->call
@@ -5197,7 +5195,6 @@ visitArguments(MyThread* t, Heap::Visitor* v, void* stack, object method)
       break;
     }
   }
-  
 }
 
 void
@@ -5214,14 +5211,14 @@ visitStack(MyThread* t, Heap::Visitor* v)
   object targetMethod = (trace ? trace->targetMethod : 0);
 
   while (stack) {
+    if (targetMethod) {
+      visitArguments(t, v, stack, targetMethod);
+      targetMethod = 0;
+    }
+
     object method = methodForIp(t, ip);
     if (method) {
       PROTECT(t, method);
-
-      if (targetMethod) {
-        visitArguments(t, v, stack, targetMethod);
-        targetMethod = 0;
-      }
 
       t->arch->nextFrame(&stack, &base);
 
@@ -5246,34 +5243,37 @@ visitStack(MyThread* t, Heap::Visitor* v)
 void
 walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
 {
-  const int ContinuationReferenceCount = 3;
-
-  int bodyStart = max(0, start - ContinuationReferenceCount);
+  const int BodyOffset = ContinuationBody / BytesPerWord;
 
   object method = static_cast<object>
     (t->m->heap->follow(continuationMethod(t, c)));
-  unsigned count = frameMapSizeInBits(t, method);
+  int count = frameMapSizeInBits(t, method);
 
   if (count) {
+    int stack = BodyOffset
+      + (continuationFramePointerOffset(t, c) / BytesPerWord)
+      - t->arch->framePointerOffset()
+      - stackOffsetFromFrame(t, method);
+
+    int first = stack + localOffsetFromStack(t, count - 1, method);
+    if (start > first) {
+      count -= start - first;
+    }
+
     object map = codePool(t, methodCode(t, method));
     int index = frameMapIndex
       (t, method, difference
        (continuationAddress(t, c),
         reinterpret_cast<void*>(methodAddress(t, method))));
 
-    for (unsigned i = bodyStart; i < count; ++i) {
+    for (int i = count - 1; i >= 0; --i) {
       int j = index + i;
       if ((intArrayBody(t, map, j / 32)
            & (static_cast<int32_t>(1) << (j % 32))))
       {
-        if (not w->visit
-            ((continuationFramePointerOffset(t, c) / BytesPerWord)
-             - t->arch->framePointerOffset()
-             - stackOffsetFromFrame(t, method)
-             + localOffsetFromStack(t, i, method)))
-        {
+        if (not w->visit(stack + localOffsetFromStack(t, i, method))) {
           return;
-        }        
+        }
       }
     }
   }
@@ -5417,7 +5417,7 @@ class ArgumentList {
     MyProtector(ArgumentList* list): Protector(list->t), list(list) { }
 
     virtual void visit(Heap::Visitor* v) {
-      for (unsigned i = list->position; i < list->size; ++i) {
+      for (unsigned i = 0; i < list->position; ++i) {
         if (list->objectMask[i]) {
           v->visit(reinterpret_cast<object*>(list->array + i));
         }
@@ -5658,6 +5658,7 @@ class MyProcessor: public Processor {
       v->visit(&objectPools);
       v->visit(&staticTableArray);
       v->visit(&virtualThunks);
+      v->visit(&receiveMethod);
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {

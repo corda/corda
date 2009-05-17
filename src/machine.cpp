@@ -196,7 +196,7 @@ visitRoots(Thread* t, Heap::Visitor* v)
   }
 }
 
-void
+bool
 walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
      unsigned arrayElementSize, unsigned arrayLength, unsigned start)
 {
@@ -207,7 +207,7 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
   for (unsigned i = start; i < fixedSizeInWords; ++i) {
     if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
       if (not w->visit(i)) {
-        return;
+        return false;
       }
     }
   }
@@ -240,12 +240,14 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
           if (not w->visit
               (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
           {
-            return;
+            return false;
           }
         }
       }
     }
   }
+
+  return true;
 }
 
 void
@@ -2784,6 +2786,8 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
   object objectMask = static_cast<object>
     (t->m->heap->follow(classObjectMask(t, class_)));
 
+  bool more = true;
+
   if (objectMask) {
     unsigned fixedSize = classFixedSize(t, class_);
     unsigned arrayElementSize = classArrayElementSize(t, class_);
@@ -2795,20 +2799,20 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
     memcpy(mask, &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
-    ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
+    more = ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
   } else if (classFlags(t, class_) & SingletonFlag) {
     unsigned length = singletonLength(t, o);
     if (length) {
-      ::walk(t, w, singletonMask(t, o),
-             (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
+      more = ::walk(t, w, singletonMask(t, o),
+                    (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
     } else if (start == 0) {
-      w->visit(0);
+      more = w->visit(0);
     }
   } else if (start == 0) {
-    w->visit(0);
+    more = w->visit(0);
   }
 
-  if (classFlags(t, class_) & ContinuationFlag) {
+  if (more and classFlags(t, class_) & ContinuationFlag) {
     t->m->processor->walkContinuationBody(t, w, o, start);
   }
 }
