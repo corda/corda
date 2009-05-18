@@ -31,7 +31,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -1134,17 +1134,17 @@ class Frame {
 
   void storeInt(unsigned index) {
     storeLocal(context, 1, popInt(), index);
-    storedInt(index);
+    storedInt(translateLocalIndex(context, 1, index));
   }
 
   void storeLong(unsigned index) {
     storeLocal(context, 2, popLong(), index);
-    storedLong(index);
+    storedLong(translateLocalIndex(context, 2, index));
   }
 
   void storeObject(unsigned index) {
     storeLocal(context, 1, popObject(), index);
-    storedObject(index);
+    storedObject(translateLocalIndex(context, 1, index));
   }
 
   void storeObjectOrAddress(unsigned index) {
@@ -1153,9 +1153,9 @@ class Frame {
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
     if (get(sp - 1) == Object) {
-      storedObject(index);
+      storedObject(translateLocalIndex(context, 1, index));
     } else {
-      storedInt(index);
+      storedInt(translateLocalIndex(context, 1, index));
     }
 
     popped(1);
@@ -3521,7 +3521,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         // should verify once we have complete data flow information
         // (todo).
         storeLocal(context, 1, c->constant(0), index);
-        frame->storedObject(index);
+        frame->storedObject(translateLocalIndex(context, 1, index));
       }
 
       frame->pushAddress(frame->addressOperand(c->machineIp(ip)));
