@@ -299,9 +299,14 @@ classpath-classes = \
 classpath-object = $(native-build)/classpath-jar.o
 classpath-dep = $(classpath-build)/dep
 
-test-sources = $(shell find $(test) -name '*.java')
+test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 test-dep = $(test-build)/dep
+
+test-extra-sources = $(wildcard $(test)/extra/*.java)
+test-extra-classes = \
+	$(call java-classes,$(test-extra-sources),$(test),$(test-build))
+test-extra-dep = $(test-build)/extra/dep
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
@@ -312,7 +317,7 @@ args = $(flags) $(input)
 
 .PHONY: build
 build: $(static-library) $(executable) $(dynamic-library) \
-	$(executable-dynamic) $(classpath-dep) $(test-dep)
+	$(executable-dynamic) $(classpath-dep) $(test-dep) $(test-extra-dep)
 
 $(test-classes): $(classpath-dep)
 
@@ -388,6 +393,13 @@ $(test-dep): $(test-sources)
 		$(shell $(MAKE) -s --no-print-directory $(test-classes))
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(dir $(@)) \
 		test/Subroutine.java
+	@touch $(@)
+
+$(test-extra-dep): $(test-extra-sources)
+	@echo "compiling extra test classes"
+	@mkdir -p $(dir $(@))
+	$(javac) -d $(test) -bootclasspath $(classpath-build) \
+		$(shell $(MAKE) -s --no-print-directory $(test-extra-classes))
 	@touch $(@)
 
 define compile-object
