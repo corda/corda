@@ -1,5 +1,3 @@
-package extra;
-
 import static avian.Continuations.callWithCurrentContinuation;
 
 import avian.CallbackReceiver;
@@ -11,15 +9,28 @@ public class Coroutines {
   }
 
   private static void produce(Consumer<Character> consumer) throws Exception {
+    System.out.println("produce \"a\"");
     consumer.consume('a');
+
+    System.out.println("produce \"b\"");
     consumer.consume('b');
+
+    System.out.println("produce \"c\"");
     consumer.consume('c');
   }
 
   private static void consume(Producer<Character> producer) throws Exception {
-    expect(producer.produce() == 'a');
-    expect(producer.produce() == 'b');
-    expect(producer.produce() == 'c');
+    char v = producer.produce();
+    System.out.println("consume \"" + v + "\"");
+    expect(v == 'a');
+
+    v = producer.produce();
+    System.out.println("consume \"" + v + "\"");
+    expect(v == 'b');
+
+    v = producer.produce();
+    System.out.println("consume \"" + v + "\"");
+    expect(v == 'c');
   }
 
   public static void main(String[] args) throws Exception {
@@ -28,34 +39,37 @@ public class Coroutines {
     final Consumer<Character> consumer = new Consumer<Character>() {
       public void consume(final Character c) throws Exception {
         callWithCurrentContinuation(new CallbackReceiver() {
-            public Object receive(Callback continuation) {
-              state.produceNext = continuation;
+          public Object receive(Callback continuation) {
+            state.produceNext = continuation;
 
-              state.consumeNext.handleResult(c);
-
-              throw new AssertionError();
-            }
-          });
-      }
-    };
-
-    final Producer<Character> producer = new Producer<Character>() {
-      public Character produce() throws Exception {
-        return callWithCurrentContinuation(new CallbackReceiver<Character>() {
-          public Character receive(Callback<Character> continuation)
-          throws Exception
-          {
-            state.consumeNext = continuation;
-
-            if (state.produceNext == null) {
-              Coroutines.produce(consumer);
-            } else {
-              state.produceNext.handleResult(null);
-            }
+            state.consumeNext.handleResult(c);
 
             throw new AssertionError();
           }
         });
+      }
+    };
+
+    final Producer<Character> producer = new Producer<Character>() {
+      final CallbackReceiver<Character> receiver
+      = new CallbackReceiver<Character>() {
+        public Character receive(Callback<Character> continuation)
+        throws Exception
+        {
+          state.consumeNext = continuation;
+          
+          if (state.produceNext == null) {
+            Coroutines.produce(consumer);
+          } else {
+            state.produceNext.handleResult(null);
+          }
+          
+          throw new AssertionError();
+        }
+      };
+
+      public Character produce() throws Exception {
+        return callWithCurrentContinuation(receiver);
       }
     };
 
