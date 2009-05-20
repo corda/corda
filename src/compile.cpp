@@ -5968,12 +5968,6 @@ class MyProcessor: public Processor {
   virtual void callWithCurrentContinuation(Thread* vmt, object receiver) {
     MyThread* t = static_cast<MyThread*>(vmt);
 
-    object method;
-    object continuation;
-    void* base;
-    void* stack;
-    unsigned oldArgumentFootprint;
-
     { PROTECT(t, receiver);
 
       if (receiveMethod == 0) {
@@ -6000,26 +5994,27 @@ class MyProcessor: public Processor {
       }
 
       if (LIKELY(t->exception == 0)) {
-        method = findInterfaceMethod
+        object method = findInterfaceMethod
           (t, receiveMethod, objectClass(t, receiver));
         PROTECT(t, method);
         
         compile(t, ::codeAllocator(t), 0, method);
         if (LIKELY(t->exception == 0)) {
           void* ip;
-          continuation = makeCurrentContinuation
+          void* base;
+          void* stack;
+          unsigned oldArgumentFootprint;
+          t->continuation = makeCurrentContinuation
             (t, &ip, &base, &stack, &oldArgumentFootprint);
+
+          callWithContinuation
+            (t, method, receiver, t->continuation, base, stack,
+             oldArgumentFootprint);
         }
       }
     }
 
-    if (LIKELY(t->exception == 0)) {
-      t->continuation = continuation;
-      callWithContinuation(t, method, receiver, continuation, base, stack,
-                           oldArgumentFootprint);
-    } else {
-      unwind(t);
-    }
+    unwind(t);
   }
 
   virtual void feedResultToContinuation(Thread* vmt, object continuation,
