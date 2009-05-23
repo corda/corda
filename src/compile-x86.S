@@ -23,11 +23,11 @@
 #define THREAD_EXCEPTION_HANDLER 192
 
 #define CONTINUATION_NEXT 8
-#define CONTINUATION_ADDRESS 24
-#define CONTINUATION_RETURN_ADDRESS_OFFSET 32
-#define CONTINUATION_FRAME_POINTER_OFFSET 40
-#define CONTINUATION_LENGTH 48
-#define CONTINUATION_BODY 56
+#define CONTINUATION_ADDRESS 32
+#define CONTINUATION_RETURN_ADDRESS_OFFSET 40
+#define CONTINUATION_FRAME_POINTER_OFFSET 48
+#define CONTINUATION_LENGTH 56
+#define CONTINUATION_BODY 64
 
 .globl vmInvoke
 vmInvoke:
@@ -145,22 +145,36 @@ LOCAL(vmInvoke_exit):
    popq   %rbp
    ret
    
-.globl vmCallWithContinuation
-vmCallWithContinuation:
+.globl vmJumpAndInvoke
+vmJumpAndInvoke:
    // %rdi: thread
    // %rsi: address
-   // %rdx: targetObject
-   // %rcx: continuation
-   // %r8 : base
-   // %r9 : stack
+   // %rdx: base
+   // %rcx: stack
+   // %r8 : argumentFootprint
+   // %r9 : arguments
    
-   movq   %rdi,%rbx
-   movq   %r8,%rbp
-   movq   %r9,%rsp
+   // set return address
    movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
    movq   %r10,(%rsp)
-   movq   %rdx,8(%rsp)
-   movq   %rcx,16(%rsp)
+   
+   // copy arguments into place
+   movq   $0,%r11
+   jmp    LOCAL(vmJumpAndInvoke_argumentTest)
+
+LOCAL(vmJumpAndInvoke_argumentLoop):
+   movq   (%r8,%r11,1),%r10
+   movq   %r10,8(%rsp,%r11,1)
+   addq   $8,%r11
+
+LOCAL(vmJumpAndInvoke_argumentTest):
+   cmpq   %r8,%r11
+   jb     LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   movq   %rdi,%rbx
+   movq   %rdx,%rbp
+   movq   %rcx,%rsp
+   
    jmp    *%rsi
    
 #elif defined __i386__

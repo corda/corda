@@ -849,12 +849,23 @@ Java_java_net_URL_00024ResourceInputStream_close(Thread*, jclass, jlong peer)
 }
 
 extern "C" JNIEXPORT void JNICALL
-Avian_avian_Continuations_callWithCurrentContinuation(Thread* t,
-                                                      object,
-                                                      uintptr_t* arguments)
+Avian_avian_Continuations_callWithCurrentContinuation
+(Thread* t, object, uintptr_t* arguments)
 {
   t->m->processor->callWithCurrentContinuation
     (t, reinterpret_cast<object>(*arguments));
+
+  abort(t);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Continuations_dynamicWind2
+(Thread* t, object, uintptr_t* arguments)
+{
+  t->m->processor->dynamicWind
+    (t, reinterpret_cast<object>(arguments[0]),
+     reinterpret_cast<object>(arguments[1]),
+     reinterpret_cast<object>(arguments[2]));
 
   abort(t);
 }

@@ -16,12 +16,77 @@ public abstract class Continuations {
   public static native <T> T callWithCurrentContinuation
     (CallbackReceiver<T> receiver) throws Exception;
 
-  public static native <T> T dynamicWind(Runnable before,
-                                         Callable<T> thunk,
-                                         Runnable after) throws Exception;
+  public static <T> T dynamicWind(Runnable before,
+                                  Callable<T> thunk,
+                                  Runnable after)
+    throws Exception
+  {
+    UnwindResult result = dynamicWind2(buffer, thunk, after);
+    if (result.continuation != null) {
+      after.run();
+      if (result.exception != null) {
+        result.continuation.handleException(result.exception);
+      } else {
+        result.continuation.handleResult(result.value);
+      }
+      throw new AssertionError();
+    } else {
+      return (T) result.value;
+    }
+  }
+
+  private static native UnwindResult dynamicWind2(Runnable before,
+                                                  Callable<T> thunk,
+                                                  Runnable after)
+    throws Exception;
+
+  private static UnwindResult wind(Runnable before,
+                                   Callable<T> thunk,
+                                   Runnable after)
+    throws Exception
+  {
+    before.run();
+
+    try {
+      return new UnwindResult(null, thunk.call(), null);
+    } finally {
+      after.run();
+    }
+  }
+
+  private static void rewind(Runnable before,
+                             Callback continuation,
+                             Object result,
+                             Throwable exception)
+    throws Exception
+  {
+    before.run();
+    
+    if (exception != null) {
+      continuation.handleException(exception);
+    } else {
+      continuation.handleResult(value);
+    }
+
+    throw new AssertionError();
+  }
 
   private static class Continuation<T> implements Callback<T> {
     public native void handleResult(T result);
     public native void handleException(Throwable exception);
+  }
+
+  private static class UnwindResult {
+    public final Callback continuation;
+    public final Object result;
+    public final Throwable exception;
+
+    public UnwindResult(Callback continuation, Object result,
+                        Throwable exception)
+    {
+      this.continuation = continuation;
+      this.result = result;
+      this.exception = exception;
+    }
   }
 }

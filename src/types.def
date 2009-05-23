@@ -104,13 +104,23 @@
 (type array
   (noassert array object body))
 
+(type continuationContext
+  (object next)
+  (object before)
+  (object after)
+  (object continuation)
+  (object method))
+
 (type continuation avian/Continuations$Continuation
   (object next)
+  (object context)
   (object method)
   (void* address)
   (uintptr_t returnAddressOffset)
   (uintptr_t framePointerOffset)
   (array uintptr_t body))
+
+(type unwindResult avian/Continuations$UnwindResult)
 
 (type callbackReceiver avian/CallbackReceiver)
 
