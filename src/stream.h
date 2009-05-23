@@ -44,6 +44,12 @@ class Stream {
 
   void read(uint8_t* data, unsigned size) {
     if (size > this->size - position_) {
+      // GCC 4.4 will give us an uninitialized value warning in read1
+      // unless we do this: (it's smart enough to track data flow
+      // across functions but not smart enough to see we won't return
+      // from Client::handleError)
+      *data = 0;
+
       client->handleError();
     } else {
       memcpy(data, this->data + position_, size);
