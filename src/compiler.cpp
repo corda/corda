@@ -2377,7 +2377,7 @@ class CallEvent: public Event {
         ((flags & Compiler::Aligned) ? AlignedCall : Call, BytesPerWord,
          &typeMask, &planRegisterMask, &thunk);
 
-      assert(c, thunk == 0);
+      assert(c, not thunk);
 
       addRead(c, this, address, read
               (c, SiteMask
@@ -3300,15 +3300,15 @@ pushWord(Context* c, Value* v)
 }
 
 Value*
-push(Context* c, unsigned footprint, Value* v)
+push(Context* c, unsigned footprint, Value* v, bool reverse)
 {
   assert(c, footprint);
 
-  bool bigEndian = c->arch->bigEndian();
+  bool lowFirst = reverse xor c->arch->bigEndian();
   
   Value* low = v;
   
-  if (not bigEndian) {
+  if (lowFirst) {
     v = pushWord(c, v);
   }
 
@@ -3327,7 +3327,7 @@ push(Context* c, unsigned footprint, Value* v)
     high = 0;
   }
   
-  if (bigEndian) {
+  if (not lowFirst) {
     v = pushWord(c, v);
   }
 
@@ -3493,8 +3493,8 @@ appendCombine(Context* c, TernaryOperation type,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    ::push(c, ceiling(secondSize, BytesPerWord), second);
-    ::push(c, ceiling(firstSize, BytesPerWord), first);
+    ::push(c, ceiling(secondSize, BytesPerWord), second, false);
+    ::push(c, ceiling(firstSize, BytesPerWord), first, false);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -3724,7 +3724,7 @@ class BranchEvent: public Event {
     
     c->arch->plan(type, BytesPerWord, &typeMask, &registerMask, &thunk);
 
-    assert(c, thunk == 0);
+    assert(c, not thunk);
 
     addRead(c, this, address, read
             (c, SiteMask(typeMask, registerMask, AnyFrameIndex)));
@@ -5111,7 +5111,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void push(unsigned footprint, Operand* value) {
-    ::push(&c, footprint, static_cast<Value*>(value));
+    ::push(&c, footprint, static_cast<Value*>(value), true);
   }
 
   virtual void save(unsigned footprint, Operand* value) {
