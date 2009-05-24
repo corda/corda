@@ -153,6 +153,10 @@ vmJumpAndInvoke:
    // %rcx: stack
    // %r8 : argumentFootprint
    // %r9 : arguments
+
+   movq   %rdi,%rbx
+   movq   %rdx,%rbp
+   movq   %rcx,%rsp
    
    // set return address
    movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
@@ -163,29 +167,38 @@ vmJumpAndInvoke:
    jmp    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
-   movq   (%r8,%r11,1),%r10
+   movq   (%r9,%r11,1),%r10
    movq   %r10,8(%rsp,%r11,1)
    addq   $8,%r11
 
 LOCAL(vmJumpAndInvoke_argumentTest):
    cmpq   %r8,%r11
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
-
-   movq   %rdi,%rbx
-   movq   %rdx,%rbp
-   movq   %rcx,%rsp
    
    jmp    *%rsi
    
 #elif defined __i386__
+   
+#define THREAD_CONTINUATION 96
+#define THREAD_EXCEPTION 36
+#define THREAD_EXCEPTION_STACK 100
+#define THREAD_EXCEPTION_OFFSET 104
+#define THREAD_EXCEPTION_HANDLER 108
 
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+#define CONTINUATION_NEXT 4
+#define CONTINUATION_ADDRESS 16
+#define CONTINUATION_RETURN_ADDRESS_OFFSET 20
+#define CONTINUATION_FRAME_POINTER_OFFSET 24
+#define CONTINUATION_LENGTH 28
+#define CONTINUATION_BODY 32
+
+#if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
 .globl _vmInvoke
 _vmInvoke: 
-#  else
+#else
 .globl vmInvoke
 vmInvoke:
-#  endif
+#endif
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -214,25 +227,89 @@ vmInvoke:
    // copy arguments into place
    movl   $0,%ecx
    movl   16(%ebp),%edx
-   jmp    LOCAL(test)
+   jmp    LOCAL(vmInvoke_argumentTest)
 
-LOCAL(loop):
+LOCAL(vmInvoke_argumentLoop):
    movl   (%edx,%ecx,1),%eax
    movl   %eax,(%esp,%ecx,1)
    addl   $4,%ecx
 
-LOCAL(test):
+LOCAL(vmInvoke_argumentTest):
    cmpl   20(%ebp),%ecx
-   jb     LOCAL(loop)
+   jb     LOCAL(vmInvoke_argumentLoop)
 
    // call function
    call   *12(%ebp)
-   
+
+.globl vmInvoke_returnAddress
+vmInvoke_returnAddress:
    // restore stack pointer and callee-saved registers
    movl   %ebp,%ecx
    subl   $16,%ecx
    movl   %ecx,%esp
 
+   // call the next continuation, if any
+   movl   THREAD_CONTINUATION(%ebx),%ecx
+   cmpl   $0,%ecx
+   je     LOCAL(vmInvoke_exit)
+
+   movl   CONTINUATION_LENGTH(%ecx),%esi
+   shll   $3,%esi
+   subl   %esi,%esp
+   subl   $48,%esp
+   
+   leal   CONTINUATION_BODY(%ecx),%edi
+
+   push   %eax
+   push   %edx
+   
+   movl   $0,%edx
+   jmp    LOCAL(vmInvoke_continuationTest)
+
+LOCAL(vmInvoke_continuationLoop):
+   movl   (%edi,%edx,1),%eax
+   movl   %eax,(%esp,%edx,1)
+   addl   $8,%edx
+   
+LOCAL(vmInvoke_continuationTest):
+   cmpl   %esi,%edx
+   jb     LOCAL(vmInvoke_continuationLoop)
+
+   pop    %edx
+   pop    %eax
+
+   movl   CONTINUATION_RETURN_ADDRESS_OFFSET(%ecx),%edi
+   call   LOCAL(getPC)
+   addl   $_GLOBAL_OFFSET_TABLE_,%esi
+   movl   vmInvoke_returnAddress@GOT(%esi),%esi
+   movl   %esi,(%esp,%edi,1)
+   
+   movl   CONTINUATION_FRAME_POINTER_OFFSET(%ecx),%edi
+   movl   %ebp,(%esp,%edi,1)
+   addl   %esp,%edi
+   movl   %edi,%ebp
+   
+   movl   CONTINUATION_NEXT(%ecx),%edi
+   movl   %edi,THREAD_CONTINUATION(%ebx)
+
+   // call the continuation unless we're handling an exception
+   movl   THREAD_EXCEPTION(%ebx),%esi
+   cmpl   $0,%esi
+   jne    LOCAL(vmInvoke_handleException)
+
+   jmp    *CONTINUATION_ADDRESS(%ecx)
+
+LOCAL(vmInvoke_handleException):
+   // we're handling an exception - call the exception handler instead
+   movl   $0,THREAD_EXCEPTION(%ebx)
+   movl   THREAD_EXCEPTION_STACK(%ebx),%esp
+   movl   THREAD_EXCEPTION_OFFSET(%ebx),%edi
+   movl   %esi,(%esp,%edi,1)
+   
+   jmp    *THREAD_EXCEPTION_HANDLER(%ebx)
+
+LOCAL(vmInvoke_exit):
+   // restore callee-saved registers
    movl   0(%esp),%ebx
    movl   4(%esp),%esi
    movl   8(%esp),%edi
@@ -242,22 +319,64 @@ LOCAL(test):
    
    addl   $16,%esp
    
-LOCAL(void):
+LOCAL(vmInvoke_void):
    cmpl   $VOID_TYPE,%ecx
-   jne    LOCAL(int64)
-   jmp    LOCAL(exit)
+   jne    LOCAL(vmInvoke_int64)
+   jmp    LOCAL(vmInvoke_return)
 
-LOCAL(int64):
+LOCAL(vmInvoke_int64):
    cmpl   $INT64_TYPE,%ecx
-   jne    LOCAL(int32)
-   jmp    LOCAL(exit)
+   jne    LOCAL(vmInvoke_int32)
+   jmp    LOCAL(vmInvoke_return)
    
-LOCAL(int32):
+LOCAL(vmInvoke_int32):
    movl   $0,%edx
 
-LOCAL(exit):
+LOCAL(vmInvoke_return):
    popl   %ebp
    ret
+
+LOCAL(getPC):
+   movl   (%esp),%esi
+   ret
+   
+.globl vmJumpAndInvoke
+vmJumpAndInvoke:
+   //  8(%ebp): thread
+   // 12(%ebp): address
+   // 16(%ebp): base
+   // 20(%ebp): stack
+   // 24(%ebp): argumentFootprint
+   // 28(%ebp): arguments
+
+   movl   8(%ebp),%ebx
+   movl   20(%ebp),%esp
+   
+   // set return address
+   call   LOCAL(getPC)
+   addl   $_GLOBAL_OFFSET_TABLE_,%esi
+   movl   vmInvoke_returnAddress@GOT(%esi),%esi
+   movl   %esi,(%esp)
+   
+   // copy arguments into place
+   movl   $0,%ecx
+   movl   24(%ebp),%esi
+   movl   28(%ebp),%eax
+   jmp    LOCAL(vmJumpAndInvoke_argumentTest)
+
+LOCAL(vmJumpAndInvoke_argumentLoop):
+   movl   (%eax,%ecx,1),%edx
+   movl   %edx,8(%esp,%ecx,1)
+   addl   $8,%ecx
+
+LOCAL(vmJumpAndInvoke_argumentTest):
+   cmpl   %esi,%ecx
+   jb     LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   movl   12(%ebp),%esi
+   movl   16(%ebp),%ebp
+   
+   jmp    *%esi
    
 #else
 #  error unsupported platform
