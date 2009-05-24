@@ -155,12 +155,10 @@ vmJumpAndInvoke:
    // %r9 : arguments
 
    movq   %rdi,%rbx
-   movq   %rdx,%rbp
-   movq   %rcx,%rsp
    
    // set return address
    movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
-   movq   %r10,(%rsp)
+   movq   %r10,(%rcx)
    
    // copy arguments into place
    movq   $0,%r11
@@ -168,12 +166,15 @@ vmJumpAndInvoke:
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
    movq   (%r9,%r11,1),%r10
-   movq   %r10,8(%rsp,%r11,1)
+   movq   %r10,8(%rcx,%r11,1)
    addq   $8,%r11
 
 LOCAL(vmJumpAndInvoke_argumentTest):
    cmpq   %r8,%r11
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   movq   %rdx,%rbp
+   movq   %rcx,%rsp
    
    jmp    *%rsi
    
@@ -342,40 +343,41 @@ LOCAL(getPC):
    
 .globl vmJumpAndInvoke
 vmJumpAndInvoke:
-   //  8(%ebp): thread
-   // 12(%ebp): address
-   // 16(%ebp): base
-   // 20(%ebp): stack
-   // 24(%ebp): argumentFootprint
-   // 28(%ebp): arguments
+   //  4(%esp): thread
+   //  8(%esp): address
+   // 12(%esp): base
+   // 16(%esp): stack
+   // 20(%esp): argumentFootprint
+   // 24(%esp): arguments
 
-   movl   8(%ebp),%ebx
-   movl   20(%ebp),%esp
+   movl   16(%esp),%ecx
    
    // set return address
    call   LOCAL(getPC)
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
    movl   vmInvoke_returnAddress@GOT(%esi),%esi
-   movl   %esi,(%esp)
+   movl   %esi,(%ecx)
    
    // copy arguments into place
-   movl   $0,%ecx
-   movl   24(%ebp),%esi
-   movl   28(%ebp),%eax
+   movl   $0,%esi
+   movl   20(%esp),%edx
+   movl   24(%esp),%eax
    jmp    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
-   movl   (%eax,%ecx,1),%edx
-   movl   %edx,8(%esp,%ecx,1)
-   addl   $8,%ecx
+   movl   (%eax,%esi,1),%edi
+   movl   %edi,4(%ecx,%esi,1)
+   addl   $4,%esi
 
 LOCAL(vmJumpAndInvoke_argumentTest):
-   cmpl   %esi,%ecx
+   cmpl   %edx,%esi
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
 
-   movl   12(%ebp),%esi
-   movl   16(%ebp),%ebp
-   
+   movl   4(%esp),%ebx
+   movl   8(%esp),%esi
+   movl   12(%esp),%ebp
+   movl   %ecx,%esp
+
    jmp    *%esi
    
 #else
