@@ -21,27 +21,27 @@ public abstract class Continuations {
                                   Runnable after)
     throws Exception
   {
-    UnwindResult result = dynamicWind2(buffer, thunk, after);
+    UnwindResult result = dynamicWind2(before, thunk, after);
     if (result.continuation != null) {
       after.run();
       if (result.exception != null) {
         result.continuation.handleException(result.exception);
       } else {
-        result.continuation.handleResult(result.value);
+        result.continuation.handleResult(result.result);
       }
       throw new AssertionError();
     } else {
-      return (T) result.value;
+      return (T) result.result;
     }
   }
 
   private static native UnwindResult dynamicWind2(Runnable before,
-                                                  Callable<T> thunk,
+                                                  Callable thunk,
                                                   Runnable after)
     throws Exception;
 
   private static UnwindResult wind(Runnable before,
-                                   Callable<T> thunk,
+                                   Callable thunk,
                                    Runnable after)
     throws Exception
   {
@@ -65,7 +65,7 @@ public abstract class Continuations {
     if (exception != null) {
       continuation.handleException(exception);
     } else {
-      continuation.handleResult(value);
+      continuation.handleResult(result);
     }
 
     throw new AssertionError();

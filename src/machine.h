@@ -1727,6 +1727,12 @@ makeInterruptedException(Thread* t)
 }
 
 inline object
+makeIncompatibleContinuationException(Thread* t)
+{
+  return makeIncompatibleContinuationException(t, 0, makeTrace(t), 0);
+}
+
+inline object
 makeStackOverflowError(Thread* t)
 {
   return makeStackOverflowError(t, 0, makeTrace(t), 0);

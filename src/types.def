@@ -175,6 +175,9 @@
 
 (type exceptionInInitializerError java/lang/ExceptionInInitializerError)
 
+(type incompatibleContinuationException
+  avian/IncompatibleContinuationException)
+
 (type number java/lang/Number)
 
 (type byte java/lang/Byte)

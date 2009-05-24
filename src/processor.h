@@ -137,6 +137,9 @@ class Processor {
   callWithCurrentContinuation(Thread* t, object receiver) = 0;
 
   virtual void
+  dynamicWind(Thread* t, object before, object thunk, object after) = 0;
+
+  virtual void
   feedResultToContinuation(Thread* t, object continuation, object result) = 0;
 
   virtual void

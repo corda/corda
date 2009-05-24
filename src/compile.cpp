@@ -49,13 +49,14 @@ class MyThread: public Thread {
  public:
   class CallTrace {
    public:
-    CallTrace(MyThread* t):
+    CallTrace(MyThread* t, object method):
       t(t),
       base(t->base),
       stack(t->stack),
       continuation(t->continuation),
-      nativeMethod(0),
+      nativeMethod((methodFlags(t, method) & ACC_NATIVE) ? method : 0),
       targetMethod(0),
+      originalMethod(method),
       next(t->trace)
     {
       t->trace = this;
@@ -77,6 +78,7 @@ class MyThread: public Thread {
     object continuation;
     object nativeMethod;
     object targetMethod;
+    object originalMethod;
     CallTrace* next;
   };
 
@@ -1371,7 +1373,7 @@ releaseLock(MyThread* t, object method, void* stack)
 
 void
 findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
-                 void** targetStack)
+                 void** targetStack, unsigned* oldArgumentFootprint = 0)
 {
   void* ip = t->ip;
   void* base = t->base;
@@ -1386,7 +1388,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
   while (*targetIp == 0) {
     object method = methodForIp(t, ip);
     if (method) {
-      void* handler = findExceptionHandler(t, method, ip, forContinuation);
+      void* handler = findExceptionHandler(t, method, ip);
 
       if (handler) {
         *targetIp = handler;
@@ -1418,12 +1420,16 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
       *targetStack = static_cast<void**>(stack)
         + t->arch->frameReturnAddressSize();
 
+      if (oldArgumentFootprint) {
+        *oldArgumentFootprint
+          = t->arch->argumentFootprint(methodParameterFootprint(t, target));
+      }
+
       while (t->continuation) {
         object method = continuationMethod(t, t->continuation);
 
         void* handler = findExceptionHandler
-          (t, method, continuationAddress(t, t->continuation),
-           forContinuation);
+          (t, method, continuationAddress(t, t->continuation));
 
         if (handler) {
           t->exceptionHandler = handler;
@@ -1547,6 +1553,9 @@ unwind(MyThread* t)
 
 object&
 objectPools(MyThread* t);
+
+object&
+rewindMethod(MyThread* t);
 
 uintptr_t
 defaultThunk(MyThread* t);
@@ -5309,13 +5318,31 @@ callContinuation(MyThread* t, object continuation, object result,
   vmJump(ip, base, stack, t, reinterpret_cast<uintptr_t>(result), 0);
 }
 
-uint8_t*
+int8_t*
 returnSpec(MyThread* t, object method)
 {
-  uint8_t* s = &byteArrayBody(t, methodSpec(t, method));
+  int8_t* s = &byteArrayBody(t, methodSpec(t, method), 0);
   while (*s and *s != ')') ++ s;
   expect(t, *s == ')');
   return s + 1;
+}
+
+object
+returnClass(MyThread* t, object method)
+{
+  int8_t* spec = returnSpec(t, method);
+  unsigned length = strlen(reinterpret_cast<char*>(spec));
+  object name;
+  if (*spec == '[') {
+    name = makeByteArray(t, length + 1);
+    memcpy(&byteArrayBody(t, name, 0), spec, length);
+  } else {
+    assert(t, *spec == 'L');
+    assert(t, spec[length - 1] == ';');
+    name = makeByteArray(t, length - 1);
+    memcpy(&byteArrayBody(t, name, 0), spec + 1, length - 2);
+  }
+  return resolveClass(t, name);
 }
 
 bool
@@ -5326,129 +5353,19 @@ compatibleReturnType(MyThread* t, object oldMethod, object newMethod)
   } else if (methodReturnCode(t, oldMethod) == methodReturnCode(t, newMethod))
   {
     if (methodReturnCode(t, oldMethod) == ObjectField) {
-      uint8_t* oldSpec = returnSpec(t, oldMethod);
-      uint8_t* newSpec = returnSpec(t, newMethod);
+      PROTECT(t, newMethod);
 
-      
+      object oldClass = returnClass(t, oldMethod);
+      PROTECT(t, oldClass);
+
+      object newClass = returnClass(t, newMethod);
+
+      return isAssignableFrom(t, oldClass, newClass);
     } else {
       return true;
     }
   } else {
     return methodReturnCode(t, oldMethod) == VoidField;
-  }
-}
-
-object
-findUnwindContinuation(MyThread* t, object oldContinuation,
-                       object newContinuation)
-{
-
-}
-
-object
-findRewindContinuation(MyThread* t, object oldContinuation,
-                       object newContinuation)
-{
-
-}
-
-void
-callContinuation(MyThread* t, object continuation, object result,
-                 object exception)
-{
-  enum {
-    Call,
-    Unwind,
-    Rewind,
-    Throw
-  } action;
-
-  object nextContinuation = 0;
-
-  if (t->continuation == null
-      or continuationContext(t, t->continuation)
-      != continuationContext(t, continuation))
-  {
-    PROTECT(t, continuation);
-    PROTECT(t, result);
-    PROTECT(t, exception);
-
-    if (not compatibleReturnType
-        (t, t->trace->originalMethod, continuationContextMethod
-         (t, continuationContext(t, t->continuation))))
-    {
-      t->exception = makeIncompatibleContinuationException(t);
-      action = Throw;
-    } else {
-      nextContinuation = findUnwindContinuation
-        (t, t->continuation, continuation);
-
-      if (nextContinuation) {
-        result = makeUnwindResult(t, continuation, result, exception);
-        action = Unwind;
-      } else {
-        nextContinuation = findRewindContinuation
-          (t, t->continuation, continuation);
-
-        if (nextContinuation) {
-          action = Rewind;
-
-          if (rewindMethod(t) == 0) {
-            const char* const className = "avian/Continuations";
-            const char* const methodName = "rewind";
-            const char* const methodSpec
-              = "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
-              "Ljava/lang/Throwable;)V";
-            
-            object method = resolveMethod
-              (t, className, methodName, methodSpec);
-            
-            if (method) {
-              rewindMethod(t) == 0;
-            } else {
-              object message = makeString
-                (t, "%s %s not found in %s",
-                 methodName, methodSpec, className);
-
-              t->exception = makeNoSuchMethodError(t, message);
-              action = Throw;
-            }
-          }
-        }
-      }
-    }
-  } else {
-    action = Call;
-  }
-
-  void* ip;
-  void* base;
-  void* stack;
-  findUnwindTarget(t, &ip, &base, &stack);
-
-  switch (action) {
-  case Call: {
-    callContinuation
-      (t, unwindContinuation, result, exception, ip, base, stack);
-  } break;
-
-  case Unwind: {
-    callContinuation(t, nextContinuation, result, 0, ip, base, stack);
-  } break;
-
-  case Rewind: {
-    jumpAndInvoke
-      (t, rewindMethod(t), base, stack, oldArgumentFootprint, 3,
-       continuationContextBefore(t, nextContinuation), nextContinuation,
-       result, exception);
-  } break;
-
-  case Throw: {
-    vmJump(ip, base, stack, t, 0, 0);    
-  } break;
-
-  default:
-    abort(t);
   }
 }
 
@@ -5482,6 +5399,131 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
      - t->arch->frameReturnAddressSize(),
      argumentCount * BytesPerWord,
      arguments);
+}
+
+void
+callContinuation(MyThread* t, object continuation, object result,
+                 object exception)
+{
+  enum {
+    Call,
+    Unwind,
+    Rewind,
+    Throw
+  } action;
+
+  object nextContinuation = 0;
+
+  if (t->continuation == 0
+      or continuationContext(t, t->continuation)
+      != continuationContext(t, continuation))
+  {
+    PROTECT(t, continuation);
+    PROTECT(t, result);
+    PROTECT(t, exception);
+
+    if (compatibleReturnType
+        (t, t->trace->originalMethod, continuationContextMethod
+         (t, continuationContext(t, t->continuation))))
+    {
+      object oldContext;
+      object unwindContext;
+
+      if (t->continuation) {
+        oldContext = continuationContext(t, t->continuation);
+        unwindContext = oldContext;
+      } else {
+        oldContext = 0;
+        unwindContext = 0;
+      }
+
+      object rewindContext = 0;
+
+      for (object newContext = continuationContext(t, continuation);
+           newContext; newContext = continuationContextNext(t, newContext))
+      {
+        if (newContext == oldContext) {
+          unwindContext = 0;
+          break;
+        } else {
+          rewindContext = newContext;
+        }
+      }
+
+      if (unwindContext
+          and continuationContextContinuation(t, unwindContext))
+      {
+        nextContinuation = continuationContextContinuation(t, unwindContext);
+        result = makeUnwindResult(t, continuation, result, exception);
+        action = Unwind;
+      } else if (rewindContext
+                 and continuationContextContinuation(t, rewindContext))
+      {
+        nextContinuation = continuationContextContinuation(t, rewindContext);
+        action = Rewind;
+
+        if (rewindMethod(t) == 0) {
+          PROTECT(t, nextContinuation);
+
+          const char* const className = "avian/Continuations";
+          const char* const methodName = "rewind";
+          const char* const methodSpec
+            = "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
+            "Ljava/lang/Throwable;)V";
+            
+          object method = resolveMethod
+            (t, className, methodName, methodSpec);
+            
+          if (method) {
+            rewindMethod(t) = method;
+          } else {
+            object message = makeString
+              (t, "%s %s not found in %s",
+               methodName, methodSpec, className);
+
+            t->exception = makeNoSuchMethodError(t, message);
+            action = Throw;
+          }
+        }
+      } 
+    } else {
+      t->exception = makeIncompatibleContinuationException(t);
+      action = Throw;
+    }
+  } else {
+    action = Call;
+  }
+
+  void* ip;
+  void* base;
+  void* stack;
+  unsigned oldArgumentFootprint;
+  findUnwindTarget(t, &ip, &base, &stack, &oldArgumentFootprint);
+
+  switch (action) {
+  case Call: {
+    callContinuation
+      (t, nextContinuation, result, exception, ip, base, stack);
+  } break;
+
+  case Unwind: {
+    callContinuation(t, nextContinuation, result, 0, ip, base, stack);
+  } break;
+
+  case Rewind: {
+    jumpAndInvoke
+      (t, rewindMethod(t), base, stack, oldArgumentFootprint, 3,
+       continuationContextBefore(t, nextContinuation), nextContinuation,
+       result, exception);
+  } break;
+
+  case Throw: {
+    vmJump(ip, base, stack, t, 0, 0);    
+  } break;
+
+  default:
+    abort(t);
+  }
 }
 
 class ArgumentList {
@@ -5618,11 +5660,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
 
   uint64_t result;
 
-  { MyThread::CallTrace trace(t);
-
-    if (methodFlags(t, method) & ACC_NATIVE) {
-      trace.nativeMethod = method;
-    }
+  { MyThread::CallTrace trace(t, method);
 
     assert(t, arguments->position == arguments->size);
 
@@ -5745,6 +5783,8 @@ class MyProcessor: public Processor {
     staticTableArray(0),
     virtualThunks(0),
     receiveMethod(0),
+    windMethod(0),
+    rewindMethod(0),
     codeAllocator(s, 0, 0)
   { }
 
@@ -5839,12 +5879,15 @@ class MyProcessor: public Processor {
       v->visit(&staticTableArray);
       v->visit(&virtualThunks);
       v->visit(&receiveMethod);
+      v->visit(&windMethod);
+      v->visit(&rewindMethod);
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
       v->visit(&(trace->continuation));
       v->visit(&(trace->nativeMethod));
       v->visit(&(trace->targetMethod));
+      v->visit(&(trace->originalMethod));
     }
 
     v->visit(&(t->continuation));
@@ -6255,7 +6298,7 @@ class MyProcessor: public Processor {
 
     if (LIKELY(t->exception == 0)) {
       jumpAndInvoke
-        (t, method, base, stack, oldArgumentFootprint, 3, before, thunk,
+        (t, windMethod, base, stack, oldArgumentFootprint, 3, before, thunk,
          after);
     } else {
       unwind(t);
@@ -6296,6 +6339,8 @@ class MyProcessor: public Processor {
   object staticTableArray;
   object virtualThunks;
   object receiveMethod;
+  object windMethod;
+  object rewindMethod;
   SegFaultHandler segFaultHandler;
   FixedAllocator codeAllocator;
 };
@@ -6904,6 +6949,12 @@ object&
 objectPools(MyThread* t)
 {
   return processor(t)->objectPools;
+}
+
+object&
+rewindMethod(MyThread* t)
+{
+  return processor(t)->rewindMethod;
 }
 
 uintptr_t
