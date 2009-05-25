@@ -208,11 +208,13 @@ _vmJump:
 .globl vmJump
 vmJump:
 #  endif
-   movl   4(%esp),%eax
+   movl   4(%esp),%esi
    movl   8(%esp),%ebp
    movl   16(%esp),%ebx
+   movl   20(%esp),%eax
+   movl   24(%esp),%edx
    movl   12(%esp),%esp
-   jmp    *%eax
+   jmp    *%esi
 
 #else
 #  error unsupported platform
