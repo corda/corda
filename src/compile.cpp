@@ -31,7 +31,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -5498,7 +5498,9 @@ callContinuation(MyThread* t, object continuation, object result,
             action = Throw;
           }
         }
-      } 
+      } else {
+        action = Call;
+      }
     } else {
       t->exception = makeIncompatibleContinuationException(t);
       action = Throw;
@@ -5523,10 +5525,12 @@ callContinuation(MyThread* t, object continuation, object result,
   } break;
 
   case Rewind: {
+    t->continuation = nextContinuation;
+
     jumpAndInvoke
       (t, rewindMethod(t), base, stack, oldArgumentFootprint,
        continuationContextBefore(t, continuationContext(t, nextContinuation)),
-       nextContinuation, result, exception);
+       continuation, result, exception);
   } break;
 
   case Throw: {
