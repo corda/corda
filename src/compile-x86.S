@@ -18,7 +18,7 @@
    
 #define THREAD_CONTINUATION 168
 #define THREAD_EXCEPTION 64
-#define THREAD_EXCEPTION_STACK 176
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 176
 #define THREAD_EXCEPTION_OFFSET 184
 #define THREAD_EXCEPTION_HANDLER 192
 
@@ -124,7 +124,8 @@ LOCAL(vmInvoke_continuationTest):
 LOCAL(vmInvoke_handleException):
    // we're handling an exception - call the exception handler instead
    movq   $0,THREAD_EXCEPTION(%rbx)
-   movq   THREAD_EXCEPTION_STACK(%rbx),%rsp
+   movq   THREAD_EXCEPTION_STACK_ADJUSTMENT(%rbx),%rdi
+   subq   %rdi,%rsp
    movq   THREAD_EXCEPTION_OFFSET(%rbx),%rdi
    movq   %rsi,(%rsp,%rdi,1)
    
@@ -182,7 +183,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 #define THREAD_CONTINUATION 96
 #define THREAD_EXCEPTION 36
-#define THREAD_EXCEPTION_STACK 100
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 100
 #define THREAD_EXCEPTION_OFFSET 104
 #define THREAD_EXCEPTION_HANDLER 108
 
@@ -303,7 +304,8 @@ LOCAL(vmInvoke_continuationTest):
 LOCAL(vmInvoke_handleException):
    // we're handling an exception - call the exception handler instead
    movl   $0,THREAD_EXCEPTION(%ebx)
-   movl   THREAD_EXCEPTION_STACK(%ebx),%esp
+   movl   THREAD_EXCEPTION_STACK_ADJUSTMENT(%ebx),%edi
+   subl   %edi,%esp
    movl   THREAD_EXCEPTION_OFFSET(%ebx),%edi
    movl   %esi,(%esp,%edi,1)
    

@@ -88,7 +88,7 @@ class MyThread: public Thread {
     base(0),
     stack(0),
     continuation(0),
-    exceptionStack(0),
+    exceptionStackAdjustment(0),
     exceptionOffset(0),
     exceptionHandler(0),
     tailAddress(0),
@@ -105,7 +105,7 @@ class MyThread: public Thread {
   void* base;
   void* stack;
   object continuation;
-  void* exceptionStack;
+  uintptr_t exceptionStackAdjustment;
   uintptr_t exceptionOffset;
   void* exceptionHandler;
   void* tailAddress;
@@ -1426,49 +1426,54 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
       }
 
       while (t->continuation) {
-        object method = continuationMethod(t, t->continuation);
+        object c = t->continuation;
+
+        object method = continuationMethod(t, c);
 
         void* handler = findExceptionHandler
-          (t, method, continuationAddress(t, t->continuation));
+          (t, method, continuationAddress(t, c));
 
         if (handler) {
           t->exceptionHandler = handler;
 
-          t->exceptionStack = static_cast<void**>(*targetStack)
-            + t->arch->argumentFootprint(methodParameterFootprint(t, target))
-            - t->arch->argumentFootprint(methodParameterFootprint(t, method))
-            - stackOffsetFromFrame(t, method);
+          t->exceptionStackAdjustment 
+            = (stackOffsetFromFrame(t, method)
+               - ((continuationFramePointerOffset(t, c) / BytesPerWord)
+                  - t->arch->framePointerOffset()
+                  + t->arch->frameReturnAddressSize())) * BytesPerWord;
 
           t->exceptionOffset
             = localOffset(t, localSize(t, method), method) * BytesPerWord;
           break;
         } else if (t->exception) {
           releaseLock(t, method,
-                      reinterpret_cast<uint8_t*>(t->continuation)
+                      reinterpret_cast<uint8_t*>(c)
                       + ContinuationBody
-                      + continuationReturnAddressOffset(t, t->continuation)
+                      + continuationReturnAddressOffset(t, c)
                       - t->arch->returnAddressOffset());
         }
 
-        t->continuation = continuationNext(t, t->continuation);
+        t->continuation = continuationNext(t, c);
       }
     }
   }
 }
 
 object
-makeCurrentContinuation(MyThread* t, object context, void** targetIp,
-                        void** targetBase, void** targetStack,
-                        unsigned* oldArgumentFootprint)
+makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
+                        void** targetStack, unsigned* oldArgumentFootprint)
 {
-  PROTECT(t, context);
-
   void* ip = t->ip;
   void* base = t->base;
   void* stack = t->stack;
   if (ip == 0) {
     ip = t->arch->frameIp(stack);
   }
+
+  object context = t->continuation
+    ? continuationContext(t, t->continuation)
+    : makeContinuationContext(t, 0, 0, 0, 0, t->trace->originalMethod);
+  PROTECT(t, context);
 
   object target = t->trace->targetMethod;
   PROTECT(t, target);
@@ -5300,9 +5305,6 @@ callContinuation(MyThread* t, object continuation, object result,
 {
   assert(t, t->exception == 0);
 
-  t->trace->nativeMethod = 0;
-  t->trace->targetMethod = 0;
-
   t->continuation = continuation;
 
   if (exception) {
@@ -5313,7 +5315,12 @@ callContinuation(MyThread* t, object continuation, object result,
     t->stack = stack;
 
     findUnwindTarget(t, &ip, &base, &stack);
+
+    t->ip = 0;
   }
+
+  t->trace->nativeMethod = 0;
+  t->trace->targetMethod = 0;
 
   vmJump(ip, base, stack, t, reinterpret_cast<uintptr_t>(result), 0);
 }
@@ -5371,8 +5378,7 @@ compatibleReturnType(MyThread* t, object oldMethod, object newMethod)
 
 void
 jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
-              unsigned oldArgumentFootprint, unsigned argumentCount,
-              ...)
+              unsigned oldArgumentFootprint, ...)
 {
   t->trace->targetMethod = 0;
 
@@ -5382,8 +5388,9 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
     t->trace->nativeMethod = 0;
   }
 
+  unsigned argumentCount = methodParameterFootprint(t, method);
   uintptr_t arguments[argumentCount];
-  va_list a; va_start(a, argumentCount);
+  va_list a; va_start(a, oldArgumentFootprint);
   for (unsigned i = 0; i < argumentCount; ++i) {
     arguments[i] = va_arg(a, uintptr_t);
   }
@@ -5394,7 +5401,7 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
      base,
      static_cast<void**>(stack)
      + oldArgumentFootprint
-     - t->arch->argumentFootprint(methodParameterFootprint(t, method))
+     - t->arch->argumentFootprint(argumentCount)
      - t->arch->frameFooterSize()
      - t->arch->frameReturnAddressSize(),
      argumentCount * BytesPerWord,
@@ -5517,9 +5524,9 @@ callContinuation(MyThread* t, object continuation, object result,
 
   case Rewind: {
     jumpAndInvoke
-      (t, rewindMethod(t), base, stack, oldArgumentFootprint, 3,
-       continuationContextBefore(t, nextContinuation), nextContinuation,
-       result, exception);
+      (t, rewindMethod(t), base, stack, oldArgumentFootprint,
+       continuationContextBefore(t, continuationContext(t, nextContinuation)),
+       nextContinuation, result, exception);
   } break;
 
   case Throw: {
@@ -5803,7 +5810,7 @@ class MyProcessor: public Processor {
     if (false) {
       fprintf(stderr, "%d\n", difference(&(t->continuation), t));
       fprintf(stderr, "%d\n", difference(&(t->exception), t));
-      fprintf(stderr, "%d\n", difference(&(t->exceptionStack), t));
+      fprintf(stderr, "%d\n", difference(&(t->exceptionStackAdjustment), t));
       fprintf(stderr, "%d\n", difference(&(t->exceptionOffset), t));
       fprintf(stderr, "%d\n", difference(&(t->exceptionHandler), t));
       exit(0);
@@ -6245,18 +6252,14 @@ class MyProcessor: public Processor {
 
         if (LIKELY(t->exception == 0)) {
           t->continuation = makeCurrentContinuation
-            (t, t->continuation
-             ? continuationContext(t, t->continuation)
-             : makeContinuationContext
-             (t, 0, 0, 0, 0, t->trace->originalMethod),
-             &ip, &base, &stack, &oldArgumentFootprint);
+            (t, &ip, &base, &stack, &oldArgumentFootprint);
         }
       }
     }
 
     if (LIKELY(t->exception == 0)) {
       jumpAndInvoke
-        (t, method, base, stack, oldArgumentFootprint, 2, receiver,
+        (t, method, base, stack, oldArgumentFootprint, receiver,
          t->continuation);
     } else {
       unwind(t);
@@ -6296,25 +6299,20 @@ class MyProcessor: public Processor {
       }
 
       if (LIKELY(t->exception == 0)) {
-        object oldContext
-          = (t->continuation ? continuationContext(t, t->continuation) : 0);
+        t->continuation = makeCurrentContinuation
+          (t, &ip, &base, &stack, &oldArgumentFootprint);
 
-        object context = makeContinuationContext
-          (t, oldContext, before, after, 0, t->trace->originalMethod);
+        object newContext = makeContinuationContext
+          (t, continuationContext(t, t->continuation), before, after,
+           t->continuation, t->trace->originalMethod);
 
-        object continuation = makeCurrentContinuation
-          (t, context, &ip, &base, &stack, &oldArgumentFootprint);
-
-        set(t, continuationContext(t, continuation),
-            ContinuationContextContinuation, continuation);
-
-        t->continuation = continuation;
+        set(t, t->continuation, ContinuationContext, newContext);
       }
     }
 
     if (LIKELY(t->exception == 0)) {
       jumpAndInvoke
-        (t, windMethod, base, stack, oldArgumentFootprint, 3, before, thunk,
+        (t, windMethod, base, stack, oldArgumentFootprint, before, thunk,
          after);
     } else {
       unwind(t);
