@@ -31,7 +31,7 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -5431,7 +5431,7 @@ callContinuation(MyThread* t, object continuation, object result,
 
     if (compatibleReturnType
         (t, t->trace->originalMethod, continuationContextMethod
-         (t, continuationContext(t, t->continuation))))
+         (t, continuationContext(t, continuation))))
     {
       object oldContext;
       object unwindContext;
