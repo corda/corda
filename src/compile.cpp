@@ -5476,6 +5476,12 @@ callContinuation(MyThread* t, object continuation, object result,
             
           if (method) {
             rewindMethod(t) = method;
+            
+            compile(t, ::codeAllocator(t), 0, method);
+
+            if (UNLIKELY(t->exception)) {
+              action = Throw;
+            }
           } else {
             object message = makeString
               (t, "%s %s not found in %s",
@@ -5794,6 +5800,15 @@ class MyProcessor: public Processor {
     MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
       MyThread(m, javaThread, static_cast<MyThread*>(parent));
     t->init();
+
+    if (false) {
+      fprintf(stderr, "%d\n", difference(&(t->continuation), t));
+      fprintf(stderr, "%d\n", difference(&(t->exception), t));
+      fprintf(stderr, "%d\n", difference(&(t->exceptionStack), t));
+      fprintf(stderr, "%d\n", difference(&(t->exceptionOffset), t));
+      fprintf(stderr, "%d\n", difference(&(t->exceptionHandler), t));
+      exit(0);
+    }
 
     return t;
   }
@@ -6268,11 +6283,13 @@ class MyProcessor: public Processor {
         const char* const methodName = "wind";
         const char* const methodSpec
           = "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
-          "Ljava/lang/Runnable;)Ljava/lang/Object;";
+          "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;";
 
         windMethod = resolveMethod(t, className, methodName, methodSpec);
 
-        if (windMethod == 0) {
+        if (windMethod) {        
+          compile(t, ::codeAllocator(t), 0, windMethod);
+        } else {
           object message = makeString
             (t, "%s %s not found in %s", methodName, methodSpec, className);
           t->exception = makeNoSuchMethodError(t, message);

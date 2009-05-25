@@ -255,9 +255,9 @@ vmInvoke_returnAddress:
    je     LOCAL(vmInvoke_exit)
 
    movl   CONTINUATION_LENGTH(%ecx),%esi
-   shll   $3,%esi
+   shll   $2,%esi
    subl   %esi,%esp
-   subl   $48,%esp
+   subl   $16,%esp
    
    leal   CONTINUATION_BODY(%ecx),%edi
 
@@ -269,8 +269,8 @@ vmInvoke_returnAddress:
 
 LOCAL(vmInvoke_continuationLoop):
    movl   (%edi,%edx,1),%eax
-   movl   %eax,(%esp,%edx,1)
-   addl   $8,%edx
+   movl   %eax,8(%esp,%edx,1)
+   addl   $4,%edx
    
 LOCAL(vmInvoke_continuationTest):
    cmpl   %esi,%edx
