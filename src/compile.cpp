@@ -5508,8 +5508,7 @@ callContinuation(MyThread* t, object continuation, object result,
 
   switch (action) {
   case Call: {
-    callContinuation
-      (t, nextContinuation, result, exception, ip, base, stack);
+    callContinuation(t, continuation, result, exception, ip, base, stack);
   } break;
 
   case Unwind: {
