@@ -18,8 +18,10 @@ public class DynamicWind {
   }
 
   private void unwindTest(final Callable<Integer> unwind) throws Exception {
+    System.out.println("unwindTest enter");
+            
     try {
-    expect(dynamicWind(new Runnable() {
+      expect(dynamicWind(new Runnable() {
           public void run() {
             System.out.println("unwindTest before");
 
@@ -57,9 +59,13 @@ public class DynamicWind {
       e.printStackTrace();
     }
 
+    System.out.println("unwindTest expect");
+            
     expect(before == 1);
     expect(task == 1);
     expect(after == 1);
+
+    System.out.println("unwindTest exit");
   }
 
   private void normalUnwind() throws Exception {
@@ -81,6 +87,8 @@ public class DynamicWind {
   private void continuationUnwindTest(final CallbackReceiver<Integer> receiver)
     throws Exception
   {
+    System.out.println("continuationUnwindTest enter");
+            
     try {
       expect(callWithCurrentContinuation(new CallbackReceiver<Integer>() {
             public Integer receive(final Callback<Integer> continuation)
@@ -98,9 +106,13 @@ public class DynamicWind {
       e.printStackTrace();
     }
     
+    System.out.println("continuationUnwindTest expect");
+
     expect(before == 1);
     expect(task == 1);
     expect(after == 1);
+
+    System.out.println("continuationUnwindTest exit");
   }
 
   private void continuationResultUnwind() throws Exception {
@@ -124,18 +136,24 @@ public class DynamicWind {
   private void rewindTest(final Callable<Integer> unwind, Runnable rewind)
     throws Exception
   {
+    System.out.println("rewindTest enter");
+
     int value;
     try {
       value = dynamicWind(new Runnable() {
           public void run() {
+            System.out.println("rewindTest before");
+    
             expect(before == continuationCount);
-            expect(task == 0);
-            expect(after == 0);
+            expect(task == continuationCount);
+            expect(after == continuationCount);
           
             ++ before;
           }
         }, new Callable<Integer>() {
           public Integer call() throws Exception {
+            System.out.println("rewindTest thunk");
+    
             expect(before == 1);
             expect(task == 0);
             expect(after == 0);
@@ -154,6 +172,8 @@ public class DynamicWind {
           }
         }, new Runnable() {
             public void run() {
+              System.out.println("rewindTest after");
+    
               expect(before == continuationCount + 1);
               expect(task == 1);
               expect(after == continuationCount);
@@ -165,9 +185,13 @@ public class DynamicWind {
       value = e.value;
     }
 
+    System.out.println("rewindTest expect");
+    
     expect(value == continuationCount);
     
     if (value == 0) {
+      System.out.println("rewindTest expect 0");
+    
       expect(before == 1);
       expect(task == 1);
       expect(after == 1);
@@ -176,11 +200,15 @@ public class DynamicWind {
       rewind.run();
       throw new AssertionError();
     } else {
+      System.out.println("rewindTest expect 1");
+    
       expect(value == 1);
       expect(before == 2);
       expect(task == 1);
       expect(after == 2);
     }
+
+    System.out.println("rewindTest exit");
   }
 
   private void continuationResultRewind() throws Exception {
