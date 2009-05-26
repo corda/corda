@@ -412,7 +412,7 @@ $(test-dep): $(test-sources)
 $(test-extra-dep): $(test-extra-sources)
 	@echo "compiling extra test classes"
 	@mkdir -p $(dir $(@))
-	$(javac) -d $(test) -bootclasspath $(classpath-build) \
+	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-extra-classes))
 	@touch $(@)
 
