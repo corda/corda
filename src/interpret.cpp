@@ -567,6 +567,48 @@ pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
   }
 }
 
+void
+marshalArguments(Thread* t, uintptr_t* args, unsigned i, unsigned count,
+                 object data, bool indirect)
+{
+  unsigned offset = 0;
+  unsigned sp = frameBase(t, t->frame);
+  for (; i < count; ++i) {
+    unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
+
+    switch (type) {
+    case INT8_TYPE:
+    case INT16_TYPE:
+    case INT32_TYPE:
+    case FLOAT_TYPE:
+      args[offset++] = peekInt(t, sp++);
+      break;
+
+    case INT64_TYPE:
+    case DOUBLE_TYPE: {
+      uint64_t v = peekLong(t, sp);
+      memcpy(args + offset, &v, 8);
+      offset += (8 / BytesPerWord);
+      sp += 2;
+    } break;
+
+    case POINTER_TYPE: {
+      if (indirect) {
+        object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
+        if (*v == 0) {
+          v = 0;
+        }
+        args[offset++] = reinterpret_cast<uintptr_t>(v);
+      } else {
+        args[offset++] = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
+      }
+    } break;
+
+    default: abort(t);
+    }
+  }
+}
+
 unsigned
 invokeNativeSlow(Thread* t, object method)
 {
@@ -592,37 +634,7 @@ invokeNativeSlow(Thread* t, object method)
       (pushReference(t, methodClass(t, method)));
   }
 
-  unsigned sp = frameBase(t, t->frame);
-  for (; i < count; ++i) {
-    unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
-
-    switch (type) {
-    case INT8_TYPE:
-    case INT16_TYPE:
-    case INT32_TYPE:
-    case FLOAT_TYPE:
-      args[offset++] = peekInt(t, sp++);
-      break;
-
-    case INT64_TYPE:
-    case DOUBLE_TYPE: {
-      uint64_t v = peekLong(t, sp);
-      memcpy(args + offset, &v, 8);
-      offset += (8 / BytesPerWord);
-      sp += 2;
-    } break;
-
-    case POINTER_TYPE: {
-      object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
-      if (*v == 0) {
-        v = 0;
-      }
-      args[offset++] = reinterpret_cast<uintptr_t>(v);
-    } break;
-
-    default: abort(t);
-    }
-  }
+  marshalArguments(t, args + offset, i, count, data, true);
 
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
@@ -693,12 +705,11 @@ invokeNative(Thread* t, object method)
   if (methodVmFlags(t, method) & FastNative) {
     pushFrame(t, method);
 
-    unsigned footprint = methodParameterFootprint(t, method);
-    uintptr_t arguments[footprint];
-    unsigned sp = frameBase(t, t->frame);
-    for (unsigned i = 0; i < footprint; ++i) {
-      arguments[i] = t->stack[((sp + i) * 2) + 1];
-    }
+    object data = methodCode(t, method);
+    uintptr_t arguments[methodParameterFootprint(t, method)];
+    marshalArguments
+      (t, arguments, (methodFlags(t, method) & ACC_STATIC) ? 1 : 0,
+       nativeMethodDataLength(t, data) - 1, data, false);
 
     uint64_t result = reinterpret_cast<FastNativeFunction>
       (nativeMethodDataFunction(t, methodCode(t, method)))
