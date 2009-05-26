@@ -35,6 +35,12 @@ endif
 ifeq ($(heapdump),true)
 	options := $(options)-heapdump
 endif
+ifeq ($(tails),true)
+	options := $(options)-tails
+endif
+ifeq ($(continuations),true)
+	options := $(options)-continuations
+endif
 
 root = $(shell (cd .. && pwd))
 build = build
@@ -252,6 +258,14 @@ ifeq ($(heapdump),true)
 	vm-sources += $(src)/heapdump.cpp
 	vm-heapwalk-objects = $(heapwalk-objects)
 	cflags += -DAVIAN_HEAPDUMP
+endif
+
+ifeq ($(tails),true)
+	cflags += -DAVIAN_TAILS
+endif
+
+ifeq ($(continuations),true)
+	cflags += -DAVIAN_CONTINUATIONS
 endif
 
 bootimage-generator-sources = $(src)/bootimage.cpp 

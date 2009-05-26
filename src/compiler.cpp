@@ -2392,7 +2392,7 @@ class CallEvent: public Event {
       int framePointerIndex;
       int frameOffset;
 
-      if (flags & Compiler::TailJump) {
+      if (TailCalls and (flags & Compiler::TailJump)) {
         assert(c, argumentCount == 0);
 
         int base = frameBase(c);
@@ -2433,7 +2433,7 @@ class CallEvent: public Event {
       }
     }
 
-    if ((flags & Compiler::TailJump) == 0) {
+    if ((not TailCalls) or (flags & Compiler::TailJump) == 0) {
       stackArgumentIndex = c->localFootprint;
       if (stackBefore) {
         stackArgumentIndex += stackBefore->index + 1 - stackArgumentFootprint;
@@ -2475,7 +2475,7 @@ class CallEvent: public Event {
   virtual void compile(Context* c) {
     UnaryOperation op;
 
-    if (flags & Compiler::TailJump) {
+    if (TailCalls and (flags & Compiler::TailJump)) {
       if (flags & Compiler::Aligned) {
         op = AlignedJump;
       } else {
@@ -2525,25 +2525,29 @@ class CallEvent: public Event {
                                 stackArgumentIndex);
     }
 
-    if (flags & Compiler::TailJump) {
-      if (returnAddressSurrogate) {
-        returnAddressSurrogate->source->thaw(c, returnAddressSurrogate);
-      }
+    if (TailCalls) {
+      if (flags & Compiler::TailJump) {
+        if (returnAddressSurrogate) {
+          returnAddressSurrogate->source->thaw(c, returnAddressSurrogate);
+        }
 
-      if (framePointerSurrogate) {
-        framePointerSurrogate->source->thaw(c, framePointerSurrogate);
-      }
-    } else {
-      unsigned footprint = c->arch->argumentFootprint(stackArgumentFootprint);
-      if (footprint > c->arch->stackAlignmentInWords()) {
-        Assembler::Register stack(c->arch->stack());
-        ResolvedPromise adjustmentPromise
-          ((footprint - c->arch->stackAlignmentInWords()) * BytesPerWord);
-        Assembler::Constant adjustmentConstant(&adjustmentPromise);
-        c->assembler->apply
-          (Subtract, BytesPerWord, ConstantOperand, &adjustmentConstant,
-           BytesPerWord, RegisterOperand, &stack,
-           BytesPerWord, RegisterOperand, &stack);
+        if (framePointerSurrogate) {
+          framePointerSurrogate->source->thaw(c, framePointerSurrogate);
+        }
+      } else {
+        unsigned footprint = c->arch->argumentFootprint
+          (stackArgumentFootprint);
+
+        if (footprint > c->arch->stackAlignmentInWords()) {
+          Assembler::Register stack(c->arch->stack());
+          ResolvedPromise adjustmentPromise
+            ((footprint - c->arch->stackAlignmentInWords()) * BytesPerWord);
+          Assembler::Constant adjustmentConstant(&adjustmentPromise);
+          c->assembler->apply
+            (Subtract, BytesPerWord, ConstantOperand, &adjustmentConstant,
+             BytesPerWord, RegisterOperand, &stack,
+             BytesPerWord, RegisterOperand, &stack);
+        }
       }
     }
 

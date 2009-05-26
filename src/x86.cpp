@@ -2412,44 +2412,48 @@ class MyAssembler: public Assembler {
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate)
   {
-    if (offset) {
-      Register tmp(c.client->acquireTemporary());
+    if (TailCalls) {
+      if (offset) {
+        Register tmp(c.client->acquireTemporary());
       
-      Memory returnAddressSrc(rsp, (footprint + 1) * BytesPerWord);
-      moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
+        Memory returnAddressSrc(rsp, (footprint + 1) * BytesPerWord);
+        moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
     
-      Memory returnAddressDst(rsp, (footprint - offset + 1) * BytesPerWord);
-      moveRM(&c, BytesPerWord, &tmp, BytesPerWord, &returnAddressDst);
+        Memory returnAddressDst(rsp, (footprint - offset + 1) * BytesPerWord);
+        moveRM(&c, BytesPerWord, &tmp, BytesPerWord, &returnAddressDst);
 
-      c.client->releaseTemporary(tmp.low);
+        c.client->releaseTemporary(tmp.low);
 
-      Memory baseSrc(rsp, footprint * BytesPerWord);
-      Register base(rbp);
-      moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
+        Memory baseSrc(rsp, footprint * BytesPerWord);
+        Register base(rbp);
+        moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
 
-      Register stack(rsp);
-      Constant footprintConstant
-        (resolved(&c, (footprint - offset + 1) * BytesPerWord));
-      addCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack);
+        Register stack(rsp);
+        Constant footprintConstant
+          (resolved(&c, (footprint - offset + 1) * BytesPerWord));
+        addCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack);
 
-      if (returnAddressSurrogate != NoRegister) {
-        assert(&c, offset > 0);
+        if (returnAddressSurrogate != NoRegister) {
+          assert(&c, offset > 0);
 
-        Register ras(returnAddressSurrogate);
-        Memory dst(rsp, offset * BytesPerWord);
-        moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
-      }
+          Register ras(returnAddressSurrogate);
+          Memory dst(rsp, offset * BytesPerWord);
+          moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
+        }
 
-      if (framePointerSurrogate != NoRegister) {
-        assert(&c, offset > 0);
+        if (framePointerSurrogate != NoRegister) {
+          assert(&c, offset > 0);
 
-        Register fps(framePointerSurrogate);
-        Memory dst(rsp, (offset - 1) * BytesPerWord);
-        moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+          Register fps(framePointerSurrogate);
+          Memory dst(rsp, (offset - 1) * BytesPerWord);
+          moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+        }
+      } else {
+        popFrame();
       }
     } else {
-      popFrame();
-    }    
+      abort(&c);
+    }
   }
 
   virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
@@ -2458,7 +2462,7 @@ class MyAssembler: public Assembler {
     assert(&c, argumentFootprint >= StackAlignmentInWords);
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
-    if (argumentFootprint > StackAlignmentInWords) {
+    if (TailCalls and argumentFootprint > StackAlignmentInWords) {
       Register returnAddress(rcx);
       popR(&c, BytesPerWord, &returnAddress);
 

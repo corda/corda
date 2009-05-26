@@ -39,6 +39,12 @@ const bool DebugFrameMaps = false;
 
 const bool CheckArrayBounds = true;
 
+#ifdef AVIAN_CONTINUATIONS
+const bool Continuations = true;
+#else
+const bool Continuations = false;
+#endif
+
 const unsigned MaxNativeCallFootprint = 4;
 
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
@@ -1425,7 +1431,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
           = t->arch->argumentFootprint(methodParameterFootprint(t, target));
       }
 
-      while (t->continuation) {
+      while (Continuations and t->continuation) {
         object c = t->continuation;
 
         object method = continuationMethod(t, c);
@@ -1495,7 +1501,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       unsigned argumentFootprint
         = t->arch->argumentFootprint(methodParameterFootprint(t, target));
       unsigned alignment = t->arch->stackAlignmentInWords();
-      if (argumentFootprint > alignment) {
+      if (TailCalls and argumentFootprint > alignment) {
         top += argumentFootprint - alignment;
       }
 
@@ -1560,7 +1566,13 @@ object&
 objectPools(MyThread* t);
 
 object&
+windMethod(MyThread* t);
+
+object&
 rewindMethod(MyThread* t);
+
+object&
+receiveMethod(MyThread* t);
 
 uintptr_t
 defaultThunk(MyThread* t);
@@ -2144,7 +2156,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
   unsigned flags = (tailCall ? Compiler::TailJump : 0);
 
   if (useThunk or (tailCall and (methodFlags(t, target) & ACC_NATIVE))) {
-    if (tailCall) {
+    if (TailCalls and tailCall) {
       TraceElement* trace = frame->trace(target, TraceElement::TailCall);
       Compiler::Operand* returnAddress = c->promiseConstant
         (new (frame->context->zone.allocate(sizeof(TraceElementPromise)))
@@ -2409,12 +2421,13 @@ returnsNext(MyThread* t, object code, unsigned ip)
 bool
 isTailCall(MyThread* t, object code, unsigned ip, object caller, object callee)
 {
-  return (((methodFlags(t, caller) & ACC_SYNCHRONIZED) == 0)
-          and (not inTryBlock(t, code, ip - 1))
-          and (not needsReturnBarrier(t, caller))
-          and (methodReturnCode(t, caller) == VoidField
-               or methodReturnCode(t, caller) == methodReturnCode(t, callee))
-          and returnsNext(t, code, ip));
+  return TailCalls
+    and ((methodFlags(t, caller) & ACC_SYNCHRONIZED) == 0)
+    and (not inTryBlock(t, code, ip - 1))
+    and (not needsReturnBarrier(t, caller))
+    and (methodReturnCode(t, caller) == VoidField
+         or methodReturnCode(t, caller) == methodReturnCode(t, callee))
+    and returnsNext(t, code, ip);
 }
 
 void
@@ -5111,7 +5124,8 @@ invokeNative(MyThread* t)
   if (UNLIKELY(t->exception)) {
     unwind(t);
   } else {
-    if (t->arch->argumentFootprint(parameterFootprint)
+    if (TailCalls
+        and t->arch->argumentFootprint(parameterFootprint)
         > t->arch->stackAlignmentInWords())
     {
       t->stack = static_cast<uintptr_t*>(t->stack)
@@ -5540,6 +5554,117 @@ callContinuation(MyThread* t, object continuation, object result,
   default:
     abort(t);
   }
+}
+
+void
+callWithCurrentContinuation(MyThread* t, object receiver)
+{
+  object method = 0;
+  void* ip = 0;
+  void* base = 0;
+  void* stack = 0;
+  unsigned oldArgumentFootprint = 0;
+
+  { PROTECT(t, receiver);
+
+    if (receiveMethod(t) == 0) {
+      const char* const className = "avian/CallbackReceiver";
+      const char* const methodName = "receive";
+      const char* const methodSpec = "(Lavian/Callback;)Ljava/lang/Object;";
+
+      object m = resolveMethod(t, className, methodName, methodSpec);
+
+      if (m) {
+        receiveMethod(t) = m;
+      } else {
+        object message = makeString
+          (t, "%s %s not found in %s", methodName, methodSpec, className);
+        t->exception = makeNoSuchMethodError(t, message);
+      }
+
+      if (LIKELY(t->exception == 0)) {
+        object continuationClass = arrayBody
+          (t, t->m->types, Machine::ContinuationType);
+        
+        if (classVmFlags(t, continuationClass) & BootstrapFlag) {
+          resolveClass(t, vm::className(t, continuationClass));
+        }
+      }
+    }
+
+    if (LIKELY(t->exception == 0)) {
+      method = findInterfaceMethod
+        (t, receiveMethod(t), objectClass(t, receiver));
+      PROTECT(t, method);
+        
+      compile(t, ::codeAllocator(t), 0, method);
+
+      if (LIKELY(t->exception == 0)) {
+        t->continuation = makeCurrentContinuation
+          (t, &ip, &base, &stack, &oldArgumentFootprint);
+      }
+    }
+  }
+
+  if (LIKELY(t->exception == 0)) {
+    jumpAndInvoke
+      (t, method, base, stack, oldArgumentFootprint, receiver,
+       t->continuation);
+  } else {
+    unwind(t);
+  }
+}
+
+void
+dynamicWind(MyThread* t, object before, object thunk, object after)
+{
+  void* ip = 0;
+  void* base = 0;
+  void* stack = 0;
+  unsigned oldArgumentFootprint = 0;
+
+  { PROTECT(t, before);
+    PROTECT(t, thunk);
+    PROTECT(t, after);
+
+    if (windMethod(t) == 0) {
+      const char* const className = "avian/Continuations";
+      const char* const methodName = "wind";
+      const char* const methodSpec
+        = "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
+        "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;";
+
+      object method = resolveMethod(t, className, methodName, methodSpec);
+
+      if (method) {
+        windMethod(t) = method;
+        compile(t, ::codeAllocator(t), 0, method);
+      } else {
+        object message = makeString
+          (t, "%s %s not found in %s", methodName, methodSpec, className);
+        t->exception = makeNoSuchMethodError(t, message);
+      }
+    }
+
+    if (LIKELY(t->exception == 0)) {
+      t->continuation = makeCurrentContinuation
+        (t, &ip, &base, &stack, &oldArgumentFootprint);
+
+      object newContext = makeContinuationContext
+        (t, continuationContext(t, t->continuation), before, after,
+         t->continuation, t->trace->originalMethod);
+
+      set(t, t->continuation, ContinuationContext, newContext);
+    }
+  }
+
+  if (LIKELY(t->exception == 0)) {
+    jumpAndInvoke
+      (t, windMethod(t), base, stack, oldArgumentFootprint, before, thunk,
+       after);
+  } else {
+    unwind(t);
+  }    
 }
 
 class ArgumentList {
@@ -6213,132 +6338,52 @@ class MyProcessor: public Processor {
            (t->m->system->handleSegFault(&segFaultHandler)));
   }
 
-  virtual void callWithCurrentContinuation(Thread* vmt, object receiver) {
-    MyThread* t = static_cast<MyThread*>(vmt);
-
-    object method = 0;
-    void* ip = 0;
-    void* base = 0;
-    void* stack = 0;
-    unsigned oldArgumentFootprint = 0;
-
-    { PROTECT(t, receiver);
-
-      if (receiveMethod == 0) {
-        const char* const className = "avian/CallbackReceiver";
-        const char* const methodName = "receive";
-        const char* const methodSpec = "(Lavian/Callback;)Ljava/lang/Object;";
-
-        receiveMethod = resolveMethod(t, className, methodName, methodSpec);
-
-        if (receiveMethod == 0) {
-          object message = makeString
-            (t, "%s %s not found in %s", methodName, methodSpec, className);
-          t->exception = makeNoSuchMethodError(t, message);
-        }
-
-        if (LIKELY(t->exception == 0)) {
-          object continuationClass = arrayBody
-            (t, t->m->types, Machine::ContinuationType);
-        
-          if (classVmFlags(t, continuationClass) & BootstrapFlag) {
-            resolveClass(t, vm::className(t, continuationClass));
-          }
-        }
-      }
-
-      if (LIKELY(t->exception == 0)) {
-        method = findInterfaceMethod
-          (t, receiveMethod, objectClass(t, receiver));
-        PROTECT(t, method);
-        
-        compile(t, ::codeAllocator(t), 0, method);
-
-        if (LIKELY(t->exception == 0)) {
-          t->continuation = makeCurrentContinuation
-            (t, &ip, &base, &stack, &oldArgumentFootprint);
-        }
-      }
-    }
-
-    if (LIKELY(t->exception == 0)) {
-      jumpAndInvoke
-        (t, method, base, stack, oldArgumentFootprint, receiver,
-         t->continuation);
+  virtual void callWithCurrentContinuation(Thread* t, object receiver) {
+    if (Continuations) {
+      ::callWithCurrentContinuation(static_cast<MyThread*>(t), receiver);
     } else {
-      unwind(t);
+      abort(t);
     }
   }
 
-  virtual void dynamicWind(Thread* vmt, object before, object thunk,
+  virtual void dynamicWind(Thread* t, object before, object thunk,
                            object after)
   {
-    MyThread* t = static_cast<MyThread*>(vmt);
-
-    void* ip = 0;
-    void* base = 0;
-    void* stack = 0;
-    unsigned oldArgumentFootprint = 0;
-
-    { PROTECT(t, before);
-      PROTECT(t, thunk);
-      PROTECT(t, after);
-
-      if (windMethod == 0) {
-        const char* const className = "avian/Continuations";
-        const char* const methodName = "wind";
-        const char* const methodSpec
-          = "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
-          "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;";
-
-        windMethod = resolveMethod(t, className, methodName, methodSpec);
-
-        if (windMethod) {        
-          compile(t, ::codeAllocator(t), 0, windMethod);
-        } else {
-          object message = makeString
-            (t, "%s %s not found in %s", methodName, methodSpec, className);
-          t->exception = makeNoSuchMethodError(t, message);
-        }
-      }
-
-      if (LIKELY(t->exception == 0)) {
-        t->continuation = makeCurrentContinuation
-          (t, &ip, &base, &stack, &oldArgumentFootprint);
-
-        object newContext = makeContinuationContext
-          (t, continuationContext(t, t->continuation), before, after,
-           t->continuation, t->trace->originalMethod);
-
-        set(t, t->continuation, ContinuationContext, newContext);
-      }
-    }
-
-    if (LIKELY(t->exception == 0)) {
-      jumpAndInvoke
-        (t, windMethod, base, stack, oldArgumentFootprint, before, thunk,
-         after);
+    if (Continuations) {
+      ::dynamicWind(static_cast<MyThread*>(t), before, thunk, after);
     } else {
-      unwind(t);
-    }    
+      abort(t);
+    }
   }
 
-  virtual void feedResultToContinuation(Thread* vmt, object continuation,
+  virtual void feedResultToContinuation(Thread* t, object continuation,
                                         object result)
   {
-    callContinuation(static_cast<MyThread*>(vmt), continuation, result, 0);
+    if (Continuations) {
+      callContinuation(static_cast<MyThread*>(t), continuation, result, 0);
+    } else {
+      abort(t);
+    }
   }
 
-  virtual void feedExceptionToContinuation(Thread* vmt, object continuation,
+  virtual void feedExceptionToContinuation(Thread* t, object continuation,
                                            object exception)
   {
-    callContinuation(static_cast<MyThread*>(vmt), continuation, 0, exception);
+    if (Continuations) {
+      callContinuation(static_cast<MyThread*>(t), continuation, 0, exception);
+    } else {
+      abort(t);
+    }
   }
 
   virtual void walkContinuationBody(Thread* t, Heap::Walker* w, object o,
                                     unsigned start)
   {
-    ::walkContinuationBody(static_cast<MyThread*>(t), w, o, start);
+    if (Continuations) {
+      ::walkContinuationBody(static_cast<MyThread*>(t), w, o, start);
+    } else {
+      abort(t);
+    }
   }
   
   System* s;
@@ -6970,9 +7015,21 @@ objectPools(MyThread* t)
 }
 
 object&
+windMethod(MyThread* t)
+{
+  return processor(t)->windMethod;
+}
+
+object&
 rewindMethod(MyThread* t)
 {
   return processor(t)->rewindMethod;
+}
+
+object&
+receiveMethod(MyThread* t)
+{
+  return processor(t)->receiveMethod;
 }
 
 uintptr_t

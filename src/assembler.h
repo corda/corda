@@ -16,6 +16,12 @@
 
 namespace vm {
 
+#ifdef AVIAN_TAILS
+const bool TailCalls = true;
+#else
+const bool TailCalls = false;
+#endif
+
 enum Operation {
   Return,
   LoadBarrier,
