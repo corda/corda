@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package java.lang;
+package avian;
 
 import java.net.URL;
 import java.net.MalformedURLException;

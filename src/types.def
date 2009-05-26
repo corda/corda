@@ -8,7 +8,7 @@
 
 (type classLoader java/lang/ClassLoader)
 
-(type systemClassLoader java/lang/SystemClassLoader)
+(type systemClassLoader avian/SystemClassLoader)
 
 (type accessibleObject java/lang/reflect/AccessibleObject)
 

@@ -167,7 +167,7 @@ Avian_java_lang_ClassLoader_defineClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_SystemClassLoader_findLoadedClass
+Avian_avian_SystemClassLoader_findLoadedClass
 (Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[1]);
@@ -176,7 +176,7 @@ Avian_java_lang_SystemClassLoader_findLoadedClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_SystemClassLoader_findClass
+Avian_avian_SystemClassLoader_findClass
 (Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[1]);
@@ -185,7 +185,7 @@ Avian_java_lang_SystemClassLoader_findClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_SystemClassLoader_resourceExists
+Avian_avian_SystemClassLoader_resourceExists
 (Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[1]);
@@ -639,7 +639,7 @@ Avian_java_lang_Runtime_gc
 #ifdef AVIAN_HEAPDUMP
 
 extern "C" JNIEXPORT void JNICALL
-Avian_java_lang_Runtime_dumpHeap
+Avian_avian_Machine_dumpHeap
 (Thread* t, object, uintptr_t* arguments)
 {
   object outputFile = reinterpret_cast<object>(*arguments);
