@@ -245,7 +245,7 @@ LOCAL(vmInvoke_argumentTest):
 
 .globl vmInvoke_returnAddress
 vmInvoke_returnAddress:
-   // restore stack pointer and callee-saved registers
+   // restore stack pointer
    movl   %ebp,%ecx
    subl   $16,%ecx
    movl   %ecx,%esp
