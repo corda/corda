@@ -2398,6 +2398,14 @@ class MyAssembler: public Assembler {
           BytesPerWord, RegisterOperand, &stack);
   }
 
+  virtual void adjustFrame(unsigned footprint) {
+    Register stack(rsp);
+    Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
+    apply(Subtract, BytesPerWord, ConstantOperand, &footprintConstant,
+          BytesPerWord, RegisterOperand, &stack,
+          BytesPerWord, RegisterOperand, &stack);
+  }
+
   virtual void popFrame() {
     Register base(rbp);
     Register stack(rsp);

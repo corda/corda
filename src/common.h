@@ -30,7 +30,7 @@
 #endif
 
 #if (defined __i386__) || (defined __POWERPC__)
-#  define LD "d"
+#  define LD "ld"
 #  define LLD "lld"
 #ifdef __APPLE__
 #  define ULD "lu"

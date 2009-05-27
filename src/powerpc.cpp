@@ -65,7 +65,7 @@ inline int sth(int rs, int ra, int i) { return D(44, rs, ra, i); }
 inline int sthx(int rs, int ra, int rb) { return X(31, rs, ra, rb, 407, 0); }
 inline int stw(int rs, int ra, int i) { return D(36, rs, ra, i); }
 inline int stwu(int rs, int ra, int i) { return D(37, rs, ra, i); }
-inline int stwux(int rs, int ra, int i) { return X(31, rs, ra, rb, 183, 0); }
+inline int stwux(int rs, int ra, int rb) { return X(31, rs, ra, rb, 183, 0); }
 inline int stwx(int rs, int ra, int rb) { return X(31, rs, ra, rb, 151, 0); }
 inline int add(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 266, 0); }
 inline int addc(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 10, 0); }
@@ -137,7 +137,7 @@ inline int blt(int i) { return bc(12, 0, i, 0); }
 inline int bgt(int i) { return bc(12, 1, i, 0); }
 inline int bge(int i) { return bc(4, 0, i, 0); }
 inline int ble(int i) { return bc(4, 1, i, 0); }
-inline int be(int i) { return bc(12, 2, i, 0); }
+inline int beq(int i) { return bc(12, 2, i, 0); }
 inline int bne(int i) { return bc(4, 2, i, 0); }
 inline int cmpw(int ra, int rb) { return cmp(0, ra, rb); }
 inline int cmplw(int ra, int rb) { return cmpl(0, ra, rb); }
@@ -160,6 +160,7 @@ carry16(intptr_t v)
 const unsigned FrameFooterSize = 6;
 
 const unsigned StackAlignmentInBytes = 16;
+const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 
 const int StackRegister = 1;
 const int ThreadRegister = 13;
@@ -1507,7 +1508,7 @@ jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, be(0));
+  issue(c, beq(0));
 }
 
 void
@@ -1688,6 +1689,14 @@ class MyArchitecture: public Assembler::Architecture {
     return (BytesPerWord == 4 ? 3 : NoRegister);
   }
 
+  virtual int virtualCallTarget() {
+    return 4;
+  }
+
+  virtual int virtualCallIndex() {
+    return 3;
+  }
+
   virtual bool condensedAddressing() {
     return false;
   }
@@ -1708,7 +1717,7 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual unsigned stackPadding(unsigned footprint) {
+  virtual unsigned frameFootprint(unsigned footprint) {
     return max(footprint, StackAlignmentInWords);
   }
 
@@ -1726,11 +1735,16 @@ class MyArchitecture: public Assembler::Architecture {
     return index + 3;
   }
 
+  virtual unsigned stackAlignmentInWords() {
+    return StackAlignmentInWords;
+  }
+
   virtual bool matchCall(void* returnAddress, void* target) {
     uint32_t* instruction = static_cast<uint32_t*>(returnAddress) - 1;
 
-    return *instruction == bl(static_cast<uint8_t*>(target)
-                              - reinterpret_cast<uint8_t*>(instruction));
+    return *instruction == static_cast<uint32_t>
+      (bl(static_cast<uint8_t*>(target)
+          - reinterpret_cast<uint8_t*>(instruction)));
   }
 
   virtual void updateCall(UnaryOperation op UNUSED,
@@ -1786,6 +1800,14 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual unsigned frameFooterSize() {
     return FrameFooterSize;
+  }
+
+  virtual int returnAddressOffset() {
+    return 8 / BytesPerWord;
+  }
+
+  virtual int framePointerOffset() {
+    return 0;
   }
 
   virtual void nextFrame(void** stack, void**) {
@@ -1971,6 +1993,15 @@ class MyAssembler: public Assembler {
     moveAndUpdateRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
   }
 
+  virtual void adjustFrame(unsigned footprint) {
+    Register nextStack(0);
+    Memory stackSrc(StackRegister, 0);
+    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &nextStack);
+
+    Memory stackDst(StackRegister, -footprint * BytesPerWord);
+    moveAndUpdateRM(&c, BytesPerWord, &nextStack, BytesPerWord, &stackDst);
+  }
+
   virtual void popFrame() {
     Register stack(StackRegister);
     Memory stackSrc(StackRegister, 0);
@@ -2024,8 +2055,8 @@ class MyAssembler: public Assembler {
   virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
     popFrame();
 
-    assert(c, argumentFootprint >= StackAlignmentInWords);
-    assert(c, (argumentFootprint % StackAlignmentInWords) == 0);
+    assert(&c, argumentFootprint >= StackAlignmentInWords);
+    assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
     if (argumentFootprint > StackAlignmentInWords) {
       Register tmp(0);
@@ -2049,7 +2080,7 @@ class MyAssembler: public Assembler {
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp1);
 
     Register tmp2(arch_->returnLow());
-    Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
+    Memory newStackSrc(ThreadRegister, stackOffset);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp2);
 
     Register stack(StackRegister);

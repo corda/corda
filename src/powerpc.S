@@ -161,4 +161,6 @@ vmJump:
    mtlr r3
    mr   r1,r5
    mr   r13,r6
+   mr   r4,r7
+   mr   r3,r8
    blr

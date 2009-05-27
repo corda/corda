@@ -24,14 +24,15 @@ vmInvoke(void* thread, void* function, void* arguments,
 
 extern "C" void
 vmJumpAndInvoke(void* thread, void* function, void* base, void* stack,
-                unsigned argumentFootprint, uintptr_t* arguments);
+                unsigned argumentFootprint, uintptr_t* arguments,
+                unsigned frameSize);
 
 extern "C" void
 vmCall();
 
 namespace {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -5413,13 +5414,13 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
   vmJumpAndInvoke
     (t, reinterpret_cast<void*>(methodAddress(t, method)),
      base,
-     static_cast<void**>(stack)
-     + oldArgumentFootprint
-     - t->arch->argumentFootprint(argumentCount)
-     - t->arch->frameFooterSize()
-     - t->arch->frameReturnAddressSize(),
+     stack,
      argumentCount * BytesPerWord,
-     arguments);
+     arguments,
+     (oldArgumentFootprint
+      - t->arch->argumentFootprint(argumentCount)
+      - t->arch->frameFooterSize()
+      - t->arch->frameReturnAddressSize()) * BytesPerWord);
 }
 
 void

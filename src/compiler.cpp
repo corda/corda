@@ -384,13 +384,13 @@ unsigned
 RegisterResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
   return snprintf
-    (buffer, bufferSize, "register %"LD, this - c->registerResources);
+    (buffer, bufferSize, "register %d", this - c->registerResources);
 }
 
 unsigned
 FrameResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
-  return snprintf(buffer, bufferSize, "frame %"LD, this - c->frameResources);
+  return snprintf(buffer, bufferSize, "frame %d", this - c->frameResources);
 }
 
 class PoolPromise: public Promise {
@@ -679,8 +679,7 @@ offsetToFrameIndex(Context* c, unsigned offset)
 {
   assert(c, static_cast<int>
          ((offset / BytesPerWord) - c->arch->frameFooterSize()) >= 0);
-
-  assert(c, (offset / BytesPerWord) - c->arch->frameFooterSize()
+  assert(c, ((offset / BytesPerWord) - c->arch->frameFooterSize())
          < totalFrameSize(c));
 
   return (offset / BytesPerWord) - c->arch->frameFooterSize();
@@ -689,7 +688,8 @@ offsetToFrameIndex(Context* c, unsigned offset)
 unsigned
 frameBase(Context* c)
 {
-  return c->alignedFrameSize - 1
+  return c->alignedFrameSize
+    - c->arch->frameReturnAddressSize()
     - c->arch->frameFooterSize()
     + c->arch->frameHeaderSize();
 }
@@ -1262,7 +1262,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
       }
     }
   }
-  
+
   best = pickTarget(c, read->value, mask, registerPenalty, best);
   if (best.cost <= Target::MinimumFrameCost) {
     return best;
@@ -2539,14 +2539,8 @@ class CallEvent: public Event {
           (stackArgumentFootprint);
 
         if (footprint > c->arch->stackAlignmentInWords()) {
-          Assembler::Register stack(c->arch->stack());
-          ResolvedPromise adjustmentPromise
-            ((footprint - c->arch->stackAlignmentInWords()) * BytesPerWord);
-          Assembler::Constant adjustmentConstant(&adjustmentPromise);
-          c->assembler->apply
-            (Subtract, BytesPerWord, ConstantOperand, &adjustmentConstant,
-             BytesPerWord, RegisterOperand, &stack,
-             BytesPerWord, RegisterOperand, &stack);
+          c->assembler->adjustFrame
+            (footprint - c->arch->stackAlignmentInWords());
         }
       }
     }

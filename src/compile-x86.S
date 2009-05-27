@@ -148,14 +148,19 @@ LOCAL(vmInvoke_exit):
    
 .globl vmJumpAndInvoke
 vmJumpAndInvoke:
-   // %rdi: thread
-   // %rsi: address
-   // %rdx: base
-   // %rcx: stack
-   // %r8 : argumentFootprint
-   // %r9 : arguments
+   //    %rdi: thread
+   //    %rsi: address
+   //    %rdx: base
+   //    %rcx: stack
+   //    %r8 : argumentFootprint
+   //    %r9 : arguments
+   // 8(%rsp): frameSize
 
+   movq   %rdx,%rbp
+   
    movq   %rdi,%rbx
+   
+   subq   8(%rsp),%rcx
    
    // set return address
    movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
@@ -174,7 +179,6 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    cmpq   %r8,%r11
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
 
-   movq   %rdx,%rbp
    movq   %rcx,%rsp
    
    jmp    *%rsi
@@ -351,8 +355,12 @@ vmJumpAndInvoke:
    // 16(%esp): stack
    // 20(%esp): argumentFootprint
    // 24(%esp): arguments
+   // 28(%esp): frameSize
 
+   movl   12(%esp),%ebp
+   
    movl   16(%esp),%ecx
+   subl   28(%esp),%ecx
    
    // set return address
    call   LOCAL(getPC)
@@ -377,7 +385,6 @@ LOCAL(vmJumpAndInvoke_argumentTest):
 
    movl   4(%esp),%ebx
    movl   8(%esp),%esi
-   movl   12(%esp),%ebp
    movl   %ecx,%esp
 
    jmp    *%esi

@@ -232,7 +232,7 @@ class Assembler {
 
   class Memory: public Operand {
    public:
-    Memory(int base, int offset, int index = NoRegister, unsigned scale = 0):
+    Memory(int base, int offset, int index = NoRegister, unsigned scale = 1):
       base(base), offset(offset), index(index), scale(scale)
     { }
 
@@ -327,6 +327,7 @@ class Assembler {
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
+  virtual void adjustFrame(unsigned footprint) = 0;
   virtual void popFrame() = 0;
   virtual void popFrameForTailCall(unsigned footprint, int offset,
                                    int returnAddressSurrogate,
