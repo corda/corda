@@ -2019,36 +2019,40 @@ class MyAssembler: public Assembler {
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate)
   {
-    if (offset) {
-      Register tmp(0);
-      Memory returnAddressSrc(StackRegister, 8 + (footprint * BytesPerWord));
-      moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
+    if (TailCalls) {
+      if (offset) {
+        Register tmp(0);
+        Memory returnAddressSrc(StackRegister, 8 + (footprint * BytesPerWord));
+        moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
     
-      issue(&c, mtlr(tmp.low));
+        issue(&c, mtlr(tmp.low));
 
-      Memory stackSrc(StackRegister, footprint * BytesPerWord);
-      moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
+        Memory stackSrc(StackRegister, footprint * BytesPerWord);
+        moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
 
-      Memory stackDst(StackRegister, (footprint - offset) * BytesPerWord);
-      moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
+        Memory stackDst(StackRegister, (footprint - offset) * BytesPerWord);
+        moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
 
-      if (returnAddressSurrogate != NoRegister) {
-        assert(&c, offset > 0);
+        if (returnAddressSurrogate != NoRegister) {
+          assert(&c, offset > 0);
 
-        Register ras(returnAddressSurrogate);
-        Memory dst(StackRegister, 8 + (offset * BytesPerWord));
-        moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
-      }
+          Register ras(returnAddressSurrogate);
+          Memory dst(StackRegister, 8 + (offset * BytesPerWord));
+          moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
+        }
 
-      if (framePointerSurrogate != NoRegister) {
-        assert(&c, offset > 0);
+        if (framePointerSurrogate != NoRegister) {
+          assert(&c, offset > 0);
 
-        Register fps(framePointerSurrogate);
-        Memory dst(StackRegister, offset * BytesPerWord);
-        moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+          Register fps(framePointerSurrogate);
+          Memory dst(StackRegister, offset * BytesPerWord);
+          moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+        }
+      } else {
+        popFrame();
       }
     } else {
-      popFrame();
+      abort(&c);
     }
   }
 
@@ -2058,7 +2062,7 @@ class MyAssembler: public Assembler {
     assert(&c, argumentFootprint >= StackAlignmentInWords);
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
-    if (argumentFootprint > StackAlignmentInWords) {
+    if (TailCalls and argumentFootprint > StackAlignmentInWords) {
       Register tmp(0);
       Memory stackSrc(StackRegister, 0);
       moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
@@ -2072,16 +2076,17 @@ class MyAssembler: public Assembler {
     return_(&c);
   }
 
-  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffset) {
+  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  {
     popFrame();
 
     Register tmp1(0);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp1);
 
-    Register tmp2(arch_->returnLow());
-    Memory newStackSrc(ThreadRegister, stackOffset);
-    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp2);
+    Register tmp2(5);
+    Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
+    moveMR(&c, BytesPerWord, &newStackSrc, BytesPerWord, &tmp2);
 
     Register stack(StackRegister);
     subR(&c, BytesPerWord, &tmp2, &stack, &tmp2);
