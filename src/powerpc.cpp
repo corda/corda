@@ -1598,6 +1598,9 @@ populateTables(ArchitectureContext* c)
   uo[index(Jump, R)] = CAST1(jumpR);
   uo[index(Jump, C)] = CAST1(jumpC);
 
+  uo[index(AlignedJump, R)] = CAST1(jumpR);
+  uo[index(AlignedJump, C)] = CAST1(jumpC);
+
   uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
   uo[index(JumpIfNotEqual, C)] = CAST1(jumpIfNotEqualC);
   uo[index(JumpIfGreater, C)] = CAST1(jumpIfGreaterC);
@@ -2089,7 +2092,7 @@ class MyAssembler: public Assembler {
     moveMR(&c, BytesPerWord, &newStackSrc, BytesPerWord, &tmp2);
 
     Register stack(StackRegister);
-    subR(&c, BytesPerWord, &tmp2, &stack, &tmp2);
+    subR(&c, BytesPerWord, &stack, &tmp2, &tmp2);
 
     Memory stackDst(StackRegister, 0, tmp2.low);
     moveAndUpdateRM(&c, BytesPerWord, &tmp1, BytesPerWord, &stackDst);
