@@ -266,6 +266,7 @@ endif
 
 ifeq ($(continuations),true)
 	cflags += -DAVIAN_CONTINUATIONS
+	asmflags += -DAVIAN_CONTINUATIONS
 endif
 
 bootimage-generator-sources = $(src)/bootimage.cpp 
@@ -425,7 +426,7 @@ endef
 define compile-asm-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cc) -I$(src) -c $(<) -o $(@)
+	$(cc) -I$(src) $(asmflags) -c $(<) -o $(@)
 endef
 
 $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
