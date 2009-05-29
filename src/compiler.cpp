@@ -384,13 +384,15 @@ unsigned
 RegisterResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
   return snprintf
-    (buffer, bufferSize, "register %d", this - c->registerResources);
+    (buffer, bufferSize, "register %d", static_cast<int>
+     (this - c->registerResources));
 }
 
 unsigned
 FrameResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
-  return snprintf(buffer, bufferSize, "frame %d", this - c->frameResources);
+  return snprintf(buffer, bufferSize, "frame %d", static_cast<int>
+                  (this - c->frameResources));
 }
 
 class PoolPromise: public Promise {
