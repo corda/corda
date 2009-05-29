@@ -35,6 +35,8 @@
 #define CONTINUATION_LENGTH 56
 #define CONTINUATION_BODY 64
 
+#define CALLEE_SAVED_REGISTER_FOOTPRINT 48
+
 .globl GLOBAL(vmInvoke)
 GLOBAL(vmInvoke):
    pushq  %rbp
@@ -48,8 +50,8 @@ GLOBAL(vmInvoke):
    // %r9 : returnType (ignored)
    
    // allocate stack space, adding room for callee-saved registers
-	 subq   %r8,%rsp
-	 subq   $48,%rsp
+   subq   %r8,%rsp
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
    
    // save callee-saved registers
    movq   %rsp,%r9
@@ -91,11 +93,14 @@ GLOBAL(vmInvoke_returnAddress):
    cmpq   $0,%rcx
    je     LOCAL(vmInvoke_exit)
 
+   // allocate a frame of size (continuation.length * BYTES_PER_WORD)
+   // + CALLEE_SAVED_REGISTER_FOOTPRINT
    movq   CONTINUATION_LENGTH(%rcx),%rsi
    shlq   $3,%rsi
    subq   %rsi,%rsp
-   subq   $48,%rsp
-   
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
+
+   // copy the continuation body into the frame
    leaq   CONTINUATION_BODY(%rcx),%rdi
    
    movq   $0,%r9
@@ -109,16 +114,19 @@ LOCAL(vmInvoke_continuationLoop):
 LOCAL(vmInvoke_continuationTest):
    cmpq   %rsi,%r9
    jb     LOCAL(vmInvoke_continuationLoop)
-   
+
+   // set the return address to vmInvoke_returnAddress
    movq   CONTINUATION_RETURN_ADDRESS_OFFSET(%rcx),%rdi
    movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
    movq   %r10,(%rsp,%rdi,1)
-   
+
+   // save the current base pointer in the frame and update it
    movq   CONTINUATION_FRAME_POINTER_OFFSET(%rcx),%rdi
    movq   %rbp,(%rsp,%rdi,1)
    addq   %rsp,%rdi
    movq   %rdi,%rbp
-   
+
+   // consume the continuation
    movq   CONTINUATION_NEXT(%rcx),%rdi
    movq   %rdi,THREAD_CONTINUATION(%rbx)
 
@@ -141,9 +149,10 @@ LOCAL(vmInvoke_handleException):
 LOCAL(vmInvoke_exit):
 #endif // AVIAN_CONTINUATIONS
    
-   // restore callee-saved registers
+   // restore callee-saved registers (below the stack pointer, but in
+   // the red zone)
    movq   %rsp,%r9
-   subq   $48,%r9
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
 
    movq   0(%r9),%rbx
    movq   8(%r9),%r12
@@ -161,16 +170,23 @@ GLOBAL(vmJumpAndInvoke):
    //    %rdi: thread
    //    %rsi: address
    //    %rdx: base
-   //    %rcx: stack
+   //    %rcx: (unused)
    //    %r8 : argumentFootprint
    //    %r9 : arguments
    // 8(%rsp): frameSize
 
    movq   %rdx,%rbp
    
-   movq   %rdi,%rbx
+   // restore (pseudo)-stack pointer (we don't want to touch the real
+   // stack pointer, since we haven't copied the arguments yet)
+   movq   %rbp,%rcx
+         
+   // allocate new frame, adding room for callee-saved registers
+   movl   8(%rsp),%eax
+   subq   %rax,%rcx
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rcx
    
-   subq   8(%rsp),%rcx
+   movq   %rdi,%rbx
    
    // set return address
    movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
@@ -189,6 +205,8 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    cmpq   %r8,%r11
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
 
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
    movq   %rcx,%rsp
    
    jmp    *%rsi
@@ -213,6 +231,8 @@ LOCAL(vmJumpAndInvoke_argumentTest):
 #define CONTINUATION_LENGTH 28
 #define CONTINUATION_BODY 32
 
+#define CALLEE_SAVED_REGISTER_FOOTPRINT 16
+   
 .globl GLOBAL(vmInvoke)
 GLOBAL(vmInvoke):
    pushl  %ebp
@@ -227,7 +247,7 @@ GLOBAL(vmInvoke):
 
    // allocate stack space, adding room for callee-saved registers
 	 subl   24(%ebp),%esp
-	 subl   $16,%esp
+   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%esp
    
    // save callee-saved registers
    movl   %esp,%ecx
@@ -259,9 +279,10 @@ LOCAL(vmInvoke_argumentTest):
 
 .globl vmInvoke_returnAddress
 vmInvoke_returnAddress:
-   // restore stack pointer
+   // restore stack pointer, preserving the area containing saved
+   // registers
    movl   %ebp,%ecx
-   subl   $16,%ecx
+   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
    movl   %ecx,%esp
 
 #ifdef AVIAN_CONTINUATIONS
@@ -270,11 +291,12 @@ vmInvoke_returnAddress:
    cmpl   $0,%ecx
    je     LOCAL(vmInvoke_exit)
 
+   // allocate a frame of size (continuation.length * BYTES_PER_WORD)
    movl   CONTINUATION_LENGTH(%ecx),%esi
    shll   $2,%esi
    subl   %esi,%esp
-   subl   $16,%esp
    
+   // copy the continuation body into the frame
    leal   CONTINUATION_BODY(%ecx),%edi
 
    push   %eax
@@ -295,17 +317,20 @@ LOCAL(vmInvoke_continuationTest):
    pop    %edx
    pop    %eax
 
+   // set the return address to vmInvoke_returnAddress
    movl   CONTINUATION_RETURN_ADDRESS_OFFSET(%ecx),%edi
    call   LOCAL(getPC)
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
    movl   vmInvoke_returnAddress@GOT(%esi),%esi
    movl   %esi,(%esp,%edi,1)
    
+   // save the current base pointer in the frame and update it
    movl   CONTINUATION_FRAME_POINTER_OFFSET(%ecx),%edi
    movl   %ebp,(%esp,%edi,1)
    addl   %esp,%edi
    movl   %edi,%ebp
    
+   // consume the continuation
    movl   CONTINUATION_NEXT(%ecx),%edi
    movl   %edi,THREAD_CONTINUATION(%ebx)
 
@@ -337,7 +362,7 @@ LOCAL(vmInvoke_exit):
    // handle return value based on expected type
    movl   28(%ebp),%ecx
    
-   addl   $16,%esp
+   addl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%esp
    
 LOCAL(vmInvoke_void):
    cmpl   $VOID_TYPE,%ecx
@@ -366,15 +391,22 @@ GLOBAL(vmJumpAndInvoke):
    //  4(%esp): thread
    //  8(%esp): address
    // 12(%esp): base
-   // 16(%esp): stack
+   // 16(%esp): (unused)
    // 20(%esp): argumentFootprint
    // 24(%esp): arguments
    // 28(%esp): frameSize
 
    movl   12(%esp),%ebp
    
-   movl   16(%esp),%ecx
+   // restore (pseudo)-stack pointer (we don't want to touch the real
+   // stack pointer, since we haven't copied the arguments yet)
+   movl   %ebp,%ecx
+   
+   // allocate new frame, adding room for callee-saved registers
    subl   28(%esp),%ecx
+   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
+   
+   movl   4(%esp),%ebx
    
    // set return address
    call   LOCAL(getPC)
@@ -397,8 +429,10 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    cmpl   %edx,%esi
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
 
-   movl   4(%esp),%ebx
    movl   8(%esp),%esi
+   
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
    movl   %ecx,%esp
 
    jmp    *%esi
