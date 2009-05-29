@@ -12,6 +12,12 @@
 
 #define LOCAL(x) .L##x
 
+#if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+#  define GLOBAL(x) _##x
+#else
+#  define GLOBAL(x) x   
+#endif
+
 .text
 
 #ifdef __x86_64__
@@ -29,8 +35,8 @@
 #define CONTINUATION_LENGTH 56
 #define CONTINUATION_BODY 64
 
-.globl vmInvoke
-vmInvoke:
+.globl GLOBAL(vmInvoke)
+GLOBAL(vmInvoke):
    pushq  %rbp
    movq   %rsp,%rbp
       
@@ -74,11 +80,12 @@ LOCAL(vmInvoke_argumentTest):
    // call function
    call   *%rsi
    
-.globl vmInvoke_returnAddress
-vmInvoke_returnAddress:
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
    movq   %rbp,%rsp
 
+#ifdef AVIAN_CONTINUATIONS
    // call the next continuation, if any
    movq   THREAD_CONTINUATION(%rbx),%rcx
    cmpq   $0,%rcx
@@ -132,6 +139,8 @@ LOCAL(vmInvoke_handleException):
    jmp    *THREAD_EXCEPTION_HANDLER(%rbx)
 
 LOCAL(vmInvoke_exit):
+#endif // AVIAN_CONTINUATIONS
+   
    // restore callee-saved registers
    movq   %rsp,%r9
    subq   $48,%r9
@@ -146,8 +155,9 @@ LOCAL(vmInvoke_exit):
    popq   %rbp
    ret
    
-.globl vmJumpAndInvoke
-vmJumpAndInvoke:
+.globl GLOBAL(vmJumpAndInvoke)
+GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
    //    %rdi: thread
    //    %rsi: address
    //    %rdx: base
@@ -182,6 +192,11 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    movq   %rcx,%rsp
    
    jmp    *%rsi
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   int3
+#endif // not AVIAN_CONTINUATIONS
    
 #elif defined __i386__
    
@@ -198,13 +213,8 @@ LOCAL(vmJumpAndInvoke_argumentTest):
 #define CONTINUATION_LENGTH 28
 #define CONTINUATION_BODY 32
 
-#if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmInvoke
-_vmInvoke: 
-#else
-.globl vmInvoke
-vmInvoke:
-#endif
+.globl GLOBAL(vmInvoke)
+GLOBAL(vmInvoke):
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -254,6 +264,7 @@ vmInvoke_returnAddress:
    subl   $16,%ecx
    movl   %ecx,%esp
 
+#ifdef AVIAN_CONTINUATIONS
    // call the next continuation, if any
    movl   THREAD_CONTINUATION(%ebx),%ecx
    cmpl   $0,%ecx
@@ -316,6 +327,8 @@ LOCAL(vmInvoke_handleException):
    jmp    *THREAD_EXCEPTION_HANDLER(%ebx)
 
 LOCAL(vmInvoke_exit):
+#endif // AVIAN_CONTINUATIONS
+   
    // restore callee-saved registers
    movl   0(%esp),%ebx
    movl   4(%esp),%esi
@@ -347,8 +360,9 @@ LOCAL(getPC):
    movl   (%esp),%esi
    ret
    
-.globl vmJumpAndInvoke
-vmJumpAndInvoke:
+.globl GLOBAL(vmJumpAndInvoke)
+GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
    //  4(%esp): thread
    //  8(%esp): address
    // 12(%esp): base
@@ -388,6 +402,11 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    movl   %ecx,%esp
 
    jmp    *%esi
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   int3
+#endif // AVIAN_CONTINUATIONS
    
 #else
 #  error unsupported platform
