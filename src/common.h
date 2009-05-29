@@ -288,7 +288,7 @@ bitsToFloat(uint32_t bits)
   return f;
 }
 
-inline intptr_t
+inline int
 difference(void* a, void* b)
 {
   return reinterpret_cast<intptr_t>(a) - reinterpret_cast<intptr_t>(b);

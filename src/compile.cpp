@@ -5412,7 +5412,8 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack, ...)
      stack,
      argumentCount * BytesPerWord,
      arguments,
-     t->arch->alignFrameSize(t->arch->argumentFootprint(argumentCount))
+     (t->arch->alignFrameSize(t->arch->argumentFootprint(argumentCount))
+      + t->arch->frameReturnAddressSize())
      * BytesPerWord);
 }
 
@@ -5922,11 +5923,11 @@ class MyProcessor: public Processor {
     t->init();
 
     if (false) {
-      fprintf(stderr, "%"LD"\n", difference(&(t->continuation), t));
-      fprintf(stderr, "%"LD"\n", difference(&(t->exception), t));
-      fprintf(stderr, "%"LD"\n", difference(&(t->exceptionStackAdjustment), t));
-      fprintf(stderr, "%"LD"\n", difference(&(t->exceptionOffset), t));
-      fprintf(stderr, "%"LD"\n", difference(&(t->exceptionHandler), t));
+      fprintf(stderr, "%d\n", difference(&(t->continuation), t));
+      fprintf(stderr, "%d\n", difference(&(t->exception), t));
+      fprintf(stderr, "%d\n", difference(&(t->exceptionStackAdjustment), t));
+      fprintf(stderr, "%d\n", difference(&(t->exceptionOffset), t));
+      fprintf(stderr, "%d\n", difference(&(t->exceptionHandler), t));
       exit(0);
     }
 
