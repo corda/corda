@@ -87,12 +87,12 @@ GLOBAL(vmInvoke):
    
    // copy arguments into place
    li   r16,0
+   addi r18,r1,ARGUMENT_BASE
    b    LOCAL(vmInvoke_argumentTest)
    
 LOCAL(vmInvoke_argumentLoop):
    lwzx r17,r16,r5
-   addi r18,r16,ARGUMENT_BASE
-   stwx r17,r18,r1
+   stwx r17,r16,r18
    addi r16,r16,BYTES_PER_WORD
    
 LOCAL(vmInvoke_argumentTest):
@@ -102,9 +102,8 @@ LOCAL(vmInvoke_argumentTest):
    // load and call function address
    mtctr r4
    bctrl
-   
-.globl GLOBAL(vmInvoke_returnAddress)
-GLOBAL(vmInvoke_returnAddress):
+
+LOCAL(vmInvoke_returnAddress):
    // restore stack pointer
 	 lwz	r1,0(r1)
 
@@ -116,17 +115,18 @@ GLOBAL(vmInvoke_returnAddress):
 
    lwz  r6,CONTINUATION_LENGTH(r5)
    slwi r6,r6,2
-   subfic r6,r6,-80
-   stwux r1,r1,r6
+   subfic r7,r6,-80
+   stwux r1,r1,r7
 
    addi r7,r5,CONTINUATION_BODY
 
    li   r8,0
+   addi r10,r1,ARGUMENT_BASE
    b    LOCAL(vmInvoke_continuationTest)
 
 LOCAL(vmInvoke_continuationLoop):
    lwzx r9,r7,r8
-   stwx r9,r1,r8
+   stwx r9,r10,r8
    addi r8,r8,4
 
 LOCAL(vmInvoke_continuationTest):
@@ -138,8 +138,7 @@ LOCAL(vmInvoke_continuationTest):
    
 LOCAL(vmInvoke_getPC):
    mflr r10
-   addis r10,r10,ha16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))
-   la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))(r10)
+   la   r10,lo16(LOCAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))(r10)
    stwx r10,r1,r7
 
    lwz  r7,CONTINUATION_FRAME_POINTER_OFFSET(r5)
@@ -155,7 +154,7 @@ LOCAL(vmInvoke_getPC):
    lwz  r7,THREAD_EXCEPTION(r13)
    cmpwi r7,0
    bne  LOCAL(vmInvoke_handleException)
-   addi r7,r5,CONTINUATION_ADDRESS
+   lwz  r7,CONTINUATION_ADDRESS(r5)
    mtctr r7
    bctr
 
@@ -170,7 +169,7 @@ LOCAL(vmInvoke_handleException):
    lwz  r8,THREAD_EXCEPTION_OFFSET(r13)
    stwx r7,r1,r8
 
-   addi r7,r13,THREAD_EXCEPTION_HANDLER
+   lwz  r7,THREAD_EXCEPTION_HANDLER(r13)
    mtctr r7
    bctr
 
@@ -226,6 +225,7 @@ LOCAL(vmInvoke_return):
 
 .globl GLOBAL(vmJumpAndInvoke)
 GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
    // r3: thread
    // r4: address
    // r5: (unused)
@@ -234,36 +234,50 @@ GLOBAL(vmJumpAndInvoke):
    // r8: arguments
    // r9: frameSize
 
+   // restore (pseudo)-stack pointer (we don't want to touch the real
+   // stack pointer, since we haven't copied the arguments yet)
+   lwz  r6,0(r6)
+
+   // make everything between r1 and r6 one big stack frame while we
+   // shuffle things around
    stw  r6,0(r1)
+
+   // allocate new frame, adding room for callee-saved registers
+   subfic r10,r9,-80
+	 stwux r6,r6,r10
    
    mr   r13,r3
 
    // copy arguments into place
    li   r9,0
-   addi r10,r6,ARGUMENT_BASE
+   addi r11,r6,ARGUMENT_BASE
    b    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
-   lwzx r11,r8,r9
-   stwx r11,r10,r9
+   lwzx r12,r8,r9
+   stwx r12,r11,r9
    addi r9,r9,4
 
 LOCAL(vmJumpAndInvoke_argumentTest):
    cmplw r9,r7
    ble  LOCAL(vmJumpAndInvoke_argumentLoop)
 
-   subf r7,r6,r9
-   stw  r6,0(r7)
-   mr   r1,r7
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
+   mr   r1,r6
    
-   // set return address
+   // set return address to vmInvoke_returnAddress
    bl   LOCAL(vmJumpAndInvoke_getPC)
    
 LOCAL(vmJumpAndInvoke_getPC):
    mflr r10
-   addis r10,r10,ha16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))
-   la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))(r10)
+   la   r10,lo16(LOCAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))(r10)
    mtlr r10
 
    mtctr r4
    bctr
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   trap
+#endif // not AVIAN_CONTINUATIONS

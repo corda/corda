@@ -1380,7 +1380,7 @@ releaseLock(MyThread* t, object method, void* stack)
 
 void
 findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
-                 void** targetStack, unsigned* oldArgumentFootprint = 0)
+                 void** targetStack)
 {
   void* ip = t->ip;
   void* base = t->base;
@@ -1427,11 +1427,6 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
       *targetStack = static_cast<void**>(stack)
         + t->arch->frameReturnAddressSize();
 
-      if (oldArgumentFootprint) {
-        *oldArgumentFootprint
-          = t->arch->argumentFootprint(methodParameterFootprint(t, target));
-      }
-
       while (Continuations and t->continuation) {
         object c = t->continuation;
 
@@ -1468,7 +1463,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
 object
 makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
-                        void** targetStack, unsigned* oldArgumentFootprint)
+                        void** targetStack)
 {
   void* ip = t->ip;
   void* base = t->base;
@@ -1498,7 +1493,8 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       PROTECT(t, method);
 
       void** top = static_cast<void**>(stack)
-        + t->arch->frameReturnAddressSize();
+        + t->arch->frameReturnAddressSize()
+        + t->arch->frameFooterSize();
       unsigned argumentFootprint
         = t->arch->argumentFootprint(methodParameterFootprint(t, target));
       unsigned alignment = t->arch->stackAlignmentInWords();
@@ -1518,9 +1514,11 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       object c = makeContinuation
         (t, 0, context, method, ip,
          ((frameSize
+           + t->arch->frameFooterSize()
            + t->arch->returnAddressOffset()
            - t->arch->frameReturnAddressSize()) * BytesPerWord),
          ((frameSize
+           + t->arch->frameFooterSize()
            + t->arch->framePointerOffset() 
            - t->arch->frameReturnAddressSize()) * BytesPerWord),
          totalSize);
@@ -1541,9 +1539,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       *targetIp = ip;
       *targetBase = base;
       *targetStack = static_cast<void**>(stack)
-        + t->arch->frameReturnAddressSize();
-      *oldArgumentFootprint
-        = t->arch->argumentFootprint(methodParameterFootprint(t, target));
+        + t->arch->frameReturnAddressSize();;
     }
   }
 
@@ -5392,8 +5388,7 @@ compatibleReturnType(MyThread* t, object oldMethod, object newMethod)
 }
 
 void
-jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
-              unsigned oldArgumentFootprint, ...)
+jumpAndInvoke(MyThread* t, object method, void* base, void* stack, ...)
 {
   t->trace->targetMethod = 0;
 
@@ -5405,7 +5400,7 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
 
   unsigned argumentCount = methodParameterFootprint(t, method);
   uintptr_t arguments[argumentCount];
-  va_list a; va_start(a, oldArgumentFootprint);
+  va_list a; va_start(a, stack);
   for (unsigned i = 0; i < argumentCount; ++i) {
     arguments[i] = va_arg(a, uintptr_t);
   }
@@ -5417,10 +5412,8 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack,
      stack,
      argumentCount * BytesPerWord,
      arguments,
-     (oldArgumentFootprint
-      - t->arch->argumentFootprint(argumentCount)
-      - t->arch->frameFooterSize()
-      - t->arch->frameReturnAddressSize()) * BytesPerWord);
+     t->arch->alignFrameSize(t->arch->argumentFootprint(argumentCount))
+     * BytesPerWord);
 }
 
 void
@@ -5527,8 +5520,7 @@ callContinuation(MyThread* t, object continuation, object result,
   void* ip;
   void* base;
   void* stack;
-  unsigned oldArgumentFootprint;
-  findUnwindTarget(t, &ip, &base, &stack, &oldArgumentFootprint);
+  findUnwindTarget(t, &ip, &base, &stack);
 
   switch (action) {
   case Call: {
@@ -5543,7 +5535,7 @@ callContinuation(MyThread* t, object continuation, object result,
     t->continuation = nextContinuation;
 
     jumpAndInvoke
-      (t, rewindMethod(t), base, stack, oldArgumentFootprint,
+      (t, rewindMethod(t), base, stack,
        continuationContextBefore(t, continuationContext(t, nextContinuation)),
        continuation, result, exception);
   } break;
@@ -5564,7 +5556,6 @@ callWithCurrentContinuation(MyThread* t, object receiver)
   void* ip = 0;
   void* base = 0;
   void* stack = 0;
-  unsigned oldArgumentFootprint = 0;
 
   { PROTECT(t, receiver);
 
@@ -5601,16 +5592,13 @@ callWithCurrentContinuation(MyThread* t, object receiver)
       compile(t, ::codeAllocator(t), 0, method);
 
       if (LIKELY(t->exception == 0)) {
-        t->continuation = makeCurrentContinuation
-          (t, &ip, &base, &stack, &oldArgumentFootprint);
+        t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
       }
     }
   }
 
   if (LIKELY(t->exception == 0)) {
-    jumpAndInvoke
-      (t, method, base, stack, oldArgumentFootprint, receiver,
-       t->continuation);
+    jumpAndInvoke(t, method, base, stack, receiver, t->continuation);
   } else {
     unwind(t);
   }
@@ -5622,7 +5610,6 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
   void* ip = 0;
   void* base = 0;
   void* stack = 0;
-  unsigned oldArgumentFootprint = 0;
 
   { PROTECT(t, before);
     PROTECT(t, thunk);
@@ -5648,8 +5635,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
     }
 
     if (LIKELY(t->exception == 0)) {
-      t->continuation = makeCurrentContinuation
-        (t, &ip, &base, &stack, &oldArgumentFootprint);
+      t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
 
       object newContext = makeContinuationContext
         (t, continuationContext(t, t->continuation), before, after,
@@ -5660,9 +5646,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
   }
 
   if (LIKELY(t->exception == 0)) {
-    jumpAndInvoke
-      (t, windMethod(t), base, stack, oldArgumentFootprint, before, thunk,
-       after);
+    jumpAndInvoke(t, windMethod(t), base, stack, before, thunk, after);
   } else {
     unwind(t);
   }    
