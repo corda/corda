@@ -13,23 +13,24 @@ package avian;
 import java.util.concurrent.Callable;
 
 /**
- * This class provides access to the Avian VM's continuation support.
+ * This class provides methods to capture continuations and manage
+ * control flow when calling continuations.
  *
  * <p>A continuation is a snapshot of a thread's call stack which can
  * be captured via <code>callWithCurrentContinuation</code> and later
- * restored any number of times.  We restore this snapshot by either
- * feeding it a result (to be returned by
+ * restored any number of times.  The program may restore this
+ * snapshot by either feeding it a result (to be returned by
  * <code>callWithCurrentContinuation</code>) or feeding it an
  * exception (to be thrown by
  * <code>callWithCurrentContinuation</code>).  Continuations may be
  * used to implement features such as coroutines, generators, and
  * cooperative multitasking.
  *
- * <p>This class provides two static methods -
+ * <p>This class provides two static methods,
  * <code>callWithCurrentContinuation</code> and
- * <code>dynamicWind</code> - with similar semantics to the Scheme
+ * <code>dynamicWind</code>, with similar semantics to the Scheme
  * methods <code>call-with-current-continuation</code> and
- * <code>dynamic-wind</code>, respectively.  Additionally, we define
+ * <code>dynamic-wind</code>, respectively.  In addition, we define
  * how continuations work with respect to native code, exceptions,
  * try/finally blocks, synchronized blocks, and multithreading.
  *
@@ -43,8 +44,8 @@ import java.util.concurrent.Callable;
  * native frame in the stack.  The reason for this is that the VM
  * cannot, in general, safely capture and restore native frames.
  * Therefore, each call from native code to Java (including the
- * original invocation of <code>main</code> or
- * <code>Thread.run</code>) represents a new continuation context in
+ * original invocation of <code>main(String[])</code> or
+ * <code>Thread.run()</code>) represents a new continuation context in
  * which continuations may be captured, and these will only contain
  * frames from within that context.
  *
@@ -56,15 +57,13 @@ import java.util.concurrent.Callable;
  * continuation was created.
  *
  * <p>We define the return type of a continuation context as the
- * return type of the least-recently called method in the call trace
- * (i.e. the end of the list).  A continuation may be called from a
- * different continuation context than the one in which it was created
- * provided the return type of the new context is compatible with the
- * original context.
+ * return type of the first method called in that context.  A
+ * continuation may be called from a different context than the one in
+ * which it was created, provided the return type of the latter is
+ * compatible with the current context.
  *
- * <p>Given a thread executing in continuation context "A" which wants
- * to call a continuation created in context "B", the following rules
- * apply:
+ * <p>Given a thread executing in context "A" which wants to call a
+ * continuation created in context "B", the following rules apply:
  *
  * <ul>
  *
@@ -85,15 +84,15 @@ import java.util.concurrent.Callable;
  * provided the return types are compatible.  Multiple threads may
  * safely call the same continuation simultaneously without
  * synchronization.  Any attempt to call a continuation from a context
- * with an incompatible return type will result in an
- * <code>avian/IncompatibleContinuationException<code> being thrown.
+ * with an incompatible return type will throw an {@link
+ * avian.IncompatibleContinuationException}.
  *
  * <h3>Winding, Unwinding, and Rewinding</h3>
  *
  * <p>Traditionally, Java provides one way to wind the execution stack
  * (recursive method calls) and two ways to unwind it (normal returns
  * and exception unwinding).  With continuations, we add a new way to
- * (re)wind the stack and a new way to unwind it.
+ * rewind the stack and a new way to unwind it.
  *
  * <p>The call stack of a continuation may share frames with other
  * continuations - in which case they share a common history.  When
@@ -108,13 +107,13 @@ import java.util.concurrent.Callable;
  * unwinding, the VM will ignore these blocks - monitors will not be
  * released or acquired and finally blocks will not execute.  This is
  * by design.  The purpose of such a block is to acquire a resource
- * before executing a task and release when that task is done.  With
+ * before executing a task and release it when the task is done.  With
  * continuations, we may wish to yield control temporarily to another
  * continuation while executing such a task, and we might do so
  * several times.  In such a case we would only want to acquire the
  * resource when we start the task and only release it when we're
  * finished, regardless of how often we unwound to reach other
- * continuations or rewound to return to the next step.
+ * continuations or rewound to the next step.
  *
  * <p>Conversely, we may wish to acquire and release a resource each
  * time we (re)wind to or unwind from a continuation, respectively.
