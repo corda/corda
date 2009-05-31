@@ -417,8 +417,8 @@ architecture-specific parameters.
 
 Step 8: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the
-VM to get a handle to the embedded jar.  We tell the VM about this
-function via the "avian.bootimage" property.
+VM to get a handle to the embedded boot image.  We tell the VM about
+this function via the "avian.bootimage" property.
 
 Note also that this example includes no resources besides class files.
 If our application loaded resources such as images and properties
