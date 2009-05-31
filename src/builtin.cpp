@@ -115,7 +115,7 @@ Avian_java_lang_Object_notifyAll
   notifyAll(t, this_);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Object_hashCode
 (Thread* t, object, uintptr_t* arguments)
 {
