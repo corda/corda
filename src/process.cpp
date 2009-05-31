@@ -149,7 +149,7 @@ resolveNativeMethod(Thread* t, const char* undecorated, const char* decorated)
 
 void*
 resolveNativeMethod(Thread* t, object method, const char* prefix,
-                    unsigned prefixLength)
+                    unsigned prefixLength, int footprint UNUSED)
 {
   unsigned undecoratedSize = prefixLength + jniNameLength(t, method, false);
   char undecorated[undecoratedSize + 1 + 6]; // extra 6 is for code below
@@ -166,9 +166,11 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
 
 #ifdef __MINGW32__
   // on windows, we also try the _%s@%d and %s@%d variants
-  unsigned footprint = methodParameterFootprint(t, method) + 1;
-  if (methodFlags(t, method) & ACC_STATIC) {
-    ++ footprint;
+  if (footprint == -1) {
+    footprint = methodParameterFootprint(t, method) + 1;
+    if (methodFlags(t, method) & ACC_STATIC) {
+      ++ footprint;
+    }
   }
 
   *undecorated = '_';
@@ -201,12 +203,12 @@ namespace vm {
 void*
 resolveNativeMethod(Thread* t, object method)
 {
-  void* p = ::resolveNativeMethod(t, method, "Java_", 5);
+  void* p = ::resolveNativeMethod(t, method, "Java_", 5, -1);
   if (p) {
     return p;
   }
 
-  p = ::resolveNativeMethod(t, method, "Avian_", 6);
+  p = ::resolveNativeMethod(t, method, "Avian_", 6, 3);
   if (p) {
     methodVmFlags(t, method) |= FastNative;
     return p;
