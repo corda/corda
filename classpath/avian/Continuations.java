@@ -29,7 +29,7 @@ import java.util.concurrent.Callable;
  * <p>This class provides two static methods,
  * <code>callWithCurrentContinuation</code> and
  * <code>dynamicWind</code>, with similar semantics to the Scheme
- * methods <code>call-with-current-continuation</code> and
+ * functions <code>call-with-current-continuation</code> and
  * <code>dynamic-wind</code>, respectively.  In addition, we define
  * how continuations work with respect to native code, exceptions,
  * try/finally blocks, synchronized blocks, and multithreading.
@@ -96,32 +96,30 @@ import java.util.concurrent.Callable;
  *
  * <p>The call stack of a continuation may share frames with other
  * continuations - in which case they share a common history.  When
- * calling a continuation "B" from the current continuation "A", we
- * must unwind past any frames which are in "A" but not in "B" and
+ * calling a continuation "B" from the current continuation "A", the
+ * VM must unwind past any frames which are in "A" but not in "B" and
  * rewind past any frames in "B" but not in "A".  During this
- * unwinding and rewinding, we may pass through synchronized and
+ * unwinding and rewinding, control may pass through synchronized and
  * try/finally blocks while going down the old stack and up the new
  * stack.
  *
  * <p>However, unlike the traditional processes of winding and
  * unwinding, the VM will ignore these blocks - monitors will not be
  * released or acquired and finally blocks will not execute.  This is
- * by design.  The purpose of such a block is to acquire a resource
- * before executing a task and release it when the task is done.  With
- * continuations, we may wish to yield control temporarily to another
- * continuation while executing such a task, and we might do so
- * several times.  In such a case we would only want to acquire the
- * resource when we start the task and only release it when we're
- * finished, regardless of how often we unwound to reach other
- * continuations or rewound to the next step.
+ * by design.  The purpose of such a block is to acquire a resource,
+ * such as a file handle or monitor, once before executing a task and
+ * release it after the task is finished, regardless of how often the
+ * task might temporarily yield control to other continuations.
  *
- * <p>Conversely, we may wish to acquire and release a resource each
- * time we (re)wind to or unwind from a continuation, respectively.
- * In this case, we use <code>dynamicWind</code> to register functions
- * which will run every time that frame is passed, regardless of how
- * the stack is wound or unwound.
+ * <p>Conversely, one might wish to acquire and release a resource
+ * each time control (re)winds to or unwinds from a continuation,
+ * respectively.  In this case, we use <code>dynamicWind</code> to
+ * register functions which will run every time that frame is passed,
+ * regardless of how the stack is wound or unwound.
  */
-public abstract class Continuations {
+public class Continuations {
+  private Continuations() { }
+
   /**
    * Captures the current continuation, passing a reference to the
    * specified receiver.
