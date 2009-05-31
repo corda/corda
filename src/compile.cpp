@@ -2646,9 +2646,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case areturn: {
-      Compiler::Operand* value = frame->popObject();
       handleExit(t, frame);
-      c->return_(BytesPerWord, value);
+      c->return_(BytesPerWord, frame->popObject());
     } return;
 
     case arraylength: {
@@ -3465,9 +3464,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case ireturn:
     case freturn: {
-      Compiler::Operand* value = frame->popInt();
       handleExit(t, frame);
-      c->return_(4, value);
+      c->return_(4, frame->popInt());
     } return;
 
     case ishl: {
@@ -3760,9 +3758,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case lreturn:
     case dreturn: {
-      Compiler::Operand* value = frame->popLong();
       handleExit(t, frame);
-      c->return_(8, value);
+      c->return_(8, frame->popLong());
     } return;
 
     case lshl: {
