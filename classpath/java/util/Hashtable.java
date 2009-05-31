@@ -28,7 +28,7 @@ public class Hashtable<K, V> implements Map<K, V> {
     }
   }
 
-  public String toString() {
+  public synchronized String toString() {
     return map.toString();
   }
 
