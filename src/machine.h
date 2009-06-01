@@ -1325,7 +1325,7 @@ class Thread {
 #endif // VM_STRESS
 };
 
-typedef uint64_t (*FastNativeFunction)(Thread*, object, uintptr_t*);
+typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 
 inline object
 objectClass(Thread*, object o)

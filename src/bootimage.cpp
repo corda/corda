@@ -373,8 +373,8 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
 int
 main(int ac, const char** av)
 {
-  if (ac < 2 or ac > 5) {
-    fprintf(stderr, "usage: %s <classpath> "
+  if (ac < 3 or ac > 6) {
+    fprintf(stderr, "usage: %s <classpath> <output file> "
             "[<class name> [<method name> [<method spec>]]]\n", av[0]);
     return -1;
   }
@@ -395,9 +395,17 @@ main(int ac, const char** av)
   enter(t, Thread::ActiveState);
   enter(t, Thread::IdleState);
 
+  FILE* output = fopen(av[2], "wb");
+  if (output == 0) {
+    fprintf(stderr, "unable to open %s\n", av[2]);    
+    return -1;
+  }
+
   writeBootImage
-    (t, stdout, &image, code, CodeCapacity,
-     (ac > 2 ? av[2] : 0), (ac > 3 ? av[3] : 0), (ac > 4 ? av[4] : 0));
+    (t, output, &image, code, CodeCapacity,
+     (ac > 3 ? av[3] : 0), (ac > 4 ? av[4] : 0), (ac > 5 ? av[5] : 0));
+
+  fclose(output);
 
   if (t->exception) {
     printTrace(t, t->exception);

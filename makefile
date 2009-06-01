@@ -14,7 +14,9 @@ build-platform = \
 		| sed 's/^cygwin.*$$/cygwin/')
 
 arch = $(build-arch)
-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
+bootimage-platform = \
+	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
+platform = $(bootimage-platform)
 
 ifeq ($(platform),windows)
 	arch = i386
@@ -273,7 +275,7 @@ bootimage-generator-sources = $(src)/bootimage.cpp
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
 bootimage-generator = \
-	$(build)/$(build-platform)-$(build-arch)$(options)/bootimage-generator
+	$(build)/$(bootimage-platform)-$(build-arch)$(options)/bootimage-generator
 
 bootimage-bin = $(native-build)/bootimage.bin
 bootimage-object = $(native-build)/bootimage-bin.o
@@ -489,7 +491,7 @@ $(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 	$(ranlib) $(@)
 
 $(bootimage-bin): $(bootimage-generator)
-	$(<) $(classpath-build) > $(@)
+	$(<) $(classpath-build) $(@)
 
 $(bootimage-object): $(bootimage-bin) $(binaryToMacho)
 	@echo "creating $(@)"
@@ -524,7 +526,7 @@ make-bootimage-generator:
 	(unset MAKEFLAGS && \
 	 make mode=$(mode) \
 		arch=$(build-arch) \
-		platform=$(build-platform) \
+		platform=$(bootimage-platform) \
 	  bootimage=$(bootimage) \
 	  heapdump=$(heapdump) \
 		bootimage-generator= \
