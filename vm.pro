@@ -8,7 +8,6 @@
 
 # the VM depends on the fixed layout of the following classes:
 
--keepclassmembers class avian.SystemClassLoader { !static <fields>; }
 -keepclassmembers class java.lang.Class { !static <fields>; }
 -keepclassmembers class java.lang.ClassLoader { !static <fields>; }
 -keepclassmembers class java.lang.String { !static <fields>; }
@@ -32,6 +31,7 @@
 
 # the VM may throw instances of the following:
 
+-keep public class avian.IncompatibleContinuationException
 -keep public class java.lang.RuntimeException
 -keep public class java.lang.IllegalStateException
 -keep public class java.lang.IllegalArgumentException
@@ -74,3 +74,19 @@
 # Thread.run is called by name in the VM
 
 -keepclassmembernames class java.lang.Thread { void run(); }
+
+# when continuations are enabled, the VM may call these methods by name:
+
+-keepclassmembers class avian.Continuations {
+   *** wind(...);
+   *** rewind(...);
+ }
+
+-keepclassmembernames class avian.CallbackReceiver {
+   *** receive(...);
+ }
+
+# the above methods include these classes in their signatures:
+
+-keepnames public class avian.Callback
+-keepnames public class java.util.concurrent.Callable
