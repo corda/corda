@@ -403,12 +403,12 @@ Step 5: Run ProGuard with stage1 as input and stage2 as output.
  $ java -jar ../../proguard4.3/lib/proguard.jar \
      -injars stage1 -outjars stage2 @../vm.pro @hello.pro
 
-(note: pass -dontusemixedcaseclassnames to ProGuard when building on systems with case-insensitive filesystems such as Windows and OS X)
+(note: pass -dontusemixedcaseclassnames to ProGuard when building on
+systems with case-insensitive filesystems such as Windows and OS X)
 
 Step 6: Build the boot image.
 
- $ ../build/linux-i386-bootimage/bootimage-generator stage2 \
-     > bootimage.bin
+ $ ../build/linux-i386-bootimage/bootimage-generator stage2 bootimage.bin
 
 Step 7: Make an object file out of the boot image.
 
