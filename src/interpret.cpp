@@ -3217,7 +3217,7 @@ class MyProcessor: public Processor {
     return 0;
   }
 
-  virtual void initialize(vm::Thread*, BootImage*, uint8_t*, unsigned) {
+  virtual void initialize(BootImage*, uint8_t*, unsigned) {
     abort(s);
   }
 
@@ -3227,13 +3227,11 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void visitRoots(BootImage*, HeapWalker*) {
+  virtual void visitRoots(HeapWalker*) {
     abort(s);
   }
 
-  virtual unsigned* makeCallTable(vm::Thread*, BootImage*, HeapWalker*,
-                                  uint8_t*)
-  {
+  virtual unsigned* makeCallTable(vm::Thread*, HeapWalker*) {
     abort(s);
   }
 

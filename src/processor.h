@@ -117,18 +117,17 @@ class Processor {
   getStackTrace(Thread* t, Thread* target) = 0;
 
   virtual void
-  initialize(Thread* t, BootImage* image, uint8_t* code,
-             unsigned capacity) = 0;
+  initialize(BootImage* image, uint8_t* code, unsigned capacity) = 0;
 
   virtual void
   compileMethod(Thread* t, Zone* zone, object* constants, object* calls,
                 DelayedPromise** addresses, object method) = 0;
 
   virtual void
-  visitRoots(BootImage* image, HeapWalker* w) = 0;
+  visitRoots(HeapWalker* w) = 0;
 
   virtual unsigned*
-  makeCallTable(Thread* t, BootImage* image, HeapWalker* w, uint8_t* code) = 0;
+  makeCallTable(Thread* t, HeapWalker* w) = 0;
 
   virtual void
   boot(Thread* t, BootImage* image) = 0;

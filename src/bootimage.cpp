@@ -33,12 +33,9 @@ endsWith(const char* suffix, const char* s, unsigned length)
 
 object
 makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
-              unsigned capacity, uintptr_t* codeMap, const char* className,
+              uintptr_t* codeMap, const char* className,
               const char* methodName, const char* methodSpec)
 {
-  unsigned size = 0;
-  t->m->processor->initialize(t, image, code, &size, capacity);
-  
   object constants = 0;
   PROTECT(t, constants);
   
@@ -118,8 +115,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             - reinterpret_cast<intptr_t>(code));
   }
 
-  image->codeSize = size;
-
   return constants;
 }
 
@@ -143,7 +138,7 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
   image->loader = w->visitRoot(m->loader);
   image->types = w->visitRoot(m->types);
 
-  m->processor->visitRoots(image, w);
+  m->processor->visitRoots(w);
 
   for (; constants; constants = tripleThird(t, constants)) {
     w->visitRoot(tripleFirst(t, constants));
@@ -186,7 +181,7 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
             and (currentOffset * BytesPerWord) == ClassStaticTable)
         {
           FixedAllocator allocator
-            (t, reinterpret_cast<uint8_t*>(heap + position),
+            (t->m->system, reinterpret_cast<uint8_t*>(heap + position),
              (capacity - position) * BytesPerWord);
 
           unsigned totalInBytes;
@@ -284,21 +279,18 @@ offset(object a, uintptr_t* b)
 }
 
 void
-writeBootImage(Thread* t, FILE* out, const char* className,
+writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
+               unsigned codeCapacity, const char* className,
                const char* methodName, const char* methodSpec)
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
-  BootImage image;
 
-  const unsigned CodeCapacity = 32 * 1024 * 1024;
-  uint8_t* code = static_cast<uint8_t*>(t->m->heap->allocate(CodeCapacity));
   uintptr_t* codeMap = static_cast<uintptr_t*>
-    (t->m->heap->allocate(codeMapSize(CodeCapacity)));
-  memset(codeMap, 0, codeMapSize(CodeCapacity));
+    (t->m->heap->allocate(codeMapSize(codeCapacity)));
+  memset(codeMap, 0, codeMapSize(codeCapacity));
 
   object constants = makeCodeImage
-    (t, &zone, &image, code, CodeCapacity, codeMap, className, methodName,
-     methodSpec);
+    (t, &zone, image, code, codeMap, className, methodName, methodSpec);
 
   if (t->exception) return;
 
@@ -314,13 +306,13 @@ writeBootImage(Thread* t, FILE* out, const char* className,
   collect(t, Heap::MajorCollection);
 
   HeapWalker* heapWalker = makeHeapImage
-    (t, &image, heap, heapMap, HeapCapacity, constants);
+    (t, image, heap, heapMap, HeapCapacity, constants);
 
   updateConstants(t, constants, code, codeMap, heapWalker->map());
 
-  image.classCount = hashMapSize(t, t->m->classMap);
+  image->classCount = hashMapSize(t, t->m->classMap);
   unsigned* classTable = static_cast<unsigned*>
-    (t->m->heap->allocate(image.classCount * sizeof(unsigned)));
+    (t->m->heap->allocate(image->classCount * sizeof(unsigned)));
 
   { unsigned i = 0;
     for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
@@ -328,9 +320,9 @@ writeBootImage(Thread* t, FILE* out, const char* className,
     }
   }
 
-  image.stringCount = hashMapSize(t, t->m->stringMap);
+  image->stringCount = hashMapSize(t, t->m->stringMap);
   unsigned* stringTable = static_cast<unsigned*>
-    (t->m->heap->allocate(image.stringCount * sizeof(unsigned)));
+    (t->m->heap->allocate(image->stringCount * sizeof(unsigned)));
 
   { unsigned i = 0;
     for (HashMapIterator it(t, t->m->stringMap); it.hasMore();) {
@@ -339,29 +331,28 @@ writeBootImage(Thread* t, FILE* out, const char* className,
     }
   }
 
-  unsigned* callTable = t->m->processor->makeCallTable
-    (t, &image, heapWalker, code);
+  unsigned* callTable = t->m->processor->makeCallTable(t, heapWalker);
 
   heapWalker->dispose();
 
-  image.magic = BootImage::Magic;
-  image.codeBase = reinterpret_cast<uintptr_t>(code);
+  image->magic = BootImage::Magic;
+  image->codeBase = reinterpret_cast<uintptr_t>(code);
 
   fprintf(stderr, "class count %d string count %d call count %d\n"
           "heap size %d code size %d\n",
-          image.classCount, image.stringCount, image.callCount, image.heapSize,
-          image.codeSize);
+          image->classCount, image->stringCount, image->callCount,
+          image->heapSize, image->codeSize);
 
   if (true) {
-    fwrite(&image, sizeof(BootImage), 1, out);
+    fwrite(image, sizeof(BootImage), 1, out);
 
-    fwrite(classTable, image.classCount * sizeof(unsigned), 1, out);
-    fwrite(stringTable, image.stringCount * sizeof(unsigned), 1, out);
-    fwrite(callTable, image.callCount * sizeof(unsigned) * 2, 1, out);
+    fwrite(classTable, image->classCount * sizeof(unsigned), 1, out);
+    fwrite(stringTable, image->stringCount * sizeof(unsigned), 1, out);
+    fwrite(callTable, image->callCount * sizeof(unsigned) * 2, 1, out);
 
-    unsigned offset = (image.classCount * sizeof(unsigned))
-      + (image.stringCount * sizeof(unsigned))
-      + (image.callCount * sizeof(unsigned) * 2);
+    unsigned offset = (image->classCount * sizeof(unsigned))
+      + (image->stringCount * sizeof(unsigned))
+      + (image->callCount * sizeof(unsigned) * 2);
 
     while (offset % BytesPerWord) {
       uint8_t c = 0;
@@ -369,11 +360,11 @@ writeBootImage(Thread* t, FILE* out, const char* className,
       ++ offset;
     }
 
-    fwrite(heapMap, pad(heapMapSize(image.heapSize)), 1, out);
-    fwrite(heap, pad(image.heapSize), 1, out);
+    fwrite(heapMap, pad(heapMapSize(image->heapSize)), 1, out);
+    fwrite(heap, pad(image->heapSize), 1, out);
 
-    fwrite(codeMap, pad(codeMapSize(image.codeSize)), 1, out);
-    fwrite(code, pad(image.codeSize), 1, out);
+    fwrite(codeMap, pad(codeMapSize(image->codeSize)), 1, out);
+    fwrite(code, pad(image->codeSize), 1, out);
   }
 }
 
@@ -392,6 +383,12 @@ main(int ac, const char** av)
   Heap* h = makeHeap(s, 128 * 1024 * 1024);
   Finder* f = makeFinder(s, av[1], 0);
   Processor* p = makeProcessor(s, h);
+
+  BootImage image;
+  const unsigned CodeCapacity = 32 * 1024 * 1024;
+  uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
+  p->initialize(&image, code, CodeCapacity);
+
   Machine* m = new (h->allocate(sizeof(Machine))) Machine(s, h, f, p, 0, 0);
   Thread* t = p->makeThread(m, 0, 0);
   
@@ -399,8 +396,8 @@ main(int ac, const char** av)
   enter(t, Thread::IdleState);
 
   writeBootImage
-    (t, stdout, (ac > 2 ? av[2] : 0), (ac > 3 ? av[3] : 0),
-     (ac > 4 ? av[4] : 0));
+    (t, stdout, &image, code, CodeCapacity,
+     (ac > 2 ? av[2] : 0), (ac > 3 ? av[3] : 0), (ac > 4 ? av[4] : 0));
 
   if (t->exception) {
     printTrace(t, t->exception);

@@ -5884,8 +5884,7 @@ boot(MyThread* t, BootImage* image);
 class MyProcessor;
 
 void
-compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
-              BootImage* image, uint8_t* imageBase);
+compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p);
 
 MyProcessor*
 processor(MyThread* t);
@@ -5909,7 +5908,8 @@ class MyProcessor: public Processor {
     receiveMethod(0),
     windMethod(0),
     rewindMethod(0),
-    codeAllocator(s, 0, 0)
+    codeAllocator(s, 0, 0),
+    bootImage(0)
   { }
 
   virtual Thread*
@@ -6248,14 +6248,10 @@ class MyProcessor: public Processor {
     return visitor.trace;
   }
 
-  virtual void initialize(Thread* vmt, BootImage* image, uint8_t* code,
-                          unsigned capacity)
-  {
+  virtual void initialize(BootImage* image, uint8_t* code, unsigned capacity) {
+    bootImage = image;
     codeAllocator.base = code;
     codeAllocator.capacity = capacity;
-
-    ::compileThunks
-        (static_cast<MyThread*>(vmt), &codeAllocator, this, image, code);
   }
 
   virtual void compileMethod(Thread* vmt, Zone* zone, object* constants,
@@ -6272,16 +6268,15 @@ class MyProcessor: public Processor {
     *addresses = bootContext.addresses;
   }
 
-  virtual void visitRoots(BootImage* image, HeapWalker* w) {
-    image->methodTree = w->visitRoot(methodTree);
-    image->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
-    image->virtualThunks = w->visitRoot(virtualThunks);
+  virtual void visitRoots(HeapWalker* w) {
+    bootImage->methodTree = w->visitRoot(methodTree);
+    bootImage->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
+    bootImage->virtualThunks = w->visitRoot(virtualThunks);
   }
 
-  virtual unsigned* makeCallTable(Thread* t, BootImage* image, HeapWalker* w,
-                                  uint8_t* code)
-  {
-    image->callCount = callTableSize;
+  virtual unsigned* makeCallTable(Thread* t, HeapWalker* w) {
+    bootImage->codeSize = codeAllocator.offset;
+    bootImage->callCount = callTableSize;
 
     unsigned* table = static_cast<unsigned*>
       (t->m->heap->allocate(callTableSize * sizeof(unsigned) * 2));
@@ -6290,7 +6285,7 @@ class MyProcessor: public Processor {
     for (unsigned i = 0; i < arrayLength(t, callTable); ++i) {
       for (object p = arrayBody(t, callTable, i); p; p = callNodeNext(t, p)) {
         table[index++] = callNodeAddress(t, p)
-          - reinterpret_cast<uintptr_t>(code);
+          - reinterpret_cast<uintptr_t>(codeAllocator.base);
         table[index++] = w->map()->find(callNodeTarget(t, p))
           | (static_cast<unsigned>(callNodeFlags(t, p)) << BootShift);
       }
@@ -6300,9 +6295,11 @@ class MyProcessor: public Processor {
   }
 
   virtual void boot(Thread* t, BootImage* image) {
-    codeAllocator.base = static_cast<uint8_t*>
-      (s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
-    codeAllocator.capacity = ExecutableAreaSizeInBytes;
+    if (codeAllocator.base == 0) {
+      codeAllocator.base = static_cast<uint8_t*>
+        (s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
+      codeAllocator.capacity = ExecutableAreaSizeInBytes;
+    }
 
     if (image) {
       ::boot(static_cast<MyThread*>(t), image);
@@ -6313,7 +6310,7 @@ class MyProcessor: public Processor {
       set(t, methodTree, TreeNodeLeft, methodTreeSentinal);
       set(t, methodTree, TreeNodeRight, methodTreeSentinal);
 
-      ::compileThunks(static_cast<MyThread*>(t), &codeAllocator, this, 0, 0);
+      ::compileThunks(static_cast<MyThread*>(t), &codeAllocator, this);
     }
 
     segFaultHandler.m = t->m;
@@ -6389,6 +6386,7 @@ class MyProcessor: public Processor {
   object rewindMethod;
   SegFaultHandler segFaultHandler;
   FixedAllocator codeAllocator;
+  BootImage* bootImage;
 };
 
 object
@@ -6697,9 +6695,9 @@ fixupVirtualThunks(MyThread* t, BootImage* image, uint8_t* code)
   MyProcessor* p = processor(t);
   
   for (unsigned i = 0; i < wordArrayLength(t, p->virtualThunks); ++i) {
-    if (wordArrayBody(t, p->virtualThunks, 0)) {
-      wordArrayBody(t, p->virtualThunks, 0)
-        = (wordArrayBody(t, p->virtualThunks, 0) - image->codeBase)
+    if (wordArrayBody(t, p->virtualThunks, i)) {
+      wordArrayBody(t, p->virtualThunks, i)
+        = (wordArrayBody(t, p->virtualThunks, i) - image->codeBase)
         + reinterpret_cast<uintptr_t>(code);
     }
   }
@@ -6779,8 +6777,7 @@ getThunk(MyThread* t, Thunk thunk)
 }
 
 void
-compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
-              BootImage* image, uint8_t* imageBase)
+compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 {
   class ThunkContext {
    public:
@@ -6904,6 +6901,9 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p,
 
   p->defaultThunk = finish
     (t, allocator, defaultContext.context.assembler, "default");
+
+  BootImage* image = p->bootImage;
+  uint8_t* imageBase = p->codeAllocator.base;
 
   { void* call;
     defaultContext.promise.listener->resolve
