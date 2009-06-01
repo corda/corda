@@ -8,9 +8,9 @@
 
 # the VM depends on the fixed layout of the following classes:
 
+-keepclassmembers class avian.SystemClassLoader { !static <fields>; }
 -keepclassmembers class java.lang.Class { !static <fields>; }
 -keepclassmembers class java.lang.ClassLoader { !static <fields>; }
--keepclassmembers class java.lang.SystemClassLoader { !static <fields>; }
 -keepclassmembers class java.lang.String { !static <fields>; }
 -keepclassmembers class java.lang.Thread { !static <fields>; }
 -keepclassmembers class java.lang.StackTraceElement { !static <fields>; }
@@ -54,7 +54,7 @@
 
 # ClassLoader.getSystemClassloader() depends on the existence of this class:
 
--keep             class java.lang.SystemClassLoader
+-keep             class avian.SystemClassLoader
 
 # the VM references these classes by name, so protect them from obfuscation:
 
