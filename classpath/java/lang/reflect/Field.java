@@ -101,6 +101,38 @@ public class Field<T> extends AccessibleObject {
     }
   }
 
+  public boolean getBoolean(Object instance) throws IllegalAccessException {
+    return ((Boolean) get(instance)).booleanValue();
+  }
+
+  public byte getByte(Object instance) throws IllegalAccessException {
+    return ((Byte) get(instance)).byteValue();
+  }
+
+  public short getShort(Object instance) throws IllegalAccessException {
+    return ((Short) get(instance)).shortValue();
+  }
+
+  public char getChar(Object instance) throws IllegalAccessException {
+    return ((Character) get(instance)).charValue();
+  }
+
+  public int getInt(Object instance) throws IllegalAccessException {
+    return ((Integer) get(instance)).intValue();
+  }
+
+  public float getFloat(Object instance) throws IllegalAccessException {
+    return ((Float) get(instance)).floatValue();
+  }
+
+  public long getLong(Object instance) throws IllegalAccessException {
+    return ((Long) get(instance)).longValue();
+  }
+
+  public double getDouble(Object instance) throws IllegalAccessException {
+    return ((Double) get(instance)).doubleValue();
+  }
+
   public void set(Object instance, Object value)
     throws IllegalAccessException
   {
@@ -160,6 +192,10 @@ public class Field<T> extends AccessibleObject {
     default:
       throw new Error();
     }
+  }
+
+  public boolean isEnumConstant() {
+    throw new UnsupportedOperationException();
   }
 
   private static native long getPrimitive

@@ -10,7 +10,9 @@
 
 package java.lang.reflect;
 
-public class Constructor<T> extends AccessibleObject implements Member {
+public class Constructor<T> extends AccessibleObject
+  implements Member, GenericDeclaration
+{
   private Method<T> method;
 
   public Constructor(Method<T> method) {
@@ -44,6 +46,18 @@ public class Constructor<T> extends AccessibleObject implements Member {
 
   public String getName() {
     return method.getName();
+  }
+
+  public boolean isSynthetic() {
+    return method.isSynthetic();
+  }
+
+  public TypeVariable<Constructor<T>>[] getTypeParameters() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Type[] getGenericParameterTypes() {
+    return method.getGenericParameterTypes();
   }
 
   private static native <T> T make(Class<T> c);

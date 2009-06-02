@@ -12,13 +12,29 @@ package java.lang;
 
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Pattern;
+import java.util.Comparator;
+import java.util.Locale;
 import java.io.ByteArrayOutputStream;
+import java.io.Serializable;
 
-public final class String implements Comparable<String>, CharSequence {
+public final class String
+  implements Comparable<String>, CharSequence, Serializable
+{
+  public static Comparator<String> CASE_INSENSITIVE_ORDER
+    = new Comparator<String>() {
+    public int compare(String a, String b) {
+      return a.compareToIgnoreCase(b);
+    }
+  };
+
   private final Object data;
   private final int offset;
   private final int length;
   private int hashCode;
+
+  public String() {
+    this(new char[0], 0, 0);
+  }
 
   public String(char[] data, int offset, int length, boolean copy) {
     this((Object) data, offset, length, copy);
@@ -32,7 +48,9 @@ public final class String implements Comparable<String>, CharSequence {
     this(data, 0, data.length);
   }
 
-  public String(byte bytes[], int offset, int length, String charsetName) throws UnsupportedEncodingException {
+  public String(byte bytes[], int offset, int length, String charsetName)
+    throws UnsupportedEncodingException
+  {
     this(bytes, offset, length);
     if (!charsetName.equals("UTF-8")) {
       throw new UnsupportedEncodingException(charsetName);
@@ -57,12 +75,29 @@ public final class String implements Comparable<String>, CharSequence {
 
   public String(byte[] data, String charset)
     throws UnsupportedEncodingException
-    {
-      this(data);
-      if (! charset.equals("UTF-8")) {
-        throw new UnsupportedEncodingException(charset);
-      }
+  {
+    this(data);
+    if (! charset.equals("UTF-8")) {
+      throw new UnsupportedEncodingException(charset);
     }
+  }
+
+  public String(byte bytes[], int highByte, int offset, int length) {
+    if (offset < 0 || offset + length > bytes.length) {
+      throw new IndexOutOfBoundsException
+        (offset + " < 0 or " + offset + " + " + length + " > " + bytes.length);
+    }
+
+    char[] c = new char[length];
+    int mask = highByte << 8;
+    for (int i = 0; i < length; ++i) {
+      c[i] = (char) ((bytes[offset + i] & 0xFF) | mask);
+    }
+
+    this.data = c;
+    this.offset = 0;
+    this.length = length;
+  }
 
   private String(Object data, int offset, int length, boolean copy) {
     int l;
@@ -534,6 +569,10 @@ public final class String implements Comparable<String>, CharSequence {
     return Pattern.matches(regex, this);
   }
   
+  public String replaceAll(String regex, String replacement) {
+    return Pattern.compile(regex).matcher(this).replaceAll(replacement);
+  }
+  
   public native String intern();
 
   public static String valueOf(Object s) {
@@ -572,6 +611,10 @@ public final class String implements Comparable<String>, CharSequence {
     return Double.toString(v);
   }
 
+  public static String valueOf(char[] data, int offset, int length) {
+    return new String(data, offset, length);
+  }
+
   public int lastIndexOf(int ch, int lastIndex) {
     for (int i = lastIndex ; i >= 0; --i) {
       if (charAt(i) == ch) {
@@ -580,5 +623,64 @@ public final class String implements Comparable<String>, CharSequence {
     }
 
     return -1;
+  }
+
+  public boolean regionMatches(int thisOffset, String match, int matchOffset,
+                               int length)
+  {
+    return regionMatches(false, thisOffset, match, matchOffset, length);
+  }
+
+  public boolean regionMatches(boolean ignoreCase, int thisOffset,
+                               String match, int matchOffset, int length)
+  {
+    String a = substring(thisOffset, length);
+    String b = match.substring(matchOffset, length);
+    if (ignoreCase) {
+      return a.equalsIgnoreCase(b);
+    } else {
+      return a.equals(b);
+    }
+  }
+
+  public boolean isEmpty() {
+    return length == 0;
+  }
+
+  public boolean contains(String match) {
+    return indexOf(match) != -1;
+  }
+
+  public int codePointAt(int offset) {
+    return Character.codePointAt(this, offset);
+  }
+
+  public int codePointCount(int start, int end) {
+    return Character.codePointCount(this, start, end);
+  }
+
+  public String replace(CharSequence match, CharSequence replacement) {
+    throw new UnsupportedOperationException();
+  }
+
+  public String toUpperCase(Locale locale) {
+    throw new UnsupportedOperationException();
+  }
+
+  public String toLowerCase(Locale locale) {
+    throw new UnsupportedOperationException();
+  }
+
+  // for GNU Classpath compatibility:
+  static char[] zeroBasedStringValue(String s) {
+    if (s.offset == 0) {
+      if (s.data instanceof char[]) {
+        char[] data = (char[]) s.data;
+        if (data.length == s.length) {
+          return data;
+        }
+      }
+    }
+    return s.toCharArray();
   }
 }
