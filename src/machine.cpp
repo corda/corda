@@ -1840,8 +1840,12 @@ Thread::init()
   if (javaThread) {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   } else {
+    const unsigned NewState = 0;
+    const unsigned NormalPriority = 5;
+
     this->javaThread = makeThread
-      (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader, 0);
+      (this, reinterpret_cast<int64_t>(this), 0, 0, NewState, NormalPriority,
+       0, 0, 0, m->loader, 0, 0, 0);
   }
 }
 
@@ -2969,11 +2973,11 @@ makeTrace(Thread* t, Thread* target)
 void
 runJavaThread(Thread* t)
 {
-  object method = resolveMethod(t, "java/lang/Thread", "run", "()V");
+  object method = resolveMethod
+    (t, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
+
   if (t->exception == 0) {
-    t->m->processor->invoke
-      (t, findMethod(t, method, objectClass(t, t->javaThread)),
-       t->javaThread);
+    t->m->processor->invoke (t, method, t->javaThread);
   }
 }
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,15 +10,12 @@
 
 package java.lang;
 
-public class ExceptionInInitializerError extends Error {
-  private final Throwable cause2;
-
-  public ExceptionInInitializerError(String message) {
+public class VirtualMachineError extends Error {
+  public VirtualMachineError(String message) {
     super(message);
-    cause2 = null;
   }
 
-  public ExceptionInInitializerError() {
+  public VirtualMachineError() {
     this(null);
   }
 }

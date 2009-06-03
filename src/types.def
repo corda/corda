@@ -144,8 +144,9 @@
 
 (type illegalMonitorStateException java/lang/IllegalMonitorStateException)
 
-(type arrayIndexOutOfBoundsException
-  java/lang/ArrayIndexOutOfBoundsException)
+(type indexOutOfBoundsException java/lang/IndexOutOfBoundsException)
+
+(type arrayIndexOutOfBoundsException java/lang/ArrayIndexOutOfBoundsException)
 
 (type arrayStoreException java/lang/ArrayStoreException)
 
@@ -160,6 +161,8 @@
 (type interruptedException java/lang/InterruptedException)
 
 (type error java/lang/Error)
+
+(type virtualMachineError java/lang/VirtualMachineError)
 
 (type stackOverflowError java/lang/StackOverflowError)
 

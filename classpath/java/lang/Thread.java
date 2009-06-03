@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -15,14 +15,30 @@ import java.util.WeakHashMap;
 
 public class Thread implements Runnable {
   private long peer;
+  private boolean interrupted;
+  private boolean daemon;
+  private byte state;
+  private byte priority;
   private final Runnable task;
   private Map<ThreadLocal, Object> locals;
-  private boolean interrupted;
   private Object sleepLock;
   private ClassLoader classLoader;
-  private String name;
+  private UncaughtExceptionHandler exceptionHandler;
 
-  public Thread(Runnable task, String name) {
+  // package private for GNU Classpath, which inexpicably bypasses the
+  // accessor methods:
+  String name;
+  ThreadGroup group;
+
+  private static UncaughtExceptionHandler defaultExceptionHandler;
+
+  public static final int MIN_PRIORITY = 1;
+  public static final int NORM_PRIORITY = 5;
+  public static final int MAX_PRIORITY = 10;
+
+  public Thread(ThreadGroup group, Runnable task, String name, long stackSize)
+  {
+    this.group = group;
     this.task = task;
     this.name = name;
 
@@ -41,8 +57,28 @@ public class Thread implements Runnable {
     classLoader = current.classLoader;
   }
 
+  public Thread(ThreadGroup group, Runnable task, String name) {
+    this(group, task, name, 0);
+  }
+
+  public Thread(ThreadGroup group, String name) {
+    this(null, null, name);
+  }
+
+  public Thread(Runnable task, String name) {
+    this(null, task, name);
+  }
+
   public Thread(Runnable task) {
-    this(task, "Thread["+task+"]");
+    this(null, task, "Thread["+task+"]");
+  }
+
+  public Thread(String name) {
+    this(null, null, name);
+  }
+
+  public Thread() {
+    this((Runnable) null);
   }
 
   public synchronized void start() {
@@ -57,6 +93,28 @@ public class Thread implements Runnable {
   }
 
   private native long doStart();
+
+  private static void run(Thread t) throws Throwable {
+    t.state = (byte) State.RUNNABLE.ordinal();
+    try {
+      t.run();
+    } catch (Throwable e) {
+      UncaughtExceptionHandler eh = t.exceptionHandler;
+      UncaughtExceptionHandler deh = defaultExceptionHandler;
+      if (eh != null) {
+        eh.uncaughtException(t, e);
+      } else if (deh != null) {
+        deh.uncaughtException(t, e);
+      } else {
+        throw e;
+      }
+    } finally {
+      synchronized (t) {
+        t.state = (byte) State.TERMINATED.ordinal();
+        t.notifyAll();
+      }
+    }
+  }
 
   public void run() {
     if (task != null) {
@@ -101,6 +159,10 @@ public class Thread implements Runnable {
     }
   }
 
+  public static boolean isInterrupted() {
+    return currentThread().interrupted;
+  }
+
   public static void sleep(long milliseconds) throws InterruptedException {
     Thread t = currentThread();
     if (t.sleepLock == null) {
@@ -109,6 +171,16 @@ public class Thread implements Runnable {
     synchronized (t.sleepLock) {
       t.sleepLock.wait(milliseconds);
     }
+  }
+
+  public static void sleep(long milliseconds, int nanoseconds)
+    throws InterruptedException
+  {
+    if (nanoseconds > 0) {
+      ++ milliseconds;
+    }
+
+    sleep(milliseconds);
   }
 
   public StackTraceElement[] getStackTrace() {
@@ -123,6 +195,127 @@ public class Thread implements Runnable {
   
   public String getName() {
     return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public UncaughtExceptionHandler getUncaughtExceptionHandler() {
+    UncaughtExceptionHandler eh = exceptionHandler;
+    return (eh == null ? group : eh);
+  }
+
+  public static UncaughtExceptionHandler getDefaultUncaughtExceptionHandler() {
+    return defaultExceptionHandler;
+  }
+
+  public void setUncaughtExceptionHandler(UncaughtExceptionHandler h) {
+    exceptionHandler = h;
+  }
+
+  public static void setDefaultUncaughtExceptionHandler
+    (UncaughtExceptionHandler h)
+  {
+    defaultExceptionHandler = h;
+  }
+
+  public State getState() {
+    return State.values()[state];
+  }
+
+  public boolean isAlive() {
+    switch (getState()) {
+    case NEW:
+    case TERMINATED:
+      return false;
+
+    default:
+      return true;
+    }
+  }
+
+  public int getPriority() {
+    return priority;
+  }
+
+  public void setPriority(int priority) {
+    if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
+      throw new IllegalArgumentException();
+    }
+    this.priority = (byte) priority;
+  }
+
+  public boolean isDaemon() {
+    return daemon;
+  }
+
+  public void setDaemon(boolean v) {
+    daemon = v;
+  }
+
+  public static native void yield();
+
+  public synchronized void join() throws InterruptedException {
+    while (getState() != State.TERMINATED) {
+      wait();
+    }
+  }
+
+  public synchronized void join(long milliseconds) throws InterruptedException
+  {
+    long then = System.currentTimeMillis();
+    while (getState() != State.TERMINATED) {
+      wait();
+
+      if (System.currentTimeMillis() - then >= milliseconds) {
+        break;
+      }
+    }
+  }
+
+  public void join(long milliseconds, int nanoseconds)
+    throws InterruptedException
+  {
+    if (nanoseconds > 0) {
+      ++ milliseconds;
+    }
+
+    join(milliseconds);
+  }
+
+  public ThreadGroup getThreadGroup() {
+    return group;
+  }
+
+  public static native boolean holdsLock(Object o);
+
+  public long getId() {
+    return peer;
+  }
+
+  public void stop() {
+    throw new UnsupportedOperationException();
+  }
+
+  public void stop(Throwable t) {
+    throw new UnsupportedOperationException();
+  }
+
+  public void suspend() {
+    throw new UnsupportedOperationException();
+  }
+
+  public void resume() {
+    throw new UnsupportedOperationException();
+  }
+
+  public interface UncaughtExceptionHandler {
+    public void uncaughtException(Thread t, Throwable e);
+  }
+
+  public enum State {
+    NEW, RUNNABLE, BLOCKED, WAITING, TIMED_WAITING, TERMINATED
   }
   
 }

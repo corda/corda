@@ -80,3 +80,59 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   setProperty(t, method, properties, "user.home", getenv("HOME"));
 #endif
 }
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_gnu_classpath_VMStackWalker_getClassContext
+(Thread* t, object, uintptr_t*)
+{
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t):
+      t(t), skipCount(1), trace(0), index(0), protector(t, &trace)
+    { }
+
+    virtual bool visit(Processor::StackWalker* walker) {
+      if (skipCount == 0) {
+        if (trace == 0) {
+          trace = makeObjectArray
+            (t, arrayBody(t, t->m->types, Machine::ClassType),
+             walker->count());
+        }
+
+        assert(t, index < objectArrayLength(t, trace));
+
+        set(t, trace, ArrayBody + (index * BytesPerWord),
+            methodClass(t, walker->method()));
+
+        ++ index;
+        return true;
+      } else {
+        -- skipCount;
+        return true;
+      }
+    }
+
+    Thread* t;
+    unsigned skipCount;
+    object trace;
+    unsigned index;
+    Thread::SingleProtector protector;
+  } v(t);
+
+  t->m->processor->walkStack(t, &v);
+
+  if (v.trace == 0) {
+    v.trace = makeObjectArray
+      (t, arrayBody(t, t->m->types, Machine::ClassType), 0);
+  }
+
+  return reinterpret_cast<int64_t>(v.trace);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_gnu_classpath_VMStackWalker_getClassLoader
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>
+    (classLoader(t, reinterpret_cast<object>(arguments[0])));
+}

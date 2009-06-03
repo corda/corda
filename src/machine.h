@@ -1703,7 +1703,7 @@ makeClassNotFoundException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeClassNotFoundException(t, message, trace, 0);
+  return makeClassNotFoundException(t, message, trace, 0, 0);
 }
 
 inline object
@@ -1767,7 +1767,7 @@ makeExceptionInInitializerError(Thread* t, object cause)
 {
   PROTECT(t, cause);
   object trace = makeTrace(t);
-  return makeExceptionInInitializerError(t, 0, trace, cause);
+  return makeExceptionInInitializerError(t, 0, trace, cause, cause);
 }
 
 inline object

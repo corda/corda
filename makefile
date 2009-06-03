@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 name = avian
 version = 0.2
@@ -328,11 +328,14 @@ gnu-blacklist = \
 gnu-overrides = \
 	java/lang/Class.class \
 	java/lang/Enum.class \
+	java/lang/InheritableThreadLocal.class \
 	java/lang/Object.class \
 	java/lang/StackTraceElement.class \
 	java/lang/String.class \
 	java/lang/StringBuffer.class \
 	java/lang/StringBuilder.class \
+	java/lang/Thread.class \
+	java/lang/ThreadLocal.class \
 	java/lang/Throwable.class \
 	java/lang/ref/PhantomReference.class \
 	java/lang/ref/Reference.class \
@@ -425,6 +428,16 @@ $(classpath-dep): $(classpath-sources)
 	@mkdir -p $(classpath-build)
 	$(javac) -d $(classpath-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
+ifdef gnu
+	(wd=$$(pwd); \
+	 cd $(classpath-build); \
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(build)/overrides.jar")" \
+		 $(gnu-overrides) $$(find avian -name '*.class'); \
+	 rm -r *; \
+	 $(jar) xf $(gnu)/share/classpath/glibj.zip; \
+	 rm $(gnu-blacklist); \
+	 jar xf "$$($(native-path) "$${wd}/$(build)/overrides.jar")")
+endif
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -483,21 +496,9 @@ $(boot-object): $(boot-source)
 	$(compile-object)
 
 $(build)/classpath.jar: $(classpath-dep)
-ifdef gnu
-	mkdir $(build)/gnu
-	(wd=$$(pwd); \
-	 cd $(build)/gnu; \
-	 $(jar) xf $(gnu)/share/classpath/glibj.zip; \
-	 rm $(gnu-blacklist); \
-	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
-	(wd=$$(pwd); \
-	 cd $(classpath-build); \
-	 $(jar) u0f "$$($(native-path) "$${wd}/$(@)")" $(gnu-overrides))
-else
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
-endif
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)

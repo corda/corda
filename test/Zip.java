@@ -9,7 +9,9 @@ public class Zip {
     ZipFile file = new ZipFile("build/classpath.jar");
 
     byte[] buffer = new byte[4096];
-    for (Enumeration<ZipEntry> e = file.entries(); e.hasMoreElements();) {
+    for (Enumeration<? extends ZipEntry> e = file.entries();
+         e.hasMoreElements();)
+    {
       ZipEntry entry = e.nextElement();
       InputStream in = file.getInputStream(entry);
       try {
