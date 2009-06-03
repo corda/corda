@@ -43,6 +43,10 @@ endif
 ifeq ($(continuations),true)
 	options := $(options)-continuations
 endif
+ifdef gnu
+  options := $(options)-gnu
+	gnu-sources = $(src)/gnu.cpp
+endif
 
 root = $(shell (cd .. && pwd))
 build = build
@@ -232,7 +236,8 @@ vm-sources = \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
-	$(src)/process.cpp
+	$(src)/process.cpp \
+	$(gnu-sources)
 
 vm-asm-sources = $(src)/$(asm).S
 
@@ -314,16 +319,38 @@ classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
 	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
 classpath-object = $(native-build)/classpath-jar.o
-classpath-dep = $(classpath-build)/dep
+classpath-dep = $(classpath-build).dep
+
+gnu-blacklist = \
+	java/lang/AbstractStringBuffer.class \
+	java/lang/reflect/Proxy.class
+
+gnu-overrides = \
+	java/lang/Class.class \
+	java/lang/Enum.class \
+	java/lang/Object.class \
+	java/lang/StackTraceElement.class \
+	java/lang/String.class \
+	java/lang/StringBuffer.class \
+	java/lang/StringBuilder.class \
+	java/lang/Throwable.class \
+	java/lang/ref/PhantomReference.class \
+	java/lang/ref/Reference.class \
+	java/lang/ref/ReferenceQueue.class \
+	java/lang/ref/WeakReference.class \
+	java/lang/reflect/AccessibleObject.class \
+	java/lang/reflect/Constructor.class \
+	java/lang/reflect/Field.class \
+	java/lang/reflect/Method.class
 
 test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
-test-dep = $(test-build)/dep
+test-dep = $(test-build).dep
 
 test-extra-sources = $(wildcard $(test)/extra/*.java)
 test-extra-classes = \
 	$(call java-classes,$(test-extra-sources),$(test),$(test-build))
-test-extra-dep = $(test-build)/extra/dep
+test-extra-dep = $(test-build)-extra.dep
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
@@ -395,8 +422,8 @@ $(classpath-build)/%.class: $(classpath)/%.java
 
 $(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
-	@mkdir -p $(dir $(@))
-	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
+	@mkdir -p $(classpath-build)
+	$(javac) -d $(classpath-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
 	@touch $(@)
 
@@ -405,8 +432,8 @@ $(test-build)/%.class: $(test)/%.java
 
 $(test-dep): $(test-sources)
 	@echo "compiling test classes"
-	@mkdir -p $(dir $(@))
-	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
+	@mkdir -p $(test-build)
+	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-classes))
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(dir $(@)) \
 		test/Subroutine.java
@@ -414,7 +441,7 @@ $(test-dep): $(test-sources)
 
 $(test-extra-dep): $(test-extra-sources)
 	@echo "compiling extra test classes"
-	@mkdir -p $(dir $(@))
+	@mkdir -p $(test-build)
 	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-extra-classes))
 	@touch $(@)
@@ -456,9 +483,21 @@ $(boot-object): $(boot-source)
 	$(compile-object)
 
 $(build)/classpath.jar: $(classpath-dep)
+ifdef gnu
+	mkdir $(build)/gnu
+	(wd=$$(pwd); \
+	 cd $(build)/gnu; \
+	 $(jar) xf $(gnu)/share/classpath/glibj.zip; \
+	 rm $(gnu-blacklist); \
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
-	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" $$(find . -name '*.class'))
+	 $(jar) u0f "$$($(native-path) "$${wd}/$(@)")" $(gnu-overrides))
+else
+	(wd=$$(pwd); \
+	 cd $(classpath-build); \
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
+endif
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)
