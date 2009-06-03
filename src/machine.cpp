@@ -2521,8 +2521,17 @@ resolveMethod(Thread* t, const char* className, const char* methodName,
     object spec = makeByteArray(t, methodSpec);
     object reference = makeReference(t, class_, name, spec);
     
-    return findMethodInClass(t, class_, referenceName(t, reference),
-                             referenceSpec(t, reference));
+    object method = findMethodInClass(t, class_, referenceName(t, reference),
+                                      referenceSpec(t, reference));
+
+    if (t->exception == 0 and method == 0) {
+      object message = makeString
+        (t, "%s %s not found in %s", methodName, methodSpec, className);
+
+      t->exception = makeNoSuchMethodError(t, message);
+    } else {
+      return method;
+    }
   }
 
   return 0;

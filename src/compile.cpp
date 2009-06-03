@@ -5477,15 +5477,11 @@ callContinuation(MyThread* t, object continuation, object result,
 
         if (rewindMethod(t) == 0) {
           PROTECT(t, nextContinuation);
-
-          const char* const className = "avian/Continuations";
-          const char* const methodName = "rewind";
-          const char* const methodSpec
-            = "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
-            "Ljava/lang/Throwable;)V";
             
           object method = resolveMethod
-            (t, className, methodName, methodSpec);
+            (t, "avian/Continuations", "rewind",
+             "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
+             "Ljava/lang/Throwable;)V");
             
           if (method) {
             rewindMethod(t) = method;
@@ -5496,11 +5492,6 @@ callContinuation(MyThread* t, object continuation, object result,
               action = Throw;
             }
           } else {
-            object message = makeString
-              (t, "%s %s not found in %s",
-               methodName, methodSpec, className);
-
-            t->exception = makeNoSuchMethodError(t, message);
             action = Throw;
           }
         }
@@ -5558,21 +5549,13 @@ callWithCurrentContinuation(MyThread* t, object receiver)
   { PROTECT(t, receiver);
 
     if (receiveMethod(t) == 0) {
-      const char* const className = "avian/CallbackReceiver";
-      const char* const methodName = "receive";
-      const char* const methodSpec = "(Lavian/Callback;)Ljava/lang/Object;";
-
-      object m = resolveMethod(t, className, methodName, methodSpec);
+      object m = resolveMethod
+        (t, "avian/CallbackReceiver", "receive",
+         "(Lavian/Callback;)Ljava/lang/Object;");
 
       if (m) {
         receiveMethod(t) = m;
-      } else {
-        object message = makeString
-          (t, "%s %s not found in %s", methodName, methodSpec, className);
-        t->exception = makeNoSuchMethodError(t, message);
-      }
 
-      if (LIKELY(t->exception == 0)) {
         object continuationClass = arrayBody
           (t, t->m->types, Machine::ContinuationType);
         
@@ -5614,21 +5597,14 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
     PROTECT(t, after);
 
     if (windMethod(t) == 0) {
-      const char* const className = "avian/Continuations";
-      const char* const methodName = "wind";
-      const char* const methodSpec
-        = "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
-        "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;";
-
-      object method = resolveMethod(t, className, methodName, methodSpec);
+      object method = resolveMethod
+        (t, "avian/Continuations", "wind",
+         "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
+        "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
       if (method) {
         windMethod(t) = method;
         compile(t, ::codeAllocator(t), 0, method);
-      } else {
-        object message = makeString
-          (t, "%s %s not found in %s", methodName, methodSpec, className);
-        t->exception = makeNoSuchMethodError(t, message);
       }
     }
 
