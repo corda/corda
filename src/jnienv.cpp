@@ -256,6 +256,24 @@ ExceptionCheck(Thread* t)
   return t->exception != 0;
 }
 
+jobject JNICALL
+NewDirectByteBuffer(Thread*, void*, jlong)
+{
+  return 0;
+}
+
+void* JNICALL
+GetDirectBufferAddress(Thread*, jobject)
+{
+  return 0;
+}
+
+jlong JNICALL
+GetDirectBufferCapacity(JNIEnv*, jobject)
+{
+  return -1;
+}
+
 jclass JNICALL
 GetObjectClass(Thread* t, jobject o)
 {
@@ -1905,6 +1923,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->FindClass = ::FindClass;
   envTable->ThrowNew = ::ThrowNew;
   envTable->ExceptionCheck = ::ExceptionCheck;
+  envTable->NewDirectByteBuffer = ::NewDirectByteBuffer;
+  envTable->GetDirectBufferAddress = ::GetDirectBufferAddress;
+  envTable->GetDirectBufferCapacity = ::GetDirectBufferCapacity;
   envTable->DeleteLocalRef = ::DeleteLocalRef;
   envTable->GetObjectClass = ::GetObjectClass;
   envTable->IsInstanceOf = ::IsInstanceOf;

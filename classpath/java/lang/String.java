@@ -596,7 +596,9 @@ public final class String
   }
 
   public static String valueOf(int v) {
-    return Integer.toString(v);
+    // use Integer.toString(int, int), because GNU Classpath's
+    // Integer.toString(int) just calls String.valueOf(int):
+    return Integer.toString(v, 10);
   }
 
   public static String valueOf(long v) {
@@ -613,6 +615,10 @@ public final class String
 
   public static String valueOf(char[] data, int offset, int length) {
     return new String(data, offset, length);
+  }
+
+  public static String valueOf(char[] data) {
+    return valueOf(data, 0, data.length);
   }
 
   public int lastIndexOf(int ch, int lastIndex) {

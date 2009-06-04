@@ -497,6 +497,68 @@ makeByteArray(Thread* t, const char* format, va_list a)
 }
 
 object
+parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
+                  unsigned sourceIndex, unsigned lastByteRead)
+{
+  PROTECT(t, bytesSoFar);
+  
+  unsigned length = byteArrayLength(t, bytesSoFar) - 1;
+  object value = makeCharArray(t, length + 1);
+
+  unsigned vi = 0;
+  for (; vi < byteCount; ++vi) {
+    charArrayBody(t, value, vi) = byteArrayBody(t, bytesSoFar, vi);
+  }
+
+  unsigned a = lastByteRead;
+  unsigned si = sourceIndex;
+  while (true) {
+    if (a & 0x80) {
+      // todo: handle non-ASCII characters properly
+      if (a & 0x20) {
+	// 3 bytes
+	si += 2;
+	assert(t, si < length);
+	unsigned b = s.read1();
+	unsigned c = s.read1();
+	charArrayBody(t, value, vi++)
+          = ((a & 0xf) << 12) | ((b & 0x3f) << 6) | (c & 0x3f);
+      } else {
+	// 2 bytes
+	++ si;
+	assert(t, si < length);
+	unsigned b = s.read1();
+
+	if (a == 0xC0 and b == 0x80) {
+	  charArrayBody(t, value, vi++) = 0;
+	} else {
+	  charArrayBody(t, value, vi++) = ((a & 0x1f) << 6) | (b & 0x3f);
+	}
+      }
+    } else {
+      charArrayBody(t, value, vi++) = a;
+    }    
+    
+    if (++si < length) {
+      a = s.read1();
+    } else {
+      break;
+    }
+  }
+
+  if (vi < length) {
+    PROTECT(t, value);
+    
+    object v = makeCharArray(t, vi + 1);
+    memcpy(&charArrayBody(t, v, 0), &charArrayBody(t, value, 0), vi * 2);
+    value = v;
+  }
+  
+  charArrayBody(t, value, vi) = 0;
+  return value;
+}
+
+object
 parseUtf8(Thread* t, Stream& s, unsigned length)
 {
   object value = makeByteArray(t, length + 1);
@@ -507,21 +569,17 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
       // todo: handle non-ASCII characters properly
       if (a & 0x20) {
 	// 3 bytes
-	si += 2;
-	assert(t, si < length);
-	/*unsigned b = */s.read1();
-	/*unsigned c = */s.read1();
-	byteArrayBody(t, value, vi++) = '_';
+        return parseUtf8NonAscii(t, s, value, vi, si, a);
       } else {
 	// 2 bytes
-	++ si;
-	assert(t, si < length);
 	unsigned b = s.read1();
 
 	if (a == 0xC0 and b == 0x80) {
+          ++ si;
+          assert(t, si < length);
 	  byteArrayBody(t, value, vi++) = 0;
 	} else {
-	  byteArrayBody(t, value, vi++) = '_';
+          return parseUtf8NonAscii(t, s, value, vi, si, a);
 	}
       }
     } else {
@@ -583,7 +641,8 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       parsePoolEntry(t, s, index, pool, si);
         
       object value = singletonObject(t, pool, si);
-      value = makeString(t, value, 0, byteArrayLength(t, value) - 1, 0);
+      value = makeString
+        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1, 0);
       value = intern(t, value);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
     }
@@ -1513,7 +1572,7 @@ boot(Thread* t)
 
   m->unsafe = true;
 
-  m->loader = allocate(t, sizeof(void*) * 3, true);
+  m->loader = allocate(t, FixedSizeOfSystemClassLoader, true);
 
   m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
   arrayLength(t, m->types) = TypeCount;
@@ -2434,6 +2493,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
      classLoader(t, class_),
      vtableLength);
 
+  PROTECT(t, real);
+
   t->m->processor->initVtable(t, real);
 
   updateClassTables(t, real, class_);
@@ -2977,7 +3038,7 @@ runJavaThread(Thread* t)
     (t, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
 
   if (t->exception == 0) {
-    t->m->processor->invoke (t, method, t->javaThread);
+    t->m->processor->invoke(t, method, 0, t->javaThread);
   }
 }
 

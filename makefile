@@ -1,4 +1,4 @@
-#MAKEFLAGS = -s
+MAKEFLAGS = -s
 
 name = avian
 version = 0.2
@@ -326,12 +326,13 @@ gnu-blacklist = \
 	java/lang/reflect/Proxy.class
 
 gnu-overrides = \
+	avian/*.class \
 	java/lang/Class.class \
 	java/lang/Enum.class \
 	java/lang/InheritableThreadLocal.class \
 	java/lang/Object.class \
 	java/lang/StackTraceElement.class \
-	java/lang/String.class \
+	java/lang/String*.class \
 	java/lang/StringBuffer.class \
 	java/lang/StringBuilder.class \
 	java/lang/Thread.class \
@@ -432,7 +433,7 @@ ifdef gnu
 	(wd=$$(pwd); \
 	 cd $(classpath-build); \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(build)/overrides.jar")" \
-		 $(gnu-overrides) $$(find avian -name '*.class'); \
+		 $(gnu-overrides); \
 	 rm -r *; \
 	 $(jar) xf $(gnu)/share/classpath/glibj.zip; \
 	 rm $(gnu-blacklist); \
