@@ -5953,9 +5953,11 @@ class MyProcessor: public Processor {
   virtual void
   initVtable(Thread* t, object c)
   {
+    PROTECT(t, c);
     for (int i = classLength(t, c) - 1; i >= 0; --i) {
-      classVtable(t, c, i) = reinterpret_cast<void*>
+      void* thunk = reinterpret_cast<void*>
         (virtualThunk(static_cast<MyThread*>(t), i));
+      classVtable(t, c, i) = thunk;
     }
   }
 
