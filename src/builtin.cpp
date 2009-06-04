@@ -61,6 +61,16 @@ enumerateThreads(Thread* t, Thread* x, object array, unsigned* index,
   }
 }
 
+bool
+compatibleArrayTypes(Thread* t, object a, object b)
+{
+  return classArrayElementSize(t, a)
+    and classArrayElementSize(t, b)
+    and (a == b
+         or (not ((classVmFlags(t, a) & PrimitiveFlag)
+                  or (classVmFlags(t, b) & PrimitiveFlag))));
+}
+
 } // namespace
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -528,7 +538,9 @@ Avian_java_lang_System_arraycopy
   int32_t length = arguments[4];
 
   if (LIKELY(src and dst)) {
-    if (LIKELY(objectClass(t, src) == objectClass(t, dst))) {
+    if (LIKELY(compatibleArrayTypes
+               (t, objectClass(t, src), objectClass(t, dst))))
+    {
       unsigned elementSize = classArrayElementSize(t, objectClass(t, src));
 
       if (LIKELY(elementSize)) {
