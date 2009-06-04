@@ -57,6 +57,12 @@ src = src
 classpath = classpath
 test = test
 
+ifdef gnu
+	avian-classpath-build = $(build)/avian-classpath
+else
+	avian-classpath-build = $(classpath-build)
+endif
+
 input = List
 
 build-cxx = g++
@@ -426,17 +432,20 @@ $(classpath-build)/%.class: $(classpath)/%.java
 
 $(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
-	@mkdir -p $(classpath-build)
-	$(javac) -d $(classpath-build) -bootclasspath $(classpath-build) \
+	@mkdir -p $(avian-classpath-build)
+	$(javac) -d $(avian-classpath-build) \
+		-bootclasspath $(avian-classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
 ifdef gnu
-	(wd=$$(pwd); \
-	 cd $(classpath-build); \
+	(wd=$$(pwd) && \
+	 cd $(avian-classpath-build) && \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(build)/overrides.jar")" \
-		 $(gnu-overrides); \
-	 rm -r *; \
-	 $(jar) xf $(gnu)/share/classpath/glibj.zip; \
-	 rm $(gnu-blacklist); \
+		 $(gnu-overrides))
+	@mkdir -p $(classpath-build)
+	(wd=$$(pwd) && \
+	 cd $(classpath-build) && \
+	 $(jar) xf $(gnu)/share/classpath/glibj.zip && \
+	 rm $(gnu-blacklist) && \
 	 jar xf "$$($(native-path) "$${wd}/$(build)/overrides.jar")")
 endif
 	@touch $(@)
@@ -497,8 +506,8 @@ $(boot-object): $(boot-source)
 	$(compile-object)
 
 $(build)/classpath.jar: $(classpath-dep)
-	(wd=$$(pwd); \
-	 cd $(classpath-build); \
+	(wd=$$(pwd) && \
+	 cd $(classpath-build) && \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
@@ -510,8 +519,8 @@ ifeq ($(platform),darwin)
 	$(binaryToMacho) $(asm) $(build)/classpath.jar __TEXT __text \
 		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
 else
-	(wd=$$(pwd); \
-	 cd $(build); \
+	(wd=$$(pwd) && \
+	 cd $(build) && \
 	 $(objcopy) -I binary classpath.jar \
 		 -O $(object-format) -B $(object-arch) "$${wd}/$(@)")
 endif
@@ -540,10 +549,10 @@ ifeq ($(platform),darwin)
 	$(binaryToMacho) $(asm) $(<) __BOOT __boot \
 		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
 else
-	(wd=$$(pwd); \
-	 cd $(native-build); \
+	(wd=$$(pwd) && \
+	 cd $(native-build) && \
 	 $(objcopy) --rename-section=.data=.boot -I binary bootimage.bin \
-		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp"; \
+		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp" && \
 	 $(objcopy) --set-section-flags .boot=alloc,load,code "$${wd}/$(@).tmp" \
 		"$${wd}/$(@)")
 endif
