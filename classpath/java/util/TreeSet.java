@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -9,6 +9,9 @@
    details. */
 
 package java.util;
+
+import avian.PersistentSet;
+import avian.Cell;
 
 public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
   private PersistentSet<Cell<T>> set;
