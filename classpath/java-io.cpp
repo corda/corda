@@ -23,6 +23,7 @@
 #ifdef WIN32
 #  include <windows.h>
 #  include <io.h>
+#  include <direct.h>
 
 #  define OPEN _open
 #  define CLOSE _close
