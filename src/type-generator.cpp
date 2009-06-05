@@ -1560,11 +1560,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     }
   }
 
-  if (memberOwner(member)->type == Object::Pod) {
-    out->write(">(o->body");
-  } else {
-    out->write(">(reinterpret_cast<uint8_t*>(o)");
-  }
+  out->write(">(reinterpret_cast<uint8_t*>(o)");
   if (endsWith("[0]", typeName)
       or (member->type != Object::Scalar
           and memberTypeObject(member)))
