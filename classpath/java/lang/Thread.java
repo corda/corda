@@ -265,10 +265,12 @@ public class Thread implements Runnable {
   public synchronized void join(long milliseconds) throws InterruptedException
   {
     long then = System.currentTimeMillis();
+    long remaining = milliseconds;
     while (getState() != State.TERMINATED) {
-      wait();
+      wait(remaining);
 
-      if (System.currentTimeMillis() - then >= milliseconds) {
+      remaining = milliseconds - (System.currentTimeMillis() - then);
+      if (remaining <= 0) {
         break;
       }
     }
