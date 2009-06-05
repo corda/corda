@@ -79,7 +79,7 @@ namespace {
   
   int descriptor(JNIEnv* e, HANDLE h)
   {
-    int fd = _open_osfhandle(reinterpret_cast<long>(h), 0);
+    int fd = _open_osfhandle(reinterpret_cast<intptr_t>(h), 0);
     if (fd == -1) {
       throwNew(e, "java/io/IOException", strerror(errno));
     }
