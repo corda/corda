@@ -266,13 +266,10 @@ public class Thread implements Runnable {
   {
     long then = System.currentTimeMillis();
     long remaining = milliseconds;
-    while (getState() != State.TERMINATED) {
+    while (remaining > 0 && getState() != State.TERMINATED) {
       wait(remaining);
 
       remaining = milliseconds - (System.currentTimeMillis() - then);
-      if (remaining <= 0) {
-        break;
-      }
     }
   }
 
