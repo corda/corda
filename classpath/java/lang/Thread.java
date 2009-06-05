@@ -25,8 +25,8 @@ public class Thread implements Runnable {
   private ClassLoader classLoader;
   private UncaughtExceptionHandler exceptionHandler;
 
-  // package private for GNU Classpath, which inexpicably bypasses the
-  // accessor methods:
+  // package private for GNU Classpath, which inexplicably bypasses
+  // the accessor methods:
   String name;
   ThreadGroup group;
 
