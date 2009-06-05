@@ -168,6 +168,8 @@ public final class Class <T> {
 
   private Method findMethod(String name, Class[] parameterTypes) {
     if (methodTable != null) {
+      if (parameterTypes == null)
+        parameterTypes = new Class[0];
       for (int i = 0; i < methodTable.length; ++i) {
         if (methodTable[i].getName().equals(name)
             && match(parameterTypes, methodTable[i].getParameterTypes()))
