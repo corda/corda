@@ -1926,9 +1926,9 @@ stringCharAt(Thread* t, object s, int i)
   if (objectClass(t, data)
       == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
-    return byteArrayBody(t, data, i);
+    return byteArrayBody(t, data, stringOffset(t, s) + i);
   } else {
-    return charArrayBody(t, data, i);
+    return charArrayBody(t, data, stringOffset(t, s) + i);
   }
 }
 
