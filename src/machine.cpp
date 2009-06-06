@@ -514,7 +514,6 @@ parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
   unsigned si = sourceIndex;
   while (true) {
     if (a & 0x80) {
-      // todo: handle non-ASCII characters properly
       if (a & 0x20) {
 	// 3 bytes
 	si += 2;
@@ -566,7 +565,6 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
   for (unsigned si = 0; si < length; ++si) {
     unsigned a = s.read1();
     if (a & 0x80) {
-      // todo: handle non-ASCII characters properly
       if (a & 0x20) {
 	// 3 bytes
         return parseUtf8NonAscii(t, s, value, vi, si, a);
