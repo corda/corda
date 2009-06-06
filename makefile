@@ -46,6 +46,18 @@ endif
 ifdef gnu
   options := $(options)-gnu
 	gnu-sources = $(src)/gnu.cpp
+	gnu-libraries = \
+		$(gnu)/lib/classpath/libjavaio.a \
+		$(gnu)/lib/classpath/libjavalang.a \
+		$(gnu)/lib/classpath/libjavalangreflect.a \
+		$(gnu)/lib/classpath/libjavamath.a \
+		$(gnu)/lib/classpath/libjavanet.a \
+		$(gnu)/lib/classpath/libjavanio.a \
+		$(gnu)/lib/classpath/libjavautil.a
+	gnu-object-dep = $(build)/gnu-object.dep
+	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\"
+	gnu-lflags = -lgmp
+	gnu-objects = $(shell find $(build)/gnu-objects -name "*.o") 
 endif
 
 root = $(shell (cd .. && pwd))
@@ -93,13 +105,14 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
+	$(gnu-cflags)
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
 cflags = $(build-cflags)
 
-common-lflags = -lm -lz
+common-lflags = -lm -lz $(gnu-lflags)
 
 build-lflags =
 
@@ -534,10 +547,11 @@ $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	$(compile-object)
 
+$(static-library): $(gnu-object-dep)
 $(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
-	$(ar) cru $(@) $(^)
+	$(ar) cru $(@) $(^) $(call gnu-objects)
 	$(ranlib) $(@)
 
 $(bootimage-bin): $(bootimage-generator)
@@ -557,16 +571,24 @@ else
 		"$${wd}/$(@)")
 endif
 
+$(gnu-object-dep): $(gnu-libraries)
+	@mkdir -p $(build)/gnu-objects
+	(cd $(build)/gnu-objects && \
+	 for x in $(gnu-libraries); do ar x $${x}; done)
+	@touch $(@)
+
+$(executable): $(gnu-object-dep)
 $(executable): \
 		$(vm-objects) $(jni-objects) $(driver-object) $(vm-heapwalk-objects) \
 		$(boot-object) $(vm-classpath-object)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
-	$(dlltool) -z $(@).def $(^)
+	$(dlltool) -z $(@).def $(^) $(call gnu-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(cc) $(@).exp $(^) $(lflags) -o $(@)
+	$(cc) $(@).exp $(^) $(call gnu-objects) $(lflags) -o $(@)
 else
-	$(cc) $(^) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
+	$(cc) $(^) $(call gnu-objects) $(rdynamic) $(lflags) $(bootimage-lflags) \
+		-o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
@@ -597,7 +619,7 @@ endif
 
 $(dynamic-library): \
 		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
-		$(boot-object) $(vm-classpath-object)
+		$(boot-object) $(vm-classpath-object) $(gnu-libraries)
 	@echo "linking $(@)"
 	$(cc) $(^) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
 	$(strip) $(strip-all) $(@)

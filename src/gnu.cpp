@@ -57,9 +57,17 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 
   setProperty(t, method, properties, "file.encoding", "ASCII");
 
-#ifdef WIN32 
+  // specify a bogus library path so we can do our own search in
+  // VMRuntime.nativeLoad:
+#define LIBRARY_PATH_SENTINAL "*"
+  setProperty(t, method, properties, "java.library.path",
+              LIBRARY_PATH_SENTINAL);
+
+#ifdef WIN32
+#  define FILE_SEPARATOR "\\"
+  
   setProperty(t, method, properties, "line.separator", "\r\n");
-  setProperty(t, method, properties, "file.separator", "\\");
+  setProperty(t, method, properties, "file.separator", FILE_SEPARATOR);
   setProperty(t, method, properties, "path.separator", ";");
   setProperty(t, method, properties, "os.name", "Windows");
 
@@ -69,21 +77,16 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 
   setProperty(t, method, properties, "user.home",
               _wgetenv(L"USERPROFILE"), "%ls");
-
-  setProperty(t, method, properties, "java.library.path",
-              _wgetenv(L"PATH"), "%ls");
 #else
+#  define FILE_SEPARATOR "/"
+  
   setProperty(t, method, properties, "line.separator", "\n");
-  setProperty(t, method, properties, "file.separator", "/");
+  setProperty(t, method, properties, "file.separator", FILE_SEPARATOR);
   setProperty(t, method, properties, "path.separator", ":");
 #  ifdef __APPLE__
   setProperty(t, method, properties, "os.name", "Mac OS X");
-  setProperty(t, method, properties, "java.library.path",
-              getenv("DYLD_LIBRARY_PATH"));
 #  else
   setProperty(t, method, properties, "os.name", "Linux");
-  setProperty(t, method, properties, "java.library.path",
-              getenv("LD_LIBRARY_PATH"));
 #  endif
   setProperty(t, method, properties, "java.io.tmpdir", "/tmp");
   setProperty(t, method, properties, "user.home", getenv("HOME"));
@@ -153,17 +156,17 @@ Avian_java_lang_VMRuntime_mapLibraryName
   object name = reinterpret_cast<object>(arguments[0]);
   PROTECT(t, name);
 
-  const unsigned prefixLength = sizeof(SO_PREFIX) - 1;
+  const unsigned soPrefixLength = sizeof(SO_PREFIX) - 1;
   const unsigned nameLength = stringLength(t, name);
-  const unsigned suffixLength = sizeof(SO_SUFFIX) - 1;
-  const unsigned total = prefixLength + nameLength + suffixLength;
+  const unsigned soSuffixLength = sizeof(SO_SUFFIX) - 1;
+  const unsigned total = soPrefixLength + nameLength + soSuffixLength;
 
   object s = makeByteArray(t, total + 1);
   char* p = reinterpret_cast<char*>(&byteArrayBody(t, s, 0));
 
-  memcpy(p, SO_PREFIX, prefixLength);
-  stringChars(t, name, p + prefixLength);
-  memcpy(p + prefixLength + nameLength, SO_SUFFIX, suffixLength);
+  memcpy(p, SO_PREFIX, soPrefixLength);
+  stringChars(t, name, p + soPrefixLength);
+  memcpy(p + soPrefixLength + nameLength, SO_SUFFIX, soSuffixLength);
   p[total] = 0;
 
   return reinterpret_cast<int64_t>(makeString(t, s, 0, total, 0));
@@ -188,7 +191,38 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_VMRuntime_nativeLoad
 (Thread* t, object, uintptr_t* arguments)
 {
-  uintptr_t args[] = { arguments[0], 0 };
+  object name = reinterpret_cast<object>(arguments[0]);
+
+  // given that we set java.library.path to LIBRARY_PATH_SENTINAL, we
+  // can determine which names are filenames and which are library
+  // names by looking for the prefix LIBRARY_PATH_SENTINAL
+  // FILE_SEPARATOR
+
+  unsigned length = stringLength(t, name);
+  char n[length + 1];
+  stringChars(t, name, n);
+
+  const unsigned pathPrefixLength
+    = sizeof(LIBRARY_PATH_SENTINAL) - 1
+    + sizeof(FILE_SEPARATOR) - 1;
+
+  bool mapName = (strncmp(n, LIBRARY_PATH_SENTINAL FILE_SEPARATOR,
+                          pathPrefixLength) == 0);
+  if (mapName) {
+    // strip the path prefix, SO prefix, and SO suffix before passing
+    // the name to Runtime.load
+
+    const unsigned soPrefixLength = sizeof(SO_PREFIX) - 1;
+    const unsigned soSuffixLength = sizeof(SO_SUFFIX) - 1;
+    const unsigned newOffset
+      = stringOffset(t, name) + pathPrefixLength + soPrefixLength;
+    const unsigned newLength
+      = length - pathPrefixLength - soPrefixLength - soSuffixLength;
+
+    name = makeString(t, stringData(t, name), newOffset, newLength, 0);
+  }
+
+  uintptr_t args[] = { reinterpret_cast<uintptr_t>(name), mapName };
 
   Avian_java_lang_Runtime_load(t, 0, args);
 
