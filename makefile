@@ -617,11 +617,13 @@ else
 	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
 
+$(dynamic-library): $(gnu-object-dep)
 $(dynamic-library): \
 		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
 		$(boot-object) $(vm-classpath-object) $(gnu-libraries)
 	@echo "linking $(@)"
-	$(cc) $(^) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
+	$(cc) $(^) $(call gnu-objects) $(shared) $(lflags) $(bootimage-lflags) \
+		-o $(@)
 	$(strip) $(strip-all) $(@)
 
 $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
