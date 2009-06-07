@@ -52,7 +52,7 @@ public final class String
     throws UnsupportedEncodingException
   {
     this(bytes, offset, length);
-    if (!charsetName.equals("UTF-8")) {
+    if (! charsetName.equalsIgnoreCase("UTF-8")) {
       throw new UnsupportedEncodingException(charsetName);
     }
   }
@@ -416,7 +416,7 @@ public final class String
       }
     } else {
       throw new IndexOutOfBoundsException
-        (start + " not in (0, " + end + ") or " + end + " > " + length);
+        (start + " not in [0, " + end + ") or " + end + " > " + length);
     }
   }
 
@@ -640,8 +640,8 @@ public final class String
   public boolean regionMatches(boolean ignoreCase, int thisOffset,
                                String match, int matchOffset, int length)
   {
-    String a = substring(thisOffset, length);
-    String b = match.substring(matchOffset, length);
+    String a = substring(thisOffset, thisOffset + length);
+    String b = match.substring(matchOffset, matchOffset + length);
     if (ignoreCase) {
       return a.equalsIgnoreCase(b);
     } else {
