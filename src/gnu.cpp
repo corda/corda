@@ -52,8 +52,7 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 
   setProperty(t, method, properties, "java.vm.name", "Avian");
 
-  setProperty(t, method, properties, "java.lang.classpath",
-              t->m->finder->path());
+  setProperty(t, method, properties, "java.protocol.handler.pkgs", "avian");
 
   setProperty(t, method, properties, "file.encoding", "ASCII");
 
@@ -77,6 +76,9 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 
   setProperty(t, method, properties, "user.home",
               _wgetenv(L"USERPROFILE"), "%ls");
+
+  GetCurrentDirectory(MAX_PATH, buffer);
+  setProperty(t, method, properties, "user.dir", buffer);
 #else
 #  define FILE_SEPARATOR "/"
   
@@ -90,6 +92,7 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 #  endif
   setProperty(t, method, properties, "java.io.tmpdir", "/tmp");
   setProperty(t, method, properties, "user.home", getenv("HOME"));
+  setProperty(t, method, properties, "user.dir", getenv("PWD"));
 #endif
 }
 
@@ -278,4 +281,17 @@ Avian_java_lang_VMClassLoader_loadClass
   uintptr_t args[] = { 0, arguments[0] };
 
   return Avian_avian_SystemClassLoader_findClass(t, 0, args);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_SystemClassLoader_findLoadedClass
+(Thread*, object, uintptr_t*);
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_VMClassLoader_findLoadedClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  uintptr_t args[] = { 0, arguments[1] };
+
+  return Avian_avian_SystemClassLoader_findLoadedClass(t, 0, args);
 }

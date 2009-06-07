@@ -46,6 +46,7 @@ endif
 ifdef gnu
   options := $(options)-gnu
 	gnu-sources = $(src)/gnu.cpp
+	gnu-jar = $(gnu)/share/classpath/glibj.zip
 	gnu-libraries = \
 		$(gnu)/lib/classpath/libjavaio.a \
 		$(gnu)/lib/classpath/libjavalang.a \
@@ -346,6 +347,7 @@ gnu-blacklist = \
 
 gnu-overrides = \
 	avian/*.class \
+	avian/resource/*.class \
 	java/lang/Class.class \
 	java/lang/Enum.class \
 	java/lang/InheritableThreadLocal.class \
@@ -443,7 +445,7 @@ $(native-build)/type-generator.o: \
 $(classpath-build)/%.class: $(classpath)/%.java
 	@echo $(<)
 
-$(classpath-dep): $(classpath-sources)
+$(classpath-dep): $(classpath-sources) $(gnu-jar)
 	@echo "compiling classpath classes"
 	@mkdir -p $(avian-classpath-build)
 	$(javac) -d $(avian-classpath-build) \
@@ -457,7 +459,7 @@ ifdef gnu
 	@mkdir -p $(classpath-build)
 	(wd=$$(pwd) && \
 	 cd $(classpath-build) && \
-	 $(jar) xf $(gnu)/share/classpath/glibj.zip && \
+	 $(jar) xf $(gnu-jar) && \
 	 rm $(gnu-blacklist) && \
 	 jar xf "$$($(native-path) "$${wd}/$(build)/overrides.jar")")
 endif
