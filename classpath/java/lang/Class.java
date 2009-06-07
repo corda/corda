@@ -89,6 +89,9 @@ public final class Class <T> implements Type, GenericDeclaration {
                               ClassLoader loader)
     throws ClassNotFoundException
   {
+    if (loader == null) {
+      loader = Class.class.loader;
+    }
     Class c = loader.loadClass(name);
     if (initialize) {
       c.initialize();
