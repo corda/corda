@@ -597,6 +597,28 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
   return value;
 }
 
+void
+removeByteArray(Thread* t, object o)
+{
+  hashMapRemove(t, t->m->byteArrayMap, o, byteArrayHash, objectEqual);
+}
+
+object
+internByteArray(Thread* t, object array)
+{
+  PROTECT(t, array);
+
+  object n = hashMapFindNode
+    (t, t->m->byteArrayMap, array, byteArrayHash, byteArrayEqual);
+  if (n) {
+    return jreferenceTarget(t, tripleFirst(t, n));
+  } else {
+    hashMapInsert(t, t->m->byteArrayMap, array, 0, byteArrayHash);
+    addFinalizer(t, array, removeByteArray);
+    return array;
+  }
+}
+
 unsigned
 parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
 {
@@ -619,6 +641,11 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
   case CONSTANT_Utf8: {
     if (singletonObject(t, pool, i) == 0) {
       object value = parseUtf8(t, s, s.read2());
+      if (objectClass(t, value)
+          == arrayBody(t, t->m->types, Machine::ByteArrayType))
+      {
+        value = internByteArray(t, value);
+      }
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
     }
   } return 1;
@@ -1764,6 +1791,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   bootstrapClassMap(0),
   monitorMap(0),
   stringMap(0),
+  byteArrayMap(0),
   types(0),
   jniMethodTable(0),
   finalizers(0),
@@ -1884,6 +1912,7 @@ Thread::init()
       boot(this);
     }
 
+    m->byteArrayMap = makeWeakHashMap(this, 0, 0);
     m->monitorMap = makeWeakHashMap(this, 0, 0);
 
     m->jniMethodTable = makeVector(this, 0, 0);
@@ -2916,6 +2945,7 @@ visitRoots(Machine* m, Heap::Visitor* v)
   v->visit(&(m->bootstrapClassMap));
   v->visit(&(m->monitorMap));
   v->visit(&(m->stringMap));
+  v->visit(&(m->byteArrayMap));
   v->visit(&(m->types));
   v->visit(&(m->jniMethodTable));
 

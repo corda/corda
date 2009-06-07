@@ -1186,6 +1186,7 @@ class Machine {
   object bootstrapClassMap;
   object monitorMap;
   object stringMap;
+  object byteArrayMap;
   object types;
   object jniMethodTable;
   object finalizers;
