@@ -8,16 +8,147 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+
 #include "types.h"
 
 #define LOCAL(x) .L##x
    
 .text
-   
+
 #ifdef __x86_64__
-   
+
+#ifdef __WINDOWS__
+
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+.globl _vmNativeCall
+_vmNativeCall: 
+#  else
 .globl vmNativeCall
 vmNativeCall:
+#  endif
+   pushq %rbp
+   //save nonvolatile registers
+   pushq %r12
+   pushq %r13
+   pushq %r14
+   pushq %r15
+   movq %rsp, %rbp
+   
+   
+   // %rcx: function
+   // %rdx: arguments
+   // %r8:  arguments count
+   // %r9:  return type
+   
+   movq %rcx, %r10
+   movq %rdx, %r11
+   movq %r8, %r12
+   movq %r9, %r13
+   
+   // %r10: function
+   // %r11: arguments
+   // %r12: arguments count
+   // %r13: return type
+   
+   //allocate initial stack space
+   subq $32, %rsp
+   
+   //first arg
+   cmp $0, %r12
+   je LOCAL(call)
+   movq 0(%r11),%rcx
+   movq 0(%r11),%xmm0
+   subq $1, %r12
+   
+   //second arg
+   cmp $0, %r12
+   je LOCAL(call)
+   movq 8(%r11),%rdx
+   movq 8(%r11),%xmm1
+   subq $1, %r12
+   
+   //third arg
+   cmp $0, %r12
+   je LOCAL(call)
+   movq 16(%r11),%r8
+   movq 16(%r11),%xmm2
+   subq $1, %r12
+   
+   //fourth arg
+   cmp $0, %r12
+   je LOCAL(call)
+   movq 24(%r11),%r9
+   movq 24(%r11),%xmm3
+   subq $1, %r12
+   
+   
+   //calculate stack space for arguments, aligned
+   movq $8, %r15
+   leaq (%r15, %r12, 8), %r15
+   andq $0xFFFFFFFFFFFFFFF0, %r15
+   
+   //reserve stack space for arguments
+   subq %r15, %rsp
+   
+   //reset the counter
+   addq $3, %r12
+   jmp LOCAL(loopend)
+   
+LOCAL(loop):
+   movq (%r11, %r12, 8), %r14
+   movq %r14, (%rsp, %r12, 8);
+   subq $1, %r12
+   
+LOCAL(loopend):
+   //we don't need to move arg 3 and lower
+   cmpq $3, %r12
+   jne LOCAL(loop)
+   
+LOCAL(call):
+   call *%r10
+   
+LOCAL(void):
+   cmpq   $VOID_TYPE,%r13
+   jne    LOCAL(float)
+   jmp    LOCAL(exit)
+   
+LOCAL(float):
+   cmpq   $FLOAT_TYPE,%r13
+   je     LOCAL(copy)
+   cmpq   $DOUBLE_TYPE,%r13
+   jne    LOCAL(exit)
+   
+LOCAL(copy):
+   movq   %xmm0,%rax
+   
+LOCAL(exit):
+   
+   movq %rbp, %rsp
+   //return nonvolatile registers to their former state
+   popq %r15
+   popq %r14
+   popq %r13
+   popq %r12
+   
+   popq %rbp
+   ret
+
+.globl _vmJump
+_vmJump:
+   movq   %rdx,%rbp
+   movq   %r8,%rsp
+   movq   %r9,%rbx
+   jmp    *%rcx
+   
+#elif defined __LINUX__
+
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+.globl _vmNativeCall
+_vmNativeCall: 
+#  else
+.globl vmNativeCall
+vmNativeCall:
+#  endif
    pushq  %rbp
    movq   %rsp,%rbp
 
@@ -119,9 +250,10 @@ vmJump:
    movq   %rdx,%rsp
    movq   %rcx,%rbx
    jmp    *%rdi
+   
+#endif //def __WINDOWS__
 
 #elif defined __i386__
-
 #  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
 .globl _vmNativeCall
 _vmNativeCall: 
@@ -211,7 +343,4 @@ vmJump:
    movl   16(%esp),%ebx
    movl   12(%esp),%esp
    jmp    *%eax
-
-#else
-#  error unsupported platform
-#endif
+#endif //def __x86_64__
