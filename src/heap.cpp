@@ -33,6 +33,7 @@ const bool Verbose = false;
 const bool Verbose2 = false;
 const bool Debug = false;
 const bool DebugFixies = false;
+const bool DebugAllocation = false;
 
 #define ACQUIRE(x) MutexLock MAKE_NAME(monitorLock_) (x)
 
@@ -1673,11 +1674,23 @@ void* tryAllocate(Context* c, unsigned size)
 {
   ACQUIRE(c->lock);
 
+  if (DebugAllocation) {
+    size = pad(size);
+    size += 2 * BytesPerWord;
+  }
+
   if (size + c->count < c->limit) {
     void* p = c->system->tryAllocate(size);
     if (p) {
       c->count += size;
-      return p;
+      
+      if (DebugAllocation) {
+        static_cast<uintptr_t*>(p)[0] = 0x22377322;
+        static_cast<uintptr_t*>(p)[(size / BytesPerWord) - 1] = 0x22377322;
+        return static_cast<uintptr_t*>(p) + 1;
+      } else {
+        return p;
+      }
     }
   }
   return 0;
@@ -1687,6 +1700,20 @@ void free(Context* c, const void* p, unsigned size) {
   ACQUIRE(c->lock);
 
   expect(c->system, c->count >= size);
+
+  if (DebugAllocation) {
+    memset(const_cast<void*>(p), 0xFE, size);
+
+    size = pad(size);
+
+    p = static_cast<const uintptr_t*>(p) - 1;
+
+    expect(c->system, static_cast<const uintptr_t*>(p)[0] == 0x22377322);
+
+    expect(c->system, static_cast<const uintptr_t*>(p)
+           [1 + (size / BytesPerWord)] == 0x22377322);
+  }
+
   c->system->free(p);
   c->count -= size;
 }
