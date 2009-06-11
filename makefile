@@ -16,10 +16,6 @@ build-platform = \
 arch = $(build-arch)
 platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 
-ifeq ($(platform),windows)
-	arch = i386
-endif
-
 mode = fast
 process = compile
 
@@ -159,6 +155,22 @@ ifeq ($(platform),windows)
 			native-path = cygpath -m
 		endif
 	endif
+
+	ifeq ($(arch),x86_64)
+		cxx = x86_64-pc-mingw32-g++
+		cc = x86_64-pc-mingw32-gcc
+		dlltool = x86_64-pc-mingw32-dlltool
+		ar = x86_64-pc-mingw32-ar
+		ranlib = x86_64-pc-mingw32-ranlib
+		objcopy = x86_64-pc-mingw32-objcopy
+		strip = :
+		inc = "$(root)/win64/include"
+		lib = "$(root)/win64/lib"
+		cflags += -D__x86_64__ -D__WINDOWS__
+		pointer-size = 8
+		object-format = pe-x86-64
+	endif
+		 
 endif
 
 ifeq ($(mode),debug)
@@ -399,7 +411,7 @@ endef
 define compile-asm-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cc) -I$(src) -c $(<) -o $(@)
+	$(cc) $(cflags) -I$(src) -c $(<) -o $(@)
 endef
 
 $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
@@ -531,4 +543,3 @@ $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
 	$(build-cc) $(^) $(build-lflags) -o $(@)
-
