@@ -772,7 +772,8 @@ struct MINIDUMP_USER_STREAM_INFORMATION;
 struct MINIDUMP_CALLBACK_INFORMATION;
 
 enum MINIDUMP_TYPE {
-  MiniDumpNormal = 0
+  MiniDumpNormal = 0,
+  MiniDumpWithFullMemory = 2
 };
 
 typedef BOOL (*MiniDumpWriteDumpType)
@@ -812,7 +813,7 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
           (GetCurrentProcess(),
            GetCurrentProcessId(),
            file,
-           MiniDumpNormal,
+           MiniDumpWithFullMemory,
            &exception,
            0,
            0);
