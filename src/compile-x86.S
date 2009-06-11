@@ -16,8 +16,90 @@
 
 #ifdef __x86_64__
 
+#ifdef __WINDOWS__
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+.globl _vmInvoke
+_vmInvoke: 
+#  else
 .globl vmInvoke
 vmInvoke:
+#error other
+#  endif
+   pushq  %rbp
+   movq   %rsp,%rbp
+   
+   	  //NEW
+   // %rcx: thread
+   // %rdx: function
+   // %r8 : arguments
+   // %r9 : argumentsFootprint
+   // 48(%rbp) : frameSize
+   // 56(%rbp) : returnType (ignored)
+   
+   // allocate stack space, adding room for callee-saved registers
+   movl   48(%rbp),%eax
+   subq   %rax,%rsp
+   subq   $64,%rsp
+   
+   // save callee-saved registers
+   movq   %rsp,%r11
+   addq   %rax,%r11
+
+   movq   %rbx,0(%r11)
+   movq   %r12,8(%r11)
+   movq   %r13,16(%r11)
+   movq   %r14,24(%r11)
+   movq   %r15,32(%r11)
+   movq   %rsi,40(%r11)
+   movq   %rdi,48(%r11)
+   
+   // we use rbx to hold the thread pointer, by convention
+   mov    %rcx,%rbx
+
+   // copy arguments into place
+   movq   $0,%r11
+   jmp    LOCAL(test)
+
+LOCAL(loop):
+   movq   (%r8,%r11,1),%rsi
+   movq   %rsi,(%rsp,%r11,1)
+   addq   $8,%r11
+
+LOCAL(test):
+   cmpq   %r9,%r11
+   jb     LOCAL(loop)
+   
+   // call function
+   call   *%rdx
+   
+   // restore stack pointer
+   movq   %rbp,%rsp
+   
+   // restore callee-saved registers
+   movq   %rsp,%r11
+   subq   $64,%r11
+
+   movq   0(%r11),%rbx
+   movq   8(%r11),%r12
+   movq   16(%r11),%r13
+   movq   24(%r11),%r14
+   movq   32(%r11),%r15
+   movq   40(%r11),%rsi
+   movq   48(%r11),%rdi
+
+   // return
+   popq   %rbp
+   ret
+   
+#elif defined __LINUX__
+
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+.globl _vmInvoke
+_vmInvoke: 
+#  else
+.globl vmInvoke
+vmInvoke:
+#  endif
    pushq  %rbp
    movq   %rsp,%rbp
       
@@ -77,6 +159,10 @@ LOCAL(test):
    // return
    popq   %rbp
    ret
+   
+#else
+#error unsupported platorm / architecture combo
+#endif //defined __WINDOWS__
 
 #elif defined __i386__
 
@@ -160,7 +246,6 @@ LOCAL(int32):
 LOCAL(exit):
    popl   %ebp
    ret
-   
 #else
-#  error unsupported platform
-#endif
+#error unsupported architecture
+#endif //def __x86_64__
