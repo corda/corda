@@ -4183,24 +4183,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
   }
 }
 
+FILE* compileLog = 0;
+
 void
 logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
            const char* name, const char* spec)
 {
-  static FILE* log = 0;
   static bool open = false;
   if (not open) {
     open = true;
     const char* path = findProperty(t, "avian.jit.log");
     if (path) {
-      log = fopen(path, "wb");
+      compileLog = fopen(path, "wb");
     } else if (DebugCompile) {
-      log = stderr;
+      compileLog = stderr;
     }
   }
 
-  if (log) {
-    fprintf(log, "%p %p %s.%s%s\n",
+  if (compileLog) {
+    fprintf(compileLog, "%p %p %s.%s%s\n",
             code, static_cast<const uint8_t*>(code) + size,
             class_, name, spec);
   }
@@ -5872,6 +5873,11 @@ class SegFaultHandler: public System::SignalHandler {
         return true;
       }
     }
+
+    if (compileLog) {
+      fflush(compileLog);
+    }
+
     return false;
   }
 
