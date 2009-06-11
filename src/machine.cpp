@@ -1800,6 +1800,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   weakReferences(0),
   tenuredWeakReferences(0),
   unsafe(false),
+  triedBuiltinOnLoad(false),
   heapPoolIndex(0)
 {
   heap->setClient(heapClient);
@@ -2600,33 +2601,55 @@ resolveClass(Thread* t, object spec)
 }
 
 object
-resolveMethod(Thread* t, const char* className, const char* methodName,
+resolveMethod(Thread* t, object class_, const char* methodName,
               const char* methodSpec)
 {
-  object class_ = resolveClass(t, makeByteArray(t, "%s", className));
-  if (LIKELY(t->exception == 0)) {
-    PROTECT(t, class_);
+  PROTECT(t, class_);
 
-    object name = makeByteArray(t, methodName);
-    PROTECT(t, name);
+  object name = makeByteArray(t, methodName);
+  PROTECT(t, name);
 
-    object spec = makeByteArray(t, methodSpec);
-    object reference = makeReference(t, class_, name, spec);
+  object spec = makeByteArray(t, methodSpec);
     
-    object method = findMethodInClass(t, class_, referenceName(t, reference),
-                                      referenceSpec(t, reference));
+  object method = findMethodInClass(t, class_, name, spec);
 
-    if (t->exception == 0 and method == 0) {
-      object message = makeString
-        (t, "%s %s not found in %s", methodName, methodSpec, className);
+  if (t->exception == 0 and method == 0) {
+    object message = makeString
+      (t, "%s %s not found in %s", methodName, methodSpec, className);
 
-      t->exception = makeNoSuchMethodError(t, message);
-    } else {
-      return method;
-    }
+    t->exception = makeNoSuchMethodError(t, message);
+    return 0;
+  } else {
+    return method;
+  }
+}
+
+object
+resolveField(Thread* t, object class_, const char* fieldName,
+              const char* fieldSpec)
+{
+  PROTECT(t, class_);
+
+  object name = makeByteArray(t, fieldName);
+  PROTECT(t, name);
+
+  object spec = makeByteArray(t, fieldSpec);
+  PROTECT(t, spec);
+ 
+  object field = 0;
+  for (; class_ != 0 and field == 0; class_ = classSuper(t, class_)) {
+    field = findFieldInClass(t, class_, name, spec);
   }
 
-  return 0;
+  if (t->exception == 0 and field == 0) {
+    object message = makeString
+      (t, "%s %s not found in %s", fieldName, fieldSpec, className);
+
+    t->exception = makeNoSuchFieldError(t, message);
+    return 0;
+  } else {
+    return field;
+  }
 }
 
 object

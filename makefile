@@ -56,7 +56,7 @@ ifdef gnu
 		$(gnu)/lib/classpath/libjavanio.a \
 		$(gnu)/lib/classpath/libjavautil.a
 	gnu-object-dep = $(build)/gnu-object.dep
-	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\"
+	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
 	gnu-lflags = -lgmp
 	gnu-objects = $(shell find $(build)/gnu-objects -name "*.o") 
 endif
@@ -473,7 +473,7 @@ $(test-dep): $(test-sources)
 	@mkdir -p $(test-build)
 	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-classes))
-	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(dir $(@)) \
+	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
 		test/Subroutine.java
 	@touch $(@)
 

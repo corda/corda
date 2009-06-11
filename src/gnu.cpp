@@ -33,6 +33,89 @@ setProperty(Thread* t, object method, object properties,
 
 } // namespace
 
+namespace vm {
+
+jobject JNICALL
+NewDirectByteBuffer(Thread* t, void* address, jlong capacity)
+{
+  const char* pointerClassName;
+  const char* initSpec;
+  if (BytesPerWord == 8) {
+    pointerClassName = "gnu/classpath/Pointer64";
+    initSpec = "(J)V";
+  } else {
+    pointerClassName = "gnu/classpath/Pointer32";
+    initSpec = "(I)V";
+  }
+
+  object pointerClass = resolveClass(t, pointerClassName);
+  if (UNLIKELY(pointerClass == 0)) return 0;
+  PROTECT(t, pointerClass);
+
+  object pointerConstructor = resolveMethod
+    (t, pointerClass, "<init>", initSpec);
+  if (UNLIKELY(pointerConstructor == 0)) return 0;
+
+  object pointer = make(t, pointerClass);
+  PROTECT(t, pointer);
+
+  t->m->processor->invoke(t, pointerConstructor, pointer, address);
+  if (UNLIKELY(t->exception)) return 0;
+
+  object bufferClass = resolveClass
+    (t, "java/nio/DirectByteBufferImpl$ReadWrite");
+  if (UNLIKELY(bufferClass == 0)) return 0;
+  PROTECT(t, bufferClass);
+  
+  object bufferConstructor = resolveMethod
+    (t, bufferClass, "<init>", "(Lgnu/classpath/Pointer;int)V");
+  if (UNLIKELY(bufferConstructor == 0)) return 0;
+  
+  object buffer = make(t, bufferClass);
+  PROTECT(t, buffer);
+
+  t->m->processor->invoke
+    (t, bufferConstructor, buffer, &pointer, static_cast<jint>(capacity));
+  if (UNLIKELY(t->exception)) return 0;
+  
+  return makeLocalReference(t, buffer);
+}
+
+void* JNICALL
+GetDirectBufferAddress(Thread* t, jobject buffer)
+{
+  object addressField = resolveField
+    (t, objectClass(t, *buffer), "address", "Lgnu/classpath/Pointer;");
+  if (UNLIKELY(addressField == 0)) return 0;
+
+  object address = cast<object>(*buffer, fieldOffset(t, addressField));
+  if (address == 0) return 0;
+  
+  const char* dataSpec;
+  if (BytesPerWord == 8) {
+    dataSpec = "J";
+  } else {
+    dataSpec = "I";
+  }
+  
+  object dataField = resolveField
+    (t, objectClass(t, address), "data", dataSpec);
+  if (UNLIKELY(dataField == 0)) return 0;
+
+  return cast<void*>(address, fieldOffset(t, dataField));
+}
+
+jlong JNICALL
+GetDirectBufferCapacity(Thread* t, jobject buffer)
+{
+  object capField = resolveField(t, objectClass(t, *buffer), "cap", "I");
+  if (UNLIKELY(capField == 0)) return 0;
+
+  return cast<jint>(*buffer, fieldOffset(t, capField));
+}
+
+} // namespace vm
+
 extern "C" JNIEXPORT void JNICALL
 Avian_gnu_classpath_VMSystemProperties_preInit
 (Thread* t, object, uintptr_t* arguments)

@@ -1195,6 +1195,7 @@ class Machine {
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;
+  bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
@@ -2049,11 +2050,45 @@ object
 parseClass(Thread* t, const uint8_t* data, unsigned length);
 
 object
-resolveClass(Thread* t, object spec);
+resolveClass(Thread* t, object name);
+
+inline object
+resolveClass(Thread* t, const char* name)
+{
+  return resolveClass(t, makeByteArray(t, "%s", name));
+}
 
 object
-resolveMethod(Thread* t, const char* className, const char* methodName,
+resolveMethod(Thread* t, object class_, const char* methodName,
               const char* methodSpec);
+
+inline object
+resolveMethod(Thread* t, const char* className, const char* methodName,
+              const char* methodSpec)
+{
+  object class_ = resolveClass(t, className);
+  if (LIKELY(t->exception == 0)) {
+    return resolveMethod(t, class_, methodName, methodSpec);
+  } else {
+    return 0;
+  }
+}
+
+object
+resolveField(Thread* t, object class_, const char* fieldName,
+             const char* fieldSpec);
+
+inline object
+resolveField(Thread* t, const char* className, const char* fieldName,
+             const char* fieldSpec)
+{
+  object class_ = resolveClass(t, className);
+  if (LIKELY(t->exception == 0)) {
+    return resolveField(t, class_, fieldName, fieldSpec);
+  } else {
+    return 0;
+  }
+}
 
 object
 resolveObjectArrayClass(Thread* t, object elementSpec);

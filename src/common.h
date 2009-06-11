@@ -115,7 +115,6 @@ pad(unsigned n)
   return pad(n, BytesPerWord);
 }
 
-
 inline unsigned
 ceiling(unsigned n, unsigned d)
 {

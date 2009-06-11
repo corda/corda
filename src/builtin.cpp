@@ -71,6 +71,15 @@ compatibleArrayTypes(Thread* t, object a, object b)
                   or (classVmFlags(t, b) & PrimitiveFlag))));
 }
 
+void
+runOnLoadIfFound(Thread* t, System::Library* library)
+{
+  void* p = library->resolve("JNI_OnLoad");
+  if (p) {
+    reinterpret_cast<jint (JNICALL *)(Machine*, void*)>(p)(t->m, 0);
+  }
+}
+
 } // namespace
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -612,6 +621,10 @@ Avian_java_lang_Runtime_load
           and (s[length] == ',' or s[length] == 0))
       {
         // library is built in to this executable
+        if (not t->m->triedBuiltinOnLoad) {
+          t->m->triedBuiltinOnLoad = true;
+          runOnLoadIfFound(t, t->m->libraries);
+        }
         return;
       } else {
         while (*s and *s != ',') ++ s;
@@ -635,6 +648,7 @@ Avian_java_lang_Runtime_load
   System::Library* lib;
   if (LIKELY(t->m->system->success(t->m->system->load(&lib, n, mapName)))) {
     last->setNext(lib);
+    runOnLoadIfFound(t, lib);
   } else {
     object message = makeString(t, "library not found: %s", n);
     t->exception = makeUnsatisfiedLinkError(t, message);
