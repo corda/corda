@@ -39,11 +39,16 @@
 #  define LX "x"
 #  define ULD "u"
 #endif
-#elif defined __x86_64__
+#elif defined __x86_64__ && defined __LINUX__
 #  define LD "ld"
 #  define LX "lx"
 #  define LLD "ld"
 #  define ULD "lu"
+#elif defined __x86_64__ && defined __WINDOWS__
+#  define LD "I64d"
+#  define LX "I64x"
+#  define LLD "I64d"
+#  define ULD "I64x"
 #else
 #  error "Unsupported architecture"
 #endif
