@@ -548,6 +548,7 @@ enum Event {
   IpEvent,
   MarkEvent,
   ClearEvent,
+  InitEvent,
   TraceEvent
 };
 
@@ -4388,6 +4389,14 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       clearBit(roots, i);
     } break;
 
+    case InitEvent: {
+      unsigned reference = context->eventLog.get2(eventIndex);
+      eventIndex += 2;
+
+      uintptr_t* tableRoots = context->rootTable + (reference * mapSize);  
+      memcpy(roots, tableRoots, mapSize * BytesPerWord);      
+    } break;
+
     case TraceEvent: {
       TraceElement* te; context->eventLog.get(eventIndex, &te, BytesPerWord);
       if (DebugFrameMaps) {
@@ -4711,16 +4720,8 @@ compile(MyThread* t, Allocator* allocator, Context* context)
           uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
           Frame frame2(&frame, stackMap);
 
-          uintptr_t* roots = context->rootTable
-            + (start * frameMapSizeInWords(t, context->method));
-
-          for (unsigned i = 0; i < localSize(t, context->method); ++ i) {
-            if (getBit(roots, i)) {
-              frame2.set(i, Frame::Object);
-            } else {
-              frame2.set(i, Frame::Integer);
-            }
-          }
+          context->eventLog.append(InitEvent);
+          context->eventLog.append2(start);
 
           for (unsigned i = 1;
                i < codeMaxStack(t, methodCode(t, context->method));
