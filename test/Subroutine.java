@@ -63,9 +63,9 @@ public class Subroutine {
     test(false, true);
     test(true, false);
 
-    test2(1);
-    test2(2);
-    test2(3);
+    String.valueOf(test2(1));
+    String.valueOf(test2(2));
+    String.valueOf(test2(3));
   }
 
   private static class DummyException extends RuntimeException { }

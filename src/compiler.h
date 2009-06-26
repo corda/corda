@@ -43,7 +43,6 @@ class Compiler {
 
   virtual Subroutine* startSubroutine() = 0;
   virtual void endSubroutine(Subroutine* subroutine) = 0;
-  virtual void restoreFromSubroutine(Subroutine* subroutine) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned alignedFrameSize) = 0;
@@ -96,6 +95,7 @@ class Compiler {
                           unsigned index) = 0;
   virtual Operand* loadLocal(unsigned footprint, unsigned index) = 0;
   virtual void saveLocals() = 0;
+  virtual void cleanLocals() = 0;
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
                            Operand* index, intptr_t handler) = 0;

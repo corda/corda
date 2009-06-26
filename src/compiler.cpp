@@ -4016,6 +4016,31 @@ appendSaveLocals(Context* c)
          SaveLocalsEvent(c));
 }
 
+class CleanLocalsEvent: public Event {
+ public:
+  CleanLocalsEvent(Context* c):
+    Event(c)
+  { }
+
+  virtual const char* name() {
+    return "CleanLocalsEvent";
+  }
+
+  virtual void compile(Context* c) {
+    for (FrameIterator it(c, 0, c->locals); it.hasMore();) {
+      FrameIterator::Element e = it.next(c);
+      clean(c, e.value, 0);
+    }
+  }
+};
+
+void
+appendCleanLocals(Context* c)
+{
+  append(c, new (c->zone->allocate(sizeof(CleanLocalsEvent)))
+         CleanLocalsEvent(c));
+}
+
 class DummyEvent: public Event {
  public:
   DummyEvent(Context* c):
@@ -4927,6 +4952,8 @@ class MyCompiler: public Compiler {
   }
 
   virtual void endSubroutine(Subroutine* subroutine) {
+    saveLocals();
+
     static_cast<MySubroutine*>(subroutine)->forkState = ::saveState(&c);
   }
 
@@ -5038,6 +5065,13 @@ class MyCompiler: public Compiler {
     }
 
     c.logicalIp = logicalIp;
+    
+    for (unsigned li = 0; li < c.localFootprint; ++li) {
+      Local* local = c.locals + li;
+      if (local->value == 0) {
+        initLocal(1, li);
+      }
+    }
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
@@ -5331,6 +5365,10 @@ class MyCompiler: public Compiler {
 
   virtual void saveLocals() {
     appendSaveLocals(&c);
+  }
+
+  virtual void cleanLocals() {
+    appendCleanLocals(&c);
   }
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
