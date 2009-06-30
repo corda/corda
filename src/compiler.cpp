@@ -5062,16 +5062,16 @@ class MyCompiler: public Compiler {
     if (c.subroutine) {
       c.logicalCode[logicalIp]->subroutine = c.subroutine;
       c.subroutine = 0;
+    
+      for (unsigned li = 0; li < c.localFootprint; ++li) {
+        Local* local = c.locals + li;
+        if (local->value == 0) {
+          initLocal(1, li);
+        }
+      }
     }
 
     c.logicalIp = logicalIp;
-    
-    for (unsigned li = 0; li < c.localFootprint; ++li) {
-      Local* local = c.locals + li;
-      if (local->value == 0) {
-        initLocal(1, li);
-      }
-    }
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
