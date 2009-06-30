@@ -4744,8 +4744,10 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
     assert(t, context->traceLogCount + ceiling((i + 1) * mapSize, 32)
            <= intArrayLength(t, table));
 
-    copyFrameMap(&intArrayBody(t, table, context->traceLogCount), p->map,
-                 mapSize, i * mapSize, p, 0);
+    if (mapSize) {
+      copyFrameMap(&intArrayBody(t, table, context->traceLogCount), p->map,
+                   mapSize, i * mapSize, p, 0);
+    }
   }
 
   return table;
