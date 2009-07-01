@@ -123,7 +123,7 @@ endif
 
 ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	lflags = $(common-lflags) -ldl -framework CoreFoundation -framework Carbon
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__BOOT,rwx,rwx
 	endif

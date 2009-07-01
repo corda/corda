@@ -7,7 +7,7 @@
 
    There is NO WARRANTY for this software.  See license.txt for
    details. */
-
+   
 #include "math.h"
 #include "stdlib.h"
 #include "sys/time.h"
@@ -32,11 +32,13 @@
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
+#include "sys/utsname.h"
 #include "sys/wait.h"
 #endif
 
 #ifdef __APPLE__
 #  define SO_SUFFIX ".jnilib"
+#include "Gestalt.h"
 #elif defined WIN32
 #  define SO_SUFFIX ".dll"
 #else
@@ -349,6 +351,14 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("\\");
     } else if (strcmp(chars, "os.name") == 0) {
       r = e->NewStringUTF("Windows");
+    } else if (strcmp(chars, "os.version") == 0) {
+      unsigned size = 32;
+      char buffer[size];
+      OSVERSIONINFO OSversion;
+      OSversion.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
+      ::GetVersionEx(&OSversion);
+      snprintf(buffer, size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
+      r = e->NewStringUTF(buffer);
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
@@ -368,10 +378,26 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 #else
       r = e->NewStringUTF("Linux");
 #endif
+    } else if (strcmp(chars, "os.version") == 0) {
+#ifdef __APPLE__
+      unsigned size = 32;
+      char buffer[size];
+      long minorVersion, majorVersion;
+      
+      Gestalt(gestaltSystemVersionMajor, &majorVersion);
+      Gestalt(gestaltSystemVersionMinor, &minorVersion);
+      
+      snprintf(buffer, size, "%lld.%lld", majorVersion, minorVersion);
+      r = e->NewStringUTF(buffer);
+#else
+      struct utsname system_id; 
+      uname(&system_id);
+      r = e->NewStringUTF(system_id.release);
+#endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
     } else if (strcmp(chars, "user.home") == 0) {
-      r = e->NewStringUTF(getenv("HOME"));      
+      r = e->NewStringUTF(getenv("HOME"));
     }
 #endif
 
