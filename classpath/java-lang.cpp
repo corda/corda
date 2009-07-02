@@ -38,7 +38,7 @@
 
 #ifdef __APPLE__
 #  define SO_SUFFIX ".jnilib"
-//#include "Gestalt.h"
+#include <Carbon/Carbon.h>
 #elif defined WIN32
 #  define SO_SUFFIX ".dll"
 #else
@@ -380,16 +380,15 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 #endif
     } else if (strcmp(chars, "os.version") == 0) {
 #ifdef __APPLE__
-/*      unsigned size = 32;
+      unsigned size = 32;
       char buffer[size];
       long minorVersion, majorVersion;
       
       Gestalt(gestaltSystemVersionMajor, &majorVersion);
       Gestalt(gestaltSystemVersionMinor, &minorVersion);
       
-      snprintf(buffer, size, "%lld.%lld", majorVersion, minorVersion);
-      r = e->NewStringUTF(buffer);*/
-      r = e->NewStringUTF("I hate OSX");
+      snprintf(buffer, size, "%ld.%ld", majorVersion, minorVersion);
+      r = e->NewStringUTF(buffer);
 #else
       struct utsname system_id; 
       uname(&system_id);
