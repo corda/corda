@@ -38,7 +38,7 @@
 
 #ifdef __APPLE__
 #  define SO_SUFFIX ".jnilib"
-#include <Carbon/Carbon.h>
+#include <CoreServices/CoreServices.h>
 #elif defined WIN32
 #  define SO_SUFFIX ".dll"
 #else
