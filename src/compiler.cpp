@@ -2052,7 +2052,7 @@ class MultiRead: public Read {
     }
     lastRead = cell;
 
-    //     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
+//     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
 
     lastTarget->value = r;
   }
@@ -2064,7 +2064,7 @@ class MultiRead: public Read {
   void allocateTarget(Context* c) {
     Cell* cell = cons(c, 0, 0);
 
-    //     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
+//     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
 
     if (lastTarget) {
       lastTarget->next = cell;
@@ -4952,13 +4952,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void endSubroutine(Subroutine* subroutine) {
-    saveLocals();
-
     static_cast<MySubroutine*>(subroutine)->forkState = ::saveState(&c);
-  }
-
-  virtual void restoreFromSubroutine(Subroutine* subroutine) {
-    ::restoreState(&c, static_cast<MySubroutine*>(subroutine)->forkState);
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -5059,10 +5053,23 @@ class MyCompiler: public Compiler {
       (c.zone->allocate(sizeof(LogicalInstruction)))
       LogicalInstruction(logicalIp, c.stack, c.locals);
 
-    if (c.subroutine) {
+    bool startSubroutine = c.subroutine != 0;
+    if (startSubroutine) {
       c.logicalCode[logicalIp]->subroutine = c.subroutine;
       c.subroutine = 0;
-    
+    }
+
+    c.logicalIp = logicalIp;
+
+    if (startSubroutine) {
+      // assume all local variables are initialized on entry to a
+      // subroutine, since other calls to the subroutine may
+      // initialize them:
+      unsigned sizeInBytes = sizeof(Local) * c.localFootprint;
+      Local* newLocals = static_cast<Local*>(c.zone->allocate(sizeInBytes));
+      memcpy(newLocals, c.locals, sizeInBytes);
+      c.locals = newLocals;
+
       for (unsigned li = 0; li < c.localFootprint; ++li) {
         Local* local = c.locals + li;
         if (local->value == 0) {
@@ -5070,8 +5077,6 @@ class MyCompiler: public Compiler {
         }
       }
     }
-
-    c.logicalIp = logicalIp;
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
