@@ -97,10 +97,6 @@ public class LinkedList<T> implements List<T> {
     return find(element) != null;
   }
 
-  public void addAll(Collection<T> c) {
-    for (T t: c) add(t);
-  }
-
   public boolean add(T element) {
     addLast(element);
     return true;

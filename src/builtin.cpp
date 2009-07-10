@@ -27,6 +27,8 @@ search(Thread* t, object name, object (*op)(Thread*, object),
        bool replaceDots)
 {
   if (LIKELY(name)) {
+    PROTECT(t, name);
+
     object n = makeByteArray(t, stringLength(t, name) + 1);
     char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
     stringChars(t, name, s);

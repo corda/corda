@@ -271,7 +271,7 @@ class MyStackWalker: public Processor::StackWalker {
 
   virtual void walk(Processor::StackVisitor* v) {
     for (MyStackWalker it(this); it.valid();) {
-      MyStackWalker walker(it);
+      MyStackWalker walker(&it);
       if (not v->visit(&walker)) {
         break;
       }
@@ -548,6 +548,7 @@ enum Event {
   IpEvent,
   MarkEvent,
   ClearEvent,
+  InitEvent,
   TraceEvent
 };
 
@@ -4183,24 +4184,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
   }
 }
 
+FILE* compileLog = 0;
+
 void
 logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
            const char* name, const char* spec)
 {
-  static FILE* log = 0;
   static bool open = false;
   if (not open) {
     open = true;
     const char* path = findProperty(t, "avian.jit.log");
     if (path) {
-      log = fopen(path, "wb");
+      compileLog = fopen(path, "wb");
     } else if (DebugCompile) {
-      log = stderr;
+      compileLog = stderr;
     }
   }
 
-  if (log) {
-    fprintf(log, "%p %p %s.%s%s\n",
+  if (compileLog) {
+    fprintf(compileLog, "%p %p %s.%s%s\n",
             code, static_cast<const uint8_t*>(code) + size,
             class_, name, spec);
   }
@@ -4385,6 +4387,14 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       eventIndex += 2;
 
       clearBit(roots, i);
+    } break;
+
+    case InitEvent: {
+      unsigned reference = context->eventLog.get2(eventIndex);
+      eventIndex += 2;
+
+      uintptr_t* tableRoots = context->rootTable + (reference * mapSize);  
+      memcpy(roots, tableRoots, mapSize * BytesPerWord);      
     } break;
 
     case TraceEvent: {
@@ -4710,16 +4720,8 @@ compile(MyThread* t, Allocator* allocator, Context* context)
           uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
           Frame frame2(&frame, stackMap);
 
-          uintptr_t* roots = context->rootTable
-            + (start * frameMapSizeInWords(t, context->method));
-
-          for (unsigned i = 0; i < localSize(t, context->method); ++ i) {
-            if (getBit(roots, i)) {
-              frame2.set(i, Frame::Object);
-            } else {
-              frame2.set(i, Frame::Integer);
-            }
-          }
+          context->eventLog.append(InitEvent);
+          context->eventLog.append2(start);
 
           for (unsigned i = 1;
                i < codeMaxStack(t, methodCode(t, context->method));
@@ -5848,6 +5850,11 @@ class SegFaultHandler: public System::SignalHandler {
         return true;
       }
     }
+
+    if (compileLog) {
+      fflush(compileLog);
+    }
+
     return false;
   }
 

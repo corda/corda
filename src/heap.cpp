@@ -34,6 +34,12 @@ const bool Verbose2 = false;
 const bool Debug = false;
 const bool DebugFixies = false;
 
+#ifdef NDEBUG
+const bool DebugAllocation = false;
+#else
+const bool DebugAllocation = true;
+#endif
+
 #define ACQUIRE(x) MutexLock MAKE_NAME(monitorLock_) (x)
 
 class MutexLock {
@@ -422,7 +428,9 @@ class Segment {
   }
 
   void dispose() {
-    free(context, data, (footprint(capacity())) * BytesPerWord);
+    if (data) {
+      free(context, data, (footprint(capacity())) * BytesPerWord);
+    }
     data = 0;
     map = 0;
   }
@@ -1673,11 +1681,22 @@ void* tryAllocate(Context* c, unsigned size)
 {
   ACQUIRE(c->lock);
 
+  if (DebugAllocation) {
+    size = pad(size) + 2 * BytesPerWord;
+  }
+
   if (size + c->count < c->limit) {
     void* p = c->system->tryAllocate(size);
     if (p) {
       c->count += size;
-      return p;
+      
+      if (DebugAllocation) {
+        static_cast<uintptr_t*>(p)[0] = 0x22377322;
+        static_cast<uintptr_t*>(p)[(size / BytesPerWord) - 1] = 0x22377322;
+        return static_cast<uintptr_t*>(p) + 1;
+      } else {
+        return p;
+      }
     }
   }
   return 0;
@@ -1686,7 +1705,21 @@ void* tryAllocate(Context* c, unsigned size)
 void free(Context* c, const void* p, unsigned size) {
   ACQUIRE(c->lock);
 
+  if (DebugAllocation) {
+    size = pad(size) + 2 * BytesPerWord;
+
+    memset(const_cast<void*>(p), 0xFE, size - (2 * BytesPerWord));
+
+    p = static_cast<const uintptr_t*>(p) - 1;
+
+    expect(c->system, static_cast<const uintptr_t*>(p)[0] == 0x22377322);
+
+    expect(c->system, static_cast<const uintptr_t*>(p)
+           [(size / BytesPerWord) - 1] == 0x22377322);
+  }
+
   expect(c->system, c->count >= size);
+
   c->system->free(p);
   c->count -= size;
 }
