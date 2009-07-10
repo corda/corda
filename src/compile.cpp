@@ -271,7 +271,7 @@ class MyStackWalker: public Processor::StackWalker {
 
   virtual void walk(Processor::StackVisitor* v) {
     for (MyStackWalker it(this); it.valid();) {
-      MyStackWalker walker(it);
+      MyStackWalker walker(&it);
       if (not v->visit(&walker)) {
         break;
       }
