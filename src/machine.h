@@ -94,6 +94,10 @@ const unsigned CompiledFlag = 1 << 1;
 const unsigned ConstructorFlag = 1 << 2;
 const unsigned FastNative = 1 << 3;
 
+#ifndef JNI_VERSION_1_6
+#define JNI_VERSION_1_6 0x00010006
+#endif
+
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
 

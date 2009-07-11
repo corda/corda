@@ -98,6 +98,14 @@ GetEnv(Machine* m, Thread** t, jint version)
 }
 
 jsize JNICALL
+GetVersion(Thread* t)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return JNI_VERSION_1_6;
+}
+
+jsize JNICALL
 GetStringLength(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
@@ -1914,6 +1922,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
   memset(envTable, 0, sizeof(JNIEnvVTable));
 
+  envTable->GetVersion = ::GetVersion;
   envTable->GetStringLength = ::GetStringLength;
   envTable->GetStringChars = ::GetStringChars;
   envTable->ReleaseStringChars = ::ReleaseStringChars;

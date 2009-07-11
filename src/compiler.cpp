@@ -2591,7 +2591,7 @@ unreachable(Event* event)
   for (Link* p = event->predecessors; p; p = p->nextPredecessor) {
     if (not p->predecessor->allExits()) return false;
   }
-  return true;
+  return event->predecessors != 0;
 }
 
 class ReturnEvent: public Event {
