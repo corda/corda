@@ -497,8 +497,10 @@ class SubroutineCall;
 
 class Subroutine {
  public:
-  Subroutine(unsigned ip, unsigned logIndex, Subroutine* next):
-    next(next),
+  Subroutine(unsigned ip, unsigned logIndex, Subroutine* listNext,
+             Subroutine* stackNext):
+    listNext(listNext),
+    stackNext(stackNext),
     calls(0),
     handle(0),
     ip(ip),
@@ -509,7 +511,8 @@ class Subroutine {
     visited(false)
   { }
 
-  Subroutine* next;
+  Subroutine* listNext;
+  Subroutine* stackNext;
   SubroutineCall* calls;
   Compiler::Subroutine* handle;
   unsigned ip;
@@ -520,11 +523,14 @@ class Subroutine {
   bool visited;
 };
 
+class SubroutinePath;
+
 class SubroutineCall {
  public:
   SubroutineCall(Subroutine* subroutine, Promise* returnAddress):
     subroutine(subroutine),
     returnAddress(returnAddress),
+    paths(0),
     next(subroutine->calls)
   {
     subroutine->calls = this;
@@ -533,22 +539,46 @@ class SubroutineCall {
 
   Subroutine* subroutine;
   Promise* returnAddress;
+  SubroutinePath* paths;
   SubroutineCall* next;
 };
 
 class SubroutinePath {
  public:
-  SubroutinePath(SubroutineCall* call, SubroutinePath* next,
+  SubroutinePath(SubroutineCall* call, SubroutinePath* stackNext,
                  uintptr_t* rootTable):
     call(call),
-    next(next),
+    stackNext(stackNext),
+    listNext(call->paths),
     rootTable(rootTable)
-  { }
+  {
+    call->paths = this;
+  }
 
   SubroutineCall* call;
-  SubroutinePath* next;
+  SubroutinePath* stackNext;
+  SubroutinePath* listNext;
   uintptr_t* rootTable;
 };
+
+void
+print(SubroutinePath* path)
+{
+  if (path) {
+    fprintf(stderr, " (");
+    while (true) {
+      fprintf(stderr, "%p", reinterpret_cast<void*>
+              (path->call->returnAddress->value()));
+      path = path->stackNext;
+      if (path) {
+        fprintf(stderr, ", ");
+      } else {
+        break;
+      }
+    }
+    fprintf(stderr, ")");
+  }
+}
 
 class SubroutineTrace {
  public:
@@ -567,12 +597,13 @@ class TraceElement: public TraceHandler {
   static const unsigned VirtualCall = 1 << 0;
   static const unsigned TailCall    = 1 << 1;
 
-  TraceElement(Context* context, object target,
-               unsigned flags, TraceElement* next):
+  TraceElement(Context* context, object target, unsigned flags,
+               TraceElement* next):
     context(context),
     address(0),
     next(next),
     subroutineTrace(0),
+    subroutineTraceCount(0),
     target(target),
     argumentIndex(0),
     flags(flags)
@@ -589,6 +620,7 @@ class TraceElement: public TraceHandler {
   Promise* address;
   TraceElement* next;
   SubroutineTrace* subroutineTrace;
+  unsigned subroutineTraceCount;
   object target;
   unsigned argumentIndex;
   unsigned flags;
@@ -618,7 +650,7 @@ enum Event {
   IpEvent,
   MarkEvent,
   ClearEvent,
-  InitEvent,
+  PushExceptionHandlerEvent,
   TraceEvent,
   PushSubroutineEvent,
   PopSubroutineEvent
@@ -633,7 +665,7 @@ frameMapSizeInBits(MyThread* t, object method)
 unsigned
 frameMapSizeInWords(MyThread* t, object method)
 {
-  return ceiling(frameMapSizeInBits(t, method), BitsPerWord) * BytesPerWord;
+  return ceiling(frameMapSizeInBits(t, method), BitsPerWord);
 }
 
 uint16_t*
@@ -762,6 +794,7 @@ class Context {
     traceLog(0),
     visitTable(makeVisitTable(t, &zone, method)),
     rootTable(makeRootTable(t, &zone, method)),
+    subroutineTable(0),
     objectPoolCount(0),
     traceLogCount(0),
     dirtyRoots(false),
@@ -782,6 +815,7 @@ class Context {
     traceLog(0),
     visitTable(0),
     rootTable(0),
+    subroutineTable(0),
     objectPoolCount(0),
     traceLogCount(0),
     dirtyRoots(false),
@@ -806,6 +840,7 @@ class Context {
   TraceElement* traceLog;
   uint16_t* visitTable;
   uintptr_t* rootTable;
+  Subroutine** subroutineTable;
   unsigned objectPoolCount;
   unsigned traceLogCount;
   bool dirtyRoots;
@@ -1132,6 +1167,10 @@ class Frame {
   }
 
   void startLogicalIp(unsigned ip) {
+    if (subroutine) {
+      context->subroutineTable[ip] = subroutine;
+    }
+
     c->startLogicalIp(ip);
 
     context->eventLog.append(IpEvent);
@@ -1391,7 +1430,7 @@ class Frame {
     pushAddress(addressOperand(returnAddress));
 
     Subroutine* subroutine = 0;
-    for (Subroutine* s = context->subroutines; s; s = s->next) {
+    for (Subroutine* s = context->subroutines; s; s = s->listNext) {
       if (s->ip == ip) {
         subroutine = s;
         break;
@@ -1402,7 +1441,17 @@ class Frame {
       context->subroutines = subroutine = new
         (context->zone.allocate(sizeof(Subroutine)))
         Subroutine(ip, context->eventLog.length() + 1 + BytesPerWord + 2,
-                   context->subroutines);
+                   context->subroutines, this->subroutine);
+
+      if (context->subroutineTable == 0) {
+        unsigned size = codeLength(t, methodCode(t, context->method))
+          * sizeof(Subroutine*);
+
+        context->subroutineTable = static_cast<Subroutine**>
+          (context->zone.allocate(size));
+
+        memset(context->subroutineTable, 0, size);
+      }
     }
 
     subroutine->handle = c->startSubroutine();
@@ -1438,6 +1487,8 @@ class Frame {
     context->eventLog.append(PopSubroutineEvent);
 
     context->eventLog.set2(nextIndexIndex, context->eventLog.length());
+
+    subroutine = subroutine->stackNext;
   }
   
   Context* context;
@@ -4448,12 +4499,29 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       clearBit(roots, i);
     } break;
 
-    case InitEvent: {
+    case PushExceptionHandlerEvent: {
       unsigned reference = context->eventLog.get2(eventIndex);
       eventIndex += 2;
 
-      uintptr_t* tableRoots = context->rootTable + (reference * mapSize);  
-      memcpy(roots, tableRoots, mapSize * BytesPerWord);      
+      if (context->subroutineTable and context->subroutineTable[reference]) {
+        Subroutine* s = context->subroutineTable[reference];
+        unsigned originalEventIndex = eventIndex;
+
+        for (SubroutineCall* c = s->calls; c; c = c->next) {
+          for (SubroutinePath* p = c->paths; p; p = p->listNext) {
+            memcpy(roots, p->rootTable + (reference * mapSize),
+                   mapSize * BytesPerWord);
+
+            eventIndex = calculateFrameMaps
+              (t, context, roots, originalEventIndex, p);
+          }
+        }
+      } else {
+        memcpy(roots, context->rootTable + (reference * mapSize),
+               mapSize * BytesPerWord);
+
+        eventIndex = calculateFrameMaps(t, context, roots, eventIndex, 0);
+      }
     } break;
 
     case TraceEvent: {
@@ -4461,18 +4529,33 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       if (DebugFrameMaps) {
         fprintf(stderr, "trace roots at ip %3d: ", ip);
         printSet(*roots, mapSize);
+        if (subroutinePath) {
+          fprintf(stderr, " ");
+          print(subroutinePath);
+        }
         fprintf(stderr, "\n");
       }
 
       if (subroutinePath == 0) {
         memcpy(te->map, roots, mapSize * BytesPerWord);
       } else {
-        te->subroutineTrace = new
-          (context->zone.allocate
-           (sizeof(SubroutineTrace) + (mapSize * BytesPerWord)))
-          SubroutineTrace(subroutinePath, te->subroutineTrace);
+        SubroutineTrace* trace = 0;
+        for (SubroutineTrace* t = te->subroutineTrace; t; t = t->next) {
+          if (t->path == subroutinePath) {
+            trace = t;
+          }
+        }
 
-        memcpy(te->subroutineTrace->map, roots, mapSize * BytesPerWord);
+        if (trace == 0) {
+          te->subroutineTrace = trace = new
+            (context->zone.allocate
+             (sizeof(SubroutineTrace) + (mapSize * BytesPerWord)))
+            SubroutineTrace(subroutinePath, te->subroutineTrace);
+
+          ++ te->subroutineTraceCount;
+        }
+
+        memcpy(trace->map, roots, mapSize * BytesPerWord);
       }
 
       eventIndex += BytesPerWord;
@@ -4487,11 +4570,21 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
       eventIndex = nextIndex;
 
-      calculateFrameMaps
-        (t, context, roots, call->subroutine->logIndex, new
-         (context->zone.allocate(sizeof(SubroutinePath)))
-         SubroutinePath(call, subroutinePath,
-                        makeRootTable(t, &(context->zone), context->method)));
+      SubroutinePath* path = 0;
+      for (SubroutinePath* p = call->paths; p; p = p->listNext) {
+        if (p->stackNext == subroutinePath) {
+          path = p;
+          break;
+        }
+      }
+
+      if (path == 0) {
+        path = new (context->zone.allocate(sizeof(SubroutinePath)))
+          SubroutinePath(call, subroutinePath,
+                         makeRootTable(t, &(context->zone), context->method));
+      }
+
+      calculateFrameMaps(t, context, roots, call->subroutine->logIndex, path);
     } break;
 
     case PopSubroutineEvent:
@@ -4556,25 +4649,6 @@ void
 clearBit(int32_t* dst, unsigned index)
 {
   dst[index / 32] &= ~(static_cast<int32_t>(1) << (index % 32));
-}
-
-void
-print(SubroutinePath* path)
-{
-  if (path) {
-    fprintf(stderr, " (");
-    while (true) {
-      fprintf(stderr, "%p", reinterpret_cast<void*>
-              (path->call->returnAddress->value()));
-      path = path->next;
-      if (path) {
-        fprintf(stderr, ", ");
-      } else {
-        break;
-      }
-    }
-    fprintf(stderr, ")");
-  }
 }
 
 void
@@ -4649,6 +4723,37 @@ class FrameMapTablePath {
   int32_t elements[0];
 };
 
+int
+compareInt32s(const void* va, const void* vb)
+{
+  return *static_cast<int32_t const*>(va) - *static_cast<int32_t const*>(vb);
+}
+
+int
+compare(SubroutinePath* a, SubroutinePath* b)
+{
+  if (a->stackNext) {
+    int d = compare(a->stackNext, b->stackNext);
+    if (d) return d;
+  }
+  int64_t av = a->call->returnAddress->value();
+  int64_t bv = b->call->returnAddress->value();
+  if (av > bv) {
+    return 1;
+  } else if (av < bv) {
+    return -1;
+  } else {
+    return 0;
+  }
+}
+
+int
+compareSubroutineTracePointers(const void* va, const void* vb)
+{
+  return compare((*static_cast<SubroutineTrace* const*>(va))->path,
+                 (*static_cast<SubroutineTrace* const*>(vb))->path);
+}
+
 object
 makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
                          TraceElement** elements, unsigned pathFootprint,
@@ -4675,7 +4780,7 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
     if (p->subroutineTrace) {
       FrameMapTablePath* previous = 0;
       Subroutine* subroutine = p->subroutineTrace->path->call->subroutine;
-      for (Subroutine* s = subroutine; s; s = s->next) {
+      for (Subroutine* s = subroutine; s; s = s->stackNext) {
         if (s->tableIndex == 0) {
           unsigned pathObjectSize = sizeof(FrameMapTablePath)
             + (sizeof(int32_t) * s->callCount);
@@ -4689,7 +4794,8 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 
           FrameMapTablePath* current = new (body + s->tableIndex)
             FrameMapTablePath
-            (s->stackIndex, s->callCount, s->next ? s->next->tableIndex : 0);
+            (s->stackIndex, s->callCount,
+             s->stackNext ? s->stackNext->tableIndex : 0);
 
           unsigned i = 0;
           for (SubroutineCall* c = subroutine->calls; c; c = c->next) {
@@ -4699,6 +4805,10 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
               = static_cast<intptr_t>(c->returnAddress->value())
               - reinterpret_cast<intptr_t>(start);
           }
+          assert(t, i == s->callCount);
+
+          qsort(current->elements, s->callCount, sizeof(int32_t),
+                compareInt32s);
 
           if (previous) {
             previous->next = s->tableIndex;
@@ -4712,20 +4822,34 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 
       pathIndex = subroutine->tableIndex;
 
+      SubroutineTrace* traces[p->subroutineTraceCount];
+      unsigned i = 0;
       for (SubroutineTrace* trace = p->subroutineTrace;
            trace; trace = trace->next)
       {
-        assert(t, ceiling(nextMapIndex + mapSize, 32) * 4 <= pathsOffset);
+        assert(t, i < p->subroutineTraceCount);
+        traces[i++] = trace;
+      }
+      assert(t, i == p->subroutineTraceCount);
+
+      qsort(traces, p->subroutineTraceCount, sizeof(SubroutineTrace*),
+            compareSubroutineTracePointers);
+
+      for (unsigned i = 0; i < p->subroutineTraceCount; ++i) {
+        assert(t, mapsOffset + ceiling(nextMapIndex + mapSize, 32) * 4
+               <= pathsOffset);
 
         copyFrameMap(reinterpret_cast<int32_t*>(body + mapsOffset),
-                     trace->map, mapSize, nextMapIndex, p, trace->path);
+                     traces[i]->map, mapSize, nextMapIndex, p,
+                     traces[i]->path);
 
         nextMapIndex += mapSize;
       }
     } else {
       pathIndex = 0;
 
-      assert(t, ceiling(nextMapIndex + mapSize, 32) * 4 <= pathsOffset);
+      assert(t, mapsOffset + ceiling(nextMapIndex + mapSize, 32) * 4
+             <= pathsOffset);
 
       copyFrameMap(reinterpret_cast<int32_t*>(body + mapsOffset), p->map,
                    mapSize, nextMapIndex, p, 0);
@@ -4742,6 +4866,8 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
       (static_cast<intptr_t>(p->address->value())
        - reinterpret_cast<intptr_t>(start), mapBase, pathIndex);
   }
+
+  assert(t, nextMapIndex == mapCount * mapSize);
 
   return table;
 }
@@ -4852,17 +4978,19 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       SubroutineTrace* trace = p->subroutineTrace;
       unsigned myMapCount = 1;
       if (trace) {
-        for (SubroutinePath* sp = trace->path; sp; sp = sp->next) {
-          Subroutine* subroutine = sp->call->subroutine;
-          unsigned callCount = subroutine->callCount;
+        for (Subroutine* s = trace->path->call->subroutine;
+             s; s = s->stackNext)
+        {
+          unsigned callCount = s->callCount;
           myMapCount *= callCount;
-          if (not subroutine->visited) {
-            subroutine->visited = true;
+          if (not s->visited) {
+            s->visited = true;
             pathFootprint += sizeof(FrameMapTablePath)
               + (sizeof(int32_t) * callCount);
           }
         }
       }
+      
       mapCount += myMapCount;
 
       elements[index++] = p;
@@ -5002,7 +5130,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
           uint8_t stackMap[codeMaxStack(t, methodCode(t, context->method))];
           Frame frame2(&frame, stackMap);
 
-          context->eventLog.append(InitEvent);
+          context->eventLog.append(PushExceptionHandlerEvent);
           context->eventLog.append2(start);
 
           for (unsigned i = 1;
@@ -5014,6 +5142,8 @@ compile(MyThread* t, Allocator* allocator, Context* context)
 
           compile(t, &frame2, exceptionHandlerIp(eh), start);
           if (UNLIKELY(t->exception)) return 0;
+
+          context->eventLog.append(PopContextEvent);
 
           eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
         }
@@ -5491,7 +5621,7 @@ findFrameMapInGeneralTable(MyThread* t, void* stack, object method,
                                      
     if (offset == v->offset) {
       *start = v->base + (findFrameMap(t, stack, method, table, v->path)
-                          * frameMapSizeInWords(t, method));
+                          * frameMapSizeInBits(t, method));
       return;
     } else if (offset < v->offset) {
       top = middle;

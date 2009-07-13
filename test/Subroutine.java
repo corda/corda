@@ -58,6 +58,61 @@ public class Subroutine {
     }
   }
 
+  private static Object test3(int path1, int path2, int path3) {
+    try {
+      try {
+        switch (path1) {
+        case 1:
+          return new Object();
+
+        case 2: {
+          int a = 42;
+          return Integer.valueOf(a);
+        }
+
+        case 3:
+          throw new DummyException();
+        }
+      } finally {
+        try {
+          switch (path2) {
+          case 1:
+            return new Object();
+
+          case 2: {
+            int a = 42;
+            return Integer.valueOf(a);
+          }
+
+          case 3:
+            throw new DummyException();
+          }
+        } finally {
+          try {
+            switch (path3) {
+            case 1:
+              return new Object();
+
+            case 2: {
+              int a = 42;
+              return Integer.valueOf(a);
+            }
+
+            case 3:
+              throw new DummyException();
+            }
+          } finally {
+            System.gc();
+          }
+        }
+      }
+      return null;
+    } catch (DummyException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
   public static void main(String[] args) {
     test(false, false);
     test(false, true);
@@ -66,6 +121,42 @@ public class Subroutine {
     String.valueOf(test2(1));
     String.valueOf(test2(2));
     String.valueOf(test2(3));
+
+    String.valueOf(test3(1, 1, 1));
+    String.valueOf(test3(2, 1, 1));
+    String.valueOf(test3(3, 1, 1));
+
+    String.valueOf(test3(1, 2, 1));
+    String.valueOf(test3(2, 2, 1));
+    String.valueOf(test3(3, 2, 1));
+
+    String.valueOf(test3(1, 3, 1));
+    String.valueOf(test3(2, 3, 1));
+    String.valueOf(test3(3, 3, 1));
+
+    String.valueOf(test3(1, 1, 2));
+    String.valueOf(test3(2, 1, 2));
+    String.valueOf(test3(3, 1, 2));
+
+    String.valueOf(test3(1, 2, 2));
+    String.valueOf(test3(2, 2, 2));
+    String.valueOf(test3(3, 2, 2));
+
+    String.valueOf(test3(1, 3, 2));
+    String.valueOf(test3(2, 3, 2));
+    String.valueOf(test3(3, 3, 2));
+
+    String.valueOf(test3(1, 1, 3));
+    String.valueOf(test3(2, 1, 3));
+    String.valueOf(test3(3, 1, 3));
+
+    String.valueOf(test3(1, 2, 3));
+    String.valueOf(test3(2, 2, 3));
+    String.valueOf(test3(3, 2, 3));
+
+    String.valueOf(test3(1, 3, 3));
+    String.valueOf(test3(2, 3, 3));
+    String.valueOf(test3(3, 3, 3));
   }
 
   private static class DummyException extends RuntimeException { }
