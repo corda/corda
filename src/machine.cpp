@@ -2055,6 +2055,10 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     // another thread wants to enter the exclusive state, either for a
     // collection or some other reason.  We give it a chance here.
     ENTER(t, Thread::IdleState);
+
+    while (t->m->exclusive) {
+      t->m->stateLock->wait(t->systemThread, 0);
+    }
   }
   
   switch (type) {
