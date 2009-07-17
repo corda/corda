@@ -2762,13 +2762,6 @@ collect(Thread* t, Heap::CollectionType type)
 
   postCollect(m->rootThread);
 
-  for (object f = m->finalizeQueue; f; f = finalizerNext(t, f)) {
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
-  }
-  m->finalizeQueue = 0;
-
   killZombies(t, m->rootThread);
 
   for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
@@ -2781,6 +2774,14 @@ collect(Thread* t, Heap::CollectionType type)
 #ifdef VM_STRESS
   if (not stress) t->stress = false;
 #endif
+
+  object f = m->finalizeQueue;
+  m->finalizeQueue = 0;
+  for (; f; f = finalizerNext(t, f)) {
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
+  }
 }
 
 void
