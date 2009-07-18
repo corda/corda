@@ -2061,42 +2061,47 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     }
   }
   
-  switch (type) {
-  case Machine::MovableAllocation:
-    if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-        > ThreadHeapSizeInWords)
-    {
-      t->heap = 0;
-      if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
-        t->heap = static_cast<uintptr_t*>
-          (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
+  do {
+    switch (type) {
+    case Machine::MovableAllocation:
+      if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+          > ThreadHeapSizeInWords)
+      {
+        t->heap = 0;
+        if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
+          t->heap = static_cast<uintptr_t*>
+            (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
 
-        if (t->heap) {
-          memset(t->heap, 0, ThreadHeapSizeInBytes);
+          if (t->heap) {
+            memset(t->heap, 0, ThreadHeapSizeInBytes);
 
-          t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
-          t->heapOffset += t->heapIndex;
-          t->heapIndex = 0;
+            t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
+            t->heapOffset += t->heapIndex;
+            t->heapIndex = 0;
+          }
         }
       }
+      break;
+
+    case Machine::FixedAllocation:
+      if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes)
+      {
+        t->heap = 0;
+      }
+      break;
+
+    case Machine::ImmortalAllocation:
+      break;
     }
-    break;
 
-  case Machine::FixedAllocation:
-    if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes) {
-      t->heap = 0;
+    if (t->heap == 0) {
+      //     fprintf(stderr, "gc");
+      //     vmPrintTrace(t);
+      collect(t, Heap::MinorCollection);
     }
-    break;
-
-  case Machine::ImmortalAllocation:
-    break;
-  }
-
-  if (t->heap == 0) {
-//     fprintf(stderr, "gc");
-//     vmPrintTrace(t);
-    collect(t, Heap::MinorCollection);
-  }
+  } while (type == Machine::MovableAllocation
+           and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+           > ThreadHeapSizeInWords);
   
   switch (type) {
   case Machine::MovableAllocation: {
