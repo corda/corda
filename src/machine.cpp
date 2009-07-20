@@ -2439,6 +2439,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
      classLoader(t, class_),
      vtableLength);
 
+  PROTECT(t, real);
+
   t->m->processor->initVtable(t, real);
 
   updateClassTables(t, real, class_);
