@@ -6453,22 +6453,6 @@ class MyProcessor: public Processor {
   }
 
   virtual void
-  initClass(Thread* t, object c)
-  {
-    PROTECT(t, c);
-    
-    ACQUIRE(t, t->m->classLock);
-    if (classNeedsInit(t, c)) {
-      classVmFlags(t, c) |= InitFlag;
-      invoke(t, classInitializer(t, c), 0);
-      if (t->exception) {
-        t->exception = makeExceptionInInitializerError(t, t->exception);
-      }
-      classVmFlags(t, c) &= ~(NeedInitFlag | InitFlag);
-    }
-  }
-
-  virtual void
   visitObjects(Thread* vmt, Heap::Visitor* v)
   {
     MyThread* t = static_cast<MyThread*>(vmt);

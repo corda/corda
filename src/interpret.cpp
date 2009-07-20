@@ -26,6 +26,8 @@ const unsigned FrameMethodOffset = 2;
 const unsigned FrameIpOffset = 3;
 const unsigned FrameFootprint = 4;
 
+class ClassInitList;
+
 class Thread: public vm::Thread {
  public:
   static const unsigned StackSizeInBytes = 64 * 1024;
@@ -36,14 +38,37 @@ class Thread: public vm::Thread {
     ip(0),
     sp(0),
     frame(-1),
-    code(0)
+    code(0),
+    classInitList(0)
   { }
 
   unsigned ip;
   unsigned sp;
   int frame;
   object code;
+  ClassInitList* classInitList;
   uintptr_t stack[StackSizeInWords];
+};
+
+class ClassInitList {
+ public:
+  ClassInitList(Thread* t, object class_, ClassInitList* next):
+    t(t), class_(class_), next(next)
+  { }
+
+  static void push(Thread* t, object class_) {
+    t->classInitList = new (t->m->heap->allocate(sizeof(ClassInitList)))
+      ClassInitList(t, class_, t->classInitList);
+  }
+
+  void pop() {
+    t->classInitList = next;
+    t->m->heap->free(this, sizeof(ClassInitList));
+  }
+
+  Thread* t;
+  object class_;
+  ClassInitList* next;
 };
 
 inline void
@@ -348,12 +373,14 @@ popFrame(Thread* t)
     }   
   }
   
-  if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)) {
-    if (t->exception) {
-      t->exception = makeExceptionInInitializerError(t, t->exception);
-    }
-    classVmFlags(t, methodClass(t, method)) &= ~(NeedInitFlag | InitFlag);
-    release(t, t->m->classLock);
+  if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)
+      and t->classInitList)
+  {
+    assert(t, t->classInitList->class_ == methodClass(t, method));
+    
+    t->classInitList->pop();
+
+    postInitClass(t, methodClass(t, method));
   }
 
   t->sp = frameBase(t, t->frame);
@@ -732,17 +759,21 @@ invokeNative(Thread* t, object method)
 bool
 classInit2(Thread* t, object class_, unsigned ipOffset)
 {
+  for (ClassInitList* list = t->classInitList; list; list = list->next) {
+    if (list->class_ == class_) {
+      return false;
+    }
+  }
+
   PROTECT(t, class_);
-  acquire(t, t->m->classLock);
-  if (classVmFlags(t, class_) & NeedInitFlag
-      and (classVmFlags(t, class_) & InitFlag) == 0)
-  {
-    classVmFlags(t, class_) |= InitFlag;
+
+  if (preInitClass(t, class_)) {
+    ClassInitList::push(t, class_);
+    
     t->code = classInitializer(t, class_);
     t->ip -= ipOffset;
     return true;
   } else {
-    release(t, t->m->classLock);
     return false;
   }
 }
@@ -3071,22 +3102,6 @@ class MyProcessor: public Processor {
   }
 
   virtual void
-  initClass(vm::Thread* t, object c)
-  {
-    PROTECT(t, c);
-    
-    acquire(t, t->m->classLock);
-    if (classVmFlags(t, c) & NeedInitFlag
-        and (classVmFlags(t, c) & InitFlag) == 0)
-    {
-      classVmFlags(t, c) |= InitFlag;
-      invoke(t, classInitializer(t, c), 0);
-    } else {
-      release(t, t->m->classLock);
-    }
-  }
-
-  virtual void
   visitObjects(vm::Thread* vmt, Heap::Visitor* v)
   {
     Thread* t = static_cast<Thread*>(vmt);
@@ -3097,6 +3112,10 @@ class MyProcessor: public Processor {
       if (t->stack[i * 2] == ObjectTag) {
         v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
       }
+    }
+
+    for (ClassInitList* list = t->classInitList; list; list = list->next) {
+      v->visit(reinterpret_cast<object*>(&(list->class_)));
     }
   }
 

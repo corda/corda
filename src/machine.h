@@ -84,9 +84,10 @@ const unsigned ReferenceFlag = 1 << 0;
 const unsigned WeakReferenceFlag = 1 << 1;
 const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
-const unsigned PrimitiveFlag = 1 << 4;
-const unsigned BootstrapFlag = 1 << 5;
-const unsigned HasFinalMemberFlag = 1 << 6;
+const unsigned InitErrorFlag = 1 << 4;
+const unsigned PrimitiveFlag = 1 << 5;
+const unsigned BootstrapFlag = 1 << 6;
+const unsigned HasFinalMemberFlag = 1 << 7;
 
 // method vmFlags:
 const unsigned ClassInitFlag = 1 << 0;
@@ -1267,6 +1268,25 @@ class Thread {
     object* p;
   };
 
+  class ClassInitStack {
+   public:
+    ClassInitStack(Thread* t, object class_):
+      next(t->classInitStack),
+      class_(class_),
+      protector(t, &(this->class_))
+    {
+      t->classInitStack = this;
+    }
+
+    ~ClassInitStack() {
+      protector.t->classInitStack = next;
+    }
+
+    ClassInitStack* next;
+    object class_;
+    SingleProtector protector;
+  };
+
   class Runnable: public System::Runnable {
    public:
     Runnable(Thread* t): t(t) { }
@@ -1319,6 +1339,7 @@ class Thread {
   unsigned heapIndex;
   unsigned heapOffset;
   Protector* protector;
+  ClassInitStack* classInitStack;
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
@@ -1764,6 +1785,14 @@ makeNoSuchMethodError(Thread* t, object message)
 }
 
 inline object
+makeNoClassDefFoundError(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeNoClassDefFoundError(t, message, trace, 0);
+}
+
+inline object
 makeUnsatisfiedLinkError(Thread* t, object message)
 {
   PROTECT(t, message);
@@ -2100,20 +2129,17 @@ resolveField(Thread* t, const char* className, const char* fieldName,
 object
 resolveObjectArrayClass(Thread* t, object elementSpec);
 
-inline bool
-classNeedsInit(Thread* t, object c)
-{
-  return classVmFlags(t, c) & NeedInitFlag
-    and (classVmFlags(t, c) & InitFlag) == 0;
-}
+bool
+classNeedsInit(Thread* t, object c);
 
-inline void
-initClass(Thread* t, object c)
-{
-  if (classNeedsInit(t, c)) {
-    t->m->processor->initClass(t, c);
-  }
-}
+bool
+preInitClass(Thread* t, object c);
+
+void
+postInitClass(Thread* t, object c);
+
+void
+initClass(Thread* t, object c);
 
 object
 makeObjectArray(Thread* t, object elementClass, unsigned count);

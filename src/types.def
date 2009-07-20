@@ -174,6 +174,8 @@
 
 (type noSuchMethodError java/lang/NoSuchMethodError)
 
+(type noClassDefFoundError java/lang/NoClassDefFoundError)
+
 (type unsatisfiedLinkError java/lang/UnsatisfiedLinkError)
 
 (type exceptionInInitializerError java/lang/ExceptionInInitializerError)

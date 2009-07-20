@@ -1863,6 +1863,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   heapIndex(0),
   heapOffset(0),
   protector(0),
+  classInitStack(0),
   runnable(this),
   defaultHeap(static_cast<uintptr_t*>
               (m->heap->allocate(ThreadHeapSizeInBytes))),
@@ -2685,6 +2686,92 @@ resolveObjectArrayClass(Thread* t, object elementSpec)
   }
 
   return resolveClass(t, spec);
+}
+
+bool
+classNeedsInit(Thread* t, object c)
+{
+  if (classVmFlags(t, c) & NeedInitFlag) {
+    if (classVmFlags(t, c) & InitFlag) {
+      // the class is currently being initialized.  If this the thread
+      // which is initializing it, we should not try to initialize it
+      // recursively.  Otherwise, we must wait for the responsible
+      // thread to finish.
+      for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
+        if (s->class_ == c) {
+          return false;
+        }
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool
+preInitClass(Thread* t, object c)
+{
+  if (classVmFlags(t, c) & NeedInitFlag) {
+    PROTECT(t, c);
+    ACQUIRE(t, t->m->classLock);
+    if (classVmFlags(t, c) & NeedInitFlag) {
+      if (classVmFlags(t, c) & InitFlag) {
+        // the class is currently being initialized.  If this the
+        // thread which is initializing it, we should not try to
+        // initialize it recursively.
+        for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
+          if (s->class_ == c) {
+            return false;
+          }
+        }
+
+        // some other thread is on the job - wait for it to finish.
+        while (classVmFlags(t, c) & InitFlag) {
+          ENTER(t, Thread::IdleState);
+          t->m->classLock->wait(t->systemThread, 0);
+        }
+      } else if (classVmFlags(t, c) & InitErrorFlag) {
+        object message = makeString
+          (t, "%s", &byteArrayBody(t, className(t, c), 0));
+        t->exception = makeNoClassDefFoundError(t, message);
+      } else {
+        classVmFlags(t, c) |= InitFlag;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void
+postInitClass(Thread* t, object c)
+{
+  PROTECT(t, c);
+
+  ACQUIRE(t, t->m->classLock);
+  if (t->exception) {
+    t->exception = makeExceptionInInitializerError(t, t->exception);
+    classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
+    classVmFlags(t, c) &= ~InitFlag;
+  } else {
+    classVmFlags(t, c) &= ~(NeedInitFlag | InitFlag);
+  }
+  t->m->classLock->notifyAll(t->systemThread);
+}
+
+void
+initClass(Thread* t, object c)
+{
+  PROTECT(t, c);
+
+  if (preInitClass(t, c)) {
+    Thread::ClassInitStack stack(t, c);
+
+    t->m->processor->invoke(t, classInitializer(t, c), 0);
+
+    postInitClass(t, c);
+  }
 }
 
 object
