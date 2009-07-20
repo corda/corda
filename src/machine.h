@@ -1519,6 +1519,9 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
 {
+  assert(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+         <= ThreadHeapSizeInWords);
+
   object o = reinterpret_cast<object>(t->heap + t->heapIndex);
   t->heapIndex += ceiling(sizeInBytes, BytesPerWord);
   cast<object>(o, 0) = 0;

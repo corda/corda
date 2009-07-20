@@ -2118,44 +2118,53 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     // another thread wants to enter the exclusive state, either for a
     // collection or some other reason.  We give it a chance here.
     ENTER(t, Thread::IdleState);
+
+    while (t->m->exclusive) {
+      t->m->stateLock->wait(t->systemThread, 0);
+    }
   }
   
-  switch (type) {
-  case Machine::MovableAllocation:
-    if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-        > ThreadHeapSizeInWords)
-    {
-      t->heap = 0;
-      if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
-        t->heap = static_cast<uintptr_t*>
-          (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
+  do {
+    switch (type) {
+    case Machine::MovableAllocation:
+      if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+          > ThreadHeapSizeInWords)
+      {
+        t->heap = 0;
+        if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
+          t->heap = static_cast<uintptr_t*>
+            (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
 
-        if (t->heap) {
-          memset(t->heap, 0, ThreadHeapSizeInBytes);
+          if (t->heap) {
+            memset(t->heap, 0, ThreadHeapSizeInBytes);
 
-          t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
-          t->heapOffset += t->heapIndex;
-          t->heapIndex = 0;
+            t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
+            t->heapOffset += t->heapIndex;
+            t->heapIndex = 0;
+          }
         }
       }
+      break;
+
+    case Machine::FixedAllocation:
+      if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes)
+      {
+        t->heap = 0;
+      }
+      break;
+
+    case Machine::ImmortalAllocation:
+      break;
     }
-    break;
 
-  case Machine::FixedAllocation:
-    if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes) {
-      t->heap = 0;
+    if (t->heap == 0) {
+      //     fprintf(stderr, "gc");
+      //     vmPrintTrace(t);
+      collect(t, Heap::MinorCollection);
     }
-    break;
-
-  case Machine::ImmortalAllocation:
-    break;
-  }
-
-  if (t->heap == 0) {
-//     fprintf(stderr, "gc");
-//     vmPrintTrace(t);
-    collect(t, Heap::MinorCollection);
-  }
+  } while (type == Machine::MovableAllocation
+           and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+           > ThreadHeapSizeInWords);
   
   switch (type) {
   case Machine::MovableAllocation: {
@@ -2832,13 +2841,6 @@ collect(Thread* t, Heap::CollectionType type)
 
   postCollect(m->rootThread);
 
-  for (object f = m->finalizeQueue; f; f = finalizerNext(t, f)) {
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
-  }
-  m->finalizeQueue = 0;
-
   killZombies(t, m->rootThread);
 
   for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
@@ -2851,6 +2853,14 @@ collect(Thread* t, Heap::CollectionType type)
 #ifdef VM_STRESS
   if (not stress) t->stress = false;
 #endif
+
+  object f = m->finalizeQueue;
+  m->finalizeQueue = 0;
+  for (; f; f = finalizerNext(t, f)) {
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
+  }
 }
 
 void
