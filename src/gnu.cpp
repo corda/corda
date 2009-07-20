@@ -353,6 +353,20 @@ Avian_java_lang_VMRuntime_gc
   Avian_java_lang_Runtime_gc(t, 0, 0);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_VMRuntime_runFinalizationForExit
+(Thread*, object, uintptr_t*)
+{
+  // ignore
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_VMRuntime_exit
+(Thread*, object, uintptr_t* arguments)
+{
+  exit(arguments[0]);
+}
+
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findClass
 (Thread*, object, uintptr_t*);
