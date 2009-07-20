@@ -4952,7 +4952,12 @@ class MyCompiler: public Compiler {
   }
 
   virtual void endSubroutine(Subroutine* subroutine) {
+    appendCleanLocals(&c);
     static_cast<MySubroutine*>(subroutine)->forkState = ::saveState(&c);
+  }
+
+  virtual void linkSubroutine(Subroutine* subroutine) {
+    restoreState(static_cast<MySubroutine*>(subroutine)->forkState);
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -5370,10 +5375,6 @@ class MyCompiler: public Compiler {
 
   virtual void saveLocals() {
     appendSaveLocals(&c);
-  }
-
-  virtual void cleanLocals() {
-    appendCleanLocals(&c);
   }
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,

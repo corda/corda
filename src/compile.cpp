@@ -1480,7 +1480,7 @@ class Frame {
   }
 
   void endSubroutine(unsigned nextIndexIndex) {
-    c->cleanLocals();
+    c->linkSubroutine(subroutine->handle);
 
     poppedInt();
 

@@ -113,6 +113,31 @@ public class Subroutine {
     }
   }
 
+  private static long test4(int path) {
+    try {
+      try {
+        switch (path) {
+        case 1:
+          return 42L;
+
+        case 2: {
+          int a = 42;
+          return 52L;
+        }
+
+        case 3:
+          throw new DummyException();
+        }
+      } finally {
+        System.gc();
+      }
+      return 0L;
+    } catch (DummyException e) {
+      e.printStackTrace();
+      return 0L;
+    }
+  }
+
   public static void main(String[] args) {
     test(false, false);
     test(false, true);
@@ -157,6 +182,10 @@ public class Subroutine {
     String.valueOf(test3(1, 3, 3));
     String.valueOf(test3(2, 3, 3));
     String.valueOf(test3(3, 3, 3));
+
+    String.valueOf(test4(1));
+    String.valueOf(test4(2));
+    String.valueOf(test4(3));
   }
 
   private static class DummyException extends RuntimeException { }
