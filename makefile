@@ -83,7 +83,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DAVIAN_COMMIT=\"$(shell git rev-parse --short=8 HEAD)\"
+
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 

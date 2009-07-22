@@ -503,8 +503,6 @@ Avian_java_lang_System_getVMProperty
     r = reinterpret_cast<int64_t>(makeString(t, "%s", t->m->finder->path()));
   } else if (strcmp(n, "avian.version") == 0) {
     r = reinterpret_cast<int64_t>(makeString(t, AVIAN_VERSION));
-  } else if (strcmp(n, "avian.commit") == 0) {
-    r = reinterpret_cast<int64_t>(makeString(t, AVIAN_COMMIT));
   } else if (strcmp(n, "file.encoding") == 0) {
     r = reinterpret_cast<int64_t>(makeString(t, "ASCII"));
   } else {
