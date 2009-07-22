@@ -2247,9 +2247,9 @@ instanceOf64(Thread* t, object class_, object o)
 }
 
 uint64_t
-makeNewWeakReference64(Thread* t, object class_)
+makeNewGeneral64(Thread* t, object class_)
 {
-  return reinterpret_cast<uintptr_t>(makeNewWeakReference(t, class_));
+  return reinterpret_cast<uintptr_t>(makeNewGeneral(t, class_));
 }
 
 uint64_t
@@ -2316,14 +2316,6 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code,
   default:
     abort(t);
   }
-}
-
-bool
-emptyMethod(MyThread* t, object method)
-{
-  return ((methodFlags(t, method) & ACC_NATIVE) == 0)
-    and (codeLength(t, methodCode(t, method)) == 1)
-    and (codeBody(t, methodCode(t, method), 0) == return_);
 }
 
 Compiler::Operand*
@@ -3967,10 +3959,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(t->exception)) return;
 
-      if (classVmFlags(t, class_) & WeakReferenceFlag) {
+      if (classVmFlags(t, class_) & (WeakReferenceFlag | HasFinalizerFlag)) {
         frame->pushObject
           (c->call
-           (c->constant(getThunk(t, makeNewWeakReference64Thunk)),
+           (c->constant(getThunk(t, makeNewGeneral64Thunk)),
             0,
             frame->trace(0, 0),
             BytesPerWord,

@@ -76,6 +76,7 @@ const int UnknownLine = -2;
 
 // class flags (note that we must be careful not to overlap the
 // standard ACC_* flags):
+const unsigned HasFinalMemberFlag = 1 << 13;
 const unsigned SingletonFlag = 1 << 14;
 const unsigned ContinuationFlag = 1 << 15;
 
@@ -87,7 +88,7 @@ const unsigned InitFlag = 1 << 3;
 const unsigned InitErrorFlag = 1 << 4;
 const unsigned PrimitiveFlag = 1 << 5;
 const unsigned BootstrapFlag = 1 << 6;
-const unsigned HasFinalMemberFlag = 1 << 7;
+const unsigned HasFinalizerFlag = 1 << 7;
 
 // method vmFlags:
 const unsigned ClassInitFlag = 1 << 0;
@@ -1821,27 +1822,16 @@ makeNew(Thread* t, object class_)
   return instance;
 }
 
-inline object
-makeNewWeakReference(Thread* t, object class_)
-{
-  assert(t, t->state == Thread::ActiveState);
-
-  object instance = makeNew(t, class_);
-  PROTECT(t, instance);
-
-  ACQUIRE(t, t->m->referenceLock);
-
-  jreferenceVmNext(t, instance) = t->m->weakReferences;
-  t->m->weakReferences = instance;
-
-  return instance;
-}
+object
+makeNewGeneral(Thread* t, object class_);
 
 inline object
 make(Thread* t, object class_)
 {
-  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
-    return makeNewWeakReference(t, class_);
+  if (UNLIKELY(classVmFlags(t, class_)
+               & (WeakReferenceFlag | HasFinalizerFlag)))
+  {
+    return makeNewGeneral(t, class_);
   } else {
     return makeNew(t, class_);
   }
@@ -2081,6 +2071,14 @@ fieldSize(Thread* t, object field)
 
 object
 findLoadedClass(Thread* t, object spec);
+
+inline bool
+emptyMethod(Thread* t, object method)
+{
+  return ((methodFlags(t, method) & ACC_NATIVE) == 0)
+    and (codeLength(t, methodCode(t, method)) == 1)
+    and (codeBody(t, methodCode(t, method), 0) == return_);
+}
 
 object
 parseClass(Thread* t, const uint8_t* data, unsigned length);

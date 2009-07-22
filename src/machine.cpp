@@ -481,6 +481,27 @@ postCollect(Thread* t)
   }
 }
 
+void
+finalizeObject(Thread* t, object o)
+{
+  for (object c = objectClass(t, o); c; c = classSuper(t, c)) {
+    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+      object m = arrayBody(t, classMethodTable(t, c), i);
+
+      if (strcmp(reinterpret_cast<const int8_t*>("finalize"),
+                 &byteArrayBody(t, methodName(t, m), 0)) == 0
+          and strcmp(reinterpret_cast<const int8_t*>("()V"),
+                     &byteArrayBody(t, methodSpec(t, m), 0)) == 0)
+      {
+        t->m->processor->invoke(t, m, o);
+        t->exception = 0;
+        return;
+      }               
+    }
+  }
+  abort(t);
+}
+
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
@@ -1247,6 +1268,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
           hashMapInsert(t, virtualMap, method, method, methodHash);
         }
+
+        if (UNLIKELY(strcmp
+                     (reinterpret_cast<const int8_t*>("finalize"), 
+                      &byteArrayBody(t, methodName(t, method), 0)) == 0
+                     and strcmp
+                     (reinterpret_cast<const int8_t*>("()V"),
+                      &byteArrayBody(t, methodSpec(t, method), 0)) == 0
+                     and (not emptyMethod(t, method))))
+        {
+          classVmFlags(t, class_) |= HasFinalizerFlag;
+        }
       } else {
         methodOffset(t, method) = i;
 
@@ -1400,6 +1432,8 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   expect(t, bootstrapClass == arrayBody(t, t->m->types, Machine::ClassType)
          or classFixedSize(t, bootstrapClass) >= classFixedSize(t, class_));
+
+  expect(t, (classVmFlags(t, class_) & HasFinalizerFlag) == 0);
 
   PROTECT(t, bootstrapClass);
   PROTECT(t, class_);
@@ -2233,6 +2267,28 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 }
 
 object
+makeNewGeneral(Thread* t, object class_)
+{
+  assert(t, t->state == Thread::ActiveState);
+
+  object instance = makeNew(t, class_);
+  PROTECT(t, instance);
+
+  if (classVmFlags(t, class_) & WeakReferenceFlag) {
+    ACQUIRE(t, t->m->referenceLock);
+    
+    jreferenceVmNext(t, instance) = t->m->weakReferences;
+    t->m->weakReferences = instance;
+  }
+
+  if (classVmFlags(t, class_) & HasFinalizerFlag) {
+    addFinalizer(t, instance, finalizeObject);
+  }
+
+  return instance;
+}
+
+object
 makeByteArray(Thread* t, const char* format, ...)
 {
   va_list a;
@@ -2498,7 +2554,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
     set(t, class_, ClassSuper, sc);
 
     classVmFlags(t, class_)
-      |= (classVmFlags(t, sc) & (ReferenceFlag | WeakReferenceFlag));
+      |= (classVmFlags(t, sc)
+          & (ReferenceFlag | WeakReferenceFlag | HasFinalizerFlag));
   }
   
   parseInterfaceTable(t, s, class_, pool);
