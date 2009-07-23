@@ -42,7 +42,11 @@ public abstract class Selector {
 
   public abstract Selector wakeup();
 
+  public abstract int selectNow() throws IOException;
+
   public abstract int select(long interval) throws IOException;
+
+  public abstract int select() throws IOException;
 
   public abstract void close();
 }
