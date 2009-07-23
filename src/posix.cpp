@@ -124,9 +124,7 @@ class MySystem: public System {
 
       r->setInterrupted(true);
 
-      if (flags & Waiting) {
-        pthread_kill(thread, InterruptSignal);
-      }
+      pthread_kill(thread, InterruptSignal);
     }
 
     virtual void join() {
@@ -849,6 +847,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
   } else {
     switch (signal) {
     case VisitSignal:
+    case InterruptSignal:
       break;
 
     default:
