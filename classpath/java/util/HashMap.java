@@ -40,19 +40,7 @@ public class HashMap<K, V> implements Map<K, V> {
   }
 
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("{");
-    for (Iterator<Entry<K, V>> it = iterator(); it.hasNext();) {
-      Entry<K, V> e = it.next();
-      sb.append(e.getKey())
-        .append("=")
-        .append(e.getValue());
-      if (it.hasNext()) {
-        sb.append(",");
-      }
-    }
-    sb.append("}");
-    return sb.toString();
+    return Collections.toString(this);
   }
 
   private static int nextPowerOfTwo(int n) {
@@ -324,7 +312,8 @@ public class HashMap<K, V> implements Map<K, V> {
     }
 
     public boolean contains(Object o) {
-      return (o instanceof Entry<?,?>) ? containsKey(((Entry<?,?>)o).getKey()) : false;
+      return (o instanceof Entry<?,?>)
+        && containsKey(((Entry<?,?>)o).getKey());
     }
 
     public boolean add(Entry<K, V> e) {
@@ -337,9 +326,9 @@ public class HashMap<K, V> implements Map<K, V> {
       return change;
     }
 
-		public boolean remove(Object o) {
-			return (o instanceof Entry<?,?>) ? remove((Entry<?,?>)o) : false;
-		}
+    public boolean remove(Object o) {
+      return (o instanceof Entry<?,?>) && remove((Entry<?,?>)o);
+    }
 
     public boolean remove(Entry<K, V> e) {
       return removeCell(e.getKey()) != null;
@@ -394,10 +383,9 @@ public class HashMap<K, V> implements Map<K, V> {
     }
 
     public Iterator<K> iterator() {
-      return new KeyIterator(new MyIterator());
+      return new Collections.KeyIterator(new MyIterator());
     }
   }
-
 
   private class Values implements Collection<V> {
     public int size() {
@@ -433,7 +421,7 @@ public class HashMap<K, V> implements Map<K, V> {
     }
 
     public Iterator<V> iterator() {
-      return new ValueIterator(new MyIterator());
+      return new Collections.ValueIterator(new MyIterator());
     }
   }
 
@@ -493,46 +481,6 @@ public class HashMap<K, V> implements Map<K, V> {
       } else {
         throw new IllegalStateException();
       }
-    }
-  }
-
-  private static class KeyIterator<K, V> implements Iterator<K> {
-    private final Iterator<Entry<K, V>> it;
-
-    public KeyIterator(Iterator<Entry<K, V>> it) {
-      this.it = it;
-    }
-
-    public K next() {
-      return it.next().getKey();
-    }
-
-    public boolean hasNext() {
-      return it.hasNext();
-    }
-
-    public void remove() {
-      it.remove();
-    }
-  }
-
-  private static class ValueIterator<K, V> implements Iterator<V> {
-    private final Iterator<Entry<K, V>> it;
-
-    public ValueIterator(Iterator<Entry<K, V>> it) {
-      this.it = it;
-    }
-
-    public V next() {
-      return it.next().getValue();
-    }
-
-    public boolean hasNext() {
-      return it.hasNext();
-    }
-
-    public void remove() {
-      it.remove();
     }
   }
 }

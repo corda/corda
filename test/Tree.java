@@ -1,5 +1,8 @@
 import java.util.Comparator;
 import java.util.TreeSet;
+import java.util.TreeMap;
+import java.util.Map;
+import java.util.Iterator;
 
 public class Tree {
   private static void expect(boolean v) {
@@ -14,6 +17,21 @@ public class Tree {
       sb.append(", ");
     }
     sb.setLength(sb.length()-2);
+    return sb.toString();
+  }
+
+  private static String printMap(TreeMap map) {
+    StringBuilder sb = new StringBuilder();
+
+    for (Iterator<Map.Entry> it = map.entrySet().iterator(); it.hasNext();) {
+      Map.Entry e = it.next();
+      sb.append(e.getKey());
+      sb.append("=");
+      sb.append(e.getValue());
+      if (it.hasNext()) {
+        sb.append(", ");
+      }
+    }
     return sb.toString();
   }
 
@@ -53,5 +71,43 @@ public class Tree {
     expect(t2.size() == 6);
     t2.add("kappa");
     isEqual(printList(t2), "999, five, four, kappa, one, three, two");
+
+    TreeMap<String,String> map = new TreeMap<String,String>
+      (new Comparator<String>() {
+        public int compare(String s1, String s2) {
+          return s1.compareTo(s2);
+        }
+      });
+
+    map.put("q", "Q");
+    map.put("a", "A");
+    map.put("b", "B");
+    map.put("z", "Z");
+    map.put("c", "C");
+    map.put("y", "Y");
+
+    isEqual(printMap(map), "a=A, b=B, c=C, q=Q, y=Y, z=Z");
+  }
+
+  private static class MyEntry<K,V> implements Map.Entry<K,V> {
+    public final K key;
+    public V value;
+
+    public MyEntry(K key, V value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    public K getKey() {
+      return key;
+    }
+
+    public V getValue() {
+      return value;
+    }
+
+    public void setValue(V value) {
+      this.value = value;
+    }
   }
 }
