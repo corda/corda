@@ -628,13 +628,16 @@ class MySystem: public System {
     visitTarget = target;
 
     int rv = pthread_kill(target->thread, VisitSignal);
-    expect(this, rv == 0);
 
-    while (visitTarget) visitLock->wait(t, 0);
+    if (rv == 0) {
+      while (visitTarget) visitLock->wait(t, 0);
 
-    threadVisitor = 0;
+      threadVisitor = 0;
 
-    return 0;
+      return 0;
+    } else {
+      return -1;
+    }
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
