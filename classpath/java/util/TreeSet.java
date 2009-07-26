@@ -13,7 +13,7 @@ package java.util;
 import avian.PersistentSet;
 import avian.Cell;
 
-public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
+public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
   private PersistentSet<Cell<T>> set;
   private int size;
 
@@ -52,23 +52,37 @@ public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
     return false;
   }
 
-  // Used by hashMaps for replacement
-  public void addAndReplace(T value) {
+  T addAndReplace(T value) {
     PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
     if (p.fresh()) {
       set = p.add();
       ++size;
+      return null;
     } else {
+      T old = p.value().value;
       set = p.replaceWith(new Cell(value, null));
+      return old;
     }
   }
     
-  public boolean remove(Object value) {
+  T find(T value) {
+    PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
+    return p.fresh() ? null : p.value().value;
+  }
+
+  T removeAndReturn(T value) {
+    Cell<T> cell = removeCell(value);
+    return cell == null ? null : cell.value;
+  }
+
+  private Cell<T> removeCell(Object value) {
     PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
     if (p.fresh()) {
-      return false;
+      return null;
     } else {
       --size;
+
+      Cell<T> old = p.value();
 
       if (p.value().next != null) {
         set = p.replaceWith(p.value().next);
@@ -76,8 +90,12 @@ public class TreeSet<T>  extends AbstractSet<T> implements Collection<T> {
         set = p.remove();
       }
 
-      return true;
+      return old;
     }
+  }
+
+  public boolean remove(Object value) {
+    return removeCell(value) != null;
   }
 
   public int size() {

@@ -6690,7 +6690,7 @@ class MyProcessor: public Processor {
       collect(t, Heap::MinorCollection);
     }
 
-    return visitor.trace;
+    return visitor.trace ? visitor.trace : makeArray(t, 0);
   }
 
   virtual void initialize(BootImage* image, uint8_t* code, unsigned capacity) {
