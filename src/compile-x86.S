@@ -21,19 +21,140 @@
 .text
 
 #ifdef __x86_64__
-   
-#define THREAD_CONTINUATION 168
-#define THREAD_EXCEPTION 64
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 176
-#define THREAD_EXCEPTION_OFFSET 184
-#define THREAD_EXCEPTION_HANDLER 192
 
-#define CONTINUATION_NEXT 8
-#define CONTINUATION_ADDRESS 32
-#define CONTINUATION_RETURN_ADDRESS_OFFSET 40
-#define CONTINUATION_FRAME_POINTER_OFFSET 48
-#define CONTINUATION_LENGTH 56
-#define CONTINUATION_BODY 64
+#ifdef __MINGW32__
+
+#define CALLEE_SAVED_REGISTER_FOOTPRINT 64
+
+.globl GLOBAL(vmInvoke)
+GLOBAL(vmInvoke):
+   pushq  %rbp
+   movq   %rsp,%rbp
+   
+   // %rcx: thread
+   // %rdx: function
+   // %r8 : arguments
+   // %r9 : argumentsFootprint
+   // 48(%rbp) : frameSize
+   // 56(%rbp) : returnType (ignored)
+   
+   // allocate stack space, adding room for callee-saved registers
+   movl   48(%rbp),%eax
+   subq   %rax,%rsp
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
+   
+   // save callee-saved registers
+   movq   %rsp,%r11
+   addq   %rax,%r11
+
+   movq   %rbx,0(%r11)
+   movq   %r12,8(%r11)
+   movq   %r13,16(%r11)
+   movq   %r14,24(%r11)
+   movq   %r15,32(%r11)
+   movq   %rsi,40(%r11)
+   movq   %rdi,48(%r11)
+   
+   // we use rbx to hold the thread pointer, by convention
+   mov    %rcx,%rbx
+
+   // copy arguments into place
+   movq   $0,%r11
+   jmp    LOCAL(vmInvoke_argumentTest)
+
+LOCAL(vmInvoke_argumentLoop):
+   movq   (%r8,%r11,1),%rsi
+   movq   %rsi,(%rsp,%r11,1)
+   addq   $8,%r11
+
+LOCAL(vmInvoke_argumentTest):
+   cmpq   %r9,%r11
+   jb     LOCAL(vmInvoke_argumentLoop)
+   
+   // call function
+   call   *%rdx
+
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
+   // restore stack pointer
+   movq   %rbp,%rsp
+
+#ifdef AVIAN_CONTINUATIONS
+#  include "continuations-x86.S"
+#endif // AVIAN_CONTINUATIONS
+
+   // restore callee-saved registers (below the stack pointer, but in
+   // the red zone)
+   movq   %rsp,%r11
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r11
+
+   movq   0(%r11),%rbx
+   movq   8(%r11),%r12
+   movq   16(%r11),%r13
+   movq   24(%r11),%r14
+   movq   32(%r11),%r15
+   movq   40(%r11),%rsi
+   movq   48(%r11),%rdi
+
+   // return
+   popq   %rbp
+   ret
+      
+.globl GLOBAL(vmJumpAndInvoke)
+GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
+   //     %rcx: thread
+   //     %rdx: address
+   //     %r8 : base
+   //     %r9 : (unused)
+   //  8(%rsp): argumentFootprint
+   // 16(%rsp): arguments
+   // 24(%rsp): frameSize
+
+   movq   %r8,%rbp
+   
+   // restore (pseudo)-stack pointer (we don't want to touch the real
+   // stack pointer, since we haven't copied the arguments yet)
+   movq   %rbp,%r9
+         
+   // allocate new frame, adding room for callee-saved registers
+   movl   24(%rsp),%eax
+   subq   %rax,%r9
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
+   
+   movq   %rcx,%rbx
+   
+   // set return address
+   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   movq   %r10,(%r9)
+   
+   // copy arguments into place
+   movq   $0,%r11
+   movq   16(%rsp),%r8
+   movq   8(%rsp),%rax
+   jmp    LOCAL(vmJumpAndInvoke_argumentTest)
+
+LOCAL(vmJumpAndInvoke_argumentLoop):
+   movq   (%r8,%r11,1),%r10
+   movq   %r10,8(%r9,%r11,1)
+   addq   $8,%r11
+
+LOCAL(vmJumpAndInvoke_argumentTest):
+   cmpq   %rax,%r11
+   jb     LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
+   movq   %r9,%rsp
+   
+   jmp    *%rdx
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   int3
+#endif // not AVIAN_CONTINUATIONS
+
+#else // not __MINGW32__
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 48
 
@@ -88,65 +209,7 @@ GLOBAL(vmInvoke_returnAddress):
    movq   %rbp,%rsp
 
 #ifdef AVIAN_CONTINUATIONS
-   // call the next continuation, if any
-   movq   THREAD_CONTINUATION(%rbx),%rcx
-   cmpq   $0,%rcx
-   je     LOCAL(vmInvoke_exit)
-
-   // allocate a frame of size (continuation.length * BYTES_PER_WORD)
-   // + CALLEE_SAVED_REGISTER_FOOTPRINT
-   movq   CONTINUATION_LENGTH(%rcx),%rsi
-   shlq   $3,%rsi
-   subq   %rsi,%rsp
-   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
-
-   // copy the continuation body into the frame
-   leaq   CONTINUATION_BODY(%rcx),%rdi
-   
-   movq   $0,%r9
-   jmp    LOCAL(vmInvoke_continuationTest)
-
-LOCAL(vmInvoke_continuationLoop):
-   movq   (%rdi,%r9,1),%r8
-   movq   %r8,(%rsp,%r9,1)
-   addq   $8,%r9
-   
-LOCAL(vmInvoke_continuationTest):
-   cmpq   %rsi,%r9
-   jb     LOCAL(vmInvoke_continuationLoop)
-
-   // set the return address to vmInvoke_returnAddress
-   movq   CONTINUATION_RETURN_ADDRESS_OFFSET(%rcx),%rdi
-   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
-   movq   %r10,(%rsp,%rdi,1)
-
-   // save the current base pointer in the frame and update it
-   movq   CONTINUATION_FRAME_POINTER_OFFSET(%rcx),%rdi
-   movq   %rbp,(%rsp,%rdi,1)
-   addq   %rsp,%rdi
-   movq   %rdi,%rbp
-
-   // consume the continuation
-   movq   CONTINUATION_NEXT(%rcx),%rdi
-   movq   %rdi,THREAD_CONTINUATION(%rbx)
-
-   // call the continuation unless we're handling an exception
-   movq   THREAD_EXCEPTION(%rbx),%rsi
-   cmpq   $0,%rsi
-   jne    LOCAL(vmInvoke_handleException)
-   jmp    *CONTINUATION_ADDRESS(%rcx)
-
-LOCAL(vmInvoke_handleException):
-   // we're handling an exception - call the exception handler instead
-   movq   $0,THREAD_EXCEPTION(%rbx)
-   movq   THREAD_EXCEPTION_STACK_ADJUSTMENT(%rbx),%rdi
-   subq   %rdi,%rsp
-   movq   THREAD_EXCEPTION_OFFSET(%rbx),%rdi
-   movq   %rsi,(%rsp,%rdi,1)
-   
-   jmp    *THREAD_EXCEPTION_HANDLER(%rbx)
-
-LOCAL(vmInvoke_exit):
+#  include "continuations-x86.S"
 #endif // AVIAN_CONTINUATIONS
    
    // restore callee-saved registers (below the stack pointer, but in
@@ -215,21 +278,10 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    // enabled
    int3
 #endif // not AVIAN_CONTINUATIONS
+
+#endif // not __MINGW32__
    
 #elif defined __i386__
-   
-#define THREAD_CONTINUATION 96
-#define THREAD_EXCEPTION 36
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 100
-#define THREAD_EXCEPTION_OFFSET 104
-#define THREAD_EXCEPTION_HANDLER 108
-
-#define CONTINUATION_NEXT 4
-#define CONTINUATION_ADDRESS 16
-#define CONTINUATION_RETURN_ADDRESS_OFFSET 20
-#define CONTINUATION_FRAME_POINTER_OFFSET 24
-#define CONTINUATION_LENGTH 28
-#define CONTINUATION_BODY 32
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 16
    
@@ -286,72 +338,7 @@ vmInvoke_returnAddress:
    movl   %ecx,%esp
 
 #ifdef AVIAN_CONTINUATIONS
-   // call the next continuation, if any
-   movl   THREAD_CONTINUATION(%ebx),%ecx
-   cmpl   $0,%ecx
-   je     LOCAL(vmInvoke_exit)
-
-   // allocate a frame of size (continuation.length * BYTES_PER_WORD)
-   movl   CONTINUATION_LENGTH(%ecx),%esi
-   shll   $2,%esi
-   subl   %esi,%esp
-   
-   // copy the continuation body into the frame
-   leal   CONTINUATION_BODY(%ecx),%edi
-
-   push   %eax
-   push   %edx
-   
-   movl   $0,%edx
-   jmp    LOCAL(vmInvoke_continuationTest)
-
-LOCAL(vmInvoke_continuationLoop):
-   movl   (%edi,%edx,1),%eax
-   movl   %eax,8(%esp,%edx,1)
-   addl   $4,%edx
-   
-LOCAL(vmInvoke_continuationTest):
-   cmpl   %esi,%edx
-   jb     LOCAL(vmInvoke_continuationLoop)
-
-   pop    %edx
-   pop    %eax
-
-   // set the return address to vmInvoke_returnAddress
-   movl   CONTINUATION_RETURN_ADDRESS_OFFSET(%ecx),%edi
-   call   LOCAL(getPC)
-   addl   $_GLOBAL_OFFSET_TABLE_,%esi
-   movl   vmInvoke_returnAddress@GOT(%esi),%esi
-   movl   %esi,(%esp,%edi,1)
-   
-   // save the current base pointer in the frame and update it
-   movl   CONTINUATION_FRAME_POINTER_OFFSET(%ecx),%edi
-   movl   %ebp,(%esp,%edi,1)
-   addl   %esp,%edi
-   movl   %edi,%ebp
-   
-   // consume the continuation
-   movl   CONTINUATION_NEXT(%ecx),%edi
-   movl   %edi,THREAD_CONTINUATION(%ebx)
-
-   // call the continuation unless we're handling an exception
-   movl   THREAD_EXCEPTION(%ebx),%esi
-   cmpl   $0,%esi
-   jne    LOCAL(vmInvoke_handleException)
-
-   jmp    *CONTINUATION_ADDRESS(%ecx)
-
-LOCAL(vmInvoke_handleException):
-   // we're handling an exception - call the exception handler instead
-   movl   $0,THREAD_EXCEPTION(%ebx)
-   movl   THREAD_EXCEPTION_STACK_ADJUSTMENT(%ebx),%edi
-   subl   %edi,%esp
-   movl   THREAD_EXCEPTION_OFFSET(%ebx),%edi
-   movl   %esi,(%esp,%edi,1)
-   
-   jmp    *THREAD_EXCEPTION_HANDLER(%ebx)
-
-LOCAL(vmInvoke_exit):
+#  include "continuations-x86.S"
 #endif // AVIAN_CONTINUATIONS
    
    // restore callee-saved registers
@@ -443,5 +430,5 @@ LOCAL(vmJumpAndInvoke_argumentTest):
 #endif // AVIAN_CONTINUATIONS
    
 #else
-#  error unsupported platform
-#endif
+#error unsupported architecture
+#endif //def __x86_64__

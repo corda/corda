@@ -3292,3 +3292,29 @@ vmPrintTrace(Thread* t)
 
   t->m->processor->walkStack(t, &v);
 }
+
+// also for debugging
+void*
+vmAddressFromLine(Thread* t, object m, unsigned line)
+{
+	object code = methodCode(t, m);
+	printf("code: %p\n", code);
+	object lnt = codeLineNumberTable(t, code);
+	printf("lnt: %p\n", lnt);
+	
+	if (lnt) {
+		unsigned last = 0;
+		unsigned bottom = 0;
+		unsigned top = lineNumberTableLength(t, lnt);
+		for(unsigned i = bottom; i < top; i++)
+		{
+			LineNumber* ln = lineNumberTableBody(t, lnt, i);
+			if(lineNumberLine(ln) == line)
+				return reinterpret_cast<void*>(lineNumberIp(ln));
+			else if(lineNumberLine(ln) > line)
+				return reinterpret_cast<void*>(last);
+			last = lineNumberIp(ln);
+		}
+	}
+	return 0;
+}

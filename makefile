@@ -18,10 +18,6 @@ bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 platform = $(bootimage-platform)
 
-ifeq ($(platform),windows)
-	arch = i386
-endif
-
 mode = fast
 process = compile
 
@@ -191,6 +187,21 @@ ifeq ($(platform),windows)
 			native-path = cygpath -m
 		endif
 	endif
+
+	ifeq ($(arch),x86_64)
+		cxx = x86_64-pc-mingw32-g++
+		cc = x86_64-pc-mingw32-gcc
+		dlltool = x86_64-pc-mingw32-dlltool
+		ar = x86_64-pc-mingw32-ar
+		ranlib = x86_64-pc-mingw32-ranlib
+		objcopy = x86_64-pc-mingw32-objcopy
+		strip = :
+		inc = "$(root)/win64/include"
+		lib = "$(root)/win64/lib"
+		pointer-size = 8
+		object-format = pe-x86-64
+	endif
+		 
 endif
 
 ifeq ($(mode),debug)
@@ -636,4 +647,3 @@ $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
 	$(build-cc) $(^) $(build-lflags) -o $(@)
-

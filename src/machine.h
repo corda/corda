@@ -2448,4 +2448,7 @@ dumpHeap(Thread* t, FILE* out);
 void
 vmPrintTrace(vm::Thread* t);
 
+void*
+vmAddressFromLine(vm::Thread* t, vm::object m, unsigned line);
+
 #endif//MACHINE_H

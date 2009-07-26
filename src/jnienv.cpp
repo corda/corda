@@ -62,8 +62,10 @@ AttachCurrentThread(Machine* m, Thread** t, void*)
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t == 0) {
     *t = m->processor->makeThread(m, 0, m->rootThread);
+    m->system->attach(&((*t)->runnable));
 
     enter(*t, Thread::ActiveState);
+    enter(*t, Thread::IdleState);
 
     m->localThread->set(*t);
   }
