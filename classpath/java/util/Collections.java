@@ -64,6 +64,22 @@ public class Collections {
     return sb.toString();
   }
 
+  static String toString(Map m) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (Iterator<Map.Entry> it = m.entrySet().iterator(); it.hasNext();) {
+      Map.Entry e = it.next();
+      sb.append(e.getKey())
+        .append("=")
+        .append(e.getValue());
+      if (it.hasNext()) {
+        sb.append(",");
+      }
+    }
+    sb.append("}");
+    return sb.toString();
+  }
+
   static class IteratorEnumeration<T> implements Enumeration<T> {
     private final Iterator<T> it;
 
@@ -311,5 +327,45 @@ public class Collections {
   
   public static <T> Set<T> unmodifiableSet(Set<T> hs) {
     return new UnmodifiableSet<T>(hs);
+  }
+
+  static class KeyIterator<K, V> implements Iterator<K> {
+    private final Iterator<Map.Entry<K, V>> it;
+
+    public KeyIterator(Iterator<Map.Entry<K, V>> it) {
+      this.it = it;
+    }
+
+    public K next() {
+      return it.next().getKey();
+    }
+
+    public boolean hasNext() {
+      return it.hasNext();
+    }
+
+    public void remove() {
+      it.remove();
+    }
+  }
+
+  static class ValueIterator<K, V> implements Iterator<V> {
+    private final Iterator<Map.Entry<K, V>> it;
+
+    public ValueIterator(Iterator<Map.Entry<K, V>> it) {
+      this.it = it;
+    }
+
+    public V next() {
+      return it.next().getValue();
+    }
+
+    public boolean hasNext() {
+      return it.hasNext();
+    }
+
+    public void remove() {
+      it.remove();
+    }
   }
 }

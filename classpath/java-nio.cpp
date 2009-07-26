@@ -626,7 +626,17 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
   }
 #endif
 
-  timeval time = { interval / 1000, (interval % 1000) * 1000 };
+  timeval time;
+  if (interval > 0) {
+    time.tv_sec = interval / 1000;
+    time.tv_usec = (interval % 1000) * 1000;
+  } else if (interval < 0) {
+    time.tv_sec = 0;
+    time.tv_usec = 0;
+  } else {
+    time.tv_sec = INT32_MAX;
+    time.tv_usec = 0;
+  }
   int r = ::select(max + 1, &(s->read), &(s->write), &(s->except), &time);
 
   if (r < 0) {

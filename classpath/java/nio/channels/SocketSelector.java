@@ -48,7 +48,21 @@ class SocketSelector extends Selector {
     }
   }
 
+  public synchronized int selectNow() throws IOException {
+    return doSelect(-1);
+  }
+
+  public synchronized int select() throws IOException {
+    return doSelect(0);
+  }
+
   public synchronized int select(long interval) throws IOException {
+    if (interval < 0) throw new IllegalArgumentException();
+
+    return doSelect(interval);
+  }
+
+  public int doSelect(long interval) throws IOException {
     selectedKeys.clear();
 
     if (clearWoken()) return 0;
