@@ -2101,7 +2101,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFootprint(unsigned footprint) {
-#ifdef __WINDOWS__
+#ifdef __MINGW32__
     return max(footprint, StackAlignmentInWords);
 #else
     return max(footprint > argumentRegisterCount() ?
@@ -2115,9 +2115,9 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-#ifdef __WINDOWS__
+#ifdef __MINGW32__
     if (BytesPerWord == 8) return 4; else
-#elif defined __LINUX__
+#else
     if (BytesPerWord == 8) return 6; else
 #endif
     return 0;
@@ -2126,7 +2126,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int argumentRegister(unsigned index) {
     assert(&c, BytesPerWord == 8);
     switch (index) {
-#ifdef __WINDOWS__
+#ifdef __MINGW32__
     case 0:
       return rcx;
     case 1:
@@ -2135,7 +2135,7 @@ class MyArchitecture: public Assembler::Architecture {
       return r8;
     case 3:
       return r9;
-#elif defined __LINUX__
+#else
     case 0:
       return rdi;
     case 1:
