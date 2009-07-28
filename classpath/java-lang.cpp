@@ -32,6 +32,7 @@
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
+#include <sys/sysctl.h>
 #include "sys/utsname.h"
 #include "sys/wait.h"
 #endif
@@ -359,6 +360,36 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       ::GetVersionEx(&OSversion);
       snprintf(buffer, size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
       r = e->NewStringUTF(buffer);
+    } else if (strcmp(chars, "os.arch") == 0) {
+    #ifdef __i386__
+      r = e->NewStringUTF("x86");
+    #else
+      #ifdef __x86_64__
+        r = e->NewStringUTF("x86_64");
+      #else
+        #if defined(__ppc__) || defined(__powerpc__) || defined(__ppc64__) || defined(__powerpc64__)
+          r = e->NewStringUTF("ppc");
+        #else
+          #ifdef __ia64__
+            r = e->NewStringUTF("ia64");
+          #else
+            #ifdef __arm__
+              r = e->NewStringUTF("arm");
+            #else
+              #ifdef __alpha__
+                r = e->NewStringUTF("alpha");
+              #else
+                #ifdef __sparc64__
+                  r = e->NewStringUTF("sparc64");
+                #else
+                  r = e->NewStringUTF("unknown");
+                #endif
+              #endif
+            #endif
+          #endif
+        #endif
+      #endif
+    #endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
@@ -394,6 +425,36 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       uname(&system_id);
       r = e->NewStringUTF(system_id.release);
 #endif
+    } else if (strcmp(chars, "os.arch") == 0) {
+    #ifdef __i386__
+      r = e->NewStringUTF("x86");
+    #else
+      #ifdef __x86_64__
+        r = e->NewStringUTF("x86_64");
+      #else
+        #if defined(__ppc__) || defined(__powerpc__) || defined(__ppc64__) || defined(__powerpc64__)
+          r = e->NewStringUTF("ppc");
+        #else
+          #ifdef __ia64__
+            r = e->NewStringUTF("ia64");
+          #else
+            #ifdef __arm__
+              r = e->NewStringUTF("arm");
+            #else
+              #ifdef __alpha__
+                r = e->NewStringUTF("alpha");
+              #else
+                #ifdef __sparc64__
+                  r = e->NewStringUTF("sparc64");
+                #else
+                  r = e->NewStringUTF("unknown");
+                #endif
+              #endif
+            #endif
+          #endif
+        #endif
+      #endif
+    #endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
     } else if (strcmp(chars, "user.home") == 0) {
