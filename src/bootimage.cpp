@@ -303,6 +303,10 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
     (t->m->heap->allocate(heapMapSize(HeapCapacity)));
   memset(heapMap, 0, heapMapSize(HeapCapacity));
 
+  // this map will not be used when the bootimage is loaded, so
+  // there's no need to preserve it:
+  t->m->byteArrayMap = makeWeakHashMap(t, 0, 0);
+
   collect(t, Heap::MajorCollection);
 
   HeapWalker* heapWalker = makeHeapImage
