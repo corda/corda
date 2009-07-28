@@ -484,6 +484,12 @@ postCollect(Thread* t)
 void
 finalizeObject(Thread* t, object o)
 {
+  if (t->state == Thread::ExitState) {
+    // don't waste time running Java finalizers if we're exiting the
+    // VM
+    return;
+  }
+
   for (object c = objectClass(t, o); c; c = classSuper(t, c)) {
     for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
       object m = arrayBody(t, classMethodTable(t, c), i);
