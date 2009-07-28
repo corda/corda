@@ -235,7 +235,7 @@ public final class String
   }
 
   public boolean equalsIgnoreCase(String s) {
-    return this == s || compareToIgnoreCase(s) == 0;
+    return this == s || (s != null && compareToIgnoreCase(s) == 0);
   }
 
   public int compareTo(String s) {
