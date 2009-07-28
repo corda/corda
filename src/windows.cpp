@@ -55,7 +55,7 @@ run(void* r)
   return 0;
 }
 
-const bool Verbose = true;
+const bool Verbose = false;
 
 const unsigned Waiting = 1 << 0;
 const unsigned Notified = 1 << 1;
