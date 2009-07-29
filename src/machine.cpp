@@ -2688,7 +2688,8 @@ resolveMethod(Thread* t, object class_, const char* methodName,
 
   if (t->exception == 0 and method == 0) {
     object message = makeString
-      (t, "%s %s not found in %s", methodName, methodSpec, className);
+      (t, "%s %s not found in %s", methodName, methodSpec,
+       &byteArrayBody(t, className(t, class_), 0));
 
     t->exception = makeNoSuchMethodError(t, message);
     return 0;
@@ -2716,7 +2717,8 @@ resolveField(Thread* t, object class_, const char* fieldName,
 
   if (t->exception == 0 and field == 0) {
     object message = makeString
-      (t, "%s %s not found in %s", fieldName, fieldSpec, className);
+      (t, "%s %s not found in %s", fieldName, fieldSpec,
+       &byteArrayBody(t, className(t, class_), 0));
 
     t->exception = makeNoSuchFieldError(t, message);
     return 0;
