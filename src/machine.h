@@ -2167,13 +2167,6 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*makeError)(Thread*, object));
 
 inline object
-findField(Thread* t, object class_, object name, object spec)
-{
-  return findInHierarchy
-    (t, class_, name, spec, findFieldInClass, makeNoSuchFieldError);
-}
-
-inline object
 findMethod(Thread* t, object class_, object name, object spec)
 {
   return findInHierarchy
