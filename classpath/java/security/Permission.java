@@ -10,14 +10,8 @@
 
 package java.security;
 
-public class ProtectionDomain {
-  private final CodeSource codeSource;
-  private final PermissionCollection permissions;
-
-  public ProtectionDomain(CodeSource codeSource,
-                          PermissionCollection permissions)
-  {
-    this.codeSource = codeSource;
-    this.permissions = permissions;
+public abstract class Permission {
+  public PermissionCollection newPermissionCollection() {
+    return null;
   }
 }

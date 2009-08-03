@@ -23,6 +23,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.security.ProtectionDomain;
+import java.security.Permissions;
+import java.security.AllPermission;
 
 public final class Class <T> implements Type, GenericDeclaration {
   private static final int PrimitiveFlag = 1 << 4;
@@ -494,7 +496,9 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public ProtectionDomain getProtectionDomain() {
-    throw new UnsupportedOperationException();
+    Permissions p = new Permissions();
+    p.add(new AllPermission());
+    return new ProtectionDomain(null, p);
   }
 
   // for GNU Classpath compatibility:
