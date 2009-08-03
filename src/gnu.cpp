@@ -177,6 +177,25 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   setProperty(t, method, properties, "user.home", getenv("HOME"));
   setProperty(t, method, properties, "user.dir", getenv("PWD"));
 #endif
+
+#ifdef __i386__
+  setProperty(t, method, properties, "os.arch", "x86");
+#elif defined __x86_64__
+  setProperty(t, method, properties, "os.arch", "x86_64");
+#elif defined(__ppc__) || defined(__powerpc__) \
+  || defined(__ppc64__) || defined(__powerpc64__)
+  setProperty(t, method, properties, "os.arch", "ppc");
+#elif defined __ia64__
+  setProperty(t, method, properties, "os.arch", "ia64");
+#elif defined __arm__
+  setProperty(t, method, properties, "os.arch", "arm");
+#elif defined __alpha__
+  setProperty(t, method, properties, "os.arch", "alpha");
+#elif defined __sparc64__
+  setProperty(t, method, properties, "os.arch", "sparc64");
+#else
+  setProperty(t, method, properties, "os.arch", "unknown");
+#endif
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
