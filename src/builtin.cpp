@@ -78,7 +78,9 @@ runOnLoadIfFound(Thread* t, System::Library* library)
 {
   void* p = library->resolve("JNI_OnLoad");
   if (p) {
-    reinterpret_cast<jint (JNICALL *)(Machine*, void*)>(p)(t->m, 0);
+    jint (JNICALL * JNI_OnLoad)(Machine*, void*);
+    memcpy(&JNI_OnLoad, &p, sizeof(void*));
+    JNI_OnLoad(t->m, 0);
   }
 }
 
