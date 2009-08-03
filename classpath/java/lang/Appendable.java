@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,15 +10,13 @@
 
 package java.lang;
 
-public class ExceptionInInitializerError extends Error {
-  private final Throwable cause2;
+import java.io.IOException;
 
-  public ExceptionInInitializerError(String message) {
-    super(message);
-    cause2 = null;
-  }
+public interface Appendable {
+  public Appendable append(char c) throws IOException;
 
-  public ExceptionInInitializerError() {
-    this(null);
-  }
+  public Appendable append(CharSequence sequence) throws IOException;
+
+  public Appendable append(CharSequence sequence, int start, int end)
+    throws IOException;
 }

@@ -110,6 +110,11 @@ class Vector {
     append(&v, BytesPerWord);
   }
 
+  void set2(unsigned offset, uint16_t v) {
+    assert(s, offset <= position - 2);
+    memcpy(data + offset, &v, 2);
+  }
+
   unsigned get(unsigned offset) {
     uint8_t v; get(offset, &v, 1);
     return v;

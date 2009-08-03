@@ -14,12 +14,19 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.GenericDeclaration;
+import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.security.ProtectionDomain;
+import java.security.Permissions;
+import java.security.AllPermission;
 
-public final class Class <T> {
+public final class Class <T> implements Type, GenericDeclaration {
   private static final int PrimitiveFlag = 1 << 4;
 
   private short flags;
@@ -84,6 +91,9 @@ public final class Class <T> {
                               ClassLoader loader)
     throws ClassNotFoundException
   {
+    if (loader == null) {
+      loader = Class.class.loader;
+    }
     Class c = loader.loadClass(name);
     if (initialize) {
       c.initialize();
@@ -168,6 +178,8 @@ public final class Class <T> {
 
   private Method findMethod(String name, Class[] parameterTypes) {
     if (methodTable != null) {
+      if (parameterTypes == null)
+        parameterTypes = new Class[0];
       for (int i = 0; i < methodTable.length; ++i) {
         if (methodTable[i].getName().equals(name)
             && match(parameterTypes, methodTable[i].getParameterTypes()))
@@ -434,8 +446,63 @@ public final class Class <T> {
       return null;
     }
   }
-  
+
   public boolean desiredAssertionStatus() {
     return false;
+  }
+
+  public T cast(Object o) {
+    return (T) o;
+  }
+
+  public Object[] getSigners() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Annotation[] getDeclaredAnnotations() {
+    throw new UnsupportedOperationException();
+  }
+
+  public boolean isEnum() {
+    throw new UnsupportedOperationException();
+  }
+
+  public TypeVariable<Class<T>>[] getTypeParameters() {
+    throw new UnsupportedOperationException();
+  }
+
+  public String getSimpleName() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Method getEnclosingMethod() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Constructor getEnclosingConstructor() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Class getEnclosingClass() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Class[] getDeclaredClasses() {
+    throw new UnsupportedOperationException();
+  }
+
+  public <A extends Annotation> A getAnnotation(Class<A> c) {
+    throw new UnsupportedOperationException();
+  }
+
+  public ProtectionDomain getProtectionDomain() {
+    Permissions p = new Permissions();
+    p.add(new AllPermission());
+    return new ProtectionDomain(null, p);
+  }
+
+  // for GNU Classpath compatibility:
+  void setSigners(Object[] signers) {
+    throw new UnsupportedOperationException();
   }
 }

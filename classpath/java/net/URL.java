@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -11,7 +11,6 @@
 package java.net;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 
 public final class URL {
@@ -73,7 +72,7 @@ public final class URL {
     throws MalformedURLException
   {
     if ("resource".equals(protocol)) {
-      return new ResourceHandler();
+      return new avian.resource.Handler();
     } else {
       throw new MalformedURLException("unknown protocol: " + protocol);
     }
@@ -87,88 +86,5 @@ public final class URL {
     this.port = port;
     this.file = file;
     this.ref = ref;
-  }
-
-  private static class ResourceHandler extends URLStreamHandler {
-    protected URLConnection openConnection(URL url) {
-      return new ResourceConnection(url);
-    }
-  }
-
-  private static class ResourceConnection extends URLConnection {
-    public ResourceConnection(URL url) {
-      super(url);
-    }
-
-    public int getContentLength() {
-      return ResourceInputStream.getContentLength(url.getFile());
-    }
-
-    public InputStream getInputStream() throws IOException {
-      return new ResourceInputStream(url.getFile());
-    }
-  }
-
-  private static class ResourceInputStream extends InputStream {
-    private long peer;
-    private int position;
-
-    public ResourceInputStream(String path) throws IOException {
-      peer = open(path);
-      if (peer == 0) {
-        throw new FileNotFoundException(path);
-      }
-    }
-
-    private static native int getContentLength(String path);
-
-    private static native long open(String path) throws IOException;
-
-    private static native int read(long peer, int position) throws IOException;
-
-    private static native int read(long peer, int position,
-                                   byte[] b, int offset, int length)
-      throws IOException;
-
-    public static native void close(long peer) throws IOException;
-
-    public int read() throws IOException {
-      if (peer != 0) {
-        int c = read(peer, position);
-        if (c >= 0) {
-          ++ position;
-        }
-        return c;
-      } else {
-        throw new IOException();
-      }
-    }
-
-    public int read(byte[] b, int offset, int length) throws IOException {
-      if (peer != 0) {
-        if (b == null) {
-          throw new NullPointerException();
-        }
-
-        if (offset < 0 || offset + length > b.length) {
-          throw new ArrayIndexOutOfBoundsException();
-        }
-
-        int c = read(peer, position, b, offset, length);
-        if (c >= 0) {
-          position += c;
-        }
-        return c;
-      } else {
-        throw new IOException();
-      }
-    }
-
-    public void close() throws IOException {
-      if (peer != 0) {
-        close(peer);
-        peer = 0;
-      }
-    }
   }
 }

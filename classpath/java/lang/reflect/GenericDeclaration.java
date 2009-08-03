@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,15 +10,6 @@
 
 package java.lang.reflect;
 
-public interface Member {
-  public static final int PUBLIC = 0;
-  public static final int DECLARED = 1;
-
-  public Class getDeclaringClass();
-
-  public int getModifiers();
-
-  public String getName();
-
-  public boolean isSynthetic();
+public interface GenericDeclaration {
+  public TypeVariable<?>[] getTypeParameters();
 }

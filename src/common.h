@@ -40,10 +40,17 @@
 #  define ULD "u"
 #endif
 #elif defined __x86_64__
-#  define LD "ld"
-#  define LX "lx"
-#  define LLD "ld"
-#  define ULD "lu"
+#  ifdef __MINGW32__
+#    define LD "I64d"
+#    define LX "I64x"
+#    define LLD "I64d"
+#    define ULD "I64x"
+#  else
+#    define LD "ld"
+#    define LX "lx"
+#    define LLD "ld"
+#    define ULD "lu"
+#  endif
 #else
 #  error "Unsupported architecture"
 #endif
@@ -114,7 +121,6 @@ pad(unsigned n)
 {
   return pad(n, BytesPerWord);
 }
-
 
 inline unsigned
 ceiling(unsigned n, unsigned d)

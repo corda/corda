@@ -62,8 +62,10 @@ AttachCurrentThread(Machine* m, Thread** t, void*)
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t == 0) {
     *t = m->processor->makeThread(m, 0, m->rootThread);
+    m->system->attach(&((*t)->runnable));
 
     enter(*t, Thread::ActiveState);
+    enter(*t, Thread::IdleState);
 
     m->localThread->set(*t);
   }
@@ -263,6 +265,26 @@ ExceptionCheck(Thread* t)
 {
   return t->exception != 0;
 }
+
+#ifndef AVIAN_GNU
+jobject JNICALL
+NewDirectByteBuffer(Thread*, void*, jlong)
+{
+  return 0;
+}
+
+void* JNICALL
+GetDirectBufferAddress(Thread*, jobject)
+{
+  return 0;
+}
+
+jlong JNICALL
+GetDirectBufferCapacity(Thread*, jobject)
+{
+  return -1;
+}
+#endif// not AVIAN_GNU
 
 jclass JNICALL
 GetObjectClass(Thread* t, jobject o)
@@ -823,22 +845,12 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
   va_end(a);
 }
 
-object
-findField(Thread* t, jclass c, const char* name, const char* spec)
-{
-  object n = makeByteArray(t, "%s", name);
-  PROTECT(t, n);
-
-  object s = makeByteArray(t, "%s", spec);
-  return vm::findField(t, *c, n, s);
-}
-
 jfieldID JNICALL
 GetFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, c, name, spec);
+  object field = resolveField(t, *c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
@@ -849,7 +861,7 @@ GetStaticFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, c, name, spec);
+  object field = resolveField(t, *c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
@@ -1889,6 +1901,17 @@ append(char** p, const char* value, unsigned length, char tail)
 
 namespace vm {
 
+#ifdef AVIAN_GNU
+jobject JNICALL
+NewDirectByteBuffer(Thread*, void*, jlong);
+
+void* JNICALL
+GetDirectBufferAddress(Thread*, jobject);
+
+jlong JNICALL
+GetDirectBufferCapacity(Thread*, jobject);
+#endif//AVIAN_GNU
+
 void
 populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 {
@@ -1914,6 +1937,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->FindClass = ::FindClass;
   envTable->ThrowNew = ::ThrowNew;
   envTable->ExceptionCheck = ::ExceptionCheck;
+  envTable->NewDirectByteBuffer = ::NewDirectByteBuffer;
+  envTable->GetDirectBufferAddress = ::GetDirectBufferAddress;
+  envTable->GetDirectBufferCapacity = ::GetDirectBufferCapacity;
   envTable->DeleteLocalRef = ::DeleteLocalRef;
   envTable->GetObjectClass = ::GetObjectClass;
   envTable->IsInstanceOf = ::IsInstanceOf;

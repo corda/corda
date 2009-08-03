@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,9 +10,9 @@
 
 package java.lang;
 
-public class StackOverflowError extends Error {
+public class StackOverflowError extends VirtualMachineError {
   public StackOverflowError(String message) {
-    super(message, null);
+    super(message);
   }
 
   public StackOverflowError() {

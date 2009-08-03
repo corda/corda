@@ -10,7 +10,7 @@
 
 package java.lang;
 
-public class StringBuilder implements CharSequence {
+public class StringBuilder implements CharSequence, Appendable {
   private static final int BufferSize = 32;
 
   private Cell chain;
@@ -52,6 +52,14 @@ public class StringBuilder implements CharSequence {
       }
       return this;
     }
+  }
+
+  public StringBuilder append(CharSequence sequence) {
+    return append(sequence.toString());
+  }
+
+  public Appendable append(CharSequence sequence, int start, int end) {
+    return append(sequence.subSequence(start, end));
   }
 
   public StringBuilder append(char[] b, int offset, int length) {
@@ -148,6 +156,10 @@ public class StringBuilder implements CharSequence {
     }
 
     return this;
+  }
+
+  public StringBuilder insert(int i, CharSequence s) {
+    return insert(i, s.toString());
   }
 
   public StringBuilder insert(int i, char c) {
@@ -331,5 +343,9 @@ public class StringBuilder implements CharSequence {
     if(index < 0 || index >= length) throw new IndexOutOfBoundsException();
     deleteCharAt(index);
     insert(index, ch);
+  }
+
+  public void ensureCapacity(int capacity) {
+    // ignore
   }
 }

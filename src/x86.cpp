@@ -7,6 +7,9 @@
 
    There is NO WARRANTY for this software.  See license.txt for
    details. */
+   
+   
+#if (defined __i386__) || (defined __x86_64__)
 
 #include "assembler.h"
 #include "vector.h"
@@ -399,81 +402,114 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
   return padding;
 }
 
-void
-encode(Context* c, uint8_t* instruction, unsigned length, int a, int b,
-       int32_t displacement, int index, unsigned scale)
-{
-  c->code.append(instruction, length);
+#define REX_W 0x48
+#define REX_R 0x44
+#define REX_X 0x42
+#define REX_B 0x41
+#define REX_NONE 0x40
 
-  uint8_t width;
-  if (displacement == 0 and b != rbp) {
-    width = 0;
-  } else if (isInt8(displacement)) {
-    width = 0x40;
-  } else {
-    width = 0x80;
+void maybeRex(Context* c, unsigned size, int a, int index, int base, bool always) {
+  if(BytesPerWord == 8) {
+    uint8_t byte;
+    if(size == 8) {
+      byte = REX_W;
+    } else {
+      byte = REX_NONE;
+    }
+    if(a != NoRegister && (a & 8)) byte |= REX_R;
+    if(index != NoRegister && (index & 8)) byte |= REX_X;
+    if(base != NoRegister && (base & 8)) byte |= REX_B;
+    if(always or byte != REX_NONE) c->code.append(byte);
   }
+}
 
-  if (index == -1) {
-    c->code.append(width | (a << 3) | b);
-    if (b == rsp) {
-      c->code.append(0x24);
+inline void maybeRex(Context* c, unsigned size, Assembler::Register* a, 
+	Assembler::Register* b) {
+  maybeRex(c, size, a->low, NoRegister, b->low, false);
+}
+
+inline void alwaysRex(Context* c, unsigned size, Assembler::Register* a, 
+	Assembler::Register* b) {
+  maybeRex(c, size, a->low, NoRegister, b->low, true);
+}
+
+inline void maybeRex(Context* c, unsigned size, Assembler::Register* a) {
+  maybeRex(c, size, NoRegister, NoRegister, a->low, false);
+}
+
+inline void maybeRex(Context* c, unsigned size, Assembler::Register* a,
+	Assembler::Memory* b) {
+  maybeRex(c, size, a->low, b->index, b->base, false);
+}
+
+inline void maybeRex(Context* c, unsigned size, Assembler::Memory* a) {
+  maybeRex(c, size, NoRegister, a->index, a->base, false);
+}
+
+inline int regCode(int a) {
+  return a & 7;
+}
+
+inline int regCode(Assembler::Register* a) {
+  return regCode(a->low);
+}
+
+inline void modrm(Context* c, uint8_t mod, int a, int b) {
+  c->code.append(mod | (regCode(b) << 3) | regCode(a));
+}
+
+inline void modrm(Context* c, uint8_t mod, Assembler::Register* a, 
+	Assembler::Register* b) {
+  modrm(c, mod, a->low, b->low);
+}
+
+inline void sib(Context* c, unsigned scale, int index, int base) {
+  c->code.append((log(scale) << 6) | (regCode(index) << 3) | regCode(base));
+}
+
+inline void modrmSib(Context* c, int width, int a, int scale, int index, int base) {
+  if(index == NoRegister) {
+    modrm(c, width, base, a);
+    if(regCode(base) == rsp) {
+      sib(c, 0x00, rsp, rsp);
     }
   } else {
-    assert(c, b != rsp);
-    c->code.append(width | (a << 3) | 4);
-    c->code.append((log(scale) << 6) | (index << 3) | b);
+    modrm(c, width, rsp, a);
+    sib(c, scale, index, base);
   }
+}
 
-  if (displacement == 0 and b != rbp) {
-    // do nothing
-  } else if (isInt8(displacement)) {
-    c->code.append(displacement);
+inline void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset) {
+  if(offset == 0 && regCode(base) != rbp) {
+    modrmSib(c, 0x00, a, scale, index, base);
+  } else if(isInt8(offset)) {
+    modrmSib(c, 0x40, a, scale, index, base);
+    c->code.append(offset);
   } else {
-    c->code.append4(displacement);
+    modrmSib(c, 0x80, a, scale, index, base);
+    c->code.append4(offset);
   }
 }
+  
 
-void
-rex(Context* c, uint8_t mask, int r)
-{
-  if (BytesPerWord == 8) {
-    c->code.append(mask | ((r & 8) >> 3));
-  }
+inline void modrmSibImm(Context* c, Assembler::Register* a,
+	Assembler::Memory* b) {
+  modrmSibImm(c, a->low, b->scale, b->index, b->base, b->offset);
 }
 
-void
-rex(Context* c)
-{
-  rex(c, 0x48, rax);
+inline void opcode(Context* c, uint8_t op) {
+  c->code.append(op);
 }
 
-void
-encode(Context* c, uint8_t instruction, int a, Assembler::Memory* b, bool rex)
-{
-  if (rex) {
-    ::rex(c);
-  }
-
-  encode(c, &instruction, 1, a, b->base, b->offset, b->index, b->scale);
-}
-
-void
-encode2(Context* c, uint16_t instruction, int a, Assembler::Memory* b,
-        bool rex)
-{
-  if (rex) {
-    ::rex(c);
-  }
-
-  uint8_t i[2] = { instruction >> 8, instruction & 0xff };
-  encode(c, i, 2, a, b->base, b->offset, b->index, b->scale);
+inline void opcode(Context* c, uint8_t op1, uint8_t op2) {
+  c->code.append(op1);
+  c->code.append(op2);
 }
 
 void
 return_(Context* c)
 {
-  c->code.append(0xc3);
+  opcode(c, 0xc3);
 }
 
 void
@@ -485,7 +521,7 @@ unconditional(Context* c, unsigned jump, Assembler::Constant* a)
 {
   appendOffsetTask(c, a->value, offset(c), 5);
 
-  c->code.append(jump);
+  opcode(c, jump);
   c->code.append4(0);
 }
 
@@ -494,8 +530,7 @@ conditional(Context* c, unsigned condition, Assembler::Constant* a)
 {
   appendOffsetTask(c, a->value, offset(c), 6);
   
-  c->code.append(0x0f);
-  c->code.append(condition);
+  opcode(c, 0x0f, condition);
   c->code.append4(0);
 }
 
@@ -565,9 +600,8 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, size == BytesPerWord);
 
-  if (a->low & 8) rex(c, 0x40, a->low);
-  c->code.append(0xff);
-  c->code.append(0xe0 | (a->low & 7));
+  maybeRex(c, 4, a);
+  opcode(c, 0xff, 0xe0 + regCode(a));
 }
 
 void
@@ -582,8 +616,10 @@ void
 jumpM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 {
   assert(c, size == BytesPerWord);
-
-  encode(c, 0xff, 4, a, false);
+  
+  maybeRex(c, 4, a);
+  opcode(c, 0xff);
+  modrmSibImm(c, rsp, a->scale, a->index, a->base, a->offset);
 }
 
 void
@@ -653,17 +689,19 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, size == BytesPerWord);
 
-  if (a->low & 8) rex(c, 0x40, a->low);
-  c->code.append(0xff);
-  c->code.append(0xd0 | (a->low & 7));
+	//maybeRex.W has no meaning here so we disable it
+  maybeRex(c, 4, a);
+  opcode(c, 0xff, 0xd0 + regCode(a));
 }
 
 void
 callM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 {
   assert(c, size == BytesPerWord);
-
-  encode(c, 0xff, 2, a, false);
+  
+  maybeRex(c, 4, a);
+  opcode(c, 0xff);
+  modrmSibImm(c, rdx, a->scale, a->index, a->base, a->offset);
 }
 
 void
@@ -689,7 +727,8 @@ pushR(Context* c, unsigned size, Assembler::Register* a)
     pushR(c, 4, &ah);
     pushR(c, 4, a);
   } else {
-    c->code.append(0x50 | a->low);      
+    maybeRex(c, 4, a);
+    opcode(c, 0x50 + regCode(a));
   }
 }
 
@@ -706,7 +745,8 @@ popR(Context* c, unsigned size, Assembler::Register* a)
     popR(c, 4, a);
     popR(c, 4, &ah);
   } else {
-    c->code.append(0x58 | a->low);
+    maybeRex(c, 4, a);
+    opcode(c, 0x58 + regCode(a));
     if (BytesPerWord == 8 and size == 4) {
       moveRR(c, 4, a, 8, a);
     }
@@ -724,7 +764,8 @@ popM(Context* c, unsigned size, Assembler::Memory* a)
   } else {
     assert(c, BytesPerWord == 4 or size == 8);
 
-    encode(c, 0x8f, 0, a, false);
+    opcode(c, 0x8f);
+    modrmSibImm(c, 0, a->scale, a->index, a->base, a->offset);
   }
 }
 
@@ -747,9 +788,8 @@ negateR(Context* c, unsigned size, Assembler::Register* a)
     addCarryCR(c, 4, &zero, &ah);
     negateR(c, 4, &ah);
   } else {
-    if (size == 8) rex(c);
-    c->code.append(0xf7);
-    c->code.append(0xd8 | a->low);
+    maybeRex(c, size, a);
+    opcode(c, 0xf7, 0xd8 + regCode(a));
   }
 }
 
@@ -763,8 +803,8 @@ negateRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-moveCR2(Context* c, unsigned, Assembler::Constant* a,
-        unsigned bSize, Assembler::Register* b, unsigned promiseOffset)
+moveCR2(Context* c, UNUSED unsigned aSize, Assembler::Constant* a,
+        UNUSED unsigned bSize, Assembler::Register* b, unsigned promiseOffset)
 {
   if (BytesPerWord == 4 and bSize == 8) {
     int64_t v = a->value->value();
@@ -780,8 +820,8 @@ moveCR2(Context* c, unsigned, Assembler::Constant* a,
     moveCR(c, 4, &al, 4, b);
     moveCR(c, 4, &ah, 4, &bh);
   } else {
-    rex(c, 0x48, b->low);
-    c->code.append(0xb8 | b->low);
+    maybeRex(c, BytesPerWord, b);
+    opcode(c, 0xb8 + regCode(b));
     if (a->value->resolved()) {
       c->code.appendAddress(a->value->value());
     } else {
@@ -806,15 +846,16 @@ swapRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
   assert(c, aSize == bSize);
   assert(c, aSize == BytesPerWord);
   
-  rex(c);
-  c->code.append(0x87);
-  c->code.append(0xc0 | (b->low << 3) | a->low);
+  alwaysRex(c, aSize, a, b);
+  opcode(c, 0x87);
+  modrm(c, 0xc0, b, a);
 }
 
 void
 moveRR(Context* c, unsigned aSize, Assembler::Register* a,
-       unsigned bSize, Assembler::Register* b)
+       UNUSED unsigned bSize, Assembler::Register* b)
 {
+	
   if (BytesPerWord == 4 and aSize == 8 and bSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
@@ -839,31 +880,28 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
         moveRR(c, BytesPerWord, a, BytesPerWord, b);
         moveRR(c, 1, b, BytesPerWord, b);
       } else {
-        rex(c);
-        c->code.append(0x0f);
-        c->code.append(0xbe);
-        c->code.append(0xc0 | (b->low << 3) | a->low);
+        alwaysRex(c, aSize, b, a);
+        opcode(c, 0x0f, 0xbe);
+        modrm(c, 0xc0, a, b);
       }
       break;
 
     case 2:
-      rex(c);
-      c->code.append(0x0f);
-      c->code.append(0xbf);
-      c->code.append(0xc0 | (b->low << 3) | a->low);
+      alwaysRex(c, aSize, b, a);
+      opcode(c, 0x0f, 0xbf);
+      modrm(c, 0xc0, a, b);
       break;
 
-    case 8:
     case 4:
-      if (aSize == 4 and bSize == 8) {
-        if (BytesPerWord == 8) {
-          rex(c);
-          c->code.append(0x63);
-          c->code.append(0xc0 | (b->low << 3) | a->low);
-        } else {
-          if (a->low == rax and b->low == rax and b->high == rdx) {
-            c->code.append(0x99); // cdq
-          } else {
+      if (bSize == 8) {
+      	if (BytesPerWord == 8) {
+          alwaysRex(c, aSize, b, a);
+          opcode(c, 0x63);
+          modrm(c, 0xc0, a, b);
+      	} else {
+      	  if (a->low == rax and b->low == rax and b->high == rdx) {
+      	  	opcode(c, 0x99); //cdq
+      	  } else {
             assert(c, b->low == rax and b->high == rdx);
 
             moveRR(c, 4, a, 4, b);
@@ -872,14 +910,22 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
         }
       } else {
         if (a->low != b->low) {
-          rex(c);
-          c->code.append(0x89);
-          c->code.append(0xc0 | (a->low << 3) | b->low);
+          alwaysRex(c, aSize, a, b);
+          opcode(c, 0x89);
+          modrm(c, 0xc0, b, a);
         }
+      }
+      break; 
+      
+    case 8:
+      if (a->low != b->low){
+        maybeRex(c, aSize, a, b);
+        opcode(c, 0x89);
+        modrm(c, 0xc0, b, a);
       }
       break;
     }
-  }  
+  }
 }
 
 void
@@ -888,36 +934,47 @@ moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
 {
   switch (aSize) {
   case 1:
-    encode2(c, 0x0fbe, b->low, a, true);
+    maybeRex(c, bSize, b, a);
+    opcode(c, 0x0f, 0xbe);
+    modrmSibImm(c, b, a);
     break;
 
   case 2:
-    encode2(c, 0x0fbf, b->low, a, true);
+    maybeRex(c, bSize, b, a);
+    opcode(c, 0x0f, 0xbf);
+    modrmSibImm(c, b, a);
     break;
 
   case 4:
-  case 8:
-    if (aSize == 4 and bSize == 8) {
-      if (BytesPerWord == 8) {
-        encode(c, 0x63, b->low, a, true);
-      } else {
+    if (BytesPerWord == 8) {
+      maybeRex(c, bSize, b, a);
+      opcode(c, 0x63);
+      modrmSibImm(c, b, a);
+    } else {
+      if (bSize == 8) {
         assert(c, b->low == rax and b->high == rdx);
         
         moveMR(c, 4, a, 4, b);
         moveRR(c, 4, b, 8, b);
-      }
-    } else {
-      if (BytesPerWord == 4 and aSize == 8 and bSize == 8) {
-        Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
-        Assembler::Register bh(b->high);
-
-        moveMR(c, 4, a, 4, b);    
-        moveMR(c, 4, &ah, 4, &bh);
-      } else if (BytesPerWord == 8 and aSize == 4) {
-        encode(c, 0x63, b->low, a, true);
       } else {
-        encode(c, 0x8b, b->low, a, true);
+        maybeRex(c, bSize, b, a);
+        opcode(c, 0x8b);
+        modrmSibImm(c, b, a);
       }
+    }
+    break;
+    
+  case 8:
+    if (BytesPerWord == 4 and bSize == 8) {
+      Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+      Assembler::Register bh(b->high);
+
+      moveMR(c, 4, a, 4, b);    
+      moveMR(c, 4, &ah, 4, &bh);
+    } else {
+      maybeRex(c, bSize, b, a);
+      opcode(c, 0x8b);
+      modrmSibImm(c, b, a);
     }
     break;
 
@@ -930,41 +987,48 @@ moveRM(Context* c, unsigned aSize, Assembler::Register* a,
        unsigned bSize UNUSED, Assembler::Memory* b)
 {
   assert(c, aSize == bSize);
+  
+  switch (aSize) {
+  case 1:
+    maybeRex(c, bSize, a, b);
+    opcode(c, 0x88);
+    modrmSibImm(c, a, b);
+    break;
 
-  if (BytesPerWord == 4 and aSize == 8) {
-    Assembler::Register ah(a->high);
-    Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
+  case 2:
+    opcode(c, 0x66);
+    maybeRex(c, bSize, a, b);
+    opcode(c, 0x89);
+    modrmSibImm(c, a, b);
+    break;
 
-    moveRM(c, 4, a, 4, b);    
-    moveRM(c, 4, &ah, 4, &bh);
-  } else if (BytesPerWord == 8 and aSize == 4) {
-    encode(c, 0x89, a->low, b, false);
-  } else {
-    switch (aSize) {
-    case 1:
-      if (BytesPerWord == 8) {
-        if (a->low > rbx) {
-          encode2(c, 0x4088, a->low, b, false);
-        } else {
-          encode(c, 0x88, a->low, b, false);
-        }
-      } else {
-        assert(c, a->low <= rbx);
-
-        encode(c, 0x88, a->low, b, false);
-      }
+  case 4:
+    if (BytesPerWord == 8) {
+      maybeRex(c, bSize, a, b);
+      opcode(c, 0x89);
+      modrmSibImm(c, a, b);
       break;
-
-    case 2:
-      encode2(c, 0x6689, a->low, b, false);
-      break;
-
-    case BytesPerWord:
-      encode(c, 0x89, a->low, b, true);
-      break;
-
-    default: abort(c);
+    } else {
+      opcode(c, 0x89);
+      modrmSibImm(c, a, b);
     }
+    break;
+    
+  case 8:
+    if(BytesPerWord == 8) {
+      maybeRex(c, bSize, a, b);
+      opcode(c, 0x89);
+      modrmSibImm(c, a, b);
+    } else {
+      Assembler::Register ah(a->high);
+      Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
+
+      moveRM(c, 4, a, 4, b);    
+      moveRM(c, 4, &ah, 4, &bh);
+    }
+    break;
+
+  default: abort(c);
   }
 }
 
@@ -994,17 +1058,24 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
 {
   switch (bSize) {
   case 1:
-    encode(c, 0xc6, 0, b, false);
+    maybeRex(c, bSize, b);
+    opcode(c, 0xc6);
+    modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
     c->code.append(a->value->value());
     break;
 
   case 2:
-    encode2(c, 0x66c7, 0, b, false);
+    opcode(c, 0x66);
+    maybeRex(c, bSize, b);
+    opcode(c, 0xc7);
+    modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
     c->code.append2(a->value->value());
     break;
 
   case 4:
-    encode(c, 0xc7, 0, b, false);
+    maybeRex(c, bSize, b);
+    opcode(c, 0xc7);
+    modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
     if (a->value->resolved()) {
       c->code.append4(a->value->value());
     } else {
@@ -1014,9 +1085,11 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
     break;
 
   case 8: {
-    if (BytesPerWord == 8) {
+  	if (BytesPerWord == 8) {
       if(a->value->resolved() and isInt32(a->value->value())) {
-        encode(c, 0xc7, 0, b, true);
+        maybeRex(c, bSize, b);
+        opcode(c, 0xc7);
+        modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
         c->code.append4(a->value->value());
       } else {
         Assembler::Register tmp(c->client->acquireTemporary());
@@ -1024,8 +1097,8 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
         moveRM(c, 8, &tmp, 8, b);
         c->client->releaseTemporary(tmp.low);
       }
-    } else {
-      Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
+  	} else {
+  	  Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
       Assembler::Constant al(shiftMaskPromise(c, a->value, 0, 0xFFFFFFFF));
 
       Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
@@ -1045,10 +1118,9 @@ moveZRR(Context* c, unsigned aSize, Assembler::Register* a,
 {
   switch (aSize) {
   case 2:
-    rex(c);
-    c->code.append(0x0f);
-    c->code.append(0xb7);
-    c->code.append(0xc0 | (b->low << 3) | a->low);
+    alwaysRex(c, aSize, b, a);
+    opcode(c, 0x0f, 0xb7);
+    modrm(c, 0xc0, a, b);
     break;
 
   default: abort(c);
@@ -1061,8 +1133,10 @@ moveZMR(Context* c, unsigned aSize UNUSED, Assembler::Memory* a,
 {
   assert(c, bSize == BytesPerWord);
   assert(c, aSize == 2);
-
-  encode2(c, 0x0fb7, b->low, a, true);
+  
+  maybeRex(c, bSize, b, a);
+  opcode(c, 0x0f, 0xb7);
+  modrmSibImm(c, b->low, a->scale, a->index, a->base, a->offset);
 }
 
 void
@@ -1071,9 +1145,9 @@ addCarryRR(Context* c, unsigned size, Assembler::Register* a,
 {
   assert(c, BytesPerWord == 8 or size == 4);
   
-  if (size == 8) rex(c);
-  c->code.append(0x11);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+  maybeRex(c, size, a, b);
+  opcode(c, 0x11);
+  modrm(c, 0xc0, b, a);
 }
 
 void
@@ -1089,9 +1163,9 @@ addRR(Context* c, unsigned aSize, Assembler::Register* a,
     addRR(c, 4, a, 4, b);
     addCarryRR(c, 4, &ah, &bh);
   } else {
-    if (aSize == 8) rex(c);
-    c->code.append(0x01);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    maybeRex(c, aSize, a, b);
+    opcode(c, 0x01);
+    modrm(c, 0xc0, b, a);
   }
 }
 
@@ -1099,12 +1173,11 @@ void
 addCarryCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
            Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
   
   int64_t v = a->value->value();
   if (isInt8(v)) {
-    c->code.append(0x83);
-    c->code.append(0xd0 | b->low);
+    maybeRex(c, size, b);
+    opcode(c, 0x83, 0xd0 + regCode(b));
     c->code.append(v);
   } else {
     abort(c);
@@ -1132,14 +1205,12 @@ addCR(Context* c, unsigned aSize, Assembler::Constant* a,
       addCarryCR(c, 4, &ah, &bh);
     } else {
       if (isInt32(v)) {
-        if (bSize == 8) rex(c);
+        maybeRex(c, aSize, b);
         if (isInt8(v)) {
-          c->code.append(0x83);
-          c->code.append(0xc0 | b->low);
+          opcode(c, 0x83, 0xc0 + regCode(b));
           c->code.append(v);
         } else {
-          c->code.append(0x81);
-          c->code.append(0xc0 | b->low);
+          opcode(c, 0x81, 0xc0 + regCode(b));
           c->code.append4(v);
         }
       } else {
@@ -1160,8 +1231,7 @@ subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
   
   int64_t v = a->value->value();
   if (isInt8(v)) {
-    c->code.append(0x83);
-    c->code.append(0xd8 | b->low);
+    opcode(c, 0x83, 0xd8 + regCode(b));
     c->code.append(v);
   } else {
     abort(c);
@@ -1193,14 +1263,12 @@ subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
       subtractBorrowCR(c, 4, &ah, &bh);
     } else {
       if (isInt32(v)) {
-        if (bSize == 8) rex(c);
+        maybeRex(c, aSize, b);
         if (isInt8(v)) {
-          c->code.append(0x83);
-          c->code.append(0xe8 | b->low);
+          opcode(c, 0x83, 0xe8 + regCode(b));
           c->code.append(v);
         } else {
-          c->code.append(0x81);
-          c->code.append(0xe8 | b->low);
+          opcode(c, 0x81, 0xe8 + regCode(b));
           c->code.append4(v);
         }
       } else {
@@ -1219,9 +1287,9 @@ subtractBorrowRR(Context* c, unsigned size, Assembler::Register* a,
 {
   assert(c, BytesPerWord == 8 or size == 4);
   
-  if (size == 8) rex(c);
-  c->code.append(0x19);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+  maybeRex(c, size, a, b);
+  opcode(c, 0x19);
+  modrm(c, 0xc0, b, a);
 }
 
 void
@@ -1229,7 +1297,7 @@ subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
            unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
-
+  
   if (BytesPerWord == 4 and aSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
@@ -1237,9 +1305,9 @@ subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
     subtractRR(c, 4, a, 4, b);
     subtractBorrowRR(c, 4, &ah, &bh);
   } else {
-    if (aSize == 8) rex(c);
-    c->code.append(0x29);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    maybeRex(c, aSize, a, b);
+    opcode(c, 0x29);
+    modrm(c, 0xc0, b, a);
   }
 }
 
@@ -1249,6 +1317,7 @@ andRR(Context* c, unsigned aSize, Assembler::Register* a,
 {
   assert(c, aSize == bSize);
 
+
   if (BytesPerWord == 4 and aSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
@@ -1256,9 +1325,9 @@ andRR(Context* c, unsigned aSize, Assembler::Register* a,
     andRR(c, 4, a, 4, b);
     andRR(c, 4, &ah, 4, &bh);
   } else {
-    if (aSize == 8) rex(c);
-    c->code.append(0x21);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    maybeRex(c, aSize, a, b);
+    opcode(c, 0x21);
+    modrm(c, 0xc0, b, a);
   }
 }
 
@@ -1283,14 +1352,12 @@ andCR(Context* c, unsigned aSize, Assembler::Constant* a,
     andCR(c, 4, &ah, 4, &bh);
   } else {
     if (isInt32(v)) {
-      if (bSize == 8) rex(c);
+      maybeRex(c, aSize, b);
       if (isInt8(v)) {
-        c->code.append(0x83);
-        c->code.append(0xe0 | b->low);
+        opcode(c, 0x83, 0xe0 + regCode(b));
         c->code.append(v);
       } else {
-        c->code.append(0x81);
-        c->code.append(0xe0 | b->low);
+        opcode(c, 0x81, 0xe0 + regCode(b));
         c->code.append4(v);
       }
     } else {
@@ -1315,9 +1382,9 @@ orRR(Context* c, unsigned aSize, Assembler::Register* a,
     orRR(c, 4, a, 4, b);
     orRR(c, 4, &ah, 4, &bh);
   } else {
-    if (aSize == 8) rex(c);
-    c->code.append(0x09);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    maybeRex(c, aSize, a, b);
+    opcode(c, 0x09);
+    modrm(c, 0xc0, b, a);
   }
 }
 
@@ -1342,14 +1409,12 @@ orCR(Context* c, unsigned aSize, Assembler::Constant* a,
       orCR(c, 4, &ah, 4, &bh);
     } else {
       if (isInt32(v)) {
-        if (bSize == 8) rex(c);
+        maybeRex(c, aSize, b);
         if (isInt8(v)) {
-          c->code.append(0x83);
-          c->code.append(0xc8 | b->low);
+          opcode(c, 0x83, 0xc8 + regCode(b));
           c->code.append(v);
         } else {
-          c->code.append(0x81);
-          c->code.append(0xc8 | b->low);
+          opcode(c, 0x81, 0xc8 + regCode(b));
           c->code.append4(v);        
         }
       } else {
@@ -1373,9 +1438,9 @@ xorRR(Context* c, unsigned aSize, Assembler::Register* a,
     xorRR(c, 4, a, 4, b);
     xorRR(c, 4, &ah, 4, &bh);
   } else {
-    if (aSize == 8) rex(c);
-    c->code.append(0x31);
-    c->code.append(0xc0 | (a->low << 3) | b->low);
+    maybeRex(c, aSize, a, b);
+    opcode(c, 0x31);
+    modrm(c, 0xc0, b, a);
   }
 }
 
@@ -1400,14 +1465,12 @@ xorCR(Context* c, unsigned aSize, Assembler::Constant* a,
       xorCR(c, 4, &ah, 4, &bh);
     } else {
       if (isInt32(v)) {
-        if (bSize == 8) rex(c);
+        maybeRex(c, aSize, b);
         if (isInt8(v)) {
-          c->code.append(0x83);
-          c->code.append(0xf0 | b->low);
+          opcode(c, 0x83, 0xf0 + regCode(b));
           c->code.append(v);
         } else {
-          c->code.append(0x81);
-          c->code.append(0xf0 | b->low);
+          opcode(c, 0x81, 0xf0 + regCode(b));
           c->code.append4(v);        
         }
       } else {
@@ -1425,6 +1488,7 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
            unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
+
 
   if (BytesPerWord == 4 and aSize == 8) {
     assert(c, b->high == rdx);
@@ -1444,16 +1508,14 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
     addRR(c, 4, &bh, 4, b);
     
     // mul a->low,%eax%edx
-    c->code.append(0xf7);
-    c->code.append(0xe0 | a->low);
+    opcode(c, 0xf7, 0xe0 + a->low);
     
     addRR(c, 4, b, 4, &bh);
     moveRR(c, 4, &axdx, 4, b);
   } else {
-    if (aSize == 8) rex(c);
-    c->code.append(0x0f);
-    c->code.append(0xaf);
-    c->code.append(0xc0 | (b->low << 3) | a->low);
+    maybeRex(c, aSize, b, a);
+    opcode(c, 0x0f, 0xaf);
+    modrm(c, 0xc0, a, b);
   }
 }
 
@@ -1462,11 +1524,11 @@ compareRR(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
 
-  if (aSize == 8) rex(c);
-  c->code.append(0x39);
-  c->code.append(0xc0 | (a->low << 3) | b->low);
+
+  maybeRex(c, aSize, a, b);
+  opcode(c, 0x39);
+  modrm(c, 0xc0, b, a);
 }
 
 void
@@ -1478,14 +1540,12 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
   
   if (a->value->resolved() and isInt32(a->value->value())) {
     int64_t v = a->value->value();
-    if (aSize == 8) rex(c);
+    maybeRex(c, aSize, b);
     if (isInt8(v)) {
-      c->code.append(0x83);
-      c->code.append(0xf8 | b->low);
+      opcode(c, 0x83, 0xf8 + regCode(b));
       c->code.append(v);
     } else {
-      c->code.append(0x81);
-      c->code.append(0xf8 | b->low);
+      opcode(c, 0x81, 0xf8 + regCode(b));
       c->code.append4(v);
     }
   } else {
@@ -1515,14 +1575,14 @@ multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
     int64_t v = a->value->value();
     if (v != 1) {
       if (isInt32(v)) {
-        if (bSize == 8) rex(c);
+        maybeRex(c, bSize, b, b);
         if (isInt8(v)) {
-          c->code.append(0x6b);
-          c->code.append(0xc0 | (b->low << 3) | b->low);
+          opcode(c, 0x6b);
+          modrm(c, 0xc0, b, b);
           c->code.append(v);
         } else {
-          c->code.append(0x69);
-          c->code.append(0xc0 | (b->low << 3) | b->low);
+          opcode(c, 0x69);
+          modrm(c, 0xc0, b, b);
           c->code.append4(v);        
         }
       } else {
@@ -1545,7 +1605,9 @@ compareRM(Context* c, unsigned aSize, Assembler::Register* a,
   if (BytesPerWord == 8 and aSize == 4) {
     moveRR(c, 4, a, 8, a);
   }
-  encode(c, 0x39, a->low, b, true);
+  maybeRex(c, bSize, a, b);
+  opcode(c, 0x39);
+  modrmSibImm(c, a, b);
 }
 
 void
@@ -1557,7 +1619,9 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
   
   if (a->value->resolved()) { 
     int64_t v = a->value->value();   
-    encode(c, isInt8(v) ? 0x83 : 0x81, 7, b, true);
+    maybeRex(c, aSize, b);
+    opcode(c, isInt8(v) ? 0x83 : 0x81);
+    modrmSibImm(c, rdi, b->scale, b->index, b->base, b->offset);
     
     if (isInt8(v)) {
       c->code.append(v);
@@ -1575,8 +1639,8 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
-            Assembler::Register* bl, Assembler::Operand* bh,
+longCompare(Context* c, Assembler::Operand* al, UNUSED Assembler::Operand* ah,
+            Assembler::Register* bl, UNUSED Assembler::Operand* bh,
             BinaryOperationType compare)
 {
   ResolvedPromise negativePromise(-1);
@@ -1591,19 +1655,17 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
   if (BytesPerWord == 8) {
     compare(c, 8, al, 8, bl);
     
-    c->code.append(0x0f);
-    c->code.append(0x8c); // jl
+    opcode(c, 0x0f, 0x8c); // jl
     unsigned less = c->code.length();
     c->code.append4(0);
 
-    c->code.append(0x0f);
-    c->code.append(0x8f); // jg
+    opcode(c, 0x0f, 0x8f); // jg
     unsigned greater = c->code.length();
     c->code.append4(0);
 
     moveCR(c, 4, &zero, 4, bl);
     
-    c->code.append(0xe9); // jmp
+    opcode(c, 0xe9); // jmp
     unsigned nextFirst = c->code.length();
     c->code.append4(0);
 
@@ -1612,7 +1674,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
 
     moveCR(c, 4, &negative, 4, bl);
 
-    c->code.append(0xe9); // jmp
+    opcode(c, 0xe9); // jmp
     unsigned nextSecond = c->code.length();
     c->code.append4(0);
 
@@ -1629,25 +1691,21 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
   } else {
     compare(c, 4, ah, 4, bh);
     
-    c->code.append(0x0f);
-    c->code.append(0x8c); // jl
+    opcode(c, 0x0f, 0x8c); //jl
     unsigned less = c->code.length();
     c->code.append4(0);
 
-    c->code.append(0x0f);
-    c->code.append(0x8f); // jg
+    opcode(c, 0x0f, 0x8f); //jg
     unsigned greater = c->code.length();
     c->code.append4(0);
 
     compare(c, 4, al, 4, bl);
 
-    c->code.append(0x0f);
-    c->code.append(0x82); // ja
+    opcode(c, 0x0f, 0x82); //ja
     unsigned above = c->code.length();
     c->code.append4(0);
 
-    c->code.append(0x0f);
-    c->code.append(0x87); // jb
+    opcode(c, 0x0f, 0x87); //jb
     unsigned below = c->code.length();
     c->code.append4(0);
 
@@ -1665,7 +1723,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
 
     moveCR(c, 4, &negative, 4, bl);
 
-    c->code.append(0xe9); // jmp
+    opcode(c, 0xe9); // jmp
     unsigned nextSecond = c->code.length();
     c->code.append4(0);
 
@@ -1689,7 +1747,6 @@ void
 divideRR(Context* c, unsigned aSize, Assembler::Register* a,
          unsigned bSize UNUSED, Assembler::Register* b UNUSED)
 {
-  assert(c, BytesPerWord == 8 or aSize == 4);
   assert(c, aSize == bSize);
 
   assert(c, b->low == rax);
@@ -1697,18 +1754,16 @@ divideRR(Context* c, unsigned aSize, Assembler::Register* a,
 
   c->client->save(rdx);
     
-  if (aSize == 8) rex(c);
-  c->code.append(0x99); // cdq
-  if (aSize == 8) rex(c);
-  c->code.append(0xf7);
-  c->code.append(0xf8 | a->low);
+  maybeRex(c, aSize, a, b);
+  opcode(c, 0x99); // cdq
+  maybeRex(c, aSize, b, a);
+  opcode(c, 0xf7, 0xf8 + regCode(a));
 }
 
 void
 remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
             unsigned bSize UNUSED, Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or aSize == 4);
   assert(c, aSize == bSize);
 
   assert(c, b->low == rax);
@@ -1716,11 +1771,10 @@ remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
 
   c->client->save(rdx);
     
-  if (aSize == 8) rex(c);
-  c->code.append(0x99); // cdq
-  if (aSize == 8) rex(c);
-  c->code.append(0xf7);
-  c->code.append(0xf8 | a->low);
+  maybeRex(c, aSize, a, b);
+  opcode(c, 0x99); // cdq
+  maybeRex(c, aSize, b, a);
+  opcode(c, 0xf7, 0xf8 + regCode(a));
 
   Assembler::Register dx(rdx);
   moveRR(c, BytesPerWord, &dx, BytesPerWord, b);
@@ -1760,10 +1814,10 @@ longCompareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
 }
 
 void
-doShift(Context* c, void (*shift)
+doShift(Context* c, UNUSED void (*shift)
         (Context*, unsigned, Assembler::Register*, unsigned,
          Assembler::Register*),
-        int type, unsigned aSize, Assembler::Constant* a,
+        int type, UNUSED unsigned aSize, Assembler::Constant* a,
         unsigned bSize, Assembler::Register* b)
 {
   int64_t v = a->value->value();
@@ -1775,13 +1829,11 @@ doShift(Context* c, void (*shift)
     moveCR(c, 4, a, 4, &cx);
     shift(c, aSize, &cx, bSize, b);
   } else {
-    if (bSize == 8) rex(c);
+    maybeRex(c, bSize, b);
     if (v == 1) {
-      c->code.append(0xd1);
-      c->code.append(type | b->low);
+      opcode(c, 0xd1, type + regCode(b));
     } else if (isInt8(v)) {
-      c->code.append(0xc1);
-      c->code.append(type | b->low);
+      opcode(c, 0xc1, type + regCode(b));
       c->code.append(v);
     } else {
       abort(c);
@@ -1790,36 +1842,32 @@ doShift(Context* c, void (*shift)
 }
 
 void
-shiftLeftRR(Context* c, unsigned aSize, Assembler::Register* a,
+shiftLeftRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
             unsigned bSize, Assembler::Register* b)
 {
   assert(c, a->low == rcx);
-
+  
   if (BytesPerWord == 4 and bSize == 8) {
     // shld
-    c->code.append(0x0f);
-    c->code.append(0xa5);
-    c->code.append(0xc0 | (b->low << 3) | b->high);
+    opcode(c, 0x0f, 0xa5);
+    modrm(c, 0xc0, b->high, b->low);
 
     // shl
-    c->code.append(0xd3);
-    c->code.append(0xe0 | b->low);
+    opcode(c, 0xd3, 0xe0 + b->low);
 
     ResolvedPromise promise(32);
     Assembler::Constant constant(&promise);
     compareCR(c, aSize, &constant, aSize, a);
 
-    c->code.append(0x0f);
-    c->code.append(0x8c); // jl
+    opcode(c, 0x0f, 0x8c); //jl
     c->code.append4(2 + 2);
 
     Assembler::Register bh(b->high);
     moveRR(c, 4, b, 4, &bh); // 2 bytes
     xorRR(c, 4, b, 4, b); // 2 bytes
   } else {
-    if (bSize == 8) rex(c);
-    c->code.append(0xd3);
-    c->code.append(0xe0 | b->low);
+    maybeRex(c, bSize, a, b);
+    opcode(c, 0xd3, 0xe0 + regCode(b));
   }
 }
 
@@ -1831,40 +1879,34 @@ shiftLeftCR(Context* c, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-shiftRightRR(Context* c, unsigned aSize, Assembler::Register* a,
+shiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
              unsigned bSize, Assembler::Register* b)
 {
   assert(c, a->low == rcx);
-
   if (BytesPerWord == 4 and bSize == 8) {
     // shrd
-    c->code.append(0x0f);
-    c->code.append(0xad);
-    c->code.append(0xc0 | (b->high << 3) | b->low);
+    opcode(c, 0x0f, 0xad);
+    modrm(c, 0xc0, b->low, b->high);
 
     // sar
-    c->code.append(0xd3);
-    c->code.append(0xf8 | b->high);
+    opcode(c, 0xd3, 0xf8 + b->high);
 
     ResolvedPromise promise(32);
     Assembler::Constant constant(&promise);
     compareCR(c, aSize, &constant, aSize, a);
 
-    c->code.append(0x0f);
-    c->code.append(0x8c); // jl
+    opcode(c, 0x0f, 0x8c); //jl
     c->code.append4(2 + 3);
 
     Assembler::Register bh(b->high);
     moveRR(c, 4, &bh, 4, b); // 2 bytes
 
     // sar 31,high
-    c->code.append(0xc1);
-    c->code.append(0xf8 | b->high);
+    opcode(c, 0xc1, 0xf8 + b->high);
     c->code.append(31);
   } else {
-    if (bSize == 8) rex(c);
-    c->code.append(0xd3);
-    c->code.append(0xf8 | b->low);
+    maybeRex(c, bSize, a, b);
+    opcode(c, 0xd3, 0xf8 + regCode(b));
   }
 }
 
@@ -1876,36 +1918,32 @@ shiftRightCR(Context* c, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-unsignedShiftRightRR(Context* c, unsigned aSize, Assembler::Register* a,
+unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
                      unsigned bSize, Assembler::Register* b)
 {
   assert(c, a->low == rcx);
 
   if (BytesPerWord == 4 and bSize == 8) {
     // shrd
-    c->code.append(0x0f);
-    c->code.append(0xad);
-    c->code.append(0xc0 | (b->high << 3) | b->low);
+    opcode(c, 0x0f, 0xad);
+    modrm(c, 0xc0, b->low, b->high);
 
     // shr
-    c->code.append(0xd3);
-    c->code.append(0xe8 | b->high);
+    opcode(c, 0xd3, 0xe8 + b->high);
 
     ResolvedPromise promise(32);
     Assembler::Constant constant(&promise);
     compareCR(c, aSize, &constant, aSize, a);
 
-    c->code.append(0x0f);
-    c->code.append(0x8c); // jl
+    opcode(c, 0x0f, 0x8c); //jl
     c->code.append4(2 + 2);
 
     Assembler::Register bh(b->high);
     moveRR(c, 4, &bh, 4, b); // 2 bytes
     xorRR(c, 4, &bh, 4, &bh); // 2 bytes
   } else {
-    if (bSize == 8) rex(c);
-    c->code.append(0xd3);
-    c->code.append(0xe8 | b->low);
+    maybeRex(c, bSize, a, b);
+    opcode(c, 0xd3, 0xe8 + regCode(b));
   }
 }
 
@@ -2015,7 +2053,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned registerCount() {
-    return 8;//BytesPerWord == 4 ? 8 : 16;
+    return (BytesPerWord == 4 ? 8 : 16);
   }
 
   virtual int stack() {
@@ -2063,9 +2101,13 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFootprint(unsigned footprint) {
+#ifdef __MINGW32__
+    return max(footprint, StackAlignmentInWords);
+#else
     return max(footprint > argumentRegisterCount() ?
                footprint - argumentRegisterCount() : 0,
                StackAlignmentInWords);
+#endif
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
@@ -2073,13 +2115,27 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-    return (BytesPerWord == 4 ? 0 : 6);
+#ifdef __MINGW32__
+    if (BytesPerWord == 8) return 4; else
+#else
+    if (BytesPerWord == 8) return 6; else
+#endif
+    return 0;
   }
 
   virtual int argumentRegister(unsigned index) {
     assert(&c, BytesPerWord == 8);
-
     switch (index) {
+#ifdef __MINGW32__
+    case 0:
+      return rcx;
+    case 1:
+      return rdx;
+    case 2:
+      return r8;
+    case 3:
+      return r9;
+#else
     case 0:
       return rdi;
     case 1:
@@ -2092,6 +2148,7 @@ class MyArchitecture: public Assembler::Architecture {
       return r8;
     case 5:
       return r9;
+#endif
     default:
       abort(&c);
     }
@@ -2114,7 +2171,7 @@ class MyArchitecture: public Assembler::Architecture {
   {
     if (BytesPerWord == 4 or op == Call or op == Jump) {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-
+      
       assert(&c, ((op == Call or op == LongCall) and *instruction == 0xE8)
              or ((op == Jump or op == LongJump) and *instruction == 0xE9));
 
@@ -2611,3 +2668,5 @@ makeAssembler(System* system, Allocator* allocator, Zone* zone,
 
 
 } // namespace vm
+
+#endif //(defined __i386__) || (defined __x86_64__)

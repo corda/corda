@@ -574,11 +574,20 @@ class MySystem: public System {
     if (handler) {
       segFaultHandler = handler;
 
+#ifdef __i386__
       oldSegFaultHandler = SetUnhandledExceptionFilter(handleException);
+#elif defined __x86_64__
+      AddVectoredExceptionHandler(1, handleException);
+      oldSegFaultHandler = 0;
+#endif
       return 0;
     } else if (segFaultHandler) {
       segFaultHandler = 0;
+#ifdef __i386__
       SetUnhandledExceptionFilter(oldSegFaultHandler);
+#elif defined __x86_64__
+      //do nothing, handlers are never "unregistered" anyway
+#endif
       return 0;
     } else {
       return 1;
@@ -600,10 +609,15 @@ class MySystem: public System {
     CONTEXT context;
     rv = GetThreadContext(target->thread, &context);
     expect(this, rv);
-
+#ifdef __i386__
     visitor->visit(reinterpret_cast<void*>(context.Eip),
                    reinterpret_cast<void*>(context.Ebp),
                    reinterpret_cast<void*>(context.Esp));
+#elif defined __x86_64__
+	visitor->visit(reinterpret_cast<void*>(context.Rip),
+                   reinterpret_cast<void*>(context.Rbp),
+                   reinterpret_cast<void*>(context.Rsp));
+#endif
 
     rv = ResumeThread(target->thread);
     expect(this, rv != -1);
@@ -798,7 +812,7 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
       char name[MAX_PATH];
       _timeb tb;
       _ftime(&tb);
-      snprintf(name, MAX_PATH, "%s\\crash-%lld.mdmp", directory,
+      snprintf(name, MAX_PATH, "%s\\crash-%"LLD".mdmp", directory,
                (static_cast<int64_t>(tb.time) * 1000)
                + static_cast<int64_t>(tb.millitm));
 
@@ -830,18 +844,31 @@ LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e)
 {
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+#ifdef __i386__
     void* ip = reinterpret_cast<void*>(e->ContextRecord->Eip);
     void* base = reinterpret_cast<void*>(e->ContextRecord->Ebp);
     void* stack = reinterpret_cast<void*>(e->ContextRecord->Esp);
     void* thread = reinterpret_cast<void*>(e->ContextRecord->Ebx);
+#elif defined __x86_64__ 
+    void* ip = reinterpret_cast<void*>(e->ContextRecord->Rip);
+    void* base = reinterpret_cast<void*>(e->ContextRecord->Rbp);
+    void* stack = reinterpret_cast<void*>(e->ContextRecord->Rsp);
+    void* thread = reinterpret_cast<void*>(e->ContextRecord->Rbx);
+#endif
 
     bool jump = system->segFaultHandler->handleSignal
       (&ip, &base, &stack, &thread);
-
+#ifdef __i386__
     e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
     e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
     e->ContextRecord->Esp = reinterpret_cast<DWORD>(stack);
     e->ContextRecord->Ebx = reinterpret_cast<DWORD>(thread);
+#elif defined __x86_64__
+    e->ContextRecord->Rip = reinterpret_cast<DWORD64>(ip);
+    e->ContextRecord->Rbp = reinterpret_cast<DWORD64>(base);
+    e->ContextRecord->Rsp = reinterpret_cast<DWORD64>(stack);
+    e->ContextRecord->Rbx = reinterpret_cast<DWORD64>(thread);
+#endif
 
     if (jump) {
       return EXCEPTION_CONTINUE_EXECUTION;

@@ -10,7 +10,9 @@
 
 package java.lang.reflect;
 
-public class Method<T> extends AccessibleObject implements Member {
+public class Method<T> extends AccessibleObject
+  implements Member, GenericDeclaration
+{
   private byte vmFlags;
   private byte returnCode;
   private byte parameterCount;
@@ -123,5 +125,29 @@ public class Method<T> extends AccessibleObject implements Member {
       }
     }
     throw new RuntimeException();
+  }
+
+  public boolean isSynthetic() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Object getDefaultValue() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Type[] getGenericParameterTypes() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Type getGenericReturnType() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Class[] getExceptionTypes() {
+    throw new UnsupportedOperationException();
+  }
+
+  public TypeVariable<Method<T>>[] getTypeParameters() {
+    throw new UnsupportedOperationException();
   }
 }

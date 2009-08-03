@@ -18,10 +18,6 @@ bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 platform = $(bootimage-platform)
 
-ifeq ($(platform),windows)
-	arch = i386
-endif
-
 mode = fast
 process = compile
 
@@ -43,6 +39,23 @@ endif
 ifeq ($(continuations),true)
 	options := $(options)-continuations
 endif
+ifdef gnu
+  options := $(options)-gnu
+	gnu-sources = $(src)/gnu.cpp
+	gnu-jar = $(gnu)/share/classpath/glibj.zip
+	gnu-libraries = \
+		$(gnu)/lib/classpath/libjavaio.a \
+		$(gnu)/lib/classpath/libjavalang.a \
+		$(gnu)/lib/classpath/libjavalangreflect.a \
+		$(gnu)/lib/classpath/libjavamath.a \
+		$(gnu)/lib/classpath/libjavanet.a \
+		$(gnu)/lib/classpath/libjavanio.a \
+		$(gnu)/lib/classpath/libjavautil.a
+	gnu-object-dep = $(build)/gnu-object.dep
+	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
+	gnu-lflags = -lgmp
+	gnu-objects = $(shell find $(build)/gnu-objects -name "*.o") 
+endif
 
 root = $(shell (cd .. && pwd))
 build = build
@@ -52,6 +65,12 @@ test-build = $(build)/test
 src = src
 classpath = classpath
 test = test
+
+ifdef gnu
+	avian-classpath-build = $(build)/avian-classpath
+else
+	avian-classpath-build = $(classpath-build)
+endif
 
 input = List
 
@@ -83,13 +102,14 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
+	$(gnu-cflags)
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
 cflags = $(build-cflags)
 
-common-lflags = -lm -lz
+common-lflags = -lm -lz $(gnu-lflags)
 
 build-lflags =
 
@@ -167,6 +187,21 @@ ifeq ($(platform),windows)
 			native-path = cygpath -m
 		endif
 	endif
+
+	ifeq ($(arch),x86_64)
+		cxx = x86_64-pc-mingw32-g++
+		cc = x86_64-pc-mingw32-gcc
+		dlltool = x86_64-pc-mingw32-dlltool
+		ar = x86_64-pc-mingw32-ar
+		ranlib = x86_64-pc-mingw32-ranlib
+		objcopy = x86_64-pc-mingw32-objcopy
+		strip = :
+		inc = "$(root)/win64/include"
+		lib = "$(root)/win64/lib"
+		pointer-size = 8
+		object-format = pe-x86-64
+	endif
+		 
 endif
 
 ifeq ($(mode),debug)
@@ -232,7 +267,8 @@ vm-sources = \
 	$(src)/$(process).cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
-	$(src)/process.cpp
+	$(src)/process.cpp \
+	$(gnu-sources)
 
 vm-asm-sources = $(src)/$(asm).S
 
@@ -314,16 +350,43 @@ classpath-sources = $(shell find $(classpath) -name '*.java')
 classpath-classes = \
 	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
 classpath-object = $(native-build)/classpath-jar.o
-classpath-dep = $(classpath-build)/dep
+classpath-dep = $(classpath-build).dep
+
+gnu-blacklist = \
+	java/lang/AbstractStringBuffer.class \
+	java/lang/reflect/Proxy.class
+
+gnu-overrides = \
+	avian/*.class \
+	avian/resource/*.class \
+	java/lang/Class.class \
+	java/lang/Enum.class \
+	java/lang/InheritableThreadLocal.class \
+	java/lang/Object.class \
+	java/lang/StackTraceElement.class \
+	java/lang/String*.class \
+	java/lang/StringBuffer.class \
+	java/lang/StringBuilder.class \
+	java/lang/Thread.class \
+	java/lang/ThreadLocal.class \
+	java/lang/Throwable.class \
+	java/lang/ref/PhantomReference.class \
+	java/lang/ref/Reference.class \
+	java/lang/ref/ReferenceQueue.class \
+	java/lang/ref/WeakReference.class \
+	java/lang/reflect/AccessibleObject.class \
+	java/lang/reflect/Constructor.class \
+	java/lang/reflect/Field.class \
+	java/lang/reflect/Method.class
 
 test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
-test-dep = $(test-build)/dep
+test-dep = $(test-build).dep
 
 test-extra-sources = $(wildcard $(test)/extra/*.java)
 test-extra-classes = \
 	$(call java-classes,$(test-extra-sources),$(test),$(test-build))
-test-extra-dep = $(test-build)/extra/dep
+test-extra-dep = $(test-build)-extra.dep
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
@@ -393,11 +456,24 @@ $(native-build)/type-generator.o: \
 $(classpath-build)/%.class: $(classpath)/%.java
 	@echo $(<)
 
-$(classpath-dep): $(classpath-sources)
+$(classpath-dep): $(classpath-sources) $(gnu-jar)
 	@echo "compiling classpath classes"
-	@mkdir -p $(dir $(@))
-	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
+	@mkdir -p $(avian-classpath-build)
+	$(javac) -d $(avian-classpath-build) \
+		-bootclasspath $(avian-classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
+ifdef gnu
+	(wd=$$(pwd) && \
+	 cd $(avian-classpath-build) && \
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(build)/overrides.jar")" \
+		 $(gnu-overrides))
+	@mkdir -p $(classpath-build)
+	(wd=$$(pwd) && \
+	 cd $(classpath-build) && \
+	 $(jar) xf $(gnu-jar) && \
+	 rm $(gnu-blacklist) && \
+	 jar xf "$$($(native-path) "$${wd}/$(build)/overrides.jar")")
+endif
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -405,16 +481,16 @@ $(test-build)/%.class: $(test)/%.java
 
 $(test-dep): $(test-sources)
 	@echo "compiling test classes"
-	@mkdir -p $(dir $(@))
-	$(javac) -d $(dir $(@)) -bootclasspath $(classpath-build) \
+	@mkdir -p $(test-build)
+	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-classes))
-	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(dir $(@)) \
+	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
 		test/Subroutine.java
 	@touch $(@)
 
 $(test-extra-dep): $(test-extra-sources)
 	@echo "compiling extra test classes"
-	@mkdir -p $(dir $(@))
+	@mkdir -p $(test-build)
 	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
 		$(shell $(MAKE) -s --no-print-directory $(test-extra-classes))
 	@touch $(@)
@@ -456,9 +532,9 @@ $(boot-object): $(boot-source)
 	$(compile-object)
 
 $(build)/classpath.jar: $(classpath-dep)
-	(wd=$$(pwd); \
-	 cd $(classpath-build); \
-	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" $$(find . -name '*.class'))
+	(wd=$$(pwd) && \
+	 cd $(classpath-build) && \
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
 	$(cxx) $(^) -o $(@)
@@ -469,8 +545,8 @@ ifeq ($(platform),darwin)
 	$(binaryToMacho) $(asm) $(build)/classpath.jar __TEXT __text \
 		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
 else
-	(wd=$$(pwd); \
-	 cd $(build); \
+	(wd=$$(pwd) && \
+	 cd $(build) && \
 	 $(objcopy) -I binary classpath.jar \
 		 -O $(object-format) -B $(object-arch) "$${wd}/$(@)")
 endif
@@ -484,10 +560,11 @@ $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 $(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
 	$(compile-object)
 
+$(static-library): $(gnu-object-dep)
 $(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
-	$(ar) cru $(@) $(^)
+	$(ar) cru $(@) $(^) $(call gnu-objects)
 	$(ranlib) $(@)
 
 $(bootimage-bin): $(bootimage-generator)
@@ -499,24 +576,32 @@ ifeq ($(platform),darwin)
 	$(binaryToMacho) $(asm) $(<) __BOOT __boot \
 		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
 else
-	(wd=$$(pwd); \
-	 cd $(native-build); \
+	(wd=$$(pwd) && \
+	 cd $(native-build) && \
 	 $(objcopy) --rename-section=.data=.boot -I binary bootimage.bin \
-		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp"; \
+		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp" && \
 	 $(objcopy) --set-section-flags .boot=alloc,load,code "$${wd}/$(@).tmp" \
 		"$${wd}/$(@)")
 endif
 
+$(gnu-object-dep): $(gnu-libraries)
+	@mkdir -p $(build)/gnu-objects
+	(cd $(build)/gnu-objects && \
+	 for x in $(gnu-libraries); do ar x $${x}; done)
+	@touch $(@)
+
+$(executable): $(gnu-object-dep)
 $(executable): \
 		$(vm-objects) $(jni-objects) $(driver-object) $(vm-heapwalk-objects) \
 		$(boot-object) $(vm-classpath-object)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
-	$(dlltool) -z $(@).def $(^)
+	$(dlltool) -z $(@).def $(^) $(call gnu-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(cc) $(@).exp $(^) $(lflags) -o $(@)
+	$(cc) $(@).exp $(^) $(call gnu-objects) $(lflags) -o $(@)
 else
-	$(cc) $(^) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
+	$(cc) $(^) $(call gnu-objects) $(rdynamic) $(lflags) $(bootimage-lflags) \
+		-o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
@@ -545,11 +630,13 @@ else
 	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
 
+$(dynamic-library): $(gnu-object-dep)
 $(dynamic-library): \
 		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
-		$(boot-object) $(vm-classpath-object)
+		$(boot-object) $(vm-classpath-object) $(gnu-libraries)
 	@echo "linking $(@)"
-	$(cc) $(^) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
+	$(cc) $(^) $(call gnu-objects) $(shared) $(lflags) $(bootimage-lflags) \
+		-o $(@)
 	$(strip) $(strip-all) $(@)
 
 $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
@@ -560,4 +647,3 @@ $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
 	$(build-cc) $(^) $(build-lflags) -o $(@)
-

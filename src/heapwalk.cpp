@@ -88,7 +88,7 @@ class Context {
     while (stack) {
       Stack* dead = stack;
       stack = dead->next;
-      thread->m->heap->free(stack, sizeof(Stack));
+      thread->m->heap->free(dead, sizeof(Stack));
     }
   }
 

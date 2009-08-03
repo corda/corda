@@ -18,8 +18,8 @@ public class StackTraceElement {
   private String file;
   private int line;
 
-  private StackTraceElement(String class_, String method, String file,
-                            int line)
+  public StackTraceElement(String class_, String method, String file,
+                           int line)
   {
     this.class_ = class_;
     this.method = method;
@@ -56,7 +56,7 @@ public class StackTraceElement {
   }
 
   public String getClassName() {
-    return class_;
+    return class_.replace('/', '.');
   }
 
   public String getMethodName() {

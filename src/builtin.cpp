@@ -63,6 +63,25 @@ enumerateThreads(Thread* t, Thread* x, object array, unsigned* index,
   }
 }
 
+bool
+compatibleArrayTypes(Thread* t, object a, object b)
+{
+  return classArrayElementSize(t, a)
+    and classArrayElementSize(t, b)
+    and (a == b
+         or (not ((classVmFlags(t, a) & PrimitiveFlag)
+                  or (classVmFlags(t, b) & PrimitiveFlag))));
+}
+
+void
+runOnLoadIfFound(Thread* t, System::Library* library)
+{
+  void* p = library->resolve("JNI_OnLoad");
+  if (p) {
+    reinterpret_cast<jint (JNICALL *)(Machine*, void*)>(p)(t->m, 0);
+  }
+}
+
 } // namespace
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -530,7 +549,9 @@ Avian_java_lang_System_arraycopy
   int32_t length = arguments[4];
 
   if (LIKELY(src and dst)) {
-    if (LIKELY(objectClass(t, src) == objectClass(t, dst))) {
+    if (LIKELY(compatibleArrayTypes
+               (t, objectClass(t, src), objectClass(t, dst))))
+    {
       unsigned elementSize = classArrayElementSize(t, objectClass(t, src));
 
       if (LIKELY(elementSize)) {
@@ -602,6 +623,10 @@ Avian_java_lang_Runtime_load
           and (s[length] == ',' or s[length] == 0))
       {
         // library is built in to this executable
+        if (not t->m->triedBuiltinOnLoad) {
+          t->m->triedBuiltinOnLoad = true;
+          runOnLoadIfFound(t, t->m->libraries);
+        }
         return;
       } else {
         while (*s and *s != ',') ++ s;
@@ -625,6 +650,7 @@ Avian_java_lang_Runtime_load
   System::Library* lib;
   if (LIKELY(t->m->system->success(t->m->system->load(&lib, n, mapName)))) {
     last->setNext(lib);
+    runOnLoadIfFound(t, lib);
   } else {
     object message = makeString(t, "library not found: %s", n);
     t->exception = makeUnsatisfiedLinkError(t, message);
@@ -836,7 +862,7 @@ Avian_java_lang_Thread_enumerate
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_net_URL_00024ResourceInputStream_getContentLength
+Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
 (Thread* t, object, uintptr_t* arguments)
 {
   object path = reinterpret_cast<object>(*arguments);
@@ -856,7 +882,7 @@ Avian_java_net_URL_00024ResourceInputStream_getContentLength
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_net_URL_00024ResourceInputStream_open
+Avian_avian_resource_Handler_00024ResourceInputStream_open
 (Thread* t, object, uintptr_t* arguments)
 {
   object path = reinterpret_cast<object>(*arguments);
@@ -873,7 +899,7 @@ Avian_java_net_URL_00024ResourceInputStream_open
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_net_URL_00024ResourceInputStream_read__JI
+Avian_avian_resource_Handler_00024ResourceInputStream_read__JI
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -888,7 +914,7 @@ Avian_java_net_URL_00024ResourceInputStream_read__JI
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_net_URL_00024ResourceInputStream_read__JI_3BII
+Avian_avian_resource_Handler_00024ResourceInputStream_read__JI_3BII
 (Thread* t, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -913,7 +939,7 @@ Avian_java_net_URL_00024ResourceInputStream_read__JI_3BII
 }
 
 extern "C" JNIEXPORT void JNICALL
-Avian_java_net_URL_00024ResourceInputStream_close
+Avian_avian_resource_Handler_00024ResourceInputStream_close
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);

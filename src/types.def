@@ -144,8 +144,9 @@
 
 (type illegalMonitorStateException java/lang/IllegalMonitorStateException)
 
-(type arrayIndexOutOfBoundsException
-  java/lang/ArrayIndexOutOfBoundsException)
+(type indexOutOfBoundsException java/lang/IndexOutOfBoundsException)
+
+(type arrayIndexOutOfBoundsException java/lang/ArrayIndexOutOfBoundsException)
 
 (type arrayStoreException java/lang/ArrayStoreException)
 
@@ -161,6 +162,8 @@
 
 (type error java/lang/Error)
 
+(type virtualMachineError java/lang/VirtualMachineError)
+
 (type stackOverflowError java/lang/StackOverflowError)
 
 (type linkageError java/lang/LinkageError)
@@ -170,6 +173,8 @@
 (type noSuchFieldError java/lang/NoSuchFieldError)
 
 (type noSuchMethodError java/lang/NoSuchMethodError)
+
+(type noClassDefFoundError java/lang/NoClassDefFoundError)
 
 (type unsatisfiedLinkError java/lang/UnsatisfiedLinkError)
 

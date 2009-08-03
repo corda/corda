@@ -76,6 +76,7 @@ const int UnknownLine = -2;
 
 // class flags (note that we must be careful not to overlap the
 // standard ACC_* flags):
+const unsigned HasFinalMemberFlag = 1 << 13;
 const unsigned SingletonFlag = 1 << 14;
 const unsigned ContinuationFlag = 1 << 15;
 
@@ -84,9 +85,10 @@ const unsigned ReferenceFlag = 1 << 0;
 const unsigned WeakReferenceFlag = 1 << 1;
 const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
-const unsigned PrimitiveFlag = 1 << 4;
-const unsigned BootstrapFlag = 1 << 5;
-const unsigned HasFinalMemberFlag = 1 << 6;
+const unsigned InitErrorFlag = 1 << 4;
+const unsigned PrimitiveFlag = 1 << 5;
+const unsigned BootstrapFlag = 1 << 6;
+const unsigned HasFinalizerFlag = 1 << 7;
 
 // method vmFlags:
 const unsigned ClassInitFlag = 1 << 0;
@@ -1190,6 +1192,7 @@ class Machine {
   object bootstrapClassMap;
   object monitorMap;
   object stringMap;
+  object byteArrayMap;
   object types;
   object jniMethodTable;
   object finalizers;
@@ -1198,6 +1201,7 @@ class Machine {
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;
+  bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
@@ -1265,6 +1269,25 @@ class Thread {
     object* p;
   };
 
+  class ClassInitStack {
+   public:
+    ClassInitStack(Thread* t, object class_):
+      next(t->classInitStack),
+      class_(class_),
+      protector(t, &(this->class_))
+    {
+      t->classInitStack = this;
+    }
+
+    ~ClassInitStack() {
+      protector.t->classInitStack = next;
+    }
+
+    ClassInitStack* next;
+    object class_;
+    SingleProtector protector;
+  };
+
   class Runnable: public System::Runnable {
    public:
     Runnable(Thread* t): t(t) { }
@@ -1317,6 +1340,7 @@ class Thread {
   unsigned heapIndex;
   unsigned heapOffset;
   Protector* protector;
+  ClassInitStack* classInitStack;
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
@@ -1710,7 +1734,7 @@ makeClassNotFoundException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeClassNotFoundException(t, message, trace, 0);
+  return makeClassNotFoundException(t, message, trace, 0, 0);
 }
 
 inline object
@@ -1762,6 +1786,14 @@ makeNoSuchMethodError(Thread* t, object message)
 }
 
 inline object
+makeNoClassDefFoundError(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeNoClassDefFoundError(t, message, trace, 0);
+}
+
+inline object
 makeUnsatisfiedLinkError(Thread* t, object message)
 {
   PROTECT(t, message);
@@ -1774,7 +1806,7 @@ makeExceptionInInitializerError(Thread* t, object cause)
 {
   PROTECT(t, cause);
   object trace = makeTrace(t);
-  return makeExceptionInInitializerError(t, 0, trace, cause);
+  return makeExceptionInInitializerError(t, 0, trace, cause, cause);
 }
 
 inline object
@@ -1790,27 +1822,16 @@ makeNew(Thread* t, object class_)
   return instance;
 }
 
-inline object
-makeNewWeakReference(Thread* t, object class_)
-{
-  assert(t, t->state == Thread::ActiveState);
-
-  object instance = makeNew(t, class_);
-  PROTECT(t, instance);
-
-  ACQUIRE(t, t->m->referenceLock);
-
-  jreferenceVmNext(t, instance) = t->m->weakReferences;
-  t->m->weakReferences = instance;
-
-  return instance;
-}
+object
+makeNewGeneral(Thread* t, object class_);
 
 inline object
 make(Thread* t, object class_)
 {
-  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
-    return makeNewWeakReference(t, class_);
+  if (UNLIKELY(classVmFlags(t, class_)
+               & (WeakReferenceFlag | HasFinalizerFlag)))
+  {
+    return makeNewGeneral(t, class_);
   } else {
     return makeNew(t, class_);
   }
@@ -1933,9 +1954,9 @@ stringCharAt(Thread* t, object s, int i)
   if (objectClass(t, data)
       == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
-    return byteArrayBody(t, data, i);
+    return byteArrayBody(t, data, stringOffset(t, s) + i);
   } else {
-    return charArrayBody(t, data, i);
+    return charArrayBody(t, data, stringOffset(t, s) + i);
   }
 }
 
@@ -2051,33 +2072,72 @@ fieldSize(Thread* t, object field)
 object
 findLoadedClass(Thread* t, object spec);
 
+inline bool
+emptyMethod(Thread* t, object method)
+{
+  return ((methodFlags(t, method) & ACC_NATIVE) == 0)
+    and (codeLength(t, methodCode(t, method)) == 1)
+    and (codeBody(t, methodCode(t, method), 0) == return_);
+}
+
 object
 parseClass(Thread* t, const uint8_t* data, unsigned length);
 
 object
-resolveClass(Thread* t, object spec);
+resolveClass(Thread* t, object name);
+
+inline object
+resolveClass(Thread* t, const char* name)
+{
+  return resolveClass(t, makeByteArray(t, "%s", name));
+}
 
 object
-resolveMethod(Thread* t, const char* className, const char* methodName,
+resolveMethod(Thread* t, object class_, const char* methodName,
               const char* methodSpec);
+
+inline object
+resolveMethod(Thread* t, const char* className, const char* methodName,
+              const char* methodSpec)
+{
+  object class_ = resolveClass(t, className);
+  if (LIKELY(t->exception == 0)) {
+    return resolveMethod(t, class_, methodName, methodSpec);
+  } else {
+    return 0;
+  }
+}
+
+object
+resolveField(Thread* t, object class_, const char* fieldName,
+             const char* fieldSpec);
+
+inline object
+resolveField(Thread* t, const char* className, const char* fieldName,
+             const char* fieldSpec)
+{
+  object class_ = resolveClass(t, className);
+  if (LIKELY(t->exception == 0)) {
+    return resolveField(t, class_, fieldName, fieldSpec);
+  } else {
+    return 0;
+  }
+}
 
 object
 resolveObjectArrayClass(Thread* t, object elementSpec);
 
-inline bool
-classNeedsInit(Thread* t, object c)
-{
-  return classVmFlags(t, c) & NeedInitFlag
-    and (classVmFlags(t, c) & InitFlag) == 0;
-}
+bool
+classNeedsInit(Thread* t, object c);
 
-inline void
-initClass(Thread* t, object c)
-{
-  if (classNeedsInit(t, c)) {
-    t->m->processor->initClass(t, c);
-  }
-}
+bool
+preInitClass(Thread* t, object c);
+
+void
+postInitClass(Thread* t, object c);
+
+void
+initClass(Thread* t, object c);
 
 object
 makeObjectArray(Thread* t, object elementClass, unsigned count);
@@ -2387,5 +2447,8 @@ dumpHeap(Thread* t, FILE* out);
 
 void
 vmPrintTrace(vm::Thread* t);
+
+void*
+vmAddressFromLine(vm::Thread* t, vm::object m, unsigned line);
 
 #endif//MACHINE_H

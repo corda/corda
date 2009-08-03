@@ -13,8 +13,9 @@ package java.lang;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.IOException;
+import java.io.Serializable;
 
-public class Throwable {
+public class Throwable implements Serializable {
   private String message;
   private Object trace;
   private Throwable cause;
@@ -108,5 +109,10 @@ public class Throwable {
       sb.append("caused by: ");
       cause.printStackTrace(sb, nl);
     }
+  }
+
+  public Throwable fillInStackTrace() {
+    trace = trace(0);
+    return this;
   }
 }

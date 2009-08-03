@@ -88,26 +88,4 @@ public class Tree {
 
     isEqual(printMap(map), "a=A, b=B, c=C, q=Q, y=Y, z=Z");
   }
-
-  private static class MyEntry<K,V> implements Map.Entry<K,V> {
-    public final K key;
-    public V value;
-
-    public MyEntry(K key, V value) {
-      this.key = key;
-      this.value = value;
-    }
-
-    public K getKey() {
-      return key;
-    }
-
-    public V getValue() {
-      return value;
-    }
-
-    public void setValue(V value) {
-      this.value = value;
-    }
-  }
 }

@@ -73,7 +73,9 @@
 
 # Thread.run is called by name in the VM
 
--keepclassmembernames class java.lang.Thread { void run(); }
+-keepclassmembers class java.lang.Thread {
+   private static void run(java.lang.Thread);
+ }
 
 # when continuations are enabled, the VM may call these methods by name:
 
