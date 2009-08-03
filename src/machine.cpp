@@ -250,6 +250,23 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
   return true;
 }
 
+object
+findInInterfaces(Thread* t, object class_, object name, object spec,
+                 object (*find)(Thread*, object, object, object))
+{
+  object result = 0;
+  if (classInterfaceTable(t, class_)) {
+    for (unsigned i = 0;
+         i < arrayLength(t, classInterfaceTable(t, class_)) and result == 0;
+         i += 2)
+    {
+      result = find
+        (t, arrayBody(t, classInterfaceTable(t, class_), i), name, spec);
+    }
+  }
+  return result;
+}
+
 void
 finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 {
@@ -2710,7 +2727,8 @@ resolveField(Thread* t, object class_, const char* fieldName,
   object spec = makeByteArray(t, fieldSpec);
   PROTECT(t, spec);
  
-  object field = 0;
+  object field = findInInterfaces(t, class_, name, spec, findFieldInClass);
+
   for (; class_ != 0 and field == 0; class_ = classSuper(t, class_)) {
     field = findFieldInClass(t, class_, name, spec);
   }
@@ -2900,8 +2918,16 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   }
 
   if (o == 0) {
+    if (find == findFieldInClass) {
+      o = findInInterfaces(t, class_, name, spec, find);
+    }
+
     for (; o == 0 and class_; class_ = classSuper(t, class_)) {
       o = find(t, class_, name, spec);
+    }
+
+    if (o == 0 and find == findMethodInClass) {
+      o = findInInterfaces(t, class_, name, spec, find);
     }
   }
 
