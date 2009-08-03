@@ -24,21 +24,29 @@ public class SocketChannel extends SelectableChannel
 
   int socket = InvalidSocket;
   boolean connected = false;
+  boolean blocking = true;
 
   public static SocketChannel open() {
     return new SocketChannel();
   }
 
-  public SelectableChannel configureBlocking(boolean v) {
-    if (v) throw new IllegalArgumentException();
+  public SelectableChannel configureBlocking(boolean v) throws IOException {
+    blocking = v;
+    if (socket != InvalidSocket) {
+      configureBlocking(socket, v);
+    }
     return this;
+  }
+
+  public boolean isBlocking() {
+    return blocking;
   }
 
   public Socket socket() {
     return new Handle();
   }
 
-  public boolean connect(SocketAddress address) throws Exception {
+  public boolean connect(SocketAddress address) throws IOException {
     InetSocketAddress a;
     try {
       a = (InetSocketAddress) address;
@@ -46,6 +54,7 @@ public class SocketChannel extends SelectableChannel
       throw new UnsupportedAddressTypeException();
     }
     socket = doConnect(a.getHostName(), a.getPort());
+    configureBlocking(blocking);
     return connected;
   }
 
@@ -56,11 +65,11 @@ public class SocketChannel extends SelectableChannel
     }
   }
 
-  private int doConnect(String host, int port) throws Exception {
+  private int doConnect(String host, int port) throws IOException {
     if (host == null) throw new NullPointerException();
 
     boolean b[] = new boolean[1];
-    int s = natDoConnect(host, port, b);
+    int s = natDoConnect(host, port, blocking, b);
     connected = b[0];
     return s;
   }
@@ -109,11 +118,14 @@ public class SocketChannel extends SelectableChannel
     }
   }
 
+  private static native void configureBlocking(int socket, boolean blocking)
+    throws IOException;
+
   private static native void natSetTcpNoDelay(int socket, boolean on)
     throws SocketException;
 
-  private static native int natDoConnect(String host, int port, boolean[] connected)
-    throws Exception;
+  private static native int natDoConnect(String host, int port, boolean blocking, boolean[] connected)
+    throws IOException;
   private static native int natRead(int socket, byte[] buffer, int offset, int length)
     throws IOException;
   private static native int natWrite(int socket, byte[] buffer, int offset, int length)
