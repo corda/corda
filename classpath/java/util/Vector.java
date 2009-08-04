@@ -93,11 +93,11 @@ public class Vector<T> extends AbstractList<T> {
     list.clear();
   }
 
-  public synchronized int indexOf(T element) {
+  public synchronized int indexOf(Object element) {
     return list.indexOf(element);
   }
 
-  public synchronized int lastIndexOf(T element) {
+  public synchronized int lastIndexOf(Object element) {
     return list.lastIndexOf(element);
   }
 

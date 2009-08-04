@@ -93,6 +93,28 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     return find(element) != null;
   }
 
+  public int indexOf(Object element) {
+    int i = 0;
+    for (Cell<T> c = front; c != null; c = c.next) {
+      if (equal(c.value, element)) {
+        return i;
+      }
+      ++ i;
+    }
+    return -1;
+  }
+
+  public int lastIndexOf(Object element) {
+    int i = size;
+    for (Cell<T> c = rear; c != null; c = c.prev) {
+      -- i;
+      if (equal(c.value, element)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   public boolean add(T element) {
     addLast(element);
     return true;

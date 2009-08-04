@@ -94,7 +94,7 @@ public class ArrayList<T> extends AbstractList<T> {
     return true;
   }
 
-  public int indexOf(T element) {
+  public int indexOf(Object element) {
     for (int i = 0; i < size; ++i) {
       if (equal(element, array[i])) {
         return i;
@@ -103,8 +103,8 @@ public class ArrayList<T> extends AbstractList<T> {
     return -1;
   }
 
-  public int lastIndexOf(T element) {
-    for (int i = size; i >= 0; --i) {
+  public int lastIndexOf(Object element) {
+    for (int i = size - 1; i >= 0; --i) {
       if (equal(element, array[i])) {
         return i;
       }

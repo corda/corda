@@ -73,6 +73,24 @@ public class Arrays {
         return false;
       }
 
+      public int indexOf(Object element) {
+        for (int i = 0; i < array.length; ++i) {
+          if (equal(element, array[i])) {
+            return i;
+          }
+        }
+        return -1;
+      }
+
+      public int lastIndexOf(Object element) {
+        for (int i = array.length - 1; i >= 0; --i) {
+          if (equal(element, array[i])) {
+            return i;
+          }
+        }
+        return -1;
+      }
+
       public T get(int index) {
         return array[index];
       }
