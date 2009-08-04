@@ -41,6 +41,12 @@ public class File {
     return isDirectory(path);
   }
 
+  private static native boolean isFile(String path);
+
+  public boolean isFile() {
+    return isFile(path);
+  }
+
   public String getName() {
     int index = path.lastIndexOf(FileSeparator);
     if (index >= 0) {
@@ -139,6 +145,19 @@ public class File {
       }
     }
     return mkdir();
+  }
+
+  public File[] listFiles() {
+    return listFiles(null);
+  }
+
+  public File[] listFiles(FilenameFilter filter) {
+    String[] list = list(filter);
+    File[] result = new File[list.length];
+    for (int i = 0; i < list.length; ++i) {
+      result[i] = new File(this, list[i]);
+    }
+    return result;
   }
 
   public String[] list() {
