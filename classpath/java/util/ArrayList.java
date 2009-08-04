@@ -176,6 +176,10 @@ public class ArrayList<T> implements List<T> {
     return new Collections.ArrayListIterator(this, index);
   }
 
+  public ListIterator<T> listIterator() {
+    return listIterator(0);
+  }
+
   public String toString() {
     return Collections.toString(this);
   }
