@@ -102,7 +102,15 @@ public class Arrays {
       }
 
       public Iterator<T> iterator() {
-        return new Collections.ArrayListIterator(this);
+        return listIterator();
+      }
+
+      public ListIterator<T> listIterator(int index) {
+        return new Collections.ArrayListIterator(this, index);
+      }
+
+      public ListIterator<T> listIterator() {
+        return listIterator(0);
       }
     };
   }

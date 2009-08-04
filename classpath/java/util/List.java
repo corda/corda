@@ -22,4 +22,8 @@ public interface List<T> extends Collection<T> {
   public void add(int index, T element);
 
   public boolean isEmpty();
+
+  public ListIterator<T> listIterator(int index);
+
+  public ListIterator<T> listIterator();
 }

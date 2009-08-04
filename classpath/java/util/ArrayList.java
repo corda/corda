@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class ArrayList<T> implements List<T> {
+public class ArrayList<T> extends AbstractList<T> {
   private static final int MinimumCapacity = 16;
 
   private Object[] array;
@@ -169,7 +169,7 @@ public class ArrayList<T> implements List<T> {
   }
 
   public Iterator<T> iterator() {
-    return new Collections.ArrayListIterator(this);
+    return listIterator();
   }
 
   public ListIterator<T> listIterator(int index) {

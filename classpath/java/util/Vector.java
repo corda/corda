@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class Vector<T> implements List<T> {
+public class Vector<T> extends AbstractList<T> {
   private final ArrayList<T> list;
 
   public Vector(int capacity) {
@@ -112,7 +112,15 @@ public class Vector<T> implements List<T> {
   }
 
   public Iterator<T> iterator() {
-    return new Collections.ArrayListIterator(this);
+    return listIterator();
+  }
+
+  public ListIterator<T> listIterator(int index) {
+    return new Collections.ArrayListIterator(this, index);
+  }
+
+  public ListIterator<T> listIterator() {
+    return listIterator(0);
   }
 
   public Enumeration<T> elements() {
