@@ -858,6 +858,8 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     PROTECT(t, name);
 
     object interface = resolveClass(t, name);
+    if (UNLIKELY(t->exception)) return;
+
     PROTECT(t, interface);
 
     hashMapInsertMaybe(t, map, name, interface, byteArrayHash, byteArrayEqual);
