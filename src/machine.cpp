@@ -2907,7 +2907,6 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*makeError)(Thread*, object))
 {
   object originalClass = class_;
-  PROTECT(t, class_);
 
   object o = 0;
   if ((classFlags(t, class_) & ACC_INTERFACE)
@@ -2919,7 +2918,7 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
 
   if (o == 0) {
     if (find == findFieldInClass) {
-      o = findInInterfaces(t, class_, name, spec, find);
+      o = findInInterfaces(t, originalClass, name, spec, find);
     }
 
     for (; o == 0 and class_; class_ = classSuper(t, class_)) {
@@ -2927,7 +2926,7 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
     }
 
     if (o == 0 and find == findMethodInClass) {
-      o = findInInterfaces(t, class_, name, spec, find);
+      o = findInInterfaces(t, originalClass, name, spec, find);
     }
   }
 
