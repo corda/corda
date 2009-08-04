@@ -81,6 +81,10 @@ public class Arrays {
         throw new UnsupportedOperationException();
       }
 
+      public Object[] toArray() {
+        return toArray(new Object[size()]);      
+      }
+
       public <S> S[] toArray(S[] a) {
         return (S[])array;
       }

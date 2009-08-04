@@ -85,10 +85,6 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     }
   }
 
-  public <S> S[] toArray(S[] a) {
-    return Collections.toArray(this, a);
-  }
-
   public int size() {
     return size;
   }

@@ -77,10 +77,6 @@ public class Vector<T> extends AbstractList<T> {
     return list.isEmpty();
   }
 
-  public synchronized <S> S[] toArray(S[] a) {
-    return list.toArray(a);
-  }
-
   public void removeElementAt(int index) {
     remove(index);
   }

@@ -159,10 +159,6 @@ public class ArrayList<T> extends AbstractList<T> {
     return size() == 0;
   }
 
-  public <S> S[] toArray(S[] a) {
-    return Collections.toArray(this, a);
-  }
-
   public void clear() {
     array = null;
     size = 0;

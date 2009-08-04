@@ -144,6 +144,10 @@ public class TreeMap<K,V> implements Map<K,V> {
       return set.removeAndReturn(new MyEntry(key, null)) != null;
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <T> T[] toArray(T[] array) {
       return Collections.toArray(this, array);      
     }
@@ -180,6 +184,10 @@ public class TreeMap<K,V> implements Map<K,V> {
 
     public boolean remove(Object value) {
       throw new UnsupportedOperationException();
+    }
+
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
     }
 
     public <T> T[] toArray(T[] array) {

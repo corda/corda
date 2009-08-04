@@ -129,6 +129,10 @@ public class Collections {
       synchronized (lock) { return collection.remove((T)e); }
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <T> T[] toArray(T[] array) {
       synchronized (lock) { return collection.toArray(array); }
     }
@@ -319,10 +323,13 @@ public class Collections {
       return inner.size();
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <S> S[] toArray(S[] array) {
       return inner.toArray(array);
-    }
-          
+    }     
   }
   
   public static <T> Set<T> unmodifiableSet(Set<T> hs) {

@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class HashSet<T> implements Set<T> {
+public class HashSet<T> extends AbstractSet<T> implements Set<T> {
   private static final Object Value = new Object();
 
   private final HashMap<T, Object> map;
@@ -52,10 +52,6 @@ public class HashSet<T> implements Set<T> {
 
   public boolean remove(Object element) {
     return map.remove(element) != Value;
-  }
-
-  public <T> T[] toArray(T[] array) {
-    return Collections.toArray(this, array);
   }
 
   public void clear() {
