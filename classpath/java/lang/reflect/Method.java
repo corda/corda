@@ -103,6 +103,10 @@ public class Method<T> extends AccessibleObject
     throws InvocationTargetException, IllegalAccessException
   {
     if ((flags & Modifier.STATIC) != 0 || class_.isInstance(instance)) {
+      if ((flags & Modifier.STATIC) != 0) {
+        instance = null;
+      }
+
       if (arguments.length == parameterCount) {
         return invoke(this, instance, arguments);        
       } else {
