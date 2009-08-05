@@ -35,4 +35,5 @@ public final class Modifier {
   public static boolean isSuper    (int v) { return (v &     SUPER) != 0; }
   public static boolean isNative   (int v) { return (v &    NATIVE) != 0; }
   public static boolean isAbstract (int v) { return (v &  ABSTRACT) != 0; }
+  public static boolean isInterface(int v) { return (v & INTERFACE) != 0; }
 }
