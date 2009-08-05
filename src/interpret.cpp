@@ -167,7 +167,7 @@ popLong(Thread* t)
   return (b << 32) | a;
 }
 
-inline float
+inline double
 popDouble(Thread* t)
 {
   return bitsToDouble(popLong(t));
