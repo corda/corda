@@ -341,13 +341,26 @@ Avian_java_lang_VMRuntime_nativeLoad
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Class_primitiveClass
-(Thread* t, object, uintptr_t*);
+(Thread*, object, uintptr_t*);
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_VMClassLoader_getPrimitiveClass
 (Thread* t, object, uintptr_t* arguments)
 {
   return Avian_java_lang_Class_primitiveClass(t, 0, arguments);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_ClassLoader_defineClass
+(Thread*, object, uintptr_t*);
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_VMClassLoader_defineClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  uintptr_t args[] = { arguments[2], arguments[3], arguments[4] };
+
+  return Avian_java_lang_ClassLoader_defineClass(t, 0, args);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
