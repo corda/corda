@@ -256,7 +256,7 @@ class Read {
     value(0), event(0), eventNext(0)
   { }
 
-  virtual bool intersect(SiteMask* mask) = 0;
+  virtual bool intersect(SiteMask* mask, unsigned depth = 0) = 0;
 
   virtual Value* successor() = 0;
   
@@ -1939,7 +1939,7 @@ class SingleRead: public Read {
     next_(0), mask(mask), successor_(successor)
   { }
 
-  virtual bool intersect(SiteMask* mask) {
+  virtual bool intersect(SiteMask* mask, unsigned) {
     *mask = ::intersect(*mask, this->mask);
 
     return true;
@@ -2002,13 +2002,19 @@ class MultiRead: public Read {
     reads(0), lastRead(0), firstTarget(0), lastTarget(0), visited(false)
   { }
 
-  virtual bool intersect(SiteMask* mask) {
+  virtual bool intersect(SiteMask* mask, unsigned depth) {
+    if (depth > 0) {
+      // short-circuit recursion to avoid poor performance in
+      // deeply-nested branches
+      return reads != 0;
+    }
+
     bool result = false;
     if (not visited) {
       visited = true;
       for (Cell** cell = &reads; *cell;) {
         Read* r = static_cast<Read*>((*cell)->value);
-        bool valid = r->intersect(mask);
+        bool valid = r->intersect(mask, depth + 1);
         if (valid) {
           result = true;
           cell = &((*cell)->next);
@@ -2101,11 +2107,11 @@ class StubRead: public Read {
     next_(0), read(0), visited(false), valid_(true)
   { }
 
-  virtual bool intersect(SiteMask* mask) {
+  virtual bool intersect(SiteMask* mask, unsigned depth) {
     if (not visited) {
       visited = true;
       if (read) {
-        bool valid = read->intersect(mask);
+        bool valid = read->intersect(mask, depth);
         if (not valid) {
           read = 0;
         }
@@ -4333,6 +4339,8 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
       } else {
         complete = false;
       }
+    } else {
+      sites[el.localIndex] = 0;
     }
   }
 
