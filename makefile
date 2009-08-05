@@ -360,13 +360,16 @@ gnu-overrides = \
 	avian/*.class \
 	avian/resource/*.class \
 	java/lang/Class.class \
+	java/lang/Class\$$*.class \
 	java/lang/Enum.class \
 	java/lang/InheritableThreadLocal.class \
 	java/lang/Object.class \
 	java/lang/StackTraceElement.class \
-	java/lang/String*.class \
+	java/lang/String.class \
+	java/lang/String\$$*.class \
 	java/lang/StringBuffer.class \
 	java/lang/StringBuilder.class \
+	java/lang/StringBuilder\$$*.class \
 	java/lang/Thread.class \
 	java/lang/ThreadLocal.class \
 	java/lang/Throwable.class \
