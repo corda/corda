@@ -1679,10 +1679,6 @@ class MyArchitecture: public Assembler::Architecture {
     return (BytesPerWord == 4 ? 3 : NoRegister);
   }
 
-  virtual bool condensedAddressing() {
-    return false;
-  }
-
   virtual bool bigEndian() {
     return true;
   }
@@ -1770,6 +1766,18 @@ class MyArchitecture: public Assembler::Architecture {
     *stack = *static_cast<void**>(*stack);
   }
 
+  virtual BinaryOperation hasBinaryIntrinsic(Thread* t, object method) {
+  	return NoBinaryOperation;
+  }
+  
+  virtual TernaryOperation hasTernaryIntrinsic(Thread* t UNUSED, object method UNUSED) {
+  	return NoTernaryOperation;
+  }
+  
+  virtual bool supportsFloatCompare(unsigned size) {
+    return false;
+  }
+  
   virtual void plan
   (UnaryOperation,
    unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
@@ -1780,42 +1788,62 @@ class MyArchitecture: public Assembler::Architecture {
     *thunk = false;
   }
 
-  virtual void plan
+  virtual void planSource
   (BinaryOperation op,
    unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-   bool* thunk)
+   unsigned, bool* thunk)
   {
     *aTypeMask = ~0;
     *aRegisterMask = ~static_cast<uint64_t>(0);
-
-    *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
 
     *thunk = false;
 
     switch (op) {
     case Compare:
       *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
-      *bTypeMask = (1 << RegisterOperand);
       break;
 
     case Negate:
       *aTypeMask = (1 << RegisterOperand);
+      break;
+    case FloatCompare:
+    case FloatNegate:
+    case Float2Float:
+    case Float2Int:
+    case Int2Float:
+      *thunk = true;
+      break;
+    default:
+      break;
+    }
+  }
+  
+  virtual void planDestination
+  (BinaryOperation op,
+   unsigned, const uint8_t* aTypeMask, const uint64_t* aRegisterMask,
+   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask)
+  {
+    *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+    *bRegisterMask = ~static_cast<uint64_t>(0);
+
+    switch (op) {
+    case Compare:
       *bTypeMask = (1 << RegisterOperand);
       break;
 
+    case Negate:
+      *bTypeMask = (1 << RegisterOperand);
+      break;
     default:
       break;
     }
   }
 
-  virtual void plan
+  virtual void planSource
   (TernaryOperation op,
    unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-   unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask,
-   bool* thunk)
+   unsigned, bool* thunk)
   {
     *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
     *aRegisterMask = ~static_cast<uint64_t>(0);
@@ -1851,10 +1879,25 @@ class MyArchitecture: public Assembler::Architecture {
       }
       break;
 
+    case FloatAdd:
+    case FloatSubtract:
+    case FloatMultiply:
+    case FloatDivide:
+    case FloatRemainder:
+      *bTypeMask = ~0;
+      *thunk = true;
+      break;
     default:
       break;
     }
+  }
 
+  virtual void planDestination
+  (TernaryOperation op,
+   unsigned, const uint8_t*, const uint64_t*,
+   unsigned, const uint8_t* bTypeMask, const uint64_t* bRegisterMask,
+   unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask)
+  {
     *cTypeMask = *bTypeMask;
     *cRegisterMask = *bRegisterMask;
   }
