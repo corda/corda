@@ -36,7 +36,8 @@ enum UnaryOperation {
   JumpIfLessOrEqual,
   JumpIfGreaterOrEqual,
   JumpIfEqual,
-  JumpIfNotEqual
+  JumpIfNotEqual,
+  JumpIfUnordered
 };
 
 const unsigned UnaryOperationCount = JumpIfNotEqual + 1;
@@ -45,10 +46,24 @@ enum BinaryOperation {
   Move,
   MoveZ,
   Compare,
-  Negate
+  Negate,
+  
+  //extensions:
+  FloatNegate,
+  FloatCompare,
+  Float2Float,
+  Float2Int,
+  Int2Float,
+  
+  //intrinsic functions:
+  FloatSqrt,
+  FloatAbs,
+  Abs,
+  
+  NoBinaryOperation = -1
 };
 
-const unsigned BinaryOperationCount = Negate + 1;
+const unsigned BinaryOperationCount = Abs + 1;
 
 enum TernaryOperation {
   LongCompare,
@@ -62,10 +77,23 @@ enum TernaryOperation {
   UnsignedShiftRight,
   And,
   Or,
-  Xor
+  Xor,
+  
+  //extensions:
+  FloatAdd,
+  FloatSubtract,
+  FloatMultiply,
+  FloatDivide,
+  FloatRemainder,
+  
+  //intrinsic functions:
+  FloatMax,
+  FloatMin,
+  
+  NoTernaryOperation = -1
 };
 
-const unsigned TernaryOperationCount = Xor + 1;
+const unsigned TernaryOperationCount = FloatMin + 1;
 
 enum OperandType {
   ConstantOperand,
@@ -258,15 +286,19 @@ class Assembler {
   class Architecture {
    public:
     virtual unsigned registerCount() = 0;
+    virtual unsigned generalRegisterCount() = 0;
+    virtual unsigned floatRegisterCount() = 0;
+    virtual uint64_t generalRegisters() = 0;
+    virtual uint64_t floatRegisters() = 0;
 
     virtual int stack() = 0;
     virtual int thread() = 0;
     virtual int returnLow() = 0;
     virtual int returnHigh() = 0;
 
-    virtual bool condensedAddressing() = 0;
-
     virtual bool bigEndian() = 0;
+    
+    virtual bool supportsFloatCompare(unsigned size) = 0;
 
     virtual bool reserved(int register_) = 0;
 
@@ -287,24 +319,36 @@ class Assembler {
     virtual unsigned frameReturnAddressSize() = 0;
     virtual unsigned frameFooterSize() = 0;
     virtual void nextFrame(void** stack, void** base) = 0;
+    
+    virtual BinaryOperation hasBinaryIntrinsic(Thread* t, object method) = 0;
+    virtual TernaryOperation hasTernaryIntrinsic(Thread* t, object method) = 0;
 
     virtual void plan
     (UnaryOperation op,
      unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
      bool* thunk) = 0;
 
-    virtual void plan
+    virtual void planSource
     (BinaryOperation op,
      unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-     bool* thunk) = 0;
+     unsigned bSize, bool* thunk) = 0;
+     
+    virtual void planDestination
+    (BinaryOperation op,
+     unsigned aSize, const uint8_t* aTypeMask, const uint64_t* aRegisterMask,
+     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask) = 0;
 
-    virtual void plan
+    virtual void planSource
     (TernaryOperation op,
      unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
      unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-     unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask,
-     bool* thunk) = 0; 
+     unsigned cSize, bool* thunk) = 0; 
+
+    virtual void planDestination
+    (TernaryOperation op,
+     unsigned aSize, const uint8_t* aTypeMask, const uint64_t* aRegisterMask,
+     unsigned bSize, const uint8_t* bTypeMask, const uint64_t* bRegisterMask,
+     unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask) = 0; 
 
     virtual void acquire() = 0;
     virtual void release() = 0;
