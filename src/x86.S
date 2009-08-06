@@ -18,6 +18,42 @@
 #ifdef __x86_64__
 
 #ifdef __WINDOWS__
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+.globl _detectFeature
+_detectFeature: 
+#  else
+.globl detectFeature
+detectFeature:
+#  endif
+   pushq %rbp
+   movq %rsp, %rbp
+   pushq %rdx
+   pushq %rcx
+   pushq %rbx
+   pushq %rsi
+   pushq %rdi
+   movl %ecx, %edi
+   movl %edx, %esi
+   movl $1, %eax
+   cpuid
+   andl %esi, %edx
+   andl %edi, %ecx
+   orl %edx, %ecx
+   test %ecx, %ecx
+   je LOCAL(NOSSE)
+   movl $1, %eax
+   jmp LOCAL(SSEEND)
+LOCAL(NOSSE):
+   movl $0, %eax
+LOCAL(SSEEND):
+   popq %rdi
+   popq %rsi
+   popq %rbx
+   popq %rcx
+   popq %rdx
+   movq %rbp,%rsp
+   popq %rbp
+   ret
 
 #  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
 .globl _vmNativeCall
@@ -141,6 +177,36 @@ _vmJump:
    jmp    *%rcx
    
 #elif defined __LINUX__
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+.globl _detectFeature
+_detectFeature: 
+#  else
+.globl detectFeature
+detectFeature:
+#  endif
+   pushq %rbp
+   movq %rsp, %rbp
+   pushq %rdx
+   pushq %rcx
+   pushq %rbx
+   movl $1, %eax
+   cpuid
+   andl %esi, %edx
+   andl %edi, %ecx
+   orl %edx, %ecx
+   test %ecx, %ecx
+   je LOCAL(NOSSE)
+   movl $1, %eax
+   jmp LOCAL(SSEEND)
+LOCAL(NOSSE):
+   movl $0, %eax
+LOCAL(SSEEND):
+   popq %rbx
+   popq %rcx
+   popq %rdx
+   movq %rbp,%rsp
+   popq %rbp
+   ret
 
 #  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
 .globl _vmNativeCall
@@ -252,8 +318,44 @@ vmJump:
    jmp    *%rdi
    
 #endif //def __WINDOWS__
-
 #elif defined __i386__
+#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+.globl _detectFeature
+_detectFeature: 
+#  else
+.globl detectFeature
+detectFeature:
+#  endif
+   pushl %ebp
+   movl %esp, %ebp
+   pushl %edx
+   pushl %ecx
+   pushl %ebx
+   pushl %esi
+   pushl %edi
+   movl 12(%ebp), %esi
+   movl 8(%ebp), %edi
+   movl $1, %eax
+   cpuid
+   andl %esi, %edx
+   andl %edi, %ecx
+   orl %edx, %ecx
+   test %ecx, %ecx
+   je LOCAL(NOSSE)
+   movl $1, %eax
+   jmp LOCAL(SSEEND)
+LOCAL(NOSSE):
+   movl $0, %eax
+LOCAL(SSEEND):
+   popl %edi
+   popl %esi
+   popl %ebx
+   popl %ecx
+   popl %edx
+   movl %ebp,%esp
+   popl %ebp
+   ret
+   
 #  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
 .globl _vmNativeCall
 _vmNativeCall: 
