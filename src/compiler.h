@@ -21,8 +21,9 @@ class Compiler {
  public:
   class Client {
    public:
-    virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
-    virtual intptr_t getThunk(TernaryOperation op, unsigned size) = 0;
+    virtual intptr_t getThunk(UnaryOperation op, unsigned size, unsigned resultSize) = 0;
+    virtual intptr_t getThunk(BinaryOperation op, unsigned size, unsigned resultSize) = 0;
+    virtual intptr_t getThunk(TernaryOperation op, unsigned size, unsigned resultSize) = 0;
   };
   
   static const unsigned Aligned  = 1 << 0;
@@ -106,18 +107,25 @@ class Compiler {
                          unsigned dstSize) = 0;
   virtual Operand* lcmp(Operand* a, Operand* b) = 0;
   virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
+  virtual void fcmp(unsigned size, Operand* a, Operand* b) = 0;
   virtual void jl(Operand* address) = 0;
   virtual void jg(Operand* address) = 0;
   virtual void jle(Operand* address) = 0;
   virtual void jge(Operand* address) = 0;
   virtual void je(Operand* address) = 0;
   virtual void jne(Operand* address) = 0;
+  virtual void juo(Operand* address) = 0;
   virtual void jmp(Operand* address) = 0;
   virtual Operand* add(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* sub(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* mul(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* div(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* rem(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* fadd(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* fsub(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* fmul(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* fdiv(unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* frem(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* shl(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* shr(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* ushr(unsigned size, Operand* a, Operand* b) = 0;
@@ -125,6 +133,12 @@ class Compiler {
   virtual Operand* or_(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* neg(unsigned size, Operand* a) = 0;
+  virtual Operand* fneg(unsigned size, Operand* a) = 0;
+  virtual Operand* operation(BinaryOperation op, unsigned aSize, unsigned resSize, Operand* a) = 0;
+  virtual Operand* operation(TernaryOperation op, unsigned aSize, unsigned bSize, unsigned resSize, Operand* a, Operand* b) = 0;
+  virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
+  virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
+  virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
 
   virtual void loadBarrier() = 0;
   virtual void storeStoreBarrier() = 0;
