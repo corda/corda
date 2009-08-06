@@ -27,11 +27,12 @@ vmCall();
 
 namespace {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
 const bool DebugFrameMaps = false;
+const bool DebugIntrinsics = false;
 
 const bool CheckArrayBounds = true;
 
@@ -3091,7 +3092,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if(params == 1) {//TODO: Get number of method params
       	BinaryOperation op = t->arch->hasBinaryIntrinsic(t, target);
       	if(op != NoBinaryOperation) {
-      	  printf("Could use binary intrinsic %i.\n", op);
+      	  if(DebugIntrinsics) {
+      	    fprintf(stderr, "Using binary intrinsic %i.\n", op);
+      	  }
 		  int opSize = methodParameterFootprint(t, target) * BytesPerWord;
 		  int resSize = resultSize(t, methodReturnCode(t, target));
 		  Compiler::Operand* param;
@@ -3111,7 +3114,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       } else if(params == 2) { //TODO: Get number of method params
       	TernaryOperation op = t->arch->hasTernaryIntrinsic(t, target);
       	if(op != NoTernaryOperation) {
-      	  printf("Could use ternary intrinsic %i.\n", op);
+      	  if(DebugIntrinsics) {
+      	    fprintf(stderr, "Could use ternary intrinsic %i.\n", op);
+      	  }
       	  //int aSize, bSize;
 		  //int resSize = resultSize(t, methodReturnCode(t, target));
           compileDirectInvoke(t, frame, target); //TODO: use intrinsic
