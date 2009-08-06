@@ -21,7 +21,7 @@ class Compiler {
  public:
   class Client {
    public:
-    virtual intptr_t getThunk(UnaryOperation op, unsigned size, unsigned resultSize) = 0;
+    virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
     virtual intptr_t getThunk(BinaryOperation op, unsigned size, unsigned resultSize) = 0;
     virtual intptr_t getThunk(TernaryOperation op, unsigned size, unsigned resultSize) = 0;
   };
