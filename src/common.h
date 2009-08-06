@@ -29,7 +29,7 @@
 #  define PATH_SEPARATOR ':'
 #endif
 
-#if (defined __i386__) || (defined __POWERPC__)
+#if (defined __i386__) || (defined __POWERPC__) || (defined __arm__)
 #  define LD "ld"
 #  define LLD "lld"
 #ifdef __APPLE__

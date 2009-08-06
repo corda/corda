@@ -21,6 +21,8 @@ vmJump(void* address, void* base, void* stack, void* thread,
 #  include "x86.h"
 #elif defined __POWERPC__
 #  include "powerpc.h"
+#elif defined __arm__
+#  include "arm.h"
 #else
 #  error unsupported architecture
 #endif
