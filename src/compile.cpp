@@ -189,8 +189,10 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
   intptr_t start = methodCompiled(t, method);
 
   if (DebugMethodTree) {
-    fprintf(stderr, "find 0x%"LX" in (0x%"LX",0x%"LX")\n", ip, start,
-            start + compiledSize(start));
+    fprintf(stderr, "find %p in (%p,%p)\n",
+            reinterpret_cast<void*>(ip),
+            reinterpret_cast<void*>(start),
+            reinterpret_cast<void*>(start + compiledSize(start)));
   }
 
   if (ip < start) {
