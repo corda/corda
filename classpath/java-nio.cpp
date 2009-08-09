@@ -27,6 +27,7 @@
 #  include <netdb.h>
 #  include <sys/select.h>
 #  include <netinet/tcp.h>
+#  include <sys/socket.h>
 #endif
 
 #define java_nio_channels_SelectionKey_OP_READ 1L

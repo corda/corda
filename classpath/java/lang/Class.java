@@ -29,7 +29,7 @@ import java.security.Permissions;
 import java.security.AllPermission;
 
 public final class Class <T> implements Type, GenericDeclaration {
-  private static final int PrimitiveFlag = 1 << 4;
+  private static final int PrimitiveFlag = 1 << 5;
 
   private short flags;
   private byte vmFlags;
@@ -64,6 +64,34 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public String getName() {
+    if (name == null) {
+      if ((vmFlags & PrimitiveFlag) != 0) {
+        if (this == primitiveClass('V')) {
+          name = "void".getBytes();
+        } else if (this == primitiveClass('Z')) {
+          name = "boolean".getBytes();
+        } else if (this == primitiveClass('B')) {
+          name = "byte".getBytes();
+        } else if (this == primitiveClass('C')) {
+          name = "char".getBytes();
+        } else if (this == primitiveClass('S')) {
+          name = "short".getBytes();
+        } else if (this == primitiveClass('I')) {
+          name = "int".getBytes();
+        } else if (this == primitiveClass('F')) {
+          name = "float".getBytes();
+        } else if (this == primitiveClass('J')) {
+          name = "long".getBytes();
+        } else if (this == primitiveClass('D')) {
+          name = "double".getBytes();
+        } else {
+          throw new AssertionError();
+        }
+      } else {
+        throw new AssertionError();
+      }
+    }
+
     return new String
       (replace('/', '.', name, 0, name.length - 1), 0, name.length - 1, false);
   }

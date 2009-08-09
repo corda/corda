@@ -306,6 +306,21 @@ Java_java_io_File_isDirectory(JNIEnv* e, jclass, jstring path)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_isFile(JNIEnv* e, jclass, jstring path)
+{
+  const char* chars = e->GetStringUTFChars(path, 0);
+  if (chars) {
+    STRUCT_STAT s;
+    int r = STAT(chars, &s);
+    bool v = (r == 0 and S_ISREG(s.st_mode));
+    e->ReleaseStringUTFChars(path, chars);
+    return v;
+  } else {
+    return false;
+  }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_exists(JNIEnv* e, jclass, jstring path)
 {
   const char* chars = e->GetStringUTFChars(path, 0);

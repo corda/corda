@@ -129,6 +129,10 @@ public class Collections {
       synchronized (lock) { return collection.remove((T)e); }
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <T> T[] toArray(T[] array) {
       synchronized (lock) { return collection.toArray(array); }
     }
@@ -198,7 +202,6 @@ public class Collections {
     return new SynchronizedMap<K, V> (map); 
   }
   
-
   static class SynchronizedSet<T>
     extends SynchronizedCollection<T>
     implements Set<T>
@@ -232,7 +235,7 @@ public class Collections {
 
   static class ArrayListIterator<T> implements ListIterator<T> {
     private final List<T> list;
-    private boolean canRemove = false;
+    private int toRemove = -1;
     private int index;
 
     public ArrayListIterator(List<T> list) {
@@ -250,7 +253,7 @@ public class Collections {
 
     public T previous() {
       if (hasPrevious()) {
-        canRemove = true;
+        toRemove = index;
         return list.get(index--);
       } else {
         throw new NoSuchElementException();
@@ -259,8 +262,8 @@ public class Collections {
 
     public T next() {
       if (hasNext()) {
-        canRemove = true;
-        return list.get(++index);
+        toRemove = ++index;
+        return list.get(index);
       } else {
         throw new NoSuchElementException();
       }
@@ -271,9 +274,10 @@ public class Collections {
     }
 
     public void remove() {
-      if (canRemove) {
-        canRemove = false;
-        list.remove(index--);
+      if (toRemove != -1) {
+        list.remove(toRemove);
+        index = toRemove - 1;
+        toRemove = -1;
       } else {
         throw new IllegalStateException();
       }
@@ -319,10 +323,13 @@ public class Collections {
       return inner.size();
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <S> S[] toArray(S[] array) {
       return inner.toArray(array);
-    }
-          
+    }     
   }
   
   public static <T> Set<T> unmodifiableSet(Set<T> hs) {

@@ -334,6 +334,10 @@ public class HashMap<K, V> implements Map<K, V> {
       return removeCell(e.getKey()) != null;
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <T> T[] toArray(T[] array) {
       return Collections.toArray(this, array);      
     }
@@ -374,6 +378,10 @@ public class HashMap<K, V> implements Map<K, V> {
       return removeCell(key) != null;
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <T> T[] toArray(T[] array) {
       return Collections.toArray(this, array);      
     }
@@ -410,6 +418,10 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public boolean remove(Object value) {
       throw new UnsupportedOperationException();
+    }
+
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
     }
 
     public <T> T[] toArray(T[] array) {

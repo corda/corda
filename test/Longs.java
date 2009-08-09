@@ -35,7 +35,13 @@ public class Longs {
     return a - (a % b);
   }
 
+  private static int negativeOne() {
+    return -1;
+  }
+
   public static void main(String[] args) {
+    expect(((long) negativeOne()) == -1);
+
     { long foo = 25214903884L;
       int radix = 10;
       expect(foo > 0);

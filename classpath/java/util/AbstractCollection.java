@@ -62,6 +62,10 @@ public abstract class AbstractCollection<T> implements Collection<T> {
 
   public abstract int size();
 
+  public Object[] toArray() {
+    return toArray(new Object[size()]);      
+  }
+
   public <S> S[] toArray(S[] array) {
     return Collections.toArray(this, array);
   }

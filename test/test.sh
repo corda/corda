@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 log=build/log.txt
 vg="nice valgrind --leak-check=full --num-callers=32 \
@@ -28,7 +28,7 @@ for test in ${tests}; do
       exit 1;;
   esac
 
-  if (( ${?} == 0 )); then
+  if [ "${?}" = "0" ]; then
     echo "success"
   else
     echo "fail"

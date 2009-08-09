@@ -73,12 +73,34 @@ public class Arrays {
         return false;
       }
 
+      public int indexOf(Object element) {
+        for (int i = 0; i < array.length; ++i) {
+          if (equal(element, array[i])) {
+            return i;
+          }
+        }
+        return -1;
+      }
+
+      public int lastIndexOf(Object element) {
+        for (int i = array.length - 1; i >= 0; --i) {
+          if (equal(element, array[i])) {
+            return i;
+          }
+        }
+        return -1;
+      }
+
       public T get(int index) {
         return array[index];
       }
 
       public T set(int index, T value) {
         throw new UnsupportedOperationException();
+      }
+
+      public Object[] toArray() {
+        return toArray(new Object[size()]);      
       }
 
       public <S> S[] toArray(S[] a) {
@@ -102,7 +124,15 @@ public class Arrays {
       }
 
       public Iterator<T> iterator() {
-        return new Collections.ArrayListIterator(this);
+        return listIterator();
+      }
+
+      public ListIterator<T> listIterator(int index) {
+        return new Collections.ArrayListIterator(this, index);
+      }
+
+      public ListIterator<T> listIterator() {
+        return listIterator(0);
       }
     };
   }
