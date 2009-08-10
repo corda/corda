@@ -85,11 +85,13 @@ public class Method<T> extends AccessibleObject
             types[index++] = Class.forName(name);
           } else {
             String name = spec.substring(start, i + 1);
-            types[index++] = Class.forCanonicalName(name);
+            types[index++] = Class.forCanonicalName
+              (class_.getClassLoader(), name);
           }
         } else {
           String name = spec.substring(i, i + 1);
-          types[index++] = Class.forCanonicalName(name);
+          types[index++] = Class.forCanonicalName
+            (class_.getClassLoader(), name);
         }
       }
     } catch (ClassNotFoundException e) {
@@ -105,6 +107,13 @@ public class Method<T> extends AccessibleObject
     if ((flags & Modifier.STATIC) != 0 || class_.isInstance(instance)) {
       if ((flags & Modifier.STATIC) != 0) {
         instance = null;
+      }
+
+      if (arguments == null) {
+        if (parameterCount > 0) {
+          throw new NullPointerException();
+        }
+        arguments = new Object[0];
       }
 
       if (arguments.length == parameterCount) {
@@ -125,7 +134,8 @@ public class Method<T> extends AccessibleObject
     for (int i = 0; i < spec.length - 1; ++i) {
       if (spec[i] == ')') {
         return Class.forCanonicalName
-          (new String(spec, i + 1, spec.length - i - 2, false));
+          (class_.getClassLoader(),
+           new String(spec, i + 1, spec.length - i - 2, false));
       }
     }
     throw new RuntimeException();
