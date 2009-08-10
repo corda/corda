@@ -371,6 +371,8 @@ gnu-overrides = \
 	java/lang/StringBuilder.class \
 	java/lang/StringBuilder\$$*.class \
 	java/lang/Thread.class \
+	java/lang/Thread\$$*.class \
+	java/lang/ThreadGroup.class \
 	java/lang/ThreadLocal.class \
 	java/lang/Throwable.class \
 	java/lang/ref/PhantomReference.class \

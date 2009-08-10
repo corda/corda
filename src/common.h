@@ -313,6 +313,12 @@ voidPointer(T function)
   return p;
 }
 
+inline void
+replace(char a, char b, char* c)
+{
+  for (; *c; ++c) if (*c == a) *c = b;
+}
+
 class Machine;
 class Thread;
 

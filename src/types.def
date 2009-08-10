@@ -6,7 +6,8 @@
 (type singleton
   (array uintptr_t body))
 
-(type classLoader java/lang/ClassLoader)
+(type classLoader java/lang/ClassLoader
+  (object map))
 
 (type systemClassLoader avian/SystemClassLoader)
 
@@ -127,6 +128,8 @@
 (type string java/lang/String)
 
 (type thread java/lang/Thread)
+
+(type threadGroup java/lang/ThreadGroup)
 
 (type stackTraceElement java/lang/StackTraceElement)
 

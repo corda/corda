@@ -101,8 +101,9 @@ class Processor {
              va_list arguments) = 0;
 
   virtual object
-  invokeList(Thread* t, const char* className, const char* methodName,
-             const char* methodSpec, object this_, va_list arguments) = 0;
+  invokeList(Thread* t, object loader, const char* className,
+             const char* methodName, const char* methodSpec,
+             object this_, va_list arguments) = 0;
 
   virtual void
   dispose(Thread* t) = 0;
@@ -160,13 +161,14 @@ class Processor {
   }
 
   object
-  invoke(Thread* t, const char* className, const char* methodName,
-         const char* methodSpec, object this_, ...)
+  invoke(Thread* t, object loader, const char* className,
+         const char* methodName, const char* methodSpec, object this_, ...)
   {
     va_list a;
     va_start(a, this_);
 
-    object r = invokeList(t, className, methodName, methodSpec, this_, a);
+    object r = invokeList
+      (t, loader, className, methodName, methodSpec, this_, a);
 
     va_end(a);
 

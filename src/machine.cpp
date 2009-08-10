@@ -501,6 +501,8 @@ postCollect(Thread* t)
 void
 finalizeObject(Thread* t, object o)
 {
+  if (true) return;
+
   if (t->state == Thread::ExitState) {
     // don't waste time running Java finalizers if we're exiting the
     // VM
@@ -857,7 +859,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     object name = singletonObject(t, pool, s.read2() - 1);
     PROTECT(t, name);
 
-    object interface = resolveClass(t, name);
+    object interface = resolveClass(t, classLoader(t, class_), name);
     if (UNLIKELY(t->exception)) return;
 
     PROTECT(t, interface);
@@ -878,7 +880,8 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 
     unsigned i = 0;
     for (HashMapIterator it(t, map); it.hasMore();) {
-      object interface = resolveClass(t, tripleFirst(t, it.next()));
+      object interface = resolveClass
+        (t, classLoader(t, class_), tripleFirst(t, it.next()));
       if (UNLIKELY(t->exception)) return;
 
       set(t, interfaceTable, ArrayBody + (i * BytesPerWord), interface);
@@ -1164,6 +1167,68 @@ scanMethodSpec(Thread* t, const char* s, unsigned* parameterCount,
   *returnCode = fieldCode(t, *it.returnSpec());
 }
 
+object
+addInterfaceMethods(Thread* t, object class_, object virtualMap,
+                    unsigned* virtualCount, bool makeList)
+{
+  object itable = classInterfaceTable(t, class_);
+  if (itable) {
+    PROTECT(t, class_);
+    PROTECT(t, virtualMap);  
+    PROTECT(t, itable);
+    
+    object list = 0;
+    PROTECT(t, list);
+
+    object method = 0;
+    PROTECT(t, method);
+
+    object vtable = 0;
+    PROTECT(t, vtable);
+
+   unsigned stride = (classFlags(t, class_) & ACC_INTERFACE) ? 1 : 2;
+   for (unsigned i = 0; i < arrayLength(t, itable); i += stride) {
+      vtable = classVirtualTable(t, arrayBody(t, itable, i));
+      if (vtable) {
+        for (unsigned j = 0; j < arrayLength(t, vtable); ++j) {
+          method = arrayBody(t, vtable, j);
+          object n = hashMapFindNode
+            (t, virtualMap, method, methodHash, methodEqual);
+          if (n == 0) {
+            method = makeMethod
+              (t,
+               methodVmFlags(t, method),
+               methodReturnCode(t, method),
+               methodParameterCount(t, method),
+               methodParameterFootprint(t, method),
+               methodFlags(t, method),
+               (*virtualCount)++,
+               0,
+               methodName(t, method),
+               methodSpec(t, method),
+               class_,
+               0,
+               0);
+
+            hashMapInsert(t, virtualMap, method, method, methodHash);
+
+            if (makeList) {
+              if (list == 0) {
+                list = vm::makeList(t, 0, 0, 0);
+              }
+              listAppend(t, list, method);
+            }
+          }
+        }
+      }
+    }
+
+    return list;
+  }
+
+  return 0;
+}
+
 void
 parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 {
@@ -1180,38 +1245,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, superVirtualTable);
 
   if (classFlags(t, class_) & ACC_INTERFACE) {
-    object itable = classInterfaceTable(t, class_);
-    if (itable) {
-      PROTECT(t, itable);
-      for (unsigned i = 0; i < arrayLength(t, itable); ++i) {
-        object vtable = classVirtualTable(t, arrayBody(t, itable, i));
-        if (vtable) {
-          PROTECT(t, vtable);
-          for (unsigned j = 0; j < arrayLength(t, vtable); ++j) {
-            object method = arrayBody(t, vtable, j);
-            object n = hashMapFindNode
-              (t, virtualMap, method, methodHash, methodEqual);
-            if (n == 0) {
-              method = makeMethod
-                (t,
-                 methodVmFlags(t, method),
-                 methodReturnCode(t, method),
-                 methodParameterCount(t, method),
-                 methodParameterFootprint(t, method),
-                 methodFlags(t, method),
-                 virtualCount++,
-                 0,
-                 methodName(t, method),
-                 methodSpec(t, method),
-                 class_,
-                 0,
-                 0);
-              hashMapInsert(t, virtualMap, method, method, methodHash);
-            }
-          }
-        }
-      }
-    }
+    addInterfaceMethods(t, class_, virtualMap, &virtualCount, false);
   } else {
     if (classSuper(t, class_)) {
       superVirtualTable = classVirtualTable(t, classSuper(t, class_));
@@ -1325,6 +1359,15 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     set(t, class_, ClassMethodTable, methodTable);
   }
 
+  object abstractVirtuals;
+  if (classFlags(t, class_) & ACC_INTERFACE) {
+    abstractVirtuals = 0;
+  } else {
+    abstractVirtuals = addInterfaceMethods
+      (t, class_, virtualMap, &virtualCount, true);
+  }
+  PROTECT(t, abstractVirtuals);
+
   bool populateInterfaceVtables = false;
 
   if (declaredVirtualCount == 0
@@ -1367,6 +1410,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         ++ i;
       }
     } else {
+      populateInterfaceVtables = true;
+
       if (superVirtualTable) {
         for (; i < arrayLength(t, superVirtualTable); ++i) {
           object method = arrayBody(t, superVirtualTable, i);
@@ -1380,15 +1425,40 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         set(t, vtable, ArrayBody + (i * BytesPerWord), pairFirst(t, p));
         ++ i;
       }
+
+      if (abstractVirtuals) {
+        PROTECT(t, abstractVirtuals);
+
+        unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
+        object newMethodTable = makeArray
+          (t, oldLength + listSize(t, abstractVirtuals));
+
+        memcpy(&arrayBody(t, newMethodTable, 0),
+               &arrayBody(t, classMethodTable(t, class_), 0),
+               oldLength * sizeof(object));
+
+        mark(t, newMethodTable, ArrayBody, oldLength);
+
+        unsigned mti = oldLength;
+        for (object p = listFront(t, abstractVirtuals);
+             p; p = pairSecond(t, p))
+        {
+          set(t, newMethodTable,
+              ArrayBody + ((mti++) * BytesPerWord), pairFirst(t, p));
+
+          set(t, vtable,
+              ArrayBody + ((i++) * BytesPerWord), pairFirst(t, p));
+        }
+
+        assert(t, arrayLength(t, newMethodTable) == mti);
+
+        set(t, class_, ClassMethodTable, newMethodTable);
+      }
     }
 
     assert(t, arrayLength(t, vtable) == i);
 
     set(t, class_, ClassVirtualTable, vtable);
-
-    if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
-      populateInterfaceVtables = true;
-    }
   }
 
   if (populateInterfaceVtables) {
@@ -1406,9 +1476,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
             object method = arrayBody(t, ivtable, j);
             method = hashMapFind
               (t, virtualMap, method, methodHash, methodEqual);
-
-            // note that method may be null in the case of an abstract
-            // class
+            assert(t, method);
               
             set(t, vtable, ArrayBody + (j * BytesPerWord), method);        
           }
@@ -1480,7 +1548,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 }
 
 object
-makeArrayClass(Thread* t, unsigned dimensions, object spec,
+makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
                object elementClass)
 {
   // todo: arrays should implement Cloneable and Serializable
@@ -1502,7 +1570,7 @@ makeArrayClass(Thread* t, unsigned dimensions, object spec,
      0,
      0,
      elementClass,
-     t->m->loader,
+     loader,
      arrayLength(t, vtable));
 
   t->m->processor->initVtable(t, c);
@@ -1511,7 +1579,7 @@ makeArrayClass(Thread* t, unsigned dimensions, object spec,
 }
 
 object
-makeArrayClass(Thread* t, object spec)
+makeArrayClass(Thread* t, object loader, object spec)
 {
   PROTECT(t, spec);
 
@@ -1551,11 +1619,28 @@ makeArrayClass(Thread* t, object spec)
     (t, t->m->bootstrapClassMap, elementSpec, byteArrayHash, byteArrayEqual);
 
   if (elementClass == 0) {
-    elementClass = resolveClass(t, elementSpec);
+    elementClass = resolveClass(t, loader, elementSpec);
     if (UNLIKELY(t->exception)) return 0;
   }
 
-  return makeArrayClass(t, dimensions, spec, elementClass);
+  return makeArrayClass(t, loader, dimensions, spec, elementClass);
+}
+
+object
+resolveArrayClass(Thread* t, object loader, object spec)
+{
+  object c = hashMapFind
+    (t, t->m->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+
+  if (c) {
+    set(t, c, ClassVirtualTable,
+        classVirtualTable
+        (t, arrayBody(t, t->m->types, Machine::JobjectType)));
+
+    return c;
+  } else {
+    return makeArrayClass(t, loader, spec);
+  }
 }
 
 void
@@ -1714,9 +1799,10 @@ boot(Thread* t)
   classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
     |= PrimitiveFlag;
 
-  m->bootstrapClassMap = makeHashMap(t, 0, 0);
+  object classMap = makeHashMap(t, 0, 0);
+  set(t, t->m->loader, ClassLoaderMap, classMap);
 
-  m->classMap = makeHashMap(t, 0, 0);
+  m->bootstrapClassMap = makeHashMap(t, 0, 0);
 
   m->stringMap = makeWeakHashMap(t, 0, 0);
 
@@ -1846,7 +1932,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   referenceLock(0),
   libraries(0),
   loader(0),
-  classMap(0),
+  loadClassMethod(0),
   bootstrapClassMap(0),
   monitorMap(0),
   stringMap(0),
@@ -1980,6 +2066,8 @@ Thread::init()
 
     m->localThread->set(this);
   } else {
+    assert(this, javaThread);
+
     peer = parent->child;
     parent->child = this;
   }
@@ -1990,9 +2078,11 @@ Thread::init()
     const unsigned NewState = 0;
     const unsigned NormalPriority = 5;
 
+    object group = makeThreadGroup(this, 0, 0);
+
     this->javaThread = makeThread
       (this, reinterpret_cast<int64_t>(this), 0, 0, NewState, NormalPriority,
-       0, 0, 0, m->loader, 0, 0, 0);
+       0, 0, 0, m->loader, 0, 0, group);
   }
 }
 
@@ -2378,7 +2468,7 @@ isAssignableFrom(Thread* t, object a, object b)
 
   if (classFlags(t, a) & ACC_INTERFACE) {
     if (classVmFlags(t, b) & BootstrapFlag) {
-      resolveClass(t, className(t, b));
+      resolveSystemClass(t, className(t, b));
       if (UNLIKELY(t->exception)) {
         t->exception = 0;
         return false;
@@ -2517,17 +2607,20 @@ primitiveSize(Thread* t, unsigned code)
 }
 
 object
-findLoadedClass(Thread* t, object spec)
+findLoadedSystemClass(Thread* t, object spec)
 {
   PROTECT(t, spec);
   ACQUIRE(t, t->m->classLock);
 
-  return hashMapFind(t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
+  return hashMapFind(t, classLoaderMap(t, t->m->loader), spec, byteArrayHash,
+                     byteArrayEqual);
 }
 
 object
-parseClass(Thread* t, const uint8_t* data, unsigned size)
+parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
 {
+  PROTECT(t, loader);
+
   class Client : public Stream::Client {
    public:
     Client(Thread* t): t(t) { }
@@ -2567,13 +2660,13 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
                             0, // fields
                             0, // methods
                             0, // static table
-                            t->m->loader,
+                            loader,
                             0);// vtable length
   PROTECT(t, class_);
   
   unsigned super = s.read2();
   if (super) {
-    object sc = resolveClass(t, singletonObject(t, pool, super - 1));
+    object sc = resolveClass(t, loader, singletonObject(t, pool, super - 1));
     if (UNLIKELY(t->exception)) return 0;
 
     set(t, class_, ClassSuper, sc);
@@ -2623,26 +2716,18 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
 }
 
 object
-resolveClass(Thread* t, object spec)
+resolveSystemClass(Thread* t, object spec)
 {
   PROTECT(t, spec);
+
   ACQUIRE(t, t->m->classLock);
 
   object class_ = hashMapFind
-    (t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
+    (t, classLoaderMap(t, t->m->loader), spec, byteArrayHash, byteArrayEqual);
 
   if (class_ == 0) {
     if (byteArrayBody(t, spec, 0) == '[') {
-      class_ = hashMapFind
-        (t, t->m->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
-
-      if (class_) {
-        set(t, class_, ClassVirtualTable,
-            classVirtualTable
-            (t, arrayBody(t, t->m->types, Machine::JobjectType)));
-      } else {
-        class_ = makeArrayClass(t, spec);
-      }
+      class_ = resolveArrayClass(t, t->m->loader, spec);
     } else {
       char file[byteArrayLength(t, spec) + 6];
       memcpy(file, &byteArrayBody(t, spec, 0), byteArrayLength(t, spec) - 1);
@@ -2656,7 +2741,8 @@ resolveClass(Thread* t, object spec)
         }
 
         // parse class file
-        class_ = parseClass(t, region->start(), region->length());
+        class_ = parseClass
+          (t, t->m->loader, region->start(), region->length());
         region->dispose();
 
         if (LIKELY(t->exception == 0)) {
@@ -2667,11 +2753,12 @@ resolveClass(Thread* t, object spec)
           }
 
           object bootstrapClass = hashMapFind
-            (t, t->m->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+            (t, t->m->bootstrapClassMap, spec, byteArrayHash,
+             byteArrayEqual);
 
           if (bootstrapClass) {
             PROTECT(t, bootstrapClass);
-
+              
             updateBootstrapClass(t, bootstrapClass, class_);
             class_ = bootstrapClass;
           }
@@ -2682,7 +2769,8 @@ resolveClass(Thread* t, object spec)
     if (class_) {
       PROTECT(t, class_);
 
-      hashMapInsert(t, t->m->classMap, spec, class_, byteArrayHash);
+      hashMapInsert(t, classLoaderMap(t, t->m->loader), spec, class_,
+                    byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
       t->exception = makeClassNotFoundException(t, message);
@@ -2690,6 +2778,76 @@ resolveClass(Thread* t, object spec)
   }
 
   return class_;
+}
+
+object
+resolveClass(Thread* t, object loader, object spec)
+{
+  if (loader == t->m->loader) {
+    return resolveSystemClass(t, spec);
+  } else {
+    PROTECT(t, loader);
+    PROTECT(t, spec);
+
+    ACQUIRE(t, t->m->classLock);
+
+    if (classLoaderMap(t, loader) == 0) {
+      object map = makeHashMap(t, 0, 0);
+      set(t, loader, ClassLoaderMap, map);
+    }
+
+    object class_ = hashMapFind
+      (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
+
+    if (class_ == 0) {
+      if (byteArrayBody(t, spec, 0) == '[') {
+        class_ = resolveArrayClass(t, loader, spec);
+      } else {
+        if (t->m->loadClassMethod == 0) {
+          object m = resolveMethod
+            (t, t->m->loader, "java/lang/ClassLoader", "loadClass",
+             "(Ljava/lang/String;)Ljava/lang/Class;");
+
+          if (m) {
+            t->m->loadClassMethod = m;
+
+            object classLoaderClass = arrayBody
+              (t, t->m->types, Machine::ClassLoaderType);
+        
+            if (classVmFlags(t, classLoaderClass) & BootstrapFlag) {
+              resolveSystemClass(t, vm::className(t, classLoaderClass));
+            }
+          }      
+        }
+
+        if (LIKELY(t->exception == 0)) {
+          object method = findMethod
+            (t, t->m->loadClassMethod, objectClass(t, loader));
+
+          if (LIKELY(t->exception == 0)) {
+            PROTECT(t, method);
+
+            object specString = makeString
+              (t, "%s", &byteArrayBody(t, spec, 0));
+
+            class_ = t->m->processor->invoke(t, method, loader, specString);
+          }
+        }
+      }
+    }
+
+    if (class_) {
+      PROTECT(t, class_);
+
+      hashMapInsert(t, classLoaderMap(t, loader), spec, class_,
+                    byteArrayHash);
+    } else if (t->exception == 0) {
+      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
+      t->exception = makeClassNotFoundException(t, message);
+    }
+
+    return class_;
+  }
 }
 
 object
@@ -2748,8 +2906,9 @@ resolveField(Thread* t, object class_, const char* fieldName,
 }
 
 object
-resolveObjectArrayClass(Thread* t, object elementSpec)
+resolveObjectArrayClass(Thread* t, object loader, object elementSpec)
 {
+  PROTECT(t, loader);
   PROTECT(t, elementSpec);
 
   object spec;
@@ -2770,7 +2929,7 @@ resolveObjectArrayClass(Thread* t, object elementSpec)
     byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 2) = 0;
   }
 
-  return resolveClass(t, spec);
+  return resolveClass(t, loader, spec);
 }
 
 bool
@@ -2860,9 +3019,10 @@ initClass(Thread* t, object c)
 }
 
 object
-makeObjectArray(Thread* t, object elementClass, unsigned count)
+makeObjectArray(Thread* t, object loader, object elementClass, unsigned count)
 {
-  object arrayClass = resolveObjectArrayClass(t, className(t, elementClass));
+  object arrayClass = resolveObjectArrayClass
+    (t, loader, className(t, elementClass));
   PROTECT(t, arrayClass);
 
   object array = makeArray(t, count);
@@ -2925,10 +3085,6 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
 
     for (; o == 0 and class_; class_ = classSuper(t, class_)) {
       o = find(t, class_, name, spec);
-    }
-
-    if (o == 0 and find == findMethodInClass) {
-      o = findInInterfaces(t, originalClass, name, spec, find);
     }
   }
 
@@ -3153,7 +3309,7 @@ void
 visitRoots(Machine* m, Heap::Visitor* v)
 {
   v->visit(&(m->loader));
-  v->visit(&(m->classMap));
+  v->visit(&(m->loadClassMethod));
   v->visit(&(m->bootstrapClassMap));
   v->visit(&(m->monitorMap));
   v->visit(&(m->stringMap));
@@ -3275,7 +3431,7 @@ void
 runJavaThread(Thread* t)
 {
   object method = resolveMethod
-    (t, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
+    (t, t->m->loader, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
 
   if (t->exception == 0) {
     t->m->processor->invoke(t, method, 0, t->javaThread);
