@@ -86,8 +86,11 @@ public class Thread implements Runnable {
       throw new IllegalStateException("thread already started");
     }
 
+    state = (byte) State.RUNNABLE.ordinal();
+
     peer = doStart();
     if (peer == 0) {
+      state = (byte) State.NEW.ordinal();
       throw new RuntimeException("unable to start native thread");
     }
   }
@@ -95,7 +98,6 @@ public class Thread implements Runnable {
   private native long doStart();
 
   private static void run(Thread t) throws Throwable {
-    t.state = (byte) State.RUNNABLE.ordinal();
     try {
       t.run();
     } catch (Throwable e) {
