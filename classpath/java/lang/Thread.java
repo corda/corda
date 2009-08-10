@@ -38,7 +38,7 @@ public class Thread implements Runnable {
 
   public Thread(ThreadGroup group, Runnable task, String name, long stackSize)
   {
-    this.group = group;
+    this.group = (group == null ? Thread.currentThread().group : group);
     this.task = task;
     this.name = name;
 
