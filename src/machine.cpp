@@ -2386,6 +2386,8 @@ makeNewGeneral(Thread* t, object class_)
 {
   assert(t, t->state == Thread::ActiveState);
 
+  PROTECT(t, class_);
+
   object instance = makeNew(t, class_);
   PROTECT(t, instance);
 
