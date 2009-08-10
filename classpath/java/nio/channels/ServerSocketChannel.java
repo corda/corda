@@ -23,7 +23,7 @@ public class ServerSocketChannel extends SelectableChannel {
     return new ServerSocketChannel();
   }
 
-  public SelectableChannel configureBlocking(boolean v) {
+  public SelectableChannel configureBlocking(boolean v) throws IOException {
     return channel.configureBlocking(v);
   }
 
@@ -61,6 +61,7 @@ public class ServerSocketChannel extends SelectableChannel {
         throw new IllegalArgumentException();
       }
       channel.socket = doListen(a.getHostName(), a.getPort());
+      channel.configureBlocking(channel.isBlocking());
     }
   }
 

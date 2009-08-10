@@ -74,20 +74,31 @@ enum StackTag {
 const int NativeLine = -1;
 const int UnknownLine = -2;
 
-// class flags:
+// class flags (note that we must be careful not to overlap the
+// standard ACC_* flags):
+const unsigned HasFinalMemberFlag = 1 << 13;
+const unsigned SingletonFlag = 1 << 14;
+const unsigned ContinuationFlag = 1 << 15;
+
+// class vmFlags:
 const unsigned ReferenceFlag = 1 << 0;
 const unsigned WeakReferenceFlag = 1 << 1;
 const unsigned NeedInitFlag = 1 << 2;
 const unsigned InitFlag = 1 << 3;
-const unsigned PrimitiveFlag = 1 << 4;
-const unsigned SingletonFlag = 1 << 5;
+const unsigned InitErrorFlag = 1 << 4;
+const unsigned PrimitiveFlag = 1 << 5;
 const unsigned BootstrapFlag = 1 << 6;
-const unsigned HasFinalMemberFlag = 1 << 7;
+const unsigned HasFinalizerFlag = 1 << 7;
 
-// method flags:
+// method vmFlags:
 const unsigned ClassInitFlag = 1 << 0;
 const unsigned CompiledFlag = 1 << 1;
 const unsigned ConstructorFlag = 1 << 2;
+const unsigned FastNative = 1 << 3;
+
+#ifndef JNI_VERSION_1_6
+#define JNI_VERSION_1_6 0x00010006
+#endif
 
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
@@ -1181,6 +1192,7 @@ class Machine {
   object bootstrapClassMap;
   object monitorMap;
   object stringMap;
+  object byteArrayMap;
   object types;
   object jniMethodTable;
   object finalizers;
@@ -1189,6 +1201,7 @@ class Machine {
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;
+  bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
@@ -1256,6 +1269,25 @@ class Thread {
     object* p;
   };
 
+  class ClassInitStack {
+   public:
+    ClassInitStack(Thread* t, object class_):
+      next(t->classInitStack),
+      class_(class_),
+      protector(t, &(this->class_))
+    {
+      t->classInitStack = this;
+    }
+
+    ~ClassInitStack() {
+      protector.t->classInitStack = next;
+    }
+
+    ClassInitStack* next;
+    object class_;
+    SingleProtector protector;
+  };
+
   class Runnable: public System::Runnable {
    public:
     Runnable(Thread* t): t(t) { }
@@ -1308,6 +1340,7 @@ class Thread {
   unsigned heapIndex;
   unsigned heapOffset;
   Protector* protector;
+  ClassInitStack* classInitStack;
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
@@ -1319,6 +1352,8 @@ class Thread {
   bool stress;
 #endif // VM_STRESS
 };
+
+typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 
 inline object
 objectClass(Thread*, object o)
@@ -1454,17 +1489,17 @@ expect(Thread* t, bool v)
 
 class FixedAllocator: public Allocator {
  public:
-  FixedAllocator(Thread* t, uint8_t* base, unsigned capacity):
-    t(t), base(base), offset(0), capacity(capacity)
+  FixedAllocator(System* s, uint8_t* base, unsigned capacity):
+    s(s), base(base), offset(0), capacity(capacity)
   { }
 
   virtual void* tryAllocate(unsigned) {
-    abort(t);
+    abort(s);
   }
 
   virtual void* allocate(unsigned size) {
     unsigned paddedSize = pad(size);
-    expect(t, offset + paddedSize < capacity);
+    expect(s, offset + paddedSize < capacity);
 
     void* p = base + offset;
     offset += paddedSize;
@@ -1472,10 +1507,10 @@ class FixedAllocator: public Allocator {
   }
 
   virtual void free(const void*, unsigned) {
-    abort(t);
+    abort(s);
   }
 
-  Thread* t;
+  System* s;
   uint8_t* base;
   unsigned offset;
   unsigned capacity;
@@ -1508,6 +1543,9 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
 {
+  assert(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+         <= ThreadHeapSizeInWords);
+
   object o = reinterpret_cast<object>(t->heap + t->heapIndex);
   t->heapIndex += ceiling(sizeInBytes, BytesPerWord);
   cast<object>(o, 0) = 0;
@@ -1696,7 +1734,7 @@ makeClassNotFoundException(Thread* t, object message)
 {
   PROTECT(t, message);
   object trace = makeTrace(t);
-  return makeClassNotFoundException(t, message, trace, 0);
+  return makeClassNotFoundException(t, message, trace, 0, 0);
 }
 
 inline object
@@ -1717,6 +1755,12 @@ inline object
 makeInterruptedException(Thread* t)
 {
   return makeInterruptedException(t, 0, makeTrace(t), 0);
+}
+
+inline object
+makeIncompatibleContinuationException(Thread* t)
+{
+  return makeIncompatibleContinuationException(t, 0, makeTrace(t), 0);
 }
 
 inline object
@@ -1742,6 +1786,14 @@ makeNoSuchMethodError(Thread* t, object message)
 }
 
 inline object
+makeNoClassDefFoundError(Thread* t, object message)
+{
+  PROTECT(t, message);
+  object trace = makeTrace(t);
+  return makeNoClassDefFoundError(t, message, trace, 0);
+}
+
+inline object
 makeUnsatisfiedLinkError(Thread* t, object message)
 {
   PROTECT(t, message);
@@ -1754,7 +1806,7 @@ makeExceptionInInitializerError(Thread* t, object cause)
 {
   PROTECT(t, cause);
   object trace = makeTrace(t);
-  return makeExceptionInInitializerError(t, 0, trace, cause);
+  return makeExceptionInInitializerError(t, 0, trace, cause, cause);
 }
 
 inline object
@@ -1770,27 +1822,16 @@ makeNew(Thread* t, object class_)
   return instance;
 }
 
-inline object
-makeNewWeakReference(Thread* t, object class_)
-{
-  assert(t, t->state == Thread::ActiveState);
-
-  object instance = makeNew(t, class_);
-  PROTECT(t, instance);
-
-  ACQUIRE(t, t->m->referenceLock);
-
-  jreferenceVmNext(t, instance) = t->m->weakReferences;
-  t->m->weakReferences = instance;
-
-  return instance;
-}
+object
+makeNewGeneral(Thread* t, object class_);
 
 inline object
 make(Thread* t, object class_)
 {
-  if (UNLIKELY(classVmFlags(t, class_) & WeakReferenceFlag)) {
-    return makeNewWeakReference(t, class_);
+  if (UNLIKELY(classVmFlags(t, class_)
+               & (WeakReferenceFlag | HasFinalizerFlag)))
+  {
+    return makeNewGeneral(t, class_);
   } else {
     return makeNew(t, class_);
   }
@@ -1913,9 +1954,9 @@ stringCharAt(Thread* t, object s, int i)
   if (objectClass(t, data)
       == arrayBody(t, t->m->types, Machine::ByteArrayType))
   {
-    return byteArrayBody(t, data, i);
+    return byteArrayBody(t, data, stringOffset(t, s) + i);
   } else {
-    return charArrayBody(t, data, i);
+    return charArrayBody(t, data, stringOffset(t, s) + i);
   }
 }
 
@@ -1934,15 +1975,6 @@ stringEqual(Thread* t, object a, object b)
   } else {
     return false;
   }
-}
-
-inline bool
-intArrayEqual(Thread* t, object a, object b)
-{
-  return a == b or
-    ((intArrayLength(t, a) == intArrayLength(t, b)) and
-     memcmp(&intArrayBody(t, a, 0), &intArrayBody(t, b, 0),
-            intArrayLength(t, a) * 4) == 0);
 }
 
 inline uint32_t
@@ -2040,33 +2072,72 @@ fieldSize(Thread* t, object field)
 object
 findLoadedClass(Thread* t, object spec);
 
+inline bool
+emptyMethod(Thread* t, object method)
+{
+  return ((methodFlags(t, method) & ACC_NATIVE) == 0)
+    and (codeLength(t, methodCode(t, method)) == 1)
+    and (codeBody(t, methodCode(t, method), 0) == return_);
+}
+
 object
 parseClass(Thread* t, const uint8_t* data, unsigned length);
 
 object
-resolveClass(Thread* t, object spec);
+resolveClass(Thread* t, object name);
+
+inline object
+resolveClass(Thread* t, const char* name)
+{
+  return resolveClass(t, makeByteArray(t, "%s", name));
+}
 
 object
-resolveMethod(Thread* t, const char* className, const char* methodName,
+resolveMethod(Thread* t, object class_, const char* methodName,
               const char* methodSpec);
+
+inline object
+resolveMethod(Thread* t, const char* className, const char* methodName,
+              const char* methodSpec)
+{
+  object class_ = resolveClass(t, className);
+  if (LIKELY(t->exception == 0)) {
+    return resolveMethod(t, class_, methodName, methodSpec);
+  } else {
+    return 0;
+  }
+}
+
+object
+resolveField(Thread* t, object class_, const char* fieldName,
+             const char* fieldSpec);
+
+inline object
+resolveField(Thread* t, const char* className, const char* fieldName,
+             const char* fieldSpec)
+{
+  object class_ = resolveClass(t, className);
+  if (LIKELY(t->exception == 0)) {
+    return resolveField(t, class_, fieldName, fieldSpec);
+  } else {
+    return 0;
+  }
+}
 
 object
 resolveObjectArrayClass(Thread* t, object elementSpec);
 
-inline bool
-classNeedsInit(Thread* t, object c)
-{
-  return classVmFlags(t, c) & NeedInitFlag
-    and (classVmFlags(t, c) & InitFlag) == 0;
-}
+bool
+classNeedsInit(Thread* t, object c);
 
-inline void
-initClass(Thread* t, object c)
-{
-  if (classNeedsInit(t, c)) {
-    t->m->processor->initClass(t, c);
-  }
-}
+bool
+preInitClass(Thread* t, object c);
+
+void
+postInitClass(Thread* t, object c);
+
+void
+initClass(Thread* t, object c);
 
 object
 makeObjectArray(Thread* t, object elementClass, unsigned count);
@@ -2094,13 +2165,6 @@ object
 findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*find)(Thread*, object, object, object),
                 object (*makeError)(Thread*, object));
-
-inline object
-findField(Thread* t, object class_, object name, object spec)
-{
-  return findInHierarchy
-    (t, class_, name, spec, findFieldInClass, makeNoSuchFieldError);
-}
 
 inline object
 findMethod(Thread* t, object class_, object name, object spec)
@@ -2367,6 +2431,26 @@ makeSingletonOfSize(Thread* t, unsigned count)
     singletonMask(t, o)[0] = 1;
   }
   return o;
+}
+
+inline void
+singletonMarkBit(Thread* t, object singleton, unsigned start, unsigned index)
+{
+  uintptr_t& val = singletonValue(t, singleton, start + (index / BitsPerWord));
+  val |= static_cast<uintptr_t>(1) << (index % BitsPerWord);
+}
+
+inline bool
+singletonGetBit(Thread* t, object singleton, unsigned start, unsigned index)
+{
+  uintptr_t& val = singletonValue(t, singleton, start + (index / BitsPerWord));
+  return (val & static_cast<uintptr_t>(1) << (index % BitsPerWord)) != 0;
+}
+
+inline bool
+singletonIsFloat(Thread* t, object singleton, unsigned index)
+{
+  return singletonGetBit(t, singleton, singletonLength(t, singleton) - 2 * singletonMaskSize(t, singleton), index);
 }
 
 void

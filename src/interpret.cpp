@@ -26,6 +26,8 @@ const unsigned FrameMethodOffset = 2;
 const unsigned FrameIpOffset = 3;
 const unsigned FrameFootprint = 4;
 
+class ClassInitList;
+
 class Thread: public vm::Thread {
  public:
   static const unsigned StackSizeInBytes = 64 * 1024;
@@ -36,14 +38,37 @@ class Thread: public vm::Thread {
     ip(0),
     sp(0),
     frame(-1),
-    code(0)
+    code(0),
+    classInitList(0)
   { }
 
   unsigned ip;
   unsigned sp;
   int frame;
   object code;
+  ClassInitList* classInitList;
   uintptr_t stack[StackSizeInWords];
+};
+
+class ClassInitList {
+ public:
+  ClassInitList(Thread* t, object class_, ClassInitList* next):
+    t(t), class_(class_), next(next)
+  { }
+
+  static void push(Thread* t, object class_) {
+    t->classInitList = new (t->m->heap->allocate(sizeof(ClassInitList)))
+      ClassInitList(t, class_, t->classInitList);
+  }
+
+  void pop() {
+    t->classInitList = next;
+    t->m->heap->free(this, sizeof(ClassInitList));
+  }
+
+  Thread* t;
+  object class_;
+  ClassInitList* next;
 };
 
 inline void
@@ -142,7 +167,7 @@ popLong(Thread* t)
   return (b << 32) | a;
 }
 
-inline float
+inline double
 popDouble(Thread* t)
 {
   return bitsToDouble(popLong(t));
@@ -348,12 +373,14 @@ popFrame(Thread* t)
     }   
   }
   
-  if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)) {
-    if (t->exception) {
-      t->exception = makeExceptionInInitializerError(t, t->exception);
-    }
-    classVmFlags(t, methodClass(t, method)) &= ~(NeedInitFlag | InitFlag);
-    release(t, t->m->classLock);
+  if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)
+      and t->classInitList)
+  {
+    assert(t, t->classInitList->class_ == methodClass(t, method));
+    
+    t->classInitList->pop();
+
+    postInitClass(t, methodClass(t, method));
   }
 
   t->sp = frameBase(t, t->frame);
@@ -410,8 +437,7 @@ makeNativeMethodData(Thread* t, object method, void* function)
   object data = makeNativeMethodData(t,
                                      function,
                                      0, // argument table size
-                                     count,
-                                     false);
+                                     count);
         
   unsigned argumentTableSize = BytesPerWord * 2;
   unsigned index = 0;
@@ -460,7 +486,7 @@ makeNativeMethodData(Thread* t, object method, void* function)
   return data;
 }
 
-inline object
+inline void
 resolveNativeMethodData(Thread* t, object method)
 {
   if (methodCode(t, method) == 0) {
@@ -468,8 +494,13 @@ resolveNativeMethodData(Thread* t, object method)
     if (LIKELY(p)) {
       PROTECT(t, method);
       object data = makeNativeMethodData(t, method, p);
+
+      // ensure other threads see updated methodVmFlags before
+      // methodCode, and that the native method data is initialized
+      // before it is visible to those threads:
+      memoryBarrier();
+
       set(t, method, MethodCode, data);
-      return data;
     } else {
       object message = makeString
         (t, "%s.%s%s",
@@ -477,11 +508,8 @@ resolveNativeMethodData(Thread* t, object method)
          &byteArrayBody(t, methodName(t, method), 0),
          &byteArrayBody(t, methodSpec(t, method), 0));
       t->exception = makeUnsatisfiedLinkError(t, message);
-      return 0;
     }
-  } else {
-    return methodCode(t, method);
-  }  
+  } 
 }
 
 inline void
@@ -498,35 +526,79 @@ checkStack(Thread* t, object method)
   }
 }
 
-unsigned
-invokeNative(Thread* t, object method)
+void
+pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
 {
-  PROTECT(t, method);
+  switch (returnCode) {
+  case ByteField:
+  case BooleanField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<int8_t>(result));
+    }
+    pushInt(t, static_cast<int8_t>(result));
+    break;
 
-  object data = resolveNativeMethodData(t, method);
-  if (UNLIKELY(t->exception)) {
-    return VoidField;
+  case CharField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<uint16_t>(result));
+    }
+    pushInt(t, static_cast<uint16_t>(result));
+    break;
+
+  case ShortField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<int16_t>(result));
+    }
+    pushInt(t, static_cast<int16_t>(result));
+    break;
+
+  case FloatField:
+  case IntField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %d\n", static_cast<int32_t>(result));
+    }
+    pushInt(t, result);
+    break;
+
+  case LongField:
+  case DoubleField:
+    if (DebugRun) {
+      fprintf(stderr, "result: %"LLD"\n", result);
+    }
+    pushLong(t, result);
+    break;
+
+  case ObjectField:
+    if (indirect) {
+      if (DebugRun) {
+        fprintf(stderr, "result: %p at %p\n",
+                static_cast<uintptr_t>(result) == 0 ? 0 :
+                *reinterpret_cast<object*>(static_cast<uintptr_t>(result)),
+                reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+      }
+      pushObject(t, static_cast<uintptr_t>(result) == 0 ? 0 :
+                 *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+    } else {
+      if (DebugRun) {
+        fprintf(stderr, "result: %p\n", reinterpret_cast<object>(result));
+      }
+      pushObject(t, reinterpret_cast<object>(result));
+    }
+    break;
+
+  case VoidField:
+    break;
+
+  default:
+    abort(t);
   }
+}
 
-  PROTECT(t, data);
-
-  pushFrame(t, method);
-
-  unsigned count = nativeMethodDataLength(t, data) - 1;
-
-  unsigned size = nativeMethodDataArgumentTableSize(t, data);
-  uintptr_t args[size / BytesPerWord];
+void
+marshalArguments(Thread* t, uintptr_t* args, unsigned i, unsigned count,
+                 object data, bool indirect)
+{
   unsigned offset = 0;
-
-  args[offset++] = reinterpret_cast<uintptr_t>(t);
-
-  unsigned i = 0;
-  if (methodFlags(t, method) & ACC_STATIC) {
-    ++ i;
-    args[offset++] = reinterpret_cast<uintptr_t>
-      (pushReference(t, methodClass(t, method)));
-  }
-
   unsigned sp = frameBase(t, t->frame);
   for (; i < count; ++i) {
     unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
@@ -548,16 +620,48 @@ invokeNative(Thread* t, object method)
     } break;
 
     case POINTER_TYPE: {
-      object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
-      if (*v == 0) {
-        v = 0;
+      if (indirect) {
+        object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
+        if (*v == 0) {
+          v = 0;
+        }
+        args[offset++] = reinterpret_cast<uintptr_t>(v);
+      } else {
+        args[offset++] = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
       }
-      args[offset++] = reinterpret_cast<uintptr_t>(v);
     } break;
 
     default: abort(t);
     }
   }
+}
+
+unsigned
+invokeNativeSlow(Thread* t, object method)
+{
+  PROTECT(t, method);
+
+  object data = methodCode(t, method);
+  PROTECT(t, data);
+
+  pushFrame(t, method);
+
+  unsigned count = nativeMethodDataLength(t, data) - 1;
+
+  unsigned size = nativeMethodDataArgumentTableSize(t, data);
+  uintptr_t args[size / BytesPerWord];
+  unsigned offset = 0;
+
+  args[offset++] = reinterpret_cast<uintptr_t>(t);
+
+  unsigned i = 0;
+  if (methodFlags(t, method) & ACC_STATIC) {
+    ++ i;
+    args[offset++] = reinterpret_cast<uintptr_t>
+      (pushReference(t, methodClass(t, method)));
+  }
+
+  marshalArguments(t, args + offset, i, count, data, true);
 
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
@@ -609,80 +713,67 @@ invokeNative(Thread* t, object method)
     return VoidField;
   }
 
-  switch (returnCode) {
-  case ByteField:
-  case BooleanField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<int8_t>(result));
-    }
-    pushInt(t, static_cast<int8_t>(result));
-    break;
-
-  case CharField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<uint16_t>(result));
-    }
-    pushInt(t, static_cast<uint16_t>(result));
-    break;
-
-  case ShortField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<int16_t>(result));
-    }
-    pushInt(t, static_cast<int16_t>(result));
-    break;
-
-  case FloatField:
-  case IntField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %d\n", static_cast<int32_t>(result));
-    }
-    pushInt(t, result);
-    break;
-
-  case LongField:
-  case DoubleField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", result);
-    }
-    pushLong(t, result);
-    break;
-
-  case ObjectField:
-    if (DebugRun) {
-      fprintf(stderr, "result: %p at %p\n",
-              static_cast<uintptr_t>(result) == 0 ? 0 :
-              *reinterpret_cast<object*>(static_cast<uintptr_t>(result)),
-              reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
-    }
-    pushObject(t, static_cast<uintptr_t>(result) == 0 ? 0 :
-               *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
-    break;
-
-  case VoidField:
-    break;
-
-  default:
-    abort(t);
-  }
+  pushResult(t, returnCode, result, true);
 
   return returnCode;
+}
+
+unsigned
+invokeNative(Thread* t, object method)
+{
+  PROTECT(t, method);
+
+  resolveNativeMethodData(t, method);
+
+  if (UNLIKELY(t->exception)) {
+    return VoidField;
+  }
+
+  if (methodVmFlags(t, method) & FastNative) {
+    pushFrame(t, method);
+
+    object data = methodCode(t, method);
+    uintptr_t arguments[methodParameterFootprint(t, method)];
+    marshalArguments
+      (t, arguments, (methodFlags(t, method) & ACC_STATIC) ? 1 : 0,
+       nativeMethodDataLength(t, data) - 1, data, false);
+
+    uint64_t result = reinterpret_cast<FastNativeFunction>
+      (nativeMethodDataFunction(t, methodCode(t, method)))
+      (t, method, arguments);
+    
+    popFrame(t);
+
+    if (UNLIKELY(t->exception)) {
+      return VoidField;
+    }
+
+    pushResult(t, methodReturnCode(t, method), result, false);
+
+    return methodReturnCode(t, method);
+  } else {
+    return invokeNativeSlow(t, method);
+  }
 }
 
 bool
 classInit2(Thread* t, object class_, unsigned ipOffset)
 {
+  for (ClassInitList* list = t->classInitList; list; list = list->next) {
+    if (list->class_ == class_) {
+      return false;
+    }
+  }
+
   PROTECT(t, class_);
-  acquire(t, t->m->classLock);
-  if (classVmFlags(t, class_) & NeedInitFlag
-      and (classVmFlags(t, class_) & InitFlag) == 0)
-  {
-    classVmFlags(t, class_) |= InitFlag;
+
+  if (preInitClass(t, class_)) {
+    ClassInitList::push(t, class_);
+    
     t->code = classInitializer(t, class_);
     t->ip -= ipOffset;
     return true;
   } else {
-    release(t, t->m->classLock);
     return false;
   }
 }
@@ -911,7 +1002,7 @@ interpret(Thread* t)
       object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
       if (UNLIKELY(exception)) goto throw_;
             
-      pushObject(t, makeObjectArray(t, class_, count, true));
+      pushObject(t, makeObjectArray(t, class_, count));
     } else {
       object message = makeString(t, "%d", count);
       exception = makeNegativeArraySizeException(t, message);
@@ -2352,7 +2443,7 @@ interpret(Thread* t)
       }
     }
 
-    object array = makeArray(t, counts[0], true);
+    object array = makeArray(t, counts[0]);
     setObjectClass(t, array, class_);
     PROTECT(t, array);
 
@@ -2383,35 +2474,35 @@ interpret(Thread* t)
 
       switch (type) {
       case T_BOOLEAN:
-        array = makeBooleanArray(t, count, true);
+        array = makeBooleanArray(t, count);
         break;
 
       case T_CHAR:
-        array = makeCharArray(t, count, true);
+        array = makeCharArray(t, count);
         break;
 
       case T_FLOAT:
-        array = makeFloatArray(t, count, true);
+        array = makeFloatArray(t, count);
         break;
 
       case T_DOUBLE:
-        array = makeDoubleArray(t, count, true);
+        array = makeDoubleArray(t, count);
         break;
 
       case T_BYTE:
-        array = makeByteArray(t, count, true);
+        array = makeByteArray(t, count);
         break;
 
       case T_SHORT:
-        array = makeShortArray(t, count, true);
+        array = makeShortArray(t, count);
         break;
 
       case T_INT:
-        array = makeIntArray(t, count, true);
+        array = makeIntArray(t, count);
         break;
 
       case T_LONG:
-        array = makeLongArray(t, count, true);
+        array = makeLongArray(t, count);
         break;
 
       default: abort(t);
@@ -3001,29 +3092,13 @@ class MyProcessor: public Processor {
     return vm::makeClass
       (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
        objectMask, name, super, interfaceTable, virtualTable, fieldTable,
-       methodTable, staticTable, loader, 0, false);
+       methodTable, staticTable, loader, 0);
   }
 
   virtual void
   initVtable(vm::Thread*, object)
   {
     // ignore
-  }
-
-  virtual void
-  initClass(vm::Thread* t, object c)
-  {
-    PROTECT(t, c);
-    
-    acquire(t, t->m->classLock);
-    if (classVmFlags(t, c) & NeedInitFlag
-        and (classVmFlags(t, c) & InitFlag) == 0)
-    {
-      classVmFlags(t, c) |= InitFlag;
-      invoke(t, classInitializer(t, c), 0);
-    } else {
-      release(t, t->m->classLock);
-    }
   }
 
   virtual void
@@ -3037,6 +3112,10 @@ class MyProcessor: public Processor {
       if (t->stack[i * 2] == ObjectTag) {
         v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
       }
+    }
+
+    for (ClassInitList* list = t->classInitList; list; list = list->next) {
+      v->visit(reinterpret_cast<object*>(&(list->class_)));
     }
   }
 
@@ -3157,25 +3236,21 @@ class MyProcessor: public Processor {
     return 0;
   }
 
-  virtual void compileThunks(vm::Thread*, BootImage*, uint8_t*, unsigned*,
-                             unsigned)
+  virtual void initialize(BootImage*, uint8_t*, unsigned) {
+    abort(s);
+  }
+
+  virtual void compileMethod(vm::Thread*, Zone*, object*, object*,
+                             DelayedPromise**, object)
   {
     abort(s);
   }
 
-  virtual void compileMethod(vm::Thread*, Zone*, uint8_t*, unsigned*, unsigned,
-                             object*, object*, DelayedPromise**, object)
-  {
+  virtual void visitRoots(HeapWalker*) {
     abort(s);
   }
 
-  virtual void visitRoots(BootImage*, HeapWalker*) {
-    abort(s);
-  }
-
-  virtual unsigned* makeCallTable(vm::Thread*, BootImage*, HeapWalker*,
-                                  uint8_t*)
-  {
+  virtual unsigned* makeCallTable(vm::Thread*, HeapWalker*) {
     abort(s);
   }
 
@@ -3183,6 +3258,29 @@ class MyProcessor: public Processor {
     expect(s, image == 0);
   }
   
+
+  virtual void callWithCurrentContinuation(vm::Thread*, object) {
+    abort(s);
+  }
+
+  virtual void dynamicWind(vm::Thread*, object, object, object) {
+    abort(s);
+  }
+
+  virtual void feedResultToContinuation(vm::Thread*, object, object){
+    abort(s);
+  }
+
+  virtual void feedExceptionToContinuation(vm::Thread*, object, object) {
+    abort(s);
+  }
+
+  virtual void walkContinuationBody(vm::Thread*, Heap::Walker*, object,
+                                    unsigned)
+  {
+    abort(s);
+  }
+
   virtual void dispose(vm::Thread* t) {
     t->m->heap->free(t, sizeof(Thread));
   }

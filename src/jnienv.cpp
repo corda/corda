@@ -100,6 +100,14 @@ GetEnv(Machine* m, Thread** t, jint version)
 }
 
 jsize JNICALL
+GetVersion(Thread* t)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return JNI_VERSION_1_6;
+}
+
+jsize JNICALL
 GetStringLength(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
@@ -257,6 +265,26 @@ ExceptionCheck(Thread* t)
 {
   return t->exception != 0;
 }
+
+#ifndef AVIAN_GNU
+jobject JNICALL
+NewDirectByteBuffer(Thread*, void*, jlong)
+{
+  return 0;
+}
+
+void* JNICALL
+GetDirectBufferAddress(Thread*, jobject)
+{
+  return 0;
+}
+
+jlong JNICALL
+GetDirectBufferCapacity(Thread*, jobject)
+{
+  return -1;
+}
+#endif// not AVIAN_GNU
 
 jclass JNICALL
 GetObjectClass(Thread* t, jobject o)
@@ -817,22 +845,12 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
   va_end(a);
 }
 
-object
-findField(Thread* t, jclass c, const char* name, const char* spec)
-{
-  object n = makeByteArray(t, "%s", name);
-  PROTECT(t, n);
-
-  object s = makeByteArray(t, "%s", spec);
-  return vm::findField(t, *c, n, s);
-}
-
 jfieldID JNICALL
 GetFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, c, name, spec);
+  object field = resolveField(t, *c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
@@ -843,7 +861,7 @@ GetStaticFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
   ENTER(t, Thread::ActiveState);
 
-  object field = findField(t, c, name, spec);
+  object field = resolveField(t, *c, name, spec);
   if (UNLIKELY(t->exception)) return 0;
 
   return fieldOffset(t, field);
@@ -998,7 +1016,7 @@ GetStaticObjectField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, arrayBody(t, classStaticTable(t, *c), field));
+  return makeLocalReference(t, cast<object>(classStaticTable(t, *c), field));
 }
 
 jboolean JNICALL
@@ -1006,8 +1024,7 @@ GetStaticBooleanField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  return v ? intValue(t, v) != 0 : false;
+  return cast<int8_t>(classStaticTable(t, *c), field);
 }
 
 jbyte JNICALL
@@ -1015,8 +1032,7 @@ GetStaticByteField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  return static_cast<jbyte>(v ? intValue(t, v) : 0);
+  return cast<int8_t>(classStaticTable(t, *c), field);
 }
 
 jchar JNICALL
@@ -1024,8 +1040,7 @@ GetStaticCharField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  return static_cast<jchar>(v ? intValue(t, v) : 0);
+  return cast<uint16_t>(classStaticTable(t, *c), field);
 }
 
 jshort JNICALL
@@ -1033,8 +1048,7 @@ GetStaticShortField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  return static_cast<jshort>(v ? intValue(t, v) : 0);
+  return cast<int16_t>(classStaticTable(t, *c), field);
 }
 
 jint JNICALL
@@ -1042,8 +1056,7 @@ GetStaticIntField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  return v ? intValue(t, v) : 0;
+  return cast<int32_t>(classStaticTable(t, *c), field);
 }
 
 jlong JNICALL
@@ -1051,8 +1064,7 @@ GetStaticLongField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  return static_cast<jlong>(v ? longValue(t, v) : 0);
+  return cast<int64_t>(classStaticTable(t, *c), field);
 }
 
 jfloat JNICALL
@@ -1060,10 +1072,7 @@ GetStaticFloatField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  jint i = v ? intValue(t, v) : 0;
-  jfloat f; memcpy(&f, &i, 4);
-  return f;
+  return cast<float>(classStaticTable(t, *c), field);
 }
 
 jdouble JNICALL
@@ -1071,10 +1080,7 @@ GetStaticDoubleField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  object v = arrayBody(t, classStaticTable(t, *c), field);
-  jlong i = v ? longValue(t, v) : 0;
-  jdouble f; memcpy(&f, &i, 4);
-  return f;
+  return cast<double>(classStaticTable(t, *c), field);
 }
 
 void JNICALL
@@ -1082,17 +1088,15 @@ SetStaticObjectField(Thread* t, jclass c, jfieldID field, jobject v)
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord),
-      (v ? *v : 0));
+  set(t, classStaticTable(t, *c), field, (v ? *v : 0));
 }
 
 void JNICALL
 SetStaticBooleanField(Thread* t, jclass c, jfieldID field, jboolean v)
 {
   ENTER(t, Thread::ActiveState);
-
-  object o = makeInt(t, v ? 1 : 0);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  
+  cast<int8_t>(classStaticTable(t, *c), field) = v;
 }
 
 void JNICALL
@@ -1100,8 +1104,7 @@ SetStaticByteField(Thread* t, jclass c, jfieldID field, jbyte v)
 {
   ENTER(t, Thread::ActiveState);
 
-  object o = makeInt(t, v);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  cast<int8_t>(classStaticTable(t, *c), field) = v;
 }
 
 void JNICALL
@@ -1109,8 +1112,7 @@ SetStaticCharField(Thread* t, jclass c, jfieldID field, jchar v)
 {
   ENTER(t, Thread::ActiveState);
 
-  object o = makeInt(t, v);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  cast<uint16_t>(classStaticTable(t, *c), field) = v;
 }
 
 void JNICALL
@@ -1118,8 +1120,7 @@ SetStaticShortField(Thread* t, jclass c, jfieldID field, jshort v)
 {
   ENTER(t, Thread::ActiveState);
 
-  object o = makeInt(t, v);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  cast<int16_t>(classStaticTable(t, *c), field) = v;
 }
 
 void JNICALL
@@ -1127,8 +1128,7 @@ SetStaticIntField(Thread* t, jclass c, jfieldID field, jint v)
 {
   ENTER(t, Thread::ActiveState);
 
-  object o = makeInt(t, v);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  cast<int32_t>(classStaticTable(t, *c), field) = v;
 }
 
 void JNICALL
@@ -1136,8 +1136,7 @@ SetStaticLongField(Thread* t, jclass c, jfieldID field, jlong v)
 {
   ENTER(t, Thread::ActiveState);
 
-  object o = makeLong(t, v);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  cast<int64_t>(classStaticTable(t, *c), field) = v;
 }
 
 void JNICALL
@@ -1145,9 +1144,7 @@ SetStaticFloatField(Thread* t, jclass c, jfieldID field, jfloat v)
 {
   ENTER(t, Thread::ActiveState);
 
-  jint i; memcpy(&i, &v, 4);
-  object o = makeInt(t, i);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  cast<float>(classStaticTable(t, *c), field) = v;
 }
 
 void JNICALL
@@ -1155,9 +1152,7 @@ SetStaticDoubleField(Thread* t, jclass c, jfieldID field, jdouble v)
 {
   ENTER(t, Thread::ActiveState);
 
-  jlong i; memcpy(&i, &v, 8);
-  object o = makeLong(t, i);
-  set(t, classStaticTable(t, *c), ArrayBody + (field * BytesPerWord), o);
+  cast<double>(classStaticTable(t, *c), field) = v;
 }
 
 jobject JNICALL
@@ -1883,6 +1878,17 @@ append(char** p, const char* value, unsigned length, char tail)
 
 namespace vm {
 
+#ifdef AVIAN_GNU
+jobject JNICALL
+NewDirectByteBuffer(Thread*, void*, jlong);
+
+void* JNICALL
+GetDirectBufferAddress(Thread*, jobject);
+
+jlong JNICALL
+GetDirectBufferCapacity(Thread*, jobject);
+#endif//AVIAN_GNU
+
 void
 populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 {
@@ -1895,6 +1901,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
   memset(envTable, 0, sizeof(JNIEnvVTable));
 
+  envTable->GetVersion = ::GetVersion;
   envTable->GetStringLength = ::GetStringLength;
   envTable->GetStringChars = ::GetStringChars;
   envTable->ReleaseStringChars = ::ReleaseStringChars;
@@ -1907,6 +1914,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->FindClass = ::FindClass;
   envTable->ThrowNew = ::ThrowNew;
   envTable->ExceptionCheck = ::ExceptionCheck;
+  envTable->NewDirectByteBuffer = ::NewDirectByteBuffer;
+  envTable->GetDirectBufferAddress = ::GetDirectBufferAddress;
+  envTable->GetDirectBufferCapacity = ::GetDirectBufferCapacity;
   envTable->DeleteLocalRef = ::DeleteLocalRef;
   envTable->GetObjectClass = ::GetObjectClass;
   envTable->IsInstanceOf = ::IsInstanceOf;

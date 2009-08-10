@@ -1323,12 +1323,6 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
     }
   }
 
-  if (equal(typeJavaName(type), "java/lang/Class")) {
-    // add inline vtable
-    addMember(type, Array::make
-              (type, 0, "void*", "vtable", sizeOf("void*", 0)));
-  }
-
   if (typeSuper(type)) {
     for (Object* p = typeMethods(typeSuper(type)); p; p = cdr(p)) {
       addMethod(type, car(p));
@@ -1372,23 +1366,25 @@ parseType(Object::ObjectType type, Object* p, Object* declarations,
 
   Type* t = Type::make(type, name, javaName);
 
-  if (javaName and *javaName != '[') {
-    assert(cdr(p) == 0);
+  bool isJavaType = javaName and *javaName != '[';
 
+  if (isJavaType) {
     const char* file = append(javaClassDirectory, "/", javaName, ".class");
     Stream s(fopen(file, "rb"), true);
     parseJavaClass(t, &s, declarations);
-  } else {
-    for (p = cdr(p); p; p = cdr(p)) {
-      if (type == Object::Type) {
-        parseSubdeclaration(t, car(p), declarations);
-      } else {
-        Object* member = parseMember(t, car(p), declarations);
-        assert(member->type == Object::Scalar);
-        addMember(t, member);
-      }
-    }
+  }
 
+  for (p = cdr(p); p; p = cdr(p)) {
+    if (type == Object::Type) {
+      parseSubdeclaration(t, car(p), declarations);
+    } else {
+      Object* member = parseMember(t, car(p), declarations);
+      assert(member->type == Object::Scalar);
+      addMember(t, member);
+    }
+  }
+
+  if (not isJavaType) {
     if (type == Object::Type and typeSuper(t)) {
       for (Object* p = typeMethods(typeSuper(t)); p; p = cdr(p)) {
         addMethod(t, car(p));

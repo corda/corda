@@ -76,7 +76,8 @@ certain flags described below, all of which are optional.
 
  $ make platform={linux,windows,darwin} arch={i386,x86_64,powerpc} \
      process={compile,interpret} mode={debug,debug-fast,fast,small} \
-     bootimage={true,false} heapdump={true,false}
+     bootimage={true,false} heapdump={true,false} tails={true,false} \
+     continuations={true,false}
 
   * platform - the target platform
       default: output of $(uname -s | tr [:upper:] [:lower:]),
@@ -86,7 +87,7 @@ certain flags described below, all of which are optional.
       default: output of $(uname -m), normalized in some cases
       (e.g. i686 -> i386)
 
-  * mode - which set of compilation flags to use, which determine
+  * mode - which set of compilation flags to use to determine
     optimization level, debug symbols, and whether to enable
     assertions
       default: fast
@@ -103,6 +104,18 @@ certain flags described below, all of which are optional.
     which, when called, will generate a snapshot of the heap in a
     simple, ad-hoc format for memory profiling purposes.  See
     heapdump.cpp for details.
+      default: false
+
+  * tails - if true, optimize each tail call by replacing the caller's
+    stack frame with the callee's.  This convention ensures proper
+    tail recursion, suitable for languages such as Scheme.  This
+    option is only valid for process=compile builds.
+      default: false
+
+  * continuations - if true, support continuations via the
+    avian.Continuations methods callWithCurrentContinuation and
+    dynamicWind.  See Continuations.java for details.  This option is
+    only valid for process=compile builds.
       default: false
 
 These flags determine the name of the directory used for the build.
@@ -390,12 +403,12 @@ Step 5: Run ProGuard with stage1 as input and stage2 as output.
  $ java -jar ../../proguard4.3/lib/proguard.jar \
      -injars stage1 -outjars stage2 @../vm.pro @hello.pro
 
-(note: pass -dontusemixedcaseclassnames to ProGuard when building on systems with case-insensitive filesystems such as Windows and OS X)
+(note: pass -dontusemixedcaseclassnames to ProGuard when building on
+systems with case-insensitive filesystems such as Windows and OS X)
 
 Step 6: Build the boot image.
 
- $ ../build/linux-i386-bootimage/bootimage-generator stage2 \
-     > bootimage.bin
+ $ ../build/linux-i386-bootimage/bootimage-generator stage2 bootimage.bin
 
 Step 7: Make an object file out of the boot image.
 

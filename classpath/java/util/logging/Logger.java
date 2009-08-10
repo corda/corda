@@ -113,8 +113,9 @@ public class Logger {
     if (level.intValue() < getEffectiveLevel().intValue()) {
       return;
     }
-    LogRecord r = new LogRecord(name, caller.getName(), level, message,
-                                exception);
+    LogRecord r = new LogRecord
+      (name, caller == null ? "<unknown>" : caller.getName(), level, message,
+       exception);
     publish(r);
   }
 

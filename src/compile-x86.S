@@ -12,23 +12,25 @@
 
 #define LOCAL(x) .L##x
 
+#if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+#  define GLOBAL(x) _##x
+#else
+#  define GLOBAL(x) x   
+#endif
+
 .text
 
 #ifdef __x86_64__
 
-#ifdef __WINDOWS__
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmInvoke
-_vmInvoke: 
-#  else
-.globl vmInvoke
-vmInvoke:
-#error other
-#  endif
+#ifdef __MINGW32__
+
+#define CALLEE_SAVED_REGISTER_FOOTPRINT 64
+
+.globl GLOBAL(vmInvoke)
+GLOBAL(vmInvoke):
    pushq  %rbp
    movq   %rsp,%rbp
    
-   	  //NEW
    // %rcx: thread
    // %rdx: function
    // %r8 : arguments
@@ -39,7 +41,7 @@ vmInvoke:
    // allocate stack space, adding room for callee-saved registers
    movl   48(%rbp),%eax
    subq   %rax,%rsp
-   subq   $64,%rsp
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
    
    // save callee-saved registers
    movq   %rsp,%r11
@@ -58,26 +60,33 @@ vmInvoke:
 
    // copy arguments into place
    movq   $0,%r11
-   jmp    LOCAL(test)
+   jmp    LOCAL(vmInvoke_argumentTest)
 
-LOCAL(loop):
+LOCAL(vmInvoke_argumentLoop):
    movq   (%r8,%r11,1),%rsi
    movq   %rsi,(%rsp,%r11,1)
    addq   $8,%r11
 
-LOCAL(test):
+LOCAL(vmInvoke_argumentTest):
    cmpq   %r9,%r11
-   jb     LOCAL(loop)
+   jb     LOCAL(vmInvoke_argumentLoop)
    
    // call function
    call   *%rdx
-   
+
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
    movq   %rbp,%rsp
-   
-   // restore callee-saved registers
+
+#ifdef AVIAN_CONTINUATIONS
+#  include "continuations-x86.S"
+#endif // AVIAN_CONTINUATIONS
+
+   // restore callee-saved registers (below the stack pointer, but in
+   // the red zone)
    movq   %rsp,%r11
-   subq   $64,%r11
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r11
 
    movq   0(%r11),%rbx
    movq   8(%r11),%r12
@@ -90,16 +99,67 @@ LOCAL(test):
    // return
    popq   %rbp
    ret
-   
-#elif defined __LINUX__
+      
+.globl GLOBAL(vmJumpAndInvoke)
+GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
+   //     %rcx: thread
+   //     %rdx: address
+   //     %r8 : base
+   //     %r9 : (unused)
+   //  8(%rsp): argumentFootprint
+   // 16(%rsp): arguments
+   // 24(%rsp): frameSize
 
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmInvoke
-_vmInvoke: 
-#  else
-.globl vmInvoke
-vmInvoke:
-#  endif
+   movq   %r8,%rbp
+   
+   // restore (pseudo)-stack pointer (we don't want to touch the real
+   // stack pointer, since we haven't copied the arguments yet)
+   movq   %rbp,%r9
+         
+   // allocate new frame, adding room for callee-saved registers
+   movl   24(%rsp),%eax
+   subq   %rax,%r9
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
+   
+   movq   %rcx,%rbx
+   
+   // set return address
+   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   movq   %r10,(%r9)
+   
+   // copy arguments into place
+   movq   $0,%r11
+   movq   16(%rsp),%r8
+   movq   8(%rsp),%rax
+   jmp    LOCAL(vmJumpAndInvoke_argumentTest)
+
+LOCAL(vmJumpAndInvoke_argumentLoop):
+   movq   (%r8,%r11,1),%r10
+   movq   %r10,8(%r9,%r11,1)
+   addq   $8,%r11
+
+LOCAL(vmJumpAndInvoke_argumentTest):
+   cmpq   %rax,%r11
+   jb     LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
+   movq   %r9,%rsp
+   
+   jmp    *%rdx
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   int3
+#endif // not AVIAN_CONTINUATIONS
+
+#else // not __MINGW32__
+
+#define CALLEE_SAVED_REGISTER_FOOTPRINT 48
+
+.globl GLOBAL(vmInvoke)
+GLOBAL(vmInvoke):
    pushq  %rbp
    movq   %rsp,%rbp
       
@@ -111,8 +171,8 @@ vmInvoke:
    // %r9 : returnType (ignored)
    
    // allocate stack space, adding room for callee-saved registers
-	 subq   %r8,%rsp
-	 subq   $48,%rsp
+   subq   %r8,%rsp
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
    
    // save callee-saved registers
    movq   %rsp,%r9
@@ -129,26 +189,33 @@ vmInvoke:
 
    // copy arguments into place
    movq   $0,%r9
-   jmp    LOCAL(test)
+   jmp    LOCAL(vmInvoke_argumentTest)
 
-LOCAL(loop):
+LOCAL(vmInvoke_argumentLoop):
    movq   (%rdx,%r9,1),%r8
    movq   %r8,(%rsp,%r9,1)
    addq   $8,%r9
 
-LOCAL(test):
+LOCAL(vmInvoke_argumentTest):
    cmpq   %rcx,%r9
-   jb     LOCAL(loop)
+   jb     LOCAL(vmInvoke_argumentLoop)
    
    // call function
    call   *%rsi
    
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
    movq   %rbp,%rsp
+
+#ifdef AVIAN_CONTINUATIONS
+#  include "continuations-x86.S"
+#endif // AVIAN_CONTINUATIONS
    
-   // restore callee-saved registers
+   // restore callee-saved registers (below the stack pointer, but in
+   // the red zone)
    movq   %rsp,%r9
-   subq   $48,%r9
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
 
    movq   0(%r9),%rbx
    movq   8(%r9),%r12
@@ -160,19 +227,66 @@ LOCAL(test):
    popq   %rbp
    ret
    
-#else
-#error unsupported platorm / architecture combo
-#endif //defined __WINDOWS__
+.globl GLOBAL(vmJumpAndInvoke)
+GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
+   //    %rdi: thread
+   //    %rsi: address
+   //    %rdx: base
+   //    %rcx: (unused)
+   //    %r8 : argumentFootprint
+   //    %r9 : arguments
+   // 8(%rsp): frameSize
 
+   movq   %rdx,%rbp
+   
+   // restore (pseudo)-stack pointer (we don't want to touch the real
+   // stack pointer, since we haven't copied the arguments yet)
+   movq   %rbp,%rcx
+         
+   // allocate new frame, adding room for callee-saved registers
+   movl   8(%rsp),%eax
+   subq   %rax,%rcx
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rcx
+   
+   movq   %rdi,%rbx
+   
+   // set return address
+   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   movq   %r10,(%rcx)
+   
+   // copy arguments into place
+   movq   $0,%r11
+   jmp    LOCAL(vmJumpAndInvoke_argumentTest)
+
+LOCAL(vmJumpAndInvoke_argumentLoop):
+   movq   (%r9,%r11,1),%r10
+   movq   %r10,8(%rcx,%r11,1)
+   addq   $8,%r11
+
+LOCAL(vmJumpAndInvoke_argumentTest):
+   cmpq   %r8,%r11
+   jb     LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
+   movq   %rcx,%rsp
+   
+   jmp    *%rsi
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   int3
+#endif // not AVIAN_CONTINUATIONS
+
+#endif // not __MINGW32__
+   
 #elif defined __i386__
 
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmInvoke
-_vmInvoke: 
-#  else
-.globl vmInvoke
-vmInvoke:
-#  endif
+#define CALLEE_SAVED_REGISTER_FOOTPRINT 16
+   
+.globl GLOBAL(vmInvoke)
+GLOBAL(vmInvoke):
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -185,7 +299,7 @@ vmInvoke:
 
    // allocate stack space, adding room for callee-saved registers
 	 subl   24(%ebp),%esp
-	 subl   $16,%esp
+   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%esp
    
    // save callee-saved registers
    movl   %esp,%ecx
@@ -201,26 +315,33 @@ vmInvoke:
    // copy arguments into place
    movl   $0,%ecx
    movl   16(%ebp),%edx
-   jmp    LOCAL(test)
+   jmp    LOCAL(vmInvoke_argumentTest)
 
-LOCAL(loop):
+LOCAL(vmInvoke_argumentLoop):
    movl   (%edx,%ecx,1),%eax
    movl   %eax,(%esp,%ecx,1)
    addl   $4,%ecx
 
-LOCAL(test):
+LOCAL(vmInvoke_argumentTest):
    cmpl   20(%ebp),%ecx
-   jb     LOCAL(loop)
+   jb     LOCAL(vmInvoke_argumentLoop)
 
    // call function
    call   *12(%ebp)
-   
-   // restore stack pointer
-   movl   %ebp,%esp
+
+.globl vmInvoke_returnAddress
+vmInvoke_returnAddress:
+   // restore stack pointer, preserving the area containing saved
+   // registers
+   movl   %ebp,%ecx
+   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
+   movl   %ecx,%esp
+
+#ifdef AVIAN_CONTINUATIONS
+#  include "continuations-x86.S"
+#endif // AVIAN_CONTINUATIONS
    
    // restore callee-saved registers
-   subl   $16,%esp
-
    movl   0(%esp),%ebx
    movl   4(%esp),%esi
    movl   8(%esp),%edi
@@ -228,24 +349,86 @@ LOCAL(test):
    // handle return value based on expected type
    movl   28(%ebp),%ecx
    
-   addl   $16,%esp
+   addl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%esp
    
-LOCAL(void):
+LOCAL(vmInvoke_void):
    cmpl   $VOID_TYPE,%ecx
-   jne    LOCAL(int64)
-   jmp    LOCAL(exit)
+   jne    LOCAL(vmInvoke_int64)
+   jmp    LOCAL(vmInvoke_return)
 
-LOCAL(int64):
+LOCAL(vmInvoke_int64):
    cmpl   $INT64_TYPE,%ecx
-   jne    LOCAL(int32)
-   jmp    LOCAL(exit)
+   jne    LOCAL(vmInvoke_int32)
+   jmp    LOCAL(vmInvoke_return)
    
-LOCAL(int32):
+LOCAL(vmInvoke_int32):
    movl   $0,%edx
 
-LOCAL(exit):
+LOCAL(vmInvoke_return):
    popl   %ebp
    ret
+
+LOCAL(getPC):
+   movl   (%esp),%esi
+   ret
+   
+.globl GLOBAL(vmJumpAndInvoke)
+GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
+   //  4(%esp): thread
+   //  8(%esp): address
+   // 12(%esp): base
+   // 16(%esp): (unused)
+   // 20(%esp): argumentFootprint
+   // 24(%esp): arguments
+   // 28(%esp): frameSize
+
+   movl   12(%esp),%ebp
+   
+   // restore (pseudo)-stack pointer (we don't want to touch the real
+   // stack pointer, since we haven't copied the arguments yet)
+   movl   %ebp,%ecx
+   
+   // allocate new frame, adding room for callee-saved registers
+   subl   28(%esp),%ecx
+   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
+   
+   movl   4(%esp),%ebx
+   
+   // set return address
+   call   LOCAL(getPC)
+   addl   $_GLOBAL_OFFSET_TABLE_,%esi
+   movl   vmInvoke_returnAddress@GOT(%esi),%esi
+   movl   %esi,(%ecx)
+   
+   // copy arguments into place
+   movl   $0,%esi
+   movl   20(%esp),%edx
+   movl   24(%esp),%eax
+   jmp    LOCAL(vmJumpAndInvoke_argumentTest)
+
+LOCAL(vmJumpAndInvoke_argumentLoop):
+   movl   (%eax,%esi,1),%edi
+   movl   %edi,4(%ecx,%esi,1)
+   addl   $4,%esi
+
+LOCAL(vmJumpAndInvoke_argumentTest):
+   cmpl   %edx,%esi
+   jb     LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   movl   8(%esp),%esi
+   
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
+   movl   %ecx,%esp
+
+   jmp    *%esi
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   int3
+#endif // AVIAN_CONTINUATIONS
+   
 #else
 #error unsupported architecture
 #endif //def __x86_64__

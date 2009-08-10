@@ -22,6 +22,10 @@ public abstract class Reference<T> {
     this.queue = queue;
   }
 
+  protected Reference(T target) {
+    this(target, null);
+  }
+
   public T get() {
     return target;
   }

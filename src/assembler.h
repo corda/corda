@@ -16,6 +16,12 @@
 
 namespace vm {
 
+#ifdef AVIAN_TAILS
+const bool TailCalls = true;
+#else
+const bool TailCalls = false;
+#endif
+
 enum Operation {
   Return,
   LoadBarrier,
@@ -31,13 +37,20 @@ enum UnaryOperation {
   AlignedCall,
   Jump,
   LongJump,
+  AlignedJump,
   JumpIfLess,
   JumpIfGreater,
   JumpIfLessOrEqual,
   JumpIfGreaterOrEqual,
   JumpIfEqual,
   JumpIfNotEqual,
-  JumpIfUnordered
+  JumpIfFloatUnordered,
+  JumpIfFloatLess,
+  JumpIfFloatGreater,
+  JumpIfFloatLessOrEqual,
+  JumpIfFloatGreaterOrEqual,
+  JumpIfFloatEqual,
+  JumpIfFloatNotEqual,
 };
 
 const unsigned UnaryOperationCount = JumpIfNotEqual + 1;
@@ -225,12 +238,6 @@ class DelayedPromise: public ListenPromise {
   DelayedPromise* next;
 };
 
-class TraceHandler {
- public:
-  virtual void handleTrace(Promise* address, unsigned padIndex,
-                           unsigned padding) = 0;
-};
-
 class Assembler {
  public:
   class Operand { };
@@ -259,7 +266,7 @@ class Assembler {
 
   class Memory: public Operand {
    public:
-    Memory(int base, int offset, int index = NoRegister, unsigned scale = 0):
+    Memory(int base, int offset, int index = NoRegister, unsigned scale = 1):
       base(base), offset(offset), index(index), scale(scale)
     { }
 
@@ -290,21 +297,32 @@ class Assembler {
     virtual unsigned floatRegisterCount() = 0;
     virtual uint64_t generalRegisters() = 0;
     virtual uint64_t floatRegisters() = 0;
+    virtual uint64_t allRegisters() = 0;
 
     virtual int stack() = 0;
     virtual int thread() = 0;
     virtual int returnLow() = 0;
     virtual int returnHigh() = 0;
+    virtual int virtualCallTarget() = 0;
+    virtual int virtualCallIndex() = 0;
 
     virtual bool bigEndian() = 0;
     
     virtual bool supportsFloatCompare(unsigned size) = 0;
 
+    virtual bool alwaysCondensed(BinaryOperation op) = 0;
+    virtual bool alwaysCondensed(TernaryOperation op) = 0;
+
     virtual bool reserved(int register_) = 0;
 
+    virtual unsigned frameFootprint(unsigned footprint) = 0;
     virtual unsigned argumentFootprint(unsigned footprint) = 0;
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
+
+    virtual unsigned stackAlignmentInWords() = 0;
+
+    virtual bool matchCall(void* returnAddress, void* target) = 0;
 
     virtual void updateCall(UnaryOperation op, bool assertAlignment,
                             void* returnAddress, void* newTarget) = 0;
@@ -318,6 +336,8 @@ class Assembler {
     virtual unsigned frameHeaderSize() = 0;
     virtual unsigned frameReturnAddressSize() = 0;
     virtual unsigned frameFooterSize() = 0;
+    virtual int returnAddressOffset() = 0;
+    virtual int framePointerOffset() = 0;
     virtual void nextFrame(void** stack, void** base) = 0;
     
     virtual BinaryOperation hasBinaryIntrinsic(Thread* t, object method) = 0;
@@ -361,7 +381,15 @@ class Assembler {
   virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
+  virtual void adjustFrame(unsigned footprint) = 0;
   virtual void popFrame() = 0;
+  virtual void popFrameForTailCall(unsigned footprint, int offset,
+                                   int returnAddressSurrogate,
+                                   int framePointerSurrogate) = 0;
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint)
+  = 0;
+  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  = 0;
 
   virtual void apply(Operation op) = 0;
 

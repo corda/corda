@@ -187,4 +187,40 @@ public final class Character implements Comparable<Character> {
     return isHighSurrogate(high) && isLowSurrogate(low);
   }
 
+  public static int codePointAt(CharSequence sequence, int offset) {
+    int length = sequence.length();
+    if (offset < 0 || offset >= length) {
+      throw new IndexOutOfBoundsException();
+    }
+
+    char high = sequence.charAt(offset);
+    if (! isHighSurrogate(high) || offset >= length) {
+      return high;
+    }
+    char low = sequence.charAt(offset + 1);
+    if (! isLowSurrogate(low)) {
+      return high;
+    }
+
+    return toCodePoint(high, low);
+  }
+
+  public static int codePointCount(CharSequence sequence, int start, int end) {
+    int length = sequence.length();
+    if (start < 0 || start > end || end >= length) {
+      throw new IndexOutOfBoundsException();
+    }
+
+    int count = 0;
+    for (int i = start; i < end; ++i) {
+      if (isHighSurrogate(sequence.charAt(i))
+          && (i + 1) < end
+          && isLowSurrogate(sequence.charAt(i + 1)))
+      {
+        ++ i;
+      }
+      ++ count;
+    }
+    return count;
+  }
 }

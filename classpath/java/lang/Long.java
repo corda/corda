@@ -66,7 +66,7 @@ public final class Long extends Number implements Comparable<Long> {
 
     char[] array = new char[size];
 
-    int i = array.length - 1;
+    int i = size - 1;
     for (long n = v; n != 0; n /= radix) {
       long digit = n % radix;
       if (negative) digit = -digit;
@@ -83,7 +83,7 @@ public final class Long extends Number implements Comparable<Long> {
       array[i] = '-';
     }
 
-    return new String(array);
+    return new String(array, 0, size, false);
   }
 
   public static String toString(long v) {

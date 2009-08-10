@@ -14,13 +14,20 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.GenericDeclaration;
+import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.security.ProtectionDomain;
+import java.security.Permissions;
+import java.security.AllPermission;
 
-public final class Class <T> {
-  private static final int PrimitiveFlag = 1 << 4;
+public final class Class <T> implements Type, GenericDeclaration {
+  private static final int PrimitiveFlag = 1 << 5;
 
   private short flags;
   private byte vmFlags;
@@ -55,6 +62,34 @@ public final class Class <T> {
   }
 
   public String getName() {
+    if (name == null) {
+      if ((vmFlags & PrimitiveFlag) != 0) {
+        if (this == primitiveClass('V')) {
+          name = "void".getBytes();
+        } else if (this == primitiveClass('Z')) {
+          name = "boolean".getBytes();
+        } else if (this == primitiveClass('B')) {
+          name = "byte".getBytes();
+        } else if (this == primitiveClass('C')) {
+          name = "char".getBytes();
+        } else if (this == primitiveClass('S')) {
+          name = "short".getBytes();
+        } else if (this == primitiveClass('I')) {
+          name = "int".getBytes();
+        } else if (this == primitiveClass('F')) {
+          name = "float".getBytes();
+        } else if (this == primitiveClass('J')) {
+          name = "long".getBytes();
+        } else if (this == primitiveClass('D')) {
+          name = "double".getBytes();
+        } else {
+          throw new AssertionError();
+        }
+      } else {
+        throw new AssertionError();
+      }
+    }
+
     return new String
       (replace('/', '.', name, 0, name.length - 1), 0, name.length - 1, false);
   }
@@ -84,6 +119,9 @@ public final class Class <T> {
                               ClassLoader loader)
     throws ClassNotFoundException
   {
+    if (loader == null) {
+      loader = Class.class.loader;
+    }
     Class c = loader.loadClass(name);
     if (initialize) {
       c.initialize();
@@ -436,8 +474,63 @@ public final class Class <T> {
       return null;
     }
   }
-  
+
   public boolean desiredAssertionStatus() {
     return false;
+  }
+
+  public T cast(Object o) {
+    return (T) o;
+  }
+
+  public Object[] getSigners() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Annotation[] getDeclaredAnnotations() {
+    throw new UnsupportedOperationException();
+  }
+
+  public boolean isEnum() {
+    throw new UnsupportedOperationException();
+  }
+
+  public TypeVariable<Class<T>>[] getTypeParameters() {
+    throw new UnsupportedOperationException();
+  }
+
+  public String getSimpleName() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Method getEnclosingMethod() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Constructor getEnclosingConstructor() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Class getEnclosingClass() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Class[] getDeclaredClasses() {
+    throw new UnsupportedOperationException();
+  }
+
+  public <A extends Annotation> A getAnnotation(Class<A> c) {
+    throw new UnsupportedOperationException();
+  }
+
+  public ProtectionDomain getProtectionDomain() {
+    Permissions p = new Permissions();
+    p.add(new AllPermission());
+    return new ProtectionDomain(null, p);
+  }
+
+  // for GNU Classpath compatibility:
+  void setSigners(Object[] signers) {
+    throw new UnsupportedOperationException();
   }
 }

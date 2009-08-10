@@ -58,25 +58,24 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
 
 extern "C" uint64_t
-#ifdef __WINDOWS__
+#  ifdef __MINGW32__
 vmNativeCall(void* function, void* stack, unsigned stackSize,
              unsigned returnType);
-#elif defined __LINUX__
-
+#  else
 vmNativeCall(void* function, void* stack, unsigned stackSize,
              void* gprTable, void* sseTable, unsigned returnType);
-#endif //def __WINDOWS__
+#  endif
 
 namespace vm {
 
-#ifdef __WINDOWS__
+#  ifdef __MINGW32__
 inline uint64_t
 dynamicCall(void* function, uint64_t* arguments, UNUSED uint8_t* argumentTypes,
             unsigned argumentCount, unsigned, unsigned returnType)
 {
   return vmNativeCall(function, arguments, argumentCount, returnType);
 }
-#elif defined __LINUX__
+#  else
 inline uint64_t
 dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned, unsigned returnType)
@@ -117,7 +116,7 @@ dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
                       (gprIndex ? gprTable : 0),
                       (sseIndex ? sseTable : 0), returnType);
 }
-#endif //def __WINDOWS__
+#endif
 
 } // namespace vm
 

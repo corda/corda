@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -63,7 +63,7 @@ public class ZipFile {
     return index.size();
   }
 
-  public Enumeration<ZipEntry> entries() {
+  public Enumeration<? extends ZipEntry> entries() {
     return new MyEnumeration(window, index.values().iterator());
   }
 

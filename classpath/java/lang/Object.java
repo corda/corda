@@ -25,7 +25,7 @@ public class Object {
     return this == o;
   }
 
-  protected void finalize() { }
+  protected void finalize() throws Throwable { }
 
   public native final Class<? extends Object> getClass();
 
@@ -41,5 +41,14 @@ public class Object {
     wait(0);
   }
 
-  public native final void wait(long timeout) throws InterruptedException;
+  public native final void wait(long milliseconds) throws InterruptedException;
+
+  public final void wait(long milliseconds, int nanoseconds)
+    throws InterruptedException
+  {
+    if (nanoseconds != 0) {
+      ++ milliseconds;
+    }
+    wait(milliseconds);
+  }
 }

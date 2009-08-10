@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class LinkedList<T> implements List<T> {
+public class LinkedList<T> extends AbstractSequentialList<T> {
   private Cell<T> front;
   private Cell<T> rear;
   private int size;
@@ -85,10 +85,6 @@ public class LinkedList<T> implements List<T> {
     }
   }
 
-  public <S> S[] toArray(S[] a) {
-    return Collections.toArray(this, a);
-  }
-
   public int size() {
     return size;
   }
@@ -97,8 +93,26 @@ public class LinkedList<T> implements List<T> {
     return find(element) != null;
   }
 
-  public void addAll(Collection<T> c) {
-    for (T t: c) add(t);
+  public int indexOf(Object element) {
+    int i = 0;
+    for (Cell<T> c = front; c != null; c = c.next) {
+      if (equal(c.value, element)) {
+        return i;
+      }
+      ++ i;
+    }
+    return -1;
+  }
+
+  public int lastIndexOf(Object element) {
+    int i = size;
+    for (Cell<T> c = rear; c != null; c = c.prev) {
+      -- i;
+      if (equal(c.value, element)) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   public boolean add(T element) {
@@ -202,7 +216,19 @@ public class LinkedList<T> implements List<T> {
   }
 
   public Iterator<T> iterator() {
-    return new MyIterator(front);
+    return listIterator();
+  }
+
+  public ListIterator<T> listIterator(int index) {
+    MyIterator it = new MyIterator();
+    for (int i = 0; i < index; ++i) {
+      it.next();
+    }
+    return it;
+  }
+
+  public ListIterator<T> listIterator() {
+    return listIterator(0);
   }
 
   public String toString() {
@@ -221,18 +247,29 @@ public class LinkedList<T> implements List<T> {
     }
   }
 
-  private class MyIterator implements Iterator<T> {
+  private class MyIterator implements ListIterator<T> {
+    private Cell<T> toRemove;
     private Cell<T> current;
-    private Cell<T> next;
 
-    public MyIterator(Cell<T> start) {
-      next = start;
+    public T previous() {
+      if (hasPrevious()) {
+        T v = current.value;
+        toRemove = current;
+        current = current.prev;
+        return v;
+      } else {
+        throw new NoSuchElementException();
+      }
     }
 
     public T next() {
       if (hasNext()) {
-        current = next;
-        next = next.next;
+        if (current == null) {
+          current = front;
+        } else {
+          current = current.next;
+        }
+        toRemove = current;
         return current.value;
       } else {
         throw new NoSuchElementException();
@@ -240,13 +277,22 @@ public class LinkedList<T> implements List<T> {
     }
 
     public boolean hasNext() {
-      return next != null;
+      if (current == null) {
+        return front != null;
+      } else {
+        return current.next != null;
+      }
+    }
+
+    public boolean hasPrevious() {
+      return current != null;
     }
 
     public void remove() {
-      if (current != null) {
-        LinkedList.this.remove(current);
-        current = null;
+      if (toRemove != null) {
+        current = toRemove.prev;
+        LinkedList.this.remove(toRemove);
+        toRemove = null;
       } else {
         throw new IllegalStateException();
       }

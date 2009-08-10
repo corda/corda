@@ -196,7 +196,7 @@ visitRoots(Thread* t, Heap::Visitor* v)
   }
 }
 
-void
+bool
 walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
      unsigned arrayElementSize, unsigned arrayLength, unsigned start)
 {
@@ -207,7 +207,7 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
   for (unsigned i = start; i < fixedSizeInWords; ++i) {
     if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
       if (not w->visit(i)) {
-        return;
+        return false;
       }
     }
   }
@@ -240,12 +240,31 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
           if (not w->visit
               (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
           {
-            return;
+            return false;
           }
         }
       }
     }
   }
+
+  return true;
+}
+
+object
+findInInterfaces(Thread* t, object class_, object name, object spec,
+                 object (*find)(Thread*, object, object, object))
+{
+  object result = 0;
+  if (classInterfaceTable(t, class_)) {
+    for (unsigned i = 0;
+         i < arrayLength(t, classInterfaceTable(t, class_)) and result == 0;
+         i += 2)
+    {
+      result = find
+        (t, arrayBody(t, classInterfaceTable(t, class_), i), name, spec);
+    }
+  }
+  return result;
 }
 
 void
@@ -479,6 +498,33 @@ postCollect(Thread* t)
   }
 }
 
+void
+finalizeObject(Thread* t, object o)
+{
+  if (t->state == Thread::ExitState) {
+    // don't waste time running Java finalizers if we're exiting the
+    // VM
+    return;
+  }
+
+  for (object c = objectClass(t, o); c; c = classSuper(t, c)) {
+    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+      object m = arrayBody(t, classMethodTable(t, c), i);
+
+      if (strcmp(reinterpret_cast<const int8_t*>("finalize"),
+                 &byteArrayBody(t, methodName(t, m), 0)) == 0
+          and strcmp(reinterpret_cast<const int8_t*>("()V"),
+                     &byteArrayBody(t, methodSpec(t, m), 0)) == 0)
+      {
+        t->m->processor->invoke(t, m, o);
+        t->exception = 0;
+        return;
+      }               
+    }
+  }
+  abort(t);
+}
+
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
@@ -495,21 +541,31 @@ makeByteArray(Thread* t, const char* format, va_list a)
 }
 
 object
-parseUtf8(Thread* t, Stream& s, unsigned length)
+parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
+                  unsigned sourceIndex, unsigned lastByteRead)
 {
-  object value = makeByteArray(t, length + 1);
+  PROTECT(t, bytesSoFar);
+  
+  unsigned length = byteArrayLength(t, bytesSoFar) - 1;
+  object value = makeCharArray(t, length + 1);
+
   unsigned vi = 0;
-  for (unsigned si = 0; si < length; ++si) {
-    unsigned a = s.read1();
+  for (; vi < byteCount; ++vi) {
+    charArrayBody(t, value, vi) = byteArrayBody(t, bytesSoFar, vi);
+  }
+
+  unsigned a = lastByteRead;
+  unsigned si = sourceIndex;
+  while (true) {
     if (a & 0x80) {
-      // todo: handle non-ASCII characters properly
       if (a & 0x20) {
 	// 3 bytes
 	si += 2;
 	assert(t, si < length);
-	/*unsigned b = */s.read1();
-	/*unsigned c = */s.read1();
-	byteArrayBody(t, value, vi++) = '_';
+	unsigned b = s.read1();
+	unsigned c = s.read1();
+	charArrayBody(t, value, vi++)
+          = ((a & 0xf) << 12) | ((b & 0x3f) << 6) | (c & 0x3f);
       } else {
 	// 2 bytes
 	++ si;
@@ -517,9 +573,55 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
 	unsigned b = s.read1();
 
 	if (a == 0xC0 and b == 0x80) {
+	  charArrayBody(t, value, vi++) = 0;
+	} else {
+	  charArrayBody(t, value, vi++) = ((a & 0x1f) << 6) | (b & 0x3f);
+	}
+      }
+    } else {
+      charArrayBody(t, value, vi++) = a;
+    }    
+    
+    if (++si < length) {
+      a = s.read1();
+    } else {
+      break;
+    }
+  }
+
+  if (vi < length) {
+    PROTECT(t, value);
+    
+    object v = makeCharArray(t, vi + 1);
+    memcpy(&charArrayBody(t, v, 0), &charArrayBody(t, value, 0), vi * 2);
+    value = v;
+  }
+  
+  charArrayBody(t, value, vi) = 0;
+  return value;
+}
+
+object
+parseUtf8(Thread* t, Stream& s, unsigned length)
+{
+  object value = makeByteArray(t, length + 1);
+  unsigned vi = 0;
+  for (unsigned si = 0; si < length; ++si) {
+    unsigned a = s.read1();
+    if (a & 0x80) {
+      if (a & 0x20) {
+	// 3 bytes
+        return parseUtf8NonAscii(t, s, value, vi, si, a);
+      } else {
+	// 2 bytes
+	unsigned b = s.read1();
+
+	if (a == 0xC0 and b == 0x80) {
+          ++ si;
+          assert(t, si < length);
 	  byteArrayBody(t, value, vi++) = 0;
 	} else {
-	  byteArrayBody(t, value, vi++) = '_';
+          return parseUtf8NonAscii(t, s, value, vi, si, a);
 	}
       }
     } else {
@@ -537,6 +639,28 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
   
   byteArrayBody(t, value, vi) = 0;
   return value;
+}
+
+void
+removeByteArray(Thread* t, object o)
+{
+  hashMapRemove(t, t->m->byteArrayMap, o, byteArrayHash, objectEqual);
+}
+
+object
+internByteArray(Thread* t, object array)
+{
+  PROTECT(t, array);
+
+  object n = hashMapFindNode
+    (t, t->m->byteArrayMap, array, byteArrayHash, byteArrayEqual);
+  if (n) {
+    return jreferenceTarget(t, tripleFirst(t, n));
+  } else {
+    hashMapInsert(t, t->m->byteArrayMap, array, 0, byteArrayHash);
+    addFinalizer(t, array, removeByteArray);
+    return array;
+  }
 }
 
 unsigned
@@ -561,6 +685,11 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
   case CONSTANT_Utf8: {
     if (singletonObject(t, pool, i) == 0) {
       object value = parseUtf8(t, s, s.read2());
+      if (objectClass(t, value)
+          == arrayBody(t, t->m->types, Machine::ByteArrayType))
+      {
+        value = internByteArray(t, value);
+      }
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
     }
   } return 1;
@@ -581,7 +710,8 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       parsePoolEntry(t, s, index, pool, si);
         
       object value = singletonObject(t, pool, si);
-      value = makeString(t, value, 0, byteArrayLength(t, value) - 1, 0);
+      value = makeString
+        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1, 0);
       value = intern(t, value);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
     }
@@ -628,8 +758,13 @@ object
 parsePool(Thread* t, Stream& s)
 {
   unsigned count = s.read2() - 1;
-
-  object pool = makeSingletonOfSize(t, count);
+  unsigned old;
+  unsigned floatMaskSize = 0;
+  do {
+  	old = floatMaskSize;
+    floatMaskSize = singletonMaskSize(count + floatMaskSize);
+  } while (floatMaskSize != old);
+  object pool = makeSingletonOfSize(t, count + floatMaskSize);
   PROTECT(t, pool);
 
   if (count) {
@@ -641,12 +776,18 @@ parsePool(Thread* t, Stream& s)
       switch (s.read1()) {
       case CONSTANT_Class:
       case CONSTANT_String:
+        assert(t, !singletonIsFloat(t, pool, i));
         singletonMarkObject(t, pool, i);
         s.skip(2);
         break;
 
       case CONSTANT_Integer:
+        assert(t, !singletonIsFloat(t, pool, i));
+        s.skip(4);
+        break;
       case CONSTANT_Float:
+        singletonMarkBit(t, pool, count, i);
+        assert(t, singletonIsFloat(t, pool, i));
         s.skip(4);
         break;
 
@@ -654,17 +795,27 @@ parsePool(Thread* t, Stream& s)
       case CONSTANT_Fieldref:
       case CONSTANT_Methodref:
       case CONSTANT_InterfaceMethodref:
+        assert(t, !singletonIsFloat(t, pool, i));
         singletonMarkObject(t, pool, i);
         s.skip(4);
         break;
 
       case CONSTANT_Long:
+        assert(t, !singletonIsFloat(t, pool, i));
+        s.skip(8);
+        ++ i;
+        break;
       case CONSTANT_Double:
+        singletonMarkBit(t, pool, count, i);
+        singletonMarkBit(t, pool, count, i + 1);
+        assert(t, singletonIsFloat(t, pool, i));
+        assert(t, singletonIsFloat(t, pool, i + 1));
         s.skip(8);
         ++ i;
         break;
 
       case CONSTANT_Utf8:
+        assert(t, !singletonIsFloat(t, pool, i));
         singletonMarkObject(t, pool, i);
         s.skip(s.read2());
         break;
@@ -728,6 +879,8 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     PROTECT(t, name);
 
     object interface = resolveClass(t, name);
+    if (UNLIKELY(t->exception)) return;
+
     PROTECT(t, interface);
 
     hashMapInsertMaybe(t, map, name, interface, byteArrayHash, byteArrayEqual);
@@ -1161,6 +1314,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
           hashMapInsert(t, virtualMap, method, method, methodHash);
         }
+
+        if (UNLIKELY(strcmp
+                     (reinterpret_cast<const int8_t*>("finalize"), 
+                      &byteArrayBody(t, methodName(t, method), 0)) == 0
+                     and strcmp
+                     (reinterpret_cast<const int8_t*>("()V"),
+                      &byteArrayBody(t, methodSpec(t, method), 0)) == 0
+                     and (not emptyMethod(t, method))))
+        {
+          classVmFlags(t, class_) |= HasFinalizerFlag;
+        }
       } else {
         methodOffset(t, method) = i;
 
@@ -1313,14 +1477,9 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   expect(t, classSuper(t, bootstrapClass) == classSuper(t, class_));
 
   expect(t, bootstrapClass == arrayBody(t, t->m->types, Machine::ClassType)
-         or classFixedSize(t, bootstrapClass) == classFixedSize(t, class_));
+         or classFixedSize(t, bootstrapClass) >= classFixedSize(t, class_));
 
-  expect(t,
-         (classVmFlags(t, bootstrapClass) & ReferenceFlag)
-         or (classObjectMask(t, bootstrapClass) == 0
-             and classObjectMask(t, class_) == 0)
-         or intArrayEqual(t, classObjectMask(t, bootstrapClass),
-                          classObjectMask(t, class_)));
+  expect(t, (classVmFlags(t, class_) & HasFinalizerFlag) == 0);
 
   PROTECT(t, bootstrapClass);
   PROTECT(t, class_);
@@ -1329,7 +1488,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
 
   classVmFlags(t, bootstrapClass) &= ~BootstrapFlag;
   classVmFlags(t, bootstrapClass) |= classVmFlags(t, class_);
-  classFlags(t, bootstrapClass) = classFlags(t, class_);
+  classFlags(t, bootstrapClass) |= classFlags(t, class_);
 
   set(t, bootstrapClass, ClassSuper, classSuper(t, class_));
   set(t, bootstrapClass, ClassInterfaceTable, classInterfaceTable(t, class_));
@@ -1518,7 +1677,7 @@ boot(Thread* t)
 
   m->unsafe = true;
 
-  m->loader = allocate(t, sizeof(void*) * 3, true);
+  m->loader = allocate(t, FixedSizeOfSystemClassLoader, true);
 
   m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
   arrayLength(t, m->types) = TypeCount;
@@ -1544,8 +1703,11 @@ boot(Thread* t)
 
   m->unsafe = false;
 
-  classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+  classFlags(t, arrayBody(t, m->types, Machine::SingletonType))
     |= SingletonFlag;
+
+  classFlags(t, arrayBody(t, m->types, Machine::ContinuationType))
+    |= ContinuationFlag;
 
   classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
     |= ReferenceFlag;
@@ -1709,6 +1871,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   bootstrapClassMap(0),
   monitorMap(0),
   stringMap(0),
+  byteArrayMap(0),
   types(0),
   jniMethodTable(0),
   finalizers(0),
@@ -1717,6 +1880,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   weakReferences(0),
   tenuredWeakReferences(0),
   unsafe(false),
+  triedBuiltinOnLoad(false),
   heapPoolIndex(0)
 {
   heap->setClient(heapClient);
@@ -1779,6 +1943,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   heapIndex(0),
   heapOffset(0),
   protector(0),
+  classInitStack(0),
   runnable(this),
   defaultHeap(static_cast<uintptr_t*>
               (m->heap->allocate(ThreadHeapSizeInBytes))),
@@ -1829,6 +1994,7 @@ Thread::init()
       boot(this);
     }
 
+    m->byteArrayMap = makeWeakHashMap(this, 0, 0);
     m->monitorMap = makeWeakHashMap(this, 0, 0);
 
     m->jniMethodTable = makeVector(this, 0, 0);
@@ -1842,8 +2008,12 @@ Thread::init()
   if (javaThread) {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   } else {
+    const unsigned NewState = 0;
+    const unsigned NormalPriority = 5;
+
     this->javaThread = makeThread
-      (this, reinterpret_cast<int64_t>(this), 0, 0, 0, 0, m->loader, 0);
+      (this, reinterpret_cast<int64_t>(this), 0, 0, NewState, NormalPriority,
+       0, 0, 0, m->loader, 0, 0, 0);
   }
 }
 
@@ -2057,44 +2227,53 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     // another thread wants to enter the exclusive state, either for a
     // collection or some other reason.  We give it a chance here.
     ENTER(t, Thread::IdleState);
+
+    while (t->m->exclusive) {
+      t->m->stateLock->wait(t->systemThread, 0);
+    }
   }
   
-  switch (type) {
-  case Machine::MovableAllocation:
-    if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
-        > ThreadHeapSizeInWords)
-    {
-      t->heap = 0;
-      if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
-        t->heap = static_cast<uintptr_t*>
-          (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
+  do {
+    switch (type) {
+    case Machine::MovableAllocation:
+      if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+          > ThreadHeapSizeInWords)
+      {
+        t->heap = 0;
+        if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
+          t->heap = static_cast<uintptr_t*>
+            (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
 
-        if (t->heap) {
-          memset(t->heap, 0, ThreadHeapSizeInBytes);
+          if (t->heap) {
+            memset(t->heap, 0, ThreadHeapSizeInBytes);
 
-          t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
-          t->heapOffset += t->heapIndex;
-          t->heapIndex = 0;
+            t->m->heapPool[t->m->heapPoolIndex++] = t->heap;
+            t->heapOffset += t->heapIndex;
+            t->heapIndex = 0;
+          }
         }
       }
+      break;
+
+    case Machine::FixedAllocation:
+      if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes)
+      {
+        t->heap = 0;
+      }
+      break;
+
+    case Machine::ImmortalAllocation:
+      break;
     }
-    break;
 
-  case Machine::FixedAllocation:
-    if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes) {
-      t->heap = 0;
+    if (t->heap == 0) {
+      //     fprintf(stderr, "gc");
+      //     vmPrintTrace(t);
+      collect(t, Heap::MinorCollection);
     }
-    break;
-
-  case Machine::ImmortalAllocation:
-    break;
-  }
-
-  if (t->heap == 0) {
-//     fprintf(stderr, "gc");
-//     vmPrintTrace(t);
-    collect(t, Heap::MinorCollection);
-  }
+  } while (type == Machine::MovableAllocation
+           and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+           > ThreadHeapSizeInWords);
   
   switch (type) {
   case Machine::MovableAllocation: {
@@ -2131,6 +2310,28 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 
   default: abort(t);
   }
+}
+
+object
+makeNewGeneral(Thread* t, object class_)
+{
+  assert(t, t->state == Thread::ActiveState);
+
+  object instance = makeNew(t, class_);
+  PROTECT(t, instance);
+
+  if (classVmFlags(t, class_) & WeakReferenceFlag) {
+    ACQUIRE(t, t->m->referenceLock);
+    
+    jreferenceVmNext(t, instance) = t->m->weakReferences;
+    t->m->weakReferences = instance;
+  }
+
+  if (classVmFlags(t, class_) & HasFinalizerFlag) {
+    addFinalizer(t, instance, finalizeObject);
+  }
+
+  return instance;
 }
 
 object
@@ -2399,7 +2600,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
     set(t, class_, ClassSuper, sc);
 
     classVmFlags(t, class_)
-      |= (classVmFlags(t, sc) & (ReferenceFlag | WeakReferenceFlag));
+      |= (classVmFlags(t, sc)
+          & (ReferenceFlag | WeakReferenceFlag | HasFinalizerFlag));
   }
   
   parseInterfaceTable(t, s, class_, pool);
@@ -2431,6 +2633,8 @@ parseClass(Thread* t, const uint8_t* data, unsigned size)
      classStaticTable(t, class_),
      classLoader(t, class_),
      vtableLength);
+
+  PROTECT(t, real);
 
   t->m->processor->initVtable(t, real);
 
@@ -2510,24 +2714,58 @@ resolveClass(Thread* t, object spec)
 }
 
 object
-resolveMethod(Thread* t, const char* className, const char* methodName,
+resolveMethod(Thread* t, object class_, const char* methodName,
               const char* methodSpec)
 {
-  object class_ = resolveClass(t, makeByteArray(t, "%s", className));
-  if (LIKELY(t->exception == 0)) {
-    PROTECT(t, class_);
+  PROTECT(t, class_);
 
-    object name = makeByteArray(t, methodName);
-    PROTECT(t, name);
+  object name = makeByteArray(t, methodName);
+  PROTECT(t, name);
 
-    object spec = makeByteArray(t, methodSpec);
-    object reference = makeReference(t, class_, name, spec);
+  object spec = makeByteArray(t, methodSpec);
     
-    return findMethodInClass(t, class_, referenceName(t, reference),
-                             referenceSpec(t, reference));
+  object method = findMethodInClass(t, class_, name, spec);
+
+  if (t->exception == 0 and method == 0) {
+    object message = makeString
+      (t, "%s %s not found in %s", methodName, methodSpec,
+       &byteArrayBody(t, className(t, class_), 0));
+
+    t->exception = makeNoSuchMethodError(t, message);
+    return 0;
+  } else {
+    return method;
+  }
+}
+
+object
+resolveField(Thread* t, object class_, const char* fieldName,
+              const char* fieldSpec)
+{
+  PROTECT(t, class_);
+
+  object name = makeByteArray(t, fieldName);
+  PROTECT(t, name);
+
+  object spec = makeByteArray(t, fieldSpec);
+  PROTECT(t, spec);
+ 
+  object field = findInInterfaces(t, class_, name, spec, findFieldInClass);
+
+  for (; class_ != 0 and field == 0; class_ = classSuper(t, class_)) {
+    field = findFieldInClass(t, class_, name, spec);
   }
 
-  return 0;
+  if (t->exception == 0 and field == 0) {
+    object message = makeString
+      (t, "%s %s not found in %s", fieldName, fieldSpec,
+       &byteArrayBody(t, className(t, class_), 0));
+
+    t->exception = makeNoSuchFieldError(t, message);
+    return 0;
+  } else {
+    return field;
+  }
 }
 
 object
@@ -2554,6 +2792,92 @@ resolveObjectArrayClass(Thread* t, object elementSpec)
   }
 
   return resolveClass(t, spec);
+}
+
+bool
+classNeedsInit(Thread* t, object c)
+{
+  if (classVmFlags(t, c) & NeedInitFlag) {
+    if (classVmFlags(t, c) & InitFlag) {
+      // the class is currently being initialized.  If this the thread
+      // which is initializing it, we should not try to initialize it
+      // recursively.  Otherwise, we must wait for the responsible
+      // thread to finish.
+      for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
+        if (s->class_ == c) {
+          return false;
+        }
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool
+preInitClass(Thread* t, object c)
+{
+  if (classVmFlags(t, c) & NeedInitFlag) {
+    PROTECT(t, c);
+    ACQUIRE(t, t->m->classLock);
+    if (classVmFlags(t, c) & NeedInitFlag) {
+      if (classVmFlags(t, c) & InitFlag) {
+        // the class is currently being initialized.  If this the
+        // thread which is initializing it, we should not try to
+        // initialize it recursively.
+        for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
+          if (s->class_ == c) {
+            return false;
+          }
+        }
+
+        // some other thread is on the job - wait for it to finish.
+        while (classVmFlags(t, c) & InitFlag) {
+          ENTER(t, Thread::IdleState);
+          t->m->classLock->wait(t->systemThread, 0);
+        }
+      } else if (classVmFlags(t, c) & InitErrorFlag) {
+        object message = makeString
+          (t, "%s", &byteArrayBody(t, className(t, c), 0));
+        t->exception = makeNoClassDefFoundError(t, message);
+      } else {
+        classVmFlags(t, c) |= InitFlag;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void
+postInitClass(Thread* t, object c)
+{
+  PROTECT(t, c);
+
+  ACQUIRE(t, t->m->classLock);
+  if (t->exception) {
+    t->exception = makeExceptionInInitializerError(t, t->exception);
+    classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
+    classVmFlags(t, c) &= ~InitFlag;
+  } else {
+    classVmFlags(t, c) &= ~(NeedInitFlag | InitFlag);
+  }
+  t->m->classLock->notifyAll(t->systemThread);
+}
+
+void
+initClass(Thread* t, object c)
+{
+  PROTECT(t, c);
+
+  if (preInitClass(t, c)) {
+    Thread::ClassInitStack stack(t, c);
+
+    t->m->processor->invoke(t, classInitializer(t, c), 0);
+
+    postInitClass(t, c);
+  }
 }
 
 object
@@ -2606,7 +2930,6 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*makeError)(Thread*, object))
 {
   object originalClass = class_;
-  PROTECT(t, class_);
 
   object o = 0;
   if ((classFlags(t, class_) & ACC_INTERFACE)
@@ -2617,8 +2940,16 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   }
 
   if (o == 0) {
+    if (find == findFieldInClass) {
+      o = findInInterfaces(t, originalClass, name, spec, find);
+    }
+
     for (; o == 0 and class_; class_ = classSuper(t, class_)) {
       o = find(t, class_, name, spec);
+    }
+
+    if (o == 0 and find == findMethodInClass) {
+      o = findInInterfaces(t, originalClass, name, spec, find);
     }
   }
 
@@ -2760,13 +3091,6 @@ collect(Thread* t, Heap::CollectionType type)
 
   postCollect(m->rootThread);
 
-  for (object f = m->finalizeQueue; f; f = finalizerNext(t, f)) {
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
-  }
-  m->finalizeQueue = 0;
-
   killZombies(t, m->rootThread);
 
   for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
@@ -2779,6 +3103,14 @@ collect(Thread* t, Heap::CollectionType type)
 #ifdef VM_STRESS
   if (not stress) t->stress = false;
 #endif
+
+  object f = m->finalizeQueue;
+  m->finalizeQueue = 0;
+  for (; f; f = finalizerNext(t, f)) {
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
+  }
 }
 
 void
@@ -2787,6 +3119,8 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
   object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
   object objectMask = static_cast<object>
     (t->m->heap->follow(classObjectMask(t, class_)));
+
+  bool more = true;
 
   if (objectMask) {
     unsigned fixedSize = classFixedSize(t, class_);
@@ -2799,17 +3133,21 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
     memcpy(mask, &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
-    ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
-  } else if (classVmFlags(t, class_) & SingletonFlag) {
+    more = ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
+  } else if (classFlags(t, class_) & SingletonFlag) {
     unsigned length = singletonLength(t, o);
     if (length) {
-      ::walk(t, w, singletonMask(t, o),
-             (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
+      more = ::walk(t, w, singletonMask(t, o),
+                    (singletonCount(t, o) + 2) * BytesPerWord, 0, 0, start);
     } else if (start == 0) {
-      w->visit(0);
+      more = w->visit(0);
     }
   } else if (start == 0) {
-    w->visit(0);
+    more = w->visit(0);
+  }
+
+  if (more and classFlags(t, class_) & ContinuationFlag) {
+    t->m->processor->walkContinuationBody(t, w, o, start);
   }
 }
 
@@ -2840,15 +3178,16 @@ visitRoots(Machine* m, Heap::Visitor* v)
   v->visit(&(m->bootstrapClassMap));
   v->visit(&(m->monitorMap));
   v->visit(&(m->stringMap));
+  v->visit(&(m->byteArrayMap));
   v->visit(&(m->types));
   v->visit(&(m->jniMethodTable));
 
-  for (Reference* r = m->jniReferences; r; r = r->next) {
-    v->visit(&(r->target));
-  }
-
   for (Thread* t = m->rootThread; t; t = t->peer) {
     ::visitRoots(t, v);
+  }
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    v->visit(&(r->target));
   }
 }
 
@@ -2956,11 +3295,11 @@ makeTrace(Thread* t, Thread* target)
 void
 runJavaThread(Thread* t)
 {
-  object method = resolveMethod(t, "java/lang/Thread", "run", "()V");
+  object method = resolveMethod
+    (t, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
+
   if (t->exception == 0) {
-    t->m->processor->invoke
-      (t, findMethod(t, method, objectClass(t, t->javaThread)),
-       t->javaThread);
+    t->m->processor->invoke(t, method, 0, t->javaThread);
   }
 }
 

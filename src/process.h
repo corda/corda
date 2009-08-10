@@ -126,17 +126,7 @@ isSpecialMethod(Thread* t, object method, object class_)
 }
 
 void*
-resolveNativeMethod2(Thread* t, object method);
-
-inline void*
-resolveNativeMethod(Thread* t, object method)
-{
-  if (methodCode(t, method)) {
-    return pointerValue(t, methodCode(t, method));
-  } else {
-    return resolveNativeMethod2(t, method);
-  }
-}
+resolveNativeMethod(Thread* t, object method);
 
 inline object
 findInterfaceMethod(Thread* t, object method, object class_)

@@ -7,7 +7,7 @@
 
    There is NO WARRANTY for this software.  See license.txt for
    details. */
-
+   
 #include "math.h"
 #include "stdlib.h"
 #include "sys/time.h"
@@ -32,11 +32,14 @@
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
+#include <sys/sysctl.h>
+#include "sys/utsname.h"
 #include "sys/wait.h"
 #endif
 
 #ifdef __APPLE__
 #  define SO_SUFFIX ".jnilib"
+#include <CoreServices/CoreServices.h>
 #elif defined WIN32
 #  define SO_SUFFIX ".dll"
 #else
@@ -349,6 +352,44 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("\\");
     } else if (strcmp(chars, "os.name") == 0) {
       r = e->NewStringUTF("Windows");
+    } else if (strcmp(chars, "os.version") == 0) {
+      unsigned size = 32;
+      char buffer[size];
+      OSVERSIONINFO OSversion;
+      OSversion.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
+      ::GetVersionEx(&OSversion);
+      snprintf(buffer, size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
+      r = e->NewStringUTF(buffer);
+    } else if (strcmp(chars, "os.arch") == 0) {
+    #ifdef __i386__
+      r = e->NewStringUTF("x86");
+    #else
+      #ifdef __x86_64__
+        r = e->NewStringUTF("x86_64");
+      #else
+        #if defined(__ppc__) || defined(__powerpc__) || defined(__ppc64__) || defined(__powerpc64__)
+          r = e->NewStringUTF("ppc");
+        #else
+          #ifdef __ia64__
+            r = e->NewStringUTF("ia64");
+          #else
+            #ifdef __arm__
+              r = e->NewStringUTF("arm");
+            #else
+              #ifdef __alpha__
+                r = e->NewStringUTF("alpha");
+              #else
+                #ifdef __sparc64__
+                  r = e->NewStringUTF("sparc64");
+                #else
+                  r = e->NewStringUTF("unknown");
+                #endif
+              #endif
+            #endif
+          #endif
+        #endif
+      #endif
+    #endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
@@ -368,10 +409,56 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 #else
       r = e->NewStringUTF("Linux");
 #endif
+    } else if (strcmp(chars, "os.version") == 0) {
+#ifdef __APPLE__
+      unsigned size = 32;
+      char buffer[size];
+      long minorVersion, majorVersion;
+      
+      Gestalt(gestaltSystemVersionMajor, &majorVersion);
+      Gestalt(gestaltSystemVersionMinor, &minorVersion);
+      
+      snprintf(buffer, size, "%ld.%ld", majorVersion, minorVersion);
+      r = e->NewStringUTF(buffer);
+#else
+      struct utsname system_id; 
+      uname(&system_id);
+      r = e->NewStringUTF(system_id.release);
+#endif
+    } else if (strcmp(chars, "os.arch") == 0) {
+    #ifdef __i386__
+      r = e->NewStringUTF("x86");
+    #else
+      #ifdef __x86_64__
+        r = e->NewStringUTF("x86_64");
+      #else
+        #if defined(__ppc__) || defined(__powerpc__) || defined(__ppc64__) || defined(__powerpc64__)
+          r = e->NewStringUTF("ppc");
+        #else
+          #ifdef __ia64__
+            r = e->NewStringUTF("ia64");
+          #else
+            #ifdef __arm__
+              r = e->NewStringUTF("arm");
+            #else
+              #ifdef __alpha__
+                r = e->NewStringUTF("alpha");
+              #else
+                #ifdef __sparc64__
+                  r = e->NewStringUTF("sparc64");
+                #else
+                  r = e->NewStringUTF("unknown");
+                #endif
+              #endif
+            #endif
+          #endif
+        #endif
+      #endif
+    #endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
     } else if (strcmp(chars, "user.home") == 0) {
-      r = e->NewStringUTF(getenv("HOME"));      
+      r = e->NewStringUTF(getenv("HOME"));
     }
 #endif
 

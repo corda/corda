@@ -67,7 +67,7 @@ mangle(int8_t c, char* dst)
 unsigned
 jniNameLength(Thread* t, object method, bool decorate)
 {
-  unsigned size = 5;
+  unsigned size = 0;
 
   object className = ::className(t, methodClass(t, method));
   for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
@@ -96,10 +96,11 @@ jniNameLength(Thread* t, object method, bool decorate)
 }
 
 void
-makeJNIName(Thread* t, char* name, object method, bool decorate)
+makeJNIName(Thread* t, const char* prefix, unsigned prefixLength, char* name,
+            object method, bool decorate)
 {
-  memcpy(name, "Java_", 5);
-  name += 5;
+  memcpy(name, prefix, prefixLength);
+  name += prefixLength;
 
   object className = ::className(t, methodClass(t, method));
   for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
@@ -146,31 +147,30 @@ resolveNativeMethod(Thread* t, const char* undecorated, const char* decorated)
   return 0;
 }
 
-} // namespace
-
-namespace vm {
-
 void*
-resolveNativeMethod2(Thread* t, object method)
+resolveNativeMethod(Thread* t, object method, const char* prefix,
+                    unsigned prefixLength, int footprint UNUSED)
 {
-  unsigned undecoratedSize = jniNameLength(t, method, false);
+  unsigned undecoratedSize = prefixLength + jniNameLength(t, method, false);
   char undecorated[undecoratedSize + 1 + 6]; // extra 6 is for code below
-  makeJNIName(t, undecorated + 1, method, false);
+  makeJNIName(t, prefix, prefixLength, undecorated + 1, method, false);
 
-  unsigned decoratedSize = jniNameLength(t, method, true);
+  unsigned decoratedSize = prefixLength + jniNameLength(t, method, true);
   char decorated[decoratedSize + 1 + 6]; // extra 6 is for code below
-  makeJNIName(t, decorated + 1, method, true);
+  makeJNIName(t, prefix, prefixLength, decorated + 1, method, true);
 
-  void* p = ::resolveNativeMethod(t, undecorated + 1, decorated + 1);
+  void* p = resolveNativeMethod(t, undecorated + 1, decorated + 1);
   if (p) {
     return p;
   }
 
 #ifdef __MINGW32__
   // on windows, we also try the _%s@%d and %s@%d variants
-  unsigned footprint = methodParameterFootprint(t, method) + 1;
-  if (methodFlags(t, method) & ACC_STATIC) {
-    ++ footprint;
+  if (footprint == -1) {
+    footprint = methodParameterFootprint(t, method) + 1;
+    if (methodFlags(t, method) & ACC_STATIC) {
+      ++ footprint;
+    }
   }
 
   *undecorated = '_';
@@ -181,17 +181,38 @@ resolveNativeMethod2(Thread* t, object method)
   snprintf(decorated + decoratedSize + 1, 5, "@%d",
            footprint * BytesPerWord);
 
-  p = ::resolveNativeMethod(t, undecorated, decorated);
+  p = resolveNativeMethod(t, undecorated, decorated);
   if (p) {
     return p;
   }
 
   // one more try without the leading underscore
-  p = ::resolveNativeMethod(t, undecorated + 1, decorated + 1);
+  p = resolveNativeMethod(t, undecorated + 1, decorated + 1);
   if (p) {
     return p;
   }
 #endif
+
+  return 0;
+}
+
+} // namespace
+
+namespace vm {
+
+void*
+resolveNativeMethod(Thread* t, object method)
+{
+  void* p = ::resolveNativeMethod(t, method, "Java_", 5, -1);
+  if (p) {
+    return p;
+  }
+
+  p = ::resolveNativeMethod(t, method, "Avian_", 6, 3);
+  if (p) {
+    methodVmFlags(t, method) |= FastNative;
+    return p;
+  }
 
   return 0;
 }

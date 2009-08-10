@@ -63,8 +63,6 @@ const unsigned VisitSignalIndex = 0;
 const unsigned SegFaultSignalIndex = 1;
 const unsigned InterruptSignalIndex = 2;
 
-const unsigned ExecutableAreaSizeInBytes = 16 * 1024 * 1024;
-
 class MySystem;
 MySystem* system;
 
@@ -126,9 +124,7 @@ class MySystem: public System {
 
       r->setInterrupted(true);
 
-      if (flags & Waiting) {
-        pthread_kill(thread, InterruptSignal);
-      }
+      pthread_kill(thread, InterruptSignal);
     }
 
     virtual void join() {
@@ -518,9 +514,7 @@ class MySystem: public System {
 
   MySystem():
     threadVisitor(0),
-    visitTarget(0),
-    executableArea(0),
-    executableOffset(0)
+    visitTarget(0)
   {
     expect(this, system == 0);
     system = this;
@@ -559,33 +553,23 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-    if (executableArea == 0) {
 #ifdef __x86_64__
-      const unsigned Extra = MAP_32BIT;
+    const unsigned Extra = MAP_32BIT;
 #else
-      const unsigned Extra = 0;
+    const unsigned Extra = 0;
 #endif
-      void* p = mmap(0, ExecutableAreaSizeInBytes, PROT_EXEC | PROT_READ
-                     | PROT_WRITE, MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
+    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ
+                   | PROT_WRITE, MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
 
-      if (p != MAP_FAILED) {
-        executableArea = static_cast<uint8_t*>(p);
-      }
-    }
-
-    if (executableArea
-        and executableOffset + pad(sizeInBytes) < ExecutableAreaSizeInBytes)
-    {
-      void* r = executableArea + executableOffset;
-      executableOffset += pad(sizeInBytes);
-      return r;
-    } else {
+    if (p == MAP_FAILED) {
       return 0;
+    } else {
+      return static_cast<uint8_t*>(p);
     }
   }
 
-  virtual void freeExecutable(const void*, unsigned) {
-    // ignore
+  virtual void freeExecutable(const void* p, unsigned sizeInBytes) {
+    munmap(const_cast<void*>(p), sizeInBytes);
   }
 
   virtual bool success(Status s) {
@@ -642,13 +626,16 @@ class MySystem: public System {
     visitTarget = target;
 
     int rv = pthread_kill(target->thread, VisitSignal);
-    expect(this, rv == 0);
 
-    while (visitTarget) visitLock->wait(t, 0);
+    if (rv == 0) {
+      while (visitTarget) visitLock->wait(t, 0);
 
-    threadVisitor = 0;
+      threadVisitor = 0;
 
-    return 0;
+      return 0;
+    } else {
+      return -1;
+    }
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
@@ -780,11 +767,6 @@ class MySystem: public System {
     registerHandler(0, VisitSignalIndex);
     system = 0;
 
-    if (executableArea) {
-      int r UNUSED = munmap(executableArea, ExecutableAreaSizeInBytes);
-      assert(this, r == 0);
-    }
-
     ::free(this);
   }
 
@@ -850,7 +832,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       sigaddset(&set, SegFaultSignal);
       sigprocmask(SIG_UNBLOCK, &set, 0);
 
-      vmJump(ip, base, stack, thread);
+      vmJump(ip, base, stack, thread, 0, 0);
     }
   } break;
 
@@ -868,6 +850,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
   } else {
     switch (signal) {
     case VisitSignal:
+    case InterruptSignal:
       break;
 
     default:

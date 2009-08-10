@@ -83,6 +83,10 @@ main(int ac, const char** av)
   ++ vmArgs.nOptions;
 #endif
 
+#ifdef BOOT_BUILTINS
+  ++ vmArgs.nOptions;
+#endif
+
   JavaVMOption options[vmArgs.nOptions];
   vmArgs.options = options;
 
@@ -101,6 +105,11 @@ main(int ac, const char** av)
 #ifdef BOOT_LIBRARY
   options[optionIndex++].optionString
     = const_cast<char*>("-Davian.bootstrap=" BOOT_LIBRARY);
+#endif
+
+#ifdef BOOT_BUILTINS
+  options[optionIndex++].optionString
+    = const_cast<char*>("-Davian.builtins=" BOOT_BUILTINS);
 #endif
 
 #define CLASSPATH_PROPERTY "-Djava.class.path="

@@ -64,6 +64,22 @@ public class Collections {
     return sb.toString();
   }
 
+  static String toString(Map m) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (Iterator<Map.Entry> it = m.entrySet().iterator(); it.hasNext();) {
+      Map.Entry e = it.next();
+      sb.append(e.getKey())
+        .append("=")
+        .append(e.getValue());
+      if (it.hasNext()) {
+        sb.append(",");
+      }
+    }
+    sb.append("}");
+    return sb.toString();
+  }
+
   static class IteratorEnumeration<T> implements Enumeration<T> {
     private final Iterator<T> it;
 
@@ -111,6 +127,10 @@ public class Collections {
 
     public boolean remove(Object e) {
       synchronized (lock) { return collection.remove((T)e); }
+    }
+
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
     }
 
     public <T> T[] toArray(T[] array) {
@@ -182,7 +202,6 @@ public class Collections {
     return new SynchronizedMap<K, V> (map); 
   }
   
-
   static class SynchronizedSet<T>
     extends SynchronizedCollection<T>
     implements Set<T>
@@ -216,7 +235,7 @@ public class Collections {
 
   static class ArrayListIterator<T> implements ListIterator<T> {
     private final List<T> list;
-    private boolean canRemove = false;
+    private int toRemove = -1;
     private int index;
 
     public ArrayListIterator(List<T> list) {
@@ -234,7 +253,7 @@ public class Collections {
 
     public T previous() {
       if (hasPrevious()) {
-        canRemove = true;
+        toRemove = index;
         return list.get(index--);
       } else {
         throw new NoSuchElementException();
@@ -243,8 +262,8 @@ public class Collections {
 
     public T next() {
       if (hasNext()) {
-        canRemove = true;
-        return list.get(++index);
+        toRemove = ++index;
+        return list.get(index);
       } else {
         throw new NoSuchElementException();
       }
@@ -255,9 +274,10 @@ public class Collections {
     }
 
     public void remove() {
-      if (canRemove) {
-        canRemove = false;
-        list.remove(index--);
+      if (toRemove != -1) {
+        list.remove(toRemove);
+        index = toRemove - 1;
+        toRemove = -1;
       } else {
         throw new IllegalStateException();
       }
@@ -303,13 +323,56 @@ public class Collections {
       return inner.size();
     }
 
+    public Object[] toArray() {
+      return toArray(new Object[size()]);      
+    }
+
     public <S> S[] toArray(S[] array) {
       return inner.toArray(array);
-    }
-          
+    }     
   }
   
   public static <T> Set<T> unmodifiableSet(Set<T> hs) {
     return new UnmodifiableSet<T>(hs);
+  }
+
+  static class KeyIterator<K, V> implements Iterator<K> {
+    private final Iterator<Map.Entry<K, V>> it;
+
+    public KeyIterator(Iterator<Map.Entry<K, V>> it) {
+      this.it = it;
+    }
+
+    public K next() {
+      return it.next().getKey();
+    }
+
+    public boolean hasNext() {
+      return it.hasNext();
+    }
+
+    public void remove() {
+      it.remove();
+    }
+  }
+
+  static class ValueIterator<K, V> implements Iterator<V> {
+    private final Iterator<Map.Entry<K, V>> it;
+
+    public ValueIterator(Iterator<Map.Entry<K, V>> it) {
+      this.it = it;
+    }
+
+    public V next() {
+      return it.next().getValue();
+    }
+
+    public boolean hasNext() {
+      return it.hasNext();
+    }
+
+    public void remove() {
+      it.remove();
+    }
   }
 }

@@ -12,19 +12,20 @@
 #include "types.h"
 
 #define LOCAL(x) .L##x
+
+#if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+#  define GLOBAL(x) _##x
+#else
+#  define GLOBAL(x) x   
+#endif
    
 .text
 
 #ifdef __x86_64__
 
-#ifdef __WINDOWS__
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _detectFeature
-_detectFeature: 
-#  else
-.globl detectFeature
-detectFeature:
-#  endif
+#ifdef __MINGW32__
+.globl GLOBAL(detectFeature)
+GLOBAL(detectFeature):
    pushq %rbp
    movq %rsp, %rbp
    pushq %rdx
@@ -55,13 +56,8 @@ LOCAL(SSEEND):
    popq %rbp
    ret
 
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmNativeCall
-_vmNativeCall: 
-#  else
-.globl vmNativeCall
-vmNativeCall:
-#  endif
+.globl GLOBAL(vmNativeCall)
+GLOBAL(vmNativeCall):
    pushq %rbp
    //save nonvolatile registers
    pushq %r12
@@ -169,21 +165,18 @@ LOCAL(exit):
    popq %rbp
    ret
 
-.globl _vmJump
-_vmJump:
+.globl GLOBAL(vmJump)
+GLOBAL(vmJump):
    movq   %rdx,%rbp
+   movq   8(%rsp),%rax
+   movq   16(%rsp),%rdx
    movq   %r8,%rsp
    movq   %r9,%rbx
    jmp    *%rcx
    
-#elif defined __LINUX__
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _detectFeature
-_detectFeature: 
-#  else
-.globl detectFeature
-detectFeature:
-#  endif
+#else // not __MINGW32__
+.globl GLOBAL(detectFeature)
+GLOBAL(detectFeature):
    pushq %rbp
    movq %rsp, %rbp
    pushq %rdx
@@ -208,13 +201,8 @@ LOCAL(SSEEND):
    popq %rbp
    ret
 
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmNativeCall
-_vmNativeCall: 
-#  else
-.globl vmNativeCall
-vmNativeCall:
-#  endif
+.globl GLOBAL(vmNativeCall)
+GLOBAL(vmNativeCall):
    pushq  %rbp
    movq   %rsp,%rbp
 
@@ -310,22 +298,21 @@ LOCAL(exit):
    popq   %rbp
    ret
 
-.globl vmJump
-vmJump:
+.globl GLOBAL(vmJump)
+GLOBAL(vmJump):
    movq   %rsi,%rbp
    movq   %rdx,%rsp
    movq   %rcx,%rbx
+   movq   %r8,%rax
+   movq   %r9,%rdx
    jmp    *%rdi
-   
-#endif //def __WINDOWS__
+
+#endif // not __MINGW32__
+
 #elif defined __i386__
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _detectFeature
-_detectFeature: 
-#  else
-.globl detectFeature
-detectFeature:
-#  endif
+
+.globl GLOBAL(detectFeature)
+GLOBAL(detectFeature):
    pushl %ebp
    movl %esp, %ebp
    pushl %edx
@@ -355,14 +342,9 @@ LOCAL(SSEEND):
    movl %ebp,%esp
    popl %ebp
    ret
-   
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmNativeCall
-_vmNativeCall: 
-#  else
-.globl vmNativeCall
-vmNativeCall:
-#  endif
+
+.globl GLOBAL(vmNativeCall)
+GLOBAL(vmNativeCall):
    pushl  %ebp
    movl   %esp,%ebp
 
@@ -433,16 +415,14 @@ LOCAL(exit):
    popl   %ebp
    ret
      
-#  if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
-.globl _vmJump
-_vmJump:
-#  else
-.globl vmJump
-vmJump:
-#  endif
-   movl   4(%esp),%eax
+.globl GLOBAL(vmJump)
+GLOBAL(vmJump):
+   movl   4(%esp),%esi
    movl   8(%esp),%ebp
    movl   16(%esp),%ebx
+   movl   20(%esp),%eax
+   movl   24(%esp),%edx
    movl   12(%esp),%esp
-   jmp    *%eax
+   jmp    *%esi
+
 #endif //def __x86_64__

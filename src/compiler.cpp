@@ -7,9 +7,9 @@
 
    There is NO WARRANTY for this software.  See license.txt for
    details. */
-
 #include "compiler.h"
 #include "assembler.h"
+#include "machine.h"
 
 using namespace vm;
 
@@ -138,7 +138,7 @@ class SitePair {
   Site* high;
 };
 
-class Stack: public Compiler::StackElement {
+class Stack {
  public:
   Stack(unsigned index, Value* value, Stack* next):
     index(index), value(value), next(next)
@@ -257,6 +257,8 @@ class Read {
   { }
 
   virtual bool intersect(SiteMask* mask) = 0;
+
+  virtual Value* successor() = 0;
   
   virtual bool valid() = 0;
 
@@ -293,9 +295,9 @@ enum ValueType {
 
 class Value: public Compiler::Operand {
  public:
-  Value(Site* site, Site* target):
+  Value(Site* site, Site* target, ValueType type):
     reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
-    high(0), home(NoFrameIndex), type(ValueGeneral)
+    high(0), home(NoFrameIndex), type(type)
   { }
 
   virtual void addPredecessor(Context*, Event*) { }
@@ -397,13 +399,15 @@ unsigned
 RegisterResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
   return snprintf
-    (buffer, bufferSize, "register %"LD, this - c->registerResources);
+    (buffer, bufferSize, "register %d", static_cast<int>
+     (this - c->registerResources));
 }
 
 unsigned
 FrameResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
-  return snprintf(buffer, bufferSize, "frame %"LD, this - c->frameResources);
+  return snprintf(buffer, bufferSize, "frame %d", static_cast<int>
+                  (this - c->frameResources));
 }
 
 class PoolPromise: public Promise {
@@ -633,6 +637,8 @@ class Event {
 
   virtual bool isBranch() { return false; }
 
+  virtual bool allExits() { return false; }
+
   Event* next;
   Stack* stackBefore;
   Local* localsBefore;
@@ -651,42 +657,58 @@ class Event {
 };
 
 unsigned
-usableFrameSize(Context* c)
+totalFrameSize(Context* c)
 {
-  return c->alignedFrameSize - c->arch->frameFooterSize();
+  return c->alignedFrameSize
+    + c->arch->frameHeaderSize()
+    + c->arch->argumentFootprint(c->parameterFootprint);
 }
 
 int
-frameIndex(Context* c, int index)
+frameIndex(Context* c, int localIndex)
 {
-  assert(c, static_cast<int>
-         (usableFrameSize(c) + c->parameterFootprint - index - 1) >= 0);
+  assert(c, localIndex >= 0);
 
-  return usableFrameSize(c) + c->parameterFootprint - index - 1;
+  int index = c->alignedFrameSize + c->parameterFootprint - localIndex - 1;
+
+  if (localIndex < static_cast<int>(c->parameterFootprint)) {
+    index += c->arch->frameHeaderSize();
+  } else {
+    index -= c->arch->frameFooterSize();
+  }
+
+  assert(c, index >= 0);
+  assert(c, static_cast<unsigned>(index) < totalFrameSize(c));
+
+  return index;
 }
 
 unsigned
 frameIndexToOffset(Context* c, unsigned frameIndex)
 {
-  return ((frameIndex >= usableFrameSize(c)) ?
-          (frameIndex
-           + (c->arch->frameFooterSize() * 2)
-           + c->arch->frameHeaderSize()) :
-          (frameIndex
-           + c->arch->frameFooterSize())) * BytesPerWord;
+  assert(c, frameIndex < totalFrameSize(c));
+
+  return (frameIndex + c->arch->frameFooterSize()) * BytesPerWord;
 }
 
 unsigned
 offsetToFrameIndex(Context* c, unsigned offset)
 {
-  unsigned normalizedOffset = offset / BytesPerWord;
+  assert(c, static_cast<int>
+         ((offset / BytesPerWord) - c->arch->frameFooterSize()) >= 0);
+  assert(c, ((offset / BytesPerWord) - c->arch->frameFooterSize())
+         < totalFrameSize(c));
 
-  return ((normalizedOffset >= c->alignedFrameSize) ?
-          (normalizedOffset
-           - (c->arch->frameFooterSize() * 2)
-           - c->arch->frameHeaderSize()) :
-          (normalizedOffset
-           - c->arch->frameFooterSize()));
+  return (offset / BytesPerWord) - c->arch->frameFooterSize();
+}
+
+unsigned
+frameBase(Context* c)
+{
+  return c->alignedFrameSize
+    - c->arch->frameReturnAddressSize()
+    - c->arch->frameFooterSize()
+    + c->arch->frameHeaderSize();
 }
 
 class FrameIterator {
@@ -1105,7 +1127,11 @@ FrameResource::thaw(Context* c, Value* v)
 
 class Target {
  public:
-  static const unsigned Penalty = 10;
+  static const unsigned MinimumRegisterCost = 0;
+  static const unsigned MinimumFrameCost = 1;
+  static const unsigned StealPenalty = 2;
+  static const unsigned StealUniquePenalty = 4;
+  static const unsigned LowRegisterPenalty = 10;
   static const unsigned Impossible = 20;
 
   Target(): cost(Impossible) { }
@@ -1118,6 +1144,27 @@ class Target {
   OperandType type;
   uint8_t cost;
 };
+
+ValueType
+resultType(unsigned code) {
+  switch (code) {
+  case VoidField:
+  case ByteField:
+  case BooleanField:
+  case CharField:
+  case ShortField:
+  case ObjectField:
+  case LongField:
+  case IntField:
+    return ValueGeneral;
+  case FloatField:
+  case DoubleField:
+    return ValueFloat;
+  default:
+    //abort(t);
+    return ValueGeneral;
+  }
+}
 
 Target
 pickTarget(Context* c, Read* r, bool intersectRead,
@@ -1134,9 +1181,9 @@ resourceCost(Context* c UNUSED, Value* v, Resource* r)
     if (v and buddies(r->value, v)) {
       return 0;
     } else if (hasMoreThanOneSite(r->value)) {
-      return 2;
+      return Target::StealPenalty;
     } else {
-      return 4;
+      return Target::StealUniquePenalty;
     }
   } else {
     return 0;
@@ -1158,7 +1205,7 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
   for (int i = c->arch->registerCount() - 1; i >= 0; --i) {
     if ((1 << i) & mask) {
       RegisterResource* r = c->registerResources + i;
-      unsigned myCost = resourceCost(c, v, r);
+      unsigned myCost = resourceCost(c, v, r) + Target::MinimumRegisterCost;
       if ((static_cast<uint32_t>(1) << i) == mask) {
         *cost = myCost;
         return i;
@@ -1184,7 +1231,8 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask)
 unsigned
 frameCost(Context* c, Value* v, int frameIndex)
 {
-  return resourceCost(c, v, c->frameResources + frameIndex) + 1;
+  return resourceCost(c, v, c->frameResources + frameIndex)
+    + Target::MinimumFrameCost;
 }
 
 Target
@@ -1196,7 +1244,7 @@ pickFrameTarget(Context* c, Value* v)
   do {
     if (p->home >= 0) {
       Target mine(p->home, MemoryOperand, frameCost(c, v, p->home));
-      if (mine.cost == 1) {
+      if (mine.cost == Target::MinimumFrameCost) {
         return mine;
       } else if (mine.cost < best.cost) {
         best = mine;
@@ -1213,10 +1261,10 @@ pickAnyFrameTarget(Context* c, Value* v)
 {
   Target best;
 
-  unsigned count = usableFrameSize(c) + c->parameterFootprint;
+  unsigned count = totalFrameSize(c);
   for (unsigned i = 0; i < count; ++i) {
     Target mine(i, MemoryOperand, frameCost(c, v, i));
-    if (mine.cost == 1) {
+    if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
@@ -1227,37 +1275,14 @@ pickAnyFrameTarget(Context* c, Value* v)
 }
 
 Target
-pickTarget(Context* c, Read* read, bool intersectRead,
-           unsigned registerReserveCount)
+pickTarget(Context* c, Value* value, const SiteMask& mask,
+           unsigned registerPenalty, Target best)
 {
-  SiteMask mask;
-  read->intersect(&mask);
-
-  unsigned registerPenalty;
-  if(read->value) {
-    if(read->value->type == ValueGeneral) {
-      registerPenalty = (c->generalRegisterCount > registerReserveCount
-                              ? 0 : Target::Penalty);
-    } else if(read->value->type == ValueFloat) {
-      registerPenalty = (c->floatRegisterCount > registerReserveCount
-                              ? 0 : Target::Penalty);
-    } else {
-      registerPenalty = (c->availableRegisterCount > registerReserveCount
-                              ? 0 : Target::Penalty);
-    }
-  } else {
-    registerPenalty = (c->availableRegisterCount > registerReserveCount
-                            ? 0 : Target::Penalty);
-  }
-  	
-  
-  Target best;
-  if ((mask.typeMask & (1 << RegisterOperand))) {
-    Target mine = pickRegisterTarget(c, read->value, mask.registerMask);
+  if (mask.typeMask & (1 << RegisterOperand)) {
+    Target mine = pickRegisterTarget(c, value, mask.registerMask);
 
     mine.cost += registerPenalty;
-    if(mine.cost == Target::Impossible) asm("int3");
-    if (mine.cost == 0) {
+    if (mine.cost == Target::MinimumRegisterCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
@@ -1266,12 +1291,62 @@ pickTarget(Context* c, Read* read, bool intersectRead,
 
   if ((mask.typeMask & (1 << MemoryOperand)) && mask.frameIndex >= 0) {
     Target mine(mask.frameIndex, MemoryOperand,
-                frameCost(c, read->value, mask.frameIndex));
-    if (mine.cost == 0) {
+                frameCost(c, value, mask.frameIndex));
+    if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
     }
+  }
+
+  return best;
+}
+
+Target
+pickTarget(Context* c, Read* read, bool intersectRead,
+           unsigned registerReserveCount)
+{
+  /*unsigned registerPenalty = (c->availableRegisterCount > registerReserveCount
+                              ? 0 : Target::LowRegisterPenalty);*/
+  unsigned registerPenalty;
+  if(read->value) {
+    if(read->value->type == ValueGeneral) {
+      registerPenalty = (c->generalRegisterCount > registerReserveCount
+                              ? 0 : Target::LowRegisterPenalty);
+    } else if(read->value->type == ValueFloat) {
+      registerPenalty = (c->floatRegisterCount > registerReserveCount
+                              ? 0 : Target::LowRegisterPenalty);
+    } else {
+      registerPenalty = (c->availableRegisterCount > registerReserveCount
+                              ? 0 : Target::LowRegisterPenalty);
+    }
+  } else {
+    registerPenalty = (c->availableRegisterCount > registerReserveCount
+                            ? 0 : Target::LowRegisterPenalty);
+  }
+
+  SiteMask mask;
+  read->intersect(&mask);
+
+  Target best;
+
+  Value* successor = read->successor();
+  if (successor) {
+    Read* r = live(successor);
+    if (r) {
+      SiteMask intersection = mask;
+      if (r->intersect(&intersection)) {
+        best = pickTarget(c, read->value, intersection, registerPenalty, best);
+        if (best.cost <= Target::MinimumFrameCost) {
+          return best;
+        }
+      }
+    }
+  }
+
+  best = pickTarget(c, read->value, mask, registerPenalty, best);
+  if (best.cost <= Target::MinimumFrameCost) {
+    return best;
   }
 
   if (intersectRead) {
@@ -1282,7 +1357,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
 
     mine.cost += registerPenalty;
 
-    if (mine.cost == 0) {
+    if (mine.cost == Target::MinimumRegisterCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
@@ -1290,14 +1365,16 @@ pickTarget(Context* c, Read* read, bool intersectRead,
   }
 
   { Target mine = pickFrameTarget(c, read->value);
-    if (mine.cost == 0) {
+    if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
       best = mine;
     }
   }
 
-  if (best.cost > 3 and c->availableRegisterCount == 0) {
+  if (best.cost >= Target::StealUniquePenalty
+      and c->availableRegisterCount == 0)
+  {
     // there are no free registers left, so moving from memory to
     // memory isn't an option - try harder to find an available frame
     // site:
@@ -1305,6 +1382,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     assert(c, best.cost <= 3);
   }
 
+  //if(best.cost == Target::Impossible)asm("int3");
   return best;
 }
 
@@ -1937,14 +2015,18 @@ release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNUSED)
 
 class SingleRead: public Read {
  public:
-  SingleRead(const SiteMask& mask):
-    next_(0), mask(mask)
+  SingleRead(const SiteMask& mask, Value* successor):
+    next_(0), mask(mask), successor_(successor)
   { }
 
   virtual bool intersect(SiteMask* mask) {
     *mask = ::intersect(*mask, this->mask);
 
     return true;
+  }
+
+  virtual Value* successor() {
+    return successor_;
   }
   
   virtual bool valid() {
@@ -1962,15 +2044,16 @@ class SingleRead: public Read {
 
   Read* next_;
   SiteMask mask;
+  Value* successor_;
 };
 
 Read*
-read(Context* c, const SiteMask& mask)
+read(Context* c, const SiteMask& mask, Value* successor = 0)
 {
   assert(c, (mask.typeMask != 1 << MemoryOperand) or mask.frameIndex >= 0);
 
   return new (c->zone->allocate(sizeof(SingleRead)))
-    SingleRead(mask);
+    SingleRead(mask, successor);
 }
 
 Read*
@@ -2016,6 +2099,10 @@ class MultiRead: public Read {
       visited = false;
     }
     return result;
+  }
+
+  virtual Value* successor() {
+    return 0;
   }
 
   virtual bool valid() {
@@ -2068,7 +2155,7 @@ class MultiRead: public Read {
   }
 
   Read* nextTarget() {
-//     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
+    //     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
 
     Read* r = static_cast<Read*>(firstTarget->value);
     firstTarget = firstTarget->next;
@@ -2106,6 +2193,10 @@ class StubRead: public Read {
       visited = false;
     }
     return valid_;
+  }
+
+  virtual Value* successor() {
+    return 0;
   }
 
   virtual bool valid() {
@@ -2207,7 +2298,7 @@ addRead(Context* c, Event* e, Value* v, Read* r)
   if (DebugReads) {
     fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
   }
-
+//if(!e)asm("int3");
   r->value = v;
   if (e) {
     r->event = e;
@@ -2217,9 +2308,9 @@ addRead(Context* c, Event* e, Value* v, Read* r)
   }
 
   if (v->lastRead) {
-//     if (DebugReads) {
-//       fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
-//     }
+    //     if (DebugReads) {
+    //       fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
+    //     }
 
     v->lastRead->append(c, r);
   } else {
@@ -2238,11 +2329,14 @@ clean(Context* c, Value* v, unsigned popIndex)
              (c, static_cast<MemorySite*>(s)->offset)
              >= popIndex))
     {
-      if (false) {
+      if (false and
+          s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex)))
+      {
         char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "remove %s from %p at %d pop index %d\n",
+        fprintf(stderr, "remove %s from %p at %d pop offset 0x%x\n",
                 buffer, v, offsetToFrameIndex
-                (c, static_cast<MemorySite*>(s)->offset), popIndex);
+                (c, static_cast<MemorySite*>(s)->offset),
+                frameIndexToOffset(c, popIndex));
       }
       it.remove(c);
     }
@@ -2287,8 +2381,7 @@ saveLocals(Context* c, Event* e)
     if (local->value) {
       if (DebugReads) {
         fprintf(stderr, "local save read %p at %d of %d\n",
-                local->value, ::frameIndex(c, li),
-                usableFrameSize(c) + c->parameterFootprint);
+                local->value, ::frameIndex(c, li), totalFrameSize(c));
       }
 
       addRead(c, e, local->value, read
@@ -2307,18 +2400,24 @@ class CallEvent: public Event {
     address(address),
     traceHandler(traceHandler),
     result(result),
+    returnAddressSurrogate(0),
+    framePointerSurrogate(0),
     popIndex(0),
-    padIndex(0),
-    padding(0),
+    stackArgumentIndex(0),
     flags(flags),
-    resultSize(resultSize)
+    resultSize(resultSize),
+    stackArgumentFootprint(stackArgumentFootprint)
   {
-    uint32_t registerMask = ~0;
-    Stack* s = argumentStack;
-    unsigned index = 0;
-    unsigned frameIndex = 0;
+    uint32_t registerMask = c->arch->allRegisters();
 
     if (argumentCount) {
+      assert(c, (flags & Compiler::TailJump) == 0);
+      assert(c, stackArgumentFootprint == 0);
+
+      Stack* s = argumentStack;
+      unsigned frameIndex = 0;
+      unsigned index = 0;
+
       while (true) {
         Read* target;
         if (index < c->arch->argumentRegisterCount()) {
@@ -2338,6 +2437,7 @@ class CallEvent: public Event {
           target = read(c, SiteMask(1 << MemoryOperand, 0, frameIndex));
           ++ frameIndex;
         }
+
         addRead(c, this, s->value, target);
 
         if ((++ index) < argumentCount) {
@@ -2359,63 +2459,95 @@ class CallEvent: public Event {
         ((flags & Compiler::Aligned) ? AlignedCall : Call, BytesPerWord,
          &typeMask, &planRegisterMask, &thunk);
 
-      assert(c, thunk == 0);
+      assert(c, not thunk);
 
       addRead(c, this, address, read
               (c, SiteMask
                (typeMask, registerMask & planRegisterMask, AnyFrameIndex)));
     }
 
-    int footprint = stackArgumentFootprint;
-    for (Stack* s = stackBefore; s; s = s->next) {
-      if (s->value) {
-        if (footprint > 0) {
+    Stack* stack = stackBefore;
+
+    if (stackArgumentFootprint) {
+      int footprint = stackArgumentFootprint;
+      int returnAddressIndex;
+      int framePointerIndex;
+      int frameOffset;
+
+      if (TailCalls and (flags & Compiler::TailJump)) {
+        assert(c, argumentCount == 0);
+
+        int base = frameBase(c);
+        returnAddressIndex = base + c->arch->returnAddressOffset();
+        framePointerIndex = base + c->arch->framePointerOffset();
+
+        frameOffset = totalFrameSize(c)
+          - c->arch->argumentFootprint(stackArgumentFootprint) - 1;
+      } else {
+        returnAddressIndex = -1;
+        framePointerIndex = -1;
+        frameOffset = -1;
+      }
+
+      while (footprint > 0) {
+        if (stack->value) {
+          int frameIndex = footprint + frameOffset;
+
           if (DebugReads) {
             fprintf(stderr, "stack arg read %p at %d of %d\n",
-                    s->value, frameIndex,
-                    usableFrameSize(c) + c->parameterFootprint);
+                    stack->value, frameIndex, totalFrameSize(c));
           }
 
-          addRead(c, this, s->value, read
-                  (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
-        } else {
+          if (static_cast<int>(frameIndex) == returnAddressIndex) {
+            returnAddressSurrogate = stack->value;
+            addRead(c, this, stack->value, generalRegisterRead(c));
+          } else if (static_cast<int>(frameIndex) == framePointerIndex) {
+            framePointerSurrogate = stack->value;
+            addRead(c, this, stack->value, generalRegisterRead(c));
+          } else {
+            addRead(c, this, stack->value, read
+                    (c, SiteMask(1 << MemoryOperand, 0, frameIndex)));
+          }
+        }
+
+        stack = stack->next;
+        -- footprint;
+      }
+    }
+
+    if ((not TailCalls) or (flags & Compiler::TailJump) == 0) {
+      stackArgumentIndex = c->localFootprint;
+      if (stackBefore) {
+        stackArgumentIndex += stackBefore->index + 1 - stackArgumentFootprint;
+      }
+
+      popIndex
+        = c->alignedFrameSize
+        + c->parameterFootprint
+        - c->arch->frameFooterSize()
+        - stackArgumentIndex;
+
+      assert(c, static_cast<int>(popIndex) >= 0);
+
+      while (stack) {
+        if (stack->value) {
           unsigned logicalIndex = ::frameIndex
-            (c, s->index + c->localFootprint);
+            (c, stack->index + c->localFootprint);
 
           if (DebugReads) {
             fprintf(stderr, "stack save read %p at %d of %d\n",
-                    s->value, logicalIndex,
-                    usableFrameSize(c) + c->parameterFootprint);
+                    stack->value, logicalIndex, totalFrameSize(c));
           }
 
-          addRead(c, this, s->value, read
+          addRead(c, this, stack->value, read
                   (c, SiteMask(1 << MemoryOperand, 0, logicalIndex)));
         }
+
+        stack = stack->next;
       }
 
-      -- footprint;
-
-      if (footprint == 0) {
-        unsigned logicalIndex = ::frameIndex(c, s->index + c->localFootprint);
-
-        assert(c, logicalIndex >= frameIndex);
-
-        padding = logicalIndex - frameIndex;
-        padIndex = s->index + c->localFootprint;
-      }
-
-      ++ frameIndex;
+      saveLocals(c, this);
     }
-
-    popIndex
-      = usableFrameSize(c)
-      + c->parameterFootprint
-      - (stackBefore ? stackBefore->index + 1 - stackArgumentFootprint : 0)
-      - c->localFootprint;
-
-    assert(c, static_cast<int>(popIndex) >= 0);
-
-    saveLocals(c, this);
   }
 
   virtual const char* name() {
@@ -2423,12 +2555,76 @@ class CallEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    apply(c, (flags & Compiler::Aligned) ? AlignedCall : Call, BytesPerWord,
-          address->source, 0);
+    UnaryOperation op;
+
+    if (TailCalls and (flags & Compiler::TailJump)) {
+      if (flags & Compiler::Aligned) {
+        op = AlignedJump;
+      } else {
+        op = Jump;
+      }
+
+      assert(c, returnAddressSurrogate == 0
+             or returnAddressSurrogate->source->type(c) == RegisterOperand);
+      assert(c, framePointerSurrogate == 0
+             or framePointerSurrogate->source->type(c) == RegisterOperand);
+
+      int ras;
+      if (returnAddressSurrogate) {
+        returnAddressSurrogate->source->freeze(c, returnAddressSurrogate);
+
+        ras = static_cast<RegisterSite*>
+          (returnAddressSurrogate->source)->number;
+      } else {
+        ras = NoRegister;
+      }
+
+      int fps;
+      if (framePointerSurrogate) {
+        framePointerSurrogate->source->freeze(c, framePointerSurrogate);
+
+        fps = static_cast<RegisterSite*>
+          (framePointerSurrogate->source)->number;
+      } else {
+        fps = NoRegister;
+      }
+
+      int offset
+        = static_cast<int>(c->arch->argumentFootprint(stackArgumentFootprint))
+        - static_cast<int>(c->arch->argumentFootprint(c->parameterFootprint));
+
+      c->assembler->popFrameForTailCall(c->alignedFrameSize, offset, ras, fps);
+    } else if (flags & Compiler::Aligned) {
+      op = AlignedCall;
+    } else {
+      op = Call;
+    }
+
+    apply(c, op, BytesPerWord, address->source, 0);
 
     if (traceHandler) {
       traceHandler->handleTrace(codePromise(c, c->assembler->offset()),
-                                padIndex, padding);
+                                stackArgumentIndex);
+    }
+
+    if (TailCalls) {
+      if (flags & Compiler::TailJump) {
+        if (returnAddressSurrogate) {
+          returnAddressSurrogate->source->thaw(c, returnAddressSurrogate);
+        }
+
+        if (framePointerSurrogate) {
+          framePointerSurrogate->source->thaw(c, framePointerSurrogate);
+        }
+      } else {
+        unsigned footprint = c->arch->argumentFootprint
+          (stackArgumentFootprint);
+
+        if (footprint > c->arch->stackAlignmentInWords()) {
+          c->assembler->adjustFrame
+            (footprint - c->arch->stackAlignmentInWords());
+        }
+      }
     }
 
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
@@ -2441,14 +2637,20 @@ class CallEvent: public Event {
     }
   }
 
+  virtual bool allExits() {
+    return (flags & Compiler::TailJump) != 0;
+  }
+
   Value* address;
   TraceHandler* traceHandler;
   Value* result;
+  Value* returnAddressSurrogate;
+  Value* framePointerSurrogate;
   unsigned popIndex;
-  unsigned padIndex;
-  unsigned padding;
+  unsigned stackArgumentIndex;
   unsigned flags;
   unsigned resultSize;
+  unsigned stackArgumentFootprint;
 };
 
 void
@@ -2461,6 +2663,15 @@ appendCall(Context* c, Value* address, unsigned flags,
          CallEvent(c, address, flags, traceHandler, result,
                    resultSize, argumentStack, argumentCount,
                    stackArgumentFootprint));
+}
+
+bool
+unreachable(Event* event)
+{
+  for (Link* p = event->predecessors; p; p = p->nextPredecessor) {
+    if (not p->predecessor->allExits()) return false;
+  }
+  return event->predecessors != 0;
 }
 
 class ReturnEvent: public Event {
@@ -2486,8 +2697,10 @@ class ReturnEvent: public Event {
       popRead(c, this, r->value);
     }
     
-    c->assembler->popFrame();
-    c->assembler->apply(Return);
+    if (not unreachable(this)) {
+      c->assembler->popFrameAndPopArgumentsAndReturn
+        (c->arch->argumentFootprint(c->parameterFootprint));
+    }
   }
 
   Value* value;
@@ -2507,6 +2720,7 @@ addBuddy(Value* original, Value* buddy)
   Value* p = original;
   while (p->buddy != original) p = p->buddy;
   p->buddy = buddy;
+  //buddy->type = original->type;
 
   if (DebugBuddies) {
     fprintf(stderr, "add buddy %p to", buddy);
@@ -2655,9 +2869,9 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 }
 
 Value*
-value(Context* c, Site* site = 0, Site* target = 0)
+value(Context* c, ValueType type, Site* site = 0, Site* target = 0)
 {
-  return new (c->zone->allocate(sizeof(Value))) Value(site, target);
+  return new (c->zone->allocate(sizeof(Value))) Value(site, target, type);
 }
 
 void
@@ -2665,7 +2879,7 @@ split(Context* c, Value* v)
 {
   assert(c, v->high == 0);
 
-  v->high = value(c);
+  v->high = value(c, v->type);
   for (SiteIterator it(v); it.hasMore();) {
     Site* s = it.next();
     removeSite(c, v, s);
@@ -2688,7 +2902,7 @@ grow(Context* c, Value* v)
 {
   assert(c, v->high == 0);
 
-  v->high = value(c);
+  v->high = value(c, v->type);
 }
 
 class MoveEvent: public Event {
@@ -2703,14 +2917,18 @@ class MoveEvent: public Event {
   {
     assert(c, srcSelectSize <= srcSize);
 
-    addRead(c, this, src, read(c, srcLowMask));
-    if (srcSelectSize > BytesPerWord) {
-      maybeSplit(c, src);
-      addRead(c, this, src->high, read(c, srcHighMask));
-    }
+    bool noop = srcSelectSize >= dstSize;
     
     if (dstSize > BytesPerWord) {
       grow(c, dst);
+    }
+
+    addRead(c, this, src, read(c, srcLowMask, noop ? dst : 0));
+    if (srcSelectSize > BytesPerWord) {
+      maybeSplit(c, src);
+      addRead(c, this, src->high, read
+              (c, srcHighMask,
+               noop and dstSize > BytesPerWord ? dst->high : 0));
     }
   }
 
@@ -2928,14 +3146,14 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
   Site* s;
   Value* v;
   Read* r = liveNext(c, value);
-  if (r == 0 and value->source->match(c, static_cast<const SiteMask&>(resultMask))) {
+  if (value->source->match(c, static_cast<const SiteMask&>(resultMask))) {
     s = value->source;
     v = value;
     if (r and not hasMoreThanOneSite(v)) {
       preserve(c, v, s, r);
     }
   } else {
-    SingleRead r(resultMask);
+    SingleRead r(resultMask, 0);
     s = pickTargetSite(c, &r, true);
     v = result;
     addSite(c, result, s);
@@ -2998,13 +3216,16 @@ class CombineEvent: public Event {
       addRead(c, this, first->high, read(c, firstHighMask));
     }
 
-    addRead(c, this, second, read(c, secondLowMask));
-    if (secondSize > BytesPerWord) {
-      addRead(c, this, second->high, read(c, secondHighMask));
-    }
-
     if (resultSize > BytesPerWord) {
       grow(c, result);
+    }
+
+    bool condensed = c->arch->alwaysCondensed(type);
+
+    addRead(c, this, second, read(c, secondLowMask, condensed ? result : 0));
+    if (secondSize > BytesPerWord) {
+      addRead(c, this, second->high, read
+              (c, secondHighMask, condensed ? result->high : 0));
     }
   }
 
@@ -3032,7 +3253,7 @@ class CombineEvent: public Event {
          ? getTarget(c, second->high, result->high, resultHighMask)
          : 0);
 
-//     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
+    //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
     apply(c, type, firstSize, first->source, source(first->high),
           secondSize, second->source, source(second->high),
           resultSize, low, high);
@@ -3176,15 +3397,15 @@ pushWord(Context* c, Value* v)
 }
 
 Value*
-push(Context* c, unsigned footprint, Value* v)
+push(Context* c, unsigned footprint, Value* v, bool reverse)
 {
   assert(c, footprint);
 
-  bool bigEndian = c->arch->bigEndian();
+  bool lowFirst = reverse xor c->arch->bigEndian();
   
   Value* low = v;
   
-  if (bigEndian) {
+  if (lowFirst) {
     v = pushWord(c, v);
   }
 
@@ -3203,7 +3424,7 @@ push(Context* c, unsigned footprint, Value* v)
     high = 0;
   }
   
-  if (not bigEndian) {
+  if (not lowFirst) {
     v = pushWord(c, v);
   }
 
@@ -3236,7 +3457,7 @@ pop(Context* c, unsigned footprint)
 
   bool bigEndian = c->arch->bigEndian();
 
-  if (not bigEndian) {
+  if (bigEndian) {
     s = c->stack;
   }
 
@@ -3247,11 +3468,11 @@ pop(Context* c, unsigned footprint)
     Stack* low;
     Stack* high;
     if (bigEndian) {
-      high = c->stack;
-      low = high->next;
-    } else {
       low = c->stack;
       high = low->next;
+    } else {
+      high = c->stack;
+      low = high->next;
     }
 
     assert(c, low->value->high == high->value
@@ -3261,7 +3482,7 @@ pop(Context* c, unsigned footprint)
     popWord(c);
   }
 
-  if (bigEndian) {
+  if (not bigEndian) {
     s = c->stack;
   }
 
@@ -3366,14 +3587,14 @@ appendCombine(Context* c, TernaryOperation type,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    ::push(c, ceiling(secondSize, BytesPerWord), second);
-    ::push(c, ceiling(firstSize, BytesPerWord), first);
+    ::push(c, ceiling(secondSize, BytesPerWord), second, false);
+    ::push(c, ceiling(firstSize, BytesPerWord), first, false);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
     appendCall
-      (c, value(c, constantSite(c, c->client->getThunk(type, firstSize, resultSize))),
+      (c, value(c, ValueGeneral, constantSite(c, c->client->getThunk(type, firstSize, resultSize))),
        0, 0, result, resultSize, argumentStack,
        ceiling(secondSize, BytesPerWord) + ceiling(firstSize, BytesPerWord),
        0);
@@ -3400,10 +3621,13 @@ class TranslateEvent: public Event {
                  const SiteMask& valueHighMask):
     Event(c), type(type), size(size), resSize(resSize), value(value), result(result)
   {
-    addRead(c, this, value, read(c, valueLowMask));
+    bool condensed = c->arch->alwaysCondensed(type);
+
+    addRead(c, this, value, read(c, valueLowMask, condensed ? result : 0));
     if (size > BytesPerWord) {
-      addRead(c, this, value->high, read(c, valueHighMask));
       grow(c, result);
+      addRead(c, this, value->high, read
+              (c, valueHighMask, condensed ? result->high : 0));
     }
   }
 
@@ -3472,13 +3696,13 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize, Value* fir
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    ::push(c, ceiling(firstSize, BytesPerWord), first);
+    ::push(c, ceiling(firstSize, BytesPerWord), first, false);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
     appendCall
-      (c, value(c, constantSite(c, c->client->getThunk(type, firstSize, resultSize))),
+      (c, value(c, ValueGeneral, constantSite(c, c->client->getThunk(type, firstSize, resultSize))),
        0, 0, result, resultSize, argumentStack,
        ceiling(firstSize, BytesPerWord), 0);
   } else {
@@ -3595,8 +3819,8 @@ appendMemory(Context* c, Value* base, int displacement, Value* index,
 
 class BranchEvent: public Event {
  public:
-  BranchEvent(Context* c, UnaryOperation type, Value* address):
-    Event(c), type(type), address(address)
+  BranchEvent(Context* c, UnaryOperation type, Value* address, bool exit):
+    Event(c), type(type), address(address), exit(exit)
   {
     address->addPredecessor(c, this);
 
@@ -3606,7 +3830,7 @@ class BranchEvent: public Event {
     
     c->arch->plan(type, BytesPerWord, &typeMask, &registerMask, &thunk);
 
-    assert(c, thunk == 0);
+    assert(c, not thunk);
 
     addRead(c, this, address, read
             (c, SiteMask(typeMask, registerMask, AnyFrameIndex)));
@@ -3673,7 +3897,7 @@ class BranchEvent: public Event {
       jump = true;
     }
 
-    if (jump) {
+    if (jump and not unreachable(this)) {
       apply(c, type, BytesPerWord, address->source, 0);
     }
 
@@ -3682,15 +3906,21 @@ class BranchEvent: public Event {
 
   virtual bool isBranch() { return true; }
 
+  virtual bool allExits() {
+    return type == Jump and (exit or unreachable(this));
+  }
+
   UnaryOperation type;
   Value* address;
+  bool exit;
 };
 
 void
-appendBranch(Context* c, UnaryOperation type, Value* address)
+appendBranch(Context* c, UnaryOperation type, Value* address,
+             bool exit = false)
 {
   append(c, new (c->zone->allocate(sizeof(BranchEvent)))
-         BranchEvent(c, type, address));
+         BranchEvent(c, type, address, exit));
 }
 
 class BoundsCheckEvent: public Event {
@@ -3802,11 +4032,11 @@ frameFootprint(Context* c, Stack* s)
 void
 visit(Context* c, Link* link)
 {
-//   fprintf(stderr, "visit link from %d to %d fork %p junction %p\n",
-//           link->predecessor->logicalInstruction->index,
-//           link->successor->logicalInstruction->index,
-//           link->forkState,
-//           link->junctionState);
+  //   fprintf(stderr, "visit link from %d to %d fork %p junction %p\n",
+  //           link->predecessor->logicalInstruction->index,
+  //           link->successor->logicalInstruction->index,
+  //           link->forkState,
+  //           link->junctionState);
 
   ForkState* forkState = link->forkState;
   if (forkState) {
@@ -3814,7 +4044,7 @@ visit(Context* c, Link* link)
       ForkElement* p = forkState->elements + i;
       Value* v = p->value;
       v->reads = p->read->nextTarget();
-//       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
+      //       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
       if (not live(v)) {
         clearSites(c, v);
       }
@@ -3839,7 +4069,7 @@ class BuddyEvent: public Event {
   BuddyEvent(Context* c, Value* original, Value* buddy):
     Event(c), original(original), buddy(buddy)
   {
-    addRead(c, this, original, read(c, SiteMask(~0, ~0, AnyFrameIndex)));
+    addRead(c, this, original, read(c, SiteMask(~0, c->arch->allRegisters(), AnyFrameIndex)));
   }
 
   virtual const char* name() {
@@ -3847,7 +4077,7 @@ class BuddyEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-//     fprintf(stderr, "original %p buddy %p\n", original, buddy);
+    //     fprintf(stderr, "original %p buddy %p\n", original, buddy);
     assert(c, hasSite(original));
 
     addBuddy(original, buddy);
@@ -3890,6 +4120,31 @@ appendSaveLocals(Context* c)
 {
   append(c, new (c->zone->allocate(sizeof(SaveLocalsEvent)))
          SaveLocalsEvent(c));
+}
+
+class CleanLocalsEvent: public Event {
+ public:
+  CleanLocalsEvent(Context* c):
+    Event(c)
+  { }
+
+  virtual const char* name() {
+    return "CleanLocalsEvent";
+  }
+
+  virtual void compile(Context* c) {
+    for (FrameIterator it(c, 0, c->locals); it.hasMore();) {
+      FrameIterator::Element e = it.next(c);
+      clean(c, e.value, 0);
+    }
+  }
+};
+
+void
+appendCleanLocals(Context* c)
+{
+  append(c, new (c->zone->allocate(sizeof(CleanLocalsEvent)))
+         CleanLocalsEvent(c));
 }
 
 class DummyEvent: public Event {
@@ -3988,7 +4243,7 @@ acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
 {
   if (acceptMatch(c, s, read, mask) and (not s->frozen(c))) {
     if (s->type(c) == RegisterOperand) {
-      return c->availableRegisterCount > ResolveRegisterReserveCount;
+      return c->generalRegisterCount > ResolveRegisterReserveCount;
     } else {
       assert(c, s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex)));
 
@@ -4007,7 +4262,7 @@ pickSourceSite(Context* c, Read* read, Site* target = 0,
                bool (*accept)(Context*, Site*, Read*, const SiteMask&)
                = acceptMatch)
 {
-  SiteMask mask(typeMask, ~0, AnyFrameIndex);
+  SiteMask mask(typeMask, c->arch->allRegisters(), AnyFrameIndex);
 
   if (intersectRead) {
     read->intersect(&mask);
@@ -4382,9 +4637,9 @@ void
 restore(Context* c, Event* e, Snapshot* snapshots)
 {
   for (Snapshot* s = snapshots; s; s = s->next) {
-//     char buffer[256]; sitesToString(c, s->sites, buffer, 256);
-//     fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
-//             s->value, s->value->buddy, buffer, live(s->value));
+    //     char buffer[256]; sitesToString(c, s->sites, buffer, 256);
+    //     fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
+    //             s->value, s->value->buddy, buffer, live(s->value));
 
     s->value->buddy = s->buddy;
   }
@@ -4736,7 +4991,7 @@ Value*
 maybeBuddy(Context* c, Value* v)
 {
   if (v->home >= 0) {
-    Value* n = value(c);
+    Value* n = value(c, v->type);
     appendBuddy(c, v, n);
     return n;
   } else {
@@ -4801,11 +5056,12 @@ class MyCompiler: public Compiler {
   }
 
   virtual void endSubroutine(Subroutine* subroutine) {
+    appendCleanLocals(&c);
     static_cast<MySubroutine*>(subroutine)->forkState = ::saveState(&c);
   }
 
-  virtual void restoreFromSubroutine(Subroutine* subroutine) {
-    ::restoreState(&c, static_cast<MySubroutine*>(subroutine)->forkState);
+  virtual void linkSubroutine(Subroutine* subroutine) {
+    restoreState(static_cast<MySubroutine*>(subroutine)->forkState);
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -4816,7 +5072,7 @@ class MyCompiler: public Compiler {
     c.localFootprint = localFootprint;
     c.alignedFrameSize = alignedFrameSize;
 
-    unsigned frameResourceCount = usableFrameSize(&c) + parameterFootprint;
+    unsigned frameResourceCount = totalFrameSize(&c);
 
     c.frameResources = static_cast<FrameResource*>
       (c.zone->allocate(sizeof(FrameResource) * frameResourceCount));
@@ -4825,9 +5081,12 @@ class MyCompiler: public Compiler {
       new (c.frameResources + i) FrameResource;
     }
 
+    unsigned base = frameBase(&c);
+    c.frameResources[base + c.arch->returnAddressOffset()].reserved = true;
+    c.frameResources[base + c.arch->framePointerOffset()].reserved = true;
+
     // leave room for logical instruction -1
-    unsigned codeSize = sizeof(LogicalInstruction*)
-      * (logicalCodeLength + 1);
+    unsigned codeSize = sizeof(LogicalInstruction*) * (logicalCodeLength + 1);
     c.logicalCode = static_cast<LogicalInstruction**>
       (c.zone->allocate(codeSize));
     memset(c.logicalCode, 0, codeSize);
@@ -4903,12 +5162,30 @@ class MyCompiler: public Compiler {
       (c.zone->allocate(sizeof(LogicalInstruction)))
       LogicalInstruction(logicalIp, c.stack, c.locals);
 
-    if (c.subroutine) {
+    bool startSubroutine = c.subroutine != 0;
+    if (startSubroutine) {
       c.logicalCode[logicalIp]->subroutine = c.subroutine;
       c.subroutine = 0;
     }
 
     c.logicalIp = logicalIp;
+
+    if (startSubroutine) {
+      // assume all local variables are initialized on entry to a
+      // subroutine, since other calls to the subroutine may
+      // initialize them:
+      unsigned sizeInBytes = sizeof(Local) * c.localFootprint;
+      Local* newLocals = static_cast<Local*>(c.zone->allocate(sizeInBytes));
+      memcpy(newLocals, c.locals, sizeInBytes);
+      c.locals = newLocals;
+
+      for (unsigned li = 0; li < c.localFootprint; ++li) {
+        Local* local = c.locals + li;
+        if (local->value == 0) {
+          initLocal(1, li, ValueFloat); 
+        }
+      }
+    }
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
@@ -4938,24 +5215,25 @@ class MyCompiler: public Compiler {
     return p;
   }
 
-  virtual Operand* constant(int64_t value) {
-    return promiseConstant(resolved(&c, value));
+  virtual Operand* constant(int64_t value, unsigned code) {
+    return promiseConstant(resolved(&c, value), code);
   }
 
-  virtual Operand* promiseConstant(Promise* value) {
-    return ::value(&c, ::constantSite(&c, value));
+  virtual Operand* promiseConstant(Promise* value, unsigned code) {
+    return ::value(&c, resultType(code), ::constantSite(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
-    return value(&c, ::addressSite(&c, address));
+    return value(&c, ValueGeneral, ::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
+                          unsigned code,
                           int displacement = 0,
                           Operand* index = 0,
                           unsigned scale = 1)
   {
-    Value* result = value(&c);
+    Value* result = value(&c, resultType(code));
 
     appendMemory(&c, static_cast<Value*>(base), displacement,
                  static_cast<Value*>(index), scale, result);
@@ -4963,14 +5241,17 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* stack() {
-    Site* s = registerSite(&c, c.arch->stack());
-    return value(&c, s, s);
-  }
-
-  virtual Operand* thread() {
-    Site* s = registerSite(&c, c.arch->thread());
-    return value(&c, s, s);
+  virtual Operand* register_(int number) {
+  	assert(&c, (1 << number) & c.arch->allRegisters());
+  	
+    Site* s = registerSite(&c, number);
+    ValueType type = ValueGeneral;
+    if((1 << number) & c.arch->generalRegisters()) {
+      type = ValueGeneral;
+    } else if((1 << number) & c.arch->floatRegisters()) {
+      type = ValueFloat;
+    }
+    return value(&c, type, s, s);
   }
 
   Promise* machineIp() {
@@ -4980,14 +5261,14 @@ class MyCompiler: public Compiler {
   virtual void push(unsigned footprint UNUSED) {
     assert(&c, footprint == 1);
 
-    Value* v = value(&c);
+    Value* v = value(&c, ValueFloat);
     Stack* s = ::stack(&c, v, c.stack);
     v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
 
   virtual void push(unsigned footprint, Operand* value) {
-    ::push(&c, footprint, static_cast<Value*>(value));
+    ::push(&c, footprint, static_cast<Value*>(value), true);
   }
 
   virtual void save(unsigned footprint, Operand* value) {
@@ -5005,7 +5286,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void pushed() {
-    Value* v = value(&c);
+    Value* v = value(&c, ValueFloat);
     appendFrameSite
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
@@ -5016,35 +5297,19 @@ class MyCompiler: public Compiler {
   }
 
   virtual void popped(unsigned footprint) {
-    assert(&c, c.stack->value->home >= 0);
+    for (; footprint; -- footprint) {
+      assert(&c, c.stack->value == 0 or c.stack->value->home >= 0);
 
-    if (footprint > 1) {
-      assert(&c, footprint == 2);
-      assert(&c, c.stack->value->high == c.stack->next->value
-             and ((BytesPerWord == 8) xor (c.stack->value->high != 0)));
-
-      popped(1);
+      if (DebugFrame) {
+        fprintf(stderr, "popped %p\n", c.stack->value);
+      }
+      
+      c.stack = c.stack->next;
     }
-
-    if (DebugFrame) {
-      fprintf(stderr, "popped %p\n", c.stack->value);
-    }
-
-    c.stack = c.stack->next;
   }
 
-  virtual StackElement* top() {
-    return c.stack;
-  }
-
-  virtual unsigned footprint(StackElement* e) {
-    return (static_cast<Stack*>(e)->next
-            and (static_cast<Stack*>(e)->next->value
-                 == static_cast<Stack*>(e)->value->high)) ? 2 : 1;
-  }
-
-  virtual unsigned index(StackElement* e) {
-    return static_cast<Stack*>(e)->index;
+  virtual unsigned topOfStack() {
+    return c.stack->index;
   }
 
   virtual Operand* peek(unsigned footprint, unsigned index) {
@@ -5062,18 +5327,18 @@ class MyCompiler: public Compiler {
       Stack* low;
       Stack* high;
       if (bigEndian) {
-        high = s;
-        low = s->next;
-      } else {
         low = s;
         high = s->next;
+      } else {
+        high = s;
+        low = s->next;
       }
 
       assert(&c, low->value->high == high->value
              and ((BytesPerWord == 8) xor (low->value->high != 0)));
 #endif // not NDEBUG
 
-      if (bigEndian) {
+      if (not bigEndian) {
         s = s->next;
       }
     }
@@ -5085,6 +5350,7 @@ class MyCompiler: public Compiler {
                         unsigned flags,
                         TraceHandler* traceHandler,
                         unsigned resultSize,
+                        unsigned resultCode,
                         unsigned argumentCount,
                         ...)
   {
@@ -5121,7 +5387,7 @@ class MyCompiler: public Compiler {
       argumentStack = ::stack(&c, arguments[i], argumentStack);
     }
 
-    Value* result = value(&c);
+    Value* result = value(&c, resultType(resultCode));
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
                resultSize, argumentStack, index, 0);
 
@@ -5132,9 +5398,10 @@ class MyCompiler: public Compiler {
                              unsigned flags,
                              TraceHandler* traceHandler,
                              unsigned resultSize,
+                             unsigned resultCode,
                              unsigned argumentFootprint)
   {
-    Value* result = value(&c);
+    Value* result = value(&c, resultType(resultCode));
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
                resultSize, c.stack, 0, argumentFootprint);
     return result;
@@ -5144,10 +5411,10 @@ class MyCompiler: public Compiler {
     appendReturn(&c, size, static_cast<Value*>(value));
   }
 
-  virtual void initLocal(unsigned footprint, unsigned index) {
+  virtual void initLocal(unsigned footprint, unsigned index, unsigned code) {
     assert(&c, index + footprint <= c.localFootprint);
 
-    Value* v = value(&c);
+    Value* v = value(&c, resultType(code));
 
     if (footprint > 1) {
       assert(&c, footprint == 2);
@@ -5163,7 +5430,7 @@ class MyCompiler: public Compiler {
       }
 
       if (BytesPerWord == 4) {
-        initLocal(1, highIndex);
+        initLocal(1, highIndex, code);
         v->high = c.locals[highIndex].value;
       }
 
@@ -5194,7 +5461,7 @@ class MyCompiler: public Compiler {
     for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
       Local* local = e->localsBefore + i;
       if (local->value) {
-        initLocal(1, i);
+        initLocal(1, i, local->value->type == ValueGeneral ? IntField : FloatField);
       }
     }
 
@@ -5244,7 +5511,7 @@ class MyCompiler: public Compiler {
   {
     assert(&c, dstSize >= BytesPerWord);
 
-    Value* dst = value(&c);
+    Value* dst = value(&c, static_cast<Value*>(src)->type);
     appendMove(&c, Move, srcSize, srcSelectSize, static_cast<Value*>(src),
                dstSize, dst);
     return dst;
@@ -5255,31 +5522,30 @@ class MyCompiler: public Compiler {
   {
     assert(&c, dstSize >= BytesPerWord);
 
-    Value* dst = value(&c);
+    Value* dst = value(&c, static_cast<Value*>(src)->type);
     appendMove(&c, MoveZ, srcSize, srcSelectSize, static_cast<Value*>(src),
                dstSize, dst);
     return dst;
   }
 
   virtual Operand* lcmp(Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral and static_cast<Value*>(b)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, LongCompare, 8, static_cast<Value*>(a),
                   8, static_cast<Value*>(b), 8, result);
     return result;
   }
 
   virtual void cmp(unsigned size, Operand* a, Operand* b) {
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral and static_cast<Value*>(b)->type == ValueGeneral);
     appendCompare(&c, Compare, size, static_cast<Value*>(a),
                   static_cast<Value*>(b));
   }
 
   virtual void fcmp(unsigned size, Operand* a, Operand* b) {
-  	static_cast<Value*>(a)->type = ValueFloat;
-  	static_cast<Value*>(b)->type = ValueFloat;
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat and static_cast<Value*>(b)->type == ValueFloat);
     appendCompare(&c, FloatCompare, size, static_cast<Value*>(a),
                   static_cast<Value*>(b));
-  	//static_cast<Value*>(a)->type = ValueGeneral;
-  	//static_cast<Value*>(b)->type = ValueGeneral;
   }
   
 
@@ -5306,52 +5572,86 @@ class MyCompiler: public Compiler {
   virtual void jne(Operand* address) {
     appendBranch(&c, JumpIfNotEqual, static_cast<Value*>(address));
   }
+
+  virtual void fjl(Operand* address) {
+    appendBranch(&c, JumpIfFloatLess, static_cast<Value*>(address));
+  }
+
+  virtual void fjg(Operand* address) {
+    appendBranch(&c, JumpIfFloatGreater, static_cast<Value*>(address));
+  }
+
+  virtual void fjle(Operand* address) {
+    appendBranch(&c, JumpIfFloatLessOrEqual, static_cast<Value*>(address));
+  }
+
+  virtual void fjge(Operand* address) {
+    appendBranch(&c, JumpIfFloatGreaterOrEqual, static_cast<Value*>(address));
+  }
+
+  virtual void fje(Operand* address) {
+    appendBranch(&c, JumpIfFloatEqual, static_cast<Value*>(address));
+  }
+
+  virtual void fjne(Operand* address) {
+    appendBranch(&c, JumpIfFloatNotEqual, static_cast<Value*>(address));
+  }
   
-  virtual void juo(Operand* address) {
-    appendBranch(&c, JumpIfUnordered, static_cast<Value*>(address));
+  virtual void fjuo(Operand* address) {
+    appendBranch(&c, JumpIfFloatUnordered, static_cast<Value*>(address));
   }
 
   virtual void jmp(Operand* address) {
     appendBranch(&c, Jump, static_cast<Value*>(address));
   }
 
+  virtual void exit(Operand* address) {
+    appendBranch(&c, Jump, static_cast<Value*>(address), true);
+  }
+
   virtual Operand* add(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral and static_cast<Value*>(b)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, Add, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* sub(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral and static_cast<Value*>(b)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, Subtract, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* mul(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral and static_cast<Value*>(b)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, Multiply, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* div(unsigned size, Operand* a, Operand* b)  {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral and static_cast<Value*>(b)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, Divide, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* rem(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral and static_cast<Value*>(b)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, Remainder, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* fadd(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat and static_cast<Value*>(b)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
     static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
     appendCombine(&c, FloatAdd, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
@@ -5359,7 +5659,8 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* fsub(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat and static_cast<Value*>(b)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
     static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
     appendCombine(&c, FloatSubtract, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
@@ -5367,7 +5668,8 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* fmul(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat and static_cast<Value*>(b)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
     static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
     appendCombine(&c, FloatMultiply, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
@@ -5375,110 +5677,114 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* fdiv(unsigned size, Operand* a, Operand* b)  {
-    Value* result = value(&c);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat and static_cast<Value*>(b)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
     appendCombine(&c, FloatDivide, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* frem(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat and static_cast<Value*>(b)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
     appendCombine(&c, FloatRemainder, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* shl(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, ShiftLeft, BytesPerWord, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* shr(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, ShiftRight, BytesPerWord, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* ushr(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, UnsignedShiftRight, BytesPerWord, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* and_(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, And, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* or_(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, Or, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) {
-    Value* result = value(&c);
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendCombine(&c, Xor, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* neg(unsigned size, Operand* a) {
-    Value* result = value(&c);
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
     appendTranslate(&c, Negate, size, static_cast<Value*>(a), size, result);
     return result;
   }
 
   virtual Operand* fneg(unsigned size, Operand* a) {
-    Value* result = value(&c);
-    static_cast<Value*>(a)->type = ValueFloat;
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
     appendTranslate(&c, FloatNegate, size, static_cast<Value*>(a), size, result);
     return result;
   }
   
-  virtual Operand* operation(BinaryOperation op, unsigned aSize, unsigned resSize, Operand* a) {
-  	Value* result = value(&c);
-  	static_cast<Value*>(a)->type = ValueFloat;
+  virtual Operand* operation(BinaryOperation op, unsigned aSize, unsigned resSize, unsigned resCode, Operand* a) {
+  	Value* result = value(&c, resultType(resCode));
   	appendTranslate(&c, op, aSize, static_cast<Value*>(a), resSize, result);
   	return result;
   }
   
-  virtual Operand* operation(TernaryOperation op, unsigned aSize, unsigned bSize, unsigned resSize, Operand* a, Operand* b) {
-    Value* result = value(&c);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
+  virtual Operand* operation(TernaryOperation op, unsigned aSize, unsigned bSize, unsigned resSize, unsigned resCode, Operand* a, Operand* b) {
+  	Value* result = value(&c, resultType(resCode));
     appendCombine(&c, op, aSize, static_cast<Value*>(a),
                   bSize, static_cast<Value*>(b), resSize, result);
     return result;
   }
   
   virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) {
-    Value* result = value(&c);
-    static_cast<Value*>(a)->type = ValueFloat;
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
     appendTranslate(&c, Float2Float, aSize, static_cast<Value*>(a), resSize, result);
     return result;
   }
   
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) {
-    Value* result = value(&c);
-    static_cast<Value*>(a)->type = ValueFloat;
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
+    Value* result = value(&c, ValueGeneral);
     appendTranslate(&c, Float2Int, aSize, static_cast<Value*>(a), resSize, result);
     return result;
   }
   
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) {
-    Value* result = value(&c);
-    //result->type = ValueFloat;
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueFloat);
     appendTranslate(&c, Int2Float, aSize, static_cast<Value*>(a), resSize, result);
-    //result->type = ValueGeneral;
     return result;
   }
 

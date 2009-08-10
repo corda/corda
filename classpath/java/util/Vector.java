@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class Vector<T> implements List<T> {
+public class Vector<T> extends AbstractList<T> {
   private final ArrayList<T> list;
 
   public Vector(int capacity) {
@@ -77,10 +77,6 @@ public class Vector<T> implements List<T> {
     return list.isEmpty();
   }
 
-  public synchronized <S> S[] toArray(S[] a) {
-    return list.toArray(a);
-  }
-
   public void removeElementAt(int index) {
     remove(index);
   }
@@ -97,11 +93,11 @@ public class Vector<T> implements List<T> {
     list.clear();
   }
 
-  public synchronized int indexOf(T element) {
+  public synchronized int indexOf(Object element) {
     return list.indexOf(element);
   }
 
-  public synchronized int lastIndexOf(T element) {
+  public synchronized int lastIndexOf(Object element) {
     return list.lastIndexOf(element);
   }
 
@@ -112,7 +108,15 @@ public class Vector<T> implements List<T> {
   }
 
   public Iterator<T> iterator() {
-    return new Collections.ArrayListIterator(this);
+    return listIterator();
+  }
+
+  public ListIterator<T> listIterator(int index) {
+    return new Collections.ArrayListIterator(this, index);
+  }
+
+  public ListIterator<T> listIterator() {
+    return listIterator(0);
   }
 
   public Enumeration<T> elements() {

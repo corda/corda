@@ -53,4 +53,12 @@ public abstract class Enum<E extends Enum<E>> implements Comparable<E> {
   public String toString() {
     return name;
   }
+
+  public Class<E> getDeclaringClass() {
+    Class c = getClass();
+    while (c.getSuperclass() != Enum.class) {
+      c = c.getSuperclass();
+    }
+    return c;
+  }
 }

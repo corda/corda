@@ -69,6 +69,9 @@ const unsigned FloatRegisterMask = BytesPerWord == 4 ? 0x00ff0000 : 0xffff0000;
 
 const unsigned FrameHeaderSize = 2;
 
+const unsigned StackAlignmentInBytes = 16;
+const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
+
 inline bool
 isInt8(intptr_t v)
 {
@@ -532,7 +535,7 @@ inline void modrmSib(Context* c, int width, int a, int scale, int index, int bas
   }
 }
 
-inline void modrmSibImm(Context* c, int a, int scale, int index, int base, long long offset) {
+inline void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset) {
   if(offset == 0 && regCode(base) != rbp) {
     modrmSib(c, 0x00, a, scale, index, base);
   } else if(isInt8(offset)) {
@@ -730,11 +733,43 @@ jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
-jumpIfUnorderedC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+jumpIfFloatUnorderedC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
 
   conditional(c, 0x8a, a);
+}
+
+void
+jumpIfFloatGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x87, a);
+}
+
+void
+jumpIfFloatGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x83, a);
+}
+
+void
+jumpIfFloatLessC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x82, a);
+}
+
+void
+jumpIfFloatLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x86, a);
 }
 
 void
@@ -779,7 +814,14 @@ alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 }
 
 void
-pushR(Context* c, UNUSED unsigned size, Assembler::Register* a)
+alignedJumpC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c);
+  jumpC(c, size, a);
+}
+
+void
+pushR(Context* c, unsigned size, Assembler::Register* a)
 {
   if (BytesPerWord == 4 and size == 8) {
     Assembler::Register ah(a->high);
@@ -810,6 +852,22 @@ popR(Context* c, unsigned size, Assembler::Register* a)
     if (BytesPerWord == 8 and size == 4) {
       moveRR(c, 4, a, 8, a);
     }
+  }
+}
+
+void
+popM(Context* c, unsigned size, Assembler::Memory* a)
+{
+  if (BytesPerWord == 4 and size == 8) {
+    Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
+
+    popM(c, 4, a);
+    popM(c, 4, &ah);
+  } else {
+    assert(c, BytesPerWord == 4 or size == 8);
+
+    opcode(c, 0x8f);
+    modrmSibImm(c, 0, a->scale, a->index, a->base, a->offset);
   }
 }
 
@@ -2322,13 +2380,22 @@ populateTables(ArchitectureContext* c)
   uo[index(Jump, C)] = CAST1(jumpC);
   uo[index(Jump, M)] = CAST1(jumpM);
 
+  uo[index(AlignedJump, C)] = CAST1(alignedJumpC);
+
   uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
   uo[index(JumpIfNotEqual, C)] = CAST1(jumpIfNotEqualC);
   uo[index(JumpIfGreater, C)] = CAST1(jumpIfGreaterC);
   uo[index(JumpIfGreaterOrEqual, C)] = CAST1(jumpIfGreaterOrEqualC);
   uo[index(JumpIfLess, C)] = CAST1(jumpIfLessC);
   uo[index(JumpIfLessOrEqual, C)] = CAST1(jumpIfLessOrEqualC);
-  uo[index(JumpIfUnordered, C)] = CAST1(jumpIfUnorderedC);
+
+  uo[index(JumpIfFloatUnordered, C)] = CAST1(jumpIfFloatUnorderedC);
+  uo[index(JumpIfFloatEqual, C)] = CAST1(jumpIfEqualC);
+  uo[index(JumpIfFloatNotEqual, C)] = CAST1(jumpIfNotEqualC);
+  uo[index(JumpIfFloatGreater, C)] = CAST1(jumpIfFloatGreaterC);
+  uo[index(JumpIfFloatGreaterOrEqual, C)] = CAST1(jumpIfFloatGreaterOrEqualC);
+  uo[index(JumpIfFloatLess, C)] = CAST1(jumpIfFloatLessC);
+  uo[index(JumpIfFloatLessOrEqual, C)] = CAST1(jumpIfFloatLessOrEqualC);
 
   uo[index(LongJump, C)] = CAST1(longJumpC);
 
@@ -2447,6 +2514,11 @@ class MyArchitecture: public Assembler::Architecture {
   virtual uint64_t floatRegisters() {
   	return supportsSSE() ? FloatRegisterMask : 0;
   }
+  
+  virtual uint64_t allRegisters() {
+  	return generalRegisters() | floatRegisters();
+  }
+  
 
   virtual int stack() {
     return rsp;
@@ -2462,6 +2534,14 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual int returnHigh() {
     return (BytesPerWord == 4 ? rdx : NoRegister);
+  }
+
+  virtual int virtualCallTarget() {
+    return rax;
+  }
+
+  virtual int virtualCallIndex() {
+    return rdx;
   }
 
   virtual bool bigEndian() {
@@ -2480,14 +2560,24 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned frameFootprint(unsigned footprint) {
+#ifdef __MINGW32__
+    return max(footprint, StackAlignmentInWords);
+#else
+    return max(footprint > argumentRegisterCount() ?
+               footprint - argumentRegisterCount() : 0,
+               StackAlignmentInWords);
+#endif
+  }
+
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return max(footprint, footprint - argumentRegisterCount());
+    return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
   }
 
   virtual unsigned argumentRegisterCount() {
-#ifdef __WINDOWS__
+#ifdef __MINGW32__
     if (BytesPerWord == 8) return 4; else
-#elif defined __LINUX__
+#else
     if (BytesPerWord == 8) return 6; else
 #endif
     return 0;
@@ -2496,7 +2586,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int argumentRegister(unsigned index) {
     assert(&c, BytesPerWord == 8);
     switch (index) {
-#ifdef __WINDOWS__
+#ifdef __MINGW32__
     case 0:
       return rcx;
     case 1:
@@ -2505,7 +2595,7 @@ class MyArchitecture: public Assembler::Architecture {
       return r8;
     case 3:
       return r9;
-#elif defined __LINUX__
+#else
     case 0:
       return rdi;
     case 1:
@@ -2524,9 +2614,20 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual void updateCall(UnaryOperation op UNUSED,
-                          bool assertAlignment UNUSED, void* returnAddress,
-                          void* newTarget)
+  virtual unsigned stackAlignmentInWords() {
+    return StackAlignmentInWords;
+  }
+
+  virtual bool matchCall(void* returnAddress, void* target) {
+    uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
+    int32_t actualOffset; memcpy(&actualOffset, instruction + 1, 4);
+    void* actualTarget = static_cast<uint8_t*>(returnAddress) + actualOffset;
+
+    return *instruction == 0xE8 and actualTarget == target;
+  }
+
+  virtual void updateCall(UnaryOperation op, bool assertAlignment UNUSED,
+                          void* returnAddress, void* newTarget)
   {
     if (BytesPerWord == 4 or op == Call or op == Jump) {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
@@ -2566,8 +2667,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
-    const unsigned alignment = 16 / BytesPerWord;
-    return (ceiling(sizeInWords + FrameHeaderSize, alignment) * alignment)
+    return pad(sizeInWords + FrameHeaderSize, StackAlignmentInWords)
       - FrameHeaderSize;
   }
 
@@ -2589,6 +2689,37 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual bool supportsFloatCompare(unsigned size) {
     return supportsSSE() and size <= BytesPerWord;
+  }
+  
+  virtual bool alwaysCondensed(BinaryOperation op)
+  {
+    switch(op) {
+    case FloatCompare:
+    case Compare:
+    case Float2Float:
+    case Float2Int:
+    case Int2Float:
+      return false;
+    case Negate:
+    case Abs:
+    case FloatAbs:
+    case FloatNegate:
+    case FloatSqrt:
+    default:
+      return true;
+    }
+  }
+  
+  virtual bool alwaysCondensed(TernaryOperation) {
+    return true;
+  }
+
+  virtual int returnAddressOffset() {
+    return 0;
+  }
+
+  virtual int framePointerOffset() {
+    return -1;
   }
 
   virtual void nextFrame(void** stack, void** base) {
@@ -2979,6 +3110,14 @@ class MyAssembler: public Assembler {
           BytesPerWord, RegisterOperand, &stack);
   }
 
+  virtual void adjustFrame(unsigned footprint) {
+    Register stack(rsp);
+    Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
+    apply(Subtract, BytesPerWord, ConstantOperand, &footprintConstant,
+          BytesPerWord, RegisterOperand, &stack,
+          BytesPerWord, RegisterOperand, &stack);
+  }
+
   virtual void popFrame() {
     Register base(rbp);
     Register stack(rsp);
@@ -2986,6 +3125,91 @@ class MyAssembler: public Assembler {
           BytesPerWord, RegisterOperand, &stack);
 
     popR(&c, BytesPerWord, &base);
+  }
+
+  virtual void popFrameForTailCall(unsigned footprint,
+                                   int offset,
+                                   int returnAddressSurrogate,
+                                   int framePointerSurrogate)
+  {
+    if (TailCalls) {
+      if (offset) {
+        Register tmp(c.client->acquireTemporary());
+      
+        Memory returnAddressSrc(rsp, (footprint + 1) * BytesPerWord);
+        moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
+    
+        Memory returnAddressDst(rsp, (footprint - offset + 1) * BytesPerWord);
+        moveRM(&c, BytesPerWord, &tmp, BytesPerWord, &returnAddressDst);
+
+        c.client->releaseTemporary(tmp.low);
+
+        Memory baseSrc(rsp, footprint * BytesPerWord);
+        Register base(rbp);
+        moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
+
+        Register stack(rsp);
+        Constant footprintConstant
+          (resolved(&c, (footprint - offset + 1) * BytesPerWord));
+        addCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack);
+
+        if (returnAddressSurrogate != NoRegister) {
+          assert(&c, offset > 0);
+
+          Register ras(returnAddressSurrogate);
+          Memory dst(rsp, offset * BytesPerWord);
+          moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
+        }
+
+        if (framePointerSurrogate != NoRegister) {
+          assert(&c, offset > 0);
+
+          Register fps(framePointerSurrogate);
+          Memory dst(rsp, (offset - 1) * BytesPerWord);
+          moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+        }
+      } else {
+        popFrame();
+      }
+    } else {
+      abort(&c);
+    }
+  }
+
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
+    popFrame();
+
+    assert(&c, argumentFootprint >= StackAlignmentInWords);
+    assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
+
+    if (TailCalls and argumentFootprint > StackAlignmentInWords) {
+      Register returnAddress(rcx);
+      popR(&c, BytesPerWord, &returnAddress);
+
+      Register stack(rsp);
+      Constant adjustment
+        (resolved(&c, (argumentFootprint - StackAlignmentInWords)
+                  * BytesPerWord));
+      addCR(&c, BytesPerWord, &adjustment, BytesPerWord, &stack);
+
+      jumpR(&c, BytesPerWord, &returnAddress);
+    } else {
+      return_(&c);
+    }
+  }
+
+  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  {
+    popFrame();
+
+    Register returnAddress(rcx);
+    popR(&c, BytesPerWord, &returnAddress);
+
+    Register stack(rsp);
+    Memory stackSrc(rbx, stackOffsetFromThread);
+    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
+
+    jumpR(&c, BytesPerWord, &returnAddress);
   }
 
   virtual void apply(Operation op) {

@@ -154,17 +154,19 @@ eagain()
 }
 
 bool
-makeNonblocking(JNIEnv* e, int d)
+setBlocking(JNIEnv* e, int d, bool blocking)
 {
 #ifdef WIN32
-  u_long a = 1;
+  u_long a = (blocking ? 0 : 1);
   int r = ioctlsocket(d, FIONBIO, &a);
   if (r != 0) {
     throwIOException(e);
     return false;
   }
 #else
-  int r = fcntl(d, F_SETFL, fcntl(d, F_GETFL) | O_NONBLOCK);
+  int r = fcntl(d, F_SETFL, (blocking
+                             ? (fcntl(d, F_GETFL) & (~O_NONBLOCK))
+                             : (fcntl(d, F_GETFL) | O_NONBLOCK)));
   if (r < 0) {
     throwIOException(e);
     return false;
@@ -231,7 +233,6 @@ doAccept(JNIEnv* e, int s)
   socklen_t length = sizeof(address);
   int r = ::accept(s, &address, &length);
   if (r >= 0) {
-    makeNonblocking(e, r);
     return r;
   } else {
     throwIOException(e);
@@ -260,7 +261,7 @@ doWrite(int fd, const void* buffer, size_t count)
 }
 
 int
-makeSocket(JNIEnv* e, bool blocking = false)
+makeSocket(JNIEnv* e)
 {
 #ifdef WIN32
   static bool wsaInitialized = false;
@@ -278,8 +279,6 @@ makeSocket(JNIEnv* e, bool blocking = false)
     throwIOException(e);
     return s;
   }
-
-  if (not blocking) makeNonblocking(e, s);
 
   return s;
 }
@@ -312,6 +311,15 @@ Java_java_nio_channels_ServerSocketChannel_natDoListen(JNIEnv *e,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_java_nio_channels_SocketChannel_configureBlocking(JNIEnv *e,
+                                                       jclass,
+                                                       jint socket,
+                                                       jboolean blocking)
+{
+  setBlocking(e, socket, blocking);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_java_nio_channels_SocketChannel_natSetTcpNoDelay(JNIEnv *e,
                                                       jclass,
                                                       jint socket,
@@ -325,10 +333,13 @@ Java_java_nio_channels_SocketChannel_natDoConnect(JNIEnv *e,
 						  jclass,
 						  jstring host,
 						  jint port,
+                                                  jboolean blocking,
 						  jbooleanArray retVal)
 {
   int s = makeSocket(e);
   if (e->ExceptionOccurred()) return 0;
+
+  setBlocking(e, s, blocking);
 
   sockaddr_in address;
   init(e, &address, host, port);
@@ -425,7 +436,8 @@ class Pipe {
     address.sin_family = AF_INET;
     address.sin_port = 0;
     address.sin_addr.s_addr = inet_addr("127.0.0.1"); //INADDR_LOOPBACK;
-    listener_ = makeSocket(e, false);
+    listener_ = makeSocket(e);
+    setBlocking(e, listener_, false);
     ::doListen(e, listener_, &address);
 
     socklen_t length = sizeof(sockaddr_in);
@@ -435,7 +447,8 @@ class Pipe {
       throwIOException(e);
     }
 
-    writer_ = makeSocket(e, true);
+    writer_ = makeSocket(e);
+    setBlocking(e, writer_, true);
     connected_ = ::doConnect(e, writer_, &address);
   }
 
@@ -485,8 +498,8 @@ class Pipe {
       return;
     }
 
-    if (makeNonblocking(e, pipe[0])) {
-      makeNonblocking(e, pipe[1]);
+    if (setBlocking(e, pipe[0], false)) {
+      setBlocking(e, pipe[1], false);
     }
   }
 
@@ -626,7 +639,17 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
   }
 #endif
 
-  timeval time = { interval / 1000, (interval % 1000) * 1000 };
+  timeval time;
+  if (interval > 0) {
+    time.tv_sec = interval / 1000;
+    time.tv_usec = (interval % 1000) * 1000;
+  } else if (interval < 0) {
+    time.tv_sec = 0;
+    time.tv_usec = 0;
+  } else {
+    time.tv_sec = INT32_MAX;
+    time.tv_usec = 0;
+  }
   int r = ::select(max + 1, &(s->read), &(s->write), &(s->except), &time);
 
   if (r < 0) {

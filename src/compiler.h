@@ -17,6 +17,11 @@
 
 namespace vm {
 
+class TraceHandler {
+ public:
+  virtual void handleTrace(Promise* address, unsigned argumentIndex) = 0;
+};
+
 class Compiler {
  public:
   class Client {
@@ -28,9 +33,9 @@ class Compiler {
   
   static const unsigned Aligned  = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
+  static const unsigned TailJump = 1 << 2;
 
   class Operand { };
-  class StackElement { };
   class State { };
   class Subroutine { };
 
@@ -39,7 +44,7 @@ class Compiler {
 
   virtual Subroutine* startSubroutine() = 0;
   virtual void endSubroutine(Subroutine* subroutine) = 0;
-  virtual void restoreFromSubroutine(Subroutine* subroutine) = 0;
+  virtual void linkSubroutine(Subroutine* subroutine) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned alignedFrameSize) = 0;
@@ -52,16 +57,16 @@ class Compiler {
   virtual Promise* poolAppend(intptr_t value) = 0;
   virtual Promise* poolAppendPromise(Promise* value) = 0;
 
-  virtual Operand* constant(int64_t value) = 0;
-  virtual Operand* promiseConstant(Promise* value) = 0;
+  virtual Operand* constant(int64_t value, unsigned code) = 0;
+  virtual Operand* promiseConstant(Promise* value, unsigned code) = 0;
   virtual Operand* address(Promise* address) = 0;
   virtual Operand* memory(Operand* base,
+                          unsigned code,
                           int displacement = 0,
                           Operand* index = 0,
                           unsigned scale = 1) = 0;
 
-  virtual Operand* stack() = 0;
-  virtual Operand* thread() = 0;
+  virtual Operand* register_(int number) = 0;
 
   virtual void push(unsigned footprint) = 0;
   virtual void push(unsigned footprint, Operand* value) = 0;
@@ -69,15 +74,14 @@ class Compiler {
   virtual Operand* pop(unsigned footprint) = 0;
   virtual void pushed() = 0;
   virtual void popped(unsigned footprint) = 0;
-  virtual StackElement* top() = 0;
-  virtual unsigned footprint(StackElement*) = 0;
-  virtual unsigned index(StackElement*) = 0;
+  virtual unsigned topOfStack() = 0;
   virtual Operand* peek(unsigned footprint, unsigned index) = 0;
 
   virtual Operand* call(Operand* address,
                         unsigned flags,
                         TraceHandler* traceHandler,
                         unsigned resultSize,
+                        unsigned resultCode,
                         unsigned argumentCount,
                         ...) = 0;
 
@@ -85,11 +89,12 @@ class Compiler {
                              unsigned flags,
                              TraceHandler* traceHandler,
                              unsigned resultSize,
+                             unsigned resultCode,
                              unsigned argumentFootprint) = 0;
 
   virtual void return_(unsigned size, Operand* value) = 0;
 
-  virtual void initLocal(unsigned size, unsigned index) = 0;
+  virtual void initLocal(unsigned size, unsigned index, unsigned code) = 0;
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) = 0;
   virtual void storeLocal(unsigned footprint, Operand* src,
                           unsigned index) = 0;
@@ -114,8 +119,15 @@ class Compiler {
   virtual void jge(Operand* address) = 0;
   virtual void je(Operand* address) = 0;
   virtual void jne(Operand* address) = 0;
-  virtual void juo(Operand* address) = 0;
+  virtual void fjl(Operand* address) = 0;
+  virtual void fjg(Operand* address) = 0;
+  virtual void fjle(Operand* address) = 0;
+  virtual void fjge(Operand* address) = 0;
+  virtual void fje(Operand* address) = 0;
+  virtual void fjne(Operand* address) = 0;
+  virtual void fjuo(Operand* address) = 0;
   virtual void jmp(Operand* address) = 0;
+  virtual void exit(Operand* address) = 0;
   virtual Operand* add(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* sub(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* mul(unsigned size, Operand* a, Operand* b) = 0;
@@ -134,8 +146,8 @@ class Compiler {
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* neg(unsigned size, Operand* a) = 0;
   virtual Operand* fneg(unsigned size, Operand* a) = 0;
-  virtual Operand* operation(BinaryOperation op, unsigned aSize, unsigned resSize, Operand* a) = 0;
-  virtual Operand* operation(TernaryOperation op, unsigned aSize, unsigned bSize, unsigned resSize, Operand* a, Operand* b) = 0;
+  virtual Operand* operation(BinaryOperation op, unsigned aSize, unsigned resSize, unsigned resCode, Operand* a) = 0;
+  virtual Operand* operation(TernaryOperation op, unsigned aSize, unsigned bSize, unsigned resSize, unsigned resCode, Operand* a, Operand* b) = 0;
   virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;

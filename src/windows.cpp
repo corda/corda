@@ -55,7 +55,7 @@ run(void* r)
   return 0;
 }
 
-const bool Verbose = true;
+const bool Verbose = false;
 
 const unsigned Waiting = 1 << 0;
 const unsigned Notified = 1 << 1;
@@ -523,8 +523,6 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-    assert(this, sizeInBytes % LikelyPageSizeInBytes == 0);
-
     return VirtualAlloc
       (0, sizeInBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   }
@@ -788,7 +786,8 @@ struct MINIDUMP_USER_STREAM_INFORMATION;
 struct MINIDUMP_CALLBACK_INFORMATION;
 
 enum MINIDUMP_TYPE {
-  MiniDumpNormal = 0
+  MiniDumpNormal = 0,
+  MiniDumpWithFullMemory = 2
 };
 
 typedef BOOL (*MiniDumpWriteDumpType)
@@ -828,7 +827,7 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
           (GetCurrentProcess(),
            GetCurrentProcessId(),
            file,
-           MiniDumpNormal,
+           MiniDumpWithFullMemory,
            &exception,
            0,
            0);

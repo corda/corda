@@ -30,7 +30,7 @@
 #endif
 
 #if (defined __i386__) || (defined __POWERPC__)
-#  define LD "d"
+#  define LD "ld"
 #  define LLD "lld"
 #ifdef __APPLE__
 #  define ULD "lu"
@@ -39,16 +39,18 @@
 #  define LX "x"
 #  define ULD "u"
 #endif
-#elif defined __x86_64__ && defined __LINUX__
-#  define LD "ld"
-#  define LX "lx"
-#  define LLD "ld"
-#  define ULD "lu"
-#elif defined __x86_64__ && defined __WINDOWS__
-#  define LD "I64d"
-#  define LX "I64x"
-#  define LLD "I64d"
-#  define ULD "I64x"
+#elif defined __x86_64__
+#  ifdef __MINGW32__
+#    define LD "I64d"
+#    define LX "I64x"
+#    define LLD "I64d"
+#    define ULD "I64x"
+#  else
+#    define LD "ld"
+#    define LX "lx"
+#    define LLD "ld"
+#    define ULD "lu"
+#  endif
 #else
 #  error "Unsupported architecture"
 #endif
@@ -109,9 +111,15 @@ avg(unsigned a, unsigned b)
 }
 
 inline unsigned
+pad(unsigned n, unsigned alignment)
+{
+  return (n + (alignment - 1)) & ~(alignment - 1);
+}
+
+inline unsigned
 pad(unsigned n)
 {
-  return (n + (BytesPerWord - 1)) & ~(BytesPerWord - 1);
+  return pad(n, BytesPerWord);
 }
 
 inline unsigned
@@ -286,7 +294,7 @@ bitsToFloat(uint32_t bits)
   return f;
 }
 
-inline intptr_t
+inline int
 difference(void* a, void* b)
 {
   return reinterpret_cast<intptr_t>(a) - reinterpret_cast<intptr_t>(b);

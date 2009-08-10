@@ -14,7 +14,8 @@
 #include "common.h"
 
 extern "C" void NO_RETURN
-vmJump(void* address, void* base, void* stack, void* thread);
+vmJump(void* address, void* base, void* stack, void* thread,
+       uintptr_t returnLow, uintptr_t returnHigh);
 
 #if (defined __i386__) || (defined __x86_64__)
 #  include "x86.h"

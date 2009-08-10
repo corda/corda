@@ -39,10 +39,12 @@ class BootImage {
   unsigned types;
   unsigned methodTree;
   unsigned methodTreeSentinal;
+  unsigned virtualThunks;
 
   uintptr_t codeBase;
 
   unsigned defaultThunk;
+  unsigned defaultVirtualThunk;
   unsigned nativeThunk;
   unsigned aioobThunk;
 
@@ -50,6 +52,7 @@ class BootImage {
   unsigned thunkSize;
 
   unsigned compileMethodCall;
+  unsigned compileVirtualMethodCall;
   unsigned invokeNativeCall;
   unsigned throwArrayIndexOutOfBoundsCall;
 
