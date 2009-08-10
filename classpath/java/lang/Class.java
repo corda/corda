@@ -136,11 +136,15 @@ public final class Class <T> implements Type, GenericDeclaration {
   private native void initialize();
   
   public static Class forCanonicalName(String name) {
+    return forCanonicalName(null, name);
+  }
+
+  public static Class forCanonicalName(ClassLoader loader, String name) {
     try {
       if (name.startsWith("[")) {
-        return forName(name);
+        return forName(name, true, loader);
       } else if (name.startsWith("L")) {
-        return forName(name.substring(1, name.length() - 1));
+        return forName(name.substring(1, name.length() - 1), true, loader);
       } else {
         if (name.length() == 1) {
           return primitiveClass(name.charAt(0));
