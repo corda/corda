@@ -4325,22 +4325,32 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
     FrameIterator::Element el = it.next(c);
     Value* v = el.value;
     Read* r = live(v);
+    Site* s = sites[el.localIndex];
 
     if (r) {
-      if (sites[el.localIndex]) {
+      if (s) {
         if (DebugControl) {
           char buffer[256];
-          sites[el.localIndex]->toString(c, buffer, 256);
+          s->toString(c, buffer, 256);
           fprintf(stderr, "resolve original %s for %p local %d frame %d\n",
-                  buffer, el.value, el.localIndex, frameIndex(c, &el));
+                  buffer, v, el.localIndex, frameIndex(c, &el));
         }
 
-        acquireSite(c, frozen, sites[el.localIndex], v, r, true);
+        acquireSite(c, frozen, s, v, r, true);
       } else {
         complete = false;
       }
-    } else {
-      sites[el.localIndex] = 0;
+    } else if (s) {
+      if (DebugControl) {
+        char buffer[256];
+        s->toString(c, buffer, 256);
+        fprintf(stderr, "freeze original %s for %p local %d frame %d\n",
+                buffer, v, el.localIndex, frameIndex(c, &el));
+      }
+      
+      addSite(c, v, s);
+      removeSite(c, v, s);
+      freeze(c, frozen, s, v);
     }
   }
 
@@ -4521,7 +4531,14 @@ setSites(Context* c, Event* e, Site** sites)
     if (sites[el.localIndex]) {
       if (live(el.value)) {
         setSites(c, el.value, sites[el.localIndex]);
+      } else if (DebugControl) {
+        char buffer[256]; sitesToString(c, sites[el.localIndex], buffer, 256);
+        fprintf(stderr, "skip sites %s for %p local %d frame %d\n",
+                buffer, el.value, el.localIndex, frameIndex(c, &el));
       }
+    } else if (DebugControl) {
+      fprintf(stderr, "no sites for %p local %d frame %d\n",
+              el.value, el.localIndex, frameIndex(c, &el));
     }
   }
 }
