@@ -1049,7 +1049,7 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
     case 4:
       if (bSize == 8) {
       	if (BytesPerWord == 8) {
-          alwaysRex(c, aSize, b, a);
+          alwaysRex(c, bSize, b, a);
           opcode(c, 0x63);
           modrm(c, 0xc0, a, b);
       	} else {

@@ -29,16 +29,20 @@
 #  define PATH_SEPARATOR ':'
 #endif
 
-#if (defined __i386__) || (defined __POWERPC__)
+#if (defined __i386__) || (defined __POWERPC__) || (defined __arm__)
 #  define LD "ld"
-#  define LLD "lld"
-#ifdef __APPLE__
-#  define ULD "lu"
-#  define LX "lx"
-#else
-#  define LX "x"
-#  define ULD "u"
-#endif
+#  ifdef __MINGW32__
+#    define LLD "I64d"
+#  else
+#    define LLD "lld"
+#  endif
+#  ifdef __APPLE__
+#    define ULD "lu"
+#    define LX "lx"
+#  else
+#    define LX "x"
+#    define ULD "u"
+#  endif
 #elif defined __x86_64__
 #  ifdef __MINGW32__
 #    define LD "I64d"
