@@ -1317,11 +1317,10 @@ pickTarget(Context* c, Read* read, bool intersectRead,
       registerPenalty = (c->floatRegisterCount > registerReserveCount
                               ? 0 : Target::LowRegisterPenalty);
     } else {
-      registerPenalty = (c->availableRegisterCount > registerReserveCount
-                              ? 0 : Target::LowRegisterPenalty);
+      abort(c);
     }
   } else {
-    registerPenalty = (c->availableRegisterCount > registerReserveCount
+    registerPenalty = (c->generalRegisterCount > registerReserveCount || c->floatRegisterCount > registerReserveCount
                             ? 0 : Target::LowRegisterPenalty);
   }
 
