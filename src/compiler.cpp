@@ -108,6 +108,8 @@ class Site {
   virtual unsigned copyCost(Context*, Site*) = 0;
 
   virtual bool match(Context*, const SiteMask&) = 0;
+
+  virtual bool loneMatch(Context*, const SiteMask&) = 0;
   
   virtual void acquire(Context*, Value*) { }
 
@@ -1429,6 +1431,10 @@ class ConstantSite: public Site {
     return mask.typeMask & (1 << ConstantOperand);
   }
 
+  virtual bool loneMatch(Context*, const SiteMask&) {
+    return true;
+  }
+
   virtual OperandType type(Context*) {
     return ConstantOperand;
   }
@@ -1501,6 +1507,10 @@ class AddressSite: public Site {
     return mask.typeMask & (1 << AddressOperand);
   }
 
+  virtual bool loneMatch(Context*, const SiteMask&) {
+    return false;
+  }
+
   virtual OperandType type(Context*) {
     return AddressOperand;
   }
@@ -1570,6 +1580,16 @@ class RegisterSite: public Site {
 
     if ((mask.typeMask & (1 << RegisterOperand))) {
       return ((static_cast<uint64_t>(1) << number) & mask.registerMask);
+    } else {
+      return false;
+    }
+  }
+
+  virtual bool loneMatch(Context* c UNUSED, const SiteMask& mask) {
+    assert(c, number != NoRegister);
+
+    if ((mask.typeMask & (1 << RegisterOperand))) {
+      return ((static_cast<uint64_t>(1) << number) == mask.registerMask);
     } else {
       return false;
     }
@@ -1727,6 +1747,23 @@ class MemorySite: public Site {
     } else {
       return false;
     }
+  }
+
+  virtual bool loneMatch(Context* c, const SiteMask& mask) {
+    assert(c, acquired);
+
+    if (mask.typeMask & (1 << MemoryOperand)) {
+      if (base == c->arch->stack()) {
+        assert(c, index == NoRegister);
+
+        if (mask.frameIndex == AnyFrameIndex) {
+          return false;
+        } else {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   virtual void acquire(Context* c, Value* v) {
@@ -3145,7 +3182,8 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
   Site* s;
   Value* v;
   Read* r = liveNext(c, value);
-  if (value->source->match(c, static_cast<const SiteMask&>(resultMask))) {
+  if (value->source->match(c, static_cast<const SiteMask&>(resultMask)) and (r == 0 or 
+          value->source->loneMatch(c, static_cast<const SiteMask&>(resultMask)))) {
     s = value->source;
     v = value;
     if (r and not hasMoreThanOneSite(v)) {
