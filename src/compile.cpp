@@ -2228,8 +2228,6 @@ throw_(MyThread* t, object o)
     t->exception = makeNullPointerException(t);
   }
 
-  printTrace(t, t->exception);
-
   unwind(t);
 }
 
@@ -5031,11 +5029,11 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "org/eclipse/osgi/framework/internal/core/Constants") == 0 and
+       "java/lang/Throwable") == 0 and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "getInternalSymbolicName") == 0)
+       "printStackTrace") == 0)
   {
     trap();
   }
