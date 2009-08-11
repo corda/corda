@@ -1676,6 +1676,14 @@ class MyArchitecture: public Assembler::Architecture {
     return 32;
   }
 
+  virtual unsigned generalRegisterCount() {
+    return 32;
+  }
+
+  virtual unsigned floatRegisterCount() {
+    return 0;
+  }
+
   virtual int stack() {
     return StackRegister;
   }
@@ -1827,23 +1835,23 @@ class MyArchitecture: public Assembler::Architecture {
     *stack = *static_cast<void**>(*stack);
   }
 
-  virtual BinaryOperation hasBinaryIntrinsic(Thread* t, object method) {
+  virtual BinaryOperation hasBinaryIntrinsic(Thread*, object) {
   	return NoBinaryOperation;
   }
   
-  virtual TernaryOperation hasTernaryIntrinsic(Thread* t UNUSED, object method UNUSED) {
+  virtual TernaryOperation hasTernaryIntrinsic(Thread*, object) {
   	return NoTernaryOperation;
   }
   
-  virtual bool supportsFloatCompare(unsigned size) {
+  virtual bool supportsFloatCompare(unsigned) {
     return false;
   }
   
-  virtual bool alwaysCondensed(BinaryOperation op) {
+  virtual bool alwaysCondensed(BinaryOperation) {
     return false;
   }
   
-  virtual bool alwaysCondensed(TernaryOperation op) {
+  virtual bool alwaysCondensed(TernaryOperation) {
     return false;
   }
   
@@ -1889,7 +1897,7 @@ class MyArchitecture: public Assembler::Architecture {
   
   virtual void planDestination
   (BinaryOperation op,
-   unsigned, const uint8_t* aTypeMask, const uint64_t* aRegisterMask,
+   unsigned, const uint8_t*, const uint64_t*,
    unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask)
   {
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
@@ -1962,9 +1970,9 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planDestination
-  (TernaryOperation op,
+  (TernaryOperation,
    unsigned, const uint8_t*, const uint64_t*,
-   unsigned, const uint8_t* bTypeMask, const uint64_t* bRegisterMask,
+   unsigned, const uint8_t*, const uint64_t*,
    unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask)
   {
     *cTypeMask = (1 << RegisterOperand);
