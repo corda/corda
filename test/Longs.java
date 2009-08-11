@@ -39,6 +39,10 @@ public class Longs {
     return -1;
   }
 
+  private static long unsignedShiftRight32(long x) {
+    return x >>> 32;
+  }
+
   public static void main(String[] args) {
     expect(((long) negativeOne()) == -1);
 
@@ -211,6 +215,8 @@ public class Longs {
     buffer.putLong(231);
     buffer.flip();
     expect(buffer.getLong() == 231);
+
+    expect(unsignedShiftRight32(231) == 0);
   }
 
 }
