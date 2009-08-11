@@ -961,7 +961,7 @@ sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
   	modrm(c, 0xc0, b, a);  	
   } else {
   	opcode(c, 0x66);
-  	maybeRex(c, aSize, a, b);
+  	maybeRex(c, aSize, b, a);
   	opcode(c, 0x0f, 0x6e);
   	modrm(c, 0xc0, a, b);  	
   }
@@ -2699,12 +2699,12 @@ class MyArchitecture: public Assembler::Architecture {
     case Float2Float:
     case Float2Int:
     case Int2Float:
-      return false;
-    case Negate:
-    case Abs:
     case FloatAbs:
     case FloatNegate:
     case FloatSqrt:
+      return false;
+    case Negate:
+    case Abs:
     default:
       return true;
     }
@@ -2902,11 +2902,14 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Negate:
+   	  *bTypeMask = (1 << RegisterOperand);
+   	  *bRegisterMask = *aRegisterMask;
+   	  break;
     case FloatNegate:
     case FloatSqrt:
    	case Float2Float:
    	  *bTypeMask = (1 << RegisterOperand);
-   	  *bRegisterMask = *aRegisterMask;
+   	  *bRegisterMask = FloatRegisterMask;
    	  break;
    	case Int2Float:
    	  *bTypeMask = (1 << RegisterOperand);
