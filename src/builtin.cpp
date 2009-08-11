@@ -186,6 +186,12 @@ Avian_java_lang_ClassLoader_defineClass
   t->m->heap->free(buffer, length);
 
   if (c) {
+    if (classLoaderMap(t, loader) == 0) {
+      PROTECT(t, c);
+      object map = makeHashMap(t, 0, 0);
+      set(t, loader, ClassLoaderMap, map);
+    }
+
     hashMapInsert(t, classLoaderMap(t, loader), className(t, c), c,
                   byteArrayHash);
   }
