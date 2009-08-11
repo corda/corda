@@ -73,16 +73,17 @@ public class Method<T> extends AccessibleObject
         } else if (c == 'L') {
           int start = i + 1;
           i = next(';', spec, start);
-          String name = spec.substring(start, i);
-          types[index++] = Class.forName(name);
+          String name = spec.substring(start, i).replace('/', '.');
+          types[index++] = Class.forName(name, true, class_.getClassLoader());
         } else if (c == '[') {
           int start = i;
           while (spec.charAt(i) == '[') ++i;
 
           if (spec.charAt(i) == 'L') {
             i = next(';', spec, i + 1);
-            String name = spec.substring(start, i);
-            types[index++] = Class.forName(name);
+            String name = spec.substring(start, i).replace('/', '.');
+            types[index++] = Class.forName
+              (name, true, class_.getClassLoader());
           } else {
             String name = spec.substring(start, i + 1);
             types[index++] = Class.forCanonicalName
