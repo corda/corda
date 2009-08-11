@@ -134,6 +134,8 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 
   PROTECT(t, method);
 
+  setProperty(t, method, properties, "java.specification.version", "1.5");
+
   setProperty(t, method, properties, "java.vm.name", "Avian");
 
   setProperty(t, method, properties, "java.protocol.handler.pkgs", "avian");
