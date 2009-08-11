@@ -501,8 +501,6 @@ postCollect(Thread* t)
 void
 finalizeObject(Thread* t, object o)
 {
-  if (true) return;
-
   if (t->state == Thread::ExitState) {
     // don't waste time running Java finalizers if we're exiting the
     // VM
