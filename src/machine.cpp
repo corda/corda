@@ -2832,6 +2832,9 @@ resolveClass(Thread* t, object loader, object spec)
             object specString = makeString
               (t, "%s", &byteArrayBody(t, spec, 0));
 
+            replace('/', '.', reinterpret_cast<char*>
+                    (&byteArrayBody(t, stringData(t, specString), 0)));
+
             class_ = t->m->processor->invoke(t, method, loader, specString);
           }
         }
