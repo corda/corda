@@ -3652,7 +3652,7 @@ class TranslateEvent: public Event {
 
     apply(c, type,
           size, value->source, source(value->high),
-          size, low, high);
+          resSize, low, high);
 
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
