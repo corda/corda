@@ -3630,7 +3630,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       	  if (DebugIntrinsics) {
       	    fprintf(stderr, "Using binary intrinsic %i.\n", op);
       	  }
-		  int opSize = methodParameterFootprint(t, target) * BytesPerWord;
+		  int opSize = methodParameterFootprint(t, target) * 4;
 		  int resSize = resultSize(t, methodReturnCode(t, target));
 		  Compiler::Operand* param;
 		  if (opSize == 4) {
