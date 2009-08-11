@@ -5025,7 +5025,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
      (&byteArrayBody(t, methodSpec(t, context->method), 0)));
 
   // for debugging:
-  if (//false and
+  if (false and
       strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
