@@ -501,11 +501,19 @@ void unsignedShiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
   }
 }
 
+void
+moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
+       unsigned dstSize, Assembler::Register* dst);
+
 void unsignedShiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 {
   int sh = getVal(a);
   if (size == 8) {
-    if (sh < 32) {
+    if (sh == 32) {
+      Assembler::Register high(b->high);
+      moveRR(con, 4, &high, 4, t);
+      issue(con, li(H(t),0));
+    } else if (sh < 32) {
       issue(con, srwi(R(t), R(b), sh));
       issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
       issue(con, rlwinm(H(t),H(b),32-sh,sh,31));
@@ -595,10 +603,6 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* target)
   issue(c, mtctr(target->low));
   issue(c, bctr());
 }
-
-void
-moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
-       unsigned dstSize, Assembler::Register* dst);
 
 void
 swapRR(Context* c, unsigned aSize, Assembler::Register* a,
