@@ -2003,6 +2003,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->SetStaticFloatField = ::SetStaticFloatField;
   envTable->SetStaticDoubleField = ::SetStaticDoubleField;
   envTable->NewGlobalRef = ::NewGlobalRef;
+  envTable->NewWeakGlobalRef = ::NewGlobalRef;
   envTable->DeleteGlobalRef = ::DeleteGlobalRef;
   envTable->ExceptionOccurred = ::ExceptionOccurred;
   envTable->ExceptionDescribe = ::ExceptionDescribe;
