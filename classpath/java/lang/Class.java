@@ -96,6 +96,32 @@ public final class Class <T> implements Type, GenericDeclaration {
       (replace('/', '.', name, 0, name.length - 1), 0, name.length - 1, false);
   }
 
+  public String getCanonicalName() {
+    if ((vmFlags & PrimitiveFlag) != 0) {
+      return getName();
+    } else if (isArray()) {
+      return getComponentType().getCanonicalName() + "[]";
+    } else {
+      return getName().replace('$', '.');
+    }
+  }
+
+  public String getSimpleName() {
+    if ((vmFlags & PrimitiveFlag) != 0) {
+      return getName();
+    } else if (isArray()) {
+      return getComponentType().getSimpleName() + "[]";
+    } else {
+      String name = getCanonicalName();
+      int index = name.lastIndexOf('.');
+      if (index >= 0) {
+        return name.substring(index + 1);
+      } else {
+        return name;
+      }
+    }
+  }
+
   public Object staticTable() {
     return staticTable;
   }
@@ -159,6 +185,26 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   public Class getComponentType() {
     if (isArray()) {
+      String n = getName();
+      if ("[Z".equals(n)) {
+        return primitiveClass('Z');
+      } else if ("[B".equals(n)) {
+        return primitiveClass('B');
+      } else if ("[S".equals(n)) {
+        return primitiveClass('S');
+      } else if ("[C".equals(n)) {
+        return primitiveClass('C');
+      } else if ("[I".equals(n)) {
+        return primitiveClass('I');
+      } else if ("[F".equals(n)) {
+        return primitiveClass('F');
+      } else if ("[J".equals(n)) {
+        return primitiveClass('J');
+      } else if ("[D".equals(n)) {
+        return primitiveClass('D');
+      }
+
+      if (staticTable == null) throw new AssertionError(name);
       return (Class) staticTable;
     } else {
       return null;
@@ -485,12 +531,35 @@ public final class Class <T> implements Type, GenericDeclaration {
     return false;
   }
 
+  public <T> Class<? extends T> asSubclass(Class<T> c) {
+    if (! c.isAssignableFrom(this)) {
+      throw new ClassCastException();
+    }
+
+    return (Class<? extends T>) this;
+  }
+
   public T cast(Object o) {
     return (T) o;
   }
 
   public Object[] getSigners() {
     return Static.signers.get(this);
+  }
+
+  public Package getPackage() {
+    if ((vmFlags & PrimitiveFlag) != 0 || isArray()) {
+      return null;
+    } else {
+      String name = getCanonicalName();
+      int index = name.lastIndexOf('.');
+      if (index >= 0) {
+        return new Package(name.substring(0, index),
+                           null, null, null, null, null, null, null, null);
+      } else {
+        return null;
+      }
+    }
   }
 
   public Annotation[] getDeclaredAnnotations() {
@@ -502,10 +571,6 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public TypeVariable<Class<T>>[] getTypeParameters() {
-    throw new UnsupportedOperationException();
-  }
-
-  public String getSimpleName() {
     throw new UnsupportedOperationException();
   }
 
