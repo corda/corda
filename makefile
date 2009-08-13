@@ -378,6 +378,7 @@ gnu-overrides = \
 	java/lang/ref/PhantomReference.class \
 	java/lang/ref/Reference.class \
 	java/lang/ref/ReferenceQueue.class \
+	java/lang/ref/SoftReference.class \
 	java/lang/ref/WeakReference.class \
 	java/lang/reflect/AccessibleObject.class \
 	java/lang/reflect/Constructor.class \
