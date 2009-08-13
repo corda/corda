@@ -248,6 +248,29 @@ public class StringBuilder implements CharSequence, Appendable {
 
     return -1;
   }
+  
+  public int lastIndexOf(String s) {
+    return lastIndexOf(s, length - s.length());
+  }
+
+  public int lastIndexOf(String s, int lastIndex) {
+    int slength = s.length();
+    if (slength == 0) return lastIndex;
+
+    for (int i = Math.min(length - slength, lastIndex); i >= 0; --i) {
+      int j = 0;
+      for (; j < slength && i + j < length; ++j) {
+        if (charAt(i + j) != s.charAt(j)) {
+          break;
+        }
+      }
+      if (j == slength) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
 
   public int length() {
     return length;
@@ -283,9 +306,8 @@ public class StringBuilder implements CharSequence, Appendable {
     }
   }
 
-  public void getChars(int srcOffset, int srcLength, char[] dst, int dstOffset)
-  {
-    if (srcOffset < 0 || srcOffset + srcLength > length) {
+  public void getChars(int srcStart, int srcEnd, char[] dst, int dstStart) {
+    if (srcStart < 0 || srcEnd > length) {
       throw new IndexOutOfBoundsException();
     }
 
@@ -297,17 +319,17 @@ public class StringBuilder implements CharSequence, Appendable {
       int end = index;
       index = start;
 
-      if (start < srcOffset) {
-        start = srcOffset;
+      if (start < srcStart) {
+        start = srcStart;
       }
 
-      if (end > srcOffset + srcLength) {
-        end = srcOffset + srcLength;
+      if (end > srcEnd) {
+        end = srcEnd;
       }
 
       if (start < end) {
-        c.value.getChars(start - index, end - start,
-                         dst, dstOffset + (start - srcOffset));
+        c.value.getChars(start - index, end - index,
+                         dst, dstStart + (start - srcStart));
       }
     }
   }
@@ -328,10 +350,14 @@ public class StringBuilder implements CharSequence, Appendable {
     }
   }
 
+  public String substring(int start) {
+    return substring(start, length);
+  }
+
   public String substring(int start, int end) {
     int len = end-start;
     char[] buf = new char[len]; 
-    getChars(start, len, buf,0 );
+    getChars(start, end, buf, 0);
     return new String(buf, 0, len, false);
   }
         
