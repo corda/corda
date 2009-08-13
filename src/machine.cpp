@@ -1326,7 +1326,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
           hashMapInsert(t, virtualMap, method, method, methodHash);
         }
 
-        if (UNLIKELY(strcmp
+        if (UNLIKELY((classFlags(t, class_) & ACC_INTERFACE) == 0
+                     and strcmp
                      (reinterpret_cast<const int8_t*>("finalize"), 
                       &byteArrayBody(t, methodName(t, method), 0)) == 0
                      and strcmp
@@ -1774,6 +1775,8 @@ boot(Thread* t)
   classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
     |= ReferenceFlag;
   classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
+    |= ReferenceFlag | WeakReferenceFlag;
+  classVmFlags(t, arrayBody(t, m->types, Machine::SoftReferenceType))
     |= ReferenceFlag | WeakReferenceFlag;
   classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
     |= ReferenceFlag | WeakReferenceFlag;
@@ -2428,16 +2431,18 @@ makeString(Thread* t, const char* format, ...)
 void
 stringChars(Thread* t, object string, char* chars)
 {
-  object data = stringData(t, string);
-  if (objectClass(t, data)
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
-    memcpy(chars,
-           &byteArrayBody(t, data, stringOffset(t, string)),
-           stringLength(t, string));
-  } else {
-    for (unsigned i = 0; i < stringLength(t, string); ++i) {
-      chars[i] = charArrayBody(t, data, stringOffset(t, string) + i);
+  if (stringLength(t, string)) {
+    object data = stringData(t, string);
+    if (objectClass(t, data)
+        == arrayBody(t, t->m->types, Machine::ByteArrayType))
+    {
+      memcpy(chars,
+             &byteArrayBody(t, data, stringOffset(t, string)),
+             stringLength(t, string));
+    } else {
+      for (unsigned i = 0; i < stringLength(t, string); ++i) {
+        chars[i] = charArrayBody(t, data, stringOffset(t, string) + i);
+      }
     }
   }
   chars[stringLength(t, string)] = 0;
@@ -2446,17 +2451,19 @@ stringChars(Thread* t, object string, char* chars)
 void
 stringChars(Thread* t, object string, uint16_t* chars)
 {
-  object data = stringData(t, string);
-  if (objectClass(t, data)
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
-    for (unsigned i = 0; i < stringLength(t, string); ++i) {
-      chars[i] = byteArrayBody(t, data, stringOffset(t, string) + i);
+  if (stringLength(t, string)) {
+    object data = stringData(t, string);
+    if (objectClass(t, data)
+        == arrayBody(t, t->m->types, Machine::ByteArrayType))
+    {
+      for (unsigned i = 0; i < stringLength(t, string); ++i) {
+        chars[i] = byteArrayBody(t, data, stringOffset(t, string) + i);
+      }
+    } else {
+      memcpy(chars,
+             &charArrayBody(t, data, stringOffset(t, string)),
+             stringLength(t, string) * sizeof(uint16_t));
     }
-  } else {
-    memcpy(chars,
-           &charArrayBody(t, data, stringOffset(t, string)),
-           stringLength(t, string) * sizeof(uint16_t));
   }
   chars[stringLength(t, string)] = 0;
 }
@@ -2821,7 +2828,7 @@ resolveClass(Thread* t, object loader, object spec)
         }
 
         if (LIKELY(t->exception == 0)) {
-          object method = findMethod
+          object method = findVirtualMethod
             (t, t->m->loadClassMethod, objectClass(t, loader));
 
           if (LIKELY(t->exception == 0)) {

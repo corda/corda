@@ -2185,7 +2185,7 @@ findMethod(Thread* t, object class_, object name, object spec)
 }
 
 inline object
-findMethod(Thread* t, object method, object class_)
+findVirtualMethod(Thread* t, object method, object class_)
 {
   return arrayBody(t, classVirtualTable(t, class_), 
                    methodOffset(t, method));
