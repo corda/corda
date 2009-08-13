@@ -19,6 +19,10 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     this.name = name;
   }
 
+  public ThreadGroup(String name) {
+    this(Thread.currentThread().getThreadGroup(), name);
+  }
+
   public void uncaughtException(Thread t, Throwable e) {
     if (parent != null) {
       parent.uncaughtException(t, e);
