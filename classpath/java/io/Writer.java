@@ -26,7 +26,7 @@ public abstract class Writer {
 
   public void write(String s, int offset, int length) throws IOException {
     char[] b = new char[length];
-    s.getChars(offset, length, b, 0);
+    s.getChars(offset, offset + length, b, 0);
     write(b);
   }
 
