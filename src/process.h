@@ -37,13 +37,14 @@ codeReadInt32(Thread* t, object code, unsigned& ip)
 }
 
 inline object
-resolveClassInObject(Thread* t, object container, unsigned classOffset)
+resolveClassInObject(Thread* t, object loader, object container,
+                     unsigned classOffset)
 {
   object o = cast<object>(container, classOffset);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
     PROTECT(t, container);
 
-    o = resolveClass(t, o);
+    o = resolveClass(t, loader, o);
     if (UNLIKELY(t->exception)) return 0;
     
     set(t, container, classOffset, o);
@@ -52,34 +53,36 @@ resolveClassInObject(Thread* t, object container, unsigned classOffset)
 }
 
 inline object
-resolveClassInPool(Thread* t, object pool, unsigned index)
+resolveClassInPool(Thread* t, object method, unsigned index)
 {
-  object o = singletonObject(t, pool, index);
+  object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
-    PROTECT(t, pool);
+    PROTECT(t, method);
 
-    o = resolveClass(t, o);
+    o = resolveClass(t, classLoader(t, methodClass(t, method)), o);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, pool, SingletonBody + (index * BytesPerWord), o);
+    set(t, codePool(t, methodCode(t, method)),
+        SingletonBody + (index * BytesPerWord), o);
   }
   return o; 
 }
 
 inline object
-resolve(Thread* t, object pool, unsigned index,
+resolve(Thread* t, object method, unsigned index,
         object (*find)(vm::Thread*, object, object, object),
         object (*makeError)(vm::Thread*, object))
 {
-  object o = singletonObject(t, pool, index);
+  object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
   {
-    PROTECT(t, pool);
+    PROTECT(t, method);
 
     object reference = o;
     PROTECT(t, reference);
 
-    object class_ = resolveClassInObject(t, o, ReferenceClass);
+    object class_ = resolveClassInObject
+      (t, classLoader(t, methodClass(t, method)), o, ReferenceClass);
     if (UNLIKELY(t->exception)) return 0;
     
     o = findInHierarchy
@@ -87,22 +90,23 @@ resolve(Thread* t, object pool, unsigned index,
        find, makeError);
     if (UNLIKELY(t->exception)) return 0;
     
-    set(t, pool, SingletonBody + (index * BytesPerWord), o);
+    set(t, codePool(t, methodCode(t, method)),
+        SingletonBody + (index * BytesPerWord), o);
   }
 
   return o;
 }
 
 inline object
-resolveField(Thread* t, object pool, unsigned index)
+resolveField(Thread* t, object method, unsigned index)
 {
-  return resolve(t, pool, index, findFieldInClass, makeNoSuchFieldError);
+  return resolve(t, method, index, findFieldInClass, makeNoSuchFieldError);
 }
 
 inline object
-resolveMethod(Thread* t, object pool, unsigned index)
+resolveMethod(Thread* t, object method, unsigned index)
 {
-  return resolve(t, pool, index, findMethodInClass, makeNoSuchMethodError);
+  return resolve(t, method, index, findMethodInClass, makeNoSuchMethodError);
 }
 
 inline bool
@@ -162,7 +166,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
          &byteArrayBody(t, spec, 1),
          byteArrayLength(t, spec) - 1);
 
-  object class_ = resolveClass(t, elementSpec);
+  object class_ = resolveSystemClass(t, elementSpec);
   PROTECT(t, class_);
 
   for (int32_t i = 0; i < counts[index]; ++i) {

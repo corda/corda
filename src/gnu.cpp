@@ -11,6 +11,7 @@
 #include "machine.h"
 #include "constants.h"
 #include "processor.h"
+#include "util.h"
 
 using namespace vm;
 
@@ -48,7 +49,7 @@ NewDirectByteBuffer(Thread* t, void* address, jlong capacity)
     initSpec = "(I)V";
   }
 
-  object pointerClass = resolveClass(t, pointerClassName);
+  object pointerClass = resolveClass(t, t->m->loader, pointerClassName);
   if (UNLIKELY(pointerClass == 0)) return 0;
   PROTECT(t, pointerClass);
 
@@ -63,7 +64,7 @@ NewDirectByteBuffer(Thread* t, void* address, jlong capacity)
   if (UNLIKELY(t->exception)) return 0;
 
   object bufferClass = resolveClass
-    (t, "java/nio/DirectByteBufferImpl$ReadWrite");
+    (t, t->m->loader, "java/nio/DirectByteBufferImpl$ReadWrite");
   if (UNLIKELY(bufferClass == 0)) return 0;
   PROTECT(t, bufferClass);
   
@@ -124,7 +125,7 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   PROTECT(t, properties);
 
   object method = resolveMethod
-    (t, "java/util/Properties", "setProperty",
+    (t, t->m->loader, "java/util/Properties", "setProperty",
      "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;");
 
   if (UNLIKELY(t->exception)) {
@@ -132,6 +133,9 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   }
 
   PROTECT(t, method);
+
+  setProperty(t, method, properties, "java.version", "1.5");
+  setProperty(t, method, properties, "java.specification.version", "1.5");
 
   setProperty(t, method, properties, "java.vm.name", "Avian");
 
@@ -212,7 +216,7 @@ Avian_gnu_classpath_VMStackWalker_getClassContext
       if (skipCount == 0) {
         if (trace == 0) {
           trace = makeObjectArray
-            (t, arrayBody(t, t->m->types, Machine::ClassType),
+            (t, t->m->loader, arrayBody(t, t->m->types, Machine::ClassType),
              walker->count());
         }
 
@@ -240,7 +244,7 @@ Avian_gnu_classpath_VMStackWalker_getClassContext
 
   if (v.trace == 0) {
     v.trace = makeObjectArray
-      (t, arrayBody(t, t->m->types, Machine::ClassType), 0);
+      (t, t->m->loader, arrayBody(t, t->m->types, Machine::ClassType), 0);
   }
 
   return reinterpret_cast<int64_t>(v.trace);
@@ -341,13 +345,33 @@ Avian_java_lang_VMRuntime_nativeLoad
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Class_primitiveClass
-(Thread* t, object, uintptr_t*);
+(Thread*, object, uintptr_t*);
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_VMClassLoader_getPrimitiveClass
 (Thread* t, object, uintptr_t* arguments)
 {
   return Avian_java_lang_Class_primitiveClass(t, 0, arguments);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_ClassLoader_defineClass
+(Thread*, object, uintptr_t*);
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_VMClassLoader_defineClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  uintptr_t args[]
+    = { arguments[0], arguments[2], arguments[3], arguments[4] };
+
+//   object name = reinterpret_cast<object>(arguments[1]);
+//   char n[stringLength(t, name) + 1];
+//   stringChars(t, name, n);
+//   fprintf(stderr, "define class %s in %p\n", n,
+//           reinterpret_cast<void*>(arguments[0]));
+
+  return Avian_java_lang_ClassLoader_defineClass(t, 0, args);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -396,18 +420,44 @@ Avian_java_lang_VMClassLoader_loadClass
 {
   uintptr_t args[] = { 0, arguments[0] };
 
+//   object name = reinterpret_cast<object>(arguments[0]);
+//   char n[stringLength(t, name) + 1];
+//   stringChars(t, name, n);
+//   fprintf(stderr, "load bootstrap class %s in %p\n", n, t->m->loader);
+
   return Avian_avian_SystemClassLoader_findClass(t, 0, args);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_findLoadedClass
-(Thread*, object, uintptr_t*);
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_VMClassLoader_resolveClass
+(Thread*, object, uintptr_t*)
+{
+  // ignore
+}
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_VMClassLoader_findLoadedClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  uintptr_t args[] = { 0, arguments[1] };
+  object loader = reinterpret_cast<object>(arguments[0]);
+  
+  object map = classLoaderMap(t, loader);
+  if (map) {
+    PROTECT(t, loader);
 
-  return Avian_avian_SystemClassLoader_findLoadedClass(t, 0, args);
+    object name = reinterpret_cast<object>(arguments[1]);
+    PROTECT(t, name);
+
+    object n = makeByteArray(t, stringLength(t, name) + 1);
+    char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
+    stringChars(t, name, s);
+    
+    replace('.', '/', s);
+
+    return reinterpret_cast<int64_t>
+      (hashMapFind
+       (t, classLoaderMap(t, loader), n, byteArrayHash, byteArrayEqual));
+  } else {
+    return 0;
+  }
 }

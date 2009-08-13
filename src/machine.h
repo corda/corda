@@ -1188,7 +1188,7 @@ class Machine {
   System::Monitor* referenceLock;
   System::Library* libraries;
   object loader;
-  object classMap;
+  object loadClassMethod;
   object bootstrapClassMap;
   object monitorMap;
   object stringMap;
@@ -2070,7 +2070,7 @@ fieldSize(Thread* t, object field)
 }
 
 object
-findLoadedClass(Thread* t, object spec);
+findLoadedSystemClass(Thread* t, object spec);
 
 inline bool
 emptyMethod(Thread* t, object method)
@@ -2081,15 +2081,26 @@ emptyMethod(Thread* t, object method)
 }
 
 object
-parseClass(Thread* t, const uint8_t* data, unsigned length);
+parseClass(Thread* t, object loader, const uint8_t* data, unsigned length);
 
 object
-resolveClass(Thread* t, object name);
+resolveClass(Thread* t, object loader, object name);
 
 inline object
-resolveClass(Thread* t, const char* name)
+resolveClass(Thread* t, object loader, const char* name)
 {
-  return resolveClass(t, makeByteArray(t, "%s", name));
+  PROTECT(t, loader);
+  object n = makeByteArray(t, "%s", name);
+  return resolveClass(t, loader, n);
+}
+
+object
+resolveSystemClass(Thread* t, object name);
+
+inline object
+resolveSystemClass(Thread* t, const char* name)
+{
+  return resolveSystemClass(t, makeByteArray(t, "%s", name));
 }
 
 object
@@ -2097,10 +2108,10 @@ resolveMethod(Thread* t, object class_, const char* methodName,
               const char* methodSpec);
 
 inline object
-resolveMethod(Thread* t, const char* className, const char* methodName,
-              const char* methodSpec)
+resolveMethod(Thread* t, object loader, const char* className,
+              const char* methodName, const char* methodSpec)
 {
-  object class_ = resolveClass(t, className);
+  object class_ = resolveClass(t, loader, className);
   if (LIKELY(t->exception == 0)) {
     return resolveMethod(t, class_, methodName, methodSpec);
   } else {
@@ -2113,10 +2124,10 @@ resolveField(Thread* t, object class_, const char* fieldName,
              const char* fieldSpec);
 
 inline object
-resolveField(Thread* t, const char* className, const char* fieldName,
-             const char* fieldSpec)
+resolveField(Thread* t, object loader, const char* className,
+             const char* fieldName, const char* fieldSpec)
 {
-  object class_ = resolveClass(t, className);
+  object class_ = resolveClass(t, loader, className);
   if (LIKELY(t->exception == 0)) {
     return resolveField(t, class_, fieldName, fieldSpec);
   } else {
@@ -2125,7 +2136,7 @@ resolveField(Thread* t, const char* className, const char* fieldName,
 }
 
 object
-resolveObjectArrayClass(Thread* t, object elementSpec);
+resolveObjectArrayClass(Thread* t, object loader, object elementSpec);
 
 bool
 classNeedsInit(Thread* t, object c);
@@ -2140,7 +2151,7 @@ void
 initClass(Thread* t, object c);
 
 object
-makeObjectArray(Thread* t, object elementClass, unsigned count);
+makeObjectArray(Thread* t, object loader, object elementClass, unsigned count);
 
 object
 findInTable(Thread* t, object table, object name, object spec,

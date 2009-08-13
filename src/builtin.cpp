@@ -11,16 +11,11 @@
 #include "machine.h"
 #include "constants.h"
 #include "processor.h"
+#include "util.h"
 
 using namespace vm;
 
 namespace {
-
-inline void
-replace(char a, char b, char* c)
-{
-  for (; *c; ++c) if (*c == a) *c = b;
-}
 
 int64_t
 search(Thread* t, object name, object (*op)(Thread*, object),
@@ -177,15 +172,30 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_ClassLoader_defineClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object b = reinterpret_cast<object>(arguments[0]);
-  int offset = arguments[1];
-  int length = arguments[2];
+  object loader = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, loader);
+
+  object b = reinterpret_cast<object>(arguments[1]);
+  int offset = arguments[2];
+  int length = arguments[3];
 
   uint8_t* buffer = static_cast<uint8_t*>
     (t->m->heap->allocate(length));
   memcpy(buffer, &byteArrayBody(t, b, offset), length);
-  object c = parseClass(t, buffer, length);
+  object c = parseClass(t, loader, buffer, length);
   t->m->heap->free(buffer, length);
+
+  if (c) {
+    if (classLoaderMap(t, loader) == 0) {
+      PROTECT(t, c);
+      object map = makeHashMap(t, 0, 0);
+      set(t, loader, ClassLoaderMap, map);
+    }
+
+    hashMapInsert(t, classLoaderMap(t, loader), className(t, c), c,
+                  byteArrayHash);
+  }
+
   return reinterpret_cast<int64_t>(c);
 }
 
@@ -195,7 +205,7 @@ Avian_avian_SystemClassLoader_findLoadedClass
 {
   object name = reinterpret_cast<object>(arguments[1]);
 
-  return search(t, name, findLoadedClass, true);
+  return search(t, name, findLoadedSystemClass, true);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -204,7 +214,7 @@ Avian_avian_SystemClassLoader_findClass
 {
   object name = reinterpret_cast<object>(arguments[1]);
 
-  return search(t, name, resolveClass, true);
+  return search(t, name, resolveSystemClass, true);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -465,7 +475,8 @@ Avian_java_lang_reflect_Array_makeObjectArray
   object elementType = reinterpret_cast<object>(arguments[0]);
   int length = arguments[1];
 
-  return reinterpret_cast<int64_t>(makeObjectArray(t, elementType, length));
+  return reinterpret_cast<int64_t>
+    (makeObjectArray(t, classLoader(t, elementType), elementType, length));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -767,8 +778,10 @@ Avian_java_lang_Throwable_resolveTrace
   PROTECT(t, trace);
 
   unsigned length = arrayLength(t, trace);
+  object elementType = arrayBody
+    (t, t->m->types, Machine::StackTraceElementType);
   object array = makeObjectArray
-    (t, arrayBody(t, t->m->types, Machine::StackTraceElementType), length);
+    (t, classLoader(t, elementType), elementType, length);
   PROTECT(t, array);
 
   object e = 0;

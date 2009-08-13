@@ -22,6 +22,8 @@ import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
+import java.util.HashMap;
 import java.security.ProtectionDomain;
 import java.security.Permissions;
 import java.security.AllPermission;
@@ -134,11 +136,15 @@ public final class Class <T> implements Type, GenericDeclaration {
   private native void initialize();
   
   public static Class forCanonicalName(String name) {
+    return forCanonicalName(null, name);
+  }
+
+  public static Class forCanonicalName(ClassLoader loader, String name) {
     try {
       if (name.startsWith("[")) {
-        return forName(name);
+        return forName(name, true, loader);
       } else if (name.startsWith("L")) {
-        return forName(name.substring(1, name.length() - 1));
+        return forName(name.substring(1, name.length() - 1), true, loader);
       } else {
         if (name.length() == 1) {
           return primitiveClass(name.charAt(0));
@@ -444,7 +450,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public boolean isArray() {
-    return arrayElementSize != 0;
+    return this != Class.class && arrayElementSize != 0;
   }
 
   public boolean isInstance(Object o) {
@@ -484,7 +490,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public Object[] getSigners() {
-    throw new UnsupportedOperationException();
+    return Static.signers.get(this);
   }
 
   public Annotation[] getDeclaredAnnotations() {
@@ -531,6 +537,12 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   // for GNU Classpath compatibility:
   void setSigners(Object[] signers) {
-    throw new UnsupportedOperationException();
+    if (signers != null && signers.length > 0) {
+      Static.signers.put(this, signers);
+    }
+  }
+
+  private static class Static {
+    public static final Map<Class,Object[]> signers = new HashMap();
   }
 }

@@ -73,23 +73,26 @@ public class Method<T> extends AccessibleObject
         } else if (c == 'L') {
           int start = i + 1;
           i = next(';', spec, start);
-          String name = spec.substring(start, i);
-          types[index++] = Class.forName(name);
+          String name = spec.substring(start, i).replace('/', '.');
+          types[index++] = Class.forName(name, true, class_.getClassLoader());
         } else if (c == '[') {
           int start = i;
           while (spec.charAt(i) == '[') ++i;
 
           if (spec.charAt(i) == 'L') {
             i = next(';', spec, i + 1);
-            String name = spec.substring(start, i);
-            types[index++] = Class.forName(name);
+            String name = spec.substring(start, i).replace('/', '.');
+            types[index++] = Class.forName
+              (name, true, class_.getClassLoader());
           } else {
             String name = spec.substring(start, i + 1);
-            types[index++] = Class.forCanonicalName(name);
+            types[index++] = Class.forCanonicalName
+              (class_.getClassLoader(), name);
           }
         } else {
           String name = spec.substring(i, i + 1);
-          types[index++] = Class.forCanonicalName(name);
+          types[index++] = Class.forCanonicalName
+            (class_.getClassLoader(), name);
         }
       }
     } catch (ClassNotFoundException e) {
@@ -103,6 +106,17 @@ public class Method<T> extends AccessibleObject
     throws InvocationTargetException, IllegalAccessException
   {
     if ((flags & Modifier.STATIC) != 0 || class_.isInstance(instance)) {
+      if ((flags & Modifier.STATIC) != 0) {
+        instance = null;
+      }
+
+      if (arguments == null) {
+        if (parameterCount > 0) {
+          throw new NullPointerException();
+        }
+        arguments = new Object[0];
+      }
+
       if (arguments.length == parameterCount) {
         return invoke(this, instance, arguments);        
       } else {
@@ -121,7 +135,8 @@ public class Method<T> extends AccessibleObject
     for (int i = 0; i < spec.length - 1; ++i) {
       if (spec[i] == ')') {
         return Class.forCanonicalName
-          (new String(spec, i + 1, spec.length - i - 2, false));
+          (class_.getClassLoader(),
+           new String(spec, i + 1, spec.length - i - 2, false));
       }
     }
     throw new RuntimeException();

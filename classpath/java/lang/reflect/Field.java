@@ -53,7 +53,8 @@ public class Field<T> extends AccessibleObject {
   }
 
   public Class getType() {
-    return Class.forCanonicalName(new String(spec, 0, spec.length - 1, false));
+    return Class.forCanonicalName(class_.getClassLoader(),
+                                  new String(spec, 0, spec.length - 1, false));
   }
 
   public Object get(Object instance) throws IllegalAccessException {

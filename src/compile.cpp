@@ -147,7 +147,7 @@ resolveTarget(MyThread* t, void* stack, object method)
     PROTECT(t, method);
     PROTECT(t, class_);
 
-    resolveClass(t, className(t, class_));
+    resolveSystemClass(t, className(t, class_));
     if (UNLIKELY(t->exception)) return 0;
   }
 
@@ -164,7 +164,7 @@ resolveTarget(MyThread* t, object class_, unsigned index)
   if (classVmFlags(t, class_) & BootstrapFlag) {
     PROTECT(t, class_);
 
-    resolveClass(t, className(t, class_));
+    resolveSystemClass(t, className(t, class_));
     if (UNLIKELY(t->exception)) return 0;
   }
 
@@ -2030,10 +2030,11 @@ longToFloat(int64_t a)
 }
 
 uint64_t
-makeBlankObjectArray(MyThread* t, object class_, int32_t length)
+makeBlankObjectArray(MyThread* t, object loader, object class_, int32_t length)
 {
   if (length >= 0) {
-    return reinterpret_cast<uint64_t>(makeObjectArray(t, class_, length));
+    return reinterpret_cast<uint64_t>
+      (makeObjectArray(t, loader, class_, length));
   } else {
     object message = makeString(t, "%d", length);
     t->exception = makeNegativeArraySizeException(t, message);
@@ -2226,6 +2227,9 @@ throw_(MyThread* t, object o)
   } else {
     t->exception = makeNullPointerException(t);
   }
+
+//   printTrace(t, t->exception);
+
   unwind(t);
 }
 
@@ -2746,7 +2750,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case anewarray: {
       uint16_t index = codeReadInt16(t, code, ip);
       
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       Compiler::Operand* length = frame->popInt();
@@ -2757,7 +2761,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           0,
           frame->trace(0, 0),
           BytesPerWord,
-          3, c->register_(t->arch->thread()), frame->append(class_), length));
+          4, c->register_(t->arch->thread()),
+          frame->append(classLoader(t, methodClass(t, context->method))),
+          frame->append(class_), length));
     } break;
 
     case areturn: {
@@ -2810,7 +2816,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case checkcast: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       Compiler::Operand* instance = c->peek(1, 0);
@@ -3085,7 +3091,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case getstatic: {
       uint16_t index = codeReadInt16(t, code, ip);
         
-      object field = resolveField(t, codePool(t, code), index - 1);
+      object field = resolveField(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       Compiler::Operand* table;
@@ -3452,7 +3458,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case instanceof: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       frame->pushInt
@@ -3467,7 +3473,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
       ip += 2;
 
-      object target = resolveMethod(t, codePool(t, code), index - 1);
+      object target = resolveMethod(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
@@ -3502,7 +3508,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case invokespecial: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object target = resolveMethod(t, codePool(t, code), index - 1);
+      object target = resolveMethod(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       object class_ = methodClass(t, context->method);
@@ -3520,7 +3526,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case invokestatic: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object target = resolveMethod(t, codePool(t, code), index - 1);
+      object target = resolveMethod(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       assert(t, methodFlags(t, target) & ACC_STATIC);
@@ -3533,7 +3539,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case invokevirtual: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object target = resolveMethod(t, codePool(t, code), index - 1);
+      object target = resolveMethod(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
@@ -3729,7 +3735,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         if (objectClass(t, v)
             == arrayBody(t, t->m->types, Machine::ByteArrayType))
         {
-          object class_ = resolveClassInPool(t, pool, index - 1); 
+          object class_ = resolveClassInPool(t, context->method, index - 1); 
           if (UNLIKELY(t->exception)) return;
 
           frame->pushObject(frame->append(class_));
@@ -3807,37 +3813,42 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
-      Compiler::Operand* start = 0;
-      uint32_t ipTable[pairCount];
-      for (int32_t i = 0; i < pairCount; ++i) {
-        unsigned index = ip + (i * 8);
-        int32_t key = codeReadInt32(t, code, index);
-        uint32_t newIp = base + codeReadInt32(t, code, index);
-        assert(t, newIp < codeLength(t, code));
+      if (pairCount) {
+        Compiler::Operand* start = 0;
+        uint32_t ipTable[pairCount];
+        for (int32_t i = 0; i < pairCount; ++i) {
+          unsigned index = ip + (i * 8);
+          int32_t key = codeReadInt32(t, code, index);
+          uint32_t newIp = base + codeReadInt32(t, code, index);
+          assert(t, newIp < codeLength(t, code));
 
-        ipTable[i] = newIp;
+          ipTable[i] = newIp;
 
-        Promise* p = c->poolAppend(key);
-        if (i == 0) {
-          start = frame->addressOperand(p);
+          Promise* p = c->poolAppend(key);
+          if (i == 0) {
+            start = frame->addressOperand(p);
+          }
+          c->poolAppendPromise(frame->addressPromise(c->machineIp(newIp)));
         }
-        c->poolAppendPromise(frame->addressPromise(c->machineIp(newIp)));
-      }
-      assert(t, start);
+        assert(t, start);
 
-      c->jmp
-        (c->call
-         (c->constant(getThunk(t, lookUpAddressThunk)),
-          0, 0, BytesPerWord,
-          4, key, start, c->constant(pairCount), default_));
+        c->jmp
+          (c->call
+           (c->constant(getThunk(t, lookUpAddressThunk)),
+            0, 0, BytesPerWord,
+            4, key, start, c->constant(pairCount), default_));
 
-      Compiler::State* state = c->saveState();
+        Compiler::State* state = c->saveState();
 
-      for (int32_t i = 0; i < pairCount; ++i) {
-        compile(t, frame, ipTable[i]);
-        if (UNLIKELY(t->exception)) return;
+        for (int32_t i = 0; i < pairCount; ++i) {
+          compile(t, frame, ipTable[i]);
+          if (UNLIKELY(t->exception)) return;
 
-        c->restoreState(state);
+          c->restoreState(state);
+        }
+      } else {
+        // a switch statement with no cases, apparently
+        c->jmp(default_);
       }
 
       ip = defaultIp;
@@ -3934,7 +3945,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
       uint8_t dimensions = codeBody(t, code, ip++);
 
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
@@ -3958,7 +3969,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case new_: {
       uint16_t index = codeReadInt16(t, code, ip);
         
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       if (classVmFlags(t, class_) & (WeakReferenceFlag | HasFinalizerFlag)) {
@@ -4008,7 +4019,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case putstatic: {
       uint16_t index = codeReadInt16(t, code, ip);
     
-      object field = resolveField(t, codePool(t, code), index - 1);
+      object field = resolveField(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
       object staticTable = 0;
@@ -4310,12 +4321,13 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
 }
 
 void
-translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
+translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
                                intptr_t start)
 {
-  object oldTable = codeExceptionHandlerTable(t, code);
+  object oldTable = codeExceptionHandlerTable(t, methodCode(t, method));
+
   if (oldTable) {
-    PROTECT(t, code);
+    PROTECT(t, method);
     PROTECT(t, oldTable);
 
     unsigned length = exceptionHandlerTableLength(t, oldTable);
@@ -4344,7 +4356,7 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
       object type;
       if (exceptionHandlerCatchType(oldHandler)) {
         type = resolveClassInPool
-          (t, codePool(t, code), exceptionHandlerCatchType(oldHandler) - 1);
+          (t, method, exceptionHandlerCatchType(oldHandler) - 1);
         if (UNLIKELY(t->exception)) return;
       } else {
         type = 0;
@@ -4353,7 +4365,7 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object code,
       set(t, newTable, ArrayBody + ((i + 1) * BytesPerWord), type);
     }
 
-    set(t, code, CodeExceptionHandlerTable, newTable);
+    set(t, methodCode(t, method), CodeExceptionHandlerTable, newTable);
   }
 }
 
@@ -4942,8 +4954,8 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     }
   }
 
-  translateExceptionHandlerTable(t, c, methodCode(t, context->method),
-                                 reinterpret_cast<intptr_t>(start));
+  translateExceptionHandlerTable
+    (t, c, context->method, reinterpret_cast<intptr_t>(start));
   if (UNLIKELY(t->exception)) return 0;
 
   translateLineNumberTable(t, c, methodCode(t, context->method),
@@ -5825,6 +5837,8 @@ returnSpec(MyThread* t, object method)
 object
 returnClass(MyThread* t, object method)
 {
+  PROTECT(t, method);
+
   int8_t* spec = returnSpec(t, method);
   unsigned length = strlen(reinterpret_cast<char*>(spec));
   object name;
@@ -5837,7 +5851,8 @@ returnClass(MyThread* t, object method)
     name = makeByteArray(t, length - 1);
     memcpy(&byteArrayBody(t, name, 0), spec + 1, length - 2);
   }
-  return resolveClass(t, name);
+
+  return resolveClass(t, classLoader(t, methodClass(t, method)), name);
 }
 
 bool
@@ -5959,7 +5974,7 @@ callContinuation(MyThread* t, object continuation, object result,
           PROTECT(t, nextContinuation);
             
           object method = resolveMethod
-            (t, "avian/Continuations", "rewind",
+            (t, t->m->loader, "avian/Continuations", "rewind",
              "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
              "Ljava/lang/Throwable;)V");
             
@@ -6030,7 +6045,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
     if (receiveMethod(t) == 0) {
       object m = resolveMethod
-        (t, "avian/CallbackReceiver", "receive",
+        (t, t->m->loader, "avian/CallbackReceiver", "receive",
          "(Lavian/Callback;)Ljava/lang/Object;");
 
       if (m) {
@@ -6040,7 +6055,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
           (t, t->m->types, Machine::ContinuationType);
         
         if (classVmFlags(t, continuationClass) & BootstrapFlag) {
-          resolveClass(t, vm::className(t, continuationClass));
+          resolveSystemClass(t, vm::className(t, continuationClass));
         }
       }
     }
@@ -6078,7 +6093,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
 
     if (windMethod(t) == 0) {
       object method = resolveMethod
-        (t, "avian/Continuations", "wind",
+        (t, t->m->loader, "avian/Continuations", "wind",
          "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
         "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
@@ -6570,6 +6585,16 @@ class MyProcessor: public Processor {
 
     PROTECT(t, method);
 
+    if (false) {
+      compile(static_cast<MyThread*>(t),
+              ::codeAllocator(static_cast<MyThread*>(t)), 0,
+              resolveMethod(t, t->m->loader,
+                            "java/beans/PropertyChangeSupport",
+                            "firePropertyChange",
+                            "(Ljava/beans/PropertyChangeEvent;)V"));
+      trap();
+    }
+
     compile(static_cast<MyThread*>(t),
             ::codeAllocator(static_cast<MyThread*>(t)), 0, method);
 
@@ -6581,8 +6606,9 @@ class MyProcessor: public Processor {
   }
 
   virtual object
-  invokeList(Thread* t, const char* className, const char* methodName,
-             const char* methodSpec, object this_, va_list arguments)
+  invokeList(Thread* t, object loader, const char* className,
+             const char* methodName, const char* methodSpec,
+             object this_, va_list arguments)
   {
     if (UNLIKELY(t->exception)) return 0;
 
@@ -6595,7 +6621,8 @@ class MyProcessor: public Processor {
     ArgumentList list
       (t, array, size, objectMask, this_, methodSpec, false, arguments);
 
-    object method = resolveMethod(t, className, methodName, methodSpec);
+    object method = resolveMethod
+      (t, loader, className, methodName, methodSpec);
     if (LIKELY(t->exception == 0)) {
       assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
@@ -7064,7 +7091,7 @@ fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
 void
 fixupMethods(Thread* t, BootImage* image, uint8_t* code)
 {
-  for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
+  for (HashMapIterator it(t, classLoaderMap(t, t->m->loader)); it.hasMore();) {
     object c = tripleSecond(t, it.next());
 
     if (classMethodTable(t, c)) {
@@ -7194,7 +7221,9 @@ boot(MyThread* t, BootImage* image)
 
   syncInstructionCache(code, image->codeSize);
 
-  t->m->classMap = makeClassMap(t, classTable, image->classCount, heap);
+  object classMap = makeClassMap(t, classTable, image->classCount, heap);
+  set(t, t->m->loader, ClassLoaderMap, classMap);
+
   t->m->stringMap = makeStringMap(t, stringTable, image->stringCount, heap);
 
   p->callTableSize = image->callCount;

@@ -223,7 +223,7 @@ FindClass(Thread* t, const char* name)
   object n = makeByteArray(t, strlen(name) + 1);
   replace('.', '/', name, &byteArrayBody(t, n, 0));
 
-  return makeLocalReference(t, resolveClass(t, n));
+  return makeLocalReference(t, resolveClass(t, t->m->loader, n));
 }
 
 jint JNICALL
@@ -1213,7 +1213,7 @@ NewObjectArray(Thread* t, jsize length, jclass class_, jobject init)
 {
   ENTER(t, Thread::ActiveState);
 
-  object a = makeObjectArray(t, *class_, length);
+  object a = makeObjectArray(t, classLoader(t, *class_), *class_, length);
   object value = (init ? *init : 0);
   for (jsize i = 0; i < length; ++i) {
     set(t, a, ArrayBody + (i * BytesPerWord), value);

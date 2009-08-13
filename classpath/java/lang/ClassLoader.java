@@ -33,7 +33,8 @@ public abstract class ClassLoader {
     return ClassLoader.class.getClassLoader();
   }
 
-  private static native Class defineClass(byte[] b, int offset, int length);
+  private static native Class defineClass
+    (ClassLoader loader, byte[] b, int offset, int length);
 
   protected Class defineClass(String name, byte[] b, int offset, int length) {
     if (b == null) {
@@ -44,7 +45,7 @@ public abstract class ClassLoader {
       throw new IndexOutOfBoundsException();
     }
 
-    return defineClass(b, offset, length);
+    return defineClass(this, b, offset, length);
   }
 
   protected Class findClass(String name) throws ClassNotFoundException {
