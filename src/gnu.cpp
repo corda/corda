@@ -134,6 +134,7 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 
   PROTECT(t, method);
 
+  setProperty(t, method, properties, "java.version", "1.5");
   setProperty(t, method, properties, "java.specification.version", "1.5");
 
   setProperty(t, method, properties, "java.vm.name", "Avian");
@@ -425,6 +426,13 @@ Avian_java_lang_VMClassLoader_loadClass
 //   fprintf(stderr, "load bootstrap class %s in %p\n", n, t->m->loader);
 
   return Avian_avian_SystemClassLoader_findClass(t, 0, args);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_VMClassLoader_resolveClass
+(Thread*, object, uintptr_t*)
+{
+  // ignore
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
