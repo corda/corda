@@ -2228,6 +2228,8 @@ throw_(MyThread* t, object o)
     t->exception = makeNullPointerException(t);
   }
 
+//   printTrace(t, t->exception);
+
   unwind(t);
 }
 
@@ -3811,37 +3813,42 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
-      Compiler::Operand* start = 0;
-      uint32_t ipTable[pairCount];
-      for (int32_t i = 0; i < pairCount; ++i) {
-        unsigned index = ip + (i * 8);
-        int32_t key = codeReadInt32(t, code, index);
-        uint32_t newIp = base + codeReadInt32(t, code, index);
-        assert(t, newIp < codeLength(t, code));
+      if (pairCount) {
+        Compiler::Operand* start = 0;
+        uint32_t ipTable[pairCount];
+        for (int32_t i = 0; i < pairCount; ++i) {
+          unsigned index = ip + (i * 8);
+          int32_t key = codeReadInt32(t, code, index);
+          uint32_t newIp = base + codeReadInt32(t, code, index);
+          assert(t, newIp < codeLength(t, code));
 
-        ipTable[i] = newIp;
+          ipTable[i] = newIp;
 
-        Promise* p = c->poolAppend(key);
-        if (i == 0) {
-          start = frame->addressOperand(p);
+          Promise* p = c->poolAppend(key);
+          if (i == 0) {
+            start = frame->addressOperand(p);
+          }
+          c->poolAppendPromise(frame->addressPromise(c->machineIp(newIp)));
         }
-        c->poolAppendPromise(frame->addressPromise(c->machineIp(newIp)));
-      }
-      assert(t, start);
+        assert(t, start);
 
-      c->jmp
-        (c->call
-         (c->constant(getThunk(t, lookUpAddressThunk)),
-          0, 0, BytesPerWord,
-          4, key, start, c->constant(pairCount), default_));
+        c->jmp
+          (c->call
+           (c->constant(getThunk(t, lookUpAddressThunk)),
+            0, 0, BytesPerWord,
+            4, key, start, c->constant(pairCount), default_));
 
-      Compiler::State* state = c->saveState();
+        Compiler::State* state = c->saveState();
 
-      for (int32_t i = 0; i < pairCount; ++i) {
-        compile(t, frame, ipTable[i]);
-        if (UNLIKELY(t->exception)) return;
+        for (int32_t i = 0; i < pairCount; ++i) {
+          compile(t, frame, ipTable[i]);
+          if (UNLIKELY(t->exception)) return;
 
-        c->restoreState(state);
+          c->restoreState(state);
+        }
+      } else {
+        // a switch statement with no cases, apparently
+        c->jmp(default_);
       }
 
       ip = defaultIp;
