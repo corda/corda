@@ -55,6 +55,10 @@ public class Throwable implements Serializable {
     return message;
   }
 
+  public String getLocalizedMessage() {
+    return getMessage();
+  }
+
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(getClass().getName());
@@ -77,6 +81,10 @@ public class Throwable implements Serializable {
 
   public StackTraceElement[] getStackTrace() {
     return resolveTrace();
+  }
+
+  public void setStackTrace(StackTraceElement[] trace) {
+    this.trace = trace;
   }
 
   public void printStackTrace(PrintStream out) {
