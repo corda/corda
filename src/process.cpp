@@ -203,14 +203,14 @@ namespace vm {
 void*
 resolveNativeMethod(Thread* t, object method)
 {
-  void* p = ::resolveNativeMethod(t, method, "Java_", 5, -1);
+  void* p = ::resolveNativeMethod(t, method, "Avian_", 6, 3);
   if (p) {
+    methodVmFlags(t, method) |= FastNative;
     return p;
   }
 
-  p = ::resolveNativeMethod(t, method, "Avian_", 6, 3);
+  p = ::resolveNativeMethod(t, method, "Java_", 5, -1);
   if (p) {
-    methodVmFlags(t, method) |= FastNative;
     return p;
   }
 
