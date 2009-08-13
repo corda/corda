@@ -16,4 +16,8 @@ public abstract class AccessibleObject {
   public abstract boolean isAccessible();
 
   public abstract void setAccessible(boolean v);
+
+  public static void setAccessible(AccessibleObject[] array, boolean v) {
+    for (AccessibleObject o: array) o.setAccessible(v);
+  }
 }
