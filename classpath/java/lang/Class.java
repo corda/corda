@@ -450,7 +450,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public boolean isArray() {
-    return arrayElementSize != 0;
+    return this != Class.class && arrayElementSize != 0;
   }
 
   public boolean isInstance(Object o) {
