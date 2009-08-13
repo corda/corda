@@ -357,9 +357,13 @@ public final class String
   }
 
   public int lastIndexOf(String s) {
-    if (s.length == 0) return length;
+    return lastIndexOf(s, length - s.length);
+  }
 
-    for (int i = length - s.length; i >= 0; --i) {
+  public int lastIndexOf(String s, int lastIndex) {
+    if (s.length == 0) return lastIndex;
+
+    for (int i = Math.min(length - s.length, lastIndex); i >= 0; --i) {
       int j = 0;
       for (; j < s.length && i + j < length; ++j) {
         if (charAt(i + j) != s.charAt(j)) {
@@ -521,44 +525,12 @@ public final class String
     }
   }
 
-  public String[] split(String s) {
-    String[] array = new String[(length / s.length) + 1];
-    int index = 0;
-    int last = 0;
-    int position = 0;
-    for (int i = 0; i < length - s.length + 1;) {
-      int j;
-      for (j = 0; j < s.length; ++j) {
-        if (charAt(i + j) != s.charAt(j)) {
-          break;
-        }
-      }
+  public String[] split(String regex) {
+    return split(regex, 0);
+  }
 
-      if (j == s.length) {
-        if (i > 0) {
-          if (i > position) {
-            last = index;
-          }
-          array[index++] = substring(position, i);
-        }
-        i = position = i + s.length;
-      } else {
-        ++ i;
-      }
-    }
-
-    if (position < length) {
-      last = index;
-      array[index] = substring(position, length);
-    }
-
-    if (last + 1 < array.length) {
-      String[] a = new String[last + 1];
-      System.arraycopy(array, 0, a, 0, last + 1);
-      array = a;
-    }
-
-    return array;
+  public String[] split(String regex, int limit) {
+    return Pattern.compile(regex).split(this, limit);
   }
 
   public CharSequence subSequence(int start, int end) {
