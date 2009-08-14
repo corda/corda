@@ -19,6 +19,8 @@ using namespace vm;
 
 namespace {
 
+const unsigned NoByte = 0xFFFF;
+
 bool
 find(Thread* t, Thread* o)
 {
@@ -540,9 +542,21 @@ makeByteArray(Thread* t, const char* format, va_list a)
   return s;
 }
 
+unsigned
+readByte(Stream& s, unsigned* value)
+{
+  if (*value == NoByte) {
+    return s.read1();
+  } else {
+    unsigned r = *value;
+    *value = NoByte;
+    return r;
+  }
+}
+
 object
 parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
-                  unsigned sourceIndex, unsigned lastByteRead)
+                  unsigned sourceIndex, unsigned byteA, unsigned byteB)
 {
   PROTECT(t, bytesSoFar);
   
@@ -554,15 +568,14 @@ parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
     charArrayBody(t, value, vi) = byteArrayBody(t, bytesSoFar, vi);
   }
 
-  unsigned a = lastByteRead;
-  unsigned si = sourceIndex;
-  while (true) {
+  for (unsigned si = sourceIndex; si < length; ++si) {
+    unsigned a = readByte(s, &byteA);
     if (a & 0x80) {
       if (a & 0x20) {
 	// 3 bytes
 	si += 2;
 	assert(t, si < length);
-	unsigned b = s.read1();
+        unsigned b = readByte(s, &byteB);
 	unsigned c = s.read1();
 	charArrayBody(t, value, vi++)
           = ((a & 0xf) << 12) | ((b & 0x3f) << 6) | (c & 0x3f);
@@ -570,7 +583,7 @@ parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
 	// 2 bytes
 	++ si;
 	assert(t, si < length);
-	unsigned b = s.read1();
+        unsigned b = readByte(s, &byteB);
 
 	if (a == 0xC0 and b == 0x80) {
 	  charArrayBody(t, value, vi++) = 0;
@@ -580,12 +593,6 @@ parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
       }
     } else {
       charArrayBody(t, value, vi++) = a;
-    }    
-    
-    if (++si < length) {
-      a = s.read1();
-    } else {
-      break;
     }
   }
 
@@ -611,7 +618,7 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
     if (a & 0x80) {
       if (a & 0x20) {
 	// 3 bytes
-        return parseUtf8NonAscii(t, s, value, vi, si, a);
+        return parseUtf8NonAscii(t, s, value, vi, si, a, NoByte);
       } else {
 	// 2 bytes
 	unsigned b = s.read1();
@@ -621,7 +628,7 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
           assert(t, si < length);
 	  byteArrayBody(t, value, vi++) = 0;
 	} else {
-          return parseUtf8NonAscii(t, s, value, vi, si, a);
+          return parseUtf8NonAscii(t, s, value, vi, si, a, b);
 	}
       }
     } else {
