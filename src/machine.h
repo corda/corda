@@ -74,12 +74,6 @@ enum StackTag {
 const int NativeLine = -1;
 const int UnknownLine = -2;
 
-// class flags (note that we must be careful not to overlap the
-// standard ACC_* flags):
-const unsigned HasFinalMemberFlag = 1 << 13;
-const unsigned SingletonFlag = 1 << 14;
-const unsigned ContinuationFlag = 1 << 15;
-
 // class vmFlags:
 const unsigned ReferenceFlag = 1 << 0;
 const unsigned WeakReferenceFlag = 1 << 1;
@@ -89,6 +83,10 @@ const unsigned InitErrorFlag = 1 << 4;
 const unsigned PrimitiveFlag = 1 << 5;
 const unsigned BootstrapFlag = 1 << 6;
 const unsigned HasFinalizerFlag = 1 << 7;
+const unsigned LinkFlag = 1 << 8;
+const unsigned HasFinalMemberFlag = 1 << 9;
+const unsigned SingletonFlag = 1 << 10;
+const unsigned ContinuationFlag = 1 << 11;
 
 // method vmFlags:
 const unsigned ClassInitFlag = 1 << 0;
@@ -1816,6 +1814,7 @@ makeNew(Thread* t, object class_)
 
   PROTECT(t, class_);
   unsigned sizeInBytes = pad(classFixedSize(t, class_));
+  assert(t, sizeInBytes);
   object instance = allocate(t, sizeInBytes, classObjectMask(t, class_));
   setObjectClass(t, instance, class_);
 
@@ -2103,6 +2102,9 @@ resolveSystemClass(Thread* t, const char* name)
   return resolveSystemClass(t, makeByteArray(t, "%s", name));
 }
 
+void
+linkClass(Thread* t, object loader, object class_);
+
 object
 resolveMethod(Thread* t, object class_, const char* methodName,
               const char* methodSpec);
@@ -2185,7 +2187,7 @@ findMethod(Thread* t, object class_, object name, object spec)
 }
 
 inline object
-findMethod(Thread* t, object method, object class_)
+findVirtualMethod(Thread* t, object method, object class_)
 {
   return arrayBody(t, classVirtualTable(t, class_), 
                    methodOffset(t, method));
@@ -2442,6 +2444,101 @@ makeSingletonOfSize(Thread* t, unsigned count)
     singletonMask(t, o)[0] = 1;
   }
   return o;
+}
+
+inline object
+resolveClassInObject(Thread* t, object loader, object container,
+                     unsigned classOffset)
+{
+  object o = cast<object>(container, classOffset);
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
+    PROTECT(t, container);
+
+    o = resolveClass(t, loader, o);
+    if (UNLIKELY(t->exception)) return 0;
+    
+    set(t, container, classOffset, o);
+  }
+  return o; 
+}
+
+inline object
+resolveClassInPool(Thread* t, object loader, object method, unsigned index)
+{
+  object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType)) {
+    PROTECT(t, method);
+
+    o = resolveClass(t, loader, referenceName(t, o));
+    if (UNLIKELY(t->exception)) return 0;
+    
+    set(t, codePool(t, methodCode(t, method)),
+        SingletonBody + (index * BytesPerWord), o);
+  }
+  return o; 
+}
+
+inline object
+resolveClassInPool(Thread* t, object method, unsigned index)
+{
+  return resolveClassInPool(t, classLoader(t, methodClass(t, method)),
+                            method, index);
+}
+
+inline object
+resolve(Thread* t, object loader, object method, unsigned index,
+        object (*find)(vm::Thread*, object, object, object),
+        object (*makeError)(vm::Thread*, object))
+{
+  object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
+  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
+  {
+    PROTECT(t, method);
+
+    object reference = o;
+    PROTECT(t, reference);
+
+    object class_ = resolveClassInObject(t, loader, o, ReferenceClass);
+    if (UNLIKELY(t->exception)) return 0;
+    
+    o = findInHierarchy
+      (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+       find, makeError);
+    if (UNLIKELY(t->exception)) return 0;
+    
+    set(t, codePool(t, methodCode(t, method)),
+        SingletonBody + (index * BytesPerWord), o);
+  }
+
+  return o;
+}
+
+inline object
+resolveField(Thread* t, object loader, object method, unsigned index)
+{
+  return resolve(t, loader, method, index, findFieldInClass,
+                 makeNoSuchFieldError);
+}
+
+inline object
+resolveField(Thread* t, object method, unsigned index)
+{
+  return resolveField
+    (t, classLoader(t, methodClass(t, method)), method, index);
+}
+
+inline object
+resolveMethod(Thread* t, object loader, object method, unsigned index)
+{
+  return resolve(t, loader, method, index, findMethodInClass,
+                 makeNoSuchMethodError);
+}
+
+inline object
+resolveMethod(Thread* t, object method, unsigned index)
+{
+  return resolveMethod
+    (t, classLoader(t, methodClass(t, method)), method, index);
 }
 
 void

@@ -77,6 +77,7 @@ DetachCurrentThread(Machine* m)
 {
   Thread* t = static_cast<Thread*>(m->localThread->get());
   if (t) {
+    m->localThread->set(0);
     t->exit();
     return 0;
   } else {
@@ -2003,6 +2004,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->SetStaticFloatField = ::SetStaticFloatField;
   envTable->SetStaticDoubleField = ::SetStaticDoubleField;
   envTable->NewGlobalRef = ::NewGlobalRef;
+  envTable->NewWeakGlobalRef = ::NewGlobalRef;
   envTable->DeleteGlobalRef = ::DeleteGlobalRef;
   envTable->ExceptionOccurred = ::ExceptionOccurred;
   envTable->ExceptionDescribe = ::ExceptionDescribe;

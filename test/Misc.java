@@ -91,11 +91,6 @@ public class Misc {
   }
 
   public static void main(String[] args) {
-   expect(new String(new byte[] { 99, 111, 109, 46, 101, 99, 111, 118, 97,
-                                  116, 101, 46, 110, 97, 116, 46, 98, 117,
-                                  115, 46, 83, 121, 109, 98, 111, 108 })
-     .equals("com.ecovate.nat.bus.Symbol"));
-
     expect(queryDefault(new Object()) != null);
 
     { Foo foo = new Foo();

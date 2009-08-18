@@ -183,20 +183,17 @@ Avian_gnu_classpath_VMSystemProperties_preInit
 #endif
 
 #ifdef __i386__
+  setProperty(t, method, properties, "gnu.cpu.endian", "little");
   setProperty(t, method, properties, "os.arch", "x86");
 #elif defined __x86_64__
+  setProperty(t, method, properties, "gnu.cpu.endian", "little");
   setProperty(t, method, properties, "os.arch", "x86_64");
 #elif defined(__ppc__) || defined(__powerpc__) \
   || defined(__ppc64__) || defined(__powerpc64__)
+  setProperty(t, method, properties, "gnu.cpu.endian", "big");
   setProperty(t, method, properties, "os.arch", "ppc");
-#elif defined __ia64__
-  setProperty(t, method, properties, "os.arch", "ia64");
 #elif defined __arm__
   setProperty(t, method, properties, "os.arch", "arm");
-#elif defined __alpha__
-  setProperty(t, method, properties, "os.arch", "alpha");
-#elif defined __sparc64__
-  setProperty(t, method, properties, "os.arch", "sparc64");
 #else
   setProperty(t, method, properties, "os.arch", "unknown");
 #endif
@@ -460,4 +457,44 @@ Avian_java_lang_VMClassLoader_findLoadedClass
   } else {
     return 0;
   }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_compareAndSwapInt
+(Thread*, object, uintptr_t* arguments)
+{
+  object target = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int32_t expect = arguments[4];
+  int32_t update = arguments[5];
+
+  return __sync_bool_compare_and_swap
+    (&cast<int32_t>(target, offset), expect, update);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_compareAndSwapLong
+(Thread*, object, uintptr_t* arguments)
+{
+  object target = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int64_t expect; memcpy(&expect, arguments + 4, 8);
+  int64_t update; memcpy(&update, arguments + 6, 8);
+
+  return __sync_bool_compare_and_swap
+    (&cast<int64_t>(target, offset), expect, update);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_objectFieldOffset
+(Thread* t, object, uintptr_t* arguments)
+{
+  return fieldOffset(t, reinterpret_cast<object>(arguments[1]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_util_concurrent_atomic_AtomicLong_VMSupportsCS8
+(Thread*, object, uintptr_t*)
+{
+  return 0;
 }

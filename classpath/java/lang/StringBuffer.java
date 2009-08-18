@@ -129,10 +129,10 @@ public class StringBuffer implements CharSequence {
     sb.setCharAt(index, ch);
   }
 
-  public synchronized void getChars(int srcOffset, int srcLength, char[] dst,
-                                    int dstOffset)
+  public synchronized void getChars(int srcStart, int srcEnd, char[] dst,
+                                    int dstStart)
   {
-    sb.getChars(srcOffset, srcLength, dst, dstOffset);
+    sb.getChars(srcStart, srcEnd, dst, dstStart);
   }
 
   public synchronized String toString() {

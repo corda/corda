@@ -210,6 +210,8 @@
 
 (type weakReference java/lang/ref/WeakReference)
 
+(type softReference java/lang/ref/SoftReference)
+
 (type phantomReference java/lang/ref/PhantomReference)
 
 (type byteArray [B

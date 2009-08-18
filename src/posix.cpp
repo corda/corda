@@ -129,7 +129,7 @@ class MySystem: public System {
 
     virtual void join() {
       int rv UNUSED = pthread_join(thread, 0);
-      expect(s, rv == 0);
+      //expect(s, rv == 0);
     }
 
     virtual void dispose() {

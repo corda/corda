@@ -199,6 +199,16 @@ Avian_java_lang_ClassLoader_defineClass
   return reinterpret_cast<int64_t>(c);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_ClassLoader_resolveClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object class_ = reinterpret_cast<object>(arguments[1]);
+
+  linkClass(t, loader, class_);
+}
+
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findLoadedClass
 (Thread* t, object, uintptr_t* arguments)
@@ -289,6 +299,16 @@ Avian_java_lang_Class_initialize
   object this_ = reinterpret_cast<object>(arguments[0]);
 
   initClass(t, this_);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_Class_link
+(Thread* t, object, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+  object loader = reinterpret_cast<object>(arguments[1]);
+
+  linkClass(t, loader, this_);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

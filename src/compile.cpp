@@ -139,6 +139,19 @@ resolveThisPointer(MyThread* t, void* stack)
 }
 
 object
+findMethod(Thread* t, object method, object instance)
+{
+  if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+    if (methodVirtual(t, method)) {
+      return findVirtualMethod(t, method, objectClass(t, instance));      
+    } else if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
+      return findInterfaceMethod(t, method, objectClass(t, instance));
+    }
+  }
+  return method;
+}
+
+object
 resolveTarget(MyThread* t, void* stack, object method)
 {
   object class_ = objectClass(t, resolveThisPointer(t, stack));
@@ -154,7 +167,7 @@ resolveTarget(MyThread* t, void* stack, object method)
   if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
     return findInterfaceMethod(t, method, class_);
   } else {
-    return findMethod(t, method, class_);
+    return findVirtualMethod(t, method, class_);
   }
 }
 
@@ -2498,7 +2511,7 @@ bool
 needsReturnBarrier(MyThread* t, object method)
 {
   return (methodFlags(t, method) & ConstructorFlag)
-    and (classFlags(t, methodClass(t, method)) & HasFinalMemberFlag);
+    and (classVmFlags(t, methodClass(t, method)) & HasFinalMemberFlag);
 }
 
 bool
@@ -3513,7 +3526,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       object class_ = methodClass(t, context->method);
       if (isSpecialMethod(t, target, class_)) {
-        target = findMethod(t, target, classSuper(t, class_));
+        target = findVirtualMethod(t, target, classSuper(t, class_));
       }
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
@@ -3733,7 +3746,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (singletonIsObject(t, pool, index - 1)) {
         object v = singletonObject(t, pool, index - 1);
         if (objectClass(t, v)
-            == arrayBody(t, t->m->types, Machine::ByteArrayType))
+            == arrayBody(t, t->m->types, Machine::ReferenceType))
         {
           object class_ = resolveClassInPool(t, context->method, index - 1); 
           if (UNLIKELY(t->exception)) return;
@@ -6333,6 +6346,8 @@ class SegFaultHandler: public System::SignalHandler {
         t->exception = makeNullPointerException(t);
         t->tracing = false;
 
+//         printTrace(t, t->exception);
+
         findUnwindTarget(t, ip, base, stack);
 
         t->ip = oldIp;
@@ -6429,10 +6444,10 @@ class MyProcessor: public Processor {
   virtual object
   makeClass(vm::Thread* t,
             uint16_t flags,
-            uint8_t vmFlags,
-            uint8_t arrayDimensions,
+            uint16_t vmFlags,
             uint16_t fixedSize,
-            uint16_t arrayElementSize,
+            uint8_t arrayElementSize,
+            uint8_t arrayDimensions,
             object objectMask,
             object name,
             object super,
@@ -6445,7 +6460,7 @@ class MyProcessor: public Processor {
             unsigned vtableLength)
   {
     return vm::makeClass
-      (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
+      (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
        objectMask, name, super, interfaceTable, virtualTable, fieldTable,
        methodTable, staticTable, loader, vtableLength);
   }
@@ -6543,6 +6558,8 @@ class MyProcessor: public Processor {
 
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
+    method = findMethod(t, method, this_);
+
     const char* spec = reinterpret_cast<char*>
       (&byteArrayBody(t, methodSpec(t, method), 0));
 
@@ -6574,6 +6591,8 @@ class MyProcessor: public Processor {
 
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
     
+    method = findMethod(t, method, this_);
+
     const char* spec = reinterpret_cast<char*>
       (&byteArrayBody(t, methodSpec(t, method), 0));
 

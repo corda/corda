@@ -26,20 +26,21 @@ public abstract class Enum<E extends Enum<E>> implements Comparable<E> {
   }
 
   public static <T extends Enum<T>> T valueOf(Class<T> enumType, String name) {
-    if (name != null) {
-      try {
-        Method method = enumType.getMethod("values");
-        Enum values[] = (Enum[])(method.invoke(null));
-        for (Enum value : values) {
-          if (name.equals(value.name)) {
-            return (T) value;
-          }
+    if (name == null) throw new NullPointerException();
+
+    try {
+      Method method = enumType.getMethod("values");
+      Enum values[] = (Enum[]) (method.invoke(null));
+      for (Enum value: values) {
+        if (name.equals(value.name)) {
+          return (T) value;
         }
-      } catch (Exception ex) {
-        throw new RuntimeException(ex);
       }
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
     }
-    return null;
+
+    throw new IllegalArgumentException(name);
   }
 
   public int ordinal() {

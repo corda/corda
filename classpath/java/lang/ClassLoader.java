@@ -83,9 +83,7 @@ public abstract class ClassLoader {
     return c;
   }
 
-  protected void resolveClass(Class c) {
-    // ignore
-  }
+  protected native void resolveClass(Class c);
 
   private ClassLoader getParent() {
     return parent;

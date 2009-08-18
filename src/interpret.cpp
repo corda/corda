@@ -844,8 +844,7 @@ findExceptionHandler(Thread* t, object method, unsigned ip)
 
           PROTECT(t, eht);
           catchType = resolveClassInPool
-            (t, codePool(t, methodCode(t, method)),
-             exceptionHandlerCatchType(eh) - 1);
+            (t, method, exceptionHandlerCatchType(eh) - 1);
 
           if (catchType) {
             eh = exceptionHandlerTableBody(t, eht, i);
@@ -1025,10 +1024,12 @@ interpret(Thread* t)
     if (LIKELY(count >= 0)) {
       uint16_t index = codeReadInt16(t, code, ip);
       
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
       if (UNLIKELY(exception)) goto throw_;
             
-      pushObject(t, makeObjectArray(t, class_, count));
+      pushObject(t, makeObjectArray
+                 (t, classLoader(t, methodClass(t, frameMethod(t, frame))),
+                  class_, count));
     } else {
       object message = makeString(t, "%d", count);
       exception = makeNegativeArraySizeException(t, message);
@@ -1211,7 +1212,7 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     if (peekObject(t, sp - 1)) {
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
       if (not instanceOf(t, class_, peekObject(t, sp - 1))) {
@@ -1568,7 +1569,7 @@ interpret(Thread* t)
     if (LIKELY(peekObject(t, sp - 1))) {
       uint16_t index = codeReadInt16(t, code, ip);
     
-      object field = resolveField(t, codePool(t, code), index - 1);
+      object field = resolveField(t, frameMethod(t, frame), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
       assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
@@ -1602,7 +1603,7 @@ interpret(Thread* t)
   case getstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = resolveField(t, codePool(t, code), index - 1);
+    object field = resolveField(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
     assert(t, fieldFlags(t, field) & ACC_STATIC);
@@ -1958,7 +1959,7 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     if (peekObject(t, sp - 1)) {
-      object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+      object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
       if (UNLIKELY(exception)) goto throw_;
 
       if (instanceOf(t, class_, popObject(t))) {
@@ -1977,7 +1978,7 @@ interpret(Thread* t)
     
     ip += 2;
 
-    object method = resolveMethod(t, codePool(t, code), index - 1);
+    object method = resolveMethod(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -1994,7 +1995,7 @@ interpret(Thread* t)
   case invokespecial: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object method = resolveMethod(t, codePool(t, code), index - 1);
+    object method = resolveMethod(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -2004,7 +2005,7 @@ interpret(Thread* t)
         class_ = classSuper(t, class_);
         if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
 
-        code = findMethod(t, method, class_);
+        code = findVirtualMethod(t, method, class_);
       } else {
         code = method;
       }
@@ -2019,7 +2020,7 @@ interpret(Thread* t)
   case invokestatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object method = resolveMethod(t, codePool(t, code), index - 1);
+    object method = resolveMethod(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, method);
     
@@ -2031,7 +2032,7 @@ interpret(Thread* t)
   case invokevirtual: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object method = resolveMethod(t, codePool(t, code), index - 1);
+    object method = resolveMethod(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
@@ -2039,7 +2040,7 @@ interpret(Thread* t)
       object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
       if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
 
-      code = findMethod(t, method, class_);
+      code = findVirtualMethod(t, method, class_);
       goto invoke;
     } else {
       exception = makeNullPointerException(t);
@@ -2246,9 +2247,10 @@ interpret(Thread* t)
     if (singletonIsObject(t, pool, index - 1)) {
       object v = singletonObject(t, pool, index - 1);
       if (objectClass(t, v)
-          == arrayBody(t, t->m->types, Machine::ByteArrayType))
+          == arrayBody(t, t->m->types, Machine::ReferenceType))
       {
-        object class_ = resolveClassInPool(t, pool, index - 1); 
+        object class_ = resolveClassInPool
+          (t, frameMethod(t, frame), index - 1); 
         if (UNLIKELY(exception)) goto throw_;
 
         pushObject(t, class_);
@@ -2455,7 +2457,7 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
     uint8_t dimensions = codeBody(t, code, ip++);
 
-    object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+    object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, class_);
 
@@ -2481,7 +2483,7 @@ interpret(Thread* t)
   case new_: {
     uint16_t index = codeReadInt16(t, code, ip);
     
-    object class_ = resolveClassInPool(t, codePool(t, code), index - 1);
+    object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, class_);
 
@@ -2555,7 +2557,7 @@ interpret(Thread* t)
   case putfield: {
     uint16_t index = codeReadInt16(t, code, ip);
     
-    object field = resolveField(t, codePool(t, code), index - 1);
+    object field = resolveField(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
     if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
@@ -2645,7 +2647,7 @@ interpret(Thread* t)
   case putstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = resolveField(t, codePool(t, code), index - 1);
+    object field = resolveField(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
     if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
@@ -2724,7 +2726,7 @@ interpret(Thread* t)
   case return_: {
     object method = frameMethod(t, frame);
     if ((methodFlags(t, method) & ConstructorFlag)
-        and (classFlags(t, methodClass(t, method)) & HasFinalMemberFlag))
+        and (classVmFlags(t, methodClass(t, method)) & HasFinalMemberFlag))
     {
       storeStoreMemoryBarrier();
     }
@@ -2825,13 +2827,14 @@ interpret(Thread* t)
     ip -= 2;
 
     uint16_t index = codeReadInt16(t, code, ip);
-    object method = resolveMethod(t, codePool(t, code), index - 1);
+    object method = resolveMethod(t, frameMethod(t, frame), index - 1);
 
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
     assert(t, classVmFlags(t, class_) & BootstrapFlag);
     
-    resolveClass(t, className(t, class_));
+    resolveClass(t, classLoader(t, methodClass(t, frameMethod(t, frame))),
+                 className(t, class_));
     if (UNLIKELY(exception)) goto throw_;
 
     ip -= 3;
@@ -2999,13 +3002,13 @@ invoke(Thread* t, object method)
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
 
     if (classVmFlags(t, class_) & BootstrapFlag) {
-      resolveClass(t, className(t, class_));
+      resolveClass(t, t->m->loader, className(t, class_));
     }
 
     if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
       method = findInterfaceMethod(t, method, class_);
     } else {
-      method = findMethod(t, method, class_);
+      method = findVirtualMethod(t, method, class_);
     }
   } else {
     class_ = methodClass(t, method);
@@ -3100,10 +3103,10 @@ class MyProcessor: public Processor {
   virtual object
   makeClass(vm::Thread* t,
             uint16_t flags,
-            uint8_t vmFlags,
-            uint8_t arrayDimensions,
+            uint16_t vmFlags,
             uint16_t fixedSize,
-            uint16_t arrayElementSize,
+            uint8_t arrayElementSize,
+            uint8_t arrayDimensions,
             object objectMask,
             object name,
             object super,
@@ -3116,7 +3119,7 @@ class MyProcessor: public Processor {
             unsigned vtableLength UNUSED)
   {
     return vm::makeClass
-      (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
+      (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
        objectMask, name, super, interfaceTable, virtualTable, fieldTable,
        methodTable, staticTable, loader, 0);
   }
@@ -3230,8 +3233,9 @@ class MyProcessor: public Processor {
   }
 
   virtual object
-  invokeList(vm::Thread* vmt, const char* className, const char* methodName,
-             const char* methodSpec, object this_, va_list arguments)
+  invokeList(vm::Thread* vmt, object loader, const char* className,
+             const char* methodName, const char* methodSpec, object this_,
+             va_list arguments)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
@@ -3247,7 +3251,9 @@ class MyProcessor: public Processor {
 
     pushArguments(t, this_, methodSpec, false, arguments);
 
-    object method = resolveMethod(t, className, methodName, methodSpec);
+    object method = resolveMethod
+      (t, loader, className, methodName, methodSpec);
+
     if (LIKELY(t->exception == 0)) {
       assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 

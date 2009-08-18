@@ -32,10 +32,10 @@ public final class Class <T> implements Type, GenericDeclaration {
   private static final int PrimitiveFlag = 1 << 5;
 
   private short flags;
-  private byte vmFlags;
-  private byte arrayDimensions;
+  private short vmFlags;
   private short fixedSize;
-  private short arrayElementSize;
+  private byte arrayElementSize;
+  private byte arrayDimensions;
   private int[] objectMask;
   private byte[] name;
   private Class super_;
@@ -96,6 +96,32 @@ public final class Class <T> implements Type, GenericDeclaration {
       (replace('/', '.', name, 0, name.length - 1), 0, name.length - 1, false);
   }
 
+  public String getCanonicalName() {
+    if ((vmFlags & PrimitiveFlag) != 0) {
+      return getName();
+    } else if (isArray()) {
+      return getComponentType().getCanonicalName() + "[]";
+    } else {
+      return getName().replace('$', '.');
+    }
+  }
+
+  public String getSimpleName() {
+    if ((vmFlags & PrimitiveFlag) != 0) {
+      return getName();
+    } else if (isArray()) {
+      return getComponentType().getSimpleName() + "[]";
+    } else {
+      String name = getCanonicalName();
+      int index = name.lastIndexOf('.');
+      if (index >= 0) {
+        return name.substring(index + 1);
+      } else {
+        return name;
+      }
+    }
+  }
+
   public Object staticTable() {
     return staticTable;
   }
@@ -125,6 +151,7 @@ public final class Class <T> implements Type, GenericDeclaration {
       loader = Class.class.loader;
     }
     Class c = loader.loadClass(name);
+    c.link(loader);
     if (initialize) {
       c.initialize();
     }
@@ -132,6 +159,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   private static native Class primitiveClass(char name);
+
+  private native void link(ClassLoader loader);
 
   private native void initialize();
   
@@ -159,6 +188,26 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   public Class getComponentType() {
     if (isArray()) {
+      String n = getName();
+      if ("[Z".equals(n)) {
+        return primitiveClass('Z');
+      } else if ("[B".equals(n)) {
+        return primitiveClass('B');
+      } else if ("[S".equals(n)) {
+        return primitiveClass('S');
+      } else if ("[C".equals(n)) {
+        return primitiveClass('C');
+      } else if ("[I".equals(n)) {
+        return primitiveClass('I');
+      } else if ("[F".equals(n)) {
+        return primitiveClass('F');
+      } else if ("[J".equals(n)) {
+        return primitiveClass('J');
+      } else if ("[D".equals(n)) {
+        return primitiveClass('D');
+      }
+
+      if (staticTable == null) throw new AssertionError(name);
       return (Class) staticTable;
     } else {
       return null;
@@ -169,6 +218,8 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   private Field findField(String name) {
     if (fieldTable != null) {
+      link(loader);
+
       for (int i = 0; i < fieldTable.length; ++i) {
         if (fieldTable[i].getName().equals(name)) {
           return fieldTable[i];
@@ -212,8 +263,12 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   private Method findMethod(String name, Class[] parameterTypes) {
     if (methodTable != null) {
-      if (parameterTypes == null)
+      link(loader);
+
+      if (parameterTypes == null) {
         parameterTypes = new Class[0];
+      }
+
       for (int i = 0; i < methodTable.length; ++i) {
         if (methodTable[i].getName().equals(name)
             && match(parameterTypes, methodTable[i].getParameterTypes()))
@@ -302,6 +357,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Constructor[] getDeclaredConstructors() {
     Constructor[] array = new Constructor[countConstructors(false)];
     if (methodTable != null) {
+      link(loader);
+
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (methodTable[i].getName().equals("<init>")) {
@@ -316,6 +373,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Constructor[] getConstructors() {
     Constructor[] array = new Constructor[countConstructors(true)];
     if (methodTable != null) {
+      link(loader);
+
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
@@ -354,6 +413,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Field[] getFields() {
     Field[] array = new Field[countPublicFields()];
     if (fieldTable != null) {
+      link(loader);
+
       int ai = 0;
       for (int i = 0; i < fieldTable.length; ++i) {
         if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
@@ -382,6 +443,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Method[] getDeclaredMethods() {
     Method[] array = new Method[countMethods(false)];
     if (methodTable != null) {
+      link(loader);
+
       int ai = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (! methodTable[i].getName().startsWith("<")) {
@@ -396,6 +459,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Method[] getMethods() {
     Method[] array = new Method[countMethods(true)];
     if (methodTable != null) {
+      link(loader);
+
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
@@ -411,6 +476,8 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   public Class[] getInterfaces() {
     if (interfaceTable != null) {
+      link(loader);
+
       Class[] array = new Class[interfaceTable.length / 2];
       for (int i = 0; i < array.length; ++i) {
         array[i] = (Class) interfaceTable[i * 2];
@@ -450,7 +517,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public boolean isArray() {
-    return this != Class.class && arrayElementSize != 0;
+    return arrayDimensions != 0;
   }
 
   public boolean isInstance(Object o) {
@@ -485,12 +552,35 @@ public final class Class <T> implements Type, GenericDeclaration {
     return false;
   }
 
+  public <T> Class<? extends T> asSubclass(Class<T> c) {
+    if (! c.isAssignableFrom(this)) {
+      throw new ClassCastException();
+    }
+
+    return (Class<? extends T>) this;
+  }
+
   public T cast(Object o) {
     return (T) o;
   }
 
   public Object[] getSigners() {
     return Static.signers.get(this);
+  }
+
+  public Package getPackage() {
+    if ((vmFlags & PrimitiveFlag) != 0 || isArray()) {
+      return null;
+    } else {
+      String name = getCanonicalName();
+      int index = name.lastIndexOf('.');
+      if (index >= 0) {
+        return new Package(name.substring(0, index),
+                           null, null, null, null, null, null, null, null);
+      } else {
+        return null;
+      }
+    }
   }
 
   public Annotation[] getDeclaredAnnotations() {
@@ -502,10 +592,6 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public TypeVariable<Class<T>>[] getTypeParameters() {
-    throw new UnsupportedOperationException();
-  }
-
-  public String getSimpleName() {
     throw new UnsupportedOperationException();
   }
 
