@@ -543,6 +543,50 @@ makeByteArray(Thread* t, const char* format, va_list a)
 }
 
 unsigned
+resolveSpec(Thread* t, object loader, object spec, unsigned offset)
+{
+  int8_t* s = &byteArrayBody(t, spec, offset);
+  unsigned result;
+  switch (*s) {
+  case 'L':
+    ++ offset;
+    while (*s and *s != ';') ++ s;
+    result = s + 1 - &byteArrayBody(t, spec, 0);
+    break;
+
+  case '[':
+    while (*s == '[') ++ s;
+    switch (*s) {
+    case 'L':
+      while (*s and *s != ';') ++ s;
+      ++ s;
+      break;
+                    
+    default:
+      ++ s;
+      break;
+    }
+    result = s - &byteArrayBody(t, spec, 0);
+    break;
+
+  default:
+    return offset + 1;
+  }
+
+  PROTECT(t, spec);
+
+  unsigned length = s - &byteArrayBody(t, spec, offset);
+
+  object name = makeByteArray(t, length + 1);
+  memcpy(&byteArrayBody(t, name, 0),
+         &byteArrayBody(t, spec, offset),
+         length);
+  resolveClass(t, loader, name);
+
+  return result;
+}
+
+unsigned
 readByte(Stream& s, unsigned* value)
 {
   if (*value == NoByte) {
@@ -706,7 +750,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       unsigned si = s.read2() - 1;
       parsePoolEntry(t, s, index, pool, si);
         
-      object value = singletonObject(t, pool, si);
+      object value = makeReference(t, 0, singletonObject(t, pool, si), 0);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
     }
   } return 1;
@@ -749,7 +793,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       parsePoolEntry(t, s, index, pool, ci);
       parsePoolEntry(t, s, index, pool, nti);
         
-      object class_ = singletonObject(t, pool, ci);
+      object class_ = referenceName(t, singletonObject(t, pool, ci));
       object nameAndType = singletonObject(t, pool, nti);
       object value = makeReference
           (t, class_, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
@@ -861,7 +905,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 
   unsigned count = s.read2();
   for (unsigned i = 0; i < count; ++i) {
-    object name = singletonObject(t, pool, s.read2() - 1);
+    object name = referenceName(t, singletonObject(t, pool, s.read2() - 1));
     PROTECT(t, name);
 
     object interface = resolveClass(t, classLoader(t, class_), name);
@@ -983,7 +1027,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         staticTypes[staticCount++] = code;
       } else {
         if (flags & ACC_FINAL) {
-          classFlags(t, class_) |= HasFinalMemberFlag;
+          classVmFlags(t, class_) |= HasFinalMemberFlag;
         }
 
         unsigned excess = (memberOffset % fieldSize(t, code)) % BytesPerWord;
@@ -1565,9 +1609,9 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
     (t,
      0,
      0,
-     dimensions,
      2 * BytesPerWord,
      BytesPerWord,
+     dimensions,
      classObjectMask(t, arrayBody(t, t->m->types, Machine::ArrayType)),
      spec,
      arrayBody(t, t->m->types, Machine::JobjectType),
@@ -1704,7 +1748,7 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
   super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
 
   object class_ = t->m->processor->makeClass
-    (t, 0, BootstrapFlag, 0, fixedSize, arrayElementSize, mask, 0, super, 0, 0,
+    (t, 0, BootstrapFlag, fixedSize, arrayElementSize, 0, mask, 0, super, 0, 0,
      0, 0, 0, t->m->loader, vtableLength);
 
   set(t, t->m->types, ArrayBody + (type * BytesPerWord), class_);
@@ -1773,10 +1817,10 @@ boot(Thread* t)
 
   m->unsafe = false;
 
-  classFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+  classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
     |= SingletonFlag;
 
-  classFlags(t, arrayBody(t, m->types, Machine::ContinuationType))
+  classVmFlags(t, arrayBody(t, m->types, Machine::ContinuationType))
     |= ContinuationFlag;
 
   classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
@@ -2074,8 +2118,6 @@ Thread::init()
 
     m->localThread->set(this);
   } else {
-    assert(this, javaThread);
-
     peer = parent->child;
     parent->child = this;
   }
@@ -2083,10 +2125,15 @@ Thread::init()
   if (javaThread) {
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   } else {
+    object group;
+    if (parent) {
+      group = threadGroup(this, parent->javaThread);
+    } else {
+      group = makeThreadGroup(this, 0, 0);
+    }
+
     const unsigned NewState = 0;
     const unsigned NormalPriority = 5;
-
-    object group = makeThreadGroup(this, 0, 0);
 
     this->javaThread = makeThread
       (this, reinterpret_cast<int64_t>(this), 0, 0, NewState, NormalPriority,
@@ -2663,11 +2710,12 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
   object class_ = makeClass(t,
                             flags,
                             0, // VM flags
-                            0, // array dimensions
                             0, // fixed size
                             0, // array size
+                            0, // array dimensions
                             0, // object mask
-                            singletonObject(t, pool, name - 1),
+                            referenceName
+                            (t, singletonObject(t, pool, name - 1)),
                             0, // super
                             0, // interfaces
                             0, // vtable
@@ -2680,7 +2728,8 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
   
   unsigned super = s.read2();
   if (super) {
-    object sc = resolveClass(t, loader, singletonObject(t, pool, super - 1));
+    object sc = resolveClass
+      (t, loader, referenceName(t, singletonObject(t, pool, super - 1)));
     if (UNLIKELY(t->exception)) return 0;
 
     set(t, class_, ClassSuper, sc);
@@ -2706,9 +2755,9 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
     (t,
      classFlags(t, class_),
      classVmFlags(t, class_),
-     classArrayDimensions(t, class_),
      classFixedSize(t, class_),
      classArrayElementSize(t, class_),
+     classArrayDimensions(t, class_),
      classObjectMask(t, class_),
      className(t, class_),
      classSuper(t, class_),
@@ -2864,6 +2913,95 @@ resolveClass(Thread* t, object loader, object spec)
     }
 
     return class_;
+  }
+}
+
+void
+linkClass(Thread* t, object loader, object class_)
+{
+  PROTECT(t, loader);
+  PROTECT(t, class_);
+
+  ACQUIRE(t, t->m->classLock);
+
+  if ((classVmFlags(t, class_) & LinkFlag) == 0) {
+    if (classSuper(t, class_)) {
+      linkClass(t, loader, classSuper(t, class_));
+    }
+
+    if (classInterfaceTable(t, class_)) { 
+      unsigned increment = 2;
+      if (classFlags(t, class_) & ACC_INTERFACE) {
+        increment = 1;
+      }
+
+      for (unsigned i = 0; i < arrayLength(t, classInterfaceTable(t, class_));
+           i += increment)
+      {
+        linkClass(t, loader, arrayBody(t, classInterfaceTable(t, class_), i));
+      }
+    }
+
+    if (classMethodTable(t, class_)) {
+      bool resolvedPool = false;
+      for (unsigned i = 0;
+           i < arrayLength(t, classMethodTable(t, class_)); ++i)
+      {
+        object method = arrayBody(t, classMethodTable(t, class_), i);
+        PROTECT(t, method);
+
+        object code = methodCode(t, method);
+        if ((not resolvedPool)
+            and code
+            and codePool(t, code)
+            and objectClass(t, codePool(t, code))
+            == arrayBody(t, t->m->types, Machine::SingletonType))
+        {
+          object pool = codePool(t, code);
+          PROTECT(t, pool);
+          unsigned count = singletonCount(t, pool);
+          for (unsigned j = 0; j < count; ++j) {
+            if (singletonIsObject(t, pool, j)) {
+              object entry = singletonObject(t, pool, j);
+              if (objectClass(t, entry)
+                  == arrayBody(t, t->m->types, Machine::ReferenceType))
+              {
+                if (referenceSpec(t, entry) == 0) {
+                  resolveClassInPool(t, loader, method, j);
+                } else if (byteArrayBody(t, referenceSpec(t, entry), 0) == '(')
+                {
+                  resolveMethod(t, loader, method, j);
+                } else {
+                  resolveField(t, loader, method, j);
+                }
+
+                if (UNLIKELY(t->exception)) return;
+              }
+            }
+          }
+
+          resolvedPool = true;
+        }
+      
+        object spec = methodSpec(t, method);
+        PROTECT(t, spec);
+        for (unsigned j = 1; j < byteArrayLength(t, spec);) {
+          j = resolveSpec(t, loader, spec, j);
+          if (UNLIKELY(t->exception)) return;
+        }    
+      }
+    }
+
+    if (classFieldTable(t, class_)) {
+      for (unsigned i = 0; i < arrayLength(t, classFieldTable(t, class_)); ++i)
+      {
+        resolveSpec(t, loader, fieldSpec
+                    (t, arrayBody(t, classFieldTable(t, class_), i)), 0);
+        if (UNLIKELY(t->exception)) return;
+      }
+    }
+
+    classVmFlags(t, class_) |= LinkFlag;
   }
 }
 
@@ -3286,7 +3424,7 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
            intArrayLength(t, objectMask) * 4);
 
     more = ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
-  } else if (classFlags(t, class_) & SingletonFlag) {
+  } else if (classVmFlags(t, class_) & SingletonFlag) {
     unsigned length = singletonLength(t, o);
     if (length) {
       more = ::walk(t, w, singletonMask(t, o),
@@ -3298,7 +3436,7 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
     more = w->visit(0);
   }
 
-  if (more and classFlags(t, class_) & ContinuationFlag) {
+  if (more and classVmFlags(t, class_) & ContinuationFlag) {
     t->m->processor->walkContinuationBody(t, w, o, start);
   }
 }

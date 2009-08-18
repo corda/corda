@@ -60,10 +60,10 @@ class Processor {
   virtual object
   makeClass(Thread* t,
             uint16_t flags,
-            uint8_t vmFlags,
-            uint8_t arrayDimensions,
+            uint16_t vmFlags,
             uint16_t fixedSize,
-            uint16_t arrayElementSize,
+            uint8_t arrayElementSize,
+            uint8_t arrayDimensions,
             object objectMask,
             object name,
             object super,

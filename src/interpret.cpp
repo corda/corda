@@ -2246,7 +2246,7 @@ interpret(Thread* t)
     if (singletonIsObject(t, pool, index - 1)) {
       object v = singletonObject(t, pool, index - 1);
       if (objectClass(t, v)
-          == arrayBody(t, t->m->types, Machine::ByteArrayType))
+          == arrayBody(t, t->m->types, Machine::ReferenceType))
       {
         object class_ = resolveClassInPool(t, pool, index - 1); 
         if (UNLIKELY(exception)) goto throw_;
@@ -2724,7 +2724,7 @@ interpret(Thread* t)
   case return_: {
     object method = frameMethod(t, frame);
     if ((methodFlags(t, method) & ConstructorFlag)
-        and (classFlags(t, methodClass(t, method)) & HasFinalMemberFlag))
+        and (classVmFlags(t, methodClass(t, method)) & HasFinalMemberFlag))
     {
       storeStoreMemoryBarrier();
     }
@@ -3100,10 +3100,10 @@ class MyProcessor: public Processor {
   virtual object
   makeClass(vm::Thread* t,
             uint16_t flags,
-            uint8_t vmFlags,
-            uint8_t arrayDimensions,
+            uint16_t vmFlags,
             uint16_t fixedSize,
-            uint16_t arrayElementSize,
+            uint8_t arrayElementSize,
+            uint8_t arrayDimensions,
             object objectMask,
             object name,
             object super,
@@ -3116,7 +3116,7 @@ class MyProcessor: public Processor {
             unsigned vtableLength UNUSED)
   {
     return vm::makeClass
-      (t, flags, vmFlags, arrayDimensions, fixedSize, arrayElementSize,
+      (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
        objectMask, name, super, interfaceTable, virtualTable, fieldTable,
        methodTable, staticTable, loader, 0);
   }

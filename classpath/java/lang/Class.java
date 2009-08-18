@@ -32,10 +32,10 @@ public final class Class <T> implements Type, GenericDeclaration {
   private static final int PrimitiveFlag = 1 << 5;
 
   private short flags;
-  private byte vmFlags;
-  private byte arrayDimensions;
+  private short vmFlags;
   private short fixedSize;
-  private short arrayElementSize;
+  private byte arrayElementSize;
+  private byte arrayDimensions;
   private int[] objectMask;
   private byte[] name;
   private Class super_;
@@ -151,6 +151,7 @@ public final class Class <T> implements Type, GenericDeclaration {
       loader = Class.class.loader;
     }
     Class c = loader.loadClass(name);
+    c.link(loader);
     if (initialize) {
       c.initialize();
     }
@@ -158,6 +159,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   private static native Class primitiveClass(char name);
+
+  private native void link(ClassLoader loader);
 
   private native void initialize();
   
@@ -215,6 +218,8 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   private Field findField(String name) {
     if (fieldTable != null) {
+      link(loader);
+
       for (int i = 0; i < fieldTable.length; ++i) {
         if (fieldTable[i].getName().equals(name)) {
           return fieldTable[i];
@@ -258,8 +263,12 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   private Method findMethod(String name, Class[] parameterTypes) {
     if (methodTable != null) {
-      if (parameterTypes == null)
+      link(loader);
+
+      if (parameterTypes == null) {
         parameterTypes = new Class[0];
+      }
+
       for (int i = 0; i < methodTable.length; ++i) {
         if (methodTable[i].getName().equals(name)
             && match(parameterTypes, methodTable[i].getParameterTypes()))
@@ -348,6 +357,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Constructor[] getDeclaredConstructors() {
     Constructor[] array = new Constructor[countConstructors(false)];
     if (methodTable != null) {
+      link(loader);
+
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (methodTable[i].getName().equals("<init>")) {
@@ -362,6 +373,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Constructor[] getConstructors() {
     Constructor[] array = new Constructor[countConstructors(true)];
     if (methodTable != null) {
+      link(loader);
+
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
@@ -400,6 +413,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Field[] getFields() {
     Field[] array = new Field[countPublicFields()];
     if (fieldTable != null) {
+      link(loader);
+
       int ai = 0;
       for (int i = 0; i < fieldTable.length; ++i) {
         if (((fieldTable[i].getModifiers() & Modifier.PUBLIC)) != 0) {
@@ -428,6 +443,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Method[] getDeclaredMethods() {
     Method[] array = new Method[countMethods(false)];
     if (methodTable != null) {
+      link(loader);
+
       int ai = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (! methodTable[i].getName().startsWith("<")) {
@@ -442,6 +459,8 @@ public final class Class <T> implements Type, GenericDeclaration {
   public Method[] getMethods() {
     Method[] array = new Method[countMethods(true)];
     if (methodTable != null) {
+      link(loader);
+
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
         if (((methodTable[i].getModifiers() & Modifier.PUBLIC) != 0)
@@ -457,6 +476,8 @@ public final class Class <T> implements Type, GenericDeclaration {
 
   public Class[] getInterfaces() {
     if (interfaceTable != null) {
+      link(loader);
+
       Class[] array = new Class[interfaceTable.length / 2];
       for (int i = 0; i < array.length; ++i) {
         array[i] = (Class) interfaceTable[i * 2];
@@ -496,7 +517,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public boolean isArray() {
-    return this != Class.class && arrayElementSize != 0;
+    return arrayDimensions != 0;
   }
 
   public boolean isInstance(Object o) {

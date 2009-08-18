@@ -77,6 +77,7 @@ DetachCurrentThread(Machine* m)
 {
   Thread* t = static_cast<Thread*>(m->localThread->get());
   if (t) {
+    m->localThread->set(0);
     t->exit();
     return 0;
   } else {
