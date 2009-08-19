@@ -252,9 +252,13 @@ public class Thread implements Runnable {
     return daemon;
   }
 
-  public void setDaemon(boolean v) {
-    daemon = v;
+  public synchronized void setDaemon(boolean v) {
+    if (v != daemon) {
+      setDaemon(this, v);
+    }
   }
+
+  private static native void setDaemon(Thread t, boolean increment);
 
   public static native void yield();
 
