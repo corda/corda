@@ -1245,7 +1245,7 @@ SetObjectArrayElement(Thread* t, jobjectArray array, jsize index,
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, *array, ArrayBody + (index * BytesPerWord), *value);
+  set(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
 }
 
 jbooleanArray JNICALL
