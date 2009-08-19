@@ -2943,48 +2943,13 @@ linkClass(Thread* t, object loader, object class_)
     }
 
     if (classMethodTable(t, class_)) {
-      bool resolvedPool = false;
       for (unsigned i = 0;
            i < arrayLength(t, classMethodTable(t, class_)); ++i)
       {
-        object method = arrayBody(t, classMethodTable(t, class_), i);
-        PROTECT(t, method);
-
-        object code = methodCode(t, method);
-        if ((not resolvedPool)
-            and code
-            and codePool(t, code)
-            and objectClass(t, codePool(t, code))
-            == arrayBody(t, t->m->types, Machine::SingletonType))
-        {
-          object pool = codePool(t, code);
-          PROTECT(t, pool);
-          unsigned count = singletonCount(t, pool);
-          for (unsigned j = 0; j < count; ++j) {
-            if (singletonIsObject(t, pool, j)) {
-              object entry = singletonObject(t, pool, j);
-              if (objectClass(t, entry)
-                  == arrayBody(t, t->m->types, Machine::ReferenceType))
-              {
-                if (referenceSpec(t, entry) == 0) {
-                  resolveClassInPool(t, loader, method, j);
-                } else if (byteArrayBody(t, referenceSpec(t, entry), 0) == '(')
-                {
-                  resolveMethod(t, loader, method, j);
-                } else {
-                  resolveField(t, loader, method, j);
-                }
-
-                if (UNLIKELY(t->exception)) return;
-              }
-            }
-          }
-
-          resolvedPool = true;
-        }
-      
-        object spec = methodSpec(t, method);
+        object spec = methodSpec
+          (t, arrayBody(t, classMethodTable(t, class_), i));
         PROTECT(t, spec);
+
         for (unsigned j = 1; j < byteArrayLength(t, spec);) {
           j = resolveSpec(t, loader, spec, j);
           if (UNLIKELY(t->exception)) return;

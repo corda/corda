@@ -77,8 +77,17 @@ DetachCurrentThread(Machine* m)
 {
   Thread* t = static_cast<Thread*>(m->localThread->get());
   if (t) {
+    expect(t, t != m->rootThread);
+
     m->localThread->set(0);
-    t->exit();
+
+    ACQUIRE_RAW(t, t->m->stateLock);
+
+    enter(t, Thread::ActiveState);
+    enter(t, Thread::ZombieState);
+
+    t->state = Thread::JoinedState;
+
     return 0;
   } else {
     return -1;
@@ -1236,7 +1245,7 @@ SetObjectArrayElement(Thread* t, jobjectArray array, jsize index,
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, *array, ArrayBody + (index * BytesPerWord), *value);
+  set(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
 }
 
 jbooleanArray JNICALL
