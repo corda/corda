@@ -30,6 +30,16 @@ public class StringBuffer implements CharSequence {
     return this;
   }
 
+  public synchronized StringBuffer append(CharSequence s) {
+    sb.append(s);
+    return this;
+  }
+
+  public synchronized StringBuffer append(StringBuffer s) {
+    sb.append(s);
+    return this;
+  }
+
   public synchronized StringBuffer append(Object o) {
     sb.append(o);
     return this;
