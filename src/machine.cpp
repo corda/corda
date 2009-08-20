@@ -2201,6 +2201,7 @@ Thread::exit()
     if (m->liveCount == 1) {
       turnOffTheLights(this);
     } else {
+      threadPeer(this, javaThread) = 0;
       enter(this, Thread::ZombieState);
     }
   }
@@ -2209,8 +2210,6 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  threadPeer(this, javaThread) = 0;
-
   if (systemThread) {
     systemThread->dispose();
   }

@@ -53,6 +53,9 @@ DetachCurrentThread(Machine* m)
     ACQUIRE_RAW(t, t->m->stateLock);
 
     enter(t, Thread::ActiveState);
+
+    threadPeer(t, t->javaThread) = 0;
+
     enter(t, Thread::ZombieState);
 
     t->state = Thread::JoinedState;
