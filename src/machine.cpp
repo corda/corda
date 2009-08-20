@@ -618,6 +618,7 @@ resolveSpec(Thread* t, object loader, object spec, unsigned offset)
   }
 
   PROTECT(t, spec);
+  PROTECT(t, loader);
 
   unsigned length = s - &byteArrayBody(t, spec, offset);
 
