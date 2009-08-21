@@ -31,7 +31,7 @@
 
 #if (defined __i386__) || (defined __POWERPC__) || (defined __arm__)
 #  define LD "ld"
-#  if defined(__MINGW32__) && __GNUC__ == 4
+#  if (defined __MINGW32__) && __GNUC__ == 4
 #    define LLD "I64d"
 #  else
 #    define LLD "lld"
