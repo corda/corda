@@ -22,6 +22,10 @@ public abstract class Enum<E extends Enum<E>> implements Comparable<E> {
   }
 
   public int compareTo(E other) {
+    if (getDeclaringClass() != other.getDeclaringClass()) {
+      throw new ClassCastException();
+    }
+
     return ordinal - other.ordinal;
   }
 
