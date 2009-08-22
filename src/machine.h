@@ -1178,12 +1178,14 @@ class Machine {
   unsigned propertyCount;
   unsigned activeCount;
   unsigned liveCount;
+  unsigned daemonCount;
   unsigned fixedFootprint;
   System::Local* localThread;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
   System::Monitor* classLock;
   System::Monitor* referenceLock;
+  System::Monitor* shutdownLock;
   System::Library* libraries;
   object loader;
   object loadClassMethod;
@@ -1198,6 +1200,7 @@ class Machine {
   object finalizeQueue;
   object weakReferences;
   object tenuredWeakReferences;
+  object shutdownHooks;
   bool unsafe;
   bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
@@ -1393,6 +1396,9 @@ dispose(Thread* t, Reference* r)
 
 void
 collect(Thread* t, Heap::CollectionType type);
+
+void
+shutDown(Thread* t);
 
 #ifdef VM_STRESS
 
@@ -1597,6 +1603,19 @@ setObjectClass(Thread*, object o, object value)
     = reinterpret_cast<object>
     (reinterpret_cast<uintptr_t>(value)
      | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
+}
+
+inline Thread*
+startThread(Thread* t, object javaThread)
+{
+  Thread* p = t->m->processor->makeThread(t->m, javaThread, t);
+
+  if (t->m->system->success(t->m->system->start(&(p->runnable)))) {
+    return p;
+  } else {
+    p->exit();
+    return 0;
+  }
 }
 
 inline const char*
@@ -2340,9 +2359,6 @@ interrupt(Thread*, Thread* target)
 
 object
 intern(Thread* t, object s);
-
-void
-exit(Thread* t);
 
 void
 walk(Thread* t, Heap::Walker* w, object o, unsigned start);

@@ -147,6 +147,50 @@ disposeAll(Thread* m, Thread* o)
 }
 
 void
+turnOffTheLights(Thread* t)
+{
+  expect(t, t->m->liveCount == 1);
+
+  joinAll(t, t->m->rootThread);
+
+  enter(t, Thread::ExitState);
+
+  for (object* p = &(t->m->finalizers); *p;) {
+    object f = *p;
+    *p = finalizerNext(t, *p);
+
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
+  }
+
+  for (object* p = &(t->m->tenuredFinalizers); *p;) {
+    object f = *p;
+    *p = finalizerNext(t, *p);
+
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    function(t, finalizerTarget(t, f));
+  }
+
+  Machine* m = t->m;
+
+  disposeAll(t, t->m->rootThread);
+
+  System* s = m->system;
+  Heap* h = m->heap;
+  Processor* p = m->processor;
+  Finder* f = m->finder;
+
+  m->dispose();
+  h->disposeFixies();
+  p->dispose();
+  h->dispose();
+  f->dispose();
+  s->dispose();
+}
+
+void
 killZombies(Thread* t, Thread* o)
 {
   for (Thread* p = o->child; p;) {
@@ -574,6 +618,7 @@ resolveSpec(Thread* t, object loader, object spec, unsigned offset)
   }
 
   PROTECT(t, spec);
+  PROTECT(t, loader);
 
   unsigned length = s - &byteArrayBody(t, spec, offset);
 
@@ -1976,12 +2021,14 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   propertyCount(propertyCount),
   activeCount(0),
   liveCount(0),
+  daemonCount(0),
   fixedFootprint(0),
   localThread(0),
   stateLock(0),
   heapLock(0),
   classLock(0),
   referenceLock(0),
+  shutdownLock(0),
   libraries(0),
   loader(0),
   loadClassMethod(0),
@@ -1996,6 +2043,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   finalizeQueue(0),
   weakReferences(0),
   tenuredWeakReferences(0),
+  shutdownHooks(0),
   unsafe(false),
   triedBuiltinOnLoad(false),
   heapPoolIndex(0)
@@ -2009,6 +2057,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
       not system->success(system->make(&heapLock)) or
       not system->success(system->make(&classLock)) or
       not system->success(system->make(&referenceLock)) or
+      not system->success(system->make(&shutdownLock)) or
       not system->success
       (system->load(&libraries, findProperty(this, "avian.bootstrap"), false)))
   {
@@ -2024,6 +2073,7 @@ Machine::dispose()
   heapLock->dispose();
   classLock->dispose();
   referenceLock->dispose();
+  shutdownLock->dispose();
 
   if (libraries) {
     libraries->disposeAll();
@@ -2150,8 +2200,9 @@ Thread::exit()
     enter(this, Thread::ExclusiveState);
 
     if (m->liveCount == 1) {
-      vm::exit(this);
+      turnOffTheLights(this);
     } else {
+      threadPeer(this, javaThread) = 0;
       enter(this, Thread::ZombieState);
     }
   }
@@ -2170,31 +2221,41 @@ Thread::dispose()
 }
 
 void
-exit(Thread* t)
+shutDown(Thread* t)
 {
-  enter(t, Thread::ExitState);
+  ACQUIRE(t, t->m->shutdownLock);
 
-  joinAll(t, t->m->rootThread);
+  object hooks = t->m->shutdownHooks;
+  PROTECT(t, hooks);
 
-  for (object* p = &(t->m->finalizers); *p;) {
-    object f = *p;
-    *p = finalizerNext(t, *p);
+  t->m->shutdownHooks = 0;
 
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
+  object h = hooks;
+  PROTECT(t, h);
+  for (; h; h = pairSecond(t, h)) {
+    startThread(t, pairFirst(t, h));
   }
 
-  for (object* p = &(t->m->tenuredFinalizers); *p;) {
-    object f = *p;
-    *p = finalizerNext(t, *p);
+  // wait for hooks to exit
+  h = hooks;
+  for (; h; h = pairSecond(t, h)) {
+    while (true) {
+      Thread* ht = reinterpret_cast<Thread*>(threadPeer(t, pairFirst(t, h)));
 
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
+      { ACQUIRE(t, t->m->stateLock);
+
+        if (ht == 0
+            or ht->state == Thread::ZombieState
+            or ht->state == Thread::JoinedState)
+        {
+          break;
+        } else {
+          ENTER(t, Thread::IdleState);
+          t->m->stateLock->wait(t->systemThread, 0);
+        }
+      }
+    }
   }
-
-  disposeAll(t, t->m->rootThread);
 }
 
 void
@@ -2255,6 +2316,10 @@ enter(Thread* t, Thread::State s)
     if (s == Thread::ZombieState) {
       assert(t, t->m->liveCount > 0);
       -- t->m->liveCount;
+
+      if (threadDaemon(t, t->javaThread)) {
+        -- t->m->daemonCount;
+      }
     }
     t->state = s;
 
@@ -2308,7 +2373,7 @@ enter(Thread* t, Thread::State s)
 
     t->state = s;
 
-    while (t->m->liveCount > 1) {
+    while (t->m->liveCount - t->m->daemonCount > 1) {
       t->m->stateLock->wait(t->systemThread, 0);
     }
   } break;
@@ -3436,6 +3501,7 @@ visitRoots(Machine* m, Heap::Visitor* v)
   v->visit(&(m->byteArrayMap));
   v->visit(&(m->types));
   v->visit(&(m->jniMethodTable));
+  v->visit(&(m->shutdownHooks));
 
   for (Thread* t = m->rootThread; t; t = t->peer) {
     ::visitRoots(t, v);

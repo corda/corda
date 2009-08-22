@@ -26,37 +26,6 @@ const uintptr_t NonVirtualMethodID
 = (static_cast<uintptr_t>(1) << (BitsPerWord - 2));
 
 jint JNICALL
-DestroyJavaVM(Machine* m)
-{
-  System* s = m->system;
-  Heap* h = m->heap;
-  Processor* p = m->processor;
-  Finder* f = m->finder;
-  Thread* t = m->rootThread;
-
-  // wait for other threads to exit
-  { ACQUIRE(t, m->stateLock);
-
-    while (m->liveCount > 1) {
-      t->m->stateLock->wait(t->systemThread, 0);
-    }
-  }
-
-  int exitCode = (t->exception ? -1 : 0);
-  enter(t, Thread::ActiveState);
-  t->exit();
-
-  m->dispose();
-  h->disposeFixies();
-  p->dispose();
-  h->dispose();
-  f->dispose();
-  s->dispose();
-
-  return exitCode;
-}
-
-jint JNICALL
 AttachCurrentThread(Machine* m, Thread** t, void*)
 {
   *t = static_cast<Thread*>(m->localThread->get());
@@ -84,6 +53,9 @@ DetachCurrentThread(Machine* m)
     ACQUIRE_RAW(t, t->m->stateLock);
 
     enter(t, Thread::ActiveState);
+
+    threadPeer(t, t->javaThread) = 0;
+
     enter(t, Thread::ZombieState);
 
     t->state = Thread::JoinedState;
@@ -92,6 +64,30 @@ DetachCurrentThread(Machine* m)
   } else {
     return -1;
   }
+}
+
+jint JNICALL
+DestroyJavaVM(Machine* m)
+{
+  Thread* t; AttachCurrentThread(m, &t, 0);
+
+  // wait for other non-daemon threads to exit
+  { ACQUIRE(t, t->m->stateLock);
+    while (t->m->liveCount - t->m->daemonCount > 1) {
+      t->m->stateLock->wait(t->systemThread, 0);
+    }
+  }
+
+  { ENTER(t, Thread::ActiveState);
+
+    shutDown(t);
+  }
+
+  int exitCode = (t->exception ? -1 : 0);
+
+  t->exit();
+
+  return exitCode;
 }
 
 jint JNICALL
@@ -431,7 +427,7 @@ CallBooleanMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? false : (intValue(t, r) != 0));
+  return (r ? (intValue(t, r) != 0) : false);
 }
 
 jboolean JNICALL
@@ -454,7 +450,7 @@ CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jbyte JNICALL
@@ -477,7 +473,7 @@ CallCharMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jchar JNICALL
@@ -500,7 +496,7 @@ CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jshort JNICALL
@@ -523,7 +519,7 @@ CallIntMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jint JNICALL
@@ -546,7 +542,7 @@ CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? 0 : longValue(t, r));
+  return (r ? longValue(t, r) : 0);
 }
 
 jlong JNICALL
@@ -569,7 +565,7 @@ CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? 0 : bitsToFloat(intValue(t, r)));
+  return (r ? bitsToFloat(intValue(t, r)) : 0);
 }
 
 jfloat JNICALL
@@ -592,7 +588,7 @@ CallDoubleMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 
   object method = getMethod(t, m);
   object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (t->exception ? 0 : bitsToDouble(longValue(t, r)));
+  return (r ? bitsToDouble(longValue(t, r)) : 0);
 }
 
 jdouble JNICALL
@@ -666,7 +662,7 @@ CallStaticBooleanMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : (intValue(t, r) != 0));
+  return (r ? (intValue(t, r) != 0) : false);
 }
 
 jboolean JNICALL
@@ -688,7 +684,7 @@ CallStaticByteMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jbyte JNICALL
@@ -710,7 +706,7 @@ CallStaticCharMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jchar JNICALL
@@ -732,7 +728,7 @@ CallStaticShortMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jshort JNICALL
@@ -754,7 +750,7 @@ CallStaticIntMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : intValue(t, r));
+  return (r ? intValue(t, r) : 0);
 }
 
 jint JNICALL
@@ -776,7 +772,7 @@ CallStaticLongMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : longValue(t, r));
+  return (r ? longValue(t, r) : 0);
 }
 
 jlong JNICALL
@@ -798,7 +794,7 @@ CallStaticFloatMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : bitsToFloat(intValue(t, r)));
+  return (r ? bitsToFloat(intValue(t, r)) : 0);
 }
 
 jfloat JNICALL
@@ -820,7 +816,7 @@ CallStaticDoubleMethodV(Thread* t, jclass, jmethodID m, va_list a)
   ENTER(t, Thread::ActiveState);
 
   object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (t->exception ? 0 : bitsToDouble(longValue(t, r)));
+  return (r ? bitsToDouble(longValue(t, r)) : 0);
 }
 
 jdouble JNICALL

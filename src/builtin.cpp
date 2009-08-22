@@ -726,6 +726,8 @@ extern "C" JNIEXPORT void JNICALL
 Avian_java_lang_Runtime_exit
 (Thread* t, object, uintptr_t* arguments)
 {
+  shutDown(t);
+
   t->m->system->exit(*arguments);
 }
 
@@ -743,6 +745,18 @@ Avian_java_lang_Runtime_totalMemory
 {
   // todo
   return 0;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_Runtime_addShutdownHook
+(Thread* t, object, uintptr_t* arguments)
+{
+  object hook = reinterpret_cast<object>(arguments[1]);
+  PROTECT(t, hook);
+
+  ACQUIRE(t, t->m->shutdownLock);
+
+  t->m->shutdownHooks = makePair(t, hook, t->m->shutdownHooks);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -840,16 +854,8 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Thread_doStart
 (Thread* t, object, uintptr_t* arguments)
 {
-  object this_ = reinterpret_cast<object>(*arguments);
-
-  Thread* p = t->m->processor->makeThread(t->m, this_, t);
-
-  if (t->m->system->success(t->m->system->start(&(p->runnable)))) {
-    return reinterpret_cast<int64_t>(p);
-  } else {
-    p->exit();
-    return 0;
-  }
+  return reinterpret_cast<int64_t>
+    (startThread(t, reinterpret_cast<object>(*arguments)));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -894,6 +900,27 @@ Avian_java_lang_Thread_enumerate
   unsigned index = 0;
   enumerateThreads(t, t->m->rootThread, array, &index, count);
   return count;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_Thread_setDaemon
+(Thread* t, object, uintptr_t* arguments)
+{
+  object thread = reinterpret_cast<object>(arguments[0]);
+  bool daemon = arguments[1] != 0;
+
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  threadDaemon(t, thread) = daemon;
+
+  if (daemon) {
+    ++ t->m->daemonCount;
+  } else {
+    expect(t, t->m->daemonCount);
+    -- t->m->daemonCount;
+  }
+
+  t->m->stateLock->notifyAll(t->systemThread);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

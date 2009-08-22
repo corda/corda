@@ -67,7 +67,11 @@ doOpen(JNIEnv* e, const char* path, int mask)
 {
   int fd = OPEN(path, mask | OPEN_MASK, S_IRUSR | S_IWUSR);
   if (fd == -1) {
-    throwNew(e, "java/io/IOException", strerror(errno));
+    if (errno == ENOENT) {
+      throwNew(e, "java/io/FileNotFoundException", strerror(errno));
+    } else {
+      throwNew(e, "java/io/IOException", strerror(errno));
+    }
   }
   return fd;
 }

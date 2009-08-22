@@ -59,6 +59,8 @@ public class Runtime {
     return new MyProcess(process[0], (int) process[1], (int) process[2], (int) process[3]);
   }
 
+  public native void addShutdownHook(Thread t);
+
   private static native void exec(String[] command, long[] process);
 
   private static native int exitValue(long pid);

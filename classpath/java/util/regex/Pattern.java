@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,12 +10,14 @@
 
 package java.util.regex;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.LinkedList;
+
 /**
- * This implementation is a skeleton, useful only for compilation. At runtime it
- * is need to be replaced by a working implementation, for example one from the
- * Apache Harmony project.
+ * This is a work in progress.
  * 
- * @author zsombor
+ * @author zsombor and others
  * 
  */
 public class Pattern {
@@ -29,12 +31,41 @@ public class Pattern {
   public static final int UNICODE_CASE     = 64;
   public static final int CANON_EQ         = 128;
 
-  private int             patternFlags;
-  private String          pattern;
+  private final int patternFlags;
+  private final String pattern;
 
   protected Pattern(String pattern, int flags) {
     this.pattern = pattern;
     this.patternFlags = flags;
+
+    if (! trivial(pattern)) {
+      throw new UnsupportedOperationException
+        ("only trivial regular expressions are supported so far");
+    }
+  }
+
+  private static boolean trivial(String pattern) {
+    for (int i = 0; i < pattern.length(); ++i) {
+      char c = pattern.charAt(i);
+      switch (c) {
+      case '\\':
+      case '.':
+      case '*':
+      case '+':
+      case '?':
+      case '|':
+      case '[':
+      case ']':
+      case '{':
+      case '}':
+      case '(':
+      case ')':
+      case '^':
+      case '$':
+        return false;
+      }
+    }
+    return true;
   }
 
   public static Pattern compile(String regex) {
@@ -50,7 +81,7 @@ public class Pattern {
   }
 
   public Matcher matcher(CharSequence input) {
-    throw new UnsupportedOperationException();
+    return new Matcher(this, input);
   }
 
   public static boolean matches(String regex, CharSequence input) {
@@ -66,10 +97,72 @@ public class Pattern {
   }
 
   public String[] split(CharSequence input) {
-    throw new UnsupportedOperationException();
+    return split(input, 0);
   }
 
   public String[] split(CharSequence input, int limit) {
-    throw new UnsupportedOperationException();
+    boolean strip;
+    if (limit < 0) {
+      strip = false;
+      limit = Integer.MAX_VALUE;
+    } else if (limit == 0) {
+      strip = true;
+      limit = Integer.MAX_VALUE;
+    } else {
+      strip = false;
+    }
+
+    List<CharSequence> list = new LinkedList();
+    int index = 0;
+    int trailing = 0;
+    while (index < input.length() && list.size() < limit) {
+      int i = indexOf(input, pattern, index);
+      if (i >= 0) {
+        if (i == index) {
+          ++ trailing;
+        } else {
+          trailing = 0;
+        }
+
+        list.add(input.subSequence(index, i));
+        index = i + pattern.length();
+      } else {
+        break;
+      }
+    }
+
+    if (strip && index == input.length()) {
+      ++ trailing;
+    } else {
+      trailing = 0;
+    }
+    list.add(input.subSequence(index, input.length()));
+
+    String[] result = new String[list.size() - trailing];
+    int i = 0;
+    for (Iterator<CharSequence> it = list.iterator();
+         it.hasNext() && i < result.length; ++ i)
+    {
+      result[i] = it.next().toString();
+    }
+    return result;
+  }
+
+  static int indexOf(CharSequence haystack, CharSequence needle, int start) {
+    if (needle.length() == 0) return start;
+
+    for (int i = start; i < haystack.length() - needle.length() + 1; ++i) {
+      int j = 0;
+      for (; j < needle.length(); ++j) {
+        if (haystack.charAt(i + j) != needle.charAt(j)) {
+          break;
+        }
+      }
+      if (j == needle.length()) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 }

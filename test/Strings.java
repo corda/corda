@@ -9,9 +9,20 @@ public class Strings {
                                    115, 46, 83, 121, 109, 98, 111, 108 })
       .equals("com.ecovate.nat.bus.Symbol"));
     
-    // We don't yet have a regex implementation, so this test will fail:
-//     final String months = "Jan\u00aeFeb\u00aeMar\u00ae";
-//     expect(months.split("\u00ae").length == 3);
+    final String months = "Jan\u00aeFeb\u00aeMar\u00ae";
+    expect(months.split("\u00ae").length == 3);
+    expect(months.replaceAll("\u00ae", ".").equals("Jan.Feb.Mar."));
+
+    expect("foo_foofoo__foo".replaceAll("_", "__")
+           .equals("foo__foofoo____foo"));
+
+    expect("foo_foofoo__foo".replaceFirst("_", "__")
+           .equals("foo__foofoo__foo"));
+
+    expect("stereomime".matches("stereomime"));
+    expect(! "stereomime".matches("stereomim"));
+    expect(! "stereomime".matches("tereomime"));
+    expect(! "stereomime".matches("sterEomime"));
 
     StringBuilder sb = new StringBuilder();
     sb.append('$');
