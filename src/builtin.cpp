@@ -909,18 +909,7 @@ Avian_java_lang_Thread_setDaemon
   object thread = reinterpret_cast<object>(arguments[0]);
   bool daemon = arguments[1] != 0;
 
-  ACQUIRE_RAW(t, t->m->stateLock);
-
-  threadDaemon(t, thread) = daemon;
-
-  if (daemon) {
-    ++ t->m->daemonCount;
-  } else {
-    expect(t, t->m->daemonCount);
-    -- t->m->daemonCount;
-  }
-
-  t->m->stateLock->notifyAll(t->systemThread);
+  setDaemon(t, thread, daemon);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

@@ -1173,6 +1173,7 @@ class Machine {
   Processor* processor;
   Thread* rootThread;
   Thread* exclusive;
+  Thread* finalizeThread;
   Reference* jniReferences;
   const char** properties;
   unsigned propertyCount;
@@ -1201,6 +1202,7 @@ class Machine {
   object weakReferences;
   object tenuredWeakReferences;
   object shutdownHooks;
+  object objectsToFinalize;
   bool unsafe;
   bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
@@ -1230,6 +1232,9 @@ inline void stress(Thread* t);
 
 void
 runJavaThread(Thread* t);
+
+void
+runFinalizeThread(Thread* t);
 
 class Thread {
  public:
@@ -1302,10 +1307,14 @@ class Thread {
 
       t->m->localThread->set(t);
 
-      runJavaThread(t);
+      if (t == t->m->finalizeThread) {
+        runFinalizeThread(t);
+      } else if (t->javaThread) {
+        runJavaThread(t);
 
-      if (t->exception) {
-        printTrace(t, t->exception);
+        if (t->exception) {
+          printTrace(t, t->exception);
+        }
       }
 
       t->exit();
@@ -2355,6 +2364,25 @@ inline void
 interrupt(Thread*, Thread* target)
 {
   target->systemThread->interrupt();
+}
+
+inline void
+setDaemon(Thread* t, object thread, bool daemon)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  if (threadDaemon(t, thread) != daemon) {
+    threadDaemon(t, thread) = daemon;
+
+    if (daemon) {
+      ++ t->m->daemonCount;
+    } else {
+      expect(t, t->m->daemonCount);
+      -- t->m->daemonCount;
+    }
+    
+    t->m->stateLock->notifyAll(t->systemThread);
+  }
 }
 
 object

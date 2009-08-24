@@ -1,4 +1,5 @@
 public class Finalizers {
+  private static final Object lock = new Object();
   private static boolean finalized = false;
 
   private static void expect(boolean v) {
@@ -6,15 +7,21 @@ public class Finalizers {
   }
 
   protected void finalize() {
-    finalized = true;
+    synchronized (lock) {
+      finalized = true;
+      lock.notifyAll();
+    }
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     new Finalizers();
 
     expect(! finalized);
     
-    System.gc();
+    synchronized (lock) {
+      System.gc();
+      lock.wait(5000);
+    }
 
     expect(finalized);
 
@@ -24,7 +31,10 @@ public class Finalizers {
 
     expect(! finalized);
     
-    System.gc();
+    synchronized (lock) {
+      System.gc();
+      lock.wait(5000);
+    }
 
     expect(finalized);
   }

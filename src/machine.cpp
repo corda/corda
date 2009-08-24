@@ -211,6 +211,23 @@ killZombies(Thread* t, Thread* o)
   }
 }
 
+object
+makeJavaThread(Thread* t, Thread* parent)
+{ 
+  object group;
+  if (parent) {
+    group = threadGroup(t, parent->javaThread);
+  } else {
+    group = makeThreadGroup(t, 0, 0);
+  }
+
+  const unsigned NewState = 0;
+  const unsigned NormalPriority = 5;
+
+  return makeThread
+    (t, 0, 0, 0, NewState, NormalPriority, 0, 0, 0, t->m->loader, 0, 0, group);
+}
+
 unsigned
 footprint(Thread* t)
 {
@@ -547,12 +564,6 @@ postCollect(Thread* t)
 void
 finalizeObject(Thread* t, object o)
 {
-  if (t->state == Thread::ExitState) {
-    // don't waste time running Java finalizers if we're exiting the
-    // VM
-    return;
-  }
-
   for (object c = objectClass(t, o); c; c = classSuper(t, c)) {
     for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
       object m = arrayBody(t, classMethodTable(t, c), i);
@@ -2016,6 +2027,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   processor(processor),
   rootThread(0),
   exclusive(0),
+  finalizeThread(0),
   jniReferences(0),
   properties(properties),
   propertyCount(propertyCount),
@@ -2044,6 +2056,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   weakReferences(0),
   tenuredWeakReferences(0),
   shutdownHooks(0),
+  objectsToFinalize(0),
   unsafe(false),
   triedBuiltinOnLoad(false),
   heapPoolIndex(0)
@@ -2172,23 +2185,11 @@ Thread::init()
     parent->child = this;
   }
 
-  if (javaThread) {
-    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
-  } else {
-    object group;
-    if (parent) {
-      group = threadGroup(this, parent->javaThread);
-    } else {
-      group = makeThreadGroup(this, 0, 0);
-    }
-
-    const unsigned NewState = 0;
-    const unsigned NormalPriority = 5;
-
-    this->javaThread = makeThread
-      (this, reinterpret_cast<int64_t>(this), 0, 0, NewState, NormalPriority,
-       0, 0, 0, m->loader, 0, 0, group);
+  if (javaThread == 0) {
+    this->javaThread = makeJavaThread(this, parent);
   }
+
+  threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
 }
 
 void
@@ -2253,6 +2254,22 @@ shutDown(Thread* t)
           ENTER(t, Thread::IdleState);
           t->m->stateLock->wait(t->systemThread, 0);
         }
+      }
+    }
+  }
+
+  // tell finalize thread to exit and wait for it to do so
+  { ACQUIRE(t, t->m->stateLock);
+    Thread* finalizeThread = t->m->finalizeThread;
+    if (finalizeThread) {
+      t->m->finalizeThread = 0;
+      t->m->stateLock->notifyAll(t->systemThread);
+
+      while (finalizeThread->state != Thread::ZombieState
+             and finalizeThread->state != Thread::JoinedState)
+      {
+        ENTER(t, Thread::IdleState);
+        t->m->stateLock->wait(t->systemThread, 0);      
       }
     }
   }
@@ -2519,7 +2536,7 @@ makeNewGeneral(Thread* t, object class_)
   }
 
   if (classVmFlags(t, class_) & HasFinalizerFlag) {
-    addFinalizer(t, instance, finalizeObject);
+    addFinalizer(t, instance, 0);
   }
 
   return instance;
@@ -3429,7 +3446,24 @@ collect(Thread* t, Heap::CollectionType type)
   for (; f; f = finalizerNext(t, f)) {
     void (*function)(Thread*, object);
     memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
+    if (function) {
+      function(t, finalizerTarget(t, f));
+    } else {
+      m->objectsToFinalize = makePair
+        (t, finalizerTarget(t, f), m->objectsToFinalize);      
+    }
+  }
+
+  if (m->objectsToFinalize and m->finalizeThread == 0) {
+    m->finalizeThread = m->processor->makeThread
+      (m, makeJavaThread(t, m->rootThread), m->rootThread);
+
+    if (not t->m->system->success
+        (m->system->start(&(m->finalizeThread->runnable))))
+    {
+      m->finalizeThread->exit();
+      m->finalizeThread = 0;
+    }
   }
 }
 
@@ -3502,6 +3536,7 @@ visitRoots(Machine* m, Heap::Visitor* v)
   v->visit(&(m->types));
   v->visit(&(m->jniMethodTable));
   v->visit(&(m->shutdownHooks));
+  v->visit(&(m->objectsToFinalize));
 
   for (Thread* t = m->rootThread; t; t = t->peer) {
     ::visitRoots(t, v);
@@ -3621,6 +3656,36 @@ runJavaThread(Thread* t)
 
   if (t->exception == 0) {
     t->m->processor->invoke(t, method, 0, t->javaThread);
+  }
+}
+
+void
+runFinalizeThread(Thread* t)
+{
+  setDaemon(t, t->javaThread, true);
+
+  object list = 0;
+  PROTECT(t, list);
+
+  while (true) {
+    { ACQUIRE(t, t->m->stateLock);
+
+      while (t->m->finalizeThread and t->m->objectsToFinalize == 0) {
+        ENTER(t, Thread::IdleState);
+        t->m->stateLock->wait(t->systemThread, 0);
+      }
+
+      if (t->m->finalizeThread == 0) {
+        return;
+      } else {
+        list = t->m->objectsToFinalize;
+        t->m->objectsToFinalize = 0;
+      }
+    }
+
+    for (; list; list = pairSecond(t, list)) {
+      finalizeObject(t, pairFirst(t, list));
+    }
   }
 }
 
