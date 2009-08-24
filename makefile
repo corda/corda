@@ -88,7 +88,7 @@ vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
 javac = "$(JAVA_HOME)/bin/javac"
 jar = "$(JAVA_HOME)/bin/jar"
-strip = :
+strip = strip
 strip-all = --strip-all
 
 rdynamic = -rdynamic
@@ -195,7 +195,7 @@ ifeq ($(platform),windows)
 		ar = x86_64-pc-mingw32-ar
 		ranlib = x86_64-pc-mingw32-ranlib
 		objcopy = x86_64-pc-mingw32-objcopy
-		strip = :
+		strip = x86_64-pc-mingw32-strip
 		inc = "$(root)/win64/include"
 		lib = "$(root)/win64/lib"
 		pointer-size = 8
@@ -206,15 +206,19 @@ endif
 
 ifeq ($(mode),debug)
 	cflags += -O0 -g3
+	strip = :
 endif
 ifeq ($(mode),debug-fast)
 	cflags += -O0 -g3 -DNDEBUG
+	strip = :
 endif
 ifeq ($(mode),stress)
 	cflags += -O0 -g3 -DVM_STRESS
+	strip = :
 endif
 ifeq ($(mode),stress-major)
 	cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
+	strip = :
 endif
 ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG
