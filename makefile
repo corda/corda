@@ -238,8 +238,8 @@ ifdef msvc
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
-		-I"$(zlib)/include" -I$(src) -I"$(native-build)" \
-		-I"$(windows-java-home)/include" \
+		-Fd$(native-build)/$(name).pdb -I"$(zlib)/include" -I$(src) \
+		-I"$(native-build)" -I"$(windows-java-home)/include" \
 		-I"$(windows-java-home)/include/win32"
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
