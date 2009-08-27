@@ -226,7 +226,7 @@ ifeq ($(mode),small)
 	cflags += -Os -g3 -DNDEBUG
 endif
 
-oflag = -o
+output = -o $(1)
 as := $(cc)
 ld := $(cc)
 build-ld := $(build-cc)
@@ -244,7 +244,7 @@ ifdef msvc
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib
-	oflag = -Fo
+	output = -Fo$(1)
 
 	ifeq ($(mode),debug)
 		cflags += -Od -Zi
@@ -547,7 +547,7 @@ $(test-extra-dep): $(test-extra-sources)
 define compile-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) -c $(<) $(oflag)$(@)
+	$(cxx) $(cflags) -c $(<) $(call output,$(@))
 endef
 
 define compile-asm-object
@@ -575,7 +575,7 @@ $(driver-dynamic-object): $(driver-source)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(so-prefix)$(name)$(so-suffix)\" \
-		-c $(<) $(oflag)$(@)
+		-c $(<) $(call output,$(@))
 
 $(boot-object): $(boot-source)
 	$(compile-object)
@@ -586,7 +586,7 @@ $(build)/classpath.jar: $(classpath-dep)
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
-	$(cxx) $(^) $(oflag)$(@)
+	$(cxx) $(^) $(call output,$(@))
 
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
 	@echo "creating $(@)"
