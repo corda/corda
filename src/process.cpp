@@ -152,19 +152,24 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
                     unsigned prefixLength, int footprint UNUSED)
 {
   unsigned undecoratedSize = prefixLength + jniNameLength(t, method, false);
-  char undecorated[undecoratedSize + 1 + 6]; // extra 6 is for code below
-  makeJNIName(t, prefix, prefixLength, undecorated + 1, method, false);
+  // extra 6 is for code below:
+  RUNTIME_ARRAY(char, undecorated, undecoratedSize + 1 + 6);
+  makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(undecorated) + 1,
+              method, false);
 
   unsigned decoratedSize = prefixLength + jniNameLength(t, method, true);
-  char decorated[decoratedSize + 1 + 6]; // extra 6 is for code below
-  makeJNIName(t, prefix, prefixLength, decorated + 1, method, true);
+  // extra 6 is for code below:
+  RUNTIME_ARRAY(char, decorated, decoratedSize + 1 + 6);
+  makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(decorated) + 1,
+              method, true);
 
-  void* p = resolveNativeMethod(t, undecorated + 1, decorated + 1);
+  void* p = resolveNativeMethod(t, RUNTIME_ARRAY_BODY(undecorated) + 1,
+                                RUNTIME_ARRAY_BODY(decorated) + 1);
   if (p) {
     return p;
   }
 
-#ifdef __MINGW32__
+#ifdef PLATFORM_WINDOWS
   // on windows, we also try the _%s@%d and %s@%d variants
   if (footprint == -1) {
     footprint = methodParameterFootprint(t, method) + 1;
@@ -173,21 +178,23 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
     }
   }
 
-  *undecorated = '_';
-  snprintf(undecorated + undecoratedSize + 1, 5, "@%d",
-           footprint * BytesPerWord);
+  *RUNTIME_ARRAY_BODY(undecorated) = '_';
+  vm::snprintf(RUNTIME_ARRAY_BODY(undecorated) + undecoratedSize + 1, 5, "@%d",
+               footprint * BytesPerWord);
 
-  *decorated = '_';
-  snprintf(decorated + decoratedSize + 1, 5, "@%d",
-           footprint * BytesPerWord);
+  *RUNTIME_ARRAY_BODY(decorated) = '_';
+  vm::snprintf(RUNTIME_ARRAY_BODY(decorated) + decoratedSize + 1, 5, "@%d",
+               footprint * BytesPerWord);
 
-  p = resolveNativeMethod(t, undecorated, decorated);
+  p = resolveNativeMethod(t, RUNTIME_ARRAY_BODY(undecorated),
+                          RUNTIME_ARRAY_BODY(decorated));
   if (p) {
     return p;
   }
 
   // one more try without the leading underscore
-  p = resolveNativeMethod(t, undecorated + 1, decorated + 1);
+  p = resolveNativeMethod(t, RUNTIME_ARRAY_BODY(undecorated) + 1,
+                          RUNTIME_ARRAY_BODY(decorated) + 1);
   if (p) {
     return p;
   }

@@ -88,7 +88,7 @@ vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
 javac = "$(JAVA_HOME)/bin/javac"
 jar = "$(JAVA_HOME)/bin/jar"
-strip = :
+strip = strip
 strip-all = --strip-all
 
 rdynamic = -rdynamic
@@ -210,32 +210,75 @@ ifeq ($(platform),windows)
 		ar = x86_64-pc-mingw32-ar
 		ranlib = x86_64-pc-mingw32-ranlib
 		objcopy = x86_64-pc-mingw32-objcopy
-		strip = :
+		strip = x86_64-pc-mingw32-strip
 		inc = "$(root)/win64/include"
 		lib = "$(root)/win64/lib"
 		pointer-size = 8
 		object-format = pe-x86-64
 	endif
-		 
 endif
 
 ifeq ($(mode),debug)
 	cflags += -O0 -g3
+	strip = :
 endif
 ifeq ($(mode),debug-fast)
 	cflags += -O0 -g3 -DNDEBUG
+	strip = :
 endif
 ifeq ($(mode),stress)
 	cflags += -O0 -g3 -DVM_STRESS
+	strip = :
 endif
 ifeq ($(mode),stress-major)
 	cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
+	strip = :
 endif
 ifeq ($(mode),fast)
 	cflags += -O3 -g3 -DNDEBUG
 endif
 ifeq ($(mode),small)
 	cflags += -Os -g3 -DNDEBUG
+endif
+
+output = -o $(1)
+as := $(cc)
+ld := $(cc)
+build-ld := $(build-cc)
+
+ifdef msvc
+	windows-java-home = $(shell cygpath -m "$(JAVA_HOME)")
+	zlib = $(shell cygpath -m "$(root)/win32/msvc")
+	cxx = "$(msvc)/BIN/cl.exe"
+	cc = $(cxx)
+	ld = "$(msvc)/BIN/link.exe"
+	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
+		-Fd$(native-build)/$(name).pdb -I"$(zlib)/include" -I$(src) \
+		-I"$(native-build)" -I"$(windows-java-home)/include" \
+		-I"$(windows-java-home)/include/win32"
+	shared = -dll
+	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
+		-DEFAULTLIB:zlib
+	output = -Fo$(1)
+
+	ifeq ($(mode),debug)
+		cflags += -Od -Zi
+		lflags += -debug
+	endif
+	ifeq ($(mode),debug-fast)
+		cflags += -Od -Zi -DNDEBUG
+		lflags += -debug
+	endif
+	ifeq ($(mode),fast)
+		cflags += -Ob2it -GL -Zi -DNDEBUG
+		lflags += -LTCG
+	endif
+	ifeq ($(mode),small)
+		cflags += -O1s -Zi -GL -DNDEBUG
+		lflags += -LTCG
+	endif
+
+	strip = :
 endif
 
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
@@ -519,13 +562,13 @@ $(test-extra-dep): $(test-extra-sources)
 define compile-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) -c $(<) -o $(@)
+	$(cxx) $(cflags) -c $(<) $(call output,$(@))
 endef
 
 define compile-asm-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cc) -I$(src) $(asmflags) -c $(<) -o $(@)
+	$(as) -I$(src) $(asmflags) -c $(<) -o $(@)
 endef
 
 $(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
@@ -547,7 +590,7 @@ $(driver-dynamic-object): $(driver-source)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(so-prefix)$(name)$(so-suffix)\" \
-		-c $(<) -o $(@)
+		-c $(<) $(call output,$(@))
 
 $(boot-object): $(boot-source)
 	$(compile-object)
@@ -558,7 +601,7 @@ $(build)/classpath.jar: $(classpath-dep)
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
 
 $(binaryToMacho): $(src)/binaryToMacho.cpp
-	$(cxx) $(^) -o $(@)
+	$(cxx) $(^) $(call output,$(@))
 
 $(classpath-object): $(build)/classpath.jar $(binaryToMacho)
 	@echo "creating $(@)"
@@ -617,11 +660,15 @@ $(executable): \
 		$(boot-object) $(vm-classpath-object)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
+ifdef msvc
+	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib
+else
 	$(dlltool) -z $(@).def $(^) $(call gnu-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(cc) $(@).exp $(^) $(call gnu-objects) $(lflags) -o $(@)
+	$(ld) $(@).exp $(^) $(call gnu-objects) $(lflags) -o $(@)
+endif
 else
-	$(cc) $(^) $(call gnu-objects) $(rdynamic) $(lflags) $(bootimage-lflags) \
+	$(ld) $(^) $(call gnu-objects) $(rdynamic) $(lflags) $(bootimage-lflags) \
 		-o $(@)
 endif
 	$(strip) $(strip-all) $(@)
@@ -644,11 +691,15 @@ $(build-bootimage-generator): \
 		$(bootimage-generator-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
+ifdef msvc
+	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib
+else
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(cc) $(@).exp $(^) $(lflags) -o $(@)
+	$(ld) $(@).exp $(^) $(lflags) -o $(@)
+endif
 else
-	$(cc) $(^) $(rdynamic) $(lflags) -o $(@)
+	$(ld) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
 
 $(dynamic-library): $(gnu-object-dep)
@@ -656,15 +707,25 @@ $(dynamic-library): \
 		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
 		$(boot-object) $(vm-classpath-object) $(gnu-libraries)
 	@echo "linking $(@)"
-	$(cc) $(^) $(call gnu-objects) $(shared) $(lflags) $(bootimage-lflags) \
+ifdef msvc
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
+		-IMPLIB:$(native-build)/$(name).lib
+else
+	$(ld) $(^) $(call gnu-objects) $(shared) $(lflags) $(bootimage-lflags) \
 		-o $(@)
+endif
 	$(strip) $(strip-all) $(@)
 
 $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 	@echo "linking $(@)"
-	$(cc) $(^) $(lflags) -o $(@)
+ifdef msvc
+	$(ld) $(lflags) -LIBPATH:$(native-build) -DEFAULTLIB:$(name) \
+		 -PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@)
+else
+	$(ld) $(^) $(lflags) -o $(@)
+endif
 	$(strip) $(strip-all) $(@)
 
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
-	$(build-cc) $(^) $(build-lflags) -o $(@)
+	$(build-ld) $(^) $(build-lflags) -o $(@)

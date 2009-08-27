@@ -149,7 +149,7 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   setProperty(t, method, properties, "java.library.path",
               LIBRARY_PATH_SENTINAL);
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 #  define FILE_SEPARATOR "\\"
   
   setProperty(t, method, properties, "line.separator", "\r\n");
@@ -182,17 +182,16 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   setProperty(t, method, properties, "user.dir", getenv("PWD"));
 #endif
 
-#ifdef __i386__
+#ifdef ARCH_x86_32
   setProperty(t, method, properties, "gnu.cpu.endian", "little");
   setProperty(t, method, properties, "os.arch", "x86");
-#elif defined __x86_64__
+#elif defined ARCH_x86_64
   setProperty(t, method, properties, "gnu.cpu.endian", "little");
   setProperty(t, method, properties, "os.arch", "x86_64");
-#elif defined(__ppc__) || defined(__powerpc__) \
-  || defined(__ppc64__) || defined(__powerpc64__)
+#elif defined ARCH_powerpc
   setProperty(t, method, properties, "gnu.cpu.endian", "big");
   setProperty(t, method, properties, "os.arch", "ppc");
-#elif defined __arm__
+#elif defined ARCH_arm
   setProperty(t, method, properties, "os.arch", "arm");
 #else
   setProperty(t, method, properties, "os.arch", "unknown");

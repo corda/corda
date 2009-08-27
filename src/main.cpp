@@ -11,14 +11,44 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
-#include "stdint.h"
 #include "jni.h"
 
-#ifdef __MINGW32__
+#if (defined __MINGW32__) || (defined _MSC_VER)
 #  define PATH_SEPARATOR ';'
 #else
 #  define PATH_SEPARATOR ':'
 #endif
+
+#ifdef _MSC_VER
+
+#  define not !
+#  define or ||
+#  define and &&
+#  define xor ^
+
+template <class T>
+class RuntimeArray {
+ public:
+  RuntimeArray(unsigned size):
+    body(static_cast<T*>(malloc(size * sizeof(T))))
+  { }
+
+  ~RuntimeArray() {
+    free(body);
+  }
+
+  T* body;
+};
+
+#  define RUNTIME_ARRAY(type, name, size) RuntimeArray<type> name(size);
+#  define RUNTIME_ARRAY_BODY(name) name.body
+
+#else // not _MSC_VER
+
+#  define RUNTIME_ARRAY(type, name, size) type name[size];
+#  define RUNTIME_ARRAY_BODY(name) name
+
+#endif // not _MSC_VER
 
 namespace {
 
@@ -87,28 +117,28 @@ main(int ac, const char** av)
   ++ vmArgs.nOptions;
 #endif
 
-  JavaVMOption options[vmArgs.nOptions];
-  vmArgs.options = options;
+  RUNTIME_ARRAY(JavaVMOption, options, vmArgs.nOptions);
+  vmArgs.options = RUNTIME_ARRAY_BODY(options);
 
   unsigned optionIndex = 0;
 
 #ifdef BOOT_IMAGE
-  options[optionIndex++].optionString
+  vmArgs.options[optionIndex++].optionString
     = const_cast<char*>("-Davian.bootimage=" BOOT_IMAGE);
 #endif
 
 #ifdef BOOT_CLASSPATH
-  options[optionIndex++].optionString
+  vmArgs.options[optionIndex++].optionString
     = const_cast<char*>("-Xbootclasspath:" BOOT_CLASSPATH);
 #endif
 
 #ifdef BOOT_LIBRARY
-  options[optionIndex++].optionString
+  vmArgs.options[optionIndex++].optionString
     = const_cast<char*>("-Davian.bootstrap=" BOOT_LIBRARY);
 #endif
 
 #ifdef BOOT_BUILTINS
-  options[optionIndex++].optionString
+  vmArgs.options[optionIndex++].optionString
     = const_cast<char*>("-Davian.builtins=" BOOT_BUILTINS);
 #endif
 
@@ -118,21 +148,23 @@ main(int ac, const char** av)
   unsigned classpathPropertyBufferSize
     = sizeof(CLASSPATH_PROPERTY) + classpathSize;
 
-  char classpathPropertyBuffer[classpathPropertyBufferSize];
-  memcpy(classpathPropertyBuffer,
+  RUNTIME_ARRAY(char, classpathPropertyBuffer, classpathPropertyBufferSize);
+  memcpy(RUNTIME_ARRAY_BODY(classpathPropertyBuffer),
          CLASSPATH_PROPERTY,
          sizeof(CLASSPATH_PROPERTY) - 1);
-  memcpy(classpathPropertyBuffer + sizeof(CLASSPATH_PROPERTY) - 1,
+  memcpy(RUNTIME_ARRAY_BODY(classpathPropertyBuffer)
+         + sizeof(CLASSPATH_PROPERTY) - 1,
          classpath,
          classpathSize + 1);
 
-  options[optionIndex++].optionString = classpathPropertyBuffer;
+  vmArgs.options[optionIndex++].optionString
+    = RUNTIME_ARRAY_BODY(classpathPropertyBuffer);
 
   for (int i = 1; i < ac; ++i) {
     if (strncmp(av[i], "-X", 2) == 0
         or strncmp(av[i], "-D", 2) == 0)
     {
-      options[optionIndex++].optionString = const_cast<char*>(av[i]);
+      vmArgs.options[optionIndex++].optionString = const_cast<char*>(av[i]);
     }
   }
 

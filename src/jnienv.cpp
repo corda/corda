@@ -1854,17 +1854,17 @@ int
 parseSize(const char* s)
 {
   unsigned length = strlen(s);
-  char buffer[length + 1];
+  RUNTIME_ARRAY(char, buffer, length + 1);
   if (length == 0) {
     return 0;
   } else if (s[length - 1] == 'k') {
-    memcpy(buffer, s, length - 1);
-    buffer[length] = 0;
-    return atoi(buffer) * 1024;
+    memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
+    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+    return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024;
   } else if (s[length - 1] == 'm') {
-    memcpy(buffer, s, length - 1);
-    buffer[length] = 0;
-    return atoi(buffer) * 1024 * 1024;
+    memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
+    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+    return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024 * 1024;
   } else {
     return atoi(s);
   }
@@ -2144,8 +2144,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   unsigned cpl = strlen(classpath);
 
   unsigned classpathBufferSize = bcppl + bcpl + bcpal + cpl + 4;
-  char classpathBuffer[classpathBufferSize];
-  char* classpathPointer = classpathBuffer;
+  RUNTIME_ARRAY(char, classpathBuffer, classpathBufferSize);
+  char* classpathPointer = RUNTIME_ARRAY_BODY(classpathBuffer);
 
   append(&classpathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
   append(&classpathPointer, bootClasspath, bcpl, PATH_SEPARATOR);
@@ -2154,7 +2154,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
-  Finder* f = makeFinder(s, classpathBuffer, bootLibrary);
+  Finder* f = makeFinder(s, RUNTIME_ARRAY_BODY(classpathBuffer), bootLibrary);
   Processor* p = makeProcessor(s, h);
 
   const char** properties = static_cast<const char**>

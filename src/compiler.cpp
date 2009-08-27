@@ -15,6 +15,8 @@ using namespace vm;
 
 namespace {
 
+namespace local {
+
 const bool DebugAppend = false;
 const bool DebugCompile = false;
 const bool DebugResources = false;
@@ -294,8 +296,6 @@ class Value: public Compiler::Operand {
     reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
     high(0), home(NoFrameIndex)
   { }
-
-  virtual void addPredecessor(Context*, Event*) { }
   
   Read* reads;
   Read* lastRead;
@@ -383,7 +383,7 @@ class Context {
 unsigned
 RegisterResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
-  return snprintf
+  return vm::snprintf
     (buffer, bufferSize, "register %d", static_cast<int>
      (this - c->registerResources));
 }
@@ -391,8 +391,8 @@ RegisterResource::toString(Context* c, char* buffer, unsigned bufferSize)
 unsigned
 FrameResource::toString(Context* c, char* buffer, unsigned bufferSize)
 {
-  return snprintf(buffer, bufferSize, "frame %d", static_cast<int>
-                  (this - c->frameResources));
+  return vm::snprintf(buffer, bufferSize, "frame %d", static_cast<int>
+                      (this - c->frameResources));
 }
 
 class PoolPromise: public Promise {
@@ -924,11 +924,15 @@ deadBuddy(Context* c, Value* v, Read* r UNUSED)
     fprintf(stderr, "\n");
   }
 
+  assert(c, v->buddy);
+
   Value* next = v->buddy;
   v->buddy = v;
   Value* p = next;
   while (p->buddy != v) p = p->buddy;
   p->buddy = next;
+
+  assert(c, p->buddy);
 
   for (SiteIterator it(v); it.hasMore();) {
     Site* s = it.next();
@@ -1335,10 +1339,10 @@ class ConstantSite: public Site {
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (value->resolved()) {
-      return snprintf
+      return vm::snprintf
         (buffer, bufferSize, "constant %"LLD, value->value());
     } else {
-      return snprintf(buffer, bufferSize, "constant unresolved");
+      return vm::snprintf(buffer, bufferSize, "constant unresolved");
     }
   }
 
@@ -1407,10 +1411,10 @@ class AddressSite: public Site {
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (address->resolved()) {
-      return snprintf
+      return vm::snprintf
         (buffer, bufferSize, "address %"LLD, address->value());
     } else {
-      return snprintf(buffer, bufferSize, "address unresolved");
+      return vm::snprintf(buffer, bufferSize, "address unresolved");
     }
   }
 
@@ -1466,9 +1470,9 @@ class RegisterSite: public Site {
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (number != NoRegister) {
-      return snprintf(buffer, bufferSize, "%p register %d", this, number);
+      return vm::snprintf(buffer, bufferSize, "%p register %d", this, number);
     } else {
-      return snprintf(buffer, bufferSize, "%p register unacquired", this);
+      return vm::snprintf(buffer, bufferSize, "%p register unacquired", this);
     }
   }
 
@@ -1506,7 +1510,7 @@ class RegisterSite: public Site {
     }
 
     RegisterResource* resource = c->registerResources + target.index;
-    ::acquire(c, resource, v, this);
+    local::acquire(c, resource, v, this);
 
     number = target.index;
   }
@@ -1514,7 +1518,7 @@ class RegisterSite: public Site {
   virtual void release(Context* c, Value* v) {
     assert(c, number != NoRegister);
 
-    ::release(c, c->registerResources + number, v, this);
+    local::release(c, c->registerResources + number, v, this);
   }
 
   virtual void freeze(Context* c, Value* v) {
@@ -1608,10 +1612,10 @@ class MemorySite: public Site {
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (acquired) {
-      return snprintf(buffer, bufferSize, "memory %d 0x%x %d %d",
+      return vm::snprintf(buffer, bufferSize, "memory %d 0x%x %d %d",
                       base, offset, index, scale);
     } else {
-      return snprintf(buffer, bufferSize, "memory unacquired");
+      return vm::snprintf(buffer, bufferSize, "memory unacquired");
     }
   }
 
@@ -1659,7 +1663,8 @@ class MemorySite: public Site {
     if (base == c->arch->stack()) {
       assert(c, index == NoRegister);
 
-      ::acquire(c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
+      local::acquire
+        (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
     }
 
     acquired = true;
@@ -1669,7 +1674,8 @@ class MemorySite: public Site {
     if (base == c->arch->stack()) {
       assert(c, index == NoRegister);
 
-      ::release(c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
+      local::release
+        (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
     }
 
     decrement(c, c->registerResources + base);
@@ -1842,10 +1848,10 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
     }
 
     if (p->sites) {
-      total += snprintf(buffer + total, size - total, "%p has ", p);
+      total += vm::snprintf(buffer + total, size - total, "%p has ", p);
       total += sitesToString(c, p->sites, buffer + total, size - total);
     } else {
-      total += snprintf(buffer + total, size - total, "%p has nothing", p);
+      total += vm::snprintf(buffer + total, size - total, "%p has nothing", p);
     }
 
     p = p->buddy;
@@ -1940,7 +1946,7 @@ class SingleRead: public Read {
   { }
 
   virtual bool intersect(SiteMask* mask, unsigned) {
-    *mask = ::intersect(*mask, this->mask);
+    *mask = local::intersect(*mask, this->mask);
 
     return true;
   }
@@ -2222,7 +2228,8 @@ void
 addRead(Context* c, Event* e, Value* v, Read* r)
 {
   if (DebugReads) {
-    fprintf(stderr, "add read %p to %p last %p event %p (%s)\n", r, v, v->lastRead, e, (e ? e->name() : 0));
+    fprintf(stderr, "add read %p to %p last %p event %p (%s)\n",
+            r, v, v->lastRead, e, (e ? e->name() : 0));
   }
 
   r->value = v;
@@ -2307,11 +2314,11 @@ saveLocals(Context* c, Event* e)
     if (local->value) {
       if (DebugReads) {
         fprintf(stderr, "local save read %p at %d of %d\n",
-                local->value, ::frameIndex(c, li), totalFrameSize(c));
+                local->value, local::frameIndex(c, li), totalFrameSize(c));
       }
 
       addRead(c, e, local->value, read
-              (c, SiteMask(1 << MemoryOperand, 0, ::frameIndex(c, li))));
+              (c, SiteMask(1 << MemoryOperand, 0, local::frameIndex(c, li))));
     }
   }
 }
@@ -2457,7 +2464,7 @@ class CallEvent: public Event {
 
       while (stack) {
         if (stack->value) {
-          unsigned logicalIndex = ::frameIndex
+          unsigned logicalIndex = local::frameIndex
             (c, stack->index + c->localFootprint);
 
           if (DebugReads) {
@@ -2782,6 +2789,9 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
     }
   } else {
     target = src->source;
+
+    assert(c, src);
+    assert(c, dst);
 
     addBuddy(src, dst);
 
@@ -3207,11 +3217,15 @@ removeBuddy(Context* c, Value* v)
       fprintf(stderr, "\n");
     }
 
+    assert(c, v->buddy);
+
     Value* next = v->buddy;
     v->buddy = v;
     Value* p = next;
     while (p->buddy != v) p = p->buddy;
     p->buddy = next;
+
+    assert(c, p->buddy);
 
     if (not live(next)) {
       clearSites(c, next);
@@ -3499,8 +3513,8 @@ appendCombine(Context* c, TernaryOperation type,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    ::push(c, ceiling(secondSize, BytesPerWord), second, false);
-    ::push(c, ceiling(firstSize, BytesPerWord), first, false);
+    local::push(c, ceiling(secondSize, BytesPerWord), second, false);
+    local::push(c, ceiling(firstSize, BytesPerWord), first, false);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -3722,8 +3736,6 @@ class BranchEvent: public Event {
   BranchEvent(Context* c, UnaryOperation type, Value* address, bool exit):
     Event(c), type(type), address(address), exit(exit)
   {
-    address->addPredecessor(c, this);
-
     bool thunk;
     uint8_t typeMask;
     uint64_t registerMask;
@@ -3980,6 +3992,9 @@ class BuddyEvent: public Event {
     //     fprintf(stderr, "original %p buddy %p\n", original, buddy);
     assert(c, hasSite(original));
 
+    assert(c, original);
+    assert(c, buddy);
+
     addBuddy(original, buddy);
 
     popRead(c, this, original);
@@ -4104,7 +4119,8 @@ append(Context* c, Event* e)
               e->logicalInstruction->index);
     }
 
-    Link* link = ::link(c, p, e->predecessors, e, p->successors, c->forkState);
+    Link* link = local::link
+      (c, p, e->predecessors, e, p->successors, c->forkState);
     e->predecessors = link;
     p->successors = link;
   }
@@ -4457,11 +4473,12 @@ resolveBranchSites(Context* c, Event* e, SiteRecordList* frozen)
 {
   if (e->successors->nextSuccessor and e->junctionSites == 0) {
     unsigned footprint = frameFootprint(c, e->stackAfter);
-    Site* branchSites[footprint];
-    memset(branchSites, 0, sizeof(Site*) * footprint);
+    RUNTIME_ARRAY(Site*, branchSites, footprint);
+    memset(RUNTIME_ARRAY_BODY(branchSites), 0, sizeof(Site*) * footprint);
 
-    if (not resolveSourceSites(c, e, frozen, branchSites)) {
-      resolveTargetSites(c, e, frozen, branchSites);
+    if (not resolveSourceSites(c, e, frozen, RUNTIME_ARRAY_BODY(branchSites)))
+    {
+      resolveTargetSites(c, e, frozen, RUNTIME_ARRAY_BODY(branchSites));
     }
   }
 }
@@ -4560,6 +4577,8 @@ restore(Context* c, Event* e, Snapshot* snapshots)
     //     fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
     //             s->value, s->value->buddy, buffer, live(s->value));
 
+    assert(c, s->buddy);
+
     s->value->buddy = s->buddy;
   }
 
@@ -4577,8 +4596,8 @@ restore(Context* c, Event* e, Snapshot* snapshots)
 void
 populateSources(Context* c, Event* e)
 {
-  SiteRecord frozenRecords[e->readCount];
-  SiteRecordList frozen(frozenRecords, e->readCount);
+  RUNTIME_ARRAY(SiteRecord, frozenRecords, e->readCount);
+  SiteRecordList frozen(RUNTIME_ARRAY_BODY(frozenRecords), e->readCount);
 
   for (Read* r = e->reads; r; r = r->eventNext) {
     r->value->source = readSource(c, r);
@@ -4752,8 +4771,8 @@ compile(Context* c)
     }
 
     unsigned footprint = frameFootprint(c, e->stackAfter);
-    SiteRecord frozenRecords[footprint];
-    SiteRecordList frozen(frozenRecords, footprint);
+    RUNTIME_ARRAY(SiteRecord, frozenRecords, footprint);
+    SiteRecordList frozen(RUNTIME_ARRAY_BODY(frozenRecords), footprint);
 
     bool branch = e->isBranch();
     if (branch and e->successors) {
@@ -4803,7 +4822,7 @@ compile(Context* c)
       block->assemblerBlock = a->endBlock(e->next != 0);
 
       if (e->next) {
-        block = ::block(c, e->next);
+        block = local::block(c, e->next);
       }
     }
   }
@@ -4962,13 +4981,13 @@ class MyCompiler: public Compiler {
   }
 
   virtual State* saveState() {
-    State* s = ::saveState(&c);
+    State* s = local::saveState(&c);
     restoreState(s);
     return s;
   }
 
   virtual void restoreState(State* state) {
-    ::restoreState(&c, static_cast<ForkState*>(state));
+    local::restoreState(&c, static_cast<ForkState*>(state));
   }
 
   virtual Subroutine* startSubroutine() {
@@ -4978,7 +4997,7 @@ class MyCompiler: public Compiler {
 
   virtual void endSubroutine(Subroutine* subroutine) {
     appendCleanLocals(&c);
-    static_cast<MySubroutine*>(subroutine)->forkState = ::saveState(&c);
+    static_cast<MySubroutine*>(subroutine)->forkState = local::saveState(&c);
   }
 
   virtual void linkSubroutine(Subroutine* subroutine) {
@@ -5042,7 +5061,7 @@ class MyCompiler: public Compiler {
       p->stackAfter = c.stack;
       p->localsAfter = c.locals;
 
-      Link* link = ::link
+      Link* link = local::link
         (&c, p, e->predecessors, e, p->successors, c.forkState);
       e->predecessors = link;
       p->successors = link;
@@ -5141,11 +5160,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* promiseConstant(Promise* value) {
-    return ::value(&c, ::constantSite(&c, value));
+    return local::value(&c, local::constantSite(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
-    return value(&c, ::addressSite(&c, address));
+    return value(&c, local::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -5174,13 +5193,13 @@ class MyCompiler: public Compiler {
     assert(&c, footprint == 1);
 
     Value* v = value(&c);
-    Stack* s = ::stack(&c, v, c.stack);
+    Stack* s = local::stack(&c, v, c.stack);
     v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
 
   virtual void push(unsigned footprint, Operand* value) {
-    ::push(&c, footprint, static_cast<Value*>(value), true);
+    local::push(&c, footprint, static_cast<Value*>(value), true);
   }
 
   virtual void save(unsigned footprint, Operand* value) {
@@ -5194,7 +5213,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* pop(unsigned footprint) {
-    return ::pop(&c, footprint);
+    return local::pop(&c, footprint);
   }
 
   virtual void pushed() {
@@ -5203,7 +5222,7 @@ class MyCompiler: public Compiler {
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
 
-    Stack* s = ::stack(&c, v, c.stack);
+    Stack* s = local::stack(&c, v, c.stack);
     v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
@@ -5271,17 +5290,17 @@ class MyCompiler: public Compiler {
 
     unsigned footprint = 0;
     unsigned size = BytesPerWord;
-    Value* arguments[argumentCount];
+    RUNTIME_ARRAY(Value*, arguments, argumentCount);
     int index = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       Value* o = va_arg(a, Value*);
       if (o) {
         if (bigEndian and size > BytesPerWord) {
-          arguments[index++] = o->high;
+          RUNTIME_ARRAY_BODY(arguments)[index++] = o->high;
         }
-        arguments[index] = o;
+        RUNTIME_ARRAY_BODY(arguments)[index] = o;
         if ((not bigEndian) and size > BytesPerWord) {
-          arguments[++index] = o->high;
+          RUNTIME_ARRAY_BODY(arguments)[++index] = o->high;
         }
         size = BytesPerWord;
         ++ index;
@@ -5295,7 +5314,8 @@ class MyCompiler: public Compiler {
 
     Stack* argumentStack = c.stack;
     for (int i = index - 1; i >= 0; --i) {
-      argumentStack = ::stack(&c, arguments[i], argumentStack);
+      argumentStack = local::stack
+        (&c, RUNTIME_ARRAY_BODY(arguments)[i], argumentStack);
     }
 
     Value* result = value(&c);
@@ -5391,11 +5411,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
-    ::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
+    local::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
   }
 
   virtual Operand* loadLocal(unsigned footprint, unsigned index) {
-    return ::loadLocal(&c, footprint, index);
+    return local::loadLocal(&c, footprint, index);
   }
 
   virtual void saveLocals() {
@@ -5578,7 +5598,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual unsigned compile() {
-    return c.machineCodeSize = ::compile(&c);
+    return c.machineCodeSize = local::compile(&c);
   }
 
   virtual unsigned poolSize() {
@@ -5621,8 +5641,10 @@ class MyCompiler: public Compiler {
   }
 
   Context c;
-  ::Client client;
+  local::Client client;
 };
+
+} // namespace local
 
 } // namespace
 
@@ -5632,8 +5654,8 @@ Compiler*
 makeCompiler(System* system, Assembler* assembler, Zone* zone,
              Compiler::Client* client)
 {
-  return new (zone->allocate(sizeof(MyCompiler)))
-    MyCompiler(system, assembler, zone, client);
+  return new (zone->allocate(sizeof(local::MyCompiler)))
+    local::MyCompiler(system, assembler, zone, client);
 }
 
 } // namespace vm

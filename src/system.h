@@ -176,6 +176,7 @@ expect(System* s, bool v)
 #ifdef NDEBUG
 
 # define assert(a, b)
+# define vm_assert(a, b)
 
 #else // not NDEBUG
 
@@ -184,6 +185,8 @@ assert(System* s, bool v)
 {
   expect(s, v);
 }
+
+# define vm_assert(a, b) vm::assert(a, b)
 
 #endif // not NDEBUG
 

@@ -17,11 +17,11 @@ extern "C" void NO_RETURN
 vmJump(void* address, void* base, void* stack, void* thread,
        uintptr_t returnLow, uintptr_t returnHigh);
 
-#if (defined __i386__) || (defined __x86_64__)
+#if (defined ARCH_x86_32) || (defined ARCH_x86_64)
 #  include "x86.h"
-#elif defined __POWERPC__
+#elif defined ARCH_powerpc
 #  include "powerpc.h"
-#elif defined __arm__
+#elif defined ARCH_arm
 #  include "arm.h"
 #else
 #  error unsupported architecture

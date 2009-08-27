@@ -11,7 +11,14 @@
 #include "sys/stat.h"
 #include "windows.h"
 #include "sys/timeb.h"
-#include "dirent.h"
+
+#ifdef _MSC_VER
+#  define S_ISREG(x) ((x) & _S_IFREG)
+#  define S_ISDIR(x) ((x) & _S_IFDIR)
+#  define FTIME _ftime_s
+#else
+#  define FTIME _ftime
+#endif
 
 #undef max
 #undef min
@@ -419,27 +426,33 @@ class MySystem: public System {
 
   class Directory: public System::Directory {
    public:
-    Directory(System* s, DIR* directory): s(s), directory(directory) { }
+    Directory(System* s): s(s), handle(0), findNext(false) { }
 
     virtual const char* next() {
-      if (directory) {
-        dirent* e = readdir(directory);
-        if (e) {
-          return e->d_name;
+      if (handle and handle != INVALID_HANDLE_VALUE) {
+        if (findNext) {
+          if (FindNextFile(handle, &data)) {
+            return data.cFileName;
+          }
+        } else {
+          findNext = true;
+          return data.cFileName;
         }
       }
       return 0;
     }
 
     virtual void dispose() {
-      if (directory) {
-        closedir(directory);
+      if (handle and handle != INVALID_HANDLE_VALUE) {
+        FindClose(handle);
       }
       s->free(this);
     }
 
     System* s;
-    DIR* directory;
+    HANDLE handle;
+    WIN32_FIND_DATA data;
+    bool findNext;
   };
 
   class Library: public System::Library {
@@ -574,18 +587,18 @@ class MySystem: public System {
     if (handler) {
       segFaultHandler = handler;
 
-#ifdef __i386__
+#ifdef ARCH_x86_32
       oldSegFaultHandler = SetUnhandledExceptionFilter(handleException);
-#elif defined __x86_64__
+#elif defined ARCH_x86_64
       AddVectoredExceptionHandler(1, handleException);
       oldSegFaultHandler = 0;
 #endif
       return 0;
     } else if (segFaultHandler) {
       segFaultHandler = 0;
-#ifdef __i386__
+#ifdef ARCH_x86_32
       SetUnhandledExceptionFilter(oldSegFaultHandler);
-#elif defined __x86_64__
+#elif defined ARCH_x86_64
       //do nothing, handlers are never "unregistered" anyway
 #endif
       return 0;
@@ -609,12 +622,12 @@ class MySystem: public System {
     CONTEXT context;
     rv = GetThreadContext(target->thread, &context);
     expect(this, rv);
-#ifdef __i386__
+#ifdef ARCH_x86_32
     visitor->visit(reinterpret_cast<void*>(context.Eip),
                    reinterpret_cast<void*>(context.Ebp),
                    reinterpret_cast<void*>(context.Esp));
-#elif defined __x86_64__
-	visitor->visit(reinterpret_cast<void*>(context.Rip),
+#elif defined ARCH_x86_64
+    visitor->visit(reinterpret_cast<void*>(context.Rip),
                    reinterpret_cast<void*>(context.Rbp),
                    reinterpret_cast<void*>(context.Rsp));
 #endif
@@ -664,10 +677,13 @@ class MySystem: public System {
 
   virtual Status open(System::Directory** directory, const char* name) {
     Status status = 1;
-    
-    DIR* d = opendir(name);
-    if (d) {
-      *directory = new (allocate(this, sizeof(Directory))) Directory(this, d);
+
+    Directory* d = new (allocate(this, sizeof(Directory))) Directory(this);
+    d->handle = FindFirstFile(name, &(d->data));
+    if (d->handle == INVALID_HANDLE_VALUE) {
+      d->dispose();
+    } else {
+      *directory = d;
       status = 0;
     }
     
@@ -698,9 +714,10 @@ class MySystem: public System {
     unsigned nameLength = (name ? strlen(name) : 0);
     if (mapName and name) {
       unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
-      char buffer[size];
-      snprintf(buffer, size, SO_PREFIX "%s" SO_SUFFIX, name);
-      handle = LoadLibrary(buffer);
+      RUNTIME_ARRAY(char, buffer, size);;
+      vm::snprintf
+        (RUNTIME_ARRAY_BODY(buffer), size, SO_PREFIX "%s" SO_SUFFIX, name);
+      handle = LoadLibrary(RUNTIME_ARRAY_BODY(buffer));
     } else if (name) {
       handle = LoadLibrary(name);
     } else {
@@ -811,10 +828,10 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
     if (MiniDumpWriteDump) {
       char name[MAX_PATH];
       _timeb tb;
-      _ftime(&tb);
-      snprintf(name, MAX_PATH, "%s\\crash-%"LLD".mdmp", directory,
-               (static_cast<int64_t>(tb.time) * 1000)
-               + static_cast<int64_t>(tb.millitm));
+      FTIME(&tb);
+      vm::snprintf(name, MAX_PATH, "%s\\crash-%"LLD".mdmp", directory,
+                   (static_cast<int64_t>(tb.time) * 1000)
+                   + static_cast<int64_t>(tb.millitm));
 
       HANDLE file = CreateFile
         (name, FILE_WRITE_DATA, 0, 0, CREATE_ALWAYS, 0, 0);
@@ -844,12 +861,12 @@ LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e)
 {
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-#ifdef __i386__
+#ifdef ARCH_x86_32
     void* ip = reinterpret_cast<void*>(e->ContextRecord->Eip);
     void* base = reinterpret_cast<void*>(e->ContextRecord->Ebp);
     void* stack = reinterpret_cast<void*>(e->ContextRecord->Esp);
     void* thread = reinterpret_cast<void*>(e->ContextRecord->Ebx);
-#elif defined __x86_64__ 
+#elif defined ARCH_x86_64
     void* ip = reinterpret_cast<void*>(e->ContextRecord->Rip);
     void* base = reinterpret_cast<void*>(e->ContextRecord->Rbp);
     void* stack = reinterpret_cast<void*>(e->ContextRecord->Rsp);
@@ -858,12 +875,12 @@ handleException(LPEXCEPTION_POINTERS e)
 
     bool jump = system->segFaultHandler->handleSignal
       (&ip, &base, &stack, &thread);
-#ifdef __i386__
+#ifdef  ARCH_x86_32
     e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
     e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
     e->ContextRecord->Esp = reinterpret_cast<DWORD>(stack);
     e->ContextRecord->Ebx = reinterpret_cast<DWORD>(thread);
-#elif defined __x86_64__
+#elif defined ARCH_x86_64
     e->ContextRecord->Rip = reinterpret_cast<DWORD64>(ip);
     e->ContextRecord->Rbp = reinterpret_cast<DWORD64>(base);
     e->ContextRecord->Rsp = reinterpret_cast<DWORD64>(stack);

@@ -11,7 +11,6 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include "stdint.h"
 #include "stdlib.h"
 #include "stdarg.h"
 #include "stddef.h"
@@ -20,8 +19,77 @@
 #include "types.h"
 #include "math.h"
 
+#ifdef _MSC_VER
+
+// don't complain about using 'this' in member initializers:
+#  pragma warning(disable:4355)
+
+typedef char int8_t;
+typedef unsigned char uint8_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef int int32_t;
+typedef unsigned int uint32_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+
+#  define not !
+#  define or ||
+#  define and &&
+#  define xor ^
+
+#  define LIKELY(v) v
+#  define UNLIKELY(v) v
+
+#  define UNUSED
+
+#  define NO_RETURN __declspec(noreturn)
+
+#  define PLATFORM_WINDOWS
+
+#  ifdef _M_IX86
+typedef int32_t intptr_t;
+typedef uint32_t uintptr_t;
+#    define ARCH_x86_32
+#  elif defined _M_X64
+typedef int64_t intptr_t;
+typedef uint64_t uintptr_t;
+#    define ARCH_x86_64
+#  else
+#    error "unsupported architecture"
+#  endif
+
+#else // not _MSC_VER
+
+#  include "stdint.h"
+
+#  define LIKELY(v) __builtin_expect((v) != 0, true)
+#  define UNLIKELY(v) __builtin_expect((v) != 0, false)
+
+#  define UNUSED __attribute__((unused))
+
+#  define NO_RETURN __attribute__((noreturn))
+
+#  ifdef __MINGW32__
+#    define PLATFORM_WINDOWS
+#  endif
+
+#  ifdef __i386__
+#    define ARCH_x86_32
+#  elif defined __x86_64__
+#    define ARCH_x86_64
+#  elif defined __POWERPC__
+#    define ARCH_powerpc
+#  elif defined __arm__
+#    define ARCH_arm
+#  else
+#    error "unsupported architecture"
+#  endif
+
+#endif // not _MSC_VER
+
 #undef JNIEXPORT
-#ifdef __MINGW32__
+#ifdef PLATFORM_WINDOWS
 #  define JNIEXPORT __declspec(dllexport)
 #  define PATH_SEPARATOR ';'
 #else
@@ -29,9 +97,9 @@
 #  define PATH_SEPARATOR ':'
 #endif
 
-#if (defined __i386__) || (defined __POWERPC__) || (defined __arm__)
+#if (defined ARCH_x86_32) || (defined ARCH_powerpc) || (defined ARCH_arm)
 #  define LD "ld"
-#  if (defined __MINGW32__) && __GNUC__ == 4
+#  if (defined _MSC_VER) || ((defined __MINGW32__) && __GNUC__ >= 4)
 #    define LLD "I64d"
 #  else
 #    define LLD "lld"
@@ -43,10 +111,10 @@
 #    define LX "x"
 #    define ULD "u"
 #  endif
-#elif defined __x86_64__
+#elif defined ARCH_x86_64
 #  define LD "ld"
 #  define LX "lx"
-#  ifdef __MINGW32__
+#  if (defined _MSC_VER) || (defined __MINGW32__)
 #    define LLD "I64d"
 #    define ULD "I64x"
 #  else
@@ -57,7 +125,7 @@
 #  error "Unsupported architecture"
 #endif
 
-#ifdef __MINGW32__
+#ifdef PLATFORM_WINDOWS
 #  define SO_PREFIX ""
 #else
 #  define SO_PREFIX "lib"
@@ -65,26 +133,94 @@
 
 #ifdef __APPLE__
 #  define SO_SUFFIX ".jnilib"
-#elif defined __MINGW32__
+#elif defined PLATFORM_WINDOWS
 #  define SO_SUFFIX ".dll"
 #else
 #  define SO_SUFFIX ".so"
 #endif
 
-#define NO_RETURN __attribute__((noreturn))
-
-#define LIKELY(v) __builtin_expect((v) != 0, true)
-#define UNLIKELY(v) __builtin_expect((v) != 0, false)
-
 #define MACRO_XY(X, Y) X##Y
 #define MACRO_MakeNameXY(FX, LINE) MACRO_XY(FX, LINE)
 #define MAKE_NAME(FX) MACRO_MakeNameXY(FX, __LINE__)
 
-#define UNUSED __attribute__((unused))
-
 inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace vm {
+
+#ifdef _MSC_VER
+
+template <class T>
+class RuntimeArray {
+ public:
+  RuntimeArray(unsigned size):
+    body(static_cast<T*>(malloc(size * sizeof(T))))
+  { }
+
+  ~RuntimeArray() {
+    free(body);
+  }
+
+  T* body;
+};
+
+#  define RUNTIME_ARRAY(type, name, size) RuntimeArray<type> name(size);
+#  define RUNTIME_ARRAY_BODY(name) name.body
+
+inline int
+vsnprintf(char* dst, size_t size, const char* format, va_list a)
+{
+  return vsnprintf_s(dst, size, _TRUNCATE, format, a);
+}
+
+inline int
+snprintf(char* dst, size_t size, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  int r = vsnprintf(dst, size, format, a);
+  va_end(a);
+  return r;
+}
+
+inline FILE*
+fopen(const char* name, const char* mode)
+{
+  FILE* file;
+  if (fopen_s(&file, name, mode) == 0) {
+    return file;
+  } else {
+    return 0;
+  }
+}
+
+#else // not _MSC_VER
+
+#  define RUNTIME_ARRAY(type, name, size) type name[size];
+#  define RUNTIME_ARRAY_BODY(name) name
+
+inline int
+vsnprintf(char* dst, size_t size, const char* format, va_list a)
+{
+  return ::vsnprintf(dst, size, format, a);
+}
+
+inline int
+snprintf(char* dst, size_t size, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  int r = vsnprintf(dst, size, format, a);
+  va_end(a);
+  return r;
+}
+
+inline FILE*
+fopen(const char* name, const char* mode)
+{
+  return ::fopen(name, mode);
+}
+
+#endif // not _MSC_VER
 
 const unsigned BytesPerWord = sizeof(uintptr_t);
 const unsigned BitsPerWord = BytesPerWord * 8;
