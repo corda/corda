@@ -14,28 +14,39 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <dirent.h>
 
 #include "jni.h"
 #include "jni-util.h"
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
+
 #  include <windows.h>
 #  include <io.h>
 #  include <direct.h>
+#  include <share.h>
 
-#  define OPEN _open
 #  define CLOSE _close
 #  define READ _read
 #  define WRITE _write
 #  define STAT _stat
 #  define STRUCT_STAT struct _stat
 #  define MKDIR(path, mode) _mkdir(path)
-#  define CREAT _creat
 #  define UNLINK _unlink
 #  define OPEN_MASK O_BINARY
-#else
+
+#  ifdef _MSC_VER
+#    define S_ISREG(x) ((x) | _S_IFREG)
+#    define S_ISDIR(x) ((x) | _S_IFDIR)
+#    define S_IRUSR _S_IREAD
+#    define S_IWUSR _S_IWRITE
+#  else
+#    define OPEN _open
+#    define CREAT _creat
+#  endif
+
+#else // not PLATFORM_WINDOWS
+
+#  include <dirent.h>
 #  include <unistd.h>
 #  include "sys/mman.h"
 
@@ -49,11 +60,31 @@
 #  define CREAT creat
 #  define UNLINK unlink
 #  define OPEN_MASK 0
-#endif
+
+#endif // not PLATFORM_WINDOWS
 
 inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace {
+
+#ifdef _MSC_VER
+inline int
+OPEN(const char* path, int mask, int mode)
+{
+  int fd;
+  if (_sopen_s(&fd, path, mask, _SH_DENYNO, mode) == 0) {
+    return fd;
+  } else {
+    return -1;
+  }
+}
+
+inline int
+CREAT(const char* path, int mode)
+{
+  return OPEN(path, _O_CREAT, mode);
+}
+#endif
 
 inline bool
 exists(const char* path)
@@ -68,9 +99,9 @@ doOpen(JNIEnv* e, const char* path, int mask)
   int fd = OPEN(path, mask | OPEN_MASK, S_IRUSR | S_IWUSR);
   if (fd == -1) {
     if (errno == ENOENT) {
-      throwNew(e, "java/io/FileNotFoundException", strerror(errno));
+      throwNewErrno(e, "java/io/FileNotFoundException");
     } else {
-      throwNew(e, "java/io/IOException", strerror(errno));
+      throwNewErrno(e, "java/io/IOException");
     }
   }
   return fd;
@@ -81,7 +112,7 @@ doClose(JNIEnv* e, jint fd)
 {
   int r = CLOSE(fd);
   if (r == -1) {
-    throwNew(e, "java/io/IOException", strerror(errno));
+    throwNewErrno(e, "java/io/IOException");
   }
 }
 
@@ -94,7 +125,7 @@ doRead(JNIEnv* e, jint fd, jbyte* data, jint length)
   } else if (r == 0) {
     return -1;
   } else {
-    throwNew(e, "java/io/IOException", strerror(errno));
+    throwNewErrno(e, "java/io/IOException");
     return 0;
   }  
 }
@@ -104,11 +135,11 @@ doWrite(JNIEnv* e, jint fd, const jbyte* data, jint length)
 {
   int r = WRITE(fd, data, length);
   if (r != length) {
-    throwNew(e, "java/io/IOException", strerror(errno));
+    throwNewErrno(e, "java/io/IOException");
   }
 }
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 
 class Mapping {
  public:
@@ -170,7 +201,37 @@ unmap(JNIEnv*, Mapping* mapping)
   free(mapping);
 }
 
-#else // not WIN32
+class Directory {
+ public:
+  Directory(): handle(0), findNext(false) { }
+
+  virtual const char* next() {
+    if (handle and handle != INVALID_HANDLE_VALUE) {
+      if (findNext) {
+        if (FindNextFile(handle, &data)) {
+          return data.cFileName;
+        }
+      } else {
+        findNext = true;
+        return data.cFileName;
+      }
+    }
+    return 0;
+  }
+
+  virtual void dispose() {
+    if (handle and handle != INVALID_HANDLE_VALUE) {
+      FindClose(handle);
+    }
+    free(this);
+  }
+
+  HANDLE handle;
+  WIN32_FIND_DATA data;
+  bool findNext;
+};
+
+#else // not PLATFORM_WINDOWS
 
 class Mapping {
  public:
@@ -203,7 +264,7 @@ map(JNIEnv* e, const char* path)
     close(fd);
   }
   if (result == 0 and not e->ExceptionOccurred()) {
-    throwNew(e, "java/io/IOException", strerror(errno));
+    throwNewErrno(e, "java/io/IOException");
   }
   return result;
 }
@@ -215,7 +276,7 @@ unmap(JNIEnv*, Mapping* mapping)
   free(mapping);
 }
 
-#endif // not WIN32
+#endif // not PLATFORM_WINDOWS
 
 } // namespace
 
@@ -257,7 +318,7 @@ Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
     if (not exists(chars)) {
       int r = ::MKDIR(chars, 0700);
       if (r != 0) {
-        throwNew(e, "java/io/IOException", strerror(errno));
+        throwNewErrno(e, "java/io/IOException");
       }
     }
     e->ReleaseStringUTFChars(path, chars);
@@ -272,7 +333,7 @@ Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
     if (not exists(chars)) {
       int fd = CREAT(chars, 0600);
       if (fd == -1) {
-        throwNew(e, "java/io/IOException", strerror(errno));
+        throwNewErrno(e, "java/io/IOException");
       } else {
         doClose(e, fd);
       }
@@ -288,7 +349,7 @@ Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
   if (chars) {
     int r = UNLINK(chars);
     if (r != 0) {
-      throwNew(e, "java/io/IOException", strerror(errno));
+      throwNewErrno(e, "java/io/IOException");
     }
     e->ReleaseStringUTFChars(path, chars);
   }
@@ -337,6 +398,48 @@ Java_java_io_File_exists(JNIEnv* e, jclass, jstring path)
   }
 }
 
+#ifdef PLATFORM_WINDOWS
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
+{
+  const char* chars = e->GetStringUTFChars(path, 0);
+  if (chars) {
+    Directory* d = new (malloc(sizeof(Directory))) Directory;
+    d->handle = FindFirstFile(chars, &(d->data));
+    if (d->handle == INVALID_HANDLE_VALUE) {
+      d->dispose();
+      d = 0;
+    }
+
+    e->ReleaseStringUTFChars(path, chars);
+    return reinterpret_cast<jlong>(d);
+  } else {
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_java_io_File_readDir(JNIEnv* e, jclass, jlong handle)
+{
+  Directory* d = reinterpret_cast<Directory*>(handle);
+  
+  const char* s = d->next();
+  if (s) {
+    return e->NewStringUTF(s);
+  } else {
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_io_File_closeDir(JNIEnv* , jclass, jlong handle)
+{
+  reinterpret_cast<Directory*>(handle)->dispose();
+}
+
+#else // not PLATFORM_WINDOWS
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
 {
@@ -372,6 +475,8 @@ Java_java_io_File_closeDir(JNIEnv* , jclass, jlong handle)
     closedir(reinterpret_cast<DIR*>(handle));
   }
 }
+
+#endif // not PLATFORM_WINDOWS
 
 extern "C" JNIEXPORT jint JNICALL
 Java_java_io_FileInputStream_open(JNIEnv* e, jclass, jstring path)

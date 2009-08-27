@@ -12,16 +12,20 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
 
 #include "jni.h"
 #include "jni-util.h"
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 #  include <winsock2.h>
 #  include <errno.h>
+#  ifdef _MSC_VER
+#    define snprintf sprintf_s
+#  else
+#    include <unistd.h>
+#  endif
 #else
+#  include <unistd.h>
 #  include <fcntl.h>
 #  include <errno.h>
 #  include <netdb.h>
@@ -34,7 +38,7 @@
 #define java_nio_channels_SelectionKey_OP_WRITE 4L
 #define java_nio_channels_SelectionKey_OP_ACCEPT 16L
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 typedef int socklen_t;
 #endif
 
@@ -51,16 +55,31 @@ charsToArray(JNIEnv* e, const char* s)
   return a;
 }
 
+#ifdef _MSC_VER
+inline void
+close(int socket)
+{
+  closesocket(socket);
+}
+#endif
+
 inline jbyteArray
 errorString(JNIEnv* e, int n)
 {
+#ifdef _MSC_VER
+  const unsigned size = 128;
+  char buffer[size];
+  strerror_s(buffer, size, n);
+  return charsToArray(e, buffer);
+#else
   return charsToArray(e, strerror(n));
+#endif
 }
 
 inline jbyteArray
 errorString(JNIEnv* e)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   const unsigned size = 64;
   char buffer[size];
   snprintf(buffer, size, "wsa code: %d", WSAGetLastError());
@@ -118,7 +137,7 @@ init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
     hostent* host = gethostbyname(chars);
     e->ReleaseStringUTFChars(hostString, chars);
     if (host == 0) {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
       throwIOException(e);
 #else
       throwIOException(e, hstrerror(h_errno));
@@ -135,7 +154,7 @@ init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
 inline bool
 einProgress()
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   return WSAGetLastError() == WSAEINPROGRESS
     or WSAGetLastError() == WSAEWOULDBLOCK;
 #else
@@ -146,7 +165,7 @@ einProgress()
 inline bool
 eagain()
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   return WSAGetLastError() == WSAEINPROGRESS
     or WSAGetLastError() == WSAEWOULDBLOCK;
 #else
@@ -157,7 +176,7 @@ eagain()
 bool
 setBlocking(JNIEnv* e, int d, bool blocking)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   u_long a = (blocking ? 0 : 1);
   int r = ioctlsocket(d, FIONBIO, &a);
   if (r != 0) {
@@ -244,7 +263,7 @@ doAccept(JNIEnv* e, int s)
 int
 doRead(int fd, void* buffer, size_t count)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   return recv(fd, static_cast<char*>(buffer), count, 0);
 #else
   return read(fd, buffer, count);
@@ -254,7 +273,7 @@ doRead(int fd, void* buffer, size_t count)
 int
 doWrite(int fd, const void* buffer, size_t count)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   return send(fd, static_cast<const char*>(buffer), count, 0);
 #else
   return write(fd, buffer, count);
@@ -264,7 +283,7 @@ doWrite(int fd, const void* buffer, size_t count)
 int
 makeSocket(JNIEnv* e)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   static bool wsaInitialized = false;
   if (not wsaInitialized) {
     WSADATA data;
@@ -427,7 +446,7 @@ namespace {
 
 class Pipe {
  public:
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   // The Windows socket API only accepts socket file descriptors, not
   // pipe descriptors or others.  Thus, to implement
   // Selector.wakeup(), we make a socket connection via the loopback
@@ -625,7 +644,7 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
     if (max < socket) max = socket;
   }
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   if (s->control.listener() >= 0) {
     int socket = s->control.listener();
     FD_SET(static_cast<unsigned>(socket), &(s->read));
@@ -660,7 +679,7 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
     }
   }
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   if (FD_ISSET(s->control.writer(), &(s->write)) or
       FD_ISSET(s->control.writer(), &(s->except)))
   {

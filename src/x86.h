@@ -14,7 +14,11 @@
 #include "types.h"
 #include "common.h"
 
-#ifdef __i386__
+#ifdef _MSC_VER
+#  include "windows.h"
+#endif
+
+#ifdef ARCH_x86_32
 
 #  ifdef __APPLE__
 #    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
@@ -50,7 +54,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 
 } // namespace vm
 
-#elif defined __x86_64__
+#elif defined ARCH_x86_64
 
 #  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
 #  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
@@ -58,7 +62,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
 
 extern "C" uint64_t
-#  ifdef __MINGW32__
+#  ifdef PLATFORM_WINDOWS
 vmNativeCall(void* function, void* stack, unsigned stackSize,
              unsigned returnType);
 #  else
@@ -68,7 +72,7 @@ vmNativeCall(void* function, void* stack, unsigned stackSize,
 
 namespace vm {
 
-#  ifdef __MINGW32__
+#  ifdef PLATFORM_WINDOWS
 inline uint64_t
 dynamicCall(void* function, uint64_t* arguments, UNUSED uint8_t* argumentTypes,
             unsigned argumentCount, unsigned, unsigned returnType)
@@ -129,13 +133,21 @@ namespace vm {
 inline void
 trap()
 {
+#ifdef _MSC_VER
+  __asm int 3
+#else
   asm("int3");
+#endif
 }
 
 inline void
 memoryBarrier()
 {
+#ifdef _MSC_VER
+  MemoryBarrier();
+#else
   __asm__ __volatile__("": : :"memory");
+#endif
 }
 
 inline void

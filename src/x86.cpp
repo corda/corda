@@ -7,19 +7,18 @@
 
    There is NO WARRANTY for this software.  See license.txt for
    details. */
-   
-   
-#if (defined __i386__) || (defined __x86_64__)
 
 #include "assembler.h"
 #include "vector.h"
-
+   
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
 
 using namespace vm;
 
 namespace {
+
+namespace local {
 
 enum {
   rax = 0,
@@ -2101,7 +2100,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFootprint(unsigned footprint) {
-#ifdef __MINGW32__
+#ifdef PLATFORM_WINDOWS
     return max(footprint, StackAlignmentInWords);
 #else
     return max(footprint > argumentRegisterCount() ?
@@ -2115,7 +2114,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-#ifdef __MINGW32__
+#ifdef PLATFORM_WINDOWS
     if (BytesPerWord == 8) return 4; else
 #else
     if (BytesPerWord == 8) return 6; else
@@ -2126,7 +2125,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int argumentRegister(unsigned index) {
     assert(&c, BytesPerWord == 8);
     switch (index) {
-#ifdef __MINGW32__
+#ifdef PLATFORM_WINDOWS
     case 0:
       return rcx;
     case 1:
@@ -2407,18 +2406,21 @@ class MyAssembler: public Assembler {
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {
-    struct {
+    struct Argument {
       unsigned size;
       OperandType type;
       Operand* operand;
-    } arguments[argumentCount];
+    };
+    RUNTIME_ARRAY(Argument, arguments, argumentCount);
     va_list a; va_start(a, argumentCount);
     unsigned footprint = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
-      arguments[i].size = va_arg(a, unsigned);
-      arguments[i].type = static_cast<OperandType>(va_arg(a, int));
-      arguments[i].operand = va_arg(a, Operand*);
-      footprint += ceiling(arguments[i].size, BytesPerWord);
+      RUNTIME_ARRAY_BODY(arguments)[i].size = va_arg(a, unsigned);
+      RUNTIME_ARRAY_BODY(arguments)[i].type
+        = static_cast<OperandType>(va_arg(a, int));
+      RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, Operand*);
+      footprint += ceiling
+        (RUNTIME_ARRAY_BODY(arguments)[i].size, BytesPerWord);
     }
     va_end(a);
 
@@ -2429,14 +2431,22 @@ class MyAssembler: public Assembler {
       if (i < arch_->argumentRegisterCount()) {
         Register dst(arch_->argumentRegister(i));
         apply(Move,
-              arguments[i].size, arguments[i].type, arguments[i].operand,
-              pad(arguments[i].size), RegisterOperand, &dst);
+              RUNTIME_ARRAY_BODY(arguments)[i].size,
+              RUNTIME_ARRAY_BODY(arguments)[i].type,
+              RUNTIME_ARRAY_BODY(arguments)[i].operand,
+              pad(RUNTIME_ARRAY_BODY(arguments)[i].size),
+              RegisterOperand,
+              &dst);
       } else {
         Memory dst(rsp, offset * BytesPerWord);
         apply(Move,
-              arguments[i].size, arguments[i].type, arguments[i].operand,
-              pad(arguments[i].size), MemoryOperand, &dst);
-        offset += ceiling(arguments[i].size, BytesPerWord);
+              RUNTIME_ARRAY_BODY(arguments)[i].size,
+              RUNTIME_ARRAY_BODY(arguments)[i].type,
+              RUNTIME_ARRAY_BODY(arguments)[i].operand,
+              pad(RUNTIME_ARRAY_BODY(arguments)[i].size),
+              MemoryOperand,
+              &dst);
+        offset += ceiling(RUNTIME_ARRAY_BODY(arguments)[i].size, BytesPerWord);
       }
     }
   }
@@ -2620,7 +2630,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual Promise* offset() {
-    return ::offset(&c);
+    return local::offset(&c);
   }
 
   virtual Block* endBlock(bool startNew) {
@@ -2647,6 +2657,8 @@ class MyAssembler: public Assembler {
   MyArchitecture* arch_;
 };
 
+} // namespace local
+
 } // namespace
 
 namespace vm {
@@ -2654,19 +2666,17 @@ namespace vm {
 Assembler::Architecture*
 makeArchitecture(System* system)
 {
-  return new (allocate(system, sizeof(MyArchitecture))) MyArchitecture(system);
+  return new (allocate(system, sizeof(local::MyArchitecture)))
+    local::MyArchitecture(system);
 }
 
 Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,
               Assembler::Architecture* architecture)
 {
-  return new (zone->allocate(sizeof(MyAssembler)))
-    MyAssembler(system, allocator, zone,
-                static_cast<MyArchitecture*>(architecture));
+  return new (zone->allocate(sizeof(local::MyAssembler)))
+    local::MyAssembler(system, allocator, zone,
+                       static_cast<local::MyArchitecture*>(architecture));
 }
 
-
 } // namespace vm
-
-#endif //(defined __i386__) || (defined __x86_64__)

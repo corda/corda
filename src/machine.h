@@ -18,7 +18,7 @@
 #include "processor.h"
 #include "constants.h"
 
-#ifdef __MINGW32__
+#ifdef PLATFORM_WINDOWS
 #  define JNICALL __stdcall
 #else
 #  define JNICALL
@@ -2371,7 +2371,7 @@ setDaemon(Thread* t, object thread, bool daemon)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
-  if (threadDaemon(t, thread) != daemon) {
+  if ((threadDaemon(t, thread) != 0) != daemon) {
     threadDaemon(t, thread) = daemon;
 
     if (daemon) {

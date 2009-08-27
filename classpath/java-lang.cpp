@@ -10,44 +10,56 @@
    
 #include "math.h"
 #include "stdlib.h"
-#include "sys/time.h"
 #include "time.h"
 #include "time.h"
 #include "string.h"
 #include "stdio.h"
-#include "stdint.h"
 #include "jni.h"
 #include "jni-util.h"
 #include "errno.h"
 #include "fcntl.h"
-#include "unistd.h"
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
+
 #  include "windows.h"
 #  include "winbase.h"
 #  include "io.h"
 #  include "tchar.h"
+#  include "float.h"
 #  include "sys/types.h"
 #  include "sys/timeb.h"
 #  define SO_PREFIX ""
-#else
-#  define SO_PREFIX "lib"
-#include <sys/sysctl.h>
-#include "sys/utsname.h"
-#include "sys/wait.h"
-#endif
-
-#ifdef __APPLE__
-#  define SO_SUFFIX ".jnilib"
-#include <CoreServices/CoreServices.h>
-#elif defined WIN32
 #  define SO_SUFFIX ".dll"
-#else
-#  define SO_SUFFIX ".so"
-#endif
+
+#  ifdef _MSC_VER
+#    define snprintf sprintf_s
+#    define isnan _isnan
+#    define isfinite _finite
+#    define strtof strtod
+#    define FTIME _ftime_s
+#  else
+#    define FTIME _ftime
+#  endif
+
+#else // not PLATFORM_WINDOWS
+
+#  define SO_PREFIX "lib"
+#  ifdef __APPLE__
+#    define SO_SUFFIX ".jnilib"
+#    include <CoreServices/CoreServices.h>
+#  else
+#    define SO_SUFFIX ".so"
+#  endif
+#  include "unistd.h"
+#  include "sys/time.h"
+#  include "sys/sysctl.h"
+#  include "sys/utsname.h"
+#  include "sys/wait.h"
+
+#endif // not PLATFORM_WINDOWS
 
 namespace {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   char* getErrorStr(DWORD err){
     // The poor man's error string, just print the error code 
     char * errStr = (char*) malloc(9 * sizeof(char));
@@ -84,7 +96,7 @@ namespace {
   {
     int fd = _open_osfhandle(reinterpret_cast<intptr_t>(h), 0);
     if (fd == -1) {
-      throwNew(e, "java/io/IOException", strerror(errno));
+      throwNewErrno(e, "java/io/IOException");
     }
     return fd;
   }
@@ -92,7 +104,7 @@ namespace {
   void makePipe(JNIEnv* e, int p[2])
   {
     if(pipe(p) != 0) {
-      throwNew(e, "java/io/IOException", strerror(errno));
+      throwNewErrno(e, "java/io/IOException");
     }
   }
   
@@ -120,7 +132,7 @@ namespace {
 #endif  
 }
 
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
 extern "C" JNIEXPORT void JNICALL 
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
                             jobjectArray command, jlongArray process)
@@ -132,13 +144,17 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     size += e->GetStringUTFLength(element) + 1;
   } 
    
-  char line[size];
-  char* linep = line;
+  RUNTIME_ARRAY(char, line, size);
+  char* linep = RUNTIME_ARRAY_BODY(line);
   for (int i = 0; i < e->GetArrayLength(command); ++i) {
     if (i) *(linep++) = _T(' ');
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
     const char* s =  e->GetStringUTFChars(element, 0);
+#ifdef _MSC_VER
+    _tcscpy_s(linep, size - (linep - RUNTIME_ARRAY_BODY(line)), s);
+#else
     _tcscpy(linep, s);
+#endif
     e->ReleaseStringUTFChars(element, s);
     linep += e->GetStringUTFLength(element);
   }
@@ -175,7 +191,7 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   si.hStdInput = out[0];
   si.hStdError = err[1];
  
-  BOOL success = CreateProcess(0, (LPSTR) line, 0, 0, 1,
+  BOOL success = CreateProcess(0, (LPSTR) RUNTIME_ARRAY_BODY(line), 0, 0, 1,
                                CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
                                0, 0, &si, &pi);
   
@@ -247,14 +263,14 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   makePipe(e, msg);
   if(e->ExceptionOccurred()) return;
   if(fcntl(msg[1], F_SETFD, FD_CLOEXEC) != 0) {
-    throwNew(e, "java/io/IOException", strerror(errno));
+    throwNewErrno(e, "java/io/IOException");
     return;
   }
   
   pid_t pid = fork();
   switch(pid){
   case -1: // error
-    throwNew(e, "java/io/IOException", strerror(errno));
+    throwNewErrno(e, "java/io/IOException");
     return;
   case 0: { // child
     // Setup stdin, stdout and stderr
@@ -286,10 +302,10 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     char c;
     int r = read(msg[0], &c, 1);
     if(r == -1) {
-      throwNew(e, "java/io/IOException", strerror(errno));
+      throwNewErrno(e, "java/io/IOException");
       return;
     } else if(r) {
-      throwNew(e, "java/io/IOException", strerror(c));
+      throwNewErrno(e, "java/io/IOException");
       return;
     }
   } break;
@@ -309,9 +325,9 @@ Java_java_lang_Runtime_exitValue(JNIEnv* e, jclass, jlong pid)
   int status;
   pid_t returned = waitpid(pid, &status, WNOHANG);
   if(returned == 0){
-    throwNew(e, "java/lang/IllegalThreadStateException", strerror(errno));
+    throwNewErrno(e, "java/lang/IllegalThreadStateException");
   } else if(returned == -1){
-    throwNew(e, "java/lang/Exception", strerror(errno));
+    throwNewErrno(e, "java/lang/Exception");
   } 
   
   return WEXITSTATUS(status);
@@ -345,7 +361,7 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
   jstring r = 0;
   const char* chars = e->GetStringUTFChars(name, 0);
   if (chars) {
-#ifdef WIN32 
+#ifdef PLATFORM_WINDOWS 
     if (strcmp(chars, "line.separator") == 0) {
       r = e->NewStringUTF("\r\n");
     } else if (strcmp(chars, "file.separator") == 0) {
@@ -354,49 +370,38 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("Windows");
     } else if (strcmp(chars, "os.version") == 0) {
       unsigned size = 32;
-      char buffer[size];
+      RUNTIME_ARRAY(char, buffer, size);
       OSVERSIONINFO OSversion;
       OSversion.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
       ::GetVersionEx(&OSversion);
-      snprintf(buffer, size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
-      r = e->NewStringUTF(buffer);
+      snprintf(RUNTIME_ARRAY_BODY(buffer), size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
+      r = e->NewStringUTF(RUNTIME_ARRAY_BODY(buffer));
     } else if (strcmp(chars, "os.arch") == 0) {
-    #ifdef __i386__
+#ifdef ARCH_x86_32
       r = e->NewStringUTF("x86");
-    #else
-      #ifdef __x86_64__
-        r = e->NewStringUTF("x86_64");
-      #else
-        #if defined(__ppc__) || defined(__powerpc__) || defined(__ppc64__) || defined(__powerpc64__)
-          r = e->NewStringUTF("ppc");
-        #else
-          #ifdef __ia64__
-            r = e->NewStringUTF("ia64");
-          #else
-            #ifdef __arm__
-              r = e->NewStringUTF("arm");
-            #else
-              #ifdef __alpha__
-                r = e->NewStringUTF("alpha");
-              #else
-                #ifdef __sparc64__
-                  r = e->NewStringUTF("sparc64");
-                #else
-                  r = e->NewStringUTF("unknown");
-                #endif
-              #endif
-            #endif
-          #endif
-        #endif
-      #endif
-    #endif
+#elif defined ARCH_x86_64
+      r = e->NewStringUTF("x86_64");
+#elif defined ARCH_powerpc
+      r = e->NewStringUTF("ppc");
+#elif defined ARCH_arm
+      r = e->NewStringUTF("arm");
+#endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
     } else if (strcmp(chars, "user.home") == 0) {
+#  ifdef _MSC_VER
+      WCHAR buffer[MAX_PATH];
+      if (_wgetenv_s(0, buffer, MAX_PATH, L"USERPROFILE") == 0) {
+        r = e->NewString(reinterpret_cast<jchar*>(buffer), lstrlenW(buffer));
+      } else {
+        r = 0;
+      }
+#  else
       LPWSTR home = _wgetenv(L"USERPROFILE");
       r = e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
+#  endif
     }
 #else
     if (strcmp(chars, "line.separator") == 0) {
@@ -426,35 +431,15 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF(system_id.release);
 #endif
     } else if (strcmp(chars, "os.arch") == 0) {
-    #ifdef __i386__
+#ifdef ARCH_x86_32
       r = e->NewStringUTF("x86");
-    #else
-      #ifdef __x86_64__
-        r = e->NewStringUTF("x86_64");
-      #else
-        #if defined(__ppc__) || defined(__powerpc__) || defined(__ppc64__) || defined(__powerpc64__)
-          r = e->NewStringUTF("ppc");
-        #else
-          #ifdef __ia64__
-            r = e->NewStringUTF("ia64");
-          #else
-            #ifdef __arm__
-              r = e->NewStringUTF("arm");
-            #else
-              #ifdef __alpha__
-                r = e->NewStringUTF("alpha");
-              #else
-                #ifdef __sparc64__
-                  r = e->NewStringUTF("sparc64");
-                #else
-                  r = e->NewStringUTF("unknown");
-                #endif
-              #endif
-            #endif
-          #endif
-        #endif
-      #endif
-    #endif
+#elif defined ARCH_x86_64
+      r = e->NewStringUTF("x86_64");
+#elif defined ARCH_powerpc
+      r = e->NewStringUTF("ppc");
+#elif defined ARCH_arm
+      r = e->NewStringUTF("arm");
+#endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
     } else if (strcmp(chars, "user.home") == 0) {
@@ -476,9 +461,9 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_lang_System_currentTimeMillis(JNIEnv*, jclass)
 {
-#ifdef WIN32
+#ifdef PLATFORM_WINDOWS
   _timeb tb;
-  _ftime(&tb);
+  FTIME(&tb);
   return (static_cast<jlong>(tb.time) * 1000) + static_cast<jlong>(tb.millitm);
 #else
   timeval tv = { 0, 0 };
@@ -496,9 +481,10 @@ Java_java_lang_System_doMapLibraryName(JNIEnv* e, jclass, jstring name)
   if (chars) {
     unsigned nameLength = strlen(chars);
     unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
-    char buffer[size];
-    snprintf(buffer, size, SO_PREFIX "%s" SO_SUFFIX, chars);
-    r = e->NewStringUTF(buffer);
+    RUNTIME_ARRAY(char, buffer, size);
+    snprintf
+      (RUNTIME_ARRAY_BODY(buffer), size, SO_PREFIX "%s" SO_SUFFIX, chars);
+    r = e->NewStringUTF(RUNTIME_ARRAY_BODY(buffer));
 
     e->ReleaseStringUTFChars(name, chars);
   }

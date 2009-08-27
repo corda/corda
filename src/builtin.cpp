@@ -234,9 +234,9 @@ Avian_avian_SystemClassLoader_resourceExists
   object name = reinterpret_cast<object>(arguments[1]);
 
   if (LIKELY(name)) {
-    char n[stringLength(t, name) + 1];
-    stringChars(t, name, n);
-    return t->m->finder->exists(n);
+    RUNTIME_ARRAY(char, n, stringLength(t, name) + 1);
+    stringChars(t, name, RUNTIME_ARRAY_BODY(n));
+    return t->m->finder->exists(RUNTIME_ARRAY_BODY(n));
   } else {
     t->exception = makeNullPointerException(t);
     return 0;
@@ -547,18 +547,18 @@ Avian_java_lang_System_getVMProperty
   PROTECT(t, found);
 
   unsigned length = stringLength(t, name);
-  char n[length + 1];
-  stringChars(t, name, n);
+  RUNTIME_ARRAY(char, n, length + 1);
+  stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
   int64_t r = 0;
-  if (strcmp(n, "java.lang.classpath") == 0) {
+  if (::strcmp(RUNTIME_ARRAY_BODY(n), "java.lang.classpath") == 0) {
     r = reinterpret_cast<int64_t>(makeString(t, "%s", t->m->finder->path()));
-  } else if (strcmp(n, "avian.version") == 0) {
+  } else if (::strcmp(RUNTIME_ARRAY_BODY(n), "avian.version") == 0) {
     r = reinterpret_cast<int64_t>(makeString(t, AVIAN_VERSION));
-  } else if (strcmp(n, "file.encoding") == 0) {
+  } else if (::strcmp(RUNTIME_ARRAY_BODY(n), "file.encoding") == 0) {
     r = reinterpret_cast<int64_t>(makeString(t, "ASCII"));
   } else {
-    const char* v = findProperty(t, n);
+    const char* v = findProperty(t, RUNTIME_ARRAY_BODY(n));
     if (v) {
       r = reinterpret_cast<int64_t>(makeString(t, v));
     }
@@ -643,8 +643,8 @@ Avian_java_lang_Runtime_load
   bool mapName = arguments[1];
 
   unsigned length = stringLength(t, name);
-  char n[length + 1];
-  stringChars(t, name, n);
+  RUNTIME_ARRAY(char, n, length + 1);
+  stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
   ACQUIRE(t, t->m->classLock);
 
@@ -652,7 +652,7 @@ Avian_java_lang_Runtime_load
   if (mapName and builtins) {
     const char* s = builtins;
     while (*s) {
-      if (strncmp(s, n, length) == 0
+      if (::strncmp(s, RUNTIME_ARRAY_BODY(n), length) == 0
           and (s[length] == ',' or s[length] == 0))
       {
         // library is built in to this executable
@@ -671,7 +671,7 @@ Avian_java_lang_Runtime_load
   System::Library* last = t->m->libraries;
   for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     if (lib->name()
-        and strcmp(lib->name(), n) == 0
+        and ::strcmp(lib->name(), RUNTIME_ARRAY_BODY(n)) == 0
         and lib->mapName() == mapName)
     {
       // already loaded
@@ -681,11 +681,14 @@ Avian_java_lang_Runtime_load
   }
 
   System::Library* lib;
-  if (LIKELY(t->m->system->success(t->m->system->load(&lib, n, mapName)))) {
+  if (LIKELY(t->m->system->success
+             (t->m->system->load(&lib, RUNTIME_ARRAY_BODY(n), mapName))))
+  {
     last->setNext(lib);
     runOnLoadIfFound(t, lib);
   } else {
-    object message = makeString(t, "library not found: %s", n);
+    object message = makeString
+      (t, "library not found: %s", RUNTIME_ARRAY_BODY(n));
     t->exception = makeUnsatisfiedLinkError(t, message);
   }
 }
@@ -777,8 +780,8 @@ Avian_java_lang_Throwable_trace
         if (isAssignableFrom
             (t, arrayBody(t, t->m->types, Machine::ThrowableType),
              methodClass(t, method))
-            and strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                       &byteArrayBody(t, methodName(t, method), 0))
+            and vm::strcmp(reinterpret_cast<const int8_t*>("<init>"),
+                           &byteArrayBody(t, methodName(t, method), 0))
             == 0)
         {
           return true;
@@ -919,10 +922,10 @@ Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
   object path = reinterpret_cast<object>(*arguments);
 
   if (LIKELY(path)) {
-    char p[stringLength(t, path) + 1];
-    stringChars(t, path, p);
+    RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+    stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
-    System::Region* r = t->m->finder->find(p);
+    System::Region* r = t->m->finder->find(RUNTIME_ARRAY_BODY(p));
     if (r) {
       jint rSize = r->length();
       r->dispose();
@@ -939,10 +942,11 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
   object path = reinterpret_cast<object>(*arguments);
 
   if (LIKELY(path)) {
-    char p[stringLength(t, path) + 1];
-    stringChars(t, path, p);
+    RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+    stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
-    return reinterpret_cast<int64_t>(t->m->finder->find(p));
+    return reinterpret_cast<int64_t>
+      (t->m->finder->find(RUNTIME_ARRAY_BODY(p)));
   } else {
     t->exception = makeNullPointerException(t);
     return 0;

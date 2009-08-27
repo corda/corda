@@ -16,6 +16,8 @@ using namespace vm;
 
 namespace {
 
+namespace local {
+
 // an object must survive TenureThreshold + 2 garbage collections
 // before being copied to gen2 (must be at least 1):
 const unsigned TenureThreshold = 3;
@@ -1194,7 +1196,7 @@ void
 collect(Context* c, void** p, void* target, unsigned offset)
 {
   void* original = mask(*p);
-  void* parent = 0;
+  void* parent_ = 0;
   
   if (Debug) {
     fprintf(stderr, "update %p (%s) at %p (%s)\n",
@@ -1202,7 +1204,7 @@ collect(Context* c, void** p, void* target, unsigned offset)
   }
 
   bool needsVisit;
-  set(p, update(c, mask(p), target, offset, &needsVisit));
+  local::set(p, update(c, mask(p), target, offset, &needsVisit));
 
   if (Debug) {
     fprintf(stderr, "  result: %p (%s) (visit? %d)\n",
@@ -1262,7 +1264,7 @@ collect(Context* c, void** p, void* target, unsigned offset)
             second = offset;
           }
         } else {
-          set(copy, offset, childCopy);
+          local::set(copy, offset, childCopy);
         }
 
         if (visits > 1 and total > 2 and (second or needsVisit)) {
@@ -1301,16 +1303,16 @@ collect(Context* c, void** p, void* target, unsigned offset)
     if (walker.visits) {
       // descend
       if (walker.visits > 1) {
-        ::parent(c, original) = parent;
-        parent = original;
+        parent(c, original) = parent_;
+        parent_ = original;
       }
 
       original = get(copy, walker.first);
-      set(copy, walker.first, follow(c, original));
+      local::set(copy, walker.first, follow(c, original));
       goto visit;
     } else {
       // ascend
-      original = parent;
+      original = parent_;
     }
   }
 
@@ -1359,9 +1361,9 @@ collect(Context* c, void** p, void* target, unsigned offset)
     assert(c, walker.total > 1);
 
     if (walker.total == 3 and bitsetHasMore(bitset(c, original))) {
-      parent = original;
+      parent_ = original;
     } else {
-      parent = ::parent(c, original);
+      parent_ = parent(c, original);
     }
 
     if (Debug) {
@@ -1375,7 +1377,7 @@ collect(Context* c, void** p, void* target, unsigned offset)
     }
 
     original = get(copy, walker.next);
-    set(copy, walker.next, follow(c, original));
+    local::set(copy, walker.next, follow(c, original));
     goto visit;
   } else {
     return;
@@ -1475,7 +1477,7 @@ visitMarkedFixies(Context* c)
       { }
 
       virtual bool visit(unsigned offset) {
-        collect(c, p, offset);
+        local::collect(c, p, offset);
         return true;
       }
 
@@ -1559,7 +1561,7 @@ collect2(Context* c)
     Visitor(Context* c): c(c) { }
 
     virtual void visit(void* p) {
-      collect(c, static_cast<void**>(p));
+      local::collect(c, static_cast<void**>(p));
       visitMarkedFixies(c);
     }
 
@@ -1745,11 +1747,11 @@ class MyHeap: public Heap {
   }
 
   virtual void* tryAllocate(unsigned size) {
-    return ::tryAllocate(&c, size);
+    return local::tryAllocate(&c, size);
   }
 
   virtual void* allocate(unsigned size) {
-    void* p = ::tryAllocate(&c, size);
+    void* p = local::tryAllocate(&c, size);
     expect(c.system, p);
     return p;
   }
@@ -1762,7 +1764,7 @@ class MyHeap: public Heap {
     c.mode = type;
     c.incomingFootprint = incomingFootprint;
 
-    ::collect(&c);
+    local::collect(&c);
   }
 
   virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
@@ -1856,10 +1858,10 @@ class MyHeap: public Heap {
       if (Debug) {
         fprintf(stderr, "follow %p (%s) to %p (%s)\n",
                 p, segment(&c, p),
-                ::follow(&c, p), segment(&c, ::follow(&c, p)));
+                local::follow(&c, p), segment(&c, local::follow(&c, p)));
       }
 
-      return ::follow(&c, p);
+      return local::follow(&c, p);
     } else {
       return p;
     }
@@ -1903,6 +1905,8 @@ class MyHeap: public Heap {
   Context c;
 };
 
+} // namespace local
+
 } // namespace
 
 namespace vm {
@@ -1910,7 +1914,8 @@ namespace vm {
 Heap*
 makeHeap(System* system, unsigned limit)
 {  
-  return new (system->tryAllocate(sizeof(MyHeap))) MyHeap(system, limit);
+  return new (system->tryAllocate(sizeof(local::MyHeap)))
+    local::MyHeap(system, limit);
 }
 
 } // namespace vm

@@ -64,13 +64,14 @@ void
 dispose(Thread* t, Thread* o, bool remove)
 {
   if (remove) {
-    // debug
+#ifndef NDEBUG
     expect(t, find(t->m->rootThread, o));
 
     unsigned c = count(t->m->rootThread, o);
-    Thread* threads[c];
+    Thread** threads = static_cast<Thread**>
+      (allocate(t->m->system, c * sizeof(Thread*)));
     fill(t->m->rootThread, o, threads);
-    // end debug
+#endif
 
     if (o->parent) {
       Thread* previous = 0;
@@ -110,13 +111,13 @@ dispose(Thread* t, Thread* o, bool remove)
       abort(t);
     }
 
-    // debug
+#ifndef NDEBUG
     expect(t, not find(t->m->rootThread, o));
 
     for (unsigned i = 0; i < c; ++i) {
       expect(t, find(t->m->rootThread, threads[i]));
     }
-    // end debug
+#endif
   }
 
   o->dispose();
@@ -568,10 +569,10 @@ finalizeObject(Thread* t, object o)
     for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
       object m = arrayBody(t, classMethodTable(t, c), i);
 
-      if (strcmp(reinterpret_cast<const int8_t*>("finalize"),
-                 &byteArrayBody(t, methodName(t, m), 0)) == 0
-          and strcmp(reinterpret_cast<const int8_t*>("()V"),
-                     &byteArrayBody(t, methodSpec(t, m), 0)) == 0)
+      if (vm::strcmp(reinterpret_cast<const int8_t*>("finalize"),
+                     &byteArrayBody(t, methodName(t, m), 0)) == 0
+          and vm::strcmp(reinterpret_cast<const int8_t*>("()V"),
+                         &byteArrayBody(t, methodSpec(t, m), 0)) == 0)
       {
         t->m->processor->invoke(t, m, o);
         t->exception = 0;
@@ -588,7 +589,7 @@ makeByteArray(Thread* t, const char* format, va_list a)
   const int Size = 256;
   char buffer[Size];
   
-  int r = vsnprintf(buffer, Size - 1, format, a);
+  int r = vm::vsnprintf(buffer, Size - 1, format, a);
   expect(t, r >= 0 and r < Size - 1);
 
   object s = makeByteArray(t, strlen(buffer) + 1);
@@ -1031,7 +1032,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     object staticValueTable = makeIntArray(t, count);
     PROTECT(t, staticValueTable);
 
-    uint8_t staticTypes[count];
+    RUNTIME_ARRAY(uint8_t, staticTypes, count);
 
     for (unsigned i = 0; i < count; ++i) {
       unsigned flags = s.read2();
@@ -1048,8 +1049,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         object name = singletonObject(t, pool, s.read2() - 1);
         unsigned length = s.read4();
 
-        if (strcmp(reinterpret_cast<const int8_t*>("ConstantValue"),
-                   &byteArrayBody(t, name, 0)) == 0)
+        if (vm::strcmp(reinterpret_cast<const int8_t*>("ConstantValue"),
+                       &byteArrayBody(t, name, 0)) == 0)
         {
           value = s.read2();
         } else {
@@ -1080,7 +1081,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
         intArrayBody(t, staticValueTable, staticCount) = value;
 
-        staticTypes[staticCount++] = code;
+        RUNTIME_ARRAY_BODY(staticTypes)[staticCount++] = code;
       } else {
         if (flags & ACC_FINAL) {
           classVmFlags(t, class_) |= HasFinalMemberFlag;
@@ -1109,7 +1110,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         (&singletonBody(t, staticTable, 0));
 
       for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
-        unsigned size = fieldSize(t, staticTypes[i]);
+        unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
         unsigned excess = offset % size;
         if (excess) {
           offset += BytesPerWord - excess;
@@ -1117,7 +1118,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
         unsigned value = intArrayBody(t, staticValueTable, i);
         if (value) {
-          switch (staticTypes[i]) {
+          switch (RUNTIME_ARRAY_BODY(staticTypes)[i]) {
           case ByteField:
           case BooleanField:
             body[offset] = singletonValue(t, pool, value - 1);
@@ -1150,7 +1151,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           }
         }
 
-        if (staticTypes[i] == ObjectField) {
+        if (RUNTIME_ARRAY_BODY(staticTypes)[i] == ObjectField) {
           singletonMarkObject(t, staticTable, offset / BytesPerWord);
         }
 
@@ -1238,8 +1239,8 @@ parseCode(Thread* t, Stream& s, object pool)
     object name = singletonObject(t, pool, s.read2() - 1);
     unsigned length = s.read4();
 
-    if (strcmp(reinterpret_cast<const int8_t*>("LineNumberTable"),
-               &byteArrayBody(t, name, 0)) == 0)
+    if (vm::strcmp(reinterpret_cast<const int8_t*>("LineNumberTable"),
+                   &byteArrayBody(t, name, 0)) == 0)
     {
       unsigned lntLength = s.read2();
       object lnt = makeLineNumberTable(t, lntLength);
@@ -1384,8 +1385,8 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         object name = singletonObject(t, pool, s.read2() - 1);
         unsigned length = s.read4();
 
-        if (strcmp(reinterpret_cast<const int8_t*>("Code"),
-                   &byteArrayBody(t, name, 0)) == 0)
+        if (vm::strcmp(reinterpret_cast<const int8_t*>("Code"),
+                       &byteArrayBody(t, name, 0)) == 0)
         {
           code = parseCode(t, s, pool);
         } else {
@@ -1434,10 +1435,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         }
 
         if (UNLIKELY((classFlags(t, class_) & ACC_INTERFACE) == 0
-                     and strcmp
+                     and vm::strcmp
                      (reinterpret_cast<const int8_t*>("finalize"), 
                       &byteArrayBody(t, methodName(t, method), 0)) == 0
-                     and strcmp
+                     and vm::strcmp
                      (reinterpret_cast<const int8_t*>("()V"),
                       &byteArrayBody(t, methodSpec(t, method), 0)) == 0
                      and (not emptyMethod(t, method))))
@@ -1447,13 +1448,14 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       } else {
         methodOffset(t, method) = i;
 
-        if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
-                   &byteArrayBody(t, methodName(t, method), 0)) == 0)
+        if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
+                       &byteArrayBody(t, methodName(t, method), 0)) == 0)
         {
           methodVmFlags(t, method) |= ClassInitFlag;
           classVmFlags(t, class_) |= NeedInitFlag;
-        } else if (strcmp(reinterpret_cast<const int8_t*>("<init>"), 
-                          &byteArrayBody(t, methodName(t, method), 0)) == 0)
+        } else if (vm::strcmp
+                   (reinterpret_cast<const int8_t*>("<init>"), 
+                    &byteArrayBody(t, methodName(t, method), 0)) == 0)
         {
           methodVmFlags(t, method) |= ConstructorFlag;
         }
@@ -2660,8 +2662,8 @@ classInitializer(Thread* t, object class_)
   for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, class_)); ++i) {
     object o = arrayBody(t, classMethodTable(t, class_), i);
 
-    if (strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
-               &byteArrayBody(t, methodName(t, o), 0)) == 0)
+    if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
+                   &byteArrayBody(t, methodName(t, o), 0)) == 0)
     {
       return o;
     }               
@@ -2764,12 +2766,12 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
 {
   PROTECT(t, loader);
 
-  class Client : public Stream::Client {
+  class Client: public Stream::Client {
    public:
     Client(Thread* t): t(t) { }
 
     virtual void NO_RETURN handleError() {
-      abort(t);
+      vm::abort(t);
     }
 
    private:
@@ -2874,11 +2876,15 @@ resolveSystemClass(Thread* t, object spec)
     if (byteArrayBody(t, spec, 0) == '[') {
       class_ = resolveArrayClass(t, t->m->loader, spec);
     } else {
-      char file[byteArrayLength(t, spec) + 6];
-      memcpy(file, &byteArrayBody(t, spec, 0), byteArrayLength(t, spec) - 1);
-      memcpy(file + byteArrayLength(t, spec) - 1, ".class", 7);
+      RUNTIME_ARRAY(char, file, byteArrayLength(t, spec) + 6);
+      memcpy(RUNTIME_ARRAY_BODY(file),
+             &byteArrayBody(t, spec, 0),
+             byteArrayLength(t, spec) - 1);
+      memcpy(RUNTIME_ARRAY_BODY(file) + byteArrayLength(t, spec) - 1,
+             ".class",
+             7);
 
-      System::Region* region = t->m->finder->find(file);
+      System::Region* region = t->m->finder->find(RUNTIME_ARRAY_BODY(file));
 
       if (region) {
         if (Verbose) {
@@ -3241,10 +3247,10 @@ findInTable(Thread* t, object table, object name, object spec,
   if (table) {
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
       object o = arrayBody(t, table, i);      
-      if (strcmp(&byteArrayBody(t, getName(t, o), 0),
-                 &byteArrayBody(t, name, 0)) == 0 and
-          strcmp(&byteArrayBody(t, getSpec(t, o), 0),
-                 &byteArrayBody(t, spec, 0)) == 0)
+      if (vm::strcmp(&byteArrayBody(t, getName(t, o), 0),
+                     &byteArrayBody(t, name, 0)) == 0 and
+          vm::strcmp(&byteArrayBody(t, getSpec(t, o), 0),
+                     &byteArrayBody(t, spec, 0)) == 0)
       {
         return o;
       }
@@ -3483,11 +3489,12 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
       = (arrayElementSize ?
          cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
 
-    uint32_t mask[intArrayLength(t, objectMask)];
-    memcpy(mask, &intArrayBody(t, objectMask, 0),
+    RUNTIME_ARRAY(uint32_t, mask, intArrayLength(t, objectMask));
+    memcpy(RUNTIME_ARRAY_BODY(mask), &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
-    more = ::walk(t, w, mask, fixedSize, arrayElementSize, arrayLength, start);
+    more = ::walk(t, w, RUNTIME_ARRAY_BODY(mask), fixedSize, arrayElementSize,
+                  arrayLength, start);
   } else if (classVmFlags(t, class_) & SingletonFlag) {
     unsigned length = singletonLength(t, o);
     if (length) {
@@ -3564,9 +3571,9 @@ printTrace(Thread* t, object exception)
   
     if (throwableMessage(t, e)) {
       object m = throwableMessage(t, e);
-      char message[stringLength(t, m) + 1];
-      stringChars(t, m, message);
-      fprintf(stderr, ": %s\n", message);
+      RUNTIME_ARRAY(char, message, stringLength(t, m) + 1);
+      stringChars(t, m, RUNTIME_ARRAY_BODY(message));
+      fprintf(stderr, ": %s\n", RUNTIME_ARRAY_BODY(message));
     } else {
       fprintf(stderr, "\n");
     }
@@ -3610,7 +3617,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
-      assert(t, index < arrayLength(t, trace));
+      vm_assert(t, index < arrayLength(t, trace));
       set(t, trace, ArrayBody + (index * BytesPerWord), e);
       ++ index;
       return true;
@@ -3635,7 +3642,7 @@ makeTrace(Thread* t, Thread* target)
     Visitor(Thread* t): t(t), trace(0) { }
 
     virtual bool visit(Processor::StackWalker* walker) {
-      trace = makeTrace(t, walker);
+      trace = vm::makeTrace(t, walker);
       return false;
     }
 
