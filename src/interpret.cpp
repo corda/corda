@@ -3109,6 +3109,7 @@ class MyProcessor: public Processor {
             uint8_t arrayDimensions,
             object objectMask,
             object name,
+            object sourceFile,
             object super,
             object interfaceTable,
             object virtualTable,
@@ -3120,8 +3121,8 @@ class MyProcessor: public Processor {
   {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
-       objectMask, name, super, interfaceTable, virtualTable, fieldTable,
-       methodTable, staticTable, loader, 0);
+       objectMask, name, sourceFile, super, interfaceTable, virtualTable,
+       fieldTable, methodTable, staticTable, loader, 0);
   }
 
   virtual void
