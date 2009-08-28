@@ -1595,6 +1595,24 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 }
 
 void
+parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
+{
+  unsigned attributeCount = s.read2();
+  for (unsigned j = 0; j < attributeCount; ++j) {
+    object name = singletonObject(t, pool, s.read2() - 1);
+    unsigned length = s.read4();
+
+    if (vm::strcmp(reinterpret_cast<const int8_t*>("SourceFile"),
+                   &byteArrayBody(t, name, 0)) == 0)
+    {
+      set(t, class_, ClassSourceFile, singletonObject(t, pool, s.read2() - 1));
+    } else {
+      s.skip(length);
+    }
+  }
+}
+
+void
 updateClassTables(Thread* t, object newClass, object oldClass)
 {
   object fieldTable = classFieldTable(t, newClass);
@@ -1672,6 +1690,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      dimensions,
      classObjectMask(t, arrayBody(t, t->m->types, Machine::ArrayType)),
      spec,
+     0,
      arrayBody(t, t->m->types, Machine::JobjectType),
      0,
      vtable,
@@ -1806,8 +1825,8 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
   super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
 
   object class_ = t->m->processor->makeClass
-    (t, 0, BootstrapFlag, fixedSize, arrayElementSize, 0, mask, 0, super, 0, 0,
-     0, 0, 0, t->m->loader, vtableLength);
+    (t, 0, BootstrapFlag, fixedSize, arrayElementSize, 0, mask, 0, 0, super, 0,
+     0, 0, 0, 0, t->m->loader, vtableLength);
 
   set(t, t->m->types, ArrayBody + (type * BytesPerWord), class_);
 }
@@ -2800,6 +2819,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
                             0, // object mask
                             referenceName
                             (t, singletonObject(t, pool, name - 1)),
+                            0,
                             0, // super
                             0, // interfaces
                             0, // vtable
@@ -2832,6 +2852,9 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
   parseMethodTable(t, s, class_, pool);
   if (UNLIKELY(t->exception)) return 0;
 
+  parseAttributeTable(t, s, class_, pool);
+  if (UNLIKELY(t->exception)) return 0;
+
   object vtable = classVirtualTable(t, class_);
   unsigned vtableLength = (vtable ? arrayLength(t, vtable) : 0);
 
@@ -2844,6 +2867,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
      classArrayDimensions(t, class_),
      classObjectMask(t, class_),
      className(t, class_),
+     classSourceFile(t, class_),
      classSuper(t, class_),
      classInterfaceTable(t, class_),
      classVirtualTable(t, class_),

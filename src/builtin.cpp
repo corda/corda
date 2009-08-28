@@ -827,19 +827,25 @@ Avian_java_lang_Throwable_resolveTrace
   object class_ = 0;
   PROTECT(t, class_);
 
+  object method = 0;
+  PROTECT(t, method);
+
   for (unsigned i = 0; i < length; ++i) {
     e = arrayBody(t, trace, i);
 
     class_ = className(t, methodClass(t, traceElementMethod(t, e)));
     class_ = makeString(t, class_, 0, byteArrayLength(t, class_) - 1, 0);
 
-    object method = methodName(t, traceElementMethod(t, e));
+    method = methodName(t, traceElementMethod(t, e));
     method = makeString(t, method, 0, byteArrayLength(t, method) - 1, 0);
 
     unsigned line = t->m->processor->lineNumber
       (t, traceElementMethod(t, e), traceElementIp(t, e));
 
-    object ste = makeStackTraceElement(t, class_, method, 0, line);
+    object file = classSourceFile(t, methodClass(t, traceElementMethod(t, e)));
+    file = file ? makeString(t, file, 0, byteArrayLength(t, file) - 1, 0) : 0;
+
+    object ste = makeStackTraceElement(t, class_, method, file, line);
     set(t, array, ArrayBody + (i * BytesPerWord), ste);
   }
 

@@ -38,6 +38,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   private byte arrayDimensions;
   private int[] objectMask;
   private byte[] name;
+  private byte[] sourceFile;
   private Class super_;
   private Object[] interfaceTable;
   private Method[] virtualTable;

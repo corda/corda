@@ -66,6 +66,7 @@ class Processor {
             uint8_t arrayDimensions,
             object objectMask,
             object name,
+            object sourceFile,
             object super,
             object interfaceTable,
             object virtualTable,
