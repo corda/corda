@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 name = avian
 version = 0.2
@@ -252,17 +252,18 @@ ifdef msvc
 	cxx = "$(msvc)/BIN/cl.exe"
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
+	mt = "mt.exe"
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
 		-Fd$(native-build)/$(name).pdb -I"$(zlib)/include" -I$(src) \
 		-I"$(native-build)" -I"$(windows-java-home)/include" \
 		-I"$(windows-java-home)/include/win32"
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
-		-DEFAULTLIB:zlib
+		-DEFAULTLIB:zlib -MANIFEST
 	output = -Fo$(1)
 
 	ifeq ($(mode),debug)
-		cflags += -Od -Zi
+		cflags += -Od -Zi -MDd
 		lflags += -debug
 	endif
 	ifeq ($(mode),debug-fast)
@@ -661,7 +662,9 @@ $(executable): \
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
-	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib
+	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib \
+		-MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
 	$(dlltool) -z $(@).def $(^) $(call gnu-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
@@ -692,7 +695,9 @@ $(build-bootimage-generator): \
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
-	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib
+	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib \
+		-MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -d $(@).def -e $(@).exp
@@ -709,7 +714,8 @@ $(dynamic-library): \
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(native-build)/$(name).lib
+		-IMPLIB:$(native-build)/$(name).lib -MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
 	$(ld) $(^) $(call gnu-objects) $(shared) $(lflags) $(bootimage-lflags) \
 		-o $(@)
@@ -720,7 +726,8 @@ $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(lflags) -LIBPATH:$(native-build) -DEFAULTLIB:$(name) \
-		 -PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@)
+		-PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@) -MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
 	$(ld) $(^) $(lflags) -o $(@)
 endif
