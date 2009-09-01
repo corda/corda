@@ -15,6 +15,8 @@ using namespace vm;
 
 namespace {
 
+namespace local {
+
 enum {
   Root,
   Size,
@@ -49,6 +51,8 @@ objectSize(Thread* t, object o)
   return extendedSize(t, o, baseSize(t, o, objectClass(t, o)));
 }
 
+} // namespace local
+
 } // namespace
 
 namespace vm {
@@ -61,24 +65,24 @@ dumpHeap(Thread* t, FILE* out)
     Visitor(Thread* t, FILE* out): t(t), out(out), nextNumber(1) { }
 
     virtual void root() {
-      write1(out, Root);      
+      write1(out, local::Root);      
     }
 
     virtual unsigned visitNew(object p) {
       if (p) {
         unsigned number = nextNumber++;
-        write4(out, number);
+        local::write4(out, number);
 
-        write1(out, Size);
-        write4(out, objectSize(t, p));
+        local::write1(out, local::Size);
+        local::write4(out, local::objectSize(t, p));
 
         if (objectClass(t, p) == arrayBody(t, t->m->types, Machine::ClassType))
         {
           object name = className(t, p);
           if (name) {
-            write1(out, ClassName);
-            writeString(out, &byteArrayBody(t, name, 0),
-                        byteArrayLength(t, name) - 1);
+            local::write1(out, local::ClassName);
+            local::writeString(out, &byteArrayBody(t, name, 0),
+                               byteArrayLength(t, name) - 1);
           }
         }
 
@@ -89,15 +93,15 @@ dumpHeap(Thread* t, FILE* out)
     }
 
     virtual void visitOld(object, unsigned number) {
-      write4(out, number);      
+      local::write4(out, number);      
     }
 
     virtual void push(object, unsigned, unsigned) {
-      write1(out, Push);
+      local::write1(out, local::Push);
     }
 
     virtual void pop() {
-      write1(out, Pop);
+      local::write1(out, local::Pop);
     }
 
     Thread* t;
