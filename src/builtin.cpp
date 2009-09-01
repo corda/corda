@@ -711,7 +711,7 @@ Avian_avian_Machine_dumpHeap
   unsigned length = stringLength(t, outputFile);
   char n[length + 1];
   stringChars(t, outputFile, n);
-  FILE* out = fopen(n, "wb");
+  FILE* out = vm::fopen(n, "wb");
   if (out) {
     { ENTER(t, Thread::ExclusiveState);
       dumpHeap(t, out);
