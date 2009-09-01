@@ -68,23 +68,23 @@ public final class Class <T> implements Type, GenericDeclaration {
     if (name == null) {
       if ((vmFlags & PrimitiveFlag) != 0) {
         if (this == primitiveClass('V')) {
-          name = "void".getBytes();
+          name = "void\0".getBytes();
         } else if (this == primitiveClass('Z')) {
-          name = "boolean".getBytes();
+          name = "boolean\0".getBytes();
         } else if (this == primitiveClass('B')) {
-          name = "byte".getBytes();
+          name = "byte\0".getBytes();
         } else if (this == primitiveClass('C')) {
-          name = "char".getBytes();
+          name = "char\0".getBytes();
         } else if (this == primitiveClass('S')) {
-          name = "short".getBytes();
+          name = "short\0".getBytes();
         } else if (this == primitiveClass('I')) {
-          name = "int".getBytes();
+          name = "int\0".getBytes();
         } else if (this == primitiveClass('F')) {
-          name = "float".getBytes();
+          name = "float\0".getBytes();
         } else if (this == primitiveClass('J')) {
-          name = "long".getBytes();
+          name = "long\0".getBytes();
         } else if (this == primitiveClass('D')) {
-          name = "double".getBytes();
+          name = "double\0".getBytes();
         } else {
           throw new AssertionError();
         }
