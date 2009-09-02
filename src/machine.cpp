@@ -379,13 +379,15 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 void
 referenceUnreachable(Thread* t, Heap::Visitor* v, object* p)
 {
+  object r = static_cast<object>(t->m->heap->follow(*p));
+
   if (DebugReferences) {
     fprintf(stderr, "reference %p unreachable (target %p)\n",
-            *p, jreferenceTarget(t, *p));
+            *p, jreferenceTarget(t, r));
   }
 
-  if (jreferenceQueue(t, *p)
-      and t->m->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
+  if (jreferenceQueue(t, r)
+      and t->m->heap->status(jreferenceQueue(t, r)) != Heap::Unreachable)
   {
     // queue is reachable - add the reference
     referenceTargetUnreachable(t, v, p);    
