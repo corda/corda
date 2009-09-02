@@ -1790,7 +1790,7 @@ class MyHeap: public Heap {
     if (c.client->isFixed(p)) {
       return fixie(p)->age >= FixieTenureThreshold;
     } else {
-      return c.gen2.contains(p);
+      return c.gen2.contains(p) or c.nextGen2.contains(p);
     }
   }
 
@@ -1802,6 +1802,7 @@ class MyHeap: public Heap {
   bool targetNeedsMark(void* target) {
     return target
       and not c.gen2.contains(target)
+      and not c.nextGen2.contains(target)
       and not immortalHeapContains(&c, target)
       and not (c.client->isFixed(target)
                and fixie(target)->age >= FixieTenureThreshold);
@@ -1828,10 +1829,18 @@ class MyHeap: public Heap {
 
       if (dirty) markDirty(&c, f);
     } else {
+      Segment::Map* map;
+      if (c.gen2.contains(p)) {
+        map = &(c.heapMap);
+      } else {
+        assert(&c, c.nextGen2.contains(p));
+        map = &(c.nextHeapMap);
+      }
+
       for (unsigned i = 0; i < count; ++i) {
         void** target = static_cast<void**>(p) + offset + i;
         if (targetNeedsMark(mask(*target))) {
-          c.heapMap.set(target);
+          map->set(target);
         }
       }
     }
