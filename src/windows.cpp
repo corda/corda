@@ -678,8 +678,13 @@ class MySystem: public System {
   virtual Status open(System::Directory** directory, const char* name) {
     Status status = 1;
 
+    unsigned length = strlen(name);
+    RUNTIME_ARRAY(char, buffer, length + 3);
+    memcpy(RUNTIME_ARRAY_BODY(buffer), name, length);
+    memcpy(RUNTIME_ARRAY_BODY(buffer) + length, "\\*", 3);
+
     Directory* d = new (allocate(this, sizeof(Directory))) Directory(this);
-    d->handle = FindFirstFile(name, &(d->data));
+    d->handle = FindFirstFile(RUNTIME_ARRAY_BODY(buffer), &(d->data));
     if (d->handle == INVALID_HANDLE_VALUE) {
       d->dispose();
     } else {

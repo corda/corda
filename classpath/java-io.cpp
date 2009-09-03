@@ -405,14 +405,21 @@ Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
 {
   const char* chars = e->GetStringUTFChars(path, 0);
   if (chars) {
+    unsigned length = strlen(chars);
+
+    RUNTIME_ARRAY(char, buffer, length + 3);
+    memcpy(RUNTIME_ARRAY_BODY(buffer), chars, length);
+    memcpy(RUNTIME_ARRAY_BODY(buffer) + length, "\\*", 3);
+
+    e->ReleaseStringUTFChars(path, chars);
+
     Directory* d = new (malloc(sizeof(Directory))) Directory;
-    d->handle = FindFirstFile(chars, &(d->data));
+    d->handle = FindFirstFile(buffer, &(d->data));
     if (d->handle == INVALID_HANDLE_VALUE) {
       d->dispose();
       d = 0;
     }
 
-    e->ReleaseStringUTFChars(path, chars);
     return reinterpret_cast<jlong>(d);
   } else {
     return 0;
