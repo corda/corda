@@ -379,13 +379,15 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 void
 referenceUnreachable(Thread* t, Heap::Visitor* v, object* p)
 {
+  object r = static_cast<object>(t->m->heap->follow(*p));
+
   if (DebugReferences) {
     fprintf(stderr, "reference %p unreachable (target %p)\n",
-            *p, jreferenceTarget(t, *p));
+            *p, jreferenceTarget(t, r));
   }
 
-  if (jreferenceQueue(t, *p)
-      and t->m->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
+  if (jreferenceQueue(t, r)
+      and t->m->heap->status(jreferenceQueue(t, r)) != Heap::Unreachable)
   {
     // queue is reachable - add the reference
     referenceTargetUnreachable(t, v, p);    
@@ -458,7 +460,9 @@ postVisit(Thread* t, Heap::Visitor* v)
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable
       referenceUnreachable(t, v, p);
-    } else if (m->heap->status(jreferenceTarget(t, *p))
+    } else if (m->heap->status
+               (jreferenceTarget
+                (t, static_cast<object>(m->heap->follow(*p))))
                == Heap::Unreachable)
     {
       // target is unreachable
@@ -504,7 +508,9 @@ postVisit(Thread* t, Heap::Visitor* v)
       if (m->heap->status(*p) == Heap::Unreachable) {
         // reference is unreachable
         referenceUnreachable(t, v, p);
-      } else if (m->heap->status(jreferenceTarget(t, *p))
+      } else if (m->heap->status
+                 (jreferenceTarget
+                  (t, static_cast<object>(m->heap->follow(*p))))
                  == Heap::Unreachable)
       {
         // target is unreachable
@@ -1928,8 +1934,7 @@ boot(Thread* t)
   classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
     |= PrimitiveFlag;
 
-  object classMap = makeHashMap(t, 0, 0);
-  set(t, t->m->loader, ClassLoaderMap, classMap);
+  m->classMap = makeHashMap(t, 0, 0);
 
   m->bootstrapClassMap = makeHashMap(t, 0, 0);
 
@@ -2064,6 +2069,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   shutdownLock(0),
   libraries(0),
   loader(0),
+  classMap(0),
   loadClassMethod(0),
   bootstrapClassMap(0),
   monitorMap(0),
@@ -2776,8 +2782,7 @@ findLoadedSystemClass(Thread* t, object spec)
   PROTECT(t, spec);
   ACQUIRE(t, t->m->classLock);
 
-  return hashMapFind(t, classLoaderMap(t, t->m->loader), spec, byteArrayHash,
-                     byteArrayEqual);
+  return hashMapFind(t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
 }
 
 object
@@ -2894,7 +2899,7 @@ resolveSystemClass(Thread* t, object spec)
   ACQUIRE(t, t->m->classLock);
 
   object class_ = hashMapFind
-    (t, classLoaderMap(t, t->m->loader), spec, byteArrayHash, byteArrayEqual);
+    (t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
 
   if (class_ == 0) {
     if (byteArrayBody(t, spec, 0) == '[') {
@@ -2944,8 +2949,7 @@ resolveSystemClass(Thread* t, object spec)
     if (class_) {
       PROTECT(t, class_);
 
-      hashMapInsert(t, classLoaderMap(t, t->m->loader), spec, class_,
-                    byteArrayHash);
+      hashMapInsert(t, t->m->classMap, spec, class_, byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
       t->exception = makeClassNotFoundException(t, message);
@@ -3559,6 +3563,7 @@ void
 visitRoots(Machine* m, Heap::Visitor* v)
 {
   v->visit(&(m->loader));
+  v->visit(&(m->classMap));
   v->visit(&(m->loadClassMethod));
   v->visit(&(m->bootstrapClassMap));
   v->visit(&(m->monitorMap));
@@ -3693,6 +3698,8 @@ runJavaThread(Thread* t)
 void
 runFinalizeThread(Thread* t)
 {
+  fprintf(stderr, "run finalize thread\n");
+
   setDaemon(t, t->javaThread, true);
 
   object list = 0;
@@ -3707,6 +3714,8 @@ runFinalizeThread(Thread* t)
       }
 
       if (t->m->finalizeThread == 0) {
+        fprintf(stderr, "exit finalize thread\n");
+
         return;
       } else {
         list = t->m->objectsToFinalize;

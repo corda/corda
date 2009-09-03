@@ -437,7 +437,7 @@ Avian_java_lang_VMClassLoader_findLoadedClass
 {
   object loader = reinterpret_cast<object>(arguments[0]);
   
-  object map = classLoaderMap(t, loader);
+  object map = getClassLoaderMap(t, loader);
   if (map) {
     PROTECT(t, loader);
 
@@ -452,7 +452,7 @@ Avian_java_lang_VMClassLoader_findLoadedClass
 
     return reinterpret_cast<int64_t>
       (hashMapFind
-       (t, classLoaderMap(t, loader), n, byteArrayHash, byteArrayEqual));
+       (t, getClassLoaderMap(t, loader), n, byteArrayHash, byteArrayEqual));
   } else {
     return 0;
   }

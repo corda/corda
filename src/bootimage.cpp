@@ -52,7 +52,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
 //       fprintf(stderr, "%.*s\n", nameSize - 6, name);
-      object c = resolveClass
+      object c = resolveSystemClass
         (t, makeByteArray(t, "%.*s", nameSize - 6, name));
 
       if (t->exception) return 0;
@@ -399,7 +399,7 @@ main(int ac, const char** av)
   enter(t, Thread::ActiveState);
   enter(t, Thread::IdleState);
 
-  FILE* output = fopen(av[2], "wb");
+  FILE* output = vm::fopen(av[2], "wb");
   if (output == 0) {
     fprintf(stderr, "unable to open %s\n", av[2]);    
     return -1;

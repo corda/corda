@@ -186,13 +186,13 @@ Avian_java_lang_ClassLoader_defineClass
   t->m->heap->free(buffer, length);
 
   if (c) {
-    if (classLoaderMap(t, loader) == 0) {
+    if (getClassLoaderMap(t, loader) == 0) {
       PROTECT(t, c);
       object map = makeHashMap(t, 0, 0);
       set(t, loader, ClassLoaderMap, map);
     }
 
-    hashMapInsert(t, classLoaderMap(t, loader), className(t, c), c,
+    hashMapInsert(t, getClassLoaderMap(t, loader), className(t, c), c,
                   byteArrayHash);
   }
 
@@ -711,7 +711,7 @@ Avian_avian_Machine_dumpHeap
   unsigned length = stringLength(t, outputFile);
   char n[length + 1];
   stringChars(t, outputFile, n);
-  FILE* out = fopen(n, "wb");
+  FILE* out = vm::fopen(n, "wb");
   if (out) {
     { ENTER(t, Thread::ExclusiveState);
       dumpHeap(t, out);
