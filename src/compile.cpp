@@ -7131,7 +7131,7 @@ fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
 void
 fixupMethods(Thread* t, BootImage* image, uint8_t* code)
 {
-  for (HashMapIterator it(t, classLoaderMap(t, t->m->loader)); it.hasMore();) {
+  for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
     object c = tripleSecond(t, it.next());
 
     if (classMethodTable(t, c)) {
@@ -7261,8 +7261,7 @@ boot(MyThread* t, BootImage* image)
 
   syncInstructionCache(code, image->codeSize);
 
-  object classMap = makeClassMap(t, classTable, image->classCount, heap);
-  set(t, t->m->loader, ClassLoaderMap, classMap);
+  t->m->classMap = makeClassMap(t, classTable, image->classCount, heap);
 
   t->m->stringMap = makeStringMap(t, stringTable, image->stringCount, heap);
 

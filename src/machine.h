@@ -1189,6 +1189,7 @@ class Machine {
   System::Monitor* shutdownLock;
   System::Library* libraries;
   object loader;
+  object classMap;
   object loadClassMethod;
   object bootstrapClassMap;
   object monitorMap;
@@ -1657,6 +1658,16 @@ bool
 instanceOf(Thread* t, object class_, object o);
 
 #include "type-declarations.cpp"
+
+inline object
+getClassLoaderMap(Thread* t, object loader)
+{
+  if (loader == t->m->loader) {
+    return t->m->classMap;
+  } else {
+    return classLoaderMap(t, loader);
+  }
+}
 
 inline bool
 objectFixed(Thread*, object o)
