@@ -414,7 +414,7 @@ Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
     e->ReleaseStringUTFChars(path, chars);
 
     Directory* d = new (malloc(sizeof(Directory))) Directory;
-    d->handle = FindFirstFile(buffer, &(d->data));
+    d->handle = FindFirstFile(RUNTIME_ARRAY_BODY(buffer), &(d->data));
     if (d->handle == INVALID_HANDLE_VALUE) {
       d->dispose();
       d = 0;
