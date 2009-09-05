@@ -3,12 +3,12 @@ MAKEFLAGS = -s
 name = avian
 version = 0.2
 
-build-arch = $(shell uname -m | sed 's/^i.86$$/i386/')
+build-arch := $(shell uname -m | sed 's/^i.86$$/i386/')
 ifeq (Power,$(filter Power,$(build-arch)))
 	build-arch = powerpc
 endif
 
-build-platform = \
+build-platform := \
 	$(shell uname -s | tr [:upper:] [:lower:] \
 		| sed 's/^mingw32.*$$/mingw32/' \
 		| sed 's/^cygwin.*$$/cygwin/')
@@ -54,10 +54,10 @@ ifdef gnu
 	gnu-object-dep = $(build)/gnu-object.dep
 	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
 	gnu-lflags = -lgmp
-	gnu-objects = $(shell find $(build)/gnu-objects -name "*.o") 
+	gnu-objects := $(shell find $(build)/gnu-objects -name "*.o") 
 endif
 
-root = $(shell (cd .. && pwd))
+root := $(shell (cd .. && pwd))
 build = build
 native-build = $(build)/$(platform)-$(arch)$(options)
 classpath-build = $(build)/classpath
@@ -232,8 +232,8 @@ ld := $(cc)
 build-ld := $(build-cc)
 
 ifdef msvc
-	windows-java-home = $(shell cygpath -m "$(JAVA_HOME)")
-	zlib = $(shell cygpath -m "$(root)/win32/msvc")
+	windows-java-home := $(shell cygpath -m "$(JAVA_HOME)")
+	zlib := $(shell cygpath -m "$(root)/win32/msvc")
 	cxx = "$(msvc)/BIN/cl.exe"
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
@@ -271,7 +271,7 @@ cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
 
-jni-sources = $(shell find $(classpath) -name '*.cpp')
+jni-sources := $(shell find $(classpath) -name '*.cpp')
 jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(native-build))
 
 generated-code = \
@@ -390,7 +390,7 @@ executable = $(native-build)/$(name)${exe-suffix}
 dynamic-library = $(native-build)/$(so-prefix)$(name)$(so-suffix)
 executable-dynamic = $(native-build)/$(name)-dynamic${exe-suffix}
 
-classpath-sources = $(shell find $(classpath) -name '*.java')
+classpath-sources := $(shell find $(classpath) -name '*.java')
 classpath-classes = \
 	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
 classpath-object = $(native-build)/classpath-jar.o
