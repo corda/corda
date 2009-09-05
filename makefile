@@ -449,7 +449,9 @@ args = $(flags) $(input)
 build: $(static-library) $(executable) $(dynamic-library) \
 	$(executable-dynamic) $(classpath-dep) $(test-dep) $(test-extra-dep)
 
-$(test-classes): $(classpath-dep)
+$(test-dep): $(classpath-dep)
+
+$(test-extra-dep): $(classpath-dep)
 
 .PHONY: run
 run: build
