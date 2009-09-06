@@ -663,18 +663,13 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage-generator): make-bootimage-generator
-
-make-bootimage-generator:
-	(unset MAKEFLAGS && \
-	 make mode=$(mode) \
+$(bootimage-generator):
+	$(MAKE) mode=$(mode) \
 		arch=$(build-arch) \
 		platform=$(bootimage-platform) \
-	  bootimage=$(bootimage) \
-	  heapdump=$(heapdump) \
 		bootimage-generator= \
 		build-bootimage-generator=$(bootimage-generator) \
-		$(bootimage-generator))
+		$(bootimage-generator)
 
 $(build-bootimage-generator): \
 		$(vm-objects) $(classpath-object) $(jni-objects) $(heapwalk-objects) \
