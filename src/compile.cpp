@@ -6351,7 +6351,9 @@ class SegFaultHandler: public System::SignalHandler {
         void* oldBase = t->base;
         void* oldStack = t->stack;
 
-        t->ip = *ip;
+        // add one to the IP since findLineNumber will subtract one
+        // when we make the trace:
+        t->ip = static_cast<uint8_t*>(*ip) + 1;
         t->base = *base;
         t->stack = static_cast<void**>(*stack)
           - t->arch->frameReturnAddressSize();
