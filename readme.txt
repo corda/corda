@@ -100,7 +100,7 @@ certain flags described below, all of which are optional.
     only valid for process=compile builds.
       default: false
 
-  * heapdump - if true, implement java.lang.Runtime.dumpHeap(String),
+  * heapdump - if true, implement avian.Machine.dumpHeap(String),
     which, when called, will generate a snapshot of the heap in a
     simple, ad-hoc format for memory profiling purposes.  See
     heapdump.cpp for details.
