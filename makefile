@@ -534,8 +534,10 @@ $(test-build)/%.class: $(test)/%.java
 $(test-dep): $(test-sources)
 	@echo "compiling test classes"
 	@mkdir -p $(test-build)
-	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
-		$(shell $(MAKE) -s --no-print-directory $(test-classes))
+	files="$(shell $(MAKE) -s --no-print-directory $(test-classes))"; \
+	if test -n "$${files}"; then \
+		$(javac) -d $(test-build) -bootclasspath $(classpath-build) $${files}; \
+	fi
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
 		test/Subroutine.java
 	@touch $(@)
@@ -543,8 +545,10 @@ $(test-dep): $(test-sources)
 $(test-extra-dep): $(test-extra-sources)
 	@echo "compiling extra test classes"
 	@mkdir -p $(test-build)
-	$(javac) -d $(test-build) -bootclasspath $(classpath-build) \
-		$(shell $(MAKE) -s --no-print-directory $(test-extra-classes))
+	files="$(shell $(MAKE) -s --no-print-directory $(test-extra-classes))"; \
+	if test -n "$${files}"; then \
+		$(javac) -d $(test-build) -bootclasspath $(classpath-build) $${files}; \
+	fi
 	@touch $(@)
 
 define compile-object
