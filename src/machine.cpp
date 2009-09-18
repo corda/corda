@@ -68,9 +68,8 @@ dispose(Thread* t, Thread* o, bool remove)
     expect(t, find(t->m->rootThread, o));
 
     unsigned c = count(t->m->rootThread, o);
-    Thread** threads = static_cast<Thread**>
-      (allocate(t->m->system, c * sizeof(Thread*)));
-    fill(t->m->rootThread, o, threads);
+    RUNTIME_ARRAY(Thread*, threads, c);
+    fill(t->m->rootThread, o, RUNTIME_ARRAY_BODY(threads));
 #endif
 
     if (o->parent) {
@@ -115,7 +114,7 @@ dispose(Thread* t, Thread* o, bool remove)
     expect(t, not find(t->m->rootThread, o));
 
     for (unsigned i = 0; i < c; ++i) {
-      expect(t, find(t->m->rootThread, threads[i]));
+      expect(t, find(t->m->rootThread, RUNTIME_ARRAY_BODY(threads)[i]));
     }
 #endif
   }
