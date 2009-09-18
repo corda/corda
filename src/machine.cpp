@@ -3698,8 +3698,6 @@ runJavaThread(Thread* t)
 void
 runFinalizeThread(Thread* t)
 {
-  fprintf(stderr, "run finalize thread\n");
-
   setDaemon(t, t->javaThread, true);
 
   object list = 0;
@@ -3714,8 +3712,6 @@ runFinalizeThread(Thread* t)
       }
 
       if (t->m->finalizeThread == 0) {
-        fprintf(stderr, "exit finalize thread\n");
-
         return;
       } else {
         list = t->m->objectsToFinalize;
