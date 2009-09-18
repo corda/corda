@@ -1540,6 +1540,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       }
 
       if (abstractVirtuals) {
+        PROTECT(t, vtable);
         PROTECT(t, abstractVirtuals);
 
         unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
@@ -1713,6 +1714,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
 object
 makeArrayClass(Thread* t, object loader, object spec)
 {
+  PROTECT(t, loader);
   PROTECT(t, spec);
 
   const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
