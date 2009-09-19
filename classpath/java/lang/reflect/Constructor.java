@@ -10,6 +10,8 @@
 
 package java.lang.reflect;
 
+import java.lang.annotation.Annotation;
+
 public class Constructor<T> extends AccessibleObject
   implements Member, GenericDeclaration
 {
@@ -50,6 +52,18 @@ public class Constructor<T> extends AccessibleObject
 
   public boolean isSynthetic() {
     return method.isSynthetic();
+  }
+
+  public <T extends Annotation> T getAnnotation(Class<T> class_) {
+    return method.getAnnotation(class_);
+  }
+
+  public Annotation[] getAnnotations() {
+    return method.getAnnotations();
+  }
+
+  public Annotation[] getDeclaredAnnotations() {
+    return method.getDeclaredAnnotations();
   }
 
   public TypeVariable<Constructor<T>>[] getTypeParameters() {

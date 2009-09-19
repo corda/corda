@@ -3093,11 +3093,12 @@ class MyProcessor: public Processor {
              object name,
              object spec,
              object class_,
+             object addendum,
              object code)
   {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, 0, name, spec, class_, code, 0);
+       offset, 0, name, spec, addendum, class_, code, 0);
   }
 
   virtual object
@@ -3116,13 +3117,14 @@ class MyProcessor: public Processor {
             object fieldTable,
             object methodTable,
             object staticTable,
+            object addendum,
             object loader,
             unsigned vtableLength UNUSED)
   {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
        objectMask, name, sourceFile, super, interfaceTable, virtualTable,
-       fieldTable, methodTable, staticTable, loader, 0);
+       fieldTable, methodTable, addendum, staticTable, loader, 0);
   }
 
   virtual void

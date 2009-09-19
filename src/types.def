@@ -13,9 +13,19 @@
 
 (type accessibleObject java/lang/reflect/AccessibleObject)
 
+(type classAddendum java/lang/Class$Addendum)
+
 (type field java/lang/reflect/Field)
 
+(type fieldAddendum java/lang/reflect/Field$Addendum)
+
 (type method java/lang/reflect/Method)
+
+(type methodAddendum java/lang/reflect/Method$Addendum)
+
+(type proxy java/lang/reflect/Proxy)
+
+(type pair avian/Pair)
 
 (type nativeMethodData
   (void* function)
@@ -53,10 +63,6 @@
   (object class)
   (object name)
   (object spec))
-
-(type pair
-  (object first)
-  (object second))
 
 (type triple
   (object first)

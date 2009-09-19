@@ -54,6 +54,7 @@ class Processor {
              uint16_t offset,
              object name,
              object spec,
+             object addendum,
              object class_,
              object code) = 0;
 
@@ -72,6 +73,7 @@ class Processor {
             object virtualTable,
             object fieldTable,
             object methodTable,
+            object addendum,
             object staticTable,
             object loader,
             unsigned vtableLength) = 0;

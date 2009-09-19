@@ -10,8 +10,16 @@
 
 package java.lang.reflect;
 
-public abstract class AccessibleObject {
+import java.lang.annotation.Annotation;
+
+public abstract class AccessibleObject implements AnnotatedElement {
   protected static final int Accessible = 1 << 0;
+
+  public boolean isAnnotationPresent
+    (Class<? extends Annotation> class_)
+  {
+    return getAnnotation(class_) != null;
+  }
 
   public abstract boolean isAccessible();
 

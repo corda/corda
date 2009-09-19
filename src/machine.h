@@ -1204,6 +1204,7 @@ class Machine {
   object tenuredWeakReferences;
   object shutdownHooks;
   object objectsToFinalize;
+  object invokeMethod;
   bool unsafe;
   bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
@@ -1847,6 +1848,12 @@ makeExceptionInInitializerError(Thread* t, object cause)
 }
 
 inline object
+makeIncompatibleClassChangeError(Thread* t)
+{
+  return makeIncompatibleClassChangeError(t, 0, makeTrace(t), 0);
+}
+
+inline object
 makeNew(Thread* t, object class_)
 {
   assert(t, t->state == Thread::ActiveState);
@@ -2194,6 +2201,13 @@ initClass(Thread* t, object c);
 object
 makeObjectArray(Thread* t, object loader, object elementClass, unsigned count);
 
+inline object
+makeObjectArray(Thread* t, unsigned count)
+{
+  return makeObjectArray
+    (t, t->m->loader, arrayBody(t, t->m->types, Machine::JobjectType), count);
+}
+
 object
 findInTable(Thread* t, object table, object name, object spec,
             object& (*getName)(Thread*, object),
@@ -2232,6 +2246,22 @@ findVirtualMethod(Thread* t, object method, object class_)
                    methodOffset(t, method));
 }
 
+inline object
+findInterfaceMethod(Thread* t, object method, object class_)
+{
+  assert(t, (classVmFlags(t, class_) & BootstrapFlag) == 0);
+
+  object interface = methodClass(t, method);
+  object itable = classInterfaceTable(t, class_);
+  for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
+    if (arrayBody(t, itable, i) == interface) {
+      return arrayBody(t, arrayBody(t, itable, i + 1),
+                       methodOffset(t, method));
+    }
+  }
+  abort(t);
+}
+
 inline unsigned
 objectArrayLength(Thread* t UNUSED, object array)
 {
@@ -2248,7 +2278,7 @@ objectArrayBody(Thread* t UNUSED, object array, unsigned index)
   assert(t, classObjectMask(t, objectClass(t, array))
          == classObjectMask(t, arrayBody
                             (t, t->m->types, Machine::ArrayType)));
-  return cast<object>(array, (2 + index) * BytesPerWord);
+  return cast<object>(array, ArrayBody + (index * BytesPerWord));
 }
 
 unsigned

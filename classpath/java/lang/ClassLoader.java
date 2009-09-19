@@ -83,7 +83,9 @@ public abstract class ClassLoader {
     return c;
   }
 
-  protected native void resolveClass(Class c);
+  protected void resolveClass(Class c) {
+    c.link(this);
+  }
 
   private ClassLoader getParent() {
     return parent;

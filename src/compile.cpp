@@ -6331,7 +6331,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
 
   default:
     abort(t);
-  };
+  }
 
   return r;
 }
@@ -6450,12 +6450,13 @@ class MyProcessor: public Processor {
              uint16_t offset,
              object name,
              object spec,
+             object addendum,
              object class_,
              object code)
   {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, 0, name, spec, class_, code,
+       offset, 0, name, spec, addendum, class_, code,
        local::defaultThunk(static_cast<MyThread*>(t)));
   }
 
@@ -6475,13 +6476,14 @@ class MyProcessor: public Processor {
             object fieldTable,
             object methodTable,
             object staticTable,
+            object addendum, 
             object loader,
             unsigned vtableLength)
   {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
        objectMask, name, sourceFile, super, interfaceTable, virtualTable,
-       fieldTable, methodTable, staticTable, loader, vtableLength);
+       fieldTable, methodTable, staticTable, addendum, loader, vtableLength);
   }
 
   virtual void
@@ -7656,6 +7658,7 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
          methodNativeID(t, method),
          methodName(t, method),
          methodSpec(t, method),
+         methodAddendum(t, method),
          methodClass(t, method),
          methodCode(t, method),
          reinterpret_cast<intptr_t>(compiled));

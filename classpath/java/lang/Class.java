@@ -10,14 +10,20 @@
 
 package java.lang;
 
+import avian.AnnotationInvocationHandler;
+import avian.Pair;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.GenericDeclaration;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.IOException;
@@ -28,8 +34,11 @@ import java.security.ProtectionDomain;
 import java.security.Permissions;
 import java.security.AllPermission;
 
-public final class Class <T> implements Type, GenericDeclaration {
+public final class Class <T>
+  implements Type, GenericDeclaration, AnnotatedElement
+{
   private static final int PrimitiveFlag = 1 << 5;
+  private static final int LinkFlag = 1 << 8;
 
   private short flags;
   private short vmFlags;
@@ -44,6 +53,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   private Method[] virtualTable;
   private Field[] fieldTable;
   private Method[] methodTable;
+  private Addendum addendum;
   private Object staticTable;
   private ClassLoader loader;
 
@@ -139,6 +149,157 @@ public final class Class <T> implements Type, GenericDeclaration {
     }
   }
 
+  private static Class loadClass(ClassLoader loader,
+                                 byte[] nameBytes, int offset, int length)
+  {
+    String name = new String(nameBytes, offset, length, false);
+    try {
+      return loader.loadClass(name);
+    } catch (ClassNotFoundException e) {
+      NoClassDefFoundError error = new NoClassDefFoundError(name);
+      error.initCause(e);
+      throw error;
+    }
+  }
+
+  private static Object resolveAnnotationValue(ClassLoader loader,
+                                               Object raw)
+  {
+    if (raw instanceof Pair) {
+      Pair<byte[],byte[]> p = (Pair<byte[],byte[]>) raw;
+      return Enum.valueOf
+        (loadClass(loader, p.first, 1, p.first.length - 3),
+         new String(p.second, 0, p.second.length - 1, false));
+    } else if (raw instanceof byte[]) {
+      byte[] typeName = (byte[]) raw;
+      return loadClass(loader, typeName, 0, typeName.length - 1);
+    } else if (raw.getClass().isArray()) {
+      Object[] array = (Object[]) raw;
+      if (array.length > 0 && array[0] == null) {
+        resolveAnnotation(loader, array);
+      } else {
+        for (int i = 0; i < array.length; ++i) {
+          array[i] = resolveAnnotationValue(loader, array[i]);
+        }
+      }
+    }
+
+    return raw;
+  }
+
+  private static void resolveAnnotation(ClassLoader loader,
+                                        Object[] annotation)
+  {
+    byte[] typeName = (byte[]) annotation[1];
+    annotation[1] = loadClass(loader, typeName, 1, typeName.length - 3);
+
+    for (int i = 2; i < annotation.length; i += 2) {
+      byte[] name = (byte[]) annotation[i];
+      annotation[i] = new String(name, 0, name.length - 1, false).intern();
+      annotation[i + 1] = resolveAnnotationValue(loader, annotation[i + 1]);
+    }
+  }
+
+  private static void resolveAnnotationTable(ClassLoader loader,
+                                             Object[] table)
+  {
+    for (int i = 0; i < table.length; ++i) {
+      resolveAnnotation(loader, (Object[]) table[i]);
+    }
+  }
+
+  private static int resolveSpec(ClassLoader loader, byte[] spec, int start) {
+    int result;
+    int end;
+    switch (spec[start]) {
+    case 'L':
+      ++ start;
+      end = start;
+      while (spec[end] != ';') ++ end;
+      result = end + 1;
+      break;
+
+    case '[':
+      end = start + 1;
+      while (spec[end] == '[') ++ end;
+      switch (spec[end]) {
+      case 'L':
+        ++ end;
+        while (spec[end] != ';') ++ end;
+        ++ end;
+        break;
+        
+      default:
+        ++ end;
+      }
+      result = end;
+      break;
+
+    default:
+      return start + 1;
+    }
+
+    loadClass(loader, spec, start, end - start);
+
+    return result;
+  }
+
+  private static native void acquireClassLock();
+
+  private static native void releaseClassLock();
+
+  void link(ClassLoader loader) {
+    acquireClassLock();
+    try {
+      if ((vmFlags & LinkFlag) == 0) {
+        if (super_ != null) {
+          super_.link(loader);
+        }
+
+        if (addendum != null && addendum.annotationTable != null) {
+          resolveAnnotationTable(loader, addendum.annotationTable);
+        }
+
+        if (interfaceTable != null) {
+          int stride = (isInterface() ? 1 : 2);
+          for (int i = 0; i < interfaceTable.length; i += stride) {
+            ((Class) interfaceTable[i]).link(loader);
+          }
+        }
+
+        if (methodTable != null) {
+          for (int i = 0; i < methodTable.length; ++i) {
+            Method m = methodTable[i];
+
+            for (int j = 1; j < m.spec.length;) {
+              j = resolveSpec(loader, m.spec, j);
+            }
+
+            if (m.addendum != null && m.addendum.annotationTable != null) {
+              resolveAnnotationTable(loader, m.addendum.annotationTable);
+            }
+          }
+        }
+
+        if (fieldTable != null) {
+          for (int i = 0; i < fieldTable.length; ++i) {
+            Field f = fieldTable[i];
+
+            resolveSpec(loader, f.spec, 0);
+
+            if (f.addendum != null && f.addendum.annotationTable != null) {
+              resolveAnnotationTable(loader, f.addendum.annotationTable);
+            }
+          }
+        }
+
+        vmFlags |= LinkFlag;
+      }
+    } finally {
+      releaseClassLock();
+    }
+  }
+
   public static Class forName(String name) throws ClassNotFoundException {
     return forName
       (name, true, Method.getCaller().getDeclaringClass().getClassLoader());
@@ -160,8 +321,6 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   private static native Class primitiveClass(char name);
-
-  private native void link(ClassLoader loader);
 
   private native void initialize();
   
@@ -479,9 +638,10 @@ public final class Class <T> implements Type, GenericDeclaration {
     if (interfaceTable != null) {
       link(loader);
 
-      Class[] array = new Class[interfaceTable.length / 2];
+      int stride = (isInterface() ? 1 : 2);
+      Class[] array = new Class[interfaceTable.length / stride];
       for (int i = 0; i < array.length; ++i) {
-        array[i] = (Class) interfaceTable[i * 2];
+        array[i] = (Class) interfaceTable[i * stride];
       }
       return array;
     } else {
@@ -566,7 +726,7 @@ public final class Class <T> implements Type, GenericDeclaration {
   }
 
   public Object[] getSigners() {
-    return Static.signers.get(this);
+    return addendum == null ? null : addendum.signers;
   }
 
   public Package getPackage() {
@@ -584,8 +744,76 @@ public final class Class <T> implements Type, GenericDeclaration {
     }
   }
 
+  public boolean isAnnotationPresent
+    (Class<? extends Annotation> class_)
+  {
+    return getAnnotation(class_) != null;
+  }
+
+  private Annotation getAnnotation(Object[] a) {
+    if (a[0] == null) {
+      a[0] = Proxy.newProxyInstance
+        (loader, new Class[] { (Class) a[1] },
+         new AnnotationInvocationHandler(a));
+    }
+    return (Annotation) a[0];
+  }
+
+  public <T extends Annotation> T getAnnotation(Class<T> class_) {
+    for (Class c = this; c != null; c = c.super_) {
+      if (c.addendum != null && c.addendum.annotationTable != null) {
+        link(c.loader);
+        
+        Object[] table = c.addendum.annotationTable;
+        for (int i = 0; i < table.length; ++i) {
+          Object[] a = (Object[]) table[i];
+          if (a[1] == class_) {
+            return (T) c.getAnnotation(a);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   public Annotation[] getDeclaredAnnotations() {
-    throw new UnsupportedOperationException();
+    if (addendum != null && addendum.annotationTable != null) {
+      link(loader);
+
+      Object[] table = addendum.annotationTable;
+      Annotation[] array = new Annotation[table.length];
+      for (int i = 0; i < table.length; ++i) {
+        array[i] = getAnnotation((Object[]) table[i]);
+      }
+      return array;
+    } else {
+      return new Annotation[0];
+    }
+  }
+
+  private int countAnnotations() {
+    int count = 0;
+    for (Class c = this; c != null; c = c.super_) {
+      if (c.addendum != null && c.addendum.annotationTable != null) {
+        count += c.addendum.annotationTable.length;
+      }
+    }
+    return count;
+  }
+
+  public Annotation[] getAnnotations() {
+    Annotation[] array = new Annotation[countMethods(true)];
+    int i = 0;
+    for (Class c = this; c != null; c = c.super_) {
+      if (c.addendum != null && c.addendum.annotationTable != null) {
+        Object[] table = c.addendum.annotationTable;
+        for (int j = 0; j < table.length; ++j) {
+          array[i++] = getAnnotation((Object[]) table[j]);
+        }
+      }
+    }
+
+    return array;
   }
 
   public boolean isEnum() {
@@ -612,10 +840,6 @@ public final class Class <T> implements Type, GenericDeclaration {
     throw new UnsupportedOperationException();
   }
 
-  public <A extends Annotation> A getAnnotation(Class<A> c) {
-    throw new UnsupportedOperationException();
-  }
-
   public ProtectionDomain getProtectionDomain() {
     Permissions p = new Permissions();
     p.add(new AllPermission());
@@ -625,11 +849,15 @@ public final class Class <T> implements Type, GenericDeclaration {
   // for GNU Classpath compatibility:
   void setSigners(Object[] signers) {
     if (signers != null && signers.length > 0) {
-      Static.signers.put(this, signers);
+      if (addendum == null) {
+        addendum = new Addendum();
+      }
+      addendum.signers = signers;
     }
   }
 
-  private static class Static {
-    public static final Map<Class,Object[]> signers = new HashMap();
+  private static class Addendum {
+    public Object[] annotationTable;
+    public Object[] signers;
   }
 }

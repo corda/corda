@@ -59,22 +59,6 @@ isSpecialMethod(Thread* t, object method, object class_)
 void*
 resolveNativeMethod(Thread* t, object method);
 
-inline object
-findInterfaceMethod(Thread* t, object method, object class_)
-{
-  assert(t, (classVmFlags(t, class_) & BootstrapFlag) == 0);
-
-  object interface = methodClass(t, method);
-  object itable = classInterfaceTable(t, class_);
-  for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-    if (arrayBody(t, itable, i) == interface) {
-      return arrayBody(t, arrayBody(t, itable, i + 1),
-                       methodOffset(t, method));
-    }
-  }
-  abort(t);
-}
-
 inline void
 populateMultiArray(Thread* t, object array, int32_t* counts,
                    unsigned index, unsigned dimensions)

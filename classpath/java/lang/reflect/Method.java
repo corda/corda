@@ -10,6 +10,10 @@
 
 package java.lang.reflect;
 
+import avian.AnnotationInvocationHandler;
+
+import java.lang.annotation.Annotation;
+
 public class Method<T> extends AccessibleObject
   implements Member, GenericDeclaration
 {
@@ -21,7 +25,8 @@ public class Method<T> extends AccessibleObject
   private short offset;
   private int nativeID;
   private byte[] name;
-  private byte[] spec;
+  public byte[] spec;
+  public Addendum addendum;
   private Class<T> class_;
   private Object code;
   private long compiled;
@@ -142,6 +147,45 @@ public class Method<T> extends AccessibleObject
     throw new RuntimeException();
   }
 
+  private Annotation getAnnotation(Object[] a) {
+    if (a[0] == null) {
+      a[0] = Proxy.newProxyInstance
+        (class_.getClassLoader(), new Class[] { (Class) a[1] },
+         new AnnotationInvocationHandler(a));
+    }
+    return (Annotation) a[0];
+  }
+
+  public <T extends Annotation> T getAnnotation(Class<T> class_) {
+    if (addendum != null && addendum.annotationTable != null) {
+      Object[] table = addendum.annotationTable;
+      for (int i = 0; i < table.length; ++i) {
+        Object[] a = (Object[]) table[i];
+        if (a[1] == class_) {
+          return (T) getAnnotation(a);
+        }
+      }
+    }
+    return null;
+  }
+
+  public Annotation[] getAnnotations() {
+    if (addendum != null && addendum.annotationTable != null) {
+      Object[] table = addendum.annotationTable;
+      Annotation[] array = new Annotation[table.length];
+      for (int i = 0; i < table.length; ++i) {
+        array[i] = getAnnotation((Object[]) table[i]);
+      }
+      return array;
+    } else {
+      return new Annotation[0];
+    }
+  }
+
+  public Annotation[] getDeclaredAnnotations() {
+    return getAnnotations();
+  }
+
   public boolean isSynthetic() {
     throw new UnsupportedOperationException();
   }
@@ -164,5 +208,9 @@ public class Method<T> extends AccessibleObject
 
   public TypeVariable<Method<T>>[] getTypeParameters() {
     throw new UnsupportedOperationException();
+  }
+
+  public static class Addendum {
+    public Object[] annotationTable;
   }
 }
