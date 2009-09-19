@@ -11,7 +11,6 @@
 package java.lang;
 
 import avian.AnnotationInvocationHandler;
-import avian.Pair;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -38,22 +37,21 @@ public final class Class <T>
   implements Type, GenericDeclaration, AnnotatedElement
 {
   private static final int PrimitiveFlag = 1 << 5;
-  private static final int LinkFlag = 1 << 8;
 
   private short flags;
-  private short vmFlags;
+  public short vmFlags;
   private short fixedSize;
   private byte arrayElementSize;
   private byte arrayDimensions;
   private int[] objectMask;
   private byte[] name;
   private byte[] sourceFile;
-  private Class super_;
-  private Object[] interfaceTable;
-  private Method[] virtualTable;
-  private Field[] fieldTable;
-  private Method[] methodTable;
-  private Addendum addendum;
+  public Class super_;
+  public Object[] interfaceTable;
+  public Method[] virtualTable;
+  public Field[] fieldTable;
+  public Method[] methodTable;
+  public avian.ClassAddendum addendum;
   private Object staticTable;
   private ClassLoader loader;
 
@@ -149,157 +147,6 @@ public final class Class <T>
     }
   }
 
-  private static Class loadClass(ClassLoader loader,
-                                 byte[] nameBytes, int offset, int length)
-  {
-    String name = new String(nameBytes, offset, length, false);
-    try {
-      return loader.loadClass(name);
-    } catch (ClassNotFoundException e) {
-      NoClassDefFoundError error = new NoClassDefFoundError(name);
-      error.initCause(e);
-      throw error;
-    }
-  }
-
-  private static Object resolveAnnotationValue(ClassLoader loader,
-                                               Object raw)
-  {
-    if (raw instanceof Pair) {
-      Pair<byte[],byte[]> p = (Pair<byte[],byte[]>) raw;
-      return Enum.valueOf
-        (loadClass(loader, p.first, 1, p.first.length - 3),
-         new String(p.second, 0, p.second.length - 1, false));
-    } else if (raw instanceof byte[]) {
-      byte[] typeName = (byte[]) raw;
-      return loadClass(loader, typeName, 0, typeName.length - 1);
-    } else if (raw.getClass().isArray()) {
-      Object[] array = (Object[]) raw;
-      if (array.length > 0 && array[0] == null) {
-        resolveAnnotation(loader, array);
-      } else {
-        for (int i = 0; i < array.length; ++i) {
-          array[i] = resolveAnnotationValue(loader, array[i]);
-        }
-      }
-    }
-
-    return raw;
-  }
-
-  private static void resolveAnnotation(ClassLoader loader,
-                                        Object[] annotation)
-  {
-    byte[] typeName = (byte[]) annotation[1];
-    annotation[1] = loadClass(loader, typeName, 1, typeName.length - 3);
-
-    for (int i = 2; i < annotation.length; i += 2) {
-      byte[] name = (byte[]) annotation[i];
-      annotation[i] = new String(name, 0, name.length - 1, false).intern();
-      annotation[i + 1] = resolveAnnotationValue(loader, annotation[i + 1]);
-    }
-  }
-
-  private static void resolveAnnotationTable(ClassLoader loader,
-                                             Object[] table)
-  {
-    for (int i = 0; i < table.length; ++i) {
-      resolveAnnotation(loader, (Object[]) table[i]);
-    }
-  }
-
-  private static int resolveSpec(ClassLoader loader, byte[] spec, int start) {
-    int result;
-    int end;
-    switch (spec[start]) {
-    case 'L':
-      ++ start;
-      end = start;
-      while (spec[end] != ';') ++ end;
-      result = end + 1;
-      break;
-
-    case '[':
-      end = start + 1;
-      while (spec[end] == '[') ++ end;
-      switch (spec[end]) {
-      case 'L':
-        ++ end;
-        while (spec[end] != ';') ++ end;
-        ++ end;
-        break;
-        
-      default:
-        ++ end;
-      }
-      result = end;
-      break;
-
-    default:
-      return start + 1;
-    }
-
-    loadClass(loader, spec, start, end - start);
-
-    return result;
-  }
-
-  private static native void acquireClassLock();
-
-  private static native void releaseClassLock();
-
-  void link(ClassLoader loader) {
-    acquireClassLock();
-    try {
-      if ((vmFlags & LinkFlag) == 0) {
-        if (super_ != null) {
-          super_.link(loader);
-        }
-
-        if (addendum != null && addendum.annotationTable != null) {
-          resolveAnnotationTable(loader, addendum.annotationTable);
-        }
-
-        if (interfaceTable != null) {
-          int stride = (isInterface() ? 1 : 2);
-          for (int i = 0; i < interfaceTable.length; i += stride) {
-            ((Class) interfaceTable[i]).link(loader);
-          }
-        }
-
-        if (methodTable != null) {
-          for (int i = 0; i < methodTable.length; ++i) {
-            Method m = methodTable[i];
-
-            for (int j = 1; j < m.spec.length;) {
-              j = resolveSpec(loader, m.spec, j);
-            }
-
-            if (m.addendum != null && m.addendum.annotationTable != null) {
-              resolveAnnotationTable(loader, m.addendum.annotationTable);
-            }
-          }
-        }
-
-        if (fieldTable != null) {
-          for (int i = 0; i < fieldTable.length; ++i) {
-            Field f = fieldTable[i];
-
-            resolveSpec(loader, f.spec, 0);
-
-            if (f.addendum != null && f.addendum.annotationTable != null) {
-              resolveAnnotationTable(loader, f.addendum.annotationTable);
-            }
-          }
-        }
-
-        vmFlags |= LinkFlag;
-      }
-    } finally {
-      releaseClassLock();
-    }
-  }
-
   public static Class forName(String name) throws ClassNotFoundException {
     return forName
       (name, true, Method.getCaller().getDeclaringClass().getClassLoader());
@@ -313,7 +160,7 @@ public final class Class <T>
       loader = Class.class.loader;
     }
     Class c = loader.loadClass(name);
-    c.link(loader);
+    avian.SystemClassLoader.link(c, loader);
     if (initialize) {
       c.initialize();
     }
@@ -378,7 +225,7 @@ public final class Class <T>
 
   private Field findField(String name) {
     if (fieldTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       for (int i = 0; i < fieldTable.length; ++i) {
         if (fieldTable[i].getName().equals(name)) {
@@ -423,7 +270,7 @@ public final class Class <T>
 
   private Method findMethod(String name, Class[] parameterTypes) {
     if (methodTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       if (parameterTypes == null) {
         parameterTypes = new Class[0];
@@ -517,7 +364,7 @@ public final class Class <T>
   public Constructor[] getDeclaredConstructors() {
     Constructor[] array = new Constructor[countConstructors(false)];
     if (methodTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
@@ -533,7 +380,7 @@ public final class Class <T>
   public Constructor[] getConstructors() {
     Constructor[] array = new Constructor[countConstructors(true)];
     if (methodTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
@@ -573,7 +420,7 @@ public final class Class <T>
   public Field[] getFields() {
     Field[] array = new Field[countPublicFields()];
     if (fieldTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       int ai = 0;
       for (int i = 0; i < fieldTable.length; ++i) {
@@ -603,7 +450,7 @@ public final class Class <T>
   public Method[] getDeclaredMethods() {
     Method[] array = new Method[countMethods(false)];
     if (methodTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       int ai = 0;
       for (int i = 0; i < methodTable.length; ++i) {
@@ -619,7 +466,7 @@ public final class Class <T>
   public Method[] getMethods() {
     Method[] array = new Method[countMethods(true)];
     if (methodTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       int index = 0;
       for (int i = 0; i < methodTable.length; ++i) {
@@ -636,7 +483,7 @@ public final class Class <T>
 
   public Class[] getInterfaces() {
     if (interfaceTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
       int stride = (isInterface() ? 1 : 2);
       Class[] array = new Class[interfaceTable.length / stride];
@@ -762,9 +609,9 @@ public final class Class <T>
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
     for (Class c = this; c != null; c = c.super_) {
       if (c.addendum != null && c.addendum.annotationTable != null) {
-        link(c.loader);
+        avian.SystemClassLoader.link(c, c.loader);
         
-        Object[] table = c.addendum.annotationTable;
+        Object[] table = (Object[]) c.addendum.annotationTable;
         for (int i = 0; i < table.length; ++i) {
           Object[] a = (Object[]) table[i];
           if (a[1] == class_) {
@@ -778,9 +625,9 @@ public final class Class <T>
 
   public Annotation[] getDeclaredAnnotations() {
     if (addendum != null && addendum.annotationTable != null) {
-      link(loader);
+      avian.SystemClassLoader.link(this);
 
-      Object[] table = addendum.annotationTable;
+      Object[] table = (Object[]) addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
         array[i] = getAnnotation((Object[]) table[i]);
@@ -795,7 +642,7 @@ public final class Class <T>
     int count = 0;
     for (Class c = this; c != null; c = c.super_) {
       if (c.addendum != null && c.addendum.annotationTable != null) {
-        count += c.addendum.annotationTable.length;
+        count += ((Object[]) c.addendum.annotationTable).length;
       }
     }
     return count;
@@ -806,7 +653,7 @@ public final class Class <T>
     int i = 0;
     for (Class c = this; c != null; c = c.super_) {
       if (c.addendum != null && c.addendum.annotationTable != null) {
-        Object[] table = c.addendum.annotationTable;
+        Object[] table = (Object[]) c.addendum.annotationTable;
         for (int j = 0; j < table.length; ++j) {
           array[i++] = getAnnotation((Object[]) table[j]);
         }
@@ -850,14 +697,9 @@ public final class Class <T>
   void setSigners(Object[] signers) {
     if (signers != null && signers.length > 0) {
       if (addendum == null) {
-        addendum = new Addendum();
+        addendum = new avian.ClassAddendum();
       }
       addendum.signers = signers;
     }
-  }
-
-  private static class Addendum {
-    public Object[] annotationTable;
-    public Object[] signers;
   }
 }

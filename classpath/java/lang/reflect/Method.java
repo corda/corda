@@ -19,14 +19,14 @@ public class Method<T> extends AccessibleObject
 {
   private byte vmFlags;
   private byte returnCode;
-  private byte parameterCount;
-  private byte parameterFootprint;
+  public byte parameterCount;
+  public byte parameterFootprint;
   private short flags;
   private short offset;
   private int nativeID;
   private byte[] name;
   public byte[] spec;
-  public Addendum addendum;
+  public avian.Addendum addendum;
   private Class<T> class_;
   private Object code;
   private long compiled;
@@ -53,6 +53,10 @@ public class Method<T> extends AccessibleObject
 
   public String getName() {
     return new String(name, 0, name.length - 1, false);
+  }
+
+  String getSpec() {
+    return new String(spec, 0, spec.length - 1, false);
   }
 
   private static int next(char c, String s, int start) {
@@ -158,7 +162,7 @@ public class Method<T> extends AccessibleObject
 
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
     if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = addendum.annotationTable;
+      Object[] table = (Object[]) addendum.annotationTable;
       for (int i = 0; i < table.length; ++i) {
         Object[] a = (Object[]) table[i];
         if (a[1] == class_) {
@@ -171,7 +175,7 @@ public class Method<T> extends AccessibleObject
 
   public Annotation[] getAnnotations() {
     if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = addendum.annotationTable;
+      Object[] table = (Object[]) addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
         array[i] = getAnnotation((Object[]) table[i]);
@@ -208,9 +212,5 @@ public class Method<T> extends AccessibleObject
 
   public TypeVariable<Method<T>>[] getTypeParameters() {
     throw new UnsupportedOperationException();
-  }
-
-  public static class Addendum {
-    public Object[] annotationTable;
   }
 }

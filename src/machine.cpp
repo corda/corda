@@ -970,122 +970,6 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
   set(t, class_, ClassInterfaceTable, interfaceTable);
 }
 
-object
-parseAnnotation(Thread* t, Stream& s, object pool);
-
-object
-parseAnnotationValue(Thread* t, Stream& s, object pool)
-{
-  unsigned tag = s.read1();
-  switch (tag) {
-  case 'Z':
-    return makeBoolean(t, singletonValue(t, pool, s.read2() - 1));
-
-  case 'B':
-    return makeByte(t, singletonValue(t, pool, s.read2() - 1));
-
-  case 'C':
-    return makeChar(t, singletonValue(t, pool, s.read2() - 1));
-
-  case 'S':
-    return makeShort(t, singletonValue(t, pool, s.read2() - 1));
-
-  case 'I':
-    return makeInt(t, singletonValue(t, pool, s.read2() - 1));
-
-  case 'F':
-    return makeFloat(t, bitsToFloat(singletonValue(t, pool, s.read2() - 1)));
-
-  case 'J': {
-    int64_t v; memcpy(&v, &singletonValue(t, pool, s.read2() - 1), 8);
-    return makeLong(t, v);
-  }
-
-  case 'D': {
-    double v; memcpy(&v, &singletonValue(t, pool, s.read2() - 1), 8);
-    return makeDouble(t, v);
-  }
-
-  case 's': {
-    object value = singletonObject(t, pool, s.read2() - 1);
-    return intern
-      (t, makeString(t, value, 0, byteArrayLength(t, value) - 1, 0));
-  }
-
-  case 'e': {
-    unsigned typeNameIndex = s.read2() - 1;
-    unsigned nameIndex = s.read2() - 1;
-    return makePair(t, singletonObject(t, pool, typeNameIndex),
-                    singletonObject(t, pool, nameIndex));
-  }
-
-  case 'c':
-    return singletonObject(t, pool, s.read2() - 1);
-
-  case '@':
-    return parseAnnotation(t, s, pool);
-
-  case '[': {
-    unsigned count = s.read2();
-    object array = makeObjectArray(t, count);
-    PROTECT(t, array);
-    for (unsigned i = 0; i < count; ++i) {
-      object value = parseAnnotationValue(t, s, pool);
-      if (UNLIKELY(t->exception)) return 0;
-
-      set(t, array, ArrayBody + (i * BytesPerWord), value);
-    }
-    return array;
-  }    
-
-  default: abort(t);
-  }
-}
-
-object
-parseAnnotation(Thread* t, Stream& s, object pool)
-{
-  PROTECT(t, pool);
-
-  unsigned typeIndex = s.read2() - 1;
-  unsigned elementCount = s.read2();
-  object array = makeObjectArray(t, (elementCount * 2) + 2);
-  PROTECT(t, array);
-
-  set(t, array, ArrayBody + BytesPerWord, singletonObject(t, pool, typeIndex));
-
-  for (unsigned i = 0; i < elementCount; ++i) {
-    set(t, array, ArrayBody + (((i * 2) + 2) * BytesPerWord),
-        singletonObject(t, pool, s.read2() - 1));  
-
-    object value = parseAnnotationValue(t, s, pool);
-    if (UNLIKELY(t->exception)) return 0;
-
-    set(t, array, ArrayBody + (((i * 2) + 3) * BytesPerWord), value);
-  }
-
-  return array;
-}
-
-object
-parseAnnotationTable(Thread* t, Stream& s, object pool)
-{
-  PROTECT(t, pool);
-
-  unsigned annotationCount = s.read2();
-  object annotations = makeArray(t, annotationCount);
-  PROTECT(t, annotations);
-  
-  for (unsigned i = 0; i < annotationCount; ++i) {
-    object annotation = parseAnnotation(t, s, pool);
-    if (UNLIKELY(t->exception)) return 0;
-    
-    set(t, annotations, ArrayBody + (i * BytesPerWord), annotation);
-  }
-
-  return annotations;
-}
-
 void
 parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 {
@@ -1136,7 +1020,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
                               ("RuntimeVisibleAnnotations"),
                               &byteArrayBody(t, name, 0)) == 0)
         {
-          addendum = makeFieldAddendum(t, parseAnnotationTable(t, s, pool));
+          object body = makeByteArray(t, length);
+          s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
+                 length);
+          addendum = makeAddendum(t, pool, body);
         } else {
           s.skip(length);
         }
@@ -1486,7 +1373,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               ("RuntimeVisibleAnnotations"),
                               &byteArrayBody(t, name, 0)) == 0)
         {
-          addendum = makeMethodAddendum(t, parseAnnotationTable(t, s, pool));
+          object body = makeByteArray(t, length);
+          s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
+                 length);
+          addendum = makeAddendum(t, pool, body);
         } else {
           s.skip(length);
         }
@@ -1711,8 +1601,10 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
                           ("RuntimeVisibleAnnotations"),
                           &byteArrayBody(t, name, 0)) == 0)
     {
-      object addendum = makeClassAddendum
-        (t, parseAnnotationTable(t, s, pool), 0);
+      object body = makeByteArray(t, length);
+      s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)), length);
+
+      object addendum = makeClassAddendum(t, pool, body, 0);
       
       set(t, class_, ClassAddendum, addendum);
     } else {
@@ -2189,7 +2081,6 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   tenuredWeakReferences(0),
   shutdownHooks(0),
   objectsToFinalize(0),
-  invokeMethod(0),
   unsafe(false),
   triedBuiltinOnLoad(false),
   heapPoolIndex(0)
@@ -3627,7 +3518,6 @@ visitRoots(Machine* m, Heap::Visitor* v)
   v->visit(&(m->jniMethodTable));
   v->visit(&(m->shutdownHooks));
   v->visit(&(m->objectsToFinalize));
-  v->visit(&(m->invokeMethod));
 
   for (Thread* t = m->rootThread; t; t = t->peer) {
     ::visitRoots(t, v);

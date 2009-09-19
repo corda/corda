@@ -1204,7 +1204,6 @@ class Machine {
   object tenuredWeakReferences;
   object shutdownHooks;
   object objectsToFinalize;
-  object invokeMethod;
   bool unsafe;
   bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;

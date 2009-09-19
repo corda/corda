@@ -13,19 +13,15 @@
 
 (type accessibleObject java/lang/reflect/AccessibleObject)
 
-(type classAddendum java/lang/Class$Addendum)
-
 (type field java/lang/reflect/Field)
-
-(type fieldAddendum java/lang/reflect/Field$Addendum)
 
 (type method java/lang/reflect/Method)
 
-(type methodAddendum java/lang/reflect/Method$Addendum)
-
 (type proxy java/lang/reflect/Proxy)
 
-(type pair avian/Pair)
+(type addendum avian/Addendum)
+
+(type classAddendum avian/ClassAddendum)
 
 (type nativeMethodData
   (void* function)
@@ -110,6 +106,10 @@
 
 (type array
   (noassert array object body))
+
+(type pair
+  (object first)
+  (object second))
 
 (type continuationContext
   (object next)

@@ -32,7 +32,7 @@ public class Field<T> extends AccessibleObject {
   private short offset;
   private byte[] name;
   public byte[] spec;
-  public Addendum addendum;
+  public avian.Addendum addendum;
   private Class<T> class_;
 
   private Field() { }
@@ -211,7 +211,7 @@ public class Field<T> extends AccessibleObject {
 
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
     if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = addendum.annotationTable;
+      Object[] table = (Object[]) addendum.annotationTable;
       for (int i = 0; i < table.length; ++i) {
         Object[] a = (Object[]) table[i];
         if (a[1] == class_) {
@@ -224,7 +224,7 @@ public class Field<T> extends AccessibleObject {
 
   public Annotation[] getAnnotations() {
     if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = addendum.annotationTable;
+      Object[] table = (Object[]) addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
         array[i] = getAnnotation((Object[]) table[i]);
@@ -256,6 +256,7 @@ public class Field<T> extends AccessibleObject {
     (Object instance, int offset, Object value);
 
   public static class Addendum {
-    public Object[] annotationTable;
+    public Object pool;
+    public Object annotationTable;
   }
 }

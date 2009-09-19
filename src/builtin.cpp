@@ -79,242 +79,6 @@ runOnLoadIfFound(Thread* t, System::Library* library)
   }
 }
 
-void JNICALL
-proxyConstruct(Thread* t, object, uintptr_t* arguments)
-{
-  set(t, reinterpret_cast<object>(arguments[0]), ProxyH,
-      reinterpret_cast<object>(arguments[1]));
-}
-
-int64_t JNICALL
-proxyInvoke(Thread* t, object method, uintptr_t* arguments)
-{
-  PROTECT(t, method);
-  
-  unsigned size = methodParameterFootprint(t, method);
-  RUNTIME_ARRAY(bool, objectMask, size);
-
-  assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
-
-  unsigned i = 0;
-  RUNTIME_ARRAY_BODY(objectMask)[i++] = true;
-
-  unsigned argumentCount = 0;
-  for (MethodSpecIterator it
-         (t, reinterpret_cast<char*>
-          (&byteArrayBody(t, methodSpec(t, method), 0)));
-       it.hasNext();)
-  {
-    ++ argumentCount;
-
-    switch (*it.next()) {
-    case 'L':
-    case '[':
-      RUNTIME_ARRAY_BODY(objectMask)[i++] = true;
-      break;
-      
-    case 'J':
-    case 'D':
-      RUNTIME_ARRAY_BODY(objectMask)[i++] = false;
-      RUNTIME_ARRAY_BODY(objectMask)[i++] = false;
-      break;
-
-    default:
-      RUNTIME_ARRAY_BODY(objectMask)[i++] = false;
-      break;        
-    }
-  }
-
-  class MyProtector: public Thread::Protector {
-   public:
-    MyProtector(Thread* t, uintptr_t* array, bool* mask, unsigned count):
-      Protector(t), array(array), mask(mask), count(count) { }
-
-    virtual void visit(Heap::Visitor* v) {
-      for (unsigned i = 0; i < count; ++i) {
-        if (mask[i]) {
-          v->visit(reinterpret_cast<object*>(array + i));
-        }
-      }
-    }
-
-    uintptr_t* array;
-    bool* mask;
-    unsigned count;
-  } protector(t, arguments, RUNTIME_ARRAY_BODY(objectMask), i);
-
-  object array = makeObjectArray
-    (t, t->m->loader, arrayBody(t, t->m->types, Machine::JobjectType),
-     argumentCount);
-  PROTECT(t, array);
-
-  i = 0;
-  unsigned ai = 1;
-  for (MethodSpecIterator it
-         (t, reinterpret_cast<char*>
-          (&byteArrayBody(t, methodSpec(t, method), 0)));
-       it.hasNext();)
-  {
-    object a;
-    unsigned size;
-    switch (*it.next()) {
-    case 'L':
-    case '[':
-      a = reinterpret_cast<object>(arguments[ai]);
-      size = 1;
-      break;
-
-    case 'Z':
-      a = makeBoolean(t, static_cast<int8_t>(arguments[ai]));
-      size = 1;
-      break;
-
-    case 'B':
-      a = makeByte(t, static_cast<int8_t>(arguments[ai]));
-      size = 1;
-      break;
-
-    case 'S':
-      a = makeShort(t, static_cast<int16_t>(arguments[ai]));
-      size = 1;
-      break;
-
-    case 'C':
-      a = makeChar(t, static_cast<uint16_t>(arguments[ai]));
-      size = 1;
-      break;
-
-    case 'I':
-      a = makeInt(t, static_cast<int32_t>(arguments[ai]));
-      size = 1;
-      break;
-
-    case 'F':
-      a = makeFloat(t, bitsToFloat(static_cast<int32_t>(arguments[ai])));
-      size = 1;
-      break;
-      
-    case 'J': {
-      int64_t v; memcpy(&v, arguments + ai, 8);
-      a = makeLong(t, v);
-      size = 2;
-    } break;
-
-    case 'D': {
-      double v; memcpy(&v, arguments + ai, 8);
-      a = makeDouble(t, v);
-      size = 2;
-    } break;
-
-    default:
-      abort(t);
-    }
-
-    set(t, array, ArrayBody + (i * BytesPerWord), a);
-
-    ++ i;
-    ai += size;
-  }
-
-  if (t->m->invokeMethod == 0) {
-    object m = resolveMethod
-      (t, t->m->loader, "java/lang/reflect/InvocationHandler", "invoke",
-       "(Ljava/lang/Object;Ljava/lang/reflect/Method;[Ljava/lang/Object;)"
-       "Ljava/lang/Object;");
-    
-    if (m) {
-      t->m->invokeMethod = m;
-    }
-
-    if (UNLIKELY(t->exception)) return 0;
-  }
-
-  object invoke = findInterfaceMethod
-    (t, t->m->invokeMethod, objectClass
-     (t, proxyH(t, reinterpret_cast<object>(arguments[0]))));
-  PROTECT(t, invoke);
-        
-  object result = t->m->processor->invoke
-    (t, invoke, proxyH(t, reinterpret_cast<object>(arguments[0])),
-     reinterpret_cast<object>(arguments[0]), method, array);
-  if (UNLIKELY(t->exception)) return 0;
-
-  switch (methodReturnCode(t, method)) {
-  case BooleanField:
-    return booleanValue(t, result);
-
-  case ByteField:
-    return byteValue(t, result);
-
-  case CharField:
-    return charValue(t, result);
-
-  case ShortField:
-    return shortValue(t, result);
-
-  case FloatField:
-    return floatToBits(floatValue(t, result));
-
-  case IntField:
-    return intValue(t, result);
-
-  case LongField:
-    return longValue(t, result);
-
-  case DoubleField:
-    return doubleToBits(doubleValue(t, result));
-
-  case ObjectField:
-    return reinterpret_cast<int64_t>(result);
-
-  case VoidField:
-    return 0;
-
-  default:
-    abort(t);
-  }
-}
-
-void
-addInterface(Thread* t, object map, object interface)
-{
-  hashMapInsertMaybe
-    (t, map, className(t, interface), interface, byteArrayHash,
-     byteArrayEqual);
-}
-
-object
-allInterfaces(Thread* t, object array)
-{
-  PROTECT(t, array);
-
-  object map = makeHashMap(t, 0, 0);
-  PROTECT(t, map);
-
-  for (unsigned i = 0; i < objectArrayLength(t, array); ++i) {
-    addInterface(t, map, objectArrayBody(t, array, i));
-
-    object itable = classInterfaceTable(t, objectArrayBody(t, array, i));
-    if (itable) {
-      PROTECT(t, itable);
-
-      for (unsigned j = 0; j < arrayLength(t, itable); ++j) {
-        addInterface(t, map, arrayBody(t, itable, j));
-      }
-    }
-  }
-
-  object result = makeArray(t, hashMapSize(t, map));
-  
-  unsigned i = 0;
-  for (HashMapIterator it(t, map); it.hasMore();) {
-    set(t, result, ArrayBody + (i * BytesPerWord), tripleSecond(t, it.next()));
-    ++ i;
-  }
-
-  return result;
-}
-
 } // namespace
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -404,8 +168,22 @@ Avian_java_lang_Object_clone
   return reinterpret_cast<int64_t>(clone);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_SystemClassLoader_acquireClassLock
+(Thread* t, object)
+{
+  acquire(t, t->m->classLock);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_SystemClassLoader_releaseClassLock
+(Thread* t, object)
+{
+  release(t, t->m->classLock);
+}
+
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_ClassLoader_defineClass
+Avian_avian_SystemClassLoader_defineClass
 (Thread* t, object, uintptr_t* arguments)
 {
   object loader = reinterpret_cast<object>(arguments[0]);
@@ -525,20 +303,6 @@ Avian_java_lang_Class_initialize
   object this_ = reinterpret_cast<object>(arguments[0]);
 
   initClass(t, this_);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_java_lang_Class_acquireClassLock
-(Thread* t, object)
-{
-  acquire(t, t->m->classLock);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_java_lang_Class_releaseClassLock
-(Thread* t, object)
-{
-  release(t, t->m->classLock);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -727,195 +491,6 @@ Avian_java_lang_reflect_Array_makeObjectArray
 
   return reinterpret_cast<int64_t>
     (makeObjectArray(t, classLoader(t, elementType), elementType, length));
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_reflect_Proxy_makeClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  object loader = reinterpret_cast<object>(arguments[0]);
-  PROTECT(t, loader);
-
-  object interfaces = allInterfaces(t, reinterpret_cast<object>(arguments[1]));
-  PROTECT(t, interfaces);
-
-  object name = reinterpret_cast<object>(arguments[2]);
-  PROTECT(t, name);
-
-  object virtualMap = makeHashMap(t, 0, 0);
-  PROTECT(t, virtualMap);
-
-  object superVtable = classVirtualTable
-    (t, arrayBody(t, t->m->types, Machine::ProxyType));
-  PROTECT(t, superVtable);
-
-  for (unsigned i = 0; i < arrayLength(t, superVtable); ++i) {
-    object method = arrayBody(t, superVtable, i);
-    hashMapInsert(t, virtualMap, method, method, methodHash);
-  }
-
-  unsigned virtualCount = arrayLength(t, superVtable);
-  
-  object newVirtuals = makeList(t, 0, 0, 0);
-  PROTECT(t, newVirtuals);
-  
-  object ivtable = 0;
-  PROTECT(t, ivtable);
-
-  object method = 0;
-  PROTECT(t, method);
-
-  for (unsigned i = 0; i < arrayLength(t, interfaces); ++i) {
-    ivtable = classVirtualTable(t, arrayBody(t, interfaces, i));
-
-    if (ivtable) {
-      for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
-        method = arrayBody(t, ivtable, j);
-
-        method = makeMethod
-          (t,
-           methodVmFlags(t, method) | FastNative,
-           methodReturnCode(t, method),
-           methodParameterCount(t, method),
-           methodParameterFootprint(t, method),
-           methodFlags(t, method) | ACC_NATIVE,
-           0,
-           0,
-           methodName(t, method),
-           methodSpec(t, method),
-           0,
-           0,
-           0,
-           reinterpret_cast<int64_t>(proxyInvoke));
-
-        object p = hashMapFindNode
-          (t, virtualMap, method, methodHash, methodEqual);
-
-        if (p) {
-          methodOffset(t, method) = methodOffset(t, tripleFirst(t, p));
-
-          set(t, p, TripleSecond, method);
-        } else {
-          methodOffset(t, method) = virtualCount++;
-
-          listAppend(t, newVirtuals, method);
-
-          hashMapInsert(t, virtualMap, method, method, methodHash);
-        }
-      }
-    }
-  }
-
-  object vtable = makeArray(t, virtualCount);
-  PROTECT(t, vtable);
-
-  unsigned i = 0;
-  for (; i < arrayLength(t, superVtable); ++i) {
-    method = hashMapFind
-      (t, virtualMap, arrayBody(t, superVtable, i), methodHash, methodEqual);
-    
-    set(t, vtable, ArrayBody + (i * BytesPerWord), method);
-  }
-
-  object methodTable = makeArray(t, listSize(t, newVirtuals) + 1);
-  PROTECT(t, methodTable);
-
-  unsigned mti = 0;
-  for (object p = listFront(t, newVirtuals); p; p = pairSecond(t, p)) {
-    set(t, vtable, ArrayBody + (i * BytesPerWord), pairFirst(t, p));
-    ++ i;
-
-    set(t, methodTable, ArrayBody + (mti * BytesPerWord), pairFirst(t, p));
-    ++ mti;
-  }
-
-#define NAME "<init>"
-  object constructorName = makeByteArray(t, sizeof(NAME));
-  PROTECT(t, constructorName);
-  memcpy(&byteArrayBody(t, constructorName, 0), NAME, sizeof(NAME));
-
-#define SPEC "(Ljava/lang/reflect/InvocationHandler;)V"
-  object constructorSpec = makeByteArray(t, sizeof(SPEC));
-  PROTECT(t, constructorSpec);
-  memcpy(&byteArrayBody(t, constructorSpec, 0), SPEC, sizeof(SPEC));
-
-  object constructor = makeMethod
-    (t,
-     methodVmFlags(t, method) | FastNative,
-     VoidField,
-     1,
-     2,
-     methodFlags(t, method) | ACC_NATIVE,
-     0,
-     0,
-     constructorName,
-     constructorSpec,
-     0,
-     0,
-     0,
-     reinterpret_cast<int64_t>(proxyConstruct));
-
-  set(t, methodTable, ArrayBody + (mti * BytesPerWord), constructor);
-  ++ mti;  
-
-  assert(t, arrayLength(t, vtable) == i);
-  assert(t, arrayLength(t, methodTable) == mti);
-
-  object itable = makeArray(t, arrayLength(t, interfaces) * 2);
-  PROTECT(t, itable);
-
-  object newIVTable = 0;
-  PROTECT(t, newIVTable);
-
-  for (unsigned i = 0; i < arrayLength(t, interfaces); ++i) {
-    object interface = arrayBody(t, interfaces, i);
-
-    set(t, itable, ArrayBody + ((i * 2) * BytesPerWord), interface);
-
-    ivtable = classVirtualTable(t, interface);
-    if (ivtable) {
-      newIVTable = makeArray(t, arrayLength(t, ivtable));
-
-      set(t, itable, ArrayBody + (((i * 2) + 1) * BytesPerWord), newIVTable);
-
-      for (unsigned j = 0; j < arrayLength(t, ivtable); ++j) {
-        method = hashMapFind
-          (t, virtualMap, arrayBody(t, ivtable, j), methodHash, methodEqual);
-        assert(t, method);
-        
-        set(t, newIVTable, ArrayBody + (j * BytesPerWord), method);
-      }
-    }
-  }
-
-  object c = t->m->processor->makeClass
-    (t,
-     0,
-     0,
-     classFixedSize(t, arrayBody(t, t->m->types, Machine::ProxyType)),
-     0,
-     0,
-     classObjectMask(t, arrayBody(t, t->m->types, Machine::ProxyType)),
-     name,
-     0,
-     arrayBody(t, t->m->types, Machine::ProxyType),
-     itable,
-     vtable,
-     0,
-     methodTable,
-     0,
-     0,
-     loader,
-     arrayLength(t, vtable));
-  PROTECT(t, c);
-
-  t->m->processor->initVtable(t, c);
-
-  for (unsigned i = 0; i < arrayLength(t, methodTable); ++i) {
-    set(t, arrayBody(t, methodTable, i), MethodClass, c);
-  }
-
-  return reinterpret_cast<int64_t>(c);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -1468,4 +1043,30 @@ Avian_avian_Continuations_00024Continuation_handleException
      reinterpret_cast<object>(arguments[1]));
 
   abort(t);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Singleton_getObject
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>
+    (singletonObject(t, reinterpret_cast<object>(arguments[0]), arguments[1]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Singleton_getInt
+(Thread* t, object, uintptr_t* arguments)
+{
+  return singletonValue
+    (t, reinterpret_cast<object>(arguments[0]), arguments[1]);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Singleton_getLong
+(Thread* t, object, uintptr_t* arguments)
+{
+  int64_t v;
+  memcpy(&singletonValue
+         (t, reinterpret_cast<object>(arguments[0]), arguments[1]), &v, 8);
+  return v;
 }

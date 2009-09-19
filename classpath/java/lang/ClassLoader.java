@@ -33,9 +33,6 @@ public abstract class ClassLoader {
     return ClassLoader.class.getClassLoader();
   }
 
-  private static native Class defineClass
-    (ClassLoader loader, byte[] b, int offset, int length);
-
   protected Class defineClass(String name, byte[] b, int offset, int length) {
     if (b == null) {
       throw new NullPointerException();
@@ -45,7 +42,7 @@ public abstract class ClassLoader {
       throw new IndexOutOfBoundsException();
     }
 
-    return defineClass(this, b, offset, length);
+    return avian.SystemClassLoader.defineClass(this, b, offset, length);
   }
 
   protected Class findClass(String name) throws ClassNotFoundException {
@@ -84,7 +81,7 @@ public abstract class ClassLoader {
   }
 
   protected void resolveClass(Class c) {
-    c.link(this);
+    avian.SystemClassLoader.link(c, this);
   }
 
   private ClassLoader getParent() {

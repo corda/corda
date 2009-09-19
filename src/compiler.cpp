@@ -134,12 +134,6 @@ class Site {
   Site* next;
 };
 
-class SitePair {
- public:
-  Site* low;
-  Site* high;
-};
-
 class Stack {
  public:
   Stack(unsigned index, Value* value, Stack* next):
