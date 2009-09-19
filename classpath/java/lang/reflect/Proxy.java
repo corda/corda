@@ -336,7 +336,7 @@ public class Proxy {
     case 'C':
       write1(out, invokevirtual);
       write2(out, poolAddMethodRef
-             (pool, "java/lang/Character", "charValue", "()B") + 1);
+             (pool, "java/lang/Character", "charValue", "()C") + 1);
       write1(out, ireturn);
       break;
 
