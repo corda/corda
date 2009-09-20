@@ -826,8 +826,13 @@ object
 parsePool(Thread* t, Stream& s)
 {
   unsigned count = s.read2() - 1;
-
-  object pool = makeSingletonOfSize(t, count);
+  unsigned old;
+  unsigned floatMaskSize = 0;
+  do {
+  	old = floatMaskSize;
+    floatMaskSize = singletonMaskSize(count + floatMaskSize);
+  } while (floatMaskSize != old);
+  object pool = makeSingletonOfSize(t, count + floatMaskSize);
   PROTECT(t, pool);
 
   if (count) {
@@ -839,12 +844,18 @@ parsePool(Thread* t, Stream& s)
       switch (s.read1()) {
       case CONSTANT_Class:
       case CONSTANT_String:
+        assert(t, !singletonIsFloat(t, pool, i));
         singletonMarkObject(t, pool, i);
         s.skip(2);
         break;
 
       case CONSTANT_Integer:
+        assert(t, !singletonIsFloat(t, pool, i));
+        s.skip(4);
+        break;
       case CONSTANT_Float:
+        singletonMarkBit(t, pool, count, i);
+        assert(t, singletonIsFloat(t, pool, i));
         s.skip(4);
         break;
 
@@ -852,17 +863,27 @@ parsePool(Thread* t, Stream& s)
       case CONSTANT_Fieldref:
       case CONSTANT_Methodref:
       case CONSTANT_InterfaceMethodref:
+        assert(t, !singletonIsFloat(t, pool, i));
         singletonMarkObject(t, pool, i);
         s.skip(4);
         break;
 
       case CONSTANT_Long:
+        assert(t, !singletonIsFloat(t, pool, i));
+        s.skip(8);
+        ++ i;
+        break;
       case CONSTANT_Double:
+        singletonMarkBit(t, pool, count, i);
+        singletonMarkBit(t, pool, count, i + 1);
+        assert(t, singletonIsFloat(t, pool, i));
+        assert(t, singletonIsFloat(t, pool, i + 1));
         s.skip(8);
         ++ i;
         break;
 
       case CONSTANT_Utf8:
+        assert(t, !singletonIsFloat(t, pool, i));
         singletonMarkObject(t, pool, i);
         s.skip(s.read2());
         break;

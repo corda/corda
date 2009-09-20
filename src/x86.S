@@ -24,6 +24,37 @@
 #ifdef __x86_64__
 
 #ifdef __MINGW32__
+.globl GLOBAL(detectFeature)
+GLOBAL(detectFeature):
+   pushq %rbp
+   movq %rsp, %rbp
+   pushq %rdx
+   pushq %rcx
+   pushq %rbx
+   pushq %rsi
+   pushq %rdi
+   movl %ecx, %edi
+   movl %edx, %esi
+   movl $1, %eax
+   cpuid
+   andl %esi, %edx
+   andl %edi, %ecx
+   orl %edx, %ecx
+   test %ecx, %ecx
+   je LOCAL(NOSSE)
+   movl $1, %eax
+   jmp LOCAL(SSEEND)
+LOCAL(NOSSE):
+   movl $0, %eax
+LOCAL(SSEEND):
+   popq %rdi
+   popq %rsi
+   popq %rbx
+   popq %rcx
+   popq %rdx
+   movq %rbp,%rsp
+   popq %rbp
+   ret
 
 .globl GLOBAL(vmNativeCall)
 GLOBAL(vmNativeCall):
@@ -144,6 +175,31 @@ GLOBAL(vmJump):
    jmp    *%rcx
    
 #else // not __MINGW32__
+.globl GLOBAL(detectFeature)
+GLOBAL(detectFeature):
+   pushq %rbp
+   movq %rsp, %rbp
+   pushq %rdx
+   pushq %rcx
+   pushq %rbx
+   movl $1, %eax
+   cpuid
+   andl %esi, %edx
+   andl %edi, %ecx
+   orl %edx, %ecx
+   test %ecx, %ecx
+   je LOCAL(NOSSE)
+   movl $1, %eax
+   jmp LOCAL(SSEEND)
+LOCAL(NOSSE):
+   movl $0, %eax
+LOCAL(SSEEND):
+   popq %rbx
+   popq %rcx
+   popq %rdx
+   movq %rbp,%rsp
+   popq %rbp
+   ret
 
 .globl GLOBAL(vmNativeCall)
 GLOBAL(vmNativeCall):
@@ -250,10 +306,42 @@ GLOBAL(vmJump):
    movq   %r8,%rax
    movq   %r9,%rdx
    jmp    *%rdi
-   
+
 #endif // not __MINGW32__
 
 #elif defined __i386__
+
+.globl GLOBAL(detectFeature)
+GLOBAL(detectFeature):
+   pushl %ebp
+   movl %esp, %ebp
+   pushl %edx
+   pushl %ecx
+   pushl %ebx
+   pushl %esi
+   pushl %edi
+   movl 12(%ebp), %esi
+   movl 8(%ebp), %edi
+   movl $1, %eax
+   cpuid
+   andl %esi, %edx
+   andl %edi, %ecx
+   orl %edx, %ecx
+   test %ecx, %ecx
+   je LOCAL(NOSSE)
+   movl $1, %eax
+   jmp LOCAL(SSEEND)
+LOCAL(NOSSE):
+   movl $0, %eax
+LOCAL(SSEEND):
+   popl %edi
+   popl %esi
+   popl %ebx
+   popl %ecx
+   popl %edx
+   movl %ebp,%esp
+   popl %ebp
+   ret
 
 .globl GLOBAL(vmNativeCall)
 GLOBAL(vmNativeCall):

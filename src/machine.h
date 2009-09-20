@@ -2530,6 +2530,26 @@ makeSingletonOfSize(Thread* t, unsigned count)
   return o;
 }
 
+inline void
+singletonMarkBit(Thread* t, object singleton, unsigned start, unsigned index)
+{
+  uintptr_t& val = singletonValue(t, singleton, start + (index / BitsPerWord));
+  val |= static_cast<uintptr_t>(1) << (index % BitsPerWord);
+}
+
+inline bool
+singletonGetBit(Thread* t, object singleton, unsigned start, unsigned index)
+{
+  uintptr_t& val = singletonValue(t, singleton, start + (index / BitsPerWord));
+  return (val & static_cast<uintptr_t>(1) << (index % BitsPerWord)) != 0;
+}
+
+inline bool
+singletonIsFloat(Thread* t, object singleton, unsigned index)
+{
+  return singletonGetBit(t, singleton, singletonLength(t, singleton) - 2 * singletonMaskSize(t, singleton), index);
+}
+
 inline object
 resolveClassInObject(Thread* t, object loader, object container,
                      unsigned classOffset)

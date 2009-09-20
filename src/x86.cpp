@@ -10,9 +10,13 @@
 
 #include "assembler.h"
 #include "vector.h"
-   
+
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
+
+const bool DebugSSE = false;
+const bool EnableSSE = true;
+const bool EnableSSE2 = true;
 
 using namespace vm;
 
@@ -38,6 +42,31 @@ enum {
   r14 = 14,
   r15 = 15,
 };
+
+enum {
+  xmm0 = r15 + 1,
+  xmm1,
+  xmm2,
+  xmm3,
+  xmm4,
+  xmm5,
+  xmm6,
+  xmm7,
+  xmm8,
+  xmm9,
+  xmm10,
+  xmm11,
+  xmm12,
+  xmm13,
+  xmm14,
+  xmm15,
+};
+
+const unsigned GeneralRegisterMask
+= BytesPerWord == 4 ? 0x000000ff : 0x0000ffff;
+
+const unsigned FloatRegisterMask
+= BytesPerWord == 4 ? 0x00ff0000 : 0xffff0000;
 
 const unsigned FrameHeaderSize = 2;
 
@@ -401,13 +430,44 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
   return padding;
 }
 
+extern "C"
+bool detectFeature(unsigned ecx, unsigned edx);
+
+inline bool
+supportsSSE()
+{
+	static int supported = -1;
+	if(supported == -1) {
+	  supported = EnableSSE && detectFeature(0, 0x2000000);
+	  if(DebugSSE) {
+	    fprintf(stderr, "sse %sdetected.\n", supported ? "" : "not ");
+	  }
+	}
+	return supported;	
+}
+
+inline bool
+supportsSSE2()
+{
+	static int supported = -1;
+	if(supported == -1) {
+	  supported = EnableSSE2 && detectFeature(0, 0x4000000);
+	  if(DebugSSE) {
+	    fprintf(stderr, "sse2 %sdetected.\n", supported ? "" : "not ");
+	  }
+	}
+	return supported;
+}
+
 #define REX_W 0x48
 #define REX_R 0x44
 #define REX_X 0x42
 #define REX_B 0x41
 #define REX_NONE 0x40
 
-void maybeRex(Context* c, unsigned size, int a, int index, int base, bool always) {
+void maybeRex(Context* c, unsigned size, int a, int index, int base,
+              bool always)
+{
   if(BytesPerWord == 8) {
     uint8_t byte;
     if(size == 8) {
@@ -466,7 +526,9 @@ inline void sib(Context* c, unsigned scale, int index, int base) {
   c->code.append((log(scale) << 6) | (regCode(index) << 3) | regCode(base));
 }
 
-inline void modrmSib(Context* c, int width, int a, int scale, int index, int base) {
+inline void modrmSib(Context* c, int width, int a, int scale, int index,
+                     int base)
+{
   if(index == NoRegister) {
     modrm(c, width, base, a);
     if(regCode(base) == rsp) {
@@ -478,7 +540,9 @@ inline void modrmSib(Context* c, int width, int a, int scale, int index, int bas
   }
 }
 
-inline void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset) {
+inline void modrmSibImm(Context* c, int a, int scale, int index, int base,
+                        int offset)
+{
   if(offset == 0 && regCode(base) != rbp) {
     modrmSib(c, 0x00, a, scale, index, base);
   } else if(isInt8(offset)) {
@@ -503,6 +567,12 @@ inline void opcode(Context* c, uint8_t op) {
 inline void opcode(Context* c, uint8_t op1, uint8_t op2) {
   c->code.append(op1);
   c->code.append(op2);
+}
+
+inline void opcode(Context* c, uint8_t op1, uint8_t op2, uint8_t op3) {
+  c->code.append(op1);
+  c->code.append(op2);
+  c->code.append(op3);
 }
 
 void
@@ -670,6 +740,46 @@ jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 }
 
 void
+jumpIfFloatUnorderedC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x8a, a);
+}
+
+void
+jumpIfFloatGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x87, a);
+}
+
+void
+jumpIfFloatGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x83, a);
+}
+
+void
+jumpIfFloatLessC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x82, a);
+}
+
+void
+jumpIfFloatLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  conditional(c, 0x86, a);
+}
+
+void
 longJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
@@ -831,11 +941,59 @@ moveCR2(Context* c, UNUSED unsigned aSize, Assembler::Constant* a,
   }
 }
 
+inline bool floatReg(Assembler::Register* a) {
+	return a->low >= xmm0;
+}
+
+void
+sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
+       unsigned bSize UNUSED, Assembler::Register* b)
+{
+  if(floatReg(a) && floatReg(b)) {
+  	if(aSize == 4) {
+  	  opcode(c, 0xf3);
+  	  maybeRex(c, 4, a, b);
+  	  opcode(c, 0x0f, 0x10);
+  	  modrm(c, 0xc0, b, a);
+  	} else {
+  	  opcode(c, 0xf2);
+  	  maybeRex(c, 4, a, b);
+  	  opcode(c, 0x0f, 0x10);
+  	  modrm(c, 0xc0, b, a);
+  	} 
+  } else if(floatReg(a)) {
+  	opcode(c, 0x66);
+  	maybeRex(c, aSize, a, b);
+  	opcode(c, 0x0f, 0x7e);
+  	modrm(c, 0xc0, b, a);  	
+  } else {
+  	opcode(c, 0x66);
+  	maybeRex(c, aSize, b, a);
+  	opcode(c, 0x0f, 0x6e);
+  	modrm(c, 0xc0, a, b);  	
+  }
+}
+
+void
+sseMoveCR(Context* c, unsigned aSize, Assembler::Constant* a,
+       unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize <= BytesPerWord);
+  Assembler::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
+  moveCR2(c, aSize, a, aSize, &tmp, 0);
+  sseMoveRR(c, aSize, &tmp, bSize, b);
+  c->client->releaseTemporary(tmp.low);
+}
+
 void
 moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
        unsigned bSize, Assembler::Register* b)
 {
-  moveCR2(c, aSize, a, bSize, b, 0);
+  if(floatReg(b)) {
+  	sseMoveCR(c, aSize, a, bSize, b);
+  } else {
+    moveCR2(c, aSize, a, bSize, b, 0);
+  }
 }
 
 void
@@ -854,7 +1012,11 @@ void
 moveRR(Context* c, unsigned aSize, Assembler::Register* a,
        UNUSED unsigned bSize, Assembler::Register* b)
 {
-	
+  if(floatReg(a) or floatReg(b)) {
+  	sseMoveRR(c, aSize, a, bSize, b);
+  	return;
+  }
+  
   if (BytesPerWord == 4 and aSize == 8 and bSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
@@ -928,9 +1090,24 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+sseMoveMR(Context* c, unsigned aSize, Assembler::Memory* a,
+       unsigned bSize UNUSED, Assembler::Register* b)
+{
+  opcode(c, 0x66);
+  maybeRex(c, aSize, b, a);
+  opcode(c, 0x0f, 0x6e);
+  modrmSibImm(c, b, a);
+}
+
+void
 moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
        unsigned bSize, Assembler::Register* b)
 {
+  if(floatReg(b)) {
+  	sseMoveMR(c, aSize, a, bSize, b);
+  	return;
+  }
+  
   switch (aSize) {
   case 1:
     maybeRex(c, bSize, b, a);
@@ -982,10 +1159,25 @@ moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
 }
 
 void
+sseMoveRM(Context* c, unsigned aSize, Assembler::Register* a,
+       UNUSED unsigned bSize, Assembler::Memory* b)
+{
+  opcode(c, 0x66);
+  maybeRex(c, aSize, a, b);
+  opcode(c, 0x0f, 0x7e);
+  modrmSibImm(c, a, b);
+}
+
+void
 moveRM(Context* c, unsigned aSize, Assembler::Register* a,
        unsigned bSize UNUSED, Assembler::Memory* b)
 {
   assert(c, aSize == bSize);
+  
+  if(floatReg(a)) {
+  	sseMoveRM(c, aSize, a, bSize, b);
+  	return;
+  }
   
   switch (aSize) {
   case 1:
@@ -1084,20 +1276,21 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
     break;
 
   case 8: {
-  	if (BytesPerWord == 8) {
+    if (BytesPerWord == 8) {
       if(a->value->resolved() and isInt32(a->value->value())) {
         maybeRex(c, bSize, b);
         opcode(c, 0xc7);
         modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
         c->code.append4(a->value->value());
       } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
+        Assembler::Register tmp
+          (c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, 8, a, 8, &tmp);
         moveRM(c, 8, &tmp, 8, b);
         c->client->releaseTemporary(tmp.low);
       }
-  	} else {
-  	  Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
+    } else {
+      Assembler::Constant ah(shiftMaskPromise(c, a->value, 32, 0xFFFFFFFF));
       Assembler::Constant al(shiftMaskPromise(c, a->value, 0, 0xFFFFFFFF));
 
       Assembler::Memory bh(b->base, b->offset + 4, b->index, b->scale);
@@ -1213,7 +1406,8 @@ addCR(Context* c, unsigned aSize, Assembler::Constant* a,
           c->code.append4(v);
         }
       } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
+        Assembler::Register tmp
+          (c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         addRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -1271,7 +1465,8 @@ subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
           c->code.append4(v);
         }
       } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
+        Assembler::Register tmp
+          (c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         subtractRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -1360,7 +1555,8 @@ andCR(Context* c, unsigned aSize, Assembler::Constant* a,
         c->code.append4(v);
       }
     } else {
-      Assembler::Register tmp(c->client->acquireTemporary());
+      Assembler::Register tmp
+        (c->client->acquireTemporary(GeneralRegisterMask));
       moveCR(c, aSize, a, aSize, &tmp);
       andRR(c, aSize, &tmp, bSize, b);
       c->client->releaseTemporary(tmp.low);
@@ -1417,7 +1613,8 @@ orCR(Context* c, unsigned aSize, Assembler::Constant* a,
           c->code.append4(v);        
         }
       } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
+        Assembler::Register tmp
+          (c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         orRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -1473,7 +1670,8 @@ xorCR(Context* c, unsigned aSize, Assembler::Constant* a,
           c->code.append4(v);        
         }
       } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
+        Assembler::Register tmp
+          (c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         xorRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -1548,7 +1746,7 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
       c->code.append4(v);
     }
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
+    Assembler::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
     moveCR(c, aSize, a, aSize, &tmp);
     compareRR(c, aSize, &tmp, bSize, b);
     c->client->releaseTemporary(tmp.low);
@@ -1562,7 +1760,7 @@ multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
   assert(c, aSize == bSize);
 
   if (BytesPerWord == 4 and aSize == 8) {
-    const uint32_t mask = ~((1 << rax) | (1 << rdx));
+    const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
     Assembler::Register tmp(c->client->acquireTemporary(mask),
                             c->client->acquireTemporary(mask));
 
@@ -1585,7 +1783,8 @@ multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
           c->code.append4(v);        
         }
       } else {
-        Assembler::Register tmp(c->client->acquireTemporary());
+        Assembler::Register tmp
+          (c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         multiplyRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);      
@@ -1630,7 +1829,7 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
       abort(c);
     }
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
+    Assembler::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
     moveCR(c, aSize, a, bSize, &tmp);
     compareRM(c, bSize, &tmp, bSize, b);
     c->client->releaseTemporary(tmp.low);
@@ -1953,6 +2152,223 @@ unsignedShiftRightCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
   doShift(c, unsignedShiftRightRR, 0xe8, aSize, a, bSize, b);
 }
 
+inline void floatRegOp(Context* c, unsigned aSize, Assembler::Register* a,
+                     unsigned bSize UNUSED, Assembler::Register* b, uint8_t op, uint8_t mod = 0xc0)
+{
+  if(aSize == 4) {
+    opcode(c, 0xf3);
+  } else {
+    opcode(c, 0xf2);
+  }
+  maybeRex(c, bSize, a, b);
+  opcode(c, 0x0f, op);
+  modrm(c, mod, a, b);
+}
+
+inline void floatMemOp(Context* c, unsigned aSize, Assembler::Memory* a,
+                     unsigned bSize UNUSED, Assembler::Register* b, uint8_t op)
+{
+  if(aSize == 4) {
+    opcode(c, 0xf3);
+  } else {
+    opcode(c, 0xf2);
+  }
+  maybeRex(c, bSize, b, a);
+  opcode(c, 0x0f, op);
+  modrmSibImm(c, b, a);
+}
+
+void
+floatSqrtRR(Context* c, unsigned aSize, Assembler::Register* a,
+                     unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatRegOp(c, aSize, a, 4, b, 0x51);
+}
+
+void
+floatSqrtMR(Context* c, unsigned aSize, Assembler::Memory* a,
+                     unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatMemOp(c, aSize, a, 4, b, 0x51);
+}
+
+void
+floatAddRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatRegOp(c, aSize, a, 4, b, 0x58);
+}
+
+void
+floatAddMR(Context* c, unsigned aSize, Assembler::Memory* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatMemOp(c, aSize, a, 4, b, 0x58);
+}
+
+void
+floatSubtractRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatRegOp(c, aSize, a, 4, b, 0x5c);
+}
+
+void
+floatSubtractMR(Context* c, unsigned aSize, Assembler::Memory* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatMemOp(c, aSize, a, 4, b, 0x5c);
+}
+
+void
+floatMultiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatRegOp(c, aSize, a, 4, b, 0x59);
+}
+
+void
+floatMultiplyMR(Context* c, unsigned aSize, Assembler::Memory* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatMemOp(c, aSize, a, 4, b, 0x59);
+}
+
+void
+floatDivideRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatRegOp(c, aSize, a, 4, b, 0x5e);
+}
+
+void
+floatDivideMR(Context* c, unsigned aSize, Assembler::Memory* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  floatMemOp(c, aSize, a, 4, b, 0x5e);
+}
+
+void
+float2FloatRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, supportsSSE2());
+  floatRegOp(c, aSize, a, 4, b, 0x5a);
+}
+
+void
+float2FloatMR(Context* c, unsigned aSize, Assembler::Memory* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, supportsSSE2());
+  floatMemOp(c, aSize, a, 4, b, 0x5a);
+}
+
+void
+float2IntRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize, Assembler::Register* b)
+{
+  assert(c, !floatReg(b));
+  floatRegOp(c, aSize, a, bSize, b, 0x2d);
+}
+
+void
+float2IntMR(Context* c, unsigned aSize, Assembler::Memory* a,
+      unsigned bSize, Assembler::Register* b)
+{
+  floatMemOp(c, aSize, a, bSize, b, 0x2d);
+}
+
+void
+int2FloatRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize, Assembler::Register* b)
+{
+  floatRegOp(c, bSize, a, aSize, b, 0x2a);
+}
+
+void
+int2FloatMR(Context* c, unsigned aSize, Assembler::Memory* a,
+      unsigned bSize, Assembler::Register* b)
+{
+  floatMemOp(c, bSize, a, aSize, b, 0x2a);
+}
+
+void
+floatCompareRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  if (aSize == 8) {
+    opcode(c, 0x66);
+  }
+  maybeRex(c, 4, a, b);
+  opcode(c, 0x0f, 0x2e);
+  modrm(c, 0xc0, a, b);
+}
+
+void
+floatNegateRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, floatReg(a) and floatReg(b));
+  // unlike most of the other floating point code, this does NOT
+  // support doubles:
+  assert(c, aSize == 4);
+  ResolvedPromise pcon(0x80000000);
+  Assembler::Constant con(&pcon);
+  if(a->low == b->low) {
+    Assembler::Register tmp(c->client->acquireTemporary(FloatRegisterMask));
+    moveCR(c, 4, &con, 4, &tmp);
+    maybeRex(c, 4, a, &tmp);
+    opcode(c, 0x0f, 0x57);
+    modrm(c, 0xc0, &tmp, a);
+    c->client->releaseTemporary(tmp.low);
+  } else {
+    moveCR(c, 4, &con, 4, b);
+    if(aSize == 8) opcode(c, 0x66);
+    maybeRex(c, 4, a, b);
+    opcode(c, 0x0f, 0x57);
+    modrm(c, 0xc0, a, b);
+  }
+}
+
+void
+floatAbsRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b)
+{
+  assert(c, floatReg(a) and floatReg(b));
+  // unlike most of the other floating point code, this does NOT
+  // support doubles:
+  assert(c, aSize == 4);
+  ResolvedPromise pcon(0x7fffffff);
+  Assembler::Constant con(&pcon);
+  if(a->low == b->low) {
+    Assembler::Register tmp(c->client->acquireTemporary(FloatRegisterMask));
+    moveCR(c, 4, &con, 4, &tmp);
+    maybeRex(c, 4, a, &tmp);
+    opcode(c, 0x0f, 0x54);
+    modrm(c, 0xc0, &tmp, a);
+    c->client->releaseTemporary(tmp.low);
+  } else {
+    moveCR(c, 4, &con, 4, b);
+    maybeRex(c, 4, a, b);
+    opcode(c, 0x0f, 0x54);
+    modrm(c, 0xc0, a, b);
+  }
+}
+
+void
+absRR(Context* c, unsigned aSize, Assembler::Register* a,
+      unsigned bSize UNUSED, Assembler::Register* b UNUSED)
+{
+  assert(c, aSize == bSize and a->low == rax and b->low == rax);
+  Assembler::Register d(c->client->acquireTemporary(static_cast<uint64_t>(1) << rdx));
+  maybeRex(c, aSize, a, b);
+  opcode(c, 0x99);
+  xorRR(c, aSize, &d, aSize, a);
+  subtractRR(c, aSize, &d, aSize, a);
+  c->client->releaseTemporary(rdx);
+}
+
 void
 populateTables(ArchitectureContext* c)
 {
@@ -1991,9 +2407,19 @@ populateTables(ArchitectureContext* c)
   uo[index(JumpIfLess, C)] = CAST1(jumpIfLessC);
   uo[index(JumpIfLessOrEqual, C)] = CAST1(jumpIfLessOrEqualC);
 
+  uo[index(JumpIfFloatUnordered, C)] = CAST1(jumpIfFloatUnorderedC);
+  uo[index(JumpIfFloatEqual, C)] = CAST1(jumpIfEqualC);
+  uo[index(JumpIfFloatNotEqual, C)] = CAST1(jumpIfNotEqualC);
+  uo[index(JumpIfFloatGreater, C)] = CAST1(jumpIfFloatGreaterC);
+  uo[index(JumpIfFloatGreaterOrEqual, C)] = CAST1(jumpIfFloatGreaterOrEqualC);
+  uo[index(JumpIfFloatLess, C)] = CAST1(jumpIfFloatLessC);
+  uo[index(JumpIfFloatLessOrEqual, C)] = CAST1(jumpIfFloatLessOrEqualC);
+
   uo[index(LongJump, C)] = CAST1(longJumpC);
 
   bo[index(Negate, R, R)] = CAST2(negateRR);
+
+  bo[index(FloatNegate, R, R)] = CAST2(floatNegateRR);
 
   bo[index(Move, R, R)] = CAST2(moveRR);
   bo[index(Move, C, R)] = CAST2(moveCR);
@@ -2001,6 +2427,9 @@ populateTables(ArchitectureContext* c)
   bo[index(Move, R, M)] = CAST2(moveRM);
   bo[index(Move, C, M)] = CAST2(moveCM);
   bo[index(Move, A, R)] = CAST2(moveAR);
+
+  bo[index(FloatSqrt, R, R)] = CAST2(floatSqrtRR);
+  bo[index(FloatSqrt, M, R)] = CAST2(floatSqrtMR);
 
   bo[index(MoveZ, R, R)] = CAST2(moveZRR);
   bo[index(MoveZ, M, R)] = CAST2(moveZMR);
@@ -2010,11 +2439,19 @@ populateTables(ArchitectureContext* c)
   bo[index(Compare, C, M)] = CAST2(compareCM);
   bo[index(Compare, R, M)] = CAST2(compareRM);
 
+  bo[index(FloatCompare, R, R)] = CAST2(floatCompareRR);
+
   bo[index(Add, R, R)] = CAST2(addRR);
   bo[index(Add, C, R)] = CAST2(addCR);
 
   bo[index(Subtract, C, R)] = CAST2(subtractCR);
   bo[index(Subtract, R, R)] = CAST2(subtractRR);
+
+  bo[index(FloatAdd, R, R)] = CAST2(floatAddRR);
+  bo[index(FloatAdd, M, R)] = CAST2(floatAddMR);
+
+  bo[index(FloatSubtract, R, R)] = CAST2(floatSubtractRR);
+  bo[index(FloatSubtract, M, R)] = CAST2(floatSubtractMR);
 
   bo[index(And, R, R)] = CAST2(andRR);
   bo[index(And, C, R)] = CAST2(andCR);
@@ -2030,6 +2467,12 @@ populateTables(ArchitectureContext* c)
 
   bo[index(Divide, R, R)] = CAST2(divideRR);
 
+  bo[index(FloatMultiply, R, R)] = CAST2(floatMultiplyRR);
+  bo[index(FloatMultiply, M, R)] = CAST2(floatMultiplyMR);
+
+  bo[index(FloatDivide, R, R)] = CAST2(floatDivideRR);
+  bo[index(FloatDivide, M, R)] = CAST2(floatDivideMR);
+
   bo[index(Remainder, R, R)] = CAST2(remainderRR);
 
   bo[index(LongCompare, C, R)] = CAST2(longCompareCR);
@@ -2043,8 +2486,19 @@ populateTables(ArchitectureContext* c)
 
   bo[index(UnsignedShiftRight, R, R)] = CAST2(unsignedShiftRightRR);
   bo[index(UnsignedShiftRight, C, R)] = CAST2(unsignedShiftRightCR);
-}
 
+  bo[index(Float2Float, R, R)] = CAST2(float2FloatRR);
+  bo[index(Float2Float, M, R)] = CAST2(float2FloatMR);
+
+  bo[index(Float2Int, R, R)] = CAST2(float2IntRR);
+  bo[index(Float2Int, M, R)] = CAST2(float2IntMR);
+
+  bo[index(Int2Float, R, R)] = CAST2(int2FloatRR);
+  bo[index(Int2Float, M, R)] = CAST2(int2FloatMR);
+
+  bo[index(Abs, R, R)] = CAST2(absRR);
+  bo[index(FloatAbs, R, R)] = CAST2(floatAbsRR);
+}
 class MyArchitecture: public Assembler::Architecture {
  public:
   MyArchitecture(System* system): c(system), referenceCount(0) {
@@ -2052,8 +2506,37 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned registerCount() {
-    return (BytesPerWord == 4 ? 8 : 16);
+    if (supportsSSE()) {
+      return BytesPerWord == 4 ? 24 : 32;
+    } else {
+      return BytesPerWord == 4 ? 8 : 16;
+    }
   }
+  
+  virtual unsigned generalRegisterCount() {
+  	return BytesPerWord == 4 ? 8 : 16;
+  }
+  
+  virtual unsigned floatRegisterCount() {
+    if (supportsSSE()) {
+      return BytesPerWord == 4 ? 8 : 16;
+    } else {
+      return 0;
+    }
+  }
+  
+  virtual uint64_t generalRegisters() {
+  	return GeneralRegisterMask;
+  }
+  
+  virtual uint64_t floatRegisters() {
+  	return supportsSSE() ? FloatRegisterMask : 0;
+  }
+  
+  virtual uint64_t allRegisters() {
+  	return generalRegisters() | floatRegisters();
+  }
+  
 
   virtual int stack() {
     return rsp;
@@ -2079,10 +2562,6 @@ class MyArchitecture: public Assembler::Architecture {
     return rdx;
   }
 
-  virtual bool condensedAddressing() {
-    return true;
-  }
-
   virtual bool bigEndian() {
     return false;
   }
@@ -2093,7 +2572,7 @@ class MyArchitecture: public Assembler::Architecture {
     case rsp:
     case rbx:
       return true;
-
+   	  
     default:
       return false;
     }
@@ -2226,6 +2705,33 @@ class MyArchitecture: public Assembler::Architecture {
     return 0;
   }
 
+  virtual bool supportsFloatCompare(unsigned) {
+    return supportsSSE();
+  }
+  
+  virtual bool alwaysCondensed(BinaryOperation op)
+  {
+    switch(op) {
+    case FloatCompare:
+    case Compare:
+    case Float2Float:
+    case Float2Int:
+    case Int2Float:
+    case FloatAbs:
+    case FloatNegate:
+    case FloatSqrt:
+      return false;
+    case Negate:
+    case Abs:
+    default:
+      return true;
+    }
+  }
+  
+  virtual bool alwaysCondensed(TernaryOperation) {
+    return true;
+  }
+
   virtual int returnAddressOffset() {
     return 0;
   }
@@ -2252,46 +2758,137 @@ class MyArchitecture: public Assembler::Architecture {
     *thunk = false;
   }
 
-  virtual void plan
+  virtual BinaryOperation binaryIntrinsic(const char* className,
+                                          const char* methodName,
+                                          const char* parameterSpec)
+  {
+    if (strcmp(className, "java/lang/Math") == 0) {
+      if (supportsSSE()
+          and strcmp(methodName, "sqrt") == 0
+          and strcmp(parameterSpec, "(D)D") == 0)
+      {
+        return FloatSqrt;
+      } else if (strcmp(methodName, "abs")) {
+      	if (strcmp(parameterSpec, "(I)I") == 0 
+            or strcmp(parameterSpec, "(J)J") == 0)
+        {
+          return Abs;
+      	} else if (supportsSSE()
+                   and supportsSSE2()
+                   and strcmp(parameterSpec, "(F)F") == 0)
+        {
+      	  return FloatAbs;
+      	}
+      }
+    }
+    return NoBinaryOperation;
+  }
+
+  virtual TernaryOperation ternaryIntrinsic(const char* className UNUSED,
+                                            const char* methodName UNUSED,
+                                            const char* parameterSpec UNUSED)
+  {
+    return NoTernaryOperation;
+  }
+
+  virtual void planSource
   (BinaryOperation op,
    unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-   bool* thunk)
+   unsigned bSize, bool* thunk)
   {
     *aTypeMask = ~0;
-    *aRegisterMask = ~static_cast<uint64_t>(0);
-
-    *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
+    *aRegisterMask = GeneralRegisterMask |
+      (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     *thunk = false;
 
     switch (op) {
     case Compare:
       *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
-      *bTypeMask = (1 << RegisterOperand);
+      *aRegisterMask = GeneralRegisterMask;
+      break;
+
+    case FloatCompare:
+      assert(&c, supportsSSE());
+      *aTypeMask = (1 << RegisterOperand);
+      *aRegisterMask = FloatRegisterMask;
       break;
 
     case Negate:
       *aTypeMask = (1 << RegisterOperand);
-      *bTypeMask = (1 << RegisterOperand);
       *aRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
         | (static_cast<uint64_t>(1) << rax);
-      *bRegisterMask = *aRegisterMask;
+      break;
+
+    case Abs:
+      *aTypeMask = (1 << RegisterOperand);
+      *aRegisterMask = (static_cast<uint64_t>(1) << rax);
+      break;
+
+    case FloatAbs:
+      *aTypeMask = (1 << RegisterOperand);
+      *aRegisterMask = FloatRegisterMask;
+      break;  
+  
+    case FloatNegate:
+      // floatNegateRR does not support doubles
+      if (supportsSSE() and aSize == 4 and bSize == 4) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
+      break;
+
+    case FloatSqrt:
+      *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      *aRegisterMask = FloatRegisterMask;
+      break;
+
+    case Float2Float:
+      if (supportsSSE() and supportsSSE2()) {
+        *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+        *aRegisterMask = FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
+      break;
+
+    case Float2Int:
+      if (supportsSSE()) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
+      break;
+
+    case Int2Float:
+      if (supportsSSE()) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = GeneralRegisterMask
+          | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+      } else {
+        *thunk = true;
+      }
       break;
 
     case Move:
+      *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      *aRegisterMask = GeneralRegisterMask
+        | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+
       if (BytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
-          const uint32_t mask = ~((1 << rax) | (1 << rdx));
-          *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
-          *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
-            | (static_cast<uint64_t>(1) << rax);        
+          *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+          const uint32_t mask
+            = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+          *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;    
         } else if (aSize == 1 or bSize == 1) {
+          *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
           const uint32_t mask
             = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
-          *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
-          *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;        
+          *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;     
         }
       }
       break;
@@ -2301,12 +2898,84 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual void plan
+  virtual void planDestination
+  (BinaryOperation op,
+   unsigned aSize, const uint8_t* aTypeMask UNUSED,
+   const uint64_t* aRegisterMask, unsigned bSize, uint8_t* bTypeMask,
+   uint64_t* bRegisterMask)
+  {
+    *bTypeMask = ~0;
+    *bRegisterMask = GeneralRegisterMask
+      | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+
+    switch (op) {
+    case Compare:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = GeneralRegisterMask;
+      break;
+
+    case FloatCompare:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = FloatRegisterMask;
+      break;
+
+    case Abs:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = (static_cast<uint64_t>(1) << rax);
+      break;
+
+    case FloatAbs:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = *aRegisterMask;
+      break;
+
+    case Negate:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = *aRegisterMask;
+      break;
+
+    case FloatNegate:
+    case FloatSqrt:
+    case Float2Float:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = FloatRegisterMask;
+      break;
+    case Int2Float:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = FloatRegisterMask;
+      break;
+    case Float2Int:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = GeneralRegisterMask
+        | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+      break;
+
+    case Move:
+      *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      *bRegisterMask = GeneralRegisterMask
+        | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+      if (BytesPerWord == 4) {
+        if (aSize == 4 and bSize == 8) {
+          *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
+            | (static_cast<uint64_t>(1) << rax);
+        } else if (aSize == 1 or bSize == 1) {
+          const uint32_t mask
+            = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
+          *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        }
+      }
+      break;
+
+    default:
+      break;
+    }
+  }
+
+  virtual void planSource
   (TernaryOperation op,
-   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned aSize, uint8_t *aTypeMask, uint64_t *aRegisterMask,
    unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask,
-   unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask,
-   bool* thunk)
+   unsigned, bool* thunk)
   {
     *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
     *aRegisterMask = ~static_cast<uint64_t>(0);
@@ -2317,21 +2986,37 @@ class MyArchitecture: public Assembler::Architecture {
     *thunk = false;
 
     switch (op) {
+    case FloatAdd:
+    case FloatSubtract:
+    case FloatMultiply:
+    case FloatDivide:
+      if (supportsSSE()) {
+        *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+        *bTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FloatRegisterMask;
+        *bRegisterMask = FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
+      break;
+   	  
     case Multiply:
       if (BytesPerWord == 4 and aSize == 8) { 
-        const uint32_t mask = ~((1 << rax) | (1 << rdx));
+        const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
         *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
         *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32)) | mask;
+      } else {
+        *aRegisterMask = GeneralRegisterMask;
+        *bRegisterMask = GeneralRegisterMask;
       }
       break;
 
     case Divide:
       if (BytesPerWord == 4 and aSize == 8) {
-        *bTypeMask = ~0;
-        *thunk = true;        
+        *thunk = true;        			
       } else {
         *aTypeMask = (1 << RegisterOperand);
-        *aRegisterMask = ~((1 << rax) | (1 << rdx));
+        *aRegisterMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
         *bRegisterMask = 1 << rax;      
       }
       break;
@@ -2342,25 +3027,33 @@ class MyArchitecture: public Assembler::Architecture {
         *thunk = true;
       } else {
         *aTypeMask = (1 << RegisterOperand);
-        *aRegisterMask = ~((1 << rax) | (1 << rdx));
-        *bRegisterMask = 1 << rax;      
+        *aRegisterMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+        *bRegisterMask = 1 << rax;
       }
       break;
 
     case ShiftLeft:
     case ShiftRight:
     case UnsignedShiftRight: {
-      *aRegisterMask = (~static_cast<uint64_t>(0) << 32)
+      *aRegisterMask = (static_cast<uint64_t>(GeneralRegisterMask) << 32)
         | (static_cast<uint64_t>(1) << rcx);
-      const uint32_t mask = ~(1 << rcx);
+      const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
       *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
     } break;
 
     default:
       break;
     }
+  }
 
-    *cTypeMask = *bTypeMask;
+  virtual void planDestination
+  (TernaryOperation op UNUSED,
+   unsigned aSize UNUSED, const uint8_t* aTypeMask UNUSED,
+   const uint64_t* aRegisterMask UNUSED, unsigned bSize UNUSED,
+   const uint8_t* bTypeMask UNUSED, const uint64_t* bRegisterMask,
+   unsigned cSize UNUSED, uint8_t* cTypeMask, uint64_t* cRegisterMask)
+  {
+    *cTypeMask = (1 << RegisterOperand);
     *cRegisterMask = *bRegisterMask;
   }
 
