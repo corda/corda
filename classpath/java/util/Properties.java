@@ -45,8 +45,8 @@ public class Properties extends Hashtable {
     return value;
   }
 
-  public void setProperty(String key, String value) {
-    put(key, value);
+  public Object setProperty(String key, String value) {
+    return put(key, value);
   }
 
   private static class Parser {

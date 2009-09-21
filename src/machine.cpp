@@ -68,9 +68,8 @@ dispose(Thread* t, Thread* o, bool remove)
     expect(t, find(t->m->rootThread, o));
 
     unsigned c = count(t->m->rootThread, o);
-    Thread** threads = static_cast<Thread**>
-      (allocate(t->m->system, c * sizeof(Thread*)));
-    fill(t->m->rootThread, o, threads);
+    RUNTIME_ARRAY(Thread*, threads, c);
+    fill(t->m->rootThread, o, RUNTIME_ARRAY_BODY(threads));
 #endif
 
     if (o->parent) {
@@ -115,7 +114,7 @@ dispose(Thread* t, Thread* o, bool remove)
     expect(t, not find(t->m->rootThread, o));
 
     for (unsigned i = 0; i < c; ++i) {
-      expect(t, find(t->m->rootThread, threads[i]));
+      expect(t, find(t->m->rootThread, RUNTIME_ARRAY_BODY(threads)[i]));
     }
 #endif
   }
@@ -1541,6 +1540,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       }
 
       if (abstractVirtuals) {
+        PROTECT(t, vtable);
         PROTECT(t, abstractVirtuals);
 
         unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
@@ -1714,6 +1714,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
 object
 makeArrayClass(Thread* t, object loader, object spec)
 {
+  PROTECT(t, loader);
   PROTECT(t, spec);
 
   const char* s = reinterpret_cast<const char*>(&byteArrayBody(t, spec, 0));
@@ -3698,8 +3699,6 @@ runJavaThread(Thread* t)
 void
 runFinalizeThread(Thread* t)
 {
-  fprintf(stderr, "run finalize thread\n");
-
   setDaemon(t, t->javaThread, true);
 
   object list = 0;
@@ -3714,8 +3713,6 @@ runFinalizeThread(Thread* t)
       }
 
       if (t->m->finalizeThread == 0) {
-        fprintf(stderr, "exit finalize thread\n");
-
         return;
       } else {
         list = t->m->objectsToFinalize;

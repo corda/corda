@@ -731,7 +731,7 @@ Avian_java_lang_Runtime_exit
 {
   shutDown(t);
 
-  t->m->system->exit(*arguments);
+  t->m->system->exit(arguments[1]);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
