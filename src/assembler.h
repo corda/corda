@@ -115,6 +115,11 @@ enum OperandType {
   MemoryOperand
 };
 
+enum ValueType {
+  ValueGeneral,
+  ValueFloat
+};
+
 const unsigned OperandTypeCount = MemoryOperand + 1;
 
 const int NoRegister = -1;
@@ -292,12 +297,10 @@ class Assembler {
 
   class Architecture {
    public:
-    virtual unsigned registerCount() = 0;
-    virtual unsigned generalRegisterCount() = 0;
-    virtual unsigned floatRegisterCount() = 0;
-    virtual uint64_t generalRegisters() = 0;
-    virtual uint64_t floatRegisters() = 0;
-    virtual uint64_t allRegisters() = 0;
+    virtual unsigned floatRegisterSize() = 0;
+
+    virtual uint32_t generalRegisterMask() = 0;
+    virtual uint32_t floatRegisterMask() = 0;
 
     virtual int stack() = 0;
     virtual int thread() = 0;
@@ -307,6 +310,8 @@ class Assembler {
     virtual int virtualCallIndex() = 0;
 
     virtual bool bigEndian() = 0;
+
+    virtual unsigned registerSize(ValueType type) = 0;
     
     virtual bool supportsFloatCompare(unsigned size) = 0;
 

@@ -34,7 +34,7 @@ namespace {
 
 namespace local {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -5353,19 +5353,17 @@ finish(MyThread* t, Allocator* allocator, Context* context)
      (&byteArrayBody(t, methodSpec(t, context->method), 0)));
 
   // for debugging:
-  if (false and
+  if (//false and
       ::strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "java/lang/Throwable") == 0 and
+       "AllFloats") == 0 and
       ::strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "write") == 0)
+       "multiplyByFive") == 0)
   {
     trap();
-    fprintf(stderr, "Address: %p\n",
-            ::vmAddressFromLine(t, (object)(context->method), 1176));
   }
 
   syncInstructionCache(start, codeSize);

@@ -2505,38 +2505,21 @@ class MyArchitecture: public Assembler::Architecture {
     populateTables(&c);
   }
 
-  virtual unsigned registerCount() {
+  virtual unsigned floatRegisterSize() {
     if (supportsSSE()) {
-      return BytesPerWord == 4 ? 24 : 32;
-    } else {
-      return BytesPerWord == 4 ? 8 : 16;
-    }
-  }
-  
-  virtual unsigned generalRegisterCount() {
-  	return BytesPerWord == 4 ? 8 : 16;
-  }
-  
-  virtual unsigned floatRegisterCount() {
-    if (supportsSSE()) {
-      return BytesPerWord == 4 ? 8 : 16;
+      return 8;
     } else {
       return 0;
     }
   }
   
-  virtual uint64_t generalRegisters() {
-  	return GeneralRegisterMask;
+  virtual uint32_t generalRegisterMask() {
+    return GeneralRegisterMask;
   }
   
-  virtual uint64_t floatRegisters() {
-  	return supportsSSE() ? FloatRegisterMask : 0;
+  virtual uint32_t floatRegisterMask() {
+    return supportsSSE() ? FloatRegisterMask : 0;
   }
-  
-  virtual uint64_t allRegisters() {
-  	return generalRegisters() | floatRegisters();
-  }
-  
 
   virtual int stack() {
     return rsp;
@@ -2564,6 +2547,14 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual bool bigEndian() {
     return false;
+  }
+
+  virtual unsigned registerSize(ValueType type) {
+    switch (type) {
+    case ValueGeneral: return BytesPerWord;
+    case ValueFloat: return 8;
+    default: abort(&c);
+    }
   }
 
   virtual bool reserved(int register_) {
@@ -2993,8 +2984,12 @@ class MyArchitecture: public Assembler::Architecture {
       if (supportsSSE()) {
         *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *bTypeMask = (1 << RegisterOperand);
-        *aRegisterMask = FloatRegisterMask;
-        *bRegisterMask = FloatRegisterMask;
+
+        const uint64_t mask
+          = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+          | FloatRegisterMask;
+        *aRegisterMask = mask;
+        *bRegisterMask = mask;
       } else {
         *thunk = true;
       }
