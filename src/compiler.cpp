@@ -19,9 +19,9 @@ namespace local {
 
 const bool DebugAppend = true;
 const bool DebugCompile = true;
-const bool DebugResources = false;
+const bool DebugResources = true;
 const bool DebugFrame = false;
-const bool DebugControl = false;
+const bool DebugControl = true;
 const bool DebugReads = true;
 const bool DebugSites = true;
 const bool DebugMoves = false;
@@ -1384,11 +1384,15 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     = (c->availableGeneralRegisterCount > registerReserveCount
        ? 0 : Target::LowRegisterPenalty);
 
-  SiteMask mask;
+  Value* value = read->value;
+
+  uint32_t registerMask = (value->type == ValueGeneral
+                           ? c->arch->generalRegisterMask() : ~0);
+
+  SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
 
   Target best;
-  Value* value = read->value;
 
   Value* successor = read->successor();
   if (successor) {
@@ -1418,7 +1422,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     return best;
   }
 
-  { Target mine = pickRegisterTarget(c, value, ~0);
+  { Target mine = pickRegisterTarget(c, value, registerMask);
 
     mine.cost += registerPenalty;
 
@@ -3268,6 +3272,7 @@ grow(Context* c, Value* v)
   assert(c, v->next == v);
 
   Value* next = value(c, v->type);
+  fprintf(stderr, "grow %p to %p\n", v, next);
   v->next = next;
   next->next = v;
   next->index = 1;
@@ -3558,6 +3563,7 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
     }
   } else {
     SingleRead r(resultMask, 0);
+    r.value = result;
     s = pickTargetSite(c, &r, true);
     v = result;
     addSite(c, result, s);
@@ -3627,6 +3633,14 @@ class CombineEvent: public Event {
 
   virtual void compile(Context* c) {
     assert(c, first->source->type(c) == first->next->source->type(c));
+
+    if (second->source->type(c) != second->next->source->type(c)) {
+      fprintf(stderr, "%p %p %d : %p %p %d\n",
+              second, second->source, second->source->type(c),
+              second->next, second->next->source,
+              second->next->source->type(c));
+    }
+
     assert(c, second->source->type(c) == second->next->source->type(c));
     
     freezeSource(c, firstSize, first);
@@ -3823,13 +3837,12 @@ push(Context* c, unsigned footprint, Value* v, bool reverse)
   if (footprint > 1) {
     assert(c, footprint == 2);
 
-    if (BytesPerWord == 4 and low->next == v) {
-      split(c, low);
+    if (BytesPerWord == 4) {
+      maybeSplit(c, low);
+      high = pushWord(c, low->next);
+    } else {
+      high = pushWord(c, 0);
     }
-
-    high = pushWord(c, low->next);
-  } else if (v) {
-    high = v->next;
   } else {
     high = 0;
   }
@@ -3838,7 +3851,7 @@ push(Context* c, unsigned footprint, Value* v, bool reverse)
     v = pushWord(c, v);
   }
 
-  if (v) {
+  if (high) {
     v->next = high;
     high->next = v;
     high->index = 1;
@@ -3930,7 +3943,7 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
     }
 
     if (BytesPerWord == 4) {
-      assert(c, v->next);
+      assert(c, v->next != v);
 
       high = storeLocal(c, 1, v->next, highIndex, false);
     } else {
@@ -3939,12 +3952,16 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
 
     index = lowIndex;
   } else {
-    high = v->next;
+    high = 0;
   }
 
   v = maybeBuddy(c, v);
-  v->next = high;
-  high->index = 1;
+
+  if (high != 0) {
+    v->next = high;
+    high->next = v;
+    high->index = 1;
+  }
 
   Local* local = c->locals + index;
   local->value = v;
@@ -4052,6 +4069,8 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
+    assert(c, value->source->type(c) == value->next->source->type(c));
+
     uint8_t bTypeMask;
     uint64_t bRegisterMask;
     
@@ -4215,7 +4234,7 @@ class MemoryEvent: public Event {
       (c, baseRegister, displacement, indexRegister, scale);
 
     Site* low;
-    if (result->next) {
+    if (result->next != result) {
       Site* high = site->copyHigh(c);
       low = site->copyLow(c);
 

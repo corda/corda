@@ -975,12 +975,25 @@ sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+sseMoveCR(Context* c, unsigned aSize, Assembler::Constant* a,
+       unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize <= BytesPerWord);
+  Assembler::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
+  moveCR2(c, aSize, a, aSize, &tmp, 0);
+  sseMoveRR(c, aSize, &tmp, bSize, b);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
 moveCR(Context* c, unsigned aSize, Assembler::Constant* a,
        unsigned bSize, Assembler::Register* b)
 {
-  assert(c, not floatReg(b));
-
-  moveCR2(c, aSize, a, bSize, b, 0);
+  if (floatReg(b)) {
+    sseMoveCR(c, aSize, a, bSize, b);
+  } else {
+    moveCR2(c, aSize, a, bSize, b, 0);
+  }
 }
 
 void
@@ -2995,8 +3008,7 @@ class MyArchitecture: public Assembler::Architecture {
       // can't move directly from memory to memory
       *tmpTypeMask = (1 << RegisterOperand);
       *tmpRegisterMask = GeneralRegisterMask
-        | (static_cast<uint64_t>(GeneralRegisterMask) << 32)
-        | FloatRegisterMask;
+        | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
     } else if (dstTypeMask & (1 << RegisterOperand)) {
       if (srcTypeMask & (1 << RegisterOperand)) {
         if (((dstRegisterMask & FloatRegisterMask) == 0)
@@ -3023,10 +3035,12 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned, bool* thunk)
   {
     *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    *aRegisterMask = GeneralRegisterMask
+      | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     *bTypeMask = (1 << RegisterOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
+    *bRegisterMask = GeneralRegisterMask
+      | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     *thunk = false;
 
