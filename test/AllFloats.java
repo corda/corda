@@ -46,10 +46,10 @@ public class AllFloats {
     expect(divide(5f, 2d) == 5f/2d);
     expect(add(5f, 4f) == 5f+4f);
     expect(add(5d, 4d) == 5f+4d);
-    expect(add(5f, 4f) == 5f+4d);
+    expect(add(5f, 4d) == 5f+4d);
     expect(subtract(5f, 4f) == 5f-4f);
     expect(subtract(5d, 4d) == 5f-4d);
-    expect(subtract(5f, 4f) == 5f-4d);
+    expect(subtract(5f, 4d) == 5f-4d);
     expect(complex(4f, 3f) == (4f-3f)/(4f*3f) + 2f);
     expect(complex(4d, 3d) == (4d-3d)/(4d*3d) + 2d);
     expect(complex(4f, 3d) == (4f-3d)/(4f*3d) + 2f);

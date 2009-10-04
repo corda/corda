@@ -57,6 +57,8 @@ const unsigned UnaryOperationCount = JumpIfNotEqual + 1;
 
 enum BinaryOperation {
   Move,
+  MoveLow,
+  MoveHigh,
   MoveZ,
   Compare,
   Negate,
@@ -365,8 +367,13 @@ class Assembler {
      
     virtual void planDestination
     (BinaryOperation op,
-     unsigned aSize, const uint8_t* aTypeMask, const uint64_t* aRegisterMask,
+     unsigned aSize, uint8_t aTypeMask, uint64_t aRegisterMask,
      unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask) = 0;
+
+    virtual void planMove
+    (uint8_t srcTypeMask, uint64_t srcRegisterMask,
+     uint8_t dstTypeMask, uint64_t dstRegisterMask,
+     uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask) = 0; 
 
     virtual void planSource
     (TernaryOperation op,
@@ -376,8 +383,8 @@ class Assembler {
 
     virtual void planDestination
     (TernaryOperation op,
-     unsigned aSize, const uint8_t* aTypeMask, const uint64_t* aRegisterMask,
-     unsigned bSize, const uint8_t* bTypeMask, const uint64_t* bRegisterMask,
+     unsigned aSize, uint8_t aTypeMask, uint64_t aRegisterMask,
+     unsigned bSize, uint8_t bTypeMask, uint64_t bRegisterMask,
      unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask) = 0; 
 
     virtual void acquire() = 0;

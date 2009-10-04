@@ -5361,7 +5361,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       ::strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "multiplyByFive") == 0)
+       "i2d") == 0)
   {
     trap();
   }
