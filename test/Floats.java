@@ -49,6 +49,9 @@ public class Floats {
     double d = 1d;
     expect(((int) d) == 1);
 
+    float f = 1f;
+    expect(((int) f) == 1);
+
     expect(Math.round(0.4f) == 0);
     expect(Math.round(0.5f) == 1);
     expect(Math.round(1.0f) == 1);

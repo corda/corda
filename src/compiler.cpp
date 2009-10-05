@@ -17,13 +17,13 @@ namespace {
 
 namespace local {
 
-const bool DebugAppend = true;
-const bool DebugCompile = true;
-const bool DebugResources = true;
+const bool DebugAppend = false;
+const bool DebugCompile = false;
+const bool DebugResources = false;
 const bool DebugFrame = false;
-const bool DebugControl = true;
-const bool DebugReads = true;
-const bool DebugSites = true;
+const bool DebugControl = false;
+const bool DebugReads = false;
+const bool DebugSites = false;
 const bool DebugMoves = false;
 const bool DebugBuddies = false;
 
@@ -3900,8 +3900,9 @@ pop(Context* c, unsigned footprint)
       low = high->next;
     }
 
-    assert(c, low->value->next == high->value
-           and ((BytesPerWord == 8) xor (low->value->next != 0)));
+    assert(c, (BytesPerWord == 8
+               and low->value->next == low->value and high->value == 0)
+           or (BytesPerWord == 4 and low->value->next == high->value));
 #endif // not NDEBUG
 
     popWord(c);
@@ -5739,8 +5740,9 @@ class MyCompiler: public Compiler {
         low = s->next;
       }
 
-      assert(&c, low->value->next == high->value
-             and ((BytesPerWord == 8) xor (low->value->next != 0)));
+      assert(&c, (BytesPerWord == 8
+                  and low->value->next == low->value and high->value == 0)
+             or (BytesPerWord == 4 and low->value->next == high->value));
 #endif // not NDEBUG
 
       if (not bigEndian) {

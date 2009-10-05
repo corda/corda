@@ -5357,11 +5357,11 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       ::strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "AllFloats") == 0 and
+       "Floats") == 0 and
       ::strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "i2d") == 0)
+       "main") == 0)
   {
     trap();
   }

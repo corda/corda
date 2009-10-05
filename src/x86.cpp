@@ -2169,20 +2169,21 @@ unsignedShiftRightCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
 }
 
 inline void floatRegOp(Context* c, unsigned aSize, Assembler::Register* a,
-                     unsigned bSize UNUSED, Assembler::Register* b, uint8_t op, uint8_t mod = 0xc0)
+                       unsigned bSize, Assembler::Register* b, uint8_t op,
+                       uint8_t mod = 0xc0)
 {
   if(aSize == 4) {
     opcode(c, 0xf3);
   } else {
     opcode(c, 0xf2);
   }
-  maybeRex(c, bSize, a, b);
+  maybeRex(c, bSize, b, a);
   opcode(c, 0x0f, op);
   modrm(c, mod, a, b);
 }
 
 inline void floatMemOp(Context* c, unsigned aSize, Assembler::Memory* a,
-                     unsigned bSize UNUSED, Assembler::Register* b, uint8_t op)
+                       unsigned bSize, Assembler::Register* b, uint8_t op)
 {
   if(aSize == 4) {
     opcode(c, 0xf3);
@@ -2867,7 +2868,7 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Float2Int:
       if (supportsSSE() and (bSize <= BytesPerWord)) {
-        *aTypeMask = (1 << RegisterOperand);
+        *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
       } else {
@@ -2877,7 +2878,7 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Int2Float:
       if (supportsSSE()) {
-        *aTypeMask = (1 << RegisterOperand);
+        *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = GeneralRegisterMask
           | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
       } else {
