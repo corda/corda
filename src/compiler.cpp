@@ -5405,6 +5405,28 @@ maybeBuddy(Context* c, Value* v)
   }
 }
 
+void
+linkLocals(Context* c, Local* oldLocals, Local* newLocals)
+{
+  for (int i = 0; i < static_cast<int>(c->localFootprint); ++i) {
+    Local* local = oldLocals + i;
+    if (local->value) {
+      int highOffset = c->arch->bigEndian() ? 1 : -1;
+
+      if (i + highOffset >= 0
+          and i + highOffset < static_cast<int>(c->localFootprint)
+          and local->value->next == local[highOffset].value)
+      {
+        Value* v = newLocals[i].value;
+        Value* next = newLocals[i + highOffset].value;
+        v->next = next;
+        next->next = v;
+        next->index = 1;
+      }
+    }
+  }
+}
+
 class Client: public Assembler::Client {
  public:
   Client(Context* c): c(c) { }
@@ -5467,7 +5489,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual void linkSubroutine(Subroutine* subroutine) {
+    Local* oldLocals = c.locals;
     restoreState(static_cast<MySubroutine*>(subroutine)->forkState);
+    linkLocals(&c, oldLocals, c.locals);
   }
 
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
@@ -5878,23 +5902,7 @@ class MyCompiler: public Compiler {
       }
     }
 
-    for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
-      Local* local = e->localsBefore + i;
-      if (local->value) {
-        int highOffset = c.arch->bigEndian() ? 1 : -1;
-
-        if (i + highOffset >= 0
-            and i + highOffset < static_cast<int>(c.localFootprint)
-            and local->value->next == local[highOffset].value)
-        {
-          Value* v = c.locals[i].value;
-          Value* next = c.locals[i + highOffset].value;
-          v->next = next;
-          next->next = v;
-          next->index = 1;
-        }
-      }
-    }
+    linkLocals(&c, e->localsBefore, newLocals);
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {

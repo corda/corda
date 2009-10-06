@@ -118,7 +118,7 @@ public class Subroutine {
       try {
         switch (path) {
         case 1:
-          return 0xFFFFFFFFFFL;
+          return 0xFABFABFABFL;
 
         case 2: {
           int a = 42;
@@ -187,7 +187,7 @@ public class Subroutine {
     String.valueOf(test4(2));
     String.valueOf(test4(3));
 
-    expect(test4(1) == 0xFFFFFFFFFFL);
+    expect(test4(1) == 0xFABFABFABFL);
   }
 
   private static class DummyException extends RuntimeException { }
