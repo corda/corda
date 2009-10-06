@@ -72,7 +72,7 @@ class SocketSelector extends Selector {
          it.hasNext();)
     {
       SelectionKey key = it.next();
-      SocketChannel c = (SocketChannel)key.channel();
+      SelectableChannel c = key.channel();
       int socket = c.socketFD();
       if (c.isOpen()) {
         key.readyOps(0);
@@ -88,7 +88,7 @@ class SocketSelector extends Selector {
 
     if (r > 0) {
       for (SelectionKey key : keys) {
-        SocketChannel c = (SocketChannel)key.channel();
+        SelectableChannel c = key.channel();
         int socket = c.socketFD();
         int ready = natUpdateReadySet(socket, key.interestOps(), state);
         key.readyOps(ready);

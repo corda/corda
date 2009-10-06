@@ -521,15 +521,18 @@ class Pipe {
     if (setBlocking(e, pipe[0], false)) {
       setBlocking(e, pipe[1], false);
     }
+
+    open_ = true;
   }
 
   void dispose() {
     ::close(pipe[0]);
     ::close(pipe[1]);
+    open_ = false;
   }
 
   bool connected() {
-    return true;
+    return open_;
   }
 
   int reader() {
@@ -542,6 +545,7 @@ class Pipe {
 
  private:
   int pipe[2];
+  bool open_;
 #endif
 };
 

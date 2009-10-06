@@ -35,6 +35,12 @@ public class File {
     this(parent.getPath() + FileSeparator + child);
   }
 
+  public static native boolean rename(String old, String new_);
+
+  public boolean renameTo(File newName) {
+    return rename(path, newName.path);
+  }
+
   private static native boolean isDirectory(String path);
 
   public boolean isDirectory() {

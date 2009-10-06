@@ -23,6 +23,10 @@ public class ServerSocketChannel extends SelectableChannel {
     return new ServerSocketChannel();
   }
 
+  public int socketFD() {
+    return channel.socketFD();
+  }
+
   public SelectableChannel configureBlocking(boolean v) throws IOException {
     return channel.configureBlocking(v);
   }
