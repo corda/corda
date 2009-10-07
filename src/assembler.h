@@ -38,22 +38,11 @@ enum UnaryOperation {
   Jump,
   LongJump,
   AlignedJump,
-  JumpIfLess,
-  JumpIfGreater,
-  JumpIfLessOrEqual,
-  JumpIfGreaterOrEqual,
-  JumpIfEqual,
-  JumpIfNotEqual,
-  JumpIfFloatUnordered,
-  JumpIfFloatLess,
-  JumpIfFloatGreater,
-  JumpIfFloatLessOrEqual,
-  JumpIfFloatGreaterOrEqual,
-  JumpIfFloatEqual,
-  JumpIfFloatNotEqual,
+  
+  NoUnaryOperation = -1
 };
 
-const unsigned UnaryOperationCount = JumpIfNotEqual + 1;
+const unsigned UnaryOperationCount = AlignedJump + 1;
 
 enum BinaryOperation {
   Move,
@@ -62,15 +51,11 @@ enum BinaryOperation {
   MoveZ,
   Compare,
   Negate,
-  
-  //extensions:
   FloatNegate,
   FloatCompare,
   Float2Float,
   Float2Int,
   Int2Float,
-  
-  //intrinsic functions:
   FloatSqrt,
   FloatAbs,
   Abs,
@@ -81,7 +66,6 @@ enum BinaryOperation {
 const unsigned BinaryOperationCount = Abs + 1;
 
 enum TernaryOperation {
-  LongCompare,
   Add,
   Subtract,
   Multiply,
@@ -93,22 +77,35 @@ enum TernaryOperation {
   And,
   Or,
   Xor,
-  
-  //extensions:
   FloatAdd,
   FloatSubtract,
   FloatMultiply,
   FloatDivide,
   FloatRemainder,
-  
-  //intrinsic functions:
   FloatMax,
   FloatMin,
+  JumpIfLess,
+  JumpIfGreater,
+  JumpIfLessOrEqual,
+  JumpIfGreaterOrEqual,
+  JumpIfEqual,
+  JumpIfNotEqual,
+  JumpIfFloatEqual,
+  JumpIfFloatNotEqual,
+  JumpIfFloatLess,
+  JumpIfFloatGreater,
+  JumpIfFloatLessOrEqual,
+  JumpIfFloatGreaterOrEqual,
+  JumpIfFloatLessOrUnordered,
+  JumpIfFloatGreaterOrUnordered,
+  JumpIfFloatLessOrEqualOrUnordered,
+  JumpIfFloatGreaterOrEqualOrUnordered,
   
   NoTernaryOperation = -1
 };
 
-const unsigned TernaryOperationCount = FloatMin + 1;
+const unsigned TernaryOperationCount
+= JumpIfFloatGreaterOrEqualOrUnordered + 1;
 
 enum OperandType {
   ConstantOperand,
@@ -315,8 +312,6 @@ class Assembler {
 
     virtual unsigned registerSize(ValueType type) = 0;
     
-    virtual bool supportsFloatCompare(unsigned size) = 0;
-
     virtual bool alwaysCondensed(BinaryOperation op) = 0;
     virtual bool alwaysCondensed(TernaryOperation op) = 0;
 

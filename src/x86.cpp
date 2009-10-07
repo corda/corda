@@ -2713,10 +2713,6 @@ class MyArchitecture: public Assembler::Architecture {
     return 0;
   }
 
-  virtual bool supportsFloatCompare(unsigned) {
-    return supportsSSE();
-  }
-  
   virtual bool alwaysCondensed(BinaryOperation op)
   {
     switch(op) {

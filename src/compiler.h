@@ -120,22 +120,41 @@ class Compiler {
                         unsigned dstSize) = 0;
   virtual Operand* loadz(unsigned size, unsigned srcSelectSize, Operand* src,
                          unsigned dstSize) = 0;
-  virtual Operand* lcmp(Operand* a, Operand* b) = 0;
-  virtual void cmp(unsigned size, Operand* a, Operand* b) = 0;
-  virtual void fcmp(unsigned size, Operand* a, Operand* b) = 0;
-  virtual void jl(Operand* address) = 0;
-  virtual void jg(Operand* address) = 0;
-  virtual void jle(Operand* address) = 0;
-  virtual void jge(Operand* address) = 0;
-  virtual void je(Operand* address) = 0;
-  virtual void jne(Operand* address) = 0;
-  virtual void fjl(Operand* address) = 0;
-  virtual void fjg(Operand* address) = 0;
-  virtual void fjle(Operand* address) = 0;
-  virtual void fjge(Operand* address) = 0;
-  virtual void fje(Operand* address) = 0;
-  virtual void fjne(Operand* address) = 0;
-  virtual void fjuo(Operand* address) = 0;
+
+  virtual void jumpIfEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfNotEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfLess
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfGreater
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfLessOrEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfGreaterOrEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+
+  virtual void jumpIfFloatEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatNotEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatLess
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatGreater
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatLessOrEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatGreaterOrEqual
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatLessOrUnordered
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatGreaterOrUnordered
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatLessOrEqualOrUnordered
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void jumpIfFloatGreaterOrEqualOrUnordered
+  (unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+
   virtual void jmp(Operand* address) = 0;
   virtual void exit(Operand* address) = 0;
   virtual Operand* add(unsigned size, Operand* a, Operand* b) = 0;

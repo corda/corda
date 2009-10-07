@@ -66,13 +66,6 @@ apply(Context* c, TernaryOperation op,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High);
 
-enum ConstantCompare {
-  CompareNone,
-  CompareLess,
-  CompareGreater,
-  CompareEqual
-};
-
 class Cell {
  public:
   Cell(Cell* next, void* value): next(next), value(value) { }
@@ -385,8 +378,7 @@ class Context {
     localFootprint(0),
     machineCodeSize(0),
     alignedFrameSize(0),
-    availableGeneralRegisterCount(generalRegisterLimit - generalRegisterStart),
-    constantCompare(CompareNone)
+    availableGeneralRegisterCount(generalRegisterLimit - generalRegisterStart)
   {
     for (unsigned i = generalRegisterStart; i < generalRegisterLimit; ++i) {
       new (registerResources + i) RegisterResource(arch->reserved(i));
@@ -433,7 +425,6 @@ class Context {
   unsigned machineCodeSize;
   unsigned alignedFrameSize;
   unsigned availableGeneralRegisterCount;
-  ConstantCompare constantCompare;
 };
 
 unsigned
@@ -3459,82 +3450,6 @@ findConstantSite(Context* c, Value* v)
   return 0;
 }
 
-class CompareEvent: public Event {
- public:
-  CompareEvent(Context* c, BinaryOperation type, unsigned size, Value* first,
-               Value* second, const SiteMask& firstMask,
-               const SiteMask& secondMask):
-    Event(c), type(type), size(size), first(first), second(second)
-  {
-    assert(c, type != FloatCompare or
-           (first->type == ValueFloat and first->type == ValueFloat)); 
-
-    addReads(c, this, first, size, firstMask, firstMask);
-    addReads(c, this, second, size, secondMask, secondMask);
-  }
-
-  virtual const char* name() {
-    return "CompareEvent";
-  }
-
-  virtual void compile(Context* c) {
-    ConstantSite* firstConstant = findConstantSite(c, first);
-    ConstantSite* secondConstant = findConstantSite(c, second);
-
-    if (firstConstant and secondConstant) {
-      int64_t d = firstConstant->value->value()
-        - secondConstant->value->value();
-
-      if (d < 0) {
-        c->constantCompare = CompareLess;
-      } else if (d > 0) {
-        c->constantCompare = CompareGreater;
-      } else {
-        c->constantCompare = CompareEqual;
-      }
-    } else {
-      c->constantCompare = CompareNone;
-
-      apply(c, type, size, first->source, first->source,
-            size, second->source, second->source);
-    }
-
-    for (Read* r = reads; r; r = r->eventNext) {
-      popRead(c, this, r->value);
-    }
-  }
-  
-  BinaryOperation type;
-  unsigned size;
-  Value* first;
-  Value* second;
-};
-
-void
-appendCompare(Context* c, BinaryOperation op, unsigned size, Value* first,
-              Value* second)
-{
-  bool thunk;
-  uint8_t firstTypeMask;
-  uint64_t firstRegisterMask;
-  uint8_t secondTypeMask;
-  uint64_t secondRegisterMask;
-
-  c->arch->planSource
-    (op, size, &firstTypeMask, &firstRegisterMask, size, &thunk);
-
-  assert(c, not thunk); // todo
-
-  c->arch->planDestination
-    (op, size, 0, 0, size, &secondTypeMask, &secondRegisterMask);
-
-  append(c, new (c->zone->allocate(sizeof(CompareEvent)))
-         CompareEvent
-         (c, op, size, first, second,
-          SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
-          SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex)));
-}
-
 void
 preserve(Context* c, Value* v, Site* s, Read* r)
 {
@@ -3574,12 +3489,6 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
   s->freeze(c, v);
 
   return s;
-}
-
-Site*
-source(Value* v, Site* site)
-{
-  return v ? v->source : site;
 }
 
 void
@@ -3674,8 +3583,8 @@ class CombineEvent: public Event {
 
     //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
     apply(c, type,
-          firstSize, first->source, source(first->next, first->source),
-          secondSize, second->source, source(second->next, second->source),
+          firstSize, first->source, first->next->source),
+          secondSize, second->source, second->next->source),
           resultSize, low, high);
 
     thawSource(c, firstSize, first);
@@ -4095,8 +4004,7 @@ class TranslateEvent: public Event {
          ? getTarget(c, value->next, result->next, resultHighMask)
          : low);
 
-    apply(c, type,
-          valueSize, value->source, source(value->next, value->source),
+    apply(c, type, valueSize, value->source, value->next->source),
           resultSize, low, high);
 
     for (Read* r = reads; r; r = r->eventNext) {
@@ -4264,20 +4172,96 @@ appendMemory(Context* c, Value* base, int displacement, Value* index,
          MemoryEvent(c, base, displacement, index, scale, result));
 }
 
+double
+asFloat(unsigned size, int64_t v)
+{
+  if (size == 4) {
+    return bitsToFloat(v);
+  } else {
+    return bitsToDouble(v);
+  }
+}
+
+bool
+unordered(double a, double b)
+{
+  return not (a >= b or a < b);
+}
+
+bool
+shouldJump(TernaryOperation type, unsigned size, int64_t a, int64_t b)
+{
+  switch (type) {
+  case JumpIfEqual:
+    return a == b;
+
+  case JumpIfNotEqual:
+    return a != b;
+
+  case JumpIfLess:
+    return a < b;
+
+  case JumpIfGreater:
+    return a > b;
+
+  case JumpIfLessOrEqual:
+    return a <= b;
+
+  case JumpIfGreaterOrEqual:
+    return a >= b;
+
+  case JumpIfFloatEqual:
+    return asFloat(size, a) == asFloat(size, b);
+
+  case JumpIfFloatNotEqual:
+    return asFloat(size, a) != asFloat(size, b);
+
+  case JumpIfFloatLess:
+    return asFloat(size, a) < asFloat(size, b);
+
+  case JumpIfFloatGreater:
+    return asFloat(size, a) > asFloat(size, b);
+
+  case JumpIfFloatLessOrEqual:
+    return asFloat(size, a) <= asFloat(size, b);
+
+  case JumpIfFloatGreaterOrEqual:
+    return asFloat(size, a) >= asFloat(size, b);
+
+  case JumpIfFloatLessOrUnordered:
+    return asFloat(size, a) < asFloat(size, b)
+      or unordered(asFloat(size, a), asFloat(size, b));
+
+  case JumpIfFloatGreaterOrUnordered:
+    return asFloat(size, a) > asFloat(size, b)
+      or unordered(asFloat(size, a), asFloat(size, b));
+
+  case JumpIfFloatLessOrEqualOrUnordered:
+    return asFloat(size, a) <= asFloat(size, b)
+      or unordered(asFloat(size, a), asFloat(size, b));
+
+  case JumpIfFloatGreaterOrEqualOrUnordered:
+    return asFloat(size, a) >= asFloat(size, b)
+      or unordered(asFloat(size, a), asFloat(size, b));
+
+  default:
+    jump = false;
+  }
+}
+
 class BranchEvent: public Event {
  public:
-  BranchEvent(Context* c, UnaryOperation type, Value* address, bool exit):
-    Event(c), type(type), address(address), exit(exit)
+  BranchEvent(Context* c, TernaryOperation type, unsigned size,
+              Value* first, Value* second, Value* address, bool exit,
+              const SiteMask& firstLowMask,
+              const SiteMask& firstHighMask,
+              const SiteMask& secondLowMask,
+              const SiteMask& secondHighMask):
+    Event(c), type(type), size(size), first(first), second(second),
+    address(address), exit(exit)
   {
-    bool thunk;
-    uint8_t typeMask;
-    uint64_t registerMask;
-    
-    c->arch->plan(type, BytesPerWord, &typeMask, &registerMask, &thunk);
-
-    assert(c, not thunk);
-
-    addRead(c, this, address, SiteMask(typeMask, registerMask, AnyFrameIndex));
+    addReads(c, this, first, firstSize, firstLowMask, firstHighMask);
+    addReads(c, this, second, secondSize, secondLowMask, secondHighMask);
   }
 
   virtual const char* name() {
@@ -4285,67 +4269,27 @@ class BranchEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    bool jump;
-    UnaryOperation type = this->type;
-    if (type != Jump) {
-      switch (c->constantCompare) {
-      case CompareLess:
-        switch (type) {
-        case JumpIfLess:
-        case JumpIfLessOrEqual:
-        case JumpIfNotEqual:
-          jump = true;
-          type = Jump;
-          break;
+    ConstantSite* firstConstant = findConstantSite(c, first);
+    ConstantSite* secondConstant = findConstantSite(c, second);
 
-        default:
-          jump = false;
-        }
-        break;
-
-      case CompareGreater:
-        switch (type) {
-        case JumpIfGreater:
-        case JumpIfGreaterOrEqual:
-        case JumpIfNotEqual:
-          jump = true;
-          type = Jump;
-          break;
-
-        default:
-          jump = false;
-        }
-        break;
-
-      case CompareEqual:
-        switch (type) {
-        case JumpIfEqual:
-        case JumpIfLessOrEqual:
-        case JumpIfGreaterOrEqual:
-          jump = true;
-          type = Jump;
-          break;
-
-        default:
-          jump = false;
-        }
-        break;
-
-      case CompareNone:
-        jump = true;
-        break;
-
-      default: abort(c);
+    if (not unreachable(this)) {
+      if (firstConstant and secondConstant) {
+        if (shouldJump(type, firstConstant->value->value(),
+                       secondConstant->value->value())
+            and reachable)
+        {
+          apply(c, Jump, BytesPerWord, address->source, address->source);
+        }      
+      } else {
+        apply(c, type, size, first->source, first->next->source,
+              size, second->source, second->next->sourcem
+              BytesPerWord, address->source, address->source);
       }
-    } else {
-      jump = true;
     }
 
-    if (jump and not unreachable(this)) {
-      apply(c, type, BytesPerWord, address->source, address->source);
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
     }
-
-    popRead(c, this, address);
   }
 
   virtual bool isBranch() { return true; }
@@ -4355,9 +4299,56 @@ class BranchEvent: public Event {
   }
 
   UnaryOperation type;
+  unsigned size;
+  Value* first;
+  Value* second;
   Value* address;
   bool exit;
 };
+
+void
+appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
+             Value* second, Value* address, bool exit = false)
+{
+  bool thunk;
+  uint8_t firstTypeMask;
+  uint64_t firstRegisterMask;
+  uint8_t secondTypeMask;
+  uint64_t secondRegisterMask;
+
+  c->arch->planSource(type, size, &firstTypeMask, &firstRegisterMask,
+                      size, &secondTypeMask, &secondRegisterMask,
+                      resultSize, &thunk);
+
+  if (thunk) {
+    Stack* oldStack = c->stack;
+
+    local::push(c, ceiling(size, BytesPerWord), second, false);
+    local::push(c, ceiling(size, BytesPerWord), first, false);
+
+    Stack* argumentStack = c->stack;
+    c->stack = oldStack;
+
+    Value* result = value(&c, ValueGeneral);
+    appendCall
+      (c, value
+       (c, ValueGeneral, constantSite(c, c->client->getThunk(type, size, 4))),
+       0, 0, result, resultSize, argumentStack,
+       ceiling(size, BytesPerWord) * 2, 0);
+
+    appendBranch(c, JumpIfEqual, 4, value(c, ValueGeneral, constantSite(c, 0)),
+                 result, address);
+  } else {
+    append
+      (c, new (c->zone->allocate(sizeof(BranchEvent)))
+       BranchEvent
+       (c, type, size, first, second, address, exit,
+        SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
+        SiteMask(firstTypeMask, firstRegisterMask >> 32, AnyFrameIndex),
+        SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex),
+        SiteMask(secondTypeMask, secondRegisterMask >> 32, AnyFrameIndex)));
+  }
+}
 
 void
 appendBranch(Context* c, UnaryOperation type, Value* address,
@@ -4396,11 +4387,10 @@ class BoundsCheckEvent: public Event {
       outOfBoundsPromise = codePromise(c, static_cast<Promise*>(0));
 
       Site* zero = constantSite(c, resolved(c, 0));
-      apply(c, Compare, 4, zero, zero, 4, index->source, index->source);
-
       Assembler::Constant outOfBoundsConstant(outOfBoundsPromise);
       a->apply
-        (JumpIfLess, BytesPerWord, ConstantOperand, &outOfBoundsConstant);
+        (JumpIfLess, 4, zero, zero, 4, index->source, index->source,
+         BytesPerWord, ConstantOperand, &outOfBoundsConstant);
     }
 
     assert(c, object->source->type(c) == RegisterOperand);
@@ -4408,10 +4398,9 @@ class BoundsCheckEvent: public Event {
                       lengthOffset, NoRegister, 1);
     length.acquired = true;
 
-    apply(c, Compare, 4, index->source, index->source, 4, &length, &length);
-
     Assembler::Constant nextConstant(nextPromise);
-    a->apply(JumpIfGreater, BytesPerWord, ConstantOperand, &nextConstant);
+    a->apply(JumpIfGreater, 4, index->source, index->source, 4, &length,
+             &length, BytesPerWord, ConstantOperand, &nextConstant);
 
     if (constant == 0) {
       outOfBoundsPromise->offset = a->offset();
@@ -5953,88 +5942,176 @@ class MyCompiler: public Compiler {
     return dst;
   }
 
-  virtual Operand* lcmp(Operand* a, Operand* b) {
+  virtual void jumpIfEqual(unsigned size, Operand* a, Operand* b,
+                           Operand* address)
+  {
     assert(&c, static_cast<Value*>(a)->type == ValueGeneral
            and static_cast<Value*>(b)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, LongCompare, 8, static_cast<Value*>(a),
-                  8, static_cast<Value*>(b), 8, result);
-    return result;
+
+    appendBranch(&c, JumpIfEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void cmp(unsigned size, Operand* a, Operand* b) {
+  virtual void jumpIfNotEqual(unsigned size, Operand* a, Operand* b,
+                              Operand* address)
+  {
     assert(&c, static_cast<Value*>(a)->type == ValueGeneral
            and static_cast<Value*>(b)->type == ValueGeneral);
-    appendCompare(&c, Compare, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b));
+
+    appendBranch(&c, JumpIfNotEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void fcmp(unsigned size, Operand* a, Operand* b) {
+  virtual void jumpIfLess(unsigned size, Operand* a, Operand* b,
+                          Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
+           and static_cast<Value*>(b)->type == ValueGeneral);
+
+    appendBranch(&c, JumpIfLess, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
+  }
+
+  virtual void jumpIfGreater(unsigned size, Operand* a, Operand* b,
+                             Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
+           and static_cast<Value*>(b)->type == ValueGeneral);
+
+    appendBranch(&c, JumpIfGreater, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
+  }
+
+  virtual void jumpIfLessOrEqual(unsigned size, Operand* a, Operand* b,
+                                 Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
+           and static_cast<Value*>(b)->type == ValueGeneral);
+
+    appendBranch(&c, JumpIfLessOrEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
+  }
+
+  virtual void jumpIfGreaterOrEqual(unsigned size, Operand* a, Operand* b,
+                                    Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
+           and static_cast<Value*>(b)->type == ValueGeneral);
+
+    appendBranch(&c, JumpIfGreaterOrEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
+  }
+
+  virtual void jumpIfFloatEqual(unsigned size, Operand* a, Operand* b,
+                           Operand* address)
+  {
     assert(&c, static_cast<Value*>(a)->type == ValueFloat
            and static_cast<Value*>(b)->type == ValueFloat);
-    appendCompare(&c, FloatCompare, size, static_cast<Value*>(a),
-                  static_cast<Value*>(b));
-  }
-  
 
-  virtual void jl(Operand* address) {
-    appendBranch(&c, JumpIfLess, static_cast<Value*>(address));
+    appendBranch(&c, JumpIfFloatEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void jg(Operand* address) {
-    appendBranch(&c, JumpIfGreater, static_cast<Value*>(address));
+  virtual void jumpIfFloatNotEqual(unsigned size, Operand* a, Operand* b,
+                                   Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatNotEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void jle(Operand* address) {
-    appendBranch(&c, JumpIfLessOrEqual, static_cast<Value*>(address));
+  virtual void jumpIfFloatLess(unsigned size, Operand* a, Operand* b,
+                               Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatLess, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void jge(Operand* address) {
-    appendBranch(&c, JumpIfGreaterOrEqual, static_cast<Value*>(address));
+  virtual void jumpIfFloatGreater(unsigned size, Operand* a, Operand* b,
+                                  Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatGreater, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void je(Operand* address) {
-    appendBranch(&c, JumpIfEqual, static_cast<Value*>(address));
+  virtual void jumpIfFloatLessOrEqual(unsigned size, Operand* a, Operand* b,
+                                 Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatLessOrEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void jne(Operand* address) {
-    appendBranch(&c, JumpIfNotEqual, static_cast<Value*>(address));
+  virtual void jumpIfFloatGreaterOrEqual(unsigned size, Operand* a, Operand* b,
+                                    Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatGreaterOrEqual, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void fjl(Operand* address) {
-    appendBranch(&c, JumpIfFloatLess, static_cast<Value*>(address));
+  virtual void jumpIfFloatLessOrUnordered(unsigned size, Operand* a,
+                                          Operand* b, Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatLessOrUnordered, size, static_cast<Value*>(a),
+                 static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
-  virtual void fjg(Operand* address) {
-    appendBranch(&c, JumpIfFloatGreater, static_cast<Value*>(address));
+  virtual void jumpIfFloatGreaterOrUnordered(unsigned size, Operand* a,
+                                             Operand* b, Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatGreaterOrUnordered, size,
+                 static_cast<Value*>(a), static_cast<Value*>(b),
+                 static_cast<Value*>(address));
   }
 
-  virtual void fjle(Operand* address) {
-    appendBranch(&c, JumpIfFloatLessOrEqual, static_cast<Value*>(address));
+  virtual void jumpIfFloatLessOrEqualOrUnordered(unsigned size, Operand* a,
+                                                 Operand* b, Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
+
+    appendBranch(&c, JumpIfFloatLessOrEqualOrUnordered, size,
+                 static_cast<Value*>(a), static_cast<Value*>(b),
+                 static_cast<Value*>(address));
   }
 
-  virtual void fjge(Operand* address) {
-    appendBranch(&c, JumpIfFloatGreaterOrEqual, static_cast<Value*>(address));
-  }
+  virtual void jumpIfFloatGreaterOrEqualOrUnordered(unsigned size, Operand* a,
+                                                    Operand* b,
+                                                    Operand* address)
+  {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat
+           and static_cast<Value*>(b)->type == ValueFloat);
 
-  virtual void fje(Operand* address) {
-    appendBranch(&c, JumpIfFloatEqual, static_cast<Value*>(address));
-  }
-
-  virtual void fjne(Operand* address) {
-    appendBranch(&c, JumpIfFloatNotEqual, static_cast<Value*>(address));
-  }
-  
-  virtual void fjuo(Operand* address) {
-    appendBranch(&c, JumpIfFloatUnordered, static_cast<Value*>(address));
+    appendBranch(&c, JumpIfFloatGreaterOrEqualOrUnordered, size,
+                 static_cast<Value*>(a), static_cast<Value*>(b),
+                 static_cast<Value*>(address));
   }
 
   virtual void jmp(Operand* address) {
-    appendBranch(&c, Jump, static_cast<Value*>(address));
+    appendBranch(&c, Jump, 0, 0, 0, static_cast<Value*>(address));
   }
 
   virtual void exit(Operand* address) {
-    appendBranch(&c, Jump, static_cast<Value*>(address), true);
+    appendBranch(&c, Jump, 0, 0, 0, static_cast<Value*>(address), true);
   }
 
   virtual Operand* add(unsigned size, Operand* a, Operand* b) {

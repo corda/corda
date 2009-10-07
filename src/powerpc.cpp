@@ -1847,10 +1847,6 @@ class MyArchitecture: public Assembler::Architecture {
   	return NoTernaryOperation;
   }
   
-  virtual bool supportsFloatCompare(unsigned) {
-    return false;
-  }
-  
   virtual bool alwaysCondensed(BinaryOperation) {
     return false;
   }

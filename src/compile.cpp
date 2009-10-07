@@ -1971,6 +1971,18 @@ compareFloatsL(uint32_t bi, uint32_t ai)
   }
 }
 
+int64_t
+compareLongs(uint64_t b, uint64_t a)
+{
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 uint64_t
 addDouble(uint64_t b, uint64_t a)
 {
@@ -2677,17 +2689,111 @@ saveStateAndCompile(MyThread* t, Frame* initialFrame, unsigned ip)
 }
 
 bool
-isCJump(unsigned instruction)
+integerBranch(Frame* frame, object code, unsigned& ip, unsigned size,
+              Compiler::Operand* a, Compiler::Operand* b)
 {
-  switch(instruction) {
+  if (ip + 3 > codeLength(t, code)) {
+    return false;
+  }
+
+  Compiler* c = frame->c;
+  unsigned instruction = codeBody(t, code, ip++);
+  uint32_t offset = codeReadInt16(t, code, ip);
+  uint32_t newIp = (ip - 3) + offset;
+  assert(t, newIp < codeLength(t, code));
+  
+  Compiler::Operand* target = frame->machineIp(newIp);
+
+  switch (instruction) {
   case ifeq:
-  case ifne:
-  case ifgt:
-  case ifge:
-  case iflt:
-  case ifle: 
+    c->jumpIfEqual(size, a, b, target);
     return true;
+
+  case ifne:
+    c->jumpIfNotEqual(size, a, b, target);
+    return true;
+
+  case ifgt:
+    c->jumpIfGreater(size, a, b, target);
+    return true;
+
+  case ifge:
+    c->jumpIfGreaterOrEqual(size, a, b, target);
+    return true;
+
+  case iflt:
+    c->jumpIfLessOrUnordered(size, a, b, target);
+    return true;
+
+  case ifle:
+    c->jumpIfLessOrEqualOrUnordered(size, a, b, target);
+    return true;
+
   default:
+    ip -= 3;
+    return false;
+  }
+}
+
+bool
+floatBranch(Frame* frame, object code, unsigned& ip, unsigned size,
+            bool lessIfUnordered, Compiler::Operand* a, Compiler::Operand* b)
+{
+  if (ip + 3 > codeLength(t, code)) {
+    return false;
+  }
+
+  Compiler* c = frame->c;
+  unsigned instruction = codeBody(t, code, ip++);
+  uint32_t offset = codeReadInt16(t, code, ip);
+  uint32_t newIp = (ip - 3) + offset;
+  assert(t, newIp < codeLength(t, code));
+  
+  Compiler::Operand* target = frame->machineIp(newIp);
+
+  switch (instruction) {
+  case ifeq:
+    c->jumpIfFloatEqual(size, a, b, target);
+    return true;
+
+  case ifne:
+    c->jumpIfFloatNotEqual(size, a, b, target);
+    return true;
+
+  case ifgt:
+    if (lessIfUnordered) {
+      c->jumpIfFloatGreater(size, a, b, target);
+    } else {
+      c->jumpIfFloatGreaterOrUnordered(size, a, b, target);
+    }
+    return true;
+
+  case ifge:
+    if (lessIfUnordered) {
+      c->jumpIfFloatGreaterOrEqual(size, a, b, target);
+    } else {
+      c->jumpIfFloatGreaterOrEqualOrUnordered(size, a, b, target);
+    }
+    return true;
+
+  case iflt:
+    if (lessIfUnordered) {
+      c->jumpIfFloatLessOrUnordered(size, a, b, target);
+    } else {
+      c->jumpIfFloatLess(size, a, b, target);
+    }
+    return true;
+
+  case ifle:
+    if (lessIfUnordered) {
+      c->jumpIfFloatLessOrEqualOrUnordered(size, a, b, target);
+    } else {
+      c->jumpIfFloatLessOrEqual(size, a, b, target);
+    }
+    return true;
+
+  default:
+    ip -= 3;
     return false;
   }
 }
@@ -2706,8 +2812,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
   object code = methodCode(t, context->method);
   PROTECT(t, code);
   
-  int lastFcmpl = 1, lastFcmpg = 1;
-    
   while (ip < codeLength(t, code)) {
     if (context->visitTable[ip] ++) {
       // we've already visited this part of the code
@@ -2733,9 +2837,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          1, c->register_(t->arch->thread()));
     }
     
-    ++ lastFcmpl;
-    ++ lastFcmpg;
-
 //     fprintf(stderr, "ip: %d map: %ld\n", ip, *(frame->map));
 
     unsigned instruction = codeBody(t, code, ip++);
@@ -3043,10 +3144,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if(t->arch->supportsFloatCompare(8) and isCJump(codeBody(t, code, ip))) {
-        c->fcmp(8, a, b);
-        lastFcmpg = 0;
-      } else {
+      if (not floatBranch(frame, ip, 8, false, a, b)) {
         frame->pushInt
           (c->call
            (c->constant
@@ -3061,10 +3159,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if(t->arch->supportsFloatCompare(8) and isCJump(codeBody(t, code, ip))) {
-        c->fcmp(8, a, b);
-        lastFcmpl = 0;
-      } else {
+      if (not floatBranch(frame, ip, 8, true, a, b)) {
         frame->pushInt
           (c->call
            (c->constant
@@ -3162,10 +3257,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      if(t->arch->supportsFloatCompare(4) and isCJump(codeBody(t, code, ip))) {
-        c->fcmp(4, a, b);
-        lastFcmpg = 0;
-      } else {
+      if (not floatBranch(frame, ip, 4, false, a, b)) {
         frame->pushInt
           (c->call
            (c->constant
@@ -3178,10 +3270,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      if(t->arch->supportsFloatCompare(4) and isCJump(codeBody(t, code, ip))) {
-        c->fcmp(4, a, b);
-        lastFcmpl = 0;
-      } else {
+      if (not floatBranch(frame, ip, 4, true, a, b)) {
         frame->pushInt
           (c->call
            (c->constant
@@ -3473,11 +3562,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->cmp(BytesPerWord, a, b);
       if (instruction == if_acmpeq) {
-        c->je(target);
+        c->jumpIfEqual(BytesPerWord, a, btarget);
       } else {
-        c->jne(target);
+        c->jumpIfNotEqual(BytesPerWord, a, btarget);
       }
 
       saveStateAndCompile(t, frame, newIp);
@@ -3498,26 +3586,27 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popInt();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->cmp(4, a, b);
       switch (instruction) {
       case if_icmpeq:
-        c->je(target);
+        c->jumpIfEqual(4, a, b, target);
         break;
       case if_icmpne:
-        c->jne(target);
+        c->jumpIfNotEqual(4, a, b, target);
         break;
       case if_icmpgt:
-        c->jg(target);
+        c->jumpIfGreater(4, a, b, target);
         break;
       case if_icmpge:
-        c->jge(target);
+        c->jumpIfGreaterOrEqual(4, a, b, target);
         break;
       case if_icmplt:
-        c->jl(target);
+        c->jumpIfLess(4, a, b, target);
         break;
       case if_icmple:
-        c->jle(target);
+        c->jumpIfLessOrEqual(4, a, b, target);
         break;
+      default:
+        abort(t);
       }
       
       saveStateAndCompile(t, frame, newIp);
@@ -3537,67 +3626,30 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* target = frame->machineIp(newIp);
       Compiler::Operand* cont = frame->machineIp(ip);
 
-      if (lastFcmpl != 1 and lastFcmpg != 1) {
-        Compiler::Operand* a = frame->popInt();
-        c->cmp(4, c->constant(0, Compiler::IntegerType), a);
-      }
+      Compiler::Operand* a = c->constant(0, Compiler::IntegerType);
+      Compiler::Operand* b = frame->popInt();
+
       switch (instruction) {
       case ifeq:
-        if (lastFcmpl == 1 or lastFcmpg == 1) {
-          c->fjuo(cont);
-          c->fje(target);
-        } else {
-          c->je(target);
-        }
+        c->jumpIfEqual(4, a, b, target);
         break;
       case ifne:
-        if (lastFcmpl == 1 or lastFcmpg == 1) {
-          c->fjuo(cont);
-          c->fjne(target);
-        } else {
-          c->jne(target);
-        }
+        c->jumpIfNotEqual(4, a, b, target);
         break;
       case ifgt:
-        if (lastFcmpl == 1) {
-          c->fjuo(cont);
-          c->fjg(target);
-        } else if (lastFcmpg == 1) {
-          c->fjg(target);
-        } else {
-          c->jg(target);
-        }
+        c->jumpIfGreater(4, a, b, target);
         break;
       case ifge:
-        if (lastFcmpl == 1) {
-          c->fjuo(cont);
-          c->fjge(target);
-        } else if (lastFcmpg == 1) {
-          c->fjge(target);
-        } else {
-          c->jge(target);
-        }
+        c->jumpIfGreaterOrEqual(4, a, b, target);
         break;
       case iflt:
-        if (lastFcmpg == 1) {
-          c->fjuo(cont);
-          c->fjl(target);
-        } else if (lastFcmpl == 1) {
-          c->fjl(target);
-        } else {
-          c->jl(target);
-        }
+        c->jumpIfLess(4, a, b, target);
         break;
       case ifle:
-        if(lastFcmpg == 1) {
-          c->fjuo(cont);
-          c->fjle(target);
-        } else if (lastFcmpl == 1) {
-          c->fjle(target);
-        } else {
-          c->jle(target);
-        }
+        c->jumpIfLessOrEqual(4, a, b, target);
         break;
+      default:
+        abort(t);
       }
 
       saveStateAndCompile(t, frame, newIp);
@@ -3610,14 +3662,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
-      Compiler::Operand* a = frame->popObject();
+      Compiler::Operand* a = c->constant(0, Compiler::ObjectType);
+      Compiler::Operand* b = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->cmp(BytesPerWord, c->constant(0, Compiler::ObjectType), a);
       if (instruction == ifnull) {
-        c->je(target);
+        c->jumpIfEqual(BytesPerWord, a, btarget);
       } else {
-        c->jne(target);
+        c->jumpIfNotEqual(BytesPerWord, a, btarget);
       }
 
       saveStateAndCompile(t, frame, newIp);
@@ -3971,7 +4023,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushInt(c->lcmp(a, b));
+      if (not integerBranch(frame, ip, 8, a, b)) {
+        frame->pushInt
+          (c->call
+           (c->constant
+            (getThunk(t, compareLongsThunk), Compiler::AddressType),
+            0, 0, 4, Compiler::IntegerType, 4,
+            static_cast<Compiler::Operand*>(0), a,
+            static_cast<Compiler::Operand*>(0), b));
+      }
     } break;
 
     case lconst_0:
@@ -4522,15 +4582,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Compiler::Operand* key = frame->popInt();
       
-      c->cmp(4, c->constant(bottom, Compiler::IntegerType), key);
-      c->jl(frame->machineIp(defaultIp));
+      c->jumpIfLess(4, c->constant(bottom, Compiler::IntegerType), key,
+                    frame->machineIp(defaultIp));
 
       c->save(1, key);
 
       saveStateAndCompile(t, frame, defaultIp);
 
-      c->cmp(4, c->constant(top, Compiler::IntegerType), key);
-      c->jg(frame->machineIp(defaultIp));
+      c->jumpIfGreater(4, c->constant(top, Compiler::IntegerType), key,
+                       frame->machineIp(defaultIp));
 
       c->save(1, key);
 
