@@ -58,6 +58,10 @@ public class SocketChannel extends SelectableChannel
     return connected;
   }
 
+  public boolean finishConnect() throws IOException {
+    return natFinishConnect(socket);
+  }
+
   public void close() throws IOException {
     if (isOpen()) {
       super.close();
@@ -125,6 +129,8 @@ public class SocketChannel extends SelectableChannel
     throws SocketException;
 
   private static native int natDoConnect(String host, int port, boolean blocking, boolean[] connected)
+    throws IOException;
+  private static native boolean natFinishConnect(int socket)
     throws IOException;
   private static native int natRead(int socket, byte[] buffer, int offset, int length)
     throws IOException;

@@ -13,8 +13,8 @@ package java.nio.channels;
 public class SelectionKey {
   public static final int OP_READ = 1 << 0;
   public static final int OP_WRITE = 1 << 2;
+  public static final int OP_CONNECT = 1 << 3;
   public static final int OP_ACCEPT = 1 << 4;
-//   public static final int OP_CONNECT = 1 << 3;
 
   private final SelectableChannel channel;
   private final Selector selector;
@@ -55,6 +55,10 @@ public class SelectionKey {
 
   public boolean isWritable() {
     return (readyOps & OP_WRITE) != 0;
+  }
+
+  public boolean isConnectable() {
+    return (readyOps & OP_CONNECT) != 0;
   }
 
   public boolean isAcceptable() {
