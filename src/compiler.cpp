@@ -2520,7 +2520,8 @@ move(Context* c, Value* value, Site* src, Site* dst)
   uint8_t tmpTypeMask;
   uint64_t tmpRegisterMask;
   c->arch->planMove
-    (1 << src->type(c), src->registerMask(c),
+    (value->nextWord == value ? BytesPerWord : 8,
+     1 << src->type(c), src->registerMask(c),
      1 << dst->type(c), dst->registerMask(c),
      &tmpTypeMask, &tmpRegisterMask);
 

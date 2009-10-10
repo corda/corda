@@ -3024,7 +3024,8 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planMove
-  (uint8_t srcTypeMask, uint64_t srcRegisterMask,
+  (unsigned size, 
+   uint8_t srcTypeMask, uint64_t srcRegisterMask,
    uint8_t dstTypeMask, uint64_t dstRegisterMask,
    uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask)
   {
@@ -3040,10 +3041,12 @@ class MyArchitecture: public Assembler::Architecture {
         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
     } else if (dstTypeMask & (1 << RegisterOperand)) {
       if (srcTypeMask & (1 << RegisterOperand)) {
-        if (((dstRegisterMask & FloatRegisterMask) == 0)
-            xor ((srcRegisterMask & FloatRegisterMask) == 0))
+        if (size != BytesPerWord
+            and (((dstRegisterMask & FloatRegisterMask) == 0)
+                 xor ((srcRegisterMask & FloatRegisterMask) == 0)))
         {
-          // can't move directly from FPR to GPR or vice-versa
+          // can't move directly from FPR to GPR or vice-versa for
+          // values larger than the GPR size
           *tmpTypeMask = (1 << MemoryOperand);
           *tmpRegisterMask = 0;
         }
