@@ -304,7 +304,7 @@ class Value: public Compiler::Operand {
  public:
   Value(Site* site, Site* target, ValueType type):
     reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
-    next(this), home(NoFrameIndex), type(type), index(0)
+    nextWord(this), home(NoFrameIndex), type(type), wordIndex(0)
   { }
   
   Read* reads;
@@ -313,10 +313,10 @@ class Value: public Compiler::Operand {
   Site* source;
   Site* target;
   Value* buddy;
-  Value* next;
+  Value* nextWord;
   int8_t home;
   ValueType type;
-  uint8_t index;
+  uint8_t wordIndex;
 };
 
 uint32_t
@@ -828,7 +828,7 @@ class SiteIterator {
         }
 
         if (includeNext and pass == 0) {
-          Value* v = originalValue->next;
+          Value* v = originalValue->nextWord;
           if (v != originalValue) {
             pass = 1;
             originalValue = v;
@@ -874,18 +874,6 @@ class SiteIterator {
 };
 
 bool
-hasMoreThanOneSite(Context* c, Value* v)
-{
-  SiteIterator it(c, v);
-  if (it.hasMore()) {
-    it.next();
-    return it.hasMore();
-  } else {
-    return false;
-  }
-}
-
-bool
 hasSite(Context* c, Value* v)
 {
   SiteIterator it(c, v);
@@ -899,6 +887,31 @@ findSite(Context*, Value* v, Site* site)
     if (s == site) return true;
   }
   return false;
+}
+
+bool
+uniqueSite(Context* c, Value* v, Site* s)
+{
+  SiteIterator it(c, v);
+  Site* p = it.next();
+  if (it.hasMore()) {
+    // the site is not this word's only site, but if the site is
+    // shared with the next word, it may be that word's only site
+    if (v->nextWord != v and s->registerSize(c) > BytesPerWord) {
+      SiteIterator nit(c, v->nextWord);
+      Site* p = nit.next();
+      if (nit.hasMore()) {
+        return false;
+      } else {
+        return p == s;
+      }
+    } else {
+      return false;
+    }    
+  } else {
+    assert(c, p == s);
+    return true;
+  }
 }
 
 void
@@ -1222,10 +1235,10 @@ resourceCost(Context* c UNUSED, Value* v, Resource* r)
 
     if (v and buddies(r->value, v)) {
       return 0;
-    } else if (hasMoreThanOneSite(c, r->value)) {
-      return Target::StealPenalty;
-    } else {
+    } else if (uniqueSite(c, r->value, r->site)) {
       return Target::StealUniquePenalty;
+    } else {
+      return Target::StealPenalty;
     }
   } else {
     return 0;
@@ -2072,8 +2085,8 @@ steal(Context* c, Resource* r, Value* thief)
             thief, resourceBuffer, r->value, siteBuffer);
   }
 
-  if (not ((thief and buddies(thief, r->value))
-           or hasMoreThanOneSite(c, r->value)))
+  if ((not (thief and buddies(thief, r->value))
+       and uniqueSite(c, r->value, r->site)))
   {
     r->site->freeze(c, r->value);
 
@@ -2388,12 +2401,12 @@ pickOrMoveSite(Context* c, Value* v, Site* s, unsigned index)
 Site*
 pickOrMoveSite(Context* c, Value* v, Site* s, Site** low, Site** high)
 {
-  if (v->index == 0) {
+  if (v->wordIndex == 0) {
     *low = s;
-    *high = pickOrMoveSite(c, v->next, s, 1);
+    *high = pickOrMoveSite(c, v->nextWord, s, 1);
     return *high;
   } else {
-    *low = pickOrMoveSite(c, v->next, s, 0);
+    *low = pickOrMoveSite(c, v->nextWord, s, 0);
     *high = s;
     return *low;
   }
@@ -2410,12 +2423,12 @@ growSite(Context* c, Value* v, Site* s, unsigned index)
 Site*
 growSite(Context* c, Value* v, Site* s, Site** low, Site** high)
 {
-  if (v->index == 0) {
+  if (v->wordIndex == 0) {
     *low = s;
-    *high = growSite(c, v->next, s, 1);
+    *high = growSite(c, v->nextWord, s, 1);
     return *high;
   } else {
-    *low = growSite(c, v->next, s, 0);
+    *low = growSite(c, v->nextWord, s, 0);
     *high = s;
     return *low;
   }
@@ -2552,7 +2565,7 @@ move(Context* c, Value* value, Site* src, Site* dst)
   
   unsigned srcSize;
   unsigned dstSize;
-  if (value->next == value) {
+  if (value->nextWord == value) {
     srcSize = BytesPerWord;
     dstSize = BytesPerWord;
   } else {
@@ -2564,18 +2577,18 @@ move(Context* c, Value* value, Site* src, Site* dst)
     apply(c, Move, srcSize, src, src, dstSize, dst, dst);
   } else if (srcSize > BytesPerWord) {
     Site* low, *high, *other = growSite(c, value, dst, &low, &high);
-    other->freeze(c, value->next);
+    other->freeze(c, value->nextWord);
 
     apply(c, Move, srcSize, src, src, srcSize, low, high);
 
-    other->thaw(c, value->next);
+    other->thaw(c, value->nextWord);
   } else {
     Site* low, *high, *other = pickOrMoveSite(c, value, src, &low, &high);
-    other->freeze(c, value->next);
+    other->freeze(c, value->nextWord);
 
     apply(c, Move, dstSize, low, high, dstSize, dst, dst);
 
-    other->thaw(c, value->next);
+    other->thaw(c, value->nextWord);
   }
 
   dst->thaw(c, value);
@@ -2693,8 +2706,8 @@ addReads(Context* c, Event* e, Value* v, unsigned size,
   SingleRead* r = read(c, lowMask, lowSuccessor);
   addRead(c, e, v, r);
   if (size > BytesPerWord) {
-    r->high = v->next;
-    addRead(c, e, v->next, highMask, highSuccessor);
+    r->high = v->nextWord;
+    addRead(c, e, v->nextWord, highMask, highSuccessor);
   }
 }
 
@@ -3016,8 +3029,8 @@ class CallEvent: public Event {
 
     if (resultSize and live(result)) {
       addSite(c, result, registerSite(c, c->arch->returnLow()));
-      if (resultSize > BytesPerWord and live(result->next)) {
-        addSite(c, result->next, registerSite(c, c->arch->returnHigh()));
+      if (resultSize > BytesPerWord and live(result->nextWord)) {
+        addSite(c, result->nextWord, registerSite(c, c->arch->returnHigh()));
       }
     }
   }
@@ -3263,12 +3276,12 @@ value(Context* c, ValueType type, Site* site = 0, Site* target = 0)
 void
 grow(Context* c, Value* v)
 {
-  assert(c, v->next == v);
+  assert(c, v->nextWord == v);
 
   Value* next = value(c, v->type);
-  v->next = next;
-  next->next = v;
-  next->index = 1;
+  v->nextWord = next;
+  next->nextWord = v;
+  next->wordIndex = 1;
 }
 
 void
@@ -3280,14 +3293,14 @@ split(Context* c, Value* v)
     removeSite(c, v, s);
     
     addSite(c, v, s->copyLow(c));
-    addSite(c, v->next, s->copyHigh(c));
+    addSite(c, v->nextWord, s->copyHigh(c));
   }
 }
 
 void
 maybeSplit(Context* c, Value* v)
 {
-  if (v->next == v) {
+  if (v->nextWord == v) {
     split(c, v);
   }
 }
@@ -3313,7 +3326,7 @@ class MoveEvent: public Event {
     }
 
     addReads(c, this, src, srcSelectSize, srcLowMask, noop ? dst : 0,
-             srcHighMask, noop and dstSize > BytesPerWord ? dst->next : 0);
+             srcHighMask, noop and dstSize > BytesPerWord ? dst->nextWord : 0);
   }
 
   virtual const char* name() {
@@ -3328,7 +3341,7 @@ class MoveEvent: public Event {
       (type,
        srcSelectSize,
        1 << src->source->type(c), 
-       (static_cast<uint64_t>(src->next->source->registerMask(c)) << 32)
+       (static_cast<uint64_t>(src->nextWord->source->registerMask(c)) << 32)
        | static_cast<uint64_t>(src->source->registerMask(c)),
        dstSize,
        &dstTypeMask,
@@ -3343,8 +3356,8 @@ class MoveEvent: public Event {
     } else if (srcSelectSize == dstSize) {
       maybeMove(c, Move, BytesPerWord, BytesPerWord, src, BytesPerWord, dst,
                 dstLowMask);
-      maybeMove(c, Move, BytesPerWord, BytesPerWord, src->next, BytesPerWord,
-                dst->next, dstHighMask);
+      maybeMove(c, Move, BytesPerWord, BytesPerWord, src->nextWord, BytesPerWord,
+                dst->nextWord, dstHighMask);
     } else if (srcSize > BytesPerWord) {
       assert(c, dstSize == BytesPerWord);
 
@@ -3354,7 +3367,7 @@ class MoveEvent: public Event {
       assert(c, srcSize == BytesPerWord);
       assert(c, srcSelectSize == BytesPerWord);
 
-      if (dst->next->target or live(dst->next)) {
+      if (dst->nextWord->target or live(dst->nextWord)) {
         assert(c, dstLowMask.typeMask & (1 << RegisterOperand));
 
         Site* low = freeRegisterSite(c, dstLowMask.registerMask);
@@ -3385,20 +3398,20 @@ class MoveEvent: public Event {
 
         low->freeze(c, dst);
 
-        addSite(c, dst->next, high);
+        addSite(c, dst->nextWord, high);
 
-        high->freeze(c, dst->next);
+        high->freeze(c, dst->nextWord);
         
         if (DebugMoves) {
           char srcb[256]; low->toString(c, srcb, 256);
           char dstb[256]; high->toString(c, dstb, 256);
           fprintf(stderr, "extend %s to %s for %p %p\n",
-                  srcb, dstb, dst, dst->next);
+                  srcb, dstb, dst, dst->nextWord);
         }
 
         apply(c, Move, BytesPerWord, low, low, dstSize, low, high);
 
-        high->thaw(c, dst->next);
+        high->thaw(c, dst->nextWord);
 
         low->thaw(c, dst);
       } else {
@@ -3475,7 +3488,7 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
   {
     s = value->source;
     v = value;
-    if (r and not hasMoreThanOneSite(c, v)) {
+    if (r and uniqueSite(c, v, s)) {
       preserve(c, v, s, r);
     }
   } else {
@@ -3498,7 +3511,7 @@ freezeSource(Context* c, unsigned size, Value* v)
 {
   v->source->freeze(c, v);
   if (size > BytesPerWord) {
-    v->next->source->freeze(c, v->next);
+    v->nextWord->source->freeze(c, v->nextWord);
   }
 }
 
@@ -3507,7 +3520,7 @@ thawSource(Context* c, unsigned size, Value* v)
 {
   v->source->thaw(c, v);
   if (size > BytesPerWord) {
-    v->next->source->thaw(c, v->next);
+    v->nextWord->source->thaw(c, v->nextWord);
   }
 }
 
@@ -3535,7 +3548,7 @@ class CombineEvent: public Event {
 
     addReads(c, this, second, secondSize,
              secondLowMask, condensed ? result : 0,
-             secondHighMask, condensed ? result->next : 0);
+             secondHighMask, condensed ? result->nextWord : 0);
   }
 
   virtual const char* name() {
@@ -3543,16 +3556,16 @@ class CombineEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    assert(c, first->source->type(c) == first->next->source->type(c));
+    assert(c, first->source->type(c) == first->nextWord->source->type(c));
 
-    if (second->source->type(c) != second->next->source->type(c)) {
+    if (second->source->type(c) != second->nextWord->source->type(c)) {
       fprintf(stderr, "%p %p %d : %p %p %d\n",
               second, second->source, second->source->type(c),
-              second->next, second->next->source,
-              second->next->source->type(c));
+              second->nextWord, second->nextWord->source,
+              second->nextWord->source->type(c));
     }
 
-    assert(c, second->source->type(c) == second->next->source->type(c));
+    assert(c, second->source->type(c) == second->nextWord->source->type(c));
     
     freezeSource(c, firstSize, first);
     
@@ -3563,11 +3576,11 @@ class CombineEvent: public Event {
       (type,
        firstSize,
        1 << first->source->type(c),
-       (static_cast<uint64_t>(first->next->source->registerMask(c)) << 32)
+       (static_cast<uint64_t>(first->nextWord->source->registerMask(c)) << 32)
        | static_cast<uint64_t>(first->source->registerMask(c)),
        secondSize,
        1 << second->source->type(c),
-       (static_cast<uint64_t>(second->next->source->registerMask(c)) << 32)
+       (static_cast<uint64_t>(second->nextWord->source->registerMask(c)) << 32)
        | static_cast<uint64_t>(second->source->registerMask(c)),
        resultSize,
        &cTypeMask,
@@ -3580,13 +3593,13 @@ class CombineEvent: public Event {
     unsigned lowSize = low->registerSize(c);
     Site* high
       = (resultSize > lowSize
-         ? getTarget(c, second->next, result->next, resultHighMask)
+         ? getTarget(c, second->nextWord, result->nextWord, resultHighMask)
          : low);
 
     //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
     apply(c, type,
-          firstSize, first->source, first->next->source,
-          secondSize, second->source, second->next->source,
+          firstSize, first->source, first->nextWord->source,
+          secondSize, second->source, second->nextWord->source,
           resultSize, low, high);
 
     thawSource(c, firstSize, first);
@@ -3597,13 +3610,13 @@ class CombineEvent: public Event {
 
     low->thaw(c, second);
     if (resultSize > lowSize) {
-      high->thaw(c, second->next);
+      high->thaw(c, second->nextWord);
     }
 
     if (live(result)) {
       addSite(c, result, low);
-      if (resultSize > lowSize and live(result->next)) {
-        addSite(c, result->next, high);
+      if (resultSize > lowSize and live(result->nextWord)) {
+        addSite(c, result->nextWord, high);
       }
     }
   }
@@ -3750,7 +3763,7 @@ push(Context* c, unsigned footprint, Value* v, bool reverse)
 
     if (BytesPerWord == 4) {
       maybeSplit(c, low);
-      high = pushWord(c, low->next);
+      high = pushWord(c, low->nextWord);
     } else {
       high = pushWord(c, 0);
     }
@@ -3763,9 +3776,9 @@ push(Context* c, unsigned footprint, Value* v, bool reverse)
   }
 
   if (high) {
-    v->next = high;
-    high->next = v;
-    high->index = 1;
+    v->nextWord = high;
+    high->nextWord = v;
+    high->wordIndex = 1;
   }
 
   return v;
@@ -3812,8 +3825,8 @@ pop(Context* c, unsigned footprint)
     }
 
     assert(c, (BytesPerWord == 8
-               and low->value->next == low->value and high->value == 0)
-           or (BytesPerWord == 4 and low->value->next == high->value));
+               and low->value->nextWord == low->value and high->value == 0)
+           or (BytesPerWord == 4 and low->value->nextWord == high->value));
 #endif // not NDEBUG
 
     popWord(c);
@@ -3855,9 +3868,9 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
     }
 
     if (BytesPerWord == 4) {
-      assert(c, v->next != v);
+      assert(c, v->nextWord != v);
 
-      high = storeLocal(c, 1, v->next, highIndex, false);
+      high = storeLocal(c, 1, v->nextWord, highIndex, false);
     } else {
       high = 0;
     }
@@ -3870,9 +3883,9 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
   v = maybeBuddy(c, v);
 
   if (high != 0) {
-    v->next = high;
-    high->next = v;
-    high->index = 1;
+    v->nextWord = high;
+    high->nextWord = v;
+    high->wordIndex = 1;
   }
 
   Local* local = c->locals + index;
@@ -3973,7 +3986,7 @@ class TranslateEvent: public Event {
     }
 
     addReads(c, this, value, valueSize, valueLowMask, condensed ? result : 0,
-             valueHighMask, condensed ? result->next : 0);
+             valueHighMask, condensed ? result->nextWord : 0);
   }
 
   virtual const char* name() {
@@ -3981,7 +3994,7 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    assert(c, value->source->type(c) == value->next->source->type(c));
+    assert(c, value->source->type(c) == value->nextWord->source->type(c));
 
     uint8_t bTypeMask;
     uint64_t bRegisterMask;
@@ -3990,7 +4003,7 @@ class TranslateEvent: public Event {
       (type,
        valueSize,
        1 << value->source->type(c),
-       (static_cast<uint64_t>(value->next->source->registerMask(c)) << 32)
+       (static_cast<uint64_t>(value->nextWord->source->registerMask(c)) << 32)
        | static_cast<uint64_t>(value->source->registerMask(c)),
        resultSize,
        &bTypeMask,
@@ -4003,10 +4016,10 @@ class TranslateEvent: public Event {
     unsigned lowSize = low->registerSize(c);
     Site* high
       = (resultSize > lowSize
-         ? getTarget(c, value->next, result->next, resultHighMask)
+         ? getTarget(c, value->nextWord, result->nextWord, resultHighMask)
          : low);
 
-    apply(c, type, valueSize, value->source, value->next->source,
+    apply(c, type, valueSize, value->source, value->nextWord->source,
           resultSize, low, high);
 
     for (Read* r = reads; r; r = r->eventNext) {
@@ -4015,13 +4028,13 @@ class TranslateEvent: public Event {
 
     low->thaw(c, value);
     if (resultSize > lowSize) {
-      high->thaw(c, value->next);
+      high->thaw(c, value->nextWord);
     }
 
     if (live(result)) {
       addSite(c, result, low);
-      if (resultSize > lowSize and live(result->next)) {
-        addSite(c, result->next, high);
+      if (resultSize > lowSize and live(result->nextWord)) {
+        addSite(c, result->nextWord, high);
       }
     }
   }
@@ -4145,12 +4158,12 @@ class MemoryEvent: public Event {
       (c, baseRegister, displacement, indexRegister, scale);
 
     Site* low;
-    if (result->next != result) {
+    if (result->nextWord != result) {
       Site* high = site->copyHigh(c);
       low = site->copyLow(c);
 
-      result->next->target = high;
-      addSite(c, result->next, high);
+      result->nextWord->target = high;
+      addSite(c, result->nextWord, high);
     } else {
       low = site;
     }
@@ -4290,8 +4303,8 @@ class BranchEvent: public Event {
           apply(c, Jump, BytesPerWord, address->source, address->source);
         }      
       } else {
-        apply(c, type, size, first->source, first->next->source,
-              size, second->source, second->next->source,
+        apply(c, type, size, first->source, first->nextWord->source,
+              size, second->source, second->nextWord->source,
               BytesPerWord, address->source, address->source);
       }
     }
@@ -5447,13 +5460,13 @@ linkLocals(Context* c, Local* oldLocals, Local* newLocals)
 
       if (i + highOffset >= 0
           and i + highOffset < static_cast<int>(c->localFootprint)
-          and local->value->next == local[highOffset].value)
+          and local->value->nextWord == local[highOffset].value)
       {
         Value* v = newLocals[i].value;
         Value* next = newLocals[i + highOffset].value;
-        v->next = next;
-        next->next = v;
-        next->index = 1;
+        v->nextWord = next;
+        next->nextWord = v;
+        next->wordIndex = 1;
       }
     }
   }
@@ -5737,9 +5750,9 @@ class MyCompiler: public Compiler {
     c.saved = cons(&c, static_cast<Value*>(value), c.saved);
     if (BytesPerWord == 4 and footprint > 1) {
       assert(&c, footprint == 2);
-      assert(&c, static_cast<Value*>(value)->next);
+      assert(&c, static_cast<Value*>(value)->nextWord);
 
-      save(1, static_cast<Value*>(value)->next);
+      save(1, static_cast<Value*>(value)->nextWord);
     }
   }
 
@@ -5797,8 +5810,8 @@ class MyCompiler: public Compiler {
       }
 
       assert(&c, (BytesPerWord == 8
-                  and low->value->next == low->value and high->value == 0)
-             or (BytesPerWord == 4 and low->value->next == high->value));
+                  and low->value->nextWord == low->value and high->value == 0)
+             or (BytesPerWord == 4 and low->value->nextWord == high->value));
 #endif // not NDEBUG
 
       if (not bigEndian) {
@@ -5829,11 +5842,11 @@ class MyCompiler: public Compiler {
       Value* o = va_arg(a, Value*);
       if (o) {
         if (bigEndian and size > BytesPerWord) {
-          RUNTIME_ARRAY_BODY(arguments)[index++] = o->next;
+          RUNTIME_ARRAY_BODY(arguments)[index++] = o->nextWord;
         }
         RUNTIME_ARRAY_BODY(arguments)[index] = o;
         if ((not bigEndian) and size > BytesPerWord) {
-          RUNTIME_ARRAY_BODY(arguments)[++index] = o->next;
+          RUNTIME_ARRAY_BODY(arguments)[++index] = o->nextWord;
         }
         size = BytesPerWord;
         ++ index;
@@ -5897,9 +5910,9 @@ class MyCompiler: public Compiler {
       if (BytesPerWord == 4) {
         initLocal(1, highIndex, type);
         Value* next = c.locals[highIndex].value;
-        v->next = next;
-        next->next = v;
-        next->index = 1;
+        v->nextWord = next;
+        next->nextWord = v;
+        next->wordIndex = 1;
       }
 
       index = lowIndex;
