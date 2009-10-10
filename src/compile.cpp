@@ -2689,8 +2689,8 @@ saveStateAndCompile(MyThread* t, Frame* initialFrame, unsigned ip)
 }
 
 bool
-integerBranch(Frame* frame, object code, unsigned& ip, unsigned size,
-              Compiler::Operand* a, Compiler::Operand* b)
+integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
+              unsigned size, Compiler::Operand* a, Compiler::Operand* b)
 {
   if (ip + 3 > codeLength(t, code)) {
     return false;
@@ -2707,37 +2707,41 @@ integerBranch(Frame* frame, object code, unsigned& ip, unsigned size,
   switch (instruction) {
   case ifeq:
     c->jumpIfEqual(size, a, b, target);
-    return true;
+    break;
 
   case ifne:
     c->jumpIfNotEqual(size, a, b, target);
-    return true;
+    break;
 
   case ifgt:
     c->jumpIfGreater(size, a, b, target);
-    return true;
+    break;
 
   case ifge:
     c->jumpIfGreaterOrEqual(size, a, b, target);
-    return true;
+    break;
 
   case iflt:
-    c->jumpIfLessOrUnordered(size, a, b, target);
-    return true;
+    c->jumpIfLess(size, a, b, target);
+    break;
 
   case ifle:
-    c->jumpIfLessOrEqualOrUnordered(size, a, b, target);
-    return true;
+    c->jumpIfLessOrEqual(size, a, b, target);
+    break;
 
   default:
     ip -= 3;
     return false;
   }
+
+  saveStateAndCompile(t, frame, newIp);
+  return t->exception == 0;
 }
 
 bool
-floatBranch(Frame* frame, object code, unsigned& ip, unsigned size,
-            bool lessIfUnordered, Compiler::Operand* a, Compiler::Operand* b)
+floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
+            unsigned size, bool lessIfUnordered, Compiler::Operand* a,
+            Compiler::Operand* b)
 {
   if (ip + 3 > codeLength(t, code)) {
     return false;
@@ -2754,11 +2758,11 @@ floatBranch(Frame* frame, object code, unsigned& ip, unsigned size,
   switch (instruction) {
   case ifeq:
     c->jumpIfFloatEqual(size, a, b, target);
-    return true;
+    break;
 
   case ifne:
     c->jumpIfFloatNotEqual(size, a, b, target);
-    return true;
+    break;
 
   case ifgt:
     if (lessIfUnordered) {
@@ -2766,7 +2770,7 @@ floatBranch(Frame* frame, object code, unsigned& ip, unsigned size,
     } else {
       c->jumpIfFloatGreaterOrUnordered(size, a, b, target);
     }
-    return true;
+    break;
 
   case ifge:
     if (lessIfUnordered) {
@@ -2774,7 +2778,7 @@ floatBranch(Frame* frame, object code, unsigned& ip, unsigned size,
     } else {
       c->jumpIfFloatGreaterOrEqualOrUnordered(size, a, b, target);
     }
-    return true;
+    break;
 
   case iflt:
     if (lessIfUnordered) {
@@ -2782,7 +2786,7 @@ floatBranch(Frame* frame, object code, unsigned& ip, unsigned size,
     } else {
       c->jumpIfFloatLess(size, a, b, target);
     }
-    return true;
+    break;
 
   case ifle:
     if (lessIfUnordered) {
@@ -2790,12 +2794,15 @@ floatBranch(Frame* frame, object code, unsigned& ip, unsigned size,
     } else {
       c->jumpIfFloatLessOrEqual(size, a, b, target);
     }
-    return true;
+    break;
 
   default:
     ip -= 3;
     return false;
   }
+
+  saveStateAndCompile(t, frame, newIp);
+  return t->exception == 0;
 }
 
 void
@@ -3144,7 +3151,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if (not floatBranch(frame, ip, 8, false, a, b)) {
+      if (not floatBranch(t, frame, code, ip, 8, false, a, b)) {
+        if (UNLIKELY(t->exception)) return;        
+
         frame->pushInt
           (c->call
            (c->constant
@@ -3159,7 +3168,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if (not floatBranch(frame, ip, 8, true, a, b)) {
+      if (not floatBranch(t, frame, code, ip, 8, true, a, b)) {
+        if (UNLIKELY(t->exception)) return;        
+
         frame->pushInt
           (c->call
            (c->constant
@@ -3257,7 +3268,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      if (not floatBranch(frame, ip, 4, false, a, b)) {
+      if (not floatBranch(t, frame, code, ip, 4, false, a, b)) {
+        if (UNLIKELY(t->exception)) return;        
+
         frame->pushInt
           (c->call
            (c->constant
@@ -3270,7 +3283,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      if (not floatBranch(frame, ip, 4, true, a, b)) {
+      if (not floatBranch(t, frame, code, ip, 4, true, a, b)) {
+        if (UNLIKELY(t->exception)) return;        
+
         frame->pushInt
           (c->call
            (c->constant
@@ -3563,9 +3578,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* target = frame->machineIp(newIp);
 
       if (instruction == if_acmpeq) {
-        c->jumpIfEqual(BytesPerWord, a, btarget);
+        c->jumpIfEqual(BytesPerWord, a, b, target);
       } else {
-        c->jumpIfNotEqual(BytesPerWord, a, btarget);
+        c->jumpIfNotEqual(BytesPerWord, a, b, target);
       }
 
       saveStateAndCompile(t, frame, newIp);
@@ -3624,7 +3639,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       assert(t, newIp < codeLength(t, code));
 
       Compiler::Operand* target = frame->machineIp(newIp);
-      Compiler::Operand* cont = frame->machineIp(ip);
 
       Compiler::Operand* a = c->constant(0, Compiler::IntegerType);
       Compiler::Operand* b = frame->popInt();
@@ -3667,9 +3681,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* target = frame->machineIp(newIp);
 
       if (instruction == ifnull) {
-        c->jumpIfEqual(BytesPerWord, a, btarget);
+        c->jumpIfEqual(BytesPerWord, a, b, target);
       } else {
-        c->jumpIfNotEqual(BytesPerWord, a, btarget);
+        c->jumpIfNotEqual(BytesPerWord, a, b, target);
       }
 
       saveStateAndCompile(t, frame, newIp);
@@ -4023,7 +4037,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if (not integerBranch(frame, ip, 8, a, b)) {
+      if (not integerBranch(t, frame, code, ip, 8, a, b)) {
+        if (UNLIKELY(t->exception)) return;        
+
         frame->pushInt
           (c->call
            (c->constant

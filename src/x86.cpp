@@ -13,6 +13,7 @@
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
+#define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)
 
 const bool DebugSSE = false;
 const bool EnableSSE = true;
@@ -73,13 +74,17 @@ const unsigned FrameHeaderSize = 2;
 const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 
-inline bool
+const unsigned NonBranchTernaryOperationCount = FloatMin + 1;
+const unsigned BranchOperationCount
+= JumpIfFloatGreaterOrEqualOrUnordered - FloatMin;
+
+bool
 isInt8(intptr_t v)
 {
   return v == static_cast<int8_t>(v);
 }
 
-inline bool
+bool
 isInt32(intptr_t v)
 {
   return v == static_cast<int32_t>(v);
@@ -139,6 +144,10 @@ typedef void (*UnaryOperationType)(Context*, unsigned, Assembler::Operand*);
 typedef void (*BinaryOperationType)
 (Context*, unsigned, Assembler::Operand*, unsigned, Assembler::Operand*);
 
+typedef void (*BranchOperationType)
+(Context*, TernaryOperation, unsigned, Assembler::Operand*,
+ Assembler::Operand*, Assembler::Operand*);
+
 class ArchitectureContext {
  public:
   ArchitectureContext(System* s): s(s) { }
@@ -148,38 +157,42 @@ class ArchitectureContext {
   UnaryOperationType unaryOperations[UnaryOperationCount
                                      * OperandTypeCount];
   BinaryOperationType binaryOperations
-  [(BinaryOperationCount + TernaryOperationCount)
+  [(BinaryOperationCount + NonBranchTernaryOperationCount)
+   * OperandTypeCount
+   * OperandTypeCount];
+  BranchOperationType branchOperations
+  [(BranchOperationCount)
    * OperandTypeCount
    * OperandTypeCount];
 };
 
-inline void NO_RETURN
+void NO_RETURN
 abort(Context* c)
 {
   abort(c->s);
 }
 
-inline void NO_RETURN
+void NO_RETURN
 abort(ArchitectureContext* c)
 {
   abort(c->s);
 }
 
 #ifndef NDEBUG
-inline void
+void
 assert(Context* c, bool v)
 {
   assert(c->s, v);
 }
 
-inline void
+void
 assert(ArchitectureContext* c, bool v)
 {
   assert(c->s, v);
 }
 #endif // not NDEBUG
 
-inline void
+void
 expect(Context* c, bool v)
 {
   expect(c->s, v);
@@ -433,30 +446,30 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
 extern "C"
 bool detectFeature(unsigned ecx, unsigned edx);
 
-inline bool
+bool
 supportsSSE()
 {
-	static int supported = -1;
-	if(supported == -1) {
-	  supported = EnableSSE && detectFeature(0, 0x2000000);
-	  if(DebugSSE) {
-	    fprintf(stderr, "sse %sdetected.\n", supported ? "" : "not ");
-	  }
-	}
-	return supported;	
+  static int supported = -1;
+  if(supported == -1) {
+    supported = EnableSSE and detectFeature(0, 0x2000000);
+    if(DebugSSE) {
+      fprintf(stderr, "sse %sdetected.\n", supported ? "" : "not ");
+    }
+  }
+  return supported;	
 }
 
-inline bool
+bool
 supportsSSE2()
 {
-	static int supported = -1;
-	if(supported == -1) {
-	  supported = EnableSSE2 && detectFeature(0, 0x4000000);
-	  if(DebugSSE) {
-	    fprintf(stderr, "sse2 %sdetected.\n", supported ? "" : "not ");
-	  }
-	}
-	return supported;
+  static int supported = -1;
+  if(supported == -1) {
+    supported = EnableSSE2 and detectFeature(0, 0x4000000);
+    if(DebugSSE) {
+      fprintf(stderr, "sse2 %sdetected.\n", supported ? "" : "not ");
+    }
+  }
+  return supported;
 }
 
 #define REX_W 0x48
@@ -475,59 +488,78 @@ void maybeRex(Context* c, unsigned size, int a, int index, int base,
     } else {
       byte = REX_NONE;
     }
-    if(a != NoRegister && (a & 8)) byte |= REX_R;
-    if(index != NoRegister && (index & 8)) byte |= REX_X;
-    if(base != NoRegister && (base & 8)) byte |= REX_B;
+    if(a != NoRegister and (a & 8)) byte |= REX_R;
+    if(index != NoRegister and (index & 8)) byte |= REX_X;
+    if(base != NoRegister and (base & 8)) byte |= REX_B;
     if(always or byte != REX_NONE) c->code.append(byte);
   }
 }
 
-inline void maybeRex(Context* c, unsigned size, Assembler::Register* a, 
-	Assembler::Register* b) {
+void
+maybeRex(Context* c, unsigned size, Assembler::Register* a,
+         Assembler::Register* b)
+{
   maybeRex(c, size, a->low, NoRegister, b->low, false);
 }
 
-inline void alwaysRex(Context* c, unsigned size, Assembler::Register* a, 
-	Assembler::Register* b) {
+void
+alwaysRex(Context* c, unsigned size, Assembler::Register* a,
+          Assembler::Register* b)
+{
   maybeRex(c, size, a->low, NoRegister, b->low, true);
 }
 
-inline void maybeRex(Context* c, unsigned size, Assembler::Register* a) {
+void
+maybeRex(Context* c, unsigned size, Assembler::Register* a)
+{
   maybeRex(c, size, NoRegister, NoRegister, a->low, false);
 }
 
-inline void maybeRex(Context* c, unsigned size, Assembler::Register* a,
-	Assembler::Memory* b) {
+void
+maybeRex(Context* c, unsigned size, Assembler::Register* a,
+         Assembler::Memory* b)
+{
   maybeRex(c, size, a->low, b->index, b->base, false);
 }
 
-inline void maybeRex(Context* c, unsigned size, Assembler::Memory* a) {
+void
+maybeRex(Context* c, unsigned size, Assembler::Memory* a)
+{
   maybeRex(c, size, NoRegister, a->index, a->base, false);
 }
 
-inline int regCode(int a) {
+int
+regCode(int a)
+{
   return a & 7;
 }
 
-inline int regCode(Assembler::Register* a) {
+int
+regCode(Assembler::Register* a)
+{
   return regCode(a->low);
 }
 
-inline void modrm(Context* c, uint8_t mod, int a, int b) {
+void
+modrm(Context* c, uint8_t mod, int a, int b)
+{
   c->code.append(mod | (regCode(b) << 3) | regCode(a));
 }
 
-inline void modrm(Context* c, uint8_t mod, Assembler::Register* a, 
-	Assembler::Register* b) {
+void
+modrm(Context* c, uint8_t mod, Assembler::Register* a, Assembler::Register* b)
+{
   modrm(c, mod, a->low, b->low);
 }
 
-inline void sib(Context* c, unsigned scale, int index, int base) {
+void
+sib(Context* c, unsigned scale, int index, int base)
+{
   c->code.append((log(scale) << 6) | (regCode(index) << 3) | regCode(base));
 }
 
-inline void modrmSib(Context* c, int width, int a, int scale, int index,
-                     int base)
+void
+modrmSib(Context* c, int width, int a, int scale, int index, int base)
 {
   if(index == NoRegister) {
     modrm(c, width, base, a);
@@ -540,10 +572,10 @@ inline void modrmSib(Context* c, int width, int a, int scale, int index,
   }
 }
 
-inline void modrmSibImm(Context* c, int a, int scale, int index, int base,
-                        int offset)
+void
+modrmSibImm(Context* c, int a, int scale, int index, int base, int offset)
 {
-  if(offset == 0 && regCode(base) != rbp) {
+  if(offset == 0 and regCode(base) != rbp) {
     modrmSib(c, 0x00, a, scale, index, base);
   } else if(isInt8(offset)) {
     modrmSib(c, 0x40, a, scale, index, base);
@@ -555,21 +587,28 @@ inline void modrmSibImm(Context* c, int a, int scale, int index, int base,
 }
   
 
-inline void modrmSibImm(Context* c, Assembler::Register* a,
-	Assembler::Memory* b) {
+void
+modrmSibImm(Context* c, Assembler::Register* a, Assembler::Memory* b)
+{
   modrmSibImm(c, a->low, b->scale, b->index, b->base, b->offset);
 }
 
-inline void opcode(Context* c, uint8_t op) {
+void
+opcode(Context* c, uint8_t op)
+{
   c->code.append(op);
 }
 
-inline void opcode(Context* c, uint8_t op1, uint8_t op2) {
+void
+opcode(Context* c, uint8_t op1, uint8_t op2)
+{
   c->code.append(op1);
   c->code.append(op2);
 }
 
-inline void opcode(Context* c, uint8_t op1, uint8_t op2, uint8_t op3) {
+void
+opcode(Context* c, uint8_t op1, uint8_t op2, uint8_t op3)
+{
   c->code.append(op1);
   c->code.append(op2);
   c->code.append(op3);
@@ -603,32 +642,52 @@ conditional(Context* c, unsigned condition, Assembler::Constant* a)
   c->code.append4(0);
 }
 
-inline unsigned
-index(UnaryOperation operation, OperandType operand)
+unsigned
+index(ArchitectureContext*, UnaryOperation operation, OperandType operand)
 {
   return operation + (UnaryOperationCount * operand);
 }
 
-inline unsigned
-index(BinaryOperation operation,
+unsigned
+index(ArchitectureContext*, BinaryOperation operation,
       OperandType operand1,
       OperandType operand2)
 {
   return operation
-    + ((BinaryOperationCount + TernaryOperationCount) * operand1)
-    + ((BinaryOperationCount + TernaryOperationCount)
+    + ((BinaryOperationCount + NonBranchTernaryOperationCount) * operand1)
+    + ((BinaryOperationCount + NonBranchTernaryOperationCount)
        * OperandTypeCount * operand2);
 }
 
-inline unsigned
-index(TernaryOperation operation,
-      OperandType operand1,
-      OperandType operand2)
+bool
+isBranch(TernaryOperation op)
 {
+  return op > FloatMin;
+}
+
+bool
+isFloatBranch(TernaryOperation op)
+{
+  return op > JumpIfNotEqual;
+}
+
+unsigned
+index(ArchitectureContext* c UNUSED, TernaryOperation operation,
+      OperandType operand1, OperandType operand2)
+{
+  assert(c, not isBranch(operation));
+
   return BinaryOperationCount + operation
-    + ((BinaryOperationCount + TernaryOperationCount) * operand1)
-    + ((BinaryOperationCount + TernaryOperationCount)
+    + ((BinaryOperationCount + NonBranchTernaryOperationCount) * operand1)
+    + ((BinaryOperationCount + NonBranchTernaryOperationCount)
        * OperandTypeCount * operand2);
+}
+
+unsigned
+branchIndex(ArchitectureContext* c UNUSED, OperandType operand1,
+            OperandType operand2)
+{
+  return operand1 + (OperandTypeCount * operand2);
 }
 
 void
@@ -692,94 +751,6 @@ jumpM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 }
 
 void
-jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x84, a);
-}
-
-void
-jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x85, a);
-}
-
-void
-jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x8f, a);
-}
-
-void
-jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x8d, a);
-}
-
-void
-jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x8c, a);
-}
-
-void
-jumpIfLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x8e, a);
-}
-
-void
-jumpIfFloatUnorderedC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x8a, a);
-}
-
-void
-jumpIfFloatGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x87, a);
-}
-
-void
-jumpIfFloatGreaterOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x83, a);
-}
-
-void
-jumpIfFloatLessC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x82, a);
-}
-
-void
-jumpIfFloatLessOrEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
-{
-  assert(c, size == BytesPerWord);
-
-  conditional(c, 0x86, a);
-}
-
-void
 longJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
   assert(c, size == BytesPerWord);
@@ -798,7 +769,7 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
   assert(c, size == BytesPerWord);
 
-	//maybeRex.W has no meaning here so we disable it
+  // maybeRex.W has no meaning here so we disable it
   maybeRex(c, 4, a);
   opcode(c, 0xff, 0xd0 + regCode(a));
 }
@@ -941,42 +912,44 @@ moveCR2(Context* c, UNUSED unsigned aSize, Assembler::Constant* a,
   }
 }
 
-inline bool floatReg(Assembler::Register* a) {
-	return a->low >= xmm0;
+bool
+floatReg(Assembler::Register* a)
+{
+  return a->low >= xmm0;
 }
 
 void
 sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
-       unsigned bSize UNUSED, Assembler::Register* b)
+          unsigned bSize UNUSED, Assembler::Register* b)
 {
-  if(floatReg(a) && floatReg(b)) {
-  	if(aSize == 4) {
-  	  opcode(c, 0xf3);
-  	  maybeRex(c, 4, a, b);
-  	  opcode(c, 0x0f, 0x10);
-  	  modrm(c, 0xc0, b, a);
-  	} else {
-  	  opcode(c, 0xf2);
-  	  maybeRex(c, 4, a, b);
-  	  opcode(c, 0x0f, 0x10);
-  	  modrm(c, 0xc0, b, a);
-  	} 
-  } else if(floatReg(a)) {
-  	opcode(c, 0x66);
-  	maybeRex(c, aSize, a, b);
-  	opcode(c, 0x0f, 0x7e);
-  	modrm(c, 0xc0, b, a);  	
+  if (floatReg(a) and floatReg(b)) {
+    if (aSize == 4) {
+      opcode(c, 0xf3);
+      maybeRex(c, 4, a, b);
+      opcode(c, 0x0f, 0x10);
+      modrm(c, 0xc0, b, a);
+    } else {
+      opcode(c, 0xf2);
+      maybeRex(c, 4, a, b);
+      opcode(c, 0x0f, 0x10);
+      modrm(c, 0xc0, b, a);
+    } 
+  } else if (floatReg(a)) {
+    opcode(c, 0x66);
+    maybeRex(c, aSize, a, b);
+    opcode(c, 0x0f, 0x7e);
+    modrm(c, 0xc0, b, a);  	
   } else {
-  	opcode(c, 0x66);
-  	maybeRex(c, aSize, b, a);
-  	opcode(c, 0x0f, 0x6e);
-  	modrm(c, 0xc0, a, b);  	
+    opcode(c, 0x66);
+    maybeRex(c, aSize, b, a);
+    opcode(c, 0x0f, 0x6e);
+    modrm(c, 0xc0, a, b);  	
   }
 }
 
 void
 sseMoveCR(Context* c, unsigned aSize, Assembler::Constant* a,
-       unsigned bSize, Assembler::Register* b)
+          unsigned bSize, Assembler::Register* b)
 {
   assert(c, aSize <= BytesPerWord);
   Assembler::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
@@ -1013,8 +986,8 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
        UNUSED unsigned bSize, Assembler::Register* b)
 {
   if(floatReg(a) or floatReg(b)) {
-  	sseMoveRR(c, aSize, a, bSize, b);
-  	return;
+    sseMoveRR(c, aSize, a, bSize, b);
+    return;
   }
   
   if (BytesPerWord == 4 and aSize == 8 and bSize == 8) {
@@ -1733,15 +1706,101 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
+branch(Context* c, TernaryOperation op, Assembler::Constant* target)
+{
+  switch (op) {
+  case JumpIfEqual:
+    conditional(c, 0x84, target);
+    break;
+
+  case JumpIfNotEqual:
+    conditional(c, 0x85, target);
+    break;
+
+  case JumpIfLess:
+    conditional(c, 0x8c, target);
+    break;
+
+  case JumpIfGreater:
+    conditional(c, 0x8f, target);
+    break;
+
+  case JumpIfLessOrEqual:
+    conditional(c, 0x8e, target);
+    break;
+
+  case JumpIfGreaterOrEqual:
+    conditional(c, 0x8d, target);
+    break;
+
+  default:
+    abort(c);
+  }
+}
+
+void
+branchFloat(Context* c, TernaryOperation op, Assembler::Constant* target)
+{
+  switch (op) {
+  case JumpIfFloatEqual:
+    conditional(c, 0x84, target);
+    break;
+
+  case JumpIfFloatNotEqual:
+    conditional(c, 0x85, target);
+    break;
+
+  case JumpIfFloatLess:
+    conditional(c, 0x82, target);
+    break;
+
+  case JumpIfFloatGreater:
+    conditional(c, 0x87, target);
+    break;
+
+  case JumpIfFloatLessOrEqual:
+    conditional(c, 0x86, target);
+    break;
+
+  case JumpIfFloatGreaterOrEqual:
+    conditional(c, 0x83, target);
+    break;
+
+  case JumpIfFloatLessOrUnordered:
+    conditional(c, 0x82, target);
+    conditional(c, 0x8a, target);
+    break;
+
+  case JumpIfFloatGreaterOrUnordered:
+    conditional(c, 0x87, target);
+    conditional(c, 0x8a, target);
+    break;
+
+  case JumpIfFloatLessOrEqualOrUnordered:
+    conditional(c, 0x86, target);
+    conditional(c, 0x8a, target);
+    break;
+
+  case JumpIfFloatGreaterOrEqualOrUnordered:
+    conditional(c, 0x83, target);
+    conditional(c, 0x8a, target);
+    break;
+
+  default:
+    abort(c);
+  }
+}
+
+void
 compareRR(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
-
+  assert(c, aSize <= BytesPerWord);
 
   maybeRex(c, aSize, a, b);
   opcode(c, 0x39);
-  modrm(c, 0xc0, b, a);
+  modrm(c, 0xc0, b, a);  
 }
 
 void
@@ -1766,46 +1825,6 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
     moveCR(c, aSize, a, aSize, &tmp);
     compareRR(c, aSize, &tmp, bSize, b);
     c->client->releaseTemporary(tmp.low);
-  }
-}
-
-void
-multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
-           unsigned bSize, Assembler::Register* b)
-{
-  assert(c, aSize == bSize);
-
-  if (BytesPerWord == 4 and aSize == 8) {
-    const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-    Assembler::Register tmp(c->client->acquireTemporary(mask),
-                            c->client->acquireTemporary(mask));
-
-    moveCR(c, aSize, a, aSize, &tmp);
-    multiplyRR(c, aSize, &tmp, bSize, b);
-    c->client->releaseTemporary(tmp.low);
-    c->client->releaseTemporary(tmp.high);
-  } else {
-    int64_t v = a->value->value();
-    if (v != 1) {
-      if (isInt32(v)) {
-        maybeRex(c, bSize, b, b);
-        if (isInt8(v)) {
-          opcode(c, 0x6b);
-          modrm(c, 0xc0, b, b);
-          c->code.append(v);
-        } else {
-          opcode(c, 0x69);
-          modrm(c, 0xc0, b, b);
-          c->code.append4(v);        
-        }
-      } else {
-        Assembler::Register tmp
-          (c->client->acquireTemporary(GeneralRegisterMask));
-        moveCR(c, aSize, a, aSize, &tmp);
-        multiplyRR(c, aSize, &tmp, bSize, b);
-        c->client->releaseTemporary(tmp.low);      
-      }
-    }
   }
 }
 
@@ -1853,107 +1872,205 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-longCompare(Context* c, Assembler::Operand* al, UNUSED Assembler::Operand* ah,
-            Assembler::Register* bl, UNUSED Assembler::Operand* bh,
-            BinaryOperationType compare)
+compareFloatRR(Context* c, unsigned aSize, Assembler::Register* a,
+               unsigned bSize UNUSED, Assembler::Register* b)
 {
-  ResolvedPromise negativePromise(-1);
-  Assembler::Constant negative(&negativePromise);
+  assert(c, aSize == bSize);
 
-  ResolvedPromise zeroPromise(0);
-  Assembler::Constant zero(&zeroPromise);
+  if (aSize == 8) {
+    opcode(c, 0x66);
+  }
+  maybeRex(c, 4, a, b);
+  opcode(c, 0x0f, 0x2e);
+  modrm(c, 0xc0, a, b);
+}
 
-  ResolvedPromise positivePromise(1);
-  Assembler::Constant positive(&positivePromise);
+void
+branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
+           Assembler::Operand* ah, Assembler::Operand* bl,
+           Assembler::Operand* bh, Assembler::Constant* target,
+           BinaryOperationType compare)
+{
+  compare(c, 4, ah, 4, bh);
+  
+  unsigned next = 0;
 
-  if (BytesPerWord == 8) {
-    compare(c, 8, al, 8, bl);
-    
-    opcode(c, 0x0f, 0x8c); // jl
-    unsigned less = c->code.length();
-    c->code.append4(0);
-
-    opcode(c, 0x0f, 0x8f); // jg
-    unsigned greater = c->code.length();
-    c->code.append4(0);
-
-    moveCR(c, 4, &zero, 4, bl);
-    
-    opcode(c, 0xe9); // jmp
-    unsigned nextFirst = c->code.length();
-    c->code.append4(0);
-
-    int32_t lessOffset = c->code.length() - less - 4;
-    c->code.set(less, &lessOffset, 4);
-
-    moveCR(c, 4, &negative, 4, bl);
-
-    opcode(c, 0xe9); // jmp
-    unsigned nextSecond = c->code.length();
-    c->code.append4(0);
-
-    int32_t greaterOffset = c->code.length() - greater - 4;
-    c->code.set(greater, &greaterOffset, 4);
-
-    moveCR(c, 4, &positive, 4, bl);
-
-    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
-    c->code.set(nextFirst, &nextFirstOffset, 4);
-
-    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
-    c->code.set(nextSecond, &nextSecondOffset, 4);
-  } else {
-    compare(c, 4, ah, 4, bh);
-    
-    opcode(c, 0x0f, 0x8c); //jl
-    unsigned less = c->code.length();
-    c->code.append4(0);
-
-    opcode(c, 0x0f, 0x8f); //jg
-    unsigned greater = c->code.length();
-    c->code.append4(0);
+  switch (op) {
+  case JumpIfEqual:
+    opcode(c, 0x75); // jne
+    next = c->code.length();
+    c->code.append(0);
 
     compare(c, 4, al, 4, bl);
+    conditional(c, 0x84, target); // je
+    break;
 
-    opcode(c, 0x0f, 0x82); //ja
-    unsigned above = c->code.length();
-    c->code.append4(0);
+  case JumpIfNotEqual:
+    conditional(c, 0x85, target); // jne
 
-    opcode(c, 0x0f, 0x87); //jb
-    unsigned below = c->code.length();
-    c->code.append4(0);
+    compare(c, 4, al, 4, bl);
+    conditional(c, 0x85, target); // jne
+    break;
 
-    moveCR(c, 4, &zero, 4, bl);
-    
-    c->code.append(0xe9); // jmp
-    unsigned nextFirst = c->code.length();
-    c->code.append4(0);
+  case JumpIfLess:
+    conditional(c, 0x8c, target); // jl
 
-    int32_t lessOffset = c->code.length() - less - 4;
-    c->code.set(less, &lessOffset, 4);
+    opcode(c, 0x7f); // jg
+    next = c->code.length();
+    c->code.append(0);
 
-    int32_t aboveOffset = c->code.length() - above - 4;
-    c->code.set(above, &aboveOffset, 4);
+    compare(c, 4, al, 4, bl);
+    conditional(c, 0x82, target); // jb
+    break;
 
-    moveCR(c, 4, &negative, 4, bl);
+  case JumpIfGreater:
+    conditional(c, 0x8f, target); // jg
 
-    opcode(c, 0xe9); // jmp
-    unsigned nextSecond = c->code.length();
-    c->code.append4(0);
+    opcode(c, 0x7c); // jl
+    next = c->code.length();
+    c->code.append(0);
 
-    int32_t greaterOffset = c->code.length() - greater - 4;
-    c->code.set(greater, &greaterOffset, 4);
+    compare(c, 4, al, 4, bl);
+    conditional(c, 0x87, target); // ja
+    break;
 
-    int32_t belowOffset = c->code.length() - below - 4;
-    c->code.set(below, &belowOffset, 4);
+  case JumpIfLessOrEqual:
+    conditional(c, 0x8c, target); // jl
 
-    moveCR(c, 4, &positive, 4, bl);
+    opcode(c, 0x7f); // jg
+    next = c->code.length();
+    c->code.append(0);
 
-    int32_t nextFirstOffset = c->code.length() - nextFirst - 4;
-    c->code.set(nextFirst, &nextFirstOffset, 4);
+    compare(c, 4, al, 4, bl);
+    conditional(c, 0x86, target); // jbe
+    break;
 
-    int32_t nextSecondOffset = c->code.length() - nextSecond - 4;
-    c->code.set(nextSecond, &nextSecondOffset, 4);
+  case JumpIfGreaterOrEqual:
+    conditional(c, 0x8f, target); // jg
+
+    opcode(c, 0x7c); // jl
+    next = c->code.length();
+    c->code.append(0);
+
+    compare(c, 4, al, 4, bl);
+    conditional(c, 0x83, target); // jae
+    break;
+
+  default:
+    abort(c);
+  }  
+
+  if (next) {
+    int8_t nextOffset = c->code.length() - next - 1;
+    c->code.set(next, &nextOffset, 1);
+  }
+}
+
+void
+branchRR(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Register* a, Assembler::Register* b,
+         Assembler::Constant* target)
+{
+  if (isFloatBranch(op)) {
+    compareFloatRR(c, size, a, size, b);
+    branchFloat(c, op, target);
+  } else if (size > BytesPerWord) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    branchLong(c, op, a, &ah, b, &bh, target, CAST2(compareRR));
+  } else {
+    compareRR(c, size, a, size, b);
+    branch(c, op, target);
+  }
+}
+
+void
+branchCR(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Constant* a, Assembler::Register* b,
+         Assembler::Constant* target)
+{
+  assert(c, not isFloatBranch(op));
+
+  if (size > BytesPerWord) {
+    int64_t v = a->value->value();
+
+    ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
+    Assembler::Constant al(&low);
+  
+    ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
+    Assembler::Constant ah(&high);
+  
+    Assembler::Register bh(b->high);
+
+    branchLong(c, op, &al, &ah, b, &bh, target, CAST2(compareCR));
+  } else {
+    compareCR(c, size, a, size, b);
+    branch(c, op, target);
+  }
+}
+
+void
+branchRM(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Register* a, Assembler::Memory* b,
+         Assembler::Constant* target)
+{
+  assert(c, not isFloatBranch(op));
+  assert(c, size <= BytesPerWord);
+
+  compareRM(c, size, a, size, b);
+  branch(c, op, target);
+}
+
+void
+branchCM(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Constant* a, Assembler::Memory* b,
+         Assembler::Constant* target)
+{
+  assert(c, not isFloatBranch(op));
+  assert(c, size <= BytesPerWord);
+
+  compareCM(c, size, a, size, b);
+  branch(c, op, target);
+}
+
+void
+multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
+           unsigned bSize, Assembler::Register* b)
+{
+  assert(c, aSize == bSize);
+
+  if (BytesPerWord == 4 and aSize == 8) {
+    const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+    Assembler::Register tmp(c->client->acquireTemporary(mask),
+                            c->client->acquireTemporary(mask));
+
+    moveCR(c, aSize, a, aSize, &tmp);
+    multiplyRR(c, aSize, &tmp, bSize, b);
+    c->client->releaseTemporary(tmp.low);
+    c->client->releaseTemporary(tmp.high);
+  } else {
+    int64_t v = a->value->value();
+    if (v != 1) {
+      if (isInt32(v)) {
+        maybeRex(c, bSize, b, b);
+        if (isInt8(v)) {
+          opcode(c, 0x6b);
+          modrm(c, 0xc0, b, b);
+          c->code.append(v);
+        } else {
+          opcode(c, 0x69);
+          modrm(c, 0xc0, b, b);
+          c->code.append4(v);        
+        }
+      } else {
+        Assembler::Register tmp
+          (c->client->acquireTemporary(GeneralRegisterMask));
+        moveCR(c, aSize, a, aSize, &tmp);
+        multiplyRR(c, aSize, &tmp, bSize, b);
+        c->client->releaseTemporary(tmp.low);      
+      }
+    }
   }
 }
 
@@ -1992,39 +2109,6 @@ remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
 
   Assembler::Register dx(rdx);
   moveRR(c, BytesPerWord, &dx, BytesPerWord, b);
-}
-
-void
-longCompareCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
-              unsigned bSize UNUSED, Assembler::Register* b)
-{
-  assert(c, aSize == 8);
-  assert(c, bSize == 8);
-  
-  int64_t v = a->value->value();
-
-  ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
-  Assembler::Constant al(&low);
-  
-  ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
-  Assembler::Constant ah(&high);
-  
-  Assembler::Register bh(b->high);
-  
-  longCompare(c, &al, &ah, b, &bh, CAST2(compareCR));
-}
-
-void
-longCompareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
-              unsigned bSize UNUSED, Assembler::Register* b)
-{
-  assert(c, aSize == 8);
-  assert(c, bSize == 8);
-  
-  Assembler::Register ah(a->high);
-  Assembler::Register bh(b->high);
-  
-  longCompare(c, a, &ah, b, &bh, CAST2(compareRR));
 }
 
 void
@@ -2073,8 +2157,8 @@ shiftLeftRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
     Assembler::Constant constant(&promise);
     compareCR(c, aSize, &constant, aSize, a);
 
-    opcode(c, 0x0f, 0x8c); //jl
-    c->code.append4(2 + 2);
+    opcode(c, 0x7c); //jl
+    c->code.append(2 + 2);
 
     Assembler::Register bh(b->high);
     moveRR(c, 4, b, 4, &bh); // 2 bytes
@@ -2109,8 +2193,8 @@ shiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
     Assembler::Constant constant(&promise);
     compareCR(c, aSize, &constant, aSize, a);
 
-    opcode(c, 0x0f, 0x8c); //jl
-    c->code.append4(2 + 3);
+    opcode(c, 0x7c); //jl
+    c->code.append(2 + 3);
 
     Assembler::Register bh(b->high);
     moveRR(c, 4, &bh, 4, b); // 2 bytes
@@ -2149,8 +2233,8 @@ unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
     Assembler::Constant constant(&promise);
     compareCR(c, aSize, &constant, aSize, a);
 
-    opcode(c, 0x0f, 0x8c); //jl
-    c->code.append4(2 + 2);
+    opcode(c, 0x7c); //jl
+    c->code.append(2 + 2);
 
     Assembler::Register bh(b->high);
     moveRR(c, 4, &bh, 4, b); // 2 bytes
@@ -2168,11 +2252,11 @@ unsignedShiftRightCR(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
   doShift(c, unsignedShiftRightRR, 0xe8, aSize, a, bSize, b);
 }
 
-inline void floatRegOp(Context* c, unsigned aSize, Assembler::Register* a,
-                       unsigned bSize, Assembler::Register* b, uint8_t op,
-                       uint8_t mod = 0xc0)
+void
+floatRegOp(Context* c, unsigned aSize, Assembler::Register* a, unsigned bSize,
+           Assembler::Register* b, uint8_t op, uint8_t mod = 0xc0)
 {
-  if(aSize == 4) {
+  if (aSize == 4) {
     opcode(c, 0xf3);
   } else {
     opcode(c, 0xf2);
@@ -2182,10 +2266,11 @@ inline void floatRegOp(Context* c, unsigned aSize, Assembler::Register* a,
   modrm(c, mod, a, b);
 }
 
-inline void floatMemOp(Context* c, unsigned aSize, Assembler::Memory* a,
-                       unsigned bSize, Assembler::Register* b, uint8_t op)
+void
+floatMemOp(Context* c, unsigned aSize, Assembler::Memory* a, unsigned bSize,
+           Assembler::Register* b, uint8_t op)
 {
-  if(aSize == 4) {
+  if (aSize == 4) {
     opcode(c, 0xf3);
   } else {
     opcode(c, 0xf2);
@@ -2197,77 +2282,77 @@ inline void floatMemOp(Context* c, unsigned aSize, Assembler::Memory* a,
 
 void
 floatSqrtRR(Context* c, unsigned aSize, Assembler::Register* a,
-                     unsigned bSize UNUSED, Assembler::Register* b)
+            unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x51);
 }
 
 void
 floatSqrtMR(Context* c, unsigned aSize, Assembler::Memory* a,
-                     unsigned bSize UNUSED, Assembler::Register* b)
+            unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x51);
 }
 
 void
 floatAddRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+           unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x58);
 }
 
 void
 floatAddMR(Context* c, unsigned aSize, Assembler::Memory* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+           unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x58);
 }
 
 void
 floatSubtractRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+                unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x5c);
 }
 
 void
 floatSubtractMR(Context* c, unsigned aSize, Assembler::Memory* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+                unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x5c);
 }
 
 void
 floatMultiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+                unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x59);
 }
 
 void
 floatMultiplyMR(Context* c, unsigned aSize, Assembler::Memory* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+                unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x59);
 }
 
 void
 floatDivideRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+              unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x5e);
 }
 
 void
 floatDivideMR(Context* c, unsigned aSize, Assembler::Memory* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+              unsigned bSize UNUSED, Assembler::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x5e);
 }
 
 void
 float2FloatRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+              unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, supportsSSE2());
   floatRegOp(c, aSize, a, 4, b, 0x5a);
@@ -2275,7 +2360,7 @@ float2FloatRR(Context* c, unsigned aSize, Assembler::Register* a,
 
 void
 float2FloatMR(Context* c, unsigned aSize, Assembler::Memory* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+              unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, supportsSSE2());
   floatMemOp(c, aSize, a, 4, b, 0x5a);
@@ -2283,7 +2368,7 @@ float2FloatMR(Context* c, unsigned aSize, Assembler::Memory* a,
 
 void
 float2IntRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize, Assembler::Register* b)
+            unsigned bSize, Assembler::Register* b)
 {
   assert(c, !floatReg(b));
   floatRegOp(c, aSize, a, bSize, b, 0x2d);
@@ -2291,40 +2376,28 @@ float2IntRR(Context* c, unsigned aSize, Assembler::Register* a,
 
 void
 float2IntMR(Context* c, unsigned aSize, Assembler::Memory* a,
-      unsigned bSize, Assembler::Register* b)
+            unsigned bSize, Assembler::Register* b)
 {
   floatMemOp(c, aSize, a, bSize, b, 0x2d);
 }
 
 void
 int2FloatRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize, Assembler::Register* b)
+            unsigned bSize, Assembler::Register* b)
 {
   floatRegOp(c, bSize, a, aSize, b, 0x2a);
 }
 
 void
 int2FloatMR(Context* c, unsigned aSize, Assembler::Memory* a,
-      unsigned bSize, Assembler::Register* b)
+            unsigned bSize, Assembler::Register* b)
 {
   floatMemOp(c, bSize, a, aSize, b, 0x2a);
 }
 
 void
-floatCompareRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
-{
-  if (aSize == 8) {
-    opcode(c, 0x66);
-  }
-  maybeRex(c, 4, a, b);
-  opcode(c, 0x0f, 0x2e);
-  modrm(c, 0xc0, a, b);
-}
-
-void
 floatNegateRR(Context* c, unsigned aSize, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+              unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, floatReg(a) and floatReg(b));
   // unlike most of the other floating point code, this does NOT
@@ -2350,7 +2423,7 @@ floatNegateRR(Context* c, unsigned aSize, Assembler::Register* a,
 
 void
 floatAbsRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
-      unsigned bSize UNUSED, Assembler::Register* b)
+           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, floatReg(a) and floatReg(b));
   // unlike most of the other floating point code, this does NOT
@@ -2378,7 +2451,8 @@ absRR(Context* c, unsigned aSize, Assembler::Register* a,
       unsigned bSize UNUSED, Assembler::Register* b UNUSED)
 {
   assert(c, aSize == bSize and a->low == rax and b->low == rax);
-  Assembler::Register d(c->client->acquireTemporary(static_cast<uint64_t>(1) << rdx));
+  Assembler::Register d
+    (c->client->acquireTemporary(static_cast<uint64_t>(1) << rdx));
   maybeRex(c, aSize, a, b);
   opcode(c, 0x99);
   xorRR(c, aSize, &d, aSize, a);
@@ -2397,124 +2471,105 @@ populateTables(ArchitectureContext* c)
   OperationType* zo = c->operations;
   UnaryOperationType* uo = c->unaryOperations;
   BinaryOperationType* bo = c->binaryOperations;
+  BranchOperationType* bro = c->branchOperations;
 
   zo[Return] = return_;
   zo[LoadBarrier] = ignore;
   zo[StoreStoreBarrier] = ignore;
   zo[StoreLoadBarrier] = ignore;
 
-  uo[index(Call, C)] = CAST1(callC);
-  uo[index(Call, R)] = CAST1(callR);
-  uo[index(Call, M)] = CAST1(callM);
+  uo[index(c, Call, C)] = CAST1(callC);
+  uo[index(c, Call, R)] = CAST1(callR);
+  uo[index(c, Call, M)] = CAST1(callM);
 
-  uo[index(AlignedCall, C)] = CAST1(alignedCallC);
+  uo[index(c, AlignedCall, C)] = CAST1(alignedCallC);
 
-  uo[index(LongCall, C)] = CAST1(longCallC);
+  uo[index(c, LongCall, C)] = CAST1(longCallC);
 
-  uo[index(Jump, R)] = CAST1(jumpR);
-  uo[index(Jump, C)] = CAST1(jumpC);
-  uo[index(Jump, M)] = CAST1(jumpM);
+  uo[index(c, Jump, R)] = CAST1(jumpR);
+  uo[index(c, Jump, C)] = CAST1(jumpC);
+  uo[index(c, Jump, M)] = CAST1(jumpM);
 
-  uo[index(AlignedJump, C)] = CAST1(alignedJumpC);
+  uo[index(c, AlignedJump, C)] = CAST1(alignedJumpC);
 
-  uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
-  uo[index(JumpIfNotEqual, C)] = CAST1(jumpIfNotEqualC);
-  uo[index(JumpIfGreater, C)] = CAST1(jumpIfGreaterC);
-  uo[index(JumpIfGreaterOrEqual, C)] = CAST1(jumpIfGreaterOrEqualC);
-  uo[index(JumpIfLess, C)] = CAST1(jumpIfLessC);
-  uo[index(JumpIfLessOrEqual, C)] = CAST1(jumpIfLessOrEqualC);
+  uo[index(c, LongJump, C)] = CAST1(longJumpC);
 
-  uo[index(JumpIfFloatUnordered, C)] = CAST1(jumpIfFloatUnorderedC);
-  uo[index(JumpIfFloatEqual, C)] = CAST1(jumpIfEqualC);
-  uo[index(JumpIfFloatNotEqual, C)] = CAST1(jumpIfNotEqualC);
-  uo[index(JumpIfFloatGreater, C)] = CAST1(jumpIfFloatGreaterC);
-  uo[index(JumpIfFloatGreaterOrEqual, C)] = CAST1(jumpIfFloatGreaterOrEqualC);
-  uo[index(JumpIfFloatLess, C)] = CAST1(jumpIfFloatLessC);
-  uo[index(JumpIfFloatLessOrEqual, C)] = CAST1(jumpIfFloatLessOrEqualC);
+  bo[index(c, Negate, R, R)] = CAST2(negateRR);
 
-  uo[index(LongJump, C)] = CAST1(longJumpC);
+  bo[index(c, FloatNegate, R, R)] = CAST2(floatNegateRR);
 
-  bo[index(Negate, R, R)] = CAST2(negateRR);
+  bo[index(c, Move, R, R)] = CAST2(moveRR);
+  bo[index(c, Move, C, R)] = CAST2(moveCR);
+  bo[index(c, Move, M, R)] = CAST2(moveMR);
+  bo[index(c, Move, R, M)] = CAST2(moveRM);
+  bo[index(c, Move, C, M)] = CAST2(moveCM);
+  bo[index(c, Move, A, R)] = CAST2(moveAR);
 
-  bo[index(FloatNegate, R, R)] = CAST2(floatNegateRR);
+  bo[index(c, FloatSqrt, R, R)] = CAST2(floatSqrtRR);
+  bo[index(c, FloatSqrt, M, R)] = CAST2(floatSqrtMR);
 
-  bo[index(Move, R, R)] = CAST2(moveRR);
-  bo[index(Move, C, R)] = CAST2(moveCR);
-  bo[index(Move, M, R)] = CAST2(moveMR);
-  bo[index(Move, R, M)] = CAST2(moveRM);
-  bo[index(Move, C, M)] = CAST2(moveCM);
-  bo[index(Move, A, R)] = CAST2(moveAR);
+  bo[index(c, MoveZ, R, R)] = CAST2(moveZRR);
+  bo[index(c, MoveZ, M, R)] = CAST2(moveZMR);
 
-  bo[index(FloatSqrt, R, R)] = CAST2(floatSqrtRR);
-  bo[index(FloatSqrt, M, R)] = CAST2(floatSqrtMR);
+  bo[index(c, Add, R, R)] = CAST2(addRR);
+  bo[index(c, Add, C, R)] = CAST2(addCR);
 
-  bo[index(MoveZ, R, R)] = CAST2(moveZRR);
-  bo[index(MoveZ, M, R)] = CAST2(moveZMR);
+  bo[index(c, Subtract, C, R)] = CAST2(subtractCR);
+  bo[index(c, Subtract, R, R)] = CAST2(subtractRR);
 
-  bo[index(Compare, R, R)] = CAST2(compareRR);
-  bo[index(Compare, C, R)] = CAST2(compareCR);
-  bo[index(Compare, C, M)] = CAST2(compareCM);
-  bo[index(Compare, R, M)] = CAST2(compareRM);
+  bo[index(c, FloatAdd, R, R)] = CAST2(floatAddRR);
+  bo[index(c, FloatAdd, M, R)] = CAST2(floatAddMR);
 
-  bo[index(FloatCompare, R, R)] = CAST2(floatCompareRR);
+  bo[index(c, FloatSubtract, R, R)] = CAST2(floatSubtractRR);
+  bo[index(c, FloatSubtract, M, R)] = CAST2(floatSubtractMR);
 
-  bo[index(Add, R, R)] = CAST2(addRR);
-  bo[index(Add, C, R)] = CAST2(addCR);
+  bo[index(c, And, R, R)] = CAST2(andRR);
+  bo[index(c, And, C, R)] = CAST2(andCR);
 
-  bo[index(Subtract, C, R)] = CAST2(subtractCR);
-  bo[index(Subtract, R, R)] = CAST2(subtractRR);
+  bo[index(c, Or, R, R)] = CAST2(orRR);
+  bo[index(c, Or, C, R)] = CAST2(orCR);
 
-  bo[index(FloatAdd, R, R)] = CAST2(floatAddRR);
-  bo[index(FloatAdd, M, R)] = CAST2(floatAddMR);
+  bo[index(c, Xor, R, R)] = CAST2(xorRR);
+  bo[index(c, Xor, C, R)] = CAST2(xorCR);
 
-  bo[index(FloatSubtract, R, R)] = CAST2(floatSubtractRR);
-  bo[index(FloatSubtract, M, R)] = CAST2(floatSubtractMR);
+  bo[index(c, Multiply, R, R)] = CAST2(multiplyRR);
+  bo[index(c, Multiply, C, R)] = CAST2(multiplyCR);
 
-  bo[index(And, R, R)] = CAST2(andRR);
-  bo[index(And, C, R)] = CAST2(andCR);
+  bo[index(c, Divide, R, R)] = CAST2(divideRR);
 
-  bo[index(Or, R, R)] = CAST2(orRR);
-  bo[index(Or, C, R)] = CAST2(orCR);
+  bo[index(c, FloatMultiply, R, R)] = CAST2(floatMultiplyRR);
+  bo[index(c, FloatMultiply, M, R)] = CAST2(floatMultiplyMR);
 
-  bo[index(Xor, R, R)] = CAST2(xorRR);
-  bo[index(Xor, C, R)] = CAST2(xorCR);
+  bo[index(c, FloatDivide, R, R)] = CAST2(floatDivideRR);
+  bo[index(c, FloatDivide, M, R)] = CAST2(floatDivideMR);
 
-  bo[index(Multiply, R, R)] = CAST2(multiplyRR);
-  bo[index(Multiply, C, R)] = CAST2(multiplyCR);
+  bo[index(c, Remainder, R, R)] = CAST2(remainderRR);
 
-  bo[index(Divide, R, R)] = CAST2(divideRR);
+  bo[index(c, ShiftLeft, R, R)] = CAST2(shiftLeftRR);
+  bo[index(c, ShiftLeft, C, R)] = CAST2(shiftLeftCR);
 
-  bo[index(FloatMultiply, R, R)] = CAST2(floatMultiplyRR);
-  bo[index(FloatMultiply, M, R)] = CAST2(floatMultiplyMR);
+  bo[index(c, ShiftRight, R, R)] = CAST2(shiftRightRR);
+  bo[index(c, ShiftRight, C, R)] = CAST2(shiftRightCR);
 
-  bo[index(FloatDivide, R, R)] = CAST2(floatDivideRR);
-  bo[index(FloatDivide, M, R)] = CAST2(floatDivideMR);
+  bo[index(c, UnsignedShiftRight, R, R)] = CAST2(unsignedShiftRightRR);
+  bo[index(c, UnsignedShiftRight, C, R)] = CAST2(unsignedShiftRightCR);
 
-  bo[index(Remainder, R, R)] = CAST2(remainderRR);
+  bo[index(c, Float2Float, R, R)] = CAST2(float2FloatRR);
+  bo[index(c, Float2Float, M, R)] = CAST2(float2FloatMR);
 
-  bo[index(LongCompare, C, R)] = CAST2(longCompareCR);
-  bo[index(LongCompare, R, R)] = CAST2(longCompareRR);
+  bo[index(c, Float2Int, R, R)] = CAST2(float2IntRR);
+  bo[index(c, Float2Int, M, R)] = CAST2(float2IntMR);
 
-  bo[index(ShiftLeft, R, R)] = CAST2(shiftLeftRR);
-  bo[index(ShiftLeft, C, R)] = CAST2(shiftLeftCR);
+  bo[index(c, Int2Float, R, R)] = CAST2(int2FloatRR);
+  bo[index(c, Int2Float, M, R)] = CAST2(int2FloatMR);
 
-  bo[index(ShiftRight, R, R)] = CAST2(shiftRightRR);
-  bo[index(ShiftRight, C, R)] = CAST2(shiftRightCR);
+  bo[index(c, Abs, R, R)] = CAST2(absRR);
+  bo[index(c, FloatAbs, R, R)] = CAST2(floatAbsRR);
 
-  bo[index(UnsignedShiftRight, R, R)] = CAST2(unsignedShiftRightRR);
-  bo[index(UnsignedShiftRight, C, R)] = CAST2(unsignedShiftRightCR);
-
-  bo[index(Float2Float, R, R)] = CAST2(float2FloatRR);
-  bo[index(Float2Float, M, R)] = CAST2(float2FloatMR);
-
-  bo[index(Float2Int, R, R)] = CAST2(float2IntRR);
-  bo[index(Float2Int, M, R)] = CAST2(float2IntMR);
-
-  bo[index(Int2Float, R, R)] = CAST2(int2FloatRR);
-  bo[index(Int2Float, M, R)] = CAST2(int2FloatMR);
-
-  bo[index(Abs, R, R)] = CAST2(absRR);
-  bo[index(FloatAbs, R, R)] = CAST2(floatAbsRR);
+  bro[branchIndex(c, R, R)] = CAST_BRANCH(branchRR);
+  bro[branchIndex(c, C, R)] = CAST_BRANCH(branchCR);
+  bro[branchIndex(c, C, M)] = CAST_BRANCH(branchCM);
+  bro[branchIndex(c, R, M)] = CAST_BRANCH(branchRM);
 }
 class MyArchitecture: public Assembler::Architecture {
  public:
@@ -2713,11 +2768,8 @@ class MyArchitecture: public Assembler::Architecture {
     return 0;
   }
 
-  virtual bool alwaysCondensed(BinaryOperation op)
-  {
+  virtual bool alwaysCondensed(BinaryOperation op) {
     switch(op) {
-    case FloatCompare:
-    case Compare:
     case Float2Float:
     case Float2Int:
     case Int2Float:
@@ -2725,10 +2777,13 @@ class MyArchitecture: public Assembler::Architecture {
     case FloatNegate:
     case FloatSqrt:
       return false;
+
     case Negate:
     case Abs:
-    default:
       return true;
+
+    default:
+      abort(&c);
     }
   }
   
@@ -2807,18 +2862,6 @@ class MyArchitecture: public Assembler::Architecture {
     *thunk = false;
 
     switch (op) {
-    case Compare:
-      *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
-      *aRegisterMask = GeneralRegisterMask;
-      break;
-
-    case FloatCompare:
-      assert(&c, supportsSSE());
-      *aTypeMask = (1 << RegisterOperand);
-      *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-        | FloatRegisterMask;
-      break;
-
     case Negate:
       *aTypeMask = (1 << RegisterOperand);
       *aRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
@@ -2917,17 +2960,6 @@ class MyArchitecture: public Assembler::Architecture {
       | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     switch (op) {
-    case Compare:
-      *bTypeMask = (1 << RegisterOperand);
-      *bRegisterMask = GeneralRegisterMask;
-      break;
-
-    case FloatCompare:
-      *bTypeMask = (1 << RegisterOperand);
-      *bRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-        | FloatRegisterMask;
-      break;
-
     case Abs:
       *bTypeMask = (1 << RegisterOperand);
       *bRegisterMask = (static_cast<uint64_t>(1) << rax);
@@ -3083,7 +3115,6 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Remainder:
       if (BytesPerWord == 4 and aSize == 8) {
-        *bTypeMask = ~0;
         *thunk = true;
       } else {
         *aTypeMask = (1 << RegisterOperand);
@@ -3101,18 +3132,44 @@ class MyArchitecture: public Assembler::Architecture {
       *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
     } break;
 
+    case JumpIfFloatEqual:
+    case JumpIfFloatNotEqual:
+    case JumpIfFloatLess:
+    case JumpIfFloatGreater:
+    case JumpIfFloatLessOrEqual:
+    case JumpIfFloatGreaterOrEqual:
+    case JumpIfFloatLessOrUnordered:
+    case JumpIfFloatGreaterOrUnordered:
+    case JumpIfFloatLessOrEqualOrUnordered:
+    case JumpIfFloatGreaterOrEqualOrUnordered:
+      if (supportsSSE()) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+          | FloatRegisterMask;
+        *bTypeMask = *aTypeMask;
+        *bRegisterMask = *aRegisterMask;
+      } else {
+        *thunk = true;
+      }
+      break;
+
     default:
       break;
     }
   }
 
   virtual void planDestination
-  (TernaryOperation, unsigned, uint8_t, uint64_t, unsigned, uint8_t,
+  (TernaryOperation op, unsigned, uint8_t, uint64_t, unsigned, uint8_t,
    uint64_t bRegisterMask, unsigned, uint8_t* cTypeMask,
    uint64_t* cRegisterMask)
   {
-    *cTypeMask = (1 << RegisterOperand);
-    *cRegisterMask = bRegisterMask;
+    if (isBranch(op)) {
+      *cTypeMask = (1 << ConstantOperand);
+      *cRegisterMask = 0;
+    } else {
+      *cTypeMask = (1 << RegisterOperand);
+      *cRegisterMask = bRegisterMask;
+    }
   }
 
   virtual void acquire() {
@@ -3325,28 +3382,37 @@ class MyAssembler: public Assembler {
   virtual void apply(UnaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand)
   {
-    arch_->c.unaryOperations[index(op, aType)](&c, aSize, aOperand);
+    arch_->c.unaryOperations[index(&(arch_->c), op, aType)]
+      (&c, aSize, aOperand);
   }
 
   virtual void apply(BinaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType, Operand* bOperand)
   {
-    arch_->c.binaryOperations[index(op, aType, bType)]
+    arch_->c.binaryOperations[index(&(arch_->c), op, aType, bType)]
       (&c, aSize, aOperand, bSize, bOperand);
   }
 
   virtual void apply(TernaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType, Operand* bOperand,
-                     unsigned cSize UNUSED, OperandType cType UNUSED,
-                     Operand*)
+                     unsigned cSize, OperandType cType, Operand* cOperand)
   {
-    assert(&c, bSize == cSize);
-    assert(&c, bType == cType);
+    if (isBranch(op)) {
+      assert(&c, aSize == bSize);
+      assert(&c, cSize == BytesPerWord);
+      assert(&c, cType == ConstantOperand);
 
-    arch_->c.binaryOperations[index(op, aType, bType)]
-      (&c, aSize, aOperand, bSize, bOperand);
+      arch_->c.branchOperations[branchIndex(&(arch_->c), aType, bType)]
+        (&c, op, aSize, aOperand, bOperand, cOperand);
+    } else {
+      assert(&c, bSize == cSize);
+      assert(&c, bType == cType);
+
+      arch_->c.binaryOperations[index(&(arch_->c), op, aType, bType)]
+        (&c, aSize, aOperand, bSize, bOperand);
+    }
   }
 
   virtual void writeTo(uint8_t* dst) {

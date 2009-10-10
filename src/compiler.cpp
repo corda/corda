@@ -31,7 +31,10 @@ const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
 
 const unsigned StealRegisterReserveCount = 2;
-const unsigned ResolveRegisterReserveCount = 2;
+
+// this should be equal to the largest number of registers used by a
+// compare instruction:
+const unsigned ResolveRegisterReserveCount = (BytesPerWord == 8 ? 2 : 4);
 
 class Context;
 class Value;
@@ -3263,7 +3266,6 @@ grow(Context* c, Value* v)
   assert(c, v->next == v);
 
   Value* next = value(c, v->type);
-  fprintf(stderr, "grow %p to %p\n", v, next);
   v->next = next;
   next->next = v;
   next->index = 1;
@@ -3583,8 +3585,8 @@ class CombineEvent: public Event {
 
     //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
     apply(c, type,
-          firstSize, first->source, first->next->source),
-          secondSize, second->source, second->next->source),
+          firstSize, first->source, first->next->source,
+          secondSize, second->source, second->next->source,
           resultSize, low, high);
 
     thawSource(c, firstSize, first);
@@ -4004,7 +4006,7 @@ class TranslateEvent: public Event {
          ? getTarget(c, value->next, result->next, resultHighMask)
          : low);
 
-    apply(c, type, valueSize, value->source, value->next->source),
+    apply(c, type, valueSize, value->source, value->next->source,
           resultSize, low, high);
 
     for (Read* r = reads; r; r = r->eventNext) {
@@ -4189,7 +4191,8 @@ unordered(double a, double b)
 }
 
 bool
-shouldJump(TernaryOperation type, unsigned size, int64_t a, int64_t b)
+shouldJump(Context* c, TernaryOperation type, unsigned size, int64_t b,
+           int64_t a)
 {
   switch (type) {
   case JumpIfEqual:
@@ -4245,23 +4248,30 @@ shouldJump(TernaryOperation type, unsigned size, int64_t a, int64_t b)
       or unordered(asFloat(size, a), asFloat(size, b));
 
   default:
-    jump = false;
+    abort(c);
   }
 }
 
 class BranchEvent: public Event {
  public:
   BranchEvent(Context* c, TernaryOperation type, unsigned size,
-              Value* first, Value* second, Value* address, bool exit,
+              Value* first, Value* second, Value* address,
               const SiteMask& firstLowMask,
               const SiteMask& firstHighMask,
               const SiteMask& secondLowMask,
               const SiteMask& secondHighMask):
     Event(c), type(type), size(size), first(first), second(second),
-    address(address), exit(exit)
+    address(address)
   {
-    addReads(c, this, first, firstSize, firstLowMask, firstHighMask);
-    addReads(c, this, second, secondSize, secondLowMask, secondHighMask);
+    addReads(c, this, first, size, firstLowMask, firstHighMask);
+    addReads(c, this, second, size, secondLowMask, secondHighMask);
+
+    uint8_t typeMask;
+    uint64_t registerMask;
+    c->arch->planDestination(type, size, 0, 0, size, 0, 0, BytesPerWord,
+                             &typeMask, &registerMask);
+
+    addRead(c, this, address, SiteMask(typeMask, registerMask, AnyFrameIndex));
   }
 
   virtual const char* name() {
@@ -4274,15 +4284,14 @@ class BranchEvent: public Event {
 
     if (not unreachable(this)) {
       if (firstConstant and secondConstant) {
-        if (shouldJump(type, firstConstant->value->value(),
-                       secondConstant->value->value())
-            and reachable)
+        if (shouldJump(c, type, size, firstConstant->value->value(),
+                       secondConstant->value->value()))
         {
           apply(c, Jump, BytesPerWord, address->source, address->source);
         }      
       } else {
         apply(c, type, size, first->source, first->next->source,
-              size, second->source, second->next->sourcem
+              size, second->source, second->next->source,
               BytesPerWord, address->source, address->source);
       }
     }
@@ -4294,21 +4303,16 @@ class BranchEvent: public Event {
 
   virtual bool isBranch() { return true; }
 
-  virtual bool allExits() {
-    return type == Jump and (exit or unreachable(this));
-  }
-
-  UnaryOperation type;
+  TernaryOperation type;
   unsigned size;
   Value* first;
   Value* second;
   Value* address;
-  bool exit;
 };
 
 void
 appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
-             Value* second, Value* address, bool exit = false)
+             Value* second, Value* address)
 {
   bool thunk;
   uint8_t firstTypeMask;
@@ -4318,7 +4322,7 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
 
   c->arch->planSource(type, size, &firstTypeMask, &firstRegisterMask,
                       size, &secondTypeMask, &secondRegisterMask,
-                      resultSize, &thunk);
+                      BytesPerWord, &thunk);
 
   if (thunk) {
     Stack* oldStack = c->stack;
@@ -4329,20 +4333,21 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
-    Value* result = value(&c, ValueGeneral);
+    Value* result = value(c, ValueGeneral);
     appendCall
       (c, value
        (c, ValueGeneral, constantSite(c, c->client->getThunk(type, size, 4))),
-       0, 0, result, resultSize, argumentStack,
+       0, 0, result, 4, argumentStack,
        ceiling(size, BytesPerWord) * 2, 0);
 
-    appendBranch(c, JumpIfEqual, 4, value(c, ValueGeneral, constantSite(c, 0)),
+    appendBranch(c, JumpIfEqual, 4, value
+                 (c, ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
                  result, address);
   } else {
     append
       (c, new (c->zone->allocate(sizeof(BranchEvent)))
        BranchEvent
-       (c, type, size, first, second, address, exit,
+       (c, type, size, first, second, address,
         SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
         SiteMask(firstTypeMask, firstRegisterMask >> 32, AnyFrameIndex),
         SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex),
@@ -4350,12 +4355,51 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
   }
 }
 
+class JumpEvent: public Event {
+ public:
+  JumpEvent(Context* c, UnaryOperation type, Value* address, bool exit):
+    Event(c), type(type), address(address), exit(exit)
+  {
+    bool thunk;
+    uint8_t typeMask;
+    uint64_t registerMask;
+    c->arch->plan(type, BytesPerWord, &typeMask, &registerMask, &thunk);
+
+    assert(c, not thunk);
+
+    addRead(c, this, address, SiteMask(typeMask, registerMask, AnyFrameIndex));
+  }
+
+  virtual const char* name() {
+    return "JumpEvent";
+  }
+
+  virtual void compile(Context* c) {
+    if (not unreachable(this)) {
+      apply(c, type, BytesPerWord, address->source, address->source);
+    }
+
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
+  }
+
+  virtual bool isBranch() { return true; }
+
+  virtual bool allExits() {
+    return exit or unreachable(this);
+  }
+
+  UnaryOperation type;
+  Value* address;
+  bool exit;
+};
+
 void
-appendBranch(Context* c, UnaryOperation type, Value* address,
-             bool exit = false)
+appendJump(Context* c, UnaryOperation type, Value* address, bool exit = false)
 {
-  append(c, new (c->zone->allocate(sizeof(BranchEvent)))
-         BranchEvent(c, type, address, exit));
+  append(c, new (c->zone->allocate(sizeof(JumpEvent)))
+         JumpEvent(c, type, address, exit));
 }
 
 class BoundsCheckEvent: public Event {
@@ -4386,11 +4430,10 @@ class BoundsCheckEvent: public Event {
     } else {
       outOfBoundsPromise = codePromise(c, static_cast<Promise*>(0));
 
-      Site* zero = constantSite(c, resolved(c, 0));
-      Assembler::Constant outOfBoundsConstant(outOfBoundsPromise);
-      a->apply
-        (JumpIfLess, 4, zero, zero, 4, index->source, index->source,
-         BytesPerWord, ConstantOperand, &outOfBoundsConstant);
+      ConstantSite zero(resolved(c, 0));
+      ConstantSite oob(outOfBoundsPromise);
+      apply(c, JumpIfLess, 4, &zero, &zero, 4, index->source, index->source,
+            BytesPerWord, &oob, &oob);
     }
 
     assert(c, object->source->type(c) == RegisterOperand);
@@ -4398,9 +4441,9 @@ class BoundsCheckEvent: public Event {
                       lengthOffset, NoRegister, 1);
     length.acquired = true;
 
-    Assembler::Constant nextConstant(nextPromise);
-    a->apply(JumpIfGreater, 4, index->source, index->source, 4, &length,
-             &length, BytesPerWord, ConstantOperand, &nextConstant);
+    ConstantSite next(nextPromise);
+    apply(c, JumpIfGreater, 4, index->source, index->source, 4, &length,
+          &length, BytesPerWord, &next, &next);
 
     if (constant == 0) {
       outOfBoundsPromise->offset = a->offset();
@@ -6107,11 +6150,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual void jmp(Operand* address) {
-    appendBranch(&c, Jump, 0, 0, 0, static_cast<Value*>(address));
+    appendJump(&c, Jump, static_cast<Value*>(address));
   }
 
   virtual void exit(Operand* address) {
-    appendBranch(&c, Jump, 0, 0, 0, static_cast<Value*>(address), true);
+    appendJump(&c, Jump, static_cast<Value*>(address), true);
   }
 
   virtual Operand* add(unsigned size, Operand* a, Operand* b) {
