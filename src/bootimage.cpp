@@ -386,7 +386,7 @@ main(int ac, const char** av)
   System* s = makeSystem(0);
   Heap* h = makeHeap(s, 128 * 1024 * 1024);
   Finder* f = makeFinder(s, av[1], 0);
-  Processor* p = makeProcessor(s, h);
+  Processor* p = makeProcessor(s, h, false);
 
   BootImage image;
   const unsigned CodeCapacity = 32 * 1024 * 1024;

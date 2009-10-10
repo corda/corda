@@ -893,7 +893,7 @@ bool
 uniqueSite(Context* c, Value* v, Site* s)
 {
   SiteIterator it(c, v);
-  Site* p = it.next();
+  Site* p UNUSED = it.next();
   if (it.hasMore()) {
     // the site is not this word's only site, but if the site is
     // shared with the next word, it may be that word's only site
@@ -1784,7 +1784,7 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual unsigned registerMask(Context* c) {
+  virtual unsigned registerMask(Context* c UNUSED) {
     assert(c, number != NoRegister);
 
     return 1 << number;
@@ -4266,6 +4266,37 @@ shouldJump(Context* c, TernaryOperation type, unsigned size, int64_t b,
   }
 }
 
+TernaryOperation
+thunkBranch(Context* c, TernaryOperation type)
+{
+  switch (type) {
+  case JumpIfFloatEqual:
+    return JumpIfEqual;
+
+  case JumpIfFloatNotEqual:
+    return JumpIfNotEqual;
+
+  case JumpIfFloatLess:
+  case JumpIfFloatLessOrUnordered:
+    return JumpIfLess;
+
+  case JumpIfFloatGreater:
+  case JumpIfFloatGreaterOrUnordered:
+    return JumpIfGreater;
+
+  case JumpIfFloatLessOrEqual:
+  case JumpIfFloatLessOrEqualOrUnordered:
+    return JumpIfLessOrEqual;
+
+  case JumpIfFloatGreaterOrEqual:
+  case JumpIfFloatGreaterOrEqualOrUnordered:
+    return JumpIfGreaterOrEqual;
+
+  default:
+    abort(c);
+  }
+}
+
 class BranchEvent: public Event {
  public:
   BranchEvent(Context* c, TernaryOperation type, unsigned size,
@@ -4354,7 +4385,7 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
        0, 0, result, 4, argumentStack,
        ceiling(size, BytesPerWord) * 2, 0);
 
-    appendBranch(c, JumpIfEqual, 4, value
+    appendBranch(c, thunkBranch(c, type), 4, value
                  (c, ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
                  result, address);
   } else {

@@ -180,7 +180,7 @@ class Processor {
 };
 
 Processor*
-makeProcessor(System* system, Allocator* allocator);
+makeProcessor(System* system, Allocator* allocator, bool useNativeFeatures);
 
 } // namespace vm
 

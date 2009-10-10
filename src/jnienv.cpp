@@ -2155,7 +2155,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
   Finder* f = makeFinder(s, RUNTIME_ARRAY_BODY(classpathBuffer), bootLibrary);
-  Processor* p = makeProcessor(s, h);
+  Processor* p = makeProcessor(s, h, true);
 
   const char** properties = static_cast<const char**>
     (h->allocate(sizeof(const char*) * propertyCount));

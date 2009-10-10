@@ -3333,7 +3333,7 @@ class MyProcessor: public Processor {
 namespace vm {
 
 Processor*
-makeProcessor(System* system, Allocator* allocator)
+makeProcessor(System* system, Allocator* allocator, bool)
 {
   return new (allocator->allocate(sizeof(MyProcessor)))
     MyProcessor(system, allocator);

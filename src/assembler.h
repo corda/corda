@@ -428,7 +428,7 @@ class Assembler {
 };
 
 Assembler::Architecture*
-makeArchitecture(System* system);
+makeArchitecture(System* system, bool useNativeFeatures);
 
 Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,

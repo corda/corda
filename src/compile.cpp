@@ -92,7 +92,8 @@ class MyThread: public Thread {
     CallTrace* next;
   };
 
-  MyThread(Machine* m, object javaThread, MyThread* parent):
+  MyThread(Machine* m, object javaThread, MyThread* parent,
+           bool useNativeFeatures):
     Thread(m, javaThread, parent),
     ip(0),
     base(0),
@@ -106,7 +107,9 @@ class MyThread: public Thread {
     virtualCallIndex(0),
     trace(0),
     reference(0),
-    arch(parent ? parent->arch : makeArchitecture(m->system))
+    arch(parent
+         ? parent->arch
+         : makeArchitecture(m->system, useNativeFeatures))
   {
     arch->acquire();
   }
@@ -786,30 +789,33 @@ class Context {
         } else {
           return local::getThunk(t, negateDoubleThunk);
         }
+
       case Float2Float:
         if (size == 4 and resultSize == 8) {
           return local::getThunk(t, floatToDoubleThunk);
-        } else if(size == 8 and resultSize == 4) {
+        } else if (size == 8 and resultSize == 4) {
           return local::getThunk(t, doubleToFloatThunk);
         }
+
       case Float2Int:
         if (size == 4 and resultSize == 4) {
           return local::getThunk(t, floatToIntThunk);
-        } else if(size == 4 and resultSize == 8) {
+        } else if (size == 4 and resultSize == 8) {
           return local::getThunk(t, floatToLongThunk);
-        } else if(size == 8 and resultSize == 4) {
+        } else if (size == 8 and resultSize == 4) {
           return local::getThunk(t, doubleToIntThunk);
-        } else if(size == 8 and resultSize == 8) {
+        } else if (size == 8 and resultSize == 8) {
           return local::getThunk(t, doubleToLongThunk);
         }
+
       case Int2Float:
         if (size == 4 and resultSize == 4) {
           return local::getThunk(t, intToFloatThunk);
-        } else if(size == 4 and resultSize == 8) {
+        } else if (size == 4 and resultSize == 8) {
           return local::getThunk(t, intToDoubleThunk);
-        } else if(size == 8 and resultSize == 4) {
+        } else if (size == 8 and resultSize == 4) {
           return local::getThunk(t, longToFloatThunk);
-        } else if(size == 8 and resultSize == 8) {
+        } else if (size == 8 and resultSize == 8) {
           return local::getThunk(t, longToDoubleThunk);
         }
           
@@ -819,48 +825,71 @@ class Context {
       abort(t);
     }
 
-    virtual intptr_t getThunk(TernaryOperation op, unsigned size UNUSED,
-                              unsigned resultSize)
+    virtual intptr_t getThunk(TernaryOperation op, unsigned size, unsigned)
     {
-      switch (op) {
-      case Divide:
-        if (resultSize == 8) {
+      if (size == 8) {
+        switch (op) {
+        case Divide:
           return local::getThunk(t, divideLongThunk);
-        }
-        break;
 
-      case Remainder:
-        if (resultSize == 8) {
-          return local::getThunk(t, moduloLongThunk);
-        }
-        break;
-      
-      case FloatAdd:
-        if(resultSize == 4) {
-          return local::getThunk(t, addFloatThunk);
-        } else {
+        case Remainder:
+         return local::getThunk(t, moduloLongThunk);
+
+        case FloatAdd:
           return local::getThunk(t, addDoubleThunk);
-        }        
-      case FloatSubtract:
-        if(resultSize == 4) {
-          return local::getThunk(t, subtractFloatThunk);
-        } else {
-          return local::getThunk(t, subtractDoubleThunk);
-        }  
-      case FloatMultiply:
-        if(resultSize == 4) {
-          return local::getThunk(t, multiplyFloatThunk);
-        } else {
-          return local::getThunk(t, multiplyDoubleThunk);
-        }  
-      case FloatDivide:
-        if(resultSize == 4) {
-          return local::getThunk(t, divideFloatThunk);
-        } else {
-          return local::getThunk(t, divideDoubleThunk);
-        }  
 
-      default: break;
+        case FloatSubtract:
+          return local::getThunk(t, subtractDoubleThunk);
+
+        case FloatMultiply:
+          return local::getThunk(t, multiplyDoubleThunk);
+
+        case FloatDivide:
+          return local::getThunk(t, divideDoubleThunk);
+
+        case JumpIfFloatEqual:
+        case JumpIfFloatNotEqual:
+        case JumpIfFloatLess:
+        case JumpIfFloatGreater:
+        case JumpIfFloatLessOrEqual:
+        case JumpIfFloatGreaterOrUnordered:
+        case JumpIfFloatGreaterOrEqualOrUnordered:
+          return local::getThunk(t, compareDoublesGThunk);
+
+        case JumpIfFloatGreaterOrEqual:
+        case JumpIfFloatLessOrUnordered:
+        case JumpIfFloatLessOrEqualOrUnordered:
+          return local::getThunk(t, compareDoublesLThunk);
+
+        default: break;
+        }
+      } else if (size == 4) {
+        switch (op) {
+        case FloatAdd:
+          return local::getThunk(t, addFloatThunk);
+        case FloatSubtract:
+          return local::getThunk(t, subtractFloatThunk);
+        case FloatMultiply:
+          return local::getThunk(t, multiplyFloatThunk);
+        case FloatDivide:
+          return local::getThunk(t, divideFloatThunk);
+
+        case JumpIfFloatEqual:
+        case JumpIfFloatNotEqual:
+        case JumpIfFloatLess:
+        case JumpIfFloatGreater:
+        case JumpIfFloatLessOrEqual:
+        case JumpIfFloatGreaterOrUnordered:
+        case JumpIfFloatGreaterOrEqualOrUnordered:
+          return local::getThunk(t, compareFloatsGThunk);
+
+        case JumpIfFloatGreaterOrEqual:
+        case JumpIfFloatLessOrUnordered:
+        case JumpIfFloatLessOrEqualOrUnordered:
+          return local::getThunk(t, compareFloatsLThunk);
+
+        default: break;
+        }
       }
 
       abort(t);
@@ -6784,7 +6813,7 @@ processor(MyThread* t);
 
 class MyProcessor: public Processor {
  public:
-  MyProcessor(System* s, Allocator* allocator):
+  MyProcessor(System* s, Allocator* allocator, bool useNativeFeatures):
     s(s),
     allocator(allocator),
     defaultThunk(0),
@@ -6792,7 +6821,6 @@ class MyProcessor: public Processor {
     nativeThunk(0),
     aioobThunk(0),
     callTable(0),
-    callTableSize(0),
     methodTree(0),
     methodTreeSentinal(0),
     objectPools(0),
@@ -6801,15 +6829,19 @@ class MyProcessor: public Processor {
     receiveMethod(0),
     windMethod(0),
     rewindMethod(0),
+    bootImage(0),
     codeAllocator(s, 0, 0),
-    bootImage(0)
+    thunkSize(0),
+    callTableSize(0),
+    useNativeFeatures(useNativeFeatures)
   { }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
   {
     MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
-      MyThread(m, javaThread, static_cast<MyThread*>(parent));
+      MyThread(m, javaThread, static_cast<MyThread*>(parent),
+               useNativeFeatures);
     t->init();
 
     if (false) {
@@ -7275,9 +7307,7 @@ class MyProcessor: public Processor {
   uint8_t* nativeThunk;
   uint8_t* aioobThunk;
   uint8_t* thunkTable;
-  unsigned thunkSize;
   object callTable;
-  unsigned callTableSize;
   object methodTree;
   object methodTreeSentinal;
   object objectPools;
@@ -7286,9 +7316,12 @@ class MyProcessor: public Processor {
   object receiveMethod;
   object windMethod;
   object rewindMethod;
+  BootImage* bootImage;
   SegFaultHandler segFaultHandler;
   FixedAllocator codeAllocator;
-  BootImage* bootImage;
+  unsigned thunkSize;
+  unsigned callTableSize;
+  bool useNativeFeatures;
 };
 
 object
@@ -7485,7 +7518,7 @@ void
 fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
           uintptr_t* heap)
 {
-  Assembler::Architecture* arch = makeArchitecture(t->m->system);
+  Assembler::Architecture* arch = makeArchitecture(t->m->system, false);
   arch->acquire();
 
   for (unsigned word = 0; word < size; ++word) {
@@ -8092,10 +8125,10 @@ codeAllocator(MyThread* t)
 namespace vm {
 
 Processor*
-makeProcessor(System* system, Allocator* allocator)
+makeProcessor(System* system, Allocator* allocator, bool useNativeFeatures)
 {
   return new (allocator->allocate(sizeof(local::MyProcessor)))
-    local::MyProcessor(system, allocator);
+    local::MyProcessor(system, allocator, useNativeFeatures);
 }
 
 } // namespace vm
