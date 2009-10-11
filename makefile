@@ -129,6 +129,8 @@ shared = -shared
 
 native-path = echo
 
+binaryToElf = $(native-build)/binaryToElf
+
 ifeq ($(arch),i386)
 	object-arch = i386
 	object-format = elf32-i386
@@ -150,11 +152,14 @@ ifeq ($(platform),darwin)
 	rdynamic =
 	strip-all = -S -x
 	binaryToMacho = $(native-build)/binaryToMacho
+	binaryToElf =
 	so-suffix = .jnilib
 	shared = -dynamiclib
 endif
 
 ifeq ($(platform),windows)
+	binaryToElf =
+
 	inc = "$(root)/win32/include"
 	lib = "$(root)/win32/lib"
 
@@ -626,11 +631,21 @@ $(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 $(bootimage-bin): $(bootimage-generator)
 	$(<) $(classpath-build) $(@)
 
-$(bootimage-object): $(bootimage-bin) $(binaryToMacho)
+$(binaryToElf): $(src)/binaryToElf.cpp
+	$(cxx) $(^) $(call output,$(@))
+
+# we would always use objcopy here except (1) it's not supported on
+# Darwin, and (2) it won't let us specify per-section alignment
+# requirements
+$(bootimage-object): $(bootimage-bin) $(binaryToMacho) $(binaryToElf)
 	@echo "creating $(@)"
 ifeq ($(platform),darwin)
 	$(binaryToMacho) $(asm) $(<) __BOOT __boot \
 		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
+else
+ifeq ($(platform),linux)
+	$(binaryToElf) $(<) .boot \
+		_binary_bootimage_bin_start _binary_bootimage_bin_end > $(@)
 else
 	(wd=$$(pwd) && \
 	 cd $(native-build) && \
@@ -638,6 +653,7 @@ else
 		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp" && \
 	 $(objcopy) --set-section-flags .boot=alloc,load,code "$${wd}/$(@).tmp" \
 		"$${wd}/$(@)")
+endif
 endif
 
 $(gnu-object-dep): $(gnu-libraries)
