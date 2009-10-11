@@ -1579,6 +1579,7 @@ interpret(Thread* t)
                    and (fieldCode(t, field) == DoubleField
                         or fieldCode(t, field) == LongField)))
       {
+        PROTECT(t, field);
         acquire(t, field);        
       }
 
@@ -2560,6 +2561,9 @@ interpret(Thread* t)
     object field = resolveField(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
+    assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+    PROTECT(t, field);
+
     if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
       if (BytesPerWord == 4
           and (fieldCode(t, field) == DoubleField
@@ -2570,8 +2574,6 @@ interpret(Thread* t)
         storeStoreMemoryBarrier();
       }
     }
-
-    assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
     switch (fieldCode(t, field)) {
     case ByteField:
@@ -2650,6 +2652,10 @@ interpret(Thread* t)
     object field = resolveField(t, frameMethod(t, frame), index - 1);
     if (UNLIKELY(exception)) goto throw_;
 
+    assert(t, fieldFlags(t, field) & ACC_STATIC);
+
+    PROTECT(t, field);
+
     if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
       if (BytesPerWord == 4
           and (fieldCode(t, field) == DoubleField
@@ -2660,10 +2666,6 @@ interpret(Thread* t)
         storeStoreMemoryBarrier();
       }
     }
-
-    assert(t, fieldFlags(t, field) & ACC_STATIC);
-
-    PROTECT(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
       
@@ -3092,8 +3094,8 @@ class MyProcessor: public Processor {
              uint16_t offset,
              object name,
              object spec,
-             object class_,
              object addendum,
+             object class_,
              object code)
   {
     return vm::makeMethod
@@ -3116,8 +3118,8 @@ class MyProcessor: public Processor {
             object virtualTable,
             object fieldTable,
             object methodTable,
-            object staticTable,
             object addendum,
+            object staticTable,
             object loader,
             unsigned vtableLength UNUSED)
   {
