@@ -153,6 +153,17 @@ init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
 }
 
 inline bool
+einProgress(int error)
+{
+#ifdef PLATFORM_WINDOWS
+  return error == WSAEINPROGRESS
+    or error == WSAEWOULDBLOCK;
+#else
+  return error == EINPROGRESS;
+#endif
+}
+
+inline bool
 einProgress()
 {
 #ifdef PLATFORM_WINDOWS
@@ -381,7 +392,11 @@ Java_java_nio_channels_SocketChannel_natFinishConnect(JNIEnv *e,
   socklen_t size = sizeof(int);
   int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
                      reinterpret_cast<char*>(&error), &size);
-  if (r != 0 or size != sizeof(int) or error != 0) {
+  if (r != 0 or size != sizeof(int)) {
+    throwIOException(e);
+  } else if (einProgress(error)) {
+    return false;
+  } else if (error != 0) {
     throwIOException(e);
   }
   return true;
