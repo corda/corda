@@ -254,7 +254,6 @@ ifdef msvc
 	strip = :
 endif
 
-cpp-program = $(patsubst $(2)/%.cpp,$(3)/%,$(1))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
