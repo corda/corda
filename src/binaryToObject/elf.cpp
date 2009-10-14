@@ -12,38 +12,172 @@
 #include "stdio.h"
 #include "string.h"
 
-#include "sys/stat.h"
-#include "sys/mman.h"
-#include "fcntl.h"
-#include "unistd.h"
+#define EI_NIDENT 16
 
-#include "elf.h"
+#define EI_MAG0 0
+#define EI_MAG1 1
+#define EI_MAG2 2
+#define EI_MAG3 3
+#define EI_CLASS 4
+#define EI_DATA 5
+#define EI_VERSION 6
+#define EI_OSABI 7
+#define EI_ABIVERSION 8
 
-#ifdef __x86_64__
+#define ELFMAG0 0x7f
+#define ELFMAG1 'E'
+#define ELFMAG2 'L'
+#define ELFMAG3 'F'
+
+#define ELFCLASS64 2
+#define ELFCLASS32 1
+
+#define EV_CURRENT 1
+
+#define ELFDATA2LSB 1
+
+#define ELFOSABI_SYSV 0
+
+#define ET_REL 1
+
+#define EM_386 3
+#define EM_X86_64 62
+
+#define SHT_PROGBITS 1
+#define SHT_SYMTAB 2
+#define SHT_STRTAB 3
+
+#define SHF_WRITE (1 << 0)
+#define SHF_ALLOC (1 << 1)
+#define SHF_EXECINSTR (1 << 2)
+
+#define STB_GLOBAL 1
+
+#define STT_NOTYPE 0
+
+#define STV_DEFAULT 0
+
+#define ELF64_ST_INFO(bind, type) (((bind) << 4) + ((type) & 0xf))
+#define ELF32_ST_INFO(bind, type) ELF64_ST_INFO((bind), (type))
+
+#if (BITS_PER_WORD == 64)
 #  define FileHeader Elf64_Ehdr
 #  define SectionHeader Elf64_Shdr
 #  define Symbol Elf64_Sym
 #  define Class ELFCLASS64
-#  define Machine EM_X86_64
 #  define SYMBOL_INFO ELF64_ST_INFO
-#else // not __x86_64__
+#elif (BITS_PER_WORD == 32)
 #  define FileHeader Elf32_Ehdr
 #  define SectionHeader Elf32_Shdr
 #  define Symbol Elf32_Sym
 #  define Class ELFCLASS32
-#  define Machine EM_386
 #  define SYMBOL_INFO ELF32_ST_INFO
-#endif // not __x86_64__
+#else
+#  error
+#endif
 
 #define Data ELFDATA2LSB
 #define OSABI ELFOSABI_SYSV
 
 namespace {
 
+typedef uint16_t Elf64_Half;
+typedef uint32_t Elf64_Word;
+typedef uint64_t Elf64_Addr;
+typedef uint64_t Elf64_Xword;
+typedef uint16_t Elf64_Section;
+typedef uint64_t Elf64_Off;
+
+struct Elf64_Ehdr {
+  unsigned char e_ident[EI_NIDENT];
+  Elf64_Half e_type;
+  Elf64_Half e_machine;
+  Elf64_Word e_version;
+  Elf64_Addr e_entry;
+  Elf64_Off e_phoff;
+  Elf64_Off e_shoff;
+  Elf64_Word e_flags;
+  Elf64_Half e_ehsize;
+  Elf64_Half e_phentsize;
+  Elf64_Half e_phnum;
+  Elf64_Half e_shentsize;
+  Elf64_Half e_shnum;
+  Elf64_Half e_shstrndx;
+};
+
+struct Elf64_Shdr {
+  Elf64_Word sh_name;
+  Elf64_Word sh_type;
+  Elf64_Xword sh_flags;
+  Elf64_Addr sh_addr;
+  Elf64_Off sh_offset;
+  Elf64_Xword sh_size;
+  Elf64_Word sh_link;
+  Elf64_Word sh_info;
+  Elf64_Xword sh_addralign;
+  Elf64_Xword sh_entsize;
+};
+
+struct Elf64_Sym {
+  Elf64_Word st_name;
+  unsigned char st_info;
+  unsigned char st_other;
+  Elf64_Section st_shndx;
+  Elf64_Addr st_value;
+  Elf64_Xword st_size;
+};
+
+typedef uint16_t Elf32_Half;
+typedef uint32_t Elf32_Word;
+typedef uint32_t Elf32_Addr;
+typedef uint64_t Elf32_Xword;
+typedef uint16_t Elf32_Section;
+typedef uint32_t Elf32_Off;
+
+struct Elf32_Ehdr {
+  unsigned char	e_ident[EI_NIDENT];
+  Elf32_Half e_type;
+  Elf32_Half e_machine;
+  Elf32_Word e_version;
+  Elf32_Addr e_entry;
+  Elf32_Off e_phoff;
+  Elf32_Off e_shoff;
+  Elf32_Word e_flags;
+  Elf32_Half e_ehsize;
+  Elf32_Half e_phentsize;
+  Elf32_Half e_phnum;
+  Elf32_Half e_shentsize;
+  Elf32_Half e_shnum;
+  Elf32_Half e_shstrndx;
+};
+
+struct Elf32_Shdr {
+  Elf32_Word sh_name;
+  Elf32_Word sh_type;
+  Elf32_Word sh_flags;
+  Elf32_Addr sh_addr;
+  Elf32_Off sh_offset;
+  Elf32_Word sh_size;
+  Elf32_Word sh_link;
+  Elf32_Word sh_info;
+  Elf32_Word sh_addralign;
+  Elf32_Word sh_entsize;
+};
+
+struct Elf32_Sym {
+  Elf32_Word st_name;
+  Elf32_Addr st_value;
+  Elf32_Word st_size;
+  unsigned char st_info;
+  unsigned char st_other;
+  Elf32_Section st_shndx;
+};
+
 void
-writeObject(FILE* out, const uint8_t* data, unsigned size,
-            const char* sectionName, const char* startName,
-            const char* endName)
+writeObject(const uint8_t* data, unsigned size, FILE* out,
+            const char* startName, const char* endName,
+            const char* sectionName, unsigned sectionFlags,
+            unsigned alignment, int machine)
 {
   const unsigned sectionCount = 5;
   const unsigned symbolCount = 2;
@@ -92,7 +226,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
   fileHeader.e_ident[EI_OSABI] = OSABI;
   fileHeader.e_ident[EI_ABIVERSION] = 0;
   fileHeader.e_type = ET_REL;
-  fileHeader.e_machine = Machine;
+  fileHeader.e_machine = machine;
   fileHeader.e_version = EV_CURRENT;
   fileHeader.e_entry = 0;
   fileHeader.e_phoff = 0;
@@ -111,14 +245,14 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
   SectionHeader bodySection;
   bodySection.sh_name = sectionNameOffset;
   bodySection.sh_type = SHT_PROGBITS;
-  bodySection.sh_flags = SHF_WRITE | SHF_ALLOC | SHF_EXECINSTR;
+  bodySection.sh_flags = sectionFlags;
   bodySection.sh_addr = 0;
   bodySection.sh_offset = sizeof(FileHeader)
     + (sizeof(SectionHeader) * sectionCount);
   bodySection.sh_size = size;
   bodySection.sh_link = 0;
   bodySection.sh_info = 0;
-  bodySection.sh_addralign = sizeof(void*);
+  bodySection.sh_addralign = alignment;
   bodySection.sh_entsize = 0;
 
   SectionHeader sectionStringTableSection;
@@ -157,7 +291,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
   symbolTableSection.sh_size = sizeof(Symbol) * symbolCount;
   symbolTableSection.sh_link = stringTableSectionNumber;
   symbolTableSection.sh_info = 0;
-  symbolTableSection.sh_addralign = sizeof(void*);
+  symbolTableSection.sh_addralign = BITS_PER_WORD / 8;
   symbolTableSection.sh_entsize = sizeof(Symbol);
 
   Symbol startSymbol;
@@ -170,7 +304,7 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
 
   Symbol endSymbol;
   endSymbol.st_name = endNameOffset;
-  endSymbol.st_value = 0;
+  endSymbol.st_value = size;
   endSymbol.st_size = 0;
   endSymbol.st_info = SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE);
   endSymbol.st_other = STV_DEFAULT;
@@ -183,9 +317,9 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
          out);
   fwrite(&stringTableSection, 1, sizeof(stringTableSection), out);
   fwrite(&symbolTableSection, 1, sizeof(symbolTableSection), out);
-  
+
   fwrite(data, 1, size, out);
-  
+
   fputc(0, out);
   fwrite(sectionStringTableName, 1, sectionStringTableNameLength, out);
   fwrite(stringTableName, 1, stringTableNameLength, out);
@@ -202,39 +336,46 @@ writeObject(FILE* out, const uint8_t* data, unsigned size,
 
 } // namespace
 
-int
-main(int argc, const char** argv)
+#define MACRO_MAKE_NAME(a, b, c) a##b##c
+#define MAKE_NAME(a, b, c) MACRO_MAKE_NAME(a, b, c)
+
+namespace binaryToObject {
+
+bool
+MAKE_NAME(writeElf, BITS_PER_WORD, Object)
+  (uint8_t* data, unsigned size, FILE* out, const char* startName,
+   const char* endName, const char* architecture, unsigned alignment,
+   bool writable, bool executable)
 {
-  if (argc != 5) {
-    fprintf(stderr,
-            "usage: %s <input file> <section name> <start symbol name> "
-            "<end symbol name>\n",
-            argv[0]);
-    return -1;
-  }
-
-  uint8_t* data = 0;
-  unsigned size;
-  int fd = open(argv[1], O_RDONLY);
-  if (fd != -1) {
-    struct stat s;
-    int r = fstat(fd, &s);
-    if (r != -1) {
-      data = static_cast<uint8_t*>
-        (mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
-      size = s.st_size;
-    }
-    close(fd);
-  }
-
-  if (data) {
-    writeObject(stdout, data, size, argv[2], argv[3], argv[4]);
-
-    munmap(data, size);
-
-    return 0;
+  int machine;
+  if (strcmp(architecture, "x86_64") == 0) {
+    machine = EM_X86_64;
+  } else if (strcmp(architecture, "i386") == 0) {
+    machine = EM_386;
   } else {
-    perror(argv[0]);
-    return -1;
+    fprintf(stderr, "unsupported architecture: %s\n", architecture);
+    return false;
   }
+
+  const char* sectionName;
+  unsigned sectionFlags = SHF_ALLOC;
+  if (writable and executable) {
+    sectionName = ".rwx";
+    sectionFlags |= SHF_WRITE | SHF_EXECINSTR;
+  } else if (writable) {
+    sectionName = ".data";
+    sectionFlags |= SHF_WRITE;
+  } else if (executable) {
+    sectionName = ".text";
+    sectionFlags |= SHF_EXECINSTR;
+  } else {
+    sectionName = ".rodata";
+  }
+
+  writeObject(data, size, out, startName, endName, sectionName, sectionFlags,
+              alignment, machine);
+
+  return true;
 }
+
+} // namespace binaryToObject

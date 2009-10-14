@@ -64,7 +64,6 @@ Build requirements include:
   * GNU make 3.80 or later
   * GCC 3.4 or later
   * JDK 1.5 or later
-  * GNU binutils 2.17 or later (not needed on OS X)
   * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later
 
@@ -196,29 +195,8 @@ EOF
 
 Step 3: Make an object file out of the jar.
 
-for linux-i386:
-
- $ objcopy -I binary boot.jar -O elf32-i386 -B i386 boot-jar.o
-
-for linux-x86_64:
-
- $ objcopy -I binary boot.jar -O elf64-x86-64 -B i386:x86-64 boot-jar.o
-
-for windows-i386:
-
- $ objcopy -I binary boot.jar -O pe-i386 -B i386 boot-jar.o
-
-for darwin-i386: (objcopy is not currently supported on this platform,
-so we use the binaryToMacho utility instead)
-
- $ ../build/darwin-i386/binaryToMacho x86 boot.jar \
-     __TEXT __text __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
-
-for darwin-powerpc:
-
- $ ../build/darwin-i386/binaryToMacho powerpc boot.jar \
-     __TEXT __text __binary_boot_jar_start __binary_boot_jar_end > boot-jar.o
-
+ $ ../build/${platform}-${arch}/binaryToObject boot.jar boot-jar.o \
+     _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
 
 Step 4: Write a driver which starts the VM and runs the desired main
 method.  Note the bootJar function, which will be called by the VM to
@@ -412,21 +390,11 @@ Step 6: Build the boot image.
 
 Step 7: Make an object file out of the boot image.
 
-for linux-i386:
 
- $ objcopy --rename-section=.data=.boot -I binary bootimage.bin \
-     -O elf32-i386 -B i386 bootimage.tmp
- $ objcopy --set-section-flags .boot=alloc,load,code bootimage.tmp \
-     bootimage.o
-
-for darwin-i386:
-
- $ ../build/darwin-i386/binaryToMacho x86 bootimage.bin \
-     __BOOT __boot __binary_bootimage_bin_start __binary_bootimage_bin_end \
-     > bootimage.o
-
-for other platforms: See the previous example for
-architecture-specific parameters.
+ $ ../build/${platform}-${arch}/binaryToObject \
+     bootimage.bin bootimage-bin.o \
+     _binary_bootimage_bin_start _binary_bootimage_bin_end \
+     ${platform} ${arch} 8 writable executable
 
 Step 8: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the

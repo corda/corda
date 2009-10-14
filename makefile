@@ -82,7 +82,6 @@ cc = $(build-cc)
 ar = ar
 ranlib = ranlib
 dlltool = dlltool
-objcopy = objcopy
 vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
@@ -118,8 +117,6 @@ lflags = $(common-lflags) -lpthread -ldl
 system = posix
 asm = x86
 
-object-arch = i386:x86-64
-object-format = elf64-x86-64
 pointer-size = 8
 
 so-prefix = lib
@@ -129,17 +126,11 @@ shared = -shared
 
 native-path = echo
 
-binaryToElf = $(native-build)/binaryToElf
-
 ifeq ($(arch),i386)
-	object-arch = i386
-	object-format = elf32-i386
 	pointer-size = 4
 endif
 ifeq ($(arch),powerpc)
 	asm = powerpc
-	object-arch = powerpc
-	object-format = elf32-powerpc
 	pointer-size = 4
 endif
 
@@ -151,20 +142,15 @@ ifeq ($(platform),darwin)
 	endif
 	rdynamic =
 	strip-all = -S -x
-	binaryToMacho = $(native-build)/binaryToMacho
-	binaryToElf =
 	so-suffix = .jnilib
 	shared = -dynamiclib
 endif
 
 ifeq ($(platform),windows)
-	binaryToElf =
-
 	inc = "$(root)/win32/include"
 	lib = "$(root)/win32/lib"
 
 	system = windows
-	object-format = pe-i386
 
 	so-prefix =
 	so-suffix = .dll
@@ -179,7 +165,6 @@ ifeq ($(platform),windows)
 		dlltool = i586-mingw32msvc-dlltool
 		ar = i586-mingw32msvc-ar
 		ranlib = i586-mingw32msvc-ranlib
-		objcopy = i586-mingw32msvc-objcopy
 		strip = i586-mingw32msvc-strip
 	else
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
@@ -199,12 +184,9 @@ ifeq ($(platform),windows)
 		dlltool = x86_64-pc-mingw32-dlltool
 		ar = x86_64-pc-mingw32-ar
 		ranlib = x86_64-pc-mingw32-ranlib
-		objcopy = x86_64-pc-mingw32-objcopy
 		strip = x86_64-pc-mingw32-strip
 		inc = "$(root)/win64/include"
 		lib = "$(root)/win64/lib"
-		pointer-size = 8
-		object-format = pe-x86-64
 	endif
 endif
 
@@ -272,6 +254,7 @@ ifdef msvc
 	strip = :
 endif
 
+cpp-program = $(patsubst $(2)/%.cpp,$(3)/%,$(1))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
@@ -389,6 +372,15 @@ generator-sources = $(src)/type-generator.cpp
 generator-objects = \
 	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
 generator = $(native-build)/generator
+
+converter-objects = \
+	$(native-build)/binaryToObject-main.o \
+	$(native-build)/binaryToObject-elf64.o \
+	$(native-build)/binaryToObject-elf32.o \
+	$(native-build)/binaryToObject-mach-o64.o \
+	$(native-build)/binaryToObject-mach-o32.o \
+	$(native-build)/binaryToObject-pe.o
+converter = $(native-build)/binaryToObject
 
 static-library = $(native-build)/lib$(name).a
 executable = $(native-build)/$(name)${exe-suffix}
@@ -597,20 +589,31 @@ $(build)/classpath.jar: $(classpath-dep)
 	 cd $(classpath-build) && \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
 
-$(binaryToMacho): $(src)/binaryToMacho.cpp
-	$(cxx) $(^) $(call output,$(@))
+$(native-build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
+	$(build-cxx) -c $(^) -o $(@)
 
-$(classpath-object): $(build)/classpath.jar $(binaryToMacho)
+$(native-build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
+	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
+
+$(native-build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
+	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
+
+$(native-build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
+	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
+
+$(native-build)/binaryToObject-mach-o32.o: $(src)/binaryToObject/mach-o.cpp
+	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
+
+$(native-build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
+	$(build-cxx) -c $(^) -o $(@)
+
+$(converter): $(converter-objects)
+	$(build-cxx) $(^) -o $(@)
+
+$(classpath-object): $(build)/classpath.jar $(converter)
 	@echo "creating $(@)"
-ifeq ($(platform),darwin)
-	$(binaryToMacho) $(asm) $(build)/classpath.jar __TEXT __text \
-		__binary_classpath_jar_start __binary_classpath_jar_end > $(@)
-else
-	(wd=$$(pwd) && \
-	 cd $(build) && \
-	 $(objcopy) -I binary classpath.jar \
-		 -O $(object-format) -B $(object-arch) "$${wd}/$(@)")
-endif
+	$(converter) $(<) $(@) _binary_classpath_jar_start \
+		_binary_classpath_jar_end $(platform) $(arch)
 
 $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
@@ -631,30 +634,11 @@ $(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 $(bootimage-bin): $(bootimage-generator)
 	$(<) $(classpath-build) $(@)
 
-$(binaryToElf): $(src)/binaryToElf.cpp
-	$(cxx) $(^) $(call output,$(@))
-
-# we would always use objcopy here except (1) it's not supported on
-# Darwin, and (2) it won't let us specify per-section alignment
-# requirements
-$(bootimage-object): $(bootimage-bin) $(binaryToMacho) $(binaryToElf)
+$(bootimage-object): $(bootimage-bin) $(converter)
 	@echo "creating $(@)"
-ifeq ($(platform),darwin)
-	$(binaryToMacho) $(asm) $(<) __BOOT __boot \
-		__binary_bootimage_bin_start __binary_bootimage_bin_end > $(@)
-else
-ifeq ($(platform),linux)
-	$(binaryToElf) $(<) .boot \
-		_binary_bootimage_bin_start _binary_bootimage_bin_end > $(@)
-else
-	(wd=$$(pwd) && \
-	 cd $(native-build) && \
-	 $(objcopy) --rename-section=.data=.boot -I binary bootimage.bin \
-		-O $(object-format) -B $(object-arch) "$${wd}/$(@).tmp" && \
-	 $(objcopy) --set-section-flags .boot=alloc,load,code "$${wd}/$(@).tmp" \
-		"$${wd}/$(@)")
-endif
-endif
+	$(converter) $(<) $(@) _binary_bootimage_bin_start \
+		_binary_bootimage_bin_end $(platform) $(arch) $(pointer-size) \
+		writable executable
 
 $(gnu-object-dep): $(gnu-libraries)
 	@mkdir -p $(build)/gnu-objects
