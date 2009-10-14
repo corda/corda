@@ -192,7 +192,6 @@ EOF
  $ javac -bootclasspath boot.jar Hello.java
  $ jar u0f boot.jar Hello.class
 
-
 Step 3: Make an object file out of the jar.
 
  $ ../build/${platform}-${arch}/binaryToObject boot.jar boot-jar.o \
@@ -287,7 +286,6 @@ on Mac OS X:
 on Windows:
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/win32 \
      -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
-
 
 Step 5: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
@@ -389,7 +387,6 @@ Step 6: Build the boot image.
  $ ../build/linux-i386-bootimage/bootimage-generator stage2 bootimage.bin
 
 Step 7: Make an object file out of the boot image.
-
 
  $ ../build/${platform}-${arch}/binaryToObject \
      bootimage.bin bootimage-bin.o \
