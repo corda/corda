@@ -418,12 +418,12 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 #ifdef __APPLE__
       unsigned size = 32;
       char buffer[size];
-      long minorVersion, majorVersion;
+      int32_t minorVersion, majorVersion;
       
       Gestalt(gestaltSystemVersionMajor, &majorVersion);
       Gestalt(gestaltSystemVersionMinor, &minorVersion);
       
-      snprintf(buffer, size, "%ld.%ld", majorVersion, minorVersion);
+      snprintf(buffer, size, "%d.%d", majorVersion, minorVersion);
       r = e->NewStringUTF(buffer);
 #else
       struct utsname system_id; 

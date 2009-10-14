@@ -291,7 +291,14 @@ LOCAL(float):
    jne    LOCAL(exit)
    
 LOCAL(copy):
+#ifdef __APPLE__
+   // as of OS X 10.6, Apple is still using an assembler that doesn't
+   // understand movq SSE,GPR, but movd does the same thing, despite
+   // the name
+   movd   %xmm0,%rax
+#else
    movq   %xmm0,%rax
+#endif
 
 LOCAL(exit):
    movq   %rbp,%rsp

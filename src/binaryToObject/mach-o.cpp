@@ -12,10 +12,12 @@
 #include "stdio.h"
 #include "string.h"
 
+#define MH_MAGIC_64 0xfeedfacf
 #define MH_MAGIC 0xfeedface
 
 #define MH_OBJECT 1
 
+#define LC_SEGMENT_64 0x19
 #define LC_SEGMENT 1
 #define LC_SYMTAB 2
 
@@ -35,13 +37,19 @@
 #define CPU_SUBTYPE_POWERPC_ALL 0
 
 #if (BITS_PER_WORD == 64)
+#  define Magic MH_MAGIC_64
+#  define Segment LC_SEGMENT_64
 #  define FileHeader mach_header_64
 #  define SegmentCommand segment_command_64
 #  define Section section_64
+#  define NList struct nlist_64
 #elif (BITS_PER_WORD == 32)
+#  define Magic MH_MAGIC
+#  define Segment LC_SEGMENT
 #  define FileHeader mach_header
 #  define SegmentCommand segment_command
 #  define Section section
+#  define NList struct nlist
 #else
 #  error
 #endif
@@ -90,6 +98,16 @@ struct section_64 {
   uint32_t reserved1;
   uint32_t reserved2;
   uint32_t reserved3;
+};
+
+struct nlist_64 {
+  union {
+    uint32_t  n_strx;
+  } n_un;
+  uint8_t n_type;
+  uint8_t n_sect;
+  uint16_t n_desc;
+  uint64_t n_value;
 };
 
 struct mach_header {
@@ -173,7 +191,7 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   unsigned endNameLength = strlen(endName) + 1;
 
   FileHeader header = {
-    MH_MAGIC, // magic
+    Magic, // magic
     cpuType,
     cpuSubType,
     MH_OBJECT, // filetype,
@@ -185,7 +203,7 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   };
 
   SegmentCommand segment = {
-    LC_SEGMENT, // cmd
+    Segment, // cmd
     sizeof(SegmentCommand) + sizeof(Section), // cmdsize
     "", // segname
     0, // vmaddr
@@ -237,11 +255,11 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
     + sizeof(Section)
     + sizeof(symtab_command)
     + pad(size)
-    + (sizeof(struct nlist) * 2), // stroff
+    + (sizeof(NList) * 2), // stroff
     1 + startNameLength + endNameLength, // strsize
   };
 
-  struct nlist symbolList[] = {
+  NList symbolList[] = {
     {
       1, // n_un
       N_SECT | N_EXT, // n_type
@@ -284,7 +302,7 @@ bool
 MAKE_NAME(writeMachO, BITS_PER_WORD, Object)
   (uint8_t* data, unsigned size, FILE* out, const char* startName,
    const char* endName, const char* architecture, unsigned alignment,
-   bool, bool executable)
+   bool writable, bool)
 {
   cpu_type_t cpuType;
   cpu_subtype_t cpuSubType;
@@ -304,7 +322,7 @@ MAKE_NAME(writeMachO, BITS_PER_WORD, Object)
 
   const char* segmentName;
   const char* sectionName;
-  if (executable) {
+  if (writable) {
     segmentName = "__RWX";
     sectionName = "__rwx";
   } else {

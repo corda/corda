@@ -2336,8 +2336,8 @@ wait(Thread* t, object o, int64_t milliseconds)
   System::Monitor* m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
-    fprintf(stderr, "thread %p waits %"LLD" millis on %p for %x\n",
-            t, milliseconds, m, hash);
+    fprintf(stderr, "thread %p waits %d millis on %p for %x\n",
+            t, static_cast<int>(milliseconds), m, hash);
   }
 
   if (m and m->owner() == t->systemThread) {

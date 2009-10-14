@@ -1650,14 +1650,14 @@ collect(Context* c)
     c->lastCollectionTime = now;
 
     fprintf(stderr,
-            " - collect: %4"LLD"ms; "
-            "total: %4"LLD"ms; "
-            "run: %4"LLD"ms; "
-            "total: %4"LLD"ms\n",
-            collection,
-            c->totalCollectionTime,
-            run,
-            c->totalTime - c->totalCollectionTime);
+            " - collect: %4dms; "
+            "total: %4dms; "
+            "run: %4dms; "
+            "total: %4dms\n",
+            static_cast<int>(collection),
+            static_cast<int>(c->totalCollectionTime),
+            static_cast<int>(run),
+            static_cast<int>(c->totalTime - c->totalCollectionTime));
 
     fprintf(stderr,
             " -             gen1: %8d/%8d bytes\n",

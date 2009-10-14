@@ -56,10 +56,24 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 
 #elif defined ARCH_x86_64
 
-#  define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
-#  define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
-#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
-#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
+#  ifdef __APPLE__
+#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__rip)
+#      define BASE_REGISTER(context) (context->uc_mcontext->__ss.__rbp)
+#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__rsp)
+#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__rbx)
+#    else
+#      define IP_REGISTER(context) (context->uc_mcontext->ss.rip)
+#      define BASE_REGISTER(context) (context->uc_mcontext->ss.rbp)
+#      define STACK_REGISTER(context) (context->uc_mcontext->ss.rsp)
+#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.rbx)
+#    endif
+#  else
+#    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
+#    define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
+#    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
+#    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
+#  endif
 
 extern "C" uint64_t
 #  ifdef PLATFORM_WINDOWS
@@ -81,7 +95,7 @@ dynamicCall(void* function, uint64_t* arguments, UNUSED uint8_t* argumentTypes,
 }
 #  else
 inline uint64_t
-dynamicCall(void* function, uint64_t* arguments, uint8_t* argumentTypes,
+dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned, unsigned returnType)
 {
   const unsigned GprCount = 6;

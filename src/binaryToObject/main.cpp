@@ -170,7 +170,7 @@ main(int argc, const char** argv)
 
       fclose(out);
     } else {
-      fprintf(stderr, "unable to open %d\n", argv[2]);
+      fprintf(stderr, "unable to open %s\n", argv[2]);
     }
 
     munmap(data, size);

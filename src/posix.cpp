@@ -11,6 +11,7 @@
 #ifdef __APPLE__
 #  include "CoreFoundation/CoreFoundation.h"
 #  undef assert
+#  define _XOPEN_SOURCE
 #endif
 
 #include "sys/mman.h"
@@ -51,22 +52,26 @@ class MutexResource {
   pthread_mutex_t* m;
 };
 
+const int InvalidSignal = -1;
 const int VisitSignal = SIGUSR1;
-#ifdef __APPLE__
-const int SegFaultSignal = SIGBUS;
-#else
 const int SegFaultSignal = SIGSEGV;
+#ifdef __APPLE__
+const int AltSegFaultSignal = SIGBUS;
+#else
+const int AltSegFaultSignal = InvalidSignal;
 #endif
 const int InterruptSignal = SIGUSR2;
 
 const unsigned VisitSignalIndex = 0;
 const unsigned SegFaultSignalIndex = 1;
-const unsigned InterruptSignalIndex = 2;
+const unsigned AltSegFaultSignalIndex = 2;
+const unsigned InterruptSignalIndex = 3;
 
 class MySystem;
 MySystem* system;
 
-const int signals[] = { VisitSignal, SegFaultSignal, InterruptSignal };
+const int signals[] = { VisitSignal, SegFaultSignal, AltSegFaultSignal,
+                        InterruptSignal };
 
 void
 handleSignal(int signal, siginfo_t* info, void* context);
@@ -553,13 +558,8 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-#ifdef __x86_64__
-    const unsigned Extra = MAP_32BIT;
-#else
-    const unsigned Extra = 0;
-#endif
     void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ
-                   | PROT_WRITE, MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
+                   | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
 
     if (p == MAP_FAILED) {
       return 0;
@@ -607,7 +607,12 @@ class MySystem: public System {
   }
 
   virtual Status handleSegFault(SignalHandler* handler) {
-    return registerHandler(handler, SegFaultSignalIndex);
+    Status s = registerHandler(handler, SegFaultSignalIndex);
+    if (s == 0 and AltSegFaultSignal != InvalidSignal) {
+      return registerHandler(handler, AltSegFaultSignalIndex);
+    } else {
+      return s;
+    }
   }
 
   virtual Status visit(System::Thread* st, System::Thread* sTarget,
@@ -814,8 +819,13 @@ handleSignal(int signal, siginfo_t* info, void* context)
     system->visitLock->notifyAll(t);
   } break;
 
-  case SegFaultSignal: {
-    index = SegFaultSignalIndex;
+  case SegFaultSignal:
+  case AltSegFaultSignal: {
+    if (signal == SegFaultSignal) {
+      index = SegFaultSignalIndex;
+    } else {
+      index = AltSegFaultSignalIndex;
+    }
 
     bool jump = system->handlers[index]->handleSignal
       (&ip, &base, &stack, &thread);
@@ -829,7 +839,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       sigset_t set;
 
       sigemptyset(&set);
-      sigaddset(&set, SegFaultSignal);
+      sigaddset(&set, signal);
       sigprocmask(SIG_UNBLOCK, &set, 0);
 
       vmJump(ip, base, stack, thread, 0, 0);
