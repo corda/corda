@@ -138,7 +138,7 @@ ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	lflags = $(common-lflags) -ldl -framework CoreFoundation -framework CoreServices
 	ifeq ($(bootimage),true)
-		bootimage-lflags = -Wl,-segprot,__BOOT,rwx,rwx
+		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
 	endif
 	rdynamic =
 	strip-all = -S -x
