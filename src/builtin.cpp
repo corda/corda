@@ -170,14 +170,14 @@ Avian_java_lang_Object_clone
 
 extern "C" JNIEXPORT void JNICALL
 Avian_avian_SystemClassLoader_acquireClassLock
-(Thread* t, object)
+(Thread* t, object, uintptr_t*)
 {
   acquire(t, t->m->classLock);
 }
 
 extern "C" JNIEXPORT void JNICALL
 Avian_avian_SystemClassLoader_releaseClassLock
-(Thread* t, object)
+(Thread* t, object, uintptr_t*)
 {
   release(t, t->m->classLock);
 }
