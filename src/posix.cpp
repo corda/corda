@@ -52,26 +52,27 @@ class MutexResource {
   pthread_mutex_t* m;
 };
 
-const int InvalidSignal = -1;
 const int VisitSignal = SIGUSR1;
+const unsigned VisitSignalIndex = 0;
 const int SegFaultSignal = SIGSEGV;
+const unsigned SegFaultSignalIndex = 1;
+const int InterruptSignal = SIGUSR2;
+const unsigned InterruptSignalIndex = 2;
 #ifdef __APPLE__
 const int AltSegFaultSignal = SIGBUS;
-#else
-const int AltSegFaultSignal = InvalidSignal;
+const unsigned AltSegFaultSignalIndex = 3;
 #endif
-const int InterruptSignal = SIGUSR2;
 
-const unsigned VisitSignalIndex = 0;
-const unsigned SegFaultSignalIndex = 1;
-const unsigned AltSegFaultSignalIndex = 2;
-const unsigned InterruptSignalIndex = 3;
+const int signals[] = { VisitSignal,
+                        SegFaultSignal,
+                        InterruptSignal
+#ifdef __APPLE__
+                        , AltSegFaultSignal
+#endif
+};
 
 class MySystem;
 MySystem* system;
-
-const int signals[] = { VisitSignal, SegFaultSignal, AltSegFaultSignal,
-                        InterruptSignal };
 
 void
 handleSignal(int signal, siginfo_t* info, void* context);
@@ -558,8 +559,16 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ
-                   | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+#if (! defined __APPLE__) && (defined __x86_64__)
+    // map to the lower 32 bits of memory when possible so as to avoid
+    // expensive relative jumps
+    const unsigned Extra = MAP_32BIT;
+#else
+    const unsigned Extra = 0;
+#endif
+
+    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
 
     if (p == MAP_FAILED) {
       return 0;
@@ -608,11 +617,12 @@ class MySystem: public System {
 
   virtual Status handleSegFault(SignalHandler* handler) {
     Status s = registerHandler(handler, SegFaultSignalIndex);
-    if (s == 0 and AltSegFaultSignal != InvalidSignal) {
+#ifdef __APPLE__
+    if (s == 0) {
       return registerHandler(handler, AltSegFaultSignalIndex);
-    } else {
-      return s;
     }
+#endif
+    return s;
   }
 
   virtual Status visit(System::Thread* st, System::Thread* sTarget,
@@ -820,31 +830,35 @@ handleSignal(int signal, siginfo_t* info, void* context)
   } break;
 
   case SegFaultSignal:
-  case AltSegFaultSignal: {
+#ifdef __APPLE__
+  case AltSegFaultSignal:
     if (signal == SegFaultSignal) {
       index = SegFaultSignalIndex;
     } else {
       index = AltSegFaultSignalIndex;
     }
+#else
+    index = SegFaultSignalIndex;
+#endif
+    {
+      bool jump = system->handlers[index]->handleSignal
+        (&ip, &base, &stack, &thread);
 
-    bool jump = system->handlers[index]->handleSignal
-      (&ip, &base, &stack, &thread);
+      if (jump) {
+        // I'd like to use setcontext here (and get rid of the
+        // sigprocmask call), but it doesn't work on my Linux x86_64
+        // system, and I can't tell from the documentation if it's even
+        // supposed to work.
 
-    if (jump) {
-      // I'd like to use setcontext here (and get rid of the
-      // sigprocmask call), but it doesn't work on my Linux x86_64
-      // system, and I can't tell from the documentation if it's even
-      // supposed to work.
+        sigset_t set;
 
-      sigset_t set;
+        sigemptyset(&set);
+        sigaddset(&set, signal);
+        sigprocmask(SIG_UNBLOCK, &set, 0);
 
-      sigemptyset(&set);
-      sigaddset(&set, signal);
-      sigprocmask(SIG_UNBLOCK, &set, 0);
-
-      vmJump(ip, base, stack, thread, 0, 0);
-    }
-  } break;
+        vmJump(ip, base, stack, thread, 0, 0);
+      }
+    } break;
 
   case InterruptSignal: {
     index = InterruptSignalIndex;
