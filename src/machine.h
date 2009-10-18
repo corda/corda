@@ -2531,23 +2531,35 @@ makeSingletonOfSize(Thread* t, unsigned count)
 }
 
 inline void
-singletonMarkBit(Thread* t, object singleton, unsigned start, unsigned index)
+singletonSetBit(Thread* t, object singleton, unsigned start, unsigned index)
 {
-  uintptr_t& val = singletonValue(t, singleton, start + (index / BitsPerWord));
-  val |= static_cast<uintptr_t>(1) << (index % BitsPerWord);
+  singletonValue(t, singleton, start + (index / BitsPerWord))
+    |= static_cast<uintptr_t>(1) << (index % BitsPerWord);
 }
 
 inline bool
-singletonGetBit(Thread* t, object singleton, unsigned start, unsigned index)
+singletonBit(Thread* t, object singleton, unsigned start, unsigned index)
 {
-  uintptr_t& val = singletonValue(t, singleton, start + (index / BitsPerWord));
-  return (val & static_cast<uintptr_t>(1) << (index % BitsPerWord)) != 0;
+  return (singletonValue(t, singleton, start + (index / BitsPerWord))
+          & (static_cast<uintptr_t>(1) << (index % BitsPerWord))) != 0;
 }
 
-inline bool
-singletonIsFloat(Thread* t, object singleton, unsigned index)
+inline unsigned
+poolMaskSize(unsigned count)
 {
-  return singletonGetBit(t, singleton, singletonLength(t, singleton) - 2 * singletonMaskSize(t, singleton), index);
+  return ceiling(count, BitsPerWord);
+}
+
+inline unsigned
+poolMaskSize(Thread* t, object pool)
+{
+  return ceiling(singletonCount(t, pool), BitsPerWord + 1);
+}
+
+inline unsigned
+poolSize(Thread* t, object pool)
+{
+  return singletonCount(t, pool) - poolMaskSize(t, pool);
 }
 
 inline object

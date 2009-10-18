@@ -4166,7 +4166,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         frame->pushInt
           (c->constant
            (singletonValue(t, pool, index - 1),
-            singletonIsFloat(t, pool, index - 1)
+            singletonBit(t, pool, poolSize(t, pool), index - 1)
             ? Compiler::FloatType : Compiler::IntegerType));
       }
     } break;
@@ -4180,7 +4180,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
       frame->pushLong
         (c->constant
-         (v, singletonIsFloat(t, pool, index - 1)
+         (v, singletonBit(t, pool, poolSize(t, pool), index - 1)
           ? Compiler::FloatType : Compiler::IntegerType));
     } break;
 
