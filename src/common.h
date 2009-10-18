@@ -260,6 +260,18 @@ pad(unsigned n)
   return pad(n, BytesPerWord);
 }
 
+inline uintptr_t
+padWord(uintptr_t n, uintptr_t alignment)
+{
+  return (n + (alignment - 1)) & ~(alignment - 1);
+}
+
+inline uintptr_t
+padWord(uintptr_t n)
+{
+  return padWord(n, BytesPerWord);
+}
+
 inline unsigned
 ceiling(unsigned n, unsigned d)
 {

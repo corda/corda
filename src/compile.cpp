@@ -7694,7 +7694,7 @@ boot(MyThread* t, BootImage* image)
   unsigned* callTable = stringTable + image->stringCount;
 
   uintptr_t* heapMap = reinterpret_cast<uintptr_t*>
-    (pad(reinterpret_cast<uintptr_t>(callTable + (image->callCount * 2))));
+    (padWord(reinterpret_cast<uintptr_t>(callTable + (image->callCount * 2))));
   unsigned heapMapSizeInWords = ceiling
     (heapMapSize(image->heapSize), BytesPerWord);
   uintptr_t* heap = heapMap + heapMapSizeInWords;
