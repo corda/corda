@@ -36,6 +36,7 @@ class Compiler {
   static const unsigned Aligned  = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
   static const unsigned TailJump = 1 << 2;
+  static const unsigned LongJumpOrCall = 1 << 3;
 
   enum OperandType {
     ObjectType,

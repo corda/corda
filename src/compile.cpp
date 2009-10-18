@@ -617,6 +617,7 @@ class TraceElement: public TraceHandler {
  public:
   static const unsigned VirtualCall = 1 << 0;
   static const unsigned TailCall    = 1 << 1;
+  static const unsigned LongCall    = 1 << 2;
 
   TraceElement(Context* context, object target, unsigned flags,
                TraceElement* next):
@@ -1877,10 +1878,16 @@ uintptr_t
 nativeThunk(MyThread* t);
 
 uintptr_t
+bootNativeThunk(MyThread* t);
+
+uintptr_t
 aioobThunk(MyThread* t);
 
 uintptr_t
 virtualThunk(MyThread* t, unsigned index);
+
+bool
+unresolved(MyThread* t, uintptr_t methodAddress);
 
 uintptr_t
 methodAddress(Thread* t, object method)
@@ -1912,7 +1919,7 @@ findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
   if (instance) {
     object target = findInterfaceMethod(t, method, objectClass(t, instance));
 
-    if (methodAddress(t, target) == defaultThunk(t)) {
+    if (unresolved(t, methodAddress(t, target))) {
       PROTECT(t, target);
 
       compile(t, codeAllocator(t), 0, target);
@@ -2478,24 +2485,51 @@ operandTypeForFieldCode(Thread* t, unsigned code)
   }
 }
 
+bool
+useLongJump(MyThread* t, uintptr_t target)
+{
+  uintptr_t reach = t->arch->maximumImmediateJump();
+  FixedAllocator* a = codeAllocator(t);
+  uintptr_t start = reinterpret_cast<uintptr_t>(a->base);
+  uintptr_t end = reinterpret_cast<uintptr_t>(a->base) + a->capacity;
+  assert(t, end - start < reach);
+
+  return (target > end && (target - start) > reach)
+    or (target < start && (end - target) > reach);
+}
+
 Compiler::Operand*
 compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
                     bool useThunk, unsigned rSize, Promise* addressPromise)
 {
   Compiler* c = frame->c;
 
-  unsigned flags = (tailCall ? Compiler::TailJump : 0);
+  unsigned flags = (TailCalls and tailCall ? Compiler::TailJump : 0);
+  unsigned traceFlags;
 
-  if (useThunk or (tailCall and (methodFlags(t, target) & ACC_NATIVE))) {
+  if (addressPromise == 0 and useLongJump(t, methodAddress(t, target))) {
+    flags |= Compiler::LongJumpOrCall;
+    traceFlags = TraceElement::LongCall;
+  } else {
+    traceFlags = 0;
+  }
+
+  if (useThunk
+      or (TailCalls and tailCall and (methodFlags(t, target) & ACC_NATIVE)))
+  {
+    flags |= Compiler::Aligned;
+
     if (TailCalls and tailCall) {
-      TraceElement* trace = frame->trace(target, TraceElement::TailCall);
+      traceFlags |= TraceElement::TailCall;
+
+      TraceElement* trace = frame->trace(target, traceFlags);
       Compiler::Operand* returnAddress = c->promiseConstant
         (new (frame->context->zone.allocate(sizeof(TraceElementPromise)))
          TraceElementPromise(t->m->system, trace), Compiler::AddressType);
 
       Compiler::Operand* result = c->stackCall
         (returnAddress,
-         flags | Compiler::Aligned,
+         flags,
          trace,
          rSize,
          operandTypeForFieldCode(t, methodReturnCode(t, target)),
@@ -2506,18 +2540,18 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
          (c->register_(t->arch->thread()), Compiler::AddressType,
           difference(&(t->tailAddress), t)));
 
-      if (methodFlags(t, target) & ACC_NATIVE) {
-        c->exit(c->constant(nativeThunk(t), Compiler::AddressType));
-      } else {
-        c->exit(c->constant(defaultThunk(t), Compiler::AddressType));
-      }
+      c->exit
+        (c->constant
+         ((methodFlags(t, target) & ACC_NATIVE)
+          ? nativeThunk(t) : defaultThunk(t),
+          Compiler::AddressType));
 
       return result;
     } else {
       return c->stackCall
         (c->constant(defaultThunk(t), Compiler::AddressType),
-         flags | Compiler::Aligned,
-         frame->trace(target, 0),
+         flags,
+         frame->trace(target, traceFlags),
          rSize,
          operandTypeForFieldCode(t, methodReturnCode(t, target)),
          methodParameterFootprint(t, target));
@@ -2567,7 +2601,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
         result = compileDirectInvoke
           (t, frame, target, tailCall, true, rSize, 0);
       }
-    } else if (methodAddress(t, target) == defaultThunk(t)
+    } else if (unresolved(t, methodAddress(t, target))
                or classNeedsInit(t, methodClass(t, target)))
     {
       result = compileDirectInvoke
@@ -5607,10 +5641,9 @@ compile(MyThread* t, Allocator* allocator, Context* context)
 }
 
 void
-updateCall(MyThread* t, UnaryOperation op, bool assertAlignment,
-           void* returnAddress, void* target)
+updateCall(MyThread* t, UnaryOperation op, void* returnAddress, void* target)
 {
-  t->arch->updateCall(op, assertAlignment, returnAddress, target);
+  t->arch->updateCall(op, returnAddress, target);
 }
 
 void*
@@ -5633,13 +5666,32 @@ compileMethod2(MyThread* t, void* ip)
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
-    void* address = reinterpret_cast<void*>(methodAddress(t, target));
+    uintptr_t address;
+    if ((methodFlags(t, target) & ACC_NATIVE)
+        and useLongJump(t, reinterpret_cast<uintptr_t>(ip)))
+    {
+      address = bootNativeThunk(t);
+    } else {
+      address = methodAddress(t, target);
+    }
     uint8_t* updateIp = static_cast<uint8_t*>(ip);
-    
-    updateCall(t, (callNodeFlags(t, node) & TraceElement::TailCall)
-               ? Jump : Call, true, updateIp, address);
 
-    return address;
+    UnaryOperation op;
+    if (callNodeFlags(t, node) & TraceElement::LongCall) {
+      if (callNodeFlags(t, node) & TraceElement::TailCall) {
+        op = AlignedLongJump;
+      } else {
+        op = AlignedLongCall;
+      }
+    } else if (callNodeFlags(t, node) & TraceElement::TailCall) {
+      op = AlignedJump;
+    } else {
+      op = AlignedCall;
+    }
+    
+    updateCall(t, op, updateIp, reinterpret_cast<void*>(address));
+
+    return reinterpret_cast<void*>(address);
   }
 }
 
@@ -5730,7 +5782,7 @@ resolveNative(MyThread* t, object method)
   initClass(t, methodClass(t, method));
 
   if (LIKELY(t->exception == 0)
-      and methodCompiled(t, method) == defaultThunk(t))
+      and unresolved(t, methodCompiled(t, method)))
   {
     void* function = resolveNativeMethod(t, method);
     if (UNLIKELY(function == 0)) {
@@ -6817,8 +6869,10 @@ class MyProcessor: public Processor {
     s(s),
     allocator(allocator),
     defaultThunk(0),
+    bootDefaultThunk(0),
     defaultVirtualThunk(0),
     nativeThunk(0),
+    bootNativeThunk(0),
     aioobThunk(0),
     callTable(0),
     methodTree(0),
@@ -7243,9 +7297,9 @@ class MyProcessor: public Processor {
       methodTree = methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
       set(t, methodTree, TreeNodeLeft, methodTreeSentinal);
       set(t, methodTree, TreeNodeRight, methodTreeSentinal);
-
-      local::compileThunks(static_cast<MyThread*>(t), &codeAllocator, this);
     }
+
+    local::compileThunks(static_cast<MyThread*>(t), &codeAllocator, this);
 
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success
@@ -7303,8 +7357,10 @@ class MyProcessor: public Processor {
   System* s;
   Allocator* allocator;
   uint8_t* defaultThunk;
+  uint8_t* bootDefaultThunk;
   uint8_t* defaultVirtualThunk;
   uint8_t* nativeThunk;
+  uint8_t* bootNativeThunk;
   uint8_t* aioobThunk;
   uint8_t* thunkTable;
   object callTable;
@@ -7340,8 +7396,7 @@ findCallNode(MyThread* t, void* address)
   object table = p->callTable;
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
-  unsigned index = static_cast<uintptr_t>(key) 
-    & (arrayLength(t, table) - 1);
+  unsigned index = static_cast<uintptr_t>(key) & (arrayLength(t, table) - 1);
 
   for (object n = arrayBody(t, table, index);
        n; n = callNodeNext(t, n))
@@ -7592,32 +7647,23 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
 {
   MyProcessor* p = processor(t);
   
-  p->defaultThunk = code + image->defaultThunk;
+  p->bootDefaultThunk = code + image->defaultThunk;
+  p->bootNativeThunk = code + image->nativeThunk;
 
-  updateCall(t, LongCall, false, code + image->compileMethodCall,
+  updateCall(t, LongCall, code + image->compileMethodCall,
              voidPointer(local::compileMethod));
 
-  p->defaultVirtualThunk = code + image->defaultVirtualThunk;
-
-  updateCall(t, LongCall, false, code + image->compileVirtualMethodCall,
+  updateCall(t, LongCall, code + image->compileVirtualMethodCall,
              voidPointer(local::compileVirtualMethod));
 
-  p->nativeThunk = code + image->nativeThunk;
-
-  updateCall(t, LongCall, false, code + image->invokeNativeCall,
+  updateCall(t, LongCall, code + image->invokeNativeCall,
              voidPointer(invokeNative));
 
-  p->aioobThunk = code + image->aioobThunk;
-
-  updateCall(t, LongCall, false,
-             code + image->throwArrayIndexOutOfBoundsCall,
+  updateCall(t, LongCall, code + image->throwArrayIndexOutOfBoundsCall,
              voidPointer(throwArrayIndexOutOfBounds));
 
-  p->thunkTable = code + image->thunkTable;
-  p->thunkSize = image->thunkSize;
-
 #define THUNK(s)                                                        \
-  updateCall(t, LongJump, false, code + image->s##Call, voidPointer(s));
+  updateCall(t, LongJump, code + image->s##Call, voidPointer(s));
 
 #include "thunks.cpp"
 
@@ -7958,6 +8004,12 @@ defaultThunk(MyThread* t)
 }
 
 uintptr_t
+bootDefaultThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->bootDefaultThunk);
+}
+
+uintptr_t
 defaultVirtualThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>(processor(t)->defaultVirtualThunk);
@@ -7970,9 +8022,22 @@ nativeThunk(MyThread* t)
 }
 
 uintptr_t
+bootNativeThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->bootNativeThunk);
+}
+
+uintptr_t
 aioobThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>(processor(t)->aioobThunk);
+}
+
+bool
+unresolved(MyThread* t, uintptr_t methodAddress)
+{
+  return methodAddress == defaultThunk(t)
+    or methodAddress == bootDefaultThunk(t);
 }
 
 uintptr_t

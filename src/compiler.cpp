@@ -2957,7 +2957,13 @@ class CallEvent: public Event {
     UnaryOperation op;
 
     if (TailCalls and (flags & Compiler::TailJump)) {
-      if (flags & Compiler::Aligned) {
+      if (flags & Compiler::LongJumpOrCall) {
+        if (flags & Compiler::Aligned) {
+          op = AlignedLongJump;
+        } else {
+          op = LongJump;
+        }
+      } else if (flags & Compiler::Aligned) {
         op = AlignedJump;
       } else {
         op = Jump;
@@ -2993,6 +2999,12 @@ class CallEvent: public Event {
         - static_cast<int>(c->arch->argumentFootprint(c->parameterFootprint));
 
       c->assembler->popFrameForTailCall(c->alignedFrameSize, offset, ras, fps);
+    } else if (flags & Compiler::LongJumpOrCall) {
+      if (flags & Compiler::Aligned) {
+        op = AlignedLongCall;
+      } else {
+        op = LongCall;
+      }
     } else if (flags & Compiler::Aligned) {
       op = AlignedCall;
     } else {

@@ -67,6 +67,8 @@ const unsigned FloatRegisterMask
 
 const unsigned FrameHeaderSize = 2;
 
+const int LongJumpRegister = r10;
+
 const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 
@@ -410,7 +412,12 @@ appendImmediateTask(Context* c, Promise* promise, Promise* offset,
 
 class AlignmentPadding {
  public:
-  AlignmentPadding(Context* c): offset(c->code.length()), next(0) {
+  AlignmentPadding(Context* c, unsigned instructionOffset, unsigned alignment):
+    offset(c->code.length()),
+    instructionOffset(instructionOffset),
+    alignment(alignment),
+    next(0)
+  {
     if (c->lastBlock->firstPadding) {
       c->lastBlock->lastPadding->next = this;
     } else {
@@ -420,6 +427,8 @@ class AlignmentPadding {
   }
 
   unsigned offset;
+  unsigned instructionOffset;
+  unsigned alignment;
   AlignmentPadding* next;
 };
 
@@ -432,7 +441,7 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
     unsigned index = 0;
     for (; p; p = p->next) {
       index = p->offset - offset;
-      while ((start + index + padding + 1) % 4) {
+      while ((start + index + padding + p->instructionOffset) % p->alignment) {
         ++ padding;
       }
       
@@ -448,7 +457,10 @@ detectFeature(unsigned ecx, unsigned edx);
 bool
 useSSE(ArchitectureContext* c)
 {
-  if (c->useNativeFeatures) {
+  if (BytesPerWord == 8) {
+    // amd64 implies SSE2 support
+    return true;
+  } else if (c->useNativeFeatures) {
     static int supported = -1;
     if (supported == -1) {
       supported = detectFeature(0, 0x2000000) // SSE 1
@@ -703,7 +715,7 @@ longCallC(Context* c, unsigned size, Assembler::Constant* a)
   assert(c, size == BytesPerWord);
 
   if (BytesPerWord == 8) {
-    Assembler::Register r(r10);
+    Assembler::Register r(LongJumpRegister);
     moveCR2(c, size, a, size, &r, 11);
     callR(c, size, &r);
   } else {
@@ -744,7 +756,7 @@ longJumpC(Context* c, unsigned size, Assembler::Constant* a)
   assert(c, size == BytesPerWord);
 
   if (BytesPerWord == 8) {
-    Assembler::Register r(r10);
+    Assembler::Register r(LongJumpRegister);
     moveCR2(c, size, a, size, &r, 11);
     jumpR(c, size, &r);
   } else {
@@ -775,15 +787,43 @@ callM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 void
 alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c);
+  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c, 1, 4);
   callC(c, size, a);
+}
+
+void
+alignedLongCallC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  if (BytesPerWord == 8) {
+    new (c->zone->allocate(sizeof(AlignmentPadding)))
+      AlignmentPadding(c, 2, 8);
+    longCallC(c, size, a);
+  } else {
+    alignedCallC(c, size, a);
+  }
 }
 
 void
 alignedJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c);
+  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c, 1, 4);
   jumpC(c, size, a);
+}
+
+void
+alignedLongJumpC(Context* c, unsigned size, Assembler::Constant* a)
+{
+  assert(c, size == BytesPerWord);
+
+  if (BytesPerWord == 8) {
+    new (c->zone->allocate(sizeof(AlignmentPadding)))
+      AlignmentPadding(c, 2, 8);
+    longJumpC(c, size, a);
+  } else {
+    alignedJumpC(c, size, a);
+  }
 }
 
 void
@@ -1054,8 +1094,6 @@ void
 sseMoveMR(Context* c, unsigned aSize, Assembler::Memory* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
-  assert(c, aSize == bSize);
-
   if (BytesPerWord == 4 and aSize == 8) {
     opcode(c, 0xf3);
     opcode(c, 0x0f, 0x7e);
@@ -2472,6 +2510,8 @@ populateTables(ArchitectureContext* c)
 
   uo[index(c, LongCall, C)] = CAST1(longCallC);
 
+  uo[index(c, AlignedLongCall, C)] = CAST1(alignedLongCallC);
+
   uo[index(c, Jump, R)] = CAST1(jumpR);
   uo[index(c, Jump, C)] = CAST1(jumpC);
   uo[index(c, Jump, M)] = CAST1(jumpM);
@@ -2479,6 +2519,8 @@ populateTables(ArchitectureContext* c)
   uo[index(c, AlignedJump, C)] = CAST1(alignedJumpC);
 
   uo[index(c, LongJump, C)] = CAST1(longJumpC);
+
+  uo[index(c, AlignedLongJump, C)] = CAST1(alignedLongJumpC);
 
   bo[index(c, Negate, R, R)] = CAST2(negateRR);
 
@@ -2610,6 +2652,10 @@ class MyArchitecture: public Assembler::Architecture {
     return false;
   }
 
+  virtual uintptr_t maximumImmediateJump() {
+    return 0x7FFFFFFF;
+  }
+
   virtual unsigned registerSize(ValueType type) {
     switch (type) {
     case ValueGeneral: return BytesPerWord;
@@ -2696,9 +2742,35 @@ class MyArchitecture: public Assembler::Architecture {
     return *instruction == 0xE8 and actualTarget == target;
   }
 
-  virtual void updateCall(UnaryOperation op, bool assertAlignment UNUSED,
-                          void* returnAddress, void* newTarget)
+  virtual void updateCall(UnaryOperation op, void* returnAddress,
+                          void* newTarget)
   {
+    bool assertAlignment;
+    switch (op) {
+    case AlignedCall:
+      op = Call;
+      assertAlignment = true;
+      break;
+
+    case AlignedJump:
+      op = Jump;
+      assertAlignment = true;
+      break;
+
+    case AlignedLongCall:
+      op = LongCall;
+      assertAlignment = true;
+      break;
+
+    case AlignedLongJump:
+      op = LongJump;
+      assertAlignment = true;
+      break;
+
+    default:
+      assertAlignment = false;
+    }
+
     if (BytesPerWord == 4 or op == Call or op == Jump) {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
       
@@ -2708,9 +2780,14 @@ class MyArchitecture: public Assembler::Architecture {
       assert(&c, (not assertAlignment)
              or reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
       
-      int32_t v = static_cast<uint8_t*>(newTarget)
+      intptr_t v = static_cast<uint8_t*>(newTarget)
         - static_cast<uint8_t*>(returnAddress);
-      memcpy(instruction + 1, &v, 4);
+
+      assert(&c, isInt32(v));
+
+      int32_t v32 = v;
+
+      memcpy(instruction + 1, &v32, 4);
     } else {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 13;
 
@@ -3422,7 +3499,9 @@ class MyAssembler: public Assembler {
 
         index += size;
 
-        while ((b->start + index + padding + 1) % 4) {
+        while ((b->start + index + padding + p->instructionOffset)
+               % p->alignment)
+        {
           *(dst + b->start + index + padding) = 0x90;
           ++ padding;
         }

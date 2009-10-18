@@ -34,9 +34,11 @@ const unsigned OperationCount = StoreLoadBarrier + 1;
 enum UnaryOperation {
   Call,
   LongCall,
+  AlignedLongCall,
   AlignedCall,
   Jump,
   LongJump,
+  AlignedLongJump,
   AlignedJump,
   
   NoUnaryOperation = -1
@@ -308,6 +310,8 @@ class Assembler {
 
     virtual bool bigEndian() = 0;
 
+    virtual uintptr_t maximumImmediateJump() = 0;
+
     virtual unsigned registerSize(ValueType type) = 0;
     
     virtual bool alwaysCondensed(BinaryOperation op) = 0;
@@ -324,8 +328,8 @@ class Assembler {
 
     virtual bool matchCall(void* returnAddress, void* target) = 0;
 
-    virtual void updateCall(UnaryOperation op, bool assertAlignment,
-                            void* returnAddress, void* newTarget) = 0;
+    virtual void updateCall(UnaryOperation op, void* returnAddress,
+                            void* newTarget) = 0;
 
     virtual uintptr_t getConstant(const void* src) = 0;
     virtual void setConstant(void* dst, uintptr_t constant) = 0;
