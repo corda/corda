@@ -783,51 +783,76 @@ class Context {
     virtual intptr_t getThunk(BinaryOperation op, unsigned size,
                               unsigned resultSize)
     {
-      switch(op) {
-      case FloatNegate:
-        if (size == 4) {
-          return local::getThunk(t, negateFloatThunk);
-        } else {
+      if (size == 8) {
+        switch(op) {
+        case FloatNegate:
+          assert(t, resultSize == 8);
           return local::getThunk(t, negateDoubleThunk);
-        }
 
-      case Float2Float:
-        if (size == 4 and resultSize == 8) {
-          return local::getThunk(t, floatToDoubleThunk);
-        } else if (size == 8 and resultSize == 4) {
+        case FloatSquareRoot:
+          assert(t, resultSize == 8);
+          return local::getThunk(t, squareRootDoubleThunk);
+
+        case Float2Float:
+          assert(t, resultSize == 4);
           return local::getThunk(t, doubleToFloatThunk);
-        }
 
-      case Float2Int:
-        if (size == 4 and resultSize == 4) {
-          return local::getThunk(t, floatToIntThunk);
-        } else if (size == 4 and resultSize == 8) {
-          return local::getThunk(t, floatToLongThunk);
-        } else if (size == 8 and resultSize == 4) {
-          return local::getThunk(t, doubleToIntThunk);
-        } else if (size == 8 and resultSize == 8) {
-          return local::getThunk(t, doubleToLongThunk);
-        }
+        case Float2Int:
+          if (resultSize == 8) {
+            return local::getThunk(t, doubleToLongThunk);
+          } else {
+            assert(t, resultSize == 4);
+            return local::getThunk(t, doubleToIntThunk);
+          }
 
-      case Int2Float:
-        if (size == 4 and resultSize == 4) {
-          return local::getThunk(t, intToFloatThunk);
-        } else if (size == 4 and resultSize == 8) {
-          return local::getThunk(t, intToDoubleThunk);
-        } else if (size == 8 and resultSize == 4) {
-          return local::getThunk(t, longToFloatThunk);
-        } else if (size == 8 and resultSize == 8) {
-          return local::getThunk(t, longToDoubleThunk);
-        }
+        case Int2Float:
+          if (resultSize == 8) {
+            return local::getThunk(t, longToDoubleThunk);
+          } else {
+            assert(t, resultSize == 4);
+            return local::getThunk(t, longToFloatThunk);
+          }
           
-      default: break;
+        default: abort(t);
+        }
+      } else {
+        assert(t, size == 4);
+
+        switch(op) {
+        case FloatNegate:
+          assert(t, size == 4);
+          return local::getThunk(t, negateFloatThunk);
+
+        case FloatAbsolute:
+          assert(t, size == 4);
+          return local::getThunk(t, absoluteFloatThunk);
+
+        case Float2Float:
+          assert(t, resultSize == 8);
+          return local::getThunk(t, floatToDoubleThunk);
+
+        case Float2Int:
+          if (resultSize == 4) {
+            return local::getThunk(t, floatToIntThunk);
+          } else {
+            assert(t, resultSize == 8);
+            return local::getThunk(t, floatToLongThunk);
+          }
+
+        case Int2Float:
+          if (resultSize == 4) {
+            return local::getThunk(t, intToFloatThunk);
+          } else {
+            assert(t, resultSize == 8);
+            return local::getThunk(t, intToDoubleThunk);
+          }
+          
+        default: abort(t);
+        }
       }
-      
-      abort(t);
     }
 
-    virtual intptr_t getThunk(TernaryOperation op, unsigned size, unsigned)
-    {
+    virtual intptr_t getThunk(TernaryOperation op, unsigned size, unsigned) {
       if (size == 8) {
         switch (op) {
         case Divide:
@@ -862,9 +887,10 @@ class Context {
         case JumpIfFloatLessOrEqualOrUnordered:
           return local::getThunk(t, compareDoublesLThunk);
 
-        default: break;
+        default: abort(t);
         }
-      } else if (size == 4) {
+      } else {
+        assert(t, size == 4);
         switch (op) {
         case FloatAdd:
           return local::getThunk(t, addFloatThunk);
@@ -889,11 +915,9 @@ class Context {
         case JumpIfFloatLessOrEqualOrUnordered:
           return local::getThunk(t, compareFloatsLThunk);
 
-        default: break;
+        default: abort(t);
         }
       }
-
-      abort(t);
     }
 
     MyThread* t;
@@ -2056,6 +2080,12 @@ negateDouble(uint64_t a)
 }
 
 uint64_t
+squareRootDouble(uint64_t a)
+{
+  return doubleToBits(sqrt(bitsToDouble(a)));
+}
+
+uint64_t
 doubleToFloat(int64_t a)
 {
   return floatToBits(static_cast<float>(bitsToDouble(a)));
@@ -2107,6 +2137,12 @@ uint64_t
 negateFloat(uint32_t a)
 {
   return floatToBits(- bitsToFloat(a));
+}
+
+uint64_t
+absoluteFloat(uint32_t a)
+{
+  return floatToBits(fabsf(bitsToFloat(a)));
 }
 
 int64_t
@@ -2866,6 +2902,38 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
 
   saveStateAndCompile(t, frame, newIp);
   return t->exception == 0;
+}
+
+bool
+intrinsic(MyThread* t, Frame* frame, object target)
+{
+#define MATCH(name, constant)                                           \
+  (byteArrayLength(t, name) - 1 == sizeof(constant)                     \
+   and strcmp(reinterpret_cast<char*>(&byteArrayBody(t, name, 0)),      \
+              constant) == 0)
+
+  object className = vm::className(t, methodClass(t, target));
+  if (UNLIKELY(MATCH(className, "java/lang/Math"))) {
+    Compiler* c = frame->c;
+    if (MATCH(methodName(t, target), "sqrt")
+        and MATCH(methodSpec(t, target), "(D)D"))
+    {
+      frame->pushLong(c->fsqrt(8, frame->popLong()));
+      return true;
+    } else if (MATCH(methodName(t, target), "abs")) {
+      if (MATCH(methodSpec(t, target), "(I)I")) {
+        frame->pushInt(c->abs(4, frame->popInt()));
+        return true;
+      } else if (MATCH(methodSpec(t, target), "(J)J")) {
+        frame->pushLong(c->abs(8, frame->popLong()));
+        return true;
+      } else if (MATCH(methodSpec(t, target), "(F)F")) {
+        frame->pushInt(c->fabs(4, frame->popInt()));
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void
@@ -3878,58 +3946,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       assert(t, methodFlags(t, target) & ACC_STATIC);
 
-      bool usedIntrinsic = false;
-      int params = methodParameterCount(t, target);
-      if (params == 1) {
-      	BinaryOperation op = t->arch->binaryIntrinsic
-          (reinterpret_cast<char*>
-           (&byteArrayBody(t, className(t, methodClass(t, target)), 0)),
-           reinterpret_cast<char*>
-           (&byteArrayBody(t, methodName(t, target), 0)),
-           reinterpret_cast<char*>
-           (&byteArrayBody(t, methodSpec(t, target), 0)));
-
-      	if (op != NoBinaryOperation) {
-      	  if (DebugIntrinsics) {
-      	    fprintf(stderr, "Using binary intrinsic %i.\n", op);
-      	  }
-          int opSize = methodParameterFootprint(t, target) * 4;
-          int resSize = resultSize(t, methodReturnCode(t, target));
-          Compiler::Operand* param;
-          if (opSize == 4) {
-            param = frame->popInt();
-          } else {
-            param = frame->popLong();
-          }
-          Compiler::Operand* operand = c->operation
-            (op, opSize, resSize, operandTypeForFieldCode
-             (t, methodReturnCode(t, target)), param);
-          if (resSize == 4) {
-            frame->pushInt(operand);
-          } else {
-            frame->pushLong(operand);
-          }
-          usedIntrinsic = true;
-      	}
-      } else if (params == 2) {
-      	TernaryOperation op = t->arch->ternaryIntrinsic
-          (reinterpret_cast<char*>
-           (&byteArrayBody(t, className(t, methodClass(t, target)), 0)),
-           reinterpret_cast<char*>
-           (&byteArrayBody(t, methodName(t, target), 0)),
-           reinterpret_cast<char*>
-           (&byteArrayBody(t, methodSpec(t, target), 0)));
-
-      	if (op != NoTernaryOperation) {
-      	  if (DebugIntrinsics) {
-      	    fprintf(stderr, "Could use ternary intrinsic %i.\n", op);
-      	  }
-      	  //int aSize, bSize;
-		  //int resSize = resultSize(t, methodReturnCode(t, target));
-          //TODO: use intrinsic
-      	}
-      }
-      if (not usedIntrinsic) {
+      if (not intrinsic(t, frame, target)) {
         bool tailCall = isTailCall(t, code, ip, context->method, target);
         compileDirectInvoke(t, frame, target, tailCall);
       }

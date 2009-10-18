@@ -6370,23 +6370,27 @@ class MyCompiler: public Compiler {
       (&c, FloatNegate, size, static_cast<Value*>(a), size, result);
     return result;
   }
-  
-  virtual Operand* operation(BinaryOperation op, unsigned aSize,
-                             unsigned resSize, OperandType resType, Operand* a)
-  {
-    Value* result = value(&c, valueType(&c, resType));
-    appendTranslate(&c, op, aSize, static_cast<Value*>(a), resSize, result);
+
+  virtual Operand* abs(unsigned size, Operand* a) {
+  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
+    Value* result = value(&c, ValueGeneral);
+    appendTranslate(&c, Absolute, size, static_cast<Value*>(a), size, result);
     return result;
   }
-  
-  virtual Operand* operation(TernaryOperation op, unsigned aSize,
-                             unsigned bSize, unsigned resSize,
-                             OperandType resType, Operand* a, Operand* b)
-  {
-    Value* result = value(&c, valueType(&c, resType));
-    appendCombine
-      (&c, op, aSize, static_cast<Value*>(a), bSize, static_cast<Value*>(b),
-       resSize, result);
+
+  virtual Operand* fabs(unsigned size, Operand* a) {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
+    appendTranslate
+      (&c, FloatAbsolute, size, static_cast<Value*>(a), size, result);
+    return result;
+  }
+
+  virtual Operand* fsqrt(unsigned size, Operand* a) {
+    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
+    Value* result = value(&c, ValueFloat);
+    appendTranslate
+      (&c, FloatSquareRoot, size, static_cast<Value*>(a), size, result);
     return result;
   }
   

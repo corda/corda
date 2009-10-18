@@ -176,12 +176,9 @@ class Compiler {
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* neg(unsigned size, Operand* a) = 0;
   virtual Operand* fneg(unsigned size, Operand* a) = 0;
-  virtual Operand* operation(BinaryOperation op, unsigned aSize,
-                             unsigned resSize, OperandType resType,
-                             Operand* a) = 0;
-  virtual Operand* operation(TernaryOperation op, unsigned aSize,
-                             unsigned bSize, unsigned resSize,
-                             OperandType resType, Operand* a, Operand* b) = 0;
+  virtual Operand* abs(unsigned size, Operand* a) = 0;
+  virtual Operand* fabs(unsigned size, Operand* a) = 0;
+  virtual Operand* fsqrt(unsigned size, Operand* a) = 0;
   virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;

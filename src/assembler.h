@@ -56,14 +56,14 @@ enum BinaryOperation {
   Float2Float,
   Float2Int,
   Int2Float,
-  FloatSqrt,
-  FloatAbs,
-  Abs,
+  FloatSquareRoot,
+  FloatAbsolute,
+  Absolute,
   
   NoBinaryOperation = -1
 };
 
-const unsigned BinaryOperationCount = Abs + 1;
+const unsigned BinaryOperationCount = Absolute + 1;
 
 enum TernaryOperation {
   Add,
@@ -343,14 +343,6 @@ class Assembler {
     virtual int returnAddressOffset() = 0;
     virtual int framePointerOffset() = 0;
     virtual void nextFrame(void** stack, void** base) = 0;
-    
-    virtual BinaryOperation binaryIntrinsic(const char* className,
-                                            const char* methodName,
-                                            const char* parameterSpec) = 0;
-
-    virtual TernaryOperation ternaryIntrinsic(const char* className,
-                                              const char* methodName,
-                                              const char* parameterSpec) = 0;
 
     virtual void plan
     (UnaryOperation op,

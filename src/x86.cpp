@@ -2446,7 +2446,7 @@ floatNegateRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-floatAbsRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+floatAbsoluteRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
            unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, floatReg(a) and floatReg(b));
@@ -2471,7 +2471,7 @@ floatAbsRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
 }
 
 void
-absRR(Context* c, unsigned aSize, Assembler::Register* a,
+absoluteRR(Context* c, unsigned aSize, Assembler::Register* a,
       unsigned bSize UNUSED, Assembler::Register* b UNUSED)
 {
   assert(c, aSize == bSize and a->low == rax and b->low == rax);
@@ -2533,8 +2533,8 @@ populateTables(ArchitectureContext* c)
   bo[index(c, Move, C, M)] = CAST2(moveCM);
   bo[index(c, Move, A, R)] = CAST2(moveAR);
 
-  bo[index(c, FloatSqrt, R, R)] = CAST2(floatSqrtRR);
-  bo[index(c, FloatSqrt, M, R)] = CAST2(floatSqrtMR);
+  bo[index(c, FloatSquareRoot, R, R)] = CAST2(floatSqrtRR);
+  bo[index(c, FloatSquareRoot, M, R)] = CAST2(floatSqrtMR);
 
   bo[index(c, MoveZ, R, R)] = CAST2(moveZRR);
   bo[index(c, MoveZ, M, R)] = CAST2(moveZMR);
@@ -2591,8 +2591,8 @@ populateTables(ArchitectureContext* c)
   bo[index(c, Int2Float, R, R)] = CAST2(int2FloatRR);
   bo[index(c, Int2Float, M, R)] = CAST2(int2FloatMR);
 
-  bo[index(c, Abs, R, R)] = CAST2(absRR);
-  bo[index(c, FloatAbs, R, R)] = CAST2(floatAbsRR);
+  bo[index(c, Absolute, R, R)] = CAST2(absoluteRR);
+  bo[index(c, FloatAbsolute, R, R)] = CAST2(floatAbsoluteRR);
 
   bro[branchIndex(c, R, R)] = CAST_BRANCH(branchRR);
   bro[branchIndex(c, C, R)] = CAST_BRANCH(branchCR);
@@ -2839,13 +2839,13 @@ class MyArchitecture: public Assembler::Architecture {
     case Float2Float:
     case Float2Int:
     case Int2Float:
-    case FloatAbs:
+    case FloatAbsolute:
     case FloatNegate:
-    case FloatSqrt:
+    case FloatSquareRoot:
       return false;
 
     case Negate:
-    case Abs:
+    case Absolute:
       return true;
 
     default:
@@ -2892,16 +2892,16 @@ class MyArchitecture: public Assembler::Architecture {
           and strcmp(methodName, "sqrt") == 0
           and strcmp(parameterSpec, "(D)D") == 0)
       {
-        return FloatSqrt;
+        return FloatSquareRoot;
       } else if (strcmp(methodName, "abs")) {
       	if (strcmp(parameterSpec, "(I)I") == 0 
             or strcmp(parameterSpec, "(J)J") == 0)
         {
-          return Abs;
+          return Absolute;
       	} else if (useSSE(&c)
                    and strcmp(parameterSpec, "(F)F") == 0)
         {
-      	  return FloatAbs;
+      	  return FloatAbsolute;
       	}
       }
     }
@@ -2933,12 +2933,12 @@ class MyArchitecture: public Assembler::Architecture {
         | (static_cast<uint64_t>(1) << rax);
       break;
 
-    case Abs:
+    case Absolute:
       *aTypeMask = (1 << RegisterOperand);
       *aRegisterMask = (static_cast<uint64_t>(1) << rax);
       break;
 
-    case FloatAbs:
+    case FloatAbsolute:
       *aTypeMask = (1 << RegisterOperand);
       *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
         | FloatRegisterMask;
@@ -2954,7 +2954,7 @@ class MyArchitecture: public Assembler::Architecture {
       }
       break;
 
-    case FloatSqrt:
+    case FloatSquareRoot:
       *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
       *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
         | FloatRegisterMask;
@@ -3025,12 +3025,12 @@ class MyArchitecture: public Assembler::Architecture {
       | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     switch (op) {
-    case Abs:
+    case Absolute:
       *bTypeMask = (1 << RegisterOperand);
       *bRegisterMask = (static_cast<uint64_t>(1) << rax);
       break;
 
-    case FloatAbs:
+    case FloatAbsolute:
       *bTypeMask = (1 << RegisterOperand);
       *bRegisterMask = aRegisterMask;
       break;
@@ -3041,7 +3041,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case FloatNegate:
-    case FloatSqrt:
+    case FloatSquareRoot:
     case Float2Float:
     case Int2Float:
       *bTypeMask = (1 << RegisterOperand);
