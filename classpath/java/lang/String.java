@@ -231,11 +231,25 @@ public final class String
   }
 
   public boolean equals(Object o) {
-    return this == o || (o instanceof String && compareTo((String) o) == 0);
+    if (this == o) {
+      return true;
+    } else if (o instanceof String) {
+      String s = (String) o;
+      return s.length == length && compareTo(s) == 0;
+    } else {
+      return false;
+    }
   }
 
-  public boolean equalsIgnoreCase(String s) {
-    return this == s || (s != null && compareToIgnoreCase(s) == 0);
+  public boolean equalsIgnoreCase(String o) {
+    if (this == o) {
+      return true;
+    } else if (o instanceof String) {
+      String s = (String) o;
+      return s.length == length && compareToIgnoreCase(s) == 0;
+    } else {
+      return false;
+    }
   }
 
   public int compareTo(String s) {
