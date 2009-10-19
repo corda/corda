@@ -107,6 +107,10 @@ enum TernaryOperation {
 const unsigned TernaryOperationCount
 = JumpIfFloatGreaterOrEqualOrUnordered + 1;
 
+const unsigned NonBranchTernaryOperationCount = FloatMin + 1;
+const unsigned BranchOperationCount
+= JumpIfFloatGreaterOrEqualOrUnordered - FloatMin;
+
 enum OperandType {
   ConstantOperand,
   AddressOperand,
@@ -312,8 +316,6 @@ class Assembler {
 
     virtual uintptr_t maximumImmediateJump() = 0;
 
-    virtual unsigned registerSize(ValueType type) = 0;
-    
     virtual bool alwaysCondensed(BinaryOperation op) = 0;
     virtual bool alwaysCondensed(TernaryOperation op) = 0;
 

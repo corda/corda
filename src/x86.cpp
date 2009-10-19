@@ -72,10 +72,6 @@ const int LongJumpRegister = r10;
 const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 
-const unsigned NonBranchTernaryOperationCount = FloatMin + 1;
-const unsigned BranchOperationCount
-= JumpIfFloatGreaterOrEqualOrUnordered - FloatMin;
-
 bool
 isInt8(intptr_t v)
 {
@@ -2656,14 +2652,6 @@ class MyArchitecture: public Assembler::Architecture {
     return 0x7FFFFFFF;
   }
 
-  virtual unsigned registerSize(ValueType type) {
-    switch (type) {
-    case ValueGeneral: return BytesPerWord;
-    case ValueFloat: return 8;
-    default: abort(&c);
-    }
-  }
-
   virtual bool reserved(int register_) {
     switch (register_) {
     case rbp:
@@ -2881,38 +2869,6 @@ class MyArchitecture: public Assembler::Architecture {
       | (1 << ConstantOperand);
     *aRegisterMask = ~static_cast<uint64_t>(0);
     *thunk = false;
-  }
-
-  virtual BinaryOperation binaryIntrinsic(const char* className,
-                                          const char* methodName,
-                                          const char* parameterSpec)
-  {
-    if (strcmp(className, "java/lang/Math") == 0) {
-      if (useSSE(&c)
-          and strcmp(methodName, "sqrt") == 0
-          and strcmp(parameterSpec, "(D)D") == 0)
-      {
-        return FloatSquareRoot;
-      } else if (strcmp(methodName, "abs")) {
-      	if (strcmp(parameterSpec, "(I)I") == 0 
-            or strcmp(parameterSpec, "(J)J") == 0)
-        {
-          return Absolute;
-      	} else if (useSSE(&c)
-                   and strcmp(parameterSpec, "(F)F") == 0)
-        {
-      	  return FloatAbsolute;
-      	}
-      }
-    }
-    return NoBinaryOperation;
-  }
-
-  virtual TernaryOperation ternaryIntrinsic(const char* className UNUSED,
-                                            const char* methodName UNUSED,
-                                            const char* parameterSpec UNUSED)
-  {
-    return NoTernaryOperation;
   }
 
   virtual void planSource

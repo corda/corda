@@ -14,6 +14,7 @@
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
 #define CAST3(x) reinterpret_cast<TernaryOperationType>(x)
+#define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)
 
 using namespace vm;
 
@@ -224,6 +225,10 @@ typedef void (*TernaryOperationType)
 (Context*, unsigned, Assembler::Operand*, Assembler::Operand*,
  Assembler::Operand*);
 
+typedef void (*BranchOperationType)
+(Context*, TernaryOperation, unsigned, Assembler::Operand*,
+ Assembler::Operand*, Assembler::Operand*);
+
 class ArchitectureContext {
  public:
   ArchitectureContext(System* s): s(s) { }
@@ -235,7 +240,9 @@ class ArchitectureContext {
   BinaryOperationType binaryOperations
   [BinaryOperationCount * OperandTypeCount * OperandTypeCount];
   TernaryOperationType ternaryOperations
-  [TernaryOperationCount * OperandTypeCount];
+  [NonBranchTernaryOperationCount * OperandTypeCount];
+  BranchOperationType branchOperations
+  [BranchOperationCount * OperandTypeCount * OperandTypeCount];
 };
 
 inline void NO_RETURN
@@ -379,13 +386,14 @@ appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
 }
 
 inline unsigned
-index(UnaryOperation operation, OperandType operand)
+index(ArchitectureContext*, UnaryOperation operation, OperandType operand)
 {
   return operation + (UnaryOperationCount * operand);
 }
 
 inline unsigned
-index(BinaryOperation operation,
+index(ArchitectureContext*,
+      BinaryOperation operation,
       OperandType operand1,
       OperandType operand2)
 {
@@ -394,13 +402,34 @@ index(BinaryOperation operation,
     + (BinaryOperationCount * OperandTypeCount * operand2);
 }
 
-inline unsigned
-index(TernaryOperation operation,
-      OperandType operand1)
+bool
+isBranch(TernaryOperation op)
 {
-  return operation + (TernaryOperationCount * operand1);
+  return op > FloatMin;
 }
 
+bool
+isFloatBranch(TernaryOperation op)
+{
+  return op > JumpIfNotEqual;
+}
+
+inline unsigned
+index(ArchitectureContext* c UNUSED,
+      TernaryOperation operation,
+      OperandType operand1)
+{
+  assert(c, not isBranch(operation));
+
+  return operation + (NonBranchTernaryOperationCount * operand1);
+}
+
+unsigned
+branchIndex(ArchitectureContext* c UNUSED, OperandType operand1,
+            OperandType operand2)
+{
+  return operand1 + (OperandTypeCount * operand2);
+}
 
 // BEGIN OPERATION COMPILERS
 
@@ -1309,105 +1338,185 @@ compareUnsignedCR(Context* c, unsigned aSize, Assembler::Constant* a,
   }
 }
 
-void
-longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
-            Assembler::Operand* bl, Assembler::Operand* bh,
-            Assembler::Register* dst, BinaryOperationType compareSigned,
-            BinaryOperationType compareUnsigned)
+int32_t
+branch(Context* c, TernaryOperation op)
 {
-  ResolvedPromise negativePromise(-1);
-  Assembler::Constant negative(&negativePromise);
+  switch (op) {
+  case JumpIfEqual:
+    return beq(0);
+    
+  case JumpIfNotEqual:
+    return bne(0);
+    
+  case JumpIfLess:
+    return blt(0);
+    
+  case JumpIfGreater:
+    return bgt(0);
+    
+  case JumpIfLessOrEqual:
+    return ble(0);
+    
+  case JumpIfGreaterOrEqual:
+    return bge(0);
+    
+  default:
+    abort(c);
+  }
+}
 
-  ResolvedPromise zeroPromise(0);
-  Assembler::Constant zero(&zeroPromise);
+void
+conditional(Context* c, int32_t branch, Assembler::Constant* target)
+{
+  appendOffsetTask(c, target->value, offset(c), true);
+  issue(c, branch);
+}
 
-  ResolvedPromise positivePromise(1);
-  Assembler::Constant positive(&positivePromise);
+void
+branch(Context* c, TernaryOperation op, Assembler::Constant* target)
+{
+  conditional(c, branch(c, op), target);
+}
 
+void
+branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
+           Assembler::Operand* ah, Assembler::Operand* bl,
+           Assembler::Operand* bh, Assembler::Constant* target,
+           BinaryOperationType compareSigned,
+           BinaryOperationType compareUnsigned)
+{
   compareSigned(c, 4, ah, 4, bh);
 
-  unsigned less = c->code.length();
-  issue(c, blt(0));
+  unsigned next = 0;
+  
+  switch (op) {
+  case JumpIfEqual:
+    next = c->code.length();
+    issue(c, bne(0));
 
-  unsigned greater = c->code.length();
-  issue(c, bgt(0));
+    compareSigned(c, 4, al, 4, bl);
+    conditional(c, beq(0), target);
+    break;
 
-  compareUnsigned(c, 4, al, 4, bl);
+  case JumpIfNotEqual:
+    conditional(c, bne(0), target);
 
-  unsigned above = c->code.length();
-  issue(c, bgt(0));
+    compareSigned(c, 4, al, 4, bl);
+    conditional(c, bne(0), target);
+    break;
 
-  unsigned below = c->code.length();
-  issue(c, blt(0));
+  case JumpIfLess:
+    conditional(c, blt(0), target);
 
-  moveCR(c, 4, &zero, 4, dst);
+    next = c->code.length();
+    issue(c, bgt(0));
 
-  unsigned nextFirst = c->code.length();
-  issue(c, b(0));
+    compareUnsigned(c, 4, al, 4, bl);
+    conditional(c, blt(0), target);
+    break;
 
-  updateOffset
-    (c->s, c->code.data + less, true, reinterpret_cast<intptr_t>
-     (c->code.data + c->code.length()));
+  case JumpIfGreater:
+    conditional(c, bgt(0), target);
 
-  updateOffset
-    (c->s, c->code.data + below, true, reinterpret_cast<intptr_t>
-     (c->code.data + c->code.length()));
+    next = c->code.length();
+    issue(c, blt(0));
 
-  moveCR(c, 4, &negative, 4, dst);
+    compareUnsigned(c, 4, al, 4, bl);
+    conditional(c, bgt(0), target);
+    break;
 
-  unsigned nextSecond = c->code.length();
-  issue(c, b(0));
+  case JumpIfLessOrEqual:
+    conditional(c, blt(0), target);
 
-  updateOffset
-    (c->s, c->code.data + greater, true, reinterpret_cast<intptr_t>
-     (c->code.data + c->code.length()));
+    next = c->code.length();
+    issue(c, bgt(0));
 
-  updateOffset
-    (c->s, c->code.data + above, true, reinterpret_cast<intptr_t>
-     (c->code.data + c->code.length()));
+    compareUnsigned(c, 4, al, 4, bl);
+    conditional(c, ble(0), target);
+    break;
 
-  moveCR(c, 4, &positive, 4, dst);
+  case JumpIfGreaterOrEqual:
+    conditional(c, bgt(0), target);
 
-  updateOffset
-    (c->s, c->code.data + nextFirst, false, reinterpret_cast<intptr_t>
-     (c->code.data + c->code.length()));
+    next = c->code.length();
+    issue(c, blt(0));
 
-  updateOffset
-    (c->s, c->code.data + nextSecond, false, reinterpret_cast<intptr_t>
-     (c->code.data + c->code.length()));
+    compareUnsigned(c, 4, al, 4, bl);
+    conditional(c, bge(0), target);
+    break;
+
+  default:
+    abort(c);
+  }
+
+  if (next) {
+    updateOffset
+      (c->s, c->code.data + next, true, reinterpret_cast<intptr_t>
+       (c->code.data + c->code.length()));
+  }
 }
 
 void
-longCompareR(Context* c, unsigned size UNUSED, Assembler::Register* a,
-             Assembler::Register* b, Assembler::Register* dst)
+branchRR(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Register* a, Assembler::Register* b,
+         Assembler::Constant* target)
 {
-  assert(c, size == 8);
-  
-  Assembler::Register ah(a->high);
-  Assembler::Register bh(b->high);
-  
-  longCompare(c, a, &ah, b, &bh, dst, CAST2(compareRR),
-              CAST2(compareUnsignedRR));
+  if (size > BytesPerWord) {
+    Assembler::Register ah(a->high);
+    Assembler::Register bh(b->high);
+
+    branchLong(c, op, a, &ah, b, &bh, target, CAST2(compareRR),
+               CAST2(compareUnsignedRR));
+  } else {
+    compareRR(c, size, a, size, b);
+    branch(c, op, target);
+  }
 }
 
 void
-longCompareC(Context* c, unsigned size UNUSED, Assembler::Constant* a,
-             Assembler::Register* b, Assembler::Register* dst)
+branchCR(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Constant* a, Assembler::Register* b,
+         Assembler::Constant* target)
 {
-  assert(c, size == 8);
+  if (size > BytesPerWord) {
+    int64_t v = a->value->value();
 
-  int64_t v = a->value->value();
+    ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
+    Assembler::Constant al(&low);
 
-  ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
-  Assembler::Constant al(&low);
-  
-  ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
-  Assembler::Constant ah(&high);
-  
-  Assembler::Register bh(b->high);
-  
-  longCompare(c, &al, &ah, b, &bh, dst, CAST2(compareCR),
-              CAST2(compareUnsignedCR));
+    ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
+    Assembler::Constant ah(&high);
+
+    Assembler::Register bh(b->high);
+
+    branchLong(c, op, &al, &ah, b, &bh, target, CAST2(compareCR),
+               CAST2(compareUnsignedCR));
+  } else {
+    compareCR(c, size, a, size, b);
+    branch(c, op, target);
+  }
+}
+
+void
+branchRM(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Register* a, Assembler::Memory* b,
+         Assembler::Constant* target)
+{
+  assert(c, size <= BytesPerWord);
+
+  compareRM(c, size, a, size, b);
+  branch(c, op, target);
+}
+
+void
+branchCM(Context* c, TernaryOperation op, unsigned size,
+         Assembler::Constant* a, Assembler::Memory* b,
+         Assembler::Constant* target)
+{
+  assert(c, size <= BytesPerWord);
+
+  compareCM(c, size, a, size, b);
+  branch(c, op, target);
 }
 
 ShiftMaskPromise*
@@ -1589,85 +1698,76 @@ populateTables(ArchitectureContext* c)
   UnaryOperationType* uo = c->unaryOperations;
   BinaryOperationType* bo = c->binaryOperations;
   TernaryOperationType* to = c->ternaryOperations;
+  BranchOperationType* bro = c->branchOperations;
 
   zo[Return] = return_;
   zo[LoadBarrier] = memoryBarrier;
   zo[StoreStoreBarrier] = memoryBarrier;
   zo[StoreLoadBarrier] = memoryBarrier;
 
-  uo[index(LongCall, C)] = CAST1(longCallC);
+  uo[index(c, LongCall, C)] = CAST1(longCallC);
 
-  uo[index(LongJump, C)] = CAST1(longJumpC);
+  uo[index(c, LongJump, C)] = CAST1(longJumpC);
 
-  uo[index(Jump, R)] = CAST1(jumpR);
-  uo[index(Jump, C)] = CAST1(jumpC);
+  uo[index(c, Jump, R)] = CAST1(jumpR);
+  uo[index(c, Jump, C)] = CAST1(jumpC);
 
-  uo[index(AlignedJump, R)] = CAST1(jumpR);
-  uo[index(AlignedJump, C)] = CAST1(jumpC);
+  uo[index(c, AlignedJump, R)] = CAST1(jumpR);
+  uo[index(c, AlignedJump, C)] = CAST1(jumpC);
 
-  uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
-  uo[index(JumpIfNotEqual, C)] = CAST1(jumpIfNotEqualC);
-  uo[index(JumpIfGreater, C)] = CAST1(jumpIfGreaterC);
-  uo[index(JumpIfGreaterOrEqual, C)] = CAST1(jumpIfGreaterOrEqualC);
-  uo[index(JumpIfLess, C)] = CAST1(jumpIfLessC);
-  uo[index(JumpIfLessOrEqual, C)] = CAST1(jumpIfLessOrEqualC);
+  uo[index(c, Call, C)] = CAST1(callC);
+  uo[index(c, Call, R)] = CAST1(callR);
 
-  uo[index(Call, C)] = CAST1(callC);
-  uo[index(Call, R)] = CAST1(callR);
+  uo[index(c, AlignedCall, C)] = CAST1(callC);
+  uo[index(c, AlignedCall, R)] = CAST1(callR);
 
-  uo[index(AlignedCall, C)] = CAST1(callC);
-  uo[index(AlignedCall, R)] = CAST1(callR);
+  bo[index(c, Move, R, R)] = CAST2(moveRR);
+  bo[index(c, Move, C, R)] = CAST2(moveCR);
+  bo[index(c, Move, C, M)] = CAST2(moveCM);
+  bo[index(c, Move, M, R)] = CAST2(moveMR);
+  bo[index(c, Move, R, M)] = CAST2(moveRM);
+  bo[index(c, Move, A, R)] = CAST2(moveAR);
 
-  bo[index(Move, R, R)] = CAST2(moveRR);
-  bo[index(Move, C, R)] = CAST2(moveCR);
-  bo[index(Move, C, M)] = CAST2(moveCM);
-  bo[index(Move, M, R)] = CAST2(moveMR);
-  bo[index(Move, R, M)] = CAST2(moveRM);
-  bo[index(Move, A, R)] = CAST2(moveAR);
+  bo[index(c, MoveZ, R, R)] = CAST2(moveZRR);
+  bo[index(c, MoveZ, M, R)] = CAST2(moveZMR);
+  bo[index(c, MoveZ, C, R)] = CAST2(moveCR);
 
-  bo[index(MoveZ, R, R)] = CAST2(moveZRR);
-  bo[index(MoveZ, M, R)] = CAST2(moveZMR);
-  bo[index(MoveZ, C, R)] = CAST2(moveCR);
+  bo[index(c, Negate, R, R)] = CAST2(negateRR);
 
-  bo[index(Compare, R, R)] = CAST2(compareRR);
-  bo[index(Compare, C, R)] = CAST2(compareCR);
-  bo[index(Compare, R, M)] = CAST2(compareRM);
-  bo[index(Compare, C, M)] = CAST2(compareCM);
+  to[index(c, Add, R)] = CAST3(addR);
+  to[index(c, Add, C)] = CAST3(addC);
 
-  bo[index(Negate, R, R)] = CAST2(negateRR);
+  to[index(c, Subtract, R)] = CAST3(subR);
+  to[index(c, Subtract, C)] = CAST3(subC);
 
-  to[index(Add, R)] = CAST3(addR);
-  to[index(Add, C)] = CAST3(addC);
+  to[index(c, Multiply, R)] = CAST3(multiplyR);
 
-  to[index(Subtract, R)] = CAST3(subR);
-  to[index(Subtract, C)] = CAST3(subC);
+  to[index(c, Divide, R)] = CAST3(divideR);
 
-  to[index(Multiply, R)] = CAST3(multiplyR);
+  to[index(c, Remainder, R)] = CAST3(remainderR);
 
-  to[index(Divide, R)] = CAST3(divideR);
+  to[index(c, ShiftLeft, R)] = CAST3(shiftLeftR);
+  to[index(c, ShiftLeft, C)] = CAST3(shiftLeftC);
 
-  to[index(Remainder, R)] = CAST3(remainderR);
+  to[index(c, ShiftRight, R)] = CAST3(shiftRightR);
+  to[index(c, ShiftRight, C)] = CAST3(shiftRightC);
 
-  to[index(ShiftLeft, R)] = CAST3(shiftLeftR);
-  to[index(ShiftLeft, C)] = CAST3(shiftLeftC);
+  to[index(c, UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
+  to[index(c, UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
 
-  to[index(ShiftRight, R)] = CAST3(shiftRightR);
-  to[index(ShiftRight, C)] = CAST3(shiftRightC);
+  to[index(c, And, C)] = CAST3(andC);
+  to[index(c, And, R)] = CAST3(andR);
 
-  to[index(UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
-  to[index(UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
+  to[index(c, Or, C)] = CAST3(orC);
+  to[index(c, Or, R)] = CAST3(orR);
 
-  to[index(And, C)] = CAST3(andC);
-  to[index(And, R)] = CAST3(andR);
+  to[index(c, Xor, C)] = CAST3(xorC);
+  to[index(c, Xor, R)] = CAST3(xorR);
 
-  to[index(Or, C)] = CAST3(orC);
-  to[index(Or, R)] = CAST3(orR);
-
-  to[index(Xor, C)] = CAST3(xorC);
-  to[index(Xor, R)] = CAST3(xorR);
-
-  to[index(LongCompare, R)] = CAST3(longCompareR);
-  to[index(LongCompare, C)] = CAST3(longCompareC);
+  bro[branchIndex(c, R, R)] = CAST_BRANCH(branchRR);
+  bro[branchIndex(c, C, R)] = CAST_BRANCH(branchCR);
+  bro[branchIndex(c, C, M)] = CAST_BRANCH(branchCM);
+  bro[branchIndex(c, R, M)] = CAST_BRANCH(branchRM);
 }
 
 class MyArchitecture: public Assembler::Architecture {
@@ -1676,15 +1776,15 @@ class MyArchitecture: public Assembler::Architecture {
     populateTables(&c);
   }
 
-  virtual unsigned registerCount() {
-    return 32;
+  virtual unsigned floatRegisterSize() {
+    return 0;
   }
 
-  virtual unsigned generalRegisterCount() {
-    return 32;
+  virtual uint32_t generalRegisterMask() {
+    return 0xFFFFFFFF;
   }
 
-  virtual unsigned floatRegisterCount() {
+  virtual uint32_t floatRegisterMask() {
     return 0;
   }
 
@@ -1714,6 +1814,10 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual bool bigEndian() {
     return true;
+  }
+
+  virtual uintptr_t maximumImmediateJump() {
+    return 0x3FFFFFF;
   }
 
   virtual bool reserved(int register_) {
@@ -1746,18 +1850,6 @@ class MyArchitecture: public Assembler::Architecture {
     return index + 3;
   }
   
-  virtual uint64_t generalRegisters() {
-  	return (static_cast<uint64_t>(1) << 32) - 1;
-  }
-  
-  virtual uint64_t floatRegisters() {
-  	return 0;
-  }
-  
-  virtual uint64_t allRegisters() {
-  	return generalRegisters() | floatRegisters();
-  }
-
   virtual unsigned stackAlignmentInWords() {
     return StackAlignmentInWords;
   }
@@ -1771,12 +1863,14 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void updateCall(UnaryOperation op UNUSED,
-                          bool assertAlignment UNUSED, void* returnAddress,
+                          void* returnAddress,
                           void* newTarget)
   {
     switch (op) {
     case Call:
-    case Jump: {
+    case Jump:
+    case AlignedCall:
+    case AlignedJump: {
       updateOffset(c.s, static_cast<uint8_t*>(returnAddress) - 4, false,
                    reinterpret_cast<intptr_t>(newTarget));
     } break;
@@ -1876,20 +1970,17 @@ class MyArchitecture: public Assembler::Architecture {
     *thunk = false;
 
     switch (op) {
-    case Compare:
-      *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
-      break;
-
     case Negate:
       *aTypeMask = (1 << RegisterOperand);
       break;
-    case FloatCompare:
+
     case FloatNegate:
     case Float2Float:
     case Float2Int:
     case Int2Float:
       *thunk = true;
       break;
+
     default:
       break;
     }
@@ -1897,22 +1988,37 @@ class MyArchitecture: public Assembler::Architecture {
   
   virtual void planDestination
   (BinaryOperation op,
-   unsigned, const uint8_t*, const uint64_t*,
+   unsigned, uint8_t, uint64_t,
    unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask)
   {
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
     *bRegisterMask = ~static_cast<uint64_t>(0);
 
     switch (op) {
-    case Compare:
-      *bTypeMask = (1 << RegisterOperand);
-      break;
-
     case Negate:
       *bTypeMask = (1 << RegisterOperand);
       break;
+
     default:
       break;
+    }
+  }
+
+  virtual void planMove
+  (unsigned,
+   uint8_t srcTypeMask, uint64_t srcRegisterMask,
+   uint8_t dstTypeMask, uint64_t,
+   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask)
+  {
+    *tmpTypeMask = srcTypeMask;
+    *tmpRegisterMask = srcRegisterMask;
+
+    if ((dstTypeMask & (1 << MemoryOperand))
+        and (srcTypeMask & ((1 << MemoryOperand) | 1 << AddressOperand)))
+    {
+      // can't move directly from memory to memory                              
+      *tmpTypeMask = (1 << RegisterOperand);
+      *tmpRegisterMask = ~static_cast<uint64_t>(0);
     }
   }
 
@@ -1942,14 +2048,9 @@ class MyArchitecture: public Assembler::Architecture {
       *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       break;
 
-    case LongCompare:
-      *bTypeMask = (1 << RegisterOperand);
-      break;
-
     case Divide:
     case Remainder:
       if (BytesPerWord == 4 and aSize == 8) {
-        *bTypeMask = ~0;
         *thunk = true;        
       } else {
         *aTypeMask = (1 << RegisterOperand);
@@ -1961,22 +2062,37 @@ class MyArchitecture: public Assembler::Architecture {
     case FloatMultiply:
     case FloatDivide:
     case FloatRemainder:
-      *bTypeMask = ~0;
+    case JumpIfFloatEqual:
+    case JumpIfFloatNotEqual:
+    case JumpIfFloatLess:
+    case JumpIfFloatGreater:
+    case JumpIfFloatLessOrEqual:
+    case JumpIfFloatGreaterOrEqual:
+    case JumpIfFloatLessOrUnordered:
+    case JumpIfFloatGreaterOrUnordered:
+    case JumpIfFloatLessOrEqualOrUnordered:
+    case JumpIfFloatGreaterOrEqualOrUnordered:
       *thunk = true;
       break;
+
     default:
       break;
     }
   }
 
   virtual void planDestination
-  (TernaryOperation,
-   unsigned, const uint8_t*, const uint64_t*,
-   unsigned, const uint8_t*, const uint64_t*,
+  (TernaryOperation op,
+   unsigned, uint8_t, uint64_t,
+   unsigned, uint8_t, const uint64_t,
    unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask)
   {
-    *cTypeMask = (1 << RegisterOperand);
-    *cRegisterMask = ~static_cast<uint64_t>(0);
+    if (isBranch(op)) {
+      *cTypeMask = (1 << ConstantOperand);
+      *cRegisterMask = 0;
+    } else {
+      *cTypeMask = (1 << RegisterOperand);
+      *cRegisterMask = ~static_cast<uint64_t>(0);
+    }
   }
 
   virtual void acquire() {
@@ -2178,30 +2294,40 @@ class MyAssembler: public Assembler {
   virtual void apply(UnaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand)
   {
-    arch_->c.unaryOperations[index(op, aType)](&c, aSize, aOperand);
+    arch_->c.unaryOperations[index(&(arch_->c), op, aType)]
+      (&c, aSize, aOperand);
   }
 
   virtual void apply(BinaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType, Operand* bOperand)
   {
-    arch_->c.binaryOperations[index(op, aType, bType)]
+    arch_->c.binaryOperations[index(&(arch_->c), op, aType, bType)]
       (&c, aSize, aOperand, bSize, bOperand);
   }
 
   virtual void apply(TernaryOperation op,
-                     unsigned, OperandType aType, Operand* aOperand,
+                     unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType UNUSED,
                      Operand* bOperand,
                      unsigned cSize UNUSED, OperandType cType UNUSED,
                      Operand* cOperand)
   {
-    assert(&c, bSize == cSize);
-    assert(&c, bType == RegisterOperand);
-    assert(&c, cType == RegisterOperand);
+    if (isBranch(op)) {
+      assert(&c, aSize == bSize);
+      assert(&c, cSize == BytesPerWord);
+      assert(&c, cType == ConstantOperand);
 
-    arch_->c.ternaryOperations[index(op, aType)]
-      (&c, bSize, aOperand, bOperand, cOperand);
+      arch_->c.branchOperations[branchIndex(&(arch_->c), aType, bType)]
+        (&c, op, aSize, aOperand, bOperand, cOperand);
+    } else {
+      assert(&c, bSize == cSize);
+      assert(&c, bType == RegisterOperand);
+      assert(&c, cType == RegisterOperand);
+      
+      arch_->c.ternaryOperations[index(&(arch_->c), op, aType)]
+        (&c, bSize, aOperand, bOperand, cOperand);
+    }
   }
 
   virtual void writeTo(uint8_t* dst) {
@@ -2249,7 +2375,7 @@ class MyAssembler: public Assembler {
 namespace vm {
 
 Assembler::Architecture*
-makeArchitecture(System* system)
+makeArchitecture(System* system, bool)
 {
   return new (allocate(system, sizeof(MyArchitecture))) MyArchitecture(system);
 }

@@ -1424,7 +1424,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     if (best.cost == Target::Impossible) {
       fprintf(stderr, "mask type %d reg %d frame %d\n",
               mask.typeMask, mask.registerMask, mask.frameIndex);
-      asm("int3");
+      abort(c);
     }
     return best;
   }
@@ -1458,7 +1458,10 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     assert(c, best.cost <= 3);
   }
 
-  if (best.cost == Target::Impossible) asm("int3");
+  if (best.cost == Target::Impossible) {
+    abort(c);
+  }
+
   return best;
 }
 
