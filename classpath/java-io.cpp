@@ -356,6 +356,27 @@ Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)
+{
+  const char* oldChars = e->GetStringUTFChars(old, 0);
+  const char* newChars = e->GetStringUTFChars(new_, 0);
+  if (oldChars) {
+    bool v;
+    if (newChars) {
+      v = rename(oldChars, newChars) == 0;
+
+      e->ReleaseStringUTFChars(new_, newChars);
+    } else {
+      v = false;
+    }
+    e->ReleaseStringUTFChars(old, oldChars);
+    return v;
+  } else {
+    return false;
+  }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_isDirectory(JNIEnv* e, jclass, jstring path)
 {
   const char* chars = e->GetStringUTFChars(path, 0);

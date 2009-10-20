@@ -36,6 +36,7 @@
 
 #define java_nio_channels_SelectionKey_OP_READ 1L
 #define java_nio_channels_SelectionKey_OP_WRITE 4L
+#define java_nio_channels_SelectionKey_OP_CONNECT 8L
 #define java_nio_channels_SelectionKey_OP_ACCEPT 16L
 
 #ifdef PLATFORM_WINDOWS
@@ -149,6 +150,17 @@ init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
     address->sin_port = htons(port);
     address->sin_addr = *reinterpret_cast<in_addr*>(host->h_addr_list[0]);
   }
+}
+
+inline bool
+einProgress(int error)
+{
+#ifdef PLATFORM_WINDOWS
+  return error == WSAEINPROGRESS
+    or error == WSAEWOULDBLOCK;
+#else
+  return error == EINPROGRESS;
+#endif
 }
 
 inline bool
@@ -371,6 +383,25 @@ Java_java_nio_channels_SocketChannel_natDoConnect(JNIEnv *e,
   return s;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_nio_channels_SocketChannel_natFinishConnect(JNIEnv *e,
+                                                      jclass,
+                                                      jint socket)
+{
+  int error;
+  socklen_t size = sizeof(int);
+  int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
+                     reinterpret_cast<char*>(&error), &size);
+  if (r != 0 or size != sizeof(int)) {
+    throwIOException(e);
+  } else if (einProgress(error)) {
+    return false;
+  } else if (error != 0) {
+    throwIOException(e);
+  }
+  return true;
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_java_nio_channels_SocketChannel_natRead(JNIEnv *e,
 					     jclass,
@@ -521,15 +552,18 @@ class Pipe {
     if (setBlocking(e, pipe[0], false)) {
       setBlocking(e, pipe[1], false);
     }
+
+    open_ = true;
   }
 
   void dispose() {
     ::close(pipe[0]);
     ::close(pipe[1]);
+    open_ = false;
   }
 
   bool connected() {
-    return true;
+    return open_;
   }
 
   int reader() {
@@ -542,6 +576,7 @@ class Pipe {
 
  private:
   int pipe[2];
+  bool open_;
 #endif
 };
 
@@ -622,7 +657,8 @@ Java_java_nio_channels_SocketSelector_natSelectUpdateInterestSet(JNIEnv *,
     FD_CLR(static_cast<unsigned>(socket), &(s->read));
   }
   
-  if (interest & java_nio_channels_SelectionKey_OP_WRITE) {
+  if (interest & (java_nio_channels_SelectionKey_OP_WRITE |
+		  java_nio_channels_SelectionKey_OP_CONNECT)) {
     FD_SET(static_cast<unsigned>(socket), &(s->write));
     if (max < socket) max = socket;
   } else {
@@ -744,10 +780,16 @@ Java_java_nio_channels_SocketSelector_natUpdateReadySet(JNIEnv *, jclass,
     }
   }
   
-  if ((interest & java_nio_channels_SelectionKey_OP_WRITE)
-      and FD_ISSET(socket, &(s->write))) {
-    ready |= java_nio_channels_SelectionKey_OP_WRITE;
+  if (FD_ISSET(socket, &(s->write))) {
+    if (interest & java_nio_channels_SelectionKey_OP_WRITE) {
+      ready |= java_nio_channels_SelectionKey_OP_WRITE;
+    }
+
+    if (interest & java_nio_channels_SelectionKey_OP_CONNECT) {
+      ready |= java_nio_channels_SelectionKey_OP_CONNECT;
+    }    
   }
+
   return ready;
 }
 

@@ -16,6 +16,8 @@ import java.nio.ByteBuffer;
 public abstract class SelectableChannel implements Channel {
   private SelectionKey key;
 
+  abstract int socketFD();
+
   public abstract SelectableChannel configureBlocking(boolean v)
     throws IOException;
 
