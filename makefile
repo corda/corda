@@ -179,12 +179,12 @@ ifeq ($(platform),windows)
 	endif
 
 	ifeq ($(arch),x86_64)
-		cxx = x86_64-pc-mingw32-g++
-		cc = x86_64-pc-mingw32-gcc
-		dlltool = x86_64-pc-mingw32-dlltool
-		ar = x86_64-pc-mingw32-ar
-		ranlib = x86_64-pc-mingw32-ranlib
-		strip = x86_64-pc-mingw32-strip
+		cxx = x86_64-w64-mingw32-g++
+		cc = x86_64-w64-mingw32-gcc
+		dlltool = x86_64-w64-mingw32-dlltool
+		ar = x86_64-w64-mingw32-ar
+		ranlib = x86_64-w64-mingw32-ranlib
+		strip = x86_64-w64-mingw32-strip
 		inc = "$(root)/win64/include"
 		lib = "$(root)/win64/lib"
 	endif
