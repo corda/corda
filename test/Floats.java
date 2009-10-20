@@ -61,5 +61,9 @@ public class Floats {
     expect(Math.round(0.5d) == 1);
     expect(Math.round(1.0d) == 1);
     expect(Math.round(1.9d) == 2);
+
+    float b = 1.0f;
+    int blue = (int)(b * 255 + 0.5);
+    expect(blue == 255);
   }
 }

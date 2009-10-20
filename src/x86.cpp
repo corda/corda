@@ -2391,14 +2391,14 @@ float2IntRR(Context* c, unsigned aSize, Assembler::Register* a,
             unsigned bSize, Assembler::Register* b)
 {
   assert(c, not floatReg(b));
-  floatRegOp(c, aSize, a, bSize, b, 0x2d);
+  floatRegOp(c, aSize, a, bSize, b, 0x2c);
 }
 
 void
 float2IntMR(Context* c, unsigned aSize, Assembler::Memory* a,
             unsigned bSize, Assembler::Register* b)
 {
-  floatMemOp(c, aSize, a, bSize, b, 0x2d);
+  floatMemOp(c, aSize, a, bSize, b, 0x2c);
 }
 
 void
