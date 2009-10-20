@@ -1066,7 +1066,7 @@ Avian_avian_Singleton_getLong
 (Thread* t, object, uintptr_t* arguments)
 {
   int64_t v;
-  memcpy(&singletonValue
-         (t, reinterpret_cast<object>(arguments[0]), arguments[1]), &v, 8);
+  memcpy(&v, &singletonValue
+         (t, reinterpret_cast<object>(arguments[0]), arguments[1]), 8);
   return v;
 }
