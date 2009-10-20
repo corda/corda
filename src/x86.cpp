@@ -2791,12 +2791,6 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual uintptr_t getConstant(const void* src) {
-    uintptr_t v;
-    memcpy(&v, src, BytesPerWord);
-    return v;
-  }
-
   virtual void setConstant(void* dst, uintptr_t constant) {
     memcpy(dst, &constant, BytesPerWord);
   }
@@ -3491,6 +3485,10 @@ class MyAssembler: public Assembler {
 
   virtual unsigned length() {
     return c.code.length();
+  }
+
+  virtual unsigned scratchSize() {
+    return 0;
   }
 
   virtual void dispose() {

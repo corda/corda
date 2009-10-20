@@ -333,7 +333,6 @@ class Assembler {
     virtual void updateCall(UnaryOperation op, void* returnAddress,
                             void* newTarget) = 0;
 
-    virtual uintptr_t getConstant(const void* src) = 0;
     virtual void setConstant(void* dst, uintptr_t constant) = 0;
 
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
@@ -421,6 +420,8 @@ class Assembler {
   virtual Block* endBlock(bool startNew) = 0;
 
   virtual unsigned length() = 0;
+
+  virtual unsigned scratchSize() = 0;
 
   virtual void dispose() = 0;
 };

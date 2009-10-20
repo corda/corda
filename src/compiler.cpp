@@ -5397,7 +5397,7 @@ compile(Context* c)
     block = next;
   }
 
-  return block->assemblerBlock->resolve(block->start, 0);
+  return block->assemblerBlock->resolve(block->start, 0) + a->scratchSize();
 }
 
 unsigned

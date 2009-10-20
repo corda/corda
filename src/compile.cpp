@@ -5383,6 +5383,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 
   return table;
 }
+
 uint8_t*
 finish(MyThread* t, Allocator* allocator, Context* context)
 {

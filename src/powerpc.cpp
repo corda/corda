@@ -32,6 +32,15 @@ inline int lo16(int64_t i) { return (int)(i & MASK_LO16); }
 inline int hi16(int64_t i) { return lo16(i >> 16); }
 inline int lo8(int64_t i) { return (int)(i & MASK_LO8); }
 inline int hi8(int64_t i) { return lo8(i >> 8); }
+
+inline int ha16(int32_t i) {
+  return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
+}
+
+inline int unha16(int32_t high, int32_t low) {
+  return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low;
+}
+
 }
 
 namespace isa {
@@ -186,13 +195,14 @@ class MyBlock: public Assembler::Block {
 };
 
 class Task;
+class ConstantPoolEntry;
 
 class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
     firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock)
+    lastBlock(firstBlock), constantPool(0), constantPoolCount(0)
   { }
 
   System* s;
@@ -203,6 +213,8 @@ class Context {
   uint8_t* result;
   MyBlock* firstBlock;
   MyBlock* lastBlock;
+  ConstantPoolEntry* constantPool;
+  unsigned constantPoolCount;
 };
 
 class Task {
@@ -556,15 +568,20 @@ void unsignedShiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
 }
 
 void
-updateImmediate(System* s, void* dst, int64_t src, unsigned size)
+updateImmediate(System* s, void* dst, int32_t src, unsigned size, bool address)
 {
   switch (size) {
   case 4: {
     int32_t* p = static_cast<int32_t*>(dst);
     int r = (p[1] >> 21) & 31;
 
-    p[0] = lis(r, src >> 16);
-    p[1] = ori(r, r, src);
+    if (address) {
+      p[0] = lis(r, ha16(src));
+      p[1] |= (src & 0xFFFF);
+    } else {
+      p[0] = lis(r, src >> 16);
+      p[1] = ori(r, r, src);
+    }
   } break;
 
   default: abort(s);
@@ -573,12 +590,13 @@ updateImmediate(System* s, void* dst, int64_t src, unsigned size)
 
 class ImmediateListener: public Promise::Listener {
  public:
-  ImmediateListener(System* s, void* dst, unsigned size, unsigned offset):
-    s(s), dst(dst), size(size), offset(offset)
+  ImmediateListener(System* s, void* dst, unsigned size, unsigned offset,
+                    bool address):
+    s(s), dst(dst), size(size), offset(offset), address(address)
   { }
 
   virtual bool resolve(int64_t value, void** location) {
-    updateImmediate(s, dst, value, size);
+    updateImmediate(s, dst, value, size, address);
     if (location) *location = static_cast<uint8_t*>(dst) + offset;
     return false;
   }
@@ -587,26 +605,28 @@ class ImmediateListener: public Promise::Listener {
   void* dst;
   unsigned size;
   unsigned offset;
+  bool address;
 };
 
 class ImmediateTask: public Task {
  public:
   ImmediateTask(Task* next, Promise* promise, Promise* offset, unsigned size,
-                unsigned promiseOffset):
+                unsigned promiseOffset, bool address):
     Task(next),
     promise(promise),
     offset(offset),
     size(size),
-    promiseOffset(promiseOffset)
+    promiseOffset(promiseOffset),
+    address(address)
   { }
 
   virtual void run(Context* c) {
     if (promise->resolved()) {
       updateImmediate
-        (c->s, c->result + offset->value(), promise->value(), size);
+        (c->s, c->result + offset->value(), promise->value(), size, address);
     } else {
       new (promise->listen(sizeof(ImmediateListener))) ImmediateListener
-        (c->s, c->result + offset->value(), size, promiseOffset);
+        (c->s, c->result + offset->value(), size, promiseOffset, address);
     }
   }
 
@@ -614,14 +634,48 @@ class ImmediateTask: public Task {
   Promise* offset;
   unsigned size;
   unsigned promiseOffset;
+  bool address;
 };
 
 void
 appendImmediateTask(Context* c, Promise* promise, Promise* offset,
-                    unsigned size, unsigned promiseOffset = 0)
+                    unsigned size, unsigned promiseOffset, bool address)
 {
   c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
-    (c->tasks, promise, offset, size, promiseOffset);
+    (c->tasks, promise, offset, size, promiseOffset, address);
+}
+
+class ConstantPoolEntry: public Promise {
+ public:
+  ConstantPoolEntry(Context* c, Promise* constant):
+    c(c), constant(constant), next(c->constantPool), address(0)
+  {
+    c->constantPool = this;
+    ++ c->constantPoolCount;
+  }
+
+  virtual int64_t value() {
+    assert(c, resolved());
+
+    return reinterpret_cast<intptr_t>(address);
+  }
+
+  virtual bool resolved() {
+    return address != 0;
+  }
+
+  Context* c;
+  Promise* constant;
+  ConstantPoolEntry* next;
+  void* address;
+  unsigned constantPoolCount;
+};
+
+ConstantPoolEntry*
+appendConstantPoolEntry(Context* c, Promise* constant)
+{
+  return new (c->zone->allocate(sizeof(ConstantPoolEntry)))
+    ConstantPoolEntry(c, constant);
 }
 
 void
@@ -717,7 +771,7 @@ moveCR2(Context* c, unsigned, Assembler::Constant* src,
       }
     } else {
       appendImmediateTask
-        (c, src->value, offset(c), BytesPerWord, promiseOffset);
+        (c, src->value, offset(c), BytesPerWord, promiseOffset, false);
       issue(c, lis(dst->low, 0));
       issue(c, ori(dst->low, dst->low, 0));
     }
@@ -1252,16 +1306,25 @@ xorC(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
-       unsigned dstSize, Assembler::Register* dst)
+moveAR2(Context* c, unsigned srcSize, Assembler::Address* src,
+        unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
 {
   assert(c, srcSize == 4 and dstSize == 4);
 
-  Assembler::Constant constant(src->address);
   Assembler::Memory memory(dst->low, 0, -1, 0);
-
-  moveCR(c, srcSize, &constant, dstSize, dst);
+  
+  appendImmediateTask
+    (c, src->address, offset(c), BytesPerWord, promiseOffset, true);
+  
+  issue(c, lis(dst->low, 0));
   moveMR(c, dstSize, &memory, dstSize, dst);
+}
+
+void
+moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
+       unsigned dstSize, Assembler::Register* dst)
+{
+  moveAR2(c, srcSize, src, dstSize, dst, 0);
 }
 
 void
@@ -1597,6 +1660,18 @@ longCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 }
 
 void
+alignedLongCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  Assembler::Address address(appendConstantPoolEntry(c, target->value));
+  moveAR2(c, BytesPerWord, &address, BytesPerWord, &tmp, 12);
+  callR(c, BytesPerWord, &tmp);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void
 longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
@@ -1604,6 +1679,18 @@ longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   Assembler::Register tmp(0);
   moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, 12);
   jumpR(c, BytesPerWord, &tmp);
+}
+
+void
+alignedLongJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+{
+  assert(c, size == BytesPerWord);
+
+  Assembler::Register tmp(c->client->acquireTemporary());
+  Assembler::Address address(appendConstantPoolEntry(c, target->value));
+  moveAR2(c, BytesPerWord, &address, BytesPerWord, &tmp, 12);
+  jumpR(c, BytesPerWord, &tmp);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -1707,7 +1794,11 @@ populateTables(ArchitectureContext* c)
 
   uo[index(c, LongCall, C)] = CAST1(longCallC);
 
+  uo[index(c, AlignedLongCall, C)] = CAST1(alignedLongCallC);
+
   uo[index(c, LongJump, C)] = CAST1(longJumpC);
+
+  uo[index(c, AlignedLongJump, C)] = CAST1(alignedLongJumpC);
 
   uo[index(c, Jump, R)] = CAST1(jumpR);
   uo[index(c, Jump, C)] = CAST1(jumpC);
@@ -1878,7 +1969,15 @@ class MyArchitecture: public Assembler::Architecture {
     case LongCall:
     case LongJump: {
       updateImmediate(c.s, static_cast<uint8_t*>(returnAddress) - 12,
-                      reinterpret_cast<intptr_t>(newTarget), BytesPerWord);
+                      reinterpret_cast<intptr_t>(newTarget), BytesPerWord,
+                      false);
+    } break;
+
+    case AlignedLongCall:
+    case AlignedLongJump: {
+      uint32_t* p = static_cast<uint32_t*>(returnAddress) - 4;
+      *reinterpret_cast<void**>(unha16(p[0] & 0xFFFF, p[1] & 0xFFFF))
+        = newTarget;
     } break;
 
     default: abort(&c);
@@ -1889,13 +1988,8 @@ class MyArchitecture: public Assembler::Architecture {
     return 4;
   }
 
-  virtual uintptr_t getConstant(const void* src) {
-    const int32_t* p = static_cast<const int32_t*>(src);
-    return (p[0] << 16) | (p[1] & 0xFFFF);    
-  }
-
   virtual void setConstant(void* dst, uintptr_t constant) {
-    updateImmediate(c.s, dst, constant, BytesPerWord);
+    updateImmediate(c.s, dst, constant, BytesPerWord, false);
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
@@ -2337,8 +2431,20 @@ class MyAssembler: public Assembler {
       memcpy(dst + b->start, c.code.data + b->offset, b->size);
     }
     
+    unsigned index = c.code.length();
+    assert(&c, index % BytesPerWord == 0);
+    for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
+      e->address = dst + index;
+      index += BytesPerWord;
+    }
+    
     for (Task* t = c.tasks; t; t = t->next) {
       t->run(&c);
+    }
+
+    for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
+      *static_cast<uint32_t*>(e->address) = e->constant->value();
+      fprintf(stderr, "constant %p at %p\n", reinterpret_cast<void*>(e->constant->value()), e->address);
     }
   }
 
@@ -2360,6 +2466,10 @@ class MyAssembler: public Assembler {
 
   virtual unsigned length() {
     return c.code.length();
+  }
+
+  virtual unsigned scratchSize() {
+    return c.constantPoolCount * BytesPerWord;
   }
 
   virtual void dispose() {
