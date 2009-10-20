@@ -1306,7 +1306,7 @@ xorC(Context* c, unsigned size, Assembler::Constant* a,
 }
 
 void
-moveAR2(Context* c, unsigned srcSize, Assembler::Address* src,
+moveAR2(Context* c, unsigned srcSize UNUSED, Assembler::Address* src,
         unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
 {
   assert(c, srcSize == 4 and dstSize == 4);
@@ -1908,7 +1908,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual uintptr_t maximumImmediateJump() {
-    return 0x3FFFFFF;
+    return 0x1FFFFFF;
   }
 
   virtual bool reserved(int register_) {

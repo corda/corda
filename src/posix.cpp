@@ -575,6 +575,8 @@ class MySystem: public System {
     if (p == MAP_FAILED) {
       return 0;
     } else {
+//       fprintf(stderr, "executable from %p to %p\n", p,
+//               static_cast<uint8_t*>(p) + sizeInBytes);
       return static_cast<uint8_t*>(p);
     }
   }
