@@ -5389,6 +5389,31 @@ finish(MyThread* t, Allocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
 
+  if (false) {
+    logCompile
+      (t, 0, 0,
+       reinterpret_cast<const char*>
+       (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
+       reinterpret_cast<const char*>
+       (&byteArrayBody(t, methodName(t, context->method), 0)),
+       reinterpret_cast<const char*>
+       (&byteArrayBody(t, methodSpec(t, context->method), 0)));
+  }
+
+  // for debugging:
+  if (false and
+      ::strcmp
+      (reinterpret_cast<const char*>
+       (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
+       "org/eclipse/swt/widgets/Control") == 0 and
+      ::strcmp
+      (reinterpret_cast<const char*>
+       (&byteArrayBody(t, methodName(t, context->method), 0)),
+       "gtk_motion_notify_event") == 0)
+  {
+    trap();
+  }
+
   unsigned codeSize = c->compile();
   uintptr_t* code = static_cast<uintptr_t*>
     (allocator->allocate(pad(codeSize) + pad(c->poolSize()) + BytesPerWord));
@@ -5514,11 +5539,11 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       ::strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, className(t, methodClass(t, context->method)), 0)),
-       "Floats") == 0 and
+       "AllFloats") == 0 and
       ::strcmp
       (reinterpret_cast<const char*>
        (&byteArrayBody(t, methodName(t, context->method), 0)),
-       "main") == 0)
+       "multiplyByFive") == 0)
   {
     trap();
   }

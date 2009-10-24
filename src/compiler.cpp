@@ -109,7 +109,7 @@ class Site {
 
   virtual bool loneMatch(Context*, const SiteMask&) = 0;
 
-  virtual bool matchNext(Context*, Site*, unsigned) = 0;
+  virtual bool matchNextWord(Context*, Site*, unsigned) = 0;
   
   virtual void acquire(Context*, Value*) { }
 
@@ -131,7 +131,9 @@ class Site {
 
   virtual Site* copyHigh(Context*) = 0;
 
-  virtual Site* makeNext(Context*, unsigned) = 0;
+  virtual Site* makeNextWord(Context*, unsigned) = 0;
+
+  virtual SiteMask nextWordMask(Context*, unsigned) = 0;
 
   virtual unsigned registerSize(Context*) { return BytesPerWord; }
 
@@ -798,12 +800,12 @@ frameIndex(Context* c, FrameIterator::Element* element)
 class SiteIterator {
  public:
   SiteIterator(Context* c, Value* v, bool includeBuddies = true,
-               bool includeNext = true):
+               bool includeNextWord = true):
     c(c),
     originalValue(v),
     currentValue(v),
     includeBuddies(includeBuddies),
-    includeNext(includeNext),
+    includeNextWord(includeNextWord),
     pass(0),
     next_(findNext(&(v->sites))),
     previous(0)
@@ -827,7 +829,7 @@ class SiteIterator {
           }
         }
 
-        if (includeNext and pass == 0) {
+        if (includeNextWord and pass == 0) {
           Value* v = originalValue->nextWord;
           if (v != originalValue) {
             pass = 1;
@@ -867,7 +869,7 @@ class SiteIterator {
   Value* originalValue;
   Value* currentValue;
   bool includeBuddies;
-  bool includeNext;
+  bool includeNextWord;
   uint8_t pass;
   Site** next_;
   Site** previous;
@@ -992,6 +994,25 @@ liveNext(Context* c, Value* v)
   return 0;
 }
 
+unsigned
+sitesToString(Context* c, Value* v, char* buffer, unsigned size);
+
+void
+deadWord(Context* c, Value* v)
+{
+  Value* nextWord = v->nextWord;
+  assert(c, nextWord != v);
+
+  for (SiteIterator it(c, v); it.hasMore();) {
+    Site* s = it.next();
+    
+    if (s->registerSize(c) > BytesPerWord) {
+      it.remove(c);
+      addSite(c, nextWord, s);
+    }
+  }
+}
+
 void
 deadBuddy(Context* c, Value* v, Read* r UNUSED)
 {
@@ -1016,7 +1037,7 @@ deadBuddy(Context* c, Value* v, Read* r UNUSED)
 
   assert(c, p->buddy);
 
-  for (SiteIterator it(c, v); it.hasMore();) {
+  for (SiteIterator it(c, v, false, false); it.hasMore();) {
     Site* s = it.next();
     it.remove(c);
     
@@ -1037,6 +1058,15 @@ popRead(Context* c, Event* e UNUSED, Value* v)
   v->reads = v->reads->next(c);
 
   if (not valid(v->reads)) {
+    Value* nextWord = v->nextWord;
+    if (nextWord != v) {
+      if (valid(nextWord->reads)) {
+        deadWord(c, v);
+      } else {
+        deadWord(c, nextWord);        
+      }
+    }
+
     Read* r = live(v);
     if (r) {
       deadBuddy(c, v, r);
@@ -1513,7 +1543,7 @@ class ConstantSite: public Site {
     return true;
   }
 
-  virtual bool matchNext(Context* c, Site* s, unsigned) {
+  virtual bool matchNextWord(Context* c, Site* s, unsigned) {
     return s->type(c) == ConstantOperand;
   }
 
@@ -1543,8 +1573,12 @@ class ConstantSite: public Site {
     return constantSite(c, shiftMaskPromise(c, value, 32, 0xFFFFFFFF));
   }
 
-  virtual Site* makeNext(Context* c, unsigned) {
+  virtual Site* makeNextWord(Context* c, unsigned) {
     abort(c);
+  }
+
+  virtual SiteMask nextWordMask(Context*, unsigned) {
+    return SiteMask(1 << ConstantOperand, 0, NoFrameIndex);
   }
 
   Promise* value;
@@ -1597,7 +1631,7 @@ class AddressSite: public Site {
     return false;
   }
 
-  virtual bool matchNext(Context* c, Site*, unsigned) {
+  virtual bool matchNextWord(Context* c, Site*, unsigned) {
     abort(c);
   }
 
@@ -1625,7 +1659,11 @@ class AddressSite: public Site {
     abort(c);
   }
 
-  virtual Site* makeNext(Context* c, unsigned) {
+  virtual Site* makeNextWord(Context* c, unsigned) {
+    abort(c);
+  }
+
+  virtual SiteMask nextWordMask(Context* c, unsigned) {
     abort(c);
   }
 
@@ -1689,7 +1727,7 @@ class RegisterSite: public Site {
     }
   }
 
-  virtual bool matchNext(Context* c, Site* s, unsigned) {
+  virtual bool matchNextWord(Context* c, Site* s, unsigned) {
     return s->type(c) == RegisterOperand
       and s->registerSize(c) == BytesPerWord;
   }
@@ -1773,8 +1811,12 @@ class RegisterSite: public Site {
     abort(c);
   }
 
-  virtual Site* makeNext(Context* c, unsigned) {
+  virtual Site* makeNextWord(Context* c, unsigned) {
     return freeRegisterSite(c, c->arch->generalRegisterMask());    
+  }
+
+  virtual SiteMask nextWordMask(Context*, unsigned) {
+    return SiteMask(1 << RegisterOperand, ~0, NoFrameIndex);
   }
 
   virtual unsigned registerSize(Context* c) {
@@ -1886,7 +1928,7 @@ class MemorySite: public Site {
     return false;
   }
 
-  virtual bool matchNext(Context* c, Site* s, unsigned index) {
+  virtual bool matchNextWord(Context* c, Site* s, unsigned index) {
     if (s->type(c) == MemoryOperand) {
       MemorySite* ms = static_cast<MemorySite*>(s);
       return ms->base == this->base
@@ -1909,6 +1951,8 @@ class MemorySite: public Site {
 
     if (base == c->arch->stack()) {
       assert(c, index == NoRegister);
+      assert
+        (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
       local::acquire
         (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
@@ -1920,6 +1964,8 @@ class MemorySite: public Site {
   virtual void release(Context* c, Value* v) {
     if (base == c->arch->stack()) {
       assert(c, index == NoRegister);
+      assert
+        (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
       local::release
         (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
@@ -1936,12 +1982,22 @@ class MemorySite: public Site {
   virtual void freeze(Context* c, Value* v) {
     if (base == c->arch->stack()) {
       c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
+    } else {
+      increment(c, c->registerResources + base);
+      if (index != NoRegister) {
+        increment(c, c->registerResources + index);
+      }
     }
   }
 
   virtual void thaw(Context* c, Value* v) {
     if (base == c->arch->stack()) {
       c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
+    } else {
+      decrement(c, c->registerResources + base);
+      if (index != NoRegister) {
+        decrement(c, c->registerResources + index);
+      }
     }
   }
 
@@ -1957,6 +2013,7 @@ class MemorySite: public Site {
   virtual void asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
                                   Assembler::Operand* result)
   {
+    // todo: endianness?
     assert(c, high == this
            or (static_cast<MemorySite*>(high)->base == base
                and static_cast<MemorySite*>(high)->offset
@@ -1989,10 +2046,24 @@ class MemorySite: public Site {
     return copyHalf(c, not c->arch->bigEndian());
   }
 
-  virtual Site* makeNext(Context* c, unsigned index) {
+  virtual Site* makeNextWord(Context* c, unsigned index) {
+    // todo: endianness?
     return memorySite
       (c, base, offset + (index == 1 ? BytesPerWord : -BytesPerWord),
        this->index, scale);
+  }
+
+  virtual SiteMask nextWordMask(Context* c, unsigned index) {
+    // todo: endianness?
+    int frameIndex;
+    if (base == c->arch->stack()) {
+      assert(c, this->index == NoRegister);
+      frameIndex = static_cast<int>(offsetToFrameIndex(c, offset))
+        + (index == 1 ? 1 : -1);
+    } else {
+      frameIndex = NoFrameIndex;
+    }
+    return SiteMask(1 << MemoryOperand, 0, frameIndex);
   }
 
   bool acquired;
@@ -2161,8 +2232,7 @@ class SingleRead: public Read {
   virtual void maybeIntersectWithHighSource(Context* c) {
     if (high) {
       Site* s = high->source;
-      this->mask = local::intersect
-        (SiteMask(1 << s->type(c), ~0, AnyFrameIndex), this->mask);
+      this->mask = local::intersect(s->nextWordMask(c, 0), this->mask);
     }
   }
 
@@ -2374,16 +2444,27 @@ stubRead(Context* c)
 }
 
 Site*
-pickOrMoveSite(Context* c, Value* v, Site* s, unsigned index)
+pickSite(Context* c, Value* v, Site* s, unsigned index)
 {
   for (SiteIterator it(c, v, true, false); it.hasMore();) {
     Site* candidate = it.next();
-    if (s->matchNext(c, candidate, index)) {
+    if (s->matchNextWord(c, candidate, index)) {
       return candidate;
     }
   }
 
-  Site* n = s->makeNext(c, index);
+  return 0;
+}
+
+Site*
+pickOrMoveSite(Context* c, Value* v, Site* s, unsigned index)
+{
+  Site* n = pickSite(c, v, s, index);
+  if (n) {
+    return n;
+  }
+
+  n = s->makeNextWord(c, index);
 
   Site* src = 0;
   unsigned copyCost = 0xFFFFFFFF;
@@ -2416,22 +2497,27 @@ pickOrMoveSite(Context* c, Value* v, Site* s, Site** low, Site** high)
 }
 
 Site*
-growSite(Context* c, Value* v, Site* s, unsigned index)
+pickOrGrowSite(Context* c, Value* v, Site* s, unsigned index)
 {
-  Site* n = s->makeNext(c, index);
+  Site* n = pickSite(c, v, s, index);
+  if (n) {
+    return n;
+  }
+
+  n = s->makeNextWord(c, index);
   addSite(c, v, n);
   return n;
 }
 
 Site*
-growSite(Context* c, Value* v, Site* s, Site** low, Site** high)
+pickOrGrowSite(Context* c, Value* v, Site* s, Site** low, Site** high)
 {
   if (v->wordIndex == 0) {
     *low = s;
-    *high = growSite(c, v->nextWord, s, 1);
+    *high = pickOrGrowSite(c, v->nextWord, s, 1);
     return *high;
   } else {
-    *low = growSite(c, v->nextWord, s, 0);
+    *low = pickOrGrowSite(c, v->nextWord, s, 0);
     *high = s;
     return *low;
   }
@@ -2580,7 +2666,7 @@ move(Context* c, Value* value, Site* src, Site* dst)
   if (srcSize == dstSize) {
     apply(c, Move, srcSize, src, src, dstSize, dst, dst);
   } else if (srcSize > BytesPerWord) {
-    Site* low, *high, *other = growSite(c, value, dst, &low, &high);
+    Site* low, *high, *other = pickOrGrowSite(c, value, dst, &low, &high);
     other->freeze(c, value->nextWord);
 
     apply(c, Move, srcSize, src, src, srcSize, low, high);
@@ -2871,7 +2957,22 @@ class CallEvent: public Event {
     Stack* stack = stackBefore;
 
     if (stackArgumentFootprint) {
-      int footprint = stackArgumentFootprint;
+      RUNTIME_ARRAY(Value*, arguments, stackArgumentFootprint);
+      for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
+        Value* v = stack->value;
+        stack = stack->next;
+
+        if ((BytesPerWord == 8 and (v == 0 or (i >= 1 and stack->value == 0)))
+            or (BytesPerWord == 4 and v->nextWord != v))
+        {
+          assert(c, BytesPerWord == 8 or v->nextWord == stack->value);
+
+          RUNTIME_ARRAY_BODY(arguments)[i--] = stack->value;
+          stack = stack->next;
+        }
+        RUNTIME_ARRAY_BODY(arguments)[i] = v;
+      }
+
       int returnAddressIndex;
       int framePointerIndex;
       int frameOffset;
@@ -2884,36 +2985,33 @@ class CallEvent: public Event {
         framePointerIndex = base + c->arch->framePointerOffset();
 
         frameOffset = totalFrameSize(c)
-          - c->arch->argumentFootprint(stackArgumentFootprint) - 1;
+          - c->arch->argumentFootprint(stackArgumentFootprint);
       } else {
         returnAddressIndex = -1;
         framePointerIndex = -1;
-        frameOffset = -1;
+        frameOffset = 0;
       }
 
-      while (footprint > 0) {
-        if (stack->value) {
-          int frameIndex = footprint + frameOffset;
+      for (unsigned i = 0; i < stackArgumentFootprint; ++i) {
+        Value* v = arguments[i];
+        if (v) {
+          int frameIndex = i + frameOffset;
 
           if (DebugReads) {
             fprintf(stderr, "stack arg read %p at %d of %d\n",
-                    stack->value, frameIndex, totalFrameSize(c));
+                    v, frameIndex, totalFrameSize(c));
           }
 
           if (static_cast<int>(frameIndex) == returnAddressIndex) {
-            returnAddressSurrogate = stack->value;
-            addRead(c, this, stack->value, generalRegisterMask(c));
+            returnAddressSurrogate = v;
+            addRead(c, this, v, generalRegisterMask(c));
           } else if (static_cast<int>(frameIndex) == framePointerIndex) {
-            framePointerSurrogate = stack->value;
-            addRead(c, this, stack->value, generalRegisterMask(c));
+            framePointerSurrogate = v;
+            addRead(c, this, v, generalRegisterMask(c));
           } else {
-            addRead(c, this, stack->value, SiteMask
-                    (1 << MemoryOperand, 0, frameIndex));
+            addRead(c, this, v, SiteMask(1 << MemoryOperand, 0, frameIndex));
           }
         }
-
-        stack = stack->next;
-        -- footprint;
       }
     }
 
@@ -3164,6 +3262,7 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
   if (srcSelectSize < dstSize) cost = 1;
 
   if (cost) {
+    // todo: let c->arch->planMove decide this:
     bool useTemporary = ((target->type(c) == MemoryOperand
                           and src->source->type(c) == MemoryOperand)
                          or (srcSelectSize < dstSize
@@ -3203,14 +3302,17 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
     } else {
       // pick a temporary register which is valid as both a
       // destination and a source for the moves we need to perform:
+      
+      removeSite(c, dst, target);
 
       bool thunk;
       uint8_t srcTypeMask;
       uint64_t srcRegisterMask;
 
       c->arch->planSource(type, dstSize, &srcTypeMask, &srcRegisterMask,
-                    dstSize, &thunk);
+                          dstSize, &thunk);
 
+      assert(c, thunk == 0);
       assert(c, dstMask.typeMask & srcTypeMask & (1 << RegisterOperand));
 
       Site* tmpTarget = freeRegisterSite
@@ -3244,6 +3346,8 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
                   srcb, dstb, src, dst);
         }
 
+        addSite(c, dst, target);
+
         tmpTarget->freeze(c, dst);
 
         apply(c, Move, dstSize, tmpTarget, tmpTarget, dstSize, target, target);
@@ -3253,8 +3357,6 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
         if (isStore) {
           removeSite(c, dst, tmpTarget);
         }
-      } else {
-        removeSite(c, dst, target);
       }
     }
 
@@ -3372,8 +3474,8 @@ class MoveEvent: public Event {
     } else if (srcSelectSize == dstSize) {
       maybeMove(c, Move, BytesPerWord, BytesPerWord, src, BytesPerWord, dst,
                 dstLowMask);
-      maybeMove(c, Move, BytesPerWord, BytesPerWord, src->nextWord, BytesPerWord,
-                dst->nextWord, dstHighMask);
+      maybeMove(c, Move, BytesPerWord, BytesPerWord, src->nextWord,
+                BytesPerWord, dst->nextWord, dstHighMask);
     } else if (srcSize > BytesPerWord) {
       assert(c, dstSize == BytesPerWord);
 
@@ -3612,7 +3714,11 @@ class CombineEvent: public Event {
          ? getTarget(c, second->nextWord, result->nextWord, resultHighMask)
          : low);
 
-    //     fprintf(stderr, "combine %p and %p into %p\n", first, second, result);
+//     fprintf(stderr, "combine %p:%p and %p:%p into %p:%p\n",
+//             first, first->nextWord,
+//             second, second->nextWord,
+//             result, result->nextWord);
+
     apply(c, type,
           firstSize, first->source, first->nextWord->source,
           secondSize, second->source, second->nextWord->source,
@@ -3760,16 +3866,16 @@ pushWord(Context* c, Value* v)
   return v;
 }
 
-Value*
-push(Context* c, unsigned footprint, Value* v, bool reverse)
+void
+push(Context* c, unsigned footprint, Value* v)
 {
   assert(c, footprint);
 
-  bool lowFirst = reverse xor c->arch->bigEndian();
+  bool bigEndian = c->arch->bigEndian();
   
   Value* low = v;
   
-  if (lowFirst) {
+  if (bigEndian) {
     v = pushWord(c, v);
   }
 
@@ -3787,7 +3893,7 @@ push(Context* c, unsigned footprint, Value* v, bool reverse)
     high = 0;
   }
   
-  if (not lowFirst) {
+  if (not bigEndian) {
     v = pushWord(c, v);
   }
 
@@ -3796,8 +3902,6 @@ push(Context* c, unsigned footprint, Value* v, bool reverse)
     high->nextWord = v;
     high->wordIndex = 1;
   }
-
-  return v;
 }
 
 void
@@ -3822,7 +3926,7 @@ pop(Context* c, unsigned footprint)
 
   bool bigEndian = c->arch->bigEndian();
 
-  if (bigEndian) {
+  if (not bigEndian) {
     s = c->stack;
   }
 
@@ -3833,11 +3937,11 @@ pop(Context* c, unsigned footprint)
     Stack* low;
     Stack* high;
     if (bigEndian) {
-      low = c->stack;
-      high = low->next;
-    } else {
       high = c->stack;
       low = high->next;
+    } else {
+      low = c->stack;
+      high = low->next;
     }
 
     assert(c, (BytesPerWord == 8
@@ -3848,7 +3952,7 @@ pop(Context* c, unsigned footprint)
     popWord(c);
   }
 
-  if (not bigEndian) {
+  if (bigEndian) {
     s = c->stack;
   }
 
@@ -3958,8 +4062,8 @@ appendCombine(Context* c, TernaryOperation type,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    local::push(c, ceiling(secondSize, BytesPerWord), second, false);
-    local::push(c, ceiling(firstSize, BytesPerWord), first, false);
+    local::push(c, ceiling(secondSize, BytesPerWord), second);
+    local::push(c, ceiling(firstSize, BytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -4079,7 +4183,7 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    local::push(c, ceiling(firstSize, BytesPerWord), first, false);
+    local::push(c, ceiling(firstSize, BytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -4387,8 +4491,8 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    local::push(c, ceiling(size, BytesPerWord), second, false);
-    local::push(c, ceiling(size, BytesPerWord), first, false);
+    local::push(c, ceiling(size, BytesPerWord), second);
+    local::push(c, ceiling(size, BytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -4605,7 +4709,7 @@ class BuddyEvent: public Event {
   BuddyEvent(Context* c, Value* original, Value* buddy):
     Event(c), original(original), buddy(buddy)
   {
-    addRead(c, this, original, SiteMask(~0, ~0, AnyFrameIndex));
+    addRead(c, this, original, SiteMask(~0, ~0, AnyFrameIndex), buddy);
   }
 
   virtual const char* name() {
@@ -4613,7 +4717,7 @@ class BuddyEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    //     fprintf(stderr, "original %p buddy %p\n", original, buddy);
+//     fprintf(stderr, "original %p buddy %p\n", original, buddy);
     assert(c, hasSite(c, original));
 
     assert(c, original);
@@ -5790,7 +5894,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void push(unsigned footprint, Operand* value) {
-    local::push(&c, footprint, static_cast<Value*>(value), true);
+    local::push(&c, footprint, static_cast<Value*>(value));
   }
 
   virtual void save(unsigned footprint, Operand* value) {
@@ -5808,7 +5912,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void pushed() {
-    Value* v = value(&c, ValueFloat);
+    Value* v = value(&c, ValueGeneral);
     appendFrameSite
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
@@ -5849,11 +5953,11 @@ class MyCompiler: public Compiler {
       Stack* low;
       Stack* high;
       if (bigEndian) {
-        low = s;
-        high = s->next;
-      } else {
         high = s;
         low = s->next;
+      } else {
+        low = s;
+        high = s->next;
       }
 
       assert(&c, (BytesPerWord == 8
@@ -5861,7 +5965,7 @@ class MyCompiler: public Compiler {
              or (BytesPerWord == 4 and low->value->nextWord == high->value));
 #endif // not NDEBUG
 
-      if (not bigEndian) {
+      if (bigEndian) {
         s = s->next;
       }
     }
