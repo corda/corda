@@ -3109,6 +3109,10 @@ class MyArchitecture: public Assembler::Architecture {
         *thunk = true;
       }
       break;
+
+    case FloatRemainder:
+      *thunk = true;
+      break;
    	  
     case Multiply:
       if (BytesPerWord == 4 and aSize == 8) { 

@@ -873,6 +873,9 @@ class Context {
         case FloatDivide:
           return local::getThunk(t, divideDoubleThunk);
 
+        case FloatRemainder:
+          return local::getThunk(t, moduloDoubleThunk);
+
         case JumpIfFloatEqual:
         case JumpIfFloatNotEqual:
         case JumpIfFloatLess:
@@ -894,12 +897,18 @@ class Context {
         switch (op) {
         case FloatAdd:
           return local::getThunk(t, addFloatThunk);
+
         case FloatSubtract:
           return local::getThunk(t, subtractFloatThunk);
+
         case FloatMultiply:
           return local::getThunk(t, multiplyFloatThunk);
+
         case FloatDivide:
           return local::getThunk(t, divideFloatThunk);
+
+        case FloatRemainder:
+          return local::getThunk(t, moduloFloatThunk);
 
         case JumpIfFloatEqual:
         case JumpIfFloatNotEqual:

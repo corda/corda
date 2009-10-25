@@ -7,6 +7,9 @@ public class AllFloats {
   private static float divide(float a, float b) {return a / b;}
   private static double divide(double a, double b) {return a / b;}
   private static double divide(float a, double b) {return a / b;}
+  private static float remainder(float a, float b) {return a % b;}
+  private static double remainder(double a, double b) {return a % b;}
+  private static double remainder(float a, double b) {return a % b;}
   private static float add(float a, float b) {return a + b;}
   private static double add(double a, double b) {return a + b;}
   private static double add(float a, double b) {return a + b;}
@@ -44,6 +47,9 @@ public class AllFloats {
     expect(divide(5f, 2f) == 5f/2f);
     expect(divide(5d, 2d) == 5d/2d);
     expect(divide(5f, 2d) == 5f/2d);
+    expect(remainder(5f, 2f) == 5f%2f);
+    expect(remainder(5d, 2d) == 5d%2d);
+    expect(remainder(5f, 2d) == 5f%2d);
     expect(add(5f, 4f) == 5f+4f);
     expect(add(5d, 4d) == 5f+4d);
     expect(add(5f, 4d) == 5f+4d);
