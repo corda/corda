@@ -757,14 +757,18 @@ class FrameIterator {
     const unsigned localIndex;
   };
 
-  FrameIterator(Context* c, Stack* stack, Local* locals):
-    stack(stack), locals(locals), localIndex(c->localFootprint - 1)
+  FrameIterator(Context* c, Stack* stack, Local* locals,
+                bool includeEmpty = false):
+    stack(stack), locals(locals), localIndex(c->localFootprint - 1),
+    includeEmpty(includeEmpty)
   { }
 
   bool hasMore() {
-    while (stack and stack->value == 0) stack = stack->next;
+    if (not includeEmpty) {
+      while (stack and stack->value == 0) stack = stack->next;
 
-    while (localIndex >= 0 and locals[localIndex].value == 0) -- localIndex;
+      while (localIndex >= 0 and locals[localIndex].value == 0) -- localIndex;
+    }
 
     return stack != 0 or localIndex >= 0;
   }
@@ -789,6 +793,7 @@ class FrameIterator {
   Stack* stack;
   Local* locals;
   int localIndex;
+  bool includeEmpty;
 };
 
 int
@@ -1689,7 +1694,8 @@ class RegisterSite: public Site {
     if (number != NoRegister) {
       return vm::snprintf(buffer, bufferSize, "%p register %d", this, number);
     } else {
-      return vm::snprintf(buffer, bufferSize, "%p register unacquired", this);
+      return vm::snprintf(buffer, bufferSize,
+                          "%p register unacquired (mask %d)", this, mask);
     }
   }
 
@@ -5000,10 +5006,12 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
                      Site** sites)
 {
   bool complete = true;
-  for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
+  for (FrameIterator it(c, e->stackAfter, e->localsAfter, true);
+       it.hasMore();)
+  {
     FrameIterator::Element el = it.next(c);
     Value* v = el.value;
-    Read* r = live(v);
+    Read* r = v ? live(v) : 0;
     Site* s = sites[el.localIndex];
 
     if (r) {
@@ -5027,9 +5035,10 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
                 buffer, v, el.localIndex, frameIndex(c, &el));
       }
       
-      addSite(c, v, s);
-      removeSite(c, v, s);
-      freeze(c, frozen, s, v);
+      Value dummy(0, 0, ValueGeneral);
+      addSite(c, &dummy, s);
+      removeSite(c, &dummy, s);
+      freeze(c, frozen, s, 0);
     }
   }
 

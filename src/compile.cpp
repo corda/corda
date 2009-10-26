@@ -5715,6 +5715,14 @@ compileMethod2(MyThread* t, void* ip)
     t->trace->targetMethod = 0;
   }
 
+  if (false) {
+    compile(t, codeAllocator(t), 0, resolveMethod
+            (t, t->m->loader,
+             "org/eclipse/swt/widgets/TableItem",
+             "getBounds",
+             "(IIZZZZJ)Lorg/eclipse/swt/internal/win32/RECT;"));
+  }
+
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
