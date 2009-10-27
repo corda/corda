@@ -19,11 +19,12 @@
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define PLATFORM_WINDOWS
 #  define PATH_SEPARATOR ';'
-#  define JNIEXPORT __declspec(dllexport)
+#  define JNIEXPORT __declspec(dllexport) __attribute__ ((externally_visible))
 #else
 #  define PLATFORM_POSIX
 #  define PATH_SEPARATOR ':'
-#  define JNIEXPORT __attribute__ ((visibility("default")))
+#  define JNIEXPORT __attribute__ ((visibility("default"))) \
+  __attribute__ ((externally_visible))
 #endif
 
 #ifdef _MSC_VER

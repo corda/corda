@@ -90,10 +90,10 @@ typedef uint64_t uintptr_t;
 
 #undef JNIEXPORT
 #ifdef PLATFORM_WINDOWS
-#  define JNIEXPORT __declspec(dllexport)
+#  define JNIEXPORT __declspec(dllexport) __attribute__ ((externally_visible))
 #  define PATH_SEPARATOR ';'
 #else
-#  define JNIEXPORT __attribute__ ((visibility("default")))
+#  define JNIEXPORT __attribute__ ((visibility("default"))) __attribute__ ((externally_visible))
 #  define PATH_SEPARATOR ':'
 #endif
 
