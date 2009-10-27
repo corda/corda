@@ -16,16 +16,26 @@
 #include "string.h"
 
 #undef JNIEXPORT
+
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define PLATFORM_WINDOWS
 #  define PATH_SEPARATOR ';'
-#  define JNIEXPORT __declspec(dllexport) __attribute__ ((externally_visible))
-#else
+#  ifdef __MINGW32__
+#    define JNIEXPORT __declspec(dllexport) \
+  __attribute__ ((externally_visible))
+#  else // not __MINGW32__
+#    define JNIEXPORT __declspec(dllexport)
+#  endif // not __MINGW32__
+#else // not (defined __MINGW32__) || (defined _MSC_VER)
 #  define PLATFORM_POSIX
 #  define PATH_SEPARATOR ':'
-#  define JNIEXPORT __attribute__ ((visibility("default"))) \
+#  ifdef __APPLE__
+#    define JNIEXPORT __attribute__ ((visibility("default")))
+#  else // not __APPLE__
+#    define JNIEXPORT __attribute__ ((visibility("default"))) \
   __attribute__ ((externally_visible))
-#endif
+#  endif // not __APPLE__
+#endif // not (defined __MINGW32__) || (defined _MSC_VER)
 
 #ifdef _MSC_VER
 
