@@ -397,7 +397,7 @@ Java_java_nio_channels_SocketChannel_natFinishConnect(JNIEnv *e,
   } else if (einProgress(error)) {
     return false;
   } else if (error != 0) {
-    throwIOException(e);
+    throwIOException(e, errorString(e, error));
   }
   return true;
 }
