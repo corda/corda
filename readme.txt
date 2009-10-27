@@ -52,7 +52,7 @@ Supported Platforms
 Avian can currently target the following platforms:
 
   Linux (i386 and x86_64)
-  Win32 (i386)
+  Win32 (i386 and x86_64)
   Mac OS X (i386, x86_64 and 32-bit PowerPC)
 
 
@@ -62,7 +62,7 @@ Building
 Build requirements include:
 
   * GNU make 3.80 or later
-  * GCC 3.4 or later
+  * GCC 3.4 or later (4.5 or later for Windows/x86_64)
   * JDK 1.5 or later
   * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later
