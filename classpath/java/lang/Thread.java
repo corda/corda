@@ -186,7 +186,11 @@ public class Thread implements Runnable {
   }
 
   public StackTraceElement[] getStackTrace() {
-    return Throwable.resolveTrace(getStackTrace(peer));
+    long p = peer;
+    if (p == 0) {
+      return new StackTraceElement[0];
+    }
+    return Throwable.resolveTrace(getStackTrace(p));
   }
 
   private static native Object getStackTrace(long peer);

@@ -92,10 +92,10 @@ typedef uint64_t uintptr_t;
 #ifdef PLATFORM_WINDOWS
 #  define JNIEXPORT __declspec(dllexport)
 #  define PATH_SEPARATOR ';'
-#else
+#else // not PLATFORM_WINDOWS
 #  define JNIEXPORT __attribute__ ((visibility("default")))
 #  define PATH_SEPARATOR ':'
-#endif
+#endif // not PLATFORM_WINDOWS
 
 #if (defined ARCH_x86_32) || (defined ARCH_powerpc) || (defined ARCH_arm)
 #  define LD "ld"

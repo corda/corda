@@ -24,13 +24,17 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 #endif // not _MSC_VER
 
+#if (defined __MINGW32__) || (defined _MSC_VER)
+#  define EXPORT __declspec(dllexport)
+#else
+#  define EXPORT __attribute__ ((visibility("default")))
+#endif
+
 #ifdef BOOT_IMAGE
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
-#  define EXPORT __declspec(dllexport)
 #  define SYMBOL(x) binary_bootimage_bin_##x
 #else
-#  define EXPORT __attribute__ ((visibility("default")))
 #  define SYMBOL(x) _binary_bootimage_bin_##x
 #endif
 
@@ -53,10 +57,8 @@ extern "C" {
 #ifdef BOOT_CLASSPATH
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
-#  define EXPORT __declspec(dllexport)
 #  define SYMBOL(x) binary_classpath_jar_##x
 #else
-#  define EXPORT __attribute__ ((visibility("default")))
 #  define SYMBOL(x) _binary_classpath_jar_##x
 #endif
 
