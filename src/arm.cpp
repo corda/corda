@@ -19,24 +19,10 @@ using namespace vm;
 
 namespace {
 
-namespace field {
-// BITFIELD MASKS
-const int64_t MASK_LO32 = 0x0ffffffff;
-const int     MASK_LO16 = 0x0ffff;
-const int     MASK_LO8  = 0x0ff;
-// BITFIELD EXTRACTORS
-inline int lo32(int64_t i) { return (int)(i & MASK_LO32); }
-inline int hi32(int64_t i) { return lo32(i >> 32); }
-inline int lo16(int64_t i) { return (int)(i & MASK_LO16); }
-inline int hi16(int64_t i) { return lo16(i >> 16); }
-inline int lo8(int64_t i) { return (int)(i & MASK_LO8); }
-inline int hi8(int64_t i) { return lo8(i >> 8); }
-}
-
 namespace isa {
 // INSTRUCTION OPTIONS
-enum COND { EQ, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV };
-enum SHIFT { LSL, LSR, ASR, ROR };
+enum CONDITION { EQ, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV };
+enum SHIFTOP { LSL, LSR, ASR, ROR };
 // INSTRUCTION FORMATS
 inline int DATA(int cond, int opcode, int S, int Rn, int Rd, int shift, int Sh, int Rm)
 { return cond<<28 | opcode<<21 | S<<20 | Rn<<16 | Rd<<12 | shift<<7 | Sh<<5 | Rm; }
@@ -60,96 +46,106 @@ inline int XFER2I(int cond, int P, int U, int W, int L, int Rn, int Rd, int offs
 { return cond<<28 | P<<24 | U<<23 | 1<<22 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | offsetH<<8 | 1<<7 | S<<6 | H<<5 | 1<<4 | offsetL; }
 inline int BLOCKXFER(int cond, int P, int U, int S, int W, int L, int Rn, int rlist)
 { return cond<<28 | 4<<25 | P<<24 | U<<23 | S<<22 | W<<21 | L<<20 | Rn<<16 | rlist; }
-inline int SWI_(int cond, int imm)
+inline int SWI(int cond, int imm)
 { return cond<<28 | 0x0f<<24 | imm; }
 inline int SWAP(int cond, int B, int Rn, int Rd, int Rm)
 { return cond<<28 | 1<<24 | B<<22 | Rn<<16 | Rd<<12 | 9<<4 | Rm; }
 // INSTRUCTIONS
-// For easier coding, some features (conditions, shifts, etc.) are left out of the instruction compilers.
-// They may be enabled using the helper functions included in this namespace.
-inline int B(int offset) { return BRANCH(AL, 0, offset); }
-inline int BL(int offset) { return BRANCH(AL, 1, offset); }
-inline int BX(int Rm) { return BRANCHX(AL, 0, Rm); }
-inline int BLX(int Rm) { return BRANCHX(AL, 1, Rm); }
-inline int SWI(int imm) { return SWI_(AL, imm); }
-inline int AND(int Rd, int Rn, int Rm) { return DATA(AL, 0x0, 0, Rn, Rd, 0, 0, Rm); }
-inline int EOR(int Rd, int Rn, int Rm) { return DATA(AL, 0x1, 0, Rn, Rd, 0, 0, Rm); }
-inline int SUB(int Rd, int Rn, int Rm) { return DATA(AL, 0x2, 0, Rn, Rd, 0, 0, Rm); }
-inline int RSB(int Rd, int Rn, int Rm) { return DATA(AL, 0x3, 0, Rn, Rd, 0, 0, Rm); }
-inline int ADD(int Rd, int Rn, int Rm) { return DATA(AL, 0x4, 0, Rn, Rd, 0, 0, Rm); }
-inline int ADC(int Rd, int Rn, int Rm) { return DATA(AL, 0x5, 0, Rn, Rd, 0, 0, Rm); }
-inline int SBC(int Rd, int Rn, int Rm) { return DATA(AL, 0x6, 0, Rn, Rd, 0, 0, Rm); }
-inline int RSC(int Rd, int Rn, int Rm) { return DATA(AL, 0x7, 0, Rn, Rd, 0, 0, Rm); }
-inline int TST(int Rn, int Rm) { return DATA(AL, 0x8, 0, Rn, 0, 0, 0, Rm); }
-inline int TEQ(int Rn, int Rm) { return DATA(AL, 0x9, 0, Rn, 0, 0, 0, Rm); }
-inline int CMP(int Rn, int Rm) { return DATA(AL, 0xa, 0, Rn, 0, 0, 0, Rm); }
-inline int CMN(int Rn, int Rm) { return DATA(AL, 0xb, 0, Rn, 0, 0, 0, Rm); }
-inline int ORR(int Rd, int Rn, int Rm) { return DATA(AL, 0xc, 0, Rn, Rd, 0, 0, Rm); }
-inline int MOV(int Rd, int Rm)         { return DATA(AL, 0xd, 0, 0, Rd, 0, 0, Rm); }
-inline int BIC(int Rd, int Rn, int Rm) { return DATA(AL, 0xe, 0, Rn, Rd, 0, 0, Rm); }
-inline int MVN(int Rd, int Rm)         { return DATA(AL, 0xf, 0, 0, Rd, 0, 0, Rm); }
-inline int ANDi(int Rd, int Rn, int imm) { return DATAI(AL, 0x0, 0, Rn, Rd, 0, imm); }
-inline int SUBi(int Rd, int Rn, int imm) { return DATAI(AL, 0x2, 0, Rn, Rd, 0, imm); }
-inline int ADDi(int Rd, int Rn, int imm) { return DATAI(AL, 0x4, 0, Rn, Rd, 0, imm); }
-inline int ORRi(int Rd, int Rn, int imm) { return DATAI(AL, 0xc, 0, Rn, Rd, 0, imm); }
-inline int MOVs(int Rd, int Rm, int Rs, int Sh)         { return DATAS(AL, 0xd, 0, 0, Rd, Rs, Sh, Rm); }
-inline int MUL(int Rd, int Rm, int Rs) { return MULTIPLY(AL, 0, 0, Rd, 0, Rs, Rm); }
-inline int UMULL(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 4, 0, RdHi, RdLo, Rs, Rm); } // only avail. on ARM7M series and above
-inline int SMULL(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 6, 0, RdHi, RdLo, Rs, Rm); } // ''
-inline int LDR(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 0, 0, 1, Rn, Rd, 0, 0, Rm); }
-inline int LDRi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 0, 0, 1, Rn, Rd, imm); }
-inline int LDRB(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 1, Rn, Rd, 0, 0, Rm); }
-inline int LDRBi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 1, 0, 1, Rn, Rd, imm); }
-inline int STR(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 0, 0, 0, Rn, Rd, 0, 0, Rm); }
-inline int STRi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 0, 0, 0, Rn, Rd, imm); }
-inline int STRB(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 0, Rn, Rd, 0, 0, Rm); }
-inline int STRBi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 1, 0, 0, Rn, Rd, imm); }
-inline int LDRH(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 0, 1, Rm); }
-inline int LDRHi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 0, 1, imm&0xf); }
-inline int STRH(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 0, Rn, Rd, 0, 1, Rm); }
-inline int STRHi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 0, Rn, Rd, imm>>4 & 0xf, 0, 1, imm&0xf); }
-inline int LDRSH(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 1, Rm); }
-inline int LDRSHi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 1, 1, imm&0xf); }
-inline int LDRSB(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 0, Rm); }
-inline int LDRSBi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 1, 0, imm&0xf); }
-inline int LDMIB(int Rn, int rlist) { return BLOCKXFER(AL, 1, 1, 0, 0, 1, Rn, rlist); }
-inline int LDMIA(int Rn, int rlist) { return BLOCKXFER(AL, 0, 1, 0, 0, 1, Rn, rlist); }
-inline int STMIB(int Rn, int rlist) { return BLOCKXFER(AL, 1, 1, 0, 0, 0, Rn, rlist); }
-inline int STMDB(int Rn, int rlist) { return BLOCKXFER(AL, 1, 0, 0, 0, 0, Rn, rlist); }
-inline int SWP(int Rd, int Rm, int Rn) { return SWAP(AL, 0, Rn, Rd, Rm); }
-inline int SWPB(int Rd, int Rm, int Rn) { return SWAP(AL, 1, Rn, Rd, Rm); }
-// HELPER FUNCTIONS
-inline int setCond(int ins, int cond)  { return ins&0x0fffffff | cond<<28; }
-inline int setResult(int ins) { return ins | 1<<20; }
-inline int setShift(int ins, int Sh, int shift) { return ins | shift<<7 | Sh<<5; }
-inline int setRot(int ins, int rot) { return ins | rot<<8; }
+// The "cond" and "S" fields are set using the SETCOND() and SETS() functions
+inline int b(int offset) { return BRANCH(AL, 0, offset); }
+inline int bl(int offset) { return BRANCH(AL, 1, offset); }
+inline int bx(int Rm) { return BRANCHX(AL, 0, Rm); }
+inline int blx(int Rm) { return BRANCHX(AL, 1, Rm); }
+inline int swi(int imm) { return SWI(AL, imm); }
+inline int and_(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x0, 0, Rn, Rd, shift, Sh, Rm); }
+inline int eor(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x1, 0, Rn, Rd, shift, Sh, Rm); }
+inline int sub(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x2, 0, Rn, Rd, shift, Sh, Rm); }
+inline int rsb(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x3, 0, Rn, Rd, shift, Sh, Rm); }
+inline int add(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x4, 0, Rn, Rd, shift, Sh, Rm); }
+inline int adc(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x5, 0, Rn, Rd, shift, Sh, Rm); }
+inline int sbc(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x6, 0, Rn, Rd, shift, Sh, Rm); }
+inline int rsc(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x7, 0, Rn, Rd, shift, Sh, Rm); }
+inline int tst(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x8, 0, Rn, 0, shift, Sh, Rm); }
+inline int teq(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x9, 0, Rn, 0, shift, Sh, Rm); }
+inline int cmp(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xa, 0, Rn, 0, shift, Sh, Rm); }
+inline int cmn(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xb, 0, Rn, 0, shift, Sh, Rm); }
+inline int orr(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xc, 0, Rn, Rd, shift, Sh, Rm); }
+inline int mov(int Rd, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xd, 0, 0, Rd, shift, Sh, Rm); }
+inline int bic(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xe, 0, Rn, Rd, shift, Sh, Rm); }
+inline int mvn(int Rd, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xf, 0, 0, Rd, shift, Sh, Rm); }
+inline int andi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x0, 0, Rn, Rd, rot, imm); }
+inline int eori(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x1, 0, Rn, Rd, rot, imm); }
+inline int subi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x2, 0, Rn, Rd, rot, imm); }
+inline int rsbi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x3, 0, Rn, Rd, rot, imm); }
+inline int addi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x4, 0, Rn, Rd, rot, imm); }
+inline int adci(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x5, 0, Rn, Rd, rot, imm); }
+inline int cmpi(int Rn, int imm, int rot=0) { return DATAI(AL, 0x0, 0, Rn, 0, rot, imm); }
+inline int orri(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0xc, 0, Rn, Rd, rot, imm); }
+inline int movi(int Rd, int imm, int rot=0) { return DATAI(AL, 0xd, 0, 0, Rd, rot, imm); }
+inline int movsh(int Rd, int Rm, int Rs, int Sh) { return DATAS(AL, 0xd, 0, 0, Rd, Rs, Sh, Rm); }
+inline int mul(int Rd, int Rm, int Rs) { return MULTIPLY(AL, 0, 0, Rd, 0, Rs, Rm); }
+inline int mla(int Rd, int Rm, int Rs, int Rn) { return MULTIPLY(AL, 1, 0, Rd, Rn, Rs, Rm); }
+inline int umull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 4, 0, RdLo, RdHi, Rs, Rm); }
+inline int umlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 5, 0, RdLo, RdHi, Rs, Rm); }
+inline int smull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 6, 0, RdLo, RdHi, Rs, Rm); }
+inline int smlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 7, 0, RdLo, RdHi, Rs, Rm); }
+inline int ldr(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 0, 0, 1, Rn, Rd, 0, 0, Rm); }
+inline int ldri(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 0, 0, 1, Rn, Rd, imm); }
+inline int ldrb(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 1, Rn, Rd, 0, 0, Rm); }
+inline int ldrbi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 1, 0, 1, Rn, Rd, imm); }
+inline int str(int Rd, int Rn, int Rm, int W=0) { return XFER(AL, 1, 1, 0, W, 0, Rn, Rd, 0, 0, Rm); }
+inline int stri(int Rd, int Rn, int imm, int W=0) { return XFERI(AL, 1, 1, 0, W, 0, Rn, Rd, imm); }
+inline int strb(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 0, Rn, Rd, 0, 0, Rm); }
+inline int strbi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 1, 0, 0, Rn, Rd, imm); }
+inline int ldrh(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 0, 1, Rm); }
+inline int ldrhi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 0, 1, imm&0xf); }
+inline int strh(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 0, Rn, Rd, 0, 1, Rm); }
+inline int strhi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 0, Rn, Rd, imm>>4 & 0xf, 0, 1, imm&0xf); }
+inline int ldrsh(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 1, Rm); }
+inline int ldrshi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 1, 1, imm&0xf); }
+inline int ldrsb(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 0, Rm); }
+inline int ldrsbi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 1, 0, imm&0xf); }
+inline int ldmib(int Rn, int rlist) { return BLOCKXFER(AL, 1, 1, 0, 0, 1, Rn, rlist); }
+inline int ldmia(int Rn, int rlist) { return BLOCKXFER(AL, 0, 1, 0, 0, 1, Rn, rlist); }
+inline int stmib(int Rn, int rlist) { return BLOCKXFER(AL, 1, 1, 0, 0, 0, Rn, rlist); }
+inline int stmdb(int Rn, int rlist) { return BLOCKXFER(AL, 1, 0, 0, 0, 0, Rn, rlist); }
+inline int swp(int Rd, int Rm, int Rn) { return SWAP(AL, 0, Rn, Rd, Rm); }
+inline int swpb(int Rd, int Rm, int Rn) { return SWAP(AL, 1, Rn, Rd, Rm); }
+inline int SETCOND(int ins, int cond) { return ins&0x0fffffff | cond<<28; }
+inline int SETS(int ins) { return ins | 1<<20; }
 // PSEUDO-INSTRUCTIONS
-inline int NOP() { return MOV(0, 0); }
-inline int LSL_(int Rd, int Rm, int Rs) { return MOVs(Rd, Rm, Rs, LSL); }
-inline int LSLi(int Rd, int Rm, int imm) { return setShift(MOV(Rd, Rm), LSL, imm); }
-inline int LSR_(int Rd, int Rm, int Rs) { return MOVs(Rd, Rm, Rs, LSR); }
-inline int LSRi(int Rd, int Rm, int imm) { return setShift(MOV(Rd, Rm), LSR, imm); }
-inline int ASR_(int Rd, int Rm, int Rs) { return MOVs(Rd, Rm, Rs, ASR); }
-inline int ASRi(int Rd, int Rm, int imm) { return setShift(MOV(Rd, Rm), ASR, imm); }
-inline int ROR_(int Rd, int Rm, int Rs) { return MOVs(Rd, Rm, Rs, ROR); }
+inline int nop() { return mov(0, 0); }
+inline int lsl(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, LSL); }
+inline int lsli(int Rd, int Rm, int imm) { return mov(Rd, Rm, LSL, imm); }
+inline int lsr(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, LSR); }
+inline int lsri(int Rd, int Rm, int imm) { return mov(Rd, Rm, LSR, imm); }
+inline int asr(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, ASR); }
+inline int asri(int Rd, int Rm, int imm) { return mov(Rd, Rm, ASR, imm); }
+inline int ror(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, ROR); }
 }
 
-inline bool
-isInt16(intptr_t v)
-{
-  return v == static_cast<int16_t>(v);
-}
+const uint64_t MASK_LO32 = 0xffffffff;
+const unsigned MASK_LO16 = 0xffff;
+const unsigned MASK_LO8  = 0xff;
+inline unsigned lo32(int64_t i) { return (unsigned)(i&MASK_LO32); }
+inline unsigned hi32(int64_t i) { return (unsigned)(i>>32); }
+inline unsigned lo16(int64_t i) { return (unsigned)(i&MASK_LO16); }
+inline unsigned hi16(int64_t i) { return lo16(i>>16); }
+inline unsigned lo8(int64_t i) { return (unsigned)(i&MASK_LO8); }
+inline unsigned hi8(int64_t i) { return lo8(i>>8); }
 
-inline int
-carry16(intptr_t v)
-{
-  return static_cast<int16_t>(v) < 0 ? 1 : 0;
-}
+inline bool isInt8(intptr_t v) { return v == static_cast<int8_t>(v); }
+inline bool isInt16(intptr_t v) { return v == static_cast<int16_t>(v); }
+inline bool isInt24(intptr_t v) { return v == v & 0xffffff; }
+inline bool isInt32(intptr_t v) { return v == static_cast<int32_t>(v); }
+inline int carry16(intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 : 0; }
 
-const unsigned FrameFooterSize = 6;
+const unsigned FrameFooterSize = 0;
+const unsigned StackAlignmentInBytes = 8;
+const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 
-const int StackRegister = 1;
-const int ThreadRegister = 13;
+const int StackRegister = 13;
+const int ThreadRegister = 12;
 
 class MyBlock: public Assembler::Block {
  public:
@@ -390,117 +386,82 @@ index(TernaryOperation operation,
 
 // BEGIN OPERATION COMPILERS
 
-using namespace field;
+using namespace isa;
 
-typedef Assembler::Register Reg;
-typedef Assembler::Constant Const;
-
-inline void issue(Context* con, int code) { con->code.append4(code); }
-inline int getTemp(Context* con) { return con->client->acquireTemporary(); }
+// shortcut functions
+inline void emit(Context* con, int code) { con->code.append4(code); }
+inline int newTemp(Context* con) { return con->client->acquireTemporary(); }
 inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
-inline int64_t getVal(Const* c) { return c->value->value(); }
-inline int R(Reg* r) { return r->low; }
-inline int H(Reg* r) { return r->high; }
+inline int64_t getValue(Assembler::Constant c) { return c->value->value(); }
 
 
-void shiftLeftR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void shiftLeftR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t)
 {
-  if(size == 8) {
-    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
-    issue(con, subfic(H(tmp), R(a), 32));
-    issue(con, slw(H(t), H(b), R(a)));
-    issue(con, srw(R(tmp), R(b), H(tmp)));
-    issue(con, or_(H(t), H(t), R(tmp)));
-    issue(con, addi(H(tmp), R(a), -32));
-    issue(con, slw(R(tmp), R(b), H(tmp)));
-    issue(con, or_(H(t), H(t), R(tmp)));
-    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
-  }
-  issue(con, slw(R(t), R(b), R(a)));
-}
-
-void shiftLeftC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
-{
-  int sh = getVal(a);
   if (size == 8) {
-    if (sh < 32) {
-      issue(con, rlwinm(H(t),H(b),sh,0,31-sh));
-      issue(con, rlwimi(H(t),R(b),sh,32-sh,31));
-    } else {
-      issue(con, rlwinm(H(t),R(b),sh-32,0,63-sh));
-      issue(con, li(R(t),0));
-    }
+    int tmpHi = newTemp(con), tmpLo = newTemp(con);
+    emit(con, SETS(rsbi(tmpHi, a->low, 32)));
+    emit(con, lsl(t->high, b->high, a->low));
+    emit(con, lsr(tmpLo, b->low, tmpHi));
+    emit(con, orr(t->high, t->high, tmpLo));
+    emit(con, addi(tmpHi, a->low, -32));
+    emit(con, lsl(tmpLo, b->low, tmpHi));
+    emit(con, orr(t->high, t->high, tmpLo));
+    freeTemp(con, tmpHi); freeTemp(con, tmpLo);
   }
-  issue(con, slwi(R(t), R(b), sh));
+  emit(con, lsl(t->low, b->low, a->low));
 }
 
-void shiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void shiftLeftC(Context* con, unsigned size, Assembler::Constant a, Assembler::Register b, Assembler::Register t)
 {
-  if(size == 8) {
-    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
-    issue(con, subfic(H(tmp), R(a), 32));
-    issue(con, srw(R(t), R(b), R(a)));
-    issue(con, slw(R(tmp), H(b), H(tmp)));
-    issue(con, or_(R(t), R(t), R(tmp)));
-    issue(con, addic(H(tmp), R(a), -32));
-    issue(con, sraw(R(tmp), H(b), H(tmp)));
-    issue(con, ble(8));
-    issue(con, ori(R(t), R(tmp), 0));
-    issue(con, sraw(H(t), H(b), R(a)));
-    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
-  } else {
-    issue(con, sraw(R(t), R(b), R(a)));
-  }
+  assert(con, size == BytesPerWord);
+  emit(con, lsli(t->low, b->low, getValue(a)));
 }
 
-void shiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
+void shiftRightR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t)
 {
-  int sh = getVal(a);
-  if(size == 8) {
-    if (sh < 32) {
-      issue(con, rlwinm(R(t),R(b),32-sh,sh,31));
-      issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
-      issue(con, srawi(H(t),H(b),sh));
-    } else {
-      issue(con, srawi(H(t),H(b),31));
-      issue(con, srawi(R(t),H(b),sh-32));
-    }
-  } else {
-    issue(con, srawi(R(t), R(b), sh));
-  }
-}
-
-void unsignedShiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
-{
-  issue(con, srw(R(t), R(b), R(a)));
-  if(size == 8) {
-    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
-    issue(con, subfic(H(tmp), R(a), 32));
-    issue(con, slw(R(tmp), H(b), H(tmp)));
-    issue(con, or_(R(t), R(t), R(tmp)));
-    issue(con, addi(H(tmp), R(a), -32));
-    issue(con, srw(R(tmp), H(b), H(tmp)));
-    issue(con, or_(R(t), R(t), R(tmp)));
-    issue(con, srw(H(t), H(b), R(a)));
-    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
-  }
-}
-
-void unsignedShiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
-{
-  int sh = getVal(a);
   if (size == 8) {
-    if (sh < 32) {
-      issue(con, srwi(R(t), R(b), sh));
-      issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
-      issue(con, rlwinm(H(t),H(b),32-sh,sh,31));
-    } else {
-      issue(con, rlwinm(R(t),H(b),64-sh,sh-32,31));
-      issue(con, li(H(t),0));
-    }
+    int tmpHi = newTemp(con), tmpLo = newTemp(con);
+    emit(con, SETS(rsbi(tmpHi, a->low, 32)));
+    emit(con, lsr(t->low, b->low, a->low));
+    emit(con, lsl(tmpLo, b->high, tmpHi));
+    emit(con, orr(t->low, t->low, tmpLo));
+    emit(con, SETS(addi(tmpHi, a->low, -32)));
+    emit(con, asr(tmpLo, b->high, tmpHi));
+    emit(con, SETCOND(b(8), LE));
+    emit(con, orri(t->low, tmpLo, 0));
+    emit(con, asr(t->high, b->high, a->low));
+    freeTemp(con, tmpHi); freeTemp(con, tmpLo);
   } else {
-    issue(con, srwi(R(t), R(b), sh));
+    emit(con, asr(t->low, b->low, a->low));
   }
+}
+
+void shiftRightC(Context* con, unsigned size, Assembler::Constant a, Assembler::Register b, Assembler::Register t)
+{
+  assert(con, size == BytesPerWord);
+  emit(con, asri(t->low, b->low, getValue(a)));
+}
+
+void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t)
+{
+  emit(con, lsr(t->low, b->low, a->low));
+  if (size == 8) {
+    int tmpHi = newTemp(con), tmpLo = newTemp(con);
+    emit(con, SETS(rsbi(tmpHi, a->low, 32)));
+    emit(con, lsl(tmpLo, b->high, tmpHi));
+    emit(con, orr(t->low, t->low, tmpLo));
+    emit(con, addi(tmpHi, a->low, -32));
+    emit(con, lsr(tmpLo, b->high, tmpHi));
+    emit(con, orr(t->low, t->low, tmpLo));
+    emit(con, lsr(t->high, b->high, a->low));
+    freeTemp(con, tmpHi); freeTemp(con, tmpLo);
+  }
+}
+
+void unsignedShiftRightC(Context* con, unsigned size, Assembler::Constant a, Assembler::Register b, Assembler::Register t)
+{
+  assert(con, size == BytesPerWord);
+  emit(con, lsri(t->low, b->low, getValue(a)));
 }
 
 void
@@ -509,10 +470,12 @@ updateImmediate(System* s, void* dst, int64_t src, unsigned size)
   switch (size) {
   case 4: {
     int32_t* p = static_cast<int32_t*>(dst);
-    int r = (p[1] >> 21) & 31;
+    int r = (p[0] >> 12) & 15;
 
-    p[0] = lis(r, src >> 16);
-    p[1] = ori(r, r, src);
+    p[0] = movi(r, lo8(src));
+    p[1] = orri(r, r, hi8(src), 12);
+    p[2] = orri(r, r, lo8(hi16(src)), 8);
+    p[3] = orri(r, r, hi8(hi16(src)), 4);
   } break;
 
   default: abort(s);
@@ -576,9 +539,7 @@ void
 jumpR(Context* c, unsigned size UNUSED, Assembler::Register* target)
 {
   assert(c, size == BytesPerWord);
-
-  issue(c, mtctr(target->low));
-  issue(c, bctr());
+  emit(c, bx(target->low));
 }
 
 void
@@ -605,18 +566,20 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
 {
   switch (srcSize) {
   case 1:
-    issue(c, extsb(dst->low, src->low));
+    emit(c, lsli(dst->low, src->low, 24));
+    emit(c, asri(dst->low, dst->low, 24));
     break;
     
   case 2:
-    issue(c, extsh(dst->low, src->low));
+    emit(c, lsli(dst->low, src->low, 16));
+    emit(c, asri(dst->low, dst->low, 16));
     break;
     
   case 4:
   case 8:
     if (srcSize == 4 and dstSize == 8) {
       moveRR(c, 4, src, 4, dst);
-      issue(c, srawi(dst->high, src->low, 31));
+      emit(c, asri(dst->high, src->low, 31));
     } else if (srcSize == 8 and dstSize == 8) {
       Assembler::Register srcHigh(src->high);
       Assembler::Register dstHigh(dst->high);
@@ -633,7 +596,7 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
         moveRR(c, 4, &srcHigh, 4, &dstHigh);
       }
     } else if (src->low != dst->low) {
-      issue(c, mr(dst->low, src->low));
+      emit(c, mov(dst->low, src->low));
     }
     break;
 
@@ -647,7 +610,8 @@ moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
 {
   switch (srcSize) {
   case 2:
-    issue(c, andi(dst->low, src->low, 0xFFFF));
+    emit(c, lsli(dst->low, src->low, 16));
+    emit(c, lsri(dst->low, src->low, 16));
     break;
 
   default: abort(c);
@@ -660,18 +624,24 @@ moveCR2(Context* c, unsigned, Assembler::Constant* src,
 {
   if (dstSize <= 4) {
     if (src->value->resolved()) {
-      int32_t v = src->value->value();
-      if (isInt16(v)) {
-        issue(c, li(dst->low, v));
-      } else {
-        issue(c, lis(dst->low, v >> 16));
-        issue(c, ori(dst->low, dst->low, v));
+      int32_t i = getValue(c);
+      emit(c, movi(dst->low, lo8(i)));
+      if (!isInt8(i)) {
+        emit(c, orri(dst->low, dst->low, hi8(i), 12));
+        if (!isInt16(i)) {
+          emit(c, orri(dst->low, dst->low, lo8(hi16(i)), 8));
+          if (!isInt24(i)) {
+            emit(c, orri(dst->low, dst->low, hi8(hi16(i)), 4));
+          }
+        }
       }
     } else {
       appendImmediateTask
         (c, src->value, offset(c), BytesPerWord, promiseOffset);
-      issue(c, lis(dst->low, 0));
-      issue(c, ori(dst->low, dst->low, 0));
+      emit(c, movi(dst->low, 0));
+      emit(c, orri(dst->low, dst->low, 0, 12));
+      emit(c, orri(dst->low, dst->low, 0, 8));
+      emit(c, orri(dst->low, dst->low, 0, 4));
     }
   } else {
     abort(c); // todo
@@ -685,38 +655,45 @@ moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
   moveCR2(c, srcSize, src, dstSize, dst, 0);
 }
 
-void addR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  if(size == 8) {
-    issue(con, addc(R(t), R(a), R(b)));
-    issue(con, adde(H(t), H(a), H(b)));
+void addR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t) {
+  if (size == 8) {
+    emit(con, SETS(addc(t->low, a->low, b->low)));
+    emit(con, adc(t->high, a->high, b->high));
   } else {
-    issue(con, add(R(t), R(a), R(b)));
+    emit(con, add(t->low, a->low, b->low));
   }
 }
 
-void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
+void addC(Context* con, unsigned size, Assembler::Constant a, Assembler::Register b, Assembler::Register t) {
   assert(con, size == BytesPerWord);
 
-  int32_t i = getVal(a);
-  if(i) {
-    issue(con, addi(R(t), R(b), lo16(i)));
-    if(not isInt16(i))
-      issue(con, addis(R(t), R(t), hi16(i) + carry16(i)));
+  int32_t i = getValue(a);
+  if (i) {
+    emit(con, addi(t->low, b->low, lo8(i)));
+    if (!isInt8(i)) {
+      emit(con, addi(t->low, b->low, hi8(i), 12));
+      if (!isInt16(i)) {
+        emit(con, addi(t->low, b->low, lo8(hi16(i)), 8));
+        if (!isInt24(i)) {
+          emit(con, addi(t->low, b->low, hi8(hi16(i)), 4));
+        }
+      }
+    }
   } else {
     moveRR(con, size, b, size, t);
   }
 }
 
-void subR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  if(size == 8) {
-    issue(con, subfc(R(t), R(a), R(b)));
-    issue(con, subfe(H(t), H(a), H(b)));
+void subR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t) {
+  if (size == 8) {
+    emit(con, SETS(rsb(t->low, a->low, b->low)));
+    emit(con, rsc(t->high, a->high, b->high));
   } else {
-    issue(con, subf(R(t), R(a), R(b)));
+    emit(con, rsb(t->low, a->low, b->low));
   }
 }
 
-void subC(Context* c, unsigned size, Const* a, Reg* b, Reg* t) {
+void subC(Context* c, unsigned size, Assembler::Constant a, Assembler::Register b, Assembler::Register t) {
   assert(c, size == BytesPerWord);
 
   ResolvedPromise promise(- a->value->value());
@@ -724,41 +701,17 @@ void subC(Context* c, unsigned size, Const* a, Reg* b, Reg* t) {
   addC(c, size, &constant, b, t);
 }
 
-void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
-  if(size == 8) {
-    bool useTemporaries = b->low == t->low;
-    int tmpLow;
-    int tmpHigh;
-    if (useTemporaries) {
-      tmpLow = con->client->acquireTemporary();
-      tmpHigh = con->client->acquireTemporary();
-    } else {
-      tmpLow = t->low;
-      tmpHigh = t->high;
-    }
-
-    issue(con, mullw(tmpHigh, H(a), R(b)));
-    issue(con, mullw(tmpLow, R(a), H(b)));
-    issue(con, add(H(t), tmpHigh, tmpLow));
-    issue(con, mulhwu(tmpLow, R(a), R(b)));
-    issue(con, add(H(t), H(t), tmpLow));
-    issue(con, mullw(R(t), R(a), R(b)));
-
-    if (useTemporaries) {
-      con->client->releaseTemporary(tmpLow);
-      con->client->releaseTemporary(tmpHigh);
-    }
+void multiplyR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t) {
+  if (size == 8) {
+    emit(con, mul(t->high, a->low, b->high));
+    emit(con, mla(t->high, a->high, b->low, t->high));
+    emit(con, smlal(t->low, t->high, a->low, b->low));
   } else {
-    issue(con, mullw(R(t), R(a), R(b)));
+    emit(con, mul(t->low, a->low, b->low));
   }
 }
 
-void divideR(Context* con, unsigned size UNUSED, Reg* a, Reg* b, Reg* t) {
-  assert(con, size == 4);
-  issue(con, divw(R(t), R(b), R(a)));
-}
-
-void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void remainderR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t) {
   bool useTemporary = b->low == t->low;
   Assembler::Register tmp(t->low);
   if (useTemporary) {
@@ -833,15 +786,15 @@ store(Context* c, unsigned size, Assembler::Register* src,
 
     switch (size) {
     case 1:
-      issue(c, stbx(src->low, base, normalized));
+      emit(c, strb(src->low, base, normalized));
       break;
 
     case 2:
-      issue(c, sthx(src->low, base, normalized));
+      emit(c, strh(src->low, base, normalized));
       break;
 
     case 4:
-      issue(c, stwx(src->low, base, normalized));
+      emit(c, str(src->low, base, normalized));
       break;
 
     case 8: {
@@ -857,15 +810,15 @@ store(Context* c, unsigned size, Assembler::Register* src,
   } else {
     switch (size) {
     case 1:
-      issue(c, stb(src->low, base, offset));
+      emit(c, strbi(src->low, base, offset));
       break;
 
     case 2:
-      issue(c, sth(src->low, base, offset));
+      emit(c, strhi(src->low, base, offset));
       break;
 
     case 4:
-      issue(c, stw(src->low, base, offset));
+      emit(c, stri(src->low, base, offset));
       break;
 
     case 8: {
@@ -894,9 +847,15 @@ moveAndUpdateRM(Context* c, unsigned srcSize UNUSED, Assembler::Register* src,
 {
   assert(c, srcSize == BytesPerWord);
   assert(c, dstSize == BytesPerWord);
-  assert(c, dst->index == NoRegister);
 
-  issue(c, stwu(src->low, dst->base, dst->offset));
+  if (dst->index == NoRegister) {
+    emit(c, stri(src->low, dst->base, dst->offset, 1));
+  } else {
+    assert(c, dst->offset == 0);
+    assert(c, dst->scale == 1);
+    
+    emit(c, str(src->low, dst->base, dst->index, 1));
+  }
 }
 
 void
@@ -911,17 +870,18 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
 
     switch (srcSize) {
     case 1:
-      issue(c, lbzx(dst->low, base, normalized));
       if (signExtend) {
-        issue(c, extsb(dst->low, dst->low));
+        emit(c, ldrsb(dst->low, base, normalized));
+      } else {
+        emit(c, ldrb(dst->low, base, normalized));
       }
       break;
 
     case 2:
       if (signExtend) {
-        issue(c, lhax(dst->low, base, normalized));
+        emit(c, ldrsh(dst->low, base, normalized));
       } else {
-        issue(c, lhzx(dst->low, base, normalized));
+        emit(c, ldrh(dst->low, base, normalized));
       }
       break;
 
@@ -935,7 +895,7 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
         load(c, 4, base, 0, normalized, 1, 4, &dstHigh, preserveIndex, false);
         load(c, 4, base, 4, normalized, 1, 4, dst, preserveIndex, false);
       } else {
-        issue(c, lwzx(dst->low, base, normalized));
+        emit(c, ldr(dst->low, base, normalized));
       }
     } break;
 
@@ -946,34 +906,32 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
   } else {
     switch (srcSize) {
     case 1:
-      issue(c, lbz(dst->low, base, offset));
       if (signExtend) {
-        issue(c, extsb(dst->low, dst->low));
+        emit(c, ldrsbi(dst->low, base, offset));
+      } else {
+        emit(c, ldrbi(dst->low, base, offset));
       }
       break;
 
     case 2:
       if (signExtend) {
-        issue(c, lha(dst->low, base, offset));
+        emit(c, ldrshi(dst->low, base, offset));
       } else {
-        issue(c, lha(dst->low, base, offset));
+        emit(c, ldrhi(dst->low, base, offset));
       }
       break;
 
     case 4:
-      issue(c, lwz(dst->low, base, offset));
+      emit(c, ldri(dst->low, base, offset));
       break;
 
     case 8: {
-      if (srcSize == 4 and dstSize == 8) {
-        load(c, 4, base, offset, NoRegister, 1, 4, dst, false, false);
-        moveRR(c, 4, dst, 8, dst);
-      } else if (srcSize == 8 and dstSize == 8) {
+      if (dstSize == 8) {
         Assembler::Register dstHigh(dst->high);
         load(c, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
         load(c, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
       } else {
-        issue(c, lwzx(dst->low, base, offset));
+        emit(c, ldri(dst->low, base, offset));
       }
     } break;
 
@@ -998,116 +956,28 @@ moveZMR(Context* c, unsigned srcSize, Assembler::Memory* src,
        dstSize, dst, true, false);
 }
 
-// void moveCR3(Context* con, unsigned aSize, Const* a, unsigned tSize, Reg* t) {
-//   int64_t i = getVal(a);
-//   if(tSize == 8) {
-//     int64_t j;
-//     if(aSize == 8) j = i; // 64-bit const -> load high bits into high register
-//     else           j = 0; // 32-bit const -> clear high register
-//     issue(con, lis(H(t), hi16(hi32(j))));
-//     issue(con, ori(H(t), H(t), lo16(hi32(j))));
-//   }
-//   issue(con, lis(R(t), hi16(i)));
-//   issue(con, ori(R(t), R(t), lo16(i)));
-// }
-
 void
 andR(Context* c, unsigned size, Assembler::Register* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  if (size == 8) {
-    Assembler::Register ah(a->high);
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-    
-    andR(c, 4, a, b, dst);
-    andR(c, 4, &ah, &bh, &dh);
-  } else {
-    issue(c, and_(dst->low, a->low, b->low));
-  }
+  if (size == 8) emit(c, and_(dst->high, a->high, b->high));
+  emit(c, and_(dst->low, a->low, b->low));
 }
 
 void
 andC(Context* c, unsigned size, Assembler::Constant* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  int64_t v = a->value->value();
+  assert(con, size == BytesPerWord);
 
-  if (size == 8) {
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-
-    andC(c, 4, &al, b, dst);
-    andC(c, 4, &ah, &bh, &dh);
+  int32_t i = getValue(a);
+  if (i) {
+    emit(con, andi(t->low, b->low, lo8(i)));
+    emit(con, andi(t->low, b->low, hi8(i), 12));
+    emit(con, andi(t->low, b->low, lo8(hi16(i)), 8));
+    emit(con, andi(t->low, b->low, hi8(hi16(i)), 4));
   } else {
-    // bitmasks of the form regex 0*1*0* can be handled in a single
-    // rlwinm instruction, hence the following:
-
-    uint32_t v32 = static_cast<uint32_t>(v);
-    unsigned state = 0;
-    unsigned start = 0;
-    unsigned end = 31;
-    for (unsigned i = 0; i < 32; ++i) {
-      unsigned bit = (v32 >> i) & 1;
-      switch (state) {
-      case 0:
-        if (bit) {
-          start = i;
-          state = 1;
-        }
-        break;
-
-      case 1:
-        if (bit == 0) {
-          end = i - 1;
-          state = 2;
-        }
-        break;
-
-      case 2:
-        if (bit) {
-          // not in 0*1*0* form.  We can only use andi(s) if either
-          // the topmost or bottommost 16 bits are zero.
-
-          if ((v32 >> 16) == 0) {
-            issue(c, andi(dst->low, b->low, v32));
-          } else if ((v32 & 0xFFFF) == 0) {
-            issue(c, andis(dst->low, b->low, v32 >> 16));
-          } else {
-            bool useTemporary = b->low == dst->low;
-            Assembler::Register tmp(dst->low);
-            if (useTemporary) {
-              tmp.low = c->client->acquireTemporary();
-            }
-
-            moveCR(c, 4, a, 4, &tmp);
-            andR(c, 4, b, &tmp, dst);
-
-            if (useTemporary) {
-              c->client->releaseTemporary(tmp.low);
-            }
-          }
-          return;
-        }
-        break;
-      }
-    }
-
-    if (state) {
-      if (start != 0 or end != 31) {
-        issue(c, rlwinm(dst->low, b->low, 0, 31 - end, 31 - start));
-      } else {
-        moveRR(c, 4, b, 4, dst);
-      }
-    } else {
-      issue(c, li(dst->low, 0));
-    }
+    moveRR(con, size, b, size, t);
   }
 }
 
@@ -1115,85 +985,61 @@ void
 orR(Context* c, unsigned size, Assembler::Register* a,
     Assembler::Register* b, Assembler::Register* dst)
 {
-  if (size == 8) {
-    Assembler::Register ah(a->high);
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-    
-    orR(c, 4, a, b, dst);
-    orR(c, 4, &ah, &bh, &dh);
-  } else {
-    issue(c, or_(dst->low, a->low, b->low));
-  }
+  if (size == 8) orr(dst->high, a->high, b->high);
+  emit(c, orr(dst->low, a->low, b->low));
 }
 
 void
 orC(Context* c, unsigned size, Assembler::Constant* a,
     Assembler::Register* b, Assembler::Register* dst)
 {
-  int64_t v = a->value->value();
+  assert(con, size == BytesPerWord);
 
-  if (size == 8) {
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-
-    orC(c, 4, &al, b, dst);
-    orC(c, 4, &ah, &bh, &dh);
-  } else {
-    issue(c, ori(b->low, dst->low, v));
-    if (v >> 16) {
-      issue(c, oris(dst->low, dst->low, v >> 16));
+  int32_t i = getValue(a);
+  if (i) {
+    emit(con, orri(t->low, b->low, lo8(i)));
+    if (!isInt8(i)) {
+      emit(con, orri(t->low, b->low, hi8(i), 12));
+      if (!isInt16(i)) {
+        emit(con, orri(t->low, b->low, lo8(hi16(i)), 8));
+        if (!isInt24(i)) {
+          emit(con, orri(t->low, b->low, hi8(hi16(i)), 4));
+        }
+      }
     }
+  } else {
+    moveRR(con, size, b, size, t);
   }
 }
 
 void
-xorR(Context* c, unsigned size, Assembler::Register* a,
+xorR(Context* com, unsigned size, Assembler::Register* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  if (size == 8) {
-    Assembler::Register ah(a->high);
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-    
-    xorR(c, 4, a, b, dst);
-    xorR(c, 4, &ah, &bh, &dh);
-  } else {
-    issue(c, xor_(dst->low, a->low, b->low));
-  }
+  if (size == 8) emit(com, eor(dst->high, a->high, b->high));
+  emit(com, eor(dst->low, a->low, b->low));
 }
 
 void
-xorC(Context* c, unsigned size, Assembler::Constant* a,
+xorC(Context* com, unsigned size, Assembler::Constant* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  uint64_t v = a->value->value();
+  assert(con, size == BytesPerWord);
 
-  if (size == 8) {
-    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
-
-    ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
-
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
-
-    xorC(c, 4, &al, b, dst);
-    xorC(c, 4, &ah, &bh, &dh);
-  } else {
-    if (v >> 16) {
-      issue(c, xoris(b->low, dst->low, v >> 16));
-      issue(c, xori(dst->low, dst->low, v));
-    } else {
-      issue(c, xori(b->low, dst->low, v));
+  int32_t i = getValue(a);
+  if (i) {
+    emit(con, eori(t->low, b->low, lo8(i)));
+    if (!isInt8(i)) {
+      emit(con, eori(t->low, b->low, hi8(i), 12));
+      if (!isInt16(i)) {
+        emit(con, eori(t->low, b->low, lo8(hi16(i)), 8));
+        if (!isInt24(i)) {
+          emit(con, eori(t->low, b->low, hi8(hi16(i)), 4));
+        }
+      }
     }
+  } else {
+    moveRR(con, size, b, size, t);
   }
 }
 
@@ -1215,8 +1061,7 @@ compareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == 4 and bSize == 4);
-  
-  issue(c, cmpw(b->low, a->low));
+  emit(c, cmp(b->low, a->low));
 }
 
 void
@@ -1226,7 +1071,7 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
   assert(c, aSize == 4 and bSize == 4);
 
   if (a->value->resolved() and isInt16(a->value->value())) {
-    issue(c, cmpwi(b->low, a->value->value()));
+    emit(c, cmpi(b->low, a->value->value()));
   } else {
     Assembler::Register tmp(c->client->acquireTemporary());
     moveCR(c, aSize, a, bSize, &tmp);
@@ -1259,31 +1104,7 @@ compareRM(Context* c, unsigned aSize, Assembler::Register* a,
   c->client->releaseTemporary(tmp.low);
 }
 
-void
-compareUnsignedRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
-                  unsigned bSize UNUSED, Assembler::Register* b)
-{
-  assert(c, aSize == 4 and bSize == 4);
-  
-  issue(c, cmplw(b->low, a->low));
-}
-
-void
-compareUnsignedCR(Context* c, unsigned aSize, Assembler::Constant* a,
-                  unsigned bSize, Assembler::Register* b)
-{
-  assert(c, aSize == 4 and bSize == 4);
-
-  if (a->value->resolved() and (a->value->value() >> 16) == 0) {
-    issue(c, cmplwi(b->low, a->value->value()));
-  } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, aSize, a, bSize, &tmp);
-    compareUnsignedRR(c, bSize, &tmp, bSize, b);
-    c->client->releaseTemporary(tmp.low);
-  }
-}
-
+// TODO
 void
 longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
             Assembler::Operand* bl, Assembler::Operand* bh,
@@ -1302,23 +1123,23 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
   compareSigned(c, 4, ah, 4, bh);
 
   unsigned less = c->code.length();
-  issue(c, blt(0));
+  emit(c, blt(0));
 
   unsigned greater = c->code.length();
-  issue(c, bgt(0));
+  emit(c, bgt(0));
 
   compareUnsigned(c, 4, al, 4, bl);
 
   unsigned above = c->code.length();
-  issue(c, bgt(0));
+  emit(c, bgt(0));
 
   unsigned below = c->code.length();
-  issue(c, blt(0));
+  emit(c, blt(0));
 
   moveCR(c, 4, &zero, 4, dst);
 
   unsigned nextFirst = c->code.length();
-  issue(c, b(0));
+  emit(c, b(0));
 
   updateOffset
     (c->s, c->code.data + less, true, reinterpret_cast<intptr_t>
@@ -1331,7 +1152,7 @@ longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
   moveCR(c, 4, &negative, 4, dst);
 
   unsigned nextSecond = c->code.length();
-  issue(c, b(0));
+  emit(c, b(0));
 
   updateOffset
     (c->s, c->code.data + greater, true, reinterpret_cast<intptr_t>
@@ -1424,13 +1245,11 @@ negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
 {
   assert(c, srcSize == dstSize);
 
+  emit(c, mvn(dst->low, src->low));
+  emit(c, SETS(addi(dst->low, dst->low, 1)));
   if (srcSize == 8) {
-    Assembler::Register dstHigh(dst->high);
-
-    issue(c, subfic(dst->low, src->low, 0));
-    issue(c, subfze(dst->high, src->high));
-  } else {
-    issue(c, neg(dst->low, src->low));
+    emit(c, mvn(dst->high, src->high));
+    emit(c, adci(dst->high, dst->high, 0));
   }
 }
 
@@ -1438,9 +1257,7 @@ void
 callR(Context* c, unsigned size UNUSED, Assembler::Register* target)
 {
   assert(c, size == BytesPerWord);
-
-  issue(c, mtctr(target->low));
-  issue(c, bctrl());
+  emit(c, blx(target->low));
 }
 
 void
@@ -1449,7 +1266,7 @@ callC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), false);
-  issue(c, bl(0));
+  emit(c, bl(0));
 }
 
 void
@@ -1478,7 +1295,7 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), false);
-  issue(c, b(0));
+  emit(c, b(0)); /* TODO */
 }
 
 void
@@ -1487,7 +1304,7 @@ jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, be(0));
+  emit(c, SETCOND(b(0), EQ));
 }
 
 void
@@ -1496,7 +1313,7 @@ jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, bne(0));
+  emit(c, SETCOND(b(0), NE));
 }
 
 void
@@ -1505,7 +1322,7 @@ jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, bgt(0));
+  emit(c, SETCOND(b(0), GT));
 }
 
 void
@@ -1515,7 +1332,7 @@ jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED,
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, bge(0));
+  emit(c, SETCOND(b(0), GE));
 }
 
 void
@@ -1524,7 +1341,7 @@ jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, blt(0));
+  emit(c, SETCOND(b(0), LS));
 }
 
 void
@@ -1534,24 +1351,21 @@ jumpIfLessOrEqualC(Context* c, unsigned size UNUSED,
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, ble(0));
+  emit(c, SETCOND(b(0), LE));
 }
 
 void
 return_(Context* c)
 {
-  issue(c, blr());
+  emit(c, mov(15, 14));
 }
 
 void
-memoryBarrier(Context* c)
-{
-  issue(c, sync(0));
-}
+memoryBarrier(Context* c) {}
 
 // END OPERATION COMPILERS
 
-
+// TODO
 void
 populateTables(ArchitectureContext* c)
 {
@@ -1576,6 +1390,9 @@ populateTables(ArchitectureContext* c)
 
   uo[index(Jump, R)] = CAST1(jumpR);
   uo[index(Jump, C)] = CAST1(jumpC);
+
+  uo[index(AlignedJump, R)] = CAST1(jumpR);
+  uo[index(AlignedJump, C)] = CAST1(jumpC);
 
   uo[index(JumpIfEqual, C)] = CAST1(jumpIfEqualC);
   uo[index(JumpIfNotEqual, C)] = CAST1(jumpIfNotEqualC);
@@ -1642,6 +1459,7 @@ populateTables(ArchitectureContext* c)
   to[index(LongCompare, C)] = CAST3(longCompareC);
 }
 
+// TODO
 class MyArchitecture: public Assembler::Architecture {
  public:
   MyArchitecture(System* system): c(system), referenceCount(0) {
@@ -1649,7 +1467,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned registerCount() {
-    return 32;
+    return 16;
   }
 
   virtual int stack() {
@@ -1668,19 +1486,27 @@ class MyArchitecture: public Assembler::Architecture {
     return (BytesPerWord == 4 ? 3 : NoRegister);
   }
 
+  virtual int virtualCallTarget() {
+    return 4;
+  }
+
+  virtual int virtualCallIndex() {
+    return 3;
+  }
+
   virtual bool condensedAddressing() {
     return false;
   }
 
   virtual bool bigEndian() {
-    return true;
+    return false;
   }
 
   virtual bool reserved(int register_) {
     switch (register_) {
-    case 0: // r0 has special meaning in addi and other instructions
     case StackRegister:
     case ThreadRegister:
+    case 15:
       return true;
 
     default:
@@ -1688,8 +1514,12 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned frameFootprint(unsigned footprint) {
+    return max(footprint, StackAlignmentInWords);
+  }
+
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return footprint;
+    return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
   }
 
   virtual unsigned argumentRegisterCount() {
@@ -1700,6 +1530,18 @@ class MyArchitecture: public Assembler::Architecture {
     assert(&c, index < argumentRegisterCount());
 
     return index + 3;
+  }
+
+  virtual unsigned stackAlignmentInWords() {
+    return StackAlignmentInWords;
+  }
+
+  virtual bool matchCall(void* returnAddress, void* target) {
+    uint32_t* instruction = static_cast<uint32_t*>(returnAddress) - 1;
+
+    return *instruction == static_cast<uint32_t>
+      (bl(static_cast<uint8_t*>(target)
+          - reinterpret_cast<uint8_t*>(instruction)));
   }
 
   virtual void updateCall(UnaryOperation op UNUSED,
@@ -1723,6 +1565,10 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual unsigned constantCallSize() {
+    return 4;
+  }
+
   virtual uintptr_t getConstant(const void* src) {
     const int32_t* p = static_cast<const int32_t*>(src);
     return (p[0] << 16) | (p[1] & 0xFFFF);    
@@ -1733,7 +1579,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
-    const unsigned alignment = 16 / BytesPerWord;
+    const unsigned alignment = StackAlignmentInBytes / BytesPerWord;
     return (ceiling(sizeInWords + FrameFooterSize, alignment) * alignment);
   }
 
@@ -1751,6 +1597,14 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual unsigned frameFooterSize() {
     return FrameFooterSize;
+  }
+
+  virtual int returnAddressOffset() {
+    return 8 / BytesPerWord;
+  }
+
+  virtual int framePointerOffset() {
+    return 0;
   }
 
   virtual void nextFrame(void** stack, void**) {
@@ -1831,6 +1685,11 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Divide:
+      *bTypeMask = ~0;
+      *thunk = true;
+      *aTypeMask = (1 << RegisterOperand);
+      break;
+
     case Remainder:
       if (BytesPerWord == 4 and aSize == 8) {
         *bTypeMask = ~0;
@@ -1926,7 +1785,7 @@ class MyAssembler: public Assembler {
 
   virtual void allocateFrame(unsigned footprint) {
     Register returnAddress(0);
-    issue(&c, mflr(returnAddress.low));
+    emit(&c, mov(returnAddress.low, 14));
 
     Memory returnAddressDst(StackRegister, 8);
     moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
@@ -1936,16 +1795,108 @@ class MyAssembler: public Assembler {
     moveAndUpdateRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
   }
 
+  virtual void adjustFrame(unsigned footprint) {
+    Register nextStack(0);
+    Memory stackSrc(StackRegister, 0);
+    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &nextStack);
+
+    Memory stackDst(StackRegister, -footprint * BytesPerWord);
+    moveAndUpdateRM(&c, BytesPerWord, &nextStack, BytesPerWord, &stackDst);
+  }
+
   virtual void popFrame() {
     Register stack(StackRegister);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
 
-    Assembler::Register returnAddress(0);
-    Assembler::Memory returnAddressSrc(StackRegister, 8);
+    Register returnAddress(0);
+    Memory returnAddressSrc(StackRegister, 8);
     moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &returnAddress);
     
-    issue(&c, mtlr(returnAddress.low));
+    emit(&c, mov(14, returnAddress.low));
+  }
+
+  virtual void popFrameForTailCall(unsigned footprint,
+                                   int offset,
+                                   int returnAddressSurrogate,
+                                   int framePointerSurrogate)
+  {
+    if (TailCalls) {
+      if (offset) {
+        Register tmp(0);
+        Memory returnAddressSrc(StackRegister, 8 + (footprint * BytesPerWord));
+        moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
+    
+        emit(&c, mov(14, tmp.low));
+
+        Memory stackSrc(StackRegister, footprint * BytesPerWord);
+        moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
+
+        Memory stackDst(StackRegister, (footprint - offset) * BytesPerWord);
+        moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
+
+        if (returnAddressSurrogate != NoRegister) {
+          assert(&c, offset > 0);
+
+          Register ras(returnAddressSurrogate);
+          Memory dst(StackRegister, 8 + (offset * BytesPerWord));
+          moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
+        }
+
+        if (framePointerSurrogate != NoRegister) {
+          assert(&c, offset > 0);
+
+          Register fps(framePointerSurrogate);
+          Memory dst(StackRegister, offset * BytesPerWord);
+          moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+        }
+      } else {
+        popFrame();
+      }
+    } else {
+      abort(&c);
+    }
+  }
+
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
+    popFrame();
+
+    assert(&c, argumentFootprint >= StackAlignmentInWords);
+    assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
+
+    if (TailCalls and argumentFootprint > StackAlignmentInWords) {
+      Register tmp(0);
+      Memory stackSrc(StackRegister, 0);
+      moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
+
+      Memory stackDst(StackRegister,
+                      (argumentFootprint - StackAlignmentInWords)
+                      * BytesPerWord);
+      moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
+    }
+
+    return_(&c);
+  }
+
+  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  {
+    popFrame();
+
+    Register tmp1(0);
+    Memory stackSrc(StackRegister, 0);
+    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp1);
+
+    Register tmp2(5);
+    Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
+    moveMR(&c, BytesPerWord, &newStackSrc, BytesPerWord, &tmp2);
+
+    Register stack(StackRegister);
+    subR(&c, BytesPerWord, &stack, &tmp2, &tmp2);
+
+    Memory stackDst(StackRegister, 0, tmp2.low);
+    moveAndUpdateRM(&c, BytesPerWord, &tmp1, BytesPerWord, &stackDst);
+
+    return_(&c);
   }
 
   virtual void apply(Operation op) {

@@ -780,6 +780,8 @@ class Context {
       case Divide:
         if (size == 8) {
           return local::getThunk(t, divideLongThunk);
+        } else if (size == 4) {
+          return local::getThunk(t, divideIntThunk);
         }
         break;
 
@@ -1992,6 +1994,12 @@ negateFloat(uint32_t a)
 
 int64_t
 divideLong(int64_t b, int64_t a)
+{
+  return a / b;
+}
+
+int64_t
+divideInt(int32_t b, int32_t a)
 {
   return a / b;
 }
