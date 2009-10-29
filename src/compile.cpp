@@ -895,6 +895,12 @@ class Context {
       } else {
         assert(t, size == 4);
         switch (op) {
+        case Divide:
+          return local::getThunk(t, divideIntThunk);
+
+        case Remainder:
+          return local::getThunk(t, moduloIntThunk);
+
         case FloatAdd:
           return local::getThunk(t, addFloatThunk);
 
@@ -2161,8 +2167,19 @@ divideLong(int64_t b, int64_t a)
 }
 
 int64_t
+divideInt(int32_t b, int32_t a)
+{
+  return a / b;
+}
+
+int64_t
 moduloLong(int64_t b, int64_t a)
 {
+  return a % b;
+}
+
+int64_t
+moduloInt(int32_t b, int32_t a) {
   return a % b;
 }
 

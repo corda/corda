@@ -1073,10 +1073,7 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
       break;
 
     case 8: {
-      if (srcSize == 4 and dstSize == 8) {
-        load(c, 4, base, offset, NoRegister, 1, 4, dst, false, false);
-        moveRR(c, 4, dst, 8, dst);
-      } else if (srcSize == 8 and dstSize == 8) {
+      if (dstSize == 8) {
         Assembler::Register dstHigh(dst->high);
         load(c, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
         load(c, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
