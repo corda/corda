@@ -788,6 +788,8 @@ class Context {
       case Remainder:
         if (size == 8) {
           return local::getThunk(t, moduloLongThunk);
+        } else if (size == 4) {
+          return local::getThunk(t, moduloIntThunk);
         }
         break;
 
@@ -2007,6 +2009,11 @@ divideInt(int32_t b, int32_t a)
 int64_t
 moduloLong(int64_t b, int64_t a)
 {
+  return a % b;
+}
+
+int64_t
+moduloInt(int32_t b, int32_t a) {
   return a % b;
 }
 

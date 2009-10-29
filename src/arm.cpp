@@ -287,18 +287,13 @@ bounded(int right, int left, int32_t v)
 }
 
 void*
-updateOffset(System* s, uint8_t* instruction, bool conditional, int64_t value)
+updateOffset(System* s, uint8_t* instruction, bool conditional UNUSED, int64_t value)
 {
   int32_t v = reinterpret_cast<uint8_t*>(value) - instruction;
    
   int32_t mask;
-  if (conditional) {
-    expect(s, bounded(2, 16, v));
-    mask = 0xFFFC;
-  } else {
-    expect(s, bounded(2, 6, v));
-    mask = 0x3FFFFFC;
-  }
+  expect(s, bounded(0, 8, v));
+  mask = 0xFFFFFF;
 
   int32_t* p = reinterpret_cast<int32_t*>(instruction);
   *p = (v & mask) | ((~mask) & *p);
@@ -711,22 +706,6 @@ void multiplyR(Context* con, unsigned size, Assembler::Register a, Assembler::Re
   }
 }
 
-void remainderR(Context* con, unsigned size, Assembler::Register a, Assembler::Register b, Assembler::Register t) {
-  bool useTemporary = b->low == t->low;
-  Assembler::Register tmp(t->low);
-  if (useTemporary) {
-    tmp.low = con->client->acquireTemporary();
-  }
-
-  divideR(con, size, a, b, &tmp);
-  multiplyR(con, size, a, &tmp, &tmp);
-  subR(con, size, &tmp, b, t);
-
-  if (useTemporary) {
-    con->client->releaseTemporary(tmp.low);
-  }
-}
-
 int
 normalize(Context* c, int offset, int index, unsigned scale, 
           bool* preserveIndex, bool* release)
@@ -1104,7 +1083,6 @@ compareRM(Context* c, unsigned aSize, Assembler::Register* a,
   c->client->releaseTemporary(tmp.low);
 }
 
-// TODO
 void
 longCompare(Context* c, Assembler::Operand* al, Assembler::Operand* ah,
             Assembler::Operand* bl, Assembler::Operand* bh,
@@ -1295,7 +1273,7 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), false);
-  emit(c, b(0)); /* TODO */
+  emit(c, b(0));
 }
 
 void
@@ -1365,7 +1343,6 @@ memoryBarrier(Context* c) {}
 
 // END OPERATION COMPILERS
 
-// TODO
 void
 populateTables(ArchitectureContext* c)
 {
@@ -1523,13 +1500,13 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-    return 8;
+    return 4;
   }
 
   virtual int argumentRegister(unsigned index) {
     assert(&c, index < argumentRegisterCount());
 
-    return index + 3;
+    return index + 0;
   }
 
   virtual unsigned stackAlignmentInWords() {
@@ -1685,18 +1662,9 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Divide:
+    case Remainder:
       *bTypeMask = ~0;
       *thunk = true;
-      *aTypeMask = (1 << RegisterOperand);
-      break;
-
-    case Remainder:
-      if (BytesPerWord == 4 and aSize == 8) {
-        *bTypeMask = ~0;
-        *thunk = true;        
-      } else {
-        *aTypeMask = (1 << RegisterOperand);
-      }
       break;
 
     default:
