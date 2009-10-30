@@ -69,7 +69,8 @@ writeObject(uint8_t* data, unsigned size, FILE* out, const char* startName,
       success = writeElf64Object
         (data, size, out, startName, endName, architecture, alignment,
          writable, executable);
-    } else if (strcmp("i386", architecture) == 0) {
+    } else if (strcmp("i386", architecture) == 0 ||
+               strcmp("arm", architecture) == 0) {
       found = true;
       success = writeElf32Object
         (data, size, out, startName, endName, architecture, alignment,
