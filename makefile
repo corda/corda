@@ -507,6 +507,8 @@ clean-native:
 	@echo "removing $(native-build)"
 	rm -rf $(native-build)
 
+$(native-build)/compile-x86-asm.o: $(src)/continuations-x86.S
+
 gen-arg = $(shell echo $(1) | sed -e 's:$(native-build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@echo "generating $(@)"
