@@ -65,7 +65,7 @@ class SocketSelector extends Selector {
   public int doSelect(long interval) throws IOException {
     selectedKeys.clear();
 
-    if (clearWoken()) return 0;
+    if (clearWoken()) interval = -1;
 
     int max=0;
     for (Iterator<SelectionKey> it = keys.iterator();

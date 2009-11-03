@@ -42,6 +42,10 @@ public class SocketChannel extends SelectableChannel
     return blocking;
   }
 
+  public boolean isConnected() {
+    return connected;
+  }
+
   public Socket socket() {
     return new Handle();
   }
@@ -59,7 +63,10 @@ public class SocketChannel extends SelectableChannel
   }
 
   public boolean finishConnect() throws IOException {
-    return natFinishConnect(socket);
+    if (! connected) {
+      connected = natFinishConnect(socket);
+    }
+    return connected;
   }
 
   public void close() throws IOException {

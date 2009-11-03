@@ -5182,8 +5182,6 @@ populateSiteTables(Context* c, Event* e, SiteRecordList* frozen)
   resolveJunctionSites(c, e, frozen);
 
   resolveBranchSites(c, e, frozen);
-
-  captureBranchSnapshots(c, e);
 }
 
 void
@@ -5452,12 +5450,17 @@ compile(Context* c)
 
     populateSources(c, e);
 
+    if (branch and e->successors) {
+      captureBranchSnapshots(c, e);
+    }
+
     thaw(c, &frozen);
 
     e->compile(c);
 
     if ((not branch) and e->successors) {
       populateSiteTables(c, e, &frozen);
+      captureBranchSnapshots(c, e);
       thaw(c, &frozen);
     }
 
