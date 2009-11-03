@@ -42,6 +42,19 @@ AttachCurrentThread(Machine* m, Thread** t, void*)
 }
 
 jint JNICALL
+AttachCurrentThreadAsDaemon(Machine* m, Thread** t, void* parameters)
+{
+  *t = static_cast<Thread*>(m->localThread->get());
+  if (*t == 0) {
+    AttachCurrentThread(m, t, parameters);
+
+    ENTER(*t, Thread::ActiveState);
+    setDaemon(*t, (*t)->javaThread, true);
+  }
+  return 0;
+}
+
+jint JNICALL
 DetachCurrentThread(Machine* m)
 {
   Thread* t = static_cast<Thread*>(m->localThread->get());
@@ -1902,6 +1915,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
   vmTable->DestroyJavaVM = DestroyJavaVM;
   vmTable->AttachCurrentThread = AttachCurrentThread;
+  vmTable->AttachCurrentThreadAsDaemon = AttachCurrentThreadAsDaemon;
   vmTable->DetachCurrentThread = DetachCurrentThread;
   vmTable->GetEnv = GetEnv;
 
