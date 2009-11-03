@@ -159,6 +159,18 @@ ifeq ($(platform),darwin)
 	strip-all = -S -x
 	so-suffix = .jnilib
 	shared = -dynamiclib
+
+	ifeq ($(arch),powerpc)
+		cflags += -arch ppc
+		asmflags += -arch ppc
+		lflags += -arch ppc
+	endif
+
+	ifeq ($(arch),i386)
+		cflags += -arch i386
+		asmflags += -arch i386
+		lflags += -arch i386
+	endif
 endif
 
 ifeq ($(platform),windows)
