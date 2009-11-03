@@ -1008,7 +1008,7 @@ deadWord(Context* c, Value* v)
   Value* nextWord = v->nextWord;
   assert(c, nextWord != v);
 
-  for (SiteIterator it(c, v); it.hasMore();) {
+  for (SiteIterator it(c, v, true, false); it.hasMore();) {
     Site* s = it.next();
     
     if (s->registerSize(c) > BytesPerWord) {
