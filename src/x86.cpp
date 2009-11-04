@@ -2931,7 +2931,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Int2Float:
-      if (useSSE(&c)) {
+      if (useSSE(&c) and (aSize <= BytesPerWord)) {
         *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = GeneralRegisterMask
           | (static_cast<uint64_t>(GeneralRegisterMask) << 32);

@@ -46,11 +46,13 @@ public class Floats {
 
     expect(subtract(0.5d, 0.1d) == 0.4d);
 
-    double d = 1d;
-    expect(((int) d) == 1);
+    { double d = 1d;
+      expect(((int) d) == 1);
+    }
 
-    float f = 1f;
-    expect(((int) f) == 1);
+    { float f = 1f;
+      expect(((int) f) == 1);
+    }
 
     expect(Math.round(0.4f) == 0);
     expect(Math.round(0.5f) == 1);
@@ -62,8 +64,14 @@ public class Floats {
     expect(Math.round(1.0d) == 1);
     expect(Math.round(1.9d) == 2);
 
-    float b = 1.0f;
-    int blue = (int)(b * 255 + 0.5);
-    expect(blue == 255);
+    { float b = 1.0f;
+      int blue = (int)(b * 255 + 0.5);
+      expect(blue == 255);
+    }
+
+    { long z = 6553311036568663L;
+      double d = (double) z;
+      expect(d == 6553311036568663.0);
+    }
   }
 }
