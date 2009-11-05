@@ -376,7 +376,7 @@ EOF
 
 Step 5: Run ProGuard with stage1 as input and stage2 as output.
 
- $ java -jar ../../proguard4.3/lib/proguard.jar \
+ $ java -jar ../../proguard4.4/lib/proguard.jar \
      -injars stage1 -outjars stage2 @../vm.pro @hello.pro
 
 (note: pass -dontusemixedcaseclassnames to ProGuard when building on
