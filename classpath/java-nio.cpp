@@ -266,7 +266,7 @@ doAccept(JNIEnv* e, int s)
   int r = ::accept(s, &address, &length);
   if (r >= 0) {
     return r;
-  } else {
+  } else if (errno != EINTR) {
     throwIOException(e);
   }
   return -1;

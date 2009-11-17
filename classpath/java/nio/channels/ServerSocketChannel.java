@@ -47,7 +47,14 @@ public class ServerSocketChannel extends SelectableChannel {
   }
 
   private int doAccept() throws IOException {
-    return natDoAccept(channel.socket);
+    while (true) {
+      int s = natDoAccept(channel.socket);
+      if (s != -1) {
+        return s;
+      }
+      // todo: throw ClosedByInterruptException if this thread was
+      // interrupted during the accept call
+    }
   }
 
   private int doListen(String host, int port) throws IOException {
