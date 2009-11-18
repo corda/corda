@@ -195,6 +195,8 @@ GetArrayLength(Thread* t, jarray array)
 jstring JNICALL
 NewString(Thread* t, const jchar* chars, jsize size)
 {
+  if (chars == 0) return 0;
+
   ENTER(t, Thread::ActiveState);
 
   object a = 0;
@@ -210,6 +212,8 @@ NewString(Thread* t, const jchar* chars, jsize size)
 jstring JNICALL
 NewStringUTF(Thread* t, const char* chars)
 {
+  if (chars == 0) return 0;
+
   ENTER(t, Thread::ActiveState);
 
   object a = 0;
