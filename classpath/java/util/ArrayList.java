@@ -38,8 +38,6 @@ public class ArrayList<T> extends AbstractList<T> {
   private void shrink() {
     if (array.length / 2 >= MinimumCapacity && size <= array.length / 3) {
       resize(array.length / 2);
-    } else if (size == 0) {
-      resize(0);
     }
   }
 
