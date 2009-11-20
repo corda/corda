@@ -303,12 +303,14 @@ class Segment {
       if (child) child->set(p, v);
     }
 
+#ifdef USE_ATOMIC_OPERATIONS
     void markAtomic(void* p) {
       assert(segment->context, bitsPerRecord == 1);
       markBitAtomic(data, indexOf(p));
       assert(segment->context, getBit(data, indexOf(p)));
       if (child) child->markAtomic(p);
     }
+#endif
 
     unsigned get(void* p) {
       return getBits(data, bitsPerRecord, indexOf(p));
@@ -1816,6 +1818,10 @@ class MyHeap: public Heap {
 
   virtual void mark(void* p, unsigned offset, unsigned count) {
     if (needsMark(p)) {
+#ifndef USE_ATOMIC_OPERATIONS
+      ACQUIRE(c.lock);
+#endif
+
       if (c.client->isFixed(p)) {
         Fixie* f = fixie(p);
         assert(&c, offset == 0 or f->hasMask);
@@ -1830,7 +1836,11 @@ class MyHeap: public Heap {
             }
 
             dirty = true;
+#ifdef USE_ATOMIC_OPERATIONS
             markBitAtomic(f->mask(), offset + i);
+#else
+            markBit(f->mask(), offset + i);
+#endif
             assert(&c, getBit(f->mask(), offset + i));
           }
         }
@@ -1848,7 +1858,11 @@ class MyHeap: public Heap {
         for (unsigned i = 0; i < count; ++i) {
           void** target = static_cast<void**>(p) + offset + i;
           if (targetNeedsMark(mask(*target))) {
+#ifdef USE_ATOMIC_OPERATIONS
             map->markAtomic(target);
+#else
+            map->set(target);
+#endif
           }
         }
       }

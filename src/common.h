@@ -63,6 +63,11 @@ typedef uint64_t uintptr_t;
 
 #  include "stdint.h"
 
+#  if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+#    define USE_ATOMIC_OPERATIONS
+#    define COMPARE_AND_SWAP __sync_bool_compare_and_swap
+#  endif
+
 #  define LIKELY(v) __builtin_expect((v) != 0, true)
 #  define UNLIKELY(v) __builtin_expect((v) != 0, false)
 
@@ -325,13 +330,15 @@ markBit(uintptr_t* map, unsigned i)
   map[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
 }
 
+#ifdef USE_ATOMIC_OPERATIONS
 inline void
 markBitAtomic(uintptr_t* map, unsigned i)
 {
   uintptr_t* p = map + wordOf(i);
   uintptr_t v = static_cast<uintptr_t>(1) << bitOf(i);
-  while (not __sync_bool_compare_and_swap(p, *p, *p | v)) { }
+  while (not COMPARE_AND_SWAP(p, *p, *p | v)) { }
 }
+#endif
 
 inline void
 clearBit(uintptr_t* map, unsigned i)
