@@ -1022,7 +1022,9 @@ void
 markDirty(Context* c, Fixie* f)
 {
   if (not f->dirty) {
+#ifdef USE_ATOMIC_OPERATIONS
     ACQUIRE(c->lock);
+#endif
 
     if (not f->dirty) {
       f->dirty = true;
