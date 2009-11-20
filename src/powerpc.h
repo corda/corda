@@ -91,16 +91,16 @@ syncInstructionCache(const void* start, unsigned size)
 }
 
 #ifdef USE_ATOMIC_OPERATIONS
+#  if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
 inline bool
 atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 {
-#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
-#else // not GCC >= 4.1
-  // todo: implement using inline assembly
-#  undef USE_ATOMIC_OPERATIONS
-#endif // not GCC >= 4.1
 }
+#  else // not GCC >= 4.1
+// todo: implement using inline assembly
+#    undef USE_ATOMIC_OPERATIONS
+#  endif // not GCC >= 4.1
 #endif // USE_ATOMIC_OPERATIONS
 
 inline uint64_t
