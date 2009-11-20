@@ -326,6 +326,14 @@ markBit(uintptr_t* map, unsigned i)
 }
 
 inline void
+markBitAtomic(uintptr_t* map, unsigned i)
+{
+  uintptr_t* p = map + wordOf(i);
+  uintptr_t v = static_cast<uintptr_t>(1) << bitOf(i);
+  while (not __sync_bool_compare_and_swap(p, *p, *p | v)) { }
+}
+
+inline void
 clearBit(uintptr_t* map, unsigned i)
 {
   map[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));

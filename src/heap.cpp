@@ -303,6 +303,13 @@ class Segment {
       if (child) child->set(p, v);
     }
 
+    void markAtomic(void* p) {
+      assert(segment->context, bitsPerRecord == 1);
+      markBitAtomic(data, indexOf(p));
+      assert(segment->context, getBit(data, indexOf(p)));
+      if (child) child->markAtomic(p);
+    }
+
     unsigned get(void* p) {
       return getBits(data, bitsPerRecord, indexOf(p));
     }
@@ -1013,8 +1020,12 @@ void
 markDirty(Context* c, Fixie* f)
 {
   if (not f->dirty) {
-    f->dirty = true;
-    f->move(c, &(c->dirtyTenuredFixies));
+    ACQUIRE(c->lock);
+
+    if (not f->dirty) {
+      f->dirty = true;
+      f->move(c, &(c->dirtyTenuredFixies));
+    }
   }
 }
 
@@ -1784,7 +1795,7 @@ class MyHeap: public Heap {
             Fixie(&c, sizeInWords, objectMask, 0, true))->body();
   }
 
-  virtual bool needsMark(void* p) {
+  bool needsMark(void* p) {
     assert(&c, c.client->isFixed(p) or (not immortalHeapContains(&c, p)));
 
     if (c.client->isFixed(p)) {
@@ -1792,11 +1803,6 @@ class MyHeap: public Heap {
     } else {
       return c.gen2.contains(p) or c.nextGen2.contains(p);
     }
-  }
-
-  virtual bool needsMark(void* p, unsigned offset) {
-    return needsMark(p) and targetNeedsMark
-      (mask(*(static_cast<void**>(p) + offset)));
   }
 
   bool targetNeedsMark(void* target) {
@@ -1809,38 +1815,41 @@ class MyHeap: public Heap {
   }
 
   virtual void mark(void* p, unsigned offset, unsigned count) {
-    if (c.client->isFixed(p)) {
-      Fixie* f = fixie(p);
-      assert(&c, offset == 0 or f->hasMask);
+    if (needsMark(p)) {
+      if (c.client->isFixed(p)) {
+        Fixie* f = fixie(p);
+        assert(&c, offset == 0 or f->hasMask);
 
-      bool dirty = false;
-      for (unsigned i = 0; i < count; ++i) {
-        void** target = static_cast<void**>(p) + offset + i;
-        if (targetNeedsMark(mask(*target))) {
-          if (DebugFixies) {
-            fprintf(stderr, "dirty fixie %p at %d (%p): %p\n",
-                    f, offset, f->body() + offset, mask(*target));
+        bool dirty = false;
+        for (unsigned i = 0; i < count; ++i) {
+          void** target = static_cast<void**>(p) + offset + i;
+          if (targetNeedsMark(mask(*target))) {
+            if (DebugFixies) {
+              fprintf(stderr, "dirty fixie %p at %d (%p): %p\n",
+                      f, offset, f->body() + offset, mask(*target));
+            }
+
+            dirty = true;
+            markBitAtomic(f->mask(), offset + i);
+            assert(&c, getBit(f->mask(), offset + i));
           }
-
-          dirty = true;
-          markBit(f->mask(), offset + i);
         }
-      }
 
-      if (dirty) markDirty(&c, f);
-    } else {
-      Segment::Map* map;
-      if (c.gen2.contains(p)) {
-        map = &(c.heapMap);
+        if (dirty) markDirty(&c, f);
       } else {
-        assert(&c, c.nextGen2.contains(p));
-        map = &(c.nextHeapMap);
-      }
+        Segment::Map* map;
+        if (c.gen2.contains(p)) {
+          map = &(c.heapMap);
+        } else {
+          assert(&c, c.nextGen2.contains(p));
+          map = &(c.nextHeapMap);
+        }
 
-      for (unsigned i = 0; i < count; ++i) {
-        void** target = static_cast<void**>(p) + offset + i;
-        if (targetNeedsMark(mask(*target))) {
-          map->set(target);
+        for (unsigned i = 0; i < count; ++i) {
+          void** target = static_cast<void**>(p) + offset + i;
+          if (targetNeedsMark(mask(*target))) {
+            map->markAtomic(target);
+          }
         }
       }
     }
