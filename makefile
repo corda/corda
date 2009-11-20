@@ -240,9 +240,11 @@ ifeq ($(mode),small)
 	cflags += -Os -g3 -DNDEBUG
 endif
 
+ifneq ($(platform),darwin)
 ifeq ($(arch),i386)
 # this is necessary to support __sync_bool_compare_and_swap:
 	cflags += -march=i486
+endif
 endif
 
 output = -o $(1)
