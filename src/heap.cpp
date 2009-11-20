@@ -11,6 +11,7 @@
 #include "heap.h"
 #include "system.h"
 #include "common.h"
+#include "arch.h"
 
 using namespace vm;
 
@@ -68,6 +69,16 @@ void assert(Context*, bool);
 System* system(Context*);
 void* tryAllocate(Context* c, unsigned size);
 void free(Context* c, const void* p, unsigned size);
+
+#ifdef USE_ATOMIC_OPERATIONS
+inline void
+markBitAtomic(uintptr_t* map, unsigned i)
+{
+  uintptr_t* p = map + wordOf(i);
+  uintptr_t v = static_cast<uintptr_t>(1) << bitOf(i);
+  while (not atomicCompareAndSwap(p, *p, *p | v)) { }
+}
+#endif // USE_ATOMIC_OPERATIONS
 
 inline void*
 get(void* o, unsigned offsetInWords)

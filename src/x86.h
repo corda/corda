@@ -188,6 +188,40 @@ syncInstructionCache(const void*, unsigned)
   // ignore
 }
 
+#ifdef USE_ATOMIC_OPERATIONS
+inline bool
+atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+{
+#ifdef _MSC_VER
+#  ifdef ARCH_x86_32
+  InterlockedCompareExchange(p, new_, old);
+#  elif defined ARCH_x86_64
+  InterlockedCompareExchange64(p, new_, old);
+#  endif // ARCH_x86_64
+#elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+  return __sync_bool_compare_and_swap(p, old, new_);
+#elif defined ARCH_x86_32
+  uint8_t result;
+
+  __asm__ __volatile__("lock; cmpxchgl %2, %0; setz %1"
+                       : "=m"(*p), "=q"(result)
+                       : "r"(new_), "a"(old), "m"(*p)
+                       : "memory");
+
+  return result != 0;
+#elif defined ARCH_x86_64
+  uint8_t result;
+
+  __asm__ __volatile__("lock; cmpxchg1 %2, %0; setz %1"
+                       : "=m"(*p), "=q"(result)
+                       : "r"(new_), "a"(old), "m"(*p)
+                       : "memory");
+
+  return result != 0;
+#endif // ARCH_x86_64
+}
+#endif // USE_ATOMIC_OPERATIONS
+
 } // namespace vm
 
 #endif//X86_H

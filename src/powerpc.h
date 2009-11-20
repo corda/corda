@@ -90,6 +90,19 @@ syncInstructionCache(const void* start, unsigned size)
   __asm__ __volatile__("isync");
 }
 
+#ifdef USE_ATOMIC_OPERATIONS
+inline bool
+atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+{
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+  return __sync_bool_compare_and_swap(p, old, new_);
+#else // not GCC >= 4.1
+  // todo: implement using inline assembly
+#  undef USE_ATOMIC_OPERATIONS
+#endif // not GCC >= 4.1
+}
+#endif // USE_ATOMIC_OPERATIONS
+
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned argumentsSize,
