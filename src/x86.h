@@ -212,7 +212,7 @@ atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 #elif defined ARCH_x86_64
   uint8_t result;
 
-  __asm__ __volatile__("lock; cmpxchg1 %2, %0; setz %1"
+  __asm__ __volatile__("lock; cmpxchgq %2, %0; setz %1"
                        : "=m"(*p), "=q"(result)
                        : "r"(new_), "a"(old), "m"(*p)
                        : "memory");
