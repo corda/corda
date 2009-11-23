@@ -1584,19 +1584,13 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
 inline void
 mark(Thread* t, object o, unsigned offset, unsigned count)
 {
-  if (t->m->heap->needsMark(o)) {
-    ACQUIRE_RAW(t, t->m->heapLock);
-    t->m->heap->mark(o, offset / BytesPerWord, count);
-  }
+  t->m->heap->mark(o, offset / BytesPerWord, count);
 }
 
 inline void
 mark(Thread* t, object o, unsigned offset)
 {
-  if (t->m->heap->needsMark(o, offset / BytesPerWord)) {
-    ACQUIRE_RAW(t, t->m->heapLock);
-    t->m->heap->mark(o, offset / BytesPerWord, 1);
-  }
+  t->m->heap->mark(o, offset / BytesPerWord, 1);
 }
 
 inline void

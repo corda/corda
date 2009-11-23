@@ -159,6 +159,18 @@ ifeq ($(platform),darwin)
 	strip-all = -S -x
 	so-suffix = .jnilib
 	shared = -dynamiclib
+
+	ifeq ($(arch),powerpc)
+		cflags += -arch ppc
+		asmflags += -arch ppc
+		lflags += -arch ppc
+	endif
+
+	ifeq ($(arch),i386)
+		cflags += -arch i386
+		asmflags += -arch i386
+		lflags += -arch i386
+	endif
 endif
 
 ifeq ($(platform),windows)
@@ -226,6 +238,11 @@ ifeq ($(mode),fast)
 endif
 ifeq ($(mode),small)
 	cflags += -Os -g3 -DNDEBUG
+endif
+
+ifeq ($(arch),i386)
+# this is necessary to support __sync_bool_compare_and_swap:
+	cflags += -march=i486
 endif
 
 output = -o $(1)
