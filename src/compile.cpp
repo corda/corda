@@ -7260,7 +7260,7 @@ class MyProcessor: public Processor {
     class Visitor: public System::ThreadVisitor {
      public:
       Visitor(MyThread* t, MyProcessor* p, MyThread* target):
-        t(t), p(p), target(target)
+        t(t), p(p), target(target), trace(0)
       { }
 
       virtual void visit(void* ip, void* base, void* stack) {
