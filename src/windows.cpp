@@ -616,26 +616,32 @@ class MySystem: public System {
 
     ACQUIRE(this, mutex);
 
+    bool success = false;
     int rv = SuspendThread(target->thread);
-    expect(this, rv != -1);
+    if (rv != -1) {
+      CONTEXT context;
+      memset(&context, 0, sizeof(CONTEXT));
+      context.ContextFlags = CONTEXT_CONTROL;
+      rv = GetThreadContext(target->thread, &context);
 
-    CONTEXT context;
-    rv = GetThreadContext(target->thread, &context);
-    expect(this, rv);
+      if (rv) {
 #ifdef ARCH_x86_32
-    visitor->visit(reinterpret_cast<void*>(context.Eip),
-                   reinterpret_cast<void*>(context.Ebp),
-                   reinterpret_cast<void*>(context.Esp));
+        visitor->visit(reinterpret_cast<void*>(context.Eip),
+                       reinterpret_cast<void*>(context.Ebp),
+                       reinterpret_cast<void*>(context.Esp));
 #elif defined ARCH_x86_64
-    visitor->visit(reinterpret_cast<void*>(context.Rip),
-                   reinterpret_cast<void*>(context.Rbp),
-                   reinterpret_cast<void*>(context.Rsp));
+        visitor->visit(reinterpret_cast<void*>(context.Rip),
+                       reinterpret_cast<void*>(context.Rbp),
+                       reinterpret_cast<void*>(context.Rsp));
 #endif
+        success = true;
+      }
 
-    rv = ResumeThread(target->thread);
-    expect(this, rv != -1);
+      rv = ResumeThread(target->thread);
+      expect(this, rv != -1);
+    }
 
-    return 0;
+    return (success ? 0 : 1);
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
