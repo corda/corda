@@ -361,10 +361,9 @@ class Assembler {
      unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask) = 0;
 
     virtual void planMove
-    (unsigned size,
-     uint8_t srcTypeMask, uint64_t srcRegisterMask,
-     uint8_t dstTypeMask, uint64_t dstRegisterMask,
-     uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask) = 0; 
+    (unsigned size, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
+     uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
+     uint8_t dstTypeMask, uint64_t dstRegisterMask) = 0; 
 
     virtual void planSource
     (TernaryOperation op,
