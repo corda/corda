@@ -14,12 +14,21 @@
 #include "stream.h"
 #include "constants.h"
 #include "processor.h"
+#include "arch.h"
 
 using namespace vm;
 
 namespace {
 
 const unsigned NoByte = 0xFFFF;
+
+#ifdef USE_ATOMIC_OPERATIONS
+void
+atomicIncrement(unsigned* p, int v)
+{
+  while (not atomicCompareAndSwap32(p, *p, *p + v)) { }
+}
+#endif
 
 bool
 find(Thread* t, Thread* o)
@@ -2319,10 +2328,22 @@ enter(Thread* t, Thread::State s)
     return;
   }
 
+#ifdef USE_ATOMIC_OPERATIONS
+#  define INCREMENT atomicIncrement
+#  define ACQUIRE_LOCK ACQUIRE_RAW(t, t->m->stateLock)
+#  define BARRIER memoryBarrier()
+#else
+#  define INCREMENT(pointer, value) *(pointer) += value;
+#  define ACQUIRE_LOCK
+#  define BARRIER
+
   ACQUIRE_RAW(t, t->m->stateLock);
+#endif // not USE_ATOMIC_OPERATIONS
 
   switch (s) {
   case Thread::ExclusiveState: {
+    ACQUIRE_LOCK;
+
     while (t->m->exclusive) {
       // another thread got here first.
       ENTER(t, Thread::IdleState);
@@ -2332,7 +2353,7 @@ enter(Thread* t, Thread::State s)
     case Thread::ActiveState: break;
 
     case Thread::IdleState: {
-      ++ t->m->activeCount;
+      INCREMENT(&(t->m->activeCount), 1);
     } break;
 
     default: abort(t);
@@ -2340,14 +2361,35 @@ enter(Thread* t, Thread::State s)
 
     t->state = Thread::ExclusiveState;
     t->m->exclusive = t;
-      
+    
+    BARRIER;
+
     while (t->m->activeCount > 1) {
       t->m->stateLock->wait(t->systemThread, 0);
     }
   } break;
 
   case Thread::IdleState:
+    if (t->state == Thread::ActiveState) {
+      // fast path
+      assert(t, t->m->activeCount > 0);
+      INCREMENT(&(t->m->activeCount), -1);
+
+      t->state = s;
+
+      if (t->m->exclusive) {
+        ACQUIRE_LOCK;
+
+        t->m->stateLock->notifyAll(t->systemThread);
+      }
+      break;
+    } else {
+      // fall through to slow path
+    }
+
   case Thread::ZombieState: {
+    ACQUIRE_LOCK;
+
     switch (t->state) {
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
@@ -2360,7 +2402,7 @@ enter(Thread* t, Thread::State s)
     }
 
     assert(t, t->m->activeCount > 0);
-    -- t->m->activeCount;
+    INCREMENT(&(t->m->activeCount), -1);
 
     if (s == Thread::ZombieState) {
       assert(t, t->m->liveCount > 0);
@@ -2375,35 +2417,45 @@ enter(Thread* t, Thread::State s)
     t->m->stateLock->notifyAll(t->systemThread);
   } break;
 
-  case Thread::ActiveState: {
-    switch (t->state) {
-    case Thread::ExclusiveState: {
-      assert(t, t->m->exclusive == t);
-
+  case Thread::ActiveState:
+    if (t->state == Thread::IdleState and t->m->exclusive == 0) {
+      // fast path
+      INCREMENT(&(t->m->activeCount), 1);
       t->state = s;
-      t->m->exclusive = 0;
+      break;
+    } else {
+      ACQUIRE_LOCK;
 
-      t->m->stateLock->notifyAll(t->systemThread);
-    } break;
+      switch (t->state) {
+      case Thread::ExclusiveState: {
+        assert(t, t->m->exclusive == t);
 
-    case Thread::NoState:
-    case Thread::IdleState: {
-      while (t->m->exclusive) {
-        t->m->stateLock->wait(t->systemThread, 0);
+        t->state = s;
+        t->m->exclusive = 0;
+
+        t->m->stateLock->notifyAll(t->systemThread);
+      } break;
+
+      case Thread::NoState:
+      case Thread::IdleState: {
+        while (t->m->exclusive) {
+          t->m->stateLock->wait(t->systemThread, 0);
+        }
+
+        INCREMENT(&(t->m->activeCount), 1);
+        if (t->state == Thread::NoState) {
+          ++ t->m->liveCount;
+        }
+        t->state = s;
+      } break;
+
+      default: abort(t);
       }
-
-      ++ t->m->activeCount;
-      if (t->state == Thread::NoState) {
-        ++ t->m->liveCount;
-      }
-      t->state = s;
     } break;
-
-    default: abort(t);
-    }
-  } break;
 
   case Thread::ExitState: {
+    ACQUIRE_LOCK;
+
     switch (t->state) {
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
@@ -2418,7 +2470,7 @@ enter(Thread* t, Thread::State s)
     }
 
     assert(t, t->m->activeCount > 0);
-    -- t->m->activeCount;
+    INCREMENT(&(t->m->activeCount), -1);
 
     t->state = s;
 
