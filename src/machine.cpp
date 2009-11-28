@@ -2421,10 +2421,18 @@ enter(Thread* t, Thread::State s)
     if (t->state == Thread::IdleState and t->m->exclusive == 0) {
       // fast path
       INCREMENT(&(t->m->activeCount), 1);
-      t->state = s;
-      break;
-    } else {
-      ACQUIRE_LOCK;
+
+      if (t->m->exclusive) {
+        // a thread has entered exclusive mode - switch to slow path
+        assert(t, t->m->activeCount > 0);
+        INCREMENT(&(t->m->activeCount), -1);
+      } else {
+        t->state = s;
+        break;
+      }
+    }
+
+    { ACQUIRE_LOCK;
 
       switch (t->state) {
       case Thread::ExclusiveState: {
