@@ -2934,7 +2934,7 @@ bool
 intrinsic(MyThread* t, Frame* frame, object target)
 {
 #define MATCH(name, constant)                                           \
-  (byteArrayLength(t, name) - 1 == sizeof(constant)                     \
+  (byteArrayLength(t, name) == sizeof(constant)                         \
    and strcmp(reinterpret_cast<char*>(&byteArrayBody(t, name, 0)),      \
               constant) == 0)
 
