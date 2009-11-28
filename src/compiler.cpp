@@ -36,6 +36,12 @@ const unsigned StealRegisterReserveCount = 2;
 // compare instruction:
 const unsigned ResolveRegisterReserveCount = (BytesPerWord == 8 ? 2 : 4);
 
+const unsigned RegisterCopyCost = 1;
+const unsigned AddressCopyCost = 2;
+const unsigned ConstantCopyCost = 3;
+const unsigned MemoryCopyCost = 4;
+const unsigned CopyPenalty = 10;
+
 class Context;
 class Value;
 class Stack;
@@ -1247,6 +1253,7 @@ class Target {
   static const unsigned MinimumFrameCost = 1;
   static const unsigned StealPenalty = 2;
   static const unsigned StealUniquePenalty = 4;
+  static const unsigned IndirectMovePenalty = 4;
   static const unsigned LowRegisterPenalty = 10;
   static const unsigned Impossible = 20;
 
@@ -1277,37 +1284,49 @@ valueType(Context* c, Compiler::OperandType type)
   }
 }
 
-Target
-pickTarget(Context* c, Read* r, bool intersectRead,
-           unsigned registerReserveCount);
+class CostCalculator {
+ public:
+  virtual unsigned cost(Context* c, uint8_t typeMask, uint32_t registerMask,
+                        int frameIndex) = 0;
+};
 
 unsigned
-resourceCost(Context* c UNUSED, Value* v, Resource* r)
+resourceCost(Context* c, Value* v, Resource* r, uint8_t typeMask,
+             uint32_t registerMask, int frameIndex,
+             CostCalculator* costCalculator)
 {
   if (r->reserved or r->freezeCount or r->referenceCount) {
     return Target::Impossible;
-  } else if (r->value) {
-    assert(c, findSite(c, r->value, r->site));
+  } else {    
+    unsigned baseCost = costCalculator ? costCalculator->cost
+      (c, typeMask, registerMask, frameIndex) : 0;
 
-    if (v and buddies(r->value, v)) {
-      return 0;
-    } else if (uniqueSite(c, r->value, r->site)) {
-      return Target::StealUniquePenalty;
+    if (r->value) {
+      assert(c, findSite(c, r->value, r->site));
+      
+      if (v and buddies(r->value, v)) {
+        return baseCost;
+      } else if (uniqueSite(c, r->value, r->site)) {
+        return baseCost + Target::StealUniquePenalty;
+      } else {
+        return baseCost = Target::StealPenalty;
+      }
     } else {
-      return Target::StealPenalty;
+      return baseCost;
     }
-  } else {
-    return 0;
   }
 }
 
 bool
 pickRegisterTarget(Context* c, int i, Value* v, uint32_t mask, int* target,
-                   unsigned* cost)
+                   unsigned* cost, CostCalculator* costCalculator = 0)
 {
   if ((1 << i) & mask) {
     RegisterResource* r = c->registerResources + i;
-    unsigned myCost = resourceCost(c, v, r) + Target::MinimumRegisterCost;
+    unsigned myCost = resourceCost
+      (c, v, r, 1 << RegisterOperand, 1 << i, NoFrameIndex, costCalculator)
+      + Target::MinimumRegisterCost;
+
     if ((static_cast<uint32_t>(1) << i) == mask) {
       *cost = myCost;
       return true;
@@ -1320,7 +1339,8 @@ pickRegisterTarget(Context* c, int i, Value* v, uint32_t mask, int* target,
 }
 
 int
-pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
+pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost,
+                   CostCalculator* costCalculator = 0)
 {
   int target = NoRegister;
   *cost = Target::Impossible;
@@ -1329,7 +1349,7 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
     for (int i = c->generalRegisterLimit - 1;
          i >= c->generalRegisterStart; --i)
     {
-      if (pickRegisterTarget(c, i, v, mask, &target, cost)) {
+      if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
     }
@@ -1339,7 +1359,7 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
     for (int i = c->floatRegisterStart;
          i < static_cast<int>(c->floatRegisterLimit); ++i)
     {
-      if (pickRegisterTarget(c, i, v, mask, &target, cost)) {
+      if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
     }
@@ -1349,29 +1369,34 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost)
 }
 
 Target
-pickRegisterTarget(Context* c, Value* v, uint32_t mask)
+pickRegisterTarget(Context* c, Value* v, uint32_t mask,
+                   CostCalculator* costCalculator = 0)
 {
   unsigned cost;
-  int number = pickRegisterTarget(c, v, mask, &cost);
+  int number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
   return Target(number, RegisterOperand, cost);
 }
 
 unsigned
-frameCost(Context* c, Value* v, int frameIndex)
+frameCost(Context* c, Value* v, int frameIndex, CostCalculator* costCalculator)
 {
-  return resourceCost(c, v, c->frameResources + frameIndex)
+  return resourceCost
+    (c, v, c->frameResources + frameIndex, 1 << MemoryOperand, 0, frameIndex,
+     costCalculator)
     + Target::MinimumFrameCost;
 }
 
 Target
-pickFrameTarget(Context* c, Value* v)
+pickFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
 {
   Target best;
 
   Value* p = v;
   do {
     if (p->home >= 0) {
-      Target mine(p->home, MemoryOperand, frameCost(c, v, p->home));
+      Target mine
+        (p->home, MemoryOperand, frameCost(c, v, p->home, costCalculator));
+
       if (mine.cost == Target::MinimumFrameCost) {
         return mine;
       } else if (mine.cost < best.cost) {
@@ -1385,13 +1410,13 @@ pickFrameTarget(Context* c, Value* v)
 }
 
 Target
-pickAnyFrameTarget(Context* c, Value* v)
+pickAnyFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
 {
   Target best;
 
   unsigned count = totalFrameSize(c);
   for (unsigned i = 0; i < count; ++i) {
-    Target mine(i, MemoryOperand, frameCost(c, v, i));
+    Target mine(i, MemoryOperand, frameCost(c, v, i, costCalculator));
     if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1404,10 +1429,12 @@ pickAnyFrameTarget(Context* c, Value* v)
 
 Target
 pickTarget(Context* c, Value* value, const SiteMask& mask,
-           unsigned registerPenalty, Target best)
+           unsigned registerPenalty, Target best,
+           CostCalculator* costCalculator)
 {
   if (mask.typeMask & (1 << RegisterOperand)) {
-    Target mine = pickRegisterTarget(c, value, mask.registerMask);
+    Target mine = pickRegisterTarget
+      (c, value, mask.registerMask, costCalculator);
 
     mine.cost += registerPenalty;
     if (mine.cost == Target::MinimumRegisterCost) {
@@ -1420,14 +1447,14 @@ pickTarget(Context* c, Value* value, const SiteMask& mask,
   if (mask.typeMask & (1 << MemoryOperand)) {
     if (mask.frameIndex >= 0) {
       Target mine(mask.frameIndex, MemoryOperand,
-                  frameCost(c, value, mask.frameIndex));
+                  frameCost(c, value, mask.frameIndex, costCalculator));
       if (mine.cost == Target::MinimumFrameCost) {
         return mine;
       } else if (mine.cost < best.cost) {
         best = mine;
       }
     } else if (mask.frameIndex == AnyFrameIndex) {
-      Target mine = pickFrameTarget(c, value);
+      Target mine = pickFrameTarget(c, value, costCalculator);
       if (mine.cost == Target::MinimumFrameCost) {
         return mine;
       } else if (mine.cost < best.cost) {
@@ -1441,7 +1468,7 @@ pickTarget(Context* c, Value* value, const SiteMask& mask,
 
 Target
 pickTarget(Context* c, Read* read, bool intersectRead,
-           unsigned registerReserveCount)
+           unsigned registerReserveCount, CostCalculator* costCalculator)
 {
   unsigned registerPenalty
     = (c->availableGeneralRegisterCount > registerReserveCount
@@ -1463,7 +1490,9 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     if (r) {
       SiteMask intersection = mask;
       if (r->intersect(&intersection)) {
-        best = pickTarget(c, value, intersection, registerPenalty, best);
+        best = pickTarget
+          (c, value, intersection, registerPenalty, best, costCalculator);
+
         if (best.cost <= Target::MinimumFrameCost) {
           return best;
         }
@@ -1471,7 +1500,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     }
   }
 
-  best = pickTarget(c, value, mask, registerPenalty, best);
+  best = pickTarget(c, value, mask, registerPenalty, best, costCalculator);
   if (best.cost <= Target::MinimumFrameCost) {
     return best;
   }
@@ -1485,7 +1514,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     return best;
   }
 
-  { Target mine = pickRegisterTarget(c, value, registerMask);
+  { Target mine = pickRegisterTarget(c, value, registerMask, costCalculator);
 
     mine.cost += registerPenalty;
 
@@ -1496,7 +1525,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     }
   }
 
-  { Target mine = pickFrameTarget(c, value);
+  { Target mine = pickFrameTarget(c, value, costCalculator);
     if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1510,7 +1539,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     // there are no free registers left, so moving from memory to
     // memory isn't an option - try harder to find an available frame
     // site:
-    best = pickAnyFrameTarget(c, value);
+    best = pickAnyFrameTarget(c, value, costCalculator);
     assert(c, best.cost <= 3);
   }
 
@@ -1558,7 +1587,7 @@ class ConstantSite: public Site {
   }
 
   virtual unsigned copyCost(Context*, Site* s) {
-    return (s == this ? 0 : 3);
+    return (s == this ? 0 : ConstantCopyCost);
   }
 
   virtual bool match(Context*, const SiteMask& mask) {
@@ -1650,7 +1679,7 @@ class AddressSite: public Site {
   }
 
   virtual unsigned copyCost(Context*, Site* s) {
-    return (s == this ? 0 : 2);
+    return (s == this ? 0 : AddressCopyCost);
   }
 
   virtual bool match(Context*, const SiteMask& mask) {
@@ -1738,7 +1767,7 @@ class RegisterSite: public Site {
     {
       return 0;
     } else {
-      return 1;
+      return RegisterCopyCost;
     }
   }
 
@@ -1928,7 +1957,7 @@ class MemorySite: public Site {
     {
       return 0;
     } else {
-      return 4;
+      return MemoryCopyCost;
     }
   }
 
@@ -2186,10 +2215,15 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
 
 Site*
 pickTargetSite(Context* c, Read* read, bool intersectRead = false,
-               unsigned registerReserveCount = 0)
+               unsigned registerReserveCount = 0,
+               CostCalculator* costCalculator = 0)
 {
-  Target target(pickTarget(c, read, intersectRead, registerReserveCount));
+  Target target
+    (pickTarget
+     (c, read, intersectRead, registerReserveCount, costCalculator));
+
   expect(c, target.cost < Target::Impossible);
+
   if (target.type == MemoryOperand) {
     return frameSite(c, target.index);
   } else {
@@ -2298,10 +2332,48 @@ Site*
 maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
           unsigned registerReserveCount = 0)
 {
-  Site* dst = pickTargetSite(c, read, intersectRead, registerReserveCount);
-  
   Value* value = read->value;
   unsigned size = value == value->nextWord ? BytesPerWord : 8;
+
+  class MyCostCalculator: public CostCalculator {
+   public:
+    MyCostCalculator(Value* value, unsigned size, bool includeNextWord):
+      value(value),
+      size(size),
+      includeNextWord(includeNextWord)
+    { }
+
+    virtual unsigned cost(Context* c, uint8_t typeMask, uint32_t registerMask,
+                          int frameIndex)
+    {
+      uint8_t srcTypeMask;
+      uint64_t srcRegisterMask;
+      uint8_t tmpTypeMask;
+      uint64_t tmpRegisterMask;
+      c->arch->planMove
+        (size, &srcTypeMask, &srcRegisterMask,
+         &tmpTypeMask, &tmpRegisterMask,
+         typeMask, registerMask);
+
+      SiteMask srcMask(srcTypeMask, srcRegisterMask, AnyFrameIndex);
+      SiteMask dstMask(typeMask, registerMask, frameIndex);
+      for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
+        Site* s = it.next();
+        if (s->match(c, srcMask) or s->match(c, dstMask)) {
+          return 0;
+        }
+      }
+
+      return Target::IndirectMovePenalty;
+    }
+
+    Value* value;
+    unsigned size;
+    bool includeNextWord;
+  } costCalculator(value, size, includeNextWord);
+
+  Site* dst = pickTargetSite
+    (c, read, intersectRead, registerReserveCount, &costCalculator);
 
   uint8_t srcTypeMask;
   uint64_t srcRegisterMask;
@@ -2313,24 +2385,25 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
      1 << dst->type(c), dst->registerMask(c));
 
   SiteMask srcMask(srcTypeMask, srcRegisterMask, AnyFrameIndex);
-  SingleRead srcRead(srcMask, 0);
-  srcRead.value = value;
-
-  unsigned cost;
-  Site* src = pickSourceSite
-    (c, &srcRead, dst, &cost, ~0, true, true, includeNextWord);
-
-  if (src == 0 or cost) {
-    unsigned cost2;
-    Site* src2 = pickSourceSite
-      (c, &srcRead, dst, &cost2, ~0, false, true, includeNextWord);
-    
-    if (src == 0 or cost2 == 0) {
-      src = src2;
-      cost = cost2;
+  unsigned cost = 0xFFFFFFFF;
+  Site* src = 0;
+  for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
+    Site* s = it.next();
+    unsigned v = s->copyCost(c, dst);
+    if (v == 0) {
+      src = s;
+      cost = 0;
+      break;
+    }
+    if (not s->match(c, srcMask)) {
+      v += CopyPenalty;
+    }
+    if (v < cost) {
+      src = s;
+      cost = v;
     }
   }
-  
+ 
   if (cost) {
     if (not src->match(c, srcMask)) {
       src->freeze(c, value);
@@ -2339,6 +2412,7 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
       SiteMask tmpMask(tmpTypeMask, tmpRegisterMask, AnyFrameIndex);
       SingleRead tmpRead(tmpMask, 0);
       tmpRead.value = value;
+      tmpRead.successor_ = value;
 
       Site* tmp = pickTargetSite(c, &tmpRead, true);
 
@@ -2377,6 +2451,8 @@ pickSiteOrMove(Context* c, Value* v, const SiteMask& mask, bool intersectMask,
 {
   SingleRead read(mask, 0);
   read.value = v;
+  read.successor_ = v;
+
   return pickSiteOrMove
     (c, &read, intersectMask, includeNextWord, registerReserveCount);
 }
@@ -3685,6 +3761,7 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
   } else {
     SingleRead r(resultMask, 0);
     r.value = result;
+    r.successor_ = result;
     s = pickTargetSite(c, &r, true);
     v = result;
     addSite(c, result, s);
