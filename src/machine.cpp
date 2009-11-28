@@ -2422,12 +2422,13 @@ enter(Thread* t, Thread::State s)
       // fast path
       INCREMENT(&(t->m->activeCount), 1);
 
+      t->state = s;
+
       if (t->m->exclusive) {
-        // a thread has entered exclusive mode - switch to slow path
-        assert(t, t->m->activeCount > 0);
-        INCREMENT(&(t->m->activeCount), -1);
+        // another thread has entered the exclusive state, so we
+        // return to idle and use the slow path to become active
+        enter(t, Thread::IdleState);
       } else {
-        t->state = s;
         break;
       }
     }
