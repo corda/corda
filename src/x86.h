@@ -159,9 +159,11 @@ memoryBarrier()
 {
 #ifdef _MSC_VER
   MemoryBarrier();
-#else
-  __asm__ __volatile__("": : :"memory");
-#endif
+#elif defined ARCH_x86_32
+  __asm__ __volatile__("lock; addl $0,0(%%esp)": : :"memory");
+#elif defined ARCH_x86_64
+  __asm__ __volatile__("mfence": : :"memory");
+#endif // ARCH_x86_64
 }
 
 inline void
