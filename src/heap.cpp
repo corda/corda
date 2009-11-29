@@ -76,7 +76,10 @@ markBitAtomic(uintptr_t* map, unsigned i)
 {
   uintptr_t* p = map + wordOf(i);
   uintptr_t v = static_cast<uintptr_t>(1) << bitOf(i);
-  while (not atomicCompareAndSwap(p, *p, *p | v)) { }
+  for (uintptr_t old = *p;
+       not atomicCompareAndSwap(p, old, old | v);
+       old = *p)
+  { }
 }
 #endif // USE_ATOMIC_OPERATIONS
 

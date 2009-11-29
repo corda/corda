@@ -24,9 +24,12 @@ const unsigned NoByte = 0xFFFF;
 
 #ifdef USE_ATOMIC_OPERATIONS
 void
-atomicIncrement(unsigned* p, int v)
+atomicIncrement(uint32_t* p, int v)
 {
-  while (not atomicCompareAndSwap32(p, *p, *p + v)) { }
+  for (uint32_t old = *p;
+       not atomicCompareAndSwap32(p, old, old + v);
+       old = *p)
+  { }
 }
 #endif
 
