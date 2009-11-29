@@ -2350,6 +2350,7 @@ enter(Thread* t, Thread::State s)
     while (t->m->exclusive) {
       // another thread got here first.
       ENTER(t, Thread::IdleState);
+      t->m->stateLock->wait(t->systemThread, 0);
     }
 
     switch (t->state) {
