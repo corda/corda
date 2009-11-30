@@ -280,7 +280,7 @@ class Read {
 
   virtual bool intersect(SiteMask* mask, unsigned depth = 0) = 0;
 
-  virtual void maybeIntersectWithHighSource(Context* c) { abort(c); }
+  virtual Value* high(Context* c) { abort(c); }
 
   virtual Value* successor() = 0;
   
@@ -2234,7 +2234,7 @@ pickTargetSite(Context* c, Read* read, bool intersectRead = false,
 class SingleRead: public Read {
  public:
   SingleRead(const SiteMask& mask, Value* successor):
-    next_(0), mask(mask), high(0), successor_(successor)
+    next_(0), mask(mask), high_(0), successor_(successor)
   { }
 
   virtual bool intersect(SiteMask* mask, unsigned) {
@@ -2243,11 +2243,8 @@ class SingleRead: public Read {
     return true;
   }
 
-  virtual void maybeIntersectWithHighSource(Context* c) {
-    if (high) {
-      Site* s = high->source;
-      this->mask = local::intersect(s->nextWordMask(c, 0), this->mask);
-    }
+  virtual Value* high(Context*) {
+    return high_;
   }
 
   virtual Value* successor() {
@@ -2269,7 +2266,7 @@ class SingleRead: public Read {
 
   Read* next_;
   SiteMask mask;
-  Value* high;
+  Value* high_;
   Value* successor_;
 };
 
@@ -2431,6 +2428,18 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
 }
 
 Site*
+maybeMove(Context* c, Value* v, const SiteMask& mask, bool intersectMask,
+          bool includeNextWord, unsigned registerReserveCount = 0)
+{
+  SingleRead read(mask, 0);
+  read.value = v;
+  read.successor_ = v;
+
+  return maybeMove
+    (c, &read, intersectMask, includeNextWord, registerReserveCount);
+}
+
+Site*
 pickSiteOrMove(Context* c, Read* read, bool intersectRead,
                bool includeNextWord, unsigned registerReserveCount = 0)
 {
@@ -2455,12 +2464,6 @@ pickSiteOrMove(Context* c, Value* v, const SiteMask& mask, bool intersectMask,
 
   return pickSiteOrMove
     (c, &read, intersectMask, includeNextWord, registerReserveCount);
-}
-
-Site*
-pickSiteOrMove(Context* c, Value* v, Site* s, unsigned index)
-{
-  return pickSiteOrMove(c, v, s->nextWordMask(c, index), true, false);
 }
 
 void
@@ -2706,9 +2709,9 @@ stubRead(Context* c)
 }
 
 Site*
-pickSite(Context* c, Value* v, Site* s, unsigned index)
+pickSite(Context* c, Value* v, Site* s, unsigned index, bool includeNextWord)
 {
-  for (SiteIterator it(c, v, true, false); it.hasMore();) {
+  for (SiteIterator it(c, v, true, includeNextWord); it.hasMore();) {
     Site* candidate = it.next();
     if (s->matchNextWord(c, candidate, index)) {
       return candidate;
@@ -2716,6 +2719,17 @@ pickSite(Context* c, Value* v, Site* s, unsigned index)
   }
 
   return 0;
+}
+
+Site*
+pickSiteOrMove(Context* c, Value* v, Site* s, unsigned index)
+{
+  Site* n = pickSite(c, v, s, index, false);
+  if (n) {
+    return n;
+  }
+
+  return maybeMove(c, v, s->nextWordMask(c, index), true, false);
 }
 
 Site*
@@ -2735,7 +2749,7 @@ pickSiteOrMove(Context* c, Value* v, Site* s, Site** low, Site** high)
 Site*
 pickSiteOrGrow(Context* c, Value* v, Site* s, unsigned index)
 {
-  Site* n = pickSite(c, v, s, index);
+  Site* n = pickSite(c, v, s, index, false);
   if (n) {
     return n;
   }
@@ -2949,7 +2963,7 @@ addReads(Context* c, Event* e, Value* v, unsigned size,
   SingleRead* r = read(c, lowMask, lowSuccessor);
   addRead(c, e, v, r);
   if (size > BytesPerWord) {
-    r->high = v->nextWord;
+    r->high_ = v->nextWord;
     addRead(c, e, v->nextWord, highMask, highSuccessor);
   }
 }
@@ -3520,10 +3534,16 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 }
 
 void
-maybeMove(Context* c, Value* src, Value* dst)
+pickSiteOrMove(Context* c, Value* src, Value* dst)
 {
   if (live(dst)) {
-    maybeMove(c, live(src), false, true);
+    Read* read = live(src);
+    Site* s = pickSourceSite(c, read, 0, 0, ~0, false, true, true);
+
+    if (s == 0 or s->isVolatile(c)) {
+      maybeMove(c, read, false, true);
+    }
+
     addBuddy(src, dst);
 
     if (src->source->isVolatile(c)) {
@@ -3620,16 +3640,23 @@ class MoveEvent: public Event {
         and srcSelectSize >= dstSize)
     {
       if (dst->target) {
-        maybeMove(c, Move, BytesPerWord, BytesPerWord, src, BytesPerWord, dst,
-                  dstLowMask);
-        if (dstSize > BytesPerWord) {
-          maybeMove(c, Move, BytesPerWord, BytesPerWord, src->nextWord,
-                    BytesPerWord, dst->nextWord, dstHighMask);
+        if (dstSize > BytesPerWord
+            and src->source->registerSize(c) > BytesPerWord)
+        {
+          apply(c, Move, srcSelectSize, src->source, src->source,
+                dstSize, dst->target, dst->target);
+        } else {
+          maybeMove(c, Move, BytesPerWord, BytesPerWord, src,
+                    BytesPerWord, dst, dstLowMask);
+          if (dstSize > BytesPerWord) {
+            maybeMove(c, Move, BytesPerWord, BytesPerWord, src->nextWord,
+                      BytesPerWord, dst->nextWord, dstHighMask);
+          }
         }
       } else {
-        maybeMove(c, src, dst);
+        pickSiteOrMove(c, src, dst);
         if (dstSize > BytesPerWord) {
-          maybeMove(c, src->nextWord, dst->nextWord);
+          pickSiteOrMove(c, src->nextWord, dst->nextWord);
         }
       }
     } else if (srcSelectSize <= BytesPerWord and dstSize <= BytesPerWord) {
@@ -3687,7 +3714,7 @@ class MoveEvent: public Event {
 
         low->thaw(c, dst);
       } else {
-        maybeMove(c, src, dst);
+        pickSiteOrMove(c, src, dst);
       }
     }
 
@@ -5036,9 +5063,21 @@ readSource(Context* c, Read* r)
     return 0;
   }
 
-  r->maybeIntersectWithHighSource(c);
-
-  return pickSiteOrMove(c, r, true, true);
+  Value* high = r->high(c);
+  if (high) {
+    Site* s = pickSite(c, r->value, high->source, 0, true);
+    SiteMask mask;
+    r->intersect(&mask);
+    if (s and s->match(c, mask)) {
+      return s;
+    } else {
+      return pickSiteOrMove
+        (c, r->value, intersect(mask, high->source->nextWordMask(c, 0)),
+         true, true);
+    }
+  } else {
+    return pickSiteOrMove(c, r, true, true);
+  }
 }
 
 void

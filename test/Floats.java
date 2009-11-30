@@ -25,6 +25,14 @@ public class Floats {
     return (int) f.field;
   }
 
+  private static void multiplyAndStore(double a, double b, Floats f) {
+    f.field = a * b;
+  }
+
+  private static double loadAndMultiply(double a, Floats f) {
+    return f.field * a;
+  }
+
   public static void main(String[] args) {
     expect(multiply(0.5d, 0.5d) == 0.25d);
     expect(multiply(0.5f, 0.5f) == 0.25f);
@@ -61,6 +69,21 @@ public class Floats {
     }
 
     expect(doubleToInt(new Floats()) == 100);
+
+    { Floats f = new Floats();
+      f.field = 32.0d;
+      expect(loadAndMultiply(2.0d, f) == 64.0d);
+    }
+
+    { Floats f = new Floats();
+      f.field = 32.0d;
+      expect(multiply(2.0d, f.field) == 64.0d);
+    }
+
+    { Floats f = new Floats();
+      multiplyAndStore(32.0d, 0.5d, f);
+      expect(f.field == 16.0d);
+    }
 
     { float f = 1f;
       expect(((int) f) == 1);
