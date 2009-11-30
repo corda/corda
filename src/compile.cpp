@@ -2934,7 +2934,7 @@ bool
 intrinsic(MyThread* t, Frame* frame, object target)
 {
 #define MATCH(name, constant)                                           \
-  (byteArrayLength(t, name) - 1 == sizeof(constant)                     \
+  (byteArrayLength(t, name) == sizeof(constant)                         \
    and strcmp(reinterpret_cast<char*>(&byteArrayBody(t, name, 0)),      \
               constant) == 0)
 
@@ -3040,6 +3040,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
            (4, 4, c->memory
             (array, Compiler::FloatType, ArrayBody, index, 4), BytesPerWord));
         break;
+
       case iaload:
         frame->pushInt
           (c->load
@@ -5621,6 +5622,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
       frame.set(--index, Frame::Long);
       c->initLocal(2, index, Compiler::IntegerType);
       break;
+
     case 'D':
       frame.set(--index, Frame::Long);
       frame.set(--index, Frame::Long);
@@ -7260,7 +7262,7 @@ class MyProcessor: public Processor {
     class Visitor: public System::ThreadVisitor {
      public:
       Visitor(MyThread* t, MyProcessor* p, MyThread* target):
-        t(t), p(p), target(target)
+        t(t), p(p), target(target), trace(0)
       { }
 
       virtual void visit(void* ip, void* base, void* stack) {

@@ -2096,19 +2096,20 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planMove
-  (unsigned,
-   uint8_t srcTypeMask, uint64_t srcRegisterMask,
-   uint8_t dstTypeMask, uint64_t,
-   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask)
+  (unsigned size, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
+   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
+   uint8_t dstTypeMask, uint64_t dstRegisterMask)
   {
-    *tmpTypeMask = srcTypeMask;
-    *tmpRegisterMask = srcRegisterMask;
+    *srcTypeMask = ~0;
+    *srcRegisterMask = ~static_cast<uint64_t>(0);
 
-    if ((dstTypeMask & (1 << MemoryOperand))
-        and (srcTypeMask & ((1 << MemoryOperand) | 1 << AddressOperand)))
-    {
-      // can't move directly from memory to memory                              
-      *tmpTypeMask = (1 << RegisterOperand);
+    *tmpTypeMask = 0;
+    *tmpRegisterMask = 0;
+
+    if (dstTypeMask & (1 << MemoryOperand)) {
+      // can't move directly from memory or constant to memory
+      *srcTypeMask = 1 << RegisterOperand;
+      *tmpTypeMask = 1 << RegisterOperand;
       *tmpRegisterMask = ~static_cast<uint64_t>(0);
     }
   }

@@ -2173,10 +2173,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
   Finder* f = makeFinder(s, RUNTIME_ARRAY_BODY(classpathBuffer), bootLibrary);
-  Processor* p = makeProcessor(s, h, false); // change back to true
-                                             // once use of SSE is
-                                             // fixed on 32-bit
-                                             // systems
+  Processor* p = makeProcessor(s, h, true);
 
   const char** properties = static_cast<const char**>
     (h->allocate(sizeof(const char*) * propertyCount));

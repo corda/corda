@@ -11,6 +11,7 @@
 #include "heap.h"
 #include "system.h"
 #include "common.h"
+#include "arch.h"
 
 using namespace vm;
 
@@ -68,6 +69,19 @@ void assert(Context*, bool);
 System* system(Context*);
 void* tryAllocate(Context* c, unsigned size);
 void free(Context* c, const void* p, unsigned size);
+
+#ifdef USE_ATOMIC_OPERATIONS
+inline void
+markBitAtomic(uintptr_t* map, unsigned i)
+{
+  uintptr_t* p = map + wordOf(i);
+  uintptr_t v = static_cast<uintptr_t>(1) << bitOf(i);
+  for (uintptr_t old = *p;
+       not atomicCompareAndSwap(p, old, old | v);
+       old = *p)
+  { }
+}
+#endif // USE_ATOMIC_OPERATIONS
 
 inline void*
 get(void* o, unsigned offsetInWords)
@@ -303,12 +317,14 @@ class Segment {
       if (child) child->set(p, v);
     }
 
+#ifdef USE_ATOMIC_OPERATIONS
     void markAtomic(void* p) {
       assert(segment->context, bitsPerRecord == 1);
       markBitAtomic(data, indexOf(p));
       assert(segment->context, getBit(data, indexOf(p)));
       if (child) child->markAtomic(p);
     }
+#endif
 
     unsigned get(void* p) {
       return getBits(data, bitsPerRecord, indexOf(p));
@@ -1020,7 +1036,9 @@ void
 markDirty(Context* c, Fixie* f)
 {
   if (not f->dirty) {
+#ifdef USE_ATOMIC_OPERATIONS
     ACQUIRE(c->lock);
+#endif
 
     if (not f->dirty) {
       f->dirty = true;
@@ -1816,6 +1834,10 @@ class MyHeap: public Heap {
 
   virtual void mark(void* p, unsigned offset, unsigned count) {
     if (needsMark(p)) {
+#ifndef USE_ATOMIC_OPERATIONS
+      ACQUIRE(c.lock);
+#endif
+
       if (c.client->isFixed(p)) {
         Fixie* f = fixie(p);
         assert(&c, offset == 0 or f->hasMask);
@@ -1830,7 +1852,11 @@ class MyHeap: public Heap {
             }
 
             dirty = true;
+#ifdef USE_ATOMIC_OPERATIONS
             markBitAtomic(f->mask(), offset + i);
+#else
+            markBit(f->mask(), offset + i);
+#endif
             assert(&c, getBit(f->mask(), offset + i));
           }
         }
@@ -1848,7 +1874,11 @@ class MyHeap: public Heap {
         for (unsigned i = 0; i < count; ++i) {
           void** target = static_cast<void**>(p) + offset + i;
           if (targetNeedsMark(mask(*target))) {
+#ifdef USE_ATOMIC_OPERATIONS
             map->markAtomic(target);
+#else
+            map->set(target);
+#endif
           }
         }
       }

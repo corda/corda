@@ -14,7 +14,11 @@
 #include "string.h"
 
 #include "sys/stat.h"
+#ifdef WIN32
+#include <windows.h>
+#else
 #include "sys/mman.h"
+#endif
 #include "fcntl.h"
 #include "unistd.h"
 
@@ -153,8 +157,29 @@ main(int argc, const char** argv)
     struct stat s;
     int r = fstat(fd, &s);
     if (r != -1) {
+#ifdef WIN32
+      HANDLE fm;
+      HANDLE h = (HANDLE) _get_osfhandle (fd);
+
+      fm = CreateFileMapping(
+               h,
+               NULL,
+               PAGE_READONLY,
+               0,
+               0,
+               NULL);
+      data = static_cast<uint8_t*>(MapViewOfFile(
+                fm,
+                FILE_MAP_READ,
+                0,
+                0,
+                s.st_size));
+
+      CloseHandle(fm);
+#else
       data = static_cast<uint8_t*>
         (mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+#endif
       size = s.st_size;
     }
     close(fd);
@@ -174,7 +199,11 @@ main(int argc, const char** argv)
       fprintf(stderr, "unable to open %s\n", argv[2]);
     }
 
+#ifdef WIN32
+    UnmapViewOfFile(data);
+#else
     munmap(data, size);
+#endif
   } else {
     perror(argv[0]);
   }

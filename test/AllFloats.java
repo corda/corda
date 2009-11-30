@@ -19,6 +19,8 @@ public class AllFloats {
   private static float complex(float a, float b) {return (a - b) / (a * b) + (float)Math.sqrt(a);}
   private static double complex(double a, double b) {return (a - b) / (a * b) + Math.sqrt(a);}
   private static double complex(float a, double b) {return (a - b) / (a * b) + Math.sqrt(a);}
+  private static double sqrt(double a) {return Math.sqrt(a);}
+  private static float complexNoIntrinsic(float a, float b) {return (a - b) / (a * b) + (float)sqrt(a);}
   private static int f2i(float a) {return (int)a;}
   private static long f2l(float a) {return (long)a;}
   private static float i2f(int a) {return (float)a;}
@@ -59,6 +61,7 @@ public class AllFloats {
     expect(complex(4f, 3f) == (4f-3f)/(4f*3f) + 2f);
     expect(complex(4d, 3d) == (4d-3d)/(4d*3d) + 2d);
     expect(complex(4f, 3d) == (4f-3d)/(4f*3d) + 2f);
+    expect(complexNoIntrinsic(4f, 3f) == (4f-3f)/(4f*3f) + 2f);
     
     expect(f2i(4f) == 4);
     expect(f2l(4f) == 4);

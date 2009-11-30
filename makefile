@@ -101,7 +101,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	$(gnu-cflags)
+	-DUSE_ATOMIC_OPERATIONS $(gnu-cflags)
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
@@ -240,9 +240,11 @@ ifeq ($(mode),small)
 	cflags += -Os -g3 -DNDEBUG
 endif
 
+ifneq ($(platform),darwin)
 ifeq ($(arch),i386)
 # this is necessary to support __sync_bool_compare_and_swap:
 	cflags += -march=i486
+endif
 endif
 
 output = -o $(1)

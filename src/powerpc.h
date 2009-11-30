@@ -90,6 +90,42 @@ syncInstructionCache(const void* start, unsigned size)
   __asm__ __volatile__("isync");
 }
 
+#ifdef USE_ATOMIC_OPERATIONS
+inline bool
+atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
+{
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+  return __sync_bool_compare_and_swap(p, old, new_);
+#else // not GCC >= 4.1
+  bool result;
+
+  __asm__ __volatile__("  sync\n"
+                       "1:\n"
+                       "  lwarx  %0,0,%2\n"
+                       "  cmpw   %0,%3\n"
+                       "  bne-   2f\n"
+                       "  stwcx. %4,0,%2\n"
+                       "  bne-   1b\n"
+                       "  isync  \n"
+                       "2:\n"
+                       "  xor    %0,%0,%3\n"
+                       "  cntlzw %0,%0\n"
+                       "  srwi   %0,%0,5\n"
+                       : "=&r"(result), "+m"(*p)
+                       : "r"(p), "r"(old), "r"(new_)
+                       : "cc", "memory");
+ 
+  return result;
+#endif // not GCC >= 4.1
+}
+
+inline bool
+atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+{
+  return atomicCompareAndSwap32(p, old, new_);
+}
+#endif // USE_ATOMIC_OPERATIONS
+
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned argumentsSize,

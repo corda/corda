@@ -946,6 +946,9 @@ void
 sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
+  assert(c, aSize >= 4);
+  assert(c, aSize == bSize);
+
   if (floatReg(a) and floatReg(b)) {
     if (aSize == 4) {
       opcode(c, 0xf3);
@@ -1090,6 +1093,9 @@ void
 sseMoveMR(Context* c, unsigned aSize, Assembler::Memory* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
+  assert(c, aSize >= 4);
+  assert(c, aSize == bSize);
+
   if (BytesPerWord == 4 and aSize == 8) {
     opcode(c, 0xf3);
     opcode(c, 0x0f, 0x7e);
@@ -1165,6 +1171,7 @@ void
 sseMoveRM(Context* c, unsigned aSize, Assembler::Register* a,
        UNUSED unsigned bSize, Assembler::Memory* b)
 {
+  assert(c, aSize >= 4);
   assert(c, aSize == bSize);
 
   if (BytesPerWord == 4 and aSize == 8) {
@@ -2921,7 +2928,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Float2Int:
-      if (useSSE(&c) and (bSize <= BytesPerWord)) {
+      if (useSSE(&c) and bSize <= BytesPerWord) {
         *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
@@ -2931,7 +2938,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Int2Float:
-      if (useSSE(&c) and (aSize <= BytesPerWord)) {
+      if (useSSE(&c) and aSize <= BytesPerWord) {
         *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = GeneralRegisterMask
           | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
@@ -2941,9 +2948,8 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Move:
-      *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-      *aRegisterMask = GeneralRegisterMask
-        | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+      *aTypeMask = ~0;
+      *aRegisterMask = ~static_cast<uint64_t>(0);
 
       if (BytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
@@ -3039,38 +3045,46 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planMove
-  (unsigned size, 
-   uint8_t srcTypeMask, uint64_t srcRegisterMask,
-   uint8_t dstTypeMask, uint64_t dstRegisterMask,
-   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask)
+  (unsigned size, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
+   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
+   uint8_t dstTypeMask, uint64_t dstRegisterMask)
   {
-    *tmpTypeMask = srcTypeMask;
-    *tmpRegisterMask = srcRegisterMask;
+    *srcTypeMask = ~0;
+    *srcRegisterMask = ~static_cast<uint64_t>(0);
 
-    if ((dstTypeMask & (1 << MemoryOperand))
-        and (srcTypeMask & ((1 << MemoryOperand) | 1 << AddressOperand)))
-    {
+    *tmpTypeMask = 0;
+    *tmpRegisterMask = 0;
+
+    if (dstTypeMask & (1 << MemoryOperand)) {
       // can't move directly from memory to memory
-      *tmpTypeMask = (1 << RegisterOperand);
+      *srcTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
+      *tmpTypeMask = 1 << RegisterOperand;
       *tmpRegisterMask = GeneralRegisterMask
         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
     } else if (dstTypeMask & (1 << RegisterOperand)) {
-      if (srcTypeMask & (1 << RegisterOperand)) {
-        if (size != BytesPerWord
-            and (((dstRegisterMask & FloatRegisterMask) == 0)
-                 xor ((srcRegisterMask & FloatRegisterMask) == 0)))
-        {
-          // can't move directly from FPR to GPR or vice-versa for
-          // values larger than the GPR size
-          *tmpTypeMask = (1 << MemoryOperand);
-          *tmpRegisterMask = 0;
+      if (size > BytesPerWord) {
+        // can't move directly from FPR to GPR or vice-versa for
+        // values larger than the GPR size
+        if (dstRegisterMask & FloatRegisterMask) {
+          *srcRegisterMask = FloatRegisterMask
+            | (static_cast<uint64_t>(FloatRegisterMask) << 32);
+          *tmpTypeMask = 1 << MemoryOperand;          
+        } else if (dstRegisterMask & GeneralRegisterMask) {
+          *srcRegisterMask = GeneralRegisterMask
+            | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+          *tmpTypeMask = 1 << MemoryOperand;
         }
-      } else if ((dstRegisterMask & FloatRegisterMask)
-                 and (srcTypeMask & (1 << ConstantOperand)))
-      {
+      }
+      if (dstRegisterMask & FloatRegisterMask) {
         // can't move directly from constant to FPR
-        *tmpTypeMask = (1 << MemoryOperand);
-        *tmpRegisterMask = 0;
+        *srcTypeMask &= ~(1 << ConstantOperand);
+        if (size > BytesPerWord) {
+          *tmpTypeMask = 1 << MemoryOperand;
+        } else {
+          *tmpTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+          *tmpRegisterMask = GeneralRegisterMask
+            | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+        }
       }
     }
   }
