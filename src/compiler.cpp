@@ -3447,6 +3447,10 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
       c->arch->planSource(type, dstSize, &srcTypeMask, &srcRegisterMask,
                           dstSize, &thunk);
 
+      if (src->type == ValueGeneral) {
+        srcRegisterMask &= c->arch->generalRegisterMask();
+      }
+
       assert(c, thunk == 0);
       assert(c, dstMask.typeMask & srcTypeMask & (1 << RegisterOperand));
 
@@ -6013,7 +6017,7 @@ class MyCompiler: public Compiler {
   virtual void push(unsigned footprint UNUSED) {
     assert(&c, footprint == 1);
 
-    Value* v = value(&c, ValueFloat);
+    Value* v = value(&c, ValueGeneral);
     Stack* s = local::stack(&c, v, c.stack);
 
     v->home = frameIndex(&c, s->index + c.localFootprint);

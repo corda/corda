@@ -946,6 +946,9 @@ void
 sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
+  assert(c, aSize >= 4);
+  assert(c, aSize == bSize);
+
   if (floatReg(a) and floatReg(b)) {
     if (aSize == 4) {
       opcode(c, 0xf3);
@@ -1090,6 +1093,9 @@ void
 sseMoveMR(Context* c, unsigned aSize, Assembler::Memory* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
+  assert(c, aSize >= 4);
+  assert(c, aSize == bSize);
+
   if (BytesPerWord == 4 and aSize == 8) {
     opcode(c, 0xf3);
     opcode(c, 0x0f, 0x7e);
@@ -1165,6 +1171,7 @@ void
 sseMoveRM(Context* c, unsigned aSize, Assembler::Register* a,
        UNUSED unsigned bSize, Assembler::Memory* b)
 {
+  assert(c, aSize >= 4);
   assert(c, aSize == bSize);
 
   if (BytesPerWord == 4 and aSize == 8) {
@@ -2942,8 +2949,7 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Move:
       *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-      *aRegisterMask = GeneralRegisterMask
-        | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+      *aRegisterMask = ~static_cast<uint64_t>(0);
 
       if (BytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
