@@ -169,7 +169,7 @@ memoryBarrier()
 inline void
 storeStoreMemoryBarrier()
 {
-  memoryBarrier();
+  __asm__ __volatile__("": : :"memory");
 }
 
 inline void
@@ -181,13 +181,13 @@ storeLoadMemoryBarrier()
 inline void
 loadMemoryBarrier()
 {
-  memoryBarrier();
+  __asm__ __volatile__("": : :"memory");
 }
 
 inline void
 syncInstructionCache(const void*, unsigned)
 {
-  // ignore
+  __asm__ __volatile__("": : :"memory");
 }
 
 #ifdef USE_ATOMIC_OPERATIONS

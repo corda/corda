@@ -235,7 +235,7 @@ methodForIp(MyThread* t, void* ip)
   // we must use a version of the method tree at least as recent as the
   // compiled form of the method containing the specified address (see
   // compile(MyThread*, Allocator*, BootContext*, object)):
-  memoryBarrier();
+  loadMemoryBarrier();
 
   return treeQuery(t, methodTree(t), reinterpret_cast<intptr_t>(ip),
                    methodTreeSentinal(t), compareIpToMethodBounds);
@@ -5878,7 +5878,7 @@ resolveNative(MyThread* t, object method)
     // methodCompiled, since we don't want them using the slow calling
     // convention on a function that expects the fast calling
     // convention:
-    memoryBarrier();
+    storeStoreMemoryBarrier();
 
     methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
   }
@@ -7469,7 +7469,7 @@ findCallNode(MyThread* t, void* address)
   // we must use a version of the call table at least as recent as the
   // compiled form of the method containing the specified address (see
   // compile(MyThread*, Allocator*, BootContext*, object)):
-  memoryBarrier();
+  loadMemoryBarrier();
 
   MyProcessor* p = processor(t);
   object table = p->callTable;
@@ -8229,7 +8229,7 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
          reinterpret_cast<intptr_t>(compiled), clone, methodTreeSentinal(t),
          compareIpToMethodBounds);
 
-      memoryBarrier();
+      storeStoreMemoryBarrier();
 
       methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
 

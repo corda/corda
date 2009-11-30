@@ -113,23 +113,7 @@ class MyBlock: public Assembler::Block {
   unsigned size;
 };
 
-class Context {
- public:
-  Context(System* s, Allocator* a, Zone* zone):
-    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock)
-  { }
-
-  System* s;
-  Zone* zone;
-  Assembler::Client* client;
-  Vector code;
-  Task* tasks;
-  uint8_t* result;
-  MyBlock* firstBlock;
-  MyBlock* lastBlock;
-};
+class Context;
 
 typedef void (*OperationType)(Context*);
 
@@ -161,6 +145,25 @@ class ArchitectureContext {
   [(BranchOperationCount)
    * OperandTypeCount
    * OperandTypeCount];
+};
+
+class Context {
+ public:
+  Context(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
+    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
+    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
+    lastBlock(firstBlock), ac(ac)
+  { }
+
+  System* s;
+  Zone* zone;
+  Assembler::Client* client;
+  Vector code;
+  Task* tasks;
+  uint8_t* result;
+  MyBlock* firstBlock;
+  MyBlock* lastBlock;
+  ArchitectureContext* ac;
 };
 
 void NO_RETURN
@@ -619,6 +622,27 @@ return_(Context* c)
 void
 ignore(Context*)
 { }
+
+void
+storeLoadBarrier(Context* c)
+{
+  if (useSSE(c->ac)) {
+    // mfence:
+    c->code.append(0x0f);
+    c->code.append(0xae);
+    c->code.append(0xf0);
+  } else {
+    // lock addq $0x0,(%rsp):
+    c->code.append(0xf0);
+    if (BytesPerWord == 8) {
+      c->code.append(0x48);
+    }
+    c->code.append(0x83);
+    c->code.append(0x04);
+    c->code.append(0x24);
+    c->code.append(0x00);    
+  }
+}
 
 void
 unconditional(Context* c, unsigned jump, Assembler::Constant* a)
@@ -2503,7 +2527,7 @@ populateTables(ArchitectureContext* c)
   zo[Return] = return_;
   zo[LoadBarrier] = ignore;
   zo[StoreStoreBarrier] = ignore;
-  zo[StoreLoadBarrier] = ignore;
+  zo[StoreLoadBarrier] = storeLoadBarrier;
 
   uo[index(c, Call, C)] = CAST1(callC);
   uo[index(c, Call, R)] = CAST1(callR);
@@ -3225,7 +3249,7 @@ class MyArchitecture: public Assembler::Architecture {
 class MyAssembler: public Assembler {
  public:
   MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch):
-    c(s, a, zone), arch_(arch)
+    c(s, a, zone, &(arch->c)), arch_(arch)
   { }
 
   virtual void setClient(Client* client) {
