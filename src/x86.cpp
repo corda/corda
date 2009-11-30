@@ -2948,7 +2948,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Move:
-      *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      *aTypeMask = ~0;
       *aRegisterMask = ~static_cast<uint64_t>(0);
 
       if (BytesPerWord == 4) {
