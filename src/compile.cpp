@@ -3040,6 +3040,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
            (4, 4, c->memory
             (array, Compiler::FloatType, ArrayBody, index, 4), BytesPerWord));
         break;
+
       case iaload:
         frame->pushInt
           (c->load
@@ -5621,6 +5622,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
       frame.set(--index, Frame::Long);
       c->initLocal(2, index, Compiler::IntegerType);
       break;
+
     case 'D':
       frame.set(--index, Frame::Long);
       frame.set(--index, Frame::Long);
