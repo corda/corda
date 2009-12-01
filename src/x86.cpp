@@ -2919,9 +2919,13 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case FloatAbsolute:
-      *aTypeMask = (1 << RegisterOperand);
-      *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-        | FloatRegisterMask;
+      if (useSSE(&c)) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+          | FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
       break;  
   
     case FloatNegate:
@@ -2935,9 +2939,13 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case FloatSquareRoot:
-      *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-      *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-        | FloatRegisterMask;
+      if (useSSE(&c)) {
+        *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+          | FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
       break;
 
     case Float2Float:
