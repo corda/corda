@@ -19,6 +19,20 @@ public class Floats {
     return a - b;
   }
 
+  private double field = 100d;
+
+  private static int doubleToInt(Floats f) {
+    return (int) f.field;
+  }
+
+  private static void multiplyAndStore(double a, double b, Floats f) {
+    f.field = a * b;
+  }
+
+  private static double loadAndMultiply(double a, Floats f) {
+    return f.field * a;
+  }
+
   public static void main(String[] args) {
     expect(multiply(0.5d, 0.5d) == 0.25d);
     expect(multiply(0.5f, 0.5f) == 0.25f);
@@ -50,8 +64,33 @@ public class Floats {
       expect(((int) d) == 1);
     }
 
+    { double d = 12345d;
+      expect(((int) d) == 12345);
+    }
+
+    expect(doubleToInt(new Floats()) == 100);
+
+    { Floats f = new Floats();
+      f.field = 32.0d;
+      expect(loadAndMultiply(2.0d, f) == 64.0d);
+    }
+
+    { Floats f = new Floats();
+      f.field = 32.0d;
+      expect(multiply(2.0d, f.field) == 64.0d);
+    }
+
+    { Floats f = new Floats();
+      multiplyAndStore(32.0d, 0.5d, f);
+      expect(f.field == 16.0d);
+    }
+
     { float f = 1f;
       expect(((int) f) == 1);
+    }
+
+    { float f = 1f;
+      expect(((long) f) == 1);
     }
 
     expect(Math.round(0.4f) == 0);
@@ -72,6 +111,21 @@ public class Floats {
     { long z = 6553311036568663L;
       double d = (double) z;
       expect(d == 6553311036568663.0);
+    }
+
+    { long z = 12345L;
+      float f = (float) z;
+      expect(f == 12345.0);
+    }
+
+    { int z = 12345;
+      float f = (float) z;
+      expect(f == 12345.0);
+    }
+
+    { int z = 12345;
+      double d = (double) z;
+      expect(d == 12345.0);
     }
   }
 }

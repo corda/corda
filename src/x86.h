@@ -159,15 +159,17 @@ memoryBarrier()
 {
 #ifdef _MSC_VER
   MemoryBarrier();
-#else
-  __asm__ __volatile__("": : :"memory");
-#endif
+#elif defined ARCH_x86_32
+  __asm__ __volatile__("lock; addl $0,0(%%esp)": : :"memory");
+#elif defined ARCH_x86_64
+  __asm__ __volatile__("mfence": : :"memory");
+#endif // ARCH_x86_64
 }
 
 inline void
 storeStoreMemoryBarrier()
 {
-  memoryBarrier();
+  __asm__ __volatile__("": : :"memory");
 }
 
 inline void
@@ -179,28 +181,24 @@ storeLoadMemoryBarrier()
 inline void
 loadMemoryBarrier()
 {
-  memoryBarrier();
+  __asm__ __volatile__("": : :"memory");
 }
 
 inline void
 syncInstructionCache(const void*, unsigned)
 {
-  // ignore
+  __asm__ __volatile__("": : :"memory");
 }
 
 #ifdef USE_ATOMIC_OPERATIONS
 inline bool
-atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 {
 #ifdef _MSC_VER
-#  ifdef ARCH_x86_32
   InterlockedCompareExchange(p, new_, old);
-#  elif defined ARCH_x86_64
-  InterlockedCompareExchange64(p, new_, old);
-#  endif // ARCH_x86_64
 #elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
-#elif defined ARCH_x86_32
+#else
   uint8_t result;
 
   __asm__ __volatile__("lock; cmpxchgl %2, %0; setz %1"
@@ -209,7 +207,17 @@ atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
                        : "memory");
 
   return result != 0;
-#elif defined ARCH_x86_64
+#endif
+}
+
+inline bool
+atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
+{
+#ifdef _MSC_VER
+  InterlockedCompareExchange64(p, new_, old);
+#elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+  return __sync_bool_compare_and_swap(p, old, new_);
+#else
   uint8_t result;
 
   __asm__ __volatile__("lock; cmpxchgq %2, %0; setz %1"
@@ -218,6 +226,16 @@ atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
                        : "memory");
 
   return result != 0;
+#endif
+}
+
+inline bool
+atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+{
+#ifdef ARCH_x86_32
+  return atomicCompareAndSwap32(reinterpret_cast<uint32_t*>(p), old, new_);
+#elif defined ARCH_x86_64
+  return atomicCompareAndSwap64(reinterpret_cast<uint64_t*>(p), old, new_);
 #endif // ARCH_x86_64
 }
 #endif // USE_ATOMIC_OPERATIONS

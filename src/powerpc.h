@@ -92,7 +92,7 @@ syncInstructionCache(const void* start, unsigned size)
 
 #ifdef USE_ATOMIC_OPERATIONS
 inline bool
-atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 {
 #if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
@@ -117,6 +117,12 @@ atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
  
   return result;
 #endif // not GCC >= 4.1
+}
+
+inline bool
+atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+{
+  return atomicCompareAndSwap32(reinterpret_cast<uint32_t*>(p), old, new_);
 }
 #endif // USE_ATOMIC_OPERATIONS
 

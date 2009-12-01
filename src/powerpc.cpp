@@ -2065,6 +2065,9 @@ class MyArchitecture: public Assembler::Architecture {
       *aTypeMask = (1 << RegisterOperand);
       break;
 
+    case Absolute:
+    case FloatAbsolute:
+    case FloatSquareRoot:
     case FloatNegate:
     case Float2Float:
     case Float2Int:
@@ -2096,19 +2099,20 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planMove
-  (unsigned,
-   uint8_t srcTypeMask, uint64_t srcRegisterMask,
-   uint8_t dstTypeMask, uint64_t,
-   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask)
+  (unsigned, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
+   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
+   uint8_t dstTypeMask, uint64_t)
   {
-    *tmpTypeMask = srcTypeMask;
-    *tmpRegisterMask = srcRegisterMask;
+    *srcTypeMask = ~0;
+    *srcRegisterMask = ~static_cast<uint64_t>(0);
 
-    if ((dstTypeMask & (1 << MemoryOperand))
-        and (srcTypeMask & ((1 << MemoryOperand) | 1 << AddressOperand)))
-    {
-      // can't move directly from memory to memory                              
-      *tmpTypeMask = (1 << RegisterOperand);
+    *tmpTypeMask = 0;
+    *tmpRegisterMask = 0;
+
+    if (dstTypeMask & (1 << MemoryOperand)) {
+      // can't move directly from memory or constant to memory
+      *srcTypeMask = 1 << RegisterOperand;
+      *tmpTypeMask = 1 << RegisterOperand;
       *tmpRegisterMask = ~static_cast<uint64_t>(0);
     }
   }

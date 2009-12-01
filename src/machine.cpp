@@ -14,12 +14,24 @@
 #include "stream.h"
 #include "constants.h"
 #include "processor.h"
+#include "arch.h"
 
 using namespace vm;
 
 namespace {
 
 const unsigned NoByte = 0xFFFF;
+
+#ifdef USE_ATOMIC_OPERATIONS
+void
+atomicIncrement(uint32_t* p, int v)
+{
+  for (uint32_t old = *p;
+       not atomicCompareAndSwap32(p, old, old + v);
+       old = *p)
+  { }
+}
+#endif
 
 bool
 find(Thread* t, Thread* o)
@@ -2319,20 +2331,33 @@ enter(Thread* t, Thread::State s)
     return;
   }
 
+#ifdef USE_ATOMIC_OPERATIONS
+#  define INCREMENT atomicIncrement
+#  define ACQUIRE_LOCK ACQUIRE_RAW(t, t->m->stateLock)
+#  define STORE_LOAD_MEMORY_BARRIER storeLoadMemoryBarrier()
+#else
+#  define INCREMENT(pointer, value) *(pointer) += value;
+#  define ACQUIRE_LOCK
+#  define STORE_LOAD_MEMORY_BARRIER
+
   ACQUIRE_RAW(t, t->m->stateLock);
+#endif // not USE_ATOMIC_OPERATIONS
 
   switch (s) {
   case Thread::ExclusiveState: {
+    ACQUIRE_LOCK;
+
     while (t->m->exclusive) {
       // another thread got here first.
       ENTER(t, Thread::IdleState);
+      t->m->stateLock->wait(t->systemThread, 0);
     }
 
     switch (t->state) {
     case Thread::ActiveState: break;
 
     case Thread::IdleState: {
-      ++ t->m->activeCount;
+      INCREMENT(&(t->m->activeCount), 1);
     } break;
 
     default: abort(t);
@@ -2340,14 +2365,35 @@ enter(Thread* t, Thread::State s)
 
     t->state = Thread::ExclusiveState;
     t->m->exclusive = t;
-      
+    
+    STORE_LOAD_MEMORY_BARRIER;
+
     while (t->m->activeCount > 1) {
       t->m->stateLock->wait(t->systemThread, 0);
     }
   } break;
 
   case Thread::IdleState:
+    if (t->state == Thread::ActiveState) {
+      // fast path
+      assert(t, t->m->activeCount > 0);
+      INCREMENT(&(t->m->activeCount), -1);
+
+      t->state = s;
+
+      if (t->m->exclusive) {
+        ACQUIRE_LOCK;
+
+        t->m->stateLock->notifyAll(t->systemThread);
+      }
+      break;
+    } else {
+      // fall through to slow path
+    }
+
   case Thread::ZombieState: {
+    ACQUIRE_LOCK;
+
     switch (t->state) {
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
@@ -2360,7 +2406,7 @@ enter(Thread* t, Thread::State s)
     }
 
     assert(t, t->m->activeCount > 0);
-    -- t->m->activeCount;
+    INCREMENT(&(t->m->activeCount), -1);
 
     if (s == Thread::ZombieState) {
       assert(t, t->m->liveCount > 0);
@@ -2375,35 +2421,54 @@ enter(Thread* t, Thread::State s)
     t->m->stateLock->notifyAll(t->systemThread);
   } break;
 
-  case Thread::ActiveState: {
-    switch (t->state) {
-    case Thread::ExclusiveState: {
-      assert(t, t->m->exclusive == t);
+  case Thread::ActiveState:
+    if (t->state == Thread::IdleState and t->m->exclusive == 0) {
+      // fast path
+      INCREMENT(&(t->m->activeCount), 1);
 
       t->state = s;
-      t->m->exclusive = 0;
 
-      t->m->stateLock->notifyAll(t->systemThread);
-    } break;
-
-    case Thread::NoState:
-    case Thread::IdleState: {
-      while (t->m->exclusive) {
-        t->m->stateLock->wait(t->systemThread, 0);
+      if (t->m->exclusive) {
+        // another thread has entered the exclusive state, so we
+        // return to idle and use the slow path to become active
+        enter(t, Thread::IdleState);
+      } else {
+        break;
       }
-
-      ++ t->m->activeCount;
-      if (t->state == Thread::NoState) {
-        ++ t->m->liveCount;
-      }
-      t->state = s;
-    } break;
-
-    default: abort(t);
     }
-  } break;
+
+    { ACQUIRE_LOCK;
+
+      switch (t->state) {
+      case Thread::ExclusiveState: {
+        assert(t, t->m->exclusive == t);
+
+        t->state = s;
+        t->m->exclusive = 0;
+
+        t->m->stateLock->notifyAll(t->systemThread);
+      } break;
+
+      case Thread::NoState:
+      case Thread::IdleState: {
+        while (t->m->exclusive) {
+          t->m->stateLock->wait(t->systemThread, 0);
+        }
+
+        INCREMENT(&(t->m->activeCount), 1);
+        if (t->state == Thread::NoState) {
+          ++ t->m->liveCount;
+        }
+        t->state = s;
+      } break;
+
+      default: abort(t);
+      }
+    } break;
 
   case Thread::ExitState: {
+    ACQUIRE_LOCK;
+
     switch (t->state) {
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
@@ -2418,7 +2483,7 @@ enter(Thread* t, Thread::State s)
     }
 
     assert(t, t->m->activeCount > 0);
-    -- t->m->activeCount;
+    INCREMENT(&(t->m->activeCount), -1);
 
     t->state = s;
 
