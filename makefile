@@ -171,6 +171,12 @@ ifeq ($(platform),darwin)
 		asmflags += -arch i386
 		lflags += -arch i386
 	endif
+
+	ifeq ($(arch),x86_64)
+		cflags += -arch x86_64
+		asmflags += -arch x86_64
+		lflags += -arch x86_64
+	endif
 endif
 
 ifeq ($(platform),windows)
