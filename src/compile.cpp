@@ -785,6 +785,10 @@ class Context {
     {
       if (size == 8) {
         switch(op) {
+        case Absolute:
+          assert(t, resultSize == 8);
+          return local::getThunk(t, absoluteLongThunk);
+
         case FloatNegate:
           assert(t, resultSize == 8);
           return local::getThunk(t, negateDoubleThunk);
@@ -819,12 +823,16 @@ class Context {
         assert(t, size == 4);
 
         switch(op) {
+        case Absolute:
+          assert(t, resultSize == 4);
+          return local::getThunk(t, absoluteIntThunk);
+
         case FloatNegate:
-          assert(t, size == 4);
+          assert(t, resultSize == 4);
           return local::getThunk(t, negateFloatThunk);
 
         case FloatAbsolute:
-          assert(t, size == 4);
+          assert(t, resultSize == 4);
           return local::getThunk(t, absoluteFloatThunk);
 
         case Float2Float:
@@ -2158,6 +2166,18 @@ uint64_t
 absoluteFloat(uint32_t a)
 {
   return floatToBits(fabsf(bitsToFloat(a)));
+}
+
+int64_t
+absoluteLong(int64_t a)
+{
+  return a > 0 ? a : -a;
+}
+
+int64_t
+absoluteInt(int32_t a)
+{
+  return a > 0 ? a : -a;
 }
 
 int64_t

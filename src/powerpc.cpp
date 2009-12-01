@@ -2065,6 +2065,9 @@ class MyArchitecture: public Assembler::Architecture {
       *aTypeMask = (1 << RegisterOperand);
       break;
 
+    case Absolute:
+    case FloatAbsolute:
+    case FloatSquareRoot:
     case FloatNegate:
     case Float2Float:
     case Float2Int:
@@ -2096,9 +2099,9 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planMove
-  (unsigned size, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
+  (unsigned, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
    uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
-   uint8_t dstTypeMask, uint64_t dstRegisterMask)
+   uint8_t dstTypeMask, uint64_t)
   {
     *srcTypeMask = ~0;
     *srcRegisterMask = ~static_cast<uint64_t>(0);
