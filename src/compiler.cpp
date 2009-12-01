@@ -2320,13 +2320,17 @@ acceptMatch(Context* c, Site* s, Read*, const SiteMask& mask)
 
 Site*
 pickSourceSite(Context* c, Read* read, Site* target = 0,
-               unsigned* cost = 0, uint8_t typeMask = ~0,
+               unsigned* cost = 0, SiteMask* extraMask = 0,
                bool intersectRead = true, bool includeBuddies = true,
                bool includeNextWord = true,
                bool (*accept)(Context*, Site*, Read*, const SiteMask&)
                = acceptMatch)
 {
-  SiteMask mask(typeMask, ~0, AnyFrameIndex);
+  SiteMask mask;
+
+  if (extraMask) {
+    mask = intersect(mask, *extraMask);
+  }
 
   if (intersectRead) {
     read->intersect(&mask);
@@ -2477,7 +2481,7 @@ pickSiteOrMove(Context* c, Read* read, bool intersectRead,
                bool includeNextWord, unsigned registerReserveCount = 0)
 {
   Site* s = pickSourceSite
-    (c, read, 0, 0, ~0, intersectRead, true, includeNextWord);
+    (c, read, 0, 0, 0, intersectRead, true, includeNextWord);
   
   if (s) {
     return s;
@@ -3594,7 +3598,7 @@ pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
     if (nextWord) {
       s = pickMatchOrMove(c, read, nextWord, index, false);
     } else {
-      s = pickSourceSite(c, read, 0, 0, ~0, false, true, true);
+      s = pickSourceSite(c, read, 0, 0, 0, false, true, true);
 
       if (s == 0 or s->isVolatile(c)) {
         s = maybeMove(c, read, false, true);
@@ -5270,13 +5274,14 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
     Read* r = live(v);
 
     if (r and sites[el.localIndex] == 0) {
-      const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
+                    c->arch->generalRegisterMask(), AnyFrameIndex);
 
       Site* s = pickSourceSite
-        (c, r, 0, 0, mask, true, false, true, acceptForResolve);
+        (c, r, 0, 0, &mask, true, false, true, acceptForResolve);
       if (s == 0) {
         s = pickSourceSite
-          (c, r, 0, 0, mask, false, false, true, acceptForResolve);
+          (c, r, 0, 0, &mask, false, false, true, acceptForResolve);
       }
 
       if (s) {
@@ -5307,15 +5312,16 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
     Read* r = live(v);
 
     if (r and sites[el.localIndex] == 0) {
-      const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
+                    c->arch->generalRegisterMask(), AnyFrameIndex);
 
       Site* s = pickSourceSite
-        (c, r, 0, 0, mask, true, true, true, acceptForResolve);
+        (c, r, 0, 0, &mask, true, true, true, acceptForResolve);
       if (s == 0) {
         s = pickSourceSite
-          (c, r, 0, 0, mask, false, true, true, acceptForResolve);
+          (c, r, 0, 0, &mask, false, true, true, acceptForResolve);
         if (s == 0) {
-          s = maybeMove(c, r, false, true, ResolveRegisterReserveCount);
+          s = maybeMove(c, v, mask, false, true, ResolveRegisterReserveCount);
         }
       }
 

@@ -978,12 +978,12 @@ sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
       opcode(c, 0xf3);
       maybeRex(c, 4, a, b);
       opcode(c, 0x0f, 0x10);
-      modrm(c, 0xc0, b, a);
+      modrm(c, 0xc0, a, b);
     } else {
       opcode(c, 0xf2);
-      maybeRex(c, 4, a, b);
+      maybeRex(c, 8, a, b);
       opcode(c, 0x0f, 0x10);
-      modrm(c, 0xc0, b, a);
+      modrm(c, 0xc0, a, b);
     } 
   } else if (floatReg(a)) {
     opcode(c, 0x66);
@@ -1118,7 +1118,6 @@ sseMoveMR(Context* c, unsigned aSize, Assembler::Memory* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize >= 4);
-  assert(c, aSize == bSize);
 
   if (BytesPerWord == 4 and aSize == 8) {
     opcode(c, 0xf3);
