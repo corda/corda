@@ -2439,6 +2439,19 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
   }
  
   if (cost) {
+    if (DebugMoves) {
+      char srcb[256]; src->toString(c, srcb, 256);
+      char dstb[256]; dst->toString(c, dstb, 256);
+      fprintf(stderr, "maybe move %s to %s for %p to %p\n",
+              srcb, dstb, value, value);
+    }
+
+    src->freeze(c, value);
+
+    addSite(c, value, dst);
+    
+    src->thaw(c, value);    
+
     if (not src->match(c, srcMask)) {
       src->freeze(c, value);
       dst->freeze(c, value);
@@ -2449,6 +2462,8 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
       tmpRead.successor_ = value;
 
       Site* tmp = pickTargetSite(c, &tmpRead, true);
+
+      addSite(c, value, tmp);
 
       move(c, value, src, tmp);
       
@@ -2851,10 +2866,9 @@ move(Context* c, Value* value, Site* src, Site* dst)
             srcb, dstb, value, value);
   }
 
+  assert(c, findSite(c, value, dst));
+
   src->freeze(c, value);
-
-  addSite(c, value, dst);
-
   dst->freeze(c, value);
   
   unsigned srcSize;
