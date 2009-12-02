@@ -200,8 +200,8 @@ Avian_avian_SystemClassLoader_defineClass
   t->m->heap->free(buffer, length);
 
   if (c) {
+    PROTECT(t, c);
     if (getClassLoaderMap(t, loader) == 0) {
-      PROTECT(t, c);
       object map = makeHashMap(t, 0, 0);
       set(t, loader, ClassLoaderMap, map);
     }
