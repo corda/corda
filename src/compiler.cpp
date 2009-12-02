@@ -2156,7 +2156,8 @@ class MemorySite: public Site {
 
   virtual SiteMask mask(Context* c) {
     return SiteMask(1 << MemoryOperand, 0, (base == c->arch->stack())
-                    ? offsetToFrameIndex(c, offset) : NoFrameIndex);
+                    ? static_cast<int>(offsetToFrameIndex(c, offset))
+                    : NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context* c, unsigned index) {
