@@ -6973,6 +6973,8 @@ class MyProcessor: public Processor {
     nativeThunk(0),
     bootNativeThunk(0),
     aioobThunk(0),
+    thunkTable(0),
+    bootThunkTable(0),
     callTable(0),
     methodTree(0),
     methodTreeSentinal(0),
@@ -6985,6 +6987,7 @@ class MyProcessor: public Processor {
     bootImage(0),
     codeAllocator(s, 0, 0),
     thunkSize(0),
+    bootThunkSize(0),
     callTableSize(0),
     useNativeFeatures(useNativeFeatures)
   { }
@@ -7298,8 +7301,14 @@ class MyProcessor: public Processor {
           uint8_t* thunkStart = p->thunkTable;
           uint8_t* thunkEnd = thunkStart + (p->thunkSize * ThunkCount);
 
-          if (static_cast<uint8_t*>(ip) >= thunkStart
-              and static_cast<uint8_t*>(ip) < thunkEnd)
+          uint8_t* bootThunkStart = p->bootThunkTable;
+          uint8_t* bootThunkEnd = bootThunkStart
+            + (p->bootThunkSize * ThunkCount);
+
+          if ((static_cast<uint8_t*>(ip) >= thunkStart
+               and static_cast<uint8_t*>(ip) < thunkEnd)
+              or (static_cast<uint8_t*>(ip) >= bootThunkStart
+                  and static_cast<uint8_t*>(ip) < bootThunkEnd))
           {
             target->ip = t->arch->frameIp(stack);
             target->base = base;
@@ -7462,6 +7471,7 @@ class MyProcessor: public Processor {
   uint8_t* bootNativeThunk;
   uint8_t* aioobThunk;
   uint8_t* thunkTable;
+  uint8_t* bootThunkTable;
   object callTable;
   object methodTree;
   object methodTreeSentinal;
@@ -7475,6 +7485,7 @@ class MyProcessor: public Processor {
   SegFaultHandler segFaultHandler;
   FixedAllocator codeAllocator;
   unsigned thunkSize;
+  unsigned bootThunkSize;
   unsigned callTableSize;
   bool useNativeFeatures;
 };
@@ -7748,6 +7759,8 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
   
   p->bootDefaultThunk = code + image->defaultThunk;
   p->bootNativeThunk = code + image->nativeThunk;
+  p->bootThunkTable = code + image->thunkTable;
+  p->bootThunkSize = image->thunkSize;
 
   updateCall(t, LongCall, code + image->compileMethodCall,
              voidPointer(local::compileMethod));
