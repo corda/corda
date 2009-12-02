@@ -235,7 +235,7 @@ methodForIp(MyThread* t, void* ip)
   // we must use a version of the method tree at least as recent as the
   // compiled form of the method containing the specified address (see
   // compile(MyThread*, Allocator*, BootContext*, object)):
-  memoryBarrier();
+  loadMemoryBarrier();
 
   return treeQuery(t, methodTree(t), reinterpret_cast<intptr_t>(ip),
                    methodTreeSentinal(t), compareIpToMethodBounds);
@@ -785,6 +785,10 @@ class Context {
     {
       if (size == 8) {
         switch(op) {
+        case Absolute:
+          assert(t, resultSize == 8);
+          return local::getThunk(t, absoluteLongThunk);
+
         case FloatNegate:
           assert(t, resultSize == 8);
           return local::getThunk(t, negateDoubleThunk);
@@ -819,12 +823,16 @@ class Context {
         assert(t, size == 4);
 
         switch(op) {
+        case Absolute:
+          assert(t, resultSize == 4);
+          return local::getThunk(t, absoluteIntThunk);
+
         case FloatNegate:
-          assert(t, size == 4);
+          assert(t, resultSize == 4);
           return local::getThunk(t, negateFloatThunk);
 
         case FloatAbsolute:
-          assert(t, size == 4);
+          assert(t, resultSize == 4);
           return local::getThunk(t, absoluteFloatThunk);
 
         case Float2Float:
@@ -2158,6 +2166,18 @@ uint64_t
 absoluteFloat(uint32_t a)
 {
   return floatToBits(fabsf(bitsToFloat(a)));
+}
+
+int64_t
+absoluteLong(int64_t a)
+{
+  return a > 0 ? a : -a;
+}
+
+int64_t
+absoluteInt(int32_t a)
+{
+  return a > 0 ? a : -a;
 }
 
 int64_t
@@ -5878,7 +5898,7 @@ resolveNative(MyThread* t, object method)
     // methodCompiled, since we don't want them using the slow calling
     // convention on a function that expects the fast calling
     // convention:
-    memoryBarrier();
+    storeStoreMemoryBarrier();
 
     methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
   }
@@ -7469,7 +7489,7 @@ findCallNode(MyThread* t, void* address)
   // we must use a version of the call table at least as recent as the
   // compiled form of the method containing the specified address (see
   // compile(MyThread*, Allocator*, BootContext*, object)):
-  memoryBarrier();
+  loadMemoryBarrier();
 
   MyProcessor* p = processor(t);
   object table = p->callTable;
@@ -8229,7 +8249,7 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
          reinterpret_cast<intptr_t>(compiled), clone, methodTreeSentinal(t),
          compareIpToMethodBounds);
 
-      memoryBarrier();
+      storeStoreMemoryBarrier();
 
       methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
 

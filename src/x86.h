@@ -169,7 +169,7 @@ memoryBarrier()
 inline void
 storeStoreMemoryBarrier()
 {
-  memoryBarrier();
+  __asm__ __volatile__("": : :"memory");
 }
 
 inline void
@@ -181,13 +181,13 @@ storeLoadMemoryBarrier()
 inline void
 loadMemoryBarrier()
 {
-  memoryBarrier();
+  __asm__ __volatile__("": : :"memory");
 }
 
 inline void
 syncInstructionCache(const void*, unsigned)
 {
-  // ignore
+  __asm__ __volatile__("": : :"memory");
 }
 
 #ifdef USE_ATOMIC_OPERATIONS
@@ -233,9 +233,9 @@ inline bool
 atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 {
 #ifdef ARCH_x86_32
-  return atomicCompareAndSwap32(p, old, new_);
+  return atomicCompareAndSwap32(reinterpret_cast<uint32_t*>(p), old, new_);
 #elif defined ARCH_x86_64
-  return atomicCompareAndSwap64(p, old, new_);
+  return atomicCompareAndSwap64(reinterpret_cast<uint64_t*>(p), old, new_);
 #endif // ARCH_x86_64
 }
 #endif // USE_ATOMIC_OPERATIONS

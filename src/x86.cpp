@@ -113,23 +113,7 @@ class MyBlock: public Assembler::Block {
   unsigned size;
 };
 
-class Context {
- public:
-  Context(System* s, Allocator* a, Zone* zone):
-    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock)
-  { }
-
-  System* s;
-  Zone* zone;
-  Assembler::Client* client;
-  Vector code;
-  Task* tasks;
-  uint8_t* result;
-  MyBlock* firstBlock;
-  MyBlock* lastBlock;
-};
+class Context;
 
 typedef void (*OperationType)(Context*);
 
@@ -161,6 +145,25 @@ class ArchitectureContext {
   [(BranchOperationCount)
    * OperandTypeCount
    * OperandTypeCount];
+};
+
+class Context {
+ public:
+  Context(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
+    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
+    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
+    lastBlock(firstBlock), ac(ac)
+  { }
+
+  System* s;
+  Zone* zone;
+  Assembler::Client* client;
+  Vector code;
+  Task* tasks;
+  uint8_t* result;
+  MyBlock* firstBlock;
+  MyBlock* lastBlock;
+  ArchitectureContext* ac;
 };
 
 void NO_RETURN
@@ -621,6 +624,27 @@ ignore(Context*)
 { }
 
 void
+storeLoadBarrier(Context* c)
+{
+  if (useSSE(c->ac)) {
+    // mfence:
+    c->code.append(0x0f);
+    c->code.append(0xae);
+    c->code.append(0xf0);
+  } else {
+    // lock addq $0x0,(%rsp):
+    c->code.append(0xf0);
+    if (BytesPerWord == 8) {
+      c->code.append(0x48);
+    }
+    c->code.append(0x83);
+    c->code.append(0x04);
+    c->code.append(0x24);
+    c->code.append(0x00);    
+  }
+}
+
+void
 unconditional(Context* c, unsigned jump, Assembler::Constant* a)
 {
   appendOffsetTask(c, a->value, offset(c), 5);
@@ -954,12 +978,12 @@ sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
       opcode(c, 0xf3);
       maybeRex(c, 4, a, b);
       opcode(c, 0x0f, 0x10);
-      modrm(c, 0xc0, b, a);
+      modrm(c, 0xc0, a, b);
     } else {
       opcode(c, 0xf2);
-      maybeRex(c, 4, a, b);
+      maybeRex(c, 8, a, b);
       opcode(c, 0x0f, 0x10);
-      modrm(c, 0xc0, b, a);
+      modrm(c, 0xc0, a, b);
     } 
   } else if (floatReg(a)) {
     opcode(c, 0x66);
@@ -1094,7 +1118,6 @@ sseMoveMR(Context* c, unsigned aSize, Assembler::Memory* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize >= 4);
-  assert(c, aSize == bSize);
 
   if (BytesPerWord == 4 and aSize == 8) {
     opcode(c, 0xf3);
@@ -2503,7 +2526,7 @@ populateTables(ArchitectureContext* c)
   zo[Return] = return_;
   zo[LoadBarrier] = ignore;
   zo[StoreStoreBarrier] = ignore;
-  zo[StoreLoadBarrier] = ignore;
+  zo[StoreLoadBarrier] = storeLoadBarrier;
 
   uo[index(c, Call, C)] = CAST1(callC);
   uo[index(c, Call, R)] = CAST1(callR);
@@ -2896,9 +2919,13 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case FloatAbsolute:
-      *aTypeMask = (1 << RegisterOperand);
-      *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-        | FloatRegisterMask;
+      if (useSSE(&c)) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+          | FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
       break;  
   
     case FloatNegate:
@@ -2912,9 +2939,13 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case FloatSquareRoot:
-      *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-      *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-        | FloatRegisterMask;
+      if (useSSE(&c)) {
+        *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+          | FloatRegisterMask;
+      } else {
+        *thunk = true;
+      }
       break;
 
     case Float2Float:
@@ -3225,7 +3256,7 @@ class MyArchitecture: public Assembler::Architecture {
 class MyAssembler: public Assembler {
  public:
   MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch):
-    c(s, a, zone), arch_(arch)
+    c(s, a, zone, &(arch->c)), arch_(arch)
   { }
 
   virtual void setClient(Client* client) {

@@ -2334,11 +2334,11 @@ enter(Thread* t, Thread::State s)
 #ifdef USE_ATOMIC_OPERATIONS
 #  define INCREMENT atomicIncrement
 #  define ACQUIRE_LOCK ACQUIRE_RAW(t, t->m->stateLock)
-#  define BARRIER memoryBarrier()
+#  define STORE_LOAD_MEMORY_BARRIER storeLoadMemoryBarrier()
 #else
 #  define INCREMENT(pointer, value) *(pointer) += value;
 #  define ACQUIRE_LOCK
-#  define BARRIER
+#  define STORE_LOAD_MEMORY_BARRIER
 
   ACQUIRE_RAW(t, t->m->stateLock);
 #endif // not USE_ATOMIC_OPERATIONS
@@ -2366,7 +2366,7 @@ enter(Thread* t, Thread::State s)
     t->state = Thread::ExclusiveState;
     t->m->exclusive = t;
     
-    BARRIER;
+    STORE_LOAD_MEMORY_BARRIER;
 
     while (t->m->activeCount > 1) {
       t->m->stateLock->wait(t->systemThread, 0);

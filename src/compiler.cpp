@@ -1476,11 +1476,18 @@ pickTarget(Context* c, Read* read, bool intersectRead,
 
   Value* value = read->value;
 
-  uint32_t registerMask = (value->type == ValueGeneral
-                           ? c->arch->generalRegisterMask() : ~0);
+  uint32_t registerMask
+    = (value->type == ValueFloat ? ~0 : c->arch->generalRegisterMask());
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
+
+  if (value->type == ValueFloat) {
+    uint32_t floatMask = mask.registerMask & c->arch->floatRegisterMask();
+    if (floatMask) {
+      mask.registerMask = floatMask;
+    }
+  }
 
   Target best;
 
@@ -1792,8 +1799,21 @@ class RegisterSite: public Site {
   }
 
   virtual bool matchNextWord(Context* c, Site* s, unsigned) {
-    return s->type(c) == RegisterOperand
-      and s->registerSize(c) == BytesPerWord;
+    assert(c, number != NoRegister);
+
+    if (s->type(c) != RegisterOperand) {
+      return false;
+    }
+
+    RegisterSite* rs = static_cast<RegisterSite*>(s);
+    unsigned size = rs->registerSize(c);
+    if (size > BytesPerWord) {
+      assert(c, number != NoRegister);
+      return number == rs->number;
+    } else {
+      uint32_t mask = c->arch->generalRegisterMask();
+      return ((1 << number) & mask) and ((1 << rs->number) & mask);
+    }
   }
 
   virtual void acquire(Context* c, Value* v) {
@@ -1876,6 +1896,9 @@ class RegisterSite: public Site {
   }
 
   virtual Site* makeNextWord(Context* c, unsigned) {
+    assert(c, number != NoRegister);
+    assert(c, ((1 << number) & c->arch->generalRegisterMask()));
+
     return freeRegisterSite(c, c->arch->generalRegisterMask());    
   }
 
@@ -1883,8 +1906,16 @@ class RegisterSite: public Site {
     return SiteMask(1 << RegisterOperand, mask_, NoFrameIndex);
   }
 
-  virtual SiteMask nextWordMask(Context*, unsigned) {
-    return SiteMask(1 << RegisterOperand, ~0, NoFrameIndex);
+  virtual SiteMask nextWordMask(Context* c, unsigned) {
+    assert(c, number != NoRegister);
+
+    if (registerSize(c) > BytesPerWord) {
+      return SiteMask
+        (1 << RegisterOperand, number, NoFrameIndex);
+    } else {
+      return SiteMask
+        (1 << RegisterOperand, c->arch->generalRegisterMask(), NoFrameIndex);
+    }
   }
 
   virtual unsigned registerSize(Context* c) {
@@ -1965,12 +1996,14 @@ class MemorySite: public Site {
     assert(c, acquired);
 
     if (mask.typeMask & (1 << MemoryOperand)) {
-      if (base == c->arch->stack()) {
-        assert(c, index == NoRegister);
-        return mask.frameIndex == AnyFrameIndex
-          or (mask.frameIndex != NoFrameIndex
-              and static_cast<int>(frameIndexToOffset(c, mask.frameIndex))
-              == offset);
+      if (mask.frameIndex >= 0) {
+        if (base == c->arch->stack()) {
+          assert(c, index == NoRegister);
+          return static_cast<int>(frameIndexToOffset(c, mask.frameIndex))
+            == offset;
+        } else {
+          return false;
+        }
       } else {
         return true;
       }
@@ -2287,13 +2320,17 @@ acceptMatch(Context* c, Site* s, Read*, const SiteMask& mask)
 
 Site*
 pickSourceSite(Context* c, Read* read, Site* target = 0,
-               unsigned* cost = 0, uint8_t typeMask = ~0,
+               unsigned* cost = 0, SiteMask* extraMask = 0,
                bool intersectRead = true, bool includeBuddies = true,
                bool includeNextWord = true,
                bool (*accept)(Context*, Site*, Read*, const SiteMask&)
                = acceptMatch)
 {
-  SiteMask mask(typeMask, ~0, AnyFrameIndex);
+  SiteMask mask;
+
+  if (extraMask) {
+    mask = intersect(mask, *extraMask);
+  }
 
   if (intersectRead) {
     read->intersect(&mask);
@@ -2444,7 +2481,7 @@ pickSiteOrMove(Context* c, Read* read, bool intersectRead,
                bool includeNextWord, unsigned registerReserveCount = 0)
 {
   Site* s = pickSourceSite
-    (c, read, 0, 0, ~0, intersectRead, true, includeNextWord);
+    (c, read, 0, 0, 0, intersectRead, true, includeNextWord);
   
   if (s) {
     return s;
@@ -3533,22 +3570,51 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
   }
 }
 
-void
-pickSiteOrMove(Context* c, Value* src, Value* dst)
+Site*
+pickMatchOrMove(Context* c, Read* r, Site* nextWord, unsigned index,
+                bool intersectRead)
+{
+  Site* s = pickSite(c, r->value, nextWord, index, true);
+  SiteMask mask;
+  if (intersectRead) {
+    r->intersect(&mask);
+  }
+  if (s and s->match(c, mask)) {
+    return s;
+  }
+
+  return pickSiteOrMove
+    (c, r->value, intersect(mask, nextWord->nextWordMask(c, index)),
+     true, true);
+}
+
+Site*
+pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
+               unsigned index)
 {
   if (live(dst)) {
     Read* read = live(src);
-    Site* s = pickSourceSite(c, read, 0, 0, ~0, false, true, true);
+    Site* s;
+    if (nextWord) {
+      s = pickMatchOrMove(c, read, nextWord, index, false);
+    } else {
+      s = pickSourceSite(c, read, 0, 0, 0, false, true, true);
 
-    if (s == 0 or s->isVolatile(c)) {
-      maybeMove(c, read, false, true);
+      if (s == 0 or s->isVolatile(c)) {
+        s = maybeMove(c, read, false, true);
+      }
     }
+    assert(c, s);
 
     addBuddy(src, dst);
 
     if (src->source->isVolatile(c)) {
       removeSite(c, src, src->source);
     }
+
+    return s;
+  } else {
+    return 0;
   }
 }
 
@@ -3645,6 +3711,13 @@ class MoveEvent: public Event {
         {
           apply(c, Move, srcSelectSize, src->source, src->source,
                 dstSize, dst->target, dst->target);
+
+          if (live(dst) == 0) {
+            removeSite(c, dst, dst->target);
+            if (dstSize > BytesPerWord) {
+              removeSite(c, dst->nextWord, dst->nextWord->target);
+            }
+          }
         } else {
           maybeMove(c, Move, BytesPerWord, BytesPerWord, src,
                     BytesPerWord, dst, dstLowMask);
@@ -3654,9 +3727,9 @@ class MoveEvent: public Event {
           }
         }
       } else {
-        pickSiteOrMove(c, src, dst);
+        Site* low = pickSiteOrMove(c, src, dst, 0, 0);
         if (dstSize > BytesPerWord) {
-          pickSiteOrMove(c, src->nextWord, dst->nextWord);
+          pickSiteOrMove(c, src->nextWord, dst->nextWord, low, 1);
         }
       }
     } else if (srcSelectSize <= BytesPerWord and dstSize <= BytesPerWord) {
@@ -3714,7 +3787,7 @@ class MoveEvent: public Event {
 
         low->thaw(c, dst);
       } else {
-        pickSiteOrMove(c, src, dst);
+        pickSiteOrMove(c, src, dst, 0, 0);
       }
     }
 
@@ -5065,16 +5138,7 @@ readSource(Context* c, Read* r)
 
   Value* high = r->high(c);
   if (high) {
-    Site* s = pickSite(c, r->value, high->source, 0, true);
-    SiteMask mask;
-    r->intersect(&mask);
-    if (s and s->match(c, mask)) {
-      return s;
-    } else {
-      return pickSiteOrMove
-        (c, r->value, intersect(mask, high->source->nextWordMask(c, 0)),
-         true, true);
-    }
+    return pickMatchOrMove(c, r, high->source, 0, true);
   } else {
     return pickSiteOrMove(c, r, true, true);
   }
@@ -5210,13 +5274,14 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
     Read* r = live(v);
 
     if (r and sites[el.localIndex] == 0) {
-      const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
+                    c->arch->generalRegisterMask(), AnyFrameIndex);
 
       Site* s = pickSourceSite
-        (c, r, 0, 0, mask, true, false, true, acceptForResolve);
+        (c, r, 0, 0, &mask, true, false, true, acceptForResolve);
       if (s == 0) {
         s = pickSourceSite
-          (c, r, 0, 0, mask, false, false, true, acceptForResolve);
+          (c, r, 0, 0, &mask, false, false, true, acceptForResolve);
       }
 
       if (s) {
@@ -5247,15 +5312,16 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
     Read* r = live(v);
 
     if (r and sites[el.localIndex] == 0) {
-      const uint32_t mask = (1 << RegisterOperand) | (1 << MemoryOperand);
+      SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
+                    c->arch->generalRegisterMask(), AnyFrameIndex);
 
       Site* s = pickSourceSite
-        (c, r, 0, 0, mask, true, true, true, acceptForResolve);
+        (c, r, 0, 0, &mask, true, true, true, acceptForResolve);
       if (s == 0) {
         s = pickSourceSite
-          (c, r, 0, 0, mask, false, true, true, acceptForResolve);
+          (c, r, 0, 0, &mask, false, true, true, acceptForResolve);
         if (s == 0) {
-          s = maybeMove(c, r, false, true, ResolveRegisterReserveCount);
+          s = maybeMove(c, v, mask, false, true, ResolveRegisterReserveCount);
         }
       }
 

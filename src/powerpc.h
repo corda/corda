@@ -122,7 +122,7 @@ atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 inline bool
 atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 {
-  return atomicCompareAndSwap32(p, old, new_);
+  return atomicCompareAndSwap32(reinterpret_cast<uint32_t*>(p), old, new_);
 }
 #endif // USE_ATOMIC_OPERATIONS
 
