@@ -98,7 +98,9 @@ certain flags described below, all of which are optional.
 
   * bootimage - if true, create a boot image containing the pre-parsed
     class library and ahead-of-time compiled methods.  This option is
-    only valid for process=compile builds.
+    only valid for process=compile builds.  Note that you may need to
+    specify both build-arch=x86_64 and arch=x86_64 on 64-bit systems
+    where "uname -m" prints "i386".
       default: false
 
   * heapdump - if true, implement avian.Machine.dumpHeap(String),
