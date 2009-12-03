@@ -52,7 +52,7 @@ LOCAL(vmInvoke_continuationTest):
 
    // set the return address to vmInvoke_returnAddress
    movq   CONTINUATION_RETURN_ADDRESS_OFFSET(%rcx),%rdi
-   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   movq   GLOBAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
    movq   %r10,(%rsp,%rdi,1)
 
    // save the current base pointer in the frame and update it
@@ -103,9 +103,11 @@ LOCAL(vmInvoke_exit):
    cmpl   $0,%ecx
    je     LOCAL(vmInvoke_exit)
 
-   // allocate a frame of size (continuation.length * BYTES_PER_WORD)
+   // allocate a frame of size (continuation.length * BYTES_PER_WORD),
+   // plus stack alignment padding
    movl   CONTINUATION_LENGTH(%ecx),%esi
    shll   $2,%esi
+   leal   8(%esi),%esi
    subl   %esi,%esp
    
    // copy the continuation body into the frame
@@ -135,8 +137,13 @@ LOCAL(vmInvoke_continuationTest):
    movl   $vmInvoke_returnAddress,%esi
 #else
    call   LOCAL(getPC)
+#  if defined __APPLE__
+LOCAL(vmInvoke_offset):
+   leal   vmInvoke_returnAddress-LOCAL(vmInvoke_offset)(%esi),%esi
+#  else
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
    movl   vmInvoke_returnAddress@GOT(%esi),%esi
+#  endif
 #endif
    movl   %esi,(%esp,%edi,1)
    
