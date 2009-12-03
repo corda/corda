@@ -8,7 +8,6 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-
 #include "types.h"
 
 #define LOCAL(x) .L##x
