@@ -131,7 +131,7 @@ LOCAL(vmInvoke_continuationTest):
 
    // set the return address to vmInvoke_returnAddress
    movl   CONTINUATION_RETURN_ADDRESS_OFFSET(%ecx),%edi
-#ifdef __MINGW32__
+#if defined __MINGW32__ || defined __CYGWIN32__
    movl   $vmInvoke_returnAddress,%esi
 #else
    call   LOCAL(getPC)

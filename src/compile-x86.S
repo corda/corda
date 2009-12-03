@@ -22,7 +22,7 @@
 
 #ifdef __x86_64__
 
-#ifdef __MINGW32__
+#if defined __MINGW32__ || defined __CYGWIN32__
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 64
 
@@ -154,7 +154,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    int3
 #endif // not AVIAN_CONTINUATIONS
 
-#else // not __MINGW32__
+#else // not __MINGW32__ ||__CYGWIN32__
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 48
 
@@ -279,7 +279,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    int3
 #endif // not AVIAN_CONTINUATIONS
 
-#endif // not __MINGW32__
+#endif // not __MINGW32__ || __CYGWIN32__
    
 #elif defined __i386__
 
@@ -396,7 +396,7 @@ GLOBAL(vmJumpAndInvoke):
    movl   4(%esp),%ebx
    
    // set return address
-#ifdef __MINGW32__
+#if defined __MINGW32__ || defined __CYGWIN32__
    movl   $vmInvoke_returnAddress,%esi
 #else
    call   LOCAL(getPC)
