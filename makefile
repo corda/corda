@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 0.2
+version = 0.3
 
 build-arch := $(shell uname -m | sed 's/^i.86$$/i386/')
 ifeq (Power,$(filter Power,$(build-arch)))
