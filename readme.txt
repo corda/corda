@@ -13,12 +13,14 @@ on Mac OS X:
  
 on Windows (MSYS):
 
+ $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386/avian -cp build/test Hello
 
 on Windows (Cygwin):
 
+ $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386/avian -cp build/test Hello
@@ -151,6 +153,42 @@ directory containing the avian directory)
 
 This gives you the Windows JNI headers, zlib headers and library, and
 a few other useful libraries like OpenSSL, libjpeg, and libpng.
+There's also a win64 repository for 64-bit builds:
+
+  $ git clone git://oss.readytalk.com/win64.git
+
+
+Building with Microsoft the Visual C++ Compiler
+-----------------------------------------------
+
+You can also build using the MSVC compiler, which makes debugging with
+tools like WinDbg and Visual Studio much easier.  Note that you will
+still need to have GCC installed - MSVC is only used to compile the
+C++ portions of the VM, while the assembly code and helper tools are
+built using GCC.
+
+The MSVC build has been tested with Visual Studio Express Edition
+versions 8 and 9.  Other versions may also work.
+
+To build with MSVC, install Cygwin as described above and set the
+following environment variables:
+
+ $ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/X11R6/bin:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/BIN:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/Tools:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v3.5:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v2.0.50727:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/VCPackages:/cygdrive/c/Program Files/Microsoft SDKs/Windows/v6.0A/bin:/cygdrive/c/WINDOWS/system32:/cygdrive/c/WINDOWS:/cygdrive/c/WINDOWS/System32/Wbem"
+
+ $ export LIBPATH="C:\WINDOWS\Microsoft.NET\Framework\v3.5;C:\WINDOWS\Microsoft.NET\Framework\v2.0.50727;C:\Program Files\Microsoft Visual Studio 9.0\VC\LIB;"
+
+ $ export VCINSTALLDIR="C:\Program Files\Microsoft Visual Studio 9.0\VC"
+
+ $ export LIB="C:\Program Files\Microsoft Visual Studio 9.0\VC\LIB;C:\Program Files\Microsoft SDKs\Windows\v6.0A\lib;"
+
+ $ export INCLUDE="C:\Program Files\Microsoft Visual Studio 9.0\VC\INCLUDE;C:\Program Files\Microsoft SDKs\Windows\v6.0A\include;"
+
+Adjust these definitions as necessary according to your MSVC
+installation.
+
+Finally, build with the msvc flag set to the MSVC tool directory:
+
+ $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC"
 
 
 Installing
