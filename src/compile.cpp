@@ -1886,7 +1886,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       *targetIp = ip;
       *targetBase = base;
       *targetStack = static_cast<void**>(stack)
-        + t->arch->frameReturnAddressSize();;
+        + t->arch->frameReturnAddressSize();
     }
   }
 

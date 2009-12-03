@@ -125,7 +125,7 @@ GLOBAL(vmJumpAndInvoke):
    movq   %rcx,%rbx
    
    // set return address
-   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   movq   GLOBAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
    movq   %r10,(%r9)
    
    // copy arguments into place
@@ -154,7 +154,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    int3
 #endif // not AVIAN_CONTINUATIONS
 
-#else // not __MINGW32__ ||__CYGWIN32__
+#else // not __MINGW32__ || __CYGWIN32__
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 48
 
@@ -252,7 +252,7 @@ GLOBAL(vmJumpAndInvoke):
    movq   %rdi,%rbx
    
    // set return address
-   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   movq   GLOBAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
    movq   %r10,(%rcx)
    
    // copy arguments into place
@@ -400,8 +400,13 @@ GLOBAL(vmJumpAndInvoke):
    movl   $vmInvoke_returnAddress,%esi
 #else
    call   LOCAL(getPC)
+#  if defined __APPLE__
+LOCAL(vmJumpAndInvoke_offset):
+   leal   vmInvoke_returnAddress-LOCAL(vmJumpAndInvoke_offset)(%esi),%esi
+#  else
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
    movl   vmInvoke_returnAddress@GOT(%esi),%esi
+#  endif
 #endif
    movl   %esi,(%ecx)
    
