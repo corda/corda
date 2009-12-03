@@ -396,9 +396,13 @@ GLOBAL(vmJumpAndInvoke):
    movl   4(%esp),%ebx
    
    // set return address
+#ifdef __MINGW32__
+   movl   $vmInvoke_returnAddress,%esi
+#else
    call   LOCAL(getPC)
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
    movl   vmInvoke_returnAddress@GOT(%esi),%esi
+#endif
    movl   %esi,(%ecx)
    
    // copy arguments into place

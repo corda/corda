@@ -131,9 +131,13 @@ LOCAL(vmInvoke_continuationTest):
 
    // set the return address to vmInvoke_returnAddress
    movl   CONTINUATION_RETURN_ADDRESS_OFFSET(%ecx),%edi
+#ifdef __MINGW32__
+   movl   $vmInvoke_returnAddress,%esi
+#else
    call   LOCAL(getPC)
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
    movl   vmInvoke_returnAddress@GOT(%esi),%esi
+#endif
    movl   %esi,(%esp,%edi,1)
    
    // save the current base pointer in the frame and update it
