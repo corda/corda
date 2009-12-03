@@ -167,8 +167,8 @@ LOCAL(exit):
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
    movq   %rdx,%rbp
-   movq   8(%rsp),%rax
-   movq   16(%rsp),%rdx
+   movq   40(%rsp),%rax
+   movq   48(%rsp),%rdx
    movq   %r8,%rsp
    movq   %r9,%rbx
    jmp    *%rcx

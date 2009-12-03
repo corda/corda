@@ -107,9 +107,9 @@ GLOBAL(vmJumpAndInvoke):
    //     %rdx: address
    //     %r8 : base
    //     %r9 : (unused)
-   //  8(%rsp): argumentFootprint
-   // 16(%rsp): arguments
-   // 24(%rsp): frameSize
+   // 40(%rsp): argumentFootprint
+   // 48(%rsp): arguments
+   // 56(%rsp): frameSize
 
    movq   %r8,%rbp
    
@@ -118,20 +118,20 @@ GLOBAL(vmJumpAndInvoke):
    movq   %rbp,%r9
          
    // allocate new frame, adding room for callee-saved registers
-   movl   24(%rsp),%eax
+   movl   56(%rsp),%eax
    subq   %rax,%r9
    subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
    
    movq   %rcx,%rbx
    
    // set return address
-   movq   GLOBAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
+   leaq   GLOBAL(vmInvoke_returnAddress)(%rip),%r10
    movq   %r10,(%r9)
    
    // copy arguments into place
    movq   $0,%r11
-   movq   16(%rsp),%r8
-   movq   8(%rsp),%rax
+   movl   48(%rsp),%r8d
+   movl   40(%rsp),%eax
    jmp    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):

@@ -52,7 +52,11 @@ LOCAL(vmInvoke_continuationTest):
 
    // set the return address to vmInvoke_returnAddress
    movq   CONTINUATION_RETURN_ADDRESS_OFFSET(%rcx),%rdi
+#if defined __MINGW32__ || defined __CYGWIN32__
+   leaq   GLOBAL(vmInvoke_returnAddress)(%rip),%r10
+#else
    movq   GLOBAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
+#endif
    movq   %r10,(%rsp,%rdi,1)
 
    // save the current base pointer in the frame and update it
