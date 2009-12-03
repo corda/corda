@@ -16,6 +16,7 @@
 
 #ifdef _MSC_VER
 #  include "windows.h"
+#  undef interface
 #endif
 
 #ifdef ARCH_x86_32
@@ -155,7 +156,23 @@ trap()
 }
 
 inline void
-memoryBarrier()
+programOrderMemoryBarrier()
+{
+#ifdef _MSC_VER
+  MemoryBarrier();
+#else
+  __asm__ __volatile__("": : :"memory");
+#endif
+}
+
+inline void
+storeStoreMemoryBarrier()
+{
+  programOrderMemoryBarrier();
+}
+
+inline void
+storeLoadMemoryBarrier()
 {
 #ifdef _MSC_VER
   MemoryBarrier();
@@ -167,27 +184,15 @@ memoryBarrier()
 }
 
 inline void
-storeStoreMemoryBarrier()
-{
-  __asm__ __volatile__("": : :"memory");
-}
-
-inline void
-storeLoadMemoryBarrier()
-{
-  memoryBarrier();
-}
-
-inline void
 loadMemoryBarrier()
 {
-  __asm__ __volatile__("": : :"memory");
+  programOrderMemoryBarrier();
 }
 
 inline void
 syncInstructionCache(const void*, unsigned)
 {
-  __asm__ __volatile__("": : :"memory");
+  programOrderMemoryBarrier();
 }
 
 #ifdef USE_ATOMIC_OPERATIONS

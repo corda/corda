@@ -3212,7 +3212,7 @@ class CallEvent: public Event {
       }
 
       for (unsigned i = 0; i < stackArgumentFootprint; ++i) {
-        Value* v = arguments[i];
+        Value* v = RUNTIME_ARRAY_BODY(arguments)[i];
         if (v) {
           int frameIndex = i + frameOffset;
 

@@ -2955,8 +2955,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
 {
 #define MATCH(name, constant)                                           \
   (byteArrayLength(t, name) == sizeof(constant)                         \
-   and strcmp(reinterpret_cast<char*>(&byteArrayBody(t, name, 0)),      \
-              constant) == 0)
+   and ::strcmp(reinterpret_cast<char*>(&byteArrayBody(t, name, 0)),    \
+                constant) == 0)
 
   object className = vm::className(t, methodClass(t, target));
   if (UNLIKELY(MATCH(className, "java/lang/Math"))) {
