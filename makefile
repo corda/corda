@@ -389,7 +389,13 @@ bootimage-object = $(native-build)/bootimage-bin.o
 
 ifeq ($(bootimage),true)
 	ifneq ($(build-arch),$(arch))
-		error "can't cross-build a bootimage"
+$(error "bootimage cross-builds not yet supported")
+	endif
+
+	ifeq ($(arch),x86_64)
+		ifneq ($(build-platform),$(platform))
+$(error "bootimage cross-builds not yet supported")
+		endif
 	endif
 
 	vm-classpath-object = $(bootimage-object)
