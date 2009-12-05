@@ -5294,10 +5294,6 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 
       Site* s = pickSourceSite
         (c, r, 0, 0, &mask, true, false, true, acceptForResolve);
-      if (s == 0) {
-        s = pickSourceSite
-          (c, r, 0, 0, &mask, false, false, true, acceptForResolve);
-      }
 
       if (s) {
         if (DebugControl) {
@@ -5332,12 +5328,9 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 
       Site* s = pickSourceSite
         (c, r, 0, 0, &mask, true, true, true, acceptForResolve);
+
       if (s == 0) {
-        s = pickSourceSite
-          (c, r, 0, 0, &mask, false, true, true, acceptForResolve);
-        if (s == 0) {
-          s = maybeMove(c, v, mask, false, true, ResolveRegisterReserveCount);
-        }
+        s = maybeMove(c, v, mask, false, true, ResolveRegisterReserveCount);
       }
 
       freeze(c, frozen, s, v);
