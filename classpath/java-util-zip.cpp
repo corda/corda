@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -20,6 +20,11 @@ Java_java_util_zip_Inflater_make
 (JNIEnv* e, jclass, jboolean nowrap)
 {
   z_stream* s = static_cast<z_stream*>(malloc(sizeof(z_stream)));
+  if (s == 0) {
+    throwNew(e, "java/lang/OutOfMemoryError", 0);
+    return 0;    
+  }
+
   memset(s, 0, sizeof(z_stream));
   
   int r = inflateInit2(s, (nowrap ? -15 : 15));
@@ -86,6 +91,11 @@ Java_java_util_zip_Deflater_make
 (JNIEnv* e, jclass, jboolean nowrap, jint level)
 {
   z_stream* s = static_cast<z_stream*>(malloc(sizeof(z_stream)));
+  if (s == 0) {
+    throwNew(e, "java/lang/OutOfMemoryError", 0);
+    return 0;    
+  }
+
   memset(s, 0, sizeof(z_stream));
   
   int r = deflateInit2(s, level, (nowrap ? -15 : 15));
