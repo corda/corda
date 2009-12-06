@@ -54,7 +54,7 @@ ifdef gnu
 	gnu-object-dep = $(build)/gnu-object.dep
 	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
 	gnu-lflags = -lgmp
-	gnu-objects := $(shell find $(build)/gnu-objects -name "*.o") 
+	gnu-objects = $(shell find $(build)/gnu-objects -name "*.o") 
 endif
 
 root := $(shell (cd .. && pwd))
@@ -446,7 +446,6 @@ gnu-overrides = \
 	avian/*.class \
 	avian/resource/*.class \
 	java/lang/Class.class \
-	java/lang/Class\$$*.class \
 	java/lang/Enum.class \
 	java/lang/InheritableThreadLocal.class \
 	java/lang/Object.class \
@@ -469,7 +468,9 @@ gnu-overrides = \
 	java/lang/reflect/AccessibleObject.class \
 	java/lang/reflect/Constructor.class \
 	java/lang/reflect/Field.class \
-	java/lang/reflect/Method.class
+	java/lang/reflect/Method.class \
+	java/lang/reflect/Proxy.class \
+	java/lang/reflect/Proxy\$$*.class
 
 test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
