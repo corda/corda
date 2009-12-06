@@ -149,7 +149,7 @@ public class Continuations {
    *
    * <p>If <code>thunk.call()</code> calls a continuation (directly or
    * via a subroutine) which does not include the current call to
-   * <code>dynamicWind<code>, <code>after.run()</code> will be called
+   * <code>dynamicWind</code>, <code>after.run()</code> will be called
    * before control passes to that continuation.  If this call throws
    * an exception, the exception will propagate to the current caller
    * of <code>dynamicWind</code>.
