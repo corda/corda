@@ -193,6 +193,27 @@ Finally, build with the msvc flag set to the MSVC tool directory:
  $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC"
 
 
+Building with GNU Classpath
+---------------------------
+
+ ** Please note that this feature is still under development and is
+    neither complete nor well-tested. **
+
+By default, Avian uses its own lightweight class library.  However,
+that library only contains a relatively small subset of the classes
+and methods included in the JRE.  If your application requires
+features beyond that subset, you may want to tell Avian to use GNU
+Classpath instead.  To do so, specify the directory in which Classpath
+is installed, e.g.:
+
+ $ make clean
+ $ make gnu=/usr/local/classpath-0.98
+
+This build will use the classes and native code from Classpath, except
+that certain core classes are replaced with implementations from the
+Avian class library for compatibility with the VM.
+
+
 Installing
 ----------
 
