@@ -203,8 +203,8 @@ By default, Avian uses its own lightweight class library.  However,
 that library only contains a relatively small subset of the classes
 and methods included in the JRE.  If your application requires
 features beyond that subset, you may want to tell Avian to use GNU
-Classpath instead.  To do so, specify the directory in which Classpath
-is installed, e.g.:
+Classpath instead.  To do so, specify the directory where Classpath is
+installed, e.g.:
 
  $ make clean
  $ make gnu=/usr/local/classpath-0.98
