@@ -393,7 +393,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "user.home") == 0) {
 #  ifdef _MSC_VER
       WCHAR buffer[MAX_PATH];
-      if (_wgetenv_s(0, buffer, MAX_PATH, L"USERPROFILE") == 0) {
+      size_t needed;
+      if (_wgetenv_s(&needed, buffer, MAX_PATH, L"USERPROFILE") == 0) {
         r = e->NewString(reinterpret_cast<jchar*>(buffer), lstrlenW(buffer));
       } else {
         r = 0;
