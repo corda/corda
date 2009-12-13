@@ -16,6 +16,9 @@
 
 #ifdef _MSC_VER
 #  include "windows.h"
+#  pragma push_macro("assert")
+#  include "intrin.h"
+#  pragma pop_macro("assert")
 #  undef interface
 #endif
 
@@ -159,7 +162,7 @@ inline void
 programOrderMemoryBarrier()
 {
 #ifdef _MSC_VER
-  MemoryBarrier();
+  _ReadWriteBarrier();
 #else
   __asm__ __volatile__("": : :"memory");
 #endif
