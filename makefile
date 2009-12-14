@@ -271,19 +271,17 @@ ifdef msvc
 		-I"$(windows-java-home)/include/win32"
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
-		-DEFAULTLIB:zlib -MANIFEST
+		-DEFAULTLIB:zlib -MANIFEST -debug
 	output = -Fo$(1)
 
 	ifeq ($(mode),debug)
 		cflags += -Od -Zi -MDd
-		lflags += -debug
 	endif
 	ifeq ($(mode),debug-fast)
 		cflags += -Od -Zi -DNDEBUG
-		lflags += -debug
 	endif
 	ifeq ($(mode),fast)
-		cflags += -Ob2it -GL -Zi -DNDEBUG
+		cflags += -O2 -GL -Zi -DNDEBUG
 		lflags += -LTCG
 	endif
 	ifeq ($(mode),small)
