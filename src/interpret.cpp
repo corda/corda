@@ -506,7 +506,7 @@ resolveNativeMethodData(Thread* t, object method)
       // ensure other threads see updated methodVmFlags before
       // methodCode, and that the native method data is initialized
       // before it is visible to those threads:
-      memoryBarrier();
+      storeStoreMemoryBarrier();
 
       set(t, method, MethodCode, data);
     } else {
