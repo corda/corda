@@ -42,6 +42,10 @@ public class Constructor<T> extends AccessibleObject
     return method.getParameterTypes();
   }
 
+  public Class[] getExceptionTypes() {
+    return method.getExceptionTypes();
+  }
+
   public int getModifiers() {
     return method.getModifiers();
   }
