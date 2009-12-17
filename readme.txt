@@ -12,14 +12,12 @@ on Mac OS X:
  $ build/darwin-i386/avian -cp build/test Hello
  
 on Windows (MSYS):
-
  $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386/avian -cp build/test Hello
 
 on Windows (Cygwin):
-
  $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
@@ -308,13 +306,13 @@ main(int ac, const char** av)
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
   jclass c = e->FindClass("Hello");
-  if (not e->ExceptionOccurred()) {
+  if (not e->ExceptionCheck()) {
     jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
-    if (not e->ExceptionOccurred()) {
+    if (not e->ExceptionCheck()) {
       jclass stringClass = e->FindClass("java/lang/String");
-      if (not e->ExceptionOccurred()) {
+      if (not e->ExceptionCheck()) {
         jobjectArray a = e->NewObjectArray(ac-1, stringClass, 0);
-        if (not e->ExceptionOccurred()) {
+        if (not e->ExceptionCheck()) {
           for (int i = 1; i < ac; ++i) {
             e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
           }
@@ -326,7 +324,7 @@ main(int ac, const char** av)
   }
 
   int exitCode = 0;
-  if (e->ExceptionOccurred()) {
+  if (e->ExceptionCheck()) {
     exitCode = -1;
     e->ExceptionDescribe();
   }
@@ -510,13 +508,13 @@ main(int ac, const char** av)
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
   jclass c = e->FindClass("Hello");
-  if (not e->ExceptionOccurred()) {
+  if (not e->ExceptionCheck()) {
     jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
-    if (not e->ExceptionOccurred()) {
+    if (not e->ExceptionCheck()) {
       jclass stringClass = e->FindClass("java/lang/String");
-      if (not e->ExceptionOccurred()) {
+      if (not e->ExceptionCheck()) {
         jobjectArray a = e->NewObjectArray(ac-1, stringClass, 0);
-        if (not e->ExceptionOccurred()) {
+        if (not e->ExceptionCheck()) {
           for (int i = 1; i < ac; ++i) {
             e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
           }
@@ -528,7 +526,7 @@ main(int ac, const char** av)
   }
 
   int exitCode = 0;
-  if (e->ExceptionOccurred()) {
+  if (e->ExceptionCheck()) {
     exitCode = -1;
     e->ExceptionDescribe();
   }

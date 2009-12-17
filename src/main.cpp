@@ -178,13 +178,13 @@ main(int ac, const char** av)
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
   jclass c = e->FindClass(class_);
-  if (not e->ExceptionOccurred()) {
+  if (not e->ExceptionCheck()) {
     jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
-    if (not e->ExceptionOccurred()) {
+    if (not e->ExceptionCheck()) {
       jclass stringClass = e->FindClass("java/lang/String");
-      if (not e->ExceptionOccurred()) {
+      if (not e->ExceptionCheck()) {
         jobjectArray a = e->NewObjectArray(argc, stringClass, 0);
-        if (not e->ExceptionOccurred()) {
+        if (not e->ExceptionCheck()) {
           for (int i = 0; i < argc; ++i) {
             e->SetObjectArrayElement(a, i, e->NewStringUTF(argv[i]));
           }
@@ -196,7 +196,7 @@ main(int ac, const char** av)
   }
 
   int exitCode = 0;
-  if (e->ExceptionOccurred()) {
+  if (e->ExceptionCheck()) {
     exitCode = -1;
     e->ExceptionDescribe();
   }

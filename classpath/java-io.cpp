@@ -170,7 +170,7 @@ map(JNIEnv* e, const char* path)
         void* data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
         if (data) {
           void* p = allocate(e, sizeof(Mapping));
-          if (not e->ExceptionOccurred()) {
+          if (not e->ExceptionCheck()) {
             result = new (p)
               Mapping(static_cast<uint8_t*>(data), size, file, mapping);
           }   
@@ -186,7 +186,7 @@ map(JNIEnv* e, const char* path)
       CloseHandle(file);
     }
   }
-  if (result == 0 and not e->ExceptionOccurred()) {
+  if (result == 0 and not e->ExceptionCheck()) {
     throwNew(e, "java/io/IOException", "%d", GetLastError());
   }
   return result;
@@ -256,14 +256,14 @@ map(JNIEnv* e, const char* path)
       void* data = mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
       if (data) {
         void* p = allocate(e, sizeof(Mapping));
-        if (not e->ExceptionOccurred()) {
+        if (not e->ExceptionCheck()) {
           result = new (p) Mapping(static_cast<uint8_t*>(data), s.st_size);
         }
       }
     }
     close(fd);
   }
-  if (result == 0 and not e->ExceptionOccurred()) {
+  if (result == 0 and not e->ExceptionCheck()) {
     throwNewErrno(e, "java/io/IOException");
   }
   return result;
