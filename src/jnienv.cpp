@@ -1186,8 +1186,18 @@ NewGlobalRef(Thread* t, jobject o)
   ACQUIRE(t, t->m->referenceLock);
   
   if (o) {
+    for (Reference* r = t->m->jniReferences; r; r = r->next) {
+      if (r->target == *o) {
+        acquire(t, r);
+
+        return &(r->target);
+      }
+    }
+
     Reference* r = new (t->m->heap->allocate(sizeof(Reference)))
       Reference(*o, &(t->m->jniReferences));
+
+    acquire(t, r);
 
     return &(r->target);
   } else {
@@ -1203,7 +1213,7 @@ DeleteGlobalRef(Thread* t, jobject r)
   ACQUIRE(t, t->m->referenceLock);
   
   if (r) {
-    dispose(t, reinterpret_cast<Reference*>(r));
+    release(t, reinterpret_cast<Reference*>(r));
   }
 }
 

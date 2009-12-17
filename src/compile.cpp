@@ -7122,10 +7122,19 @@ class MyProcessor: public Processor {
   {
     if (o) {
       MyThread* t = static_cast<MyThread*>(vmt);
-      PROTECT(t, o);
+
+      for (Reference* r = t->reference; r; r = r->next) {
+        if (r->target == o) {
+          acquire(t, r);
+
+          return &(r->target);
+        }
+      }
 
       Reference* r = new (t->m->heap->allocate(sizeof(Reference)))
         Reference(o, &(t->reference));
+
+      acquire(t, r);
 
       return &(r->target);
     } else {
@@ -7137,7 +7146,7 @@ class MyProcessor: public Processor {
   disposeLocalReference(Thread* t, object* r)
   {
     if (r) {
-      vm::dispose(t, reinterpret_cast<Reference*>(r));
+      release(t, reinterpret_cast<Reference*>(r));
     }
   }
 
