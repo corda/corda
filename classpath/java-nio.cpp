@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -332,11 +332,11 @@ Java_java_nio_channels_ServerSocketChannel_natDoListen(JNIEnv *e,
 {
   int s = makeSocket(e);
   if (s < 0) return s;
-  if (e->ExceptionOccurred()) return 0;
+  if (e->ExceptionCheck()) return 0;
   
   sockaddr_in address;
   init(e, &address, host, port);
-  if (e->ExceptionOccurred()) return 0;
+  if (e->ExceptionCheck()) return 0;
 
   ::doListen(e, s, &address);
   return s;
@@ -369,13 +369,13 @@ Java_java_nio_channels_SocketChannel_natDoConnect(JNIEnv *e,
 						  jbooleanArray retVal)
 {
   int s = makeSocket(e);
-  if (e->ExceptionOccurred()) return 0;
+  if (e->ExceptionCheck()) return 0;
 
   setBlocking(e, s, blocking);
 
   sockaddr_in address;
   init(e, &address, host, port);
-  if (e->ExceptionOccurred()) return 0;
+  if (e->ExceptionCheck()) return 0;
   
   jboolean connected = ::doConnect(e, s, &address);
   e->SetBooleanArrayRegion(retVal, 0, 1, &connected);

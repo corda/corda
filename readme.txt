@@ -12,13 +12,13 @@ on Mac OS X:
  $ build/darwin-i386/avian -cp build/test Hello
  
 on Windows (MSYS):
-
+ $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386/avian -cp build/test Hello
 
 on Windows (Cygwin):
-
+ $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386/avian -cp build/test Hello
@@ -96,7 +96,9 @@ certain flags described below, all of which are optional.
 
   * bootimage - if true, create a boot image containing the pre-parsed
     class library and ahead-of-time compiled methods.  This option is
-    only valid for process=compile builds.
+    only valid for process=compile builds.  Note that you may need to
+    specify both build-arch=x86_64 and arch=x86_64 on 64-bit systems
+    where "uname -m" prints "i386".
       default: false
 
   * heapdump - if true, implement avian.Machine.dumpHeap(String),
@@ -151,6 +153,63 @@ directory containing the avian directory)
 
 This gives you the Windows JNI headers, zlib headers and library, and
 a few other useful libraries like OpenSSL, libjpeg, and libpng.
+There's also a win64 repository for 64-bit builds:
+
+  $ git clone git://oss.readytalk.com/win64.git
+
+
+Building with Microsoft the Visual C++ Compiler
+-----------------------------------------------
+
+You can also build using the MSVC compiler, which makes debugging with
+tools like WinDbg and Visual Studio much easier.  Note that you will
+still need to have GCC installed - MSVC is only used to compile the
+C++ portions of the VM, while the assembly code and helper tools are
+built using GCC.
+
+The MSVC build has been tested with Visual Studio Express Edition
+versions 8 and 9.  Other versions may also work.
+
+To build with MSVC, install Cygwin as described above and set the
+following environment variables:
+
+ $ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/X11R6/bin:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/BIN:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/Tools:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v3.5:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v2.0.50727:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/VCPackages:/cygdrive/c/Program Files/Microsoft SDKs/Windows/v6.0A/bin:/cygdrive/c/WINDOWS/system32:/cygdrive/c/WINDOWS:/cygdrive/c/WINDOWS/System32/Wbem"
+
+ $ export LIBPATH="C:\WINDOWS\Microsoft.NET\Framework\v3.5;C:\WINDOWS\Microsoft.NET\Framework\v2.0.50727;C:\Program Files\Microsoft Visual Studio 9.0\VC\LIB;"
+
+ $ export VCINSTALLDIR="C:\Program Files\Microsoft Visual Studio 9.0\VC"
+
+ $ export LIB="C:\Program Files\Microsoft Visual Studio 9.0\VC\LIB;C:\Program Files\Microsoft SDKs\Windows\v6.0A\lib;"
+
+ $ export INCLUDE="C:\Program Files\Microsoft Visual Studio 9.0\VC\INCLUDE;C:\Program Files\Microsoft SDKs\Windows\v6.0A\include;"
+
+Adjust these definitions as necessary according to your MSVC
+installation.
+
+Finally, build with the msvc flag set to the MSVC tool directory:
+
+ $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC"
+
+
+Building with GNU Classpath
+---------------------------
+
+ ** Please note that this feature is still under development and is
+    neither complete nor well-tested. **
+
+By default, Avian uses its own lightweight class library.  However,
+that library only contains a relatively small subset of the classes
+and methods included in the JRE.  If your application requires
+features beyond that subset, you may want to tell Avian to use GNU
+Classpath instead.  To do so, specify the directory where Classpath is
+installed, e.g.:
+
+ $ make clean
+ $ make gnu=/usr/local/classpath-0.98
+
+This build will use the classes and native code from Classpath, except
+that certain core classes are replaced with implementations from the
+Avian class library for compatibility with the VM.
 
 
 Installing
@@ -247,13 +306,13 @@ main(int ac, const char** av)
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
   jclass c = e->FindClass("Hello");
-  if (not e->ExceptionOccurred()) {
+  if (not e->ExceptionCheck()) {
     jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
-    if (not e->ExceptionOccurred()) {
+    if (not e->ExceptionCheck()) {
       jclass stringClass = e->FindClass("java/lang/String");
-      if (not e->ExceptionOccurred()) {
+      if (not e->ExceptionCheck()) {
         jobjectArray a = e->NewObjectArray(ac-1, stringClass, 0);
-        if (not e->ExceptionOccurred()) {
+        if (not e->ExceptionCheck()) {
           for (int i = 1; i < ac; ++i) {
             e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
           }
@@ -265,7 +324,7 @@ main(int ac, const char** av)
   }
 
   int exitCode = 0;
-  if (e->ExceptionOccurred()) {
+  if (e->ExceptionCheck()) {
     exitCode = -1;
     e->ExceptionDescribe();
   }
@@ -449,13 +508,13 @@ main(int ac, const char** av)
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
   jclass c = e->FindClass("Hello");
-  if (not e->ExceptionOccurred()) {
+  if (not e->ExceptionCheck()) {
     jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
-    if (not e->ExceptionOccurred()) {
+    if (not e->ExceptionCheck()) {
       jclass stringClass = e->FindClass("java/lang/String");
-      if (not e->ExceptionOccurred()) {
+      if (not e->ExceptionCheck()) {
         jobjectArray a = e->NewObjectArray(ac-1, stringClass, 0);
-        if (not e->ExceptionOccurred()) {
+        if (not e->ExceptionCheck()) {
           for (int i = 1; i < ac; ++i) {
             e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
           }
@@ -467,7 +526,7 @@ main(int ac, const char** av)
   }
 
   int exitCode = 0;
-  if (e->ExceptionOccurred()) {
+  if (e->ExceptionCheck()) {
     exitCode = -1;
     e->ExceptionDescribe();
   }

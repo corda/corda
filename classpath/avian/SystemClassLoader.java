@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -29,7 +29,7 @@ public class SystemClassLoader extends ClassLoader {
 
   protected native Class findClass(String name) throws ClassNotFoundException;
 
-  protected native Class findLoadedClass(String name);
+  protected native Class reallyFindLoadedClass(String name);
 
   private native boolean resourceExists(String name);
 

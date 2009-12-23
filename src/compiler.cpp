@@ -2156,7 +2156,8 @@ class MemorySite: public Site {
 
   virtual SiteMask mask(Context* c) {
     return SiteMask(1 << MemoryOperand, 0, (base == c->arch->stack())
-                    ? offsetToFrameIndex(c, offset) : NoFrameIndex);
+                    ? static_cast<int>(offsetToFrameIndex(c, offset))
+                    : NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context* c, unsigned index) {
@@ -2439,6 +2440,19 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
   }
  
   if (cost) {
+    if (DebugMoves) {
+      char srcb[256]; src->toString(c, srcb, 256);
+      char dstb[256]; dst->toString(c, dstb, 256);
+      fprintf(stderr, "maybe move %s to %s for %p to %p\n",
+              srcb, dstb, value, value);
+    }
+
+    src->freeze(c, value);
+
+    addSite(c, value, dst);
+    
+    src->thaw(c, value);    
+
     if (not src->match(c, srcMask)) {
       src->freeze(c, value);
       dst->freeze(c, value);
@@ -2449,6 +2463,8 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
       tmpRead.successor_ = value;
 
       Site* tmp = pickTargetSite(c, &tmpRead, true);
+
+      addSite(c, value, tmp);
 
       move(c, value, src, tmp);
       
@@ -2851,10 +2867,9 @@ move(Context* c, Value* value, Site* src, Site* dst)
             srcb, dstb, value, value);
   }
 
+  assert(c, findSite(c, value, dst));
+
   src->freeze(c, value);
-
-  addSite(c, value, dst);
-
   dst->freeze(c, value);
   
   unsigned srcSize;
@@ -3197,7 +3212,7 @@ class CallEvent: public Event {
       }
 
       for (unsigned i = 0; i < stackArgumentFootprint; ++i) {
-        Value* v = arguments[i];
+        Value* v = RUNTIME_ARRAY_BODY(arguments)[i];
         if (v) {
           int frameIndex = i + frameOffset;
 
@@ -5279,10 +5294,6 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 
       Site* s = pickSourceSite
         (c, r, 0, 0, &mask, true, false, true, acceptForResolve);
-      if (s == 0) {
-        s = pickSourceSite
-          (c, r, 0, 0, &mask, false, false, true, acceptForResolve);
-      }
 
       if (s) {
         if (DebugControl) {
@@ -5317,12 +5328,9 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 
       Site* s = pickSourceSite
         (c, r, 0, 0, &mask, true, true, true, acceptForResolve);
+
       if (s == 0) {
-        s = pickSourceSite
-          (c, r, 0, 0, &mask, false, true, true, acceptForResolve);
-        if (s == 0) {
-          s = maybeMove(c, v, mask, false, true, ResolveRegisterReserveCount);
-        }
+        s = maybeMove(c, v, mask, false, true, ResolveRegisterReserveCount);
       }
 
       freeze(c, frozen, s, v);

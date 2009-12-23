@@ -8,7 +8,6 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-
 #include "types.h"
 
 #define LOCAL(x) .L##x
@@ -168,8 +167,8 @@ LOCAL(exit):
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
    movq   %rdx,%rbp
-   movq   8(%rsp),%rax
-   movq   16(%rsp),%rdx
+   movq   40(%rsp),%rax
+   movq   48(%rsp),%rdx
    movq   %r8,%rsp
    movq   %r9,%rbx
    jmp    *%rcx

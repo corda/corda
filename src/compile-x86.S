@@ -22,7 +22,7 @@
 
 #ifdef __x86_64__
 
-#ifdef __MINGW32__
+#if defined __MINGW32__ || defined __CYGWIN32__
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 64
 
@@ -107,9 +107,9 @@ GLOBAL(vmJumpAndInvoke):
    //     %rdx: address
    //     %r8 : base
    //     %r9 : (unused)
-   //  8(%rsp): argumentFootprint
-   // 16(%rsp): arguments
-   // 24(%rsp): frameSize
+   // 40(%rsp): argumentFootprint
+   // 48(%rsp): arguments
+   // 56(%rsp): frameSize
 
    movq   %r8,%rbp
    
@@ -118,20 +118,20 @@ GLOBAL(vmJumpAndInvoke):
    movq   %rbp,%r9
          
    // allocate new frame, adding room for callee-saved registers
-   movl   24(%rsp),%eax
+   movl   56(%rsp),%eax
    subq   %rax,%r9
    subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
    
    movq   %rcx,%rbx
    
    // set return address
-   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   leaq   GLOBAL(vmInvoke_returnAddress)(%rip),%r10
    movq   %r10,(%r9)
    
    // copy arguments into place
    movq   $0,%r11
-   movq   16(%rsp),%r8
-   movq   8(%rsp),%rax
+   movl   48(%rsp),%r8d
+   movl   40(%rsp),%eax
    jmp    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
@@ -154,7 +154,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    int3
 #endif // not AVIAN_CONTINUATIONS
 
-#else // not __MINGW32__
+#else // not __MINGW32__ || __CYGWIN32__
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 48
 
@@ -252,7 +252,7 @@ GLOBAL(vmJumpAndInvoke):
    movq   %rdi,%rbx
    
    // set return address
-   movq   vmInvoke_returnAddress@GOTPCREL(%rip),%r10
+   movq   GLOBAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
    movq   %r10,(%rcx)
    
    // copy arguments into place
@@ -279,7 +279,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    int3
 #endif // not AVIAN_CONTINUATIONS
 
-#endif // not __MINGW32__
+#endif // not __MINGW32__ || __CYGWIN32__
    
 #elif defined __i386__
 
@@ -396,9 +396,18 @@ GLOBAL(vmJumpAndInvoke):
    movl   4(%esp),%ebx
    
    // set return address
+#if defined __MINGW32__ || defined __CYGWIN32__
+   movl   $vmInvoke_returnAddress,%esi
+#else
    call   LOCAL(getPC)
+#  if defined __APPLE__
+LOCAL(vmJumpAndInvoke_offset):
+   leal   vmInvoke_returnAddress-LOCAL(vmJumpAndInvoke_offset)(%esi),%esi
+#  else
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
    movl   vmInvoke_returnAddress@GOT(%esi),%esi
+#  endif
+#endif
    movl   %esi,(%ecx)
    
    // copy arguments into place

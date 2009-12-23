@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -49,8 +49,10 @@ public abstract class ClassLoader {
     throw new ClassNotFoundException();
   }
 
-  protected Class findLoadedClass(String name) {
-    return null;
+  protected abstract Class reallyFindLoadedClass(String name);
+
+  protected final Class findLoadedClass(String name) {
+    return reallyFindLoadedClass(name);
   }
 
   public Class loadClass(String name) throws ClassNotFoundException {

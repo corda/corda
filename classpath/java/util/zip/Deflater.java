@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,7 +10,8 @@
 
 package java.util.zip;
 
-public class Inflater {
+public class Deflater {
+  private static final int DEFAULT_LEVEL = 6; // default compression level (6 is default for gzip)
   private static final int Z_OK = 0;
   private static final int Z_STREAM_END = 1;
   private static final int Z_NEED_DICT = 2;
@@ -27,12 +28,12 @@ public class Inflater {
   private boolean finished;
   private final boolean nowrap;
 
-  public Inflater(boolean nowrap) {
+  public Deflater(boolean nowrap) {
     this.nowrap = nowrap;
-    peer = make(nowrap);
+    peer = make(nowrap, DEFAULT_LEVEL);
   }
 
-  public Inflater() {
+  public Deflater() {
     this(false);
   }
 
@@ -42,7 +43,7 @@ public class Inflater {
     }
   }
 
-  private static native long make(boolean nowrap);
+  private static native long make(boolean nowrap, int level);
 
   public boolean finished() {
     return finished;
@@ -60,6 +61,15 @@ public class Inflater {
     return length;
   }
   
+  public void setLevel(int level) throws IllegalArgumentException {
+    if (level < 0 || level > 9) {
+      throw new IllegalArgumentException("Valid compression levels are 0-9");
+    }
+
+    dispose(peer);
+    peer = make(nowrap, level);
+  }
+  
   public void setInput(byte[] input) {
     setInput(input, 0, input.length);
   }
@@ -72,17 +82,17 @@ public class Inflater {
 
   public void reset() {
     dispose();
-    peer = make(nowrap);
+    peer = make(nowrap, DEFAULT_LEVEL);
     input = null;
     offset = length = 0;
     needDictionary = finished = false;
   }
 
-  public int inflate(byte[] output) throws DataFormatException {
-    return inflate(output, 0, output.length);
+  public int deflate(byte[] output) throws DataFormatException {
+    return deflate(output, 0, output.length);
   }
 
-  public int inflate(byte[] output, int offset, int length)
+  public int deflate(byte[] output, int offset, int length)
     throws DataFormatException
   {
     final int zlibResult = 0;
@@ -98,7 +108,8 @@ public class Inflater {
     }
 
     int[] results = new int[3];
-    inflate(peer, input, this.offset, this.length,
+    deflate(peer, 
+            input, this.offset, this.length,
             output, offset, length, results);
 
     if (results[zlibResult] < 0) {
@@ -121,7 +132,7 @@ public class Inflater {
     return results[outputCount];
   }
 
-  private static native void inflate
+  private static native void deflate
     (long peer,
      byte[] input, int inputOffset, int inputLength,
      byte[] output, int outputOffset, int outputLength,

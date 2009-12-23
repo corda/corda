@@ -64,12 +64,12 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           object method = arrayBody(t, classMethodTable(t, c), i);
           if ((methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE))
               and ((methodName == 0
-                    or strcmp
+                    or ::strcmp
                     (reinterpret_cast<char*>
                      (&byteArrayBody
                       (t, vm::methodName(t, method), 0)), methodName) == 0)
                    and (methodSpec == 0
-                        or strcmp
+                        or ::strcmp
                         (reinterpret_cast<char*>
                          (&byteArrayBody
                           (t, vm::methodSpec(t, method), 0)), methodSpec)

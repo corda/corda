@@ -200,8 +200,8 @@ Avian_avian_SystemClassLoader_defineClass
   t->m->heap->free(buffer, length);
 
   if (c) {
+    PROTECT(t, c);
     if (getClassLoaderMap(t, loader) == 0) {
-      PROTECT(t, c);
       object map = makeHashMap(t, 0, 0);
       set(t, loader, ClassLoaderMap, map);
     }
@@ -214,7 +214,7 @@ Avian_avian_SystemClassLoader_defineClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_findLoadedClass
+Avian_avian_SystemClassLoader_reallyFindLoadedClass
 (Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[1]);

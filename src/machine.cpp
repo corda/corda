@@ -173,7 +173,9 @@ turnOffTheLights(Thread* t)
 
     void (*function)(Thread*, object);
     memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
+    if (function) {
+      function(t, finalizerTarget(t, f));
+    }
   }
 
   for (object* p = &(t->m->tenuredFinalizers); *p;) {
@@ -182,7 +184,9 @@ turnOffTheLights(Thread* t)
 
     void (*function)(Thread*, object);
     memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    function(t, finalizerTarget(t, f));
+    if (function) {
+      function(t, finalizerTarget(t, f));
+    }
   }
 
   Machine* m = t->m;
@@ -230,7 +234,7 @@ makeJavaThread(Thread* t, Thread* parent)
   if (parent) {
     group = threadGroup(t, parent->javaThread);
   } else {
-    group = makeThreadGroup(t, 0, 0);
+    group = makeThreadGroup(t, 0, 0, 0);
   }
 
   const unsigned NewState = 0;
@@ -1848,8 +1852,9 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
   super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
 
   object class_ = t->m->processor->makeClass
-    (t, 0, BootstrapFlag, fixedSize, arrayElementSize, 0, mask, 0, 0, super, 0,
-     0, 0, 0, 0, 0, t->m->loader, vtableLength);
+    (t, 0, BootstrapFlag, fixedSize, arrayElementSize,
+     arrayElementSize ? 1 : 0, mask, 0, 0, super, 0, 0, 0, 0, 0, 0,
+     t->m->loader, vtableLength);
 
   set(t, t->m->types, ArrayBody + (type * BytesPerWord), class_);
 }
@@ -1950,6 +1955,23 @@ boot(Thread* t)
     |= PrimitiveFlag;
   classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
     |= PrimitiveFlag;
+
+  set(t, arrayBody(t, m->types, Machine::BooleanArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JbooleanType));
+  set(t, arrayBody(t, m->types, Machine::ByteArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JbyteType));
+  set(t, arrayBody(t, m->types, Machine::CharArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JcharType));
+  set(t, arrayBody(t, m->types, Machine::ShortArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JshortType));
+  set(t, arrayBody(t, m->types, Machine::IntArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JintType));
+  set(t, arrayBody(t, m->types, Machine::LongArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JlongType));
+  set(t, arrayBody(t, m->types, Machine::FloatArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JfloatType));
+  set(t, arrayBody(t, m->types, Machine::DoubleArrayType), ClassStaticTable,
+      arrayBody(t, m->types, Machine::JdoubleType));
 
   m->classMap = makeHashMap(t, 0, 0);
 

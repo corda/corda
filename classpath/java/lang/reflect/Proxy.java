@@ -82,6 +82,14 @@ public class Proxy {
     }
   }
 
+  public static boolean isProxyClass(Class c) {
+    return c.getName().startsWith("Proxy-");
+  }
+
+  public static InvocationHandler getInvocationHandler(Object proxy) {
+    return ((Proxy) proxy).h;
+  }
+
   private static void set4(byte[] array, int offset, int v) {
     array[offset    ] = (byte) ((v >>> 24) & 0xFF);
     array[offset + 1] = (byte) ((v >>> 16) & 0xFF);

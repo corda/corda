@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -40,6 +40,10 @@ public class Constructor<T> extends AccessibleObject
 
   public Class[] getParameterTypes() {
     return method.getParameterTypes();
+  }
+
+  public Class[] getExceptionTypes() {
+    return method.getExceptionTypes();
   }
 
   public int getModifiers() {

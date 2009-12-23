@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 0.2
+version = 0.3
 
 build-arch := $(shell uname -m | sed 's/^i.86$$/i386/')
 ifeq (Power,$(filter Power,$(build-arch)))
@@ -54,7 +54,7 @@ ifdef gnu
 	gnu-object-dep = $(build)/gnu-object.dep
 	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
 	gnu-lflags = -lgmp
-	gnu-objects := $(shell find $(build)/gnu-objects -name "*.o") 
+	gnu-objects = $(shell find $(build)/gnu-objects -name "*.o") 
 endif
 
 root := $(shell (cd .. && pwd))
@@ -171,6 +171,12 @@ ifeq ($(platform),darwin)
 		asmflags += -arch i386
 		lflags += -arch i386
 	endif
+
+	ifeq ($(arch),x86_64)
+		cflags += -arch x86_64
+		asmflags += -arch x86_64
+		lflags += -arch x86_64
+	endif
 endif
 
 ifeq ($(platform),windows)
@@ -265,19 +271,17 @@ ifdef msvc
 		-I"$(windows-java-home)/include/win32"
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
-		-DEFAULTLIB:zlib -MANIFEST
+		-DEFAULTLIB:zlib -MANIFEST -debug
 	output = -Fo$(1)
 
 	ifeq ($(mode),debug)
 		cflags += -Od -Zi -MDd
-		lflags += -debug
 	endif
 	ifeq ($(mode),debug-fast)
 		cflags += -Od -Zi -DNDEBUG
-		lflags += -debug
 	endif
 	ifeq ($(mode),fast)
-		cflags += -Ob2it -GL -Zi -DNDEBUG
+		cflags += -O2 -GL -Zi -DNDEBUG
 		lflags += -LTCG
 	endif
 	ifeq ($(mode),small)
@@ -383,7 +387,13 @@ bootimage-object = $(native-build)/bootimage-bin.o
 
 ifeq ($(bootimage),true)
 	ifneq ($(build-arch),$(arch))
-		error "can't cross-build a bootimage"
+$(error "bootimage cross-builds not yet supported")
+	endif
+
+	ifeq ($(arch),x86_64)
+		ifneq ($(build-platform),$(platform))
+$(error "bootimage cross-builds not yet supported")
+		endif
 	endif
 
 	vm-classpath-object = $(bootimage-object)
@@ -434,7 +444,6 @@ gnu-overrides = \
 	avian/*.class \
 	avian/resource/*.class \
 	java/lang/Class.class \
-	java/lang/Class\$$*.class \
 	java/lang/Enum.class \
 	java/lang/InheritableThreadLocal.class \
 	java/lang/Object.class \
@@ -457,7 +466,9 @@ gnu-overrides = \
 	java/lang/reflect/AccessibleObject.class \
 	java/lang/reflect/Constructor.class \
 	java/lang/reflect/Field.class \
-	java/lang/reflect/Method.class
+	java/lang/reflect/Method.class \
+	java/lang/reflect/Proxy.class \
+	java/lang/reflect/Proxy\$$*.class
 
 test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))

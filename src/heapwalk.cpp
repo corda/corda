@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2009, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -14,6 +14,8 @@
 using namespace vm;
 
 namespace {
+
+namespace local {
 
 const uintptr_t PointerShift = log(BytesPerWord);
 
@@ -157,7 +159,7 @@ find(Context* c, object p)
 int
 Set::find(object value)
 {
-  Set::Entry* e = ::find(context, value);
+  Set::Entry* e = local::find(context, value);
   if (e) {
     return e->number;
   } else {
@@ -328,6 +330,8 @@ class MyHeapWalker: public HeapWalker {
   HeapVisitor* visitor;
 };
 
+} // namespace local
+
 } // namespace
 
 namespace vm {
@@ -335,7 +339,8 @@ namespace vm {
 HeapWalker*
 makeHeapWalker(Thread* t, HeapVisitor* v)
 {
-  return new (t->m->heap->allocate(sizeof(MyHeapWalker))) MyHeapWalker(t, v);
+  return new (t->m->heap->allocate(sizeof(local::MyHeapWalker)))
+    local::MyHeapWalker(t, v);
 }
 
 } // namespace vm

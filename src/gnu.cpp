@@ -351,7 +351,7 @@ Avian_java_lang_VMClassLoader_getPrimitiveClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_ClassLoader_defineClass
+Avian_avian_SystemClassLoader_defineClass
 (Thread*, object, uintptr_t*);
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -367,7 +367,7 @@ Avian_java_lang_VMClassLoader_defineClass
 //   fprintf(stderr, "define class %s in %p\n", n,
 //           reinterpret_cast<void*>(arguments[0]));
 
-  return Avian_java_lang_ClassLoader_defineClass(t, 0, args);
+  return Avian_avian_SystemClassLoader_defineClass(t, 0, args);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

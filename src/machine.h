@@ -1131,7 +1131,8 @@ class Reference {
   Reference(object target, Reference** handle):
     target(target),
     next(*handle),
-    handle(handle)
+    handle(handle),
+    count(0)
   {
     if (next) {
       next->handle = &next;
@@ -1142,6 +1143,7 @@ class Reference {
   object target;
   Reference* next;
   Reference** handle;
+  unsigned count;
 };
 
 class Machine {
@@ -1402,6 +1404,20 @@ dispose(Thread* t, Reference* r)
     r->next->handle = r->handle;
   }
   t->m->heap->free(r, sizeof(*r));
+}
+
+inline void
+acquire(Thread*, Reference* r)
+{
+  ++ r->count;
+}
+
+inline void
+release(Thread* t, Reference* r)
+{
+  if ((-- r->count) == 0) {
+    dispose(t, r);
+  }
 }
 
 void

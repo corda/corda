@@ -90,8 +90,8 @@ import java.util.concurrent.Callable;
  * <h3>Winding, Unwinding, and Rewinding</h3>
  *
  * <p>Traditionally, Java provides one way to wind the execution stack
- * (recursive method calls) and two ways to unwind it (normal returns
- * and exception unwinding).  With continuations, we add a new way to
+ * (method calls) and two ways to unwind it (normal returns and
+ * exception unwinding).  With continuations, we add a new way to
  * rewind the stack and a new way to unwind it.
  *
  * <p>The call stack of a continuation may share frames with other
@@ -149,7 +149,7 @@ public class Continuations {
    *
    * <p>If <code>thunk.call()</code> calls a continuation (directly or
    * via a subroutine) which does not include the current call to
-   * <code>dynamicWind<code>, <code>after.run()</code> will be called
+   * <code>dynamicWind</code>, <code>after.run()</code> will be called
    * before control passes to that continuation.  If this call throws
    * an exception, the exception will propagate to the current caller
    * of <code>dynamicWind</code>.

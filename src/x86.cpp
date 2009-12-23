@@ -981,7 +981,7 @@ sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
       modrm(c, 0xc0, a, b);
     } else {
       opcode(c, 0xf2);
-      maybeRex(c, 8, a, b);
+      maybeRex(c, 4, a, b);
       opcode(c, 0x0f, 0x10);
       modrm(c, 0xc0, a, b);
     } 
