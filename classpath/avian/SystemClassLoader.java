@@ -29,7 +29,7 @@ public class SystemClassLoader extends ClassLoader {
 
   protected native Class findClass(String name) throws ClassNotFoundException;
 
-  protected native Class findLoadedClass(String name);
+  protected native Class reallyFindLoadedClass(String name);
 
   private native boolean resourceExists(String name);
 

@@ -234,7 +234,7 @@ makeJavaThread(Thread* t, Thread* parent)
   if (parent) {
     group = threadGroup(t, parent->javaThread);
   } else {
-    group = makeThreadGroup(t, 0, 0);
+    group = makeThreadGroup(t, 0, 0, 0);
   }
 
   const unsigned NewState = 0;

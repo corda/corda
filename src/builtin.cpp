@@ -214,7 +214,7 @@ Avian_avian_SystemClassLoader_defineClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_findLoadedClass
+Avian_avian_SystemClassLoader_reallyFindLoadedClass
 (Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[1]);
