@@ -232,6 +232,16 @@ Avian_avian_SystemClassLoader_findClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_SystemClassLoader_resolveClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object spec = reinterpret_cast<object>(arguments[1]);
+
+  return reinterpret_cast<int64_t>(resolveClass(t, loader, spec));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_resourceExists
 (Thread* t, object, uintptr_t* arguments)
 {
