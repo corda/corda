@@ -1910,6 +1910,10 @@ boot(Thread* t)
     (t, m->types, Machine::SystemClassLoaderType);
   set(t, m->loader, 0, loaderClass);
 
+#ifdef AVIAN_GNU
+  classLoaderInitialized(t, m->loader) = true;
+#endif
+
   object objectClass = arrayBody(t, m->types, Machine::JobjectType);
 
   object classClass = arrayBody(t, m->types, Machine::ClassType);
@@ -3355,12 +3359,12 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   }
 
   if (o == 0) {
-    if (find == findFieldInClass) {
-      o = findInInterfaces(t, originalClass, name, spec, find);
-    }
-
     for (; o == 0 and class_; class_ = classSuper(t, class_)) {
       o = find(t, class_, name, spec);
+    }
+
+    if (o == 0 and find == findFieldInClass) {
+      o = findInInterfaces(t, originalClass, name, spec, find);
     }
   }
 
