@@ -5327,7 +5327,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
                     c->arch->generalRegisterMask(), AnyFrameIndex);
 
       Site* s = pickSourceSite
-        (c, r, 0, 0, &mask, true, true, true, acceptForResolve);
+        (c, r, 0, 0, &mask, false, true, true, acceptForResolve);
 
       if (s == 0) {
         s = maybeMove(c, v, mask, false, true, ResolveRegisterReserveCount);
