@@ -416,12 +416,16 @@ Avian_java_lang_VMClassLoader_loadClass
 {
   uintptr_t args[] = { 0, arguments[0] };
 
-//   object name = reinterpret_cast<object>(arguments[0]);
-//   char n[stringLength(t, name) + 1];
-//   stringChars(t, name, n);
-//   fprintf(stderr, "load bootstrap class %s in %p\n", n, t->m->loader);
+  // object name = reinterpret_cast<object>(arguments[0]);
+  // char n[stringLength(t, name) + 1];
+  // stringChars(t, name, n);
+  // fprintf(stderr, "load bootstrap class %s in %p\n", n, t->m->loader);
 
-  return Avian_avian_SystemClassLoader_findClass(t, 0, args);
+  int64_t result = Avian_avian_SystemClassLoader_findClass(t, 0, args);
+
+  // fprintf(stderr, "result %p\n", reinterpret_cast<void*>(result));
+
+  return result;
 }
 
 extern "C" JNIEXPORT void JNICALL

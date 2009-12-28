@@ -33,6 +33,9 @@ public class SystemClassLoader extends ClassLoader {
 
   private native boolean resourceExists(String name);
 
+  private static native Class resolveClass(ClassLoader loader, byte[] spec)
+    throws ClassNotFoundException;
+
   protected URL findResource(String name) {
     if (resourceExists(name)) {
       try {
@@ -45,11 +48,18 @@ public class SystemClassLoader extends ClassLoader {
   private static Class loadClass(ClassLoader loader,
                                  byte[] nameBytes, int offset, int length)
   {
-    String name = new String(nameBytes, offset, length, false);
+    byte[] spec = new byte[length + 1];
+    System.arraycopy(nameBytes, offset, spec, 0, length);
+
     try {
-      return loader.loadClass(name);
+      Class c = resolveClass(loader, spec);
+      if (c == null) {
+        throw new NoClassDefFoundError();
+      }
+      return c;
     } catch (ClassNotFoundException e) {
-      NoClassDefFoundError error = new NoClassDefFoundError(name);
+      NoClassDefFoundError error = new NoClassDefFoundError
+        (new String(nameBytes, offset, length, false));
       error.initCause(e);
       throw error;
     }
@@ -158,7 +168,7 @@ public class SystemClassLoader extends ClassLoader {
   private static void parseAnnotationTable(ClassLoader loader,
                                            Addendum addendum)
   {
-    if (addendum != null && addendum.annotationTable != null) {
+    if (addendum != null && addendum.annotationTable instanceof byte[]) {
       try {
         addendum.annotationTable = parseAnnotationTable
           (loader, addendum.pool, new ByteArrayInputStream
