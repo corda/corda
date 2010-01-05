@@ -160,6 +160,7 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   TCHAR buffer[MAX_PATH];
   GetTempPath(MAX_PATH, buffer);
   setProperty(t, method, properties, "java.io.tmpdir", buffer);
+  setProperty(t, method, properties, "java.home", buffer);
 
   setProperty(t, method, properties, "user.home",
               _wgetenv(L"USERPROFILE"), "%ls");
@@ -178,6 +179,7 @@ Avian_gnu_classpath_VMSystemProperties_preInit
   setProperty(t, method, properties, "os.name", "Linux");
 #  endif
   setProperty(t, method, properties, "java.io.tmpdir", "/tmp");
+  setProperty(t, method, properties, "java.home", "/tmp");
   setProperty(t, method, properties, "user.home", getenv("HOME"));
   setProperty(t, method, properties, "user.dir", getenv("PWD"));
 #endif
