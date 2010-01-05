@@ -54,7 +54,8 @@ class Compiler {
   virtual void restoreState(State* state) = 0;
 
   virtual Subroutine* startSubroutine() = 0;
-  virtual void endSubroutine(Subroutine* subroutine) = 0;
+  virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address)
+  = 0;
   virtual void linkSubroutine(Subroutine* subroutine) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,

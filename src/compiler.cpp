@@ -4790,8 +4790,10 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
 
 class JumpEvent: public Event {
  public:
-  JumpEvent(Context* c, UnaryOperation type, Value* address, bool exit):
-    Event(c), type(type), address(address), exit(exit)
+  JumpEvent(Context* c, UnaryOperation type, Value* address, bool exit,
+            bool cleanLocals):
+    Event(c), type(type), address(address), exit(exit),
+    cleanLocals(cleanLocals)
   {
     bool thunk;
     uint8_t typeMask;
@@ -4815,6 +4817,13 @@ class JumpEvent: public Event {
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
     }
+
+    if (cleanLocals) {
+      for (FrameIterator it(c, 0, c->locals); it.hasMore();) {
+        FrameIterator::Element e = it.next(c);
+        clean(c, e.value, 0);
+      }
+    }
   }
 
   virtual bool isBranch() { return true; }
@@ -4826,13 +4835,15 @@ class JumpEvent: public Event {
   UnaryOperation type;
   Value* address;
   bool exit;
+  bool cleanLocals;
 };
 
 void
-appendJump(Context* c, UnaryOperation type, Value* address, bool exit = false)
+appendJump(Context* c, UnaryOperation type, Value* address, bool exit = false,
+           bool cleanLocals = false)
 {
   append(c, new (c->zone->allocate(sizeof(JumpEvent)))
-         JumpEvent(c, type, address, exit));
+         JumpEvent(c, type, address, exit, cleanLocals));
 }
 
 class BoundsCheckEvent: public Event {
@@ -5035,31 +5046,6 @@ appendSaveLocals(Context* c)
 {
   append(c, new (c->zone->allocate(sizeof(SaveLocalsEvent)))
          SaveLocalsEvent(c));
-}
-
-class CleanLocalsEvent: public Event {
- public:
-  CleanLocalsEvent(Context* c):
-    Event(c)
-  { }
-
-  virtual const char* name() {
-    return "CleanLocalsEvent";
-  }
-
-  virtual void compile(Context* c) {
-    for (FrameIterator it(c, 0, c->locals); it.hasMore();) {
-      FrameIterator::Element e = it.next(c);
-      clean(c, e.value, 0);
-    }
-  }
-};
-
-void
-appendCleanLocals(Context* c)
-{
-  append(c, new (c->zone->allocate(sizeof(CleanLocalsEvent)))
-         CleanLocalsEvent(c));
 }
 
 class DummyEvent: public Event {
@@ -5923,8 +5909,9 @@ class MyCompiler: public Compiler {
       MySubroutine;
   }
 
-  virtual void endSubroutine(Subroutine* subroutine) {
-    appendCleanLocals(&c);
+  virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address) {
+    appendSaveLocals(&c);
+    appendJump(&c, Jump, static_cast<Value*>(address), false, true);
     static_cast<MySubroutine*>(subroutine)->forkState = local::saveState(&c);
   }
 
