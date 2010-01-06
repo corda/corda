@@ -1638,7 +1638,9 @@ class Frame {
   }
 
   void returnFromSubroutine(unsigned returnAddressLocal) {
-    c->endSubroutine(subroutine->handle);
+    c->returnFromSubroutine
+      (subroutine->handle, loadLocal(context, 1, returnAddressLocal));
+
     subroutine->stackIndex = localOffsetFromStack
       (t, translateLocalIndex(context, 1, returnAddressLocal),
        context->method);
@@ -4670,8 +4672,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case ret: {
       unsigned index = codeBody(t, code, ip);
-      c->saveLocals();
-      c->jmp(loadLocal(context, 1, index));
       frame->returnFromSubroutine(index);
     } return;
 
