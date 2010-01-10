@@ -452,11 +452,17 @@ Java_java_io_File_readDir(JNIEnv* e, jclass, jlong handle)
 {
   Directory* d = reinterpret_cast<Directory*>(handle);
   
-  const char* s = d->next();
-  if (s) {
-    return e->NewStringUTF(s);
-  } else {
-    return 0;
+  while (true) {
+    const char* s = d->next();
+    if (s) {
+      if (strcmp(s, ".") == 0 || strcmp(s, "..") == 0) {
+        // skip . or .. and try again
+      } else {
+        return e->NewStringUTF(s);
+      }
+    } else {
+      return 0;
+    }
   }
 }
 
@@ -485,13 +491,20 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_readDir(JNIEnv* e, jclass, jlong handle)
 {
   struct dirent * directoryEntry;
-  
+
   if (handle!=0) {
-    directoryEntry = readdir(reinterpret_cast<DIR*>(handle));
-    if (directoryEntry == NULL) {
-      return NULL;
+    while (true) {
+      directoryEntry = readdir(reinterpret_cast<DIR*>(handle));
+      if (directoryEntry == NULL) {
+        return NULL;
+      } else if (strcmp(directoryEntry->d_name, ".") == 0
+                 || strcmp(directoryEntry->d_name, "..") == 0)
+      {
+        // skip . or .. and try again
+      } else {
+        return e->NewStringUTF(directoryEntry->d_name);
+      }
     }
-    return e->NewStringUTF(directoryEntry->d_name);
   }
   return NULL;
 }
