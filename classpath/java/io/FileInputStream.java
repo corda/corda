@@ -55,7 +55,9 @@ public class FileInputStream extends InputStream {
   }
 
   public void close() throws IOException {
-    close(fd);
-    fd = -1;
+    if (fd != -1) {
+      close(fd);
+      fd = -1;
+    }
   }
 }
