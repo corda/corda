@@ -22,7 +22,7 @@ public class BufferedInputStream extends InputStream {
   }
   
   public BufferedInputStream(InputStream in) {
-    this(in, 32);
+    this(in, 4096);
   }
 
   private void fill() throws IOException {
