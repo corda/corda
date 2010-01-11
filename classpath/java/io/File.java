@@ -24,7 +24,7 @@ public class File {
 
   public File(String path) {
     if (path == null) throw new NullPointerException();
-    this.path = path;
+    this.path = normalize(path);
   }
 
   public File(String parent, String child) {
@@ -33,6 +33,14 @@ public class File {
 
   public File(File parent, String child) {
     this(parent.getPath() + FileSeparator + child);
+  }
+
+  private static String normalize(String path) {
+    if ("\\".equals(FileSeparator)) {
+      return path.replace('/', '\\');
+    } else {
+      return path;
+    }
   }
 
   public static native boolean rename(String old, String new_);
