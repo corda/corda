@@ -158,7 +158,7 @@ There's also a win64 repository for 64-bit builds:
   $ git clone git://oss.readytalk.com/win64.git
 
 
-Building with Microsoft the Visual C++ Compiler
+Building with the Microsoft Visual C++ Compiler
 -----------------------------------------------
 
 You can also build using the MSVC compiler, which makes debugging with
