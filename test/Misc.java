@@ -5,6 +5,8 @@ public class Misc {
 
   private static volatile int volatileStatic;
 
+  private static volatile long volatileStaticLong;
+
   private final int NonStaticConstant = 42;
 
   private int gamma;
@@ -131,6 +133,7 @@ public class Misc {
       beta = 42;
       alpha = 43;
       volatileStatic = 55;
+      volatileStaticLong = 9L;
       int e = beta;
       int f = alpha;
       m.volatileMember = 23;
@@ -141,6 +144,7 @@ public class Misc {
       expect(alpha == 43);
       expect(m.gamma == 44);
       expect(volatileStatic == 55);
+      expect(volatileStaticLong == 9L);
       expect(m.volatileMember == 27);
     }
 
