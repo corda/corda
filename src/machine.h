@@ -2508,7 +2508,6 @@ monitorWait(Thread* t, object monitor, int64_t time)
 
   bool interrupted;
   unsigned depth;
-  bool stillWaiting;
 
   PROTECT(t, monitor);
 
@@ -2524,13 +2523,11 @@ monitorWait(Thread* t, object monitor, int64_t time)
     ENTER(t, Thread::IdleState);
 
     interrupted = t->lock->wait(t->systemThread, time);
-
-    stillWaiting = t->waiting;
   }
 
   monitorAcquire(t, monitor);
 
-  if (stillWaiting) {
+  if (t->waiting) {
     monitorRemoveWait(t, monitor);
   }
 
