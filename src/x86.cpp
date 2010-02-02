@@ -518,7 +518,7 @@ void
 maybeRex(Context* c, unsigned size, Assembler::Register* a,
          Assembler::Memory* b)
 {
-  maybeRex(c, size, a->low, b->index, b->base, false);
+  maybeRex(c, size, a->low, b->index, b->base, size == 1 and (a->low & 4));
 }
 
 void
