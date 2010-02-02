@@ -11,8 +11,8 @@
 package java.lang;
 
 public final class Long extends Number implements Comparable<Long> {
-  public static final Long MIN_VALUE = -9223372036854775808l;
-  public static final Long MAX_VALUE =  9223372036854775807l;
+  public static final long MIN_VALUE = -9223372036854775808l;
+  public static final long MAX_VALUE =  9223372036854775807l;
 
   public static final Class TYPE = Class.forCanonicalName("J");
 
