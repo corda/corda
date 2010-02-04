@@ -111,18 +111,6 @@
   (object first)
   (object second))
 
-(type monitor
-  (void* owner)
-  (void* waitHead)
-  (void* waitTail)
-  (object acquireHead)
-  (object acquireTail)
-  (unsigned depth))
-
-(type monitorNode
-  (void* value)
-  (object next))
-
 (type continuationContext
   (object next)
   (object before)
