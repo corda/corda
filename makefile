@@ -77,8 +77,14 @@ input = List
 build-cxx = g++
 build-cc = gcc
 
-cxx = $(build-cxx)
-cc = $(build-cc)
+ifeq ($(arch),i386)
+  cxx = $(build-cxx) -m32
+  cc = $(build-cc) -m32
+endif
+ifeq ($(arch),x86_64)
+  cxx = $(build-cxx) -m64
+  cc = $(build-cc) -m64
+endif
 ar = ar
 ranlib = ranlib
 dlltool = dlltool
