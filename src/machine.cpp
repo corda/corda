@@ -1808,17 +1808,13 @@ removeMonitor(Thread* t, object o)
     hash = objectHash(t, o);
   }
 
-  object p = hashMapRemove(t, t->m->monitorMap, o, objectHash, objectEqual);
+  object m = hashMapRemove(t, t->m->monitorMap, o, objectHash, objectEqual);
 
-  expect(t, p);
+  expect(t, m);
 
   if (DebugMonitors) {
-    fprintf(stderr, "dispose monitor %p for object %x\n",
-            static_cast<System::Monitor*>(pointerValue(t, p)),
-            hash);
+    fprintf(stderr, "dispose monitor %p for object %x\n", m, hash);
   }
-
-  static_cast<System::Monitor*>(pointerValue(t, p))->dispose();
 }
 
 void
@@ -2185,9 +2181,11 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   parent(parent),
   peer((parent ? parent->child : 0)),
   child(0),
+  waitNext(0),
   state(NoState),
   criticalLevel(0),
   systemThread(0),
+  lock(0),
   javaThread(javaThread),
   exception(0),
   heapIndex(0),
@@ -2201,6 +2199,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   backupHeap(0),
   backupHeapIndex(0),
   backupHeapSizeInWords(0),
+  waiting(false),
   tracing(false)
 #ifdef VM_STRESS
   , stress(false)
@@ -2255,6 +2254,8 @@ Thread::init()
     parent->child = this;
   }
 
+  expect(this, m->system->success(m->system->make(&lock)));
+
   if (javaThread == 0) {
     this->javaThread = makeJavaThread(this, parent);
   }
@@ -2282,6 +2283,8 @@ Thread::exit()
 void
 Thread::dispose()
 {
+  lock->dispose();
+
   if (systemThread) {
     systemThread->dispose();
   }
@@ -3419,51 +3422,47 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
   t->m->finalizers = f;
 }
 
-System::Monitor*
+object
 objectMonitor(Thread* t, object o, bool createNew)
 {
   assert(t, t->state == Thread::ActiveState);
 
-  object p = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
+  object m = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
 
-  if (p) {
+  if (m) {
     if (DebugMonitors) {
-      fprintf(stderr, "found monitor %p for object %x\n",
-              static_cast<System::Monitor*>(pointerValue(t, p)),
-              objectHash(t, o));
+      fprintf(stderr, "found monitor %p for object %x\n", m, objectHash(t, o));
     }
 
-    return static_cast<System::Monitor*>(pointerValue(t, p));
+    return m;
   } else if (createNew) {
     PROTECT(t, o);
+    PROTECT(t, m);
 
-    ENTER(t, Thread::ExclusiveState);
+    { ENTER(t, Thread::ExclusiveState);
 
-    p = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
-    if (p) {
+      m = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
+      if (m) {
+        if (DebugMonitors) {
+          fprintf(stderr, "found monitor %p for object %x\n",
+                  m, objectHash(t, o));
+        }
+
+        return m;
+      }
+
+      object head = makeMonitorNode(t, 0, 0);
+      m = makeMonitor(t, 0, 0, 0, head, head, 0);
+
       if (DebugMonitors) {
-        fprintf(stderr, "found monitor %p for object %x\n",
-                static_cast<System::Monitor*>(pointerValue(t, p)),
+        fprintf(stderr, "made monitor %p for object %x\n", m,
                 objectHash(t, o));
       }
 
-      return static_cast<System::Monitor*>(pointerValue(t, p));
+      hashMapInsert(t, t->m->monitorMap, o, m, objectHash);
+
+      addFinalizer(t, o, removeMonitor);
     }
-
-    System::Monitor* m;
-    System::Status s = t->m->system->make(&m);
-    expect(t, t->m->system->success(s));
-
-    if (DebugMonitors) {
-      fprintf(stderr, "made monitor %p for object %x\n",
-              m,
-              objectHash(t, o));
-    }
-
-    p = makePointer(t, m);
-    hashMapInsert(t, t->m->monitorMap, o, p, objectHash);
-
-    addFinalizer(t, o, removeMonitor);
 
     return m;
   } else {
