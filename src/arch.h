@@ -17,6 +17,20 @@ extern "C" void NO_RETURN
 vmJump(void* address, void* base, void* stack, void* thread,
        uintptr_t returnLow, uintptr_t returnHigh);
 
+namespace vm {
+
+inline void
+compileTimeMemoryBarrier()
+{
+#ifdef _MSC_VER
+  _ReadWriteBarrier();
+#else
+  __asm__ __volatile__("": : :"memory");
+#endif
+}
+
+} // namespace vm
+
 #if (defined ARCH_x86_32) || (defined ARCH_x86_64)
 #  include "x86.h"
 #elif defined ARCH_powerpc

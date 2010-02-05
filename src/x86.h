@@ -161,11 +161,7 @@ trap()
 inline void
 programOrderMemoryBarrier()
 {
-#ifdef _MSC_VER
-  _ReadWriteBarrier();
-#else
-  __asm__ __volatile__("": : :"memory");
-#endif
+  compileTimeMemoryBarrier();
 }
 
 inline void
