@@ -23,7 +23,7 @@
 #undef max
 #undef min
 
-#include "x86.h"
+#include "arch.h"
 #include "system.h"
 
 #define ACQUIRE(s, x) MutexResource MAKE_NAME(mutexResource_) (s, x)
