@@ -588,8 +588,8 @@ print(SubroutinePath* path)
   if (path) {
     fprintf(stderr, " (");
     while (true) {
-      fprintf(stderr, "%p", reinterpret_cast<void*>
-              (path->call->returnAddress->value()));
+      fprintf(stderr, "%p", path->call->returnAddress->resolved() ?
+              reinterpret_cast<void*>(path->call->returnAddress->value()) : 0);
       path = path->stackNext;
       if (path) {
         fprintf(stderr, ", ");
@@ -603,13 +603,18 @@ print(SubroutinePath* path)
 
 class SubroutineTrace {
  public:
-  SubroutineTrace(SubroutinePath* path, SubroutineTrace* next):
+  SubroutineTrace(SubroutinePath* path, SubroutineTrace* next,
+                  unsigned mapSize):
     path(path),
-    next(next)
-  { }
+    next(next),
+    watch(false)
+  {
+    memset(map, 0, mapSize * BytesPerWord);
+  }
 
   SubroutinePath* path;
   SubroutineTrace* next;
+  bool watch;
   uintptr_t map[0];
 };
 
@@ -619,17 +624,21 @@ class TraceElement: public TraceHandler {
   static const unsigned TailCall    = 1 << 1;
   static const unsigned LongCall    = 1 << 2;
 
-  TraceElement(Context* context, object target, unsigned flags,
-               TraceElement* next):
+  TraceElement(Context* context, unsigned ip, object target, unsigned flags,
+               TraceElement* next, unsigned mapSize):
     context(context),
     address(0),
     next(next),
     subroutineTrace(0),
-    subroutineTraceCount(0),
     target(target),
+    ip(ip),
+    subroutineTraceCount(0),
     argumentIndex(0),
-    flags(flags)
-  { }
+    flags(flags),
+    watch(false)
+  {
+    memset(map, 0, mapSize * BytesPerWord);
+  }
 
   virtual void handleTrace(Promise* address, unsigned argumentIndex) {
     if (this->address == 0) {
@@ -642,10 +651,12 @@ class TraceElement: public TraceHandler {
   Promise* address;
   TraceElement* next;
   SubroutineTrace* subroutineTrace;
-  unsigned subroutineTraceCount;
   object target;
+  unsigned ip;
+  unsigned subroutineTraceCount;
   unsigned argumentIndex;
   unsigned flags;
+  bool watch;
   uintptr_t map[0];
 };
 
@@ -1587,7 +1598,7 @@ class Frame {
 
     TraceElement* e = context->traceLog = new
       (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
-      TraceElement(context, target, flags, context->traceLog);
+      TraceElement(context, ip, target, flags, context->traceLog, mapSize);
 
     ++ context->traceLogCount;
 
@@ -4923,6 +4934,63 @@ printSet(uintptr_t m, unsigned limit)
   }
 }
 
+void
+calculateTryCatchRoots(Context* context, SubroutinePath* subroutinePath,
+                       uintptr_t* roots, unsigned mapSize, unsigned start,
+                       unsigned end)
+{
+  memset(roots, 0xFF, mapSize * BytesPerWord);
+
+  if (DebugFrameMaps) {
+    fprintf(stderr, "calculate try/catch roots from %d to %d", start, end);
+    if (subroutinePath) {
+      fprintf(stderr, " ");
+      print(subroutinePath);
+    }
+    fprintf(stderr, "\n");
+  }
+
+  for (TraceElement* te = context->traceLog; te; te = te->next) {
+    if (te->ip >= start and te->ip < end) {
+      uintptr_t* traceRoots = 0;
+      if (subroutinePath == 0) {
+        traceRoots = te->map;
+        te->watch = true;
+      } else {
+        for (SubroutineTrace* t = te->subroutineTrace; t; t = t->next) {
+          if (t->path == subroutinePath) {
+            traceRoots = t->map;
+            t->watch = true;
+            break;
+          }
+        }        
+      }
+
+      if (traceRoots) {
+        if (DebugFrameMaps) {
+          fprintf(stderr, "   use roots at ip %3d: ", te->ip);
+          printSet(*traceRoots, mapSize);
+          fprintf(stderr, "\n");
+        }
+
+        for (unsigned wi = 0; wi < mapSize; ++wi) {
+          roots[wi] &= traceRoots[wi];
+        }
+      } else {
+        if (DebugFrameMaps) {
+          fprintf(stderr, "  skip roots at ip %3d\n", te->ip);
+        }
+      }
+    }
+  }
+
+  if (DebugFrameMaps) {
+    fprintf(stderr, "result roots          : ");
+    printSet(*roots, mapSize);
+    fprintf(stderr, "\n");
+  }
+}
+
 unsigned
 calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
                    unsigned eventIndex, SubroutinePath* subroutinePath = 0)
@@ -4969,7 +5037,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       eventIndex += 2;
 
       if (DebugFrameMaps) {
-        fprintf(stderr, "      roots at ip %3d: ", ip);
+        fprintf(stderr, "       roots at ip %3d: ", ip);
         printSet(*RUNTIME_ARRAY_BODY(roots), mapSize);
         fprintf(stderr, "\n");
       }
@@ -4998,7 +5066,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
         }
 
         if (DebugFrameMaps) {
-          fprintf(stderr, "table roots at ip %3d: ", ip);
+          fprintf(stderr, " table roots at ip %3d: ", ip);
           printSet(*tableRoots, mapSize);
           fprintf(stderr, "\n");
         }
@@ -5022,27 +5090,27 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
     } break;
 
     case PushExceptionHandlerEvent: {
-      unsigned reference = context->eventLog.get2(eventIndex);
+      unsigned start = context->eventLog.get2(eventIndex);
+      eventIndex += 2;
+      unsigned end = context->eventLog.get2(eventIndex);
       eventIndex += 2;
 
-      if (context->subroutineTable and context->subroutineTable[reference]) {
-        Subroutine* s = context->subroutineTable[reference];
+      if (context->subroutineTable and context->subroutineTable[start]) {
+        Subroutine* s = context->subroutineTable[start];
         unsigned originalEventIndex = eventIndex;
 
         for (SubroutineCall* c = s->calls; c; c = c->next) {
           for (SubroutinePath* p = c->paths; p; p = p->listNext) {
-            memcpy(RUNTIME_ARRAY_BODY(roots),
-                   p->rootTable + (reference * mapSize),
-                   mapSize * BytesPerWord);
+            calculateTryCatchRoots
+              (context, p, RUNTIME_ARRAY_BODY(roots), mapSize, start, end);
 
             eventIndex = calculateFrameMaps
               (t, context, RUNTIME_ARRAY_BODY(roots), originalEventIndex, p);
           }
         }
       } else {
-        memcpy(RUNTIME_ARRAY_BODY(roots),
-               context->rootTable + (reference * mapSize),
-               mapSize * BytesPerWord);
+        calculateTryCatchRoots
+          (context, 0, RUNTIME_ARRAY_BODY(roots), mapSize, start, end);
 
         eventIndex = calculateFrameMaps
           (t, context, RUNTIME_ARRAY_BODY(roots), eventIndex, 0);
@@ -5052,7 +5120,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
     case TraceEvent: {
       TraceElement* te; context->eventLog.get(eventIndex, &te, BytesPerWord);
       if (DebugFrameMaps) {
-        fprintf(stderr, "trace roots at ip %3d: ", ip);
+        fprintf(stderr, " trace roots at ip %3d: ", ip);
         printSet(*RUNTIME_ARRAY_BODY(roots), mapSize);
         if (subroutinePath) {
           fprintf(stderr, " ");
@@ -5060,14 +5128,18 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
         }
         fprintf(stderr, "\n");
       }
-
+        
+      uintptr_t* map;
+      bool watch;
       if (subroutinePath == 0) {
-        memcpy(te->map, RUNTIME_ARRAY_BODY(roots), mapSize * BytesPerWord);
+        map = te->map;
+        watch = te->watch;
       } else {
         SubroutineTrace* trace = 0;
         for (SubroutineTrace* t = te->subroutineTrace; t; t = t->next) {
           if (t->path == subroutinePath) {
             trace = t;
+            break;
           }
         }
 
@@ -5075,12 +5147,27 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
           te->subroutineTrace = trace = new
             (context->zone.allocate
              (sizeof(SubroutineTrace) + (mapSize * BytesPerWord)))
-            SubroutineTrace(subroutinePath, te->subroutineTrace);
+            SubroutineTrace(subroutinePath, te->subroutineTrace, mapSize);
 
           ++ te->subroutineTraceCount;
         }
 
-        memcpy(trace->map, RUNTIME_ARRAY_BODY(roots), mapSize * BytesPerWord);
+        map = trace->map;
+        watch = trace->watch;
+      }
+
+      for (unsigned wi = 0; wi < mapSize; ++wi) {
+        uintptr_t v = RUNTIME_ARRAY_BODY(roots)[wi];
+
+        if (watch and map[wi] != v) {
+          if (DebugFrameMaps) {
+            fprintf(stderr, "dirty roots due to trace watch!\n");
+          }
+
+          context->dirtyRoots = true;
+        }
+
+        map[wi] = v;
       }
 
       eventIndex += BytesPerWord;
@@ -5184,14 +5271,12 @@ copyFrameMap(int32_t* dst, uintptr_t* src, unsigned mapSizeInBits,
              SubroutinePath* subroutinePath)
 {
   if (DebugFrameMaps) {
-    fprintf(stderr, " orig roots at ip %p: ", reinterpret_cast<void*>
-            (p->address->value()));
+    fprintf(stderr, "  orig roots at ip %3d: ", p->ip);
     printSet(src[0], ceiling(mapSizeInBits, BitsPerWord));
     print(subroutinePath);
     fprintf(stderr, "\n");
 
-    fprintf(stderr, "final roots at ip %p: ", reinterpret_cast<void*>
-            (p->address->value()));
+    fprintf(stderr, " final roots at ip %3d: ", p->ip);
   }
 
   for (unsigned j = 0; j < p->argumentIndex; ++j) {
@@ -5698,8 +5783,16 @@ compile(MyThread* t, Allocator* allocator, Context* context)
                         codeMaxStack(t, methodCode(t, context->method)));
           Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
 
+          unsigned end = exceptionHandlerEnd(eh);
+          if (exceptionHandlerIp(eh) >= start
+              and exceptionHandlerIp(eh) < end)
+          {
+            end = exceptionHandlerIp(eh);
+          }
+
           context->eventLog.append(PushExceptionHandlerEvent);
           context->eventLog.append2(start);
+          context->eventLog.append2(end);
 
           for (unsigned i = 1;
                i < codeMaxStack(t, methodCode(t, context->method));
@@ -7211,9 +7304,9 @@ class MyProcessor: public Processor {
       compile(static_cast<MyThread*>(t),
               local::codeAllocator(static_cast<MyThread*>(t)), 0,
               resolveMethod(t, t->m->loader,
-                            "java/beans/PropertyChangeSupport",
-                            "firePropertyChange",
-                            "(Ljava/beans/PropertyChangeEvent;)V"));
+                            "com/ecovate/nat/logic/Cache",
+                            "findInCache",
+                            "(Ljava/lang/String;Ljava/lang/String;JZ)Lcom/ecovate/shared/xmlrpc/Resource;"));
       trap();
     }
 
