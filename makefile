@@ -77,18 +77,18 @@ input = List
 build-cxx = g++
 build-cc = gcc
 
-cxx = $(build-cxx)
-cc = $(build-cc)
+mflag =
 ifneq ($(platform),darwin)
        ifeq ($(arch),i386)
-               cxx = $(cxx) -m32
-               cc = $(cc) -m32
+               mflag = -m32
        endif
        ifeq ($(arch),x86_64)
-               cxx = $(cxx) -m64
-               cc = $(cc) -m64
+               mflag = -m64
        endif
 endif
+
+cxx = $(build-cxx) $(mflag)
+cc = $(build-cc) $(mflag)
 
 ar = ar
 ranlib = ranlib
