@@ -78,6 +78,19 @@ errorString(JNIEnv* e, int n)
 }
 
 inline jbyteArray
+socketErrorString(JNIEnv* e, int n)
+{
+#ifdef PLATFORM_WINDOWS
+  const unsigned size = 64;
+  char buffer[size];
+  snprintf(buffer, size, "wsa code: %d", n);
+  return charsToArray(e, buffer);
+#else
+  return errorString(e, n);
+#endif
+}
+
+inline jbyteArray
 errorString(JNIEnv* e)
 {
 #ifdef PLATFORM_WINDOWS
@@ -244,6 +257,24 @@ doListen(JNIEnv* e, int s, sockaddr_in* address)
 }
 
 bool
+doFinishConnect(JNIEnv* e, int socket)
+{
+  int error;
+  socklen_t size = sizeof(int);
+  int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
+                     reinterpret_cast<char*>(&error), &size);
+
+  if (r != 0 or size != sizeof(int)) {
+    throwIOException(e);
+  } else if (einProgress(error)) {
+    return false;
+  } else if (error != 0) {
+    throwIOException(e, socketErrorString(e, error));
+  }
+  return true;
+}
+
+bool
 doConnect(JNIEnv* e, int s, sockaddr_in* address)
 {
   int r = ::connect(s, reinterpret_cast<sockaddr*>(address),
@@ -388,18 +419,7 @@ Java_java_nio_channels_SocketChannel_natFinishConnect(JNIEnv *e,
                                                       jclass,
                                                       jint socket)
 {
-  int error;
-  socklen_t size = sizeof(int);
-  int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
-                     reinterpret_cast<char*>(&error), &size);
-  if (r != 0 or size != sizeof(int)) {
-    throwIOException(e);
-  } else if (einProgress(error)) {
-    return false;
-  } else if (error != 0) {
-    throwIOException(e, errorString(e, error));
-  }
-  return true;
+  return doFinishConnect(e, socket);
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -460,8 +480,10 @@ Java_java_nio_channels_SocketChannel_natThrowWriteError(JNIEnv *e,
   socklen_t size = sizeof(int);
   int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
 		     reinterpret_cast<char*>(&error), &size);
-  if (r != 0 or size != sizeof(int) or error != 0) {
-    throwIOException(e, errorString(e, error));
+  if (r != 0 or size != sizeof(int)) {
+    throwIOException(e);
+  } else if (error != 0) {
+    throwIOException(e, socketErrorString(e, error));
   }
 }
 
@@ -660,6 +682,7 @@ Java_java_nio_channels_SocketSelector_natSelectUpdateInterestSet(JNIEnv *,
   if (interest & (java_nio_channels_SelectionKey_OP_WRITE |
 		  java_nio_channels_SelectionKey_OP_CONNECT)) {
     FD_SET(static_cast<unsigned>(socket), &(s->write));
+    FD_SET(static_cast<unsigned>(socket), &(s->except));
     if (max < socket) max = socket;
   } else {
     FD_CLR(static_cast<unsigned>(socket), &(s->write));
@@ -727,8 +750,10 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
     socklen_t size = sizeof(int);
     int r = getsockopt(socket, SOL_SOCKET, SO_ERROR,
                        reinterpret_cast<char*>(&error), &size);
-    if (r != 0 or size != sizeof(int) or error != 0) {
+    if (r != 0 or size != sizeof(int)) {
       throwIOException(e);
+    } else if (error != 0) {
+      throwIOException(e, socketErrorString(e, error));
     }
     s->control.setConnected(true);
   }
@@ -780,7 +805,7 @@ Java_java_nio_channels_SocketSelector_natUpdateReadySet(JNIEnv *, jclass,
     }
   }
   
-  if (FD_ISSET(socket, &(s->write))) {
+  if (FD_ISSET(socket, &(s->write)) or FD_ISSET(socket, &(s->except))) {
     if (interest & java_nio_channels_SelectionKey_OP_WRITE) {
       ready |= java_nio_channels_SelectionKey_OP_WRITE;
     }
