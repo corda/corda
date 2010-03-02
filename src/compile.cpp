@@ -3542,6 +3542,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object field = resolveField(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
 
+      if ((fieldFlags(t, field) & ACC_VOLATILE)
+          and BytesPerWord == 4
+          and (fieldCode(t, field) == DoubleField
+               or fieldCode(t, field) == LongField))
+      {
+        c->call
+          (c->constant
+           (getThunk(t, acquireMonitorForObjectThunk), Compiler::AddressType),
+           0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
+           c->register_(t->arch->thread()),
+           frame->append(field));
+      }
+
       Compiler::Operand* table;
 
       if (instruction == getstatic) {
@@ -3570,19 +3583,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         if (inTryBlock(t, code, ip - 3)) {
           c->saveLocals();
         }
-      }
-
-      if ((fieldFlags(t, field) & ACC_VOLATILE)
-          and BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        c->call
-          (c->constant
-           (getThunk(t, acquireMonitorForObjectThunk), Compiler::AddressType),
-           0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
-           c->register_(t->arch->thread()),
-           frame->append(field));
       }
 
       switch (fieldCode(t, field)) {
@@ -4553,6 +4553,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
       }
 
+      if (fieldFlags(t, field) & ACC_VOLATILE) {
+        if (BytesPerWord == 4
+            and (fieldCode(t, field) == DoubleField
+                 or fieldCode(t, field) == LongField))
+        {
+          c->call
+            (c->constant
+             (getThunk(t, acquireMonitorForObjectThunk),
+              Compiler::AddressType),
+             0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
+             c->register_(t->arch->thread()), frame->append(field));
+        } else {
+          c->storeStoreBarrier();
+        }
+      }
+
       Compiler::Operand* value;
       switch (fieldCode(t, field)) {
       case ByteField:
@@ -4582,22 +4598,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         table = frame->append(staticTable);
       } else {
         table = frame->popObject();
-      }
-
-      if (fieldFlags(t, field) & ACC_VOLATILE) {
-        if (BytesPerWord == 4
-            and (fieldCode(t, field) == DoubleField
-                 or fieldCode(t, field) == LongField))
-        {
-          c->call
-            (c->constant
-             (getThunk(t, acquireMonitorForObjectThunk),
-              Compiler::AddressType),
-             0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
-             c->register_(t->arch->thread()), frame->append(field));
-        } else {
-          c->storeStoreBarrier();
-        }
       }
 
       switch (fieldCode(t, field)) {
