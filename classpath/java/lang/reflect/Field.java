@@ -191,7 +191,8 @@ public class Field<T> extends AccessibleObject {
         setObject(target, offset, value);
       } else {
         throw new IllegalArgumentException
-          ("need " + getType() + ", got " + value.getClass().getName());
+          ("needed " + getType() + ", got " + value.getClass().getName() +
+           " when setting " + class_.getName() + "." + getName());
       }
       break;
 
