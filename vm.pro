@@ -32,10 +32,12 @@
 # the VM may throw instances of the following:
 
 -keep public class avian.IncompatibleContinuationException
+-keep public class java.lang.Exception
 -keep public class java.lang.RuntimeException
 -keep public class java.lang.IllegalStateException
 -keep public class java.lang.IllegalArgumentException
 -keep public class java.lang.IllegalMonitorStateException
+-keep public class java.lang.IllegalThreadStateException
 -keep public class java.lang.ArrayIndexOutOfBoundsException
 -keep public class java.lang.ArrayStoreException
 -keep public class java.lang.NegativeArraySizeException
@@ -51,6 +53,8 @@
 -keep public class java.lang.OutOfMemoryError
 -keep public class java.lang.reflect.InvocationTargetException
 -keep public class java.io.IOException
+-keep public class java.io.FileNotFoundException
+-keep public class java.net.SocketException
 
 # ClassLoader.getSystemClassloader() depends on the existence of this class:
 

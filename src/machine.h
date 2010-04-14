@@ -17,6 +17,7 @@
 #include "finder.h"
 #include "processor.h"
 #include "constants.h"
+#include "arch.h"
 
 #ifdef PLATFORM_WINDOWS
 #  define JNICALL __stdcall
@@ -1345,9 +1346,11 @@ class Thread {
   Thread* parent;
   Thread* peer;
   Thread* child;
+  Thread* waitNext;
   State state;
   unsigned criticalLevel;
   System::Thread* systemThread;
+  System::Monitor* lock;
   object javaThread;
   object exception;
   unsigned heapIndex;
@@ -1360,6 +1363,7 @@ class Thread {
   uintptr_t* backupHeap;
   unsigned backupHeapIndex;
   unsigned backupHeapSizeInWords;
+  bool waiting;
   bool tracing;
 #ifdef VM_STRESS
   bool stress;
@@ -2296,7 +2300,316 @@ parameterFootprint(Thread* t, const char* s, bool static_);
 void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
-System::Monitor*
+inline bool
+atomicCompareAndSwapObject(Thread* t, object target, unsigned offset,
+                           object old, object new_)
+{
+  if (atomicCompareAndSwap(&cast<uintptr_t>(target, offset),
+                           reinterpret_cast<uintptr_t>(old),
+                           reinterpret_cast<uintptr_t>(new_)))
+  {
+    mark(t, target, offset);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// The following two methods (monitorAtomicAppendAcquire and
+// monitorAtomicPollAcquire) use the Michael and Scott Non-Blocking
+// Queue Algorithm: http://www.cs.rochester.edu/u/michael/PODC96.html
+
+inline void
+monitorAtomicAppendAcquire(Thread* t, object monitor)
+{
+  PROTECT(t, monitor);
+
+  object node = makeMonitorNode(t, t, 0);
+
+  while (true) {
+    object tail = monitorAcquireTail(t, monitor);
+    
+    loadMemoryBarrier();
+
+    object next = monitorNodeNext(t, tail);
+
+    loadMemoryBarrier();
+
+    if (tail == monitorAcquireTail(t, monitor)) {
+      if (next) {
+        atomicCompareAndSwapObject
+          (t, monitor, MonitorAcquireTail, tail, next);
+      } else if (atomicCompareAndSwapObject
+                 (t, tail, MonitorNodeNext, 0, node))
+      {
+        atomicCompareAndSwapObject
+          (t, monitor, MonitorAcquireTail, tail, node);
+        return;
+      }
+    }
+  }
+}
+
+inline Thread*
+monitorAtomicPollAcquire(Thread* t, object monitor, bool remove)
+{
+  while (true) {
+    object head = monitorAcquireHead(t, monitor);
+
+    loadMemoryBarrier();
+
+    object tail = monitorAcquireTail(t, monitor);
+
+    loadMemoryBarrier();
+
+    object next = monitorNodeNext(t, head);
+
+    loadMemoryBarrier();
+
+    if (head == monitorAcquireHead(t, monitor)) {
+      if (head == tail) {
+        if (next) {
+          atomicCompareAndSwapObject
+            (t, monitor, MonitorAcquireTail, tail, next);
+        } else {
+          return 0;
+        }
+      } else {
+        Thread* value = static_cast<Thread*>(monitorNodeValue(t, next));
+        if ((not remove)
+            or atomicCompareAndSwapObject
+            (t, monitor, MonitorAcquireHead, head, next))
+        {
+          return value;
+        }
+      }
+    }
+  }
+}
+
+inline bool
+monitorTryAcquire(Thread* t, object monitor)
+{
+  if (monitorOwner(t, monitor) == t
+      or (monitorAtomicPollAcquire(t, monitor, false) == 0
+          and atomicCompareAndSwap
+          (reinterpret_cast<uintptr_t*>(&monitorOwner(t, monitor)), 0,
+           reinterpret_cast<uintptr_t>(t))))
+  {
+    ++ monitorDepth(t, monitor);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+inline void
+monitorAcquire(Thread* t, object monitor)
+{
+  if (not monitorTryAcquire(t, monitor)) {
+    PROTECT(t, monitor);
+
+    ACQUIRE(t, t->lock);
+
+    monitorAtomicAppendAcquire(t, monitor);
+    
+    // note that we don't try to acquire the lock until we're first in
+    // line, both because it's fair and because we don't support
+    // removing elements from arbitrary positions in the queue
+
+    while (not (t == monitorAtomicPollAcquire(t, monitor, false)
+                and atomicCompareAndSwap
+                (reinterpret_cast<uintptr_t*>(&monitorOwner(t, monitor)), 0,
+                 reinterpret_cast<uintptr_t>(t))))
+    {
+      ENTER(t, Thread::IdleState);
+      
+      t->lock->wait(t->systemThread, 0);
+    }
+
+    expect(t, t == monitorAtomicPollAcquire(t, monitor, true));
+        
+    ++ monitorDepth(t, monitor);
+  }
+
+  assert(t, monitorOwner(t, monitor) == t);
+}
+
+inline void
+monitorRelease(Thread* t, object monitor)
+{
+  expect(t, monitorOwner(t, monitor) == t);
+
+  if (-- monitorDepth(t, monitor) == 0) {
+    monitorOwner(t, monitor) = 0;
+
+    storeLoadMemoryBarrier();
+    
+    Thread* next = monitorAtomicPollAcquire(t, monitor, false);
+
+    if (next) {
+      ACQUIRE(t, next->lock);
+       
+      next->lock->notify(t->systemThread);
+    }
+  }
+}
+
+inline void
+monitorAppendWait(Thread* t, object monitor)
+{
+  assert(t, monitorOwner(t, monitor) == t);
+
+  expect(t, not t->waiting);
+  expect(t, t->waitNext == 0);
+
+  t->waiting = true;
+
+  if (monitorWaitTail(t, monitor)) {
+    static_cast<Thread*>(monitorWaitTail(t, monitor))->waitNext = t;
+  } else {
+    monitorWaitHead(t, monitor) = t;
+  }
+
+  monitorWaitTail(t, monitor) = t;
+}
+
+inline void
+monitorRemoveWait(Thread* t, object monitor)
+{
+  assert(t, monitorOwner(t, monitor) == t);
+
+  Thread* previous = 0;
+  for (Thread* current = static_cast<Thread*>(monitorWaitHead(t, monitor));
+       current; current = current->waitNext)
+  {
+    if (t == current) {
+      if (t == monitorWaitHead(t, monitor)) {
+        monitorWaitHead(t, monitor) = t->waitNext;
+      } else {
+        previous->waitNext = t->waitNext;
+      }
+
+      if (t == monitorWaitTail(t, monitor)) {
+        assert(t, t->waitNext == 0);
+        monitorWaitTail(t, monitor) = previous;
+      }
+
+      t->waitNext = 0;
+      t->waiting = false;
+
+      return;
+    } else {
+      previous = current;
+    }
+  }
+
+  abort(t);
+}
+
+inline bool
+monitorFindWait(Thread* t, object monitor)
+{
+  assert(t, monitorOwner(t, monitor) == t);
+
+  for (Thread* current = static_cast<Thread*>(monitorWaitHead(t, monitor));
+       current; current = current->waitNext)
+  {
+    if (t == current) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+inline bool
+monitorWait(Thread* t, object monitor, int64_t time)
+{
+  expect(t, monitorOwner(t, monitor) == t);
+
+  bool interrupted;
+  unsigned depth;
+
+  PROTECT(t, monitor);
+
+  { ACQUIRE(t, t->lock);
+
+    monitorAppendWait(t, monitor);
+
+    depth = monitorDepth(t, monitor);
+    monitorDepth(t, monitor) = 1;
+
+    monitorRelease(t, monitor);
+
+    ENTER(t, Thread::IdleState);
+
+    interrupted = t->lock->wait(t->systemThread, time);
+  }
+
+  monitorAcquire(t, monitor);
+
+  monitorDepth(t, monitor) = depth;
+
+  if (t->waiting) {
+    monitorRemoveWait(t, monitor);
+  } else {
+    expect(t, not monitorFindWait(t, monitor));
+  }
+
+  assert(t, monitorOwner(t, monitor) == t);
+
+  return interrupted;
+}
+
+inline Thread*
+monitorPollWait(Thread* t, object monitor)
+{
+  assert(t, monitorOwner(t, monitor) == t);
+
+  Thread* next = static_cast<Thread*>(monitorWaitHead(t, monitor));
+
+  if (next) {
+    monitorWaitHead(t, monitor) = next->waitNext;
+    next->waiting = false;
+    next->waitNext = 0;
+    if (next == monitorWaitTail(t, monitor)) {
+      monitorWaitTail(t, monitor) = 0;
+    }
+  } else {
+    assert(t, monitorWaitTail(t, monitor) == 0);
+  }
+
+  return next;
+}
+
+inline bool
+monitorNotify(Thread* t, object monitor)
+{
+  expect(t, monitorOwner(t, monitor) == t);
+  
+  Thread* next = monitorPollWait(t, monitor);
+
+  if (next) {
+    ACQUIRE(t, next->lock);
+
+    next->lock->notify(t->systemThread);
+
+    return true;
+  } else {
+    return false;
+  }
+}
+
+inline void
+monitorNotifyAll(Thread* t, object monitor)
+{
+  PROTECT(t, monitor);
+
+  while (monitorNotify(t, monitor)) { }
+}
+
+object
 objectMonitor(Thread* t, object o, bool createNew);
 
 inline void
@@ -2307,14 +2620,14 @@ acquire(Thread* t, object o)
     hash = objectHash(t, o);
   }
 
-  System::Monitor* m = objectMonitor(t, o, true);
+  object m = objectMonitor(t, o, true);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p acquires %p for %x\n",
             t, m, hash);
   }
 
-  acquire(t, m);
+  monitorAcquire(t, m);
 }
 
 inline void
@@ -2325,14 +2638,14 @@ release(Thread* t, object o)
     hash = objectHash(t, o);
   }
 
-  System::Monitor* m = objectMonitor(t, o, false);
+  object m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p releases %p for %x\n",
             t, m, hash);
   }
 
-  release(t, m);
+  monitorRelease(t, m);
 }
 
 inline void
@@ -2343,18 +2656,17 @@ wait(Thread* t, object o, int64_t milliseconds)
     hash = objectHash(t, o);
   }
 
-  System::Monitor* m = objectMonitor(t, o, false);
+  object m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p waits %d millis on %p for %x\n",
             t, static_cast<int>(milliseconds), m, hash);
   }
 
-  if (m and m->owner() == t->systemThread) {
-    bool interrupted;
-    { ENTER(t, Thread::IdleState);
-      interrupted = m->wait(t->systemThread, milliseconds);
-    }
+  if (m and monitorOwner(t, m) == t) {
+    PROTECT(t, m);
+
+    bool interrupted = monitorWait(t, m, milliseconds);
 
     if (interrupted) {
       t->exception = makeInterruptedException(t);
@@ -2379,15 +2691,15 @@ notify(Thread* t, object o)
     hash = objectHash(t, o);
   }
 
-  System::Monitor* m = objectMonitor(t, o, false);
+  object m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p notifies on %p for %x\n",
             t, m, hash);
   }
 
-  if (m and m->owner() == t->systemThread) {
-    m->notify(t->systemThread);
+  if (m and monitorOwner(t, m) == t) {
+    monitorNotify(t, m);
   } else {
     t->exception = makeIllegalMonitorStateException(t);
   }
@@ -2396,15 +2708,15 @@ notify(Thread* t, object o)
 inline void
 notifyAll(Thread* t, object o)
 {
-  System::Monitor* m = objectMonitor(t, o, false);
+  object m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
     fprintf(stderr, "thread %p notifies all on %p for %x\n",
             t, m, objectHash(t, o));
   }
 
-  if (m and m->owner() == t->systemThread) {
-    m->notifyAll(t->systemThread);
+  if (m and monitorOwner(t, m) == t) {
+    monitorNotifyAll(t, m);
   } else {
     t->exception = makeIllegalMonitorStateException(t);
   }

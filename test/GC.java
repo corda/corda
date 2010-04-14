@@ -104,6 +104,46 @@ public class GC {
     System.gc();
   }
 
+  private static void stackMap7(boolean predicate) {
+    try {
+      if (predicate) {
+        Object a = null;
+      } else {
+        Object a = null;
+      }
+
+      try {
+        int a = 42;
+        throw new DummyException();
+      } finally {
+        System.gc();
+      }
+    } catch (DummyException e) {
+      e.toString();
+    }
+  }
+
+  private static void stackMap8(boolean predicate) {
+    try {
+      Object x = new Object();
+      if (predicate) {
+        Object a = null;
+      } else {
+        Object a = null;
+      }
+
+      try {
+        int a = 42;
+        throw new DummyException();
+      } finally {
+        System.gc();
+        x.toString();
+      }
+    } catch (DummyException e) {
+      e.toString();
+    }
+  }
+
   public static void main(String[] args) {
     Object[] array = new Object[1024 * 1024];
     array[0] = new Object();
@@ -139,6 +179,13 @@ public class GC {
 
     stackMap6(true);
     stackMap6(false);
+
+    stackMap7(true);
+    stackMap7(false);
+
+    stackMap8(true);
+    stackMap8(false);
   }
 
+  private static class DummyException extends RuntimeException { }
 }
