@@ -20,29 +20,6 @@ using namespace vm;
 
 namespace {
 
-namespace field {
-// BITFIELD MASKS
-const int64_t MASK_LO32 = 0x0ffffffff;
-const int     MASK_LO16 = 0x0ffff;
-const int     MASK_LO8  = 0x0ff;
-// BITFIELD EXTRACTORS
-inline int lo32(int64_t i) { return (int)(i & MASK_LO32); }
-inline int hi32(int64_t i) { return lo32(i >> 32); }
-inline int lo16(int64_t i) { return (int)(i & MASK_LO16); }
-inline int hi16(int64_t i) { return lo16(i >> 16); }
-inline int lo8(int64_t i) { return (int)(i & MASK_LO8); }
-inline int hi8(int64_t i) { return lo8(i >> 8); }
-
-inline int ha16(int32_t i) {
-  return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
-}
-
-inline int unha16(int32_t high, int32_t low) {
-  return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low;
-}
-
-}
-
 namespace isa {
 // INSTRUCTION FORMATS
 inline int D(int op, int rt, int ra, int d) { return op<<26|rt<<21|ra<<16|(d & 0xFFFF); }
@@ -153,6 +130,24 @@ inline int cmpw(int ra, int rb) { return cmp(0, ra, rb); }
 inline int cmplw(int ra, int rb) { return cmpl(0, ra, rb); }
 inline int cmpwi(int ra, int i) { return cmpi(0, ra, i); }
 inline int cmplwi(int ra, int i) { return cmpli(0, ra, i); }
+}
+
+const int64_t MASK_LO32 = 0x0ffffffff;
+const int     MASK_LO16 = 0x0ffff;
+const int     MASK_LO8  = 0x0ff;
+inline int lo32(int64_t i) { return (int)(i & MASK_LO32); }
+inline int hi32(int64_t i) { return lo32(i >> 32); }
+inline int lo16(int64_t i) { return (int)(i & MASK_LO16); }
+inline int hi16(int64_t i) { return lo16(i >> 16); }
+inline int lo8(int64_t i) { return (int)(i & MASK_LO8); }
+inline int hi8(int64_t i) { return lo8(i >> 8); }
+
+inline int ha16(int32_t i) { 
+    return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
+}
+
+inline int unha16(int32_t high, int32_t low) {
+    return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low; 
 }
 
 inline bool
@@ -445,100 +440,94 @@ branchIndex(ArchitectureContext* c UNUSED, OperandType operand1,
 
 // BEGIN OPERATION COMPILERS
 
-using namespace field;
 using namespace isa;
 
-typedef Assembler::Register Reg;
-typedef Assembler::Constant Const;
-
-inline void issue(Context* con, int code) { con->code.append4(code); }
-inline int getTemp(Context* con) { return con->client->acquireTemporary(); }
+inline void emit(Context* con, int code) { con->code.append4(code); }
+inline int newTemp(Context* con) { return con->client->acquireTemporary(); }
 inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
-inline int64_t getVal(Const* c) { return c->value->value(); }
-inline int R(Reg* r) { return r->low; }
-inline int H(Reg* r) { return r->high; }
+inline int64_t getValue(Assembler::Constant* c) { return c->value->value(); }
 
 
-void shiftLeftR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if(size == 8) {
-    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
-    issue(con, subfic(H(tmp), R(a), 32));
-    issue(con, slw(H(t), H(b), R(a)));
-    issue(con, srw(R(tmp), R(b), H(tmp)));
-    issue(con, or_(H(t), H(t), R(tmp)));
-    issue(con, addi(H(tmp), R(a), -32));
-    issue(con, slw(R(tmp), R(b), H(tmp)));
-    issue(con, or_(H(t), H(t), R(tmp)));
-    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
+    Assembler::Register Tmp(newTemp(con), newTemp(con)); Assembler::Register* tmp = &Tmp;
+    emit(con, subfic(tmp->high, a->low, 32));
+    emit(con, slw(t->high, b->high, a->low));
+    emit(con, srw(tmp->low, b->low, tmp->high));
+    emit(con, or_(t->high, t->high, tmp->low));
+    emit(con, addi(tmp->high, a->low, -32));
+    emit(con, slw(tmp->low, b->low, tmp->high));
+    emit(con, or_(t->high, t->high, tmp->low));
+    freeTemp(con, tmp->high); freeTemp(con, tmp->low);
   }
-  issue(con, slw(R(t), R(b), R(a)));
+  emit(con, slw(t->low, b->low, a->low));
 }
 
-void shiftLeftC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
+void shiftLeftC(Context* con, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
-  int sh = getVal(a);
+  int sh = getValue(a);
   if (size == 8) {
     if (sh < 32) {
-      issue(con, rlwinm(H(t),H(b),sh,0,31-sh));
-      issue(con, rlwimi(H(t),R(b),sh,32-sh,31));
+      emit(con, rlwinm(t->high,b->high,sh,0,31-sh));
+      emit(con, rlwimi(t->high,b->low,sh,32-sh,31));
     } else {
-      issue(con, rlwinm(H(t),R(b),sh-32,0,63-sh));
-      issue(con, li(R(t),0));
+      emit(con, rlwinm(t->high,b->low,sh-32,0,63-sh));
+      emit(con, li(t->low,0));
     }
   }
-  issue(con, slwi(R(t), R(b), sh));
+  emit(con, slwi(t->low, b->low, sh));
 }
 
-void shiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if(size == 8) {
-    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
-    issue(con, subfic(H(tmp), R(a), 32));
-    issue(con, srw(R(t), R(b), R(a)));
-    issue(con, slw(R(tmp), H(b), H(tmp)));
-    issue(con, or_(R(t), R(t), R(tmp)));
-    issue(con, addic(H(tmp), R(a), -32));
-    issue(con, sraw(R(tmp), H(b), H(tmp)));
-    issue(con, ble(8));
-    issue(con, ori(R(t), R(tmp), 0));
-    issue(con, sraw(H(t), H(b), R(a)));
-    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
+    Assembler::Register Tmp(newTemp(con), newTemp(con)); Assembler::Register* tmp = &Tmp;
+    emit(con, subfic(tmp->high, a->low, 32));
+    emit(con, srw(t->low, b->low, a->low));
+    emit(con, slw(tmp->low, b->high, tmp->high));
+    emit(con, or_(t->low, t->low, tmp->low));
+    emit(con, addic(tmp->high, a->low, -32));
+    emit(con, sraw(tmp->low, b->high, tmp->high));
+    emit(con, ble(8));
+    emit(con, ori(t->low, tmp->low, 0));
+    emit(con, sraw(t->high, b->high, a->low));
+    freeTemp(con, tmp->high); freeTemp(con, tmp->low);
   } else {
-    issue(con, sraw(R(t), R(b), R(a)));
+    emit(con, sraw(t->low, b->low, a->low));
   }
 }
 
-void shiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
+void shiftRightC(Context* con, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
-  int sh = getVal(a);
+  int sh = getValue(a);
   if(size == 8) {
     if (sh < 32) {
-      issue(con, rlwinm(R(t),R(b),32-sh,sh,31));
-      issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
-      issue(con, srawi(H(t),H(b),sh));
+      emit(con, rlwinm(t->low,b->low,32-sh,sh,31));
+      emit(con, rlwimi(t->low,b->high,32-sh,0,sh-1));
+      emit(con, srawi(t->high,b->high,sh));
     } else {
-      issue(con, srawi(H(t),H(b),31));
-      issue(con, srawi(R(t),H(b),sh-32));
+      emit(con, srawi(t->high,b->high,31));
+      emit(con, srawi(t->low,b->high,sh-32));
     }
   } else {
-    issue(con, srawi(R(t), R(b), sh));
+    emit(con, srawi(t->low, b->low, sh));
   }
 }
 
-void unsignedShiftRightR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t)
+void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
-  issue(con, srw(R(t), R(b), R(a)));
+  emit(con, srw(t->low, b->low, a->low));
   if(size == 8) {
-    Reg Tmp(getTemp(con), getTemp(con)); Reg* tmp = &Tmp;
-    issue(con, subfic(H(tmp), R(a), 32));
-    issue(con, slw(R(tmp), H(b), H(tmp)));
-    issue(con, or_(R(t), R(t), R(tmp)));
-    issue(con, addi(H(tmp), R(a), -32));
-    issue(con, srw(R(tmp), H(b), H(tmp)));
-    issue(con, or_(R(t), R(t), R(tmp)));
-    issue(con, srw(H(t), H(b), R(a)));
-    freeTemp(con, H(tmp)); freeTemp(con, R(tmp));
+    Assembler::Register Tmp(newTemp(con), newTemp(con)); Assembler::Register* tmp = &Tmp;
+    emit(con, subfic(tmp->high, a->low, 32));
+    emit(con, slw(tmp->low, b->high, tmp->high));
+    emit(con, or_(t->low, t->low, tmp->low));
+    emit(con, addi(tmp->high, a->low, -32));
+    emit(con, srw(tmp->low, b->high, tmp->high));
+    emit(con, or_(t->low, t->low, tmp->low));
+    emit(con, srw(t->high, b->high, a->low));
+    freeTemp(con, tmp->high); freeTemp(con, tmp->low);
   }
 }
 
@@ -546,24 +535,24 @@ void
 moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
        unsigned dstSize, Assembler::Register* dst);
 
-void unsignedShiftRightC(Context* con, unsigned size, Const* a, Reg* b, Reg* t)
+void unsignedShiftRightC(Context* con, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
-  int sh = getVal(a);
+  int sh = getValue(a);
   if (size == 8) {
     if (sh == 32) {
       Assembler::Register high(b->high);
       moveRR(con, 4, &high, 4, t);
-      issue(con, li(H(t),0));
+      emit(con, li(t->high,0));
     } else if (sh < 32) {
-      issue(con, srwi(R(t), R(b), sh));
-      issue(con, rlwimi(R(t),H(b),32-sh,0,sh-1));
-      issue(con, rlwinm(H(t),H(b),32-sh,sh,31));
+      emit(con, srwi(t->low, b->low, sh));
+      emit(con, rlwimi(t->low,b->high,32-sh,0,sh-1));
+      emit(con, rlwinm(t->high,b->high,32-sh,sh,31));
     } else {
-      issue(con, rlwinm(R(t),H(b),64-sh,sh-32,31));
-      issue(con, li(H(t),0));
+      emit(con, rlwinm(t->low,b->high,64-sh,sh-32,31));
+      emit(con, li(t->high,0));
     }
   } else {
-    issue(con, srwi(R(t), R(b), sh));
+    emit(con, srwi(t->low, b->low, sh));
   }
 }
 
@@ -683,8 +672,8 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* target)
 {
   assert(c, size == BytesPerWord);
 
-  issue(c, mtctr(target->low));
-  issue(c, bctr());
+  emit(c, mtctr(target->low));
+  emit(c, bctr());
 }
 
 void
@@ -707,18 +696,18 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
 {
   switch (srcSize) {
   case 1:
-    issue(c, extsb(dst->low, src->low));
+    emit(c, extsb(dst->low, src->low));
     break;
     
   case 2:
-    issue(c, extsh(dst->low, src->low));
+    emit(c, extsh(dst->low, src->low));
     break;
     
   case 4:
   case 8:
     if (srcSize == 4 and dstSize == 8) {
       moveRR(c, 4, src, 4, dst);
-      issue(c, srawi(dst->high, src->low, 31));
+      emit(c, srawi(dst->high, src->low, 31));
     } else if (srcSize == 8 and dstSize == 8) {
       Assembler::Register srcHigh(src->high);
       Assembler::Register dstHigh(dst->high);
@@ -735,7 +724,7 @@ moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
         moveRR(c, 4, &srcHigh, 4, &dstHigh);
       }
     } else if (src->low != dst->low) {
-      issue(c, mr(dst->low, src->low));
+      emit(c, mr(dst->low, src->low));
     }
     break;
 
@@ -749,7 +738,7 @@ moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
 {
   switch (srcSize) {
   case 2:
-    issue(c, andi(dst->low, src->low, 0xFFFF));
+    emit(c, andi(dst->low, src->low, 0xFFFF));
     break;
 
   default: abort(c);
@@ -764,16 +753,16 @@ moveCR2(Context* c, unsigned, Assembler::Constant* src,
     if (src->value->resolved()) {
       int32_t v = src->value->value();
       if (isInt16(v)) {
-        issue(c, li(dst->low, v));
+        emit(c, li(dst->low, v));
       } else {
-        issue(c, lis(dst->low, v >> 16));
-        issue(c, ori(dst->low, dst->low, v));
+        emit(c, lis(dst->low, v >> 16));
+        emit(c, ori(dst->low, dst->low, v));
       }
     } else {
       appendImmediateTask
         (c, src->value, offset(c), BytesPerWord, promiseOffset, false);
-      issue(c, lis(dst->low, 0));
-      issue(c, ori(dst->low, dst->low, 0));
+      emit(c, lis(dst->low, 0));
+      emit(c, ori(dst->low, dst->low, 0));
     }
   } else {
     abort(c); // todo
@@ -787,38 +776,38 @@ moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
   moveCR2(c, srcSize, src, dstSize, dst, 0);
 }
 
-void addR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if(size == 8) {
-    issue(con, addc(R(t), R(a), R(b)));
-    issue(con, adde(H(t), H(a), H(b)));
+    emit(con, addc(t->low, a->low, b->low));
+    emit(con, adde(t->high, a->high, b->high));
   } else {
-    issue(con, add(R(t), R(a), R(b)));
+    emit(con, add(t->low, a->low, b->low));
   }
 }
 
-void addC(Context* con, unsigned size, Const* a, Reg* b, Reg* t) {
+void addC(Context* con, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t) {
   assert(con, size == BytesPerWord);
 
-  int32_t i = getVal(a);
+  int32_t i = getValue(a);
   if(i) {
-    issue(con, addi(R(t), R(b), lo16(i)));
+    emit(con, addi(t->low, b->low, lo16(i)));
     if(not isInt16(i))
-      issue(con, addis(R(t), R(t), hi16(i) + carry16(i)));
+      emit(con, addis(t->low, t->low, hi16(i) + carry16(i)));
   } else {
     moveRR(con, size, b, size, t);
   }
 }
 
-void subR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void subR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if(size == 8) {
-    issue(con, subfc(R(t), R(a), R(b)));
-    issue(con, subfe(H(t), H(a), H(b)));
+    emit(con, subfc(t->low, a->low, b->low));
+    emit(con, subfe(t->high, a->high, b->high));
   } else {
-    issue(con, subf(R(t), R(a), R(b)));
+    emit(con, subf(t->low, a->low, b->low));
   }
 }
 
-void subC(Context* c, unsigned size, Const* a, Reg* b, Reg* t) {
+void subC(Context* c, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t) {
   assert(c, size == BytesPerWord);
 
   ResolvedPromise promise(- a->value->value());
@@ -826,7 +815,7 @@ void subC(Context* c, unsigned size, Const* a, Reg* b, Reg* t) {
   addC(c, size, &constant, b, t);
 }
 
-void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if(size == 8) {
     bool useTemporaries = b->low == t->low;
     int tmpLow;
@@ -839,28 +828,28 @@ void multiplyR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
       tmpHigh = t->high;
     }
 
-    issue(con, mullw(tmpHigh, H(a), R(b)));
-    issue(con, mullw(tmpLow, R(a), H(b)));
-    issue(con, add(H(t), tmpHigh, tmpLow));
-    issue(con, mulhwu(tmpLow, R(a), R(b)));
-    issue(con, add(H(t), H(t), tmpLow));
-    issue(con, mullw(R(t), R(a), R(b)));
+    emit(con, mullw(tmpHigh, a->high, b->low));
+    emit(con, mullw(tmpLow, a->low, b->high));
+    emit(con, add(t->high, tmpHigh, tmpLow));
+    emit(con, mulhwu(tmpLow, a->low, b->low));
+    emit(con, add(t->high, t->high, tmpLow));
+    emit(con, mullw(t->low, a->low, b->low));
 
     if (useTemporaries) {
       con->client->releaseTemporary(tmpLow);
       con->client->releaseTemporary(tmpHigh);
     }
   } else {
-    issue(con, mullw(R(t), R(a), R(b)));
+    emit(con, mullw(t->low, a->low, b->low));
   }
 }
 
-void divideR(Context* con, unsigned size UNUSED, Reg* a, Reg* b, Reg* t) {
+void divideR(Context* con, unsigned size UNUSED, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   assert(con, size == 4);
-  issue(con, divw(R(t), R(b), R(a)));
+  emit(con, divw(t->low, b->low, a->low));
 }
 
-void remainderR(Context* con, unsigned size, Reg* a, Reg* b, Reg* t) {
+void remainderR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   bool useTemporary = b->low == t->low;
   Assembler::Register tmp(t->low);
   if (useTemporary) {
@@ -935,15 +924,15 @@ store(Context* c, unsigned size, Assembler::Register* src,
 
     switch (size) {
     case 1:
-      issue(c, stbx(src->low, base, normalized));
+      emit(c, stbx(src->low, base, normalized));
       break;
 
     case 2:
-      issue(c, sthx(src->low, base, normalized));
+      emit(c, sthx(src->low, base, normalized));
       break;
 
     case 4:
-      issue(c, stwx(src->low, base, normalized));
+      emit(c, stwx(src->low, base, normalized));
       break;
 
     case 8: {
@@ -959,15 +948,15 @@ store(Context* c, unsigned size, Assembler::Register* src,
   } else {
     switch (size) {
     case 1:
-      issue(c, stb(src->low, base, offset));
+      emit(c, stb(src->low, base, offset));
       break;
 
     case 2:
-      issue(c, sth(src->low, base, offset));
+      emit(c, sth(src->low, base, offset));
       break;
 
     case 4:
-      issue(c, stw(src->low, base, offset));
+      emit(c, stw(src->low, base, offset));
       break;
 
     case 8: {
@@ -998,12 +987,12 @@ moveAndUpdateRM(Context* c, unsigned srcSize UNUSED, Assembler::Register* src,
   assert(c, dstSize == BytesPerWord);
 
   if (dst->index == NoRegister) {
-    issue(c, stwu(src->low, dst->base, dst->offset));
+    emit(c, stwu(src->low, dst->base, dst->offset));
   } else {
     assert(c, dst->offset == 0);
     assert(c, dst->scale == 1);
     
-    issue(c, stwux(src->low, dst->base, dst->index));
+    emit(c, stwux(src->low, dst->base, dst->index));
   }
 }
 
@@ -1019,17 +1008,17 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
 
     switch (srcSize) {
     case 1:
-      issue(c, lbzx(dst->low, base, normalized));
+      emit(c, lbzx(dst->low, base, normalized));
       if (signExtend) {
-        issue(c, extsb(dst->low, dst->low));
+        emit(c, extsb(dst->low, dst->low));
       }
       break;
 
     case 2:
       if (signExtend) {
-        issue(c, lhax(dst->low, base, normalized));
+        emit(c, lhax(dst->low, base, normalized));
       } else {
-        issue(c, lhzx(dst->low, base, normalized));
+        emit(c, lhzx(dst->low, base, normalized));
       }
       break;
 
@@ -1043,7 +1032,7 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
         load(c, 4, base, 0, normalized, 1, 4, &dstHigh, preserveIndex, false);
         load(c, 4, base, 4, normalized, 1, 4, dst, preserveIndex, false);
       } else {
-        issue(c, lwzx(dst->low, base, normalized));
+        emit(c, lwzx(dst->low, base, normalized));
       }
     } break;
 
@@ -1054,22 +1043,22 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
   } else {
     switch (srcSize) {
     case 1:
-      issue(c, lbz(dst->low, base, offset));
+      emit(c, lbz(dst->low, base, offset));
       if (signExtend) {
-        issue(c, extsb(dst->low, dst->low));
+        emit(c, extsb(dst->low, dst->low));
       }
       break;
 
     case 2:
       if (signExtend) {
-        issue(c, lha(dst->low, base, offset));
+        emit(c, lha(dst->low, base, offset));
       } else {
-        issue(c, lha(dst->low, base, offset));
+        emit(c, lha(dst->low, base, offset));
       }
       break;
 
     case 4:
-      issue(c, lwz(dst->low, base, offset));
+      emit(c, lwz(dst->low, base, offset));
       break;
 
     case 8: {
@@ -1078,7 +1067,7 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
         load(c, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
         load(c, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
       } else {
-        issue(c, lwzx(dst->low, base, offset));
+        emit(c, lwzx(dst->low, base, offset));
       }
     } break;
 
@@ -1103,19 +1092,6 @@ moveZMR(Context* c, unsigned srcSize, Assembler::Memory* src,
        dstSize, dst, true, false);
 }
 
-// void moveCR3(Context* con, unsigned aSize, Const* a, unsigned tSize, Reg* t) {
-//   int64_t i = getVal(a);
-//   if(tSize == 8) {
-//     int64_t j;
-//     if(aSize == 8) j = i; // 64-bit const -> load high bits into high register
-//     else           j = 0; // 32-bit const -> clear high register
-//     issue(con, lis(H(t), hi16(hi32(j))));
-//     issue(con, ori(H(t), H(t), lo16(hi32(j))));
-//   }
-//   issue(con, lis(R(t), hi16(i)));
-//   issue(con, ori(R(t), R(t), lo16(i)));
-// }
-
 void
 andR(Context* c, unsigned size, Assembler::Register* a,
      Assembler::Register* b, Assembler::Register* dst)
@@ -1128,7 +1104,7 @@ andR(Context* c, unsigned size, Assembler::Register* a,
     andR(c, 4, a, b, dst);
     andR(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, and_(dst->low, a->low, b->low));
+    emit(c, and_(dst->low, a->low, b->low));
   }
 }
 
@@ -1181,9 +1157,9 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
           // the topmost or bottommost 16 bits are zero.
 
           if ((v32 >> 16) == 0) {
-            issue(c, andi(dst->low, b->low, v32));
+            emit(c, andi(dst->low, b->low, v32));
           } else if ((v32 & 0xFFFF) == 0) {
-            issue(c, andis(dst->low, b->low, v32 >> 16));
+            emit(c, andis(dst->low, b->low, v32 >> 16));
           } else {
             bool useTemporary = b->low == dst->low;
             Assembler::Register tmp(dst->low);
@@ -1206,12 +1182,12 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
 
     if (state) {
       if (start != 0 or end != 31) {
-        issue(c, rlwinm(dst->low, b->low, 0, 31 - end, 31 - start));
+        emit(c, rlwinm(dst->low, b->low, 0, 31 - end, 31 - start));
       } else {
         moveRR(c, 4, b, 4, dst);
       }
     } else {
-      issue(c, li(dst->low, 0));
+      emit(c, li(dst->low, 0));
     }
   }
 }
@@ -1228,7 +1204,7 @@ orR(Context* c, unsigned size, Assembler::Register* a,
     orR(c, 4, a, b, dst);
     orR(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, or_(dst->low, a->low, b->low));
+    emit(c, or_(dst->low, a->low, b->low));
   }
 }
 
@@ -1251,9 +1227,9 @@ orC(Context* c, unsigned size, Assembler::Constant* a,
     orC(c, 4, &al, b, dst);
     orC(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, ori(b->low, dst->low, v));
+    emit(c, ori(b->low, dst->low, v));
     if (v >> 16) {
-      issue(c, oris(dst->low, dst->low, v >> 16));
+      emit(c, oris(dst->low, dst->low, v >> 16));
     }
   }
 }
@@ -1270,7 +1246,7 @@ xorR(Context* c, unsigned size, Assembler::Register* a,
     xorR(c, 4, a, b, dst);
     xorR(c, 4, &ah, &bh, &dh);
   } else {
-    issue(c, xor_(dst->low, a->low, b->low));
+    emit(c, xor_(dst->low, a->low, b->low));
   }
 }
 
@@ -1294,10 +1270,10 @@ xorC(Context* c, unsigned size, Assembler::Constant* a,
     xorC(c, 4, &ah, &bh, &dh);
   } else {
     if (v >> 16) {
-      issue(c, xoris(b->low, dst->low, v >> 16));
-      issue(c, xori(dst->low, dst->low, v));
+      emit(c, xoris(b->low, dst->low, v >> 16));
+      emit(c, xori(dst->low, dst->low, v));
     } else {
-      issue(c, xori(b->low, dst->low, v));
+      emit(c, xori(b->low, dst->low, v));
     }
   }
 }
@@ -1313,7 +1289,7 @@ moveAR2(Context* c, unsigned srcSize UNUSED, Assembler::Address* src,
   appendImmediateTask
     (c, src->address, offset(c), BytesPerWord, promiseOffset, true);
   
-  issue(c, lis(dst->low, 0));
+  emit(c, lis(dst->low, 0));
   moveMR(c, dstSize, &memory, dstSize, dst);
 }
 
@@ -1330,7 +1306,7 @@ compareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
 {
   assert(c, aSize == 4 and bSize == 4);
   
-  issue(c, cmpw(b->low, a->low));
+  emit(c, cmpw(b->low, a->low));
 }
 
 void
@@ -1340,7 +1316,7 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
   assert(c, aSize == 4 and bSize == 4);
 
   if (a->value->resolved() and isInt16(a->value->value())) {
-    issue(c, cmpwi(b->low, a->value->value()));
+    emit(c, cmpwi(b->low, a->value->value()));
   } else {
     Assembler::Register tmp(c->client->acquireTemporary());
     moveCR(c, aSize, a, bSize, &tmp);
@@ -1379,7 +1355,7 @@ compareUnsignedRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
 {
   assert(c, aSize == 4 and bSize == 4);
   
-  issue(c, cmplw(b->low, a->low));
+  emit(c, cmplw(b->low, a->low));
 }
 
 void
@@ -1389,7 +1365,7 @@ compareUnsignedCR(Context* c, unsigned aSize, Assembler::Constant* a,
   assert(c, aSize == 4 and bSize == 4);
 
   if (a->value->resolved() and (a->value->value() >> 16) == 0) {
-    issue(c, cmplwi(b->low, a->value->value()));
+    emit(c, cmplwi(b->low, a->value->value()));
   } else {
     Assembler::Register tmp(c->client->acquireTemporary());
     moveCR(c, aSize, a, bSize, &tmp);
@@ -1429,7 +1405,7 @@ void
 conditional(Context* c, int32_t branch, Assembler::Constant* target)
 {
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, branch);
+  emit(c, branch);
 }
 
 void
@@ -1452,7 +1428,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
   switch (op) {
   case JumpIfEqual:
     next = c->code.length();
-    issue(c, bne(0));
+    emit(c, bne(0));
 
     compareSigned(c, 4, al, 4, bl);
     conditional(c, beq(0), target);
@@ -1469,7 +1445,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     conditional(c, blt(0), target);
 
     next = c->code.length();
-    issue(c, bgt(0));
+    emit(c, bgt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
     conditional(c, blt(0), target);
@@ -1479,7 +1455,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     conditional(c, bgt(0), target);
 
     next = c->code.length();
-    issue(c, blt(0));
+    emit(c, blt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
     conditional(c, bgt(0), target);
@@ -1489,7 +1465,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     conditional(c, blt(0), target);
 
     next = c->code.length();
-    issue(c, bgt(0));
+    emit(c, bgt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
     conditional(c, ble(0), target);
@@ -1499,7 +1475,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     conditional(c, bgt(0), target);
 
     next = c->code.length();
-    issue(c, blt(0));
+    emit(c, blt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
     conditional(c, bge(0), target);
@@ -1621,10 +1597,10 @@ negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
   if (srcSize == 8) {
     Assembler::Register dstHigh(dst->high);
 
-    issue(c, subfic(dst->low, src->low, 0));
-    issue(c, subfze(dst->high, src->high));
+    emit(c, subfic(dst->low, src->low, 0));
+    emit(c, subfze(dst->high, src->high));
   } else {
-    issue(c, neg(dst->low, src->low));
+    emit(c, neg(dst->low, src->low));
   }
 }
 
@@ -1633,8 +1609,8 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* target)
 {
   assert(c, size == BytesPerWord);
 
-  issue(c, mtctr(target->low));
-  issue(c, bctrl());
+  emit(c, mtctr(target->low));
+  emit(c, bctrl());
 }
 
 void
@@ -1643,7 +1619,7 @@ callC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), false);
-  issue(c, bl(0));
+  emit(c, bl(0));
 }
 
 void
@@ -1696,7 +1672,7 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), false);
-  issue(c, b(0));
+  emit(c, b(0));
 }
 
 void
@@ -1705,7 +1681,7 @@ jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, beq(0));
+  emit(c, beq(0));
 }
 
 void
@@ -1714,7 +1690,7 @@ jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, bne(0));
+  emit(c, bne(0));
 }
 
 void
@@ -1723,7 +1699,7 @@ jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, bgt(0));
+  emit(c, bgt(0));
 }
 
 void
@@ -1733,7 +1709,7 @@ jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED,
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, bge(0));
+  emit(c, bge(0));
 }
 
 void
@@ -1742,7 +1718,7 @@ jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, blt(0));
+  emit(c, blt(0));
 }
 
 void
@@ -1752,19 +1728,19 @@ jumpIfLessOrEqualC(Context* c, unsigned size UNUSED,
   assert(c, size == BytesPerWord);
 
   appendOffsetTask(c, target->value, offset(c), true);
-  issue(c, ble(0));
+  emit(c, ble(0));
 }
 
 void
 return_(Context* c)
 {
-  issue(c, blr());
+  emit(c, blr());
 }
 
 void
 memoryBarrier(Context* c)
 {
-  issue(c, sync(0));
+  emit(c, sync(0));
 }
 
 // END OPERATION COMPILERS
@@ -2268,7 +2244,7 @@ class MyAssembler: public Assembler {
 
   virtual void allocateFrame(unsigned footprint) {
     Register returnAddress(0);
-    issue(&c, mflr(returnAddress.low));
+    emit(&c, mflr(returnAddress.low));
 
     Memory returnAddressDst(StackRegister, 8);
     moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
@@ -2296,7 +2272,7 @@ class MyAssembler: public Assembler {
     Memory returnAddressSrc(StackRegister, 8);
     moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &returnAddress);
     
-    issue(&c, mtlr(returnAddress.low));
+    emit(&c, mtlr(returnAddress.low));
   }
 
   virtual void popFrameForTailCall(unsigned footprint,
@@ -2310,7 +2286,7 @@ class MyAssembler: public Assembler {
         Memory returnAddressSrc(StackRegister, 8 + (footprint * BytesPerWord));
         moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
     
-        issue(&c, mtlr(tmp.low));
+        emit(&c, mtlr(tmp.low));
 
         Memory stackSrc(StackRegister, footprint * BytesPerWord);
         moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);

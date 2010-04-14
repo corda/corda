@@ -13,7 +13,6 @@
 #include "util.h"
 #include "processor.h"
 #include "constants.h"
-#include "processor.h"
 
 using namespace vm;
 
