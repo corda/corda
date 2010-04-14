@@ -118,9 +118,6 @@ inline void
 pushDouble(Thread* t, double v)
 {
   uint64_t w = doubleToBits(v);
-#ifdef __arm__
-  w = w << 32 | w >> 32;
-#endif
   pushLong(t, w);
 }
 
@@ -175,9 +172,6 @@ inline double
 popDouble(Thread* t)
 {
   uint64_t v = popLong(t);
-#ifdef __arm__
-  v = v << 32 | v >> 32;
-#endif
   return bitsToDouble(v);
 }
 
@@ -569,15 +563,6 @@ pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
     break;
 
   case DoubleField:
-#ifdef __arm__
-    result = result << 32 | result >> 32;
-    if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", result);
-    }
-    pushLong(t, result);
-    break;
-#endif
-
   case LongField:
     if (DebugRun) {
       fprintf(stderr, "result: %"LLD"\n", result);
@@ -629,15 +614,6 @@ marshalArguments(Thread* t, uintptr_t* args, unsigned i, unsigned count,
       break;
 
     case DOUBLE_TYPE:
-#ifdef __arm__
-    {
-      uint64_t v = peekLong(t, sp);
-      v = v << 32 | v >> 32;
-      memcpy(args + offset, &v, 8);
-      offset += (8 / BytesPerWord);
-      sp += 2;
-    } break;
-#endif
     case INT64_TYPE: {
       uint64_t v = peekLong(t, sp);
       memcpy(args + offset, &v, 8);
