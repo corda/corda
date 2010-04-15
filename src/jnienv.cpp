@@ -18,6 +18,8 @@ using namespace vm;
 
 namespace {
 
+namespace local {
+
 const uintptr_t InterfaceMethodID
 = (static_cast<uintptr_t>(1) << (BitsPerWord - 1));
 
@@ -117,7 +119,7 @@ GetEnv(Machine* m, Thread** t, jint version)
   }
 }
 
-jsize JNICALL
+jint JNICALL
 GetVersion(Thread* t)
 {
   ENTER(t, Thread::ActiveState);
@@ -1906,6 +1908,8 @@ append(char** p, const char* value, unsigned length, char tail)
   }
 }
 
+} // namespace local
+
 } // namespace
 
 namespace vm {
@@ -1926,170 +1930,171 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 {
   memset(vmTable, 0, sizeof(JavaVMVTable));
 
-  vmTable->DestroyJavaVM = DestroyJavaVM;
-  vmTable->AttachCurrentThread = AttachCurrentThread;
-  vmTable->AttachCurrentThreadAsDaemon = AttachCurrentThreadAsDaemon;
-  vmTable->DetachCurrentThread = DetachCurrentThread;
-  vmTable->GetEnv = GetEnv;
+  vmTable->DestroyJavaVM = local::DestroyJavaVM;
+  vmTable->AttachCurrentThread = local::AttachCurrentThread;
+  vmTable->AttachCurrentThreadAsDaemon = local::AttachCurrentThreadAsDaemon;
+  vmTable->DetachCurrentThread = local::DetachCurrentThread;
+  vmTable->GetEnv = local::GetEnv;
 
   memset(envTable, 0, sizeof(JNIEnvVTable));
 
-  envTable->GetVersion = ::GetVersion;
-  envTable->GetStringLength = ::GetStringLength;
-  envTable->GetStringChars = ::GetStringChars;
-  envTable->ReleaseStringChars = ::ReleaseStringChars;
-  envTable->GetStringUTFLength = ::GetStringUTFLength;
-  envTable->GetStringUTFChars = ::GetStringUTFChars;
-  envTable->ReleaseStringUTFChars = ::ReleaseStringUTFChars;
-  envTable->GetArrayLength = ::GetArrayLength;
-  envTable->NewString = ::NewString;
-  envTable->NewStringUTF = ::NewStringUTF;
-  envTable->FindClass = ::FindClass;
-  envTable->ThrowNew = ::ThrowNew;
-  envTable->ExceptionCheck = ::ExceptionCheck;
-  envTable->NewDirectByteBuffer = ::NewDirectByteBuffer;
-  envTable->GetDirectBufferAddress = ::GetDirectBufferAddress;
-  envTable->GetDirectBufferCapacity = ::GetDirectBufferCapacity;
-  envTable->DeleteLocalRef = ::DeleteLocalRef;
-  envTable->GetObjectClass = ::GetObjectClass;
-  envTable->IsInstanceOf = ::IsInstanceOf;
-  envTable->GetFieldID = ::GetFieldID;
-  envTable->GetMethodID = ::GetMethodID;
-  envTable->GetStaticMethodID = ::GetStaticMethodID;
-  envTable->NewObject = ::NewObject;
-  envTable->NewObjectV = ::NewObjectV;
-  envTable->CallObjectMethodV = ::CallObjectMethodV;
-  envTable->CallObjectMethod = ::CallObjectMethod;
-  envTable->CallBooleanMethodV = ::CallBooleanMethodV;
-  envTable->CallBooleanMethod = ::CallBooleanMethod;
-  envTable->CallByteMethodV = ::CallByteMethodV;
-  envTable->CallByteMethod = ::CallByteMethod;
-  envTable->CallCharMethodV = ::CallCharMethodV;
-  envTable->CallCharMethod = ::CallCharMethod;
-  envTable->CallShortMethodV = ::CallShortMethodV;
-  envTable->CallShortMethod = ::CallShortMethod;
-  envTable->CallIntMethodV = ::CallIntMethodV;
-  envTable->CallIntMethod = ::CallIntMethod;
-  envTable->CallLongMethodV = ::CallLongMethodV;
-  envTable->CallLongMethod = ::CallLongMethod;
-  envTable->CallFloatMethodV = ::CallFloatMethodV;
-  envTable->CallFloatMethod = ::CallFloatMethod;
-  envTable->CallDoubleMethodV = ::CallDoubleMethodV;
-  envTable->CallDoubleMethod = ::CallDoubleMethod;
-  envTable->CallVoidMethodV = ::CallVoidMethodV;
-  envTable->CallVoidMethod = ::CallVoidMethod;
-  envTable->CallStaticObjectMethodV = ::CallStaticObjectMethodV;
-  envTable->CallStaticObjectMethod = ::CallStaticObjectMethod;
-  envTable->CallStaticBooleanMethodV = ::CallStaticBooleanMethodV;
-  envTable->CallStaticBooleanMethod = ::CallStaticBooleanMethod;
-  envTable->CallStaticByteMethodV = ::CallStaticByteMethodV;
-  envTable->CallStaticByteMethod = ::CallStaticByteMethod;
-  envTable->CallStaticCharMethodV = ::CallStaticCharMethodV;
-  envTable->CallStaticCharMethod = ::CallStaticCharMethod;
-  envTable->CallStaticShortMethodV = ::CallStaticShortMethodV;
-  envTable->CallStaticShortMethod = ::CallStaticShortMethod;
-  envTable->CallStaticIntMethodV = ::CallStaticIntMethodV;
-  envTable->CallStaticIntMethod = ::CallStaticIntMethod;
-  envTable->CallStaticLongMethodV = ::CallStaticLongMethodV;
-  envTable->CallStaticLongMethod = ::CallStaticLongMethod;
-  envTable->CallStaticFloatMethodV = ::CallStaticFloatMethodV;
-  envTable->CallStaticFloatMethod = ::CallStaticFloatMethod;
-  envTable->CallStaticDoubleMethodV = ::CallStaticDoubleMethodV;
-  envTable->CallStaticDoubleMethod = ::CallStaticDoubleMethod;
-  envTable->CallStaticVoidMethodV = ::CallStaticVoidMethodV;
-  envTable->CallStaticVoidMethod = ::CallStaticVoidMethod;
-  envTable->GetStaticFieldID = ::GetStaticFieldID;
-  envTable->GetObjectField = ::GetObjectField;
-  envTable->GetBooleanField = ::GetBooleanField;
-  envTable->GetByteField = ::GetByteField;
-  envTable->GetCharField = ::GetCharField;
-  envTable->GetShortField = ::GetShortField;
-  envTable->GetIntField = ::GetIntField;
-  envTable->GetLongField = ::GetLongField;
-  envTable->GetFloatField = ::GetFloatField;
-  envTable->GetDoubleField = ::GetDoubleField;
-  envTable->SetObjectField = ::SetObjectField;
-  envTable->SetBooleanField = ::SetBooleanField;
-  envTable->SetByteField = ::SetByteField;
-  envTable->SetCharField = ::SetCharField;
-  envTable->SetShortField = ::SetShortField;
-  envTable->SetIntField = ::SetIntField;
-  envTable->SetLongField = ::SetLongField;
-  envTable->SetFloatField = ::SetFloatField;
-  envTable->SetDoubleField = ::SetDoubleField;
-  envTable->GetStaticObjectField = ::GetStaticObjectField;
-  envTable->GetStaticBooleanField = ::GetStaticBooleanField;
-  envTable->GetStaticByteField = ::GetStaticByteField;
-  envTable->GetStaticCharField = ::GetStaticCharField;
-  envTable->GetStaticShortField = ::GetStaticShortField;
-  envTable->GetStaticIntField = ::GetStaticIntField;
-  envTable->GetStaticLongField = ::GetStaticLongField;
-  envTable->GetStaticFloatField = ::GetStaticFloatField;
-  envTable->GetStaticDoubleField = ::GetStaticDoubleField;
-  envTable->SetStaticObjectField = ::SetStaticObjectField;
-  envTable->SetStaticBooleanField = ::SetStaticBooleanField;
-  envTable->SetStaticByteField = ::SetStaticByteField;
-  envTable->SetStaticCharField = ::SetStaticCharField;
-  envTable->SetStaticShortField = ::SetStaticShortField;
-  envTable->SetStaticIntField = ::SetStaticIntField;
-  envTable->SetStaticLongField = ::SetStaticLongField;
-  envTable->SetStaticFloatField = ::SetStaticFloatField;
-  envTable->SetStaticDoubleField = ::SetStaticDoubleField;
-  envTable->NewGlobalRef = ::NewGlobalRef;
-  envTable->NewWeakGlobalRef = ::NewGlobalRef;
-  envTable->DeleteGlobalRef = ::DeleteGlobalRef;
-  envTable->ExceptionOccurred = ::ExceptionOccurred;
-  envTable->ExceptionDescribe = ::ExceptionDescribe;
-  envTable->ExceptionClear = ::ExceptionClear;
-  envTable->NewObjectArray = ::NewObjectArray;
-  envTable->GetObjectArrayElement = ::GetObjectArrayElement;
-  envTable->SetObjectArrayElement = ::SetObjectArrayElement;
-  envTable->NewBooleanArray = ::NewBooleanArray;
-  envTable->NewByteArray = ::NewByteArray;
-  envTable->NewCharArray = ::NewCharArray;
-  envTable->NewShortArray = ::NewShortArray;
-  envTable->NewIntArray = ::NewIntArray;
-  envTable->NewLongArray = ::NewLongArray;
-  envTable->NewFloatArray = ::NewFloatArray;
-  envTable->NewDoubleArray = ::NewDoubleArray;
-  envTable->GetBooleanArrayElements = ::GetBooleanArrayElements;
-  envTable->GetByteArrayElements = ::GetByteArrayElements;
-  envTable->GetCharArrayElements = ::GetCharArrayElements;
-  envTable->GetShortArrayElements = ::GetShortArrayElements;
-  envTable->GetIntArrayElements = ::GetIntArrayElements;
-  envTable->GetLongArrayElements = ::GetLongArrayElements;
-  envTable->GetFloatArrayElements = ::GetFloatArrayElements;
-  envTable->GetDoubleArrayElements = ::GetDoubleArrayElements;
-  envTable->ReleaseBooleanArrayElements = ::ReleaseBooleanArrayElements;
-  envTable->ReleaseByteArrayElements = ::ReleaseByteArrayElements;
-  envTable->ReleaseCharArrayElements = ::ReleaseCharArrayElements;
-  envTable->ReleaseShortArrayElements = ::ReleaseShortArrayElements;
-  envTable->ReleaseIntArrayElements = ::ReleaseIntArrayElements;
-  envTable->ReleaseLongArrayElements = ::ReleaseLongArrayElements;
-  envTable->ReleaseFloatArrayElements = ::ReleaseFloatArrayElements;
-  envTable->ReleaseDoubleArrayElements = ::ReleaseDoubleArrayElements;
-  envTable->GetBooleanArrayRegion = ::GetBooleanArrayRegion;
-  envTable->GetByteArrayRegion = ::GetByteArrayRegion;
-  envTable->GetCharArrayRegion = ::GetCharArrayRegion;
-  envTable->GetShortArrayRegion = ::GetShortArrayRegion;
-  envTable->GetIntArrayRegion = ::GetIntArrayRegion;
-  envTable->GetLongArrayRegion = ::GetLongArrayRegion;
-  envTable->GetFloatArrayRegion = ::GetFloatArrayRegion;
-  envTable->GetDoubleArrayRegion = ::GetDoubleArrayRegion;
-  envTable->SetBooleanArrayRegion = ::SetBooleanArrayRegion;
-  envTable->SetByteArrayRegion = ::SetByteArrayRegion;
-  envTable->SetCharArrayRegion = ::SetCharArrayRegion;
-  envTable->SetShortArrayRegion = ::SetShortArrayRegion;
-  envTable->SetIntArrayRegion = ::SetIntArrayRegion;
-  envTable->SetLongArrayRegion = ::SetLongArrayRegion;
-  envTable->SetFloatArrayRegion = ::SetFloatArrayRegion;
-  envTable->SetDoubleArrayRegion = ::SetDoubleArrayRegion;
-  envTable->GetPrimitiveArrayCritical = ::GetPrimitiveArrayCritical;
-  envTable->ReleasePrimitiveArrayCritical = ::ReleasePrimitiveArrayCritical;
-  envTable->MonitorEnter = MonitorEnter;
-  envTable->MonitorExit = MonitorExit;
-  envTable->GetJavaVM = ::GetJavaVM;
-  envTable->IsSameObject = ::IsSameObject;
+  envTable->GetVersion = local::GetVersion;
+  envTable->GetStringLength = local::GetStringLength;
+  envTable->GetStringChars = local::GetStringChars;
+  envTable->ReleaseStringChars = local::ReleaseStringChars;
+  envTable->GetStringUTFLength = local::GetStringUTFLength;
+  envTable->GetStringUTFChars = local::GetStringUTFChars;
+  envTable->ReleaseStringUTFChars = local::ReleaseStringUTFChars;
+  envTable->GetArrayLength = local::GetArrayLength;
+  envTable->NewString = local::NewString;
+  envTable->NewStringUTF = local::NewStringUTF;
+  envTable->FindClass = local::FindClass;
+  envTable->ThrowNew = local::ThrowNew;
+  envTable->ExceptionCheck = local::ExceptionCheck;
+  envTable->NewDirectByteBuffer = local::NewDirectByteBuffer;
+  envTable->GetDirectBufferAddress = local::GetDirectBufferAddress;
+  envTable->GetDirectBufferCapacity = local::GetDirectBufferCapacity;
+  envTable->DeleteLocalRef = local::DeleteLocalRef;
+  envTable->GetObjectClass = local::GetObjectClass;
+  envTable->IsInstanceOf = local::IsInstanceOf;
+  envTable->GetFieldID = local::GetFieldID;
+  envTable->GetMethodID = local::GetMethodID;
+  envTable->GetStaticMethodID = local::GetStaticMethodID;
+  envTable->NewObject = local::NewObject;
+  envTable->NewObjectV = local::NewObjectV;
+  envTable->CallObjectMethodV = local::CallObjectMethodV;
+  envTable->CallObjectMethod = local::CallObjectMethod;
+  envTable->CallBooleanMethodV = local::CallBooleanMethodV;
+  envTable->CallBooleanMethod = local::CallBooleanMethod;
+  envTable->CallByteMethodV = local::CallByteMethodV;
+  envTable->CallByteMethod = local::CallByteMethod;
+  envTable->CallCharMethodV = local::CallCharMethodV;
+  envTable->CallCharMethod = local::CallCharMethod;
+  envTable->CallShortMethodV = local::CallShortMethodV;
+  envTable->CallShortMethod = local::CallShortMethod;
+  envTable->CallIntMethodV = local::CallIntMethodV;
+  envTable->CallIntMethod = local::CallIntMethod;
+  envTable->CallLongMethodV = local::CallLongMethodV;
+  envTable->CallLongMethod = local::CallLongMethod;
+  envTable->CallFloatMethodV = local::CallFloatMethodV;
+  envTable->CallFloatMethod = local::CallFloatMethod;
+  envTable->CallDoubleMethodV = local::CallDoubleMethodV;
+  envTable->CallDoubleMethod = local::CallDoubleMethod;
+  envTable->CallVoidMethodV = local::CallVoidMethodV;
+  envTable->CallVoidMethod = local::CallVoidMethod;
+  envTable->CallStaticObjectMethodV = local::CallStaticObjectMethodV;
+  envTable->CallStaticObjectMethod = local::CallStaticObjectMethod;
+  envTable->CallStaticBooleanMethodV = local::CallStaticBooleanMethodV;
+  envTable->CallStaticBooleanMethod = local::CallStaticBooleanMethod;
+  envTable->CallStaticByteMethodV = local::CallStaticByteMethodV;
+  envTable->CallStaticByteMethod = local::CallStaticByteMethod;
+  envTable->CallStaticCharMethodV = local::CallStaticCharMethodV;
+  envTable->CallStaticCharMethod = local::CallStaticCharMethod;
+  envTable->CallStaticShortMethodV = local::CallStaticShortMethodV;
+  envTable->CallStaticShortMethod = local::CallStaticShortMethod;
+  envTable->CallStaticIntMethodV = local::CallStaticIntMethodV;
+  envTable->CallStaticIntMethod = local::CallStaticIntMethod;
+  envTable->CallStaticLongMethodV = local::CallStaticLongMethodV;
+  envTable->CallStaticLongMethod = local::CallStaticLongMethod;
+  envTable->CallStaticFloatMethodV = local::CallStaticFloatMethodV;
+  envTable->CallStaticFloatMethod = local::CallStaticFloatMethod;
+  envTable->CallStaticDoubleMethodV = local::CallStaticDoubleMethodV;
+  envTable->CallStaticDoubleMethod = local::CallStaticDoubleMethod;
+  envTable->CallStaticVoidMethodV = local::CallStaticVoidMethodV;
+  envTable->CallStaticVoidMethod = local::CallStaticVoidMethod;
+  envTable->GetStaticFieldID = local::GetStaticFieldID;
+  envTable->GetObjectField = local::GetObjectField;
+  envTable->GetBooleanField = local::GetBooleanField;
+  envTable->GetByteField = local::GetByteField;
+  envTable->GetCharField = local::GetCharField;
+  envTable->GetShortField = local::GetShortField;
+  envTable->GetIntField = local::GetIntField;
+  envTable->GetLongField = local::GetLongField;
+  envTable->GetFloatField = local::GetFloatField;
+  envTable->GetDoubleField = local::GetDoubleField;
+  envTable->SetObjectField = local::SetObjectField;
+  envTable->SetBooleanField = local::SetBooleanField;
+  envTable->SetByteField = local::SetByteField;
+  envTable->SetCharField = local::SetCharField;
+  envTable->SetShortField = local::SetShortField;
+  envTable->SetIntField = local::SetIntField;
+  envTable->SetLongField = local::SetLongField;
+  envTable->SetFloatField = local::SetFloatField;
+  envTable->SetDoubleField = local::SetDoubleField;
+  envTable->GetStaticObjectField = local::GetStaticObjectField;
+  envTable->GetStaticBooleanField = local::GetStaticBooleanField;
+  envTable->GetStaticByteField = local::GetStaticByteField;
+  envTable->GetStaticCharField = local::GetStaticCharField;
+  envTable->GetStaticShortField = local::GetStaticShortField;
+  envTable->GetStaticIntField = local::GetStaticIntField;
+  envTable->GetStaticLongField = local::GetStaticLongField;
+  envTable->GetStaticFloatField = local::GetStaticFloatField;
+  envTable->GetStaticDoubleField = local::GetStaticDoubleField;
+  envTable->SetStaticObjectField = local::SetStaticObjectField;
+  envTable->SetStaticBooleanField = local::SetStaticBooleanField;
+  envTable->SetStaticByteField = local::SetStaticByteField;
+  envTable->SetStaticCharField = local::SetStaticCharField;
+  envTable->SetStaticShortField = local::SetStaticShortField;
+  envTable->SetStaticIntField = local::SetStaticIntField;
+  envTable->SetStaticLongField = local::SetStaticLongField;
+  envTable->SetStaticFloatField = local::SetStaticFloatField;
+  envTable->SetStaticDoubleField = local::SetStaticDoubleField;
+  envTable->NewGlobalRef = local::NewGlobalRef;
+  envTable->NewWeakGlobalRef = local::NewGlobalRef;
+  envTable->DeleteGlobalRef = local::DeleteGlobalRef;
+  envTable->ExceptionOccurred = local::ExceptionOccurred;
+  envTable->ExceptionDescribe = local::ExceptionDescribe;
+  envTable->ExceptionClear = local::ExceptionClear;
+  envTable->NewObjectArray = local::NewObjectArray;
+  envTable->GetObjectArrayElement = local::GetObjectArrayElement;
+  envTable->SetObjectArrayElement = local::SetObjectArrayElement;
+  envTable->NewBooleanArray = local::NewBooleanArray;
+  envTable->NewByteArray = local::NewByteArray;
+  envTable->NewCharArray = local::NewCharArray;
+  envTable->NewShortArray = local::NewShortArray;
+  envTable->NewIntArray = local::NewIntArray;
+  envTable->NewLongArray = local::NewLongArray;
+  envTable->NewFloatArray = local::NewFloatArray;
+  envTable->NewDoubleArray = local::NewDoubleArray;
+  envTable->GetBooleanArrayElements = local::GetBooleanArrayElements;
+  envTable->GetByteArrayElements = local::GetByteArrayElements;
+  envTable->GetCharArrayElements = local::GetCharArrayElements;
+  envTable->GetShortArrayElements = local::GetShortArrayElements;
+  envTable->GetIntArrayElements = local::GetIntArrayElements;
+  envTable->GetLongArrayElements = local::GetLongArrayElements;
+  envTable->GetFloatArrayElements = local::GetFloatArrayElements;
+  envTable->GetDoubleArrayElements = local::GetDoubleArrayElements;
+  envTable->ReleaseBooleanArrayElements = local::ReleaseBooleanArrayElements;
+  envTable->ReleaseByteArrayElements = local::ReleaseByteArrayElements;
+  envTable->ReleaseCharArrayElements = local::ReleaseCharArrayElements;
+  envTable->ReleaseShortArrayElements = local::ReleaseShortArrayElements;
+  envTable->ReleaseIntArrayElements = local::ReleaseIntArrayElements;
+  envTable->ReleaseLongArrayElements = local::ReleaseLongArrayElements;
+  envTable->ReleaseFloatArrayElements = local::ReleaseFloatArrayElements;
+  envTable->ReleaseDoubleArrayElements = local::ReleaseDoubleArrayElements;
+  envTable->GetBooleanArrayRegion = local::GetBooleanArrayRegion;
+  envTable->GetByteArrayRegion = local::GetByteArrayRegion;
+  envTable->GetCharArrayRegion = local::GetCharArrayRegion;
+  envTable->GetShortArrayRegion = local::GetShortArrayRegion;
+  envTable->GetIntArrayRegion = local::GetIntArrayRegion;
+  envTable->GetLongArrayRegion = local::GetLongArrayRegion;
+  envTable->GetFloatArrayRegion = local::GetFloatArrayRegion;
+  envTable->GetDoubleArrayRegion = local::GetDoubleArrayRegion;
+  envTable->SetBooleanArrayRegion = local::SetBooleanArrayRegion;
+  envTable->SetByteArrayRegion = local::SetByteArrayRegion;
+  envTable->SetCharArrayRegion = local::SetCharArrayRegion;
+  envTable->SetShortArrayRegion = local::SetShortArrayRegion;
+  envTable->SetIntArrayRegion = local::SetIntArrayRegion;
+  envTable->SetLongArrayRegion = local::SetLongArrayRegion;
+  envTable->SetFloatArrayRegion = local::SetFloatArrayRegion;
+  envTable->SetDoubleArrayRegion = local::SetDoubleArrayRegion;
+  envTable->GetPrimitiveArrayCritical = local::GetPrimitiveArrayCritical;
+  envTable->ReleasePrimitiveArrayCritical
+    = local::ReleasePrimitiveArrayCritical;
+  envTable->MonitorEnter = local::MonitorEnter;
+  envTable->MonitorExit = local::MonitorExit;
+  envTable->GetJavaVM = local::GetJavaVM;
+  envTable->IsSameObject = local::IsSameObject;
 }
 
 } // namespace vm
@@ -2111,7 +2116,7 @@ JNI_GetDefaultJavaVMInitArgs(void*)
 extern "C" JNIEXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 {
-  JavaVMInitArgs* a = static_cast<JavaVMInitArgs*>(args);
+  local::JavaVMInitArgs* a = static_cast<local::JavaVMInitArgs*>(args);
 
   unsigned heapLimit = 0;
   const char* bootLibrary = 0;
@@ -2127,7 +2132,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     if (strncmp(a->options[i].optionString, "-X", 2) == 0) {
       const char* p = a->options[i].optionString + 2;
       if (strncmp(p, "mx", 2) == 0) {
-        heapLimit = parseSize(p + 2);
+        heapLimit = local::parseSize(p + 2);
       } else if (strncmp(p, BOOTCLASSPATH_PREPEND_OPTION ":",
                          sizeof(BOOTCLASSPATH_PREPEND_OPTION)) == 0)
       {
@@ -2174,10 +2179,11 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   RUNTIME_ARRAY(char, classpathBuffer, classpathBufferSize);
   char* classpathPointer = RUNTIME_ARRAY_BODY(classpathBuffer);
 
-  append(&classpathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
-  append(&classpathPointer, bootClasspath, bcpl, PATH_SEPARATOR);
-  append(&classpathPointer, bootClasspathAppend, bcpal, PATH_SEPARATOR);
-  append(&classpathPointer, classpath, cpl, 0);
+  local::append
+    (&classpathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
+  local::append(&classpathPointer, bootClasspath, bcpl, PATH_SEPARATOR);
+  local::append(&classpathPointer, bootClasspathAppend, bcpal, PATH_SEPARATOR);
+  local::append(&classpathPointer, classpath, cpl, 0);
 
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
