@@ -11,6 +11,14 @@
 #ifndef ARCH_H
 #define ARCH_H
 
+#ifdef _MSC_VER
+#  include "windows.h"
+#  pragma push_macro("assert")
+#  include "intrin.h"
+#  pragma pop_macro("assert")
+#  undef interface
+#endif
+
 #include "common.h"
 
 extern "C" void NO_RETURN

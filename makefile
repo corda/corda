@@ -277,6 +277,7 @@ ifdef msvc
 	ld = "$(msvc)/BIN/link.exe"
 	mt = "mt.exe"
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
+		-DUSE_ATOMIC_OPERATIONS \
 		-Fd$(native-build)/$(name).pdb -I"$(zlib)/include" -I$(src) \
 		-I"$(native-build)" -I"$(windows-java-home)/include" \
 		-I"$(windows-java-home)/include/win32"
