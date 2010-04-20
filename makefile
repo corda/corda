@@ -3,7 +3,7 @@ MAKEFLAGS = -s
 name = avian
 version = 0.3
 
-build-arch := $(shell uname -m | sed 's/^i.86$$/i386/')
+build-arch := $(shell uname -m | sed 's/^i.86$$/i386/' | sed 's/^arm.*$$/arm/')
 ifeq (Power,$(filter Power,$(build-arch)))
 	build-arch = powerpc
 endif
@@ -145,19 +145,8 @@ ifeq ($(arch),powerpc)
 	pointer-size = 4
 endif
 ifeq ($(arch),arm)
-  lflags := -L/opt/crosstool/gcc-4.1.0-glibc-2.3.2/arm-unknown-linux-gnu/arm-unknown-linux-gnu/lib -L$(root)/arm/lib $(lflags)
-  cflags := -I/opt/crosstool/gcc-4.1.0-glibc-2.3.2/arm-unknown-linux-gnu/arm-unknown-linux-gnu/include -I$(root)/arm/include $(cflags)
-
   asm = arm
-  object-arch = arm 
-  object-format = elf32-littlearm
   pointer-size = 4 
-  cxx = arm-unknown-linux-gnu-g++
-  cc = arm-unknown-linux-gnu-gcc
-  ar = arm-unknown-linux-gnu-ar
-  ranlib = arm-unknown-linux-gnu-ranlib
-  objcopy = arm-unknown-linux-gnu-objcopy
-  strip = arm-unknown-linux-gnu-strip
 endif
 
 ifeq ($(platform),darwin)
