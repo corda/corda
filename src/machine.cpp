@@ -2690,6 +2690,30 @@ makeString(Thread* t, const char* format, ...)
   return makeString(t, s, 0, byteArrayLength(t, s) - 1, 0);
 }
 
+
+int
+stringUTFLength(Thread* t, object string) {
+  int length = 0;
+
+  if (stringLength(t, string)) {
+    object data = stringData(t, string);
+    if (objectClass(t, data)
+        == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
+      length = stringLength(t, string);
+    } else {
+      for (unsigned i = 0; i < stringLength(t, string); ++i) {
+        uint16_t c = charArrayBody(t, data, stringOffset(t, string) + i);
+        if (!c)             length += 1; // null char (was 2 bytes in Java)
+        else if (c < 0x80)  length += 1; // ASCII char
+        else if (c < 0x800) length += 2; // two-byte char
+        else                length += 3; // three-byte char
+      }
+    }
+  }
+
+  return length;
+}
+
 void
 stringChars(Thread* t, object string, char* chars)
 {
@@ -2728,6 +2752,42 @@ stringChars(Thread* t, object string, uint16_t* chars)
     }
   }
   chars[stringLength(t, string)] = 0;
+}
+
+void
+stringUTFChars(Thread* t, object string, char* chars, unsigned length UNUSED)
+{
+  assert(t, static_cast<unsigned>(stringUTFLength(t, string)) == length);
+
+  if (stringLength(t, string)) {
+    object data = stringData(t, string);
+    if (objectClass(t, data)
+        == arrayBody(t, t->m->types, Machine::ByteArrayType))
+    {    
+      memcpy(chars,
+             &byteArrayBody(t, data, stringOffset(t, string)),
+             stringLength(t, string));
+      chars[stringLength(t, string)] = 0; 
+    } else {
+      int j = 0;
+      for (unsigned i = 0; i < stringLength(t, string); ++i) {
+        uint16_t c = charArrayBody(t, data, stringOffset(t, string) + i);
+        if(!c) {                // null char
+          chars[j++] = 0;
+        } else if (c < 0x80) {  // ASCII char
+          chars[j++] = static_cast<char>(c);
+        } else if (c < 0x800) { // two-byte char
+          chars[j++] = static_cast<char>(0x0c0 | (c >> 6));
+          chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
+        } else {                // three-byte char
+          chars[j++] = static_cast<char>(0x0e0 | ((c >> 12) & 0x0f));
+          chars[j++] = static_cast<char>(0x080 | ((c >> 6) & 0x03f));
+          chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
+        }
+      }
+      chars[j] = 0;
+    }    
+  }
 }
 
 bool

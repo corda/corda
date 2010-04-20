@@ -159,7 +159,7 @@ GetStringUTFLength(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
 
-  return stringLength(t, *s);
+  return stringUTFLength(t, *s);
 }
 
 const char* JNICALL
@@ -167,9 +167,10 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
 {
   ENTER(t, Thread::ActiveState);
 
+  int length = stringUTFLength(t, *s);
   char* chars = static_cast<char*>
-    (t->m->heap->allocate(stringLength(t, *s) + 1));
-  stringChars(t, *s, chars);
+    (t->m->heap->allocate(length + 1));
+  stringUTFChars(t, *s, chars, length);
 
   if (isCopy) *isCopy = true;
   return chars;

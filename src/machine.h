@@ -1901,11 +1901,17 @@ makeByteArray(Thread* t, const char* format, ...);
 object
 makeString(Thread* t, const char* format, ...);
 
+int
+stringUTFLength(Thread* t, object string);
+
 void
 stringChars(Thread* t, object string, char* chars);
 
 void
 stringChars(Thread* t, object string, uint16_t* chars);
+
+void
+stringUTFChars(Thread* t, object string, char* chars, unsigned length);
 
 bool
 isAssignableFrom(Thread* t, object a, object b);
