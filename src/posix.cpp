@@ -93,6 +93,8 @@ pathOfExecutable(System* s, const char** retBuf, unsigned* size)
   CFBundleRef bundle = CFBundleGetMainBundle();
   CFURLRef url = CFBundleCopyExecutableURL(bundle);
   CFStringRef path = CFURLCopyPath(url);
+  path = CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault,
+						    path, CFSTR(""));
   CFIndex pathSize = CFStringGetMaximumSizeOfFileSystemRepresentation(path);
   char* buffer = reinterpret_cast<char*>(allocate(s, pathSize));
   if (CFStringGetFileSystemRepresentation(path, buffer, pathSize)) {
