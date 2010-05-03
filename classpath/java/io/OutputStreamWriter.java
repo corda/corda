@@ -10,6 +10,8 @@
 
 package java.io;
 
+import avian.Utf8;
+
 public class OutputStreamWriter extends Writer {
   private final OutputStream out;
 
@@ -18,11 +20,7 @@ public class OutputStreamWriter extends Writer {
   }
   
   public void write(char[] b, int offset, int length) throws IOException {
-    byte[] buffer = new byte[length];
-    for (int i = 0; i < length; ++i) {
-      buffer[i] = (byte) b[i + offset];
-    }
-    out.write(buffer);
+    out.write(Utf8.encode(b, offset, length));
   }
 
   public void flush() throws IOException {

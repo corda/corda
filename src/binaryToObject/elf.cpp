@@ -42,6 +42,7 @@
 
 #define EM_386 3
 #define EM_X86_64 62
+#define EM_ARM 40
 
 #define SHT_PROGBITS 1
 #define SHT_SYMTAB 2
@@ -352,6 +353,8 @@ MAKE_NAME(writeElf, BITS_PER_WORD, Object)
     machine = EM_X86_64;
   } else if (strcmp(architecture, "i386") == 0) {
     machine = EM_386;
+  } else if (strcmp(architecture, "arm") == 0) {
+    machine = EM_ARM;
   } else {
     fprintf(stderr, "unsupported architecture: %s\n", architecture);
     return false;

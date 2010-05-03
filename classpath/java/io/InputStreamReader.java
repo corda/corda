@@ -10,6 +10,8 @@
 
 package java.io;
 
+import avian.Utf8;
+
 public class InputStreamReader extends Reader {
   private final InputStream in;
 
@@ -31,10 +33,14 @@ public class InputStreamReader extends Reader {
   public int read(char[] b, int offset, int length) throws IOException {
     byte[] buffer = new byte[length];
     int c = in.read(buffer);
-    for (int i = 0; i < c; ++i) {
-      b[i + offset] = (char) buffer[i];
-    }
-    return c;
+
+    if (c <= 0) return c;
+
+    char[] buffer16 = Utf8.decode16(buffer, 0, c);
+
+    System.arraycopy(buffer16, 0, b, offset, buffer16.length);
+
+    return buffer16.length;
   }
 
   public void close() throws IOException {
