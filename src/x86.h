@@ -199,7 +199,8 @@ inline bool
 atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 {
 #ifdef _MSC_VER
-  InterlockedCompareExchange(p, new_, old);
+  return old == InterlockedCompareExchange
+    (reinterpret_cast<LONG*>(p), new_, old);
 #elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
 #else
@@ -218,7 +219,8 @@ inline bool
 atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
 {
 #ifdef _MSC_VER
-  InterlockedCompareExchange64(p, new_, old);
+  return old == InterlockedCompareExchange64
+    (reinterpret_cast<LONGLONG*>(p), new_, old);
 #elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
 #else

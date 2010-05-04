@@ -38,9 +38,7 @@ public class InputStreamReader extends Reader {
 
     char[] buffer16 = Utf8.decode16(buffer, 0, c);
 
-    for (int i = 0; i < buffer16.length; ++i) {
-      b[i + offset] = buffer16[i];
-    }
+    System.arraycopy(buffer16, 0, b, offset, buffer16.length);
 
     return buffer16.length;
   }
