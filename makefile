@@ -212,8 +212,8 @@ ifeq ($(platform),windows)
 	endif
 
 	ifeq ($(arch),x86_64)
-		cxx = x86_64-w64-mingw32-g++
-		cc = x86_64-w64-mingw32-gcc
+		cxx = x86_64-w64-mingw32-g++ $(mflag)
+		cc = x86_64-w64-mingw32-gcc $(mflag)
 		dlltool = x86_64-w64-mingw32-dlltool
 		ar = x86_64-w64-mingw32-ar
 		ranlib = x86_64-w64-mingw32-ranlib
