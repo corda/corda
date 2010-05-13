@@ -742,9 +742,9 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
   if (FD_ISSET(s->control.writer(), &(s->write)) or
       FD_ISSET(s->control.writer(), &(s->except)))
   {
-    unsigned socket = s->control.writer();
-    FD_CLR(socket, &(s->write));
-    FD_CLR(socket, &(s->except));
+    int socket = s->control.writer();
+    FD_CLR(static_cast<unsigned>(socket), &(s->write));
+    FD_CLR(static_cast<unsigned>(socket), &(s->except));
 
     int error;
     socklen_t size = sizeof(int);
