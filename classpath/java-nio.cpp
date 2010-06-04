@@ -428,13 +428,32 @@ Java_java_nio_channels_SocketChannel_natRead(JNIEnv *e,
 					     jint socket,
 					     jbyteArray buffer,
 					     jint offset,
-					     jint length)
+					     jint length,
+                                             jboolean blocking)
 {
-  jboolean isCopy;
-  uint8_t *buf = static_cast<uint8_t*>
-    (e->GetPrimitiveArrayCritical(buffer, &isCopy));
-  int r = ::doRead(socket, buf + offset, length);
-  e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  int r;
+  if (blocking) {
+    uint8_t* buf = static_cast<uint8_t*>(allocate(e, length));
+    if (buf) {
+      r = ::doRead(socket, buf, length);
+      if (r > 0) {
+        e->SetByteArrayRegion
+          (buffer, offset, r, reinterpret_cast<jbyte*>(buf));
+      }
+      free(buf);
+    } else {
+      return 0;
+    }
+  } else {
+    jboolean isCopy;
+    uint8_t* buf = static_cast<uint8_t*>
+      (e->GetPrimitiveArrayCritical(buffer, &isCopy));
+
+    r = ::doRead(socket, buf + offset, length);
+
+    e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  }
+
   if (r < 0) {
     if (eagain()) {
       return 0;
@@ -453,13 +472,30 @@ Java_java_nio_channels_SocketChannel_natWrite(JNIEnv *e,
 					      jint socket,
 					      jbyteArray buffer,
 					      jint offset,
-					      jint length)
+					      jint length,
+                                              jboolean blocking)
 {
-  jboolean isCopy;
-  uint8_t *buf = static_cast<uint8_t*>
-    (e->GetPrimitiveArrayCritical(buffer, &isCopy));
-  int r = ::doWrite(socket, buf + offset, length);
-  e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  int r;
+  if (blocking) {
+    uint8_t* buf = static_cast<uint8_t*>(allocate(e, length));
+    if (buf) {
+      e->GetByteArrayRegion
+        (buffer, offset, length, reinterpret_cast<jbyte*>(buf));
+      r = ::doWrite(socket, buf, length);
+      free(buf);
+    } else {
+      return 0;
+    }
+  } else {
+    jboolean isCopy;
+    uint8_t* buf = static_cast<uint8_t*>
+      (e->GetPrimitiveArrayCritical(buffer, &isCopy));
+
+    r = ::doWrite(socket, buf + offset, length);
+
+    e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  }
+
   if (r < 0) {
     if (eagain()) {
       return 0;
