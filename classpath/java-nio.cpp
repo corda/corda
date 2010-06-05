@@ -56,13 +56,15 @@ charsToArray(JNIEnv* e, const char* s)
   return a;
 }
 
-#ifdef _MSC_VER
 inline void
-close(int socket)
+doClose(int socket)
 {
+#ifdef PLATFORM_WINDOWS
   closesocket(socket);
-}
+#else
+  close(socket);
 #endif
+}
 
 inline jbyteArray
 errorString(JNIEnv* e, int n)
@@ -528,7 +530,7 @@ Java_java_nio_channels_SocketChannel_natCloseSocket(JNIEnv *,
 						    jclass,
 						    jint socket)
 {
-  close(socket);
+  doClose(socket);
 }
 
 namespace {
@@ -562,9 +564,9 @@ class Pipe {
   }
 
   void dispose() {
-    if (listener_ >= 0) ::close(listener_);
-    if (reader_ >= 0) ::close(reader_);
-    if (writer_ >= 0) ::close(writer_);
+    if (listener_ >= 0) ::doClose(listener_);
+    if (reader_ >= 0) ::doClose(reader_);
+    if (writer_ >= 0) ::doClose(writer_);
   }
 
   bool connected() {
@@ -615,8 +617,8 @@ class Pipe {
   }
 
   void dispose() {
-    ::close(pipe[0]);
-    ::close(pipe[1]);
+    ::doClose(pipe[0]);
+    ::doClose(pipe[1]);
     open_ = false;
   }
 
