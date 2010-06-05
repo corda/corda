@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 
 public abstract class SelectableChannel implements Channel {
   private SelectionKey key;
+  private boolean open = true;
 
   abstract int socketFD();
 
@@ -30,12 +31,11 @@ public abstract class SelectableChannel implements Channel {
   }
 
   public boolean isOpen() {
-    return key != null;
+    return open;
   }
 
   public void close() throws IOException {
-    if (key != null) {
-      key = null;
-    }
+    open = false;
+    key = null;
   }
 }
