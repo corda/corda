@@ -193,21 +193,12 @@ ifeq ($(platform),windows)
 	cflags = -I$(inc) $(common-cflags)
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
-		ifeq (,$(shell which x86_64-w64-mingw32-g++))
-			cxx = i586-mingw32msvc-g++
-			cc = i586-mingw32msvc-gcc
-			dlltool = i586-mingw32msvc-dlltool
-			ar = i586-mingw32msvc-ar
-			ranlib = i586-mingw32msvc-ranlib
-			strip = i586-mingw32msvc-strip
-		else
-			cxx = x86_64-w64-mingw32-g++ $(mflag)
-			cc = x86_64-w64-mingw32-gcc $(mflag)
-			dlltool = x86_64-w64-mingw32-dlltool -mi386 --as-flags=--32
-			ar = x86_64-w64-mingw32-ar
-			ranlib = x86_64-w64-mingw32-ranlib
-			strip = x86_64-w64-mingw32-strip
-		endif
+		cxx = i586-mingw32msvc-g++
+		cc = i586-mingw32msvc-gcc
+		dlltool = i586-mingw32msvc-dlltool
+		ar = i586-mingw32msvc-ar
+		ranlib = i586-mingw32msvc-ranlib
+		strip = i586-mingw32msvc-strip
 	else
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
 		build-cflags = $(common-cflags) -I$(src) -mthreads
