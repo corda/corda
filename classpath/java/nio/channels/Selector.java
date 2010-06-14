@@ -18,7 +18,7 @@ public abstract class Selector {
   protected final Set<SelectionKey> keys = new HashSet();
   protected final Set<SelectionKey> selectedKeys = new HashSet();
 
-  public static Selector open() {
+  public static Selector open() throws IOException {
     return new SocketSelector();
   }
   
