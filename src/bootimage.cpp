@@ -87,7 +87,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     object method = tripleFirst(t, calls);
     uintptr_t address;
     if (methodFlags(t, method) & ACC_NATIVE) {
-      address = reinterpret_cast<uintptr_t>(code + image->nativeThunk);
+      address = reinterpret_cast<uintptr_t>(code + image->thunks.native.start);
     } else {
       address = methodCompiled(t, method);
     }
