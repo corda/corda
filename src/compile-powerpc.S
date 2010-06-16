@@ -24,6 +24,7 @@
 #  define GLOBAL(x) x   
 #endif
       
+#define THREAD_STACK 108
 #define THREAD_CONTINUATION 112
 #define THREAD_EXCEPTION 44
 #define THREAD_EXCEPTION_STACK_ADJUSTMENT 116
@@ -106,6 +107,17 @@ LOCAL(vmInvoke_argumentTest):
 LOCAL(vmInvoke_returnAddress):
    // restore stack pointer
 	 lwz	r1,0(r1)
+   
+   // clear MyThread::stack to avoid confusing another thread calling
+   // java.lang.Thread.getStackTrace on this one.  See
+   // MyProcess::getStackTrace in compile.cpp for details on how we get
+   // a reliable stack trace from a thread that might be interrupted at
+   // any point in its execution.
+   li   r5,0
+   stw  r5,THREAD_STACK(r13)
+   
+.globl GLOBAL(vmInvoke_safeStack)
+GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
    // call the next continuation, if any
