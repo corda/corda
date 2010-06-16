@@ -74,7 +74,7 @@ import java.util.concurrent.Callable;
  *   type of "B" must match exactly</li>
  *
  *   <li>If the return type of "A" is an object type, that type must
- *   assignable from the return type of "B" (i.e. the latter must
+ *   be assignable from the return type of "B" (i.e. the latter must
  *   either be the same as the former or a superclass or
  *   superinterface of it)</li>
  *
@@ -111,11 +111,11 @@ import java.util.concurrent.Callable;
  * release it after the task is finished, regardless of how often the
  * task might temporarily yield control to other continuations.
  *
- * <p>Conversely, one might wish to acquire and release a resource
+ * <p>Alternatively, one might wish to acquire and release a resource
  * each time control (re)winds to or unwinds from a continuation,
- * respectively.  In this case, we use <code>dynamicWind</code> to
- * register functions which will run every time that frame is passed,
- * regardless of how the stack is wound or unwound.
+ * respectively.  In this case, one may use <code>dynamicWind</code>
+ * to register functions which will run every time that frame is
+ * passed, regardless of how the stack is wound or unwound.
  */
 public class Continuations {
   private Continuations() { }
