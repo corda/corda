@@ -3,7 +3,7 @@ MAKEFLAGS = -s
 name = avian
 version = 0.3
 
-build-arch := $(shell uname -m | sed 's/^i.86$$/i386/')
+build-arch := $(shell uname -m | sed 's/^i.86$$/i386/' | sed 's/^arm.*$$/arm/')
 ifeq (Power,$(filter Power,$(build-arch)))
 	build-arch = powerpc
 endif
@@ -145,19 +145,8 @@ ifeq ($(arch),powerpc)
 	pointer-size = 4
 endif
 ifeq ($(arch),arm)
-  lflags := -L/opt/crosstool/gcc-4.1.0-glibc-2.3.2/arm-unknown-linux-gnu/arm-unknown-linux-gnu/lib -L$(root)/arm/lib $(lflags)
-  cflags := -I/opt/crosstool/gcc-4.1.0-glibc-2.3.2/arm-unknown-linux-gnu/arm-unknown-linux-gnu/include -I$(root)/arm/include $(cflags)
-
   asm = arm
-  object-arch = arm 
-  object-format = elf32-littlearm
   pointer-size = 4 
-  cxx = arm-unknown-linux-gnu-g++
-  cc = arm-unknown-linux-gnu-gcc
-  ar = arm-unknown-linux-gnu-ar
-  ranlib = arm-unknown-linux-gnu-ranlib
-  objcopy = arm-unknown-linux-gnu-objcopy
-  strip = arm-unknown-linux-gnu-strip
 endif
 
 ifeq ($(platform),darwin)
@@ -223,8 +212,8 @@ ifeq ($(platform),windows)
 	endif
 
 	ifeq ($(arch),x86_64)
-		cxx = x86_64-w64-mingw32-g++
-		cc = x86_64-w64-mingw32-gcc
+		cxx = x86_64-w64-mingw32-g++ $(mflag)
+		cc = x86_64-w64-mingw32-gcc $(mflag)
 		dlltool = x86_64-w64-mingw32-dlltool
 		ar = x86_64-w64-mingw32-ar
 		ranlib = x86_64-w64-mingw32-ranlib
@@ -277,6 +266,7 @@ ifdef msvc
 	ld = "$(msvc)/BIN/link.exe"
 	mt = "mt.exe"
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
+		-DUSE_ATOMIC_OPERATIONS \
 		-Fd$(native-build)/$(name).pdb -I"$(zlib)/include" -I$(src) \
 		-I"$(native-build)" -I"$(windows-java-home)/include" \
 		-I"$(windows-java-home)/include/win32"

@@ -14,9 +14,9 @@
 #include "types.h"
 #include "common.h"
 
-#define IP_REGISTER(context) (context->uc_mcontext.gregs[15])
-#define STACK_REGISTER(context) (context->uc_mcontext.gregs[13])
-#define THREAD_REGISTER(context) (context->uc_mcontext.gregs[12])
+#define IP_REGISTER(context) (context->uc_mcontext.arm_pc)
+#define STACK_REGISTER(context) (context->uc_mcontext.arm_sp)
+#define THREAD_REGISTER(context) (context->uc_mcontext.arm_ip)
 
 extern "C" uint64_t
 vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
@@ -60,16 +60,32 @@ syncInstructionCache(const void* start UNUSED, unsigned size UNUSED)
   asm("nop");
 }
 
+typedef int (__kernel_cmpxchg_t)(int oldval, int newval, int *ptr);
+#define __kernel_cmpxchg (*(__kernel_cmpxchg_t *)0xffff0fc0)
+
+inline bool
+atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
+{
+  int r = __kernel_cmpxchg(static_cast<int>(old), static_cast<int>(new_), reinterpret_cast<int*>(p));
+  return (!r ? true : false);
+}
+
+inline bool
+atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+{
+  return atomicCompareAndSwap32(reinterpret_cast<uint32_t*>(p), old, new_);
+}
+
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
-            unsigned argumentCount, unsigned argumentsSize,
+            unsigned argumentCount, unsigned argumentsSize UNUSED,
             unsigned returnType UNUSED)
 {
   const unsigned GprCount = 4;
   uintptr_t gprTable[GprCount];
   unsigned gprIndex = 0;
 
-  uintptr_t stack[argumentsSize / BytesPerWord];
+  uintptr_t stack[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
   unsigned stackIndex = 0;
 
   unsigned ai = 0;
@@ -77,15 +93,18 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     switch (argumentTypes[ati]) {
     case DOUBLE_TYPE:
     case INT64_TYPE: {
-      if (gprIndex + (8 / BytesPerWord) <= GprCount) {
+      if (gprIndex + (8 / BytesPerWord) <= GprCount) { // pass argument on registers
+        if (gprIndex & 1) {                            // 8-byte alignment
+          memset(gprTable + gprIndex, 0, 4);           // probably not necessary, but for good luck
+          ++gprIndex;
+        }
         memcpy(gprTable + gprIndex, arguments + ai, 8);
         gprIndex += 8 / BytesPerWord;
-      } else if (gprIndex == GprCount-1) { // split between last GPR and stack
-        memcpy(gprTable + gprIndex, arguments + ai, 4);
-        ++gprIndex;
-        memcpy(stack + stackIndex, arguments + ai + 4, 4);
-        ++stackIndex;
-      } else {
+      } else {                                         // pass argument on stack
+        if (stackIndex & 1) {                          // 8-byte alignment
+          memset(stack + stackIndex, 0, 4);            // probably not necessary, but for good luck
+          ++stackIndex;
+        }
         memcpy(stack + stackIndex, arguments + ai, 8);
         stackIndex += 8 / BytesPerWord;
       }

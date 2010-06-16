@@ -92,7 +92,7 @@ public class SocketChannel extends SelectableChannel
     byte[] array = b.array();
     if (array == null) throw new NullPointerException();
 
-    int r = natRead(socket, array, b.arrayOffset() + b.position(), b.remaining());
+    int r = natRead(socket, array, b.arrayOffset() + b.position(), b.remaining(), blocking);
     if (r > 0) {
       b.position(b.position() + r);
     }
@@ -108,7 +108,7 @@ public class SocketChannel extends SelectableChannel
     byte[] array = b.array();
     if (array == null) throw new NullPointerException();
 
-    int w = natWrite(socket, array, b.arrayOffset() + b.position(), b.remaining());
+    int w = natWrite(socket, array, b.arrayOffset() + b.position(), b.remaining(), blocking);
     if (w > 0) {
       b.position(b.position() + w);
     }
@@ -139,9 +139,9 @@ public class SocketChannel extends SelectableChannel
     throws IOException;
   private static native boolean natFinishConnect(int socket)
     throws IOException;
-  private static native int natRead(int socket, byte[] buffer, int offset, int length)
+  private static native int natRead(int socket, byte[] buffer, int offset, int length, boolean blocking)
     throws IOException;
-  private static native int natWrite(int socket, byte[] buffer, int offset, int length)
+  private static native int natWrite(int socket, byte[] buffer, int offset, int length, boolean blocking)
     throws IOException;
   private static native void natThrowWriteError(int socket) throws IOException;
   private static native void natCloseSocket(int socket);

@@ -28,10 +28,11 @@
 #  define CLOSE _close
 #  define READ _read
 #  define WRITE _write
-#  define STAT _stat
+#  define STAT _wstat
 #  define STRUCT_STAT struct _stat
-#  define MKDIR(path, mode) _mkdir(path)
-#  define UNLINK _unlink
+#  define MKDIR(path, mode) _wmkdir(path)
+#  define UNLINK _wunlink
+#  define RENAME _wrename
 #  define OPEN_MASK O_BINARY
 
 #  ifdef _MSC_VER
@@ -40,9 +41,14 @@
 #    define S_IRUSR _S_IREAD
 #    define S_IWUSR _S_IWRITE
 #  else
-#    define OPEN _open
-#    define CREAT _creat
+#    define OPEN _wopen
+#    define CREAT _wcreat
 #  endif
+
+#  define GET_CHARS GetStringChars
+#  define RELEASE_CHARS(path, chars) ReleaseStringChars(path, reinterpret_cast<const jchar*>(chars))
+
+typedef wchar_t char_t;
 
 #else // not PLATFORM_WINDOWS
 
@@ -59,42 +65,50 @@
 #  define MKDIR mkdir
 #  define CREAT creat
 #  define UNLINK unlink
+#  define RENAME rename
 #  define OPEN_MASK 0
+
+#  define GET_CHARS GetStringUTFChars
+#  define RELEASE_CHARS ReleaseStringUTFChars
+
+typedef char char_t;
 
 #endif // not PLATFORM_WINDOWS
 
 inline void* operator new(size_t, void* p) throw() { return p; }
 
+typedef const char_t* string_t;
+
 namespace {
 
 #ifdef _MSC_VER
-inline int
-OPEN(const char* path, int mask, int mode)
+inline int 
+OPEN(string_t path, int mask, int mode)
 {
-  int fd;
-  if (_sopen_s(&fd, path, mask, _SH_DENYNO, mode) == 0) {
-    return fd;
+  int fd; 
+  if (_wsopen_s(&fd, path, mask, _SH_DENYNO, mode) == 0) {
+    return fd; 
   } else {
-    return -1;
+    return -1; 
   }
 }
 
 inline int
-CREAT(const char* path, int mode)
+CREAT(string_t path, int mode)
 {
   return OPEN(path, _O_CREAT, mode);
 }
 #endif
 
 inline bool
-exists(const char* path)
+exists(string_t path)
 {
   STRUCT_STAT s;
   return STAT(path, &s) == 0;
 }
 
 inline int
-doOpen(JNIEnv* e, const char* path, int mask)
+doOpen(JNIEnv* e, string_t path, int mask)
 {
   int fd = OPEN(path, mask | OPEN_MASK, S_IRUSR | S_IWUSR);
   if (fd == -1) {
@@ -157,11 +171,11 @@ class Mapping {
 };
 
 inline Mapping*
-map(JNIEnv* e, const char* path)
+map(JNIEnv* e, string_t path)
 {
   Mapping* result = 0;
-  HANDLE file = CreateFile(path, FILE_READ_DATA, FILE_SHARE_READ, 0,
-                           OPEN_EXISTING, 0, 0);
+  HANDLE file = CreateFileW(path, FILE_READ_DATA, FILE_SHARE_READ, 0,
+                            OPEN_EXISTING, 0, 0);
   if (file != INVALID_HANDLE_VALUE) {
     unsigned size = GetFileSize(file, 0);
     if (size != INVALID_FILE_SIZE) {
@@ -205,10 +219,10 @@ class Directory {
  public:
   Directory(): handle(0), findNext(false) { }
 
-  virtual const char* next() {
+  virtual string_t next() {
     if (handle and handle != INVALID_HANDLE_VALUE) {
       if (findNext) {
-        if (FindNextFile(handle, &data)) {
+        if (FindNextFileW(handle, &data)) {
           return data.cFileName;
         }
       } else {
@@ -227,7 +241,7 @@ class Directory {
   }
 
   HANDLE handle;
-  WIN32_FIND_DATA data;
+  WIN32_FIND_DATAW data;
   bool findNext;
 };
 
@@ -245,7 +259,7 @@ class Mapping {
 };
 
 inline Mapping*
-map(JNIEnv* e, const char* path)
+map(JNIEnv* e, string_t path)
 {
   Mapping* result = 0;
   int fd = open(path, O_RDONLY);
@@ -280,6 +294,14 @@ unmap(JNIEnv*, Mapping* mapping)
 
 } // namespace
 
+inline string_t getChars(JNIEnv* e, jstring path) {
+  return reinterpret_cast<string_t>(e->GET_CHARS(path, 0));
+}
+
+inline void releaseChars(JNIEnv* e, jstring path, string_t chars) {
+  e->RELEASE_CHARS(path, chars);
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_toCanonicalPath(JNIEnv* /*e*/, jclass, jstring path)
 {
@@ -297,14 +319,14 @@ Java_java_io_File_toAbsolutePath(JNIEnv* /*e*/, jclass, jstring path)
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     STRUCT_STAT s;
     int r = STAT(chars, &s);
     if (r == 0) {
       return s.st_size;
     }
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
   }
 
   return -1;
@@ -313,7 +335,7 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
 extern "C" JNIEXPORT void JNICALL
 Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     if (not exists(chars)) {
       int r = ::MKDIR(chars, 0700);
@@ -321,14 +343,14 @@ Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
         throwNewErrno(e, "java/io/IOException");
       }
     }
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
   }
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     if (not exists(chars)) {
       int fd = CREAT(chars, 0600);
@@ -338,38 +360,38 @@ Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
         doClose(e, fd);
       }
     }
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
   }
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     int r = UNLINK(chars);
     if (r != 0) {
       throwNewErrno(e, "java/io/IOException");
     }
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
   }
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)
 {
-  const char* oldChars = e->GetStringUTFChars(old, 0);
-  const char* newChars = e->GetStringUTFChars(new_, 0);
+  string_t oldChars = getChars(e, old);
+  string_t newChars = getChars(e, new_);
   if (oldChars) {
     bool v;
     if (newChars) {
-      v = rename(oldChars, newChars) == 0;
+      v = RENAME(oldChars, newChars) == 0;
 
-      e->ReleaseStringUTFChars(new_, newChars);
+      releaseChars(e, new_, newChars);
     } else {
       v = false;
     }
-    e->ReleaseStringUTFChars(old, oldChars);
+    releaseChars(e, old, oldChars);
     return v;
   } else {
     return false;
@@ -379,12 +401,12 @@ Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_isDirectory(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     STRUCT_STAT s;
     int r = STAT(chars, &s);
     bool v = (r == 0 and S_ISDIR(s.st_mode));
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
     return v;
   } else {
     return false;
@@ -394,12 +416,12 @@ Java_java_io_File_isDirectory(JNIEnv* e, jclass, jstring path)
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_isFile(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     STRUCT_STAT s;
     int r = STAT(chars, &s);
     bool v = (r == 0 and S_ISREG(s.st_mode));
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
     return v;
   } else {
     return false;
@@ -409,10 +431,10 @@ Java_java_io_File_isFile(JNIEnv* e, jclass, jstring path)
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_exists(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     bool v = exists(chars);
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
     return v;
   } else {
     return false;
@@ -424,18 +446,19 @@ Java_java_io_File_exists(JNIEnv* e, jclass, jstring path)
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
-    unsigned length = strlen(chars);
+    unsigned length = wcslen(chars);
+    unsigned size = length * sizeof(char_t);
 
-    RUNTIME_ARRAY(char, buffer, length + 3);
-    memcpy(RUNTIME_ARRAY_BODY(buffer), chars, length);
-    memcpy(RUNTIME_ARRAY_BODY(buffer) + length, "\\*", 3);
+    RUNTIME_ARRAY(char_t, buffer, length + 3);
+    memcpy(RUNTIME_ARRAY_BODY(buffer), chars, size);
+    memcpy(RUNTIME_ARRAY_BODY(buffer) + length, L"\\*", 6);
 
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
 
     Directory* d = new (malloc(sizeof(Directory))) Directory;
-    d->handle = FindFirstFile(RUNTIME_ARRAY_BODY(buffer), &(d->data));
+    d->handle = FindFirstFileW(RUNTIME_ARRAY_BODY(buffer), &(d->data));
     if (d->handle == INVALID_HANDLE_VALUE) {
       d->dispose();
       d = 0;
@@ -451,14 +474,14 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_readDir(JNIEnv* e, jclass, jlong handle)
 {
   Directory* d = reinterpret_cast<Directory*>(handle);
-  
+
   while (true) {
-    const char* s = d->next();
+    string_t s = d->next();
     if (s) {
-      if (strcmp(s, ".") == 0 || strcmp(s, "..") == 0) {
+      if (wcscmp(s, L".") == 0 || wcscmp(s, L"..") == 0) {
         // skip . or .. and try again
       } else {
-        return e->NewStringUTF(s);
+        return e->NewString(reinterpret_cast<const jchar*>(s), wcslen(s));
       }
     } else {
       return 0;
@@ -477,10 +500,10 @@ Java_java_io_File_closeDir(JNIEnv* , jclass, jlong handle)
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     jlong handle = reinterpret_cast<jlong>(opendir(chars));
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
     return handle;
   } else {
     return 0;
@@ -522,13 +545,13 @@ Java_java_io_File_closeDir(JNIEnv* , jclass, jlong handle)
 extern "C" JNIEXPORT jint JNICALL
 Java_java_io_FileInputStream_open(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path); 
   if (chars) {
     int fd = doOpen(e, chars, O_RDONLY);
-    e->ReleaseStringUTFChars(path, chars);
-    return fd;
+    releaseChars(e, path, chars);
+    return fd; 
   } else {
-    return -1;
+    return -1; 
   }
 }
 
@@ -572,10 +595,10 @@ Java_java_io_FileInputStream_close(JNIEnv* e, jclass, jint fd)
 extern "C" JNIEXPORT jint JNICALL
 Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     int fd = doOpen(e, chars, O_WRONLY | O_CREAT | O_TRUNC);
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
     return fd;
   } else {
     return -1;
@@ -618,7 +641,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
                                    jlongArray result)
 {
-  const char* chars = e->GetStringUTFChars(path, 0);
+  string_t chars = getChars(e, path);
   if (chars) {
     Mapping* mapping = map(e, chars);
 
@@ -628,7 +651,7 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
     jlong length = (mapping ? mapping->length : 0);
     e->SetLongArrayRegion(result, 1, 1, &length);
 
-    e->ReleaseStringUTFChars(path, chars);
+    releaseChars(e, path, chars);
   }
 }
 

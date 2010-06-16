@@ -56,13 +56,15 @@ charsToArray(JNIEnv* e, const char* s)
   return a;
 }
 
-#ifdef _MSC_VER
 inline void
-close(int socket)
+doClose(int socket)
 {
+#ifdef PLATFORM_WINDOWS
   closesocket(socket);
-}
+#else
+  close(socket);
 #endif
+}
 
 inline jbyteArray
 errorString(JNIEnv* e, int n)
@@ -428,13 +430,32 @@ Java_java_nio_channels_SocketChannel_natRead(JNIEnv *e,
 					     jint socket,
 					     jbyteArray buffer,
 					     jint offset,
-					     jint length)
+					     jint length,
+                                             jboolean blocking)
 {
-  jboolean isCopy;
-  uint8_t *buf = static_cast<uint8_t*>
-    (e->GetPrimitiveArrayCritical(buffer, &isCopy));
-  int r = ::doRead(socket, buf + offset, length);
-  e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  int r;
+  if (blocking) {
+    uint8_t* buf = static_cast<uint8_t*>(allocate(e, length));
+    if (buf) {
+      r = ::doRead(socket, buf, length);
+      if (r > 0) {
+        e->SetByteArrayRegion
+          (buffer, offset, r, reinterpret_cast<jbyte*>(buf));
+      }
+      free(buf);
+    } else {
+      return 0;
+    }
+  } else {
+    jboolean isCopy;
+    uint8_t* buf = static_cast<uint8_t*>
+      (e->GetPrimitiveArrayCritical(buffer, &isCopy));
+
+    r = ::doRead(socket, buf + offset, length);
+
+    e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  }
+
   if (r < 0) {
     if (eagain()) {
       return 0;
@@ -453,13 +474,30 @@ Java_java_nio_channels_SocketChannel_natWrite(JNIEnv *e,
 					      jint socket,
 					      jbyteArray buffer,
 					      jint offset,
-					      jint length)
+					      jint length,
+                                              jboolean blocking)
 {
-  jboolean isCopy;
-  uint8_t *buf = static_cast<uint8_t*>
-    (e->GetPrimitiveArrayCritical(buffer, &isCopy));
-  int r = ::doWrite(socket, buf + offset, length);
-  e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  int r;
+  if (blocking) {
+    uint8_t* buf = static_cast<uint8_t*>(allocate(e, length));
+    if (buf) {
+      e->GetByteArrayRegion
+        (buffer, offset, length, reinterpret_cast<jbyte*>(buf));
+      r = ::doWrite(socket, buf, length);
+      free(buf);
+    } else {
+      return 0;
+    }
+  } else {
+    jboolean isCopy;
+    uint8_t* buf = static_cast<uint8_t*>
+      (e->GetPrimitiveArrayCritical(buffer, &isCopy));
+
+    r = ::doWrite(socket, buf + offset, length);
+
+    e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  }
+
   if (r < 0) {
     if (eagain()) {
       return 0;
@@ -492,7 +530,7 @@ Java_java_nio_channels_SocketChannel_natCloseSocket(JNIEnv *,
 						    jclass,
 						    jint socket)
 {
-  close(socket);
+  doClose(socket);
 }
 
 namespace {
@@ -526,9 +564,9 @@ class Pipe {
   }
 
   void dispose() {
-    if (listener_ >= 0) ::close(listener_);
-    if (reader_ >= 0) ::close(reader_);
-    if (writer_ >= 0) ::close(writer_);
+    if (listener_ >= 0) ::doClose(listener_);
+    if (reader_ >= 0) ::doClose(reader_);
+    if (writer_ >= 0) ::doClose(writer_);
   }
 
   bool connected() {
@@ -579,8 +617,8 @@ class Pipe {
   }
 
   void dispose() {
-    ::close(pipe[0]);
-    ::close(pipe[1]);
+    ::doClose(pipe[0]);
+    ::doClose(pipe[1]);
     open_ = false;
   }
 
@@ -742,9 +780,9 @@ Java_java_nio_channels_SocketSelector_natDoSocketSelect(JNIEnv *e, jclass,
   if (FD_ISSET(s->control.writer(), &(s->write)) or
       FD_ISSET(s->control.writer(), &(s->except)))
   {
-    unsigned socket = s->control.writer();
-    FD_CLR(socket, &(s->write));
-    FD_CLR(socket, &(s->except));
+    int socket = s->control.writer();
+    FD_CLR(static_cast<unsigned>(socket), &(s->write));
+    FD_CLR(static_cast<unsigned>(socket), &(s->except));
 
     int error;
     socklen_t size = sizeof(int);
