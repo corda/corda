@@ -366,7 +366,7 @@ vmInvoke_returnAddress:
    // MyProcess::getStackTrace in compile.cpp for details on how we get
    // a reliable stack trace from a thread that might be interrupted at
    // any point in its execution.
-   movq   $0,THREAD_STACK(%ebx)
+   movl   $0,THREAD_STACK(%ebx)
    
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):
