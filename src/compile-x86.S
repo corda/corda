@@ -353,8 +353,8 @@ LOCAL(vmInvoke_argumentTest):
    // call function
    call   *12(%ebp)
 
-.globl vmInvoke_returnAddress
-vmInvoke_returnAddress:
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer, preserving the area containing saved
    // registers
    movl   %ebp,%ecx
