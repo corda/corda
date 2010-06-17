@@ -7750,26 +7750,24 @@ class MyProcessor: public Processor {
 };
 
 bool
-isThunk(MyThread* t, void* ip)
+isThunk(MyProcessor::ThunkCollection* thunks, void* ip)
 {
-  MyProcessor* p = processor(t);
-
-  uint8_t* thunkStart = p->thunks.default_.start;
-  uint8_t* thunkEnd = p->thunks.table.start
-    + (p->thunks.table.length * ThunkCount);
-
-  uint8_t* bootThunkStart = p->bootThunks.default_.start;
-  uint8_t* bootThunkEnd = p->bootThunks.table.start
-    + (p->bootThunks.table.length * ThunkCount);
+  uint8_t* thunkStart = thunks->default_.start;
+  uint8_t* thunkEnd = thunks->table.start
+    + (thunks->table.length * ThunkCount);
 
   return (reinterpret_cast<uintptr_t>(ip)
           >= reinterpret_cast<uintptr_t>(thunkStart)
           and reinterpret_cast<uintptr_t>(ip)
-          < reinterpret_cast<uintptr_t>(thunkEnd))
-    or (reinterpret_cast<uintptr_t>(ip)
-        >= reinterpret_cast<uintptr_t>(bootThunkStart)
-        and reinterpret_cast<uintptr_t>(ip)
-        < reinterpret_cast<uintptr_t>(bootThunkEnd));
+          < reinterpret_cast<uintptr_t>(thunkEnd));
+}
+
+bool
+isThunk(MyThread* t, void* ip)
+{
+  MyProcessor* p = processor(t);
+
+  return isThunk(&(p->thunks), ip) or isThunk(&(p->bootThunks), ip);
 }
 
 bool
@@ -7782,35 +7780,41 @@ isThunkUnsafeStack(MyProcessor::Thunk* thunk, void* ip)
 }
 
 bool
-isThunkUnsafeStack(MyThread* t, void* ip)
+isThunkUnsafeStack(MyProcessor::ThunkCollection* thunks, void* ip)
 {
-  if (isThunk(t, ip)) {
-    MyProcessor* p = processor(t);
+  const unsigned NamedThunkCount = 4;
 
-    const unsigned NamedThunkCount = 4;
+  MyProcessor::Thunk table[NamedThunkCount + ThunkCount];
 
-    MyProcessor::Thunk thunks[NamedThunkCount + ThunkCount];
-
-    thunks[0] = p->thunks.default_;
-    thunks[1] = p->thunks.defaultVirtual;
-    thunks[2] = p->thunks.native;
-    thunks[3] = p->thunks.aioob;
+  table[0] = thunks->default_;
+  table[1] = thunks->defaultVirtual;
+  table[2] = thunks->native;
+  table[3] = thunks->aioob;
     
-    for (unsigned i = 0; i < ThunkCount; ++i) {
-      new (thunks + NamedThunkCount + i) MyProcessor::Thunk
-        (p->thunks.table.start + (i * p->bootThunks.table.length),
-         p->thunks.table.frameSavedOffset,
-         p->bootThunks.table.length);
-    }
+  for (unsigned i = 0; i < ThunkCount; ++i) {
+    new (table + NamedThunkCount + i) MyProcessor::Thunk
+      (thunks->table.start + (i * thunks->table.length),
+       thunks->table.frameSavedOffset,
+       thunks->table.length);
+  }
 
-    for (unsigned i = 0; i < NamedThunkCount + ThunkCount; ++i) {
-      if (isThunkUnsafeStack(thunks + i, ip)) {
-        return true;
-      }
+  for (unsigned i = 0; i < NamedThunkCount + ThunkCount; ++i) {
+    if (isThunkUnsafeStack(table + i, ip)) {
+      return true;
     }
   }
 
   return false;
+}
+
+bool
+isThunkUnsafeStack(MyThread* t, void* ip)
+{
+  MyProcessor* p = processor(t);
+
+  return isThunk(t, ip)
+    and (isThunkUnsafeStack(&(p->thunks), ip)
+         or isThunkUnsafeStack(&(p->bootThunks), ip));
 }
 
 object
