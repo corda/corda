@@ -2587,11 +2587,15 @@ traceSize(Thread* t)
 void NO_RETURN
 throwArrayIndexOutOfBounds(MyThread* t)
 {
-  ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t));
-  
-  t->tracing = true;
-  t->exception = makeArrayIndexOutOfBoundsException(t, 0);
-  t->tracing = false;
+  if (ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t))) {  
+    t->tracing = true;
+    t->exception = makeArrayIndexOutOfBoundsException(t, 0);
+    t->tracing = false;
+  } else {
+    // not enough memory available for a new exception and stack trace
+    // -- use a preallocated instance instead
+    t->exception = t->m->arrayIndexOutOfBoundsException;
+  }
 
   unwind(t);
 }
@@ -2644,7 +2648,7 @@ makeNew64(Thread* t, object class_)
 void
 gcIfNecessary(MyThread* t)
 {
-  if (UNLIKELY(t->backupHeap)) {
+  if (UNLIKELY(t->useBackupHeap)) {
     collect(t, Heap::MinorCollection);
   }
 }
@@ -7093,7 +7097,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   }
 
   if (t->exception) { 
-    if (t->backupHeap) {
+    if (UNLIKELY(t->useBackupHeap)) {
       collect(t, Heap::MinorCollection);
     }
     return 0;
@@ -7148,11 +7152,15 @@ class SegFaultHandler: public System::SignalHandler {
            static_cast<void**>(*stack) - t->arch->frameReturnAddressSize(),
            *base, t->continuation, t->trace);
 
-        ensure(t, FixedSizeOfNullPointerException + traceSize(t));
-
-        t->tracing = true;
-        t->exception = makeNullPointerException(t);
-        t->tracing = false;
+        if (ensure(t, FixedSizeOfNullPointerException + traceSize(t))) {
+          t->tracing = true;
+          t->exception = makeNullPointerException(t);
+          t->tracing = false;
+        } else {
+          // not enough memory available for a new NPE and stack trace
+          // -- use a preallocated instance instead
+          t->exception = t->m->nullPointerException;
+        }
 
 //         printTrace(t, t->exception);
 
@@ -7587,11 +7595,11 @@ class MyProcessor: public Processor {
           c.stack = 0;
         }
 
-        ensure(t, traceSize(target));
-
-        t->tracing = true;
-        trace = makeTrace(t, target);
-        t->tracing = false;
+        if (ensure(t, traceSize(target))) {
+          t->tracing = true;
+          trace = makeTrace(t, target);
+          t->tracing = false;
+        }
       }
 
       MyThread* t;
@@ -7602,7 +7610,7 @@ class MyProcessor: public Processor {
 
     t->m->system->visit(t->systemThread, target->systemThread, &visitor);
 
-    if (t->backupHeap) {
+    if (UNLIKELY(t->useBackupHeap)) {
       PROTECT(t, visitor.trace);
 
       collect(t, Heap::MinorCollection);

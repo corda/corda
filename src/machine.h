@@ -49,6 +49,10 @@ const uintptr_t FixedMark = 3;
 const unsigned ThreadHeapSizeInBytes = 64 * 1024;
 const unsigned ThreadHeapSizeInWords = ThreadHeapSizeInBytes / BytesPerWord;
 
+const unsigned ThreadBackupHeapSizeInBytes = 2 * 1024;
+const unsigned ThreadBackupHeapSizeInWords
+= ThreadBackupHeapSizeInBytes / BytesPerWord;
+
 const unsigned ThreadHeapPoolSize = 64;
 
 const unsigned FixedFootprintThresholdInBytes
@@ -1207,6 +1211,8 @@ class Machine {
   object tenuredWeakReferences;
   object shutdownHooks;
   object objectsToFinalize;
+  object nullPointerException;
+  object arrayIndexOutOfBoundsException;
   bool unsafe;
   bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
@@ -1360,9 +1366,9 @@ class Thread {
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
-  uintptr_t* backupHeap;
+  uintptr_t backupHeap[ThreadBackupHeapSizeInWords];
   unsigned backupHeapIndex;
-  unsigned backupHeapSizeInWords;
+  bool useBackupHeap;
   bool waiting;
   bool tracing;
 #ifdef VM_STRESS
@@ -1550,20 +1556,23 @@ class FixedAllocator: public Allocator {
   unsigned capacity;
 };
 
-inline void
+inline bool
 ensure(Thread* t, unsigned sizeInBytes)
 {
   if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
       > ThreadHeapSizeInWords)
   {
-    expect(t, t->backupHeap == 0);
-    t->backupHeap = static_cast<uintptr_t*>
-      (t->m->heap->allocate(pad(sizeInBytes)));
+    if (sizeInBytes <= ThreadBackupHeapSizeInBytes) {
+      expect(t, not t->useBackupHeap);
 
-    memset(t->backupHeap, 0, sizeInBytes);
+      t->useBackupHeap = true;
 
-    t->backupHeapIndex = 0;
-    t->backupHeapSizeInWords = ceiling(sizeInBytes, BytesPerWord);
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return true;
   }
 }
 

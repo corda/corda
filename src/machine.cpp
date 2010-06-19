@@ -570,12 +570,11 @@ postCollect(Thread* t)
   t->heapOffset = 0;
   t->heapIndex = 0;
 
-  if (t->backupHeap) {
-    t->m->heap->free
-      (t->backupHeap, t->backupHeapSizeInWords * BytesPerWord);
-    t->backupHeap = 0;
+  if (t->useBackupHeap) {
+    memset(t->backupHeap, 0, ThreadBackupHeapSizeInBytes);
+
+    t->useBackupHeap = false;
     t->backupHeapIndex = 0;
-    t->backupHeapSizeInWords = 0;
   }
 
   for (Thread* c = t->child; c; c = c->peer) {
@@ -1978,7 +1977,6 @@ boot(Thread* t)
   m->bootstrapClassMap = makeHashMap(t, 0, 0);
 
   m->stringMap = makeWeakHashMap(t, 0, 0);
-
   m->processor->boot(t, 0);
 
   { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1);
@@ -2123,6 +2121,8 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   tenuredWeakReferences(0),
   shutdownHooks(0),
   objectsToFinalize(0),
+  nullPointerException(0),
+  arrayIndexOutOfBoundsException(0),
   unsafe(false),
   triedBuiltinOnLoad(false),
   heapPoolIndex(0)
@@ -2196,9 +2196,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   defaultHeap(static_cast<uintptr_t*>
               (m->heap->allocate(ThreadHeapSizeInBytes))),
   heap(defaultHeap),
-  backupHeap(0),
   backupHeapIndex(0),
-  backupHeapSizeInWords(0),
+  useBackupHeap(false),
   waiting(false),
   tracing(false)
 #ifdef VM_STRESS
@@ -2210,6 +2209,7 @@ void
 Thread::init()
 {
   memset(defaultHeap, 0, ThreadHeapSizeInBytes);
+  memset(backupHeap, 0, ThreadBackupHeapSizeInBytes);
 
   if (parent == 0) {
     assert(this, m->rootThread == 0);
@@ -2247,6 +2247,11 @@ Thread::init()
     m->monitorMap = makeWeakHashMap(this, 0, 0);
 
     m->jniMethodTable = makeVector(this, 0, 0);
+
+    m->nullPointerException = makeNullPointerException(this);
+
+    m->arrayIndexOutOfBoundsException
+      = makeArrayIndexOutOfBoundsException(this, 0);
 
     m->localThread->set(this);
   } else {
@@ -2539,15 +2544,15 @@ object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
           unsigned sizeInBytes, bool objectMask)
 {
-  if (t->backupHeap) {
+  if (UNLIKELY(t->useBackupHeap)) {
     expect(t,  t->backupHeapIndex + ceiling(sizeInBytes, BytesPerWord)
-           <= t->backupHeapSizeInWords);
+           <= ThreadBackupHeapSizeInWords);
     
     object o = reinterpret_cast<object>(t->backupHeap + t->backupHeapIndex);
     t->backupHeapIndex += ceiling(sizeInBytes, BytesPerWord);
     cast<object>(o, 0) = 0;
     return o;
-  } else if (t->tracing) {
+  } else if (UNLIKELY(t->tracing)) {
     expect(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
            <= ThreadHeapSizeInWords);
     return allocateSmall(t, sizeInBytes);
@@ -3676,6 +3681,8 @@ visitRoots(Machine* m, Heap::Visitor* v)
   v->visit(&(m->jniMethodTable));
   v->visit(&(m->shutdownHooks));
   v->visit(&(m->objectsToFinalize));
+  v->visit(&(m->nullPointerException));
+  v->visit(&(m->arrayIndexOutOfBoundsException));
 
   for (Thread* t = m->rootThread; t; t = t->peer) {
     ::visitRoots(t, v);
