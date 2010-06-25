@@ -24,12 +24,12 @@
 #  define GLOBAL(x) x   
 #endif
       
-#define THREAD_STACK 108
-#define THREAD_CONTINUATION 112
+#define THREAD_STACK 2152
+#define THREAD_CONTINUATION 2156
 #define THREAD_EXCEPTION 44
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 116
-#define THREAD_EXCEPTION_OFFSET 120
-#define THREAD_EXCEPTION_HANDLER 124
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2160
+#define THREAD_EXCEPTION_OFFSET 2164
+#define THREAD_EXCEPTION_HANDLER 2168
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -104,7 +104,8 @@ LOCAL(vmInvoke_argumentTest):
    mtctr r4
    bctrl
 
-LOCAL(vmInvoke_returnAddress):
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
 	 lwz	r1,0(r1)
    
@@ -150,7 +151,7 @@ LOCAL(vmInvoke_continuationTest):
    
 LOCAL(vmInvoke_getPC):
    mflr r10
-   la   r10,lo16(LOCAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))(r10)
+   la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))(r10)
    stwx r10,r1,r7
 
    lwz  r7,CONTINUATION_FRAME_POINTER_OFFSET(r5)
@@ -283,7 +284,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 LOCAL(vmJumpAndInvoke_getPC):
    mflr r10
-   la   r10,lo16(LOCAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))(r10)
+   la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))(r10)
    mtlr r10
 
    mtctr r4
