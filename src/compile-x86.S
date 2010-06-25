@@ -22,7 +22,7 @@
 
 #ifdef __x86_64__
 
-#define THREAD_STACK 184
+#define THREAD_STACK 2216
 
 #if defined __MINGW32__ || defined __CYGWIN32__
 
@@ -305,7 +305,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 #elif defined __i386__
 
-#define THREAD_STACK 104
+#define THREAD_STACK 2144
    
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 16
    
@@ -431,15 +431,15 @@ GLOBAL(vmJumpAndInvoke):
    
    // set return address
 #if defined __MINGW32__ || defined __CYGWIN32__
-   movl   $vmInvoke_returnAddress,%esi
+   movl   $GLOBAL(vmInvoke_returnAddress),%esi
 #else
    call   LOCAL(getPC)
 #  if defined __APPLE__
 LOCAL(vmJumpAndInvoke_offset):
-   leal   vmInvoke_returnAddress-LOCAL(vmJumpAndInvoke_offset)(%esi),%esi
+   leal   GLOBAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_offset)(%esi),%esi
 #  else
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
-   movl   vmInvoke_returnAddress@GOT(%esi),%esi
+   movl   GLOBAL(vmInvoke_returnAddress)@GOT(%esi),%esi
 #  endif
 #endif
    movl   %esi,(%ecx)
