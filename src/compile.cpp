@@ -6638,6 +6638,8 @@ callContinuation(MyThread* t, object continuation, object result,
   if (exception) {
     t->exception = exception;
 
+    MyThread::TraceContext c(t, ip, stack, base, continuation, t->trace);
+
     findUnwindTarget(t, &ip, &base, &stack, &continuation);
   }
 
