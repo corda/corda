@@ -7242,6 +7242,7 @@ class MyProcessor: public Processor {
     rewindMethod(0),
     bootImage(0),
     codeAllocator(s, 0, 0),
+    callTableSize(0),
     useNativeFeatures(useNativeFeatures)
   { }
 
