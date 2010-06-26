@@ -389,7 +389,7 @@ main(int ac, const char** av)
   Processor* p = makeProcessor(s, h, false);
 
   BootImage image;
-  const unsigned CodeCapacity = 32 * 1024 * 1024;
+  const unsigned CodeCapacity = 16 * 1024 * 1024;
   uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
   p->initialize(&image, code, CodeCapacity);
 
