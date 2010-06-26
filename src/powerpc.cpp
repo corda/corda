@@ -2421,7 +2421,7 @@ class MyAssembler: public Assembler {
 
     for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
       *static_cast<uint32_t*>(e->address) = e->constant->value();
-      fprintf(stderr, "constant %p at %p\n", reinterpret_cast<void*>(e->constant->value()), e->address);
+//       fprintf(stderr, "constant %p at %p\n", reinterpret_cast<void*>(e->constant->value()), e->address);
     }
   }
 
