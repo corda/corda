@@ -2770,12 +2770,13 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
       traceFlags |= TraceElement::TailCall;
 
       TraceElement* trace = frame->trace(target, traceFlags);
-      Compiler::Operand* returnAddress = c->promiseConstant
-        (new (frame->context->zone.allocate(sizeof(TraceElementPromise)))
-         TraceElementPromise(t->m->system, trace), Compiler::AddressType);
+
+      Promise* returnAddressPromise = new
+        (frame->context->zone.allocate(sizeof(TraceElementPromise)))
+        TraceElementPromise(t->m->system, trace);
 
       Compiler::Operand* result = c->stackCall
-        (returnAddress,
+        (c->promiseConstant(returnAddressPromise, Compiler::AddressType),
          flags,
          trace,
          rSize,
@@ -2783,7 +2784,8 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
          methodParameterFootprint(t, target));
 
       c->store
-        (BytesPerWord, returnAddress, BytesPerWord, c->memory
+        (BytesPerWord, frame->addressOperand(returnAddressPromise),
+         BytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
           difference(&(t->tailAddress), t)));
 
@@ -2832,8 +2834,10 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
   } else {
     BootContext* bc = frame->context->bootContext;
     if (bc) {
-      if (methodClass(t, target) == methodClass(t, frame->context->method)
-          or (not classNeedsInit(t, methodClass(t, target))))
+      if ((methodClass(t, target) == methodClass(t, frame->context->method)
+           or (not classNeedsInit(t, methodClass(t, target))))
+          and (not (TailCalls and tailCall
+                    and (methodFlags(t, target) & ACC_NATIVE))))
       {
         Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
           ListenPromise(t->m->system, bc->zone);
