@@ -26,7 +26,9 @@ public class SocketChannel extends SelectableChannel
   boolean connected = false;
   boolean blocking = true;
 
-  public static SocketChannel open() {
+  public static SocketChannel open() throws IOException {
+    Socket.init();
+
     return new SocketChannel();
   }
 

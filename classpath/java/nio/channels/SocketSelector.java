@@ -12,13 +12,16 @@ package java.nio.channels;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.net.Socket;
 
 class SocketSelector extends Selector {
   protected long state;
   protected final Object lock = new Object();
   protected boolean woken = false;
 
-  public SocketSelector() {
+  public SocketSelector() throws IOException {
+    Socket.init();
+
     state = natInit();
   }
 
