@@ -13,12 +13,14 @@
 
 #ifdef PLATFORM_WINDOWS
 #  include <winsock2.h>
+#  define ONLY_ON_WINDOWS(x) x
 #else
 #  include <netdb.h>
+#  define ONLY_ON_WINDOWS(x)
 #endif
 
 extern "C" JNIEXPORT void JNICALL
-Java_java_net_Socket_init(JNIEnv* e, jclass)
+Java_java_net_Socket_init(JNIEnv* ONLY_ON_WINDOWS(e), jclass)
 {
 #ifdef PLATFORM_WINDOWS
   static bool wsaInitialized = false;
