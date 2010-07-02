@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -12,8 +12,10 @@ package java.net;
 
 import java.io.IOException;
 
-public abstract class Socket {
-  public static native void init() throws IOException;
+public class UnknownHostException extends IOException {
+  public UnknownHostException(String host) {
+    super(host);
+  }
 
-  public abstract void setTcpNoDelay(boolean on) throws SocketException;
+  public UnknownHostException() { }
 }

@@ -15,11 +15,16 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 
 public class ServerSocketChannel extends SelectableChannel {
-  private final SocketChannel channel = new SocketChannel();
+  private final SocketChannel channel;
 
-  public static ServerSocketChannel open() {
+  private ServerSocketChannel() throws IOException {
+    channel = new SocketChannel();
+  }
+
+  public static ServerSocketChannel open() throws IOException {
     return new ServerSocketChannel();
   }
 
@@ -58,6 +63,8 @@ public class ServerSocketChannel extends SelectableChannel {
   }
 
   private int doListen(String host, int port) throws IOException {
+    Socket.init();
+
     return natDoListen(host, port);
   }
 

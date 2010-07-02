@@ -18,6 +18,7 @@
 
 #ifdef PLATFORM_WINDOWS
 #  include <winsock2.h>
+#  include <ws2tcpip.h>
 #  include <errno.h>
 #  ifdef _MSC_VER
 #    define snprintf sprintf_s
@@ -150,20 +151,40 @@ init(JNIEnv* e, sockaddr_in* address, jstring hostString, jint port)
 {
   const char* chars = e->GetStringUTFChars(hostString, 0);
   if (chars) {
+#ifdef PLATFORM_WINDOWS
     hostent* host = gethostbyname(chars);
     e->ReleaseStringUTFChars(hostString, chars);
     if (host == 0) {
-#ifdef PLATFORM_WINDOWS
       throwIOException(e);
-#else
-      throwIOException(e, hstrerror(h_errno));
-#endif
       return;
     }
+
     memset(address, 0, sizeof(sockaddr_in));
     address->sin_family = AF_INET;
     address->sin_port = htons(port);
     address->sin_addr = *reinterpret_cast<in_addr*>(host->h_addr_list[0]);
+#else
+    addrinfo hints;
+    memset(&hints, 0, sizeof(addrinfo));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    addrinfo* result;
+    int r = getaddrinfo(chars, 0, &hints, &result);
+    e->ReleaseStringUTFChars(hostString, chars);
+    if (r != 0) {
+      throwIOException(e, gai_strerror(r));
+      return;
+    }
+
+    memset(address, 0, sizeof(sockaddr_in));
+    address->sin_family = AF_INET;
+    address->sin_port = htons(port);
+    address->sin_addr = reinterpret_cast<sockaddr_in*>
+      (result->ai_addr)->sin_addr;
+
+    freeaddrinfo(result);
+#endif
   }
 }
 
@@ -328,17 +349,6 @@ doWrite(int fd, const void* buffer, size_t count)
 int
 makeSocket(JNIEnv* e)
 {
-#ifdef PLATFORM_WINDOWS
-  static bool wsaInitialized = false;
-  if (not wsaInitialized) {
-    WSADATA data;
-    int r = WSAStartup(MAKEWORD(2, 2), &data);
-    if (r or LOBYTE(data.wVersion) != 2 or HIBYTE(data.wVersion) != 2) {
-      throwIOException(e, "WSAStartup failed");
-    }
-  }
-#endif
-
   int s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (s < 0) {
     throwIOException(e);
