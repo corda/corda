@@ -7195,6 +7195,9 @@ bool
 isThunk(MyThread* t, void* ip);
 
 bool
+isVirtualThunk(MyThread* t, void* ip);
+
+bool
 isThunkUnsafeStack(MyThread* t, void* ip);
 
 void
@@ -7579,14 +7582,17 @@ class MyProcessor: public Processor {
           c.ip = 0;
           c.base = 0;
           c.stack = 0;
-        } else if (target->stack and (not isThunkUnsafeStack(t, ip))) {
+        } else if (target->stack
+                   and (not isThunkUnsafeStack(t, ip))
+                   and (not isVirtualThunk(t, ip)))
+        {
           // we caught the thread in a thunk or native code, and the
           // saved stack and base pointers indicate the most recent
           // Java frame on the stack
           c.ip = t->arch->frameIp(target->stack);
           c.base = target->base;
           c.stack = target->stack;
-        } else if (isThunk(t, ip)) {
+        } else if (isThunk(t, ip) or isVirtualThunk(t, ip)) {
           // we caught the thread in a thunk where the stack and base
           // registers indicate the most recent Java frame on the
           // stack
@@ -7815,6 +7821,25 @@ isThunkUnsafeStack(MyProcessor::ThunkCollection* thunks, void* ip)
 
   for (unsigned i = 0; i < NamedThunkCount + ThunkCount; ++i) {
     if (isThunkUnsafeStack(table + i, ip)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool
+isVirtualThunk(MyThread* t, void* ip)
+{
+  MyProcessor* p = processor(t);
+  
+  for (unsigned i = 0; i < wordArrayLength(t, p->virtualThunks); i += 2) {
+    uintptr_t start = wordArrayBody(t, p->virtualThunks, i);
+    uintptr_t end = start + wordArrayBody(t, p->virtualThunks, i + 1);
+
+    if (reinterpret_cast<uintptr_t>(ip) >= start
+        and reinterpret_cast<uintptr_t>(ip) < end)
+    {
       return true;
     }
   }
@@ -8138,7 +8163,7 @@ fixupVirtualThunks(MyThread* t, BootImage* image, uint8_t* code)
 {
   MyProcessor* p = processor(t);
   
-  for (unsigned i = 0; i < wordArrayLength(t, p->virtualThunks); ++i) {
+  for (unsigned i = 0; i < wordArrayLength(t, p->virtualThunks); i += 2) {
     if (wordArrayBody(t, p->virtualThunks, i)) {
       wordArrayBody(t, p->virtualThunks, i)
         = (wordArrayBody(t, p->virtualThunks, i) - image->codeBase)
@@ -8531,7 +8556,7 @@ unresolved(MyThread* t, uintptr_t methodAddress)
 }
 
 uintptr_t
-compileVirtualThunk(MyThread* t, unsigned index)
+compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 {
   Context context(t);
   Assembler* a = context.assembler;
@@ -8548,12 +8573,13 @@ compileVirtualThunk(MyThread* t, unsigned index)
 
   a->endBlock(false)->resolve(0, 0);
 
-  uint8_t* start = static_cast<uint8_t*>
-    (codeAllocator(t)->allocate(a->length()));
+  *size = a->length();
+
+  uint8_t* start = static_cast<uint8_t*>(codeAllocator(t)->allocate(*size));
 
   a->writeTo(start);
 
-  logCompile(t, start, a->length(), 0, "virtualThunk", 0);
+  logCompile(t, start, *size, 0, "virtualThunk", 0);
 
   return reinterpret_cast<uintptr_t>(start);
 }
@@ -8563,8 +8589,10 @@ virtualThunk(MyThread* t, unsigned index)
 {
   MyProcessor* p = processor(t);
 
-  if (p->virtualThunks == 0 or wordArrayLength(t, p->virtualThunks) <= index) {
-    object newArray = makeWordArray(t, nextPowerOfTwo(index + 1));
+  if (p->virtualThunks == 0
+      or wordArrayLength(t, p->virtualThunks) <= index * 2)
+  {
+    object newArray = makeWordArray(t, nextPowerOfTwo((index + 1) * 2));
     if (p->virtualThunks) {
       memcpy(&wordArrayBody(t, newArray, 0),
              &wordArrayBody(t, p->virtualThunks, 0),
@@ -8573,16 +8601,18 @@ virtualThunk(MyThread* t, unsigned index)
     p->virtualThunks = newArray;
   }
 
-  if (wordArrayBody(t, p->virtualThunks, index) == 0) {
+  if (wordArrayBody(t, p->virtualThunks, index * 2) == 0) {
     ACQUIRE(t, t->m->classLock);
 
-    if (wordArrayBody(t, p->virtualThunks, index) == 0) {
-      uintptr_t thunk = compileVirtualThunk(t, index);
-      wordArrayBody(t, p->virtualThunks, index) = thunk;
+    if (wordArrayBody(t, p->virtualThunks, index * 2) == 0) {
+      unsigned size;
+      uintptr_t thunk = compileVirtualThunk(t, index, &size);
+      wordArrayBody(t, p->virtualThunks, index * 2) = thunk;
+      wordArrayBody(t, p->virtualThunks, (index * 2) + 1) = size;
     }
   }
 
-  return wordArrayBody(t, p->virtualThunks, index);
+  return wordArrayBody(t, p->virtualThunks, index * 2);
 }
 
 void
