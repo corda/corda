@@ -53,4 +53,4 @@ vmJump:
   mov   sp, r2
   mov   r4, r3
   ldmia sp, {r0,r1}
-  mov   pc, lr
+  bx    lr

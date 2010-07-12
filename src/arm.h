@@ -27,7 +27,7 @@ namespace vm {
 inline void
 trap()
 {
-  asm("nop");
+  asm("bkpt");
 }
 
 inline void
