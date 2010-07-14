@@ -1760,6 +1760,12 @@ makeIllegalMonitorStateException(Thread* t)
 }
 
 inline object
+makeIndexOutOfBoundsException(Thread* t)
+{
+  return makeIndexOutOfBoundsException(t, 0, makeTrace(t), 0);
+}
+
+inline object
 makeArrayIndexOutOfBoundsException(Thread* t, object message)
 {
   PROTECT(t, message);

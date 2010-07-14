@@ -38,6 +38,7 @@
 -keep public class java.lang.IllegalArgumentException
 -keep public class java.lang.IllegalMonitorStateException
 -keep public class java.lang.IllegalThreadStateException
+-keep public class java.lang.IndexOutOfBoundsException
 -keep public class java.lang.ArrayIndexOutOfBoundsException
 -keep public class java.lang.ArrayStoreException
 -keep public class java.lang.NegativeArraySizeException
