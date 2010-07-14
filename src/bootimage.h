@@ -24,6 +24,30 @@ const unsigned BootHeapOffset = 1 << (BootShift + 1);
 
 class BootImage {
  public:
+  class Thunk {
+   public:
+    Thunk():
+      start(0), frameSavedOffset(0), length(0)
+    { }
+
+    Thunk(unsigned start, unsigned frameSavedOffset, unsigned length):
+      start(start), frameSavedOffset(frameSavedOffset), length(length)
+    { }
+
+    unsigned start;
+    unsigned frameSavedOffset;
+    unsigned length;
+  };
+
+  class ThunkCollection {
+   public:
+    Thunk default_;
+    Thunk defaultVirtual;
+    Thunk native;
+    Thunk aioob;
+    Thunk table;
+  };
+
   static const unsigned Magic = 0x22377322;
 
   unsigned magic;
@@ -43,13 +67,7 @@ class BootImage {
 
   uintptr_t codeBase;
 
-  unsigned defaultThunk;
-  unsigned defaultVirtualThunk;
-  unsigned nativeThunk;
-  unsigned aioobThunk;
-
-  unsigned thunkTable;
-  unsigned thunkSize;
+  ThunkCollection thunks;
 
   unsigned compileMethodCall;
   unsigned compileVirtualMethodCall;

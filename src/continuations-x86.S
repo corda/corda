@@ -10,11 +10,11 @@
 
 #ifdef __x86_64__
 
-#define THREAD_CONTINUATION 192
+#define THREAD_CONTINUATION 2224
 #define THREAD_EXCEPTION 80
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 200
-#define THREAD_EXCEPTION_OFFSET 208
-#define THREAD_EXCEPTION_HANDLER 216
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2232
+#define THREAD_EXCEPTION_OFFSET 2240
+#define THREAD_EXCEPTION_HANDLER 2248
 
 #define CONTINUATION_NEXT 8
 #define CONTINUATION_ADDRESS 32
@@ -89,11 +89,11 @@ LOCAL(vmInvoke_exit):
 
 #elif defined __i386__
    
-#define THREAD_CONTINUATION 108
+#define THREAD_CONTINUATION 2148
 #define THREAD_EXCEPTION 44
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 112
-#define THREAD_EXCEPTION_OFFSET 116
-#define THREAD_EXCEPTION_HANDLER 120
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2152
+#define THREAD_EXCEPTION_OFFSET 2156
+#define THREAD_EXCEPTION_HANDLER 2160
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -138,15 +138,15 @@ LOCAL(vmInvoke_continuationTest):
    // set the return address to vmInvoke_returnAddress
    movl   CONTINUATION_RETURN_ADDRESS_OFFSET(%ecx),%edi
 #if defined __MINGW32__ || defined __CYGWIN32__
-   movl   $vmInvoke_returnAddress,%esi
+   movl   $GLOBAL(vmInvoke_returnAddress),%esi
 #else
    call   LOCAL(getPC)
 #  if defined __APPLE__
 LOCAL(vmInvoke_offset):
-   leal   vmInvoke_returnAddress-LOCAL(vmInvoke_offset)(%esi),%esi
+   leal   GLOBAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_offset)(%esi),%esi
 #  else
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
-   movl   vmInvoke_returnAddress@GOT(%esi),%esi
+   movl   GLOBAL(vmInvoke_returnAddress)@GOT(%esi),%esi
 #  endif
 #endif
    movl   %esi,(%esp,%edi,1)

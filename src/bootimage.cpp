@@ -87,7 +87,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     object method = tripleFirst(t, calls);
     uintptr_t address;
     if (methodFlags(t, method) & ACC_NATIVE) {
-      address = reinterpret_cast<uintptr_t>(code + image->nativeThunk);
+      address = reinterpret_cast<uintptr_t>(code + image->thunks.native.start);
     } else {
       address = methodCompiled(t, method);
     }
@@ -389,7 +389,7 @@ main(int ac, const char** av)
   Processor* p = makeProcessor(s, h, false);
 
   BootImage image;
-  const unsigned CodeCapacity = 32 * 1024 * 1024;
+  const unsigned CodeCapacity = 16 * 1024 * 1024;
   uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
   p->initialize(&image, code, CodeCapacity);
 

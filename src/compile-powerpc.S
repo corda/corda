@@ -24,11 +24,12 @@
 #  define GLOBAL(x) x   
 #endif
       
-#define THREAD_CONTINUATION 112
+#define THREAD_STACK 2152
+#define THREAD_CONTINUATION 2156
 #define THREAD_EXCEPTION 44
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 116
-#define THREAD_EXCEPTION_OFFSET 120
-#define THREAD_EXCEPTION_HANDLER 124
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2160
+#define THREAD_EXCEPTION_OFFSET 2164
+#define THREAD_EXCEPTION_HANDLER 2168
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -103,9 +104,21 @@ LOCAL(vmInvoke_argumentTest):
    mtctr r4
    bctrl
 
-LOCAL(vmInvoke_returnAddress):
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
 	 lwz	r1,0(r1)
+   
+   // clear MyThread::stack to avoid confusing another thread calling
+   // java.lang.Thread.getStackTrace on this one.  See
+   // MyProcess::getStackTrace in compile.cpp for details on how we get
+   // a reliable stack trace from a thread that might be interrupted at
+   // any point in its execution.
+   li   r5,0
+   stw  r5,THREAD_STACK(r13)
+   
+.globl GLOBAL(vmInvoke_safeStack)
+GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
    // call the next continuation, if any
@@ -138,7 +151,7 @@ LOCAL(vmInvoke_continuationTest):
    
 LOCAL(vmInvoke_getPC):
    mflr r10
-   la   r10,lo16(LOCAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))(r10)
+   la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))(r10)
    stwx r10,r1,r7
 
    lwz  r7,CONTINUATION_FRAME_POINTER_OFFSET(r5)
@@ -271,7 +284,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 LOCAL(vmJumpAndInvoke_getPC):
    mflr r10
-   la   r10,lo16(LOCAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))(r10)
+   la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))(r10)
    mtlr r10
 
    mtctr r4

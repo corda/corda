@@ -22,6 +22,8 @@
 
 #ifdef __x86_64__
 
+#define THREAD_STACK 2216
+
 #if defined __MINGW32__ || defined __CYGWIN32__
 
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 64
@@ -78,6 +80,16 @@ LOCAL(vmInvoke_argumentTest):
 GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
    movq   %rbp,%rsp
+
+   // clear MyThread::stack to avoid confusing another thread calling
+   // java.lang.Thread.getStackTrace on this one.  See
+   // MyProcess::getStackTrace in compile.cpp for details on how we get
+   // a reliable stack trace from a thread that might be interrupted at
+   // any point in its execution.
+   movq   $0,THREAD_STACK(%rbx)
+   
+.globl GLOBAL(vmInvoke_safeStack)
+GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
 #  include "continuations-x86.S"
@@ -207,6 +219,16 @@ LOCAL(vmInvoke_argumentTest):
 GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
    movq   %rbp,%rsp
+   
+   // clear MyThread::stack to avoid confusing another thread calling
+   // java.lang.Thread.getStackTrace on this one.  See
+   // MyProcess::getStackTrace in compile.cpp for details on how we get
+   // a reliable stack trace from a thread that might be interrupted at
+   // any point in its execution.
+   movq   $0,THREAD_STACK(%rbx)
+   
+.globl GLOBAL(vmInvoke_safeStack)
+GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
 #  include "continuations-x86.S"
@@ -283,6 +305,8 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 #elif defined __i386__
 
+#define THREAD_STACK 2144
+   
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 16
    
 .globl GLOBAL(vmInvoke)
@@ -329,13 +353,23 @@ LOCAL(vmInvoke_argumentTest):
    // call function
    call   *12(%ebp)
 
-.globl vmInvoke_returnAddress
-vmInvoke_returnAddress:
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer, preserving the area containing saved
    // registers
    movl   %ebp,%ecx
    subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
    movl   %ecx,%esp
+   
+   // clear MyThread::stack to avoid confusing another thread calling
+   // java.lang.Thread.getStackTrace on this one.  See
+   // MyProcess::getStackTrace in compile.cpp for details on how we get
+   // a reliable stack trace from a thread that might be interrupted at
+   // any point in its execution.
+   movl   $0,THREAD_STACK(%ebx)
+   
+.globl GLOBAL(vmInvoke_safeStack)
+GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
 #  include "continuations-x86.S"
@@ -397,15 +431,15 @@ GLOBAL(vmJumpAndInvoke):
    
    // set return address
 #if defined __MINGW32__ || defined __CYGWIN32__
-   movl   $vmInvoke_returnAddress,%esi
+   movl   $GLOBAL(vmInvoke_returnAddress),%esi
 #else
    call   LOCAL(getPC)
 #  if defined __APPLE__
 LOCAL(vmJumpAndInvoke_offset):
-   leal   vmInvoke_returnAddress-LOCAL(vmJumpAndInvoke_offset)(%esi),%esi
+   leal   GLOBAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_offset)(%esi),%esi
 #  else
    addl   $_GLOBAL_OFFSET_TABLE_,%esi
-   movl   vmInvoke_returnAddress@GOT(%esi),%esi
+   movl   GLOBAL(vmInvoke_returnAddress)@GOT(%esi),%esi
 #  endif
 #endif
    movl   %esi,(%ecx)
