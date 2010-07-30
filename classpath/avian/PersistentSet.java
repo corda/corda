@@ -212,9 +212,11 @@ public class PersistentSet <T> implements Iterable <T> {
     
     Node<T> child;
     if (dead.left != NullNode) {
-      child = dead.left;
+      child = new Node(dead.left);
+    } else if (dead.right != NullNode) {
+      child = new Node(dead.right);
     } else {
-      child = dead.right;
+      child = NullNode;
     }
 
     if (ancestors == null) {
@@ -453,6 +455,7 @@ public class PersistentSet <T> implements Iterable <T> {
       return new Path(false, s.value, p.root, s.next);
     }
   }
+
   private static class Node <T> {
     public T value;
     public Node left;
