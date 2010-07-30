@@ -471,12 +471,14 @@ void shiftLeftC(Context* con, unsigned size, Assembler::Constant* a, Assembler::
     if (sh < 32) {
       emit(con, rlwinm(t->high,b->high,sh,0,31-sh));
       emit(con, rlwimi(t->high,b->low,sh,32-sh,31));
+      emit(con, slwi(t->low, b->low, sh));
     } else {
       emit(con, rlwinm(t->high,b->low,sh-32,0,63-sh));
       emit(con, li(t->low,0));
     }
+  } else {
+    emit(con, slwi(t->low, b->low, sh));
   }
-  emit(con, slwi(t->low, b->low, sh));
 }
 
 void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
