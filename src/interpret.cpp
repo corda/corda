@@ -761,12 +761,6 @@ invokeNative(Thread* t, object method)
 bool
 classInit2(Thread* t, object class_, unsigned ipOffset)
 {
-  for (ClassInitList* list = t->classInitList; list; list = list->next) {
-    if (list->class_ == class_) {
-      return false;
-    }
-  }
-
   PROTECT(t, class_);
 
   if (preInitClass(t, class_)) {
@@ -3109,6 +3103,26 @@ class MyProcessor: public Processor {
   initVtable(vm::Thread*, object)
   {
     // ignore
+  }
+
+  virtual bool
+  isInitializing(vm::Thread* vmt, object c)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    for (ClassInitList* list = t->classInitList; list; list = list->next) {
+      if (list->class_ == c) {
+        return true;
+      }
+    }
+
+    for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
+      if (s->class_ == c) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   virtual void

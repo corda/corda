@@ -81,6 +81,9 @@ class Processor {
   virtual void
   initVtable(Thread* t, object c) = 0;
 
+  virtual bool
+  isInitializing(Thread* t, object c) = 0;
+
   virtual void
   visitObjects(Thread* t, Heap::Visitor* v) = 0;
 

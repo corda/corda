@@ -3309,13 +3309,11 @@ preInitClass(Thread* t, object c)
     ACQUIRE(t, t->m->classLock);
     if (classVmFlags(t, c) & NeedInitFlag) {
       if (classVmFlags(t, c) & InitFlag) {
-        // the class is currently being initialized.  If this the
-        // thread which is initializing it, we should not try to
-        // initialize it recursively.
-        for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
-          if (s->class_ == c) {
-            return false;
-          }
+        // If the class is currently being initialized and this the thread
+        // which is initializing it, we should not try to initialize it
+        // recursively.
+        if (t->m->processor->isInitializing(t, c)) {
+          return false;
         }
 
         // some other thread is on the job - wait for it to finish.

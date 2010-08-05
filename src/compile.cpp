@@ -7332,6 +7332,17 @@ class MyProcessor: public Processor {
     }
   }
 
+  virtual bool
+  isInitializing(Thread* t, object c)
+  {
+    for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
+      if (s->class_ == c) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   virtual void
   visitObjects(Thread* vmt, Heap::Visitor* v)
   {
