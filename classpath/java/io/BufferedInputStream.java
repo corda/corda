@@ -72,6 +72,10 @@ public class BufferedInputStream extends InputStream {
     return count;
   }
 
+  public int available() throws IOException {
+    return in.available() + (limit - position);
+  }
+
   public void close() throws IOException {
     in.close();
   }
