@@ -48,6 +48,10 @@ public class Properties extends Hashtable {
   public Object setProperty(String key, String value) {
     return put(key, value);
   }
+  
+  public Enumeration<?> propertyNames() {
+    return keys();
+  }
 
   private static class Parser {
     private StringBuilder key = null;
