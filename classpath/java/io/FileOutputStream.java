@@ -22,14 +22,19 @@ public class FileOutputStream extends OutputStream {
   }
 
   public FileOutputStream(String path) throws IOException {
-    fd = open(path);
+    this(path, false);
   }
+
+  public FileOutputStream(String path, boolean append) throws IOException {
+    fd = open(path, append);
+  }
+  
 
   public FileOutputStream(File file) throws IOException {
     this(file.getPath());
   }
 
-  private static native int open(String path) throws IOException;
+  private static native int open(String path, boolean append) throws IOException;
 
   private static native void write(int fd, int c) throws IOException;
 
