@@ -378,6 +378,31 @@ Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canRead(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = access(chars, R_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canWrite(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = access(chars, W_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)
 {
   string_t oldChars = getChars(e, old);
