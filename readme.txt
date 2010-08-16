@@ -201,9 +201,18 @@ By default, Avian uses its own lightweight class library.  However,
 that library only contains a relatively small subset of the classes
 and methods included in the JRE.  If your application requires
 features beyond that subset, you may want to tell Avian to use GNU
-Classpath instead.  To do so, specify the directory where Classpath is
+Classpath instead.  In order for this to work, you must configure
+Classpath with "--enable-static" and "--with-pic".  For example:
+
+ $ cd classpath-0.98
+ $ ./configure --prefix=/usr/local/classpath-0.98 --disable-plugin \
+   --enable-static --with-pic
+ $ make && make install
+
+Then, when building Avian, specify the directory where Classpath is
 installed, e.g.:
 
+ $ cd ../avian
  $ make clean
  $ make gnu=/usr/local/classpath-0.98
 
