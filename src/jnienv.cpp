@@ -1952,9 +1952,15 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->FindClass = local::FindClass;
   envTable->ThrowNew = local::ThrowNew;
   envTable->ExceptionCheck = local::ExceptionCheck;
+#ifdef AVIAN_GNU
+  envTable->NewDirectByteBuffer = vm::NewDirectByteBuffer;
+  envTable->GetDirectBufferAddress = vm::GetDirectBufferAddress;
+  envTable->GetDirectBufferCapacity = vm::GetDirectBufferCapacity;
+#else
   envTable->NewDirectByteBuffer = local::NewDirectByteBuffer;
   envTable->GetDirectBufferAddress = local::GetDirectBufferAddress;
   envTable->GetDirectBufferCapacity = local::GetDirectBufferCapacity;
+#endif
   envTable->DeleteLocalRef = local::DeleteLocalRef;
   envTable->GetObjectClass = local::GetObjectClass;
   envTable->IsInstanceOf = local::IsInstanceOf;
