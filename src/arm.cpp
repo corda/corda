@@ -30,9 +30,9 @@ inline int DATA(int cond, int opcode, int S, int Rn, int Rd, int shift, int Sh, 
 inline int DATAS(int cond, int opcode, int S, int Rn, int Rd, int Rs, int Sh, int Rm)
 { return cond<<28 | opcode<<21 | S<<20 | Rn<<16 | Rd<<12 | Rs<<8 | Sh<<5 | 1<<4 | Rm; }
 inline int DATAI(int cond, int opcode, int S, int Rn, int Rd, int rot, int imm)
-{ return cond<<28 | 1<<25 | opcode<<21 | S<<20 | Rn<<16 | Rd<<12 | rot<<8 | imm; }
+{ return cond<<28 | 1<<25 | opcode<<21 | S<<20 | Rn<<16 | Rd<<12 | rot<<8 | (imm&0xff); }
 inline int BRANCH(int cond, int L, int offset)
-{ return cond<<28 | 5<<25 | L<<24 | offset; }
+{ return cond<<28 | 5<<25 | L<<24 | (offset&0xffffff); }
 inline int BRANCHX(int cond, int L, int Rm)
 { return cond<<28 | 0x4bffc<<6 | L<<5 | 1<<4 | Rm; }
 inline int MULTIPLY(int cond, int mul, int S, int Rd, int Rn, int Rs, int Rm)
@@ -40,7 +40,7 @@ inline int MULTIPLY(int cond, int mul, int S, int Rd, int Rn, int Rs, int Rm)
 inline int XFER(int cond, int P, int U, int B, int W, int L, int Rn, int Rd, int shift, int Sh, int Rm)
 { return cond<<28 | 3<<25 | P<<24 | U<<23 | B<<22 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | shift<<7 | Sh<<5 | Rm; }
 inline int XFERI(int cond, int P, int U, int B, int W, int L, int Rn, int Rd, int offset)
-{ return cond<<28 | 2<<25 | P<<24 | U<<23 | B<<22 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | offset; }
+{ return cond<<28 | 2<<25 | P<<24 | U<<23 | B<<22 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | (offset&0xfff); }
 inline int XFER2(int cond, int P, int U, int W, int L, int Rn, int Rd, int S, int H, int Rm)
 { return cond<<28 | P<<24 | U<<23 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | 1<<7 | S<<6 | H<<5 | 1<<4 | Rm; }
 inline int XFER2I(int cond, int P, int U, int W, int L, int Rn, int Rd, int offsetH, int S, int H, int offsetL)
@@ -48,9 +48,11 @@ inline int XFER2I(int cond, int P, int U, int W, int L, int Rn, int Rd, int offs
 inline int BLOCKXFER(int cond, int P, int U, int S, int W, int L, int Rn, int rlist)
 { return cond<<28 | 4<<25 | P<<24 | U<<23 | S<<22 | W<<21 | L<<20 | Rn<<16 | rlist; }
 inline int SWI(int cond, int imm)
-{ return cond<<28 | 0x0f<<24 | imm; }
+{ return cond<<28 | 0x0f<<24 | (imm&0xffffff); }
 inline int SWAP(int cond, int B, int Rn, int Rd, int Rm)
 { return cond<<28 | 1<<24 | B<<22 | Rn<<16 | Rd<<12 | 9<<4 | Rm; }
+// FIELD CALCULATORS
+inline int calcU(int imm) { return imm >= 0 ? 1 : 0; }
 // INSTRUCTIONS
 // The "cond" and "S" fields are set using the SETCOND() and SETS() functions
 inline int b(int offset) { return BRANCH(AL, 0, offset); }
@@ -91,21 +93,21 @@ inline int umlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 5, 0,
 inline int smull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 6, 0, RdLo, RdHi, Rs, Rm); }
 inline int smlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 7, 0, RdLo, RdHi, Rs, Rm); }
 inline int ldr(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 0, 0, 1, Rn, Rd, 0, 0, Rm); }
-inline int ldri(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 0, 0, 1, Rn, Rd, imm); }
+inline int ldri(int Rd, int Rn, int imm) { return XFERI(AL, 1, calcU(imm), 0, 0, 1, Rn, Rd, abs(imm)); }
 inline int ldrb(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 1, Rn, Rd, 0, 0, Rm); }
-inline int ldrbi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 1, 0, 1, Rn, Rd, imm); }
+inline int ldrbi(int Rd, int Rn, int imm) { return XFERI(AL, 1, calcU(imm), 1, 0, 1, Rn, Rd, abs(imm)); }
 inline int str(int Rd, int Rn, int Rm, int W=0) { return XFER(AL, 1, 1, 0, W, 0, Rn, Rd, 0, 0, Rm); }
-inline int stri(int Rd, int Rn, int imm, int W=0) { return XFERI(AL, 1, 1, 0, W, 0, Rn, Rd, imm); }
+inline int stri(int Rd, int Rn, int imm, int W=0) { return XFERI(AL, 1, calcU(imm), 0, W, 0, Rn, Rd, abs(imm)); }
 inline int strb(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 0, Rn, Rd, 0, 0, Rm); }
-inline int strbi(int Rd, int Rn, int imm) { return XFERI(AL, 1, 1, 1, 0, 0, Rn, Rd, imm); }
+inline int strbi(int Rd, int Rn, int imm) { return XFERI(AL, 1, calcU(imm), 1, 0, 0, Rn, Rd, abs(imm)); }
 inline int ldrh(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 0, 1, Rm); }
-inline int ldrhi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 0, 1, imm&0xf); }
+inline int ldrhi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, calcU(imm), 0, 1, Rn, Rd, abs(imm)>>4 & 0xf, 0, 1, abs(imm)&0xf); }
 inline int strh(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 0, Rn, Rd, 0, 1, Rm); }
-inline int strhi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 0, Rn, Rd, imm>>4 & 0xf, 0, 1, imm&0xf); }
+inline int strhi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, calcU(imm), 0, 0, Rn, Rd, abs(imm)>>4 & 0xf, 0, 1, abs(imm)&0xf); }
 inline int ldrsh(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 1, Rm); }
-inline int ldrshi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 1, 1, imm&0xf); }
+inline int ldrshi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, calcU(imm), 0, 1, Rn, Rd, abs(imm)>>4 & 0xf, 1, 1, abs(imm)&0xf); }
 inline int ldrsb(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 0, Rm); }
-inline int ldrsbi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, 1, 0, 1, Rn, Rd, imm>>4 & 0xf, 1, 0, imm&0xf); }
+inline int ldrsbi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, calcU(imm), 0, 1, Rn, Rd, abs(imm)>>4 & 0xf, 1, 0, abs(imm)&0xf); }
 inline int ldmib(int Rn, int rlist) { return BLOCKXFER(AL, 1, 1, 0, 0, 1, Rn, rlist); }
 inline int ldmia(int Rn, int rlist) { return BLOCKXFER(AL, 0, 1, 0, 0, 1, Rn, rlist); }
 inline int stmib(int Rn, int rlist) { return BLOCKXFER(AL, 1, 1, 0, 0, 0, Rn, rlist); }
@@ -165,6 +167,7 @@ const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 const int StackRegister = 13;
 const int BaseRegister = 11;
 const int ThreadRegister = 12;
+const int ProgramCounter = 15;
 
 class MyBlock: public Assembler::Block {
  public:
@@ -317,8 +320,9 @@ bounded(int right, int left, int32_t v)
 void*
 updateOffset(System* s, uint8_t* instruction, bool conditional UNUSED, int64_t value)
 {
-  int32_t v = reinterpret_cast<uint8_t*>(value) - instruction;
-   
+  // ARM's PC is two words ahead, and branches drop the bottom 2 bits.
+  int32_t v = (reinterpret_cast<uint8_t*>(value) - (instruction + 8)) >> 2;
+
   int32_t mask;
   expect(s, bounded(0, 8, v));
   mask = 0xFFFFFF;
@@ -455,7 +459,7 @@ void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::
   emit(con, lsl(t->low, b->low, a->low));
 }
 
-void shiftLeftC(Context* con, unsigned, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
+void shiftLeftC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == BytesPerWord);
   emit(con, lsli(t->low, b->low, getValue(a)));
@@ -480,7 +484,7 @@ void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler:
   }
 }
 
-void shiftRightC(Context* con, unsigned, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
+void shiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == BytesPerWord);
   emit(con, asri(t->low, b->low, getValue(a)));
@@ -502,7 +506,7 @@ void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register* a, As
   }
 }
 
-void unsignedShiftRightC(Context* con, unsigned, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
+void unsignedShiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == BytesPerWord);
   emit(con, lsri(t->low, b->low, getValue(a)));
@@ -1450,7 +1454,7 @@ longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
 
-  Assembler::Register tmp(0);
+  Assembler::Register tmp(5); // a non-arg reg that we don't mind clobbering
   moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, 12);
   jumpR(c, BytesPerWord, &tmp);
 }
@@ -1638,7 +1642,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual uint32_t generalRegisterMask() {
-    return 0xFFFFFFFF;
+    return 0xFFFF;
   }
 
   virtual uint32_t floatRegisterMask() {
@@ -1674,14 +1678,14 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual uintptr_t maximumImmediateJump() {
-    return 0x7FFFFF;
+    return 0x1FFFFFF;
   }
 
   virtual bool reserved(int register_) {
     switch (register_) {
     case StackRegister:
     case ThreadRegister:
-    case 15:
+    case ProgramCounter:
       return true;
 
     default:

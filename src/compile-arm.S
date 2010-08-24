@@ -79,10 +79,13 @@ LOCAL(vmInvoke_argumentTest):
   // load and call function address
   blx   r1
 
-LOCAL(vmInvoke_returnAddress):
+.globl GLOBAL(vmInvoke_returnAddress)
+GLOBAL(vmInvoke_returnAddress):
   // restore stack pointer
   ldr   sp, [sp]
 
+.globl GLOBAL(vmInvoke_safeStack)
+GLOBAL(vmInvoke_safeStack):
   // restore return type
   ldr   ip, [sp]
 
