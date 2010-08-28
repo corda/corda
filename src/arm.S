@@ -50,7 +50,9 @@ vmNativeCall:
 
 .globl vmJump
 vmJump:
+  mov   lr, r0
+  ldr   r0, [sp]
+  ldr   r1, [sp, #4]
   mov   sp, r2
-  mov   r4, r3
-  ldmia sp, {r0,r1}
+  mov   r8, r3
   bx    lr

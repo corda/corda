@@ -25,7 +25,14 @@
 #else
 #  define GLOBAL(x) x   
 #endif
-      
+
+#define THREAD_STACK 2144
+#define THREAD_CONTINUATION 2148
+#define THREAD_EXCEPTION 44
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2152
+#define THREAD_EXCEPTION_OFFSET 2156
+#define THREAD_EXCEPTION_HANDLER 2160
+
 .globl GLOBAL(vmInvoke)
 GLOBAL(vmInvoke):
   /*
@@ -70,24 +77,33 @@ LOCAL(vmInvoke_argumentTest):
   cmp   r4, r3
   blt   LOCAL(vmInvoke_argumentLoop)
 
-  // save the beginning of our stack frame
+  // save frame
   str   ip, [sp, #-8]!
 
-  // we use ip (r12) to hold the thread pointer, by convention
-  mov   ip, r0
+  // we use r8 to hold the thread pointer, by convention
+  mov   r8, r0
 
+.global GLOBAL(beforecall)
+GLOBAL(beforecall):
   // load and call function address
   blx   r1
+.global GLOBAL(aftercall)
+GLOBAL(aftercall):
 
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
-  // restore stack pointer
+
+  // restore frame
   ldr   sp, [sp]
 
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):
+
+  mov   ip, #0
+  str   ip, [r8, #THREAD_STACK]
+
   // restore return type
-  ldr   ip, [sp]
+  ldr   ip, [sp], #4
 
   // restore callee-saved registers
   ldmfd sp!, {r4-r11, lr}

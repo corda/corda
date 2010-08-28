@@ -19,8 +19,8 @@ namespace local {
 
 const bool DebugAppend = false;
 const bool DebugCompile = false;
-const bool DebugResources = true;
-const bool DebugFrame = true;
+const bool DebugResources = false;
+const bool DebugFrame = false;
 const bool DebugControl = false;
 const bool DebugReads = false;
 const bool DebugSites = false;
