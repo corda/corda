@@ -1678,62 +1678,6 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 }
 
 void
-jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, beq(0));
-}
-
-void
-jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bne(0));
-}
-
-void
-jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bgt(0));
-}
-
-void
-jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED,
-                      Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bge(0));
-}
-
-void
-jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, blt(0));
-}
-
-void
-jumpIfLessOrEqualC(Context* c, unsigned size UNUSED,
-                   Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, ble(0));
-}
-
-void
 return_(Context* c)
 {
   emit(c, blr());
