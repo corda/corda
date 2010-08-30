@@ -2066,7 +2066,7 @@ class MyAssembler: public Assembler {
   {
     popFrame();
 
-    Register tmp1(0);
+    Register tmp1(6);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp1);
 
