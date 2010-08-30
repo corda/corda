@@ -157,6 +157,7 @@ inline bool isInt24(intptr_t v) { return v == (v & 0xffffff); }
 inline bool isInt32(intptr_t v) { return v == static_cast<int32_t>(v); }
 inline int carry16(intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 : 0; }
 
+inline bool isOfWidth(long long i, int size) { return static_cast<unsigned long long>(i) >> size == 0; }
 inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
 
 const unsigned FrameFooterSize = 2;
@@ -751,26 +752,6 @@ void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Regist
   }
 }
 
-void addC(Context* con, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t) {
-  assert(con, size == BytesPerWord);
-
-  int32_t i = getValue(a);
-  if (i) {
-    emit(con, addi(t->low, b->low, lo8(i)));
-    if (!isOfWidth(i, 8)) {
-      emit(con, addi(t->low, b->low, hi8(i), 12));
-      if (!isOfWidth(i, 16)) {
-        emit(con, addi(t->low, b->low, lo8(hi16(i)), 8));
-        if (!isOfWidth(i, 24)) {
-          emit(con, addi(t->low, b->low, hi8(hi16(i)), 4));
-        }
-      }
-    }
-  } else {
-    moveRR(con, size, b, size, t);
-  }
-}
-
 void subR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if (size == 8) {
     emit(con, SETS(rsb(t->low, a->low, b->low)));
@@ -778,14 +759,6 @@ void subR(Context* con, unsigned size, Assembler::Register* a, Assembler::Regist
   } else {
     emit(con, rsb(t->low, a->low, b->low));
   }
-}
-
-void subC(Context* c, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t) {
-  assert(c, size == BytesPerWord);
-
-  ResolvedPromise promise(- a->value->value());
-  Assembler::Constant constant(&promise);
-  addC(c, size, &constant, b, t);
 }
 
 void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
@@ -835,8 +808,10 @@ normalize(Context* c, int offset, int index, unsigned scale,
       ResolvedPromise offsetPromise(offset);
       Assembler::Constant offsetConstant(&offsetPromise);
 
-      addC(c, BytesPerWord, &offsetConstant,
-           &untranslatedIndex, &normalizedIndex);
+      Assembler::Register tmp(c->client->acquireTemporary());
+      moveCR(c, BytesPerWord, &offsetConstant, BytesPerWord, &tmp);
+      addR(c, BytesPerWord, &tmp, &untranslatedIndex, &normalizedIndex);
+      c->client->releaseTemporary(tmp.low);
     }
 
     return normalizedIndex.low;
@@ -1036,23 +1011,6 @@ andR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
-andC(Context* con, unsigned size, Assembler::Constant* a,
-     Assembler::Register* b, Assembler::Register* dst)
-{
-  assert(con, size == BytesPerWord);
-
-  int32_t i = getValue(a);
-  if (i) {
-    Assembler::Register tmp(con->client->acquireTemporary());
-    moveCR(con, size, a, size, &tmp);
-    andR(con, size, &tmp, b, dst);
-    con->client->releaseTemporary(tmp.low);
-  } else {
-    emit(con, mov(dst->low, 0));
-  }
-}
-
-void
 orR(Context* c, unsigned size, Assembler::Register* a,
     Assembler::Register* b, Assembler::Register* dst)
 {
@@ -1061,49 +1019,11 @@ orR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
-orC(Context* con, unsigned size, Assembler::Constant* a,
-    Assembler::Register* b, Assembler::Register* dst)
-{
-  assert(con, size == BytesPerWord);
-
-  int32_t i = getValue(a);
-  if (i) {
-    emit(con, orri(dst->low, b->low, lo8(i)));
-    if (!isOfWidth(i, 8)) {
-      emit(con, orri(dst->low, b->low, hi8(i), 12));
-      if (!isOfWidth(i, 16)) {
-        emit(con, orri(dst->low, b->low, lo8(hi16(i)), 8));
-        if (!isOfWidth(i, 24)) {
-          emit(con, orri(dst->low, b->low, hi8(hi16(i)), 4));
-        }
-      }
-    }
-  } else {
-    moveRR(con, size, b, size, dst);
-  }
-}
-
-void
 xorR(Context* con, unsigned size, Assembler::Register* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
   if (size == 8) emit(con, eor(dst->high, a->high, b->high));
   emit(con, eor(dst->low, a->low, b->low));
-}
-
-void
-xorC(Context* con, unsigned size, Assembler::Constant* a,
-     Assembler::Register* b, Assembler::Register* dst)
-{
-  assert(con, size == BytesPerWord);
-
-  int32_t i = getValue(a);
-  if (i) {
-    Assembler::Register tmp(con->client->acquireTemporary());
-    moveCR(con, size, a, size, &tmp);
-    xorR(con, size, &tmp, b, dst);
-    con->client->releaseTemporary(tmp.low);
-  }
 }
 
 void
@@ -1143,7 +1063,7 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
 {
   assert(c, aSize == 4 and bSize == 4);
 
-  if (a->value->resolved() and isInt16(a->value->value())) {
+  if (a->value->resolved() and isOfWidth(a->value->value(), 8)) {
     emit(c, cmpi(b->low, a->value->value()));
   } else {
     Assembler::Register tmp(c->client->acquireTemporary());
@@ -1538,10 +1458,8 @@ populateTables(ArchitectureContext* c)
   bo[index(c, Negate, R, R)] = CAST2(negateRR);
 
   to[index(c, Add, R)] = CAST3(addR);
-  to[index(c, Add, C)] = CAST3(addC);
 
   to[index(c, Subtract, R)] = CAST3(subR);
-  to[index(c, Subtract, C)] = CAST3(subC);
 
   to[index(c, Multiply, R)] = CAST3(multiplyR);
 
@@ -1554,13 +1472,10 @@ populateTables(ArchitectureContext* c)
   to[index(c, UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
   to[index(c, UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
 
-  to[index(c, And, C)] = CAST3(andC);
   to[index(c, And, R)] = CAST3(andR);
 
-  to[index(c, Or, C)] = CAST3(orC);
   to[index(c, Or, R)] = CAST3(orR);
 
-  to[index(c, Xor, C)] = CAST3(xorC);
   to[index(c, Xor, R)] = CAST3(xorR);
 
   bro[branchIndex(c, R, R)] = CAST_BRANCH(branchRR);
@@ -1830,7 +1745,7 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void planSource
   (TernaryOperation op,
-   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned aSize UNUSED, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask,
    unsigned, bool* thunk)
   {
@@ -1845,11 +1760,9 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Add:
     case Subtract:
-      if (aSize == 8) {
-        *aTypeMask = *bTypeMask = (1 << RegisterOperand);
-      }
-      break;
-
+    case And:
+    case Or:
+    case Xor:
     case Multiply:
       *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       break;
