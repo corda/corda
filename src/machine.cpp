@@ -1627,7 +1627,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
       object body = makeByteArray(t, length);
       s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)), length);
 
-      object addendum = makeClassAddendum(t, pool, body, 0);
+      object addendum = makeClassAddendum(t, pool, body, 0, 0);
       
       set(t, class_, ClassAddendum, addendum);
     } else {

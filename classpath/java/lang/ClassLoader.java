@@ -46,7 +46,8 @@ public abstract class ClassLoader {
       throw new IndexOutOfBoundsException();
     }
 
-    return avian.SystemClassLoader.defineClass(this, b, offset, length);
+    return avian.SystemClassLoader.getClass
+      (avian.SystemClassLoader.defineVMClass(this, b, offset, length));
   }
 
   protected Class findClass(String name) throws ClassNotFoundException {
@@ -87,7 +88,7 @@ public abstract class ClassLoader {
   }
 
   protected void resolveClass(Class c) {
-    avian.SystemClassLoader.link(c, this);
+    avian.SystemClassLoader.link(c.vmClass, this);
   }
 
   private ClassLoader getParent() {

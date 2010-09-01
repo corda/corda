@@ -97,12 +97,12 @@ Avian_java_lang_Object_toString
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_Object_getClass
+Avian_java_lang_Object_getVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object this_ = reinterpret_cast<object>(arguments[0]);
+  object o = reinterpret_cast<object>(arguments[0]);
 
-  return reinterpret_cast<int64_t>(objectClass(t, this_));
+  return reinterpret_cast<int64_t>(objectClass(t, o));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -183,7 +183,15 @@ Avian_avian_SystemClassLoader_releaseClassLock
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_defineClass
+Avian_avian_SystemClassLoader_getVMClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>
+    (objectClass(t, reinterpret_cast<object>(arguments[0])));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_SystemClassLoader_defineVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
   object loader = reinterpret_cast<object>(arguments[0]);
@@ -214,25 +222,25 @@ Avian_avian_SystemClassLoader_defineClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_reallyFindLoadedClass
+Avian_avian_SystemClassLoader_findLoadedVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[1]);
+  object name = reinterpret_cast<object>(arguments[0]);
 
   return search(t, name, findLoadedSystemClass, true);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_findClass
+Avian_avian_SystemClassLoader_findVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[1]);
+  object name = reinterpret_cast<object>(arguments[0]);
 
   return search(t, name, resolveSystemClass, true);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_resolveClass
+Avian_avian_SystemClassLoader_resolveVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
   object loader = reinterpret_cast<object>(arguments[0]);
@@ -245,7 +253,7 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_resourceExists
 (Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[1]);
+  object name = reinterpret_cast<object>(arguments[0]);
 
   if (LIKELY(name)) {
     RUNTIME_ARRAY(char, n, stringLength(t, name) + 1);

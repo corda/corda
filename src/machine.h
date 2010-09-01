@@ -3000,6 +3000,29 @@ resolveMethod(Thread* t, object method, unsigned index)
     (t, classLoader(t, methodClass(t, method)), method, index);
 }
 
+inline object
+getJClass(Thread* t, object c)
+{
+  if (classAddendum(t, c) == 0) {
+    ACQUIRE(t, t->m->classLock);
+
+    object addendum = makeClassAddendum(t, 0, 0, 0, 0);
+      
+    set(t, c, ClassAddendum, addendum);
+  }
+
+  object jclass = classAddendumClass(t, classAddendum(t, c));
+  if (jclass == 0) {
+    ACQUIRE(t, t->m->classLock);
+
+    jclass = makeJclass(t, c);
+      
+    set(t, classAddendum(t, c), ClassAddendumClass, jclass);
+  }
+
+  return jclass;
+}
+
 void
 dumpHeap(Thread* t, FILE* out);
 

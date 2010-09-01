@@ -78,13 +78,13 @@ public class Constructor<T> extends AccessibleObject
     return method.getGenericParameterTypes();
   }
 
-  private static native <T> T make(Class<T> c);
+  private static native Object make(avian.VMClass c);
 
   public T newInstance(Object ... arguments)
     throws InvocationTargetException, InstantiationException,
     IllegalAccessException
   {
-    T v = make(method.getDeclaringClass());
+    T v = (T) make(method.getDeclaringClass().vmClass);
     method.invoke(v, arguments);
     return v;
   }

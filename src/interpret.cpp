@@ -2224,7 +2224,11 @@ interpret(Thread* t)
           (t, frameMethod(t, frame), index - 1); 
         if (UNLIKELY(exception)) goto throw_;
 
-        pushObject(t, class_);
+        pushObject(t, getJClass(t, class_));
+      } else if (objectClass(t, v)
+                 == arrayBody(t, t->m->types, Machine::ClassType))
+      {
+        pushObject(t, getJClass(t, v));
       } else {     
         pushObject(t, v);
       }

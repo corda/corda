@@ -94,13 +94,12 @@ public abstract class ResourceBundle {
   }
 
   public static ResourceBundle getBundle(String name, Locale locale) {
-    return getBundle(name, locale,
-                     Method.getCaller().getDeclaringClass().getClassLoader());
+    return getBundle(name, locale, Method.getCaller().class_.loader);
   }
 
   public static ResourceBundle getBundle(String name) {
-    return getBundle(name, Locale.getDefault(),
-                     Method.getCaller().getDeclaringClass().getClassLoader());
+    return getBundle
+      (name, Locale.getDefault(), Method.getCaller().class_.loader);
   }
 
   public Object getObject(String key) {

@@ -27,7 +27,11 @@ public class Object {
 
   protected void finalize() throws Throwable { }
 
-  public native final Class<? extends Object> getClass();
+  public final Class<? extends Object> getClass() {
+    return avian.SystemClassLoader.getClass(getVMClass(this));
+  }
+
+  private static native avian.VMClass getVMClass(Object o);
 
   public native int hashCode();
 

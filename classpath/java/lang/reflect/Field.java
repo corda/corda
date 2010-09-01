@@ -10,7 +10,9 @@
 
 package java.lang.reflect;
 
+import avian.VMField;
 import avian.AnnotationInvocationHandler;
+import avian.SystemClassLoader;
 
 import java.lang.annotation.Annotation;
 
@@ -26,81 +28,90 @@ public class Field<T> extends AccessibleObject {
   private static final int BooleanField = 8;
   private static final int ObjectField = 9;
 
-  private byte vmFlags;
-  private byte code;
-  private short flags;
-  private short offset;
-  private byte[] name;
-  public byte[] spec;
-  public avian.Addendum addendum;
-  private Class<T> class_;
+  private final VMField vmField;
+  private boolean accessible = true;
 
-  private Field() { }
+  public Field(VMField vmField) {
+    this.vmField = vmField;
+  }
 
   public boolean isAccessible() {
-    return (vmFlags & Accessible) != 0;
+    return accessible;
   }
 
   public void setAccessible(boolean v) {
-    if (v) vmFlags |= Accessible; else vmFlags &= ~Accessible;
+    accessible = v;
   }
 
   public Class<T> getDeclaringClass() {
-    return class_;
+    return SystemClassLoader.getClass(vmField.class_);
   }
 
   public int getModifiers() {
-    return flags;
+    return vmField.flags;
   }
 
   public String getName() {
-    return new String(name, 0, name.length - 1, false);
+    return getName(vmField);
+  }
+
+  public static String getName(VMField vmField) {
+    return new String(vmField.name, 0, vmField.name.length - 1, false);
   }
 
   public Class getType() {
-    return Class.forCanonicalName(class_.getClassLoader(),
-                                  new String(spec, 0, spec.length - 1, false));
+    return Class.forCanonicalName
+      (vmField.class_.loader,
+       new String(vmField.spec, 0, vmField.spec.length - 1, false));
   }
 
   public Object get(Object instance) throws IllegalAccessException {
     Object target;
-    if ((flags & Modifier.STATIC) != 0) {
-      target = class_.staticTable();
-    } else if (class_.isInstance(instance)) {
+    if ((vmField.flags & Modifier.STATIC) != 0) {
+      target = vmField.class_.staticTable;
+    } else if (Class.isInstance(vmField.class_, instance)) {
       target = instance;
     } else {
       throw new IllegalArgumentException();
     }
 
-    switch (code) {
+    switch (vmField.code) {
     case ByteField:
-      return Byte.valueOf((byte) getPrimitive(target, code, offset));
+      return Byte.valueOf
+        ((byte) getPrimitive(target, vmField.code, vmField.offset));
 
     case BooleanField:
-      return Boolean.valueOf(getPrimitive(target, code, offset) != 0);
+      return Boolean.valueOf
+        (getPrimitive(target, vmField.code, vmField.offset) != 0);
 
     case CharField:
-      return Character.valueOf((char) getPrimitive(target, code, offset));
+      return Character.valueOf
+        ((char) getPrimitive(target, vmField.code, vmField.offset));
 
     case ShortField:
-      return Short.valueOf((short) getPrimitive(target, code, offset));
+      return Short.valueOf
+        ((short) getPrimitive(target, vmField.code, vmField.offset));
 
     case IntField:
-      return Integer.valueOf((int) getPrimitive(target, code, offset));
+      return Integer.valueOf
+        ((int) getPrimitive(target, vmField.code, vmField.offset));
 
     case LongField:
-      return Long.valueOf((int) getPrimitive(target, code, offset));
+      return Long.valueOf
+        ((int) getPrimitive(target, vmField.code, vmField.offset));
 
     case FloatField:
       return Float.valueOf
-        (Float.intBitsToFloat((int) getPrimitive(target, code, offset)));
+        (Float.intBitsToFloat
+         ((int) getPrimitive(target, vmField.code, vmField.offset)));
 
     case DoubleField:
       return Double.valueOf
-        (Double.longBitsToDouble(getPrimitive(target, code, offset)));
+        (Double.longBitsToDouble
+         (getPrimitive(target, vmField.code, vmField.offset)));
 
     case ObjectField:
-      return getObject(target, offset);
+      return getObject(target, vmField.offset);
 
     default:
       throw new Error();
@@ -143,56 +154,58 @@ public class Field<T> extends AccessibleObject {
     throws IllegalAccessException
   {
     Object target;
-    if ((flags & Modifier.STATIC) != 0) {
-      target = class_.staticTable();
-    } else if (class_.isInstance(instance)) {
+    if ((vmField.flags & Modifier.STATIC) != 0) {
+      target = vmField.class_.staticTable;
+    } else if (Class.isInstance(vmField.class_, instance)) {
       target = instance;
     } else {
       throw new IllegalArgumentException();
     }
 
-    switch (code) {
+    switch (vmField.code) {
     case ByteField:
-      setPrimitive(target, code, offset, (Byte) value);
+      setPrimitive(target, vmField.code, vmField.offset, (Byte) value);
       break;
 
     case BooleanField:
-      setPrimitive(target, code, offset, ((Boolean) value) ? 1 : 0);
+      setPrimitive
+        (target, vmField.code, vmField.offset, ((Boolean) value) ? 1 : 0);
       break;
 
     case CharField:
-      setPrimitive(target, code, offset, (Character) value);
+      setPrimitive(target, vmField.code, vmField.offset, (Character) value);
       break;
 
     case ShortField:
-      setPrimitive(target, code, offset, (Short) value);
+      setPrimitive(target, vmField.code, vmField.offset, (Short) value);
       break;
 
     case IntField:
-      setPrimitive(target, code, offset, (Integer) value);
+      setPrimitive(target, vmField.code, vmField.offset, (Integer) value);
       break;
 
     case LongField:
-      setPrimitive(target, code, offset, (Long) value);
+      setPrimitive(target, vmField.code, vmField.offset, (Long) value);
       break;
 
     case FloatField:
-      setPrimitive(target, code, offset,
+      setPrimitive(target, vmField.code, vmField.offset,
                    Float.floatToRawIntBits((Float) value));
       break;
 
     case DoubleField:
-      setPrimitive(target, code, offset,
+      setPrimitive(target, vmField.code, vmField.offset,
                    Double.doubleToRawLongBits((Double) value));
       break;
 
     case ObjectField:
       if (value == null || getType().isInstance(value)) {
-        setObject(target, offset, value);
+        setObject(target, vmField.offset, value);
       } else {
         throw new IllegalArgumentException
-          ("needed " + getType() + ", got " + value.getClass().getName() +
-           " when setting " + class_.getName() + "." + getName());
+          ("needed " + getType() + ", got "
+           + Class.getName(Class.vmClass(target)) +
+           " when setting " + Class.getName(vmField.class_) + "." + getName());
       }
       break;
 
@@ -204,15 +217,15 @@ public class Field<T> extends AccessibleObject {
   private Annotation getAnnotation(Object[] a) {
     if (a[0] == null) {
       a[0] = Proxy.newProxyInstance
-        (class_.getClassLoader(), new Class[] { (Class) a[1] },
+        (vmField.class_.loader, new Class[] { (Class) a[1] },
          new AnnotationInvocationHandler(a));
     }
     return (Annotation) a[0];
   }
 
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
-    if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = (Object[]) addendum.annotationTable;
+    if (vmField.addendum.annotationTable != null) {
+      Object[] table = (Object[]) vmField.addendum.annotationTable;
       for (int i = 0; i < table.length; ++i) {
         Object[] a = (Object[]) table[i];
         if (a[1] == class_) {
@@ -224,8 +237,8 @@ public class Field<T> extends AccessibleObject {
   }
 
   public Annotation[] getAnnotations() {
-    if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = (Object[]) addendum.annotationTable;
+    if (vmField.addendum.annotationTable != null) {
+      Object[] table = (Object[]) vmField.addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
         array[i] = getAnnotation((Object[]) table[i]);
@@ -255,9 +268,4 @@ public class Field<T> extends AccessibleObject {
 
   private static native void setObject
     (Object instance, int offset, Object value);
-
-  public static class Addendum {
-    public Object pool;
-    public Object annotationTable;
-  }
 }

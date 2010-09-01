@@ -4370,7 +4370,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           object class_ = resolveClassInPool(t, context->method, index - 1); 
           if (UNLIKELY(t->exception)) return;
 
-          frame->pushObject(frame->append(class_));
+          frame->pushObject(frame->append(getJClass(t, class_)));
+        } else if (objectClass(t, v)
+                   == arrayBody(t, t->m->types, Machine::ClassType))
+        {
+          frame->pushObject(frame->append(getJClass(t, v)));
         } else {
           frame->pushObject(frame->append(v));
         }
@@ -6160,9 +6164,6 @@ invokeNativeSlow(MyThread* t, object method)
 {
   PROTECT(t, method);
 
-  object class_ = methodClass(t, method);
-  PROTECT(t, class_);
-
   unsigned footprint = methodParameterFootprint(t, method) + 1;
   if (methodFlags(t, method) & ACC_STATIC) {
     ++ footprint;
@@ -6181,9 +6182,13 @@ invokeNativeSlow(MyThread* t, object method)
     + t->arch->frameFooterSize()
     + t->arch->frameReturnAddressSize();
 
+  object jclass = 0;
+  PROTECT(t, jclass);
+
   if (methodFlags(t, method) & ACC_STATIC) {
+    jclass = getJClass(t, methodClass(t, method));
     RUNTIME_ARRAY_BODY(args)[argOffset++]
-      = reinterpret_cast<uintptr_t>(&class_);
+      = reinterpret_cast<uintptr_t>(&jclass);
   } else {
     RUNTIME_ARRAY_BODY(args)[argOffset++]
       = reinterpret_cast<uintptr_t>(sp++);

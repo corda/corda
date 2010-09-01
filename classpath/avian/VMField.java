@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,7 +10,13 @@
 
 package avian;
 
-public class ClassAddendum extends Addendum {
-  public volatile Class class_;
-  public Object[] signers;
+public class VMField {
+  public byte vmFlags;
+  public byte code;
+  public short flags;
+  public short offset;
+  public byte[] name;
+  public byte[] spec;
+  public avian.Addendum addendum;
+  public VMClass class_;
 }

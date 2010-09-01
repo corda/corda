@@ -107,15 +107,15 @@ public class Logger {
     return logger.getLevel();
   }
       
-  private void log(Level level, Method caller, String message,
+  private void log(Level level, avian.VMMethod caller, String message,
                    Throwable exception) {
     
     if (level.intValue() < getEffectiveLevel().intValue()) {
       return;
     }
     LogRecord r = new LogRecord
-      (name, caller == null ? "<unknown>" : caller.getName(), level, message,
-       exception);
+      (name, caller == null ? "<unknown>" : Method.getName(caller), level,
+       message, exception);
     publish(r);
   }
 

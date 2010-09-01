@@ -10,53 +10,54 @@
 
 package java.lang.reflect;
 
+import avian.VMMethod;
 import avian.AnnotationInvocationHandler;
+import avian.SystemClassLoader;
 
 import java.lang.annotation.Annotation;
 
 public class Method<T> extends AccessibleObject
   implements Member, GenericDeclaration
 {
-  private byte vmFlags;
-  private byte returnCode;
-  public byte parameterCount;
-  public byte parameterFootprint;
-  private short flags;
-  private short offset;
-  private int nativeID;
-  private byte[] name;
-  public byte[] spec;
-  public avian.Addendum addendum;
-  private Class<T> class_;
-  private Object code;
-  private long compiled;
+  private final VMMethod vmMethod;
+  private boolean accessible;
 
-  private Method() { }
+  public Method(VMMethod vmMethod) {
+    this.vmMethod = vmMethod;
+  }
 
   public boolean isAccessible() {
-    return (vmFlags & Accessible) != 0;
+    return accessible;
   }
 
   public void setAccessible(boolean v) {
-    if (v) vmFlags |= Accessible; else vmFlags &= ~Accessible;
+    accessible = v;
   }
 
-  public static native Method getCaller();
+  public static native VMMethod getCaller();
 
   public Class<T> getDeclaringClass() {
-    return class_;
+    return SystemClassLoader.getClass(vmMethod.class_);
   }
 
   public int getModifiers() {
-    return flags;
+    return vmMethod.flags;
   }
 
   public String getName() {
-    return new String(name, 0, name.length - 1, false);
+    return getName(vmMethod);
   }
 
-  String getSpec() {
-    return new String(spec, 0, spec.length - 1, false);
+  public static String getName(VMMethod vmMethod) {
+    return new String(vmMethod.name, 0, vmMethod.name.length - 1, false);
+  }
+
+  private String getSpec() {
+    return getSpec(vmMethod);
+  }
+
+  public static String getSpec(VMMethod vmMethod) {
+    return new String(vmMethod.spec, 0, vmMethod.spec.length - 1, false);
   }
 
   private static int next(char c, String s, int start) {
@@ -67,12 +68,17 @@ public class Method<T> extends AccessibleObject
   }
 
   public Class[] getParameterTypes() {
-    int count = parameterCount;
+    return getParameterTypes(vmMethod);
+  }
+
+  public static Class[] getParameterTypes(VMMethod vmMethod) {
+    int count = vmMethod.parameterCount;
 
     Class[] types = new Class[count];
     int index = 0;
 
-    String spec = new String(this.spec, 1, this.spec.length - 1, false);
+    String spec = new String
+      (vmMethod.spec, 1, vmMethod.spec.length - 1, false);
 
     try {
       for (int i = 0; i < spec.length(); ++i) {
@@ -83,7 +89,7 @@ public class Method<T> extends AccessibleObject
           int start = i + 1;
           i = next(';', spec, start);
           String name = spec.substring(start, i).replace('/', '.');
-          types[index++] = Class.forName(name, true, class_.getClassLoader());
+          types[index++] = Class.forName(name, true, vmMethod.class_.loader);
         } else if (c == '[') {
           int start = i;
           while (spec.charAt(i) == '[') ++i;
@@ -92,16 +98,16 @@ public class Method<T> extends AccessibleObject
             i = next(';', spec, i + 1);
             String name = spec.substring(start, i).replace('/', '.');
             types[index++] = Class.forName
-              (name, true, class_.getClassLoader());
+              (name, true, vmMethod.class_.loader);
           } else {
             String name = spec.substring(start, i + 1);
             types[index++] = Class.forCanonicalName
-              (class_.getClassLoader(), name);
+              (vmMethod.class_.loader, name);
           }
         } else {
           String name = spec.substring(i, i + 1);
           types[index++] = Class.forCanonicalName
-            (class_.getClassLoader(), name);
+            (vmMethod.class_.loader, name);
         }
       }
     } catch (ClassNotFoundException e) {
@@ -114,38 +120,43 @@ public class Method<T> extends AccessibleObject
   public Object invoke(Object instance, Object ... arguments)
     throws InvocationTargetException, IllegalAccessException
   {
-    if ((flags & Modifier.STATIC) != 0 || class_.isInstance(instance)) {
-      if ((flags & Modifier.STATIC) != 0) {
+    if ((vmMethod.flags & Modifier.STATIC) != 0
+        || Class.isInstance(vmMethod.class_, instance))
+    {
+      if ((vmMethod.flags & Modifier.STATIC) != 0) {
         instance = null;
       }
 
       if (arguments == null) {
-        if (parameterCount > 0) {
+        if (vmMethod.parameterCount > 0) {
           throw new NullPointerException();
         }
         arguments = new Object[0];
       }
 
-      if (arguments.length == parameterCount) {
-        return invoke(this, instance, arguments);        
+      if (arguments.length == vmMethod.parameterCount) {
+        return invoke(vmMethod, instance, arguments);        
       } else {
         throw new ArrayIndexOutOfBoundsException();
       }
     } else {
+//       System.out.println
+//         (getDeclaringClass() + "." + getName() + " flags: " + vmMethod.flags + " vm flags: " + vmMethod.vmFlags + " return code: " + vmMethod.returnCode);
       throw new IllegalArgumentException();
     }
   }
 
-  private static native Object invoke(Method method, Object instance,
+  private static native Object invoke(VMMethod method, Object instance,
                                       Object ... arguments)
     throws InvocationTargetException, IllegalAccessException;
 
   public Class getReturnType() {
-    for (int i = 0; i < spec.length - 1; ++i) {
-      if (spec[i] == ')') {
+    for (int i = 0; i < vmMethod.spec.length - 1; ++i) {
+      if (vmMethod.spec[i] == ')') {
         return Class.forCanonicalName
-          (class_.getClassLoader(),
-           new String(spec, i + 1, spec.length - i - 2, false));
+          (vmMethod.class_.loader,
+           new String
+           (vmMethod.spec, i + 1, vmMethod.spec.length - i - 2, false));
       }
     }
     throw new RuntimeException();
@@ -154,15 +165,15 @@ public class Method<T> extends AccessibleObject
   private Annotation getAnnotation(Object[] a) {
     if (a[0] == null) {
       a[0] = Proxy.newProxyInstance
-        (class_.getClassLoader(), new Class[] { (Class) a[1] },
+        (vmMethod.class_.loader, new Class[] { (Class) a[1] },
          new AnnotationInvocationHandler(a));
     }
     return (Annotation) a[0];
   }
 
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
-    if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = (Object[]) addendum.annotationTable;
+    if (vmMethod.addendum.annotationTable != null) {
+      Object[] table = (Object[]) vmMethod.addendum.annotationTable;
       for (int i = 0; i < table.length; ++i) {
         Object[] a = (Object[]) table[i];
         if (a[1] == class_) {
@@ -174,8 +185,8 @@ public class Method<T> extends AccessibleObject
   }
 
   public Annotation[] getAnnotations() {
-    if (addendum != null && addendum.annotationTable != null) {
-      Object[] table = (Object[]) addendum.annotationTable;
+    if (vmMethod.addendum.annotationTable != null) {
+      Object[] table = (Object[]) vmMethod.addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
         array[i] = getAnnotation((Object[]) table[i]);

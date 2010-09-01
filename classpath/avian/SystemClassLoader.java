@@ -13,6 +13,7 @@ package avian;
 import static avian.Stream.read1;
 import static avian.Stream.read2;
 
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -24,16 +25,26 @@ import java.io.IOException;
 public class SystemClassLoader extends ClassLoader {
   private static final int LinkFlag = 1 << 8;
 
-  public static native Class defineClass
+  public static native VMClass defineVMClass
     (ClassLoader loader, byte[] b, int offset, int length);
 
-  protected native Class findClass(String name) throws ClassNotFoundException;
+  private static native VMClass findVMClass(String name)
+    throws ClassNotFoundException;
 
-  protected native Class reallyFindLoadedClass(String name);
+  protected Class findClass(String name) throws ClassNotFoundException {
+    return getClass(findVMClass(name));
+  }
 
-  private native boolean resourceExists(String name);
+  private static native VMClass findLoadedVMClass(String name);
 
-  private static native Class resolveClass(ClassLoader loader, byte[] spec)
+  protected Class reallyFindLoadedClass(String name){
+    VMClass c = findLoadedVMClass(name);
+    return c == null ? null : getClass(c);
+  }
+
+  private static native boolean resourceExists(String name);
+
+  private static native VMClass resolveVMClass(ClassLoader loader, byte[] spec)
     throws ClassNotFoundException;
 
   protected URL findResource(String name) {
@@ -45,14 +56,14 @@ public class SystemClassLoader extends ClassLoader {
     return null;
   }
 
-  private static Class loadClass(ClassLoader loader,
-                                 byte[] nameBytes, int offset, int length)
+  private static VMClass loadVMClass(ClassLoader loader,
+                                     byte[] nameBytes, int offset, int length)
   {
     byte[] spec = new byte[length + 1];
     System.arraycopy(nameBytes, offset, spec, 0, length);
 
     try {
-      Class c = resolveClass(loader, spec);
+      VMClass c = resolveVMClass(loader, spec);
       if (c == null) {
         throw new NoClassDefFoundError();
       }
@@ -110,14 +121,14 @@ public class SystemClassLoader extends ClassLoader {
       byte[] name = (byte[]) Singleton.getObject(pool, read2(in) - 1);
 
       return Enum.valueOf
-        (loadClass(loader, typeName, 1, typeName.length - 3),
+        (getClass(loadVMClass(loader, typeName, 1, typeName.length - 3)),
          new String(name, 0, name.length - 1, false));
     }
 
     case 'c':{
       byte[] name = (byte[]) Singleton.getObject(pool, read2(in) - 1);
 
-      return loadClass(loader, name, 1, name.length - 3);
+      return getClass(loadVMClass(loader, name, 1, name.length - 3));
     }
 
     case '@':
@@ -142,7 +153,8 @@ public class SystemClassLoader extends ClassLoader {
   {
     byte[] typeName = (byte[]) Singleton.getObject(pool, read2(in) - 1);
     Object[] annotation = new Object[(read2(in) + 1) * 2];
-    annotation[1] = loadClass(loader, typeName, 1, typeName.length - 3);
+    annotation[1] = getClass
+      (loadVMClass(loader, typeName, 1, typeName.length - 3));
 
     for (int i = 2; i < annotation.length; i += 2) {
       byte[] name = (byte[]) Singleton.getObject(pool, read2(in) - 1);
@@ -214,7 +226,7 @@ public class SystemClassLoader extends ClassLoader {
       return start + 1;
     }
 
-    loadClass(loader, spec, start, end - start);
+    loadVMClass(loader, spec, start, end - start);
 
     return result;
   }
@@ -223,7 +235,35 @@ public class SystemClassLoader extends ClassLoader {
 
   private static native void releaseClassLock();
 
-  public static void link(Class c, ClassLoader loader) {
+  public static Class getClass(VMClass vmClass) {
+    if (vmClass.addendum == null) {
+      SystemClassLoader.acquireClassLock();
+      try {
+        if (vmClass.addendum == null) {
+          vmClass.addendum = new ClassAddendum();
+        }
+      } finally {
+        SystemClassLoader.releaseClassLock();
+      }
+    }
+
+    if (vmClass.addendum.class_ == null) {
+      SystemClassLoader.acquireClassLock();
+      try {
+        if (vmClass.addendum.class_ == null) {
+          vmClass.addendum.class_ = new Class(vmClass);
+        }
+      } finally {
+        SystemClassLoader.releaseClassLock();
+      }
+    }
+
+    return vmClass.addendum.class_;
+  }
+
+  public static native VMClass getVMClass(Object o);
+
+  public static void link(VMClass c, ClassLoader loader) {
     acquireClassLock();
     try {
       if ((c.vmFlags & LinkFlag) == 0) {
@@ -234,15 +274,15 @@ public class SystemClassLoader extends ClassLoader {
         parseAnnotationTable(loader, c.addendum);
 
         if (c.interfaceTable != null) {
-          int stride = (c.isInterface() ? 1 : 2);
+          int stride = ((c.flags & Modifier.INTERFACE) != 0 ? 1 : 2);
           for (int i = 0; i < c.interfaceTable.length; i += stride) {
-            link((Class) c.interfaceTable[i], loader);
+            link((VMClass) c.interfaceTable[i], loader);
           }
         }
 
         if (c.methodTable != null) {
           for (int i = 0; i < c.methodTable.length; ++i) {
-            Method m = c.methodTable[i];
+            VMMethod m = c.methodTable[i];
 
             for (int j = 1; j < m.spec.length;) {
               j = resolveSpec(loader, m.spec, j);
@@ -254,7 +294,7 @@ public class SystemClassLoader extends ClassLoader {
 
         if (c.fieldTable != null) {
           for (int i = 0; i < c.fieldTable.length; ++i) {
-            Field f = c.fieldTable[i];
+            VMField f = c.fieldTable[i];
 
             resolveSpec(loader, f.spec, 0);
 
@@ -269,7 +309,7 @@ public class SystemClassLoader extends ClassLoader {
     }
   }
 
-  public static void link(Class c) {
-    link(c, c.getClassLoader());
+  public static void link(VMClass c) {
+    link(c, c.loader);
   }
 }

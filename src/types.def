@@ -1,7 +1,9 @@
 (type jobject java/lang/Object)
 
-(type class java/lang/Class
+(type class avian/VMClass
   (array void* vtable))
+
+(type jclass java/lang/Class)
 
 (type singleton
   (array uintptr_t body))
@@ -11,13 +13,10 @@
 
 (type systemClassLoader avian/SystemClassLoader)
 
-(type accessibleObject java/lang/reflect/AccessibleObject)
+(type field avian/VMField)
 
-(type field java/lang/reflect/Field)
-
-(type method java/lang/reflect/Method)
-
-(type proxy java/lang/reflect/Proxy)
+(type method avian/VMMethod
+  (intptr_t compiled))
 
 (type addendum avian/Addendum)
 
