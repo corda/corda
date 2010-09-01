@@ -132,6 +132,8 @@ inline int blt(int offset) { return SETCOND(b(offset), LT); }
 inline int bgt(int offset) { return SETCOND(b(offset), GT); }
 inline int ble(int offset) { return SETCOND(b(offset), LE); }
 inline int bge(int offset) { return SETCOND(b(offset), GE); }
+inline int blo(int offset) { return SETCOND(b(offset), CC); }
+inline int bhs(int offset) { return SETCOND(b(offset), CS); }
 }
 
 const uint64_t MASK_LO32 = 0xffffffff;
@@ -699,7 +701,7 @@ moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
   switch (srcSize) {
   case 2:
     emit(c, lsli(dst->low, src->low, 16));
-    emit(c, lsri(dst->low, src->low, 16));
+    emit(c, lsri(dst->low, dst->low, 16));
     break;
 
   default: abort(c);
@@ -745,7 +747,7 @@ moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
 
 void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if (size == 8) {
-    emit(con, SETS(adc(t->low, a->low, b->low)));
+    emit(con, SETS(add(t->low, a->low, b->low)));
     emit(con, adc(t->high, a->high, b->high));
   } else {
     emit(con, add(t->low, a->low, b->low));
@@ -1171,7 +1173,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     emit(c, bgt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, blt(0), target);
+    conditional(c, blo(0), target);
     break;
 
   case JumpIfGreater:
@@ -1181,7 +1183,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     emit(c, blt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, bgt(0), target);
+    conditional(c, bhi(0), target);
     break;
 
   case JumpIfLessOrEqual:
@@ -1191,7 +1193,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     emit(c, bgt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, ble(0), target);
+    conditional(c, bls(0), target);
     break;
 
   case JumpIfGreaterOrEqual:
@@ -1201,7 +1203,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     emit(c, blt(0));
 
     compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, bge(0), target);
+    conditional(c, bhs(0), target);
     break;
 
   default:
@@ -1745,8 +1747,8 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void planSource
   (TernaryOperation op,
-   unsigned aSize UNUSED, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+   unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
    unsigned, bool* thunk)
   {
     *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
@@ -1758,6 +1760,12 @@ class MyArchitecture: public Assembler::Architecture {
     *thunk = false;
 
     switch (op) {
+    case ShiftLeft:
+    case ShiftRight:
+    case UnsignedShiftRight:
+      if (bSize == 8) *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+      break;
+
     case Add:
     case Subtract:
     case And:
