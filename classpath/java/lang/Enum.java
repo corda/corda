@@ -34,7 +34,7 @@ public abstract class Enum<E extends Enum<E>> implements Comparable<E> {
 
     try {
       Method method = enumType.getMethod("values");
-      Enum values[] = (Enum[]) (method.invoke(null));
+      Enum values[] = (Enum[]) method.invoke(null);
       for (Enum value: values) {
         if (name.equals(value.name)) {
           return (T) value;
