@@ -2142,6 +2142,12 @@ class MyAssembler: public Assembler {
   }
 
   virtual void saveFrame(unsigned stackOffset, unsigned) {
+    Register returnAddress(0);
+    emit(&c, mflr(returnAddress.low));
+
+    Memory returnAddressDst(StackRegister, 8);
+    moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
+
     Register stack(StackRegister);
     Memory stackDst(ThreadRegister, stackOffset);
     moveRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
