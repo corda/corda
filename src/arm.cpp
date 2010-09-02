@@ -88,10 +88,10 @@ inline int movi(int Rd, int imm, int rot=0) { return DATAI(AL, 0xd, 0, 0, Rd, ro
 inline int movsh(int Rd, int Rm, int Rs, int Sh) { return DATAS(AL, 0xd, 0, 0, Rd, Rs, Sh, Rm); }
 inline int mul(int Rd, int Rm, int Rs) { return MULTIPLY(AL, 0, 0, Rd, 0, Rs, Rm); }
 inline int mla(int Rd, int Rm, int Rs, int Rn) { return MULTIPLY(AL, 1, 0, Rd, Rn, Rs, Rm); }
-inline int umull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 4, 0, RdLo, RdHi, Rs, Rm); }
-inline int umlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 5, 0, RdLo, RdHi, Rs, Rm); }
-inline int smull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 6, 0, RdLo, RdHi, Rs, Rm); }
-inline int smlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 7, 0, RdLo, RdHi, Rs, Rm); }
+inline int umull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 4, 0, RdHi, RdLo, Rs, Rm); }
+inline int umlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 5, 0, RdHi, RdLo, Rs, Rm); }
+inline int smull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 6, 0, RdHi, RdLo, Rs, Rm); }
+inline int smlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 7, 0, RdHi, RdLo, Rs, Rm); }
 inline int ldr(int Rd, int Rn, int Rm, int W=0) { return XFER(AL, 1, 1, 0, W, 1, Rn, Rd, 0, 0, Rm); }
 inline int ldri(int Rd, int Rn, int imm, int W=0) { return XFERI(AL, 1, calcU(imm), 0, W, 1, Rn, Rd, abs(imm)); }
 inline int ldrb(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 1, Rn, Rd, 0, 0, Rm); }
@@ -479,8 +479,8 @@ void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler:
     emit(con, lsl(tmpLo, b->high, tmpHi));
     emit(con, orr(t->low, t->low, tmpLo));
     emit(con, SETS(addi(tmpHi, a->low, -32)));
-    emit(con, asr(tmpLo, b->high, tmpHi));
-    emit(con, SETCOND(::b(8), LE));
+    emit(con, SETS(asr(tmpLo, b->high, tmpHi)));
+    emit(con, ble(4));
     emit(con, orri(t->low, tmpLo, 0));
     emit(con, asr(t->high, b->high, a->low));
     freeTemp(con, tmpHi); freeTemp(con, tmpLo);
@@ -765,9 +765,20 @@ void subR(Context* con, unsigned size, Assembler::Register* a, Assembler::Regist
 
 void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if (size == 8) {
-    emit(con, mul(t->high, a->low, b->high));
-    emit(con, mla(t->high, a->high, b->low, t->high));
-    emit(con, smlal(t->low, t->high, a->low, b->low));
+    bool useTemporaries = b->low == t->low;
+    int tmpLow  = useTemporaries ? con->client->acquireTemporary() : t->low;
+    int tmpHigh = useTemporaries ? con->client->acquireTemporary() : t->high;
+
+    emit(con, umull(tmpLow, tmpHigh, a->low, b->low));
+    emit(con, mla(tmpHigh, a->low, b->high, tmpHigh));
+    emit(con, mla(tmpHigh, a->high, b->low, tmpHigh));
+
+    if (useTemporaries) {
+      emit(con, mov(t->low, tmpLow));
+      emit(con, mov(t->high, tmpHigh));
+      con->client->releaseTemporary(tmpLow);
+      con->client->releaseTemporary(tmpHigh);
+    }
   } else {
     emit(con, mul(t->low, a->low, b->low));
   }
