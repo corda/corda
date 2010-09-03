@@ -3,6 +3,22 @@ public class Longs {
     if (! v) throw new RuntimeException();
   }
 
+  public static long readLongFrom(java.io.InputStream in)
+    throws java.io.IOException
+  {
+    long b1 = in.read();
+    long b2 = in.read();
+    long b3 = in.read();
+    long b4 = in.read();
+    long b5 = in.read();
+    long b6 = in.read();
+    long b7 = in.read();
+    long b8 = in.read();
+    if (b8 == -1) throw new java.io.EOFException();
+    return (long) ((b1 << 56) | (b2 << 48) | (b3 << 40) | (b4 << 32) |
+                   (b5 << 24) | (b6 << 16) | (b7 << 8) | (b8));
+  }
+
   public static void putInt(int val, byte[] dst, int offset) {
     System.out.println("put " + val);
     dst[offset]   = (byte)((val >> 24) & 0xff);
@@ -43,7 +59,15 @@ public class Longs {
     return x >>> 32;
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
+    expect(readLongFrom(new java.io.InputStream() {
+        int step;
+
+        public int read() {
+          return ++step;
+        }
+      }) == 0x0102030405060708L);
+
     expect(((long) negativeOne()) == -1);
 
     { long foo = 25214903884L;

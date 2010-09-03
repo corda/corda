@@ -61,11 +61,17 @@ public class InflaterInputStream extends InputStream {
           return count;
         } else if (inflater.needsDictionary()) {
           throw new IOException("missing dictionary");
+        } else if (inflater.finished()) {
+          return -1;
         }
       } catch (DataFormatException e) {
         throw new IOException(e);
       }
     }
+  }
+
+  public int available() throws IOException {
+    return inflater.finished() ? 0 : 1;
   }
 
   public void close() throws IOException {

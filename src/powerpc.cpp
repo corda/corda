@@ -471,12 +471,14 @@ void shiftLeftC(Context* con, unsigned size, Assembler::Constant* a, Assembler::
     if (sh < 32) {
       emit(con, rlwinm(t->high,b->high,sh,0,31-sh));
       emit(con, rlwimi(t->high,b->low,sh,32-sh,31));
+      emit(con, slwi(t->low, b->low, sh));
     } else {
       emit(con, rlwinm(t->high,b->low,sh-32,0,63-sh));
       emit(con, li(t->low,0));
     }
+  } else {
+    emit(con, slwi(t->low, b->low, sh));
   }
-  emit(con, slwi(t->low, b->low, sh));
 }
 
 void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
@@ -1676,62 +1678,6 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 }
 
 void
-jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, beq(0));
-}
-
-void
-jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bne(0));
-}
-
-void
-jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bgt(0));
-}
-
-void
-jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED,
-                      Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bge(0));
-}
-
-void
-jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, blt(0));
-}
-
-void
-jumpIfLessOrEqualC(Context* c, unsigned size UNUSED,
-                   Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, ble(0));
-}
-
-void
 return_(Context* c)
 {
   emit(c, blr());
@@ -2196,6 +2142,12 @@ class MyAssembler: public Assembler {
   }
 
   virtual void saveFrame(unsigned stackOffset, unsigned) {
+    Register returnAddress(0);
+    emit(&c, mflr(returnAddress.low));
+
+    Memory returnAddressDst(StackRegister, 8);
+    moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
+
     Register stack(StackRegister);
     Memory stackDst(ThreadRegister, stackOffset);
     moveRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);

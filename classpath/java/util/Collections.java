@@ -79,6 +79,10 @@ public class Collections {
     sb.append("}");
     return sb.toString();
   }
+  
+  public static <T> Enumeration<T> enumeration(Collection<T> c) {
+    return new IteratorEnumeration<T> (c.iterator());
+  }
 
   static class IteratorEnumeration<T> implements Enumeration<T> {
     private final Iterator<T> it;

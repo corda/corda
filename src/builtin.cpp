@@ -594,25 +594,32 @@ Avian_java_lang_System_arraycopy
       if (LIKELY(elementSize)) {
         intptr_t sl = cast<uintptr_t>(src, BytesPerWord);
         intptr_t dl = cast<uintptr_t>(dst, BytesPerWord);
-        if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
-                   dstOffset >= 0 and dstOffset + length <= dl))
-        {
-          uint8_t* sbody = &cast<uint8_t>(src, ArrayBody);
-          uint8_t* dbody = &cast<uint8_t>(dst, ArrayBody);
-          if (src == dst) {
-            memmove(dbody + (dstOffset * elementSize),
-                    sbody + (srcOffset * elementSize),
-                    length * elementSize);
+        if (LIKELY(length > 0)) {
+          if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
+                     dstOffset >= 0 and dstOffset + length <= dl))
+          {
+            uint8_t* sbody = &cast<uint8_t>(src, ArrayBody);
+            uint8_t* dbody = &cast<uint8_t>(dst, ArrayBody);
+            if (src == dst) {
+              memmove(dbody + (dstOffset * elementSize),
+                      sbody + (srcOffset * elementSize),
+                      length * elementSize);
+            } else {
+              memcpy(dbody + (dstOffset * elementSize),
+                     sbody + (srcOffset * elementSize),
+                     length * elementSize);
+            }
+
+            if (classObjectMask(t, objectClass(t, dst))) {
+              mark(t, dst, ArrayBody + (dstOffset * BytesPerWord), length);
+            }
+
+            return;
           } else {
-            memcpy(dbody + (dstOffset * elementSize),
-                   sbody + (srcOffset * elementSize),
-                   length * elementSize);
+            t->exception = makeIndexOutOfBoundsException(t);
+            return;
           }
-
-          if (classObjectMask(t, objectClass(t, dst))) {
-            mark(t, dst, ArrayBody + (dstOffset * BytesPerWord), length);
-          }
-
+        } else {
           return;
         }
       }

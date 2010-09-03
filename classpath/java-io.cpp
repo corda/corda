@@ -593,11 +593,11 @@ Java_java_io_FileInputStream_close(JNIEnv* e, jclass, jint fd)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path)
+Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path, jboolean append)
 {
   string_t chars = getChars(e, path);
   if (chars) {
-    int fd = doOpen(e, chars, O_WRONLY | O_CREAT | O_TRUNC);
+    int fd = doOpen(e, chars, append ? (O_WRONLY | O_APPEND) : (O_WRONLY | O_CREAT | O_TRUNC));
     releaseChars(e, path, chars);
     return fd;
   } else {
