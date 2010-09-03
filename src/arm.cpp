@@ -82,6 +82,7 @@ inline int subi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x2, 0, R
 inline int rsbi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x3, 0, Rn, Rd, rot, imm); }
 inline int addi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x4, 0, Rn, Rd, rot, imm); }
 inline int adci(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x5, 0, Rn, Rd, rot, imm); }
+inline int bici(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0xe, 0, Rn, Rd, rot, imm); }
 inline int cmpi(int Rn, int imm, int rot=0) { return DATAI(AL, 0xa, 1, Rn, 0, rot, imm); }
 inline int orri(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0xc, 0, Rn, Rd, rot, imm); }
 inline int movi(int Rd, int imm, int rot=0) { return DATAI(AL, 0xd, 0, 0, Rd, rot, imm); }
@@ -1024,6 +1025,54 @@ andR(Context* c, unsigned size, Assembler::Register* a,
 }
 
 void
+andC(Context* c, unsigned size, Assembler::Constant* a,
+     Assembler::Register* b, Assembler::Register* dst)
+{
+  int64_t v = a->value->value();
+
+  if (size == 8) {
+    ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
+    Assembler::Constant ah(&high);
+
+    ResolvedPromise low(v & 0xFFFFFFFF);
+    Assembler::Constant al(&low);
+
+    Assembler::Register bh(b->high);
+    Assembler::Register dh(dst->high);
+
+    andC(c, 4, &al, b, dst);
+    andC(c, 4, &ah, &bh, &dh);
+  } else {
+    uint32_t v32 = static_cast<uint32_t>(v);
+    if (v32 != 0xFFFFFFFF) {
+      if ((v32 & 0xFFFFFF00) == 0xFFFFFF00) {
+        emit(c, bici(dst->low, b->low, (~(v32 & 0xFF)) & 0xFF));
+      } else if ((v32 & 0xFFFFFF00) == 0) {
+        emit(c, andi(dst->low, b->low, v32 & 0xFF));
+      } else {
+        // todo: there are other cases we can handle in one
+        // instruction
+
+        bool useTemporary = b->low == dst->low;
+        Assembler::Register tmp(dst->low);
+        if (useTemporary) {
+          tmp.low = c->client->acquireTemporary();
+        }
+
+        moveCR(c, 4, a, 4, &tmp);
+        andR(c, 4, b, &tmp, dst);
+        
+        if (useTemporary) {
+          c->client->releaseTemporary(tmp.low);
+        }
+      }
+    } else {
+      moveRR(c, size, b, size, dst);
+    }
+  }
+}
+
+void
 orR(Context* c, unsigned size, Assembler::Register* a,
     Assembler::Register* b, Assembler::Register* dst)
 {
@@ -1486,6 +1535,7 @@ populateTables(ArchitectureContext* c)
   to[index(c, UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
 
   to[index(c, And, R)] = CAST3(andR);
+  to[index(c, And, C)] = CAST3(andC);
 
   to[index(c, Or, R)] = CAST3(orR);
 
@@ -1779,7 +1829,6 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Add:
     case Subtract:
-    case And:
     case Or:
     case Xor:
     case Multiply:
