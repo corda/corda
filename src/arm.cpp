@@ -86,6 +86,7 @@ inline int bici(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0xe, 0, R
 inline int cmpi(int Rn, int imm, int rot=0) { return DATAI(AL, 0xa, 1, Rn, 0, rot, imm); }
 inline int orri(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0xc, 0, Rn, Rd, rot, imm); }
 inline int movi(int Rd, int imm, int rot=0) { return DATAI(AL, 0xd, 0, 0, Rd, rot, imm); }
+inline int orrsh(int Rd, int Rn, int Rm, int Rs, int Sh) { return DATAS(AL, 0xc, 0, Rn, Rd, Rs, Sh, Rm); }
 inline int movsh(int Rd, int Rm, int Rs, int Sh) { return DATAS(AL, 0xd, 0, 0, Rd, Rs, Sh, Rm); }
 inline int mul(int Rd, int Rm, int Rs) { return MULTIPLY(AL, 0, 0, Rd, 0, Rs, Rm); }
 inline int mla(int Rd, int Rm, int Rs, int Rn) { return MULTIPLY(AL, 1, 0, Rd, Rn, Rs, Rm); }
@@ -452,17 +453,18 @@ inline int64_t getValue(Assembler::Constant* c) { return c->value->value(); }
 void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if (size == 8) {
-    int tmpHi = newTemp(con), tmpLo = newTemp(con);
-    emit(con, SETS(rsbi(tmpHi, a->low, 32)));
-    emit(con, lsl(t->high, b->high, a->low));
-    emit(con, lsr(tmpLo, b->low, tmpHi));
-    emit(con, orr(t->high, t->high, tmpLo));
-    emit(con, addi(tmpHi, a->low, -32));
-    emit(con, lsl(tmpLo, b->low, tmpHi));
-    emit(con, orr(t->high, t->high, tmpLo));
-    freeTemp(con, tmpHi); freeTemp(con, tmpLo);
+    int tmp1 = newTemp(con), tmp2 = newTemp(con);
+    emit(con, lsl(tmp1, b->high, a->low));
+    emit(con, rsbi(tmp2, a->low, 32));
+    emit(con, orrsh(tmp1, tmp1, b->low, tmp2, LSR));
+    emit(con, SETS(subi(t->high, a->low, 32)));
+    emit(con, SETCOND(mov(t->high, tmp1), MI));
+    emit(con, SETCOND(lsl(t->high, b->low, t->high), PL));
+    emit(con, lsl(t->low, b->low, a->low));
+    freeTemp(con, tmp1); freeTemp(con, tmp2);
+  } else {
+    emit(con, lsl(t->low, b->low, a->low));
   }
-  emit(con, lsl(t->low, b->low, a->low));
 }
 
 void shiftLeftC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
@@ -474,17 +476,15 @@ void shiftLeftC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Asse
 void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if (size == 8) {
-    int tmpHi = newTemp(con), tmpLo = newTemp(con);
-    emit(con, SETS(rsbi(tmpHi, a->low, 32)));
-    emit(con, lsr(t->low, b->low, a->low));
-    emit(con, lsl(tmpLo, b->high, tmpHi));
-    emit(con, orr(t->low, t->low, tmpLo));
-    emit(con, SETS(addi(tmpHi, a->low, -32)));
-    emit(con, SETS(asr(tmpLo, b->high, tmpHi)));
-    emit(con, ble(4));
-    emit(con, orri(t->low, tmpLo, 0));
+    int tmp1 = newTemp(con), tmp2 = newTemp(con);
+    emit(con, lsr(tmp1, b->low, a->low));
+    emit(con, rsbi(tmp2, a->low, 32));
+    emit(con, orrsh(tmp1, tmp1, b->high, tmp2, LSL));
+    emit(con, SETS(subi(t->low, a->low, 32)));
+    emit(con, SETCOND(mov(t->low, tmp1), MI));
+    emit(con, SETCOND(asr(t->low, b->high, t->low), PL));
     emit(con, asr(t->high, b->high, a->low));
-    freeTemp(con, tmpHi); freeTemp(con, tmpLo);
+    freeTemp(con, tmp1); freeTemp(con, tmp2);
   } else {
     emit(con, asr(t->low, b->low, a->low));
   }
@@ -1076,7 +1076,7 @@ void
 orR(Context* c, unsigned size, Assembler::Register* a,
     Assembler::Register* b, Assembler::Register* dst)
 {
-  if (size == 8) orr(dst->high, a->high, b->high);
+  if (size == 8) emit(c, orr(dst->high, a->high, b->high));
   emit(c, orr(dst->low, a->low, b->low));
 }
 
