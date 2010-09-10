@@ -741,7 +741,7 @@ ifdef msvc
 		-PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@) -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(^) $(lflags) -o $(@)
+	$(ld) $(<) -L$(native-build) -ljvm $(lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
