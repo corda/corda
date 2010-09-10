@@ -34,6 +34,10 @@ public class Handler extends URLStreamHandler {
     public InputStream getInputStream() throws IOException {
       return new ResourceInputStream(url.getFile());
     }
+
+    public void connect() {
+      // ignore
+    }
   }
 
   private static class ResourceInputStream extends InputStream {

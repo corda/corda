@@ -3,7 +3,18 @@
 (type class avian/VMClass
   (array void* vtable))
 
-(type jclass java/lang/Class)
+(type jclass java/lang/Class
+  (require object vmClass))
+
+(type jaccessibleObject java/lang/reflect/AccessibleObject)
+
+(type jfield java/lang/reflect/Field)
+
+(type jmethod java/lang/reflect/Method)
+
+(type jconstructor java/lang/reflect/Constructor)
+
+(type constantPool sun/reflect/ConstantPool)
 
 (type singleton
   (array uintptr_t body))
@@ -22,6 +33,10 @@
 
 (type classAddendum avian/ClassAddendum)
 
+(type methodAddendum avian/MethodAddendum)
+
+(type fieldAddendum avian/FieldAddendum)
+
 (type nativeMethodData
   (void* function)
   (uint16_t argumentTableSize)
@@ -29,6 +44,10 @@
 
 (type pointer
   (void* value))
+
+(type native
+  (void* function)
+  (uint8_t fast))
 
 (pod exceptionHandler
   (uint16_t start)
@@ -142,15 +161,23 @@
 
 (type callbackReceiver avian/CallbackReceiver)
 
-(type string java/lang/String)
+(type string java/lang/String
+  (alias data object value)
+  (alias length uint32_t count)
+  (alias hashCode uint32_t hash))
 
-(type thread java/lang/Thread)
+(type thread java/lang/Thread
+  (require object sleepLock)
+  (require uint8_t interrupted)
+  (alias peer uint64_t eetop))
 
 (type threadGroup java/lang/ThreadGroup)
 
 (type stackTraceElement java/lang/StackTraceElement)
 
-(type throwable java/lang/Throwable)
+(type throwable java/lang/Throwable
+  (alias message object detailMessage)
+  (alias trace object backtrace))
 
 (type exception java/lang/Exception)
 
@@ -183,6 +210,8 @@
 (type error java/lang/Error)
 
 (type virtualMachineError java/lang/VirtualMachineError)
+
+(type outOfMemoryError java/lang/OutOfMemoryError)
 
 (type stackOverflowError java/lang/StackOverflowError)
 
@@ -221,9 +250,17 @@
 
 (type double java/lang/Double)
 
-(type referenceQueue java/lang/ref/ReferenceQueue)
+(type referenceQueue java/lang/ref/ReferenceQueue
+  (alias front object head))
 
-(type jreference java/lang/ref/Reference)
+(type jreference java/lang/ref/Reference
+  (alias target object referent)
+  (alias queue object queue)
+  (alias jNext object next)
+  (alias vmNext object discovered)
+  (nogc object target)
+  (nogc object queue)
+  (nogc object vmNext))
 
 (type weakReference java/lang/ref/WeakReference)
 

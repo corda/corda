@@ -47,8 +47,6 @@ public final class Class <T>
     this.vmClass = vmClass;
   }
 
-  public static native VMClass vmClass(Object o);
-
   public String toString() {
     return getName();
   }
@@ -71,23 +69,23 @@ public final class Class <T>
   public static String getName(VMClass c) {
     if (c.name == null) {
       if ((c.vmFlags & PrimitiveFlag) != 0) {
-        if (c == primitiveClass('V')) {
+        if (c == SystemClassLoader.primitiveClass('V')) {
           c.name = "void\0".getBytes();
-        } else if (c == primitiveClass('Z')) {
+        } else if (c == SystemClassLoader.primitiveClass('Z')) {
           c.name = "boolean\0".getBytes();
-        } else if (c == primitiveClass('B')) {
+        } else if (c == SystemClassLoader.primitiveClass('B')) {
           c.name = "byte\0".getBytes();
-        } else if (c == primitiveClass('C')) {
+        } else if (c == SystemClassLoader.primitiveClass('C')) {
           c.name = "char\0".getBytes();
-        } else if (c == primitiveClass('S')) {
+        } else if (c == SystemClassLoader.primitiveClass('S')) {
           c.name = "short\0".getBytes();
-        } else if (c == primitiveClass('I')) {
+        } else if (c == SystemClassLoader.primitiveClass('I')) {
           c.name = "int\0".getBytes();
-        } else if (c == primitiveClass('F')) {
+        } else if (c == SystemClassLoader.primitiveClass('F')) {
           c.name = "float\0".getBytes();
-        } else if (c == primitiveClass('J')) {
+        } else if (c == SystemClassLoader.primitiveClass('J')) {
           c.name = "long\0".getBytes();
-        } else if (c == primitiveClass('D')) {
+        } else if (c == SystemClassLoader.primitiveClass('D')) {
           c.name = "double\0".getBytes();
         } else {
           throw new AssertionError();
@@ -154,15 +152,11 @@ public final class Class <T>
     Class c = loader.loadClass(name);
     SystemClassLoader.link(c.vmClass, loader);
     if (initialize) {
-      initialize(c.vmClass);
+      SystemClassLoader.initialize(c.vmClass);
     }
     return c;
   }
 
-  private static native VMClass primitiveClass(char name);
-
-  private static native void initialize(VMClass vmClass);
-  
   public static Class forCanonicalName(String name) {
     return forCanonicalName(null, name);
   }
@@ -175,7 +169,8 @@ public final class Class <T>
         return forName(name.substring(1, name.length() - 1), true, loader);
       } else {
         if (name.length() == 1) {
-          return SystemClassLoader.getClass(primitiveClass(name.charAt(0)));
+          return SystemClassLoader.getClass
+            (SystemClassLoader.primitiveClass(name.charAt(0)));
         } else {
           throw new ClassNotFoundException(name);
         }
@@ -189,21 +184,29 @@ public final class Class <T>
     if (isArray()) {
       String n = getName();
       if ("[Z".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('Z'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('Z'));
       } else if ("[B".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('B'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('B'));
       } else if ("[S".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('S'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('S'));
       } else if ("[C".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('C'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('C'));
       } else if ("[I".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('I'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('I'));
       } else if ("[F".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('F'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('F'));
       } else if ("[J".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('J'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('J'));
       } else if ("[D".equals(n)) {
-        return SystemClassLoader.getClass(primitiveClass('D'));
+        return SystemClassLoader.getClass
+          (SystemClassLoader.primitiveClass('D'));
       }
 
       if (vmClass.staticTable == null) throw new AssertionError();
@@ -213,10 +216,8 @@ public final class Class <T>
     }
   }
 
-  public static native boolean isAssignableFrom(VMClass a, VMClass b);
-
   public boolean isAssignableFrom(Class c) {
-    return isAssignableFrom(vmClass, c.vmClass);
+    return SystemClassLoader.isAssignableFrom(vmClass, c.vmClass);
   }
 
   private static Field findField(VMClass vmClass, String name) {
@@ -533,7 +534,8 @@ public final class Class <T>
   }
 
   public static boolean isInstance(VMClass c, Object o) {
-    return o != null && isAssignableFrom(c, SystemClassLoader.getVMClass(o));
+    return o != null && SystemClassLoader.isAssignableFrom
+      (c, SystemClassLoader.getVMClass(o));
   }
 
   public boolean isInstance(Object o) {

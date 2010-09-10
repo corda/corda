@@ -465,6 +465,16 @@ replace(char a, char b, char* c)
   for (; *c; ++c) if (*c == a) *c = b;
 }
 
+inline void
+replace(char a, char b, char* dst, const char* src)
+{
+  unsigned i = 0;
+  for (; src[i]; ++ i) {
+    dst[i] = src[i] == a ? b : src[i];
+  }
+  dst[i] = 0;
+}
+
 class Machine;
 class Thread;
 

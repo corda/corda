@@ -156,6 +156,49 @@ ReleaseStringChars(Thread* t, jstring s, const jchar* chars)
   t->m->heap->free(chars, (stringLength(t, *s) + 1) * sizeof(jchar));
 }
 
+void JNICALL
+GetStringRegion(Thread* t, jstring s, jsize start, jsize length, jchar* dst)
+{
+  ENTER(t, Thread::ActiveState);
+
+  stringChars(t, *s, start, length, dst);
+}
+
+const jchar* JNICALL
+GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
+{
+  if ((t->criticalLevel ++) == 0) {
+    enter(t, Thread::ActiveState);
+  }
+
+  if (isCopy) {
+    *isCopy = true;
+  }
+  
+  object data = stringData(t, *s);
+  if (objectClass(t, data)
+      == arrayBody(t, t->m->types, Machine::ByteArrayType))
+  {
+    return GetStringChars(t, s, isCopy);
+  } else {
+    return &charArrayBody(t, data, stringOffset(t, *s));
+  }
+}
+
+void JNICALL
+ReleaseStringCritical(Thread* t, jstring s, const jchar* chars)
+{
+  if (objectClass(t, stringData(t, *s))
+      == arrayBody(t, t->m->types, Machine::ByteArrayType))
+  {
+    ReleaseStringChars(t, s, chars);
+  }
+
+  if ((-- t->criticalLevel) == 0) {
+    enter(t, Thread::IdleState);
+  }
+}
+
 jsize JNICALL
 GetStringUTFLength(Thread* t, jstring s)
 {
@@ -186,6 +229,15 @@ ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
   t->m->heap->free(chars, stringLength(t, *s) + 1);
 }
 
+void JNICALL
+GetStringUTFRegion(Thread* t, jstring s, jsize start, jsize length, char* dst)
+{
+  ENTER(t, Thread::ActiveState);
+
+  stringUTFChars
+    (t, *s, start, length, dst, stringUTFLength(t, *s, start, length));
+}
+
 jsize JNICALL
 GetArrayLength(Thread* t, jarray array)
 {
@@ -206,9 +258,8 @@ NewString(Thread* t, const jchar* chars, jsize size)
     a = makeCharArray(t, size);
     memcpy(&charArrayBody(t, a, 0), chars, size * sizeof(jchar));
   }
-  object s = makeString(t, a, 0, size, 0);
 
-  return makeLocalReference(t, s);
+  return makeLocalReference(t, t->m->classpath->makeString(t, a, 0, size));
 }
 
 jstring JNICALL
@@ -218,15 +269,11 @@ NewStringUTF(Thread* t, const char* chars)
 
   ENTER(t, Thread::ActiveState);
 
-  object a = 0;
-  unsigned size = strlen(chars);
-  if (size) {
-    a = makeByteArray(t, size);
-    memcpy(&byteArrayBody(t, a, 0), chars, size);
-  }
-  object s = makeString(t, a, 0, size, 0);
+  object array = parseUtf8(t, chars, strlen(chars));
 
-  return makeLocalReference(t, s);
+  return makeLocalReference
+    (t, t->m->classpath->makeString
+     (t, array, 0, cast<uintptr_t>(array, BytesPerWord) - 1));
 }
 
 void
@@ -238,6 +285,19 @@ replace(int a, int b, const char* in, int8_t* out)
     ++ out;
   }
   *out = 0;
+}
+
+jclass JNICALL
+DefineClass(Thread* t, const char*, jobject loader, const jbyte* buffer,
+            jsize length)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object c = defineClass
+    (t, loader ? *loader : t->m->loader,
+     reinterpret_cast<const uint8_t*>(buffer), length);
+
+  return makeLocalReference(t, c == 0 ? 0 : getJClass(t, c));
 }
 
 jclass JNICALL
@@ -275,6 +335,20 @@ ThrowNew(Thread* t, jclass c, const char* message)
   t->exception = make(t, jclassVmClass(t, *c));
   set(t, t->exception, ThrowableMessage, m);
   set(t, t->exception, ThrowableTrace, trace);
+
+  return 0;
+}
+
+jint JNICALL
+Throw(Thread* t, jthrowable throwable)
+{
+  if (t->exception) {
+    return -1;
+  }
+
+  ENTER(t, Thread::ActiveState);
+  
+  t->exception = *throwable;
 
   return 0;
 }
@@ -329,6 +403,14 @@ IsInstanceOf(Thread* t, jobject o, jclass c)
   return instanceOf(t, jclassVmClass(t, *c), *o);
 }
 
+jboolean JNICALL
+IsAssignableFrom(Thread* t, jclass a, jclass b)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return isAssignableFrom(t, jclassVmClass(t, *a), jclassVmClass(t, *b));
+}
+
 object
 findMethod(Thread* t, jclass c, const char* name, const char* spec)
 {
@@ -362,7 +444,10 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
   ENTER(t, Thread::ActiveState);
 
   object method = findMethod(t, c, name, spec);
-  if (UNLIKELY(t->exception)) return 0;
+  if (UNLIKELY(t->exception)) {
+    printTrace(t, t->exception);
+    return 0;
+  }
 
   assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
 
@@ -1116,7 +1201,7 @@ SetStaticObjectField(Thread* t, jclass c, jfieldID field, jobject v)
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, classStaticTable(t, *c), field, (v ? *v : 0));
+  set(t, classStaticTable(t, jclassVmClass(t, *c)), field, (v ? *v : 0));
 }
 
 void JNICALL
@@ -1220,6 +1305,12 @@ DeleteGlobalRef(Thread* t, jobject r)
   if (r) {
     release(t, reinterpret_cast<Reference*>(r));
   }
+}
+
+jint JNICALL
+EnsureLocalCapacity(Thread*, jint)
+{
+  return 0;
 }
 
 jthrowable JNICALL
@@ -1833,6 +1924,34 @@ ReleasePrimitiveArrayCritical(Thread* t, jarray, void*, jint)
 }
 
 jint JNICALL
+RegisterNatives(Thread* t, jclass c, const JNINativeMethod* methods,
+                jint methodCount)
+{
+  ENTER(t, Thread::ActiveState);
+
+  for (int i = 0; i < methodCount; ++i) {
+    if (methods[i].function) {
+      object method = findMethod(t, c, methods[i].name, methods[i].signature);
+      if (UNLIKELY(t->exception)) return -1;
+
+      t->m->processor->registerNative(t, method, methods[i].function);
+    }
+  }
+
+  return 0;
+}
+
+jint JNICALL
+UnregisterNatives(Thread* t, jclass c)
+{
+  ENTER(t, Thread::ActiveState);
+
+  t->m->processor->unregisterNatives(t, *c);
+
+  return 0;
+}
+
+jint JNICALL
 MonitorEnter(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
@@ -1948,14 +2067,20 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetStringLength = local::GetStringLength;
   envTable->GetStringChars = local::GetStringChars;
   envTable->ReleaseStringChars = local::ReleaseStringChars;
+  envTable->GetStringRegion = local::GetStringRegion;
+  envTable->GetStringCritical = local::GetStringCritical;
+  envTable->ReleaseStringCritical = local::ReleaseStringCritical;
   envTable->GetStringUTFLength = local::GetStringUTFLength;
   envTable->GetStringUTFChars = local::GetStringUTFChars;
   envTable->ReleaseStringUTFChars = local::ReleaseStringUTFChars;
+  envTable->GetStringUTFRegion = local::GetStringUTFRegion;
   envTable->GetArrayLength = local::GetArrayLength;
   envTable->NewString = local::NewString;
   envTable->NewStringUTF = local::NewStringUTF;
+  envTable->DefineClass = local::DefineClass;
   envTable->FindClass = local::FindClass;
   envTable->ThrowNew = local::ThrowNew;
+  envTable->Throw = local::Throw;
   envTable->ExceptionCheck = local::ExceptionCheck;
 #ifdef AVIAN_GNU
   envTable->NewDirectByteBuffer = vm::NewDirectByteBuffer;
@@ -1969,6 +2094,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->DeleteLocalRef = local::DeleteLocalRef;
   envTable->GetObjectClass = local::GetObjectClass;
   envTable->IsInstanceOf = local::IsInstanceOf;
+  envTable->IsAssignableFrom = local::IsAssignableFrom;
   envTable->GetFieldID = local::GetFieldID;
   envTable->GetMethodID = local::GetMethodID;
   envTable->GetStaticMethodID = local::GetStaticMethodID;
@@ -2054,6 +2180,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->NewGlobalRef = local::NewGlobalRef;
   envTable->NewWeakGlobalRef = local::NewGlobalRef;
   envTable->DeleteGlobalRef = local::DeleteGlobalRef;
+  envTable->EnsureLocalCapacity = local::EnsureLocalCapacity;
   envTable->ExceptionOccurred = local::ExceptionOccurred;
   envTable->ExceptionDescribe = local::ExceptionDescribe;
   envTable->ExceptionClear = local::ExceptionClear;
@@ -2103,6 +2230,8 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetPrimitiveArrayCritical = local::GetPrimitiveArrayCritical;
   envTable->ReleasePrimitiveArrayCritical
     = local::ReleasePrimitiveArrayCritical;
+  envTable->RegisterNatives = local::RegisterNatives;
+  envTable->UnregisterNatives = local::UnregisterNatives;
   envTable->MonitorEnter = local::MonitorEnter;
   envTable->MonitorExit = local::MonitorExit;
   envTable->GetJavaVM = local::GetJavaVM;
@@ -2201,6 +2330,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   Heap* h = makeHeap(s, heapLimit);
   Finder* f = makeFinder(s, RUNTIME_ARRAY_BODY(classpathBuffer), bootLibrary);
   Processor* p = makeProcessor(s, h, true);
+  Classpath* c = makeClasspath(s, h);
 
   const char** properties = static_cast<const char**>
     (h->allocate(sizeof(const char*) * propertyCount));
@@ -2212,11 +2342,14 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   }
 
   *m = new (h->allocate(sizeof(Machine)))
-    Machine(s, h, f, p, properties, propertyCount);
+    Machine(s, h, f, p, c, properties, propertyCount);
 
   *t = p->makeThread(*m, 0, 0);
 
   enter(*t, Thread::ActiveState);
+
+  c->boot(*t);
+
   enter(*t, Thread::IdleState);
 
   return 0;

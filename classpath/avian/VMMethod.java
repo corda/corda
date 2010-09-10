@@ -20,7 +20,7 @@ public class VMMethod {
   public int nativeID;
   public byte[] name;
   public byte[] spec;
-  public avian.Addendum addendum;
+  public MethodAddendum addendum;
   public VMClass class_;
   public Object code;
 }

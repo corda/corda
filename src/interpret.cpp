@@ -509,7 +509,9 @@ resolveNativeMethodData(Thread* t, object method)
          &byteArrayBody(t, className(t, methodClass(t, method)), 0),
          &byteArrayBody(t, methodName(t, method), 0),
          &byteArrayBody(t, methodSpec(t, method), 0));
-      t->exception = makeUnsatisfiedLinkError(t, message);
+
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::UnsatisfiedLinkErrorType, message);
     }
   } 
 }
@@ -524,7 +526,8 @@ checkStack(Thread* t, object method)
                + codeMaxStack(t, methodCode(t, method))
                > Thread::StackSizeInWords / 2))
   {
-    t->exception = makeStackOverflowError(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::StackOverflowErrorType);
   }
 }
 
@@ -680,15 +683,15 @@ invokeNativeSlow(Thread* t, object method)
             &byteArrayBody(t, methodName(t, method), 0));
   }
   
-//   if (strcmp(reinterpret_cast<const char*>
-//              (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-//              "org/eclipse/swt/internal/C") == 0
-//       and strcmp(reinterpret_cast<const char*>
-//                  (&byteArrayBody(t, methodName(t, method), 0)),
-//                  "memmove") == 0)
-//   {
-//     asm("int3");    
-//   }
+  //   if (strcmp(reinterpret_cast<const char*>
+  //              (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
+  //              "org/eclipse/swt/internal/C") == 0
+  //       and strcmp(reinterpret_cast<const char*>
+  //                  (&byteArrayBody(t, methodName(t, method), 0)),
+  //                  "memmove") == 0)
+  //   {
+  //     asm("int3");    
+  //   }
   
   { ENTER(t, Thread::IdleState);
 
@@ -931,13 +934,15 @@ interpret(Thread* t)
       {
         pushObject(t, objectArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    objectArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        object message = makeString
+          (t, "%d not in [0,%d)", index, objectArrayLength(t, array));
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -953,13 +958,15 @@ interpret(Thread* t)
       {
         set(t, array, ArrayBody + (index * BytesPerWord), value);
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    objectArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        object message = makeString
+          (t, "%d not in [0,%d)", index, objectArrayLength(t, array));
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1002,7 +1009,8 @@ interpret(Thread* t)
                   class_, count));
     } else {
       object message = makeString(t, "%d", count);
-      exception = makeNegativeArraySizeException(t, message);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NegativeArraySizeExceptionType, message);
       goto throw_;
     }
   } goto loop;
@@ -1023,7 +1031,8 @@ interpret(Thread* t)
     if (LIKELY(array)) {
       pushInt(t, cast<uintptr_t>(array, BytesPerWord));
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1051,7 +1060,8 @@ interpret(Thread* t)
   case athrow: {
     exception = popObject(t);
     if (UNLIKELY(exception == 0)) {
-      exception = makeNullPointerException(t);      
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
     }
   } goto throw_;
 
@@ -1071,7 +1081,8 @@ interpret(Thread* t)
         } else {
           object message = makeString(t, "%d not in [0,%d)", index,
                                       booleanArrayLength(t, array));
-          exception = makeArrayIndexOutOfBoundsException(t, message);
+          exception = t->m->classpath->makeThrowable
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
           goto throw_;
         }
       } else {
@@ -1083,12 +1094,15 @@ interpret(Thread* t)
         } else {
           object message = makeString(t, "%d not in [0,%d)", index,
                                       byteArrayLength(t, array));
-          exception = makeArrayIndexOutOfBoundsException(t, message);
+          
+          exception = t->m->classpath->makeThrowable
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
           goto throw_;
         }
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1110,7 +1124,8 @@ interpret(Thread* t)
         } else {
           object message = makeString(t, "%d not in [0,%d)", index,
                                       booleanArrayLength(t, array));
-          exception = makeArrayIndexOutOfBoundsException(t, message);
+          exception = t->m->classpath->makeThrowable
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
           goto throw_;
         }
       } else {
@@ -1121,12 +1136,14 @@ interpret(Thread* t)
         } else {
           object message = makeString(t, "%d not in [0,%d)", index,
                                       byteArrayLength(t, array));
-          exception = makeArrayIndexOutOfBoundsException(t, message);
+          exception = t->m->classpath->makeThrowable
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
           goto throw_;
         }
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1147,11 +1164,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     charArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1169,11 +1188,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     charArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1191,7 +1212,8 @@ interpret(Thread* t)
            &byteArrayBody
            (t, className(t, objectClass(t, peekObject(t, sp - 1))), 0),
            &byteArrayBody(t, className(t, class_), 0));
-        exception = makeClassCastException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ClassCastExceptionType, message);
         goto throw_;
       }
     }
@@ -1228,11 +1250,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     doubleArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1250,11 +1274,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     doubleArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1428,11 +1454,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     floatArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1450,11 +1478,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     floatArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1566,7 +1596,8 @@ interpret(Thread* t)
         }
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1658,11 +1689,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     intArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1687,11 +1720,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     intArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1958,7 +1993,8 @@ interpret(Thread* t)
         (t, method, objectClass(t, peekObject(t, sp - parameterFootprint)));
       goto invoke;
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -1983,7 +2019,8 @@ interpret(Thread* t)
       
       goto invoke;
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -2014,7 +2051,8 @@ interpret(Thread* t)
       code = findVirtualMethod(t, method, class_);
       goto invoke;
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -2150,11 +2188,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     longArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -2179,11 +2219,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     longArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -2413,7 +2455,8 @@ interpret(Thread* t)
     if (LIKELY(o)) {
       acquire(t, o);
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -2423,7 +2466,8 @@ interpret(Thread* t)
     if (LIKELY(o)) {
       release(t, o);
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -2441,7 +2485,8 @@ interpret(Thread* t)
       counts[i] = popInt(t);
       if (UNLIKELY(counts[i] < 0)) {
         object message = makeString(t, "%d", counts[i]);
-        exception = makeNegativeArraySizeException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::NegativeArraySizeExceptionType, message);
         goto throw_;
       }
     }
@@ -2514,7 +2559,8 @@ interpret(Thread* t)
       pushObject(t, array);
     } else {
       object message = makeString(t, "%d", count);
-      exception = makeNegativeArraySizeException(t, message);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NegativeArraySizeExceptionType, message);
       goto throw_;
     }
   } goto loop;
@@ -2576,7 +2622,8 @@ interpret(Thread* t)
           break;
         }
       } else {
-        exception = makeNullPointerException(t);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::NullPointerExceptionType);
       }
     } break;
 
@@ -2587,7 +2634,8 @@ interpret(Thread* t)
       if (LIKELY(o)) {
         cast<int64_t>(o, fieldOffset(t, field)) = value;
       } else {
-        exception = makeNullPointerException(t);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::NullPointerExceptionType);
       }
     } break;
 
@@ -2597,7 +2645,8 @@ interpret(Thread* t)
       if (LIKELY(o)) {
         set(t, o, fieldOffset(t, field), value);
       } else {
-        exception = makeNullPointerException(t);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::NullPointerExceptionType);
       }
     } break;
 
@@ -2727,11 +2776,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     shortArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -2749,11 +2800,13 @@ interpret(Thread* t)
       } else {
         object message = makeString(t, "%d not in [0,%d)", index,
                                     shortArrayLength(t, array));
-        exception = makeArrayIndexOutOfBoundsException(t, message);
+        exception = t->m->classpath->makeThrowable
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
         goto throw_;
       }
     } else {
-      exception = makeNullPointerException(t);
+      exception = t->m->classpath->makeThrowable
+        (t, Machine::NullPointerExceptionType);
       goto throw_;
     }
   } goto loop;
@@ -3195,7 +3248,8 @@ class MyProcessor: public Processor {
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
                  > Thread::StackSizeInWords / 2))
     {
-      t->exception = makeStackOverflowError(t);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::StackOverflowErrorType);
       return 0;
     }
 
@@ -3220,7 +3274,8 @@ class MyProcessor: public Processor {
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
                  > Thread::StackSizeInWords / 2))
     {
-      t->exception = makeStackOverflowError(t);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::StackOverflowErrorType);
       return 0;
     }
 
@@ -3244,7 +3299,8 @@ class MyProcessor: public Processor {
     if (UNLIKELY(t->sp + parameterFootprint(vmt, methodSpec, false)
                  > Thread::StackSizeInWords / 2))
     {
-      t->exception = makeStackOverflowError(t);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::StackOverflowErrorType);
       return 0;
     }
 

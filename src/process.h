@@ -56,7 +56,7 @@ isSpecialMethod(Thread* t, object method, object class_)
     and isSuperclass(t, methodClass(t, method), class_);
 }
 
-void*
+object
 resolveNativeMethod(Thread* t, object method);
 
 inline void

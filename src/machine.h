@@ -97,7 +97,6 @@ const unsigned ContinuationFlag = 1 << 11;
 const unsigned ClassInitFlag = 1 << 0;
 const unsigned CompiledFlag = 1 << 1;
 const unsigned ConstructorFlag = 1 << 2;
-const unsigned FastNative = 1 << 3;
 
 #ifndef JNI_VERSION_1_6
 #define JNI_VERSION_1_6 0x00010006
@@ -1151,6 +1150,8 @@ class Reference {
   unsigned count;
 };
 
+class Classpath;
+
 class Machine {
  public:
   enum Type {
@@ -1164,7 +1165,8 @@ class Machine {
   };
 
   Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
-          const char** properties, unsigned propertyCount);
+          Classpath* classpath, const char** properties,
+          unsigned propertyCount);
 
   ~Machine() { 
     dispose();
@@ -1178,6 +1180,7 @@ class Machine {
   Heap* heap;
   Finder* finder;
   Processor* processor;
+  Classpath* classpath;
   Thread* rootThread;
   Thread* exclusive;
   Thread* finalizeThread;
@@ -1371,10 +1374,44 @@ class Thread {
   bool useBackupHeap;
   bool waiting;
   bool tracing;
-#ifdef VM_STRESS
+  bool daemon;
   bool stress;
-#endif // VM_STRESS
 };
+
+class Classpath {
+ public:
+  virtual object
+  makeJclass(Thread* t, object class_) = 0;
+
+  virtual object
+  makeString(Thread* t, object array, int32_t offset, int32_t length) = 0;
+
+  virtual object
+  makeThread(Thread* t, Thread* parent) = 0;
+
+  virtual void
+  runThread(Thread* t) = 0;
+
+  virtual object
+  makeThrowable
+  (Thread* t, Machine::Type type, object message = 0, object trace = 0,
+   object cause = 0) = 0;
+
+  virtual void
+  boot(Thread* t) = 0;
+
+  virtual void
+  dispose() = 0;
+};
+
+inline void
+runJavaThread(Thread* t)
+{
+  t->m->classpath->runThread(t);
+}
+
+Classpath*
+makeClasspath(System* system, Allocator* allocator);
 
 typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 
@@ -1732,159 +1769,9 @@ makeTrace(Thread* t)
 }
 
 inline object
-makeRuntimeException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeRuntimeException(t, message, trace, 0);
-}
-
-inline object
-makeIllegalStateException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeIllegalStateException(t, message, trace, 0);
-}
-
-inline object
-makeIllegalArgumentException(Thread* t)
-{
-  return makeIllegalArgumentException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeIllegalMonitorStateException(Thread* t)
-{
-  return makeIllegalMonitorStateException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeIndexOutOfBoundsException(Thread* t)
-{
-  return makeIndexOutOfBoundsException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeArrayIndexOutOfBoundsException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeArrayIndexOutOfBoundsException(t, message, trace, 0);
-}
-
-inline object
-makeArrayStoreException(Thread* t)
-{
-  return makeArrayStoreException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeNegativeArraySizeException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNegativeArraySizeException(t, message, trace, 0);
-}
-
-inline object
-makeClassCastException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeClassCastException(t, message, trace, 0);
-}
-
-inline object
-makeClassNotFoundException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeClassNotFoundException(t, message, trace, 0, 0);
-}
-
-inline object
-makeNullPointerException(Thread* t)
-{
-  return makeNullPointerException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeInvocationTargetException(Thread* t, object targetException)
-{
-  PROTECT(t, targetException);
-  object trace = makeTrace(t);
-  return makeRuntimeException(t, 0, trace, targetException);
-}
-
-inline object
-makeInterruptedException(Thread* t)
-{
-  return makeInterruptedException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeIncompatibleContinuationException(Thread* t)
-{
-  return makeIncompatibleContinuationException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeStackOverflowError(Thread* t)
-{
-  return makeStackOverflowError(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeNoSuchFieldError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoSuchFieldError(t, message, trace, 0);
-}
-
-inline object
-makeNoSuchMethodError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoSuchMethodError(t, message, trace, 0);
-}
-
-inline object
-makeNoClassDefFoundError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoClassDefFoundError(t, message, trace, 0);
-}
-
-inline object
-makeUnsatisfiedLinkError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeUnsatisfiedLinkError(t, message, trace, 0);
-}
-
-inline object
-makeExceptionInInitializerError(Thread* t, object cause)
-{
-  PROTECT(t, cause);
-  object trace = makeTrace(t);
-  return makeExceptionInInitializerError(t, 0, trace, cause, cause);
-}
-
-inline object
-makeIncompatibleClassChangeError(Thread* t)
-{
-  return makeIncompatibleClassChangeError(t, 0, makeTrace(t), 0);
-}
-
-inline object
 makeNew(Thread* t, object class_)
 {
-  assert(t, t->state == Thread::ActiveState);
+  assert(t, t->state == Thread::NoState or t->state == Thread::ActiveState);
 
   PROTECT(t, class_);
   unsigned sizeInBytes = pad(classFixedSize(t, class_));
@@ -1917,16 +1804,43 @@ object
 makeString(Thread* t, const char* format, ...);
 
 int
-stringUTFLength(Thread* t, object string);
+stringUTFLength(Thread* t, object string, unsigned start, unsigned length);
+
+inline int
+stringUTFLength(Thread* t, object string)
+{
+  return stringUTFLength(t, string, 0, stringLength(t, string));
+}
 
 void
-stringChars(Thread* t, object string, char* chars);
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            char* chars);
+
+inline void
+stringChars(Thread* t, object string, char* chars)
+{
+  stringChars(t, string, 0, stringLength(t, string), chars);
+}
 
 void
-stringChars(Thread* t, object string, uint16_t* chars);
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            uint16_t* chars);
+
+inline void
+stringChars(Thread* t, object string, uint16_t* chars)
+{
+  stringChars(t, string, 0, stringLength(t, string), chars);
+}
 
 void
-stringUTFChars(Thread* t, object string, char* chars, unsigned length);
+stringUTFChars(Thread* t, object string, unsigned start, unsigned length,
+               char* chars, unsigned charsLength);
+
+inline void
+stringUTFChars(Thread* t, object string, char* chars, unsigned charsLength)
+{
+  stringUTFChars(t, string, 0, stringLength(t, string), chars, charsLength);  
+}
 
 bool
 isAssignableFrom(Thread* t, object a, object b);
@@ -2160,6 +2074,9 @@ emptyMethod(Thread* t, object method)
 }
 
 object
+parseUtf8(Thread* t, const char* data, unsigned length);
+
+object
 parseClass(Thread* t, object loader, const uint8_t* data, unsigned length);
 
 object
@@ -2264,13 +2181,13 @@ findMethodInClass(Thread* t, object class_, object name, object spec)
 object
 findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*find)(Thread*, object, object, object),
-                object (*makeError)(Thread*, object));
+                Machine::Type errorType);
 
 inline object
 findMethod(Thread* t, object class_, object name, object spec)
 {
   return findInHierarchy
-    (t, class_, name, spec, findMethodInClass, makeNoSuchMethodError);
+    (t, class_, name, spec, findMethodInClass, Machine::NoSuchMethodErrorType);
 }
 
 inline object
@@ -2690,10 +2607,12 @@ wait(Thread* t, object o, int64_t milliseconds)
     bool interrupted = monitorWait(t, m, milliseconds);
 
     if (interrupted) {
-      t->exception = makeInterruptedException(t);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::InterruptedExceptionType);
     }
   } else {
-    t->exception = makeIllegalMonitorStateException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::IllegalMonitorStateExceptionType);
   }
 
   if (DebugMonitors) {
@@ -2722,7 +2641,8 @@ notify(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotify(t, m);
   } else {
-    t->exception = makeIllegalMonitorStateException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
@@ -2739,7 +2659,8 @@ notifyAll(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotifyAll(t, m);
   } else {
-    t->exception = makeIllegalMonitorStateException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
@@ -2756,6 +2677,7 @@ setDaemon(Thread* t, object thread, bool daemon)
 
   if ((threadDaemon(t, thread) != 0) != daemon) {
     threadDaemon(t, thread) = daemon;
+    t->daemon = daemon;
 
     if (daemon) {
       ++ t->m->daemonCount;
@@ -2947,7 +2869,7 @@ resolveClassInPool(Thread* t, object method, unsigned index)
 inline object
 resolve(Thread* t, object loader, object method, unsigned index,
         object (*find)(vm::Thread*, object, object, object),
-        object (*makeError)(vm::Thread*, object))
+        Machine::Type errorType)
 {
   object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
   if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
@@ -2962,7 +2884,7 @@ resolve(Thread* t, object loader, object method, unsigned index,
     
     o = findInHierarchy
       (t, class_, referenceName(t, reference), referenceSpec(t, reference),
-       find, makeError);
+       find, errorType);
     if (UNLIKELY(t->exception)) return 0;
     
     set(t, codePool(t, methodCode(t, method)),
@@ -2976,7 +2898,7 @@ inline object
 resolveField(Thread* t, object loader, object method, unsigned index)
 {
   return resolve(t, loader, method, index, findFieldInClass,
-                 makeNoSuchFieldError);
+                 Machine::NoSuchFieldErrorType);
 }
 
 inline object
@@ -2990,7 +2912,7 @@ inline object
 resolveMethod(Thread* t, object loader, object method, unsigned index)
 {
   return resolve(t, loader, method, index, findMethodInClass,
-                 makeNoSuchMethodError);
+                 Machine::NoSuchMethodErrorType);
 }
 
 inline object
@@ -3004,6 +2926,8 @@ inline object
 getJClass(Thread* t, object c)
 {
   if (classAddendum(t, c) == 0) {
+    PROTECT(t, c);
+
     ACQUIRE(t, t->m->classLock);
 
     object addendum = makeClassAddendum(t, 0, 0, 0, 0);
@@ -3013,15 +2937,40 @@ getJClass(Thread* t, object c)
 
   object jclass = classAddendumClass(t, classAddendum(t, c));
   if (jclass == 0) {
+    PROTECT(t, c);
+
     ACQUIRE(t, t->m->classLock);
 
-    jclass = makeJclass(t, c);
+    jclass = t->m->classpath->makeJclass(t, c);
       
     set(t, classAddendum(t, c), ClassAddendumClass, jclass);
   }
 
   return jclass;
 }
+
+inline object
+primitiveClass(Thread* t, char name)
+{
+  switch (name) {
+  case 'B': return arrayBody(t, t->m->types, Machine::JbyteType);
+  case 'C': return arrayBody(t, t->m->types, Machine::JcharType);
+  case 'D': return arrayBody(t, t->m->types, Machine::JdoubleType);
+  case 'F': return arrayBody(t, t->m->types, Machine::JfloatType);
+  case 'I': return arrayBody(t, t->m->types, Machine::JintType);
+  case 'J': return arrayBody(t, t->m->types, Machine::JlongType);
+  case 'S': return arrayBody(t, t->m->types, Machine::JshortType);
+  case 'V': return arrayBody(t, t->m->types, Machine::JvoidType);
+  case 'Z': return arrayBody(t, t->m->types, Machine::JbooleanType);
+  default:
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::IllegalArgumentExceptionType);
+    return 0;
+  }
+}
+
+object
+defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);
 
 void
 dumpHeap(Thread* t, FILE* out);

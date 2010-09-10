@@ -153,6 +153,10 @@ class Processor {
   walkContinuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
   = 0;
 
+  virtual void registerNative(Thread* t, object method, void* function) = 0;
+
+  virtual void unregisterNatives(Thread* t, object c) = 0;
+
   object
   invoke(Thread* t, object method, object this_, ...)
   {

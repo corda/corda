@@ -400,6 +400,8 @@ class Array : public Scalar {
     o->typeName = typeName;
     o->name = name;
     o->elementSize = elementSize;
+    o->noassert = false;
+    o->nogc = false;
     return o;
   }
 };
@@ -455,7 +457,7 @@ memberTypeName(Object* o)
   }
 }
 
-const char*
+const char*&
 memberName(Object* o)
 {
   switch (o->type) {
@@ -987,8 +989,11 @@ class MemberIterator {
 
     offset_ += padding_;
 
-//     printf("size: %d; padding: %d; alignment: %d; offset: %d;\n",
-//            size_, padding_, alignment_, offset_);
+//     fprintf(stderr,
+//             "type: %s; member: %s; size: %d; padding: %d; alignment: %d;"
+//             " offset: %d;\n",
+//             typeName(type), memberName(member), size_, padding_, alignment_,
+//             offset_);
 
     return member;
   }
@@ -1088,19 +1093,51 @@ parseArray(Object* t, Object* p, Object* declarations)
 }
 
 Object*
+parseMember(Object* t, Object* p, Object* declarations);
+
+Object*
+parseMember(Object* t, Object* p, Object* declarations, bool* isNew)
+{
+  Object* member = parseMember(t, p, declarations);
+  for (MemberIterator it(t); it.hasMore();) {
+    Object* m = it.next();
+    if (equal(memberName(m), memberName(member))) {
+      if (not equal(memberTypeName(m), memberTypeName(member))) {
+        abort();
+      }
+      *isNew = false;
+      return m;
+    }
+  }
+  *isNew = true;
+  return member;
+}
+
+Object*
 parseMember(Object* t, Object* p, Object* declarations)
 {
   const char* spec = string(car(p));
   if (equal(spec, "array")) {
     return parseArray(t, cdr(p), declarations);
   } else if (equal(spec, "noassert")) {
-    Object* member = parseMember(t, cdr(p), declarations);
+    bool isNew;
+    Object* member = parseMember(t, cdr(p), declarations, &isNew);
     memberNoAssert(member) = true;
-    return member;
+    return isNew ? member : 0;
   } else if (equal(spec, "nogc")) {
-    Object* member = parseMember(t, cdr(p), declarations);
+    bool isNew;
+    Object* member = parseMember(t, cdr(p), declarations, &isNew);
     memberNoGC(member) = true;
-    return member;
+    return isNew ? member : 0;
+  } else if (equal(spec, "require")) {
+    bool isNew;
+    Object* member = parseMember(t, cdr(p), declarations, &isNew);
+    return isNew ? member : 0;
+  } else if (equal(spec, "alias")) {
+    bool isNew;
+    Object* member = parseMember(t, cdr(cdr(p)), declarations, &isNew);
+    memberName(member) = string(car(cdr(p)));
+    return isNew ? member : 0;
   } else {
     return Scalar::make(t, declaration(spec, declarations), spec,
                         string(car(cdr(p))),
@@ -1120,7 +1157,9 @@ parseSubdeclaration(Object* t, Object* p, Object* declarations)
     assert(typeSuper(t)->type == Object::Type);
   } else {
     Object* member = parseMember(t, p, declarations);
-    addMember(t, member);
+    if (member) {
+      addMember(t, member);
+    }
   }
 }
 
@@ -1311,14 +1350,6 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
       Object* member = Scalar::make
         (type, 0, memberType, name, sizeOf(memberType, declarations));
 
-      if (equal(typeJavaName(type), "java/lang/ref/Reference")
-          and (equal(name, "vmNext")
-               or equal(name, "target")
-               or equal(name, "queue")))
-      {
-        memberNoGC(member) = true;
-      }
-
       addMember(type, member);
     }
   }
@@ -1379,8 +1410,10 @@ parseType(Object::ObjectType type, Object* p, Object* declarations,
       parseSubdeclaration(t, car(p), declarations);
     } else {
       Object* member = parseMember(t, car(p), declarations);
-      assert(member->type == Object::Scalar);
-      addMember(t, member);
+      if (member) {
+        assert(member->type == Object::Scalar);
+        addMember(t, member);
+      }
     }
   }
 

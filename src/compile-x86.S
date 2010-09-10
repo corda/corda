@@ -22,7 +22,7 @@
 
 #ifdef __x86_64__
 
-#define THREAD_STACK 2216
+#define THREAD_STACK 2224
 
 #if defined __MINGW32__ || defined __CYGWIN32__
 

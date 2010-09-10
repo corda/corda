@@ -12,5 +12,5 @@ package avian;
 
 public class Addendum {
   public Object pool;
-  public Object annotationTable;
+  public Object annotationTable;  
 }

@@ -87,7 +87,7 @@ class System {
 
   class Library {
    public:
-    virtual void* resolve(const char* function) = 0;
+    virtual void* resolve(const char* symbol) = 0;
     virtual const char* name() = 0;
     virtual bool mapName() = 0;
     virtual Library* next() = 0;

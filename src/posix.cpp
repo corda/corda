@@ -755,7 +755,7 @@ class MySystem: public System {
 
       return 0;
     } else {
-//       fprintf(stderr, "dlerror: %s\n", dlerror());
+      fprintf(stderr, "dlerror: %s\n", dlerror());
       return 1;
     }
   }

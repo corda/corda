@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -8,14 +8,6 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package java.lang;
+package avian;
 
-public class OutOfMemoryError extends VirtualMachineError {
-  public OutOfMemoryError(String message) {
-    super(message, null);
-  }
-
-  public OutOfMemoryError() {
-    this(null);
-  }
-}
+public class FieldAddendum extends Addendum { }

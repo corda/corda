@@ -12,13 +12,12 @@ package java.lang.ref;
 
 public class ReferenceQueue<T> {
   private Reference<? extends T> front;
-  private Reference<? extends T> rear;
 
   public Reference<? extends T> poll() {
     Reference<? extends T> r = front;
     if (front != null) {
       if (front == front.jNext) {
-        front = rear = null;
+        front = null;
       } else {
         front = front.jNext;
       }
@@ -27,12 +26,11 @@ public class ReferenceQueue<T> {
   }
 
   void add(Reference<? extends T> r) {
-    r.jNext = r;
     if (front == null) {
-      front = r;
+      r.jNext = r;
     } else {
-      rear.jNext = r;
+      r.jNext = front;
     }
-    rear = r;
+    front = r;
   }
 }

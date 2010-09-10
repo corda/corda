@@ -40,7 +40,7 @@ namespace {
 
 namespace local {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -259,10 +259,10 @@ object
 findMethod(Thread* t, object method, object instance)
 {
   if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-    if (methodVirtual(t, method)) {
-      return findVirtualMethod(t, method, objectClass(t, instance));      
-    } else if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
+    if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
       return findInterfaceMethod(t, method, objectClass(t, instance));
+    } else if (methodVirtual(t, method)) {
+      return findVirtualMethod(t, method, objectClass(t, instance));      
     }
   }
   return method;
@@ -2142,7 +2142,8 @@ findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
       return methodAddress(t, target);
     }
   } else {
-    t->exception = makeNullPointerException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2414,7 +2415,8 @@ makeBlankObjectArray(MyThread* t, object loader, object class_, int32_t length)
       (makeObjectArray(t, loader, class_, length));
   } else {
     object message = makeString(t, "%d", length);
-    t->exception = makeNegativeArraySizeException(t, message);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NegativeArraySizeExceptionType, message);
     unwind(t);
   }
 }
@@ -2463,7 +2465,8 @@ makeBlankArray(MyThread* t, unsigned type, int32_t length)
     return reinterpret_cast<uintptr_t>(constructor(t, length));
   } else {
     object message = makeString(t, "%d", length);
-    t->exception = makeNegativeArraySizeException(t, message);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NegativeArraySizeExceptionType, message);
     unwind(t);
   }
 }
@@ -2497,7 +2500,8 @@ setMaybeNull(MyThread* t, object o, unsigned offset, object value)
   if (LIKELY(o)) {
     set(t, o, offset, value);
   } else {
-    t->exception = makeNullPointerException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2508,7 +2512,8 @@ acquireMonitorForObject(MyThread* t, object o)
   if (LIKELY(o)) {
     acquire(t, o);
   } else {
-    t->exception = makeNullPointerException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2519,7 +2524,8 @@ releaseMonitorForObject(MyThread* t, object o)
   if (LIKELY(o)) {
     release(t, o);
   } else {
-    t->exception = makeNullPointerException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2535,7 +2541,8 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* countStack,
     RUNTIME_ARRAY_BODY(counts)[i] = countStack[dimensions - i - 1];
     if (UNLIKELY(RUNTIME_ARRAY_BODY(counts)[i] < 0)) {
       object message = makeString(t, "%d", RUNTIME_ARRAY_BODY(counts)[i]);
-      t->exception = makeNegativeArraySizeException(t, message);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::NegativeArraySizeExceptionType, message);
       return 0;
     }
   }
@@ -2589,7 +2596,8 @@ throwArrayIndexOutOfBounds(MyThread* t)
 {
   if (ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t))) {  
     t->tracing = true;
-    t->exception = makeArrayIndexOutOfBoundsException(t, 0);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::ArrayIndexOutOfBoundsExceptionType);
     t->tracing = false;
   } else {
     // not enough memory available for a new exception and stack trace
@@ -2606,7 +2614,8 @@ throw_(MyThread* t, object o)
   if (LIKELY(o)) {
     t->exception = o;
   } else {
-    t->exception = makeNullPointerException(t);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NullPointerExceptionType);
   }
 
 //   printTrace(t, t->exception);
@@ -2622,7 +2631,8 @@ checkCast(MyThread* t, object class_, object o)
       (t, "%s as %s",
        &byteArrayBody(t, className(t, objectClass(t, o)), 0),
        &byteArrayBody(t, className(t, class_), 0));
-    t->exception = makeClassCastException(t, message);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::ClassCastExceptionType, message);
     unwind(t);
   }
 }
@@ -6125,34 +6135,32 @@ resolveNative(MyThread* t, object method)
 
   initClass(t, methodClass(t, method));
 
-  if (LIKELY(t->exception == 0)
-      and unresolved(t, methodCompiled(t, method)))
-  {
-    void* function = resolveNativeMethod(t, method);
-    if (UNLIKELY(function == 0)) {
+  if (LIKELY(t->exception == 0) and methodCode(t, method) == 0) {
+    object native = resolveNativeMethod(t, method);
+    if (UNLIKELY(native == 0)) {
       object message = makeString
         (t, "%s.%s%s",
          &byteArrayBody(t, className(t, methodClass(t, method)), 0),
          &byteArrayBody(t, methodName(t, method), 0),
          &byteArrayBody(t, methodSpec(t, method), 0));
-      t->exception = makeUnsatisfiedLinkError(t, message);
+
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::UnsatisfiedLinkErrorType, message);
       return;
     }
 
-    // ensure other threads see updated methodVmFlags before
-    // methodCompiled, since we don't want them using the slow calling
-    // convention on a function that expects the fast calling
-    // convention:
+    // ensure other threads only see the methodCode field populated
+    // once the object it points do has been populated:
     storeStoreMemoryBarrier();
 
-    methodCompiled(t, method) = reinterpret_cast<uintptr_t>(function);
+    set(t, method, MethodCode, native);
   }
 }
 
 uint64_t
-invokeNativeFast(MyThread* t, object method)
+invokeNativeFast(MyThread* t, object method, void* function)
 {
-  return reinterpret_cast<FastNativeFunction>(methodCompiled(t, method))
+  return reinterpret_cast<FastNativeFunction>(function)
     (t, method,
      static_cast<uintptr_t*>(t->stack)
      + t->arch->frameFooterSize()
@@ -6160,7 +6168,7 @@ invokeNativeFast(MyThread* t, object method)
 }
 
 uint64_t
-invokeNativeSlow(MyThread* t, object method)
+invokeNativeSlow(MyThread* t, object method, void* function)
 {
   PROTECT(t, method);
 
@@ -6232,7 +6240,6 @@ invokeNativeSlow(MyThread* t, object method)
     }
   }
 
-  void* function = reinterpret_cast<void*>(methodCompiled(t, method));
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
   uint64_t result;
@@ -6247,7 +6254,7 @@ invokeNativeSlow(MyThread* t, object method)
     if (methodFlags(t, method) & ACC_STATIC) {
       acquire(t, methodClass(t, method));
     } else {
-      acquire(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[0]));
+      acquire(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }
   }
 
@@ -6268,7 +6275,7 @@ invokeNativeSlow(MyThread* t, object method)
     if (methodFlags(t, method) & ACC_STATIC) {
       release(t, methodClass(t, method));
     } else {
-      release(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[0]));
+      release(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }
   }
 
@@ -6327,10 +6334,11 @@ invokeNativeSlow(MyThread* t, object method)
 uint64_t
 invokeNative2(MyThread* t, object method)
 {
-  if (methodVmFlags(t, method) & FastNative) {
-    return invokeNativeFast(t, method);
+  object native = methodCode(t, method);
+  if (nativeFast(t, native)) {
+    return invokeNativeFast(t, method, nativeFunction(t, native));
   } else {
-    return invokeNativeSlow(t, method);
+    return invokeNativeSlow(t, method, nativeFunction(t, native));
   }
 }
 
@@ -6829,7 +6837,8 @@ callContinuation(MyThread* t, object continuation, object result,
         action = Call;
       }
     } else {
-      t->exception = makeIncompatibleContinuationException(t);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::IncompatibleContinuationExceptionType);
       action = Throw;
     }
   } else {
@@ -7165,7 +7174,8 @@ class SegFaultHandler: public System::SignalHandler {
 
         if (ensure(t, FixedSizeOfNullPointerException + traceSize(t))) {
           t->tracing = true;
-          t->exception = makeNullPointerException(t);
+          t->exception = t->m->classpath->makeThrowable
+            (t, Machine::NullPointerExceptionType);
           t->tracing = false;
         } else {
           // not enough memory available for a new NPE and stack trace
@@ -7269,6 +7279,7 @@ class MyProcessor: public Processor {
     t->init();
 
     if (false) {
+      fprintf(stderr, "%d\n", difference(&(t->stack), t));
       fprintf(stderr, "%d\n", difference(&(t->continuation), t));
       fprintf(stderr, "%d\n", difference(&(t->exception), t));
       fprintf(stderr, "%d\n", difference(&(t->exceptionStackAdjustment), t));
@@ -7518,7 +7529,7 @@ class MyProcessor: public Processor {
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    unsigned size = parameterFootprint(t, methodSpec, false);
+    unsigned size = parameterFootprint(t, methodSpec, this_ == 0);
     RUNTIME_ARRAY(uintptr_t, array, size);
     RUNTIME_ARRAY(bool, objectMask, size);
     ArgumentList list
@@ -7763,6 +7774,31 @@ class MyProcessor: public Processor {
       local::walkContinuationBody(static_cast<MyThread*>(t), w, o, start);
     } else {
       abort(t);
+    }
+  }
+
+  virtual void registerNative(Thread* t, object method, void* function) {
+    PROTECT(t, method);
+
+    expect(t, methodFlags(t, method) & ACC_NATIVE);
+
+    object native = makeNative(t, function, false);
+
+    // ensure other threads only see the methodCode field populated
+    // once the object it points do has been populated:
+    storeStoreMemoryBarrier();
+
+    set(t, method, MethodCode, native);
+  }
+
+  virtual void unregisterNatives(Thread* t, object c) {
+    if (classMethodTable(t, c)) {
+      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+        object method = arrayBody(t, classMethodTable(t, c), i);
+        if (methodFlags(t, method) & ACC_NATIVE) {
+          set(t, method, MethodCode, 0);
+        }
+      }
     }
   }
   

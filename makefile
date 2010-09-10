@@ -1,4 +1,4 @@
-MAKEFLAGS = -s
+#MAKEFLAGS = -s
 
 name = avian
 version = 0.3
@@ -39,11 +39,17 @@ endif
 ifeq ($(continuations),true)
 	options := $(options)-continuations
 endif
+
+classpath = avian
+
+test-library-path = .
+test-executable = $(executable)
+
 ifdef gnu
+  classpath = gnu
   options := $(options)-gnu
-	gnu-sources = $(src)/gnu.cpp
-	gnu-jar = $(gnu)/share/classpath/glibj.zip
-	gnu-libraries = \
+	classapth-jar = $(gnu)/share/classpath/glibj.zip
+	classpath-libraries = \
 		$(gnu)/lib/classpath/libjavaio.a \
 		$(gnu)/lib/classpath/libjavalang.a \
 		$(gnu)/lib/classpath/libjavalangreflect.a \
@@ -51,10 +57,20 @@ ifdef gnu
 		$(gnu)/lib/classpath/libjavanet.a \
 		$(gnu)/lib/classpath/libjavanio.a \
 		$(gnu)/lib/classpath/libjavautil.a
-	gnu-object-dep = $(build)/gnu-object.dep
-	gnu-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
-	gnu-lflags = -lgmp
-	gnu-objects = $(shell find $(build)/gnu-objects -name "*.o") 
+	classpath-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
+	classpath-lflags = -lgmp
+endif
+ifdef openjdk
+  classpath = openjdk
+  options := $(options)-openjdk
+  ifeq ($(arch),x86_64)
+		openjdk-lib-dir = $(openjdk)/jre/lib/amd64
+  else
+		openjdk-lib-dir = $(openjdk)/jre/lib
+	endif
+	classpath-jar = $(openjdk)/jre/lib/rt.jar
+  test-library-path = $(openjdk-lib-dir):$(native-build)
+	test-executable = $(executable-dynamic)
 endif
 
 root := $(shell (cd .. && pwd))
@@ -63,13 +79,16 @@ native-build = $(build)/$(platform)-$(arch)$(options)
 classpath-build = $(build)/classpath
 test-build = $(build)/test
 src = src
-classpath = classpath
+classpath-src = classpath
 test = test
 
-ifdef gnu
-	avian-classpath-build = $(build)/avian-classpath
+ifneq ($(classpath),avian)
+	classpath-object-dep = $(build)/classpath-object.dep
+	classpath-objects = $(shell find $(build)/classpath-objects -name "*.o")
 else
-	avian-classpath-build = $(classpath-build)
+	jni-sources := $(shell find $(classpath-src) -name '*.cpp')
+	jni-objects = \
+		$(call cpp-objects,$(jni-sources),$(classpath-src),$(native-build))
 endif
 
 input = List
@@ -79,12 +98,12 @@ build-cc = gcc
 
 mflag =
 ifneq ($(platform),darwin)
-       ifeq ($(arch),i386)
-               mflag = -m32
-       endif
-       ifeq ($(arch),x86_64)
-               mflag = -m64
-       endif
+	ifeq ($(arch),i386)
+		mflag = -m32
+	endif
+	ifeq ($(arch),x86_64)
+		mflag = -m64
+	endif
 endif
 
 cxx = $(build-cxx) $(mflag)
@@ -112,14 +131,14 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DUSE_ATOMIC_OPERATIONS $(gnu-cflags)
+	-DUSE_ATOMIC_OPERATIONS $(classpath-cflags)
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
 cflags = $(build-cflags)
 
-common-lflags = -lm -lz $(gnu-lflags)
+common-lflags = -lm -lz $(classpath-lflags)
 
 build-lflags =
 
@@ -297,9 +316,6 @@ cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
 
-jni-sources := $(shell find $(classpath) -name '*.cpp')
-jni-objects = $(call cpp-objects,$(jni-sources),$(classpath),$(native-build))
-
 generated-code = \
 	$(native-build)/type-enums.cpp \
 	$(native-build)/type-declarations.cpp \
@@ -307,26 +323,7 @@ generated-code = \
 	$(native-build)/type-initializations.cpp \
 	$(native-build)/type-java-initializations.cpp
 
-vm-depends = \
-	$(generated-code) \
-	$(src)/allocator.h \
-	$(src)/common.h \
-	$(src)/system.h \
-	$(src)/heap.h \
-	$(src)/finder.h \
-	$(src)/processor.h \
-	$(src)/process.h \
-	$(src)/stream.h \
-	$(src)/constants.h \
-	$(src)/jnienv.h \
-	$(src)/machine.h \
-	$(src)/util.h \
-	$(src)/zone.h \
-	$(src)/assembler.h \
-	$(src)/compiler.h \
-	$(src)/$(asm).h \
-	$(src)/heapwalk.h \
-	$(src)/bootimage.h
+vm-depends := $(generated-code) $(wildcard $(src)/*.h)
 
 vm-sources = \
 	$(src)/$(system).cpp \
@@ -335,10 +332,10 @@ vm-sources = \
 	$(src)/util.cpp \
 	$(src)/heap.cpp \
 	$(src)/$(process).cpp \
+	$(src)/classpath-$(classpath).cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
-	$(src)/process.cpp \
-	$(gnu-sources)
+	$(src)/process.cpp
 
 vm-asm-sources = $(src)/$(asm).S
 
@@ -428,48 +425,37 @@ converter = $(native-build)/binaryToObject
 
 static-library = $(native-build)/lib$(name).a
 executable = $(native-build)/$(name)${exe-suffix}
-dynamic-library = $(native-build)/$(so-prefix)$(name)$(so-suffix)
+dynamic-library = $(native-build)/$(so-prefix)jvm$(so-suffix)
 executable-dynamic = $(native-build)/$(name)-dynamic${exe-suffix}
 
-classpath-sources := $(shell find $(classpath) -name '*.java')
+ifneq ($(classpath),avian)
+	classpath-sources := \
+		$(classpath-src)/avian/Continuations.java \
+		$(classpath-src)/avian/Callback.java \
+		$(classpath-src)/avian/CallbackReceiver.java \
+		$(classpath-src)/avian/IncompatibleContinuationException.java \
+		$(classpath-src)/avian/SystemClassLoader.java \
+		$(classpath-src)/avian/Machine.java \
+		$(classpath-src)/avian/Addendum.java \
+		$(classpath-src)/avian/ClassAddendum.java \
+		$(classpath-src)/avian/MethodAddendum.java \
+		$(classpath-src)/avian/FieldAddendum.java \
+		$(classpath-src)/avian/VMClass.java \
+		$(classpath-src)/avian/VMField.java \
+		$(classpath-src)/avian/VMMethod.java \
+		$(classpath-src)/avian/resource/Handler.java
+else
+	classpath-sources := $(shell find $(classpath-src) -name '*.java')
+endif
+
 classpath-classes = \
-	$(call java-classes,$(classpath-sources),$(classpath),$(classpath-build))
+	$(call java-classes,$(classpath-sources),$(classpath-src),$(classpath-build))
 classpath-object = $(native-build)/classpath-jar.o
 classpath-dep = $(classpath-build).dep
 
-gnu-blacklist = \
-	java/lang/AbstractStringBuffer.class \
-	java/lang/reflect/Proxy.class
-
-gnu-overrides = \
+vm-classes = \
 	avian/*.class \
-	avian/resource/*.class \
-	java/lang/Class.class \
-	java/lang/Enum.class \
-	java/lang/InheritableThreadLocal.class \
-	java/lang/Object.class \
-	java/lang/StackTraceElement.class \
-	java/lang/String.class \
-	java/lang/String\$$*.class \
-	java/lang/StringBuffer.class \
-	java/lang/StringBuilder.class \
-	java/lang/StringBuilder\$$*.class \
-	java/lang/Thread.class \
-	java/lang/Thread\$$*.class \
-	java/lang/ThreadGroup.class \
-	java/lang/ThreadLocal.class \
-	java/lang/Throwable.class \
-	java/lang/ref/PhantomReference.class \
-	java/lang/ref/Reference.class \
-	java/lang/ref/ReferenceQueue.class \
-	java/lang/ref/SoftReference.class \
-	java/lang/ref/WeakReference.class \
-	java/lang/reflect/AccessibleObject.class \
-	java/lang/reflect/Constructor.class \
-	java/lang/reflect/Field.class \
-	java/lang/reflect/Method.class \
-	java/lang/reflect/Proxy.class \
-	java/lang/reflect/Proxy\$$*.class
+	avian/resource/*.class
 
 test-sources = $(wildcard $(test)/*.java)
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
@@ -510,7 +496,7 @@ vg: build
 .PHONY: test
 test: build
 	/bin/sh $(test)/test.sh 2>/dev/null \
-		$(executable) $(mode) "$(flags)" \
+		$(test-library-path) $(test-executable) $(mode) "$(flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
 .PHONY: tarball
@@ -549,27 +535,20 @@ $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 $(native-build)/type-generator.o: \
 	$(generator-headers)
 
-$(classpath-build)/%.class: $(classpath)/%.java
+$(classpath-build)/%.class: $(classpath-src)/%.java
 	@echo $(<)
 
-$(classpath-dep): $(classpath-sources) $(gnu-jar)
+$(classpath-dep): $(classpath-sources) $(classpath-jar)
 	@echo "compiling classpath classes"
-	@mkdir -p $(avian-classpath-build)
-	$(javac) -d $(avian-classpath-build) \
-		-bootclasspath $(avian-classpath-build) \
-		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
-ifdef gnu
-	(wd=$$(pwd) && \
-	 cd $(avian-classpath-build) && \
-	 $(jar) c0f "$$($(native-path) "$${wd}/$(build)/overrides.jar")" \
-		 $(gnu-overrides))
 	@mkdir -p $(classpath-build)
+ifneq ($(classpath),avian)
 	(wd=$$(pwd) && \
 	 cd $(classpath-build) && \
-	 $(jar) xf $(gnu-jar) && \
-	 rm $(gnu-blacklist) && \
-	 jar xf "$$($(native-path) "$${wd}/$(build)/overrides.jar")")
+	 $(jar) xf $(classpath-jar))
 endif
+	$(javac) -d $(classpath-build) \
+		-bootclasspath $(classpath-build) \
+		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -625,7 +604,7 @@ $(driver-object): $(driver-source)
 $(driver-dynamic-object): $(driver-source)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(so-prefix)$(name)$(so-suffix)\" \
+	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(so-prefix)jvm$(so-suffix)\" \
 		-c $(<) $(call output,$(@))
 
 $(boot-object): $(boot-source)
@@ -668,14 +647,14 @@ $(generator-objects): $(native-build)/%.o: $(src)/%.cpp
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
 		-c $(<) -o $(@)
 
-$(jni-objects): $(native-build)/%.o: $(classpath)/%.cpp
+$(jni-objects): $(native-build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
 
-$(static-library): $(gnu-object-dep)
+$(static-library): $(classpath-object-dep)
 $(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
-	$(ar) cru $(@) $(^) $(call gnu-objects)
+	$(ar) cru $(@) $(^) $(call classpath-objects)
 	$(ranlib) $(@)
 
 $(bootimage-bin): $(bootimage-generator)
@@ -687,13 +666,13 @@ $(bootimage-object): $(bootimage-bin) $(converter)
 		_binary_bootimage_bin_end $(platform) $(arch) $(pointer-size) \
 		writable executable
 
-$(gnu-object-dep): $(gnu-libraries)
-	@mkdir -p $(build)/gnu-objects
-	(cd $(build)/gnu-objects && \
-	 for x in $(gnu-libraries); do ar x $${x}; done)
+$(classpath-object-dep): $(classpath-libraries)
+	@mkdir -p $(build)/classpath-objects
+	(cd $(build)/classpath-objects && \
+	 for x in $(classpath-libraries); do ar x $${x}; done)
 	@touch $(@)
 
-$(executable): $(gnu-object-dep)
+$(executable): $(classpath-object-dep)
 $(executable): \
 		$(vm-objects) $(jni-objects) $(driver-object) $(vm-heapwalk-objects) \
 		$(boot-object) $(vm-classpath-object)
@@ -704,13 +683,13 @@ ifdef msvc
 		-MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(dlltool) -z $(@).def $(^) $(call gnu-objects)
+	$(dlltool) -z $(@).def $(^) $(call classpath-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(^) $(call gnu-objects) $(lflags) -o $(@)
+	$(ld) $(@).exp $(^) $(call classpath-objects) $(lflags) -o $(@)
 endif
 else
-	$(ld) $(^) $(call gnu-objects) $(rdynamic) $(lflags) $(bootimage-lflags) \
-		-o $(@)
+	$(ld) $(^) $(call classpath-objects) $(rdynamic) $(lflags) \
+		$(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
@@ -740,18 +719,18 @@ else
 	$(ld) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
 
-$(dynamic-library): $(gnu-object-dep)
+$(dynamic-library): $(classpath-object-dep)
 $(dynamic-library): \
 		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
-		$(boot-object) $(vm-classpath-object) $(gnu-libraries)
+		$(boot-object) $(vm-classpath-object) $(classpath-libraries)
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
 		-IMPLIB:$(native-build)/$(name).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
-	$(ld) $(^) $(call gnu-objects) $(shared) $(lflags) $(bootimage-lflags) \
-		-o $(@)
+	$(ld) $(^) -Wl,--version-script=openjdk.ld \
+		$(call classpath-objects) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 

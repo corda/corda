@@ -196,10 +196,12 @@ turnOffTheLights(Thread* t)
   System* s = m->system;
   Heap* h = m->heap;
   Processor* p = m->processor;
+  Classpath* c = m->classpath;
   Finder* f = m->finder;
 
   m->dispose();
   h->disposeFixies();
+  c->dispose();
   p->dispose();
   h->dispose();
   f->dispose();
@@ -225,23 +227,6 @@ killZombies(Thread* t, Thread* o)
 
   default: break;
   }
-}
-
-object
-makeJavaThread(Thread* t, Thread* parent)
-{ 
-  object group;
-  if (parent) {
-    group = threadGroup(t, parent->javaThread);
-  } else {
-    group = makeThreadGroup(t, 0, 0, 0);
-  }
-
-  const unsigned NewState = 0;
-  const unsigned NormalPriority = 5;
-
-  return makeThread
-    (t, 0, 0, 0, NewState, NormalPriority, 0, 0, 0, t->m->loader, 0, 0, group);
 }
 
 unsigned
@@ -377,13 +362,12 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 
     object q = jreferenceQueue(t, *p);
 
-    set(t, *p, JreferenceJNext, *p);
     if (referenceQueueFront(t, q)) {
-      set(t, referenceQueueRear(t, q), JreferenceJNext, *p);
+      set(t, *p, JreferenceJNext, referenceQueueFront(t, q));
     } else {
-      set(t, q, ReferenceQueueFront, *p);
+      set(t, *p, JreferenceJNext, *p);
     }
-    set(t, q, ReferenceQueueRear, *p);
+    set(t, q, ReferenceQueueFront, *p);
 
     jreferenceQueue(t, *p) = 0;
   }
@@ -793,8 +777,8 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       parsePoolEntry(t, s, index, pool, si);
         
       object value = singletonObject(t, pool, si);
-      value = makeString
-        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1, 0);
+      value = t->m->classpath->makeString
+        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
     }
@@ -1046,7 +1030,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           object body = makeByteArray(t, length);
           s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
                  length);
-          addendum = makeAddendum(t, pool, body);
+          addendum = makeFieldAddendum(t, pool, body);
         } else {
           s.skip(length);
         }
@@ -1082,9 +1066,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           classVmFlags(t, class_) |= HasFinalMemberFlag;
         }
 
-        unsigned excess = (memberOffset % fieldSize(t, code)) % BytesPerWord;
-        if (excess) {
-          memberOffset += BytesPerWord - excess;
+        while (memberOffset % fieldSize(t, code)) {
+          ++ memberOffset;
         }
 
         fieldOffset(t, field) = memberOffset;
@@ -1392,14 +1375,29 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                        &byteArrayBody(t, name, 0)) == 0)
         {
           code = parseCode(t, s, pool);
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Exceptions"),
+                              &byteArrayBody(t, name, 0)) == 0)
+        {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0);
+          }
+          unsigned exceptionCount = s.read2();
+          object body = makeShortArray(t, exceptionCount);
+          for (unsigned i = 0; i < exceptionCount; ++i) {
+            shortArrayBody(t, body, i) = s.read2();
+          }
+          set(t, addendum, MethodAddendumExceptionTable, body);
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                               ("RuntimeVisibleAnnotations"),
                               &byteArrayBody(t, name, 0)) == 0)
         {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0);
+          }
           object body = makeByteArray(t, length);
           s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
                  length);
-          addendum = makeAddendum(t, pool, body);
+          set(t, addendum, AddendumAnnotationTable, body);
         } else {
           s.skip(length);
         }
@@ -1549,7 +1547,6 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
       if (abstractVirtuals) {
         PROTECT(t, vtable);
-        PROTECT(t, abstractVirtuals);
 
         unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
         object newMethodTable = makeArray
@@ -1673,8 +1670,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   // verify that the classes have the same layout
   expect(t, classSuper(t, bootstrapClass) == classSuper(t, class_));
 
-  expect(t, bootstrapClass == arrayBody(t, t->m->types, Machine::ClassType)
-         or classFixedSize(t, bootstrapClass) >= classFixedSize(t, class_));
+  expect(t, classFixedSize(t, bootstrapClass) >= classFixedSize(t, class_));
 
   expect(t, (classVmFlags(t, class_) & HasFinalizerFlag) == 0);
 
@@ -2079,8 +2075,8 @@ class HeapClient: public Heap::Client {
 namespace vm {
 
 Machine::Machine(System* system, Heap* heap, Finder* finder,
-                 Processor* processor, const char** properties,
-                 unsigned propertyCount):
+                 Processor* processor, Classpath* classpath,
+                 const char** properties, unsigned propertyCount):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -2088,6 +2084,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   heap(heap),
   finder(finder),
   processor(processor),
+  classpath(classpath),
   rootThread(0),
   exclusive(0),
   finalizeThread(0),
@@ -2199,7 +2196,8 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   backupHeapIndex(0),
   useBackupHeap(false),
   waiting(false),
-  tracing(false)
+  tracing(false),
+  daemon(false)
 #ifdef VM_STRESS
   , stress(false)
 #endif // VM_STRESS
@@ -2248,10 +2246,11 @@ Thread::init()
 
     m->jniMethodTable = makeVector(this, 0, 0);
 
-    m->nullPointerException = makeNullPointerException(this);
+    m->nullPointerException = m->classpath->makeThrowable
+      (this, Machine::NullPointerExceptionType);
 
-    m->arrayIndexOutOfBoundsException
-      = makeArrayIndexOutOfBoundsException(this, 0);
+    m->arrayIndexOutOfBoundsException = m->classpath->makeThrowable
+      (this, Machine::IndexOutOfBoundsExceptionType);
 
     m->localThread->set(this);
   } else {
@@ -2262,7 +2261,7 @@ Thread::init()
   expect(this, m->system->success(m->system->make(&lock)));
 
   if (javaThread == 0) {
-    this->javaThread = makeJavaThread(this, parent);
+    this->javaThread = m->classpath->makeThread(this, parent);
   }
 
   threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
@@ -2365,6 +2364,7 @@ enter(Thread* t, Thread::State s)
     return;
   }
 
+
 #ifdef USE_ATOMIC_OPERATIONS
 #  define INCREMENT atomicIncrement
 #  define ACQUIRE_LOCK ACQUIRE_RAW(t, t->m->stateLock)
@@ -2408,6 +2408,24 @@ enter(Thread* t, Thread::State s)
   } break;
 
   case Thread::IdleState:
+    // The java.lang.Thread implementation may or may not notify the
+    // VM when the daemon field in the Java object changes, so we sync
+    // up the native field whenever the thread transitions to idle:
+    if (t->daemon != threadDaemon(t, t->javaThread)) {
+      ACQUIRE_LOCK;
+
+      t->daemon = threadDaemon(t, t->javaThread);
+      
+      if (t->daemon) {
+        ++ t->m->daemonCount;
+      } else {
+        expect(t, t->m->daemonCount);
+        -- t->m->daemonCount;
+      }
+    
+      t->m->stateLock->notifyAll(t->systemThread);
+    }
+
     if (t->state == Thread::ActiveState) {
       // fast path
       assert(t, t->m->activeCount > 0);
@@ -2420,6 +2438,7 @@ enter(Thread* t, Thread::State s)
 
         t->m->stateLock->notifyAll(t->systemThread);
       }
+
       break;
     } else {
       // fall through to slow path
@@ -2692,91 +2711,98 @@ makeString(Thread* t, const char* format, ...)
   object s = ::makeByteArray(t, format, a);
   va_end(a);
 
-  return makeString(t, s, 0, byteArrayLength(t, s) - 1, 0);
+  return t->m->classpath->makeString(t, s, 0, byteArrayLength(t, s) - 1);
 }
-
 
 int
-stringUTFLength(Thread* t, object string) {
-  int length = 0;
+stringUTFLength(Thread* t, object string, unsigned start, unsigned length)
+{
+  unsigned result = 0;
 
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
     if (objectClass(t, data)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
-      length = stringLength(t, string);
+        == arrayBody(t, t->m->types, Machine::ByteArrayType))
+    {
+      result = length;
     } else {
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        uint16_t c = charArrayBody(t, data, stringOffset(t, string) + i);
-        if (!c)             length += 1; // null char (was 2 bytes in Java)
-        else if (c < 0x80)  length += 1; // ASCII char
-        else if (c < 0x800) length += 2; // two-byte char
-        else                length += 3; // three-byte char
+      for (unsigned i = 0; i < length; ++i) {
+        uint16_t c = charArrayBody
+          (t, data, stringOffset(t, string) + start + i);
+        if (c == 0)         result += 1; // null char (was 2 bytes in Java)
+        else if (c < 0x80)  result += 1; // ASCII char
+        else if (c < 0x800) result += 2; // two-byte char
+        else                result += 3; // three-byte char
       }
     }
   }
 
-  return length;
+  return result;
 }
 
 void
-stringChars(Thread* t, object string, char* chars)
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            char* chars)
 {
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
     if (objectClass(t, data)
         == arrayBody(t, t->m->types, Machine::ByteArrayType))
     {
       memcpy(chars,
-             &byteArrayBody(t, data, stringOffset(t, string)),
-             stringLength(t, string));
+             &byteArrayBody(t, data, stringOffset(t, string) + start),
+             length);
     } else {
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        chars[i] = charArrayBody(t, data, stringOffset(t, string) + i);
+      for (unsigned i = 0; i < length; ++i) {
+        chars[i] = charArrayBody(t, data, stringOffset(t, string) + start + i);
       }
     }
   }
-  chars[stringLength(t, string)] = 0;
+  chars[length] = 0;
 }
 
 void
-stringChars(Thread* t, object string, uint16_t* chars)
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            uint16_t* chars)
 {
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
     if (objectClass(t, data)
         == arrayBody(t, t->m->types, Machine::ByteArrayType))
     {
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        chars[i] = byteArrayBody(t, data, stringOffset(t, string) + i);
+      for (unsigned i = 0; i < length; ++i) {
+        chars[i] = byteArrayBody(t, data, stringOffset(t, string) + start + i);
       }
     } else {
       memcpy(chars,
-             &charArrayBody(t, data, stringOffset(t, string)),
-             stringLength(t, string) * sizeof(uint16_t));
+             &charArrayBody(t, data, stringOffset(t, string) + start),
+             length * sizeof(uint16_t));
     }
   }
-  chars[stringLength(t, string)] = 0;
+  chars[length] = 0;
 }
 
 void
-stringUTFChars(Thread* t, object string, char* chars, unsigned length UNUSED)
+stringUTFChars(Thread* t, object string, unsigned start, unsigned length,
+               char* chars, unsigned charsLength UNUSED)
 {
-  assert(t, static_cast<unsigned>(stringUTFLength(t, string)) == length);
+  assert(t, static_cast<unsigned>
+         (stringUTFLength(t, string, start, length)) == charsLength);
 
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
     if (objectClass(t, data)
         == arrayBody(t, t->m->types, Machine::ByteArrayType))
     {    
       memcpy(chars,
-             &byteArrayBody(t, data, stringOffset(t, string)),
-             stringLength(t, string));
-      chars[stringLength(t, string)] = 0; 
+             &byteArrayBody(t, data, stringOffset(t, string) + start),
+             length);
+      chars[length] = 0; 
     } else {
       int j = 0;
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        uint16_t c = charArrayBody(t, data, stringOffset(t, string) + i);
+      for (unsigned i = 0; i < length; ++i) {
+        uint16_t c = charArrayBody
+          (t, data, stringOffset(t, string) + start + i);
         if(!c) {                // null char
           chars[j++] = 0;
         } else if (c < 0x80) {  // ASCII char
@@ -3118,7 +3144,8 @@ resolveSystemClass(Thread* t, object spec)
       hashMapInsert(t, t->m->classMap, spec, class_, byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = makeClassNotFoundException(t, message);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::ClassNotFoundExceptionType, message);
     }
   }
 
@@ -3191,7 +3218,8 @@ resolveClass(Thread* t, object loader, object spec)
                     byteArrayHash);
     } else if (t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = makeClassNotFoundException(t, message);
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::ClassNotFoundExceptionType, message);
     }
 
     return class_;
@@ -3216,7 +3244,8 @@ resolveMethod(Thread* t, object class_, const char* methodName,
       (t, "%s %s not found in %s", methodName, methodSpec,
        &byteArrayBody(t, className(t, class_), 0));
 
-    t->exception = makeNoSuchMethodError(t, message);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NoSuchMethodErrorType, message);
     return 0;
   } else {
     return method;
@@ -3246,7 +3275,8 @@ resolveField(Thread* t, object class_, const char* fieldName,
       (t, "%s %s not found in %s", fieldName, fieldSpec,
        &byteArrayBody(t, className(t, class_), 0));
 
-    t->exception = makeNoSuchFieldError(t, message);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NoSuchFieldErrorType, message);
     return 0;
   } else {
     return field;
@@ -3324,7 +3354,9 @@ preInitClass(Thread* t, object c)
       } else if (classVmFlags(t, c) & InitErrorFlag) {
         object message = makeString
           (t, "%s", &byteArrayBody(t, className(t, c), 0));
-        t->exception = makeNoClassDefFoundError(t, message);
+
+        t->exception = t->m->classpath->makeThrowable
+          (t, Machine::NoClassDefFoundErrorType, message);
       } else {
         classVmFlags(t, c) |= InitFlag;
         return true;
@@ -3341,7 +3373,9 @@ postInitClass(Thread* t, object c)
 
   ACQUIRE(t, t->m->classLock);
   if (t->exception) {
-    t->exception = makeExceptionInInitializerError(t, t->exception);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::ExceptionInInitializerErrorType, 0, 0, t->exception);
+
     classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
     classVmFlags(t, c) &= ~InitFlag;
   } else {
@@ -3412,7 +3446,7 @@ findInTable(Thread* t, object table, object name, object spec,
 object
 findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*find)(Thread*, object, object, object),
-                object (*makeError)(Thread*, object))
+                Machine::Type errorType)
 {
   object originalClass = class_;
 
@@ -3440,7 +3474,7 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
        &byteArrayBody(t, name, 0),
        &byteArrayBody(t, spec, 0),
        &byteArrayBody(t, className(t, originalClass), 0));
-    t->exception = makeError(t, message);
+    t->exception = t->m->classpath->makeThrowable(t, errorType, message);
   }
 
   return o;
@@ -3596,7 +3630,7 @@ collect(Thread* t, Heap::CollectionType type)
 
   if (m->objectsToFinalize and m->finalizeThread == 0) {
     m->finalizeThread = m->processor->makeThread
-      (m, makeJavaThread(t, m->rootThread), m->rootThread);
+      (m, t->m->classpath->makeThread(t, m->rootThread), m->rootThread);
 
     if (not t->m->system->success
         (m->system->start(&(m->finalizeThread->runnable))))
@@ -3695,7 +3729,8 @@ void
 printTrace(Thread* t, object exception)
 {
   if (exception == 0) {
-    exception = makeNullPointerException(t, 0, makeTrace(t), 0);
+    exception = t->m->classpath->makeThrowable
+      (t, Machine::NullPointerExceptionType);
   }
 
   for (object e = exception; e; e = throwableCause(t, e)) {
@@ -3737,6 +3772,10 @@ printTrace(Thread* t, object exception)
       default:
         fprintf(stderr, "(line %d)\n", line);
       }
+    }
+
+    if (e == throwableCause(t, e)) {
+      break;
     }
   }
 }
@@ -3793,17 +3832,6 @@ makeTrace(Thread* t, Thread* target)
 }
 
 void
-runJavaThread(Thread* t)
-{
-  object method = resolveMethod
-    (t, t->m->loader, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
-
-  if (t->exception == 0) {
-    t->m->processor->invoke(t, method, 0, t->javaThread);
-  }
-}
-
-void
 runFinalizeThread(Thread* t)
 {
   setDaemon(t, t->javaThread, true);
@@ -3833,6 +3861,47 @@ runFinalizeThread(Thread* t)
   }
 }
 
+object
+parseUtf8(Thread* t, const char* data, unsigned length)
+{
+  class Client: public Stream::Client {
+   public:
+    Client(Thread* t): t(t) { }
+
+    virtual void NO_RETURN handleError() {
+      vm::abort(t);
+    }
+
+   private:
+    Thread* t;
+  } client(t);
+
+  Stream s(&client, reinterpret_cast<const uint8_t*>(data), length);
+
+  return ::parseUtf8(t, s, length);
+}
+
+object
+defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length)
+{
+  PROTECT(t, loader);
+
+  object c = parseClass(t, loader, buffer, length);
+
+  if (c) {
+    PROTECT(t, c);
+    if (getClassLoaderMap(t, loader) == 0) {
+      object map = makeHashMap(t, 0, 0);
+      set(t, loader, ClassLoaderMap, map);
+    }
+
+    hashMapInsert(t, getClassLoaderMap(t, loader), className(t, c), c,
+                  byteArrayHash);
+  }
+
+  return c;
+}
+
 void
 noop()
 { }
@@ -3857,7 +3926,7 @@ vmPrintTrace(Thread* t)
       int line = t->m->processor->lineNumber
         (t, walker->method(), walker->ip());
 
-      fprintf(stderr, "  at %s.%s ", class_, method);
+      fprintf(stderr, "  at %s.%s (%x) ", class_, method, walker->ip());
 
       switch (line) {
       case NativeLine:

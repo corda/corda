@@ -56,7 +56,7 @@ public class StackTraceElement {
   }
 
   public String getClassName() {
-    return class_.replace('/', '.');
+    return class_;
   }
 
   public String getMethodName() {

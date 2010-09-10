@@ -17,6 +17,6 @@ public class VMField {
   public short offset;
   public byte[] name;
   public byte[] spec;
-  public avian.Addendum addendum;
+  public FieldAddendum addendum;
   public VMClass class_;
 }
