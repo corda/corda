@@ -10,6 +10,7 @@
 
 #include "machine.h"
 #include "classpath-common.h"
+#include "util.h"
 
 // todo: move platform-specific stuff into system.h and implementations
 
@@ -711,7 +712,10 @@ JVM_CurrentTimeMillis(Thread* t, jclass)
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_NanoTime(Thread*, jclass) { abort(); }
+JVM_NanoTime(Thread* t, jclass)
+{
+  return t->m->system->now() * 1000 * 1000;
+}
 
 extern "C" JNIEXPORT void JNICALL
 JVM_ArrayCopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
@@ -1030,7 +1034,27 @@ extern "C" JNIEXPORT jobject JNICALL
 JVM_CurrentClassLoader(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetClassContext(Thread*) { abort(); }
+JVM_GetClassContext(Thread* t)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object trace = getTrace(t, 1);
+  PROTECT(t, trace);
+
+  object context = makeObjectArray
+    (t, t->m->loader, arrayBody(t, t->m->types, Machine::JclassType),
+     arrayLength(t, trace));
+  PROTECT(t, context);
+
+  for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
+    object c = getJClass
+      (t, methodClass(t, traceElementMethod(t, arrayBody(t, trace, i))));
+
+    set(t, context, ArrayBody + (i * BytesPerWord), c);
+  }
+
+  return makeLocalReference(t, context);
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_ClassDepth(Thread*, jstring) { abort(); }
@@ -1196,7 +1220,32 @@ JVM_FindClassFromClass(Thread*, const char*, jboolean,
                        jclass) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_FindLoadedClass(Thread*, jobject, jstring) { abort(); }
+JVM_FindLoadedClass(Thread* t, jobject loader, jstring name)
+{
+  ENTER(t, Thread::ActiveState);
+
+  ACQUIRE(t, t->m->classLock);
+
+  object spec = makeByteArray(t, stringLength(t, *name) + 1);
+  { char* s = reinterpret_cast<char*>(&byteArrayBody(t, spec, 0));
+    stringChars(t, *name, s);
+    replace('.', '/', s);
+  }
+
+  object c;
+  if (loader == 0 or *loader == t->m->loader) {
+    c = findLoadedSystemClass(t, spec);
+  } else {
+    object map = classLoaderMap(t, *loader);
+    if (map) {
+      c = hashMapFind(t, map, spec, byteArrayHash, byteArrayEqual);
+    } else {
+      c = 0;
+    }
+  }
+    
+  return c ? makeLocalReference(t, getJClass(t, c)) : 0;
+}
 
 extern "C" JNIEXPORT jclass JNICALL
 JVM_DefineClass(Thread*, const char*, jobject, const jbyte*,
@@ -1790,7 +1839,10 @@ extern "C" JNIEXPORT jobject JNICALL
 JVM_AssertionStatusDirectives(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_SupportsCX8(void) { abort(); }
+JVM_SupportsCX8()
+{
+  return true;
+}
 
 extern "C" JNIEXPORT const char* JNICALL
 JVM_GetClassNameUTF(Thread*, jclass) { abort(); }
@@ -1924,7 +1976,19 @@ JVM_Write(jint fd, char* src, jint length)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Available(jint, jlong*) { abort(); }
+JVM_Available(jint fd, jlong* result)
+{
+  int current = LSEEK(fd, 0, SEEK_CUR);
+  if (current == -1) return 0;
+
+  int end = LSEEK(fd, 0, SEEK_END);
+  if (end == -1) return 0;
+
+  if (LSEEK(fd, current, SEEK_SET) == -1) return 0;
+
+  *result = end - current;
+  return 1;
+}
 
 extern "C" JNIEXPORT jlong JNICALL
 JVM_Lseek(jint fd, jlong offset, jint start)
