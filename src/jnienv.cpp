@@ -404,7 +404,7 @@ IsInstanceOf(Thread* t, jobject o, jclass c)
 }
 
 jboolean JNICALL
-IsAssignableFrom(Thread* t, jclass a, jclass b)
+IsAssignableFrom(Thread* t, jclass b, jclass a)
 {
   ENTER(t, Thread::ActiveState);
 
