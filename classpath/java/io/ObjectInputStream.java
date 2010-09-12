@@ -79,6 +79,10 @@ public class ObjectInputStream extends InputStream {
     read('d');
     return readDoubleToken();
   }
+  
+  public void defaultReadObject() throws IOException {
+    throw new UnsupportedOperationException();
+  }
 
   private void skipSpace() throws IOException {
     int c;
