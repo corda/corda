@@ -37,11 +37,6 @@
 
 (type fieldAddendum avian/FieldAddendum)
 
-(type nativeMethodData
-  (void* function)
-  (uint16_t argumentTableSize)
-  (array uint8_t parameterTypes))
-
 (type pointer
   (void* value))
 

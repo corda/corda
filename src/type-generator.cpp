@@ -1137,7 +1137,7 @@ parseMember(Object* t, Object* p, Object* declarations)
     bool isNew;
     Object* member = parseMember(t, cdr(cdr(p)), declarations, &isNew);
     memberName(member) = string(car(cdr(p)));
-    return isNew ? member : 0;
+    return 0;
   } else {
     return Scalar::make(t, declaration(spec, declarations), spec,
                         string(car(cdr(p))),

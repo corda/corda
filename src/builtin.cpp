@@ -18,10 +18,11 @@ using namespace vm;
 namespace {
 
 int64_t
-search(Thread* t, object name, object (*op)(Thread*, object),
-       bool replaceDots)
+search(Thread* t, object loader, object name,
+       object (*op)(Thread*, object, object), bool replaceDots)
 {
   if (LIKELY(name)) {
+    PROTECT(t, loader);
     PROTECT(t, name);
 
     object n = makeByteArray(t, stringLength(t, name) + 1);
@@ -32,7 +33,7 @@ search(Thread* t, object name, object (*op)(Thread*, object),
       replace('.', '/', s);
     }
 
-    object r = op(t, n);
+    object r = op(t, loader, n);
     if (t->exception) {
       return 0;
     }
@@ -45,86 +46,45 @@ search(Thread* t, object name, object (*op)(Thread*, object),
   }
 }
 
+object
+resolveSystemClassThrow(Thread* t, object loader, object spec)
+{
+  return resolveSystemClass(t, loader, spec, true);
+}
+
 } // namespace
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_SystemClassLoader_acquireClassLock
-(Thread* t, object, uintptr_t*)
-{
-  acquire(t, t->m->classLock);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_SystemClassLoader_releaseClassLock
-(Thread* t, object, uintptr_t*)
-{
-  release(t, t->m->classLock);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_getVMClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  return reinterpret_cast<int64_t>
-    (objectClass(t, reinterpret_cast<object>(arguments[0])));
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_defineVMClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  object loader = reinterpret_cast<object>(arguments[0]);
-  object b = reinterpret_cast<object>(arguments[1]);
-  int offset = arguments[2];
-  int length = arguments[3];
-
-  uint8_t* buffer = static_cast<uint8_t*>
-    (t->m->heap->allocate(length));
-  memcpy(buffer, &byteArrayBody(t, b, offset), length);
-  object c = defineClass(t, loader, buffer, length);
-  t->m->heap->free(buffer, length);
-
-  return reinterpret_cast<int64_t>(c);
-}
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findLoadedVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[0]);
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object name = reinterpret_cast<object>(arguments[1]);
 
-  return search(t, name, findLoadedSystemClass, true);
+  return search(t, loader, name, findLoadedClass, true);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[0]);
-
-  return search(t, name, resolveSystemClass, true);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_resolveVMClass
-(Thread* t, object, uintptr_t* arguments)
-{
   object loader = reinterpret_cast<object>(arguments[0]);
-  object spec = reinterpret_cast<object>(arguments[1]);
+  object name = reinterpret_cast<object>(arguments[1]);
 
-  return reinterpret_cast<int64_t>(resolveClass(t, loader, spec));
+  return search(t, loader, name, resolveSystemClassThrow, true);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_resourceExists
 (Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[0]);
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object name = reinterpret_cast<object>(arguments[1]);
 
   if (LIKELY(name)) {
     RUNTIME_ARRAY(char, n, stringLength(t, name) + 1);
     stringChars(t, name, RUNTIME_ARRAY_BODY(n));
-    return t->m->finder->exists(RUNTIME_ARRAY_BODY(n));
+    return getFinder(t, loader)->exists(RUNTIME_ARRAY_BODY(n));
   } else {
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::NullPointerExceptionType);
@@ -133,35 +93,11 @@ Avian_avian_SystemClassLoader_resourceExists
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_primitiveClass
+Avian_avian_SystemClassLoader_getClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  return reinterpret_cast<int64_t>(primitiveClass(t, arguments[0]));
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_SystemClassLoader_initialize
-(Thread* t, object, uintptr_t* arguments)
-{
-  object this_ = reinterpret_cast<object>(arguments[0]);
-
-  initClass(t, this_);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_isAssignableFrom
-(Thread* t, object, uintptr_t* arguments)
-{
-  object this_ = reinterpret_cast<object>(arguments[0]);
-  object that = reinterpret_cast<object>(arguments[1]);
-
-  if (LIKELY(that)) {
-    return vm::isAssignableFrom(t, this_, that);
-  } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
-    return 0;
-  }
+  return reinterpret_cast<int64_t>
+    (getJClass(t, reinterpret_cast<object>(arguments[0])));
 }
 
 #ifdef AVIAN_HEAPDUMP
@@ -208,7 +144,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
     RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
     stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
-    System::Region* r = t->m->finder->find(RUNTIME_ARRAY_BODY(p));
+    System::Region* r = t->m->appFinder->find(RUNTIME_ARRAY_BODY(p));
     if (r) {
       jint rSize = r->length();
       r->dispose();
@@ -229,7 +165,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
     stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
     return reinterpret_cast<int64_t>
-      (t->m->finder->find(RUNTIME_ARRAY_BODY(p)));
+      (t->m->appFinder->find(RUNTIME_ARRAY_BODY(p)));
   } else {
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::NullPointerExceptionType);

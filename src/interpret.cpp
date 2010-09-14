@@ -429,80 +429,17 @@ class MyStackWalker: public Processor::StackWalker {
   int frame;
 };
 
-object
-makeNativeMethodData(Thread* t, object method, void* function)
-{
-  PROTECT(t, method);
-
-  unsigned count = methodParameterCount(t, method) + 2;
-
-  object data = makeNativeMethodData(t,
-                                     function,
-                                     0, // argument table size
-                                     count);
-        
-  unsigned argumentTableSize = BytesPerWord * 2;
-  unsigned index = 0;
-
-  nativeMethodDataParameterTypes(t, data, index++) = POINTER_TYPE;
-  nativeMethodDataParameterTypes(t, data, index++) = POINTER_TYPE;
-
-  const char* s = reinterpret_cast<const char*>
-    (&byteArrayBody(t, methodSpec(t, method), 0));
-  ++ s; // skip '('
-  while (*s and *s != ')') {
-    unsigned code = fieldCode(t, *s);
-    nativeMethodDataParameterTypes(t, data, index++) = fieldType(t, code);
-
-    switch (*s) {
-    case 'L':
-      argumentTableSize += BytesPerWord;
-      while (*s and *s != ';') ++ s;
-      ++ s;
-      break;
-
-    case '[':
-      argumentTableSize += BytesPerWord;
-      while (*s == '[') ++ s;
-      switch (*s) {
-      case 'L':
-        while (*s and *s != ';') ++ s;
-        ++ s;
-        break;
-
-      default:
-        ++ s;
-        break;
-      }
-      break;
-      
-    default:
-      argumentTableSize += pad(primitiveSize(t, code));
-      ++ s;
-      break;
-    }
-  }
-
-  nativeMethodDataArgumentTableSize(t, data) = argumentTableSize;
-
-  return data;
-}
-
 inline void
-resolveNativeMethodData(Thread* t, object method)
+resolveNative(Thread* t, object method)
 {
   if (methodCode(t, method) == 0) {
-    void* p = resolveNativeMethod(t, method);
-    if (LIKELY(p)) {
-      PROTECT(t, method);
-      object data = makeNativeMethodData(t, method, p);
-
-      // ensure other threads see updated methodVmFlags before
-      // methodCode, and that the native method data is initialized
-      // before it is visible to those threads:
+    object native = resolveNativeMethod(t, method);
+    if (LIKELY(native)) {
+      // ensure other threads only see the methodCode field populated
+      // once the object it points do has been populated:
       storeStoreMemoryBarrier();
 
-      set(t, method, MethodCode, data);
+      set(t, method, MethodCode, native);
     } else {
       object message = makeString
         (t, "%s.%s%s",
@@ -600,27 +537,35 @@ pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
 }
 
 void
-marshalArguments(Thread* t, uintptr_t* args, unsigned i, unsigned count,
-                 object data, bool indirect)
+marshalArguments(Thread* t, uintptr_t* args, uint8_t* types, unsigned sp,
+                 object method, bool indirect)
 {
-  unsigned offset = 0;
-  unsigned sp = frameBase(t, t->frame);
-  for (; i < count; ++i) {
-    unsigned type = nativeMethodDataParameterTypes(t, data, i + 1);
+  MethodSpecIterator it
+    (t, reinterpret_cast<const char*>
+     (&byteArrayBody(t, methodSpec(t, method), 0)));
+  
+  unsigned argOffset = 0;
+  unsigned typeOffset = 0;
+
+  while (it.hasNext()) {
+    unsigned type = fieldType(t, fieldCode(t, *it.next()));
+    if (types) {
+      types[typeOffset++] = type;
+    }
 
     switch (type) {
     case INT8_TYPE:
     case INT16_TYPE:
     case INT32_TYPE:
     case FLOAT_TYPE:
-      args[offset++] = peekInt(t, sp++);
+      args[argOffset++] = peekInt(t, sp++);
       break;
 
     case DOUBLE_TYPE:
     case INT64_TYPE: {
       uint64_t v = peekLong(t, sp);
-      memcpy(args + offset, &v, 8);
-      offset += (8 / BytesPerWord);
+      memcpy(args + argOffset, &v, 8);
+      argOffset += (8 / BytesPerWord);
       sp += 2;
     } break;
 
@@ -630,9 +575,9 @@ marshalArguments(Thread* t, uintptr_t* args, unsigned i, unsigned count,
         if (*v == 0) {
           v = 0;
         }
-        args[offset++] = reinterpret_cast<uintptr_t>(v);
+        args[argOffset++] = reinterpret_cast<uintptr_t>(v);
       } else {
-        args[offset++] = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
+        args[argOffset++] = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
       }
     } break;
 
@@ -642,39 +587,51 @@ marshalArguments(Thread* t, uintptr_t* args, unsigned i, unsigned count,
 }
 
 unsigned
-invokeNativeSlow(Thread* t, object method)
+invokeNativeSlow(Thread* t, object method, void* function)
 {
   PROTECT(t, method);
 
-  object data = methodCode(t, method);
-  PROTECT(t, data);
-
   pushFrame(t, method);
 
-  unsigned count = nativeMethodDataLength(t, data) - 1;
-
-  unsigned size = nativeMethodDataArgumentTableSize(t, data);
-  uintptr_t args[size / BytesPerWord];
-  unsigned offset = 0;
-
-  args[offset++] = reinterpret_cast<uintptr_t>(t);
-
-  unsigned i = 0;
+  unsigned footprint = methodParameterFootprint(t, method) + 1;
   if (methodFlags(t, method) & ACC_STATIC) {
-    ++ i;
-    args[offset++] = reinterpret_cast<uintptr_t>
-      (pushReference(t, methodClass(t, method)));
+    ++ footprint;
   }
+  unsigned count = methodParameterCount(t, method) + 2;
 
-  marshalArguments(t, args + offset, i, count, data, true);
+  RUNTIME_ARRAY(uintptr_t, args, footprint);
+  unsigned argOffset = 0;
+  RUNTIME_ARRAY(uint8_t, types, count);
+  unsigned typeOffset = 0;
+
+  RUNTIME_ARRAY_BODY(args)[argOffset++] = reinterpret_cast<uintptr_t>(t);
+  RUNTIME_ARRAY_BODY(types)[typeOffset++] = POINTER_TYPE;
+
+  object jclass = 0;
+  PROTECT(t, jclass);
+
+  unsigned sp;
+  if (methodFlags(t, method) & ACC_STATIC) {
+    sp = frameBase(t, t->frame);
+    jclass = getJClass(t, methodClass(t, method));
+    RUNTIME_ARRAY_BODY(args)[argOffset++]
+      = reinterpret_cast<uintptr_t>(&jclass);
+  } else {
+    sp = frameBase(t, t->frame);
+    object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
+    if (*v == 0) {
+      v = 0;
+    }
+    RUNTIME_ARRAY_BODY(args)[argOffset++] = reinterpret_cast<uintptr_t>(v);
+  }
+  RUNTIME_ARRAY_BODY(types)[typeOffset++] = POINTER_TYPE;
+
+  marshalArguments
+    (t, RUNTIME_ARRAY_BODY(args) + argOffset,
+     RUNTIME_ARRAY_BODY(types) + typeOffset, sp, method, true);
 
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
-  void* function = nativeMethodDataFunction(t, data);
-  uint8_t types[nativeMethodDataLength(t, data)];
-  memcpy(&types,
-         &nativeMethodDataParameterTypes(t, data, 0),
-         nativeMethodDataLength(t, data));
   uint64_t result;
 
   if (DebugRun) {
@@ -682,25 +639,15 @@ invokeNativeSlow(Thread* t, object method)
             &byteArrayBody(t, className(t, methodClass(t, method)), 0),
             &byteArrayBody(t, methodName(t, method), 0));
   }
-  
-  //   if (strcmp(reinterpret_cast<const char*>
-  //              (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
-  //              "org/eclipse/swt/internal/C") == 0
-  //       and strcmp(reinterpret_cast<const char*>
-  //                  (&byteArrayBody(t, methodName(t, method), 0)),
-  //                  "memmove") == 0)
-  //   {
-  //     asm("int3");    
-  //   }
-  
+    
   { ENTER(t, Thread::IdleState);
 
     result = t->m->system->call
       (function,
-       args,
-       types,
-       count + 1,
-       size,
+       RUNTIME_ARRAY_BODY(args),
+       RUNTIME_ARRAY_BODY(types),
+       count,
+       footprint * BytesPerWord,
        returnType);
   }
 
@@ -728,24 +675,32 @@ invokeNative(Thread* t, object method)
 {
   PROTECT(t, method);
 
-  resolveNativeMethodData(t, method);
+  resolveNative(t, method);
 
   if (UNLIKELY(t->exception)) {
     return VoidField;
   }
 
-  if (methodVmFlags(t, method) & FastNative) {
+  object native = methodCode(t, method);
+  if (nativeFast(t, native)) {
     pushFrame(t, method);
 
-    object data = methodCode(t, method);
-    uintptr_t arguments[methodParameterFootprint(t, method)];
+    unsigned footprint = methodParameterFootprint(t, method) + 1;
+    RUNTIME_ARRAY(uintptr_t, args, footprint);
+    unsigned sp = frameBase(t, t->frame);
+    unsigned argOffset = 0;
+    if (methodFlags(t, method) & ACC_STATIC) {
+      ++ footprint;
+    } else {
+      RUNTIME_ARRAY_BODY(args)[argOffset++]
+        = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
+    }
+
     marshalArguments
-      (t, arguments, (methodFlags(t, method) & ACC_STATIC) ? 1 : 0,
-       nativeMethodDataLength(t, data) - 1, data, false);
+      (t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, false);
 
     uint64_t result = reinterpret_cast<FastNativeFunction>
-      (nativeMethodDataFunction(t, methodCode(t, method)))
-      (t, method, arguments);
+       (nativeFunction(t, native))(t, method, RUNTIME_ARRAY_BODY(args));
     
     popFrame(t);
 
@@ -757,7 +712,7 @@ invokeNative(Thread* t, object method)
 
     return methodReturnCode(t, method);
   } else {
-    return invokeNativeSlow(t, method);
+    return invokeNativeSlow(t, method, nativeFunction(t, native));
   }
 }
 
@@ -1004,9 +959,7 @@ interpret(Thread* t)
       object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
       if (UNLIKELY(exception)) goto throw_;
             
-      pushObject(t, makeObjectArray
-                 (t, classLoader(t, methodClass(t, frameMethod(t, frame))),
-                  class_, count));
+      pushObject(t, makeObjectArray(t, class_, count));
     } else {
       object message = makeString(t, "%d", count);
       exception = t->m->classpath->makeThrowable
@@ -1070,9 +1023,7 @@ interpret(Thread* t)
     object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (objectClass(t, array)
-          == arrayBody(t, t->m->types, Machine::BooleanArrayType))
-      {
+      if (objectClass(t, array) == type(t, Machine::BooleanArrayType)) {
         if (LIKELY(index >= 0 and
                    static_cast<uintptr_t>(index)
                    < booleanArrayLength(t, array)))
@@ -1113,9 +1064,7 @@ interpret(Thread* t)
     object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (objectClass(t, array)
-          == arrayBody(t, t->m->types, Machine::BooleanArrayType))
-      {
+      if (objectClass(t, array) == type(t, Machine::BooleanArrayType)) {
         if (LIKELY(index >= 0 and
                    static_cast<uintptr_t>(index)
                    < booleanArrayLength(t, array)))
@@ -2259,17 +2208,13 @@ interpret(Thread* t)
 
     if (singletonIsObject(t, pool, index - 1)) {
       object v = singletonObject(t, pool, index - 1);
-      if (objectClass(t, v)
-          == arrayBody(t, t->m->types, Machine::ReferenceType))
-      {
+      if (objectClass(t, v) == type(t, Machine::ReferenceType)) {
         object class_ = resolveClassInPool
           (t, frameMethod(t, frame), index - 1); 
         if (UNLIKELY(exception)) goto throw_;
 
         pushObject(t, getJClass(t, class_));
-      } else if (objectClass(t, v)
-                 == arrayBody(t, t->m->types, Machine::ClassType))
-      {
+      } else if (objectClass(t, v) == type(t, Machine::ClassType)) {
         pushObject(t, getJClass(t, v));
       } else {     
         pushObject(t, v);
@@ -3031,7 +2976,7 @@ invoke(Thread* t, object method)
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
 
     if (classVmFlags(t, class_) & BootstrapFlag) {
-      resolveClass(t, t->m->loader, className(t, class_));
+      resolveClass(t, root(t, Machine::BootLoader), className(t, class_));
     }
 
     if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
@@ -3333,7 +3278,7 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void visitRoots(HeapWalker*) {
+  virtual void visitRoots(vm::Thread*, HeapWalker*) {
     abort(s);
   }
 

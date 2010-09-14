@@ -56,8 +56,7 @@ getTrace(Thread* t, unsigned skipCount)
       if (skipCount == 0) {
         object method = walker->method();
         if (isAssignableFrom
-            (t, arrayBody(t, t->m->types, Machine::ThrowableType),
-             methodClass(t, method))
+            (t, type(t, Machine::ThrowableType), methodClass(t, method))
             and vm::strcmp(reinterpret_cast<const int8_t*>("<init>"),
                            &byteArrayBody(t, methodName(t, method), 0))
             == 0)
@@ -80,7 +79,7 @@ getTrace(Thread* t, unsigned skipCount)
 
   t->m->processor->walkStack(t, &v);
 
-  if (v.trace == 0) v.trace = makeArray(t, 0);
+  if (v.trace == 0) v.trace = makeObjectArray(t, 0);
 
   return v.trace;
 }

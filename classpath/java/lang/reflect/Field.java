@@ -13,6 +13,7 @@ package java.lang.reflect;
 import avian.VMField;
 import avian.AnnotationInvocationHandler;
 import avian.SystemClassLoader;
+import avian.Classes;
 
 import java.lang.annotation.Annotation;
 
@@ -204,7 +205,7 @@ public class Field<T> extends AccessibleObject {
       } else {
         throw new IllegalArgumentException
           ("needed " + getType() + ", got "
-           + Class.getName(SystemClassLoader.vmClass(target)) +
+           + Class.getName(Classes.vmClass(target)) +
            " when setting " + Class.getName(vmField.class_) + "." + getName());
       }
       break;

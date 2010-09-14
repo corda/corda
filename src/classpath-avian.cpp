@@ -49,15 +49,16 @@ class MyClasspath : public Classpath {
     const unsigned NormalPriority = 5;
 
     return vm::makeThread
-      (t, 0, 0, 0, NewState, NormalPriority, 0, 0, 0, t->m->loader, 0, 0,
-       group);
+      (t, 0, 0, 0, NewState, NormalPriority, 0, 0, 0,
+       root(t, Machine::BootLoader), 0, 0, group);
   }
 
   virtual void
   runThread(Thread* t)
   {
     object method = resolveMethod
-      (t, t->m->loader, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
+      (t, root(t, Machine::BootLoader), "java/lang/Thread", "run",
+       "(Ljava/lang/Thread;)V");
 
     if (t->exception == 0) {
       t->m->processor->invoke(t, method, 0, t->javaThread);
@@ -75,13 +76,19 @@ class MyClasspath : public Classpath {
       trace = makeTrace(t);
     }
 
-    object result = make(t, arrayBody(t, t->m->types, type));
+    object result = make(t, vm::type(t, type));
     
     set(t, result, ThrowableMessage, message);
     set(t, result, ThrowableTrace, trace);
     set(t, result, ThrowableCause, cause);
 
     return result;
+  }
+
+  virtual void
+  boot(Thread*)
+  {
+    // ignore
   }
 
   virtual void
@@ -352,7 +359,7 @@ Avian_java_lang_reflect_Array_makeObjectArray
   int length = arguments[1];
 
   return reinterpret_cast<int64_t>
-    (makeObjectArray(t, classLoader(t, elementType), elementType, length));
+    (makeObjectArray(t, elementType, length));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -408,7 +415,8 @@ Avian_java_lang_System_getVMProperty
 
   int64_t r = 0;
   if (::strcmp(RUNTIME_ARRAY_BODY(n), "java.lang.classpath") == 0) {
-    r = reinterpret_cast<int64_t>(makeString(t, "%s", t->m->finder->path()));
+    r = reinterpret_cast<int64_t>
+      (makeString(t, "%s", t->m->appFinder->path()));
   } else if (::strcmp(RUNTIME_ARRAY_BODY(n), "avian.version") == 0) {
     r = reinterpret_cast<int64_t>(makeString(t, AVIAN_VERSION));
   } else if (::strcmp(RUNTIME_ARRAY_BODY(n), "file.encoding") == 0) {
@@ -499,7 +507,8 @@ Avian_java_lang_Runtime_addShutdownHook
 
   ACQUIRE(t, t->m->shutdownLock);
 
-  t->m->shutdownHooks = makePair(t, hook, t->m->shutdownHooks);
+  setRoot(t, Machine::ShutdownHooks,
+          makePair(t, hook, root(t, Machine::ShutdownHooks)));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -516,15 +525,13 @@ Avian_java_lang_Throwable_resolveTrace
   object trace = reinterpret_cast<object>(*arguments);
   PROTECT(t, trace);
 
-  unsigned length = arrayLength(t, trace);
-  object elementType = arrayBody
-    (t, t->m->types, Machine::StackTraceElementType);
-  object array = makeObjectArray
-    (t, classLoader(t, elementType), elementType, length);
+  unsigned length = objectArrayLength(t, trace);
+  object elementType = type(t, Machine::StackTraceElementType);
+  object array = makeObjectArray(t, elementType, length);
   PROTECT(t, array);
 
   for (unsigned i = 0; i < length; ++i) {
-    object ste = makeStackTraceElement(t, arrayBody(t, trace, i));
+    object ste = makeStackTraceElement(t, objectArrayBody(t, trace, i));
     set(t, array, ArrayBody + (i * BytesPerWord), ste);
   }
 
@@ -598,4 +605,86 @@ Avian_java_lang_Thread_setDaemon
   bool daemon = arguments[1] != 0;
 
   setDaemon(t, thread, daemon);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Classes_acquireClassLock
+(Thread* t, object, uintptr_t*)
+{
+  acquire(t, t->m->classLock);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Classes_releaseClassLock
+(Thread* t, object, uintptr_t*)
+{
+  release(t, t->m->classLock);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_resolveVMClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object spec = reinterpret_cast<object>(arguments[1]);
+
+  return reinterpret_cast<int64_t>(resolveClass(t, loader, spec));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_primitiveClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>(primitiveClass(t, arguments[0]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_defineVMClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object b = reinterpret_cast<object>(arguments[1]);
+  int offset = arguments[2];
+  int length = arguments[3];
+
+  uint8_t* buffer = static_cast<uint8_t*>
+    (t->m->heap->allocate(length));
+  memcpy(buffer, &byteArrayBody(t, b, offset), length);
+  object c = defineClass(t, loader, buffer, length);
+  t->m->heap->free(buffer, length);
+
+  return reinterpret_cast<int64_t>(c);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Classes_initialize
+(Thread* t, object, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+
+  initClass(t, this_);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_isAssignableFrom
+(Thread* t, object, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+  object that = reinterpret_cast<object>(arguments[1]);
+
+  if (LIKELY(that)) {
+    return vm::isAssignableFrom(t, this_, that);
+  } else {
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::NullPointerExceptionType);
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_getVMClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>
+    (objectClass(t, reinterpret_cast<object>(arguments[0])));
 }

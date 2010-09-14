@@ -176,9 +176,7 @@ GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
   }
   
   object data = stringData(t, *s);
-  if (objectClass(t, data)
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
     return GetStringChars(t, s, isCopy);
   } else {
     return &charArrayBody(t, data, stringOffset(t, *s));
@@ -188,9 +186,7 @@ GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
 void JNICALL
 ReleaseStringCritical(Thread* t, jstring s, const jchar* chars)
 {
-  if (objectClass(t, stringData(t, *s))
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (objectClass(t, stringData(t, *s)) == type(t, Machine::ByteArrayType)) {
     ReleaseStringChars(t, s, chars);
   }
 
@@ -294,7 +290,7 @@ DefineClass(Thread* t, const char*, jobject loader, const jbyte* buffer,
   ENTER(t, Thread::ActiveState);
 
   object c = defineClass
-    (t, loader ? *loader : t->m->loader,
+    (t, loader ? *loader : root(t, Machine::BootLoader),
      reinterpret_cast<const uint8_t*>(buffer), length);
 
   return makeLocalReference(t, c == 0 ? 0 : getJClass(t, c));
@@ -308,7 +304,7 @@ FindClass(Thread* t, const char* name)
   object n = makeByteArray(t, strlen(name) + 1);
   replace('.', '/', name, &byteArrayBody(t, n, 0));
 
-  object c = resolveClass(t, t->m->loader, n);
+  object c = resolveClass(t, root(t, Machine::AppLoader), n);
 
   return makeLocalReference(t, c == 0 ? 0 : getJClass(t, c));
 }
@@ -430,8 +426,9 @@ methodID(Thread* t, object method)
     ACQUIRE(t, t->m->referenceLock);
     
     if (methodNativeID(t, method) == 0) {
-      t->m->jniMethodTable = vectorAppend(t, t->m->jniMethodTable, method);
-      methodNativeID(t, method) = vectorSize(t, t->m->jniMethodTable);
+      setRoot(t, Machine::JNIMethodTable, vectorAppend
+              (t, root(t, Machine::JNIMethodTable), method));
+      methodNativeID(t, method) = vectorSize(t, root(t, Machine::JNIMethodTable));
     }
   }
 
@@ -470,7 +467,7 @@ GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
 inline object
 getMethod(Thread* t, jmethodID m)
 {
-  object method = vectorBody(t, t->m->jniMethodTable, m - 1);
+  object method = vectorBody(t, root(t, Machine::JNIMethodTable), m - 1);
 
   assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
 
@@ -733,7 +730,7 @@ CallVoidMethod(Thread* t, jobject o, jmethodID m, ...)
 inline object
 getStaticMethod(Thread* t, jmethodID m)
 {
-  object method = vectorBody(t, t->m->jniMethodTable, m - 1);
+  object method = vectorBody(t, root(t, Machine::JNIMethodTable), m - 1);
 
   assert(t, methodFlags(t, method) & ACC_STATIC);
 
@@ -1342,9 +1339,7 @@ NewObjectArray(Thread* t, jsize length, jclass class_, jobject init)
 {
   ENTER(t, Thread::ActiveState);
 
-  object a = makeObjectArray
-    (t, classLoader(t, jclassVmClass(t, *class_)), jclassVmClass(t, *class_),
-     length);
+  object a = makeObjectArray(t, jclassVmClass(t, *class_), length);
   object value = (init ? *init : 0);
   for (jsize i = 0; i < length; ++i) {
     set(t, a, ArrayBody + (i * BytesPerWord), value);
@@ -1934,7 +1929,7 @@ RegisterNatives(Thread* t, jclass c, const JNINativeMethod* methods,
       object method = findMethod(t, c, methods[i].name, methods[i].signature);
       if (UNLIKELY(t->exception)) return -1;
 
-      t->m->processor->registerNative(t, method, methods[i].function);
+      registerNative(t, method, methods[i].function);
     }
   }
 
@@ -1946,7 +1941,7 @@ UnregisterNatives(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->processor->unregisterNatives(t, *c);
+  unregisterNatives(t, *c);
 
   return 0;
 }
@@ -2314,21 +2309,21 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   unsigned bcppl = strlen(bootClasspathPrepend);
   unsigned bcpl = strlen(bootClasspath);
   unsigned bcpal = strlen(bootClasspathAppend);
-  unsigned cpl = strlen(classpath);
 
-  unsigned classpathBufferSize = bcppl + bcpl + bcpal + cpl + 4;
-  RUNTIME_ARRAY(char, classpathBuffer, classpathBufferSize);
-  char* classpathPointer = RUNTIME_ARRAY_BODY(classpathBuffer);
-
+  unsigned bootClasspathBufferSize = bcppl + bcpl + bcpal + 3;
+  RUNTIME_ARRAY(char, bootClasspathBuffer, bootClasspathBufferSize);
+  char* bootClasspathPointer = RUNTIME_ARRAY_BODY(bootClasspathBuffer);
   local::append
-    (&classpathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
-  local::append(&classpathPointer, bootClasspath, bcpl, PATH_SEPARATOR);
-  local::append(&classpathPointer, bootClasspathAppend, bcpal, PATH_SEPARATOR);
-  local::append(&classpathPointer, classpath, cpl, 0);
+    (&bootClasspathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
+  local::append(&bootClasspathPointer, bootClasspath, bcpl,
+                bcpal ? PATH_SEPARATOR : 0);
+  local::append(&bootClasspathPointer, bootClasspathAppend, bcpal, 0);
 
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
-  Finder* f = makeFinder(s, RUNTIME_ARRAY_BODY(classpathBuffer), bootLibrary);
+  Finder* bf = makeFinder
+    (s, RUNTIME_ARRAY_BODY(bootClasspathBuffer), bootLibrary);
+  Finder* af = makeFinder(s, classpath, bootLibrary);
   Processor* p = makeProcessor(s, h, true);
   Classpath* c = makeClasspath(s, h);
 
@@ -2342,15 +2337,9 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   }
 
   *m = new (h->allocate(sizeof(Machine)))
-    Machine(s, h, f, p, c, properties, propertyCount);
+    Machine(s, h, bf, af, p, c, properties, propertyCount);
 
   *t = p->makeThread(*m, 0, 0);
-
-  enter(*t, Thread::ActiveState);
-
-  c->boot(*t);
-
-  enter(*t, Thread::IdleState);
 
   return 0;
 }

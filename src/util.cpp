@@ -318,8 +318,7 @@ hashMapFindNode(Thread* t, object map, object key,
                 uint32_t (*hash)(Thread*, object),
                 bool (*equal)(Thread*, object, object))
 {
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
 
   object array = hashMapArray(t, map);
   if (array) {
@@ -367,9 +366,7 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
     }
 
     if (oldArray) {
-      bool weak = objectClass(t, map)
-        == arrayBody(t, t->m->types, Machine::WeakHashMapType);
-
+      bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
       for (unsigned i = 0; i < arrayLength(t, oldArray); ++i) {
         object next;
         for (object p = arrayBody(t, oldArray, i); p; p = next) {
@@ -407,8 +404,7 @@ hashMapInsert(Thread* t, object map, object key, object value,
 
   uint32_t h = hash(t, key);
 
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
 
   object array = hashMapArray(t, map);
 
@@ -432,7 +428,8 @@ hashMapInsert(Thread* t, object map, object key, object value,
     object r = makeWeakReference(t, 0, 0, 0, 0);
     jreferenceTarget(t, r) = key;
     jreferenceVmNext(t, r) = t->m->weakReferences;
-    k = t->m->weakReferences = r;
+    t->m->weakReferences = r;
+    k = r;
 
     array = hashMapArray(t, map);
   }
@@ -465,8 +462,7 @@ hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object))
 {
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
 
   object array = hashMapArray(t, map);
   object o = 0;

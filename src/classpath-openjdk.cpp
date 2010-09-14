@@ -40,6 +40,7 @@
 #  include <unistd.h>
 #  include <sys/types.h>
 #  include <sys/stat.h>
+#  include <sys/socket.h>
 #  include <fcntl.h>
 #  include <errno.h>
 
@@ -77,9 +78,9 @@ CREAT(string_t path, int mode)
 namespace local {
 
 const unsigned InterfaceVersion = 4;
+const unsigned PageSize = 4 * 1024;
 
 Machine* globalMachine;
-
 
 const char*
 primitiveName(Thread* t, object c)
@@ -144,6 +145,8 @@ class MyClasspath : public Classpath {
   virtual object
   makeJclass(Thread* t, object class_)
   {
+    PROTECT(t, class_);
+
     object name = makeClassNameString(t, getClassName(t, class_));
 
     return vm::makeJclass
@@ -153,9 +156,7 @@ class MyClasspath : public Classpath {
   virtual object
   makeString(Thread* t, object array, int32_t offset, int32_t length)
   {
-    if (objectClass(t, array)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType))
-    {
+    if (objectClass(t, array) == type(t, Machine::ByteArrayType)) {
       PROTECT(t, array);
       
       object charArray = makeCharArray(t, length);
@@ -183,19 +184,25 @@ class MyClasspath : public Classpath {
     }
 
     return vm::makeThread
-      (t, 0, NormalPriority, 0, 0, false, false, false, 0, group, t->m->loader,
-       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, false);
+      (t, 0, NormalPriority, 0, 0, false, false, false, 0, group,
+       root(t, Machine::BootLoader), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0,
+       0, false);
   }
 
   virtual void
   runThread(Thread* t)
   {
     object method = resolveMethod
-      (t, t->m->loader, "java/lang/Thread", "run", "()V");
+      (t, root(t, Machine::BootLoader), "java/lang/Thread", "run", "()V");
 
     if (LIKELY(t->exception == 0)) {
       t->m->processor->invoke(t, method, t->javaThread);
     }
+
+    acquire(t, t->javaThread);
+    t->flags &= ~Thread::ActiveFlag;
+    notifyAll(t, t->javaThread);
+    release(t, t->javaThread);
   }
 
   virtual object
@@ -209,7 +216,7 @@ class MyClasspath : public Classpath {
       trace = makeTrace(t);
     }
 
-    object result = make(t, arrayBody(t, t->m->types, type));
+    object result = make(t, vm::type(t, type));
     
     set(t, result, ThrowableMessage, message);
     set(t, result, ThrowableTrace, trace);
@@ -228,7 +235,22 @@ class MyClasspath : public Classpath {
     }
 
     t->m->processor->invoke
-      (t, t->m->loader, "java/lang/System", "initializeSystemClass", "()V", 0);
+      (t, root(t, Machine::BootLoader), "java/lang/System",
+       "initializeSystemClass", "()V", 0);
+    if (UNLIKELY(t->exception)) return;
+
+    object constructor = resolveMethod
+      (t, type(t, Machine::ClassLoaderType), "<init>",
+       "(Ljava/lang/ClassLoader;)V");
+    if (UNLIKELY(t->exception)) return;
+    PROTECT(t, constructor);
+
+    t->m->processor->invoke(t, constructor, root(t, Machine::BootLoader), 0);
+    if (UNLIKELY(t->exception)) return;
+
+    t->m->processor->invoke
+      (t, constructor, root(t, Machine::AppLoader),
+       root(t, Machine::BootLoader));
   }
 
   virtual void
@@ -281,16 +303,16 @@ countFields(Thread* t, object c, bool publicOnly)
 {
   object table = classFieldTable(t, c);
   if (publicOnly) {
-    return objectArrayLength(t, table);
-  } else {
     unsigned count = 0;
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
       object vmField = arrayBody(t, table, i);
-      if ((not publicOnly) or (fieldFlags(t, vmField) & ACC_PUBLIC)) {
+      if (fieldFlags(t, vmField) & ACC_PUBLIC) {
         ++ count;
       }
     }
     return count;
+  } else {
+    return objectArrayLength(t, table);
   }
 }
 
@@ -430,8 +452,7 @@ resolveParameterJTypes(Thread* t, object loader, object spec,
   PROTECT(t, list);
   
   object array = makeObjectArray
-    (t, t->m->loader, arrayBody(t, t->m->types, Machine::JclassType),
-     *parameterCount);
+    (t, type(t, Machine::JclassType), *parameterCount);
   PROTECT(t, array);
 
   for (int i = *parameterCount - 1; i >= 0; --i) {
@@ -447,15 +468,14 @@ object
 resolveExceptionJTypes(Thread* t, object loader, object addendum)
 {
   if (addendum == 0) {
-    return makeObjectArray
-      (t, loader, arrayBody(t, t->m->types, Machine::JclassType), 0);
+    return makeObjectArray(t, type(t, Machine::JclassType), 0);
   }
 
   PROTECT(t, loader);
   PROTECT(t, addendum);
 
   object array = makeObjectArray
-    (t, loader, arrayBody(t, t->m->types, Machine::JclassType),
+    (t, type(t, Machine::JclassType),
      shortArrayLength(t, methodAddendumExceptionTable(t, addendum)));
   PROTECT(t, array);
 
@@ -467,9 +487,7 @@ resolveExceptionJTypes(Thread* t, object loader, object addendum)
 
     object o = singletonObject(t, addendumPool(t, addendum), index);
 
-    if (objectClass(t, o)
-        == arrayBody(t, t->m->types, Machine::ReferenceType))
-    {
+    if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
       o = resolveClass(t, loader, referenceName(t, o));
       if (UNLIKELY(t->exception)) return 0;
     
@@ -532,6 +550,38 @@ Avian_sun_misc_Unsafe_registerNatives
   // ignore
 }
 
+extern "C" JNIEXPORT int64_t
+Avian_sun_misc_Unsafe_defineClass__Ljava_lang_String_2_3BIILjava_lang_ClassLoader_2Ljava_security_ProtectionDomain_2
+(Thread* t, object, uintptr_t* arguments)
+{
+  //object name = reinterpret_cast<object>(arguments[1]);
+  object data = reinterpret_cast<object>(arguments[2]);
+  int32_t offset = arguments[3];
+  int32_t length = arguments[4];
+  object loader = reinterpret_cast<object>(arguments[5]);
+  //object domain = reinterpret_cast<object>(arguments[6]);
+
+  uint8_t* buffer = static_cast<uint8_t*>
+    (t->m->heap->allocate(length));
+  memcpy(buffer, &byteArrayBody(t, data, offset), length);
+  object c = defineClass(t, loader, buffer, length);
+
+  return c ? reinterpret_cast<int64_t>(getJClass(t, c)) : 0;
+}
+
+extern "C" JNIEXPORT int64_t
+Avian_sun_misc_Unsafe_allocateInstance
+(Thread* t, object, uintptr_t* arguments)
+{
+  object c = jclassVmClass(t, reinterpret_cast<object>(arguments[1]));
+  PROTECT(t, c);
+
+  initClass(t, c);
+  if (UNLIKELY(t->exception)) return 0;
+
+  return reinterpret_cast<int64_t>(make(t, c));
+}
+
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_staticFieldOffset
 (Thread* t, object, uintptr_t* arguments)
@@ -565,14 +615,89 @@ Avian_sun_misc_Unsafe_objectFieldOffset
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getObject
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return cast<uintptr_t>(o, offset);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putObject
+(Thread* t, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  uintptr_t value = arguments[4];
+
+  set(t, o, offset, reinterpret_cast<object>(value));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return cast<int32_t>(o, offset);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int32_t value = arguments[4];
+
+  cast<int32_t>(o, offset) = value;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getBoolean
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return cast<uint8_t>(o, offset);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putBoolean
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  uint8_t value = arguments[4];
+
+  cast<uint8_t>(o, offset) = value;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int64_t value; memcpy(&value, arguments + 4, 8);
+
+  cast<int64_t>(o, offset) = value;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getObjectVolatile
 (Thread*, object, uintptr_t* arguments)
 {
   object o = reinterpret_cast<object>(arguments[1]);
-  unsigned offset = arguments[2];
-  object value = cast<object>(o, offset);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  
+  uintptr_t value = cast<uintptr_t>(o, offset);
   loadMemoryBarrier();
-  return reinterpret_cast<int64_t>(value);
+  return value;
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -586,6 +711,25 @@ Avian_sun_misc_Unsafe_compareAndSwapInt
 
   return __sync_bool_compare_and_swap
     (&cast<int32_t>(target, offset), expect, update);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_compareAndSwapObject
+(Thread* t, object, uintptr_t* arguments)
+{
+  object target = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  intptr_t expect = arguments[4];
+  intptr_t update = arguments[5];
+
+  bool success = __sync_bool_compare_and_swap
+    (&cast<intptr_t>(target, offset), expect, update);
+
+  if (success) {
+    mark(t, target, offset);
+  }
+
+  return success;
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -626,6 +770,17 @@ Avian_sun_misc_Unsafe_freeMemory
 }
 
 extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_setMemory
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int64_t count; memcpy(&count, arguments + 3, 8);
+  int8_t v = arguments[5];
+
+  memset(reinterpret_cast<int8_t*>(p), v, count);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_putLong__JJ
 (Thread*, object, uintptr_t* arguments)
 {
@@ -635,6 +790,16 @@ Avian_sun_misc_Unsafe_putLong__JJ
   *reinterpret_cast<int64_t*>(p) = v;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putInt__JI
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int32_t v = arguments[3];
+
+  *reinterpret_cast<int32_t*>(p) = v;
+}
+
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getByte__J
 (Thread*, object, uintptr_t* arguments)
@@ -642,6 +807,22 @@ Avian_sun_misc_Unsafe_getByte__J
   int64_t p; memcpy(&p, arguments + 1, 8);
 
   return *reinterpret_cast<int8_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getInt__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int32_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_pageSize
+(Thread*, object, uintptr_t*)
+{
+  return local::PageSize;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -732,7 +913,7 @@ JVM_InitProperties(Thread* t, jobject properties)
   ENTER(t, Thread::ActiveState);
 
   object method = resolveMethod
-    (t, t->m->loader, "java/util/Properties", "setProperty",
+    (t, root(t, Machine::BootLoader), "java/util/Properties", "setProperty",
      "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;");
 
   if (UNLIKELY(t->exception)) {
@@ -776,6 +957,9 @@ JVM_InitProperties(Thread* t, jobject properties)
   local::setProperty(t, method, *properties, "sun.boot.library.path",
                      getenv("LD_LIBRARY_PATH"));
 
+  local::setProperty(t, method, *properties, "java.protocol.handler.pkgs",
+                     "avian");
+
 #endif
   local::setProperty(t, method, *properties, "file.encoding", "ASCII");
 #ifdef ARCH_x86_32
@@ -811,10 +995,16 @@ extern "C" JNIEXPORT void JNICALL
 JVM_OnExit(void (*)(void)) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Exit(jint) { abort(); }
+JVM_Exit(jint code)
+{
+  exit(code);
+}
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Halt(jint) { abort(); }
+JVM_Halt(jint code)
+{
+  exit(code);
+}
 
 extern "C" JNIEXPORT void JNICALL
 JVM_GC()
@@ -896,7 +1086,7 @@ JVM_GetStackTraceDepth(Thread* t, jobject throwable)
 {
   ENTER(t, Thread::ActiveState);
 
-  return arrayLength(t, throwableTrace(t, *throwable));
+  return objectArrayLength(t, throwableTrace(t, *throwable));
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -906,7 +1096,7 @@ JVM_GetStackTraceElement(Thread* t, jobject throwable, jint index)
 
   return makeLocalReference
     (t, makeStackTraceElement
-     (t, arrayBody(t, throwableTrace(t, *throwable), index)));
+     (t, objectArrayBody(t, throwableTrace(t, *throwable), index)));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -947,25 +1137,7 @@ JVM_IsThreadAlive(Thread* t, jobject thread)
   ENTER(t, Thread::ActiveState);
 
   Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *thread));
-  if (p) {
-    switch (p->state) {
-    case Thread::ActiveState:
-    case Thread::IdleState:
-    case Thread::ExclusiveState:
-      return true;
-
-    case Thread::NoState:
-    case Thread::ZombieState:
-    case Thread::JoinedState:
-    case Thread::ExitState:
-      return false;
-
-    default:
-      abort(t);
-    }
-  } else {
-    return false;
-  }
+  return p and (p->flags & Thread::ActiveFlag) != 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -1013,7 +1185,19 @@ extern "C" JNIEXPORT void JNICALL
 JVM_Interrupt(Thread*, jobject) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsInterrupted(Thread*, jobject, jboolean) { abort(); }
+JVM_IsInterrupted(Thread* t, jobject thread, jboolean clear)
+{
+  ENTER(t, Thread::ActiveState);
+
+  acquire(t, *thread);
+  bool v = threadInterrupted(t, *thread);
+  if (clear) {
+    threadInterrupted(t, *thread) = false;
+  }
+  release(t, *thread);
+
+  return v;
+}
 
 extern "C" JNIEXPORT jboolean JNICALL
 JVM_HoldsLock(Thread*, jclass, jobject) { abort(); }
@@ -1042,13 +1226,12 @@ JVM_GetClassContext(Thread* t)
   PROTECT(t, trace);
 
   object context = makeObjectArray
-    (t, t->m->loader, arrayBody(t, t->m->types, Machine::JclassType),
-     arrayLength(t, trace));
+    (t, type(t, Machine::JclassType), objectArrayLength(t, trace));
   PROTECT(t, context);
 
-  for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
+  for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
     object c = getJClass
-      (t, methodClass(t, traceElementMethod(t, arrayBody(t, trace, i))));
+      (t, methodClass(t, traceElementMethod(t, objectArrayBody(t, trace, i))));
 
     set(t, context, ArrayBody + (i * BytesPerWord), c);
   }
@@ -1084,16 +1267,31 @@ JVM_LoadClass0(Thread*, jobject, jclass,
                jstring) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetArrayLength(Thread*, jobject) { abort(); }
+JVM_GetArrayLength(Thread* t, jobject array)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return cast<uintptr_t>(*array, BytesPerWord);
+}
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetArrayElement(Thread*, jobject, jint) { abort(); }
+JVM_GetArrayElement(Thread* t, jobject array, jint index)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return makeLocalReference(t, objectArrayBody(t, *array, index));
+}
 
 extern "C" JNIEXPORT jvalue JNICALL
 JVM_GetPrimitiveArrayElement(Thread*, jobject, jint, jint) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SetArrayElement(Thread*, jobject, jint, jobject) { abort(); }
+JVM_SetArrayElement(Thread* t, jobject array, jint index, jobject value)
+{
+  ENTER(t, Thread::ActiveState);
+
+  set(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
+}
 
 extern "C" JNIEXPORT void JNICALL
 JVM_SetPrimitiveArrayElement(Thread*, jobject, jint, jvalue,
@@ -1126,8 +1324,7 @@ JVM_NewArray(Thread* t, jclass elementClass, jint length)
     default: abort(t);
     }
   } else {
-    return makeLocalReference
-      (t, makeObjectArray(t, t->m->loader, c, length));
+    return makeLocalReference(t, makeObjectArray(t, c, length));
   }
 }
 
@@ -1152,32 +1349,32 @@ JVM_FindPrimitiveClass(Thread* t, const char* name)
   case 'b':
     if (name[1] == 'o') {
       return makeLocalReference
-        (t, getJClass(t, arrayBody(t, t->m->types, Machine::JbooleanType)));
+        (t, getJClass(t, type(t, Machine::JbooleanType)));
     } else {
       return makeLocalReference
-        (t, getJClass(t, arrayBody(t, t->m->types, Machine::JbyteType)));
+        (t, getJClass(t, type(t, Machine::JbyteType)));
     }
   case 'c':
     return makeLocalReference
-      (t, getJClass(t, arrayBody(t, t->m->types, Machine::JcharType)));
+      (t, getJClass(t, type(t, Machine::JcharType)));
   case 'd':
     return makeLocalReference
-      (t, getJClass(t, arrayBody(t, t->m->types, Machine::JdoubleType)));
+      (t, getJClass(t, type(t, Machine::JdoubleType)));
   case 'f':
     return makeLocalReference
-      (t, getJClass(t, arrayBody(t, t->m->types, Machine::JfloatType)));
+      (t, getJClass(t, type(t, Machine::JfloatType)));
   case 'i':
     return makeLocalReference
-      (t, getJClass(t, arrayBody(t, t->m->types, Machine::JintType)));
+      (t, getJClass(t, type(t, Machine::JintType)));
   case 'l':
     return makeLocalReference
-      (t, getJClass(t, arrayBody(t, t->m->types, Machine::JlongType)));
+      (t, getJClass(t, type(t, Machine::JlongType)));
   case 's':
     return makeLocalReference
-      (t, getJClass(t, arrayBody(t, t->m->types, Machine::JshortType)));
+      (t, getJClass(t, type(t, Machine::JshortType)));
   case 'v':
     return makeLocalReference
-      (t, getJClass(t, arrayBody(t, t->m->types, Machine::JvoidType)));
+      (t, getJClass(t, type(t, Machine::JvoidType)));
   default:
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::IllegalArgumentExceptionType);
@@ -1194,7 +1391,8 @@ JVM_FindClassFromClassLoader(Thread* t, const char* name, jboolean init,
 {
   ENTER(t, Thread::ActiveState);
 
-  object c = resolveClass(t, loader ? *loader : t->m->loader, name);
+  object c = resolveClass
+    (t, loader ? *loader : root(t, Machine::BootLoader), name);
   if (t->exception) {
     if (throwError) {
       t->exception = t->m->classpath->makeThrowable
@@ -1224,25 +1422,13 @@ JVM_FindLoadedClass(Thread* t, jobject loader, jstring name)
 {
   ENTER(t, Thread::ActiveState);
 
-  ACQUIRE(t, t->m->classLock);
-
   object spec = makeByteArray(t, stringLength(t, *name) + 1);
   { char* s = reinterpret_cast<char*>(&byteArrayBody(t, spec, 0));
     stringChars(t, *name, s);
     replace('.', '/', s);
   }
 
-  object c;
-  if (loader == 0 or *loader == t->m->loader) {
-    c = findLoadedSystemClass(t, spec);
-  } else {
-    object map = classLoaderMap(t, *loader);
-    if (map) {
-      c = hashMapFind(t, map, spec, byteArrayHash, byteArrayEqual);
-    } else {
-      c = 0;
-    }
-  }
+  object c = findLoadedClass(t, *loader, spec);
     
   return c ? makeLocalReference(t, getJClass(t, c)) : 0;
 }
@@ -1275,8 +1461,7 @@ JVM_GetClassInterfaces(Thread* t, jclass c)
       (classFlags(t, jclassVmClass(t, *c)) & ACC_INTERFACE) == 0 ? 2 : 1;
 
     object array = makeObjectArray
-       (t, t->m->loader, arrayBody(t, t->m->types, Machine::JclassType),
-        arrayLength(t, table) / stride);
+       (t, type(t, Machine::JclassType), arrayLength(t, table) / stride);
     PROTECT(t, array);
 
     for (unsigned i = 0; i < objectArrayLength(t, array); ++i) {
@@ -1287,9 +1472,7 @@ JVM_GetClassInterfaces(Thread* t, jclass c)
     return makeLocalReference(t, array);
   } else {
     return makeLocalReference
-      (t, makeObjectArray
-       (t, t->m->loader, arrayBody(t, t->m->types, Machine::JclassType),
-        0));
+      (t, makeObjectArray(t, type(t, Machine::JclassType), 0));
   }
 }
 
@@ -1299,7 +1482,8 @@ JVM_GetClassLoader(Thread* t, jclass c)
   ENTER(t, Thread::ActiveState);
 
   object loader = classLoader(t, jclassVmClass(t, *c));
-  return loader == t->m->loader ? 0 : makeLocalReference(t, loader);
+  return loader == root(t, Machine::BootLoader)
+    ? 0 : makeLocalReference(t, loader);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -1385,8 +1569,10 @@ JVM_GetClassDeclaredMethods(Thread* t, jclass c, jboolean publicOnly)
 
   object table = classMethodTable(t, jclassVmClass(t, *c));
   if (table) {
+    PROTECT(t, table);
+
     object array = makeObjectArray
-      (t, t->m->loader, arrayBody(t, t->m->types, Machine::JmethodType),
+      (t, type(t, Machine::JmethodType),
        local::countMethods(t, jclassVmClass(t, *c), publicOnly));
     PROTECT(t, array);
 
@@ -1461,9 +1647,7 @@ JVM_GetClassDeclaredMethods(Thread* t, jclass c, jboolean publicOnly)
     return makeLocalReference(t, array);
   } else {
     return makeLocalReference
-      (t, makeObjectArray
-       (t, t->m->loader, arrayBody(t, t->m->types, Machine::JmethodType),
-        0));
+      (t, makeObjectArray(t, type(t, Machine::JmethodType), 0));
   }
 }
 
@@ -1474,8 +1658,10 @@ JVM_GetClassDeclaredFields(Thread* t, jclass c, jboolean publicOnly)
 
   object table = classFieldTable(t, jclassVmClass(t, *c));
   if (table) {
+    PROTECT(t, table);
+
     object array = makeObjectArray
-      (t, t->m->loader, arrayBody(t, t->m->types, Machine::JfieldType),
+      (t, type(t, Machine::JfieldType),
        local::countFields(t, jclassVmClass(t, *c), publicOnly));
     PROTECT(t, array);
 
@@ -1501,6 +1687,8 @@ JVM_GetClassDeclaredFields(Thread* t, jclass c, jboolean publicOnly)
           return 0;
         }
 
+        PROTECT(t, type);
+
         type = getJClass(t, type);
 
         object signature = t->m->classpath->makeString
@@ -1524,12 +1712,12 @@ JVM_GetClassDeclaredFields(Thread* t, jclass c, jboolean publicOnly)
         set(t, array, ArrayBody + ((ai++) * BytesPerWord), field);
       }
     }
+    assert(t, ai == objectArrayLength(t, array));
 
     return makeLocalReference(t, array);
   } else {
     return makeLocalReference
-      (t, makeObjectArray
-       (t, t->m->loader, arrayBody(t, t->m->types, Machine::JfieldType), 0));
+      (t, makeObjectArray(t, type(t, Machine::JfieldType), 0));
   }
 }
 
@@ -1540,8 +1728,10 @@ JVM_GetClassDeclaredConstructors(Thread* t, jclass c, jboolean publicOnly)
 
   object table = classMethodTable(t, jclassVmClass(t, *c));
   if (table) {
+    PROTECT(t, table);
+
     object array = makeObjectArray
-      (t, t->m->loader, arrayBody(t, t->m->types, Machine::JconstructorType),
+      (t, type(t, Machine::JconstructorType),
        local::countConstructors(t, jclassVmClass(t, *c), publicOnly));
     PROTECT(t, array);
 
@@ -1598,9 +1788,7 @@ JVM_GetClassDeclaredConstructors(Thread* t, jclass c, jboolean publicOnly)
     return makeLocalReference(t, array);
   } else {
     return makeLocalReference
-      (t, makeObjectArray
-       (t, t->m->loader, arrayBody(t, t->m->types, Machine::JconstructorType),
-        0));
+      (t, makeObjectArray(t, type(t, Machine::JconstructorType), 0));
   }
 }
 
@@ -1739,8 +1927,11 @@ JVM_DoPrivileged
 {
   ENTER(t, Thread::ActiveState);
 
+  // todo: cache these class and method lookups in the t->m->classpath
+  // object:
+
   object privilegedAction = resolveClass
-    (t, t->m->loader, "java/security/PrivilegedAction");
+    (t, root(t, Machine::BootLoader), "java/security/PrivilegedAction");
   
   if (UNLIKELY(t->exception)) {
     return 0;
@@ -1752,7 +1943,8 @@ JVM_DoPrivileged
       (t, privilegedAction, "run", "()Ljava/lang/Object;");
   } else {
     object privilegedExceptionAction = resolveClass
-      (t, t->m->loader, "java/security/PrivilegedExceptionAction");
+      (t, root(t, Machine::BootLoader),
+       "java/security/PrivilegedExceptionAction");
     
     if (UNLIKELY(t->exception)) {
       return 0;
@@ -1769,10 +1961,8 @@ JVM_DoPrivileged
       return makeLocalReference(t, result);
     } else {
       if (wrapException and not
-          (instanceOf
-           (t, arrayBody(t, t->m->types, Machine::ErrorType), t->exception)
-           or instanceOf
-           (t, arrayBody(t, t->m->types, Machine::RuntimeExceptionType),
+          (instanceOf(t, type(t, Machine::ErrorType), t->exception)
+           or instanceOf(t, type(t, Machine::RuntimeExceptionType),
             t->exception)))
       {
         object cause = t->exception;
@@ -1781,7 +1971,8 @@ JVM_DoPrivileged
         t->exception = 0;
 
         object paeClass = resolveClass
-          (t, t->m->loader, "java/security/PrivilegedActionException");
+          (t, root(t, Machine::BootLoader),
+           "java/security/PrivilegedActionException");
 
         if (LIKELY(t->exception == 0)) {
           PROTECT(t, paeClass);
@@ -2003,37 +2194,83 @@ extern "C" JNIEXPORT jint JNICALL
 JVM_Sync(jint) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_InitializeSocketLibrary(void) { abort(); }
+JVM_InitializeSocketLibrary()
+{
+#ifdef PLATFORM_WINDOWS
+  static bool wsaInitialized = false;
+  if (not wsaInitialized) {
+    WSADATA data;
+    int r = WSAStartup(MAKEWORD(2, 2), &data);
+    if (r or LOBYTE(data.wVersion) != 2 or HIBYTE(data.wVersion) != 2) {
+      return -1;
+    } else {
+      wsaInitialized = true;
+    }
+  }
+#endif
+  return 0;
+}
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Socket(jint, jint, jint) { abort(); }
+JVM_Socket(jint domain, jint type, jint protocol)
+{
+  return socket(domain, type, protocol);
+}
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SocketClose(jint) { abort(); }
+JVM_SocketClose(jint socket)
+{
+#ifdef PLATFORM_WINDOWS
+  return closesocket(socket);
+#else
+  return close(socket);
+#endif
+}
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SocketShutdown(jint, jint) { abort(); }
+JVM_SocketShutdown(jint socket, jint how)
+{
+  return shutdown(socket, how);
+}
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Recv(jint, char*, jint, jint) { abort(); }
+JVM_Recv(jint socket, char* dst, jint count, jint flags)
+{
+  return recv(socket, dst, count, flags);
+}
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Send(jint, char*, jint, jint) { abort(); }
+JVM_Send(jint socket, char* src, jint count, jint flags)
+{
+  return send(socket, src, count, flags);
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_Timeout(int, long) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Listen(jint, jint) { abort(); }
+JVM_Listen(jint socket, jint count)
+{
+  return listen(socket, count);
+}
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Connect(jint, struct sockaddr*, jint) { abort(); }
+JVM_Connect(jint socket, sockaddr* address, jint addressLength)
+{
+  return connect(socket, address, addressLength);
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_Bind(jint, struct sockaddr*, jint) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Accept(jint, struct sockaddr*, jint*) { abort(); }
+JVM_Accept(jint socket, struct sockaddr* address, jint* addressLength)
+{
+  socklen_t length = *addressLength;
+  int r = accept(socket, address, &length);
+  *addressLength = length;
+  return r;
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_RecvFrom(jint, char*, int,
@@ -2047,7 +2284,13 @@ extern "C" JNIEXPORT jint JNICALL
 JVM_SocketAvailable(jint, jint*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetSockName(jint, struct sockaddr*, int*) { abort(); }
+JVM_GetSockName(jint socket, struct sockaddr* address, int* addressLength)
+{
+  socklen_t length = *addressLength;
+  int r = getsockname(socket, address, &length);
+  *addressLength = length;
+  return r;
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_GetSockOpt(jint, int, int, char*, int*) { abort(); }

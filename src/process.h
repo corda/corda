@@ -77,7 +77,8 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
          &byteArrayBody(t, spec, 1),
          byteArrayLength(t, spec) - 1);
 
-  object class_ = resolveSystemClass(t, elementSpec);
+  object class_ = resolveClass
+    (t, classLoader(t,  objectClass(t, array)), elementSpec);
   PROTECT(t, class_);
 
   for (int32_t i = 0; i < counts[index]; ++i) {

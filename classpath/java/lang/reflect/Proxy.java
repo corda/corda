@@ -515,8 +515,7 @@ public class Proxy {
 
     byte[] classData = out.toByteArray();
     return avian.SystemClassLoader.getClass
-      (avian.SystemClassLoader.defineVMClass
-       (loader, classData, 0, classData.length));
+      (avian.Classes.defineVMClass(loader, classData, 0, classData.length));
   }
 
   public static Object newProxyInstance(ClassLoader loader,

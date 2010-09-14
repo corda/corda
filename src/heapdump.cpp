@@ -76,8 +76,7 @@ dumpHeap(Thread* t, FILE* out)
         local::write1(out, local::Size);
         local::write4(out, local::objectSize(t, p));
 
-        if (objectClass(t, p) == arrayBody(t, t->m->types, Machine::ClassType))
-        {
+        if (objectClass(t, p) == type(t, Machine::ClassType)) {
           object name = className(t, p);
           if (name) {
             local::write1(out, local::ClassName);

@@ -1120,6 +1120,24 @@ struct JNIEnvVTable {
 #endif
 };
 
+inline void
+atomicOr(uint32_t* p, int v)
+{
+  for (uint32_t old = *p;
+       not atomicCompareAndSwap32(p, old, old | v);
+       old = *p)
+  { }
+}
+
+inline void
+atomicAnd(uint32_t* p, int v)
+{
+  for (uint32_t old = *p;
+       not atomicCompareAndSwap32(p, old, old & v);
+       old = *p)
+  { }
+}
+
 inline int
 strcmp(const int8_t* a, const int8_t* b)
 {
@@ -1164,8 +1182,26 @@ class Machine {
     ImmortalAllocation
   };
 
-  Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
-          Classpath* classpath, const char** properties,
+  enum Root {
+    BootLoader,
+    AppLoader,
+    ClassMap,
+    LoadClassMethod,
+    BootstrapClassMap,
+    MonitorMap,
+    StringMap,
+    ByteArrayMap,
+    JNIMethodTable,
+    ShutdownHooks,
+    ObjectsToFinalize,
+    NullPointerException,
+    ArrayIndexOutOfBoundsException
+  };
+
+  static const unsigned RootCount = ArrayIndexOutOfBoundsException + 1;
+
+  Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
+          Processor* processor, Classpath* classpath, const char** properties,
           unsigned propertyCount);
 
   ~Machine() { 
@@ -1178,7 +1214,8 @@ class Machine {
   System* system;
   Heap::Client* heapClient;
   Heap* heap;
-  Finder* finder;
+  Finder* bootFinder;
+  Finder* appFinder;
   Processor* processor;
   Classpath* classpath;
   Thread* rootThread;
@@ -1198,24 +1235,13 @@ class Machine {
   System::Monitor* referenceLock;
   System::Monitor* shutdownLock;
   System::Library* libraries;
-  object loader;
-  object classMap;
-  object loadClassMethod;
-  object bootstrapClassMap;
-  object monitorMap;
-  object stringMap;
-  object byteArrayMap;
   object types;
-  object jniMethodTable;
+  object roots;
   object finalizers;
   object tenuredFinalizers;
   object finalizeQueue;
   object weakReferences;
   object tenuredWeakReferences;
-  object shutdownHooks;
-  object objectsToFinalize;
-  object nullPointerException;
-  object arrayIndexOutOfBoundsException;
   bool unsafe;
   bool triedBuiltinOnLoad;
   JavaVMVTable javaVMVTable;
@@ -1260,6 +1286,13 @@ class Thread {
     ExclusiveState,
     ExitState
   };
+
+  static const unsigned UseBackupHeapFlag = 1 << 0;
+  static const unsigned WaitingFlag = 1 << 1;
+  static const unsigned TracingFlag = 1 << 2;
+  static const unsigned DaemonFlag = 1 << 3;
+  static const unsigned StressFlag = 1 << 4;
+  static const unsigned ActiveFlag = 1 << 5;
 
   class Protector {
    public:
@@ -1371,11 +1404,7 @@ class Thread {
   uintptr_t* heap;
   uintptr_t backupHeap[ThreadBackupHeapSizeInWords];
   unsigned backupHeapIndex;
-  bool useBackupHeap;
-  bool waiting;
-  bool tracing;
-  bool daemon;
-  bool stress;
+  unsigned flags;
 };
 
 class Classpath {
@@ -1600,9 +1629,9 @@ ensure(Thread* t, unsigned sizeInBytes)
       > ThreadHeapSizeInWords)
   {
     if (sizeInBytes <= ThreadBackupHeapSizeInBytes) {
-      expect(t, not t->useBackupHeap);
+      expect(t, (t->flags & Thread::UseBackupHeapFlag) == 0);
 
-      t->useBackupHeap = true;
+      atomicOr(&(t->flags), Thread::UseBackupHeapFlag);
 
       return true;
     } else {
@@ -1719,13 +1748,49 @@ instanceOf(Thread* t, object class_, object o);
 
 #include "type-declarations.cpp"
 
+inline object&
+root(Thread* t, Machine::Root root)
+{
+  return arrayBody(t, t->m->roots, root);
+}
+
+inline void
+setRoot(Thread* t, Machine::Root root, object value)
+{
+  set(t, t->m->roots, ArrayBody + (root * BytesPerWord), value);
+}
+
+inline object
+type(Thread* t, Machine::Type type)
+{
+  return arrayBody(t, t->m->types, type);
+}
+
+inline void
+setType(Thread* t, Machine::Type type, object value)
+{
+  set(t, t->m->types, ArrayBody + (type * BytesPerWord), value);
+}
+
 inline object
 getClassLoaderMap(Thread* t, object loader)
 {
-  if (loader == t->m->loader) {
-    return t->m->classMap;
+  if (loader == root(t, Machine::BootLoader)) {
+    return root(t, Machine::ClassMap);
   } else {
     return classLoaderMap(t, loader);
+  }
+}
+
+inline Finder*
+getFinder(Thread* t, object loader)
+{
+  if (loader == root(t, Machine::BootLoader)) {
+    return t->m->bootFinder;
+  } else if (loader == root(t, Machine::AppLoader)) {
+    return t->m->appFinder;
+  } else {
+    abort(t);
   }
 }
 
@@ -1927,9 +1992,7 @@ stringHash(Thread* t, object s)
 {
   if (stringHashCode(t, s) == 0 and stringLength(t, s)) {
     object data = stringData(t, s);
-    if (objectClass(t, data)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType))
-    {
+    if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
       stringHashCode(t, s) = hash
         (&byteArrayBody(t, data, stringOffset(t, s)), stringLength(t, s));
     } else {
@@ -1944,9 +2007,7 @@ inline uint16_t
 stringCharAt(Thread* t, object s, int i)
 {
   object data = stringData(t, s);
-  if (objectClass(t, data)
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
     return byteArrayBody(t, data, stringOffset(t, s) + i);
   } else {
     return charArrayBody(t, data, stringOffset(t, s) + i);
@@ -2063,7 +2124,7 @@ fieldSize(Thread* t, object field)
 }
 
 object
-findLoadedSystemClass(Thread* t, object spec);
+findLoadedClass(Thread* t, object loader, object spec);
 
 inline bool
 emptyMethod(Thread* t, object method)
@@ -2080,7 +2141,7 @@ object
 parseClass(Thread* t, object loader, const uint8_t* data, unsigned length);
 
 object
-resolveClass(Thread* t, object loader, object name);
+resolveClass(Thread* t, object loader, object name, bool throw_ = true);
 
 inline object
 resolveClass(Thread* t, object loader, const char* name)
@@ -2091,12 +2152,12 @@ resolveClass(Thread* t, object loader, const char* name)
 }
 
 object
-resolveSystemClass(Thread* t, object name);
+resolveSystemClass(Thread* t, object loader, object name, bool throw_ = true);
 
 inline object
-resolveSystemClass(Thread* t, const char* name)
+resolveSystemClass(Thread* t, object loader, const char* name)
 {
-  return resolveSystemClass(t, makeByteArray(t, "%s", name));
+  return resolveSystemClass(t, loader, makeByteArray(t, "%s", name));
 }
 
 void
@@ -2150,13 +2211,12 @@ void
 initClass(Thread* t, object c);
 
 object
-makeObjectArray(Thread* t, object loader, object elementClass, unsigned count);
+makeObjectArray(Thread* t, object elementClass, unsigned count);
 
 inline object
 makeObjectArray(Thread* t, unsigned count)
 {
-  return makeObjectArray
-    (t, t->m->loader, arrayBody(t, t->m->types, Machine::JobjectType), count);
+  return makeObjectArray(t, type(t, Machine::JobjectType), count);
 }
 
 object
@@ -2398,10 +2458,10 @@ monitorAppendWait(Thread* t, object monitor)
 {
   assert(t, monitorOwner(t, monitor) == t);
 
-  expect(t, not t->waiting);
+  expect(t, (t->flags & Thread::WaitingFlag) == 0);
   expect(t, t->waitNext == 0);
 
-  t->waiting = true;
+  atomicOr(&(t->flags), Thread::WaitingFlag);
 
   if (monitorWaitTail(t, monitor)) {
     static_cast<Thread*>(monitorWaitTail(t, monitor))->waitNext = t;
@@ -2434,7 +2494,7 @@ monitorRemoveWait(Thread* t, object monitor)
       }
 
       t->waitNext = 0;
-      t->waiting = false;
+      atomicAnd(&(t->flags), ~Thread::WaitingFlag);
 
       return;
     } else {
@@ -2489,7 +2549,7 @@ monitorWait(Thread* t, object monitor, int64_t time)
 
   monitorDepth(t, monitor) = depth;
 
-  if (t->waiting) {
+  if (t->flags & Thread::WaitingFlag) {
     monitorRemoveWait(t, monitor);
   } else {
     expect(t, not monitorFindWait(t, monitor));
@@ -2509,7 +2569,7 @@ monitorPollWait(Thread* t, object monitor)
 
   if (next) {
     monitorWaitHead(t, monitor) = next->waitNext;
-    next->waiting = false;
+    atomicAnd(&(next->flags), ~Thread::WaitingFlag);
     next->waitNext = 0;
     if (next == monitorWaitTail(t, monitor)) {
       monitorWaitTail(t, monitor) = 0;
@@ -2677,7 +2737,13 @@ setDaemon(Thread* t, object thread, bool daemon)
 
   if ((threadDaemon(t, thread) != 0) != daemon) {
     threadDaemon(t, thread) = daemon;
-    t->daemon = daemon;
+
+    Thread* p = reinterpret_cast<Thread*>(threadPeer(t, thread));
+    if (daemon) {
+      atomicOr(&(p->flags), Thread::DaemonFlag);
+    } else {
+      atomicAnd(&(p->flags), ~Thread::DaemonFlag);
+    }
 
     if (daemon) {
       ++ t->m->daemonCount;
@@ -2832,7 +2898,7 @@ resolveClassInObject(Thread* t, object loader, object container,
                      unsigned classOffset)
 {
   object o = cast<object>(container, classOffset);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
+  if (objectClass(t, o) == type(t, Machine::ByteArrayType)) {
     PROTECT(t, container);
 
     o = resolveClass(t, loader, o);
@@ -2847,7 +2913,7 @@ inline object
 resolveClassInPool(Thread* t, object loader, object method, unsigned index)
 {
   object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType)) {
+  if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
     PROTECT(t, method);
 
     o = resolveClass(t, loader, referenceName(t, o));
@@ -2872,7 +2938,7 @@ resolve(Thread* t, object loader, object method, unsigned index,
         Machine::Type errorType)
 {
   object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
+  if (objectClass(t, o) == type(t, Machine::ReferenceType))
   {
     PROTECT(t, method);
 
@@ -2953,19 +3019,47 @@ inline object
 primitiveClass(Thread* t, char name)
 {
   switch (name) {
-  case 'B': return arrayBody(t, t->m->types, Machine::JbyteType);
-  case 'C': return arrayBody(t, t->m->types, Machine::JcharType);
-  case 'D': return arrayBody(t, t->m->types, Machine::JdoubleType);
-  case 'F': return arrayBody(t, t->m->types, Machine::JfloatType);
-  case 'I': return arrayBody(t, t->m->types, Machine::JintType);
-  case 'J': return arrayBody(t, t->m->types, Machine::JlongType);
-  case 'S': return arrayBody(t, t->m->types, Machine::JshortType);
-  case 'V': return arrayBody(t, t->m->types, Machine::JvoidType);
-  case 'Z': return arrayBody(t, t->m->types, Machine::JbooleanType);
+  case 'B': return type(t, Machine::JbyteType);
+  case 'C': return type(t, Machine::JcharType);
+  case 'D': return type(t, Machine::JdoubleType);
+  case 'F': return type(t, Machine::JfloatType);
+  case 'I': return type(t, Machine::JintType);
+  case 'J': return type(t, Machine::JlongType);
+  case 'S': return type(t, Machine::JshortType);
+  case 'V': return type(t, Machine::JvoidType);
+  case 'Z': return type(t, Machine::JbooleanType);
   default:
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::IllegalArgumentExceptionType);
     return 0;
+  }
+}
+  
+inline void
+registerNative(Thread* t, object method, void* function)
+{
+  PROTECT(t, method);
+
+  expect(t, methodFlags(t, method) & ACC_NATIVE);
+
+  object native = makeNative(t, function, false);
+
+  // ensure other threads only see the methodCode field populated
+  // once the object it points to has been populated:
+  storeStoreMemoryBarrier();
+
+  set(t, method, MethodCode, native);
+}
+
+inline void
+unregisterNatives(Thread* t, object c) {
+  if (classMethodTable(t, c)) {
+    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+      object method = arrayBody(t, classMethodTable(t, c), i);
+      if (methodFlags(t, method) & ACC_NATIVE) {
+        set(t, method, MethodCode, 0);
+      }
+    }
   }
 }
 

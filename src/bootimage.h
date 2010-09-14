@@ -55,11 +55,13 @@ class BootImage {
   unsigned heapSize;
   unsigned codeSize;
 
-  unsigned classCount;
+  unsigned bootClassCount;
+  unsigned appClassCount;
   unsigned stringCount;
   unsigned callCount;
 
-  unsigned loader;
+  unsigned bootLoader;
+  unsigned appLoader;
   unsigned types;
   unsigned methodTree;
   unsigned methodTreeSentinal;

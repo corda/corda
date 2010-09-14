@@ -14,7 +14,7 @@ import java.net.URL;
 import java.net.MalformedURLException;
 
 public class SystemClassLoader extends ClassLoader {
-  private static native VMClass findVMClass(String name)
+  private native VMClass findVMClass(String name)
     throws ClassNotFoundException;
 
   protected Class findClass(String name) throws ClassNotFoundException {
@@ -23,14 +23,14 @@ public class SystemClassLoader extends ClassLoader {
 
   public static native Class getClass(VMClass vmClass);
 
-  private static native VMClass findLoadedVMClass(String name);
+  private native VMClass findLoadedVMClass(String name);
 
   protected Class reallyFindLoadedClass(String name){
     VMClass c = findLoadedVMClass(name);
     return c == null ? null : getClass(c);
   }
 
-  private static native boolean resourceExists(String name);
+  private native boolean resourceExists(String name);
 
   protected URL findResource(String name) {
     if (resourceExists(name)) {

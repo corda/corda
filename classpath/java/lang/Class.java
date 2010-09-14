@@ -14,6 +14,7 @@ import avian.VMClass;
 import avian.ClassAddendum;
 import avian.AnnotationInvocationHandler;
 import avian.SystemClassLoader;
+import avian.Classes;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -69,23 +70,23 @@ public final class Class <T>
   public static String getName(VMClass c) {
     if (c.name == null) {
       if ((c.vmFlags & PrimitiveFlag) != 0) {
-        if (c == SystemClassLoader.primitiveClass('V')) {
+        if (c == Classes.primitiveClass('V')) {
           c.name = "void\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('Z')) {
+        } else if (c == Classes.primitiveClass('Z')) {
           c.name = "boolean\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('B')) {
+        } else if (c == Classes.primitiveClass('B')) {
           c.name = "byte\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('C')) {
+        } else if (c == Classes.primitiveClass('C')) {
           c.name = "char\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('S')) {
+        } else if (c == Classes.primitiveClass('S')) {
           c.name = "short\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('I')) {
+        } else if (c == Classes.primitiveClass('I')) {
           c.name = "int\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('F')) {
+        } else if (c == Classes.primitiveClass('F')) {
           c.name = "float\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('J')) {
+        } else if (c == Classes.primitiveClass('J')) {
           c.name = "long\0".getBytes();
-        } else if (c == SystemClassLoader.primitiveClass('D')) {
+        } else if (c == Classes.primitiveClass('D')) {
           c.name = "double\0".getBytes();
         } else {
           throw new AssertionError();
@@ -150,9 +151,9 @@ public final class Class <T>
       loader = Class.class.vmClass.loader;
     }
     Class c = loader.loadClass(name);
-    SystemClassLoader.link(c.vmClass, loader);
+    Classes.link(c.vmClass, loader);
     if (initialize) {
-      SystemClassLoader.initialize(c.vmClass);
+      Classes.initialize(c.vmClass);
     }
     return c;
   }
@@ -170,7 +171,7 @@ public final class Class <T>
       } else {
         if (name.length() == 1) {
           return SystemClassLoader.getClass
-            (SystemClassLoader.primitiveClass(name.charAt(0)));
+            (Classes.primitiveClass(name.charAt(0)));
         } else {
           throw new ClassNotFoundException(name);
         }
@@ -184,29 +185,21 @@ public final class Class <T>
     if (isArray()) {
       String n = getName();
       if ("[Z".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('Z'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('Z'));
       } else if ("[B".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('B'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('B'));
       } else if ("[S".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('S'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('S'));
       } else if ("[C".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('C'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('C'));
       } else if ("[I".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('I'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('I'));
       } else if ("[F".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('F'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('F'));
       } else if ("[J".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('J'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('J'));
       } else if ("[D".equals(n)) {
-        return SystemClassLoader.getClass
-          (SystemClassLoader.primitiveClass('D'));
+        return SystemClassLoader.getClass(Classes.primitiveClass('D'));
       }
 
       if (vmClass.staticTable == null) throw new AssertionError();
@@ -217,12 +210,12 @@ public final class Class <T>
   }
 
   public boolean isAssignableFrom(Class c) {
-    return SystemClassLoader.isAssignableFrom(vmClass, c.vmClass);
+    return Classes.isAssignableFrom(vmClass, c.vmClass);
   }
 
   private static Field findField(VMClass vmClass, String name) {
     if (vmClass.fieldTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       for (int i = 0; i < vmClass.fieldTable.length; ++i) {
         if (Field.getName(vmClass.fieldTable[i]).equals(name)) {
@@ -269,7 +262,7 @@ public final class Class <T>
                                    Class[] parameterTypes)
   {
     if (vmClass.methodTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       if (parameterTypes == null) {
         parameterTypes = new Class[0];
@@ -365,7 +358,7 @@ public final class Class <T>
   public Constructor[] getDeclaredConstructors() {
     Constructor[] array = new Constructor[countConstructors(false)];
     if (vmClass.methodTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       int index = 0;
       for (int i = 0; i < vmClass.methodTable.length; ++i) {
@@ -381,7 +374,7 @@ public final class Class <T>
   public Constructor[] getConstructors() {
     Constructor[] array = new Constructor[countConstructors(true)];
     if (vmClass.methodTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       int index = 0;
       for (int i = 0; i < vmClass.methodTable.length; ++i) {
@@ -423,7 +416,7 @@ public final class Class <T>
   public Field[] getFields() {
     Field[] array = new Field[countPublicFields()];
     if (vmClass.fieldTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       int ai = 0;
       for (int i = 0; i < vmClass.fieldTable.length; ++i) {
@@ -454,7 +447,7 @@ public final class Class <T>
   public Method[] getDeclaredMethods() {
     Method[] array = new Method[countMethods(false)];
     if (vmClass.methodTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       int ai = 0;
       for (int i = 0; i < vmClass.methodTable.length; ++i) {
@@ -470,7 +463,7 @@ public final class Class <T>
   public Method[] getMethods() {
     Method[] array = new Method[countMethods(true)];
     if (vmClass.methodTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       int index = 0;
       for (int i = 0; i < vmClass.methodTable.length; ++i) {
@@ -487,7 +480,7 @@ public final class Class <T>
 
   public Class[] getInterfaces() {
     if (vmClass.interfaceTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       int stride = (isInterface() ? 1 : 2);
       Class[] array = new Class[vmClass.interfaceTable.length / stride];
@@ -534,8 +527,8 @@ public final class Class <T>
   }
 
   public static boolean isInstance(VMClass c, Object o) {
-    return o != null && SystemClassLoader.isAssignableFrom
-      (c, SystemClassLoader.getVMClass(o));
+    return o != null && Classes.isAssignableFrom
+      (c, Classes.getVMClass(o));
   }
 
   public boolean isInstance(Object o) {
@@ -620,7 +613,7 @@ public final class Class <T>
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
     for (VMClass c = vmClass; c != null; c = c.super_) {
       if (c.addendum != null && c.addendum.annotationTable != null) {
-        SystemClassLoader.link(c, c.loader);
+        Classes.link(c, c.loader);
         
         Object[] table = (Object[]) c.addendum.annotationTable;
         for (int i = 0; i < table.length; ++i) {
@@ -636,7 +629,7 @@ public final class Class <T>
 
   public Annotation[] getDeclaredAnnotations() {
     if (vmClass.addendum.annotationTable != null) {
-      SystemClassLoader.link(vmClass);
+      Classes.link(vmClass);
 
       Object[] table = (Object[]) vmClass.addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];

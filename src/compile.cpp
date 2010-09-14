@@ -40,7 +40,7 @@ namespace {
 
 namespace local {
 
-const bool DebugCompile = true;
+const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -60,6 +60,20 @@ const unsigned MaxNativeCallFootprint = 4;
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
 
 const unsigned ExecutableAreaSizeInBytes = 16 * 1024 * 1024;
+
+enum Root {
+  CallTable,
+  MethodTree,
+  MethodTreeSentinal,
+  ObjectPools,
+  StaticTableArray,
+  VirtualThunks,
+  ReceiveMethod,
+  WindMethod,
+  RewindMethod
+};
+
+const unsigned RootCount = RewindMethod + 1;
 
 inline bool
 isVmInvokeUnsafeStack(void* ip)
@@ -169,7 +183,7 @@ class MyThread: public Thread {
     // in this function, we "atomically" update the thread context
     // fields in such a way to ensure that another thread may
     // interrupt us at any time and still get a consistent, accurate
-    // stack trace.  See MyProcess::getStackTrace for details.
+    // stack trace.  See MyProcessor::getStackTrace for details.
 
     assert(t, t->transition == 0);
 
@@ -277,7 +291,7 @@ resolveTarget(MyThread* t, void* stack, object method)
     PROTECT(t, method);
     PROTECT(t, class_);
 
-    resolveSystemClass(t, className(t, class_));
+    resolveSystemClass(t, root(t, Machine::BootLoader), className(t, class_));
     if (UNLIKELY(t->exception)) return 0;
   }
 
@@ -294,7 +308,7 @@ resolveTarget(MyThread* t, object class_, unsigned index)
   if (classVmFlags(t, class_) & BootstrapFlag) {
     PROTECT(t, class_);
 
-    resolveSystemClass(t, className(t, class_));
+    resolveSystemClass(t, root(t, Machine::BootLoader), className(t, class_));
     if (UNLIKELY(t->exception)) return 0;
   }
 
@@ -302,10 +316,10 @@ resolveTarget(MyThread* t, object class_, unsigned index)
 }
 
 object&
-methodTree(MyThread* t);
+root(Thread* t, Root root);
 
-object
-methodTreeSentinal(MyThread* t);
+void
+setRoot(Thread* t, Root root, object value);
 
 unsigned
 compiledSize(intptr_t address)
@@ -348,8 +362,8 @@ methodForIp(MyThread* t, void* ip)
   // compile(MyThread*, Allocator*, BootContext*, object)):
   loadMemoryBarrier();
 
-  return treeQuery(t, methodTree(t), reinterpret_cast<intptr_t>(ip),
-                   methodTreeSentinal(t), compareIpToMethodBounds);
+  return treeQuery(t, root(t, MethodTree), reinterpret_cast<intptr_t>(ip),
+                   root(t, MethodTreeSentinal), compareIpToMethodBounds);
 }
 
 class MyStackWalker: public Processor::StackWalker {
@@ -2067,18 +2081,6 @@ unwind(MyThread* t)
   vmJump(ip, base, stack, t, 0, 0);
 }
 
-object&
-objectPools(MyThread* t);
-
-object&
-windMethod(MyThread* t);
-
-object&
-rewindMethod(MyThread* t);
-
-object&
-receiveMethod(MyThread* t);
-
 uintptr_t
 defaultThunk(MyThread* t);
 
@@ -2408,11 +2410,10 @@ longToFloat(int64_t a)
 }
 
 uint64_t
-makeBlankObjectArray(MyThread* t, object loader, object class_, int32_t length)
+makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 {
   if (length >= 0) {
-    return reinterpret_cast<uint64_t>
-      (makeObjectArray(t, loader, class_, length));
+    return reinterpret_cast<uint64_t>(makeObjectArray(t, class_, length));
   } else {
     object message = makeString(t, "%d", length);
     t->exception = t->m->classpath->makeThrowable
@@ -2595,14 +2596,14 @@ void NO_RETURN
 throwArrayIndexOutOfBounds(MyThread* t)
 {
   if (ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t))) {  
-    t->tracing = true;
+    atomicOr(&(t->flags), Thread::TracingFlag);
     t->exception = t->m->classpath->makeThrowable
-      (t, Machine::ArrayIndexOutOfBoundsExceptionType);
-    t->tracing = false;
+      (t, Machine::ArrayIndexOutOfBoundsExceptionType); 
+    atomicAnd(&(t->flags), ~Thread::TracingFlag);
   } else {
     // not enough memory available for a new exception and stack trace
     // -- use a preallocated instance instead
-    t->exception = t->m->arrayIndexOutOfBoundsException;
+    t->exception = root(t, Machine::ArrayIndexOutOfBoundsException);
   }
 
   unwind(t);
@@ -2658,7 +2659,7 @@ makeNew64(Thread* t, object class_)
 void
 gcIfNecessary(MyThread* t)
 {
-  if (UNLIKELY(t->useBackupHeap)) {
+  if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
     collect(t, Heap::MinorCollection);
   }
 }
@@ -3411,9 +3412,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           frame->trace(0, 0),
           BytesPerWord,
           Compiler::ObjectType,
-          4, c->register_(t->arch->thread()),
-          frame->append(classLoader(t, methodClass(t, context->method))),
-          frame->append(class_), length));
+          3, c->register_(t->arch->thread()), frame->append(class_), length));
     } break;
 
     case areturn: {
@@ -4374,16 +4373,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (singletonIsObject(t, pool, index - 1)) {
         object v = singletonObject(t, pool, index - 1);
-        if (objectClass(t, v)
-            == arrayBody(t, t->m->types, Machine::ReferenceType))
-        {
+        if (objectClass(t, v) == type(t, Machine::ReferenceType)) {
           object class_ = resolveClassInPool(t, context->method, index - 1); 
           if (UNLIKELY(t->exception)) return;
 
           frame->pushObject(frame->append(getJClass(t, class_)));
-        } else if (objectClass(t, v)
-                   == arrayBody(t, t->m->types, Machine::ClassType))
-        {
+        } else if (objectClass(t, v) == type(t, Machine::ClassType)) {
           frame->pushObject(frame->append(getJClass(t, v)));
         } else {
           frame->pushObject(frame->append(v));
@@ -5723,8 +5718,8 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     initArray(t, pool, context->objectPoolCount + 1);
     mark(t, pool, 0);
 
-    set(t, pool, ArrayBody, objectPools(t));
-    objectPools(t) = pool;
+    set(t, pool, ArrayBody, root(t, ObjectPools));
+    setRoot(t, ObjectPools, pool);
 
     unsigned i = 1;
     for (PoolElement* p = context->objectPool; p; p = p->next) {
@@ -6007,14 +6002,6 @@ compileMethod2(MyThread* t, void* ip)
     compile(t, codeAllocator(t), 0, target);
 
     t->trace->targetMethod = 0;
-  }
-
-  if (false) {
-    compile(t, codeAllocator(t), 0, resolveMethod
-            (t, t->m->loader,
-             "org/eclipse/swt/widgets/TableItem",
-             "getBounds",
-             "(IIZZZZJ)Lorg/eclipse/swt/internal/win32/RECT;"));
   }
 
   if (UNLIKELY(t->exception)) {
@@ -6494,9 +6481,7 @@ findFrameMap(MyThread* t, void* stack, object method, int32_t offset,
              int32_t** map, unsigned* start)
 {
   object table = codePool(t, methodCode(t, method));
-  if (objectClass(t, table)
-      == arrayBody(t, t->m->types, Machine::IntArrayType))
-  {
+  if (objectClass(t, table) == type(t, Machine::IntArrayType)) {
     findFrameMapInSimpleTable(t, method, table, offset, map, start);
   } else {
     findFrameMapInGeneralTable(t, stack, method, table, offset, map, start);
@@ -6813,16 +6798,16 @@ callContinuation(MyThread* t, object continuation, object result,
         nextContinuation = continuationContextContinuation(t, rewindContext);
         action = Rewind;
 
-        if (rewindMethod(t) == 0) {
+        if (root(t, RewindMethod) == 0) {
           PROTECT(t, nextContinuation);
             
           object method = resolveMethod
-            (t, t->m->loader, "avian/Continuations", "rewind",
+            (t, root(t, Machine::BootLoader), "avian/Continuations", "rewind",
              "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
              "Ljava/lang/Throwable;)V");
             
           if (method) {
-            rewindMethod(t) = method;
+            setRoot(t, RewindMethod, method);
             
             compile(t, local::codeAllocator(t), 0, method);
 
@@ -6864,7 +6849,7 @@ callContinuation(MyThread* t, object continuation, object result,
     transition(t, 0, 0, 0, nextContinuation, t->trace);
 
     jumpAndInvoke
-      (t, rewindMethod(t), base, stack,
+      (t, root(t, RewindMethod), base, stack,
        continuationContextBefore(t, continuationContext(t, nextContinuation)),
        continuation, result, exception);
   } break;
@@ -6890,26 +6875,27 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
   { PROTECT(t, receiver);
 
-    if (receiveMethod(t) == 0) {
+    if (root(t, ReceiveMethod) == 0) {
       object m = resolveMethod
-        (t, t->m->loader, "avian/CallbackReceiver", "receive",
+        (t, root(t, Machine::BootLoader), "avian/CallbackReceiver", "receive",
          "(Lavian/Callback;)Ljava/lang/Object;");
 
       if (m) {
-        receiveMethod(t) = m;
+        setRoot(t, ReceiveMethod, m);
 
-        object continuationClass = arrayBody
-          (t, t->m->types, Machine::ContinuationType);
+        object continuationClass = type(t, Machine::ContinuationType);
         
         if (classVmFlags(t, continuationClass) & BootstrapFlag) {
-          resolveSystemClass(t, vm::className(t, continuationClass));
+          resolveSystemClass
+            (t, root(t, Machine::BootLoader),
+             vm::className(t, continuationClass));
         }
       }
     }
 
     if (LIKELY(t->exception == 0)) {
       method = findInterfaceMethod
-        (t, receiveMethod(t), objectClass(t, receiver));
+        (t, root(t, ReceiveMethod), objectClass(t, receiver));
       PROTECT(t, method);
         
       compile(t, local::codeAllocator(t), 0, method);
@@ -6938,14 +6924,14 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
     PROTECT(t, thunk);
     PROTECT(t, after);
 
-    if (windMethod(t) == 0) {
+    if (root(t, WindMethod) == 0) {
       object method = resolveMethod
-        (t, t->m->loader, "avian/Continuations", "wind",
+        (t, root(t, Machine::BootLoader), "avian/Continuations", "wind",
          "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
         "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
       if (method) {
-        windMethod(t) = method;
+        setRoot(t, WindMethod, method);
         compile(t, local::codeAllocator(t), 0, method);
       }
     }
@@ -6962,7 +6948,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
   }
 
   if (LIKELY(t->exception == 0)) {
-    jumpAndInvoke(t, windMethod(t), base, stack, before, thunk, after);
+    jumpAndInvoke(t, root(t, WindMethod), base, stack, before, thunk, after);
   } else {
     unwind(t);
   }    
@@ -7117,7 +7103,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   }
 
   if (t->exception) { 
-    if (UNLIKELY(t->useBackupHeap)) {
+    if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
       collect(t, Heap::MinorCollection);
     }
     return 0;
@@ -7173,14 +7159,14 @@ class SegFaultHandler: public System::SignalHandler {
            *base, t->continuation, t->trace);
 
         if (ensure(t, FixedSizeOfNullPointerException + traceSize(t))) {
-          t->tracing = true;
+          atomicOr(&(t->flags), Thread::TracingFlag);
           t->exception = t->m->classpath->makeThrowable
             (t, Machine::NullPointerExceptionType);
-          t->tracing = false;
+          atomicAnd(&(t->flags), ~Thread::TracingFlag);
         } else {
           // not enough memory available for a new NPE and stack trace
           // -- use a preallocated instance instead
-          t->exception = t->m->nullPointerException;
+          t->exception = root(t, Machine::NullPointerException);
         }
 
 //         printTrace(t, t->exception);
@@ -7220,11 +7206,11 @@ boot(MyThread* t, BootImage* image);
 
 class MyProcessor;
 
-void
-compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p);
-
 MyProcessor*
 processor(MyThread* t);
+
+void
+compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p);
 
 class MyProcessor: public Processor {
  public:
@@ -7255,15 +7241,7 @@ class MyProcessor: public Processor {
   MyProcessor(System* s, Allocator* allocator, bool useNativeFeatures):
     s(s),
     allocator(allocator),
-    callTable(0),
-    methodTree(0),
-    methodTreeSentinal(0),
-    objectPools(0),
-    staticTableArray(0),
-    virtualThunks(0),
-    receiveMethod(0),
-    windMethod(0),
-    rewindMethod(0),
+    roots(0),
     bootImage(0),
     codeAllocator(s, 0, 0),
     callTableSize(0),
@@ -7365,15 +7343,7 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
 
     if (t == t->m->rootThread) {
-      v->visit(&callTable);
-      v->visit(&methodTree);
-      v->visit(&methodTreeSentinal);
-      v->visit(&objectPools);
-      v->visit(&staticTableArray);
-      v->visit(&virtualThunks);
-      v->visit(&receiveMethod);
-      v->visit(&windMethod);
-      v->visit(&rewindMethod);
+      v->visit(&roots);
     }
 
     for (MyThread::CallTrace* trace = t->trace; trace; trace = trace->next) {
@@ -7498,16 +7468,6 @@ class MyProcessor: public Processor {
        this_, spec, indirectObjects, arguments);
 
     PROTECT(t, method);
-
-    if (false) {
-      compile(static_cast<MyThread*>(t),
-              local::codeAllocator(static_cast<MyThread*>(t)), 0,
-              resolveMethod(t, t->m->loader,
-                            "com/ecovate/nat/logic/Cache",
-                            "findInCache",
-                            "(Ljava/lang/String;Ljava/lang/String;JZ)Lcom/ecovate/shared/xmlrpc/Resource;"));
-      trap();
-    }
 
     compile(static_cast<MyThread*>(t),
             local::codeAllocator(static_cast<MyThread*>(t)), 0, method);
@@ -7636,9 +7596,9 @@ class MyProcessor: public Processor {
         }
 
         if (ensure(t, traceSize(target))) {
-          t->tracing = true;
+          atomicOr(&(t->flags), Thread::TracingFlag);
           trace = makeTrace(t, target);
-          t->tracing = false;
+          atomicAnd(&(t->flags), ~Thread::TracingFlag);
         }
       }
 
@@ -7650,7 +7610,7 @@ class MyProcessor: public Processor {
 
     t->m->system->visit(t->systemThread, target->systemThread, &visitor);
 
-    if (UNLIKELY(t->useBackupHeap)) {
+    if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
       PROTECT(t, visitor.trace);
 
       collect(t, Heap::MinorCollection);
@@ -7679,10 +7639,10 @@ class MyProcessor: public Processor {
     *addresses = bootContext.addresses;
   }
 
-  virtual void visitRoots(HeapWalker* w) {
-    bootImage->methodTree = w->visitRoot(methodTree);
-    bootImage->methodTreeSentinal = w->visitRoot(methodTreeSentinal);
-    bootImage->virtualThunks = w->visitRoot(virtualThunks);
+  virtual void visitRoots(Thread* t, HeapWalker* w) {
+    bootImage->methodTree = w->visitRoot(root(t, MethodTree));
+    bootImage->methodTreeSentinal = w->visitRoot(root(t, MethodTreeSentinal));
+    bootImage->virtualThunks = w->visitRoot(root(t, VirtualThunks));
   }
 
   virtual unsigned* makeCallTable(Thread* t, HeapWalker* w) {
@@ -7693,8 +7653,10 @@ class MyProcessor: public Processor {
       (t->m->heap->allocate(callTableSize * sizeof(unsigned) * 2));
 
     unsigned index = 0;
-    for (unsigned i = 0; i < arrayLength(t, callTable); ++i) {
-      for (object p = arrayBody(t, callTable, i); p; p = callNodeNext(t, p)) {
+    for (unsigned i = 0; i < arrayLength(t, root(t, CallTable)); ++i) {
+      for (object p = arrayBody(t, root(t, CallTable), i);
+           p; p = callNodeNext(t, p))
+      {
         table[index++] = callNodeAddress(t, p)
           - reinterpret_cast<uintptr_t>(codeAllocator.base);
         table[index++] = w->map()->find(callNodeTarget(t, p))
@@ -7712,14 +7674,19 @@ class MyProcessor: public Processor {
       codeAllocator.capacity = ExecutableAreaSizeInBytes;
     }
 
+    roots = makeArray(t, RootCount);
+
     if (image) {
       local::boot(static_cast<MyThread*>(t), image);
     } else {
-      callTable = makeArray(t, 128);
-
-      methodTree = methodTreeSentinal = makeTreeNode(t, 0, 0, 0);
-      set(t, methodTree, TreeNodeLeft, methodTreeSentinal);
-      set(t, methodTree, TreeNodeRight, methodTreeSentinal);
+      setRoot(t, CallTable, makeArray(t, 128));
+      
+      setRoot(t, MethodTreeSentinal, makeTreeNode(t, 0, 0, 0));
+      setRoot(t, MethodTree, root(t, MethodTreeSentinal));
+      set(t, root(t, MethodTree), TreeNodeLeft,
+          root(t, MethodTreeSentinal));
+      set(t, root(t, MethodTree), TreeNodeRight,
+          root(t, MethodTreeSentinal));
     }
 
     local::compileThunks(static_cast<MyThread*>(t), &codeAllocator, this);
@@ -7776,43 +7743,10 @@ class MyProcessor: public Processor {
       abort(t);
     }
   }
-
-  virtual void registerNative(Thread* t, object method, void* function) {
-    PROTECT(t, method);
-
-    expect(t, methodFlags(t, method) & ACC_NATIVE);
-
-    object native = makeNative(t, function, false);
-
-    // ensure other threads only see the methodCode field populated
-    // once the object it points do has been populated:
-    storeStoreMemoryBarrier();
-
-    set(t, method, MethodCode, native);
-  }
-
-  virtual void unregisterNatives(Thread* t, object c) {
-    if (classMethodTable(t, c)) {
-      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
-        object method = arrayBody(t, classMethodTable(t, c), i);
-        if (methodFlags(t, method) & ACC_NATIVE) {
-          set(t, method, MethodCode, 0);
-        }
-      }
-    }
-  }
   
   System* s;
   Allocator* allocator;
-  object callTable;
-  object methodTree;
-  object methodTreeSentinal;
-  object objectPools;
-  object staticTableArray;
-  object virtualThunks;
-  object receiveMethod;
-  object windMethod;
-  object rewindMethod;
+  object roots;
   BootImage* bootImage;
   SegFaultHandler segFaultHandler;
   FixedAllocator codeAllocator;
@@ -7883,11 +7817,10 @@ isThunkUnsafeStack(MyProcessor::ThunkCollection* thunks, void* ip)
 bool
 isVirtualThunk(MyThread* t, void* ip)
 {
-  MyProcessor* p = processor(t);
-  
-  for (unsigned i = 0; i < wordArrayLength(t, p->virtualThunks); i += 2) {
-    uintptr_t start = wordArrayBody(t, p->virtualThunks, i);
-    uintptr_t end = start + wordArrayBody(t, p->virtualThunks, i + 1);
+  for (unsigned i = 0; i < wordArrayLength(t, root(t, VirtualThunks)); i += 2)
+  {
+    uintptr_t start = wordArrayBody(t, root(t, VirtualThunks), i);
+    uintptr_t end = start + wordArrayBody(t, root(t, VirtualThunks), i + 1);
 
     if (reinterpret_cast<uintptr_t>(ip) >= start
         and reinterpret_cast<uintptr_t>(ip) < end)
@@ -7921,8 +7854,7 @@ findCallNode(MyThread* t, void* address)
   // compile(MyThread*, Allocator*, BootContext*, object)):
   loadMemoryBarrier();
 
-  MyProcessor* p = processor(t);
-  object table = p->callTable;
+  object table = root(t, CallTable);
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
   unsigned index = static_cast<uintptr_t>(key) & (arrayLength(t, table) - 1);
@@ -8002,8 +7934,8 @@ insertCallNode(MyThread* t, object table, unsigned* size, object node)
 void
 insertCallNode(MyThread* t, object node)
 {
-  MyProcessor* p = processor(t);
-  p->callTable = insertCallNode(t, p->callTable, &(p->callTableSize), node);
+  setRoot(t, CallTable, insertCallNode
+          (t, root(t, CallTable), &(processor(t)->callTableSize), node));
 }
 
 object
@@ -8022,14 +7954,19 @@ makeClassMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
 }
 
 object
-makeStaticTableArray(Thread* t, unsigned* table, unsigned count,
-                     uintptr_t* heap)
+makeStaticTableArray(Thread* t, unsigned* bootTable, unsigned bootCount,
+                     unsigned* appTable, unsigned appCount, uintptr_t* heap)
 {
-  object array = makeArray(t, count);
+  object array = makeArray(t, bootCount + appCount);
   
-  for (unsigned i = 0; i < count; ++i) {
+  for (unsigned i = 0; i < bootCount; ++i) {
     set(t, array, ArrayBody + (i * BytesPerWord),
-        classStaticTable(t, bootObject(heap, table[i])));
+        classStaticTable(t, bootObject(heap, bootTable[i])));
+  }
+
+  for (unsigned i = 0; i < appCount; ++i) {
+    set(t, array, ArrayBody + ((bootCount + i) * BytesPerWord),
+        classStaticTable(t, bootObject(heap, appTable[i])));
   }
 
   return array;
@@ -8134,9 +8071,9 @@ fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
 }
 
 void
-fixupMethods(Thread* t, BootImage* image, uint8_t* code)
+fixupMethods(Thread* t, object map, BootImage* image, uint8_t* code)
 {
-  for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
+  for (HashMapIterator it(t, map); it.hasMore();) {
     object c = tripleSecond(t, it.next());
 
     if (classMethodTable(t, c)) {
@@ -8213,12 +8150,10 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
 void
 fixupVirtualThunks(MyThread* t, BootImage* image, uint8_t* code)
 {
-  MyProcessor* p = processor(t);
-  
-  for (unsigned i = 0; i < wordArrayLength(t, p->virtualThunks); i += 2) {
-    if (wordArrayBody(t, p->virtualThunks, i)) {
-      wordArrayBody(t, p->virtualThunks, i)
-        = (wordArrayBody(t, p->virtualThunks, i) - image->codeBase)
+  for (unsigned i = 0; i < wordArrayLength(t, root(t, VirtualThunks)); i += 2) {
+    if (wordArrayBody(t, root(t, VirtualThunks), i)) {
+      wordArrayBody(t, root(t, VirtualThunks), i)
+        = (wordArrayBody(t, root(t, VirtualThunks), i) - image->codeBase)
         + reinterpret_cast<uintptr_t>(code);
     }
   }
@@ -8229,8 +8164,9 @@ boot(MyThread* t, BootImage* image)
 {
   assert(t, image->magic == BootImage::Magic);
 
-  unsigned* classTable = reinterpret_cast<unsigned*>(image + 1);
-  unsigned* stringTable = classTable + image->classCount;
+  unsigned* bootClassTable = reinterpret_cast<unsigned*>(image + 1);
+  unsigned* appClassTable = bootClassTable + image->bootClassCount;
+  unsigned* stringTable = appClassTable + image->appClassCount;
   unsigned* callTable = stringTable + image->stringCount;
 
   uintptr_t* heapMap = reinterpret_cast<uintptr_t*>
@@ -8254,39 +8190,48 @@ boot(MyThread* t, BootImage* image)
   
   t->m->heap->setImmortalHeap(heap, image->heapSize / BytesPerWord);
 
-  t->m->loader = bootObject(heap, image->loader);
+  setRoot(t, Machine::BootLoader, bootObject(heap, image->bootLoader));
+  setRoot(t, Machine::AppLoader, bootObject(heap, image->appLoader));
   t->m->types = bootObject(heap, image->types);
 
   MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
   
-  p->methodTree = bootObject(heap, image->methodTree);
-  p->methodTreeSentinal = bootObject(heap, image->methodTreeSentinal);
+  setRoot(t, MethodTree, bootObject(heap, image->methodTree));
+  setRoot(t, MethodTreeSentinal, bootObject(heap, image->methodTreeSentinal));
 
-  p->virtualThunks = bootObject(heap, image->virtualThunks);
+  setRoot(t, VirtualThunks, bootObject(heap, image->virtualThunks));
 
   fixupCode(t, codeMap, codeMapSizeInWords, code, heap);
 
   syncInstructionCache(code, image->codeSize);
 
-  t->m->classMap = makeClassMap(t, classTable, image->classCount, heap);
+  setRoot(t, Machine::ClassMap, makeClassMap
+          (t, bootClassTable, image->bootClassCount, heap));
 
-  t->m->stringMap = makeStringMap(t, stringTable, image->stringCount, heap);
+  set(t, root(t, Machine::AppLoader), ClassLoaderMap, makeClassMap
+      (t, appClassTable, image->appClassCount, heap));
+
+  setRoot(t, Machine::StringMap, makeStringMap
+          (t, stringTable, image->stringCount, heap));
 
   p->callTableSize = image->callCount;
-  p->callTable = makeCallTable
-    (t, heap, callTable, image->callCount,
-     reinterpret_cast<uintptr_t>(code));
 
-  p->staticTableArray = makeStaticTableArray
-    (t, classTable, image->classCount, heap);
+  setRoot(t, CallTable, makeCallTable
+          (t, heap, callTable, image->callCount,
+           reinterpret_cast<uintptr_t>(code)));
 
+  setRoot(t, StaticTableArray, makeStaticTableArray
+          (t, bootClassTable, image->bootClassCount,
+           appClassTable, image->appClassCount, heap));
+    
   fixupThunks(t, image, code);
 
   fixupVirtualThunks(t, image, code);
 
-  fixupMethods(t, image, code);
+  fixupMethods(t, root(t, Machine::ClassMap), image, code);
+  fixupMethods(t, classLoaderMap(t, root(t, Machine::AppLoader)), image, code);
 
-  t->m->bootstrapClassMap = makeHashMap(t, 0, 0);
+  setRoot(t, Machine::BootstrapClassMap, makeHashMap(t, 0, 0));
 }
 
 intptr_t
@@ -8539,30 +8484,6 @@ processor(MyThread* t)
   return static_cast<MyProcessor*>(t->m->processor);
 }
 
-object&
-objectPools(MyThread* t)
-{
-  return processor(t)->objectPools;
-}
-
-object&
-windMethod(MyThread* t)
-{
-  return processor(t)->windMethod;
-}
-
-object&
-rewindMethod(MyThread* t)
-{
-  return processor(t)->rewindMethod;
-}
-
-object&
-receiveMethod(MyThread* t)
-{
-  return processor(t)->receiveMethod;
-}
-
 uintptr_t
 defaultThunk(MyThread* t)
 {
@@ -8639,32 +8560,30 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 uintptr_t
 virtualThunk(MyThread* t, unsigned index)
 {
-  MyProcessor* p = processor(t);
-
-  if (p->virtualThunks == 0
-      or wordArrayLength(t, p->virtualThunks) <= index * 2)
+  if (root(t, VirtualThunks) == 0
+      or wordArrayLength(t, root(t, VirtualThunks)) <= index * 2)
   {
     object newArray = makeWordArray(t, nextPowerOfTwo((index + 1) * 2));
-    if (p->virtualThunks) {
+    if (root(t, VirtualThunks)) {
       memcpy(&wordArrayBody(t, newArray, 0),
-             &wordArrayBody(t, p->virtualThunks, 0),
-             wordArrayLength(t, p->virtualThunks) * BytesPerWord);
+             &wordArrayBody(t, root(t, VirtualThunks), 0),
+             wordArrayLength(t, root(t, VirtualThunks)) * BytesPerWord);
     }
-    p->virtualThunks = newArray;
+    setRoot(t, VirtualThunks, newArray);
   }
 
-  if (wordArrayBody(t, p->virtualThunks, index * 2) == 0) {
+  if (wordArrayBody(t, root(t, VirtualThunks), index * 2) == 0) {
     ACQUIRE(t, t->m->classLock);
 
-    if (wordArrayBody(t, p->virtualThunks, index * 2) == 0) {
+    if (wordArrayBody(t, root(t, VirtualThunks), index * 2) == 0) {
       unsigned size;
       uintptr_t thunk = compileVirtualThunk(t, index, &size);
-      wordArrayBody(t, p->virtualThunks, index * 2) = thunk;
-      wordArrayBody(t, p->virtualThunks, (index * 2) + 1) = size;
+      wordArrayBody(t, root(t, VirtualThunks), index * 2) = thunk;
+      wordArrayBody(t, root(t, VirtualThunks), (index * 2) + 1) = size;
     }
   }
 
-  return wordArrayBody(t, p->virtualThunks, index * 2);
+  return wordArrayBody(t, root(t, VirtualThunks), index * 2);
 }
 
 void
@@ -8717,10 +8636,12 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
          methodCode(t, method),
          reinterpret_cast<intptr_t>(compiled));
 
-      methodTree(t) = treeInsert
-        (t, &(context.zone), methodTree(t),
-         reinterpret_cast<intptr_t>(compiled), clone, methodTreeSentinal(t),
-         compareIpToMethodBounds);
+      setRoot
+        (t, MethodTree, treeInsert
+         (t, &(context.zone), root(t, MethodTree),
+          reinterpret_cast<intptr_t>(compiled), clone,
+          root(t, MethodTreeSentinal),
+          compareIpToMethodBounds));
 
       storeStoreMemoryBarrier();
 
@@ -8731,22 +8652,23 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
           = compiled;
       }
 
-      treeUpdate(t, methodTree(t), reinterpret_cast<intptr_t>(compiled),
-                 method, methodTreeSentinal(t), compareIpToMethodBounds);
+      treeUpdate(t, root(t, MethodTree), reinterpret_cast<intptr_t>(compiled),
+                 method, root(t, MethodTreeSentinal), compareIpToMethodBounds);
     }
   }
 }
 
 object&
-methodTree(MyThread* t)
+root(Thread* t, Root root)
 {
-  return processor(t)->methodTree;
+  return arrayBody(t, processor(static_cast<MyThread*>(t))->roots, root);
 }
 
-object
-methodTreeSentinal(MyThread* t)
+void
+setRoot(Thread* t, Root root, object value)
 {
-  return processor(t)->methodTreeSentinal;
+  set(t, processor(static_cast<MyThread*>(t))->roots,
+      ArrayBody + (root * BytesPerWord), value);
 }
 
 FixedAllocator*

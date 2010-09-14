@@ -128,7 +128,7 @@ class Processor {
                 DelayedPromise** addresses, object method) = 0;
 
   virtual void
-  visitRoots(HeapWalker* w) = 0;
+  visitRoots(Thread* t, HeapWalker* w) = 0;
 
   virtual unsigned*
   makeCallTable(Thread* t, HeapWalker* w) = 0;
@@ -152,10 +152,6 @@ class Processor {
   virtual void
   walkContinuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
   = 0;
-
-  virtual void registerNative(Thread* t, object method, void* function) = 0;
-
-  virtual void unregisterNatives(Thread* t, object c) = 0;
 
   object
   invoke(Thread* t, object method, object this_, ...)

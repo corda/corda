@@ -104,14 +104,15 @@ public class Classes {
       byte[] name = (byte[]) Singleton.getObject(pool, read2(in) - 1);
 
       return Enum.valueOf
-        (getClass(loadVMClass(loader, typeName, 1, typeName.length - 3)),
+        (SystemClassLoader.getClass
+         (loadVMClass(loader, typeName, 1, typeName.length - 3)),
          new String(name, 0, name.length - 1, false));
     }
 
     case 'c':{
       byte[] name = (byte[]) Singleton.getObject(pool, read2(in) - 1);
 
-      return getClass(loadVMClass(loader, name, 1, name.length - 3));
+      return SystemClassLoader.getClass(loadVMClass(loader, name, 1, name.length - 3));
     }
 
     case '@':
@@ -136,7 +137,7 @@ public class Classes {
   {
     byte[] typeName = (byte[]) Singleton.getObject(pool, read2(in) - 1);
     Object[] annotation = new Object[(read2(in) + 1) * 2];
-    annotation[1] = getClass
+    annotation[1] = SystemClassLoader.getClass
       (loadVMClass(loader, typeName, 1, typeName.length - 3));
 
     for (int i = 2; i < annotation.length; i += 2) {
