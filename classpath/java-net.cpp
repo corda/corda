@@ -29,6 +29,8 @@ Java_java_net_Socket_init(JNIEnv* ONLY_ON_WINDOWS(e), jclass)
     int r = WSAStartup(MAKEWORD(2, 2), &data);
     if (r or LOBYTE(data.wVersion) != 2 or HIBYTE(data.wVersion) != 2) {
       throwNew(e, "java/io/IOException", "WSAStartup failed");
+    } else {
+      wsaInitialized = true;
     }
   }
 #endif
