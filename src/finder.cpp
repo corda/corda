@@ -16,6 +16,8 @@ using namespace vm;
 
 namespace {
 
+const bool DebugFind = false;
+
 const char*
 append(System* s, const char* a, const char* b,
        const char* c)
@@ -141,6 +143,9 @@ class DirectoryElement: public Element {
     s->free(file);
 
     if (s->success(status)) {
+      if (DebugFind) {
+        fprintf(stderr, "found %s in %s\n", name, this->name);
+      }
       return region;
     } else {
       return 0;
@@ -487,7 +492,11 @@ class JarElement: public Element {
 
     while (*name == '/') name++;
 
-    return (index ? index->find(name, region->start()) : 0);
+    System::Region* r = (index ? index->find(name, region->start()) : 0);
+    if (DebugFind and r) {
+      fprintf(stderr, "found %s in %s\n", name, this->name);
+    }
+    return r;
   }
 
   virtual bool exists(const char* name)  {
