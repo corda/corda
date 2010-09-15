@@ -1789,7 +1789,12 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_)
     if (elementClass == 0) return 0;
   }
 
-  return makeArrayClass(t, loader, dimensions, spec, elementClass);
+  object class_ = hashMapFind
+    (t, getClassLoaderMap(t, classLoader(t, elementClass)), spec,
+     byteArrayHash, byteArrayEqual);
+
+  return class_ ? class_ : makeArrayClass
+    (t, classLoader(t, elementClass), dimensions, spec, elementClass);
 }
 
 object
@@ -2281,14 +2286,18 @@ Thread::init()
   if (parent == 0) {
     enter(this, Thread::ActiveState);
 
+    if (exception == 0) {
+      setRoot(this, Machine::NullPointerException, m->classpath->makeThrowable
+              (this, Machine::NullPointerExceptionType));
+      
+      if (exception == 0) {
+        setRoot(this, Machine::ArrayIndexOutOfBoundsException,
+                m->classpath->makeThrowable
+                (this, Machine::IndexOutOfBoundsExceptionType));
+      }
+    }
+
     m->classpath->boot(this);
-
-    setRoot(this, Machine::NullPointerException, m->classpath->makeThrowable
-            (this, Machine::NullPointerExceptionType));
-
-    setRoot(this, Machine::ArrayIndexOutOfBoundsException,
-            m->classpath->makeThrowable
-            (this, Machine::IndexOutOfBoundsExceptionType));
 
     enter(this, Thread::IdleState);
   }
@@ -2441,7 +2450,7 @@ enter(Thread* t, Thread::State s)
     // todo: this won't always help if some other thread sets the
     // daemon field.  The thread trying to shut down the VM really
     // just needs to count from scratch every time any thread makes a
-    // transition.
+    // transition (i.e. eliminate Machine::daemonCount).
 
     if (UNLIKELY(((t->flags & Thread::DaemonFlag) != 0)
                  != threadDaemon(t, t->javaThread)))

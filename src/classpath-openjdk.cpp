@@ -251,6 +251,22 @@ class MyClasspath : public Classpath {
     t->m->processor->invoke
       (t, constructor, root(t, Machine::AppLoader),
        root(t, Machine::BootLoader));
+    if (UNLIKELY(t->exception)) return;
+
+    object scl = resolveField
+      (t, type(t, Machine::ClassLoaderType), "scl", "Ljava/lang/ClassLoader;");
+    if (UNLIKELY(t->exception)) return;
+    PROTECT(t, scl);
+
+    object sclSet = resolveField
+      (t, type(t, Machine::ClassLoaderType), "sclSet", "Z");
+    if (UNLIKELY(t->exception)) return;
+
+    set(t, classStaticTable(t, type(t, Machine::ClassLoaderType)),
+        fieldOffset(t, scl), root(t, Machine::AppLoader));
+
+    cast<uint8_t>(classStaticTable(t, type(t, Machine::ClassLoaderType)),
+                  fieldOffset(t, sclSet)) = true;
   }
 
   virtual void
@@ -594,6 +610,38 @@ Avian_sun_misc_Unsafe_staticFieldOffset
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_arrayBaseOffset
+(Thread*, object, uintptr_t*)
+{
+  return BytesPerWord * 2;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_arrayIndexScale
+(Thread* t, object, uintptr_t* arguments)
+{
+  object c = jclassVmClass(t, reinterpret_cast<object>(arguments[1]));
+
+  if (classVmFlags(t, c) & PrimitiveFlag) {
+    const char* name = reinterpret_cast<char*>
+      (&byteArrayBody(t, local::getClassName(t, c), 0));
+
+    switch (*name) {
+    case 'b': return 1;
+    case 's':
+    case 'c': return 2;
+    case 'l':
+    case 'd': return 8;
+    case 'i':
+    case 'f': return 4;
+    default: abort(t);
+    }
+  } else {
+    return BytesPerWord;
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_staticFieldBase
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -643,6 +691,18 @@ Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
   return cast<int32_t>(o, offset);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getIntVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  int32_t result = cast<int32_t>(o, offset);
+  loadMemoryBarrier();
+  return result;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -1026,13 +1086,22 @@ extern "C" JNIEXPORT void JNICALL
 JVM_TraceMethodCalls(jboolean) { abort(); }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_TotalMemory(void) { abort(); }
+JVM_TotalMemory()
+{
+  return 0;
+}
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_FreeMemory(void) { abort(); }
+JVM_FreeMemory()
+{
+  return 0;
+}
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_MaxMemory(void) { abort(); }
+JVM_MaxMemory()
+{
+  return 0;
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_ActiveProcessorCount(void) { abort(); }
@@ -1182,7 +1251,15 @@ extern "C" JNIEXPORT jint JNICALL
 JVM_CountStackFrames(Thread*, jobject) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Interrupt(Thread*, jobject) { abort(); }
+JVM_Interrupt(Thread* t, jobject thread)
+{
+  ENTER(t, Thread::ActiveState);
+
+  Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *thread));
+  if (p) {
+    interrupt(t, p);
+  }
+}
 
 extern "C" JNIEXPORT jboolean JNICALL
 JVM_IsInterrupted(Thread* t, jobject thread, jboolean clear)
@@ -1246,7 +1323,10 @@ extern "C" JNIEXPORT jint JNICALL
 JVM_ClassLoaderDepth(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jstring JNICALL
-JVM_GetSystemPackage(Thread*, jstring) { abort(); }
+JVM_GetSystemPackage(Thread*, jstring)
+{
+  return 0;
+}
 
 extern "C" JNIEXPORT jobjectArray JNICALL
 JVM_GetSystemPackages(Thread*) { abort(); }
@@ -1434,13 +1514,23 @@ JVM_FindLoadedClass(Thread* t, jobject loader, jstring name)
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_DefineClass(Thread*, const char*, jobject, const jbyte*,
-                jsize, jobject) { abort(); }
+JVM_DefineClass(Thread* t, const char*, jobject loader, const uint8_t* data,
+                jsize length, jobject)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object c = defineClass(t, *loader, data, length);
+
+  return c ? makeLocalReference(t, getJClass(t, c)) : 0;
+}
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_DefineClassWithSource(Thread*, const char*, jobject,
-                          const jbyte*, jsize, jobject,
-                          const char*) { abort(); }
+JVM_DefineClassWithSource(Thread* t, const char*, jobject loader,
+                          const uint8_t* data, jsize length, jobject,
+                          const char*)
+{
+  return JVM_DefineClass(t, 0, loader, data, length, 0);
+}
 
 extern "C" JNIEXPORT jstring JNICALL
 JVM_GetClassName(Thread* t, jclass c)
@@ -1501,7 +1591,20 @@ extern "C" JNIEXPORT void JNICALL
 JVM_SetClassSigners(Thread*, jclass, jobjectArray) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetProtectionDomain(Thread*, jclass) { abort(); }
+JVM_GetProtectionDomain(Thread* t, jclass)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object openJDK = resolveClass
+    (t, root(t, Machine::BootLoader), "avian/OpenJDK");
+  if (UNLIKELY(t->exception)) return 0;
+
+  object method = resolveMethod
+    (t, openJDK, "getProtectionDomain", "()Ljava/security/ProtectionDomain;");
+  if (UNLIKELY(t->exception)) return 0;
+
+  return makeLocalReference(t, t->m->processor->invoke(t, method, 0));
+}
 
 extern "C" JNIEXPORT void JNICALL
 JVM_SetProtectionDomain(Thread*, jclass, jobject) { abort(); }
@@ -1625,10 +1728,6 @@ JVM_GetClassDeclaredMethods(Thread* t, jclass c, jboolean publicOnly)
           ? 0 : addendumAnnotationTable(t, methodAddendum(t, vmMethod));
 
         if (annotationTable) {
-          fprintf(stderr, "method %s.%s has annotations\n",
-                  &byteArrayBody(t, className(t, jclassVmClass(t, *c)), 0),
-                  &byteArrayBody(t, methodName(t, vmMethod), 0));
-
           set(t, classAddendum(t, jclassVmClass(t, *c)), AddendumPool,
               addendumPool(t, methodAddendum(t, vmMethod)));
         }
@@ -1808,6 +1907,10 @@ JVM_InvokeMethod(Thread* t, jobject method, jobject instance,
     (t, classMethodTable
      (t, jclassVmClass(t, jmethodClazz(t, *method))),
       jmethodSlot(t, *method));
+
+  if (methodFlags(t, vmMethod) & ACC_STATIC) {
+    instance = 0;
+  }
 
   object result;
   if (arguments) {
@@ -2191,7 +2294,10 @@ extern "C" JNIEXPORT jint JNICALL
 JVM_SetLength(jint, jlong) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Sync(jint) { abort(); }
+JVM_Sync(jint fd)
+{
+  return fsync(fd);
+}
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_InitializeSocketLibrary()

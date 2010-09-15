@@ -444,6 +444,11 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
 		$(classpath-src)/avian/resource/Handler.java
+
+	ifdef openjdk
+		classpath-sources := $(classpath-sources) \
+			$(classpath-src)/avian/OpenJDK.java
+	endif
 else
 	classpath-sources := $(shell find $(classpath-src) -name '*.java')
 endif
