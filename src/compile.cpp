@@ -2625,7 +2625,7 @@ throw_(MyThread* t, object o)
       (t, Machine::NullPointerExceptionType);
   }
 
-  printTrace(t, t->exception);
+//   printTrace(t, t->exception);
 
   unwind(t);
 }
@@ -7187,7 +7187,7 @@ class SegFaultHandler: public System::SignalHandler {
           t->exception = root(t, Machine::NullPointerException);
         }
 
-        printTrace(t, t->exception);
+//         printTrace(t, t->exception);
 
         object continuation;
         findUnwindTarget(t, ip, base, stack, &continuation);
