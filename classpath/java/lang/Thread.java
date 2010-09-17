@@ -15,7 +15,7 @@ import java.util.WeakHashMap;
 
 public class Thread implements Runnable {
   private long peer;
-  private boolean interrupted;
+  private volatile boolean interrupted;
   private boolean daemon;
   private byte state;
   private byte priority;
@@ -141,25 +141,9 @@ public class Thread implements Runnable {
 
   public static native Thread currentThread();
 
-  private static native void interrupt(long peer);
+  public native void interrupt();
 
-  public synchronized void interrupt() {
-    if (peer != 0) {
-      interrupt(peer);
-    } else {
-      interrupted = true;
-    }
-  }
-
-  public static boolean interrupted() {
-    Thread t = currentThread();
-    
-    synchronized (t) {
-      boolean v = t.interrupted;
-      t.interrupted = false;
-      return v;
-    }
-  }
+  public native boolean interrupted();
 
   public static boolean isInterrupted() {
     return currentThread().interrupted;

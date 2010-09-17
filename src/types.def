@@ -26,8 +26,7 @@
 
 (type field avian/VMField)
 
-(type method avian/VMMethod
-  (intptr_t compiled))
+(type method avian/VMMethod)
 
 (type addendum avian/Addendum)
 
@@ -64,6 +63,7 @@
   (object pool)
   (object exceptionHandlerTable)
   (object lineNumberTable)
+  (intptr_t compiled)
   (uint16_t maxStack)
   (uint16_t maxLocals)
   (array uint8_t body))
@@ -163,6 +163,7 @@
 
 (type thread java/lang/Thread
   (require object sleepLock)
+  (require object interruptLock)
   (require uint8_t interrupted)
   (alias peer uint64_t eetop))
 

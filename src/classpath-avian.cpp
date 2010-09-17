@@ -50,7 +50,7 @@ class MyClasspath : public Classpath {
 
     return vm::makeThread
       (t, 0, 0, 0, NewState, NormalPriority, 0, 0, 0,
-       root(t, Machine::BootLoader), 0, 0, group);
+       root(t, Machine::BootLoader), 0, 0, group, 0);
   }
 
   virtual void
@@ -70,6 +70,7 @@ class MyClasspath : public Classpath {
   (Thread* t, Machine::Type type, object message, object trace, object cause)
   {
     PROTECT(t, message);
+    PROTECT(t, trace);
     PROTECT(t, cause);
     
     if (trace == 0) {

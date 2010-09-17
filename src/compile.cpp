@@ -328,6 +328,12 @@ compiledSize(intptr_t address)
 }
 
 intptr_t
+methodCompiled(Thread* t, object method)
+{
+  return codeCompiled(t, methodCode(t, method));
+}
+
+intptr_t
 compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
 {
   intptr_t start = methodCompiled(t, method);
@@ -2619,7 +2625,7 @@ throw_(MyThread* t, object o)
       (t, Machine::NullPointerExceptionType);
   }
 
-//   printTrace(t, t->exception);
+  printTrace(t, t->exception);
 
   unwind(t);
 }
@@ -2659,6 +2665,8 @@ makeNew64(Thread* t, object class_)
 void
 gcIfNecessary(MyThread* t)
 {
+  stress(t);
+
   if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
     collect(t, Heap::MinorCollection);
   }
@@ -3219,6 +3227,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
+        frame->trace(0, 0);
       }
 
       if (CheckArrayBounds) {
@@ -3311,6 +3320,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
+        frame->trace(0, 0);
       }
 
       if (CheckArrayBounds) {
@@ -3741,6 +3751,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         if (inTryBlock(t, code, ip - 3)) {
           c->saveLocals();
+          frame->trace(0, 0);
         }
       }
 
@@ -4709,6 +4720,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         if (inTryBlock(t, code, ip - 3)) {
           c->saveLocals();
+          frame->trace(0, 0);
         }
       }
 
@@ -5006,7 +5018,7 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
   }
 }
 
-void
+object
 translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
                                intptr_t start)
 {
@@ -5043,7 +5055,7 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
       if (exceptionHandlerCatchType(oldHandler)) {
         type = resolveClassInPool
           (t, method, exceptionHandlerCatchType(oldHandler) - 1);
-        if (UNLIKELY(t->exception)) return;
+        if (UNLIKELY(t->exception)) return 0;
       } else {
         type = 0;
       }
@@ -5051,11 +5063,13 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
       set(t, newTable, ArrayBody + ((i + 1) * BytesPerWord), type);
     }
 
-    set(t, methodCode(t, method), CodeExceptionHandlerTable, newTable);
+    return newTable;
+  } else {
+    return 0;
   }
 }
 
-void
+object
 translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
 {
   object oldTable = codeLineNumberTable(t, code);
@@ -5075,7 +5089,9 @@ translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
       lineNumberLine(newLine) = lineNumberLine(oldLine);
     }
 
-    set(t, code, CodeLineNumberTable, newTable);
+    return newTable;
+  } else {
+    return 0;
   }
 }
 
@@ -5527,23 +5543,23 @@ compareSubroutineTracePointers(const void* va, const void* vb)
 
 object
 makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
-                         TraceElement** elements, unsigned pathFootprint,
-                         unsigned mapCount)
+                         TraceElement** elements, unsigned elementCount,
+                         unsigned pathFootprint, unsigned mapCount)
 {
   unsigned mapSize = frameMapSizeInBits(t, context->method);
   unsigned indexOffset = sizeof(FrameMapTableHeader);
   unsigned mapsOffset = indexOffset
-    + (context->traceLogCount * sizeof(FrameMapTableIndexElement));
+    + (elementCount * sizeof(FrameMapTableIndexElement));
   unsigned pathsOffset = mapsOffset + (ceiling(mapCount * mapSize, 32) * 4);
 
   object table = makeByteArray(t, pathsOffset + pathFootprint);
   
   int8_t* body = &byteArrayBody(t, table, 0);
-  new (body) FrameMapTableHeader(context->traceLogCount);
+  new (body) FrameMapTableHeader(elementCount);
  
   unsigned nextTableIndex = pathsOffset;
   unsigned nextMapIndex = 0;
-  for (unsigned i = 0; i < context->traceLogCount; ++i) {
+  for (unsigned i = 0; i < elementCount; ++i) {
     TraceElement* p = elements[i];
     unsigned mapBase = nextMapIndex;
 
@@ -5645,27 +5661,26 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 
 object
 makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start, 
-                        TraceElement** elements)
+                        TraceElement** elements, unsigned elementCount)
 {
   unsigned mapSize = frameMapSizeInBits(t, context->method);
   object table = makeIntArray
-    (t, context->traceLogCount
-     + ceiling(context->traceLogCount * mapSize, 32));
+    (t, elementCount + ceiling(elementCount * mapSize, 32));
 
-  assert(t, intArrayLength(t, table) == context->traceLogCount
+  assert(t, intArrayLength(t, table) == elementCount
          + simpleFrameMapTableSize(t, context->method, table));
 
-  for (unsigned i = 0; i < context->traceLogCount; ++i) {
+  for (unsigned i = 0; i < elementCount; ++i) {
     TraceElement* p = elements[i];
 
     intArrayBody(t, table, i) = static_cast<intptr_t>(p->address->value())
       - reinterpret_cast<intptr_t>(start);
 
-    assert(t, context->traceLogCount + ceiling((i + 1) * mapSize, 32)
+    assert(t, elementCount + ceiling((i + 1) * mapSize, 32)
            <= intArrayLength(t, table));
 
     if (mapSize) {
-      copyFrameMap(&intArrayBody(t, table, context->traceLogCount), p->map,
+      copyFrameMap(&intArrayBody(t, table, elementCount), p->map,
                    mapSize, i * mapSize, p, 0);
     }
   }
@@ -5673,7 +5688,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
   return table;
 }
 
-uint8_t*
+void
 finish(MyThread* t, Allocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
@@ -5703,7 +5718,13 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     trap();
   }
 
+  // todo: this is a CPU-intensive operation, so consider doing it
+  // earlier before we've acquired the global class lock to improve
+  // parallelism (the downside being that it may end up being a waste
+  // of cycles if another thread compiles the same method in parallel,
+  // which might be mitigated by fine-grained, per-method locking):
   unsigned codeSize = c->compile();
+
   uintptr_t* code = static_cast<uintptr_t*>
     (allocator->allocate(pad(codeSize) + pad(c->poolSize()) + BytesPerWord));
   code[0] = codeSize;
@@ -5744,21 +5765,20 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     }
   }
 
-  translateExceptionHandlerTable
+  object newExceptionHandlerTable = translateExceptionHandlerTable
     (t, c, context->method, reinterpret_cast<intptr_t>(start));
-  if (UNLIKELY(t->exception)) return 0;
+  if (UNLIKELY(t->exception)) return;
+  PROTECT(t, newExceptionHandlerTable);
 
-  translateLineNumberTable(t, c, methodCode(t, context->method),
-                           reinterpret_cast<intptr_t>(start));
+  object newLineNumberTable = translateLineNumberTable
+    (t, c, methodCode(t, context->method), reinterpret_cast<intptr_t>(start));
 
   { object code = methodCode(t, context->method);
 
-    code = makeCode(t, 0,
-                    codeExceptionHandlerTable(t, code),
-                    codeLineNumberTable(t, code),
-                    codeMaxStack(t, code),
-                    codeMaxLocals(t, code),
-                    0);
+    code = makeCode
+      (t, 0, newExceptionHandlerTable, newLineNumberTable,
+       reinterpret_cast<uintptr_t>(start), codeMaxStack(t, code),
+       codeMaxLocals(t, code), 0);
 
     set(t, context->method, MethodCode, code);
   }
@@ -5771,44 +5791,46 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     for (TraceElement* p = context->traceLog; p; p = p->next) {
       assert(t, index < context->traceLogCount);
 
-      SubroutineTrace* trace = p->subroutineTrace;
-      unsigned myMapCount = 1;
-      if (trace) {
-        for (Subroutine* s = trace->path->call->subroutine;
-             s; s = s->stackNext)
-        {
-          unsigned callCount = s->callCount;
-          myMapCount *= callCount;
-          if (not s->visited) {
-            s->visited = true;
-            pathFootprint += sizeof(FrameMapTablePath)
-              + (sizeof(int32_t) * callCount);
+      if (p->address) {
+        SubroutineTrace* trace = p->subroutineTrace;
+        unsigned myMapCount = 1;
+        if (trace) {
+          for (Subroutine* s = trace->path->call->subroutine;
+               s; s = s->stackNext)
+          {
+            unsigned callCount = s->callCount;
+            myMapCount *= callCount;
+            if (not s->visited) {
+              s->visited = true;
+              pathFootprint += sizeof(FrameMapTablePath)
+                + (sizeof(int32_t) * callCount);
+            }
           }
         }
-      }
       
-      mapCount += myMapCount;
+        mapCount += myMapCount;
 
-      RUNTIME_ARRAY_BODY(elements)[index++] = p;
+        RUNTIME_ARRAY_BODY(elements)[index++] = p;
 
-      if (p->target) {
-        insertCallNode
-          (t, makeCallNode
-           (t, p->address->value(), p->target, p->flags, 0));
+        if (p->target) {
+          insertCallNode
+            (t, makeCallNode
+             (t, p->address->value(), p->target, p->flags, 0));
+        }
       }
     }
 
-    qsort(RUNTIME_ARRAY_BODY(elements), context->traceLogCount,
+    qsort(RUNTIME_ARRAY_BODY(elements), index,
           sizeof(TraceElement*), compareTraceElementPointers);
 
     object map;
     if (pathFootprint) {
       map = makeGeneralFrameMapTable
-        (t, context, start, RUNTIME_ARRAY_BODY(elements), pathFootprint,
+        (t, context, start, RUNTIME_ARRAY_BODY(elements), index, pathFootprint,
          mapCount);
     } else {
       map = makeSimpleFrameMapTable
-        (t, context, start, RUNTIME_ARRAY_BODY(elements));
+        (t, context, start, RUNTIME_ARRAY_BODY(elements), index);
     }
 
     set(t, methodCode(t, context->method), CodePool, map);
@@ -5838,12 +5860,10 @@ finish(MyThread* t, Allocator* allocator, Context* context)
   }
 
   syncInstructionCache(start, codeSize);
-
-  return start;
 }
 
-uint8_t*
-compile(MyThread* t, Allocator* allocator, Context* context)
+void
+compile(MyThread* t, Context* context)
 {
   Compiler* c = context->compiler;
 
@@ -5908,7 +5928,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
   Compiler::State* state = c->saveState();
 
   compile(t, &frame, 0);
-  if (UNLIKELY(t->exception)) return 0;
+  if (UNLIKELY(t->exception)) return;
 
   context->dirtyRoots = false;
   unsigned eventIndex = calculateFrameMaps(t, context, 0, 0);
@@ -5961,7 +5981,7 @@ compile(MyThread* t, Allocator* allocator, Context* context)
           }
 
           compile(t, &frame2, exceptionHandlerIp(eh), start);
-          if (UNLIKELY(t->exception)) return 0;
+          if (UNLIKELY(t->exception)) return;
 
           context->eventLog.append(PopContextEvent);
 
@@ -5977,8 +5997,6 @@ compile(MyThread* t, Allocator* allocator, Context* context)
     context->dirtyRoots = false;
     calculateFrameMaps(t, context, 0, 0);
   }
-
-  return finish(t, allocator, context);
 }
 
 void
@@ -7169,7 +7187,7 @@ class SegFaultHandler: public System::SignalHandler {
           t->exception = root(t, Machine::NullPointerException);
         }
 
-//         printTrace(t, t->exception);
+        printTrace(t, t->exception);
 
         object continuation;
         findUnwindTarget(t, ip, base, stack, &continuation);
@@ -7283,10 +7301,13 @@ class MyProcessor: public Processor {
              object class_,
              object code)
   {
+    if (code) {
+      codeCompiled(t, code) = local::defaultThunk(static_cast<MyThread*>(t));
+    }
+
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, 0, name, spec, addendum, class_, code,
-       local::defaultThunk(static_cast<MyThread*>(t)));
+       offset, 0, name, spec, addendum, class_, code);
   }
 
   virtual object
@@ -8083,7 +8104,7 @@ fixupMethods(Thread* t, object map, BootImage* image, uint8_t* code)
           assert(t, (methodCompiled(t, method) - image->codeBase)
                  <= image->codeSize);
 
-          methodCompiled(t, method)
+          codeCompiled(t, methodCode(t, method))
             = (methodCompiled(t, method) - image->codeBase)
             + reinterpret_cast<uintptr_t>(code);
 
@@ -8597,65 +8618,86 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
     if (UNLIKELY(t->exception)) return;
   }
 
-  if (methodAddress(t, method) == defaultThunk(t)) {
-    ACQUIRE(t, t->m->classLock);
-    
-    if (methodAddress(t, method) == defaultThunk(t)) {
-      assert(t, (methodFlags(t, method) & ACC_NATIVE) == 0);
-
-      Context context(t, bootContext, method);
-      uint8_t* compiled = compile(t, allocator, &context);
-      if (UNLIKELY(t->exception)) return;
-
-      if (DebugMethodTree) {
-        fprintf(stderr, "insert method at %p\n", compiled);
-      }
-
-      // We can't set the MethodCompiled field on the original method
-      // before it is placed into the method tree, since another
-      // thread might call the method, from which stack unwinding
-      // would fail (since there is not yet an entry in the method
-      // tree).  However, we can't insert the original method into the
-      // tree before setting the MethodCompiled field on it since we
-      // rely on that field to determine its position in the tree.
-      // Therefore, we insert a clone in its place.  Later, we'll
-      // replace the clone with the original to save memory.
-
-      object clone = makeMethod
-        (t, methodVmFlags(t, method),
-         methodReturnCode(t, method),
-         methodParameterCount(t, method),
-         methodParameterFootprint(t, method),
-         methodFlags(t, method),
-         methodOffset(t, method),
-         methodNativeID(t, method),
-         methodName(t, method),
-         methodSpec(t, method),
-         methodAddendum(t, method),
-         methodClass(t, method),
-         methodCode(t, method),
-         reinterpret_cast<intptr_t>(compiled));
-
-      setRoot
-        (t, MethodTree, treeInsert
-         (t, &(context.zone), root(t, MethodTree),
-          reinterpret_cast<intptr_t>(compiled), clone,
-          root(t, MethodTreeSentinal),
-          compareIpToMethodBounds));
-
-      storeStoreMemoryBarrier();
-
-      methodCompiled(t, method) = reinterpret_cast<intptr_t>(compiled);
-
-      if (methodVirtual(t, method)) {
-        classVtable(t, methodClass(t, method), methodOffset(t, method))
-          = compiled;
-      }
-
-      treeUpdate(t, root(t, MethodTree), reinterpret_cast<intptr_t>(compiled),
-                 method, root(t, MethodTreeSentinal), compareIpToMethodBounds);
-    }
+  if (methodAddress(t, method) != defaultThunk(t)) {
+    return;
   }
+
+  assert(t, (methodFlags(t, method) & ACC_NATIVE) == 0);
+
+  // We must avoid acquiring any locks until after the first pass of
+  // compilation, since this pass may trigger classloading operations
+  // involving application classloaders and thus the potential for
+  // deadlock.  To make this safe, we use a private clone of the
+  // method so that we won't be confused if another thread updates the
+  // original while we're working.
+
+  object clone = makeMethod
+    (t, methodVmFlags(t, method),
+     methodReturnCode(t, method),
+     methodParameterCount(t, method),
+     methodParameterFootprint(t, method),
+     methodFlags(t, method),
+     methodOffset(t, method),
+     methodNativeID(t, method),
+     methodName(t, method),
+     methodSpec(t, method),
+     methodAddendum(t, method),
+     methodClass(t, method),
+     methodCode(t, method));
+
+  loadMemoryBarrier();
+
+  if (methodAddress(t, method) != defaultThunk(t)) {
+    return;
+  }
+
+  PROTECT(t, clone);
+
+  Context context(t, bootContext, clone);
+  compile(t, &context);
+  if (UNLIKELY(t->exception)) return;
+
+  ACQUIRE(t, t->m->classLock);
+
+  if (methodAddress(t, method) != defaultThunk(t)) {
+    return;
+  }
+
+  finish(t, allocator, &context);
+  if (UNLIKELY(t->exception)) return;
+ 
+  if (DebugMethodTree) {
+    fprintf(stderr, "insert method at %p\n",
+            reinterpret_cast<void*>(methodCompiled(t, clone)));
+  }
+
+  // We can't update the MethodCode field on the original method
+  // before it is placed into the method tree, since another thread
+  // might call the method, from which stack unwinding would fail
+  // (since there is not yet an entry in the method tree).  However,
+  // we can't insert the original method into the tree before updating
+  // the MethodCode field on it since we rely on that field to
+  // determine its position in the tree.  Therefore, we insert the
+  // clone in its place.  Later, we'll replace the clone with the
+  // original to save memory.
+
+  setRoot
+    (t, MethodTree, treeInsert
+     (t, &(context.zone), root(t, MethodTree),
+      methodCompiled(t, clone), clone, root(t, MethodTreeSentinal),
+      compareIpToMethodBounds));
+
+  storeStoreMemoryBarrier();
+
+  set(t, method, MethodCode, methodCode(t, clone));
+
+  if (methodVirtual(t, method)) {
+    classVtable(t, methodClass(t, method), methodOffset(t, method))
+      = reinterpret_cast<void*>(methodCompiled(t, clone));
+  }
+
+  treeUpdate(t, root(t, MethodTree), methodCompiled(t, clone),
+             method, root(t, MethodTreeSentinal), compareIpToMethodBounds);
 }
 
 object&

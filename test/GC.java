@@ -1,4 +1,14 @@
 public class GC {
+  private static final Integer cache[] = new Integer[100];
+  private static final Integer MAX_INT_OBJ = new Integer(Integer.MAX_VALUE);
+
+  private static Integer valueOf(int i) {
+    try {
+      return cache[i];
+    } catch (ArrayIndexOutOfBoundsException e) {
+      return (i == Integer.MAX_VALUE) ? MAX_INT_OBJ : new Integer(i);
+    }
+  }
 
   private static void small() {
     for (int i = 0; i < 1024; ++i) {
@@ -145,6 +155,8 @@ public class GC {
   }
 
   public static void main(String[] args) {
+    valueOf(1000);
+
     Object[] array = new Object[1024 * 1024];
     array[0] = new Object();
 

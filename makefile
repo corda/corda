@@ -340,10 +340,6 @@ vm-sources = \
 vm-asm-sources = $(src)/$(asm).S
 
 ifeq ($(process),compile)
-	vm-depends += \
-		$(src)/compiler.h \
-		$(src)/vector.h
-
 	vm-sources += \
 		$(src)/compiler.cpp \
 		$(src)/$(asm).cpp

@@ -30,6 +30,9 @@
 
 #define ACQUIRE(t, x) MonitorResource MAKE_NAME(monitorResource_) (t, x)
 
+#define ACQUIRE_OBJECT(t, x) \
+  ObjectMonitorResource MAKE_NAME(monitorResource_) (t, x)
+
 #define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
 #define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
@@ -1507,20 +1510,19 @@ shutDown(Thread* t);
 inline void
 stress(Thread* t)
 {
-  if ((not t->stress)
-      and (not t->tracing)
+  if ((t->flags & (Thread::StressFlag | Thread::TracingFlag)) == 0
       and t->state != Thread::NoState
       and t->state != Thread::IdleState)
   {
-    t->stress = true;
+    atomicOr(&(t->flags), Thread::StressFlag);
 
 #  ifdef VM_STRESS_MAJOR
-      collect(t, Heap::MajorCollection);
+    collect(t, Heap::MajorCollection);
 #  else // not VM_STRESS_MAJOR
-      collect(t, Heap::MinorCollection);
+    collect(t, Heap::MinorCollection);
 #  endif // not VM_STRESS_MAJOR
 
-    t->stress = false;
+    atomicAnd(&(t->flags), ~Thread::StressFlag);
   }
 }
 
@@ -2607,6 +2609,21 @@ monitorNotifyAll(Thread* t, object monitor)
   while (monitorNotify(t, monitor)) { }
 }
 
+class ObjectMonitorResource {
+ public:
+  ObjectMonitorResource(Thread* t, object o): o(o), protector(t, &(this->o)) {
+    monitorAcquire(protector.t, o);
+  }
+
+  ~ObjectMonitorResource() {
+    monitorRelease(protector.t, o);
+  }
+
+ private:
+  object o;
+  Thread::SingleProtector protector;
+};
+
 object
 objectMonitor(Thread* t, object o, bool createNew);
 
@@ -2621,8 +2638,7 @@ acquire(Thread* t, object o)
   object m = objectMonitor(t, o, true);
 
   if (DebugMonitors) {
-    fprintf(stderr, "thread %p acquires %p for %x\n",
-            t, m, hash);
+    fprintf(stderr, "thread %p acquires %p for %x\n", t, m, hash);
   }
 
   monitorAcquire(t, m);
@@ -2639,8 +2655,7 @@ release(Thread* t, object o)
   object m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
-    fprintf(stderr, "thread %p releases %p for %x\n",
-            t, m, hash);
+    fprintf(stderr, "thread %p releases %p for %x\n", t, m, hash);
   }
 
   monitorRelease(t, m);

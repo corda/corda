@@ -84,7 +84,12 @@ Avian_avian_SystemClassLoader_resourceExists
   if (LIKELY(name)) {
     RUNTIME_ARRAY(char, n, stringLength(t, name) + 1);
     stringChars(t, name, RUNTIME_ARRAY_BODY(n));
-    return getFinder(t, loader)->exists(RUNTIME_ARRAY_BODY(n));
+
+    bool r = getFinder(t, loader)->exists(RUNTIME_ARRAY_BODY(n));
+
+    fprintf(stderr, "resource %s exists? %d\n", n, r);
+
+    return r;
   } else {
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::NullPointerExceptionType);
@@ -144,7 +149,11 @@ Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
     RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
     stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
-    System::Region* r = t->m->appFinder->find(RUNTIME_ARRAY_BODY(p));
+    System::Region* r = t->m->bootFinder->find(RUNTIME_ARRAY_BODY(p));
+    if (r == 0) {
+      r = t->m->appFinder->find(RUNTIME_ARRAY_BODY(p));
+    }
+
     if (r) {
       jint rSize = r->length();
       r->dispose();
@@ -164,8 +173,12 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
     RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
     stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
-    return reinterpret_cast<int64_t>
-      (t->m->appFinder->find(RUNTIME_ARRAY_BODY(p)));
+    System::Region* r = t->m->bootFinder->find(RUNTIME_ARRAY_BODY(p));
+    if (r == 0) {
+      r = t->m->appFinder->find(RUNTIME_ARRAY_BODY(p));
+    }
+
+    return reinterpret_cast<int64_t>(r);
   } else {
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::NullPointerExceptionType);

@@ -726,6 +726,8 @@ internByteArray(Thread* t, object array)
 {
   PROTECT(t, array);
 
+  ACQUIRE(t, t->m->referenceLock);
+
   object n = hashMapFindNode
     (t, root(t, Machine::ByteArrayMap), array, byteArrayHash, byteArrayEqual);
   if (n) {
@@ -1199,7 +1201,7 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  object code = makeCode(t, pool, 0, 0, maxStack, maxLocals, length);
+  object code = makeCode(t, pool, 0, 0, 0, maxStack, maxLocals, length);
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 
@@ -1297,7 +1299,6 @@ addInterfaceMethods(Thread* t, object class_, object virtualMap,
                methodSpec(t, method),
                0,
                class_,
-               0,
                0);
 
             hashMapInsert(t, virtualMap, method, method, methodHash);
@@ -1705,6 +1706,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
   // todo: arrays should implement Cloneable and Serializable
 
   if (classVmFlags(t, type(t, Machine::JobjectType)) & BootstrapFlag) {
+    PROTECT(t, loader);
     PROTECT(t, spec);
     PROTECT(t, elementClass);
 
@@ -2014,10 +2016,10 @@ boot(Thread* t)
   setRoot(t, Machine::StringMap, makeWeakHashMap(t, 0, 0));
   m->processor->boot(t, 0);
 
-  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1);
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
-      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
+      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
     PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
@@ -3217,59 +3219,65 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
   {
     return resolveSystemClass(t, loader, spec, throw_);
   } else {
+    expect(t, throw_);
+
     PROTECT(t, loader);
     PROTECT(t, spec);
 
-    ACQUIRE(t, t->m->classLock);
+    { ACQUIRE(t, t->m->classLock);
 
-    if (classLoaderMap(t, loader) == 0) {
-      object map = makeHashMap(t, 0, 0);
-      set(t, loader, ClassLoaderMap, map);
+      if (classLoaderMap(t, loader) == 0) {
+        object map = makeHashMap(t, 0, 0);
+        set(t, loader, ClassLoaderMap, map);
+      }
+
+      object class_ = hashMapFind
+        (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
+
+      if (class_) {
+        return class_;
+      }
     }
 
-    object class_ = hashMapFind
-      (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
+    object class_;
+    if (byteArrayBody(t, spec, 0) == '[') {
+      class_ = resolveArrayClass(t, loader, spec, throw_);
+    } else {
+      if (root(t, Machine::LoadClassMethod) == 0) {
+        object m = resolveMethod
+          (t, root(t, Machine::BootLoader), "java/lang/ClassLoader",
+           "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
 
-    if (class_ == 0) {
-      if (byteArrayBody(t, spec, 0) == '[') {
-        class_ = resolveArrayClass(t, loader, spec, throw_);
-      } else {
-        if (root(t, Machine::LoadClassMethod) == 0) {
-          object m = resolveMethod
-            (t, root(t, Machine::BootLoader), "java/lang/ClassLoader",
-             "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+        if (m) {
+          setRoot(t, Machine::LoadClassMethod, m);
 
-          if (m) {
-            setRoot(t, Machine::LoadClassMethod, m);
-
-            object classLoaderClass = type(t, Machine::ClassLoaderType);
+          object classLoaderClass = type(t, Machine::ClassLoaderType);
         
-            if (classVmFlags(t, classLoaderClass) & BootstrapFlag) {
-              resolveSystemClass
-                (t, root(t, Machine::BootLoader),
-                 vm::className(t, classLoaderClass));
-            }
-          }      
-        }
+          if (classVmFlags(t, classLoaderClass) & BootstrapFlag) {
+            resolveSystemClass
+              (t, root(t, Machine::BootLoader),
+               vm::className(t, classLoaderClass));
+          }
+        }      
+      }
+
+      if (LIKELY(t->exception == 0)) {
+        object method = findVirtualMethod
+          (t, root(t, Machine::LoadClassMethod), objectClass(t, loader));
 
         if (LIKELY(t->exception == 0)) {
-          object method = findVirtualMethod
-            (t, root(t, Machine::LoadClassMethod), objectClass(t, loader));
+          PROTECT(t, method);
 
-          if (LIKELY(t->exception == 0)) {
-            PROTECT(t, method);
+          RUNTIME_ARRAY(char, s, byteArrayLength(t, spec));
+          replace('/', '.', RUNTIME_ARRAY_BODY(s), reinterpret_cast<char*>
+                  (&byteArrayBody(t, spec, 0)));
 
-            RUNTIME_ARRAY(char, s, byteArrayLength(t, spec));
-            replace('/', '.', RUNTIME_ARRAY_BODY(s), reinterpret_cast<char*>
-                    (&byteArrayBody(t, spec, 0)));
+          object specString = makeString(t, "%s", s);
 
-            object specString = makeString(t, "%s", s);
+          class_ = t->m->processor->invoke(t, method, loader, specString);
 
-            class_ = t->m->processor->invoke(t, method, loader, specString);
-
-            if (LIKELY(class_ and t->exception == 0)) {
-              class_ = jclassVmClass(t, class_);
-            }
+          if (LIKELY(class_ and t->exception == 0)) {
+            class_ = jclassVmClass(t, class_);
           }
         }
       }
@@ -3277,6 +3285,8 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
 
     if (class_) {
       PROTECT(t, class_);
+
+      ACQUIRE(t, t->m->classLock);
 
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_,
                     byteArrayHash);
@@ -3659,8 +3669,8 @@ collect(Thread* t, Heap::CollectionType type)
   ENTER(t, Thread::ExclusiveState);
 
 #ifdef VM_STRESS
-  bool stress = t->stress;
-  if (not stress) t->stress = true;
+  bool stress = (t->flags |= Thread::StressFlag);
+  if (not stress) atomicOr(&(t->flags), Thread::StressFlag);
 #endif
 
   Machine* m = t->m;
@@ -3681,7 +3691,7 @@ collect(Thread* t, Heap::CollectionType type)
   m->fixedFootprint = 0;
 
 #ifdef VM_STRESS
-  if (not stress) t->stress = false;
+  if (not stress) atomicAnd(&(t->flags), ~Thread::StressFlag);
 #endif
 
   object f = t->m->finalizeQueue;
@@ -4005,6 +4015,8 @@ vmPrintTrace(Thread* t)
     Thread* t;
   } v(t);
 
+  fprintf(stderr, "debug trace for thread %p\n", t);
+
   t->m->processor->walkStack(t, &v);
 }
 
@@ -4012,24 +4024,24 @@ vmPrintTrace(Thread* t)
 void*
 vmAddressFromLine(Thread* t, object m, unsigned line)
 {
-	object code = methodCode(t, m);
-	printf("code: %p\n", code);
-	object lnt = codeLineNumberTable(t, code);
-	printf("lnt: %p\n", lnt);
+  object code = methodCode(t, m);
+  printf("code: %p\n", code);
+  object lnt = codeLineNumberTable(t, code);
+  printf("lnt: %p\n", lnt);
 	
-	if (lnt) {
-		unsigned last = 0;
-		unsigned bottom = 0;
-		unsigned top = lineNumberTableLength(t, lnt);
-		for(unsigned i = bottom; i < top; i++)
-		{
-			LineNumber* ln = lineNumberTableBody(t, lnt, i);
-			if(lineNumberLine(ln) == line)
-				return reinterpret_cast<void*>(lineNumberIp(ln));
-			else if(lineNumberLine(ln) > line)
-				return reinterpret_cast<void*>(last);
-			last = lineNumberIp(ln);
-		}
-	}
-	return 0;
+  if (lnt) {
+    unsigned last = 0;
+    unsigned bottom = 0;
+    unsigned top = lineNumberTableLength(t, lnt);
+    for(unsigned i = bottom; i < top; i++)
+    {
+      LineNumber* ln = lineNumberTableBody(t, lnt, i);
+      if(lineNumberLine(ln) == line)
+        return reinterpret_cast<void*>(lineNumberIp(ln));
+      else if(lineNumberLine(ln) > line)
+        return reinterpret_cast<void*>(last);
+      last = lineNumberIp(ln);
+    }
+  }
+  return 0;
 }

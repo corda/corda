@@ -186,7 +186,7 @@ class MyClasspath : public Classpath {
     return vm::makeThread
       (t, 0, NormalPriority, 0, 0, false, false, false, 0, group,
        root(t, Machine::BootLoader), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0,
-       0, false);
+       0, 0, false);
   }
 
   virtual void
@@ -210,6 +210,7 @@ class MyClasspath : public Classpath {
   (Thread* t, Machine::Type type, object message, object trace, object cause)
   {
     PROTECT(t, message);
+    PROTECT(t, trace);
     PROTECT(t, cause);
     
     if (trace == 0) {
@@ -532,6 +533,23 @@ setProperty(Thread* t, object method, object properties,
   object v = makeString(t, format, value);
 
   t->m->processor->invoke(t, method, properties, n, v);
+}
+
+object
+interruptLock(Thread* t, object thread)
+{
+  if (threadInterruptLock(t, thread) == 0) {
+    PROTECT(t, thread);
+    ACQUIRE(t, t->m->referenceLock);
+
+    if (threadInterruptLock(t, thread) == 0) {
+      object head = makeMonitorNode(t, 0, 0);
+      object lock = makeMonitor(t, 0, 0, 0, head, head, 0);
+      set(t, thread, ThreadInterruptLock, lock);
+    }
+  }
+  
+  return threadInterruptLock(t, thread);
 }
 
 } // namespace local
@@ -1255,10 +1273,14 @@ JVM_Interrupt(Thread* t, jobject thread)
 {
   ENTER(t, Thread::ActiveState);
 
+  monitorAcquire(t, local::interruptLock(t, *thread));
   Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *thread));
   if (p) {
     interrupt(t, p);
+  } else {
+    threadInterrupted(t, *thread) = true;
   }
+  monitorRelease(t, local::interruptLock(t, *thread));
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -1266,12 +1288,12 @@ JVM_IsInterrupted(Thread* t, jobject thread, jboolean clear)
 {
   ENTER(t, Thread::ActiveState);
 
-  acquire(t, *thread);
+  monitorAcquire(t, local::interruptLock(t, *thread));
   bool v = threadInterrupted(t, *thread);
   if (clear) {
     threadInterrupted(t, *thread) = false;
   }
-  release(t, *thread);
+  monitorRelease(t, local::interruptLock(t, *thread));
 
   return v;
 }
@@ -2414,7 +2436,10 @@ extern "C" JNIEXPORT struct hostent* JNICALL
 JVM_GetHostByName(char*) { abort(); }
 
 extern "C" JNIEXPORT int JNICALL
-JVM_GetHostName(char*, int) { abort(); }
+JVM_GetHostName(char* name, int length)
+{
+  return gethostname(name, length);
+}
 
 extern "C" JNIEXPORT void* JNICALL
 JVM_RawMonitorCreate(void)

@@ -2007,11 +2007,11 @@ parseSize(const char* s)
     return 0;
   } else if (s[length - 1] == 'k') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
-    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+    RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024;
   } else if (s[length - 1] == 'm') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
-    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+    RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024 * 1024;
   } else {
     return atoi(s);
