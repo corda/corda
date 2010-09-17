@@ -87,7 +87,7 @@ Avian_avian_SystemClassLoader_resourceExists
 
     bool r = getFinder(t, loader)->exists(RUNTIME_ARRAY_BODY(n));
 
-    fprintf(stderr, "resource %s exists? %d\n", n, r);
+//     fprintf(stderr, "resource %s exists? %d\n", n, r);
 
     return r;
   } else {
@@ -184,6 +184,17 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
       (t, Machine::NullPointerExceptionType);
     return 0;
   }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_resource_Handler_00024ResourceInputStream_available
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+  int32_t position = arguments[2];
+
+  System::Region* region = reinterpret_cast<System::Region*>(peer);
+  return static_cast<jint>(region->length()) - position;
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

@@ -63,6 +63,12 @@ public class Handler extends URLStreamHandler {
 
     public static native void close(long peer) throws IOException;
 
+    public static native int available(long peer, int position);
+
+    public int available() {
+      return available(peer, position);
+    }
+
     public int read() throws IOException {
       if (peer != 0) {
         int c = read(peer, position);
