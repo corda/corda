@@ -43,6 +43,7 @@
 #  include <sys/socket.h>
 #  include <fcntl.h>
 #  include <errno.h>
+#  include <sched.h>
 
 #  define OPEN open
 #  define CLOSE close
@@ -1240,7 +1241,10 @@ JVM_SetThreadPriority(Thread*, jobject, jint)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Yield(Thread*, jclass) { abort(); }
+JVM_Yield(Thread*, jclass)
+{
+  sched_yield();
+}
 
 extern "C" JNIEXPORT void JNICALL
 JVM_Sleep(Thread* t, jclass, jlong milliseconds)
