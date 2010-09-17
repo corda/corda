@@ -58,14 +58,19 @@ public class BufferedInputStream extends InputStream {
       length -= remaining;
     }
 
-    if (length > 0) {
+    while (length > 0) {
       int c = in.read(b, offset, length);
       if (c == -1) {
         if (count == 0) {
           count = -1;
         }
+        break;
       } else {
         count += c;
+
+        if (in.available() <= 0) {
+          break;
+        }
       }
     }
 
