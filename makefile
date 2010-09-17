@@ -69,13 +69,12 @@ ifdef openjdk
 		openjdk-lib-dir = $(openjdk)/jre/lib
 	endif
 	classpath-jar = $(openjdk)/jre/lib/rt.jar
-  test-library-path = $(openjdk-lib-dir):$(native-build)
+  test-library-path = $(openjdk-lib-dir):$(build)
 	test-executable = $(executable-dynamic)
 endif
 
 root := $(shell (cd .. && pwd))
-build = build
-native-build = $(build)/$(platform)-$(arch)$(options)
+build = build/$(platform)-$(arch)$(options)
 classpath-build = $(build)/classpath
 test-build = $(build)/test
 src = src
@@ -87,8 +86,7 @@ ifneq ($(classpath),avian)
 	classpath-objects = $(shell find $(build)/classpath-objects -name "*.o")
 else
 	jni-sources := $(shell find $(classpath-src) -name '*.cpp')
-	jni-objects = \
-		$(call cpp-objects,$(jni-sources),$(classpath-src),$(native-build))
+	jni-objects = $(call cpp-objects,$(jni-sources),$(classpath-src),$(build))
 endif
 
 input = List
@@ -129,7 +127,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 	-Wno-non-virtual-dtor
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
-	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(native-build) \
+	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DUSE_ATOMIC_OPERATIONS $(classpath-cflags)
 
@@ -286,9 +284,8 @@ ifdef msvc
 	mt = "mt.exe"
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
 		-DUSE_ATOMIC_OPERATIONS \
-		-Fd$(native-build)/$(name).pdb -I"$(zlib)/include" -I$(src) \
-		-I"$(native-build)" -I"$(windows-java-home)/include" \
-		-I"$(windows-java-home)/include/win32"
+		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
+		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32"
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib -MANIFEST -debug
@@ -317,11 +314,11 @@ asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
 
 generated-code = \
-	$(native-build)/type-enums.cpp \
-	$(native-build)/type-declarations.cpp \
-	$(native-build)/type-constructors.cpp \
-	$(native-build)/type-initializations.cpp \
-	$(native-build)/type-java-initializations.cpp
+	$(build)/type-enums.cpp \
+	$(build)/type-declarations.cpp \
+	$(build)/type-constructors.cpp \
+	$(build)/type-initializations.cpp \
+	$(build)/type-java-initializations.cpp
 
 vm-depends := $(generated-code) $(wildcard $(src)/*.h)
 
@@ -347,13 +344,13 @@ ifeq ($(process),compile)
 	vm-asm-sources += $(src)/compile-$(asm).S
 endif
 
-vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(native-build))
-vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(native-build))
+vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(build))
+vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(build))
 vm-objects = $(vm-cpp-objects) $(vm-asm-objects)
 
 heapwalk-sources = $(src)/heapwalk.cpp 
 heapwalk-objects = \
-	$(call cpp-objects,$(heapwalk-sources),$(src),$(native-build))
+	$(call cpp-objects,$(heapwalk-sources),$(src),$(build))
 
 ifeq ($(heapdump),true)
 	vm-sources += $(src)/heapdump.cpp
@@ -372,12 +369,12 @@ endif
 
 bootimage-generator-sources = $(src)/bootimage.cpp 
 bootimage-generator-objects = \
-	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(native-build))
+	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = \
 	$(build)/$(bootimage-platform)-$(build-arch)$(options)/bootimage-generator
 
-bootimage-bin = $(native-build)/bootimage.bin
-bootimage-object = $(native-build)/bootimage-bin.o
+bootimage-bin = $(build)/bootimage.bin
+bootimage-object = $(build)/bootimage-bin.o
 
 ifeq ($(bootimage),true)
 	ifneq ($(build-arch),$(arch))
@@ -398,31 +395,31 @@ else
 endif
 
 driver-source = $(src)/main.cpp
-driver-object = $(native-build)/main.o
-driver-dynamic-object = $(native-build)/main-dynamic.o
+driver-object = $(build)/main.o
+driver-dynamic-object = $(build)/main-dynamic.o
 
 boot-source = $(src)/boot.cpp
-boot-object = $(native-build)/boot.o
+boot-object = $(build)/boot.o
 
 generator-headers =	$(src)/constants.h
 generator-sources = $(src)/type-generator.cpp
 generator-objects = \
-	$(call cpp-objects,$(generator-sources),$(src),$(native-build))
-generator = $(native-build)/generator
+	$(call cpp-objects,$(generator-sources),$(src),$(build))
+generator = $(build)/generator
 
 converter-objects = \
-	$(native-build)/binaryToObject-main.o \
-	$(native-build)/binaryToObject-elf64.o \
-	$(native-build)/binaryToObject-elf32.o \
-	$(native-build)/binaryToObject-mach-o64.o \
-	$(native-build)/binaryToObject-mach-o32.o \
-	$(native-build)/binaryToObject-pe.o
-converter = $(native-build)/binaryToObject
+	$(build)/binaryToObject-main.o \
+	$(build)/binaryToObject-elf64.o \
+	$(build)/binaryToObject-elf32.o \
+	$(build)/binaryToObject-mach-o64.o \
+	$(build)/binaryToObject-mach-o32.o \
+	$(build)/binaryToObject-pe.o
+converter = $(build)/binaryToObject
 
-static-library = $(native-build)/lib$(name).a
-executable = $(native-build)/$(name)${exe-suffix}
-dynamic-library = $(native-build)/$(so-prefix)jvm$(so-suffix)
-executable-dynamic = $(native-build)/$(name)-dynamic${exe-suffix}
+static-library = $(build)/lib$(name).a
+executable = $(build)/$(name)${exe-suffix}
+dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
+executable-dynamic = $(build)/$(name)-dynamic${exe-suffix}
 
 ifneq ($(classpath),avian)
 	classpath-sources := \
@@ -451,7 +448,7 @@ endif
 
 classpath-classes = \
 	$(call java-classes,$(classpath-sources),$(classpath-src),$(classpath-build))
-classpath-object = $(native-build)/classpath-jar.o
+classpath-object = $(build)/classpath-jar.o
 classpath-dep = $(classpath-build).dep
 
 vm-classes = \
@@ -520,20 +517,15 @@ clean:
 	@echo "removing build"
 	rm -rf build
 
-.PHONY: clean-native
-clean-native:
-	@echo "removing $(native-build)"
-	rm -rf $(native-build)
+$(build)/compile-x86-asm.o: $(src)/continuations-x86.S
 
-$(native-build)/compile-x86-asm.o: $(src)/continuations-x86.S
-
-gen-arg = $(shell echo $(1) | sed -e 's:$(native-build)/type-\(.*\)\.cpp:\1:')
+gen-arg = $(shell echo $(1) | sed -e 's:$(build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@echo "generating $(@)"
 	@mkdir -p $(dir $(@))
 	$(generator) $(classpath-build) $(call gen-arg,$(@)) < $(<) > $(@)
 
-$(native-build)/type-generator.o: \
+$(build)/type-generator.o: \
 	$(generator-headers)
 
 $(classpath-build)/%.class: $(classpath-src)/%.java
@@ -549,7 +541,8 @@ ifneq ($(classpath),avian)
 endif
 	$(javac) -d $(classpath-build) \
 		-bootclasspath $(classpath-build) \
-		$(shell $(MAKE) -s --no-print-directory $(classpath-classes))
+		$(shell $(MAKE) -s --no-print-directory build=$(build) \
+			$(classpath-classes))
 	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
@@ -558,7 +551,7 @@ $(test-build)/%.class: $(test)/%.java
 $(test-dep): $(test-sources)
 	@echo "compiling test classes"
 	@mkdir -p $(test-build)
-	files="$(shell $(MAKE) -s --no-print-directory $(test-classes))"; \
+	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-classes))"; \
 	if test -n "$${files}"; then \
 		$(javac) -d $(test-build) -bootclasspath $(classpath-build) $${files}; \
 	fi
@@ -569,7 +562,7 @@ $(test-dep): $(test-sources)
 $(test-extra-dep): $(test-extra-sources)
 	@echo "compiling extra test classes"
 	@mkdir -p $(test-build)
-	files="$(shell $(MAKE) -s --no-print-directory $(test-extra-classes))"; \
+	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-extra-classes))"; \
 	if test -n "$${files}"; then \
 		$(javac) -d $(test-build) -bootclasspath $(classpath-build) $${files}; \
 	fi
@@ -587,16 +580,16 @@ define compile-asm-object
 	$(as) -I$(src) $(asmflags) -c $(<) -o $(@)
 endef
 
-$(vm-cpp-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+$(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
-$(vm-asm-objects): $(native-build)/%-asm.o: $(src)/%.S
+$(vm-asm-objects): $(build)/%-asm.o: $(src)/%.S
 	$(compile-asm-object)
 
-$(bootimage-generator-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+$(bootimage-generator-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
-$(heapwalk-objects): $(native-build)/%.o: $(src)/%.cpp $(vm-depends)
+$(heapwalk-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
 $(driver-object): $(driver-source)
@@ -616,22 +609,22 @@ $(build)/classpath.jar: $(classpath-dep)
 	 cd $(classpath-build) && \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
 
-$(native-build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
+$(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
 	$(build-cxx) -c $(^) -o $(@)
 
-$(native-build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
+$(build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
 	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
 
-$(native-build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
+$(build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
 	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
 
-$(native-build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
+$(build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
 	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
 
-$(native-build)/binaryToObject-mach-o32.o: $(src)/binaryToObject/mach-o.cpp
+$(build)/binaryToObject-mach-o32.o: $(src)/binaryToObject/mach-o.cpp
 	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
 
-$(native-build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
+$(build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
 	$(build-cxx) -c $(^) -o $(@)
 
 $(converter): $(converter-objects)
@@ -642,13 +635,13 @@ $(classpath-object): $(build)/classpath.jar $(converter)
 	$(converter) $(<) $(@) _binary_classpath_jar_start \
 		_binary_classpath_jar_end $(platform) $(arch)
 
-$(generator-objects): $(native-build)/%.o: $(src)/%.cpp
+$(generator-objects): $(build)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
 		-c $(<) -o $(@)
 
-$(jni-objects): $(native-build)/%.o: $(classpath-src)/%.cpp
+$(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
 
 $(static-library): $(classpath-object-dep)
@@ -727,7 +720,7 @@ $(dynamic-library): \
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(native-build)/$(name).lib -MANIFESTFILE:$(@).manifest
+		-IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
 	$(ld) $(^) -Wl,--version-script=openjdk.ld \
@@ -738,11 +731,11 @@ endif
 $(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
 	@echo "linking $(@)"
 ifdef msvc
-	$(ld) $(lflags) -LIBPATH:$(native-build) -DEFAULTLIB:$(name) \
+	$(ld) $(lflags) -LIBPATH:$(build) -DEFAULTLIB:$(name) \
 		-PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@) -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(<) -L$(native-build) -ljvm $(lflags) -o $(@)
+	$(ld) $(<) -L$(build) -ljvm $(lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
