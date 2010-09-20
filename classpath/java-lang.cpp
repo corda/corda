@@ -389,6 +389,10 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
+    } else if (strcmp(chars, "user.dir") == 0) {
+      TCHAR buffer[MAX_PATH];
+      GetCurrentDirectory(MAX_PATH, buffer);
+      r = e->NewStringUTF(buffer);
     } else if (strcmp(chars, "user.home") == 0) {
 #  ifdef _MSC_VER
       WCHAR buffer[MAX_PATH];
@@ -447,6 +451,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 #endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
+    } else if (strcmp(chars, "user.dir") == 0) {
+      r = e->NewStringUTF(getenv("PWD"));
     } else if (strcmp(chars, "user.home") == 0) {
       r = e->NewStringUTF(getenv("HOME"));
     }
