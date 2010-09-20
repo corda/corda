@@ -1432,6 +1432,9 @@ class Classpath {
   virtual void
   boot(Thread* t) = 0;
 
+  virtual const char*
+  bootClasspath() = 0;
+
   virtual void
   dispose() = 0;
 };

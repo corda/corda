@@ -11,9 +11,11 @@
 #ifndef CLASSPATH_COMMON_H
 #define CLASSPATH_COMMON_H
 
+#include "tokenizer.h"
+
 namespace vm {
 
-inline object
+object
 getCaller(Thread* t, unsigned target)
 {
   class Visitor: public Processor::StackVisitor {
@@ -43,7 +45,7 @@ getCaller(Thread* t, unsigned target)
   return v.method;
 }
 
-inline object
+object
 getTrace(Thread* t, unsigned skipCount)
 {
   class Visitor: public Processor::StackVisitor {
@@ -84,7 +86,7 @@ getTrace(Thread* t, unsigned skipCount)
   return v.trace;
 }
 
-inline bool
+bool
 compatibleArrayTypes(Thread* t, object a, object b)
 {
   return classArrayElementSize(t, a)
@@ -94,7 +96,7 @@ compatibleArrayTypes(Thread* t, object a, object b)
                   or (classVmFlags(t, b) & PrimitiveFlag))));
 }
 
-inline void
+void
 arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
           int32_t dstOffset, int32_t length)
 {
@@ -160,37 +162,13 @@ runOnLoadIfFound(Thread* t, System::Library* library)
 }
 
 System::Library*
-loadLibrary(Thread* t, const char* name, bool mapName, bool runOnLoad)
+loadLibrary(Thread* t, const char* name)
 {
   ACQUIRE(t, t->m->classLock);
 
-  const char* builtins = findProperty(t, "avian.builtins");
-  if (mapName and builtins) {
-    const char* s = builtins;
-    while (*s) {
-      unsigned length = strlen(name);
-      if (::strncmp(s, name, length) == 0
-          and (s[length] == ',' or s[length] == 0))
-      {
-        // library is built in to this executable
-        if (runOnLoad and not t->m->triedBuiltinOnLoad) {
-          t->m->triedBuiltinOnLoad = true;
-          runOnLoadIfFound(t, t->m->libraries);
-        }
-        return t->m->libraries;
-      } else {
-        while (*s and *s != ',') ++ s;
-        if (*s) ++ s;
-      }
-    }
-  }
-
   System::Library* last = t->m->libraries;
   for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
-    if (lib->name()
-        and ::strcmp(lib->name(), name) == 0
-        and lib->mapName() == mapName)
-    {
+    if (lib->name() and ::strcmp(lib->name(), name) == 0) {
       // already loaded
       return lib;
     }
@@ -198,18 +176,91 @@ loadLibrary(Thread* t, const char* name, bool mapName, bool runOnLoad)
   }
 
   System::Library* lib;
-  if (LIKELY(t->m->system->success(t->m->system->load(&lib, name, mapName)))) {
+  if (LIKELY(t->m->system->success(t->m->system->load(&lib, name)))) {
     last->setNext(lib);
+    return lib;
+  } else {
+    return 0;
+  }
+}
+
+System::Library*
+loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
+            bool runOnLoad)
+{
+  ACQUIRE(t, t->m->classLock);
+
+  unsigned nameLength = strlen(name);
+  if (mapName) {
+    const char* builtins = findProperty(t, "avian.builtins");
+    if (builtins) {
+      const char* s = builtins;
+      while (*s) {
+        if (::strncmp(s, name, nameLength) == 0
+            and (s[nameLength] == ',' or s[nameLength] == 0))
+        {
+          // library is built in to this executable
+          if (runOnLoad and not t->m->triedBuiltinOnLoad) {
+            t->m->triedBuiltinOnLoad = true;
+            runOnLoadIfFound(t, t->m->libraries);
+          }
+          return t->m->libraries;
+        } else {
+          while (*s and *s != ',') ++ s;
+          if (*s) ++ s;
+        }
+      }
+    }
+
+    const char* prefix = t->m->system->libraryPrefix();
+    const char* suffix = t->m->system->librarySuffix();
+    unsigned mappedNameLength = nameLength + strlen(prefix) + strlen(suffix);
+
+    char* mappedName = static_cast<char*>
+      (t->m->heap->allocate(mappedNameLength + 1));
+
+    snprintf(mappedName, mappedNameLength + 1, "%s%s%s", prefix, name, suffix);
+
+    name = mappedName;
+    nameLength = mappedNameLength;
+  }
+
+  System::Library* lib = 0;
+  for (Tokenizer tokenizer(path, t->m->system->pathSeparator());
+       tokenizer.hasMore();)
+  {
+    Tokenizer::Token token(tokenizer.next());
+
+    unsigned fullNameLength = token.length + 1 + nameLength;
+    RUNTIME_ARRAY(char, fullName, fullNameLength + 1);
+
+    snprintf(RUNTIME_ARRAY_BODY(fullName), fullNameLength + 1,
+             "%*s%c%s", token.length, token.s, t->m->system->fileSeparator(),
+             name);
+
+    lib = loadLibrary(t, RUNTIME_ARRAY_BODY(fullName));
+    if (lib) break;
+  }
+
+  if (lib == 0) {
+    lib = loadLibrary(t, name);
+  }
+
+  if (lib) {
     if (runOnLoad) {
       runOnLoadIfFound(t, lib);
     }
-    return lib;
-  } else {
+  } else {  
     object message = makeString(t, "library not found: %s", name);
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::UnsatisfiedLinkErrorType, message);
-    return 0;
   }
+
+  if (mapName) {
+    t->m->heap->free(name, nameLength + 1);
+  }
+
+  return lib;
 }
 
 object

@@ -92,6 +92,12 @@ class MyClasspath : public Classpath {
     // ignore
   }
 
+  virtual const char*
+  bootClasspath()
+  {
+    return "";
+  }
+
   virtual void
   dispose()
   {
@@ -473,7 +479,7 @@ Avian_java_lang_Runtime_load
   RUNTIME_ARRAY(char, n, length + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
-  loadLibrary(t, RUNTIME_ARRAY_BODY(n), mapName, true);
+  loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), mapName, true);
 }
 
 extern "C" JNIEXPORT void JNICALL

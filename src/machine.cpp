@@ -2166,7 +2166,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
       not system->success(system->make(&referenceLock)) or
       not system->success(system->make(&shutdownLock)) or
       not system->success
-      (system->load(&libraries, findProperty(this, "avian.bootstrap"), false)))
+      (system->load(&libraries, findProperty(this, "avian.bootstrap"))))
   {
     system->abort();
   }

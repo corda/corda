@@ -12,9 +12,13 @@
 #include "stdio.h"
 #include "stdint.h"
 #include "string.h"
-#include "assert.h"
+#include "errno.h"
 
 #include "constants.h"
+#include "finder.h"
+#include "stream.h"
+
+#include "assert.h"
 
 #define UNREACHABLE abort()
 
@@ -27,6 +31,8 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 using namespace vm;
 
 namespace {
+
+namespace local {
 
 #ifndef POINTER_SIZE
 #  define POINTER_SIZE sizeof(void*)
@@ -177,7 +183,7 @@ class Output {
   void write(int i) {
     static const int Size = 32;
     char s[Size];
-    int c UNUSED = snprintf(s, Size, "%d", i);
+    int c UNUSED = ::snprintf(s, Size, "%d", i);
     assert(c > 0 and c < Size);
     write(s);
   }
@@ -211,63 +217,6 @@ class FileOutput : public Output {
   const char* filename() {
     return file;
   }
-};
-
-class Stream {
- public:
-  Stream(FILE* stream, bool close):
-    stream(stream), close(close)
-  {
-    assert(stream);
-  }
-
-  ~Stream() {
-    if (close) fclose(stream);
-  }
-
-  void skip(unsigned size) {
-    fseek(stream, size, SEEK_CUR);
-  }
-
-  void read(uint8_t* data, unsigned size) {
-    fread(data, 1, size, stream);
-  }
-
-  uint8_t read1() {
-    uint8_t v;
-    read(&v, 1);
-    return v;
-  }
-
-  uint16_t read2() {
-    uint16_t a = read1();
-    uint16_t b = read1();
-    return (a << 8) | b;
-  }
-
-  uint32_t read4() {
-    uint32_t a = read2();
-    uint32_t b = read2();
-    return (a << 16) | b;
-  }
-
-  uint64_t read8() {
-    uint64_t a = read4();
-    uint64_t b = read4();
-    return (a << 32) | b;
-  }
-
-  uint32_t readFloat() {
-    return read4();
-  }
-
-  uint64_t readDouble() {
-    return read8();
-  }
-
- private:
-  FILE* stream;
-  bool close;
 };
 
 class Object {
@@ -1384,8 +1333,8 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
 }
 
 Object*
-parseType(Object::ObjectType type, Object* p, Object* declarations,
-          const char* javaClassDirectory)
+parseType(Finder* finder, Object::ObjectType type, Object* p,
+          Object* declarations)
 {
   const char* name = string(car(p));
 
@@ -1400,9 +1349,16 @@ parseType(Object::ObjectType type, Object* p, Object* declarations,
   bool isJavaType = javaName and *javaName != '[';
 
   if (isJavaType) {
-    const char* file = append(javaClassDirectory, "/", javaName, ".class");
-    Stream s(fopen(file, "rb"), true);
+    class Client: public Stream::Client {
+     public:
+      virtual void NO_RETURN handleError() {
+        abort();
+      }
+    } client;
+    System::Region* region = finder->find(append(javaName, ".class"));
+    Stream s(&client, region->start(), region->length());
     parseJavaClass(t, &s, declarations);
+    region->dispose();
   }
 
   for (p = cdr(p); p; p = cdr(p)) {
@@ -1429,14 +1385,13 @@ parseType(Object::ObjectType type, Object* p, Object* declarations,
 }
 
 Object*
-parseDeclaration(Object* p, Object* declarations,
-                 const char* javaClassDirectory)
+parseDeclaration(Finder* finder, Object* p, Object* declarations)
 {
   const char* spec = string(car(p));
   if (equal(spec, "type")) {
-    return parseType(Object::Type, cdr(p), declarations, javaClassDirectory);
+    return parseType(finder, Object::Type, cdr(p), declarations);
   } else if (equal(spec, "pod")) {
-    return parseType(Object::Pod, cdr(p), declarations, javaClassDirectory);
+    return parseType(finder, Object::Pod, cdr(p), declarations);
   } else {
     fprintf(stderr, "unexpected declaration spec: %s\n", spec);
     abort();
@@ -1444,7 +1399,7 @@ parseDeclaration(Object* p, Object* declarations,
 }
 
 Object*
-parse(Input* in, const char* javaClassDirectory)
+parse(Finder* finder, Input* in)
 {
   Object* eos = Singleton::make(Object::Eos);
   List declarations;
@@ -1452,7 +1407,7 @@ parse(Input* in, const char* javaClassDirectory)
   Object* o;
   while ((o = read(in, eos, 0)) != eos) {
     declarations.append
-      (parseDeclaration(o, declarations.first, javaClassDirectory));
+      (parseDeclaration(finder, o, declarations.first));
   }
 
   return declarations.first;
@@ -1522,7 +1477,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
 
   if (not unsafe) {
     out->write("const unsigned ");
-    out->write(capitalize(::typeName(memberOwner(member))));
+    out->write(capitalize(local::typeName(memberOwner(member))));
     out->write(capitalize(memberName(member)));
     out->write(" = ");
     writeOffset(out, offset);
@@ -1547,7 +1502,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   writeAccessorName(out, member, unsafe);
   if (memberOwner(member)->type == Object::Pod) {
     out->write("(");
-    out->write(capitalize(::typeName(memberOwner(member))));
+    out->write(capitalize(local::typeName(memberOwner(member))));
     out->write("*");
   } else {
     out->write("(Thread* t UNUSED, object");
@@ -1563,13 +1518,13 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
       out->write("  assert(t, t->m->unsafe or ");
       out->write("instanceOf(t, arrayBodyUnsafe");
       out->write("(t, t->m->types, Machine::");
-      out->write(capitalize(::typeName(memberOwner(member))));
+      out->write(capitalize(local::typeName(memberOwner(member))));
       out->write("Type)");
       out->write(", o));\n");
 
       if (member->type != Object::Scalar) {
         out->write("  assert(t, i < ");
-        out->write(::typeName(memberOwner(member)));
+        out->write(local::typeName(memberOwner(member)));
         out->write("Length(t, o));\n");
       }
     }
@@ -1599,7 +1554,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     out->write("[");
   }
 
-  out->write(capitalize(::typeName(memberOwner(member))));
+  out->write(capitalize(local::typeName(memberOwner(member))));
   out->write(capitalize(memberName(member)));
 
   if (member->type != Object::Scalar) {
@@ -2221,62 +2176,83 @@ void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
-          "usage: %s <java class directory> "
+          "usage: %s <classpath> <input file> <output file> "
           "{enums,declarations,constructors,initializations,"
           "java-initializations}\n",
           command);
   exit(-1);
 }
 
+} // namespace local
+
 } // namespace
+
+extern "C" uint64_t
+vmNativeCall(void*, void*, unsigned, unsigned)
+{
+  abort();
+}
+
+extern "C" void
+vmJump(void*, void*, void*, void*, uintptr_t, uintptr_t)
+{
+  abort();
+}
 
 int
 main(int ac, char** av)
 {
-  if ((ac != 2 and ac != 3)
-      or (ac == 3
-          and not equal(av[2], "enums")
-          and not equal(av[2], "declarations")
-          and not equal(av[2], "constructors")
-          and not equal(av[2], "initializations")
-          and not equal(av[2], "java-initializations")))
+  if (ac != 5
+      or not (local::equal(av[4], "enums")
+              or local::equal(av[4], "declarations")
+              or local::equal(av[4], "constructors")
+              or local::equal(av[4], "initializations")
+              or local::equal(av[4], "java-initializations")))
   {
-    usageAndExit(av[0]);
+    local::usageAndExit(av[0]);
   }
 
-  FileInput in(0, stdin, false);
+  System* system = makeSystem(0);
+  Finder* finder = makeFinder(system, av[1], 0);
 
-  Object* declarations = parse(&in, av[1]);
-
-  FileOutput out(0, stdout, false);
-
-  if (ac == 2 or equal(av[2], "enums")) {
-    writeEnums(&out, declarations);
+  FILE* inStream = ::fopen(av[2], "rb");
+  if (inStream == 0) {
+    fprintf(stderr, "unable to open %s: %s\n", av[2], strerror(errno));
+    return -1;
   }
+  local::FileInput in(0, inStream, false);
 
-  if (ac == 2 or equal(av[2], "declarations")) {
+  local::Object* declarations = local::parse(finder, &in);
+
+  finder->dispose();
+  system->dispose();
+
+  FILE* outStream = ::fopen(av[3], "wb");
+  if (outStream == 0) {
+    fprintf(stderr, "unable to open %s: %s\n", av[3], strerror(errno));
+    return -1;
+  }
+  local::FileOutput out(0, outStream, false);
+
+  if (local::equal(av[4], "enums")) {
+    local::writeEnums(&out, declarations);
+  } else if (local::equal(av[4], "declarations")) {
     out.write("const unsigned TypeCount = ");
-    out.Output::write(typeCount(declarations));
+    out.Output::write(local::typeCount(declarations));
     out.write(";\n\n");
 
-    writePods(&out, declarations);
-    writeAccessors(&out, declarations);
-    writeSizes(&out, declarations);
-    writeInitializerDeclarations(&out, declarations);
-    writeConstructorDeclarations(&out, declarations);
-  }
-
-  if (ac == 2 or equal(av[2], "constructors")) {
-    writeInitializers(&out, declarations);
-    writeConstructors(&out, declarations);
-  }
-  
-  if (ac == 2 or equal(av[2], "initializations")) {
-    writeInitializations(&out, declarations);
-  }
-
-  if (ac == 2 or equal(av[2], "java-initializations")) {
-    writeJavaInitializations(&out, declarations);
+    local::writePods(&out, declarations);
+    local::writeAccessors(&out, declarations);
+    local::writeSizes(&out, declarations);
+    local::writeInitializerDeclarations(&out, declarations);
+    local::writeConstructorDeclarations(&out, declarations);
+  } else if (local::equal(av[4], "constructors")) {
+    local::writeInitializers(&out, declarations);
+    local::writeConstructors(&out, declarations);
+  } else if (local::equal(av[4], "initializations")) {
+    local::writeInitializations(&out, declarations);
+  } else if (local::equal(av[4], "java-initializations")) {
+    local::writeJavaInitializations(&out, declarations);
   }
 
   return 0;

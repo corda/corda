@@ -89,7 +89,6 @@ class System {
    public:
     virtual void* resolve(const char* symbol) = 0;
     virtual const char* name() = 0;
-    virtual bool mapName() = 0;
     virtual Library* next() = 0;
     virtual void setNext(Library* lib) = 0;
     virtual void disposeAll() = 0;
@@ -135,8 +134,11 @@ class System {
   virtual Status map(Region**, const char* name) = 0;
   virtual FileType identify(const char* name) = 0;
   virtual Status open(Directory**, const char* name) = 0;
-  virtual Status load(Library**, const char* name, bool mapName) = 0;
+  virtual const char* libraryPrefix() = 0;
+  virtual const char* librarySuffix() = 0;
+  virtual Status load(Library**, const char* name) = 0;
   virtual char pathSeparator() = 0;
+  virtual char fileSeparator() = 0;
   virtual int64_t now() = 0;
   virtual void exit(int code) = 0;
   virtual void abort() = 0;

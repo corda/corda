@@ -10,6 +10,7 @@
 
 #include "zlib-custom.h"
 #include "system.h"
+#include "tokenizer.h"
 #include "finder.h"
 
 using namespace vm;
@@ -19,8 +20,7 @@ namespace {
 const bool DebugFind = false;
 
 const char*
-append(System* s, const char* a, const char* b,
-       const char* c)
+append(System* s, const char* a, const char* b, const char* c)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
@@ -148,6 +148,9 @@ class DirectoryElement: public Element {
       }
       return region;
     } else {
+      if (DebugFind) {
+        fprintf(stderr, "%s not found in %s\n", name, this->name);
+      }
       return 0;
     }
   }
@@ -493,8 +496,12 @@ class JarElement: public Element {
     while (*name == '/') name++;
 
     System::Region* r = (index ? index->find(name, region->start()) : 0);
-    if (DebugFind and r) {
-      fprintf(stderr, "found %s in %s\n", name, this->name);
+    if (DebugFind) {
+      if (r) {
+        fprintf(stderr, "found %s in %s\n", name, this->name);
+      } else {
+        fprintf(stderr, "%s not found in %s\n", name, this->name);
+      }
     }
     return r;
   }
@@ -533,7 +540,7 @@ class BuiltinElement: public JarElement {
 
   virtual void init() {
     if (index == 0) {
-      if (s->success(s->load(&library, libraryName, false))) {
+      if (s->success(s->load(&library, libraryName))) {
         void* p = library->resolve(name);
         if (p) {
           uint8_t* (*function)(unsigned*);
@@ -564,33 +571,6 @@ class BuiltinElement: public JarElement {
 Element*
 parsePath(System* s, const char* path, const char* bootLibrary)
 {
-  class Tokenizer {
-   public:
-    class Token {
-     public:
-      Token(const char* s, unsigned length): s(s), length(length) { }
-
-      const char* s;
-      unsigned length;
-    };
-
-    Tokenizer(const char* s, char delimiter): s(s), delimiter(delimiter) { }
-
-    bool hasMore() {
-      while (*s == delimiter) ++s;
-      return *s;
-    }
-
-    Token next() {
-      const char* p = s;
-      while (*s and *s != delimiter) ++s;
-      return Token(p, s - p);
-    }
-
-    const char* s;
-    char delimiter;
-  };
-
   Element* first = 0;
   Element* prev = 0;
   for (Tokenizer t(path, s->pathSeparator()); t.hasMore();) {

@@ -2306,26 +2306,31 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   
   if (classpath == 0) classpath = ".";
   
+  System* s = makeSystem(crashDumpDirectory);
+  Heap* h = makeHeap(s, heapLimit);
+  Classpath* c = makeClasspath(s, h);
+  const char* classpathBootClasspath = c->bootClasspath();
+
   unsigned bcppl = strlen(bootClasspathPrepend);
   unsigned bcpl = strlen(bootClasspath);
+  unsigned cbcpl = strlen(classpathBootClasspath);
   unsigned bcpal = strlen(bootClasspathAppend);
 
-  unsigned bootClasspathBufferSize = bcppl + bcpl + bcpal + 3;
+  unsigned bootClasspathBufferSize = bcppl + bcpl + cbcpl + bcpal + 3;
   RUNTIME_ARRAY(char, bootClasspathBuffer, bootClasspathBufferSize);
   char* bootClasspathPointer = RUNTIME_ARRAY_BODY(bootClasspathBuffer);
-  local::append
-    (&bootClasspathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
+  local::append(&bootClasspathPointer, bootClasspathPrepend, bcppl,
+                bcpl + cbcpl + bcpal ? PATH_SEPARATOR : 0);
   local::append(&bootClasspathPointer, bootClasspath, bcpl,
+                cbcpl + bcpal ? PATH_SEPARATOR : 0);
+  local::append(&bootClasspathPointer, classpathBootClasspath, cbcpl,
                 bcpal ? PATH_SEPARATOR : 0);
   local::append(&bootClasspathPointer, bootClasspathAppend, bcpal, 0);
 
-  System* s = makeSystem(crashDumpDirectory);
-  Heap* h = makeHeap(s, heapLimit);
   Finder* bf = makeFinder
     (s, RUNTIME_ARRAY_BODY(bootClasspathBuffer), bootLibrary);
   Finder* af = makeFinder(s, classpath, bootLibrary);
   Processor* p = makeProcessor(s, h, true);
-  Classpath* c = makeClasspath(s, h);
 
   const char** properties = static_cast<const char**>
     (h->allocate(sizeof(const char*) * propertyCount));

@@ -469,13 +469,12 @@ class MySystem: public System {
   class Library: public System::Library {
    public:
     Library(System* s, void* p, const char* name, unsigned nameLength,
-            bool mapName, bool isMain):
+            bool isMain):
       s(s),
       p(p),
       mainExecutable(isMain),
       name_(name),
       nameLength(nameLength),
-      mapName_(mapName),
       next_(0)
     { }
 
@@ -485,10 +484,6 @@ class MySystem: public System {
 
     virtual const char* name() {
       return name_;
-    }
-
-    virtual bool mapName() {
-      return mapName_;
     }
 
     virtual System::Library* next() {
@@ -504,7 +499,7 @@ class MySystem: public System {
         fprintf(stderr, "close %p\n", p);
       }
 
-      if (!mainExecutable) dlclose(p);
+      if (not mainExecutable) dlclose(p);
 
       if (next_) {
         next_->disposeAll();
@@ -522,7 +517,6 @@ class MySystem: public System {
     bool mainExecutable;
     const char* name_;
     unsigned nameLength;
-    bool mapName_;
     System::Library* next_;
   };
 
@@ -716,27 +710,23 @@ class MySystem: public System {
     }
   }
 
+  virtual const char* libraryPrefix() {
+    return "lib";
+  }
+
+  virtual const char* librarySuffix() {
+    return SO_SUFFIX;
+  }
+
   virtual Status load(System::Library** lib,
-                      const char* name,
-                      bool mapName)
+                      const char* name)
   {
-    void* p;
-    bool alreadyAllocated = false;
-    bool isMain = false;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName and name) {
-      unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
-      char buffer[size];
-      vm::snprintf(buffer, size, "lib%s" SO_SUFFIX, name);
-      p = dlopen(buffer, RTLD_LAZY | RTLD_LOCAL);
-    } else {
-      if (!name) {
-        pathOfExecutable(this, &name, &nameLength);
-        alreadyAllocated = true;
-        isMain = true;
-      }
-      p = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
+    bool isMain = name == 0;
+    if (isMain) {
+      pathOfExecutable(this, &name, &nameLength);
     }
+    void* p = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
  
     if (p) {
       if (Verbose) {
@@ -747,7 +737,7 @@ class MySystem: public System {
       if (name) {
         n = static_cast<char*>(allocate(this, nameLength + 1));
         memcpy(n, name, nameLength + 1);
-        if (alreadyAllocated) {
+        if (isMain) {
           free(name);
         }
       } else {
@@ -755,17 +745,23 @@ class MySystem: public System {
       }
 
       *lib = new (allocate(this, sizeof(Library)))
-        Library(this, p, n, nameLength, mapName, isMain);
+        Library(this, p, n, nameLength, isMain);
 
       return 0;
     } else {
-      fprintf(stderr, "dlerror: %s\n", dlerror());
+      if (Verbose) {
+        fprintf(stderr, "dlerror: %s\n", dlerror());
+      }
       return 1;
     }
   }
 
   virtual char pathSeparator() {
     return ':';
+  }
+
+  virtual char fileSeparator() {
+    return '/';
   }
 
   virtual int64_t now() {

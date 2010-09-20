@@ -139,9 +139,73 @@ makeClassNameString(Thread* t, object name)
 
 class MyClasspath : public Classpath {
  public:
-  MyClasspath(Allocator* allocator):
+  static const unsigned BufferSize = 256;
+
+  MyClasspath(System* s, Allocator* allocator):
     allocator(allocator)
-  { }
+  {
+    const char* javaHome = getenv("JAVA_HOME");
+    if (javaHome == 0) {
+      javaHome = AVIAN_OPENJDK_JAVA_HOME;
+    }
+
+    class StringBuilder {
+     public:
+      StringBuilder(System* s, char* pointer, unsigned remaining):
+        s(s), pointer(pointer), remaining(remaining)
+      { }
+
+      void append(const char* append) {
+        unsigned length = strlen(append);
+        assert(s, remaining > length);
+  
+        strncpy(pointer, append, remaining);
+        
+        remaining -= length;
+        pointer += length;
+      }
+
+      void append(char c) {
+        assert(s, remaining > 1);
+        
+        pointer[0] = c;
+        pointer[1] = 0;
+
+        -- remaining;
+        ++ pointer;
+      }
+
+      System* s;
+      char* pointer;
+      unsigned remaining;
+    } sb(s, buffer, BufferSize);
+
+    this->javaHome = sb.pointer;
+    sb.append(javaHome);
+    sb.append('\0');
+
+    this->classpath = sb.pointer;
+    sb.append(javaHome);
+    sb.append("/jre/lib/rt.jar");
+    sb.append(s->pathSeparator());
+    sb.append(javaHome);
+    sb.append("/jre/lib/jsse.jar");
+    sb.append(s->pathSeparator());
+    sb.append(javaHome);
+    sb.append("/jre/lib/jce.jar");
+    sb.append(s->pathSeparator());
+    sb.append(javaHome);
+    sb.append("/jre/lib/resources.jar");
+    sb.append('\0');
+
+    this->libraryPath = sb.pointer;
+    sb.append(javaHome);
+#ifdef ARCH_x86_64
+    sb.append("/jre/lib/amd64");
+#else
+    sb.append("/jre/lib");
+#endif
+  }
 
   virtual object
   makeJclass(Thread* t, object class_)
@@ -232,7 +296,7 @@ class MyClasspath : public Classpath {
   {
     globalMachine = t->m;
 
-    if (loadLibrary(t, "java", true, true) == 0) {
+    if (loadLibrary(t, libraryPath, "java", true, true) == 0) {
       abort(t);
     }
 
@@ -271,6 +335,12 @@ class MyClasspath : public Classpath {
                   fieldOffset(t, sclSet)) = true;
   }
 
+  virtual const char*
+  bootClasspath()
+  {
+    return classpath;
+  }
+
   virtual void
   dispose()
   {
@@ -278,6 +348,10 @@ class MyClasspath : public Classpath {
   }
 
   Allocator* allocator;
+  const char* javaHome;
+  const char* classpath;
+  const char* libraryPath;
+  char buffer[BufferSize];
 };
 
 struct JVM_ExceptionTableEntryType{
@@ -560,10 +634,10 @@ interruptLock(Thread* t, object thread)
 namespace vm {
 
 Classpath*
-makeClasspath(System*, Allocator* allocator)
+makeClasspath(System* s, Allocator* allocator)
 {
   return new (allocator->allocate(sizeof(local::MyClasspath)))
-    local::MyClasspath(allocator);
+    local::MyClasspath(s, allocator);
 }
 
 } // namespace vm
@@ -1028,18 +1102,20 @@ JVM_InitProperties(Thread* t, jobject properties)
   local::setProperty(t, method, *properties, "os.name", "Linux");
 #  endif
   local::setProperty(t, method, *properties, "java.io.tmpdir", "/tmp");
-  local::setProperty(t, method, *properties, "java.home", "/tmp");
   local::setProperty(t, method, *properties, "user.home", getenv("HOME"));
   local::setProperty(t, method, *properties, "user.dir", getenv("PWD"));
-
-  // todo: set this to something sane:
-  local::setProperty(t, method, *properties, "sun.boot.library.path",
-                     getenv("LD_LIBRARY_PATH"));
-
   local::setProperty(t, method, *properties, "java.protocol.handler.pkgs",
                      "avian");
 
 #endif
+  local::setProperty
+    (t, method, *properties, "java.home",
+     static_cast<local::MyClasspath*>(t->m->classpath)->javaHome);
+
+  local::setProperty
+    (t, method, *properties, "sun.boot.library.path",
+     static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath);
+
   local::setProperty(t, method, *properties, "file.encoding", "ASCII");
 #ifdef ARCH_x86_32
   local::setProperty(t, method, *properties, "os.arch", "x86");
@@ -1132,7 +1208,9 @@ JVM_LoadLibrary(const char* name)
   
   ENTER(t, Thread::ActiveState);
 
-  return loadLibrary(t, name, false, false);
+  return loadLibrary
+    (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath, name,
+     false, false);
 }
 
 extern "C" JNIEXPORT void JNICALL

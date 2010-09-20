@@ -40,26 +40,20 @@ ifeq ($(continuations),true)
 	options := $(options)-continuations
 endif
 
+root := $(shell (cd .. && pwd))
+build = build/$(platform)-$(arch)$(options)
+classpath-build = $(build)/classpath
+test-build = $(build)/test
+src = src
+classpath-src = classpath
+test = test
+
 classpath = avian
 
-test-library-path = .
 test-executable = $(executable)
+generator-classpath = $(classpath-build)
+boot-classpath = $(classpath-build)
 
-ifdef gnu
-  classpath = gnu
-  options := $(options)-gnu
-	classapth-jar = $(gnu)/share/classpath/glibj.zip
-	classpath-libraries = \
-		$(gnu)/lib/classpath/libjavaio.a \
-		$(gnu)/lib/classpath/libjavalang.a \
-		$(gnu)/lib/classpath/libjavalangreflect.a \
-		$(gnu)/lib/classpath/libjavamath.a \
-		$(gnu)/lib/classpath/libjavanet.a \
-		$(gnu)/lib/classpath/libjavanio.a \
-		$(gnu)/lib/classpath/libjavautil.a
-	classpath-cflags = -DBOOT_BUILTINS=\"javaio,javalang,javalangreflect,javamath,javanet,javanio,javautil\" -DAVIAN_GNU
-	classpath-lflags = -lgmp
-endif
 ifdef openjdk
   classpath = openjdk
   options := $(options)-openjdk
@@ -68,18 +62,11 @@ ifdef openjdk
   else
 		openjdk-lib-dir = $(openjdk)/jre/lib
 	endif
-	classpath-jar = $(openjdk)/jre/lib/rt.jar
-  test-library-path = $(openjdk-lib-dir):$(build)
+	classpath-cflags = -DAVIAN_OPENJDK_JAVA_HOME=\"$(openjdk)\"
 	test-executable = $(executable-dynamic)
+	generator-classpath := $(generator-classpath):$(openjdk)/jre/lib/rt.jar
+	boot-classpath := $(boot-classpath):$(openjdk)/jre/lib/rt.jar
 endif
-
-root := $(shell (cd .. && pwd))
-build = build/$(platform)-$(arch)$(options)
-classpath-build = $(build)/classpath
-test-build = $(build)/test
-src = src
-classpath-src = classpath
-test = test
 
 ifneq ($(classpath),avian)
 	classpath-object-dep = $(build)/classpath-object.dep
@@ -138,7 +125,7 @@ cflags = $(build-cflags)
 
 common-lflags = -lm -lz $(classpath-lflags)
 
-build-lflags =
+build-lflags = -lz -lpthread -ldl
 
 lflags = $(common-lflags) -lpthread -ldl
 
@@ -401,10 +388,15 @@ driver-dynamic-object = $(build)/main-dynamic.o
 boot-source = $(src)/boot.cpp
 boot-object = $(build)/boot.o
 
-generator-headers =	$(src)/constants.h
-generator-sources = $(src)/type-generator.cpp
+generator-depends := $(wildcard $(src)/*.h)
+generator-sources = \
+	$(src)/type-generator.cpp \
+	$(src)/$(system).cpp \
+	$(src)/finder.cpp
+generator-cpp-objects = \
+	$(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%-build.o,$(x)))
 generator-objects = \
-	$(call cpp-objects,$(generator-sources),$(src),$(build))
+	$(call generator-cpp-objects,$(generator-sources),$(src),$(build))
 generator = $(build)/generator
 
 converter-objects = \
@@ -467,9 +459,9 @@ test-extra-dep = $(test-build)-extra.dep
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
-flags = -cp $(test-build)
+test-flags = -cp $(build)/test
 
-args = $(flags) $(input)
+test-args = $(test-flags) $(input)
 
 .PHONY: build
 build: $(static-library) $(executable) $(dynamic-library) \
@@ -481,20 +473,20 @@ $(test-extra-dep): $(classpath-dep)
 
 .PHONY: run
 run: build
-	$(executable) $(args)
+	LD_LIBRARY_PATH=$(build) $(test-executable) $(test-args)
 
 .PHONY: debug
 debug: build
-	gdb --args $(executable) $(args)
+	LD_LIBRARY_PATH=$(build) gdb --args $(test-executable) $(test-args)
 
 .PHONY: vg
 vg: build
-	$(vg) $(executable) $(args)
+	LD_LIBRARY_PATH=$(build) $(vg) $(test-executable) $(test-args)
 
 .PHONY: test
 test: build
 	/bin/sh $(test)/test.sh 2>/dev/null \
-		$(test-library-path) $(test-executable) $(mode) "$(flags)" \
+		$(build) $(test-executable) $(mode) "$(test-flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
 .PHONY: tarball
@@ -523,24 +515,15 @@ gen-arg = $(shell echo $(1) | sed -e 's:$(build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@echo "generating $(@)"
 	@mkdir -p $(dir $(@))
-	$(generator) $(classpath-build) $(call gen-arg,$(@)) < $(<) > $(@)
-
-$(build)/type-generator.o: \
-	$(generator-headers)
+	$(generator) $(generator-classpath) $(<) $(@) $(call gen-arg,$(@))
 
 $(classpath-build)/%.class: $(classpath-src)/%.java
 	@echo $(<)
 
-$(classpath-dep): $(classpath-sources) $(classpath-jar)
+$(classpath-dep): $(classpath-sources)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
-ifneq ($(classpath),avian)
-	(wd=$$(pwd) && \
-	 cd $(classpath-build) && \
-	 $(jar) xf $(classpath-jar))
-endif
-	$(javac) -d $(classpath-build) \
-		-bootclasspath $(classpath-build) \
+	$(javac) -d $(classpath-build) -bootclasspath $(boot-classpath) \
 		$(shell $(MAKE) -s --no-print-directory build=$(build) \
 			$(classpath-classes))
 	@touch $(@)
@@ -553,7 +536,7 @@ $(test-dep): $(test-sources)
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-classes))"; \
 	if test -n "$${files}"; then \
-		$(javac) -d $(test-build) -bootclasspath $(classpath-build) $${files}; \
+		$(javac) -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
 		test/Subroutine.java
@@ -564,7 +547,7 @@ $(test-extra-dep): $(test-extra-sources)
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-extra-classes))"; \
 	if test -n "$${files}"; then \
-		$(javac) -d $(test-build) -bootclasspath $(classpath-build) $${files}; \
+		$(javac) -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	@touch $(@)
 
@@ -635,7 +618,8 @@ $(classpath-object): $(build)/classpath.jar $(converter)
 	$(converter) $(<) $(@) _binary_classpath_jar_start \
 		_binary_classpath_jar_end $(platform) $(arch)
 
-$(generator-objects): $(build)/%.o: $(src)/%.cpp
+$(generator-objects): $(generator-depends)
+$(generator-objects): $(build)/%-build.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
