@@ -1,12 +1,31 @@
 import java.io.InputStream;
+import java.io.File;
 import java.util.Enumeration;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipEntry;
 
 public class Zip {
+
+  private static String findJar(File directory) {
+    File[] files = directory.listFiles();
+    for (File file: directory.listFiles()) {
+      if (file.isFile()) {
+        if (file.getName().endsWith(".jar")) {
+          return file.getAbsolutePath();
+        }
+      } else if (file.isDirectory()) {
+        String result = findJar(file);
+        if (result != null) {
+          return result;
+        }
+      }
+    }
+    return null;
+  }
   
   public static void main(String[] args) throws Exception {
-    ZipFile file = new ZipFile("build/classpath.jar");
+    ZipFile file = new ZipFile
+      (findJar(new File(System.getProperty("user.dir"))));
 
     byte[] buffer = new byte[4096];
     for (Enumeration<? extends ZipEntry> e = file.entries();
