@@ -51,8 +51,8 @@ test = test
 classpath = avian
 
 test-executable = $(executable)
-generator-classpath = $(classpath-build)
 boot-classpath = $(classpath-build)
+java-home = /tmp
 
 ifdef openjdk
   classpath = openjdk
@@ -62,9 +62,8 @@ ifdef openjdk
   else
 		openjdk-lib-dir = $(openjdk)/jre/lib
 	endif
-	classpath-cflags = -DAVIAN_OPENJDK_JAVA_HOME=\"$(openjdk)\"
+	java-home = $(openjdk)/jre
 	test-executable = $(executable-dynamic)
-	generator-classpath := $(generator-classpath):$(openjdk)/jre/lib/rt.jar
 	boot-classpath := $(boot-classpath):$(openjdk)/jre/lib/rt.jar
 endif
 
@@ -116,7 +115,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DUSE_ATOMIC_OPERATIONS $(classpath-cflags)
+	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(java-home)\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
@@ -515,7 +514,7 @@ gen-arg = $(shell echo $(1) | sed -e 's:$(build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@echo "generating $(@)"
 	@mkdir -p $(dir $(@))
-	$(generator) $(generator-classpath) $(<) $(@) $(call gen-arg,$(@))
+	$(generator) $(boot-classpath) $(<) $(@) $(call gen-arg,$(@))
 
 $(classpath-build)/%.class: $(classpath-src)/%.java
 	@echo $(<)

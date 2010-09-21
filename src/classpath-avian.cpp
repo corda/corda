@@ -128,7 +128,7 @@ enumerateThreads(Thread* t, Thread* x, object array, unsigned* index,
 namespace vm {
 
 Classpath*
-makeClasspath(System*, Allocator* allocator)
+makeClasspath(System*, Allocator* allocator, const char*)
 {
   return new (allocator->allocate(sizeof(local::MyClasspath)))
     local::MyClasspath(allocator);

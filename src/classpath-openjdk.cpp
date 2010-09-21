@@ -139,16 +139,11 @@ makeClassNameString(Thread* t, object name)
 
 class MyClasspath : public Classpath {
  public:
-  static const unsigned BufferSize = 256;
+  static const unsigned BufferSize = 1024;
 
-  MyClasspath(System* s, Allocator* allocator):
+  MyClasspath(System* s, Allocator* allocator, const char* javaHome):
     allocator(allocator)
   {
-    const char* javaHome = getenv("JAVA_HOME");
-    if (javaHome == 0) {
-      javaHome = AVIAN_OPENJDK_JAVA_HOME;
-    }
-
     class StringBuilder {
      public:
       StringBuilder(System* s, char* pointer, unsigned remaining):
@@ -157,7 +152,7 @@ class MyClasspath : public Classpath {
 
       void append(const char* append) {
         unsigned length = strlen(append);
-        assert(s, remaining > length);
+        expect(s, remaining > length);
   
         strncpy(pointer, append, remaining);
         
@@ -186,24 +181,24 @@ class MyClasspath : public Classpath {
 
     this->classpath = sb.pointer;
     sb.append(javaHome);
-    sb.append("/jre/lib/rt.jar");
+    sb.append("/lib/rt.jar");
     sb.append(s->pathSeparator());
     sb.append(javaHome);
-    sb.append("/jre/lib/jsse.jar");
+    sb.append("/lib/jsse.jar");
     sb.append(s->pathSeparator());
     sb.append(javaHome);
-    sb.append("/jre/lib/jce.jar");
+    sb.append("/lib/jce.jar");
     sb.append(s->pathSeparator());
     sb.append(javaHome);
-    sb.append("/jre/lib/resources.jar");
+    sb.append("/lib/resources.jar");
     sb.append('\0');
 
     this->libraryPath = sb.pointer;
     sb.append(javaHome);
 #ifdef ARCH_x86_64
-    sb.append("/jre/lib/amd64");
+    sb.append("/lib/amd64");
 #else
-    sb.append("/jre/lib");
+    sb.append("/lib");
 #endif
   }
 
@@ -634,10 +629,10 @@ interruptLock(Thread* t, object thread)
 namespace vm {
 
 Classpath*
-makeClasspath(System* s, Allocator* allocator)
+makeClasspath(System* s, Allocator* allocator, const char* javaHome)
 {
   return new (allocator->allocate(sizeof(local::MyClasspath)))
-    local::MyClasspath(s, allocator);
+    local::MyClasspath(s, allocator, javaHome);
 }
 
 } // namespace vm

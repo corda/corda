@@ -2238,6 +2238,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
 #define CRASHDIR_PROPERTY "avian.crash.dir"
 #define CLASSPATH_PROPERTY "java.class.path"
+#define JAVA_HOME_PROPERTY "java.home"
 #define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
 #define BOOTCLASSPATH_OPTION "bootclasspath"
 #define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
@@ -2257,6 +2258,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   unsigned heapLimit = 0;
   const char* bootLibrary = 0;
   const char* classpath = 0;
+  const char* javaHome = AVIAN_JAVA_HOME;
   const char* bootClasspathPrepend = "";
   const char* bootClasspath = "";
   const char* bootClasspathAppend = "";
@@ -2296,6 +2298,10 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
                          sizeof(CLASSPATH_PROPERTY)) == 0)
       {
         classpath = p + sizeof(CLASSPATH_PROPERTY);
+      } else if (strncmp(p, JAVA_HOME_PROPERTY "=",
+                         sizeof(JAVA_HOME_PROPERTY)) == 0)
+      {
+        javaHome = p + sizeof(JAVA_HOME_PROPERTY);
       }
 
       ++ propertyCount;
@@ -2308,7 +2314,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
-  Classpath* c = makeClasspath(s, h);
+  Classpath* c = makeClasspath(s, h, javaHome);
   const char* classpathBootClasspath = c->bootClasspath();
 
   unsigned bcppl = strlen(bootClasspathPrepend);

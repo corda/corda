@@ -1446,7 +1446,7 @@ runJavaThread(Thread* t)
 }
 
 Classpath*
-makeClasspath(System* system, Allocator* allocator);
+makeClasspath(System* system, Allocator* allocator, const char* javaHome);
 
 typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 
