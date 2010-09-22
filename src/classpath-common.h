@@ -176,7 +176,7 @@ loadLibrary(Thread* t, const char* name)
   }
 
   System::Library* lib;
-  if (LIKELY(t->m->system->success(t->m->system->load(&lib, name)))) {
+  if (t->m->system->success(t->m->system->load(&lib, name))) {
     last->setNext(lib);
     return lib;
   } else {

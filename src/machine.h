@@ -1188,9 +1188,9 @@ class Machine {
   enum Root {
     BootLoader,
     AppLoader,
-    ClassMap,
-    LoadClassMethod,
     BootstrapClassMap,
+    FindLoadedClassMethod,
+    LoadClassMethod,
     MonitorMap,
     StringMap,
     ByteArrayMap,
@@ -1775,28 +1775,6 @@ inline void
 setType(Thread* t, Machine::Type type, object value)
 {
   set(t, t->m->types, ArrayBody + (type * BytesPerWord), value);
-}
-
-inline object
-getClassLoaderMap(Thread* t, object loader)
-{
-  if (loader == root(t, Machine::BootLoader)) {
-    return root(t, Machine::ClassMap);
-  } else {
-    return classLoaderMap(t, loader);
-  }
-}
-
-inline Finder*
-getFinder(Thread* t, object loader)
-{
-  if (loader == root(t, Machine::BootLoader)) {
-    return t->m->bootFinder;
-  } else if (loader == root(t, Machine::AppLoader)) {
-    return t->m->appFinder;
-  } else {
-    abort(t);
-  }
 }
 
 inline bool

@@ -85,7 +85,8 @@ Avian_avian_SystemClassLoader_resourceExists
     RUNTIME_ARRAY(char, n, stringLength(t, name) + 1);
     stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
-    bool r = getFinder(t, loader)->exists(RUNTIME_ARRAY_BODY(n));
+    bool r = static_cast<Finder*>(systemClassLoaderFinder(t, loader))->exists
+      (RUNTIME_ARRAY_BODY(n));
 
 //     fprintf(stderr, "resource %s exists? %d\n", n, r);
 

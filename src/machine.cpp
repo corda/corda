@@ -1785,15 +1785,15 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_)
   object elementClass = hashMapFind
     (t, root(t, Machine::BootstrapClassMap), elementSpec, byteArrayHash,
      byteArrayEqual);
-
+  
   if (elementClass == 0) {
     elementClass = resolveClass(t, loader, elementSpec, throw_);
     if (elementClass == 0) return 0;
   }
 
-  object class_ = hashMapFind
-    (t, getClassLoaderMap(t, classLoader(t, elementClass)), spec,
-     byteArrayHash, byteArrayEqual);
+  PROTECT(t, elementClass);
+
+  object class_ = findLoadedClass(t, classLoader(t, elementClass), spec);
 
   return class_ ? class_ : makeArrayClass
     (t, classLoader(t, elementClass), dimensions, spec, elementClass);
@@ -2002,11 +2002,17 @@ boot(Thread* t)
   set(t, type(t, Machine::DoubleArrayType), ClassStaticTable,
       type(t, Machine::JdoubleType));
 
-  setRoot(t, Machine::ClassMap, makeHashMap(t, 0, 0));
+  { object map = makeHashMap(t, 0, 0);
+    set(t, root(t, Machine::BootLoader), ClassLoaderMap, map);
+  }
+
+  systemClassLoaderFinder(t, root(t, Machine::BootLoader)) = m->bootFinder;
 
   { object map = makeHashMap(t, 0, 0);
     set(t, root(t, Machine::AppLoader), ClassLoaderMap, map);
   }
+
+  systemClassLoaderFinder(t, root(t, Machine::AppLoader)) = m->appFinder;
 
   set(t, root(t, Machine::AppLoader), ClassLoaderParent,
       root(t, Machine::BootLoader));
@@ -3127,7 +3133,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
   ACQUIRE(t, t->m->classLock);
 
   object class_ = hashMapFind
-    (t, getClassLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
+    (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
 
   if (class_ == 0) {
     if (classLoaderParent(t, loader)) {
@@ -3149,7 +3155,8 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
              ".class",
              7);
 
-      System::Region* region = getFinder(t, loader)->find
+      System::Region* region = static_cast<Finder*>
+        (systemClassLoaderFinder(t, loader))->find
         (RUNTIME_ARRAY_BODY(file));
 
       if (region) {
@@ -3185,8 +3192,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
     if (class_) {
       PROTECT(t, class_);
 
-      hashMapInsert
-        (t, getClassLoaderMap(t, loader), spec, class_, byteArrayHash);
+      hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
     } else if (throw_ and t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
       t->exception = t->m->classpath->makeThrowable
@@ -3200,48 +3206,34 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
 object
 findLoadedClass(Thread* t, object loader, object spec)
 {
+  PROTECT(t, loader);
   PROTECT(t, spec);
+
   ACQUIRE(t, t->m->classLock);
 
-  object map = getClassLoaderMap(t, loader);
-  if (map) {
-    return hashMapFind(t, map, spec, byteArrayHash, byteArrayEqual);
-  } else {
-    return 0;
-  }
+  return classLoaderMap(t, loader) ? hashMapFind
+    (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual) : 0;
 }
 
 object
 resolveClass(Thread* t, object loader, object spec, bool throw_)
 {
-  if (loader == root(t, Machine::BootLoader)
-      or loader == root(t, Machine::AppLoader))
-  {
+  if (objectClass(t, loader) == type(t, Machine::SystemClassLoaderType)) {
     return resolveSystemClass(t, loader, spec, throw_);
   } else {
     expect(t, throw_);
 
-    PROTECT(t, loader);
-    PROTECT(t, spec);
-
-    { ACQUIRE(t, t->m->classLock);
-
-      if (classLoaderMap(t, loader) == 0) {
-        object map = makeHashMap(t, 0, 0);
-        set(t, loader, ClassLoaderMap, map);
-      }
-
-      object class_ = hashMapFind
-        (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
-
-      if (class_) {
-        return class_;
+    { object c = findLoadedClass(t, loader, spec);
+      if (c) {
+        return c;
       }
     }
 
-    object class_;
+    PROTECT(t, loader);
+    PROTECT(t, spec);
+
     if (byteArrayBody(t, spec, 0) == '[') {
-      class_ = resolveArrayClass(t, loader, spec, throw_);
+      return resolveArrayClass(t, loader, spec, throw_);
     } else {
       if (root(t, Machine::LoadClassMethod) == 0) {
         object m = resolveMethod
@@ -3272,31 +3264,38 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
           replace('/', '.', RUNTIME_ARRAY_BODY(s), reinterpret_cast<char*>
                   (&byteArrayBody(t, spec, 0)));
 
-          object specString = makeString(t, "%s", s);
+          object specString = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 
-          class_ = t->m->processor->invoke(t, method, loader, specString);
+          object c = t->m->processor->invoke(t, method, loader, specString);
 
-          if (LIKELY(class_ and t->exception == 0)) {
-            class_ = jclassVmClass(t, class_);
+          if (LIKELY(c and t->exception == 0)) {
+            PROTECT(t, c);
+
+            ACQUIRE(t, t->m->classLock);
+
+            if (classLoaderMap(t, loader) == 0) {
+              object map = makeHashMap(t, 0, 0);
+              set(t, loader, ClassLoaderMap, map);
+            }
+
+            c = jclassVmClass(t, c);
+
+            hashMapInsert
+              (t, classLoaderMap(t, loader), spec, c, byteArrayHash);
+
+            return c;
           }
         }
       }
+
+      if (t->exception == 0) {
+        object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
+        t->exception = t->m->classpath->makeThrowable
+          (t, Machine::ClassNotFoundExceptionType, message);
+      }
+
+      return 0;
     }
-
-    if (class_) {
-      PROTECT(t, class_);
-
-      ACQUIRE(t, t->m->classLock);
-
-      hashMapInsert(t, classLoaderMap(t, loader), spec, class_,
-                    byteArrayHash);
-    } else if (throw_ and t->exception == 0) {
-      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::ClassNotFoundExceptionType, message);
-    }
-
-    return class_;
   }
 }
 
@@ -3411,6 +3410,7 @@ preInitClass(Thread* t, object c)
   if (classVmFlags(t, c) & NeedInitFlag) {
     PROTECT(t, c);
     ACQUIRE(t, t->m->classLock);
+
     if (classVmFlags(t, c) & NeedInitFlag) {
       if (classVmFlags(t, c) & InitFlag) {
         // If the class is currently being initialized and this the thread
@@ -3444,8 +3444,8 @@ void
 postInitClass(Thread* t, object c)
 {
   PROTECT(t, c);
-
   ACQUIRE(t, t->m->classLock);
+
   if (t->exception) {
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::ExceptionInInitializerErrorType, 0, 0, t->exception);
@@ -3960,13 +3960,15 @@ defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length)
 
   if (c) {
     PROTECT(t, c);
-    if (getClassLoaderMap(t, loader) == 0) {
+    ACQUIRE(t, t->m->classLock);
+
+    if (classLoaderMap(t, loader) == 0) {
       object map = makeHashMap(t, 0, 0);
       set(t, loader, ClassLoaderMap, map);
     }
 
-    hashMapInsert(t, getClassLoaderMap(t, loader), className(t, c), c,
-                  byteArrayHash);
+    hashMapInsert
+      (t, classLoaderMap(t, loader), className(t, c), c, byteArrayHash);
   }
 
   return c;

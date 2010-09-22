@@ -8226,8 +8226,8 @@ boot(MyThread* t, BootImage* image)
 
   syncInstructionCache(code, image->codeSize);
 
-  setRoot(t, Machine::ClassMap, makeClassMap
-          (t, bootClassTable, image->bootClassCount, heap));
+  set(t, root(t, Machine::BootLoader), ClassLoaderMap, makeClassMap
+      (t, bootClassTable, image->bootClassCount, heap));
 
   set(t, root(t, Machine::AppLoader), ClassLoaderMap, makeClassMap
       (t, appClassTable, image->appClassCount, heap));
@@ -8249,7 +8249,8 @@ boot(MyThread* t, BootImage* image)
 
   fixupVirtualThunks(t, image, code);
 
-  fixupMethods(t, root(t, Machine::ClassMap), image, code);
+  fixupMethods
+    (t, classLoaderMap(t, root(t, Machine::BootLoader)), image, code);
   fixupMethods(t, classLoaderMap(t, root(t, Machine::AppLoader)), image, code);
 
   setRoot(t, Machine::BootstrapClassMap, makeHashMap(t, 0, 0));
@@ -8656,6 +8657,24 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
   Context context(t, bootContext, clone);
   compile(t, &context);
   if (UNLIKELY(t->exception)) return;
+
+  { object ehTable = codeExceptionHandlerTable(t, methodCode(t, clone));
+
+    if (ehTable) {
+      PROTECT(t, ehTable);
+
+      // resolve all exception handler catch types before we acquire
+      // the class lock:
+      for (unsigned i = 0; i < exceptionHandlerTableLength(t, ehTable); ++i) {
+        ExceptionHandler* handler = exceptionHandlerTableBody(t, ehTable, i);
+        if (exceptionHandlerCatchType(handler)) {
+          resolveClassInPool
+            (t, clone, exceptionHandlerCatchType(handler) - 1);
+          if (UNLIKELY(t->exception)) return;
+        }
+      }
+    }
+  }
 
   ACQUIRE(t, t->m->classLock);
 

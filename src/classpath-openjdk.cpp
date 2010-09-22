@@ -1602,6 +1602,7 @@ JVM_FindLoadedClass(Thread* t, jobject loader, jstring name)
   ENTER(t, Thread::ActiveState);
 
   object spec = makeByteArray(t, stringLength(t, *name) + 1);
+
   { char* s = reinterpret_cast<char*>(&byteArrayBody(t, spec, 0));
     stringChars(t, *name, s);
     replace('.', '/', s);

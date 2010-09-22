@@ -22,7 +22,8 @@
 (type classLoader java/lang/ClassLoader
   (object map))
 
-(type systemClassLoader avian/SystemClassLoader)
+(type systemClassLoader avian/SystemClassLoader
+  (void* finder))
 
 (type field avian/VMField)
 
