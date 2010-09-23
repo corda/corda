@@ -21,6 +21,11 @@ public class Integers {
   }
 
   public static void main(String[] args) {
+    { int foo = 1028;
+      foo -= 1023;
+      expect(foo == 5);
+    }
+
     expect(gcd(12, 4) == 4);
 
     { int a = 2;

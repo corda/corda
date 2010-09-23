@@ -4953,7 +4953,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       case iinc: {
         uint16_t index = codeReadInt16(t, code, ip);
-        uint16_t count = codeReadInt16(t, code, ip);
+        int16_t count = codeReadInt16(t, code, ip);
 
         storeLocal
           (context, 1,
