@@ -41,6 +41,7 @@
 #  include <sys/types.h>
 #  include <sys/stat.h>
 #  include <sys/socket.h>
+#  include <sys/ioctl.h>
 #  include <fcntl.h>
 #  include <errno.h>
 #  include <sched.h>
@@ -49,6 +50,7 @@
 #  define CLOSE close
 #  define READ read
 #  define WRITE write
+#  define FSTAT fstat
 #  define LSEEK lseek
 
 #endif // not PLATFORM_WINDOWS
@@ -2372,6 +2374,18 @@ JVM_Write(jint fd, char* src, jint length)
 extern "C" JNIEXPORT jint JNICALL
 JVM_Available(jint fd, jlong* result)
 {
+  struct stat buffer;
+  int n;
+  if (FSTAT(fd, &buffer) >= 0
+      and (S_ISCHR(buffer.st_mode)
+           or S_ISFIFO(buffer.st_mode)
+           or S_ISSOCK(buffer.st_mode))
+      and ioctl(fd, FIONREAD, &n) >= 0)
+  {
+    *result = n;
+    return 1;
+  }
+
   int current = LSEEK(fd, 0, SEEK_CUR);
   if (current == -1) return 0;
 
