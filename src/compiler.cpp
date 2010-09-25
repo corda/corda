@@ -4865,12 +4865,13 @@ class BoundsCheckEvent: public Event {
     Assembler* a = c->assembler;
 
     ConstantSite* constant = findConstantSite(c, index);
-    CodePromise* nextPromise = codePromise
-      (c, static_cast<Promise*>(0));
     CodePromise* outOfBoundsPromise = 0;
 
     if (constant) {
-      expect(c, constant->value->value() >= 0);      
+      if (constant->value->value() < 0) {
+        Assembler::Constant handlerConstant(resolved(c, handler));
+        a->apply(Call, BytesPerWord, ConstantOperand, &handlerConstant);
+      }
     } else {
       outOfBoundsPromise = codePromise(c, static_cast<Promise*>(0));
 
@@ -4880,23 +4881,28 @@ class BoundsCheckEvent: public Event {
             BytesPerWord, &oob, &oob);
     }
 
-    assert(c, object->source->type(c) == RegisterOperand);
-    MemorySite length(static_cast<RegisterSite*>(object->source)->number,
-                      lengthOffset, NoRegister, 1);
-    length.acquired = true;
+    if (constant == 0 or constant->value->value() >= 0) {
+      assert(c, object->source->type(c) == RegisterOperand);
+      MemorySite length(static_cast<RegisterSite*>(object->source)->number,
+                        lengthOffset, NoRegister, 1);
+      length.acquired = true;
 
-    ConstantSite next(nextPromise);
-    apply(c, JumpIfGreater, 4, index->source, index->source, 4, &length,
-          &length, BytesPerWord, &next, &next);
+      CodePromise* nextPromise = codePromise
+        (c, static_cast<Promise*>(0));
 
-    if (constant == 0) {
-      outOfBoundsPromise->offset = a->offset();
+      ConstantSite next(nextPromise);
+      apply(c, JumpIfGreater, 4, index->source, index->source, 4, &length,
+            &length, BytesPerWord, &next, &next);
+
+      if (constant == 0) {
+        outOfBoundsPromise->offset = a->offset();
+      }
+
+      Assembler::Constant handlerConstant(resolved(c, handler));
+      a->apply(Call, BytesPerWord, ConstantOperand, &handlerConstant);
+
+      nextPromise->offset = a->offset();
     }
-
-    Assembler::Constant handlerConstant(resolved(c, handler));
-    a->apply(Call, BytesPerWord, ConstantOperand, &handlerConstant);
-
-    nextPromise->offset = a->offset();
 
     popRead(c, this, object);
     popRead(c, this, index);

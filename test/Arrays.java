@@ -15,6 +15,17 @@ public class Arrays {
       expect(exception != null);
     }
 
+    { int[] array = new int[0];
+      Exception exception = null;
+      try {
+        int x = array[-1];
+      } catch (ArrayIndexOutOfBoundsException e) {
+        exception = e;
+      }
+
+      expect(exception != null);
+    }
+
     { int[] array = new int[3];
       int i = 0;
       array[i++] = 1;
