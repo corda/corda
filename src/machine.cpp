@@ -1494,6 +1494,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   bool populateInterfaceVtables = false;
 
   if (declaredVirtualCount == 0
+      and abstractVirtuals == 0
       and (classFlags(t, class_) & ACC_INTERFACE) == 0)
   {
     if (classSuper(t, class_)) {

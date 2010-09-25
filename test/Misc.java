@@ -1,4 +1,16 @@
 public class Misc {
+  private interface Bar {
+    public int baz();
+  }
+
+  private static abstract class Bim implements Bar { }
+
+  private static class Baz extends Bim {
+    public int baz() {
+      return 42;
+    }
+  }
+
   private static int alpha;
   private static int beta;
   private static byte byte1, byte2, byte3;
@@ -93,6 +105,9 @@ public class Misc {
   }
 
   public static void main(String[] args) {
+    Bim bim = new Baz();
+    expect(bim.baz() == 42);
+
     expect(queryDefault(new Object()) != null);
 
     { Foo foo = new Foo();
