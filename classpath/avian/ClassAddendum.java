@@ -13,4 +13,5 @@ package avian;
 public class ClassAddendum extends Addendum {
   public volatile Class class_;
   public Object[] signers;
+  public volatile Class arrayClass;
 }

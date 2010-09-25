@@ -2178,9 +2178,6 @@ resolveField(Thread* t, object loader, const char* className,
   }
 }
 
-object
-resolveObjectArrayClass(Thread* t, object loader, object elementSpec);
-
 bool
 classNeedsInit(Thread* t, object c);
 
@@ -2992,7 +2989,7 @@ getJClass(Thread* t, object c)
 
     ACQUIRE(t, t->m->classLock);
 
-    object addendum = makeClassAddendum(t, 0, 0, 0, 0);
+    object addendum = makeClassAddendum(t, 0, 0, 0, 0, 0);
       
     set(t, c, ClassAddendum, addendum);
   }
@@ -3048,7 +3045,8 @@ registerNative(Thread* t, object method, void* function)
 }
 
 inline void
-unregisterNatives(Thread* t, object c) {
+unregisterNatives(Thread* t, object c)
+{
   if (classMethodTable(t, c)) {
     for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
       object method = arrayBody(t, classMethodTable(t, c), i);
@@ -3058,6 +3056,9 @@ unregisterNatives(Thread* t, object c) {
     }
   }
 }
+
+object
+getCaller(Thread* t, unsigned target);
 
 object
 defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);

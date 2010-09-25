@@ -16,36 +16,6 @@
 namespace vm {
 
 object
-getCaller(Thread* t, unsigned target)
-{
-  class Visitor: public Processor::StackVisitor {
-   public:
-    Visitor(Thread* t, unsigned target):
-      t(t), method(0), count(0), target(target)
-    { }
-
-    virtual bool visit(Processor::StackWalker* walker) {
-      if (count == target) {
-        method = walker->method();
-        return false;
-      } else {
-        ++ count;
-        return true;
-      }
-    }
-
-    Thread* t;
-    object method;
-    unsigned count;
-    unsigned target;
-  } v(t, target);
-
-  t->m->processor->walkStack(t, &v);
-
-  return v.method;
-}
-
-object
 getTrace(Thread* t, unsigned skipCount)
 {
   class Visitor: public Processor::StackVisitor {

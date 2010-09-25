@@ -304,7 +304,11 @@ FindClass(Thread* t, const char* name)
   object n = makeByteArray(t, strlen(name) + 1);
   replace('.', '/', name, &byteArrayBody(t, n, 0));
 
-  object c = resolveClass(t, root(t, Machine::AppLoader), n);
+  object caller = getCaller(t, 0);
+
+  object c = resolveClass
+    (t, caller ? classLoader(t, methodClass(t, caller))
+     : root(t, Machine::AppLoader), n);
 
   return makeLocalReference(t, c == 0 ? 0 : getJClass(t, c));
 }

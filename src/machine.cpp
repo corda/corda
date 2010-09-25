@@ -960,8 +960,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 
     unsigned i = 0;
     for (HashMapIterator it(t, map); it.hasMore();) {
-      object interface = resolveClass
-        (t, classLoader(t, class_), tripleFirst(t, it.next()));
+      object interface = tripleSecond(t, it.next());
       if (UNLIKELY(t->exception)) return;
 
       set(t, interfaceTable, ArrayBody + (i * BytesPerWord), interface);
@@ -1630,7 +1629,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
       object body = makeByteArray(t, length);
       s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)), length);
 
-      object addendum = makeClassAddendum(t, pool, body, 0, 0);
+      object addendum = makeClassAddendum(t, pool, body, 0, 0, 0);
       
       set(t, class_, ClassAddendum, addendum);
     } else {
@@ -1814,6 +1813,58 @@ resolveArrayClass(Thread* t, object loader, object spec, bool throw_)
   } else {
     return makeArrayClass(t, loader, spec, throw_);
   }
+}
+
+object
+resolveObjectArrayClass(Thread* t, object loader, object elementClass)
+{
+  object addendum = classAddendum(t, elementClass);
+  if (addendum) {
+    object arrayClass = classAddendumArrayClass(t, addendum);
+    if (arrayClass) {
+      return arrayClass;
+    }
+  } else {
+    PROTECT(t, loader);
+    PROTECT(t, elementClass);
+
+    ACQUIRE(t, t->m->classLock);
+
+    object addendum = makeClassAddendum(t, 0, 0, 0, 0, 0);
+      
+    set(t, elementClass, ClassAddendum, addendum);
+  }
+
+  PROTECT(t, loader);
+  PROTECT(t, elementClass);
+
+  object elementSpec = className(t, elementClass);
+  PROTECT(t, elementSpec);
+
+  object spec;
+  if (byteArrayBody(t, elementSpec, 0) == '[') {
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1);
+    byteArrayBody(t, spec, 0) = '[';
+    memcpy(&byteArrayBody(t, spec, 1),
+           &byteArrayBody(t, elementSpec, 0),
+           byteArrayLength(t, elementSpec));
+  } else {
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3);
+    byteArrayBody(t, spec, 0) = '[';
+    byteArrayBody(t, spec, 1) = 'L';
+    memcpy(&byteArrayBody(t, spec, 2),
+           &byteArrayBody(t, elementSpec, 0),
+           byteArrayLength(t, elementSpec) - 1);
+    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 1) = ';';
+    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 2) = 0;
+  }
+
+  object arrayClass = resolveClass(t, loader, spec);
+
+  set(t, classAddendum(t, elementClass), ClassAddendumArrayClass,
+      arrayClass);
+
+  return arrayClass;
 }
 
 void
@@ -2301,7 +2352,7 @@ Thread::init()
       if (exception == 0) {
         setRoot(this, Machine::ArrayIndexOutOfBoundsException,
                 m->classpath->makeThrowable
-                (this, Machine::IndexOutOfBoundsExceptionType));
+                (this, Machine::ArrayIndexOutOfBoundsExceptionType));
       }
     }
 
@@ -3356,33 +3407,6 @@ resolveField(Thread* t, object class_, const char* fieldName,
   }
 }
 
-object
-resolveObjectArrayClass(Thread* t, object loader, object elementSpec)
-{
-  PROTECT(t, loader);
-  PROTECT(t, elementSpec);
-
-  object spec;
-  if (byteArrayBody(t, elementSpec, 0) == '[') {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1);
-    byteArrayBody(t, spec, 0) = '[';
-    memcpy(&byteArrayBody(t, spec, 1),
-           &byteArrayBody(t, elementSpec, 0),
-           byteArrayLength(t, elementSpec));
-  } else {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3);
-    byteArrayBody(t, spec, 0) = '[';
-    byteArrayBody(t, spec, 1) = 'L';
-    memcpy(&byteArrayBody(t, spec, 2),
-           &byteArrayBody(t, elementSpec, 0),
-           byteArrayLength(t, elementSpec) - 1);
-    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 1) = ';';
-    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 2) = 0;
-  }
-
-  return resolveClass(t, loader, spec);
-}
-
 bool
 classNeedsInit(Thread* t, object c)
 {
@@ -3476,7 +3500,7 @@ object
 makeObjectArray(Thread* t, object elementClass, unsigned count)
 {
   object arrayClass = resolveObjectArrayClass
-    (t, classLoader(t, elementClass), className(t, elementClass));
+    (t, classLoader(t, elementClass), elementClass);
   PROTECT(t, arrayClass);
 
   object array = makeArray(t, count);
@@ -3949,6 +3973,36 @@ parseUtf8(Thread* t, const char* data, unsigned length)
   Stream s(&client, reinterpret_cast<const uint8_t*>(data), length);
 
   return ::parseUtf8(t, s, length);
+}
+
+object
+getCaller(Thread* t, unsigned target)
+{
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t, unsigned target):
+      t(t), method(0), count(0), target(target)
+    { }
+
+    virtual bool visit(Processor::StackWalker* walker) {
+      if (count == target) {
+        method = walker->method();
+        return false;
+      } else {
+        ++ count;
+        return true;
+      }
+    }
+
+    Thread* t;
+    object method;
+    unsigned count;
+    unsigned target;
+  } v(t, target);
+
+  t->m->processor->walkStack(t, &v);
+
+  return v.method;
 }
 
 object
