@@ -112,7 +112,8 @@ public class Classes {
     case 'c':{
       byte[] name = (byte[]) Singleton.getObject(pool, read2(in) - 1);
 
-      return SystemClassLoader.getClass(loadVMClass(loader, name, 1, name.length - 3));
+      return SystemClassLoader.getClass
+        (loadVMClass(loader, name, 1, name.length - 3));
     }
 
     case '@':
