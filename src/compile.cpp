@@ -2601,7 +2601,7 @@ traceSize(Thread* t)
 void NO_RETURN
 throwArrayIndexOutOfBounds(MyThread* t)
 {
-  if (ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t))) {  
+  if (ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t))) {
     atomicOr(&(t->flags), Thread::TracingFlag);
     t->exception = t->m->classpath->makeThrowable
       (t, Machine::ArrayIndexOutOfBoundsExceptionType); 
