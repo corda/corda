@@ -376,10 +376,9 @@ popFrame(Thread* t)
   }
   
   if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)
-      and t->classInitList)
-  {
-    assert(t, t->classInitList->class_ == methodClass(t, method));
-    
+      and t->classInitList
+      and t->classInitList->class_ == methodClass(t, method))
+  {    
     t->classInitList->pop();
 
     postInitClass(t, methodClass(t, method));
@@ -428,30 +427,6 @@ class MyStackWalker: public Processor::StackWalker {
   Thread* t;
   int frame;
 };
-
-inline void
-resolveNative(Thread* t, object method)
-{
-  if (methodCode(t, method) == 0) {
-    object native = resolveNativeMethod(t, method);
-    if (LIKELY(native)) {
-      // ensure other threads only see the methodCode field populated
-      // once the object it points do has been populated:
-      storeStoreMemoryBarrier();
-
-      set(t, method, MethodCode, native);
-    } else {
-      object message = makeString
-        (t, "%s.%s%s",
-         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-         &byteArrayBody(t, methodName(t, method), 0),
-         &byteArrayBody(t, methodSpec(t, method), 0));
-
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::UnsatisfiedLinkErrorType, message);
-    }
-  } 
-}
 
 inline void
 checkStack(Thread* t, object method)
@@ -538,7 +513,7 @@ pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
 
 void
 marshalArguments(Thread* t, uintptr_t* args, uint8_t* types, unsigned sp,
-                 object method, bool indirect)
+                 object method, bool fastCallingConvention)
 {
   MethodSpecIterator it
     (t, reinterpret_cast<const char*>
@@ -565,19 +540,19 @@ marshalArguments(Thread* t, uintptr_t* args, uint8_t* types, unsigned sp,
     case INT64_TYPE: {
       uint64_t v = peekLong(t, sp);
       memcpy(args + argOffset, &v, 8);
-      argOffset += (8 / BytesPerWord);
+      argOffset += fastCallingConvention ? 2 : (8 / BytesPerWord);
       sp += 2;
     } break;
 
     case POINTER_TYPE: {
-      if (indirect) {
+      if (fastCallingConvention) {
+        args[argOffset++] = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
+      } else {
         object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
         if (*v == 0) {
           v = 0;
         }
         args[argOffset++] = reinterpret_cast<uintptr_t>(v);
-      } else {
-        args[argOffset++] = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
       }
     } break;
 
@@ -628,7 +603,7 @@ invokeNativeSlow(Thread* t, object method, void* function)
 
   marshalArguments
     (t, RUNTIME_ARRAY_BODY(args) + argOffset,
-     RUNTIME_ARRAY_BODY(types) + typeOffset, sp, method, true);
+     RUNTIME_ARRAY_BODY(types) + typeOffset, sp, method, false);
 
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
@@ -685,19 +660,17 @@ invokeNative(Thread* t, object method)
   if (nativeFast(t, native)) {
     pushFrame(t, method);
 
-    unsigned footprint = methodParameterFootprint(t, method) + 1;
+    unsigned footprint = methodParameterFootprint(t, method);
     RUNTIME_ARRAY(uintptr_t, args, footprint);
     unsigned sp = frameBase(t, t->frame);
     unsigned argOffset = 0;
-    if (methodFlags(t, method) & ACC_STATIC) {
-      ++ footprint;
-    } else {
+    if ((methodFlags(t, method) & ACC_STATIC) == 0) {
       RUNTIME_ARRAY_BODY(args)[argOffset++]
         = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
     }
 
     marshalArguments
-      (t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, false);
+      (t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
 
     uint64_t result = reinterpret_cast<FastNativeFunction>
        (nativeFunction(t, native))(t, method, RUNTIME_ARRAY_BODY(args));
@@ -2829,7 +2802,7 @@ interpret(Thread* t)
 
   case iinc: {
     uint16_t index = codeReadInt16(t, code, ip);
-    uint16_t count = codeReadInt16(t, code, ip);
+    int16_t count = codeReadInt16(t, code, ip);
     
     setLocalInt(t, index, localInt(t, index) + count);
   } goto loop;
@@ -3072,7 +3045,7 @@ class MyProcessor: public Processor {
   {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, 0, name, spec, addendum, class_, code, 0);
+       offset, 0, name, spec, addendum, class_, code);
   }
 
   virtual object

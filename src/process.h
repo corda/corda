@@ -56,9 +56,6 @@ isSpecialMethod(Thread* t, object method, object class_)
     and isSuperclass(t, methodClass(t, method), class_);
 }
 
-object
-resolveNativeMethod(Thread* t, object method);
-
 inline void
 populateMultiArray(Thread* t, object array, int32_t* counts,
                    unsigned index, unsigned dimensions)
@@ -89,6 +86,9 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
     populateMultiArray(t, a, counts, index + 1, dimensions);
   }
 }
+
+void
+resolveNative(Thread* t, object method);
 
 int
 findLineNumber(Thread* t, object method, unsigned ip);

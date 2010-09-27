@@ -203,10 +203,6 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
   return 0;
 }
 
-} // namespace
-
-namespace vm {
-
 object
 resolveNativeMethod(Thread* t, object method)
 {
@@ -221,6 +217,41 @@ resolveNativeMethod(Thread* t, object method)
   }
 
   return 0;
+}
+
+} // namespace
+
+namespace vm {
+
+void
+resolveNative(Thread* t, object method)
+{
+  PROTECT(t, method);
+
+  assert(t, methodFlags(t, method) & ACC_NATIVE);
+
+  initClass(t, methodClass(t, method));
+
+  if (LIKELY(t->exception == 0) and methodCode(t, method) == 0) {
+    object native = resolveNativeMethod(t, method);
+    if (UNLIKELY(native == 0)) {
+      object message = makeString
+        (t, "%s.%s%s",
+         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+         &byteArrayBody(t, methodName(t, method), 0),
+         &byteArrayBody(t, methodSpec(t, method), 0));
+
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::UnsatisfiedLinkErrorType, message);
+      return;
+    }
+
+    // ensure other threads only see the methodCode field populated
+    // once the object it points do has been populated:
+    storeStoreMemoryBarrier();
+
+    set(t, method, MethodCode, native);
+  } 
 }
 
 int
