@@ -13,7 +13,7 @@ package java.lang;
 import avian.Cell;
 
 public class ThreadGroup implements Thread.UncaughtExceptionHandler {
-  final ThreadGroup parent; // package private for GNU Classpath compatibility
+  private final ThreadGroup parent;
   private final String name;
   private Cell<ThreadGroup> subgroups;
 

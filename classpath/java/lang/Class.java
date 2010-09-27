@@ -21,11 +21,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.annotation.Annotation;
 import java.io.InputStream;
@@ -37,9 +35,7 @@ import java.security.ProtectionDomain;
 import java.security.Permissions;
 import java.security.AllPermission;
 
-public final class Class <T>
-  implements Type, GenericDeclaration, AnnotatedElement
-{
+public final class Class <T> implements Type, AnnotatedElement {
   private static final int PrimitiveFlag = 1 << 5;
 
   public final VMClass vmClass;
@@ -665,30 +661,6 @@ public final class Class <T>
     }
 
     return array;
-  }
-
-  public boolean isEnum() {
-    throw new UnsupportedOperationException();
-  }
-
-  public TypeVariable<Class<T>>[] getTypeParameters() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Method getEnclosingMethod() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Constructor getEnclosingConstructor() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Class getEnclosingClass() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Class[] getDeclaredClasses() {
-    throw new UnsupportedOperationException();
   }
 
   public ProtectionDomain getProtectionDomain() {

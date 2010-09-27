@@ -36,18 +36,6 @@ public class Matcher {
     }
   }
 
-  public boolean requireEnd() {
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean hitEnd() {
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean lookingAt() {
-    throw new UnsupportedOperationException();
-  }
-
   public Matcher reset() {
     return reset(input);
   }
@@ -61,26 +49,6 @@ public class Matcher {
 
   public int start() {
     return start;
-  }
-
-  public int start(int group) {
-    throw new UnsupportedOperationException();
-  }
-
-  public Pattern pattern() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Matcher region(int start, int end) {
-    throw new UnsupportedOperationException();
-  }
-
-  public int regionEnd() {
-    throw new UnsupportedOperationException();
-  }
-
-  public int regionStart() {
-    throw new UnsupportedOperationException();
   }
 
   public String replaceAll(String replacement) {
@@ -124,10 +92,6 @@ public class Matcher {
     return end;
   }
 
-  public int end(int group) {
-    throw new UnsupportedOperationException();
-  }
-
   public boolean find() {
     return find(end);
   }
@@ -142,17 +106,5 @@ public class Matcher {
     } else {
       return false;
     }
-  }
-
-  public int groupCount() {
-    throw new UnsupportedOperationException();
-  }
-
-  public String group() {
-    throw new UnsupportedOperationException();
-  }
-
-  public String group(int group) {
-    throw new UnsupportedOperationException();
   }
 }

@@ -24,11 +24,8 @@ public class Thread implements Runnable {
   private Object sleepLock;
   private ClassLoader classLoader;
   private UncaughtExceptionHandler exceptionHandler;
-
-  // package private for GNU Classpath, which inexplicably bypasses
-  // the accessor methods:
-  String name;
-  ThreadGroup group;
+  private String name;
+  private ThreadGroup group;
 
   private static UncaughtExceptionHandler defaultExceptionHandler;
 
@@ -285,22 +282,6 @@ public class Thread implements Runnable {
 
   public long getId() {
     return peer;
-  }
-
-  public void stop() {
-    throw new UnsupportedOperationException();
-  }
-
-  public void stop(Throwable t) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void suspend() {
-    throw new UnsupportedOperationException();
-  }
-
-  public void resume() {
-    throw new UnsupportedOperationException();
   }
 
   public interface UncaughtExceptionHandler {

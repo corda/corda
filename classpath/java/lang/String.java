@@ -13,7 +13,6 @@ package java.lang;
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Pattern;
 import java.util.Comparator;
-import java.util.Formatter;
 import java.util.Locale;
 import java.io.Serializable;
 import avian.Utf8;
@@ -507,9 +506,7 @@ public final class String
   }
 
   public static String valueOf(int v) {
-    // use Integer.toString(int, int), because GNU Classpath's
-    // Integer.toString(int) just calls String.valueOf(int):
-    return Integer.toString(v, 10);
+    return Integer.toString(v);
   }
 
   public static String valueOf(long v) {
@@ -574,38 +571,5 @@ public final class String
 
   public int codePointCount(int start, int end) {
     return Character.codePointCount(this, start, end);
-  }
-
-  public String replace(CharSequence match, CharSequence replacement) {
-    throw new UnsupportedOperationException();
-  }
-
-  public String toUpperCase(Locale locale) {
-    throw new UnsupportedOperationException();
-  }
-
-  public String toLowerCase(Locale locale) {
-    throw new UnsupportedOperationException();
-  }
-
-  public static String format(Locale locale, String format, Object ... args) {
-    return new Formatter(locale).format(format, args).toString();
-  }
-
-  public static String format(String format, Object ... args) {
-    return format(Locale.getDefault(), format, args);
-  }
-
-  // for GNU Classpath compatibility:
-  static char[] zeroBasedStringValue(String s) {
-    if (s.offset == 0) {
-      if (s.data instanceof char[]) {
-        char[] data = (char[]) s.data;
-        if (data.length == s.length) {
-          return data;
-        }
-      }
-    }
-    return s.toCharArray();
   }
 }

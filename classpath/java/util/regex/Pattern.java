@@ -92,10 +92,6 @@ public class Pattern {
     return pattern;
   }
 
-  public static String quote(String s) {
-    throw new UnsupportedOperationException();
-  }
-
   public String[] split(CharSequence input) {
     return split(input, 0);
   }

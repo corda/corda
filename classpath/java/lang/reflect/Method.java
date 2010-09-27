@@ -16,9 +16,7 @@ import avian.SystemClassLoader;
 
 import java.lang.annotation.Annotation;
 
-public class Method<T> extends AccessibleObject
-  implements Member, GenericDeclaration
-{
+public class Method<T> extends AccessibleObject implements Member {
   private final VMMethod vmMethod;
   private boolean accessible;
 
@@ -199,29 +197,5 @@ public class Method<T> extends AccessibleObject
 
   public Annotation[] getDeclaredAnnotations() {
     return getAnnotations();
-  }
-
-  public boolean isSynthetic() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Object getDefaultValue() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Type[] getGenericParameterTypes() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Type getGenericReturnType() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Class[] getExceptionTypes() {
-    throw new UnsupportedOperationException();
-  }
-
-  public TypeVariable<Method<T>>[] getTypeParameters() {
-    throw new UnsupportedOperationException();
   }
 }

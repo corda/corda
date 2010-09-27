@@ -254,10 +254,6 @@ public class Field<T> extends AccessibleObject {
     return getAnnotations();
   }
 
-  public boolean isEnumConstant() {
-    throw new UnsupportedOperationException();
-  }
-
   private static native long getPrimitive
     (Object instance, int code, int offset);
 

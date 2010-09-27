@@ -367,7 +367,6 @@ ExceptionCheck(Thread* t)
   return t->exception != 0;
 }
 
-#ifndef AVIAN_GNU
 jobject JNICALL
 NewDirectByteBuffer(Thread*, void*, jlong)
 {
@@ -385,7 +384,6 @@ GetDirectBufferCapacity(Thread*, jobject)
 {
   return -1;
 }
-#endif// not AVIAN_GNU
 
 jclass JNICALL
 GetObjectClass(Thread* t, jobject o)
@@ -2038,17 +2036,6 @@ append(char** p, const char* value, unsigned length, char tail)
 
 namespace vm {
 
-#ifdef AVIAN_GNU
-jobject JNICALL
-NewDirectByteBuffer(Thread*, void*, jlong);
-
-void* JNICALL
-GetDirectBufferAddress(Thread*, jobject);
-
-jlong JNICALL
-GetDirectBufferCapacity(Thread*, jobject);
-#endif//AVIAN_GNU
-
 void
 populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 {
@@ -2081,15 +2068,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->ThrowNew = local::ThrowNew;
   envTable->Throw = local::Throw;
   envTable->ExceptionCheck = local::ExceptionCheck;
-#ifdef AVIAN_GNU
-  envTable->NewDirectByteBuffer = vm::NewDirectByteBuffer;
-  envTable->GetDirectBufferAddress = vm::GetDirectBufferAddress;
-  envTable->GetDirectBufferCapacity = vm::GetDirectBufferCapacity;
-#else
   envTable->NewDirectByteBuffer = local::NewDirectByteBuffer;
   envTable->GetDirectBufferAddress = local::GetDirectBufferAddress;
   envTable->GetDirectBufferCapacity = local::GetDirectBufferCapacity;
-#endif
   envTable->DeleteLocalRef = local::DeleteLocalRef;
   envTable->GetObjectClass = local::GetObjectClass;
   envTable->IsInstanceOf = local::IsInstanceOf;
