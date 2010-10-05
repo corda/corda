@@ -231,8 +231,9 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid)
 }
 
 void getLocale(char* language, char* region) {
-  const char* lang = 0;
-  const char* reg = 0;
+  const char dummy = '\0';
+  const char* lang = &dummy;
+  const char* reg = &dummy;
 
   unsigned locale = GetUserDefaultUILanguage();
   unsigned prilang = locale & 0x3ff;
@@ -266,7 +267,7 @@ void getLocale(char* language, char* region) {
     case 0x00a: {
       lang = "es";
       switch (sublang) {
-        case 0x01: case: 0x03: reg = "ES"; break;
+        case 0x01: case 0x03: reg = "ES"; break;
         case 0x02: reg = "MX"; break;
       }
     } break;
@@ -302,8 +303,8 @@ void getLocale(char* language, char* region) {
     case 0x01d: lang = "sv"; reg = "SE"; break;
   }
 
-  if (language) memcpy(language, lang, strlen(lang) * sizeof(char));
-  if (region) memcpy(region, reg, strlen(reg) * sizeof(char));
+  if (language) memcpy(language, lang, (strlen(lang) + 1) * sizeof(char));
+  if (region) memcpy(region, reg, (strlen(reg) + 1) * sizeof(char));
 }
 #else
 extern "C" JNIEXPORT void JNICALL 
@@ -451,8 +452,8 @@ void getLocale(char* language, char* region) {
     lang[underscore] = reg[reglen] = '\0';
   }
 
-  if (language) memcpy(language, lang, strlen(lang) * sizeof(char));
-  if (region) memcpy(region, reg, strlen(reg) * sizeof(char));
+  if (language) memcpy(language, lang, (strlen(lang) + 1) * sizeof(char));
+  if (region) memcpy(region, reg, (strlen(reg) + 1) * sizeof(char));
 }
 #endif
 
