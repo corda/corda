@@ -229,6 +229,82 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid)
   }
   return exitCode;
 }
+
+void getLocale(char* language, char* region) {
+  const char* lang = 0;
+  const char* reg = 0;
+
+  unsigned locale = GetUserDefaultUILanguage();
+  unsigned prilang = locale & 0x3ff;
+  unsigned sublang = locale >> 10;
+
+  switch (prilang) {
+    case 0x004: {
+      lang = "zh";
+      switch (sublang) {
+        case 0x01: reg = "Hant"; break;
+        case 0x02: reg = "Hans"; break;
+        case 0x03: reg = "HK"; break;
+        case 0x04: reg = "SG"; break;
+      }
+    } break;
+    case 0x006: lang = "da"; reg = "DK"; break;
+    case 0x007: lang = "de"; reg = "DE"; break;
+    case 0x009: {
+      lang = "en";
+      switch (sublang) {
+        case 0x01: reg = "US"; break;
+        case 0x02: reg = "GB"; break;
+        case 0x03: reg = "AU"; break;
+        case 0x04: reg = "CA"; break;
+        case 0x05: reg = "NZ"; break;
+        case 0x06: reg = "IE"; break;
+        case 0x07: reg = "ZA"; break;
+        case 0x10: reg = "IN"; break;
+      }
+    } break;
+    case 0x00a: {
+      lang = "es";
+      switch (sublang) {
+        case 0x01: case: 0x03: reg = "ES"; break;
+        case 0x02: reg = "MX"; break;
+      }
+    } break;
+    case 0x00c: {
+      lang = "fr";
+      switch (sublang) {
+        case 0x01: reg = "FR"; break;
+        case 0x02: reg = "BE"; break;
+        case 0x03: reg = "CA"; break;
+      }
+    } break;
+    case 0x010: lang = "it"; reg = "IT"; break;
+    case 0x011: lang = "ja"; reg = "JP"; break;
+    case 0x012: lang = "ko"; reg = "KR"; break;
+    case 0x013: {
+      lang = "nl";
+      switch (sublang) {
+        case 0x01: reg = "NL"; break;
+        case 0x02: reg = "BE"; break;
+      }
+    } break;
+    case 0x014: lang = "no"; reg = "NO"; break;
+    case 0x015: lang = "pl"; reg = "PL"; break;
+    case 0x016: {
+      lang = "pt";
+      switch (sublang) {
+        case 0x01: reg = "BR"; break;
+        case 0x02: reg = "PT"; break;
+      }
+    } break;
+    case 0x018: lang = "ro"; reg = "RO"; break;
+    case 0x019: lang = "ru"; reg = "RU"; break;
+    case 0x01d: lang = "sv"; reg = "SE"; break;
+  }
+
+  if (language) memcpy(language, lang, strlen(lang) * sizeof(char));
+  if (region) memcpy(region, reg, strlen(reg) * sizeof(char));
+}
 #else
 extern "C" JNIEXPORT void JNICALL 
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
@@ -352,6 +428,32 @@ Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid)
   
   return exitCode;
 }
+
+void getLocale(char* language, char* region) {
+  const char* LANG = getenv("LANG");
+
+  char dummy = '\0';
+  char* lang = &dummy;
+  char* reg = &dummy;
+
+  if (LANG) {
+    unsigned underscore = 0;
+    while (underscore < strlen(LANG) && *(LANG + underscore) != '_') ++underscore;
+    unsigned period = underscore + 1;
+    while (period < strlen(LANG) && *(LANG + period) != '.') ++period;
+
+    unsigned reglen = period - underscore - 1;
+    char lang_[underscore + 1]; lang = lang_;
+    char reg_[reglen + 1]; reg = reg_;
+
+    memcpy(lang, LANG, underscore * sizeof(char));
+    memcpy(reg, LANG + underscore + 1, reglen * sizeof(char));
+    lang[underscore] = reg[reglen] = '\0';
+  }
+
+  if (language) memcpy(language, lang, strlen(lang) * sizeof(char));
+  if (region) memcpy(region, reg, strlen(reg) * sizeof(char));
+}
 #endif
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -452,6 +554,15 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF(getenv("HOME"));
     }
 #endif
+    else if (strcmp(chars, "user.language") == 0) {
+      char lang[16];
+      getLocale(lang, 0);
+      if (strlen(lang)) r = e->NewStringUTF(lang);
+    } else if (strcmp(chars, "user.region") == 0) {
+      char reg[16];
+      getLocale(0, reg);
+      if (strlen(reg)) r = e->NewStringUTF(reg);
+    }
 
     e->ReleaseStringUTFChars(name, chars);
   }
