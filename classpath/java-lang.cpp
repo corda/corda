@@ -431,29 +431,24 @@ Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid)
 }
 
 void getLocale(char* language, char* region) {
+  unsigned langlen = 0, reglen = 0;
   const char* LANG = getenv("LANG");
 
-  char dummy = '\0';
-  char* lang = &dummy;
-  char* reg = &dummy;
-
   if (LANG) {
-    unsigned underscore = 0;
-    while (underscore < strlen(LANG) && *(LANG + underscore) != '_') ++underscore;
-    unsigned period = underscore + 1;
-    while (period < strlen(LANG) && *(LANG + period) != '.') ++period;
-
-    unsigned reglen = period - underscore - 1;
-    char lang_[underscore + 1]; lang = lang_;
-    char reg_[reglen + 1]; reg = reg_;
-
-    memcpy(lang, LANG, underscore * sizeof(char));
-    memcpy(reg, LANG + underscore + 1, reglen * sizeof(char));
-    lang[underscore] = reg[reglen] = '\0';
+    while (langlen < strlen(LANG) && *(LANG + langlen) != '_') ++langlen;
+    unsigned regend = langlen + 1;
+    while (regend < strlen(LANG) && *(LANG + regend) != '.') ++regend;
+    reglen = regend - langlen - 1;
   }
 
-  if (language) memcpy(language, lang, (strlen(lang) + 1) * sizeof(char));
-  if (region) memcpy(region, reg, (strlen(reg) + 1) * sizeof(char));
+  if (language) {
+    memcpy(language, LANG, langlen * sizeof(char));
+    language[langlen] = '\0';
+  }
+  if (region) {
+    memcpy(region, LANG + langlen + 1, reglen * sizeof(char));
+    region[reglen] = '\0';
+  }
 }
 #endif
 
