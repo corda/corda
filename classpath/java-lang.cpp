@@ -18,6 +18,7 @@
 #include "jni-util.h"
 #include "errno.h"
 #include "fcntl.h"
+#include "ctype.h"
 
 #ifdef PLATFORM_WINDOWS
 
@@ -132,6 +133,59 @@ namespace {
 #endif  
 }
 
+class Locale {
+  static const unsigned MINLEN = 2;
+  static const unsigned MAXLEN = 3;
+  static const unsigned FIELDSIZE = MAXLEN + 1;
+
+  static const char* DEFAULT_LANGUAGE;
+  static const char* DEFAULT_REGION;
+
+  char language[FIELDSIZE];
+  char region[FIELDSIZE];
+
+  bool isLanguage(const char* language) {
+    if (!language) return false;
+    unsigned len = strlen(language);
+    if (len < MINLEN || len > MAXLEN) return false;
+    const char* p = language - 1;
+    while (islower(*++p));
+    if (*p != '\0') return false;
+    return true;
+  }
+
+  bool isRegion(const char* region) {
+    if (!region) return false;
+    unsigned len = strlen(region);
+    if ((len != 0 && len < MINLEN) || len > MAXLEN) return false;
+    const char* p = region - 1;
+    while (isupper(*++p));
+    if (*p != '\0') return false;
+    return true;
+  }
+
+public:
+  Locale(const char* language = "", const char* region = "") {
+    if (!isLanguage(language) || !isRegion(region)) {
+      language = DEFAULT_LANGUAGE;
+      region = DEFAULT_REGION;
+    }
+    memcpy(this->language, language, strlen(language) + 1);
+    memcpy(this->region, region, strlen(region) + 1);
+  }
+
+  Locale& operator=(const Locale& l) {
+    memcpy(language, l.language, FIELDSIZE);
+    memcpy(region, l.region, FIELDSIZE);
+    return *this;
+  }
+
+  const char* getLanguage() { return reinterpret_cast<const char*>(language); }
+  const char* getRegion() { return reinterpret_cast<const char*>(region); }
+};
+const char* Locale::DEFAULT_LANGUAGE = "en";
+const char* Locale::DEFAULT_REGION = "";
+
 #ifdef PLATFORM_WINDOWS
 extern "C" JNIEXPORT void JNICALL 
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
@@ -230,14 +284,12 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid)
   return exitCode;
 }
 
-void getLocale(char* language, char* region) {
-  const char dummy = '\0';
-  const char* lang = &dummy;
-  const char* reg = &dummy;
-
-  unsigned locale = GetUserDefaultUILanguage();
-  unsigned prilang = locale & 0x3ff;
-  unsigned sublang = locale >> 10;
+Locale getLocale() {
+  const char* lang = "";
+  const char* reg = "";
+  unsigned langid = GetUserDefaultUILanguage();
+  unsigned prilang = langid & 0x3ff;
+  unsigned sublang = langid >> 10;
 
   switch (prilang) {
     case 0x004: {
@@ -301,10 +353,11 @@ void getLocale(char* language, char* region) {
     case 0x018: lang = "ro"; reg = "RO"; break;
     case 0x019: lang = "ru"; reg = "RU"; break;
     case 0x01d: lang = "sv"; reg = "SE"; break;
+    default: lang = "en";
   }
 
-  if (language) memcpy(language, lang, (strlen(lang) + 1) * sizeof(char));
-  if (region) memcpy(region, reg, (strlen(reg) + 1) * sizeof(char));
+  Locale locale(lang, reg);
+  return locale;
 }
 #else
 extern "C" JNIEXPORT void JNICALL 
@@ -430,25 +483,30 @@ Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid)
   return exitCode;
 }
 
-void getLocale(char* language, char* region) {
-  unsigned langlen = 0, reglen = 0;
+Locale getLocale() {
+  Locale fallback;
+
   const char* LANG = getenv("LANG");
+  if (!LANG || strcmp(LANG, "C") == 0) return fallback;
 
-  if (LANG) {
-    while (langlen < strlen(LANG) && *(LANG + langlen) != '_') ++langlen;
-    unsigned regend = langlen + 1;
-    while (regend < strlen(LANG) && *(LANG + regend) != '.') ++regend;
-    reglen = regend - langlen - 1;
-  }
+  int len = strlen(LANG);
+  char buf[len];
+  memcpy(buf, LANG, len);
 
-  if (language) {
-    memcpy(language, LANG, langlen * sizeof(char));
-    language[langlen] = '\0';
-  }
-  if (region) {
-    memcpy(region, LANG + langlen + 1, reglen * sizeof(char));
-    region[reglen] = '\0';
-  }
+  char* tracer = buf;
+  const char* reg;
+
+  while (*tracer && *tracer != '_') ++tracer;
+  if (!*tracer) return fallback;
+  *tracer = '\0';
+  reg = tracer++ + 1;
+
+  while (*tracer && *tracer != '.') ++tracer;
+  if (tracer == reg) return fallback;
+  *tracer = '\0';
+
+  Locale locale(buf, reg);
+  return locale;
 }
 #endif
 
@@ -551,13 +609,11 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     }
 #endif
     else if (strcmp(chars, "user.language") == 0) {
-      char lang[16];
-      getLocale(lang, 0);
-      if (strlen(lang)) r = e->NewStringUTF(lang);
+      Locale locale = getLocale();
+      if (strlen(locale.getLanguage())) r = e->NewStringUTF(locale.getLanguage());
     } else if (strcmp(chars, "user.region") == 0) {
-      char reg[16];
-      getLocale(0, reg);
-      if (strlen(reg)) r = e->NewStringUTF(reg);
+      Locale locale = getLocale();
+      if (strlen(locale.getRegion())) r = e->NewStringUTF(locale.getRegion());
     }
 
     e->ReleaseStringUTFChars(name, chars);
