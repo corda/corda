@@ -755,7 +755,9 @@ class MySystem: public System {
 
       return 0;
     } else {
-//       fprintf(stderr, "dlerror: %s\n", dlerror());
+      if (Verbose) {
+        fprintf(stderr, "dlerror opening %s: %s\n", name, dlerror());
+      }
       return 1;
     }
   }
