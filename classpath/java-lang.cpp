@@ -133,10 +133,9 @@ namespace {
 #endif  
 }
 
-class Locale {
-  static const unsigned MINLEN = 2;
-  static const unsigned MAXLEN = 3;
-  static const unsigned FIELDSIZE = MAXLEN + 1;
+class Locale { // represents an ISO two-char language/country pair
+  static const unsigned FIELDLEN = 2;
+  static const unsigned FIELDSIZE = FIELDLEN + 1;
 
   static const char* DEFAULT_LANGUAGE;
   static const char* DEFAULT_REGION;
@@ -147,7 +146,7 @@ class Locale {
   bool isLanguage(const char* language) {
     if (!language) return false;
     unsigned len = strlen(language);
-    if (len < MINLEN || len > MAXLEN) return false;
+    if (len != FIELDLEN) return false;
     const char* p = language - 1;
     while (islower(*++p));
     if (*p != '\0') return false;
@@ -157,7 +156,7 @@ class Locale {
   bool isRegion(const char* region) {
     if (!region) return false;
     unsigned len = strlen(region);
-    if ((len != 0 && len < MINLEN) || len > MAXLEN) return false;
+    if (len != FIELDLEN) return false;
     const char* p = region - 1;
     while (isupper(*++p));
     if (*p != '\0') return false;
@@ -165,13 +164,16 @@ class Locale {
   }
 
 public:
-  Locale(const char* language = "", const char* region = "") {
-    if (!isLanguage(language) || !isRegion(region)) {
-      language = DEFAULT_LANGUAGE;
-      region = DEFAULT_REGION;
-    }
-    memcpy(this->language, language, strlen(language) + 1);
-    memcpy(this->region, region, strlen(region) + 1);
+  Locale(const char* language = "") {
+    Locale l(language, "");
+    *this = l;
+  }
+
+  Locale(const char* language, const char* region) {
+    language = isLanguage(language) ? language : DEFAULT_LANGUAGE;
+    region = isRegion(region) ? region : DEFAULT_REGION;
+    memcpy(this->language, language, FIELDSIZE);
+    memcpy(this->region, region, FIELDSIZE);
   }
 
   Locale& operator=(const Locale& l) {
@@ -295,8 +297,8 @@ Locale getLocale() {
     case 0x004: {
       lang = "zh";
       switch (sublang) {
-        case 0x01: reg = "Hant"; break;
-        case 0x02: reg = "Hans"; break;
+        case 0x01: reg = "CN"; break;
+        case 0x02: reg = "TW"; break;
         case 0x03: reg = "HK"; break;
         case 0x04: reg = "SG"; break;
       }

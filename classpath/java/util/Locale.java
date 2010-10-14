@@ -11,11 +11,17 @@
 package java.util;
 
 public class Locale {
-  public static final Locale ENGLISH = new Locale("en", "us");
+  private static final Locale DEFAULT;
+  public static final Locale ENGLISH = new Locale("en", "");
 
   private final String language;
   private final String country;
   private final String variant;
+
+  static {
+    DEFAULT = new Locale(System.getProperty("user.language"),
+                         System.getProperty("user.region"));
+  }
 
   public Locale(String language, String country, String variant) {
     this.language = language;
@@ -44,6 +50,6 @@ public class Locale {
   }
 
   public static Locale getDefault() {
-    return ENGLISH;
+    return DEFAULT;
   }
 }
