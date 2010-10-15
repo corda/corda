@@ -97,3 +97,9 @@
 
 -keepnames public class avian.Callback
 -keepnames public class java.util.concurrent.Callable
+
+# Proguard gets confused about clone() and array classes (http://sourceforge.net/tracker/index.php?func=detail&aid=2851344&group_id=54750&atid=474704):
+
+-keepclassmembers class java.lang.Object {
+   protected java.lang.Object clone();
+ }
