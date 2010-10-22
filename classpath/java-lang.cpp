@@ -234,7 +234,8 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
                             jobjectArray command, jlongArray process)
 {
-  char** argv = static_cast<char**>(malloc((e->GetArrayLength(command) + 1) * sizeof(char*)));
+  char** argv = static_cast<char**>
+    (malloc((e->GetArrayLength(command) + 1) * sizeof(char*)));
   int i;
   for(i = 0; i < e->GetArrayLength(command); i++){
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
@@ -255,11 +256,11 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   makePipe(e, out);
   if(e->ExceptionCheck()) return;
   jlong outDescriptor = static_cast<jlong>(out[1]);
-  e->SetLongArrayRegion(process, 1, 1, &outDescriptor);
+  e->SetLongArrayRegion(process, 2, 1, &outDescriptor);
   makePipe(e, err);
   if(e->ExceptionCheck()) return;
   jlong errDescriptor = static_cast<jlong>(err[0]);
-  e->SetLongArrayRegion(process, 1, 1, &errDescriptor);
+  e->SetLongArrayRegion(process, 3, 1, &errDescriptor);
   makePipe(e, msg);
   if(e->ExceptionCheck()) return;
   if(fcntl(msg[1], F_SETFD, FD_CLOEXEC) != 0) {
