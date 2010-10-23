@@ -649,23 +649,24 @@ $(classpath-object-dep): $(classpath-libraries)
 	 for x in $(classpath-libraries); do ar x $${x}; done)
 	@touch $(@)
 
-$(executable): $(classpath-object-dep)
-$(executable): \
-		$(vm-objects) $(jni-objects) $(driver-object) $(vm-heapwalk-objects) \
-		$(boot-object) $(vm-classpath-object)
+executable-objects = $(vm-objects) $(jni-objects) $(driver-object) \
+	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object)
+
+$(executable): $(classpath-object-dep) $(executable-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
-	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib \
-		-MANIFESTFILE:$(@).manifest
+	$(ld) $(lflags) $(executable-objects) -out:$(@) -PDB:$(@).pdb \
+		-IMPLIB:$(@).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(dlltool) -z $(@).def $(^) $(call classpath-objects)
+	$(dlltool) -z $(@).def $(executable-objects) $(call classpath-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(^) $(call classpath-objects) $(lflags) -o $(@)
+	$(ld) $(@).exp $(executable-objects) $(call classpath-objects) $(lflags) \
+		-o $(@)
 endif
 else
-	$(ld) $(^) $(call classpath-objects) $(rdynamic) $(lflags) \
+	$(ld) $(executable-objects) $(call classpath-objects) $(rdynamic) $(lflags) \
 		$(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
@@ -696,17 +697,18 @@ else
 	$(ld) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
 
-$(dynamic-library): $(classpath-object-dep)
-$(dynamic-library): \
-		$(vm-objects) $(dynamic-object) $(jni-objects) $(vm-heapwalk-objects) \
-		$(boot-object) $(vm-classpath-object) $(classpath-libraries)
+dynamic-library-objects = $(vm-objects) $(dynamic-object) $(jni-objects) \
+	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
+	$(classpath-libraries)
+
+$(dynamic-library): $(classpath-object-dep) $(dynamic-library-objects)
 	@echo "linking $(@)"
 ifdef msvc
-	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
+	$(ld) $(shared) $(lflags) $(dynamic-library-objects) -out:$(@) \
+		-PDB:$(@).pdb -IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
-	$(ld) $(^) -Wl,--version-script=openjdk.ld \
+	$(ld) $(dynamic-library-objects) -Wl,--version-script=openjdk.ld \
 		$(call classpath-objects) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
