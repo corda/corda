@@ -44,7 +44,7 @@ inline unsigned
 pad(unsigned size, unsigned alignment)
 {
   unsigned n = alignment;
-  while (size and n % size and n % BytesPerWord) ++ n;
+  while (size and n % size) ++ n;
   return n - alignment;
 }
 
@@ -886,11 +886,11 @@ class MemberIterator {
     offset_(type->type == Object::Pod ? 0 : BytesPerWord),
     size_(0),
     padding_(0),
-    alignment_(0)
+    alignment_(BytesPerWord)
   { 
     while (skipSupers and hasMore() and this->type != type) next();
     padding_ = 0;
-    alignment_ = 0;
+    alignment_ = BytesPerWord;
   }
 
   bool hasMore() {
@@ -924,7 +924,7 @@ class MemberIterator {
     case Object::Scalar: {
       size_ = memberSize(member);
       padding_ = pad(size_, alignment_);
-      alignment_ = (alignment_ + size_ + padding_) % BytesPerWord; 
+      alignment_ = (alignment_ + size_ + padding_) % 8; 
     } break;
 
     case Object::Array: {
@@ -938,11 +938,11 @@ class MemberIterator {
 
     offset_ += padding_;
 
-//     fprintf(stderr,
-//             "type: %s; member: %s; size: %d; padding: %d; alignment: %d;"
-//             " offset: %d;\n",
-//             typeName(type), memberName(member), size_, padding_, alignment_,
-//             offset_);
+    // fprintf(stderr,
+    //         "type: %s; member: %s; size: %d; padding: %d; alignment: %d;"
+    //         " offset: %d;\n",
+    //         typeName(type), memberName(member), size_, padding_, alignment_,
+    //         offset_);
 
     return member;
   }
