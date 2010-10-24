@@ -200,7 +200,8 @@ class MyClasspath : public Classpath {
 #ifdef ARCH_x86_64
     sb.append("/lib/amd64");
 #else
-    sb.append("/lib");
+    // todo: handle other architectures
+    sb.append("/lib/i386");
 #endif
   }
 
@@ -2272,7 +2273,8 @@ JVM_GetMethodIxByteCodeLength(Thread*, jclass, jint) { abort(); }
 extern "C" JNIEXPORT void JNICALL
 JVM_GetMethodIxExceptionTableEntry(Thread*, jclass, jint,
                                    jint,
-                                   local::JVM_ExceptionTableEntryType*) { abort(); }
+                                   local::JVM_ExceptionTableEntryType*)
+{ abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_GetMethodIxExceptionTableLength(Thread*, jclass, int) { abort(); }
