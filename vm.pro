@@ -12,6 +12,7 @@
 -keepclassmembers class java.lang.ClassLoader { !static <fields>; }
 -keepclassmembers class java.lang.String { !static <fields>; }
 -keepclassmembers class java.lang.Thread { !static <fields>; }
+-keepclassmembers class java.lang.ThreadGroup { !static <fields>; }
 -keepclassmembers class java.lang.StackTraceElement { !static <fields>; }
 -keepclassmembers class java.lang.Throwable { !static <fields>; }
 -keepclassmembers class java.lang.Byte { !static <fields>; }
@@ -28,6 +29,17 @@
 -keepclassmembers class java.lang.ref.PhantomReference { !static <fields>; }
 -keepclassmembers class java.lang.reflect.Field { !static <fields>; }
 -keepclassmembers class java.lang.reflect.Method { !static <fields>; }
+-keepclassmembers class java.lang.reflect.Constructor { !static <fields>; }
+-keepclassmembers class java.lang.reflect.AccessibleObject { !static <fields>; }
+-keepclassmembers class sun.reflect.ConstantPool { !static <fields>; }
+-keepclassmembers class avian.VMClass { !static <fields>; }
+-keepclassmembers class avian.VMMethod { !static <fields>; }
+-keepclassmembers class avian.VMField { !static <fields>; }
+-keepclassmembers class avian.ClassAddendum { !static <fields>; }
+-keepclassmembers class avian.MethodAddendum { !static <fields>; }
+-keepclassmembers class avian.FieldAddendum { !static <fields>; }
+-keepclassmembers class avian.Continuations$Continuation { !static <fields>; }
+-keepclassmembers class avian.Continuations$UnwindResult { !static <fields>; }
 
 # the VM may throw instances of the following:
 
