@@ -57,11 +57,6 @@ java-home = /tmp
 ifdef openjdk
   classpath = openjdk
   options := $(options)-openjdk
-  ifeq ($(arch),x86_64)
-		openjdk-lib-dir = $(openjdk)/jre/lib/amd64
-  else
-		openjdk-lib-dir = $(openjdk)/jre/lib
-	endif
 	java-home = $(openjdk)/jre
 	test-executable = $(executable-dynamic)
 	boot-classpath := $(boot-classpath):$(openjdk)/jre/lib/rt.jar
@@ -252,7 +247,7 @@ endif
 ifneq ($(platform),darwin)
 ifeq ($(arch),i386)
 # this is necessary to support __sync_bool_compare_and_swap:
-	cflags += -march=i486
+	cflags += -march=i586
 endif
 endif
 
