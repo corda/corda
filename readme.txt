@@ -390,7 +390,7 @@ Step 2: Create a stage1 directory and extract the contents of the
 class library jar into it.
 
  $ mkdir stage1
- $ (cd stage1 && jar xf ../../build/classpath.jar)
+ $ (cd stage1 && jar xf ../../build/${platform}-${arch}/classpath.jar)
 
 Step 3: Build the Java code and add it to stage1.
 
