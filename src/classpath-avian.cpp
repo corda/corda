@@ -95,7 +95,7 @@ class MyClasspath : public Classpath {
   virtual const char*
   bootClasspath()
   {
-    return "";
+    return BOOT_CLASSPATH;
   }
 
   virtual void

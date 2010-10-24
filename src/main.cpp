@@ -105,10 +105,6 @@ main(int ac, const char** av)
   ++ vmArgs.nOptions;
 #endif
 
-#ifdef BOOT_CLASSPATH
-  ++ vmArgs.nOptions;
-#endif
-
 #ifdef BOOT_IMAGE
   ++ vmArgs.nOptions;
 #endif
@@ -125,11 +121,6 @@ main(int ac, const char** av)
 #ifdef BOOT_IMAGE
   vmArgs.options[optionIndex++].optionString
     = const_cast<char*>("-Davian.bootimage=" BOOT_IMAGE);
-#endif
-
-#ifdef BOOT_CLASSPATH
-  vmArgs.options[optionIndex++].optionString
-    = const_cast<char*>("-Xbootclasspath:" BOOT_CLASSPATH);
 #endif
 
 #ifdef BOOT_LIBRARY

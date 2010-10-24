@@ -2245,7 +2245,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   const char* classpath = 0;
   const char* javaHome = AVIAN_JAVA_HOME;
   const char* bootClasspathPrepend = "";
-  const char* bootClasspath = "";
+  const char* bootClasspath = 0;
   const char* bootClasspathAppend = "";
   const char* crashDumpDirectory = 0;
 
@@ -2300,21 +2300,21 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
   Classpath* c = makeClasspath(s, h, javaHome);
-  const char* classpathBootClasspath = c->bootClasspath();
+
+  if (bootClasspath == 0) {
+    bootClasspath = c->bootClasspath();
+  }
 
   unsigned bcppl = strlen(bootClasspathPrepend);
   unsigned bcpl = strlen(bootClasspath);
-  unsigned cbcpl = strlen(classpathBootClasspath);
   unsigned bcpal = strlen(bootClasspathAppend);
 
-  unsigned bootClasspathBufferSize = bcppl + bcpl + cbcpl + bcpal + 3;
+  unsigned bootClasspathBufferSize = bcppl + bcpl + bcpal + 3;
   RUNTIME_ARRAY(char, bootClasspathBuffer, bootClasspathBufferSize);
   char* bootClasspathPointer = RUNTIME_ARRAY_BODY(bootClasspathBuffer);
   local::append(&bootClasspathPointer, bootClasspathPrepend, bcppl,
-                bcpl + cbcpl + bcpal ? PATH_SEPARATOR : 0);
+                bcpl + bcpal ? PATH_SEPARATOR : 0);
   local::append(&bootClasspathPointer, bootClasspath, bcpl,
-                cbcpl + bcpal ? PATH_SEPARATOR : 0);
-  local::append(&bootClasspathPointer, classpathBootClasspath, cbcpl,
                 bcpal ? PATH_SEPARATOR : 0);
   local::append(&bootClasspathPointer, bootClasspathAppend, bcpal, 0);
 

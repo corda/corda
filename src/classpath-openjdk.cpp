@@ -182,6 +182,8 @@ class MyClasspath : public Classpath {
     sb.append('\0');
 
     this->classpath = sb.pointer;
+    sb.append(BOOT_CLASSPATH);
+    sb.append(s->pathSeparator());
     sb.append(javaHome);
     sb.append("/lib/rt.jar");
     sb.append(s->pathSeparator());
