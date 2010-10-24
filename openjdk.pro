@@ -88,17 +88,48 @@
    private java.io.FileDescriptor fd;   
  }
 
-# ProGuard will not realize AtomicInteger.value is changed from native
-# code unless we tell it (todo: handle other Atomic* classes)
+# changed in native code via sun.misc.Unsafe (todo: handle other
+# Atomic* classes)
 -keepclassmembers class java.util.concurrent.atomic.AtomicInteger {
    private int value;   
  }
 
-# this field as accessed via an AtomicReferenceFieldUpdater:
+# avoid inlining due to access check using a fixed offset into call stack:
+-keep,allowshrinking,allowobfuscation class java.util.concurrent.atomic.AtomicReferenceFieldUpdater {
+   *** newUpdater(...);
+ }
+
+# accessed reflectively via an AtomicReferenceFieldUpdater:
 -keepclassmembers class java.io.BufferedInputStream {
    protected byte[] buf;
  }
 
+-keep class java.lang.System {
+   public static java.io.InputStream in;
+   public static java.io.PrintStream out;
+   public static java.io.PrintStream err;
+   # avoid inlining due to access check using fixed offset into call stack:
+   static java.lang.Class getCallerClass();
+ }
 
+# refered to by name from native code:
+-keepnames public class java.io.InputStream
+-keepnames public class java.io.PrintStream
 
-# (to be continued...)
+# avoid inlining due to access check using fixed offset into call stack:
+-keep,allowshrinking,allowobfuscation class java.lang.System {
+   static java.lang.Class getCallerClass();
+ }
+
+-keep class java.io.UnixFileSystem {
+   public UnixFileSystem();
+ }
+
+-keep class java.io.File {
+   private java.lang.String path;
+ }
+
+-keepclassmembers class java.lang.ClassLoader$NativeLibrary {
+   long handle;
+   private int jniVersion;
+ }
