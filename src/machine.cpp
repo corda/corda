@@ -3391,8 +3391,11 @@ resolveField(Thread* t, object class_, const char* fieldName,
  
   object field = findInInterfaces(t, class_, name, spec, findFieldInClass);
 
-  for (; class_ != 0 and field == 0; class_ = classSuper(t, class_)) {
-    field = findFieldInClass(t, class_, name, spec);
+  object c = class_;
+  PROTECT(t, c);
+
+  for (; c != 0 and field == 0; c = classSuper(t, c)) {
+    field = findFieldInClass(t, c, name, spec);
   }
 
   if (t->exception == 0 and field == 0) {
