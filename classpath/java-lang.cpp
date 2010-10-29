@@ -36,9 +36,6 @@
 #    define isnan _isnan
 #    define isfinite _finite
 #    define strtof strtod
-#    define FTIME _ftime_s
-#  else
-#    define FTIME _ftime
 #  endif
 
 #else // not PLATFORM_WINDOWS
@@ -469,9 +466,13 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_java_lang_System_currentTimeMillis(JNIEnv*, jclass)
 {
 #ifdef PLATFORM_WINDOWS
-  _timeb tb;
-  FTIME(&tb);
-  return (static_cast<jlong>(tb.time) * 1000) + static_cast<jlong>(tb.millitm);
+  // We used to use _ftime here, but that only gives us 1-second
+  // resolution on Windows 7.  _ftime_s might work better, but MinGW
+  // doesn't have it as of this writing.  So we use this mess instead:
+  FILETIME time;
+  GetSystemTimeAsFileTime(&time);
+  return (((static_cast<jlong>(time.dwHighDateTime) << 32)
+           | time.dwLowDateTime) / 10000) - 11644473600000LL;
 #else
   timeval tv = { 0, 0 };
   gettimeofday(&tv, 0);
