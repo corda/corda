@@ -40,7 +40,7 @@ public class ServerSocketChannel extends SelectableChannel {
     channel.close();
   }
 
-  public SocketChannel accept() throws Exception {
+  public SocketChannel accept() throws IOException {
     SocketChannel c = new SocketChannel();
     c.socket = doAccept();
     c.connected = true;

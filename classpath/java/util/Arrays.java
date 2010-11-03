@@ -148,5 +148,11 @@ public class Arrays {
       array[i] = value;
     }
   }
+  
+  public static <T> void fill(T[] array, T value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
 
 }

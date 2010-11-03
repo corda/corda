@@ -128,7 +128,7 @@ public class Continuations {
    * <code>receiver.receive(Callback)</code>, propagate the exception
    * thrown by that method, return the result passed to the
    * handleResult(T) method of the continuation, or throw the
-   * exception passed to the handleException(Throwable) of the
+   * exception passed to the handleException(Throwable) method of the
    * continuation.
    */
   public static native <T> T callWithCurrentContinuation

@@ -35,9 +35,6 @@
 #    define isnan _isnan
 #    define isfinite _finite
 #    define strtof strtod
-#    define FTIME _ftime_s
-#  else
-#    define FTIME _ftime
 #  endif
 
 #else // not PLATFORM_WINDOWS
@@ -233,7 +230,8 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
                             jobjectArray command, jlongArray process)
 {
-  char** argv = static_cast<char**>(malloc((e->GetArrayLength(command) + 1) * sizeof(char*)));
+  char** argv = static_cast<char**>
+    (malloc((e->GetArrayLength(command) + 1) * sizeof(char*)));
   int i;
   for(i = 0; i < e->GetArrayLength(command); i++){
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
@@ -254,11 +252,11 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   makePipe(e, out);
   if(e->ExceptionCheck()) return;
   jlong outDescriptor = static_cast<jlong>(out[1]);
-  e->SetLongArrayRegion(process, 1, 1, &outDescriptor);
+  e->SetLongArrayRegion(process, 2, 1, &outDescriptor);
   makePipe(e, err);
   if(e->ExceptionCheck()) return;
   jlong errDescriptor = static_cast<jlong>(err[0]);
-  e->SetLongArrayRegion(process, 1, 1, &errDescriptor);
+  e->SetLongArrayRegion(process, 3, 1, &errDescriptor);
   makePipe(e, msg);
   if(e->ExceptionCheck()) return;
   if(fcntl(msg[1], F_SETFD, FD_CLOEXEC) != 0) {
@@ -473,9 +471,13 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_java_lang_System_currentTimeMillis(JNIEnv*, jclass)
 {
 #ifdef PLATFORM_WINDOWS
-  _timeb tb;
-  FTIME(&tb);
-  return (static_cast<jlong>(tb.time) * 1000) + static_cast<jlong>(tb.millitm);
+  // We used to use _ftime here, but that only gives us 1-second
+  // resolution on Windows 7.  _ftime_s might work better, but MinGW
+  // doesn't have it as of this writing.  So we use this mess instead:
+  FILETIME time;
+  GetSystemTimeAsFileTime(&time);
+  return (((static_cast<jlong>(time.dwHighDateTime) << 32)
+           | time.dwLowDateTime) / 10000) - 11644473600000LL;
 #else
   timeval tv = { 0, 0 };
   gettimeofday(&tv, 0);

@@ -235,19 +235,31 @@ public final class String
   }
 
   public String toLowerCase() {
-    char[] b = new char[length];
-    for (int i = 0; i < length; ++i) {
-      b[i] = Character.toLowerCase(charAt(i));
+    for (int j = 0; j < length; ++j) {
+      char ch = charAt(j);
+      if (Character.toLowerCase(ch) != ch) {
+        char[] b = new char[length];
+        for (int i = 0; i < length; ++i) {
+          b[i] = Character.toLowerCase(charAt(i));
+        }
+        return new String(b, 0, length, false);
+      }
     }
-    return new String(b, 0, length, false);
+    return this;
   }
 
   public String toUpperCase() {
-    char[] b = new char[length];
-    for (int i = 0; i < length; ++i) {
-      b[i] = Character.toUpperCase(charAt(i));
+    for (int j = 0; j < length; ++j) {
+      char ch = charAt(j);
+      if (Character.toUpperCase(ch) != ch) {
+        char[] b = new char[length];
+        for (int i = 0; i < length; ++i) {
+          b[i] = Character.toUpperCase(charAt(i));
+        }
+        return new String(b, 0, length, false);
+      }
     }
-    return new String(b, 0, length, false);
+    return this;
   }
 
   public int indexOf(int c) {
@@ -571,5 +583,21 @@ public final class String
 
   public int codePointCount(int start, int end) {
     return Character.codePointCount(this, start, end);
+  }
+
+  public String toUpperCase(Locale locale) {
+    if (locale == Locale.ENGLISH) {
+      return toUpperCase();
+    } else {
+      throw new UnsupportedOperationException("toUpperCase("+locale+')');
+    }
+  }
+
+  public String toLowerCase(Locale locale) {
+    if (locale == Locale.ENGLISH) {
+      return toLowerCase();
+    } else {
+      throw new UnsupportedOperationException("toLowerCase("+locale+')');
+    }
   }
 }

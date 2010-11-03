@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,10 +10,10 @@
 
 package java.security;
 
-public class AllPermission extends Permission { 
-  public AllPermission() {
-    super("<all>");
+public class SecurityPermission extends BasicPermission {
+
+  public SecurityPermission(String name) {
+    super(name);
   }
-  
-  
+
 }

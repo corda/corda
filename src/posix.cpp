@@ -67,13 +67,16 @@ const int AltSegFaultSignal = SIGBUS;
 const int AltSegFaultSignal = InvalidSignal;
 #endif
 const unsigned AltSegFaultSignalIndex = 3;
+const int PipeSignal = SIGPIPE;
+const unsigned PipeSignalIndex = 4;
 
 const int signals[] = { VisitSignal,
                         SegFaultSignal,
                         InterruptSignal,
-                        AltSegFaultSignal };
+                        AltSegFaultSignal,
+                        PipeSignal };
 
-const unsigned SignalCount = 4;
+const unsigned SignalCount = 5;
 
 class MySystem;
 MySystem* system;
@@ -528,6 +531,7 @@ class MySystem: public System {
     system = this;
 
     registerHandler(&nullHandler, InterruptSignalIndex);
+    registerHandler(&nullHandler, PipeSignalIndex);
     registerHandler(&nullHandler, VisitSignalIndex);
 
     expect(this, make(&visitLock) == 0);
@@ -750,7 +754,7 @@ class MySystem: public System {
       return 0;
     } else {
       if (Verbose) {
-        fprintf(stderr, "dlerror: %s\n", dlerror());
+        fprintf(stderr, "dlerror opening %s: %s\n", name, dlerror());
       }
       return 1;
     }
@@ -784,6 +788,7 @@ class MySystem: public System {
 
     registerHandler(0, InterruptSignalIndex);
     registerHandler(0, VisitSignalIndex);
+    registerHandler(0, PipeSignalIndex);
     system = 0;
 
     ::free(this);
@@ -860,6 +865,10 @@ handleSignal(int signal, siginfo_t* info, void* context)
     index = InterruptSignalIndex;
   } break;
 
+  case PipeSignal: {
+    index = PipeSignalIndex;
+  } break;
+
   default: abort();
   }
 
@@ -871,6 +880,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
     switch (signal) {
     case VisitSignal:
     case InterruptSignal:
+    case PipeSignal:
       break;
 
     default:

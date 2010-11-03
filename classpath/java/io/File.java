@@ -60,7 +60,19 @@ public class File {
   public boolean isFile() {
     return isFile(path);
   }
+  
+  private static native boolean canRead(String path);
+  
+  public boolean canRead() {
+    return canRead(path);
+  }
 
+  private static native boolean canWrite(String path);
+  
+  public boolean canWrite() {
+    return canWrite(path);
+  }
+  
   public String getName() {
     int index = path.lastIndexOf(FileSeparator);
     if (index >= 0) {
