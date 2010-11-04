@@ -391,9 +391,8 @@ class MyClasspath : public Classpath {
     }
 #endif // not AVIAN_OPENJDK_SRC
 
-    t->m->processor->invoke
-      (t, root(t, Machine::BootLoader), "java/lang/System",
-       "initializeSystemClass", "()V", 0);
+    resolveSystemClass(t, root(t, Machine::BootLoader),
+                       className(t, type(t, Machine::ClassLoaderType)));
     if (UNLIKELY(t->exception)) return;
 
     object constructor = resolveMethod
@@ -424,6 +423,10 @@ class MyClasspath : public Classpath {
 
     cast<uint8_t>(classStaticTable(t, type(t, Machine::ClassLoaderType)),
                   fieldOffset(t, sclSet)) = true;
+
+    t->m->processor->invoke
+      (t, root(t, Machine::BootLoader), "java/lang/System",
+       "initializeSystemClass", "()V", 0);
   }
 
   virtual const char*
@@ -1781,8 +1784,24 @@ JVM_GetClassLoader(Thread* t, jclass c)
   ENTER(t, Thread::ActiveState);
 
   object loader = classLoader(t, jclassVmClass(t, *c));
-  return loader == root(t, Machine::BootLoader)
-    ? 0 : makeLocalReference(t, loader);
+
+  if (loader == root(t, Machine::BootLoader)) {
+    // sun.misc.Unsafe.getUnsafe expects a null result if the class
+    // loader is the boot classloader and will throw a
+    // SecurityException otherwise.
+    object caller = getCaller(t, 2);
+    if (caller and strcmp
+        (reinterpret_cast<const char*>
+         (&byteArrayBody(t, className(t, methodClass(t, caller)), 0)),
+         "sun/misc/Unsafe") == 0)
+    {
+      return 0;
+    } else {
+      return makeLocalReference(t, root(t, Machine::BootLoader));
+    }
+  } else {
+    return makeLocalReference(t, loader);
+  }
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
