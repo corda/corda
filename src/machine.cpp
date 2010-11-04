@@ -3546,9 +3546,8 @@ findInTable(Thread* t, object table, object name, object spec,
 }
 
 object
-findInHierarchy(Thread* t, object class_, object name, object spec,
-                object (*find)(Thread*, object, object, object),
-                Machine::Type errorType)
+findInHierarchyOrNull(Thread* t, object class_, object name, object spec,
+                      object (*find)(Thread*, object, object, object))
 {
   object originalClass = class_;
 
@@ -3568,15 +3567,6 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
     if (o == 0 and find == findFieldInClass) {
       o = findInInterfaces(t, originalClass, name, spec, find);
     }
-  }
-
-  if (o == 0) {
-    object message = makeString
-      (t, "%s %s not found in %s",
-       &byteArrayBody(t, name, 0),
-       &byteArrayBody(t, spec, 0),
-       &byteArrayBody(t, className(t, originalClass), 0));
-    t->exception = t->m->classpath->makeThrowable(t, errorType, message);
   }
 
   return o;

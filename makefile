@@ -52,22 +52,31 @@ classpath = avian
 
 test-executable = $(executable)
 boot-classpath = $(classpath-build)
-java-home = /tmp
+java-home = /avian-embedded
 
 ifdef openjdk
+	ifdef openjdk-src
+		include openjdk-src.mk
+	  options := $(options)-openjdk-src
+		classpath-objects = $(openjdk-objects)
+		classpath-cflags = -DAVIAN_OPENJDK_SRC
+		openjdk-jar-dep = $(build)/openjdk-jar.dep
+		classpath-jar-dep = $(openjdk-jar-dep)
+	else
+	  options := $(options)-openjdk
+		test-executable = $(executable-dynamic)
+		library-path = LD_LIBRARY_PATH=$(build)
+		java-home = $(openjdk)/jre
+	endif
+
   classpath = openjdk
-  options := $(options)-openjdk
-	java-home = $(openjdk)/jre
-	test-executable = $(executable-dynamic)
 	boot-classpath := $(boot-classpath):$(openjdk)/jre/lib/rt.jar
 endif
 
-ifneq ($(classpath),avian)
-	classpath-object-dep = $(build)/classpath-object.dep
-	classpath-objects = $(shell find $(build)/classpath-objects -name "*.o")
-else
+ifeq ($(classpath),avian)
 	jni-sources := $(shell find $(classpath-src) -name '*.cpp')
 	jni-objects = $(call cpp-objects,$(jni-sources),$(classpath-src),$(build))
+	classpath-objects = $(jni-objects)
 endif
 
 input = List
@@ -95,6 +104,7 @@ vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
 javac = "$(JAVA_HOME)/bin/javac"
+javah = "$(JAVA_HOME)/bin/javah"
 jar = "$(JAVA_HOME)/bin/jar"
 strip = strip
 strip-all = --strip-all
@@ -108,7 +118,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 	-Wno-non-virtual-dtor
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
-	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) \
+	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(java-home)\"
 
@@ -222,27 +232,29 @@ ifeq ($(platform),windows)
 endif
 
 ifeq ($(mode),debug)
-	cflags += -O0 -g3
+	optimization-cflags = -O0 -g3
 	strip = :
 endif
 ifeq ($(mode),debug-fast)
-	cflags += -O0 -g3 -DNDEBUG
+	optimization-cflags = -O0 -g3 -DNDEBUG
 	strip = :
 endif
 ifeq ($(mode),stress)
-	cflags += -O0 -g3 -DVM_STRESS
+	optimization-cflags = -O0 -g3 -DVM_STRESS
 	strip = :
 endif
 ifeq ($(mode),stress-major)
-	cflags += -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
+	optimization-cflags = -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
 	strip = :
 endif
 ifeq ($(mode),fast)
-	cflags += -O3 -g3 -DNDEBUG
+	optimization-cflags = -O3 -g3 -DNDEBUG
 endif
 ifeq ($(mode),small)
-	cflags += -Os -g3 -DNDEBUG
+	optimization-cflags = -Os -g3 -DNDEBUG
 endif
+
+cflags += $(optimization-cflags)
 
 ifneq ($(platform),darwin)
 ifeq ($(arch),i386)
@@ -467,15 +479,15 @@ $(test-extra-dep): $(classpath-dep)
 
 .PHONY: run
 run: build
-	LD_LIBRARY_PATH=$(build) $(test-executable) $(test-args)
+	$(library-path) $(test-executable) $(test-args)
 
 .PHONY: debug
 debug: build
-	LD_LIBRARY_PATH=$(build) gdb --args $(test-executable) $(test-args)
+	$(library-path) gdb --args $(test-executable) $(test-args)
 
 .PHONY: vg
 vg: build
-	LD_LIBRARY_PATH=$(build) $(vg) $(test-executable) $(test-args)
+	$(library-path) $(vg) $(test-executable) $(test-args)
 
 .PHONY: test
 test: build
@@ -581,7 +593,8 @@ $(driver-dynamic-object): $(driver-source)
 $(boot-object): $(boot-source)
 	$(compile-object)
 
-$(build)/classpath.jar: $(classpath-dep)
+$(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
+	@echo "creating $(@)"
 	(wd=$$(pwd) && \
 	 cd $(classpath-build) && \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
@@ -622,11 +635,10 @@ $(generator-objects): $(build)/%-build.o: $(src)/%.cpp
 $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
 
-$(static-library): $(classpath-object-dep)
-$(static-library): $(vm-objects) $(jni-objects) $(vm-heapwalk-objects)
+$(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
-	$(ar) cru $(@) $(^) $(call classpath-objects)
+	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
 $(bootimage-bin): $(bootimage-generator)
@@ -638,16 +650,10 @@ $(bootimage-object): $(bootimage-bin) $(converter)
 		_binary_bootimage_bin_end $(platform) $(arch) $(pointer-size) \
 		writable executable
 
-$(classpath-object-dep): $(classpath-libraries)
-	@mkdir -p $(build)/classpath-objects
-	(cd $(build)/classpath-objects && \
-	 for x in $(classpath-libraries); do ar x $${x}; done)
-	@touch $(@)
-
-executable-objects = $(vm-objects) $(jni-objects) $(driver-object) \
+executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object)
 
-$(executable): $(classpath-object-dep) $(executable-objects)
+$(executable): $(executable-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
@@ -655,14 +661,12 @@ ifdef msvc
 		-IMPLIB:$(@).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(dlltool) -z $(@).def $(executable-objects) $(call classpath-objects)
+	$(dlltool) -z $(@).def $(executable-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(executable-objects) $(call classpath-objects) $(lflags) \
-		-o $(@)
+	$(ld) $(@).exp $(executable-objects) $(lflags) -o $(@)
 endif
 else
-	$(ld) $(executable-objects) $(call classpath-objects) $(rdynamic) $(lflags) \
-		$(bootimage-lflags) -o $(@)
+	$(ld) $(executable-objects) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
@@ -675,8 +679,8 @@ $(bootimage-generator):
 		$(bootimage-generator)
 
 $(build-bootimage-generator): \
-		$(vm-objects) $(classpath-object) $(jni-objects) $(heapwalk-objects) \
-		$(bootimage-generator-objects)
+		$(vm-objects) $(classpath-object) $(classpath-objects) \
+		$(heapwalk-objects) $(bootimage-generator-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
@@ -692,11 +696,11 @@ else
 	$(ld) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
 
-dynamic-library-objects = $(vm-objects) $(dynamic-object) $(jni-objects) \
-	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
-	$(classpath-libraries)
+dynamic-library-objects = $(vm-objects) $(dynamic-object) \
+	$(classpath-objects) $(vm-heapwalk-objects) $(boot-object) \
+	$(vm-classpath-object) $(classpath-libraries)
 
-$(dynamic-library): $(classpath-object-dep) $(dynamic-library-objects)
+$(dynamic-library): $(dynamic-library-objects)
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(shared) $(lflags) $(dynamic-library-objects) -out:$(@) \
@@ -704,7 +708,7 @@ ifdef msvc
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
 	$(ld) $(dynamic-library-objects) -Wl,--version-script=openjdk.ld \
-		$(call classpath-objects) $(shared) $(lflags) $(bootimage-lflags) -o $(@)
+		$(shared) $(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
@@ -722,3 +726,25 @@ endif
 $(generator): $(generator-objects)
 	@echo "linking $(@)"
 	$(build-ld) $(^) $(build-lflags) -o $(@)
+
+$(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
+		$(openjdk-headers-dep)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cc) -fPIC -fvisibility=hidden $(openjdk-cflags) $(optimization-cflags) \
+		-w -c $(<) $(call output,$(@))
+
+$(openjdk-headers-dep): $(openjdk)/jre/lib/rt.jar
+	@echo "generating openjdk headers"
+	@mkdir -p $(dir $(@))
+	$(javah) -d $(build)/openjdk -bootclasspath $(boot-classpath) \
+		$(openjdk-headers-classes)
+	@touch $(@)
+
+$(openjdk-jar-dep): $(openjdk)/jre/lib/rt.jar $(openjdk)/jre/lib/jsse.jar \
+		$(openjdk)/jre/lib/jce.jar $(openjdk)/jre/lib/resources.jar
+	@echo "extracting openjdk classes"
+	@mkdir -p $(dir $(@))
+	@mkdir -p $(classpath-build)
+	(cd $(classpath-build) && for x in $(^); do jar xf $${x}; done)
+	@touch $(@)

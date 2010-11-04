@@ -35,6 +35,9 @@
 #    define CREAT _wcreat
 #  endif
 
+#  define LIBRARY_PREFIX ""
+#  define LIBRARY_SUFFIX ".dll"
+
 #else // not PLATFORM_WINDOWS
 
 #  include <unistd.h>
@@ -52,6 +55,9 @@
 #  define WRITE write
 #  define FSTAT fstat
 #  define LSEEK lseek
+
+#  define LIBRARY_PREFIX "lib"
+#  define LIBRARY_SUFFIX ".so"
 
 #endif // not PLATFORM_WINDOWS
 
@@ -139,6 +145,72 @@ makeClassNameString(Thread* t, object name)
   return makeString(t, "%s", s);
 }
 
+#ifdef AVIAN_OPENJDK_SRC
+// only safe to call during bootstrap when there's only one thread
+// running:
+void
+intercept(Thread* t, object c, const char* name, const char* spec,
+          void* function)
+{
+  object m = findMethodOrNull(t, c, name, spec);        
+  if (m) {
+    PROTECT(t, m);
+
+    object clone = methodClone(t, m);
+
+    // make clone private to prevent vtable updates at compilation
+    // time.  Otherwise, our interception might be bypassed by calls
+    // through the vtable.
+    methodFlags(t, clone) |= ACC_PRIVATE;
+
+    methodFlags(t, m) |= ACC_NATIVE;
+
+    object native = makeNativeIntercept(t, function, true, clone);
+
+    set(t, m, MethodCode, native);
+  }
+}
+
+const char*
+zipLibrary(Thread*);
+
+int64_t JNICALL
+getFileAttributes
+(Thread* t, object method, uintptr_t* arguments)
+{
+  const unsigned Exists = 1;
+  const unsigned Regular = 2;
+
+  object file = reinterpret_cast<object>(arguments[1]);
+
+  object pathField = findFieldInClass2
+    (t, objectClass(t, file), "path", "Ljava/lang/String;");
+
+  if (pathField) {
+    object path = cast<object>(file, fieldOffset(t, pathField));
+
+    RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+    stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+
+    if (strcmp(zipLibrary(t), p) == 0) {
+      return Exists | Regular;
+    } else {
+      object r = t->m->processor->invoke
+        (t, nativeInterceptOriginal(t, methodCode(t, method)),
+         reinterpret_cast<object>(arguments[0]), file);
+      return (r ? intValue(t, r) : 0);
+    }
+  } else {
+    object message = makeString
+      (t, "path Ljava/lang/String; not found in %s",
+       &byteArrayBody(t, className(t, objectClass(t, file)), 0));
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::RuntimeExceptionType, message);
+    return 0;
+  }
+}
+#endif // AVIAN_OPENJDK_SRC
+
 class MyClasspath : public Classpath {
  public:
   static const unsigned BufferSize = 1024;
@@ -205,6 +277,14 @@ class MyClasspath : public Classpath {
     // todo: handle other architectures
     sb.append("/lib/i386");
 #endif
+    sb.append('\0');
+    
+    this->zipLibrary = sb.pointer;
+    sb.append(this->libraryPath);
+    sb.append("/");
+    sb.append(LIBRARY_PREFIX);
+    sb.append("zip");
+    sb.append(LIBRARY_SUFFIX);
   }
 
   virtual object
@@ -296,9 +376,20 @@ class MyClasspath : public Classpath {
   {
     globalMachine = t->m;
 
+#ifdef AVIAN_OPENJDK_SRC
+    { object c = resolveClass
+        (t, root(t, Machine::BootLoader), "java/io/UnixFileSystem");
+
+      if (c) {
+        intercept(t, c, "getBooleanAttributes0", "(Ljava/io/File;)I",
+                  voidPointer(getFileAttributes));
+      }
+    }
+#else // not AVIAN_OPENJDK_SRC
     if (loadLibrary(t, libraryPath, "java", true, true) == 0) {
       abort(t);
     }
+#endif // not AVIAN_OPENJDK_SRC
 
     t->m->processor->invoke
       (t, root(t, Machine::BootLoader), "java/lang/System",
@@ -351,6 +442,7 @@ class MyClasspath : public Classpath {
   const char* javaHome;
   const char* classpath;
   const char* libraryPath;
+  const char* zipLibrary;
   char buffer[BufferSize];
 };
 
@@ -373,6 +465,12 @@ struct jvm_version_info {
     unsigned int: 32;
     unsigned int: 32;
 };
+
+const char*
+zipLibrary(Thread* t)
+{
+  return static_cast<MyClasspath*>(t->m->classpath)->zipLibrary;
+}
 
 unsigned
 countMethods(Thread* t, object c, bool publicOnly)
@@ -1205,7 +1303,13 @@ extern "C" JNIEXPORT void* JNICALL
 JVM_LoadLibrary(const char* name)
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
-  
+
+#ifdef AVIAN_OPENJDK_SRC
+  if (strcmp(local::zipLibrary(t), name) == 0) {
+    return t->m->libraries;
+  }
+#endif // AVIAN_OPENJDK_SRC
+
   ENTER(t, Thread::ActiveState);
 
   return loadLibrary
@@ -2597,18 +2701,18 @@ jio_vsnprintf(char* dst, size_t size, const char* format, va_list a)
   return vm::vsnprintf(dst, size, format, a);
 }
 
-extern "C" JNIEXPORT int
-jio_snprintf(char* dst, size_t size, const char* format, ...)
-{
-  va_list a;
-  va_start(a, format);
+// extern "C" JNIEXPORT int
+// jio_snprintf(char* dst, size_t size, const char* format, ...)
+// {
+//   va_list a;
+//   va_start(a, format);
 
-  int r = jio_vsnprintf(dst, size, format, a);
+//   int r = jio_vsnprintf(dst, size, format, a);
 
-  va_end(a);
+//   va_end(a);
 
-  return r;
-}
+//   return r;
+// }
 
 extern "C" JNIEXPORT int
 jio_vfprintf(FILE* stream, const char* format, va_list a)
@@ -2616,15 +2720,15 @@ jio_vfprintf(FILE* stream, const char* format, va_list a)
   return vfprintf(stream, format, a);
 }
 
-extern "C" JNIEXPORT int
-jio_fprintf(FILE* stream, const char* format, ...)
-{
-  va_list a;
-  va_start(a, format);
+// extern "C" JNIEXPORT int
+// jio_fprintf(FILE* stream, const char* format, ...)
+// {
+//   va_list a;
+//   va_start(a, format);
 
-  int r = jio_vfprintf(stream, format, a);
+//   int r = jio_vfprintf(stream, format, a);
 
-  va_end(a);
+//   va_end(a);
 
-  return r;
-}
+//   return r;
+// }

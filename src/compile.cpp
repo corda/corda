@@ -8601,19 +8601,7 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
   // method so that we won't be confused if another thread updates the
   // original while we're working.
 
-  object clone = makeMethod
-    (t, methodVmFlags(t, method),
-     methodReturnCode(t, method),
-     methodParameterCount(t, method),
-     methodParameterFootprint(t, method),
-     methodFlags(t, method),
-     methodOffset(t, method),
-     methodNativeID(t, method),
-     methodName(t, method),
-     methodSpec(t, method),
-     methodAddendum(t, method),
-     methodClass(t, method),
-     methodCode(t, method));
+  object clone = methodClone(t, method);
 
   loadMemoryBarrier();
 

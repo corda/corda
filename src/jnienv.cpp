@@ -1928,10 +1928,16 @@ RegisterNatives(Thread* t, jclass c, const JNINativeMethod* methods,
 
   for (int i = 0; i < methodCount; ++i) {
     if (methods[i].function) {
-      object method = findMethod(t, c, methods[i].name, methods[i].signature);
-      if (UNLIKELY(t->exception)) return -1;
+      object method = findMethodOrNull
+        (t, jclassVmClass(t, *c), methods[i].name, methods[i].signature);
 
-      registerNative(t, method, methods[i].function);
+      if (method == 0 or (methodFlags(t, method) & ACC_NATIVE) == 0) {
+        // The JNI spec says we must throw a NoSuchMethodError in this
+        // case, but that would prevent using a code shrinker like
+        // ProGuard effectively.  Instead, we just ignore it.
+      } else {
+        registerNative(t, method, methods[i].function);
+      }
     }
   }
 

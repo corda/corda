@@ -2127,11 +2127,11 @@ object
 resolveClass(Thread* t, object loader, object name, bool throw_ = true);
 
 inline object
-resolveClass(Thread* t, object loader, const char* name)
+resolveClass(Thread* t, object loader, const char* name, bool throw_ = true)
 {
   PROTECT(t, loader);
   object n = makeByteArray(t, "%s", name);
-  return resolveClass(t, loader, n);
+  return resolveClass(t, loader, n, throw_);
 }
 
 object
@@ -2212,6 +2212,16 @@ findFieldInClass(Thread* t, object class_, object name, object spec)
 }
 
 inline object
+findFieldInClass2(Thread* t, object class_, const char* name, const char* spec)
+{
+  PROTECT(t, class_);
+  object n = makeByteArray(t, "%s", name);
+  PROTECT(t, n);
+  object s = makeByteArray(t, "%s", spec);
+  return findFieldInClass(t, class_, n, s);
+}
+
+inline object
 findMethodInClass(Thread* t, object class_, object name, object spec)
 {
   return findInTable
@@ -2219,15 +2229,43 @@ findMethodInClass(Thread* t, object class_, object name, object spec)
 }
 
 object
+findInHierarchyOrNull(Thread* t, object class_, object name, object spec,
+                      object (*find)(Thread*, object, object, object));
+
+inline object
 findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*find)(Thread*, object, object, object),
-                Machine::Type errorType);
+                Machine::Type errorType)
+{
+  object o = findInHierarchyOrNull(t, class_, name, spec, find);
+
+  if (o == 0) {
+    object message = makeString
+      (t, "%s %s not found in %s",
+       &byteArrayBody(t, name, 0),
+       &byteArrayBody(t, spec, 0),
+       &byteArrayBody(t, className(t, class_), 0));
+    t->exception = t->m->classpath->makeThrowable(t, errorType, message);
+  }
+
+  return o;
+}
 
 inline object
 findMethod(Thread* t, object class_, object name, object spec)
 {
   return findInHierarchy
     (t, class_, name, spec, findMethodInClass, Machine::NoSuchMethodErrorType);
+}
+
+inline object
+findMethodOrNull(Thread* t, object class_, const char* name, const char* spec)
+{
+  PROTECT(t, class_);
+  object n = makeByteArray(t, "%s", name);
+  PROTECT(t, n);
+  object s = makeByteArray(t, "%s", spec);
+  return findInHierarchyOrNull(t, class_, n, s, findMethodInClass);
 }
 
 inline object
@@ -3065,6 +3103,24 @@ defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);
 
 void
 dumpHeap(Thread* t, FILE* out);
+
+inline object
+methodClone(Thread* t, object method)
+{
+  return makeMethod
+    (t, methodVmFlags(t, method),
+     methodReturnCode(t, method),
+     methodParameterCount(t, method),
+     methodParameterFootprint(t, method),
+     methodFlags(t, method),
+     methodOffset(t, method),
+     methodNativeID(t, method),
+     methodName(t, method),
+     methodSpec(t, method),
+     methodAddendum(t, method),
+     methodClass(t, method),
+     methodCode(t, method));
+}
 
 } // namespace vm
 

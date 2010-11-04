@@ -191,6 +191,54 @@ Finally, build with the msvc flag set to the MSVC tool directory:
  $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC"
 
 
+Building with the OpenJDK Class Library
+---------------------------------------
+
+By default, Avian uses its own lightweight class library.  However,
+that library only contains a relatively small subset of the classes
+and methods included in the JRE.  If your application requires
+features beyond that subset, you may want to tell Avian to use
+OpenJDK's class library instead.  To do so, specify the directory
+where OpenJDK is installed, e.g.:
+
+ $ make openjdk=/usr/lib/jvm/java-6-openjdk
+
+This will build Avian as a conventional JVM (e.g. libjvm.so) which
+loads its boot class library and native libraries (e.g. libjava.so)
+from /usr/lib/jvm/java-6-openjdk/jre at runtime.  To run an
+application in this configuration, you'll need to make sure the VM is
+in your library search path.  For example:
+
+ $ LD_LIBRARY_PATH=build/linux-x86_64-openjdk \
+     build/linux-x86_64-openjdk/avian-dynamic -cp /path/to/my/application \
+     com.example.MyApplication
+
+Alternatively, you can enable a stand-alone build using OpenJDK by
+specifying the location of the OpenJDK source code, e.g.:
+
+ $ make openjdk=$(pwd)/../jdk6/build/linux-amd64/j2sdk-image \
+     openjdk-src=$(pwd)/../jdk6/jdk/src
+
+The result of such a build is a self-contained binary which does not
+depend on external libraries, jars, or other files.  In this case, the
+specified paths are used only at build time; anything needed at
+runtime is embedded in the binary.  Thus, the process of running an
+application is simplified:
+
+ $ build/linux-x86_64-openjdk-src/avian -cp /path/to/my/application \
+     com.example.MyApplication
+
+Note that the resulting binary will be very large due to the size of
+OpenJDK's class library.  This can be mitigated using UPX, preferably
+an LZMA-enabled version:
+
+ $ upx --lzma --best build/linux-x86_64-openjdk-src/avian
+
+You can reduce the size futher for embedded builds by using ProGuard
+and the supplied openjdk.pro configuration file (see "Embedding with
+ProGuard and a Boot Image" below).
+
+
 Installing
 ----------
 

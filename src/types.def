@@ -44,6 +44,10 @@
   (void* function)
   (uint8_t fast))
 
+(type nativeIntercept
+  (extends native)
+  (object original))
+
 (pod exceptionHandler
   (uint16_t start)
   (uint16_t end)
