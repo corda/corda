@@ -298,14 +298,18 @@ class MyClasspath : public Classpath {
     if (parent) {
       group = threadGroup(t, parent->javaThread);
     } else {
-      group = makeThreadGroup
-        (t, 0, 0, MaxPriority, false, false, false, 0, 0, 0, 0, 0);
+      group = allocate(t, FixedSizeOfThreadGroup, true);
+      setObjectClass(t, group, type(t, Machine::ThreadGroupType));
+      threadGroupMaxPriority(t, group) = MaxPriority;
     }
+    
+    object thread = allocate(t, FixedSizeOfThread, true);
+    setObjectClass(t, thread, type(t, Machine::ThreadType));
+    threadPriority(t, thread) = NormalPriority;
+    threadGroup(t, thread) = group;
+    threadContextClassLoader(t, thread) = root(t, Machine::BootLoader);
 
-    return vm::makeThread
-      (t, 0, NormalPriority, 0, 0, false, false, false, 0, group,
-       root(t, Machine::BootLoader), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0,
-       0, 0, false);
+    return thread;
   }
 
   virtual void
@@ -1867,6 +1871,12 @@ JVM_FindClassFromClassLoader(Thread* t, const char* name, jboolean init,
   }
 
   return makeLocalReference(t, getJClass(t, c));
+}
+
+extern "C" JNIEXPORT jclass JNICALL
+JVM_FindClassFromBootLoader(Thread* t, const char* name, jboolean throwError)
+{
+  return JVM_FindClassFromClassLoader(t, name, false, 0, throwError);
 }
 
 extern "C" JNIEXPORT jclass JNICALL
