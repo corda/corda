@@ -1198,10 +1198,12 @@ class Machine {
     ShutdownHooks,
     ObjectsToFinalize,
     NullPointerException,
-    ArrayIndexOutOfBoundsException
+    ArrayIndexOutOfBoundsException,
+    VirtualFileFinders,
+    VirtualFiles
   };
 
-  static const unsigned RootCount = ArrayIndexOutOfBoundsException + 1;
+  static const unsigned RootCount = VirtualFiles + 1;
 
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
@@ -1446,7 +1448,8 @@ runJavaThread(Thread* t)
 }
 
 Classpath*
-makeClasspath(System* system, Allocator* allocator, const char* javaHome);
+makeClasspath(System* system, Allocator* allocator, const char* javaHome,
+              const char* embedPrefix);
 
 typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 

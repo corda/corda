@@ -132,7 +132,7 @@ class System {
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;
   virtual Status map(Region**, const char* name) = 0;
-  virtual FileType identify(const char* name) = 0;
+  virtual FileType stat(const char* name, unsigned* length) = 0;
   virtual Status open(Directory**, const char* name) = 0;
   virtual const char* libraryPrefix() = 0;
   virtual const char* librarySuffix() = 0;

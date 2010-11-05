@@ -2228,6 +2228,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
 #define CRASHDIR_PROPERTY "avian.crash.dir"
+#define EMBED_PREFIX_PROPERTY "avian.embed.prefix"
 #define CLASSPATH_PROPERTY "java.class.path"
 #define JAVA_HOME_PROPERTY "java.home"
 #define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
@@ -2250,6 +2251,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   const char* bootLibrary = 0;
   const char* classpath = 0;
   const char* javaHome = AVIAN_JAVA_HOME;
+  const char* embedPrefix = AVIAN_EMBED_PREFIX;
   const char* bootClasspathPrepend = "";
   const char* bootClasspath = 0;
   const char* bootClasspathAppend = "";
@@ -2293,6 +2295,10 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
                          sizeof(JAVA_HOME_PROPERTY)) == 0)
       {
         javaHome = p + sizeof(JAVA_HOME_PROPERTY);
+      } else if (strncmp(p, EMBED_PREFIX_PROPERTY "=",
+                         sizeof(EMBED_PREFIX_PROPERTY)) == 0)
+      {
+        embedPrefix = p + sizeof(EMBED_PREFIX_PROPERTY);
       }
 
       ++ propertyCount;
@@ -2305,7 +2311,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   
   System* s = makeSystem(crashDumpDirectory);
   Heap* h = makeHeap(s, heapLimit);
-  Classpath* c = makeClasspath(s, h, javaHome);
+  Classpath* c = makeClasspath(s, h, javaHome, embedPrefix);
 
   if (bootClasspath == 0) {
     bootClasspath = c->bootClasspath();
@@ -2325,8 +2331,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   local::append(&bootClasspathPointer, bootClasspathAppend, bcpal, 0);
 
   Finder* bf = makeFinder
-    (s, RUNTIME_ARRAY_BODY(bootClasspathBuffer), bootLibrary);
-  Finder* af = makeFinder(s, classpath, bootLibrary);
+    (s, h, RUNTIME_ARRAY_BODY(bootClasspathBuffer), bootLibrary);
+  Finder* af = makeFinder(s, h, classpath, bootLibrary);
   Processor* p = makeProcessor(s, h, true);
 
   const char** properties = static_cast<const char**>

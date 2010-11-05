@@ -48,6 +48,15 @@
   (extends native)
   (object original))
 
+(type finder
+  (void* finder)
+  (object name)
+  (object next))
+
+(type region
+  (void* region)
+  (unsigned position))
+
 (pod exceptionHandler
   (uint16_t start)
   (uint16_t end)

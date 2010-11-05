@@ -85,6 +85,9 @@ object
 vectorAppend(Thread* t, object vector, object value);
 
 object
+growArray(Thread* t, object array);
+
+object
 treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
           intptr_t (*compare)(Thread* t, intptr_t key, object b));
 

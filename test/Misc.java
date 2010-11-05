@@ -204,5 +204,7 @@ public class Misc {
         } while (x != 1);
       }
     }
+
+    System.out.println(java.util.Calendar.getInstance().toString());
   }
 }

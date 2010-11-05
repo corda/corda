@@ -529,17 +529,28 @@ vectorAppend(Thread* t, object vector, object value)
              vectorSize(t, vector) * BytesPerWord);
     }
 
-    memset(&vectorBody(t, newVector, vectorSize(t, vector) + 1),
-           0,
-           (vectorLength(t, newVector) - vectorSize(t, vector) - 1)
-           * BytesPerWord);
-
     vector = newVector;
   }
 
   set(t, vector, VectorBody + (vectorSize(t, vector) * BytesPerWord), value);
   ++ vectorSize(t, vector);
   return vector;
+}
+
+object
+growArray(Thread* t, object array)
+{
+  PROTECT(t, array);
+
+  object newArray = makeArray
+    (t, array == 0 ? 16 : (arrayLength(t, array) * 2));
+
+  if (array) {
+    memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
+           arrayLength(t, array));
+  }
+
+  return newArray;
 }
 
 object

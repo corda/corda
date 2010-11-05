@@ -193,6 +193,23 @@ turnOffTheLights(Thread* t)
     }
   }
 
+  if (root(t, Machine::VirtualFiles)) {
+    for (unsigned i = 0; i < arrayLength(t, root(t, Machine::VirtualFiles));
+         ++i)
+    {
+      object region = arrayBody(t, root(t, Machine::VirtualFiles), i);
+      if (region) {
+        static_cast<System::Region*>(regionRegion(t, region))->dispose();
+      }
+    }
+  }
+
+  for (object p = root(t, Machine::VirtualFileFinders);
+       p; p = finderNext(t, p))
+  {
+    static_cast<Finder*>(finderFinder(t, p))->dispose();
+  }
+
   Machine* m = t->m;
 
   disposeAll(t, t->m->rootThread);
@@ -204,13 +221,13 @@ turnOffTheLights(Thread* t)
   Finder* bf = m->bootFinder;
   Finder* af = m->appFinder;
 
+  c->dispose();
   m->dispose();
   h->disposeFixies();
-  c->dispose();
   p->dispose();
-  h->dispose();
   bf->dispose();
   af->dispose();
+  h->dispose();
   s->dispose();
 }
 

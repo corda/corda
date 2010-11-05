@@ -88,6 +88,7 @@ namespace local {
 
 const unsigned InterfaceVersion = 4;
 const unsigned PageSize = 4 * 1024;
+const int VirtualFileBase = 1000000000;
 
 Machine* globalMachine;
 
@@ -145,7 +146,6 @@ makeClassNameString(Thread* t, object name)
   return makeString(t, "%s", s);
 }
 
-#ifdef AVIAN_OPENJDK_SRC
 // only safe to call during bootstrap when there's only one thread
 // running:
 void
@@ -171,51 +171,20 @@ intercept(Thread* t, object c, const char* name, const char* spec,
   }
 }
 
-const char*
-zipLibrary(Thread*);
-
 int64_t JNICALL
 getFileAttributes
-(Thread* t, object method, uintptr_t* arguments)
-{
-  const unsigned Exists = 1;
-  const unsigned Regular = 2;
+(Thread* t, object method, uintptr_t* arguments);
 
-  object file = reinterpret_cast<object>(arguments[1]);
-
-  object pathField = findFieldInClass2
-    (t, objectClass(t, file), "path", "Ljava/lang/String;");
-
-  if (pathField) {
-    object path = cast<object>(file, fieldOffset(t, pathField));
-
-    RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
-    stringChars(t, path, RUNTIME_ARRAY_BODY(p));
-
-    if (strcmp(zipLibrary(t), p) == 0) {
-      return Exists | Regular;
-    } else {
-      object r = t->m->processor->invoke
-        (t, nativeInterceptOriginal(t, methodCode(t, method)),
-         reinterpret_cast<object>(arguments[0]), file);
-      return (r ? intValue(t, r) : 0);
-    }
-  } else {
-    object message = makeString
-      (t, "path Ljava/lang/String; not found in %s",
-       &byteArrayBody(t, className(t, objectClass(t, file)), 0));
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::RuntimeExceptionType, message);
-    return 0;
-  }
-}
-#endif // AVIAN_OPENJDK_SRC
+int64_t JNICALL
+getLength
+(Thread* t, object method, uintptr_t* arguments);
 
 class MyClasspath : public Classpath {
  public:
   static const unsigned BufferSize = 1024;
 
-  MyClasspath(System* s, Allocator* allocator, const char* javaHome):
+  MyClasspath(System* s, Allocator* allocator, const char* javaHome,
+              const char* embedPrefix):
     allocator(allocator)
   {
     class StringBuilder {
@@ -285,6 +254,11 @@ class MyClasspath : public Classpath {
     sb.append(LIBRARY_PREFIX);
     sb.append("zip");
     sb.append(LIBRARY_SUFFIX);
+    sb.append('\0');
+
+    this->embedPrefix = sb.pointer;
+    sb.append(embedPrefix);
+    this->embedPrefixLength = sb.pointer - this->embedPrefix;
   }
 
   virtual object
@@ -377,13 +351,32 @@ class MyClasspath : public Classpath {
     globalMachine = t->m;
 
 #ifdef AVIAN_OPENJDK_SRC
-    { object c = resolveClass
+    { object ufsClass = resolveClass
         (t, root(t, Machine::BootLoader), "java/io/UnixFileSystem");
 
-      if (c) {
-        intercept(t, c, "getBooleanAttributes0", "(Ljava/io/File;)I",
-                  voidPointer(getFileAttributes));
+      if (ufsClass) {
+        PROTECT(t, ufsClass);
+
+        object fileClass = resolveClass
+          (t, root(t, Machine::BootLoader), "java/io/File");
+
+        if (fileClass) {
+          object pathField = findFieldInClass2
+            (t, fileClass, "path", "Ljava/lang/String;");
+
+          if (pathField) {
+            this->pathField = fieldOffset(t, pathField);
+
+            intercept(t, ufsClass, "getBooleanAttributes0",
+                      "(Ljava/io/File;)I", voidPointer(getFileAttributes));
+
+            intercept(t, ufsClass, "getLength", "(Ljava/io/File;)J",
+                      voidPointer(getLength));
+          }
+        }
       }
+
+      if (UNLIKELY(t->exception)) return;
     }
 #else // not AVIAN_OPENJDK_SRC
     if (loadLibrary(t, libraryPath, "java", true, true) == 0) {
@@ -437,7 +430,7 @@ class MyClasspath : public Classpath {
 
   virtual void
   dispose()
-  {
+  { 
     allocator->free(this, sizeof(*this));
   }
 
@@ -446,33 +439,202 @@ class MyClasspath : public Classpath {
   const char* classpath;
   const char* libraryPath;
   const char* zipLibrary;
+  const char* embedPrefix;
+  unsigned embedPrefixLength;
+  unsigned pathField;
   char buffer[BufferSize];
 };
 
-struct JVM_ExceptionTableEntryType{
-    jint start_pc;
-    jint end_pc;
-    jint handler_pc;
-    jint catchType;
+struct JVM_ExceptionTableEntryType {
+  jint start_pc;
+  jint end_pc;
+  jint handler_pc;
+  jint catchType;
 };
 
 struct jvm_version_info {
-    unsigned int jvm_version;
-    unsigned int update_version: 8;
-    unsigned int special_update_version: 8;
-    unsigned int reserved1: 16;
-    unsigned int reserved2;
-    unsigned int is_attach_supported: 1;
-    unsigned int is_kernel_jvm: 1;
-    unsigned int: 30;
-    unsigned int: 32;
-    unsigned int: 32;
+  unsigned jvm_version;
+  unsigned update_version: 8;
+  unsigned special_update_version: 8;
+  unsigned reserved1: 16;
+  unsigned reserved2;
+  unsigned is_attach_supported: 1;
+  unsigned is_kernel_jvm: 1;
+  unsigned: 30;
+  unsigned: 32;
+  unsigned: 32;
 };
 
-const char*
-zipLibrary(Thread* t)
+Finder*
+getFinder(Thread* t, const char* name, unsigned nameLength)
 {
-  return static_cast<MyClasspath*>(t->m->classpath)->zipLibrary;
+  ACQUIRE(t, t->m->referenceLock);
+    
+  for (object p = root(t, Machine::VirtualFileFinders);
+       p; p = finderNext(t, p))
+  {
+    if (byteArrayLength(t, finderName(t, p)) == nameLength
+        and strncmp(reinterpret_cast<const char*>
+                    (&byteArrayBody(t, finderName(t, p), 0)),
+                    name, nameLength))
+    {
+      return static_cast<Finder*>(finderFinder(t, p));
+    }
+  }
+
+  object n = makeByteArray(t, nameLength + 1);
+  memcpy(&byteArrayBody(t, n, 0), name, nameLength);
+
+  void* p = t->m->libraries->resolve
+    (reinterpret_cast<const char*>(&byteArrayBody(t, n, 0)));
+  if (p) {
+    uint8_t* (*function)(unsigned*);
+    memcpy(&function, &p, BytesPerWord);
+
+    unsigned size;
+    uint8_t* data = function(&size);
+    if (data) {
+      Finder* f = makeFinder(t->m->system, t->m->heap, data, size);
+      object finder = makeFinder
+        (t, f, n, root(t, Machine::VirtualFileFinders));
+
+      setRoot(t, Machine::VirtualFileFinders, finder);
+
+      return f;
+    }
+  }
+
+  return 0;
+}
+
+class EmbeddedFile {
+ public:
+  EmbeddedFile(MyClasspath* cp, const char* path, unsigned pathLength) {
+    if (strncmp(cp->embedPrefix, path, cp->embedPrefixLength) == 0) {
+      const char* p = path + cp->embedPrefixLength;
+      while (*p == '/') ++ p;
+
+      this->jar = p;
+
+      if (*p == 0) {
+        this->jarLength = 0;
+        this->path = 0;
+        this->pathLength = 0;
+        return;
+      }
+
+      while (*p and *p != '/') ++p;
+    
+      this->jarLength = p - this->jar;
+
+      while (*p == '/') ++p;
+
+      this->path = p;
+      this->pathLength = pathLength - (p - path);
+    } else {
+      this->jar = 0;
+      this->jarLength =0;
+      this->path = 0;
+      this->pathLength = 0;
+    }
+  }
+
+  const char* jar;
+  const char* path;
+  unsigned jarLength;
+  unsigned pathLength;
+};
+
+int64_t JNICALL
+getFileAttributes
+(Thread* t, object method, uintptr_t* arguments)
+{
+  const unsigned Exists = 1;
+  const unsigned Regular = 2;
+  const unsigned Directory = 4;
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  object file = reinterpret_cast<object>(arguments[1]);
+  object path = cast<object>(file, cp->pathField);
+
+  RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+  stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+
+  if (strcmp(cp->zipLibrary, RUNTIME_ARRAY_BODY(p)) == 0) {
+    return Exists | Regular;
+  } else {
+    EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+    if (ef.jar) {
+      if (ef.jarLength == 0) {
+        return Exists | Directory;
+      }
+
+      Finder* finder = getFinder(t, ef.jar, ef.jarLength);
+      if (finder) {
+        if (ef.pathLength == 0) {
+          return Exists | Directory;
+        }
+
+        unsigned length;
+        System::FileType type = finder->stat(ef.path, &length, true);
+        switch (type) {
+        case System::TypeUnknown: return Exists;
+        case System::TypeDoesNotExist: return 0;
+        case System::TypeFile: return Exists | Regular;
+        case System::TypeDirectory: return Exists | Directory;
+        default: abort(t);
+        }
+      } else {
+        return 0;
+      }
+    } else {
+      object r = t->m->processor->invoke
+        (t, nativeInterceptOriginal(t, methodCode(t, method)),
+         reinterpret_cast<object>(arguments[0]), file);
+      
+      return (r ? intValue(t, r) : 0);
+    }
+  }
+}
+
+int64_t JNICALL
+getLength
+(Thread* t, object method, uintptr_t* arguments)
+{
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  object file = reinterpret_cast<object>(arguments[1]);
+  object path = cast<object>(file, cp->pathField);
+
+  RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+  stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));    
+  if (ef.jar) {
+    if (ef.jarLength == 0) {
+      return 0;
+    }
+
+    Finder* finder = getFinder(t, ef.jar, ef.jarLength);
+    if (finder) {
+      if (ef.pathLength == 0) {
+        return 0;
+      }
+
+      unsigned fileLength;
+      finder->stat(ef.path, &fileLength);
+      return fileLength;
+    }
+
+    return 0;
+  } else {
+    object r = t->m->processor->invoke
+      (t, nativeInterceptOriginal(t, methodCode(t, method)),
+       reinterpret_cast<object>(arguments[0]), file);
+
+    return (r ? longValue(t, r) : 0);
+  }
 }
 
 unsigned
@@ -735,10 +897,11 @@ interruptLock(Thread* t, object thread)
 namespace vm {
 
 Classpath*
-makeClasspath(System* s, Allocator* allocator, const char* javaHome)
+makeClasspath(System* s, Allocator* allocator, const char* javaHome,
+              const char* embedPrefix)
 {
   return new (allocator->allocate(sizeof(local::MyClasspath)))
-    local::MyClasspath(s, allocator, javaHome);
+    local::MyClasspath(s, allocator, javaHome, embedPrefix);
 }
 
 } // namespace vm
@@ -1308,7 +1471,9 @@ JVM_LoadLibrary(const char* name)
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
 
 #ifdef AVIAN_OPENJDK_SRC
-  if (strcmp(local::zipLibrary(t), name) == 0) {
+  if (strcmp(static_cast<local::MyClasspath*>(t->m->classpath)->zipLibrary,
+             name) == 0)
+  {
     return t->m->libraries;
   }
 #endif // AVIAN_OPENJDK_SRC
@@ -2475,21 +2640,126 @@ JVM_NativePath(char* path)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Open(const char* name, jint flags, jint mode)
+JVM_Open(const char* path, jint flags, jint mode)
 {
-  return OPEN(name, flags, mode);
+  Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
+  local::MyClasspath* cp = static_cast<local::MyClasspath*>(t->m->classpath);
+
+  local::EmbeddedFile ef(cp, path, strlen(path));
+  if (ef.jar) {
+    if (flags != O_RDONLY) {
+      errno = EACCES;
+      return -1;
+    }
+
+    if (ef.jarLength == 0 or ef.pathLength == 0) {
+      errno = ENOENT;
+      return -1;
+    }
+
+    Finder* finder = local::getFinder(t, ef.jar, ef.jarLength);
+    if (finder == 0) {
+      errno = ENOENT;
+      return -1;
+    }
+
+    System::Region* r = finder->find(ef.path);
+    if (r == 0) {
+      errno = ENOENT;
+      return -1;
+    }
+
+    ENTER(t, Thread::ActiveState);
+    
+    ACQUIRE(t, t->m->referenceLock);
+
+    int index = -1;
+    unsigned oldLength = root(t, Machine::VirtualFiles)
+      ? arrayLength(t, root(t, Machine::VirtualFiles)) : 0;
+
+    for (unsigned i = 0; i < oldLength; ++i) {
+      if (arrayBody(t, root(t, Machine::VirtualFiles), i) == 0) {
+        index = i;
+        break;
+      }
+    }
+
+    if (index == -1) {
+      object newArray = growArray(t, root(t, Machine::VirtualFiles));
+      setRoot(t, Machine::VirtualFiles, newArray);
+      index = oldLength;
+    }
+
+    object region = makeRegion(t, r, 0);
+    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
+        region);
+
+    return index + local::VirtualFileBase;
+  } else {
+    int r = OPEN(path, flags, mode);
+    expect(t, r < local::VirtualFileBase);
+    return r;
+  }
 }
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_Close(jint fd)
 {
-  return CLOSE(fd);
+  if (fd >= local::VirtualFileBase) {
+    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
+    unsigned index = fd - local::VirtualFileBase;
+
+    ENTER(t, Thread::ActiveState);
+    
+    ACQUIRE(t, t->m->referenceLock);
+
+    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
+    if (region) {
+      static_cast<System::Region*>(regionRegion(t, region))->dispose();
+    }
+
+    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
+        0);
+
+    return 0;
+  } else {
+    return CLOSE(fd);
+  }
 }
 
 extern "C" JNIEXPORT jint JNICALL
 JVM_Read(jint fd, char* dst, jint length)
 {
-  return READ(fd, dst, length);
+  if (fd >= local::VirtualFileBase) {
+    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
+    unsigned index = fd - local::VirtualFileBase;
+
+    ENTER(t, Thread::ActiveState);
+    
+    ACQUIRE(t, t->m->referenceLock);
+    
+    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
+    if (region) {
+      System::Region* r = static_cast<System::Region*>
+        (regionRegion(t, region));
+
+      int available = r->length() - regionPosition(t, region);
+      if (length > available) {
+        length = available;
+      }
+
+      memcpy(dst, r->start(), length);
+
+      regionPosition(t, region) += length;
+
+      return length;
+    } else {
+      errno = EINVAL;
+      return -1;
+    }
+  } else {
+    return READ(fd, dst, length);
+  }
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -2501,34 +2771,94 @@ JVM_Write(jint fd, char* src, jint length)
 extern "C" JNIEXPORT jint JNICALL
 JVM_Available(jint fd, jlong* result)
 {
-  struct stat buffer;
-  int n;
-  if (FSTAT(fd, &buffer) >= 0
-      and (S_ISCHR(buffer.st_mode)
-           or S_ISFIFO(buffer.st_mode)
-           or S_ISSOCK(buffer.st_mode))
-      and ioctl(fd, FIONREAD, &n) >= 0)
-  {
-    *result = n;
+  if (fd >= local::VirtualFileBase) {
+    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
+    unsigned index = fd - local::VirtualFileBase;
+
+    ENTER(t, Thread::ActiveState);
+    
+    ACQUIRE(t, t->m->referenceLock);
+    
+    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
+    if (region) {
+      return static_cast<System::Region*>(regionRegion(t, region))->length()
+        - regionPosition(t, region);
+    } else {
+      return 0;
+    }
+  } else {
+    struct stat buffer;
+    int n;
+    if (FSTAT(fd, &buffer) >= 0
+        and (S_ISCHR(buffer.st_mode)
+             or S_ISFIFO(buffer.st_mode)
+             or S_ISSOCK(buffer.st_mode))
+        and ioctl(fd, FIONREAD, &n) >= 0)
+    {
+      *result = n;
+      return 1;
+    }
+
+    int current = LSEEK(fd, 0, SEEK_CUR);
+    if (current == -1) return 0;
+
+    int end = LSEEK(fd, 0, SEEK_END);
+    if (end == -1) return 0;
+
+    if (LSEEK(fd, current, SEEK_SET) == -1) return 0;
+
+    *result = end - current;
     return 1;
   }
-
-  int current = LSEEK(fd, 0, SEEK_CUR);
-  if (current == -1) return 0;
-
-  int end = LSEEK(fd, 0, SEEK_END);
-  if (end == -1) return 0;
-
-  if (LSEEK(fd, current, SEEK_SET) == -1) return 0;
-
-  *result = end - current;
-  return 1;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_Lseek(jint fd, jlong offset, jint start)
+JVM_Lseek(jint fd, jlong offset, jint seek)
 {
-  return LSEEK(fd, offset, start);
+  if (fd >= local::VirtualFileBase) {
+    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
+    unsigned index = fd - local::VirtualFileBase;
+
+    ENTER(t, Thread::ActiveState);
+    
+    ACQUIRE(t, t->m->referenceLock);
+    
+    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
+    if (region) {
+      System::Region* r = static_cast<System::Region*>
+        (regionRegion(t, region));
+
+      switch (seek) {
+      case SEEK_SET:
+        break;
+
+      case SEEK_CUR:
+        offset += regionPosition(t, region);
+        break;
+
+      case SEEK_END:
+        offset += r->length();
+        break;
+
+      default:
+        errno = EINVAL;
+        return -1;
+      }
+
+      if (offset >= 0 and offset <= static_cast<int>(r->length())) {
+        regionPosition(t, region) = offset;
+        return offset;
+      } else {
+        errno = EINVAL;
+        return -1;
+      }
+    } else {
+      errno = EINVAL;
+      return -1;
+    }
+  } else {
+    return LSEEK(fd, offset, seek);
+  }
 }
 
 extern "C" JNIEXPORT jint JNICALL

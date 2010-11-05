@@ -698,18 +698,22 @@ class MySystem: public System {
     return status;
   }
 
-  virtual FileType identify(const char* name) {
+  virtual FileType stat(const char* name, unsigned* length) {
     struct stat s;
-    int r = stat(name, &s);
+    int r = ::stat(name, &s);
     if (r == 0) {
       if (S_ISREG(s.st_mode)) {
+        *length = s.st_size;
         return TypeFile;
       } else if (S_ISDIR(s.st_mode)) {
+        *length = 0;
         return TypeDirectory;
       } else {
+        *length = 0;
         return TypeUnknown;
       }
     } else {
+      *length = 0;
       return TypeDoesNotExist;
     }
   }

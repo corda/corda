@@ -52,25 +52,29 @@ classpath = avian
 
 test-executable = $(executable)
 boot-classpath = $(classpath-build)
-java-home = /avian-embedded
+embed-prefix = /avian-embedded
 
 ifdef openjdk
 	ifdef openjdk-src
 		include openjdk-src.mk
 	  options := $(options)-openjdk-src
 		classpath-objects = $(openjdk-objects)
-		classpath-cflags = -DAVIAN_OPENJDK_SRC
+		classpath-cflags = -DAVIAN_OPENJDK_SRC -DBOOT_JAVAHOME
 		openjdk-jar-dep = $(build)/openjdk-jar.dep
 		classpath-jar-dep = $(openjdk-jar-dep)
+		javahome = $(embed-prefix)/javahomeJar
+		javahome-files = lib/zi
+		javahome-object = $(build)/javahome-jar.o
 	else
 	  options := $(options)-openjdk
 		test-executable = $(executable-dynamic)
 		library-path = LD_LIBRARY_PATH=$(build)
-		java-home = $(openjdk)/jre
+		javahome = $(openjdk)/jre
 	endif
 
   classpath = openjdk
 	boot-classpath := $(boot-classpath):$(openjdk)/jre/lib/rt.jar
+	build-javahome = $(openjdk)/jre
 endif
 
 ifeq ($(classpath),avian)
@@ -120,7 +124,8 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(java-home)\"
+	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
+	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
@@ -593,12 +598,6 @@ $(driver-dynamic-object): $(driver-source)
 $(boot-object): $(boot-source)
 	$(compile-object)
 
-$(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
-	@echo "creating $(@)"
-	(wd=$$(pwd) && \
-	 cd $(classpath-build) && \
-	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
-
 $(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
 	$(build-cxx) -c $(^) -o $(@)
 
@@ -620,10 +619,27 @@ $(build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
 $(converter): $(converter-objects)
 	$(build-cxx) $(^) -o $(@)
 
+$(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
+	@echo "creating $(@)"
+	(wd=$$(pwd) && \
+	 cd $(classpath-build) && \
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" .)
+
 $(classpath-object): $(build)/classpath.jar $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_classpath_jar_start \
 		_binary_classpath_jar_end $(platform) $(arch)
+
+$(build)/javahome.jar: $(foreach x,$(javahome-files),$(build-javahome)/$(x))
+	@echo "creating $(@)"
+	(wd=$$(pwd) && \
+	 cd $(build-javahome) && \
+	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" $(javahome-files))
+
+$(javahome-object): $(build)/javahome.jar $(converter)
+	@echo "creating $(@)"
+	$(converter) $(<) $(@) _binary_javahome_jar_start \
+		_binary_javahome_jar_end $(platform) $(arch)
 
 $(generator-objects): $(generator-depends)
 $(generator-objects): $(build)/%-build.o: $(src)/%.cpp
@@ -651,7 +667,8 @@ $(bootimage-object): $(bootimage-bin) $(converter)
 		writable executable
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
-	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object)
+	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
+	$(javahome-object)
 
 $(executable): $(executable-objects)
 	@echo "linking $(@)"
@@ -696,18 +713,16 @@ else
 	$(ld) $(^) $(rdynamic) $(lflags) -o $(@)
 endif
 
-dynamic-library-objects = $(vm-objects) $(dynamic-object) \
-	$(classpath-objects) $(vm-heapwalk-objects) $(boot-object) \
-	$(vm-classpath-object) $(classpath-libraries)
-
-$(dynamic-library): $(dynamic-library-objects)
+$(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
+		$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
+		$(classpath-libraries) $(javahome-object)
 	@echo "linking $(@)"
 ifdef msvc
-	$(ld) $(shared) $(lflags) $(dynamic-library-objects) -out:$(@) \
-		-PDB:$(@).pdb -IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
+		-IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
-	$(ld) $(dynamic-library-objects) -Wl,--version-script=openjdk.ld \
+	$(ld) $(^) -Wl,--version-script=openjdk.ld \
 		$(shared) $(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)

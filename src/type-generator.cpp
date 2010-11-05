@@ -2213,7 +2213,31 @@ main(int ac, char** av)
   }
 
   System* system = makeSystem(0);
-  Finder* finder = makeFinder(system, av[1], 0);
+
+  class MyAllocator: public Allocator {
+   public:
+    MyAllocator(System* s): s(s) { }
+
+    virtual void* tryAllocate(unsigned size) {
+      return s->tryAllocate(size);
+    }
+
+    virtual void* allocate(unsigned size) {
+      void* p = tryAllocate(size);
+      if (p == 0) {
+        abort(s);
+      }
+      return p;
+    }
+
+    virtual void free(const void* p, unsigned) {
+      s->free(p);
+    }
+
+    System* s;
+  } allocator(system);
+
+  Finder* finder = makeFinder(system, &allocator, av[1], 0);
 
   FILE* inStream = ::fopen(av[2], "rb");
   if (inStream == 0) {

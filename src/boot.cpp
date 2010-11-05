@@ -52,6 +52,8 @@ extern "C" {
 
 }
 
+#undef SYMBOL
+
 #endif//BOOT_IMAGE
 
 #ifdef BOOT_CLASSPATH
@@ -76,4 +78,32 @@ extern "C" {
 
 }
 
+#undef SYMBOL
+
 #endif//BOOT_CLASSPATH
+
+#ifdef BOOT_JAVAHOME
+
+#if (defined __MINGW32__) || (defined _MSC_VER)
+#  define SYMBOL(x) binary_javahome_jar_##x
+#else
+#  define SYMBOL(x) _binary_javahome_jar_##x
+#endif
+
+extern "C" {
+
+  extern const uint8_t SYMBOL(start)[];
+  extern const uint8_t SYMBOL(end)[];
+
+  EXPORT const uint8_t*
+  javahomeJar(unsigned* size)
+  {
+    *size = SYMBOL(end) - SYMBOL(start);
+    return SYMBOL(start);
+  }
+
+}
+
+#undef SYMBOL
+
+#endif//BOOT_JAVAHOME
