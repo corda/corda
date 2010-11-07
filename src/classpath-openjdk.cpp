@@ -12,8 +12,6 @@
 #include "classpath-common.h"
 #include "util.h"
 
-// todo: move platform-specific stuff into system.h and implementations
-
 #ifdef PLATFORM_WINDOWS
 
 #  include <windows.h>
@@ -48,7 +46,11 @@
 
 #  define O_RDONLY _O_RDONLY
 
-#  define EXPORT(x) _##x
+#  ifdef AVIAN_OPENJDK_SRC
+#    define EXPORT(x) x
+#  else
+#    define EXPORT(x) _##x
+#  endif
 
 #  define LIBRARY_PREFIX ""
 #  define LIBRARY_SUFFIX ".dll"
@@ -247,6 +249,12 @@ class MyClasspath : public Classpath {
     sb.append("zip");
     sb.append(LIBRARY_SUFFIX);
     sb.append('\0');
+    
+    this->tzMappings = sb.pointer;
+    sb.append(javaHome);
+    sb.append("/lib/tzmappings");
+    this->tzMappingsLength = sb.pointer - tzMappings;
+    sb.append('\0');
 
     this->embedPrefix = sb.pointer;
     sb.append(embedPrefix);
@@ -412,7 +420,9 @@ class MyClasspath : public Classpath {
   const char* classpath;
   const char* libraryPath;
   const char* zipLibrary;
+  const char* tzMappings;
   const char* embedPrefix;
+  unsigned tzMappingsLength;
   unsigned embedPrefixLength;
   unsigned filePathField;
   unsigned fileDescriptorFdField;
@@ -646,7 +656,7 @@ openFile(Thread* t, object method, uintptr_t* arguments)
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  local::EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
   if (ef.jar) {
     if (ef.jarLength == 0 or ef.pathLength == 0) {
       t->exception = t->m->classpath->makeThrowable
@@ -654,7 +664,7 @@ openFile(Thread* t, object method, uintptr_t* arguments)
       return;
     }
 
-    Finder* finder = local::getFinder(t, ef.jar, ef.jarLength);
+    Finder* finder = getFinder(t, ef.jar, ef.jarLength);
     if (finder == 0) {
       t->exception = t->m->classpath->makeThrowable
         (t, Machine::FileNotFoundExceptionType);
@@ -696,7 +706,7 @@ openFile(Thread* t, object method, uintptr_t* arguments)
     cast<int32_t>
       (cast<object>
        (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField)
-      = index + local::VirtualFileBase;
+      = index + VirtualFileBase;
   } else {
     t->m->processor->invoke
       (t, nativeInterceptOriginal(t, methodCode(t, method)), this_, path);
@@ -714,7 +724,7 @@ readByteFromFile(Thread* t, object method, uintptr_t* arguments)
     (cast<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
-  if (fd >= local::VirtualFileBase) {
+  if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
@@ -756,7 +766,7 @@ readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
     (cast<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
-  if (fd >= local::VirtualFileBase) {
+  if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
@@ -808,7 +818,7 @@ skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
     (cast<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
-  if (fd >= local::VirtualFileBase) {
+  if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
@@ -850,7 +860,7 @@ availableBytesInFile(Thread* t, object method, uintptr_t* arguments)
     (cast<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
-  if (fd >= local::VirtualFileBase) {
+  if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
@@ -883,7 +893,7 @@ closeFile(Thread* t, object method, uintptr_t* arguments)
     (cast<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
-  if (fd >= local::VirtualFileBase) {
+  if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
 
     int index = fd - VirtualFileBase;
@@ -3337,6 +3347,108 @@ jio_vfprintf(FILE* stream, const char* format, va_list a)
 }
 
 #ifdef PLATFORM_WINDOWS
+extern "C" JNIEXPORT void* JNICALL
+EXPORT(JVM_GetThreadInterruptEvent)()
+{ abort(); }
+
+namespace { HMODULE jvmHandle = 0; }
+
+extern "C" int JDK_InitJvmHandle()
+{
+  jvmHandle = GetModuleHandle(0);
+  return jvmHandle != 0;
+}
+ 
+extern "C" void* JDK_FindJvmEntry(const char* name)
+{
+  return voidPointer(GetProcAddress(jvmHandle, name));
+}
+
+#  ifdef AVIAN_OPENJDK_SRC
+
+extern "C" char* findJavaTZ_md(const char*, const char*);
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_util_TimeZone_getSystemTimeZoneID
+(Thread* t, object, uintptr_t* arguments)
+{
+  // On Windows, findJavaTZ_md loads tzmappings from the filesystem
+  // using fopen, so we have no opportunity to make it read straight
+  // from the embedded JAR file as with files read from Java code.
+  // Therefore, we must extract tzmappings to a temporary location
+  // before calling findJavaTZ_md.  We could avoid this by
+  // implementing findJavaTZ_md ourselves from scratch, but that would
+  // be a lot of code to implement and maintain.
+
+  object country = reinterpret_cast<object>(arguments[1]);
+
+  RUNTIME_ARRAY(char, countryChars, stringLength(t, country) + 1);
+  stringChars(t, country, RUNTIME_ARRAY_BODY(countryChars));
+
+  local::MyClasspath* cp = static_cast<local::MyClasspath*>(t->m->classpath);
+
+  local::EmbeddedFile ef(cp, cp->tzMappings, cp->tzMappingsLength);
+  if (ef.jar == 0 or ef.jarLength == 0 or ef.pathLength == 0) {
+    return 0;
+  }
+
+  Finder* finder = local::getFinder(t, ef.jar, ef.jarLength);
+  if (finder == 0) {
+    return 0;
+  }
+
+  System::Region* r = finder->find(ef.path);
+  if (r == 0) {
+    return 0;
+  }
+
+  RESOURCE(System::Region*, r, r->dispose());
+
+  char tmpPath[MAX_PATH + 1];
+  GetTempPathA(MAX_PATH, tmpPath);
+
+  char tmpDir[MAX_PATH + 1];
+  vm::snprintf(tmpDir, MAX_PATH, "%s/avian-tmp", tmpPath);
+  if (_mkdir(tmpDir) != 0 and errno != EEXIST) {
+    return 0;
+  }
+
+  RESOURCE(char*, tmpDir, rmdir(tmpDir)); 
+
+  char libDir[MAX_PATH + 1];
+  vm::snprintf(libDir, MAX_PATH, "%s/lib", tmpDir);
+  if (mkdir(libDir) != 0 and errno != EEXIST) {
+    return 0;
+  }
+
+  RESOURCE(char*, libDir, rmdir(libDir)); 
+
+  char file[MAX_PATH + 1];
+  vm::snprintf(file, MAX_PATH, "%s/tzmappings", libDir);
+  FILE* out = vm::fopen(file, "wb");
+  if (out == 0) {
+    return 0;
+  }
+    
+  RESOURCE(char*, file, unlink(file)); 
+  RESOURCE(FILE*, out, fclose(out));
+
+  if (fwrite(r->start(), 1, r->length(), out) != r->length()
+      or fflush(out) != 0)
+  {
+    return 0;
+  }
+
+  char* javaTZ = findJavaTZ_md(tmpDir, RUNTIME_ARRAY_BODY(countryChars));
+  if (javaTZ) {
+    object result = makeString(t, "%s", javaTZ);
+    free(javaTZ);
+    return reinterpret_cast<int64_t>(result);
+  } else {
+    return 0;
+  }
+}
+#  else // not AVIAN_OPENJDK_SRC
 extern "C" JNIEXPORT int
 jio_snprintf(char* dst, size_t size, const char* format, ...)
 {
@@ -3362,21 +3474,5 @@ jio_fprintf(FILE* stream, const char* format, ...)
 
   return r;
 }
-
-extern "C" JNIEXPORT void* JNICALL
-EXPORT(JVM_GetThreadInterruptEvent)()
-{ abort(); }
-
-namespace { HMODULE jvmHandle = 0; }
-
-extern "C" int JDK_InitJvmHandle()
-{
-  jvmHandle = GetModuleHandle(0);
-  return jvmHandle != 0;
-}
- 
-extern "C" void* JDK_FindJvmEntry(const char* name)
-{
-  return voidPointer(GetProcAddress(jvmHandle, name));
-}
-#endif
+#  endif // not AVIAN_OPENJDK_SRC
+#endif // PLATFORM_WINDOWS

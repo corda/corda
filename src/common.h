@@ -143,6 +143,16 @@ typedef uint64_t uintptr_t;
 #define MACRO_MakeNameXY(FX, LINE) MACRO_XY(FX, LINE)
 #define MAKE_NAME(FX) MACRO_MakeNameXY(FX, __LINE__)
 
+#define RESOURCE(type, name, release)                                   \
+  class MAKE_NAME(Resource_) {                                          \
+  public:                                                               \
+    MAKE_NAME(Resource_)(type name): name(name) { }                     \
+    ~MAKE_NAME(Resource_)() { release; }                                \
+                                                                        \
+  private:                                                              \
+    type name;                                                          \
+  } MAKE_NAME(resource_)(name);
+
 inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace vm {
