@@ -205,6 +205,6 @@ public class Misc {
       }
     }
 
-    System.out.println(java.util.Calendar.getInstance().toString());
+    System.out.println(new java.util.Date().toString());
   }
 }
