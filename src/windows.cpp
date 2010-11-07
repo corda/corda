@@ -485,7 +485,7 @@ class MySystem: public System {
 
     virtual void disposeAll() {
       if (Verbose) {
-        fprintf(stderr, "close %p\n", handle);
+        fprintf(stderr, "close %p\n", handle); fflush(stderr);
       }
 
       if (name_) {
@@ -736,7 +736,7 @@ class MySystem: public System {
  
     if (handle) {
       if (Verbose) {
-        fprintf(stderr, "open %s as %p\n", name, handle);
+        fprintf(stderr, "open %s as %p\n", name, handle); fflush(stderr);
       }
 
       char* n;
@@ -751,6 +751,11 @@ class MySystem: public System {
 
       return 0;
     } else {
+      if (Verbose) {
+        fprintf(stderr, "unable to open %s: %ld\n", name, GetLastError());
+        fflush(stderr);
+      }
+
       return 1;
     }
   }

@@ -205,8 +205,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     RUNTIME_ARRAY(char, fullName, fullNameLength + 1);
 
     snprintf(RUNTIME_ARRAY_BODY(fullName), fullNameLength + 1,
-             "%*s%c%s", token.length, token.s, t->m->system->fileSeparator(),
-             name);
+             "%*s/%s", token.length, token.s, name);
 
     lib = loadLibrary(t, RUNTIME_ARRAY_BODY(fullName));
     if (lib) break;

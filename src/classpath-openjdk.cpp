@@ -25,7 +25,7 @@
 #  include <sys/stat.h>
 #  include <sys/types.h>
 
-#undef interface
+#  undef interface
 
 #  define CLOSE _close
 #  define READ _read
@@ -46,7 +46,9 @@
 #    define CREAT _creat
 #  endif
 
-#define O_RDONLY _O_RDONLY
+#  define O_RDONLY _O_RDONLY
+
+#  define EXPORT(x) _##x
 
 #  define LIBRARY_PREFIX ""
 #  define LIBRARY_SUFFIX ".dll"
@@ -68,8 +70,11 @@ typedef int socklen_t;
 #  define CLOSE close
 #  define READ read
 #  define WRITE write
+#  define STAT stat
 #  define FSTAT fstat
 #  define LSEEK lseek
+
+#  define EXPORT(x) x
 
 #  define LIBRARY_PREFIX "lib"
 #  define LIBRARY_SUFFIX ".so"
@@ -161,38 +166,8 @@ makeClassNameString(Thread* t, object name)
   return makeString(t, "%s", s);
 }
 
-// only safe to call during bootstrap when there's only one thread
-// running:
 void
-intercept(Thread* t, object c, const char* name, const char* spec,
-          void* function)
-{
-  object m = findMethodOrNull(t, c, name, spec);        
-  if (m) {
-    PROTECT(t, m);
-
-    object clone = methodClone(t, m);
-
-    // make clone private to prevent vtable updates at compilation
-    // time.  Otherwise, our interception might be bypassed by calls
-    // through the vtable.
-    methodFlags(t, clone) |= ACC_PRIVATE;
-
-    methodFlags(t, m) |= ACC_NATIVE;
-
-    object native = makeNativeIntercept(t, function, true, clone);
-
-    set(t, m, MethodCode, native);
-  }
-}
-
-int64_t JNICALL
-getFileAttributes
-(Thread* t, object method, uintptr_t* arguments);
-
-int64_t JNICALL
-getLength
-(Thread* t, object method, uintptr_t* arguments);
+interceptFileOperations(Thread*);
 
 class MyClasspath : public Classpath {
  public:
@@ -255,7 +230,9 @@ class MyClasspath : public Classpath {
 
     this->libraryPath = sb.pointer;
     sb.append(javaHome);
-#ifdef ARCH_x86_64
+#ifdef PLATFORM_WINDOWS
+    sb.append("/bin");
+#elif defined ARCH_x86_64
     sb.append("/lib/amd64");
 #else
     // todo: handle other architectures
@@ -370,44 +347,12 @@ class MyClasspath : public Classpath {
     globalMachine = t->m;
 
 #ifdef AVIAN_OPENJDK_SRC
-    {
-#ifdef PLATFORM_WINDOWS
-      const char* const fsClassName = "java/io/WinNTFileSystem";
-      const char* const gbaMethodName = "getBooleanAttributes";
-#else
-      const char* const fsClassName = "java/io/UnixFileSystem";
-      const char* const gbaMethodName = "getBooleanAttributes0";
-#endif
-
-      object fsClass = resolveClass
-        (t, root(t, Machine::BootLoader), fsClassName, false);
-
-      if (fsClass) {
-        PROTECT(t, fsClass);
-
-        object fileClass = resolveClass
-          (t, root(t, Machine::BootLoader), "java/io/File");
-
-        if (fileClass) {
-          object pathField = findFieldInClass2
-            (t, fileClass, "path", "Ljava/lang/String;");
-
-          if (pathField) {
-            this->pathField = fieldOffset(t, pathField);
-
-            intercept(t, fsClass, gbaMethodName, "(Ljava/io/File;)I",
-                      voidPointer(getFileAttributes));
-
-            intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
-                      voidPointer(getLength));
-          }
-        }
-      }
-
-      if (UNLIKELY(t->exception)) return;
-    }
+    interceptFileOperations(t);
+    if (UNLIKELY(t->exception)) return;
 #else // not AVIAN_OPENJDK_SRC
-    if (loadLibrary(t, libraryPath, "java", true, true) == 0) {
+    if (loadLibrary(t, libraryPath, "verify", true, true) == 0
+        or loadLibrary(t, libraryPath, "java", true, true) == 0)
+    {
       abort(t);
     }
 #endif // not AVIAN_OPENJDK_SRC
@@ -469,7 +414,9 @@ class MyClasspath : public Classpath {
   const char* zipLibrary;
   const char* embedPrefix;
   unsigned embedPrefixLength;
-  unsigned pathField;
+  unsigned filePathField;
+  unsigned fileDescriptorFdField;
+  unsigned fileInputStreamFdField;
   char buffer[BufferSize];
 };
 
@@ -604,7 +551,7 @@ getFileAttributes
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   object file = reinterpret_cast<object>(arguments[1]);
-  object path = cast<object>(file, cp->pathField);
+  object path = cast<object>(file, cp->filePathField);
 
   RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
@@ -654,7 +601,7 @@ getLength
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   object file = reinterpret_cast<object>(arguments[1]);
-  object path = cast<object>(file, cp->pathField);
+  object path = cast<object>(file, cp->filePathField);
 
   RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
@@ -684,6 +631,379 @@ getLength
        reinterpret_cast<object>(arguments[0]), file);
 
     return (r ? longValue(t, r) : 0);
+  }
+}
+
+void JNICALL
+openFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+  object path = reinterpret_cast<object>(arguments[1]);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+  stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+  replace('\\', '/', RUNTIME_ARRAY_BODY(p));
+
+  local::EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  if (ef.jar) {
+    if (ef.jarLength == 0 or ef.pathLength == 0) {
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::FileNotFoundExceptionType);
+      return;
+    }
+
+    Finder* finder = local::getFinder(t, ef.jar, ef.jarLength);
+    if (finder == 0) {
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::FileNotFoundExceptionType);
+      return;
+    }
+
+    System::Region* r = finder->find(ef.path);
+    if (r == 0) {
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::FileNotFoundExceptionType);
+      return;
+    }
+
+    PROTECT(t, this_);
+
+    ACQUIRE(t, t->m->referenceLock);
+
+    int index = -1;
+    unsigned oldLength = root(t, Machine::VirtualFiles)
+      ? arrayLength(t, root(t, Machine::VirtualFiles)) : 0;
+
+    for (unsigned i = 0; i < oldLength; ++i) {
+      if (arrayBody(t, root(t, Machine::VirtualFiles), i) == 0) {
+        index = i;
+        break;
+      }
+    }
+
+    if (index == -1) {
+      object newArray = growArray(t, root(t, Machine::VirtualFiles));
+      setRoot(t, Machine::VirtualFiles, newArray);
+      index = oldLength;
+    }
+
+    object region = makeRegion(t, r, 0);
+    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
+        region);
+
+    cast<int32_t>
+      (cast<object>
+       (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField)
+      = index + local::VirtualFileBase;
+  } else {
+    t->m->processor->invoke
+      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_, path);
+  }
+}
+
+int64_t JNICALL
+readByteFromFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  int fd = cast<int32_t>
+    (cast<object>
+     (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
+
+  if (fd >= local::VirtualFileBase) {
+    ACQUIRE(t, t->m->referenceLock);
+    
+    object region = arrayBody
+      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+
+    if (region) {
+      System::Region* r = static_cast<System::Region*>
+        (regionRegion(t, region));
+
+      if (r->length() > regionPosition(t, region)) {
+        return r->start()[regionPosition(t, region)++];
+      } else {
+        return -1;
+      }
+    } else {
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::IoExceptionType);
+      return 0;
+    }
+  } else {
+    object r = t->m->processor->invoke
+      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_);
+
+    return r ? intValue(t, r) : 0;
+  }
+}
+
+int64_t JNICALL
+readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+  object dst = reinterpret_cast<object>(arguments[1]);
+  int32_t offset = arguments[2];
+  int32_t length = arguments[3];
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  int fd = cast<int32_t>
+    (cast<object>
+     (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
+
+  if (fd >= local::VirtualFileBase) {
+    ACQUIRE(t, t->m->referenceLock);
+    
+    object region = arrayBody
+      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+
+    if (region) {
+      System::Region* r = static_cast<System::Region*>
+        (regionRegion(t, region));
+
+      int available = r->length() - regionPosition(t, region);
+      if (available == 0) {
+        return -1;
+      }
+
+      if (length > available) {
+        length = available;
+      }
+
+      memcpy(&byteArrayBody(t, dst, offset),
+             r->start() + regionPosition(t, region),
+             length);
+
+      regionPosition(t, region) += length;
+
+      return length;
+    } else {
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::IoExceptionType);
+      return 0;
+    }
+  } else {
+    object r = t->m->processor->invoke
+      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_, dst,
+       offset, length);
+
+    return r ? intValue(t, r) : 0;
+  }
+}
+
+int64_t JNICALL
+skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+  int64_t count; memcpy(&count, arguments + 1, 8);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  int fd = cast<int32_t>
+    (cast<object>
+     (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
+
+  if (fd >= local::VirtualFileBase) {
+    ACQUIRE(t, t->m->referenceLock);
+    
+    object region = arrayBody
+      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+
+    if (region) {
+      System::Region* r = static_cast<System::Region*>
+        (regionRegion(t, region));
+
+      int available = r->length() - regionPosition(t, region);
+      if (count > available) {
+        count = available;
+      }
+
+      regionPosition(t, region) += count;
+
+      return count;
+    } else {
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::IoExceptionType);
+      return 0;
+    }
+  } else {
+    object r = t->m->processor->invoke
+      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_, count);
+
+    return r ? longValue(t, r) : 0;
+  }
+}
+
+int64_t JNICALL
+availableBytesInFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  int fd = cast<int32_t>
+    (cast<object>
+     (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
+
+  if (fd >= local::VirtualFileBase) {
+    ACQUIRE(t, t->m->referenceLock);
+    
+    object region = arrayBody
+      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+
+    if (region) {
+      return static_cast<System::Region*>(regionRegion(t, region))->length()
+        - regionPosition(t, region);
+    } else {
+      t->exception = t->m->classpath->makeThrowable
+        (t, Machine::IoExceptionType);
+      return 0;
+    }
+  } else {
+    object r = t->m->processor->invoke
+      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_);
+
+    return r ? intValue(t, r) : 0;
+  }
+}
+
+void JNICALL
+closeFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  int fd = cast<int32_t>
+    (cast<object>
+     (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
+
+  if (fd >= local::VirtualFileBase) {
+    ACQUIRE(t, t->m->referenceLock);
+
+    int index = fd - VirtualFileBase;
+    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
+
+    if (region) {
+      static_cast<System::Region*>(regionRegion(t, region))->dispose();
+    }
+
+    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
+        0);
+  } else {
+    t->m->processor->invoke
+      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_);
+  }
+}
+
+// only safe to call during bootstrap when there's only one thread
+// running:
+void
+intercept(Thread* t, object c, const char* name, const char* spec,
+          void* function)
+{
+  object m = findMethodOrNull(t, c, name, spec);        
+  if (m) {
+    PROTECT(t, m);
+
+    object clone = methodClone(t, m);
+
+    // make clone private to prevent vtable updates at compilation
+    // time.  Otherwise, our interception might be bypassed by calls
+    // through the vtable.
+    methodFlags(t, clone) |= ACC_PRIVATE;
+
+    methodFlags(t, m) |= ACC_NATIVE;
+
+    object native = makeNativeIntercept(t, function, true, clone);
+
+    set(t, m, MethodCode, native);
+  }
+}
+
+void
+interceptFileOperations(Thread* t)
+{
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  { object fileClass = resolveClass
+      (t, root(t, Machine::BootLoader), "java/io/File");
+    if (fileClass == 0) return;
+
+    object filePathField = findFieldInClass2
+      (t, fileClass, "path", "Ljava/lang/String;");
+    if (filePathField == 0) return;
+
+    cp->filePathField = fieldOffset(t, filePathField);
+  }
+
+  { object fileDescriptorClass = resolveClass
+      (t, root(t, Machine::BootLoader), "java/io/FileDescriptor");
+    if (fileDescriptorClass == 0) return;
+
+    object fileDescriptorFdField = findFieldInClass2
+      (t, fileDescriptorClass, "fd", "I");
+    if (fileDescriptorFdField == 0) return;
+
+    cp->fileDescriptorFdField = fieldOffset(t, fileDescriptorFdField);
+  }
+
+  { object fileInputStreamClass = resolveClass
+      (t, root(t, Machine::BootLoader), "java/io/FileInputStream");
+    if (fileInputStreamClass == 0) return;
+
+    object fileInputStreamFdField = findFieldInClass2
+      (t, fileInputStreamClass, "fd", "Ljava/io/FileDescriptor;");
+    if (fileInputStreamFdField == 0) return;
+
+    cp->fileInputStreamFdField = fieldOffset(t, fileInputStreamFdField);
+
+    PROTECT(t, fileInputStreamClass);
+
+    intercept(t, fileInputStreamClass, "open", "(Ljava/lang/String;)V",
+              voidPointer(openFile));
+  
+    intercept(t, fileInputStreamClass, "read", "()I",
+              voidPointer(readByteFromFile));
+  
+    intercept(t, fileInputStreamClass, "readBytes", "([BII)I",
+              voidPointer(readBytesFromFile));
+  
+    intercept(t, fileInputStreamClass, "skip", "(J)J",
+              voidPointer(skipBytesInFile));
+  
+    intercept(t, fileInputStreamClass, "available", "()I",
+              voidPointer(availableBytesInFile));
+  
+    intercept(t, fileInputStreamClass, "close0", "()V",
+              voidPointer(closeFile));
+  }
+
+  {
+#ifdef PLATFORM_WINDOWS
+    const char* const fsClassName = "java/io/WinNTFileSystem";
+    const char* const gbaMethodName = "getBooleanAttributes";
+#else
+    const char* const fsClassName = "java/io/UnixFileSystem";
+    const char* const gbaMethodName = "getBooleanAttributes0";
+#endif
+
+    object fsClass = resolveClass
+      (t, root(t, Machine::BootLoader), fsClassName, false);
+    if (fsClass == 0) return;
+
+    PROTECT(t, fsClass);
+
+    intercept(t, fsClass, gbaMethodName, "(Ljava/io/File;)I",
+              voidPointer(getFileAttributes));
+  
+    intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
+              voidPointer(getLength));
   }
 }
 
@@ -1325,13 +1645,13 @@ Avian_sun_misc_Unsafe_ensureClassInitialized
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetInterfaceVersion()
+EXPORT(JVM_GetInterfaceVersion)()
 {
   return local::InterfaceVersion;
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_IHashCode(Thread* t, jobject o)
+EXPORT(JVM_IHashCode)(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1339,7 +1659,7 @@ JVM_IHashCode(Thread* t, jobject o)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_MonitorWait(Thread* t, jobject o, jlong milliseconds)
+EXPORT(JVM_MonitorWait)(Thread* t, jobject o, jlong milliseconds)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1347,7 +1667,7 @@ JVM_MonitorWait(Thread* t, jobject o, jlong milliseconds)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_MonitorNotify(Thread* t, jobject o)
+EXPORT(JVM_MonitorNotify)(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1355,7 +1675,7 @@ JVM_MonitorNotify(Thread* t, jobject o)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_MonitorNotifyAll(Thread* t, jobject o)
+EXPORT(JVM_MonitorNotifyAll)(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1363,7 +1683,7 @@ JVM_MonitorNotifyAll(Thread* t, jobject o)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_Clone(Thread* t, jobject o)
+EXPORT(JVM_Clone)(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1371,7 +1691,7 @@ JVM_Clone(Thread* t, jobject o)
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-JVM_InternString(Thread* t, jstring s)
+EXPORT(JVM_InternString)(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1379,20 +1699,20 @@ JVM_InternString(Thread* t, jstring s)
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_CurrentTimeMillis(Thread* t, jclass)
+EXPORT(JVM_CurrentTimeMillis)(Thread* t, jclass)
 {
   return t->m->system->now();
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_NanoTime(Thread* t, jclass)
+EXPORT(JVM_NanoTime)(Thread* t, jclass)
 {
   return t->m->system->now() * 1000 * 1000;
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_ArrayCopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
-              jint dstOffset, jint length)
+EXPORT(JVM_ArrayCopy)(Thread* t, jclass, jobject src, jint srcOffset,
+                      jobject dst, jint dstOffset, jint length)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1400,7 +1720,7 @@ JVM_ArrayCopy(Thread* t, jclass, jobject src, jint srcOffset, jobject dst,
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_InitProperties(Thread* t, jobject properties)
+EXPORT(JVM_InitProperties)(Thread* t, jobject properties)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1486,22 +1806,22 @@ JVM_InitProperties(Thread* t, jobject properties)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_OnExit(void (*)(void)) { abort(); }
+EXPORT(JVM_OnExit)(void (*)(void)) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Exit(jint code)
+EXPORT(JVM_Exit)(jint code)
 {
   exit(code);
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Halt(jint code)
+EXPORT(JVM_Halt)(jint code)
 {
   exit(code);
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_GC()
+EXPORT(JVM_GC)()
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
   
@@ -1511,37 +1831,37 @@ JVM_GC()
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_MaxObjectInspectionAge(void) { abort(); }
+EXPORT(JVM_MaxObjectInspectionAge)(void) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_TraceInstructions(jboolean) { abort(); }
+EXPORT(JVM_TraceInstructions)(jboolean) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_TraceMethodCalls(jboolean) { abort(); }
+EXPORT(JVM_TraceMethodCalls)(jboolean) { abort(); }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_TotalMemory()
+EXPORT(JVM_TotalMemory)()
 {
   return 0;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_FreeMemory()
+EXPORT(JVM_FreeMemory)()
 {
   return 0;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_MaxMemory()
+EXPORT(JVM_MaxMemory)()
 {
   return 0;
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_ActiveProcessorCount(void) { abort(); }
+EXPORT(JVM_ActiveProcessorCount)(void) { abort(); }
 
 extern "C" JNIEXPORT void* JNICALL
-JVM_LoadLibrary(const char* path)
+EXPORT(JVM_LoadLibrary)(const char* path)
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
 
@@ -1565,10 +1885,10 @@ JVM_LoadLibrary(const char* path)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_UnloadLibrary(void*) { abort(); }
+EXPORT(JVM_UnloadLibrary)(void*) { abort(); }
 
 extern "C" JNIEXPORT void* JNICALL
-JVM_FindLibraryEntry(void* library, const char* name)
+EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
   
@@ -1578,16 +1898,16 @@ JVM_FindLibraryEntry(void* library, const char* name)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsSupportedJNIVersion(jint version)
+EXPORT(JVM_IsSupportedJNIVersion)(jint version)
 {
   return version <= JNI_VERSION_1_4;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsNaN(jdouble) { abort(); }
+EXPORT(JVM_IsNaN)(jdouble) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_FillInStackTrace(Thread* t, jobject throwable)
+EXPORT(JVM_FillInStackTrace)(Thread* t, jobject throwable)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1596,10 +1916,10 @@ JVM_FillInStackTrace(Thread* t, jobject throwable)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_PrintStackTrace(Thread*, jobject, jobject) { abort(); }
+EXPORT(JVM_PrintStackTrace)(Thread*, jobject, jobject) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetStackTraceDepth(Thread* t, jobject throwable)
+EXPORT(JVM_GetStackTraceDepth)(Thread* t, jobject throwable)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1607,7 +1927,7 @@ JVM_GetStackTraceDepth(Thread* t, jobject throwable)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetStackTraceElement(Thread* t, jobject throwable, jint index)
+EXPORT(JVM_GetStackTraceElement)(Thread* t, jobject throwable, jint index)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1617,28 +1937,28 @@ JVM_GetStackTraceElement(Thread* t, jobject throwable, jint index)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_InitializeCompiler (Thread*, jclass) { abort(); }
+EXPORT(JVM_InitializeCompiler) (Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsSilentCompiler(Thread*, jclass) { abort(); }
+EXPORT(JVM_IsSilentCompiler)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_CompileClass(Thread*, jclass, jclass) { abort(); }
+EXPORT(JVM_CompileClass)(Thread*, jclass, jclass) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_CompileClasses(Thread*, jclass, jstring) { abort(); }
+EXPORT(JVM_CompileClasses)(Thread*, jclass, jstring) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_CompilerCommand(Thread*, jclass, jobject) { abort(); }
+EXPORT(JVM_CompilerCommand)(Thread*, jclass, jobject) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_EnableCompiler(Thread*, jclass) { abort(); }
+EXPORT(JVM_EnableCompiler)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_DisableCompiler(Thread*, jclass) { abort(); }
+EXPORT(JVM_DisableCompiler)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_StartThread(Thread* t, jobject thread)
+EXPORT(JVM_StartThread)(Thread* t, jobject thread)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1646,10 +1966,10 @@ JVM_StartThread(Thread* t, jobject thread)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_StopThread(Thread*, jobject, jobject) { abort(); }
+EXPORT(JVM_StopThread)(Thread*, jobject, jobject) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsThreadAlive(Thread* t, jobject thread)
+EXPORT(JVM_IsThreadAlive)(Thread* t, jobject thread)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1658,19 +1978,19 @@ JVM_IsThreadAlive(Thread* t, jobject thread)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SuspendThread(Thread*, jobject) { abort(); }
+EXPORT(JVM_SuspendThread)(Thread*, jobject) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_ResumeThread(Thread*, jobject) { abort(); }
+EXPORT(JVM_ResumeThread)(Thread*, jobject) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SetThreadPriority(Thread*, jobject, jint)
+EXPORT(JVM_SetThreadPriority)(Thread*, jobject, jint)
 {
   // ignore
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Yield(Thread*, jclass)
+EXPORT(JVM_Yield)(Thread*, jclass)
 {
 #ifdef PLATFORM_WINDOWS
   SwitchToThread();
@@ -1680,7 +2000,7 @@ JVM_Yield(Thread*, jclass)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Sleep(Thread* t, jclass, jlong milliseconds)
+EXPORT(JVM_Sleep)(Thread* t, jclass, jlong milliseconds)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1695,7 +2015,7 @@ JVM_Sleep(Thread* t, jclass, jlong milliseconds)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_CurrentThread(Thread* t, jclass)
+EXPORT(JVM_CurrentThread)(Thread* t, jclass)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1703,10 +2023,10 @@ JVM_CurrentThread(Thread* t, jclass)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_CountStackFrames(Thread*, jobject) { abort(); }
+EXPORT(JVM_CountStackFrames)(Thread*, jobject) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_Interrupt(Thread* t, jobject thread)
+EXPORT(JVM_Interrupt)(Thread* t, jobject thread)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1721,7 +2041,7 @@ JVM_Interrupt(Thread* t, jobject thread)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsInterrupted(Thread* t, jobject thread, jboolean clear)
+EXPORT(JVM_IsInterrupted)(Thread* t, jobject thread, jboolean clear)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1736,25 +2056,25 @@ JVM_IsInterrupted(Thread* t, jobject thread, jboolean clear)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_HoldsLock(Thread*, jclass, jobject) { abort(); }
+EXPORT(JVM_HoldsLock)(Thread*, jclass, jobject) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_DumpAllStacks(Thread*, jclass) { abort(); }
+EXPORT(JVM_DumpAllStacks)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetAllThreads(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetAllThreads)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_DumpThreads(Thread*, jclass, jobjectArray) { abort(); }
+EXPORT(JVM_DumpThreads)(Thread*, jclass, jobjectArray) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_CurrentLoadedClass(Thread*) { abort(); }
+EXPORT(JVM_CurrentLoadedClass)(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_CurrentClassLoader(Thread*) { abort(); }
+EXPORT(JVM_CurrentClassLoader)(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetClassContext(Thread* t)
+EXPORT(JVM_GetClassContext)(Thread* t)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1776,37 +2096,37 @@ JVM_GetClassContext(Thread* t)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_ClassDepth(Thread*, jstring) { abort(); }
+EXPORT(JVM_ClassDepth)(Thread*, jstring) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_ClassLoaderDepth(Thread*) { abort(); }
+EXPORT(JVM_ClassLoaderDepth)(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jstring JNICALL
-JVM_GetSystemPackage(Thread*, jstring)
+EXPORT(JVM_GetSystemPackage)(Thread*, jstring)
 {
   return 0;
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetSystemPackages(Thread*) { abort(); }
+EXPORT(JVM_GetSystemPackages)(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_AllocateNewObject(Thread*, jobject, jclass,
+EXPORT(JVM_AllocateNewObject)(Thread*, jobject, jclass,
                       jclass) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_AllocateNewArray(Thread*, jobject, jclass,
+EXPORT(JVM_AllocateNewArray)(Thread*, jobject, jclass,
                      jint) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_LatestUserDefinedLoader(Thread*) { abort(); }
+EXPORT(JVM_LatestUserDefinedLoader)(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_LoadClass0(Thread*, jobject, jclass,
+EXPORT(JVM_LoadClass0)(Thread*, jobject, jclass,
                jstring) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetArrayLength(Thread* t, jobject array)
+EXPORT(JVM_GetArrayLength)(Thread* t, jobject array)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1814,7 +2134,7 @@ JVM_GetArrayLength(Thread* t, jobject array)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetArrayElement(Thread* t, jobject array, jint index)
+EXPORT(JVM_GetArrayElement)(Thread* t, jobject array, jint index)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1822,10 +2142,11 @@ JVM_GetArrayElement(Thread* t, jobject array, jint index)
 }
 
 extern "C" JNIEXPORT jvalue JNICALL
-JVM_GetPrimitiveArrayElement(Thread*, jobject, jint, jint) { abort(); }
+EXPORT(JVM_GetPrimitiveArrayElement)(Thread*, jobject, jint, jint) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SetArrayElement(Thread* t, jobject array, jint index, jobject value)
+EXPORT(JVM_SetArrayElement)(Thread* t, jobject array, jint index,
+                            jobject value)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1833,11 +2154,11 @@ JVM_SetArrayElement(Thread* t, jobject array, jint index, jobject value)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SetPrimitiveArrayElement(Thread*, jobject, jint, jvalue,
+EXPORT(JVM_SetPrimitiveArrayElement)(Thread*, jobject, jint, jvalue,
                              unsigned char) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_NewArray(Thread* t, jclass elementClass, jint length)
+EXPORT(JVM_NewArray)(Thread* t, jclass elementClass, jint length)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1868,10 +2189,10 @@ JVM_NewArray(Thread* t, jclass elementClass, jint length)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_NewMultiArray(Thread*, jclass, jintArray) { abort(); }
+EXPORT(JVM_NewMultiArray)(Thread*, jclass, jintArray) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_GetCallerClass(Thread* t, int target)
+EXPORT(JVM_GetCallerClass)(Thread* t, int target)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1880,7 +2201,7 @@ JVM_GetCallerClass(Thread* t, int target)
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_FindPrimitiveClass(Thread* t, const char* name)
+EXPORT(JVM_FindPrimitiveClass)(Thread* t, const char* name)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1922,11 +2243,12 @@ JVM_FindPrimitiveClass(Thread* t, const char* name)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_ResolveClass(Thread*, jclass) { abort(); }
+EXPORT(JVM_ResolveClass)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_FindClassFromClassLoader(Thread* t, const char* name, jboolean init,
-                             jobject loader, jboolean throwError)
+EXPORT(JVM_FindClassFromClassLoader)(Thread* t, const char* name,
+                                     jboolean init, jobject loader,
+                                     jboolean throwError)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1953,17 +2275,18 @@ JVM_FindClassFromClassLoader(Thread* t, const char* name, jboolean init,
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_FindClassFromBootLoader(Thread* t, const char* name, jboolean throwError)
+EXPORT(JVM_FindClassFromBootLoader)(Thread* t, const char* name,
+                                    jboolean throwError)
 {
-  return JVM_FindClassFromClassLoader(t, name, false, 0, throwError);
+  return EXPORT(JVM_FindClassFromClassLoader)(t, name, false, 0, throwError);
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_FindClassFromClass(Thread*, const char*, jboolean,
+EXPORT(JVM_FindClassFromClass)(Thread*, const char*, jboolean,
                        jclass) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_FindLoadedClass(Thread* t, jobject loader, jstring name)
+EXPORT(JVM_FindLoadedClass)(Thread* t, jobject loader, jstring name)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1980,8 +2303,8 @@ JVM_FindLoadedClass(Thread* t, jobject loader, jstring name)
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_DefineClass(Thread* t, const char*, jobject loader, const uint8_t* data,
-                jsize length, jobject)
+EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject loader,
+                        const uint8_t* data, jsize length, jobject)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -1991,15 +2314,15 @@ JVM_DefineClass(Thread* t, const char*, jobject loader, const uint8_t* data,
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_DefineClassWithSource(Thread* t, const char*, jobject loader,
+EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject loader,
                           const uint8_t* data, jsize length, jobject,
                           const char*)
 {
-  return JVM_DefineClass(t, 0, loader, data, length, 0);
+  return EXPORT(JVM_DefineClass)(t, 0, loader, data, length, 0);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-JVM_GetClassName(Thread* t, jclass c)
+EXPORT(JVM_GetClassName)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2007,7 +2330,7 @@ JVM_GetClassName(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetClassInterfaces(Thread* t, jclass c)
+EXPORT(JVM_GetClassInterfaces)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2033,7 +2356,7 @@ JVM_GetClassInterfaces(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetClassLoader(Thread* t, jclass c)
+EXPORT(JVM_GetClassLoader)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2059,7 +2382,7 @@ JVM_GetClassLoader(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsInterface(Thread* t, jclass c)
+EXPORT(JVM_IsInterface)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2067,13 +2390,13 @@ JVM_IsInterface(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetClassSigners(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassSigners)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SetClassSigners(Thread*, jclass, jobjectArray) { abort(); }
+EXPORT(JVM_SetClassSigners)(Thread*, jclass, jobjectArray) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetProtectionDomain(Thread* t, jclass)
+EXPORT(JVM_GetProtectionDomain)(Thread* t, jclass)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2089,10 +2412,10 @@ JVM_GetProtectionDomain(Thread* t, jclass)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SetProtectionDomain(Thread*, jclass, jobject) { abort(); }
+EXPORT(JVM_SetProtectionDomain)(Thread*, jclass, jobject) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsArrayClass(Thread* t, jclass c)
+EXPORT(JVM_IsArrayClass)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2100,7 +2423,7 @@ JVM_IsArrayClass(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsPrimitiveClass(Thread* t, jclass c)
+EXPORT(JVM_IsPrimitiveClass)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2108,7 +2431,7 @@ JVM_IsPrimitiveClass(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_GetComponentType(Thread* t, jclass c)
+EXPORT(JVM_GetComponentType)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2122,7 +2445,7 @@ JVM_GetComponentType(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetClassModifiers(Thread* t, jclass c)
+EXPORT(JVM_GetClassModifiers)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2130,16 +2453,16 @@ JVM_GetClassModifiers(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetDeclaredClasses(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetDeclaredClasses)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_GetDeclaringClass(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetDeclaringClass)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jstring JNICALL
-JVM_GetClassSignature(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassSignature)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
-JVM_GetClassAnnotations(Thread* t, jclass c)
+EXPORT(JVM_GetClassAnnotations)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2148,7 +2471,7 @@ JVM_GetClassAnnotations(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetClassDeclaredMethods(Thread* t, jclass c, jboolean publicOnly)
+EXPORT(JVM_GetClassDeclaredMethods)(Thread* t, jclass c, jboolean publicOnly)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2233,7 +2556,7 @@ JVM_GetClassDeclaredMethods(Thread* t, jclass c, jboolean publicOnly)
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetClassDeclaredFields(Thread* t, jclass c, jboolean publicOnly)
+EXPORT(JVM_GetClassDeclaredFields)(Thread* t, jclass c, jboolean publicOnly)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2303,7 +2626,8 @@ JVM_GetClassDeclaredFields(Thread* t, jclass c, jboolean publicOnly)
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetClassDeclaredConstructors(Thread* t, jclass c, jboolean publicOnly)
+EXPORT(JVM_GetClassDeclaredConstructors)(Thread* t, jclass c,
+                                         jboolean publicOnly)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2374,13 +2698,13 @@ JVM_GetClassDeclaredConstructors(Thread* t, jclass c, jboolean publicOnly)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetClassAccessFlags(Thread* t, jclass c)
+EXPORT(JVM_GetClassAccessFlags)(Thread* t, jclass c)
 {
-  return JVM_GetClassModifiers(t, c);
+  return EXPORT(JVM_GetClassModifiers)(t, c);
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_InvokeMethod(Thread* t, jobject method, jobject instance,
+EXPORT(JVM_InvokeMethod)(Thread* t, jobject method, jobject instance,
                  jobjectArray arguments)
 {
   ENTER(t, Thread::ActiveState);
@@ -2406,7 +2730,7 @@ JVM_InvokeMethod(Thread* t, jobject method, jobject instance,
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_NewInstanceFromConstructor(Thread* t, jobject constructor,
+EXPORT(JVM_NewInstanceFromConstructor)(Thread* t, jobject constructor,
                                jobjectArray arguments)
 {
   ENTER(t, Thread::ActiveState);
@@ -2434,7 +2758,7 @@ JVM_NewInstanceFromConstructor(Thread* t, jobject constructor,
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetClassConstantPool(Thread* t, jclass c)
+EXPORT(JVM_GetClassConstantPool)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2444,7 +2768,7 @@ JVM_GetClassConstantPool(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_ConstantPoolGetSize(Thread* t, jobject, jobject pool)
+EXPORT(JVM_ConstantPoolGetSize)(Thread* t, jobject, jobject pool)
 {
   if (pool == 0) return 0;
 
@@ -2454,28 +2778,35 @@ JVM_ConstantPoolGetSize(Thread* t, jobject, jobject pool)
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_ConstantPoolGetClassAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetClassAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-JVM_ConstantPoolGetClassAtIfLoaded(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetClassAtIfLoaded)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_ConstantPoolGetMethodAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetMethodAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_ConstantPoolGetMethodAtIfLoaded(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetMethodAtIfLoaded)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_ConstantPoolGetFieldAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetFieldAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_ConstantPoolGetFieldAtIfLoaded(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetFieldAtIfLoaded)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_ConstantPoolGetMemberRefInfoAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetMemberRefInfoAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_ConstantPoolGetIntAt(Thread* t, jobject, jobject pool, jint index)
+EXPORT(JVM_ConstantPoolGetIntAt)(Thread* t, jobject, jobject pool, jint index)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2483,19 +2814,23 @@ JVM_ConstantPoolGetIntAt(Thread* t, jobject, jobject pool, jint index)
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_ConstantPoolGetLongAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetLongAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jfloat JNICALL
-JVM_ConstantPoolGetFloatAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetFloatAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jdouble JNICALL
-JVM_ConstantPoolGetDoubleAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetDoubleAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jstring JNICALL
-JVM_ConstantPoolGetStringAt(Thread*, jobject, jobject, jint) { abort(); }
+EXPORT(JVM_ConstantPoolGetStringAt)(Thread*, jobject, jobject, jint)
+{ abort(); }
 
 extern "C" JNIEXPORT jstring JNICALL
-JVM_ConstantPoolGetUTF8At(Thread* t, jobject, jobject pool, jint index)
+EXPORT(JVM_ConstantPoolGetUTF8At)(Thread* t, jobject, jobject pool, jint index)
 {
   ENTER(t, Thread::ActiveState);
 
@@ -2507,7 +2842,7 @@ JVM_ConstantPoolGetUTF8At(Thread* t, jobject, jobject pool, jint index)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_DoPrivileged
+EXPORT(JVM_DoPrivileged)
 (Thread* t, jclass, jobject action, jobject, jboolean wrapException)
 {
   ENTER(t, Thread::ActiveState);
@@ -2585,381 +2920,211 @@ JVM_DoPrivileged
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetInheritedAccessControlContext(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetInheritedAccessControlContext)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_GetStackAccessControlContext(Thread*, jclass)
+EXPORT(JVM_GetStackAccessControlContext)(Thread*, jclass)
 {
   return 0;
 }
 
 extern "C" JNIEXPORT void* JNICALL
-JVM_RegisterSignal(jint, void*) { abort(); }
+EXPORT(JVM_RegisterSignal)(jint, void*) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_RaiseSignal(jint) { abort(); }
+EXPORT(JVM_RaiseSignal)(jint) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_FindSignal(const char*)
+EXPORT(JVM_FindSignal)(const char*)
 {
   return -1;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_DesiredAssertionStatus(Thread*, jclass, jclass)
+EXPORT(JVM_DesiredAssertionStatus)(Thread*, jclass, jclass)
 {
   return false;
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_AssertionStatusDirectives(Thread*, jclass) { abort(); }
+EXPORT(JVM_AssertionStatusDirectives)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_SupportsCX8()
+EXPORT(JVM_SupportsCX8)()
 {
   return true;
 }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetClassNameUTF(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassNameUTF)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_GetClassCPTypes(Thread*, jclass, unsigned char*) { abort(); }
+EXPORT(JVM_GetClassCPTypes)(Thread*, jclass, unsigned char*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetClassCPEntriesCount(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassCPEntriesCount)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetClassFieldsCount(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassFieldsCount)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetClassMethodsCount(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassMethodsCount)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_GetMethodIxExceptionIndexes(Thread*, jclass, jint,
+EXPORT(JVM_GetMethodIxExceptionIndexes)(Thread*, jclass, jint,
                                 unsigned short*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetMethodIxExceptionsCount(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetMethodIxExceptionsCount)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_GetMethodIxByteCode(Thread*, jclass, jint,
+EXPORT(JVM_GetMethodIxByteCode)(Thread*, jclass, jint,
                         unsigned char*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetMethodIxByteCodeLength(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetMethodIxByteCodeLength)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_GetMethodIxExceptionTableEntry(Thread*, jclass, jint,
+EXPORT(JVM_GetMethodIxExceptionTableEntry)(Thread*, jclass, jint,
                                    jint,
                                    local::JVM_ExceptionTableEntryType*)
 { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetMethodIxExceptionTableLength(Thread*, jclass, int) { abort(); }
+EXPORT(JVM_GetMethodIxExceptionTableLength)(Thread*, jclass, int) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetFieldIxModifiers(Thread*, jclass, int) { abort(); }
+EXPORT(JVM_GetFieldIxModifiers)(Thread*, jclass, int) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetMethodIxModifiers(Thread*, jclass, int) { abort(); }
+EXPORT(JVM_GetMethodIxModifiers)(Thread*, jclass, int) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetMethodIxLocalsCount(Thread*, jclass, int) { abort(); }
+EXPORT(JVM_GetMethodIxLocalsCount)(Thread*, jclass, int) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetMethodIxArgsSize(Thread*, jclass, int) { abort(); }
+EXPORT(JVM_GetMethodIxArgsSize)(Thread*, jclass, int) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetMethodIxMaxStack(Thread*, jclass, int) { abort(); }
+EXPORT(JVM_GetMethodIxMaxStack)(Thread*, jclass, int) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsConstructorIx(Thread*, jclass, int) { abort(); }
+EXPORT(JVM_IsConstructorIx)(Thread*, jclass, int) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetMethodIxNameUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetMethodIxNameUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetMethodIxSignatureUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetMethodIxSignatureUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetCPFieldNameUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetCPFieldNameUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetCPMethodNameUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetCPMethodNameUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetCPMethodSignatureUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetCPMethodSignatureUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetCPFieldSignatureUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetCPFieldSignatureUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetCPClassNameUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetCPClassNameUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetCPFieldClassNameUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetCPFieldClassNameUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT const char* JNICALL
-JVM_GetCPMethodClassNameUTF(Thread*, jclass, jint) { abort(); }
+EXPORT(JVM_GetCPMethodClassNameUTF)(Thread*, jclass, jint) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetCPFieldModifiers(Thread*, jclass, int, jclass) { abort(); }
+EXPORT(JVM_GetCPFieldModifiers)(Thread*, jclass, int, jclass) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetCPMethodModifiers(Thread*, jclass, int, jclass) { abort(); }
+EXPORT(JVM_GetCPMethodModifiers)(Thread*, jclass, int, jclass) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_ReleaseUTF(const char*) { abort(); }
+EXPORT(JVM_ReleaseUTF)(const char*) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-JVM_IsSameClassPackage(Thread*, jclass, jclass) { abort(); }
+EXPORT(JVM_IsSameClassPackage)(Thread*, jclass, jclass) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetLastErrorString(char* dst, int length)
+EXPORT(JVM_GetLastErrorString)(char* dst, int length)
 {
   strncpy(dst, strerror(errno), length);
   return strlen(dst);
 }
 
 extern "C" JNIEXPORT char* JNICALL
-JVM_NativePath(char* path)
+EXPORT(JVM_NativePath)(char* path)
 {
   return path;
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Open(const char* path, jint flags, jint mode)
+EXPORT(JVM_Open)(const char* path, jint flags, jint mode)
 {
-  Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
-  local::MyClasspath* cp = static_cast<local::MyClasspath*>(t->m->classpath);
-
-  unsigned length = strlen(path);
-
-  RUNTIME_ARRAY(char, p, length + 1);
-  replace('\\', '/', RUNTIME_ARRAY_BODY(p), path);
-
-  local::EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), length);
-  if (ef.jar) {
-    if (flags != O_RDONLY) {
-      errno = EACCES;
-      return -1;
-    }
-
-    if (ef.jarLength == 0 or ef.pathLength == 0) {
-      errno = ENOENT;
-      return -1;
-    }
-
-    Finder* finder = local::getFinder(t, ef.jar, ef.jarLength);
-    if (finder == 0) {
-      errno = ENOENT;
-      return -1;
-    }
-
-    System::Region* r = finder->find(ef.path);
-    if (r == 0) {
-      errno = ENOENT;
-      return -1;
-    }
-
-    ENTER(t, Thread::ActiveState);
-    
-    ACQUIRE(t, t->m->referenceLock);
-
-    int index = -1;
-    unsigned oldLength = root(t, Machine::VirtualFiles)
-      ? arrayLength(t, root(t, Machine::VirtualFiles)) : 0;
-
-    for (unsigned i = 0; i < oldLength; ++i) {
-      if (arrayBody(t, root(t, Machine::VirtualFiles), i) == 0) {
-        index = i;
-        break;
-      }
-    }
-
-    if (index == -1) {
-      object newArray = growArray(t, root(t, Machine::VirtualFiles));
-      setRoot(t, Machine::VirtualFiles, newArray);
-      index = oldLength;
-    }
-
-    object region = makeRegion(t, r, 0);
-    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
-        region);
-
-    return index + local::VirtualFileBase;
-  } else {
-    int r = OPEN(RUNTIME_ARRAY_BODY(p), flags, mode);
-    expect(t, r < local::VirtualFileBase);
-    return r;
-  }
+  return OPEN(path, flags, mode);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Close(jint fd)
+EXPORT(JVM_Close)(jint fd)
 {
-  if (fd >= local::VirtualFileBase) {
-    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
-    unsigned index = fd - local::VirtualFileBase;
-
-    ENTER(t, Thread::ActiveState);
-    
-    ACQUIRE(t, t->m->referenceLock);
-
-    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
-    if (region) {
-      static_cast<System::Region*>(regionRegion(t, region))->dispose();
-    }
-
-    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
-        0);
-
-    return 0;
-  } else {
-    return CLOSE(fd);
-  }
+  return CLOSE(fd);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Read(jint fd, char* dst, jint length)
+EXPORT(JVM_Read)(jint fd, char* dst, jint length)
 {
-  if (fd >= local::VirtualFileBase) {
-    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
-    unsigned index = fd - local::VirtualFileBase;
-
-    ENTER(t, Thread::ActiveState);
-    
-    ACQUIRE(t, t->m->referenceLock);
-    
-    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
-    if (region) {
-      System::Region* r = static_cast<System::Region*>
-        (regionRegion(t, region));
-
-      int available = r->length() - regionPosition(t, region);
-      if (length > available) {
-        length = available;
-      }
-
-      memcpy(dst, r->start(), length);
-
-      regionPosition(t, region) += length;
-
-      return length;
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
-  } else {
-    return READ(fd, dst, length);
-  }
+  return READ(fd, dst, length);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Write(jint fd, char* src, jint length)
+EXPORT(JVM_Write)(jint fd, char* src, jint length)
 {
   return WRITE(fd, src, length);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Available(jint fd, jlong* result)
+EXPORT(JVM_Available)(jint fd, jlong* result)
 {
-  if (fd >= local::VirtualFileBase) {
-    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
-    unsigned index = fd - local::VirtualFileBase;
-
-    ENTER(t, Thread::ActiveState);
-    
-    ACQUIRE(t, t->m->referenceLock);
-    
-    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
-    if (region) {
-      return static_cast<System::Region*>(regionRegion(t, region))->length()
-        - regionPosition(t, region);
-    } else {
-      return 0;
-    }
-  } else {
-    struct STAT buffer;
-    int n;
-    if (FSTAT(fd, &buffer) >= 0
-        and (S_ISCHR(buffer.st_mode)
-             or S_ISFIFO(buffer.st_mode)
-             or S_ISSOCK(buffer.st_mode))
-        and local::pipeAvailable(fd, &n))
-    {
-      *result = n;
-      return 1;
-    }
-
-    int current = LSEEK(fd, 0, SEEK_CUR);
-    if (current == -1) return 0;
-
-    int end = LSEEK(fd, 0, SEEK_END);
-    if (end == -1) return 0;
-
-    if (LSEEK(fd, current, SEEK_SET) == -1) return 0;
-
-    *result = end - current;
+  struct STAT buffer;
+  int n;
+  if (FSTAT(fd, &buffer) >= 0
+      and (S_ISCHR(buffer.st_mode)
+           or S_ISFIFO(buffer.st_mode)
+           or S_ISSOCK(buffer.st_mode))
+      and local::pipeAvailable(fd, &n))
+  {
+    *result = n;
     return 1;
   }
+
+  int current = LSEEK(fd, 0, SEEK_CUR);
+  if (current == -1) return 0;
+
+  int end = LSEEK(fd, 0, SEEK_END);
+  if (end == -1) return 0;
+
+  if (LSEEK(fd, current, SEEK_SET) == -1) return 0;
+
+  *result = end - current;
+  return 1;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-JVM_Lseek(jint fd, jlong offset, jint seek)
+EXPORT(JVM_Lseek)(jint fd, jlong offset, jint seek)
 {
-  if (fd >= local::VirtualFileBase) {
-    Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
-    unsigned index = fd - local::VirtualFileBase;
-
-    ENTER(t, Thread::ActiveState);
-    
-    ACQUIRE(t, t->m->referenceLock);
-    
-    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
-    if (region) {
-      System::Region* r = static_cast<System::Region*>
-        (regionRegion(t, region));
-
-      switch (seek) {
-      case SEEK_SET:
-        break;
-
-      case SEEK_CUR:
-        offset += regionPosition(t, region);
-        break;
-
-      case SEEK_END:
-        offset += r->length();
-        break;
-
-      default:
-        errno = EINVAL;
-        return -1;
-      }
-
-      if (offset >= 0 and offset <= static_cast<int>(r->length())) {
-        regionPosition(t, region) = offset;
-        return offset;
-      } else {
-        errno = EINVAL;
-        return -1;
-      }
-    } else {
-      errno = EINVAL;
-      return -1;
-    }
-  } else {
-    return LSEEK(fd, offset, seek);
-  }
+  return LSEEK(fd, offset, seek);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SetLength(jint, jlong) { abort(); }
+EXPORT(JVM_SetLength)(jint, jlong) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Sync(jint fd)
+EXPORT(JVM_Sync)(jint fd)
 {
 #ifdef PLATFORM_WINDOWS
   HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
@@ -2980,7 +3145,7 @@ JVM_Sync(jint fd)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_InitializeSocketLibrary()
+EXPORT(JVM_InitializeSocketLibrary)()
 {
 #ifdef PLATFORM_WINDOWS
   static bool wsaInitialized = false;
@@ -2998,13 +3163,13 @@ JVM_InitializeSocketLibrary()
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Socket(jint domain, jint type, jint protocol)
+EXPORT(JVM_Socket)(jint domain, jint type, jint protocol)
 {
   return socket(domain, type, protocol);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SocketClose(jint socket)
+EXPORT(JVM_SocketClose)(jint socket)
 {
 #ifdef PLATFORM_WINDOWS
   return closesocket(socket);
@@ -3014,43 +3179,43 @@ JVM_SocketClose(jint socket)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SocketShutdown(jint socket, jint how)
+EXPORT(JVM_SocketShutdown)(jint socket, jint how)
 {
   return shutdown(socket, how);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Recv(jint socket, char* dst, jint count, jint flags)
+EXPORT(JVM_Recv)(jint socket, char* dst, jint count, jint flags)
 {
   return recv(socket, dst, count, flags);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Send(jint socket, char* src, jint count, jint flags)
+EXPORT(JVM_Send)(jint socket, char* src, jint count, jint flags)
 {
   return send(socket, src, count, flags);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Timeout(int, long) { abort(); }
+EXPORT(JVM_Timeout)(int, long) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Listen(jint socket, jint count)
+EXPORT(JVM_Listen)(jint socket, jint count)
 {
   return listen(socket, count);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Connect(jint socket, sockaddr* address, jint addressLength)
+EXPORT(JVM_Connect)(jint socket, sockaddr* address, jint addressLength)
 {
   return connect(socket, address, addressLength);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Bind(jint, struct sockaddr*, jint) { abort(); }
+EXPORT(JVM_Bind)(jint, struct sockaddr*, jint) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_Accept(jint socket, struct sockaddr* address, jint* addressLength)
+EXPORT(JVM_Accept)(jint socket, struct sockaddr* address, jint* addressLength)
 {
   socklen_t length = *addressLength;
   int r = accept(socket, address, &length);
@@ -3059,18 +3224,19 @@ JVM_Accept(jint socket, struct sockaddr* address, jint* addressLength)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_RecvFrom(jint, char*, int,
+EXPORT(JVM_RecvFrom)(jint, char*, int,
              int, struct sockaddr*, int*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SendTo(jint, char*, int,
+EXPORT(JVM_SendTo)(jint, char*, int,
            int, struct sockaddr*, int) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SocketAvailable(jint, jint*) { abort(); }
+EXPORT(JVM_SocketAvailable)(jint, jint*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetSockName(jint socket, struct sockaddr* address, int* addressLength)
+EXPORT(JVM_GetSockName)(jint socket, struct sockaddr* address,
+                        int* addressLength)
 {
   socklen_t length = *addressLength;
   int r = getsockname(socket, address, &length);
@@ -3079,28 +3245,28 @@ JVM_GetSockName(jint socket, struct sockaddr* address, int* addressLength)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_GetSockOpt(jint, int, int, char*, int*) { abort(); }
+EXPORT(JVM_GetSockOpt)(jint, int, int, char*, int*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_SetSockOpt(jint, int, int, const char*, int) { abort(); }
+EXPORT(JVM_SetSockOpt)(jint, int, int, const char*, int) { abort(); }
 
 extern "C" JNIEXPORT struct protoent* JNICALL
-JVM_GetProtoByName(char*) { abort(); }
+EXPORT(JVM_GetProtoByName)(char*) { abort(); }
 
 extern "C" JNIEXPORT struct hostent* JNICALL
-JVM_GetHostByAddr(const char*, int, int) { abort(); }
+EXPORT(JVM_GetHostByAddr)(const char*, int, int) { abort(); }
 
 extern "C" JNIEXPORT struct hostent* JNICALL
-JVM_GetHostByName(char*) { abort(); }
+EXPORT(JVM_GetHostByName)(char*) { abort(); }
 
 extern "C" JNIEXPORT int JNICALL
-JVM_GetHostName(char* name, int length)
+EXPORT(JVM_GetHostName)(char* name, int length)
 {
   return gethostname(name, length);
 }
 
 extern "C" JNIEXPORT void* JNICALL
-JVM_RawMonitorCreate(void)
+EXPORT(JVM_RawMonitorCreate)(void)
 {
   System* s = local::globalMachine->system;
   System::Monitor* lock;
@@ -3112,13 +3278,13 @@ JVM_RawMonitorCreate(void)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_RawMonitorDestroy(void* lock)
+EXPORT(JVM_RawMonitorDestroy)(void* lock)
 {
   static_cast<System::Monitor*>(lock)->dispose();
 }
 
 extern "C" JNIEXPORT jint JNICALL
-JVM_RawMonitorEnter(void* lock)
+EXPORT(JVM_RawMonitorEnter)(void* lock)
 {
   static_cast<System::Monitor*>(lock)->acquire
     (static_cast<Thread*>
@@ -3128,7 +3294,7 @@ JVM_RawMonitorEnter(void* lock)
 }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_RawMonitorExit(void* lock)
+EXPORT(JVM_RawMonitorExit)(void* lock)
 {
   static_cast<System::Monitor*>(lock)->release
     (static_cast<Thread*>
@@ -3136,22 +3302,27 @@ JVM_RawMonitorExit(void* lock)
 }
 
 extern "C" JNIEXPORT void* JNICALL
-JVM_GetManagement(jint) { abort(); }
+EXPORT(JVM_GetManagement)(jint) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-JVM_InitAgentProperties(Thread*, jobject) { abort(); }
+EXPORT(JVM_InitAgentProperties)(Thread*, jobject) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetEnclosingMethodInfo(JNIEnv*, jclass) { abort(); }
+EXPORT(JVM_GetEnclosingMethodInfo)(JNIEnv*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jintArray JNICALL
-JVM_GetThreadStateValues(JNIEnv*, jint) { abort(); }
+EXPORT(JVM_GetThreadStateValues)(JNIEnv*, jint) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-JVM_GetThreadStateNames(JNIEnv*, jint, jintArray) { abort(); }
+EXPORT(JVM_GetThreadStateNames)(JNIEnv*, jint, jintArray) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_GetVersionInfo(JNIEnv*, local::jvm_version_info*, size_t) { abort(); }
+EXPORT(JVM_GetVersionInfo)(JNIEnv*, local::jvm_version_info*, size_t)
+{ abort(); }
+
+extern "C" JNIEXPORT jboolean JNICALL
+EXPORT(JVM_CX8Field)(JNIEnv*, jobject*, jfieldID*, jlong, jlong)
+{ abort(); }
 
 extern "C" JNIEXPORT int
 jio_vsnprintf(char* dst, size_t size, const char* format, va_list a)
@@ -3159,39 +3330,43 @@ jio_vsnprintf(char* dst, size_t size, const char* format, va_list a)
   return vm::vsnprintf(dst, size, format, a);
 }
 
-// extern "C" JNIEXPORT int
-// jio_snprintf(char* dst, size_t size, const char* format, ...)
-// {
-//   va_list a;
-//   va_start(a, format);
-
-//   int r = jio_vsnprintf(dst, size, format, a);
-
-//   va_end(a);
-
-//   return r;
-// }
-
 extern "C" JNIEXPORT int
 jio_vfprintf(FILE* stream, const char* format, va_list a)
 {
   return vfprintf(stream, format, a);
 }
 
-// extern "C" JNIEXPORT int
-// jio_fprintf(FILE* stream, const char* format, ...)
-// {
-//   va_list a;
-//   va_start(a, format);
-
-//   int r = jio_vfprintf(stream, format, a);
-
-//   va_end(a);
-
-//   return r;
-// }
-
 #ifdef PLATFORM_WINDOWS
+extern "C" JNIEXPORT int
+jio_snprintf(char* dst, size_t size, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+
+  int r = jio_vsnprintf(dst, size, format, a);
+
+  va_end(a);
+
+  return r;
+}
+
+extern "C" JNIEXPORT int
+jio_fprintf(FILE* stream, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+
+  int r = jio_vfprintf(stream, format, a);
+
+  va_end(a);
+
+  return r;
+}
+
+extern "C" JNIEXPORT void* JNICALL
+EXPORT(JVM_GetThreadInterruptEvent)()
+{ abort(); }
+
 namespace { HMODULE jvmHandle = 0; }
 
 extern "C" int JDK_InitJvmHandle()

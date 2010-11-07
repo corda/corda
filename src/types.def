@@ -239,6 +239,10 @@
 
 (type exceptionInInitializerError java/lang/ExceptionInInitializerError)
 
+(type ioException java/io/IOException)
+
+(type fileNotFoundException java/io/FileNotFoundException)
+
 (type incompatibleContinuationException
   avian/IncompatibleContinuationException)
 
