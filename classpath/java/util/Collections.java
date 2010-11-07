@@ -393,7 +393,6 @@ public class Collections {
       this.cmp = cmp;
     }
     
-    @Override
     public int compare(T o1, T o2) {
       return - cmp.compare(o1, o2);
     }
