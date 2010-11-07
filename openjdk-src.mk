@@ -128,7 +128,35 @@ openjdk-cflags = \
 	-D_GNU_SOURCE
 
 ifeq ($(platform),windows)
-# todo
+	openjdk-sources += \
+		$(openjdk-src)/windows/native/java/io/canonicalize_md.c \
+		$(openjdk-src)/windows/native/java/io/Console_md.c \
+		$(openjdk-src)/windows/native/java/io/FileDescriptor_md.c \
+		$(openjdk-src)/windows/native/java/io/FileInputStream_md.c \
+		$(openjdk-src)/windows/native/java/io/FileOutputStream_md.c \
+		$(openjdk-src)/windows/native/java/io/FileSystem_md.c \
+		$(openjdk-src)/windows/native/java/io/io_util_md.c \
+		$(openjdk-src)/windows/native/java/io/RandomAccessFile_md.c \
+		$(openjdk-src)/windows/native/java/io/Win32FileSystem_md.c \
+		$(openjdk-src)/windows/native/java/io/WinNTFileSystem_md.c \
+		$(openjdk-src)/windows/native/java/lang/java_props_md.c \
+		$(openjdk-src)/windows/native/java/lang/ProcessEnvironment_md.c \
+		$(openjdk-src)/windows/native/java/util/WindowsPreferences.c \
+		$(openjdk-src)/windows/native/java/util/logging.c \
+		$(openjdk-src)/windows/native/java/util/TimeZone_md.c \
+		$(openjdk-src)/windows/native/sun/io/Win32ErrorMode.c \
+
+	openjdk-headers-classes += \
+		sun.io.Win32ErrorMode
+
+	openjdk-cflags += "-I$(openjdk-src)/windows/javavm/export" \
+		"-I$(openjdk-src)/windows/native/common" \
+		"-I$(openjdk-src)/windows/native/java/io" \
+		"-I$(openjdk-src)/windows/native/java/util" \
+		"-I$(openjdk-src)/windows/javavm/include" \
+		"-I$(root)/win32/include" \
+		-D_JNI_IMPLEMENTATION_ \
+		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_
 else
 	openjdk-sources += \
 		$(openjdk-src)/solaris/native/common/jdk_util_md.c \

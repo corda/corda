@@ -15,12 +15,13 @@
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define JNIEXPORT __declspec(dllexport)
+#  define JNICALL __stdcall
 #else // not (defined __MINGW32__) || (defined _MSC_VER)
 #  define JNIEXPORT __attribute__ ((visibility("default")))
+#  define JNICALL
 #endif // not (defined __MINGW32__) || (defined _MSC_VER)
 
 #define JNIIMPORT
-#define JNICALL
 
 typedef int32_t jint;
 typedef int64_t jlong;

@@ -124,7 +124,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
+	-DUSE_ATOMIC_OPERATIONS "-DAVIAN_JAVA_HOME=\"$(javahome)\"" \
 	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
@@ -137,6 +137,8 @@ common-lflags = -lm -lz $(classpath-lflags)
 build-lflags = -lz -lpthread -ldl
 
 lflags = $(common-lflags) -lpthread -ldl
+
+build-system = posix
 
 system = posix
 asm = x86
@@ -196,6 +198,8 @@ ifeq ($(platform),windows)
 	inc = "$(root)/win32/include"
 	lib = "$(root)/win32/lib"
 
+	embed-prefix = c:/avian-embedded
+
 	system = windows
 
 	so-prefix =
@@ -213,6 +217,7 @@ ifeq ($(platform),windows)
 		ranlib = i586-mingw32msvc-ranlib
 		strip = i586-mingw32msvc-strip
 	else
+		build-platform = windows
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
 		build-cflags = $(common-cflags) -I$(src) -mthreads
 		ifeq ($(build-platform),cygwin)
@@ -402,7 +407,7 @@ boot-object = $(build)/boot.o
 generator-depends := $(wildcard $(src)/*.h)
 generator-sources = \
 	$(src)/type-generator.cpp \
-	$(src)/$(system).cpp \
+	$(src)/$(build-system).cpp \
 	$(src)/finder.cpp
 generator-cpp-objects = \
 	$(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%-build.o,$(x)))

@@ -457,11 +457,10 @@ class MySystem: public System {
 
   class Library: public System::Library {
    public:
-    Library(System* s, HMODULE handle, const char* name, bool mapName):
+    Library(System* s, HMODULE handle, const char* name):
       s(s),
       handle(handle),
       name_(name),
-      mapName_(mapName),
       next_(0)
     { }
 
@@ -474,10 +473,6 @@ class MySystem: public System {
 
     virtual const char* name() {
       return name_;
-    }
-
-    virtual bool mapName() {
-      return mapName_;
     }
 
     virtual System::Library* next() {
@@ -511,7 +506,6 @@ class MySystem: public System {
     System* s;
     HMODULE handle;
     const char* name_;
-    bool mapName_;
     System::Library* next_;
   };
 
@@ -701,35 +695,40 @@ class MySystem: public System {
     return status;
   }
 
-  virtual FileType identify(const char* name) {
+  virtual FileType stat(const char* name, unsigned* length) {
     struct _stat s;
     int r = _stat(name, &s);
     if (r == 0) {
       if (S_ISREG(s.st_mode)) {
+        *length = s.st_size;
         return TypeFile;
       } else if (S_ISDIR(s.st_mode)) {
+        *length = 0;
         return TypeDirectory;
       } else {
+        *length = 0;
         return TypeUnknown;
       }
     } else {
+      *length = 0;
       return TypeDoesNotExist;
     }
   }
 
+  virtual const char* libraryPrefix() {
+    return "";
+  }
+
+  virtual const char* librarySuffix() {
+    return SO_SUFFIX;
+  }
+
   virtual Status load(System::Library** lib,
-                      const char* name,
-                      bool mapName)
+                      const char* name)
   {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName and name) {
-      unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
-      RUNTIME_ARRAY(char, buffer, size);;
-      vm::snprintf
-        (RUNTIME_ARRAY_BODY(buffer), size, SO_PREFIX "%s" SO_SUFFIX, name);
-      handle = LoadLibrary(RUNTIME_ARRAY_BODY(buffer));
-    } else if (name) {
+    if (name) {
       handle = LoadLibrary(name);
     } else {
       handle = GetModuleHandle(0);
@@ -748,8 +747,7 @@ class MySystem: public System {
         n = 0;
       }
 
-      *lib = new (allocate(this, sizeof(Library)))
-        Library(this, handle, n, mapName);
+      *lib = new (allocate(this, sizeof(Library))) Library(this, handle, n);
 
       return 0;
     } else {
@@ -759,6 +757,10 @@ class MySystem: public System {
 
   virtual char pathSeparator() {
     return ';';
+  }
+
+  virtual char fileSeparator() {
+    return '\\';
   }
 
   virtual int64_t now() {

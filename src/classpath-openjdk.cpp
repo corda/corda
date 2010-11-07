@@ -20,10 +20,21 @@
 #  include <io.h>
 #  include <direct.h>
 #  include <share.h>
+#  include <errno.h>
+#  include <fcntl.h>
+#  include <sys/stat.h>
+#  include <sys/types.h>
+
+#undef interface
 
 #  define CLOSE _close
 #  define READ _read
 #  define WRITE _write
+#  define FSTAT _fstat
+#  define STAT _stat
+#  define LSEEK _lseek
+
+#  define S_ISSOCK(x) false
 
 #  ifdef _MSC_VER
 #    define S_ISREG(x) ((x) | _S_IFREG)
@@ -31,12 +42,16 @@
 #    define S_IRUSR _S_IREAD
 #    define S_IWUSR _S_IWRITE
 #  else
-#    define OPEN _wopen
-#    define CREAT _wcreat
+#    define OPEN _open
+#    define CREAT _creat
 #  endif
+
+#define O_RDONLY _O_RDONLY
 
 #  define LIBRARY_PREFIX ""
 #  define LIBRARY_SUFFIX ".dll"
+
+typedef int socklen_t;
 
 #else // not PLATFORM_WINDOWS
 
@@ -355,11 +370,20 @@ class MyClasspath : public Classpath {
     globalMachine = t->m;
 
 #ifdef AVIAN_OPENJDK_SRC
-    { object ufsClass = resolveClass
-        (t, root(t, Machine::BootLoader), "java/io/UnixFileSystem");
+    {
+#ifdef PLATFORM_WINDOWS
+      const char* const fsClassName = "java/io/WinNTFileSystem";
+      const char* const gbaMethodName = "getBooleanAttributes";
+#else
+      const char* const fsClassName = "java/io/UnixFileSystem";
+      const char* const gbaMethodName = "getBooleanAttributes0";
+#endif
 
-      if (ufsClass) {
-        PROTECT(t, ufsClass);
+      object fsClass = resolveClass
+        (t, root(t, Machine::BootLoader), fsClassName, false);
+
+      if (fsClass) {
+        PROTECT(t, fsClass);
 
         object fileClass = resolveClass
           (t, root(t, Machine::BootLoader), "java/io/File");
@@ -371,10 +395,10 @@ class MyClasspath : public Classpath {
           if (pathField) {
             this->pathField = fieldOffset(t, pathField);
 
-            intercept(t, ufsClass, "getBooleanAttributes0",
-                      "(Ljava/io/File;)I", voidPointer(getFileAttributes));
+            intercept(t, fsClass, gbaMethodName, "(Ljava/io/File;)I",
+                      voidPointer(getFileAttributes));
 
-            intercept(t, ufsClass, "getLength", "(Ljava/io/File;)J",
+            intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
                       voidPointer(getLength));
           }
         }
@@ -511,10 +535,30 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
   return 0;
 }
 
+bool
+pathEqual(const char* a, const char* b, unsigned length)
+{
+#ifdef PLATFORM_WINDOWS
+  return strncasecmp(a, b, length) == 0;
+#else
+  return strncmp(a, b, length) == 0;
+#endif
+}
+
+bool
+pathEqual(const char* a, const char* b)
+{
+#ifdef PLATFORM_WINDOWS
+  return strcasecmp(a, b) == 0;
+#else
+  return strcmp(a, b) == 0;
+#endif
+}
+
 class EmbeddedFile {
  public:
   EmbeddedFile(MyClasspath* cp, const char* path, unsigned pathLength) {
-    if (strncmp(cp->embedPrefix, path, cp->embedPrefixLength) == 0) {
+    if (pathEqual(cp->embedPrefix, path, cp->embedPrefixLength)) {
       const char* p = path + cp->embedPrefixLength;
       while (*p == '/') ++ p;
 
@@ -564,8 +608,9 @@ getFileAttributes
 
   RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+  replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  if (strcmp(cp->zipLibrary, RUNTIME_ARRAY_BODY(p)) == 0) {
+  if (pathEqual(cp->zipLibrary, RUNTIME_ARRAY_BODY(p))) {
     return Exists | Regular;
   } else {
     EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
@@ -613,6 +658,7 @@ getLength
 
   RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+  replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
   EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));    
   if (ef.jar) {
@@ -892,6 +938,31 @@ interruptLock(Thread* t, object thread)
   }
   
   return threadInterruptLock(t, thread);
+}
+
+bool
+pipeAvailable(int fd, int* available)
+{
+#ifdef PLATFORM_WINDOWS
+  HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+  if (h == INVALID_HANDLE_VALUE) {
+    return false;
+  }
+
+  DWORD n;
+  if (PeekNamedPipe(h, 0,0, 0, &n, 0)) {
+    *available = n;
+  } else {
+    if (GetLastError() != ERROR_BROKEN_PIPE) {
+      return false;
+    }
+    *available = 0;
+  }
+
+  return true;
+#else
+  return ioctl(fd, FIONREAD, available) >= 0;
+#endif
 }
 
 } // namespace local
@@ -1470,13 +1541,17 @@ extern "C" JNIEXPORT jint JNICALL
 JVM_ActiveProcessorCount(void) { abort(); }
 
 extern "C" JNIEXPORT void* JNICALL
-JVM_LoadLibrary(const char* name)
+JVM_LoadLibrary(const char* path)
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
 
+  RUNTIME_ARRAY(char, p, strlen(path) + 1);
+  replace('\\', '/', RUNTIME_ARRAY_BODY(p), path);
+
 #ifdef AVIAN_OPENJDK_SRC
-  if (strcmp(static_cast<local::MyClasspath*>(t->m->classpath)->zipLibrary,
-             name) == 0)
+  if (local::pathEqual
+      (static_cast<local::MyClasspath*>(t->m->classpath)->zipLibrary,
+       RUNTIME_ARRAY_BODY(p)))
   {
     return t->m->libraries;
   }
@@ -1485,8 +1560,8 @@ JVM_LoadLibrary(const char* name)
   ENTER(t, Thread::ActiveState);
 
   return loadLibrary
-    (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath, name,
-     false, false);
+    (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath,
+     RUNTIME_ARRAY_BODY(p), false, false);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -1597,7 +1672,11 @@ JVM_SetThreadPriority(Thread*, jobject, jint)
 extern "C" JNIEXPORT void JNICALL
 JVM_Yield(Thread*, jclass)
 {
+#ifdef PLATFORM_WINDOWS
+  SwitchToThread();
+#else
   sched_yield();
+#endif
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -2655,7 +2734,12 @@ JVM_Open(const char* path, jint flags, jint mode)
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
   local::MyClasspath* cp = static_cast<local::MyClasspath*>(t->m->classpath);
 
-  local::EmbeddedFile ef(cp, path, strlen(path));
+  unsigned length = strlen(path);
+
+  RUNTIME_ARRAY(char, p, length + 1);
+  replace('\\', '/', RUNTIME_ARRAY_BODY(p), path);
+
+  local::EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), length);
   if (ef.jar) {
     if (flags != O_RDONLY) {
       errno = EACCES;
@@ -2706,7 +2790,7 @@ JVM_Open(const char* path, jint flags, jint mode)
 
     return index + local::VirtualFileBase;
   } else {
-    int r = OPEN(path, flags, mode);
+    int r = OPEN(RUNTIME_ARRAY_BODY(p), flags, mode);
     expect(t, r < local::VirtualFileBase);
     return r;
   }
@@ -2797,13 +2881,13 @@ JVM_Available(jint fd, jlong* result)
       return 0;
     }
   } else {
-    struct stat buffer;
+    struct STAT buffer;
     int n;
     if (FSTAT(fd, &buffer) >= 0
         and (S_ISCHR(buffer.st_mode)
              or S_ISFIFO(buffer.st_mode)
              or S_ISSOCK(buffer.st_mode))
-        and ioctl(fd, FIONREAD, &n) >= 0)
+        and local::pipeAvailable(fd, &n))
     {
       *result = n;
       return 1;
@@ -2877,7 +2961,22 @@ JVM_SetLength(jint, jlong) { abort(); }
 extern "C" JNIEXPORT jint JNICALL
 JVM_Sync(jint fd)
 {
+#ifdef PLATFORM_WINDOWS
+  HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+  if (h == INVALID_HANDLE_VALUE) {
+    errno = EBADF;
+    return -1;
+  }
+
+  if (FlushFileBuffers(h)) {
+    return 0;
+  } else {
+    errno = EIO;
+    return -1;
+  }
+#else
   return fsync(fd);
+#endif
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -3091,3 +3190,18 @@ jio_vfprintf(FILE* stream, const char* format, va_list a)
 
 //   return r;
 // }
+
+#ifdef PLATFORM_WINDOWS
+namespace { HMODULE jvmHandle = 0; }
+
+extern "C" int JDK_InitJvmHandle()
+{
+  jvmHandle = GetModuleHandle(0);
+  return jvmHandle != 0;
+}
+ 
+extern "C" void* JDK_FindJvmEntry(const char* name)
+{
+  return voidPointer(GetProcAddress(jvmHandle, name));
+}
+#endif
