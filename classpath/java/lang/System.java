@@ -22,6 +22,7 @@ import java.util.Properties;
 public abstract class System {
   private static Property properties;
   
+  private static SecurityManager securityManager;
   //   static {
   //     loadLibrary("natives");
   //   }
@@ -117,6 +118,14 @@ public abstract class System {
 
   public static void exit(int code) {
     Runtime.getRuntime().exit(code);
+  }
+  
+  public static SecurityManager getSecurityManager() {
+    return securityManager;
+  }
+  
+  public static void setSecurityManager(SecurityManager securityManager) {
+    System.securityManager = securityManager;
   }
 
   private static class Property {

@@ -40,6 +40,6 @@ public interface Map<K, V> {
 
     public V getValue();
 
-    public void setValue(V value);
+    public V setValue(V value);
   }
 }

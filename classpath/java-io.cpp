@@ -25,6 +25,7 @@
 #  include <direct.h>
 #  include <share.h>
 
+#  define ACCESS _waccess
 #  define CLOSE _close
 #  define READ _read
 #  define WRITE _write
@@ -56,6 +57,7 @@ typedef wchar_t char_t;
 #  include <unistd.h>
 #  include "sys/mman.h"
 
+#  define ACCESS access
 #  define OPEN open
 #  define CLOSE close
 #  define READ read
@@ -376,6 +378,31 @@ Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
     releaseChars(e, path, chars);
   }
 }
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canRead(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = ACCESS(chars, R_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canWrite(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = ACCESS(chars, W_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)

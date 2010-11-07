@@ -82,6 +82,10 @@ public class ObjectOutputStream extends OutputStream {
     out.print(v);
   }
 
+  public void defaultWriteObject() throws IOException {
+    throw new UnsupportedOperationException();
+  }
+  
   private void writeObject(Object o, IdentityHashMap<Object, Integer> map,
                            int nextId)
     throws IOException

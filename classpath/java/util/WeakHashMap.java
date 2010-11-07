@@ -114,8 +114,10 @@ public class WeakHashMap<K, V> implements Map<K, V> {
       return value;
     }
 
-    public void setValue(V value) {
+    public V setValue(V value) {
+      V old = this.value;
       this.value = value;
+      return old;
     }
 
     public HashMap.Cell<K, V> next() {

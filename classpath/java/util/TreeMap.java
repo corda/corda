@@ -112,9 +112,12 @@ public class TreeMap<K,V> implements Map<K,V> {
       return value;
     }
 
-    public void setValue(V value) {
+    public V setValue(V value) {
+      V old = this.value;
       this.value = value;
+      return old;
     }
+    
   }
 
   private class KeySet implements Set<K> {
