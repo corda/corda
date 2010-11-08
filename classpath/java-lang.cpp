@@ -148,7 +148,7 @@ class Locale { // represents an ISO two-char language/country pair
     unsigned len = strlen(language);
     if (len != FIELDLEN) return false;
     const char* p = language - 1;
-    while (islower(*++p));
+    while (islower(*++p)) ;
     if (*p != '\0') return false;
     return true;
   }
@@ -158,7 +158,7 @@ class Locale { // represents an ISO two-char language/country pair
     unsigned len = strlen(region);
     if (len != FIELDLEN) return false;
     const char* p = region - 1;
-    while (isupper(*++p));
+    while (isupper(*++p)) ;
     if (*p != '\0') return false;
     return true;
   }
