@@ -141,6 +141,10 @@ build-lflags = -lz -lpthread -ldl
 
 lflags = $(common-lflags) -lpthread -ldl
 
+version-script-flag = -Wl,--version-script=openjdk.ld
+
+jvm-flags = -L$(build) -ljvm
+
 build-system = posix
 
 system = posix
@@ -168,7 +172,10 @@ ifeq ($(arch),arm)
 endif
 
 ifeq ($(platform),darwin)
+	version-script-flag =
+	jvm-flags = $(build)/libjvm.jnilib
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+	build-lflags += -framework CoreFoundation
 	lflags = $(common-lflags) -ldl -framework CoreFoundation -framework CoreServices
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
@@ -736,8 +743,8 @@ ifdef msvc
 		-IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
-	$(ld) $(^) -Wl,--version-script=openjdk.ld \
-		$(shared) $(lflags) $(bootimage-lflags) -o $(@)
+	$(ld) $(^) $(version-script-flag)	$(shared) $(lflags) $(bootimage-lflags) \
+		-o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
@@ -748,7 +755,7 @@ ifdef msvc
 		-PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@) -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(<) -L$(build) -ljvm $(lflags) -o $(@)
+	$(ld) $(<) $(jvm-flags) $(lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 

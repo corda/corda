@@ -8,13 +8,13 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#define __STDC_CONSTANT_MACROS
+
 #ifdef __APPLE__
 #  include "CoreFoundation/CoreFoundation.h"
 #  undef assert
 #  define _XOPEN_SOURCE
 #endif
-
-#define __STDC_CONSTANT_MACROS
 
 #include "sys/mman.h"
 #include "sys/types.h"
