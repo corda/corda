@@ -171,7 +171,6 @@ const unsigned StackAlignmentInBytes = 8;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 
 const int ThreadRegister = 8;
-const int BaseRegister = 11;
 const int StackRegister = 13;
 const int LinkRegister = 14;
 const int ProgramCounter = 15;
@@ -914,7 +913,7 @@ moveAndUpdateRM(Context* c, unsigned srcSize UNUSED, Assembler::Register* src,
     assert(c, dst->offset == 0);
     assert(c, dst->scale == 1);
     
-    emit(c, str(src->low, dst->base, dst->index, dst->offset ? 1 : 0));
+    emit(c, str(src->low, dst->base, dst->index, 1));
   }
 }
 
@@ -1599,6 +1598,7 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual bool reserved(int register_) {
     switch (register_) {
+    case LinkRegister:
     case StackRegister:
     case ThreadRegister:
     case ProgramCounter:
@@ -1624,7 +1624,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int argumentRegister(unsigned index) {
     assert(&c, index < argumentRegisterCount());
 
-    return index + 0;
+    return index;
   }
   
   virtual unsigned stackAlignmentInWords() {
@@ -1968,7 +1968,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual void adjustFrame(unsigned footprint) {
-    Register nextStack(0);
+    Register nextStack(5);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &nextStack);
 
@@ -1993,23 +1993,25 @@ class MyAssembler: public Assembler {
   {
     if (TailCalls) {
       if (offset) {
-        Register tmp(0);
-        Memory returnAddressSrc(StackRegister, 8 + (footprint * BytesPerWord));
-        moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
+        Register link(LinkRegister);
+        Memory returnAddressSrc
+          (StackRegister, BytesPerWord + (footprint * BytesPerWord));
+        moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &link);
     
-        emit(&c, mov(LinkRegister, tmp.low));
-
+        Register tmp(c.client->acquireTemporary());
         Memory stackSrc(StackRegister, footprint * BytesPerWord);
         moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
 
         Memory stackDst(StackRegister, (footprint - offset) * BytesPerWord);
         moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
 
+        c.client->releaseTemporary(tmp.low);
+
         if (returnAddressSurrogate != NoRegister) {
           assert(&c, offset > 0);
 
           Register ras(returnAddressSurrogate);
-          Memory dst(StackRegister, 8 + (offset * BytesPerWord));
+          Memory dst(StackRegister, BytesPerWord + (offset * BytesPerWord));
           moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
         }
 
@@ -2035,7 +2037,7 @@ class MyAssembler: public Assembler {
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
-      Register tmp(0);
+      Register tmp(5);
       Memory stackSrc(StackRegister, 0);
       moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
 
