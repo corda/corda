@@ -866,7 +866,7 @@ store(Context* c, unsigned size, Assembler::Register* src,
     }
 
     if (release) c->client->releaseTemporary(normalized);
-  } else {
+  } else if (size == 8 or abs(offset) == (abs(offset) & 0xFFF)) {
     switch (size) {
     case 1:
       emit(c, strbi(src->low, base, offset));
@@ -888,6 +888,15 @@ store(Context* c, unsigned size, Assembler::Register* src,
 
     default: abort(c);
     }
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    ResolvedPromise offsetPromise(offset);
+    Assembler::Constant offsetConstant(&offsetPromise);
+    moveCR(c, BytesPerWord, &offsetConstant, BytesPerWord, &tmp);
+    
+    store(c, size, src, base, 0, tmp.low, 1, false);
+
+    c->client->releaseTemporary(tmp.low);
   }
 }
 
@@ -962,7 +971,9 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
     }
 
     if (release) c->client->releaseTemporary(normalized);
-  } else {
+  } else if ((srcSize == 8 and dstSize == 8)
+             or abs(offset) == (abs(offset) & 0xFFF))
+  {
     switch (srcSize) {
     case 1:
       if (signExtend) {
@@ -996,6 +1007,15 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
 
     default: abort(c);
     }
+  } else {
+    Assembler::Register tmp(c->client->acquireTemporary());
+    ResolvedPromise offsetPromise(offset);
+    Assembler::Constant offsetConstant(&offsetPromise);
+    moveCR(c, BytesPerWord, &offsetConstant, BytesPerWord, &tmp);
+    
+    load(c, srcSize, base, 0, tmp.low, 1, dstSize, dst, false, signExtend);
+
+    c->client->releaseTemporary(tmp.low);
   }
 }
 
@@ -1115,6 +1135,8 @@ compareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == 4 and bSize == 4);
+  assert(c, b->low != a->low);
+
   emit(c, cmp(b->low, a->low));
 }
 
