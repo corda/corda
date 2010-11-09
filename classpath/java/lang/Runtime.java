@@ -43,7 +43,7 @@ public class Runtime {
     }
   }
 
-  public Process exec(String command) {
+  public Process exec(String command) throws IOException {
     StringTokenizer t = new StringTokenizer(command);
     String[] cmd = new String[t.countTokens()];
     for (int i = 0; i < cmd.length; i++)
@@ -52,7 +52,7 @@ public class Runtime {
     return exec(cmd);
   }
 
-  public Process exec(final String[] command) {
+  public Process exec(final String[] command) throws IOException {
     final MyProcess[] process = new MyProcess[1];
     final Throwable[] exception = new Throwable[1];
 
@@ -61,10 +61,11 @@ public class Runtime {
           public void run() {
             synchronized (process) {
               try {
-                long[] info = new long[4];
+                long[] info = new long[5];
                 exec(command, info);
                 process[0] = new MyProcess
-                  (info[0], (int) info[1], (int) info[2], (int) info[3]);
+                  (info[0], info[1], (int) info[2], (int) info[3],
+                   (int) info[4]);
               } catch (Throwable e) {
                 exception[0] = e;
               } finally {          
@@ -77,8 +78,9 @@ public class Runtime {
               synchronized (p) {
                 try {
                   if (p.pid != 0) {
-                    p.exitCode = Runtime.waitFor(p.pid);
+                    p.exitCode = Runtime.waitFor(p.pid, p.tid);
                     p.pid = 0;
+                    p.tid = 0;
                   }
                 } finally {
                   p.notifyAll();
@@ -100,7 +102,11 @@ public class Runtime {
     }
 
     if (exception[0] != null) {
-      throw new RuntimeException(exception[0]);
+      if (exception[0] instanceof IOException) {
+        throw new IOException(exception[0]);
+      } else {
+        throw new RuntimeException(exception[0]);
+      }
     }
 
     return process[0];
@@ -111,7 +117,7 @@ public class Runtime {
   private static native void exec(String[] command, long[] process)
     throws IOException;
 
-  private static native int waitFor(long pid);
+  private static native int waitFor(long pid, long tid);
 
   private static native void load(String name, boolean mapName);
 
@@ -125,13 +131,15 @@ public class Runtime {
 
   private static class MyProcess extends Process {
     private long pid;
+    private long tid;
     private final int in;
     private final int out;
     private final int err;
     private int exitCode;
 
-    public MyProcess(long pid, int in, int out, int err) {
+    public MyProcess(long pid, long tid, int in, int out, int err) {
       this.pid = pid;
+      this.tid = tid;
       this.in = in;
       this.out = out;
       this.err = err;

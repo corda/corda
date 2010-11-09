@@ -165,17 +165,17 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   SetHandleInformation(in[0], HANDLE_FLAG_INHERIT, 0);
   jlong inDescriptor = static_cast<jlong>(descriptor(e, in[0]));
   if(e->ExceptionCheck()) return;
-  e->SetLongArrayRegion(process, 1, 1, &inDescriptor);
+  e->SetLongArrayRegion(process, 2, 1, &inDescriptor);
   makePipe(e, out);
   SetHandleInformation(out[1], HANDLE_FLAG_INHERIT, 0);
   jlong outDescriptor = static_cast<jlong>(descriptor(e, out[1]));
   if(e->ExceptionCheck()) return;
-  e->SetLongArrayRegion(process, 2, 1, &outDescriptor);
+  e->SetLongArrayRegion(process, 3, 1, &outDescriptor);
   makePipe(e, err);
   SetHandleInformation(err[0], HANDLE_FLAG_INHERIT, 0);
   jlong errDescriptor = static_cast<jlong>(descriptor(e, err[0]));
   if(e->ExceptionCheck()) return;
-  e->SetLongArrayRegion(process, 3, 1, &errDescriptor);
+  e->SetLongArrayRegion(process, 4, 1, &errDescriptor);
   
   PROCESS_INFORMATION pi;
   ZeroMemory(&pi, sizeof(pi));
@@ -203,11 +203,12 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   
   jlong pid = reinterpret_cast<jlong>(pi.hProcess);
   e->SetLongArrayRegion(process, 0, 1, &pid);
-  
+  jlong tid = reinterpret_cast<jlong>(pi.hThread);  
+  e->SetLongArrayRegion(process, 1, 1, &tid);
 }
 
 extern "C" JNIEXPORT jint JNICALL 
-Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid)
+Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid, jlong tid)
 {
   DWORD exitCode;
   WaitForSingleObject(reinterpret_cast<HANDLE>(pid), INFINITE);
@@ -215,6 +216,10 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid)
   if(not success){
     throwNew(e, "java/lang/Exception", getErrorStr(GetLastError()));
   }
+
+  CloseHandle(reinterpret_cast<HANDLE>(pid));
+  CloseHandle(reinterpret_cast<HANDLE>(tid));
+
   return exitCode;
 }
 #else
@@ -240,15 +245,15 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   makePipe(e, in);
   if(e->ExceptionCheck()) return;
   jlong inDescriptor = static_cast<jlong>(in[0]);
-  e->SetLongArrayRegion(process, 1, 1, &inDescriptor);
+  e->SetLongArrayRegion(process, 2, 1, &inDescriptor);
   makePipe(e, out);
   if(e->ExceptionCheck()) return;
   jlong outDescriptor = static_cast<jlong>(out[1]);
-  e->SetLongArrayRegion(process, 2, 1, &outDescriptor);
+  e->SetLongArrayRegion(process, 3, 1, &outDescriptor);
   makePipe(e, err);
   if(e->ExceptionCheck()) return;
   jlong errDescriptor = static_cast<jlong>(err[0]);
-  e->SetLongArrayRegion(process, 3, 1, &errDescriptor);
+  e->SetLongArrayRegion(process, 4, 1, &errDescriptor);
   makePipe(e, msg);
   if(e->ExceptionCheck()) return;
   if(fcntl(msg[1], F_SETFD, FD_CLOEXEC) != 0) {
@@ -309,7 +314,7 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
 }
 
 extern "C" JNIEXPORT jint JNICALL 
-Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid)
+Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid, jlong)
 {
   bool finished = false;
   int status;
