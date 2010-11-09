@@ -43,27 +43,71 @@ public class Runtime {
     }
   }
 
-  public Process exec(String command) throws IOException {
-    long[] process = new long[4];
+  public Process exec(String command) {
     StringTokenizer t = new StringTokenizer(command);
     String[] cmd = new String[t.countTokens()];
     for (int i = 0; i < cmd.length; i++)
       cmd[i] = t.nextToken();
-    exec(cmd, process);
-    return new MyProcess(process[0], (int) process[1], (int) process[2], (int) process[3]);
+    
+    return exec(cmd);
   }
 
-  public Process exec(String[] command) {
-    long[] process = new long[4];
-    exec(command, process);
-    return new MyProcess(process[0], (int) process[1], (int) process[2], (int) process[3]);
+  public MyProcess exec(final String[] command) {
+    final MyProcess[] process = new MyProcess[1];
+    final Throwable[] exception = new Throwable[1];
+
+    synchronized (process) {
+      Thread t = new Thread() {
+          public void run() {
+            synchronized (process) {
+              try {
+                long[] info = new long[4];
+                exec(command, info);
+                process[0] = new MyProcess
+                  (info[0], (int) info[1], (int) info[2], (int) info[3]);
+
+                MyProcess p = process[0];
+                synchronized (p) {
+                  try {
+                    if (p.pid != 0) {
+                      p.exitCode = Runtime.waitFor(p.pid);
+                      p.pid = 0;
+                    }
+                  } finally {
+                    p.notifyAll();
+                  }
+                }
+              } catch (Throwable e) {
+                exception[0] = e;
+              } finally {          
+                process.notifyAll();
+              }
+            }
+          }
+        };
+      t.setDaemon(true);
+      t.start();
+
+      while (process[0] == null && exception[0] == null) {
+        try {
+          process.wait();
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
+    if (exception[0] != null) {
+      throw new RuntimeException(exception[0]);
+    }
+
+    return process[0];
   }
 
   public native void addShutdownHook(Thread t);
 
-  private static native void exec(String[] command, long[] process);
-
-  private static native int exitValue(long pid);
+  private static native void exec(String[] command, long[] process)
+    throws IOException;
 
   private static native int waitFor(long pid);
 
@@ -95,13 +139,6 @@ public class Runtime {
       throw new RuntimeException("not implemented");
     }
 
-    public int exitValue() {
-      if (pid != 0) {
-        exitCode = Runtime.exitValue(pid);
-      }
-      return exitCode;
-    }
-
     public InputStream getInputStream() {
       return new FileInputStream(new FileDescriptor(in));
     }
@@ -114,11 +151,19 @@ public class Runtime {
       return new FileInputStream(new FileDescriptor(err));
     }
 
-    public int waitFor() throws InterruptedException {
+    public synchronized int exitValue() {
       if (pid != 0) {
-        exitCode = Runtime.waitFor(pid);
-        pid = 0;
+        throw new IllegalThreadStateException();
       }
+
+      return exitCode;
+    }
+
+    public synchronized int waitFor() throws InterruptedException {
+      while (pid != 0) {
+        wait();
+      }
+
       return exitCode;
     }
   }

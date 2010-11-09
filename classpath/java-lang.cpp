@@ -191,6 +191,10 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   BOOL success = CreateProcess(0, (LPSTR) RUNTIME_ARRAY_BODY(line), 0, 0, 1,
                                CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
                                0, 0, &si, &pi);
+
+  CloseHandle(in[1]);
+  CloseHandle(out[0]);
+  CloseHandle(err[1]);
   
   if (not success) {
     throwNew(e, "java/io/IOException", getErrorStr(GetLastError()));
@@ -200,19 +204,6 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   jlong pid = reinterpret_cast<jlong>(pi.hProcess);
   e->SetLongArrayRegion(process, 0, 1, &pid);
   
-}
-
-extern "C" JNIEXPORT jint JNICALL 
-Java_java_lang_Runtime_exitValue(JNIEnv* e, jclass, jlong pid)
-{
-  DWORD exitCode;
-  BOOL success = GetExitCodeProcess(reinterpret_cast<HANDLE>(pid), &exitCode);
-  if(not success){
-    throwNew(e, "java/lang/Exception", getErrorStr(GetLastError()));
-  } else if(exitCode == STILL_ACTIVE){
-    throwNew(e, "java/lang/IllegalThreadStateException", "Process is still active");
-  }
-  return exitCode;
 }
 
 extern "C" JNIEXPORT jint JNICALL 
@@ -315,20 +306,6 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   fcntl(in[0], F_SETFD, FD_CLOEXEC);
   fcntl(out[1], F_SETFD, FD_CLOEXEC);
   fcntl(err[0], F_SETFD, FD_CLOEXEC);
-}
-
-extern "C" JNIEXPORT jint JNICALL 
-Java_java_lang_Runtime_exitValue(JNIEnv* e, jclass, jlong pid)
-{
-  int status;
-  pid_t returned = waitpid(pid, &status, WNOHANG);
-  if(returned == 0){
-    throwNewErrno(e, "java/lang/IllegalThreadStateException");
-  } else if(returned == -1){
-    throwNewErrno(e, "java/lang/Exception");
-  } 
-  
-  return WEXITSTATUS(status);
 }
 
 extern "C" JNIEXPORT jint JNICALL 
