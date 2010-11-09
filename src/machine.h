@@ -2746,7 +2746,11 @@ notifyAll(Thread* t, object o)
 inline void
 interrupt(Thread*, Thread* target)
 {
-  target->systemThread->interrupt();
+  if (target->state != Thread::ZombieState
+      and target->state != Thread::JoinedState)
+  {
+    target->systemThread->interrupt();
+  }
 }
 
 inline void
