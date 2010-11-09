@@ -4885,9 +4885,13 @@ class BoundsCheckEvent: public Event {
                       lengthOffset, NoRegister, 1);
     length.acquired = true;
 
+    index->source->freeze(c, index);
+
     ConstantSite next(nextPromise);
     apply(c, JumpIfGreater, 4, index->source, index->source, 4, &length,
           &length, BytesPerWord, &next, &next);
+
+    index->source->thaw(c, index);
 
     if (constant == 0) {
       outOfBoundsPromise->offset = a->offset();
