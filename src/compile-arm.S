@@ -249,11 +249,6 @@ LOCAL(vmJumpAndInvoke_getAddress):
    ldr  lr,[r11,r10]
 
    bx   r1
-#else // not AVIAN_CONTINUATIONS
-   // vmJumpAndInvoke should only be called when continuations are
-   // enabled
-   bkpt
-#endif // not AVIAN_CONTINUATIONS
 
 LOCAL(vmInvoke_returnAddress_word):
    .word GLOBAL(vmInvoke_returnAddress)(GOT)
@@ -262,3 +257,8 @@ LOCAL(vmInvoke_getAddress_word):
 LOCAL(vmJumpAndInvoke_getAddress_word):
    .word _GLOBAL_OFFSET_TABLE_-(LOCAL(vmJumpAndInvoke_getAddress)+8)
    
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled
+   bkpt
+#endif // not AVIAN_CONTINUATIONS
