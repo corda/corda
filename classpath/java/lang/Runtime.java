@@ -52,7 +52,7 @@ public class Runtime {
     return exec(cmd);
   }
 
-  public MyProcess exec(final String[] command) {
+  public Process exec(final String[] command) {
     final MyProcess[] process = new MyProcess[1];
     final Throwable[] exception = new Throwable[1];
 
