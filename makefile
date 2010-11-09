@@ -145,8 +145,9 @@ ifeq ($(arch),powerpc)
 	pointer-size = 4
 endif
 ifeq ($(arch),arm)
-  asm = arm
-  pointer-size = 4 
+	asm = arm
+	pointer-size = 4
+	cflags += -Wno-psabi -march=armv5t 
 endif
 
 ifeq ($(platform),darwin)
@@ -176,6 +177,16 @@ ifeq ($(platform),darwin)
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
 		lflags += -arch x86_64
+	endif
+endif
+
+ifeq ($(arch),arm)
+	ifneq ($(arch),$(build-arch))
+		cxx = arm-linux-gnueabi-g++
+		cc = arm-linux-gnueabi-gcc
+		ar = arm-linux-gnueabi-ar
+		ranlib = arm-linux-gnueabi-ranlib
+		strip = arm-linux-gnueabi-strip
 	endif
 endif
 
