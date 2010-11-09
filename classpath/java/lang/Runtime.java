@@ -65,22 +65,24 @@ public class Runtime {
                 exec(command, info);
                 process[0] = new MyProcess
                   (info[0], (int) info[1], (int) info[2], (int) info[3]);
-
-                MyProcess p = process[0];
-                synchronized (p) {
-                  try {
-                    if (p.pid != 0) {
-                      p.exitCode = Runtime.waitFor(p.pid);
-                      p.pid = 0;
-                    }
-                  } finally {
-                    p.notifyAll();
-                  }
-                }
               } catch (Throwable e) {
                 exception[0] = e;
               } finally {          
                 process.notifyAll();
+              }
+            }
+
+            MyProcess p = process[0];
+            if (p != null) {
+              synchronized (p) {
+                try {
+                  if (p.pid != 0) {
+                    p.exitCode = Runtime.waitFor(p.pid);
+                    p.pid = 0;
+                  }
+                } finally {
+                  p.notifyAll();
+                }
               }
             }
           }
