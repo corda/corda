@@ -5995,14 +5995,6 @@ compileMethod2(MyThread* t, void* ip)
     t->trace->targetMethod = 0;
   }
 
-  if (false) {
-    compile(t, codeAllocator(t), 0, resolveMethod
-            (t, t->m->loader,
-             "org/eclipse/swt/widgets/TableItem",
-             "getBounds",
-             "(IIZZZZJ)Lorg/eclipse/swt/internal/win32/RECT;"));
-  }
-
   if (UNLIKELY(t->exception)) {
     return 0;
   } else {
@@ -7485,12 +7477,11 @@ class MyProcessor: public Processor {
 
     if (false) {
       compile(static_cast<MyThread*>(t),
-              local::codeAllocator(static_cast<MyThread*>(t)), 0,
-              resolveMethod(t, t->m->loader,
-                            "com/ecovate/nat/logic/Cache",
-                            "findInCache",
-                            "(Ljava/lang/String;Ljava/lang/String;JZ)Lcom/ecovate/shared/xmlrpc/Resource;"));
-      trap();
+              local::codeAllocator(static_cast<MyThread*>(t)), 0, resolveMethod
+              (t, t->m->loader,
+               "org/eclipse/swt/widgets/Display",
+               "runSettings",
+               "()Z"));
     }
 
     compile(static_cast<MyThread*>(t),
