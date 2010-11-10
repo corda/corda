@@ -44,7 +44,7 @@ inline int XFERI(int cond, int P, int U, int B, int W, int L, int Rn, int Rd, in
 inline int XFER2(int cond, int P, int U, int W, int L, int Rn, int Rd, int S, int H, int Rm)
 { return cond<<28 | P<<24 | U<<23 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | 1<<7 | S<<6 | H<<5 | 1<<4 | Rm; }
 inline int XFER2I(int cond, int P, int U, int W, int L, int Rn, int Rd, int offsetH, int S, int H, int offsetL)
-{ return cond<<28 | P<<24 | U<<23 | 1<<22 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | offsetH<<8 | 1<<7 | S<<6 | H<<5 | 1<<4 | offsetL; }
+{ return cond<<28 | P<<24 | U<<23 | 1<<22 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | offsetH<<8 | 1<<7 | S<<6 | H<<5 | 1<<4 | (offsetL&0xf); }
 inline int BLOCKXFER(int cond, int P, int U, int S, int W, int L, int Rn, int rlist)
 { return cond<<28 | 4<<25 | P<<24 | U<<23 | S<<22 | W<<21 | L<<20 | Rn<<16 | rlist; }
 inline int SWI(int cond, int imm)
@@ -866,7 +866,10 @@ store(Context* c, unsigned size, Assembler::Register* src,
     }
 
     if (release) c->client->releaseTemporary(normalized);
-  } else if (size == 8 or abs(offset) == (abs(offset) & 0xFFF)) {
+  } else if (size == 8
+             or abs(offset) == (abs(offset) & 0xFF)
+             or (size != 2 and abs(offset) == (abs(offset) & 0xFFF)))
+  {
     switch (size) {
     case 1:
       emit(c, strbi(src->low, base, offset));
@@ -972,7 +975,10 @@ load(Context* c, unsigned srcSize, int base, int offset, int index,
 
     if (release) c->client->releaseTemporary(normalized);
   } else if ((srcSize == 8 and dstSize == 8)
-             or abs(offset) == (abs(offset) & 0xFFF))
+             or abs(offset) == (abs(offset) & 0xFF)
+             or (srcSize != 2
+                 and (srcSize != 1 or not signExtend)
+                 and abs(offset) == (abs(offset) & 0xFFF)))
   {
     switch (srcSize) {
     case 1:
