@@ -6134,11 +6134,11 @@ compileVirtualMethod(MyThread* t)
 uint64_t
 invokeNativeFast(MyThread* t, object method, void* function)
 {
-  return reinterpret_cast<FastNativeFunction>(function)
-    (t, method,
-     static_cast<uintptr_t*>(t->stack)
-     + t->arch->frameFooterSize()
-     + t->arch->frameReturnAddressSize());
+  FastNativeFunction f; memcpy(&f, &function, sizeof(void*));
+  return f(t, method,
+           static_cast<uintptr_t*>(t->stack)
+           + t->arch->frameFooterSize()
+           + t->arch->frameReturnAddressSize());
 }
 
 uint64_t
