@@ -54,6 +54,18 @@ test-executable = $(executable)
 boot-classpath = $(classpath-build)
 embed-prefix = /avian-embedded
 
+native-path = echo
+
+ifeq ($(build-platform),cygwin)
+	native-path = cygpath -m
+endif
+
+path-separator = :
+
+ifneq (,$(filter mingw32 cygwin,$(build-platform)))
+	path-separator = ;
+endif
+
 ifdef openjdk
 	ifdef openjdk-src
 		include openjdk-src.mk
@@ -72,11 +84,11 @@ ifdef openjdk
 	  options := $(options)-openjdk
 		test-executable = $(executable-dynamic)
 		library-path = LD_LIBRARY_PATH=$(build)
-		javahome = $(openjdk)/jre
+		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
   classpath = openjdk
-	boot-classpath := $(boot-classpath):$(openjdk)/jre/lib/rt.jar
+	boot-classpath := "$(boot-classpath)$(path-separator)$$($(native-path) "$(openjdk)/jre/lib/rt.jar")"
 	build-javahome = $(openjdk)/jre
 endif
 
@@ -127,7 +139,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
-	-DUSE_ATOMIC_OPERATIONS "-DAVIAN_JAVA_HOME=\"$(javahome)\"" \
+	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\"
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
@@ -156,8 +168,6 @@ so-prefix = lib
 so-suffix = .so
 
 shared = -shared
-
-native-path = echo
 
 ifeq ($(arch),i386)
 	pointer-size = 4
@@ -241,7 +251,6 @@ ifeq ($(platform),windows)
 			build-cflags += -mno-cygwin
 			lflags += -mno-cygwin
 			cflags += -mno-cygwin
-			native-path = cygpath -m
 		endif
 	endif
 

@@ -223,6 +223,19 @@ atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
     (reinterpret_cast<LONGLONG*>(p), new_, old);
 #elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
+#elif defined ARCH_x86_32
+  uint8_t result;
+
+  __asm__ __volatile__("lock; cmpxchg8b %0; setz %1"
+                       : "=m"(*p), "=q"(result)
+                       : "a"(static_cast<uint32_t>(old)),
+                         "d"(static_cast<uint32_t>(old >> 32)),
+                         "b"(static_cast<uint32_t>(new_)),
+                         "c"(static_cast<uint32_t>(new_ >> 32)),
+                         "m"(*p)
+                       : "memory");
+
+  return result != 0;
 #else
   uint8_t result;
 

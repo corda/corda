@@ -1528,11 +1528,11 @@ Avian_sun_misc_Unsafe_compareAndSwapInt
 {
   object target = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
-  int32_t expect = arguments[4];
-  int32_t update = arguments[5];
+  uint32_t expect = arguments[4];
+  uint32_t update = arguments[5];
 
-  return __sync_bool_compare_and_swap
-    (&cast<int32_t>(target, offset), expect, update);
+  return atomicCompareAndSwap32
+    (&cast<uint32_t>(target, offset), expect, update);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -1541,11 +1541,11 @@ Avian_sun_misc_Unsafe_compareAndSwapObject
 {
   object target = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
-  intptr_t expect = arguments[4];
-  intptr_t update = arguments[5];
+  uintptr_t expect = arguments[4];
+  uintptr_t update = arguments[5];
 
-  bool success = __sync_bool_compare_and_swap
-    (&cast<intptr_t>(target, offset), expect, update);
+  bool success = atomicCompareAndSwap
+    (&cast<uintptr_t>(target, offset), expect, update);
 
   if (success) {
     mark(t, target, offset);
@@ -1560,11 +1560,11 @@ Avian_sun_misc_Unsafe_compareAndSwapLong
 {
   object target = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
-  int64_t expect; memcpy(&expect, arguments + 4, 8);
-  int64_t update; memcpy(&update, arguments + 6, 8);
+  uint64_t expect; memcpy(&expect, arguments + 4, 8);
+  uint64_t update; memcpy(&update, arguments + 6, 8);
 
-  return __sync_bool_compare_and_swap
-    (&cast<int64_t>(target, offset), expect, update);
+  return atomicCompareAndSwap64
+    (&cast<uint64_t>(target, offset), expect, update);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
