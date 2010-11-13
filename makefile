@@ -245,7 +245,8 @@ ifeq ($(platform),windows)
 	else
 		build-system = windows
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
-		build-cflags = $(common-cflags) -I$(src) -mthreads
+		build-cflags = $(common-cflags) -I$(src) -I$(inc) -mthreads
+		build-lflags = -L$(lib) $(common-lflags)
 		ifeq ($(build-platform),cygwin)
 			build-lflags += -mno-cygwin
 			build-cflags += -mno-cygwin
