@@ -5698,6 +5698,8 @@ compile(Context* c)
       p->offset = a->offset();
     }
     
+    a->endEvent();
+
     LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
     if (e->next == 0
         or (e->next->logicalInstruction != e->logicalInstruction
@@ -5735,7 +5737,7 @@ compile(Context* c)
     block = next;
   }
 
-  return block->assemblerBlock->resolve(block->start, 0) + a->scratchSize();
+  return block->assemblerBlock->resolve(block->start, 0);
 }
 
 unsigned

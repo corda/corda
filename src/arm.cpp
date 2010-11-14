@@ -175,20 +175,46 @@ const int StackRegister = 13;
 const int LinkRegister = 14;
 const int ProgramCounter = 15;
 
+const unsigned PoolOffsetMask = 0xFFF;
+
+const bool DebugPool = false;
+
+class Context;
+class MyBlock;
+class PoolOffset;
+class PoolEvent;
+
+void
+resolve(MyBlock*);
+
+unsigned
+padding(MyBlock*, unsigned);
+
 class MyBlock: public Assembler::Block {
  public:
-  MyBlock(unsigned offset):
-    next(0), offset(offset), start(~0), size(0)
+  MyBlock(Context* context, unsigned offset):
+    context(context), next(0), poolOffsetHead(0), poolOffsetTail(0),
+    lastPoolOffsetTail(0), poolEventHead(0), poolEventTail(0),
+    lastEventOffset(0), offset(offset), start(~0), size(0)
   { }
 
   virtual unsigned resolve(unsigned start, Assembler::Block* next) {
     this->start = start;
     this->next = static_cast<MyBlock*>(next);
 
-    return start + size;
+    ::resolve(this);
+
+    return start + size + padding(this, size);
   }
 
+  Context* context;
   MyBlock* next;
+  PoolOffset* poolOffsetHead;
+  PoolOffset* poolOffsetTail;
+  PoolOffset* lastPoolOffsetTail;
+  PoolEvent* poolEventHead;
+  PoolEvent* poolEventTail;
+  unsigned lastEventOffset;
   unsigned offset;
   unsigned start;
   unsigned size;
@@ -201,8 +227,9 @@ class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock), constantPool(0), constantPoolCount(0)
+    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(this, 0)),
+    lastBlock(firstBlock), poolOffsetHead(0), poolOffsetTail(0),
+    constantPool(0), constantPoolCount(0)
   { }
 
   System* s;
@@ -213,6 +240,8 @@ class Context {
   uint8_t* result;
   MyBlock* firstBlock;
   MyBlock* lastBlock;
+  PoolOffset* poolOffsetHead;
+  PoolOffset* poolOffsetTail;
   ConstantPoolEntry* constantPool;
   unsigned constantPoolCount;
 };
@@ -302,7 +331,8 @@ class Offset: public Promise {
   virtual int64_t value() {
     assert(c, resolved());
 
-    return block->start + (offset - block->offset);
+    unsigned o = offset - block->offset;
+    return block->start + padding(block, o) + o;
   }
 
   Context* c;
@@ -324,7 +354,7 @@ bounded(int right, int left, int32_t v)
 }
 
 void*
-updateOffset(System* s, uint8_t* instruction, bool conditional UNUSED, int64_t value)
+updateOffset(System* s, uint8_t* instruction, int64_t value)
 {
   // ARM's PC is two words ahead, and branches drop the bottom 2 bits.
   int32_t v = (reinterpret_cast<uint8_t*>(value) - (instruction + 8)) >> 2;
@@ -341,56 +371,48 @@ updateOffset(System* s, uint8_t* instruction, bool conditional UNUSED, int64_t v
 
 class OffsetListener: public Promise::Listener {
  public:
-  OffsetListener(System* s, uint8_t* instruction, bool conditional):
+  OffsetListener(System* s, uint8_t* instruction):
     s(s),
-    instruction(instruction),
-    conditional(conditional)
+    instruction(instruction)
   { }
 
   virtual bool resolve(int64_t value, void** location) {
-    void* p = updateOffset(s, instruction, conditional, value);
+    void* p = updateOffset(s, instruction, value);
     if (location) *location = p;
     return false;
   }
 
   System* s;
   uint8_t* instruction;
-  bool conditional;
 };
 
 class OffsetTask: public Task {
  public:
-  OffsetTask(Task* next, Promise* promise, Promise* instructionOffset,
-             bool conditional):
+  OffsetTask(Task* next, Promise* promise, Promise* instructionOffset):
     Task(next),
     promise(promise),
-    instructionOffset(instructionOffset),
-    conditional(conditional)
+    instructionOffset(instructionOffset)
   { }
 
   virtual void run(Context* c) {
     if (promise->resolved()) {
       updateOffset
-        (c->s, c->result + instructionOffset->value(), conditional,
-         promise->value());
+        (c->s, c->result + instructionOffset->value(), promise->value());
     } else {
       new (promise->listen(sizeof(OffsetListener)))
-        OffsetListener(c->s, c->result + instructionOffset->value(),
-                       conditional);
+        OffsetListener(c->s, c->result + instructionOffset->value());
     }
   }
 
   Promise* promise;
   Promise* instructionOffset;
-  bool conditional;
 };
 
 void
-appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
-                 bool conditional)
+appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset)
 {
   c->tasks = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
-    (c->tasks, promise, instructionOffset, conditional);
+    (c->tasks, promise, instructionOffset);
 }
 
 inline unsigned
@@ -448,6 +470,12 @@ inline void emit(Context* con, int code) { con->code.append4(code); }
 inline int newTemp(Context* con) { return con->client->acquireTemporary(); }
 inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
 inline int64_t getValue(Assembler::Constant* c) { return c->value->value(); }
+
+inline void
+write4(uint8_t* dst, uint32_t v)
+{
+  memcpy(dst, &v, 4);
+}
 
 void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
@@ -517,89 +545,11 @@ void unsignedShiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant
   emit(con, lsri(t->low, b->low, getValue(a)));
 }
 
-void
-updateImmediate(System* s, void* dst, int64_t src, unsigned size, bool)
-{
-  switch (size) {
-  case 4: {
-    int32_t* p = static_cast<int32_t*>(dst);
-    int r = (p[0] >> 12) & 15;
-
-    p[0] = movi(r, lo8(src));
-    p[1] = orri(r, r, hi8(src), 12);
-    p[2] = orri(r, r, lo8(hi16(src)), 8);
-    p[3] = orri(r, r, hi8(hi16(src)), 4);
-  } break;
-
-  default: abort(s);
-  }
-}
-
-class ImmediateListener: public Promise::Listener {
- public:
-  ImmediateListener(System* s, void* dst, unsigned size, unsigned offset,
-                    bool address):
-    s(s), dst(dst), size(size), offset(offset), address(address)
-  { }
-
-  virtual bool resolve(int64_t value, void** location) {
-    updateImmediate(s, dst, value, size, address);
-    if (location) *location = static_cast<uint8_t*>(dst) + offset;
-    return false;
-  }
-
-  System* s;
-  void* dst;
-  unsigned size;
-  unsigned offset;
-  bool address;
-};
-
-class ImmediateTask: public Task {
- public:
-  ImmediateTask(Task* next, Promise* promise, Promise* offset, unsigned size,
-                unsigned promiseOffset, bool address):
-    Task(next),
-    promise(promise),
-    offset(offset),
-    size(size),
-    promiseOffset(promiseOffset),
-    address(address)
-  { }
-
-  virtual void run(Context* c) {
-    if (promise->resolved()) {
-      updateImmediate
-        (c->s, c->result + offset->value(), promise->value(), size, address);
-    } else {
-      new (promise->listen(sizeof(ImmediateListener))) ImmediateListener
-        (c->s, c->result + offset->value(), size, promiseOffset, address);
-    }
-  }
-
-  Promise* promise;
-  Promise* offset;
-  unsigned size;
-  unsigned promiseOffset;
-  bool address;
-};
-
-void
-appendImmediateTask(Context* c, Promise* promise, Promise* offset,
-                    unsigned size, unsigned promiseOffset, bool address)
-{
-  c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
-    (c->tasks, promise, offset, size, promiseOffset, address);
-}
-
 class ConstantPoolEntry: public Promise {
  public:
-  ConstantPoolEntry(Context* c, Promise* constant):
-    c(c), constant(constant), next(c->constantPool), address(0)
-  {
-    c->constantPool = this;
-    ++ c->constantPoolCount;
-  }
+  ConstantPoolEntry(Context* c, Promise* constant, ConstantPoolEntry* next):
+    c(c), constant(constant), next(next), address(0)
+  { }
 
   virtual int64_t value() {
     assert(c, resolved());
@@ -618,11 +568,158 @@ class ConstantPoolEntry: public Promise {
   unsigned constantPoolCount;
 };
 
-ConstantPoolEntry*
+class ConstantPoolListener: public Promise::Listener {
+ public:
+  ConstantPoolListener(System* s, uintptr_t* address):
+    s(s),
+    address(address)
+  { }
+
+  virtual bool resolve(int64_t value, void** location) {
+    *address = value;
+    if (location) *location = address;
+    return true;
+  }
+
+  System* s;
+  uintptr_t* address;
+};
+
+class PoolOffset {
+ public:
+  PoolOffset(MyBlock* block, ConstantPoolEntry* entry, unsigned offset):
+    block(block), entry(entry), next(0), offset(offset)
+  { }
+
+  MyBlock* block;
+  ConstantPoolEntry* entry;
+  PoolOffset* next;
+  unsigned offset;
+};
+
+class PoolEvent {
+ public:
+  PoolEvent(PoolOffset* poolOffsetHead, PoolOffset* poolOffsetTail,
+            unsigned offset):
+    poolOffsetHead(poolOffsetHead), poolOffsetTail(poolOffsetTail), next(0),
+    offset(offset)
+  { }
+
+  PoolOffset* poolOffsetHead;
+  PoolOffset* poolOffsetTail;
+  PoolEvent* next;
+  unsigned offset;
+};
+
+void
 appendConstantPoolEntry(Context* c, Promise* constant)
 {
-  return new (c->zone->allocate(sizeof(ConstantPoolEntry)))
-    ConstantPoolEntry(c, constant);
+  if (constant->resolved()) {
+    // make a copy, since the original might be allocated on the
+    // stack, and we need our copy to live until assembly is complete
+    constant = new (c->zone->allocate(sizeof(ResolvedPromise)))
+      ResolvedPromise(constant->value());
+  }
+
+  c->constantPool = new (c->zone->allocate(sizeof(ConstantPoolEntry)))
+    ConstantPoolEntry(c, constant, c->constantPool);
+
+  ++ c->constantPoolCount;
+
+  PoolOffset* o = new (c->zone->allocate(sizeof(PoolOffset))) PoolOffset
+    (c->lastBlock, c->constantPool, c->code.length() - c->lastBlock->offset);
+
+  if (DebugPool) {
+    fprintf(stderr, "add pool offset %p %d to block %p\n",
+            o, o->offset, c->lastBlock);
+  }
+
+  if (c->lastBlock->poolOffsetTail) {
+    c->lastBlock->poolOffsetTail->next = o;
+  } else {
+    c->lastBlock->poolOffsetHead = o;
+  }
+  c->lastBlock->poolOffsetTail = o;
+}
+
+void
+appendPoolEvent(Context* c, MyBlock* b, unsigned offset, PoolOffset* head,
+                PoolOffset* tail)
+{
+  PoolEvent* e = new (c->zone->allocate(sizeof(PoolEvent))) PoolEvent
+    (head, tail, offset);
+
+  if (b->poolEventTail) {
+    b->poolEventTail->next = e;
+  } else {
+    b->poolEventHead = e;
+  }
+  b->poolEventTail = e;
+}
+
+unsigned
+padding(MyBlock* b, unsigned offset)
+{
+  unsigned total = 0;
+  for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
+    if (e->offset <= offset) {
+      total += BytesPerWord;
+      for (PoolOffset* o = e->poolOffsetHead; o; o = o->next) {
+        total += BytesPerWord;
+      }
+    } else {
+      break;
+    }
+  }
+  return total;
+}
+
+void
+resolve(MyBlock* b)
+{
+  Context* c = b->context;
+
+  if (b->poolOffsetHead) {
+    if (c->poolOffsetTail) {
+      c->poolOffsetTail->next = b->poolOffsetHead;
+    } else {
+      c->poolOffsetHead = b->poolOffsetHead;
+    }
+    c->poolOffsetTail = b->poolOffsetTail;
+  }
+
+  if (c->poolOffsetHead) {
+    bool append;
+    if (b->next == 0 or b->next->poolEventHead) {
+      append = true;
+    } else {
+      int32_t v = (b->offset + b->size + b->next->size + BytesPerWord - 8)
+        - (c->poolOffsetHead->offset + c->poolOffsetHead->block->offset);
+
+      append = (v != (v & PoolOffsetMask));
+
+      if (DebugPool) {
+        fprintf(stderr,
+                "offset %p %d is of distance %d to next block; append? %d\n",
+                c->poolOffsetHead, c->poolOffsetHead->offset, v, append);
+      }
+    }
+
+    if (append) {
+      appendPoolEvent(c, b, b->size, c->poolOffsetHead, c->poolOffsetTail);
+
+      if (DebugPool) {
+        for (PoolOffset* o = c->poolOffsetHead; o; o = o->next) {
+          fprintf(stderr,
+                  "include %p %d in pool event %p at offset %d in block %p\n",
+                  o, o->offset, b->poolEventTail, b->size, b);
+        }
+      }
+
+      c->poolOffsetHead = 0;
+      c->poolOffsetTail = 0;
+    }
+  }
 }
 
 void
@@ -710,28 +807,14 @@ moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
 
 void
 moveCR2(Context* c, unsigned, Assembler::Constant* src,
-       unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
+        unsigned dstSize, Assembler::Register* dst)
 {
   if (dstSize <= 4) {
-    if (src->value->resolved()) {
-      int32_t i = getValue(src);
-      emit(c, movi(dst->low, lo8(i)));
-      if (!isOfWidth(i, 8)) {
-        emit(c, orri(dst->low, dst->low, hi8(i), 12));
-        if (!isOfWidth(i, 16)) {
-          emit(c, orri(dst->low, dst->low, lo8(hi16(i)), 8));
-          if (!isOfWidth(i, 24)) {
-            emit(c, orri(dst->low, dst->low, hi8(hi16(i)), 4));
-          }
-        }
-      }
+    if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
+      emit(c, movi(dst->low, lo8(getValue(src))));
     } else {
-      appendImmediateTask
-        (c, src->value, offset(c), BytesPerWord, promiseOffset, false);
-      emit(c, movi(dst->low, 0));
-      emit(c, orri(dst->low, dst->low, 0, 12));
-      emit(c, orri(dst->low, dst->low, 0, 8));
-      emit(c, orri(dst->low, dst->low, 0, 4));
+      appendConstantPoolEntry(c, src->value);
+      emit(c, ldri(dst->low, ProgramCounter, 0));
     }
   } else {
     abort(c); // todo
@@ -742,7 +825,7 @@ void
 moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
        unsigned dstSize, Assembler::Register* dst)
 {
-  moveCR2(c, srcSize, src, dstSize, dst, 0);
+  moveCR2(c, srcSize, src, dstSize, dst);
 }
 
 void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
@@ -1115,17 +1198,14 @@ xorR(Context* con, unsigned size, Assembler::Register* a,
 
 void
 moveAR2(Context* c, unsigned srcSize, Assembler::Address* src,
-       unsigned dstSize, Assembler::Register* dst, unsigned promiseOffset)
+       unsigned dstSize, Assembler::Register* dst)
 {
   assert(c, srcSize == 4 and dstSize == 4);
 
   Assembler::Constant constant(src->address);
-  Assembler::Memory memory(dst->low, 0, -1, 0);
-
-  appendImmediateTask
-    (c, src->address, offset(c), BytesPerWord, promiseOffset, true);
-
   moveCR(c, srcSize, &constant, dstSize, dst);
+
+  Assembler::Memory memory(dst->low, 0, -1, 0);
   moveMR(c, dstSize, &memory, dstSize, dst);
 }
 
@@ -1133,7 +1213,7 @@ void
 moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
        unsigned dstSize, Assembler::Register* dst)
 {
-  moveAR2(c, srcSize, src, dstSize, dst, 0);
+  moveAR2(c, srcSize, src, dstSize, dst);
 }
 
 void
@@ -1216,7 +1296,7 @@ branch(Context* c, TernaryOperation op)
 void
 conditional(Context* c, int32_t branch, Assembler::Constant* target)
 {
-  appendOffsetTask(c, target->value, offset(c), true);
+  appendOffsetTask(c, target->value, offset(c));
   emit(c, branch);
 }
 
@@ -1299,7 +1379,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
 
   if (next) {
     updateOffset
-      (c->s, c->code.data + next, true, reinterpret_cast<intptr_t>
+      (c->s, c->code.data + next, reinterpret_cast<intptr_t>
        (c->code.data + c->code.length()));
   }
 }
@@ -1426,7 +1506,7 @@ callC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
 
-  appendOffsetTask(c, target->value, offset(c), false);
+  appendOffsetTask(c, target->value, offset(c));
   emit(c, bl(0));
 }
 
@@ -1436,20 +1516,8 @@ longCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   Assembler::Register tmp(4);
-  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, 12);
+  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp);
   callR(c, BytesPerWord, &tmp);
-}
-
-void
-alignedLongCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  Assembler::Register tmp(c->client->acquireTemporary());
-  Assembler::Address address(appendConstantPoolEntry(c, target->value));
-  moveAR2(c, BytesPerWord, &address, BytesPerWord, &tmp, 12);
-  callR(c, BytesPerWord, &tmp);
-  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -1458,20 +1526,8 @@ longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   Assembler::Register tmp(4); // a non-arg reg that we don't mind clobbering
-  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, 12);
+  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp);
   jumpR(c, BytesPerWord, &tmp);
-}
-
-void
-alignedLongJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  Assembler::Register tmp(c->client->acquireTemporary());
-  Assembler::Address address(appendConstantPoolEntry(c, target->value));
-  moveAR2(c, BytesPerWord, &address, BytesPerWord, &tmp, 12);
-  jumpR(c, BytesPerWord, &tmp);
-  c->client->releaseTemporary(tmp.low);
 }
 
 void
@@ -1479,7 +1535,7 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 {
   assert(c, size == BytesPerWord);
 
-  appendOffsetTask(c, target->value, offset(c), false);
+  appendOffsetTask(c, target->value, offset(c));
   emit(c, b(0));
 }
 
@@ -1515,11 +1571,11 @@ populateTables(ArchitectureContext* c)
 
   uo[index(c, LongCall, C)] = CAST1(longCallC);
 
-  uo[index(c, AlignedLongCall, C)] = CAST1(alignedLongCallC);
+  uo[index(c, AlignedLongCall, C)] = CAST1(longCallC);
 
   uo[index(c, LongJump, C)] = CAST1(longJumpC);
 
-  uo[index(c, AlignedLongJump, C)] = CAST1(alignedLongJumpC);
+  uo[index(c, AlignedLongJump, C)] = CAST1(longJumpC);
 
   uo[index(c, Jump, R)] = CAST1(jumpR);
   uo[index(c, Jump, C)] = CAST1(jumpC);
@@ -1674,17 +1730,12 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Call:
     case Jump:
+    case LongCall:
+    case LongJump:
     case AlignedCall:
     case AlignedJump: {
-      updateOffset(c.s, static_cast<uint8_t*>(returnAddress) - 4, false,
+      updateOffset(c.s, static_cast<uint8_t*>(returnAddress) - 4,
                    reinterpret_cast<intptr_t>(newTarget));
-    } break;
-
-    case LongCall:
-    case LongJump: {
-      updateImmediate(c.s, static_cast<uint8_t*>(returnAddress) - 12,
-                      reinterpret_cast<intptr_t>(newTarget), BytesPerWord,
-                      false);
     } break;
 
     case AlignedLongCall:
@@ -1703,7 +1754,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void setConstant(void* dst, uintptr_t constant) {
-    updateImmediate(c.s, dst, constant, BytesPerWord, false);
+    *static_cast<uintptr_t*>(dst) = constant;
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
@@ -2145,23 +2196,67 @@ class MyAssembler: public Assembler {
   virtual void writeTo(uint8_t* dst) {
     c.result = dst;
     
+    unsigned dstOffset = 0;
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
-      memcpy(dst + b->start, c.code.data + b->offset, b->size);
+      if (DebugPool) {
+        fprintf(stderr, "write block %p\n", b);
+      }
+
+      unsigned blockOffset = 0;
+      for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
+        unsigned size = e->offset - blockOffset;
+        memcpy(dst + dstOffset, c.code.data + b->offset + blockOffset, size);
+        blockOffset = e->offset;
+        dstOffset += size;
+
+        unsigned poolSize = 0;
+        for (PoolOffset* o = e->poolOffsetHead; o; o = o->next) {
+          if (DebugPool) {
+            fprintf(stderr, "visit pool offset %p %d in block %p\n",
+                    o, o->offset, b);
+          }
+
+          poolSize += BytesPerWord;
+
+          unsigned entry = dstOffset + poolSize;
+
+          o->entry->address = dst + entry;
+
+          unsigned instruction = o->block->start
+            + padding(o->block, o->offset) + o->offset;
+
+          int32_t v = (entry - 8) - instruction;
+          expect(&c, v == (v & PoolOffsetMask));
+
+          int32_t* p = reinterpret_cast<int32_t*>(dst + instruction);
+          *p = (v & PoolOffsetMask) | ((~PoolOffsetMask) & *p);
+        }
+
+        write4(dst + dstOffset, ::b((poolSize + BytesPerWord - 8) >> 2));
+
+        dstOffset += poolSize + BytesPerWord;
+      }
+
+      unsigned size = b->size - blockOffset;
+
+      memcpy(dst + dstOffset,
+             c.code.data + b->offset + blockOffset,
+             size);
+
+      dstOffset += size;
     }
-    
-    unsigned index = c.code.length();
-    assert(&c, index % BytesPerWord == 0);
-    for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
-      e->address = dst + index;
-      index += BytesPerWord;
-    }
-    
+
     for (Task* t = c.tasks; t; t = t->next) {
       t->run(&c);
     }
 
     for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
-      *static_cast<uint32_t*>(e->address) = e->constant->value();
+      if (e->constant->resolved()) {
+        *static_cast<uintptr_t*>(e->address) = e->constant->value();
+      } else {
+        new (e->constant->listen(sizeof(ConstantPoolListener)))
+          ConstantPoolListener(c.s, static_cast<uintptr_t*>(e->address));
+      }
 //       fprintf(stderr, "constant %p at %p\n", reinterpret_cast<void*>(e->constant->value()), e->address);
     }
   }
@@ -2175,19 +2270,49 @@ class MyAssembler: public Assembler {
     b->size = c.code.length() - b->offset;
     if (startNew) {
       c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
-        MyBlock(c.code.length());
+        MyBlock(&c, c.code.length());
     } else {
       c.lastBlock = 0;
     }
     return b;
   }
 
-  virtual unsigned length() {
-    return c.code.length();
+  virtual void endEvent() {
+    MyBlock* b = c.lastBlock;
+    unsigned thisEventOffset = c.code.length() - b->offset;
+    if (b->poolOffsetHead) {
+      int32_t v = (thisEventOffset + BytesPerWord - 8)
+        - b->poolOffsetHead->offset;
+
+      if (v > 0 and v != (v & PoolOffsetMask)) {
+        appendPoolEvent
+          (&c, b, b->lastEventOffset, b->poolOffsetHead,
+           b->lastPoolOffsetTail);
+
+        if (DebugPool) {
+          for (PoolOffset* o = b->poolOffsetHead;
+               o != b->lastPoolOffsetTail->next; o = o->next)
+          {
+            fprintf(stderr,
+                    "in endEvent, include %p %d in pool event %p at offset %d "
+                    "in block %p\n",
+                    o, o->offset, b->poolEventTail, b->lastEventOffset, b);
+          }
+        }
+
+        b->poolOffsetHead = b->lastPoolOffsetTail->next;
+        b->lastPoolOffsetTail->next = 0;
+        if (b->poolOffsetHead == 0) {
+          b->poolOffsetTail = 0;
+        }
+      }
+    }
+    b->lastEventOffset = thisEventOffset;
+    b->lastPoolOffsetTail = b->poolOffsetTail;
   }
 
-  virtual unsigned scratchSize() {
-    return c.constantPoolCount * BytesPerWord;
+  virtual unsigned length() {
+    return c.code.length();
   }
 
   virtual void dispose() {
