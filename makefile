@@ -151,7 +151,8 @@ endif
 
 ifeq ($(platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-	lflags = $(common-lflags) -ldl -framework CoreFoundation -framework CoreServices
+	lflags = $(common-lflags) -ldl -framework CoreFoundation \
+		-framework CoreServices
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
 	endif
@@ -161,18 +162,27 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 
 	ifeq ($(arch),powerpc)
+		ifneq (,$(filter i386 x86_64,$(build-arch)))
+			converter-cflags = -DOPPOSITE_ENDIAN
+		endif
 		cflags += -arch ppc
 		asmflags += -arch ppc
 		lflags += -arch ppc
 	endif
 
 	ifeq ($(arch),i386)
+		ifeq ($(build-arch),powerpc)
+			converter-cflags = -DOPPOSITE_ENDIAN
+		endif
 		cflags += -arch i386
 		asmflags += -arch i386
 		lflags += -arch i386
 	endif
 
 	ifeq ($(arch),x86_64)
+		ifeq ($(build-arch),powerpc)
+			converter-cflags = -DOPPOSITE_ENDIAN
+		endif
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
 		lflags += -arch x86_64
@@ -640,19 +650,19 @@ $(native-build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
 	$(build-cxx) -c $(^) -o $(@)
 
 $(native-build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
 
 $(native-build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
 
 $(native-build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
 
 $(native-build)/binaryToObject-mach-o32.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
 
 $(native-build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
-	$(build-cxx) -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
 
 $(converter): $(converter-objects)
 	$(build-cxx) $(^) -o $(@)

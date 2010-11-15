@@ -15,7 +15,7 @@
 #include "common.h"
 
 #ifdef __APPLE__
-#  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#  if __DARWIN_UNIX03 && defined(_STRUCT_PPC_EXCEPTION_STATE)
 #    define IP_REGISTER(context) (context->uc_mcontext->__ss.__srr0)
 #    define STACK_REGISTER(context) (context->uc_mcontext->__ss.__r1)
 #    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__r13)
