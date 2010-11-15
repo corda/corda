@@ -175,7 +175,7 @@ const int StackRegister = 13;
 const int LinkRegister = 14;
 const int ProgramCounter = 15;
 
-const unsigned PoolOffsetMask = 0xFFF;
+const int32_t PoolOffsetMask = 0xFFF;
 
 const bool DebugPool = false;
 
