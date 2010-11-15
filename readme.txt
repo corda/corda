@@ -219,6 +219,11 @@ specifying the location of the OpenJDK source code, e.g.:
  $ make openjdk=$(pwd)/../jdk6/build/linux-amd64/j2sdk-image \
      openjdk-src=$(pwd)/../jdk6/jdk/src
 
+You must ensure that the path specified for openjdk-src does not have
+any spaces in it; make gets confused when dependency paths include
+spaces, and we haven't found away around that except to avoid paths
+with spaces entirely.
+
 The result of such a build is a self-contained binary which does not
 depend on external libraries, jars, or other files.  In this case, the
 specified paths are used only at build time; anything needed at

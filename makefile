@@ -169,6 +169,8 @@ so-suffix = .so
 
 shared = -shared
 
+openjdk-extra-cflags = -fvisibility=hidden
+
 ifeq ($(arch),i386)
 	pointer-size = 4
 endif
@@ -230,6 +232,7 @@ ifeq ($(platform),windows)
 	cflags = -I$(inc) $(common-cflags)
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
+		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
 		cxx = x86_64-w64-mingw32-g++ -m32
 		cc = x86_64-w64-mingw32-gcc -m32
 		dlltool = x86_64-w64-mingw32-dlltool -mi386 --as-flags=--32 
@@ -246,10 +249,12 @@ ifeq ($(platform),windows)
 		build-system = windows
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
 		build-cflags = $(common-cflags) -I$(src) -I$(inc) -mthreads
+		openjdk-extra-cflags =
 		build-lflags = -L$(lib) $(common-lflags)
 		ifeq ($(build-platform),cygwin)
 			build-lflags += -mno-cygwin
 			build-cflags += -mno-cygwin
+			openjdk-extra-cflags += -mno-cygwin
 			lflags += -mno-cygwin
 			cflags += -mno-cygwin
 		endif
@@ -661,10 +666,10 @@ $(classpath-object): $(build)/classpath.jar $(converter)
 	$(converter) $(<) $(@) _binary_classpath_jar_start \
 		_binary_classpath_jar_end $(platform) $(arch)
 
-$(build)/javahome.jar: $(foreach x,$(javahome-files),$(build-javahome)/$(x))
+$(build)/javahome.jar:
 	@echo "creating $(@)"
 	(wd=$$(pwd) && \
-	 cd $(build-javahome) && \
+	 cd "$(build-javahome)" && \
 	 $(jar) c0f "$$($(native-path) "$${wd}/$(@)")" $(javahome-files))
 
 $(javahome-object): $(build)/javahome.jar $(converter)
@@ -777,20 +782,23 @@ $(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
 		$(openjdk-headers-dep)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cc) -fPIC -fvisibility=hidden $(openjdk-cflags) $(optimization-cflags) \
-		-w -c $(<) $(call output,$(@))
+	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
+		$(optimization-cflags) -w -c $(<) $(call output,$(@))
 
-$(openjdk-headers-dep): $(openjdk)/jre/lib/rt.jar
+$(openjdk-headers-dep):
 	@echo "generating openjdk headers"
 	@mkdir -p $(dir $(@))
 	$(javah) -d $(build)/openjdk -bootclasspath $(boot-classpath) \
 		$(openjdk-headers-classes)
 	@touch $(@)
 
-$(openjdk-jar-dep): $(openjdk)/jre/lib/rt.jar $(openjdk)/jre/lib/jsse.jar \
-		$(openjdk)/jre/lib/jce.jar $(openjdk)/jre/lib/resources.jar
+$(openjdk-jar-dep):
 	@echo "extracting openjdk classes"
 	@mkdir -p $(dir $(@))
 	@mkdir -p $(classpath-build)
-	(cd $(classpath-build) && for x in $(^); do jar xf $${x}; done)
+	(cd $(classpath-build) && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/rt.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jsse.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jce.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/resources.jar")")
 	@touch $(@)
