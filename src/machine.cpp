@@ -1889,6 +1889,13 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
 }
 
 void
+nameClass(Thread* t, Machine::Type type, const char* name)
+{
+  object n = makeByteArray(t, name);
+  set(t, arrayBody(t, t->m->types, type), ClassName, n);
+}
+
+void
 boot(Thread* t)
 {
   Machine* m = t->m;
@@ -1990,6 +1997,10 @@ boot(Thread* t)
     PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
+
+#ifdef AVIAN_HEAPDUMP
+#  include "type-name-initializations.cpp"
+#endif
   }
 }
 

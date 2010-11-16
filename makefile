@@ -315,7 +315,8 @@ generated-code = \
 	$(native-build)/type-declarations.cpp \
 	$(native-build)/type-constructors.cpp \
 	$(native-build)/type-initializations.cpp \
-	$(native-build)/type-java-initializations.cpp
+	$(native-build)/type-java-initializations.cpp \
+	$(native-build)/type-name-initializations.cpp
 
 vm-depends = \
 	$(generated-code) \

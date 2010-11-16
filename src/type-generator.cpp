@@ -2185,6 +2185,27 @@ writeJavaInitializations(Output* out, Object* declarations)
 }
 
 void
+writeNameInitialization(Output* out, Object* type)
+{
+  out->write("nameClass(t, Machine::");
+  out->write(capitalize(typeName(type)));
+  out->write("Type, \"vm::");
+  out->write(typeName(type));
+  out->write("\");\n");
+}
+
+void
+writeNameInitializations(Output* out, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    if (o->type == Object::Type and typeJavaName(o) == 0) {
+      writeNameInitialization(out, o);
+    }
+  }
+}
+
+void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
@@ -2206,7 +2227,8 @@ main(int ac, char** av)
           and not equal(av[2], "declarations")
           and not equal(av[2], "constructors")
           and not equal(av[2], "initializations")
-          and not equal(av[2], "java-initializations")))
+          and not equal(av[2], "java-initializations")
+          and not equal(av[2], "name-initializations")))
   {
     usageAndExit(av[0]);
   }
@@ -2244,6 +2266,10 @@ main(int ac, char** av)
 
   if (ac == 2 or equal(av[2], "java-initializations")) {
     writeJavaInitializations(&out, declarations);
+  }
+
+  if (ac == 2 or equal(av[2], "name-initializations")) {
+    writeNameInitializations(&out, declarations);
   }
 
   return 0;
