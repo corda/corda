@@ -547,8 +547,10 @@ void unsignedShiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant
 
 class ConstantPoolEntry: public Promise {
  public:
-  ConstantPoolEntry(Context* c, Promise* constant, ConstantPoolEntry* next):
-    c(c), constant(constant), next(next), address(0)
+  ConstantPoolEntry(Context* c, Promise* constant, ConstantPoolEntry* next,
+                    Promise* callOffset):
+    c(c), constant(constant), next(next), callOffset(callOffset),
+    address(0)
   { }
 
   virtual int64_t value() {
@@ -564,25 +566,30 @@ class ConstantPoolEntry: public Promise {
   Context* c;
   Promise* constant;
   ConstantPoolEntry* next;
+  Promise* callOffset;
   void* address;
   unsigned constantPoolCount;
 };
 
 class ConstantPoolListener: public Promise::Listener {
  public:
-  ConstantPoolListener(System* s, uintptr_t* address):
+  ConstantPoolListener(System* s, uintptr_t* address, uint8_t* returnAddress):
     s(s),
-    address(address)
+    address(address),
+    returnAddress(returnAddress)
   { }
 
   virtual bool resolve(int64_t value, void** location) {
     *address = value;
-    if (location) *location = address;
+    if (location) {
+      *location = returnAddress ? static_cast<void*>(returnAddress) : address;
+    }
     return true;
   }
 
   System* s;
   uintptr_t* address;
+  uint8_t* returnAddress;
 };
 
 class PoolOffset {
@@ -612,7 +619,7 @@ class PoolEvent {
 };
 
 void
-appendConstantPoolEntry(Context* c, Promise* constant)
+appendConstantPoolEntry(Context* c, Promise* constant, Promise* callOffset)
 {
   if (constant->resolved()) {
     // make a copy, since the original might be allocated on the
@@ -622,7 +629,7 @@ appendConstantPoolEntry(Context* c, Promise* constant)
   }
 
   c->constantPool = new (c->zone->allocate(sizeof(ConstantPoolEntry)))
-    ConstantPoolEntry(c, constant, c->constantPool);
+    ConstantPoolEntry(c, constant, c->constantPool, callOffset);
 
   ++ c->constantPoolCount;
 
@@ -807,13 +814,13 @@ moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
 
 void
 moveCR2(Context* c, unsigned, Assembler::Constant* src,
-        unsigned dstSize, Assembler::Register* dst)
+        unsigned dstSize, Assembler::Register* dst, Promise* callOffset)
 {
   if (dstSize <= 4) {
     if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
       emit(c, movi(dst->low, lo8(getValue(src))));
     } else {
-      appendConstantPoolEntry(c, src->value);
+      appendConstantPoolEntry(c, src->value, callOffset);
       emit(c, ldri(dst->low, ProgramCounter, 0));
     }
   } else {
@@ -825,7 +832,7 @@ void
 moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
        unsigned dstSize, Assembler::Register* dst)
 {
-  moveCR2(c, srcSize, src, dstSize, dst);
+  moveCR2(c, srcSize, src, dstSize, dst, 0);
 }
 
 void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
@@ -1516,7 +1523,7 @@ longCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   Assembler::Register tmp(4);
-  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp);
+  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, offset(c));
   callR(c, BytesPerWord, &tmp);
 }
 
@@ -1526,7 +1533,7 @@ longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == BytesPerWord);
 
   Assembler::Register tmp(4); // a non-arg reg that we don't mind clobbering
-  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp);
+  moveCR2(c, BytesPerWord, target, BytesPerWord, &tmp, offset(c));
   jumpR(c, BytesPerWord, &tmp);
 }
 
@@ -1730,18 +1737,18 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Call:
     case Jump:
-    case LongCall:
-    case LongJump:
     case AlignedCall:
     case AlignedJump: {
       updateOffset(c.s, static_cast<uint8_t*>(returnAddress) - 4,
                    reinterpret_cast<intptr_t>(newTarget));
     } break;
 
+    case LongCall:
+    case LongJump:
     case AlignedLongCall:
     case AlignedLongJump: {
-      uint32_t* p = static_cast<uint32_t*>(returnAddress) - 4;
-      *reinterpret_cast<void**>(unha16(p[0] & 0xFFFF, p[1] & 0xFFFF))
+      uint32_t* p = static_cast<uint32_t*>(returnAddress) - 2;
+      *reinterpret_cast<void**>(p + (((*p & PoolOffsetMask) + 8) / 4))
         = newTarget;
     } break;
 
@@ -2255,7 +2262,10 @@ class MyAssembler: public Assembler {
         *static_cast<uintptr_t*>(e->address) = e->constant->value();
       } else {
         new (e->constant->listen(sizeof(ConstantPoolListener)))
-          ConstantPoolListener(c.s, static_cast<uintptr_t*>(e->address));
+          ConstantPoolListener(c.s, static_cast<uintptr_t*>(e->address),
+                               e->callOffset
+                               ? dst + e->callOffset->value() + 8
+                               : 0);
       }
 //       fprintf(stderr, "constant %p at %p\n", reinterpret_cast<void*>(e->constant->value()), e->address);
     }
