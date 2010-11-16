@@ -1298,6 +1298,7 @@ class Thread {
   static const unsigned DaemonFlag = 1 << 3;
   static const unsigned StressFlag = 1 << 4;
   static const unsigned ActiveFlag = 1 << 5;
+  static const unsigned SystemFlag = 1 << 6;
 
   class Protector {
    public:
@@ -2758,13 +2759,42 @@ notifyAll(Thread* t, object o)
   }
 }
 
-inline void
-interrupt(Thread*, Thread* target)
+inline bool
+zombified(Thread* t)
 {
-  if (target->state != Thread::ZombieState
-      and target->state != Thread::JoinedState)
-  {
+  return t->state == Thread::ZombieState
+    or t->state == Thread::JoinedState;
+}
+
+inline bool
+acquireSystem(Thread* t, Thread* target)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  if (not zombified(target)) {
+    atomicOr(&(target->flags), Thread::SystemFlag);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+inline void
+releaseSystem(Thread* t, Thread* target)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  assert(t, not zombified(target));
+
+  atomicAnd(&(target->flags), ~Thread::SystemFlag);
+}
+
+inline void
+interrupt(Thread* t, Thread* target)
+{
+  if (acquireSystem(t, target)) {
     target->systemThread->interrupt();
+    releaseSystem(t, target);
   }
 }
 

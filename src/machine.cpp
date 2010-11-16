@@ -45,10 +45,9 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
-    if (o->state != Thread::ZombieState
-        and o->state != Thread::JoinedState)
-    {
+    if (acquireSystem(t, o)) {
       o->systemThread->join();
+      releaseSystem(t, o);
     }
     o->state = Thread::JoinedState;
   }
@@ -2407,7 +2406,15 @@ Thread::exit()
       turnOffTheLights(this);
     } else {
       threadPeer(this, javaThread) = 0;
-      enter(this, Thread::ZombieState);
+
+      { ACQUIRE_RAW(this, m->stateLock);
+
+        while (flags & SystemFlag) {
+          m->stateLock->wait(systemThread, 0);
+        }
+      
+        enter(this, Thread::ZombieState);
+      }
 
       lock->dispose();
       lock = 0;
