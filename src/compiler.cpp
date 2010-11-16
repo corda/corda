@@ -4885,9 +4885,13 @@ class BoundsCheckEvent: public Event {
                       lengthOffset, NoRegister, 1);
     length.acquired = true;
 
+    index->source->freeze(c, index);
+
     ConstantSite next(nextPromise);
     apply(c, JumpIfGreater, 4, index->source, index->source, 4, &length,
           &length, BytesPerWord, &next, &next);
+
+    index->source->thaw(c, index);
 
     if (constant == 0) {
       outOfBoundsPromise->offset = a->offset();
@@ -5694,6 +5698,8 @@ compile(Context* c)
       p->offset = a->offset();
     }
     
+    a->endEvent();
+
     LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
     if (e->next == 0
         or (e->next->logicalInstruction != e->logicalInstruction
@@ -5731,7 +5737,7 @@ compile(Context* c)
     block = next;
   }
 
-  return block->assemblerBlock->resolve(block->start, 0) + a->scratchSize();
+  return block->assemblerBlock->resolve(block->start, 0);
 }
 
 unsigned

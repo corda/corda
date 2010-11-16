@@ -418,9 +418,9 @@ class Assembler {
 
   virtual Block* endBlock(bool startNew) = 0;
 
-  virtual unsigned length() = 0;
+  virtual void endEvent() = 0;
 
-  virtual unsigned scratchSize() = 0;
+  virtual unsigned length() = 0;
 
   virtual void dispose() = 0;
 };

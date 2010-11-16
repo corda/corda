@@ -232,7 +232,7 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   fileHeader.e_entry = 0;
   fileHeader.e_phoff = 0;
   fileHeader.e_shoff = sizeof(FileHeader);
-  fileHeader.e_flags = 0;
+  fileHeader.e_flags = (machine == EM_ARM ? 0x04000000 : 0);
   fileHeader.e_ehsize = sizeof(FileHeader);
   fileHeader.e_phentsize = 0;
   fileHeader.e_phnum = 0;
