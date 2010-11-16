@@ -189,15 +189,25 @@ ifeq ($(arch),powerpc)
 	pointer-size = 4
 endif
 ifeq ($(arch),arm)
-  asm = arm
-  pointer-size = 4 
+	asm = arm
+	pointer-size = 4
+	cflags += -Wno-psabi
+
+	ifneq ($(arch),$(build-arch))
+		cxx = arm-linux-gnueabi-g++
+		cc = arm-linux-gnueabi-gcc
+		ar = arm-linux-gnueabi-ar
+		ranlib = arm-linux-gnueabi-ranlib
+		strip = arm-linux-gnueabi-strip
+	endif
 endif
 
 ifeq ($(platform),darwin)
 	version-script-flag =
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	build-lflags += -framework CoreFoundation
-	lflags = $(common-lflags) -ldl -framework CoreFoundation -framework CoreServices
+	lflags = $(common-lflags) -ldl -framework CoreFoundation \
+		-framework CoreServices
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
 	endif
@@ -207,6 +217,9 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 
 	ifeq ($(arch),powerpc)
+		ifneq (,$(filter i386 x86_64,$(build-arch)))
+			converter-cflags = -DOPPOSITE_ENDIAN
+		endif
 		openjdk-extra-cflags += -arch ppc
 		cflags += -arch ppc
 		asmflags += -arch ppc
@@ -214,6 +227,9 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),i386)
+		ifeq ($(build-arch),powerpc)
+			converter-cflags = -DOPPOSITE_ENDIAN
+		endif
 		openjdk-extra-cflags += -arch i386
 		cflags += -arch i386
 		asmflags += -arch i386
@@ -221,6 +237,9 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),x86_64)
+		ifeq ($(build-arch),powerpc)
+			converter-cflags = -DOPPOSITE_ENDIAN
+		endif
 		openjdk-extra-cflags += -arch x86_64
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
@@ -364,7 +383,8 @@ generated-code = \
 	$(build)/type-declarations.cpp \
 	$(build)/type-constructors.cpp \
 	$(build)/type-initializations.cpp \
-	$(build)/type-java-initializations.cpp
+	$(build)/type-java-initializations.cpp \
+	$(build)/type-name-initializations.cpp
 
 vm-depends := $(generated-code) $(wildcard $(src)/*.h)
 
@@ -650,19 +670,19 @@ $(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
 	$(build-cxx) -c $(^) -o $(@)
 
 $(build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
 
 $(build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
 
 $(build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) -DBITS_PER_WORD=64 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
 
 $(build)/binaryToObject-mach-o32.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) -DBITS_PER_WORD=32 -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
 
 $(build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
-	$(build-cxx) -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
 
 $(converter): $(converter-objects)
 	$(build-cxx) $(^) -o $(@)

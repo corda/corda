@@ -3532,12 +3532,12 @@ class MyAssembler: public Assembler {
     return b;
   }
 
-  virtual unsigned length() {
-    return c.code.length();
+  virtual void endEvent() {
+    // ignore
   }
 
-  virtual unsigned scratchSize() {
-    return 0;
+  virtual unsigned length() {
+    return c.code.length();
   }
 
   virtual void dispose() {

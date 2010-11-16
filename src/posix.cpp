@@ -784,6 +784,7 @@ class MySystem: public System {
   }
 
   virtual void abort() {
+    *static_cast<void**>(0) = 0;
     ::abort();
   }
 

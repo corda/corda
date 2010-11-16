@@ -5416,14 +5416,14 @@ codeSingletonSizeInBytes(MyThread*, unsigned codeSizeInBytes)
 }
 
 uint8_t*
-finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name)
+finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name,
+       unsigned length)
 {
-  uint8_t* start = static_cast<uint8_t*>
-    (allocator->allocate(pad(a->length())));
+  uint8_t* start = static_cast<uint8_t*>(allocator->allocate(pad(length)));
 
   a->writeTo(start);
 
-  logCompile(t, start, a->length(), 0, name, 0);
+  logCompile(t, start, length, 0, name, 0);
 
   return start;
 }
@@ -8275,9 +8275,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
 
-    a->endBlock(false)->resolve(0, 0);
-
-    p->thunks.default_.length = a->length();
+    p->thunks.default_.length = a->endBlock(false)->resolve(0, 0);
   }
 
   ThunkContext defaultVirtualContext(t, &zone);
@@ -8321,9 +8319,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
 
-    a->endBlock(false)->resolve(0, 0);
-
-    p->thunks.defaultVirtual.length = a->length();
+    p->thunks.defaultVirtual.length = a->endBlock(false)->resolve(0, 0);
   }
 
   ThunkContext nativeContext(t, &zone);
@@ -8342,9 +8338,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
   
     a->popFrameAndUpdateStackAndReturn(difference(&(t->stack), t));
 
-    a->endBlock(false)->resolve(0, 0);
-
-    p->thunks.native.length = a->length();
+    p->thunks.native.length = a->endBlock(false)->resolve(0, 0);
   }
 
   ThunkContext aioobContext(t, &zone);
@@ -8361,9 +8355,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Constant proc(&(aioobContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
-    a->endBlock(false)->resolve(0, 0);
-
-    p->thunks.aioob.length = a->length();
+    p->thunks.aioob.length = a->endBlock(false)->resolve(0, 0);
   }
 
   ThunkContext tableContext(t, &zone);
@@ -8377,13 +8369,12 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Constant proc(&(tableContext.promise));
     a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
 
-    a->endBlock(false)->resolve(0, 0);
-
-    p->thunks.table.length = a->length();
+    p->thunks.table.length = a->endBlock(false)->resolve(0, 0);
   }  
 
   p->thunks.default_.start = finish
-    (t, allocator, defaultContext.context.assembler, "default");
+    (t, allocator, defaultContext.context.assembler, "default",
+     p->thunks.default_.length);
 
   BootImage* image = p->bootImage;
   uint8_t* imageBase = p->codeAllocator.base;
@@ -8398,7 +8389,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
   }
 
   p->thunks.defaultVirtual.start = finish
-    (t, allocator, defaultVirtualContext.context.assembler, "defaultVirtual");
+    (t, allocator, defaultVirtualContext.context.assembler, "defaultVirtual",
+     p->thunks.defaultVirtual.length);
 
   { void* call;
     defaultVirtualContext.promise.listener->resolve
@@ -8411,7 +8403,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
   }
 
   p->thunks.native.start = finish
-    (t, allocator, nativeContext.context.assembler, "native");
+    (t, allocator, nativeContext.context.assembler, "native",
+     p->thunks.native.length);
 
   { void* call;
     nativeContext.promise.listener->resolve
@@ -8423,7 +8416,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
   }
 
   p->thunks.aioob.start = finish
-    (t, allocator, aioobContext.context.assembler, "aioob");
+    (t, allocator, aioobContext.context.assembler, "aioob",
+     p->thunks.aioob.length);
 
   { void* call;
     aioobContext.promise.listener->resolve
@@ -8535,9 +8529,7 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
   Assembler::Constant thunk(&defaultVirtualThunkPromise);
   a->apply(Jump, BytesPerWord, ConstantOperand, &thunk);
 
-  a->endBlock(false)->resolve(0, 0);
-
-  *size = a->length();
+  *size = a->endBlock(false)->resolve(0, 0);
 
   uint8_t* start = static_cast<uint8_t*>(codeAllocator(t)->allocate(*size));
 

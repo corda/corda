@@ -2173,12 +2173,33 @@ writeJavaInitializations(Output* out, Object* declarations)
 }
 
 void
+writeNameInitialization(Output* out, Object* type)
+{
+  out->write("nameClass(t, Machine::");
+  out->write(capitalize(typeName(type)));
+  out->write("Type, \"vm::");
+  out->write(typeName(type));
+  out->write("\");\n");
+}
+
+void
+writeNameInitializations(Output* out, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    if (o->type == Object::Type and typeJavaName(o) == 0) {
+      writeNameInitialization(out, o);
+    }
+  }
+}
+
+void
 usageAndExit(const char* command)
 {
   fprintf(stderr,
           "usage: %s <classpath> <input file> <output file> "
           "{enums,declarations,constructors,initializations,"
-          "java-initializations}\n",
+          "java-initializations,name-initializations}\n",
           command);
   exit(-1);
 }
@@ -2207,7 +2228,8 @@ main(int ac, char** av)
               or local::equal(av[4], "declarations")
               or local::equal(av[4], "constructors")
               or local::equal(av[4], "initializations")
-              or local::equal(av[4], "java-initializations")))
+              or local::equal(av[4], "java-initializations")
+              or local::equal(av[4], "name-initializations")))
   {
     local::usageAndExit(av[0]);
   }
@@ -2277,6 +2299,8 @@ main(int ac, char** av)
     local::writeInitializations(&out, declarations);
   } else if (local::equal(av[4], "java-initializations")) {
     local::writeJavaInitializations(&out, declarations);
+  } else if (local::equal(av[4], "name-initializations")) {
+    local::writeNameInitializations(&out, declarations);
   }
 
   return 0;

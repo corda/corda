@@ -65,5 +65,11 @@ public class Arrays {
       p = false;
       expect(array[1] == array[p ? 0 : 1]);
     }
+
+    { int[] array = new int[1024];
+      array[1023] = -1;
+      expect(array[1023] == -1);
+      expect(array[1022] == 0);
+    }
   }
 }

@@ -45,7 +45,11 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
-    o->systemThread->join();
+    if (o->state != Thread::ZombieState
+        and o->state != Thread::JoinedState)
+    {
+      o->systemThread->join();
+    }
     o->state = Thread::JoinedState;
   }
 }
@@ -1980,6 +1984,13 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
 }
 
 void
+nameClass(Thread* t, Machine::Type type, const char* name)
+{
+  object n = makeByteArray(t, name);
+  set(t, arrayBody(t, t->m->types, type), ClassName, n);
+}
+
+void
 boot(Thread* t)
 {
   Machine* m = t->m;
@@ -2098,6 +2109,10 @@ boot(Thread* t)
     PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
+
+#ifdef AVIAN_HEAPDUMP
+#  include "type-name-initializations.cpp"
+#endif
   }
 }
 
@@ -2393,6 +2408,12 @@ Thread::exit()
     } else {
       threadPeer(this, javaThread) = 0;
       enter(this, Thread::ZombieState);
+
+      lock->dispose();
+      lock = 0;
+
+      systemThread->dispose();
+      systemThread = 0;
     }
   }
 }
@@ -2400,7 +2421,9 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  lock->dispose();
+  if (lock) {
+    lock->dispose();
+  }
 
   if (systemThread) {
     systemThread->dispose();
