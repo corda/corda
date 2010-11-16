@@ -4,7 +4,6 @@ log=build/log.txt
 vg="nice valgrind --leak-check=full --num-callers=32 \
 --freelist-vol=100000000 --error-exitcode=1"
 
-library_path=${1}; shift
 vm=${1}; shift
 mode=${1}; shift
 flags=${1}; shift
@@ -19,10 +18,10 @@ for test in ${tests}; do
 
   case ${mode} in
     debug|debug-fast|fast|small )
-      LD_LIBRARY_PATH=${library_path} ${vm} ${flags} ${test} >>${log} 2>&1;;
+      ${vm} ${flags} ${test} >>${log} 2>&1;;
 
     stress* )
-      LD_LIBRARY_PATH=${library_path} ${vg} ${vm} ${flags} ${test} \
+      ${vg} ${vm} ${flags} ${test} \
         >>${log} 2>&1;;
 
     * )

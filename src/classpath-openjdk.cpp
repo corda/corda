@@ -52,9 +52,6 @@
 #    define EXPORT(x) _##x
 #  endif
 
-#  define LIBRARY_PREFIX ""
-#  define LIBRARY_SUFFIX ".dll"
-
 typedef int socklen_t;
 
 #else // not PLATFORM_WINDOWS
@@ -77,9 +74,6 @@ typedef int socklen_t;
 #  define LSEEK lseek
 
 #  define EXPORT(x) x
-
-#  define LIBRARY_PREFIX "lib"
-#  define LIBRARY_SUFFIX ".so"
 
 #endif // not PLATFORM_WINDOWS
 
@@ -245,9 +239,9 @@ class MyClasspath : public Classpath {
     this->zipLibrary = sb.pointer;
     sb.append(this->libraryPath);
     sb.append("/");
-    sb.append(LIBRARY_PREFIX);
+    sb.append(SO_PREFIX);
     sb.append("zip");
-    sb.append(LIBRARY_SUFFIX);
+    sb.append(SO_SUFFIX);
     sb.append('\0');
     
     this->tzMappings = sb.pointer;

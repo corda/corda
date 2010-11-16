@@ -66,7 +66,18 @@ ifneq (,$(filter mingw32 cygwin,$(build-platform)))
 	path-separator = ;
 endif
 
+library-path-variable = LD_LIBRARY_PATH
+
+ifeq ($(build-platform),darwin)
+	library-path-variable = DYLD_LIBRARY_PATH
+endif
+
 ifdef openjdk
+	openjdk-arch = $(arch)
+	ifeq ($(arch),x86_64)
+		openjdk-arch = amd64
+	endif
+
 	ifdef openjdk-src
 		include openjdk-src.mk
 	  options := $(options)-openjdk-src
@@ -83,7 +94,8 @@ ifdef openjdk
 	else
 	  options := $(options)-openjdk
 		test-executable = $(executable-dynamic)
-		library-path = LD_LIBRARY_PATH=$(build)
+		library-path = \
+			$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
@@ -155,8 +167,6 @@ lflags = $(common-lflags) -lpthread -ldl
 
 version-script-flag = -Wl,--version-script=openjdk.ld
 
-jvm-flags = -L$(build) -ljvm
-
 build-system = posix
 
 system = posix
@@ -185,7 +195,6 @@ endif
 
 ifeq ($(platform),darwin)
 	version-script-flag =
-	jvm-flags = $(build)/libjvm.jnilib
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	build-lflags += -framework CoreFoundation
 	lflags = $(common-lflags) -ldl -framework CoreFoundation -framework CoreServices
@@ -194,22 +203,25 @@ ifeq ($(platform),darwin)
 	endif
 	rdynamic =
 	strip-all = -S -x
-	so-suffix = .jnilib
+	so-suffix = .dylib
 	shared = -dynamiclib
 
 	ifeq ($(arch),powerpc)
+		openjdk-extra-cflags += -arch ppc
 		cflags += -arch ppc
 		asmflags += -arch ppc
 		lflags += -arch ppc
 	endif
 
 	ifeq ($(arch),i386)
+		openjdk-extra-cflags += -arch i386
 		cflags += -arch i386
 		asmflags += -arch i386
 		lflags += -arch i386
 	endif
 
 	ifeq ($(arch),x86_64)
+		openjdk-extra-cflags += -arch x86_64
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
 		lflags += -arch x86_64
@@ -532,8 +544,8 @@ vg: build
 
 .PHONY: test
 test: build
-	/bin/sh $(test)/test.sh 2>/dev/null \
-		$(build) $(test-executable) $(mode) "$(test-flags)" \
+	$(library-path) /bin/sh $(test)/test.sh 2>/dev/null \
+		$(test-executable) $(mode) "$(test-flags)" \
 		$(call class-names,$(test-build),$(test-classes))
 
 .PHONY: tarball
@@ -770,7 +782,7 @@ ifdef msvc
 		-PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@) -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(<) $(jvm-flags) $(lflags) -o $(@)
+	$(ld) $(<) -L$(build) -ljvm $(lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 

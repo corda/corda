@@ -127,6 +127,12 @@ openjdk-cflags = \
 	-DJDK_BUILD_NUMBER=\"0\" \
 	-D_GNU_SOURCE
 
+ifeq ($(platform),darwin)
+	openjdk-cflags += \
+		-D_LFS_LARGEFILE=1 \
+		-D_ALLBSD_SOURCE
+endif
+
 ifeq ($(platform),windows)
 	openjdk-sources += \
 		$(openjdk-src)/windows/native/java/io/canonicalize_md.c \

@@ -719,7 +719,7 @@ class MySystem: public System {
   }
 
   virtual const char* libraryPrefix() {
-    return "lib";
+    return SO_PREFIX;
   }
 
   virtual const char* librarySuffix() {

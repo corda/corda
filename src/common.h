@@ -132,7 +132,7 @@ typedef uint64_t uintptr_t;
 #endif
 
 #ifdef __APPLE__
-#  define SO_SUFFIX ".jnilib"
+#  define SO_SUFFIX ".dylib"
 #elif defined PLATFORM_WINDOWS
 #  define SO_SUFFIX ".dll"
 #else
