@@ -874,7 +874,9 @@ handleSignal(int signal, siginfo_t* info, void* context)
   default: abort();
   }
 
-  if (system->oldHandlers[index].sa_flags & SA_SIGINFO) {
+  if (system->oldHandlers[index].sa_flags & SA_SIGINFO
+      and system->oldHandlers[index].sa_sigaction)
+  {
     system->oldHandlers[index].sa_sigaction(signal, info, context);
   } else if (system->oldHandlers[index].sa_handler) {
     system->oldHandlers[index].sa_handler(signal);
