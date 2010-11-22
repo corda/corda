@@ -149,16 +149,17 @@ public class HashMap<K, V> implements Map<K, V> {
   }
 
   public boolean containsValue(Object value) {
-  	if (array != null) {
-      int index = array.length - 1;
-      for (Cell<K, V> c = array[index]; c != null; c = c.next()) {
-        if (helper.equal(value, c.getValue())) {
-          return true;
+    if (array != null) {
+      for (int i = 0; i < array.length; ++i) {
+        for (Cell<K, V> c = array[i]; c != null; c = c.next()) {
+          if (helper.equal(value, c.getValue())) {
+            return true;
+          }
         }
       }
     }  
 	
-		return false;
+    return false;
   }
 
   public V get(Object key) {
@@ -450,10 +451,12 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public Entry<K, V> next() {
       if (hasNext()) {
-        if (currentCell != null && currentCell.next() != null) {
-          previousCell = currentCell;
-        } else {
-          previousCell = null;
+        if (currentCell != null) {
+          if (currentCell.next() != null) {
+            previousCell = currentCell;
+          } else {
+            previousCell = null;
+          }
         }
 
         currentCell = nextCell;
@@ -490,6 +493,7 @@ public class HashMap<K, V> implements Map<K, V> {
           }
         }
         currentCell = null;
+        -- size;
       } else {
         throw new IllegalStateException();
       }
