@@ -108,8 +108,16 @@ public class DumpStats {
 
     return map;
   }
+
+  private static void usageAndExit() {
+    System.err.println("usage: java DumpStats <heap dump> <word size>");
+  }
   
   public static void main(String[] args) throws Exception {
+    if (args.length != 2) {
+      usageAndExit();
+    }
+
     Map<Integer, Record> map = read
       (new BufferedInputStream(new FileInputStream(args[0])));
 
@@ -120,19 +128,22 @@ public class DumpStats {
         }
       });
 
+    int wordSize = Integer.parseInt(args[1]);
+
     int footprint = 0;
     int count = 0;
     for (Record r: array) {
       if (r.name == null) {
         r.name = String.valueOf(r.key);
       }
-      System.out.println(r.name + ": " + r.footprint + " " + r.count);
+      System.out.println
+        (r.name + ": " + (r.footprint * wordSize) + " " + r.count);
       footprint += r.footprint;
       count += r.count;
     }
 
     System.out.println();
-    System.out.println("total: " + footprint + " " + count);
+    System.out.println("total: " + (footprint * wordSize) + " " + count);
   }
 
   private static class Record {
