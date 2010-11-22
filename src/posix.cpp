@@ -655,6 +655,8 @@ class MySystem: public System {
 
       threadVisitor = 0;
 
+      system->visitLock->notifyAll(t);
+
       return 0;
     } else {
       return -1;
