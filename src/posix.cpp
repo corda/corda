@@ -650,17 +650,22 @@ class MySystem: public System {
 
     int rv = pthread_kill(target->thread, VisitSignal);
 
+    int result;
     if (rv == 0) {
       while (visitTarget) visitLock->wait(t, 0);
 
-      threadVisitor = 0;
-
-      system->visitLock->notifyAll(t);
-
-      return 0;
+      result = 0;
     } else {
-      return -1;
+      visitTarget = 0;
+
+      result = -1;
     }
+
+    threadVisitor = 0;
+
+    system->visitLock->notifyAll(t);
+
+    return result;
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
