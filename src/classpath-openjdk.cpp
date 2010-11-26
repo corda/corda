@@ -209,7 +209,7 @@ class MyClasspath : public Classpath {
     sb.append('\0');
 
     this->classpath = sb.pointer;
-    sb.append(BOOT_CLASSPATH);
+    sb.append(AVIAN_CLASSPATH);
     sb.append(s->pathSeparator());
     sb.append(javaHome);
     sb.append("/lib/rt.jar");
@@ -590,7 +590,8 @@ getFileAttributes
       }
     } else {
       object r = t->m->processor->invoke
-        (t, nativeInterceptOriginal(t, methodCode(t, method)),
+        (t, nativeInterceptOriginal
+         (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
          reinterpret_cast<object>(arguments[0]), file);
       
       return (r ? intValue(t, r) : 0);
@@ -631,7 +632,8 @@ getLength
     return 0;
   } else {
     object r = t->m->processor->invoke
-      (t, nativeInterceptOriginal(t, methodCode(t, method)),
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
        reinterpret_cast<object>(arguments[0]), file);
 
     return (r ? longValue(t, r) : 0);
@@ -703,7 +705,9 @@ openFile(Thread* t, object method, uintptr_t* arguments)
       = index + VirtualFileBase;
   } else {
     t->m->processor->invoke
-      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_, path);
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       this_, path);
   }
 }
 
@@ -740,7 +744,9 @@ readByteFromFile(Thread* t, object method, uintptr_t* arguments)
     }
   } else {
     object r = t->m->processor->invoke
-      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_);
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       this_);
 
     return r ? intValue(t, r) : 0;
   }
@@ -793,8 +799,9 @@ readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
     }
   } else {
     object r = t->m->processor->invoke
-      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_, dst,
-       offset, length);
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       this_, dst, offset, length);
 
     return r ? intValue(t, r) : 0;
   }
@@ -837,7 +844,9 @@ skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
     }
   } else {
     object r = t->m->processor->invoke
-      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_, count);
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       this_, count);
 
     return r ? longValue(t, r) : 0;
   }
@@ -870,7 +879,9 @@ availableBytesInFile(Thread* t, object method, uintptr_t* arguments)
     }
   } else {
     object r = t->m->processor->invoke
-      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_);
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       this_);
 
     return r ? intValue(t, r) : 0;
   }
@@ -901,7 +912,9 @@ closeFile(Thread* t, object method, uintptr_t* arguments)
         0);
   } else {
     t->m->processor->invoke
-      (t, nativeInterceptOriginal(t, methodCode(t, method)), this_);
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       this_);
   }
 }
 
@@ -926,7 +939,11 @@ intercept(Thread* t, object c, const char* name, const char* spec,
 
     object native = makeNativeIntercept(t, function, true, clone);
 
-    set(t, m, MethodCode, native);
+    PROTECT(t, native);
+
+    object runtimeData = getMethodRuntimeData(t, m);
+
+    set(t, runtimeData, MethodRuntimeDataNative, native);
   }
 }
 
@@ -1196,7 +1213,7 @@ resolveParameterJTypes(Thread* t, object loader, object spec,
 object
 resolveExceptionJTypes(Thread* t, object loader, object addendum)
 {
-  if (addendum == 0) {
+  if (addendum == 0 or methodAddendumExceptionTable(t, addendum) == 0) {
     return makeObjectArray(t, type(t, Machine::JclassType), 0);
   }
 
@@ -2470,8 +2487,9 @@ EXPORT(JVM_GetClassAnnotations)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference
-    (t, addendumAnnotationTable(t, classAddendum(t, jclassVmClass(t, *c))));
+  object addendum = classAddendum(t, jclassVmClass(t, *c));
+  return addendum
+    ? makeLocalReference(t, addendumAnnotationTable(t, addendum)) : 0;
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
@@ -2537,7 +2555,12 @@ EXPORT(JVM_GetClassDeclaredMethods)(Thread* t, jclass c, jboolean publicOnly)
           ? 0 : addendumAnnotationTable(t, methodAddendum(t, vmMethod));
 
         if (annotationTable) {
-          set(t, classAddendum(t, jclassVmClass(t, *c)), AddendumPool,
+          PROTECT(t, signature);
+          PROTECT(t, annotationTable);
+
+          object runtimeData = getClassRuntimeData(t, jclassVmClass(t, *c));
+
+          set(t, runtimeData, ClassRuntimeDataPool,
               addendumPool(t, methodAddendum(t, vmMethod)));
         }
 
@@ -2607,8 +2630,13 @@ EXPORT(JVM_GetClassDeclaredFields)(Thread* t, jclass c, jboolean publicOnly)
           ? 0 : addendumAnnotationTable(t, fieldAddendum(t, vmField));
 
         if (annotationTable) {
-          set(t, classAddendum(t, jclassVmClass(t, *c)), AddendumPool,
-              addendumPool(t, fieldAddendum(t, vmField)));
+          PROTECT(t, signature);
+          PROTECT(t, annotationTable);
+
+          object runtimeData = getClassRuntimeData(t, jclassVmClass(t, *c));
+
+          set(t, runtimeData, ClassRuntimeDataPool,
+              addendumPool(t, methodAddendum(t, vmField)));
         }
 
         object field = makeJfield
@@ -2680,7 +2708,12 @@ EXPORT(JVM_GetClassDeclaredConstructors)(Thread* t, jclass c,
           ? 0 : addendumAnnotationTable(t, methodAddendum(t, vmMethod));
 
         if (annotationTable) {
-          set(t, classAddendum(t, jclassVmClass(t, *c)), AddendumPool,
+          PROTECT(t, signature);
+          PROTECT(t, annotationTable);
+
+          object runtimeData = getClassRuntimeData(t, jclassVmClass(t, *c));
+
+          set(t, runtimeData, ClassRuntimeDataPool,
               addendumPool(t, methodAddendum(t, vmMethod)));
         }
 
@@ -2766,9 +2799,20 @@ EXPORT(JVM_GetClassConstantPool)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference
-    (t, makeConstantPool
-     (t, addendumPool(t, classAddendum(t, jclassVmClass(t, *c)))));
+  object vmClass = jclassVmClass(t, *c);
+  object addendum = classAddendum(t, vmClass);
+  object pool;
+  if (addendum) {
+    pool = addendumPool(t, addendum);
+  } else {
+    pool = 0;
+  }
+
+  if (pool == 0) {
+    pool = classRuntimeDataPool(t, getClassRuntimeData(t, vmClass));
+  }
+
+  return makeLocalReference(t, makeConstantPool(t, pool));
 }
 
 extern "C" JNIEXPORT jint JNICALL

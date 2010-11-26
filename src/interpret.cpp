@@ -656,7 +656,7 @@ invokeNative(Thread* t, object method)
     return VoidField;
   }
 
-  object native = methodCode(t, method);
+  object native = methodRuntimeDataNative(t, getMethodRuntimeData(t, method));
   if (nativeFast(t, native)) {
     pushFrame(t, method);
 
@@ -3045,7 +3045,7 @@ class MyProcessor: public Processor {
   {
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, 0, name, spec, addendum, class_, code);
+       offset, 0, 0, name, spec, addendum, class_, code);
   }
 
   virtual object
@@ -3069,7 +3069,7 @@ class MyProcessor: public Processor {
             unsigned vtableLength UNUSED)
   {
     return vm::makeClass
-      (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
+      (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions, 0,
        objectMask, name, sourceFile, super, interfaceTable, virtualTable,
        fieldTable, methodTable, addendum, staticTable, loader, 0);
   }

@@ -1194,6 +1194,8 @@ class Machine {
     MonitorMap,
     StringMap,
     ByteArrayMap,
+    ClassRuntimeDataTable,
+    MethodRuntimeDataTable,
     JNIMethodTable,
     ShutdownHooks,
     ObjectsToFinalize,
@@ -3056,28 +3058,70 @@ resolveMethod(Thread* t, object method, unsigned index)
     (t, classLoader(t, methodClass(t, method)), method, index);
 }
 
+object
+vectorAppend(Thread*, object, object);
+
 inline object
-getJClass(Thread* t, object c)
+getClassRuntimeData(Thread* t, object c)
 {
-  if (classAddendum(t, c) == 0) {
+  if (classRuntimeDataIndex(t, c) == 0) {
     PROTECT(t, c);
 
     ACQUIRE(t, t->m->classLock);
 
-    object addendum = makeClassAddendum(t, 0, 0, 0, 0, 0);
-      
-    set(t, c, ClassAddendum, addendum);
+    if (classRuntimeDataIndex(t, c) == 0) {
+      object runtimeData = makeClassRuntimeData(t, 0, 0, 0);
+
+      setRoot(t, Machine::ClassRuntimeDataTable, vectorAppend
+              (t, root(t, Machine::ClassRuntimeDataTable), runtimeData));
+
+      classRuntimeDataIndex(t, c) = vectorSize
+        (t, root(t, Machine::ClassRuntimeDataTable));
+    }
   }
 
-  object jclass = classAddendumClass(t, classAddendum(t, c));
+  return vectorBody(t, root(t, Machine::ClassRuntimeDataTable),
+                    classRuntimeDataIndex(t, c) - 1);
+}
+
+inline object
+getMethodRuntimeData(Thread* t, object method)
+{
+  if (methodRuntimeDataIndex(t, method) == 0) {
+    PROTECT(t, method);
+
+    ACQUIRE(t, t->m->classLock);
+
+    if (methodRuntimeDataIndex(t, method) == 0) {
+      object runtimeData = makeMethodRuntimeData(t, 0);
+
+      setRoot(t, Machine::MethodRuntimeDataTable, vectorAppend
+              (t, root(t, Machine::MethodRuntimeDataTable), runtimeData));
+
+      methodRuntimeDataIndex(t, method) = vectorSize
+        (t, root(t, Machine::MethodRuntimeDataTable));
+    }
+  }
+
+  return vectorBody(t, root(t, Machine::MethodRuntimeDataTable),
+                    methodRuntimeDataIndex(t, method) - 1);
+}
+
+inline object
+getJClass(Thread* t, object c)
+{
+  object jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
   if (jclass == 0) {
     PROTECT(t, c);
 
     ACQUIRE(t, t->m->classLock);
 
-    jclass = t->m->classpath->makeJclass(t, c);
+    jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
+    if (jclass == 0) {
+      jclass = t->m->classpath->makeJclass(t, c);
       
-    set(t, classAddendum(t, c), ClassAddendumClass, jclass);
+      set(t, getClassRuntimeData(t, c), ClassRuntimeDataJclass, jclass);
+    }
   }
 
   return jclass;
@@ -3111,12 +3155,15 @@ registerNative(Thread* t, object method, void* function)
   expect(t, methodFlags(t, method) & ACC_NATIVE);
 
   object native = makeNative(t, function, false);
+  PROTECT(t, native);
 
-  // ensure other threads only see the methodCode field populated
-  // once the object it points to has been populated:
+  object runtimeData = getMethodRuntimeData(t, method);
+
+  // ensure other threads only see the methodRuntimeDataNative field
+  // populated once the object it points to has been populated:
   storeStoreMemoryBarrier();
 
-  set(t, method, MethodCode, native);
+  set(t, runtimeData, MethodRuntimeDataNative, native);
 }
 
 inline void
@@ -3126,7 +3173,7 @@ unregisterNatives(Thread* t, object c)
     for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
       object method = arrayBody(t, classMethodTable(t, c), i);
       if (methodFlags(t, method) & ACC_NATIVE) {
-        set(t, method, MethodCode, 0);
+        set(t, getMethodRuntimeData(t, method), MethodRuntimeDataNative, 0);
       }
     }
   }
@@ -3152,6 +3199,7 @@ methodClone(Thread* t, object method)
      methodFlags(t, method),
      methodOffset(t, method),
      methodNativeID(t, method),
+     methodRuntimeDataIndex(t, method),
      methodName(t, method),
      methodSpec(t, method),
      methodAddendum(t, method),

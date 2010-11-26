@@ -2900,6 +2900,8 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
   if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
     Compiler::Operand* lock;
     if (methodFlags(t, method) & ACC_STATIC) {
+      PROTECT(t, method);
+
       lock = frame->append(methodClass(t, method));
     } else {
       lock = loadLocal(frame->context, 1, savedTargetIndex(t, method));
@@ -3716,6 +3718,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           and (fieldCode(t, field) == DoubleField
                or fieldCode(t, field) == LongField))
       {
+        PROTECT(t, field);
+
         c->call
           (c->constant
            (getThunk(t, acquireMonitorForObjectThunk), Compiler::AddressType),
@@ -3728,6 +3732,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (instruction == getstatic) {
         assert(t, fieldFlags(t, field) & ACC_STATIC);
+
+        PROTECT(t, field);
 
         if (fieldClass(t, field) != methodClass(t, context->method)
             and classNeedsInit(t, fieldClass(t, field)))
@@ -4127,7 +4133,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       unsigned instance = parameterFootprint - 1;
 
-      unsigned rSize = resultSize(t, methodReturnCode(t, target));
+      int returnCode = methodReturnCode(t, target);
+
+      unsigned rSize = resultSize(t, returnCode);
 
       Compiler::Operand* result = c->stackCall
         (c->call
@@ -4143,13 +4151,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          0,
          frame->trace(0, 0),
          rSize,
-         operandTypeForFieldCode(t, methodReturnCode(t, target)),
+         operandTypeForFieldCode(t, returnCode),
          parameterFootprint);
 
       frame->pop(parameterFootprint);
 
       if (rSize) {
-        pushReturnValue(t, frame, methodReturnCode(t, target), result);
+        pushReturnValue(t, frame, returnCode, result);
       }
     } break;
 
@@ -4385,12 +4393,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (singletonIsObject(t, pool, index - 1)) {
         object v = singletonObject(t, pool, index - 1);
         if (objectClass(t, v) == type(t, Machine::ReferenceType)) {
-          object class_ = resolveClassInPool(t, context->method, index - 1); 
+          v = resolveClassInPool(t, context->method, index - 1); 
           if (UNLIKELY(t->exception)) return;
+        }
 
-          frame->pushObject(frame->append(getJClass(t, class_)));
-        } else if (objectClass(t, v) == type(t, Machine::ClassType)) {
-          frame->pushObject(frame->append(getJClass(t, v)));
+        if (objectClass(t, v) == type(t, Machine::ClassType)) {
+          frame->pushObject
+            (c->call
+             (c->constant
+              (getThunk(t, getJClassThunk), Compiler::AddressType),
+              0,
+              frame->trace(0, 0),
+              BytesPerWord,
+              Compiler::ObjectType,
+              2, c->register_(t->arch->thread()), frame->append(v)));
         } else {
           frame->pushObject(frame->append(v));
         }
@@ -4703,6 +4719,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         if (fieldClass(t, field) != methodClass(t, context->method)
             and classNeedsInit(t, fieldClass(t, field)))
         {
+          PROTECT(t, field);
+
           c->call
             (c->constant
              (getThunk(t, tryInitClassThunk), Compiler::AddressType),
@@ -4729,6 +4747,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             and (fieldCode(t, field) == DoubleField
                  or fieldCode(t, field) == LongField))
         {
+          PROTECT(t, field);
+
           c->call
             (c->constant
              (getThunk(t, acquireMonitorForObjectThunk),
@@ -4766,6 +4786,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* table;
 
       if (instruction == putstatic) {
+        PROTECT(t, field);
+
         table = frame->append(staticTable);
       } else {
         table = frame->popObject();
@@ -6308,7 +6330,7 @@ invokeNativeSlow(MyThread* t, object method, void* function)
 uint64_t
 invokeNative2(MyThread* t, object method)
 {
-  object native = methodCode(t, method);
+  object native = methodRuntimeDataNative(t, getMethodRuntimeData(t, method));
   if (nativeFast(t, native)) {
     return invokeNativeFast(t, method, nativeFunction(t, native));
   } else {
@@ -7276,7 +7298,7 @@ class MyProcessor: public Processor {
 
     return vm::makeMethod
       (t, vmFlags, returnCode, parameterCount, parameterFootprint, flags,
-       offset, 0, name, spec, addendum, class_, code);
+       offset, 0, 0, name, spec, addendum, class_, code);
   }
 
   virtual object
@@ -7301,8 +7323,9 @@ class MyProcessor: public Processor {
   {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
-       objectMask, name, sourceFile, super, interfaceTable, virtualTable,
-       fieldTable, methodTable, staticTable, addendum, loader, vtableLength);
+       0, objectMask, name, sourceFile, super, interfaceTable,
+       virtualTable, fieldTable, methodTable, staticTable, addendum, loader,
+       vtableLength);
   }
 
   virtual void
@@ -7664,11 +7687,11 @@ class MyProcessor: public Processor {
       codeAllocator.capacity = ExecutableAreaSizeInBytes;
     }
 
-    roots = makeArray(t, RootCount);
-
     if (image) {
       local::boot(static_cast<MyThread*>(t), image);
     } else {
+      roots = makeArray(t, RootCount);
+
       setRoot(t, CallTable, makeArray(t, 128));
       
       setRoot(t, MethodTreeSentinal, makeTreeNode(t, 0, 0, 0));
@@ -8069,7 +8092,7 @@ fixupMethods(Thread* t, object map, BootImage* image, uint8_t* code)
     if (classMethodTable(t, c)) {
       for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
         object method = arrayBody(t, classMethodTable(t, c), i);
-        if (methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE)) {
+        if (methodCode(t, method)) {
           assert(t, (methodCompiled(t, method) - image->codeBase)
                  <= image->codeSize);
 
@@ -8077,7 +8100,7 @@ fixupMethods(Thread* t, object map, BootImage* image, uint8_t* code)
             = (methodCompiled(t, method) - image->codeBase)
             + reinterpret_cast<uintptr_t>(code);
 
-          if (DebugCompile and (methodFlags(t, method) & ACC_NATIVE) == 0) {
+          if (DebugCompile) {
             logCompile
               (static_cast<MyThread*>(t),
                reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
@@ -8180,11 +8203,16 @@ boot(MyThread* t, BootImage* image)
   
   t->m->heap->setImmortalHeap(heap, image->heapSize / BytesPerWord);
 
-  setRoot(t, Machine::BootLoader, bootObject(heap, image->bootLoader));
-  setRoot(t, Machine::AppLoader, bootObject(heap, image->appLoader));
   t->m->types = bootObject(heap, image->types);
 
+  t->m->roots = makeArray(t, Machine::RootCount);
+
+  setRoot(t, Machine::BootLoader, bootObject(heap, image->bootLoader));
+  setRoot(t, Machine::AppLoader, bootObject(heap, image->appLoader));
+
   MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+
+  p->roots = makeArray(t, RootCount);
   
   setRoot(t, MethodTree, bootObject(heap, image->methodTree));
   setRoot(t, MethodTreeSentinal, bootObject(heap, image->methodTreeSentinal));
@@ -8195,11 +8223,17 @@ boot(MyThread* t, BootImage* image)
 
   syncInstructionCache(code, image->codeSize);
 
-  set(t, root(t, Machine::BootLoader), ClassLoaderMap, makeClassMap
-      (t, bootClassTable, image->bootClassCount, heap));
+  { object map = makeClassMap(t, bootClassTable, image->bootClassCount, heap);
+    set(t, root(t, Machine::BootLoader), ClassLoaderMap, map);
+  }
 
-  set(t, root(t, Machine::AppLoader), ClassLoaderMap, makeClassMap
-      (t, appClassTable, image->appClassCount, heap));
+  systemClassLoaderFinder(t, root(t, Machine::BootLoader)) = t->m->bootFinder;
+
+  { object map = makeClassMap(t, appClassTable, image->appClassCount, heap);
+    set(t, root(t, Machine::AppLoader), ClassLoaderMap, map);
+  }
+
+  systemClassLoaderFinder(t, root(t, Machine::AppLoader)) = t->m->appFinder;
 
   setRoot(t, Machine::StringMap, makeStringMap
           (t, stringTable, image->stringCount, heap));

@@ -16,6 +16,7 @@ public class VMClass {
   public short fixedSize;
   public byte arrayElementSize;
   public byte arrayDimensions;
+  public int runtimeDataIndex;
   public int[] objectMask;
   public byte[] name;
   public byte[] sourceFile;
@@ -24,7 +25,7 @@ public class VMClass {
   public VMMethod[] virtualTable;
   public VMField[] fieldTable;
   public VMMethod[] methodTable;
-  public volatile avian.ClassAddendum addendum;
+  public avian.ClassAddendum addendum;
   public Object staticTable;
   public ClassLoader loader;
 }

@@ -1314,6 +1314,7 @@ addInterfaceMethods(Thread* t, object class_, object virtualMap,
                methodFlags(t, method),
                (*virtualCount)++,
                0,
+               0,
                methodName(t, method),
                methodSpec(t, method),
                0,
@@ -1650,7 +1651,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
       object body = makeByteArray(t, length);
       s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)), length);
 
-      object addendum = makeClassAddendum(t, pool, body, 0, 0, 0);
+      object addendum = makeClassAddendum(t, pool, body);
       
       set(t, class_, ClassAddendum, addendum);
     } else {
@@ -1839,21 +1840,11 @@ resolveArrayClass(Thread* t, object loader, object spec, bool throw_)
 object
 resolveObjectArrayClass(Thread* t, object loader, object elementClass)
 {
-  object addendum = classAddendum(t, elementClass);
-  if (addendum) {
-    object arrayClass = classAddendumArrayClass(t, addendum);
+  { object arrayClass = classRuntimeDataArrayClass
+      (t, getClassRuntimeData(t, elementClass));
     if (arrayClass) {
       return arrayClass;
     }
-  } else {
-    PROTECT(t, loader);
-    PROTECT(t, elementClass);
-
-    ACQUIRE(t, t->m->classLock);
-
-    object addendum = makeClassAddendum(t, 0, 0, 0, 0, 0);
-      
-    set(t, elementClass, ClassAddendum, addendum);
   }
 
   PROTECT(t, loader);
@@ -1882,7 +1873,7 @@ resolveObjectArrayClass(Thread* t, object loader, object elementClass)
 
   object arrayClass = resolveClass(t, loader, spec);
 
-  set(t, classAddendum(t, elementClass), ClassAddendumArrayClass,
+  set(t, getClassRuntimeData(t, elementClass), ClassRuntimeDataArrayClass,
       arrayClass);
 
   return arrayClass;
@@ -2104,7 +2095,7 @@ boot(Thread* t)
   { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
-      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
+      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
     PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
@@ -2349,6 +2340,8 @@ Thread::init()
 
     m->unsafe = false;
 
+    enter(this, ActiveState);
+
     if (image) {
       m->processor->boot(this, image);
     } else {
@@ -2358,6 +2351,8 @@ Thread::init()
     setRoot(this, Machine::ByteArrayMap, makeWeakHashMap(this, 0, 0));
     setRoot(this, Machine::MonitorMap, makeWeakHashMap(this, 0, 0));
 
+    setRoot(this, Machine::ClassRuntimeDataTable, makeVector(this, 0, 0));
+    setRoot(this, Machine::MethodRuntimeDataTable, makeVector(this, 0, 0));
     setRoot(this, Machine::JNIMethodTable, makeVector(this, 0, 0));
 
     m->localThread->set(this);
@@ -2373,25 +2368,6 @@ Thread::init()
   }
 
   threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
-
-  if (parent == 0) {
-    enter(this, Thread::ActiveState);
-
-    if (exception == 0) {
-      setRoot(this, Machine::NullPointerException, m->classpath->makeThrowable
-              (this, Machine::NullPointerExceptionType));
-      
-      if (exception == 0) {
-        setRoot(this, Machine::ArrayIndexOutOfBoundsException,
-                m->classpath->makeThrowable
-                (this, Machine::ArrayIndexOutOfBoundsExceptionType));
-      }
-    }
-
-    m->classpath->boot(this);
-
-    enter(this, Thread::IdleState);
-  }
 }
 
 void
@@ -3151,6 +3127,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
                             0, // fixed size
                             0, // array size
                             0, // array dimensions
+                            0, // runtime data index
                             0, // object mask
                             referenceName
                             (t, singletonObject(t, pool, name - 1)),

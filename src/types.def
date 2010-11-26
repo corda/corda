@@ -37,6 +37,14 @@
 
 (type fieldAddendum avian/FieldAddendum)
 
+(type classRuntimeData
+  (object arrayClass)
+  (object jclass)
+  (object pool))
+
+(type methodRuntimeData
+  (object native))
+
 (type pointer
   (void* value))
 

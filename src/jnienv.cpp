@@ -430,7 +430,8 @@ methodID(Thread* t, object method)
     if (methodNativeID(t, method) == 0) {
       setRoot(t, Machine::JNIMethodTable, vectorAppend
               (t, root(t, Machine::JNIMethodTable), method));
-      methodNativeID(t, method) = vectorSize(t, root(t, Machine::JNIMethodTable));
+      methodNativeID(t, method) = vectorSize
+        (t, root(t, Machine::JNIMethodTable));
     }
   }
 
@@ -2036,6 +2037,27 @@ append(char** p, const char* value, unsigned length, char tail)
   }
 }
 
+void
+boot(Thread* t)
+{
+  enter(t, Thread::ActiveState);
+
+  if (t->exception == 0) {
+    setRoot(t, Machine::NullPointerException, t->m->classpath->makeThrowable
+            (t, Machine::NullPointerExceptionType));
+      
+    if (t->exception == 0) {
+      setRoot(t, Machine::ArrayIndexOutOfBoundsException,
+              t->m->classpath->makeThrowable
+              (t, Machine::ArrayIndexOutOfBoundsExceptionType));
+    }
+  }
+
+  t->m->classpath->boot(t);
+
+  enter(t, Thread::IdleState);
+}
+
 } // namespace local
 
 } // namespace
@@ -2348,6 +2370,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     Machine(s, h, bf, af, p, c, properties, propertyCount);
 
   *t = p->makeThread(*m, 0, 0);
+
+  local::boot(*t);
 
   return 0;
 }

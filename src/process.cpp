@@ -232,7 +232,9 @@ resolveNative(Thread* t, object method)
 
   initClass(t, methodClass(t, method));
 
-  if (LIKELY(t->exception == 0) and methodCode(t, method) == 0) {
+  if (LIKELY(t->exception == 0)
+      and methodRuntimeDataNative(t, getMethodRuntimeData(t, method)) == 0)
+  {
     object native = resolveNativeMethod(t, method);
     if (UNLIKELY(native == 0)) {
       object message = makeString
@@ -246,11 +248,15 @@ resolveNative(Thread* t, object method)
       return;
     }
 
-    // ensure other threads only see the methodCode field populated
-    // once the object it points do has been populated:
+    PROTECT(t, native);
+
+    object runtimeData = getMethodRuntimeData(t, method);
+
+    // ensure other threads only see the methodRuntimeDataNative field
+    // populated once the object it points to has been populated:
     storeStoreMemoryBarrier();
 
-    set(t, method, MethodCode, native);
+    set(t, runtimeData, MethodRuntimeDataNative, native);
   } 
 }
 

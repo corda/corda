@@ -572,10 +572,6 @@ public final class Class <T> implements Type, AnnotatedElement {
     return (T) o;
   }
 
-  public Object[] getSigners() {
-    return vmClass.addendum.signers;
-  }
-
   public Package getPackage() {
     if ((vmClass.vmFlags & PrimitiveFlag) != 0 || isArray()) {
       return null;

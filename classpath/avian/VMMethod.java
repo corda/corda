@@ -18,6 +18,7 @@ public class VMMethod {
   public short flags;
   public short offset;
   public int nativeID;
+  public int runtimeDataIndex;
   public byte[] name;
   public byte[] spec;
   public MethodAddendum addendum;

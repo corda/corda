@@ -72,13 +72,13 @@ ifeq ($(build-platform),darwin)
 	library-path-variable = DYLD_LIBRARY_PATH
 endif
 
-ifdef openjdk
+ifneq ($(openjdk),)
 	openjdk-arch = $(arch)
 	ifeq ($(arch),x86_64)
 		openjdk-arch = amd64
 	endif
 
-	ifdef openjdk-src
+	ifneq ($(openjdk-src),)
 		include openjdk-src.mk
 	  options := $(options)-openjdk-src
 		classpath-objects = $(openjdk-objects)
@@ -436,8 +436,7 @@ endif
 bootimage-generator-sources = $(src)/bootimage.cpp 
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
-bootimage-generator = \
-	$(build)/$(bootimage-platform)-$(build-arch)$(options)/bootimage-generator
+bootimage-generator = $(build)/bootimage-generator
 
 bootimage-bin = $(build)/bootimage.bin
 bootimage-object = $(build)/bootimage-bin.o
@@ -454,10 +453,11 @@ $(error "bootimage cross-builds not yet supported")
 	endif
 
 	vm-classpath-object = $(bootimage-object)
-	cflags += -DBOOT_IMAGE=\"bootimageBin\"
+	cflags += -DBOOT_IMAGE=\"bootimageBin\" -DAVIAN_CLASSPATH=\"\"
 else
 	vm-classpath-object = $(classpath-object)
-	cflags += -DBOOT_CLASSPATH=\"[classpathJar]\"
+	cflags += -DBOOT_CLASSPATH=\"[classpathJar]\" \
+		-DAVIAN_CLASSPATH=\"[classpathJar]\"
 endif
 
 driver-source = $(src)/main.cpp
@@ -509,7 +509,7 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMMethod.java \
 		$(classpath-src)/avian/resource/Handler.java
 
-	ifdef openjdk
+	ifneq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
 			$(classpath-src)/avian/OpenJDK.java
 	endif
@@ -759,6 +759,8 @@ $(bootimage-generator):
 	$(MAKE) mode=$(mode) \
 		arch=$(build-arch) \
 		platform=$(bootimage-platform) \
+		openjdk=$(openjdk) \
+		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \
 		build-bootimage-generator=$(bootimage-generator) \
 		$(bootimage-generator)
