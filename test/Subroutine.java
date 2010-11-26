@@ -138,6 +138,19 @@ public class Subroutine {
     }
   }
 
+  public boolean test5(boolean predicate) {
+    try {
+      if (predicate) {
+        return false;
+      }
+    } finally {
+      synchronized (this) {
+        notifyAll();
+      }
+    }
+    return true;
+  }
+
   public static void main(String[] args) {
     test(false, false);
     test(false, true);
@@ -188,6 +201,9 @@ public class Subroutine {
     String.valueOf(test4(3));
 
     expect(test4(1) == 0xFABFABFABFL);
+
+    new Subroutine().test5(true);
+    new Subroutine().test5(false);
   }
 
   private static class DummyException extends RuntimeException { }

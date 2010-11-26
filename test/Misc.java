@@ -104,7 +104,28 @@ public class Misc {
     return (o == null ? default_ : o);
   }
 
+  private static class Zam {
+    public void bim() { }
+  }
+
+  private static class Zim {
+    public Object zum() {
+      return null;
+    }
+  }
+
+  private static Zim zim = new Zim();
+
+  private static void zam() {
+    Zam z;
+    while ((z = (Zam) zim.zum()) != null) {
+      z.bim();
+    }
+  }
+
   public static void main(String[] args) {
+    zam();
+
     Bim bim = new Baz();
     expect(bim.baz() == 42);
 

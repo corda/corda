@@ -982,9 +982,30 @@ valid(Read* r)
   return r and r->valid();
 }
 
-Read*
-live(Value* v)
+bool
+hasBuddy(Context* c, Value* a, Value* b)
 {
+  if (a == b) {
+    return true;
+  }
+
+  int i = 0;
+  for (Value* p = a->buddy; p != a; p = p->buddy) {
+    if (p == b) {
+      return true;
+    }
+    if (++i > 1000) {
+      abort(c);
+    }
+  }
+  return false;
+}
+
+Read*
+live(Context* c UNUSED, Value* v)
+{
+  assert(c, hasBuddy(c, v->buddy, v));
+
   Value* p = v;
   do {
     if (valid(p->reads)) {
@@ -999,6 +1020,8 @@ live(Value* v)
 Read*
 liveNext(Context* c, Value* v)
 {
+  assert(c, hasBuddy(c, v->buddy, v));
+
   Read* r = v->reads->next(c);
   if (valid(r)) return r;
 
@@ -1082,7 +1105,7 @@ popRead(Context* c, Event* e UNUSED, Value* v)
       }
     }
 
-    Read* r = live(v);
+    Read* r = live(c, v);
     if (r) {
       deadBuddy(c, v, r);
     } else {
@@ -1493,7 +1516,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
 
   Value* successor = read->successor();
   if (successor) {
-    Read* r = live(successor);
+    Read* r = live(c, successor);
     if (r) {
       SiteMask intersection = mask;
       if (r->intersect(&intersection)) {
@@ -2534,7 +2557,7 @@ steal(Context* c, Resource* r, Value* thief)
   {
     r->site->freeze(c, r->value);
 
-    maybeMove(c, live(r->value), false, true, StealRegisterReserveCount);
+    maybeMove(c, live(c, r->value), false, true, StealRegisterReserveCount);
 
     r->site->thaw(c, r->value);
   }
@@ -3360,9 +3383,9 @@ class CallEvent: public Event {
 
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
 
-    if (resultSize and live(result)) {
+    if (resultSize and live(c, result)) {
       addSite(c, result, registerSite(c, c->arch->returnLow()));
-      if (resultSize > BytesPerWord and live(result->nextWord)) {
+      if (resultSize > BytesPerWord and live(c, result->nextWord)) {
         addSite(c, result->nextWord, registerSite(c, c->arch->returnHigh()));
       }
     }
@@ -3446,7 +3469,7 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
           const SiteMask& dstMask)
 {
-  Read* read = live(dst);
+  Read* read = live(c, dst);
   bool isStore = read == 0;
 
   Site* target;
@@ -3607,8 +3630,8 @@ Site*
 pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
                unsigned index)
 {
-  if (live(dst)) {
-    Read* read = live(src);
+  if (live(c, dst)) {
+    Read* read = live(c, src);
     Site* s;
     if (nextWord) {
       s = pickMatchOrMove(c, read, nextWord, index, false);
@@ -3727,7 +3750,7 @@ class MoveEvent: public Event {
           apply(c, Move, srcSelectSize, src->source, src->source,
                 dstSize, dst->target, dst->target);
 
-          if (live(dst) == 0) {
+          if (live(c, dst) == 0) {
             removeSite(c, dst, dst->target);
             if (dstSize > BytesPerWord) {
               removeSite(c, dst->nextWord, dst->nextWord->target);
@@ -3754,7 +3777,7 @@ class MoveEvent: public Event {
       assert(c, srcSize == BytesPerWord);
       assert(c, srcSelectSize == BytesPerWord);
 
-      if (dst->nextWord->target or live(dst->nextWord)) {
+      if (dst->nextWord->target or live(c, dst->nextWord)) {
         assert(c, dstLowMask.typeMask & (1 << RegisterOperand));
 
         Site* low = freeRegisterSite(c, dstLowMask.registerMask);
@@ -3945,12 +3968,12 @@ class CombineEvent: public Event {
   virtual void compile(Context* c) {
     assert(c, first->source->type(c) == first->nextWord->source->type(c));
 
-    if (second->source->type(c) != second->nextWord->source->type(c)) {
-      fprintf(stderr, "%p %p %d : %p %p %d\n",
-              second, second->source, second->source->type(c),
-              second->nextWord, second->nextWord->source,
-              second->nextWord->source->type(c));
-    }
+    // if (second->source->type(c) != second->nextWord->source->type(c)) {
+    //   fprintf(stderr, "%p %p %d : %p %p %d\n",
+    //           second, second->source, second->source->type(c),
+    //           second->nextWord, second->nextWord->source,
+    //           second->nextWord->source->type(c));
+    // }
 
     assert(c, second->source->type(c) == second->nextWord->source->type(c));
     
@@ -4004,9 +4027,9 @@ class CombineEvent: public Event {
       high->thaw(c, second->nextWord);
     }
 
-    if (live(result)) {
+    if (live(c, result)) {
       addSite(c, result, low);
-      if (resultSize > lowSize and live(result->nextWord)) {
+      if (resultSize > lowSize and live(c, result->nextWord)) {
         addSite(c, result->nextWord, high);
       }
     }
@@ -4043,11 +4066,11 @@ removeBuddy(Context* c, Value* v)
 
     assert(c, p->buddy);
 
-    if (not live(next)) {
+    if (not live(c, next)) {
       clearSites(c, next);
     }
 
-    if (not live(v)) {
+    if (not live(c, v)) {
       clearSites(c, v);
     }
   }
@@ -4420,9 +4443,9 @@ class TranslateEvent: public Event {
       high->thaw(c, value->nextWord);
     }
 
-    if (live(result)) {
+    if (live(c, result)) {
       addSite(c, result, low);
-      if (resultSize > lowSize and live(result->nextWord)) {
+      if (resultSize > lowSize and live(c, result->nextWord)) {
         addSite(c, result->nextWord, high);
       }
     }
@@ -4937,7 +4960,7 @@ class FrameSiteEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    if (live(value)) {
+    if (live(c, value)) {
       addSite(c, value, frameSite(c, index));
     }
   }
@@ -4975,7 +4998,7 @@ visit(Context* c, Link* link)
       Value* v = p->value;
       v->reads = p->read->nextTarget();
       //       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
-      if (not live(v)) {
+      if (not live(c, v)) {
         clearSites(c, v);
       }
     }
@@ -5238,7 +5261,7 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
   {
     FrameIterator::Element el = it.next(c);
     Value* v = el.value;
-    Read* r = v ? live(v) : 0;
+    Read* r = v ? live(c, v) : 0;
     Site* s = sites[el.localIndex];
 
     if (r) {
@@ -5282,7 +5305,7 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     Value* v = el.value;
-    Read* r = live(v);
+    Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
       SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
@@ -5316,7 +5339,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
   for (FrameIterator it(c, e->stackAfter, e->localsAfter); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     Value* v = el.value;
-    Read* r = live(v);
+    Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
       SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
@@ -5415,7 +5438,7 @@ populateSiteTables(Context* c, Event* e, SiteRecordList* frozen)
 void
 setSites(Context* c, Value* v, Site* s)
 {
-  assert(c, live(v));
+  assert(c, live(c, v));
 
   for (; s; s = s->next) {
     addSite(c, v, s->copy(c));
@@ -5444,7 +5467,7 @@ setSites(Context* c, Event* e, Site** sites)
   for (FrameIterator it(c, e->stackBefore, e->localsBefore); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     if (sites[el.localIndex]) {
-      if (live(el.value)) {
+      if (live(c, el.value)) {
         setSites(c, el.value, sites[el.localIndex]);
       } else if (DebugControl) {
         char buffer[256]; sitesToString(c, sites[el.localIndex], buffer, 256);
@@ -5471,10 +5494,17 @@ void
 restore(Context* c, Event* e, Snapshot* snapshots)
 {
   for (Snapshot* s = snapshots; s; s = s->next) {
-    //     char buffer[256]; sitesToString(c, s->sites, buffer, 256);
-    //     fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
-    //             s->value, s->value->buddy, buffer, live(s->value));
+    Value* v = s->value;
+    Value* next = v->buddy;
+    if (v != next) {
+      v->buddy = v;
+      Value* p = next;
+      while (p->buddy != v) p = p->buddy;
+      p->buddy = next;
+    }
+  }
 
+  for (Snapshot* s = snapshots; s; s = s->next) {
     assert(c, s->buddy);
 
     s->value->buddy = s->buddy;
@@ -5483,11 +5513,15 @@ restore(Context* c, Event* e, Snapshot* snapshots)
   resetFrame(c, e);
 
   for (Snapshot* s = snapshots; s; s = s->next) {
-    if (live(s->value)) {
-      if (live(s->value) and s->sites and s->value->sites == 0) {
+    if (live(c, s->value)) {
+      if (live(c, s->value) and s->sites and s->value->sites == 0) {
         setSites(c, s->value, s->sites);
       }
     }
+
+    // char buffer[256]; sitesToString(c, s->sites, buffer, 256);
+    // fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
+    //         s->value, s->value->buddy, buffer, live(c, s->value));
   }
 }
 
@@ -5554,7 +5588,7 @@ updateJunctionReads(Context* c, JunctionState* state)
     FrameIterator::Element e = it.next(c);
     StubReadPair* p = state->reads + e.localIndex;
     if (p->value and p->read->read == 0) {
-      Read* r = live(e.value);
+      Read* r = live(c, e.value);
       if (r) {
         if (DebugReads) {
           fprintf(stderr, "stub read %p for %p valid: %p\n",
@@ -5784,6 +5818,10 @@ addForkElement(Context* c, Value* v, ForkState* state, unsigned index)
 ForkState*
 saveState(Context* c)
 {
+  if (c->logicalCode[c->logicalIp]->lastEvent == 0) {
+    appendDummy(c);
+  }
+
   unsigned elementCount = frameFootprint(c, c->stack) + count(c->saved);
 
   ForkState* state = new
