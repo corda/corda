@@ -462,7 +462,10 @@ endif
 
 driver-source = $(src)/main.cpp
 driver-object = $(build)/main.o
-driver-dynamic-object = $(build)/main-dynamic.o
+driver-dynamic-objects = \
+	$(build)/main-dynamic.o \
+	$(build)/$(build-system).o \
+	$(build)/finder.o
 
 boot-source = $(src)/boot.cpp
 boot-object = $(build)/boot.o
@@ -657,7 +660,7 @@ $(heapwalk-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 $(driver-object): $(driver-source)
 	$(compile-object)
 
-$(driver-dynamic-object): $(driver-source)
+$(build)/main-dynamic.o: $(driver-source)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(cflags) -DBOOT_LIBRARY=\"$(so-prefix)jvm$(so-suffix)\" \
@@ -797,14 +800,15 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(executable-dynamic): $(driver-dynamic-object) $(dynamic-library)
+$(executable-dynamic): $(driver-dynamic-objects) $(dynamic-library)
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(lflags) -LIBPATH:$(build) -DEFAULTLIB:$(name) \
-		-PDB:$(@).pdb -IMPLIB:$(@).lib $(<) -out:$(@) -MANIFESTFILE:$(@).manifest
+		-PDB:$(@).pdb -IMPLIB:$(@).lib $(driver-dynamic-objects) -out:$(@) \
+		-MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(<) -L$(build) -ljvm $(lflags) -o $(@)
+	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
