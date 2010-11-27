@@ -222,7 +222,7 @@ class DataRegion: public System::Region {
   }
 
   virtual void dispose() {
-    allocator->free(this, sizeof(*this));
+    allocator->free(this, sizeof(*this) + length_);
   }
 
   System* s;

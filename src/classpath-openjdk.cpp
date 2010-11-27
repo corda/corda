@@ -64,6 +64,7 @@ typedef int socklen_t;
 #  include <fcntl.h>
 #  include <errno.h>
 #  include <sched.h>
+#  include <dlfcn.h>
 
 #  define OPEN open
 #  define CLOSE close
@@ -244,6 +245,22 @@ class MyClasspath : public Classpath {
     sb.append(SO_SUFFIX);
     sb.append('\0');
     
+    this->netLibrary = sb.pointer;
+    sb.append(this->libraryPath);
+    sb.append("/");
+    sb.append(SO_PREFIX);
+    sb.append("net");
+    sb.append(SO_SUFFIX);
+    sb.append('\0');
+
+    this->nioLibrary = sb.pointer;
+    sb.append(this->libraryPath);
+    sb.append("/");
+    sb.append(SO_PREFIX);
+    sb.append("nio");
+    sb.append(SO_SUFFIX);
+    sb.append('\0');
+    
     this->tzMappings = sb.pointer;
     sb.append(javaHome);
     sb.append("/lib/tzmappings");
@@ -414,6 +431,8 @@ class MyClasspath : public Classpath {
   const char* classpath;
   const char* libraryPath;
   const char* zipLibrary;
+  const char* netLibrary;
+  const char* nioLibrary;
   const char* tzMappings;
   const char* embedPrefix;
   unsigned tzMappingsLength;
@@ -561,7 +580,10 @@ getFileAttributes
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  if (pathEqual(cp->zipLibrary, RUNTIME_ARRAY_BODY(p))) {
+  if (pathEqual(cp->zipLibrary, RUNTIME_ARRAY_BODY(p))
+      or pathEqual(cp->netLibrary, RUNTIME_ARRAY_BODY(p))
+      or pathEqual(cp->nioLibrary, RUNTIME_ARRAY_BODY(p)))
+  {
     return Exists | Regular;
   } else {
     EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
@@ -1665,6 +1687,41 @@ Avian_sun_misc_Unsafe_ensureClassInitialized
   initClass(t, jclassVmClass(t, reinterpret_cast<object>(arguments[1])));
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_unpark
+(Thread* t, object, uintptr_t* arguments)
+{
+  object thread = reinterpret_cast<object>(arguments[1]);
+  
+  monitorAcquire(t, local::interruptLock(t, thread));
+  threadUnparked(t, thread) = true;
+  monitorNotify(t, local::interruptLock(t, thread));
+  monitorRelease(t, local::interruptLock(t, thread));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_park
+(Thread* t, object, uintptr_t* arguments)
+{
+  bool absolute = arguments[1];
+  int64_t time; memcpy(&time, arguments + 2, 8);
+  
+  if (absolute) {
+    time -= t->m->system->now();
+  }
+
+  if (time <= 0) {
+    return;
+  }
+
+  monitorAcquire(t, local::interruptLock(t, t->javaThread));
+  while (not (threadUnparked(t, t->javaThread)
+              or monitorWait(t, local::interruptLock(t, t->javaThread), time)))
+  { }
+  threadUnparked(t, t->javaThread) = false;
+  monitorRelease(t, local::interruptLock(t, t->javaThread));
+}
+
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_GetInterfaceVersion)()
 {
@@ -1879,7 +1936,13 @@ EXPORT(JVM_MaxMemory)()
 }
 
 extern "C" JNIEXPORT jint JNICALL
-EXPORT(JVM_ActiveProcessorCount)(void) { abort(); }
+EXPORT(JVM_ActiveProcessorCount)()
+{
+  return 1;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+net_JNI_OnLoad(JavaVM*, void*);
 
 extern "C" JNIEXPORT void* JNICALL
 EXPORT(JVM_LoadLibrary)(const char* path)
@@ -1892,8 +1955,17 @@ EXPORT(JVM_LoadLibrary)(const char* path)
 #ifdef AVIAN_OPENJDK_SRC
   if (local::pathEqual
       (static_cast<local::MyClasspath*>(t->m->classpath)->zipLibrary,
+       RUNTIME_ARRAY_BODY(p))
+      or local::pathEqual
+      (static_cast<local::MyClasspath*>(t->m->classpath)->nioLibrary,
        RUNTIME_ARRAY_BODY(p)))
   {
+    return t->m->libraries;
+  } else if (local::pathEqual
+             (static_cast<local::MyClasspath*>(t->m->classpath)->netLibrary,
+              RUNTIME_ARRAY_BODY(p)))
+  {
+    net_JNI_OnLoad(t->m, 0);
     return t->m->libraries;
   }
 #endif // AVIAN_OPENJDK_SRC
@@ -1914,6 +1986,10 @@ EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
   
   ENTER(t, Thread::ActiveState);
+
+  if (library == 0) {
+    library = t->m->libraries;
+  }
 
   return static_cast<System::Library*>(library)->resolve(name);
 }
@@ -2411,10 +2487,25 @@ EXPORT(JVM_IsInterface)(Thread* t, jclass c)
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-EXPORT(JVM_GetClassSigners)(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassSigners)(Thread* t, jclass c)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object runtimeData = getClassRuntimeDataIfExists(t, jclassVmClass(t, *c));
+
+  return runtimeData ? makeLocalReference
+    (t, classRuntimeDataSigners(t, runtimeData)) : 0;
+}
 
 extern "C" JNIEXPORT void JNICALL
-EXPORT(JVM_SetClassSigners)(Thread*, jclass, jobjectArray) { abort(); }
+EXPORT(JVM_SetClassSigners)(Thread* t, jclass c, jobjectArray signers)
+{
+  ENTER(t, Thread::ActiveState);
+
+  object runtimeData = getClassRuntimeData(t, jclassVmClass(t, *c));
+
+  set(t, runtimeData, ClassRuntimeDataSigners, *signers);
+}
 
 extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_GetProtectionDomain)(Thread* t, jclass)

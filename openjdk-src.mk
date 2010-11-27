@@ -32,6 +32,10 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/lang/Thread.c \
 	$(openjdk-src)/share/native/java/lang/Throwable.c \
 	$(wildcard $(openjdk-src)/share/native/java/lang/fdlibm/src/*.c) \
+	$(openjdk-src)/share/native/java/net/DatagramPacket.c \
+	$(openjdk-src)/share/native/java/net/InetAddress.c \
+	$(openjdk-src)/share/native/java/net/Inet4Address.c \
+	$(openjdk-src)/share/native/java/net/Inet6Address.c \
 	$(openjdk-src)/share/native/java/nio/Bits.c \
 	$(openjdk-src)/share/native/java/security/AccessController.c \
 	$(openjdk-src)/share/native/java/sql/DriverManager.c \
@@ -70,6 +74,7 @@ openjdk-headers-classes = \
 	java.lang.Compiler \
 	java.lang.Double \
 	java.lang.Float \
+	java.lang.Integer \
 	java.lang.Object \
 	java.lang.Package \
 	java.lang.Runtime \
@@ -83,6 +88,20 @@ openjdk-headers-classes = \
 	java.lang.ref.Finalizer \
 	java.lang.reflect.Array \
 	java.lang.reflect.Proxy \
+	java.net.InetAddress \
+	java.net.Inet4Address \
+	java.net.Inet6Address \
+	java.net.DatagramPacket \
+	java.net.SocketOptions \
+	java.net.InetAddressImplFactory \
+	java.net.Inet4AddressImpl \
+	java.net.Inet6AddressImpl \
+	java.net.NetworkInterface \
+	java.net.PlainSocketImpl \
+	java.net.PlainDatagramSocketImpl \
+	java.net.SocketInputStream \
+	java.net.SocketOutputStream \
+	java.nio.MappedByteBuffer \
 	java.security.AccessController \
 	java.util.ResourceBundle \
 	java.util.TimeZone \
@@ -101,6 +120,21 @@ openjdk-headers-classes = \
 	sun.misc.VM \
 	sun.misc.VMSupport \
 	sun.misc.Version \
+	sun.net.spi.DefaultProxySelector \
+	sun.nio.ch.FileKey \
+	sun.nio.ch.FileChannelImpl \
+	sun.nio.ch.FileDispatcher \
+	sun.nio.ch.DatagramChannelImpl \
+	sun.nio.ch.DatagramDispatcher \
+	sun.nio.ch.IOStatus \
+	sun.nio.ch.IOUtil \
+	sun.nio.ch.Net \
+	sun.nio.ch.ServerSocketChannelImpl \
+	sun.nio.ch.SocketChannelImpl \
+	sun.nio.ch.EPollArrayWrapper \
+	sun.nio.ch.PollArrayWrapper \
+	sun.nio.ch.InheritedChannel \
+	sun.nio.ch.NativeThread \
 	sun.reflect.ConstantPool \
 	sun.reflect.NativeConstructorAccessorImpl \
 	sun.reflect.NativeMethodAccessorImpl \
@@ -116,7 +150,9 @@ openjdk-cflags = \
 	"-I$(openjdk-src)/share/native/java/io" \
 	"-I$(openjdk-src)/share/native/java/lang" \
 	"-I$(openjdk-src)/share/native/java/lang/fdlibm/include" \
+	"-I$(openjdk-src)/share/native/java/net" \
 	"-I$(openjdk-src)/share/native/java/util/zip" \
+	"-I$(openjdk-src)/share/native/sun/nio/ch" \
 	"-I$(openjdk-src)/share/javavm/include" \
 	-D_LITTLE_ENDIAN \
 	-DARCHPROPNAME=\"x86\" \
@@ -147,6 +183,10 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/io/WinNTFileSystem_md.c \
 		$(openjdk-src)/windows/native/java/lang/java_props_md.c \
 		$(openjdk-src)/windows/native/java/lang/ProcessEnvironment_md.c \
+		$(openjdk-src)/windows/native/java/net/InetAddressImplFactory.c \
+		$(openjdk-src)/windows/native/java/net/Inet4AddressImpl.c \
+		$(openjdk-src)/windows/native/java/net/Inet6AddressImpl.c \
+		$(openjdk-src)/windows/native/java/net/NetworkInterface.c \
 		$(openjdk-src)/windows/native/java/util/WindowsPreferences.c \
 		$(openjdk-src)/windows/native/java/util/logging.c \
 		$(openjdk-src)/windows/native/java/util/TimeZone_md.c \
@@ -158,6 +198,7 @@ ifeq ($(platform),windows)
 	openjdk-cflags += "-I$(openjdk-src)/windows/javavm/export" \
 		"-I$(openjdk-src)/windows/native/common" \
 		"-I$(openjdk-src)/windows/native/java/io" \
+		"-I$(openjdk-src)/windows/native/java/net" \
 		"-I$(openjdk-src)/windows/native/java/util" \
 		"-I$(openjdk-src)/windows/javavm/include" \
 		"-I$(root)/win32/include" \
@@ -178,9 +219,36 @@ else
 		$(openjdk-src)/solaris/native/java/lang/java_props_md.c \
 		$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c \
 		$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c \
+		$(openjdk-src)/solaris/native/java/net/net_util_md.c \
+		$(openjdk-src)/solaris/native/java/net/linux_close.c \
+		$(openjdk-src)/solaris/native/java/net/InetAddressImplFactory.c \
+		$(openjdk-src)/solaris/native/java/net/Inet4AddressImpl.c \
+		$(openjdk-src)/solaris/native/java/net/Inet6AddressImpl.c \
+		$(openjdk-src)/solaris/native/java/net/NetworkInterface.c \
+		$(openjdk-src)/solaris/native/java/net/PlainSocketImpl.c \
+		$(openjdk-src)/solaris/native/java/net/PlainDatagramSocketImpl.c \
+		$(openjdk-src)/solaris/native/java/net/SocketInputStream.c \
+		$(openjdk-src)/solaris/native/java/net/SocketOutputStream.c \
+		$(openjdk-src)/solaris/native/java/nio/MappedByteBuffer.c \
 		$(openjdk-src)/solaris/native/java/util/FileSystemPreferences.c \
 		$(openjdk-src)/solaris/native/java/util/logging.c \
-		$(openjdk-src)/solaris/native/java/util/TimeZone_md.c
+		$(openjdk-src)/solaris/native/java/util/TimeZone_md.c \
+		$(openjdk-src)/solaris/native/sun/net/dns/ResolverConfigurationImpl.c \
+		$(openjdk-src)/solaris/native/sun/net/spi/DefaultProxySelector.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramChannelImpl.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramDispatcher.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/FileChannelImpl.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/FileDispatcher.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/FileKey.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/IOUtil.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/Net.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/ServerSocketChannelImpl.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/SocketChannelImpl.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/SocketDispatcher.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/EPollArrayWrapper.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/PollArrayWrapper.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/InheritedChannel.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/NativeThread.c \
 
 	openjdk-headers-classes += \
 		java.io.UnixFileSystem
@@ -188,13 +256,20 @@ else
 	openjdk-cflags += "-I$(openjdk-src)/solaris/javavm/export" \
 		"-I$(openjdk-src)/solaris/native/common" \
 		"-I$(openjdk-src)/solaris/native/java/io" \
+		"-I$(openjdk-src)/solaris/native/java/net" \
 		"-I$(openjdk-src)/solaris/native/java/util" \
 		"-I$(openjdk-src)/solaris/javavm/include"
 endif
+
+openjdk-local-sources = \
+	$(src)/openjdk/my_net_util.c
 
 c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 
 openjdk-objects = \
 	$(call c-objects,$(openjdk-sources),$(openjdk-src),$(build)/openjdk)
+
+openjdk-local-objects = \
+	$(call c-objects,$(openjdk-local-sources),$(src)/openjdk,$(build)/openjdk)
 
 openjdk-headers-dep = $(build)/openjdk/headers.dep

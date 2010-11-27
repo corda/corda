@@ -81,12 +81,12 @@ ifneq ($(openjdk),)
 	ifneq ($(openjdk-src),)
 		include openjdk-src.mk
 	  options := $(options)-openjdk-src
-		classpath-objects = $(openjdk-objects)
+		classpath-objects = $(openjdk-objects) $(openjdk-local-objects)
 		classpath-cflags = -DAVIAN_OPENJDK_SRC -DBOOT_JAVAHOME
 		openjdk-jar-dep = $(build)/openjdk-jar.dep
 		classpath-jar-dep = $(openjdk-jar-dep)
 		javahome = $(embed-prefix)/javahomeJar
-		javahome-files = lib/zi
+		javahome-files = lib/zi lib/currency.data
 		ifeq ($(platform),windows)
 			javahome-files += lib/tzmappings
 		endif
@@ -813,6 +813,13 @@ $(generator): $(generator-objects)
 	$(build-ld) $(^) $(build-lflags) -o $(@)
 
 $(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
+		$(openjdk-headers-dep)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
+		$(optimization-cflags) -w -c $(<) $(call output,$(@))
+
+$(openjdk-local-objects): $(build)/openjdk/%.o: $(src)/openjdk/%.c \
 		$(openjdk-headers-dep)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))

@@ -1882,9 +1882,6 @@ resolveObjectArrayClass(Thread* t, object loader, object elementClass)
 void
 removeMonitor(Thread* t, object o)
 {
-  expect(t, t->state == Thread::ExclusiveState
-         or t->state == Thread::ExitState);
-
   unsigned hash;
   if (DebugMonitors) {
     hash = objectHash(t, o);
@@ -1892,8 +1889,6 @@ removeMonitor(Thread* t, object o)
 
   object m = hashMapRemove
     (t, root(t, Machine::MonitorMap), o, objectHash, objectEqual);
-
-  expect(t, m);
 
   if (DebugMonitors) {
     fprintf(stderr, "dispose monitor %p for object %x\n", m, hash);

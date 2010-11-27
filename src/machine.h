@@ -3062,6 +3062,17 @@ object
 vectorAppend(Thread*, object, object);
 
 inline object
+getClassRuntimeDataIfExists(Thread* t, object c)
+{
+  if (classRuntimeDataIndex(t, c)) {
+    return vectorBody(t, root(t, Machine::ClassRuntimeDataTable),
+                      classRuntimeDataIndex(t, c) - 1);
+  } else {
+    return 0;
+  }
+}
+
+inline object
 getClassRuntimeData(Thread* t, object c)
 {
   if (classRuntimeDataIndex(t, c) == 0) {
@@ -3070,7 +3081,7 @@ getClassRuntimeData(Thread* t, object c)
     ACQUIRE(t, t->m->classLock);
 
     if (classRuntimeDataIndex(t, c) == 0) {
-      object runtimeData = makeClassRuntimeData(t, 0, 0, 0);
+      object runtimeData = makeClassRuntimeData(t, 0, 0, 0, 0);
 
       setRoot(t, Machine::ClassRuntimeDataTable, vectorAppend
               (t, root(t, Machine::ClassRuntimeDataTable), runtimeData));
