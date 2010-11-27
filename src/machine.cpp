@@ -3294,14 +3294,14 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
   } else {
     expect(t, throw_);
 
+    PROTECT(t, loader);
+    PROTECT(t, spec);
+
     { object c = findLoadedClass(t, loader, spec);
       if (c) {
         return c;
       }
     }
-
-    PROTECT(t, loader);
-    PROTECT(t, spec);
 
     if (byteArrayBody(t, spec, 0) == '[') {
       return resolveArrayClass(t, loader, spec, throw_);
