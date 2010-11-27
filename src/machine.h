@@ -2197,6 +2197,9 @@ void
 initClass(Thread* t, object c);
 
 object
+resolveObjectArrayClass(Thread* t, object loader, object elementClass);
+
+object
 makeObjectArray(Thread* t, object elementClass, unsigned count);
 
 inline object

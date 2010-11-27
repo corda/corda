@@ -313,12 +313,25 @@ class MyClasspath : public Classpath {
       setObjectClass(t, group, type(t, Machine::ThreadGroupType));
       threadGroupMaxPriority(t, group) = MaxPriority;
     }
+
+    PROTECT(t, group);
     
     object thread = allocate(t, FixedSizeOfThread, true);
     setObjectClass(t, thread, type(t, Machine::ThreadType));
     threadPriority(t, thread) = NormalPriority;
     threadGroup(t, thread) = group;
     threadContextClassLoader(t, thread) = root(t, Machine::BootLoader);
+
+    PROTECT(t, thread);
+
+    const unsigned BufferSize = 256;
+    char buffer[BufferSize];
+    unsigned length = vm::snprintf(buffer, BufferSize, "Thread-%p", thread);
+    object name = makeCharArray(t, length);
+    for (unsigned i = 0; i < length; ++i) {
+      charArrayBody(t, name, i) = buffer[i];
+    }
+    set(t, thread, ThreadName, name);
 
     return thread;
   }
@@ -1708,10 +1721,9 @@ Avian_sun_misc_Unsafe_park
   
   if (absolute) {
     time -= t->m->system->now();
-  }
-
-  if (time <= 0) {
-    return;
+    if (time <= 0) {
+      return;
+    }
   }
 
   monitorAcquire(t, local::interruptLock(t, t->javaThread));
@@ -2162,7 +2174,44 @@ extern "C" JNIEXPORT jobjectArray JNICALL
 EXPORT(JVM_GetAllThreads)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-EXPORT(JVM_DumpThreads)(Thread*, jclass, jobjectArray) { abort(); }
+EXPORT(JVM_DumpThreads)(Thread* t, jclass, jobjectArray threads)
+{
+  ENTER(t, Thread::ActiveState);
+
+  unsigned threadsLength = objectArrayLength(t, *threads);
+  object arrayClass = resolveObjectArrayClass
+    (t, classLoader(t, type(t, Machine::StackTraceElementType)),
+     type(t, Machine::StackTraceElementType));
+  object result = makeObjectArray(t, arrayClass, threadsLength);
+  PROTECT(t, result);
+
+  for (unsigned threadsIndex = 0; threadsIndex < threadsLength;
+       ++ threadsIndex)
+  {
+    Thread* peer = reinterpret_cast<Thread*>
+      (threadPeer(t, objectArrayBody(t, *threads, threadsIndex)));
+
+    if (peer) {
+      object trace = t->m->processor->getStackTrace(t, peer);
+      PROTECT(t, trace);
+
+      unsigned traceLength = objectArrayLength(t, trace);
+      object array = makeObjectArray
+        (t, type(t, Machine::StackTraceElementType), traceLength);
+      PROTECT(t, array);
+
+      for (unsigned traceIndex = 0; traceIndex < traceLength; ++ traceIndex) {
+        object ste = makeStackTraceElement
+          (t, objectArrayBody(t, trace, traceIndex));
+        set(t, array, ArrayBody + (traceIndex * BytesPerWord), ste);
+      }
+
+      set(t, result, ArrayBody + (threadsIndex * BytesPerWord), array);
+    }
+  }
+
+  return makeLocalReference(t, result);
+}
 
 extern "C" JNIEXPORT jclass JNICALL
 EXPORT(JVM_CurrentLoadedClass)(Thread*) { abort(); }

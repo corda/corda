@@ -1837,48 +1837,6 @@ resolveArrayClass(Thread* t, object loader, object spec, bool throw_)
   }
 }
 
-object
-resolveObjectArrayClass(Thread* t, object loader, object elementClass)
-{
-  { object arrayClass = classRuntimeDataArrayClass
-      (t, getClassRuntimeData(t, elementClass));
-    if (arrayClass) {
-      return arrayClass;
-    }
-  }
-
-  PROTECT(t, loader);
-  PROTECT(t, elementClass);
-
-  object elementSpec = className(t, elementClass);
-  PROTECT(t, elementSpec);
-
-  object spec;
-  if (byteArrayBody(t, elementSpec, 0) == '[') {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1);
-    byteArrayBody(t, spec, 0) = '[';
-    memcpy(&byteArrayBody(t, spec, 1),
-           &byteArrayBody(t, elementSpec, 0),
-           byteArrayLength(t, elementSpec));
-  } else {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3);
-    byteArrayBody(t, spec, 0) = '[';
-    byteArrayBody(t, spec, 1) = 'L';
-    memcpy(&byteArrayBody(t, spec, 2),
-           &byteArrayBody(t, elementSpec, 0),
-           byteArrayLength(t, elementSpec) - 1);
-    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 1) = ';';
-    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 2) = 0;
-  }
-
-  object arrayClass = resolveClass(t, loader, spec);
-
-  set(t, getClassRuntimeData(t, elementClass), ClassRuntimeDataArrayClass,
-      arrayClass);
-
-  return arrayClass;
-}
-
 void
 removeMonitor(Thread* t, object o)
 {
@@ -3517,6 +3475,48 @@ initClass(Thread* t, object c)
 
     postInitClass(t, c);
   }
+}
+
+object
+resolveObjectArrayClass(Thread* t, object loader, object elementClass)
+{
+  { object arrayClass = classRuntimeDataArrayClass
+      (t, getClassRuntimeData(t, elementClass));
+    if (arrayClass) {
+      return arrayClass;
+    }
+  }
+
+  PROTECT(t, loader);
+  PROTECT(t, elementClass);
+
+  object elementSpec = className(t, elementClass);
+  PROTECT(t, elementSpec);
+
+  object spec;
+  if (byteArrayBody(t, elementSpec, 0) == '[') {
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1);
+    byteArrayBody(t, spec, 0) = '[';
+    memcpy(&byteArrayBody(t, spec, 1),
+           &byteArrayBody(t, elementSpec, 0),
+           byteArrayLength(t, elementSpec));
+  } else {
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3);
+    byteArrayBody(t, spec, 0) = '[';
+    byteArrayBody(t, spec, 1) = 'L';
+    memcpy(&byteArrayBody(t, spec, 2),
+           &byteArrayBody(t, elementSpec, 0),
+           byteArrayLength(t, elementSpec) - 1);
+    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 1) = ';';
+    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 2) = 0;
+  }
+
+  object arrayClass = resolveClass(t, loader, spec);
+
+  set(t, getClassRuntimeData(t, elementClass), ClassRuntimeDataArrayClass,
+      arrayClass);
+
+  return arrayClass;
 }
 
 object
