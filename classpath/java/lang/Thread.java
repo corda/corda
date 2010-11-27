@@ -16,6 +16,7 @@ import java.util.WeakHashMap;
 public class Thread implements Runnable {
   private long peer;
   private volatile boolean interrupted;
+  private volatile boolean unparked;
   private boolean daemon;
   private byte state;
   private byte priority;
