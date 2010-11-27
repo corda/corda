@@ -673,6 +673,10 @@ parsePath(System* s, Allocator* allocator, const char* path,
       }
     }
 
+    if (DebugFind) {
+      fprintf(stderr, "add element %.*s %p\n", token.length, token.s, e);
+    }
+
     if (e) {
       if (prev) {
         prev->next = e;
