@@ -2914,8 +2914,12 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Absolute:
-      *aTypeMask = (1 << RegisterOperand);
-      *aRegisterMask = (static_cast<uint64_t>(1) << rax);
+      if (aSize <= BytesPerWord) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = (static_cast<uint64_t>(1) << rax);
+      } else {
+        *thunk = true;
+      }
       break;
 
     case FloatAbsolute:

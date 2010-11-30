@@ -60,6 +60,8 @@ public class Longs {
   }
 
   public static void main(String[] args) throws Exception {
+    expect(Math.abs(-123L) == 123L);
+
     expect(readLongFrom(new java.io.InputStream() {
         int step;
 
