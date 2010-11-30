@@ -1403,17 +1403,18 @@ addRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-addCarryCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
+addCarryCR(Context* c, unsigned size, Assembler::Constant* a,
            Assembler::Register* b)
 {
   
   int64_t v = a->value->value();
+  maybeRex(c, size, b);
   if (isInt8(v)) {
-    maybeRex(c, size, b);
     opcode(c, 0x83, 0xd0 + regCode(b));
     c->code.append(v);
   } else {
-    abort(c);
+    opcode(c, 0x81, 0xd0 + regCode(b));
+    c->code.append4(v);
   }
 }
 
@@ -1740,16 +1741,31 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
+    Assembler::Register tmp(-1);
+    Assembler::Register* scratch;
+    if (a->low == b->low) {
+      tmp.low = c->client->acquireTemporary
+        (GeneralRegisterMask & ~(1 << rax));
+      scratch = &tmp;
+      moveRR(c, 4, b, 4, scratch);
+    } else {
+      scratch = b;
+    }
+
     moveRR(c, 4, b, 4, &axdx);
-    multiplyRR(c, 4, &ah, 4, b);
+    multiplyRR(c, 4, &ah, 4, scratch);
     multiplyRR(c, 4, a, 4, &bh);
-    addRR(c, 4, &bh, 4, b);
+    addRR(c, 4, &bh, 4, scratch);
     
     // mul a->low,%eax%edx
     opcode(c, 0xf7, 0xe0 + a->low);
     
-    addRR(c, 4, b, 4, &bh);
+    addRR(c, 4, scratch, 4, &bh);
     moveRR(c, 4, &axdx, 4, b);
+
+    if (tmp.low != -1) {
+      c->client->releaseTemporary(tmp.low);
+    }
   } else {
     maybeRex(c, aSize, b, a);
     opcode(c, 0x0f, 0xaf);
