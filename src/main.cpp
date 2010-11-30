@@ -59,6 +59,11 @@ class RuntimeArray {
 // ourselves:
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 
+// we link against a System implmentation, which requires this at link
+// time, but it should not be used at runtime:
+extern "C" uint64_t
+vmNativeCall(void*, void*, unsigned, unsigned) { abort(); }
+
 #endif // BOOT_LIBRARY
 
 namespace {
@@ -111,19 +116,21 @@ mainClass(const char* jar)
 
   Finder* finder = makeFinder(system, &allocator, jar, 0);
 
-  const char* result = 0;
+  char* result = 0;
 
   System::Region* region = finder->find("META-INF/MANIFEST.MF");
   if (region) {
     unsigned start = 0;
     unsigned length;
     while (readLine(region->start(), region->length(), &start, &length)) {
+      const unsigned PrefixLength = 12;
       if (strncmp("Main-Class: ", reinterpret_cast<const char*>
-                  (region->start() + start), 12) == 0)
+                  (region->start() + start), PrefixLength) == 0)
       {
-        result = strndup
-          (reinterpret_cast<const char*>(region->start() + start + 12),
-           length - 12);
+        result = static_cast<char*>(malloc(length + 1 - PrefixLength));
+        memcpy(result, region->start() + start + PrefixLength,
+               length - PrefixLength);
+        result[length - PrefixLength] = 0;
         break;
       }
       start += length;

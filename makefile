@@ -86,9 +86,11 @@ ifneq ($(openjdk),)
 		openjdk-jar-dep = $(build)/openjdk-jar.dep
 		classpath-jar-dep = $(openjdk-jar-dep)
 		javahome = $(embed-prefix)/javahomeJar
-		javahome-files = lib/zi lib/currency.data
+		javahome-files = lib/zi
 		ifeq ($(platform),windows)
 			javahome-files += lib/tzmappings
+		else
+			javahome-files += lib/currency.data
 		endif
 		javahome-object = $(build)/javahome-jar.o
 	else
@@ -835,6 +837,11 @@ $(openjdk-headers-dep):
 	@mkdir -p $(dir $(@))
 	$(javah) -d $(build)/openjdk -bootclasspath $(boot-classpath) \
 		$(openjdk-headers-classes)
+ifeq ($(platform),windows)
+	sed 's/^#ifdef _WIN64/#if 1/' \
+		< "$(openjdk-src)/windows/native/java/net/net_util_md.h" \
+		> $(build)/openjdk/net_util_md.h
+endif
 	@touch $(@)
 
 $(openjdk-jar-dep):

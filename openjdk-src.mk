@@ -131,14 +131,14 @@ openjdk-headers-classes = \
 	sun.nio.ch.Net \
 	sun.nio.ch.ServerSocketChannelImpl \
 	sun.nio.ch.SocketChannelImpl \
-	sun.nio.ch.EPollArrayWrapper \
+	sun.nio.ch.SocketDispatcher \
 	sun.nio.ch.PollArrayWrapper \
-	sun.nio.ch.InheritedChannel \
 	sun.nio.ch.NativeThread \
 	sun.reflect.ConstantPool \
 	sun.reflect.NativeConstructorAccessorImpl \
 	sun.reflect.NativeMethodAccessorImpl \
 	sun.reflect.Reflection \
+	sun.security.provider.NativeSeedGenerator
 
 # todo: set properties according to architecture targeted and OpenJDK
 # version used:
@@ -183,19 +183,38 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/io/WinNTFileSystem_md.c \
 		$(openjdk-src)/windows/native/java/lang/java_props_md.c \
 		$(openjdk-src)/windows/native/java/lang/ProcessEnvironment_md.c \
+		$(openjdk-src)/windows/native/java/net/net_util_md.c \
 		$(openjdk-src)/windows/native/java/net/InetAddressImplFactory.c \
 		$(openjdk-src)/windows/native/java/net/Inet4AddressImpl.c \
 		$(openjdk-src)/windows/native/java/net/Inet6AddressImpl.c \
 		$(openjdk-src)/windows/native/java/net/NetworkInterface.c \
+		$(openjdk-src)/windows/native/java/net/NetworkInterface_winXP.c \
+		$(openjdk-src)/windows/native/java/net/NetworkInterface_win9x.c \
+		$(openjdk-src)/windows/native/java/net/SocketInputStream.c \
+		$(openjdk-src)/windows/native/java/net/SocketOutputStream.c \
 		$(openjdk-src)/windows/native/java/util/WindowsPreferences.c \
 		$(openjdk-src)/windows/native/java/util/logging.c \
 		$(openjdk-src)/windows/native/java/util/TimeZone_md.c \
 		$(openjdk-src)/windows/native/sun/io/Win32ErrorMode.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/DatagramChannelImpl.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/DatagramDispatcher.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/FileChannelImpl.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/FileDispatcher.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/FileKey.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/IOUtil.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/Net.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/ServerSocketChannelImpl.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/SocketChannelImpl.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/SocketDispatcher.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/WindowsSelectorImpl.c \
+		$(openjdk-src)/windows/native/sun/security/provider/WinCAPISeedGenerator.c
 
 	openjdk-headers-classes += \
-		sun.io.Win32ErrorMode
+		sun.io.Win32ErrorMode \
+		sun.nio.ch.WindowsSelectorImpl \
 
-	openjdk-cflags += "-I$(openjdk-src)/windows/javavm/export" \
+	openjdk-cflags += \
+		"-I$(openjdk-src)/windows/javavm/export" \
 		"-I$(openjdk-src)/windows/native/common" \
 		"-I$(openjdk-src)/windows/native/java/io" \
 		"-I$(openjdk-src)/windows/native/java/net" \
@@ -203,7 +222,10 @@ ifeq ($(platform),windows)
 		"-I$(openjdk-src)/windows/javavm/include" \
 		"-I$(root)/win32/include" \
 		-D_JNI_IMPLEMENTATION_ \
-		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_
+		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_ \
+		-D_WINSOCK2API_ \
+		-Ds6_words=_s6_words \
+		-Ds6_bytes=_s6_bytes
 else
 	openjdk-sources += \
 		$(openjdk-src)/solaris/native/common/jdk_util_md.c \
@@ -251,7 +273,9 @@ else
 		$(openjdk-src)/solaris/native/sun/nio/ch/NativeThread.c \
 
 	openjdk-headers-classes += \
-		java.io.UnixFileSystem
+		java.io.UnixFileSystem \
+		sun.nio.ch.InheritedChannel \
+		sun.nio.ch.EPollArrayWrapper \
 
 	openjdk-cflags += "-I$(openjdk-src)/solaris/javavm/export" \
 		"-I$(openjdk-src)/solaris/native/common" \
