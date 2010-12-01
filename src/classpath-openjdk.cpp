@@ -635,6 +635,63 @@ getFileAttributes
 }
 
 int64_t JNICALL
+checkFileAccess
+(Thread* t, object method, uintptr_t* arguments)
+{
+  const unsigned Read = 4;
+  
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  object file = reinterpret_cast<object>(arguments[1]);
+  unsigned mask = arguments[2];
+  object path = cast<object>(file, cp->filePathField);
+
+  RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+  stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+  replace('\\', '/', RUNTIME_ARRAY_BODY(p));
+
+  if (pathEqual(cp->zipLibrary, RUNTIME_ARRAY_BODY(p))
+      or pathEqual(cp->netLibrary, RUNTIME_ARRAY_BODY(p))
+      or pathEqual(cp->nioLibrary, RUNTIME_ARRAY_BODY(p)))
+  {
+    return mask == Read;
+  } else {
+    EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+    if (ef.jar) {
+      if (ef.jarLength == 0) {
+        return mask == Read;
+      }
+
+      Finder* finder = getFinder(t, ef.jar, ef.jarLength);
+      if (finder) {
+        if (ef.pathLength == 0) {
+          return mask == Read;
+        }
+
+        unsigned length;
+        System::FileType type = finder->stat(ef.path, &length, true);
+        switch (type) {
+        case System::TypeDoesNotExist: return false;
+        case System::TypeUnknown:
+        case System::TypeFile:
+        case System::TypeDirectory: return mask == Read;
+        default: abort(t);
+        }
+      } else {
+        return 0;
+      }
+    } else {
+      object r = t->m->processor->invoke
+        (t, nativeInterceptOriginal
+         (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+         reinterpret_cast<object>(arguments[0]), file, mask);
+      
+      return (r ? booleanValue(t, r) : false);
+    }
+  }
+}
+
+int64_t JNICALL
 getLength
 (Thread* t, object method, uintptr_t* arguments)
 {
@@ -1057,6 +1114,9 @@ interceptFileOperations(Thread* t)
 
     intercept(t, fsClass, gbaMethodName, "(Ljava/io/File;)I",
               voidPointer(getFileAttributes));
+
+    intercept(t, fsClass, "checkAccess", "(Ljava/io/File;I)Z",
+              voidPointer(checkFileAccess));
   
     intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
               voidPointer(getLength));
