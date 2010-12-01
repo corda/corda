@@ -244,7 +244,6 @@ else
 		$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c \
 		$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c \
 		$(openjdk-src)/solaris/native/java/net/net_util_md.c \
-		$(openjdk-src)/solaris/native/java/net/linux_close.c \
 		$(openjdk-src)/solaris/native/java/net/InetAddressImplFactory.c \
 		$(openjdk-src)/solaris/native/java/net/Inet4AddressImpl.c \
 		$(openjdk-src)/solaris/native/java/net/Inet6AddressImpl.c \
@@ -274,6 +273,11 @@ else
 		$(openjdk-src)/solaris/native/sun/nio/ch/InheritedChannel.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/NativeThread.c \
 
+	ifeq ($(platform),linux)
+		openjdk-sources += \
+			$(openjdk-src)/solaris/native/java/net/linux_close.c
+	endif
+
 	openjdk-headers-classes += \
 		java.io.UnixFileSystem \
 		sun.nio.ch.InheritedChannel \
@@ -284,7 +288,8 @@ else
 		"-I$(openjdk-src)/solaris/native/java/io" \
 		"-I$(openjdk-src)/solaris/native/java/net" \
 		"-I$(openjdk-src)/solaris/native/java/util" \
-		"-I$(openjdk-src)/solaris/javavm/include"
+		"-I$(openjdk-src)/solaris/javavm/include" \
+		"-I$(openjdk-src)/solaris/hpi/include"
 endif
 
 openjdk-local-sources = \
