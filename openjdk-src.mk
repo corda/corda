@@ -183,6 +183,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/io/WinNTFileSystem_md.c \
 		$(openjdk-src)/windows/native/java/lang/java_props_md.c \
 		$(openjdk-src)/windows/native/java/lang/ProcessEnvironment_md.c \
+		$(openjdk-src)/windows/native/java/lang/ProcessImpl_md.c \
 		$(openjdk-src)/windows/native/java/net/net_util_md.c \
 		$(openjdk-src)/windows/native/java/net/InetAddressImplFactory.c \
 		$(openjdk-src)/windows/native/java/net/Inet4AddressImpl.c \
@@ -210,6 +211,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/security/provider/WinCAPISeedGenerator.c
 
 	openjdk-headers-classes += \
+		java.lang.ProcessImpl \
 		sun.io.Win32ErrorMode \
 		sun.nio.ch.WindowsSelectorImpl \
 
