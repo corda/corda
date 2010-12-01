@@ -2000,7 +2000,7 @@ EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
   
   ENTER(t, Thread::ActiveState);
 
-  if (library == 0) {
+  if (library == RTLD_DEFAULT) {
     library = t->m->libraries;
   }
 
