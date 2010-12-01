@@ -1853,10 +1853,11 @@ EXPORT(JVM_InitProperties)(Thread* t, jobject properties)
   local::setProperty(t, method, *properties, "java.io.tmpdir", "/tmp");
   local::setProperty(t, method, *properties, "user.home", getenv("HOME"));
   local::setProperty(t, method, *properties, "user.dir", getenv("PWD"));
+#endif
+
   local::setProperty(t, method, *properties, "java.protocol.handler.pkgs",
                      "avian");
 
-#endif
   local::setProperty
     (t, method, *properties, "java.home",
      static_cast<local::MyClasspath*>(t->m->classpath)->javaHome);
@@ -2776,7 +2777,7 @@ EXPORT(JVM_GetClassDeclaredFields)(Thread* t, jclass c, jboolean publicOnly)
           object runtimeData = getClassRuntimeData(t, jclassVmClass(t, *c));
 
           set(t, runtimeData, ClassRuntimeDataPool,
-              addendumPool(t, methodAddendum(t, vmField)));
+              addendumPool(t, fieldAddendum(t, vmField)));
         }
 
         object field = makeJfield
