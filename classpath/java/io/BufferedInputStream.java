@@ -67,6 +67,7 @@ public class BufferedInputStream extends InputStream {
         break;
       } else {
         count += c;
+        length -= c;
 
         if (in.available() <= 0) {
           break;
