@@ -71,5 +71,11 @@ public class Arrays {
       expect(array[1023] == -1);
       expect(array[1022] == 0);
     }
+
+    { Integer[] array = (Integer[])
+        java.lang.reflect.Array.newInstance(Integer.class, 1);
+      array[0] = Integer.valueOf(42);
+      expect(array[0].intValue() == 42);
+    }
   }
 }

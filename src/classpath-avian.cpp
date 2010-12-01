@@ -366,7 +366,7 @@ Avian_java_lang_reflect_Array_makeObjectArray
   int length = arguments[1];
 
   return reinterpret_cast<int64_t>
-    (makeObjectArray(t, elementType, length));
+    (makeObjectArray(t, jclassVmClass(t, elementType), length));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
