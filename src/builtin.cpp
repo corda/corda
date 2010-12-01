@@ -126,7 +126,8 @@ Avian_avian_Machine_dumpHeap
     fclose(out);
   } else {
     object message = makeString(t, "file not found: %s", n);
-    t->exception = makeRuntimeException(t, message);
+    t->exception = t->m->classpath->makeThrowable
+      (t, Machine::RuntimeExceptionType, message);
   }
 }
 
