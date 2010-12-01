@@ -1444,12 +1444,6 @@ class Classpath {
   dispose() = 0;
 };
 
-inline void
-runJavaThread(Thread* t)
-{
-  t->m->classpath->runThread(t);
-}
-
 Classpath*
 makeClasspath(System* system, Allocator* allocator, const char* javaHome,
               const char* embedPrefix);
@@ -1758,6 +1752,16 @@ bool
 instanceOf(Thread* t, object class_, object o);
 
 #include "type-declarations.cpp"
+
+inline void
+runJavaThread(Thread* t)
+{
+  if (threadDaemon(t, t->javaThread)) {
+    atomicOr(&(t->flags), Thread::DaemonFlag);
+  }
+
+  t->m->classpath->runThread(t);
+}
 
 inline object&
 root(Thread* t, Machine::Root root)
@@ -2812,10 +2816,12 @@ setDaemon(Thread* t, object thread, bool daemon)
     threadDaemon(t, thread) = daemon;
 
     Thread* p = reinterpret_cast<Thread*>(threadPeer(t, thread));
-    if (daemon) {
-      atomicOr(&(p->flags), Thread::DaemonFlag);
-    } else {
-      atomicAnd(&(p->flags), ~Thread::DaemonFlag);
+    if (p) {
+      if (daemon) {
+        atomicOr(&(p->flags), Thread::DaemonFlag);
+      } else {
+        atomicAnd(&(p->flags), ~Thread::DaemonFlag);
+      }
     }
 
     if (daemon) {
