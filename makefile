@@ -468,7 +468,7 @@ driver-source = $(src)/main.cpp
 driver-object = $(build)/main.o
 driver-dynamic-objects = \
 	$(build)/main-dynamic.o \
-	$(build)/$(build-system).o \
+	$(build)/$(system).o \
 	$(build)/finder.o
 
 boot-source = $(src)/boot.cpp
