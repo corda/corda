@@ -3255,14 +3255,13 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
     PROTECT(t, loader);
     PROTECT(t, spec);
 
-    { object c = findLoadedClass(t, loader, spec);
-      if (c) {
-        return c;
-      }
+    object c = findLoadedClass(t, loader, spec);
+    if (c) {
+      return c;
     }
 
     if (byteArrayBody(t, spec, 0) == '[') {
-      return resolveArrayClass(t, loader, spec, throw_);
+      c = resolveArrayClass(t, loader, spec, throw_);
     } else {
       if (root(t, Machine::LoadClassMethod) == 0) {
         object m = resolveMethod
@@ -3295,34 +3294,35 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
 
           object specString = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 
-          object c = t->m->processor->invoke(t, method, loader, specString);
-
-          if (LIKELY(c and t->exception == 0)) {
-            PROTECT(t, c);
-
-            ACQUIRE(t, t->m->classLock);
-
-            if (classLoaderMap(t, loader) == 0) {
-              object map = makeHashMap(t, 0, 0);
-              set(t, loader, ClassLoaderMap, map);
-            }
-
-            c = jclassVmClass(t, c);
-
-            hashMapInsert
-              (t, classLoaderMap(t, loader), spec, c, byteArrayHash);
-
-            return c;
+          object jc = t->m->processor->invoke(t, method, loader, specString);
+          if (LIKELY(jc and t->exception == 0)) {
+            c = jclassVmClass(t, jc);
           }
         }
       }
+    }
 
+    if (LIKELY(c and t->exception == 0)) {
+      PROTECT(t, c);
+
+      ACQUIRE(t, t->m->classLock);
+
+      if (classLoaderMap(t, loader) == 0) {
+        object map = makeHashMap(t, 0, 0);
+        set(t, loader, ClassLoaderMap, map);
+      }
+
+      hashMapInsert
+        (t, classLoaderMap(t, loader), spec, c, byteArrayHash);
+
+      return c;
+    } else {
       if (t->exception == 0) {
         object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
         t->exception = t->m->classpath->makeThrowable
           (t, Machine::ClassNotFoundExceptionType, message);
       }
-
+      
       return 0;
     }
   }
@@ -3883,6 +3883,8 @@ printTrace(Thread* t, object exception)
       break;
     }
   }
+
+  fflush(stderr);
 }
 
 object
@@ -4087,6 +4089,8 @@ vmPrintTrace(Thread* t)
   fprintf(stderr, "debug trace for thread %p\n", t);
 
   t->m->processor->walkStack(t, &v);
+
+  fflush(stderr);
 }
 
 // also for debugging
