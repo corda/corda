@@ -648,15 +648,22 @@ class MySystem: public System {
 
     int rv = pthread_kill(target->thread, VisitSignal);
 
+    int result;
     if (rv == 0) {
       while (visitTarget) visitLock->wait(t, 0);
 
-      threadVisitor = 0;
-
-      return 0;
+      result = 0;
     } else {
-      return -1;
+      visitTarget = 0;
+
+      result = -1;
     }
+
+    threadVisitor = 0;
+
+    system->visitLock->notifyAll(t);
+
+    return result;
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
@@ -876,7 +883,9 @@ handleSignal(int signal, siginfo_t* info, void* context)
   default: abort();
   }
 
-  if (system->oldHandlers[index].sa_flags & SA_SIGINFO) {
+  if (system->oldHandlers[index].sa_flags & SA_SIGINFO
+      and system->oldHandlers[index].sa_sigaction)
+  {
     system->oldHandlers[index].sa_sigaction(signal, info, context);
   } else if (system->oldHandlers[index].sa_handler) {
     system->oldHandlers[index].sa_handler(signal);

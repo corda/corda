@@ -69,6 +69,7 @@ void assert(Context*, bool);
 System* system(Context*);
 void* tryAllocate(Context* c, unsigned size);
 void free(Context* c, const void* p, unsigned size);
+void outOfMemory(Context*);
 
 #ifdef USE_ATOMIC_OPERATIONS
 inline void
@@ -359,7 +360,7 @@ class Segment {
               break;
             }
           } else {
-            abort(context);
+            outOfMemory(context);
           }
         }
       }
@@ -1708,7 +1709,8 @@ collect(Context* c)
   }
 }
 
-void* tryAllocate(Context* c, unsigned size)
+void*
+tryAllocate(Context* c, unsigned size)
 {
   ACQUIRE(c->lock);
 
@@ -1733,7 +1735,9 @@ void* tryAllocate(Context* c, unsigned size)
   return 0;
 }
 
-void free(Context* c, const void* p, unsigned size) {
+void
+free(Context* c, const void* p, unsigned size)
+{
   ACQUIRE(c->lock);
 
   if (DebugAllocation) {
@@ -1755,8 +1759,16 @@ void free(Context* c, const void* p, unsigned size) {
   c->count -= size;
 }
 
-void free_(Context* c, const void* p, unsigned size) {
+void
+free_(Context* c, const void* p, unsigned size)
+{
   free(c, p, size);
+}
+
+void
+outOfMemory(Context* c)
+{
+  c->client->outOfMemory();
 }
 
 class MyHeap: public Heap {
@@ -1781,7 +1793,9 @@ class MyHeap: public Heap {
 
   virtual void* allocate(unsigned size) {
     void* p = local::tryAllocate(&c, size);
-    expect(c.system, p);
+    if (p == 0) {
+      c.client->outOfMemory();
+    }
     return p;
   }
 

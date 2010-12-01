@@ -159,6 +159,8 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
+converter-cflags = -D__STDC_CONSTANT_MACROS
+
 cflags = $(build-cflags)
 
 common-lflags = -lm -lz $(classpath-lflags)
@@ -220,7 +222,7 @@ ifeq ($(platform),darwin)
 
 	ifeq ($(arch),powerpc)
 		ifneq (,$(filter i386 x86_64,$(build-arch)))
-			converter-cflags = -DOPPOSITE_ENDIAN
+			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		openjdk-extra-cflags += -arch ppc
 		cflags += -arch ppc
@@ -230,7 +232,7 @@ ifeq ($(platform),darwin)
 
 	ifeq ($(arch),i386)
 		ifeq ($(build-arch),powerpc)
-			converter-cflags = -DOPPOSITE_ENDIAN
+			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		openjdk-extra-cflags += -arch i386
 		cflags += -arch i386
@@ -240,7 +242,7 @@ ifeq ($(platform),darwin)
 
 	ifeq ($(arch),x86_64)
 		ifeq ($(build-arch),powerpc)
-			converter-cflags = -DOPPOSITE_ENDIAN
+			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		openjdk-extra-cflags += -arch x86_64
 		cflags += -arch x86_64

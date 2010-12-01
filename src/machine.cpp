@@ -2136,6 +2136,21 @@ class HeapClient: public Heap::Client {
     ::walk(m->rootThread, w, o, 0);
   }
 
+  virtual void outOfMemory() {
+#ifdef AVIAN_HEAPDUMP
+    const char* path = findProperty(m->rootThread, "avian.heap.dump");
+    if (path) {
+      FILE* out = vm::fopen(path, "wb");
+      if (out) {
+        dumpHeap(m->rootThread, out);
+        fclose(out);
+      }
+    }
+#endif//AVIAN_HEAPDUMP
+
+    abort(m->system);
+  }
+
   void dispose() {
     m->heap->free(this, sizeof(*this));
   }
