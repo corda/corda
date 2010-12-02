@@ -287,8 +287,10 @@ else
 	openjdk-cflags += "-I$(openjdk-src)/solaris/javavm/export" \
 		"-I$(openjdk-src)/solaris/native/common" \
 		"-I$(openjdk-src)/solaris/native/java/io" \
+		"-I$(openjdk-src)/solaris/native/java/lang" \
 		"-I$(openjdk-src)/solaris/native/java/net" \
 		"-I$(openjdk-src)/solaris/native/java/util" \
+		"-I$(openjdk-src)/solaris/native/sun/nio/ch" \
 		"-I$(openjdk-src)/solaris/javavm/include" \
 		"-I$(openjdk-src)/solaris/hpi/include"
 endif
