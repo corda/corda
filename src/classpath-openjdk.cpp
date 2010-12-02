@@ -54,6 +54,8 @@
 
 typedef int socklen_t;
 
+#  define RTLD_DEFAULT 0
+
 #else // not PLATFORM_WINDOWS
 
 #  include <unistd.h>

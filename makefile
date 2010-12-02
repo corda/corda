@@ -268,18 +268,18 @@ ifeq ($(platform),windows)
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
-		cxx = x86_64-w64-mingw32-g++ -m32
-		cc = x86_64-w64-mingw32-gcc -m32
-		dlltool = x86_64-w64-mingw32-dlltool -mi386 --as-flags=--32 
-		ar = x86_64-w64-mingw32-ar
-		ranlib = x86_64-w64-mingw32-ranlib
-		strip = x86_64-w64-mingw32-strip --strip-all
-		# cxx = i586-mingw32msvc-g++
-		# cc = i586-mingw32msvc-gcc
-		# dlltool = i586-mingw32msvc-dlltool
-		# ar = i586-mingw32msvc-ar
-		# ranlib = i586-mingw32msvc-ranlib
-		# strip = i586-mingw32msvc-strip
+		# cxx = x86_64-w64-mingw32-g++ -m32
+		# cc = x86_64-w64-mingw32-gcc -m32
+		# dlltool = x86_64-w64-mingw32-dlltool -mi386 --as-flags=--32 
+		# ar = x86_64-w64-mingw32-ar
+		# ranlib = x86_64-w64-mingw32-ranlib
+		# strip = x86_64-w64-mingw32-strip --strip-all
+		cxx = i586-mingw32msvc-g++
+		cc = i586-mingw32msvc-gcc
+		dlltool = i586-mingw32msvc-dlltool
+		ar = i586-mingw32msvc-ar
+		ranlib = i586-mingw32msvc-ranlib
+		strip = i586-mingw32msvc-strip --strip-all
 	else
 		build-system = windows
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
@@ -824,8 +824,10 @@ $(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
 		$(openjdk-headers-dep)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
+	sed 's/^static jclass ia_class;//' < $(<) > $(build)/openjdk/$(notdir $(<))
 	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
-		$(optimization-cflags) -w -c $(<) $(call output,$(@))
+		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
+		$(call output,$(@))
 
 $(openjdk-local-objects): $(build)/openjdk/%.o: $(src)/openjdk/%.c \
 		$(openjdk-headers-dep)
@@ -843,6 +845,9 @@ ifeq ($(platform),windows)
 	sed 's/^#ifdef _WIN64/#if 1/' \
 		< "$(openjdk-src)/windows/native/java/net/net_util_md.h" \
 		> $(build)/openjdk/net_util_md.h
+	cp "$(openjdk-src)/windows/native/java/net/NetworkInterface.h" \
+		$(build)/openjdk/NetworkInterface.h
+	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
 	@touch $(@)
 

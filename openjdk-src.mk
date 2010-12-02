@@ -221,6 +221,7 @@ ifeq ($(platform),windows)
 		"-I$(openjdk-src)/windows/native/java/io" \
 		"-I$(openjdk-src)/windows/native/java/net" \
 		"-I$(openjdk-src)/windows/native/java/util" \
+		"-I$(openjdk-src)/windows/native/sun/nio/ch" \
 		"-I$(openjdk-src)/windows/javavm/include" \
 		"-I$(root)/win32/include" \
 		-D_JNI_IMPLEMENTATION_ \
