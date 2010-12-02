@@ -1756,10 +1756,6 @@ instanceOf(Thread* t, object class_, object o);
 inline void
 runJavaThread(Thread* t)
 {
-  if (threadDaemon(t, t->javaThread)) {
-    atomicOr(&(t->flags), Thread::DaemonFlag);
-  }
-
   t->m->classpath->runThread(t);
 }
 
