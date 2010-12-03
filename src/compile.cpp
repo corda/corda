@@ -2662,6 +2662,12 @@ makeNew64(Thread* t, object class_)
   return reinterpret_cast<uintptr_t>(makeNew(t, class_));
 }
 
+uint64_t
+getJClass64(Thread* t, object class_)
+{
+  return reinterpret_cast<uintptr_t>(getJClass(t, class_));
+}
+
 void
 gcIfNecessary(MyThread* t)
 {
@@ -4401,7 +4407,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           frame->pushObject
             (c->call
              (c->constant
-              (getThunk(t, getJClassThunk), Compiler::AddressType),
+              (getThunk(t, getJClass64Thunk), Compiler::AddressType),
               0,
               frame->trace(0, 0),
               BytesPerWord,
