@@ -76,6 +76,7 @@
 # the VM references these classes by name, so protect them from obfuscation:
 
 -keepnames public class java.lang.**
+-keepnames public class avian.**
 
 # Don't optimize calls to ResourceBundle
 -keep,allowshrinking,allowobfuscation public class java.util.ResourceBundle {
