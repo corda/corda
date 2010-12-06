@@ -181,7 +181,7 @@
    <methods>;
  }
 
-# refered to by name in LocaleData to load resources:
+# referred to by name in LocaleData to load resources:
 -keep class sun.util.resources.CalendarData
 -keep class sun.text.resources.FormatData
 
