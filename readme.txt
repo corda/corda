@@ -51,7 +51,7 @@ Supported Platforms
 
 Avian can currently target the following platforms:
 
-  Linux (i386 and x86_64)
+  Linux (i386, x86_64 and ARM)
   Windows (i386 and x86_64)
   Mac OS X (i386, x86_64 and 32-bit PowerPC)
 
@@ -73,10 +73,17 @@ been tested.
 The build is directed by a single makefile and may be influenced via
 certain flags described below, all of which are optional.
 
- $ make platform={linux,windows,darwin} arch={i386,x86_64,powerpc} \
-     process={compile,interpret} mode={debug,debug-fast,fast,small} \
-     bootimage={true,false} heapdump={true,false} tails={true,false} \
-     continuations={true,false}
+ $ make \
+     platform={linux,windows,darwin} \
+     arch={i386,x86_64,powerpc,arm} \
+     process={compile,interpret} \
+     mode={debug,debug-fast,fast,small} \
+     bootimage={true,false} \
+     heapdump={true,false} \
+     tails={true,false} \
+     continuations={true,false} \
+     openjdk=<openjdk installation directory> \
+     openjdk-src=<openjdk source directory>
 
   * platform - the target platform
       default: output of $(uname -s | tr [:upper:] [:lower:]),
@@ -118,6 +125,18 @@ certain flags described below, all of which are optional.
     dynamicWind.  See Continuations.java for details.  This option is
     only valid for process=compile builds.
       default: false
+
+  * openjdk - if set, use OpenJDK class library instead of the default
+    Avian class library.  See "Building with the OpenJDK Class
+    Library" below for details.
+      default: not set
+
+  * openjdk-src - if this and the openjdk option above are both set,
+    build an embeddable VM using the OpenJDK class library.  The JNI
+    components of the OpenJDK class library will be built from the
+    sources found under the specified directory.  See "Building with
+    the OpenJDK Class Library" below for details.
+      default: not set
 
 These flags determine the name of the directory used for the build.
 The name always starts with ${platform}-${arch}, and each non-default
@@ -291,7 +310,7 @@ Step 3: Make an object file out of the jar.
 Step 4: Write a driver which starts the VM and runs the desired main
 method.  Note the bootJar function, which will be called by the VM to
 get a handle to the embedded jar.  We tell the VM about this jar by
-setting the classpath to "[bootJar]".
+setting the boot classpath to "[bootJar]".
 
  $ cat >main.cpp <<EOF
 #include "stdint.h"
@@ -330,7 +349,7 @@ main(int ac, const char** av)
   JavaVMOption options[vmArgs.nOptions];
   vmArgs.options = options;
 
-  options[0].optionString = const_cast<char*>("-Djava.class.path=[bootJar]");
+  options[0].optionString = const_cast<char*>("-Xbootclasspath:[bootJar]");
 
   JavaVM* vm;
   void* env;
