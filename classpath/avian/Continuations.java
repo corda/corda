@@ -53,8 +53,8 @@ import java.util.concurrent.Callable;
  * causes the current continuation to be replaced with the calling
  * continuation.  When the last method in this new continuation
  * returns, it returns to the native frame which created the current
- * context, which may not be the same as the context in which that
- * continuation was created.
+ * context, which may or may not be the same as the context in which
+ * that continuation was created.
  *
  * <p>We define the return type of a continuation context as the
  * return type of the first method called in that context.  A
