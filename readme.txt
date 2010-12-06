@@ -486,7 +486,7 @@ EOF
 
 Step 5: Run ProGuard with stage1 as input and stage2 as output.
 
- $ java -jar ../../proguard4.4/lib/proguard.jar \
+ $ java -jar ../../proguard4.6/lib/proguard.jar \
      -injars stage1 -outjars stage2 @../vm.pro @hello.pro
 
 (note: pass -dontusemixedcaseclassnames to ProGuard when building on
@@ -596,3 +596,12 @@ executable, and optionally strip its symbols.
 
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello
  $ strip --strip-all hello
+
+
+Trademarks
+----------
+
+Oracle and Java are registered trademarks of Oracle and/or its
+affiliates.  Other names may be trademarks of their respective owners.
+
+The Avian project is not affiliated with Oracle.
