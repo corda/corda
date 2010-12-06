@@ -20,6 +20,16 @@
    protected ClassLoader(java.lang.ClassLoader);
  }
 
+-keep class avian.SystemClassLoader {
+   protected java.net.URL findResource(java.lang.String);
+ }
+
+-keepnames class java.lang.ClassLoader {
+   public java.lang.Class loadClass(java.lang.String);
+   private static java.net.URL getBootstrapResource(java.lang.String);
+   private static java.util.Enumeration getBootstrapResources(java.lang.String);
+ }
+
 -keep class java.util.Properties {
    public java.lang.Object setProperty(java.lang.String, java.lang.String);
  }
@@ -50,6 +60,9 @@
 
 # these class names are used to disambiguate JNI method lookups:
 
+-keepnames public class java.net.URL
+-keepnames public class java.util.Enumeration
+-keepnames public class java.security.ProtectionDomain
 -keepnames public class java.security.PrivilegedAction
 -keepnames public class java.security.PrivilegedExceptionAction
 -keepnames public class java.security.AccessControlContext
@@ -74,6 +87,15 @@
    public String(byte[], java.lang.String);
    public byte[] getBytes();
    public byte[] getBytes(java.lang.String);
+ }
+
+-keepclassmembers class java.util.zip.Inflater {
+   long strm;
+   boolean needDict;
+   boolean finished;
+   byte[] buf;
+   int off;
+   int len;
  }
 
 -keepclassmembers class java.io.FileDescriptor {
@@ -110,6 +132,8 @@
    public static java.io.PrintStream err;
    # avoid inlining due to access check using fixed offset into call stack:
    static java.lang.Class getCallerClass();
+   # called from jni_util.c:
+   static java.lang.String getProperty(java.lang.String);
  }
 
 # refered to by name from native code:
@@ -133,3 +157,31 @@
    long handle;
    private int jniVersion;
  }
+
+-keep class java.nio.charset.Charset {
+   # called from jni_util.c:
+   boolean isSupported(java.lang.String);
+ }
+
+# Charsets are loaded via reflection.  If you need others besides
+# UTF-8, you'll need to add them (e.g. sun.nio.cs.ISO_8859_1).
+-keep class sun.nio.cs.UTF_8
+
+# loaded reflectively to handle embedded resources:
+-keep class avian.resource.Handler
+
+# refered to symbolically in MethodAccessorGenerator:
+-keep class sun.reflect.MethodAccessorImpl {
+   <methods>;
+ }
+-keep class sun.reflect.ConstructorAccessorImpl {
+   <methods>;
+ }
+-keep class sun.reflect.SerializationConstructorAccessorImpl {
+   <methods>;
+ }
+
+# refered to by name in LocaleData to load resources:
+-keep class sun.util.resources.CalendarData
+-keep class sun.text.resources.FormatData
+
