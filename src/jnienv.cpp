@@ -444,10 +444,7 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
   ENTER(t, Thread::ActiveState);
 
   object method = findMethod(t, c, name, spec);
-  if (UNLIKELY(t->exception)) {
-    printTrace(t, t->exception);
-    return 0;
-  }
+  if (UNLIKELY(t->exception)) return 0;
 
   assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
 
