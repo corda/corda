@@ -380,6 +380,10 @@ class MyClasspath : public Classpath {
   {
     globalMachine = t->m;
 
+    resolveSystemClass(t, root(t, Machine::BootLoader),
+                       className(t, type(t, Machine::ClassLoaderType)));
+    if (UNLIKELY(t->exception)) return;
+
 #ifdef AVIAN_OPENJDK_SRC
     interceptFileOperations(t);
     if (UNLIKELY(t->exception)) return;
@@ -390,10 +394,6 @@ class MyClasspath : public Classpath {
       abort(t);
     }
 #endif // not AVIAN_OPENJDK_SRC
-
-    resolveSystemClass(t, root(t, Machine::BootLoader),
-                       className(t, type(t, Machine::ClassLoaderType)));
-    if (UNLIKELY(t->exception)) return;
 
     object constructor = resolveMethod
       (t, type(t, Machine::ClassLoaderType), "<init>",
@@ -694,7 +694,7 @@ checkFileAccess
 }
 
 int64_t JNICALL
-getLength
+getFileLength
 (Thread* t, object method, uintptr_t* arguments)
 {
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
@@ -1012,13 +1012,49 @@ closeFile(Thread* t, object method, uintptr_t* arguments)
   }
 }
 
+int64_t JNICALL
+getBootstrapResource(Thread* t, object, uintptr_t* arguments)
+{
+  object name = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, name);
+
+  object m = findMethodOrNull
+    (t, type(t, Machine::SystemClassLoaderType),
+     "findResource", "(Ljava/lang/String;)Ljava/net/URL;");
+  
+  if (m) {
+    return reinterpret_cast<int64_t>
+      (t->m->processor->invoke(t, m, root(t, Machine::BootLoader), name));
+  } else {
+    return 0;
+  }
+}
+
+int64_t JNICALL
+getBootstrapResources(Thread* t, object, uintptr_t* arguments)
+{
+  object name = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, name);
+
+  object m = findMethodOrNull
+    (t, type(t, Machine::SystemClassLoaderType),
+     "findResources", "(Ljava/lang/String;)Ljava/util/Enumeration;");
+  
+  if (m) {
+    return reinterpret_cast<int64_t>
+      (t->m->processor->invoke(t, m, root(t, Machine::BootLoader), name));
+  } else {
+    return 0;
+  }
+}
+
 // only safe to call during bootstrap when there's only one thread
 // running:
 void
 intercept(Thread* t, object c, const char* name, const char* spec,
           void* function)
 {
-  object m = findMethodOrNull(t, c, name, spec);        
+  object m = findMethodOrNull(t, c, name, spec);
   if (m) {
     PROTECT(t, m);
 
@@ -1121,8 +1157,16 @@ interceptFileOperations(Thread* t)
               voidPointer(checkFileAccess));
   
     intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
-              voidPointer(getLength));
+              voidPointer(getFileLength));
   }
+
+  intercept(t, type(t, Machine::ClassLoaderType), "getBootstrapResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            voidPointer(getBootstrapResource));
+
+  intercept(t, type(t, Machine::ClassLoaderType), "getBootstrapResources",
+            "(Ljava/lang/String;)Ljava/util/Enumeration;",
+            voidPointer(getBootstrapResources));
 }
 
 unsigned

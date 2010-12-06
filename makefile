@@ -93,6 +93,7 @@ ifneq ($(openjdk),)
 			javahome-files += lib/currency.data
 		endif
 		javahome-object = $(build)/javahome-jar.o
+		boot-javahome-object = $(build)/boot-javahome.o
 	else
 	  options := $(options)-openjdk
 		test-executable = $(executable-dynamic)
@@ -673,6 +674,9 @@ $(build)/main-dynamic.o: $(driver-source)
 $(boot-object): $(boot-source)
 	$(compile-object)
 
+$(boot-javahome-object): $(src)/boot-javahome.cpp
+	$(compile-object)
+
 $(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
 	$(build-cxx) -c $(^) -o $(@)
 
@@ -726,7 +730,8 @@ $(generator-objects): $(build)/%-build.o: $(src)/%.cpp
 $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
 
-$(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects)
+$(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
+		$(javahome-object) $(boot-javahome-object)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
@@ -743,7 +748,7 @@ $(bootimage-object): $(bootimage-bin) $(converter)
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
-	$(javahome-object)
+	$(javahome-object) $(boot-javahome-object)
 
 $(executable): $(executable-objects)
 	@echo "linking $(@)"
@@ -792,7 +797,7 @@ endif
 
 $(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
 		$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
-		$(classpath-libraries) $(javahome-object)
+		$(classpath-libraries) $(javahome-object) $(boot-javahome-object)
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \

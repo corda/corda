@@ -12,6 +12,10 @@ package avian;
 
 import java.net.URL;
 import java.net.MalformedURLException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Enumeration;
 
 public class SystemClassLoader extends ClassLoader {
   private native VMClass findVMClass(String name)
@@ -39,5 +43,14 @@ public class SystemClassLoader extends ClassLoader {
       } catch (MalformedURLException ignored) { }
     }
     return null;
+  }
+
+  protected Enumeration<URL> findResources(String name) {
+    Collection<URL> urls = new ArrayList(1);
+    URL url = findResource(name);
+    if (url != null) {
+      urls.add(url);
+    }
+    return Collections.enumeration(urls);
   }
 }

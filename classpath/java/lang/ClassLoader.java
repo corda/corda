@@ -99,6 +99,10 @@ public abstract class ClassLoader {
     return null;
   }
 
+  protected Enumeration<URL> findResources(String name) throws IOException {
+    return Collections.enumeration(new ArrayList<URL>(0));
+  }
+
   public URL getResource(String path) {
     URL url = null;
     if (parent != null) {
