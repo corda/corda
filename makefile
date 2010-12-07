@@ -225,20 +225,20 @@ ifeq ($(platform),darwin)
 		ifneq (,$(filter i386 x86_64,$(build-arch)))
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
-		openjdk-extra-cflags += -arch ppc
-		cflags += -arch ppc
-		asmflags += -arch ppc
-		lflags += -arch ppc
+		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=10.4
+		cflags += -arch ppc -mmacosx-version-min=10.4
+		asmflags += -arch ppc -mmacosx-version-min=10.4
+		lflags += -arch ppc -mmacosx-version-min=10.4
 	endif
 
 	ifeq ($(arch),i386)
 		ifeq ($(build-arch),powerpc)
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
-		openjdk-extra-cflags += -arch i386
-		cflags += -arch i386
-		asmflags += -arch i386
-		lflags += -arch i386
+		openjdk-extra-cflags += -arch i386 -mmacosx-version-min=10.4
+		cflags += -arch i386 -mmacosx-version-min=10.4
+		asmflags += -arch i386 -mmacosx-version-min=10.4
+		lflags += -arch i386 -mmacosx-version-min=10.4
 	endif
 
 	ifeq ($(arch),x86_64)
