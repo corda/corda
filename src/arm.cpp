@@ -320,8 +320,8 @@ expect(Context* c, bool v)
 
 class Offset: public Promise {
  public:
-  Offset(Context* c, MyBlock* block, unsigned offset):
-    c(c), block(block), offset(offset)
+  Offset(Context* c, MyBlock* block, unsigned offset, bool forTrace):
+    c(c), block(block), offset(offset), forTrace(forTrace)
   { }
 
   virtual bool resolved() {
@@ -332,19 +332,20 @@ class Offset: public Promise {
     assert(c, resolved());
 
     unsigned o = offset - block->offset;
-    return block->start + padding(block, o) + o;
+    return block->start + padding(block, forTrace ? o - BytesPerWord : o) + o;
   }
 
   Context* c;
   MyBlock* block;
   unsigned offset;
+  bool forTrace;
 };
 
 Promise*
-offset(Context* c)
+offset(Context* c, bool forTrace = false)
 {
   return new (c->zone->allocate(sizeof(Offset)))
-    Offset(c, c->lastBlock, c->code.length());
+    Offset(c, c->lastBlock, c->code.length(), forTrace);
 }
 
 bool
@@ -2271,8 +2272,8 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual Promise* offset() {
-    return ::offset(&c);
+  virtual Promise* offset(bool forTrace) {
+    return ::offset(&c, forTrace);
   }
 
   virtual Block* endBlock(bool startNew) {

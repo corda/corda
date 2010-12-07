@@ -2377,7 +2377,7 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual Promise* offset() {
+  virtual Promise* offset(bool) {
     return ::offset(&c);
   }
 

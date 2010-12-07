@@ -414,7 +414,7 @@ class Assembler {
 
   virtual void writeTo(uint8_t* dst) = 0;
 
-  virtual Promise* offset() = 0;
+  virtual Promise* offset(bool forTrace = false) = 0;
 
   virtual Block* endBlock(bool startNew) = 0;
 

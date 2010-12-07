@@ -3098,7 +3098,8 @@ codePromise(Context* c, Event* e)
 CodePromise*
 codePromise(Context* c, Promise* offset)
 {
-  return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
+  return new (c->zone->allocate(sizeof(CodePromise)))
+    CodePromise(c, offset);
 }
 
 void
@@ -3357,7 +3358,7 @@ class CallEvent: public Event {
     apply(c, op, BytesPerWord, address->source, address->source);
 
     if (traceHandler) {
-      traceHandler->handleTrace(codePromise(c, c->assembler->offset()),
+      traceHandler->handleTrace(codePromise(c, c->assembler->offset(true)),
                                 stackArgumentIndex);
     }
 
