@@ -701,12 +701,16 @@ resolve(MyBlock* b)
     if (b->next == 0 or b->next->poolEventHead) {
       append = true;
     } else {
-      int32_t v = (b->offset + b->size + b->next->size + BytesPerWord - 8)
-        - (c->poolOffsetHead->offset + c->poolOffsetHead->block->offset);
+      int32_t v = (b->start + b->size + b->next->size + BytesPerWord - 8)
+        - (c->poolOffsetHead->offset + c->poolOffsetHead->block->start);
 
       append = (v != (v & PoolOffsetMask));
 
       if (DebugPool) {
+        fprintf(stderr,
+                "current %p %d %d next %p %d %d\n",
+                b, b->start, b->size, b->next, b->start + b->size,
+                b->next->size);
         fprintf(stderr,
                 "offset %p %d is of distance %d to next block; append? %d\n",
                 c->poolOffsetHead, c->poolOffsetHead->offset, v, append);
@@ -714,6 +718,13 @@ resolve(MyBlock* b)
     }
 
     if (append) {
+#ifndef NDEBUG
+      int32_t v = (b->start + b->size - 8)
+        - (c->poolOffsetHead->offset + c->poolOffsetHead->block->start);
+      
+      expect(c, v == (v & PoolOffsetMask));
+#endif // not NDEBUG
+
       appendPoolEvent(c, b, b->size, c->poolOffsetHead, c->poolOffsetTail);
 
       if (DebugPool) {
