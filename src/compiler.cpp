@@ -4747,9 +4747,17 @@ class BranchEvent: public Event {
           apply(c, Jump, BytesPerWord, address->source, address->source);
         }      
       } else {
+        freezeSource(c, size, first);
+        freezeSource(c, size, second);
+        freezeSource(c, BytesPerWord, address);
+
         apply(c, type, size, first->source, first->nextWord->source,
               size, second->source, second->nextWord->source,
               BytesPerWord, address->source, address->source);
+
+        thawSource(c, BytesPerWord, address);
+        thawSource(c, size, second);
+        thawSource(c, size, first);
       }
     }
 
@@ -4914,13 +4922,13 @@ class BoundsCheckEvent: public Event {
       CodePromise* nextPromise = codePromise
         (c, static_cast<Promise*>(0));
 
-      index->source->freeze(c, index);
+      freezeSource(c, BytesPerWord, index);
 
       ConstantSite next(nextPromise);
       apply(c, JumpIfGreater, 4, index->source, index->source, 4, &length,
             &length, BytesPerWord, &next, &next);
 
-      index->source->thaw(c, index);
+      thawSource(c, BytesPerWord, index);
 
       if (constant == 0) {
         outOfBoundsPromise->offset = a->offset();
