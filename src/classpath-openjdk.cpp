@@ -174,7 +174,7 @@ class MyClasspath : public Classpath {
 
   MyClasspath(System* s, Allocator* allocator, const char* javaHome,
               const char* embedPrefix):
-    allocator(allocator)
+    allocator(allocator), ranNetOnLoad(0)
   {
     class StringBuilder {
      public:
@@ -237,30 +237,6 @@ class MyClasspath : public Classpath {
     // todo: handle other architectures
     sb.append("/lib/i386");
 #endif
-    sb.append('\0');
-    
-    this->zipLibrary = sb.pointer;
-    sb.append(this->libraryPath);
-    sb.append("/");
-    sb.append(SO_PREFIX);
-    sb.append("zip");
-    sb.append(SO_SUFFIX);
-    sb.append('\0');
-    
-    this->netLibrary = sb.pointer;
-    sb.append(this->libraryPath);
-    sb.append("/");
-    sb.append(SO_PREFIX);
-    sb.append("net");
-    sb.append(SO_SUFFIX);
-    sb.append('\0');
-
-    this->nioLibrary = sb.pointer;
-    sb.append(this->libraryPath);
-    sb.append("/");
-    sb.append(SO_PREFIX);
-    sb.append("nio");
-    sb.append(SO_SUFFIX);
     sb.append('\0');
     
     this->tzMappings = sb.pointer;
@@ -445,9 +421,6 @@ class MyClasspath : public Classpath {
   const char* javaHome;
   const char* classpath;
   const char* libraryPath;
-  const char* zipLibrary;
-  const char* netLibrary;
-  const char* nioLibrary;
   const char* tzMappings;
   const char* embedPrefix;
   unsigned tzMappingsLength;
@@ -455,6 +428,7 @@ class MyClasspath : public Classpath {
   unsigned filePathField;
   unsigned fileDescriptorFdField;
   unsigned fileInputStreamFdField;
+  bool ranNetOnLoad;
   char buffer[BufferSize];
 };
 
@@ -595,44 +569,37 @@ getFileAttributes
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  if (pathEqual(cp->zipLibrary, RUNTIME_ARRAY_BODY(p))
-      or pathEqual(cp->netLibrary, RUNTIME_ARRAY_BODY(p))
-      or pathEqual(cp->nioLibrary, RUNTIME_ARRAY_BODY(p)))
-  {
-    return Exists | Regular;
-  } else {
-    EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
-    if (ef.jar) {
-      if (ef.jarLength == 0) {
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  if (ef.jar) {
+    if (ef.jarLength == 0) {
+      return Exists | Directory;
+    }
+
+    Finder* finder = getFinder(t, ef.jar, ef.jarLength);
+    if (finder) {
+      if (ef.pathLength == 0) {
         return Exists | Directory;
       }
 
-      Finder* finder = getFinder(t, ef.jar, ef.jarLength);
-      if (finder) {
-        if (ef.pathLength == 0) {
-          return Exists | Directory;
-        }
-
-        unsigned length;
-        System::FileType type = finder->stat(ef.path, &length, true);
-        switch (type) {
-        case System::TypeUnknown: return Exists;
-        case System::TypeDoesNotExist: return 0;
-        case System::TypeFile: return Exists | Regular;
-        case System::TypeDirectory: return Exists | Directory;
-        default: abort(t);
-        }
-      } else {
-        return 0;
+      unsigned length;
+      System::FileType type = finder->stat(ef.path, &length, true);
+      switch (type) {
+      case System::TypeUnknown: return Exists;
+      case System::TypeDoesNotExist: return 0;
+      case System::TypeFile: return Exists | Regular;
+      case System::TypeDirectory: return Exists | Directory;
+      default: abort(t);
       }
     } else {
-      object r = t->m->processor->invoke
-        (t, nativeInterceptOriginal
-         (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-         reinterpret_cast<object>(arguments[0]), file);
-      
-      return (r ? intValue(t, r) : 0);
+      return 0;
     }
+  } else {
+    object r = t->m->processor->invoke
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       reinterpret_cast<object>(arguments[0]), file);
+      
+    return (r ? intValue(t, r) : 0);
   }
 }
 
@@ -652,44 +619,37 @@ checkFileAccess
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  if (pathEqual(cp->zipLibrary, RUNTIME_ARRAY_BODY(p))
-      or pathEqual(cp->netLibrary, RUNTIME_ARRAY_BODY(p))
-      or pathEqual(cp->nioLibrary, RUNTIME_ARRAY_BODY(p)))
-  {
-    return mask == Read;
-  } else {
-    EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
-    if (ef.jar) {
-      if (ef.jarLength == 0) {
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  if (ef.jar) {
+    if (ef.jarLength == 0) {
+      return mask == Read;
+    }
+
+    Finder* finder = getFinder(t, ef.jar, ef.jarLength);
+    if (finder) {
+      if (ef.pathLength == 0) {
         return mask == Read;
       }
 
-      Finder* finder = getFinder(t, ef.jar, ef.jarLength);
-      if (finder) {
-        if (ef.pathLength == 0) {
-          return mask == Read;
-        }
-
-        unsigned length;
-        System::FileType type = finder->stat(ef.path, &length, true);
-        switch (type) {
-        case System::TypeDoesNotExist: return false;
-        case System::TypeUnknown:
-        case System::TypeFile:
-        case System::TypeDirectory: return mask == Read;
-        default: abort(t);
-        }
-      } else {
-        return 0;
+      unsigned length;
+      System::FileType type = finder->stat(ef.path, &length, true);
+      switch (type) {
+      case System::TypeDoesNotExist: return false;
+      case System::TypeUnknown:
+      case System::TypeFile:
+      case System::TypeDirectory: return mask == Read;
+      default: abort(t);
       }
     } else {
-      object r = t->m->processor->invoke
-        (t, nativeInterceptOriginal
-         (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-         reinterpret_cast<object>(arguments[0]), file, mask);
-      
-      return (r ? booleanValue(t, r) : false);
+      return 0;
     }
+  } else {
+    object r = t->m->processor->invoke
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       reinterpret_cast<object>(arguments[0]), file, mask);
+      
+    return (r ? booleanValue(t, r) : false);
   }
 }
 
@@ -1048,6 +1008,50 @@ getBootstrapResources(Thread* t, object, uintptr_t* arguments)
   }
 }
 
+extern "C" JNIEXPORT jint JNICALL
+net_JNI_OnLoad(JavaVM*, void*);
+
+void JNICALL
+loadLibrary(Thread* t, object, uintptr_t* arguments)
+{
+  object name = reinterpret_cast<object>(arguments[1]);
+  RUNTIME_ARRAY(char, n, stringLength(t, name) + 1);
+  stringChars(t, name, RUNTIME_ARRAY_BODY(n));
+
+  bool absolute = arguments[2];
+
+#ifdef AVIAN_OPENJDK_SRC
+  if (not absolute) {
+    if (strcmp(n, "net") == 0) {
+      bool ran;
+
+      { ACQUIRE(t, t->m->classLock);
+
+        local::MyClasspath* c = static_cast<local::MyClasspath*>
+          (t->m->classpath);
+
+        ran = c->ranNetOnLoad;
+        c->ranNetOnLoad = true;
+      }
+
+      if (not ran) {
+        net_JNI_OnLoad(t->m, 0);
+      }
+
+      return;
+    } else if (strcmp(n, "zip") == 0
+               or strcmp(n, "nio") == 0)
+    {
+      return;
+    }
+  }
+#endif // AVIAN_OPENJDK_SRC 
+ 
+  loadLibrary
+    (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath,
+     RUNTIME_ARRAY_BODY(n), not absolute, false);
+}
+
 // only safe to call during bootstrap when there's only one thread
 // running:
 void
@@ -1159,6 +1163,10 @@ interceptFileOperations(Thread* t)
     intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
               voidPointer(getFileLength));
   }
+
+  intercept(t, type(t, Machine::ClassLoaderType), "loadLibrary",
+            "(Ljava/lang/Class;Ljava/lang/String;Z)V",
+            voidPointer(loadLibrary));
 
   intercept(t, type(t, Machine::ClassLoaderType), "getBootstrapResource",
             "(Ljava/lang/String;)Ljava/net/URL;",
@@ -2060,9 +2068,6 @@ EXPORT(JVM_ActiveProcessorCount)()
   return 1;
 }
 
-extern "C" JNIEXPORT jint JNICALL
-net_JNI_OnLoad(JavaVM*, void*);
-
 extern "C" JNIEXPORT void* JNICALL
 EXPORT(JVM_LoadLibrary)(const char* path)
 {
@@ -2070,26 +2075,6 @@ EXPORT(JVM_LoadLibrary)(const char* path)
 
   RUNTIME_ARRAY(char, p, strlen(path) + 1);
   replace('\\', '/', RUNTIME_ARRAY_BODY(p), path);
-
-#ifdef AVIAN_OPENJDK_SRC
-  if (local::pathEqual
-      (static_cast<local::MyClasspath*>(t->m->classpath)->zipLibrary,
-       RUNTIME_ARRAY_BODY(p))
-      or local::pathEqual
-      (static_cast<local::MyClasspath*>(t->m->classpath)->nioLibrary,
-       RUNTIME_ARRAY_BODY(p)))
-  {
-    return t->m->libraries;
-  } else if (local::pathEqual
-             (static_cast<local::MyClasspath*>(t->m->classpath)->netLibrary,
-              RUNTIME_ARRAY_BODY(p)))
-  {
-    net_JNI_OnLoad(t->m, 0);
-    return t->m->libraries;
-  }
-#endif // AVIAN_OPENJDK_SRC
-
-  ENTER(t, Thread::ActiveState);
 
   return loadLibrary
     (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath,
