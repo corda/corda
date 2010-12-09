@@ -172,6 +172,8 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
           // library is built in to this executable
           if (runOnLoad and not t->m->triedBuiltinOnLoad) {
             t->m->triedBuiltinOnLoad = true;
+            // todo: release the classLock before calling this to
+            // avoid the possibility of deadlock:
             runOnLoadIfFound(t, t->m->libraries);
           }
           return t->m->libraries;
