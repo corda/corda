@@ -26,6 +26,7 @@
 
 -keepnames class java.lang.ClassLoader {
    public java.lang.Class loadClass(java.lang.String);
+   static void loadLibrary(java.lang.Class, java.lang.String, boolean);
    private static java.net.URL getBootstrapResource(java.lang.String);
    private static java.util.Enumeration getBootstrapResources(java.lang.String);
  }
@@ -89,6 +90,10 @@
    public byte[] getBytes(java.lang.String);
  }
 
+-keepclassmembers class java.lang.Boolean {
+   public boolean getBoolean(java.lang.String);
+ }
+
 -keepclassmembers class java.util.zip.Inflater {
    long strm;
    boolean needDict;
@@ -100,6 +105,26 @@
 
 -keepclassmembers class java.io.FileDescriptor {
    private int fd;   
+ }
+
+-keep class java.net.InetAddress {
+   <fields>;
+ }
+-keep class java.net.Inet4Address {
+   <fields>;
+ }
+-keep class java.net.Inet4AddressImpl
+-keep class java.net.Inet6Address {
+   <fields>;
+ }
+-keep class java.net.Inet6AddressImpl
+-keep class java.net.InetSocketAddress {
+   public InetSocketAddress(java.net.InetAddress, int);   
+ }
+-keep class java.net.ServerSocket
+
+-keepclassmembers class java.net.PlainSocketImpl {
+   <fields>;
  }
 
 -keepclassmembers class java.io.FileInputStream {
@@ -183,5 +208,6 @@
 
 # referred to by name in LocaleData to load resources:
 -keep class sun.util.resources.CalendarData
+-keep class sun.util.resources.TimeZoneNames
 -keep class sun.text.resources.FormatData
 
