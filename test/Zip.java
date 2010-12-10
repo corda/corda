@@ -27,20 +27,24 @@ public class Zip {
     ZipFile file = new ZipFile
       (findJar(new File(System.getProperty("user.dir"))));
 
-    byte[] buffer = new byte[4096];
-    for (Enumeration<? extends ZipEntry> e = file.entries();
-         e.hasMoreElements();)
-    {
-      ZipEntry entry = e.nextElement();
-      InputStream in = file.getInputStream(entry);
-      try {
-        int size = 0;
-        int c; while ((c = in.read(buffer)) != -1) size += c;
-        System.out.println
-          (entry.getName() + " " + entry.getCompressedSize() + " " + size);
-      } finally {
-        in.read();
+    try {
+      byte[] buffer = new byte[4096];
+      for (Enumeration<? extends ZipEntry> e = file.entries();
+           e.hasMoreElements();)
+      {
+        ZipEntry entry = e.nextElement();
+        InputStream in = file.getInputStream(entry);
+        try {
+          int size = 0;
+          int c; while ((c = in.read(buffer)) != -1) size += c;
+          System.out.println
+            (entry.getName() + " " + entry.getCompressedSize() + " " + size);
+        } finally {
+          in.close();
+        }
       }
+    } finally {
+      file.close();
     }
   }
 
