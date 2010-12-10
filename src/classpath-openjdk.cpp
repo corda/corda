@@ -330,27 +330,6 @@ class MyClasspath : public Classpath {
     release(t, t->javaThread);
   }
 
-  virtual object
-  makeThrowable
-  (Thread* t, Machine::Type type, object message, object trace, object cause)
-  {
-    PROTECT(t, message);
-    PROTECT(t, trace);
-    PROTECT(t, cause);
-    
-    if (trace == 0) {
-      trace = makeTrace(t);
-    }
-
-    object result = make(t, vm::type(t, type));
-    
-    set(t, result, ThrowableMessage, message);
-    set(t, result, ThrowableTrace, trace);
-    set(t, result, ThrowableCause, cause);
-
-    return result;
-  }
-
   virtual void
   boot(Thread* t)
   {
@@ -709,22 +688,19 @@ openFile(Thread* t, object method, uintptr_t* arguments)
   EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
   if (ef.jar) {
     if (ef.jarLength == 0 or ef.pathLength == 0) {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::FileNotFoundExceptionType);
+      t->exception = makeThrowable(t, Machine::FileNotFoundExceptionType);
       return;
     }
 
     Finder* finder = getFinder(t, ef.jar, ef.jarLength);
     if (finder == 0) {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::FileNotFoundExceptionType);
+      t->exception = makeThrowable(t, Machine::FileNotFoundExceptionType);
       return;
     }
 
     System::Region* r = finder->find(ef.path);
     if (r == 0) {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::FileNotFoundExceptionType);
+      t->exception = makeThrowable(t, Machine::FileNotFoundExceptionType);
       return;
     }
 
@@ -792,8 +768,7 @@ readByteFromFile(Thread* t, object method, uintptr_t* arguments)
         return -1;
       }
     } else {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::IoExceptionType);
+      t->exception = makeThrowable(t, Machine::IoExceptionType);
       return 0;
     }
   } else {
@@ -847,8 +822,7 @@ readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
 
       return length;
     } else {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::IoExceptionType);
+      t->exception = makeThrowable(t, Machine::IoExceptionType);
       return 0;
     }
   } else {
@@ -892,8 +866,7 @@ skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
 
       return count;
     } else {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::IoExceptionType);
+      t->exception = makeThrowable(t, Machine::IoExceptionType);
       return 0;
     }
   } else {
@@ -927,8 +900,7 @@ availableBytesInFile(Thread* t, object method, uintptr_t* arguments)
       return static_cast<System::Region*>(regionRegion(t, region))->length()
         - regionPosition(t, region);
     } else {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::IoExceptionType);
+      t->exception = makeThrowable(t, Machine::IoExceptionType);
       return 0;
     }
   } else {
@@ -1735,8 +1707,7 @@ Avian_sun_misc_Unsafe_allocateMemory
   if (p) {
     return reinterpret_cast<int64_t>(p);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::OutOfMemoryErrorType);
+    t->exception = makeThrowable(t, Machine::OutOfMemoryErrorType);
     return 0;
   }
 }
@@ -2474,8 +2445,7 @@ EXPORT(JVM_FindPrimitiveClass)(Thread* t, const char* name)
     return makeLocalReference
       (t, getJClass(t, type(t, Machine::JvoidType)));
   default:
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::IllegalArgumentExceptionType);
+    t->exception = makeThrowable(t, Machine::IllegalArgumentExceptionType);
     return 0;
   }
 }
@@ -2494,7 +2464,7 @@ EXPORT(JVM_FindClassFromClassLoader)(Thread* t, const char* name,
     (t, loader ? *loader : root(t, Machine::BootLoader), name);
   if (t->exception) {
     if (throwError) {
-      t->exception = t->m->classpath->makeThrowable
+      t->exception = makeThrowable
         (t, Machine::NoClassDefFoundErrorType,
          throwableMessage(t, t->exception),
          throwableTrace(t, t->exception),

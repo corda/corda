@@ -31,26 +31,17 @@ AttachCurrentThread(Machine* m, Thread** t, void*)
 {
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t == 0) {
-    *t = m->processor->makeThread(m, 0, m->rootThread);
-    m->system->attach(&((*t)->runnable));
-
-    enter(*t, Thread::ActiveState);
-    enter(*t, Thread::IdleState);
-
-    m->localThread->set(*t);
+    *t = attachThread(m, false);
   }
   return 0;
 }
 
 jint JNICALL
-AttachCurrentThreadAsDaemon(Machine* m, Thread** t, void* parameters)
+AttachCurrentThreadAsDaemon(Machine* m, Thread** t, void*)
 {
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t == 0) {
-    AttachCurrentThread(m, t, parameters);
-
-    ENTER(*t, Thread::ActiveState);
-    setDaemon(*t, (*t)->javaThread, true);
+    *t = attachThread(m, true);
   }
   return 0;
 }
@@ -2040,13 +2031,12 @@ boot(Thread* t)
   enter(t, Thread::ActiveState);
 
   if (t->exception == 0) {
-    setRoot(t, Machine::NullPointerException, t->m->classpath->makeThrowable
+    setRoot(t, Machine::NullPointerException, makeThrowable
             (t, Machine::NullPointerExceptionType));
       
     if (t->exception == 0) {
       setRoot(t, Machine::ArrayIndexOutOfBoundsException,
-              t->m->classpath->makeThrowable
-              (t, Machine::ArrayIndexOutOfBoundsExceptionType));
+              makeThrowable(t, Machine::ArrayIndexOutOfBoundsExceptionType));
     }
   }
 

@@ -101,7 +101,7 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
 
             return;
           } else {
-            t->exception = t->m->classpath->makeThrowable
+            t->exception = makeThrowable
               (t, Machine::IndexOutOfBoundsExceptionType);
             return;
           }
@@ -111,13 +111,11 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
       }
     }
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     return;
   }
 
-  t->exception = t->m->classpath->makeThrowable
-    (t, Machine::ArrayStoreExceptionType);
+  t->exception = makeThrowable(t, Machine::ArrayStoreExceptionType);
 }
 
 void
@@ -223,7 +221,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     }
   } else {  
     object message = makeString(t, "library not found: %s", name);
-    t->exception = t->m->classpath->makeThrowable
+    t->exception = makeThrowable
       (t, Machine::UnsatisfiedLinkErrorType, message);
   }
 

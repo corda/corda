@@ -2150,8 +2150,7 @@ findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
       return methodAddress(t, target);
     }
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2422,7 +2421,7 @@ makeBlankObjectArray(MyThread* t, object class_, int32_t length)
     return reinterpret_cast<uint64_t>(makeObjectArray(t, class_, length));
   } else {
     object message = makeString(t, "%d", length);
-    t->exception = t->m->classpath->makeThrowable
+    t->exception = makeThrowable
       (t, Machine::NegativeArraySizeExceptionType, message);
     unwind(t);
   }
@@ -2472,7 +2471,7 @@ makeBlankArray(MyThread* t, unsigned type, int32_t length)
     return reinterpret_cast<uintptr_t>(constructor(t, length));
   } else {
     object message = makeString(t, "%d", length);
-    t->exception = t->m->classpath->makeThrowable
+    t->exception = makeThrowable
       (t, Machine::NegativeArraySizeExceptionType, message);
     unwind(t);
   }
@@ -2507,8 +2506,7 @@ setMaybeNull(MyThread* t, object o, unsigned offset, object value)
   if (LIKELY(o)) {
     set(t, o, offset, value);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2519,8 +2517,7 @@ acquireMonitorForObject(MyThread* t, object o)
   if (LIKELY(o)) {
     acquire(t, o);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2531,8 +2528,7 @@ releaseMonitorForObject(MyThread* t, object o)
   if (LIKELY(o)) {
     release(t, o);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     unwind(t);
   }
 }
@@ -2548,7 +2544,7 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* countStack,
     RUNTIME_ARRAY_BODY(counts)[i] = countStack[dimensions - i - 1];
     if (UNLIKELY(RUNTIME_ARRAY_BODY(counts)[i] < 0)) {
       object message = makeString(t, "%d", RUNTIME_ARRAY_BODY(counts)[i]);
-      t->exception = t->m->classpath->makeThrowable
+      t->exception = makeThrowable
         (t, Machine::NegativeArraySizeExceptionType, message);
       return 0;
     }
@@ -2603,7 +2599,7 @@ throwArrayIndexOutOfBounds(MyThread* t)
 {
   if (ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t))) {
     atomicOr(&(t->flags), Thread::TracingFlag);
-    t->exception = t->m->classpath->makeThrowable
+    t->exception = makeThrowable
       (t, Machine::ArrayIndexOutOfBoundsExceptionType); 
     atomicAnd(&(t->flags), ~Thread::TracingFlag);
   } else {
@@ -2621,8 +2617,7 @@ throw_(MyThread* t, object o)
   if (LIKELY(o)) {
     t->exception = o;
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
   }
 
   // printTrace(t, t->exception);
@@ -2638,8 +2633,7 @@ checkCast(MyThread* t, object class_, object o)
       (t, "%s as %s",
        &byteArrayBody(t, className(t, objectClass(t, o)), 0),
        &byteArrayBody(t, className(t, class_), 0));
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::ClassCastExceptionType, message);
+    t->exception = makeThrowable(t, Machine::ClassCastExceptionType, message);
     unwind(t);
   }
 }
@@ -6837,7 +6831,7 @@ callContinuation(MyThread* t, object continuation, object result,
         action = Call;
       }
     } else {
-      t->exception = t->m->classpath->makeThrowable
+      t->exception = makeThrowable
         (t, Machine::IncompatibleContinuationExceptionType);
       action = Throw;
     }
@@ -7175,8 +7169,7 @@ class SegFaultHandler: public System::SignalHandler {
 
         if (ensure(t, FixedSizeOfNullPointerException + traceSize(t))) {
           atomicOr(&(t->flags), Thread::TracingFlag);
-          t->exception = t->m->classpath->makeThrowable
-            (t, Machine::NullPointerExceptionType);
+          t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
           atomicAnd(&(t->flags), ~Thread::TracingFlag);
         } else {
           // not enough memory available for a new NPE and stack trace

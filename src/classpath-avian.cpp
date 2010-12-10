@@ -65,27 +65,6 @@ class MyClasspath : public Classpath {
     }
   }
 
-  virtual object
-  makeThrowable
-  (Thread* t, Machine::Type type, object message, object trace, object cause)
-  {
-    PROTECT(t, message);
-    PROTECT(t, trace);
-    PROTECT(t, cause);
-    
-    if (trace == 0) {
-      trace = makeTrace(t);
-    }
-
-    object result = make(t, vm::type(t, type));
-    
-    set(t, result, ThrowableMessage, message);
-    set(t, result, ThrowableTrace, trace);
-    set(t, result, ThrowableCause, cause);
-
-    return result;
-  }
-
   virtual void
   boot(Thread*)
   {
@@ -330,7 +309,7 @@ Avian_java_lang_reflect_Method_invoke
 
   object v = t->m->processor->invokeArray(t, method, instance, args);
   if (t->exception) {
-    t->exception = t->m->classpath->makeThrowable
+    t->exception = makeThrowable
       (t, Machine::InvocationTargetExceptionType, 0, 0, t->exception);
   }
   return reinterpret_cast<int64_t>(v);
@@ -348,12 +327,10 @@ Avian_java_lang_reflect_Array_getLength
     if (LIKELY(elementSize)) {
       return cast<uintptr_t>(array, BytesPerWord);
     } else {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::IllegalArgumentExceptionType);
+      t->exception = makeThrowable(t, Machine::IllegalArgumentExceptionType);
     }
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
   }
   return 0;
 }
@@ -462,8 +439,7 @@ Avian_java_lang_System_identityHashCode
   if (LIKELY(o)) {
     return objectHash(t, o);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     return 0;
   }
 }
@@ -605,16 +581,6 @@ Avian_java_lang_Thread_enumerate
 }
 
 extern "C" JNIEXPORT void JNICALL
-Avian_java_lang_Thread_setDaemon
-(Thread* t, object, uintptr_t* arguments)
-{
-  object thread = reinterpret_cast<object>(arguments[0]);
-  bool daemon = arguments[1] != 0;
-
-  setDaemon(t, thread, daemon);
-}
-
-extern "C" JNIEXPORT void JNICALL
 Avian_avian_Classes_acquireClassLock
 (Thread* t, object, uintptr_t*)
 {
@@ -682,8 +648,7 @@ Avian_avian_Classes_isAssignableFrom
   if (LIKELY(that)) {
     return vm::isAssignableFrom(t, this_, that);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     return 0;
   }
 }

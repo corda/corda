@@ -243,7 +243,7 @@ resolveNative(Thread* t, object method)
          &byteArrayBody(t, methodName(t, method), 0),
          &byteArrayBody(t, methodSpec(t, method), 0));
 
-      t->exception = t->m->classpath->makeThrowable
+      t->exception = makeThrowable
         (t, Machine::UnsatisfiedLinkErrorType, message);
       return;
     }

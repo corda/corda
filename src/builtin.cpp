@@ -40,8 +40,7 @@ search(Thread* t, object loader, object name,
 
     return reinterpret_cast<int64_t>(r);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     return 0;
   }
 }
@@ -93,8 +92,7 @@ Avian_avian_SystemClassLoader_resourceExists
 
     return r;
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     return 0;
   }
 }
@@ -126,8 +124,7 @@ Avian_avian_Machine_dumpHeap
     fclose(out);
   } else {
     object message = makeString(t, "file not found: %s", n);
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::RuntimeExceptionType, message);
+    t->exception = makeThrowable(t, Machine::RuntimeExceptionType, message);
   }
 }
 
@@ -183,8 +180,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
 
     return reinterpret_cast<int64_t>(r);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
     return 0;
   }
 }

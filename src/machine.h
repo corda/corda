@@ -1282,6 +1282,9 @@ runJavaThread(Thread* t);
 void
 runFinalizeThread(Thread* t);
 
+void
+checkDaemon(Thread* t);
+
 class Thread {
  public:
   enum State {
@@ -1361,6 +1364,8 @@ class Thread {
 
       t->m->localThread->set(t);
 
+      checkDaemon(t);
+
       if (t == t->m->finalizeThread) {
         runFinalizeThread(t);
       } else if (t->javaThread) {
@@ -1428,11 +1433,6 @@ class Classpath {
 
   virtual void
   runThread(Thread* t) = 0;
-
-  virtual object
-  makeThrowable
-  (Thread* t, Machine::Type type, object message = 0, object trace = 0,
-   object cause = 0) = 0;
 
   virtual void
   boot(Thread* t) = 0;
@@ -1709,19 +1709,6 @@ setObjectClass(Thread*, object o, object value)
      | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
 }
 
-inline Thread*
-startThread(Thread* t, object javaThread)
-{
-  Thread* p = t->m->processor->makeThread(t->m, javaThread, t);
-
-  if (t->m->system->success(t->m->system->start(&(p->runnable)))) {
-    return p;
-  } else {
-    p->exit();
-    return 0;
-  }
-}
-
 inline const char*
 findProperty(Machine* m, const char* name)
 {
@@ -1757,6 +1744,69 @@ inline void
 runJavaThread(Thread* t)
 {
   t->m->classpath->runThread(t);
+}
+
+inline bool
+startThread(Thread* t, Thread* p)
+{
+  return t->m->system->success(t->m->system->start(&(p->runnable)));
+}
+
+inline Thread*
+startThread(Thread* t, object javaThread)
+{
+  Thread* p = t->m->processor->makeThread(t->m, javaThread, t);
+
+  if (startThread(t, p)) {
+    return p;
+  } else {
+    return 0;
+  }
+}
+
+inline void
+registerDaemon(Thread* t)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  atomicOr(&(t->flags), Thread::DaemonFlag);
+
+  ++ t->m->daemonCount;
+        
+  t->m->stateLock->notifyAll(t->systemThread);
+}
+
+inline void
+checkDaemon(Thread* t)
+{
+  if (threadDaemon(t, t->javaThread)) {
+    registerDaemon(t);
+  }
+}
+
+inline Thread*
+attachThread(Machine* m, bool daemon)
+{
+  Thread* t = m->processor->makeThread(m, 0, m->rootThread);
+  m->system->attach(&(t->runnable));
+
+  enter(t, Thread::ActiveState);
+
+  t->javaThread = m->classpath->makeThread(t, m->rootThread);
+
+  threadPeer(t, t->javaThread) = reinterpret_cast<jlong>(t);
+
+  if (daemon) {
+    threadDaemon(t, t->javaThread) = true;
+
+    registerDaemon(t);
+  }
+
+  enter(t, Thread::IdleState);
+
+  m->localThread->set(t);
+
+  return t;
 }
 
 inline object&
@@ -2237,6 +2287,28 @@ findMethodInClass(Thread* t, object class_, object name, object spec)
     (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
 }
 
+inline object
+makeThrowable
+(Thread* t, Machine::Type type, object message = 0, object trace = 0,
+ object cause = 0)
+{
+  PROTECT(t, message);
+  PROTECT(t, trace);
+  PROTECT(t, cause);
+    
+  if (trace == 0) {
+    trace = makeTrace(t);
+  }
+
+  object result = make(t, vm::type(t, type));
+    
+  set(t, result, ThrowableMessage, message);
+  set(t, result, ThrowableTrace, trace);
+  set(t, result, ThrowableCause, cause);
+
+  return result;
+}
+
 object
 findInHierarchyOrNull(Thread* t, object class_, object name, object spec,
                       object (*find)(Thread*, object, object, object));
@@ -2254,7 +2326,7 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
        &byteArrayBody(t, name, 0),
        &byteArrayBody(t, spec, 0),
        &byteArrayBody(t, className(t, class_), 0));
-    t->exception = t->m->classpath->makeThrowable(t, errorType, message);
+    t->exception = makeThrowable(t, errorType, message);
   }
 
   return o;
@@ -2707,12 +2779,10 @@ wait(Thread* t, object o, int64_t milliseconds)
     bool interrupted = monitorWait(t, m, milliseconds);
 
     if (interrupted) {
-      t->exception = t->m->classpath->makeThrowable
-        (t, Machine::InterruptedExceptionType);
+      t->exception = makeThrowable(t, Machine::InterruptedExceptionType);
     }
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::IllegalMonitorStateExceptionType);
+    t->exception = makeThrowable(t, Machine::IllegalMonitorStateExceptionType);
   }
 
   if (DebugMonitors) {
@@ -2741,8 +2811,7 @@ notify(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotify(t, m);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::IllegalMonitorStateExceptionType);
+    t->exception = makeThrowable(t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
@@ -2759,8 +2828,7 @@ notifyAll(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotifyAll(t, m);
   } else {
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::IllegalMonitorStateExceptionType);
+    t->exception = makeThrowable(t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
@@ -2800,34 +2868,6 @@ interrupt(Thread* t, Thread* target)
   if (acquireSystem(t, target)) {
     target->systemThread->interrupt();
     releaseSystem(t, target);
-  }
-}
-
-inline void
-setDaemon(Thread* t, object thread, bool daemon)
-{
-  ACQUIRE_RAW(t, t->m->stateLock);
-
-  if ((threadDaemon(t, thread) != 0) != daemon) {
-    threadDaemon(t, thread) = daemon;
-
-    Thread* p = reinterpret_cast<Thread*>(threadPeer(t, thread));
-    if (p) {
-      if (daemon) {
-        atomicOr(&(p->flags), Thread::DaemonFlag);
-      } else {
-        atomicAnd(&(p->flags), ~Thread::DaemonFlag);
-      }
-    }
-
-    if (daemon) {
-      ++ t->m->daemonCount;
-    } else {
-      expect(t, t->m->daemonCount);
-      -- t->m->daemonCount;
-    }
-    
-    t->m->stateLock->notifyAll(t->systemThread);
   }
 }
 
@@ -3157,8 +3197,7 @@ primitiveClass(Thread* t, char name)
   case 'V': return type(t, Machine::JvoidType);
   case 'Z': return type(t, Machine::JbooleanType);
   default:
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::IllegalArgumentExceptionType);
+    t->exception = makeThrowable(t, Machine::IllegalArgumentExceptionType);
     return 0;
   }
 }

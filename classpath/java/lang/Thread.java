@@ -239,12 +239,12 @@ public class Thread implements Runnable {
   }
 
   public synchronized void setDaemon(boolean v) {
-    if (v != daemon) {
-      setDaemon(this, v);
+    if (getState() != State.NEW) {
+      throw new IllegalStateException();
     }
-  }
 
-  private static native void setDaemon(Thread t, boolean increment);
+    daemon = v;
+  }
 
   public static native void yield();
 

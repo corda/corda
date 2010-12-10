@@ -1731,11 +1731,13 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
     PROTECT(t, spec);
     PROTECT(t, elementClass);
 
+    // Load java.lang.Object if present so we can use its vtable, but
+    // don't throw an exception if we can't find it.  This way, we
+    // avoid infinite recursion due to trying to create an array to
+    // make a stack trace for a ClassNotFoundException.
     resolveSystemClass
       (t, root(t, Machine::BootLoader),
-       className(t, type(t, Machine::JobjectType)));
-
-    if (UNLIKELY(t->exception)) return 0;
+       className(t, type(t, Machine::JobjectType)), false);
   }
 
   object vtable = classVirtualTable(t, type(t, Machine::JobjectType));
@@ -2324,18 +2326,16 @@ Thread::init()
     setRoot(this, Machine::JNIMethodTable, makeVector(this, 0, 0));
 
     m->localThread->set(this);
+
+    javaThread = m->classpath->makeThread(this, 0);
+
+    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   } else {
     peer = parent->child;
     parent->child = this;
   }
 
   expect(this, m->system->success(m->system->make(&lock)));
-
-  if (javaThread == 0) {
-    this->javaThread = m->classpath->makeThread(this, parent);
-  }
-
-  threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
 }
 
 void
@@ -2494,36 +2494,6 @@ enter(Thread* t, Thread::State s)
   } break;
 
   case Thread::IdleState:
-    // The java.lang.Thread implementation may or may not notify the
-    // VM when the daemon field in the Java object changes, so we sync
-    // up the native field whenever the thread transitions to idle:
-
-    // todo: this won't always help if some other thread sets the
-    // daemon field.  The thread trying to shut down the VM really
-    // just needs to count from scratch every time any thread makes a
-    // transition (i.e. eliminate Machine::daemonCount).
-
-    if (UNLIKELY(((t->flags & Thread::DaemonFlag) != 0)
-                 != threadDaemon(t, t->javaThread)))
-    {
-      ACQUIRE_LOCK;
-
-      if (threadDaemon(t, t->javaThread)) {
-        atomicOr(&(t->flags), Thread::DaemonFlag);
-      } else {
-        atomicAnd(&(t->flags), ~Thread::DaemonFlag);
-      }
-      
-      if (t->flags & Thread::DaemonFlag) {
-        ++ t->m->daemonCount;
-      } else {
-        expect(t, t->m->daemonCount);
-        -- t->m->daemonCount;
-      }
-    
-      t->m->stateLock->notifyAll(t->systemThread);
-    }
-
     if (LIKELY(t->state == Thread::ActiveState)) {
       // fast path
       assert(t, t->m->activeCount > 0);
@@ -2563,7 +2533,7 @@ enter(Thread* t, Thread::State s)
       assert(t, t->m->liveCount > 0);
       -- t->m->liveCount;
 
-      if (threadDaemon(t, t->javaThread)) {
+      if (t->flags & Thread::DaemonFlag) {
         -- t->m->daemonCount;
       }
     }
@@ -3239,7 +3209,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
     } else if (throw_ and t->exception == 0) {
       object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = t->m->classpath->makeThrowable
+      t->exception = makeThrowable
         (t, Machine::ClassNotFoundExceptionType, message);
     }
   }
@@ -3334,7 +3304,7 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
     } else {
       if (t->exception == 0) {
         object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-        t->exception = t->m->classpath->makeThrowable
+        t->exception = makeThrowable
           (t, Machine::ClassNotFoundExceptionType, message);
       }
       
@@ -3361,8 +3331,7 @@ resolveMethod(Thread* t, object class_, const char* methodName,
       (t, "%s %s not found in %s", methodName, methodSpec,
        &byteArrayBody(t, className(t, class_), 0));
 
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NoSuchMethodErrorType, message);
+    t->exception = makeThrowable(t, Machine::NoSuchMethodErrorType, message);
     return 0;
   } else {
     return method;
@@ -3395,8 +3364,7 @@ resolveField(Thread* t, object class_, const char* fieldName,
       (t, "%s %s not found in %s", fieldName, fieldSpec,
        &byteArrayBody(t, className(t, class_), 0));
 
-    t->exception = t->m->classpath->makeThrowable
-      (t, Machine::NoSuchFieldErrorType, message);
+    t->exception = makeThrowable(t, Machine::NoSuchFieldErrorType, message);
     return 0;
   } else {
     return field;
@@ -3449,7 +3417,7 @@ preInitClass(Thread* t, object c)
         object message = makeString
           (t, "%s", &byteArrayBody(t, className(t, c), 0));
 
-        t->exception = t->m->classpath->makeThrowable
+        t->exception = makeThrowable
           (t, Machine::NoClassDefFoundErrorType, message);
       } else {
         classVmFlags(t, c) |= InitFlag;
@@ -3467,7 +3435,7 @@ postInitClass(Thread* t, object c)
   ACQUIRE(t, t->m->classLock);
 
   if (t->exception) {
-    t->exception = t->m->classpath->makeThrowable
+    t->exception = makeThrowable
       (t, Machine::ExceptionInInitializerErrorType, 0, 0, t->exception);
 
     classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
@@ -3527,6 +3495,7 @@ resolveObjectArrayClass(Thread* t, object loader, object elementClass)
   }
 
   object arrayClass = resolveClass(t, loader, spec);
+  if (UNLIKELY(t->exception)) return 0;
 
   set(t, getClassRuntimeData(t, elementClass), ClassRuntimeDataArrayClass,
       arrayClass);
@@ -3539,6 +3508,8 @@ makeObjectArray(Thread* t, object elementClass, unsigned count)
 {
   object arrayClass = resolveObjectArrayClass
     (t, classLoader(t, elementClass), elementClass);
+  if (UNLIKELY(t->exception)) return 0;
+
   PROTECT(t, arrayClass);
 
   object array = makeArray(t, count);
@@ -3760,13 +3731,12 @@ collect(Thread* t, Heap::CollectionType type)
   }
 
   if (root(t, Machine::ObjectsToFinalize) and m->finalizeThread == 0) {
-    m->finalizeThread = m->processor->makeThread
-      (m, t->m->classpath->makeThread(t, m->rootThread), m->rootThread);
+    object javaThread = t->m->classpath->makeThread(t, m->rootThread);
+    threadDaemon(t, javaThread) = true;
 
-    if (not t->m->system->success
-        (m->system->start(&(m->finalizeThread->runnable))))
-    {
-      m->finalizeThread->exit();
+    m->finalizeThread = m->processor->makeThread(m, javaThread, m->rootThread);
+    
+    if (not startThread(t, m->finalizeThread)) {
       m->finalizeThread = 0;
     }
   }
@@ -3849,8 +3819,7 @@ void
 printTrace(Thread* t, object exception)
 {
   if (exception == 0) {
-    exception = t->m->classpath->makeThrowable
-      (t, Machine::NullPointerExceptionType);
+    exception = makeThrowable(t, Machine::NullPointerExceptionType);
   }
 
   for (object e = exception; e; e = throwableCause(t, e)) {
@@ -3956,8 +3925,6 @@ makeTrace(Thread* t, Thread* target)
 void
 runFinalizeThread(Thread* t)
 {
-  setDaemon(t, t->javaThread, true);
-
   object list = 0;
   PROTECT(t, list);
 
