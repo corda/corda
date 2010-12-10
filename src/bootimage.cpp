@@ -170,7 +170,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     assert(t, value >= code);
 
     void* location;
-    bool flat = addresses->listener->resolve(0, &location);
+    bool flat = addresses->listener->resolve
+      (reinterpret_cast<int64_t>(code), &location);
     uintptr_t offset = value - code;
     if (flat) {
       offset |= BootFlatConstant;
