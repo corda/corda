@@ -1084,13 +1084,13 @@ interceptFileOperations(Thread* t)
       (t, root(t, Machine::BootLoader), "java/io/FileInputStream");
     if (fileInputStreamClass == 0) return;
 
+    PROTECT(t, fileInputStreamClass);
+
     object fileInputStreamFdField = findFieldInClass2
       (t, fileInputStreamClass, "fd", "Ljava/io/FileDescriptor;");
     if (fileInputStreamFdField == 0) return;
 
     cp->fileInputStreamFdField = fieldOffset(t, fileInputStreamFdField);
-
-    PROTECT(t, fileInputStreamClass);
 
     intercept(t, fileInputStreamClass, "open", "(Ljava/lang/String;)V",
               voidPointer(openFile));

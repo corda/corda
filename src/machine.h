@@ -1513,7 +1513,8 @@ shutDown(Thread* t);
 inline void
 stress(Thread* t)
 {
-  if ((t->flags & (Thread::StressFlag | Thread::TracingFlag)) == 0
+  if ((not t->m->unsafe)
+      and (t->flags & (Thread::StressFlag | Thread::TracingFlag)) == 0
       and t->state != Thread::NoState
       and t->state != Thread::IdleState)
   {
@@ -3166,10 +3167,10 @@ getMethodRuntimeData(Thread* t, object method)
 inline object
 getJClass(Thread* t, object c)
 {
+  PROTECT(t, c);
+
   object jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
   if (jclass == 0) {
-    PROTECT(t, c);
-
     ACQUIRE(t, t->m->classLock);
 
     jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));

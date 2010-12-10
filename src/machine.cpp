@@ -1903,14 +1903,15 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
   PROTECT(t, bootMethod);
 
   object n = makeByteArray(t, name);
+  PROTECT(t, n);
+
   object class_ = vm::type(t, type);
+  PROTECT(t, class_);
 
   set(t, class_, ClassName, n);
 
   object vtable;
   if (vtableLength >= 0) {
-    PROTECT(t, class_);
-
     vtable = makeArray(t, vtableLength);
     for (int i = 0; i < vtableLength; ++ i) {
       arrayBody(t, vtable, i) = bootMethod;
