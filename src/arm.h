@@ -101,6 +101,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
         memcpy(gprTable + gprIndex, arguments + ai, 8);
         gprIndex += 8 / BytesPerWord;
       } else {                                         // pass argument on stack
+        gprIndex = GprCount;
         if (stackIndex & 1) {                          // 8-byte alignment
           memset(stack + stackIndex, 0, 4);            // probably not necessary, but for good luck
           ++stackIndex;
