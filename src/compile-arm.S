@@ -96,6 +96,14 @@ GLOBAL(vmInvoke_returnAddress):
 
   // restore frame
   ldr   sp, [sp]
+   
+   // clear MyThread::stack to avoid confusing another thread calling
+   // java.lang.Thread.getStackTrace on this one.  See
+   // MyProcess::getStackTrace in compile.cpp for details on how we get
+   // a reliable stack trace from a thread that might be interrupted at
+   // any point in its execution.
+   mov  r5,#0
+   str  r5,[r8,#THREAD_STACK]
 
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):
