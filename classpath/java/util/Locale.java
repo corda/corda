@@ -30,11 +30,11 @@ public class Locale {
   }
 
   public Locale(String language, String country) {
-    this(language, country, null);
+    this(language, country, "");
   }
 
   public Locale(String language) {
-    this(language, null);
+    this(language, "");
   }
 
   public String getLanguage() {
@@ -51,5 +51,14 @@ public class Locale {
 
   public static Locale getDefault() {
     return DEFAULT;
+  }
+
+  public final String toString() {
+    boolean hasLanguage = language != "";
+    boolean hasCountry  = country  != "";
+    boolean hasVariant  = variant  != "";
+
+    if (!hasLanguage && !hasCountry) return "";
+    return language + (hasCountry || hasVariant ? '_' + country : "") + (hasVariant ? '_' + variant : "");
   }
 }
