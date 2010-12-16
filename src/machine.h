@@ -2399,6 +2399,36 @@ void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
 inline bool
+zombified(Thread* t)
+{
+  return t->state == Thread::ZombieState
+    or t->state == Thread::JoinedState;
+}
+
+inline bool
+acquireSystem(Thread* t, Thread* target)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  if (not zombified(target)) {
+    atomicOr(&(target->flags), Thread::SystemFlag);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+inline void
+releaseSystem(Thread* t, Thread* target)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  assert(t, not zombified(target));
+
+  atomicAnd(&(target->flags), ~Thread::SystemFlag);
+}
+
+inline bool
 atomicCompareAndSwapObject(Thread* t, object target, unsigned offset,
                            object old, object new_)
 {
@@ -2545,10 +2575,12 @@ monitorRelease(Thread* t, object monitor)
     
     Thread* next = monitorAtomicPollAcquire(t, monitor, false);
 
-    if (next) {
+    if (next and acquireSystem(t, next)) {
       ACQUIRE(t, next->lock);
        
       next->lock->notify(t->systemThread);
+
+      releaseSystem(t, next);
     }
   }
 }
@@ -2831,36 +2863,6 @@ notifyAll(Thread* t, object o)
   } else {
     t->exception = makeThrowable(t, Machine::IllegalMonitorStateExceptionType);
   }
-}
-
-inline bool
-zombified(Thread* t)
-{
-  return t->state == Thread::ZombieState
-    or t->state == Thread::JoinedState;
-}
-
-inline bool
-acquireSystem(Thread* t, Thread* target)
-{
-  ACQUIRE_RAW(t, t->m->stateLock);
-
-  if (not zombified(target)) {
-    atomicOr(&(target->flags), Thread::SystemFlag);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-inline void
-releaseSystem(Thread* t, Thread* target)
-{
-  ACQUIRE_RAW(t, t->m->stateLock);
-
-  assert(t, not zombified(target));
-
-  atomicAnd(&(target->flags), ~Thread::SystemFlag);
 }
 
 inline void
