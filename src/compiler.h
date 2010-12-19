@@ -188,7 +188,8 @@ class Compiler {
   virtual void storeStoreBarrier() = 0;
   virtual void storeLoadBarrier() = 0;
 
-  virtual unsigned compile() = 0;
+  virtual unsigned compile(uintptr_t stackOverflowHandler,
+                           unsigned stackLimitOffset) = 0;
   virtual unsigned poolSize() = 0;
   virtual void writeTo(uint8_t* dst) = 0;
 

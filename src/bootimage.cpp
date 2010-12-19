@@ -30,7 +30,7 @@ const unsigned HeapCapacity = 768 * 1024 * 1024;
 // One of the advantages of a bootimage-based build is that reduces
 // the overhead of major GCs at runtime since we can avoid scanning
 // the pre-built heap image entirely.  However, this only works if we
-// can ensure that no part of the heap image (with an exception noted
+// can ensure that no part of the heap image (with exceptions noted
 // below) ever points to runtime-allocated objects.  Therefore (most)
 // references in the heap image are considered immutable, and any
 // attempt to update them at runtime will cause the process to abort.

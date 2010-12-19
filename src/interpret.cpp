@@ -30,9 +30,6 @@ class ClassInitList;
 
 class Thread: public vm::Thread {
  public:
-  static const unsigned StackSizeInBytes = 64 * 1024;
-  static const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
-
   Thread(Machine* m, object javaThread, vm::Thread* parent):
     vm::Thread(m, javaThread, parent),
     ip(0),
@@ -78,7 +75,7 @@ pushObject(Thread* t, object o)
     fprintf(stderr, "push object %p at %d\n", o, t->sp);
   }
 
-  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+  assert(t, t->sp + 1 < StackSizeInWords / 2);
   t->stack[(t->sp * 2)    ] = ObjectTag;
   t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
   ++ t->sp;
@@ -91,7 +88,7 @@ pushInt(Thread* t, uint32_t v)
     fprintf(stderr, "push int %d at %d\n", v, t->sp);
   }
 
-  assert(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+  assert(t, t->sp + 1 < StackSizeInWords / 2);
   t->stack[(t->sp * 2)    ] = IntTag;
   t->stack[(t->sp * 2) + 1] = v;
   ++ t->sp;
@@ -184,7 +181,7 @@ peekObject(Thread* t, unsigned index)
             index);
   }
 
-  assert(t, index < Thread::StackSizeInWords / 2);
+  assert(t, index < StackSizeInWords / 2);
   assert(t, t->stack[index * 2] == ObjectTag);
   return *reinterpret_cast<object*>(t->stack + (index * 2) + 1);
 }
@@ -198,7 +195,7 @@ peekInt(Thread* t, unsigned index)
             index);
   }
 
-  assert(t, index < Thread::StackSizeInWords / 2);
+  assert(t, index < StackSizeInWords / 2);
   assert(t, t->stack[index * 2] == IntTag);
   return t->stack[(index * 2) + 1];
 }
@@ -254,7 +251,7 @@ inline object*
 pushReference(Thread* t, object o)
 {
   if (o) {
-    expect(t, t->sp + 1 < Thread::StackSizeInWords / 2);
+    expect(t, t->sp + 1 < StackSizeInWords / 2);
     pushObject(t, o);
     return reinterpret_cast<object*>(t->stack + ((t->sp - 1) * 2) + 1);
   } else {
@@ -436,7 +433,7 @@ checkStack(Thread* t, object method)
                + codeMaxLocals(t, methodCode(t, method))
                + FrameFootprint
                + codeMaxStack(t, methodCode(t, method))
-               > Thread::StackSizeInWords / 2))
+               > StackSizeInWords / 2))
   {
     t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
   }
@@ -3136,7 +3133,7 @@ class MyProcessor: public Processor {
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
-                 > Thread::StackSizeInWords / 2))
+                 > StackSizeInWords / 2))
     {
       t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
       return 0;
@@ -3161,7 +3158,7 @@ class MyProcessor: public Processor {
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
-                 > Thread::StackSizeInWords / 2))
+                 > StackSizeInWords / 2))
     {
       t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
       return 0;
@@ -3185,7 +3182,7 @@ class MyProcessor: public Processor {
            or t->state == Thread::ExclusiveState);
 
     if (UNLIKELY(t->sp + parameterFootprint(vmt, methodSpec, false)
-                 > Thread::StackSizeInWords / 2))
+                 > StackSizeInWords / 2))
     {
       t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
       return 0;

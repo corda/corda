@@ -4919,8 +4919,7 @@ class BoundsCheckEvent: public Event {
                         lengthOffset, NoRegister, 1);
       length.acquired = true;
 
-      CodePromise* nextPromise = codePromise
-        (c, static_cast<Promise*>(0));
+      CodePromise* nextPromise = codePromise(c, static_cast<Promise*>(0));
 
       freezeSource(c, BytesPerWord, index);
 
@@ -5649,7 +5648,7 @@ block(Context* c, Event* head)
 }
 
 unsigned
-compile(Context* c)
+compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
 {
   if (c->logicalCode[c->logicalIp]->lastEvent == 0) {
     appendDummy(c);
@@ -5659,6 +5658,15 @@ compile(Context* c)
 
   Block* firstBlock = block(c, c->firstEvent);
   Block* block = firstBlock;
+
+  if (stackOverflowHandler) {
+    Assembler::Register stack(c->arch->stack());
+    Assembler::Memory stackLimit(c->arch->thread(), stackLimitOffset);
+    Assembler::Constant handler(resolved(c, stackOverflowHandler));
+    a->apply(JumpIfGreaterOrEqual, BytesPerWord, RegisterOperand, &stack,
+             BytesPerWord, MemoryOperand, &stackLimit,
+             BytesPerWord, ConstantOperand, &handler);
+  }
 
   a->allocateFrame(c->alignedFrameSize);
 
@@ -6406,8 +6414,8 @@ class MyCompiler: public Compiler {
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
                            Operand* index, intptr_t handler)
   {
-    appendBoundsCheck(&c, static_cast<Value*>(object),
-                      lengthOffset, static_cast<Value*>(index), handler);
+    appendBoundsCheck(&c, static_cast<Value*>(object), lengthOffset,
+                      static_cast<Value*>(index), handler);
   }
 
   virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
@@ -6827,8 +6835,11 @@ class MyCompiler: public Compiler {
     appendBarrier(&c, StoreLoadBarrier);
   }
 
-  virtual unsigned compile() {
-    return c.machineCodeSize = local::compile(&c);
+  virtual unsigned compile(uintptr_t stackOverflowHandler,
+                           unsigned stackLimitOffset)
+  {
+    return c.machineCodeSize = local::compile
+      (&c, stackOverflowHandler, stackLimitOffset);
   }
 
   virtual unsigned poolSize() {

@@ -45,6 +45,7 @@ class BootImage {
     Thunk defaultVirtual;
     Thunk native;
     Thunk aioob;
+    Thunk stackOverflow;
     Thunk table;
   };
 
@@ -75,6 +76,7 @@ class BootImage {
   unsigned compileVirtualMethodCall;
   unsigned invokeNativeCall;
   unsigned throwArrayIndexOutOfBoundsCall;
+  unsigned throwStackOverflowCall;
 
 #define THUNK(s) unsigned s##Call;
 #include "thunks.cpp"

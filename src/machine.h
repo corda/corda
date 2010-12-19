@@ -56,6 +56,9 @@ const unsigned ThreadBackupHeapSizeInBytes = 2 * 1024;
 const unsigned ThreadBackupHeapSizeInWords
 = ThreadBackupHeapSizeInBytes / BytesPerWord;
 
+const unsigned StackSizeInBytes = 64 * 1024;
+const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
+
 const unsigned ThreadHeapPoolSize = 64;
 
 const unsigned FixedFootprintThresholdInBytes

@@ -225,7 +225,8 @@ class MyThread: public Thread {
          ? parent->arch
          : makeArchitecture(m->system, useNativeFeatures)),
     transition(0),
-    traceContext(0)
+    traceContext(0),
+    stackLimit(0)
   {
     arch->acquire();
   }
@@ -245,6 +246,7 @@ class MyThread: public Thread {
   Assembler::Architecture* arch;
   Context* transition;
   TraceContext* traceContext;
+  uintptr_t stackLimit;
 };
 
 void
@@ -1118,6 +1120,7 @@ class Context {
     objectPoolCount(0),
     traceLogCount(0),
     dirtyRoots(false),
+    leaf(true),
     eventLog(t->m->system, t->m->heap, 1024),
     protector(this)
   { }
@@ -1139,6 +1142,7 @@ class Context {
     objectPoolCount(0),
     traceLogCount(0),
     dirtyRoots(false),
+    leaf(true),
     eventLog(t->m->system, t->m->heap, 0),
     protector(this)
   { }
@@ -1164,6 +1168,7 @@ class Context {
   unsigned objectPoolCount;
   unsigned traceLogCount;
   bool dirtyRoots;
+  bool leaf;
   Vector eventLog;
   MyProtector protector;
 };
@@ -2100,6 +2105,9 @@ uintptr_t
 aioobThunk(MyThread* t);
 
 uintptr_t
+stackOverflowThunk(MyThread* t);
+
+uintptr_t
 virtualThunk(MyThread* t, unsigned index);
 
 bool
@@ -2607,6 +2615,14 @@ throwArrayIndexOutOfBounds(MyThread* t)
     // -- use a preallocated instance instead
     t->exception = root(t, Machine::ArrayIndexOutOfBoundsException);
   }
+
+  unwind(t);
+}
+
+void NO_RETURN
+throwStackOverflow(MyThread* t)
+{
+  t->exception = makeThrowable(t, Machine::StackOverflowErrorType); 
 
   unwind(t);
 }
@@ -4121,6 +4137,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case invokeinterface: {
+      context->leaf = false;
+
       uint16_t index = codeReadInt16(t, code, ip);
       ip += 2;
 
@@ -4162,6 +4180,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case invokespecial: {
+      context->leaf = false;
+
       uint16_t index = codeReadInt16(t, code, ip);
       object target = resolveMethod(t, context->method, index - 1);
       if (UNLIKELY(t->exception)) return;
@@ -4179,6 +4199,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case invokestatic: {
+      context->leaf = false;
+
       uint16_t index = codeReadInt16(t, code, ip);
 
       object target = resolveMethod(t, context->method, index - 1);
@@ -4193,6 +4215,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case invokevirtual: {
+      context->leaf = false;
+
       uint16_t index = codeReadInt16(t, code, ip);
 
       object target = resolveMethod(t, context->method, index - 1);
@@ -5745,7 +5769,9 @@ finish(MyThread* t, Allocator* allocator, Context* context)
   // parallelism (the downside being that it may end up being a waste
   // of cycles if another thread compiles the same method in parallel,
   // which might be mitigated by fine-grained, per-method locking):
-  unsigned codeSize = c->compile();
+  unsigned codeSize = c->compile
+    (context->leaf ? 0 : stackOverflowThunk(t),
+     difference(&(t->stackLimit), t));
 
   uintptr_t* code = static_cast<uintptr_t*>
     (allocator->allocate(pad(codeSize) + pad(c->poolSize()) + BytesPerWord));
@@ -7091,7 +7117,16 @@ object
 invoke(Thread* thread, object method, ArgumentList* arguments)
 {
   MyThread* t = static_cast<MyThread*>(thread);
-  
+
+  uintptr_t stackLimit = t->stackLimit;
+  uintptr_t stackPosition = reinterpret_cast<uintptr_t>(&t);
+  if (stackLimit == 0) {
+    t->stackLimit = stackPosition - StackSizeInBytes;
+  } else if (stackPosition < stackLimit) {
+    t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
+    return 0;
+  }
+
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
 
@@ -7110,6 +7145,8 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
        * BytesPerWord,
        returnType);
   }
+
+  t->stackLimit = stackLimit;
 
   if (t->exception) { 
     if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
@@ -7243,6 +7280,7 @@ class MyProcessor: public Processor {
     Thunk defaultVirtual;
     Thunk native;
     Thunk aioob;
+    Thunk stackOverflow;
     Thunk table;
   };
 
@@ -7801,7 +7839,7 @@ isThunkUnsafeStack(MyProcessor::Thunk* thunk, void* ip)
 bool
 isThunkUnsafeStack(MyProcessor::ThunkCollection* thunks, void* ip)
 {
-  const unsigned NamedThunkCount = 4;
+  const unsigned NamedThunkCount = 5;
 
   MyProcessor::Thunk table[NamedThunkCount + ThunkCount];
 
@@ -7809,6 +7847,7 @@ isThunkUnsafeStack(MyProcessor::ThunkCollection* thunks, void* ip)
   table[1] = thunks->defaultVirtual;
   table[2] = thunks->native;
   table[3] = thunks->aioob;
+  table[4] = thunks->stackOverflow;
     
   for (unsigned i = 0; i < ThunkCount; ++i) {
     new (table + NamedThunkCount + i) MyProcessor::Thunk
@@ -8137,6 +8176,8 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
     = thunkToThunk(image->thunks.defaultVirtual, code);
   p->bootThunks.native = thunkToThunk(image->thunks.native, code);
   p->bootThunks.aioob = thunkToThunk(image->thunks.aioob, code);
+  p->bootThunks.stackOverflow
+    = thunkToThunk(image->thunks.stackOverflow, code);
   p->bootThunks.table = thunkToThunk(image->thunks.table, code);
 
   updateCall(t, LongCall, code + image->compileMethodCall,
@@ -8150,6 +8191,9 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
 
   updateCall(t, LongCall, code + image->throwArrayIndexOutOfBoundsCall,
              voidPointer(throwArrayIndexOutOfBounds));
+
+  updateCall(t, LongCall, code + image->throwStackOverflowCall,
+             voidPointer(throwStackOverflow));
 
 #define THUNK(s)                                                        \
   updateCall(t, LongJump, code + image->s##Call, voidPointer(s));
@@ -8391,6 +8435,23 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     p->thunks.aioob.length = a->endBlock(false)->resolve(0, 0);
   }
 
+  ThunkContext stackOverflowContext(t, &zone);
+
+  { Assembler* a = stackOverflowContext.context.assembler;
+      
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+
+    p->thunks.stackOverflow.frameSavedOffset = a->length();
+
+    Assembler::Register thread(t->arch->thread());
+    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+
+    Assembler::Constant proc(&(stackOverflowContext.promise));
+    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+
+    p->thunks.stackOverflow.length = a->endBlock(false)->resolve(0, 0);
+  }
+
   ThunkContext tableContext(t, &zone);
 
   { Assembler* a = tableContext.context.assembler;
@@ -8463,6 +8524,21 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     }
   }
 
+  p->thunks.stackOverflow.start = finish
+    (t, allocator, stackOverflowContext.context.assembler, "stackOverflow",
+     p->thunks.stackOverflow.length);
+
+  { void* call;
+    stackOverflowContext.promise.listener->resolve
+      (reinterpret_cast<intptr_t>(voidPointer(throwStackOverflow)),
+       &call);
+
+    if (image) {
+      image->throwStackOverflowCall
+        = static_cast<uint8_t*>(call) - imageBase;
+    }
+  }
+
   p->thunks.table.start = static_cast<uint8_t*>
     (allocator->allocate(p->thunks.table.length * ThunkCount));
 
@@ -8472,6 +8548,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
       = thunkToThunk(p->thunks.defaultVirtual, imageBase);
     image->thunks.native = thunkToThunk(p->thunks.native, imageBase);
     image->thunks.aioob = thunkToThunk(p->thunks.aioob, imageBase);
+    image->thunks.stackOverflow
+      = thunkToThunk(p->thunks.stackOverflow, imageBase);
     image->thunks.table = thunkToThunk(p->thunks.table, imageBase);
   }
 
@@ -8537,6 +8615,12 @@ uintptr_t
 aioobThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>(processor(t)->thunks.aioob.start);
+}
+
+uintptr_t
+stackOverflowThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->thunks.stackOverflow.start);
 }
 
 bool
