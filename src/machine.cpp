@@ -3436,8 +3436,10 @@ postInitClass(Thread* t, object c)
   ACQUIRE(t, t->m->classLock);
 
   if (t->exception) {
+    object exception = t->exception;
+    t->exception = 0;
     t->exception = makeThrowable
-      (t, Machine::ExceptionInInitializerErrorType, 0, 0, t->exception);
+      (t, Machine::ExceptionInInitializerErrorType, 0, 0, exception);
 
     classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
     classVmFlags(t, c) &= ~InitFlag;
@@ -3882,6 +3884,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
     virtual bool visit(Processor::StackWalker* walker) {
       if (trace == 0) {
         trace = makeObjectArray(t, walker->count());
+        vm_assert(t, trace);
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
