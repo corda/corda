@@ -12,7 +12,8 @@
 
 #define LOCAL(x) .L##x
 
-#if defined __APPLE__ || defined __MINGW32__ || defined __CYGWIN32__
+#if defined __APPLE__ \
+   || ((defined __MINGW32__ || defined __CYGWIN32__) && ! defined __x86_64__)
 #  define GLOBAL(x) _##x
 #else
 #  define GLOBAL(x) x   

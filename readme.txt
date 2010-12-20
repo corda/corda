@@ -62,7 +62,7 @@ Building
 Build requirements include:
 
   * GNU make 3.80 or later
-  * GCC 3.4 or later (4.5 or later for Windows/x86_64)
+  * GCC 3.4 or later (4.5.1 or later for Windows/x86_64)
   * JDK 1.5 or later
   * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later

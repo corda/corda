@@ -32,7 +32,7 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 #ifdef BOOT_IMAGE
 
-#if (defined __MINGW32__) || (defined _MSC_VER)
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
 #  define SYMBOL(x) binary_bootimage_bin_##x
 #else
 #  define SYMBOL(x) _binary_bootimage_bin_##x
@@ -58,7 +58,7 @@ extern "C" {
 
 #ifdef BOOT_CLASSPATH
 
-#if (defined __MINGW32__) || (defined _MSC_VER)
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
 #  define SYMBOL(x) binary_classpath_jar_##x
 #else
 #  define SYMBOL(x) _binary_classpath_jar_##x
