@@ -205,6 +205,8 @@
 
 (type nullPointerException java/lang/NullPointerException)
 
+(type arithmeticException java/lang/ArithmeticException)
+
 (type illegalStateException java/lang/IllegalStateException)
 
 (type illegalArgumentException java/lang/IllegalArgumentException)

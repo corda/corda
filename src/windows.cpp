@@ -49,6 +49,11 @@ class MutexResource {
   HANDLE m;
 };
 
+const unsigned SegFaultIndex = 0;
+const unsigned DivideByZeroIndex = 1;
+
+const unsigned HandlerCount = 2;
+
 class MySystem;
 MySystem* system;
 
@@ -510,15 +515,55 @@ class MySystem: public System {
   };
 
   MySystem(const char* crashDumpDirectory):
-    segFaultHandler(0),
-    oldSegFaultHandler(0),
+    oldHandler(0),
     crashDumpDirectory(crashDumpDirectory)
   {
     expect(this, system == 0);
     system = this;
 
+    memset(handlers, 0, sizeof(handlers));
+
     mutex = CreateMutex(0, false, 0);
     assert(this, mutex);
+  }
+
+  bool findHandler() {
+    for (unsigned i = 0; i < HandlerCount; ++i) {
+      if (handlers[i]) return true;
+    }
+    return false;
+  }
+
+  int registerHandler(System::SignalHandler* handler, int index) {
+    if (handler) {
+      handlers[index] = handler;
+      
+      if (oldHandler == 0) {
+#ifdef ARCH_x86_32
+        oldHandler = SetUnhandledExceptionFilter(handleException);
+#elif defined ARCH_x86_64
+        AddVectoredExceptionHandler(1, handleException);
+        oldHandler = reinterpret_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(1);
+#endif
+      }
+
+      return 0;
+    } else if (handlers[index]) {
+      handlers[index] = 0;
+
+      if (not findHandler()) {
+#ifdef ARCH_x86_32
+        SetUnhandledExceptionFilter(oldHandler);
+        oldHandler = 0;
+#elif defined ARCH_x86_64
+        // do nothing, handlers are never "unregistered" anyway
+#endif        
+      }
+
+      return 0;
+    } else {
+      return 1;
+    }
   }
 
   virtual void* tryAllocate(unsigned sizeInBytes) {
@@ -578,27 +623,11 @@ class MySystem: public System {
   }
 
   virtual Status handleSegFault(SignalHandler* handler) {
-    if (handler) {
-      segFaultHandler = handler;
+    return registerHandler(handler, SegFaultIndex);
+  }
 
-#ifdef ARCH_x86_32
-      oldSegFaultHandler = SetUnhandledExceptionFilter(handleException);
-#elif defined ARCH_x86_64
-      AddVectoredExceptionHandler(1, handleException);
-      oldSegFaultHandler = 0;
-#endif
-      return 0;
-    } else if (segFaultHandler) {
-      segFaultHandler = 0;
-#ifdef ARCH_x86_32
-      SetUnhandledExceptionFilter(oldSegFaultHandler);
-#elif defined ARCH_x86_64
-      //do nothing, handlers are never "unregistered" anyway
-#endif
-      return 0;
-    } else {
-      return 1;
-    }
+  virtual Status handleDivideByZero(SignalHandler* handler) {
+    return registerHandler(handler, DivideByZeroIndex);
   }
 
   virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
@@ -795,8 +824,8 @@ class MySystem: public System {
   }
 
   HANDLE mutex;
-  System::SignalHandler* segFaultHandler;
-  LPTOP_LEVEL_EXCEPTION_FILTER oldSegFaultHandler;
+  SignalHandler* handlers[HandlerCount];
+  LPTOP_LEVEL_EXCEPTION_FILTER oldHandler;
   const char* crashDumpDirectory;
 };
 
@@ -867,7 +896,15 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
 LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e)
 {
+  System::SignalHandler* handler = 0;
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+    handler = system->handlers[SegFaultIndex];
+  } else if (e->ExceptionRecord->ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO)
+  {
+    handler = system->handlers[DivideByZeroIndex];
+  }
+
+  if (handler) {
 #ifdef ARCH_x86_32
     void* ip = reinterpret_cast<void*>(e->ContextRecord->Eip);
     void* base = reinterpret_cast<void*>(e->ContextRecord->Ebp);
@@ -880,8 +917,8 @@ handleException(LPEXCEPTION_POINTERS e)
     void* thread = reinterpret_cast<void*>(e->ContextRecord->Rbx);
 #endif
 
-    bool jump = system->segFaultHandler->handleSignal
-      (&ip, &base, &stack, &thread);
+    bool jump = handler->handleSignal(&ip, &base, &stack, &thread);
+
 #ifdef  ARCH_x86_32
     e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
     e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
@@ -897,10 +934,10 @@ handleException(LPEXCEPTION_POINTERS e)
     if (jump) {
       return EXCEPTION_CONTINUE_EXECUTION;
     }
+  }
 
-    if (system->crashDumpDirectory) {
-      dump(e, system->crashDumpDirectory);
-    }
+  if (system->crashDumpDirectory) {
+    dump(e, system->crashDumpDirectory);
   }
 
   return EXCEPTION_CONTINUE_SEARCH;

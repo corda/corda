@@ -1665,6 +1665,11 @@ interpret(Thread* t)
   case idiv: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
+
+    if (UNLIKELY(b == 0)) {
+      exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+      goto throw_;
+    }
     
     pushInt(t, a / b);
   } goto loop;
@@ -1968,6 +1973,11 @@ interpret(Thread* t)
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
+    if (UNLIKELY(b == 0)) {
+      exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+      goto throw_;
+    }
+    
     pushInt(t, a % b);
   } goto loop;
 
@@ -2187,6 +2197,11 @@ interpret(Thread* t)
     int64_t b = popLong(t);
     int64_t a = popLong(t);
     
+    if (UNLIKELY(b == 0)) {
+      exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+      goto throw_;
+    }
+    
     pushLong(t, a / b);
   } goto loop;
 
@@ -2268,6 +2283,11 @@ interpret(Thread* t)
   case lrem: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
+    
+    if (UNLIKELY(b == 0)) {
+      exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+      goto throw_;
+    }
     
     pushLong(t, a % b);
   } goto loop;

@@ -69,14 +69,17 @@ const int AltSegFaultSignal = InvalidSignal;
 const unsigned AltSegFaultSignalIndex = 3;
 const int PipeSignal = SIGPIPE;
 const unsigned PipeSignalIndex = 4;
+const int DivideByZeroSignal = SIGFPE;
+const unsigned DivideByZeroSignalIndex = 5;
 
 const int signals[] = { VisitSignal,
                         SegFaultSignal,
                         InterruptSignal,
                         AltSegFaultSignal,
-                        PipeSignal };
+                        PipeSignal,
+                        DivideByZeroSignal };
 
-const unsigned SignalCount = 5;
+const unsigned SignalCount = 6;
 
 class MySystem;
 MySystem* system;
@@ -530,6 +533,8 @@ class MySystem: public System {
     expect(this, system == 0);
     system = this;
 
+    memset(handlers, 0, sizeof(handlers));
+
     registerHandler(&nullHandler, InterruptSignalIndex);
     registerHandler(&nullHandler, PipeSignalIndex);
     registerHandler(&nullHandler, VisitSignalIndex);
@@ -629,6 +634,10 @@ class MySystem: public System {
       return registerHandler(handler, AltSegFaultSignalIndex);
     }
     return s;
+  }
+
+  virtual Status handleDivideByZero(SignalHandler* handler) {
+    return registerHandler(handler, DivideByZeroSignalIndex);
   }
 
   virtual Status visit(System::Thread* st, System::Thread* sTarget,
@@ -847,12 +856,25 @@ handleSignal(int signal, siginfo_t* info, void* context)
   } break;
 
   case SegFaultSignal:
-  case AltSegFaultSignal: {
-    if (signal == SegFaultSignal) {
+  case AltSegFaultSignal:
+  case DivideByZeroSignal: {
+    switch (signal) {
+    case SegFaultSignal:
       index = SegFaultSignalIndex;
-    } else {
+      break;
+
+    case AltSegFaultSignal:
       index = AltSegFaultSignalIndex;
+      break;
+
+    case DivideByZeroSignal:
+      index = DivideByZeroSignalIndex;
+      break;
+
+    default:
+      abort();
     }
+
     bool jump = system->handlers[index]->handleSignal
       (&ip, &base, &stack, &thread);
 

@@ -57,6 +57,7 @@
 -keep public class java.lang.ClassCastException
 -keep public class java.lang.ClassNotFoundException
 -keep public class java.lang.NullPointerException
+-keep public class java.lang.ArithmeticException
 -keep public class java.lang.InterruptedException
 -keep public class java.lang.StackOverflowError
 -keep public class java.lang.NoSuchFieldError

@@ -2035,8 +2035,13 @@ boot(Thread* t)
             (t, Machine::NullPointerExceptionType));
       
     if (t->exception == 0) {
-      setRoot(t, Machine::ArrayIndexOutOfBoundsException,
-              makeThrowable(t, Machine::ArrayIndexOutOfBoundsExceptionType));
+      setRoot(t, Machine::ArithmeticException,
+              makeThrowable(t, Machine::ArithmeticExceptionType));
+
+      if (t->exception == 0) {
+        setRoot(t, Machine::ArrayIndexOutOfBoundsException,
+                makeThrowable(t, Machine::ArrayIndexOutOfBoundsExceptionType));
+      }
     }
   }
 

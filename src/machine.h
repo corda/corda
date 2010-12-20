@@ -1203,6 +1203,7 @@ class Machine {
     ShutdownHooks,
     ObjectsToFinalize,
     NullPointerException,
+    ArithmeticException,
     ArrayIndexOutOfBoundsException,
     VirtualFileFinders,
     VirtualFiles

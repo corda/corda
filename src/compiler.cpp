@@ -4336,6 +4336,19 @@ loadLocal(Context* c, unsigned footprint, unsigned index)
   return c->locals[index].value;
 }
 
+Value*
+register_(Context* c, int number)
+{
+  assert(c, (1 << number) & (c->arch->generalRegisterMask()
+                             | c->arch->floatRegisterMask()));
+
+  Site* s = registerSite(c, number);
+  ValueType type = ((1 << number) & c->arch->floatRegisterMask())
+    ? ValueFloat: ValueGeneral;
+
+  return value(c, type, s, s);
+}
+
 void
 appendCombine(Context* c, TernaryOperation type,
               unsigned firstSize, Value* first,
@@ -4349,25 +4362,34 @@ appendCombine(Context* c, TernaryOperation type,
   uint64_t secondRegisterMask;
 
   c->arch->planSource(type, firstSize, &firstTypeMask, &firstRegisterMask,
-                secondSize, &secondTypeMask, &secondRegisterMask,
-                resultSize, &thunk);
+                      secondSize, &secondTypeMask, &secondRegisterMask,
+                      resultSize, &thunk);
 
   if (thunk) {
     Stack* oldStack = c->stack;
 
+    bool threadParameter;
+    intptr_t handler = c->client->getThunk
+      (type, firstSize, resultSize, &threadParameter);
+
+    unsigned stackSize = ceiling(secondSize, BytesPerWord)
+      + ceiling(firstSize, BytesPerWord);
+
     local::push(c, ceiling(secondSize, BytesPerWord), second);
     local::push(c, ceiling(firstSize, BytesPerWord), first);
+
+    if (threadParameter) {
+      ++ stackSize;
+
+      local::push(c, 1, register_(c, c->arch->thread()));
+    }
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
     appendCall
-      (c, value
-       (c, ValueGeneral, constantSite
-        (c, c->client->getThunk(type, firstSize, resultSize))),
-       0, 0, result, resultSize, argumentStack,
-       ceiling(secondSize, BytesPerWord) + ceiling(firstSize, BytesPerWord),
-       0);
+      (c, value(c, ValueGeneral, constantSite(c, handler)), 0, 0, result,
+       resultSize, argumentStack, stackSize, 0);
   } else {
     append
       (c, new (c->zone->allocate(sizeof(CombineEvent)))
@@ -4792,6 +4814,12 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
   if (thunk) {
     Stack* oldStack = c->stack;
 
+    bool threadParameter;
+    intptr_t handler = c->client->getThunk
+      (type, size, size, &threadParameter);
+
+    assert(c, not threadParameter);
+
     local::push(c, ceiling(size, BytesPerWord), second);
     local::push(c, ceiling(size, BytesPerWord), first);
 
@@ -4801,9 +4829,8 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
     Value* result = value(c, ValueGeneral);
     appendCall
       (c, value
-       (c, ValueGeneral, constantSite(c, c->client->getThunk(type, size, 4))),
-       0, 0, result, 4, argumentStack,
-       ceiling(size, BytesPerWord) * 2, 0);
+       (c, ValueGeneral, constantSite(c, handler)), 0, 0, result, 4,
+       argumentStack, ceiling(size, BytesPerWord) * 2, 0);
 
     appendBranch(c, thunkBranch(c, type), 4, value
                  (c, ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
@@ -6167,14 +6194,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* register_(int number) {
-    assert(&c, (1 << number) & (c.arch->generalRegisterMask()
-                                | c.arch->floatRegisterMask()));
-
-    Site* s = registerSite(&c, number);
-    ValueType type = ((1 << number) & c.arch->floatRegisterMask())
-      ? ValueFloat: ValueGeneral;
-
-    return value(&c, type, s, s);
+    return local::register_(&c, number);
   }
 
   Promise* machineIp() {

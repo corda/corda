@@ -126,6 +126,7 @@ class System {
   virtual Status make(Monitor**) = 0;
   virtual Status make(Local**) = 0;
   virtual Status handleSegFault(SignalHandler* handler) = 0;
+  virtual Status handleDivideByZero(SignalHandler* handler) = 0;
   virtual Status visit(Thread* thread, Thread* target,
                        ThreadVisitor* visitor) = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,

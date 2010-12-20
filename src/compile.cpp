@@ -1017,14 +1017,20 @@ class Context {
       }
     }
 
-    virtual intptr_t getThunk(TernaryOperation op, unsigned size, unsigned) {
+    virtual intptr_t getThunk(TernaryOperation op, unsigned size, unsigned,
+                              bool* threadParameter)
+    {
+      *threadParameter = false;
+
       if (size == 8) {
         switch (op) {
         case Divide:
+          *threadParameter = true;
           return local::getThunk(t, divideLongThunk);
 
         case Remainder:
-         return local::getThunk(t, moduloLongThunk);
+          *threadParameter = true;
+          return local::getThunk(t, moduloLongThunk);
 
         case FloatAdd:
           return local::getThunk(t, addDoubleThunk);
@@ -1061,9 +1067,11 @@ class Context {
         assert(t, size == 4);
         switch (op) {
         case Divide:
+          *threadParameter = true;
           return local::getThunk(t, divideIntThunk);
 
         case Remainder:
+          *threadParameter = true;
           return local::getThunk(t, moduloIntThunk);
 
         case FloatAdd:
@@ -2358,26 +2366,47 @@ absoluteInt(int32_t a)
 }
 
 int64_t
-divideLong(int64_t b, int64_t a)
+divideLong(MyThread* t, int64_t b, int64_t a)
 {
-  return a / b;
+  if (LIKELY(b)) {
+    return a / b;
+  } else {
+    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+    unwind(t);
+  }
 }
 
 int64_t
-divideInt(int32_t b, int32_t a)
+divideInt(MyThread* t, int32_t b, int32_t a)
 {
-  return a / b;
+  if (LIKELY(b)) {
+    return a / b;
+  } else {
+    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+    unwind(t);
+  }
 }
 
 int64_t
-moduloLong(int64_t b, int64_t a)
+moduloLong(MyThread* t, int64_t b, int64_t a)
 {
-  return a % b;
+  if (LIKELY(b)) {
+    return a % b;
+  } else {
+    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+    unwind(t);
+  }
 }
 
 int64_t
-moduloInt(int32_t b, int32_t a) {
-  return a % b;
+moduloInt(MyThread* t, int32_t b, int32_t a)
+{
+  if (LIKELY(b)) {
+    return a % b;
+  } else {
+    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
+    unwind(t);
+  }
 }
 
 uint64_t
@@ -3949,6 +3978,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case idiv: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
+
+      if (inTryBlock(t, code, ip - 1)) {
+        c->saveLocals();
+        frame->trace(0, 0);
+      }
+
       frame->pushInt(c->div(4, a, b));
     } break;
 
@@ -4262,6 +4297,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case irem: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
+
+      if (inTryBlock(t, code, ip - 1)) {
+        c->saveLocals();
+        frame->trace(0, 0);
+      }
+
       frame->pushInt(c->rem(4, a, b));
     } break;
 
@@ -4459,6 +4500,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case ldiv_: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
+
+      if (inTryBlock(t, code, ip - 1)) {
+        c->saveLocals();
+        frame->trace(0, 0);
+      }
+
       frame->pushLong(c->div(8, a, b));
     } break;
 
@@ -4564,6 +4611,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case lrem: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
+
+      if (inTryBlock(t, code, ip - 1)) {
+        c->saveLocals();
+        frame->trace(0, 0);
+      }
+
       frame->pushLong(c->rem(8, a, b));
     } break;
 
@@ -7186,9 +7239,10 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   return r;
 }
 
-class SegFaultHandler: public System::SignalHandler {
+class SignalHandler: public System::SignalHandler {
  public:
-  SegFaultHandler(): m(0) { }
+  SignalHandler(Machine::Type type, Machine::Root root, unsigned fixedSize):
+    m(0), type(type), root(root), fixedSize(fixedSize) { }
 
   virtual bool handleSignal(void** ip, void** base, void** stack,
                             void** thread)
@@ -7204,14 +7258,14 @@ class SegFaultHandler: public System::SignalHandler {
            static_cast<void**>(*stack) - t->arch->frameReturnAddressSize(),
            *base, t->continuation, t->trace);
 
-        if (ensure(t, FixedSizeOfNullPointerException + traceSize(t))) {
+        if (ensure(t, fixedSize + traceSize(t))) {
           atomicOr(&(t->flags), Thread::TracingFlag);
-          t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
+          t->exception = makeThrowable(t, type);
           atomicAnd(&(t->flags), ~Thread::TracingFlag);
         } else {
-          // not enough memory available for a new NPE and stack trace
-          // -- use a preallocated instance instead
-          t->exception = root(t, Machine::NullPointerException);
+          // not enough memory available for a new exception and stack
+          // trace -- use a preallocated instance instead
+          t->exception = vm::root(t, root);
         }
 
         // printTrace(t, t->exception);
@@ -7235,6 +7289,9 @@ class SegFaultHandler: public System::SignalHandler {
   }
 
   Machine* m;
+  Machine::Type type;
+  Machine::Root root;
+  unsigned fixedSize;
 };
 
 bool
@@ -7289,6 +7346,12 @@ class MyProcessor: public Processor {
     allocator(allocator),
     roots(0),
     bootImage(0),
+    segFaultHandler(Machine::NullPointerExceptionType,
+                    Machine::NullPointerException,
+                    FixedSizeOfNullPointerException),
+    divideByZeroHandler(Machine::ArithmeticExceptionType,
+                        Machine::ArithmeticException,
+                        FixedSizeOfArithmeticException),
     codeAllocator(s, 0, 0),
     callTableSize(0),
     useNativeFeatures(useNativeFeatures)
@@ -7744,6 +7807,10 @@ class MyProcessor: public Processor {
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success
            (t->m->system->handleSegFault(&segFaultHandler)));
+
+    divideByZeroHandler.m = t->m;
+    expect(t, t->m->system->success
+           (t->m->system->handleDivideByZero(&divideByZeroHandler)));
   }
 
   virtual void callWithCurrentContinuation(Thread* t, object receiver) {
@@ -7798,7 +7865,8 @@ class MyProcessor: public Processor {
   Allocator* allocator;
   object roots;
   BootImage* bootImage;
-  SegFaultHandler segFaultHandler;
+  SignalHandler segFaultHandler;
+  SignalHandler divideByZeroHandler;
   FixedAllocator codeAllocator;
   ThunkCollection thunks;
   ThunkCollection bootThunks;
