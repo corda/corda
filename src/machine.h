@@ -1757,14 +1757,45 @@ startThread(Thread* t, Thread* p)
   return t->m->system->success(t->m->system->start(&(p->runnable)));
 }
 
+inline void
+addThread(Thread* t, Thread* p)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  assert(t, p->state == Thread::NoState);
+
+  p->state = Thread::IdleState;
+  ++ t->m->liveCount;
+
+  p->peer = p->parent->child;
+  p->parent->child = p;
+}
+
+inline void
+removeThread(Thread* t, Thread* p)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  assert(t, p->state == Thread::IdleState);
+
+  -- t->m->liveCount;
+
+  t->m->stateLock->notifyAll(t->systemThread);
+
+  p->parent->child = p->peer;
+}
+
 inline Thread*
 startThread(Thread* t, object javaThread)
 {
   Thread* p = t->m->processor->makeThread(t->m, javaThread, t);
 
+  addThread(t, p);
+
   if (startThread(t, p)) {
     return p;
   } else {
+    removeThread(t, p);
     return 0;
   }
 }
@@ -1794,6 +1825,8 @@ attachThread(Machine* m, bool daemon)
 {
   Thread* t = m->processor->makeThread(m, 0, m->rootThread);
   m->system->attach(&(t->runnable));
+
+  addThread(t, t);
 
   enter(t, Thread::ActiveState);
 

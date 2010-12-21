@@ -2258,7 +2258,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   vtable(&(m->jniEnvVTable)),
   m(m),
   parent(parent),
-  peer((parent ? parent->child : 0)),
+  peer(0),
   child(0),
   waitNext(0),
   state(NoState),
@@ -2331,9 +2331,6 @@ Thread::init()
     javaThread = m->classpath->makeThread(this, 0);
 
     threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
-  } else {
-    peer = parent->child;
-    parent->child = this;
   }
 
   expect(this, m->system->success(m->system->make(&lock)));
@@ -2538,6 +2535,7 @@ enter(Thread* t, Thread::State s)
         -- t->m->daemonCount;
       }
     }
+
     t->state = s;
 
     t->m->stateLock->notifyAll(t->systemThread);
@@ -3436,8 +3434,10 @@ postInitClass(Thread* t, object c)
   ACQUIRE(t, t->m->classLock);
 
   if (t->exception) {
+    object exception = t->exception;
+    t->exception = 0;
     t->exception = makeThrowable
-      (t, Machine::ExceptionInInitializerErrorType, 0, 0, t->exception);
+      (t, Machine::ExceptionInInitializerErrorType, 0, 0, exception);
 
     classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
     classVmFlags(t, c) &= ~InitFlag;
@@ -3737,7 +3737,10 @@ collect(Thread* t, Heap::CollectionType type)
 
     m->finalizeThread = m->processor->makeThread(m, javaThread, m->rootThread);
     
+    addThread(t, m->finalizeThread);
+
     if (not startThread(t, m->finalizeThread)) {
+      removeThread(t, m->finalizeThread);
       m->finalizeThread = 0;
     }
   }
@@ -3882,6 +3885,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
     virtual bool visit(Processor::StackWalker* walker) {
       if (trace == 0) {
         trace = makeObjectArray(t, walker->count());
+        vm_assert(t, trace);
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
