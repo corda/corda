@@ -137,6 +137,19 @@ public class Properties extends Hashtable {
             }
             break;
 
+          case 'u':
+            if (escaped) { // ASCII Unicode escape
+              int most  = Character.digit((char)in.read(), 16);
+              int more  = Character.digit((char)in.read(), 16);
+              int less  = Character.digit((char)in.read(), 16);
+              int least = Character.digit((char)in.read(), 16);
+              char utf16 = (char)(most << 12 | more << 8 | less << 4 | least);
+              append(utf16);
+            } else {
+              append(c);
+            }
+            break;
+
           default:
             append(c);
             break;
