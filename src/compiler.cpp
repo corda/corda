@@ -4741,9 +4741,17 @@ class BranchEvent: public Event {
 
     if (not unreachable(this)) {
       if (firstConstant and secondConstant) {
-        if (shouldJump(c, type, size, firstConstant->value->value(),
-                       secondConstant->value->value()))
-        {
+        int64_t firstValue = firstConstant->value->value();
+        int64_t secondValue = secondConstant->value->value();
+
+        if (size > BytesPerWord) {
+          firstValue |= findConstantSite
+            (c, first->nextWord)->value->value() << 32;
+          secondValue |= findConstantSite
+            (c, second->nextWord)->value->value() << 32;
+        }
+
+        if (shouldJump(c, type, size, firstValue, secondValue)) {
           apply(c, Jump, BytesPerWord, address->source, address->source);
         }      
       } else {

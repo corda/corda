@@ -60,6 +60,11 @@ public class Longs {
   }
 
   public static void main(String[] args) throws Exception {
+    { long a = 0x1FFFFFFFFL;
+      long b = -1;
+      expect(a != b);
+    }
+
     expect(Math.abs(-123L) == 123L);
 
     expect(readLongFrom(new java.io.InputStream() {
