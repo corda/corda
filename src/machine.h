@@ -37,6 +37,56 @@
 
 #define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
 
+#define THREAD_RESOURCE0(t, releaseBody)                                \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t): Resource(t) { }                    \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+  } MAKE_NAME(resource_)(t);
+
+#define OBJECT_RESOURCE(t, name, releaseBody)                           \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t, object name):                       \
+      Resource(t), name(name), protector(t, &(this->name)) { }          \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+                                                                        \
+  private:                                                              \
+    object name;                                                        \
+    Thread::SingleProtector protector;                                  \
+  } MAKE_NAME(resource_)(t, name);
+
+#define THREAD_RESOURCE(t, type, name, releaseBody)                     \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t, type name):                         \
+      Resource(t), name(name) { }                                       \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+                                                                        \
+  private:                                                              \
+    type name;                                                          \
+  } MAKE_NAME(resource_)(t, name);
+
+#define THREAD_RESOURCE2(t, type1, name1, type2, name2, releaseBody)    \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t, type1 name1, type2 name2):          \
+      Resource(t), name1(name1), name2(name2) { }                       \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+                                                                        \
+  private:                                                              \
+    type1 name1;                                                        \
+    type2 name2;                                                        \
+  } MAKE_NAME(resource_)(t, name1, name2);
+
 namespace vm {
 
 const bool Verbose = false;
@@ -1201,10 +1251,12 @@ class Machine {
     MethodRuntimeDataTable,
     JNIMethodTable,
     ShutdownHooks,
+    FinalizerThread,
     ObjectsToFinalize,
     NullPointerException,
     ArithmeticException,
     ArrayIndexOutOfBoundsException,
+    OutOfMemoryError,
     VirtualFileFinders,
     VirtualFiles
   };
@@ -1280,14 +1332,22 @@ inline void stress(Thread* t);
 
 #endif // not VM_STRESS
 
-void
-runJavaThread(Thread* t);
+uint64_t
+runThread(Thread*, uintptr_t*);
 
-void
-runFinalizeThread(Thread* t);
+uint64_t
+run(Thread* t, uint64_t (*function)(Thread*, uintptr_t*),
+    uintptr_t* arguments);
 
 void
 checkDaemon(Thread* t);
+
+extern "C" uint64_t
+vmRun(uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments,
+      void* checkpoint);
+
+extern "C" void
+vmRun_returnAddress();
 
 class Thread {
  public:
@@ -1336,9 +1396,26 @@ class Thread {
     object* p;
   };
 
-  class ClassInitStack {
+  class Resource {
+   public:
+    Resource(Thread* t): t(t), next(t->resource) {
+      t->resource = this;
+    }
+
+    ~Resource() {
+      t->resource = next;
+    }
+
+    virtual void release() = 0;
+
+    Thread* t;
+    Resource* next;
+  };
+
+  class ClassInitStack: public Resource {
    public:
     ClassInitStack(Thread* t, object class_):
+      Resource(t),
       next(t->classInitStack),
       class_(class_),
       protector(t, &(this->class_))
@@ -1347,12 +1424,60 @@ class Thread {
     }
 
     ~ClassInitStack() {
-      protector.t->classInitStack = next;
+      t->classInitStack = next;
+    }
+
+    virtual void release() {
+      this->ClassInitStack::~ClassInitStack();
     }
 
     ClassInitStack* next;
     object class_;
     SingleProtector protector;
+  };
+
+  class Checkpoint {
+   public:
+    Checkpoint(Thread* t):
+      t(t),
+      next(t->checkpoint),
+      resource(t->resource),
+      protector(t->protector),
+      noThrow(false)
+    {
+      t->checkpoint = this;
+    }
+
+    ~Checkpoint() {
+      t->checkpoint = next;
+    }
+
+    virtual void NO_RETURN unwind() = 0;
+
+    Thread* t;
+    Checkpoint* next;
+    Resource* resource;
+    Protector* protector;
+    bool noThrow;
+  };
+
+  class RunCheckpoint: public Checkpoint {
+   public:
+    RunCheckpoint(Thread* t):
+      Checkpoint(t),
+      stack(0),
+      base(0)
+    { }
+
+    virtual void unwind() {
+      void* stack = this->stack;
+      this->stack = 0;
+      expect(t->m->system, stack);
+      vmJump(voidPointer(vmRun_returnAddress), base, stack, t, 0, 0);
+    }
+
+    void* stack;
+    void* base;
   };
 
   class Runnable: public System::Runnable {
@@ -1366,18 +1491,10 @@ class Thread {
     virtual void run() {
       enterActiveState(t);
 
-      t->m->localThread->set(t);
+      vm::run(t, runThread, 0);
 
-      checkDaemon(t);
-
-      if (t == t->m->finalizeThread) {
-        runFinalizeThread(t);
-      } else if (t->javaThread) {
-        runJavaThread(t);
-
-        if (t->exception) {
-          printTrace(t, t->exception);
-        }
+      if (t->exception) {
+        printTrace(t, t->exception);
       }
 
       t->exit();
@@ -1416,6 +1533,8 @@ class Thread {
   unsigned heapOffset;
   Protector* protector;
   ClassInitStack* classInitStack;
+  Resource* resource;
+  Checkpoint* checkpoint;
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
@@ -1448,6 +1567,38 @@ class Classpath {
   dispose() = 0;
 };
 
+#ifdef _MSC_VER
+
+template <class T>
+class RuntimeArray: public Thread::Resource {
+ public:
+  RuntimeArray(Thread* t, unsigned size):
+    Resource(t),
+    body(static_cast<T*>(t->m->heap->allocate(size * sizeof(T)))),
+    size(size)
+  { }
+
+  ~RuntimeArray() {
+    t->m->heap->free(body, size * sizeof(T));
+  }
+
+  virtual void release() {
+    RuntimeArray::~RuntimeArray();
+  }
+
+  T* body;
+  unsigned size;
+};
+
+#  define THREAD_RUNTIME_ARRAY(thread, type, name, size)        \
+  RuntimeArray<type> name(thread, size);
+
+#else // not _MSC_VER
+
+#  define THREAD_RUNTIME_ARRAY(thread, type, name, size) type name[size];
+
+#endif // not _MSC_VER
+
 Classpath*
 makeClasspath(System* system, Allocator* allocator, const char* javaHome,
               const char* embedPrefix);
@@ -1469,16 +1620,21 @@ enterActiveState(Thread* t)
   enter(t, Thread::ActiveState);
 }
 
-class StateResource {
+class StateResource: public Thread::Resource {
  public:
-  StateResource(Thread* t, Thread::State state): t(t), oldState(t->state) {
+  StateResource(Thread* t, Thread::State state):
+    Resource(t), oldState(t->state)
+  {
     enter(t, state);
   }
 
   ~StateResource() { enter(t, oldState); }
 
+  virtual void release() {
+    this->StateResource::~StateResource();
+  }
+
  private:
-  Thread* t;
   Thread::State oldState;
 };
 
@@ -1553,33 +1709,43 @@ release(Thread* t, System::Monitor* m)
   m->release(t->systemThread);
 }
 
-class MonitorResource {
+class MonitorResource: public Thread::Resource {
  public:
-  MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
+  MonitorResource(Thread* t, System::Monitor* m):
+    Resource(t), m(m)
+  {
     acquire(t, m);
   }
 
   ~MonitorResource() {
-    release(t, m);
+    vm::release(t, m);
+  }
+
+  virtual void release() {
+    this->MonitorResource::~MonitorResource();
   }
 
  private:
-  Thread* t;
   System::Monitor* m;
 };
 
-class RawMonitorResource {
+class RawMonitorResource: public Thread::Resource {
  public:
-  RawMonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
+  RawMonitorResource(Thread* t, System::Monitor* m):
+    Resource(t), m(m)
+  {
     m->acquire(t->systemThread);
   }
 
   ~RawMonitorResource() {
-    release(t, m);
+    vm::release(t, m);
+  }
+
+  virtual void release() {
+    this->RawMonitorResource::~RawMonitorResource();
   }
 
  private:
-  Thread* t;
   System::Monitor* m;
 };
 
@@ -1622,8 +1788,12 @@ class FixedAllocator: public Allocator {
     return p;
   }
 
-  virtual void free(const void*, unsigned) {
-    abort(s);
+  virtual void free(const void* p, unsigned size) {
+    if (p >= base and static_cast<const uint8_t*>(p) + size == base + offset) {
+      offset -= size;
+    } else {
+      abort(s);
+    }
   }
 
   System* s;
@@ -1667,7 +1837,6 @@ allocateSmall(Thread* t, unsigned sizeInBytes)
 
   object o = reinterpret_cast<object>(t->heap + t->heapIndex);
   t->heapIndex += ceiling(sizeInBytes, BytesPerWord);
-  cast<object>(o, 0) = 0;
   return o;
 }
 
@@ -1745,10 +1914,37 @@ instanceOf(Thread* t, object class_, object o);
 
 #include "type-declarations.cpp"
 
+inline uint64_t
+run(Thread* t, uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments)
+{
+  ENTER(t, Thread::ActiveState);
+  Thread::RunCheckpoint checkpoint(t);
+  return vmRun(function, arguments, &checkpoint);
+}
+
 inline void
 runJavaThread(Thread* t)
 {
   t->m->classpath->runThread(t);
+}
+
+void
+runFinalizeThread(Thread* t);
+
+inline uint64_t
+runThread(Thread* t, uintptr_t*)
+{
+  t->m->localThread->set(t);
+
+  checkDaemon(t);
+
+  if (t == t->m->finalizeThread) {
+    runFinalizeThread(t);
+  } else if (t->javaThread) {
+    runJavaThread(t);
+  }
+
+  return 1;
 }
 
 inline bool
@@ -1820,17 +2016,12 @@ checkDaemon(Thread* t)
   }
 }
 
-inline Thread*
-attachThread(Machine* m, bool daemon)
+inline uint64_t
+initAttachedThread(Thread* t, uintptr_t* arguments)
 {
-  Thread* t = m->processor->makeThread(m, 0, m->rootThread);
-  m->system->attach(&(t->runnable));
+  bool daemon = arguments[0];
 
-  addThread(t, t);
-
-  enter(t, Thread::ActiveState);
-
-  t->javaThread = m->classpath->makeThread(t, m->rootThread);
+  t->javaThread = t->m->classpath->makeThread(t, t->m->rootThread);
 
   threadPeer(t, t->javaThread) = reinterpret_cast<jlong>(t);
 
@@ -1840,11 +2031,30 @@ attachThread(Machine* m, bool daemon)
     registerDaemon(t);
   }
 
-  enter(t, Thread::IdleState);
+  t->m->localThread->set(t);
 
-  m->localThread->set(t);
+  return 1;
+}
 
-  return t;
+inline Thread*
+attachThread(Machine* m, bool daemon)
+{
+  Thread* t = m->processor->makeThread(m, 0, m->rootThread);
+  m->system->attach(&(t->runnable));
+
+  addThread(t, t);
+
+  uintptr_t arguments[] = { daemon };
+
+  enter(t, Thread::ActiveState);
+
+  if (run(t, initAttachedThread, arguments)) {
+    enter(t, Thread::IdleState);
+    return t;
+  } else {
+    t->exit();
+    return 0;
+  }
 }
 
 inline object&
@@ -1938,6 +2148,9 @@ make(Thread* t, object class_)
     return makeNew(t, class_);
   }
 }
+
+object
+makeByteArray(Thread* t, const char* format, va_list a);
 
 object
 makeByteArray(Thread* t, const char* format, ...);
@@ -2248,12 +2461,8 @@ inline object
 resolveMethod(Thread* t, object loader, const char* className,
               const char* methodName, const char* methodSpec)
 {
-  object class_ = resolveClass(t, loader, className);
-  if (LIKELY(t->exception == 0)) {
-    return resolveMethod(t, class_, methodName, methodSpec);
-  } else {
-    return 0;
-  }
+  return resolveMethod
+    (t, resolveClass(t, loader, className), methodName, methodSpec);
 }
 
 object
@@ -2264,12 +2473,8 @@ inline object
 resolveField(Thread* t, object loader, const char* className,
              const char* fieldName, const char* fieldSpec)
 {
-  object class_ = resolveClass(t, loader, className);
-  if (LIKELY(t->exception == 0)) {
-    return resolveField(t, class_, fieldName, fieldSpec);
-  } else {
-    return 0;
-  }
+  return resolveField
+    (t, resolveClass(t, loader, className), fieldName, fieldSpec);
 }
 
 bool
@@ -2347,6 +2552,48 @@ makeThrowable
   return result;
 }
 
+inline object
+makeThrowable(Thread* t, Machine::Type type, const char* format, va_list a)
+{
+  object s = makeByteArray(t, format, a);
+
+  object message = t->m->classpath->makeString
+    (t, s, 0, byteArrayLength(t, s) - 1);
+
+  return makeThrowable(t, type, message);
+}
+
+inline object
+makeThrowable(Thread* t, Machine::Type type, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object r = makeThrowable(t, type, format, a);
+  va_end(a);
+
+  return r;
+}
+
+void NO_RETURN
+throw_(Thread* t, object e);
+
+inline void NO_RETURN
+throwNew(Thread* t, Machine::Type type)
+{
+  throw_(t, makeThrowable(t, type));
+}
+
+inline void NO_RETURN
+throwNew(Thread* t, Machine::Type type, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object r = makeThrowable(t, type, format, a);
+  va_end(a);
+
+  throw_(t, r);
+}
+
 object
 findInHierarchyOrNull(Thread* t, object class_, object name, object spec,
                       object (*find)(Thread*, object, object, object));
@@ -2359,12 +2606,10 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
   object o = findInHierarchyOrNull(t, class_, name, spec, find);
 
   if (o == 0) {
-    object message = makeString
-      (t, "%s %s not found in %s",
-       &byteArrayBody(t, name, 0),
-       &byteArrayBody(t, spec, 0),
-       &byteArrayBody(t, className(t, class_), 0));
-    t->exception = makeThrowable(t, errorType, message);
+    throwNew(t, errorType, "%s %s not found in %s",
+             &byteArrayBody(t, name, 0),
+             &byteArrayBody(t, spec, 0),
+             &byteArrayBody(t, className(t, class_), 0));
   }
 
   return o;
@@ -2390,8 +2635,7 @@ findMethodOrNull(Thread* t, object class_, const char* name, const char* spec)
 inline object
 findVirtualMethod(Thread* t, object method, object class_)
 {
-  return arrayBody(t, classVirtualTable(t, class_), 
-                   methodOffset(t, method));
+  return arrayBody(t, classVirtualTable(t, class_), methodOffset(t, method));
 }
 
 inline object
@@ -2403,8 +2647,8 @@ findInterfaceMethod(Thread* t, object method, object class_)
   object itable = classInterfaceTable(t, class_);
   for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
     if (arrayBody(t, itable, i) == interface) {
-      return arrayBody(t, arrayBody(t, itable, i + 1),
-                       methodOffset(t, method));
+      return arrayBody
+        (t, arrayBody(t, itable, i + 1), methodOffset(t, method));
     }
   }
   abort(t);
@@ -2849,10 +3093,10 @@ wait(Thread* t, object o, int64_t milliseconds)
     bool interrupted = monitorWait(t, m, milliseconds);
 
     if (interrupted) {
-      t->exception = makeThrowable(t, Machine::InterruptedExceptionType);
+      throwNew(t, Machine::InterruptedExceptionType);
     }
   } else {
-    t->exception = makeThrowable(t, Machine::IllegalMonitorStateExceptionType);
+    throwNew(t, Machine::IllegalMonitorStateExceptionType);
   }
 
   if (DebugMonitors) {
@@ -2881,7 +3125,7 @@ notify(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotify(t, m);
   } else {
-    t->exception = makeThrowable(t, Machine::IllegalMonitorStateExceptionType);
+    throwNew(t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
@@ -2898,7 +3142,7 @@ notifyAll(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotifyAll(t, m);
   } else {
-    t->exception = makeThrowable(t, Machine::IllegalMonitorStateExceptionType);
+    throwNew(t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
@@ -3057,7 +3301,6 @@ resolveClassInObject(Thread* t, object loader, object container,
     PROTECT(t, container);
 
     o = resolveClass(t, loader, o);
-    if (UNLIKELY(t->exception)) return 0;
     
     set(t, container, classOffset, o);
   }
@@ -3072,7 +3315,6 @@ resolveClassInPool(Thread* t, object loader, object method, unsigned index)
     PROTECT(t, method);
 
     o = resolveClass(t, loader, referenceName(t, o));
-    if (UNLIKELY(t->exception)) return 0;
     
     set(t, codePool(t, methodCode(t, method)),
         SingletonBody + (index * BytesPerWord), o);
@@ -3101,12 +3343,10 @@ resolve(Thread* t, object loader, object method, unsigned index,
     PROTECT(t, reference);
 
     object class_ = resolveClassInObject(t, loader, o, ReferenceClass);
-    if (UNLIKELY(t->exception)) return 0;
     
     o = findInHierarchy
       (t, class_, referenceName(t, reference), referenceSpec(t, reference),
        find, errorType);
-    if (UNLIKELY(t->exception)) return 0;
     
     set(t, codePool(t, methodCode(t, method)),
         SingletonBody + (index * BytesPerWord), o);
@@ -3236,9 +3476,7 @@ primitiveClass(Thread* t, char name)
   case 'S': return type(t, Machine::JshortType);
   case 'V': return type(t, Machine::JvoidType);
   case 'Z': return type(t, Machine::JbooleanType);
-  default:
-    t->exception = makeThrowable(t, Machine::IllegalArgumentExceptionType);
-    return 0;
+  default: throwNew(t, Machine::IllegalArgumentExceptionType);
   }
 }
   

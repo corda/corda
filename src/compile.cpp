@@ -294,7 +294,6 @@ resolveTarget(MyThread* t, void* stack, object method)
     PROTECT(t, class_);
 
     resolveSystemClass(t, root(t, Machine::BootLoader), className(t, class_));
-    if (UNLIKELY(t->exception)) return 0;
   }
 
   if (classFlags(t, methodClass(t, method)) & ACC_INTERFACE) {
@@ -311,7 +310,6 @@ resolveTarget(MyThread* t, object class_, unsigned index)
     PROTECT(t, class_);
 
     resolveSystemClass(t, root(t, Machine::BootLoader), className(t, class_));
-    if (UNLIKELY(t->exception)) return 0;
   }
 
   return arrayBody(t, classVirtualTable(t, class_), index);
@@ -910,6 +908,17 @@ class BootContext {
 
 class Context {
  public:
+  class MyResource: public Thread::Resource {
+   public:
+    MyResource(Context* c): Resource(c->thread), c(c) { }
+
+    virtual void release() {
+      c->dispose();
+    }
+
+    Context* c;
+  };
+
   class MyProtector: public Thread::Protector {
    public:
     MyProtector(Context* c): Protector(c->thread), c(c) { }
@@ -1125,6 +1134,9 @@ class Context {
     visitTable(makeVisitTable(t, &zone, method)),
     rootTable(makeRootTable(t, &zone, method)),
     subroutineTable(0),
+    executableAllocator(0),
+    executableStart(0),
+    executableSize(0),
     objectPoolCount(0),
     traceLogCount(0),
     dirtyRoots(false),
@@ -1147,6 +1159,9 @@ class Context {
     visitTable(0),
     rootTable(0),
     subroutineTable(0),
+    executableAllocator(0),
+    executableStart(0),
+    executableSize(0),
     objectPoolCount(0),
     traceLogCount(0),
     dirtyRoots(false),
@@ -1156,8 +1171,19 @@ class Context {
   { }
 
   ~Context() {
-    if (compiler) compiler->dispose();
+    dispose();
+  }
+
+  void dispose() {
+    if (compiler) {
+      compiler->dispose();
+    }
+
     assembler->dispose();
+
+    if (executableAllocator) {
+      executableAllocator->free(executableStart, executableSize);
+    }
   }
 
   MyThread* thread;
@@ -1173,6 +1199,9 @@ class Context {
   uint16_t* visitTable;
   uintptr_t* rootTable;
   Subroutine** subroutineTable;
+  Allocator* executableAllocator;
+  void* executableStart;
+  unsigned executableSize;
   unsigned objectPoolCount;
   unsigned traceLogCount;
   bool dirtyRoots;
@@ -1249,10 +1278,8 @@ class Frame {
   }
 
   ~Frame() {
-    if (t->exception == 0) {
-      if (level > 1) {
-        context->eventLog.append(PopContextEvent);      
-      }
+    if (level > 1) {
+      context->eventLog.append(PopContextEvent);      
     }
   }
 
@@ -2100,6 +2127,15 @@ unwind(MyThread* t)
   vmJump(ip, base, stack, t, 0, 0);
 }
 
+class MyCheckpoint: public Thread::Checkpoint {
+ public:
+  MyCheckpoint(MyThread* t): Checkpoint(t) { }
+
+  virtual void unwind() {
+    local::unwind(static_cast<MyThread*>(t));
+  }
+};
+
 uintptr_t
 defaultThunk(MyThread* t);
 
@@ -2135,7 +2171,6 @@ void
 tryInitClass(MyThread* t, object class_)
 {
   initClass(t, class_);
-  if (UNLIKELY(t->exception)) unwind(t);
 }
 
 FixedAllocator*
@@ -2157,17 +2192,12 @@ findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
       compile(t, codeAllocator(t), 0, target);
     }
 
-    if (UNLIKELY(t->exception)) {
-      unwind(t);
-    } else {
-      if (methodFlags(t, target) & ACC_NATIVE) {
-        t->trace->nativeMethod = target;
-      }
-      return methodAddress(t, target);
+    if (methodFlags(t, target) & ACC_NATIVE) {
+      t->trace->nativeMethod = target;
     }
+    return methodAddress(t, target);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    unwind(t);
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 
@@ -2371,8 +2401,7 @@ divideLong(MyThread* t, int64_t b, int64_t a)
   if (LIKELY(b)) {
     return a / b;
   } else {
-    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
-    unwind(t);
+    throwNew(t, Machine::ArithmeticExceptionType);
   }
 }
 
@@ -2382,8 +2411,7 @@ divideInt(MyThread* t, int32_t b, int32_t a)
   if (LIKELY(b)) {
     return a / b;
   } else {
-    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
-    unwind(t);
+    throwNew(t, Machine::ArithmeticExceptionType);
   }
 }
 
@@ -2393,8 +2421,7 @@ moduloLong(MyThread* t, int64_t b, int64_t a)
   if (LIKELY(b)) {
     return a % b;
   } else {
-    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
-    unwind(t);
+    throwNew(t, Machine::ArithmeticExceptionType);
   }
 }
 
@@ -2404,8 +2431,7 @@ moduloInt(MyThread* t, int32_t b, int32_t a)
   if (LIKELY(b)) {
     return a % b;
   } else {
-    t->exception = makeThrowable(t, Machine::ArithmeticExceptionType);
-    unwind(t);
+    throwNew(t, Machine::ArithmeticExceptionType);
   }
 }
 
@@ -2457,10 +2483,7 @@ makeBlankObjectArray(MyThread* t, object class_, int32_t length)
   if (length >= 0) {
     return reinterpret_cast<uint64_t>(makeObjectArray(t, class_, length));
   } else {
-    object message = makeString(t, "%d", length);
-    t->exception = makeThrowable
-      (t, Machine::NegativeArraySizeExceptionType, message);
-    unwind(t);
+    throwNew(t, Machine::NegativeArraySizeExceptionType, "%d", length);
   }
 }
 
@@ -2507,10 +2530,7 @@ makeBlankArray(MyThread* t, unsigned type, int32_t length)
 
     return reinterpret_cast<uintptr_t>(constructor(t, length));
   } else {
-    object message = makeString(t, "%d", length);
-    t->exception = makeThrowable
-      (t, Machine::NegativeArraySizeExceptionType, message);
-    unwind(t);
+    throwNew(t, Machine::NegativeArraySizeExceptionType, "%d", length);
   }
 }
 
@@ -2543,8 +2563,7 @@ setMaybeNull(MyThread* t, object o, unsigned offset, object value)
   if (LIKELY(o)) {
     set(t, o, offset, value);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    unwind(t);
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 
@@ -2554,8 +2573,7 @@ acquireMonitorForObject(MyThread* t, object o)
   if (LIKELY(o)) {
     acquire(t, o);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    unwind(t);
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 
@@ -2565,8 +2583,7 @@ releaseMonitorForObject(MyThread* t, object o)
   if (LIKELY(o)) {
     release(t, o);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    unwind(t);
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 
@@ -2576,13 +2593,12 @@ makeMultidimensionalArray2(MyThread* t, object class_, uintptr_t* countStack,
 {
   PROTECT(t, class_);
 
-  RUNTIME_ARRAY(int32_t, counts, dimensions);
+  THREAD_RUNTIME_ARRAY(t, int32_t, counts, dimensions);
   for (int i = dimensions - 1; i >= 0; --i) {
     RUNTIME_ARRAY_BODY(counts)[i] = countStack[dimensions - i - 1];
     if (UNLIKELY(RUNTIME_ARRAY_BODY(counts)[i] < 0)) {
-      object message = makeString(t, "%d", RUNTIME_ARRAY_BODY(counts)[i]);
-      t->exception = makeThrowable
-        (t, Machine::NegativeArraySizeExceptionType, message);
+      throwNew(t, Machine::NegativeArraySizeExceptionType, "%d",
+               RUNTIME_ARRAY_BODY(counts)[i]);
       return 0;
     }
   }
@@ -2600,14 +2616,9 @@ uint64_t
 makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
                           int32_t offset)
 {
-  object r = makeMultidimensionalArray2
-    (t, class_, static_cast<uintptr_t*>(t->stack) + offset, dimensions);
-
-  if (UNLIKELY(t->exception)) {
-    unwind(t);
-  } else {
-    return reinterpret_cast<uintptr_t>(r);
-  }
+  return reinterpret_cast<uintptr_t>
+    (makeMultidimensionalArray2
+     (t, class_, static_cast<uintptr_t*>(t->stack) + offset, dimensions));
 }
 
 unsigned
@@ -2636,50 +2647,40 @@ throwArrayIndexOutOfBounds(MyThread* t)
 {
   if (ensure(t, FixedSizeOfArrayIndexOutOfBoundsException + traceSize(t))) {
     atomicOr(&(t->flags), Thread::TracingFlag);
-    t->exception = makeThrowable
-      (t, Machine::ArrayIndexOutOfBoundsExceptionType); 
-    atomicAnd(&(t->flags), ~Thread::TracingFlag);
+    THREAD_RESOURCE0(t, atomicAnd(&(t->flags), ~Thread::TracingFlag));
+
+    throwNew(t, Machine::ArrayIndexOutOfBoundsExceptionType); 
   } else {
     // not enough memory available for a new exception and stack trace
     // -- use a preallocated instance instead
-    t->exception = root(t, Machine::ArrayIndexOutOfBoundsException);
+    throw_(t, root(t, Machine::ArrayIndexOutOfBoundsException));
   }
-
-  unwind(t);
 }
 
 void NO_RETURN
 throwStackOverflow(MyThread* t)
 {
-  t->exception = makeThrowable(t, Machine::StackOverflowErrorType); 
-
-  unwind(t);
+  throwNew(t, Machine::StackOverflowErrorType); 
 }
 
 void NO_RETURN
 throw_(MyThread* t, object o)
 {
   if (LIKELY(o)) {
-    t->exception = o;
+    vm::throw_(t, o);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
+    throwNew(t, Machine::NullPointerExceptionType);
   }
-
-  // printTrace(t, t->exception);
-
-  unwind(t);
 }
 
 void
 checkCast(MyThread* t, object class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
-    object message = makeString
-      (t, "%s as %s",
+    throwNew
+      (t, Machine::ClassCastExceptionType, "%s as %s",
        &byteArrayBody(t, className(t, objectClass(t, o)), 0),
        &byteArrayBody(t, className(t, class_), 0));
-    t->exception = makeThrowable(t, Machine::ClassCastExceptionType, message);
-    unwind(t);
   }
 }
 
@@ -3115,7 +3116,7 @@ integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
   }
 
   saveStateAndCompile(t, frame, newIp);
-  return t->exception == 0;
+  return true;
 }
 
 bool
@@ -3182,7 +3183,7 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
   }
 
   saveStateAndCompile(t, frame, newIp);
-  return t->exception == 0;
+  return true;
 }
 
 bool
@@ -3221,7 +3222,7 @@ void
 compile(MyThread* t, Frame* initialFrame, unsigned ip,
         int exceptionHandlerStart)
 {
-  RUNTIME_ARRAY(uint8_t, stackMap,
+  THREAD_RUNTIME_ARRAY(t, uint8_t, stackMap,
                 codeMaxStack(t, methodCode(t, initialFrame->context->method)));
   Frame myFrame(initialFrame, RUNTIME_ARRAY_BODY(stackMap));
   Frame* frame = &myFrame;
@@ -3457,7 +3458,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
       
       object class_ = resolveClassInPool(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       Compiler::Operand* length = frame->popInt();
 
@@ -3528,7 +3528,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object class_ = resolveClassInPool(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       Compiler::Operand* instance = c->peek(1, 0);
 
@@ -3565,8 +3564,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popLong();
 
       if (not floatBranch(t, frame, code, ip, 8, false, a, b)) {
-        if (UNLIKELY(t->exception)) return;        
-
         frame->pushInt
           (c->call
            (c->constant
@@ -3582,8 +3579,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popLong();
 
       if (not floatBranch(t, frame, code, ip, 8, true, a, b)) {
-        if (UNLIKELY(t->exception)) return;        
-
         frame->pushInt
           (c->call
            (c->constant
@@ -3682,8 +3677,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popInt();
 
       if (not floatBranch(t, frame, code, ip, 4, false, a, b)) {
-        if (UNLIKELY(t->exception)) return;        
-
         frame->pushInt
           (c->call
            (c->constant
@@ -3697,8 +3690,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popInt();
 
       if (not floatBranch(t, frame, code, ip, 4, true, a, b)) {
-        if (UNLIKELY(t->exception)) return;        
-
         frame->pushInt
           (c->call
            (c->constant
@@ -3756,7 +3747,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
         
       object field = resolveField(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       if ((fieldFlags(t, field) & ACC_VOLATILE)
           and BytesPerWord == 4
@@ -4004,7 +3994,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
 
       saveStateAndCompile(t, frame, newIp);
-      if (UNLIKELY(t->exception)) return;
     } break;
 
     case if_icmpeq:
@@ -4045,7 +4034,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
       
       saveStateAndCompile(t, frame, newIp);
-      if (UNLIKELY(t->exception)) return;
     } break;
 
     case ifeq:
@@ -4087,7 +4075,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
 
       saveStateAndCompile(t, frame, newIp);
-      if (UNLIKELY(t->exception)) return;
     } break;
 
     case ifnull:
@@ -4107,7 +4094,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       }
 
       saveStateAndCompile(t, frame, newIp);
-      if (UNLIKELY(t->exception)) return;
     } break;
 
     case iinc: {
@@ -4161,7 +4147,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object class_ = resolveClassInPool(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       frame->pushInt
         (c->call
@@ -4178,7 +4163,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       ip += 2;
 
       object target = resolveMethod(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
@@ -4219,7 +4203,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       uint16_t index = codeReadInt16(t, code, ip);
       object target = resolveMethod(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       object class_ = methodClass(t, context->method);
       if (isSpecialMethod(t, target, class_)) {
@@ -4239,7 +4222,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object target = resolveMethod(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       assert(t, methodFlags(t, target) & ACC_STATIC);
 
@@ -4255,7 +4237,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object target = resolveMethod(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
@@ -4389,7 +4370,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       c->jmp(frame->machineIp(newIp));
 
       saveStateAndCompile(t, frame, newIp);
-      if (UNLIKELY(t->exception)) return;
 
       frame->endSubroutine(start);
     } break;
@@ -4423,8 +4403,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* b = frame->popLong();
 
       if (not integerBranch(t, frame, code, ip, 8, a, b)) {
-        if (UNLIKELY(t->exception)) return;        
-
         frame->pushInt
           (c->call
            (c->constant
@@ -4459,7 +4437,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         object v = singletonObject(t, pool, index - 1);
         if (objectClass(t, v) == type(t, Machine::ReferenceType)) {
           v = resolveClassInPool(t, context->method, index - 1); 
-          if (UNLIKELY(t->exception)) return;
         }
 
         if (objectClass(t, v) == type(t, Machine::ClassType)) {
@@ -4561,7 +4538,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (pairCount) {
         Compiler::Operand* start = 0;
-        RUNTIME_ARRAY(uint32_t, ipTable, pairCount);
+        THREAD_RUNTIME_ARRAY(t, uint32_t, ipTable, pairCount);
         for (int32_t i = 0; i < pairCount; ++i) {
           unsigned index = ip + (i * 8);
           int32_t key = codeReadInt32(t, code, index);
@@ -4590,7 +4567,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         for (int32_t i = 0; i < pairCount; ++i) {
           compile(t, frame, RUNTIME_ARRAY_BODY(ipTable)[i]);
-          if (UNLIKELY(t->exception)) return;
 
           c->restoreState(state);
         }
@@ -4704,7 +4680,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint8_t dimensions = codeBody(t, code, ip++);
 
       object class_ = resolveClassInPool(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
       PROTECT(t, class_);
 
       unsigned offset
@@ -4731,7 +4706,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
         
       object class_ = resolveClassInPool(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       if (classVmFlags(t, class_) & (WeakReferenceFlag | HasFinalizerFlag)) {
         frame->pushObject
@@ -4786,7 +4760,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
     
       object field = resolveField(t, context->method, index - 1);
-      if (UNLIKELY(t->exception)) return;
 
       object staticTable = 0;
 
@@ -4986,7 +4959,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       int32_t top = codeReadInt32(t, code, ip);
         
       Compiler::Operand* start = 0;
-      RUNTIME_ARRAY(uint32_t, ipTable, top - bottom + 1);
+      THREAD_RUNTIME_ARRAY(t, uint32_t, ipTable, top - bottom + 1);
       for (int32_t i = 0; i < top - bottom + 1; ++i) {
         unsigned index = ip + (i * 4);
         uint32_t newIp = base + codeReadInt32(t, code, index);
@@ -5032,7 +5005,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       for (int32_t i = 0; i < top - bottom + 1; ++i) {
         compile(t, frame, RUNTIME_ARRAY_BODY(ipTable)[i]);
-        if (UNLIKELY(t->exception)) return;
 
         c->restoreState(state);
       }
@@ -5154,7 +5126,6 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
       if (exceptionHandlerCatchType(oldHandler)) {
         type = resolveClassInPool
           (t, method, exceptionHandlerCatchType(oldHandler) - 1);
-        if (UNLIKELY(t->exception)) return 0;
       } else {
         type = 0;
       }
@@ -5277,7 +5248,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
 
   unsigned mapSize = frameMapSizeInWords(t, context->method);
 
-  RUNTIME_ARRAY(uintptr_t, roots, mapSize);
+  THREAD_RUNTIME_ARRAY(t, uintptr_t, roots, mapSize);
   if (originalRoots) {
     memcpy(RUNTIME_ARRAY_BODY(roots), originalRoots, mapSize * BytesPerWord);
   } else {
@@ -5708,7 +5679,7 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 
       pathIndex = subroutine->tableIndex;
 
-      RUNTIME_ARRAY(SubroutineTrace*, traces, p->subroutineTraceCount);
+      THREAD_RUNTIME_ARRAY(t, SubroutineTrace*, traces, p->subroutineTraceCount);
       unsigned i = 0;
       for (SubroutineTrace* trace = p->subroutineTrace;
            trace; trace = trace->next)
@@ -5826,10 +5797,15 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     (context->leaf ? 0 : stackOverflowThunk(t),
      difference(&(t->stackLimit), t));
 
-  uintptr_t* code = static_cast<uintptr_t*>
-    (allocator->allocate(pad(codeSize) + pad(c->poolSize()) + BytesPerWord));
+  unsigned total = pad(codeSize) + pad(c->poolSize()) + BytesPerWord;
+
+  uintptr_t* code = static_cast<uintptr_t*>(allocator->allocate(total));
   code[0] = codeSize;
   uint8_t* start = reinterpret_cast<uint8_t*>(code + 1);
+
+  context->executableAllocator = allocator;
+  context->executableStart = code;
+  context->executableSize = total;
 
   if (context->objectPool) {
     object pool = allocate3
@@ -5868,7 +5844,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
 
   object newExceptionHandlerTable = translateExceptionHandlerTable
     (t, c, context->method, reinterpret_cast<intptr_t>(start));
-  if (UNLIKELY(t->exception)) return;
+
   PROTECT(t, newExceptionHandlerTable);
 
   object newLineNumberTable = translateLineNumberTable
@@ -5885,7 +5861,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
   }
 
   if (context->traceLogCount) {
-    RUNTIME_ARRAY(TraceElement*, elements, context->traceLogCount);
+    THREAD_RUNTIME_ARRAY(t, TraceElement*, elements, context->traceLogCount);
     unsigned index = 0;
     unsigned pathFootprint = 0;
     unsigned mapCount = 0;
@@ -5978,7 +5954,7 @@ compile(MyThread* t, Context* context)
   c->init(codeLength(t, methodCode(t, context->method)), footprint, locals,
           alignedFrameSize(t, context->method));
 
-  RUNTIME_ARRAY(uint8_t, stackMap,
+  THREAD_RUNTIME_ARRAY(t, uint8_t, stackMap,
                 codeMaxStack(t, methodCode(t, context->method)));
   Frame frame(context, RUNTIME_ARRAY_BODY(stackMap));
 
@@ -6029,7 +6005,6 @@ compile(MyThread* t, Context* context)
   Compiler::State* state = c->saveState();
 
   compile(t, &frame, 0);
-  if (UNLIKELY(t->exception)) return;
 
   context->dirtyRoots = false;
   unsigned eventIndex = calculateFrameMaps(t, context, 0, 0);
@@ -6040,7 +6015,7 @@ compile(MyThread* t, Context* context)
 
     unsigned visitCount = exceptionHandlerTableLength(t, eht);
 
-    RUNTIME_ARRAY(bool, visited, visitCount);
+    THREAD_RUNTIME_ARRAY(t, bool, visited, visitCount);
     memset(RUNTIME_ARRAY_BODY(visited), 0, visitCount * sizeof(bool));
 
     while (visitCount) {
@@ -6059,7 +6034,7 @@ compile(MyThread* t, Context* context)
           RUNTIME_ARRAY_BODY(visited)[i] = true;
           progress = true;
 
-          RUNTIME_ARRAY(uint8_t, stackMap,
+          THREAD_RUNTIME_ARRAY(t, uint8_t, stackMap,
                         codeMaxStack(t, methodCode(t, context->method)));
           Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
 
@@ -6082,7 +6057,6 @@ compile(MyThread* t, Context* context)
           }
 
           compile(t, &frame2, exceptionHandlerIp(eh), start);
-          if (UNLIKELY(t->exception)) return;
 
           context->eventLog.append(PopContextEvent);
 
@@ -6112,47 +6086,41 @@ compileMethod2(MyThread* t, void* ip)
   object node = findCallNode(t, ip);
   object target = callNodeTarget(t, node);
 
-  if (LIKELY(t->exception == 0)) {
-    PROTECT(t, node);
-    PROTECT(t, target);
+  PROTECT(t, node);
+  PROTECT(t, target);
 
-    t->trace->targetMethod = target;
+  t->trace->targetMethod = target;
 
-    compile(t, codeAllocator(t), 0, target);
+  THREAD_RESOURCE0(t, static_cast<MyThread*>(t)->trace->targetMethod = 0);
 
-    t->trace->targetMethod = 0;
-  }
+  compile(t, codeAllocator(t), 0, target);
 
-  if (UNLIKELY(t->exception)) {
-    return 0;
+  uintptr_t address;
+  if ((methodFlags(t, target) & ACC_NATIVE)
+      and useLongJump(t, reinterpret_cast<uintptr_t>(ip)))
+  {
+    address = bootNativeThunk(t);
   } else {
-    uintptr_t address;
-    if ((methodFlags(t, target) & ACC_NATIVE)
-        and useLongJump(t, reinterpret_cast<uintptr_t>(ip)))
-    {
-      address = bootNativeThunk(t);
-    } else {
-      address = methodAddress(t, target);
-    }
-    uint8_t* updateIp = static_cast<uint8_t*>(ip);
-
-    UnaryOperation op;
-    if (callNodeFlags(t, node) & TraceElement::LongCall) {
-      if (callNodeFlags(t, node) & TraceElement::TailCall) {
-        op = AlignedLongJump;
-      } else {
-        op = AlignedLongCall;
-      }
-    } else if (callNodeFlags(t, node) & TraceElement::TailCall) {
-      op = AlignedJump;
-    } else {
-      op = AlignedCall;
-    }
-    
-    updateCall(t, op, updateIp, reinterpret_cast<void*>(address));
-
-    return reinterpret_cast<void*>(address);
+    address = methodAddress(t, target);
   }
+  uint8_t* updateIp = static_cast<uint8_t*>(ip);
+
+  UnaryOperation op;
+  if (callNodeFlags(t, node) & TraceElement::LongCall) {
+    if (callNodeFlags(t, node) & TraceElement::TailCall) {
+      op = AlignedLongJump;
+    } else {
+      op = AlignedLongCall;
+    }
+  } else if (callNodeFlags(t, node) & TraceElement::TailCall) {
+    op = AlignedJump;
+  } else {
+    op = AlignedCall;
+  }
+    
+  updateCall(t, op, updateIp, reinterpret_cast<void*>(address));
+
+  return reinterpret_cast<void*>(address);
 }
 
 uint64_t
@@ -6166,13 +6134,7 @@ compileMethod(MyThread* t)
     ip = t->arch->frameIp(t->stack);
   }
 
-  void* r = compileMethod2(t, ip);
-
-  if (UNLIKELY(t->exception)) {
-    unwind(t);
-  } else {
-    return reinterpret_cast<uintptr_t>(r);
-  }
+  return reinterpret_cast<uintptr_t>(compileMethod2(t, ip));
 }
 
 void*
@@ -6190,28 +6152,22 @@ compileVirtualMethod2(MyThread* t, object class_, unsigned index)
   }
   t->trace->targetMethod = arrayBody(t, classVirtualTable(t, c), index);
 
+  THREAD_RESOURCE0(t, static_cast<MyThread*>(t)->trace->targetMethod = 0;);
+
   PROTECT(t, class_);
 
   object target = resolveTarget(t, class_, index);
   PROTECT(t, target);
 
-  if (LIKELY(t->exception == 0)) {
-    compile(t, codeAllocator(t), 0, target);
-  }
+  compile(t, codeAllocator(t), 0, target);
 
-  t->trace->targetMethod = 0;
-
-  if (UNLIKELY(t->exception)) {
-    return 0;
+  void* address = reinterpret_cast<void*>(methodAddress(t, target));
+  if (methodFlags(t, target) & ACC_NATIVE) {
+    t->trace->nativeMethod = target;
   } else {
-    void* address = reinterpret_cast<void*>(methodAddress(t, target));
-    if (methodFlags(t, target) & ACC_NATIVE) {
-      t->trace->nativeMethod = target;
-    } else {
-      classVtable(t, class_, methodOffset(t, target)) = address;
-    }
-    return address;
+    classVtable(t, class_, methodOffset(t, target)) = address;
   }
+  return address;
 }
 
 uint64_t
@@ -6223,13 +6179,7 @@ compileVirtualMethod(MyThread* t)
   unsigned index = t->virtualCallIndex;
   t->virtualCallIndex = 0;
 
-  void* r = compileVirtualMethod2(t, class_, index);
-
-  if (UNLIKELY(t->exception)) {
-    unwind(t);
-  } else {
-    return reinterpret_cast<uintptr_t>(r);
-  }
+  return reinterpret_cast<uintptr_t>(compileVirtualMethod2(t, class_, index));
 }
 
 uint64_t
@@ -6253,9 +6203,9 @@ invokeNativeSlow(MyThread* t, object method, void* function)
   }
   unsigned count = methodParameterCount(t, method) + 2;
 
-  RUNTIME_ARRAY(uintptr_t, args, footprint);
+  THREAD_RUNTIME_ARRAY(t, uintptr_t, args, footprint);
   unsigned argOffset = 0;
-  RUNTIME_ARRAY(uint8_t, types, count);
+  THREAD_RUNTIME_ARRAY(t, uint8_t, types, count);
   unsigned typeOffset = 0;
 
   RUNTIME_ARRAY_BODY(args)[argOffset++] = reinterpret_cast<uintptr_t>(t);
@@ -6337,6 +6287,10 @@ invokeNativeSlow(MyThread* t, object method, void* function)
 
   { ENTER(t, Thread::IdleState);
 
+    bool noThrow = t->checkpoint->noThrow;
+    t->checkpoint->noThrow = true;
+    THREAD_RESOURCE(t, bool, noThrow, t->checkpoint->noThrow = noThrow);
+
     result = t->m->system->call
       (function,
        RUNTIME_ARRAY_BODY(args),
@@ -6360,43 +6314,45 @@ invokeNativeSlow(MyThread* t, object method, void* function)
             &byteArrayBody(t, methodName(t, method), 0));
   }
 
-  if (LIKELY(t->exception == 0)) {
-    switch (returnCode) {
-    case ByteField:
-    case BooleanField:
-      result = static_cast<int8_t>(result);
-      break;
+  if (UNLIKELY(t->exception)) {
+    object exception = t->exception;
+    t->exception = 0;
+    vm::throw_(t, exception);
+  }
 
-    case CharField:
-      result = static_cast<uint16_t>(result);
-      break;
+  switch (returnCode) {
+  case ByteField:
+  case BooleanField:
+    result = static_cast<int8_t>(result);
+    break;
 
-    case ShortField:
-      result = static_cast<int16_t>(result);
-      break;
+  case CharField:
+    result = static_cast<uint16_t>(result);
+    break;
 
-    case FloatField:
-    case IntField:
-      result = static_cast<int32_t>(result);
-      break;
+  case ShortField:
+    result = static_cast<int16_t>(result);
+    break;
 
-    case LongField:
-    case DoubleField:
-      break;
+  case FloatField:
+  case IntField:
+    result = static_cast<int32_t>(result);
+    break;
 
-    case ObjectField:
-      result = static_cast<uintptr_t>(result) ? *reinterpret_cast<uintptr_t*>
-        (static_cast<uintptr_t>(result)) : 0;
-      break;
+  case LongField:
+  case DoubleField:
+    break;
 
-    case VoidField:
-      result = 0;
-      break;
+  case ObjectField:
+    result = static_cast<uintptr_t>(result) ? *reinterpret_cast<uintptr_t*>
+      (static_cast<uintptr_t>(result)) : 0;
+    break;
 
-    default: abort(t);
-    }
-  } else {
+  case VoidField:
     result = 0;
+    break;
+
+  default: abort(t);
   }
 
   while (t->reference != reference) {
@@ -6442,41 +6398,35 @@ invokeNative(MyThread* t)
   uint64_t result = 0;
 
   t->trace->targetMethod = t->trace->nativeMethod;
+  
+  THREAD_RESOURCE0(t, {
+      static_cast<MyThread*>(t)->trace->targetMethod = 0;
+      static_cast<MyThread*>(t)->trace->nativeMethod = 0;
+    });
 
-  if (LIKELY(t->exception == 0)) {
-    resolveNative(t, t->trace->nativeMethod);
+  resolveNative(t, t->trace->nativeMethod);
 
-    if (LIKELY(t->exception == 0)) {
-      result = invokeNative2(t, t->trace->nativeMethod);
-    }
-  }
+  result = invokeNative2(t, t->trace->nativeMethod);
 
   unsigned parameterFootprint = methodParameterFootprint
     (t, t->trace->targetMethod);
 
-  t->trace->targetMethod = 0;
-  t->trace->nativeMethod = 0;
+  uintptr_t* stack = static_cast<uintptr_t*>(t->stack);
 
-  if (UNLIKELY(t->exception)) {
-    unwind(t);
-  } else {
-    uintptr_t* stack = static_cast<uintptr_t*>(t->stack);
-
-    if (TailCalls
-        and t->arch->argumentFootprint(parameterFootprint)
-        > t->arch->stackAlignmentInWords())
-    {
-      stack += t->arch->argumentFootprint(parameterFootprint)
-        - t->arch->stackAlignmentInWords();
-    }
-
-    stack += t->arch->frameReturnAddressSize();
-
-    transition(t, t->arch->frameIp(t->stack), stack, t->base, t->continuation,
-               t->trace);
-
-    return result;
+  if (TailCalls
+      and t->arch->argumentFootprint(parameterFootprint)
+      > t->arch->stackAlignmentInWords())
+  {
+    stack += t->arch->argumentFootprint(parameterFootprint)
+      - t->arch->stackAlignmentInWords();
   }
+
+  stack += t->arch->frameReturnAddressSize();
+
+  transition(t, t->arch->frameIp(t->stack), stack, t->base, t->continuation,
+             t->trace);
+
+  return result;
 }
 
 void
@@ -6807,7 +6757,7 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack, ...)
   }
 
   unsigned argumentCount = methodParameterFootprint(t, method);
-  RUNTIME_ARRAY(uintptr_t, arguments, argumentCount);
+  THREAD_RUNTIME_ARRAY(t, uintptr_t, arguments, argumentCount);
   va_list a; va_start(a, stack);
   for (unsigned i = 0; i < argumentCount; ++i) {
     RUNTIME_ARRAY_BODY(arguments)[i] = va_arg(a, uintptr_t);
@@ -6832,8 +6782,7 @@ callContinuation(MyThread* t, object continuation, object result,
   enum {
     Call,
     Unwind,
-    Rewind,
-    Throw
+    Rewind
   } action;
 
   object nextContinuation = 0;
@@ -6894,25 +6843,15 @@ callContinuation(MyThread* t, object continuation, object result,
              "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
              "Ljava/lang/Throwable;)V");
             
-          if (method) {
-            setRoot(t, RewindMethod, method);
+          setRoot(t, RewindMethod, method);
             
-            compile(t, local::codeAllocator(t), 0, method);
-
-            if (UNLIKELY(t->exception)) {
-              action = Throw;
-            }
-          } else {
-            action = Throw;
-          }
+          compile(t, local::codeAllocator(t), 0, method);
         }
       } else {
         action = Call;
       }
     } else {
-      t->exception = makeThrowable
-        (t, Machine::IncompatibleContinuationExceptionType);
-      action = Throw;
+      throwNew(t, Machine::IncompatibleContinuationExceptionType);
     }
   } else {
     action = Call;
@@ -6940,12 +6879,6 @@ callContinuation(MyThread* t, object continuation, object result,
       (t, root(t, RewindMethod), base, stack,
        continuationContextBefore(t, continuationContext(t, nextContinuation)),
        continuation, result, exception);
-  } break;
-
-  case Throw: {
-    transition(t, ip, stack, base, threadContinuation, t->trace);
-
-    vmJump(ip, base, stack, t, 0, 0);    
   } break;
 
   default:
@@ -6981,24 +6914,16 @@ callWithCurrentContinuation(MyThread* t, object receiver)
       }
     }
 
-    if (LIKELY(t->exception == 0)) {
-      method = findInterfaceMethod
-        (t, root(t, ReceiveMethod), objectClass(t, receiver));
-      PROTECT(t, method);
+    method = findInterfaceMethod
+      (t, root(t, ReceiveMethod), objectClass(t, receiver));
+    PROTECT(t, method);
         
-      compile(t, local::codeAllocator(t), 0, method);
+    compile(t, local::codeAllocator(t), 0, method);
 
-      if (LIKELY(t->exception == 0)) {
-        t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
-      }
-    }
+    t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
   }
 
-  if (LIKELY(t->exception == 0)) {
-    jumpAndInvoke(t, method, base, stack, receiver, t->continuation);
-  } else {
-    unwind(t);
-  }
+  jumpAndInvoke(t, method, base, stack, receiver, t->continuation);
 }
 
 void
@@ -7024,22 +6949,16 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
       }
     }
 
-    if (LIKELY(t->exception == 0)) {
-      t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
+    t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
 
-      object newContext = makeContinuationContext
-        (t, continuationContext(t, t->continuation), before, after,
-         t->continuation, t->trace->originalMethod);
+    object newContext = makeContinuationContext
+      (t, continuationContext(t, t->continuation), before, after,
+       t->continuation, t->trace->originalMethod);
 
-      set(t, t->continuation, ContinuationContext, newContext);
-    }
+    set(t, t->continuation, ContinuationContext, newContext);
   }
 
-  if (LIKELY(t->exception == 0)) {
-    jumpAndInvoke(t, root(t, WindMethod), base, stack, before, thunk, after);
-  } else {
-    unwind(t);
-  }    
+  jumpAndInvoke(t, root(t, WindMethod), base, stack, before, thunk, after);
 }
 
 class ArgumentList {
@@ -7176,9 +7095,11 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   if (stackLimit == 0) {
     t->stackLimit = stackPosition - StackSizeInBytes;
   } else if (stackPosition < stackLimit) {
-    t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
-    return 0;
+    throwNew(t, Machine::StackOverflowErrorType);
   }
+
+  THREAD_RESOURCE(t, uintptr_t, stackLimit,
+                  static_cast<MyThread*>(t)->stackLimit = stackLimit);
 
   unsigned returnCode = methodReturnCode(t, method);
   unsigned returnType = fieldType(t, returnCode);
@@ -7186,6 +7107,8 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   uint64_t result;
 
   { MyThread::CallTrace trace(t, method);
+
+    MyCheckpoint checkpoint(t);
 
     assert(t, arguments->position == arguments->size);
 
@@ -7199,13 +7122,14 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
        returnType);
   }
 
-  t->stackLimit = stackLimit;
-
   if (t->exception) { 
     if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
       collect(t, Heap::MinorCollection);
     }
-    return 0;
+    
+    object exception = t->exception;
+    t->exception = 0;
+    vm::throw_(t, exception);
   }
 
   object r;
@@ -7526,7 +7450,7 @@ class MyProcessor: public Processor {
   virtual object
   invokeArray(Thread* t, object method, object this_, object arguments)
   {
-    if (UNLIKELY(t->exception)) return 0;
+    assert(t, t->exception == 0);
 
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
@@ -7539,8 +7463,8 @@ class MyProcessor: public Processor {
       (&byteArrayBody(t, methodSpec(t, method), 0));
 
     unsigned size = methodParameterFootprint(t, method);
-    RUNTIME_ARRAY(uintptr_t, array, size);
-    RUNTIME_ARRAY(bool, objectMask, size);
+    THREAD_RUNTIME_ARRAY(t, uintptr_t, array, size);
+    THREAD_RUNTIME_ARRAY(t, bool, objectMask, size);
     ArgumentList list
       (t, RUNTIME_ARRAY_BODY(array), size, RUNTIME_ARRAY_BODY(objectMask),
        this_, spec, arguments);
@@ -7550,18 +7474,14 @@ class MyProcessor: public Processor {
     compile(static_cast<MyThread*>(t),
             local::codeAllocator(static_cast<MyThread*>(t)), 0, method);
 
-    if (LIKELY(t->exception == 0)) {
-      return local::invoke(t, method, &list);
-    }
-
-    return 0;
+    return local::invoke(t, method, &list);
   }
 
   virtual object
   invokeList(Thread* t, object method, object this_, bool indirectObjects,
              va_list arguments)
   {
-    if (UNLIKELY(t->exception)) return 0;
+    assert(t, t->exception == 0);
 
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
@@ -7574,8 +7494,8 @@ class MyProcessor: public Processor {
       (&byteArrayBody(t, methodSpec(t, method), 0));
 
     unsigned size = methodParameterFootprint(t, method);
-    RUNTIME_ARRAY(uintptr_t, array, size);
-    RUNTIME_ARRAY(bool, objectMask, size);
+    THREAD_RUNTIME_ARRAY(t, uintptr_t, array, size);
+    THREAD_RUNTIME_ARRAY(t, bool, objectMask, size);
     ArgumentList list
       (t, RUNTIME_ARRAY_BODY(array), size, RUNTIME_ARRAY_BODY(objectMask),
        this_, spec, indirectObjects, arguments);
@@ -7585,11 +7505,7 @@ class MyProcessor: public Processor {
     compile(static_cast<MyThread*>(t),
             local::codeAllocator(static_cast<MyThread*>(t)), 0, method);
 
-    if (LIKELY(t->exception == 0)) {
-      return local::invoke(t, method, &list);
-    }
-
-    return 0;
+    return local::invoke(t, method, &list);
   }
 
   virtual object
@@ -7597,34 +7513,29 @@ class MyProcessor: public Processor {
              const char* methodName, const char* methodSpec,
              object this_, va_list arguments)
   {
-    if (UNLIKELY(t->exception)) return 0;
+    assert(t, t->exception == 0);
 
     assert(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
     unsigned size = parameterFootprint(t, methodSpec, this_ == 0);
-    RUNTIME_ARRAY(uintptr_t, array, size);
-    RUNTIME_ARRAY(bool, objectMask, size);
+    THREAD_RUNTIME_ARRAY(t, uintptr_t, array, size);
+    THREAD_RUNTIME_ARRAY(t, bool, objectMask, size);
     ArgumentList list
       (t, RUNTIME_ARRAY_BODY(array), size, RUNTIME_ARRAY_BODY(objectMask),
        this_, methodSpec, false, arguments);
 
     object method = resolveMethod
       (t, loader, className, methodName, methodSpec);
-    if (LIKELY(t->exception == 0)) {
-      assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
-      PROTECT(t, method);
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+    PROTECT(t, method);
       
-      compile(static_cast<MyThread*>(t), 
-              local::codeAllocator(static_cast<MyThread*>(t)), 0, method);
+    compile(static_cast<MyThread*>(t), 
+            local::codeAllocator(static_cast<MyThread*>(t)), 0, method);
 
-      if (LIKELY(t->exception == 0)) {
-        return local::invoke(t, method, &list);
-      }
-    }
-
-    return 0;
+    return local::invoke(t, method, &list);
   }
 
   virtual void dispose(Thread* vmt) {
@@ -8762,7 +8673,6 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
 
   if (bootContext == 0) {
     initClass(t, methodClass(t, method));
-    if (UNLIKELY(t->exception)) return;
   }
 
   if (methodAddress(t, method) != defaultThunk(t)) {
@@ -8790,7 +8700,6 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
 
   Context context(t, bootContext, clone);
   compile(t, &context);
-  if (UNLIKELY(t->exception)) return;
 
   { object ehTable = codeExceptionHandlerTable(t, methodCode(t, clone));
 
@@ -8804,7 +8713,6 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
         if (exceptionHandlerCatchType(handler)) {
           resolveClassInPool
             (t, clone, exceptionHandlerCatchType(handler) - 1);
-          if (UNLIKELY(t->exception)) return;
         }
       }
     }
@@ -8817,7 +8725,6 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
   }
 
   finish(t, allocator, &context);
-  if (UNLIKELY(t->exception)) return;
  
   if (DebugMethodTree) {
     fprintf(stderr, "insert method at %p\n",
@@ -8848,6 +8755,11 @@ compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
     classVtable(t, methodClass(t, method), methodOffset(t, method))
       = reinterpret_cast<void*>(methodCompiled(t, clone));
   }
+
+  // we've compiled the method and inserted it into the tree without
+  // error, so we ensure that the executable area not be deallocated
+  // when we dispose of the context:
+  context.executableAllocator = 0;
 
   treeUpdate(t, root(t, MethodTree), methodCompiled(t, clone),
              method, root(t, MethodTreeSentinal), compareIpToMethodBounds);

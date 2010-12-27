@@ -60,9 +60,7 @@ class MyClasspath : public Classpath {
       (t, root(t, Machine::BootLoader), "java/lang/Thread", "run",
        "(Ljava/lang/Thread;)V");
 
-    if (t->exception == 0) {
-      t->m->processor->invoke(t, method, 0, t->javaThread);
-    }
+    t->m->processor->invoke(t, method, 0, t->javaThread);
   }
 
   virtual void
@@ -134,9 +132,8 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Object_getVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object o = reinterpret_cast<object>(arguments[0]);
-
-  return reinterpret_cast<int64_t>(objectClass(t, o));
+  return reinterpret_cast<int64_t>
+    (objectClass(t, reinterpret_cast<object>(arguments[0])));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -307,12 +304,16 @@ Avian_java_lang_reflect_Method_invoke
   object instance = reinterpret_cast<object>(arguments[1]);
   object args = reinterpret_cast<object>(arguments[2]);
 
-  object v = t->m->processor->invokeArray(t, method, instance, args);
-  if (t->exception) {
-    t->exception = makeThrowable
-      (t, Machine::InvocationTargetExceptionType, 0, 0, t->exception);
-  }
-  return reinterpret_cast<int64_t>(v);
+  THREAD_RESOURCE0(t, {
+      if (t->exception) {
+        object exception = t->exception;
+        t->exception = makeThrowable
+          (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
+      }
+    });
+
+  return reinterpret_cast<int64_t>
+    (t->m->processor->invokeArray(t, method, instance, args));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -327,12 +328,11 @@ Avian_java_lang_reflect_Array_getLength
     if (LIKELY(elementSize)) {
       return cast<uintptr_t>(array, BytesPerWord);
     } else {
-      t->exception = makeThrowable(t, Machine::IllegalArgumentExceptionType);
+      throwNew(t, Machine::IllegalArgumentExceptionType);
     }
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
+    throwNew(t, Machine::NullPointerExceptionType);
   }
-  return 0;
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -394,7 +394,7 @@ Avian_java_lang_System_getVMProperty
   PROTECT(t, found);
 
   unsigned length = stringLength(t, name);
-  RUNTIME_ARRAY(char, n, length + 1);
+  THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
   int64_t r = 0;
@@ -439,8 +439,7 @@ Avian_java_lang_System_identityHashCode
   if (LIKELY(o)) {
     return objectHash(t, o);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    return 0;
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 
@@ -452,7 +451,7 @@ Avian_java_lang_Runtime_load
   bool mapName = arguments[1];
 
   unsigned length = stringLength(t, name);
-  RUNTIME_ARRAY(char, n, length + 1);
+  THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
   loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), mapName, true);
@@ -622,11 +621,13 @@ Avian_avian_Classes_defineVMClass
 
   uint8_t* buffer = static_cast<uint8_t*>
     (t->m->heap->allocate(length));
-  memcpy(buffer, &byteArrayBody(t, b, offset), length);
-  object c = defineClass(t, loader, buffer, length);
-  t->m->heap->free(buffer, length);
+  
+  THREAD_RESOURCE2(t, uint8_t*, buffer, int, length,
+                   t->m->heap->free(buffer, length));
 
-  return reinterpret_cast<int64_t>(c);
+  memcpy(buffer, &byteArrayBody(t, b, offset), length);
+
+  return reinterpret_cast<int64_t>(defineClass(t, loader, buffer, length));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -648,8 +649,7 @@ Avian_avian_Classes_isAssignableFrom
   if (LIKELY(that)) {
     return vm::isAssignableFrom(t, this_, that);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    return 0;
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 

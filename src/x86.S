@@ -23,6 +23,10 @@
 
 #ifdef __x86_64__
 
+#define CHECKPOINT_THREAD 8
+#define CHECKPOINT_STACK 48
+#define CHECKPOINT_BASE 56
+   
 #ifdef __MINGW32__
 .globl GLOBAL(detectFeature)
 GLOBAL(detectFeature):
@@ -173,6 +177,48 @@ GLOBAL(vmJump):
    movq   %r8,%rsp
    movq   %r9,%rbx
    jmp    *%rcx
+
+#define VMRUN_FRAME_SIZE 80
+   
+.globl GLOBAL(vmRun)
+GLOBAL(vmRun):
+   // %rcx: function
+   // %rdx: arguments
+   // %r8 : checkpoint
+   pushq  %rbp
+   movq   %rsp,%rbp
+   subq   $VMRUN_FRAME_SIZE,%rsp
+
+   movq   %rbx,16(%rsp)
+   movq   %r12,24(%rsp)
+   movq   %r13,32(%rsp)
+   movq   %r14,40(%rsp)
+   movq   %r15,48(%rsp)
+   movq   %rsi,56(%rsp)
+   movq   %rdi,64(%rsp)
+
+   movq   %rsp,CHECKPOINT_STACK(%rcx)
+   movq   %rbp,CHECKPOINT_BASE(%rcx)
+
+   movq   %rcx,%r11
+   movq   CHECKPOINT_THREAD(%rdx),%rcx
+   
+   call   *%r11
+   
+.globl GLOBAL(vmRun_returnAddress)
+GLOBAL(vmRun_returnAddress):
+
+   movq   16(%rsp),%rbx
+   movq   24(%rsp),%r12
+   movq   32(%rsp),%r13
+   movq   40(%rsp),%r14
+   movq   48(%rsp),%r15
+   movq   56(%rsp),%rsi
+   movq   64(%rsp),%rdi
+
+   addq   $VMRUN_FRAME_SIZE,%rsp
+   popq   %rbp
+   ret
    
 #else // not __MINGW32__
 .globl GLOBAL(detectFeature)
@@ -314,9 +360,51 @@ GLOBAL(vmJump):
    movq   %r9,%rdx
    jmp    *%rdi
 
+#define VMRUN_FRAME_SIZE 64
+   
+.globl GLOBAL(vmRun)
+GLOBAL(vmRun):
+   // %rdi: function
+   // %rsi: arguments
+   // %rdx: checkpoint
+   pushq  %rbp
+   movq   %rsp,%rbp
+   subq   $VMRUN_FRAME_SIZE,%rsp
+
+   movq   %rbx,16(%rsp)
+   movq   %r12,24(%rsp)
+   movq   %r13,32(%rsp)
+   movq   %r14,40(%rsp)
+   movq   %r15,48(%rsp)
+
+   movq   %rsp,CHECKPOINT_STACK(%rdx)
+   movq   %rbp,CHECKPOINT_BASE(%rdx)
+
+   movq   %rdi,%r11
+   movq   CHECKPOINT_THREAD(%rdx),%rdi
+   
+   call   *%r11
+   
+.globl GLOBAL(vmRun_returnAddress)
+GLOBAL(vmRun_returnAddress):
+
+   movq   16(%rsp),%rbx
+   movq   24(%rsp),%r12
+   movq   32(%rsp),%r13
+   movq   40(%rsp),%r14
+   movq   48(%rsp),%r15
+
+   addq   $VMRUN_FRAME_SIZE,%rsp
+   popq   %rbp
+   ret
+
 #endif // not __MINGW32__
 
 #elif defined __i386__
+
+#define CHECKPOINT_THREAD 4
+#define CHECKPOINT_STACK 24
+#define CHECKPOINT_BASE 28
 
 .globl GLOBAL(detectFeature)
 GLOBAL(detectFeature):
@@ -432,4 +520,42 @@ GLOBAL(vmJump):
    movl   12(%esp),%esp
    jmp    *%esi
 
-#endif //def __x86_64__
+#define VMRUN_FRAME_SIZE 32
+
+.globl GLOBAL(vmRun)
+GLOBAL(vmRun):
+   //  8(%ebp): function
+   // 12(%ebp): arguments
+   // 16(%ebp): checkpoint
+   pushl  %ebp
+   movl   %esp,%ebp
+   subl   $VMRUN_FRAME_SIZE,%esp
+   
+   movl   %ebx,8(%esp)
+   movl   %esi,12(%esp)
+   movl   %edi,16(%esp)
+
+   movl   12(%ebp),%eax
+   movl   %eax,4(%esp)
+
+   movl   16(%ebp),%ecx
+   movl   CHECKPOINT_THREAD(%ecx),%eax
+   movl   %eax,0(%esp)
+
+   movl   %esp,CHECKPOINT_STACK(%ecx)
+   movl   %ebp,CHECKPOINT_BASE(%ecx)
+
+   call   *8(%ebp)
+   
+.globl GLOBAL(vmRun_returnAddress)
+GLOBAL(vmRun_returnAddress):
+   
+   movl   8(%esp),%ebx
+   movl   12(%esp),%esi
+   movl   16(%esp),%edi
+
+   addl   $VMRUN_FRAME_SIZE,%esp
+   popl   %ebp
+   ret
+
+#endif // __i386__

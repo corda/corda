@@ -375,7 +375,7 @@ popFrame(Thread* t)
   if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)
       and t->classInitList
       and t->classInitList->class_ == methodClass(t, method))
-  {    
+  {
     t->classInitList->pop();
 
     postInitClass(t, methodClass(t, method));
@@ -435,7 +435,7 @@ checkStack(Thread* t, object method)
                + codeMaxStack(t, methodCode(t, method))
                > StackSizeInWords / 2))
   {
-    t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
+    throwNew(t, Machine::StackOverflowErrorType);
   }
 }
 
@@ -570,9 +570,9 @@ invokeNativeSlow(Thread* t, object method, void* function)
   }
   unsigned count = methodParameterCount(t, method) + 2;
 
-  RUNTIME_ARRAY(uintptr_t, args, footprint);
+  THREAD_RUNTIME_ARRAY(t, uintptr_t, args, footprint);
   unsigned argOffset = 0;
-  RUNTIME_ARRAY(uint8_t, types, count);
+  THREAD_RUNTIME_ARRAY(t, uint8_t, types, count);
   unsigned typeOffset = 0;
 
   RUNTIME_ARRAY_BODY(args)[argOffset++] = reinterpret_cast<uintptr_t>(t);
@@ -613,6 +613,10 @@ invokeNativeSlow(Thread* t, object method, void* function)
     
   { ENTER(t, Thread::IdleState);
 
+    bool noThrow = t->checkpoint->noThrow;
+    t->checkpoint->noThrow = true;
+    THREAD_RESOURCE(t, bool, noThrow, t->checkpoint->noThrow = noThrow);
+
     result = t->m->system->call
       (function,
        RUNTIME_ARRAY_BODY(args),
@@ -633,7 +637,9 @@ invokeNativeSlow(Thread* t, object method, void* function)
   popFrame(t);
 
   if (UNLIKELY(t->exception)) {
-    return VoidField;
+    object exception = t->exception;
+    t->exception = 0;
+    throw_(t, exception);
   }
 
   pushResult(t, returnCode, result, true);
@@ -647,10 +653,6 @@ invokeNative(Thread* t, object method)
   PROTECT(t, method);
 
   resolveNative(t, method);
-
-  if (UNLIKELY(t->exception)) {
-    return VoidField;
-  }
 
   object native = methodRuntimeDataNative(t, getMethodRuntimeData(t, method));
   if (nativeFast(t, native)) {
@@ -672,10 +674,6 @@ invokeNative(Thread* t, object method)
        (nativeFunction(t, native))(t, method, RUNTIME_ARRAY_BODY(args));
     
     popFrame(t);
-
-    if (UNLIKELY(t->exception)) {
-      return VoidField;
-    }
 
     pushResult(t, methodReturnCode(t, method), result, false);
 
@@ -802,10 +800,8 @@ pushField(Thread* t, object target, object field)
 }
 
 object
-interpret(Thread* t)
+interpret3(Thread* t, const int base)
 {
-  const int base = t->frame;
-
   unsigned instruction = nop;
   unsigned& ip = t->ip;
   unsigned& sp = t->sp;
@@ -858,10 +854,9 @@ interpret(Thread* t)
       {
         pushObject(t, objectArrayBody(t, array, index));
       } else {
-        object message = makeString
-          (t, "%d not in [0,%d)", index, objectArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, objectArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -881,10 +876,9 @@ interpret(Thread* t)
       {
         set(t, array, ArrayBody + (index * BytesPerWord), value);
       } else {
-        object message = makeString
-          (t, "%d not in [0,%d)", index, objectArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, objectArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -924,13 +918,11 @@ interpret(Thread* t)
       uint16_t index = codeReadInt16(t, code, ip);
       
       object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
-      if (UNLIKELY(exception)) goto throw_;
             
       pushObject(t, makeObjectArray(t, class_, count));
     } else {
-      object message = makeString(t, "%d", count);
       exception = makeThrowable
-        (t, Machine::NegativeArraySizeExceptionType, message);
+        (t, Machine::NegativeArraySizeExceptionType, "%d", count);
       goto throw_;
     }
   } goto loop;
@@ -995,10 +987,9 @@ interpret(Thread* t)
         {
           pushInt(t, booleanArrayBody(t, array, index));
         } else {
-          object message = makeString(t, "%d not in [0,%d)", index,
-                                      booleanArrayLength(t, array));
           exception = makeThrowable
-            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType,
+             "%d not in [0,%d)", index, booleanArrayLength(t, array));
           goto throw_;
         }
       } else {
@@ -1008,11 +999,9 @@ interpret(Thread* t)
         {
           pushInt(t, byteArrayBody(t, array, index));
         } else {
-          object message = makeString(t, "%d not in [0,%d)", index,
-                                      byteArrayLength(t, array));
-          
           exception = makeThrowable
-            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType,
+             "%d not in [0,%d)", index, byteArrayLength(t, array));
           goto throw_;
         }
       }
@@ -1035,10 +1024,9 @@ interpret(Thread* t)
         {
           booleanArrayBody(t, array, index) = value;
         } else {
-          object message = makeString(t, "%d not in [0,%d)", index,
-                                      booleanArrayLength(t, array));
           exception = makeThrowable
-            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType,
+             "%d not in [0,%d)", index, booleanArrayLength(t, array));
           goto throw_;
         }
       } else {
@@ -1047,10 +1035,9 @@ interpret(Thread* t)
         {
           byteArrayBody(t, array, index) = value;
         } else {
-          object message = makeString(t, "%d not in [0,%d)", index,
-                                      byteArrayLength(t, array));
           exception = makeThrowable
-            (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+            (t, Machine::ArrayIndexOutOfBoundsExceptionType,
+             "%d not in [0,%d)", index, byteArrayLength(t, array));
           goto throw_;
         }
       }
@@ -1074,10 +1061,9 @@ interpret(Thread* t)
       {
         pushInt(t, charArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    charArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, charArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1097,10 +1083,9 @@ interpret(Thread* t)
       {
         charArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    charArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, charArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1117,13 +1102,11 @@ interpret(Thread* t)
       if (UNLIKELY(exception)) goto throw_;
 
       if (not instanceOf(t, class_, peekObject(t, sp - 1))) {
-        object message = makeString
-          (t, "%s as %s",
+        exception = makeThrowable
+          (t, Machine::ClassCastExceptionType, "%s as %s",
            &byteArrayBody
            (t, className(t, objectClass(t, peekObject(t, sp - 1))), 0),
            &byteArrayBody(t, className(t, class_), 0));
-        exception = makeThrowable
-          (t, Machine::ClassCastExceptionType, message);
         goto throw_;
       }
     }
@@ -1158,10 +1141,9 @@ interpret(Thread* t)
       {
         pushLong(t, doubleArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    doubleArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, doubleArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1181,10 +1163,9 @@ interpret(Thread* t)
       {
         memcpy(&doubleArrayBody(t, array, index), &value, sizeof(uint64_t));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    doubleArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, doubleArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1360,10 +1341,9 @@ interpret(Thread* t)
       {
         pushInt(t, floatArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    floatArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, floatArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1383,10 +1363,9 @@ interpret(Thread* t)
       {
         memcpy(&floatArrayBody(t, array, index), &value, sizeof(uint32_t));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    floatArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, floatArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1476,7 +1455,6 @@ interpret(Thread* t)
       uint16_t index = codeReadInt16(t, code, ip);
     
       object field = resolveField(t, frameMethod(t, frame), index - 1);
-      if (UNLIKELY(exception)) goto throw_;
 
       assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
@@ -1511,7 +1489,6 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     object field = resolveField(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
 
     assert(t, fieldFlags(t, field) & ACC_STATIC);
 
@@ -1592,10 +1569,9 @@ interpret(Thread* t)
       {
         pushInt(t, intArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    intArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, intArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1622,10 +1598,9 @@ interpret(Thread* t)
       {
         intArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    intArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, intArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -1874,7 +1849,6 @@ interpret(Thread* t)
 
     if (peekObject(t, sp - 1)) {
       object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
-      if (UNLIKELY(exception)) goto throw_;
 
       if (instanceOf(t, class_, popObject(t))) {
         pushInt(t, 1);
@@ -1893,7 +1867,6 @@ interpret(Thread* t)
     ip += 2;
 
     object method = resolveMethod(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
@@ -1910,7 +1883,6 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     object method = resolveMethod(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
@@ -1935,7 +1907,6 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     object method = resolveMethod(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, method);
     
     if (UNLIKELY(classInit(t, methodClass(t, method), 3))) goto invoke;
@@ -1947,7 +1918,6 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     object method = resolveMethod(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
     
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
@@ -2096,10 +2066,9 @@ interpret(Thread* t)
       {
         pushLong(t, longArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    longArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, longArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -2126,10 +2095,9 @@ interpret(Thread* t)
       {
         longArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    longArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, longArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -2170,7 +2138,6 @@ interpret(Thread* t)
       if (objectClass(t, v) == type(t, Machine::ReferenceType)) {
         object class_ = resolveClassInPool
           (t, frameMethod(t, frame), index - 1); 
-        if (UNLIKELY(exception)) goto throw_;
 
         pushObject(t, getJClass(t, class_));
       } else if (objectClass(t, v) == type(t, Machine::ClassType)) {
@@ -2389,16 +2356,14 @@ interpret(Thread* t)
     uint8_t dimensions = codeBody(t, code, ip++);
 
     object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, class_);
 
     int32_t counts[dimensions];
     for (int i = dimensions - 1; i >= 0; --i) {
       counts[i] = popInt(t);
       if (UNLIKELY(counts[i] < 0)) {
-        object message = makeString(t, "%d", counts[i]);
         exception = makeThrowable
-          (t, Machine::NegativeArraySizeExceptionType, message);
+          (t, Machine::NegativeArraySizeExceptionType, "%d", counts[i]);
         goto throw_;
       }
     }
@@ -2416,7 +2381,6 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
     
     object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
     PROTECT(t, class_);
 
     if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
@@ -2470,9 +2434,8 @@ interpret(Thread* t)
             
       pushObject(t, array);
     } else {
-      object message = makeString(t, "%d", count);
       exception = makeThrowable
-        (t, Machine::NegativeArraySizeExceptionType, message);
+        (t, Machine::NegativeArraySizeExceptionType, "%d", count);
       goto throw_;
     }
   } goto loop;
@@ -2491,7 +2454,6 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
     
     object field = resolveField(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
 
     assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
     PROTECT(t, field);
@@ -2582,7 +2544,6 @@ interpret(Thread* t)
     uint16_t index = codeReadInt16(t, code, ip);
 
     object field = resolveField(t, frameMethod(t, frame), index - 1);
-    if (UNLIKELY(exception)) goto throw_;
 
     assert(t, fieldFlags(t, field) & ACC_STATIC);
 
@@ -2683,10 +2644,9 @@ interpret(Thread* t)
       {
         pushInt(t, shortArrayBody(t, array, index));
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    shortArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, shortArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -2706,10 +2666,9 @@ interpret(Thread* t)
       {
         shortArrayBody(t, array, index) = value;
       } else {
-        object message = makeString(t, "%d not in [0,%d)", index,
-                                    shortArrayLength(t, array));
         exception = makeThrowable
-          (t, Machine::ArrayIndexOutOfBoundsExceptionType, message);
+          (t, Machine::ArrayIndexOutOfBoundsExceptionType, "%d not in [0,%d)",
+           index, shortArrayLength(t, array));
         goto throw_;
       }
     } else {
@@ -2771,7 +2730,6 @@ interpret(Thread* t)
     
     resolveClass(t, classLoader(t, methodClass(t, frameMethod(t, frame))),
                  className(t, class_));
-    if (UNLIKELY(exception)) goto throw_;
 
     ip -= 3;
   } goto loop;
@@ -2822,11 +2780,8 @@ interpret(Thread* t)
  invoke: {
     if (methodFlags(t, code) & ACC_NATIVE) {
       invokeNative(t, code);
-      if (UNLIKELY(exception)) goto throw_;
     } else {
       checkStack(t, code);
-      if (UNLIKELY(exception)) goto throw_;
-
       pushFrame(t, code);
     }
   } goto loop;
@@ -2849,6 +2804,39 @@ interpret(Thread* t)
   }
 
   return 0;
+}
+
+uint64_t
+interpret2(vm::Thread* t, uintptr_t* arguments)
+{
+  int base = arguments[0];
+  bool* success = reinterpret_cast<bool*>(arguments[1]);
+
+  object r = interpret3(static_cast<Thread*>(t), base);
+  *success = true;
+  return reinterpret_cast<uint64_t>(r);
+}
+
+object
+interpret(Thread* t)
+{
+  const int base = t->frame;
+
+  while (true) {
+    bool success = false;
+    uintptr_t arguments[] = { base, reinterpret_cast<uintptr_t>(&success) };
+
+    uint64_t r = run(t, interpret2, arguments);
+    if (success) {
+      if (t->exception) {
+        object exception = t->exception;
+        t->exception = 0;
+        throw_(t, exception);
+      } else {
+        return reinterpret_cast<object>(r);
+      }
+    }
+  }
 }
 
 void
@@ -2957,47 +2945,45 @@ invoke(Thread* t, object method)
   if (methodFlags(t, method) & ACC_NATIVE) {
     unsigned returnCode = invokeNative(t, method);
 
-    if (LIKELY(t->exception == 0)) {
-      switch (returnCode) {
-      case ByteField:
-      case BooleanField:
-      case CharField:
-      case ShortField:
-      case FloatField:
-      case IntField:
-        result = makeInt(t, popInt(t));
-        break;
+    switch (returnCode) {
+    case ByteField:
+    case BooleanField:
+    case CharField:
+    case ShortField:
+    case FloatField:
+    case IntField:
+      result = makeInt(t, popInt(t));
+      break;
 
-      case LongField:
-      case DoubleField:
-        result = makeLong(t, popLong(t));
-        break;
+    case LongField:
+    case DoubleField:
+      result = makeLong(t, popLong(t));
+      break;
         
-      case ObjectField:
-        result = popObject(t);
-        break;
+    case ObjectField:
+      result = popObject(t);
+      break;
 
-      case VoidField:
-        result = 0;
-        break;
+    case VoidField:
+      result = 0;
+      break;
 
-      default:
-        abort(t);
-      };
-    }
+    default:
+      abort(t);
+    };
   } else {
     checkStack(t, method);
-    if (LIKELY(t->exception == 0)) {
-      pushFrame(t, method);
-      result = interpret(t);
-      if (LIKELY(t->exception == 0)) {
-        popFrame(t);
-      }
-    }
-  }
+    pushFrame(t, method);
 
-  if (UNLIKELY(t->exception)) {
-    return 0;
+    result = interpret(t);
+
+    if (LIKELY(t->exception == 0)) {
+      popFrame(t);
+    } else {
+      object exception = t->exception;
+      t->exception = 0;
+      throw_(t, exception);
+    }
   }
 
   return result;
@@ -3155,8 +3141,7 @@ class MyProcessor: public Processor {
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
                  > StackSizeInWords / 2))
     {
-      t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
-      return 0;
+      throwNew(t, Machine::StackOverflowErrorType);
     }
 
     const char* spec = reinterpret_cast<char*>
@@ -3180,8 +3165,7 @@ class MyProcessor: public Processor {
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
                  > StackSizeInWords / 2))
     {
-      t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
-      return 0;
+      throwNew(t, Machine::StackOverflowErrorType);
     }
 
     const char* spec = reinterpret_cast<char*>
@@ -3204,8 +3188,7 @@ class MyProcessor: public Processor {
     if (UNLIKELY(t->sp + parameterFootprint(vmt, methodSpec, false)
                  > StackSizeInWords / 2))
     {
-      t->exception = makeThrowable(t, Machine::StackOverflowErrorType);
-      return 0;
+      throwNew(t, Machine::StackOverflowErrorType);
     }
 
     pushArguments(t, this_, methodSpec, false, arguments);
@@ -3213,13 +3196,9 @@ class MyProcessor: public Processor {
     object method = resolveMethod
       (t, loader, className, methodName, methodSpec);
 
-    if (LIKELY(t->exception == 0)) {
-      assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
-      return ::invoke(t, method);
-    } else {
-      return 0;
-    }
+    return ::invoke(t, method);
   }
 
   virtual object getStackTrace(vm::Thread*, vm::Thread*) {

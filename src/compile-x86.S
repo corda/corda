@@ -23,7 +23,7 @@
 
 #ifdef __x86_64__
 
-#define THREAD_STACK 2216
+#define THREAD_STACK 2232
 
 #if defined __MINGW32__ || defined __CYGWIN32__
 
@@ -306,7 +306,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 #elif defined __i386__
 
-#define THREAD_STACK 2144
+#define THREAD_STACK 2152
    
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 16
    

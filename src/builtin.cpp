@@ -33,15 +33,9 @@ search(Thread* t, object loader, object name,
       replace('.', '/', s);
     }
 
-    object r = op(t, loader, n);
-    if (t->exception) {
-      return 0;
-    }
-
-    return reinterpret_cast<int64_t>(r);
+    return reinterpret_cast<int64_t>(op(t, loader, n));
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    return 0;
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 
@@ -81,7 +75,7 @@ Avian_avian_SystemClassLoader_resourceExists
   object name = reinterpret_cast<object>(arguments[1]);
 
   if (LIKELY(name)) {
-    RUNTIME_ARRAY(char, n, stringLength(t, name) + 1);
+    THREAD_RUNTIME_ARRAY(t, char, n, stringLength(t, name) + 1);
     stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
     unsigned length;
@@ -92,8 +86,7 @@ Avian_avian_SystemClassLoader_resourceExists
 
     return r;
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    return 0;
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 
@@ -114,17 +107,16 @@ Avian_avian_Machine_dumpHeap
   object outputFile = reinterpret_cast<object>(*arguments);
 
   unsigned length = stringLength(t, outputFile);
-  char n[length + 1];
-  stringChars(t, outputFile, n);
-  FILE* out = vm::fopen(n, "wb");
+  THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
+  stringChars(t, outputFile, RUNTIME_ARRAY_BODY(n));
+  FILE* out = vm::fopen(RUNTIME_ARRAY_BODY(n), "wb");
   if (out) {
     { ENTER(t, Thread::ExclusiveState);
       dumpHeap(t, out);
     }
     fclose(out);
   } else {
-    object message = makeString(t, "file not found: %s", n);
-    t->exception = makeThrowable(t, Machine::RuntimeExceptionType, message);
+    throwNew(t, Machine::RuntimeExceptionType, "file not found: %s", n);
   }
 }
 
@@ -146,7 +138,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
   object path = reinterpret_cast<object>(*arguments);
 
   if (LIKELY(path)) {
-    RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+    THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
     stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
     System::Region* r = t->m->bootFinder->find(RUNTIME_ARRAY_BODY(p));
@@ -170,7 +162,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
   object path = reinterpret_cast<object>(*arguments);
 
   if (LIKELY(path)) {
-    RUNTIME_ARRAY(char, p, stringLength(t, path) + 1);
+    THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
     stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
     System::Region* r = t->m->bootFinder->find(RUNTIME_ARRAY_BODY(p));
@@ -180,8 +172,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
 
     return reinterpret_cast<int64_t>(r);
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
-    return 0;
+    throwNew(t, Machine::NullPointerExceptionType);
   }
 }
 

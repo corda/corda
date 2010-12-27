@@ -101,9 +101,7 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
 
             return;
           } else {
-            t->exception = makeThrowable
-              (t, Machine::IndexOutOfBoundsExceptionType);
-            return;
+            throwNew(t, Machine::IndexOutOfBoundsExceptionType);
           }
         } else {
           return;
@@ -111,11 +109,11 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
       }
     }
   } else {
-    t->exception = makeThrowable(t, Machine::NullPointerExceptionType);
+    throwNew(t, Machine::NullPointerExceptionType);
     return;
   }
 
-  t->exception = makeThrowable(t, Machine::ArrayStoreExceptionType);
+  throwNew(t, Machine::ArrayStoreExceptionType);
 }
 
 void
@@ -158,6 +156,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
 {
   ACQUIRE(t, t->m->classLock);
 
+  char* mappedName;
   unsigned nameLength = strlen(name);
   if (mapName) {
     const char* builtins = findProperty(t, "avian.builtins");
@@ -186,14 +185,21 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     const char* suffix = t->m->system->librarySuffix();
     unsigned mappedNameLength = nameLength + strlen(prefix) + strlen(suffix);
 
-    char* mappedName = static_cast<char*>
+    mappedName = static_cast<char*>
       (t->m->heap->allocate(mappedNameLength + 1));
 
     snprintf(mappedName, mappedNameLength + 1, "%s%s%s", prefix, name, suffix);
 
     name = mappedName;
     nameLength = mappedNameLength;
+  } else {
+    mappedName = 0;
   }
+
+  THREAD_RESOURCE2
+    (t, char*, mappedName, unsigned, nameLength, if (mappedName) {
+      t->m->heap->free(mappedName, nameLength + 1);
+    });
 
   System::Library* lib = 0;
   for (Tokenizer tokenizer(path, t->m->system->pathSeparator());
@@ -202,7 +208,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     Tokenizer::Token token(tokenizer.next());
 
     unsigned fullNameLength = token.length + 1 + nameLength;
-    RUNTIME_ARRAY(char, fullName, fullNameLength + 1);
+    THREAD_RUNTIME_ARRAY(t, char, fullName, fullNameLength + 1);
 
     snprintf(RUNTIME_ARRAY_BODY(fullName), fullNameLength + 1,
              "%*s/%s", token.length, token.s, name);
@@ -220,13 +226,8 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
       runOnLoadIfFound(t, lib);
     }
   } else {  
-    object message = makeString(t, "library not found: %s", name);
-    t->exception = makeThrowable
-      (t, Machine::UnsatisfiedLinkErrorType, message);
-  }
-
-  if (mapName) {
-    t->m->heap->free(name, nameLength + 1);
+    throwNew(t, Machine::UnsatisfiedLinkErrorType, "library not found: %s",
+             name);
   }
 
   return lib;
@@ -264,7 +265,7 @@ makeStackTraceElement(Thread* t, object e)
   object class_ = className(t, methodClass(t, traceElementMethod(t, e)));
   PROTECT(t, class_);
 
-  RUNTIME_ARRAY(char, s, byteArrayLength(t, class_));
+  THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, class_));
   replace('/', '.', RUNTIME_ARRAY_BODY(s),
           reinterpret_cast<char*>(&byteArrayBody(t, class_, 0)));
   class_ = makeString(t, "%s", s);

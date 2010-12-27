@@ -153,13 +153,13 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
 {
   unsigned undecoratedSize = prefixLength + jniNameLength(t, method, false);
   // extra 6 is for code below:
-  RUNTIME_ARRAY(char, undecorated, undecoratedSize + 1 + 6);
+  THREAD_RUNTIME_ARRAY(t, char, undecorated, undecoratedSize + 1 + 6);
   makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(undecorated) + 1,
               method, false);
 
   unsigned decoratedSize = prefixLength + jniNameLength(t, method, true);
   // extra 6 is for code below:
-  RUNTIME_ARRAY(char, decorated, decoratedSize + 1 + 6);
+  THREAD_RUNTIME_ARRAY(t, char, decorated, decoratedSize + 1 + 6);
   makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(decorated) + 1,
               method, true);
 
@@ -232,20 +232,13 @@ resolveNative(Thread* t, object method)
 
   initClass(t, methodClass(t, method));
 
-  if (LIKELY(t->exception == 0)
-      and methodRuntimeDataNative(t, getMethodRuntimeData(t, method)) == 0)
-  {
+  if (methodRuntimeDataNative(t, getMethodRuntimeData(t, method)) == 0) {
     object native = resolveNativeMethod(t, method);
     if (UNLIKELY(native == 0)) {
-      object message = makeString
-        (t, "%s.%s%s",
-         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
-         &byteArrayBody(t, methodName(t, method), 0),
-         &byteArrayBody(t, methodSpec(t, method), 0));
-
-      t->exception = makeThrowable
-        (t, Machine::UnsatisfiedLinkErrorType, message);
-      return;
+      throwNew(t, Machine::UnsatisfiedLinkErrorType, "%s.%s%s",
+               &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+               &byteArrayBody(t, methodName(t, method), 0),
+               &byteArrayBody(t, methodSpec(t, method), 0));
     }
 
     PROTECT(t, native);

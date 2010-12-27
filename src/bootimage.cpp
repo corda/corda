@@ -92,8 +92,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         (t, root(t, Machine::BootLoader),
          makeByteArray(t, "%.*s", nameSize - 6, name), true);
 
-      if (t->exception) return 0;
-
       PROTECT(t, c);
 
       if (classMethodTable(t, c)) {
@@ -138,8 +136,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
                 if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
                   o = resolveClass
                     (t, root(t, Machine::BootLoader), referenceName(t, o));
-
-                  if (t->exception) return 0;
     
                   set(t, addendumPool(t, addendum),
                       SingletonBody + (index * BytesPerWord), o);
@@ -360,9 +356,9 @@ offset(object a, uintptr_t* b)
 }
 
 void
-writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
-               unsigned codeCapacity, const char* className,
-               const char* methodName, const char* methodSpec)
+writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
+                unsigned codeCapacity, const char* className,
+                const char* methodName, const char* methodSpec)
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
@@ -372,8 +368,6 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
 
   object constants = makeCodeImage
     (t, &zone, image, code, codeMap, className, methodName, methodSpec);
-
-  if (t->exception) return;
 
   PROTECT(t, constants);
 
@@ -505,6 +499,23 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
   }
 }
 
+uint64_t
+writeBootImage(Thread* t, uintptr_t* arguments)
+{
+  FILE* out = reinterpret_cast<FILE*>(arguments[0]);
+  BootImage* image = reinterpret_cast<BootImage*>(arguments[1]);
+  uint8_t* code = reinterpret_cast<uint8_t*>(arguments[2]);
+  unsigned codeCapacity = arguments[3];
+  const char* className = reinterpret_cast<const char*>(arguments[4]);
+  const char* methodName = reinterpret_cast<const char*>(arguments[5]);
+  const char* methodSpec = reinterpret_cast<const char*>(arguments[6]);
+
+  writeBootImage2
+    (t, out, image, code, codeCapacity, className, methodName, methodSpec);
+
+  return 1;
+}
+
 } // namespace
 
 int
@@ -540,15 +551,22 @@ main(int ac, const char** av)
     return -1;
   }
 
-  writeBootImage
-    (t, output, &image, code, CodeCapacity,
-     (ac > 3 ? av[3] : 0), (ac > 4 ? av[4] : 0), (ac > 5 ? av[5] : 0));
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(output),
+                            reinterpret_cast<uintptr_t>(&image),
+                            reinterpret_cast<uintptr_t>(code),
+                            CodeCapacity,
+                            reinterpret_cast<uintptr_t>(ac > 3 ? av[3] : 0),
+                            reinterpret_cast<uintptr_t>(ac > 4 ? av[4] : 0),
+                            reinterpret_cast<uintptr_t>(ac > 5 ? av[5] : 0) };
+
+  run(t, writeBootImage, arguments);
 
   fclose(output);
 
   if (t->exception) {
     printTrace(t, t->exception);
+    return -1;
+  } else {
+    return 0;
   }
-
-  return 0;
 }
