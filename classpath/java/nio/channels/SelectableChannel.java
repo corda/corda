@@ -19,6 +19,8 @@ public abstract class SelectableChannel implements Channel {
 
   abstract int socketFD();
 
+  abstract void handleReadyOps(int ops);
+
   public abstract SelectableChannel configureBlocking(boolean v)
     throws IOException;
 
