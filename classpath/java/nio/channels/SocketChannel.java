@@ -67,11 +67,16 @@ public class SocketChannel extends SelectableChannel
 
   public boolean finishConnect() throws IOException {
     if (! connected) {
-      while (blocking && ! readyToConnect) {
+      while (! readyToConnect) {
         Selector selector = Selector.open();
         SelectionKey key = register(selector, SelectionKey.OP_CONNECT, null);
 
-        selector.select();
+        if (blocking) {
+          selector.select();
+        } else {
+          selector.selectNow();
+          break;
+        }
       }
 
       natFinishConnect(socket);
