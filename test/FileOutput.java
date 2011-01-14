@@ -4,14 +4,9 @@ import java.io.File;
 import java.io.IOException;
 
 public class FileOutput {
-
-  /**
-   * @param args
-   * @throws IOException 
-   */
-  public static void main(String[] args) throws IOException {
+  private static void test(boolean appendFirst) throws IOException {
     try {
-      FileOutputStream f = new FileOutputStream("test.txt");
+      FileOutputStream f = new FileOutputStream("test.txt", appendFirst);
       f.write("Hello world!\n".getBytes());
       f.close();
       
@@ -35,6 +30,11 @@ public class FileOutput {
     } finally {
       new File("test.txt").delete();
     }
+  }
+
+  public static void main(String[] args) throws IOException {
+    test(false);
+    test(true);
   }
 
 }

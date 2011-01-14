@@ -624,7 +624,9 @@ Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path, jboolean app
 {
   string_t chars = getChars(e, path);
   if (chars) {
-    int fd = doOpen(e, chars, append ? (O_WRONLY | O_APPEND) : (O_WRONLY | O_CREAT | O_TRUNC));
+    int fd = doOpen(e, chars, append
+                    ? (O_WRONLY | O_CREAT | O_APPEND)
+                    : (O_WRONLY | O_CREAT | O_TRUNC));
     releaseChars(e, path, chars);
     return fd;
   } else {
