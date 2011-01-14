@@ -325,10 +325,10 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
   if (chars) {
     STRUCT_STAT s;
     int r = STAT(chars, &s);
+    releaseChars(e, path, chars);
     if (r == 0) {
       return s.st_size;
     }
-    releaseChars(e, path, chars);
   }
 
   return -1;
