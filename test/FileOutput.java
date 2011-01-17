@@ -25,6 +25,7 @@ public class FileOutput {
       while ((c = in.read(buffer, offset, buffer.length - offset)) != -1) {
         offset += c;
       }
+      in.close();
 
       if (! "Hello world!\nHello world again!".equals
           (new String(buffer, 0, offset)))
@@ -32,7 +33,7 @@ public class FileOutput {
         throw new RuntimeException();
       }
     } finally {
-      new File("test.txt").delete();
+      expect(new File("test.txt").delete());
     }
   }
 
