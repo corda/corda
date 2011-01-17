@@ -32,6 +32,10 @@ public class ServerSocketChannel extends SelectableChannel {
     return channel.socketFD();
   }
 
+  public void handleReadyOps(int ops) {
+    channel.handleReadyOps(ops);
+  }
+
   public SelectableChannel configureBlocking(boolean v) throws IOException {
     return channel.configureBlocking(v);
   }

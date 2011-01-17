@@ -96,6 +96,7 @@ class SocketSelector extends Selector {
         int ready = natUpdateReadySet(socket, key.interestOps(), state);
         key.readyOps(ready);
         if (ready != 0) {
+          c.handleReadyOps(ready);
           selectedKeys.add(key);
         }
       }

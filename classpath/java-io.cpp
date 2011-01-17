@@ -325,10 +325,10 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
   if (chars) {
     STRUCT_STAT s;
     int r = STAT(chars, &s);
+    releaseChars(e, path, chars);
     if (r == 0) {
       return s.st_size;
     }
-    releaseChars(e, path, chars);
   }
 
   return -1;
@@ -624,7 +624,9 @@ Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path, jboolean app
 {
   string_t chars = getChars(e, path);
   if (chars) {
-    int fd = doOpen(e, chars, append ? (O_WRONLY | O_APPEND) : (O_WRONLY | O_CREAT | O_TRUNC));
+    int fd = doOpen(e, chars, append
+                    ? (O_WRONLY | O_CREAT | O_APPEND)
+                    : (O_WRONLY | O_CREAT | O_TRUNC));
     releaseChars(e, path, chars);
     return fd;
   } else {

@@ -16,6 +16,9 @@ import java.io.OutputStream;
 
 public abstract class URLConnection {
   protected final URL url;
+  protected boolean doInput = true;
+  protected boolean doOutput = false;
+  protected boolean useCaches = true;
 
   protected URLConnection(URL url) {
     this.url = url;
@@ -29,11 +32,33 @@ public abstract class URLConnection {
     return -1;
   }
 
+  public abstract void connect() throws IOException;
+
   public InputStream getInputStream() throws IOException {
     throw new UnknownServiceException();
   }
 
   public OutputStream getOutputStream() throws IOException {
     throw new UnknownServiceException();
+  }
+
+  public boolean getDoInput() {
+    return doInput;
+  }
+
+  public boolean getDoOutput() {
+    return doOutput;
+  }
+
+  public void setDoInput(boolean v) {
+    doInput = v;
+  }
+
+  public void setDoOutput(boolean v) {
+    doInput = v;
+  }
+
+  public void setUseCaches(boolean v) {
+    useCaches = v;
   }
 }

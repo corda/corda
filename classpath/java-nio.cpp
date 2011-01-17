@@ -279,7 +279,7 @@ doListen(JNIEnv* e, int s, sockaddr_in* address)
   }
 }
 
-bool
+void
 doFinishConnect(JNIEnv* e, int socket)
 {
   int error;
@@ -289,12 +289,9 @@ doFinishConnect(JNIEnv* e, int socket)
 
   if (r != 0 or size != sizeof(int)) {
     throwIOException(e);
-  } else if (einProgress(error)) {
-    return false;
-  } else if (error != 0) {
+  } else if (error and not einProgress(error)) {
     throwIOException(e, socketErrorString(e, error));
   }
-  return true;
 }
 
 bool
@@ -426,12 +423,12 @@ Java_java_nio_channels_SocketChannel_natDoConnect(JNIEnv *e,
   return s;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" JNIEXPORT void JNICALL
 Java_java_nio_channels_SocketChannel_natFinishConnect(JNIEnv *e,
                                                       jclass,
                                                       jint socket)
 {
-  return doFinishConnect(e, socket);
+  doFinishConnect(e, socket);
 }
 
 extern "C" JNIEXPORT jint JNICALL

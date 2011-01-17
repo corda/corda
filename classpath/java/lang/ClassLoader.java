@@ -54,7 +54,9 @@ public abstract class ClassLoader {
     throw new ClassNotFoundException();
   }
 
-  protected abstract Class reallyFindLoadedClass(String name);
+  protected Class reallyFindLoadedClass(String name) {
+    return null;
+  }
 
   protected final Class findLoadedClass(String name) {
     return reallyFindLoadedClass(name);
