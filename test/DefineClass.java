@@ -72,6 +72,7 @@ public class DefineClass {
 
   public abstract static class Base {
     public int foo;
+    public int[] array;
     
     public void bar() { }
 
