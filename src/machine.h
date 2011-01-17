@@ -1465,19 +1465,17 @@ class Thread {
    public:
     RunCheckpoint(Thread* t):
       Checkpoint(t),
-      stack(0),
-      base(0)
+      stack(0)
     { }
 
     virtual void unwind() {
       void* stack = this->stack;
       this->stack = 0;
       expect(t->m->system, stack);
-      vmJump(voidPointer(vmRun_returnAddress), base, stack, t, 0, 0);
+      vmJump(voidPointer(vmRun_returnAddress), stack, t, 0, 0);
     }
 
     void* stack;
-    void* base;
   };
 
   class Runnable: public System::Runnable {

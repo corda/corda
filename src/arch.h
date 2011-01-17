@@ -22,8 +22,8 @@
 #include "common.h"
 
 extern "C" void NO_RETURN
-vmJump(void* address, void* base, void* stack, void* thread,
-       uintptr_t returnLow, uintptr_t returnHigh);
+vmJump(void* address, void* stack, void* thread, uintptr_t returnLow,
+       uintptr_t returnHigh);
 
 namespace vm {
 

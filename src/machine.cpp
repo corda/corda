@@ -1227,7 +1227,7 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  object code = makeCode(t, pool, 0, 0, 0, maxStack, maxLocals, length);
+  object code = makeCode(t, pool, 0, 0, 0, 0, maxStack, maxLocals, length);
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 
@@ -2056,7 +2056,7 @@ boot(Thread* t)
 
   m->processor->boot(t, 0);
 
-  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 1);
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
       (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);

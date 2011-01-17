@@ -35,7 +35,7 @@ class System {
 
   class ThreadVisitor {
    public:
-    virtual void visit(void* ip, void* base, void* stack) = 0;
+    virtual void visit(void* ip, void* stack) = 0;
   };
 
   class Runnable {
@@ -96,8 +96,7 @@ class System {
 
   class SignalHandler {
    public:
-    virtual bool handleSignal(void** ip, void** base, void** stack,
-                              void** thread) = 0;
+    virtual bool handleSignal(void** ip, void** stack, void** thread) = 0;
   };
 
   class MonitorResource {

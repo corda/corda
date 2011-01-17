@@ -25,7 +25,6 @@
 
 #define CHECKPOINT_THREAD 8
 #define CHECKPOINT_STACK 48
-#define CHECKPOINT_BASE 56
    
 #ifdef __MINGW32__
 .globl GLOBAL(detectFeature)
@@ -171,11 +170,10 @@ LOCAL(exit):
 
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
-   movq   %rdx,%rbp
-   movq   40(%rsp),%rax
-   movq   48(%rsp),%rdx
-   movq   %r8,%rsp
-   movq   %r9,%rbx
+   movq   %r9,%rax
+   movq   40(%rsp),%rdx
+   movq   %rdx,%rsp
+   movq   %r8,%rbx
    jmp    *%rcx
 
 #define VMRUN_FRAME_SIZE 80
@@ -198,7 +196,6 @@ GLOBAL(vmRun):
    movq   %rdi,64(%rsp)
 
    movq   %rsp,CHECKPOINT_STACK(%rcx)
-   movq   %rbp,CHECKPOINT_BASE(%rcx)
 
    movq   %rcx,%r11
    movq   CHECKPOINT_THREAD(%rdx),%rcx
@@ -353,11 +350,10 @@ LOCAL(exit):
 
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
-   movq   %rsi,%rbp
-   movq   %rdx,%rsp
-   movq   %rcx,%rbx
-   movq   %r8,%rax
-   movq   %r9,%rdx
+   movq   %rsi,%rsp
+   movq   %rdx,%rbx
+   movq   %rcx,%rax
+   movq   %r8,%rdx
    jmp    *%rdi
 
 #define VMRUN_FRAME_SIZE 64
@@ -378,7 +374,6 @@ GLOBAL(vmRun):
    movq   %r15,48(%rsp)
 
    movq   %rsp,CHECKPOINT_STACK(%rdx)
-   movq   %rbp,CHECKPOINT_BASE(%rdx)
 
    movq   %rdi,%r11
    movq   CHECKPOINT_THREAD(%rdx),%rdi
@@ -513,11 +508,10 @@ LOCAL(exit):
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
    movl   4(%esp),%esi
-   movl   8(%esp),%ebp
-   movl   16(%esp),%ebx
-   movl   20(%esp),%eax
-   movl   24(%esp),%edx
-   movl   12(%esp),%esp
+   movl   12(%esp),%ebx
+   movl   16(%esp),%eax
+   movl   20(%esp),%edx
+   movl   8(%esp),%esp
    jmp    *%esi
 
 #define VMRUN_FRAME_SIZE 32
@@ -543,7 +537,6 @@ GLOBAL(vmRun):
    movl   %eax,0(%esp)
 
    movl   %esp,CHECKPOINT_STACK(%ecx)
-   movl   %ebp,CHECKPOINT_BASE(%ecx)
 
    call   *8(%ebp)
    

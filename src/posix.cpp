@@ -815,7 +815,7 @@ class MySystem: public System {
   }
 
   class NullSignalHandler: public SignalHandler {
-    virtual bool handleSignal(void**, void**, void**, void**) { return false; }
+    virtual bool handleSignal(void**, void**, void**) { return false; }
   } nullHandler;
 
   SignalHandler* handlers[SignalCount];
@@ -831,12 +831,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
 {
   ucontext_t* c = static_cast<ucontext_t*>(context);
 
-#ifndef BASE_REGISTER
-#  define BASE_REGISTER(x) 0
-#endif
-
   void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
-  void* base = reinterpret_cast<void*>(BASE_REGISTER(c));
   void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
   void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
 
@@ -846,7 +841,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
   case VisitSignal: {
     index = VisitSignalIndex;
 
-    system->threadVisitor->visit(ip, base, stack);
+    system->threadVisitor->visit(ip, stack);
 
     System::Thread* t = system->visitTarget;
     system->visitTarget = 0;
@@ -875,8 +870,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       abort();
     }
 
-    bool jump = system->handlers[index]->handleSignal
-      (&ip, &base, &stack, &thread);
+    bool jump = system->handlers[index]->handleSignal(&ip, &stack, &thread);
 
     if (jump) {
       // I'd like to use setcontext here (and get rid of the
@@ -890,7 +884,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       sigaddset(&set, signal);
       sigprocmask(SIG_UNBLOCK, &set, 0);
 
-      vmJump(ip, base, stack, thread, 0, 0);
+      vmJump(ip, stack, thread, 0, 0);
     }
   } break;
 

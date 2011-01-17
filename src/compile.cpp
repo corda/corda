@@ -29,18 +29,15 @@ extern "C" void
 vmInvoke_safeStack();
 
 extern "C" void
-vmJumpAndInvoke(void* thread, void* function, void* base, void* stack,
+vmJumpAndInvoke(void* thread, void* function, void* stack,
                 unsigned argumentFootprint, uintptr_t* arguments,
                 unsigned frameSize);
-
-extern "C" void
-vmCall();
 
 namespace {
 
 namespace local {
 
-const bool DebugCompile = false;
+const bool DebugCompile = true;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
@@ -90,26 +87,28 @@ class MyThread: public Thread {
    public:
     CallTrace(MyThread* t, object method):
       t(t),
-      base(t->base),
       stack(t->stack),
+      scratch(t->scratch),
       continuation(t->continuation),
       nativeMethod((methodFlags(t, method) & ACC_NATIVE) ? method : 0),
       targetMethod(0),
       originalMethod(method),
       next(t->trace)
     {
-      doTransition(t, 0, 0, 0, 0, this);
+      doTransition(t, 0, 0, 0, this);
     }
 
     ~CallTrace() {
       assert(t, t->stack == 0);
 
-      doTransition(t, 0, stack, base, continuation, next);
+      t->scratch = scratch;
+
+      doTransition(t, 0, stack, continuation, next);
     }
 
     MyThread* t;
-    void* base;
     void* stack;
+    void* scratch;
     object continuation;
     object nativeMethod;
     object targetMethod;
@@ -132,11 +131,10 @@ class MyThread: public Thread {
       Context* context;
     };
 
-    Context(MyThread* t, void* ip, void* stack, void* base,
-            object continuation, CallTrace* trace):
+    Context(MyThread* t, void* ip, void* stack, object continuation,
+            CallTrace* trace):
       ip(ip),
       stack(stack),
-      base(base),
       continuation(continuation),
       trace(trace),
       protector(t, this)
@@ -144,7 +142,6 @@ class MyThread: public Thread {
 
     void* ip;
     void* stack;
-    void* base;
     object continuation;
     CallTrace* trace;
     MyProtector protector;
@@ -152,9 +149,9 @@ class MyThread: public Thread {
 
   class TraceContext: public Context {
    public:
-    TraceContext(MyThread* t, void* ip, void* stack, void* base,
-                 object continuation, CallTrace* trace):
-      Context(t, ip, stack, base, continuation, trace),
+    TraceContext(MyThread* t, void* ip, void* stack, object continuation,
+                 CallTrace* trace):
+      Context(t, ip, stack, continuation, trace),
       t(t),
       next(t->traceContext)
     {
@@ -162,7 +159,7 @@ class MyThread: public Thread {
     }
 
     TraceContext(MyThread* t):
-      Context(t, t->ip, t->stack, t->base, t->continuation, t->trace),
+      Context(t, t->ip, t->stack, t->continuation, t->trace),
       t(t),
       next(t->traceContext)
     {
@@ -177,7 +174,7 @@ class MyThread: public Thread {
     TraceContext* next;
   };
 
-  static void doTransition(MyThread* t, void* ip, void* stack, void* base,
+  static void doTransition(MyThread* t, void* ip, void* stack,
                            object continuation, MyThread::CallTrace* trace)
   {
     // in this function, we "atomically" update the thread context
@@ -187,7 +184,7 @@ class MyThread: public Thread {
 
     assert(t, t->transition == 0);
 
-    Context c(t, ip, stack, base, continuation, trace);
+    Context c(t, ip, stack, continuation, trace);
 
     compileTimeMemoryBarrier();
 
@@ -196,7 +193,6 @@ class MyThread: public Thread {
     compileTimeMemoryBarrier();
 
     t->ip = ip;
-    t->base = base;
     t->stack = stack;
     t->continuation = continuation;
     t->trace = trace;
@@ -210,8 +206,8 @@ class MyThread: public Thread {
            bool useNativeFeatures):
     Thread(m, javaThread, parent),
     ip(0),
-    base(0),
     stack(0),
+    scratch(0),
     continuation(0),
     exceptionStackAdjustment(0),
     exceptionOffset(0),
@@ -232,8 +228,8 @@ class MyThread: public Thread {
   }
 
   void* ip;
-  void* base;
   void* stack;
+  void* scratch;
   object continuation;
   uintptr_t exceptionStackAdjustment;
   uintptr_t exceptionOffset;
@@ -250,10 +246,10 @@ class MyThread: public Thread {
 };
 
 void
-transition(MyThread* t, void* ip, void* stack, void* base, object continuation,
+transition(MyThread* t, void* ip, void* stack, object continuation,
            MyThread::CallTrace* trace)
 {
-  MyThread::doTransition(t, ip, stack, base, continuation, trace);
+  MyThread::doTransition(t, ip, stack, continuation, trace);
 }
 
 unsigned
@@ -372,6 +368,104 @@ methodForIp(MyThread* t, void* ip)
                    root(t, MethodTreeSentinal), compareIpToMethodBounds);
 }
 
+unsigned
+localSize(MyThread* t, object method)
+{
+  unsigned size = codeMaxLocals(t, methodCode(t, method));
+  if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
+      == ACC_SYNCHRONIZED)
+  {
+    ++ size;
+  }
+  return size;
+}
+
+unsigned
+alignedFrameSize(MyThread* t, object method)
+{
+  return t->arch->alignFrameSize
+    (localSize(t, method)
+     - methodParameterFootprint(t, method)
+     + codeMaxStack(t, methodCode(t, method))
+     + t->arch->frameFootprint(MaxNativeCallFootprint));
+}
+
+unsigned
+bitsNeeded(unsigned v)
+{
+  return log(v + 1);
+}
+
+void
+setTableValue(Thread* t, object table, unsigned base, unsigned max,
+              unsigned index, unsigned value)
+{
+  unsigned bits = bitsNeeded(max);
+  setBits<int32_t>
+    (&intArrayBody(t, table, base), bits, index * bits, value);
+}
+
+unsigned
+getTableValue(Thread* t, object table, unsigned base, unsigned max,
+              unsigned index)
+{
+  unsigned bits = bitsNeeded(max);
+  return getBits<int32_t>
+    (&intArrayBody(t, table, base), bits, index * bits);
+}
+
+unsigned
+frameSize(MyThread* t, intptr_t ip, object method)
+{
+  object code = methodCode(t, method);
+  object table = codeFrameSizeTable(t, code);
+  unsigned count = intArrayBody(t, table, 0);
+  unsigned max = alignedFrameSize(t, method);
+  intptr_t start = codeCompiled(t, code);
+  int codeSize = compiledSize(start);
+  unsigned indexSize = ceiling(count * bitsNeeded(codeSize), 32);
+  
+  assert(t, ip >= start);
+  assert(t, ip <= start + codeSize); 
+
+  unsigned offset = ip - start;
+  unsigned bottom = 0;
+  unsigned top = count;
+  for (unsigned span = top - bottom; span; span = top - bottom) {
+    unsigned middle = bottom + (span / 2);
+    unsigned candidate = getTableValue(t, table, 1, codeSize, middle);
+
+    if (offset >= candidate
+        and (middle + 1 == count
+             or offset < getTableValue(t, table, 1, codeSize, middle + 1)))
+    {
+      return getTableValue(t, table, 1 + indexSize, max, middle);
+    } else if (offset < candidate) {
+      top = middle;
+    } else if (offset > candidate) {
+      bottom = middle + 1;
+    }
+  }
+
+  if (top == 0) {
+    return 0;
+  } else if (top < count) {
+    return getTableValue(t, table, 1 + indexSize, max, top);
+  } else if (top == count && count > 0) {
+    return getTableValue(t, table, 1 + indexSize, max, top - 1);
+  } else {
+    abort(t);
+  }
+}
+
+void*
+nextFrame(MyThread* t, void* ip, void* sp, object method)
+{
+  return reinterpret_cast<void**>(sp) + local::frameSize
+    (t, reinterpret_cast<intptr_t>(ip), method)
+    + t->arch->frameReturnAddressSize();
+}
+
 class MyStackWalker: public Processor::StackWalker {
  public:
   enum State {
@@ -406,13 +500,11 @@ class MyStackWalker: public Processor::StackWalker {
   {
     if (t->traceContext) {
       ip_ = t->traceContext->ip;
-      base = t->traceContext->base;
       stack = t->traceContext->stack;
       trace = t->traceContext->trace;
       continuation = t->traceContext->continuation;
     } else {
       ip_ = 0;
-      base = t->base;
       stack = t->stack;
       trace = t->trace;
       continuation = t->continuation;      
@@ -423,7 +515,6 @@ class MyStackWalker: public Processor::StackWalker {
     t(w->t),
     state(w->state),
     ip_(w->ip_),
-    base(w->base),
     stack(w->stack),
     trace(w->trace),
     method_(w->method_),
@@ -478,7 +569,6 @@ class MyStackWalker: public Processor::StackWalker {
         if (trace) {
           continuation = trace->continuation;
           stack = trace->stack;
-          base = trace->base;
           ip_ = t->arch->frameIp(stack);
           trace = trace->next;
 
@@ -509,7 +599,7 @@ class MyStackWalker: public Processor::StackWalker {
       break;
 
     case Method:
-      t->arch->nextFrame(&stack, &base);
+      stack = nextFrame(t, ip_, stack, method_);
       ip_ = t->arch->frameIp(stack);
       break;
 
@@ -561,35 +651,12 @@ class MyStackWalker: public Processor::StackWalker {
   MyThread* t;
   State state;
   void* ip_;
-  void* base;
   void* stack;
   MyThread::CallTrace* trace;
   object method_;
   object continuation;
   MyProtector protector;
 };
-
-unsigned
-localSize(MyThread* t, object method)
-{
-  unsigned size = codeMaxLocals(t, methodCode(t, method));
-  if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
-      == ACC_SYNCHRONIZED)
-  {
-    ++ size;
-  }
-  return size;
-}
-
-unsigned
-alignedFrameSize(MyThread* t, object method)
-{
-  return t->arch->alignFrameSize
-    (localSize(t, method)
-     - methodParameterFootprint(t, method)
-     + codeMaxStack(t, methodCode(t, method))
-     + t->arch->frameFootprint(MaxNativeCallFootprint));
-}
 
 int
 localOffset(MyThread* t, int v, object method)
@@ -1929,22 +1996,19 @@ releaseLock(MyThread* t, object method, void* stack)
 }
 
 void
-findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
-                 void** targetStack, object* targetContinuation)
+findUnwindTarget(MyThread* t, void** targetIp, void** targetStack,
+                 object* targetContinuation)
 {
   void* ip;
-  void* base;
   void* stack;
   object continuation;
 
   if (t->traceContext) {
     ip = t->traceContext->ip;
-    base = t->traceContext->base;
     stack = t->traceContext->stack;
     continuation = t->traceContext->continuation;
   } else {
     ip = 0;
-    base = t->base;
     stack = t->stack;
     continuation = t->continuation;      
   }
@@ -1963,9 +2027,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
       if (handler) {
         *targetIp = handler;
-        *targetBase = base;
 
-        t->arch->nextFrame(&stack, &base);
+        stack = nextFrame(t, ip, stack, method);
 
         void** sp = static_cast<void**>(stackForFrame(t, stack, method))
           + t->arch->frameReturnAddressSize();
@@ -1977,7 +2040,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 
         t->exception = 0;
       } else {
-        t->arch->nextFrame(&stack, &base);
+        stack = nextFrame(t, ip, stack, method);
         ip = t->arch->frameIp(stack);
 
         if (t->exception) {
@@ -1988,7 +2051,6 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
       }
     } else {
       *targetIp = ip;
-      *targetBase = base;
       *targetStack = static_cast<void**>(stack)
         + t->arch->frameReturnAddressSize();
       *targetContinuation = continuation;
@@ -2029,11 +2091,9 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetBase,
 }
 
 object
-makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
-                        void** targetStack)
+makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
 {
   void* ip = t->arch->frameIp(t->stack);
-  void* base = t->base;
   void* stack = t->stack;
 
   object context = t->continuation
@@ -2066,7 +2126,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
         top += argumentFootprint - alignment;
       }
 
-      t->arch->nextFrame(&stack, &base);
+      stack = nextFrame(t, ip, stack, method);
 
       void** bottom = static_cast<void**>(stack)
           + t->arch->frameReturnAddressSize();
@@ -2101,7 +2161,6 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetBase,
       target = method;
     } else {
       *targetIp = ip;
-      *targetBase = base;
       *targetStack = static_cast<void**>(stack)
         + t->arch->frameReturnAddressSize();
     }
@@ -2117,14 +2176,13 @@ void NO_RETURN
 unwind(MyThread* t)
 {
   void* ip;
-  void* base;
   void* stack;
   object continuation;
-  findUnwindTarget(t, &ip, &base, &stack, &continuation);
+  findUnwindTarget(t, &ip, &stack, &continuation);
 
-  transition(t, ip, stack, base, continuation, t->trace);
+  transition(t, ip, stack, continuation, t->trace);
 
-  vmJump(ip, base, stack, t, 0, 0);
+  vmJump(ip, stack, t, 0, 0);
 }
 
 class MyCheckpoint: public Thread::Checkpoint {
@@ -5165,6 +5223,45 @@ translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
   }
 }
 
+object
+makeFrameSizeTable(MyThread* t, Context* c, unsigned codeSize)
+{
+  Assembler* a = c->assembler;
+  unsigned count = a->frameSizeEventCount();
+  int max = alignedFrameSize(t, c->method);
+  unsigned indexSize = ceiling(count * bitsNeeded(codeSize), 32);
+  unsigned tableSize = ceiling(count * bitsNeeded(max), 32);
+  object table = makeIntArray(t, 1 + indexSize + tableSize);
+  
+  intArrayBody(t, table, 0) = count;
+
+  unsigned index = 0;
+  int value = 0;
+  for (Assembler::FrameSizeEvent* e = a->firstFrameSizeEvent();
+       e; e = e->next())
+  {
+    assert(t, index < count);
+
+    unsigned offset = e->offset();
+    assert(t, offset <= codeSize);
+
+    value += e->change();
+
+    fprintf(stderr, "offset %d change %d value %d\n",
+            offset, e->change(), value);
+
+    assert(t, value >= 0);
+    assert(t, value <= max);
+
+    setTableValue(t, table, 1, codeSize, index, offset);
+    setTableValue(t, table, 1 + indexSize, max, index, value);
+    
+    ++ index;
+  }
+
+  return table;
+}
+
 void
 printSet(uintptr_t m, unsigned limit)
 {
@@ -5842,18 +5939,23 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     }
   }
 
-  object newExceptionHandlerTable = translateExceptionHandlerTable
-    (t, c, context->method, reinterpret_cast<intptr_t>(start));
+  { object newExceptionHandlerTable = translateExceptionHandlerTable
+      (t, c, context->method, reinterpret_cast<intptr_t>(start));
 
-  PROTECT(t, newExceptionHandlerTable);
+    PROTECT(t, newExceptionHandlerTable);
 
-  object newLineNumberTable = translateLineNumberTable
-    (t, c, methodCode(t, context->method), reinterpret_cast<intptr_t>(start));
+    object newLineNumberTable = translateLineNumberTable
+      (t, c, methodCode(t, context->method),
+       reinterpret_cast<intptr_t>(start));
 
-  { object code = methodCode(t, context->method);
+    PROTECT(t, newLineNumberTable);
+
+    object frameSizeTable = makeFrameSizeTable(t, context, codeSize);
+
+    object code = methodCode(t, context->method);
 
     code = makeCode
-      (t, 0, newExceptionHandlerTable, newLineNumberTable,
+      (t, 0, newExceptionHandlerTable, newLineNumberTable, frameSizeTable,
        reinterpret_cast<uintptr_t>(start), codeMaxStack(t, code),
        codeMaxLocals(t, code), 0);
 
@@ -6423,8 +6525,7 @@ invokeNative(MyThread* t)
 
   stack += t->arch->frameReturnAddressSize();
 
-  transition(t, t->arch->frameIp(t->stack), stack, t->base, t->continuation,
-             t->trace);
+  transition(t, t->arch->frameIp(t->stack), stack, t->continuation, t->trace);
 
   return result;
 }
@@ -6595,7 +6696,6 @@ void
 visitStack(MyThread* t, Heap::Visitor* v)
 {
   void* ip = t->arch->frameIp(t->stack);
-  void* base = t->base;
   void* stack = t->stack;
 
   MyThread::CallTrace* trace = t->trace;
@@ -6611,14 +6711,13 @@ visitStack(MyThread* t, Heap::Visitor* v)
     if (method) {
       PROTECT(t, method);
 
-      t->arch->nextFrame(&stack, &base);
+      stack = nextFrame(t, ip, stack, method);
 
       visitStackAndLocals(t, v, stack, method, ip);
 
       ip = t->arch->frameIp(stack);
     } else if (trace) {
       stack = trace->stack;
-      base = trace->base;
       ip = t->arch->frameIp(stack);
       trace = trace->next;
 
@@ -6671,24 +6770,24 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
 
 void
 callContinuation(MyThread* t, object continuation, object result,
-                 object exception, void* ip, void* base, void* stack)
+                 object exception, void* ip, void* stack)
 {
   assert(t, t->exception == 0);
 
   if (exception) {
     t->exception = exception;
 
-    MyThread::TraceContext c(t, ip, stack, base, continuation, t->trace);
+    MyThread::TraceContext c(t, ip, stack, continuation, t->trace);
 
-    findUnwindTarget(t, &ip, &base, &stack, &continuation);
+    findUnwindTarget(t, &ip, &stack, &continuation);
   }
 
   t->trace->nativeMethod = 0;
   t->trace->targetMethod = 0;
 
-  transition(t, ip, stack, base, continuation, t->trace);
+  transition(t, ip, stack, continuation, t->trace);
 
-  vmJump(ip, base, stack, t, reinterpret_cast<uintptr_t>(result), 0);
+  vmJump(ip, stack, t, reinterpret_cast<uintptr_t>(result), 0);
 }
 
 int8_t*
@@ -6746,7 +6845,7 @@ compatibleReturnType(MyThread* t, object oldMethod, object newMethod)
 }
 
 void
-jumpAndInvoke(MyThread* t, object method, void* base, void* stack, ...)
+jumpAndInvoke(MyThread* t, object method, void* stack, ...)
 {
   t->trace->targetMethod = 0;
 
@@ -6766,7 +6865,6 @@ jumpAndInvoke(MyThread* t, object method, void* base, void* stack, ...)
   
   vmJumpAndInvoke
     (t, reinterpret_cast<void*>(methodAddress(t, method)),
-     base,
      stack,
      argumentCount * BytesPerWord,
      RUNTIME_ARRAY_BODY(arguments),
@@ -6858,25 +6956,24 @@ callContinuation(MyThread* t, object continuation, object result,
   }
 
   void* ip;
-  void* base;
   void* stack;
   object threadContinuation;
-  findUnwindTarget(t, &ip, &base, &stack, &threadContinuation);
+  findUnwindTarget(t, &ip, &stack, &threadContinuation);
 
   switch (action) {
   case Call: {
-    callContinuation(t, continuation, result, exception, ip, base, stack);
+    callContinuation(t, continuation, result, exception, ip, stack);
   } break;
 
   case Unwind: {
-    callContinuation(t, nextContinuation, result, 0, ip, base, stack);
+    callContinuation(t, nextContinuation, result, 0, ip, stack);
   } break;
 
   case Rewind: {
-    transition(t, 0, 0, 0, nextContinuation, t->trace);
+    transition(t, 0, 0, nextContinuation, t->trace);
 
     jumpAndInvoke
-      (t, root(t, RewindMethod), base, stack,
+      (t, root(t, RewindMethod), stack,
        continuationContextBefore(t, continuationContext(t, nextContinuation)),
        continuation, result, exception);
   } break;
@@ -6891,7 +6988,6 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 {
   object method = 0;
   void* ip = 0;
-  void* base = 0;
   void* stack = 0;
 
   { PROTECT(t, receiver);
@@ -6920,17 +7016,16 @@ callWithCurrentContinuation(MyThread* t, object receiver)
         
     compile(t, local::codeAllocator(t), 0, method);
 
-    t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
+    t->continuation = makeCurrentContinuation(t, &ip, &stack);
   }
 
-  jumpAndInvoke(t, method, base, stack, receiver, t->continuation);
+  jumpAndInvoke(t, method, stack, receiver, t->continuation);
 }
 
 void
 dynamicWind(MyThread* t, object before, object thunk, object after)
 {
   void* ip = 0;
-  void* base = 0;
   void* stack = 0;
 
   { PROTECT(t, before);
@@ -6949,7 +7044,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
       }
     }
 
-    t->continuation = makeCurrentContinuation(t, &ip, &base, &stack);
+    t->continuation = makeCurrentContinuation(t, &ip, &stack);
 
     object newContext = makeContinuationContext
       (t, continuationContext(t, t->continuation), before, after,
@@ -6958,7 +7053,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
     set(t, t->continuation, ContinuationContext, newContext);
   }
 
-  jumpAndInvoke(t, root(t, WindMethod), base, stack, before, thunk, after);
+  jumpAndInvoke(t, root(t, WindMethod), stack, before, thunk, after);
 }
 
 class ArgumentList {
@@ -7168,9 +7263,7 @@ class SignalHandler: public System::SignalHandler {
   SignalHandler(Machine::Type type, Machine::Root root, unsigned fixedSize):
     m(0), type(type), root(root), fixedSize(fixedSize) { }
 
-  virtual bool handleSignal(void** ip, void** base, void** stack,
-                            void** thread)
-  {
+  virtual bool handleSignal(void** ip, void** stack, void** thread) {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
     if (t and t->state == Thread::ActiveState) {
       object node = methodForIp(t, *ip);
@@ -7180,7 +7273,7 @@ class SignalHandler: public System::SignalHandler {
         MyThread::TraceContext context
           (t, static_cast<uint8_t*>(*ip) + 1,
            static_cast<void**>(*stack) - t->arch->frameReturnAddressSize(),
-           *base, t->continuation, t->trace);
+           t->continuation, t->trace);
 
         if (ensure(t, fixedSize + traceSize(t))) {
           atomicOr(&(t->flags), Thread::TracingFlag);
@@ -7195,9 +7288,9 @@ class SignalHandler: public System::SignalHandler {
         // printTrace(t, t->exception);
 
         object continuation;
-        findUnwindTarget(t, ip, base, stack, &continuation);
+        findUnwindTarget(t, ip, stack, &continuation);
 
-        transition(t, ip, stack, base, continuation, t->trace);
+        transition(t, ip, stack, continuation, t->trace);
 
         *thread = t;
 
@@ -7291,6 +7384,7 @@ class MyProcessor: public Processor {
 
     if (false) {
       fprintf(stderr, "%d\n", difference(&(t->stack), t));
+      fprintf(stderr, "%d\n", difference(&(t->scratch), t));
       fprintf(stderr, "%d\n", difference(&(t->continuation), t));
       fprintf(stderr, "%d\n", difference(&(t->exception), t));
       fprintf(stderr, "%d\n", difference(&(t->exceptionStackAdjustment), t));
@@ -7571,18 +7665,16 @@ class MyProcessor: public Processor {
         t(t), p(p), target(target), trace(0)
       { }
 
-      virtual void visit(void* ip, void* base, void* stack) {
+      virtual void visit(void* ip, void* stack) {
         MyThread::TraceContext c(target);
 
         if (methodForIp(t, ip)) {
           // we caught the thread in Java code - use the register values
           c.ip = ip;
-          c.base = base;
           c.stack = stack;
         } else if (target->transition) {
           // we caught the thread in native code while in the middle
-          // of updating the context fields (MyThread::stack,
-          // MyThread::base, etc.)
+          // of updating the context fields (MyThread::stack, etc.)
           static_cast<MyThread::Context&>(c) = *(target->transition);
         } else if (isVmInvokeUnsafeStack(ip)) {
           // we caught the thread in native code just after returning
@@ -7591,31 +7683,26 @@ class MyProcessor: public Processor {
           // Java frame, if any, can be found in
           // MyThread::continuation or MyThread::trace
           c.ip = 0;
-          c.base = 0;
           c.stack = 0;
         } else if (target->stack
                    and (not isThunkUnsafeStack(t, ip))
                    and (not isVirtualThunk(t, ip)))
         {
           // we caught the thread in a thunk or native code, and the
-          // saved stack and base pointers indicate the most recent
-          // Java frame on the stack
+          // saved stack pointer indicates the most recent Java frame
+          // on the stack
           c.ip = t->arch->frameIp(target->stack);
-          c.base = target->base;
           c.stack = target->stack;
         } else if (isThunk(t, ip) or isVirtualThunk(t, ip)) {
-          // we caught the thread in a thunk where the stack and base
-          // registers indicate the most recent Java frame on the
-          // stack
+          // we caught the thread in a thunk where the stack register
+          // indicates the most recent Java frame on the stack
           c.ip = t->arch->frameIp(stack);
-          c.base = base;
           c.stack = stack;
         } else {
           // we caught the thread in native code, and the most recent
           // Java frame, if any, can be found in
           // MyThread::continuation or MyThread::trace
           c.ip = 0;
-          c.base = 0;
           c.stack = 0;
         }
 
@@ -8316,7 +8403,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = defaultContext.context.assembler;
     
-    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+    a->saveFrame(difference(&(t->stack), t));
 
     p->thunks.default_.frameSavedOffset = a->length();
 
@@ -8326,7 +8413,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Constant proc(&(defaultContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
-    a->popFrame();
+    a->popFrame(t->arch->alignFrameSize(1));
 
     Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
@@ -8360,7 +8447,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     a->apply(Move, BytesPerWord, RegisterOperand, &index,
              BytesPerWord, MemoryOperand, &virtualCallIndex);
     
-    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+    a->saveFrame(difference(&(t->stack), t));
 
     p->thunks.defaultVirtual.frameSavedOffset = a->length();
 
@@ -8370,7 +8457,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Constant proc(&(defaultVirtualContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
 
-    a->popFrame();
+    a->popFrame(t->arch->alignFrameSize(1));
 
     Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, BytesPerWord, RegisterOperand, &result);
@@ -8382,7 +8469,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = nativeContext.context.assembler;
 
-    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+    a->saveFrame(difference(&(t->stack), t));
 
     p->thunks.native.frameSavedOffset = a->length();
 
@@ -8392,7 +8479,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Constant proc(&(nativeContext.promise));
     a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
   
-    a->popFrameAndUpdateStackAndReturn(difference(&(t->stack), t));
+    a->popFrameAndUpdateStackAndReturn
+      (t->arch->alignFrameSize(1), difference(&(t->stack), t));
 
     p->thunks.native.length = a->endBlock(false)->resolve(0, 0);
   }
@@ -8401,7 +8489,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = aioobContext.context.assembler;
       
-    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+    a->saveFrame(difference(&(t->stack), t));
 
     p->thunks.aioob.frameSavedOffset = a->length();
 
@@ -8418,7 +8506,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = stackOverflowContext.context.assembler;
       
-    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+    a->saveFrame(difference(&(t->stack), t));
 
     p->thunks.stackOverflow.frameSavedOffset = a->length();
 
@@ -8435,7 +8523,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = tableContext.context.assembler;
   
-    a->saveFrame(difference(&(t->stack), t), difference(&(t->base), t));
+    a->saveFrame(difference(&(t->stack), t));
 
     p->thunks.table.frameSavedOffset = a->length();
 

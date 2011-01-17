@@ -3147,12 +3147,25 @@ class CallEvent: public Event {
       assert(c, stackArgumentFootprint == 0);
 
       Stack* s = argumentStack;
-      unsigned frameIndex = 0;
       unsigned index = 0;
+      unsigned argumentIndex = 0;
 
       while (true) {
+        unsigned footprint;
+        if (argumentIndex + 1 < argumentCount
+            and s->value->nextWord == s->next->value)
+        {
+          footprint = 2;
+        } else {
+          footprint = 1;
+        }
+
+        if (footprint > 1 and index & 1 and c->arch->argumentAlignment()) {
+          ++ index;
+        }
+
         SiteMask targetMask;
-        if (index < c->arch->argumentRegisterCount()) {
+        if (index + footprint <= c->arch->argumentRegisterCount()) {
           int number = c->arch->argumentRegister(index);
         
           if (DebugReads) {
@@ -3162,17 +3175,24 @@ class CallEvent: public Event {
           targetMask = fixedRegisterMask(number);
           registerMask &= ~(1 << number);
         } else {
+          if (index < c->arch->argumentRegisterCount()) {
+            index = c->arch->argumentRegisterCount();
+          }
+
+          unsigned frameIndex = index - c->arch->argumentRegisterCount();
+
           if (DebugReads) {
             fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
           }
 
           targetMask = SiteMask(1 << MemoryOperand, 0, frameIndex);
-          ++ frameIndex;
         }
 
         addRead(c, this, s->value, targetMask);
 
-        if ((++ index) < argumentCount) {
+        ++ index;
+
+        if ((++ argumentIndex) < argumentCount) {
           s = s->next;
         } else {
           break;
@@ -3225,7 +3245,11 @@ class CallEvent: public Event {
 
         int base = frameBase(c);
         returnAddressIndex = base + c->arch->returnAddressOffset();
-        framePointerIndex = base + c->arch->framePointerOffset();
+        if (UseFramePointer) {
+          framePointerIndex = base + c->arch->framePointerOffset();
+        } else {
+          framePointerIndex = -1;
+        }
 
         frameOffset = totalFrameSize(c)
           - c->arch->argumentFootprint(stackArgumentFootprint);
@@ -3451,7 +3475,8 @@ class ReturnEvent: public Event {
     
     if (not unreachable(this)) {
       c->assembler->popFrameAndPopArgumentsAndReturn
-        (c->arch->argumentFootprint(c->parameterFootprint));
+        (c->alignedFrameSize,
+         c->arch->argumentFootprint(c->parameterFootprint));
     }
   }
 
@@ -6042,7 +6067,8 @@ class MyCompiler: public Compiler {
 
     unsigned base = frameBase(&c);
     c.frameResources[base + c.arch->returnAddressOffset()].reserved = true;
-    c.frameResources[base + c.arch->framePointerOffset()].reserved = true;
+    c.frameResources[base + c.arch->framePointerOffset()].reserved
+      = UseFramePointer;
 
     // leave room for logical instruction -1
     unsigned codeSize = sizeof(LogicalInstruction*) * (logicalCodeLength + 1);

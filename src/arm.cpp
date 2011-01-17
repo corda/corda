@@ -1720,6 +1720,10 @@ class MyArchitecture: public Assembler::Architecture {
     return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
   }
 
+  virtual bool argumentAlignment() {
+    return true;
+  }
+
   virtual unsigned argumentRegisterCount() {
     return 4;
   }

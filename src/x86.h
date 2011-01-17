@@ -22,6 +22,8 @@
 #  undef interface
 #endif
 
+#define VA_LIST(x) x
+
 #ifdef ARCH_x86_32
 
 #  ifdef __APPLE__

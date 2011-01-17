@@ -22,6 +22,12 @@ const bool TailCalls = true;
 const bool TailCalls = false;
 #endif
 
+#ifdef AVIAN_USE_FRAME_POINTER
+const bool UseFramePointer = true;
+#else
+const bool UseFramePointer = false;
+#endif
+
 enum Operation {
   Return,
   LoadBarrier,
@@ -298,6 +304,13 @@ class Assembler {
     virtual unsigned resolve(unsigned start, Block* next) = 0;
   };
 
+  class FrameSizeEvent {
+   public:
+    virtual unsigned offset() = 0;
+    virtual int change() = 0;
+    virtual FrameSizeEvent* next() = 0;
+  };
+
   class Architecture {
    public:
     virtual unsigned floatRegisterSize() = 0;
@@ -323,6 +336,7 @@ class Assembler {
 
     virtual unsigned frameFootprint(unsigned footprint) = 0;
     virtual unsigned argumentFootprint(unsigned footprint) = 0;
+    virtual bool argumentAlignment() = 0;
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 
@@ -343,7 +357,6 @@ class Assembler {
     virtual unsigned frameFooterSize() = 0;
     virtual int returnAddressOffset() = 0;
     virtual int framePointerOffset() = 0;
-    virtual void nextFrame(void** stack, void** base) = 0;
 
     virtual void plan
     (UnaryOperation op,
@@ -385,17 +398,19 @@ class Assembler {
 
   virtual Architecture* arch() = 0;
 
-  virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
+  virtual void saveFrame(unsigned stackOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
-  virtual void adjustFrame(unsigned footprint) = 0;
-  virtual void popFrame() = 0;
+  virtual void adjustFrame(unsigned difference) = 0;
+  virtual void popFrame(unsigned footprint) = 0;
   virtual void popFrameForTailCall(unsigned footprint, int offset,
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate) = 0;
-  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint)
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
+                                                unsigned argumentFootprint)
   = 0;
-  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+                                               unsigned stackOffsetFromThread)
   = 0;
 
   virtual void apply(Operation op) = 0;
@@ -421,6 +436,10 @@ class Assembler {
   virtual void endEvent() = 0;
 
   virtual unsigned length() = 0;
+
+  virtual unsigned frameSizeEventCount() = 0;
+
+  virtual FrameSizeEvent* firstFrameSizeEvent() = 0;
 
   virtual void dispose() = 0;
 };

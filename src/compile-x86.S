@@ -23,7 +23,8 @@
 
 #ifdef __x86_64__
 
-#define THREAD_STACK 2232
+#define THREAD_STACK 2224
+#define THREAD_SCRATCH 2232
 
 #if defined __MINGW32__ || defined __CYGWIN32__
 
@@ -41,22 +42,25 @@ GLOBAL(vmInvoke):
    // 48(%rbp) : frameSize
    // 56(%rbp) : returnType (ignored)
    
-   // allocate stack space, adding room for callee-saved registers
-   movl   48(%rbp),%eax
-   subq   %rax,%rsp
+   // allocate stack space for callee-saved registers
    subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
+
+   // remember this stack position, since we won't be able to rely on
+	 // %rbp being restored when the call returns
+   movq   %rsp,THREAD_SCRATCH(%rcx)
    
    // save callee-saved registers
-   movq   %rsp,%r11
-   addq   %rax,%r11
-
-   movq   %rbx,0(%r11)
-   movq   %r12,8(%r11)
-   movq   %r13,16(%r11)
-   movq   %r14,24(%r11)
-   movq   %r15,32(%r11)
-   movq   %rsi,40(%r11)
-   movq   %rdi,48(%r11)
+   movq   %rbx,0(%rsp)
+   movq   %r12,8(%rsp)
+   movq   %r13,16(%rsp)
+   movq   %r14,24(%rsp)
+   movq   %r15,32(%rsp)
+   movq   %rsi,40(%rsp)
+   movq   %rdi,48(%rsp)
+   
+   // allocate stack space for arguments
+   movl   48(%rbp),%eax
+   subq   %rax,%rsp
    
    // we use rbx to hold the thread pointer, by convention
    mov    %rcx,%rbx
@@ -80,7 +84,7 @@ LOCAL(vmInvoke_argumentTest):
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
-   movq   %rbp,%rsp
+   movq   THREAD_SCRATCH(%rbx),%rsp
 
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
@@ -96,19 +100,17 @@ GLOBAL(vmInvoke_safeStack):
 #  include "continuations-x86.S"
 #endif // AVIAN_CONTINUATIONS
 
-   // restore callee-saved registers (below the stack pointer, but in
-   // the red zone)
-   movq   %rsp,%r11
-   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r11
+   // restore callee-saved registers
+   movq   0(%rsp),%rbx
+   movq   8(%rsp),%r12
+   movq   16(%rsp),%r13
+   movq   24(%rsp),%r14
+   movq   32(%rsp),%r15
+   movq   40(%rsp),%rsi
+   movq   48(%rsp),%rdi
 
-   movq   0(%r11),%rbx
-   movq   8(%r11),%r12
-   movq   16(%r11),%r13
-   movq   24(%r11),%r14
-   movq   32(%r11),%r15
-   movq   40(%r11),%rsi
-   movq   48(%r11),%rdi
-
+   addq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
+   
    // return
    popq   %rbp
    ret
@@ -118,47 +120,39 @@ GLOBAL(vmJumpAndInvoke):
 #ifdef AVIAN_CONTINUATIONS
    //     %rcx: thread
    //     %rdx: address
-   //     %r8 : base
-   //     %r9 : (unused)
-   // 40(%rsp): argumentFootprint
-   // 48(%rsp): arguments
-   // 56(%rsp): frameSize
-
-   movq   %r8,%rbp
+   //     %r8 : stack
+   //     %r9 : argumentFootprint
+   // 40(%rsp): arguments
+   // 48(%rsp): frameSize
    
-   // restore (pseudo)-stack pointer (we don't want to touch the real
-   // stack pointer, since we haven't copied the arguments yet)
-   movq   %rbp,%r9
-         
    // allocate new frame, adding room for callee-saved registers
-   movl   56(%rsp),%eax
-   subq   %rax,%r9
-   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
+   movl   48(%rsp),%eax
+   subq   %rax,%r8
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r8
    
    movq   %rcx,%rbx
    
    // set return address
    leaq   GLOBAL(vmInvoke_returnAddress)(%rip),%r10
-   movq   %r10,(%r9)
+   movq   %r10,(%r8)
    
    // copy arguments into place
    movq   $0,%r11
-   movl   48(%rsp),%r8d
    movl   40(%rsp),%eax
    jmp    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
-   movq   (%r8,%r11,1),%r10
-   movq   %r10,8(%r9,%r11,1)
+   movq   (%rax,%r11,1),%r10
+   movq   %r10,8(%r8,%r11,1)
    addq   $8,%r11
 
 LOCAL(vmJumpAndInvoke_argumentTest):
-   cmpq   %rax,%r11
+   cmpq   %9,%r11
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
 
    // the arguments have been copied, so we can set the real stack
    // pointer now
-   movq   %r9,%rsp
+   movq   %r8,%rsp
    
    jmp    *%rdx
 #else // not AVIAN_CONTINUATIONS
@@ -183,20 +177,23 @@ GLOBAL(vmInvoke):
    // %r8 : frameSize
    // %r9 : returnType (ignored)
    
-   // allocate stack space, adding room for callee-saved registers
-   subq   %r8,%rsp
+   // allocate stack space for callee-saved registers
    subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
    
+   // remember this stack position, since we won't be able to rely on
+	 // %rbp being restored when the call returns
+   movq   %rsp,THREAD_SCRATCH(%rdi)
+   
    // save callee-saved registers
-   movq   %rsp,%r9
-   addq   %r8,%r9
-
-   movq   %rbx,0(%r9)
-   movq   %r12,8(%r9)
-   movq   %r13,16(%r9)
-   movq   %r14,24(%r9)
-   movq   %r15,32(%r9)
-
+   movq   %rbx,0(%rsp)
+   movq   %r12,8(%rsp)
+   movq   %r13,16(%rsp)
+   movq   %r14,24(%rsp)
+   movq   %r15,32(%rsp)
+   
+   // allocate stack space for arguments
+   subq   %r8,%rsp
+   
    // we use rbx to hold the thread pointer, by convention
    mov    %rdi,%rbx
 
@@ -219,7 +216,7 @@ LOCAL(vmInvoke_argumentTest):
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
-   movq   %rbp,%rsp
+   movq   THREAD_SCRATCH(%rbx),%rsp
    
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
@@ -234,18 +231,16 @@ GLOBAL(vmInvoke_safeStack):
 #ifdef AVIAN_CONTINUATIONS
 #  include "continuations-x86.S"
 #endif // AVIAN_CONTINUATIONS
+
+   // restore callee-saved registers
+   movq   0(%rsp),%rbx
+   movq   8(%rsp),%r12
+   movq   16(%rsp),%r13
+   movq   24(%rsp),%r14
+   movq   32(%rsp),%r15
+
+   addq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rsp
    
-   // restore callee-saved registers (below the stack pointer, but in
-   // the red zone)
-   movq   %rsp,%r9
-   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%r9
-
-   movq   0(%r9),%rbx
-   movq   8(%r9),%r12
-   movq   16(%r9),%r13
-   movq   24(%r9),%r14
-   movq   32(%r9),%r15
-
    // return
    popq   %rbp
    ret
@@ -255,45 +250,37 @@ GLOBAL(vmJumpAndInvoke):
 #ifdef AVIAN_CONTINUATIONS
    //    %rdi: thread
    //    %rsi: address
-   //    %rdx: base
-   //    %rcx: (unused)
-   //    %r8 : argumentFootprint
-   //    %r9 : arguments
-   // 8(%rsp): frameSize
-
-   movq   %rdx,%rbp
-   
-   // restore (pseudo)-stack pointer (we don't want to touch the real
-   // stack pointer, since we haven't copied the arguments yet)
-   movq   %rbp,%rcx
+   //    %rdx: stack
+   //    %rcx: argumentFootprint
+   //    %r8 : arguments
+   //    %r9 : frameSize
          
    // allocate new frame, adding room for callee-saved registers
-   movl   8(%rsp),%eax
-   subq   %rax,%rcx
-   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rcx
+   subq   %r9,%rdx
+   subq   $CALLEE_SAVED_REGISTER_FOOTPRINT,%rdx
    
    movq   %rdi,%rbx
    
    // set return address
    movq   GLOBAL(vmInvoke_returnAddress)@GOTPCREL(%rip),%r10
-   movq   %r10,(%rcx)
+   movq   %r10,(%rdx)
    
    // copy arguments into place
    movq   $0,%r11
    jmp    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
-   movq   (%r9,%r11,1),%r10
-   movq   %r10,8(%rcx,%r11,1)
+   movq   (%r8,%r11,1),%r10
+   movq   %r10,8(%rdx,%r11,1)
    addq   $8,%r11
 
 LOCAL(vmJumpAndInvoke_argumentTest):
-   cmpq   %r8,%r11
+   cmpq   %rcx,%r11
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
 
    // the arguments have been copied, so we can set the real stack
    // pointer now
-   movq   %rcx,%rsp
+   movq   %rdx,%rsp
    
    jmp    *%rsi
 #else // not AVIAN_CONTINUATIONS
@@ -306,7 +293,8 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 #elif defined __i386__
 
-#define THREAD_STACK 2152
+#define THREAD_STACK 2148
+#define THREAD_SCRATCH 2152
    
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 16
    
@@ -321,21 +309,24 @@ GLOBAL(vmInvoke):
    // 20(%ebp): argumentFootprint
    // 24(%ebp): frameSize
    // 28(%ebp): returnType
-
-   // allocate stack space, adding room for callee-saved registers
-	 subl   24(%ebp),%esp
+   
+   // allocate stack space for callee-saved registers
    subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%esp
    
-   // save callee-saved registers
-   movl   %esp,%ecx
-   addl   24(%ebp),%ecx
+   // remember this stack position, since we won't be able to rely on
+	 // %rbp being restored when the call returns
+   movl   8(%ebp),%eax
+   movl   %esp,THREAD_SCRATCH(%eax)
 
-   movl   %ebx,0(%ecx)
-   movl   %esi,4(%ecx)
-   movl   %edi,8(%ecx)
+   movl   %ebx,0(%esp)
+   movl   %esi,4(%esp)
+   movl   %edi,8(%esp)
+
+   // allocate stack space for arguments
+	 subl   24(%ebp),%esp
    
    // we use ebx to hold the thread pointer, by convention
-   mov    8(%ebp),%ebx
+   mov    %eax,%ebx
    
    // copy arguments into place
    movl   $0,%ecx
@@ -356,11 +347,8 @@ LOCAL(vmInvoke_argumentTest):
 
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
-   // restore stack pointer, preserving the area containing saved
-   // registers
-   movl   %ebp,%ecx
-   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
-   movl   %ecx,%esp
+   // restore stack pointer
+   movl   THREAD_SCRATCH(%ebx),%esp
    
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
@@ -380,11 +368,11 @@ GLOBAL(vmInvoke_safeStack):
    movl   0(%esp),%ebx
    movl   4(%esp),%esi
    movl   8(%esp),%edi
-
-   // handle return value based on expected type
-   movl   28(%ebp),%ecx
    
    addl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%esp
+
+   // handle return value based on expected type
+   movl   28(%esp),%ecx
    
 LOCAL(vmInvoke_void):
    cmpl   $VOID_TYPE,%ecx
@@ -412,20 +400,15 @@ GLOBAL(vmJumpAndInvoke):
 #ifdef AVIAN_CONTINUATIONS
    //  4(%esp): thread
    //  8(%esp): address
-   // 12(%esp): base
-   // 16(%esp): (unused)
-   // 20(%esp): argumentFootprint
-   // 24(%esp): arguments
-   // 28(%esp): frameSize
+   // 12(%esp): stack
+   // 16(%esp): argumentFootprint
+   // 20(%esp): arguments
+   // 24(%esp): frameSize
 
-   movl   12(%esp),%ebp
-   
-   // restore (pseudo)-stack pointer (we don't want to touch the real
-   // stack pointer, since we haven't copied the arguments yet)
-   movl   %ebp,%ecx
+   movl   12(%esp),%ecx
    
    // allocate new frame, adding room for callee-saved registers
-   subl   28(%esp),%ecx
+   subl   24(%esp),%ecx
    subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
    
    movl   4(%esp),%ebx
@@ -447,8 +430,8 @@ LOCAL(vmJumpAndInvoke_offset):
    
    // copy arguments into place
    movl   $0,%esi
-   movl   20(%esp),%edx
-   movl   24(%esp),%eax
+   movl   16(%esp),%edx
+   movl   20(%esp),%eax
    jmp    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):

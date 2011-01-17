@@ -311,67 +311,98 @@ log(unsigned n)
   return r;
 }
 
+template <class T>
 inline unsigned
 wordOf(unsigned i)
 {
-  return i / BitsPerWord;
+  return i / (sizeof(T) * 8);
+}
+
+inline unsigned
+wordOf(unsigned i)
+{
+  return wordOf<uintptr_t>(i);
+}
+
+template <class T>
+inline unsigned
+bitOf(unsigned i)
+{
+  return i % (sizeof(T) * 8);
 }
 
 inline unsigned
 bitOf(unsigned i)
 {
-  return i % BitsPerWord;
+  return bitOf<uintptr_t>(i);
+}
+
+template <class T>
+inline unsigned
+indexOf(unsigned word, unsigned bit)
+{
+  return (word * (sizeof(T) * 8)) + bit;
 }
 
 inline unsigned
 indexOf(unsigned word, unsigned bit)
 {
-  return (word * BitsPerWord) + bit;
+  return indexOf<uintptr_t>(word, bit);
 }
 
+template <class T>
 inline void
-markBit(uintptr_t* map, unsigned i)
+markBit(T* map, unsigned i)
 {
-  map[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
+  map[wordOf<T>(i)] |= static_cast<T>(1) << bitOf<T>(i);
 }
 
+template <class T>
 inline void
-clearBit(uintptr_t* map, unsigned i)
+clearBit(T* map, unsigned i)
 {
-  map[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
+  map[wordOf<T>(i)] &= ~(static_cast<T>(1) << bitOf<T>(i));
 }
 
+template <class T>
 inline unsigned
-getBit(uintptr_t* map, unsigned i)
+getBit(T* map, unsigned i)
 {
-  return (map[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i)))
-    >> bitOf(i);
+  return (map[wordOf<T>(i)] & (static_cast<T>(1) << bitOf<T>(i)))
+    >> bitOf<T>(i);
 }
 
+// todo: the following (clearBits, setBits, and getBits) could be made
+// more efficient by operating on a word at a time instead of a bit at
+// a time:
+
+template <class T>
 inline void
-clearBits(uintptr_t* map, unsigned bitsPerRecord, unsigned index)
+clearBits(T* map, unsigned bitsPerRecord, unsigned index)
 {
   for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
-    clearBit(map, i);
+    clearBit<T>(map, i);
   }
 }
 
+template <class T>
 inline void
-setBits(uintptr_t* map, unsigned bitsPerRecord, int index, unsigned v)
+setBits(T* map, unsigned bitsPerRecord, int index, unsigned v)
 {
   for (int i = index + bitsPerRecord - 1; i >= index; --i) {
-    if (v & 1) markBit(map, i); else clearBit(map, i);
+    if (v & 1) markBit<T>(map, i); else clearBit<T>(map, i);
     v >>= 1;
   }
 }
 
+template <class T>
 inline unsigned
-getBits(uintptr_t* map, unsigned bitsPerRecord, unsigned index)
+getBits(T* map, unsigned bitsPerRecord, unsigned index)
 {
   unsigned v = 0;
   for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
     v <<= 1;
-    v |= getBit(map, i);
+    v |= getBit<T>(map, i);
   }
   return v;
 }

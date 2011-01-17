@@ -561,7 +561,7 @@ NewObjectV(Thread* t, jclass c, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return reinterpret_cast<jobject>(run(t, newObjectV, arguments));
 }
@@ -597,7 +597,7 @@ CallObjectMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return reinterpret_cast<jobject>(run(t, callObjectMethodV, arguments));
 }
@@ -631,7 +631,7 @@ CallBooleanMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callIntMethodV, arguments) != 0;
 }
@@ -654,7 +654,7 @@ CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callIntMethodV, arguments);
 }
@@ -677,7 +677,7 @@ CallCharMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callIntMethodV, arguments);
 }
@@ -700,7 +700,7 @@ CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callIntMethodV, arguments);
 }
@@ -723,7 +723,7 @@ CallIntMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callIntMethodV, arguments);
 }
@@ -757,7 +757,7 @@ CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callLongMethodV, arguments);
 }
@@ -780,7 +780,7 @@ CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return bitsToFloat(run(t, callIntMethodV, arguments));
 }
@@ -803,7 +803,7 @@ CallDoubleMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return bitsToDouble(run(t, callLongMethodV, arguments));
 }
@@ -839,7 +839,7 @@ CallVoidMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             m,
-                            reinterpret_cast<uintptr_t>(a) };
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   run(t, callVoidMethodV, arguments);
 }
@@ -879,7 +879,7 @@ callStaticObjectMethodV(Thread* t, uintptr_t* arguments)
 jobject JNICALL
 CallStaticObjectMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return reinterpret_cast<jobject>(run(t, callStaticObjectMethodV, arguments));
 }
@@ -910,7 +910,7 @@ callStaticIntMethodV(Thread* t, uintptr_t* arguments)
 jboolean JNICALL
 CallStaticBooleanMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callStaticIntMethodV, arguments) != 0;
 }
@@ -931,7 +931,7 @@ CallStaticBooleanMethod(Thread* t, jclass c, jmethodID m, ...)
 jbyte JNICALL
 CallStaticByteMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callStaticIntMethodV, arguments);
 }
@@ -952,7 +952,7 @@ CallStaticByteMethod(Thread* t, jclass c, jmethodID m, ...)
 jchar JNICALL
 CallStaticCharMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callStaticIntMethodV, arguments);
 }
@@ -973,7 +973,7 @@ CallStaticCharMethod(Thread* t, jclass c, jmethodID m, ...)
 jshort JNICALL
 CallStaticShortMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callStaticIntMethodV, arguments);
 }
@@ -994,7 +994,7 @@ CallStaticShortMethod(Thread* t, jclass c, jmethodID m, ...)
 jint JNICALL
 CallStaticIntMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callStaticIntMethodV, arguments);
 }
@@ -1025,7 +1025,7 @@ callStaticLongMethodV(Thread* t, uintptr_t* arguments)
 jlong JNICALL
 CallStaticLongMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return run(t, callStaticLongMethodV, arguments);
 }
@@ -1046,7 +1046,7 @@ CallStaticLongMethod(Thread* t, jclass c, jmethodID m, ...)
 jfloat JNICALL
 CallStaticFloatMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return bitsToFloat(run(t, callStaticIntMethodV, arguments));
 }
@@ -1067,7 +1067,7 @@ CallStaticFloatMethod(Thread* t, jclass c, jmethodID m, ...)
 jdouble JNICALL
 CallStaticDoubleMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   return bitsToDouble(run(t, callStaticLongMethodV, arguments));
 }
@@ -1099,7 +1099,7 @@ callStaticVoidMethodV(Thread* t, uintptr_t* arguments)
 void JNICALL
 CallStaticVoidMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
   run(t, callStaticVoidMethodV, arguments);
 }

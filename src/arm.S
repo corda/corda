@@ -56,3 +56,25 @@ vmJump:
   mov   sp, r2
   mov   r8, r3
   bx    lr
+
+#define CHECKPOINT_THREAD 4
+#define CHECKPOINT_STACK 24
+
+.globl vmRun
+vmRun:
+  // r0: function
+  // r1: arguments
+  // r2: checkpoint
+  stmfd sp!, {r4-r11, lr}
+   
+  str   sp, [r2, #CHECKPOINT_STACK]
+
+  mov   r12, r0
+  ldr   r0, [r2, #CHECKPOINT_THREAD]
+
+  blx   r12
+
+.globl vmRun_returnAddress
+vmRun_returnAddress:
+  ldmfd sp!, {r4-r11, lr}
+  bx    lr

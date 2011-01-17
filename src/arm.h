@@ -14,6 +14,8 @@
 #include "types.h"
 #include "common.h"
 
+#define VA_LIST(x) (&(x))
+
 #define IP_REGISTER(context) (context->uc_mcontext.arm_pc)
 #define STACK_REGISTER(context) (context->uc_mcontext.arm_sp)
 #define THREAD_REGISTER(context) (context->uc_mcontext.arm_ip)

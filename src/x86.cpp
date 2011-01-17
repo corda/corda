@@ -65,12 +65,14 @@ const unsigned GeneralRegisterMask
 const unsigned FloatRegisterMask
 = BytesPerWord == 4 ? 0x00ff0000 : 0xffff0000;
 
-const unsigned FrameHeaderSize = 2;
+const unsigned FrameHeaderSize = (UseFramePointer ? 2 : 1);
 
 const int LongJumpRegister = r10;
 
 const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
+
+const int FrameSizePoison = -2147483647;
 
 bool
 isInt8(intptr_t v)
@@ -86,16 +88,26 @@ isInt32(intptr_t v)
 
 class Task;
 class AlignmentPadding;
+class MyFrameSizeEvent;
 
 unsigned
 padding(AlignmentPadding* p, unsigned index, unsigned offset,
         AlignmentPadding* limit);
 
+class Context;
+class MyBlock;
+
+void
+appendFrameSizeEvent(Context* c, MyBlock* b, Promise* offset, int change);
+
+ResolvedPromise*
+  resolved(Context* c, int64_t value);
+
 class MyBlock: public Assembler::Block {
  public:
   MyBlock(unsigned offset):
-    next(0), firstPadding(0), lastPadding(0), offset(offset), start(~0),
-    size(0)
+    next(0), firstPadding(0), lastPadding(0), firstFrameSizeEvent(0),
+    lastFrameSizeEvent(0), offset(offset), start(~0), size(0)
   { }
 
   virtual unsigned resolve(unsigned start, Assembler::Block* next) {
@@ -108,12 +120,12 @@ class MyBlock: public Assembler::Block {
   MyBlock* next;
   AlignmentPadding* firstPadding;
   AlignmentPadding* lastPadding;
+  MyFrameSizeEvent* firstFrameSizeEvent;
+  MyFrameSizeEvent* lastFrameSizeEvent;
   unsigned offset;
   unsigned start;
   unsigned size;
 };
-
-class Context;
 
 typedef void (*OperationType)(Context*);
 
@@ -152,7 +164,8 @@ class Context {
   Context(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
     firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock), ac(ac)
+    lastBlock(firstBlock), firstFrameSizeEvent(0), lastFrameSizeEvent(0),
+    ac(ac), frameSizeEventCount(0)
   { }
 
   System* s;
@@ -163,7 +176,10 @@ class Context {
   uint8_t* result;
   MyBlock* firstBlock;
   MyBlock* lastBlock;
+  MyFrameSizeEvent* firstFrameSizeEvent;
+  MyFrameSizeEvent* lastFrameSizeEvent;
   ArchitectureContext* ac;
+  unsigned frameSizeEventCount;
 };
 
 void NO_RETURN
@@ -448,6 +464,54 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
     }
   }
   return padding;
+}
+
+class MyFrameSizeEvent: public Assembler::FrameSizeEvent {
+ public:
+  MyFrameSizeEvent(Context* c, Promise* offset, int change):
+    c(c), next_(0), offset_(offset), change_(change)
+  { }
+
+  virtual unsigned offset() {
+    return offset_->value();
+  }
+
+  virtual int change() {
+    expect(c, change_ != FrameSizePoison);
+
+    return change_;
+  }
+
+  virtual Assembler::FrameSizeEvent* next() {
+    return next_;
+  }
+
+  Context* c;
+  MyFrameSizeEvent* next_;
+  Promise* offset_;
+  int change_;
+};
+
+void
+appendFrameSizeEvent(Context* c, MyBlock* b, Promise* offset, int change)
+{
+  MyFrameSizeEvent* e = new (c->zone->allocate(sizeof(MyFrameSizeEvent)))
+    MyFrameSizeEvent(c, offset, change);
+
+  if (b->firstFrameSizeEvent) {
+    b->lastFrameSizeEvent->next_ = e;
+  } else {
+    b->firstFrameSizeEvent = e;
+  }
+  b->lastFrameSizeEvent = e;
+
+  ++ c->frameSizeEventCount;
+}
+
+void
+appendFrameSizeEvent(Context* c, int change)
+{
+  appendFrameSizeEvent(c, c->lastBlock, offset(c), change);
 }
 
 extern "C" bool
@@ -878,22 +942,6 @@ popR(Context* c, unsigned size, Assembler::Register* a)
     if (BytesPerWord == 8 and size == 4) {
       moveRR(c, 4, a, 8, a);
     }
-  }
-}
-
-void
-popM(Context* c, unsigned size, Assembler::Memory* a)
-{
-  if (BytesPerWord == 4 and size == 8) {
-    Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
-
-    popM(c, 4, a);
-    popM(c, 4, &ah);
-  } else {
-    assert(c, BytesPerWord == 4 or size == 8);
-
-    opcode(c, 0x8f);
-    modrmSibImm(c, 0, a->scale, a->index, a->base, a->offset);
   }
 }
 
@@ -2701,6 +2749,8 @@ class MyArchitecture: public Assembler::Architecture {
   virtual bool reserved(int register_) {
     switch (register_) {
     case rbp:
+      return UseFramePointer;
+
     case rsp:
     case rbx:
       return true;
@@ -2722,6 +2772,10 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual unsigned argumentFootprint(unsigned footprint) {
     return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
+  }
+
+  virtual bool argumentAlignment() {
+    return false;
   }
 
   virtual unsigned argumentRegisterCount() {
@@ -2891,13 +2945,6 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual int framePointerOffset() {
     return -1;
-  }
-
-  virtual void nextFrame(void** stack, void** base) {
-    assert(&c, *static_cast<void**>(*base) != *base);
-
-    *stack = static_cast<void**>(*base) + 1;
-    *base = *static_cast<void**>(*base);
   }
 
   virtual void plan
@@ -3288,16 +3335,11 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
-  virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) {
+  virtual void saveFrame(unsigned stackOffset) {
     Register stack(rsp);
     Memory stackDst(rbx, stackOffset);
     apply(Move, BytesPerWord, RegisterOperand, &stack,
           BytesPerWord, MemoryOperand, &stackDst);
-
-    Register base(rbp);
-    Memory baseDst(rbx, baseOffset);
-    apply(Move, BytesPerWord, RegisterOperand, &base,
-          BytesPerWord, MemoryOperand, &baseDst);
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {
@@ -3347,37 +3389,62 @@ class MyAssembler: public Assembler {
   }
 
   virtual void allocateFrame(unsigned footprint) {
-    Register base(rbp);
-    pushR(&c, BytesPerWord, &base);
-
     Register stack(rsp);
-    apply(Move, BytesPerWord, RegisterOperand, &stack,
-          BytesPerWord, RegisterOperand, &base);
+
+    if (UseFramePointer) {
+      Register base(rbp);
+      pushR(&c, BytesPerWord, &base);
+
+      apply(Move, BytesPerWord, RegisterOperand, &stack,
+            BytesPerWord, RegisterOperand, &base);
+
+      appendFrameSizeEvent(&c, 1);
+    }
 
     Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
     apply(Subtract, BytesPerWord, ConstantOperand, &footprintConstant,
           BytesPerWord, RegisterOperand, &stack,
           BytesPerWord, RegisterOperand, &stack);
+
+    appendFrameSizeEvent(&c, footprint);
   }
 
-  virtual void adjustFrame(unsigned footprint) {
+  virtual void adjustFrame(unsigned difference) {
+    appendFrameSizeEvent(&c, - difference);
+
     Register stack(rsp);
-    Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
-    apply(Subtract, BytesPerWord, ConstantOperand, &footprintConstant,
+    Constant differenceConstant(resolved(&c, difference * BytesPerWord));
+    apply(Subtract, BytesPerWord, ConstantOperand, &differenceConstant,
           BytesPerWord, RegisterOperand, &stack,
           BytesPerWord, RegisterOperand, &stack);
+
+    appendFrameSizeEvent(&c, difference);
   }
 
-  virtual void popFrame() {
-    Register base(rbp);
-    Register stack(rsp);
-    apply(Move, BytesPerWord, RegisterOperand, &base,
-          BytesPerWord, RegisterOperand, &stack);
+  virtual void popFrame(unsigned frameFootprint) {
+    if (UseFramePointer) {
+      Register base(rbp);
+      Register stack(rsp);
+      apply(Move, BytesPerWord, RegisterOperand, &base,
+            BytesPerWord, RegisterOperand, &stack);
 
-    popR(&c, BytesPerWord, &base);
+      appendFrameSizeEvent(&c, - frameFootprint);
+
+      popR(&c, BytesPerWord, &base);
+
+      appendFrameSizeEvent(&c, - 1);
+    } else {
+      Register stack(rsp);
+      Constant footprint(resolved(&c, frameFootprint * BytesPerWord));
+      apply(Add, BytesPerWord, ConstantOperand, &footprint,
+            BytesPerWord, RegisterOperand, &stack,
+            BytesPerWord, RegisterOperand, &stack);
+
+      appendFrameSizeEvent(&c, - frameFootprint);
+    }
   }
 
-  virtual void popFrameForTailCall(unsigned footprint,
+  virtual void popFrameForTailCall(unsigned frameFootprint,
                                    int offset,
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate)
@@ -3386,22 +3453,27 @@ class MyAssembler: public Assembler {
       if (offset) {
         Register tmp(c.client->acquireTemporary());
       
-        Memory returnAddressSrc(rsp, (footprint + 1) * BytesPerWord);
+        Memory returnAddressSrc(rsp, (frameFootprint + 1) * BytesPerWord);
         moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
     
-        Memory returnAddressDst(rsp, (footprint - offset + 1) * BytesPerWord);
+        Memory returnAddressDst
+          (rsp, (frameFootprint - offset + 1) * BytesPerWord);
         moveRM(&c, BytesPerWord, &tmp, BytesPerWord, &returnAddressDst);
 
         c.client->releaseTemporary(tmp.low);
 
-        Memory baseSrc(rsp, footprint * BytesPerWord);
-        Register base(rbp);
-        moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
+        if (UseFramePointer) {
+          Memory baseSrc(rsp, frameFootprint * BytesPerWord);
+          Register base(rbp);
+          moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
+        }
 
         Register stack(rsp);
-        Constant footprintConstant
-          (resolved(&c, (footprint - offset + 1) * BytesPerWord));
-        addCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack);
+        Constant footprint
+          (resolved(&c, (frameFootprint - offset + 1) * BytesPerWord));
+        addCR(&c, BytesPerWord, &footprint, BytesPerWord, &stack);
+
+        appendFrameSizeEvent(&c, - (frameFootprint - offset + 1));
 
         if (returnAddressSurrogate != NoRegister) {
           assert(&c, offset > 0);
@@ -3419,15 +3491,17 @@ class MyAssembler: public Assembler {
           moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
         }
       } else {
-        popFrame();
+        popFrame(frameFootprint);
       }
     } else {
       abort(&c);
     }
   }
 
-  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
-    popFrame();
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
+                                                unsigned argumentFootprint)
+  {
+    popFrame(frameFootprint);
 
     assert(&c, argumentFootprint >= StackAlignmentInWords);
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
@@ -3442,22 +3516,35 @@ class MyAssembler: public Assembler {
                   * BytesPerWord));
       addCR(&c, BytesPerWord, &adjustment, BytesPerWord, &stack);
 
+      appendFrameSizeEvent(&c, - (argumentFootprint - StackAlignmentInWords));
+
       jumpR(&c, BytesPerWord, &returnAddress);
     } else {
       return_(&c);
     }
+
+    // todo: this is not necessary if there are no instructions to
+    // follow:
+    appendFrameSizeEvent(&c, frameFootprint);
   }
 
-  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+                                               unsigned stackOffsetFromThread)
   {
-    popFrame();
+    popFrame(frameFootprint);
 
     Register returnAddress(rcx);
     popR(&c, BytesPerWord, &returnAddress);
 
+    appendFrameSizeEvent(&c, -1);
+
     Register stack(rsp);
     Memory stackSrc(rbx, stackOffsetFromThread);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
+
+    // we can't statically determine the frame size at this point, so
+    // we poison any attempt to query for it:
+    appendFrameSizeEvent(&c, FrameSizePoison);
 
     jumpR(&c, BytesPerWord, &returnAddress);
   }
@@ -3507,6 +3594,15 @@ class MyAssembler: public Assembler {
     c.result = dst;
     
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
+      if (b->firstFrameSizeEvent) {
+        if (c.firstFrameSizeEvent) {
+          c.lastFrameSizeEvent->next_ = b->firstFrameSizeEvent;
+        } else {
+          c.firstFrameSizeEvent = b->firstFrameSizeEvent;
+        }
+        c.lastFrameSizeEvent = b->lastFrameSizeEvent;
+      }
+
       unsigned index = 0;
       unsigned padding = 0;
       for (AlignmentPadding* p = b->firstPadding; p; p = p->next) {
@@ -3558,6 +3654,14 @@ class MyAssembler: public Assembler {
 
   virtual unsigned length() {
     return c.code.length();
+  }
+
+  virtual unsigned frameSizeEventCount() {
+    return c.frameSizeEventCount;
+  }
+
+  virtual FrameSizeEvent* firstFrameSizeEvent() {
+    return c.firstFrameSizeEvent;
   }
 
   virtual void dispose() {
