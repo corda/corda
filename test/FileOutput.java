@@ -4,6 +4,10 @@ import java.io.File;
 import java.io.IOException;
 
 public class FileOutput {
+  private static void expect(boolean v) {
+    if (! v) throw new RuntimeException();
+  }
+
   private static void test(boolean appendFirst) throws IOException {
     try {
       FileOutputStream f = new FileOutputStream("test.txt", appendFirst);
@@ -33,6 +37,8 @@ public class FileOutput {
   }
 
   public static void main(String[] args) throws IOException {
+    expect(new File("nonexistent-file").length() == 0);
+
     test(false);
     test(true);
   }

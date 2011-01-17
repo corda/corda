@@ -331,7 +331,7 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
     }
   }
 
-  return -1;
+  return 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
