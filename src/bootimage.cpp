@@ -411,6 +411,41 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
     set(t, type(t, Machine::JdoubleType), ClassName, name);
   }
 
+  // resolve primitive array classes in case they are needed at
+  // runtime:
+  { resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[B"), true);
+    if (t->exception) return;
+
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[Z"), true);
+    if (t->exception) return;
+
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[S"), true);
+    if (t->exception) return;
+
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[C"), true);
+    if (t->exception) return;
+
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[I"), true);
+    if (t->exception) return;
+
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[J"), true);
+    if (t->exception) return;
+
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[F"), true);
+    if (t->exception) return;
+
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader), makeByteArray(t, "[D"), true);
+    if (t->exception) return;
+  }
+
   collect(t, Heap::MajorCollection);
 
   uintptr_t* heap = static_cast<uintptr_t*>
