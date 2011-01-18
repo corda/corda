@@ -116,3 +116,9 @@
 -keepclassmembers class java.lang.Object {
    protected java.lang.Object clone();
  }
+
+# called by name in the VM:
+
+-keepclassmembers class java.lang.ClassLoader {
+   public java.lang.Class loadClass(java.lang.String);
+ }
