@@ -462,7 +462,7 @@ Step 2: Create a stage1 directory and extract the contents of the
 class library jar into it.
 
  $ mkdir stage1
- $ (cd stage1 && jar xf ../../build/${platform}-${arch}/classpath.jar)
+ $ (cd stage1 && jar xf ../../build/linux-i386-bootimage/classpath.jar)
 
 Step 3: Build the Java code and add it to stage1.
 
@@ -498,10 +498,10 @@ Step 6: Build the boot image.
 
 Step 7: Make an object file out of the boot image.
 
- $ ../build/${platform}-${arch}/binaryToObject \
+ $ ../build/linux-i386-bootimage/binaryToObject \
      bootimage.bin bootimage-bin.o \
      _binary_bootimage_bin_start _binary_bootimage_bin_end \
-     ${platform} ${arch} 8 writable executable
+     linux i386 8 writable executable
 
 Step 8: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the
