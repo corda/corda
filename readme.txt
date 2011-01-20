@@ -442,7 +442,10 @@ For boot image builds:
    space in the executable than the equivalent class files.  In
    practice, this can make the executable 30-50% larger.  Also, AOT
    compilation does not yet yield significantly faster or smaller code
-   than JIT compilation.
+   than JIT compilation.  Finally, floating point code may be slower
+   on 32-bit x86 since the compiler cannot assume SSE2 support will be
+   available at runtime, and the x87 FPU is not supported except via
+   out-of-line helper functions.
 
 Note you can use ProGuard without using a boot image and vice-versa,
 as desired.
