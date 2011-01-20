@@ -71,5 +71,11 @@ public class Strings {
     sb.append('$');
     sb.append('2');
     expect(sb.substring(1).equals("2"));
+
+    expect(Character.forDigit(Character.digit('0', 10), 10) == '0');
+    expect(Character.forDigit(Character.digit('9', 10), 10) == '9');
+    expect(Character.forDigit(Character.digit('b', 16), 16) == 'b');
+    expect(Character.forDigit(Character.digit('f', 16), 16) == 'f');
+    expect(Character.forDigit(Character.digit('z', 36), 36) == 'z');
   }
 }
