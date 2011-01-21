@@ -187,7 +187,7 @@ C++ portions of the VM, while the assembly code and helper tools are
 built using GCC.
 
 The MSVC build has been tested with Visual Studio Express Edition
-versions 8 and 9.  Other versions may also work.
+versions 8, 9, and 10.  Other versions may also work.
 
 To build with MSVC, install Cygwin as described above and set the
 following environment variables:

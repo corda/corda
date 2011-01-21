@@ -458,7 +458,7 @@ class JarIndex {
       RUNTIME_ARRAY_BODY(n)[length] = '/';
       RUNTIME_ARRAY_BODY(n)[length + 1] = 0;
 
-      node = findNode(n);
+      node = findNode(RUNTIME_ARRAY_BODY(n));
       if (node) {
         return System::TypeDirectory;
       } else {
