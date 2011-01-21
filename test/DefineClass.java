@@ -4,7 +4,6 @@ import java.io.FileInputStream;
 
 public class DefineClass {
   private static File findClass(String name, File directory) {
-    File[] files = directory.listFiles();
     for (File file: directory.listFiles()) {
       if (file.isFile()) {
         if (file.getName().equals(name + ".class")) {
